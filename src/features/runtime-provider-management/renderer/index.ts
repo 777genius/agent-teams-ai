@@ -45,6 +45,7 @@ export {
 } from './openCodeLocalModelSetup';
 export type { RuntimeProviderConnectedCountEvidence, RuntimeProviderConnectedCountObservation, RuntimeProviderDirectoryCacheSnapshot } from './runtimeProviderDirectoryCache';
 export {
+  beginRuntimeProviderConnectedCountCheck,
   getRuntimeProviderDirectoryCacheSnapshot,
   getRuntimeProviderDirectoryCacheWithGlobalFallbackSnapshot,
   useRuntimeProviderConnectedCount,

@@ -26,6 +26,7 @@ function scheduleFields(
   onTargetMemberChange: (name: string) => void,
   overrides: {
     mode?: 'legacy' | 'agent' | 'team';
+    taskFirst?: boolean;
     targetMember?: string;
     team?: Pick<TeamSummary, 'members' | 'leadName'>;
   } = {}
@@ -36,6 +37,7 @@ function scheduleFields(
       expanded
       onToggle={() => undefined}
       mode={overrides.mode ?? 'agent'}
+      taskFirst={overrides.taskFirst}
       onModeChange={() => undefined}
       targetMember={overrides.targetMember ?? ''}
       onTargetMemberChange={onTargetMemberChange}
@@ -190,6 +192,26 @@ describe('SmartScheduleFields teammate picker', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it('shows an explicitly named lead alongside the default lead label', async () => {
+    const onChange = vi.fn();
+    await act(async () =>
+      root.render(scheduleFields(onChange, {
+        team: {
+          leadName: 'Robin',
+          members: [{ name: 'Robin', role: 'Coordinator' }, { name: 'alice' }],
+        },
+      }))
+    );
+
+    const trigger = host.querySelector('button[role="combobox"]') as HTMLButtonElement;
+    expect(trigger.textContent).toContain('Robin — Team lead (default)');
+    await act(async () => trigger.click());
+    const list = document.body.querySelector('[cmdk-list]') as HTMLElement;
+    expect(list.textContent).toContain('Robin — Team lead (default)');
+    expect(list.textContent).toContain('Coordinator');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('reuses lead metadata when the roster spells its name with different casing', async () => {
     const onChange = vi.fn();
     await act(async () =>
@@ -263,6 +285,26 @@ describe('SmartScheduleFields teammate picker', () => {
     expect(list.textContent).toContain('alice');
     expect(list.textContent).not.toContain('bad.');
     expect(list.textContent).not.toContain('con');
+  });
+
+  it('explains task-first delivery and preserves an exact teammate target', async () => {
+    const onChange = vi.fn();
+    await act(async () =>
+      root.render(scheduleFields(onChange, { taskFirst: true, targetMember: 'alice' }))
+    );
+    expect(host.textContent).toContain('The selected teammate receives a board task');
+    expect((host.querySelector('button[role="combobox"]') as HTMLElement).getAttribute('aria-label'))
+      .toBe('Assign to');
+    expect(host.textContent).not.toContain('runs an isolated agent');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('describes coordination through the lead when assigning to a team', async () => {
+    await act(async () =>
+      root.render(scheduleFields(vi.fn(), { taskFirst: true, mode: 'team' }))
+    );
+    expect(host.textContent).toContain('The team lead receives a coordination task');
+    expect(host.querySelector('button[role="combobox"]')).toBeNull();
   });
 
   it('keeps legacy one-shot schedule editing free of a teammate target', async () => {

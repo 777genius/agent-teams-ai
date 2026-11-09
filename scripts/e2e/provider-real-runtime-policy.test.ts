@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  completeConnectedCount, connectedProviderIds, parseProviderDirectory,
+  assertStableConnectedProviders, completeConnectedCount, connectedProviderIds, parseProviderDirectory,
   validateConnectedSummary,
 } from './provider-real-runtime-policy.ts';
 
@@ -61,4 +61,33 @@ test('never report duplicated ids, a response error, or malformed JSON', () => {
   assert.throws(() => parseProviderDirectory(
     page('all', [{ providerId: 'OPENROUTER', state: 'connected' },
       { providerId: 'openrouter', state: 'connected' }]), 'all'));
+});
+
+test('warm connected identities reject substitution despite an unchanged count', () => {
+  const original = parseProviderDirectory(page('connected', [
+    { providerId: 'OpenRouter', state: 'connected' },
+  ]), 'connected');
+  const replacement = parseProviderDirectory(page('connected', [
+    { providerId: 'DeepInfra', state: 'connected' },
+  ]), 'connected');
+  assert.equal(completeConnectedCount(original), completeConnectedCount(replacement));
+  assert.throws(
+    () => assertStableConnectedProviders(original.entries, replacement.entries),
+    /Connected identities changed without a credential mutation/,
+  );
+  assert.doesNotThrow(() => assertStableConnectedProviders(original.entries, [
+    { providerId: ' openrouter ', state: 'connected' },
+  ]));
+});
+
+test('unfiltered native inventory may change while connected summary stays authoritative', () => {
+  const all = parseProviderDirectory(page('all', rows,
+    { totalCount: 4, nextCursor: '3' }), 'all');
+  const connected = parseProviderDirectory(page('connected', rows.slice(0, 2)), 'connected');
+  const warmAll = parseProviderDirectory(page('all', rows.slice(0, 2)), 'all');
+  const warmConnected = parseProviderDirectory(
+    page('connected', rows.slice(0, 2)), 'connected');
+  assert.notEqual(all.totalCount, warmAll.totalCount);
+  assert.equal(validateConnectedSummary(all, connected), 1);
+  assert.equal(validateConnectedSummary(warmAll, warmConnected), 1);
 });

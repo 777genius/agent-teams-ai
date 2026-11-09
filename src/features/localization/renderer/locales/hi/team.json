@@ -1522,7 +1522,12 @@
       "leadDefault": "टीम लीड (डिफ़ॉल्ट)",
       "agentDescription": "टीम बंद हो तो अलग एजेंट चलाता है; चल रही हो तो कार्य सौंपता है।",
       "teamDescription": "टीम बंद हो तो सहेजी गई टीम शुरू करता है; चल रही हो तो लीड को कार्य सौंपता है। सहेजी गई सेटिंग्स उपयोग होती हैं।",
-      "teamPathMissing": "शेड्यूल पर टीम शुरू करने से पहले उसका प्रोजेक्ट फ़ोल्डर सहेजें।"
+      "teamPathMissing": "शेड्यूल पर टीम शुरू करने से पहले उसका प्रोजेक्ट फ़ोल्डर सहेजें।",
+      "taskFirstAgentDescription": "चुने गए टीम सदस्य को ज़रूरत पड़ने पर टीम सुरक्षित रूप से शुरू होने के बाद बोर्ड पर कार्य दिया जाएगा। व्यस्त एजेंटों का काम बाधित नहीं होगा।",
+      "taskFirstTeamDescription": "टीम लीड को ज़रूरत पड़ने पर टीम सुरक्षित रूप से शुरू होने के बाद समन्वय कार्य दिया जाएगा। चल रहा काम बाधित नहीं होगा।",
+      "taskFirstTarget": "इसे सौंपें",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "पुराने सहेजे गए प्रॉम्प्ट की समीक्षा करके स्थायी निर्देश अलग कर दिए हैं। पुराना पाठ रखें, पर शेड्यूल पर न चलाएँ।"
     },
     "title": {
       "createSchedule": "अनुसूची बनाएँ",
@@ -2097,7 +2102,8 @@
       "stillRunning": "कार्य अभी भी चल रहा है...",
       "loadingLogs": "लोड हो रहा है...",
       "errors": "त्रुटियाँ",
-      "close": "बंद"
+      "close": "बंद",
+      "openTask": "कार्य खोलें"
     },
     "cron": {
       "expression": "क्रोन अभिव्यक्ति",

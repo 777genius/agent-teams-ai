@@ -20,6 +20,11 @@ import {
 } from './opencode-diagnostics/packaged.mjs';
 import { verifyPackaged } from './opencode-diagnostics/packaged-verify.mjs';
 import {
+  prepareRealRuntimeFixture,
+  realRuntimeEnvironment,
+  verifyRealRuntimeElectron,
+} from './opencode-diagnostics/real-runtime.mjs';
+import {
   catalogScenarios,
   enterProviderSettings,
   verifyCatalog,
@@ -202,6 +207,27 @@ if (mode === 'seed-packaged') {
   };
   await preparePackagedProfile(data);
   data.projectSentinel = await prepareExistingProject(data);
+  await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data, null, 2));
+  console.log(dir);
+} else if (mode === 'seed-real') {
+  assert(root === undefined, 'Seed real provider test only in a fresh sandbox');
+  // The test-only screenshot and sanitized receipt must live under runner.temp,
+  // not os.tmpdir() (which can be /tmp on Linux cloud runners).
+  const tempParent = process.env.RUNNER_TEMP && path.isAbsolute(process.env.RUNNER_TEMP)
+    ? process.env.RUNNER_TEMP
+    : os.tmpdir();
+  const dir = await realpath(await mkdtemp(path.join(tempParent, 'opencode-diagnostics-e2e-')));
+  const data = {
+    root: dir,
+    home: path.join(dir, 'TEST-home'),
+    userData: path.join(dir, 'user-data'),
+    bin: path.join(dir, 'bin'),
+    temp: path.join(dir, 'tmp'),
+    node: process.execPath,
+    platform: process.platform,
+  };
+  await prepareRealRuntimeFixture(data, repo);
+  await writeFile(path.join(dir, 'scenario'), 'real-connected');
   await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data, null, 2));
   console.log(dir);
 } else if (mode === 'seed') {
@@ -406,6 +432,7 @@ if (mode === 'seed-packaged') {
   const data = await manifest();
   assert(!data.launcher, 'Sandbox already started; seed a new sandbox');
   const env = data.packaged ? await preparePackagedProfile(data) : isolatedEnvironment(data);
+  if (data.realRuntime) Object.assign(env, realRuntimeEnvironment(data));
   if (data.packaged) {
     assert.equal(process.platform, 'win32');
     assert.deepEqual(
@@ -601,7 +628,9 @@ if (mode === 'seed-packaged') {
         }
         throw navigationError;
       }
-      if (scenario === cleanupScenario) {
+      if (scenario === 'real-connected') {
+        await verifyRealRuntimeElectron({ root, data, evaluate, send });
+      } else if (scenario === cleanupScenario) {
         await verifyStartupCleanup({ root, evaluate, send });
       } else if (catalogScenarios.includes(scenario)) {
         await verifyCatalog({ root, scenario, evaluate, send });
@@ -748,5 +777,5 @@ if (mode === 'seed-packaged') {
   }
 } else
   throw new Error(
-    'Usage: seed [startup-cleanup] | seed-packaged --packaged-executable <exe> [--runtime-setup app-install] | start <sandbox> | inspect <sandbox> | verify <sandbox> | stop <sandbox>'
+    'Usage: seed [startup-cleanup] | seed-real | seed-packaged --packaged-executable <exe> [--runtime-setup app-install] | start <sandbox> | inspect <sandbox> | verify <sandbox> | stop <sandbox>'
   );

@@ -230,10 +230,8 @@ const TEAM_COLOR_NAMES = [
   'orange',
   'pink',
 ] as const;
-
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
 const CREATE_LAUNCH_AUTHORITY_BLOCKER_ID = 'create-team-launch-authority-blocker';
-
 function getProviderLabel(providerId: TeamProviderId): string {
   return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
 }
@@ -1584,7 +1582,7 @@ export const CreateTeamDialog = ({
   const launchPreflightCanResolveBlockers =
     canResolveOpenCodeLaunchBlockers(launchAuthorityBlockers);
   useEffect(() => {
-    if (submissionFence.busy) return;
+    if (submissionFence.busy || (open && !active)) return;
     if (
       !open ||
       !canCreate ||
@@ -2430,7 +2428,7 @@ export const CreateTeamDialog = ({
           </p>
         ) : null}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-1.5 md:col-span-2">
+          <div className="w-full max-w-[24rem] space-y-1.5 md:col-span-2">
             <Label htmlFor="team-name">{t('create.fields.teamName')}</Label>
             <Input
               id="team-name"
@@ -2467,8 +2465,8 @@ export const CreateTeamDialog = ({
             ) : null}
           </div>
           <div className="space-y-4 md:col-span-2">
-            <TeamTemplatePicker
-              confirmBeforeApply
+            <div className="w-full max-w-[26rem]">
+              <TeamTemplatePicker confirmBeforeApply
               disabled={!draftLoaded || !descriptionDraft.isLoaded || !promptDraft.isLoaded}
               onApply={(draft) => {
                 setRuntimeSelection(1);
@@ -2484,7 +2482,8 @@ export const CreateTeamDialog = ({
                   multimodelEnabled: true,
                 }));
               }}
-            />
+              />
+            </div>
             <TeamRosterEditorSection
               runtimeSelectionUnresolved={runtimeSelectionUnresolved}
               members={members}
@@ -2515,6 +2514,7 @@ export const CreateTeamDialog = ({
               runtimeProviderStatusById={runtimeProviderStatusById}
               onOpenCodeProviderScopedStatusChange={handleOpenCodeProviderScopedStatusChange}
               onOpenProviderSettings={setProviderSettingsProviderId}
+              onManageProviders={invalidatePrepareProvider}
               providerReadyById={providerReadyById}
               onProviderChange={setSelectedProviderId}
               onModelChange={setSelectedModel}

@@ -1522,7 +1522,12 @@
       "leadDefault": "टीम लीड (डीफॉल्ट)",
       "agentDescription": "टीम बंद असेल तर स्वतंत्र एजंट सुरू करतो; सुरू असेल तर काम सोपवतो.",
       "teamDescription": "टीम बंद असेल तर जतन केलेली टीम सुरू करतो; सुरू असेल तर लीडला काम सोपवतो. जतन केलेली सेटिंग्ज वापरतो.",
-      "teamPathMissing": "सुरू करण्याचे वेळापत्रक ठरवण्यापूर्वी टीमचा प्रकल्प फोल्डर जतन करा."
+      "teamPathMissing": "सुरू करण्याचे वेळापत्रक ठरवण्यापूर्वी टीमचा प्रकल्प फोल्डर जतन करा.",
+      "taskFirstAgentDescription": "गरज असल्यास टीम सुरक्षितपणे सुरू केल्यानंतर निवडलेल्या सदस्याला बोर्डवरील काम दिले जाईल. व्यस्त एजंट्सच्या कामात व्यत्यय आणला जाणार नाही.",
+      "taskFirstTeamDescription": "गरज असल्यास टीम सुरक्षितपणे सुरू केल्यानंतर टीम लीडला समन्वयाचे काम दिले जाईल. सुरू असलेल्या कामात व्यत्यय आणला जाणार नाही.",
+      "taskFirstTarget": "यांना सोपवा",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "जुना जतन केलेला प्रॉम्प्ट तपासला आणि कायमच्या सूचना वेगळ्या केल्या. जुना मजकूर ठेवा; शेड्यूलमध्ये चालवू नका."
     },
     "title": {
       "createSchedule": "वेळापत्रक तयार करा",
@@ -2097,7 +2102,8 @@
       "stillRunning": "टास्क अजूनही चालू आहे...",
       "loadingLogs": "लॉग्स लोड होत आहेत...",
       "errors": "त्रुटी",
-      "close": "बंद करा"
+      "close": "बंद करा",
+      "openTask": "काम उघडा"
     },
     "cron": {
       "expression": "Cron अभिव्यक्ती",

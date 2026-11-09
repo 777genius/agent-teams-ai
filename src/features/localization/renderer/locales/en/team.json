@@ -1079,9 +1079,9 @@
       "notReadyTitle": "OpenCode is not ready for team launch",
       "freeModelsAvailableTitle": "Free models are in OpenCode Zen",
       "providerNotConnectedTitle": "OpenCode provider is not connected",
-      "authRequiredModels": "Models requiring a provider connection: {{count}}. They are hidden from the choices by default.",
-      "showAuthRequired": "Show these models",
-      "hideAuthRequired": "Hide these models",
+      "authRequiredModels": "{{count}} OpenCode catalog models require an account or API key for their provider. They are hidden until connected; showing them does not make them usable.",
+      "showAuthRequired": "Show unavailable models",
+      "hideAuthRequired": "Hide unavailable models",
       "readyTitle": "OpenCode is ready",
       "readyMessage": "OpenCode passed provider readiness. Select it to use OpenCode models for this team.",
       "useOpenCode": "Use OpenCode",
@@ -1690,7 +1690,12 @@
       "teamPathMissing": "The team needs a saved project folder before scheduling a launch.",
       "title": "Schedule",
       "upgradeSmart": "Switch to smart scheduling",
-      "wholeTeam": "Whole team"
+      "wholeTeam": "Whole team",
+      "taskFirstAgentDescription": "The selected teammate receives a board task after the team is safely started, if needed. Busy agents are not interrupted.",
+      "taskFirstTeamDescription": "The team lead receives a coordination task after the team is safely started, if needed. Existing work is not interrupted.",
+      "taskFirstTarget": "Assign to",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "I've reviewed the saved prompt and separated any lasting instructions. Keep the old prompt, but never run it for scheduled work."
     },
     "title": {
       "createSchedule": "Create Schedule",
@@ -2291,7 +2296,8 @@
       "stillRunning": "Task is still running...",
       "loadingLogs": "Loading logs...",
       "errors": "Errors",
-      "close": "Close"
+      "close": "Close",
+      "openTask": "Open task"
     },
     "cron": {
       "expression": "Cron expression",
