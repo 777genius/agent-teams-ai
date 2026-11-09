@@ -186,3 +186,75 @@ test('owner-side pages retain every message beyond 512 KiB under revision and pr
   assert.throws(() => other.readMessagesPage(), (error) =>
     error instanceof TeamOwnerError && error.code === 'forbidden');
 });
+
+test('removed teammate inbox remains readable for admin only after a persisted owner restart', (ctx) => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-removed-inbox-')));
+  ctx.after(() => rmSync(root, { recursive: true, force: true }));
+  const options = {
+    root,
+    binding: { backendId: 'TEST-A', teamId: 'TEST-team', teamName: 'test-team' },
+    members: [{ memberId: 'alice', name: 'alice', role: 'member' as const }],
+    removedMembers: [
+      {
+        memberId: 'bob',
+        name: 'bob',
+        role: 'member' as const,
+        removedAt: '2026-01-02T00:00:00.000Z',
+      },
+    ],
+    grants: [
+      { principalId: 'human', memberName: 'user', permissions: ['read', 'admin'] as ('read' | 'admin')[] },
+      { principalId: 'alice', memberName: 'alice', permissions: ['read'] as 'read'[] },
+      { principalId: 'bob', memberName: 'bob', permissions: ['read'] as 'read'[], revoked: true },
+    ],
+  };
+  const owner = createFilesystemTeamOwner(options);
+  const directory = join(root, 'teams/test-team/inboxes');
+  mkdirSync(directory, { recursive: true });
+  for (const name of ['bob', 'alice']) {
+    writeFileSync(
+      join(directory, `${name}.json`),
+      JSON.stringify([{
+        messageId: `TEST-${name}-message`,
+        from: 'user',
+        text: `original-${name}-history`,
+        timestamp: name === 'bob' ? '2026-01-01T00:00:00.000Z' : '2026-01-02T00:00:00.000Z',
+        read: false,
+      }])
+    );
+  }
+
+  const admin = owner.connect('human');
+  const member = owner.connect('alice');
+  const snapshot = admin.readSnapshot() as {
+    members: { name: string }[];
+    messages: { text: string }[];
+  };
+  assert.deepEqual(snapshot.members.map((row) => row.name), ['alice'], 'removed member stays absent from active roster');
+  assert.deepEqual(
+    snapshot.messages.map((row) => row.text).sort(),
+    ['original-alice-history', 'original-bob-history']
+  );
+  const adminPage = admin.readMessagesPage({ limit: 10 }) as { messages: { text: string }[] };
+  assert.deepEqual(
+    adminPage.messages.map((row) => row.text).sort(),
+    ['original-alice-history', 'original-bob-history']
+  );
+  const aliceSnapshot = member.readSnapshot() as { messages: { text: string }[] };
+  assert.deepEqual(aliceSnapshot.messages.map((row) => row.text), ['original-alice-history']);
+  const alicePage = member.readMessagesPage() as { messages: { text: string }[] };
+  assert.deepEqual(alicePage.messages.map((row) => row.text), ['original-alice-history']);
+  assert.throws(() => owner.connect('bob').readMessagesPage(), (error) =>
+    error instanceof TeamOwnerError && error.code === 'forbidden'
+  );
+
+  const reopened = createFilesystemTeamOwner({ ...options, members: [], removedMembers: [] });
+  const reopenedPage = reopened.connect('human').readMessagesPage() as {
+    messages: { text: string }[];
+  };
+  assert.deepEqual(
+    reopenedPage.messages.map((row) => row.text).sort(),
+    ['original-alice-history', 'original-bob-history'],
+    'persisted removed-member history must survive reopen'
+  );
+});
