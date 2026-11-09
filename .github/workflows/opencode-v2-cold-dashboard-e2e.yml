@@ -9,6 +9,14 @@ on:
       - 'scripts/e2e/opencode-diagnostics/packaged-verify.mjs'
       - 'scripts/e2e/opencode-diagnostics/real-runtime.mjs'
       - 'scripts/e2e/opencode-diagnostics/real-runtime.test.mjs'
+      - 'scripts/e2e/opencode-diagnostics/run-packaged.mjs'
+      - 'scripts/e2e/opencode-diagnostics/packaged.mjs'
+      - 'scripts/e2e/opencode-diagnostics/v2-support-repair*.mjs'
+      - 'runtime.lock.json'
+      - 'src/renderer/components/dashboard/ProviderConnectionCounts.tsx'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts'
+      - 'src/renderer/components/dashboard/DashboardProviderSummary.tsx'
+      - 'src/features/runtime-provider-management/core/domain/runtimeProviderQuickConnect.ts'
 
 permissions:
   contents: read

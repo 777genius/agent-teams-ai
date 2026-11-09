@@ -75,6 +75,18 @@ test('real V2 zero count rejects unknown, pending, malformed and stale identitie
   ]) {
     assert.throws(() => verifyCompleteConnectedSourceSummary({ ...complete, ...changed }, 0));
   }
+  // Fixture-only contract: positive native V2 auth is not claimed by this test.
+  const one = { ...complete, directory: { ...complete.directory,
+    entries: [{ providerId: 'example', state: 'connected' }],
+    returnedCount: 1, totalCount: 1 } };
+  assert.equal(verifyCompleteConnectedSourceSummary(one, 1), 1);
+  assert.equal(hasExactVisibleOpenCodeCount('OpenCode · Providers: 1 connected', 1), true);
+  const duplicated = { ...complete, directory: { ...complete.directory,
+    entries: [{ providerId: 'example', state: 'connected' },
+      { providerId: ' Example ', state: 'connected' }],
+    returnedCount: 2, totalCount: 2 } };
+  assert.throws(() => verifyCompleteConnectedSourceSummary(duplicated, 2),
+    /Duplicate provider identity/);
 });
 
 test('real Settings header proof is independent of localized labels', () => {
