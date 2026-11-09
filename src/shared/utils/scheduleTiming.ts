@@ -25,7 +25,7 @@ export function getValidScheduleNextRuns(
     job = new Cron(cronExpression, { timezone: scheduleTimezone, paused: true });
     const runs = job.nextRuns(count);
     if (
-      runs.length !== count ||
+      runs.length === 0 ||
       runs.some((date) => !Number.isFinite(date.getTime()))
     ) {
       throw new Error('Cron expression has no upcoming runs');
