@@ -36,6 +36,7 @@ import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliPr
 import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
+import { MULTIMODEL_PROVIDER_IDS } from '@renderer/store/slices/cliInstallerSlice';
 import { shouldHydrateCodexModelCatalog } from '@renderer/utils/codexCatalogHydration';
 import { isCodexModelCatalogFallbackActive } from '@renderer/utils/codexModelCatalogFallback';
 import {
@@ -1115,6 +1116,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
 }) => {
   const { t } = useAppTranslation('team');
   const { t: dashboardT } = useAppTranslation('dashboard');
+  const { t: commonT } = useAppTranslation('common');
   const creationPageActive = useContext(CreateTeamPageActivityContext);
   const openSettingsTab = useStore((s) => s.openSettingsTab);
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
@@ -1128,6 +1130,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     Set<OpenCodeRouteFilterTag>
   >(() => new Set());
   const [modelQuery, setModelQuery] = useState('');
+  const [refreshingProviderStatuses, setRefreshingProviderStatuses] = useState(false);
+  const [providerStatusRefreshError, setProviderStatusRefreshError] = useState(false);
   const [openCodeSourceFilterOpen, setOpenCodeSourceFilterOpen] = useState(false);
   const [openCodeSourceQuery, setOpenCodeSourceQuery] = useState('');
   const [selectedOpenCodeSourceIds, setSelectedOpenCodeSourceIds] = useState<Set<string>>(
@@ -1165,6 +1169,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const cliProviderStatusScopeRevision = useStore((s) => s.cliProviderStatusScopeRevision);
   const invalidateCliProviderModelCatalog = useStore((s) => s.invalidateCliProviderModelCatalog);
   const fetchCliProviderStatus = useStore((s) => s.fetchCliProviderStatus);
+  const fetchCliStatus = useStore((s) => s.fetchCliStatus);
+  const invalidateCliStatus = useStore((s) => s.invalidateCliStatus);
   const openCodeRuntimeStatus = useStore((s) => s.openCodeRuntimeStatus);
   const openCodeRuntimeStatusLoading = useStore((s) => s.openCodeRuntimeStatusLoading);
   const openCodeRuntimeError = useStore((s) => s.openCodeRuntimeError);
@@ -2533,6 +2539,44 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     passiveStatusFailed: openCodePassiveProviderStatus?.statusCheckOutcome === 'transient_error',
     passiveCatalogFailed: openCodePassiveProviderStatus?.modelCatalogRefreshState === 'error',
   });
+  const refreshAllProviderStatuses = async (): Promise<void> => {
+    if (refreshingProviderStatuses) return;
+    setRefreshingProviderStatuses(true);
+    setProviderStatusRefreshError(false);
+    try {
+      // Settings may have changed credentials, backends or installed runtimes.
+      // Retire old scoped reads and bypass the main-process status cache first.
+      await invalidateCliStatus();
+      await fetchCliStatus();
+      const checks = MULTIMODEL_PROVIDER_IDS.map((candidateProviderId) =>
+        fetchCliProviderStatus(candidateProviderId, { checkReason: 'manual_refresh' })
+      );
+      if (openCodeCatalogScopeKey) {
+        // Project configuration can change OpenCode routes and the Claude default.
+        checks.push(
+          fetchCliProviderStatus('opencode', {
+            checkReason: 'manual_refresh',
+            projectPath: openCodeCatalogScopeKey,
+          }),
+          fetchCliProviderStatus('anthropic', {
+            checkReason: 'manual_refresh',
+            projectPath: openCodeCatalogScopeKey,
+          })
+        );
+      }
+      const results = await Promise.allSettled(checks);
+      if (results.some((result) => result.status === 'rejected')) {
+        setProviderStatusRefreshError(true);
+      }
+      // The scoped catalog and local providers reload via scope revision.
+      // Force source discovery too, so newly connected providers appear.
+      sourceDiscovery?.refresh();
+    } catch {
+      setProviderStatusRefreshError(true);
+    } finally {
+      setRefreshingProviderStatuses(false);
+    }
+  };
   const retryOpenCodeCatalogRefresh = (): void => {
     openCodeScopedCatalog.refresh();
     invalidateCliProviderModelCatalog?.();
@@ -3142,12 +3186,50 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               aria-label="Model providers"
               className="h-full min-h-full w-full flex-col items-stretch justify-start gap-1 overflow-visible rounded-none border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-sidebar)] p-2"
             >
-              <Button type="button" variant="outline" size="sm" data-testid="team-model-selector-manage-providers"
-                className="mb-1 h-8 w-full justify-start gap-2 border-[var(--color-border)] bg-black/[0.025] px-2.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-black/[0.05] hover:text-[var(--color-text)] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
-                onClick={() => { onManageProviders?.(providerId); openSettingsTab('providers'); }}>
-                <Settings2 className="size-4 shrink-0" aria-hidden="true" />
-                {dashboardT('cliStatus.actions.manageProviders')}
-              </Button>
+              <div className="mb-1 flex w-full items-center gap-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  data-testid="team-model-selector-manage-providers"
+                  className="h-8 min-w-0 flex-1 justify-start gap-2 border-[var(--color-border)] bg-black/[0.025] px-2.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-black/[0.05] hover:text-[var(--color-text)] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
+                  onClick={() => {
+                    onManageProviders?.(providerId);
+                    openSettingsTab('providers');
+                  }}
+                >
+                  <Settings2 className="size-4 shrink-0" aria-hidden="true" />
+                  {dashboardT('cliStatus.actions.manageProviders')}
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      data-testid="team-model-selector-refresh-providers"
+                      className="size-8 shrink-0 border-[var(--color-border)] p-0"
+                      aria-label={commonT('actions.refresh')}
+                      aria-busy={refreshingProviderStatuses}
+                      disabled={refreshingProviderStatuses}
+                      onClick={() => void refreshAllProviderStatuses()}
+                    >
+                      <RefreshCw
+                        className={cn('size-4', refreshingProviderStatuses && 'animate-spin')}
+                        aria-hidden="true"
+                      />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {commonT('actions.refresh')} · {dashboardT('cliStatus.actions.manageProviders')}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              {providerStatusRefreshError ? (
+                <span role="alert" className="px-2 text-[11px] text-red-600 dark:text-red-300">
+                  {commonT('states.error')}
+                </span>
+              ) : null>
               {PROVIDERS.map((provider) => {
                 const providerDisabledReason = getProviderDisabledReason(provider.id);
                 const providerSelectable = isProviderSelectable(provider.id);
