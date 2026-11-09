@@ -17,6 +17,7 @@ import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller
 import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
+import { createCodexRuntimeStatusActions } from './codexRuntimeStatusActions';
 import {
   getProviderDisplayName,
   isMultimodelCliStatus,
@@ -877,8 +878,6 @@ let cliProviderStatusRequestId = 0;
 const cliProviderStatusActiveRequestIds = new Map<string, number>();
 const codexCatalogLoadingRefreshAttempts = new Map<CliProviderId, number>();
 const codexCatalogLoadingRefreshTimers = new Map<CliProviderId, ReturnType<typeof setTimeout>>();
-let codexRuntimeStatusInFlight: Promise<void> | null = null;
-let codexRuntimeStatusReadRevision = 0;
 
 function clearCodexCatalogLoadingRefresh(providerId: CliProviderId): void {
   const timer = codexCatalogLoadingRefreshTimers.get(providerId);
@@ -1572,38 +1571,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     () => clearCliProviderStatusInFlight('opencode')
   ),
 
-  fetchCodexRuntimeStatus: async () => {
-    if (!api.codexRuntime) return;
-    if (codexRuntimeStatusInFlight) return codexRuntimeStatusInFlight;
-
-    const revision = ++codexRuntimeStatusReadRevision;
-    let request!: Promise<void>;
-    // eslint-disable-next-line prefer-const
-    request = (async () => {
-      set({ codexRuntimeStatusLoading: true, codexRuntimeError: null });
-      try {
-        const status = await api.codexRuntime.getStatus();
-        if (revision === codexRuntimeStatusReadRevision) {
-          set({ codexRuntimeStatus: status, codexRuntimeError: status.error ?? null });
-        }
-      } catch (error) {
-        if (revision === codexRuntimeStatusReadRevision) {
-          const message =
-            error instanceof Error ? error.message : 'Failed to check Codex runtime status';
-          logger.error('Failed to fetch Codex runtime status:', error);
-          set({ codexRuntimeError: message });
-        }
-      } finally {
-        if (revision === codexRuntimeStatusReadRevision) {
-          set({ codexRuntimeStatusLoading: false });
-        }
-        if (codexRuntimeStatusInFlight === request) codexRuntimeStatusInFlight = null;
-      }
-    })();
-    codexRuntimeStatusInFlight = request;
-
-    return request;
-  },
+  ...createCodexRuntimeStatusActions(set),
 
   installCodexRuntime: async () => {
     if (!api.codexRuntime) return;
@@ -1653,15 +1621,4 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     }
   },
 
-  invalidateCodexRuntimeStatus: async () => {
-    // Retire stale reads before invalidating the native cache. Otherwise a
-    // concurrent refresh can join an old request and restore an obsolete status.
-    const revision = ++codexRuntimeStatusReadRevision;
-    codexRuntimeStatusInFlight = null;
-    set({ codexRuntimeStatusLoading: false });
-    await api.codexRuntime?.invalidateStatus();
-    if (revision === codexRuntimeStatusReadRevision) {
-      set({ codexRuntimeStatus: null });
-    }
-  },
 });
