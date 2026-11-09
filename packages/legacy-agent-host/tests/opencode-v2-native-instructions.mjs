@@ -324,10 +324,17 @@ try {
     },
     async readNativeEffectivePermissions(signal) {
       nativePermissionReads++;
+      // A genuine permission snapshot is scoped to both the selected native
+      // session AND this TEST-owned ELF process. An identical ruleset from a
+      // foreign session or recycled PID must not qualify Host readiness.
+      if(signal.aborted||startIdentity(child.pid)!==startTicks)
+        throw Error('native_session_process_identity_changed');
       const result=await native(sessionPath,'GET',undefined,signal);
-      if(!isOwnedNativeSessionSnapshot(result,nativeSessionId,workspace,permissionRules))
+      if(signal.aborted||startIdentity(child.pid)!==startTicks||
+         !isOwnedNativeSessionSnapshot(result,nativeSessionId,workspace,permissionRules))
         throw Error('native_session_readback_mismatch');
-      return result.data.data.permissions;
+      return {nativeSessionId,pid:child.pid,startIdentity:startTicks,
+        rules:result.data.data.permissions};
     },
     async installAndAttestInitialContext(capture,signal) {
       if(capture.nativeSessionId!==nativeSessionId ||
