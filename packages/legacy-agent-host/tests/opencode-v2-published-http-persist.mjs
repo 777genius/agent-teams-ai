@@ -553,13 +553,16 @@ if (process.argv[2] === '--worker') {
           pid:secondPid,startIdentity:startTicks,version:info.data.version};
       },
       async readNativeEffectivePermissions(signal) {
-        if(signal.aborted)throw Error('TEST_readback_aborted');
+        if(signal.aborted||startIdentity(secondPid)!==startTicks)
+          throw Error('TEST_readback_process_identity_lost');
         const response=await call(sessionPath);
-        if(signal.aborted||response.status!==200||
+        if(signal.aborted||startIdentity(secondPid)!==startTicks||
+           response.status!==200||
            response.data?.data?.id!==sessionId||
            response.data?.data?.location?.directory!==workspace)
           throw Error('TEST_native_session_identity_unconfirmed');
-        return response.data.data.permissions;
+        return {nativeSessionId:sessionId,pid:secondPid,startIdentity:startTicks,
+          rules:response.data.data.permissions};
       },
       async installAndAttestInitialContext(capture,signal) {
         if(signal.aborted||++instructionWrites!==1||

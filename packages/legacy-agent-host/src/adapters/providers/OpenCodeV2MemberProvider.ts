@@ -33,10 +33,16 @@ export interface OpenCodeV2OwnedSession {
     version: string;
   }> | undefined>;
   /**
-   * Read back the fully assembled rules from THIS owned native engine, not a
-   * user config fragment. The owner must prove the same PID/start identity.
+   * Read back fully assembled rules from THIS owned native engine and
+   * session, not a user config fragment. Bind the readback to the real PID
+   * and start identity, not just the credentials or loopback address.
    */
-  readNativeEffectivePermissions(signal: AbortSignal): Promise<unknown>;
+  readNativeEffectivePermissions(signal: AbortSignal): Promise<Readonly<{
+    nativeSessionId: string;
+    pid: number;
+    startIdentity: string;
+    rules: unknown;
+  }> | undefined>;
   /** Captured product policy; V2's permissive default is never inherited. */
   readonly requiredExternalDirectory: 'ask' | 'deny';
   /**
@@ -256,9 +262,16 @@ export function createOpenCodeV2MemberProvider(
             // production owner still must prove genuine engine custody and
             // cannot claim qualification from a scripted TEST receipt.
             const effective = await owned.readNativeEffectivePermissions(combined);
-            const policy = preflightOpenCodeV2EffectiveExternalDirectory(
-              effective, requiredExternalDirectory);
-            if (policy.kind !== 'policy-candidate' || combined.aborted || !current()) return false;
+            // Permissions must be read from THIS exact native session and
+            // PID/start identity. A correctly ordered ruleset from another
+            // session or a restarted process is not an authorization.
+            if (!effective ||
+                effective.nativeSessionId !== profile.nativeSessionId ||
+                effective.pid !== admittedCustody.pid ||
+                effective.startIdentity !== admittedCustody.startIdentity ||
+                preflightOpenCodeV2EffectiveExternalDirectory(
+                  effective.rules, requiredExternalDirectory).kind !== 'policy-candidate' ||
+                combined.aborted || !current()) return false;
             // A native session being reachable is NOT a ready Team member.
             // Initial role/team/workspace instructions need native readback;
             // never infer their installation from probe or a local digest.
@@ -281,8 +294,12 @@ export function createOpenCodeV2MemberProvider(
             // A process or policy may change during the initial native PUT.
             // Re-attest both after the mutation; never retry a lost PUT ACK.
             const finalEffective = await owned.readNativeEffectivePermissions(combined);
-            if (preflightOpenCodeV2EffectiveExternalDirectory(
-              finalEffective, requiredExternalDirectory).kind !== 'policy-candidate' ||
+            if (!finalEffective ||
+                finalEffective.nativeSessionId !== profile.nativeSessionId ||
+                finalEffective.pid !== admittedCustody.pid ||
+                finalEffective.startIdentity !== admittedCustody.startIdentity ||
+                preflightOpenCodeV2EffectiveExternalDirectory(
+                  finalEffective.rules, requiredExternalDirectory).kind !== 'policy-candidate' ||
                 combined.aborted || !current()) return false;
             const finalCustody = await owned.readNativeCustody(combined);
             if (!finalCustody || combined.aborted || !current() ||

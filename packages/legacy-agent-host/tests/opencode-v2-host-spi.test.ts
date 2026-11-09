@@ -109,6 +109,12 @@ function testNativeCustody() {
   };
 }
 
+function testNativePermissionReadback(rules: unknown) {
+  const custody = testNativeCustody();
+  return { nativeSessionId: v2Profile().nativeSessionId,
+    pid: custody.pid, startIdentity: custody.startIdentity, rules };
+}
+
 function owner(probeOk: boolean, effective: 'deny' | 'ask' | 'allow' = 'deny') {
   const calls = { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 };
   const captured: OpenCodeV2OwnedSession = {
@@ -118,7 +124,9 @@ function owner(probeOk: boolean, effective: 'deny' | 'ask' | 'allow' = 'deny') {
     async readNativeCustody() { return testNativeCustody(); },
     async readNativeEffectivePermissions() {
       calls.permissions++;
-      return [{ action: 'external_directory', resource: '*', effect: effective }];
+      return testNativePermissionReadback([
+        { action: 'external_directory', resource: '*', effect: effective },
+      ]);
     },
     async installAndAttestInitialContext(capture) {
       calls.context++;
@@ -596,7 +604,9 @@ test('a reused mutable custody readback cannot hide a native PID or binary swap'
           sharedReadback.executableSha256 = 'b'.repeat(64);
         }
       }
-      return [{ action: 'external_directory', resource: '*', effect: 'deny' }];
+      return testNativePermissionReadback([
+        { action: 'external_directory', resource: '*', effect: 'deny' },
+      ]);
     };
     const provider = createOpenCodeV2MemberProvider(context(), captured);
     await assert.rejects(() => provider.factory.open(request()),
@@ -608,6 +618,41 @@ test('a reused mutable custody readback cannot hide a native PID or binary swap'
     assert.equal(provider.initialContextEvidence?.(), undefined);
     assert.equal(calls.stop, 1, 'only this TEST owner is retired');
     assert.equal(await provider.cleanup(), true);
+  }
+});
+
+test('V2 permission readbacks must bind to the captured session and process before and after context PUT', async () => {
+  for (const phase of ['initial', 'final'] as const) {
+    for (const mismatch of ['session', 'pid', 'start'] as const) {
+      const { captured, calls } = owner(true);
+      const original = captured.readNativeEffectivePermissions;
+      let reads = 0;
+      captured.readNativeEffectivePermissions = async (signal) => {
+        const proof = await original(signal);
+        assert.ok(proof);
+        reads++;
+        if ((phase === 'final' && reads !== 2) ||
+            (phase === 'initial' && reads !== 1)) return proof;
+        return {
+          ...proof,
+          ...(mismatch === 'session' ? { nativeSessionId: 'ses_FOREIGN' } : {}),
+          ...(mismatch === 'pid' ? { pid: proof.pid + 1 } : {}),
+          ...(mismatch === 'start' ? { startIdentity: 'TEST-foreign-start' } : {}),
+        };
+      };
+      const provider = createOpenCodeV2MemberProvider(context(), captured);
+      await assert.rejects(() => provider.factory.open(request()),
+        /opencode.driver.dependency-unavailable/,
+        `Native permission ${phase} ${mismatch} identity must fail closed`);
+      assert.equal(reads, phase === 'final' ? 2 : 1);
+      assert.equal(calls.context, phase === 'final' ? 1 : 0,
+        'a foreign initial readback must not install native instructions');
+      assert.equal(provider.isReady(), false);
+      assert.equal(provider.initialContextEvidence?.(), undefined);
+      assert.equal(calls.password, 0, 'a foreign permission scope cannot read credentials');
+      assert.equal(calls.stop, 1, 'only the selected TEST-owned process is stopped');
+      assert.equal(await provider.cleanup(), true);
+    }
   }
 });
 
@@ -640,7 +685,9 @@ test('native permission drift revokes an already ready V2 SPI member, with no re
   let effective: 'deny' | 'allow' = 'deny';
   captured.readNativeEffectivePermissions = async () => {
     calls.permissions++;
-    return [{ action: 'external_directory', resource: '*', effect: effective }];
+    return testNativePermissionReadback([
+        { action: 'external_directory', resource: '*', effect: effective },
+      ]);
   };
   const provider = createOpenCodeV2MemberProvider(context(), captured);
   const opened = await provider.factory.open(request());
@@ -808,7 +855,9 @@ test('policy relaxed during native instructions cannot pass final Host admission
   let effect: 'deny' | 'allow' = 'deny';
   captured.readNativeEffectivePermissions = async () => {
     calls.permissions++;
-    return [{ action: 'external_directory', resource: '*', effect }];
+    return testNativePermissionReadback([
+      { action: 'external_directory', resource: '*', effect },
+    ]);
   };
   captured.installAndAttestInitialContext = async (capture) => {
     calls.context++;
