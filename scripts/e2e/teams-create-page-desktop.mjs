@@ -649,9 +649,9 @@ async function setBrowserWindowZoom(inspector, factor) {
 async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebuggerUrl) {
   const scheduleLabel = 'schedule-visual-e2e-' + randomUUID().slice(0, 8);
   log('reject invalid cron and timezone at the actual native IPC boundary');
-  for (const timing of [
-    { cronExpression: 'not a cron', timezone: 'UTC' },
-    { cronExpression: '0 9 * * *', timezone: 'Mars/Olympus' },
+  for (const { timing, expectedError } of [
+    { timing: { cronExpression: 'not a cron', timezone: 'UTC' }, expectedError: /cron/i },
+    { timing: { cronExpression: '0 9 * * *', timezone: 'Mars/Olympus' }, expectedError: /time ?zone/i },
   ]) {
     const invalidInput = {
       teamName: fixture.teamName,
@@ -663,7 +663,7 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
         ').then(() => "UNEXPECTED_SUCCESS", error => String(error?.message ?? error))'
     );
     assert.notEqual(result, 'UNEXPECTED_SUCCESS', 'Native IPC accepted invalid schedule timing');
-    assert(/cron|timezone|schedule/i.test(result), 'Native IPC returned an unrelated error: ' + result);
+    assert(expectedError.test(result), 'Native IPC returned an unrelated error: ' + result);
   }
 
   log('open real Schedules UI in isolated Electron');
@@ -726,6 +726,8 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
   );
   assert.notEqual(invalidEditResult, 'UNEXPECTED_SUCCESS',
     'Native IPC accepted invalid edit of an active schedule');
+  assert(/cron/i.test(invalidEditResult),
+    'Native IPC rejected invalid edit for the wrong reason: ' + invalidEditResult);
   const afterRejectedEdit = (await client.evaluate('window.electronAPI.schedules.list()'))
     .find(s => s.id === scheduled.id);
   assert.equal(afterRejectedEdit?.cronExpression, '*/30 * * * *',
@@ -875,6 +877,8 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
   await captureScreenshot(client, fixture, 'schedules-run-log');
   await client.click("Array.from(document.querySelectorAll('[role=dialog] button'))" +
     ".find(button => button.textContent?.trim() === 'Close')");
+  await client.waitFor("!document.querySelector('[role=dialog]')",
+    'run log dialog closed');
 
   log('destructive action demands confirmation and Cancel preserves the record');
   await client.click(more);
@@ -885,6 +889,8 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
   await client.click("document.querySelector('[role=dialog][aria-label=Delete] button:not([data-confirm-btn])')");
   assert((await client.evaluate('window.electronAPI.schedules.list()')).some(s => s.id === scheduled.id),
     'Cancel deleted a scheduled task');
+  await client.waitFor("!document.querySelector('[role=dialog]')",
+    'delete confirmation closed');
 
   await client.click(more);
   await client.click(createButtonExpression('Delete'));
