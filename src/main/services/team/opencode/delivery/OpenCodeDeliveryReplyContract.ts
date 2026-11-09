@@ -90,3 +90,9 @@ export function isOpenCodeConfiguredLeadReply(
     recipient === configuredLeadName.trim().toLowerCase()
   );
 }
+/** Concrete user/lead messages must not settle without a destination receipt. */
+export function isOpenCodeReplyRequiredDeliveryRecipient(recipient: string | null | undefined): boolean {
+  if (!recipient?.trim()) return false;
+  const replyContract = classifyOpenCodeDeliveryReplyContract(recipient);
+  return replyContract === 'user_reply' || replyContract === 'lead_reply';
+}
