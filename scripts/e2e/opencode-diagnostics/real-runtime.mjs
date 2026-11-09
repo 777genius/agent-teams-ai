@@ -119,11 +119,19 @@ export async function verifyColdDashboardConnectedCount({ root, evaluate, send }
   let outcome = 'count_unavailable';
   let connected = null;
   for (let attempt = 0; attempt < 180; attempt++) {
-    const view = await evaluate(`(() => ({
-      dashboard: Boolean(document.querySelector('[data-testid="dashboard-manage-providers"]')?.getClientRects().length),
-      settings: Boolean(document.querySelector('[data-testid="provider-settings-page"]')?.getClientRects().length),
-      count: document.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent || '',
-    }))()`);
+    let view;
+    try {
+      view = await evaluate(`(() => ({
+        dashboard: Boolean(document.querySelector('[data-testid="dashboard-manage-providers"]')?.getClientRects().length),
+        settings: Boolean(document.querySelector('[data-testid="provider-settings-page"]')?.getClientRects().length),
+        count: document.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent || '',
+      }))()`);
+    } catch {
+      // A renderer navigation may briefly replace CDP's execution context.
+      // Keep the original bounded cold-start budget and preserve failure evidence.
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      continue;
+    }
     if (view.settings) {
       outcome = 'settings_opened_before_dashboard_proof';
       break;
