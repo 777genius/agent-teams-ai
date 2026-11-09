@@ -464,6 +464,13 @@ try {
   await until(() => cdp!.evaluate(
     `(async()=>{const c=await window.electronAPI.config.get();return c.general.theme===window.__taskTabsAppearanceInitialTheme;})()`
   ), 'Appearance restores fixture theme');
+  // Typography is independent of UI zoom and uses actual OS font fallback in Electron.
+  await chooseAppearanceOption('appearance-font-select', 'appearance-font-option-Georgia');
+  await chooseAppearanceOption('appearance-text-size', 'appearance-text-size-option-125');
+  await until(() => cdp!.evaluate(
+    "(()=>{const v=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const root=document.documentElement;const font=getComputedStyle(document.body).fontFamily;const size=parseFloat(getComputedStyle(document.querySelector('[data-testid=appearance-font-select]')).fontSize);return v?.fontFamily==='Georgia'&&v?.fontSizePercent===125&&root.style.getPropertyValue('--appearance-text-scale')==='1.25'&&font.includes('Georgia')&&size>=14.9&&size<=15.1;})()"
+  ), 'Appearance applies local font and 125% glyph/line height without changing zoom');
+  await cdp.screenshot(join(root, 'settings-appearance-typography-125-desktop.png'));
   // Custom Appearance E2E: exercise the actual Electron renderer, IPC and persisted
   // local preference store (never synthetic React props or fabricated E2E receipts).
   await chooseAppearanceOption('appearance-ui-scale', 'appearance-ui-scale-option-125');
@@ -476,9 +483,15 @@ try {
     "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===200&&Math.abs(zoom-2)<0.02;})()"
   ), 'Appearance applies and saves 200% through native Electron zoom');
   await until(() => cdp!.evaluate(
-    "(()=>{const ids=['appearance-ui-scale','appearance-custom-theme-select','appearance-edit-custom-themes'];const visible=ids.every(id=>{const el=document.querySelector('[data-testid='+id+']');if(!(el instanceof HTMLElement))return false;const box=el.getBoundingClientRect();return box.width>0&&box.left>=0&&box.right<=window.innerWidth-4;});const sidebar=document.getElementById('sidebar-tasks-panel');return visible&&(!sidebar||sidebar.getClientRects().length===0);})()"
+    "(()=>{const ids=['appearance-ui-scale','appearance-custom-theme-select','appearance-edit-custom-themes','appearance-font-select','appearance-text-size'];const visible=ids.every(id=>{const el=document.querySelector('[data-testid='+id+']');if(!(el instanceof HTMLElement))return false;const box=el.getBoundingClientRect();return box.width>0&&box.left>=0&&box.right<=window.innerWidth-4;});const sidebar=document.getElementById('sidebar-tasks-panel');return visible&&(!sidebar||sidebar.getClientRects().length===0);})()"
   ), '200% Appearance controls remain onscreen without task sidebar overflow');
   await cdp.screenshot(join(root, 'settings-appearance-200-desktop.png'));
+  await cdp.evaluate("document.querySelector('[data-testid=appearance-font-select]')?.scrollIntoView({block:'center'})");
+  await cdp.screenshot(join(root, 'settings-appearance-fonts-at-200-desktop.png'));
+  // Ensure typography controls are reachable even in the narrow 200% viewport.
+  await until(() => cdp!.evaluate(
+    "(()=>{const ids=['appearance-font-select','appearance-font-discover','appearance-text-size'];return ids.every(id=>{const el=document.querySelector('[data-testid='+id+']');if(!(el instanceof HTMLElement))return false;el.scrollIntoView({block:'nearest'});const b=el.getBoundingClientRect();return b.width>0&&b.left>=0&&b.right<=innerWidth-4;});})()"
+  ), '200% font controls fit within the visible settings panel');
   // A 200% native scale halves the CSS viewport; editing must still work.
   await cdp.evaluate("document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]').click()");
   await until(() => cdp!.evaluate(
@@ -542,6 +555,34 @@ try {
   await until(() => cdp!.evaluate(
     "!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
   ), 'Clean editor cancellation');
+  // Exercise the manual local font fallback, which works even when the experimental
+  // browser installed-font API is unsupported or denied (e.g. opaque file origin).
+  await chooseAppearanceOption('appearance-font-select', 'appearance-font-option-system');
+  await chooseAppearanceOption('appearance-font-select', 'appearance-font-option-other');
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=appearance-font-custom-input]')"
+  ), 'Manual font field opens');
+  await clickAppearanceControl('appearance-font-custom-input');
+  await cdp.send('Input.insertText', { text: 'Noto Sans' });
+  await clickAppearanceControl('appearance-font-custom-apply');
+  await until(() => cdp!.evaluate(
+    "(()=>{const v=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return v?.fontFamily==='Noto Sans'&&document.documentElement.style.getPropertyValue('--appearance-font-family').includes('Noto Sans');})()"
+  ), 'Manual font name persists and applies in actual Electron');
+  await cdp.screenshot(join(root, 'settings-appearance-manual-font-desktop.png'));
+  await cdp.evaluate("document.querySelector('[data-testid=\"settings-nav-general\"]')?.click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"settings-nav-general\"][aria-current=\"page\"]')"
+  ), 'Leave Appearance after typography selection');
+  await cdp.evaluate("document.querySelector('[data-testid=\"settings-nav-appearance\"]')?.click()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const font=document.querySelector('[data-testid=appearance-font-select]');const size=document.querySelector('[data-testid=appearance-text-size]');return !!font&&!!size&&font.textContent.includes('Noto Sans')&&size.textContent.includes('125%');})()"
+  ), 'Typography selection survives Settings navigation');
+  await chooseAppearanceOption('appearance-font-select', 'appearance-font-option-system');
+  await chooseAppearanceOption('appearance-text-size', 'appearance-text-size-option-100');
+  await until(() => cdp!.evaluate(
+    "(()=>{const v=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return v?.fontFamily===null&&v?.fontSizePercent===100&&document.documentElement.style.getPropertyValue('--appearance-font-family')===''&&document.documentElement.style.getPropertyValue('--appearance-text-scale')==='1';})()"
+  ), 'System typography resets without affecting custom themes or native zoom');
+  reads.push({ kind: 'appearance-typography-real-electron', fontChoices: ['Georgia','Noto Sans','system'], textSizes: [100,125], persisted: true, customManualFont: true, restored: true });
   reads.push({ kind: 'appearance-custom-theme-and-zoom-real-electron', customJsonSaved: true, cssApplied: true, builtinsRestored: true, scales: [100,125,200] });
   reads.push({ kind: 'appearance-settings-real-electron', navigation: true, themeSaved: true, themeRestored: true });
   }
