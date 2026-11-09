@@ -17,7 +17,8 @@ const TASK_ARRAY_FIELDS = [
 type TaskPart = { index: number; part: number; total: number };
 type Segment =
   | { kind: 'task'; value: JsonValue; part: TaskPart }
-  | { kind: 'message' | 'reviewer'; value: JsonValue }
+  | { kind: 'message'; value: JsonValue; part: TaskPart }
+  | { kind: 'reviewer'; value: JsonValue }
   | { kind: 'kanban-task' | 'column-order'; key: string; value: JsonValue };
 
 /** Split retained array history into valid task records, not opaque unprojected JSON.
@@ -52,6 +53,63 @@ function taskSegments(tasks: JsonValue[], itemBudget: number): Segment[] {
     for (const [part, fragment] of parts.entries())
       segments.push({ kind: 'task', value: fragment,
         part: { index, part, total: parts.length } });
+  }
+  return segments;
+}
+
+
+/** Large accepted message text is split on Unicode codepoint boundaries. */
+function messageSegments(messages: JsonValue[], itemBudget: number): Segment[] {
+  const segments: Segment[] = [];
+  for (const [index, value] of messages.entries()) {
+    if (Buffer.byteLength(JSON.stringify(value)) + 2 <= itemBudget) {
+      segments.push({ kind: 'message', value, part: { index, part: 0, total: 1 } });
+      continue;
+    }
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+      throw new TeamOwnerError('hold');
+    const original = value as Record<string, JsonValue>;
+    if (typeof original.text !== 'string' ||
+        typeof original.from !== 'string' ||
+        typeof original.timestamp !== 'string' ||
+        typeof original.read !== 'boolean')
+      throw new TeamOwnerError('hold');
+    const continuation = {
+      from: original.from, timestamp: original.timestamp, read: original.read,
+      ...(typeof original.messageId === 'string' ? { messageId: original.messageId } : {}),
+      text: '',
+    };
+    const first = { ...original, text: '' };
+    const overhead = Math.max(
+      Buffer.byteLength(JSON.stringify(first)),
+      Buffer.byteLength(JSON.stringify(continuation))
+    );
+    const maxTextBytes = itemBudget - overhead - 64;
+    if (maxTextBytes <= 0) throw new TeamOwnerError('hold');
+    const chunks: string[] = [];
+    let chunk = '', bytes = 0;
+    for (const character of original.text) {
+      const size = Buffer.byteLength(JSON.stringify(character)) - 2;
+      if (size > maxTextBytes) throw new TeamOwnerError('hold');
+      if (bytes + size > maxTextBytes) {
+        chunks.push(chunk);
+        chunk = '';
+        bytes = 0;
+      }
+      chunk += character;
+      bytes += size;
+    }
+    chunks.push(chunk);
+    for (const [part, text] of chunks.entries()) {
+      const fragment = part === 0 ? { ...first, text } : { ...continuation, text };
+      if (Buffer.byteLength(JSON.stringify(fragment)) + 64 > itemBudget)
+        throw new TeamOwnerError('hold');
+      segments.push({
+        kind: 'message',
+        value: fragment,
+        part: { index, part, total: chunks.length },
+      });
+    }
   }
   return segments;
 }
@@ -116,14 +174,17 @@ export function pageOwnerSnapshot(options: {
   };
   const baseBytes = Buffer.byteLength(JSON.stringify(basePage));
   if (baseBytes > budget - 512) throw new TeamOwnerError('hold');
-  const taskItems = taskSegments(source.tasks, budget - baseBytes - 512);
+  const itemBudget = budget - baseBytes - 512;
+  const taskItems = taskSegments(source.tasks, itemBudget);
+  const messageItems = messageSegments(source.messages, itemBudget);
   const fragmentedTasks = taskItems.length !== source.tasks.length;
+  const fragmentedMessages = messageItems.length !== source.messages.length;
 
   // Task, message and Kanban records share one original ordered revision.
   // Task parts are ordinary projected task rows with explicit ordering metadata.
   const segments: Segment[] = [
     ...taskItems,
-    ...source.messages.map((value) => ({ kind: 'message' as const, value })),
+    ...messageItems,
     ...Object.entries(board.tasks as Record<string, JsonValue>).map(([key, value]) => ({
       kind: 'kanban-task' as const, key, value,
     })),
@@ -156,6 +217,10 @@ export function pageOwnerSnapshot(options: {
       taskTotal: source.tasks.length,
       taskParts: [] as TaskPart[],
     } : {}),
+    ...(fragmentedMessages ? {
+      messageTotal: source.messages.length,
+      messageParts: [] as TaskPart[],
+    } : {}),
   };
   let bytes = Buffer.byteLength(JSON.stringify(page));
   if (bytes > budget) throw new TeamOwnerError('hold');
@@ -166,7 +231,8 @@ export function pageOwnerSnapshot(options: {
     // Account for all array punctuation, map keys and optional task indexes.
     const nextBytes = Buffer.byteLength(JSON.stringify(segment.value)) +
       ('key' in segment ? Buffer.byteLength(JSON.stringify(segment.key)) + 2
-        : segment.kind === 'task' && fragmentedTasks
+        : segment.kind === 'task' && fragmentedTasks ||
+          segment.kind === 'message' && fragmentedMessages
           ? Buffer.byteLength(JSON.stringify(segment.part)) + 2
           : 1);
     if (bytes + nextBytes > budget) {
@@ -178,7 +244,10 @@ export function pageOwnerSnapshot(options: {
         page.tasks.push(segment.value);
         page.taskParts?.push(segment.part);
         break;
-      case 'message': page.messages.push(segment.value); break;
+      case 'message':
+        page.messages.push(segment.value);
+        page.messageParts?.push(segment.part);
+        break;
       case 'kanban-task': page.kanbanState.tasks[segment.key] = segment.value; break;
       case 'reviewer': page.kanbanState.reviewers.push(segment.value); break;
       case 'column-order': {

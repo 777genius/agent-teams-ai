@@ -245,23 +245,38 @@ function kanban(value: unknown, teamName: string): KanbanState {
 }
 
 
-/** Validate fragment positions separately from projected task content. */
-export function projectTaskParts(source: Record<string, unknown>): Pick<BackendTeamSnapshot, 'taskTotal' | 'taskParts'> {
-  if (source.taskTotal === undefined && source.taskParts === undefined) return {};
-  const total = source.taskTotal;
+/** Signed page offsets describe projected rows, never unvalidated raw payloads. */
+type PartIndex = { index: number; part: number; total: number };
+function readPartIndexes(
+  source: Record<string, unknown>,
+  totalKey: 'taskTotal' | 'messageTotal',
+  partsKey: 'taskParts' | 'messageParts',
+  itemsKey: 'tasks' | 'messages'
+): { total: number; parts: PartIndex[] } | undefined {
+  if (source[totalKey] === undefined && source[partsKey] === undefined) return undefined;
+  const total = source[totalKey];
   if (typeof total !== 'number' || !Number.isSafeInteger(total) || total < 1 ||
-      !Array.isArray(source.tasks)) throw new Error('Invalid task page');
-  const parts = array(source.taskParts, (value) => {
+      !Array.isArray(source[itemsKey])) throw new Error('Invalid snapshot part count');
+  const parts = array(source[partsKey], (value) => {
     const part = row(value);
     const index = part.index, position = part.part, count = part.total;
     if (typeof index !== 'number' || !Number.isSafeInteger(index) || index < 0 || index >= total ||
         typeof position !== 'number' || !Number.isSafeInteger(position) || position < 0 ||
         typeof count !== 'number' || !Number.isSafeInteger(count) || count < 1 || position >= count)
-      throw new Error('Invalid task page index');
+      throw new Error('Invalid snapshot part index');
     return { index, part: position, total: count };
   });
-  if (parts.length !== source.tasks.length) throw new Error('Invalid task part count');
-  return { taskTotal: total, taskParts: parts };
+  if (parts.length !== source[itemsKey].length)
+    throw new Error('Invalid snapshot part count');
+  return { total, parts };
+}
+export function projectTaskParts(source: Record<string, unknown>): Pick<BackendTeamSnapshot, 'taskTotal' | 'taskParts'> {
+  const value = readPartIndexes(source, 'taskTotal', 'taskParts', 'tasks');
+  return value ? { taskTotal: value.total, taskParts: value.parts } : {};
+}
+function projectMessageParts(source: Record<string, unknown>): Pick<BackendTeamSnapshot, 'messageTotal' | 'messageParts'> {
+  const value = readPartIndexes(source, 'messageTotal', 'messageParts', 'messages');
+  return value ? { messageTotal: value.total, messageParts: value.parts } : {};
 }
 
 /** Product fields only; private paths, receipts, native IDs and arbitrary extras are omitted. */
@@ -291,6 +306,7 @@ export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
     revision,
     ...(nextCursor === undefined ? {} : { nextCursor }),
     ...projectTaskParts(source),
+    ...projectMessageParts(source),
     ...(source.runtimeNeverLaunched === true ? { runtimeNeverLaunched: true as const } : {}),
     ...(source.lifecycle === undefined
       ? {}

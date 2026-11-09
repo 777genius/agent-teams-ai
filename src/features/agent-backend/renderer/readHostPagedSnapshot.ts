@@ -13,6 +13,7 @@ const TASK_ARRAY_FIELDS = [
   'blocks', 'blockedBy', 'related',
 ] as const;
 type Task = BackendTeamSnapshot['tasks'][number];
+type Message = BackendTeamSnapshot['messages'][number];
 
 /** Merge only projected task parts; never publish incomplete nested history. */
 export function assembleTaskParts(
@@ -47,6 +48,33 @@ export function assembleTaskParts(
   return tasks;
 }
 
+/** Only complete projected message text leaves the page-assembly boundary. */
+function assembleMessageParts(
+  groups: Map<number, { total: number; values: Map<number, Message> }>,
+  messageTotal: number
+): BackendTeamSnapshot['messages'] {
+  if (groups.size !== messageTotal) throw new Error('Missing Host message pages');
+  const messages: BackendTeamSnapshot['messages'] = [];
+  for (let index = 0; index < messageTotal; index++) {
+    const group = groups.get(index);
+    if (!group || group.values.size !== group.total)
+      throw new Error('Incomplete Host message text');
+    const base = group.values.get(0);
+    if (!base) throw new Error('Missing Host message base');
+    let text = base.text;
+    for (let part = 1; part < group.total; part++) {
+      const fragment = group.values.get(part);
+      if (!fragment || fragment.messageId !== base.messageId ||
+          fragment.from !== base.from || fragment.timestamp !== base.timestamp ||
+          fragment.read !== base.read)
+        throw new Error('Mismatched Host message fragment');
+      text += fragment.text;
+    }
+    messages.push({ ...base, text });
+  }
+  return messages;
+}
+
 /** Publish a complete read only after bounded Owner pages pass the original fences. */
 export async function readHostPagedSnapshot(
   backend: Pick<AgentBackendApi, 'invoke'>,
@@ -65,6 +93,7 @@ export async function readHostPagedSnapshot(
   const tasks: BackendTeamSnapshot['tasks'] = [];
   const taskParts = new Map<number, { total: number; values: Map<number, Task> }>();
   const messages: BackendTeamSnapshot['messages'] = [];
+  const messageParts = new Map<number, { total: number; values: Map<number, Message> }>();
   let kanbanState: BackendTeamSnapshot['kanbanState'] | undefined;
   const seen = new Set<string>();
 
@@ -88,7 +117,9 @@ export async function readHostPagedSnapshot(
         page.feed.streamId !== first.feed.streamId ||
         page.feed.sequence !== first.feed.sequence ||
         page.taskTotal !== first.taskTotal ||
-        Boolean(page.taskParts) !== Boolean(first.taskParts)
+        Boolean(page.taskParts) !== Boolean(first.taskParts) ||
+        page.messageTotal !== first.messageTotal ||
+        Boolean(page.messageParts) !== Boolean(first.messageParts)
       ) throw new Error('Host team changed during paged read');
     } else {
       first = page;
@@ -112,7 +143,25 @@ export async function readHostPagedSnapshot(
     } else {
       tasks.push(...page.tasks);
     }
-    messages.push(...page.messages);
+    if (page.messageParts) {
+      if (page.messageParts.length !== page.messages.length || page.messageTotal === undefined)
+        throw new Error('Invalid Host message page');
+      for (const [position, message] of page.messages.entries()) {
+        const marker = page.messageParts[position];
+        if (!marker || marker.index >= page.messageTotal || marker.part >= marker.total)
+          throw new Error('Invalid Host message part');
+        let group = messageParts.get(marker.index);
+        if (!group) {
+          group = { total: marker.total, values: new Map<number, Message>() };
+          messageParts.set(marker.index, group);
+        }
+        if (group.total !== marker.total || group.values.has(marker.part))
+          throw new Error('Duplicate Host message fragment');
+        group.values.set(marker.part, message);
+      }
+    } else {
+      messages.push(...page.messages);
+    }
     // Page-local Kanban fragments are not a complete board. Reconstruct the
     // original ordered map and column arrays before exposing any product view.
     if (!kanbanState) kanbanState = {
@@ -147,12 +196,16 @@ export async function readHostPagedSnapshot(
       const data: BackendTeamSnapshot = {
         ...first,
         tasks: fullTasks,
-        messages,
+        messages: first.messageParts
+          ? assembleMessageParts(messageParts, first.messageTotal ?? 0)
+          : messages,
         kanbanState: completeKanban,
       };
       delete data.nextCursor;
       delete data.taskTotal;
       delete data.taskParts;
+      delete data.messageTotal;
+      delete data.messageParts;
       readOrder.acceptSnapshot(handleId, data);
       return {
         data,

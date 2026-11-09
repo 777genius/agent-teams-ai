@@ -133,6 +133,62 @@ test('one task with large nested history retains all task parts, order and signe
   assert.equal(JSON.stringify(snapshot), original, 'paging does not mutate original data');
 });
 
+test('a 420 KiB Unicode message remains readable through signed Desktop and MCP pages', () => {
+  const message = {
+    messageId: 'TEST-oversized-message',
+    from: 'alice',
+    timestamp: '2026-01-01T00:00:00.000Z',
+    text: '漢'.repeat(140_000),
+    read: false,
+    attachments: [{ id: 'TEST-attachment', filename: 'proof.txt' }],
+  };
+  const snapshot = {
+    teamName: 'TEST-team', revision: 'a'.repeat(64), members: [],
+    tasks: [], messages: [message],
+    kanbanState: { teamName: 'TEST-team', reviewers: [], tasks: {} },
+  };
+  assert.ok(Buffer.byteLength(JSON.stringify(message)) > 384 * 1024);
+  const original = JSON.stringify(snapshot);
+  for (const maxBytes of [128 * 1024, 384 * 1024]) {
+    const fragments = new Map<number, string>();
+    let cursor: string | undefined, pages = 0;
+    do {
+      const page = pageOwnerSnapshot({
+        principalId: 'human', key: 'TEST-key', snapshot, maxBytes,
+        ...(cursor ? { cursor } : {}),
+      }) as {
+        messages: { text: string; attachments?: unknown[] }[];
+        messageTotal: number;
+        messageParts: { index: number; part: number; total: number }[];
+        nextCursor: string | null;
+      };
+      assert.ok(Buffer.byteLength(JSON.stringify(page)) <= maxBytes);
+      assert.equal(page.messageTotal, 1);
+      assert.equal(page.messageParts.length, page.messages.length);
+      for (const [position, marker] of page.messageParts.entries()) {
+        assert.equal(marker.index, 0);
+        assert.ok(!fragments.has(marker.part));
+        fragments.set(marker.part, page.messages[position]!.text);
+        if (marker.part > 0)
+          assert.equal(page.messages[position]!.attachments, undefined);
+      }
+      if (pages === 0) {
+        assert.ok(page.nextCursor);
+        assert.throws(() => pageOwnerSnapshot({
+          principalId: 'foreign', key: 'TEST-key', snapshot,
+          maxBytes, cursor: page.nextCursor!,
+        }));
+      }
+      cursor = page.nextCursor ?? undefined;
+      assert.ok(++pages < 128);
+    } while (cursor);
+    assert.ok(pages > 1);
+    assert.equal([...fragments.entries()].sort(([a], [b]) => a - b)
+      .map(([, text]) => text).join(''), message.text);
+  }
+  assert.equal(JSON.stringify(snapshot), original);
+});
+
 test('large retained task inventory stays readable through all bounded original Owner pages', (t) => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-large-tasks-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));

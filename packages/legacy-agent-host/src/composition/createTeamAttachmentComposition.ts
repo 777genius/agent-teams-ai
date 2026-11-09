@@ -202,12 +202,15 @@ export function createTeamAttachmentComposition(options: {
                   cursor = next;
                 }
                 if (!completed) throw new TeamOwnerError('hold');
-                if (
-                  messages.length > 1 &&
-                  new Set(messages.map((row) => digest(row.attachments))).size > 1
-                )
+                // Continuation-only text fragments have no attachment metadata.
+                // The original first fragment keeps the canonical references.
+                const candidates = messages.flatMap((row) =>
+                  row.attachments === undefined ? [] : [row.attachments]
+                );
+                if (candidates.length > 1 &&
+                    new Set(candidates.map((value) => digest(value))).size > 1)
                   throw new TeamOwnerError('hold');
-                const metadata = messages[0]?.attachments ?? [];
+                const metadata = candidates[0] ?? [];
                 if (mode === 'list')
                   value = metadata.map((item) =>
                     attachmentMetadataSchema.parse(

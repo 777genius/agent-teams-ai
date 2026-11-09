@@ -22,6 +22,9 @@ export interface BackendTeamSnapshot {
   /** Present only for nested task-history pages; parts match page.tasks in order. */
   taskTotal?: number;
   taskParts?: { index: number; part: number; total: number }[];
+  /** Message text parts remain private to paged reads until reassembled. */
+  messageTotal?: number;
+  messageParts?: { index: number; part: number; total: number }[];
   lifecycle?: BackendTeamLifecycle;
   /** Selected owner has no current/retained native capture, original binding or pending cleanup. */
   runtimeNeverLaunched?: true;
