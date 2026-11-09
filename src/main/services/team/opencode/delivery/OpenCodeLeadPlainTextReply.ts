@@ -1,4 +1,8 @@
 import {
+  classifyOpenCodeDeliveryReplyContract,
+  isOpenCodeLeadDestinationProof,
+} from './OpenCodeDeliveryReplyContract';
+import {
   buildPlainTextVisibleReplyMessageId,
   buildPlainTextVisibleReplySummary,
 } from './OpenCodeGroupVisibleReply';
@@ -10,9 +14,8 @@ import {
   canMaterializeOpenCodePlainTextReply,
   hasOpenCodeObservedMessageSendToolCall,
 } from './OpenCodePromptDeliveryReadCommitPolicy';
-import { classifyOpenCodeDeliveryReplyContract, isOpenCodeLeadDestinationProof } from './OpenCodeDeliveryReplyContract';
-import { openCodeTaskRefsIncludeAll } from './OpenCodeRuntimeDeliveryProofMatching';
 import { isOpenCodeVisibleReplySemanticallySufficient } from './OpenCodePromptDeliveryWatchdog';
+import { openCodeTaskRefsIncludeAll } from './OpenCodeRuntimeDeliveryProofMatching';
 
 import type { OpenCodePromptDeliveryLedgerRecord, OpenCodePromptDeliveryLedgerStore } from './OpenCodePromptDeliveryLedger';
 import type { OpenCodeVisibleReplyProof } from './OpenCodePromptDeliveryWatchdog';
