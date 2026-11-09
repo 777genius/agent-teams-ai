@@ -139,13 +139,29 @@ export async function verifyProviderManageDialogs(evaluate, send, reportStage = 
     for (let attempt = 0; attempt < 80; attempt++) {
       selected = await evaluate("(() => {" +
         " const dialog = document.querySelector('[role=\"dialog\"][data-state=\"open\"]');" +
-        " return dialog?.querySelector('[role=\"tab\"][data-state=\"active\"]')?.textContent?.trim() || '';" +
+        " return dialog?.querySelector('[role=\"tab\"][data-state=\"active\"]')?.id || '';" +
         "})()");
-      if (selected.toLowerCase().includes(provider)) break;
+      if (selected.endsWith('-trigger-' + provider)) break;
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
-    assert(selected.toLowerCase().includes(provider),
-      'Manage ' + provider + ' opened a different provider panel: ' + selected);
+    assert(selected.endsWith('-trigger-' + provider),
+      'Manage ' + provider + ' opened a different provider tab: ' + selected);
+    reportStage(provider + ':content');
+    const contentSelector = provider === 'anthropic'
+      ? '[data-testid="connection-method-compatible"]'
+      : provider === 'codex'
+        ? '[data-testid="codex-custom-provider-panel"]'
+        : '[data-testid="runtime-provider-tab-providers"]';
+    let contentVisible = false;
+    for (let attempt = 0; attempt < 80; attempt++) {
+      contentVisible = await evaluate("(() => {" +
+        " const dialog = document.querySelector('[role=\"dialog\"][data-state=\"open\"]');" +
+        " const marker = dialog?.querySelector(" + JSON.stringify(contentSelector) + ");" +
+        " return Boolean(marker && marker.getClientRects().length); })()");
+      if (contentVisible) break;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    assert(contentVisible, 'Manage ' + provider + ' settings panel content missing');
     reportStage(provider + ':close');
     await clickControl(evaluate, send,
       "document.querySelector('[role=\"dialog\"][data-state=\"open\"] button.absolute.right-3.top-3')");
@@ -230,7 +246,8 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) 
     const message = error instanceof Error ? error.message : '';
     receipt.manageFailureCategory =
       message.includes('Manage control missing') ? 'control_unavailable' :
-      message.includes('different provider panel') ? 'wrong_provider_panel' :
+      message.includes('different provider tab') ? 'wrong_provider_tab' :
+      message.includes('settings panel content missing') ? 'provider_content_missing' :
       message.includes('dialog did not close') ? 'dialog_close_failed' :
       message.includes('Required desktop control unavailable') ? 'desktop_click_unavailable' :
       'other';
