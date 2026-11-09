@@ -2220,7 +2220,7 @@
   "schedule": {
     "actionFailed": "Не удалось выполнить действие с расписанием",
     "deleteConfirmation": "Удалить расписание \"{{label}}\"? История его запусков также будет удалена.",
-    "runRequested": "Запуск начат. Передачу задачи можно отслеживать в истории запусков.",
+    "runRequested": "Запуск запрошен. Проверьте в истории, была ли передана задача.",
     "count": "{{count}} schedules",
     "count_one": "{{count}} schedule",
     "count_few": "{{count}} schedules",

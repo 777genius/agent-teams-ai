@@ -2273,7 +2273,7 @@
   "schedule": {
     "actionFailed": "Schedule action failed",
     "deleteConfirmation": "Delete schedule \"{{label}}\"? Its run history will also be removed.",
-    "runRequested": "Run started. Track the task handoff in run history.",
+    "runRequested": "Run requested. Check history to see whether work was handed off.",
     "count": "{{count}} schedules",
     "count_one": "{{count}} schedule",
     "count_other": "{{count}} schedules",

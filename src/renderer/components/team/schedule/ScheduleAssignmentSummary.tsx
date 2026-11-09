@@ -15,7 +15,9 @@ export function ScheduleAssignmentSummary({
       schedule.executionMode === 'team' || !schedule.targetMember?.trim()
         ? t('launch.schedule.leadDefault')
         : schedule.targetMember.trim();
-    label = `${t('launch.schedule.taskFirstTarget')}: ${target}`;
+    label = schedule.executionMode === 'team'
+      ? t('launch.schedule.taskFirstWholeTeam')
+      : `${t('launch.schedule.taskFirstTarget')}: ${target}`;
   } else if (!schedule.executionMode) {
     label = t('launch.schedule.legacyNotice');
   } else {

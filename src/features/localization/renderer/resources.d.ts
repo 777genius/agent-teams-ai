@@ -6458,7 +6458,7 @@ export default interface Resources {
         "stillRunning": "Task is still running...",
         "title": "Run Log"
       },
-      "runRequested": "Run started. Track the task handoff in run history.",
+      "runRequested": "Run requested. Check history to see whether work was handed off.",
       "runStatus": {
         "cancelled": "Cancelled",
         "completed": "Completed",

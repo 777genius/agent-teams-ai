@@ -736,7 +736,7 @@ async function exerciseScheduleUx(client, fixture, log) {
     "?.querySelector('button[aria-label=\\\"Run now\\\"]')";
   await client.click(runNow);
   await client.waitFor(
-    "document.querySelector('[role=status]')?.textContent?.includes('Run started')",
+    "document.querySelector('[role=status]')?.textContent?.includes('Run requested')",
     'run-now feedback visible', 45_000);
   const createdRuns = await client.evaluate(
     'window.electronAPI.schedules.getRuns(' + JSON.stringify(scheduled.id) + ')');

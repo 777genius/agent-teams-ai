@@ -79,6 +79,7 @@ const ScheduleListItem = ({
   const { t, resolvedLanguage } = useAppTranslation('common');
   const [expanded, setExpanded] = useState(false);
   const [selectedRun, setSelectedRun] = useState<ScheduleRun | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const runs = useStore(useShallow((s) => s.scheduleRuns[schedule.id] ?? []));
   const runsLoading = useStore((s) => s.scheduleRunsLoading[schedule.id] ?? false);
   const fetchRunHistory = useStore((s) => s.fetchRunHistory);
@@ -171,7 +172,7 @@ const ScheduleListItem = ({
             <TooltipContent side="top">{t('schedules.actions.runNow')}</TooltipContent>
           </Tooltip>
 
-          <Popover>
+          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="sm" className="size-7 p-0" aria-label={t('actions.moreActions')}>
                 <MoreHorizontal className="size-3.5" />
@@ -181,7 +182,7 @@ const ScheduleListItem = ({
               <button
                 type="button"
                 className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                onClick={() => onEdit(schedule)}
+                onClick={() => { setMenuOpen(false); onEdit(schedule); }}
               >
                 <Pencil className="mr-2 size-3.5" />
                 {t('schedules.actions.edit')}
@@ -190,7 +191,7 @@ const ScheduleListItem = ({
                 <button
                   type="button"
                   className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                  onClick={() => onPause(schedule.id)}
+                  onClick={() => { setMenuOpen(false); onPause(schedule.id); }}
                 >
                   <Pause className="mr-2 size-3.5" />
                   {t('schedules.actions.pause')}
@@ -199,7 +200,7 @@ const ScheduleListItem = ({
                 <button
                   type="button"
                   className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                  onClick={() => onResume(schedule.id)}
+                  onClick={() => { setMenuOpen(false); onResume(schedule.id); }}
                 >
                   <Play className="mr-2 size-3.5" />
                   {t('schedules.actions.resume')}
@@ -208,7 +209,7 @@ const ScheduleListItem = ({
               <button
                 type="button"
                 className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-red-400 hover:bg-[var(--color-surface-raised)]"
-                onClick={() => onDelete(schedule.id)}
+                onClick={() => { setMenuOpen(false); onDelete(schedule.id); }}
               >
                 <Trash2 className="mr-2 size-3.5" />
                 {t('schedules.actions.delete')}
