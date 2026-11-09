@@ -260,7 +260,7 @@ describe('SchedulerService', () => {
     expect(jobs.has(invalid.id)).toBe(false);
     expect((await service.getSchedule(invalid.id))?.status).toBe('active');
     // Invalid historic data is reported, without aborting the valid cron jobs.
-    expect(vi.mocked(console.error).mock.calls.map(([message]) => String(message)))
+    expect(vi.mocked(console.error).mock.calls.map((args) => args.map(String).join(' ')))
       .toEqual([expect.stringContaining('Failed to create cron job')]);
     vi.mocked(console.error).mockClear();
     await service.stop();
@@ -832,7 +832,7 @@ describe('SchedulerService', () => {
       .rejects.toThrow('storage unavailable');
     expect(await repo.getSchedule(schedule.id)).toEqual(failing);
     expect(pauseSpy).not.toHaveBeenCalled();
-    expect(vi.mocked(console.warn).mock.calls.map(([message]) => String(message)))
+    expect(vi.mocked(console.warn).mock.calls.map((args) => args.map(String).join(' ')))
       .toEqual([expect.stringContaining('Auto-pausing after 3 consecutive failures')]);
     vi.mocked(console.warn).mockClear();
     await service.stop();
