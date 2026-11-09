@@ -4,6 +4,8 @@ import { statSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { clickControl } from './catalog.mjs';
+
 const SYNTHETIC_KEY = 'TEST-nonsecret-local-catalog-only';
 const PROVIDER = 'deepinfra';
 
@@ -109,6 +111,50 @@ export function hasOneVisibleOpenCodeConnection(text) {
   return numericTokens?.length === 1 && numericTokens[0] === '1';
 }
 
+/**
+ * Read-only desktop regression: each Settings → Providers Manage action opens
+ * its own provider panel and closes without changing credentials.
+ */
+export async function verifyProviderManageDialogs(evaluate, send) {
+  const verified = [];
+  for (const provider of ['anthropic', 'codex', 'opencode']) {
+    const control = "document.querySelector('[data-testid=\"runtime-manage-" + provider + "\"]')";
+    let ready = false;
+    for (let attempt = 0; attempt < 80; attempt++) {
+      ready = await evaluate("(() => { const button = " + control +
+        "; return Boolean(button && !button.disabled && button.getClientRects().length); })()");
+      if (ready) break;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    assert(ready, 'Settings Manage control missing or disabled: ' + provider);
+    await clickControl(evaluate, send, control);
+    let selected = '';
+    for (let attempt = 0; attempt < 80; attempt++) {
+      selected = await evaluate("(() => {" +
+        " const dialog = document.querySelector('[role=\"dialog\"][data-state=\"open\"]');" +
+        " return dialog?.querySelector('[role=\"tab\"][data-state=\"active\"]')?.textContent?.trim() || '';" +
+        "})()");
+      if (selected.toLowerCase().includes(provider)) break;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    assert(selected.toLowerCase().includes(provider),
+      'Manage ' + provider + ' opened a different provider panel: ' + selected);
+    await clickControl(evaluate, send,
+      "document.querySelector('[role=\"dialog\"][data-state=\"open\"] button.absolute.right-3.top-3')");
+    let closed = false;
+    for (let attempt = 0; attempt < 40; attempt++) {
+      closed = await evaluate(
+        "document.querySelector('[role=\"dialog\"][data-state=\"open\"]') === null"
+      );
+      if (closed) break;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    assert(closed, 'Manage ' + provider + ' dialog did not close');
+    verified.push(provider);
+  }
+  return verified;
+}
+
 export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) {
   assert(data.realRuntime === true, 'Real runtime E2E must not use the fixture shim');
   let header = '';
@@ -139,6 +185,7 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) 
   assert(!observed?.missingBridge, 'Runtime provider preload bridge unavailable');
   assert.equal(observed.error, null, 'Genuine runtime IPC directory request failed');
   const count = verifyRealProviderCountResponse(observed.directory);
+  const manageDialogsVerified = await verifyProviderManageDialogs(evaluate, send);
   const screenshot = await send('Page.captureScreenshot', { format: 'png' });
   assert(typeof screenshot.data === 'string');
   await writeFile(path.join(root, 'real-connection.png'),
@@ -152,6 +199,7 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send }) 
     realElectronIpc: true,
     connected: count,
     headerConnected: 1,
+    manageDialogsVerified,
     headerReadyMs,
     ipcElapsedMs,
     fullCatalogReconciled: false,
