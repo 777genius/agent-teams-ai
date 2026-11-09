@@ -7,7 +7,10 @@ import { getCronDescription } from '@renderer/utils/scheduleFormatters';
 import { useShallow } from 'zustand/react/shallow';
 
 type ScheduleAction = 'delete' | 'pause' | 'resume' | 'run';
-export type ScheduleActionFeedback = { kind: 'error' | 'success'; message: string };
+export interface ScheduleActionFeedback {
+  kind: 'error' | 'success';
+  message: string;
+}
 
 /** Same deletion safety and visible failure semantics in both schedule lists. */
 export function useScheduleActions() {

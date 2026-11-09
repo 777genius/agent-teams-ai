@@ -6,9 +6,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import type { Schedule } from '@shared/types';
 
 /** A schedule handoff is not a completed task. Show who actually receives it. */
-export function ScheduleAssignmentSummary({
+export const ScheduleAssignmentSummary = ({
   schedule,
-}: Readonly<{ schedule: Schedule }>): React.JSX.Element {
+}: Readonly<{ schedule: Schedule }>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   let label: string;
   if (schedule.taskFirst) {
@@ -32,11 +32,14 @@ export function ScheduleAssignmentSummary({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span tabIndex={0} className="block min-w-0 truncate text-[11px] text-[var(--color-text-muted)]">
+        <button
+          type="button"
+          className="block w-full min-w-0 truncate text-left text-[11px] text-[var(--color-text-muted)]"
+        >
           {label}
-        </span>
+        </button>
       </TooltipTrigger>
       <TooltipContent side="top" className="max-w-sm text-xs">{label}</TooltipContent>
     </Tooltip>
   );
-}
+};

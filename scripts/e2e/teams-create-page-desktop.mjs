@@ -641,8 +641,11 @@ async function exerciseScheduleUx(client, fixture, log) {
   await client.waitFor("document.querySelector('[role=dialog] #schedule-label')",
     'actual schedule editor loaded', 45_000);
   await captureScreenshot(client, fixture, 'schedules-editor-opened');
-  const pristineSave = createButtonExpression('Create Schedule');
-  await client.click(pristineSave);
+  // The empty-state page also has a "Create Schedule" button behind the modal.
+  // Target the enabled dialog submit, not the background trigger.
+  const saveButton = "Array.from(document.querySelectorAll('[role=dialog] button'))" +
+    ".find(button => button.textContent?.trim() === 'Create Schedule')";
+  await client.click(saveButton);
   await client.waitFor(
     "document.querySelector('[role=dialog]')?.textContent?.includes('Team is required')",
     'pristine form shows a reason after Save', 20_000);
@@ -662,8 +665,6 @@ async function exerciseScheduleUx(client, fixture, log) {
   await client.fill('#dialog-prompt', 'Review the fixture project and write a short status update.');
   log('invalid cron is field-level visible and blocks Save');
   await client.fill('input[placeholder="0 9 * * 1-5"]', 'not a cron');
-  const saveButton = "Array.from(document.querySelectorAll('[role=dialog] button'))" +
-    ".find(button => button.textContent?.trim() === 'Create Schedule')";
   await client.waitFor("(" + saveButton + ")?.disabled === true",
     'invalid cron blocks the Create Schedule action');
   await captureScreenshot(client, fixture, 'schedules-invalid-cron');
@@ -699,7 +700,7 @@ async function exerciseScheduleUx(client, fixture, log) {
   }
   await client.evaluate("document.documentElement.style.zoom = '2'");
   const zoomActionsVisible = await client.evaluate(`(() => {
-    const row = Array.from(document.querySelectorAll('div.rounded-lg'))
+    const row = Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]'))
       .find(el => el.textContent?.includes(${JSON.stringify(scheduleLabel)}) &&
         el.querySelector('button[aria-label="More actions"]'));
     const button = row?.querySelector('button[aria-label="More actions"]');
@@ -717,7 +718,7 @@ async function exerciseScheduleUx(client, fixture, log) {
   try {
     await client.waitFor('window.innerWidth <= 700', 'narrow renderer viewport');
     const narrowActionsVisible = await client.evaluate(`(() => {
-      const row = Array.from(document.querySelectorAll('div.rounded-lg'))
+      const row = Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]'))
         .find(el => el.textContent?.includes(${JSON.stringify(scheduleLabel)}) &&
           el.querySelector('button[aria-label="More actions"]'));
       const rect = row?.querySelector('button[aria-label="More actions"]')?.getBoundingClientRect();
@@ -730,7 +731,7 @@ async function exerciseScheduleUx(client, fixture, log) {
   }
 
   log('edit the real schedule without migrating its task-first semantics');
-  const more = "Array.from(document.querySelectorAll('div.rounded-lg'))" +
+  const more = "Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]'))" +
     ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
     "row.querySelector('button[aria-label=\\\"More actions\\\"]'))" +
     "?.querySelector('button[aria-label=\\\"More actions\\\"]')";
@@ -749,7 +750,7 @@ async function exerciseScheduleUx(client, fixture, log) {
   assert.equal(afterEdit.taskFirst, true, 'Edit silently changed schedule execution semantics');
 
   log('run now and inspect the actual schedule run history');
-  const runNow = "Array.from(document.querySelectorAll('div.rounded-lg'))" +
+  const runNow = "Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]'))" +
     ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
     "row.querySelector('button[aria-label=\\\"Run now\\\"]'))" +
     "?.querySelector('button[aria-label=\\\"Run now\\\"]')";
@@ -760,17 +761,17 @@ async function exerciseScheduleUx(client, fixture, log) {
   const createdRuns = await client.evaluate(
     'window.electronAPI.schedules.getRuns(' + JSON.stringify(scheduled.id) + ')');
   assert(createdRuns.length > 0, 'Run now created no persisted run');
-  const expand = "Array.from(document.querySelectorAll('div.rounded-lg'))" +
+  const expand = "Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]'))" +
     ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
     "row.querySelector('button[aria-expanded]'))?.querySelector('button[aria-expanded]')";
   await client.click(expand);
   await client.waitFor(
-    "Array.from(document.querySelectorAll('div.rounded-lg')).some(row => " +
+    "Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]')).some(row => " +
       "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
       "row.querySelector('div[role=button]'))",
     'run history row visible');
   await captureScreenshot(client, fixture, 'schedules-run-history');
-  await client.click("Array.from(document.querySelectorAll('div.rounded-lg'))" +
+  await client.click("Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]'))" +
     ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
     "row.querySelector('div[role=button]'))?.querySelector('div[role=button]')");
   await client.waitFor(
@@ -794,7 +795,7 @@ async function exerciseScheduleUx(client, fixture, log) {
   await client.click(createButtonExpression('Delete'));
   await client.click("document.querySelector('[role=dialog][aria-label=Delete] button[data-confirm-btn]')");
   await client.waitFor(
-    "!Array.from(document.querySelectorAll('div.rounded-lg')).some(row => " +
+    "!Array.from(document.querySelectorAll('[data-testid="schedule-list-item"]')).some(row => " +
       "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
       "row.querySelector('button[aria-label=\\\"More actions\\\"]'))",
     'confirmed schedule disappeared from UI', 45_000);

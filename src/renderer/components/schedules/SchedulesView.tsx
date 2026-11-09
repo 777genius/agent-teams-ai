@@ -93,7 +93,7 @@ const ScheduleListItem = ({
   }, [expanded, runs.length, runsLoading, fetchRunHistory, schedule.id]);
 
   return (
-    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
+    <div data-testid="schedule-list-item" className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
       {/* Main row */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
         {/* Expand toggle */}
