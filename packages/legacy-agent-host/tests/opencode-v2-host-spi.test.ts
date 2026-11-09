@@ -381,6 +381,29 @@ test('V2 adapter rejects V1, unsupported versions and V1 plugin before owner acc
   assert.deepEqual(calls, { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 });
 });
 
+test('V2 rejects foreign Host request and MCP endpoint capture before native owner access', () => {
+  const { captured, calls } = owner(true);
+  const base = v2Profile();
+  const foreignRequest = [
+    { ...request(), sessionId: 'TEST-other-session' },
+    { ...request(), generation: 2 },
+    { ...request(), configRevision: 'TEST-other-revision' },
+  ];
+  for (const input of foreignRequest) {
+    assert.throws(() => createOpenCodeV2MemberProvider(context(base, input), captured),
+      /separate native profile/, 'foreign Runtime request must not adopt native V2 capture');
+  }
+  for (const key of ['teamId', 'memberId'] as const) {
+    const foreign = context(base);
+    Object.assign(foreign.endpoint.binding, { [key]: 'TEST-foreign-' + key });
+    assert.throws(() => createOpenCodeV2MemberProvider(foreign, captured),
+      /separate native profile/, 'foreign MCP endpoint must not adopt native V2 capture');
+  }
+  assert.deepEqual(calls, {
+    probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0,
+  }, 'all foreign captures must fail before owner callbacks or native mutation');
+});
+
 test('inherited OPENCODE_BIN_PATH refuses V2 admission before owner access', () => {
   const previous = process.env.OPENCODE_BIN_PATH;
   try {

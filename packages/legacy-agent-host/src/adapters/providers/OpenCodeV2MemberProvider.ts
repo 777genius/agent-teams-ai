@@ -77,6 +77,14 @@ export function createOpenCodeV2MemberProvider(
   const inheritedBinaryOverride = () => hasUntrustedOpenCodeBinaryOverride(process.env);
   if (selected.provider !== 'opencode' || selected.nativeGeneration !== 'v2' ||
       (selected.protocolRevision !== '2.0.0' && selected.protocolRevision !== '2.0.21') ||
+      // The private owner is selected for one immutable Host allocation. Reject
+      // cross-session, cross-generation or foreign MCP endpoint captures before
+      // even reading TEST-owned credentials or starting a native probe.
+      selected.sessionId !== context.request.sessionId ||
+      selected.generation !== context.request.generation ||
+      selected.configRevision !== context.request.configRevision ||
+      selected.teamId !== context.endpoint.binding.teamId ||
+      selected.memberId !== context.endpoint.binding.memberId ||
       !selected.nativeSessionId || hasUntrustedOpenCodeBinaryOverride(selected.environment) ||
       inheritedBinaryOverride() ||
       selected.mcpPolicyPlugin ||
