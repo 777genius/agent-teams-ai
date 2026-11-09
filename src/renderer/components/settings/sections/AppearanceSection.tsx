@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@renderer/lib/utils';
 
 import { SettingRow, SettingsSectionHeader, SettingsToggle } from '../components';
+
 import { TypographyControls } from './TypographyControls';
 
 import type { SafeConfig } from '../hooks/useSettingsConfig';

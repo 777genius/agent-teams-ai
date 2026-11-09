@@ -95,12 +95,20 @@ export function createTaskTableColumns(
       maxSize: 220,
       cell: ({ row }) => (
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className={
-            'inline-block max-w-full truncate rounded px-1.5 py-0.5 text-[calc(11px*var(--appearance-text-scale,1))] font-medium ' +
-            STATUS_CLASSES[row.original.status]
-          }>
-            {labels.statusNames[row.original.status]}
-          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                tabIndex={0}
+                className={
+                  'inline-block max-w-full truncate rounded px-1.5 py-0.5 text-[calc(11px*var(--appearance-text-scale,1))] font-medium ' +
+                  STATUS_CLASSES[row.original.status]
+                }
+              >
+                {labels.statusNames[row.original.status]}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top">{labels.statusNames[row.original.status]}</TooltipContent>
+          </Tooltip>
           {row.original.needsFix ? (
             <Tooltip>
               <TooltipTrigger asChild>

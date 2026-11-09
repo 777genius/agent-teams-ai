@@ -2,11 +2,11 @@
 import {
   CUSTOM_THEME_COLOR_KEYS,
   DEFAULT_APPEARANCE,
+  MAX_FONT_SIZE_PERCENT,
   MAX_JSON_LENGTH,
   MAX_ZOOM,
-  MIN_ZOOM,
-  MAX_FONT_SIZE_PERCENT,
   MIN_FONT_SIZE_PERCENT,
+  MIN_ZOOM,
   normalizeFontFamily,
   parseAppearance,
   validateCustomThemes,

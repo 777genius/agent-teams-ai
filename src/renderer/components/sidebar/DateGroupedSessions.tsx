@@ -7,6 +7,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { useAppearancePreferences } from '@features/appearance/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
 import { cn } from '@renderer/lib/utils';
@@ -149,14 +150,9 @@ type VirtualItem =
   | { type: 'session'; session: Session; isPinned: boolean; isHidden: boolean; id: string }
   | { type: 'loader'; id: string };
 
-/**
- * Item height constants for virtual scroll positioning.
- * CRITICAL: These values MUST match the actual rendered heights of components.
- * If SessionItem height changes, update SESSION_HEIGHT here AND add h-[Xpx] to SessionItem.
- * Mismatch causes items to overlap!
- */
+/** Heights used by the virtualizer; the session estimate is passed into SessionItem. */
 const HEADER_HEIGHT = 28;
-const SESSION_HEIGHT = 54; // Must match h-[54px] in SessionItem.tsx
+const SESSION_HEIGHT = 54;
 const LOADER_HEIGHT = 36;
 const OVERSCAN = 5;
 
@@ -185,6 +181,8 @@ function matchesSessionSearch(session: Session, query: string): boolean {
 
 export const DateGroupedSessions = memo((): React.JSX.Element => {
   const { t } = useAppTranslation('common');
+  const { fontSizePercent } = useAppearancePreferences();
+  const sessionHeight = Math.ceil(SESSION_HEIGHT * Math.max(1, fontSizePercent / 100));
   const {
     sessions,
     selectedSessionId,
@@ -532,7 +530,7 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
   const estimateSize = useCallback(
     (index: number) => {
       const item = virtualItems[index];
-      if (!item) return SESSION_HEIGHT;
+      if (!item) return sessionHeight;
 
       switch (item.type) {
         case 'header':
@@ -542,10 +540,10 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
           return LOADER_HEIGHT;
         case 'session':
         default:
-          return SESSION_HEIGHT;
+          return sessionHeight;
       }
     },
-    [virtualItems]
+    [virtualItems, sessionHeight]
   );
 
   // Set up virtualizer
@@ -556,6 +554,11 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
     estimateSize,
     overscan: OVERSCAN,
   });
+
+  // Invalidate cached row offsets when text size changes.
+  useEffect(() => {
+    rowVirtualizer.measure();
+  }, [sessionHeight, rowVirtualizer]);
 
   // Get virtual items for dependency tracking
   const virtualRows = rowVirtualizer.getVirtualItems();
@@ -1110,6 +1113,7 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
                   </div>
                 ) : (
                   <SessionItem
+                    rowHeight={sessionHeight}
                     session={item.session}
                     isActive={selectedSessionId === item.session.id}
                     isPinned={item.isPinned}

@@ -5,11 +5,11 @@ import {
   listLocalFontFamilies,
   setAppearanceFontFamily,
   setAppearanceFontSize,
-  useAppearancePreferences,
   uniqueFontFamilies,
+  useAppearancePreferences,
 } from '@features/appearance/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@renderer/components/ui/select';
 
 import { SettingRow } from '../components';
 
@@ -38,10 +38,13 @@ export const TypographyControls = (): React.JSX.Element => {
   );
   const fonts = useMemo(() => {
     const query = fontQuery.trim().toLocaleLowerCase();
-    const matches = query
-      ? allFonts.filter((family) => family.toLocaleLowerCase().includes(query))
-      : allFonts;
-    return uniqueFontFamilies(matches.slice(0, MAX_VISIBLE_FONT_CHOICES), fontFamily);
+    const selected = fontFamily?.toLocaleLowerCase();
+    return allFonts
+      .filter((family) => {
+        const name = family.toLocaleLowerCase();
+        return name !== selected && (!query || name.includes(query));
+      })
+      .slice(0, MAX_VISIBLE_FONT_CHOICES);
   }, [allFonts, fontQuery, fontFamily]);
 
   const save = (action: () => void): boolean => {
@@ -81,7 +84,7 @@ export const TypographyControls = (): React.JSX.Element => {
         description={t('general.appearance.fontFamily.description')}
       >
         <div className="flex min-w-0 max-w-full flex-col items-end gap-2">
-          {allFonts.length > MAX_VISIBLE_FONT_CHOICES && (
+          {(allFonts.length > MAX_VISIBLE_FONT_CHOICES || fontQuery !== '') && (
             <input
               type="search"
               data-testid="appearance-font-filter"
@@ -114,6 +117,17 @@ export const TypographyControls = (): React.JSX.Element => {
                 <SelectItem value={SYSTEM_FONT} data-testid="appearance-font-option-system">
                   {t('general.appearance.fontFamily.system')}
                 </SelectItem>
+                {fontFamily !== null && (
+                  <>
+                    <SelectItem
+                      value={`family:${fontFamily}`}
+                      data-testid={`appearance-font-option-${fontFamily}`}
+                    >
+                      {fontFamily}
+                    </SelectItem>
+                    {fonts.length > 0 && <SelectSeparator />}
+                  </>
+                )}
                 {fonts.map((family) => (
                   <SelectItem
                     key={family}

@@ -31,6 +31,7 @@ interface SessionItemProps {
   isHidden?: boolean;
   multiSelectActive?: boolean;
   isSelected?: boolean;
+  rowHeight?: number;
 }
 
 /**
@@ -150,6 +151,7 @@ export const SessionItem = memo(function SessionItem({
   isHidden,
   multiSelectActive,
   isSelected,
+  rowHeight = 54,
 }: Readonly<SessionItemProps>): React.JSX.Element {
   const {
     openTab,
@@ -254,14 +256,15 @@ export const SessionItem = memo(function SessionItem({
     }
   }, [activeProjectId, openTab, selectSession, session.id, sessionLabel, splitPane]);
 
-  // Height must match SESSION_HEIGHT (54px) in DateGroupedSessions.tsx for virtual scroll
+  // The parent virtualizer passes its row estimate to keep rendered height aligned.
   return (
     <>
       <button
         onClick={handleClick}
         onContextMenu={handleContextMenu}
-        className={`flex h-[54px] w-full flex-col justify-center overflow-hidden border-b px-2 py-1.5 text-left transition-colors ${isActive ? '' : 'bg-transparent hover:bg-surface-raised'}`}
+        className={`flex w-full flex-col justify-center overflow-hidden border-b px-2 py-1.5 text-left transition-colors ${isActive ? '' : 'bg-transparent hover:bg-surface-raised'}`}
         style={{
+          height: rowHeight,
           borderColor: 'var(--color-border)',
           ...(isActive ? { backgroundColor: 'var(--color-surface-raised)' } : {}),
           ...(isHidden ? { opacity: 0.5 } : {}),

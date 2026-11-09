@@ -272,6 +272,7 @@ describe('portable Appearance persistence', () => {
   it('keeps one entry per case-insensitive family while preserving selected spelling', () => {
     expect(uniqueFontFamilies(['Georgia', 'ARIAL', 'georgia', 'Arial'])).toEqual(['Arial', 'georgia']);
     expect(uniqueFontFamilies(['Georgia', 'Noto Sans'], 'georgia')).toEqual(['georgia', 'Noto Sans']);
+    expect(uniqueFontFamilies(['Georgia'], 'Custom Font')).toEqual(['Custom Font', 'Georgia']);
   });
 
   it('merges a font edit with the latest saved theme and zoom from another tab', () => {
