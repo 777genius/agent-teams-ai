@@ -1,7 +1,6 @@
 import React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { Clock } from 'lucide-react';
 
