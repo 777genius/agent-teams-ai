@@ -237,6 +237,53 @@ test('V2 policy getter cannot swap native permission or cleanup callbacks before
   assert.equal(await provider.cleanup(), true);
 });
 
+test('V2 rejects forged per-function bind even when a fake reader reports DENY', async () => {
+  const { captured, calls } = owner(true, 'allow');
+  const original = captured.readNativeEffectivePermissions;
+  let forgedBinds = 0;
+  Object.defineProperty(original, 'bind', {
+    value: () => {
+      forgedBinds++;
+      return async () => testNativePermissionReadback([
+        { action: 'external_directory', resource: '*', effect: 'deny' },
+      ]);
+    },
+  });
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  await assert.rejects(() => provider.factory.open(request()), /opencode.driver.dependency-unavailable/);
+  assert.equal(forgedBinds, 0);
+  assert.equal(calls.permissions, 1, 'must invoke the original ALLOW policy reader');
+  assert.equal(calls.context, 0, 'unsafe policy cannot install context');
+  assert.equal(calls.password, 0);
+  assert.equal(await provider.cleanup(), true);
+  assert.equal(calls.stop, 1);
+});
+
+test('V2 owner policy getter cannot replace captured Host authority callbacks', async () => {
+  const input = context();
+  let lease = true;
+  input.isCurrent = () => lease;
+  input.canAllocate = () => lease;
+  const { captured, calls } = owner(true);
+  Object.defineProperty(captured, 'requiredExternalDirectory', {
+    get() {
+      lease = false;
+      input.isCurrent = () => true;
+      input.canAllocate = () => true;
+      return 'deny';
+    },
+  });
+  const provider = createOpenCodeV2MemberProvider(input, captured);
+  await assert.rejects(() => provider.factory.open(request()),
+    'a revoked captured Host lease must prevent native admission');
+  assert.equal(calls.probe, 0);
+  assert.equal(calls.permissions, 0);
+  assert.equal(calls.context, 0);
+  assert.equal(calls.password, 0);
+  assert.equal(await provider.cleanup(), true);
+  assert.equal(calls.stop, 1);
+});
+
 test('V2 admission cannot accept forged permission readback swapped during owner probe', async () => {
   const { captured, calls } = owner(true);
   let forgedPermissionCalls = 0;
@@ -874,6 +921,22 @@ test('V2 rejects mutually matching malformed custody digests before native owner
   }
 });
 
+test('V2 rejects array-coerced SHA256 before touching owner policy', () => {
+  const base = nativeV2Profile();
+  const { captured, calls } = owner(true);
+  let policyReads = 0;
+  Object.defineProperty(captured, 'requiredExternalDirectory', {
+    get() { policyReads++; return 'deny'; },
+  });
+  const forgedDigest = ['a'.repeat(64)] as unknown as string;
+  assert.throws(() => createOpenCodeV2MemberProvider(context({
+    ...base, executable: { ...base.executable, sha256: forgedDigest },
+  }), captured), /separate native profile and owner/);
+  assert.equal(policyReads, 0);
+  assert.deepEqual(calls,
+    { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 });
+});
+
 test('actual native custody must match captured executable, digest, protocol and physical PID', async () => {
   const original = testNativeCustody();
   for (const bad of [
@@ -930,6 +993,33 @@ test('a reused mutable custody readback cannot hide a native PID or binary swap'
     assert.equal(calls.stop, 1, 'only this TEST owner is retired');
     assert.equal(await provider.cleanup(), true);
   }
+});
+
+test('V2 checks the first captured native digest, not later accessor values', async () => {
+  const { captured, calls } = owner(true);
+  let custodyReads = 0;
+  let digestReads = 0;
+  captured.readNativeCustody = async () => {
+    custodyReads++;
+    if (custodyReads > 1) return { ...testNativeCustody(), executableSha256: 'b'.repeat(64) };
+    return {
+      ...testNativeCustody(),
+      get executableSha256() {
+        digestReads++;
+        return digestReads <= 2 ? 'a'.repeat(64) : 'b'.repeat(64);
+      },
+    };
+  };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  await assert.rejects(() => provider.factory.open(request()),
+    /opencode.driver.dependency-unavailable/,
+    'post-validation getter changes cannot redefine the admitted binary');
+  assert.equal(digestReads, 1, 'the admission must read the native digest only once');
+  assert.equal(custodyReads, 2, 'final native re-attestation still occurs');
+  assert.equal(calls.context, 1, 'native context was installed only once');
+  assert.equal(provider.isReady(), false);
+  assert.equal(await provider.cleanup(), true);
+  assert.equal(calls.stop, 1);
 });
 
 test('V2 permission readbacks must bind to the captured session and process before and after context PUT', async () => {

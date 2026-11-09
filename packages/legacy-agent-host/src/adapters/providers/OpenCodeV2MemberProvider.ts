@@ -82,7 +82,7 @@ function captureOwnedCallback<K extends OwnedCallback>(
     if (descriptor) {
       if (typeof descriptor.value !== 'function')
         throw new Error('OpenCode V2 requires data-property native owner callbacks');
-      return descriptor.value.bind(owned) as OpenCodeV2OwnedSession[K];
+      return Function.prototype.bind.call(descriptor.value, owned) as OpenCodeV2OwnedSession[K];
     }
     prototype = Object.getPrototypeOf(prototype);
   }
@@ -104,6 +104,10 @@ export function createOpenCodeV2MemberProvider(
   const originalEndpointBinding = runtimeDigest(context.endpoint.binding);
   const originalProfile = runtimeDigest(context.profile);
   const capturedInstructions = context.instructions;
+  // Retain original Host authority before a native owner getter can swap
+  // these callbacks to forge an always-current lease.
+  const capturedIsCurrent = Function.prototype.bind.call(context.isCurrent, context) as () => boolean;
+  const capturedCanAllocate = Function.prototype.bind.call(context.canAllocate, context) as () => boolean;
   const selected = structuredClone(context.profile);
   // A trusted profile alone cannot sanitize an override inherited from
   // the parent Host process. Refuse V2 before any TEST owner access.
@@ -118,7 +122,8 @@ export function createOpenCodeV2MemberProvider(
       selected.configRevision !== context.request.configRevision ||
       selected.teamId !== context.endpoint.binding.teamId ||
       selected.memberId !== context.endpoint.binding.memberId ||
-      !selected.nativeSessionId || !nativeSha256Hex.test(selected.executable.sha256) ||
+      !selected.nativeSessionId || typeof selected.executable.sha256 !== 'string' ||
+      !nativeSha256Hex.test(selected.executable.sha256) ||
        hasUntrustedOpenCodeBinaryOverride(selected.environment) ||
       inheritedBinaryOverride() ||
       selected.mcpPolicyPlugin ||
@@ -193,7 +198,7 @@ export function createOpenCodeV2MemberProvider(
   const current = () => {
     if (sealed || qualificationRevoked) return false;
     try {
-      if (!inheritedBinaryOverride() && context.isCurrent() && context.canAllocate() &&
+      if (!inheritedBinaryOverride() && capturedIsCurrent() && capturedCanAllocate() &&
           runtimeDigest(context.request) === originalRequest &&
           runtimeDigest(context.endpoint.binding) === originalEndpointBinding &&
           runtimeDigest(context.profile) === originalProfile &&
@@ -307,27 +312,27 @@ export function createOpenCodeV2MemberProvider(
             // custody. Even identical bytes in a restarted PID cannot inherit
             // the old member's authority without a new Host capture.
             const custody = await capturedReadNativeCustody(combined);
-            if (!custody || combined.aborted || !current() ||
-                custody.executablePath !== profile.executable.path ||
-                (!nativeSha256Hex.test(custody.executableSha256) ||
-                  custody.executableSha256 !== profile.executable.sha256) ||
-                custody.version !== profile.protocolRevision ||
-                !Number.isSafeInteger(custody.pid) || custody.pid <= 0 ||
-                typeof custody.startIdentity !== 'string' ||
-                !/^[A-Za-z0-9._:-]{1,128}$/.test(custody.startIdentity) ||
-                (pinnedProcessIdentity !== undefined &&
-                  (custody.pid !== pinnedProcessIdentity.pid ||
-                   custody.startIdentity !== pinnedProcessIdentity.startIdentity))) return false;
-            // The owner may reuse a mutable readback object. Snapshot the
-            // admission values before further awaits so a process/hash swap
-            // cannot relabel the first custody read as the final one.
-            const admittedCustody = Object.freeze({
+            // Snapshot owner-controlled properties ONCE before checking any
+            // digest or PID; a getter could change its value on a later read.
+            const admittedCustody = custody && Object.freeze({
               executablePath: custody.executablePath,
               executableSha256: custody.executableSha256,
               version: custody.version,
               pid: custody.pid,
               startIdentity: custody.startIdentity,
             });
+            if (!admittedCustody || combined.aborted || !current() ||
+                admittedCustody.executablePath !== profile.executable.path ||
+                typeof admittedCustody.executableSha256 !== 'string' ||
+                !nativeSha256Hex.test(admittedCustody.executableSha256) ||
+                admittedCustody.executableSha256 !== profile.executable.sha256 ||
+                admittedCustody.version !== profile.protocolRevision ||
+                !Number.isSafeInteger(admittedCustody.pid) || admittedCustody.pid <= 0 ||
+                typeof admittedCustody.startIdentity !== 'string' ||
+                !/^[A-Za-z0-9._:-]{1,128}$/.test(admittedCustody.startIdentity) ||
+                (pinnedProcessIdentity !== undefined &&
+                  (admittedCustody.pid !== pinnedProcessIdentity.pid ||
+                   admittedCustody.startIdentity !== pinnedProcessIdentity.startIdentity))) return false;
             pinnedProcessIdentity ??= {
               pid: admittedCustody.pid, startIdentity: admittedCustody.startIdentity,
             };
