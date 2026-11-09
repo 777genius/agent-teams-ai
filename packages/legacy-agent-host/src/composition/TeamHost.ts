@@ -338,6 +338,7 @@ export function createTeamHost(
         | 'getTask'
         | 'listTasks'
         | 'snapshot'
+        | 'messages.page'
         | 'activity.logs'
         | 'activity.stats'
         | 'lead.activity'
@@ -395,6 +396,14 @@ export function createTeamHost(
           if (operation === 'snapshot') {
             z.object({}).strict().parse(input.payload);
             return { ok: true, value: connection.readSnapshot() };
+          }
+          if (operation === 'messages.page') {
+            const query = z.object({
+              cursor: z.string().min(1).max(128).optional(),
+              limit: z.number().int().min(1).max(100).optional(),
+              groupChatId: segment.optional(),
+            }).strict().parse(input.payload);
+            return { ok: true, value: connection.readMessagesPage(query) };
           }
           if (operation === 'lead.activity' || operation === 'lead.context') {
             z.object({}).strict().parse(input.payload);
@@ -687,6 +696,7 @@ export function createTeamHost(
       capabilities: [
         'team.task',
         'team.snapshot',
+        'team.messages.page',
         'team.roster',
         'team.product-changes',
         'team.message',
@@ -726,6 +736,7 @@ export function createTeamHost(
         'team.task.get': method('getTask'),
         'team.tasks.list': method('listTasks'),
         'team.snapshot': method('snapshot'),
+        'team.messages.page': method('messages.page'),
         'team.roster.read': method('roster.read'),
         'team.roster.lookup': method('roster.lookup'),
         'team.roster.replace': method('roster.replace'),

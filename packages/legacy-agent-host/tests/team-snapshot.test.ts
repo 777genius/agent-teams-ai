@@ -125,3 +125,64 @@ test('large legitimate inbox history preserves bounded authorized change feed, n
     (error) => error instanceof TeamOwnerError && error.code === 'forbidden'
   );
 });
+
+
+test('owner-side pages retain every message beyond 512 KiB under revision and principal fences', (t) => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-message-page-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const owner = createFilesystemTeamOwner({
+    root,
+    binding: { backendId: 'TEST-A', teamId: 'TEST-team', teamName: 'test-team' },
+    members: [{ memberId: 'alice', name: 'alice', role: 'member' }],
+    grants: [
+      { principalId: 'human', memberName: 'user', permissions: ['read', 'admin'] },
+      { principalId: 'alice', memberName: 'alice', permissions: ['read'] },
+    ],
+  });
+  const reader = owner.connect('human');
+  const other = owner.connect('alice');
+  const inbox = join(root, 'teams/test-team/inboxes/user.json');
+  mkdirSync(join(root, 'teams/test-team/inboxes'), { recursive: true });
+  const messages = Array.from({ length: 120 }, (_, index) => ({
+    messageId: `TEST-message-${index}`,
+    from: 'alice',
+    text: `retained-${index}-${'x'.repeat(6000)}`,
+    timestamp: new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString(),
+    read: false,
+  }));
+  writeFileSync(inbox, JSON.stringify(messages));
+  assert.ok(Buffer.byteLength(JSON.stringify(messages)) > 512 * 1024);
+  assert.throws(() => reader.readSnapshot(), (error) =>
+    error instanceof TeamOwnerError && error.code === 'hold');
+  const first = reader.readMessagesPage({ limit: 20 }) as {
+    revision: string; messages: typeof messages; nextCursor: string | null; hasMore: boolean;
+  };
+  assert.equal(first.messages.length, 20);
+  assert.equal(first.messages.at(-1)?.messageId, 'TEST-message-119');
+  assert.ok(Buffer.byteLength(JSON.stringify(first)) < 384 * 1024);
+  assert.equal(JSON.stringify(first).includes('principalId'), false);
+  const visited = first.messages.map((row) => row.messageId);
+  let cursor = first.nextCursor;
+  while (cursor) {
+    const page = reader.readMessagesPage({ cursor, limit: 20 }) as typeof first;
+    assert.equal(page.revision, first.revision);
+    assert.ok(Buffer.byteLength(JSON.stringify(page)) < 384 * 1024);
+    visited.push(...page.messages.map((row) => row.messageId));
+    cursor = page.nextCursor;
+  }
+  assert.equal(visited.length, 120);
+  assert.equal(new Set(visited).size, 120);
+  assert.equal(visited[0], 'TEST-message-100');
+  assert.equal(visited.at(-1), 'TEST-message-19');
+  assert.throws(() => other.readMessagesPage({ cursor: first.nextCursor! }), (error) =>
+    error instanceof TeamOwnerError && error.code === 'hold');
+  assert.deepEqual((other.readMessagesPage() as { messages: unknown[] }).messages, []);
+  messages.push({ messageId: 'TEST-message-120', from: 'alice', text: 'new',
+    timestamp: '2026-01-02T00:00:00.000Z', read: false });
+  writeFileSync(inbox, JSON.stringify(messages));
+  assert.throws(() => reader.readMessagesPage({ cursor: first.nextCursor! }), (error) =>
+    error instanceof TeamOwnerError && error.code === 'hold');
+  reader.revoke('alice');
+  assert.throws(() => other.readMessagesPage(), (error) =>
+    error instanceof TeamOwnerError && error.code === 'forbidden');
+});

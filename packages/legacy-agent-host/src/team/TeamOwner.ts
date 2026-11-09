@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { executeTeamCommand } from './executeTeamCommand.js';
 import { captureCommandSelection } from './captureCommandSelection.js';
 import { teamCommandFingerprint } from './teamCommandFingerprint.js';
@@ -93,6 +94,8 @@ export class TeamOwner {
   readonly nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent'>;
   private readonly commandAccess: ReturnType<typeof createTeamCommandAccess>;
   private readonly productChanges = new TeamProductChanges();
+  /** Volatile key: continuation cursors expire on owner recreation. */
+  private readonly messagesPageKey = randomUUID();
   private readonly store: TeamStore;
   private readonly policy: TeamPolicyPort;
   private readonly binding: TeamBinding;
@@ -429,6 +432,8 @@ export class TeamOwner {
       getTask: (taskId: string) => this.getTask(principalId, taskId),
       listTasks: () => this.listTasks(principalId),
       readSnapshot: () => this.readSnapshot(principalId),
+      readMessagesPage: (options: { cursor?: string; limit?: number; groupChatId?: string } = {}) =>
+        this.readMessagesPage(principalId, options),
       readDeletedTasks: () => this.readDeletedTasks(principalId),
       ...(this.policy.reads
         ? {
@@ -586,14 +591,25 @@ export class TeamOwner {
     });
   }
 
+  /** Shared owner-authorized inbox and cross-team attribution, inside the existing fence. */
+  private productMessages(grant: TeamGrant, members: readonly { name: string }[]): JsonValue[] {
+    const recipients = grant.permissions.includes('admin')
+      ? [...members.map(({ name }) => name), 'user']
+      : [grant.memberName];
+    return projectCrossTeamMessages({
+      store: this.store,
+      policy: this.policy,
+      messages: canonicalGroupMessages(recipients.flatMap((name) => this.policy.readInbox(name))),
+      actor: grant.memberName,
+      readAll: grant.permissions.includes('admin'),
+    });
+  }
+
   /** Product read under the current actor grant and the same fence as revoke/writes. */
   private collectProductState(principalId: string) {
     const grant = this.authorize(principalId, 'read');
     const state = this.state();
     const members = state.members.map(({ name, role }) => ({ name, role }));
-    const recipients = grant.permissions.includes('admin')
-      ? [...members.map(({ name }) => name), 'user']
-      : [grant.memberName];
     const snapshot = {
       teamName: this.binding.teamName,
       lifecycle: this.commandAccess.lifecycle(principalId).view(),
@@ -613,13 +629,7 @@ export class TeamOwner {
       members,
       tasks: this.policy.taskBoard().listTasks(),
       ...(this.policy.processes ? { processes: this.processCommands(principalId).list() } : {}),
-      messages: projectCrossTeamMessages({
-        store: this.store,
-        policy: this.policy,
-        messages: canonicalGroupMessages(recipients.flatMap((name) => this.policy.readInbox(name))),
-        actor: grant.memberName,
-        readAll: grant.permissions.includes('admin'),
-      }),
+      messages: this.productMessages(grant, members),
       kanbanState: this.store.read('../kanban-state.json') ?? {
         teamName: this.binding.teamName,
         reviewers: [],
@@ -655,6 +665,70 @@ export class TeamOwner {
       // becomes oversized, without weakening the snapshot/transport size guards.
       const revision = digest(this.collectProductState(principalId));
       return json(this.productChanges.read(principalId, revision, cursor));
+    });
+  }
+
+
+  /** Bounded reverse-chronological history read, independent of full team snapshots. */
+  private readMessagesPage(
+    principalId: string,
+    options: { cursor?: string; limit?: number; groupChatId?: string }
+  ): JsonValue {
+    return this.store.fenced(() => {
+      const grant = this.authorize(principalId, 'read');
+      const limit = options.limit ?? 50;
+      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
+        throw new TeamOwnerError('invalid');
+      if (options.groupChatId !== undefined) safeSegment(options.groupChatId);
+      const unique = new Map<string, JsonValue>();
+      for (const message of this.productMessages(grant, this.state().members)) {
+        if (message === null || typeof message !== 'object' || Array.isArray(message))
+          throw new TeamOwnerError('hold');
+        const row = message as Record<string, JsonValue>;
+        if (typeof row.timestamp !== 'string') throw new TeamOwnerError('hold');
+        if (
+          options.groupChatId !== undefined &&
+          (row.groupChatId !== options.groupChatId || row.messageId !== row.groupMessageId)
+        ) continue;
+        unique.set(typeof row.messageId === 'string' ? row.messageId : digest(message), message);
+      }
+      // Stable sort retains original persisted order when timestamps are equal.
+      const messages = [...unique.values()].sort((a, b) =>
+        (a as { timestamp: string }).timestamp.localeCompare((b as { timestamp: string }).timestamp)
+      );
+      const revision = digest({
+        principalId, grant, teamName: this.binding.teamName,
+        groupChatId: options.groupChatId ?? null, messages,
+      });
+      const signature = (offset: number) =>
+        digest({ key: this.messagesPageKey, principalId, revision, offset });
+      let offset = 0;
+      if (options.cursor !== undefined) {
+        const match = /^([1-9][0-9]{0,8})\.([a-f0-9]{64})$/.exec(options.cursor);
+        if (!match) throw new TeamOwnerError('invalid');
+        offset = Number(match[1]);
+        if (match[2] !== signature(offset)) throw new TeamOwnerError('hold');
+      }
+      if (offset > messages.length) throw new TeamOwnerError('hold');
+      const end = messages.length - offset;
+      let start = Math.max(0, end - limit);
+      let page = messages.slice(start, end);
+      // Reduce page length to fit the transport envelope, never silently drop history.
+      while (page.length > 1 && Buffer.byteLength(JSON.stringify(page)) > 384 * 1024) {
+        start++;
+        page = messages.slice(start, end);
+      }
+      const nextOffset = offset + page.length;
+      const response = {
+        teamName: this.binding.teamName,
+        revision,
+        messages: page,
+        nextCursor: start > 0 ? `${nextOffset}.${signature(nextOffset)}` : null,
+        hasMore: start > 0,
+      };
+      if (Buffer.byteLength(JSON.stringify(response)) > 384 * 1024)
+        throw new TeamOwnerError('hold');
+      return json(response);
     });
   }
 
