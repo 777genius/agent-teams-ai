@@ -95,9 +95,12 @@ describe('chip draft persistence via draftStorage', () => {
   it('does not show Saved when an older chip write finishes after an edit', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     let releaseSave!: () => void;
+    let releaseNewSave!: () => void;
     const oldWrite = new Promise<void>((resolve) => { releaseSave = resolve; });
+    const newWrite = new Promise<void>((resolve) => { releaseNewSave = resolve; });
     const save = vi.spyOn(draftStorage, 'saveDraft')
       .mockImplementationOnce(() => oldWrite)
+      .mockImplementationOnce(() => newWrite)
       .mockResolvedValue(undefined);
     let draft!: ReturnType<typeof useChipDraftPersistence>;
     function Input(): ReactElement {
@@ -116,6 +119,12 @@ describe('chip draft persistence via draftStorage', () => {
       expect(draft.chips[0]?.id).toBe('newer-chip');
       expect(draft.isSaved).toBe(false);
       await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      expect(save).toHaveBeenCalledTimes(2);
+      expect(save.mock.calls[1]?.slice(0, 2)).toEqual([
+        'createTeam:prompt:chips', JSON.stringify([makeChip({ id: 'newer-chip' })]),
+      ]);
+      expect(draft.isSaved).toBe(false);
+      await act(async () => { releaseNewSave(); await Promise.resolve(); });
       expect(draft.isSaved).toBe(true);
     } finally {
       await act(async () => { root.unmount(); });
