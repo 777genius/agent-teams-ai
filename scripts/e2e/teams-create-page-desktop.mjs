@@ -713,9 +713,14 @@ async function exerciseScheduleUx(client, fixture, log) {
   await client.click(createButtonExpression('Delete'));
   await client.click("document.querySelector('[role=dialog][aria-label=Delete] button[data-confirm-btn]')");
   await client.waitFor(
-    "window.electronAPI.schedules.list().then(rows => !rows.some(s => s.id === " +
-      JSON.stringify(scheduled.id) + "))",
-    'confirmed schedule deletion persisted', 45_000);
+    "!Array.from(document.querySelectorAll('div.rounded-lg')).some(row => " +
+      "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+      "row.querySelector('button[aria-label=\\\"More actions\\\"]'))",
+    'confirmed schedule disappeared from UI', 45_000);
+  assert.equal(
+    (await client.evaluate('window.electronAPI.schedules.list()')).some(s => s.id === scheduled.id),
+    false, 'Confirmed deletion was not persisted'
+  );
   await captureScreenshot(client, fixture, 'schedules-deleted');
   return { scheduleLabel, scheduleId: scheduled.id, createdAndDeleted: true };
 }
