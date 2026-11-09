@@ -187,6 +187,29 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     expect(await f.messages('captain')).toEqual([]);
   });
 
+  it('reads a real captured OpenCode projection by canonical message identity', () => {
+    const fixturePath = path.join(process.cwd(), 'test/fixtures/team/opencode/relay-works-10-jack-projection-transcript.json');
+    const captured = JSON.parse(fs.readFileSync(fixturePath, 'utf8')) as OpenCodeRuntimeTranscriptResponse;
+    const messages = captured.transcript?.logProjection?.messages ?? [];
+    const final = messages.filter(message =>
+      message.type === 'assistant' &&
+      Array.isArray(message.content) &&
+      message.content.some(block => block.type === 'text')
+    ).at(-1);
+    expect(final).toBeDefined();
+    if (!final) throw new Error('Missing captured assistant');
+    const full = Array.isArray(final.content)
+      ? final.content.flatMap(block => block.type === 'text' ? [block.text] : []).join('\n')
+      : '';
+    expect(readOpenCodeExactAssistantText(captured.transcript, final.sessionId, final.uuid)).toBe(full);
+    const toolCall = messages.find(message => message.type === 'assistant' &&
+      message.toolCalls.some(call => call.name.includes('message_send')));
+    expect(toolCall).toBeDefined();
+    if (toolCall) {
+      expect(readOpenCodeExactAssistantText(captured.transcript, toolCall.sessionId, toolCall.uuid)).toBeNull();
+    }
+  });
+
   it('matches the exact canonical assistant ID/session and never falls back to latest text', () => {
     const messages = [
       transcriptMessage('msg-older', 'Old reply'),
