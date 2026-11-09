@@ -656,6 +656,77 @@ describe('ordinary Host team read selection', () => {
       code: 'hold',
     });
   });
+  it('opens a retained deleted Host task via the captured owner with full comment/detail identity', async () => {
+    const f = fixture();
+    const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+    vi.mocked(f.backend.invoke).mockImplementation(async (request) =>
+      request.operation === 'task.get'
+        ? {
+            ok: true,
+            value: {
+              id: 'retained-1',
+              subject: 'Retained detail',
+              description: 'Original deleted task description',
+              status: 'deleted',
+              comments: [{
+                id: 'comment-1',
+                author: 'alice',
+                text: 'Retained comment',
+                createdAt: '2026-01-03',
+                type: 'regular',
+              }],
+              descriptionTaskRefs: [{
+                taskId: '1',
+                displayId: '1',
+                teamName: 'same-display-team',
+              }],
+              privateRoot: '/SECRET',
+            },
+          }
+        : invoke(request)
+    );
+    const task = await createHostTeamsApi(f.legacy, f.backend).getTask(f.key, 'retained-1');
+    expect(task).toMatchObject({
+      id: 'retained-1',
+      subject: 'Retained detail',
+      description: 'Original deleted task description',
+      status: 'deleted',
+      comments: [{ text: 'Retained comment', author: 'alice' }],
+    });
+    expect(task?.descriptionTaskRefs?.[0].teamName).toBe(f.key);
+    expect(JSON.stringify(task)).not.toContain('/SECRET');
+    expect(f.backend.invoke).toHaveBeenCalledWith(expect.objectContaining({
+      operation: 'task.get',
+      handle: { handleId: 'TEST-original-A' },
+      payload: { taskId: 'retained-1' },
+    }));
+    expect(f.legacy.getTask).not.toHaveBeenCalled();
+  });
+
+  it.each(['identity', 'status', 'forbidden'] as const)(
+    'refuses %s retained task read without falling back to a legacy owner',
+    async (caseName) => {
+      const f = fixture();
+      const original = vi.mocked(f.backend.invoke).getMockImplementation()!;
+      vi.mocked(f.backend.invoke).mockImplementation(async (request) => {
+        if (request.operation !== 'task.get') return original(request);
+        if (caseName === 'forbidden')
+          return { ok: false, code: 'forbidden', outcome: 'not-dispatched' };
+        return {
+          ok: true,
+          value: {
+            id: caseName === 'identity' ? 'foreign-task' : 'retained-1',
+            status: caseName === 'status' ? 'in_progress' : 'deleted',
+            subject: 'Not a valid retained task',
+          },
+        };
+      });
+      await expect(createHostTeamsApi(f.legacy, f.backend).getTask(f.key, 'retained-1'))
+        .rejects.toThrow();
+      expect(f.legacy.getTask).not.toHaveBeenCalled();
+    }
+  );
+
   it('fails closed for unknown/unavailable handles and unsupported operations, zero legacy fallback', async () => {
     const f = fixture();
     const teams = createHostTeamsApi(f.legacy, f.backend);
