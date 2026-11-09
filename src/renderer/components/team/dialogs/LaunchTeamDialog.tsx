@@ -408,6 +408,27 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     provider: false, model: false, effort: false, fastMode: false, skipPermissions: false,
   });
   useEffect(() => setSavedPromptReview(null), [effectiveTeamName, schedule?.id, open]);
+  // Show existing one-time startup instructions before Save, not after a failed attempt.
+  useEffect(() => {
+    if (!open || !isTaskFirstSchedule || !effectiveTeamName) return;
+    let cancelled = false;
+    void api.teams.getSavedRequest(effectiveTeamName).then((saved) => {
+      if (cancelled) return;
+      const prompt = saved?.prompt?.trim() ?? '';
+      if (!prompt) {
+        setSavedPromptReview(null);
+        return;
+      }
+      setSavedPromptReview((current) =>
+        current?.teamName === effectiveTeamName && current.prompt === prompt
+          ? current
+          : { teamName: effectiveTeamName, prompt, confirmed: schedule?.reviewedSavedPrompt === true }
+      );
+    }).catch(() => {
+      // Submission still performs an authoritative read and reports failures.
+    });
+    return () => { cancelled = true; };
+  }, [effectiveTeamName, isTaskFirstSchedule, open, schedule?.reviewedSavedPrompt]);
   // A newly selected team must not inherit the former team's target member.
   useEffect(() => {
     if (isSchedule && !isEditing) setScheduleTargetMember('');
@@ -2629,6 +2650,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             />
           ) : null}
 
+          {isTaskFirstSchedule && savedPromptReview?.teamName === effectiveTeamName ? (
+            <HistoricalPromptReview
+              prompt={savedPromptReview.prompt}
+              confirmed={savedPromptReview.confirmed}
+              onConfirmedChange={(confirmed) => setSavedPromptReview((current) => current && ({ ...current, confirmed }))}
+            />
+          ) : null}
+
           {!usesSavedTeamRuntime ? <ProjectPathSelector
             cwdMode={cwdMode}
             onCwdModeChange={setCwdMode}
@@ -3019,10 +3048,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             </div>
           ) : null}
         </div>
-        {isTaskFirstSchedule && savedPromptReview?.teamName === effectiveTeamName ? (
-          <HistoricalPromptReview prompt={savedPromptReview.prompt} confirmed={savedPromptReview.confirmed}
-            onConfirmedChange={(confirmed) => setSavedPromptReview((current) => current && ({ ...current, confirmed }))} />
-        ) : null}
         {/* Error display */}
         {activeError ? (
           <div className="flex items-start gap-2 rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
