@@ -47,6 +47,7 @@ export async function materializeOpenCodeLeadPlainTextReply(input: {
     ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
     teamName: string;
     memberName: string;
+    visibleReply?: OpenCodeVisibleReplyProof | null;
     ports: OpenCodeLeadPlainTextReplyPorts;
   }): Promise<{ ledgerRecord: OpenCodePromptDeliveryLedgerRecord; visibleReply: OpenCodeVisibleReplyProof | null }> {
     const record = input.ledgerRecord;
@@ -57,11 +58,9 @@ export async function materializeOpenCodeLeadPlainTextReply(input: {
       (classifyOpenCodeDeliveryReplyContract(recipient) !== 'lead_reply' &&
         recipient.toLowerCase() !== configuredLead.trim().toLowerCase()) ||
       !canMaterializeOpenCodePlainTextReply(record) ||
-      (record.visibleReplyMessageId &&
-        record.visibleReplyInbox?.trim().toLowerCase() === configuredLead.trim().toLowerCase()) ||
       (record.responseState !== 'tool_error' && hasOpenCodeObservedMessageSendToolCall(record))
     ) {
-      return { ledgerRecord: record, visibleReply: null };
+      return { ledgerRecord: record, visibleReply: input.visibleReply ?? null };
     }
     const destination = configuredLead.trim();
     const messageId = buildPlainTextVisibleReplyMessageId(record);
@@ -78,6 +77,15 @@ export async function materializeOpenCodeLeadPlainTextReply(input: {
           actionMode: record.actionMode, taskRefs: record.taskRefs,
           text: proof.message.text, summary: proof.message.summary,
         }).sufficient);
+
+    if (validProof(input.visibleReply ?? null)) {
+      return { ledgerRecord: record, visibleReply: input.visibleReply! };
+    }
+    // Do not invent a new reply while a lead-bound tool receipt is unresolved.
+    if (record.visibleReplyMessageId &&
+      record.visibleReplyInbox?.trim().toLowerCase() === destination.toLowerCase()) {
+      return { ledgerRecord: record, visibleReply: null };
+    }
 
     try {
       const existing = await input.ports.findByRelayOfMessageId({
