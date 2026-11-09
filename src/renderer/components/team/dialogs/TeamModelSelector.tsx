@@ -124,6 +124,7 @@ import { selectVisibleOpenCodeModelOptions } from './openCodeVisibleModelOptions
 import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';
 import { resolveRuntimeDefaultModelLabel } from './runtimeDefaultModelLabel';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
+import { TeamModelProviderActions } from './TeamModelProviderActions';
 import {
   OpenCodeCatalogRefreshErrorCard,
   ProviderStatusPanel,
@@ -149,7 +150,6 @@ import {
 import { useOpenCodeProjectDefaultModel } from './useOpenCodeDefaultRouteLabel';
 import { usePublishOpenCodeProviderScopedStatus } from './useOpenCodeProviderScopedModelAuthority';
 import { useTeamDefaultModelTooltip } from './useTeamDefaultModelTooltip';
-import { TeamModelProviderActions } from './TeamModelProviderActions';
 import { useTeamModelProviderStatus } from './useTeamModelProviderStatus';
 export {
   computeEffectiveTeamModel,
