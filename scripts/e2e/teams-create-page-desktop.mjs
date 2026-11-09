@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
+import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -20,6 +21,8 @@ const appLogTail = [];
 const appLogRemainder = { stdout: '', stderr: '' };
 let appProcess = null;
 let appProcessGroupId = null;
+let mainInspectorWebSocketUrl = null;
+let expectedMainInspectorPort = null;
 let cdp = null;
 let inputSelectAllDomFallbacks = 0;
 
@@ -27,8 +30,30 @@ function rememberAppLog(chunk, stream) {
   const text = chunk.toString();
   const lines = `${appLogRemainder[stream]}${text}`.split(/\r?\n/);
   appLogRemainder[stream] = lines.pop() ?? '';
+  for (const line of lines) {
+    const target = line.match(/Debugger listening on (ws:\/\/(?:127\.0\.0\.1|localhost|\[::1\]):(\d+)\/[a-z0-9-]+)/i);
+    if (target && Number(target[2]) === expectedMainInspectorPort)
+      mainInspectorWebSocketUrl = target[1];
+  }
   appLogTail.push(...lines.filter(Boolean));
   if (appLogTail.length > 200) appLogTail.splice(0, appLogTail.length - 200);
+}
+
+// Use an explicit, available port: electron-vite treats --inspect=0 as disabled.
+async function findFreeInspectorPort() {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      if (!address || typeof address === 'string') {
+        server.close();
+        reject(new Error('Could not allocate a loopback inspector port'));
+        return;
+      }
+      server.close((error) => error ? reject(error) : resolve(address.port));
+    });
+  });
 }
 
 async function json(file, value) {
@@ -197,6 +222,7 @@ async function waitForRenderer(port) {
 async function startApp(fixture) {
   // Never use a previous process's DevTools URL while launching the new one.
   appLogTail.length = 0;
+  mainInspectorWebSocketUrl = null;
   appLogRemainder.stdout = '';
   appLogRemainder.stderr = '';
   const nodeBinary = await realpath(process.execPath);
@@ -222,9 +248,11 @@ async function startApp(fixture) {
   // Windows pnpm is a .cmd shim, which cannot be spawned as a POSIX executable.
   // Keep a known launcher PID for taskkill /T on teardown (including restart).
   const windows = process.platform === 'win32';
+  const inspectorPort = await findFreeInspectorPort();
+  expectedMainInspectorPort = inspectorPort;
   appProcess = spawn(
     windows ? (process.env.ComSpec || 'cmd.exe') : 'pnpm',
-    windows ? ['/d', '/s', '/c', 'pnpm dev:mcp'] : ['dev:mcp', ...(process.platform === 'linux' ? ['--noSandbox'] : [])],
+    windows ? ['/d', '/s', '/c', `pnpm dev:mcp --inspect=${inspectorPort}`] : ['dev:mcp', `--inspect=${inspectorPort}`, ...(process.platform === 'linux' ? ['--noSandbox'] : [])],
     {
       cwd: repoRoot,
       detached: !windows,
@@ -261,7 +289,20 @@ async function startApp(fixture) {
   })();
   const port = await Promise.race([ownedPort, exitedBeforeRenderer]);
   const renderer = await Promise.race([waitForRenderer(port), exitedBeforeRenderer]);
-  return { port, renderer };
+  // electron-vite --inspect exposes the *main process* on loopback; renderer
+  // CDP cannot access BrowserWindow.webContents.zoomFactor or menu accelerators.
+  const inspectorWebSocketDebuggerUrl = await Promise.race([
+    (async () => {
+      const deadline = Date.now() + 10_000;
+      while (!mainInspectorWebSocketUrl && Date.now() < deadline)
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      if (!mainInspectorWebSocketUrl)
+        throw new Error('Main-process loopback V8 inspector was not started');
+      return mainInspectorWebSocketUrl;
+    })(),
+    exitedBeforeRenderer,
+  ]);
+  return { port, renderer, inspectorWebSocketDebuggerUrl };
 }
 
 class CdpClient {
@@ -638,13 +679,24 @@ async function main() {
       'same team name restored after Back');
     await captureScreenshot(cdp, fixture, 'resumed');
 
-    log('switch away to Settings and return to Teams creation in same renderer');
+    log('open Providers Settings through the real model picker and resume the draft');
     const teamsTabId = await cdp.evaluate(`(() => {
       const store = window.__agentTeamsDevStore.getState();
       const pane = store.paneLayout.panes.find(p => p.id === store.paneLayout.focusedPaneId);
       return pane.activeTabId;
     })()`);
-    await cdp.evaluate("window.__agentTeamsDevStore.getState().openSettingsTab('general')");
+    const leadModelTrigger = `document.querySelector('[data-role=lead-row] button[aria-label*=" provider, "]')`;
+    await cdp.click(leadModelTrigger);
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=team-model-selector-manage-providers]')",
+      'Manage providers action in Create Team model picker'
+    );
+    await cdp.click("document.querySelector('[data-testid=team-model-selector-manage-providers]')");
+    await cdp.waitFor(`(() => {
+      const store = window.__agentTeamsDevStore.getState();
+      const pane = store.paneLayout.panes.find(p => p.id === store.paneLayout.focusedPaneId);
+      return pane.tabs.find(t => t.id === pane.activeTabId)?.type === 'settings';
+    })()`, 'Manage providers navigated to Settings');
     // Inactive Teams creation pages are retained mounted to avoid lost editor state.
     // Assert that the inactive page is hidden, not removed from the DOM.
     await cdp.waitFor(
@@ -654,7 +706,10 @@ async function main() {
     await cdp.evaluate(
       `window.__agentTeamsDevStore.getState().setActiveTab(${JSON.stringify(teamsTabId)})`);
     await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
-      'draft survives tab switch');
+      'draft survives the Manage providers Settings trip');
+    await cdp.click(leadModelTrigger);
+    await cdp.waitFor("!document.querySelector('[data-testid=team-model-selector-manage-providers]')",
+      'model picker collapsed on return');
     log('render creation page in both themes and at 200% CSS zoom');
     for (const theme of ['light', 'dark']) {
       await cdp.evaluate(
@@ -675,6 +730,62 @@ async function main() {
     );
     await captureScreenshot(cdp, fixture, 'css-zoom-200');
     await cdp.evaluate("document.documentElement.style.zoom = ''");
+
+    log('verify actual BrowserWindow.zoomFactor=2 in isolated Electron main process');
+    const zoomBaseline = await cdp.evaluate(
+      "window.electronAPI.getZoomFactor().then(factor => ({ factor, innerWidth: window.innerWidth }))"
+    );
+    assert(zoomBaseline.factor >= 0.95 && zoomBaseline.factor <= 1.05,
+      'Electron test must start at 100% native zoom');
+    // This local inspector is enabled only in the disposable E2E launch. It
+    // changes a *real* BrowserWindow property, not CSS zoom or CDP pinch scale.
+    const inspector = await CdpClient.connect(started.inspectorWebSocketDebuggerUrl);
+    const setActualZoom = async (factor) => {
+      return inspector.evaluate(
+        "(() => {" +
+        "const moduleRequire = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);" +
+        "if (!moduleRequire) throw new Error('Electron main inspector cannot require modules');" +
+        "const { BrowserWindow } = moduleRequire('electron');" +
+        "const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http://localhost:'));" +
+        "if (!win) throw new Error('Isolated app BrowserWindow not found');" +
+        "win.webContents.setZoomFactor(" + JSON.stringify(factor) + ");" +
+        "return win.webContents.getZoomFactor();" +
+        "})()"
+      );
+    };
+    try {
+      await inspector.send('Runtime.enable');
+      const actualFactor = await setActualZoom(2);
+      assert(Math.abs(actualFactor - 2) <= 0.05,
+        'BrowserWindow did not accept native 200% zoom');
+      await cdp.waitFor(
+        "window.innerWidth < " + JSON.stringify(zoomBaseline.innerWidth * 0.70),
+        'actual Electron zoom narrowed layout viewport'
+      );
+      const visibleAtZoom = await cdp.evaluate(`(() => {
+        const back = document.querySelector('[data-testid=create-team-page] button[aria-label="Back to teams"]');
+        if (!back) return false;
+        const rect = back.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 &&
+          rect.right > 0 && rect.left < window.innerWidth &&
+          rect.bottom > 0 && rect.top < window.innerHeight &&
+          getComputedStyle(back).visibility === 'visible';
+      })()`);
+      assert(visibleAtZoom, 'Back button disappeared at native Electron 200% zoom');
+      await captureScreenshot(cdp, fixture, 'native-electron-zoom-200');
+      assert(Math.abs((await setActualZoom(1)) - 1) <= 0.05,
+        'BrowserWindow did not restore 100% zoom');
+      await cdp.waitFor(
+        "window.innerWidth >= " + JSON.stringify(zoomBaseline.innerWidth * 0.95),
+        'actual Electron layout restored after native zoom reset'
+      );
+    } finally {
+      inspector.close();
+    }
+    assert.equal(
+      await cdp.evaluate("document.querySelector('#team-name')?.value"),
+      unique, 'Native zoom and reset changed unsaved draft'
+    );
 
     log('split into two panes and prevent duplicate creation editors');
     const paneCount = await cdp.evaluate("(() => { " +
@@ -867,6 +978,11 @@ async function main() {
       );
     };
     await selectTemplate();
+    // Wait for the dialog's focus and Tab-trap effects before testing keyboard containment.
+    await cdp.waitFor(
+      `document.querySelector('[role=dialog][aria-label="Apply team template?"]')?.contains(document.activeElement)`,
+      'template confirmation initial keyboard focus'
+    );
     // A destructive confirmation must not expose background form fields to Tab.
     await cdp.send('Input.dispatchKeyEvent', {
       type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9,
@@ -1013,6 +1129,7 @@ async function main() {
       unique,
       retainedAcrossBack: true,
       retainedAcrossTabSwitch: true,
+      manageProvidersNavigationRetainsDraft: true,
       retainedAcrossProcessRestart: true,
       launchStillModal: true,
       launchContentLoaded: true,
@@ -1025,6 +1142,7 @@ async function main() {
       duplicateNameValidationRecovered: true,
       themeDarkLightRendered: true,
       cssZoom200Rendered: true,
+      nativeElectronZoom200Rendered: true,
       splitPaneSingleEditor: true,
       macInputSelectionFallbackCount: inputSelectAllDomFallbacks,
       sandboxRoot: fixture.root,

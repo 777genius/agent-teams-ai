@@ -57,6 +57,23 @@ describe('MemberSelect', () => {
     vi.clearAllMocks();
   });
 
+  it('accepts minimal roster display data without fabricated runtime status', async () => {
+    await act(async () => {
+      root.render(
+        <MemberSelect
+          members={[{ name: 'alice', role: 'Reviewer', color: 'blue' }]}
+          value="alice"
+          onChange={vi.fn()}
+        />
+      );
+      await flush();
+    });
+    const trigger = host.querySelector('button[role="combobox"]') as HTMLElement;
+    expect(trigger.textContent).toContain('alice');
+    await act(async () => trigger.click());
+    expect(document.body.querySelector('[cmdk-list]')?.textContent).toContain('Reviewer');
+  });
+
   it('preserves Create Task defaults for unassigned and lead display', async () => {
     const onChange = vi.fn();
 
@@ -91,6 +108,21 @@ describe('MemberSelect', () => {
     expect(document.body.querySelector('input')?.getAttribute('placeholder')).toBe(
       'Search members...'
     );
+  });
+
+  it('labels a stale selected recipient without changing its saved identity', async () => {
+    await act(async () => {
+      root.render(
+        <MemberSelect members={[member('alice')]} value="retired-member" onChange={vi.fn()}
+          unavailableLabel="This recipient is no longer available." />
+      );
+      await flush();
+    });
+    const button = host.querySelector('button[role="combobox"]') as HTMLButtonElement;
+    expect(button.getAttribute('aria-invalid')).toBe('true');
+    expect(button.textContent).toContain('retired-member');
+    expect(button.textContent).toContain('no longer available');
+    expect(button.title).toBe(''); // Shared Radix Tooltip replaces native title help.
   });
 
   it('supports custom log-source labels, descriptions, search text, and selection', async () => {

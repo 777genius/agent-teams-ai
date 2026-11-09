@@ -1521,7 +1521,12 @@
       "leadDefault": "チームリーダー（既定）",
       "agentDescription": "チーム停止中は単独のエージェントを実行し、稼働中は担当者にタスクを割り当てます。",
       "teamDescription": "チーム停止中は保存済みのチームを起動し、稼働中はリーダーにタスクを割り当てます。保存済みの設定を使用します。",
-      "teamPathMissing": "自動起動の前にチームのプロジェクトフォルダーを保存してください。"
+      "teamPathMissing": "自動起動の前にチームのプロジェクトフォルダーを保存してください。",
+      "taskFirstAgentDescription": "選択したチームメイトには、必要に応じてチームを安全に起動してからボードのタスクを割り当てます。作業中のエージェントは中断しません。",
+      "taskFirstTeamDescription": "チームリーダーには、必要に応じてチームを安全に起動してから調整タスクを割り当てます。進行中の作業は中断しません。",
+      "taskFirstTarget": "担当者",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "保存済みの古いプロンプトを確認し、恒久的な指示を分離しました。記録は残しますが、スケジュールで実行しません。"
     },
     "title": {
       "createSchedule": "スケジュールの作成",
@@ -2096,7 +2101,8 @@
       "stillRunning": "タスクはまだ実行中...",
       "loadingLogs": "ログをロードする...",
       "errors": "エラー",
-      "close": "ふりがな"
+      "close": "ふりがな",
+      "openTask": "タスクを開く"
     },
     "cron": {
       "expression": "クロン式",

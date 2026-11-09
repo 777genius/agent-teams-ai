@@ -135,8 +135,20 @@ export const ConfirmDialog = (): React.JSX.Element | null => {
         (e.shiftKey ? last : first).focus();
       }
     };
+    // Closing a Select can restore focus to its trigger after this modal mounts.
+    // Keep the background inert even when that late focus restoration occurs.
+    const handleFocusIn = (event: FocusEvent): void => {
+      const dialog = dialogRef.current;
+      if (dialog && event.target instanceof Node && !dialog.contains(event.target)) {
+        dialog.querySelector<HTMLButtonElement>('[data-confirm-btn]')?.focus();
+      }
+    };
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener('focusin', handleFocusIn);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('focusin', handleFocusIn);
+    };
   }, [state.isOpen, close]);
 
   // Auto-focus confirm button

@@ -1,4 +1,5 @@
 import { useAppTranslation } from '@features/localization/renderer';
+import { useOpenCodeDashboardConnectedCountProbe } from '@features/runtime-provider-management/renderer';
 import { isElectronMode } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { filterMainScreenCliProviders } from '@renderer/utils/geminiUiFreeze';
@@ -8,13 +9,25 @@ import { Gauge, Settings2 } from 'lucide-react';
 import { ProviderConnectionCounts } from './ProviderConnectionCounts';
 import { useProviderConnectionSummary } from './useProviderConnectionSummary';
 
-export const DashboardProviderSummary = (): React.JSX.Element | null => {
+interface DashboardProviderSummaryProps {
+  readonly isActive?: boolean;
+}
+
+export const DashboardProviderSummary = ({ isActive = true }: DashboardProviderSummaryProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
-  const { summary, cliStatus, cliStatusLoading, cliStatusError, multimodelEnabled } =
+  const { summary, cliStatus, cliStatusLoading, cliStatusError, multimodelEnabled, openCodeIsChecking, projectPath, openCodeRuntimeStatus } =
     useProviderConnectionSummary();
   const openSettingsTab = useStore((state) => state.openSettingsTab);
   const openTab = useStore((state) => state.openTab);
+
+  useOpenCodeDashboardConnectedCountProbe({
+    enabled: isElectronMode() && isActive && multimodelEnabled &&
+      cliStatus?.installed === true && cliStatus.flavor === 'agent_teams_orchestrator',
+    projectPath,
+    runtimeStatus: openCodeRuntimeStatus,
+    connectedCount: summary.openCodeConnected,
+  });
 
   if (!isElectronMode()) return null;
 
@@ -43,6 +56,7 @@ export const DashboardProviderSummary = (): React.JSX.Element | null => {
             cliStatus={cliStatus}
             cliStatusLoading={cliStatusLoading}
             multimodelEnabled={multimodelEnabled}
+            openCodeIsChecking={openCodeIsChecking}
           />
         </div>
         {cliStatusError && (

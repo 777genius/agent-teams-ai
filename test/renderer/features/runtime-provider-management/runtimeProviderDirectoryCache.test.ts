@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { runtimeProviderDirectoryInteraction } from '../../../../src/features/runtime-provider-management/renderer/view-models/runtimeProviderDirectoryInteraction';
 
 import {
+  beginRuntimeProviderConnectedCountCheck,
   getRuntimeProviderConnectedCountEvidence,
   getRuntimeProviderConnectedCountObservation,
   getRuntimeProviderDirectoryCacheSnapshot,
@@ -44,6 +45,39 @@ const providerEntry = {
 describe('runtimeProviderDirectoryCache', () => {
   afterEach(() => {
     resetRuntimeProviderDirectoryCacheForTests();
+  });
+
+  it('tracks only active scoped checks, including concurrent reads and invalidation', () => {
+    const project = '/tmp/checking';
+    const readToken = getRuntimeProviderDirectoryReadToken(project);
+    const stopFirst = beginRuntimeProviderConnectedCountCheck(project, readToken);
+    const stopSecond = beginRuntimeProviderConnectedCountCheck(project, readToken);
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(true);
+    expect(getRuntimeProviderConnectedCountEvidence('/tmp/other').checking).toBeUndefined();
+    stopFirst();
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(true);
+    stopSecond();
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBeUndefined();
+    stopSecond();
+
+    const stopStale = beginRuntimeProviderConnectedCountCheck(project, readToken);
+    invalidateRuntimeProviderDirectoryScopeReads(project);
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(true);
+    stopStale();
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(false);
+    const stopRejected = beginRuntimeProviderConnectedCountCheck(project, readToken);
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(false);
+    stopRejected();
+    const stopCurrent = beginRuntimeProviderConnectedCountCheck(project);
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(true);
+    stopCurrent();
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(false);
+
+    const stopGlobal = beginRuntimeProviderConnectedCountCheck('/tmp/global-invalidation');
+    invalidateRuntimeProviderDirectoryScopeReads(null);
+    expect(getRuntimeProviderConnectedCountEvidence('/tmp/global-invalidation').checking).toBe(true);
+    stopGlobal();
+    expect(getRuntimeProviderConnectedCountEvidence('/tmp/global-invalidation').checking).toBe(false);
   });
 
   it('fences count-only observations across project switches, credential writes and global logout', () => {

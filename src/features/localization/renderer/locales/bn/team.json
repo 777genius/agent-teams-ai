@@ -1521,7 +1521,12 @@
       "leadDefault": "দলনেতা (ডিফল্ট)",
       "agentDescription": "দল বন্ধ থাকলে আলাদা এজেন্ট চালায়; চালু থাকলে কাজ বরাদ্দ করে।",
       "teamDescription": "দল বন্ধ থাকলে সংরক্ষিত দল চালু করে; চালু থাকলে নেতাকে কাজ দেয়। সংরক্ষিত সেটিংস ব্যবহার করে।",
-      "teamPathMissing": "চালু করার সময়সূচি দেওয়ার আগে দলের প্রকল্প ফোল্ডার সংরক্ষণ করুন।"
+      "teamPathMissing": "চালু করার সময়সূচি দেওয়ার আগে দলের প্রকল্প ফোল্ডার সংরক্ষণ করুন।",
+      "taskFirstAgentDescription": "প্রয়োজনে দল নিরাপদে চালু করার পর নির্বাচিত সদস্য বোর্ডে একটি কাজ পাবেন। ব্যস্ত এজেন্টদের কাজ বাধাগ্রস্ত হবে না।",
+      "taskFirstTeamDescription": "প্রয়োজনে দল নিরাপদে চালু করার পর দলনেতা সমন্বয়ের একটি কাজ পাবেন। চলমান কাজ বাধাগ্রস্ত হবে না।",
+      "taskFirstTarget": "দায়িত্ব দিন",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "সংরক্ষিত পুরোনো প্রম্পট পর্যালোচনা করেছি এবং স্থায়ী নির্দেশ আলাদা করেছি। পাঠ্যটি রাখুন, কিন্তু সময়সূচিতে চালাবেন না।"
     },
     "title": {
       "createSchedule": "ট্যাগ তৈরি করুন",
@@ -2096,7 +2101,8 @@
       "stillRunning": "কর্ম বর্তমানে চলছে...",
       "loadingLogs": "লগ লোড করা হচ্ছে...",
       "errors": "ত্রুটি",
-      "close": "বন্ধ"
+      "close": "বন্ধ",
+      "openTask": "কাজ খুলুন"
     },
     "cron": {
       "expression": "এক্সপ্রেশন",

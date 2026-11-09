@@ -6,12 +6,20 @@ on:
     branches: [main]
     paths:
       - 'scripts/e2e/provider-real-runtime-*.ts'
+      - 'scripts/e2e/opencode-diagnostics/real-runtime.mjs'
+      - 'scripts/e2e/opencode-diagnostics-desktop.mjs'
+      - 'src/renderer/components/dashboard/DashboardProviderSummary.tsx'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts'
       - '.github/workflows/provider-real-runtime-e2e.yml'
       - 'runtime.lock.json'
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - 'scripts/e2e/provider-real-runtime-*.ts'
+      - 'scripts/e2e/opencode-diagnostics/real-runtime.mjs'
+      - 'scripts/e2e/opencode-diagnostics-desktop.mjs'
+      - 'src/renderer/components/dashboard/DashboardProviderSummary.tsx'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts'
       - '.github/workflows/provider-real-runtime-e2e.yml'
       - 'runtime.lock.json'
 
@@ -42,11 +50,12 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
       - name: Verify pure provider-count contract
-        run: node --test scripts/e2e/provider-real-runtime-policy.test.ts
+        run: node --test scripts/e2e/provider-real-runtime-policy.test.ts scripts/e2e/opencode-diagnostics/real-runtime.test.mjs
       - name: Install genuine OpenCode V1 in runner-owned scratch
         shell: bash
         run: |
@@ -68,6 +77,31 @@ jobs:
         env:
           PROVIDER_REAL_E2E_EVIDENCE: ${{ runner.temp }}/provider-real-runtime-e2e/evidence.json
         run: node scripts/e2e/provider-real-runtime-e2e.ts
+      - name: Install desktop Electron test dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Verify isolated desktop harness guardrails
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs
+      - name: Verify real pinned runtime through Linux Electron IPC and UI
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node scripts/e2e/opencode-diagnostics/run.mjs --real-runtime
+      - name: Verify real pinned runtime through Windows Electron IPC and UI
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          node scripts/e2e/opencode-diagnostics/run.mjs --real-runtime
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Preserve sanitized real Electron connection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-runtime-electron-ipc-${{ matrix.platform }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.png
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold-dashboard.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold-dashboard.png
       - name: Preserve sanitized count and timing evidence
         if: always()
         uses: actions/upload-artifact@v4
