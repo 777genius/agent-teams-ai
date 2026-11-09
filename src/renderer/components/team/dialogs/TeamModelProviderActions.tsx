@@ -38,10 +38,6 @@ export function TeamModelProviderActions({
   const fetchOpenCodeRuntimeStatus = useStore((s) => s.fetchOpenCodeRuntimeStatus);
   const invalidateCodexRuntimeStatus = useStore((s) => s.invalidateCodexRuntimeStatus);
   const fetchCodexRuntimeStatus = useStore((s) => s.fetchCodexRuntimeStatus);
-  const invalidateOpenCodeRuntimeStatus = useStore((s) => s.invalidateOpenCodeRuntimeStatus);
-  const fetchOpenCodeRuntimeStatus = useStore((s) => s.fetchOpenCodeRuntimeStatus);
-  const invalidateCodexRuntimeStatus = useStore((s) => s.invalidateCodexRuntimeStatus);
-  const fetchCodexRuntimeStatus = useStore((s) => s.fetchCodexRuntimeStatus);
   const directory = useOpenCodeSourceDirectory(projectPath || null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState(false);
@@ -65,15 +61,6 @@ export function TeamModelProviderActions({
     try {
       // Retire old scoped reads and bypass cached CLI metadata before checking providers.
       await invalidateCliStatus();
-      // Runtime snapshots are separate from CLI provider status. A runtime may
-      // have been installed or updated outside the app while Settings was open.
-      const runtimeResults = await Promise.allSettled([
-        invalidateOpenCodeRuntimeStatus().then(() => fetchOpenCodeRuntimeStatus()),
-        invalidateCodexRuntimeStatus().then(() => fetchCodexRuntimeStatus()),
-      ]);
-      if (runtimeResults.some((result) => result.status === 'rejected')) {
-        setRefreshError(true);
-      }
       await fetchCliStatus();
       // Metadata reads report errors in the store instead of rejecting.
       if (useStore.getState().cliStatusError) setRefreshError(true);
