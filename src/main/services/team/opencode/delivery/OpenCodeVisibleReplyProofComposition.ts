@@ -1,6 +1,7 @@
 import { isLeadMember } from '@shared/utils/leadDetection';
-import { ClaudeBinaryResolver } from '../../ClaudeBinaryResolver';
+
 import { ClaudeMultimodelBridgeService } from '../../../runtime/ClaudeMultimodelBridgeService';
+import { ClaudeBinaryResolver } from '../../ClaudeBinaryResolver';
 
 import { OpenCodeVisibleReplyProofService } from './OpenCodeVisibleReplyProofService';
 
