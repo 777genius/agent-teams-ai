@@ -56,7 +56,7 @@ function response(input: {
         modelCount: 0,
         authMethods: ['api' as const],
         defaultModelId: null,
-        sources: ['synthetic-test'],
+        sources: ['seed' as const],
         sourceLabel: 'Test fixture',
         providerSource: null,
         detail: null,
