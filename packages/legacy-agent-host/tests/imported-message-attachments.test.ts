@@ -345,6 +345,80 @@ test('actual Team attachment control route accepts full Main stored binding and 
   assert.equal(calls, 3);
 });
 
+test('captured Host resolves canonical message attachment metadata past the first 384 KiB snapshot page', async () => {
+  const { createFilesystemTeamOwner } =
+    await import('../dist/adapters/team/createFilesystemTeamOwner.js');
+  const { createTeamAttachmentComposition } =
+    await import('../dist/composition/createTeamAttachmentComposition.js');
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-later-message-attachments-')));
+  roots.push(root);
+  const binding = { backendId: 'TEST-owner', teamId: 'TEST-team-id', teamName: 'TEST-team' };
+  const members = [{ memberId: 'TEST-lead', name: 'captain', role: 'lead' as const }];
+  const grants = [{ principalId: 'TEST-reader', memberName: 'user', permissions: ['read' as const] }];
+  const owner = createFilesystemTeamOwner({ root, binding, members, grants });
+  const connection = owner.connect('TEST-reader');
+  const scope = {
+    projectId: 'TEST-context',
+    workspaceId: 'TEST-context',
+    teamId: binding.teamId,
+    runId: 'TEST-run',
+    memberId: 'user',
+    generation: '1',
+  };
+  const profile = {
+    principalId: 'TEST-reader',
+    owner: {
+      ownerId: 'TEST-owner',
+      revision: 'TEST-revision',
+      storageRoot: root,
+      profileId: 'TEST-profile',
+      protocolVersion: 1 as const,
+      buildId: 'TEST-build',
+      nodeSha256: 'a'.repeat(64),
+      hostEntrySha256: 'b'.repeat(64),
+    },
+  };
+  const attachment = { id: 'TEST-image', filename: 'image.png', mimeType: 'image/png', size: 4 };
+  const targetId = 'TEST-message-119';
+  const messages = Array.from({ length: 120 }, (_, index) => ({
+    messageId: `TEST-message-${index}`,
+    from: 'captain',
+    text: `retained-${index}-${'x'.repeat(6000)}`,
+    timestamp: '2026-01-01T00:00:00.000Z',
+    read: false,
+    ...(index === 119 ? { attachments: [attachment] } : {}),
+  }));
+  const inbox = join(root, 'teams/TEST-team/inboxes/user.json');
+  mkdirSync(dirname(inbox), { recursive: true });
+  writeFileSync(inbox, JSON.stringify(messages));
+  const first = connection.readSnapshot() as {
+    messages: { messageId: string }[];
+    nextCursor: string | null;
+  };
+  assert.ok(first.nextCursor);
+  assert.equal(first.messages.some((row) => row.messageId === targetId), false);
+  const hosted = {
+    definition: { binding, scope, members, grants },
+    owner,
+    connection,
+  };
+  const composition = createTeamAttachmentComposition({
+    profile,
+    teams: new Map([[binding.teamId, hosted]]),
+    assertCurrent: () => undefined,
+  });
+  const response = await composition.methods['team.message.attachments.read']!.handle(
+    {
+      binding: { schemaVersion: 1, handleId: 'TEST-original-handle', owner: profile.owner, scope },
+      commandId: 'TEST-read',
+      payload: { reference: targetId },
+    } as never,
+    { requestId: 'TEST-read', signal: new AbortController().signal }
+  ) as { ok: boolean; value?: unknown };
+  assert.equal(response.ok, true);
+  assert.deepEqual(response.value, [attachment]);
+});
+
 test('shared current source reader preserves exact task and comment attachment reads', () => {
   const f = fixture();
   const task = {

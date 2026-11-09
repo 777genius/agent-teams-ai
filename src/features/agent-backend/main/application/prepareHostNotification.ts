@@ -11,7 +11,7 @@ export interface HostNotificationSource {
   initialize(): Promise<void>;
   isCurrent(): boolean;
   connection(handle: BackendHandle): Connection | undefined;
-  readSnapshot(handle: BackendHandle, isCurrent: () => boolean): Promise<BackendTeamSnapshot>;
+  readSnapshot(handle: BackendHandle, isCurrent: () => boolean, cursor?: string): Promise<BackendTeamSnapshot>;
 }
 
 /** Existing Desktop store owns notifications; Host supplies only original product identity. */
@@ -36,15 +36,38 @@ export async function prepareHostNotification(source: HostNotificationSource, ra
       throw new Error('Host notification owner changed');
   };
   assertCurrent();
-  const snapshot = await source.readSnapshot(handle, () => {
+  const current = () => {
     try {
       assertCurrent();
       return true;
     } catch {
       return false;
     }
-  });
+  };
+  const first = await source.readSnapshot(handle, current);
   assertCurrent();
+  // Resolve the original target only after all bounded pages have been
+  // checked. Main must not treat a partial page as a complete team.
+  const tasks = [...first.tasks];
+  const seen = new Set<string>();
+  let cursor = first.nextCursor;
+  let pages = 1;
+  while (cursor !== undefined && cursor !== null) {
+    if (pages++ >= 128 || seen.has(cursor))
+      throw new Error('Host notification page continuation unavailable');
+    seen.add(cursor);
+    const next = await source.readSnapshot(handle, current, cursor);
+    assertCurrent();
+    if (
+      next.teamName !== first.teamName ||
+      next.revision !== first.revision ||
+      next.feed.streamId !== first.feed.streamId ||
+      next.feed.sequence !== first.feed.sequence
+    ) throw new Error('Host notification source changed during paged read');
+    tasks.push(...next.tasks);
+    cursor = next.nextCursor;
+  }
+  const snapshot = { ...first, tasks };
   const target = data.target!;
   if (target.kind === 'task') {
     const task = snapshot.tasks.find((row) => row.id === target.taskId);
