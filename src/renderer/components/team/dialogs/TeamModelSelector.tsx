@@ -149,8 +149,8 @@ import {
 import { useOpenCodeProjectDefaultModel } from './useOpenCodeDefaultRouteLabel';
 import { usePublishOpenCodeProviderScopedStatus } from './useOpenCodeProviderScopedModelAuthority';
 import { useTeamDefaultModelTooltip } from './useTeamDefaultModelTooltip';
-import { useTeamModelProviderStatus } from './useTeamModelProviderStatus';
 import { TeamModelProviderActions } from './TeamModelProviderActions';
+import { useTeamModelProviderStatus } from './useTeamModelProviderStatus';
 export {
   computeEffectiveTeamModel,
   formatTeamModelSummary,
