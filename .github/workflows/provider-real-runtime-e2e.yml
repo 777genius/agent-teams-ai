@@ -9,6 +9,10 @@ on:
       - 'scripts/e2e/opencode-diagnostics/startup-resources.mjs'
       - 'scripts/e2e/opencode-diagnostics/startup-resources.test.mjs'
       - 'scripts/e2e/opencode-diagnostics/run.mjs'
+      - 'scripts/e2e/opencode-diagnostics/real-runtime.mjs'
+      - 'scripts/e2e/opencode-diagnostics-desktop.mjs'
+      - 'src/renderer/components/dashboard/DashboardProviderSummary.tsx'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts'
       - '.github/workflows/provider-real-runtime-e2e.yml'
       - 'runtime.lock.json'
   pull_request:
@@ -18,6 +22,10 @@ on:
       - 'scripts/e2e/opencode-diagnostics/startup-resources.mjs'
       - 'scripts/e2e/opencode-diagnostics/startup-resources.test.mjs'
       - 'scripts/e2e/opencode-diagnostics/run.mjs'
+      - 'scripts/e2e/opencode-diagnostics/real-runtime.mjs'
+      - 'scripts/e2e/opencode-diagnostics-desktop.mjs'
+      - 'src/renderer/components/dashboard/DashboardProviderSummary.tsx'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts'
       - '.github/workflows/provider-real-runtime-e2e.yml'
       - 'runtime.lock.json'
 
@@ -98,6 +106,8 @@ jobs:
           path: |
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.png
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold-dashboard.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold-dashboard.png
       - name: Preserve owned startup resource samples
         if: always()
         uses: actions/upload-artifact@v4
