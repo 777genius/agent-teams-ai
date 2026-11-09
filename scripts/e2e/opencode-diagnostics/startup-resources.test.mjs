@@ -18,6 +18,9 @@ describe('isolated provider startup resource census', () => {
     assert.deepEqual(parseUnixResourceRows(' 123 2048 00:00:01 opencode\n'), [
       { pid: 123, rssBytes: 2097152, cpuTimeMs: 1000, name: 'opencode' },
     ]);
+    assert.deepEqual(parseUnixResourceRows(' 55 512 00:01 node (foreground-child watchdog)\n'), [
+      { pid: 55, rssBytes: 524288, cpuTimeMs: 1000, name: 'node (foreground-child watchdog)' },
+    ]);
     assert.deepEqual(parseWindowsResourceRows('\uFEFF{"pid":1,"rssBytes":4096,"cpuTimeMs":10.5,"name":"opencode.exe"}'), [
       { pid: 1, rssBytes: 4096, cpuTimeMs: 10.5, name: 'opencode.exe' },
     ]);

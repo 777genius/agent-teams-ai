@@ -25,7 +25,7 @@ export function parseCpuTimeMs(value) {
 
 export function parseUnixResourceRows(output) {
   return output.trim().split('\n').filter(Boolean).map((line) => {
-    const match = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s*$/.exec(line);
+    const match = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.+?)\s*$/.exec(line);
     assert(match, 'Invalid OS resource row');
     const pid = Number(match[1]);
     const rssBytes = Number(match[2]) * 1024;
