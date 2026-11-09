@@ -207,7 +207,7 @@
         "description": "JSON-kleurenpaletten met naam, gebaseerd op licht of donker.",
         "none": "Ingebouwd thema",
         "edit": "JSON bewerken",
-        "localOnly": "Thema's en schaal worden alleen op dit apparaat of in deze browser bewaard.",
+        "localOnly": "Thema’s, zoom en lettertypen worden alleen op dit apparaat of in deze browser opgeslagen.",
         "editor": {
           "title": "Thema's bewerken (JSON)",
           "description": "Bewerk maximaal 8 thema's. Kleuren moeten #RRGGBB zijn. Alleen geldige JSON wordt opgeslagen; een lege themes-lijst verwijdert alles.",
@@ -222,6 +222,22 @@
       "uiScale": {
         "label": "Interfaceschaal",
         "description": "Schaal de hele app zonder de browser- of systeemzoom te wijzigen.",
+        "reset": "Herstellen"
+      },
+      "fontFamily": {
+        "label": "Lettertype van interface",
+        "description": "Kies een lokaal geïnstalleerd lettertype. Editor en terminal behouden hun eigen lettertype.",
+        "system": "Systeemstandaard",
+        "other": "Ander lettertype…",
+        "placeholder": "Naam van geïnstalleerd lettertype",
+        "apply": "Toepassen",
+        "discover": "Geïnstalleerde lettertypen zoeken",
+        "loaded": "Geïnstalleerde lettertypen toegevoegd aan de lijst.",
+        "unavailable": "Lettertypen kunnen hier niet worden opgevraagd. Voer de naam handmatig in."
+      },
+      "textSize": {
+        "label": "Tekstgrootte",
+        "description": "Wijzig de tekstgrootte zonder de interfacezoom te veranderen.",
         "reset": "Herstellen"
       }
     },
