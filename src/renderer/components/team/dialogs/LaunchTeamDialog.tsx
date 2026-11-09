@@ -398,7 +398,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const isTeamSchedule = isSchedule && scheduleExecutionMode === 'team';
   const isTaskFirstSchedule = isSchedule && (schedule?.taskFirst === true || !isEditing);
   const usesSavedTeamRuntime = isTeamSchedule || isTaskFirstSchedule;
-  const legacyTeamSettings = isEditing && schedule?.executionMode === 'team' && !schedule.taskFirst ? schedule.launchConfig : null;
+  const legacyTeamSettings = isEditing && scheduleExecutionMode === 'team' && schedule?.executionMode === 'team' && !schedule.taskFirst ? schedule.launchConfig : null;
   useEffect(() => setSavedPromptReview(null), [effectiveTeamName, schedule?.id, open]);
   // A newly selected team must not inherit the former team's target member.
   useEffect(() => {
@@ -2136,7 +2136,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [isLaunchMode, membersDrafts]);
 
   const provisioningError = isLaunchMode ? props.provisioningError : null;
-  const activeError = localError ?? (usesSavedTeamRuntime ? null : modelValidationError) ?? provisioningError;
+  const activeError = localError ?? validationErrors[0] ?? (usesSavedTeamRuntime ? null : modelValidationError) ?? provisioningError;
   const effectivePrepare = useMemo(
     () =>
       deriveEffectiveProvisioningPrepareState({

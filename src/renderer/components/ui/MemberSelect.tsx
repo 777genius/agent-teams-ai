@@ -15,6 +15,7 @@ import { Command as CommandPrimitive } from 'cmdk';
 import { Check, ChevronsUpDown, UserRound } from 'lucide-react';
 
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip';
 
 import type { ResolvedTeamMember } from '@shared/types';
 
@@ -148,8 +149,10 @@ export const MemberSelect = <T extends SelectableMember>({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
           type="button"
           role="combobox"
           aria-haspopup="listbox"
@@ -157,7 +160,7 @@ export const MemberSelect = <T extends SelectableMember>({
           aria-controls={listboxId}
           aria-label={triggerAriaLabel}
           aria-invalid={unavailableSelection || undefined}
-          title={unavailableSelection ? unavailableLabel : isAvatarTrigger ? selectedLabel : undefined}
+          title={isAvatarTrigger && !unavailableSelection ? selectedLabel : undefined}
           disabled={disabled}
           className={cn(
             isAvatarTrigger
@@ -190,8 +193,13 @@ export const MemberSelect = <T extends SelectableMember>({
               <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
             </>
           )}
-        </button>
-      </PopoverTrigger>
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        {unavailableSelection && unavailableLabel ? (
+          <TooltipContent side="top">{unavailableLabel}</TooltipContent>
+        ) : null}
+      </Tooltip>
       <PopoverContent
         className={cn(
           isAvatarTrigger ? 'w-56 p-0' : 'w-[var(--radix-popover-trigger-width)] min-w-[200px] p-0'

@@ -4845,7 +4845,7 @@ describe('LaunchTeamDialog', () => {
       expect(host.textContent).toContain('Review the team');
       expect(host.textContent).toContain('saved one-time instructions');
       expect(host.textContent).toContain('Old task that must not be executed');
-      const acknowledgment = host.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      const acknowledgment = host.querySelector('button[role="checkbox"]') as HTMLButtonElement;
       expect(acknowledgment).toBeTruthy();
       await act(async () => {
         acknowledgment.click();
