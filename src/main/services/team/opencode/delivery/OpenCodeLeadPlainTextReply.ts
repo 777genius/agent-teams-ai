@@ -10,7 +10,8 @@ import {
   canMaterializeOpenCodePlainTextReply,
   hasOpenCodeObservedMessageSendToolCall,
 } from './OpenCodePromptDeliveryReadCommitPolicy';
-import { isOpenCodeLeadReplyRecipientAlias, openCodeTaskRefsIncludeAll } from './OpenCodeRuntimeDeliveryProofMatching';
+import { openCodeTaskRefsIncludeAll } from './OpenCodeRuntimeDeliveryProofMatching';
+import { classifyOpenCodeDeliveryReplyContract } from './OpenCodeDeliveryReplyContract';
 import { isOpenCodeVisibleReplySemanticallySufficient } from './OpenCodePromptDeliveryWatchdog';
 
 import type { OpenCodePromptDeliveryLedgerRecord, OpenCodePromptDeliveryLedgerStore } from './OpenCodePromptDeliveryLedger';
@@ -53,7 +54,7 @@ export async function materializeOpenCodeLeadPlainTextReply(input: {
     const recipient = record.replyRecipient.trim();
     if (
       !configuredLead?.trim() ||
-      (!isOpenCodeLeadReplyRecipientAlias(recipient) &&
+      (classifyOpenCodeDeliveryReplyContract(recipient) !== 'lead_reply' &&
         recipient.toLowerCase() !== configuredLead.trim().toLowerCase()) ||
       !canMaterializeOpenCodePlainTextReply(record) ||
       record.visibleReplyMessageId ||
