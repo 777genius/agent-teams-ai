@@ -116,9 +116,10 @@ export function hasOneVisibleOpenCodeConnection(text) {
  */
 export async function verifyColdDashboardConnectedCount({ root, evaluate, send }) {
   const started = performance.now();
+  const timeoutMs = 90_000;
   let outcome = 'count_unavailable';
   let connected = null;
-  for (let attempt = 0; attempt < 180; attempt++) {
+  while (performance.now() - started < timeoutMs) {
     let view;
     try {
       view = await evaluate(`(() => ({
@@ -127,21 +128,20 @@ export async function verifyColdDashboardConnectedCount({ root, evaluate, send }
         count: document.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent || '',
       }))()`);
     } catch {
-      // A renderer navigation may briefly replace CDP's execution context.
-      // Keep the original bounded cold-start budget and preserve failure evidence.
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      continue;
+      // The renderer can replace its execution context while navigating.
+      // Retry only inside the original wall-clock budget, then write failure evidence.
     }
-    if (view.settings) {
+    if (view?.settings) {
       outcome = 'settings_opened_before_dashboard_proof';
       break;
     }
-    if (view.dashboard && hasOneVisibleOpenCodeConnection(view.count)) {
+    if (view?.dashboard && hasOneVisibleOpenCodeConnection(view.count)) {
       outcome = 'passed';
       connected = 1;
       break;
     }
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    const remaining = timeoutMs - (performance.now() - started);
+    if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, Math.min(500, remaining)));
   }
   const elapsedMs = Math.round(performance.now() - started);
   await writeFile(path.join(root, 'cold-dashboard.json'), JSON.stringify({

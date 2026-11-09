@@ -145,6 +145,22 @@ describe('cold Dashboard OpenCode count-only probe', () => {
     expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
   });
 
+  it('does not repeat a failed count across Dashboard remounts or rapid scope switches', async () => {
+    loadProviderDirectory.mockRejectedValue(new Error('test-only directory timeout'));
+    await render({ projectPath: '/test/A' });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    await render({ projectPath: '/test/A' });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+
+    await render({ projectPath: '/test/B' });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
+    await render({ projectPath: '/test/A' });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
+  });
+
   it('accepts a genuine complete empty connected summary as zero', async () => {
     loadProviderDirectory.mockResolvedValue(response({ entries: 0 }));
     await render();

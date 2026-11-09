@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 import { api } from '@renderer/api';
 
@@ -15,6 +15,7 @@ import type { OpenCodeRuntimeStatus } from '@shared/types';
 
 /** One in-flight count read per scope/runtime/credential generation, across Dashboard panes. */
 const activeReads = new Map<string, Promise<void>>();
+const recentAttempts = new Map<string, number>();
 const RETRY_AFTER_MS = 2 * 60_000;
 
 interface DashboardConnectedCountProbeOptions {
@@ -42,7 +43,6 @@ export function useOpenCodeDashboardConnectedCountProbe({
   // This changes on invalidation; the Dashboard's existing external-store
   // subscription re-renders the hook even when Unknown stays Unknown.
   const readToken = getRuntimeProviderDirectoryReadToken(projectPath);
-  const lastAttempt = useRef<{ key: string; startedAt: number } | null>(null);
 
   useEffect(() => {
     if (!enabled || !revision || connectedCount !== null) return;
@@ -50,10 +50,12 @@ export function useOpenCodeDashboardConnectedCountProbe({
     const token = getRuntimeProviderDirectoryReadToken(projectPath);
     const key = JSON.stringify([projectPath?.trim() || null, revision, token]);
     const now = Date.now();
-    if (lastAttempt.current?.key === key &&
-        now - lastAttempt.current.startedAt < RETRY_AFTER_MS) return;
-    lastAttempt.current = { key, startedAt: now };
-    if (activeReads.has(key)) return;
+    // Pane remounts and rapid project switches must not restart a failed CLI read.
+    for (const [attemptKey, startedAt] of recentAttempts) {
+      if (now - startedAt >= RETRY_AFTER_MS) recentAttempts.delete(attemptKey);
+    }
+    if (recentAttempts.has(key) || activeReads.has(key)) return;
+    recentAttempts.set(key, now);
 
     const endCheck = beginRuntimeProviderConnectedCountCheck(projectPath, token);
     const request = api.runtimeProviderManagement.loadProviderDirectory({
