@@ -65,7 +65,6 @@ export interface OpenCodeVisibleReplyProofServiceDependencies {
     requireFailedMessageSendProof?: boolean;
     runtimePromptMessageId?: string;
     expectedReplyRecipient?: string;
-    expectedRelayOfMessageId?: string;
   }) => Promise<string | null>;
   emitRuntimeDeliveryReplyAdvisoryRefresh: (teamName: string, message: InboxMessage) => void;
   warn: (message: string) => void;

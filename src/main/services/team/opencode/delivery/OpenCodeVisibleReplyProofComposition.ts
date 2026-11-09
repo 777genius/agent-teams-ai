@@ -37,18 +37,11 @@ function isOpenCodeMessageSendTool(name: string): boolean {
   return /(?:^|[_-])(message_send|group_chat_send)$/.test(name.toLowerCase());
 }
 
-/** A send to another explicit recipient/origin cannot satisfy this lead inbox. */
-function isUnrelatedOpenCodeSend(
-  input: Record<string, unknown>,
-  expectedRecipient?: string,
-  expectedRelayOfMessageId?: string
-): boolean {
+/** Only a provably different physical inbox can rule out duplicate lead delivery. */
+function isUnrelatedOpenCodeSend(input: Record<string, unknown>, expectedRecipient?: string): boolean {
   const to = typeof input.to === 'string' ? input.to.trim().toLowerCase() : '';
   const recipient = expectedRecipient?.trim().toLowerCase();
-  if (!to || !recipient) return false;
-  if (to !== recipient && !isLeadNameAlias(to)) return true;
-  const relay = typeof input.relayOfMessageId === 'string' ? input.relayOfMessageId.trim() : '';
-  return Boolean(relay && expectedRelayOfMessageId && relay !== expectedRelayOfMessageId);
+  return Boolean(to && recipient && to !== recipient && !isLeadNameAlias(to));
 }
 
 /**
@@ -61,8 +54,7 @@ function hasNoPotentiallySuccessfulOpenCodeSends(
   sessionId: string,
   promptMessageId: string,
   assistantMessageId: string,
-  expectedRecipient?: string,
-  expectedRelayOfMessageId?: string
+  expectedRecipient?: string
 ): boolean {
   const promptPositions = messages.flatMap((message, i) =>
     message.uuid === promptMessageId && message.sessionId === sessionId &&
@@ -89,7 +81,7 @@ function hasNoPotentiallySuccessfulOpenCodeSends(
     .flatMap(message => message.toolCalls
       .filter(call => isOpenCodeMessageSendTool(call.name))
       .filter(call => !isUnrelatedOpenCodeSend(
-        call.input, expectedRecipient, expectedRelayOfMessageId
+        call.input, expectedRecipient
       ))
       .map(call => ({ assistantId: message.uuid, callId: call.id.trim() })));
   // A stale ledger tool name must not block a newer text-only assistant turn.
@@ -115,7 +107,6 @@ export function readOpenCodeExactAssistantText(
     requireFailedMessageSendProof?: boolean;
     runtimePromptMessageId?: string;
     expectedReplyRecipient?: string;
-    expectedRelayOfMessageId?: string;
   }
 ): string | null {
   if (transcript?.sessionId !== sessionId) return null;
@@ -132,7 +123,7 @@ export function readOpenCodeExactAssistantText(
     const promptId = options.runtimePromptMessageId?.trim();
     if (!promptId || !hasNoPotentiallySuccessfulOpenCodeSends(
       messages, sessionId, promptId, assistantMessageId,
-      options.expectedReplyRecipient, options.expectedRelayOfMessageId
+      options.expectedReplyRecipient
     )) return null;
   } else if (hasSendInAnswer) {
     // A send without independently confirmed failure may have written the inbox.
@@ -166,7 +157,6 @@ export function createOpenCodeVisibleReplyProofServiceFromHost(
         requireFailedMessageSendProof: input.requireFailedMessageSendProof,
         runtimePromptMessageId: input.runtimePromptMessageId,
         expectedReplyRecipient: input.expectedReplyRecipient,
-        expectedRelayOfMessageId: input.expectedRelayOfMessageId,
       });
     },
     sendGroupChatReply: options.sendGroupChatReply ?? service.sendGroupChatReply,

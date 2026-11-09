@@ -420,7 +420,6 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
       requireFailedMessageSendProof: true,
       runtimePromptMessageId: 'prompt-lead',
       expectedReplyRecipient: 'captain',
-      expectedRelayOfMessageId: 'msg-lead',
     };
     expect(readOpenCodeExactAssistantText(
       projection([prompt, peerSend, answer]), 'ses-current', 'answer-lead', options
@@ -443,7 +442,7 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     }] };
     expect(readOpenCodeExactAssistantText(
       projection([prompt, otherOrigin, answer]), 'ses-current', 'answer-lead', options
-    )).toBe('Complete answer to captain.');
+    )).toBeNull();
   });
 
   it('does not confuse a stale ledger message_send with a send in the current turn', () => {
