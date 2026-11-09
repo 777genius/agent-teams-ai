@@ -82,7 +82,11 @@ function captureOwnedCallback<K extends OwnedCallback>(
     if (descriptor) {
       if (typeof descriptor.value !== 'function')
         throw new Error('OpenCode V2 requires data-property native owner callbacks');
-      return Function.prototype.bind.call(descriptor.value, owned) as OpenCodeV2OwnedSession[K];
+      // Function.prototype.bind reads target.name and target.length. An owner
+      // can use those getters to replace another callback during capture.
+      // Reflect.apply preserves original identity/receiver without metadata reads.
+      const original = descriptor.value as (...args: unknown[]) => unknown;
+      return ((...args: unknown[]) => Reflect.apply(original, owned, args)) as OpenCodeV2OwnedSession[K];
     }
     prototype = Object.getPrototypeOf(prototype);
   }

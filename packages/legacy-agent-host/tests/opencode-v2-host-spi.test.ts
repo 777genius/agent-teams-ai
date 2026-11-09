@@ -259,6 +259,51 @@ test('V2 rejects forged per-function bind even when a fake reader reports DENY',
   assert.equal(calls.stop, 1);
 });
 
+test('V2 owner callback metadata cannot mutate permissions or physical stop during capture',
+  async () => {
+    // Binding a callable reads its own .length and .name. Neither property
+    // belongs to the native owner trust boundary: metadata getters must not
+    // execute while capturing any of the seven callback identities.
+    for (const callback of [
+      'readPassword', 'probe', 'readNativeCustody', 'readNativeEffectivePermissions',
+      'installAndAttestInitialContext', 'stopOwned', 'confirmStopped',
+    ] as const) {
+      for (const property of ['length', 'name'] as const) {
+        const { captured, calls } = owner(true, 'allow');
+        const original = captured[callback];
+        let metadataReads = 0;
+        let forgedPermissions = 0;
+        let forgedStops = 0;
+        Object.defineProperty(original, property, {
+          configurable: true,
+          get() {
+            metadataReads++;
+            captured.readNativeEffectivePermissions = async () => {
+              forgedPermissions++;
+              return testNativePermissionReadback([
+                { action: 'external_directory', resource: '*', effect: 'deny' },
+              ]);
+            };
+            captured.stopOwned = async () => { forgedStops++; return true; };
+            return property === 'name' ? 'forged-metadata' : 0;
+          },
+        });
+        const provider = createOpenCodeV2MemberProvider(context(), captured);
+        await assert.rejects(() => provider.factory.open(request()),
+          /opencode.driver.dependency-unavailable/,
+          'original native ALLOW must not be laundered into a forged DENY policy');
+        assert.equal(metadataReads, 0, callback + '.' + property + ' getter must never run');
+        assert.equal(calls.permissions, 1, 'only original ALLOW reader is invoked');
+        assert.equal(forgedPermissions, 0, 'no forged permission readback');
+        assert.equal(calls.context, 0, 'no native mutation under untrusted policy');
+        assert.equal(calls.password, 0, 'no credentials before native admission');
+        assert.equal(calls.stop, 1, 'stop only original TEST-owned process');
+        assert.equal(forgedStops, 0, 'no forged physical cleanup callback');
+        assert.equal(await provider.cleanup(), true);
+      }
+    }
+  });
+
 test('V2 owner policy getter cannot replace captured Host authority callbacks', async () => {
   const input = context();
   let lease = true;
