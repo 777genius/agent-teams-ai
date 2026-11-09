@@ -440,14 +440,16 @@ export class TeamOwner {
         safeSegment(taskId);
         return pageOwnerTaskDetail({
           principalId, grant, key: this.snapshotPageKey, teamName: this.binding.teamName,
-          taskId, task: json(this.policy.taskBoard().getTask(taskId)), cursor,
+          taskId, task: json(this.policy.taskBoard().getTask(taskId)),
+          ...(cursor === undefined ? {} : { cursor }),
         });
       }),
       readKanbanPage: (cursor?: string) => this.store.fenced(() => {
         const grant = this.authorize(principalId, 'read');
         return pageOwnerKanban({
           principalId, grant, key: this.snapshotPageKey, teamName: this.binding.teamName,
-          board: this.policy.taskBoard().getKanbanState({ strict: true }), cursor,
+          board: this.policy.taskBoard().getKanbanState({ strict: true }),
+          ...(cursor === undefined ? {} : { cursor }),
         });
       }),
       listTasks: () => this.listTasks(principalId),
