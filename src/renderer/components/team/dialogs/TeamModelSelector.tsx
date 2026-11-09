@@ -3199,7 +3199,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   }}
                 >
                   <Settings2 className="size-4 shrink-0" aria-hidden="true" />
-                  {dashboardT('cliStatus.actions.manageProviders')}
+                  <span className="min-w-0 truncate">
+                    {dashboardT('cliStatus.actions.manageProviders')}
+                  </span>
                 </Button>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -3227,7 +3229,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               </div>
               {providerStatusRefreshError ? (
                 <span role="alert" className="px-2 text-[11px] text-red-600 dark:text-red-300">
-                  {commonT('states.error')}
+                  {commonT('states.error')} · {commonT('actions.retry')}
                 </span>
               ) : null>
               {PROVIDERS.map((provider) => {
