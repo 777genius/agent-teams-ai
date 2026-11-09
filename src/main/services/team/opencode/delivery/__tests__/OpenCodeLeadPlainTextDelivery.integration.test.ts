@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TeamInboxReader } from '../../../TeamInboxReader';
 import { TeamInboxWriter } from '../../../TeamInboxWriter';
-import { buildPlainTextVisibleReplyMessageId } from '../OpenCodeGroupVisibleReply';
+import { buildPlainTextVisibleReplyMessageId, buildPlainTextVisibleReplySummary } from '../OpenCodeGroupVisibleReply';
 import {
   createOpenCodePromptDeliveryLedgerStore,
   isOpenCodePromptDeliveryWatchdogTerminal,
@@ -133,6 +133,22 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     expect(again.visibleReply?.message.messageId).toBe(first.visibleReply?.message.messageId);
     expect((await f.messages('captain'))).toHaveLength(1);
     expect(f.readExactAssistantText).not.toHaveBeenCalled();
+  });
+
+  it('does not commit a lead receipt when writer deduplicates a non-exact reply', async () => {
+    const f = await fixture({ text: 'Full response.' });
+    const messageId = buildPlainTextVisibleReplyMessageId(f.observed);
+    await f.deps.inboxWriter.sendMessage('team', {
+      member: 'captain', from: 'worker', to: 'captain',
+      text: '  Full response.  ', messageId, timestamp: ISO,
+      summary: buildPlainTextVisibleReplySummary('Full response.'),
+      relayOfMessageId: ' msg-lead ', source: 'runtime_delivery',
+    });
+    const result = await f.materialize();
+    expect(result.visibleReply).toBeNull();
+    expect(result.ledgerRecord.visibleReplyMessageId).toBeNull();
+    expect(await f.readAllowed(result.ledgerRecord, null)).toBe(false);
+    expect((await f.messages('captain')).map(message => message.text)).toEqual(['  Full response.  ']);
   });
 
   it('does not accept a user inbox receipt for a lead-directed reply', async () => {
