@@ -140,7 +140,10 @@ function owner(probeOk: boolean, effective: 'deny' | 'ask' | 'allow' = 'deny') {
 }
 
 test('V2 rejects accessor-backed native owner methods before getter can forge policy', () => {
-  for (const name of ['readPassword', 'probe', 'readNativeEffectivePermissions'] as const) {
+  for (const name of [
+    'readPassword', 'probe', 'readNativeCustody', 'readNativeEffectivePermissions',
+    'installAndAttestInitialContext', 'stopOwned', 'confirmStopped',
+  ] as const) {
     const { captured, calls } = owner(true);
     let getterCalls = 0;
     let forgedPermissionCalls = 0;
@@ -165,6 +168,33 @@ test('V2 rejects accessor-backed native owner methods before getter can forge po
       { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 },
       'rejected owner must not run native operations');
   }
+});
+
+test('V2 accepts prototype data methods while retaining the original owner receiver', async () => {
+  const { captured, calls } = owner(true);
+  // A class-style owner can expose methods on its prototype. The Host must
+  // bind them to the actual instance, not to the prototype or a late swap.
+  const instance = Object.create(captured) as OpenCodeV2OwnedSession & {
+    probeCalls: number;
+  };
+  instance.probeCalls = 0;
+  captured.probe = async function (this: typeof instance) {
+    this.probeCalls++;
+    return true;
+  };
+  const provider = createOpenCodeV2MemberProvider(context(), instance);
+  captured.probe = async () => false; // Retained method must survive this swap.
+  const opened = await provider.factory.open(request());
+  try {
+    assert.equal(provider.isReady(), true);
+    assert.equal(instance.probeCalls, 1, 'captured method uses the original instance receiver');
+    assert.equal(calls.context, 1, 'native context is installed once');
+    assert.equal(calls.password, 0, 'no credentials needed for initial admission');
+  } finally {
+    await opened.driver.close();
+    assert.equal(await provider.cleanup(), true);
+  }
+  assert.equal(calls.stop, 1, 'only the captured TEST owner is stopped');
 });
 
 test('V2 policy getter cannot swap native permission or cleanup callbacks before capture', async () => {
