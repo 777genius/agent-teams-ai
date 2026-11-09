@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { BackendOperationsFacade } from '../../../src/features/agent-backend/main/adapters/input/BackendOperationsFacade';
+import { projectDeletedTasks } from '../../../src/features/agent-backend/main/adapters/output/projectDeletedTasks';
 import { projectTeamSnapshot } from '../../../src/features/agent-backend/main/adapters/output/projectTeamSnapshot';
 import { createHostBackendRenderer } from '../../../src/features/agent-backend/renderer/createHostBackendRenderer';
 import {
@@ -720,7 +721,7 @@ describe('ordinary Host team read selection', () => {
       request.operation === 'tasks.list'
         ? {
             ok: true,
-            value: {
+            value: projectDeletedTasks({
               kind: 'deleted-tasks',
               teamName: f.snapshot.teamName,
               tasks: [{
@@ -742,7 +743,7 @@ describe('ordinary Host team read selection', () => {
                 }],
                 privateRoot: '/SECRET',
               }],
-            },
+            }),
           }
         : invoke(request)
     );
