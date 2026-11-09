@@ -67,7 +67,8 @@ export function useOpenCodeDashboardConnectedCountProbe({
       refresh: false,
     })
       .then((response) => {
-        if (response.error || !response.directory) return;
+        if (response.schemaVersion !== 1 || response.runtimeId !== 'opencode' ||
+            response.error || !response.directory) return;
         const connected = countCompleteDirectoryConnections(response.directory, 'connected');
         if (connected === null) return;
         publishRuntimeProviderConnectedCount({
