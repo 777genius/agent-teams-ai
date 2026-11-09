@@ -177,6 +177,33 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     expect(await f.readAllowed(corrected.ledgerRecord, corrected.visibleReply)).toBe(true);
   });
 
+  it('ignores the legacy user fallback before it can corrupt a plain-text lead ledger', async () => {
+    const f = await fixture({ text: 'Correct lead-only reply.' });
+    const messageId = buildPlainTextVisibleReplyMessageId(f.observed);
+    await f.deps.inboxWriter.sendMessage('team', {
+      member: 'user', from: 'worker', to: 'user', messageId,
+      text: 'Wrong user receipt', relayOfMessageId: 'msg-lead', source: 'runtime_delivery',
+    });
+    const legacy = {
+      ...f.observed,
+      visibleReplyCorrelation: 'relayOfMessageId' as const,
+      visibleReplyMessageId: messageId,
+    };
+    const recovered = await f.service.applyDestinationProof({
+      ledger: f.ledger, ledgerRecord: legacy, teamName: 'team',
+      replyRecipient: 'team-lead', memberName: 'worker',
+    });
+    expect(recovered.visibleReply).toBeNull();
+    expect(recovered.ledgerRecord.visibleReplyInbox).toBeNull();
+    const corrected = await f.service.materializePlainTextReplyIfNeeded({
+      ledger: f.ledger, ledgerRecord: recovered.ledgerRecord,
+      teamName: 'team', memberName: 'worker',
+    });
+    expect(corrected.visibleReply?.inboxName).toBe('captain');
+    expect((await f.messages('captain')).map(msg => msg.text)).toEqual(['Correct lead-only reply.']);
+    expect(await f.readAllowed(corrected.ledgerRecord, corrected.visibleReply)).toBe(true);
+  });
+
   it('preserves an already correlated tool delivery to the right lead inbox', async () => {
     const f = await fixture();
     const first = await f.materialize();
