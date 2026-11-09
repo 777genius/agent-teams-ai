@@ -172,6 +172,17 @@ Exact reviewed sources:
   operation and foreign scope remain independently admissible. These are
   disposable SQL semantics only; operation-level effect identity, generation,
   credential/route authority and production Host admission remain unqualified.
+  **Separate credential-render proof (9 Nov 2026 UTC):** Runtime
+  [TEST-only commit `b68c7ae`](https://github.com/agent-teams-ai/agent-runtime/commit/b68c7ae6b54ab66f7081e331287a829061f015bb)
+  extends the existing independent-OS-process Host-B RED oracle to measure
+  actual credential rendering separately from Provider Access materialization.
+  [Direct-HEAD PG18 Node 24/26 #42547632942](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42547632942)
+  checked out `b68c7ae` explicitly and each reported 33 PASS, 1 deliberate
+  RED FAIL, zero skips: duplicate dispatch=1, materialization request=1,
+  credential render=1 and second completed outcome=true, where all four must
+  be zero/false. Original PostgreSQL receipt remained immutable. This is a
+  deterministic TEST transport with actual PostgreSQL and a separate Host OS
+  process, not proof of a production-provider exploit or a qualified fix.
   There is still no installed Runtime pre-effect admission owner.
   The existing synchronous `HostHttpConsumptionJournal.consume()` and
   `routeFirstWrite` first-byte lease must not be quietly replaced with an
