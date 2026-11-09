@@ -1421,10 +1421,9 @@ test('V2 cold checkpoint compatibility survives a new generation but never a for
     const next = { ...request(), generation: 2, checkpointRef: 'TEST-native-v2-checkpoint' };
     const nextProfile = { ...v2Profile(), generation: 2 };
     const nextContext = context(nextProfile, next);
-    nextContext.endpoint.binding = {
-      ...nextContext.endpoint.binding,
+    Object.assign(nextContext.endpoint.binding, {
       generation: 'test-generation-2', runId: 'test-new-run',
-    };
+    });
     let checkpointReads = 0;
     nextContext.readCheckpoint = async () => { checkpointReads++; return original; };
     const nextOwner = owner(true);
@@ -1438,10 +1437,10 @@ test('V2 cold checkpoint compatibility survives a new generation but never a for
     assert.equal(nextOwner.calls.stop, 1, 'only the new TEST owner is stopped');
 
     const foreignContext = context({ ...nextProfile, memberId: 'test-foreign-member' }, next);
-    foreignContext.endpoint.binding = {
-      ...foreignContext.endpoint.binding, memberId: 'test-foreign-member',
+    Object.assign(foreignContext.endpoint.binding, {
+      memberId: 'test-foreign-member',
       generation: 'test-generation-2', runId: 'test-new-run',
-    };
+    });
     foreignContext.readCheckpoint = async () => original;
     const foreignOwner = owner(true);
     const foreign = createOpenCodeV2MemberProvider(foreignContext, foreignOwner.captured);
