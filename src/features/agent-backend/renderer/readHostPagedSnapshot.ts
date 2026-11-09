@@ -75,15 +75,17 @@ export async function readHostPagedSnapshot(
     }
 
     if (page.nextCursor === undefined || page.nextCursor === null) {
+      const completeKanban = kanbanState;
+      if (!completeKanban) throw new Error('Missing Host Kanban state');
       const fullTasks = tasks.map((task) => {
-        const board = kanbanState.tasks[task.id];
+        const board = completeKanban.tasks[task.id];
         return board ? { ...task, kanbanColumn: board.column, reviewer: board.reviewer } : task;
       });
       const data: BackendTeamSnapshot = {
         ...first,
         tasks: fullTasks,
         messages,
-        kanbanState,
+        kanbanState: completeKanban,
       };
       delete data.nextCursor;
       readOrder.acceptSnapshot(handleId, data);
