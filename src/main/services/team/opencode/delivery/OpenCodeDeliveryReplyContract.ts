@@ -40,7 +40,10 @@ export function classifyOpenCodeDeliveryReplyContract(
   if (lower === OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT) {
     return 'informational';
   }
-  if (isLeadMember({ name: recipient }) || isLeadAgentType(lower)) {
+  if (
+    isLeadMember({ name: recipient }) || isLeadAgentType(lower) ||
+    ['teamlead', 'team-leader'].includes(lower.replace(/[\s_]+/g, '-'))
+  ) {
     return 'lead_reply';
   }
   return 'teammate_report';
@@ -91,8 +94,12 @@ export function isOpenCodeConfiguredLeadReply(
   );
 }
 /** Concrete user/lead messages must not settle without a destination receipt. */
-export function isOpenCodeReplyRequiredDeliveryRecipient(recipient: string | null | undefined): boolean {
+export function isOpenCodeReplyRequiredDeliveryRecipient(
+  recipient: string | null | undefined,
+  configuredLeadName?: string | null
+): boolean {
   if (!recipient?.trim()) return false;
   const replyContract = classifyOpenCodeDeliveryReplyContract(recipient);
-  return replyContract === 'user_reply' || replyContract === 'lead_reply';
+  return replyContract === 'user_reply' || replyContract === 'lead_reply' ||
+    isOpenCodeConfiguredLeadReply({ replyRecipient: recipient }, configuredLeadName);
 }
