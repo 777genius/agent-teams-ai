@@ -9,7 +9,7 @@ const name = z
   .string()
   .min(1)
   .max(200)
-  .refine((value) => value === value.trim());
+  .refine((value) => value === value.trim() && !value.includes('\0'));
 const names = z
   .array(name)
   .max(200)
@@ -19,7 +19,7 @@ export const groupMutationSchema = z.discriminatedUnion('operation', [
   z.strictObject({
     operation: z.literal('create'),
     id: uuid,
-    name: z.string().trim().min(1).max(100),
+    name: z.string().trim().min(1).max(100).refine((value) => !value.includes('\0')),
     selectedMemberNames: names,
     excludedMemberNames: names,
     autoIncludeNewMembers: z.boolean(),
@@ -27,7 +27,7 @@ export const groupMutationSchema = z.discriminatedUnion('operation', [
   z.strictObject({
     operation: z.literal('create.agent'),
     sourceMessageId: id,
-    name: z.string().trim().min(1).max(100),
+    name: z.string().trim().min(1).max(100).refine((value) => !value.includes('\0')),
     selectedMemberNames: names,
     autoIncludeNewMembers: z.boolean().optional(),
   }),
@@ -41,8 +41,8 @@ export const groupMutationSchema = z.discriminatedUnion('operation', [
       .string()
       .min(1)
       .max(100_000)
-      .refine((value) => !!value.trim()),
-    summary: z.string().max(1_000).optional(),
+      .refine((value) => !!value.trim() && !value.includes('\0')),
+    summary: z.string().max(1_000).refine((value) => !value.includes('\0')).optional(),
     taskRefs: refs.optional(),
     relayOfMessageId: id.optional(),
   }),
