@@ -205,7 +205,6 @@ test('removed teammate inbox remains readable for admin only after a persisted o
     grants: [
       { principalId: 'human', memberName: 'user', permissions: ['read', 'admin'] as ('read' | 'admin')[] },
       { principalId: 'alice', memberName: 'alice', permissions: ['read'] as 'read'[] },
-      { principalId: 'bob', memberName: 'bob', permissions: ['read'] as 'read'[], revoked: true },
     ],
   };
   const owner = createFilesystemTeamOwner(options);
