@@ -1027,7 +1027,9 @@ export async function verifyPackaged({
         proof.passed = true;
       } finally {
         await save('v2-cold-connected-count.json', JSON.stringify(proof, null, 2));
-        await observe('globalThis.__packagedCatalogObservation.active = false');
+        // The later Settings refresh measures only its own calls, never the
+        // pre-Settings connected-summary proof (refresh:false/filter:connected).
+        await observe('globalThis.__packagedCatalogObservation.records = []; globalThis.__packagedCatalogObservation.active = false');
       }
     }
 
