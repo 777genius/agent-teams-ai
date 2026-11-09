@@ -86,6 +86,8 @@ export function createHostCrossTeamApi(
       )) {
         assertCurrent(current);
         const product = await snapshot(row.handle, current);
+        // Trashed teams remain readable, but cannot receive messages.
+        if (product.lifecycle && product.lifecycle.deletedAt !== null) continue;
         const lead = product.members.find((member) => member.role === 'lead');
         targets.push({
           teamName: hostTeamSelectionKey(row.handle.handleId),

@@ -289,6 +289,21 @@ reads and has a
 for the real Host transport pending cap. These qualify source/test
 increments only, **not** production target-core M04/M05/M11 parity.
 
+**Stage 1 trashed-destination picker boundary (9 Nov 2026, source
+[`32e33e71`](https://github.com/777genius/agent-teams-ai/commit/32e33e71fa94719a2802812c1a181504a95a9ed9)):**
+The captured same-Owner cross-Team destination list excludes Team snapshots
+whose lifecycle has a non-null `deletedAt`, while retaining ordinary
+read-only archived access; recovery may make that destination visible again.
+The [focused renderer regression](https://github.com/777genius/agent-teams-ai/blob/32e33e71fa94719a2802812c1a181504a95a9ed9/test/features/agent-backend/hostCrossTeamTransport.test.ts)
+checks hidden-while-trashed and visible-after-recovery without legacy routing.
+This **picker-only source test** does not establish that a crafted direct
+`crossTeam.send` to a trashed destination is rejected by the original Owner.
+M05/M16 target-core qualification therefore requires a **command-boundary**
+negative for a retained/trashed recipient, plus correct original-owner receipt
+reconciliation and non-replay of UNKNOWN; never infer write authority from
+historical readability or target-list filtering. No target-core public API,
+packed native test or production writer is qualified by this change.
+
 **Stage 1 scoped group-pagination correction (9 Nov 2026,
 [source `4ac2dc70`](https://github.com/777genius/agent-teams-ai/commit/4ac2dc70af4d70d2835899ee5c3f2b2dfb339ecb)):**
 `useGroupChatHistory` now observes the Owner `feedRevision` on head

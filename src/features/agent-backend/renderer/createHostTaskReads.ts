@@ -1,7 +1,7 @@
 import { HostTeamOperationError } from './createHostTeamMutations';
 
 import type { BackendHandle } from '../contracts';
-import type { AgentBackendApi, BackendTask } from '../contracts/operations';
+import type { AgentBackendApi } from '../contracts/operations';
 import type { BackendTeamSnapshot } from '../contracts/teamSnapshot';
 import type { TeamsAPI } from '@shared/types/api';
 import type { TaskComment, TeamTaskWithKanban } from '@shared/types/team';
@@ -48,7 +48,10 @@ export function createHostTaskReads(
         typeof task.subject !== 'string'
       )
         throw new HostTeamOperationError('invalid-result', 'unknown');
-      const retained = task as BackendTask;
+      const retained = task;
+      const subject = retained.subject;
+      if (typeof subject !== 'string')
+        throw new HostTeamOperationError('invalid-result', 'unknown');
       const comments = retained.comments?.map((comment) => {
         if (
           typeof comment.id !== 'string' ||
@@ -72,7 +75,7 @@ export function createHostTaskReads(
       // Only the Main-projected product allowlist is exposed; no Host internals.
       const restored: TeamTaskWithKanban = {
         id: retained.id,
-        subject: retained.subject!,
+        subject,
         status: 'deleted',
         ...(retained.displayId === undefined ? {} : { displayId: retained.displayId }),
         ...(retained.description === undefined ? {} : { description: retained.description }),
