@@ -1,9 +1,9 @@
 import {
   classifyOpenCodeDeliveryReplyContract,
-  isOpenCodeReplyOptionalDeliveryContract,
   isOpenCodeConfiguredLeadReply,
   isOpenCodeLeadDestinationProof,
   isOpenCodeLeadReplyRecipient,
+  isOpenCodeReplyOptionalDeliveryContract,
   isOpenCodeReplyRequiredDeliveryRecipient,
 } from './OpenCodeDeliveryReplyContract';
 import {
@@ -269,10 +269,7 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
       hasAcceptedMemberWorkSyncReport: input.hasAcceptedMemberWorkSyncReport,
     });
   }
-  // Null is an attempted but unsuccessful lead-config lookup; undefined is
-  // a caller that did not resolve team config (for example a pure unit test).
-  // Without a roster we cannot tell "captain" (the lead) from a peer, so
-  // never silently acknowledge a direct peer-looking reply on lookup failure.
+  // A missing roster cannot distinguish a custom lead from an ordinary peer.
   if (
     input.configuredLeadName === null && record?.replyRecipient?.trim() &&
     classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'teammate_report'
@@ -413,10 +410,7 @@ export function getOpenCodeDeliveryPendingReason(input: {
     ) {
       return 'plain_text_ack_only_still_requires_answer';
     }
-    // This reason is consumed only when the read policy denies the response.
-    // Do not infer "optional peer" from the raw recipient here: a custom lead
-    // (for example "captain") has no recognizable alias without team config.
-    // Even a recorded message ID may refer to the wrong inbox.
+    // A rejected reply may have a custom lead or a wrong-inbox receipt.
     if (record && !record.groupChatId && !record.inboxReadCommittedAt) {
       return 'plain_text_visible_reply_not_materialized_yet';
     }
