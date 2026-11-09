@@ -15,7 +15,7 @@ const TASK_ARRAY_FIELDS = [
 type Task = BackendTeamSnapshot['tasks'][number];
 
 /** Merge only projected task parts; never publish incomplete nested history. */
-function assembleTaskParts(
+export function assembleTaskParts(
   groups: Map<number, { total: number; values: Map<number, Task> }>,
   taskTotal: number
 ): BackendTeamSnapshot['tasks'] {

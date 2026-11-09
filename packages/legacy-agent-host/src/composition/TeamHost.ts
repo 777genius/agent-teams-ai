@@ -431,12 +431,19 @@ export function createTeamHost(
           }
           if (operation === 'listTasks') {
             const query = z
-              .object({ deleted: z.literal(true).optional() })
+              .object({
+                deleted: z.literal(true).optional(),
+                cursor: z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).optional(),
+              })
               .strict()
               .parse(input.payload ?? {});
+            if (query.cursor !== undefined && query.deleted !== true)
+              throw new TeamOwnerError('invalid');
             return {
               ok: true,
-              value: query.deleted ? connection.readDeletedTasks() : json(connection.listTasks()),
+              value: query.deleted
+                ? connection.readDeletedTasks(query.cursor ? { cursor: query.cursor } : {})
+                : json(connection.listTasks()),
             };
           }
           if (operation === 'getTask') {

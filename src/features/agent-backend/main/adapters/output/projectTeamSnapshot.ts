@@ -246,7 +246,7 @@ function kanban(value: unknown, teamName: string): KanbanState {
 
 
 /** Validate fragment positions separately from projected task content. */
-function projectTaskParts(source: Record<string, unknown>): Pick<BackendTeamSnapshot, 'taskTotal' | 'taskParts'> {
+export function projectTaskParts(source: Record<string, unknown>): Pick<BackendTeamSnapshot, 'taskTotal' | 'taskParts'> {
   if (source.taskTotal === undefined && source.taskParts === undefined) return {};
   const total = source.taskTotal;
   if (typeof total !== 'number' || !Number.isSafeInteger(total) || total < 1 ||

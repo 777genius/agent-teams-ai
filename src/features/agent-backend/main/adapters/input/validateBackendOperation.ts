@@ -59,9 +59,16 @@ function payload(
       object(value, []);
       return {};
     case 'tasks.list': {
-      const p = object(value, ['deleted']);
+      const p = object(value, ['deleted', 'cursor']);
       if (p.deleted !== undefined && p.deleted !== true) throw new InvalidBackendOperation();
-      return p.deleted === true ? { deleted: true } : {};
+      if (p.cursor !== undefined &&
+          (p.deleted !== true ||
+           typeof p.cursor !== 'string' ||
+           !/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.test(p.cursor)))
+        throw new InvalidBackendOperation();
+      return p.deleted === true
+        ? { deleted: true, ...(p.cursor === undefined ? {} : { cursor: p.cursor }) }
+        : {};
     }
     case 'process.lookup': {
       const p = object(value, ['originalCommandId']);

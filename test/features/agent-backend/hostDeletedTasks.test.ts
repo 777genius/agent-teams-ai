@@ -62,7 +62,9 @@ function fixture() {
         case 'team.snapshot':
           return success(human.readSnapshot());
         case 'team.tasks.list':
-          return success(payload.deleted ? human.readDeletedTasks() : human.listTasks());
+          return success(payload.deleted
+            ? human.readDeletedTasks(payload.cursor ? { cursor: payload.cursor as string } : {})
+            : human.listTasks());
         case 'team.task.get':
           return success(human.getTask(payload.taskId as string));
         case 'team.roster.read':
@@ -194,6 +196,51 @@ it('restores a real canonical deleted Task through selected and global Trash wit
   );
 });
 
+it('retrieves complete >512 KiB deleted task history and restores it after all signed pages', async () => {
+  const f = fixture();
+  const taskId = f.human.execute({
+    commandId: 'TEST-huge-trash-create',
+    operation: 'task.create',
+    payload: { subject: 'Large retained Trash history', owner: 'team-lead' },
+  }).effects.taskId;
+  const expected = Array.from({ length: 90 }, (_, index) =>
+    'TEST-trash-comment-' + index + '-' + 'x'.repeat(6000));
+  for (const [index, text] of expected.entries()) {
+    f.human.execute({
+      commandId: 'TEST-huge-trash-comment-' + index,
+      operation: 'task.comment',
+      payload: { taskId, text },
+    });
+  }
+  f.human.execute({
+    commandId: 'TEST-huge-trash-delete',
+    operation: 'task.lifecycle',
+    payload: { taskId, action: 'delete' },
+  });
+  const persisted = f.human.getTask(taskId) as { comments: { text: string }[] };
+  expect(persisted.comments.map((row) => row.text)).toEqual(expected);
+  const first = f.human.readDeletedTasks() as { nextCursor: string | null };
+  expect(first.nextCursor).not.toBeNull();
+  expect(Buffer.byteLength(JSON.stringify(first))).toBeLessThan(384 * 1024);
+
+  const trash = await f.teams.getDeletedTasks(f.key);
+  expect(trash).toHaveLength(1);
+  expect(trash[0]?.id).toBe(taskId);
+  expect(trash[0]?.comments?.map((row) => row.text)).toEqual(expected);
+  const reads = vi.mocked(f.backend.invoke).mock.calls.filter(
+    ([request]) => request.operation === 'tasks.list'
+  );
+  expect(reads.length).toBeGreaterThan(1);
+  expect(reads[0]?.[0].payload).toEqual({ deleted: true });
+  expect(reads.at(-1)?.[0].payload).toHaveProperty('cursor');
+  // A stale continuation cannot read another revision.
+  await f.teams.restoreTask(f.key, taskId);
+  expect(() => f.human.readDeletedTasks({ cursor: first.nextCursor! })).toThrow();
+  expect(await f.teams.getDeletedTasks(f.key)).toEqual([]);
+  const restored = await f.teams.getTask(f.key, taskId);
+  expect(restored?.comments?.map((row) => row.text)).toEqual(expected);
+});
+
 it.each(['context', 'mutation'] as const)(
   'refuses a held Trash response after the original %s boundary changes',
   async (boundary) => {
@@ -244,6 +291,8 @@ it.each([
   { deleted: 'true' },
   { deleted: {} },
   { deleted: true, root: '/TEST' },
+  { deleted: true, cursor: 'bad-cursor' },
+  { cursor: '1.' + 'a'.repeat(64) },
 ])('rejects any nonfinite Trash query %j before transport', (value) => {
   expect(() =>
     parseBackendOperation({
