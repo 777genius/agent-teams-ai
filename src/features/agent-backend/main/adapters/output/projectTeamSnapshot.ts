@@ -244,6 +244,26 @@ function kanban(value: unknown, teamName: string): KanbanState {
   return result;
 }
 
+
+/** Validate fragment positions separately from projected task content. */
+function projectTaskParts(source: Record<string, unknown>): Pick<BackendTeamSnapshot, 'taskTotal' | 'taskParts'> {
+  if (source.taskTotal === undefined && source.taskParts === undefined) return {};
+  const total = source.taskTotal;
+  if (typeof total !== 'number' || !Number.isSafeInteger(total) || total < 1 ||
+      !Array.isArray(source.tasks)) throw new Error('Invalid task page');
+  const parts = array(source.taskParts, (value) => {
+    const part = row(value);
+    const index = part.index, position = part.part, count = part.total;
+    if (typeof index !== 'number' || !Number.isSafeInteger(index) || index < 0 || index >= total ||
+        typeof position !== 'number' || !Number.isSafeInteger(position) || position < 0 ||
+        typeof count !== 'number' || !Number.isSafeInteger(count) || count < 1 || position >= count)
+      throw new Error('Invalid task page index');
+    return { index, part: position, total: count };
+  });
+  if (parts.length !== source.tasks.length) throw new Error('Invalid task part count');
+  return { taskTotal: total, taskParts: parts };
+}
+
 /** Product fields only; private paths, receipts, native IDs and arbitrary extras are omitted. */
 export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
   const source = row(value);
@@ -270,6 +290,7 @@ export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
     teamName,
     revision,
     ...(nextCursor === undefined ? {} : { nextCursor }),
+    ...projectTaskParts(source),
     ...(source.runtimeNeverLaunched === true ? { runtimeNeverLaunched: true as const } : {}),
     ...(source.lifecycle === undefined
       ? {}

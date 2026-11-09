@@ -19,6 +19,9 @@ export interface BackendTeamSnapshot {
   revision: string;
   /** Authenticated Owner continuation; never expose a partial team to consumers. */
   nextCursor?: string | null;
+  /** Present only for nested task-history pages; parts match page.tasks in order. */
+  taskTotal?: number;
+  taskParts?: { index: number; part: number; total: number }[];
   lifecycle?: BackendTeamLifecycle;
   /** Selected owner has no current/retained native capture, original binding or pending cleanup. */
   runtimeNeverLaunched?: true;

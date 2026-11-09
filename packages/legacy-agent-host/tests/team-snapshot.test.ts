@@ -58,6 +58,81 @@ test('snapshot reads persisted authority/roster/tasks/kanban and only permitted 
 });
 
 
+
+test('one task with large nested history retains all task parts, order and signed continuations', () => {
+  const history = Array.from({ length: 90 }, (_, index) => ({
+    id: 'comment-' + index,
+    author: 'alice',
+    type: 'regular',
+    createdAt: '2026-01-01T00:00:00Z',
+    text: 'history-' + index + '-' + 'x'.repeat(6000),
+  }));
+  const tasks = [
+    { id: 'first', subject: 'First', status: 'pending', comments: [] },
+    { id: 'large', subject: 'Large', status: 'pending', comments: history,
+      historyEvents: [{ id: 'created', timestamp: '2026-01-01T00:00:00Z',
+        type: 'task_created', status: 'pending' }] },
+    { id: 'last', subject: 'Last', status: 'pending', comments: [] },
+  ];
+  const snapshot = {
+    teamName: 'TEST-team', revision: 'a'.repeat(64), members: [],
+    tasks, messages: [],
+    kanbanState: { teamName: 'TEST-team', reviewers: [], tasks: {} },
+  };
+  const original = JSON.stringify(snapshot);
+  for (const maxBytes of [128 * 1024, 384 * 1024]) {
+    const groups = new Map<number, Map<number, Record<string, unknown>>>();
+    let cursor: string | undefined;
+    let pages = 0;
+    do {
+      const page = pageOwnerSnapshot({ principalId: 'human', key: 'TEST-key',
+        snapshot, maxBytes, ...(cursor ? { cursor } : {}) }) as {
+        tasks: Record<string, unknown>[];
+        taskTotal: number;
+        taskParts: { index: number; part: number; total: number }[];
+        nextCursor: string | null;
+      };
+      assert.equal(page.taskTotal, tasks.length);
+      assert.equal(page.taskParts.length, page.tasks.length);
+      assert.ok(Buffer.byteLength(JSON.stringify(page)) <= maxBytes);
+      for (const [index, marker] of page.taskParts.entries()) {
+        const group = groups.get(marker.index) ?? new Map();
+        assert.equal(group.has(marker.part), false);
+        group.set(marker.part, page.tasks[index]!);
+        groups.set(marker.index, group);
+      }
+      if (pages === 0) {
+        assert.ok(page.nextCursor);
+        assert.throws(() => pageOwnerSnapshot({ principalId: 'different',
+          key: 'TEST-key', snapshot, maxBytes, cursor: page.nextCursor! }));
+      }
+      cursor = page.nextCursor ?? undefined;
+      pages++;
+      assert.ok(pages < 128, 'cursor must converge');
+    } while (cursor);
+    assert.equal(groups.size, tasks.length);
+    const rebuilt = tasks.map((task, index) => {
+      const pieces = groups.get(index)!;
+      const base = { ...pieces.get(0)! };
+      for (let part = 1; part < pieces.size; part++) {
+        const row = pieces.get(part)!;
+        for (const field of ['comments', 'historyEvents']) {
+          if (Array.isArray(row[field]))
+            (base as Record<string, unknown>)[field] = [
+              ...((base as Record<string, unknown>)[field] as unknown[] ?? []),
+              ...(row[field] as unknown[]),
+            ];
+        }
+      }
+      assert.equal(base.id, task.id);
+      return base;
+    });
+    assert.deepEqual(rebuilt, tasks);
+    assert.ok(pages > 1);
+  }
+  assert.equal(JSON.stringify(snapshot), original, 'paging does not mutate original data');
+});
+
 test('large retained task inventory stays readable through all bounded original Owner pages', (t) => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-team-large-tasks-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));

@@ -7,6 +7,45 @@ type Connection = BackendConnectionSnapshot['bindings'][number];
 type CurrentScope = () => boolean;
 
 const MAX_PAGES = 128;
+const TASK_ARRAY_FIELDS = [
+  'comments', 'historyEvents', 'workIntervals', 'reviewIntervals',
+  'attachments', 'descriptionTaskRefs', 'promptTaskRefs',
+  'blocks', 'blockedBy', 'related',
+] as const;
+type Task = BackendTeamSnapshot['tasks'][number];
+
+/** Merge only projected task parts; never publish incomplete nested history. */
+function assembleTaskParts(
+  groups: Map<number, { total: number; values: Map<number, Task> }>,
+  taskTotal: number
+): BackendTeamSnapshot['tasks'] {
+  if (groups.size !== taskTotal) throw new Error('Missing Host task pages');
+  const tasks: BackendTeamSnapshot['tasks'] = [];
+  for (let index = 0; index < taskTotal; index++) {
+    const group = groups.get(index);
+    if (!group || group.values.size !== group.total) throw new Error('Incomplete Host task history');
+    const base = group.values.get(0);
+    if (!base) throw new Error('Missing Host task base');
+    const merged: Record<string, unknown> = { ...base };
+    for (let part = 1; part < group.total; part++) {
+      const value = group.values.get(part);
+      if (!value || value.id !== base.id || value.subject !== base.subject ||
+          value.status !== base.status) throw new Error('Mismatched Host task fragment');
+      const extra = value as unknown as Record<string, unknown>;
+      for (const field of TASK_ARRAY_FIELDS) {
+        if (extra[field] === undefined) continue;
+        const items = extra[field];
+        if (!Array.isArray(items)) throw new Error('Invalid Host task history');
+        const prior = merged[field];
+        if (prior !== undefined && !Array.isArray(prior))
+          throw new Error('Mismatched Host task history');
+        merged[field] = [...(prior as unknown[] | undefined ?? []), ...items];
+      }
+    }
+    tasks.push(merged as Task);
+  }
+  return tasks;
+}
 
 /** Publish a complete read only after bounded Owner pages pass the original fences. */
 export async function readHostPagedSnapshot(
@@ -24,6 +63,7 @@ export async function readHostPagedSnapshot(
   let cursor: string | undefined;
   let first: BackendTeamSnapshot | undefined;
   const tasks: BackendTeamSnapshot['tasks'] = [];
+  const taskParts = new Map<number, { total: number; values: Map<number, Task> }>();
   const messages: BackendTeamSnapshot['messages'] = [];
   let kanbanState: BackendTeamSnapshot['kanbanState'] | undefined;
   const seen = new Set<string>();
@@ -46,12 +86,32 @@ export async function readHostPagedSnapshot(
         page.revision !== first.revision ||
         page.teamName !== first.teamName ||
         page.feed.streamId !== first.feed.streamId ||
-        page.feed.sequence !== first.feed.sequence
+        page.feed.sequence !== first.feed.sequence ||
+        page.taskTotal !== first.taskTotal ||
+        Boolean(page.taskParts) !== Boolean(first.taskParts)
       ) throw new Error('Host team changed during paged read');
     } else {
       first = page;
     }
-    tasks.push(...page.tasks);
+    if (page.taskParts) {
+      if (page.taskParts.length !== page.tasks.length || page.taskTotal === undefined)
+        throw new Error('Invalid Host task page');
+      for (const [position, task] of page.tasks.entries()) {
+        const marker = page.taskParts[position];
+        if (!marker || marker.index >= page.taskTotal || marker.part >= marker.total)
+          throw new Error('Invalid Host task part');
+        let group = taskParts.get(marker.index);
+        if (!group) {
+          group = { total: marker.total, values: new Map<number, Task>() };
+          taskParts.set(marker.index, group);
+        }
+        if (group.total !== marker.total || group.values.has(marker.part))
+          throw new Error('Duplicate Host task fragment');
+        group.values.set(marker.part, task);
+      }
+    } else {
+      tasks.push(...page.tasks);
+    }
     messages.push(...page.messages);
     // Page-local Kanban fragments are not a complete board. Reconstruct the
     // original ordered map and column arrays before exposing any product view.
@@ -77,7 +137,10 @@ export async function readHostPagedSnapshot(
     if (page.nextCursor === undefined || page.nextCursor === null) {
       const completeKanban = kanbanState;
       if (!completeKanban) throw new Error('Missing Host Kanban state');
-      const fullTasks = tasks.map((task) => {
+      const reconstructed = first.taskParts
+        ? assembleTaskParts(taskParts, first.taskTotal ?? 0)
+        : tasks;
+      const fullTasks = reconstructed.map((task) => {
         const board = completeKanban.tasks[task.id];
         return board ? { ...task, kanbanColumn: board.column, reviewer: board.reviewer } : task;
       });
@@ -88,6 +151,8 @@ export async function readHostPagedSnapshot(
         kanbanState: completeKanban,
       };
       delete data.nextCursor;
+      delete data.taskTotal;
+      delete data.taskParts;
       readOrder.acceptSnapshot(handleId, data);
       return {
         data,
