@@ -10836,7 +10836,7 @@ describe('TeamProvisioningService', () => {
       expect(observeMessageDelivery).toHaveBeenCalledTimes(1);
     }, 10_000);
 
-    it('resolves stored attachment payloads for OpenCode inbox relay before delivery', async () => {
+    it('passes stored OpenCode attachment payloads without committing unread lead replies', async () => {
       const resolveInputDeclaration = vi
         .fn<ResolveOpenCodeInputDeclaration>()
         .mockImplementation(({ projectPath, model }) =>
@@ -10925,10 +10925,14 @@ describe('TeamProvisioningService', () => {
         })
       ).resolves.toMatchObject({
         attempted: 1,
-        delivered: 1,
+        delivered: 0,
         failed: 0,
-        relayed: 1,
+        relayed: 0,
       });
+      // The runtime accepted the image input, but the clipped preview alone
+      // is not evidence that the lead received a complete answer.
+      const stored = JSON.parse(await fsPromises.readFile(path.join(inboxDir, 'bob.json'), 'utf8')) as { read: boolean }[];
+      expect(stored[0]?.read).toBe(false);
       expect(resolveInputDeclaration).toHaveBeenCalledWith({
         projectPath: '/repo',
         model: 'openai/gpt-5.4-mini',
@@ -12326,7 +12330,7 @@ describe('TeamProvisioningService', () => {
       expect(sendMessageToMember).toHaveBeenCalledTimes(1);
     });
 
-    it('accepts observed visible OpenCode user replies for lead-delegated inbox messages', async () => {
+    it('keeps a lead relay pending if the observed reply reached only the user', async () => {
       const svc = new TeamProvisioningService();
       const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
         ok: true,
@@ -12430,11 +12434,11 @@ describe('TeamProvisioningService', () => {
       ).resolves.toMatchObject({
         delivered: true,
         accepted: true,
-        responsePending: false,
+        responsePending: true,
         responseState: 'responded_visible_message',
         visibleReplyMessageId: 'reply-user-1',
         visibleReplyCorrelation: 'relayOfMessageId',
-        diagnostics: ['visible_message_sent'],
+        diagnostics: ['opencode_delivery_response_pending'],
       });
       expect(sendMessageToMember).toHaveBeenCalledTimes(1);
       expect(sendMessageToMember).toHaveBeenCalledWith(
