@@ -1,135 +1,120 @@
+# OpenCode V2 → Stage 1 Host: адаптация и проверка независимости от форка
 
-# OpenCode V2 → Stage 1 Host: план адаптации и fork-free cutover
+**Статус:** план реализации, обновлён 10 ноября 2026 по последнему поручению владельца. Это не подтверждение выполненного E2E.
+**Scope:** завершить зависимые PR; основной frontend PR #982 **не сливать в main**, не выпускать релиз и не включать новый backend по умолчанию. **Stage 2 отложен.**
 
-**Статус:** план на 10 ноября 2026; не код, не новое E2E-доказательство и не разрешение на merge/release.  
-**Владелец:** Agent Teams. **Stage 2 (новые Orchestrator/agent-runtime) отложен.**  
-**Цель:** перенос фактически работающего OpenCode V2 из старого `claude-multimodel` в существующий Stage 1 Host без второго владельца, лишних миграций или изменения UX.
+Зависимости: [Stage 1 #982](https://github.com/777genius/agent-teams-ai/pull/982) → [preflight #1106](https://github.com/777genius/agent-teams-ai/pull/1106) → [Host V2 #1110](https://github.com/777genius/agent-teams-ai/pull/1110). Provider: [extraction #1](https://github.com/agent-teams-ai/old-provider-implementations/pull/1) → [V2 correction #2](https://github.com/agent-teams-ai/old-provider-implementations/pull/2). Границы: [Stage 1](stage-1-legacy-host.md), [контракты](stage-1-contracts.md), [M01–M19](compatibility-matrix.md), [программа](README.md). Поручение на V2 отдельно от исходной V1-приёмки: [scope #1110](https://github.com/777genius/agent-teams-ai/pull/1110#issuecomment-6772010714).
 
-Связанные PR: [Stage 1 #982](https://github.com/777genius/agent-teams-ai/pull/982); [V2 static #1106](https://github.com/777genius/agent-teams-ai/pull/1106) → [V2 Host #1110](https://github.com/777genius/agent-teams-ai/pull/1110); [provider extraction #1](https://github.com/agent-teams-ai/old-provider-implementations/pull/1) → [provider V2 #2](https://github.com/agent-teams-ai/old-provider-implementations/pull/2). Нормативные документы: [Stage 1](stage-1-legacy-host.md), [контракты](stage-1-contracts.md), [матрица M01–M19](compatibility-matrix.md), [общая программа](README.md).
+## 1. Что действительно есть
 
-## 1. Исходное состояние, проверенное по GitHub
+- Provider repo `agent-teams-ai/old-provider-implementations` пока показывает документационную default-ветку `bootstrap`; код двух пакетов находится в `feat/extract-providers` (PR #1), доработки V2 — в #2. Путь к исходникам не означает опубликованный или квалифицированный runtime.
+- `packages/legacy-agent-host` — отдельный Node-пакет/процесс **в frontend-репозитории**. Provider implementations и Session SPI находятся в отдельном provider repo. Перемещать Host в ещё один Git-репозиторий не нужно.
+- Выбранный Stage 1 Host-owned candidate проверялся настоящими Electron/SDK/CLI с localhost inference. Это не vendor-login/subscription proof. Стандартные dev/dist, staging и `resources/runtime` ещё содержат прежний `claude-multimodel`: независимость нового пути и удаление форка из всей поставки — **разные результаты**.
+- Snapshot аудита: frontend runtime `0.0.159`, Stage 1 #982 — `0.0.158`; существующий V2 engine `2.1.4` квалифицирован старым runtime на macOS arm64/x64, Windows arm64/x64, Linux x64, но не Linux arm64. Перед интеграцией перепроверить exact refs/lock, не переносить старый PASS на новый Host.
+- Текущие private Host/provider gates допускают V2 `2.0.0/2.0.21`, а V1-профиль Host — `1.18.35/1.19.4`. Старый Frontend при первой установке выбирает V1 `1.19.5`; при явном обновлении V1 использует npm metadata, а для V2 выбирает engine из qualification manifest. Это **наблюдаемый baseline, не новая целевая политика**.
+- Проверенный donor V2 — `777genius/agent_teams_orchestrator/src/services/opencode`: native protocol, delivery, permissions, lifecycle. Не копировать целиком `OpenCodeV2ExecutionOwner`, `OpenCodeV2AdmissionStore` и их журналы: новый Host уже имеет своих владельцев.
 
-- `agent-teams-ai/old-provider-implementations`: default `bootstrap` содержит документы; код находится в `feat/extract-providers` ([PR #1](https://github.com/agent-teams-ai/old-provider-implementations/pull/1), переведён в **Ready for review**), доработки V2 — в зависимом Draft #2. Это не пустой проект. После **собственных** exact-head CI, независимого review и проверки package/public exports PR #1 можно слить в `bootstrap` как source extraction **без npm/release**. #2 не считать готовым вслед за #1 и не удалять vendored package до его замены проверенным артефактом.
-- `packages/legacy-agent-host` — независимый **пакет и процесс внутри frontend-репозитория**, не отдельный Git-репозиторий. Provider Session SPI и Claude/Codex/OpenCode adapters живут в provider repo. **Не выделяем Host в новый repo сейчас:** это перемещение само по себе не исправляет ответственность или E2E.
-- Stage 1 candidate уже проходит реальные Electron/SDK/CLI tests с ограниченным localhost inference и не нуждается в запуске fork для **новых Host-owned действий**. Однако стандартные `pnpm dev`/`pnpm dist` и `resources/runtime` ещё используют/упаковывают старый `claude-multimodel` для legacy-path. Полный production cutover **не выполнен**.
-- Frontend `main` на момент аудита закрепляет runtime **0.0.159** и диапазон V2 `>=2.0.0, <3.0.0`; квалифицированный **engine** `2.1.4` на macOS arm64/x64, Linux x64, Windows arm64/x64 (Linux arm64 без delivery). Stage 1 #982 ещё закрепляет **0.0.158** и расходится с текущим `main`: перед integration сверить exact runtime/artifact lock и затронутые UI/IPC изменения. Старый runtime native PASS **не** является Host V2 PASS.
-- Donor, который **уже работает**: `777genius/agent_teams_orchestrator`, `src/services/opencode/host/OpenCodeV2ExecutionHost.ts`, `.../OpenCodeV2ExecutionOwner.ts`, `execution/OpenCodeV2SessionService.ts`, `OpenCodeV2AdmissionStore.ts`, native transport, permissions, messages и packaging. Не копировать целиком Owner/журналы: Stage 1 уже владеет Team/Task/Message/Runtime.
-- Draft #1106/#1110 и provider #2 содержат реальный native TEST прогресс. Но standalone V2 SPI пока допускает `2.0.0/2.0.21`, а выбранный Frontend engine — `2.1.4`. Это **protocol/qualification gap**, который нельзя закрыть добавлением версии в строковый список. Pass provider TEST или старого runtime ≠ Host→Electron V2 PASS.
-
-## 2. Единственная архитектура владения
+## 2. Один владелец, существующие интерфейсы
 
 ```text
-Existing Electron UI (CreateTeamDialog / LaunchTeamDialog / Settings / Tasks / Review)
-    ↓ existing preload/HTTP + AgentBackendApi + BackendOwnerRouter
-Stage 1 Host: packages/legacy-agent-host (один captured owner на handle)
-    Team: roster / Tasks / DM / groups / review / notifications / product policy
-    Runtime: one durable intent ledger / generation / session / queue /
-             native subprocess custody / recovery / stop / checkpoint
-    ↓ existing provider-neutral Session SPI
-old-provider-implementations: OpenCode V1 adapter | OpenCode V2 dialect adapter
-    ↓ official native OpenCode engine, private authenticated endpoint, MCP/tools
+Existing Electron UI / preload / HTTP contracts
+    → AgentBackendApi / BackendOwnerRouter
+    → Stage 1 Host
+        Team: tasks, roster, messages, review, product approvals
+        Runtime: durable input, session generation, process custody, stop/recovery
+        → provider-neutral Session SPI
+        → one OpenCode V1 adapter OR one OpenCode V2 dialect adapter
+        → official native engine / model / tools / MCP
 ```
 
-| Слой | Владеет | Не должен делать |
+| Слой | Ответственность | Запрет |
 | --- | --- | --- |
-| Frontend feature UI | Установка V1/V2, статус, каталог, выбор моделей, auth UI, формы и отображение | Прямой provider subprocess execution, второй Team/Task writer |
-| `src/features/agent-backend` | Captured owner routing / IPC / HTTP / state projections | Смена owner у старой сессии, fallback на fork после неизвестного исхода |
-| Host Team | Конфигурация команды, задачи, сообщения, review и product approvals | Provider-specific HTTP, выделение второго native session owner |
-| Host Runtime | Durable IDs, launch/session/stop, process/generation/permissions authority, recovery | Дублировать V2 owner store или передавать UNKNOWN другому владельцу |
-| Provider SPI | Native V1/V2 HTTP/SDK dialect, bounded read/write, event/tool normalization | Новый durable ledger, Task ownership, приложение или renderer |
-| Legacy runtime | Только явно сохранённые old-owner handles/архивы до безопасного retirement | Новый fallback для Host-owned V2 |
+| Frontend | Установка, выбор поколения/модели, auth UI, статусы, существующие формы | Прямой native execution из renderer, второй Team writer |
+| Backend routing | Выбранный owner каждого handle, IPC/HTTP, отображение результатов | Смена владельца после UNKNOWN, скрытый fallback на fork |
+| Host Team | Задачи, сообщения, roster, review и продуктовые разрешения | Нативный HTTP decoder или ещё один provider runtime |
+| Host Runtime | Единственный durable admission, поколения сессий, owned child, recovery | Копия старого V2 Owner/admission journal |
+| Provider adapter | Ограниченный native transport, dialect, события/tool results | Product store, отдельный durable ledger, frontend imports |
 
-**Clean Architecture / SOLID / DRY:** переиспользовать existing ports и явную composition; не копировать `OpenCodeV2ExecutionOwner`/`AdmissionStore`, journal, auth managers или целый runtime. **Host Runtime отвечает за persistent ownership/admission/cleanup**, а provider adapter получает только ограниченную session lease/transport; native child запускается и останавливается по делегированному Host-owned custody, без второго durable owner. UI не импортирует Host internals; Host не импортирует renderer/feature implementation. Без нового repo, БД, очереди, UI, flags и generic framework.
+Runtime выдаёт ограниченную session/transport lease; native child custody остаётся Host-owned. Provider не получает право усыновлять shared процессы или чужие сессии. Host не импортирует renderer/feature implementation; UI не импортирует Host internals.
 
-## 3. Политика установки и версий — сохраняем один существующий контракт
+Clean Architecture/SOLID/DRY означают явные зависимости и повторное использование **проверенных правил**, не механическое объединение несовместимых V1/V2 протоколов. Не добавлять БД, framework, scheduler, feature flags, новое UI или интерфейс на каждый helper. `OpenCodeV2MemberProvider.ts` (~783 строки) сокращать только по реальной ответственности; сохранить existing readback/cleanup helpers и предел новых production-файлов ≤800 строк.
 
-Нормативные Frontend sources: `src/features/opencode-compatibility/core/domain/openCodeV2Contract.ts`, `pinnedOpenCodeV2Contract.ts`, `generation.ts` и `src/features/opencode-runtime-installer/core/domain/installPolicy.ts`.
+## 3. Целевая политика версий: latest stable своего поколения
 
-1. OpenCode отсутствует → установка выбирает **V1 baseline `1.19.5`**. Installed V1 остаётся V1, installed/явно выбранная V2 — V2; нет per-model/per-failure fallback. **Обязательный найденный gap:** V1 профиль Stage 1 Host #1110 допускает лишь `1.18.35/1.19.4`; нельзя считать frontend default `1.19.5` совместимым без нативной проверки. Согласовать V1 admission с текущим продуктом **отдельно от V2 wire**, не добавляя версии в allowlist вслепую.
-2. `installedCliVersion` (версия пользователя), `selectedQualifiedEngineVersion` (проверенная engine) и `wireDialect/capabilities` — **разные идентичности**. Stable CLI в опубликованном диапазоне только распознаётся; Team launch допустим, когда конкретный engine/платформа/доставка/протокол подтверждены.
-3. Published qualified engine/delivery manifest — **единый источник выбора** для Frontend. Host получает immutable trusted descriptor (CLI, engine, dialect, selected model/profile/account, platform/arch, digest native executable + graph, session owner/generation); не вводить вторую таблицу «разрешённых пользовательских версий» и не доверять renderer-supplied capabilities.
-4. Поддерживать другие стабильные установленные V2 CLI по уже опубликованной **range + qualified engine** policy; версия CLI **не равна** версии engine и не разрешает произвольную 2.x API-семантику. Выбрать **один** доказанный execution surface для `2.1.4` (приоритет — существующий tested embedded SDK/engine с persisted events), а не параллельно портировать stock CLI и embedded runtime. Другой wire dialect вводить **только** по измеренной необходимости.
-5. Missing/foreign/outdated engine, недоказанный dialect, prerelease, неподдержанная платформа или несовместимый checkpoint → явный HOLD/unsupported без скрытого перехода на V1. Сохранить исходную session identity, настройки, плагины и credentials.
-6. Support installer и V2 delivery должны работать без старого `claude-multimodel` для нового Host-owned path; хранение verified V2 native support отдельно от legacy CLI допустимо. Не тащить source checkout, чужой системный Node/Bun или unpinned npm «latest».
+**Последнее решение владельца заменяет фиксированную первую установку `1.19.5`.** Сохраняем V1 по умолчанию, широкий совместимый диапазон, явное обновление и отдельную квалификацию engine. Не смешивать version discovery, installation и launch admission.
 
-## 4. Порядок реализации — четыре небольших слоя и один отдельный cleanup
+1. **Первая установка:** последняя стабильная поддерживаемая **V1**, определённая по официальным metadata в выбранном диапазоне. Не глобальный `latest`, способный переключить major, и не вечный pin на `1.19.5`.
+2. **Обновление:** пользователь может явно обновить установленную V1 до latest stable V1, V2 — до latest stable V2. Уже выбранное поколение сохраняется. Явно выбранная совместимая версия не меняется без действия пользователя; prerelease/чужое поколение не подставляются автоматически. Не добавлять отдельный каталог версий/новый экран без необходимости: переиспользовать installer и существующее действие Update.
+3. **Пользовательский CLI ≠ execution engine ≠ wire dialect.** Для V2 сохраняется `stable-v2-qualified-engine`: stable CLI в опубликованном диапазоне `>=2.0.0, <3.0.0` может обслуживаться отдельным проверенным engine. Latest CLI не разрешает автоматически latest непроверенный engine. Точная engine/platform/dialect/digest выбирается из одного trusted qualification/delivery contract; обновление engine требует native E2E, а не новой строки allowlist.
+4. **V1 также не ограничивать двумя patch-версиями.** Согласовать Host/provider admission с существующим опубликованным диапазоном и проверенным API/возможностями. Native tests обязаны покрыть baseline `1.19.4`, бывший default `1.19.5` и выбранную latest stable V1. Не обещать проверку всех будущих выпусков; несовместимый протокол отказывать до опасных side effects. Не расширять строковый список вслепую.
+5. **Безопасное разрешение latest:** один раз получить metadata, проверить stable semver/major/package/platform, зафиксировать exact version и integrity, проверить root/native package соответствие, затем скачать эти байты. Смена dist-tag между чтениями не меняет выбранную версию. Проверять checksum/digest и атомарно активировать; при ошибке сети, metadata или проверки оставить предыдущую рабочую установку, без скрытого downgrade.
+6. **Обновление не мигрирует активную команду.** Не менять исполняемые файлы/engine binding живой или UNKNOWN-сессии. Сохранить versioned installation и pinned engine для её stop/reconcile/resume; новая версия доступна новым запускам. Не создавать новую систему миграции: reuse existing installer, owner binding и checkpoint compatibility.
+7. **Одна политика, несколько потребителей:** существующие `openCodeV2Contract.ts`, `pinnedOpenCodeV2Contract.ts`, `generation.ts`, `installPolicy.ts` и `packageSelection.ts`. Trusted composition передаёт Host immutable descriptor обеих версий, dialect, OS/arch, graph/executable digest, account/profile и session generation. Renderer не назначает capabilities и не передаёт secrets в manifest/логи.
+8. Missing/unqualified engine, wrong ABI, unknown wire, несовместимый checkpoint/plugin или unsupported OS → честный unsupported/HOLD, без silent V2→V1/fork fallback. Не изменять пользовательские HOME/XDG/config/plugins/auth. Unsupported V2 OAuth/plugin маршруты не становятся поддержанными от успешной установки или login.
 
-### A. Provider package: настоящий engine 2.1.4 и Session SPI
+## 4. Реализация минимальными вертикальными срезами
 
-Owning repo: Draft provider #1 → #2; исходники `packages/provider-implementations/.../opencode-protocol/v2-*`.
+### A. Provider library — исправить фактический протокол
 
-- Freeze source SHA/provider archive и текущий **0.0.159 V2 delivery descriptor**. Сопоставить **фактический** native 2.1.4 embedded SDK/engine wire (не npm wrapper): session/create/get/prompt `{data}` envelope, cursor, `events.persist`/SSE terminal lineage, tool call/result, MCP, permission/interrupt/auth. Отдельные 2.0.21/2.1.4 fixtures не дают общего API автоматически.
-- Проверить и при необходимости добавить **минимальный dialect-specific decoder/transport** внутри существующей V2 provider factory. Не дублировать transport в Host или Frontend и не менять V1 adapter ради ложного DRY.
-- На disposable native 2.1.4 показать actual model turn → assistant output → durable terminal и cold readback, а также tool effect, permission deny/ask и MCP. `Session.log` без полноценного native event lineage — HOLD, не успешная модельная сессия.
-- Проверить bound loopback/Basic Auth, реальные PID+birth/digest (не wrapper SHA), exact source package/SDK graph, bounded HTTP/SSE, чужую сессию/permission/lease и rollback/revoke. После accepted или UNKNOWN POST — **никакого повторного выполнения**. Node24/26, packed consumer и независимый security review; E2E с localhost model proof ≠ оплаченная подписка.
-- Не merge/publish provider #1/#2 до собственных current-SHA CI и review; после приёмки выбрать **один immutable archive** в Host.
+Работать в существующем provider PR #2 поверх #1. Freeze source SHA и один выбранный artifact; не копировать library в Frontend.
 
-**Выход:** standalone V2 dialect для проверенной 2.1.4 engine; V1 не меняется, пакет не зависит от прежнего runtime/форка.
+- Приоритет — уже проверяемый embedded SDK/engine `2.1.4` с persistent events. Выбрать **одну** execution surface; не портировать параллельно stock CLI и embedded runtime ради полноты.
+- Сверить реальные `{data}` envelopes, session create/get/prompt, message cursor, persistent SSE/terminal, tool call/result IDs, MCP, permissions и interrupt. Старые fixtures не удостоверяют новый wire; при необходимости добавить минимальную dialect strategy внутри existing adapter.
+- Доказать native model → непустой assistant → durable terminal → cold readback без дополнительных model calls. Один ACK, пустой log или `idle` без исходного input correlation — не успех.
+- Проверить loopback/auth, scoped session/credentials, bounded JSON/SSE/stream budgets, foreign permissions, cancellation/lost ACK. После принятого или UNKNOWN input не повторять POST. Physical PID/birth/digest проверяется владельцем, не подменяется wrapper/package hash.
+- Node24/26, frozen dependency graph, `pnpm check`, packed consumers и независимое review. Сохранять public exports и V1. Выдать immutable archive после приёмки; не редактировать vendored dist.
 
-### B. Stage 1 Host: один native owner, без копирования старых журналов
+### B. Host — соединить с единственным Runtime owner
 
-Owning repo: текущий Stage 1 package, Draft #1106 → #1110.
+Использовать #1106 → #1110; согласовать актуальную базу #982, не сливая её в main.
 
-- В `runtimeProfile.ts`, `openCodeV2StaticPreflight.ts` и `OpenCodeV2MemberProvider.ts` заменить повторённые exact `2.0.0/2.0.21` как **пользовательскую version policy** на immutable qualified engine/dialect selection. До реальной native qualification не расширять допускающий запуск guard.
-- Захватывать Team/run/member/session/generation, command ID и account namespace **до** native side effects. Process custody, allocated child, lease, interrupt, close/UNKNOWN, cold recovery остаются у существующего Host Runtime; provider управляет только сессионным protocol transport.
-- `OpenCodeV2MemberProvider.ts` (~783 строк) не делить **ради длины**: сначала переиспользовать `CustodyReadback`, `PermissionReadback`, `InitialContextReadback`, `ObserverCleanup`. Вынести лишь проверяемую реальную ответственность, если требуется изменение/превышается правило **≤800 физических строк** для нового production-файла. Без generic manager, facade inheritance и доп. интерфейсов на каждый helper.
-- Native initial instructions ставятся **ровно один раз**, затем attested readback по session/generation/config revision. Не переотправлять PUT/POST после неясного ACK. Реальный Stop не должен убивать общий/чужой OpenCode процесс.
-- Native `external_directory: deny|ask` должен реально **блокировать внешний TEST tool effect**, включая project-scoped сохранённый `always` и native plugin hooks (или доказанное отсутствие), а не просто возвращать JSON правила. Default V2 allow не наследовать; `once/reject`, stale grant и обрыв в момент approval fail-closed. Непроверенная plugin/tool-approval/MCP capability означает явный unsupported/HOLD **до side effects**.
+- Устранить разрыв V1 install/admission и V2 CLI/engine/dialect в `runtimeProfile.ts`, `openCodeV2StaticPreflight.ts`, `OpenCodeV2MemberProvider.ts`. Текущие native gates не ослаблять до положительного proof; новый широкий диапазон не должен означать произвольную wire совместимость.
+- Захватить Team/run/member/session/generation/account/command ID до side effects; один durable intent и один owner на native child. Initial instructions отправлять не более одного раза до разрешения UNKNOWN; readback проверяет исходный digest/revision.
+- Реальные `external_directory: deny|ask`, once/reject, stale/revoked approval проверять **tool side effect**, включая project saved `always` и plugin hooks/их доказанное отсутствие. Чтение JSON rules само по себе не доказывает enforcement. Неподдержанный persistent grant/MCP/plugin явно отказать до мутации.
+- Переиспользовать custody/permissions/context/observer helpers. Проверить targeted interrupt/Stop, sibling survives, child PID reuse, app crash, durable recovery, no double writer. Exit Host не равен доказательству завершения всех детей.
 
-**Выход:** Stage 1 Host→OpenCode V2 native turn, known terminal, tool/MCP/permission/Stop и cold-safe recovery, без второго owner/store.
+**Выход A+B:** один полный native Host V2 turn + MCP/tool/permissions + durable terminal + Stop/cold Resume; V1/Claude/Codex не регрессировали. Это ещё не полный Desktop cutover.
 
-### C. Frontend glue: не трогать существующий UX
+### C. Desktop — прежний UX, новый execution path
 
-- Сохраняются оригинальные `CreateTeamDialog` / `LaunchTeamDialog` / Resume / Task Board / Review / Processes / Provider Settings / model picker; никаких новых диалогов или feature flags.
-- Использовать existing app installer, qualified model catalogs, per-project config и provider-management port. Связать UI и IPC с captured Host owner **для новых Host-owned команд**; native metadata и account profile передавать только через existing trusted composition, а не renderer-флаги.
-- В old-runtime коде различить **explicit old-owner compatibility** и новые Host-owned команды. Пресечь старые fork probes, `runtime status/models/auth`, subprocess launch и watchers для Host-owned handles даже **до первого prompt**; проверять sentinel-ами. Не удалять по пути старые данные/историю.
-- Изменение V2 engine/встроенного plugin или неожиданного capability показывает честный diagnostic/unsupported; не обещает запуск на основании login/каталога моделей.
+- Оставить текущие Create/Launch/Resume, Settings/model picker, Tasks/Review/Processes, notifications и IPC/HTTP DTO. Без нового UI, отдельного store или скрытого фонового launch.
+- Installer/status/catalog/auth используют existing feature ports и trusted Host composition. Новые Host-owned команды не вызывают fork даже для startup/status/models/auth/Stop; проверить negative sentinel, а не только отсутствие fork на prompt.
+- Различать old-owner и Host-owned handles. Старые active/UNKNOWN/архивы сохраняют исходного владельца. Mixed old/new ownership не объявлять поддержанным без отдельного proof; нет автоматической V1↔V2 миграции или relay неизвестной операции.
 
-**Выход:** те же пользовательские действия создают, запускают, контролируют и читают команду через единственный новый Host.
+### D. Приёмка, затем отдельное удаление ненужного legacy
 
-### D. End-to-end квалификация (обязательная до cutover)
+- Сначала deterministic localhost inference с реальными SDK/CLI/Host, затем native tool/MCP/permission и оригинальный Electron CDP. Только disposable TEST проекты/HOME; не использовать рабочие проекты/подписки/ambient credentials.
+- Полная UI цепочка: Create → Launch → Task/tool → peer/group → Review → targeted Stop → Quit → cold readback/Resume. Использовать существующие harness/контролы; positive и negative cases, не второй тестовый framework.
+- Проверить затронутые packaged tuples macOS arm64/x64, Windows arm64/x64, Linux x64: native Node/Bun/engine graph, ASAR, Windows wrapper, startup/stop. Linux arm64 не объявлять поддержанным без delivery и native proof. Большую матрицу запускать на интеграционном HEAD, не на каждом неизменяющем границы коммите.
+- Опциональный реальный бесплатный OpenCode model smoke — [#1171](https://github.com/777genius/agent-teams-ai/issues/1171): bounded requests/time/token budget, disposable data, отсутствие secrets; сетевой сбой/429 не превращать в fake PASS или mandatory flaky gate. Claude/Codex vendor OAuth/подписки — отдельная согласованная ручная приёмка.
+- Сохранить original receipts/screenshots, exact source/package/engine digests, OS, input/session/owner identity и cleanup. Если source/runtime изменился — повторить affected checks, не переносить старый PASS без доказанной неизменности.
+- Только после этого удалить лишние fork bootstrap/probes/imports из нового пути. Удалять старый binary из всей поставки можно лишь когда нет unresolved old-owner obligations либо есть проверенный read/stop/reconcile/archive path. Rollback/default действует на новые unbound handles; пользовательские данные не удалять. Production cutover/release остаётся отдельным решением.
 
-- **Offline deterministic:** реальные Claude Agent SDK / Codex CLI / OpenCode V1/V2 + TEST-only localhost inference и настоящие команды/инструменты. Никакой real user data, исходных проектов или credentials CI.
-- **Положительный E2E по возрастающей сложности:** (1) provider native `2.1.4` model/tool + terminal/cold lineage; (2) тот же turn через **один** Stage 1 Host owner/MCP/permission/Stop; (3) original Electron Create/Launch→Task→peer/group/review→Resume/Stop; (4) выбранные packaged OS. Не запускать полный M01–M19/5-OS suite **на каждом маленьком коммите**, если границы unchanged.
-- **Native negative:** error/lost ACK до/после admission, no retry on UNKNOWN, foreign/stale session/permission, no double writer/duplicate Task, wrong model dialect, denied external access despite persisted allow/hooks, shared backing stop, lifecycle process reaping.
-- **UI/packed:** оригинальный Electron CDP (не новый harness/UI), Create→Launch→Task→DM/Group→Review→Stop→Quit→cold readback; арх./delivery/Node/Bun/ASAR/Windows wrapper. Реально протестировать поддерживаемые macOS ARM/x64, Windows ARM/x64, Linux x64; не заявлять Linux arm64.
-- **Real providers separately:** опциональный bounded настоящий бесплатный OpenCode model test по [#1171](https://github.com/777genius/agent-teams-ai/issues/1171), не flaky required CI. Claude/Codex live subscription OAuth, quota, revoked permissions — отдельно и с согласованными TEST-аккаунтами. Локальный mock ответ **не** называется vendor-auth E2E.
-- Evidence на **финальном SHA**: original receipts/screenshots, source pins, ZIP SHA-256/CRC, native binary digest/version, platform, owner/generation/command ID, cleanup results; reuse только для неизменившихся boundaries.
+## 5. E2E-матрица и критерий готовности
 
-### E. Fork-free cleanup — отдельный небольшой PR после D
-
-- Удалить из новых Host-owned путей зависимость на старый CLI/bootstrap/probes/management, убедиться в отрицательном sentinel. Не переносить в новый backend whole legacy modules.
-- `pnpm dev/dist`, staging и `resources/runtime` менять лишь после подтверждения **нулевой активной зависимости новых Host-owned путей** от fork (startup/management/status/model/auth/stop, даже без prompt). Удаление legacy binary из **всей** поставки отдельно: либо все старые obligations окончательно завершены, либо для каждого retained old-owner handle сохранён working read/stop/reconcile/archive path. Rollback/default применяются только к **новым unbound handles**, без live migration.
-- Никакой автоматической миграции активных V1/V2 sessions или пользовательских профилей; ни merge #982 в `main`, ни релиз/активация Host без отдельного owner decision.
-
-## 5. Минимальная E2E-матрица и stop-ship
-
-| Test | Доказательство |
+| Граница | Обязательная проверка |
 | --- | --- |
-| Fresh / V1 / V2 | Default V1 `1.19.5` **и Host V1 admission доказаны вместе**; installed V1→V1, V2→V2, explicit V2; без fallback |
-| Arbitrary stable V2 CLI in range | Правильная identity native CLI + выбранная qualified engine/платформа/dialect; incompatible = HOLD |
-| Wrong engine / wrong ABI / unsupported OS | Refuse **до** session/native mutation; no access to user credentials |
-| Real model → terminal | Nonempty assistant + original accepted input + persisted native terminal and cold lineage |
-| Tools/MCP | Exact native tool effect, call/result pairing, tool permission, MCP child custody and cleanup |
-| Permissions | deny/ask/once/reject, late revoke, saved `always` and plugin hook precedence, no stale grant |
-| Team+UI | Real Create/Launch, task/review/attachments, human/peer/group, source logs, notification/ref links |
-| Runtime controls | Targeted Stop/interrupt, independent sibling survives, app Quit, crash/cold Resume, no PID reuse |
-| UNKNOWN | Lost ack, durable ID, read-only reconciliation, zero extra POST/launch; never fresh-as-resume |
-| Packaging | Actual runtime bytes, signed/pinned delivery, no source checkout/system Node or fork on new host path |
-| Legacy state | Old owner unchanged, no replay/adoption, no user data loss, no destructive reset |
+| Latest installation | Fresh latest stable V1; V1→latest V1; V2→latest V2; prerelease/major jump отказ; metadata/tag race; corrupt archive и interrupted install сохраняют прежнюю версию |
+| Compatibility | V1 baseline/default/latest проходят Host; V2 installed CLI отличается от qualified engine; missing/wrong platform/dialect отказывается до эффекта |
+| Running session + update | Команда сохраняет свой binary/engine/checkpoint; новое обновление не меняет её stop/recovery и не повторяет input |
+| Native model/terminal | Исходный accepted input, непустой assistant, persisted terminal/cursor, cold lineage, no extra model POST |
+| Tool/MCP/permissions | Реальный эффект/запрет, paired call/result IDs, child cleanup, saved always/plugin precedence, once/reject/revoke |
+| Team UI | Tasks/Unicode comments/attachments/TaskRef, human/peer/group, review/apply/reject, notifications, exact selected model/member |
+| Lifecycle/UNKNOWN | Targeted stop/interrupt, sibling survives, Quit/crash/cold Resume, PID identity, lost ACK и zero replay |
+| Packaging/fork-free | Точные native bytes, без source checkout/system runtime dependency; Host path не вызывает legacy CLI даже для management |
+| Retained data | Старый owner не усыновлён; tasks/history/UNKNOWN/архивы сохранены; нет destructive migration |
 
-Replay, чужие права, shared-process kill, фальшивый tool/success, неподтверждённый `2.1.4` wire/permissions/MCP, зависимость нового Host от fork, потеря V1/истории и красный exact-head CI — **stop-ship**. Повторить релевантные M01–M19 и V01–V08, не копируя весь тестовый framework.
+Релевантные M01–M19 и V01–V08 обязательны для новой композиции. Не считать native provider-only или старый runtime доказательством нового Host/Electron. Replay, лишние права, shared-process kill, fake success, исчезновение истории, неподтверждённый engine/dialect, hidden fallback и красные exact-head gates — **stop-ship**.
 
-## 6. PR-последовательность, проверки, оценка
+## 6. Порядок merge и ограничения
 
-1. **Provider source #1 → `bootstrap`** можно слить после current-head Node24/26 `pnpm check`, packed-consumer и независимого review: это публикация **исходников в default Git-ветке, не npm/release/активация Host**. Уже существует Ready PR #1. Затем обновить base для #2 на `bootstrap` обычным Git merge/rebase **без force**; не сливать V2 #2 без своего protocol/Native E2E/security review и исправления unresolved threads.
-2. **Host #1106 → #1110:** работать в зависимых Draft только для **Stage 1 V2**, актуализировать базу #982 с текущим main осторожно, затем закрыть настоящий qualified 2.1.4 и V1 `1.19.5` gap. Предыдущее прямое поручение владельца подтверждено в [#1110 scope](https://github.com/777genius/agent-teams-ai/pull/1110#issuecomment-6772010714), **не** в Stage 2 #1105; не переносить весь `OpenCodeV2ExecutionOwner`.
-3. **Frontend glue + E2E:** минимальный patch существующих feature ports и старых Electron controls; один selected package/build graph и original UI proof. Ни новых UX страниц, ни state migration, ни второй owner.
-4. **Finishing gates:** на точном final HEAD `pnpm typecheck`, `pnpm lint`, `pnpm lint:mcp`, `pnpm guard:source-file-size`, `pnpm guard:team-provisioning-architecture`, focused Host/native, Full CI + CodeQL + затронутые packed/native OS E2E и independent architecture/security review. Draft Fast feedback ≠ merge-pass; оригинальный Source/Electron proof другой SHA ≠ текущий код.
-5. **Решения о merge раздельны:** docs-plan PR #1173 можно слить в **Stage 1 branch**, если он пройдёт собственный docs review/CI; source extraction #1 — в provider `bootstrap` по п. 1; #1106/#1110/#2 пока HOLD. **#982 → `main`, релиз и retirement старого fork требуют отдельного решения владельца; Stage 2 исключён.**
+1. **Provider #1 → default `bootstrap`:** исходники можно сделать видимыми без npm/release, но после собственных exact-head CI, packed consumer и реального независимого review. Neutral/skipped reviewer из-за лимита — не review. Не менять default на незавершённую ветку вместо проверки.
+2. **Provider #2:** после #1 retarget на default; сохранить ancestry обычным merge, без force-push и массового rebase. Проверить только его diff, исправить findings, завершить его native/source/packed gates. Merge source не означает включение V2 в продукт.
+3. **Host #1106 → #1110 → ветка Stage 1:** интегрировать в порядке зависимостей после проверки текущей базы, selected provider artifact и E2E. Нужные latest-policy изменения делать в owning installer/Host/provider, не через дублирование версии. Не трогать чужую одновременно изменяемую ветку без сверки нового HEAD.
+4. **План #1173 → Stage 1:** docs-only CI/review; это разрешённый зависимый merge, не #982→main. Постоянно добавлять новые plan/framework PR не требуется.
+5. **Финальные gates:** repo-pinned TypeScript ≥7.0.2, `.ts` для нового TS, `pnpm typecheck`, lint и архитектурные/source-size guards, provider Node24/26 `pnpm check`, соответствующие Host/native/Electron/packed проверки, Full qualification/CodeQL и независимое review на окончательном HEAD. Не ослаблять guards/тесты для green. Source CI, native qualification, release readiness показывать отдельно.
+6. **Не входит в разрешённый merge:** #982→main, Stage 2 #1105, публикация пакетов/релиза, переключение production backend и удаление действующего legacy compatibility. Основной PR остаётся открытым; Stage 2 отложен.
 
-**Ориентир оставшегося нового кода**, не считая уже написанного: **1 700–3 900 production LOC**, **3 400–6 750 tests/E2E LOC** плюс удаление дубликатов. Сложность ~8/10, цель — 9/10 уверенности после exact-head native/UI/packed acceptance; не обещание нулевых багов.
+Ориентир оставшейся адаптации: 1 700–3 900 production LOC и 3 400–6 750 tests/E2E LOC, не считая существующего кода. Это оценка, не норматив по объёму и не обещание отсутствия багов. Не создавать дополнительные слои ради достижения чисел.
 
-**Критический review перед каждым merge:** один writer/owner? Существует оригинальный native proof именно выбранного engine? Нет ли скрытой ветки fallback? Нет ли второго каталога версий, дополнительной БД, UI/сервиса без consumer? Не исчезли ли effective permissions/TaskRef/review/history/UNKNOWN? Сравнены ли exact refs, артeфакты и cleanup? Есть ли positive и negative сценарий, а не только API mock? Все ответы проверяемы по неизменённым receipts.
-
-**Результат:** Stage 1 Host обслуживает Claude/Codex/OpenCode V1/V2 и прежний UX без fork executable на новом пути. Старый runtime сохраняется лишь для явно старых обязательств до отдельного безопасного retirement. Stage 2 — **вне scope**.
+Перед каждым merge: один owner/writer; выбранный native proof; нет скрытого fallback; сохранены права/история/UNKNOWN; latest resolved один раз в exact verified bytes; live session не изменена; корректны base/head и оригинальные receipts. При отрицательном ответе исправить конкретный слой, не начинать лишнюю миграцию.
