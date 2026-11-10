@@ -327,4 +327,42 @@ describe('Smart schedules filesystem safe E2E', () => {
     expect(port.createTask).not.toHaveBeenCalled();
     expect(oneShot).not.toHaveBeenCalled();
   });
+
+  it('drains an in-flight JSON timestamp write before stop, cleanup and restart', async () => {
+    const schedule = await scheduler.createSchedule({
+      ...input(), executionMode: 'agent', targetMember: '',
+    });
+    let releaseWrite!: () => void;
+    const writeGate = new Promise<void>((resolve) => { releaseWrite = resolve; });
+    let writeStarted = false;
+    const saveSchedule = repository.saveSchedule.bind(repository);
+    vi.spyOn(repository, 'saveSchedule').mockImplementation(async (candidate) => {
+      if (candidate.id === schedule.id && candidate.lastRunAt) {
+        writeStarted = true;
+        await writeGate;
+      }
+      return saveSchedule(candidate);
+    });
+
+    await scheduler.triggerNow(schedule.id);
+    await vi.waitFor(() => expect(writeStarted).toBe(true), { timeout: 8000 });
+    let stopFinished = false;
+    const stopping = scheduler.stop().then(() => { stopFinished = true; });
+    try {
+      await new Promise<void>((resolve) => setTimeout(resolve, 25));
+      expect(stopFinished).toBe(false);
+      expect(fs.existsSync(path.join(basePath, 'agent-teams-schedules'))).toBe(true);
+    } finally {
+      releaseWrite();
+      await stopping;
+    }
+
+    expect((await repository.getSchedule(schedule.id))?.lastRunAt).toBeTruthy();
+    expect((await repository.listRuns(schedule.id))[0]?.status).toBe('dispatched');
+    await scheduler.start();
+    expect((await repository.listRuns(schedule.id))[0]?.status).toBe('dispatched');
+    expect(port.createTask).toHaveBeenCalledOnce();
+    expect(oneShot).not.toHaveBeenCalled();
+  });
+
 });
