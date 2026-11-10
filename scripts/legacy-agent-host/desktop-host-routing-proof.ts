@@ -223,6 +223,29 @@ export async function runDesktopF08ReadTimingProof(
   const text = 'TEST F08 original Task comment and shared read recovery';
   const comments = (task: Record<string, unknown>) =>
     ((task.comments as unknown[] | undefined) ?? []).map(row);
+  // F08 deliberately intercepts one physical Host read. Once a retained comment
+  // spans Owner pages, that read is a task fragment, not a complete snapshot.
+  const assertOriginalPageTask = (page: Record<string, unknown>, expected: Record<string, unknown>) => {
+    assert.ok(Array.isArray(page.tasks));
+    const index = page.tasks.map(row).findIndex((task) => task.id === expected.id);
+    assert.ok(index >= 0, 'original Task is present on the held Owner page');
+    const part = row(page.tasks[index]);
+    assert.equal(part.subject, expected.subject);
+    assert.equal(part.status, expected.status);
+    if (page.taskParts === undefined) {
+      assert.deepEqual(comments(part), comments(expected));
+      return;
+    }
+    assert.ok(Array.isArray(page.taskParts));
+    assert.equal(page.taskParts.length, page.tasks.length);
+    const marker = row(page.taskParts[index]);
+    assert.equal(marker.part, 0, 'held original Task is the base part');
+    assert.ok(typeof marker.total === 'number' && marker.total > 1);
+    assert.ok(typeof page.nextCursor === 'string' &&
+      /^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.test(page.nextCursor));
+    const present = comments(part);
+    assert.deepEqual(present, comments(expected).slice(0, present.length));
+  };
   assert.equal(comments(originalTask).filter((comment) => comment.text === text).length, 0);
   const proof: Record<string, unknown> = {
     status: 'INCOMPLETE',
@@ -264,6 +287,12 @@ export async function runDesktopF08ReadTimingProof(
     proof.beforeMutationSnapshot = await cdp.evaluate(
       `(async()=>{const {api}=await import('/api/index.ts');return api.teams.getData(${desktopJsLiteral(selection)});})()`
     );
+    const beforeData = row(proof.beforeMutationSnapshot);
+    assert.ok(Array.isArray(beforeData.tasks));
+    const beforeTask = beforeData.tasks.map(row).find((task) => task.id === originalTask.id);
+    assert.ok(beforeTask);
+    assert.deepEqual(comments(beforeTask), comments(originalTask),
+      'complete public Owner page assembly retains the full original Task history');
     // The sidebar opens the existing Task detail without its separate Open team action.
     const sidebarText = await ui.waitRead(
       `(() => {const rows=[...document.querySelectorAll('#sidebar-tasks-panel .sidebar-task-item')].filter(e=>[...e.querySelectorAll('span')].some(s=>s.textContent.trim()===${desktopJsLiteral(options.seed.subject)}));return rows.length===1?rows[0].textContent.trim():null;})()`,
@@ -304,7 +333,7 @@ export async function runDesktopF08ReadTimingProof(
       .map(row)
       .find((task) => task.id === options.seed.taskId);
     assert.ok(staleProductTask);
-    assert.deepEqual(comments(staleProductTask), comments(originalTask));
+    assertOriginalPageTask(staleProductData, originalTask);
     // Keep this original mounted surface through both stale deliveries: no observer epoch change.
     await cdp.evaluate('window.__TEST_f08.staleArmed=true;true');
     const stale = row(
@@ -620,11 +649,7 @@ export async function runDesktopF08ReadTimingProof(
       .map(row)
       .find((task) => task.id === options.seed.taskId);
     assert.ok(heldTask);
-    assert.deepEqual(
-      comments(heldTask),
-      comments(changedTask),
-      'the separate selected response includes the already committed comment'
-    );
+    assertOriginalPageTask(row(heldResult.value), changedTask);
     proof.selectedReadProvenance = {
       request: held.request,
       stack: held.stack,
