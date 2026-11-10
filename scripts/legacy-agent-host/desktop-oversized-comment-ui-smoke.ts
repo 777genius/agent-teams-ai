@@ -16,6 +16,7 @@ const commandId = 'TEST-large-accepted-task-comment';
 const largeText = '漢'.repeat(200_000);
 const textSha256 = createHash('sha256').update(largeText).digest('hex');
 
+/** Require a canonical TEST JSON record without accepting arrays or null. */
 function record(value: unknown): Record<string, unknown> {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value as Record<string, unknown>;
@@ -132,11 +133,18 @@ export async function runDesktopOversizedCommentUiSmoke(
   const card = '.kanban-task-card[data-task-id=' + desktopJsLiteral(options.taskId) + ']';
   if (!(await cdp.evaluate('Boolean(document.querySelector(' + desktopJsLiteral(card) + '))')))
     await ui.clickSidebar(options.subject);
-  await ui.waitRead('Boolean(document.querySelector(' + desktopJsLiteral(card) + '))',
-    'original Task card after cold readback');
-  await ui.click(card + ' h5', 'open original Task detail after large comment');
   const commentSelector = '[role="dialog"] [data-task-comment-id=' +
     desktopJsLiteral(commentId) + ']';
+  const requestedTaskDetailAlreadyOpen = await cdp.evaluate(
+    'Boolean(document.querySelector(' + desktopJsLiteral(commentSelector) + '))'
+  );
+  // The original sidebar Task row may have already opened its own detail.
+  // Do not click through a modal overlay or generate a second Task action.
+  if (!requestedTaskDetailAlreadyOpen) {
+    await ui.waitRead('Boolean(document.querySelector(' + desktopJsLiteral(card) + '))',
+      'original Task card after cold readback');
+    await ui.click(card + ' h5', 'open original Task detail after large comment');
+  }
   await ui.waitRead(
     'Boolean(document.querySelector(' + desktopJsLiteral(commentSelector) + '))',
     'original comment card after signed-page readback'
