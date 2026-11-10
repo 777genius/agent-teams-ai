@@ -834,6 +834,19 @@ test('V2 launch rejects unproven model/variant changes and V1 permission modes',
   });
   assert.equal(nestedSelected.model, nestedBase.model);
   assert.equal(nestedSelected.nativeOptions.variant, undefined);
+  // A custom provider ID may itself contain a slash. The flat alias then
+  // collides with a different provider/model pair: explicit selection cannot
+  // prove which pair the catalog selected. Implicit native capture stays valid.
+  const ambiguousProviderBase = runtimeProfileSchema.parse({ members: [{
+    ...nativeV2Profile(),
+    nativeOptions: { ...nativeV2Profile().nativeOptions, providerId: 'TEST-provider/nested' },
+  }] }).members[0]!;
+  assert.equal(applyLaunchConfiguration(ambiguousProviderBase, {}).model, 'TEST-model');
+  assert.throws(() => applyLaunchConfiguration(ambiguousProviderBase, {
+    model: 'TEST-provider/nested/TEST-model',
+  }), (error: unknown) => error instanceof Error && 'reason' in error &&
+    error.reason === 'launch-option-unsupported',
+  'a slash-bearing provider ID must not launder a foreign catalog selection');
   // A catalog alias may be longer than a single 256-character ID. Only the
   // qualified alias of the ACTUAL captured V2 model is admitted at that size.
   const longProvider = 'p'.repeat(180);

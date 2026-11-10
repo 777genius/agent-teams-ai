@@ -47,7 +47,10 @@ export function applyLaunchConfiguration(
   // cannot change it. Reject explicit effort until a separate native variant
   // attestation exists; a matching captured string alone proves nothing.
   const v2 = base.provider === 'opencode' && base.nativeGeneration === 'v2';
-  const qualifiedCapturedModel = v2
+  // A slash inside a custom provider ID makes the flattened catalog alias
+  // ambiguous with another provider's model path. Without structured catalog
+  // provenance, an explicit choice cannot attest that captured native pair.
+  const qualifiedCapturedModel = v2 && !base.nativeOptions.providerId.includes('/')
     ? `${base.nativeOptions.providerId}/${base.model}`
     : undefined;
   if (selected.model !== undefined && selected.model.length > 256 &&
