@@ -210,6 +210,30 @@ test('V2 rejects Proxy native owner receivers and prototype chains before descri
   }
 });
 
+test('V2 rejects Proxy-wrapped Host and native owner callbacks before invoking their apply traps', () => {
+  for (const boundary of ['Host authority', 'native owner'] as const) {
+    const { captured, calls } = owner(false);
+    const host = context();
+    let forgedCalls = 0;
+    if (boundary === 'Host authority') {
+      host.isCurrent = new Proxy(() => false, {
+        apply() { forgedCalls++; return true; },
+      });
+    } else {
+      captured.probe = new Proxy(captured.probe, {
+        apply() { forgedCalls++; return Promise.resolve(true); },
+      });
+    }
+    assert.throws(() => createOpenCodeV2MemberProvider(host, captured),
+      new RegExp('data-property ' + boundary + ' callbacks'),
+      'a callable Proxy must not forge a current Host lease or successful native probe');
+    assert.equal(forgedCalls, 0, 'reject before calling the Proxy apply trap');
+    assert.deepEqual(calls,
+      { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 },
+      'a rejected callback must never acquire native authority');
+  }
+});
+
 test('V2 accepts prototype data methods while retaining the original owner receiver', async () => {
   const { captured, calls } = owner(true);
   // A class-style owner can expose methods on its prototype. The Host must

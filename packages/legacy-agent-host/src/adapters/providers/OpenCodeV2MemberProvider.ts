@@ -88,8 +88,11 @@ function captureDataCallback<T extends object, K extends keyof T>(
       throw new Error(`OpenCode V2 requires data-property ${callbackOwner} callbacks`);
     const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
     if (descriptor) {
-      if (typeof descriptor.value !== 'function')
+      if (typeof descriptor.value !== 'function' || nodeUtilTypes.isProxy(descriptor.value))
         throw new Error(`OpenCode V2 requires data-property ${callbackOwner} callbacks`);
+      // A Proxy-wrapped function can counterfeit a Host lease or a native
+      // permission/custody result through its apply trap. Such callbacks are
+      // not ordinary captured data-method identities.
       // Function.prototype.bind reads target.name and target.length. Those
       // getters can replace another authority callback during capture.
       // Reflect.apply preserves original identity/receiver without metadata reads.
