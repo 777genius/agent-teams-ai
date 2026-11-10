@@ -1062,6 +1062,25 @@ test('V2 native probe failure HOLDs without submission and physically stops its 
   assert.deepEqual(calls, { probe: 1, permissions: 0, context: 0, password: 0, stop: 1, stopped: 1 });
 });
 
+test('V2 rejects truthy non-boolean native probe receipts without credentials or mutation',
+  async () => {
+    for (const malformed of [{ ready: false }, 1]) {
+      const { captured, calls } = owner(true);
+      captured.probe = async () => { calls.probe++; return malformed as unknown as boolean; };
+      const provider = createOpenCodeV2MemberProvider(context(), captured);
+      await assert.rejects(() => provider.factory.open(request()),
+        /opencode.driver.dependency-unavailable/,
+        'native probe may qualify only with the primitive boolean true');
+      assert.equal(provider.isReady(), false);
+      assert.equal(calls.probe, 1);
+      assert.equal(calls.permissions, 0, 'do not read native permissions after malformed probe');
+      assert.equal(calls.context, 0, 'do not install initial native instructions');
+      assert.equal(calls.password, 0, 'do not disclose credentials');
+      assert.equal(await provider.cleanup(), true);
+      assert.equal(calls.stop, 1, 'stop only the selected TEST-owned engine once');
+    }
+  });
+
 test('V2 TEST-owned probe uses existing Session SPI; stop is idempotent and revokes readiness', async () => {
   const { captured, calls } = owner(true);
   const provider = createOpenCodeV2MemberProvider(context(), captured);
@@ -1979,6 +1998,27 @@ test('cleanup retries only read-only physical confirmation after uncertain stop 
   assert.equal(provider.isReady(), false);
   assert.equal(provider.initialContextEvidence?.(), undefined);
 });
+
+test('V2 refuses truthy non-boolean physical stop evidence after failed admission',
+  async () => {
+    for (const malformed of [{ stopped: false }, 1]) {
+      const { captured, calls } = owner(true);
+      captured.confirmStopped = async () => {
+        calls.stopped++;
+        return malformed as unknown as boolean;
+      };
+      const provider = createOpenCodeV2MemberProvider(context(), captured);
+      await assert.rejects(() => provider.factory.open({ ...request(), configRevision: 'forged' }),
+        /opencode.v2.owner-cleanup-unknown/,
+        'malformed native status cannot confirm that the original PID has stopped');
+      assert.equal(provider.isReady(), false);
+      assert.equal(await provider.cleanup(), false, 'read-only recheck cannot launder false custody');
+      assert.equal(calls.stop, 1, 'do not resend native stop after uncertain ACK');
+      assert.equal(calls.stopped, 2, 'physical status may be checked again without a new stop');
+      assert.equal(calls.context, 0);
+      assert.equal(calls.password, 0);
+    }
+  });
 
 test('sealing a ready V2 capture initiates its own physical stop before explicit cleanup', async () => {
   const { captured, calls } = owner(true);

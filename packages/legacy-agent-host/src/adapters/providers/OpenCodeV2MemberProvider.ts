@@ -251,8 +251,11 @@ export function createOpenCodeV2MemberProvider(
     checking ??= Promise.resolve().then(() => capturedConfirmStopped())
       .catch(() => false)
       .then((stopped) => {
-        if (stopped) physicallyStopped = true;
-        return stopped;
+        // Only literal true attests physical termination of the pinned PID.
+        // Structured native responses cannot become cleanup=confirmed.
+        const confirmed = stopped === true;
+        if (confirmed) physicallyStopped = true;
+        return confirmed;
       })
       .finally(() => { checking = undefined; });
     return checking;
@@ -326,7 +329,9 @@ export function createOpenCodeV2MemberProvider(
             if (!current() || signal.aborted) return false;
             const combined = AbortSignal.any([signal, abort.signal]);
             const valid = await capturedProbe(combined);
-            if (!valid || combined.aborted || !current()) return false;
+            // A native owner probe must affirm readiness with literal true.
+            // Truthy objects or numeric receipts are not native custody proof.
+            if (valid !== true || combined.aborted || !current()) return false;
             // This is an independently captured, immutable Host process pin.
             // A loopback HTTP success or a wrapper/package hash is not native
             // custody. Even identical bytes in a restarted PID cannot inherit
