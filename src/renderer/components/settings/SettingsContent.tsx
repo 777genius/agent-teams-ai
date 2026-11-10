@@ -191,7 +191,10 @@ export const SettingsContent = ({
                   </div>
                 }
               >
-                <CliStatusBanner isDashboardActive={isActive && activeSection === 'providers'} />
+                <CliStatusBanner
+                  isDashboardActive={isActive && activeSection === 'providers'}
+                  mode="settings"
+                />
               </Suspense>
             </div>
           )}

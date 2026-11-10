@@ -3367,6 +3367,100 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
+  it('renders the Settings provider list inline while preserving dashboard collapse', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'agent_teams_orchestrator',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: true,
+      providers: [
+        {
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          supported: true,
+          authenticated: true,
+          authMethod: 'claude.ai',
+          verificationState: 'verified',
+          statusMessage: 'Connected via Anthropic subscription',
+          models: ['claude-sonnet-4-5'],
+          canLoginFromUi: true,
+          capabilities: { teamLaunch: true, oneShot: true },
+          connection: {
+            supportsOAuth: true,
+            supportsApiKey: true,
+            configurableAuthModes: ['auto', 'oauth', 'api_key'],
+            configuredAuthMode: 'oauth',
+            apiKeyConfigured: false,
+            apiKeySource: null,
+            apiKeySourceLabel: null,
+          },
+        },
+      ],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
+        await Promise.resolve();
+      });
+      const toggle = host.querySelector<HTMLElement>(
+        '[role="button"][aria-label="Collapse provider details"]'
+      );
+      expect(toggle).not.toBeNull();
+      await act(async () => {
+        toggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await Promise.resolve();
+      });
+      expect(host.textContent).not.toContain('Connected via Anthropic subscription');
+
+      await act(async () => {
+        root.render(
+          React.createElement(CliStatusBanner, {
+            isDashboardActive: true,
+            mode: 'settings',
+          })
+        );
+        await Promise.resolve();
+      });
+      const banner = host.querySelector<HTMLElement>('[data-testid="provider-status-banner"]');
+      const header = host.querySelector<HTMLElement>(
+        '[data-testid="provider-status-banner-header"]'
+      );
+      expect(banner?.style.backgroundColor).toBe('transparent');
+      expect(banner?.classList.contains('rounded-lg')).toBe(false);
+      expect(header?.classList.contains('border-b')).toBe(true);
+      expect(header?.getAttribute('role')).toBeNull();
+      expect(header?.getAttribute('aria-expanded')).toBeNull();
+      expect(host.textContent).toContain('Connected via Anthropic subscription');
+      expect(banner?.querySelector('.border-b')).not.toBeNull();
+
+      await act(async () => {
+        header?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('Connected via Anthropic subscription');
+
+      await act(async () => {
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
+        await Promise.resolve();
+      });
+      expect(
+        host.querySelector('[role="button"][aria-label="Expand provider details"]')
+      ).not.toBeNull();
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    }
+  });
+
   it('restores the collapsed dashboard provider banner after remount', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';

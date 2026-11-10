@@ -289,6 +289,38 @@ export async function verifyProviderManageDialogs(evaluate, send, reportStage = 
 
 export async function verifyRealRuntimeElectron({ root, data, evaluate, send, coldDashboard }) {
   assert(data.realRuntime === true, 'Real runtime E2E must not use the fixture shim');
+  // Settings has no collapsing shell; the Dashboard keeps its independent preference.
+  let inlineLayout = null;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    inlineLayout = await evaluate(`(() => {
+      const page = document.querySelector('[data-testid="provider-settings-page"]');
+      const banner = page?.querySelector('[data-testid="provider-status-banner"]');
+      const header = banner?.querySelector('[data-testid="provider-status-banner-header"]');
+      if (!banner || !header || !header.getClientRects().length) return null;
+      return {
+        inline: !banner.classList.contains('rounded-lg'),
+        background: getComputedStyle(banner).backgroundColor,
+        borderBottom: getComputedStyle(header).borderBottomWidth,
+        headerInteractive: header.matches('[role="button"], [aria-expanded]'),
+        collapseButtons: banner.querySelectorAll(
+          '[aria-label="Collapse provider details"], [aria-label="Expand provider details"]'
+        ).length,
+        visibleProviderRows: [...banner.querySelectorAll('div.grid.border-b')].filter(
+          row => row.getClientRects().length && row.textContent.includes('Anthropic')
+        ).length,
+      };
+    })()`);
+    if (inlineLayout?.visibleProviderRows) break;
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  assert(inlineLayout?.inline, 'Settings provider banner retained the Dashboard card shell');
+  assert.match(inlineLayout.background, /^(?:rgba\(0, 0, 0, 0\)|transparent)$/,
+    'Settings provider background differs from its parent surface');
+  assert.equal(inlineLayout.borderBottom, '1px', 'Settings provider header divider missing');
+  assert.equal(inlineLayout.headerInteractive, false, 'Settings header must not be collapsible');
+  assert.equal(inlineLayout.collapseButtons, 0, 'Settings retained collapse affordances');
+  assert(inlineLayout.visibleProviderRows > 0, 'Settings provider details are not visible');
+
   let header = '';
   const headerStarted = performance.now();
   for (let attempt = 0; attempt < 120; attempt++) {
@@ -337,6 +369,7 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send, co
     manageStage: 'starting',
     manageResult: 'pending',
     manageDialogsVerified: [],
+    inlineSettingsLayout: { passed: true, visibleProviderRows: inlineLayout.visibleProviderRows },
   };
   const screenshot = await send('Page.captureScreenshot', { format: 'png' });
   assert(typeof screenshot.data === 'string');

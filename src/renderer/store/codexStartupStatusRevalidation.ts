@@ -46,7 +46,7 @@ export function installCodexStartupStatusRevalidation(
       recheckPending ||
         Boolean(
           recoveryCandidate &&
-          (accountLookupPending || !snapshotReadStarted || (accountReady && !rechecked))
+          (accountLookupPending || (!rechecked && (!snapshotReadStarted || accountReady)))
         )
     );
   };
