@@ -23,6 +23,12 @@ import {
 import { SettingsLoadingSkeleton } from './SettingsLoadingSkeleton';
 import { type SettingsSection, SettingsTabs } from './SettingsTabs';
 
+const GatewayProvidersSettingsSection = lazy(() =>
+  import('@features/gateway-provider/renderer').then((module) => ({
+    default: module.GatewayProvidersSettingsSection,
+  }))
+);
+
 const CliStatusBanner = lazy(() =>
   import('../dashboard/CliStatusBanner').then((module) => ({
     default: module.CliStatusBanner,
@@ -38,6 +44,7 @@ export const SettingsView = ({ isActive = true }: SettingsViewProps): React.JSX.
   const { t: commonT } = useAppTranslation('common');
   const [activeSection, setActiveSection] = useState<SettingsSection>('general');
   const [hasVisitedProviders, setHasVisitedProviders] = useState(false);
+  const [hasVisitedGatewayProviders, setHasVisitedGatewayProviders] = useState(false);
 
   // Keep active OAuth and unsaved forms mounted across Settings section switches.
   // Only passive provider checks are gated by activeSection and isActive.
@@ -47,6 +54,14 @@ export const SettingsView = ({ isActive = true }: SettingsViewProps): React.JSX.
       setHasVisitedProviders(true);
     }
   }, [activeSection, hasVisitedProviders]);
+
+  useEffect(() => {
+    if (activeSection === 'gatewayProviders' && !hasVisitedGatewayProviders) {
+      // Keep pending gateway edits mounted when switching Settings sections.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- preserve mounted settings forms
+      setHasVisitedGatewayProviders(true);
+    }
+  }, [activeSection, hasVisitedGatewayProviders]);
   const [pendingAnchor, setPendingAnchor] = useState<string | null>(null);
   const { pendingSettingsSection, clearPendingSettingsSection, connectionMode } = useStore(
     useShallow((s) => ({
@@ -200,6 +215,24 @@ export const SettingsView = ({ isActive = true }: SettingsViewProps): React.JSX.
               </div>
             )}
 
+            {(hasVisitedGatewayProviders || activeSection === 'gatewayProviders') &&
+              isElectronMode() && (
+                <div
+                  data-testid="gateway-providers-settings-page"
+                  className={activeSection === 'gatewayProviders' ? undefined : 'hidden'}
+                >
+                  <Suspense
+                    fallback={
+                      <div className="flex min-h-24 items-center justify-center">
+                        <Loader2 className="size-5 animate-spin text-text-muted" />
+                      </div>
+                    }
+                  >
+                    <GatewayProvidersSettingsSection />
+                  </Suspense>
+                </div>
+              )}
+
             {activeSection === 'externalAgentConnection' && isElectronMode() && (
               <ExternalAgentConnectionSettings
                 api={api.externalAgentConnection}
@@ -254,6 +287,7 @@ function isSettingsSection(value: string | undefined): value is SettingsSection 
     value === 'appearance' ||
     value === 'connection' ||
     value === 'providers' ||
+    value === 'gatewayProviders' ||
     value === 'externalAgentConnection' ||
     value === 'notifications' ||
     value === 'advanced'

@@ -16,6 +16,7 @@ import type {
   CliProviderStatus,
   TeamProviderId,
   TeamProvisioningModelCheckRequest,
+  TeamProvisioningPrepareContext,
 } from '@shared/types';
 
 type RuntimeProviderStatusById = ReadonlyMap<TeamProviderId, CliProviderStatus | null | undefined>;
@@ -41,6 +42,7 @@ export function buildProviderPreparePlans({
   limitContext,
   runtimeProviderStatusById,
   cachedModelResultsByCacheKey,
+  context,
 }: {
   cwd: string;
   providerIds: readonly TeamProviderId[];
@@ -50,6 +52,7 @@ export function buildProviderPreparePlans({
   >;
   backendSummaryByProvider: ReadonlyMap<TeamProviderId, string | null>;
   limitContext: boolean;
+  context?: TeamProvisioningPrepareContext;
   runtimeProviderStatusById: RuntimeProviderStatusById;
   cachedModelResultsByCacheKey: ReadonlyMap<
     string,
@@ -67,7 +70,7 @@ export function buildProviderPreparePlans({
     const modelChecksSignature = buildProviderPrepareModelChecksSignature(
       new Map([[providerId, selectedModelChecks]])
     );
-    const requestSignature = buildProviderPrepareRequestSignature({
+    const baseRequestSignature = buildProviderPrepareRequestSignature({
       cwd,
       selectedProviderId: providerId,
       selectedModel: '',
@@ -78,7 +81,7 @@ export function buildProviderPreparePlans({
       ),
       modelChecksSignature,
     });
-    const cacheKey = buildProviderPrepareModelCacheKey({
+    const baseCacheKey = buildProviderPrepareModelCacheKey({
       cwd,
       providerId,
       backendSummary,
@@ -86,6 +89,10 @@ export function buildProviderPreparePlans({
       runtimeStatusSignature,
       modelChecksSignature,
     });
+    const requestSignature = context
+      ? JSON.stringify([context, baseRequestSignature])
+      : baseRequestSignature;
+    const cacheKey = context ? JSON.stringify([context, baseCacheKey]) : baseCacheKey;
     const cachedModelResultsById = {
       ...getShortLivedProviderPrepareModelResults({
         providerId,

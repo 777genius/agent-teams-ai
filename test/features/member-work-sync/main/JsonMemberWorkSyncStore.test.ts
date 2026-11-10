@@ -1,7 +1,7 @@
+import * as atomicWrite from '@agent-teams/task-change-ledger/review-io';
 import { archiveFileWithGenerations } from '@features/internal-storage/main';
 import { JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
-import * as atomicWrite from '@main/utils/atomicWrite';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -92,7 +92,7 @@ describe('JsonMemberWorkSyncStore', () => {
   });
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), 'member-work-sync-store-'));
+    root = await mkdtemp(join(tmpdir(), 'TEST-member-work-sync-store-'));
     store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(root));
   });
 

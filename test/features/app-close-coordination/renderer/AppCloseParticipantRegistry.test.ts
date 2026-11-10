@@ -52,6 +52,7 @@ describe('AppCloseParticipantRegistry', () => {
   it('wires and removes the preload readiness listener', async () => {
     let handler: AppCloseReadinessHandler | null = null;
     const api: AppCloseCoordinationElectronApi = {
+      requestUiMount: async () => true,
       onReadinessRequest: (nextHandler) => {
         handler = nextHandler;
         return () => {

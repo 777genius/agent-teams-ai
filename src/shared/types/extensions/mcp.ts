@@ -81,26 +81,11 @@ export interface McpHeaderDef {
 
 // ── Installed state (from ~/.claude.json / .mcp.json) ──────────────────────
 
-export interface InstalledMcpEntry {
-  name: string;
-  scope: 'local' | 'user' | 'project' | 'global';
-  transport?: string;
-  /** Secret-free identity derived from the configured command or URL. */
-  targetKey?: string;
-}
-
-export type McpServerHealthStatus = 'connected' | 'needs-authentication' | 'failed' | 'unknown';
-
-export interface McpServerDiagnostic {
-  name: string;
-  target: string;
-  scope?: 'local' | 'user' | 'project' | 'global' | 'dynamic' | 'managed';
-  transport?: string;
-  status: McpServerHealthStatus;
-  statusLabel: string;
-  rawLine: string;
-  checkedAt: number;
-}
+export type {
+  InstalledMcpEntry,
+  McpServerDiagnostic,
+  McpServerHealthStatus,
+} from '@agent-teams/legacy-agent-host/extension-management';
 
 // ── Install request (renderer → main, minimal trusted data) ────────────────
 

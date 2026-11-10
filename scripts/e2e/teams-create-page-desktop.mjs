@@ -15,12 +15,18 @@ import { fileURLToPath } from 'node:url';
 
 import WebSocket from 'ws';
 
+import { processes } from './opencode-diagnostics/platform.mjs';
+import { extendOwnedHistory, remainingOwned } from './teams-create-page-owned-processes.mjs';
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '../..');
 const appLogTail = [];
 const appLogRemainder = { stdout: '', stderr: '' };
 let appProcess = null;
 let appProcessGroupId = null;
+let appCdpPort = null;
+let windowsOwnedHistory = [];
+const windowsTeardowns = [];
 let mainInspectorWebSocketUrl = null;
 let expectedMainInspectorPort = null;
 let cdp = null;
@@ -264,6 +270,11 @@ async function startApp(fixture) {
   appProcessGroupId = appProcess.pid;
   appProcess.stdout.on('data', (chunk) => rememberAppLog(chunk, 'stdout'));
   appProcess.stderr.on('data', (chunk) => rememberAppLog(chunk, 'stderr'));
+  if (windows) {
+    const initial = processes().find((value) => value.pid === appProcess.pid);
+    assert(initial?.birth, 'Cannot pin the disposable Windows launcher PID/birth');
+    windowsOwnedHistory = [initial];
+  }
   const exitedBeforeRenderer = new Promise((_, reject) => {
     appProcess.once('exit', (code, signal) => {
       reject(
@@ -289,6 +300,8 @@ async function startApp(fixture) {
   })();
   const port = await Promise.race([ownedPort, exitedBeforeRenderer]);
   const renderer = await Promise.race([waitForRenderer(port), exitedBeforeRenderer]);
+  if (windows) windowsOwnedHistory = extendOwnedHistory(windowsOwnedHistory, processes());
+  appCdpPort = port;
   // electron-vite --inspect exposes the *main process* on loopback; renderer
   // CDP cannot access BrowserWindow.webContents.zoomFactor or menu accelerators.
   const inspectorWebSocketDebuggerUrl = await Promise.race([
@@ -509,10 +522,19 @@ async function waitForProcessGroupExit(processGroupId, timeoutMs) {
     try {
       process.kill(-processGroupId, 0);
     } catch (error) {
-      if (error?.code === 'ESRCH' || error?.code === 'EPERM') return;
-      throw error;
+      if (error?.code === 'ESRCH') return true;
+      // EPERM proves a group may still exist; it never authorizes cleanup success.
+      if (error?.code !== 'EPERM') throw error;
     }
     await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  try {
+    process.kill(-processGroupId, 0);
+    return false;
+  } catch (error) {
+    if (error?.code === 'ESRCH') return true;
+    if (error?.code === 'EPERM') return false;
+    throw error;
   }
 }
 
@@ -531,23 +553,70 @@ async function cleanup(fixture) {
     } catch {
       appProcess?.kill('SIGKILL');
     }
-    await waitForProcessGroupExit(appProcessGroupId, 4_000);
+    if (!(await waitForProcessGroupExit(appProcessGroupId, 4_000))) {
+      throw new Error('Disposable Electron process group is still present after teardown');
+    }
   } else if (appProcess?.pid && process.platform === 'win32') {
-    // Killing only cmd.exe leaves the child pnpm/Electron processes alive and
-    // contaminates the second launch or the next CI job.
-    const launcherPid = appProcess.pid;
-    await new Promise((resolve) => {
-      const killer = spawn('taskkill', ['/PID', String(launcherPid), '/T', '/F'], {
-        windowsHide: true, stdio: 'ignore',
+    // taskkill can return nonzero after a normal launcher exit. Do not accept
+    // either its exit status OR launcher absence as proof the Electron tree died.
+    const launcher = windowsOwnedHistory[0];
+    assert(launcher?.pid === appProcess.pid && launcher.birth,
+      'Disposable Windows launcher identity was not pinned');
+    let current = processes();
+    const currentLauncher = current.find((value) => value.pid === launcher.pid);
+    assert(!currentLauncher || currentLauncher.birth === launcher.birth,
+      'Disposable Windows launcher PID was reused; refusing taskkill');
+    let history = extendOwnedHistory(windowsOwnedHistory, current);
+    let taskkillExitCode = null;
+    if (currentLauncher) {
+      taskkillExitCode = await new Promise((resolve, reject) => {
+        const killer = spawn('taskkill', ['/PID', String(launcher.pid), '/T', '/F'], {
+          windowsHide: true, stdio: 'ignore',
+        });
+        killer.once('error', reject);
+        killer.once('close', resolve);
       });
-      killer.once('error', resolve);
-      killer.once('close', resolve);
+    }
+    const deadline = Date.now() + 12_000;
+    let remaining = [];
+    let debugStillListening = false;
+    do {
+      current = processes();
+      history = extendOwnedHistory(history, current);
+      remaining = remainingOwned(history, current);
+      debugStillListening = false;
+      if (appCdpPort !== null) {
+        try {
+          await getTargets(appCdpPort);
+          debugStillListening = true;
+        } catch {
+          // Only the OS census below authorizes cleanup. CDP absence alone is insufficient.
+        }
+      }
+      if (!remaining.length && !debugStillListening) break;
+      if (Date.now() >= deadline) {
+        throw new Error(
+          'Disposable Windows Electron process-tree termination unconfirmed: ' +
+          `taskkill=${String(taskkillExitCode)} ownedRemaining=${remaining.map(p => p.pid).join(',')} cdp=${debugStillListening}`
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    } while (true);
+    windowsTeardowns.push({
+      launcherPid: launcher.pid,
+      taskkillAttempted: taskkillExitCode !== null,
+      taskkillExitCode,
+      observedIdentityCount: history.length,
+      exactOwnedProcessesAbsent: true,
+      cdpPortAbsent: true,
     });
+    windowsOwnedHistory = [];
   } else if (appProcess?.pid) {
     appProcess.kill('SIGKILL');
   }
   appProcess = null;
   appProcessGroupId = null;
+  appCdpPort = null;
   if (fixture?.root && process.env.TEAMS_CREATE_PAGE_E2E_KEEP !== '1') {
     for (let attempt = 0; attempt < 8; attempt += 1) {
       try {
@@ -556,7 +625,7 @@ async function cleanup(fixture) {
       } catch (error) {
         if (attempt === 7) {
           process.stderr.write(`Fixture cleanup failed: ${String(error)}\n`);
-          return;
+          throw error;
         }
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
@@ -590,7 +659,28 @@ async function captureScreenshot(client, fixture, label) {
 }
 
 async function initializeTeams(client, fixture, { afterRestart = false } = {}) {
+  // UI readiness must not be inferred from Main's ready flag. Capture renderer
+  // failures that occur before React's dev store is created, especially on macOS.
+  const rendererErrors = [];
+  const reportRendererError = (message) => {
+    if (!message) return;
+    rendererErrors.push(String(message).slice(0, 1800));
+    if (rendererErrors.length > 12) rendererErrors.shift();
+  };
+  client.on('Runtime.exceptionThrown', (params) => {
+    reportRendererError(params.exceptionDetails?.exception?.description ?? params.exceptionDetails?.text);
+  });
+  client.on('Runtime.consoleAPICalled', (params) => {
+    if (params.type !== 'error') return;
+    reportRendererError((params.args ?? []).map((arg) =>
+      arg.value ?? arg.description ?? arg.unserializableValue ?? ''
+    ).join(' '));
+  });
+  client.on('Log.entryAdded', (params) => {
+    if (params.entry?.level === 'error') reportRendererError(params.entry.text);
+  });
   await client.send('Runtime.enable');
+  await client.send('Log.enable');
   await client.send('Page.enable');
   try {
     // Cold macOS CI may finish Vite's dev renderer bundle after 60s while
@@ -607,9 +697,26 @@ async function initializeTeams(client, fixture, { afterRestart = false } = {}) {
     } catch {
       // The renderer may not have a working preload at all.
     }
+    let rendererState = null;
+    try {
+      rendererState = await client.evaluate(`(() => ({
+        url: location.href,
+        readyState: document.readyState,
+        rootChildren: document.querySelector('#root')?.childElementCount ?? null,
+        uiDidInit: Boolean(window.__claudeTeamsUiDidInit),
+        electronApiPresent: Boolean(window.electronAPI),
+        teamsApiPresent: Boolean(window.electronAPI?.teams),
+        devStorePresent: Boolean(window.__agentTeamsDevStore),
+        viteOverlay: document.querySelector('vite-error-overlay')?.shadowRoot?.textContent?.slice(0, 1200) ?? null,
+      }))()`);
+    } catch {
+      // Renderer may have crashed; retain the captured CDP exceptions instead.
+    }
     throw new Error(
       `Electron renderer did not initialize after ${afterRestart ? 'process restart' : 'cold start'}; ` +
-        `startup status: ${JSON.stringify(startupStatus)}. ${String(error)}`
+        `startup status: ${JSON.stringify(startupStatus)}; ` +
+        `renderer state: ${JSON.stringify(rendererState)}; ` +
+        `renderer errors: ${JSON.stringify(rendererErrors)}. ${String(error)}`
     );
   }
   const names = await client.evaluate(
@@ -912,6 +1019,8 @@ async function main() {
   const fixture = await seedFixture();
   const unique = `create-page-e2e-${randomUUID().slice(0, 8)}`;
   let failure = null;
+  let cleanupFailure = null;
+  let qualifiedResult = null;
   const log = (step) => process.stdout.write(`STEP: ${step}\n`);
   const renderSnapshot = async (client) => {
     return client.evaluate(`(() => {
@@ -1464,7 +1573,7 @@ async function main() {
 
     const scheduleUiEvidence = await exerciseScheduleUx(cdp, fixture, log, started.inspectorWebSocketDebuggerUrl);
 
-    const results = {
+    qualifiedResult = {
       success: true,
       scheduleUiEvidence,
       unique,
@@ -1488,11 +1597,7 @@ async function main() {
       macInputSelectionFallbackCount: inputSelectAllDomFallbacks,
       sandboxRoot: fixture.root,
     };
-    const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
-    await mkdir(outDir, { recursive: true });
-    await writeFile(path.join(outDir, 'teams-create-page-result.json'),
-      JSON.stringify(results, null, 2));
-    process.stdout.write(JSON.stringify(results, null, 2) + '\n');
+
   } catch (error) {
     failure = error;
     await dumpRenderer(cdp, 'teams-create-page-failure');
@@ -1500,9 +1605,32 @@ async function main() {
       try { await captureScreenshot(cdp, fixture, 'failure'); } catch { /* disconnected */ }
     }
   } finally {
-    await cleanup(fixture);
+    try {
+      await cleanup(fixture);
+    } catch (error) {
+      cleanupFailure = error;
+    }
+  }
+  if (failure && cleanupFailure) {
+    throw new AggregateError([failure, cleanupFailure], 'Create Page E2E and cleanup both failed');
   }
   if (failure) throw failure;
+  if (cleanupFailure) throw cleanupFailure;
+  assert(qualifiedResult, 'Missing Create Page E2E proof');
+  qualifiedResult.cleanup = {
+    processGroupAbsent: process.platform !== 'win32' ? true : null,
+    windowsTaskkillExitedZero: process.platform === 'win32'
+      ? windowsTeardowns.every((item) => item.taskkillExitCode === 0) : null,
+    windowsExactOwnedProcessesAbsent: process.platform === 'win32'
+      ? windowsTeardowns.length === 2 && windowsTeardowns.every((item) => item.exactOwnedProcessesAbsent) : null,
+    windowsTeardowns: process.platform === 'win32' ? windowsTeardowns : null,
+    temporaryProfileRemoved: process.env.TEAMS_CREATE_PAGE_E2E_KEEP !== '1',
+  };
+  const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
+  await mkdir(outDir, { recursive: true });
+  await writeFile(path.join(outDir, 'teams-create-page-result.json'),
+    JSON.stringify(qualifiedResult, null, 2));
+  process.stdout.write(JSON.stringify(qualifiedResult, null, 2) + '\n');
 }
 
 main().catch(async (error) => {

@@ -3,6 +3,7 @@ import {
   initializeReviewHandlers,
   registerReviewHandlers,
   removeReviewHandlers,
+  setReviewMainWindow,
 } from '@main/ipc/review';
 import { ReviewDecisionStore } from '@main/services/team/ReviewDecisionStore';
 import { closeReviewPersistenceScopeLockDatabasesForTests } from '@main/services/team/ReviewPersistenceScopeLock';
@@ -17,6 +18,7 @@ import {
   REVIEW_CLEAR_DRAFT_HISTORY,
   REVIEW_DELETE_EDITED_FILE,
   REVIEW_EXECUTE_MUTATION,
+  REVIEW_FILE_CHANGE,
   REVIEW_GET_FILE_CONTENT,
   REVIEW_GET_TASK_CHANGES,
   REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
@@ -383,6 +385,56 @@ describe('review IPC path confinement', () => {
     expect(fileWatcher.start).toHaveBeenCalledWith(worktreeDir, expect.any(Function));
     expect(fileWatcher.setWatchedFiles).toHaveBeenCalledTimes(1);
     expect(fileWatcher.setWatchedFiles).toHaveBeenCalledWith([worktreeFile]);
+  });
+
+  it('keeps invalidations live when updating watched files on the same project and retires old callbacks', async () => {
+    let watching = false;
+    let callback: ((event: { path: string; type: 'change' }) => void) | undefined;
+    const send = vi.fn();
+    const secondFile = path.join(projectDir, 'src/second.ts');
+    const fileWatcher = {
+      isWatching: () => watching,
+      start: (_root: string, listener: typeof callback) => {
+        watching = true;
+        callback = listener;
+      },
+      stop: () => {
+        watching = false;
+      },
+      setWatchedFiles: vi.fn(),
+    };
+    initializeReviewHandlers({
+      extractor: extractor as never,
+      fileWatcher,
+      projectPathValidator: async (candidate) => candidate,
+    });
+    setReviewMainWindow({
+      isDestroyed: () => false,
+      webContents: { isDestroyed: () => false, send },
+    } as never);
+    try {
+      await ipcMain.invoke(REVIEW_WATCH_FILES, projectDir, [projectFile]);
+      const original = callback!;
+      original({ path: projectFile, type: 'change' });
+      expect(send).toHaveBeenCalledTimes(1);
+      await ipcMain.invoke(REVIEW_WATCH_FILES, projectDir, [secondFile]);
+      callback!({ path: secondFile, type: 'change' });
+      expect(send).toHaveBeenLastCalledWith(REVIEW_FILE_CHANGE, {
+        path: secondFile,
+        type: 'change',
+      });
+      expect(send).toHaveBeenCalledTimes(2);
+      await ipcMain.invoke(REVIEW_UNWATCH_FILES);
+      original({ path: projectFile, type: 'change' });
+      expect(send).toHaveBeenCalledTimes(2);
+      await ipcMain.invoke(REVIEW_WATCH_FILES, projectDir, [projectFile]);
+      original({ path: projectFile, type: 'change' });
+      expect(send).toHaveBeenCalledTimes(2);
+      callback!({ path: projectFile, type: 'change' });
+      expect(send).toHaveBeenCalledTimes(3);
+    } finally {
+      setReviewMainWindow(null);
+    }
   });
 
   it('rejects path traversal in persisted review decision identities', async () => {

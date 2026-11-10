@@ -8,7 +8,7 @@ import type {
 type RuntimeProviderStatusById = ReadonlyMap<TeamProviderId, CliProviderStatus | null | undefined>;
 type ProviderModelCheckSignatureInput =
   | string
-  | Pick<TeamProvisioningModelCheckRequest, 'model' | 'effort'>;
+  | Pick<TeamProvisioningModelCheckRequest, 'model' | 'effort' | 'targets'>;
 type SelectedModelChecksByProvider = ReadonlyMap<
   TeamProviderId,
   readonly ProviderModelCheckSignatureInput[]
@@ -35,25 +35,51 @@ function normalizeModelIds(modelIds: readonly string[] | null | undefined): stri
 
 function normalizeModelChecks(
   checks: readonly ProviderModelCheckSignatureInput[] | null | undefined
-): { model: string; effort: string | null }[] {
+): {
+  model: string;
+  effort: string | null;
+  targets?: TeamProvisioningModelCheckRequest['targets'];
+}[] {
   const seen = new Set<string>();
-  const normalized: { model: string; effort: string | null }[] = [];
+  const normalized: {
+    model: string;
+    effort: string | null;
+    targets?: TeamProvisioningModelCheckRequest['targets'];
+  }[] = [];
   for (const check of checks ?? []) {
     const model = (typeof check === 'string' ? check : check.model).trim();
     if (!model) {
       continue;
     }
     const effort = typeof check === 'string' ? null : (check.effort ?? null);
-    const key = `${model}\n${effort ?? ''}`;
+    const targets =
+      typeof check === 'string' || !check.targets
+        ? undefined
+        : check.targets
+            .map((target) =>
+              target.kind === 'lead'
+                ? { kind: 'lead' as const }
+                : {
+                    kind: 'member' as const,
+                    name: target.name.trim(),
+                    ...(target.originalName === undefined
+                      ? {}
+                      : { originalName: target.originalName.trim() }),
+                  }
+            )
+            .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    const key = JSON.stringify([model, effort, targets]);
     if (seen.has(key)) {
       continue;
     }
     seen.add(key);
-    normalized.push({ model, effort });
+    normalized.push({ model, effort, ...(targets === undefined ? {} : { targets }) });
   }
   return normalized.sort(
     (left, right) =>
-      left.model.localeCompare(right.model) || (left.effort ?? '').localeCompare(right.effort ?? '')
+      left.model.localeCompare(right.model) ||
+      (left.effort ?? '').localeCompare(right.effort ?? '') ||
+      JSON.stringify(left.targets ?? []).localeCompare(JSON.stringify(right.targets ?? []))
   );
 }
 

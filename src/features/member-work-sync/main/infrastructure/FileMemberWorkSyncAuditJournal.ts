@@ -9,6 +9,7 @@ import type {
   MemberWorkSyncLoggerPort,
 } from '../../core/application';
 import type { MemberWorkSyncStorePaths } from './MemberWorkSyncStorePaths';
+import type { LegacySourceWriteAdmissionPolicy } from '@agent-teams/legacy-agent-host/lifecycle';
 
 const DEFAULT_MAX_BYTES = 5 * 1024 * 1024;
 const DEFAULT_ROTATED_FILE_COUNT = 5;
@@ -23,6 +24,7 @@ interface PersistedAuditEvent extends MemberWorkSyncAuditEvent {
 }
 
 export interface FileMemberWorkSyncAuditJournalOptions {
+  sourceWriteAdmission?: LegacySourceWriteAdmissionPolicy;
   maxBytes?: number;
   rotatedFileCount?: number;
 }
@@ -131,13 +133,25 @@ export class FileMemberWorkSyncAuditJournal implements MemberWorkSyncAuditJourna
   constructor(
     private readonly paths: MemberWorkSyncStorePaths,
     private readonly logger?: MemberWorkSyncLoggerPort,
-    options: FileMemberWorkSyncAuditJournalOptions = {}
+    private readonly options: FileMemberWorkSyncAuditJournalOptions = {}
   ) {
     this.maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
     this.rotatedFileCount = options.rotatedFileCount ?? DEFAULT_ROTATED_FILE_COUNT;
   }
 
-  async append(event: MemberWorkSyncAuditEvent): Promise<void> {
+  append(event: MemberWorkSyncAuditEvent): Promise<void> {
+    let admission;
+    try {
+      admission = this.options.sourceWriteAdmission?.capture(event.teamName);
+    } catch {
+      return Promise.resolve();
+    } // Audit cannot reopen a retired source or change business outcomes.
+    if (admission?.kind === 'read-only') return Promise.resolve();
+    const append = () => this.appendWithinAdmission(event);
+    return admission ? admission.run(() => admission.publish(append)) : append();
+  }
+
+  private async appendWithinAdmission(event: MemberWorkSyncAuditEvent): Promise<void> {
     const filePath = this.paths.getMemberJournalPath(event.teamName, event.memberName);
     const previous = this.appendChains.get(filePath) ?? Promise.resolve();
     const next = previous.catch(() => undefined).then(() => this.appendToFile(filePath, event));
@@ -153,12 +167,27 @@ export class FileMemberWorkSyncAuditJournal implements MemberWorkSyncAuditJourna
     }
   }
 
-  private async appendToFile(filePath: string, event: MemberWorkSyncAuditEvent): Promise<void> {
+  private appendToFile(filePath: string, event: MemberWorkSyncAuditEvent): Promise<void> {
+    const admission = this.options.sourceWriteAdmission?.current(event.teamName);
+    const append = () =>
+      this.appendToFileWithinAdmission(filePath, event, admission?.assertCurrent);
+    return admission ? admission.publish(append) : append();
+  }
+
+  private async appendToFileWithinAdmission(
+    filePath: string,
+    event: MemberWorkSyncAuditEvent,
+    assertCurrent?: () => void
+  ): Promise<void> {
     try {
+      assertCurrent?.();
       await this.paths.ensureMemberWorkSyncDir(event.teamName, event.memberName);
+      assertCurrent?.();
       await mkdir(dirname(filePath), { recursive: true });
       await withFileLock(filePath, async () => {
+        assertCurrent?.();
         await rotateIfNeeded(filePath, this.maxBytes, this.rotatedFileCount);
+        assertCurrent?.();
         await appendFile(filePath, `${JSON.stringify(sanitizeEvent(event))}\n`, 'utf8');
       });
     } catch (error) {

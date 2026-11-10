@@ -18,12 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TaskDetailIdentity } from '@features/team-task-detail/contracts';
 import type { TaskDetailSessionController } from '@features/team-task-detail/renderer';
-import type {
-  TaskComment,
-  TeamSummary,
-  TeamTaskWithKanban,
-  TeamViewSnapshot,
-} from '@shared/types';
+import type { TaskComment, TeamSummary, TeamTaskWithKanban, TeamViewSnapshot } from '@shared/types';
 
 const apiMock = vi.hoisted(() => ({
   teams: {
@@ -101,14 +96,18 @@ function acceptLiveTeamSnapshotFixture(
   }));
 }
 
-function mount(surfaceId: string, receive: (controller: TaskDetailSessionController) => void) {
+function mount(
+  surfaceId: string,
+  receive: (controller: TaskDetailSessionController) => void,
+  taskIdentity = identity
+) {
   const host = document.createElement('div');
   document.body.appendChild(host);
   const root = createRoot(host);
   roots.push(root);
   const View = () => {
     const controller = useTaskDetailSession({
-      identity: { ...identity },
+      identity: { ...taskIdentity },
       surfaceId,
       currentTask: task,
     });
@@ -160,6 +159,88 @@ describe('task session surface and origin integration', () => {
     });
     document.body.innerHTML = '';
     vi.unstubAllGlobals();
+  });
+
+  it('retains Host comment ID/payload across actual unmount/reopen and retirement while preserving newer draft edits', async () => {
+    const hostIdentity = { ...identity, teamName: 'host-team:TEST-owner' };
+    const hostKey = taskDetailKey(hostIdentity);
+    acceptLiveTeamSnapshotFixture(hostIdentity.teamName);
+    useStore.setState((state) => ({
+      taskDetailById: {
+        ...state.taskDetailById,
+        [hostKey]: {
+          ...createTaskDetailReadEntry(hostIdentity),
+          phase: 'ready',
+          full: task,
+          loading: false,
+        },
+      },
+    }));
+    apiMock.teams.addTaskComment
+      .mockRejectedValueOnce(new Error('TEST lost ACK'))
+      .mockResolvedValueOnce({
+        id: 'TEST-comment',
+        text: 'ORIGINAL',
+        author: 'user',
+        createdAt: '2026-10-27',
+        type: 'regular',
+      });
+    let first!: TaskDetailSessionController;
+    let originalRoot!: ReturnType<typeof createRoot>;
+    await act(async () => {
+      originalRoot = mount(
+        'host-dialog',
+        (value) => {
+          first = value;
+        },
+        hostIdentity
+      );
+    });
+    await act(async () => {
+      first.setCommentText('ORIGINAL');
+    });
+    await act(async () => {
+      await first.submitComment();
+    });
+    expect(console.error).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(console.error).mock.calls.flat().join(' ')).toBe(
+      '[Renderer:unwrapIpc] [team:addTaskComment] TEST lost ACK'
+    );
+    vi.mocked(console.error).mockClear();
+    const originalRequest = structuredClone(apiMock.teams.addTaskComment.mock.calls[0]![2]);
+    expect(originalRequest.command).toEqual({
+      commandId: expect.any(String),
+      idempotencyKey: expect.any(String),
+    });
+    await act(async () => {
+      first.setCommentText('NEWER');
+      originalRoot.unmount();
+      roots.splice(roots.indexOf(originalRoot), 1);
+    });
+    useStore
+      .getState()
+      .retireTaskDetailSessionWork({ contextId: 'local', teamName: hostIdentity.teamName });
+    expect(useStore.getState().taskDetailSessionById[hostKey].commentIntent?.request).toEqual(
+      originalRequest
+    );
+    let reopened!: TaskDetailSessionController;
+    await act(async () => {
+      mount(
+        'host-tab',
+        (value) => {
+          reopened = value;
+        },
+        hostIdentity
+      );
+    });
+    expect(reopened.isOwner).toBe(true);
+    await act(async () => {
+      await reopened.submitComment();
+    });
+    expect(apiMock.teams.addTaskComment).toHaveBeenCalledTimes(2);
+    expect(apiMock.teams.addTaskComment.mock.calls[1]![2]).toEqual(originalRequest);
+    expect(useStore.getState().taskDetailSessionById[hostKey].commentText).toBe('NEWER');
+    expect(useStore.getState().taskDetailSessionById[hostKey].commentIntent).toBeUndefined();
   });
 
   it('refreshes same-ID tasks across teams once per identity from root interest', async () => {

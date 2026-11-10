@@ -59,6 +59,9 @@ jobs:
           cache: pnpm
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      # Host workspace exports are built artifacts; pnpm install does not create them.
+      - name: Build isolated Host for profile migration tests
+        run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Validate isolated profile and legacy migration
         run: >-
           pnpm exec vitest run --maxWorkers=1

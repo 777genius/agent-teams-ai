@@ -48,6 +48,7 @@ function makeIpcMain() {
 
 function makeFeature(): MemberWorkSyncFeatureFacade {
   return {
+    withStoppedImportFence: (_teamName, read) => read(),
     startBackground: vi.fn(),
     getStatus: vi.fn(async (request) => ({
       teamName: request.teamName,

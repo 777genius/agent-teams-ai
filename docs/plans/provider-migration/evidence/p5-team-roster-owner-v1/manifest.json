@@ -1,0 +1,44 @@
+{
+  "scope": "Team-owned saved roster/configuration prerequisite.254 Host tests and170 frontend regressions passed.13 core roster cases and3 controlled-provider real NDJSON scenarios; no actual SDK/Electron dialog qualification or full stage1 claim.",
+  "sourceBoundary": "Working-tree source hashes retained after the successful managed checks, with no later production edits. Full Host source/dist, listed files, executed tests and logs only; not a pre/post immutable full Main dependency closure or release qualification.",
+  "hostSource": "cecb4af0d59b45eea5940053b523c63567f06ef4bf07d582c990a92a5769b9be",
+  "hostDist": "891cb85cbcc5ac2cfd03a547a16df79b5042f0bfdb6389efb9beefb4962d50b7",
+  "sources": {
+    "packages/legacy-agent-host/src/team/rosterContracts.ts": "c31a03fe52a7948cb012e40fbfd0579b751e1e7c715a31388d6a962a3c99073d",
+    "packages/legacy-agent-host/src/team/rosterSchema.ts": "b0dc1232be7a69cb837d5535f2f589f2f396be421227b8cf35a59fea375b16c6",
+    "packages/legacy-agent-host/src/team/ownerState.ts": "0f268117f38d6a96704492dd3853cb6e704168a44dfba37704208e15369cd823",
+    "packages/legacy-agent-host/src/team/TeamRosterTransitions.ts": "f998bf4ff2a6462842193eecd46097440a213fb09fc27afc843a2e76c659dfb0",
+    "packages/legacy-agent-host/src/team/TeamOwner.ts": "dc59728392abce58aba28ae2940deb6b4441451fb33c4413e3342c250277923d",
+    "packages/legacy-agent-host/src/team/contracts.ts": "d050f056c8534ec4a60a4b6e0335e974f4068f6ff17db74d0c43bc458fe9012c",
+    "packages/legacy-agent-host/src/adapters/team/createFilesystemTeamOwner.ts": "bbfe1b6c5fc1aefabef41876c289b1283db31e92b269dca59a6ccc7da263097b",
+    "packages/legacy-agent-host/src/composition/teamRoster.ts": "a0aee536e3dcb46b1207ccaf8ef0e49e4d8fd76e7b5e36610f8f23c57d3b901f",
+    "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts": "f2eef4f145c0ef30ec3c480801cb07c73bc5d789a49f22efeeb1c3a745e4256a",
+    "packages/legacy-agent-host/src/composition/TeamHost.ts": "27f9b447c8e13e901642d538913d1b2dc6d6d450aaef379e732b48984fa54c96",
+    "packages/legacy-agent-host/tests/team-roster.test.ts": "d0c3f1a94f7633b48e91eb3f35e62a23e87f9559687545e5782de9a74c1482bc",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts": "7372439a119b7596ea4eef7269f697458f4b2d80a498686f4e076ec5f1aeb2b6"
+  },
+  "jobId": "1d9f42a8cb19092f9256e3ab802d1f21",
+  "files": [
+    {
+      "path": "jobs/1d9f42a8cb19092f9256e3ab802d1f21/stdout.log",
+      "sha256": "0328ec1366d3c3de2bdb95e592f2e0eeb29c470a6670e9c6a0e196ca6ddfe2de"
+    },
+    {
+      "path": "jobs/1d9f42a8cb19092f9256e3ab802d1f21/stderr.log",
+      "sha256": "693c9ed37cfdc1c2c5fa97d566a7bbf030569530bc1e28841414da7a86a2763f"
+    },
+    {
+      "path": "executed-tests/packages/legacy-agent-host/tests/team-roster.test.ts",
+      "sha256": "d0c3f1a94f7633b48e91eb3f35e62a23e87f9559687545e5782de9a74c1482bc"
+    },
+    {
+      "path": "executed-tests/packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "sha256": "7372439a119b7596ea4eef7269f697458f4b2d80a498686f4e076ec5f1aeb2b6"
+    }
+  ],
+  "predecessors": [
+    "d497e8a437688b03f183266bb035e6cd stopped at exact-optional Host type errors; fixed consumer roster identity shape and optional input types",
+    "cc665b07cfd77676f6563b1d49cd9fcb passed253 Host/170 frontend before final unknown-custody case and canonical controller-role projection",
+    "c9733d1a0f8044e15d6fa3a15abf1c86 stopped at prefer-const before types/tests; callback repaired"
+  ]
+}

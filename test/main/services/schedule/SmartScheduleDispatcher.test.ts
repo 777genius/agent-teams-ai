@@ -81,6 +81,7 @@ function makePort(): SmartScheduleRuntimePort {
     })),
     getLeadName: vi.fn(async () => 'lead'),
     getSavedRequest: vi.fn(async () => saved),
+    hasLaunchConfig: vi.fn(async () => true),
     attachMember: vi.fn(async () => undefined),
     createTask: vi.fn(async () => ({ id: 'task-1', displayId: '7', subject: 'task', status: 'in_progress' } as TeamTask)),
     launchTeam: vi.fn(async () => ({ runId: 'launched-1', launchStatus: 'started' as const })),
@@ -102,6 +103,22 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
   beforeEach(() => {
     port = makePort();
     dispatch = new SmartScheduleDispatcher(port);
+  });
+
+  it('refuses Host-owned schedules before reading or mutating the legacy runtime', async () => {
+    for (const mode of ['agent', 'team'] as const) {
+      const result = await dispatch.dispatch(
+        { ...makeSchedule(mode), teamName: 'host-team:TEST-captured-handle' },
+        'TEST-host-run',
+        active
+      );
+      expect(result.kind).toBe('skipped');
+    }
+    expect(port.isTeamAlive).not.toHaveBeenCalled();
+    expect(port.getSavedRequest).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.runOneShot).not.toHaveBeenCalled();
   });
 
   it('rejects invalid persisted modes instead of silently launching a team', async () => {
@@ -549,6 +566,77 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     expect(port.createTask).not.toHaveBeenCalled();
   });
 
+  it('skips a retained one-agent schedule if its team was deleted', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    port.getSavedRequest = vi.fn(async () => null);
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), targetMember: 'alice' },
+      'orphaned-team',
+      active
+    );
+    expect(result).toMatchObject({ kind: 'skipped', summary: expect.stringContaining('configuration is missing') });
+    expect(port.runOneShot).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+  });
+
+  it('fails closed for a configured selected teammate when the team is stopped', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), targetMember: 'alice' }, 'selected-alice-offline', active
+    );
+    expect(result).toMatchObject({
+      kind: 'skipped',
+      summary: expect.stringContaining('Selected teammate "alice" cannot run'),
+    });
+    expect(port.runOneShot).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.attachMember).not.toHaveBeenCalled();
+  });
+
+  it('preserves the separate offline lead one-shot path without a team launch', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), targetMember: 'LEAD' }, 'selected-lead-offline', active
+    );
+    expect(result.kind).toBe('one_shot');
+    expect(port.runOneShot).toHaveBeenCalledOnce();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+  });
+
+  it('skips an offline one-agent schedule if its selected member was removed', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), targetMember: 'removed-member' },
+      'orphaned-member',
+      active
+    );
+    expect(result).toMatchObject({ kind: 'skipped', summary: expect.stringContaining('not configured') });
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
+  it('does not run an offline agent with missing verified launch configuration', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    port.hasLaunchConfig = vi.fn(async () => false);
+    const result = await dispatch.dispatch(makeSchedule('agent'), 'missing-config', active);
+    expect(result.kind).toBe('skipped');
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
+  it('rechecks stop/cancel admission after validating the saved offline recipient', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    let cancelled = false;
+    port.getLeadName = vi.fn(async () => {
+      cancelled = true;
+      return 'lead';
+    });
+    const result = await dispatch.dispatch(makeSchedule('agent'), 'cancelled-during-lookup', () => cancelled);
+    expect(result.kind).toBe('skipped');
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
   it('rejects a lead without current process evidence even when alive is claimed', async () => {
     const snapshot = runtimeMembers(true);
     snapshot.members.lead = { ...snapshot.members.lead, pidSource: undefined, pid: undefined };
@@ -645,6 +733,16 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     );
     expect(result.kind).toBe('skipped');
     expect(port.attachMember).not.toHaveBeenCalled();
+  });
+
+  it('refuses metadata-only draft schedules without invoking the unsafe launch path', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    port.hasLaunchConfig = vi.fn(async () => false);
+    await expect(dispatch.assertCanSchedule(makeSchedule('team'))).rejects.toThrow('Finish team setup');
+    const result = await dispatch.dispatch(makeSchedule('team'), 'draft-run', active);
+    expect(result).toMatchObject({ kind: 'skipped', summary: expect.stringContaining('Finish team setup') });
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
   });
 
   it('launches the whole team once using saved provider/CWD and one prompt', async () => {

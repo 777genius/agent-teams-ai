@@ -1,15 +1,12 @@
-import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
+import { buildEffectiveTeamMemberSpec } from '@shared/utils/teamMemberRuntimeSelection';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type { TeamCreateRequest, TeamProviderId } from '@shared/types';
 
-export function getExplicitLaunchModelSelection(model: string | undefined): string | undefined {
-  const trimmed = model?.trim();
-  if (!trimmed || isDefaultProviderModelSelection(trimmed)) {
-    return undefined;
-  }
-  return trimmed;
-}
+export {
+  buildEffectiveTeamMemberSpec,
+  getExplicitLaunchModelSelection,
+} from '@shared/utils/teamMemberRuntimeSelection';
 
 export type TeamMemberInput = TeamCreateRequest['members'][number];
 
@@ -35,36 +32,6 @@ export function teamRequestIncludesCodexMember(
       defaultProviderId;
     return memberProviderId === 'codex';
   });
-}
-
-export function buildEffectiveTeamMemberSpec(
-  member: TeamMemberInput,
-  defaults: {
-    providerId?: TeamProviderId;
-    model?: string;
-    effort?: TeamCreateRequest['effort'];
-    syncModelsWithLead?: boolean;
-  }
-): TeamMemberInput {
-  const memberProviderId = normalizeTeamMemberProviderId(member.providerId);
-  const defaultProviderId = normalizeTeamMemberProviderId(defaults.providerId) ?? 'anthropic';
-  const effectiveProviderId = memberProviderId ?? defaultProviderId ?? 'anthropic';
-  const explicitMemberModel = getExplicitLaunchModelSelection(member.model);
-  const usesDefaultProvider = memberProviderId == null || memberProviderId === defaultProviderId;
-  const inheritsLeadModel = defaults.syncModelsWithLead !== false && usesDefaultProvider;
-  const model =
-    explicitMemberModel ||
-    (inheritsLeadModel ? getExplicitLaunchModelSelection(defaults.model) : undefined) ||
-    undefined;
-  const effort =
-    member.effort ?? (inheritsLeadModel && !explicitMemberModel ? defaults.effort : undefined);
-
-  return {
-    ...member,
-    providerId: effectiveProviderId,
-    model,
-    effort,
-  };
 }
 
 export function buildEffectiveTeamMemberSpecs(

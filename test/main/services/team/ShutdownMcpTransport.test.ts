@@ -48,17 +48,23 @@ const mainSource = ts.createSourceFile(
   ts.ScriptTarget.Latest,
   true
 );
-function sourceNode(name: string): ts.Node {
+const shutdownStepSource = ts.createSourceFile(
+  'shutdownStep.ts',
+  readFileSync('src/main/utils/shutdownStep.ts', 'utf8'),
+  ts.ScriptTarget.Latest,
+  true
+);
+function sourceNode(name: string, source: ts.SourceFile = mainSource): ts.Node {
   let found: ts.Node | undefined;
   function visit(node: ts.Node) {
     if (
       (ts.isFunctionDeclaration(node) || ts.isVariableDeclaration(node)) &&
-      node.name?.getText(mainSource) === name
+      node.name?.getText(source) === name
     )
       found = node;
     ts.forEachChild(node, visit);
   }
-  visit(mainSource);
+  visit(source);
   if (!found) throw new Error(`Source boundary missing: ${name}`);
   return found;
 }
@@ -475,6 +481,7 @@ describe('shutdown MCP transport authority', () => {
     };
     const finished = new Error('bounded shutdown completed MCP teardown');
     const stopStartupAdmission = vi.fn();
+    const legacyMaintenance = vi.fn().mockResolvedValue(true);
     const disposeTokenUsage = vi.fn();
     const prepareShutdownStop = vi.fn();
     const openShutdownStop = vi.fn();
@@ -495,6 +502,8 @@ describe('shutdown MCP transport authority', () => {
     const shutdown = compileExpression(sourceNode('shutdownServices').getText(mainSource), {
       shutdownPromise: null,
       stopAdmittingOpenCodeStartupCleanup: stopStartupAdmission,
+      nativeLegacyMaintenanceRequired: legacyMaintenance,
+      shutdownDesktopAgentBackend: vi.fn().mockResolvedValue(undefined),
       openCodeLifecycleBridge: { prepareShutdownStop, openShutdownStop, releaseShutdownStop },
       runtimeProviderManagementFeature: { shutdown: drainCatalog },
       externalAgentConnection: {
@@ -521,7 +530,15 @@ describe('shutdown MCP transport authority', () => {
       openCodePromptDeliveryContinuityScan: { stop: stopContinuityScan },
       stopPeriodicOpenCodeHostStartupLockPurge: null,
       teamRuntimeRecoveryFeature: null,
-      teamProvisioningService: { setRuntimeRecoveryFailureObserver: noOp, stopAllTeams: stop },
+      teamProvisioningService: {
+        setRuntimeRecoveryFailureObserver: noOp,
+        hasTrackedRuntimeObligations: () => true,
+        stopAllTeams: () => {
+          // Capture late legacy work before stopAll removes the owner maps.
+          expect(legacyMaintenance).toHaveBeenCalledTimes(2);
+          return stop();
+        },
+      },
       cleanupOpenCodeHostsForLifecycle: stop,
       agentTeamsMcpHttpServer: server,
       killTrackedCliProcesses: () => {
@@ -667,7 +684,9 @@ describe('shutdown MCP transport authority', () => {
         client.execute(command, body, { cwd: directory, timeoutMs: 1000 });
       const logger = { info: vi.fn(), warn: vi.fn(), diagnostic: vi.fn() };
       const realRunShutdownStep = compileExpression(
-        sourceNode('runShutdownStep').getText(mainSource),
+        sourceNode('runShutdownStep', shutdownStepSource)
+          .getText(shutdownStepSource)
+          .replace(/^export\s+/, ''),
         { logger, SHUTDOWN_STEP_TIMEOUT_MS: 10_000 }
       ) as (label: string, action: () => unknown, timeoutMs?: number) => Promise<void>;
       const prepare = vi.spyOn(bridge, 'prepareShutdownStop');
@@ -712,6 +731,8 @@ describe('shutdown MCP transport authority', () => {
       const shutdown = compileExpression(sourceNode('shutdownServices').getText(mainSource), {
         shutdownPromise: null,
         stopAdmittingOpenCodeStartupCleanup: vi.fn(),
+        nativeLegacyMaintenanceRequired: () => Promise.resolve(false),
+        shutdownDesktopAgentBackend: () => Promise.resolve(),
         openCodeLifecycleBridge: bridge,
         runtimeProviderManagementFeature: null,
         externalAgentConnection: { ...connection, closeAdmission },
@@ -736,6 +757,7 @@ describe('shutdown MCP transport authority', () => {
         teamRuntimeRecoveryFeature: null,
         teamProvisioningService: {
           setRuntimeRecoveryFailureObserver: vi.fn(),
+          hasTrackedRuntimeObligations: () => false,
           stopAllTeams: () => (stopAllTeamsRun = stopAllTeams()),
         },
         cleanupOpenCodeHostsForLifecycle: async () => {
@@ -793,15 +815,23 @@ describe('shutdown MCP transport authority', () => {
           expect(logger.warn).toHaveBeenCalledWith(
             'Shutdown step failed (stop all teams): stop all teams failed'
           );
-        expect(logger.diagnostic).toHaveBeenCalledExactlyOnceWith(
-          expect.stringMatching(
-            new RegExp(
-              `^Shutdown stop all teams took \\d+ms; OpenCode lane stops confirmed=2 unconfirmed=0 pending=${
-                outcome === 'times out' ? 1 : 0
-              } capturedStopAuthority=true$`
-            )
+        expect(
+          logger.diagnostic.mock.calls.filter(
+            ([message]) =>
+              typeof message === 'string' &&
+              message.startsWith('Shutdown stop all teams took ')
           )
-        );
+        ).toEqual([
+          [
+            expect.stringMatching(
+              new RegExp(
+                `^Shutdown stop all teams took \\d+ms; OpenCode lane stops confirmed=2 unconfirmed=0 pending=${
+                  outcome === 'times out' ? 1 : 0
+                } capturedStopAuthority=true$`
+              )
+            ),
+          ],
+        ]);
         if (outcome === 'times out') {
           finishHungChild();
           expect(await settlesSoon(lateLaneStop!, 'the late lane stop')).toMatchObject({
@@ -841,6 +871,81 @@ describe('shutdown MCP transport authority', () => {
       }
     }
   );
+
+  it('seals the captured backend before the first shutdown await and on repeated entry', async () => {
+    const order: string[] = [];
+    let release!: () => void;
+    const drain = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const finished = new Error('stop after verifying backend drain');
+    const backend = vi.fn(() => {
+      order.push('backend-sealed');
+      return drain;
+    });
+    const shutdown = compileExpression(sourceNode('shutdownServices').getText(mainSource), {
+      shutdownPromise: null,
+      stopAdmittingOpenCodeStartupCleanup: () => order.push('legacy-admission-sealed'),
+      nativeLegacyMaintenanceRequired: () => {
+        order.push('legacy-census-captured');
+        return Promise.resolve(false);
+      },
+      shutdownDesktopAgentBackend: backend,
+      tokenUsageFeature: null,
+      rendererRecoveryController: null,
+      openCodePromptDeliveryContinuityScan: null,
+      removeExternalAgentConnectionIpc: vi.fn(),
+      ipcMain: {},
+      openCodeLifecycleBridge: null,
+      clearStartupTimers: () => order.push('startup-timers-cleared'),
+      clearInboxNotifyTimers: () => order.push('inbox-timers-cleared'),
+      stopPeriodicOpenCodeHostStartupLockPurge: () => order.push('purge-stopped'),
+      runtimeProviderManagementFeature: {
+        shutdown: async () => {
+          order.push('catalog-sealed');
+        },
+      },
+      externalAgentConnection: { closeAdmission: vi.fn() },
+      logger: { info: vi.fn() },
+      runShutdownStep: async (name: string, step: () => unknown) => {
+        order.push(name);
+        if (
+          name !== 'provider model catalog drain' &&
+          name !== 'agent backend cleanup' &&
+          name !== 'external connection admission drain'
+        )
+          throw finished;
+        await step();
+      },
+    }) as () => Promise<void>;
+    const first = shutdown();
+    const rejectedFirst = expect(first).rejects.toBe(finished);
+    expect(order).toEqual([
+      'legacy-admission-sealed',
+      'legacy-census-captured',
+      'backend-sealed',
+      'startup-timers-cleared',
+      'inbox-timers-cleared',
+      'purge-stopped',
+      'provider model catalog drain',
+      'catalog-sealed',
+    ]);
+    const repeated = shutdown();
+    const rejectedRepeated = expect(repeated).rejects.toBe(finished);
+    expect(backend).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => {
+      expect(order.filter((entry) => entry === 'agent backend cleanup')).toHaveLength(1);
+    });
+    expect(order.indexOf('provider model catalog drain')).toBeLessThan(
+      order.indexOf('external connection admission drain')
+    );
+    expect(order.indexOf('external connection admission drain')).toBeLessThan(
+      order.indexOf('agent backend cleanup')
+    );
+    release();
+    await rejectedFirst;
+    await rejectedRepeated;
+  });
 
   it.each([true, false])(
     'refreshes a new main command spool with current authority=%s',

@@ -4,6 +4,7 @@ import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvaila
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
+import type { useAppTranslation } from '@features/localization/renderer';
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 import type { EffortLevel, ResolvedTeamMember, TeamFastMode, TeamProviderId } from '@shared/types';
 
@@ -41,6 +42,39 @@ export function getStoredTeamFastMode(): TeamFastMode {
 
 export function getProviderLabel(providerId: TeamProviderId): string {
   return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
+}
+
+export function getLaunchDialogActionLabels(
+  mode: 'launch' | 'relaunch' | 'schedule',
+  editing: boolean,
+  t: ReturnType<typeof useAppTranslation>['t']
+) {
+  return {
+    dialogTitle:
+      mode === 'relaunch'
+        ? t('launch.title.relaunch')
+        : mode === 'launch'
+          ? t('launch.title.launch')
+          : editing
+            ? t('launch.title.editSchedule')
+            : t('launch.title.createSchedule'),
+    submitLabel:
+      mode === 'relaunch'
+        ? t('launch.actions.relaunchTeam')
+        : mode === 'launch'
+          ? t('launch.actions.launchTeam')
+          : editing
+            ? t('launch.actions.saveChanges')
+            : t('launch.actions.createSchedule'),
+    submittingLabel:
+      mode === 'relaunch'
+        ? t('launch.actions.relaunching')
+        : mode === 'launch'
+          ? t('launch.actions.launching')
+          : editing
+            ? t('launch.actions.saving')
+            : t('launch.actions.creating'),
+  };
 }
 
 export function resolveMemberDraftRuntime(

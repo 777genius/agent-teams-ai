@@ -12,9 +12,16 @@ import {
   resetMemberWorkSyncLastSettlements,
   resolveQueuedMemberWorkSyncSettlement,
 } from './memberWorkSyncLastSettlementStore';
+import {
+  awaitMemberWorkSyncQueueTeamIdle,
+  runMemberWorkSyncQueueScope,
+  unrefMemberWorkSyncTimer,
+} from './memberWorkSyncQueueScope';
 import { preferLaterMemberWorkSyncSettlement } from './memberWorkSyncSettlementCoalesce';
 
 import type { MemberWorkSyncReconcileContext } from '../../core/application/MemberWorkSyncReconciler';
+import type { QueueItem, RunningItem } from './memberWorkSyncQueueScope';
+import type { LegacySourceExecutionScope } from '@agent-teams/legacy-agent-host/lifecycle';
 
 export type MemberWorkSyncTriggerReason =
   | 'startup_scan'
@@ -65,36 +72,13 @@ export interface MemberWorkSyncRunningItemDiagnostics {
   triggerReasons: MemberWorkSyncTriggerReason[];
 }
 
-interface QueueItem {
-  teamName: string;
-  memberName: string;
-  firstQueuedAt: number;
-  lastQueuedAt: number;
-  runAt: number;
-  maxRunAt: number;
-  triggerReasons: Set<MemberWorkSyncTriggerReason>;
-  triggerReasonCounts: Map<MemberWorkSyncTriggerReason, number>;
-  retryCount: number;
-  recovery?: MemberWorkSyncReconcileContext['recovery'];
-  settlement?: MemberWorkSyncReconcileContext['settlement'];
-}
-
-interface RunningItem {
-  teamName: string;
-  memberName: string;
-  startedAt: number;
-  rerunRequested: boolean;
-  triggerReasons: Set<MemberWorkSyncTriggerReason>;
-  recovery?: MemberWorkSyncReconcileContext['recovery'];
-  settlement?: MemberWorkSyncReconcileContext['settlement'];
-}
-
 interface TriggerTimingPolicy {
   runAfterMs: number;
   maxCoalesceWaitMs: number;
 }
 
 export interface MemberWorkSyncEventQueueDeps {
+  captureExecutionScope?(teamName: string): LegacySourceExecutionScope;
   reconcile(
     input: { teamName: string; memberName: string },
     context: MemberWorkSyncReconcileContext
@@ -115,10 +99,6 @@ export interface MemberWorkSyncEventQueueDeps {
 
 function keyOf(teamName: string, memberName: string): string {
   return `${teamName}\0${memberName.trim().toLowerCase()}`;
-}
-
-function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
-  timer.unref?.();
 }
 
 const DEFAULT_RECONCILE_TIMEOUT_MS = 2 * 60_000;
@@ -281,6 +261,7 @@ export class MemberWorkSyncEventQueue {
     }
 
     this.items.set(key, {
+      sourceExecution: this.deps.captureExecutionScope?.(teamName),
       teamName,
       memberName,
       firstQueuedAt: now,
@@ -341,15 +322,7 @@ export class MemberWorkSyncEventQueue {
       }
     }
 
-    while (true) {
-      const pending = [
-        ...(this.inFlightByTeam.get(normalizedTeamName) ?? []),
-        ...(this.settlingByTeam.get(normalizedTeamName) ?? []),
-        ...(this.auditInFlightByTeam.get(normalizedTeamName) ?? []),
-      ];
-      if (pending.length === 0) break;
-      await Promise.allSettled(pending);
-    }
+    await this.awaitTeamIdle(normalizedTeamName);
   }
 
   resumeTeam(teamName: string): void {
@@ -405,6 +378,15 @@ export class MemberWorkSyncEventQueue {
     };
   }
 
+  awaitTeamIdle(teamName: string): Promise<void> {
+    return awaitMemberWorkSyncQueueTeamIdle(
+      teamName,
+      this.inFlightByTeam,
+      this.settlingByTeam,
+      this.auditInFlightByTeam
+    );
+  }
+
   async stop(): Promise<void> {
     this.stopped = true;
     if (this.timer) {
@@ -415,8 +397,12 @@ export class MemberWorkSyncEventQueue {
     this.running.clear();
     this.activeKeys.clear();
     resetMemberWorkSyncLastSettlements();
-    while (this.inFlight.size > 0 || this.settling.size > 0) {
-      await Promise.allSettled([...this.inFlight, ...this.settling]);
+    while (this.inFlight.size > 0 || this.settling.size > 0 || this.auditInFlightByTeam.size > 0) {
+      await Promise.allSettled([
+        ...this.inFlight,
+        ...this.settling,
+        ...[...this.auditInFlightByTeam.values()].flatMap((promises) => [...promises]),
+      ]);
     }
   }
 
@@ -441,7 +427,7 @@ export class MemberWorkSyncEventQueue {
       this.timer = null;
       this.pump();
     }, delayMs);
-    unrefTimer(this.timer);
+    unrefMemberWorkSyncTimer(this.timer);
   }
 
   private pump(): void {
@@ -482,41 +468,43 @@ export class MemberWorkSyncEventQueue {
 
     let failed = false;
     let failure: unknown = null;
-    const promise = this.executeItem(key, item, running)
-      .catch((error: unknown) => {
-        failed = true;
-        failure = error;
-        if (error instanceof MemberWorkSyncTeamQuiescedError) {
-          // A quiesced team parks its queue work and is retried without consuming the
-          // retry budget, so this is an expected state rather than a reconcile failure.
-          this.counters.quiesced += 1;
-          this.deps.logger?.debug('member work sync queue reconcile parked: team quiesced', {
+    const promise = runMemberWorkSyncQueueScope(item.sourceExecution, () =>
+      this.executeItem(key, item, running)
+        .catch((error: unknown) => {
+          failed = true;
+          failure = error;
+          if (error instanceof MemberWorkSyncTeamQuiescedError) {
+            // A quiesced team parks its queue work and is retried without consuming the
+            // retry budget, so this is an expected state rather than a reconcile failure.
+            this.counters.quiesced += 1;
+            this.deps.logger?.debug('member work sync queue reconcile parked: team quiesced', {
+              teamName: item.teamName,
+              memberName: item.memberName,
+            });
+            return;
+          }
+          this.counters.failed += 1;
+          this.deps.logger?.warn('member work sync queue reconcile failed', {
             teamName: item.teamName,
             memberName: item.memberName,
+            error: String(error),
           });
-          return;
-        }
-        this.counters.failed += 1;
-        this.deps.logger?.warn('member work sync queue reconcile failed', {
-          teamName: item.teamName,
-          memberName: item.memberName,
-          error: String(error),
-        });
-      })
-      .finally(() => {
-        this.inFlight.delete(promise);
-        this.removeTrackedPromise(this.inFlightByTeam, item.teamName, promise);
-        const settlePromise = getReconcileTimeoutSettlePromise(failure);
-        if (settlePromise) {
-          this.activeKeys.delete(key);
-          this.pump();
-          void settlePromise.finally(() => {
-            this.finishItem(key, item, running, failed, failure);
-          });
-          return;
-        }
-        this.finishItem(key, item, running, failed, failure);
-      });
+        })
+        .finally(() => {
+          this.inFlight.delete(promise);
+          this.removeTrackedPromise(this.inFlightByTeam, item.teamName, promise);
+          const settlePromise = getReconcileTimeoutSettlePromise(failure);
+          if (settlePromise) {
+            this.activeKeys.delete(key);
+            this.pump();
+            void settlePromise.finally(() => {
+              this.finishItem(key, item, running, failed, failure);
+            });
+            return;
+          }
+          this.finishItem(key, item, running, failed, failure);
+        })
+    );
 
     this.inFlight.add(promise);
     this.addTrackedPromise(this.inFlightByTeam, item.teamName, promise);
@@ -629,6 +617,7 @@ export class MemberWorkSyncEventQueue {
   }
 
   private async executeItem(_key: string, item: QueueItem, running: RunningItem): Promise<void> {
+    item.sourceExecution?.assertCurrent();
     if (!this.deps.reconcileInactiveTeams && !(await this.deps.isTeamActive(item.teamName))) {
       this.counters.dropped += 1;
       this.appendAudit({
@@ -696,7 +685,7 @@ export class MemberWorkSyncEventQueue {
               )
             );
           }, this.reconcileTimeoutMs);
-          unrefTimer(timeout);
+          unrefMemberWorkSyncTimer(timeout);
         }),
       ]);
     } finally {

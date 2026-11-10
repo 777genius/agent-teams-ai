@@ -1,7 +1,6 @@
 /**
  * Store index - combines all slices and exports the unified store.
  */
-
 import { api } from '@renderer/api';
 import { cleanupStale as cleanupCommentReadState } from '@renderer/services/commentReadStorage';
 import { syncRendererTelemetry } from '@renderer/telemetry';
@@ -63,6 +62,7 @@ import {
 } from './team/teamManagementNotices';
 import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
 import { getVisibleTeamNamesInAnyPane } from './team/teamViewVisibility';
+import { applyToolApprovalEvent } from './team/toolApprovalEvents';
 import { nextTeamAliveFromLeadActivity } from './leadActivityTeamAlive';
 import {
   decideProcessFanoutDryRun,
@@ -93,7 +93,6 @@ import type {
   TeamProvisioningProgress,
   ToolActivityEventPayload,
   ToolApprovalEvent,
-  ToolApprovalRequest,
   UpdaterStatus,
 } from '@shared/types';
 
@@ -245,15 +244,17 @@ export function initializeNotificationListeners(): () => void {
   // Sessions sidebar tab when it first mounts; scanning it here made startup
   // pay for a hidden panel.
   void (async () => {
-    // Load config for theme before first paint.
+    // Config: fast (in-memory read) — needed for theme before first paint.
     await useStore.getState().fetchConfig();
     if (disposed) return;
-    // Sync telemetry from loaded config.
+
+    // Sync renderer telemetry gate from loaded config
     const loadedConfig = useStore.getState().appConfig;
     syncRendererTelemetry(loadedConfig?.general?.telemetryEnabled ?? true);
 
     if (api.cliInstaller) {
-      // Resolve CLI flavor before creating multimodel placeholders.
+      // Resolve the configured CLI flavor after config has loaded to avoid
+      // bootstrapping multimodel placeholder state in Claude-only mode.
       type NavigatorWithUserAgentData = Navigator & { userAgentData?: { platform?: string } };
       const nav: NavigatorWithUserAgentData | null =
         typeof navigator !== 'undefined' ? (navigator as NavigatorWithUserAgentData) : null;
@@ -268,7 +269,9 @@ export function initializeNotificationListeners(): () => void {
         if (multimodelEnabled) {
           void (async () => {
             await useStore.getState().bootstrapCliStatus({
-              multimodelEnabled: true, providerStatusMode: 'defer', isActive: () => !disposed,
+              multimodelEnabled: true,
+              providerStatusMode: 'defer',
+              isActive: () => !disposed,
             });
             if (disposed) return;
             if (deferredProviderStatusCleanup) {
@@ -307,7 +310,8 @@ export function initializeNotificationListeners(): () => void {
       }, delayMs);
     }
 
-    // Defer the global task scan until the initial team list is ready.
+    // Keep immediately visible startup data first; global task aggregation can
+    // scan all team task files, so hydrate it after the team list.
     await Promise.all([
       useStore.getState().fetchTeams(),
       useStore.getState().fetchNotifications(),
@@ -2230,32 +2234,7 @@ export function initializeNotificationListeners(): () => void {
   if (api.teams?.onToolApprovalEvent) {
     const cleanup = api.teams.onToolApprovalEvent((_event: unknown, data: unknown) => {
       const event = data as ToolApprovalEvent;
-      if ('autoResolved' in event && event.autoResolved) {
-        // Timeout or auto-allow resolved in main — remove from UI and record result
-        const allowed = event.reason !== 'timeout_deny';
-        useStore.setState((s) => {
-          const next = new Map(s.resolvedApprovals);
-          next.set(event.requestId, allowed);
-          return {
-            pendingApprovals: s.pendingApprovals.filter(
-              (a) => !(a.runId === event.runId && a.requestId === event.requestId)
-            ),
-            resolvedApprovals: next,
-          };
-        });
-      } else if ('dismissed' in event && event.dismissed) {
-        const dismiss = event;
-        useStore.setState((s) => ({
-          pendingApprovals: s.pendingApprovals.filter(
-            (a) => !(a.teamName === dismiss.teamName && a.runId === dismiss.runId)
-          ),
-        }));
-      } else {
-        const request = event as ToolApprovalRequest;
-        useStore.setState((s) => ({
-          pendingApprovals: [...s.pendingApprovals, request],
-        }));
-      }
+      useStore.setState((state) => applyToolApprovalEvent(state, event));
     });
     if (typeof cleanup === 'function') {
       cleanupFns.push(cleanup);

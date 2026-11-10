@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { api } from '@renderer/api';
 import { FileIcon } from '@renderer/components/team/editor/FileIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
@@ -42,7 +43,7 @@ export const AttachmentDisplay = ({
 
   useEffect(() => {
     let cancelled = false;
-    void window.electronAPI.teams
+    void api.teams
       .getAttachments(teamName, messageId)
       .then((data) => {
         if (!cancelled) setState({ loaded: data, loading: false, key: `${teamName}:${messageId}` });
@@ -77,6 +78,7 @@ export const AttachmentDisplay = ({
       const isImage = !!data && !referenceIds?.has(meta.id) && isImageMime(data.mimeType);
       return {
         meta,
+        data: data?.data,
         dataUrl: isImage ? `data:${data.mimeType};base64,${data.data}` : undefined,
         filePath: data?.filePath ?? meta.filePath,
         unavailable: !data,
@@ -85,6 +87,7 @@ export const AttachmentDisplay = ({
     })
     .filter(Boolean) as {
     meta: AttachmentMeta;
+    data: string | undefined;
     dataUrl: string | undefined;
     filePath: string | undefined;
     isImage: boolean;
@@ -119,16 +122,31 @@ export const AttachmentDisplay = ({
                   : undefined
               }
             />
-          ) : item.filePath && !item.unavailable ? (
+          ) : !item.unavailable ? (
             <Tooltip key={item.meta.id}>
               <TooltipTrigger asChild>
                 <button
                   type="button"
                   className="flex size-20 flex-col items-center justify-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] transition-colors hover:border-[var(--color-border-emphasis)] hover:bg-[var(--color-surface)]"
-                  aria-label={`Open ${item.meta.filename}`}
+                  aria-label={`${item.filePath ? 'Open' : 'Download'} ${item.meta.filename}`}
                   onClick={(event) => {
                     event.stopPropagation();
-                    revealFileInEditor(item.filePath!);
+                    if (item.filePath) revealFileInEditor(item.filePath);
+                    else if (item.data !== undefined) {
+                      const bytes = Uint8Array.from(atob(item.data), (character) =>
+                        character.charCodeAt(0)
+                      );
+                      const url = URL.createObjectURL(
+                        new Blob([bytes], { type: item.meta.mimeType })
+                      );
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = item.meta.filename;
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      URL.revokeObjectURL(url);
+                    }
                   }}
                   onKeyDown={(event) => event.stopPropagation()}
                 >

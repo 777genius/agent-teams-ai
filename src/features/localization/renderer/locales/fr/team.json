@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "Par exemple, examen quotidien du code, tests nocturnes...",
       "maxBudgetUsd": "Budget maximal (USD)",
       "maxTurns": "Max tourne",
+      "executionLimitsNote": "Ces limites s’appliquent uniquement aux exécutions autonomes ponctuelles. Elles ne s’appliquent pas aux tâches confiées à une équipe déjà en cours d’exécution.",
       "noLimit": "Aucune limite",
       "noMatches": "Aucune équipe ne correspond à votre recherche.",
       "noTeams": "Aucune équipe disponible. Créez une équipe d'abord.",
@@ -2140,7 +2141,9 @@
     "status": {
       "active": "Activité",
       "paused": "Paus",
-      "disabled": "Handicapés"
+      "disabled": "Handicapés",
+      "hostUnsupported": "Planification Host indisponible",
+      "saved": "Enregistré"
     },
     "runStatus": {
       "pending": "En attente",

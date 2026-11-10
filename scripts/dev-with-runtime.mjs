@@ -2,7 +2,6 @@
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -28,6 +27,7 @@ import {
   matchesRuntimeCliVersion,
 } from './lib/runtime-cli-version.mjs';
 import { spawnSyncWithWindowsShell } from './lib/windows-shell-spawn.mjs';
+import { resolveElectronViteArgs } from './lib/dev-remote-debugging.ts';
 
 const runAndCapture = createRuntimeCommandCapture(spawnSyncWithWindowsShell);
 
@@ -45,7 +45,6 @@ const runtimeCacheRoot = process.env.CLAUDE_DEV_RUNTIME_CACHE_ROOT?.trim()
 const scriptArgs = process.argv.slice(2);
 const shouldPrintRuntimePath = scriptArgs.includes('--print-runtime-path');
 const electronViteArgs = scriptArgs.filter((arg) => arg !== '--print-runtime-path' && arg !== '--');
-const remoteDebuggingPortArg = '--remoteDebuggingPort';
 const terminalPlatformRootEnv = 'CLAUDE_TERMINAL_PLATFORM_ROOT';
 const legacyTerminalPlatformRootEnv = 'TERMINAL_PLATFORM_ROOT';
 const terminalDaemonBinaryEnv = 'CLAUDE_TERMINAL_DAEMON_BINARY';
@@ -283,83 +282,6 @@ function formatProgressSummary(writtenBytes, totalBytes, hasTotal) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function parseRemoteDebuggingPortArg(args) {
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === remoteDebuggingPortArg) {
-      const rawPort = args[index + 1];
-      const port = Number.parseInt(rawPort ?? '', 10);
-      return Number.isFinite(port) && port > 0
-        ? { index, valueIndex: index + 1, port, style: 'split' }
-        : null;
-    }
-
-    const prefix = `${remoteDebuggingPortArg}=`;
-    if (arg.startsWith(prefix)) {
-      const port = Number.parseInt(arg.slice(prefix.length), 10);
-      return Number.isFinite(port) && port > 0 ? { index, port, style: 'equals' } : null;
-    }
-  }
-
-  return null;
-}
-
-function isTcpPortAvailable(port) {
-  return new Promise((resolve) => {
-    const server = net.createServer();
-    let settled = false;
-
-    const finish = (available) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      resolve(available);
-    };
-
-    server.unref();
-    server.once('error', () => finish(false));
-    server.listen({ host: '127.0.0.1', port }, () => {
-      server.close(() => finish(true));
-    });
-  });
-}
-
-async function findAvailableTcpPort(preferredPort) {
-  for (let port = preferredPort; port < preferredPort + 100; port += 1) {
-    if (await isTcpPortAvailable(port)) {
-      return port;
-    }
-  }
-
-  throw new Error(`No available remote debugging port near ${preferredPort}`);
-}
-
-async function resolveElectronViteArgs(args) {
-  const remoteDebuggingPort = parseRemoteDebuggingPortArg(args);
-  if (!remoteDebuggingPort) {
-    return args;
-  }
-
-  const availablePort = await findAvailableTcpPort(remoteDebuggingPort.port);
-  if (availablePort === remoteDebuggingPort.port) {
-    return args;
-  }
-
-  process.stdout.write(
-    `Remote debugging port ${remoteDebuggingPort.port} is busy; using ${availablePort}.\n`
-  );
-
-  const nextArgs = [...args];
-  if (remoteDebuggingPort.style === 'split') {
-    nextArgs[remoteDebuggingPort.valueIndex] = String(availablePort);
-  } else {
-    nextArgs[remoteDebuggingPort.index] = `${remoteDebuggingPortArg}=${availablePort}`;
-  }
-
-  return nextArgs;
 }
 
 function readBinaryVersion(binaryPath) {
@@ -742,31 +664,44 @@ async function resolveRuntimeCli() {
 }
 
 async function main() {
-  augmentRuntimeToolPath();
+  const candidate = process.env.AGENT_TEAMS_HOST_CANDIDATE === '1';
+  if (
+    candidate &&
+    (!process.env.AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH ||
+      !process.env.AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256)
+  ) {
+    throw new Error('Host candidate requires the captured backend descriptor');
+  }
+  if (!candidate) augmentRuntimeToolPath();
 
   if (!shouldPrintRuntimePath && applyOrganizationDemoMode()) {
     return;
   }
 
-  const resolvedRuntime = await resolveRuntimeCli();
+  const resolvedRuntime = candidate ? null : await resolveRuntimeCli();
 
   if (shouldPrintRuntimePath) {
+    if (!resolvedRuntime) throw new Error('Host candidate has no fork executable');
     process.stdout.write(`${resolvedRuntime.binaryPath}\n`);
     return;
   }
 
-  process.stdout.write(`Using runtime from ${resolvedRuntime.sourceLabel}\n`);
-  if ('cacheDir' in resolvedRuntime && resolvedRuntime.cacheDir) {
-    process.stdout.write(`Runtime cache: ${resolvedRuntime.cacheDir}\n`);
+  if (resolvedRuntime) {
+    process.stdout.write(`Using runtime from ${resolvedRuntime.sourceLabel}\n`);
+    if ('cacheDir' in resolvedRuntime && resolvedRuntime.cacheDir) {
+      process.stdout.write(`Runtime cache: ${resolvedRuntime.cacheDir}\n`);
+    }
+    process.stdout.write(
+      `Runtime version: ${formatRuntimeVersionForDisplay(resolvedRuntime.versionText)}\n`
+    );
   }
-  process.stdout.write(
-    `Runtime version: ${formatRuntimeVersionForDisplay(resolvedRuntime.versionText)}\n`
-  );
 
   const uiEnv = {
     ...process.env,
     UV_THREADPOOL_SIZE: process.env.UV_THREADPOOL_SIZE?.trim() || '16',
-    CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: resolvedRuntime.binaryPath,
+    ...(resolvedRuntime
+      ? { CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: resolvedRuntime.binaryPath }
+      : {}),
   };
   ensureMinimumNodeOldSpaceEnv(uiEnv);
   delete uiEnv.CLAUDE_CLI_PATH;
@@ -778,7 +713,10 @@ async function main() {
     env: uiEnv,
   });
 
-  ensureTerminalPlatformRuntime(uiEnv);
+  if (candidate) {
+    delete uiEnv.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
+    // Candidate tooling stages generic terminal resources explicitly; startup never downloads.
+  } else ensureTerminalPlatformRuntime(uiEnv);
 
   runOrExit(uiPackageManager, ['exec', 'electron-vite', 'dev', ...resolvedElectronViteArgs], {
     cwd: uiRepoRoot,

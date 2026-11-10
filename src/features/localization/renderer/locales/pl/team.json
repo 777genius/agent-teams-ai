@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "np. Codzienny przegląd kodu, Nocne testy...",
       "maxBudgetUsd": "Maks. budżet (USD)",
       "maxTurns": "Maks. tur",
+      "executionLimitsNote": "Te limity dotyczą tylko samodzielnych uruchomień jednorazowych. Nie dotyczą zadań przypisywanych już działającemu zespołowi.",
       "noLimit": "Bez limitu",
       "noMatches": "Żaden zespół nie pasuje do Twojego wyszukiwania.",
       "noTeams": "Brak dostępnych zespołów. Najpierw utwórz zespół.",
@@ -2140,7 +2141,9 @@
     "status": {
       "active": "Aktywny",
       "paused": "Wstrzymany",
-      "disabled": "Wyłączony"
+      "disabled": "Wyłączony",
+      "hostUnsupported": "Harmonogram Host jest niedostępny",
+      "saved": "Zapisano"
     },
     "runStatus": {
       "pending": "Oczekujące",

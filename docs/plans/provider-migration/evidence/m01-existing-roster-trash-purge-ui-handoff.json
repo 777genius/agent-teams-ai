@@ -1,0 +1,56 @@
+{
+  "status": "PASS",
+  "scope": "Existing Create save-only, Add/Remove/Restore teammate, Trash/Restore/reload and identity-fenced permanent deletion through original UI",
+  "sourceHead": "a528caeb44efcb9be2b9d5db7f084065f2d771ad",
+  "harnessDelta": "Stronger Restore poll waits for config projection completion; whole-owner equality and all purge assertions preserved. Exact source bytes retained.",
+  "originalJobId": "f396430e63704b8e65001f3c6e200454",
+  "retentionJobId": "6062ea6f79aa6ca40d78bc2f3f1ea6a4",
+  "retentionSha256": "a10b30ec28b831faf12058693068496f4b652ad699d0223d26ce305e8442601e",
+  "retainedRoot": "/Volumes/Transcend/dev/TEST-roster-ui-v3-scope-retainer-r6de669f/retained-create-config-ui-f396430e63704b8e65001f3c6e200454",
+  "retainedFiles": 2545,
+  "createStatus": "PASS",
+  "rosterStatus": "PASS",
+  "snapshots": [
+    "solo-before-add",
+    "team-after-add",
+    "solo-after-remove",
+    "team-after-restore",
+    "first-trash",
+    "team-after-trash-restore",
+    "second-trash-for-permanent-delete"
+  ],
+  "restoredMemberId": "c80ceafa-2964-55f9-8cbc-c0cc61cb3f7d",
+  "stableIdentityAndSettings": true,
+  "permanentDeletion": {
+    "identityId": "e63d00c4-2bac-54ab-aef4-cc034d51e021",
+    "phase": "deleted",
+    "cleanupCompleted": true,
+    "teamName": "test-created-from-dialog",
+    "identityKind": "team"
+  },
+  "originalSeedTeamUnchanged": true,
+  "permanentDeletionNotReplayed": true,
+  "nativeTeamAllocations": 0,
+  "cleanup": {
+    "processGroup": 46188,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+  },
+  "writerReleased": true,
+  "naturalElectronOrHostExitQualified": false,
+  "earlierFailure": {
+    "jobId": "5bf4e8fd88e7306480429c092096b5a6",
+    "retentionJobId": "8866cec235f67674c38b1ab93e9bb7f8",
+    "reason": "Test sampled Restore before its config projection journal was cleared. Entire business state survived; original raw INCOMPLETE preserved."
+  },
+  "excluded": [
+    "Native launch/runtime/provider auth or inference",
+    "UNKNOWN/native-stop lifecycle cases beyond this stopped Team",
+    "Whole M01/Stage1",
+    "Stage2 or delivery/merge/release"
+  ]
+}

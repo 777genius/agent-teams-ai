@@ -162,11 +162,7 @@ export class MemberWorkSyncTeamChangeRouter {
     if (!normalizedTeamName) return;
     this.quiescedTeams.add(normalizedTeamName);
     await this.queue.quiesceTeam(normalizedTeamName);
-    while (true) {
-      const pending = [...(this.inFlightByTeam.get(normalizedTeamName) ?? [])];
-      if (pending.length === 0) break;
-      await Promise.allSettled(pending);
-    }
+    await this.awaitTeamIdle(normalizedTeamName);
     // The wait above has no deadline, so a caller that gives up on it resumes
     // the team while this call is still parked here. Membership of
     // quiescedTeams is what resumeTeam clears, so it is also the cancellation
@@ -174,6 +170,14 @@ export class MemberWorkSyncTeamChangeRouter {
     // after the resume and nothing is left to lift it again.
     if (!this.quiescedTeams.has(normalizedTeamName)) return;
     await this.queue.quiesceTeam(normalizedTeamName);
+  }
+
+  async awaitTeamIdle(teamName: string): Promise<void> {
+    while (true) {
+      const pending = [...(this.inFlightByTeam.get(teamName.trim()) ?? [])];
+      if (pending.length === 0) return;
+      await Promise.allSettled(pending);
+    }
   }
 
   resumeTeam(teamName: string): void {

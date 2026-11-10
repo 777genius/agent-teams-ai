@@ -1,0 +1,47 @@
+{
+  "status": "PASS scoped ordinary Composer/native product updates/viewport/Stop; full P0-P8/M01-M19 INCOMPLETE",
+  "archive": "docs/plans/provider-migration/evidence/p5-desktop-native-product-updates-v2.tar.gz",
+  "archiveSha256": "bf8cd8aafeefa83d7bdbf716cb6b58e07648e9f4e17f7c93e975f85e0ab37e47",
+  "receiptSha256": "d02e77217ea75d68ee6b34798a200a83c5877c44117f061fa8b98616743b8dae",
+  "jobId": "c5851b577ca4882d08f9828e609434cf",
+  "source": "ebcf9370ca1e75e10abf11daa925479fb52681686acd06efb7c1d66f89710a57",
+  "dist": "6d7bbcc54c499bbecda9463ad27832c20f2cc752a983e3e33801eb2b2418d55b",
+  "providerSha256": "3baf16ca2276d0a444be273fe6c36d5f71c0586a3ae521f01bfc22d8adff0204",
+  "verified": {
+    "path": "Actual isolated Electron dev:mcp, trusted CDP input -> ordinary direct Composer -> preload/Main/standalone Host/D -> actual Claude SDK0.3.305/CLI/MCP/Bash. Local scripted inference, dummy auth; no vendor model/API qualification.",
+    "inputs": "Two ordinary Send clicks, eleven actual Native model requests, zero oracle failures; exact original command/message UUID and original-generation delivery for both inputs. First-turn history and fixed role context remain effective on turn two.",
+    "task": "One native MCP-created, assigned, started, commented and completed Task from alice, real Bash ONE/TWO effects and handled exit7. Native Task automatically appears in ordinary Kanban/sidebar without manual refresh.",
+    "viewport": "Both exact reply body texts verified fully inside clipped ancestor bounds with hit testing. Screenshot confirms both replies, native Task in sidebar and Kanban count2. Initial bootstrap remains explicit sandbox setup API, not ordinary Launch UI.",
+    "stop": "One ordinary Stop after terminal succeeded inputs. Original Runtime closed/released and captured Native child physically absent before any Quit.",
+    "cleanup": {
+      "processGroup": 50663,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; native custody and captured child absence verified separately"
+    },
+    "legacy": "Final strict sentinel census has zero refusals and no nonversion provider execution. Allowed legacy --version discovery remains; fork-free startup is not qualified."
+  },
+  "implementation": "Read-only bounded snapshot invalidation, no new product writer/event journal. One sequential shared loop over captured handles; current-grant read on every poll, explicit initial/unknown/evicted cursor gaps, current context and unsubscribe fences. New subscribers force rehydration even when an earlier listener consumed the current cursor.",
+  "subscriberRegression": "Controlled red: late subscriber received0 instead of4 invalidations after the shared cursor was consumed. Reset subscription epoch/cursors and batch initial polling; regression and full98-test frontend suite pass. Final Native run uses this changed production source in a fresh TEST Team, never replays the earlier failed Team input.",
+  "priorAttempt": {
+    "jobId": "5c53e40100f0f6d61aa2382a30aa270b",
+    "receiptSha256": "39f57d7e06e6711dbea1542aafb09f1c0a8d81b7579f2ce2bf41bf715538694f",
+    "status": "INCOMPLETE retained: first real input completed and automatic Kanban/sidebar update visible, then a collector incorrectly expected one text node despite valid identical header summary/body. Second input/ordinary Stop never sent in that Team."
+  },
+  "readback": {
+    "jobId": "c70e54f0cf13faa4bd4f3850ffc82919",
+    "receiptSha256": "9f5ed5f3fca93d1fb8e555ef05c61fe1ac8454a90bfe1117090716fc8eb17abe",
+    "reconciliationSha256": "7d6a5902c78a5e5172b82e3f52a3455d8bf472bf0b46d595d21e6003dfa0ec6a",
+    "status": "Saved UI readback PASS after app restart, zero Native allocation/input replay and exact Runtime record unchanged. Original runner exit1/INCOMPLETE retained for transient defunct-wrapper cleanup observation; later readonly census confirms all captured PIDs absent/9222 free without inventing original app exit code."
+  },
+  "checks": {
+    "host": "00b5545ab475dee67349b81a486493df: full227/227 Host, strict Host/script types, affected lint0errors (existing no-unsafe-finally warning), both guards PASS Node24.21.",
+    "frontend": "094932c8861d915ebfbfcbee0cf0f3f0: root pinned TS7, full agent-backend98/98 and affected lint PASS after subscriber fix; overlaps earlier97, counts not summed.",
+    "composer": "2652fbb252c34ca47fe03d106f8a5d66 includes34/34 existing Composer tests after one-line mouse-focus fix; actual Native UI red/green retained in v1/v2 evidence."
+  },
+  "postNativeDelta": "Only maintained runner formatting after exact source capture; strict harness types/size guard pass, runner796/800. Archive source is the exact executed source; product code unchanged after final Native proof.",
+  "remaining": "Snapshot invalidation is an incremental product refresh slice. The stricter correlated snapshot/high-water cursor/replay ordering contract in stage-1-contracts§6 remains unqualified, as do complete background feeds/notifications and merged-list partial owner outage. Ordinary Launch/Resume/settings, runtime widgets/approvals/attachments/subagents, group/cross-Team/dynamic Team/M13, remaining auth/config and P7/P8 remain mandatory."
+}

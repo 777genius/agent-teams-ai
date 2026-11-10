@@ -14,6 +14,8 @@ import {
   type TeamProvisioningStopTeamPorts,
 } from './TeamProvisioningStopFlow';
 
+import type { LegacyNativeStopPublication } from './LegacyNativeStopPublication';
+
 type RuntimeAdapterRunMap<TRun extends TeamProvisioningStopRun> =
   OpenCodeRuntimeStopFlowPorts['runtimeAdapterRunByTeam'] &
     TeamProvisioningStopTeamPorts<TRun>['runtimeAdapterRunByTeam'];
@@ -65,7 +67,7 @@ export interface TeamProvisioningStopFlowFactoryDeps<TRun extends TeamProvisioni
 }
 
 export interface TeamProvisioningStopFlowBoundary {
-  stopTeam(teamName: string): Promise<void>;
+  stopTeam(teamName: string, publication?: LegacyNativeStopPublication | null): Promise<void>;
   stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void>;
   stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void>;
 }
@@ -271,8 +273,8 @@ export function createTeamProvisioningStopFlowBoundary<TRun extends TeamProvisio
   deps: TeamProvisioningStopFlowFactoryDeps<TRun>
 ): TeamProvisioningStopFlowBoundary {
   return {
-    stopTeam: (teamName) =>
-      stopTeamFlow(teamName, createTeamProvisioningStopTeamPortsFromDeps(deps)),
+    stopTeam: (teamName, publication) =>
+      stopTeamFlow(teamName, createTeamProvisioningStopTeamPortsFromDeps(deps), publication),
     stopMixedSecondaryRuntimeLanes: (teamName) =>
       stopMixedSecondaryRuntimeLanes(teamName, createOpenCodeRuntimeStopFlowPortsFromDeps(deps)),
     stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>

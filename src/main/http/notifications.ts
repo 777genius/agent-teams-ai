@@ -13,8 +13,9 @@
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
-import { coercePageLimit, validateNotificationId, validateTeamName } from '../ipc/guards';
+import { coercePageLimit, validateNotificationId } from '../ipc/guards';
 import { NotificationManager } from '../services/infrastructure/NotificationManager';
+import { validateNotificationTeamSelection } from '../services/infrastructure/notificationTeamSelection';
 
 import type { FastifyInstance } from 'fastify';
 
@@ -90,7 +91,7 @@ export function registerNotificationRoutes(app: FastifyInstance): void {
           manager.setViewedTeamName(null);
           return true;
         }
-        const validated = validateTeamName(teamName);
+        const validated = validateNotificationTeamSelection(teamName);
         if (!validated.valid) {
           logger.error(`POST notifications/viewed-team rejected: ${validated.error ?? 'unknown'}`);
           return false;

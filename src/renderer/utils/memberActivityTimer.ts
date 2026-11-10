@@ -753,6 +753,7 @@ function getCurrentReviewTimerAnchorEvent(
     if (
       event.type === 'review_requested' ||
       event.type === 'review_approved' ||
+      event.type === 'review_disapproved' ||
       event.type === 'review_changes_requested' ||
       event.type === 'task_created' ||
       (event.type === 'status_changed' &&
@@ -775,6 +776,7 @@ function getCurrentReviewCycleStartedAtMs(task: TeamTaskWithKanban, fallbackMs: 
     }
     if (
       event.type === 'review_approved' ||
+      event.type === 'review_disapproved' ||
       event.type === 'review_changes_requested' ||
       event.type === 'task_created' ||
       (event.type === 'status_changed' &&

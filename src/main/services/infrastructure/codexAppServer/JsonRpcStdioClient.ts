@@ -143,6 +143,9 @@ export class JsonRpcStdioClient {
       for (const reject of pendingNotifications) reject(error);
       pendingNotifications.clear();
     };
+    // write callbacks reject their request, but a broken pipe also emits an
+    // error event. Contain it here so a failed CLI probe cannot crash main.
+    child.stdin?.on('error', (error) => rejectAll(error));
 
     const failTransport = (error: Error): void => {
       transportError ??= error;

@@ -89,7 +89,7 @@ export function getCurrentRuntimeOfflineVisualState(
 }
 
 export function isCodexNativeProcessTeammate(member: ResolvedTeamMember): boolean {
-  if (isLeadMember(member)) {
+  if (isLeadMember(member) || member.runtimeOwner === 'captured-host') {
     return false;
   }
   return (

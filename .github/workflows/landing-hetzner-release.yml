@@ -90,7 +90,13 @@ jobs:
           test -f "$release/landing/index.html"
           test -f "$release/docs/index.html"
           test -f "$release/docs/guide/installation.html"
-          ! find "$release" -type l | grep -q .
+          # A negated pipeline suppresses Bash errexit even when a symlink
+          # exists. Capture find's status before testing its single result.
+          first_link="$(find "$release" -type l -print -quit)"
+          if [[ -n "$first_link" ]]; then
+            echo "::error::Static release contains a symlink: $first_link" >&2
+            exit 1
+          fi
           grep -Fq 'OpenRig' "$release/landing/index.html"
           grep -Fq 'Supported desktop platforms' "$release/landing/index.html"
           python3 - "$release" <<'PY'

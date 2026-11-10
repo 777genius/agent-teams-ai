@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "ör. Günlük kod incelemesi, Gece testleri...",
       "maxBudgetUsd": "Maks. bütçe (USD)",
       "maxTurns": "Maks. tur",
+      "executionLimitsNote": "Bu sınırlar yalnızca bağımsız tek seferlik çalıştırmalar için geçerlidir. Zaten çalışan bir ekibe atanan görevler için geçerli değildir.",
       "noLimit": "Limit yok",
       "noMatches": "Aramanızla eşleşen ekip yok.",
       "noTeams": "Kullanılabilir ekip yok. Önce bir ekip oluşturun.",
@@ -2140,7 +2141,9 @@
     "status": {
       "active": "Etkin",
       "paused": "Duraklatıldı",
-      "disabled": "Devre dışı"
+      "disabled": "Devre dışı",
+      "hostUnsupported": "Host zamanlaması kullanılamıyor",
+      "saved": "Kaydedildi"
     },
     "runStatus": {
       "pending": "Beklemede",

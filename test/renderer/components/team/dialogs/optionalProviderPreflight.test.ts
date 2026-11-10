@@ -562,7 +562,7 @@ describe('optional provider preflight skip', () => {
       };
       const identity = { cacheKey: 'fresh-proof', requestSignature: 'same-account-model-cwd' };
       const original = fence.runPreflight(identity, input);
-      await Promise.resolve();
+      await vi.waitFor(() => expect(prepareProvisioning).toHaveBeenCalledTimes(2));
       fence.acquire({ current: 0 });
       if (state === 'completed') {
         finish({
@@ -629,6 +629,30 @@ describe('optional provider preflight skip', () => {
     fence.release();
     expect(fence.runPreflight(identity, input)).toBe(original);
     expect(prepareProvisioning).toHaveBeenCalledOnce();
+  });
+  it('retains one preparation ID while submitting and creates a distinct intent only on an explicit refresh', async () => {
+    const fence = createProviderSubmissionFence();
+    const firstId = fence.preparationId;
+    const prepareProvisioning = vi.fn(async () => ({ ready: true, message: 'TEST-ready' }));
+    const input = {
+      cwd: '/TEST/preparation',
+      providerId: 'anthropic' as const,
+      selectedModelIds: [],
+      prepareProvisioning,
+    };
+    const identity = { cacheKey: 'TEST-proof', requestSignature: 'TEST-selection' };
+    const original = fence.runPreflight(identity, input);
+    expect(fence.acquire({ current: 0 })).toBe(true);
+    fence.refreshPreparation();
+    expect(fence.preparationId).toBe(firstId);
+    await original;
+    fence.release();
+    fence.refreshPreparation();
+    expect(fence.preparationId).not.toBe(firstId);
+    const next = fence.runPreflight(identity, input);
+    expect(next).not.toBe(original);
+    await next;
+    expect(prepareProvisioning).toHaveBeenCalledTimes(2);
   });
   it.each(['anthropic', 'codex', 'opencode'] as const)(
     'allows optional %s checking only with strict current authority',

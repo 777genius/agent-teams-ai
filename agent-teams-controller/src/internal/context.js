@@ -17,6 +17,7 @@ function createControllerContext(options = {}) {
     claudeDir: paths.claudeDir,
     paths,
     allowUserMessageSender: options.allowUserMessageSender !== false,
+    boundTaskTools: options.boundTaskTools === true,
   };
 }
 

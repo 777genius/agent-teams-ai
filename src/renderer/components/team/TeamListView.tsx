@@ -66,6 +66,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { assignCreatedTeamToOrganization } from './dialogs/assignCreatedTeamToOrganization';
 import { CreateTeamPageLoadingFallback } from './dialogs/CreateTeamPageLoadingFallback';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
+import { loadExistingTeamLaunchDialog } from './dialogs/stoppedTeamLaunch';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { buildCopiedTeamMembers } from './teamCopyData';
 import { TeamDeleteButton } from './TeamDeleteButton';
@@ -96,7 +97,6 @@ import type {
   ResolvedTeamMember,
   TeamCreateRequest,
   TeamLaunchRequest,
-  TeamMemberSnapshot,
   TeamSummary,
   TeamSummaryMember,
 } from '@shared/types';
@@ -135,17 +135,6 @@ function getRecentProjects(team: TeamSummary): string[] {
 
 function folderName(fullPath: string): string {
   return getBaseName(fullPath) || fullPath;
-}
-
-function resolveLaunchDialogMembers(members: readonly TeamMemberSnapshot[]): ResolvedTeamMember[] {
-  return members.map((member) => {
-    return {
-      ...member,
-      status: member.currentTaskId ? 'active' : 'idle',
-      messageCount: 0,
-      lastActiveAt: null,
-    };
-  });
 }
 
 function renderMemberNames(members: TeamSummaryMember[]): React.JSX.Element {
@@ -287,6 +276,7 @@ const ActiveTeamCard = ({
 
   return (
     <div
+      data-team-name={team.teamName}
       role="button"
       tabIndex={0}
       className="team-row-zebra-card group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-[var(--color-border)] p-4 transition-colors duration-200 hover:border-[var(--color-border-emphasis)]"
@@ -932,29 +922,16 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
     ) => {
       e.stopPropagation();
       if (!projectPath) return;
-      try {
-        const data = await api.teams.getData(teamName, {
-          includeMemberBranches: false,
-        });
-        setLaunchDialogMode(mode);
-        setLaunchDialogTeamName(teamName);
-        setLaunchDialogMembers(resolveLaunchDialogMembers(data.members ?? []));
-        setLaunchDialogDefaultPath(data.config.projectPath ?? projectPath);
-        setLaunchDialogOpen(true);
-      } catch (err) {
-        // Draft teams (no config.json) throw TEAM_DRAFT — expected, use fallback
-        if (!(err instanceof Error && err.message.includes('TEAM_DRAFT'))) {
-          console.error('Failed to load team data for launch dialog:', err);
-        }
-        // Fallback: open dialog with minimal data
-        setLaunchDialogMode(mode);
-        setLaunchDialogTeamName(teamName);
-        setLaunchDialogMembers([]);
-        setLaunchDialogDefaultPath(projectPath);
-        setLaunchDialogOpen(true);
-      }
+      const target = await loadExistingTeamLaunchDialog(teamName, projectPath, mode);
+      if (!target) return;
+      if (target.teamName !== teamName) void fetchTeams();
+      setLaunchDialogMode(target.mode);
+      setLaunchDialogTeamName(target.teamName);
+      setLaunchDialogMembers(target.members);
+      setLaunchDialogDefaultPath(target.projectPath);
+      setLaunchDialogOpen(true);
     },
-    []
+    [fetchTeams]
   );
 
   const handleLaunchSubmit = useCallback(
@@ -976,7 +953,8 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
     async (
       request: TeamLaunchRequest,
       members: TeamCreateRequest['members'],
-      _intent?: unknown,
+      memberSettingsRelaunch?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch'],
+      rosterMetadata?: Parameters<typeof executeTeamRelaunch>[0]['rosterMetadata'],
       onMembersSaved?: () => void
     ) => {
       setLaunchingTeamName(request.teamName);
@@ -986,7 +964,10 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
           isTeamAlive: true,
           request,
           members,
+          memberSettingsRelaunch,
+          rosterMetadata,
           onMembersSaved,
+          stopRun: api.teams.cancelProvisioning,
           stopTeam: async (nextTeamName) => {
             try {
               await api.teams.stop(nextTeamName);
@@ -1054,18 +1035,20 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
 
   const handleCreateSubmit = useCallback(
     async (request: TeamCreateRequest, placement?: OrganizationPlacementSelection) => {
-      await createTeam(request);
+      const created = await createTeam(request);
+      const teamName = created.teamName ?? request.teamName;
       await assignCreatedTeamToOrganization({
         placement,
-        teamName: request.teamName,
+        teamName,
         label: request.displayName || request.teamName,
         failureTitle: t('create.placementFailure.title', { defaultValue: 'Team created, not placed' }),
         failureMessage: t('create.placementFailure.message', {
-          teamName: request.teamName,
+          teamName,
           defaultValue: 'Assign this team from the Organization Map; do not create it again.',
         }),
         acknowledgeLabel: t('create.placementFailure.acknowledge', { defaultValue: 'Got it' }),
       });
+      return teamName;
     },
     [createTeam, t]
   );

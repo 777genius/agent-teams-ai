@@ -2,6 +2,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@features/localization/renderer', () => ({
@@ -141,4 +142,62 @@ describe('TaskCommentInput composer layout', () => {
       await Promise.resolve();
     });
   });
+  it.each([
+    { name: 'cleared', text: '' },
+    { name: 'over-limit', text: 'x'.repeat(MAX_TEXT_LENGTH + 1) },
+  ])(
+    'keeps the existing Send available to resolve a retained original comment after $name draft edits',
+    async ({ text }) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const controller = createTaskDetailSessionFixture('task-a');
+      controller.session = {
+        ...controller.session,
+        commentText: text,
+        commentIntent: {
+          request: {
+            text: 'ORIGINAL',
+            command: { commandId: 'TEST-original', idempotencyKey: 'TEST-original' },
+          },
+          submittedPartRevisions: { commentText: 1 },
+        },
+      };
+      const render = async () => {
+        await act(async () => {
+          root.render(
+            <TaskCommentInput
+              surfaceId="TEST-dialog"
+              contextId="local"
+              teamName="team-a"
+              taskId="task-a"
+              projectPath={null}
+              members={[]}
+              controller={controller}
+            />
+          );
+        });
+      };
+      await render();
+      const button = host.querySelector<HTMLButtonElement>('.message-composer-send-button')!;
+      expect(button).not.toBeNull();
+      expect(button.disabled).toBe(false);
+      expect(host.querySelector('.message-composer-send-slot')?.getAttribute('data-visible')).toBe(
+        'true'
+      );
+      await act(async () => {
+        button.click();
+      });
+      expect(controller.submitComment).toHaveBeenCalledTimes(1);
+      controller.canSubmit = false;
+      await render();
+      expect(host.querySelector<HTMLButtonElement>('.message-composer-send-button')!.disabled).toBe(
+        true
+      );
+      await act(async () => {
+        root.unmount();
+      });
+    }
+  );
 });

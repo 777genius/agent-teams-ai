@@ -1082,6 +1082,7 @@ describe('SchedulerService', () => {
 
   it('records smart dispatch without claiming task completion or starting the legacy CLI', async () => {
     const dispatcher = {
+      assertCanSchedule: vi.fn(async () => undefined),
       dispatch: vi.fn(async () => ({ kind: 'dispatched' as const, summary: 'Task created' })),
     };
     const service = new SchedulerService(repo, executor as any, warmUpFn, dispatcher as never);
@@ -1105,6 +1106,7 @@ describe('SchedulerService', () => {
 
   it('records a safely skipped smart tick with a visible reason', async () => {
     const dispatcher = {
+      assertCanSchedule: vi.fn(async () => undefined),
       dispatch: vi.fn(async () => ({ kind: 'skipped' as const, summary: 'Target not ready' })),
     };
     const service = new SchedulerService(repo, executor as any, warmUpFn, dispatcher as never);
@@ -1124,7 +1126,10 @@ describe('SchedulerService', () => {
   });
 
   it('does not auto-retry a smart dispatch with an uncertain side effect', async () => {
-    const dispatcher = { dispatch: vi.fn(async () => { throw new Error('delivery unknown'); }) };
+    const dispatcher = {
+      assertCanSchedule: vi.fn(async () => undefined),
+      dispatch: vi.fn(async () => { throw new Error('delivery unknown'); }),
+    };
     const service = new SchedulerService(repo, executor as any, warmUpFn, dispatcher as never);
     const schedule = await service.createSchedule({
       teamName: 'my-team',

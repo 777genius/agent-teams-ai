@@ -23,7 +23,7 @@ export interface CodexSnapshotRefreshRequest {
 // refresh_token_reused revocation, so a forced call inside this window of the last completed
 // forced rotation is downgraded to a regular read that reuses that rotation's result. A forced
 // call after the window rotates again; explicit login/logout resets the window.
-const FORCED_TOKEN_REFRESH_REUSE_WINDOW_MS = 30_000;
+export const FORCED_TOKEN_REFRESH_REUSE_WINDOW_MS = 30_000;
 
 export function normalizeRefreshOptions(
   options?: CodexSnapshotRefreshRequest

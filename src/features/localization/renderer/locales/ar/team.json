@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "على سبيل المثال، استعراض الشفرة اليومي، اختبارات ليلية...",
       "maxBudgetUsd": "Max budget (USD)",
       "maxTurns": "(ماكس)",
+      "executionLimitsNote": "تنطبق هذه الحدود فقط على عمليات التشغيل المستقلة لمرة واحدة. ولا تنطبق على المهام المسندة إلى فريق يعمل بالفعل.",
       "noLimit": "لا حدود",
       "noMatches": "لا فرق تطابق بحثك",
       "noTeams": "لا فرق متاحة إنشاء فريق أولا.",
@@ -2140,7 +2141,9 @@
     "status": {
       "active": "النشاط",
       "paused": "مدفوع",
-      "disabled": "المعوقين"
+      "disabled": "المعوقين",
+      "hostUnsupported": "جدولة Host غير متاحة",
+      "saved": "محفوظ"
     },
     "runStatus": {
       "pending": "تنتهي",

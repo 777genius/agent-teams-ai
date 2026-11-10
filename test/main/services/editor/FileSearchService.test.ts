@@ -10,12 +10,15 @@ vi.mock('@main/utils/gitAvailability', () => ({
   canUseGitWithoutMacInstallerPrompt: mockGitAvailable,
 }));
 
-vi.mock('fs/promises', () => ({
-  access: vi.fn(),
-  readdir: vi.fn(),
-  readFile: vi.fn(),
-  stat: vi.fn(),
-}));
+vi.mock('fs/promises', () => {
+  const mockedFs = {
+    access: vi.fn(),
+    readdir: vi.fn(),
+    readFile: vi.fn(),
+    stat: vi.fn(),
+  };
+  return { ...mockedFs, default: mockedFs };
+});
 
 vi.mock('isbinaryfile', () => ({
   isBinaryFile: vi.fn(),

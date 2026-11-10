@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "例如，每日代码审核、每晚测试……",
       "maxBudgetUsd": "最高预算（美元）",
       "maxTurns": "最大转数",
+      "executionLimitsNote": "这些限制仅适用于独立的一次性运行，不适用于分配给已在运行的团队的任务。",
       "noLimit": "无限制",
       "noMatches": "没有团队符合您的搜索。",
       "noTeams": "没有可用的团队。首先创建一个团队。",
@@ -2140,7 +2141,9 @@
     "status": {
       "active": "活跃",
       "paused": "已暂停",
-      "disabled": "已停用"
+      "disabled": "已停用",
+      "hostUnsupported": "Host 调度不可用",
+      "saved": "已保存"
     },
     "runStatus": {
       "pending": "待办的",

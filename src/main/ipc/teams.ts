@@ -9,6 +9,7 @@ import {
   validateAgentAttachmentIpcPayload,
   validateAgentAttachmentSerializedIpcPayload,
 } from '@features/agent-attachments/main';
+import { isHostTeamSelectionKey, TeamCreationRefusal } from '@features/agent-backend/contracts';
 import { readNativeInboxAttachmentCapability } from '@features/member-work-sync/main';
 import { persistNodeMemberSettingsRelaunch } from '@features/team-provisioning/main';
 import {
@@ -18,6 +19,7 @@ import {
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
+import { TeamDraftPreflightCollisionError } from '@main/services/team/createDraftTeamConfig';
 import { OpenCodeRetainedPrimaryRestartError } from '@main/services/team/provisioning/OpenCodeRetainedPrimaryRestartError';
 import {
   getTeamDataWorkerClient,
@@ -144,7 +146,7 @@ import {
 } from '@shared/utils/slashCommands';
 import { looksLikeCanonicalTaskId } from '@shared/utils/taskIdentity';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
-import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import {
   normalizeRuntimeSelectionVersion,
   requireTeamRuntimeSelection,
@@ -200,6 +202,7 @@ import { TeamMetaStore } from '../services/team/TeamMetaStore';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
+import { createPrepareProvisioningHandler } from './teams/createPrepareProvisioningHandler';
 import { waitForOpenCodeRuntimeRelayForUi } from './teams/openCodeRuntimeDeliveryRelayUi';
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
 import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
@@ -207,6 +210,12 @@ import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermane
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
 import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
 import { withTimeoutValue } from './teams/withTimeoutValue';
+import {
+  captureDesktopHostNotification,
+  createDesktopCapturedTeam,
+  createDesktopCapturedTeamConfiguration,
+  isDesktopAgentBackendSelected,
+} from './agentBackend';
 import {
   validateFromField,
   validateMemberName,
@@ -295,6 +304,7 @@ import type {
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
   TeamConfig,
+  TeamCreateConfigResponse,
   TeamCreateRequest,
   TeamCreateResponse,
   TeamFastMode,
@@ -307,9 +317,6 @@ import type {
   TeamMessageNotificationData,
   TeamProviderBackendId,
   TeamProviderId,
-  TeamProvisioningModelCheckRequest,
-  TeamProvisioningModelVerificationMode,
-  TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamSummary,
   TeamTask,
@@ -698,7 +705,14 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_SET_TASK_LOG_STREAM_TRACKING, handleSetTaskLogStreamTracking);
   ipcMain.handle(TEAM_SET_TOOL_ACTIVITY_TRACKING, handleSetToolActivityTracking);
   ipcMain.handle(TEAM_GET_CLAUDE_LOGS, handleGetClaudeLogs);
-  ipcMain.handle(TEAM_PREPARE_PROVISIONING, handlePrepareProvisioning);
+  ipcMain.handle(
+    TEAM_PREPARE_PROVISIONING,
+    createPrepareProvisioningHandler((cwd, options) =>
+      wrapTeamHandler('prepareProvisioning', () =>
+        getTeamProvisioningPreflightApi().prepareForProvisioning(cwd, options)
+      )
+    )
+  );
   ipcMain.handle(TEAM_GET_WORKTREE_GIT_STATUS, handleGetWorktreeGitStatus);
   ipcMain.handle(TEAM_INITIALIZE_GIT_REPOSITORY, handleInitializeGitRepository);
   ipcMain.handle(TEAM_CREATE_INITIAL_GIT_COMMIT, handleCreateInitialGitCommit);
@@ -1030,6 +1044,11 @@ async function wrapTeamHandler<T>(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error(`[teams:${operation}] ${message}`);
+    if (operation === 'createConfig' && error instanceof TeamDraftPreflightCollisionError) {
+      // Existing on-disk team/tasks detected before this Create allocated anything.
+      // Post-allocation errors, transport failures, and uncertain side effects remain held.
+      return teamCreationFailureResult(new TeamCreationRefusal('conflict', 'not-dispatched'), message);
+    }
     return teamReadFailureResult(error);
   }
 }
@@ -2052,13 +2071,43 @@ function noteLaunchIntentFailed(teamName: string, source: string): void {
   } as TeamProvisioningProgress);
 }
 
+/** Only proven Create refusals carry this finite correction proof across contextBridge. */
+function teamCreationFailureResult<T>(error: unknown, message: string): IpcResult<T> {
+  return {
+    success: false,
+    error: message,
+    ...(error instanceof TeamCreationRefusal
+      ? {
+          failure: {
+            kind: 'captured-team-create-refusal',
+            code: error.code,
+            outcome: error.outcome,
+          },
+        }
+      : {}),
+  };
+}
+
 async function handleCreateTeam(
   event: IpcMainInvokeEvent,
   request: unknown
 ): Promise<IpcResult<TeamCreateResponse>> {
+  if (isDesktopAgentBackendSelected()) {
+    try {
+      return { success: true, data: await createDesktopCapturedTeam(event, request) };
+    } catch (error) {
+      return teamCreationFailureResult(
+        error,
+        'Captured Host creation unavailable. Refresh teams or retry the unchanged form.'
+      );
+    }
+  }
   const validation = await validateProvisioningRequest(request);
   if (!validation.valid) {
-    return { success: false, error: validation.error };
+    return teamCreationFailureResult(
+      new TeamCreationRefusal('invalid', 'not-dispatched'),
+      validation.error
+    );
   }
   const progressTargetWindow = BrowserWindow.fromWebContents(event.sender);
 
@@ -2429,150 +2478,6 @@ async function handleValidateCliArgs(
   });
 }
 
-async function handlePrepareProvisioning(
-  _event: IpcMainInvokeEvent,
-  cwd: unknown,
-  providerId: unknown,
-  providerIds: unknown,
-  selectedModels: unknown,
-  limitContext: unknown,
-  modelVerificationMode: unknown,
-  selectedModelChecks: unknown
-): Promise<IpcResult<TeamProvisioningPrepareResult>> {
-  let validatedCwd: string | undefined;
-  let validatedProviderId: TeamLaunchRequest['providerId'];
-  let validatedProviderIds: TeamProviderId[] | undefined;
-  let validatedSelectedModels: string[] | undefined;
-  let validatedLimitContext: boolean | undefined;
-  let validatedModelVerificationMode: TeamProvisioningModelVerificationMode | undefined;
-  let validatedSelectedModelChecks: TeamProvisioningModelCheckRequest[] | undefined;
-  if (cwd !== undefined) {
-    if (typeof cwd !== 'string' || cwd.trim().length === 0) {
-      return { success: false, error: 'cwd must be a non-empty string' };
-    }
-    validatedCwd = cwd.trim();
-    if (!path.isAbsolute(validatedCwd)) {
-      return { success: false, error: 'cwd must be an absolute path' };
-    }
-  }
-  if (providerId !== undefined) {
-    if (!isTeamProviderId(providerId)) {
-      return { success: false, error: 'providerId must be anthropic, codex, gemini, or opencode' };
-    }
-    validatedProviderId = providerId;
-  }
-  if (providerIds !== undefined) {
-    if (!Array.isArray(providerIds)) {
-      return { success: false, error: 'providerIds must be an array when provided' };
-    }
-    const normalized: TeamProviderId[] = [];
-    for (const entry of providerIds) {
-      if (!isTeamProviderId(entry)) {
-        return {
-          success: false,
-          error: 'providerIds entries must be anthropic, codex, gemini, or opencode',
-        };
-      }
-      if (!normalized.includes(entry)) {
-        normalized.push(entry);
-      }
-    }
-    validatedProviderIds = normalized;
-  }
-  if (selectedModels !== undefined) {
-    if (!Array.isArray(selectedModels)) {
-      return { success: false, error: 'selectedModels must be an array when provided' };
-    }
-    const normalized: string[] = [];
-    const seen = new Set<string>();
-    for (let index = 0; index < selectedModels.length; index += 1) {
-      if (!Object.hasOwn(selectedModels, index)) {
-        return { success: false, error: 'selectedModels entries must be non-empty strings' };
-      }
-      const entry = selectedModels[index];
-      if (typeof entry !== 'string' || entry.trim().length === 0) {
-        return { success: false, error: 'selectedModels entries must be non-empty strings' };
-      }
-      const model = entry.trim();
-      if (!seen.has(model)) {
-        seen.add(model);
-        normalized.push(model);
-      }
-    }
-    validatedSelectedModels = normalized;
-  }
-  if (limitContext !== undefined) {
-    if (typeof limitContext !== 'boolean') {
-      return { success: false, error: 'limitContext must be a boolean when provided' };
-    }
-    validatedLimitContext = limitContext;
-  }
-  if (modelVerificationMode !== undefined) {
-    if (modelVerificationMode !== 'compatibility' && modelVerificationMode !== 'deep') {
-      return {
-        success: false,
-        error: 'modelVerificationMode must be compatibility or deep when provided',
-      };
-    }
-    validatedModelVerificationMode = modelVerificationMode;
-  }
-  if (selectedModelChecks !== undefined) {
-    if (!Array.isArray(selectedModelChecks)) {
-      return { success: false, error: 'selectedModelChecks must be an array when provided' };
-    }
-    const normalized: TeamProvisioningModelCheckRequest[] = [];
-    const seen = new Set<string>();
-    for (const entry of selectedModelChecks) {
-      if (!entry || typeof entry !== 'object') {
-        return { success: false, error: 'selectedModelChecks entries must be objects' };
-      }
-      const rawEntry = entry as {
-        providerId?: unknown;
-        model?: unknown;
-        effort?: unknown;
-      };
-      if (!isTeamProviderId(rawEntry.providerId)) {
-        return {
-          success: false,
-          error: 'selectedModelChecks entries must include a valid providerId',
-        };
-      }
-      if (typeof rawEntry.model !== 'string' || rawEntry.model.trim().length === 0) {
-        return {
-          success: false,
-          error: 'selectedModelChecks entries must include a non-empty model',
-        };
-      }
-      const effortValidation = parseOptionalTeamEffort(rawEntry.effort, rawEntry.providerId);
-      if (!effortValidation.valid) {
-        return { success: false, error: `selectedModelChecks ${effortValidation.error}` };
-      }
-      const model = rawEntry.model.trim();
-      const key = `${rawEntry.providerId}\n${model}\n${effortValidation.value ?? ''}`;
-      if (seen.has(key)) {
-        continue;
-      }
-      seen.add(key);
-      normalized.push({
-        providerId: rawEntry.providerId,
-        model,
-        ...(effortValidation.value ? { effort: effortValidation.value } : {}),
-      });
-    }
-    validatedSelectedModelChecks = normalized;
-  }
-  return wrapTeamHandler('prepareProvisioning', () =>
-    getTeamProvisioningPreflightApi().prepareForProvisioning(validatedCwd, {
-      providerId: validatedProviderId,
-      providerIds: validatedProviderIds,
-      modelIds: validatedSelectedModels,
-      limitContext: validatedLimitContext,
-      modelVerificationMode: validatedModelVerificationMode,
-      modelChecks: validatedSelectedModelChecks,
-    })
-  );
-}
-
 async function handleProvisioningStatus(
   _event: IpcMainInvokeEvent,
   runId: unknown
@@ -2618,6 +2523,9 @@ function isUpdateKanbanPatch(value: unknown): value is UpdateKanbanPatch {
   }
 
   const patch = value as Partial<UpdateKanbanPatch> & { op?: unknown; column?: unknown };
+  if (patch.op === 'disapprove') {
+    return !Array.isArray(value) && Object.keys(value).length === 1;
+  }
   if (patch.op === 'remove') {
     return true;
   }
@@ -3581,15 +3489,28 @@ async function handleProcessAlive(
 }
 
 async function handleCreateConfig(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request: unknown
-): Promise<IpcResult<void>> {
+): Promise<IpcResult<void | TeamCreateConfigResponse>> {
+  if (isDesktopAgentBackendSelected()) {
+    try {
+      return { success: true, data: await createDesktopCapturedTeamConfiguration(event, request) };
+    } catch (error) {
+      return teamCreationFailureResult(
+        error,
+        'Captured Host configuration unavailable. Refresh teams or retry the unchanged form.'
+      );
+    }
+  }
   let payload: ReturnType<typeof parseCreateTeamRequest>;
   try {
     payload = parseCreateTeamRequest(request);
   } catch (error) {
     if (error instanceof TeamRequestValidationError || error instanceof TeamRuntimeSelectionError)
-      return teamReadFailureResult(error);
+      return teamCreationFailureResult(
+        new TeamCreationRefusal('invalid', 'not-dispatched'),
+        error.message
+      );
     return wrapTeamHandler('createConfig', () => Promise.reject(error));
   }
   return wrapTeamHandler('createConfig', async () => {
@@ -4895,6 +4816,25 @@ async function handleShowMessageNotification(
     return { success: false, error: 'Invalid notification data' };
   }
   const d = data as TeamMessageNotificationData;
+  if (
+    isHostTeamSelectionKey(d.teamName) ||
+    (d.target &&
+      typeof d.target === 'object' &&
+      'teamName' in d.target &&
+      isHostTeamSelectionKey(d.target.teamName))
+  ) {
+    try {
+      const captured = await captureDesktopHostNotification(_event, data);
+      captured.assertCurrent();
+      await NotificationManager.getInstance().addTeamNotification(
+        captured.payload,
+        captured.assertCurrent
+      );
+      return { success: true, data: undefined };
+    } catch {
+      return { success: false, error: 'Captured Host notification destination unavailable' };
+    }
+  }
   if (!d.teamDisplayName || !d.from || !d.body) {
     return { success: false, error: 'Missing required fields (teamDisplayName, from, body)' };
   }

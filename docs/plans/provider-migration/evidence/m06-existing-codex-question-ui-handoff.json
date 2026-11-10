@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "status": "SCOPED_PASS",
+  "scope": "Actual Codex CLI localhost finite MCP form elicitation through existing Composer/Question Sheet: accept and deny",
+  "originalJob": "4ecbbc9b292705afcba92a2b74033fa6",
+  "originalExitCode": 0,
+  "provider": {
+    "name": "Codex",
+    "version": "0.162.0",
+    "sha256": "8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57",
+    "approvalPolicy": "on-request",
+    "sandbox": "workspace-write"
+  },
+  "observations": {
+    "nativeToolCalls": 2,
+    "modelRequests": 6,
+    "nativeReplies": [
+      {
+        "turn": "CODEX_QUESTION_ALLOW",
+        "action": "accept",
+        "content": {
+          "color": "TEST_BLUE"
+        }
+      },
+      {
+        "turn": "CODEX_QUESTION_DENY",
+        "action": "decline",
+        "content": null
+      }
+    ],
+    "canonicalRuntimeCommands": 2,
+    "nativeAfterStop": {
+      "phase": "closed",
+      "custody": "released"
+    }
+  },
+  "cleanup": {
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "originalGroupEmpty": true,
+    "writerReleased": true
+  },
+  "retention": {
+    "job": "c59713e26d4e8697ab40e9bd84b35e16",
+    "exitCode": 0,
+    "complete": true,
+    "files": 5626,
+    "issues": [],
+    "sha256": "1b4cffc6d498dd025cd1e52a489f60fcdf33bfe4494152485b5b7bbf371158fc",
+    "originalOutside": "/private/var/folders/7b/ydmc_b0n251bc4hss4tz8y880000gn/T/TEST-codex-question-retention-z3jeeklc/retained-4ecbbc9b292705afcba92a2b74033fa6",
+    "ignoredWorkspaceCopy": ".artifacts/provider-migration/codex-question-ui-20261024-attempt4",
+    "sourceAndBundles": "Original before/after source and compiled startup pins verified by retainer"
+  },
+  "priorFailure": {
+    "job": "1122850cd0f1903186cd8aa822ab6a49",
+    "cause": "TEST policy never declines native elicitation before Host/UI",
+    "fix": "Two TEST fixture policy values changed to on-request; no production permission change",
+    "retained": ".artifacts/provider-migration/codex-question-ui-20261024-attempt3"
+  },
+  "checks": {
+    "scriptTypes": "230ccdfd85dd6acb545b25ccb8d22f00 PASS",
+    "scriptLint": "31ebdc9e867b2e42d9460b67b674211e PASS",
+    "currentHostGate": {
+      "job": "3cfaf5e7f1374230d9ba8f23a3acc192",
+      "passed": 721,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0
+    }
+  },
+  "notClaimed": [
+    "vendor authentication/inference",
+    "all question shapes",
+    "full M06/M07/M08",
+    "packed app",
+    "natural Quit qualification beyond harness cleanup",
+    "full Stage1",
+    "Stage2"
+  ]
+}

@@ -30,26 +30,48 @@ export interface WindowsProcessTableFailureFacts {
 
 /** Closed observation facts; never retains process stdout or raw native errors. */
 export class WindowsProcessTableProbeError extends Error {
-  constructor(message: string, readonly failureFacts: WindowsProcessTableFailureFacts) {
+  constructor(
+    message: string,
+    readonly failureFacts: WindowsProcessTableFailureFacts
+  ) {
     super(message);
     this.name = 'WindowsProcessTableProbeError';
   }
 }
 
 function failureFacts(error: unknown, stderr: string): WindowsProcessTableFailureFacts {
-  const outcome = error && typeof error === 'object' ? error as { code?: unknown; signal?: unknown } : {};
+  const outcome =
+    error && typeof error === 'object' ? (error as { code?: unknown; signal?: unknown }) : {};
   const trimmed = stderr.trim();
   const clixml = trimmed.startsWith('#< CLIXML');
-  const knownStreams = new Set(['progress', 'error', 'warning', 'verbose', 'debug', 'information', 'output']);
+  const knownStreams = new Set([
+    'progress',
+    'error',
+    'warning',
+    'verbose',
+    'debug',
+    'information',
+    'output',
+  ]);
   return {
     reason: error ? 'probe_failed' : 'stderr_received',
-    exitCode: typeof outcome.code === 'number' && Number.isInteger(outcome.code) ? outcome.code : null,
-    nativeCode: typeof outcome.code === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(outcome.code) ? outcome.code : null,
+    exitCode:
+      typeof outcome.code === 'number' && Number.isInteger(outcome.code) ? outcome.code : null,
+    nativeCode:
+      typeof outcome.code === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(outcome.code)
+        ? outcome.code
+        : null,
     signal: outcome.signal === 'SIGTERM' || outcome.signal === 'SIGKILL' ? outcome.signal : null,
     stderrFormat: !trimmed ? 'empty' : clixml ? 'clixml' : 'text',
-    stderrStreams: clixml ? [...new Set([...trimmed.matchAll(/\bS=["']([A-Za-z]+)["']/g)]
-      .map(match => match[1].toLowerCase())
-      .map(stream => knownStreams.has(stream) ? stream : 'unknown'))].sort() : [],
+    stderrStreams: clixml
+      ? [
+          ...new Set(
+            [...trimmed.matchAll(/\bS=["']([A-Za-z]+)["']/g)]
+              .map((match) => match[1].toLowerCase())
+              .map((stream) => (knownStreams.has(stream) ? stream : 'unknown'))
+          ),
+        ].sort()
+      : [],
   };
 }
 

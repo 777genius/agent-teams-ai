@@ -498,3 +498,35 @@ export function getOpenCodeRuntimeDeliveryAdvisoryReasonKey(input: {
     .slice(0, 96);
   return `${action}:${normalized || 'unknown'}`;
 }
+
+export function parseOpenCodeRetryAt(value: string | null | undefined): number | null {
+  const text = value?.trim();
+  if (!text) {
+    return null;
+  }
+  const lowerText = text.toLowerCase();
+  const nextMarker = 'next=';
+  const tokenStart = lowerText.indexOf(nextMarker);
+  const valueStart = tokenStart >= 0 ? tokenStart + nextMarker.length : 0;
+  let valueEnd = valueStart;
+  while (valueEnd < text.length) {
+    const char = text[valueEnd];
+    if (
+      char === ' ' ||
+      char === '\t' ||
+      char === '\n' ||
+      char === '\r' ||
+      char === ',' ||
+      char === ';'
+    ) {
+      break;
+    }
+    valueEnd += 1;
+  }
+  let cleaned = text.slice(valueStart, valueEnd);
+  while (cleaned.endsWith('.') || cleaned.endsWith(')') || cleaned.endsWith(']')) {
+    cleaned = cleaned.slice(0, -1);
+  }
+  const parsed = Date.parse(cleaned);
+  return Number.isFinite(parsed) ? parsed : null;
+}

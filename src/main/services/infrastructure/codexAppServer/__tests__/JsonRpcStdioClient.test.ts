@@ -78,6 +78,39 @@ afterEach(() => {
 });
 
 describe('JsonRpcStdioClient', () => {
+  it('contains a broken child stdin pipe instead of raising an uncaught main-process error', async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-json-rpc-closed-stdin-'));
+    tempDirs.push(directory);
+    const scriptPath = path.join(directory, 'server.cjs');
+    fs.writeFileSync(
+      scriptPath,
+      `
+require('node:fs').closeSync(0);
+process.stdout.write(JSON.stringify({jsonrpc:'2.0',method:'stdin-closed'})+'\\n');
+setInterval(() => {}, 10_000);
+`
+    );
+    const client = new JsonRpcStdioClient({ warn: () => undefined });
+    await client.withSession(
+      {
+        binaryPath: process.execPath,
+        args: [scriptPath],
+        label: 'TEST broken stdin',
+        requestTimeoutMs: 1000,
+        totalTimeoutMs: 3000,
+      },
+      async (session) => {
+        await new Promise<void>((resolve) => {
+          session.onNotification((method) => {
+            if (method === 'stdin-closed') resolve();
+          });
+        });
+        await expect(session.request('ping')).rejects.toMatchObject({ code: 'EPIPE' });
+        await expect(session.request('late')).rejects.toThrow();
+      }
+    );
+  });
+
   it('sends JSON-RPC 2.0 framed requests and preserves structured errors', async () => {
     const scriptPath = createStrictJsonRpcServerScript();
     const client = new JsonRpcStdioClient({ warn: () => undefined });

@@ -304,7 +304,7 @@ export function classifyAnalyticsError(error: unknown): AnalyticsErrorClass {
 }
 
 export function recordProviderConnectionEnd(input: {
-  runtime: 'opencode';
+  runtime: 'opencode' | 'claude';
   provider: string | null | undefined;
   authMethod: string | null;
   connectionIntent: AnalyticsProviderConnectionIntent;

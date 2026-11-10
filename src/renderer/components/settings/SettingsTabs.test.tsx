@@ -19,7 +19,7 @@ describe('settings navigation', () => {
     vi.mocked(isElectronMode).mockReturnValue(true);
   });
 
-  it('offers external agent connection as a separate page and omits gateway providers', () => {
+  it('keeps gateway profile management and external agent connection as separate pages', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -29,9 +29,14 @@ describe('settings navigation', () => {
       root.render(<SettingsTabs activeSection="general" onSectionChange={onSectionChange} />)
     );
     const buttons = [...host.querySelectorAll('button')];
-    expect(buttons.some((button) => button.textContent === 'tabs.gatewayProviders.label')).toBe(
-      false
+    const gateway = buttons.find((button) => button.textContent === 'tabs.gatewayProviders.label');
+    expect(gateway).toBeDefined();
+    act(() => gateway?.click());
+    expect(onSectionChange).toHaveBeenCalledWith('gatewayProviders');
+    act(() =>
+      root.render(<SettingsTabs activeSection="gatewayProviders" onSectionChange={onSectionChange} />)
     );
+    expect(gateway?.getAttribute('aria-current')).toBe('page');
     const appearance = buttons.find((button) => button.textContent === 'general.appearance.title');
     expect(appearance).toBeDefined();
     act(() => appearance?.click());
@@ -63,6 +68,7 @@ describe('settings navigation', () => {
     expect(labels).toContain('tabs.notifications.label');
     expect(labels).toContain('tabs.advanced.label');
     expect(labels).not.toContain('runtimeProvider.tabs.providers');
+    expect(labels).not.toContain('tabs.gatewayProviders.label');
     expect(labels).not.toContain('general.externalAgentConnection.title');
     act(() => root.unmount());
   });

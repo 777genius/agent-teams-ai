@@ -1,0 +1,848 @@
+{
+  "schemaVersion": 1,
+  "repository": "777genius/agent-teams-ai",
+  "head": "451e9bb1914e45489c182c32a085e0f2da72911c",
+  "run": 40903039695,
+  "attempt": 1,
+  "scope": "Original451 manual CI/CodeQL acceptance and independent raw audit. Subsequent controlled M19 fixture changes have no native result from this run.",
+  "status": "SCOPED_CANDIDATE_GATES_PASS_M19_POSITIVE_COLD_UI_SEQUENCE_STILL_PENDING",
+  "auditProvenance": [
+    {
+      "name": "source-audit.json",
+      "sha256": "6c071f9ae508ed40dccc56d7ee0659e4cbf0038b744bb416392b000f8f4c3fb2",
+      "bytes": 43159,
+      "retainedHere": "Compact sanitized summary; bulk pins/raw logs remain original audit evidence"
+    },
+    {
+      "name": "mixed-audit.json",
+      "sha256": "8328c7bcbf8fe0d548c870d9f83f5cab4313944e3cc6263093e08da882ae470d",
+      "bytes": 14473,
+      "retainedHere": "Compact sanitized summary; bulk pins/raw logs remain original audit evidence"
+    },
+    {
+      "name": "native-audit.json",
+      "sha256": "aace3e702ba90659601fd715dd42daef4612cf422b07e0cb255ce1c3205b9c6d",
+      "bytes": 9041,
+      "retainedHere": "Compact sanitized summary; bulk pins/raw logs remain original audit evidence"
+    },
+    {
+      "name": "p7-audit.json",
+      "sha256": "78eb6af163e14e9b56aa0c66cb68cd41a691a44869b1be2fd03efc535bb0433d",
+      "bytes": 494283,
+      "retainedHere": "Compact sanitized summary; bulk pins/raw logs remain original audit evidence"
+    },
+    {
+      "name": "canonical-audit.json",
+      "sha256": "890cf032e52920c75a2a9a2f285c60f53e562731f21d22652585f60e299b2104",
+      "bytes": 54233,
+      "retainedHere": "Compact sanitized summary; bulk pins/raw logs remain original audit evidence"
+    }
+  ],
+  "canonical": {
+    "run": {
+      "id": 40903039695,
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/40903039695",
+      "event": "workflow_dispatch",
+      "head_sha": "451e9bb1914e45489c182c32a085e0f2da72911c",
+      "head_branch": "feat/provider-migration-stage-1",
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    "fullQualification": {
+      "jobId": 123563748440,
+      "conclusion": "success",
+      "checkoutSha": "451e9bb1914e45489c182c32a085e0f2da72911c",
+      "modeFull": true,
+      "modeReuse": false,
+      "scope": "full",
+      "aggregateResults": {
+        "plan": "success",
+        "validate": "success",
+        "test": "success",
+        "lint": "success",
+        "task-change-ledger-windows": "success",
+        "focused": "skipped",
+        "source": "skipped",
+        "dmg-artwork": "skipped"
+      }
+    },
+    "rootTotals": {
+      "passed": 24104,
+      "skipped": 98,
+      "failed": 0,
+      "total": 24202
+    },
+    "rootFileTotals": {
+      "passed": 2051,
+      "skipped": 37,
+      "failed": 0,
+      "total": 2088
+    },
+    "rootCountScope": "Fresh40903039695 original four root-shard summaries only. Workspace tests, CI scripts, Windows smoke, native/Source/P7 tests are excluded. Equal older counts are not reused.",
+    "shards": [
+      {
+        "jobId": 123552081880,
+        "jobName": "test (1/4)",
+        "conclusion": "success",
+        "checkoutSha": "451e9bb1914e45489c182c32a085e0f2da72911c",
+        "rootTests": {
+          "passed": 5844,
+          "skipped": 26,
+          "failed": 0,
+          "total": 5870
+        },
+        "rootFiles": {
+          "passed": 512,
+          "skipped": 10,
+          "failed": 0,
+          "total": 522
+        },
+        "logSha256": "e70ebdbd4289926c461a5fc81a1813d667db33d089db0bdf95ec969d1d456d00"
+      },
+      {
+        "jobId": 123552081937,
+        "jobName": "test (2/4)",
+        "conclusion": "success",
+        "checkoutSha": "451e9bb1914e45489c182c32a085e0f2da72911c",
+        "rootTests": {
+          "passed": 6150,
+          "skipped": 36,
+          "failed": 0,
+          "total": 6186
+        },
+        "rootFiles": {
+          "passed": 512,
+          "skipped": 10,
+          "failed": 0,
+          "total": 522
+        },
+        "logSha256": "2f97fe04689f5d0a0cc6c99a25c198323a195da02945d7719828442098611126"
+      },
+      {
+        "jobId": 123552081884,
+        "jobName": "test (3/4)",
+        "conclusion": "success",
+        "checkoutSha": "451e9bb1914e45489c182c32a085e0f2da72911c",
+        "rootTests": {
+          "passed": 5839,
+          "skipped": 17,
+          "failed": 0,
+          "total": 5856
+        },
+        "rootFiles": {
+          "passed": 514,
+          "skipped": 8,
+          "failed": 0,
+          "total": 522
+        },
+        "logSha256": "8df99894d4cd74ddb4ec879eb3803b5b643f9a92de4bbcd51b5b88d9b7e51322"
+      },
+      {
+        "jobId": 123552081981,
+        "jobName": "test (4/4)",
+        "conclusion": "success",
+        "checkoutSha": "451e9bb1914e45489c182c32a085e0f2da72911c",
+        "rootTests": {
+          "passed": 6271,
+          "skipped": 19,
+          "failed": 0,
+          "total": 6290
+        },
+        "rootFiles": {
+          "passed": 513,
+          "skipped": 9,
+          "failed": 0,
+          "total": 522
+        },
+        "logSha256": "0c53a6d6261e3cc36a700a90f53507b683bb8ce5283b2e147d24f08b13c099d3"
+      }
+    ],
+    "automaticDraft": {
+      "metadata": {
+        "id": 40901837868,
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/40901837868",
+        "event": "pull_request",
+        "head_sha": "451e9bb1914e45489c182c32a085e0f2da72911c",
+        "head_branch": "feat/provider-migration-stage-1",
+        "run_attempt": 1,
+        "status": "completed",
+        "conclusion": "failure",
+        "display_title": "CI proof: PR=982 | head=451e9bb1914e45489c182c32a085e0f2da72911c | base=16e098d51b32f0463c8836b7359760d106534b62 | merge=9ac6dba8b1a8a0ba424b1fe34d2078abcac45ba8 | action=synchronize | draft=true"
+      },
+      "failedJobId": 123547918009,
+      "checkoutSha": "9ac6dba8b1a8a0ba424b1fe34d2078abcac45ba8",
+      "modeFull": false,
+      "modeReuse": false,
+      "classification": "Expected Draft merge-gate refusal; no genuine code regression in the failed job",
+      "reason": "Draft feedback does not qualify for merge",
+      "fastFeedback": {
+        "jobId": 123547917259,
+        "conclusion": "success"
+      }
+    }
+  },
+  "source": {
+    "status": "PASS_WITH_EXPLICIT_LIMITS",
+    "allPrimaryJobsIncludingMixedAndCodex": 11,
+    "pairedReadbacks": 3,
+    "otherSourceSummary": {
+      "successfulJobsAudited": 9,
+      "originalReceiptsAudited": 12,
+      "sourcePinsPerReceipt": 1414,
+      "allPinsMatchExactImmutableCommit": true,
+      "checkpointPayloadsAndBindingsRecomputed": 7,
+      "issues": [],
+      "pendingOpenOutcome": "PASS safe shutdown/readback with held/unknown open-unknown custody debt retained"
+    },
+    "receipts": [
+      {
+        "artifactId": "12910973976",
+        "path": "private/tmp/TEST-desktop-backend-YWrKiU/desktop-backend-receipt.json",
+        "sha256": "96d72ad002a570a4ebfb2d476c859b95969e32a9aebadf77b10858885ccd8894",
+        "mode": "native-create-ui",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "profileDigestMatched": true,
+        "finalDescriptorMatchesInitial": true
+      },
+      {
+        "artifactId": "12911949298",
+        "path": "private/tmp/TEST-desktop-backend-eCZkm1/desktop-backend-receipt.json",
+        "sha256": "513f53ef8c49c6ab18e6c74d62b5c5bc897a4d04504e5c83f6f40d880c37d890",
+        "mode": "native-create-ui",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "profileDigestMatched": true,
+        "finalDescriptorMatchesInitial": true
+      },
+      {
+        "artifactId": "12910564356",
+        "path": "private/tmp/TEST-desktop-backend-Ld8iOo/desktop-backend-receipt.json",
+        "sha256": "33e7014200bf596ca9cb07492b39768afeeb51f0fe5640130cf340f7da7beef6",
+        "mode": "stopped-import-ui",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "profileDigestMatched": true,
+        "finalDescriptorMatchesInitial": true
+      },
+      {
+        "artifactId": "12911766098",
+        "path": "private/tmp/TEST-desktop-backend-kwbwHN/desktop-backend-receipt.json",
+        "sha256": "ab36ba05363a51b1442ad9ddb5f4987d2c6dedfa8beef4123544d7acd4b99e15",
+        "mode": "stopped-import-ui",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "profileDigestMatched": true,
+        "finalDescriptorMatchesInitial": true
+      },
+      {
+        "artifactId": "12912031055",
+        "path": "private/tmp/TEST-desktop-backend-Ugq7AG/desktop-backend-receipt.json",
+        "sha256": "73e8d3aad17526d85ebed453036b031210eccac9274fd3b7b2f96e13e61c2b9e",
+        "mode": "native-resume-ui",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "profileDigestMatched": true,
+        "finalDescriptorMatchesInitial": true
+      },
+      {
+        "artifactId": "12911908558",
+        "path": "private/tmp/TEST-desktop-backend-TSVfFI/desktop-backend-receipt.json",
+        "sha256": "622d5b547201cbdca6ad8108c739b81be29cf5d2f9d1e751d6338bfc2a4ce355",
+        "mode": "native-quit-ui",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "profileDigestMatched": true,
+        "finalDescriptorMatchesInitial": true
+      },
+      {
+        "artifactId": "12911908558",
+        "path": "private/tmp/TEST-desktop-backend-TSVfFI/desktop-readback-receipt.json",
+        "sha256": "5a18b08ffba60d77685b306bee58cac91ae7ef5730b99a9964f227ab85b41e87",
+        "mode": "native-quit-readback-ui",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "profileDigestMatched": true,
+        "finalDescriptorMatchesInitial": true
+      },
+      {
+        "artifactId": "12913330161",
+        "path": "private/tmp/TEST-desktop-backend-DB6pz6/desktop-backend-receipt.json",
+        "sha256": "7d5c5a53ccf37b0f28029c15d5b8280bc29516552103f01c04f13b42a38eca72",
+        "mode": "native-quit-ui",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "profileDigestMatched": true,
+        "finalDescriptorMatchesInitial": true
+      },
+      {
+        "artifactId": "12913330161",
+        "path": "private/tmp/TEST-desktop-backend-DB6pz6/desktop-readback-receipt.json",
+        "sha256": "306142f999d4da4353e05cdd64763236a04e44fb0cd542f8354b821629128a92",
+        "mode": "native-quit-readback-ui",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "profileDigestMatched": true,
+        "finalDescriptorMatchesInitial": true
+      },
+      {
+        "artifactId": "12912438468",
+        "path": "private/tmp/TEST-desktop-backend-XaxBwJ/desktop-backend-receipt.json",
+        "sha256": "b2a4537573af832263b3a199afbcea5dd451344791c97b807f70de1711850cfc",
+        "mode": "native-review-ui",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "profileDigestMatched": true,
+        "finalDescriptorMatchesInitial": true
+      },
+      {
+        "artifactId": "12912438468",
+        "path": "private/tmp/TEST-desktop-backend-XaxBwJ/desktop-native-review-readback-receipt.json",
+        "sha256": "bc0148d62d735740a8f847f2616c295b06b84df011b4eb9df44c8fc29b38e621",
+        "mode": "native-review-readback-ui",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "profileDigestMatched": true,
+        "finalDescriptorMatchesInitial": true
+      },
+      {
+        "artifactId": "12909854643",
+        "path": "private/tmp/TEST-desktop-backend-yRuvRk/desktop-backend-receipt.json",
+        "sha256": "d85d33b0a0659a20177fc8abd75a1a6554abaa90260cb4b00934cf6b6a4fd185",
+        "mode": "task-board-cross-team-ui",
+        "status": "PASS",
+        "preparedCount": 1,
+        "uniqueSourcePins": 1414,
+        "immutableGitMatch": true,
+        "beforeAfterEqual": true,
+        "profileDigestMatched": true,
+        "finalDescriptorMatchesInitial": false
+      }
+    ],
+    "limits": [
+      "Source Desktop and localhost scripted inference only; no real-provider authentication or packed/installed acceptance",
+      "No new whole Stage1/M13/M19 acceptance; historical root911 SDK-custody HOLD remains",
+      "Exact-identity SIGTERM wrapper cleanup does not prove normal wrapper exit",
+      "Historical failed Mixed36 receipt remains INCOMPLETE; new Mixed451 audited separately",
+      "Native binaries and final compiled runtime trees omitted by this source upload are frozen-harness pin assertions; retained Claude JSONL and first-epoch bundles are independently rehashed where asserted below.",
+      "Taskboard native picker, boundary-size, native delivery and blob garbage collection remain outside this selected offline UI proof."
+    ]
+  },
+  "mixed": {
+    "job": 123550233030,
+    "artifact": {
+      "id": 12913740709,
+      "size": 871220,
+      "zipSha256": "6c024adfef0cae00f014765292b1ab3c842771b1ff4bf30931fb848f8de5fbe0"
+    },
+    "receipt": {
+      "path": "private/tmp/TEST-desktop-backend-x9dmYD/desktop-backend-receipt.json",
+      "sha256": "4084fb794f6aa413c352fad7c72ec426f827717fbbdfaefb37b7d85484310526",
+      "status": "PASS",
+      "mixedStatus": "PASS"
+    },
+    "sourcePins": {
+      "count": 1414,
+      "beforeAfterEqual": true,
+      "immutableGitMatch": true
+    },
+    "actions": {
+      "groupCreateCount": 1,
+      "groupSendCount": 1,
+      "bobRestartCount": 1,
+      "wholeTeamStopCount": 1
+    },
+    "group": {
+      "status": "PASS",
+      "logicalMessageCount": 2,
+      "sendCommandCount": 2,
+      "nativeReplyCommandCount": 1,
+      "physicalRuntimeInputProofs": 3,
+      "nativeAcknowledgements": [
+        "team-lead",
+        "bob",
+        "carol"
+      ],
+      "identityCrossLinksVerified": true
+    },
+    "models": {
+      "claude": {
+        "observationCount": 13,
+        "failures": [],
+        "allContextEffective": true
+      },
+      "codex": {
+        "observationCount": 15,
+        "failures": [],
+        "allContextEffective": true
+      },
+      "opencode": {
+        "observationCount": 13,
+        "failures": [],
+        "allContextEffective": true
+      }
+    },
+    "tasksCompleted": 3,
+    "nativeEffect": "ONE\nONE\nONE\nTWO\nTWO\nTWO\n",
+    "restartStatus": "PASS",
+    "originalHostPid": 3998,
+    "managementPid": 4267,
+    "oldBobPid": 6127,
+    "newBobPid": 7036,
+    "stop": {
+      "selectedSessionsClosedSealedReleased": 3,
+      "allRunSessionsClosedSealedReleased": 4,
+      "rawDurableStoresMatch": true,
+      "releasedBeforeQuit": true,
+      "runtimeChildren": [
+        {
+          "pid": 6110,
+          "parentPid": 3998,
+          "groupId": 6110,
+          "birth": "Thu Oct 29 16:14:23 2026",
+          "command": "/private/tmp/TEST-stage1-inputs-VkiZTa/opencode/opencode"
+        },
+        {
+          "pid": 6115,
+          "parentPid": 3998,
+          "groupId": 6115,
+          "birth": "Thu Oct 29 16:14:23 2026",
+          "command": "/Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk-darwin-arm64@0.3.305/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude"
+        },
+        {
+          "pid": 7036,
+          "parentPid": 3998,
+          "groupId": 7036,
+          "birth": "Thu Oct 29 16:15:02 2026",
+          "command": "/private/tmp/TEST-stage1-inputs-VkiZTa/codex/codex-aarch64-apple-darwin"
+        }
+      ],
+      "managementUnchanged": true,
+      "nativeAbsenceBeforeHarnessCleanup": "Original pinned source reached receipt.stop only after all three runtime PIDs absent and exact unchanged Host/management-only child census assertions. The intermediate process table itself is not retained in the receipt."
+    },
+    "reloadReadback": {
+      "settingsRetained": true,
+      "captureCount": 1,
+      "closedLaunchDialogWithoutRelaunch": true
+    },
+    "cleanup": {
+      "processGroup": 3869,
+      "remaining": [],
+      "appExitCode": null,
+      "appSignalCode": "SIGTERM",
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+    },
+    "wrapperNaturalExit": false,
+    "limits": [
+      "Native Stop absence is original source-assertion-backed; no retained final process table for a separate raw physical census re-evaluation",
+      "Six captured wrapper/renderer entries remained before exact owned harness SIGTERM cleanup; final group empty and captured Host absent. Natural wrapper exit not qualified",
+      "Desktop Host exit code not separately exposed",
+      "Original 36dfe INCOMPLETE Stop receipt remains immutable",
+      "Original M19 root911 SDK custody HOLD unchanged; no full Stage1, real-auth, other-OS, release/default activation claim"
+    ]
+  },
+  "codexResume": {
+    "status": "PASS",
+    "receiptSha256": "c2f8c426d2f9b82a7d36d9871d129b592971e296b0087cc8f0cd2d43ee58156c",
+    "sourcePins": 1414,
+    "immutableGitMatch": true,
+    "beforeAfterEqual": true,
+    "nativeInputsBeforeAfterEqual": true,
+    "checkpoints": [
+      {
+        "reference": "cp1-cd864ada260df7e1c98291e53873f025d12e80e96c88ac4a70a3bf9535ae674b",
+        "fileSha256": "30d5552d93c832a06a24a6906c3e18247c7b9ae617f0acdb9153581ab4dac3b5",
+        "digestMatched": true,
+        "referenceFingerprintHistoryMatched": true
+      },
+      {
+        "reference": "cp1-1918c6cfec17ae054eac913fa1fbe5cbb2b6d72709e669b7ad13722d7599f93e",
+        "fileSha256": "5af190914f5f0a971c2e8d53245e8ba7fab01c4bb3ffaeb9eef4b30d4a232dd0",
+        "digestMatched": true,
+        "referenceFingerprintHistoryMatched": true
+      }
+    ],
+    "sameNativeIdentity": true,
+    "nativeIdentityDigest": "e53d8ad104994fe2114f1a15eb19f1df7ce90f50268adc56ac925c088c33b2fd",
+    "nativeHistoryFileSha256": "e1dc8c85cf5ee1881d67afd8cd32daaec9e6a0ca255840c7cadcdb4b2f7f2a2f",
+    "originalHistoryPrefixRehashed": true,
+    "helperAbsentAfterStop": true,
+    "releasedBeforeQuit": true
+  },
+  "h3": {
+    "status": "PASS",
+    "receiptSha256": "9fd85a0933f0dd14d67433e6c4b70d7d1ea9c35e6f0712bc9d97f5c54e7f0d50",
+    "cleanupConfirmed": true,
+    "hostFacts": [
+      {
+        "pid": 7925,
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "pid": 7980,
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "pid": 8042,
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "modelObservationCounts": [
+      12,
+      12,
+      12
+    ],
+    "modelFailureCounts": [
+      0,
+      0,
+      0
+    ],
+    "hostSourceTreeSha256": "226129eb1873a50db84de204ac8156299ba0fc145df414b25c96f64d628e515c",
+    "hostSourceImmutableGitMatch": true,
+    "harnessSha256": "6ca1ed67bd4e1b3eaaf480bf8af216ff9d3cee87f536951fe57cb251d04f3e04",
+    "harnessImmutableGitMatch": true,
+    "checkpoints": [
+      {
+        "file": "store/runtime-checkpoints/cp1-31d39fd7c8a40f35a533528307663c44af5ee38449b2b12718c520301832fce2.json",
+        "sha256": "63e541436c83200e819698e472377e745e933b5bfff0a69b91f08b9d45375a78",
+        "digestMatched": true,
+        "memberId": "bob-id",
+        "checkpointId": "TEST-history-B"
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-867b173b052e4babf0bc529c2e7ea33e3ec381f2526077474b0cf5cebac09d1e.json",
+        "sha256": "99e54baadf9fb2e6c3c09304fb3d283636c348593ba55e6942e8a8a38e66caeb",
+        "digestMatched": true,
+        "memberId": "alice-id",
+        "checkpointId": "TEST-history-A"
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-dd3ee2cffcffd5a221ed90f51741cd8f0b147a186a174442c25f69a1b7c8d3e7.json",
+        "sha256": "d5d526d0f3d8ac2526d7aca25682d4e46ca0066356340021c44dc8c3bc3dd290",
+        "digestMatched": true,
+        "memberId": "carol-id",
+        "checkpointId": "TEST-history-A"
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-0882dfae49eb94c74a33b1f1e0338ff3d29f4356b2dd29b82d3c9f3740906ea7.json",
+        "sha256": "4664ebefe3ec47dbca1b127346e21498deae11ef1f26f567b476d4027cbfcd0a",
+        "digestMatched": true,
+        "memberId": "alice-id",
+        "checkpointId": "TEST-history-B"
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-e9bd606325f4a375ebd3867a3627603c341a1d66c26884632b664fe8b394e544.json",
+        "sha256": "be7f6fae11ff57b7f140aec50982242a54c4e6d574b1aa833b24333370350719",
+        "digestMatched": true,
+        "memberId": "carol-id",
+        "checkpointId": "TEST-history-B"
+      },
+      {
+        "file": "store/runtime-checkpoints/cp1-f7f2ce9d196bebce3025b0969adb57c582b4c25dff3615fb6384cf552c3c302e.json",
+        "sha256": "31b3ef321b1afd97e4a7b9b8d3b948abdcb333edd61fd00b6a4979bed3f8289d",
+        "digestMatched": true,
+        "memberId": "bob-id",
+        "checkpointId": "TEST-history-A"
+      }
+    ],
+    "identities": [
+      {
+        "member": "alice",
+        "referenceA": "cp1-867b173b052e4babf0bc529c2e7ea33e3ec381f2526077474b0cf5cebac09d1e",
+        "referenceB": "cp1-0882dfae49eb94c74a33b1f1e0338ff3d29f4356b2dd29b82d3c9f3740906ea7",
+        "nativeIdentityDigest": "c21011879c7a1bc4bfca425188f7b5b9f068f6725f6d4b428bfaaa6b95b3b37d",
+        "sameOriginalIdentity": true,
+        "engine": "0.3.305"
+      },
+      {
+        "member": "bob",
+        "referenceA": "cp1-f7f2ce9d196bebce3025b0969adb57c582b4c25dff3615fb6384cf552c3c302e",
+        "referenceB": "cp1-31d39fd7c8a40f35a533528307663c44af5ee38449b2b12718c520301832fce2",
+        "nativeIdentityDigest": "af1c4d46a227cd8fc14d1386f14c15fed6871d322f18f91a51d16e76c6275b2f",
+        "sameOriginalIdentity": true,
+        "engine": "codex-app-server"
+      },
+      {
+        "member": "carol",
+        "referenceA": "cp1-dd3ee2cffcffd5a221ed90f51741cd8f0b147a186a174442c25f69a1b7c8d3e7",
+        "referenceB": "cp1-e9bd606325f4a375ebd3867a3627603c341a1d66c26884632b664fe8b394e544",
+        "nativeIdentityDigest": "bd44f10da078f9e549cf56a7117c9b5b517289e6ff325babbc17204eb9ace5b3",
+        "sameOriginalIdentity": true,
+        "engine": "opencode-v1"
+      }
+    ],
+    "sessionsClosedSealedReleased": 6,
+    "scope": "Actual all-three native history restore; Desktop controls, group, cross-Team, vendor authentication and full Stage1 excluded"
+  },
+  "nativeLimits": [
+    "Second Codex app epoch needed harness SIGTERM; natural wrapper exit is not qualified",
+    "No separately exposed Host exit code for the Desktop app",
+    "Original M19 root911 SDK custody HOLD unchanged",
+    "No full M19 live cold Stop qualification",
+    "Existing UI, Stage1 P0-P8/M01-M19 and OpenCode V1 only",
+    "Draft retained; no merge/release/default activation"
+  ],
+  "p7": {
+    "job": 123550232268,
+    "status": "SCOPED_RAW_ACCEPT_WITH_OMITTED_BINARY_TREE_LIMITS",
+    "provenance": {
+      "proofArtifact": {
+        "id": 12910648921,
+        "name": "stage1-process-qualification-proof-451e9bb1914e45489c182c32a085e0f2da72911c",
+        "size": 1201479,
+        "sha256": "f465d89cdbe8f58f12add4869af8617f97653eb340b99a32349507ab200569c4",
+        "matchesGitHubDigest": true
+      },
+      "fullArtifact": {
+        "id": 12912655632,
+        "size": 3151798558,
+        "githubDeclaredSha256": "17ff81ba14ce9d1757e2afb423b3be1c8ccc0e57f2cc67680f5685181dbf336e",
+        "downloaded": false,
+        "independentlyRehashed": false,
+        "reason": "Full 3.15GB archive exceeds available disk; do not promote its declared digest into a byte audit"
+      },
+      "tuple": {
+        "platform": "darwin",
+        "architecture": "arm64",
+        "osBuild": "24G624",
+        "nodeVersion": "v24.21.0"
+      },
+      "originalReceipt": {
+        "path": "private/tmp/TEST-stage1-p7-ipl3ze/p7-receipt.json",
+        "size": 353173,
+        "sha256": "2c5b6bae3c9ea287c03fafcccfea1a57576eccc9ef91cb52fa04af7b3e213a62"
+      },
+      "packedReceipt": {
+        "path": "private/tmp/TEST-stage1-p7-ipl3ze/tmp/TEST-desktop-backend-rBsRQk/desktop-backend-receipt.json",
+        "size": 597388,
+        "sha256": "cb037ad6024e6b91a70d6f44aa79cc6b74f5b155ea3e775d12887d25a0f9942e"
+      },
+      "normalSdkReceipt": {
+        "path": "private/tmp/TEST-stage1-p7-ipl3ze/tmp/TEST-desktop-backend-LtNjbX/normal-native-process-receipt.json",
+        "size": 531274,
+        "sha256": "324c42480f23a2d722198737a838cd507c585a698f7a954841921dfa7bc4fd43"
+      },
+      "kernelProof": {
+        "path": "private/tmp/TEST-stage1-p7-ipl3ze/tmp/TEST-native-ancestry-S79aiM/proof.ndjson",
+        "size": 6521,
+        "sha256": "d9685b084bea2e51fb594c1171ea3a0d4733a83103cf2ef93f95fe6a2f31861b"
+      }
+    },
+    "sourcePinSummary": {
+      "p7Frozen": {
+        "count": 1449,
+        "matchedImmutableGitBlobCount": 1420,
+        "notGitBlobCount": 29,
+        "mismatches": []
+      },
+      "packedBefore": {
+        "count": 1414,
+        "matchedImmutableGitBlobCount": 1414,
+        "mismatches": []
+      },
+      "packedAfter": {
+        "count": 1414,
+        "matchedImmutableGitBlobCount": 1414,
+        "mismatches": []
+      }
+    },
+    "moduleChecks": {
+      "processManifest": {
+        "matches": true,
+        "expected": "21953c9e242ddd77fba123b2d1f2edf30d0e555b73b70ac85ab0c26d2a11cf7f",
+        "actual": "21953c9e242ddd77fba123b2d1f2edf30d0e555b73b70ac85ab0c26d2a11cf7f"
+      },
+      "processModule": {
+        "matches": true,
+        "expected": "51779b25fe0368efe5c062ec1d357151ca87028f98d5e6fb88485ca8b7178074",
+        "actual": "51779b25fe0368efe5c062ec1d357151ca87028f98d5e6fb88485ca8b7178074"
+      },
+      "processC": {
+        "matches": true,
+        "expected": "310161c5d404d45e4f149b15b88c3805bfeddc4cc4c424460cddee3e845a284b",
+        "actual": "310161c5d404d45e4f149b15b88c3805bfeddc4cc4c424460cddee3e845a284b"
+      },
+      "CMatchesImmutableGit": {
+        "matches": true,
+        "expected": "310161c5d404d45e4f149b15b88c3805bfeddc4cc4c424460cddee3e845a284b",
+        "actual": "310161c5d404d45e4f149b15b88c3805bfeddc4cc4c424460cddee3e845a284b"
+      },
+      "packedReceipt": {
+        "matches": true,
+        "expected": "cb037ad6024e6b91a70d6f44aa79cc6b74f5b155ea3e775d12887d25a0f9942e",
+        "actual": "cb037ad6024e6b91a70d6f44aa79cc6b74f5b155ea3e775d12887d25a0f9942e"
+      },
+      "packedCapture": {
+        "matches": true,
+        "expected": "556edf0e168ea75a36b4e42952ff420d37d2ef8709b735d357d73278dc2b7c1e",
+        "actual": "556edf0e168ea75a36b4e42952ff420d37d2ef8709b735d357d73278dc2b7c1e"
+      },
+      "normalSdkCapture": {
+        "matches": true,
+        "expected": "b35da596633c302192e5d1a90689522ba214ba4d3868267792bc9cdd3ea31ca8",
+        "actual": "b35da596633c302192e5d1a90689522ba214ba4d3868267792bc9cdd3ea31ca8"
+      }
+    },
+    "kernel": {
+      "status": "ACCEPT_CURRENT_TUPLE",
+      "contractAssertionsCompleted": true,
+      "cleanup": {
+        "phase": "original-finite-cleanup-finished",
+        "originalTargetsAbsent": true,
+        "scope": "No numeric/group signal; actual target signal only from saved native capsule; all other TEST targets self-exit after12s"
+      },
+      "scope": "Actual current tuple native ancestry negatives, orphan/cross-session/dead-root/drift protection, exact-original signal with neighbor survival. SDK integration independently covered below."
+    },
+    "normalSdk": {
+      "status": "NORMAL_SDK_PROCESS_STOP_OBSERVED",
+      "modelObservations": 4,
+      "modelFailures": [],
+      "harnessSignals": 0,
+      "recaptures": 0,
+      "adoptions": 0,
+      "terminateCallCount": 1,
+      "stopPhase": "completed",
+      "stopState": {
+        "phase": "completed",
+        "native": "observed-absent",
+        "signalAccepted": true
+      },
+      "neighborHealthyBeforeOwnerStop": true,
+      "ownerClose": "original Host exit0/no signal",
+      "originalRootObservation": "absent",
+      "originalTargetObservation": "absent",
+      "host": {
+        "pid": 4014,
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true,
+        "diagnosticBytes": 1306
+      }
+    },
+    "packed": {
+      "status": "ACCEPT_ORIGINAL_PACKED_LAUNCH_STOP_SCOPE",
+      "receiptStatus": "PASS",
+      "originalLaunchSubmitCount": 1,
+      "originalStopClickCount": 1,
+      "sourceBeforeAfterUnchanged": true,
+      "modelObservations": 8,
+      "modelFailures": [],
+      "settingsRetainedAfterReload": true,
+      "cleanup": {
+        "processGroup": 4386,
+        "remaining": [],
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "capturedHostObserved": true,
+        "capturedHostAbsent": true,
+        "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+      },
+      "cleanupLimit": "Existing finally reached exact-identity SIGTERM attempt for original app group because app4386 remained. No proof of signal delivery/acceptance or natural app Quit is invented. Host4414 absent from group before cleanup; global Host absence only observed after cleanup. Separate Host exit code not exposed."
+    },
+    "checkpointSha256": [
+      "fd4734277d76c35642b0f4c68837eb875e3e843255b1b1b6285c5461d3114d97",
+      "ca0c591d575ee6bf9001b038be26249ab54fb9eee69eb88517071d89358f4f1d"
+    ],
+    "nativeTranscriptSha256": [
+      "336e305097172702a343cb0ff5f9f49c829e65ae2cefab6fc63558fb0f22831c",
+      "e612ff8569cc7e93913cccb117bb6b7238d47b0d5c0e85c81eb741215793b23c"
+    ],
+    "limits": [
+      "Full Electron executable/app.asar, bundled node/Host/provider/SDK binaries, compiled renderer/runtime/terminal trees and build toolchain/header payloads are not available in the bounded proof; their frozen pins remain original receipt assertions, never independent byte rehashes.",
+      "No other OS/architecture tuple, real provider authentication or vendor inference qualification.",
+      "Original M19 root911 remains immutable SDK-custody HOLD. Fresh normal SDK released roots and cold read-only observations do not release original root911 or qualify original live cold Stop.",
+      "Stage1 P0–P8/M01–M19 only, existing UI and OpenCode V1 only; no Stage2/V2 integration, publication, merge, release or default activation."
+    ]
+  },
+  "codeql": {
+    "status": "PASS_NO_NEW_FINDING_IDENTITIES_RELATIVE_TO_EXACT_MAIN",
+    "run": 40903047474,
+    "attempt": 1,
+    "event": "workflow_dispatch",
+    "head": "451e9bb1914e45489c182c32a085e0f2da72911c",
+    "jobs": [
+      {
+        "id": 123550255016,
+        "name": "Analyze (javascript-typescript)",
+        "conclusion": "success",
+        "headSha": "451e9bb1914e45489c182c32a085e0f2da72911c"
+      },
+      {
+        "id": 123550255590,
+        "name": "Analyze (actions)",
+        "conclusion": "success",
+        "headSha": "451e9bb1914e45489c182c32a085e0f2da72911c"
+      }
+    ],
+    "findingIdentityFields": [
+      "github/alertNumber",
+      "ruleId",
+      "primaryLocation.uri",
+      "primaryLocationLineHash"
+    ],
+    "jstsFindingIdentityMultisetsEqual": true,
+    "branchIntroducedIdentities": [],
+    "branchRemovedIdentities": [],
+    "inheritedChangedMessageAlertIds": [
+      575,
+      576
+    ],
+    "branchOpenInstances": 187,
+    "mainOpenInstances": 188,
+    "branchOnlyOpenAlertIds": [],
+    "mainOnlyOpenAlertIds": [
+      591
+    ],
+    "limit": "187 inherited open branch instances remain; not an alert-free repository claim. No dismissals or state changes."
+  },
+  "m19Remaining": {
+    "contract": "stage-1-contracts.md:574–585",
+    "required": "Canonical register/list → real Host restart → existing ProcessesSection Stop of same immutable original TEST capture → stopped history; metadata-only stop and stale/foreign refusal remain separate",
+    "whyCurrentGatesDoNotCloseIt": "Normal-live UI/native SDK Stop and cold already-absent readback are scoped proofs. No current original positive same-child Stop after Host restart is retained.",
+    "approvedNext": "One controlled-native finite TEST child through the real canonical registry, two real Hosts and the same existing UI. Separate actual SDK registration/normal Stop proof remains required; no SDK cold-survival claim.",
+    "historicalRoot911": "Immutable INCOMPLETE/SDK-custody HOLD, never replayed/adopted/retconned; disclosed debt is allowed, not proof of current positive acceptance."
+  },
+  "delivery": "Stage1 P0–P8/M01–M19, existing UI, OpenCode V1 only. PR remains Draft. No Stage2/V2 Host integration, merge, release, publication or default activation."
+}

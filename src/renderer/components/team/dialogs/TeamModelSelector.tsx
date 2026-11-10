@@ -406,7 +406,6 @@ function buildOpenCodeVirtualRows({
   columnCount: number;
 }): OpenCodeVirtualRow[] {
   const rows: OpenCodeVirtualRow[] = [];
-
   if (defaultOptions.length > 0) {
     rows.push({
       kind: 'models',
@@ -647,7 +646,8 @@ function shouldHydrateProviderModelCatalog(
       catalog?.source === 'static-fallback' ||
       (runtimeCatalog?.dynamic === true &&
         runtimeCatalog.source !== 'anthropic-compatible-api' &&
-        catalog?.source !== 'anthropic-models-api')
+        catalog?.source !== 'anthropic-models-api' &&
+        catalog?.source !== 'claude-sdk')
     );
   }
 

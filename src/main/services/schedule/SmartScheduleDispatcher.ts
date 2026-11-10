@@ -4,6 +4,7 @@
  *
  * Legacy schedules never reach this class.
  */
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { isTeamTaskDeleted, isTeamTaskFinishedForDependency } from '@shared/utils/teamTaskState';
 
 import type { ExecutionRequest, ScheduledTaskResult } from './ScheduledTaskExecutor';
@@ -33,6 +34,7 @@ export interface SmartScheduleRuntimePort {
   getMemberStatuses(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
   getLeadName(teamName: string): Promise<string | null>;
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
+  hasLaunchConfig(teamName: string): Promise<boolean>;
   /** Required only for opt-in task-first schedules; old adapters remain compatible. */
   hasRunnableConfig?(teamName: string): Promise<boolean>;
   hasActiveOwnedTask?(teamName: string, owner: string): boolean;
@@ -101,6 +103,15 @@ export class SmartScheduleDispatcher {
 
   constructor(private readonly runtime: SmartScheduleRuntimePort) {}
 
+  /** Reject new team schedules for metadata-only drafts; desktop Launch must finish their setup. */
+  async assertCanSchedule(schedule: Pick<Schedule, 'teamName' | 'executionMode'>): Promise<void> {
+    if (schedule.executionMode !== 'team') return;
+    const saved = await this.runtime.getSavedRequest(schedule.teamName);
+    if (saved && !(await this.runtime.hasLaunchConfig(schedule.teamName))) {
+      throw new Error('Finish team setup before creating a Whole team schedule');
+    }
+  }
+
   async dispatch(
     schedule: Schedule,
     runId: string,
@@ -111,6 +122,9 @@ export class SmartScheduleDispatcher {
     }
     if (schedule.executionMode !== 'agent' && schedule.executionMode !== 'team') {
       throw new Error('Unsupported schedule execution mode');
+    }
+    if (isHostTeamSelectionKey(schedule.teamName)) {
+      return skipped('Host-owned team scheduling requires an owner-aware runtime');
     }
     // Check outstanding task-first work before any early skip. That carries
     // its task ID through arbitrarily many skipped runs, despite 50-run
@@ -148,6 +162,37 @@ export class SmartScheduleDispatcher {
           return skipped('Team state changed while scheduling; no action was submitted');
         }
         if (schedule.executionMode === 'agent') {
+          // An offline one-agent run must still refer to a real configured team
+          // and recipient. Deleted teams retain independent schedule records.
+          const saved = await this.runtime.getSavedRequest(team);
+          if (!saved || !(await this.runtime.hasLaunchConfig(team))) {
+            return skipped('Team configuration is missing; no standalone agent was started');
+          }
+          const leadName = await this.runtime.getLeadName(team);
+          if (!leadName) return skipped('Team lead cannot be resolved');
+          const requestedMember = schedule.targetMember?.trim() || leadName;
+          const memberName =
+            requestedMember.toLowerCase() === leadName.toLowerCase()
+              ? leadName
+              : requestedMember;
+          if (memberName !== leadName && !saved.members.some((member) => member.name === memberName)) {
+            return skipped(`Member "${memberName}" is not configured in this team`);
+          }
+          if (
+            isCancelled() ||
+            this.runtime.isTeamLaunching(team) ||
+            this.runtime.isTeamBusy(team) ||
+            this.runtime.isTeamAlive(team)
+          ) {
+            return skipped('Team state changed while validating scheduled agent; no work was submitted');
+          }
+          // One-shot CLI has no teammate owner/role/provider/workflow contract.
+          // Running it for a selected non-lead would silently execute as an
+          // unrelated standalone agent. Keep the schedule and fail closed until
+          // an owner-aware offline teammate route is explicitly qualified.
+          if (memberName !== leadName) {
+            return skipped(`Selected teammate "${memberName}" cannot run while the team is stopped; start the team first`);
+          }
           const result = await this.runtime.runOneShot({
             runId,
             config: schedule.launchConfig,
@@ -159,6 +204,9 @@ export class SmartScheduleDispatcher {
         const saved = await this.runtime.getSavedRequest(team);
         if (!saved?.cwd || !saved.providerId) {
           return skipped('Team launch settings are missing or the provider is not selected');
+        }
+        if (!(await this.runtime.hasLaunchConfig(team))) {
+          return skipped('Finish team setup before scheduling a Whole team launch (config.json missing)');
         }
         if (isCancelled() || this.runtime.isTeamLaunching(team) || this.runtime.isTeamBusy(team) || this.runtime.isTeamAlive(team)) {
           return skipped('Team launch state changed; no duplicate launch was submitted');

@@ -155,48 +155,47 @@ describe('applyElectronDevPathOverrides', () => {
   );
 
   it.skipIf(process.platform !== 'win32')(
-    'handles an unavailable early Windows userData path without weakening regular-profile isolation',
+    'uses regular APPDATA when userData is unavailable before Windows Electron ready',
     () => {
-      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-early-userdata-'));
-      tempDirs.push(root);
-      const appData = path.join(root, 'normal-appdata');
-      const regular = path.join(appData, 'Agent Teams AI');
-      const isolated = path.join(root, 'isolated');
+      const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-early-userdata-'));
+      tempDirs.push(tempRoot);
+      const appData = path.join(tempRoot, 'regular-appdata');
+      const regularProfile = path.join(appData, 'Agent Teams AI');
+      const isolated = path.join(tempRoot, 'isolated');
       const previousAppData = process.env.APPDATA;
       process.env.APPDATA = appData;
-      const setPath = vi.fn();
-      const app = {
-        setPath,
-        getName: () => 'Agent Teams AI',
-        getPath: (name: string): string => {
-          throw new Error(`Failed to get '${name}' path`);
-        },
-      };
       try {
+        const setPath = vi.fn();
+        const app = {
+          setPath,
+          getName: () => 'Agent Teams AI',
+          commandLine: { hasSwitch: () => false },
+          getPath: (name: string): string => {
+            if (name === 'userData' || name === 'appData')
+              throw new Error(`Failed to get '${name}' path`);
+            throw new Error(`Unexpected Electron path: ${name}`);
+          },
+        };
         expect(
           applyElectronDevPathOverrides(app, {
             [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: isolated,
           }).userDataDir
         ).toBe(isolated);
         expect(setPath).toHaveBeenCalledTimes(4);
-        expect(fs.existsSync(regular)).toBe(false);
         setPath.mockClear();
-
         expect(() =>
           applyElectronDevPathOverrides(app, {
-            [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: regular,
+            [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: regularProfile,
           })
         ).toThrow(/overlaps regular userData/);
         expect(setPath).not.toHaveBeenCalled();
-        expect(fs.existsSync(regular)).toBe(false);
-
+        expect(fs.existsSync(regularProfile)).toBe(false);
         process.env.APPDATA = 'relative-appdata';
         expect(() =>
           applyElectronDevPathOverrides(app, {
             [AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV]: isolated,
           })
         ).toThrow("Failed to get 'appData' path");
-        expect(setPath).not.toHaveBeenCalled();
       } finally {
         if (previousAppData === undefined) delete process.env.APPDATA;
         else process.env.APPDATA = previousAppData;

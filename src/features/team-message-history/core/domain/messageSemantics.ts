@@ -2,6 +2,8 @@ import type { InboxMessage } from '@shared/types';
 
 // Required keys make additions to the normalized message contract a review decision.
 const semanticFields: Record<keyof InboxMessage, true> = {
+  // Captured destinations affect navigation/reply availability, not durable message identity.
+  crossTeamNavigation: true,
   from: true,
   to: true,
   text: true,

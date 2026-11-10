@@ -1,3 +1,4 @@
+import { internalStorageInterruption } from '@features/member-work-sync/main/infrastructure/internalStorageInterruption';
 import {
   InternalStorageOperationInterruptedError,
   KeyedMutex,
@@ -62,7 +63,7 @@ function harness(initial: MemberWorkSyncStatus | null = status()) {
       status: 'identified',
       identityId: currentIncarnation,
     })),
-    adoptLegacy: vi.fn<MemberWorkSyncStatusAuthorityDeps['identity']['adoptLegacy']>(async () => ({
+    adoptLegacy: vi.fn<NonNullable<MemberWorkSyncStatusAuthorityDeps['identity']['adoptLegacy']>>(async () => ({
       status: 'identified',
       identityId: currentIncarnation,
     })),
@@ -82,6 +83,7 @@ function harness(initial: MemberWorkSyncStatus | null = status()) {
       }),
   };
   const deps: MemberWorkSyncStatusAuthorityDeps = {
+    interruption: internalStorageInterruption,
     identity,
     withPreparedBackend: async (_identity, operation) => operation(backend),
   };

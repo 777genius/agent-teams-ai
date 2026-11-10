@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "es. Revisione del codice quotidiana, Test notturni...",
       "maxBudgetUsd": "Budget massimo (USD)",
       "maxTurns": "Turni massimi",
+      "executionLimitsNote": "Questi limiti si applicano solo alle esecuzioni autonome una tantum. Non si applicano alle attività assegnate a un team già in esecuzione.",
       "noLimit": "Nessun limite",
       "noMatches": "Nessun team corrisponde alla tua ricerca.",
       "noTeams": "Nessun team disponibile. Crea prima un team.",
@@ -2140,7 +2141,9 @@
     "status": {
       "active": "Attiva",
       "paused": "Sospesa",
-      "disabled": "Disabilitata"
+      "disabled": "Disabilitata",
+      "hostUnsupported": "Pianificazione Host non disponibile",
+      "saved": "Salvato"
     },
     "runStatus": {
       "pending": "In attesa",

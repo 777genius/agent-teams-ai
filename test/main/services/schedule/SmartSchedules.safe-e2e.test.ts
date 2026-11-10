@@ -70,6 +70,7 @@ describe('Smart schedules filesystem safe E2E', () => {
       getMemberStatuses: vi.fn(async () => ({ runId: 'active-team-run', statuses: {} })),
       getLeadName: vi.fn(async () => 'lead'),
       getSavedRequest: vi.fn(async () => saved),
+      hasLaunchConfig: vi.fn(async () => true),
       attachMember: vi.fn(async () => undefined),
       createTask: vi.fn(async () => ({
         id: 'e2e-task',
@@ -123,6 +124,48 @@ describe('Smart schedules filesystem safe E2E', () => {
     }, { timeout: 8000 });
     return (await repository.listRuns(scheduleId))[0];
   }
+
+  it('refuses to persist, resume or execute Host-owned schedules through legacy services', async () => {
+    const hostTeam = 'host-team:TEST-captured-handle';
+    const hostInput = { ...input(), teamName: hostTeam, executionMode: 'agent' as const };
+    await expect(scheduler.createSchedule(hostInput)).rejects.toThrow(
+      'Host-backed teams require owner-aware scheduling'
+    );
+    expect(await repository.listSchedules()).toHaveLength(0);
+
+    // Old records remain readable for cleanup, but never become executable.
+    const now = new Date().toISOString();
+    const retained: Schedule = {
+      ...hostInput,
+      id: 'retained-host-schedule',
+      status: 'active',
+      maxConsecutiveFailures: 3,
+      consecutiveFailures: 0,
+      maxTurns: 5,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await repository.saveSchedule(retained);
+    await scheduler.stop();
+    await scheduler.start();
+    await expect(scheduler.triggerNow(retained.id)).rejects.toThrow(
+      'Host-backed teams require owner-aware scheduling'
+    );
+    await expect(scheduler.updateSchedule(retained.id, { label: 'Unsafe' })).rejects.toThrow(
+      'Host-backed teams require owner-aware scheduling'
+    );
+    await expect(scheduler.resumeSchedule(retained.id)).rejects.toThrow(
+      'Host-backed teams require owner-aware scheduling'
+    );
+    expect((await repository.listRuns(retained.id))).toHaveLength(0);
+    expect(oneShot).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+
+    await scheduler.pauseSchedule(retained.id);
+    await scheduler.deleteSchedule(retained.id);
+    expect(await repository.listSchedules()).toHaveLength(0);
+  });
 
   it('reads unmodified preexisting JSON and continues the one-shot executor after editing', async () => {
     const now = new Date().toISOString();
@@ -296,6 +339,62 @@ describe('Smart schedules filesystem safe E2E', () => {
     );
     expect(port.launchTeam).toHaveBeenCalledOnce();
     expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
+  it('rejects a metadata-only team draft before saving and safely skips retained schedules', async () => {
+    port.hasLaunchConfig = vi.fn(async () => false);
+    const draftInput = { ...input(), executionMode: 'team' as const };
+    await expect(scheduler.createSchedule(draftInput)).rejects.toThrow('Finish team setup');
+    expect(await repository.listSchedules()).toHaveLength(0);
+
+    const now = new Date().toISOString();
+    const retained: Schedule = {
+      ...draftInput, id: 'retained-draft', status: 'active', maxConsecutiveFailures: 3,
+      consecutiveFailures: 0, maxTurns: 5, createdAt: now, updatedAt: now,
+    };
+    await repository.saveSchedule(retained);
+    await expect(scheduler.updateSchedule(retained.id, { label: 'Retry' })).rejects.toThrow('Finish team setup');
+    await expect(scheduler.resumeSchedule(retained.id)).rejects.toThrow('Finish team setup');
+    port.isTeamAlive = vi.fn(() => false);
+    await scheduler.triggerNow(retained.id);
+    const run = await waitForRun(retained.id, 'skipped');
+    expect(run.summary).toContain('Finish team setup');
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(oneShot).not.toHaveBeenCalled();
+  });
+
+  it('persists a selected teammate HOLD without silently spawning a standalone agent', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    const schedule = await scheduler.createSchedule({
+      ...input(), executionMode: 'agent', targetMember: 'alice', label: 'Alice backlog',
+    });
+    await scheduler.triggerNow(schedule.id);
+    const run = await waitForRun(schedule.id, 'skipped');
+    expect(run.summary).toContain('Selected teammate "alice" cannot run');
+    expect(oneShot).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.attachMember).not.toHaveBeenCalled();
+    await scheduler.stop();
+    await scheduler.start();
+    expect((await repository.listRuns(schedule.id))[0]?.status).toBe('skipped');
+    expect((await repository.getSchedule(schedule.id))?.targetMember).toBe('alice');
+  });
+
+  it('persists a skipped run after a scheduled agent team is deleted', async () => {
+    const schedule = await scheduler.createSchedule({
+      ...input(), executionMode: 'agent', targetMember: 'alice',
+    });
+    // Schedule JSON survives team removal, but must not execute instructions.
+    port.isTeamAlive = vi.fn(() => false);
+    port.getSavedRequest = vi.fn(async () => null);
+    await scheduler.triggerNow(schedule.id);
+    const run = await waitForRun(schedule.id, 'skipped');
+    expect(run.summary).toContain('configuration is missing');
+    expect(oneShot).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect((await repository.listRuns(schedule.id))[0]?.status).toBe('skipped');
   });
 
   it('starts a stopped team once from its saved provider profile without a second task', async () => {

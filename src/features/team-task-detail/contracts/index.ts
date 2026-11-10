@@ -1,4 +1,5 @@
 import type { InlineChip } from '@shared/types/inlineChip';
+import type { AddTaskCommentRequest } from '@shared/types/team';
 
 export interface TaskDetailIdentity {
   contextId: string;
@@ -47,7 +48,14 @@ export interface PendingAttachment {
   size: number;
 }
 
+/** Application-lifetime obligation only; ordinary draft storage is not a durable command journal. */
+export interface TaskDetailCommentIntent {
+  request: AddTaskCommentRequest;
+  submittedPartRevisions: Partial<Record<TaskDetailSubmitPart, number>>;
+}
+
 export interface TaskDetailSession {
+  commentIntent?: TaskDetailCommentIntent;
   commentText: string;
   commentChips: InlineChip[];
   pendingAttachments: PendingAttachment[];

@@ -48,7 +48,8 @@ export function useMessagesPanelSend({
     actionMode?: ActionMode,
     taskRefs?: TaskRef[],
     toMember?: string,
-    messageId?: string
+    messageId?: string,
+    replyMetadata?: { conversationId?: string; replyToConversationId?: string }
   ) => Promise<CrossTeamSendResult | null>;
 } {
   const handleSend = useCallback(
@@ -103,12 +104,14 @@ export function useMessagesPanelSend({
       actionMode?: ActionMode,
       taskRefs?: TaskRef[],
       toMember?: string,
-      messageId?: string
+      messageId?: string,
+      replyMetadata?: { conversationId?: string; replyToConversationId?: string }
     ) =>
       sendCrossTeamMessage({
         fromTeam: teamName,
         fromMember: 'user',
         toTeam,
+        ...(replyMetadata ?? {}),
         ...(toMember ? { toMember } : {}),
         text,
         taskRefs,

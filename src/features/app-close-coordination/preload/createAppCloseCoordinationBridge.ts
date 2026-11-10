@@ -2,9 +2,11 @@ import {
   APP_CLOSE_READINESS_REQUEST,
   APP_CLOSE_READINESS_RESPONSE,
   APP_CLOSE_READINESS_STARTED,
+  APP_CLOSE_UI_MOUNT_REQUEST,
   type AppCloseCoordinationElectronApi,
   type AppCloseReadinessHandler,
   type AppCloseReadinessRequest,
+  type AppCloseReadinessResponse,
 } from '../contracts';
 
 import type { IpcRenderer, IpcRendererEvent } from 'electron';
@@ -28,11 +30,13 @@ export function createAppCloseCoordinationBridge(
     (_event: IpcRendererEvent, request: AppCloseReadinessRequest) => {
       ipcRenderer.send(APP_CLOSE_READINESS_STARTED, { requestId: request.requestId });
       void (async () => {
+        const handler = readinessHandler;
+        const uiHandlerObserved = handler !== null;
         let ok = true;
         let blockers: string[] = [];
         try {
-          if (readinessHandler) {
-            const result = await readinessHandler(request);
+          if (handler) {
+            const result = await handler(request);
             ok = result.ok === true;
             blockers = normalizeBlockers(result.blockers);
           }
@@ -44,12 +48,14 @@ export function createAppCloseCoordinationBridge(
           requestId: request.requestId,
           ok,
           blockers,
-        });
+          uiHandlerObserved,
+        } satisfies AppCloseReadinessResponse);
       })();
     }
   );
 
   return {
+    requestUiMount: async () => (await ipcRenderer.invoke(APP_CLOSE_UI_MOUNT_REQUEST)) === true,
     onReadinessRequest: (handler) => {
       readinessHandler = handler;
       return (): void => {

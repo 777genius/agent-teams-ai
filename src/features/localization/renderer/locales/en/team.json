@@ -1677,6 +1677,7 @@
       "legacyNotice": "Existing one-shot schedule — saving keeps its current behavior.",
       "maxBudgetUsd": "Max budget (USD)",
       "maxTurns": "Max turns",
+      "executionLimitsNote": "These limits apply only to standalone one-shot runs. Tasks assigned to a running team do not use them.",
       "noLimit": "No limit",
       "noMatches": "No teams match your search.",
       "noTeams": "No teams available. Create a team first.",
@@ -2340,7 +2341,9 @@
     "status": {
       "active": "Active",
       "paused": "Paused",
-      "disabled": "Disabled"
+      "disabled": "Disabled",
+      "hostUnsupported": "Host scheduling unavailable",
+      "saved": "Saved"
     },
     "runStatus": {
       "pending": "Pending",

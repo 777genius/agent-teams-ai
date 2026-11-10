@@ -91,7 +91,7 @@ export function createManagedGitEnv(
     : [path.join(root, 'bin')];
 
   // Windows treats PATH/Path as the same variable; avoid duplicate keys.
-  const previousPath = env.PATH ?? Object.entries(env).find(([key]) => key.toUpperCase() === 'PATH')?.[1];
+  const previousPath = env.PATH ?? Object.entries(env).find(([key, value]) => key.toUpperCase() === 'PATH' && value !== undefined)?.[1];
   if (platform === 'win32') {
     for (const key of Object.keys(env)) {
       if (key !== 'PATH' && key.toUpperCase() === 'PATH') delete env[key];

@@ -9,7 +9,7 @@ import {
 } from '@features/codex-account/contracts';
 
 import type { CodexAccountFeatureFacade } from '../../../composition/createCodexAccountFeature';
-import type { IpcMain } from 'electron';
+import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 function asOptionsRecord(value: unknown, label: string): Record<string, unknown> | undefined {
   if (typeof value === 'undefined') {
@@ -63,17 +63,31 @@ function parseLoginOptions(value: unknown): CodexStartChatgptLoginOptions | unde
 
 export function registerCodexAccountIpc(
   ipcMain: IpcMain,
-  feature: CodexAccountFeatureFacade
+  feature: CodexAccountFeatureFacade,
+  captureGuard?: (event: IpcMainInvokeEvent) => (() => boolean) | null
 ): void {
-  ipcMain.handle(CODEX_ACCOUNT_GET_SNAPSHOT, () => feature.getSnapshot());
-  ipcMain.handle(CODEX_ACCOUNT_REFRESH_SNAPSHOT, (_event, options?: unknown) =>
-    feature.refreshSnapshot(parseRefreshOptions(options))
+  const run = <T>(event: IpcMainInvokeEvent, action: () => Promise<T>): Promise<T> => {
+    if (!captureGuard) return action();
+    const current = captureGuard(event);
+    if (!current?.()) return Promise.reject(new Error('Codex account request is not authorized.'));
+    return action().then((result) => {
+      if (!current()) throw new Error('Codex account context changed. Refresh before retrying.');
+      return result;
+    });
+  };
+  ipcMain.handle(CODEX_ACCOUNT_GET_SNAPSHOT, (event) => run(event, () => feature.getSnapshot()));
+  ipcMain.handle(CODEX_ACCOUNT_REFRESH_SNAPSHOT, (event, options?: unknown) => {
+    const parsed = parseRefreshOptions(options);
+    return run(event, () => feature.refreshSnapshot(parsed));
+  });
+  ipcMain.handle(CODEX_ACCOUNT_START_CHATGPT_LOGIN, (event, options?: unknown) => {
+    const parsed = parseLoginOptions(options);
+    return run(event, () => feature.startChatgptLogin(parsed));
+  });
+  ipcMain.handle(CODEX_ACCOUNT_CANCEL_CHATGPT_LOGIN, (event) =>
+    run(event, () => feature.cancelLogin())
   );
-  ipcMain.handle(CODEX_ACCOUNT_START_CHATGPT_LOGIN, (_event, options?: unknown) =>
-    feature.startChatgptLogin(parseLoginOptions(options))
-  );
-  ipcMain.handle(CODEX_ACCOUNT_CANCEL_CHATGPT_LOGIN, () => feature.cancelLogin());
-  ipcMain.handle(CODEX_ACCOUNT_LOGOUT, () => feature.logout());
+  ipcMain.handle(CODEX_ACCOUNT_LOGOUT, (event) => run(event, () => feature.logout()));
 }
 
 export function removeCodexAccountIpc(ipcMain: IpcMain): void {

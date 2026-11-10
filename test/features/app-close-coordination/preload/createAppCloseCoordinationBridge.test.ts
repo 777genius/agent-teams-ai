@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import {
   APP_CLOSE_READINESS_REQUEST,
   APP_CLOSE_READINESS_RESPONSE,
+  APP_CLOSE_UI_MOUNT_REQUEST,
 } from '@features/app-close-coordination/contracts';
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
 import { describe, expect, it, vi } from 'vitest';
@@ -13,14 +14,16 @@ import type { IpcRenderer } from 'electron';
 function createIpcRenderer() {
   const emitter = new EventEmitter();
   const send = vi.fn();
+  const invoke = vi.fn().mockResolvedValue(true);
   const ipcRenderer = {
     on: (channel: string, listener: (...args: unknown[]) => void) => {
       emitter.on(channel, listener);
       return ipcRenderer;
     },
     send,
+    invoke,
   } as unknown as IpcRenderer;
-  return { emitter, ipcRenderer, send };
+  return { emitter, ipcRenderer, send, invoke };
 }
 
 const request: AppCloseReadinessRequest = {
@@ -30,6 +33,22 @@ const request: AppCloseReadinessRequest = {
 };
 
 describe('createAppCloseCoordinationBridge', () => {
+  it('requires exact mount permission through the finite no-payload IPC', async () => {
+    const { ipcRenderer, invoke } = createIpcRenderer();
+    const bridge = createAppCloseCoordinationBridge(ipcRenderer);
+    await expect(bridge.requestUiMount()).resolves.toBe(true);
+    expect(invoke).toHaveBeenCalledWith(APP_CLOSE_UI_MOUNT_REQUEST);
+    invoke.mockResolvedValueOnce('true');
+    await expect(bridge.requestUiMount()).resolves.toBe(false);
+  });
+
+  it('does not fabricate mount permission when the Main request fails', async () => {
+    const { ipcRenderer, invoke } = createIpcRenderer();
+    invoke.mockRejectedValueOnce(new Error('closed admission'));
+    const bridge = createAppCloseCoordinationBridge(ipcRenderer);
+    await expect(bridge.requestUiMount()).rejects.toThrow('closed admission');
+  });
+
   it('responds ready before the React registry mounts', async () => {
     const { emitter, ipcRenderer, send } = createIpcRenderer();
     createAppCloseCoordinationBridge(ipcRenderer);
@@ -40,6 +59,7 @@ describe('createAppCloseCoordinationBridge', () => {
         requestId: request.requestId,
         ok: true,
         blockers: [],
+        uiHandlerObserved: false,
       });
     });
   });
@@ -58,6 +78,7 @@ describe('createAppCloseCoordinationBridge', () => {
         requestId: request.requestId,
         ok: false,
         blockers: ['decision save failed'],
+        uiHandlerObserved: true,
       });
     });
 
@@ -78,6 +99,7 @@ describe('createAppCloseCoordinationBridge', () => {
         requestId: request.requestId,
         ok: false,
         blockers: ['fsync failed'],
+        uiHandlerObserved: true,
       });
     });
   });
@@ -99,6 +121,7 @@ describe('createAppCloseCoordinationBridge', () => {
         requestId: request.requestId,
         ok: true,
         blockers: [],
+        uiHandlerObserved: true,
       });
     });
   });

@@ -5,12 +5,14 @@
  * Uses one-shot `claude -p` executor (NOT launchTeam stream-json).
  */
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { getSchedulesBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { getValidScheduleNextRuns } from '@shared/utils/scheduleTiming';
 import { Cron } from 'croner';
 import { randomUUID } from 'crypto';
 
+import { completeScheduleRun } from './completeScheduleRun';
 import { computeScheduleNextRunAt } from './computeScheduleNextRunAt';
 import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
 
@@ -31,6 +33,14 @@ const logger = createLogger('Service:Scheduler');
 // =============================================================================
 // Constants
 // =============================================================================
+
+// A captured Host handle is not a legacy team name. Until an owner-aware
+// scheduling port is qualified, refuse before creating any native/legacy effect.
+const HOST_SCHEDULE_UNSUPPORTED = 'Schedules for Host-backed teams require owner-aware scheduling';
+
+function assertSupportedScheduledTeam(teamName: string): void {
+  if (isHostTeamSelectionKey(teamName)) throw new Error(HOST_SCHEDULE_UNSUPPORTED);
+}
 
 const WARMUP_RETRY_DELAY_MS = 60_000;
 const WARMUP_MAX_RETRIES = 3;
@@ -111,7 +121,7 @@ export class SchedulerService {
     let activeCount = 0;
 
     for (const schedule of schedules) {
-      if (schedule.status === 'active') {
+      if (schedule.status === 'active' && !isHostTeamSelectionKey(schedule.teamName)) {
         this.createCronJob(schedule);
         if (this.cronJobs.has(schedule.id)) activeCount++;
       }
@@ -178,6 +188,8 @@ export class SchedulerService {
     const cronExpression = input.cronExpression.trim();
     const timezone = input.timezone.trim();
     getValidScheduleNextRuns(cronExpression, timezone);
+    assertSupportedScheduledTeam(input.teamName);
+    await this.smartDispatcher?.assertCanSchedule(input);
     if (input.taskFirst && input.executionMode !== 'agent' && input.executionMode !== 'team') {
       throw new Error('Task-first schedule requires agent or team executionMode');
     }
@@ -223,6 +235,7 @@ export class SchedulerService {
   async updateSchedule(id: string, patch: UpdateSchedulePatch): Promise<Schedule> {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
+    assertSupportedScheduledTeam(existing.teamName);
     if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
     const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
     const cronExpression = (patch.cronExpression ?? existing.cronExpression).trim();
@@ -243,6 +256,8 @@ export class SchedulerService {
       }),
       updatedAt: new Date().toISOString(),
     };
+    await this.smartDispatcher?.assertCanSchedule(updated);
+
     // Reschedule cron job if expression or timezone changed
     const reschedule = cronChanged || patch.warmUpMinutes !== undefined || patch.executionMode !== undefined;
     if (reschedule && updated.status === 'active') updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
@@ -314,6 +329,10 @@ export class SchedulerService {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
 
+    // A retained Host schedule cannot be armed against the legacy executor.
+    assertSupportedScheduledTeam(existing.teamName);
+    await this.smartDispatcher?.assertCanSchedule(existing);
+
     // A historic invalid schedule must be repaired before it can be resumed.
     getValidScheduleNextRuns(existing.cronExpression, existing.timezone);
     const updated: Schedule = {
@@ -365,6 +384,9 @@ export class SchedulerService {
     if (!schedule) {
       throw new Error(`Schedule not found: ${id}`);
     }
+
+    // Reject foreign owner keys before allocating an execution record.
+    assertSupportedScheduledTeam(schedule.teamName);
 
     // Check locks
     if (this.activeRuns.has(id)) {
@@ -429,6 +451,7 @@ export class SchedulerService {
 
   /** Historic records may be invalid: log and keep the rest of startup running. */
   private createCronJob(schedule: Schedule): void {
+    if (isHostTeamSelectionKey(schedule.teamName)) return;
     try {
       getValidScheduleNextRuns(schedule.cronExpression, schedule.timezone);
       const job = this.prepareCronJob(schedule);
@@ -528,8 +551,8 @@ export class SchedulerService {
 
   private async onCronTick(scheduleId: string): Promise<void> {
     const schedule = await this.repository.getSchedule(scheduleId);
-    if (schedule?.status !== 'active') {
-      logger.debug(`Cron tick for ${scheduleId} skipped (not active)`);
+    if (schedule?.status !== 'active' || isHostTeamSelectionKey(schedule.teamName)) {
+      logger.debug(`Cron tick for ${scheduleId} skipped (not active or unsupported owner)`);
       return;
     }
 
@@ -572,6 +595,12 @@ export class SchedulerService {
   // ===========================================================================
 
   private async executeRunInBackground(schedule: Schedule, run: ScheduleRun): Promise<void> {
+    // Also guard an already-queued callback from before this code was deployed.
+    // A Host selection key must never reach the legacy one-shot or team runtime.
+    if (isHostTeamSelectionKey(schedule.teamName)) {
+      await this.completeRun(run, 'skipped', null, HOST_SCHEDULE_UNSUPPORTED);
+      return;
+    }
     const { id: scheduleId, launchConfig } = schedule;
 
     // Acquire locks
@@ -721,33 +750,10 @@ export class SchedulerService {
     error?: string,
     linkedTaskId?: string
   ): Promise<void> {
-    const completedAt = new Date().toISOString();
-    const startedAt = new Date(run.startedAt).getTime();
-    const durationMs = Date.now() - startedAt;
-
-    const updatedRun: ScheduleRun = {
-      ...run,
-      status,
-      completedAt,
-      durationMs,
-      exitCode,
-      summary: summary ?? run.summary,
-      error: error ?? run.error,
-      ...(linkedTaskId ? { linkedTaskId } : {}),
-    };
-
-    await this.repository.saveRun(updatedRun);
-
-    const eventType =
-      status === 'completed' || status === 'dispatched' || status === 'skipped'
-        ? 'run-completed'
-        : 'run-failed';
-    this.emitChange({
-      type: eventType,
-      scheduleId: run.scheduleId,
-      teamName: run.teamName,
-      detail: error,
-    });
+    await completeScheduleRun(
+      this.repository, (event) => this.emitChange(event),
+      run, status, exitCode, summary, error, linkedTaskId
+    );
   }
 
   // ===========================================================================
@@ -820,10 +826,6 @@ export class SchedulerService {
       teamName: fresh.teamName,
     });
   }
-
-  // ===========================================================================
-  // Recovery
-  // ===========================================================================
 
   // ===========================================================================
   // Helpers

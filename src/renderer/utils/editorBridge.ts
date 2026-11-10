@@ -31,9 +31,16 @@ let activeView: EditorView | null = null;
 export const editorBridge = {
   states,
   scrolls,
-  revision(filePath: string): string { return `${sessionRevision}:${revisions.get(filePath) ?? 0}`; },
+  revision(filePath: string): string {
+    return `${sessionRevision}:${revisions.get(filePath) ?? 0}`;
+  },
   /** Reuse dirty state; refresh clean state when the on-disk baseline/mode changes. */
-  prepareState(filePath: string, mtimeMs: number | undefined, readOnly: boolean, dirty: boolean): void {
+  prepareState(
+    filePath: string,
+    mtimeMs: number | undefined,
+    readOnly: boolean,
+    dirty: boolean
+  ): void {
     const previous = origins.get(filePath);
     if (!dirty && previous && (previous.mtimeMs !== mtimeMs || previous.readOnly !== readOnly)) {
       this.deleteState(filePath);
@@ -42,7 +49,10 @@ export const editorBridge = {
   },
   touchState(filePath: string, modified: Record<string, boolean>): void {
     const state = states.get(filePath);
-    if (state) { states.delete(filePath); states.set(filePath, state); }
+    if (state) {
+      states.delete(filePath);
+      states.set(filePath, state);
+    }
     let chars = [...states.values()].reduce((sum, entry) => sum + entry.doc.length, 0);
     for (const [key, entry] of states) {
       if (states.size <= 30 && chars * 2 <= 64 * 1024 * 1024) break;
@@ -56,10 +66,18 @@ export const editorBridge = {
     if (origin) origins.set(filePath, { ...origin, mtimeMs });
   },
   releaseView(view: EditorView): void {
-    if (activeView === view) { activeView = null; activeFilePath = null; }
+    if (activeView === view) {
+      activeView = null;
+      activeFilePath = null;
+    }
   },
   /** Called by CodeMirrorEditor on mount */
-  register(sc: Map<string, EditorState>, stc: Map<string, number>, view: EditorView, filePath?: string): void {
+  register(
+    sc: Map<string, EditorState>,
+    stc: Map<string, number>,
+    view: EditorView,
+    filePath?: string
+  ): void {
     stateCache = sc;
     scrollTopCache = stc;
     activeView = view;
@@ -78,9 +96,15 @@ export const editorBridge = {
   },
 
   captureSave(filePath: string): EditorSaveSnapshot | null {
-    const state = activeView && activeFilePath === filePath ? activeView.state : stateCache?.get(filePath);
+    const state =
+      activeView && activeFilePath === filePath ? activeView.state : stateCache?.get(filePath);
     if (!state || state.facet(EditorState.readOnly)) return null;
-    return { content: state.sliceDoc(), document: state.doc, revision: this.revision(filePath), session: sessionRevision };
+    return {
+      content: state.sliceDoc(),
+      document: state.doc,
+      revision: this.revision(filePath),
+      session: sessionRevision,
+    };
   },
   matchesSaveSession(snapshot: EditorSaveSnapshot): boolean {
     return snapshot.session === sessionRevision;
@@ -89,12 +113,14 @@ export const editorBridge = {
     return this.revision(filePath) === snapshot.revision;
   },
   matchesSaveDocument(filePath: string, snapshot: EditorSaveSnapshot): boolean {
-    const state = activeView && activeFilePath === filePath ? activeView.state : stateCache?.get(filePath);
+    const state =
+      activeView && activeFilePath === filePath ? activeView.state : stateCache?.get(filePath);
     return this.matchesSaveTarget(filePath, snapshot) && state?.doc === snapshot.document;
   },
   /** Get content for a single file from cached EditorState */
   getContent(filePath: string): string | null {
-    const state = activeView && activeFilePath === filePath ? activeView.state : stateCache?.get(filePath);
+    const state =
+      activeView && activeFilePath === filePath ? activeView.state : stateCache?.get(filePath);
     // Read-only preview protection also covers direct store/bridge save callers.
     return state && !state.facet(EditorState.readOnly) ? state.sliceDoc() : null;
   },
@@ -146,7 +172,10 @@ export const editorBridge = {
     stateCache!.set(newPath, state);
     scrollTopCache?.delete(oldPath);
     if (scroll !== undefined) scrollTopCache?.set(newPath, scroll);
-    if (origin) { origins.delete(oldPath); origins.set(newPath, origin); }
+    if (origin) {
+      origins.delete(oldPath);
+      origins.set(newPath, origin);
+    }
     if (isActive) activeFilePath = newPath;
   },
 

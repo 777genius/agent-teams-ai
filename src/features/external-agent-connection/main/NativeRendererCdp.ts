@@ -1,7 +1,7 @@
 import { readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
-import { app, type WebContents,webContents } from 'electron';
+import { app, type WebContents, webContents } from 'electron';
 
 import {
   type AppConnectionContext,

@@ -1505,6 +1505,7 @@
       "labelPlaceholder": "cth., Semakan kod harian, Ujian malam...",
       "maxBudgetUsd": "Belanjawan maksimum (USD)",
       "maxTurns": "Giliran maksimum",
+      "executionLimitsNote": "Had ini hanya terpakai pada pelaksanaan kendiri sekali sahaja. Had ini tidak terpakai pada tugasan yang diberikan kepada pasukan yang sedang berjalan.",
       "noLimit": "Tiada had",
       "noMatches": "Tiada pasukan sepadan dengan carian anda.",
       "noTeams": "Tiada pasukan tersedia. Cipta pasukan dahulu.",
@@ -2140,7 +2141,9 @@
     "status": {
       "active": "Aktif",
       "paused": "Dijeda",
-      "disabled": "Dilumpuhkan"
+      "disabled": "Dilumpuhkan",
+      "hostUnsupported": "Penjadualan Host tidak tersedia",
+      "saved": "Disimpan"
     },
     "runStatus": {
       "pending": "Tertangguh",

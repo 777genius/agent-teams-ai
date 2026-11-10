@@ -20,6 +20,7 @@ interface MemberWorkSyncTeamDeletionState {
    * purge on this team is outstanding.
    */
   destructivePhase: Promise<void> | null;
+  capturedPurge?: () => Promise<void>;
 }
 
 export interface MemberWorkSyncTeamDeletionCoordinatorPorts {
@@ -36,6 +37,7 @@ export interface MemberWorkSyncTeamDeletionCoordinatorPorts {
   resumeRouter(teamName: string): void;
   enqueueStartupScan(teamNames: string[]): Promise<void>;
   purgeTeam(teamName: string, deletionIdentityId?: string): Promise<void>;
+  capturePurgeTeam?(teamName: string, deletionIdentityId?: string): () => Promise<void>;
 }
 
 /**
@@ -84,6 +86,15 @@ export class MemberWorkSyncTeamDeletionCoordinator {
       return currentState.preparation;
     }
 
+    let capturedPurge: (() => Promise<void>) | undefined;
+    try {
+      capturedPurge = this.ports.capturePurgeTeam?.(
+        teamName,
+        deletionIdentityId?.trim() || undefined
+      );
+    } catch (error) {
+      return Promise.reject(error);
+    }
     const quiescedTeamName =
       currentState && !currentState.resumeReleased
         ? (currentState.quiescedTeamName ?? teamName)
@@ -91,6 +102,7 @@ export class MemberWorkSyncTeamDeletionCoordinator {
     const precedingDestructivePhase = currentState?.destructivePhase ?? null;
     const state: MemberWorkSyncTeamDeletionState = {
       status: 'deleting',
+      capturedPurge,
       preparation: null,
       preparationSucceeded: false,
       pendingResumeTeamName: currentState?.pendingResumeTeamName ?? null,
@@ -222,9 +234,11 @@ export class MemberWorkSyncTeamDeletionCoordinator {
         throw abandonedPreparationError(teamName);
       }
     }
-    const purge = state.deletionIdentityId
-      ? this.ports.purgeTeam(teamName, state.deletionIdentityId)
-      : this.ports.purgeTeam(teamName);
+    const purge = state.capturedPurge
+      ? state.capturedPurge()
+      : state.deletionIdentityId
+        ? this.ports.purgeTeam(teamName, state.deletionIdentityId)
+        : this.ports.purgeTeam(teamName);
     // Recorded with no await in between, so an abort either sees no purge of
     // its own at all or sees exactly the one it has to wait for.
     state.destructivePhase = purge.then(

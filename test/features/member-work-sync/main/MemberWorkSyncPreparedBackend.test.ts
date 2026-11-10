@@ -1,3 +1,4 @@
+import { internalStorageInterruption } from '@features/member-work-sync/main/infrastructure/internalStorageInterruption';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -166,6 +167,7 @@ describe('prepared backend production storage path', () => {
     async (kind) => {
       const h = await setup(kind);
       const authority = new MemberWorkSyncStatusAuthority({
+      interruption: internalStorageInterruption,
         identity: createTestWorkSyncIdentity(identity.incarnation),
         withPreparedBackend: (binding, operation) =>
           h.store.withPreparedBackend(binding, operation),

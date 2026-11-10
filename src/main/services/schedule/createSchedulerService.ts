@@ -30,6 +30,7 @@ export function createSchedulerService(
     getMemberStatuses: (teamName) => apis.memberLifecycle.getMemberSpawnStatuses(teamName),
     getLeadName: (teamName) => data.getLeadMemberName(teamName),
     getSavedRequest: (teamName) => data.getSavedRequest(teamName),
+    hasLaunchConfig: async (teamName) => (await configReader.getConfigVerified(teamName)) !== null,
     hasActiveOwnedTask: (teamName, memberName) => data.hasActiveOwnedTask(teamName, memberName),
     hasRunnableConfig: async (teamName) => {
       const config = await configReader.getConfig(teamName);

@@ -3,6 +3,8 @@ import { dirname } from 'node:path';
 
 import { atomicWriteAsync, syncDirectoryDurably } from '@main/utils/atomicWrite';
 
+import type { AdmittedLegacySourceWrite } from '@agent-teams/legacy-agent-host/lifecycle';
+
 export interface InternalStorageJsonReplicaEnvelope<TSnapshot> {
   schemaVersion: 1;
   state: 'dirty' | 'clean';
@@ -36,7 +38,10 @@ export class InternalStorageFallbackUnsafeError extends Error {
 export class InternalStorageJsonReplica<TSnapshot> {
   constructor(
     private readonly getPath: (teamName: string) => string,
-    private readonly isSnapshot: (value: unknown, teamName: string) => value is TSnapshot
+    private readonly isSnapshot: (value: unknown, teamName: string) => value is TSnapshot,
+    private readonly sourceWriteAdmission?: (
+      teamName: string
+    ) => AdmittedLegacySourceWrite | undefined
   ) {}
 
   async markDirty(teamName: string): Promise<void> {
@@ -188,17 +193,30 @@ export class InternalStorageJsonReplica<TSnapshot> {
     return parsed;
   }
 
-  private async write(
+  private write(
     teamName: string,
     envelope: InternalStorageJsonReplicaEnvelope<TSnapshot>
   ): Promise<void> {
+    const admission = this.sourceWriteAdmission?.(teamName);
+    const publish = () => this.writeWithinAdmission(teamName, envelope, admission?.assertCurrent);
+    return admission ? admission.publish(publish) : publish();
+  }
+
+  private async writeWithinAdmission(
+    teamName: string,
+    envelope: InternalStorageJsonReplicaEnvelope<TSnapshot>,
+    assertCurrent?: () => void
+  ): Promise<void> {
+    assertCurrent?.();
     const replicaPath = this.getPath(teamName);
     const replicaDirectory = dirname(replicaPath);
     const firstCreatedDirectory = await mkdir(replicaDirectory, { recursive: true });
     if (firstCreatedDirectory) {
       await syncDirectoryDurably(dirname(firstCreatedDirectory));
     }
+    assertCurrent?.();
     await atomicWriteAsync(replicaPath, `${JSON.stringify(envelope, null, 2)}\n`, {
+      ...(assertCurrent ? { assertCurrent } : {}),
       durability: 'strict',
       syncDirectory: true,
     });

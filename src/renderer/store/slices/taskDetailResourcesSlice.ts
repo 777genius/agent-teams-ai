@@ -1,9 +1,10 @@
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import {
   isValidTaskDetailIdentity,
   normalizeTaskDetailIdentity,
   taskDetailKey,
 } from '@features/team-task-detail/core';
-import { api } from '@renderer/api';
+import { api, reviewApiForTeam } from '@renderer/api';
 import {
   buildTaskChangeRequestOptions,
   buildTaskChangeSignature,
@@ -32,6 +33,12 @@ import type {
   TaskChangeRequestOptions,
   TaskChangeSetV2,
 } from '@shared/types';
+import type {
+  HostTaskActivityView,
+  HostTaskExactLogs,
+  HostTaskLogDetailResult,
+  HostTaskLogStream,
+} from '@shared/types/teamActivity';
 import type { StateCreator } from 'zustand';
 
 type TaskDetailResourceValue =
@@ -41,7 +48,11 @@ type TaskDetailResourceValue =
   | BoardTaskActivityEntry[]
   | BoardTaskActivityDetailResult
   | BoardTaskExactLogSummariesResponse
-  | BoardTaskExactLogDetailResult;
+  | BoardTaskExactLogDetailResult
+  | HostTaskActivityView
+  | HostTaskExactLogs
+  | HostTaskLogDetailResult
+  | HostTaskLogStream;
 
 export interface TaskDetailResourceEntry {
   identity: TaskDetailIdentity;
@@ -240,6 +251,18 @@ export const createTaskDetailResourcesSlice: StateCreator<
     return request.promise;
   };
 
+  const readLogSummary = async (
+    identity: TaskDetailIdentity
+  ): Promise<BoardTaskLogStreamSummary> => {
+    if (isHostTeamSelectionKey(identity.teamName))
+      return api.teams.getTaskLogStreamSummary(identity.teamName, identity.taskId);
+    return (
+      (await api.teams.getTaskLogStreamSummary?.(identity.teamName, identity.taskId)) ?? {
+        segmentCount: 0,
+      }
+    );
+  };
+
   const ensureVisibleKind = async (
     identity: TaskDetailIdentity,
     kind: TaskDetailVisibleResourceKind,
@@ -257,7 +280,7 @@ export const createTaskDetailResourcesSlice: StateCreator<
         'changes',
         signature,
         () =>
-          api.review.getTaskChanges(
+          reviewApiForTeam(identity.teamName, { taskId: identity.taskId }).getTaskChanges(
             identity.teamName,
             identity.taskId,
             buildTaskChangeRequestOptions(task, { since, summaryOnly: true, forceFresh })
@@ -267,16 +290,7 @@ export const createTaskDetailResourcesSlice: StateCreator<
       return;
     }
     if (kind === 'log-summary') {
-      await ensureResource(
-        identity,
-        kind,
-        signature,
-        async () =>
-          (await api.teams.getTaskLogStreamSummary?.(identity.teamName, identity.taskId)) ?? {
-            segmentCount: 0,
-          },
-        forceFresh
-      );
+      await ensureResource(identity, kind, signature, () => readLogSummary(identity), forceFresh);
       return;
     }
     if (kind === 'log-stream') {
@@ -352,22 +366,20 @@ export const createTaskDetailResourcesSlice: StateCreator<
         'changes',
         signature,
         () =>
-          api.review.getTaskChanges(identity.teamName, identity.taskId, {
-            ...options,
-            forceFresh,
-            retryBackfill: forceFresh || options.retryBackfill,
-          }),
+          reviewApiForTeam(identity.teamName, { taskId: identity.taskId }).getTaskChanges(
+            identity.teamName,
+            identity.taskId,
+            {
+              ...options,
+              forceFresh,
+              retryBackfill: forceFresh || options.retryBackfill,
+            }
+          ),
         forceFresh
       ),
 
     ensureTaskDetailLogSummary: (identity) =>
-      ensureResource(identity, 'log-summary', 'default', async () => {
-        return (
-          (await api.teams.getTaskLogStreamSummary?.(identity.teamName, identity.taskId)) ?? {
-            segmentCount: 0,
-          }
-        );
-      }),
+      ensureResource(identity, 'log-summary', 'default', () => readLogSummary(identity)),
 
     ensureTaskDetailLogStream: (identity) =>
       ensureResource(identity, 'log-stream', 'default', () =>

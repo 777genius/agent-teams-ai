@@ -47,7 +47,7 @@ vi.mock('fs/promises', async (importOriginal) => {
   };
 });
 
-vi.mock('@main/utils/atomicWrite', () => atomicWriteMocks);
+vi.mock('@agent-teams/task-change-ledger/review-io', () => atomicWriteMocks);
 
 function regularFileStats(dev = 1, ino = 1) {
   return {
@@ -484,7 +484,7 @@ describe('ReviewApplierService', () => {
     expect(writeFile).toHaveBeenCalledWith(filePath, 'one\r\ntwo\r\nTHREE\r\n\r\n', 'utf8');
   });
 
-  it('serializes concurrent partial rejects for the same file without losing either result', async () => {
+  it('serializes concurrent partial rejects across applier instances without losing either result', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
     const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
@@ -502,7 +502,7 @@ describe('ReviewApplierService', () => {
     const svc = new ReviewApplierService();
     const results = await Promise.all([
       svc.rejectHunks('team', filePath, original, modified, [0], []),
-      svc.rejectHunks('team', filePath, original, modified, [1], []),
+      new ReviewApplierService().rejectHunks('team', filePath, original, modified, [1], []),
     ]);
 
     expect(results.every((result) => result.success)).toBe(true);
@@ -641,13 +641,16 @@ describe('ReviewApplierService', () => {
     await expect(
       new ReviewApplierService().classifyEditedFileTransition(filePath, 'before\n', 'after\n')
     ).resolves.toBe('after');
-    expect(atomicWriteMocks.resumePreparedReviewFileTransaction).toHaveBeenCalledWith({
-      kind: 'replace',
-      sourcePath: filePath,
-      targetPath: filePath,
-      expectedContent: 'before\n',
-      nextContent: 'after\n',
-    });
+    expect(atomicWriteMocks.resumePreparedReviewFileTransaction).toHaveBeenCalledWith(
+      {
+        kind: 'replace',
+        sourcePath: filePath,
+        targetPath: filePath,
+        expectedContent: 'before\n',
+        nextContent: 'after\n',
+      },
+      {}
+    );
   });
 
   it('classifies exact ledger rename states used by crash recovery', async () => {
@@ -732,13 +735,16 @@ describe('ReviewApplierService', () => {
 
     await expect(classify()).resolves.toBe('accepted');
     await expect(classify()).resolves.toBe('accepted');
-    expect(atomicWriteMocks.resumePreparedReviewFileTransaction).toHaveBeenCalledWith({
-      kind: 'move',
-      sourcePath: oldPath,
-      targetPath: newPath,
-      expectedContent: oldContent,
-      nextContent: newContent,
-    });
+    expect(atomicWriteMocks.resumePreparedReviewFileTransaction).toHaveBeenCalledWith(
+      {
+        kind: 'move',
+        sourcePath: oldPath,
+        targetPath: newPath,
+        expectedContent: oldContent,
+        nextContent: newContent,
+      },
+      {}
+    );
     expect(atomicWriteMocks.inspectReviewFileTransaction).toHaveBeenCalledWith(transaction);
     expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
 

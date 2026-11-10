@@ -64,3 +64,33 @@ describe('registerCodexAccountIpc', () => {
     expect(feature.startChatgptLogin).not.toHaveBeenCalled();
   });
 });
+
+it('captured native IPC rejects foreign senders before I/O and late replies after context changes', async () => {
+  const handlers = new Map<string, (...args: unknown[]) => unknown>();
+  const ipc = {
+    handle: (channel: string, handler: (...args: unknown[]) => unknown) =>
+      handlers.set(channel, handler),
+  };
+  let current = true,
+    finish!: (value: unknown) => void;
+  const feature = {
+    getSnapshot: vi.fn(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    ),
+  };
+  const owner = {};
+  registerCodexAccountIpc(ipc as never, feature as never, (event) =>
+    event === owner ? () => current : null
+  );
+  const { CODEX_ACCOUNT_GET_SNAPSHOT } = await import('@features/codex-account/contracts');
+  const get = handlers.get(CODEX_ACCOUNT_GET_SNAPSHOT)!;
+  await expect(get({})).rejects.toThrow('not authorized');
+  expect(feature.getSnapshot).not.toHaveBeenCalled();
+  const pending = get(owner);
+  current = false;
+  finish({});
+  await expect(pending).rejects.toThrow('context changed');
+});

@@ -15,6 +15,7 @@ import {
   createTaskDetailReadEntry,
   EMPTY_TASK_DETAIL_SESSION,
   failTaskDetailSave,
+  failTaskDetailSubmit,
   ignoreTaskDetailPendingAttachment,
   releaseTaskDetailOwner,
   retireTaskDetailSessionWork,
@@ -593,5 +594,43 @@ describe('task detail critical read policies', () => {
     expect(session.editingDescription).toBe(true);
     expect(session.partRevisions.description).toBe(2);
     expect(session.partRevisions.subject).toBe(1);
+  });
+});
+
+describe('retained Host comment obligation', () => {
+  const request = {
+    text: 'ORIGINAL',
+    command: { commandId: 'TEST-original', idempotencyKey: 'TEST-original' },
+  };
+  it('retains immutable request and original part revisions through UNKNOWN, retirement and surface transfer; newer edits survive resolution', () => {
+    let session = updateTaskDetailPart({ ...EMPTY_TASK_DETAIL_SESSION }, 'commentText', 'ORIGINAL');
+    session = claimTaskDetailOwner(session, 'dialog');
+    const caller = structuredClone(request);
+    session = beginTaskDetailSubmit(session, session, caller);
+    const originalRevision = session.commentIntent!.submittedPartRevisions.commentText;
+    caller.text = 'MUTATED CALLER';
+    expect(session.commentIntent!.request.text).toBe('ORIGINAL');
+    session = failTaskDetailSubmit(session, session.submitRevision, 'lost ACK');
+    session = updateTaskDetailPart(session, 'commentText', 'NEWER EDIT');
+    session = retireTaskDetailSessionWork(session, true);
+    session = claimTaskDetailOwner(session, 'tab');
+    expect(session.commentIntent!.submittedPartRevisions.commentText).toBe(originalRevision);
+    session = beginTaskDetailSubmit(session, session, session.commentIntent!.request);
+    session = completeTaskDetailSubmit(session, session.submitRevision);
+    expect(session.commentText).toBe('NEWER EDIT');
+    expect(session.commentIntent).toBeUndefined();
+  });
+  it('keeps UNKNOWN but clears only matching proven no-effect submission at the accepted revision', () => {
+    const draft = updateTaskDetailPart({ ...EMPTY_TASK_DETAIL_SESSION }, 'commentText', 'DRAFT');
+    const first = beginTaskDetailSubmit(draft, draft, { ...request, text: 'DRAFT' });
+    expect(
+      failTaskDetailSubmit(first, first.submitRevision, 'unknown').commentIntent
+    ).toBeDefined();
+    expect(
+      failTaskDetailSubmit(first, first.submitRevision - 1, 'stale refusal', true).commentIntent
+    ).toBeDefined();
+    const refused = failTaskDetailSubmit(first, first.submitRevision, 'known no effect', true);
+    expect(refused.commentIntent).toBeUndefined();
+    expect(refused.commentText).toBe('DRAFT');
   });
 });

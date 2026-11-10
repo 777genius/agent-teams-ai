@@ -2,6 +2,7 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+import { pruneDeletedTeamBackups } from '@agent-teams/legacy-agent-host/lifecycle';
 import {
   atomicWriteAsync,
   atomicWriteSync,
@@ -17,7 +18,7 @@ import {
 } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
-import { TeamPermanentDeletionCoordinator } from './permanent-deletion/TeamPermanentDeletionCoordinator';
+import { createTeamPermanentDeletionCoordinator } from './permanent-deletion/TeamPermanentDeletionCoordinator';
 import {
   BackupPublicationFencedError,
   type TeamPermanentDeletionIntent,
@@ -38,22 +39,27 @@ import {
 } from './TeamBackupFileCollection';
 import {
   type BackupManifest,
-  getBackupManifestPath,
   readBackupManifest,
   readBackupManifestStrict,
   readBackupManifestStrictSync,
   writeBackupManifestStrictAware,
   writeBackupManifestSync,
 } from './teamBackupManifest';
-import { isValidConfig, isValidJson, TeamBackupRestoreService } from './TeamBackupRestoreService';
+import {
+  isValidConfig,
+  isValidJson,
+  pruneStaleStopMarkerBackupSync,
+  TeamBackupRestoreService,
+} from './TeamBackupRestoreService';
 import { loadTeamBackupStartupRegistry, readTeamBackupRegistry } from './TeamBackupStartupRegistry';
 import { TeamBackupWorkSyncRestoreCoordinator } from './TeamBackupWorkSyncRestoreCoordinator';
-import { TEAM_LAUNCH_STOPPED_MARKER_FILE } from './TeamLaunchStateStore';
 
+import type { TeamPermanentDeletionCoordinator } from './permanent-deletion/TeamPermanentDeletionCoordinator';
 import type { PermanentDeletionLock } from './permanent-deletion/TeamPermanentDeletionLock';
 import type { BackupRegistry, BackupRegistryEntry } from './TeamBackupStartupRegistry';
 import type { TeamDataService } from './TeamDataService';
 import type { TeamWorkSyncRestoreAttemptPorts } from './TeamWorkSyncRestoreAttemptOwner';
+import type { LegacySourceWriteAdmissionPolicy } from '@agent-teams/legacy-agent-host/lifecycle';
 import type { MemberWorkSyncRestoreParticipant } from '@features/member-work-sync/main';
 
 export type {
@@ -65,8 +71,9 @@ const logger = createLogger('TeamBackupService');
 
 const PERIODIC_INTERVAL_MS = 3 * 60 * 1000;
 const TASK_DEBOUNCE_MS = 500;
-const DELETED_RETENTION_DAYS = 30;
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
+
+// Helpers
 
 function isEnoent(err: unknown): boolean {
   return (err as NodeJS.ErrnoException).code === 'ENOENT';
@@ -76,7 +83,25 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+// ---------------------------------------------------------------------------
+// TeamBackupService
+// ---------------------------------------------------------------------------
+
+export interface SelectedHostTeamBackup {
+  sourceWriteAdmission?: LegacySourceWriteAdmissionPolicy;
+  startup(): Promise<void>;
+  tick(): Promise<void>;
+}
 export class TeamBackupService {
+  private selectedHostBackup?: SelectedHostTeamBackup;
+  /** Composition selects this before initialization; the existing timer remains the sole scheduler. */
+  configureSelectedHostBackup(backup: SelectedHostTeamBackup): void {
+    if (this.initializationPromise || this.initialized)
+      throw new Error('Backup backend already captured');
+    this.selectedHostBackup = backup;
+    this.configuration?.setLegacySourceWriteAdmission?.(backup.sourceWriteAdmission);
+  }
+
   private registry: BackupRegistry = { version: 1, teams: {} };
   private periodicTimer: ReturnType<typeof setInterval> | null = null;
   private taskDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -86,7 +111,8 @@ export class TeamBackupService {
   private isShuttingDown = false;
   private backupGeneration = 0;
   private periodicBackupActive = false;
-  private readonly permanentDeletion = new TeamPermanentDeletionCoordinator({
+  private readonly permanentDeletion = createTeamPermanentDeletionCoordinator({
+    sourceWriteAdmissionPolicy: () => this.sourceWriteAdmission,
     awaitInitialization: () => this.awaitInitialization(),
     isInitialized: () => this.initialized,
     isShuttingDown: () => this.isShuttingDown,
@@ -121,13 +147,12 @@ export class TeamBackupService {
   });
 
   /**
-   * The teams directory is shared with other app profiles and native sessions,
-   * and a backup writes its identity marker into the team's config.json, so
-   * only teams this profile manages are backed up. Without the provisioning
-   * service's view a team is this profile's only when its owner marker says so.
+   * The teams directory is shared with other app profiles and native sessions.
+   * Only teams belonging to this profile are backed up.
    */
   constructor(
-    configuration?: Pick<TeamDataService, 'setConfigurationIdentityFence'>,
+    private readonly configuration?: Pick<TeamDataService, 'setConfigurationIdentityFence'> &
+      Partial<Pick<TeamDataService, 'setLegacySourceWriteAdmission'>>,
     private readonly ownership: TeamProfileOwnership = createTeamProfileOwnership({
       isTrackedInThisProcess: () => false,
     })
@@ -169,21 +194,40 @@ export class TeamBackupService {
     await this.permanentDeletion.initialize();
     await this.reconcileResurrectedTeams();
     await this.workSyncRestore.restoreIfNeeded(onProgress);
+    await this.selectedHostBackup?.startup();
     if (this.isShuttingDown) throw new Error('Backup startup interrupted by shutdown');
     void this.pruneStaleBackups().catch((err: unknown) =>
       logger.warn(`[Backup] prune failed: ${String(err)}`)
     );
     this.initialized = true;
+    this.startPeriodicBackup();
+    logger.info('[Backup] TeamBackupService initialized');
+  }
+
+  private startPeriodicBackup(): void {
     this.periodicTimer = setInterval(() => {
       void this.runPeriodicBackup().catch((err: unknown) =>
         logger.warn(`[Backup] periodic failed: ${String(err)}`)
       );
     }, PERIODIC_INTERVAL_MS);
     this.periodicTimer.unref();
-    logger.info('[Backup] TeamBackupService initialized');
   }
 
-  async backupTeam(teamName: string): Promise<void> {
+  get sourceWriteAdmission(): LegacySourceWriteAdmissionPolicy | undefined {
+    return this.selectedHostBackup?.sourceWriteAdmission;
+  }
+
+  private runLegacyBackupWrite(teamName: string, operation: () => Promise<void>): Promise<void> {
+    const admission = this.sourceWriteAdmission?.capture(teamName);
+    if (admission?.kind === 'read-only') return Promise.resolve();
+    return admission ? admission.run(operation) : operation();
+  }
+
+  backupTeam(teamName: string): Promise<void> {
+    return this.runLegacyBackupWrite(teamName, () => this.backupTeamWithinAdmission(teamName));
+  }
+
+  private async backupTeamWithinAdmission(teamName: string): Promise<void> {
     await this.awaitInitialization();
     if (this.isShuttingDown) return;
     await this.workSyncRestore.runWhileQuiesced(teamName, () =>
@@ -195,12 +239,19 @@ export class TeamBackupService {
 
   scheduleTaskBackup(teamName: string, taskFile: string): void {
     if (this.isShuttingDown || !this.initialized) return;
+    const admission = this.sourceWriteAdmission?.capture(teamName);
+    if (admission?.kind === 'read-only') return;
+    const execution = admission?.run(() => this.sourceWriteAdmission!.bindExecution(teamName));
     const key = `${teamName}/${taskFile}`;
     const existing = this.taskDebounceTimers.get(key);
     if (existing) clearTimeout(existing);
     const timer = setTimeout(() => {
-      this.taskDebounceTimers.delete(key);
-      void this.backupTeam(teamName).catch(() => undefined);
+      if (this.taskDebounceTimers.get(key) === timer) this.taskDebounceTimers.delete(key);
+      if (execution)
+        void Promise.resolve()
+          .then(() => execution.run(() => this.backupTeam(teamName)))
+          .catch(() => undefined);
+      else void this.backupTeam(teamName).catch(() => undefined);
     }, TASK_DEBOUNCE_MS);
     this.taskDebounceTimers.set(key, timer);
   }
@@ -220,7 +271,10 @@ export class TeamBackupService {
       if (this.permanentDeletion.isPermanentDeletionFencedSync(teamName, entry.identityId))
         continue;
       try {
-        this.doBackupTeamSync(teamName);
+        const admission = this.sourceWriteAdmission?.capture(teamName);
+        if (admission?.kind === 'read-only') continue;
+        if (admission) admission.run(() => this.doBackupTeamSync(teamName));
+        else this.doBackupTeamSync(teamName);
       } catch (err: unknown) {
         logger.warn(`[Backup] shutdown backup failed for ${teamName}: ${String(err)}`);
       }
@@ -295,58 +349,17 @@ export class TeamBackupService {
   }
 
   async pruneStaleBackups(): Promise<void> {
-    const cutoff = Date.now() - DELETED_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-    let changed = false;
-    for (const [teamName, entry] of Object.entries(this.registry.teams)) {
-      if (entry.status !== 'deleted_by_user' || !entry.deletedByUserAt) continue;
-      const deletedAt = new Date(entry.deletedByUserAt).getTime();
-      if (deletedAt > cutoff) continue;
-      const didPrune = await this.withTeamIdentityFence(teamName, async () => {
-        const currentEntry = this.registry.teams[teamName];
-        if (
-          currentEntry?.status !== 'deleted_by_user' ||
-          currentEntry.identityId !== entry.identityId ||
-          currentEntry.deletedByUserAt !== entry.deletedByUserAt
-        ) {
-          return false;
-        }
-        const currentManifest = await readBackupManifestStrict(
-          path.join(this.getBackupDir(teamName), 'manifest.json'),
-          teamName
-        );
-        if (currentManifest?.workSyncRestorePending) return false;
-        if (currentManifest && currentManifest.identityId !== entry.identityId) return false;
-
-        const backupDir = this.getBackupDir(teamName);
-        const removal = await removePathWithIdentityFenceAsync(backupDir, {
-          recursive: true,
-          force: true,
-          durability: 'strict',
-          validateDetached: async (detachedPath) => {
-            try {
-              const manifest = JSON.parse(
-                await fs.promises.readFile(getBackupManifestPath(detachedPath), 'utf8')
-              ) as BackupManifest;
-              return (
-                manifest.teamName === teamName &&
-                manifest.identityId === entry.identityId &&
-                manifest.status === 'deleted_by_user' &&
-                !Object.hasOwn(manifest, 'workSyncRestorePending')
-              );
-            } catch {
-              return false;
-            }
-          },
-        });
-        if (removal === 'changed') return false;
-        if (this.registry.teams[teamName]?.identityId === entry.identityId) {
-          delete this.registry.teams[teamName];
-        }
-        logger.info(`[Backup] Pruned stale backup for ${teamName}`);
-        return true;
-      });
-      if (didPrune) changed = true;
-    }
+    const changed = await pruneDeletedTeamBackups({
+      entries: () => this.registry.teams,
+      directory: (name) => this.getBackupDir(name),
+      withIdentityFence: (name, operation) => this.withTeamIdentityFence(name, operation),
+      assertPrunable() {},
+      onPruned: async (name, entry) => {
+        if (this.registry.teams[name]?.identityId === entry.identityId)
+          delete this.registry.teams[name];
+      },
+      log: (message) => logger.info(message),
+    });
     if (changed) await this.saveRegistry();
   }
 
@@ -390,14 +403,17 @@ export class TeamBackupService {
       const teamNames = await this.discoverActiveTeams();
       for (const teamName of teamNames) {
         if (this.isShuttingDown) return;
-        if (await this.isRestoreSourceProtected(teamName)) continue;
-        if (this.workSyncRestore.isRestoreActive(teamName)) continue;
-        await this.workSyncRestore.runWhileQuiesced(teamName, () =>
-          this.withTeamIdentityFence(teamName, () =>
-            this.withTeamMutex(teamName, () => this.doBackupTeam(teamName))
-          )
-        );
+        await this.runLegacyBackupWrite(teamName, async () => {
+          if (await this.isRestoreSourceProtected(teamName)) return;
+          if (this.workSyncRestore.isRestoreActive(teamName)) return;
+          await this.workSyncRestore.runWhileQuiesced(teamName, () =>
+            this.withTeamIdentityFence(teamName, () =>
+              this.withTeamMutex(teamName, () => this.doBackupTeam(teamName))
+            )
+          );
+        });
       }
+      await this.selectedHostBackup?.tick();
     } finally {
       this.periodicBackupActive = false;
     }
@@ -606,7 +622,7 @@ export class TeamBackupService {
     for (const descriptor of sourceFiles) {
       this.backupSingleFileSync(descriptor, backupDir, manifest);
     }
-    this.pruneStaleStopMarkerBackupSync(teamName, backupDir, manifest);
+    pruneStaleStopMarkerBackupSync(teamName, backupDir, manifest);
 
     manifest.lastBackupAt = nowIso();
     this.saveManifestSync(teamName, manifest);
@@ -618,26 +634,6 @@ export class TeamBackupService {
       deletedByUserAt: manifest.deletedByUserAt,
       lastBackupAt: manifest.lastBackupAt,
     };
-  }
-
-  /**
-   * The shutdown backup only adds files, so a stop marker the team no longer
-   * has would stay in the backup and freeze every later restore of its launch
-   * state. Only a proven ENOENT drops it: unreadable is not absent.
-   */
-  private pruneStaleStopMarkerBackupSync(
-    teamName: string,
-    backupDir: string,
-    manifest: BackupManifest
-  ): void {
-    try {
-      fs.statSync(path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_STOPPED_MARKER_FILE));
-      return;
-    } catch (err: unknown) {
-      if (!isEnoent(err)) return;
-    }
-    fs.rmSync(path.join(backupDir, TEAM_LAUNCH_STOPPED_MARKER_FILE), { force: true });
-    delete manifest.fileStats[TEAM_LAUNCH_STOPPED_MARKER_FILE];
   }
 
   private async backupSingleFile(

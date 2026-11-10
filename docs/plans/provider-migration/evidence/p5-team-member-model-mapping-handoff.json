@@ -1,0 +1,32 @@
+{
+  "status": "PASS explicit captured member model mapping; ordinary existing-dialog E2E and full stage1 remain INCOMPLETE",
+  "evidence": "docs/plans/provider-migration/evidence/p5-team-member-model-mapping-v1/manifest.json",
+  "hostSource": "d9b2ef54405541ded22f305724593e3512fa4e7f4c95b0f135e4c33af1cea475",
+  "hostDist": "eab8dc1a09dc8042b21481e370bd97eaf104e5e4867ae9df1da419afc9416cf4",
+  "providerSha256": "543cfa030a0d0cda0c5b091c207906c6f175ed6cd9eec28090094ff0b085af59",
+  "implementation": {
+    "ui": "Existing dialog groups carry explicit lead/member references, originalName for renamed members, effective inheritance and exact effort. Removed rows are omitted. Legacy untargeted behavior stays unchanged. A small hook reuses the existing memo without adding controls or increasing frozen Launch dialog size. Model/effort inheritance is shared with existing Main member specs.",
+    "mapping": "Main resolves labels/roles against the authorized captured Host configuration to stable member IDs. Host configuration includes canonical roles and Main requires exactly one lead. Duplicate references/names, partial Claude coverage, provider mismatch and mixed targeted/untargeted checks are rejected before dispatch. No renderer-supplied stable member authority or private config.",
+    "capture": "Targets are validated and deeply captured before await. Targets form part of canonical request signatures, so swapping equal model/effort sets across members cannot reuse another mapping. Cache identity retains duplicate references for backend rejection.",
+    "workspace": "Dialog cwd must match captured lead workspace. Each member probe uses its own captured private cwd/HOME/config/account/endpoint. Runtime sessions remain unopened. Changed workspaces or dynamic roster/provider configuration still require owner support.",
+    "scope": "Claude model-only preflight. No launch/global auth authority is inferred. Untargeted callers retain conservative saved-selection matching. No new UI or new business state owner."
+  },
+  "checks": {
+    "jobId": "82ac3ff7ad4faa507d89fc2b21ea8b6e",
+    "host": "235/235 PASS with strict Host test typecheck; root typecheck/build PASS.",
+    "frontend": "257/257 PASS across25 files, including73 existing-dialog tests,28 captured preparation tests,7 context tests,4 target/inheritance builder tests and4 existing Main member-spec tests.",
+    "quality": "Affected fast lint, frozen source caps, provisioning architecture and whitespace PASS. Existing closeDialog dependency warning remains. Full lint/CI and other owning/final gates remain required."
+  },
+  "native": {
+    "scope": "Main application adapter -> DesktopBackendFeature -> standalone Host -> actual SDK0.3.305/CLI with three isolated localhost fixture endpoints. Not Electron sender/dialog or vendor API/auth acceptance.",
+    "facts": "10 requests:3 global,5 lead,2 worker. Both members have same saved model/low effort; lead requests use medium, worker requests high and each uses its own account/workspace/config endpoint. Concurrent preparations share original/successor results, warm/cold replay adds no request, revoke/regrant requires fresh checks for both members. Zero tools and no configured hook effect.",
+    "custody": "10 durable records:8 completed/2 cancelled, all resourceHeld:false. Both Host child exits confirmed; shutdown providerCustody remains unresolved and this run does not independently census every descendant. No full app Quit/Relaunch claim.",
+    "sourceBoundary": "Retained exact executed test, receipt/attempt, logs and full Host source/dist hashes; listed Main surface hashes only, not complete dependency closure or release qualification."
+  },
+  "remainingImmediate": [
+    "Dynamic roster/provider/workspace configuration, default/clear semantics and other providers.",
+    "Full selected configuration/capability/auth authority; ordinary replaceMembers -> launchTeam -> progress, create and Resume/relaunch.",
+    "Actual Electron E2E using existing Launch/Create/Resume controls and all remaining P0-P8/M01-M19 acceptance."
+  ],
+  "delivery": "Isolated worktree; existing UI only. Draft PRs with exact-head links to plan/contracts/matrix, no main/release merge. Stage2 excluded. No commit/push/PR/merge in this slice."
+}

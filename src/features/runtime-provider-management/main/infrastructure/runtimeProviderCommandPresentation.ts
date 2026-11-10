@@ -71,3 +71,8 @@ export function truncateCommandErrorDetail(message: string): string {
     ? message
     : `${message.slice(0, COMMAND_ERROR_DETAIL_LIMIT).trimEnd()}...`;
 }
+
+export function isCommandTimeoutMessage(value: string): boolean {
+  const normalized = value.toLowerCase();
+  return normalized.includes('timed out') || normalized.includes('timeout');
+}

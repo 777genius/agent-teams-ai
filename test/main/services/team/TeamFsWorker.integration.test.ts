@@ -23,16 +23,17 @@ async function getWorkerPath(): Promise<string> {
 
 async function bundleWorkerForTests(): Promise<string> {
   const outDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-bundle-'));
-  const outfile = path.join(outDir, 'team-fs-worker.cjs');
+  const outfile = path.join(outDir, 'team-fs-worker.mjs');
   await fs.writeFile(
     outfile,
     [
-      "const path = require('node:path');",
-      "const { createRequire } = require('node:module');",
+      "import path from 'node:path';",
+      "import { createRequire } from 'node:module';",
+      "import { pathToFileURL } from 'node:url';",
       "const requireFromRepo = createRequire(path.join(process.cwd(), 'package.json'));",
-      "const { register } = requireFromRepo('tsx/cjs/api');",
-      "register({ tsconfigPath: path.join(process.cwd(), 'tsconfig.json') });",
-      "require(path.join(process.cwd(), 'src', 'main', 'workers', 'team-fs-worker.ts'));",
+      "const { register } = requireFromRepo('tsx/esm/api');",
+      "register({ tsconfig: path.join(process.cwd(), 'tsconfig.json') });",
+      "await import(pathToFileURL(path.join(process.cwd(), 'src', 'main', 'workers', 'team-fs-worker.ts')).href);",
       '',
     ].join('\n'),
     'utf8'
@@ -573,6 +574,33 @@ describe('team-fs-worker integration', () => {
         subject: 'Changed subject with a different size',
       });
       expect(changed.diag?.cacheMisses).toBe(1);
+    } finally {
+      await worker.terminate();
+    }
+  });
+
+  it('keeps explicit Disapprove and unknown review tags distinct in worker projections', async () => {
+    const workerPath = await getWorkerPath();
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-task-review-worker-'));
+    const tasksBase = path.join(tempDir, 'tasks'), teamName = 'TEST-team';
+    const tasksDir = path.join(tasksBase, teamName);
+    await fs.mkdir(tasksDir, { recursive: true });
+    for (const [id, type] of [['1', 'review_disapproved'], ['2', 'unknown_review_decision']]) {
+      await fs.writeFile(path.join(tasksDir, id + '.json'), JSON.stringify({
+        id, subject: 'Review decision ' + id, status: 'completed', reviewState: 'approved',
+        createdAt: '2026-05-08T10:00:00.000Z',
+        historyEvents: [
+          { id: 'approved', type: 'review_approved', to: 'approved', timestamp: '2026-05-08T10:00:00.000Z' },
+          { id: 'decision', type, to: 'none', timestamp: '2026-05-08T10:05:00.000Z' },
+        ],
+      }));
+    }
+    const worker = createWorker(workerPath);
+    try {
+      const { tasks } = await callGetAllTasks(worker, tasksBase);
+      expect(tasks).toHaveLength(2);
+      expect(tasks.find((task) => (task as { id?: unknown }).id === '1')).toMatchObject({ reviewState: 'none' });
+      expect(tasks.find((task) => (task as { id?: unknown }).id === '2')).toMatchObject({ reviewState: 'approved' });
     } finally {
       await worker.terminate();
     }

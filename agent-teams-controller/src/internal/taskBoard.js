@@ -114,8 +114,8 @@ function taskBriefing(context, memberName) {
   return tasks.taskBriefing(context, memberName);
 }
 
-function getKanbanState(context) {
-  return kanban.getKanbanState(context);
+function getKanbanState(context, options) {
+  return kanban.getKanbanState(context, options);
 }
 
 function setKanbanColumn(context, taskId, column, options) {
@@ -150,6 +150,10 @@ function startReview(context, taskId, flags) {
   return review.startReview(context, taskId, flags);
 }
 
+function disapproveReview(context, taskId, flags) {
+  return review.disapproveReview(context, taskId, flags);
+}
+
 function approveReview(context, taskId, flags) {
   return review.approveReview(context, taskId, flags);
 }
@@ -163,6 +167,7 @@ module.exports = {
   addTaskAttachmentMeta,
   addTaskComment,
   approveReview,
+  disapproveReview,
   attachCommentFile,
   attachTaskFile,
   clearKanban,

@@ -69,6 +69,7 @@ import {
   resolvePassiveProviderRuntime,
 } from './cliInstallerStatusAuthority';
 
+import type { RuntimeProviderStatusPort } from '@features/runtime-provider-management/main';
 import type {
   CliInstallationStatus,
   CliInstallerGetStatusOptions,
@@ -387,19 +388,7 @@ function createCliInstallerRunDiag(): CliInstallerStatusRunDiag {
 }
 
 function resetGatherDiag(diag: CliInstallerStatusRunDiag): void {
-  diag.versionError = null;
-  diag.authAttempts = 0;
-  diag.authLastError = null;
-  diag.authStdoutLen = 0;
-  diag.authStdoutTail = '';
-  diag.authTimedOut = false;
-  diag.gatherError = null;
-  diag.shellEnvMs = null;
-  diag.binaryResolveMs = null;
-  diag.versionProbeMs = null;
-  diag.providerInitialWaitMs = null;
-  diag.totalMs = null;
-  diag.diagWriteScheduled = false;
+  Object.assign(diag, createCliInstallerRunDiag());
 }
 
 function cloneCliInstallerRunDiag(diag: CliInstallerStatusRunDiag): CliInstallerStatusRunDiag {
@@ -426,7 +415,10 @@ export class CliInstallerService {
   private statusGatherGeneration = 0;
   private readonly latestProviderSignatures = new Map<CliProviderId, string | null>();
 
-  constructor(private readonly now: () => number = Date.now) {}
+  constructor(
+    private readonly now: () => number = Date.now,
+    private readonly nativeStatus?: RuntimeProviderStatusPort
+  ) {}
 
   private rememberHealthyStatus(status: CliInstallationStatus): void {
     if (!status.installed || !status.binaryPath || status.launchError) {
@@ -564,7 +556,12 @@ export class CliInstallerService {
     this.mainWindow = window;
   }
 
+  usesNativeStatus(): boolean {
+    return this.nativeStatus !== undefined;
+  }
+
   getLatestStatusSnapshot(): CliInstallationStatus | null {
+    if (this.nativeStatus) return null;
     const now = this.now();
     return this.latestStatusSnapshot
       ? projectStatusAuthority(this.latestStatusSnapshot, now, cloneCliInstallationStatus)
@@ -824,6 +821,7 @@ export class CliInstallerService {
   // ---------------------------------------------------------------------------
 
   async getStatus(options: CliInstallerGetStatusOptions = {}): Promise<CliInstallationStatus> {
+    if (this.nativeStatus) return this.nativeStatus.getStatus(options);
     const statusStartedAt = Date.now();
     const providerStatusMode: CliInstallerProviderStatusMode = options.providerStatusMode ?? 'full';
     const generation = ++this.statusGatherGeneration;
@@ -868,6 +866,7 @@ export class CliInstallerService {
     providerId: CliProviderId,
     options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus | null> {
+    if (this.nativeStatus) return this.nativeStatus.getProviderStatus(providerId, options);
     // Cold polling stays passive. Explicit invalidation requests runtime-only rediscovery.
     const generation = this.statusGatherGeneration;
     await this.refreshInvalidatedRuntime(generation);
@@ -935,6 +934,7 @@ export class CliInstallerService {
   }
 
   async verifyProviderModels(providerId: CliProviderId): Promise<CliProviderStatus | null> {
+    if (this.nativeStatus) return this.nativeStatus.verifyProviderModels(providerId);
     await resolveInteractiveShellEnvBestEffort({
       timeoutMs: 1_500,
       fallbackEnv: process.env,
@@ -1400,6 +1400,7 @@ export class CliInstallerService {
   // ---------------------------------------------------------------------------
 
   async install(): Promise<void> {
+    if (this.nativeStatus) throw new Error('The selected Host is delivered with the application.');
     if (!getCliFlavorUiOptions(getConfiguredCliFlavor()).supportsSelfUpdate) {
       const error = 'Updates are disabled for the configured agent_teams_orchestrator runtime.';
       logger.warn(error);

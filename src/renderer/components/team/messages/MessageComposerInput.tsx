@@ -67,6 +67,7 @@ export const MessageComposerInput = ({
                       type="button"
                       className="message-composer-send-button inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-45"
                       disabled={!canSend}
+                      onMouseDown={(event) => event.preventDefault()}
                       onClick={submit}
                     >
                       <Send size={14} />

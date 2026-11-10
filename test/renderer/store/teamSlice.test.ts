@@ -1,3 +1,4 @@
+import { hostTeamRunId } from '@features/agent-backend/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { create } from 'zustand';
 
@@ -7534,6 +7535,42 @@ describe('teamSlice actions', () => {
       window.localStorage.removeItem('team:launchParams:my-team');
     });
 
+    it('adopts canonical Host Create progress without writing legacy name settings', async () => {
+      const store = createSliceStore();
+      const teamName = 'host-team:TEST-create-handle';
+      const runId = hostTeamRunId('TEST-create-handle', 'TEST-launch', 'TEST-roster');
+      hoisted.createTeam.mockResolvedValue({ runId, teamName });
+      hoisted.getProvisioningStatus.mockResolvedValue({
+        runId,
+        teamName,
+        state: 'ready',
+        message: 'TEST ready',
+        startedAt: '2026-10-22T00:00:00.000Z',
+        updatedAt: '2026-10-22T00:00:01.000Z',
+      });
+
+      const response = await store.getState().createTeam({
+        teamName: 'TEST-draft-name',
+        cwd: '/TEST-create-project',
+        members: [],
+        createdTeamReadiness: {
+          preparationId: 'TEST-preparation',
+          selectionSignature: '{}',
+          draftDigest: 'TEST-digest',
+          expiresAt: Date.now() + 60_000,
+        },
+      });
+
+      expect(response).toEqual({ runId, teamName });
+      expect(store.getState().fetchTeams).toHaveBeenCalled();
+      expect(store.getState().currentProvisioningRunIdByTeam[teamName]).toBe(runId);
+      expect(store.getState().provisioningRuns[runId]?.teamName).toBe(teamName);
+      expect(store.getState().provisioningSnapshotByTeam['TEST-draft-name']).toBeUndefined();
+      expect(store.getState().launchParamsByTeam['TEST-draft-name']).toBeUndefined();
+      expect(store.getState().toolApprovalSettingsByTeam['TEST-draft-name']).toBeUndefined();
+      expect(window.localStorage.getItem('team:launchParams:TEST-draft-name')).toBeNull();
+    });
+
     it('persists providerBackendId into createTeam launch params', async () => {
       const store = createSliceStore();
 
@@ -7911,6 +7948,15 @@ describe('teamSlice actions', () => {
         // Preload reconstructs a plain Error from the main IpcResult.
         response.reject(new Error(message));
         await rejection;
+        // Logging may be disabled by the renderer logger; consume only the exact
+        // diagnostic if emitted, leaving every other unexpected log visible.
+        if (vi.mocked(console.error).mock.calls.length > 0) {
+          expect(console.error).toHaveBeenCalledExactlyOnceWith(
+            '[Renderer:unwrapIpc]',
+            `[team:${operation === 'createTeam' ? 'create' : 'launch'}] ${message}`
+          );
+          vi.mocked(console.error).mockClear();
+        }
         expect(store.getState().provisioningErrorByTeam['my-team']).toBe(message);
         expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBeUndefined();
         expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBeUndefined();
@@ -7929,7 +7975,8 @@ describe('teamSlice actions', () => {
         ).not.toHaveBeenCalled();
 
         // Admission has become available; changing the response alone must not retry.
-        hoisted[operation].mockResolvedValue({ runId: 'retry-run' });
+        const retryResponse = { runId: 'retry-run', teamName: 'my-team', launchStatus: 'started' as const };
+        hoisted[operation].mockResolvedValue(retryResponse);
         await vi.advanceTimersByTimeAsync(120_000);
         expect(hoisted[operation]).toHaveBeenCalledTimes(1);
         hoisted.getProvisioningStatus.mockResolvedValue({
@@ -7940,7 +7987,9 @@ describe('teamSlice actions', () => {
           startedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
-        await expect(store.getState()[operation](request)).resolves.toBe('retry-run');
+        const retryResult = await store.getState()[operation](request);
+        if (operation === 'createTeam') expect(retryResult).toEqual(retryResponse);
+        else expect(retryResult).toBe(retryResponse.runId);
         expect(hoisted[operation]).toHaveBeenCalledTimes(2);
         expect(store.getState().provisioningErrorByTeam['my-team']).toBeUndefined();
         expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('retry-run');

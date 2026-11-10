@@ -1,0 +1,73 @@
+{
+  "scope": "Existing status/cancel API and shared progress callback over captured Host/launch/roster. Controlled provider with real Host/Runtime/filesystem/MCP/NDJSON and ordinary TeamsAPI; not native SDK or Electron dialog acceptance. Stage1 remains incomplete; stage2 excluded.",
+  "sourceBoundary": "Working-tree hashes retained after managed checks; not a pre/post immutable full Main dependency closure or release qualification. Host source remained unchanged after its238-test pass. Final170-test frontend suite includes shared status/callback read ordering and cancellation-crossing regressions, with no production changes after it. Intermediate v1 is retained as historical evidence before the shared-read-order fix.",
+  "hostSource": "01828612ce128963d77c3e5f4108bad2a754307a6b134ab22b842bf8e1212f46",
+  "hostDist": "8693156a9a66b1c5d427239f2edf001e2cb7c3744911c0b669db8faeddbeb015",
+  "sources": {
+    "packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts": "ff2ed0ade52c0c713a96a592cd4c4e2a3dec2e06037bcb294e00f93136d3aea3",
+    "packages/legacy-agent-host/src/team-launch/contracts.ts": "c1cd9e6d0cffc0323330d827bc959a178c9cd9c2d7877bc04b42c428dc432ddb",
+    "src/features/agent-backend/contracts/index.ts": "6c755acf1765e5efb2a0fba7c30f5cc649459b53f3c338871e5c821edf728a2f",
+    "src/features/agent-backend/contracts/launch.ts": "e4750b4ad703fcb5a9f0b7ac46d892a82250971c646fd3082d709acebddfc7d8",
+    "src/features/agent-backend/contracts/teamRunSelection.ts": "75d868c448348ce9d3f25578a9309eae27324d8f1895f35fec1c0e7d52023c0a",
+    "src/features/agent-backend/main/adapters/output/projectLaunchSnapshot.ts": "88402704fd0967ffcf1188f968d95aae4928cbe193fd88d09e72430dfe226077",
+    "src/features/agent-backend/renderer/createHostTeamsApi.ts": "56400714dafcdb7eeccb00934f593af5164b9e07b4a5ba2cbe9e4f884546f607",
+    "src/features/agent-backend/renderer/createHostTeamChanges.ts": "3218fed52fa507752e1a640d5dc869dfbae796f0843970a428b41a0d9bed7555",
+    "src/features/agent-backend/renderer/createHostTeamProvisioning.ts": "b753f9f8066a3274b5d1bc16dee22d077ecb0fa296fcc2d4b1a272cbf7264db6",
+    "src/features/agent-backend/renderer/createHostTeamLifecycle.ts": "bff3293bb60b3e11ef2422b7c15b7c08bb4ac015fd7b2541aecbe1488ea252b0",
+    "src/features/agent-backend/renderer/projectHostProvisioningProgress.ts": "7d200ac60b46a51307d61040d722921216bb423531153d43ad5e15e64ae5ef41",
+    "src/features/agent-backend/renderer/hostTeamRouting.ts": "06468d2e2b0c849fd51eb105ab69d21fffa357eb34026df2d010b1362392791e",
+    "src/features/agent-backend/renderer/TeamProductReadOrder.ts": "506a0e72e1207626a3e0e246e82fc595f869b712e93fc188f9240e4ae5f9432f",
+    "test/features/agent-backend/hostProvisioningProgress.test.ts": "d4d5693ceb91cf0ec8e997189e18bf954d16a2af75a1a69a4f06910dddeee2cc",
+    "test/features/agent-backend/runtimeActivityFacade.test.ts": "2a1c230afc0822bd776773a3423b280e8b0c5b084ee24cb1b97d10adb3fbb778",
+    "packages/legacy-agent-host/tests/team-launch.test.ts": "1efd1982b4aa3c391c013478494bd0d1748eafa87eb625f99afb3a53a91259d0",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts": "1d7784e7ad38a5592cfdc0111e86df5e3b211e31bad0fb2aae89f2e95cfba226"
+  },
+  "checks": [
+    {
+      "id": "af3b6605385f4eb7c69a71edb54a5373",
+      "scope": "238 Host tests with strict test types and controlled-provider NDJSON integration. Host source unchanged since this successful run."
+    },
+    {
+      "id": "382cb6d8508f850c3613ceed3cca4968",
+      "scope": "Final root types/build, affected lint,170 frontend tests including15 progress cases and controlled-provider NDJSON ordinary progress/cancel, source-size/provisioning guards and whitespace."
+    }
+  ],
+  "files": [
+    {
+      "path": "jobs/af3b6605385f4eb7c69a71edb54a5373/stdout.log",
+      "sha256": "482810db6bf23c485f7639cbf8ba90d31092b41c5846a42d4261264e11149090"
+    },
+    {
+      "path": "jobs/af3b6605385f4eb7c69a71edb54a5373/stderr.log",
+      "sha256": "693c9ed37cfdc1c2c5fa97d566a7bbf030569530bc1e28841414da7a86a2763f"
+    },
+    {
+      "path": "jobs/382cb6d8508f850c3613ceed3cca4968/stdout.log",
+      "sha256": "93953803c22cd0cc719b0d93c63dc21ef655e8452c6c3492f8a3626d433f91e6"
+    },
+    {
+      "path": "jobs/382cb6d8508f850c3613ceed3cca4968/stderr.log",
+      "sha256": "73d50d7902ee000a4e136ac6b617b0090d4194d15b63f11d0baafcab2360276c"
+    },
+    {
+      "path": "executed-tests/test/features/agent-backend/hostProvisioningProgress.test.ts",
+      "sha256": "d4d5693ceb91cf0ec8e997189e18bf954d16a2af75a1a69a4f06910dddeee2cc"
+    },
+    {
+      "path": "executed-tests/test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "sha256": "2a1c230afc0822bd776773a3423b280e8b0c5b084ee24cb1b97d10adb3fbb778"
+    },
+    {
+      "path": "executed-tests/packages/legacy-agent-host/tests/team-launch.test.ts",
+      "sha256": "1efd1982b4aa3c391c013478494bd0d1748eafa87eb625f99afb3a53a91259d0"
+    },
+    {
+      "path": "executed-tests/packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "sha256": "1d7784e7ad38a5592cfdc0111e86df5e3b211e31bad0fb2aae89f2e95cfba226"
+    }
+  ],
+  "predecessors": [
+    "f43ae3e1431e76c4cd31e5360b8dce44:2 existing comparisons needed to exclude new observation time while comparing every state/identity field",
+    "d7471824713ac4d6ab1b4f9772d760db:stopped at import/export sort before types/tests; sorting repaired"
+  ]
+}

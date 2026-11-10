@@ -94,6 +94,17 @@ describe('managed Git desktop resolution', () => {
     expect(env.Path).toBeUndefined();
   });
 
+  it('keeps a defined Windows Path when PATH is present but undefined', async () => {
+    const resourcesPath = await fixture('win32-x64');
+    const env = createManagedGitEnv(
+      { PATH: undefined, Path: 'C:\\Windows\\System32;C:\\tools' },
+      { resourcesPath, platform: 'win32', arch: 'x64' }
+    );
+    expect(env.PATH).toContain('C:\\Windows\\System32');
+    expect(env.PATH).toContain('C:\\tools');
+    expect(env.Path).toBeUndefined();
+  });
+
   it('does not block non-Git launch environments when a packaged runtime is missing', async () => {
     const resourcesPath = await mkdtemp(path.join(tmpdir(), 'managed-git-missing-env-'));
     directories.push(resourcesPath);

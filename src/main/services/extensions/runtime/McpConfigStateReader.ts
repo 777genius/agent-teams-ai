@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
+import { readConfiguredMcpServers } from '@agent-teams/legacy-agent-host/mcp-catalog';
 import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { getMcpRuntimeTargetKey } from '@shared/utils/mcpTargets';
@@ -110,38 +111,27 @@ export class McpConfigStateReader {
     value: unknown,
     scope: 'user' | 'project' | 'local'
   ): ConfiguredMcpEntry[] {
-    const mcpServers =
-      value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
-    if (!mcpServers) {
-      return [];
-    }
+    return readConfiguredMcpServers(value, scope).map(({ name, config }): ConfiguredMcpEntry => {
+      let transport: string | undefined;
+      if (typeof config.command === 'string') transport = 'stdio';
+      else if (typeof config.url === 'string') transport = 'http';
 
-    return Object.entries(mcpServers)
-      .filter((entry): entry is [string, Record<string, unknown>] => {
-        const [, config] = entry;
-        return Boolean(config && typeof config === 'object' && !Array.isArray(config));
-      })
-      .map(([name, config]): ConfiguredMcpEntry => {
-        let transport: string | undefined;
-        if (typeof config.command === 'string') transport = 'stdio';
-        else if (typeof config.url === 'string') transport = 'http';
+      let targetKey: string | undefined;
+      if (
+        transport === 'stdio' &&
+        config.command === 'npx' &&
+        Array.isArray(config.args) &&
+        config.args.length === 2 &&
+        config.args[0] === '-y' &&
+        typeof config.args[1] === 'string'
+      ) {
+        targetKey = getMcpRuntimeTargetKey(`npx -y ${config.args[1]}`, transport) ?? undefined;
+      } else if (transport === 'http' && typeof config.url === 'string') {
+        targetKey = getMcpRuntimeTargetKey(config.url, transport) ?? undefined;
+      }
 
-        let targetKey: string | undefined;
-        if (
-          transport === 'stdio' &&
-          config.command === 'npx' &&
-          Array.isArray(config.args) &&
-          config.args.length === 2 &&
-          config.args[0] === '-y' &&
-          typeof config.args[1] === 'string'
-        ) {
-          targetKey = getMcpRuntimeTargetKey(`npx -y ${config.args[1]}`, transport) ?? undefined;
-        } else if (transport === 'http' && typeof config.url === 'string') {
-          targetKey = getMcpRuntimeTargetKey(config.url, transport) ?? undefined;
-        }
-
-        return { name, scope, transport, targetKey, config: { ...config } };
-      });
+      return { name, scope, transport, targetKey, config: { ...config } };
+    });
   }
 
   private async readMcpServersFromFile(
