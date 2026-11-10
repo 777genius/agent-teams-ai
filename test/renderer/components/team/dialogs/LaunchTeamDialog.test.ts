@@ -438,6 +438,7 @@ vi.mock('@renderer/components/ui/dialog', () => ({
       : null,
   DialogContent: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
+  DialogTrigger: ({ children }: { children: React.ReactNode }) => children,
   DialogHeader: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
   DialogTitle: ({ children }: { children: React.ReactNode }) =>
@@ -543,7 +544,10 @@ vi.mock('@renderer/utils/teamProviderRuntimeStatusLoading', async (importOrigina
   isTeamProviderRuntimeStatusLoading: vi.fn(() => false),
 }));
 
-vi.mock('@renderer/components/team/dialogs/providerPrepareCacheKey', () => ({
+vi.mock('@renderer/components/team/dialogs/providerPrepareCacheKey', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('@renderer/components/team/dialogs/providerPrepareCacheKey')
+  >()),
   buildProviderPrepareModelCacheKey: () => 'prepare-cache-key',
 }));
 
