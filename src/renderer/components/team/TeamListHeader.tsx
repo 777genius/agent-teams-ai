@@ -7,9 +7,9 @@ import { Import, Network, Plus, Search } from 'lucide-react';
 
 import { TeamListFilterPopover } from './TeamListFilterPopover';
 
+import type { TeamListFilterState } from './TeamListFilterPopover';
 import type { ExternalAgentConnectionApi } from '@features/external-agent-connection/contracts';
 import type { TeamSummary } from '@shared/types';
-import type { TeamListFilterState } from './TeamListFilterPopover';
 
 interface Props {
   managementApi: ExternalAgentConnectionApi;

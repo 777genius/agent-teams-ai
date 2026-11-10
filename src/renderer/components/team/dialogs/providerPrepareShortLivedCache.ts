@@ -187,6 +187,13 @@ export function storeShortLivedProviderPrepareModelResults({
   }
 }
 
+/** Credentials/settings changes invalidate both ready proof and stale issue hints. */
+export function invalidateShortLivedProviderPrepareModelResults(providerId: TeamProviderId): void {
+  if (providerId !== 'opencode') return;
+  shortLivedProviderPrepareCache.clear();
+  shortLivedProviderPrepareIssueCache.clear();
+}
+
 export function __resetShortLivedProviderPrepareCacheForTests(): void {
   shortLivedProviderPrepareCache.clear();
   shortLivedProviderPrepareIssueCache.clear();

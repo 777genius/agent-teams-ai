@@ -1,10 +1,10 @@
-import type { ComponentProps } from 'react';
-
 import { ExternalAgentPromptAction } from '@features/external-agent-connection/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 
 import { CreateTeamTemplatePicker } from './CreateTeamTemplatePicker';
+
+import type { ComponentProps } from 'react';
 
 type Props = ComponentProps<typeof CreateTeamTemplatePicker> & {
   local: boolean;

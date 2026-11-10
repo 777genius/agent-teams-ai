@@ -65,7 +65,6 @@ import {
 } from '@renderer/services/createTeamDraftGeneration';
 import {
   applyStoredCreateTeamMemberRuntimePreferences,
-  getStoredCreateTeamEffort,
   getStoredCreateTeamFastMode as getStoredTeamFastMode,
   getStoredCreateTeamMemberRuntimePreferences,
   getStoredCreateTeamModel as getStoredTeamModel,
@@ -103,6 +102,8 @@ import { assignCreatedTeamToOrganization } from './assignCreatedTeamToOrganizati
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
 import { consumeTeamCopySeedOnce } from './createTeamCopySeed';
+import { buildDefaultTeamDescription } from './createTeamDescription';
+import { CreateTeamHeaderActions } from './CreateTeamHeaderActions';
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
 import {
   getOrganizationPlacementUnitKindKey,
@@ -115,10 +116,7 @@ import {
   validateRequest,
   validateTeamNameInline,
 } from './createTeamSubmissionValidation';
-import { buildDefaultTeamDescription } from './createTeamDescription';
-import { alignProvisioningChecks } from './provisioningProviderChecks';
 import { CreateTeamSurface } from './CreateTeamSurface';
-import { CreateTeamHeaderActions } from './CreateTeamHeaderActions';
 import {
   buildProviderModelChecksMap,
   collectDialogMemberProviderIds,
@@ -167,9 +165,11 @@ import {
 } from './providerPrepareRequestSignature';
 import {
   getShortLivedProviderPrepareModelIssueReasons,
+  invalidateShortLivedProviderPrepareModelResults,
   storeShortLivedProviderPrepareModelResults,
 } from './providerPrepareShortLivedCache';
 import { getProvisioningModelIssue } from './provisioningModelIssues';
+import { alignProvisioningChecks } from './provisioningProviderChecks';
 import { ProvisioningProviderRuntimeSettingsDialog } from './ProvisioningProviderRuntimeSettingsDialog';
 import {
   deriveEffectiveProvisioningPrepareState,
@@ -862,6 +862,7 @@ export const CreateTeamDialog = ({
       (prepareProviderRequestSeqByIdRef.current.get(providerId) ?? 0) + 1
     );
     prepareWarningsByProviderIdRef.current.delete(providerId);
+    invalidateShortLivedProviderPrepareModelResults(providerId);
     setPrepareProviderInvalidationEpochById((current) => ({
       ...current,
       [providerId]: (current[providerId] ?? 0) + 1,
@@ -1131,6 +1132,7 @@ export const CreateTeamDialog = ({
       limitContext: effectiveAnthropicRuntimeLimitContext,
       runtimeProviderStatusById,
       cachedModelResultsByCacheKey: prepareModelResultsCacheRef.current,
+      invalidationEpochByProviderId: prepareProviderInvalidationEpochById,
     });
     const changedPlans = providerPlans.filter((plan) => {
       if (runtimeProviderLoadingById.get(plan.providerId)) return false;

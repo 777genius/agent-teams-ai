@@ -41,6 +41,7 @@ export function buildProviderPreparePlans({
   limitContext,
   runtimeProviderStatusById,
   cachedModelResultsByCacheKey,
+  invalidationEpochByProviderId,
 }: {
   cwd: string;
   providerIds: readonly TeamProviderId[];
@@ -55,6 +56,7 @@ export function buildProviderPreparePlans({
     string,
     Record<string, ProviderPrepareDiagnosticsModelResult>
   >;
+  invalidationEpochByProviderId?: Readonly<Partial<Record<TeamProviderId, number>>>;
 }): ProviderPreparePlan[] {
   return providerIds.map((providerId) => {
     const selectedModelChecks = [...(selectedModelChecksByProvider.get(providerId) ?? [])];
@@ -67,6 +69,10 @@ export function buildProviderPreparePlans({
     const modelChecksSignature = buildProviderPrepareModelChecksSignature(
       new Map([[providerId, selectedModelChecks]])
     );
+    // Explicit credential/settings changes require a fresh proof even when the
+    // runtime's passive status has not changed yet.
+    const epoch = invalidationEpochByProviderId?.[providerId] ?? 0;
+    const invalidationSuffix = epoch > 0 ? `::settings-invalidation:${epoch}` : '';
     const requestSignature = buildProviderPrepareRequestSignature({
       cwd,
       selectedProviderId: providerId,
@@ -77,7 +83,7 @@ export function buildProviderPreparePlans({
         runtimeProviderStatusById.get(providerId)
       ),
       modelChecksSignature,
-    });
+    }) + invalidationSuffix;
     const cacheKey = buildProviderPrepareModelCacheKey({
       cwd,
       providerId,
@@ -85,7 +91,7 @@ export function buildProviderPreparePlans({
       limitContext,
       runtimeStatusSignature,
       modelChecksSignature,
-    });
+    }) + invalidationSuffix;
     const cachedModelResultsById = {
       ...getShortLivedProviderPrepareModelResults({
         providerId,
