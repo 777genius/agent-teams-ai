@@ -51,7 +51,7 @@ export const CreateTeamSurface = ({
         data-testid="create-team-page"
         className="flex size-full min-h-0 min-w-0 flex-col overflow-y-auto overflow-x-hidden"
       >
-        <header className="sticky top-0 z-10 flex items-start gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
           <Button
             type="button"
             variant="ghost"
@@ -64,7 +64,6 @@ export const CreateTeamSurface = ({
           </Button>
           <div className="min-w-0 flex-1">
             <h1 className="text-base font-semibold text-[var(--color-text)]">{title}</h1>
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">{description}</p>
           </div>
           {headerActions ? (
             <div className="ml-auto w-56 max-w-[40%] shrink-0">{headerActions}</div>
