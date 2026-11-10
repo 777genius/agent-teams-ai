@@ -387,6 +387,15 @@ describe('OpenCode prompt delivery read commit policy', () => {
         taskRefsIncludeAll,
       });
     await expect(allowed()).resolves.toBe(true);
+    await expect(isOpenCodeDeliveryResponseReadCommitAllowed({
+      teamName: 'team',
+      memberName: 'alice',
+      configuredLeadName: null,
+      ledgerRecord: { ...peer, replyRecipient: 'captain' },
+      responseState: 'empty_assistant_turn',
+      hasAcceptedMemberWorkSyncReport: async () => false,
+      taskRefsIncludeAll,
+    })).resolves.toBe(false);
     for (const overrides of [
       { replyRecipient: 'user' },
       { replyRecipient: 'team-lead' },
