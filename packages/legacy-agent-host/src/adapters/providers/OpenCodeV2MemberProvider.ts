@@ -375,7 +375,13 @@ export function createOpenCodeV2MemberProvider(
             // Permissions must be read from THIS exact native session and
             // PID/start identity. A correctly ordered ruleset from another
             // session or a restarted process is not an authorization.
-            if (!effective ||
+            // A V2.0.21 session ASK rule alone is not effective ASK:
+            // persisted project-scoped "always" grants can resolve it to ALLOW,
+            // as the isolated native TEST demonstrates. The current owner
+            // readback only attests session rules, not persisted grants or plugin
+            // resolution. Hold ASK until that native effective proof exists.
+            // Explicit session DENY is independently tested to win over grants.
+            if (!effective || requiredExternalDirectory === 'ask' ||
                 effective.nativeSessionId !== profile.nativeSessionId ||
                 effective.pid !== admittedCustody.pid ||
                 effective.startIdentity !== admittedCustody.startIdentity ||

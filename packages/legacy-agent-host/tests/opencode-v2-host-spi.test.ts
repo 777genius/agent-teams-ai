@@ -2031,6 +2031,23 @@ test('mutable owner cannot downgrade an already captured deny to ask', async () 
   assert.deepEqual(calls, { probe: 1, permissions: 1, context: 0, password: 0, stop: 1, stopped: 1 });
 });
 
+test('V2 ASK admission holds when persisted project grants are not attested', async () => {
+  // Real OpenCode 2.0.21 can resolve an unchanged session ASK to ALLOW
+  // using a persisted project-scoped "always" grant. A session rule
+  // snapshot is not proof that the effective native result remains ASK.
+  const { captured, calls } = owner(true, 'ask');
+  captured.requiredExternalDirectory = 'ask';
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  await assert.rejects(() => provider.factory.open(request()),
+    /opencode.driver.dependency-unavailable/,
+    'ASK without native saved-grant/plugin attestation must not become ready');
+  assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  assert.deepEqual(calls,
+    { probe: 1, permissions: 1, context: 0, password: 0, stop: 1, stopped: 1 },
+    'fail closed before native instructions or credentials, then stop only owned TEST engine');
+});
+
 test('native instructions are not treated as installed when identity attestation is wrong', async () => {
   const { captured, calls } = owner(true);
   captured.installAndAttestInitialContext = async (capture) => {
