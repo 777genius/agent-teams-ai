@@ -126,10 +126,11 @@ describe('OpenCode lead plain-text reply persisted E2E', () => {
     expect(resolved.visibleReply?.message.text).toBe(text);
     expect((await f.messages('captain')).map(m => m.text)).toEqual([text]);
     expect(await f.messages('user')).toEqual([]);
-    expect(f.readExactAssistantText).toHaveBeenCalledWith({
+    expect(f.readExactAssistantText).toHaveBeenCalledWith(expect.objectContaining({
       teamName: 'team', memberName: 'worker', laneId: 'primary',
       runId: 'run-1', sessionId: 'ses-current', assistantMessageId: 'msg-assistant',
-    });
+      expectedReplyRecipient: 'captain',
+    }));
     expect(await f.readAllowed(resolved.ledgerRecord, resolved.visibleReply)).toBe(true);
     const committed = await f.ledger.markInboxReadCommitted({
       id: resolved.ledgerRecord.id, committedAt: ISO,
