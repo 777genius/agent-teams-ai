@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  closeProviderManageDialog,
   hasOneVisibleOpenCodeConnection,
   hasExactVisibleOpenCodeCount,
   verifyCompleteConnectedSourceSummary,
@@ -105,4 +106,48 @@ test('real Settings header proof is independent of localized labels', () => {
   ]) {
     assert.equal(hasOneVisibleOpenCodeConnection(label), false);
   }
+});
+
+test('provider Manage close retries a swallowed click only after renewed hit testing', async () => {
+  let clicks = 0;
+  let polls = 0;
+  const evaluate = async (expression) => {
+    assert.match(expression, /button\\.absolute\\.right-3\\.top-3/);
+    polls++;
+    if (clicks === 2) return 'closed';
+    if (polls === 2) return 'blocked';
+    return 'ready';
+  };
+  const click = async (selector) => {
+    assert.match(selector, /button\\.absolute\\.right-3\\.top-3/);
+    clicks++;
+  };
+  await closeProviderManageDialog(evaluate, click, 'opencode',
+    { pollMs: 0, maxPolls: 8, retryAfterPolls: 2, maxClicks: 3 });
+  assert.equal(clicks, 2, 'A transiently swallowed click should get exactly one safe retry');
+});
+
+test('provider Manage close never clicks a blocked or foreign dialog', async () => {
+  for (const [state, message] of [
+    ['blocked', /dialog close control obstructed/],
+    ['wrong-provider', /changed dialog during close/],
+  ]) {
+    let clicks = 0;
+    await assert.rejects(closeProviderManageDialog(
+      async () => state,
+      async () => { clicks++; },
+      'opencode', { pollMs: 0, maxPolls: 3, retryAfterPolls: 1, maxClicks: 2 }
+    ), message);
+    assert.equal(clicks, 0);
+  }
+});
+
+test('provider Manage close fails after bounded retries if the dialog stays open', async () => {
+  let clicks = 0;
+  await assert.rejects(closeProviderManageDialog(
+    async () => 'ready',
+    async () => { clicks++; },
+    'opencode', { pollMs: 0, maxPolls: 6, retryAfterPolls: 2, maxClicks: 2 }
+  ), /dialog did not close/);
+  assert.equal(clicks, 2);
 });
