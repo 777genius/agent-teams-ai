@@ -116,6 +116,13 @@ export function assertListenerOwnership(ids, owned) {
   );
 }
 export async function assertPortAvailable() {
+  // Electron can release its CDP listener just after the previous owned
+  // fixture has received SIGTERM. Wait briefly, but never connect to, reuse,
+  // or terminate a foreign listener.
+  const deadline = Date.now() + 15_000;
+  while (listeners().length > 0 && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
   assert.equal(listeners().length, 0, 'Port 9222 already has a listener');
   for (const host of ['127.0.0.1', '::1']) {
     await new Promise((resolve, reject) => {
