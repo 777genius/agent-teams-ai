@@ -896,7 +896,6 @@ export class CliInstallerService {
       return passiveRuntime.errorStatus;
     }
     const { binaryPath } = passiveRuntime;
-
     const read = options.projectPath ? null : this.providerStatusRevisions.beginRead(providerId);
     const handleCatalogUpdate = (hydratedProviderStatus: CliProviderStatus): void => {
       if (read?.isCurrent() === false) return;
@@ -932,6 +931,7 @@ export class CliInstallerService {
     }
     if (!options.projectPath) {
       this.updateLatestProviderStatusIfCurrent(providerStatus, generation);
+      read?.acknowledgePublication();
     }
     return projectProviderAuthority(providerStatus, this.now());
   }
