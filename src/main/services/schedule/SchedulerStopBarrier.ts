@@ -6,10 +6,10 @@ const STOP_DRAIN_TIMEOUT_MS = 15_000;
 
 export class SchedulerStopBarrier {
   private readonly finalizations = new Set<Promise<void>>();
-  private readonly retryDelays = new Map<
-    string,
-    { timer: ReturnType<typeof setTimeout>; finish: () => void }
-  >();
+  private readonly retryDelays = new Set<{
+    timer: ReturnType<typeof setTimeout>;
+    finish: () => void;
+  }>();
 
   beginFinalization(): () => void {
     let resolve!: () => void;
@@ -21,19 +21,23 @@ export class SchedulerStopBarrier {
     };
   }
 
-  waitForRetry(scheduleId: string, delayMs: number): Promise<void> {
+  waitForRetry(delayMs: number): Promise<void> {
     return new Promise<void>((resolve) => {
-      const timer = setTimeout(() => {
-        this.retryDelays.delete(scheduleId);
+      const entry = {
+        timer: undefined as unknown as ReturnType<typeof setTimeout>,
+        finish: () => resolve(),
+      };
+      entry.timer = setTimeout(() => {
+        this.retryDelays.delete(entry);
         resolve();
       }, delayMs);
-      timer.unref();
-      this.retryDelays.set(scheduleId, { timer, finish: resolve });
+      entry.timer.unref();
+      this.retryDelays.add(entry);
     });
   }
 
   cancelRetries(): void {
-    for (const { timer, finish } of this.retryDelays.values()) {
+    for (const { timer, finish } of this.retryDelays) {
       clearTimeout(timer);
       finish();
     }
