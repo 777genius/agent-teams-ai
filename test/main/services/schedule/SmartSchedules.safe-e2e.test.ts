@@ -365,4 +365,33 @@ describe('Smart schedules filesystem safe E2E', () => {
     expect(oneShot).not.toHaveBeenCalled();
   });
 
+
+  it('does not persist a late executor result from the previous scheduler generation', async () => {
+    let finishExecution!: () => void;
+    const executing = new Promise<void>((resolve) => { finishExecution = resolve; });
+    oneShot.mockImplementationOnce(async () => {
+      await executing;
+      return {
+        exitCode: 0, stdout: 'old run', stderr: '', summary: 'old run', durationMs: 10,
+      };
+    });
+    const schedule = await scheduler.createSchedule(input());
+    const run = await scheduler.triggerNow(schedule.id);
+    await vi.waitFor(() => expect(oneShot).toHaveBeenCalledOnce(), { timeout: 8000 });
+    try {
+      await scheduler.stop();
+      await scheduler.start();
+    } finally {
+      finishExecution();
+    }
+    await new Promise<void>((resolve) => setTimeout(resolve, 25));
+
+    expect((await repository.listRuns(schedule.id))[0]).toMatchObject({
+      id: run.id, status: 'failed_interrupted',
+    });
+    expect((await repository.getSchedule(schedule.id))?.lastRunAt).toBeUndefined();
+    expect(oneShot).toHaveBeenCalledOnce();
+    expect(port.createTask).not.toHaveBeenCalled();
+  });
+
 });
