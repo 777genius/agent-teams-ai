@@ -1,5 +1,6 @@
 import { createOpenCodeV2DriverFactory } from '@agent-teams/provider-implementations/opencode';
 import type { OpenCodeV2DriverConfig } from '@agent-teams/provider-implementations/opencode';
+import { types as nodeUtilTypes } from 'node:util';
 import { runtimeDigest } from '../../runtime/identity.js';
 import { finalizeOpenCodeV2ObserverAfterClose, guardOpenCodeV2ObserverCleanup } from './OpenCodeV2ObserverCleanup.js';
 import { initialContextDigest } from '../../team-launch/context.js';
@@ -77,6 +78,11 @@ function captureDataCallback<T extends object, K extends keyof T>(
 ): T[K] {
   let prototype: object | null = receiver;
   while (prototype !== null) {
+    // A Proxy's descriptor/prototype traps can swap later custody callbacks
+    // before they are captured, laundering an unsafe native permission reader.
+    // Test every chain element before any reflective operation on it.
+    if (nodeUtilTypes.isProxy(prototype))
+      throw new Error(`OpenCode V2 requires data-property ${callbackOwner} callbacks`);
     const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
     if (descriptor) {
       if (typeof descriptor.value !== 'function')

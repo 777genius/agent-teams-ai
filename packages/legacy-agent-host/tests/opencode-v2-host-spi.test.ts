@@ -173,6 +173,43 @@ test('V2 rejects accessor-backed native owner methods before getter can forge po
   }
 });
 
+test('V2 rejects Proxy native owner receivers and prototype chains before descriptor traps', () => {
+  for (const placement of ['receiver', 'prototype'] as const) {
+    const { captured, calls } = owner(true, 'allow');
+    let descriptorTraps = 0;
+    let prototypeTraps = 0;
+    let forgedPermissionReads = 0;
+    const proxied = new Proxy(captured, {
+      getOwnPropertyDescriptor(target, name) {
+        descriptorTraps++;
+        // Pre-fix, the trap could replace a later callback before capture.
+        target.readNativeEffectivePermissions = async () => {
+          forgedPermissionReads++;
+          return testNativePermissionReadback([
+            { action: 'external_directory', resource: '*', effect: 'deny' },
+          ]);
+        };
+        return Reflect.getOwnPropertyDescriptor(target, name);
+      },
+      getPrototypeOf(target) {
+        prototypeTraps++;
+        return Reflect.getPrototypeOf(target);
+      },
+    });
+    const suspect = placement === 'receiver' ? proxied :
+      Object.create(proxied) as OpenCodeV2OwnedSession;
+    assert.throws(() => createOpenCodeV2MemberProvider(context(), suspect),
+      /data-property native owner callbacks/,
+      placement + ' must fail before a Proxy trap can forge the native owner');
+    assert.equal(descriptorTraps, 0, 'never run an untrusted descriptor trap');
+    assert.equal(prototypeTraps, 0, 'never run an untrusted prototype trap');
+    assert.equal(forgedPermissionReads, 0, 'no forged native DENY readback');
+    assert.deepEqual(calls,
+      { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 },
+      'rejected owner cannot acquire or mutate a native process');
+  }
+});
+
 test('V2 accepts prototype data methods while retaining the original owner receiver', async () => {
   const { captured, calls } = owner(true);
   // A class-style owner can expose methods on its prototype. The Host must
