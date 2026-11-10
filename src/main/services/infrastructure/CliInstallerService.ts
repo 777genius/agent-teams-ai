@@ -906,6 +906,7 @@ export class CliInstallerService {
       if (!this.updateLatestProviderStatusIfCurrent(hydratedProviderStatus, generation)) {
         return;
       }
+      read?.acknowledgePublication();
       if (this.latestStatusSnapshot) {
         this.publishStatusSnapshot(this.latestStatusSnapshot);
       }
@@ -924,7 +925,6 @@ export class CliInstallerService {
           )
           .finally(read?.finish);
     if (generation !== this.statusGatherGeneration) return createObsoleteProviderStatus(providerId);
-    // Superseded results are not authoritative, even when they failed.
     if (read?.isCurrent() === false) return createPendingProviderStatus(providerId);
     const mismatchStatus = projectMismatchedProviderStatus(providerId, providerStatus, this.now());
     if (mismatchStatus) {

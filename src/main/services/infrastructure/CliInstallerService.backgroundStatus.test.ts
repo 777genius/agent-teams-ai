@@ -251,6 +251,34 @@ describe('CliInstallerService background provider status', () => {
     }
   );
 
+  test('a single provider read may publish its own catalog hydration', async () => {
+    const service = new CliInstallerService();
+    const internals = service as unknown as CliInstallerServiceInternals;
+    const status = internals.createInitialStatus();
+    status.flavor = 'agent_teams_orchestrator';
+    status.installed = true;
+    status.binaryPath = '/fake/runtime';
+    internals.latestStatusSnapshot = status;
+    const verified: CliProviderStatus = {
+      ...createDefaultProviderStatus('codex'),
+      supported: true,
+      authenticated: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      statusCheckErrorCode: undefined,
+    };
+    vi.spyOn(internals.multimodelBridgeService, 'getProviderStatus')
+      .mockImplementationOnce(async (_binary, _provider, onCatalogUpdate) => {
+        onCatalogUpdate?.(verified);
+        return verified;
+      });
+    expect(await service.getProviderStatus('codex')).toMatchObject({
+      providerId: 'codex',
+      authenticated: true,
+      statusCheckOutcome: 'authoritative',
+    });
+  });
+
   test('does not use a runtime discovered before status was invalidated', async () => {
     const service = new CliInstallerService();
     const internals = service as unknown as CliInstallerServiceInternals;
