@@ -99,13 +99,11 @@ import type {
 import type { OpenCodeStalePendingResolution } from './OpenCodePromptDeliveryStalePendingPolicy';
 
 const logger = createLogger('Service:OpenCodeMemberMessageDelivery');
-
 function nowIso(): string {
   return new Date().toISOString();
 }
 export class OpenCodeMemberMessageDeliveryService {
   constructor(private readonly deps: OpenCodeMemberMessageDeliveryServiceDependencies) {}
-
   private async applyStalePendingResolution(input: {
     checkpoint: () => Promise<void>;
     ledger: OpenCodePromptDeliveryLedgerStore;
@@ -162,7 +160,6 @@ export class OpenCodeMemberMessageDeliveryService {
     }
     return null;
   }
-
   async deliver(
     teamName: string,
     input: OpenCodeMemberMessageDeliveryInput
@@ -181,7 +178,6 @@ export class OpenCodeMemberMessageDeliveryService {
       };
     }
   }
-
   private async deliverCurrent(
     teamName: string,
     input: OpenCodeMemberMessageDeliveryInput
@@ -945,9 +941,7 @@ export class OpenCodeMemberMessageDeliveryService {
         ) {
           notifyActivity('active');
         }
-        // Stale-pending guard: an accepted prompt the bridge keeps reporting as
-        // `pending` has no attempt budget, so bound it here. A lead plain-text
-        // turn end settles non-user messages; stale idle records go terminal.
+        // Bound accepted pending prompts; settle only confirmed turn ends.
         const hasExecutionEvidence = hasOpenCodeAcceptedPromptExecutionEvidence(ledgerRecord);
         const staleResolution = decideOpenCodeStalePendingResolution({
           record: ledgerRecord,
@@ -956,6 +950,9 @@ export class OpenCodeMemberMessageDeliveryService {
           observedDiagnostics: observed.diagnostics,
           turnActivity,
           hasExecutionEvidence,
+          knownPeerRecipient: (await this.deps.openCodeVisibleReplyProofService.isConfiguredPeerRecipient?.(
+            teamName, ledgerRecord.replyRecipient
+          )) ?? false,
           nowMs: Date.now(),
           config: this.deps.openCodeStalePendingPolicyConfig,
         });
@@ -1147,6 +1144,8 @@ export class OpenCodeMemberMessageDeliveryService {
             send,
           }),
         sendMessage: async () => {
+          const knownPeerRecipient = (await this.deps.openCodeVisibleReplyProofService.isConfiguredPeerRecipient?.(
+            teamName, input.replyRecipient ?? '')) ?? false;
           assertCurrentRun();
           admissionRequired = false;
           if (ledgerRecord?.groupChatId && ledger)
@@ -1154,6 +1153,7 @@ export class OpenCodeMemberMessageDeliveryService {
           assertCurrentRun();
           return adapter.sendMessageToMember({
             ...payload(deliveryText),
+            knownPeerRecipient,
             deliveryAttemptId,
             fileParts: openCodeFileParts,
             controlUrl: controlUrl ?? undefined,

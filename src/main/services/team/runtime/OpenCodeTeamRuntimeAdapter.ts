@@ -133,6 +133,7 @@ export interface OpenCodeTeamRuntimeMessageInput {
   deliveryAttemptId?: string;
   fileParts?: OpenCodeSendMessageCommandBody['fileParts'];
   replyRecipient?: string;
+  knownPeerRecipient?: boolean;
   actionMode?: AgentActionMode;
   messageKind?: InboxMessageKind;
   workSyncIntent?: InboxMessage['workSyncIntent'];
