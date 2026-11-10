@@ -48,7 +48,6 @@ import {
 import {
   createDegradedProviderStatus,
   createPendingProviderStatus,
-  createRuntimeStatusErrorProviderStatus,
   mergeProviderStatusDisplayEvidence,
 } from '../runtime/providerStatusCheckContract';
 import { ClaudeBinaryResolver } from '../team/ClaudeBinaryResolver';
@@ -62,6 +61,8 @@ import {
 } from './cliInstallerProviderStatusUpdates';
 import {
   createMismatchedProviderStatus,
+  createObsoleteProviderStatus,
+  createProviderReadFailureStatus,
   getAuthenticatedFrontendProvider,
   hasAuthenticatedFrontendProvider,
   isFrontendProvider,
@@ -871,12 +872,7 @@ export class CliInstallerService {
     // Cold polling stays passive. Explicit invalidation requests runtime-only rediscovery.
     const generation = this.statusGatherGeneration;
     await this.refreshInvalidatedRuntime(generation);
-    const obsoleteStatus = () =>
-      createRuntimeStatusErrorProviderStatus(
-        providerId,
-        new Error('Provider runtime changed during status check. Refresh to retry.')
-      );
-    if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+    if (generation !== this.statusGatherGeneration) return createObsoleteProviderStatus(providerId);
     // Explicit project-scoped preflight can race initial runtime discovery.
     // Keep background/global status polling passive: it must not spawn shell
     // discovery or invalidate an authoritative cached status.
@@ -884,7 +880,8 @@ export class CliInstallerService {
     let passiveRuntime = resolvePassiveProviderRuntime(snapshot, providerId);
     if (options.projectPath && !snapshot?.binaryPath) {
       const binaryPath = await ClaudeBinaryResolver.resolve();
-      if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+      if (generation !== this.statusGatherGeneration)
+        return createObsoleteProviderStatus(providerId);
       const latest = this.latestStatusSnapshot;
       passiveRuntime = resolvePassiveProviderRuntime(
         latest?.binaryPath
@@ -923,12 +920,10 @@ export class CliInstallerService {
       : await this.multimodelBridgeService
           .getProviderStatus(binaryPath, providerId, handleCatalogUpdate)
           .catch((error: unknown) =>
-            read?.isCurrent() === false
-              ? createPendingProviderStatus(providerId)
-              : createRuntimeStatusErrorProviderStatus(providerId, error)
+            createProviderReadFailureStatus(providerId, error, read?.isCurrent())
           )
           .finally(read?.finish);
-    if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+    if (generation !== this.statusGatherGeneration) return createObsoleteProviderStatus(providerId);
     // Superseded results are not authoritative, even when they failed.
     if (read?.isCurrent() === false) return createPendingProviderStatus(providerId);
     const mismatchStatus = projectMismatchedProviderStatus(providerId, providerStatus, this.now());
