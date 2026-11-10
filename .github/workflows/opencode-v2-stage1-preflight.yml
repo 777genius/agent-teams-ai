@@ -40,6 +40,8 @@ jobs:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       # Read the actual moving Desktop product lock separately from this
       # historical Stage1 stacked checkout. The test requires both releases
       # to agree before returning even a static read-only candidate.

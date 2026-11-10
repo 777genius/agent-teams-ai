@@ -108,3 +108,51 @@ test('one captured selection survives source mutation during both manifest evalu
   assert.ok(reads > 0, 'the mutation really happened after the snapshot');
   assert.equal(selected.platform, 'win32-x64');
 });
+
+for (const gate of ['selection', 'current-product'] as const) {
+  for (const witness of ['sourceCommit', 'archive', 'sha256'] as const) {
+    test(`${gate}: validates and returns one captured ${witness} witness`, () => {
+      const { selected, lock } = fixture();
+      // Clone before installing the adversarial getter; cloning itself reads it.
+      const productLock = structuredClone(lock);
+      const delivery = lock.opencodeV2Delivery?.[selected.platform];
+      assert.ok(delivery?.archive);
+      const target = witness === 'sha256' ? delivery.archive : delivery;
+      const original = witness === 'sha256' ? delivery.archive.sha256 : delivery[witness];
+      let reads = 0;
+      Object.defineProperty(target, witness, {
+        enumerable: true,
+        // Previously typeof + regex passed, then the third read escaped unchecked.
+        get() { return ++reads <= 2 ? original : 'FOREIGN'; },
+      });
+      const result = gate === 'selection'
+        ? preflightOpenCodeV2Selection(selected, lock)
+        : preflightOpenCodeV2CurrentProduct(selected, lock, productLock);
+      assert.deepEqual(result, {
+        kind: 'candidate', platform: selected.platform, version: selected.version,
+        sourceCommit: 'b'.repeat(40), archiveSha256: 'c'.repeat(64),
+      });
+      assert.equal(reads, 1, 'validate and return the same observed witness');
+    });
+  }
+
+  test(`${gate}: an invalid first witness is not replaced by a later valid read`, () => {
+    for (const witness of ['sourceCommit', 'sha256'] as const) {
+      const { selected, lock } = fixture();
+      const productLock = structuredClone(lock);
+      const delivery = lock.opencodeV2Delivery?.[selected.platform];
+      assert.ok(delivery?.archive);
+      const target = witness === 'sha256' ? delivery.archive : delivery;
+      const original = witness === 'sha256' ? delivery.archive.sha256 : delivery.sourceCommit;
+      let reads = 0;
+      Object.defineProperty(target, witness, {
+        enumerable: true, get() { return ++reads === 1 ? 'FOREIGN' : original; },
+      });
+      const result = gate === 'selection'
+        ? preflightOpenCodeV2Selection(selected, lock)
+        : preflightOpenCodeV2CurrentProduct(selected, lock, productLock);
+      assert.deepEqual(result, { kind: 'hold', reason: 'delivery' });
+      assert.equal(reads, 1, 'do not replace an invalid capture with a second read');
+    }
+  });
+}
