@@ -2048,6 +2048,24 @@ test('V2 ASK admission holds when persisted project grants are not attested', as
     'fail closed before native instructions or credentials, then stop only owned TEST engine');
 });
 
+test('V2 product ASK admits a stricter attested native DENY without a saved-grant bypass', async () => {
+  // OpenCode 2.0.21 resolves session DENY before project-saved grants
+  // and plugin hooks. Native DENY is strictly stronger than requested ASK.
+  const { captured, calls } = owner(true, 'deny');
+  captured.requiredExternalDirectory = 'ask';
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const opened = await provider.factory.open(request());
+  try {
+    assert.equal(provider.isReady(), true);
+    assert.equal(calls.context, 1, 'native DENY path retains one initial-context attestation');
+    assert.equal(calls.permissions, 2, 'permissions checked both before and after context mutation');
+  } finally {
+    await opened.driver.close();
+    assert.equal(await provider.cleanup(), true);
+    assert.equal(calls.stop, 1, 'only the captured TEST process is signalled once');
+  }
+});
+
 test('native instructions are not treated as installed when identity attestation is wrong', async () => {
   const { captured, calls } = owner(true);
   captured.installAndAttestInitialContext = async (capture) => {

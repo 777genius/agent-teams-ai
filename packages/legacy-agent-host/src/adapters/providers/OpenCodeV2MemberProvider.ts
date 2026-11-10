@@ -379,14 +379,15 @@ export function createOpenCodeV2MemberProvider(
             // persisted project-scoped "always" grants can resolve it to ALLOW,
             // as the isolated native TEST demonstrates. The current owner
             // readback only attests session rules, not persisted grants or plugin
-            // resolution. Hold ASK until that native effective proof exists.
-            // Explicit session DENY is independently tested to win over grants.
-            if (!effective || requiredExternalDirectory === 'ask' ||
+            // resolution. Hold an effective ASK until that native proof exists.
+            // A stricter session DENY is tested to win before grants/hooks.
+            const initialPolicy = effective && preflightOpenCodeV2EffectiveExternalDirectory(
+              effective.rules, requiredExternalDirectory);
+            if (!effective || initialPolicy?.kind !== 'policy-candidate' ||
+                initialPolicy.effect === 'ask' ||
                 effective.nativeSessionId !== profile.nativeSessionId ||
                 effective.pid !== admittedCustody.pid ||
                 effective.startIdentity !== admittedCustody.startIdentity ||
-                preflightOpenCodeV2EffectiveExternalDirectory(
-                  effective.rules, requiredExternalDirectory).kind !== 'policy-candidate' ||
                 combined.aborted || !current()) return false;
             // A native session being reachable is NOT a ready Team member.
             // Initial role/team/workspace instructions need native readback;
@@ -414,12 +415,13 @@ export function createOpenCodeV2MemberProvider(
             // Re-attest both after the mutation; never retry a lost PUT ACK.
             const finalEffective = snapshotOpenCodeV2PermissionReadback(
               await capturedReadNativeEffectivePermissions(combined));
-            if (!finalEffective ||
+            const finalPolicy = finalEffective && preflightOpenCodeV2EffectiveExternalDirectory(
+              finalEffective.rules, requiredExternalDirectory);
+            if (!finalEffective || finalPolicy?.kind !== 'policy-candidate' ||
+                finalPolicy.effect === 'ask' ||
                 finalEffective.nativeSessionId !== profile.nativeSessionId ||
                 finalEffective.pid !== admittedCustody.pid ||
                 finalEffective.startIdentity !== admittedCustody.startIdentity ||
-                preflightOpenCodeV2EffectiveExternalDirectory(
-                  finalEffective.rules, requiredExternalDirectory).kind !== 'policy-candidate' ||
                 combined.aborted || !current()) return false;
             const finalCustodyReceipt = await capturedReadNativeCustody(combined);
             // Re-attest process custody after the native context PUT. A
