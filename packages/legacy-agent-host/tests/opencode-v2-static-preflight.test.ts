@@ -513,3 +513,25 @@ test('V2.2 rejects accessor-backed native permission rules without executing get
     assert.equal(reads, 0, 'untrusted native rule getter must never run');
   }
 });
+
+test('V2.2 throwing native permission envelopes fail closed without a Host exception', () => {
+  const deny = { action: 'external_directory', resource: '*', effect: 'deny' };
+  const revoked = Proxy.revocable([deny], {});
+  revoked.revoke();
+  const invalid: unknown[] = [
+    new Proxy([deny], { get(target, key, receiver) {
+      if (key === 'length') throw new Error('TEST native array length failed');
+      return Reflect.get(target, key, receiver);
+    } }),
+    [new Proxy(deny, { ownKeys() { throw new Error('TEST native ownKeys failed'); } })],
+    [new Proxy(deny, { getOwnPropertyDescriptor() {
+      throw new Error('TEST native descriptor failed');
+    } })],
+    revoked.proxy,
+  ];
+  for (const rules of invalid) {
+    assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(rules, 'deny'),
+      { kind: 'hold', reason: 'rules' },
+      'a malformed native policy response must not throw or authorize access');
+  }
+});
