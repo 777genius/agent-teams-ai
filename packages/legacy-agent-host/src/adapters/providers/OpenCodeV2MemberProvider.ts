@@ -3,6 +3,7 @@ import type { OpenCodeV2DriverConfig } from '@agent-teams/provider-implementatio
 import { types as nodeUtilTypes } from 'node:util';
 import { snapshotOpenCodeV2PermissionReadback } from './OpenCodeV2PermissionReadback.js';
 import { snapshotOpenCodeV2CustodyReadback } from './OpenCodeV2CustodyReadback.js';
+import { snapshotOpenCodeV2InitialContextReadback } from './OpenCodeV2InitialContextReadback.js';
 import { runtimeDigest } from '../../runtime/identity.js';
 import { finalizeOpenCodeV2ObserverAfterClose, guardOpenCodeV2ObserverCleanup } from './OpenCodeV2ObserverCleanup.js';
 import { initialContextDigest } from '../../team-launch/context.js';
@@ -391,7 +392,10 @@ export function createOpenCodeV2MemberProvider(
                 configRevision: capturedConfigRevision,
               }), combined);
             });
-            const attested = await initialContextAttempt;
+            // A callback receipt is not an immutable native acknowledgement:
+            // a getter could rewrite a foreign digest before the next field
+            // comparison. Capture only own, enumerable JSON data fields.
+            const attested = snapshotOpenCodeV2InitialContextReadback(await initialContextAttempt);
             if (!attested || combined.aborted || !current() ||
                 attested.nativeSessionId !== profile.nativeSessionId ||
                 attested.contextDigest !== contextDigest ||

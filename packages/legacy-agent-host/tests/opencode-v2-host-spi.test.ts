@@ -2949,3 +2949,52 @@ test('V2 refuses forged native custody envelopes before and after context instal
     }
   }
 });
+
+test('V2 rejects forged native initial-context ACK before final policy readback', async () => {
+  // An owner-provided getter could previously rewrite a wrong context digest
+  // while Host read nativeSessionId. Do not accept a forged native PUT ACK.
+  for (const shape of ['digest-getter', 'proxy', 'hidden-field', 'foreign-prototype'] as const) {
+    const { captured, calls } = owner(true);
+    let getterCalls = 0;
+    captured.installAndAttestInitialContext = async (capture) => {
+      calls.context++;
+      const receipt = {
+        nativeSessionId: capture.nativeSessionId,
+        contextDigest: capture.contextDigest,
+        generation: capture.generation,
+        configRevision: capture.configRevision,
+      };
+      if (shape === 'proxy') return new Proxy(receipt, {});
+      if (shape === 'hidden-field') {
+        Object.defineProperty(receipt, 'unsupported', { value: true, enumerable: false });
+      } else if (shape === 'foreign-prototype') {
+        Object.setPrototypeOf(receipt, { toJSON: () => ({ contextDigest: 'forged' }) });
+      } else if (shape === 'digest-getter') {
+        receipt.contextDigest = 'b'.repeat(64);
+        Object.defineProperty(receipt, 'nativeSessionId', {
+          enumerable: true,
+          get() {
+            getterCalls++;
+            // Pre-fix direct property access accepted the fake digest after
+            // this getter changed it to the expected captured digest.
+            receipt.contextDigest = capture.contextDigest;
+            return capture.nativeSessionId;
+          },
+        });
+      }
+      return receipt;
+    };
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    await assert.rejects(() => provider.factory.open(request()),
+      /opencode.driver.dependency-unavailable/,
+      'a non-JSON instruction ACK must not attest the initial native context');
+    assert.equal(getterCalls, 0, 'Host must not execute an instruction ACK getter');
+    assert.equal(calls.context, 1, 'possibly applied native instructions are never replayed');
+    assert.equal(calls.permissions, 1, 'forged ACK must fail before final permission readback');
+    assert.equal(calls.password, 0, 'invalid context receipt cannot access credentials');
+    assert.equal(provider.isReady(), false);
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.equal(calls.stop, 1, 'only this TEST-owned native engine is retired');
+    assert.equal(await provider.cleanup(), true);
+  }
+});
