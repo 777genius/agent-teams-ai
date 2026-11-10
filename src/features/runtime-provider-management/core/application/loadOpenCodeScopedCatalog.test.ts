@@ -13,6 +13,7 @@ function response(sourceId: string, freshUntil?: string): RuntimeProviderManagem
       providerId: sourceId,
       catalogState: 'fresh',
       defaultModelId: null,
+      diagnostics: [],
       models: [],
       ...(freshUntil ? { freshUntil } : {}),
     },
