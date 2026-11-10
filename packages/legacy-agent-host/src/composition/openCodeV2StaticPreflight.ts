@@ -295,6 +295,11 @@ export function preflightOpenCodeV2EffectiveExternalDirectory(
     // and conceal a trailing ALLOW. A native JSON response cannot be a Proxy.
     if (!Array.isArray(effectivePermissions) || nodeUtilTypes.isProxy(effectivePermissions))
       return { kind: 'hold', reason: 'rules' };
+    // A JSON-decoded array has the intrinsic prototype. A caller-supplied
+    // inherited iterator could expose a later ALLOW despite an indexed DENY.
+    // Never consult or execute a custom prototype while admitting native rules.
+    if (Object.getPrototypeOf(effectivePermissions) !== Array.prototype)
+      return { kind: 'hold', reason: 'rules' };
     // Real native JSON arrays have own indexed data slots. for...of would
     // execute a caller-supplied Symbol.iterator, which could omit a later
     // ALLOW rule and counterfeit a final external_directory DENY.
@@ -321,6 +326,11 @@ export function preflightOpenCodeV2EffectiveExternalDirectory(
       // hidden or symbol fields without evaluating their accessors.
       if (!rule || typeof rule !== 'object' || nodeUtilTypes.isProxy(rule) ||
           Array.isArray(rule) || Reflect.ownKeys(rule).length !== 3)
+        return { kind: 'hold', reason: 'rules' };
+      // A native JSON record cannot inherit a custom toJSON or resolver
+      // behavior that disagrees with its inspected own data descriptors.
+      const rulePrototype = Object.getPrototypeOf(rule);
+      if (rulePrototype !== Object.prototype && rulePrototype !== null)
         return { kind: 'hold', reason: 'rules' };
       const action = Object.getOwnPropertyDescriptor(rule, 'action');
       const resource = Object.getOwnPropertyDescriptor(rule, 'resource');

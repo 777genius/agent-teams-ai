@@ -658,6 +658,48 @@ test('V2.2 native permission arrays cannot hide a later ALLOW with an iterator',
 });
 
 
+test('V2.2 refuses inherited iterator and rule serialization overrides outside native JSON', () => {
+  const deny = { action: 'external_directory', resource: '*', effect: 'deny' };
+  const allow = { action: 'external_directory', resource: '*', effect: 'allow' };
+  // This array has only index 0 and length as own keys, but its inherited
+  // iterator exposes a later ALLOW to a consumer using for...of.
+  const inherited = Object.create(Array.prototype) as object;
+  let iteratorCalls = 0;
+  Object.defineProperty(inherited, Symbol.iterator, {
+    value: function* () {
+      iteratorCalls++;
+      yield deny;
+      yield allow;
+    },
+  });
+  const rules = [deny];
+  Object.setPrototypeOf(rules, inherited);
+  assert.deepEqual(Reflect.ownKeys(rules), ['0', 'length']);
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(rules, 'deny'),
+    { kind: 'hold', reason: 'rules' },
+    'an inherited iterator must not forge a final native DENY');
+  assert.equal(iteratorCalls, 0, 'admission must not execute inherited iterator code');
+  assert.deepEqual([...rules], [deny, allow], 'the real iterator exposes a later ALLOW');
+
+  // Native JSON.parse records cannot inherit toJSON, which can serialize a
+  // validated DENY as ALLOW when handed to another consumer.
+  const inheritedRule = { ...deny };
+  let serializationCalls = 0;
+  Object.setPrototypeOf(inheritedRule, {
+    toJSON() { serializationCalls++; return allow; },
+  });
+  assert.equal(Reflect.ownKeys(inheritedRule).length, 3);
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory([inheritedRule], 'deny'),
+    { kind: 'hold', reason: 'rules' },
+    'inherited rule semantics are not native JSON');
+  assert.equal(serializationCalls, 0, 'admission must not invoke inherited serializers');
+  assert.equal(JSON.parse(JSON.stringify(inheritedRule)).effect, 'allow');
+
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(
+    JSON.parse(JSON.stringify([deny])), 'deny'),
+  { kind: 'policy-candidate', effect: 'deny' }, 'canonical native JSON stays accepted');
+});
+
 test('V2 static preflight rejects throwing capture envelopes without crashing Host admission', () => {
   const revokedSelection = Proxy.revocable({ ...selected }, {});
   revokedSelection.revoke();
