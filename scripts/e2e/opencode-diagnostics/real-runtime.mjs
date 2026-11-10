@@ -314,7 +314,7 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send, co
     await new Promise(resolve => setTimeout(resolve, 250));
   }
   assert(inlineLayout?.inline, 'Settings provider banner retained the Dashboard card shell');
-  assert.match(inlineLayout.background, /^(?:rgba\\(0, 0, 0, 0\\)|transparent)$/,
+  assert.match(inlineLayout.background, /^(?:rgba\(0, 0, 0, 0\)|transparent)$/,
     'Settings provider background differs from its parent surface');
   assert.equal(inlineLayout.borderBottom, '1px', 'Settings provider header divider missing');
   assert.equal(inlineLayout.headerInteractive, false, 'Settings header must not be collapsible');
