@@ -924,7 +924,6 @@ export class CliInstallerService {
             : createRuntimeStatusErrorProviderStatus(providerId, error))
           .finally(read?.finish);
     if (generation !== this.statusGatherGeneration) return obsoleteStatus();
-    // Superseded results are not authoritative, even when they failed.
     if (read?.isCurrent() === false) return createPendingProviderStatus(providerId);
     const mismatchStatus = projectMismatchedProviderStatus(providerId, providerStatus, this.now());
     if (mismatchStatus) {
@@ -932,6 +931,7 @@ export class CliInstallerService {
     }
     if (!options.projectPath) {
       this.updateLatestProviderStatusIfCurrent(providerStatus, generation);
+      read?.acknowledgePublication();
     }
     return projectProviderAuthority(providerStatus, this.now());
   }
