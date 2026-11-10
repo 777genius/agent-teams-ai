@@ -1,0 +1,90 @@
+name: Stage1 stack merge diagnostic (read-only)
+
+on:
+  push:
+    branches: [test/stage1-stack-integration-20261110]
+    paths: [.github/workflows/stage1-stack-integration-diagnostic.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: 9a4923dffec9fffe8db65c4eb444315d18770dd3
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Diagnose exact three-way merge without running repository code
+        shell: bash
+        env:
+          SOURCE_HEAD: 9a4923dffec9fffe8db65c4eb444315d18770dd3
+          TARGET_BASE: 3d7afb100b1996f683ee9eeebfd2bd5561f7f232
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, subprocess
+          head, base = os.environ['SOURCE_HEAD'], os.environ['TARGET_BASE']
+          def git(*args, check=True):
+              return subprocess.run(['git', *args], check=check, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          assert git('rev-parse', 'HEAD').stdout.decode().strip() == head
+          git('cat-file', '-e', base + '^{commit}')
+          ancestor = git('merge-base', head, base).stdout.decode().strip()
+          attempt = git('-c', 'core.hooksPath=/dev/null', '-c', 'user.name=github-actions[bot]',
+                        '-c', 'user.email=41898282+github-actions[bot]@users.noreply.github.com',
+                        'merge', '--no-commit', '--no-ff', base, check=False)
+          conflicts = git('diff', '--name-only', '--diff-filter=U').stdout.decode().splitlines()
+          if attempt.returncode not in (0, 1):
+              raise RuntimeError('git merge failed before producing a conflict diagnosis')
+          output = pathlib.Path('.integration-proof')
+          output.mkdir(exist_ok=True)
+          report = {'kind': 'READ_ONLY_STACK_MERGE_DIAGNOSTIC', 'sourceHead': head,
+                    'targetBase': base, 'mergeBase': ancestor, 'mergeExitCode': attempt.returncode,
+                    'conflicts': conflicts, 'sourceOrNativeTestsRun': False, 'pushed': False}
+          if not conflicts and attempt.returncode == 0:
+              report['mergedTree'] = git('write-tree').stdout.decode().strip()
+          report['indexEntries'] = git('ls-files', '--unmerged').stdout.decode().splitlines()
+          # Only tracked integration inputs; never archive HOME, .git or credentials.
+          paths = sorted(set(conflicts + ['pnpm-lock.yaml']))
+          if len(paths) > 30:
+              raise RuntimeError('unexpectedly broad integration conflict')
+          report['files'] = []
+          total_bytes = 0
+          for path in paths:
+              key = hashlib.sha256(path.encode()).hexdigest()[:16]
+              entry = {'path': path, 'directory': key, 'stages': {}}
+              folder = output / key
+              folder.mkdir()
+              for label, revision in [('ancestor', ancestor), ('source', head), ('target', base)]:
+                  blob = git('show', revision + ':' + path, check=False)
+                  if blob.returncode:
+                      continue
+                  data = blob.stdout
+                  if len(data) > 4 * 1024 * 1024 or b'\0' in data:
+                      raise RuntimeError('unexpected binary or oversized integration input')
+                  total_bytes += len(data)
+                  (folder / label).write_bytes(data)
+                  entry['stages'][label] = git('rev-parse', revision + ':' + path).stdout.decode().strip()
+              indexed = git('show', ':' + path, check=False)
+              if indexed.returncode == 0:
+                  total_bytes += len(indexed.stdout)
+                  (folder / 'merged').write_bytes(indexed.stdout)
+                  entry['mergedBlob'] = git('hash-object', '--stdin', check=False).returncode if False else hashlib.sha1(
+                      b'blob ' + str(len(indexed.stdout)).encode() + b'\0' + indexed.stdout).hexdigest()
+              report['files'].append(entry)
+          if total_bytes > 12 * 1024 * 1024:
+              raise RuntimeError('integration evidence exceeded its bound')
+          (output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
+          print(json.dumps(report, indent=2))
+          PY
+      - name: Preserve merge diagnosis only (not an E2E certificate)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: stage1-stack-merge-9a4923df-3d7afb10
+          path: .integration-proof
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
