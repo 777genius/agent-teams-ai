@@ -760,6 +760,7 @@ test('V2 launch rejects unproven model/variant changes and V1 permission modes',
     { permissions: 'manual' }, { permissions: 'bypass' },
     { model: 'TEST-next-model' }, { model: 'TEST-provider/TEST-next-model' },
     { model: 'FOREIGN-provider/TEST-model' },
+    { model: 'TEST-model' }, // Unqualified ID has no catalog provider provenance.
     { effort: 'high' }, { effort: 'none' },
   ] as const;
   for (const choice of unsupported) {
@@ -768,16 +769,16 @@ test('V2 launch rejects unproven model/variant changes and V1 permission modes',
       'reason' in error && error.reason === 'launch-option-unsupported',
     `Unattested V2 launch option was accepted: ${JSON.stringify(choice)}`);
   }
-  // An explicit app selection of the SAME captured model is safe. Its
-  // provider prefix must not be mistaken for an attempt to switch models.
-  for (const model of ['TEST-model', 'TEST-provider/TEST-model']) {
-    const selected = applyLaunchConfiguration(base, { model });
-    assert.equal(selected.provider, 'opencode');
-    if (selected.provider !== 'opencode') throw new Error('Expected OpenCode profile');
-    assert.equal(selected.model, base.model);
-    assert.equal(selected.nativeOptions.toolApprovalMode, undefined);
-    assert.equal(selected.nativeOptions.variant, undefined);
-  }
+  // The exact provider-qualified model is the only explicit V2 selection
+  // that can be compared with this captured profile; bare IDs are ambiguous.
+  const selectedQualified = applyLaunchConfiguration(base, {
+    model: 'TEST-provider/TEST-model',
+  });
+  assert.equal(selectedQualified.provider, 'opencode');
+  if (selectedQualified.provider !== 'opencode') throw new Error('Expected OpenCode profile');
+  assert.equal(selectedQualified.model, base.model);
+  assert.equal(selectedQualified.nativeOptions.toolApprovalMode, undefined);
+  assert.equal(selectedQualified.nativeOptions.variant, undefined);
   // The raw selection is ambiguous: provider TEST-provider's model
   // TEST-model has the same spelling as native model TEST-provider/TEST-model.
   // Reject it without UI provenance; its doubly-qualified alias is distinct.
@@ -829,7 +830,6 @@ test('V2 launch rejects unproven model/variant changes and V1 permission modes',
   }] }).members[0]!;
   for (const choice of [
     {},
-    { model: 'TEST-model' },
     { model: 'TEST-provider/TEST-model' },
   ]) {
     const selected = applyLaunchConfiguration(capturedVariantBase, choice);

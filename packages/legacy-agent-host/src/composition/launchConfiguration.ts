@@ -54,13 +54,11 @@ export function applyLaunchConfiguration(
       (!v2 || selected.model !== qualifiedCapturedModel))
     throw new TeamLaunchError('invalid', 'launch-option-unsupported');
   if (v2) {
-    const providerPrefix = `${base.nativeOptions.providerId}/`;
-    // E.g. captured foo/bar and UI-selected foo/bar can mean either bare
-    // "foo/bar" or provider foo's model "bar". With no provenance, fail closed.
-    // The explicitly qualified foo/foo/bar remains the unambiguous alias.
+    // Only an exact provider-qualified catalog alias identifies the captured
+    // model. A bare model ID, even when its spelling matches, has no provider
+    // provenance and must not select another native session by accident.
     const modelMatches = selected.model === undefined ||
-      selected.model === qualifiedCapturedModel ||
-      (selected.model === base.model && !base.model.startsWith(providerPrefix));
+      selected.model === qualifiedCapturedModel;
     if (selected.permissions !== undefined || selected.effort !== undefined || !modelMatches)
       throw new TeamLaunchError('invalid', 'launch-option-unsupported');
   }
