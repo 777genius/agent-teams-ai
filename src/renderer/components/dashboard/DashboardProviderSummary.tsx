@@ -13,17 +13,32 @@ interface DashboardProviderSummaryProps {
   readonly isActive?: boolean;
 }
 
-export const DashboardProviderSummary = ({ isActive = true }: DashboardProviderSummaryProps): React.JSX.Element | null => {
+export const DashboardProviderSummary = ({
+  isActive = true,
+}: DashboardProviderSummaryProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
-  const { summary, cliStatus, cliStatusLoading, cliStatusError, multimodelEnabled, openCodeIsChecking, projectPath, openCodeRuntimeStatus } =
-    useProviderConnectionSummary();
+  const {
+    summary,
+    cliStatus,
+    cliStatusLoading,
+    cliStatusError,
+    cliProviderStatusLoading,
+    multimodelEnabled,
+    openCodeIsChecking,
+    projectPath,
+    openCodeRuntimeStatus,
+  } = useProviderConnectionSummary();
   const openSettingsTab = useStore((state) => state.openSettingsTab);
   const openTab = useStore((state) => state.openTab);
 
   useOpenCodeDashboardConnectedCountProbe({
-    enabled: isElectronMode() && isActive && multimodelEnabled &&
-      cliStatus?.installed === true && cliStatus.flavor === 'agent_teams_orchestrator',
+    enabled:
+      isElectronMode() &&
+      isActive &&
+      multimodelEnabled &&
+      cliStatus?.installed === true &&
+      cliStatus.flavor === 'agent_teams_orchestrator',
     projectPath,
     runtimeStatus: openCodeRuntimeStatus,
     connectedCount: summary.openCodeConnected,
@@ -55,6 +70,7 @@ export const DashboardProviderSummary = ({ isActive = true }: DashboardProviderS
             summary={summary}
             cliStatus={cliStatus}
             cliStatusLoading={cliStatusLoading}
+            providerStatusLoading={cliProviderStatusLoading}
             multimodelEnabled={multimodelEnabled}
             openCodeIsChecking={openCodeIsChecking}
           />

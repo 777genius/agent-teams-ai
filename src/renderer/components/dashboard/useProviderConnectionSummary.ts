@@ -26,7 +26,9 @@ export function useProviderConnectionSummary(cliStatusOverride?: CliInstallation
   const selectedProjectId = useStore((state) => state.selectedProjectId);
   const projects = useStore((state) => state.projects);
   const repositoryGroups = useStore((state) => state.repositoryGroups);
-  const multimodelEnabled = useStore((state) => state.appConfig?.general?.multimodelEnabled ?? true);
+  const multimodelEnabled = useStore(
+    (state) => state.appConfig?.general?.multimodelEnabled ?? true
+  );
   const projectPath = useMemo(
     () => resolveProjectPathById(selectedProjectId, projects, repositoryGroups)?.path ?? null,
     [selectedProjectId, projects, repositoryGroups]
@@ -62,7 +64,14 @@ export function useProviderConnectionSummary(cliStatusOverride?: CliInstallation
     const delay = Math.max(1, Math.min(...deadlines) - Date.now() + 10);
     const timer = window.setTimeout(() => expire((n) => n + 1), delay);
     return () => window.clearTimeout(timer);
-  }, [cliStatus, globalDirectory, projectDirectory, projectPath, observedOpenCodeCount, expiryRevision]);
+  }, [
+    cliStatus,
+    globalDirectory,
+    projectDirectory,
+    projectPath,
+    observedOpenCodeCount,
+    expiryRevision,
+  ]);
 
   const summary = getDashboardConnectionSummary({
     cliStatus,
@@ -76,5 +85,15 @@ export function useProviderConnectionSummary(cliStatusOverride?: CliInstallation
     runtimeStatus: openCodeRuntimeStatus,
   });
 
-  return { summary, cliStatus, cliStatusLoading, cliStatusError, multimodelEnabled, openCodeIsChecking, projectPath, openCodeRuntimeStatus };
+  return {
+    summary,
+    cliStatus,
+    cliStatusLoading,
+    cliStatusError,
+    cliProviderStatusLoading,
+    multimodelEnabled,
+    openCodeIsChecking,
+    projectPath,
+    openCodeRuntimeStatus,
+  };
 }

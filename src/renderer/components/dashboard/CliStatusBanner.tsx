@@ -848,7 +848,11 @@ const InstalledBanner = ({
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
   const { t: commonT } = useAppTranslation('common');
-  const { summary: sharedConnectionSummary, multimodelEnabled, openCodeIsChecking } = useProviderConnectionSummary(cliStatus);
+  const {
+    summary: sharedConnectionSummary,
+    multimodelEnabled,
+    openCodeIsChecking,
+  } = useProviderConnectionSummary(cliStatus);
   const runtimeBackendSummaryText = useMemo(
     () => buildProviderRuntimeBackendSummaryText(commonT),
     [commonT]
@@ -1026,6 +1030,7 @@ const InstalledBanner = ({
                   summary={sharedConnectionSummary}
                   cliStatus={cliStatus}
                   cliStatusLoading={cliStatusLoading}
+                  providerStatusLoading={cliProviderStatusLoading}
                   multimodelEnabled={multimodelEnabled}
                   openCodeIsChecking={openCodeIsChecking}
                 />
@@ -1829,7 +1834,12 @@ export const CliStatusBanner = ({
     return () => {
       clearInterval(interval);
     };
-  }, [isDashboardActive, isElectron, refreshAnthropicSubscriptionLimits, shouldPollAnthropicSubscriptionLimits]);
+  }, [
+    isDashboardActive,
+    isElectron,
+    refreshAnthropicSubscriptionLimits,
+    shouldPollAnthropicSubscriptionLimits,
+  ]);
 
   const handleInstall = useCallback(() => {
     installCli();
