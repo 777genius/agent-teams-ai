@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { constants } from 'node:fs';
 import { open, realpath, stat } from 'node:fs/promises';
 import { posix, win32 } from 'node:path';
+import { types as nodeUtilTypes } from 'node:util';
 
 /**
  * V2.0 qualification boundary, not a native readiness certificate.
@@ -81,7 +82,19 @@ export function isCanonicalOpenCodeV2Directory(platform: string, directory: stri
 }
 
 /** Requires an independently verified exact binary digest/version; does not itself read the binary. */
+/** Malformed owner/manifest objects are never authorization or Host crashes. */
 export function preflightOpenCodeV2Selection(
+  selection: Readonly<OpenCodeV2Selection>,
+  lock: Readonly<OpenCodeV2RuntimeLock>
+): OpenCodeV2StaticPreflight {
+  try {
+    return preflightOpenCodeV2SelectionCandidate(selection, lock);
+  } catch {
+    return { kind: 'hold', reason: 'binding' };
+  }
+}
+
+function preflightOpenCodeV2SelectionCandidate(
   selection: Readonly<OpenCodeV2Selection>,
   lock: Readonly<OpenCodeV2RuntimeLock>
 ): OpenCodeV2StaticPreflight {
@@ -150,7 +163,20 @@ export function preflightOpenCodeV2Selection(
  * Even a candidate here is NOT V2 process custody, effective permissions,
  * native Session SPI, packaged E2E or authorization to submit work.
  */
+/** Reject changing captures even when an accessor fails after static admission. */
 export function preflightOpenCodeV2CurrentProduct(
+  selection: Readonly<OpenCodeV2Selection>,
+  stageLock: Readonly<OpenCodeV2RuntimeLock>,
+  productLock: Readonly<OpenCodeV2RuntimeLock>
+): OpenCodeV2StaticPreflight {
+  try {
+    return preflightOpenCodeV2CurrentProductCandidate(selection, stageLock, productLock);
+  } catch {
+    return { kind: 'hold', reason: 'current-product' };
+  }
+}
+
+function preflightOpenCodeV2CurrentProductCandidate(
   selection: Readonly<OpenCodeV2Selection>,
   stageLock: Readonly<OpenCodeV2RuntimeLock>,
   productLock: Readonly<OpenCodeV2RuntimeLock>
@@ -260,24 +286,76 @@ export function preflightOpenCodeV2EffectiveExternalDirectory(
   { kind: 'policy-candidate'; effect: 'ask' | 'deny' } {
   if (required !== 'ask' && required !== 'deny')
     return { kind: 'hold', reason: 'rules' };
-  if (!Array.isArray(effectivePermissions) ||
-      effectivePermissions.length === 0 || effectivePermissions.length > 1024)
-    return { kind: 'hold', reason: 'rules' };
-  for (const rule of effectivePermissions) {
-    if (!rule || typeof rule !== 'object' || Array.isArray(rule) ||
-        Object.keys(rule).length !== 3 ||
-        !['action', 'resource', 'effect'].every((key) => Object.hasOwn(rule, key)) ||
-        typeof rule.action !== 'string' || !rule.action || rule.action.length > 256 ||
-        typeof rule.resource !== 'string' || !rule.resource || rule.resource.length > 8192 ||
-        !['allow', 'ask', 'deny'].includes(rule.effect))
+  // Native readback is untrusted at this boundary. A Proxy/revoked capture
+  // can throw during Array.isArray, length, ownKeys or descriptor inspection.
+  // Reject the complete envelope rather than crashing a Host readiness check.
+  try {
+    // Array.isArray and own property descriptors are not proof of an unproxied
+    // native-JSON readback: a Proxy can forge the writable length descriptor
+    // and conceal a trailing ALLOW. A native JSON response cannot be a Proxy.
+    if (!Array.isArray(effectivePermissions) || nodeUtilTypes.isProxy(effectivePermissions))
       return { kind: 'hold', reason: 'rules' };
+    // A JSON-decoded array has the intrinsic prototype. A caller-supplied
+    // inherited iterator could expose a later ALLOW despite an indexed DENY.
+    // Never consult or execute a custom prototype while admitting native rules.
+    if (Object.getPrototypeOf(effectivePermissions) !== Array.prototype)
+      return { kind: 'hold', reason: 'rules' };
+    // Real native JSON arrays have own indexed data slots. for...of would
+    // execute a caller-supplied Symbol.iterator, which could omit a later
+    // ALLOW rule and counterfeit a final external_directory DENY.
+    const length = Object.getOwnPropertyDescriptor(effectivePermissions, 'length')?.value;
+    if (!Number.isSafeInteger(length) || length < 1 || length > 1024)
+      return { kind: 'hold', reason: 'rules' };
+    // A JSON array has only its indexed slots and length. An own iterator
+    // could expose a later ALLOW to the native resolver while our indexed
+    // readback sees a final DENY. Reject extra keys without invoking them.
+    if (Reflect.ownKeys(effectivePermissions).length !== length + 1)
+      return { kind: 'hold', reason: 'rules' };
+    // Native permission JSON consists of data fields. Reject accessors:
+    // a getter may report DENY while being validated and ALLOW when the final
+    // policy is read, creating a forged policy-candidate without a stable rule.
+    let last: { action: string; resource: string; effect: 'allow' | 'ask' | 'deny' } | undefined;
+    for (let index = 0; index < length; index++) {
+      const slot = Object.getOwnPropertyDescriptor(effectivePermissions, String(index));
+      // Reject sparse arrays, inherited entries and accessors without
+      // invoking owner-controlled getters or the array's iterator.
+      if (!slot || !('value' in slot))
+        return { kind: 'hold', reason: 'rules' };
+      const rule: unknown = slot.value;
+      // Native JSON records have exactly three own string keys. Reject
+      // hidden or symbol fields without evaluating their accessors.
+      if (!rule || typeof rule !== 'object' || nodeUtilTypes.isProxy(rule) ||
+          Array.isArray(rule) || Reflect.ownKeys(rule).length !== 3)
+        return { kind: 'hold', reason: 'rules' };
+      // A native JSON record cannot inherit a custom toJSON or resolver
+      // behavior that disagrees with its inspected own data descriptors.
+      const rulePrototype = Object.getPrototypeOf(rule);
+      if (rulePrototype !== Object.prototype && rulePrototype !== null)
+        return { kind: 'hold', reason: 'rules' };
+      const action = Object.getOwnPropertyDescriptor(rule, 'action');
+      const resource = Object.getOwnPropertyDescriptor(rule, 'resource');
+      const effect = Object.getOwnPropertyDescriptor(rule, 'effect');
+      if (!action || !resource || !effect ||
+          !('value' in action) || !('value' in resource) || !('value' in effect) ||
+          !action.enumerable || !resource.enumerable || !effect.enumerable)
+        return { kind: 'hold', reason: 'rules' };
+      const a: unknown = action.value;
+      const r: unknown = resource.value;
+      const e: unknown = effect.value;
+      if (typeof a !== 'string' || !a || a.length > 256 ||
+          typeof r !== 'string' || !r || r.length > 8192 ||
+          (e !== 'allow' && e !== 'ask' && e !== 'deny'))
+        return { kind: 'hold', reason: 'rules' };
+      last = { action: a, resource: r, effect: e };
+    }
+    // An earlier broad guard may be overridden by an agent-specific rule,
+    // including wildcards. Reject instead of trying to duplicate V2's matcher.
+    if (!last || last.action !== 'external_directory' || last.resource !== '*' ||
+        (last.effect !== 'ask' && last.effect !== 'deny') ||
+        (required === 'deny' && last.effect !== 'deny'))
+      return { kind: 'hold', reason: 'external-directory' };
+    return { kind: 'policy-candidate', effect: last.effect };
+  } catch {
+    return { kind: 'hold', reason: 'rules' };
   }
-  const last = effectivePermissions[effectivePermissions.length - 1];
-  // An earlier broad guard may be overridden by an agent-specific rule,
-  // including wildcards. Reject instead of trying to duplicate V2's matcher.
-  if (last.action !== 'external_directory' || last.resource !== '*' ||
-      (last.effect !== 'ask' && last.effect !== 'deny') ||
-      (required === 'deny' && last.effect !== 'deny'))
-    return { kind: 'hold', reason: 'external-directory' };
-  return { kind: 'policy-candidate', effect: last.effect };
 }
