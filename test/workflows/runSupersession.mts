@@ -32,6 +32,7 @@ export const RUN_SUPERSESSION_POLICY = {
     'landing-hetzner-release',
     'opencode-desktop-e2e',
     'opencode-v2-cold-dashboard-e2e',
+    'opencode-v2-stage1-preflight',
     'provider-real-runtime-e2e',
     'prepare-updater-native-inputs',
     'runtime-bootstrap-smoke',
