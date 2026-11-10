@@ -2389,7 +2389,7 @@ describe('team change throttling', () => {
     mutableApi.codexRuntime = {};
     const prior = useStore.getState();
     const bootstrap = vi.fn(async () => undefined);
-    const fetchProvider = vi.fn(async () => true);
+    const fetchProvider = vi.fn(async (_providerId: string, _options: unknown) => true);
     const fetchOpenCodeRuntimeStatus = vi.fn(async () => undefined);
     const fetchCodexRuntimeStatus = vi.fn(async () => undefined);
     useStore.setState({
