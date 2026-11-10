@@ -1,4 +1,4 @@
-name: Stage1 stack merge diagnostic (read-only)
+name: Stage1 exact integration objects (temporary)
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  diagnose:
+  prepare:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -18,73 +18,144 @@ jobs:
           ref: 9a4923dffec9fffe8db65c4eb444315d18770dd3
           fetch-depth: 0
           persist-credentials: false
-      - name: Diagnose exact three-way merge without running repository code
+      - name: Reproduce exact Git merge and reviewed conflict resolutions
         shell: bash
-        env:
-          SOURCE_HEAD: 9a4923dffec9fffe8db65c4eb444315d18770dd3
-          TARGET_BASE: 3d7afb100b1996f683ee9eeebfd2bd5561f7f232
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import hashlib, json, os, pathlib, subprocess
-          head, base = os.environ['SOURCE_HEAD'], os.environ['TARGET_BASE']
+          head = '9a4923dffec9fffe8db65c4eb444315d18770dd3'
+          base = '3d7afb100b1996f683ee9eeebfd2bd5561f7f232'
+          ancestor = '171faf4fc88930815067bb0d6c51b76c0bb78071'
+          resolutions = {
+              '.github/workflows/electron-packaged-ci.yml': ('source', '8651fc161638c735868d8f61488be97446fe094d'),
+              '.github/workflows/opencode-v2-stage1-preflight.yml': ('edit', '341cae36c52d3cc35ca9b4515e3216bf28d1276b'),
+              'packages/legacy-agent-host/src/composition/openCodeV2StaticPreflight.ts': ('target', '9c6953b557b896a209429a080ad1f963593da58d'),
+              'scripts/ci/install-dependencies-with-retry.mjs': ('source', 'b58bdd8bae05ced04dbeae0e3aa80c99d1c9906b'),
+          }
           def git(*args, check=True):
               return subprocess.run(['git', *args], check=check, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          def blobsha(data):
+              return hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
           assert git('rev-parse', 'HEAD').stdout.decode().strip() == head
-          git('cat-file', '-e', base + '^{commit}')
-          ancestor = git('merge-base', head, base).stdout.decode().strip()
+          assert git('merge-base', head, base).stdout.decode().strip() == ancestor
           attempt = git('-c', 'core.hooksPath=/dev/null', '-c', 'user.name=github-actions[bot]',
                         '-c', 'user.email=41898282+github-actions[bot]@users.noreply.github.com',
                         'merge', '--no-commit', '--no-ff', base, check=False)
+          assert attempt.returncode == 1, 'unexpected merge state'
           conflicts = git('diff', '--name-only', '--diff-filter=U').stdout.decode().splitlines()
-          if attempt.returncode not in (0, 1):
-              raise RuntimeError('git merge failed before producing a conflict diagnosis')
-          output = pathlib.Path('.integration-proof')
-          output.mkdir(exist_ok=True)
-          report = {'kind': 'READ_ONLY_STACK_MERGE_DIAGNOSTIC', 'sourceHead': head,
-                    'targetBase': base, 'mergeBase': ancestor, 'mergeExitCode': attempt.returncode,
-                    'conflicts': conflicts, 'sourceOrNativeTestsRun': False, 'pushed': False}
-          if not conflicts and attempt.returncode == 0:
-              report['mergedTree'] = git('write-tree').stdout.decode().strip()
-          report['indexEntries'] = git('ls-files', '--unmerged').stdout.decode().splitlines()
-          # Only tracked integration inputs; never archive HOME, .git or credentials.
-          paths = sorted(set(conflicts + ['pnpm-lock.yaml']))
-          if len(paths) > 30:
-              raise RuntimeError('unexpectedly broad integration conflict')
-          report['files'] = []
-          total_bytes = 0
-          for path in paths:
-              key = hashlib.sha256(path.encode()).hexdigest()[:16]
-              entry = {'path': path, 'directory': key, 'stages': {}}
-              folder = output / key
-              folder.mkdir()
-              for label, revision in [('ancestor', ancestor), ('source', head), ('target', base)]:
-                  blob = git('show', revision + ':' + path, check=False)
-                  if blob.returncode:
-                      continue
-                  data = blob.stdout
-                  if len(data) > 4 * 1024 * 1024 or b'\0' in data:
-                      raise RuntimeError('unexpected binary or oversized integration input')
-                  total_bytes += len(data)
-                  (folder / label).write_bytes(data)
-                  entry['stages'][label] = git('rev-parse', revision + ':' + path).stdout.decode().strip()
-              indexed = git('show', ':' + path, check=False)
-              if indexed.returncode == 0:
-                  total_bytes += len(indexed.stdout)
-                  (folder / 'merged').write_bytes(indexed.stdout)
-                  entry['mergedBlob'] = git('hash-object', '--stdin', check=False).returncode if False else hashlib.sha1(
-                      b'blob ' + str(len(indexed.stdout)).encode() + b'\0' + indexed.stdout).hexdigest()
-              report['files'].append(entry)
-          if total_bytes > 12 * 1024 * 1024:
-              raise RuntimeError('integration evidence exceeded its bound')
+          assert sorted(conflicts) == sorted(resolutions), 'conflicts changed; no resolution allowed'
+          for path, (side, expected) in resolutions.items():
+              revision = base if side == 'target' else head
+              data = git('show', revision + ':' + path).stdout
+              assert blobsha(data) == expected, 'source blob changed'
+              if side == 'edit':
+                  old = b'run: node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs'
+                  assert data.count(old) == 1
+                  data = data.replace(old, old + b' packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts')
+                  assert blobsha(data) == 'd3068f9778c4d5a809d99da5962752ef88482d96'
+              pathlib.Path(path).write_bytes(data)
+              git('add', '--', path)
+          assert not git('ls-files', '--unmerged').stdout
+          merged_tree = git('write-tree').stdout.decode().strip()
+          raw = git('diff-tree', '--no-commit-id', '--no-renames', '--raw', '-r', '-z', base, merged_tree).stdout.split(b'\0')
+          entries = []
+          while raw and raw[0]:
+              fields = raw.pop(0).decode().split()
+              path = raw.pop(0).decode()
+              assert len(fields) == 5 and fields[0].startswith(':')
+              _, mode, _, sha, status = fields
+              assert status in ('A', 'M', 'D') and mode in ('100644', '100755', '000000')
+              assert path != '.github/workflows/stage1-stack-integration-diagnostic.yml'
+              entries.append({'path': path, 'mode': mode if status != 'D' else '100644',
+                              'type': 'blob', 'sha': sha if status != 'D' else None, 'status': status})
+          assert 1 <= len(entries) <= 60, 'unexpected scope'
+          expected_blobs = {
+              'lockfile.blob': ('pnpm-lock.yaml', '9bce60308bd4f5c91c5420b0d36f831e6b77f6ff', '88d4818ed97e4349683d59a94af5c7f85fabeda76b0a42f0cbd50e15acfe3f1f'),
+              'preflight.blob': ('.github/workflows/opencode-v2-stage1-preflight.yml', 'd3068f9778c4d5a809d99da5962752ef88482d96', '9cc7c026e844c1f6bf19ede2624a93f420ebad2f9b228600933843b9470c7139'),
+          }
+          output = pathlib.Path('.integration-objects')
+          output.mkdir()
+          for name, (path, expected_sha, expected_digest) in expected_blobs.items():
+              data = git('show', ':' + path).stdout
+              assert len(data) < 2 * 1024 * 1024 and blobsha(data) == expected_sha
+              assert hashlib.sha256(data).hexdigest() == expected_digest
+              (output / name).write_bytes(data)
+          report = {'kind': 'EXACT_STACK_MERGE_OBJECTS', 'sourceHead': head, 'targetBase': base,
+                    'mergeBase': ancestor, 'mergedTree': merged_tree, 'entries': entries,
+                    'resolvedPaths': conflicts, 'sourceOrNativeTestsRun': False,
+                    'refsWritten': False, 'commitsWritten': False}
           (output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
           print(json.dumps(report, indent=2))
           PY
-      - name: Preserve merge diagnosis only (not an E2E certificate)
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: stage1-stack-merge-9a4923df-3d7afb10
-          path: .integration-proof
+          name: reviewed-stack-git-objects
+          path: .integration-objects
           include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+
+  publish-reviewed-blobs:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    # Only two fixed hash-verified Git blobs; no checkout, refs, commits or release.
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: reviewed-stack-git-objects
+          path: reviewed-objects
+      - name: Store only the two independently audited Git blobs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, hashlib, json, os, pathlib, urllib.request
+          root = pathlib.Path('reviewed-objects')
+          report = json.loads((root / 'report.json').read_text())
+          assert report['kind'] == 'EXACT_STACK_MERGE_OBJECTS'
+          assert report['sourceHead'] == '9a4923dffec9fffe8db65c4eb444315d18770dd3'
+          assert report['targetBase'] == '3d7afb100b1996f683ee9eeebfd2bd5561f7f232'
+          assert report['refsWritten'] is False and report['commitsWritten'] is False
+          expected = {
+              'lockfile.blob': ('9bce60308bd4f5c91c5420b0d36f831e6b77f6ff', '88d4818ed97e4349683d59a94af5c7f85fabeda76b0a42f0cbd50e15acfe3f1f'),
+              'preflight.blob': ('d3068f9778c4d5a809d99da5962752ef88482d96', '9cc7c026e844c1f6bf19ede2624a93f420ebad2f9b228600933843b9470c7139'),
+          }
+          assert {p.name for p in root.iterdir()} == set(expected) | {'report.json'}
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  raise RuntimeError('unexpected GitHub API redirect')
+          opener = urllib.request.build_opener(NoRedirect)
+          published = []
+          for name, (expected_sha, expected_digest) in expected.items():
+              path = root / name
+              assert path.is_file() and not path.is_symlink() and path.stat().st_size < 2 * 1024 * 1024
+              data = path.read_bytes()
+              assert hashlib.sha256(data).hexdigest() == expected_digest
+              assert hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest() == expected_sha
+              payload = json.dumps({'encoding': 'base64', 'content': base64.b64encode(data).decode()}).encode()
+              request = urllib.request.Request('https://api.github.com/repos/777genius/agent-teams-ai/git/blobs',
+                  data=payload, method='POST', headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                  'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json',
+                  'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'stage1-exact-git-object-preparation'})
+              with opener.open(request, timeout=60) as response:
+                  result = json.loads(response.read(65536))
+              assert result['sha'] == expected_sha, 'GitHub blob identity mismatch'
+              published.append({'name': name, 'sha': expected_sha, 'sha256': expected_digest})
+          receipt = {'kind': 'TWO_REVIEWED_BLOBS_ONLY', 'blobs': published,
+                     'refsWritten': False, 'commitsWritten': False, 'sourceOrNativeTestsRun': False}
+          pathlib.Path('git-object-receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          print(json.dumps(receipt, indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: reviewed-stack-object-receipt
+          path: git-object-receipt.json
           if-no-files-found: error
           retention-days: 3
