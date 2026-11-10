@@ -81,6 +81,29 @@ export function isCanonicalOpenCodeV2Directory(platform: string, directory: stri
     posix.normalize(directory) === directory && directory !== '/';
 }
 
+const selectionFields = [
+  'generation', 'platform', 'version', 'nativeReportedVersion', 'executableSha256',
+  'observedExecutableSha256', 'endpoint', 'directory', 'nativeSessionId',
+  'sessionBinding', 'accountBinding',
+] as const satisfies readonly (keyof OpenCodeV2Selection)[];
+
+/** Capture JSON data once without executing getters or Proxy traps. */
+function captureOpenCodeV2Selection(
+  selection: Readonly<OpenCodeV2Selection>
+): Readonly<OpenCodeV2Selection> | null {
+  if (!selection || typeof selection !== 'object' || nodeUtilTypes.isProxy(selection) ||
+      Array.isArray(selection)) return null;
+  const captured = {} as OpenCodeV2Selection;
+  for (const key of selectionFields) {
+    const field = Object.getOwnPropertyDescriptor(selection, key);
+    if (!field || !('value' in field) || !field.enumerable) return null;
+    // Preserve per-field diagnostic checks below; malformed values never pass
+    // the existing guards. Only own data is copied, not input descriptors/code.
+    Object.defineProperty(captured, key, { value: field.value, enumerable: true });
+  }
+  return Object.freeze(captured);
+}
+
 /** Requires an independently verified exact binary digest/version; does not itself read the binary. */
 /** Malformed owner/manifest objects are never authorization or Host crashes. */
 export function preflightOpenCodeV2Selection(
@@ -88,7 +111,9 @@ export function preflightOpenCodeV2Selection(
   lock: Readonly<OpenCodeV2RuntimeLock>
 ): OpenCodeV2StaticPreflight {
   try {
-    return preflightOpenCodeV2SelectionCandidate(selection, lock);
+    const captured = captureOpenCodeV2Selection(selection);
+    if (!captured) return { kind: 'hold', reason: 'binding' };
+    return preflightOpenCodeV2SelectionCandidate(captured, lock);
   } catch {
     return { kind: 'hold', reason: 'binding' };
   }
@@ -170,7 +195,9 @@ export function preflightOpenCodeV2CurrentProduct(
   productLock: Readonly<OpenCodeV2RuntimeLock>
 ): OpenCodeV2StaticPreflight {
   try {
-    return preflightOpenCodeV2CurrentProductCandidate(selection, stageLock, productLock);
+    const captured = captureOpenCodeV2Selection(selection);
+    if (!captured) return { kind: 'hold', reason: 'binding' };
+    return preflightOpenCodeV2CurrentProductCandidate(captured, stageLock, productLock);
   } catch {
     return { kind: 'hold', reason: 'current-product' };
   }
