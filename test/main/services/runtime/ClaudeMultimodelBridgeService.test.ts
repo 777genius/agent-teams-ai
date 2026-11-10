@@ -2192,7 +2192,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     ).toBe(90_000);
   });
 
-  it('coalesces repeated single-provider catalog hydration while one is in flight', async () => {
+  it('serializes replaced catalog reads and publishes only the newest provider status', async () => {
     let resolveHydration!: (value: { stdout: string; stderr: string; exitCode: number }) => void;
     const hydration = new Promise<{ stdout: string; stderr: string; exitCode: number }>(
       (resolve) => {
@@ -2332,18 +2332,15 @@ describe('ClaudeMultimodelBridgeService', () => {
     await vi.waitFor(() => {
       expect(secondUpdate).toHaveBeenCalledTimes(1);
     });
-    expect(fullStatusCalls).toBe(1);
-    expect(firstUpdate).toHaveBeenCalledTimes(1);
+    // A newer provider check supersedes the first generation. Reusing its
+    // already-started result would publish obsolete credentials/model evidence.
+    expect(fullStatusCalls).toBe(2);
+    expect(firstUpdate).not.toHaveBeenCalled();
     expect(secondUpdate.mock.calls[0]?.[0]).toMatchObject({
       authenticated: false,
       authMethod: null,
-      statusMessage: 'Full status reports logged out',
+      statusMessage: 'Fresh full status',
       capabilities: { teamLaunch: false },
-      modelCatalogRefreshState: 'error',
-      modelCatalog: {
-        defaultModelId: 'gpt-5.4',
-        status: 'stale',
-      },
     });
   });
 
