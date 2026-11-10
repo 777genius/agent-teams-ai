@@ -215,6 +215,22 @@ Exact reviewed sources:
   [full CI](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42551873228)
   and [Node compatibility](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42551873136)
   completed SUCCESS. This qualifies TEST-only SQL contention, **not** a Host pre-effect fence.
+  **Cross-boot no-replay negative (10 Nov 2026, direct tested HEAD):**
+  Runtime [Draft #260 `109d1b92`](https://github.com/agent-teams-ai/agent-runtime/commit/109d1b92f1bd5de6f18b6b5a21833005164e34c3)
+  launches three additional independent Host OS processes with distinct PIDs,
+  boot identities, PostgreSQL Pools and new authenticated bearers after an
+  operation-level UNKNOWN: same request, changed `requestId`, and changed
+  `attemptId`. The original SQL receipt remains unchanged, yet **each** retry
+  makes one extra deterministic TEST provider dispatch, materialization and
+  credential render, and completes again (required: zero/false).
+  [Direct-head PostgreSQL 18 Node 24/26 #42730538274](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42730538274)
+  each report **33 PASS, one intentional M08 RED FAIL, zero skips**.
+  [Full CI #42730538201](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42730538201)
+  and [Node matrix #42730538062](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42730538062)
+  were SUCCESS on the same HEAD; neither qualifies the separate RED oracle.
+  Required next: Runtime-owned pre-effect admission, fenced by captured operation
+  rather than request/attempt, must prevent *all* duplicate provider/credential
+  effects before the Desktop S2.1 adapter; no public Host or cutover is qualified.
 - Provider implementation Draft PR #1 `7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9`
   is a separate provider Session SPI source, **not** proof that OpenCode V2 works in the Host.
   [V2's separate qualification plan](opencode-v2-host-integration.md) governs V01–V08.

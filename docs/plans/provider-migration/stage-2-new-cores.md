@@ -228,7 +228,7 @@ rewrite сохранит нынешние guarantees. Основной спос�
 - **Verification:** точный dependency SHA; focused regression, typecheck, CI,
   CodeQL, process/native proofs, packed artifact, inspector/ownership audit.
   Нет подтверждённого receipt — нет статуса PASS.
-- **Delivery:** Stage 1 PR #982 остаётся Draft; Stage 2 stacked отдельно.
+- **Delivery:** Stage 1 PR #982 остаётся независимым и открытым (Ready при source-readback 10 ноября 2026); Stage 2 остаётся отдельным Draft. Актуальный статус проверять перед delivery.
   Не делать merge/release/rollout до готовности ядер, полных проверок и
   отдельного product decision. Отсутствие merge conflicts не равно eligibility.
 
