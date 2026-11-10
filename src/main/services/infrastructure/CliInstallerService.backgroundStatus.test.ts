@@ -220,6 +220,7 @@ describe('CliInstallerService background provider status', () => {
         authenticated: newConnected,
         verificationState: 'verified' as const,
         statusCheckOutcome: 'authoritative' as const,
+        statusCheckErrorCode: undefined,
       };
       let rejectOld!: (error: Error) => void;
       const spy = vi.spyOn(internals.multimodelBridgeService, 'getProviderStatus')

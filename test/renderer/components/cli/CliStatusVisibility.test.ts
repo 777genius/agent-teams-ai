@@ -3384,7 +3384,7 @@ describe('CLI status visibility during completed install state', () => {
           displayName: 'Anthropic',
           supported: true,
           authenticated: true,
-          authMethod: 'oauth',
+          authMethod: 'claude.ai',
           verificationState: 'verified',
           statusMessage: 'Connected via Anthropic subscription',
           models: ['claude-sonnet-4-5'],
