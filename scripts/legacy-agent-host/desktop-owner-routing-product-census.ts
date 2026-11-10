@@ -28,7 +28,7 @@ export async function captureDesktopOwnerRoutingProduct(source: string, destinat
       assert.ok(!entry.isSymbolicLink());
       if (
         authority &&
-        /^authority\.lock(?:\.candidate-[1-9]\d*-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})?$/.test(
+        /^authority\.lock(?:\.candidate-[1-9]\d*-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})?$/.test(
           entry.name
         )
       ) {
@@ -37,7 +37,7 @@ export async function captureDesktopOwnerRoutingProduct(source: string, destinat
       }
       if (
         authority &&
-        /^authority\.lock-transition-v2(?:\.candidate-[1-9]\d*-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})?$/.test(
+        /^authority\.lock-transition-v2(?:\.candidate-[1-9]\d*-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})?$/.test(
           entry.name
         )
       ) {
