@@ -1,3 +1,0 @@
-$ pnpm --filter @agent-teams/legacy-agent-host build
-$ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
-$ node ./node_modules/@typescript/native/bin/tsc --noEmit

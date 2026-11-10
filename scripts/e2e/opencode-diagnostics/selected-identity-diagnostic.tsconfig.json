@@ -1,4 +1,0 @@
-{
-  "extends": "../../tsconfig/e2e-base.json",
-  "include": ["./selected-identity-diagnostic.mts"]
-}

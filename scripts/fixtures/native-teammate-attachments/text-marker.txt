@@ -1,1 +1,0 @@
-NATIVE-ATTACHMENT-TEXT fixture source marker; the harness appends an unpredictable run nonce.

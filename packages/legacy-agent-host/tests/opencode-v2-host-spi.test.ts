@@ -1268,7 +1268,7 @@ test('post-instruction custody getter cannot hide transient Host lease revocatio
     /opencode.driver.dependency-unavailable/,
     'final receipt projection must recheck authority before progress');
   assert.equal(reads, 2, 'initial and final native custody both observed');
-  assert.equal(finalPathReads, 1, 'final native identity field captured once');
+  assert.equal(finalPathReads, 0, 'Host never executes an untrusted custody getter');
   assert.equal(progressCalls, 0, 'progress cannot restore authority before its recheck');
   assert.equal(calls.context, 1, 'native context mutation never replayed');
   assert.equal(calls.permissions, 2, 'both native policy readbacks preceded final custody');
@@ -1279,7 +1279,7 @@ test('post-instruction custody getter cannot hide transient Host lease revocatio
   assert.equal(calls.stop, 1, 'only this TEST-owned native process stopped once');
 });
 
-test('V2 checks the first captured native digest, not later accessor values', async () => {
+test('V2 rejects getter-backed native executable digests before the first mutation', async () => {
   const { captured, calls } = owner(true);
   let custodyReads = 0;
   let digestReads = 0;
@@ -1298,9 +1298,9 @@ test('V2 checks the first captured native digest, not later accessor values', as
   await assert.rejects(() => provider.factory.open(request()),
     /opencode.driver.dependency-unavailable/,
     'post-validation getter changes cannot redefine the admitted binary');
-  assert.equal(digestReads, 1, 'the admission must read the native digest only once');
-  assert.equal(custodyReads, 2, 'final native re-attestation still occurs');
-  assert.equal(calls.context, 1, 'native context was installed only once');
+  assert.equal(digestReads, 0, 'Host must not execute a mutable digest getter');
+  assert.equal(custodyReads, 1, 'untrusted initial readback stops native qualification');
+  assert.equal(calls.context, 0, 'invalid first custody cannot install native context');
   assert.equal(provider.isReady(), false);
   assert.equal(await provider.cleanup(), true);
   assert.equal(calls.stop, 1);
@@ -2904,6 +2904,47 @@ test('V2 rejects forged native permission envelopes before and after initial con
       assert.equal(calls.password, 0, 'no credentials after forged native permissions');
       assert.equal(provider.isReady(), false);
       assert.equal(calls.stop, 1, 'only the captured TEST-owned process stops');
+      assert.equal(await provider.cleanup(), true);
+    }
+  }
+});
+
+test('V2 refuses forged native custody envelopes before and after context installation', async () => {
+  for (const phase of ['initial', 'final'] as const) {
+    for (const shape of ['identity-getter', 'proxy'] as const) {
+      const { captured, calls } = owner(true);
+      let reads = 0;
+      let getterCalls = 0;
+      captured.readNativeCustody = async () => {
+        reads++;
+        const canonical = testNativeCustody();
+        if ((phase === 'initial' && reads !== 1) ||
+            (phase === 'final' && reads !== 2)) return canonical;
+        if (shape === 'proxy') return new Proxy(canonical, {});
+        const forged = { ...canonical, executableSha256: 'b'.repeat(64) };
+        Object.defineProperty(forged, 'executablePath', {
+          enumerable: true,
+          get() {
+            getterCalls++;
+            // Old Host projected path first, allowing this getter to replace
+            // the unqualified digest before it read executableSha256.
+            forged.executableSha256 = canonical.executableSha256;
+            return canonical.executablePath;
+          },
+        });
+        return forged;
+      };
+      const provider = createOpenCodeV2MemberProvider(context(), captured);
+      await assert.rejects(() => provider.factory.open(request()),
+        /opencode.driver.dependency-unavailable/,
+        'native custody evidence must be genuine JSON data, not a mutable projection');
+      assert.equal(reads, phase === 'final' ? 2 : 1);
+      assert.equal(getterCalls, 0, 'Host must not invoke a custody identity getter');
+      assert.equal(calls.context, phase === 'final' ? 1 : 0,
+        'native instructions never run with invalid initial custody or replay on final failure');
+      assert.equal(calls.password, 0, 'invalid process identity cannot access credentials');
+      assert.equal(calls.stop, 1, 'only the original TEST-owned process is retired');
+      assert.equal(provider.isReady(), false);
       assert.equal(await provider.cleanup(), true);
     }
   }

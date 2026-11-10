@@ -1,1 +1,0 @@
-export { createTmuxInstallerBridge } from './createTmuxInstallerBridge';

@@ -2,6 +2,7 @@ import { createOpenCodeV2DriverFactory } from '@agent-teams/provider-implementat
 import type { OpenCodeV2DriverConfig } from '@agent-teams/provider-implementations/opencode';
 import { types as nodeUtilTypes } from 'node:util';
 import { snapshotOpenCodeV2PermissionReadback } from './OpenCodeV2PermissionReadback.js';
+import { snapshotOpenCodeV2CustodyReadback } from './OpenCodeV2CustodyReadback.js';
 import { runtimeDigest } from '../../runtime/identity.js';
 import { finalizeOpenCodeV2ObserverAfterClose, guardOpenCodeV2ObserverCleanup } from './OpenCodeV2ObserverCleanup.js';
 import { initialContextDigest } from '../../team-launch/context.js';
@@ -344,15 +345,9 @@ export function createOpenCodeV2MemberProvider(
             // custody. Even identical bytes in a restarted PID cannot inherit
             // the old member's authority without a new Host capture.
             const custody = await capturedReadNativeCustody(combined);
-            // Snapshot owner-controlled properties ONCE before checking any
-            // digest or PID; a getter could change its value on a later read.
-            const admittedCustody = custody && Object.freeze({
-              executablePath: custody.executablePath,
-              executableSha256: custody.executableSha256,
-              version: custody.version,
-              pid: custody.pid,
-              startIdentity: custody.startIdentity,
-            });
+            // Native custody is JSON data, never a Proxy or getter-backed
+            // identity that can rewrite the next field during admission.
+            const admittedCustody = snapshotOpenCodeV2CustodyReadback(custody);
             if (!admittedCustody || combined.aborted || !current() ||
                 admittedCustody.executablePath !== profile.executable.path ||
                 typeof admittedCustody.executableSha256 !== 'string' ||
@@ -414,16 +409,9 @@ export function createOpenCodeV2MemberProvider(
                   finalEffective.rules, requiredExternalDirectory).kind !== 'policy-candidate' ||
                 combined.aborted || !current()) return false;
             const finalCustodyReceipt = await capturedReadNativeCustody(combined);
-            // Treat the post-mutation native readback as a captured witness.
-            // An untrusted accessor can revoke Host authority while projecting
-            // a field, so check the lease AFTER all fields have been captured.
-            const finalCustody = finalCustodyReceipt && Object.freeze({
-              executablePath: finalCustodyReceipt.executablePath,
-              executableSha256: finalCustodyReceipt.executableSha256,
-              version: finalCustodyReceipt.version,
-              pid: finalCustodyReceipt.pid,
-              startIdentity: finalCustodyReceipt.startIdentity,
-            });
+            // Re-attest process custody after the native context PUT. A
+            // getter-backed or Proxy identity is not a native witness.
+            const finalCustody = snapshotOpenCodeV2CustodyReadback(finalCustodyReceipt);
             if (!finalCustody || combined.aborted || !current() ||
                 finalCustody.executablePath !== admittedCustody.executablePath ||
                 finalCustody.executableSha256 !== admittedCustody.executableSha256 ||
