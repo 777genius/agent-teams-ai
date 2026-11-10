@@ -1150,6 +1150,49 @@ test('native V2 credentials cannot authorize a request after synchronous owner e
     }
   });
 
+test('V2 refuses blank and control-bearing native credentials before any HTTP request',
+  { timeout: 10000 }, async () => {
+    const profile = v2Profile();
+    let httpRequests = 0;
+    const server = createServer((_request, response) => {
+      httpRequests++;
+      response.writeHead(500);
+      response.end();
+    });
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+    profile.endpoint = 'http://127.0.0.1:' + address.port;
+    try {
+      for (const invalidPassword of ['', ' \t ', 'TEST\r\ninjection', 'TEST' + String.fromCharCode(0)]) {
+        const { captured, calls } = owner(true);
+        captured.readPassword = () => { calls.password++; return invalidPassword; };
+        const provider = createOpenCodeV2MemberProvider(context(profile), captured);
+        const opened = await provider.factory.open(request());
+        try {
+          assert.equal(provider.isReady(), true, 'synthetic owner starts ready before credential use');
+          assert.deepEqual(await opened.driver.submit({
+            inputId: 'TEST-invalid-secret', operationRef: 'TEST-invalid-secret-op',
+            content: 'TEST only; no native model turn',
+          }), { ok: false, code: 'dependency-unavailable', delivery: 'known-not-sent' });
+          assert.equal(httpRequests, 0, 'malformed owner credentials must not reach loopback HTTP');
+          assert.equal(calls.password, 1, 'reject without replaying credential callback');
+          assert.equal(calls.stop, 1, 'retire only the captured TEST-owned engine');
+          assert.equal(provider.isReady(), false, 'malformed password permanently revokes admission');
+          assert.equal(await provider.cleanup(), true);
+        } finally {
+          await opened.driver.close();
+        }
+        assert.equal(calls.stop, 1, 'never stop TEST-owned PID twice');
+      }
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) =>
+        server.close(error => error ? reject(error) : resolve()));
+    }
+  });
+
 test('V2 private SPI refuses mismatched request before native probe and credentials', async () => {
   const { captured, calls } = owner(true);
   const provider = createOpenCodeV2MemberProvider(context(), captured);
@@ -2049,7 +2092,7 @@ test('V2 ASK admission holds when persisted project grants are not attested', as
   // using a persisted project-scoped "always" grant. A session rule
   // snapshot is not proof that the effective native result remains ASK.
   const { captured, calls } = owner(true, 'ask');
-  captured.requiredExternalDirectory = 'ask';
+  (captured as { requiredExternalDirectory: 'ask' | 'deny' }).requiredExternalDirectory = 'ask';
   const provider = createOpenCodeV2MemberProvider(context(), captured);
   await assert.rejects(() => provider.factory.open(request()),
     /opencode.driver.dependency-unavailable/,
@@ -2065,7 +2108,7 @@ test('V2 product ASK admits a stricter attested native DENY without a saved-gran
   // OpenCode 2.0.21 resolves session DENY before project-saved grants
   // and plugin hooks. Native DENY is strictly stronger than requested ASK.
   const { captured, calls } = owner(true, 'deny');
-  captured.requiredExternalDirectory = 'ask';
+  (captured as { requiredExternalDirectory: 'ask' | 'deny' }).requiredExternalDirectory = 'ask';
   const provider = createOpenCodeV2MemberProvider(context(), captured);
   const opened = await provider.factory.open(request());
   try {

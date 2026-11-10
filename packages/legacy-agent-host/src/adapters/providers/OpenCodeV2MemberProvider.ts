@@ -324,7 +324,8 @@ export function createOpenCodeV2MemberProvider(
           // A native credential reader must return a primitive string. A boxed
           // or forged value can execute toString() later in the HTTP Basic
           // encoder, after Host authority was checked and before network I/O.
-          if (typeof password !== 'string' || !admissionSettled() || !current())
+          // Reject blank and control-bearing credentials before ANY native HTTP.
+          if (typeof password !== 'string' || password.trim().length === 0 || /[\x00-\x1f\x7f]/.test(password) || !admissionSettled() || !current())
             throw new Error('V2 native custody revoked');
           return password;
         },
