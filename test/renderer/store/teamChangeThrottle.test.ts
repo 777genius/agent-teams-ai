@@ -2323,8 +2323,10 @@ describe('team change throttling', () => {
     const mutableApi = api as unknown as Record<string, unknown>;
     const priorCliInstaller = mutableApi.cliInstaller;
     const priorOpenCodeRuntime = mutableApi.openCodeRuntime;
+    const priorCodexRuntime = mutableApi.codexRuntime;
     mutableApi.cliInstaller = {};
     mutableApi.openCodeRuntime = {};
+    mutableApi.codexRuntime = {};
     const prior = useStore.getState();
     let resolveBootstrap!: () => void;
     const pendingBootstrap = new Promise<void>((resolve) => {
@@ -2333,6 +2335,7 @@ describe('team change throttling', () => {
     const bootstrap = vi.fn(() => pendingBootstrap);
     const fetchProvider = vi.fn(async () => true);
     const fetchOpenCodeRuntimeStatus = vi.fn(async () => undefined);
+    const fetchCodexRuntimeStatus = vi.fn(async () => undefined);
     useStore.setState({
       appConfig: {
         ...prior.appConfig,
@@ -2342,6 +2345,7 @@ describe('team change throttling', () => {
       bootstrapCliStatus: bootstrap,
       fetchCliProviderStatus: fetchProvider,
       fetchOpenCodeRuntimeStatus,
+      fetchCodexRuntimeStatus,
     } as never);
 
     try {
@@ -2355,15 +2359,18 @@ describe('team change throttling', () => {
       await vi.advanceTimersByTimeAsync(10_000);
       expect(fetchProvider).not.toHaveBeenCalled();
       expect(fetchOpenCodeRuntimeStatus).not.toHaveBeenCalled();
+      expect(fetchCodexRuntimeStatus).not.toHaveBeenCalled();
     } finally {
       mutableApi.cliInstaller = priorCliInstaller;
       mutableApi.openCodeRuntime = priorOpenCodeRuntime;
+      mutableApi.codexRuntime = priorCodexRuntime;
       useStore.setState({
         appConfig: prior.appConfig,
         fetchConfig: prior.fetchConfig,
         bootstrapCliStatus: prior.bootstrapCliStatus,
         fetchCliProviderStatus: prior.fetchCliProviderStatus,
         fetchOpenCodeRuntimeStatus: prior.fetchOpenCodeRuntimeStatus,
+        fetchCodexRuntimeStatus: prior.fetchCodexRuntimeStatus,
       });
     }
   });
@@ -2374,11 +2381,14 @@ describe('team change throttling', () => {
     const mutableApi = api as unknown as Record<string, unknown>;
     const priorCliInstaller = mutableApi.cliInstaller;
     const priorOpenCodeRuntime = mutableApi.openCodeRuntime;
+    const priorCodexRuntime = mutableApi.codexRuntime;
     mutableApi.cliInstaller = {};
     mutableApi.openCodeRuntime = {};
+    mutableApi.codexRuntime = {};
     const prior = useStore.getState();
     const bootstrap = vi.fn(async () => undefined);
     const fetchOpenCodeRuntimeStatus = vi.fn(async () => undefined);
+    const fetchCodexRuntimeStatus = vi.fn(async () => undefined);
     useStore.setState({
       appConfig: {
         ...prior.appConfig,
@@ -2387,6 +2397,7 @@ describe('team change throttling', () => {
       fetchConfig: vi.fn(async () => undefined),
       bootstrapCliStatus: bootstrap,
       fetchOpenCodeRuntimeStatus,
+      fetchCodexRuntimeStatus,
     } as never);
 
     try {
@@ -2394,14 +2405,17 @@ describe('team change throttling', () => {
       await vi.advanceTimersByTimeAsync(10_000);
       expect(bootstrap).toHaveBeenCalledTimes(1);
       expect(fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+      expect(fetchCodexRuntimeStatus).toHaveBeenCalledTimes(1);
     } finally {
       mutableApi.cliInstaller = priorCliInstaller;
       mutableApi.openCodeRuntime = priorOpenCodeRuntime;
+      mutableApi.codexRuntime = priorCodexRuntime;
       useStore.setState({
         appConfig: prior.appConfig,
         fetchConfig: prior.fetchConfig,
         bootstrapCliStatus: prior.bootstrapCliStatus,
         fetchOpenCodeRuntimeStatus: prior.fetchOpenCodeRuntimeStatus,
+        fetchCodexRuntimeStatus: prior.fetchCodexRuntimeStatus,
       });
     }
   });
