@@ -34,6 +34,7 @@ import { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import { runDesktopApprovalUiSmoke } from './desktop-approval-ui-smoke.ts';
 import { runDesktopSkillsUiSmoke } from './desktop-skills-ui-smoke.ts';
 import { runDesktopOfflineTaskBoardUiSmoke } from './desktop-task-board-cross-team-ui-smoke.ts';
+import { prepareDesktopOversizedCommentUiFixture } from './desktop-oversized-comment-ui-smoke.ts';
 import { runDesktopTaskTrashRestoreUiSmoke } from './desktop-task-trash-ui-smoke.ts';
 import { runDesktopComposerUiSmoke } from './desktop-composer-ui-smoke.ts';
 import { prepareDesktopProofMode } from './desktop-proof-mode.ts';
@@ -136,6 +137,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     openCodeEndpoint: await reserveMixedOpenCodeEndpoint(),
     openCodeManagementEndpoint: await reserveMixedOpenCodeEndpoint(),
   }) : baseFixture;
+  const oversizedCommentSeed = mode === 'task-board-cross-team-ui'
+    ? await prepareDesktopOversizedCommentUiFixture(fixture.root, fixture.uiSeed!)
+    : undefined;
   if (startupDiagnosticMode || mixedMode) Object.assign(fixture.appEnvironment, { LEGACY_DESKTOP_STARTUP_DIAGNOSTICS: '1' });
   const activitySource = baseFixture.activitySource;
   const require = createRequire(import.meta.url);
@@ -188,6 +192,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     evidence.scope = 'Actual Codex app-server finite MCP elicitation through original Composer/Question Sheet, accept and deny, canonical reply and original Stop; explicit TEST setup, localhost inference';
     evidence.excluded = ['vendor model/auth qualification', 'ordinary Launch dialog', 'full M06/M07/M08', 'Stage2'];
   }
+  if (oversizedCommentSeed) evidence.oversizedCommentSeed = oversizedCommentSeed;
   if (packed) {
     evidence.packedCandidate = packed;
     object(evidence.pins).providerArchiveSha256 = packed.runtime.providerArtifacts.find(row => row.name === '@agent-teams/provider-implementations')!.sha256;
