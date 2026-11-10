@@ -27,13 +27,13 @@ Existing Electron UI / preload / HTTP contracts
         → official native engine / model / tools / MCP
 ```
 
-| Слой | Ответственность | Запрет |
-| --- | --- | --- |
-| Frontend | Установка, выбор поколения/модели, auth UI, статусы, существующие формы | Прямой native execution из renderer, второй Team writer |
-| Backend routing | Выбранный owner каждого handle, IPC/HTTP, отображение результатов | Смена владельца после UNKNOWN, скрытый fallback на fork |
-| Host Team | Задачи, сообщения, roster, review и продуктовые разрешения | Нативный HTTP decoder или ещё один provider runtime |
-| Host Runtime | Единственный durable admission, поколения сессий, owned child, recovery | Копия старого V2 Owner/admission journal |
-| Provider adapter | Ограниченный native transport, dialect, события/tool results | Product store, отдельный durable ledger, frontend imports |
+| Слой             | Ответственность                                                         | Запрет                                                    |
+| ---------------- | ----------------------------------------------------------------------- | --------------------------------------------------------- |
+| Frontend         | Установка, выбор поколения/модели, auth UI, статусы, существующие формы | Прямой native execution из renderer, второй Team writer   |
+| Backend routing  | Выбранный owner каждого handle, IPC/HTTP, отображение результатов       | Смена владельца после UNKNOWN, скрытый fallback на fork   |
+| Host Team        | Задачи, сообщения, roster, review и продуктовые разрешения              | Нативный HTTP decoder или ещё один provider runtime       |
+| Host Runtime     | Единственный durable admission, поколения сессий, owned child, recovery | Копия старого V2 Owner/admission journal                  |
+| Provider adapter | Ограниченный native transport, dialect, события/tool results            | Product store, отдельный durable ledger, frontend imports |
 
 Runtime выдаёт ограниченную session/transport lease; native child custody остаётся Host-owned. Provider не получает право усыновлять shared процессы или чужие сессии. Host не импортирует renderer/feature implementation; UI не импортирует Host internals.
 
@@ -92,18 +92,18 @@ Clean Architecture/SOLID/DRY означают явные зависимости 
 
 ## 5. E2E-матрица и критерий готовности
 
-| Граница | Обязательная проверка |
-| --- | --- |
-| Latest installation | Fresh latest stable V1; V1→latest V1; V2→latest V2; prerelease/major jump отказ; metadata/tag race; corrupt archive и interrupted install сохраняют прежнюю версию |
-| Compatibility | V1 baseline/default/latest проходят Host; V2 installed CLI отличается от qualified engine; missing/wrong platform/dialect отказывается до эффекта |
-| Running session + update | Команда сохраняет свой binary/engine/checkpoint; новое обновление не меняет её stop/recovery и не повторяет input |
-| Native model/terminal | Исходный accepted input, непустой assistant, persisted terminal/cursor, cold lineage, no extra model POST |
-| Tool/MCP/permissions | Реальный эффект/запрет, paired call/result IDs, child cleanup, saved always/plugin precedence, once/reject/revoke |
-| Team UI | Tasks/Unicode comments/attachments/TaskRef, human/peer/group, review/apply/reject, notifications, exact selected model/member |
-| Lifecycle/UNKNOWN | Targeted stop/interrupt, sibling survives, Quit/crash/cold Resume, PID identity, lost ACK и zero replay |
-| Packaging/fork-free | Точные native bytes, без source checkout/system runtime dependency; Host path не вызывает legacy CLI даже для management |
+| Граница                     | Обязательная проверка                                                                                                                                                   |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Latest installation         | Fresh latest stable V1; V1→latest V1; V2→latest V2; prerelease/major jump отказ; metadata/tag race; corrupt archive и interrupted install сохраняют прежнюю версию      |
+| Compatibility               | V1 baseline/default/latest проходят Host; V2 installed CLI отличается от qualified engine; missing/wrong platform/dialect отказывается до эффекта                       |
+| Running session + update    | Команда сохраняет свой binary/engine/checkpoint; новое обновление не меняет её stop/recovery и не повторяет input                                                       |
+| Native model/terminal       | Исходный accepted input, непустой assistant, persisted terminal/cursor, cold lineage, no extra model POST                                                               |
+| Tool/MCP/permissions        | Реальный эффект/запрет, paired call/result IDs, child cleanup, saved always/plugin precedence, once/reject/revoke                                                       |
+| Team UI                     | Tasks/Unicode comments/attachments/TaskRef, human/peer/group, review/apply/reject, notifications, exact selected model/member                                           |
+| Lifecycle/UNKNOWN           | Targeted stop/interrupt, sibling survives, Quit/crash/cold Resume, PID identity, lost ACK и zero replay                                                                 |
+| Packaging/fork-free         | Точные native bytes, без source checkout/system runtime dependency; Host path не вызывает legacy CLI даже для management                                                |
 | Mixed retained V1 / Host V2 | В одном TEST-профиле старый V1 handle и новый Host-owned V2 handle; routing, Stop и cold readback каждого сохраняют состояние и процессы другого; без cross-owner relay |
-| Retained data | Старый owner не усыновлён; tasks/history/UNKNOWN/архивы сохранены; нет destructive migration |
+| Retained data               | Старый owner не усыновлён; tasks/history/UNKNOWN/архивы сохранены; нет destructive migration                                                                            |
 
 Релевантные [M01–M19](compatibility-matrix.md) и [V01–V08: native V2 E2E contract matrix](https://github.com/777genius/agent-teams-ai/blob/866568ee421fa595f0c99d4e3dbc0f173062a87d/docs/plans/provider-migration/opencode-v2-host-integration.md#L158-L170) обязательны для новой композиции. Ссылка V01–V08 фиксирует определения проверок, а не возобновляет отложенный Stage 2 или старые version pins. Не считать native provider-only или старый runtime доказательством нового Host/Electron. Replay, лишние права, shared-process kill, fake success, исчезновение истории, неподтверждённый engine/dialect, hidden fallback и красные exact-head gates — **stop-ship**.
 
