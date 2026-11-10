@@ -16,17 +16,31 @@ export class ProviderStatusPublicationRevisions {
     this.revisions.set(providerId, (this.revisions.get(providerId) ?? 0) + 1);
   }
 
-  beginRead(providerId: CliProviderId): { finish: () => void; isCurrent: () => boolean } {
+  beginRead(providerId: CliProviderId): {
+    finish: () => void;
+    isCurrent: () => boolean;
+    acknowledgePublication: () => void;
+  } {
     const owner = {};
     this.readOwners.set(providerId, owner);
     this.published(providerId);
-    // Advancing on settlement also fences aggregates begun during this read,
-    // including rejected reads. An old positive result must not regain authority.
+    let revision = this.revisions.get(providerId)!;
+    const isCurrent = () =>
+      this.readOwners.get(providerId) === owner &&
+      this.revisions.get(providerId) === revision;
+    // Independent status publications supersede this read even when no newer
+    // read was started. Only this read's own catalog callback may advance it.
     return {
       finish: () => {
-        if (this.readOwners.get(providerId) === owner) this.published(providerId);
+        if (!isCurrent()) return;
+        this.published(providerId);
+        revision = this.revisions.get(providerId)!;
       },
-      isCurrent: () => this.readOwners.get(providerId) === owner,
+      isCurrent,
+      acknowledgePublication: () => {
+        if (this.readOwners.get(providerId) === owner)
+          revision = this.revisions.get(providerId)!;
+      },
     };
   }
 
