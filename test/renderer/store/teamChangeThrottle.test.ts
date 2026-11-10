@@ -2278,4 +2278,131 @@ describe('team change throttling', () => {
     expect(useStore.getState().teamManagementNoticeByTeam['my-team']?.kind).toBe('trashed');
     cleanupSpy.mockRestore();
   });
+
+  it('does not queue CLI provider checks after cleanup while config is pending', async () => {
+    cleanup?.();
+    cleanup = null;
+    const mutableApi = api as unknown as Record<string, unknown>;
+    const priorCliInstaller = mutableApi.cliInstaller;
+    mutableApi.cliInstaller = {};
+    const prior = useStore.getState();
+    let resolveConfig!: () => void;
+    const pendingConfig = new Promise<void>((resolve) => {
+      resolveConfig = resolve;
+    });
+    const bootstrap = vi.fn(async () => undefined);
+    const fetchCliStatus = vi.fn(async () => undefined);
+    useStore.setState({
+      fetchConfig: vi.fn(() => pendingConfig),
+      bootstrapCliStatus: bootstrap,
+      fetchCliStatus,
+    } as never);
+
+    try {
+      cleanup = initializeNotificationListeners();
+      await vi.advanceTimersByTimeAsync(0);
+      cleanup();
+      cleanup = null;
+      resolveConfig();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(bootstrap).not.toHaveBeenCalled();
+      expect(fetchCliStatus).not.toHaveBeenCalled();
+    } finally {
+      mutableApi.cliInstaller = priorCliInstaller;
+      useStore.setState({
+        fetchConfig: prior.fetchConfig,
+        bootstrapCliStatus: prior.bootstrapCliStatus,
+        fetchCliStatus: prior.fetchCliStatus,
+      });
+    }
+  });
+
+  it('does not schedule deferred provider/runtime reads after cleanup during CLI bootstrap', async () => {
+    cleanup?.();
+    cleanup = null;
+    const mutableApi = api as unknown as Record<string, unknown>;
+    const priorCliInstaller = mutableApi.cliInstaller;
+    const priorOpenCodeRuntime = mutableApi.openCodeRuntime;
+    mutableApi.cliInstaller = {};
+    mutableApi.openCodeRuntime = {};
+    const prior = useStore.getState();
+    let resolveBootstrap!: () => void;
+    const pendingBootstrap = new Promise<void>((resolve) => {
+      resolveBootstrap = resolve;
+    });
+    const bootstrap = vi.fn(() => pendingBootstrap);
+    const fetchProvider = vi.fn(async () => true);
+    const fetchOpenCodeRuntimeStatus = vi.fn(async () => undefined);
+    useStore.setState({
+      appConfig: {
+        ...prior.appConfig,
+        general: { ...prior.appConfig?.general, multimodelEnabled: true },
+      },
+      fetchConfig: vi.fn(async () => undefined),
+      bootstrapCliStatus: bootstrap,
+      fetchCliProviderStatus: fetchProvider,
+      fetchOpenCodeRuntimeStatus,
+    } as never);
+
+    try {
+      cleanup = initializeNotificationListeners();
+      // Covers Windows' extra 3-second bootstrap delay as well as other platforms.
+      await vi.advanceTimersByTimeAsync(4_000);
+      expect(bootstrap).toHaveBeenCalledTimes(1);
+      cleanup();
+      cleanup = null;
+      resolveBootstrap();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(fetchProvider).not.toHaveBeenCalled();
+      expect(fetchOpenCodeRuntimeStatus).not.toHaveBeenCalled();
+    } finally {
+      mutableApi.cliInstaller = priorCliInstaller;
+      mutableApi.openCodeRuntime = priorOpenCodeRuntime;
+      useStore.setState({
+        appConfig: prior.appConfig,
+        fetchConfig: prior.fetchConfig,
+        bootstrapCliStatus: prior.bootstrapCliStatus,
+        fetchCliProviderStatus: prior.fetchCliProviderStatus,
+        fetchOpenCodeRuntimeStatus: prior.fetchOpenCodeRuntimeStatus,
+      });
+    }
+  });
+
+  it('still schedules the single deferred runtime check while startup stays mounted', async () => {
+    cleanup?.();
+    cleanup = null;
+    const mutableApi = api as unknown as Record<string, unknown>;
+    const priorCliInstaller = mutableApi.cliInstaller;
+    const priorOpenCodeRuntime = mutableApi.openCodeRuntime;
+    mutableApi.cliInstaller = {};
+    mutableApi.openCodeRuntime = {};
+    const prior = useStore.getState();
+    const bootstrap = vi.fn(async () => undefined);
+    const fetchOpenCodeRuntimeStatus = vi.fn(async () => undefined);
+    useStore.setState({
+      appConfig: {
+        ...prior.appConfig,
+        general: { ...prior.appConfig?.general, multimodelEnabled: true },
+      },
+      fetchConfig: vi.fn(async () => undefined),
+      bootstrapCliStatus: bootstrap,
+      fetchOpenCodeRuntimeStatus,
+    } as never);
+
+    try {
+      cleanup = initializeNotificationListeners();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(bootstrap).toHaveBeenCalledTimes(1);
+      expect(fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+    } finally {
+      mutableApi.cliInstaller = priorCliInstaller;
+      mutableApi.openCodeRuntime = priorOpenCodeRuntime;
+      useStore.setState({
+        appConfig: prior.appConfig,
+        fetchConfig: prior.fetchConfig,
+        bootstrapCliStatus: prior.bootstrapCliStatus,
+        fetchOpenCodeRuntimeStatus: prior.fetchOpenCodeRuntimeStatus,
+      });
+    }
+  });
 });
