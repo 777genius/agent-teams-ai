@@ -13,7 +13,7 @@ describe('SchedulerStopBarrier', () => {
     const stopping = barrier.drainFinalizations().then(() => { drained = true; });
 
     finishFirst();
-    await Promise.resolve();
+    await new Promise<void>((resolve) => setImmediate(resolve));
     expect(drained).toBe(false);
     finishSecond();
     await stopping;
@@ -23,12 +23,13 @@ describe('SchedulerStopBarrier', () => {
   it('wakes a cancelled retry delay instead of leaving a pending Promise', async () => {
     vi.useFakeTimers();
     const barrier = new SchedulerStopBarrier();
-    const retry = barrier.waitForRetry('schedule-1', 90_000);
+    const first = barrier.waitForRetry(90_000);
+    const second = barrier.waitForRetry(90_000);
     const finished = vi.fn();
-    void retry.then(finished);
+    void Promise.all([first, second]).then(finished);
 
     barrier.cancelRetries();
-    await retry;
+    await Promise.all([first, second]);
     expect(finished).toHaveBeenCalledOnce();
     expect(vi.getTimerCount()).toBe(0);
   });
