@@ -4,7 +4,7 @@ import { desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 
 const MAX_PAGES = 32;
-const CURSOR = /^[1-9][0-9]{0,8}\\.[a-f0-9]{64}$/;
+const CURSOR = /^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/;
 
 function record(value: unknown): Record<string, unknown> {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
