@@ -212,7 +212,10 @@ export function createOpenCodeV2MemberProvider(
   const current = () => {
     if (sealed || qualificationRevoked) return false;
     try {
-      if (!inheritedBinaryOverride() && capturedIsCurrent() && capturedCanAllocate() &&
+      // Only literal boolean true is a valid captured Host lease. A Promise,
+      // boxed boolean, number or arbitrary truthy object is not authority.
+      if (!inheritedBinaryOverride() && capturedIsCurrent() === true &&
+          capturedCanAllocate() === true &&
           runtimeDigest(context.request) === originalRequest &&
           runtimeDigest(context.endpoint.binding) === originalEndpointBinding &&
           runtimeDigest(context.profile) === originalProfile &&

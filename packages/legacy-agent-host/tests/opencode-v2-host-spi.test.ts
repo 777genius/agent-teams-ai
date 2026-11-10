@@ -342,6 +342,33 @@ test('V2 Host authority function metadata cannot substitute a revoked allocation
   }
 });
 
+test('V2 Host refuses truthy non-boolean lease results before any native admission',
+  async () => {
+    const invalidResults: ReadonlyArray<{ name: string; value: unknown }> = [
+      { name: 'unawaited false Promise', value: Promise.resolve(false) },
+      { name: 'false-shaped object', value: { authorized: false } },
+      { name: 'numeric truthy', value: 1 },
+    ];
+    for (const callback of ['isCurrent', 'canAllocate'] as const) {
+      for (const invalid of invalidResults) {
+        const input = context();
+        input[callback] = (() => invalid.value) as unknown as () => boolean;
+        const { captured, calls } = owner(true);
+        const provider = createOpenCodeV2MemberProvider(input, captured);
+        await assert.rejects(() => provider.factory.open(request()),
+          /opencode\.driver\.invalid-config/,
+          callback + ' cannot authorize a native process with ' + invalid.name);
+        assert.equal(provider.isReady(), false, 'invalid Host lease is permanently revoked');
+        assert.equal(calls.probe, 0, 'no native probe with non-boolean Host authority');
+        assert.equal(calls.permissions, 0, 'no native permission readback');
+        assert.equal(calls.context, 0, 'no native context mutation');
+        assert.equal(calls.password, 0, 'no native credentials');
+        assert.equal(await provider.cleanup(), true, 'only the TEST owner is cleaned up');
+        assert.equal(calls.stop, 1, 'no duplicate native process stop');
+      }
+    }
+  });
+
 test('V2 rejects accessor-backed Host authority without executing the getter', () => {
   for (const callback of ['isCurrent', 'canAllocate'] as const) {
     const input = context();
