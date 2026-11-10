@@ -276,7 +276,7 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
   openCodeVisibleReplyProofService: Pick<
     OpenCodeVisibleReplyProofService,
     'applyDestinationProof' | 'materializePlainTextReplyIfNeeded' | 'findByRelayOfMessageId'
-  >;
+  > & Partial<Pick<OpenCodeVisibleReplyProofService, 'isConfiguredPeerRecipient'>>;
   openCodePromptDeliveryWatchdogScheduler: Pick<
     OpenCodePromptDeliveryWatchdogScheduler,
     'isEnabled'
