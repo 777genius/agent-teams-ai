@@ -13,7 +13,8 @@ interface CliInstallerServiceInternals {
   multimodelBridgeService: {
     getProviderStatus: (
       binaryPath: string,
-      providerId: CliProviderId
+      providerId: CliProviderId,
+      onCatalogUpdate?: (provider: CliProviderStatus) => void
     ) => Promise<CliProviderStatus>;
     getProviderStatuses: (
       binaryPath: string,
@@ -36,6 +37,45 @@ afterEach(() => {
 
 describe('CliInstallerService background provider status', () => {
   const projectPath = '/sandbox/TEST-opencode-preflight';
+  test.each([false, true])(
+    'ignores older single-read catalog callbacks after a fresh result (signed out=%s)',
+    async (signedOut) => {
+      const service = new CliInstallerService();
+      const internals = service as unknown as CliInstallerServiceInternals;
+      const result = internals.createInitialStatus();
+      result.flavor = 'agent_teams_orchestrator';
+      result.installed = true;
+      result.binaryPath = '/fake/runtime';
+      internals.latestStatusSnapshot = result;
+      const unknown: CliProviderStatus = {
+        ...createDefaultProviderStatus('codex'),
+        supported: true,
+        statusCheckOutcome: 'authoritative',
+        statusCheckErrorCode: undefined,
+        verificationState: 'unknown',
+      };
+      const verified: CliProviderStatus = {
+        ...unknown,
+        authenticated: true,
+        verificationState: 'verified',
+      };
+      let oldUpdate!: (provider: CliProviderStatus) => void;
+      vi.spyOn(internals.multimodelBridgeService, 'getProviderStatus')
+        .mockImplementationOnce(async (_binary, _provider, onUpdate) => {
+          oldUpdate = onUpdate!;
+          return signedOut ? verified : unknown;
+        })
+        .mockResolvedValueOnce(signedOut ? unknown : verified);
+      await service.getProviderStatus('codex');
+      await service.getProviderStatus('codex');
+      oldUpdate(signedOut ? verified : { ...unknown, modelCatalogRefreshState: 'error' });
+      expect(
+        internals.latestStatusSnapshot?.providers.find(
+          (provider) => provider.providerId === 'codex'
+        )
+      ).toMatchObject({ authenticated: !signedOut });
+    }
+  );
   test.each([
     { startOrder: 'before', fails: false },
     { startOrder: 'during', fails: false },

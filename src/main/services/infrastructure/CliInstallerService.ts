@@ -899,7 +899,9 @@ export class CliInstallerService {
     }
     const { binaryPath } = passiveRuntime;
 
+    const read = options.projectPath ? null : this.providerStatusRevisions.beginRead(providerId);
     const handleCatalogUpdate = (hydratedProviderStatus: CliProviderStatus): void => {
+      if (read?.isCurrent() === false) return;
       if (hydratedProviderStatus.providerId !== providerId) {
         return;
       }
@@ -910,9 +912,6 @@ export class CliInstallerService {
         this.publishStatusSnapshot(this.latestStatusSnapshot);
       }
     };
-    const finishRead = options.projectPath
-      ? undefined
-      : this.providerStatusRevisions.beginRead(providerId);
     const providerStatus = options.projectPath
       ? await this.multimodelBridgeService.getProviderStatus(
           binaryPath,
@@ -923,8 +922,9 @@ export class CliInstallerService {
       : await this.multimodelBridgeService
           .getProviderStatus(binaryPath, providerId, handleCatalogUpdate)
           .catch((error: unknown) => createRuntimeStatusErrorProviderStatus(providerId, error))
-          .finally(finishRead);
-    if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+          .finally(read?.finish);
+    if (generation !== this.statusGatherGeneration || read?.isCurrent() === false)
+      return obsoleteStatus();
     const mismatchStatus = projectMismatchedProviderStatus(providerId, providerStatus, this.now());
     if (mismatchStatus) {
       return mismatchStatus;

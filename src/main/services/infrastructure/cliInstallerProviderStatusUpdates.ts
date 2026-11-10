@@ -10,16 +10,24 @@ import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@s
 /** Tracks request order rather than authentication strength: fresh negative evidence wins too. */
 export class ProviderStatusPublicationRevisions {
   private readonly revisions = new Map<CliProviderId, number>();
+  private readonly readOwners = new Map<CliProviderId, object>();
 
   published(providerId: CliProviderId): void {
     this.revisions.set(providerId, (this.revisions.get(providerId) ?? 0) + 1);
   }
 
-  beginRead(providerId: CliProviderId): () => void {
+  beginRead(providerId: CliProviderId): { finish: () => void; isCurrent: () => boolean } {
+    const owner = {};
+    this.readOwners.set(providerId, owner);
     this.published(providerId);
     // Advancing on settlement also fences aggregates begun during this read,
     // including rejected reads. An old positive result must not regain authority.
-    return () => this.published(providerId);
+    return {
+      finish: () => {
+        if (this.readOwners.get(providerId) === owner) this.published(providerId);
+      },
+      isCurrent: () => this.readOwners.get(providerId) === owner,
+    };
   }
 
   captureAggregate(): (providerId: CliProviderId) => boolean {
