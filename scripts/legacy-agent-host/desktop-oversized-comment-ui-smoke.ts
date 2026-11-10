@@ -34,6 +34,7 @@ export async function runDesktopOversizedCommentUiSmoke(
   /** Read the authoritative persisted task comment rows, never a UI approximation. */
   const readComments = async () => {
     const task = record(JSON.parse(await readFile(taskPath, 'utf8')));
+    if (task.comments === undefined) return [];
     assert.ok(Array.isArray(task.comments));
     return (task.comments as unknown[]).map(record);
   };
@@ -97,11 +98,15 @@ export async function runDesktopOversizedCommentUiSmoke(
   // The unchanged MarkdownViewer intentionally previews the first 30K chars.
   // Expand its existing comment container, then use its real Show all control
   // before requiring the original full 600KB text in the rendered DOM.
+  await ui.scrollTo(
+    commentSelector + ' div.relative.flex.justify-center > button',
+    'visible original long Task comment expander'
+  );
   await ui.click(
     commentSelector + ' div.relative.flex.justify-center > button',
     'expand original long Task comment'
   );
-  await ui.scrollTo(commentSelector + ' button', 'original Markdown Show all', 'Show all');
+  await ui.scrollTo(commentSelector + ' button', 'original Markdown Show all', 'Show all', 32);
   await ui.click(commentSelector + ' button', 'show every retained Unicode character', 'Show all');
   const fullTextVisible = [
     '(() => {',

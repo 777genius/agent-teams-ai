@@ -26,6 +26,7 @@ export async function runDesktopOfflineTaskBoardUiSmoke(
   await runDesktopCrossTeamUiSmoke(cdp, options);
   // UI composer is intentionally capped; this tests accepted large Host
   // comments through the existing Task detail after a cold renderer reload.
+  assert.ok(options.seed.taskId && options.seed.subject, 'original TEST Task identity required');
   const steps: Record<string, unknown>[] = [];
   options.evidence.oversizedCommentUiProof = await runDesktopOversizedCommentUiSmoke(cdp, {
     root: options.root,

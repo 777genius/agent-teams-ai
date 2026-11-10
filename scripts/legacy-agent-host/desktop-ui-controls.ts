@@ -153,8 +153,13 @@ export function createDesktopUiControls(
       clickCount: 1,
     });
   };
-  const scrollTo = async (selector: string, label: string, text?: string): Promise<void> => {
-    for (let attempt = 0; attempt < 12; attempt++) {
+  const scrollTo = async (
+    selector: string, label: string, text?: string, maxWheelEvents = 12
+  ): Promise<void> => {
+    assert.ok(Number.isSafeInteger(maxWheelEvents) && maxWheelEvents >= 1 && maxWheelEvents <= 32);
+    // Allow one final visibility read after the last wheel; never dispatch
+    // an extra input event after reaching the TEST-only bounded budget.
+    for (let attempt = 0; attempt <= maxWheelEvents; attempt++) {
       options.assertOwnedRenderer();
       const found = record(
         await waitRead(
@@ -174,6 +179,7 @@ export function createDesktopUiControls(
         )
       );
       if (found.visible === true) return;
+      if (attempt === maxWheelEvents) break;
       assert.equal(typeof found.x, 'number');
       assert.equal(typeof found.y, 'number');
       assert.equal(typeof found.delta, 'number');
