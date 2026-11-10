@@ -535,3 +535,37 @@ test('V2.2 throwing native permission envelopes fail closed without a Host excep
       'a malformed native policy response must not throw or authorize access');
   }
 });
+
+test('V2.2 native permission arrays cannot hide a later ALLOW with an iterator', () => {
+  const deny = { action: 'external_directory', resource: '*', effect: 'deny' };
+  const allow = { action: 'external_directory', resource: '*', effect: 'allow' };
+  const rules = [deny, allow];
+  let iteratorCalls = 0;
+  Object.defineProperty(rules, Symbol.iterator, {
+    value: function* () {
+      iteratorCalls++;
+      yield deny; // The actual final native rule is ALLOW, not this DENY.
+    },
+  });
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(rules, 'deny'),
+    { kind: 'hold', reason: 'external-directory' });
+  assert.equal(iteratorCalls, 0, 'native policy admission must never execute a custom iterator');
+
+  const getterRules = [deny];
+  let getterCalls = 0;
+  Object.defineProperty(getterRules, '0', {
+    enumerable: true, configurable: true,
+    get() {
+      getterCalls++;
+      return deny;
+    },
+  });
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(getterRules, 'deny'),
+    { kind: 'hold', reason: 'rules' });
+  assert.equal(getterCalls, 0, 'native policy admission must never execute an array-index getter');
+
+  const sparse = new Array(2);
+  sparse[1] = deny;
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(sparse, 'deny'),
+    { kind: 'hold', reason: 'rules' }, 'native JSON cannot contain inherited or sparse rule slots');
+});

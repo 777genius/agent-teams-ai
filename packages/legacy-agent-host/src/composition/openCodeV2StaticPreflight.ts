@@ -264,14 +264,25 @@ export function preflightOpenCodeV2EffectiveExternalDirectory(
   // can throw during Array.isArray, length, ownKeys or descriptor inspection.
   // Reject the complete envelope rather than crashing a Host readiness check.
   try {
-    if (!Array.isArray(effectivePermissions) ||
-        effectivePermissions.length === 0 || effectivePermissions.length > 1024)
+    if (!Array.isArray(effectivePermissions))
+      return { kind: 'hold', reason: 'rules' };
+    // Real native JSON arrays have own indexed data slots. for...of would
+    // execute a caller-supplied Symbol.iterator, which could omit a later
+    // ALLOW rule and counterfeit a final external_directory DENY.
+    const length = Object.getOwnPropertyDescriptor(effectivePermissions, 'length')?.value;
+    if (!Number.isSafeInteger(length) || length < 1 || length > 1024)
       return { kind: 'hold', reason: 'rules' };
     // Native permission JSON consists of data fields. Reject accessors:
     // a getter may report DENY while being validated and ALLOW when the final
     // policy is read, creating a forged policy-candidate without a stable rule.
     let last: { action: string; resource: string; effect: 'allow' | 'ask' | 'deny' } | undefined;
-    for (const rule of effectivePermissions) {
+    for (let index = 0; index < length; index++) {
+      const slot = Object.getOwnPropertyDescriptor(effectivePermissions, String(index));
+      // Reject sparse arrays, inherited entries and accessors without
+      // invoking owner-controlled getters or the array's iterator.
+      if (!slot || !('value' in slot))
+        return { kind: 'hold', reason: 'rules' };
+      const rule: unknown = slot.value;
       if (!rule || typeof rule !== 'object' || Array.isArray(rule) ||
           Object.keys(rule).length !== 3)
         return { kind: 'hold', reason: 'rules' };
