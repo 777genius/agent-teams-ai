@@ -9,6 +9,7 @@ import type { UiCdpPort } from './desktop-ui-controls.ts';
 
 const largeText = '漢'.repeat(200_000);
 
+/** Assert the captured TEST product value has the expected record shape. */
 function record(value: unknown): Record<string, unknown> {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value as Record<string, unknown>;
@@ -30,6 +31,7 @@ export async function runDesktopOversizedCommentUiSmoke(
   const ui = createDesktopUiControls(cdp, options);
   const commandId = 'TEST-large-accepted-task-comment';
   const taskPath = join(options.root, 'hoststore/tasks/test-desktop-backend', options.taskId + '.json');
+  /** Read the authoritative persisted task comment rows, never a UI approximation. */
   const readComments = async () => {
     const task = record(JSON.parse(await readFile(taskPath, 'utf8')));
     assert.ok(Array.isArray(task.comments));
@@ -86,6 +88,21 @@ export async function runDesktopOversizedCommentUiSmoke(
   await ui.waitRead('Boolean(document.querySelector(' + desktopJsLiteral(card) + '))',
     'original Task card after cold readback');
   await ui.click(card + ' h5', 'open original Task detail after large comment');
+  const commentSelector = '[role="dialog"] [data-task-comment-id=' +
+    desktopJsLiteral(commentId) + ']';
+  await ui.waitRead(
+    'Boolean(document.querySelector(' + desktopJsLiteral(commentSelector) + '))',
+    'same original large comment card after signed-page readback'
+  );
+  // The unchanged MarkdownViewer intentionally previews the first 30K chars.
+  // Expand its existing comment container, then use its real Show all control
+  // before requiring the original full 600KB text in the rendered DOM.
+  await ui.click(
+    commentSelector + ' div.relative.flex.justify-center > button',
+    'expand original long Task comment'
+  );
+  await ui.scrollTo(commentSelector + ' button', 'original Markdown Show all', 'Show all');
+  await ui.click(commentSelector + ' button', 'show every retained Unicode character', 'Show all');
   const fullTextVisible = [
     '(() => {',
     "const node = [...document.querySelectorAll('[role=\"dialog\"] [data-task-comment-id]')]",
