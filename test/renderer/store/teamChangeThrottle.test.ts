@@ -340,6 +340,7 @@ describe('team change throttling', () => {
       expect(bootstrapCliStatus).toHaveBeenCalledWith({
         multimodelEnabled: true,
         providerStatusMode: 'defer',
+        isActive: expect.any(Function),
       });
       expect(fetchCliProviderStatus).not.toHaveBeenCalled();
       expect(fetchOpenCodeRuntimeStatus).not.toHaveBeenCalled();
