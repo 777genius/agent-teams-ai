@@ -596,3 +596,39 @@ test('V2.2 native permission arrays cannot hide a later ALLOW with an iterator',
   assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(sparse, 'deny'),
     { kind: 'hold', reason: 'rules' }, 'native JSON cannot contain inherited or sparse rule slots');
 });
+
+
+test('V2 static preflight rejects throwing capture envelopes without crashing Host admission', () => {
+  const revokedSelection = Proxy.revocable({ ...selected }, {});
+  revokedSelection.revoke();
+  assert.deepEqual(preflightOpenCodeV2Selection(revokedSelection.proxy, lock),
+    { kind: 'hold', reason: 'binding' });
+
+  const revokedLock = Proxy.revocable({ ...lock }, {});
+  revokedLock.revoke();
+  assert.deepEqual(preflightOpenCodeV2Selection(selected, revokedLock.proxy),
+    { kind: 'hold', reason: 'binding' });
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock, revokedLock.proxy),
+    { kind: 'hold', reason: 'current-product' });
+
+  const throwingManifest = { ...lock };
+  Object.defineProperty(throwingManifest, 'opencodeV2', {
+    get() { throw new Error('TEST native manifest unavailable'); },
+  });
+  assert.deepEqual(preflightOpenCodeV2Selection(selected, throwingManifest),
+    { kind: 'hold', reason: 'binding' });
+
+  let versionReads = 0;
+  const changingStageLock = { ...lock };
+  Object.defineProperty(changingStageLock, 'version', {
+    get() {
+      if (++versionReads >= 4) throw new Error('TEST late manifest revocation');
+      return lock.version;
+    },
+  });
+  // The fourth read is the cross-product comparison, after a candidate was
+  // computed. A late revocation must still fail closed, not escape the gate.
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, changingStageLock, lock),
+    { kind: 'hold', reason: 'current-product' });
+  assert.equal(versionReads, 4);
+});

@@ -82,7 +82,19 @@ export function isCanonicalOpenCodeV2Directory(platform: string, directory: stri
 }
 
 /** Requires an independently verified exact binary digest/version; does not itself read the binary. */
+/** Malformed owner/manifest objects are never authorization or Host crashes. */
 export function preflightOpenCodeV2Selection(
+  selection: Readonly<OpenCodeV2Selection>,
+  lock: Readonly<OpenCodeV2RuntimeLock>
+): OpenCodeV2StaticPreflight {
+  try {
+    return preflightOpenCodeV2SelectionCandidate(selection, lock);
+  } catch {
+    return { kind: 'hold', reason: 'binding' };
+  }
+}
+
+function preflightOpenCodeV2SelectionCandidate(
   selection: Readonly<OpenCodeV2Selection>,
   lock: Readonly<OpenCodeV2RuntimeLock>
 ): OpenCodeV2StaticPreflight {
@@ -151,7 +163,20 @@ export function preflightOpenCodeV2Selection(
  * Even a candidate here is NOT V2 process custody, effective permissions,
  * native Session SPI, packaged E2E or authorization to submit work.
  */
+/** Reject changing captures even when an accessor fails after static admission. */
 export function preflightOpenCodeV2CurrentProduct(
+  selection: Readonly<OpenCodeV2Selection>,
+  stageLock: Readonly<OpenCodeV2RuntimeLock>,
+  productLock: Readonly<OpenCodeV2RuntimeLock>
+): OpenCodeV2StaticPreflight {
+  try {
+    return preflightOpenCodeV2CurrentProductCandidate(selection, stageLock, productLock);
+  } catch {
+    return { kind: 'hold', reason: 'current-product' };
+  }
+}
+
+function preflightOpenCodeV2CurrentProductCandidate(
   selection: Readonly<OpenCodeV2Selection>,
   stageLock: Readonly<OpenCodeV2RuntimeLock>,
   productLock: Readonly<OpenCodeV2RuntimeLock>
