@@ -821,8 +821,6 @@ export class CliInstallerService {
     return provider;
   }
 
-  // Public: getStatus
-
   async getStatus(options: CliInstallerGetStatusOptions = {}): Promise<CliInstallationStatus> {
     const statusStartedAt = Date.now();
     const providerStatusMode: CliInstallerProviderStatusMode = options.providerStatusMode ?? 'full';
@@ -906,8 +904,7 @@ export class CliInstallerService {
       if (!this.updateLatestProviderStatusIfCurrent(hydratedProviderStatus, generation)) {
         return;
       }
-      // This catalog update belongs to the current read. An unrelated explicit
-      // status publication still invalidates it through the revision fence.
+      // The revision fence distinguishes this read's hydration from external publications.
       read?.acknowledgePublication();
       if (this.latestStatusSnapshot) {
         this.publishStatusSnapshot(this.latestStatusSnapshot);
