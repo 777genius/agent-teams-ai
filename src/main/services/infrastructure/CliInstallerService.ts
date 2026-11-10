@@ -871,11 +871,8 @@ export class CliInstallerService {
     // Cold polling stays passive. Explicit invalidation requests runtime-only rediscovery.
     const generation = this.statusGatherGeneration;
     await this.refreshInvalidatedRuntime(generation);
-    const obsoleteStatus = () =>
-      createRuntimeStatusErrorProviderStatus(
-        providerId,
-        new Error('Provider runtime changed during status check. Refresh to retry.')
-      );
+    const obsoleteStatus = () => createRuntimeStatusErrorProviderStatus(
+      providerId, new Error('Provider runtime changed during status check. Refresh to retry.'));
     if (generation !== this.statusGatherGeneration) return obsoleteStatus();
     // Explicit project-scoped preflight can race initial runtime discovery.
     // Keep background/global status polling passive: it must not spawn shell
@@ -922,15 +919,12 @@ export class CliInstallerService {
         )
       : await this.multimodelBridgeService
           .getProviderStatus(binaryPath, providerId, handleCatalogUpdate)
-          .catch((error: unknown) =>
-            read?.isCurrent() === false
-              ? createPendingProviderStatus(providerId)
-              : createRuntimeStatusErrorProviderStatus(providerId, error)
-          )
+          .catch((error: unknown) => read?.isCurrent() === false
+            ? createPendingProviderStatus(providerId)
+            : createRuntimeStatusErrorProviderStatus(providerId, error))
           .finally(read?.finish);
     if (generation !== this.statusGatherGeneration) return obsoleteStatus();
-    // A superseded read is not evidence of disconnection, even if it rejected.
-    // Never grant launch authority from an older result.
+    // Superseded results are not authoritative, even when they failed.
     if (read?.isCurrent() === false) return createPendingProviderStatus(providerId);
     const mismatchStatus = projectMismatchedProviderStatus(providerId, providerStatus, this.now());
     if (mismatchStatus) {
