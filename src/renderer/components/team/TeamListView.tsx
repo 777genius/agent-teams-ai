@@ -859,10 +859,20 @@ export const TeamListView = memo(function TeamListView({
           const uniqueName = generateUniqueName(teamName, existingNames);
           const savedRequest = await api.teams.getSavedRequest(teamName);
           if (savedRequest) {
+            // Older teams can retain their description in config.json without
+            // having copied it into team.meta.json. Preserve it when duplicating.
+            const legacyDescription =
+              savedRequest.description == null
+                ? (
+                    await api.teams
+                      .getData(teamName, { includeMemberBranches: false })
+                      .catch(() => null)
+                  )?.config.description
+                : undefined;
             void openCopiedTeam({
               teamName: uniqueName,
               runtimeSelectionVersion: savedRequest.runtimeSelectionVersion,
-              description: savedRequest.description,
+              description: savedRequest.description ?? legacyDescription,
               color: savedRequest.color,
               cwd: savedRequest.cwd,
               prompt: savedRequest.prompt,
