@@ -247,6 +247,7 @@ export function initializeNotificationListeners(): () => void {
   void (async () => {
     // Config: fast (in-memory read) — needed for theme before first paint.
     await useStore.getState().fetchConfig();
+    if (disposed) return;
 
     // Sync renderer telemetry gate from loaded config
     const loadedConfig = useStore.getState().appConfig;
@@ -271,11 +272,13 @@ export function initializeNotificationListeners(): () => void {
             await useStore
               .getState()
               .bootstrapCliStatus({ multimodelEnabled: true, providerStatusMode: 'defer' });
+            if (disposed) return;
             if (deferredProviderStatusCleanup) {
               deferredProviderStatusCleanup();
             }
             deferredProviderStatusCleanup = scheduleStartupIdleTask(
               () => {
+                if (disposed) return;
                 const providerIds = getIncompleteMultimodelProviderIds(
                   useStore.getState().cliStatus
                 );
