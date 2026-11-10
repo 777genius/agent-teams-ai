@@ -6,6 +6,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - scripts/e2e/opencode-diagnostics-desktop.mjs
+      - src/renderer/store/index.ts
       - scripts/e2e/opencode-diagnostics/**
       - test/scripts/opencodeStartupCleanupFixture.test.mjs
       - .github/workflows/opencode-desktop-e2e.yml
