@@ -40,6 +40,8 @@ interface ConnectionSummaryInput {
   projectDirectory: Directory | null;
   observedOpenCodeCount?: RuntimeProviderConnectedCountObservation | null;
   countInvalidated?: boolean;
+  /** An actual scoped connection-directory read is in flight. */
+  countChecking?: boolean;
   runtimeStatus: Pick<
     OpenCodeRuntimeStatus,
     'installed' | 'state' | 'version' | 'binaryPath'
@@ -58,19 +60,22 @@ export interface DashboardConnectionSummary {
   openCodeConnected: number | null;
   /** Fresh connected rows from an incomplete directory, never an exact total. */
   openCodeKnownConnected?: number;
+  /** Previous scoped observation, displayed only during a bounded active recheck. */
+  openCodePreviousConnected?: number;
 }
 
 function isCompleteDirectory(
   directory: Directory | null,
   runtimeRevision: string | null,
-  nowMs: number
+  nowMs: number,
+  maxAgeMs = DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS
 ): directory is Directory {
   const fetchedAt = Date.parse(directory?.fetchedAt ?? '');
   return Boolean(
     runtimeRevision &&
     Number.isFinite(fetchedAt) &&
     fetchedAt <= nowMs &&
-    nowMs - fetchedAt <= DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS &&
+    nowMs - fetchedAt <= maxAgeMs &&
     directory?.authoritative &&
     directory.runtimeRevision === runtimeRevision &&
     directory.totalCount !== undefined &&
@@ -79,6 +84,21 @@ function isCompleteDirectory(
     directory.nextCursor == null &&
     directory.entries.every((entry) => entry.state !== 'error')
   );
+}
+
+function countDirectoryConnections(
+  globalDirectory: Directory,
+  projectDirectory: Directory | null
+): number {
+  const entries = new Map(
+    globalDirectory.entries.map((entry) => [entry.providerId.trim().toLowerCase(), entry] as const)
+  );
+  for (const entry of projectDirectory?.entries ?? []) {
+    entries.set(entry.providerId.trim().toLowerCase(), entry);
+  }
+  return [...entries].filter(
+    ([id, entry]) => id && id !== 'opencode' && entry.state === 'connected'
+  ).length;
 }
 
 /**
@@ -94,6 +114,7 @@ export function getDashboardConnectionSummary({
   projectDirectory,
   observedOpenCodeCount,
   countInvalidated = false,
+  countChecking = false,
   runtimeStatus,
   nowMs = Date.now(),
 }: ConnectionSummaryInput): DashboardConnectionSummary {
@@ -187,31 +208,55 @@ export function getDashboardConnectionSummary({
             .filter((id) => id && id !== 'opencode')
         : []
     );
+    let previousConnected: number | undefined;
+    if (countChecking && !countInvalidated && runtimeRevision) {
+      // Keep a previous number only while this scope is being rechecked, for
+      // at most one additional freshness window. It remains display data and
+      // never becomes an exact current total or model/launch authority.
+      const newerCachedEvidence = [globalDirectory, projectDirectory].some(
+        (directory) =>
+          directory?.runtimeRevision === runtimeRevision &&
+          directory.authoritative &&
+          Date.parse(directory.fetchedAt) > countFetchedAt
+      );
+      if (
+        !newerCachedEvidence &&
+        observedOpenCodeCount?.runtimeRevision === runtimeRevision &&
+        Number.isFinite(countFetchedAt) &&
+        countFetchedAt <= nowMs &&
+        nowMs - countFetchedAt <= 2 * DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS
+      ) {
+        previousConnected = observedOpenCodeCount.connected;
+      } else {
+        const recheckMaxAgeMs = 2 * DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS;
+        if (
+          isCompleteDirectory(globalDirectory, runtimeRevision, nowMs, recheckMaxAgeMs) &&
+          (projectPath === null ||
+            isCompleteDirectory(projectDirectory, runtimeRevision, nowMs, recheckMaxAgeMs))
+        ) {
+          previousConnected = countDirectoryConnections(
+            globalDirectory,
+            projectPath === null ? null : projectDirectory
+          );
+        }
+      }
+    }
     return {
       cliConnected,
       cliCountComplete,
       cliCountPending,
       openCodeConnected: null,
       ...(knownIds.size > 0 ? { openCodeKnownConnected: knownIds.size } : {}),
+      ...(previousConnected !== undefined ? { openCodePreviousConnected: previousConnected } : {}),
     };
   }
 
   // The project snapshot may override a global connection with the same ID;
   // count source identities, never models, local routes or the OpenCode host.
-  const entries = new Map(
-    globalDirectory.entries.map((entry) => [entry.providerId.trim().toLowerCase(), entry] as const)
+  const openCodeConnected = countDirectoryConnections(
+    globalDirectory,
+    projectPath === null ? null : projectDirectory
   );
-  if (projectPath !== null && projectDirectory) {
-    for (const entry of projectDirectory.entries) {
-      entries.set(entry.providerId.trim().toLowerCase(), entry);
-    }
-  }
-  let openCodeConnected = 0;
-  for (const [id, entry] of entries) {
-    if (id && id !== 'opencode' && entry.state === 'connected') {
-      openCodeConnected += 1;
-    }
-  }
 
   return { cliConnected, cliCountComplete, cliCountPending, openCodeConnected };
 }

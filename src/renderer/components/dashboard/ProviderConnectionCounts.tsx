@@ -45,7 +45,10 @@ export const ProviderConnectionCounts = ({
             ? t('cliStatus.provider.connectedCount', { connected: summary.cliConnected })
             : `${t('cliStatus.provider.connectedCount', { connected: summary.cliConnected })} · ${unknown}`;
 
-  const openCodeCount = summary.openCodeConnected ?? summary.openCodeKnownConnected;
+  const openCodeCount =
+    summary.openCodeConnected ??
+    (openCodeIsChecking ? summary.openCodePreviousConnected : undefined) ??
+    summary.openCodeKnownConnected;
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted">

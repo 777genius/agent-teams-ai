@@ -198,6 +198,81 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
     ).toBeUndefined();
   });
 
+  it('keeps the previous scoped count only during a bounded actual recheck, then replaces it', () => {
+    const nowMs = Date.parse('2026-11-10T16:00:00Z');
+    const observation = {
+      connected: 11,
+      runtimeRevision: revision,
+      source: 'summary-connected' as const,
+      fetchedAt: new Date(nowMs - 121_000).toISOString(),
+    };
+    const checking = {
+      ...input,
+      projectPath: '/test/project-a',
+      globalDirectory: null,
+      observedOpenCodeCount: observation,
+      countChecking: true,
+      nowMs,
+    };
+    expect(getDashboardConnectionSummary(checking)).toMatchObject({
+      openCodeConnected: null,
+      openCodePreviousConnected: 11,
+    });
+    for (const change of [
+      { countChecking: false },
+      { countInvalidated: true },
+      { runtimeStatus: { ...runtimeStatus, version: 'different-runtime' } },
+      // The scoped cache selector supplies no observation for another project.
+      { projectPath: '/test/project-b', observedOpenCodeCount: null },
+      { nowMs: nowMs + 120_000 },
+    ]) {
+      expect(
+        getDashboardConnectionSummary({ ...checking, ...change }).openCodePreviousConnected
+      ).toBeUndefined();
+    }
+    expect(
+      getDashboardConnectionSummary({
+        ...checking,
+        observedOpenCodeCount: {
+          ...observation,
+          connected: 9,
+          fetchedAt: new Date(nowMs).toISOString(),
+        },
+      })
+    ).toMatchObject({ openCodeConnected: 9 });
+    expect(
+      getDashboardConnectionSummary({
+        ...checking,
+        observedOpenCodeCount: {
+          ...observation,
+          connected: 9,
+          fetchedAt: new Date(nowMs).toISOString(),
+        },
+      }).openCodePreviousConnected
+    ).toBeUndefined();
+  });
+
+  it('retains a complete directory count as previous display data while its expired evidence is rechecked', () => {
+    const nowMs = Date.parse('2026-11-10T16:00:00Z');
+    const previous = {
+      ...input,
+      countChecking: true,
+      nowMs,
+      globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 121_000).toISOString() },
+    };
+    expect(getDashboardConnectionSummary(previous)).toMatchObject({
+      openCodeConnected: null,
+      openCodePreviousConnected: 2,
+    });
+    expect(
+      getDashboardConnectionSummary({ ...previous, countChecking: false }).openCodePreviousConnected
+    ).toBeUndefined();
+    expect(
+      getDashboardConnectionSummary({ ...previous, countInvalidated: true })
+        .openCodePreviousConnected
+    ).toBeUndefined();
+  });
+
   it('uses only fresh runtime-matched count observations for the active project', () => {
     const nowMs = Date.parse('2026-11-08T12:00:00Z');
     const observation = {

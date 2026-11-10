@@ -51,7 +51,7 @@ vi.mock('../dashboard/CliStatusBanner', () => ({
     <input aria-label="Provider draft" data-active={String(isDashboardActive)} />
   ),
 }));
-/* eslint-enable @typescript-eslint/naming-convention */
+/* eslint-enable @typescript-eslint/naming-convention -- restore checks after component mock exports */
 
 import { useStore } from '@renderer/store';
 

@@ -68,7 +68,12 @@ export function useProviderConnectionSummary(
       .map((provider) => Date.parse(provider.modelCatalog?.staleAt ?? ''))
       .filter((time) => Number.isFinite(time) && time > Date.now());
     const expiries = snapshots
-      .map((fetchedAt) => Date.parse(fetchedAt ?? '') + DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS)
+      .flatMap((fetchedAt) => {
+        const freshUntil = Date.parse(fetchedAt ?? '') + DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS;
+        return countEvidence?.checking
+          ? [freshUntil, freshUntil + DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS]
+          : [freshUntil];
+      })
       .filter((time) => Number.isFinite(time) && time > Date.now());
     const deadlines = [...expiries, ...catalogExpiries];
     if (deadlines.length === 0) return;
@@ -81,6 +86,7 @@ export function useProviderConnectionSummary(
     projectDirectory,
     projectPath,
     observedOpenCodeCount,
+    countEvidence?.checking,
     expiryRevision,
   ]);
 
@@ -93,6 +99,7 @@ export function useProviderConnectionSummary(
     projectDirectory,
     observedOpenCodeCount,
     countInvalidated: countEvidence?.invalidated ?? false,
+    countChecking: countEvidence?.checking ?? false,
     runtimeStatus: openCodeRuntimeStatus,
   });
 

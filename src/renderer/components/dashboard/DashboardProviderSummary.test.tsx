@@ -18,7 +18,16 @@ const state = vi.hoisted(() => ({
     binaryPath: string;
   },
   openCodeRuntimeStatusLoading: false,
-  countEvidence: null as null | { checking: boolean; observation: null; invalidated: boolean },
+  countEvidence: null as null | {
+    checking: boolean;
+    observation: null | {
+      connected: number;
+      fetchedAt: string;
+      runtimeRevision: string;
+      source: 'summary-connected';
+    };
+    invalidated: boolean;
+  },
   openSettingsTab: vi.fn(),
   openTab: vi.fn(),
   selectedProjectId: null,
@@ -33,7 +42,10 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock('@features/localization/renderer', () => ({
-  useAppTranslation: () => ({ t: (key: string) => key }),
+  useAppTranslation: () => ({
+    t: (key: string, values?: { connected?: number }) =>
+      values?.connected === undefined ? key : `${key} ${values.connected}`,
+  }),
 }));
 vi.mock('@features/runtime-provider-management/renderer', () => ({
   useRuntimeProviderDirectoryCache: () => state.directoryReads() ?? null,
@@ -133,6 +145,57 @@ describe('DashboardProviderSummary (passive)', () => {
       await act(async () => root.unmount());
     }
   });
+  it('shows expired count 11 beside an actual recheck spinner until fresh count 9 replaces it', async () => {
+    vi.useFakeTimers();
+    const now = Date.parse('2026-11-10T16:00:00Z');
+    vi.setSystemTime(now);
+    state.openCodeRuntimeStatus = {
+      installed: true,
+      state: 'ready',
+      version: '1.2.3',
+      binaryPath: '/test/opencode',
+    };
+    state.countEvidence = {
+      checking: true,
+      invalidated: false,
+      observation: {
+        connected: 11,
+        fetchedAt: new Date(now - 121_000).toISOString(),
+        runtimeRevision: JSON.stringify(['ready', '1.2.3', '/test/opencode']),
+        source: 'summary-connected',
+      },
+    };
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      const count = host.querySelector('[data-testid="dashboard-opencode-provider-count"]');
+      expect(count?.textContent).toContain('cliStatus.provider.connectedCount 11');
+      expect(count?.textContent).not.toContain('runtimeProvider.badges.unknown');
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+      // A hung recheck cannot keep a stale number indefinitely.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(120_000);
+      });
+      expect(count?.textContent).not.toContain('connectedCount 11');
+      state.countEvidence = {
+        checking: false,
+        invalidated: false,
+        observation: {
+          ...state.countEvidence!.observation!,
+          connected: 9,
+          fetchedAt: new Date().toISOString(),
+        },
+      };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(count?.textContent).toContain('cliStatus.provider.connectedCount 9');
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      vi.useRealTimers();
+    }
+  });
+
   it('keeps a fresh known count visible alongside the loader until remaining checks settle', async () => {
     state.openCodeRuntimeStatus = {
       installed: true,
