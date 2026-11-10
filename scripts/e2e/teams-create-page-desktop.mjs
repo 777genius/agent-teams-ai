@@ -1301,7 +1301,11 @@ async function main() {
     const copiedDescription = await cdp.evaluate(
       "document.querySelector('#team-description')?.value"
     );
-    assert(copiedDescription, 'Copied team description did not hydrate');
+    assert.equal(
+      copiedDescription,
+      'Disposable Teams creation E2E fixture',
+      'Copied team description did not hydrate from its persisted config'
+    );
     const templateConfirmationExpression =
       "Array.from(document.querySelectorAll('[role=alertdialog]'))" +
       ".find(dialog => dialog.querySelector('h2')?.textContent === 'Apply team template?')";
