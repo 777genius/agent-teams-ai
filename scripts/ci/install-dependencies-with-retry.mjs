@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [10_000, 20_000];
 const RETRYABLE_NETWORK_ERROR =
-  /(?:response code|status(?: code)?)[=: ]+5\d\d|\bERR_PNPM_FETCH_5\d\d\b|\b(?:EAI_AGAIN|ECONNRESET|ECONNREFUSED|ENETUNREACH|ETIMEDOUT|ERR_SOCKET_TIMEOUT|UND_ERR_[A-Z_]*TIMEOUT)\b|socket (?:hang up|timeout)|network timeout|TypeError: terminated|other side closed/i;
+  /(?:response code|status(?: code)?)[=: ]+5\d\d|\bERR_PNPM_FETCH_5\d\d\b|\b(?:EAI_AGAIN|ECONNRESET|ECONNREFUSED|ENETUNREACH|ETIMEDOUT|ERR_SOCKET_TIMEOUT|UND_ERR_[A-Z_]*TIMEOUT)\b|socket (?:hang up|timeout)|network timeout|the operation was aborted due to timeout|TypeError: terminated|\. postinstall: TypeError: fetch failed|other side closed/i;
 const TERMINAL_INSTALL_ERROR =
   /\bERR_PNPM_(?:OUTDATED_LOCKFILE|UNSUPPORTED_ENGINE|FETCH_404)\b|(?:response code|status(?: code)?)[=: ]+4\d\d/i;
 const ENGINE_FAILURE = /\bUnsupported engine\b/i;

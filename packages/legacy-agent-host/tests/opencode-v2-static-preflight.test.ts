@@ -14,8 +14,28 @@ const { isCanonicalOpenCodeV2Directory, preflightOpenCodeV2Selection, preflightO
     ? '../src/composition/openCodeV2StaticPreflight.ts'
     : '../dist/composition/openCodeV2StaticPreflight.js');
 
-// Read the Stage 1 checkout's current product manifest, not a duplicate allowlist.
-const lock = JSON.parse(readFileSync(new URL('../../../runtime.lock.json', import.meta.url), 'utf8')) as OpenCodeV2RuntimeLock;
+// The real checkout is verified separately below. Unit-positive coverage must
+// not require a product release to keep shipping a historical private engine.
+const checkoutLock = JSON.parse(readFileSync(new URL('../../../runtime.lock.json', import.meta.url), 'utf8')) as OpenCodeV2RuntimeLock;
+// TEST-only historical contract fixture: neither real delivery nor launch proof.
+const lock: OpenCodeV2RuntimeLock = {
+  version: 'TEST-static-preflight',
+  opencodeV2: { qualified: {
+    'darwin-arm64': ['2.0.0'], 'darwin-x64': ['2.0.0'],
+    'linux-x64': ['2.0.0'], 'linux-arm64': ['2.0.0'],
+    'win32-arm64': ['2.1.4'], 'win32-x64': ['2.1.4'],
+  } },
+  opencodeV2Delivery: Object.fromEntries(
+    ['darwin-arm64', 'darwin-x64', 'linux-x64'].map(tuple => {
+      const [platform, arch] = tuple.split('-');
+      return [tuple, {
+        schemaVersion: 1, bridgeProtocol: 1, runtimeVersion: 'TEST-static-preflight',
+        platform: platform!, arch: arch!, engineVersions: ['2.0.0'],
+        sourceCommit: 'c'.repeat(40), archive: { sha256: 'd'.repeat(64) },
+      }];
+    })
+  ),
+};
 const selected: OpenCodeV2Selection = {
   generation: 'v2', platform: 'darwin-arm64', version: '2.0.0',
   nativeReportedVersion: '2.0.0',
@@ -113,7 +133,7 @@ test('V2 static candidate must match the current product release and exact deliv
     {} as OpenCodeV2RuntimeLock), { kind: 'hold', reason: 'current-product' });
 });
 
-test('V2 current-main live checkout never inherits historical Stage1 candidate', (t) => {
+test('V2 current-main live checkout never inherits a TEST-only historical candidate', (t) => {
   // CI checks out actual main into a separate read-only directory; no network
   // lookup in a test, no history rewrites and no local user configuration.
   const currentProductPath = process.env.OPENCODE_V2_CURRENT_PRODUCT_LOCK;
@@ -121,8 +141,30 @@ test('V2 current-main live checkout never inherits historical Stage1 candidate',
   const productLock = JSON.parse(readFileSync(currentProductPath, 'utf8')) as OpenCodeV2RuntimeLock;
   assert.equal(typeof productLock.version, 'string');
   assert.notEqual(productLock.version, lock.version,
-    'Stage1 historical lock caught up with main: requalify the native matrix');
+    'the TEST-only manifest must never be used as a product lock');
   assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock, productLock),
+    { kind: 'hold', reason: 'current-product' });
+});
+
+test('the actual checkout keeps unqualified product engines behind the private driver gate', () => {
+  assert.match(checkoutLock.version ?? '', /^\d+\.\d+\.\d+$/,
+    'read the actual release manifest, not the TEST fixture');
+  const qualified = checkoutLock.opencodeV2?.qualified;
+  assert.ok(qualified && Object.keys(qualified).length > 0);
+  let checked = 0;
+  for (const [platform, versions] of Object.entries(qualified)) {
+    assert.ok(Array.isArray(versions));
+    for (const version of versions) {
+      assert.equal(typeof version, 'string');
+      assert.deepEqual(preflightOpenCodeV2Selection({
+        ...selected, platform, version, nativeReportedVersion: version,
+      }, checkoutLock), { kind: 'hold', reason: 'driver-version' },
+      `${platform}/${version}: product qualification is not private Host qualification`);
+      checked++;
+    }
+  }
+  assert.ok(checked > 0, 'at least one real product engine must be checked');
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock, checkoutLock),
     { kind: 'hold', reason: 'current-product' });
 });
 
