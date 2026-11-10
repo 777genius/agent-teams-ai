@@ -1,5 +1,8 @@
 import { buildProviderPrepareAttemptRuntimeSignature } from './providerPrepareAttemptIdentity';
-import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
+import {
+  appendProviderPrepareInvalidationEpoch,
+  buildProviderPrepareModelCacheKey,
+} from './providerPrepareCacheKey';
 import {
   getProviderPrepareCachedSnapshot,
   type ProviderPrepareDiagnosticsCachedSnapshot,
@@ -72,8 +75,7 @@ export function buildProviderPreparePlans({
     // Explicit credential/settings changes require a fresh proof even when the
     // runtime's passive status has not changed yet.
     const epoch = invalidationEpochByProviderId?.[providerId] ?? 0;
-    const invalidationSuffix = epoch > 0 ? `::settings-invalidation:${epoch}` : '';
-    const requestSignature = buildProviderPrepareRequestSignature({
+    const requestSignature = appendProviderPrepareInvalidationEpoch(buildProviderPrepareRequestSignature({
       cwd,
       selectedProviderId: providerId,
       selectedModel: '',
@@ -83,15 +85,15 @@ export function buildProviderPreparePlans({
         runtimeProviderStatusById.get(providerId)
       ),
       modelChecksSignature,
-    }) + invalidationSuffix;
-    const cacheKey = buildProviderPrepareModelCacheKey({
+    }), epoch);
+    const cacheKey = appendProviderPrepareInvalidationEpoch(buildProviderPrepareModelCacheKey({
       cwd,
       providerId,
       backendSummary,
       limitContext,
       runtimeStatusSignature,
       modelChecksSignature,
-    }) + invalidationSuffix;
+    }), epoch);
     const cachedModelResultsById = {
       ...getShortLivedProviderPrepareModelResults({
         providerId,

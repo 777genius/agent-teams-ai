@@ -6,6 +6,10 @@ import {
   getPendingProviderPreflightIds,
   resumeInterruptedProviderPreflight,
 } from '@renderer/components/team/dialogs/optionalProviderPreflight';
+import {
+  appendProviderPrepareInvalidationEpoch,
+  buildProviderPrepareModelCacheKey,
+} from '@renderer/components/team/dialogs/providerPrepareCacheKey';
 import { buildProviderPreparePlans } from '@renderer/components/team/dialogs/providerPreparePlans';
 import {
   getShortLivedProviderPrepareModelResults,
@@ -640,6 +644,18 @@ describe('optional provider preflight skip', () => {
     const invalidatedPlan = planAt(1);
     expect(invalidatedPlan.cacheKey).not.toBe(originalPlan.cacheKey);
     expect(invalidatedPlan.requestSignature).not.toBe(originalPlan.requestSignature);
+    const displayKey = appendProviderPrepareInvalidationEpoch(
+      buildProviderPrepareModelCacheKey({
+        cwd: '/tmp/test-preflight',
+        providerId: 'opencode',
+        backendSummary: null,
+        limitContext: false,
+        runtimeStatusSignature: invalidatedPlan.runtimeStatusSignature,
+        modelChecksSignature: invalidatedPlan.modelChecksSignature,
+      }),
+      1
+    );
+    expect(displayKey).toBe(invalidatedPlan.cacheKey);
     const input = {
       cwd: '/tmp/test-preflight',
       providerId: 'opencode' as const,

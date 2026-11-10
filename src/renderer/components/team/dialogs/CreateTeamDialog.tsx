@@ -153,7 +153,10 @@ import {
 } from './providerLaunchAuthority';
 import { ProviderLaunchAuthorityNotice } from './ProviderLaunchAuthorityNotice';
 import { isSameProviderPrepareAttempt } from './providerPrepareAttemptIdentity';
-import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
+import {
+  appendProviderPrepareInvalidationEpoch,
+  buildProviderPrepareModelCacheKey,
+} from './providerPrepareCacheKey';
 import {
   mergeReusableProviderPrepareModelResults,
   type ProviderPrepareDiagnosticsModelResult,
@@ -987,14 +990,14 @@ export const CreateTeamDialog = ({
       const providerModelChecksSignature = buildProviderPrepareModelChecksSignature(
         new Map([[providerId, selectedModelChecksByProvider.get(providerId) ?? []]])
       );
-      const cacheKey = buildProviderPrepareModelCacheKey({
+      const cacheKey = appendProviderPrepareInvalidationEpoch(buildProviderPrepareModelCacheKey({
         cwd: effectiveCwd,
         providerId,
         backendSummary,
         limitContext: effectiveAnthropicRuntimeLimitContext,
         runtimeStatusSignature: providerRuntimeStatusSignature,
         modelChecksSignature: providerModelChecksSignature,
-      });
+      }), prepareProviderInvalidationEpochById[providerId]);
       const issueReasons = getShortLivedProviderPrepareModelIssueReasons({
         providerId,
         cacheKey,
@@ -1019,6 +1022,7 @@ export const CreateTeamDialog = ({
     effectiveAnthropicRuntimeLimitContext,
     effectiveCwd,
     prepareChecks,
+    prepareProviderInvalidationEpochById,
     runtimeBackendSummaryByProvider,
     runtimeProviderStatusById,
     selectedModelChecksByProvider,

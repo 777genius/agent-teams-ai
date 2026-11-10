@@ -24,3 +24,8 @@ export function buildProviderPrepareModelCacheKey({
     modelChecksSignature ?? '',
   ].join('::');
 }
+
+/** Explicit settings changes invalidate model evidence without invalidating unrelated selections. */
+export function appendProviderPrepareInvalidationEpoch(key: string, epoch = 0): string {
+  return epoch > 0 ? `${key}::settings-invalidation:${epoch}` : key;
+}
