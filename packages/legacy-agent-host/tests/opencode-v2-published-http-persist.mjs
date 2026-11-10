@@ -519,6 +519,33 @@ if (process.argv[2] === '--worker') {
        coldDenied.status!==200||coldDenied.data?.data?.effect!=='deny'||
        coldDenyPending.status!==200||coldDenyPending.data?.data?.length!==0)
       throw Error('TEST_cold_saved_permission_policy_changed');
+    // A fresh session created AFTER the cold restart must inherit the
+    // project-scoped saved grant. A pre-restart session alone cannot prove
+    // that this authority belongs to the project rather than the session.
+    const coldFresh=await call('/api/session','POST',{
+      location:{directory:workspace},agent:'build',permissions:savedRules,
+    });
+    const coldFreshId=coldFresh.data?.data?.id;
+    if(coldFresh.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(coldFreshId||'')||
+       [savedId,savedFollowId,savedDenyId].includes(coldFreshId))
+      throw Error('TEST_cold_fresh_saved_session_missing');
+    const coldFreshPath='/api/session/'+encodeURIComponent(coldFreshId);
+    const coldFreshReadback=await call(coldFreshPath);
+    if(coldFreshReadback.status!==200||
+       coldFreshReadback.data?.data?.id!==coldFreshId||
+       coldFreshReadback.data?.data?.location?.directory!==workspace||
+       JSON.stringify(coldFreshReadback.data?.data?.permissions)!==JSON.stringify(savedRules))
+      throw Error('TEST_cold_fresh_session_ask_readback_changed');
+    const coldFreshAllowed=await call(coldFreshPath+'/permission','POST',{
+      action:'external_directory',resources:[savedResource],
+    });
+    const coldFreshPending=await call(coldFreshPath+'/permission');
+    if(coldFreshAllowed.status!==200||coldFreshAllowed.data?.data?.effect!=='allow'||
+       coldFreshPending.status!==200||coldFreshPending.data?.data?.length!==0)
+      throw Error('TEST_cold_fresh_session_saved_grant_unavailable');
+    if((await call(coldFreshPath,'DELETE')).status!==204)
+      throw Error('TEST_cold_fresh_saved_session_cleanup_failed');
+    receipt.nativeFreshSessionSavedGrantSurvivesColdRestartProven=true;
     receipt.nativeSavedGrantSurvivesColdRestartProven=true;
     for (const claim of stalePermissionClaims) {
       const staleAfter=await call(claim.path+'/permission');
