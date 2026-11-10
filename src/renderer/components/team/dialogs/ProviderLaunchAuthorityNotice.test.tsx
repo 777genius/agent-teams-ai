@@ -4,8 +4,8 @@ import { createRoot } from 'react-dom/client';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ProviderLaunchAuthorityNotice } from './ProviderLaunchAuthorityNotice';
 import { createLaunchGuard } from './providerLaunchAuthority';
+import { ProviderLaunchAuthorityNotice } from './ProviderLaunchAuthorityNotice';
 
 import type { CliProviderStatus } from '@shared/types';
 

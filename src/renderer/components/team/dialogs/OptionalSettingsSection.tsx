@@ -3,7 +3,7 @@ import React, { useId, useMemo, useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
-import { ChevronDown, Settings2 } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 interface OptionalSettingsSectionProps {
   title: string;
@@ -127,7 +127,13 @@ export const OptionalSettingsSection = ({
         aria-expanded={isOpen}
         aria-controls={contentId}
       >
-        <Settings2 className="size-4 shrink-0" style={{ color: headerIconColor }} />
+        <ChevronDown
+          className={cn(
+            'size-4 shrink-0 transition-transform duration-150',
+            isOpen && 'rotate-180'
+          )}
+          style={{ color: headerIconColor }}
+        />
 
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="truncate text-sm font-medium" style={{ color: headerTitleColor }}>
@@ -173,14 +179,6 @@ export const OptionalSettingsSection = ({
             </div>
           ) : null}
         </div>
-
-        <ChevronDown
-          className={cn(
-            'size-4 shrink-0 transition-transform duration-150',
-            isOpen && 'rotate-180'
-          )}
-          style={{ color: headerIconColor }}
-        />
       </button>
 
       {isOpen ? (

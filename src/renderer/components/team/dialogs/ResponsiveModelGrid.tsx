@@ -23,7 +23,7 @@ export function useModelGridColumnCount(ref: RefObject<HTMLDivElement | null>): 
   return getOpenCodeModelGridColumnCount(width);
 }
 
-export function ResponsiveModelGrid({
+export const ResponsiveModelGrid = ({
   children,
   className,
   'data-testid': testId,
@@ -31,7 +31,7 @@ export function ResponsiveModelGrid({
   children: ReactNode;
   className?: string;
   'data-testid'?: string;
-}>): React.JSX.Element {
+}>): React.JSX.Element => {
   const ref = useRef<HTMLDivElement | null>(null);
   const columns = useModelGridColumnCount(ref);
   return (
@@ -44,4 +44,4 @@ export function ResponsiveModelGrid({
       {children}
     </div>
   );
-}
+};

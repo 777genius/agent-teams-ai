@@ -841,10 +841,60 @@ describe('runProviderPrepareDiagnostics', () => {
     });
 
     expect(result.status).toBe('notes');
-    expect(result.details).toEqual(['kimi-k2.6 - verification deferred - OpenCode session is busy; retry when idle.']);
+    expect(result.details).toEqual([
+      'kimi-k2.6 - verification deferred - OpenCode session is busy; retry when idle.',
+    ]);
     expect(result.warnings).toEqual(result.details);
     expect(buildReusableProviderPrepareModelResults(result.modelResultsById)).toEqual({});
     expect(prepareProvisioning).toHaveBeenCalledTimes(2);
+  });
+
+  it('rechecks a busy deferred selection and accepts only the later verified result', async () => {
+    const modelId = 'openrouter/nvidia/nemotron-3.5-super-vl:free';
+    let busy = true;
+    const prepareProvisioning = vi.fn<
+      NonNullable<Parameters<typeof runProviderPrepareDiagnostics>[0]['prepareProvisioning']>
+    >(async (_cwd, _provider, _providers, _models, _limit, mode) =>
+      mode === 'compatibility'
+        ? {
+            ready: true,
+            message: 'Compatible',
+            details: [`Selected model ${modelId} is compatible. Deep verification pending.`],
+          }
+        : busy
+          ? {
+              ready: true,
+              message: 'Deferred',
+              warnings: [
+                'OpenCode is currently busy with another session. Deep model verification will retry when OpenCode is idle.',
+              ],
+            }
+          : {
+              ready: true,
+              message: 'Verified',
+              details: [`Selected model ${modelId} verified for launch.`],
+            }
+    );
+    const input = {
+      cwd: '/tmp/TEST-busy-retry',
+      providerId: 'opencode' as const,
+      selectedModelIds: [modelId],
+      prepareProvisioning,
+    };
+    const deferred = await runProviderPrepareDiagnostics(input);
+    expect(deferred.status).toBe('notes');
+    const cached = mergeReusableProviderPrepareModelResults({}, deferred.modelResultsById);
+    expect(cached).toEqual({});
+    busy = false;
+    const retried = await runProviderPrepareDiagnostics({
+      ...input,
+      cachedModelResultsById: cached,
+    });
+    expect(retried.status).toBe('ready');
+    expect(retried.modelResultsById[modelId]?.status).toBe('ready');
+    expect(retried.details.join('\n')).toContain('verified');
+    expect(retried.details.join('\n')).not.toContain('deferred');
+    expect(prepareProvisioning.mock.calls.filter((call) => call[5] === 'deep')).toHaveLength(2);
   });
 
   it('keeps stale OpenCode model-scoped runtime failures provider-scoped', async () => {
@@ -1926,44 +1976,45 @@ describe('runProviderPrepareDiagnostics structured model reasons', () => {
     ['needs_connection_zen', 'needs an OpenCode Zen key'],
     ['needs_connection', 'This provider is not connected'],
     ['free_tier_restricted', 'OpenCode refused this free model request'],
-  ] as const satisfies ReadonlyArray<
-    readonly [OpenCodeModelAccessReasonCode, string]
-  >)('uses the %s reason for a compatibility refusal', async (reasonCode, expected) => {
-    const prepareProvisioning = vi.fn<
-      (
-        cwd?: string,
-        providerId?: TeamProviderId,
-        providerIds?: TeamProviderId[],
-        selectedModels?: string[]
-      ) => Promise<TeamProvisioningPrepareResult>
-    >(() =>
-      Promise.resolve({
-        ready: false,
-        message: 'Selected model opencode/some-model is unavailable. raw runtime text',
-        issues: [
-          {
-            providerId: 'opencode',
-            modelId: 'opencode/some-model',
-            scope: 'model',
-            severity: 'blocking',
-            code: 'unavailable',
-            message: 'raw runtime text',
-            reasonCode,
-          },
-        ],
-      })
-    );
+  ] as const satisfies ReadonlyArray<readonly [OpenCodeModelAccessReasonCode, string]>)(
+    'uses the %s reason for a compatibility refusal',
+    async (reasonCode, expected) => {
+      const prepareProvisioning = vi.fn<
+        (
+          cwd?: string,
+          providerId?: TeamProviderId,
+          providerIds?: TeamProviderId[],
+          selectedModels?: string[]
+        ) => Promise<TeamProvisioningPrepareResult>
+      >(() =>
+        Promise.resolve({
+          ready: false,
+          message: 'Selected model opencode/some-model is unavailable. raw runtime text',
+          issues: [
+            {
+              providerId: 'opencode',
+              modelId: 'opencode/some-model',
+              scope: 'model',
+              severity: 'blocking',
+              code: 'unavailable',
+              message: 'raw runtime text',
+              reasonCode,
+            },
+          ],
+        })
+      );
 
-    const result = await runProviderPrepareDiagnostics({
-      cwd: '/tmp/project',
-      providerId: 'opencode',
-      selectedModelIds: ['opencode/some-model'],
-      prepareProvisioning,
-    });
+      const result = await runProviderPrepareDiagnostics({
+        cwd: '/tmp/project',
+        providerId: 'opencode',
+        selectedModelIds: ['opencode/some-model'],
+        prepareProvisioning,
+      });
 
-    const line = result.modelResultsById['opencode/some-model']?.line ?? '';
-    expect(line).toContain(` - unavailable - `);
-    expect(line).toContain(expected);
-    expect(line).not.toContain('raw runtime text');
-  });
+      const line = result.modelResultsById['opencode/some-model']?.line ?? '';
+      expect(line).toContain(` - unavailable - `);
+      expect(line).toContain(expected);
+      expect(line).not.toContain('raw runtime text');
+    }
+  );
 });

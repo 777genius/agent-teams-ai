@@ -44,6 +44,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@renderer/components/ui/tooltip';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
@@ -112,7 +118,7 @@ import {
 import { buildDefaultTeamDescription } from './createTeamDescription';
 import { alignProvisioningChecks } from './provisioningProviderChecks';
 import { CreateTeamSurface } from './CreateTeamSurface';
-import { CreateTeamTemplatePicker } from './CreateTeamTemplatePicker';
+import { CreateTeamHeaderActions } from './CreateTeamHeaderActions';
 import {
   buildProviderModelChecksMap,
   collectDialogMemberProviderIds,
@@ -248,6 +254,7 @@ export const CreateTeamDialog = ({
   forceDefaultProjectSelection = false,
   onClose,
   onBack,
+  onManagementApplied,
   onCreate,
   onOpenTeam,
 }: CreateTeamDialogProps): React.JSX.Element => {
@@ -386,7 +393,6 @@ export const CreateTeamDialog = ({
   const prepareUnmountGenerationRef = useRef(0);
   const appliedDefaultProjectPathRef = useRef<string | null>(null);
   const forcedDefaultProjectModePathRef = useRef<string | null>(null);
-  const lastAutoDescriptionRef = useRef<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     teamName?: string;
     members?: string;
@@ -539,7 +545,6 @@ export const CreateTeamDialog = ({
   const resetFormState = async (): Promise<void> => {
     gatewayBindings.releaseRetained();
     clearDraft();
-    lastAutoDescriptionRef.current = null;
     descriptionDraft.clearDraft();
     promptDraft.clearDraft();
     promptChipDraft.clearChipDraft();
@@ -1486,25 +1491,6 @@ export const CreateTeamDialog = ({
       setTeamName(suggestedTeamName);
     }
   }, [initialData, open, suggestedTeamName, draftLoaded]); // eslint-disable-line react-hooks/exhaustive-deps -- teamName read once
-  useEffect(() => {
-    if (!open || initialData || !descriptionDraft.isLoaded) {
-      return;
-    }
-    const resolvedTeamName = teamName.trim() || suggestedTeamName;
-    const nextAutoDescription = buildDefaultTeamDescription(resolvedTeamName, t);
-    const currentDescription = descriptionDraft.value.trim();
-    const previousAutoDescription = lastAutoDescriptionRef.current?.trim() ?? '';
-    const shouldSyncDescription =
-      currentDescription.length === 0 || currentDescription === previousAutoDescription;
-    if (shouldSyncDescription && descriptionDraft.value !== nextAutoDescription) {
-      lastAutoDescriptionRef.current = nextAutoDescription;
-      descriptionDraft.setValue(nextAutoDescription);
-      return;
-    }
-    if (currentDescription === nextAutoDescription) {
-      lastAutoDescriptionRef.current = nextAutoDescription;
-    }
-  }, [descriptionDraft, initialData, open, suggestedTeamName, t, teamName]);
   useEffect(() => {
     if (!open || !forceDefaultProjectSelection) {
       forcedDefaultProjectModePathRef.current = null;
@@ -2606,14 +2592,14 @@ export const CreateTeamDialog = ({
             </>
           }
           headerActions={
-            <CreateTeamTemplatePicker
+            <CreateTeamHeaderActions
+              local={canCreate}
+              isLight={isLight}
+              onManagementApplied={onManagementApplied}
               form={createTeamDraft}
               descriptionDraft={descriptionDraft}
               promptDraft={promptDraft}
-              defaultDescription={buildDefaultTeamDescription(
-                teamName.trim() || suggestedTeamName,
-                t
-              )}
+              defaultDescription={buildDefaultTeamDescription()}
               hasPromptChips={promptChipDraft.chips.length > 0}
               clearPromptChips={promptChipDraft.clearChipDraft}
               disabled={isSubmitting || !open || !active}
@@ -2776,20 +2762,26 @@ export const CreateTeamDialog = ({
                   checked={launchTeam}
                   onCheckedChange={(checked) => setLaunchTeam(checked === true)}
                 />
-                <div className="space-y-1">
+                <div className="flex items-center gap-1.5">
                   <Label htmlFor="launch-team" className="cursor-pointer text-sm font-semibold">
                     {t('create.launchAfterCreate.label')}
                   </Label>
-                  <p
-                    className="text-xs"
-                    style={{
-                      color: isLight
-                        ? 'color-mix(in srgb, var(--color-text-muted) 54%, var(--color-text) 46%)'
-                        : 'var(--color-text-muted)',
-                    }}
-                  >
-                    {t('create.launchAfterCreate.description')}
-                  </p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={t('create.launchAfterCreate.description')}
+                          className="rounded text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)]"
+                        >
+                          <Info className="size-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-72">
+                        {t('create.launchAfterCreate.description')}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
               {launchTeam ? (

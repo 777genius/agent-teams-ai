@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client';
 
 import { CreateTeamSurface } from '@renderer/components/team/dialogs/CreateTeamSurface';
 import { CreateTeamTemplatePicker } from '@renderer/components/team/dialogs/CreateTeamTemplatePicker';
+import { buildDefaultTeamDescription } from '@renderer/components/team/dialogs/createTeamDescription';
 import { createMemberDraft } from '@renderer/components/team/members/membersEditorUtils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -29,7 +30,7 @@ interface DraftState {
 
 const pristine: DraftState = {
   members: [],
-  description: 'Default description',
+  description: buildDefaultTeamDescription(),
   prompt: '',
   chips: [],
   launchTeam: true,
@@ -71,7 +72,7 @@ function Form({ initial }: { initial: DraftState }): React.JSX.Element {
             isLoaded: true,
             setValue: (prompt) => update({ prompt }),
           }}
-          defaultDescription="Default description"
+          defaultDescription={buildDefaultTeamDescription()}
           hasPromptChips={draft.chips.length > 0}
           clearPromptChips={() => update({ chips: [] })}
         />
@@ -120,6 +121,7 @@ describe('create team template replacement', () => {
   it('applies immediately to a pristine lead-only form from the header', async () => {
     await act(async () => root.render(createElement(Form, { initial: pristine })));
     expect(host.querySelector('header [role="combobox"]')).not.toBeNull();
+    expect(readDraft().description).toBe('');
     await selectTemplate();
     expect(document.querySelector('[role="alertdialog"]')).toBeNull();
     const applied = readDraft();

@@ -56,7 +56,7 @@ function buildVirtualRows<Group extends ModelGroup>(
   return rows;
 }
 
-export function OpenCodeVirtualizedModelGrid<Group extends ModelGroup>({
+export const OpenCodeVirtualizedModelGrid = <Group extends ModelGroup>({
   defaultOptions,
   groups,
   renderModelOption,
@@ -68,7 +68,7 @@ export function OpenCodeVirtualizedModelGrid<Group extends ModelGroup>({
   renderModelOption: (option: TeamRuntimeModelOption) => React.JSX.Element;
   renderGroupHeader: (group: Group) => React.JSX.Element;
   heightClassName: string;
-}>): React.JSX.Element {
+}>): React.JSX.Element => {
   const scrollParentRef = useRef<HTMLDivElement | null>(null);
   const columnCount = useModelGridColumnCount(scrollParentRef);
   const rows = useMemo(
@@ -169,4 +169,4 @@ export function OpenCodeVirtualizedModelGrid<Group extends ModelGroup>({
       </div>
     </div>
   );
-}
+};

@@ -13,6 +13,7 @@ import {
 
 import { ExternalAgentPromptDialog } from './ExternalAgentPromptDialog';
 import { useConnectionInfo } from './useConnectionInfo';
+import { useManagementApplied } from './useManagementApplied';
 
 import type { ExternalAgentConnectionApi } from '../contracts';
 
@@ -21,17 +22,29 @@ export function ExternalAgentPromptAction({
   local,
   isLight,
   onSettings,
+  onManagementApplied,
 }: Readonly<{
   api: ExternalAgentConnectionApi;
   local: boolean;
   isLight: boolean;
   onSettings(): void;
+  onManagementApplied?(): void;
 }>): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const [open, setOpen] = useState(false);
   const { info, error, retrying, retry } = useConnectionInfo(api, open && local);
+  useManagementApplied(
+    open && local,
+    info?.context ?? null,
+    onManagementApplied
+      ? () => {
+          setOpen(false);
+          onManagementApplied();
+        }
+      : undefined
+  );
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open && local} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
           type="button"

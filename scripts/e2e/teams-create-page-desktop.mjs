@@ -1302,6 +1302,9 @@ async function main() {
       "document.querySelector('#team-description')?.value"
     );
     assert(copiedDescription, 'Copied team description did not hydrate');
+    const templateConfirmationExpression =
+      "Array.from(document.querySelectorAll('[role=alertdialog]'))" +
+      ".find(dialog => dialog.querySelector('h2')?.textContent === 'Apply team template?')";
     const selectTemplate = async () => {
       await cdp.click(
         "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Team template\"]')"
@@ -1311,14 +1314,14 @@ async function main() {
         ".find(option => option.textContent?.includes('Software Product Team'))"
       );
       await cdp.waitFor(
-        "document.querySelector('[role=dialog][aria-label=\"Apply team template?\"]')",
+        templateConfirmationExpression,
         'template replacement confirmation'
       );
     };
     await selectTemplate();
     // Wait for the dialog's focus and Tab-trap effects before testing keyboard containment.
     await cdp.waitFor(
-      `document.querySelector('[role=dialog][aria-label="Apply team template?"]')?.contains(document.activeElement)`,
+      `(${templateConfirmationExpression})?.contains(document.activeElement)`,
       'template confirmation initial keyboard focus'
     );
     // A destructive confirmation must not expose background form fields to Tab.
@@ -1330,18 +1333,20 @@ async function main() {
     });
     assert(
       await cdp.evaluate(
-        "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"]')?.contains(document.activeElement)"
+        `(${templateConfirmationExpression})?.contains(document.activeElement)`
       ),
       'Template confirmation focus escaped into the background form'
     );
     await cdp.click(
-      "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"] button:not([data-confirm-btn])')"
+      `Array.from((${templateConfirmationExpression})?.querySelectorAll('button') ?? [])` +
+      ".find(button => button.textContent?.trim() === 'Cancel')"
     );
     assert.equal(await cdp.evaluate("document.querySelector('#team-description')?.value"),
       copiedDescription, 'Canceling template replacement discarded the copied description');
     await selectTemplate();
     await cdp.click(
-      "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"] button[data-confirm-btn]')"
+      `Array.from((${templateConfirmationExpression})?.querySelectorAll('button') ?? [])` +
+      ".find(button => button.textContent?.trim() === 'Apply template')"
     );
     await cdp.waitFor(
       "document.querySelector('#team-description')?.value === " +

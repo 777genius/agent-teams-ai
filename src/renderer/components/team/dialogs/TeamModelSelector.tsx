@@ -121,11 +121,11 @@ import {
   useScopedOpenCodeStatus,
 } from './OpenCodeSourceDirectoryProvider';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
-import { OpenCodeVirtualizedModelGrid } from './OpenCodeVirtualizedModelGrid';
-import { ResponsiveModelGrid } from './ResponsiveModelGrid';
 import * as unavailableSelection from './openCodeUnavailableSelection';
+import { OpenCodeVirtualizedModelGrid } from './OpenCodeVirtualizedModelGrid';
 import { selectVisibleOpenCodeModelOptions } from './openCodeVisibleModelOptions';
 import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';
+import { ResponsiveModelGrid } from './ResponsiveModelGrid';
 import { resolveRuntimeDefaultModelLabel } from './runtimeDefaultModelLabel';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import { TeamModelProviderActions } from './TeamModelProviderActions';

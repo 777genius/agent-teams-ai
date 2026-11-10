@@ -1,6 +1,5 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { ExternalAgentPromptAction } from '@features/external-agent-connection/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
@@ -8,7 +7,6 @@ import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
-import { Input } from '@renderer/components/ui/input';
 import {
   Tooltip,
   TooltipContent,
@@ -51,12 +49,8 @@ import {
   Copy,
   FolderOpen,
   GitBranch,
-  Import,
-  Network,
   Play,
-  Plus,
   RotateCcw,
-  Search,
   Square,
   Trash2,
   UsersRound,
@@ -72,7 +66,8 @@ import { TeamDeleteButton } from './TeamDeleteButton';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { runTeamDeleteOnce } from './teamDeleteProgress';
 import { TeamEmptyState } from './TeamEmptyState';
-import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
+import { EMPTY_TEAM_FILTER } from './TeamListFilterPopover';
+import { TeamListHeader } from './TeamListHeader';
 import { TeamListSkeleton } from './TeamListSkeleton';
 import { TeamManagementNotice } from './TeamManagementNotice';
 import {
@@ -438,7 +433,13 @@ const ActiveTeamCard = ({
   );
 };
 
-export const TeamListView = memo(function TeamListView({ tabId, isActive }: { tabId: string; isActive: boolean }): React.JSX.Element {
+export const TeamListView = memo(function TeamListView({
+  tabId,
+  isActive,
+}: {
+  tabId: string;
+  isActive: boolean;
+}): React.JSX.Element {
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
@@ -835,7 +836,9 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
       if (hasOpenEditor || hasSavedDraft) {
         const accepted = await confirm({
           title: t('create.title.copy'),
-          message: t('create.draft.replaceConfirmation', { defaultValue: 'Copying this team will replace your unfinished draft. Continue?' }),
+          message: t('create.draft.replaceConfirmation', {
+            defaultValue: 'Copying this team will replace your unfinished draft. Continue?',
+          }),
           confirmLabel: t('create.draft.replace', { defaultValue: 'Replace draft' }),
           variant: 'danger',
         });
@@ -1041,13 +1044,27 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
       }));
   }, [teams, aliveTeams]);
 
+  const handleManagementApplied = useCallback(() => {
+    setSearchQuery('');
+    setFilter(EMPTY_TEAM_FILTER);
+    void fetchTeams();
+    // Leave the form through navigation only; its autosave owns every draft entry.
+    closeTeamsCreationPage(tabId);
+  }, [closeTeamsCreationPage, fetchTeams, tabId]);
+
   const handleCreateDialogClose = useCallback(() => {
     closeTeamsCreationPage(tabId);
   }, [closeTeamsCreationPage, tabId]);
   const handleCreateBack = useCallback(() => {
     closeTeamsCreationPage(tabId);
     const originId = createSeed?.originTabId;
-    if (originId && useStore.getState().getAllPaneTabs().some((tab) => tab.id === originId)) {
+    if (
+      originId &&
+      useStore
+        .getState()
+        .getAllPaneTabs()
+        .some((tab) => tab.id === originId)
+    ) {
       useStore.getState().setActiveTab(originId);
     }
   }, [closeTeamsCreationPage, createSeed?.originTabId, tabId]);
@@ -1059,7 +1076,9 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
         placement,
         teamName: request.teamName,
         label: request.displayName || request.teamName,
-        failureTitle: t('create.placementFailure.title', { defaultValue: 'Team created, not placed' }),
+        failureTitle: t('create.placementFailure.title', {
+          defaultValue: 'Team created, not placed',
+        }),
         failureMessage: t('create.placementFailure.message', {
           teamName: request.teamName,
           defaultValue: 'Assign this team from the Organization Map; do not create it again.',
@@ -1088,15 +1107,13 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
   const createDialogElement = createPageOpen && (
     <Suspense
       fallback={
-        <CreateTeamPageLoadingFallback
-          isCopy={copyData != null}
-          onClose={handleCreateBack}
-        />
+        <CreateTeamPageLoadingFallback isCopy={copyData != null} onClose={handleCreateBack} />
       }
     >
       <CreateTeamDialog
         key={createSeed?.id ?? 'new'}
-        presentation="page" active={isActive}
+        presentation="page"
+        active={isActive}
         open={createPageOpen}
         canCreate={canCreate}
         provisioningErrorsByTeam={provisioningErrorByTeam}
@@ -1110,6 +1127,7 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
         forceDefaultProjectSelection={copyData == null && navigationProjectPath != null}
         onClose={handleCreateDialogClose}
         onBack={handleCreateBack}
+        onManagementApplied={handleManagementApplied}
         onCreate={handleCreateSubmit}
         onOpenTeam={openTeamTab}
       />
@@ -1176,92 +1194,36 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
   );
 
   const renderHeader = (): React.JSX.Element => (
-    <div className="mb-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-semibold text-[var(--color-text)]">{t('list.title')}</h2>
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <ExternalAgentPromptAction
-            api={api.externalAgentConnection}
-            local={canCreate}
-            isLight={isLight}
-            onSettings={() => useStore.getState().openSettingsTab('externalAgentConnection')}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() =>
-              openTab({ type: 'organizations', label: t('organizations.map.defaultTitle') })
-            }
-          >
-            <Network size={13} />
-            {t('list.actions.organizationMap')}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            disabled={!canCreate}
-            onClick={() => setShowImportDialog(true)}
-          >
-            <Import size={13} />
-            {t('list.actions.importTeam')}
-          </Button>
-          <Button className="gap-2" disabled={!canCreate} onClick={() => openTeamsCreationPage()}>
-            <Plus size={15} />
-            {hasCreationDraft
-              ? t('create.draft.continue', { defaultValue: 'Continue creating' })
-              : t('list.actions.createTeam')}
-          </Button>
-        </div>
-      </div>
-      {selectRecentManagedTeams(teams, teams, teamManagementNoticeByTeam).some(
-        (team) => !filteredTeams.includes(team)
-      ) ? (
-        <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-          {t('managementChanges.hidden')}{' '}
-          <Button
-            variant="link"
-            size="sm"
-            onClick={() => {
-              setSearchQuery('');
-              setFilter(EMPTY_TEAM_FILTER);
-            }}
-          >
-            {t('list.filter.clearAll')}
-          </Button>
-        </p>
-      ) : null}
-      {!canCreate ? (
-        <p className="mt-2 text-xs text-[var(--color-text-muted)]">{t('list.localOnly')}</p>
-      ) : null}
-
-      {teamsWithProvisioning.length > 0 ? (
-        <div className="mt-3 flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search
-              size={14}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
-            />
-            <Input
-              type="text"
-              placeholder={t('list.searchPlaceholder')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 pl-8 text-xs"
-            />
-          </div>
-          <TeamListFilterPopover
-            filter={filter}
-            selectedProjectPath={currentProjectPath}
-            teams={teamsWithProvisioning}
-            aliveTeams={aliveTeams}
-            onFilterChange={setFilter}
-            onProjectChange={handleProjectSelectionChange}
-          />
-        </div>
-      ) : null}
-    </div>
+    <TeamListHeader
+      managementApi={api.externalAgentConnection}
+      canCreate={canCreate}
+      isLight={isLight}
+      hasCreationDraft={hasCreationDraft}
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      filter={filter}
+      onFilterChange={setFilter}
+      projectPath={currentProjectPath}
+      teams={teamsWithProvisioning}
+      aliveTeams={aliveTeams}
+      onProjectChange={handleProjectSelectionChange}
+      onManagementApplied={handleManagementApplied}
+      onManagementSettings={() => useStore.getState().openSettingsTab('externalAgentConnection')}
+      onOrganizations={() =>
+        openTab({ type: 'organizations', label: t('organizations.map.defaultTitle') })
+      }
+      onImport={() => setShowImportDialog(true)}
+      onCreate={() => openTeamsCreationPage()}
+      managementChangesHidden={selectRecentManagedTeams(
+        teams,
+        teams,
+        teamManagementNoticeByTeam
+      ).some((team) => !filteredTeams.includes(team))}
+      onClearFilters={() => {
+        setSearchQuery('');
+        setFilter(EMPTY_TEAM_FILTER);
+      }}
+    />
   );
 
   const renderContent = (): React.JSX.Element => {
