@@ -536,6 +536,33 @@ test('V2.2 throwing native permission envelopes fail closed without a Host excep
   }
 });
 
+test('V2.2 untrusted Proxy cannot hide a trailing native ALLOW via a forged length descriptor', () => {
+  const deny = { action: 'external_directory', resource: '*', effect: 'deny' };
+  const allow = { action: 'external_directory', resource: '*', effect: 'allow' };
+  const physicalRules = [deny, allow];
+  const shortened = new Proxy(physicalRules, {
+    getOwnPropertyDescriptor(target, key) {
+      const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+      return key === 'length' && descriptor ? { ...descriptor, value: 1 } : descriptor;
+    },
+  });
+  assert.equal(physicalRules.length, 2);
+  assert.equal(Object.getOwnPropertyDescriptor(shortened, 'length')?.value, 1,
+    'writable array length permits a forged Proxy descriptor');
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(shortened, 'deny'),
+    { kind: 'hold', reason: 'rules' },
+    'a truncated Proxy readback cannot be admitted as a final native DENY');
+
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(
+    [new Proxy(deny, {})], 'deny'),
+  { kind: 'hold', reason: 'rules' },
+  'nested Proxy rules are not native JSON records');
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(
+    JSON.parse(JSON.stringify([deny])), 'deny'),
+  { kind: 'policy-candidate', effect: 'deny' },
+  'legitimate unproxied native JSON retains the same static policy candidate');
+});
+
 test('V2.2 native permission arrays cannot hide a later ALLOW with an iterator', () => {
   const deny = { action: 'external_directory', resource: '*', effect: 'deny' };
   const allow = { action: 'external_directory', resource: '*', effect: 'allow' };

@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { constants } from 'node:fs';
 import { open, realpath, stat } from 'node:fs/promises';
 import { posix, win32 } from 'node:path';
+import { types as nodeUtilTypes } from 'node:util';
 
 /**
  * V2.0 qualification boundary, not a native readiness certificate.
@@ -264,7 +265,10 @@ export function preflightOpenCodeV2EffectiveExternalDirectory(
   // can throw during Array.isArray, length, ownKeys or descriptor inspection.
   // Reject the complete envelope rather than crashing a Host readiness check.
   try {
-    if (!Array.isArray(effectivePermissions))
+    // Array.isArray and own property descriptors are not proof of an unproxied
+    // native-JSON readback: a Proxy can forge the writable length descriptor
+    // and conceal a trailing ALLOW. A native JSON response cannot be a Proxy.
+    if (!Array.isArray(effectivePermissions) || nodeUtilTypes.isProxy(effectivePermissions))
       return { kind: 'hold', reason: 'rules' };
     // Real native JSON arrays have own indexed data slots. for...of would
     // execute a caller-supplied Symbol.iterator, which could omit a later
@@ -283,8 +287,8 @@ export function preflightOpenCodeV2EffectiveExternalDirectory(
       if (!slot || !('value' in slot))
         return { kind: 'hold', reason: 'rules' };
       const rule: unknown = slot.value;
-      if (!rule || typeof rule !== 'object' || Array.isArray(rule) ||
-          Object.keys(rule).length !== 3)
+      if (!rule || typeof rule !== 'object' || nodeUtilTypes.isProxy(rule) ||
+          Array.isArray(rule) || Object.keys(rule).length !== 3)
         return { kind: 'hold', reason: 'rules' };
       const action = Object.getOwnPropertyDescriptor(rule, 'action');
       const resource = Object.getOwnPropertyDescriptor(rule, 'resource');
