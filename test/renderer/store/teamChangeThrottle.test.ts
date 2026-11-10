@@ -2337,6 +2337,7 @@ describe('team change throttling', () => {
     const fetchOpenCodeRuntimeStatus = vi.fn(async () => undefined);
     const fetchCodexRuntimeStatus = vi.fn(async () => undefined);
     useStore.setState({
+      cliStatus: createLoadingMultimodelCliStatus(),
       appConfig: {
         ...prior.appConfig,
         general: { ...prior.appConfig?.general, multimodelEnabled: true },
@@ -2365,6 +2366,7 @@ describe('team change throttling', () => {
       mutableApi.openCodeRuntime = priorOpenCodeRuntime;
       mutableApi.codexRuntime = priorCodexRuntime;
       useStore.setState({
+        cliStatus: prior.cliStatus,
         appConfig: prior.appConfig,
         fetchConfig: prior.fetchConfig,
         bootstrapCliStatus: prior.bootstrapCliStatus,
@@ -2387,15 +2389,18 @@ describe('team change throttling', () => {
     mutableApi.codexRuntime = {};
     const prior = useStore.getState();
     const bootstrap = vi.fn(async () => undefined);
+    const fetchProvider = vi.fn(async () => true);
     const fetchOpenCodeRuntimeStatus = vi.fn(async () => undefined);
     const fetchCodexRuntimeStatus = vi.fn(async () => undefined);
     useStore.setState({
+      cliStatus: createLoadingMultimodelCliStatus(),
       appConfig: {
         ...prior.appConfig,
         general: { ...prior.appConfig?.general, multimodelEnabled: true },
       },
       fetchConfig: vi.fn(async () => undefined),
       bootstrapCliStatus: bootstrap,
+      fetchCliProviderStatus: fetchProvider,
       fetchOpenCodeRuntimeStatus,
       fetchCodexRuntimeStatus,
     } as never);
@@ -2404,6 +2409,13 @@ describe('team change throttling', () => {
       cleanup = initializeNotificationListeners();
       await vi.advanceTimersByTimeAsync(10_000);
       expect(bootstrap).toHaveBeenCalledTimes(1);
+      for (const providerId of ['anthropic', 'codex', 'opencode']) {
+        expect(fetchProvider).toHaveBeenCalledWith(providerId, {
+          silent: false,
+          checkReason: 'startup',
+        });
+        expect(fetchProvider.mock.calls.filter(([id]) => id === providerId)).toHaveLength(1);
+      }
       expect(fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
       expect(fetchCodexRuntimeStatus).toHaveBeenCalledTimes(1);
     } finally {
@@ -2411,9 +2423,11 @@ describe('team change throttling', () => {
       mutableApi.openCodeRuntime = priorOpenCodeRuntime;
       mutableApi.codexRuntime = priorCodexRuntime;
       useStore.setState({
+        cliStatus: prior.cliStatus,
         appConfig: prior.appConfig,
         fetchConfig: prior.fetchConfig,
         bootstrapCliStatus: prior.bootstrapCliStatus,
+        fetchCliProviderStatus: prior.fetchCliProviderStatus,
         fetchOpenCodeRuntimeStatus: prior.fetchOpenCodeRuntimeStatus,
         fetchCodexRuntimeStatus: prior.fetchCodexRuntimeStatus,
       });
