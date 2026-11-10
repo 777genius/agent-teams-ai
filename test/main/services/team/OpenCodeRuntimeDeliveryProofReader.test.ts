@@ -136,6 +136,42 @@ function createProofReader(leadInboxMessages: InboxMessage[]): OpenCodeRuntimeDe
 }
 
 describe('OpenCodeRuntimeDeliveryProofReader', () => {
+  it('does not count a lead inbox receipt as proof for a real peer named team_lead', async () => {
+    const peerRecord = {
+      ...createLedgerRecord(), id: 'peer-alias', replyRecipient: 'team_lead',
+      inboxMessageId: 'peer-origin', visibleReplyMessageId: 'reply-wrong',
+      taskRefs: [TARGET_TASK_REF],
+    };
+    const leadRecord = { ...peerRecord, id: 'lead-other', replyRecipient: 'captain', inboxMessageId: 'lead-origin' };
+    const wrongLeadReply = {
+      ...createRuntimeReply([TARGET_TASK_REF]), to: 'captain',
+      messageId: 'reply-wrong', relayOfMessageId: 'peer-origin',
+    };
+    const validPeerReply = { ...wrongLeadReply, to: 'team_lead', messageId: 'reply-right' };
+    const inboxReader = {
+      getMessagesFor: vi.fn((_team: string, name: string) => Promise.resolve(
+        name === 'captain' ? [wrongLeadReply] : name === 'team_lead' ? [validPeerReply] : []
+      )),
+    };
+    const reader = new OpenCodeRuntimeDeliveryProofReader(
+      inboxReader as never,
+      { getTasks: vi.fn(async () => [] as TeamTask[]) } as never,
+      { getConfigSnapshot: vi.fn(async () => ({ members: [
+        { name: 'captain', agentType: 'team-lead' },
+        { name: 'team_lead', agentType: 'teammate' },
+      ] })) } as never
+    );
+    const index = await reader.readProofIndex({
+      teamName: TEAM_NAME,
+      activeMemberKeys: new Set(['tom']),
+      recordsByMember: new Map([['tom', [peerRecord, leadRecord]]]),
+    });
+    expect(index.getSnapshot('tom', peerRecord)).toMatchObject({
+      visibleReplyInbox: 'team_lead', visibleReplyMessageId: 'reply-right',
+    });
+    expect(index.getSnapshot('tom', leadRecord).visibleReplyMessageId).toBe('reply-wrong');
+  });
+
   it('matches visible replies using task refs inferred from the original inbox message', async () => {
     const record = createLedgerRecord();
     const proofIndex = await createProofReader([

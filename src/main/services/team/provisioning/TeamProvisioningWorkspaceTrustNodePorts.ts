@@ -1,54 +1,68 @@
+import { execFile } from 'node:child_process';
+
 import {
   resolveWorkspaceTrustCanonicalGitRoot,
   resolveWorkspaceTrustFilesystemGitRoot,
 } from '@features/workspace-trust/main';
+import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
+import { createManagedGitEnv, getManagedGitExecutable } from '@main/utils/managedGit';
 import { getHomeDir } from '@main/utils/pathDecoder';
-import { execFile } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import {
-  resolveWorkspaceTrustGitRoot,
-  type WorkspaceTrustGitRootResolutionPorts,
-  type WorkspaceTrustWorkspaceCollectionPorts,
-} from './TeamProvisioningWorkspaceTrust';
+import type { WorkspaceTrustWorkspaceCollectionPorts } from './TeamProvisioningWorkspaceTrust';
 
-function resolveGitTopLevel(cwd: string): Promise<string | null> {
+async function verifySeparateGitDirectory(root: string): Promise<boolean> {
+  let executable: string;
+  try {
+    executable = getManagedGitExecutable();
+    if (executable === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+
   return new Promise((resolve) => {
     execFile(
-      'git',
-      ['-C', cwd, 'rev-parse', '--show-toplevel'],
+      executable,
+      ['-C', root, 'rev-parse', '--show-toplevel'],
       {
         encoding: 'utf8',
         maxBuffer: 16 * 1024,
-        timeout: 1000,
+        timeout: 1_000,
         windowsHide: true,
+        env: createManagedGitEnv(process.env, { gitCommand: true }),
       },
       (error, stdout) => {
-        if (error) {
-          resolve(null);
+        const reported = stdout?.trim();
+        if (error || !reported || !path.isAbsolute(reported)) {
+          resolve(false);
           return;
         }
-        resolve(stdout.trim() || null);
+        void Promise.all([fs.promises.realpath(root), fs.promises.realpath(reported)])
+          .then(([expected, actual]) =>
+            resolve(
+              process.platform === 'win32'
+                ? expected.toLowerCase() === actual.toLowerCase()
+                : expected === actual
+            )
+          )
+          .catch(() => resolve(false));
       }
     );
   });
 }
 
-export function createNodeWorkspaceTrustGitRootResolutionPorts(): WorkspaceTrustGitRootResolutionPorts {
-  return {
-    resolveGitTopLevel,
-    resolveFilesystemGitRoot: resolveWorkspaceTrustFilesystemGitRoot,
-    isAbsolutePath: path.isAbsolute,
-  };
-}
-
 export function createNodeWorkspaceTrustWorkspaceCollectionPorts(): WorkspaceTrustWorkspaceCollectionPorts {
-  const gitRootPorts = createNodeWorkspaceTrustGitRootResolutionPorts();
   return {
     getHomeDir,
     realpath: async (value) => fs.promises.realpath(value).catch(() => null),
-    resolveGitRoot: (cwd) => resolveWorkspaceTrustGitRoot(cwd, gitRootPorts),
+    resolveGitRoot: async (cwd) =>
+      resolveWorkspaceTrustFilesystemGitRoot(
+        await fs.promises.realpath(cwd).catch(() => cwd),
+        verifySeparateGitDirectory
+      ),
     resolveCanonicalGitRoot: resolveWorkspaceTrustCanonicalGitRoot,
     platform: process.platform === 'win32' ? 'win32' : 'posix',
   };

@@ -1,3 +1,8 @@
+import { randomUUID } from 'node:crypto';
+import { pageOwnerMessages } from './pageOwnerMessages.js';
+import { pageOwnerTaskDetail } from './pageOwnerTaskDetail.js';
+import { pageOwnerKanban } from './pageOwnerKanban.js';
+import { pageOwnerSnapshot } from './pageOwnerSnapshot.js';
 import { executeTeamCommand } from './executeTeamCommand.js';
 import { captureCommandSelection } from './captureCommandSelection.js';
 import { teamCommandFingerprint } from './teamCommandFingerprint.js';
@@ -93,6 +98,9 @@ export class TeamOwner {
   readonly nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent'>;
   private readonly commandAccess: ReturnType<typeof createTeamCommandAccess>;
   private readonly productChanges = new TeamProductChanges();
+  /** Volatile key: continuation cursors expire on owner recreation. */
+  private readonly messagesPageKey = randomUUID();
+  private readonly snapshotPageKey = randomUUID();
   private readonly store: TeamStore;
   private readonly policy: TeamPolicyPort;
   private readonly binding: TeamBinding;
@@ -427,9 +435,28 @@ export class TeamOwner {
       execute: (command: TeamCommand) => this.execute(principalId, command),
       lookup: (commandId: string, expected?: TeamCommand) => this.lookupCommand(principalId, commandId, expected),
       getTask: (taskId: string) => this.getTask(principalId, taskId),
+      readTaskPage: (taskId: string, cursor?: string) => this.store.fenced(() => {
+        const grant = this.authorize(principalId, 'read');
+        safeSegment(taskId);
+        return pageOwnerTaskDetail({
+          principalId, grant, key: this.snapshotPageKey, teamName: this.binding.teamName,
+          taskId, task: json(this.policy.taskBoard().getTask(taskId)),
+          ...(cursor === undefined ? {} : { cursor }),
+        });
+      }),
+      readKanbanPage: (cursor?: string) => this.store.fenced(() => {
+        const grant = this.authorize(principalId, 'read');
+        return pageOwnerKanban({
+          principalId, grant, key: this.snapshotPageKey, teamName: this.binding.teamName,
+          board: this.policy.taskBoard().getKanbanState({ strict: true }),
+          ...(cursor === undefined ? {} : { cursor }),
+        });
+      }),
       listTasks: () => this.listTasks(principalId),
-      readSnapshot: () => this.readSnapshot(principalId),
-      readDeletedTasks: () => this.readDeletedTasks(principalId),
+      readSnapshot: (query: { cursor?: string } = {}) => this.readSnapshot(principalId, query),
+      readMessagesPage: (options: { cursor?: string; limit?: number; groupChatId?: string } = {}) =>
+        this.readMessagesPage(principalId, options),
+      readDeletedTasks: (query: { cursor?: string } = {}) => this.readDeletedTasks(principalId, query),
       ...(this.policy.reads
         ? {
             readQueries: createTeamReadQueries({
@@ -439,7 +466,8 @@ export class TeamOwner {
                 grant: this.authorize(principalId, 'read'),
                 members: this.state().members,
               }),
-              getTeam: () => this.readSnapshot(principalId),
+              getTeam: (cursor?: string) =>
+                this.readSnapshot(principalId, { ...(cursor ? { cursor } : {}), maxBytes: 128 * 1024 }),
             }),
           }
         : {}),
@@ -573,27 +601,46 @@ export class TeamOwner {
     });
   }
 
-  private readDeletedTasks(principalId: string): JsonValue {
+  /** Trash uses the same revision-bound Owner pager as active tasks, including nested history. */
+  private readDeletedTasks(principalId: string, query: { cursor?: string } = {}): JsonValue {
     return this.store.fenced(() => {
       this.authorize(principalId, 'read');
-      const value = json({
-        kind: 'deleted-tasks',
-        teamName: this.binding.teamName,
-        tasks: this.policy.taskBoard().listDeletedTasks(),
+      const tasks = this.policy.taskBoard().listDeletedTasks();
+      return pageOwnerSnapshot({
+        principalId,
+        key: this.snapshotPageKey,
+        snapshot: json({
+          kind: 'deleted-tasks',
+          teamName: this.binding.teamName,
+          revision: digest(tasks),
+          tasks,
+          messages: [],
+          kanbanState: { teamName: this.binding.teamName, tasks: {}, reviewers: [] },
+        }),
+        ...query,
       });
-      if (Buffer.byteLength(JSON.stringify(value)) > 512 * 1024) throw new TeamOwnerError('hold');
-      return value;
+    });
+  }
+
+  /** Shared owner-authorized inbox and cross-team attribution, inside the existing fence. */
+  private productMessages(grant: TeamGrant, members: readonly { name: string }[]): JsonValue[] {
+    const recipients = grant.permissions.includes('admin')
+      ? [...members.map(({ name }) => name), 'user']
+      : [grant.memberName];
+    return projectCrossTeamMessages({
+      store: this.store,
+      policy: this.policy,
+      messages: canonicalGroupMessages(recipients.flatMap((name) => this.policy.readInbox(name))),
+      actor: grant.memberName,
+      readAll: grant.permissions.includes('admin'),
     });
   }
 
   /** Product read under the current actor grant and the same fence as revoke/writes. */
-  private productSnapshot(principalId: string) {
+  private collectProductState(principalId: string) {
     const grant = this.authorize(principalId, 'read');
     const state = this.state();
     const members = state.members.map(({ name, role }) => ({ name, role }));
-    const recipients = grant.permissions.includes('admin')
-      ? [...members.map(({ name }) => name), 'user']
-      : [grant.memberName];
     const snapshot = {
       teamName: this.binding.teamName,
       lifecycle: this.commandAccess.lifecycle(principalId).view(),
@@ -613,39 +660,66 @@ export class TeamOwner {
       members,
       tasks: this.policy.taskBoard().listTasks(),
       ...(this.policy.processes ? { processes: this.processCommands(principalId).list() } : {}),
-      messages: projectCrossTeamMessages({
-        store: this.store,
-        policy: this.policy,
-        messages: canonicalGroupMessages(recipients.flatMap((name) => this.policy.readInbox(name))),
-        actor: grant.memberName,
-        readAll: grant.permissions.includes('admin'),
-      }),
+      messages: this.productMessages(grant, [...members, ...(state.removedMembers ?? [])]),
       kanbanState: this.store.read('../kanban-state.json') ?? {
         teamName: this.binding.teamName,
         reviewers: [],
         tasks: {},
       },
     };
-    if (Buffer.byteLength(JSON.stringify(snapshot)) > 512 * 1024) throw new TeamOwnerError('hold');
-    return { ...snapshot, revision: digest(snapshot) };
+    return snapshot;
   }
 
-  private readSnapshot(principalId: string): JsonValue {
+  /** Every page is grant-checked and revision-bound; no persisted history is discarded. */
+  private readSnapshot(
+    principalId: string,
+    query: { cursor?: string; maxBytes?: number } = {}
+  ): JsonValue {
     return this.store.fenced(() => {
-      const snapshot = this.productSnapshot(principalId);
-      const value = json({
-        ...snapshot,
-        feed: this.productChanges.snapshot(principalId, snapshot.revision),
+      const state = this.collectProductState(principalId);
+      const revision = digest(state);
+      return pageOwnerSnapshot({
+        principalId,
+        key: this.snapshotPageKey,
+        snapshot: json({
+          ...state,
+          revision,
+          feed: this.productChanges.snapshot(principalId, revision),
+        }),
+        ...query,
       });
-      if (Buffer.byteLength(JSON.stringify(value)) > 512 * 1024) throw new TeamOwnerError('hold');
-      return value;
     });
   }
 
   private readChanges(principalId: string, cursor?: string): JsonValue {
     return this.store.fenced(() => {
-      const snapshot = this.productSnapshot(principalId);
-      return json(this.productChanges.read(principalId, snapshot.revision, cursor));
+      // A change-feed response contains only finite invalidation metadata, never
+      // unbounded task/inbox history. Keep it readable after a complete snapshot
+      // becomes oversized, without weakening the snapshot/transport size guards.
+      const revision = digest(this.collectProductState(principalId));
+      return json(this.productChanges.read(principalId, revision, cursor));
+    });
+  }
+
+
+  /** The existing Owner supplies grant, inbox records and the filesystem fence. */
+  private readMessagesPage(
+    principalId: string,
+    options: { cursor?: string; limit?: number; groupChatId?: string }
+  ): JsonValue {
+    return this.store.fenced(() => {
+      const grant = this.authorize(principalId, 'read');
+      return pageOwnerMessages({
+        principalId,
+        grant,
+        teamName: this.binding.teamName,
+        key: this.messagesPageKey,
+        messages: this.productMessages(grant, [
+          ...this.state().members,
+          ...(this.state().removedMembers ?? []),
+        ]),
+        ...options,
+      });
     });
   }
 

@@ -3,7 +3,7 @@ import type { UiCdpPort } from './desktop-ui-controls.ts';
 /** TEST-only passive React/DOM inspection; never installs handlers or changes application state. */
 export async function readCreateDialogDiagnostics(cdp: UiCdpPort): Promise<unknown> {
   return cdp.evaluate(`(() => {
-    const node=document.querySelector('[role="dialog"]');
+    const node=document.querySelector('[data-testid="create-team-page"]');
     if(!node)return {dialogAbsent:true};
     const key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));
     let fiber=key?node[key]:null;

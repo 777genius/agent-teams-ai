@@ -8,7 +8,7 @@ export function createTeamReadQueries(options: {
   reads: TeamBoardReadPolicy;
   fenced<T>(action: () => T): T;
   authority(): { grant: TeamGrant; members: readonly TeamMember[] };
-  getTeam(): unknown;
+  getTeam(cursor?: string): unknown;
 }) {
   const identity = () => {
     const { grant, members } = options.authority();
@@ -48,7 +48,7 @@ export function createTeamReadQueries(options: {
     });
   };
   return Object.freeze({
-    getTeam: () => read(options.getTeam),
+    getTeam: (cursor?: string) => read(() => options.getTeam(cursor)),
     getKanbanState: (settings?: { strict?: boolean }) => read(() => options.reads.getKanbanState(settings)),
     listReviewers: () => read(() => options.reads.listReviewers()),
     getTaskComment: (taskId: string, commentId: string) =>

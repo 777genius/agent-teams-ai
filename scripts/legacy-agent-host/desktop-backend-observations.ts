@@ -230,6 +230,49 @@ export async function settledGroupMembers(
   return members;
 }
 
+/**
+ * macOS ps shows a just-exited Node child as "(node)" or "<defunct>" instead of its original
+ * command. Authorize TEST process-group cleanup only while the captured leader
+ * is still an unreaped zombie owned by this exact harness. A changed live
+ * process, PID reuse, or an orphaned group must never pass this guard.
+ */
+export function isCapturedOriginalNodeZombie(input: {
+  expectedIdentity: string;
+  observedIdentity: string;
+  state: string;
+  childPid: number | undefined;
+  group: number;
+  leader: ProcessIdentity | undefined;
+  parentPid: number;
+  platform?: NodeJS.Platform;
+}): boolean {
+  if ((input.platform ?? process.platform) !== 'darwin') return false;
+  if (!Number.isSafeInteger(input.group) || input.group <= 0 || input.childPid !== input.group)
+    return false;
+  if (
+    input.leader?.pid !== input.group ||
+    input.leader.ppid !== input.parentPid ||
+    input.leader.pgid !== input.group ||
+    !input.state.startsWith('Z')
+  )
+    return false;
+  const expression =
+    /^([A-Za-z]{3} [A-Za-z]{3} [ \d]\d \d{2}:\d{2}:\d{2} \d{4})\s+(.+)$/;
+  const expected = expression.exec(input.expectedIdentity);
+  const observed = expression.exec(input.observedIdentity);
+  if (!expected || !observed || expected[1] !== observed[1]) return false;
+  // The original packed app has a different macOS zombie display name than
+  // the dev Node wrapper. Bind that exception to its exact captured invocation.
+  const originalNode =
+    (observed[2] === '(node)' || observed[2] === '<defunct>') &&
+    /(?:^|\/)node\s+/.test(expected[2]!) &&
+    /(?:^|\s)dev:mcp(?:\s|$)/.test(expected[2]!);
+  const originalPackedApp =
+    observed[2] === '(Agent Teams AI)' &&
+    /(?:^|\/)Agent Teams AI\.app\/Contents\/MacOS\/Agent Teams AI --remote-debugging-port=9222$/.test(expected[2]!);
+  return originalNode || originalPackedApp;
+}
+
 interface OriginalAppReapInput {
   child: { pid?: number; exitCode: number | null; signalCode: NodeJS.Signals | null };
   group: number;

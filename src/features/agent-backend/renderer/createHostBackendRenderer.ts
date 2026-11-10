@@ -33,6 +33,7 @@ const reads = new Set<BackendOperation>([
   'tasks.list',
   'team.snapshot',
   'team.changes.read',
+  'team.messages.page',
   'command.lookup',
   'team.lifecycle.read',
   'team.lifecycle.lookup',

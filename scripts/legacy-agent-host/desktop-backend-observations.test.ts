@@ -4,6 +4,7 @@ import { EventEmitter } from 'node:events';
 import { createRequire, syncBuiltinESMExports } from 'node:module';
 import childProcess from 'node:child_process';
 import {
+  isCapturedOriginalNodeZombie,
   observeOriginalAppReap,
   readRendererBackendConnections,
   settledGroupMembers,
@@ -154,6 +155,73 @@ test('default CDP evaluations still reject at30s without a resend', async (t) =>
   t.mock.timers.tick(1);
   await rejection;
   assert.equal(socket.sent.length, 1);
+});
+
+test('macOS original Node zombie is the same unreaped harness child, never a changed live command', () => {
+  const good = {
+    expectedIdentity:
+      'Sun Nov  8 01:17:47 2026     /captured/node /captured/pnpm.js dev:mcp --remoteDebuggingPort 9222',
+    observedIdentity: 'Sun Nov  8 01:17:47 2026     (node)',
+    state: 'Z',
+    childPid: 4096,
+    group: 4096,
+    leader: { pid: 4096, ppid: 3990, pgid: 4096 },
+    parentPid: 3990,
+    platform: 'darwin' as const,
+  };
+  assert.equal(isCapturedOriginalNodeZombie(good), true);
+  assert.equal(
+    isCapturedOriginalNodeZombie({
+      ...good,
+      observedIdentity: 'Sun Nov  8 01:17:47 2026     <defunct>',
+    }),
+    true,
+    'the original macOS defunct wrapper requires the same Z/parent/birth/custody proof'
+  );
+  const packed = {
+    ...good,
+    expectedIdentity:
+      'Sun Nov  8 02:12:49 2026     /private/tmp/TEST-stage1-p7/app/Agent Teams AI.app/Contents/MacOS/Agent Teams AI --remote-debugging-port=9222',
+    observedIdentity: 'Sun Nov  8 02:12:49 2026     (Agent Teams AI)',
+  };
+  assert.equal(isCapturedOriginalNodeZombie(packed), true, 'original packed app zombie must retain its exact capture');
+  for (const variant of [
+    { state: 'S' },
+    { state: 'R+' },
+    { parentPid: 1 },
+    { group: 5000 },
+    { leader: { pid: 4096, ppid: 1, pgid: 4096 } },
+    { platform: 'linux' as const },
+    { observedIdentity: 'Sun Nov  8 02:12:50 2026     (Agent Teams AI)' },
+    { observedIdentity: 'Sun Nov  8 02:12:49 2026     (foreign)' },
+    { expectedIdentity: 'Sun Nov  8 02:12:49 2026     /unrelated/Agent Teams AI --remote-debugging-port=9222' },
+    { expectedIdentity: 'Sun Nov  8 02:12:49 2026     /app/Agent Teams AI.app/Contents/MacOS/Agent Teams AI --remote-debugging-port=9223' },
+    { expectedIdentity: 'Sun Nov  8 02:12:49 2026     /app/Agent Teams AI.app/Contents/MacOS/Agent Teams AI --remote-debugging-port=9222 --other' },
+  ]) {
+    assert.equal(isCapturedOriginalNodeZombie({ ...packed, ...variant }), false, JSON.stringify(variant));
+  }
+  const invalid = [
+    { state: 'S' }, // A live renamed process is never enough.
+    { state: 'R+' },
+    { observedIdentity: 'Sun Nov  8 01:17:48 2026     (node)' },
+    { observedIdentity: 'Sun Nov  8 01:17:47 2026     /different/node' },
+    { observedIdentity: 'Sun Nov  8 01:17:47 2026     (foreign)' },
+    { childPid: 5000 },
+    { group: 5000 },
+    { leader: { pid: 4096, ppid: 1, pgid: 4096 } },
+    { leader: { pid: 4096, ppid: 3990, pgid: 5000 } },
+    { leader: undefined },
+    { parentPid: 1 },
+    { platform: 'linux' as const },
+    { expectedIdentity: 'Sun Nov  8 01:17:47 2026     /unrelated/program' },
+  ];
+  for (const variant of invalid) {
+    assert.equal(
+      isCapturedOriginalNodeZombie({ ...good, ...variant }),
+      false,
+      JSON.stringify(variant)
+    );
+  }
 });
 
 const appReapInput = () => ({

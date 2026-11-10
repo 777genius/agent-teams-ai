@@ -1505,13 +1505,29 @@
       "labelPlaceholder": "جیسے، ڈیلی کوڈ جائزہ، نائٹلی امتحانات...",
       "maxBudgetUsd": "میکس بجٹ (USD)",
       "maxTurns": "میکس مل جاتا ہے",
+      "executionLimitsNote": "یہ حدود صرف آزادانہ ایک بار چلانے پر لاگو ہوتی ہیں۔ پہلے سے چلتی ہوئی ٹیم کو تفویض کردہ کاموں پر لاگو نہیں ہوتیں۔",
       "noLimit": "کوئی حد",
       "noMatches": "کوئی ٹیم آپ کی تلاش سے میچ نہیں کرتی۔",
       "noTeams": "کوئی ٹیم دستیاب نہیں۔ پہلے ٹیم بنائیں",
       "searchTeams": "تلاش ٹیمیں ...",
       "selectTeam": "ٹیم منتخب کریں...",
       "team": "ٹیم",
-      "title": "تیار"
+      "title": "تیار",
+      "execution": "اجرا",
+      "legacyNotice": "پرانا ایک بار چلنے والا شیڈول: محفوظ کرنے سے اس کا طریقہ نہیں بدلے گا۔",
+      "upgradeSmart": "اسمارٹ شیڈول پر منتقل ہوں",
+      "oneAgent": "ایک ایجنٹ",
+      "wholeTeam": "پوری ٹیم",
+      "target": "ٹیم چل رہی ہو تو ذمہ دار رکن",
+      "leadDefault": "ٹیم لیڈ (طے شدہ)",
+      "agentDescription": "ٹیم بند ہو تو الگ ایجنٹ چلتا ہے؛ فعال ہو تو کام تفویض ہوتا ہے۔",
+      "teamDescription": "ٹیم بند ہو تو محفوظ شدہ ٹیم شروع ہوتی ہے؛ فعال ہو تو لیڈ کو کام ملتا ہے۔ محفوظ ترتیبات استعمال ہوتی ہیں۔",
+      "teamPathMissing": "شیڈول سے ٹیم شروع کرنے سے پہلے پروجیکٹ فولڈر محفوظ کریں۔",
+      "taskFirstAgentDescription": "ضرورت پڑنے پر ٹیم کو محفوظ طریقے سے شروع کرنے کے بعد منتخب ساتھی کو بورڈ پر کام دیا جائے گا۔ مصروف ایجنٹس کے کام میں خلل نہیں ڈالا جائے گا۔",
+      "taskFirstTeamDescription": "ضرورت پڑنے پر ٹیم کو محفوظ طریقے سے شروع کرنے کے بعد ٹیم لیڈ کو رابطہ کاری کا کام دیا جائے گا۔ جاری کام میں خلل نہیں ڈالا جائے گا۔",
+      "taskFirstTarget": "تفویض کریں",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "میں نے پرانا محفوظ پرامپٹ دیکھ کر مستقل ہدایات الگ کر دی ہیں۔ متن محفوظ رکھیں، مگر شیڈول کے ساتھ دوبارہ نہ چلائیں۔"
     },
     "title": {
       "createSchedule": "ایجاد کریں",
@@ -2086,7 +2102,8 @@
       "stillRunning": "مجاہدین اب بھی چل رہا ہے...",
       "loadingLogs": "لاگس لوڈ کریں...",
       "errors": "خامی",
-      "close": "بندکرو"
+      "close": "بندکرو",
+      "openTask": "کام کھولیں"
     },
     "cron": {
       "expression": "قرونِ وسطٰی",
@@ -2124,7 +2141,9 @@
     "status": {
       "active": "فعال",
       "paused": "رکاوٹ",
-      "disabled": "بند"
+      "disabled": "بند",
+      "hostUnsupported": "Host شیڈولنگ دستیاب نہیں",
+      "saved": "محفوظ شدہ"
     },
     "runStatus": {
       "pending": "پَک",
@@ -2134,7 +2153,9 @@
       "completed": "مکمل",
       "failed": "ناکام ہوا",
       "interrupted": "غیر متصل",
-      "cancelled": "منسوخ کیا گیا"
+      "cancelled": "منسوخ کیا گیا",
+      "dispatched": "بھیج دیا گیا",
+      "skipped": "چھوڑ دیا گیا"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2444,10 @@
       "hiddenCount": "{{count}} پوشیدہ",
       "trash": "ترش",
       "gridView": "وائیرڈ نظریہ",
-      "columnsView": "رنگ"
+      "columnsView": "رنگ",
+      "tableView": "جدول منظر",
+      "configureColumns": "کالم منتخب کریں",
+      "resizeColumn": "{{column}} کی چوڑائی تبدیل کریں"
     },
     "trash": {
       "title": "ترش",

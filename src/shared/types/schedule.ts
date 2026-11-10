@@ -19,6 +19,8 @@ export type ScheduleRunStatus =
   | 'warm'
   | 'running'
   | 'completed'
+  | 'dispatched'
+  | 'skipped'
   | 'failed'
   | 'failed_interrupted'
   | 'cancelled';
@@ -27,9 +29,20 @@ export type ScheduleRunStatus =
 // Core Entities
 // =============================================================================
 
+/** Omitted means a legacy standalone one-shot schedule; never infer a new mode on read. */
+export type ScheduleExecutionMode = 'agent' | 'team';
+
 export interface Schedule {
   id: string;
   teamName: string;
+  /** Optional for existing persisted JSON schedules. */
+  executionMode?: ScheduleExecutionMode;
+  /** Empty/missing means the team's current lead when executionMode is agent. */
+  targetMember?: string;
+  /** Opt-in only: board task first, bootstrap-only launch if stopped; absent preserves old behavior. */
+  taskFirst?: true;
+  /** Explicit review: saved one-time prompt stays on disk but is never replayed. */
+  reviewedSavedPrompt?: true;
   label?: string;
   cronExpression: string;
   timezone: string;
@@ -74,6 +87,8 @@ export interface ScheduleRun {
   exitCode?: number | null;
   error?: string;
   retryCount: number;
+  /** Linked Task Board item, including when a newer occurrence is skipped. */
+  linkedTaskId?: string;
   /** First ~500 chars of stdout for quick UI display */
   summary?: string;
 }
@@ -102,6 +117,10 @@ export interface ScheduleChangeEvent {
 
 export interface CreateScheduleInput {
   teamName: string;
+  executionMode?: ScheduleExecutionMode;
+  taskFirst?: true;
+  reviewedSavedPrompt?: true;
+  targetMember?: string;
   label?: string;
   cronExpression: string;
   timezone: string;
@@ -112,6 +131,10 @@ export interface CreateScheduleInput {
 }
 
 export interface UpdateSchedulePatch {
+  /** Explicit user approval; may only be added to an existing task-first schedule. */
+  reviewedSavedPrompt?: true;
+  executionMode?: ScheduleExecutionMode;
+  targetMember?: string;
   label?: string;
   cronExpression?: string;
   timezone?: string;

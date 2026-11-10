@@ -136,6 +136,34 @@ describe('team provisioning roster mutation lock', () => {
     expect(stopFlow).toHaveBeenCalledOnce();
   });
 
+  it('exposes an in-flight stop via the existing team operation admission lock', async () => {
+    const service = new TeamProvisioningService();
+    let releaseStop!: () => void;
+    let stopStarted!: () => void;
+    const started = new Promise<void>((resolve) => { stopStarted = resolve; });
+    const stopFlow = vi.fn(async () => {
+      stopStarted();
+      await new Promise<void>((resolve) => { releaseStop = resolve; });
+    });
+    Object.assign(service as unknown as { stopFlowBoundaryValue: unknown }, {
+      stopFlowBoundaryValue: {
+        stopTeam: stopFlow,
+        stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
+        stopOpenCodeRuntimeAdapterTeam: vi.fn(async () => undefined),
+      },
+    });
+
+    const stop = service.stopTeam(' Busy-Team ');
+    await started;
+    expect(service.hasTeamOperationInProgress('busy-team')).toBe(true);
+    expect(service.hasTeamOperationInProgress('other-team')).toBe(false);
+
+    releaseStop();
+    await stop;
+    expect(service.hasTeamOperationInProgress('busy-team')).toBe(false);
+    expect(stopFlow).toHaveBeenCalledOnce();
+  });
+
   it('publishes the per-team stop fence before queuing behind a team operation', async () => {
     const service = new TeamProvisioningService();
     const stopFlow = vi.fn(async () => undefined);

@@ -12,6 +12,27 @@ export interface RuntimeProviderDirectoryCacheSnapshot {
   lastSummaryFetchedAt?: string;
 }
 
+/** A validated display-only count, never provider or model launch authority. */
+export interface RuntimeProviderConnectedCountObservation {
+  connected: number;
+  fetchedAt: string;
+  runtimeRevision: string;
+  source: 'summary-all' | 'summary-connected';
+}
+
+export interface RuntimeProviderConnectedCountEvidence {
+  readonly observation: RuntimeProviderConnectedCountObservation | null;
+  readonly invalidated: boolean;
+  /** True while an active consumer is reading provider connections. */
+  readonly checking?: boolean;
+}
+
+interface PublishRuntimeProviderConnectedCountInput
+  extends RuntimeProviderConnectedCountObservation {
+  projectPath?: string | null;
+  readToken: string;
+}
+
 interface PublishRuntimeProviderDirectoryCacheInput {
   projectPath?: string | null;
   entries: readonly RuntimeProviderDirectoryEntryDto[];
@@ -20,12 +41,16 @@ interface PublishRuntimeProviderDirectoryCacheInput {
   runtimeRevision?: string | null;
   totalCount?: number | null;
   nextCursor?: string | null;
+  readToken?: string;
 }
 
 const GLOBAL_SCOPE_KEY = '\u0000global';
 const MAX_CACHED_PROJECT_SCOPES = 8;
 const EMPTY_SNAPSHOT: RuntimeProviderDirectoryCacheSnapshot | null = null;
 const snapshotsByScope = new Map<string, RuntimeProviderDirectoryCacheSnapshot>();
+const EMPTY_COUNT_EVIDENCE: RuntimeProviderConnectedCountEvidence = { observation: null, invalidated: false };
+const connectedCountEvidenceByScope = new Map<string, RuntimeProviderConnectedCountEvidence>();
+const activeConnectionChecksByScope = new Map<string, Set<symbol>>();
 const listenersByScope = new Map<string, Set<() => void>>();
 const mergedFallbackByScope = new Map<
   string,
@@ -38,6 +63,13 @@ const mergedFallbackByScope = new Map<
 let globalFallbackSource: RuntimeProviderDirectoryCacheSnapshot | null = null;
 let globalFallbackSnapshot: RuntimeProviderDirectoryCacheSnapshot | null = null;
 let observedRuntimeRevision: string | null = null;
+let invalidationEpoch = 0;
+const generationByScope = new Map<string, number>;
+
+/** Reject directory reads started before a credential mutation. */
+export function getRuntimeProviderDirectoryReadToken(projectPath?: string | null): string {
+  return `${invalidationEpoch}:${generationByScope.get(getScopeKey(projectPath)) ?? 0}`;
+}
 
 function getScopeKey(projectPath?: string | null): string {
   return projectPath?.trim() || GLOBAL_SCOPE_KEY;
@@ -62,6 +94,8 @@ function pruneInactiveProjectScopes(): void {
       break;
     }
     snapshotsByScope.delete(oldestInactiveScopeKey);
+    connectedCountEvidenceByScope.delete(oldestInactiveScopeKey);
+    activeConnectionChecksByScope.delete(oldestInactiveScopeKey);
     mergedFallbackByScope.delete(oldestInactiveScopeKey);
     projectScopeCount -= 1;
   }
@@ -197,7 +231,9 @@ export function publishRuntimeProviderDirectoryCache({
   totalCount,
   nextCursor,
   runtimeRevision,
+  readToken,
 }: PublishRuntimeProviderDirectoryCacheInput): void {
+  if (readToken !== undefined && readToken !== getRuntimeProviderDirectoryReadToken(projectPath)) return;
   if (runtimeRevision && observedRuntimeRevision && runtimeRevision !== observedRuntimeRevision) {
     return; // An in-flight response from a replaced binary is stale.
   }
@@ -258,7 +294,148 @@ export function publishRuntimeProviderDirectoryCache({
     mergedFallbackByScope.delete(scopeKey);
   }
   touchScope(scopeKey, nextSnapshot);
+  // A newer complete directory supersedes a previously observed count.
+  // Count validity stays separate so the existing catalog keeps its identity.
+  const evidence = connectedCountEvidenceByScope.get(scopeKey);
+  if (
+    authoritative && !retainFullDirectory &&
+    nextCursor == null && totalCount === entries.length &&
+    entries.every((entry) => entry.state !== 'error') &&
+    (evidence?.invalidated ||
+      (evidence?.observation &&
+        nextFetchedAt >= getFetchedAtTimestamp(evidence.observation.fetchedAt)))
+  ) {
+    connectedCountEvidenceByScope.set(scopeKey, EMPTY_COUNT_EVIDENCE);
+  }
   notifyScope(scopeKey);
+}
+
+/** Reject reads started before a credential mutation. Global credentials can
+ * be inherited by every project: retain display rows, but require revalidation
+ * before any project snapshot can claim an exact connected-provider count. */
+export function invalidateRuntimeProviderDirectoryScopeReads(projectPath?: string | null): void {
+  const scopeKey = getScopeKey(projectPath);
+  generationByScope.set(scopeKey, (generationByScope.get(scopeKey) ?? 0) + 1);
+  connectedCountEvidenceByScope.set(scopeKey, {
+    observation: null,
+    invalidated: true,
+    checking: (activeConnectionChecksByScope.get(scopeKey)?.size ?? 0) > 0,
+  });
+  notifyScope(scopeKey);
+  if (scopeKey !== GLOBAL_SCOPE_KEY) return;
+  // Fence even project requests that have not published a first snapshot.
+  invalidationEpoch += 1;
+  mergedFallbackByScope.clear();
+  for (const projectScope of new Set([
+    ...snapshotsByScope.keys(),
+    ...connectedCountEvidenceByScope.keys(),
+    ...listenersByScope.keys(),
+  ])) {
+    connectedCountEvidenceByScope.set(projectScope, {
+      observation: null,
+      invalidated: true,
+      checking: (activeConnectionChecksByScope.get(projectScope)?.size ?? 0) > 0,
+    });
+    notifyScope(projectScope);
+  }
+  for (const [projectScope, snapshot] of snapshotsByScope) {
+    if (projectScope === GLOBAL_SCOPE_KEY || !snapshot.authoritative) continue;
+    // Keep verified provider rows for display, but never present inherited
+    // credentials as a fresh, authoritative project count after global logout.
+    snapshotsByScope.set(projectScope, { ...snapshot, authoritative: false });
+    notifyScope(projectScope);
+  }
+}
+
+export function markRuntimeProviderDirectoryScopeUnverified(projectPath?: string | null): void {
+  invalidateRuntimeProviderDirectoryScopeReads(projectPath);
+  const scopeKey = getScopeKey(projectPath);
+  const current = snapshotsByScope.get(scopeKey);
+  if (!current?.authoritative) return;
+  touchScope(scopeKey, { ...current, authoritative: false });
+  mergedFallbackByScope.clear();
+  notifyScope(scopeKey);
+}
+
+/** Publish only on the same scope/runtime generation as the initiating directory request. */
+export function publishRuntimeProviderConnectedCount({
+  projectPath,
+  readToken,
+  connected,
+  fetchedAt,
+  runtimeRevision,
+  source,
+}: PublishRuntimeProviderConnectedCountInput): void {
+  if (
+    readToken !== getRuntimeProviderDirectoryReadToken(projectPath) ||
+    (observedRuntimeRevision !== null && runtimeRevision !== observedRuntimeRevision) ||
+    !Number.isSafeInteger(connected) ||
+    connected < 0
+  ) return;
+  const fetchedAtMs = Date.parse(fetchedAt);
+  if (!Number.isFinite(fetchedAtMs) || fetchedAtMs > Date.now()) return;
+  const scopeKey = getScopeKey(projectPath);
+  const previous = connectedCountEvidenceByScope.get(scopeKey)?.observation;
+  if (previous && Date.parse(previous.fetchedAt) > fetchedAtMs) return;
+  connectedCountEvidenceByScope.set(scopeKey, {
+    observation: { connected, fetchedAt, runtimeRevision, source },
+    invalidated: false,
+    checking: (activeConnectionChecksByScope.get(scopeKey)?.size ?? 0) > 0,
+  });
+  notifyScope(scopeKey);
+}
+
+/** Scoped reference-counted display signal, without starting any provider IPC. */
+export function beginRuntimeProviderConnectedCountCheck(
+  projectPath?: string | null,
+  readToken = getRuntimeProviderDirectoryReadToken(projectPath)
+): () => void {
+  if (readToken !== getRuntimeProviderDirectoryReadToken(projectPath)) return () => undefined;
+  const scopeKey = getScopeKey(projectPath);
+  const id = Symbol('provider-check');
+  const pending = activeConnectionChecksByScope.get(scopeKey) ?? new Set<symbol>();
+  pending.add(id);
+  activeConnectionChecksByScope.set(scopeKey, pending);
+  const evidence = getRuntimeProviderConnectedCountEvidence(projectPath);
+  if (evidence.checking !== true) {
+    connectedCountEvidenceByScope.set(scopeKey, { ...evidence, checking: true });
+    notifyScope(scopeKey);
+  }
+  return () => {
+    if (!pending.delete(id)) return;
+    if (pending.size === 0 && activeConnectionChecksByScope.get(scopeKey) === pending) {
+      activeConnectionChecksByScope.delete(scopeKey);
+      const current = getRuntimeProviderConnectedCountEvidence(projectPath);
+      if (!current.observation && !current.invalidated)
+        connectedCountEvidenceByScope.delete(scopeKey);
+      else connectedCountEvidenceByScope.set(scopeKey, { ...current, checking: false });
+      notifyScope(scopeKey);
+    }
+  };
+}
+
+export function getRuntimeProviderConnectedCountObservation(
+  projectPath?: string | null
+): RuntimeProviderConnectedCountObservation | null {
+  return connectedCountEvidenceByScope.get(getScopeKey(projectPath))?.observation ?? null;
+}
+
+export function getRuntimeProviderConnectedCountEvidence(
+  projectPath?: string | null
+): RuntimeProviderConnectedCountEvidence {
+  return connectedCountEvidenceByScope.get(getScopeKey(projectPath)) ?? EMPTY_COUNT_EVIDENCE;
+}
+
+export function useRuntimeProviderConnectedCount(
+  projectPath?: string | null
+): RuntimeProviderConnectedCountEvidence {
+  const scopeKey = getScopeKey(projectPath);
+  const subscribe = useCallback(
+    (listener: () => void) => subscribeScope(scopeKey, listener),
+    [scopeKey]
+  );
+  const getSnapshot = useCallback(() => getRuntimeProviderConnectedCountEvidence(projectPath), [scopeKey]);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 export function useRuntimeProviderDirectoryCache(
@@ -307,7 +484,11 @@ export function observeRuntimeProviderDirectoryRevision(revision: string | null)
 
 /** Drop provider inventory when the installed OpenCode runtime identity changes. */
 export function invalidateRuntimeProviderDirectoryCache(): void {
+  invalidationEpoch += 1;
+  generationByScope.clear();
   snapshotsByScope.clear();
+  activeConnectionChecksByScope.clear();
+  connectedCountEvidenceByScope.clear();
   mergedFallbackByScope.clear();
   globalFallbackSource = null;
   globalFallbackSnapshot = null;

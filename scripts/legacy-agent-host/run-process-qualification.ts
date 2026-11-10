@@ -118,14 +118,14 @@ export async function runProcessQualification(inputsDirectory: string) {
     const terminalLockPath = join(repository, 'terminal-platform.lock.json');
     const terminalLock = await json(terminalLockPath);
     const terminalAsset = row(row(terminalLock.assets)['darwin-arm64']);
-    assert.equal(terminalLock.version, '0.3.3');
-    assert.equal(terminalAsset.file, 'terminal-platform-runtime-darwin-arm64-v0.3.3.tar.gz');
-    assert.equal(terminalAsset.sha256, 'b78da8494e2ee9b46b9bd2e002b7b6d27a2431fbac5f8bcd52d7940c408702cd');
+    assert.equal(terminalLock.version, '0.3.4');
+    assert.equal(terminalAsset.file, 'terminal-platform-runtime-darwin-arm64-v0.3.4.tar.gz');
+    assert.equal(terminalAsset.sha256, 'b4fad2842deb430c8c4f89b7e1d6ab9e6934f80195a9dcfbc0f67a196d4ad038');
     const terminalArchive = join(inputsDirectory, String(terminalAsset.file));
     assert.equal(await digest(terminalArchive), terminalAsset.sha256);
     const terminalRoot = join(repository, 'resources/terminal-platform');
     const terminalBinary = await pin(join(terminalRoot, 'terminal-daemon'));
-    assert.ok((await readFile(join(terminalRoot, 'VERSION'), 'utf8')).includes('0.3.3'));
+    assert.equal((await readFile(join(terminalRoot, 'VERSION'), 'utf8')).trim(), terminalLock.version);
     proof.terminalPlatform = { archive: await pin(terminalArchive), binary: terminalBinary };
     const headersArchive = join(inputsDirectory, 'node-v24.21.0-headers.tar.gz');
     assert.equal(await digest(headersArchive), '57c6bee2e30bbbee5bd51d6cc343eb992e174b56a2a1d0eab7a7510771c20ea2');

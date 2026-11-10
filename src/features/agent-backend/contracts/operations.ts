@@ -55,7 +55,7 @@ import type {
 import type { StoppedTeamImportApi } from './stoppedImport';
 import type { BackendTeamChanges } from './teamChanges';
 import type { BackendTeamLifecyclePayloads, BackendTeamLifecycleValue } from './teamLifecycle';
-import type { BackendTeamSnapshot } from './teamSnapshot';
+import type { BackendTeamMessagesPage, BackendTeamSnapshot } from './teamSnapshot';
 import type {
   BackendInteractionPreview,
   BackendToolApprovalPayloads,
@@ -164,8 +164,9 @@ export interface BackendOperationPayloads
   'team.lead.activity.read': Record<string, never>;
   'team.lead.context.read': Record<string, never>;
   'task.get': { taskId: string };
-  'tasks.list': { deleted?: true };
-  'team.snapshot': Record<string, never>;
+  'tasks.list': { deleted?: true; cursor?: string };
+  'team.snapshot': { cursor?: string };
+  'team.messages.page': { cursor?: string; limit?: number; groupChatId?: string };
   'team.changes.read': { cursor?: string };
   'team.roster.read': Record<string, never>;
   'team.roster.lookup': { expected?: BackendRosterReplacement };
@@ -244,6 +245,11 @@ export interface BackendDeletedTasks {
   kind: 'deleted-tasks';
   teamName: string;
   tasks: TeamTaskWithKanban[];
+  /** Signed original-Owner continuation; Trash snapshots are all-or-nothing in UI. */
+  revision?: string;
+  nextCursor?: string | null;
+  taskTotal?: number;
+  taskParts?: { index: number; part: number; total: number }[];
 }
 
 export interface BackendTask {
@@ -443,6 +449,7 @@ export type BackendOperationResult =
         | BackendLeadActivity
         | BackendLeadContext
         | BackendTeamSnapshot
+        | BackendTeamMessagesPage
         | BackendRosterConfiguration
         | BackendRosterReceipt
         | BackendTeamChanges

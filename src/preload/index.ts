@@ -20,7 +20,7 @@ import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/prel
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
 import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
-import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
+import { WINDOW_SET_ZOOM_FACTOR_CHANNEL, WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
 import { parseTeamMemberRestartResult } from '@shared/types/teamMemberRestart';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
@@ -767,6 +767,7 @@ const electronAPI: ElectronAPI = {
 
   // Zoom factor sync (used for traffic-light-safe layout)
   getZoomFactor: async (): Promise<number> => currentZoomFactor,
+  setZoomFactor: (factor: number): Promise<number> => ipcRenderer.invoke(WINDOW_SET_ZOOM_FACTOR_CHANNEL, factor),
   onZoomFactorChanged: (callback: (zoomFactor: number) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, zoomFactor: unknown): void => {
       if (typeof zoomFactor !== 'number' || !Number.isFinite(zoomFactor)) return;

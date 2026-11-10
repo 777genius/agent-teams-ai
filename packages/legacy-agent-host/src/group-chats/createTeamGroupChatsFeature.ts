@@ -61,7 +61,7 @@ export interface TeamGroupChatsFeature extends TeamGroupChatsAPI {
 }
 
 function validText(value: unknown, label: string, max = 100_000): asserts value is string {
-  if (typeof value !== 'string' || !value.trim() || value.length > max)
+  if (typeof value !== 'string' || value.includes('\0') || !value.trim() || value.length > max)
     throw new GroupChatError('invalid-input', `Invalid ${label}`);
 }
 function validateId(value: unknown): asserts value is string {
@@ -237,7 +237,7 @@ export function createTeamGroupChatsFeature(
       }
       if (
         request.summary !== undefined &&
-        (typeof request.summary !== 'string' || request.summary.length > 1000)
+        (typeof request.summary !== 'string' || request.summary.includes('\0') || request.summary.length > 1000)
       )
         throw new GroupChatError('invalid-input', 'Invalid message summary');
       if (request.relayOfMessageId !== undefined) validatePhysicalId(request.relayOfMessageId);

@@ -94,7 +94,7 @@ function fixture() {
     kanbanState: { teamName: 'same-name', reviewers: [], tasks: {} },
   };
   let current = true;
-  const read = vi.fn(async () => structuredClone(snapshot));
+  const read = vi.fn(async (_handle?: unknown, _current?: unknown, _cursor?: string) => structuredClone(snapshot));
   const source: HostNotificationSource = {
     initialize: async () => {},
     isCurrent: () => current,
@@ -126,6 +126,68 @@ function fixture() {
 }
 
 describe('original Host notification destination', () => {
+  it('resolves an original task comment on a later authenticated snapshot page', async () => {
+    const f = fixture();
+    const cursor = '1.' + 'a'.repeat(64);
+    const task = {
+      ...f.snapshot.tasks[0]!,
+      comments: [{
+        id: 'TEST-retained-comment',
+        author: 'alice',
+        text: 'Retained task review',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        type: 'regular' as const,
+      }],
+    };
+    f.read.mockImplementation(async (_handle, _current, next) =>
+      next === cursor
+        ? { ...structuredClone(f.snapshot), tasks: [task], nextCursor: null }
+        : { ...structuredClone(f.snapshot), tasks: [], nextCursor: cursor }
+    );
+    const data = {
+      ...f.data,
+      target: {
+        kind: 'task' as const,
+        teamName: f.key,
+        taskId: 'TEST-original-task',
+        commentId: 'TEST-retained-comment',
+        focus: 'review' as const,
+      },
+    };
+    const captured = await prepareHostNotification(f.source, data);
+    expect(captured.payload.target).toMatchObject({
+      kind: 'task',
+      taskId: 'TEST-original-task',
+      commentId: 'TEST-retained-comment',
+    });
+    expect(f.read).toHaveBeenCalledTimes(2);
+    expect(f.read.mock.calls[1]?.[2]).toBe(cursor);
+    captured.assertCurrent();
+  });
+
+  it('refuses torn, repeated and revoked Owner continuation without admitting a notification', async () => {
+    for (const problem of ['revision', 'repeated-cursor', 'revoked'] as const) {
+      const f = fixture();
+      const cursor = '1.' + 'b'.repeat(64);
+      let reads = 0;
+      f.read.mockImplementation(async () => {
+        reads++;
+        if (reads === 1) {
+          if (problem === 'revoked') f.revoke();
+          return { ...structuredClone(f.snapshot), tasks: [], nextCursor: cursor };
+        }
+        return {
+          ...structuredClone(f.snapshot),
+          tasks: [],
+          revision: problem === 'revision' ? 'c'.repeat(64) : f.snapshot.revision,
+          nextCursor: problem === 'repeated-cursor' ? cursor : null,
+        };
+      });
+      await expect(prepareHostNotification(f.source, f.data)).rejects.toThrow();
+      expect(reads).toBe(problem === 'revoked' ? 1 : 2);
+    }
+  });
+
   it('uses the existing viewed-Team IPC and Manager read state for a focused Host destination', async () => {
     const f = fixture(),
       manager = NotificationManager.getInstance();

@@ -66,14 +66,19 @@ listener ancestry is checked before CDP HTTP and WebSocket access.
 ## Catalog extension (desktop catalog PR641)
 
 The runner now retains the three version scenarios and then runs `delayed8s`,
-`directory-error`, `models-four-errors`, `partial-success`, `catalog-retry`, and
-`catalog-timeout` in that order. Sources are opencode, anthropic, google and
-openrouter. Partial success retains the opencode model with three source errors;
-retry requires four successful model responses and disappearance of the alert.
+`directory-error`, `models-four-errors`, `partial-success`, `catalog-retry`,
+`connected-summary`, and `catalog-timeout` in that order. Sources are opencode,
+anthropic, google and openrouter. Partial success retains the opencode model with
+three source errors; retry requires four successful model responses and
+an absent error alert. `connected-summary` supplies 105 directory entries
+(five connected and 100 available-only), paginates at 100, returns five
+entries for `--filter connected`, and verifies that the header changes from
+three to four connected sources before the second unfiltered page finishes. No real credentials are used and no models
+are requested for available-only entries.
 The delayed summary really sleeps eight seconds in the fixture subprocess. The
 catalog timeout really exceeds the normal 30-second main command deadline.
 
-`catalog.mjs` drives the existing dashboard's OpenCode re-check button via CDP,
+`catalog.mjs` uses CDP to navigate Dashboard → Settings → Providers, then drives the existing OpenCode re-check button,
 uses its existing error formatter/copy button, reads the actual system clipboard,
 and saves per-scenario UI text, loading/final/failure screenshots, subprocess
 PID/timing/argument evidence, copied reports, and matching persistent main logs.
@@ -103,8 +108,9 @@ External parent verification: run the existing `run.mjs` command above on each
 supported desktop OS and preserve the printed sandbox root. This worker has not
 run Electron, builds, installs, or heavy checks. Catalog UI selectors, timing,
 clipboard behavior, Windows shim subprocess termination and end-to-end results
-remain for the parent to verify. The dashboard must be expanded, in English, and
-expose its normal OpenCode re-check control; unavailable controls fail explicitly.
+remain for the parent to verify. The dashboard must expose the compact
+"Manage Providers" action; the full provider page must expose its normal
+OpenCode re-check control. Unavailable controls fail explicitly.
 The recipe retains `pnpm_config_verify_deps_before_run=false` to protect pinned
 linked dependencies. An ancestry failure is a blocker to that desktop attempt;
 inspect its snapshot instead of bypassing the guard.

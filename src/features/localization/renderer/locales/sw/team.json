@@ -1507,13 +1507,29 @@
       "labelPlaceholder": "k.m., Mapitio ya msimbo ya kila siku, Majaribio ya usiku...",
       "maxBudgetUsd": "Bajeti ya juu (USD)",
       "maxTurns": "Zamu za juu",
+      "executionLimitsNote": "Vikomo hivi vinatumika tu kwa utekelezaji wa kujitegemea wa mara moja. Havitumiki kwa kazi zilizopewa timu ambayo tayari inaendelea.",
       "noLimit": "Hakuna kikomo",
       "noMatches": "Hakuna timu zinazolingana na utafutaji wako.",
       "noTeams": "Hakuna timu zinazopatikana. Unda timu kwanza.",
       "searchTeams": "Tafuta timu...",
       "selectTeam": "Chagua timu...",
       "team": "Timu",
-      "title": "Ratiba"
+      "title": "Ratiba",
+      "execution": "Utekelezaji",
+      "legacyNotice": "Ratiba ya mara moja iliyopo: kuhifadhi hakutabadilisha jinsi inavyofanya kazi.",
+      "upgradeSmart": "Badili hadi ratiba mahiri",
+      "oneAgent": "Wakala mmoja",
+      "wholeTeam": "Timu nzima",
+      "target": "Mpokeaji wakati timu inaendelea",
+      "leadDefault": "Kiongozi wa timu (chaguo-msingi)",
+      "agentDescription": "Timu ikiwa imesimama, huanzisha wakala tofauti; ikiwa inaendelea, hugawa kazi.",
+      "teamDescription": "Timu ikiwa imesimama, huiwasha; ikiwa inaendelea, humpa kiongozi kazi. Hutumia mipangilio iliyohifadhiwa.",
+      "teamPathMissing": "Hifadhi folda ya mradi wa timu kabla ya kupanga uanzishaji.",
+      "taskFirstAgentDescription": "Mshiriki aliyechaguliwa atapokea kazi kwenye ubao baada ya timu kuanzishwa kwa usalama inapohitajika. Mawakala walio na shughuli hawatakatizwa.",
+      "taskFirstTeamDescription": "Kiongozi wa timu atapokea kazi ya uratibu baada ya timu kuanzishwa kwa usalama inapohitajika. Kazi inayoendelea haitakatizwa.",
+      "taskFirstTarget": "Mkabidhi",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "Nimekagua prompt ya zamani na kutenganisha maelekezo ya kudumu. Hifadhi maandishi ya zamani, lakini usiyaendeshe kwa ratiba."
     },
     "title": {
       "createSchedule": "Unda Ratiba",
@@ -2088,7 +2104,8 @@
       "stillRunning": "Kazi bado inaendeshwa...",
       "loadingLogs": "Inapakia kumbukumbu...",
       "errors": "Hitilafu",
-      "close": "Funga"
+      "close": "Funga",
+      "openTask": "Fungua kazi"
     },
     "cron": {
       "expression": "Usemi wa cron",
@@ -2126,7 +2143,9 @@
     "status": {
       "active": "Hai",
       "paused": "Imesitishwa",
-      "disabled": "Imezimwa"
+      "disabled": "Imezimwa",
+      "hostUnsupported": "Upangaji wa Host haupatikani",
+      "saved": "Imehifadhiwa"
     },
     "runStatus": {
       "pending": "Inasubiri",
@@ -2136,7 +2155,9 @@
       "completed": "Imekamilika",
       "failed": "Imeshindwa",
       "interrupted": "Imekatizwa",
-      "cancelled": "Imeghairiwa"
+      "cancelled": "Imeghairiwa",
+      "dispatched": "Imetumwa",
+      "skipped": "Imerukwa"
     }
   },
   "openCodeContextConfigHint": {
@@ -2425,7 +2446,10 @@
       "hiddenCount": "{{count}} zimefichwa",
       "trash": "Tupio",
       "gridView": "Mwonekano wa gridi",
-      "columnsView": "Mwonekano wa safu"
+      "columnsView": "Mwonekano wa safu",
+      "tableView": "Mwonekano wa jedwali",
+      "configureColumns": "Chagua safu wima",
+      "resizeColumn": "Badilisha upana wa {{column}}"
     },
     "trash": {
       "title": "Tupio",

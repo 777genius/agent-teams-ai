@@ -1505,13 +1505,29 @@
       "labelPlaceholder": "例:毎日コードレビュー、夜テスト...",
       "maxBudgetUsd": "最高の予算(USD)",
       "maxTurns": "最高の回転",
+      "executionLimitsNote": "これらの上限は単独の一回限りの実行にのみ適用されます。実行中のチームに割り当てたタスクには適用されません。",
       "noLimit": "制限なし",
       "noMatches": "チームが検索にマッチしません。",
       "noTeams": "チームなし チームを最初に作成します。",
       "searchTeams": "チーム検索",
       "selectTeam": "チームを選択",
       "team": "スタッフ",
-      "title": "スケジュール"
+      "title": "スケジュール",
+      "execution": "実行方法",
+      "legacyNotice": "既存の単発スケジュールです。保存しても動作は変わりません。",
+      "upgradeSmart": "スマートスケジュールに切り替える",
+      "oneAgent": "エージェント1人",
+      "wholeTeam": "チーム全体",
+      "target": "チーム稼働中の担当者",
+      "leadDefault": "チームリーダー（既定）",
+      "agentDescription": "チーム停止中は単独のエージェントを実行し、稼働中は担当者にタスクを割り当てます。",
+      "teamDescription": "チーム停止中は保存済みのチームを起動し、稼働中はリーダーにタスクを割り当てます。保存済みの設定を使用します。",
+      "teamPathMissing": "自動起動の前にチームのプロジェクトフォルダーを保存してください。",
+      "taskFirstAgentDescription": "選択したチームメイトには、必要に応じてチームを安全に起動してからボードのタスクを割り当てます。作業中のエージェントは中断しません。",
+      "taskFirstTeamDescription": "チームリーダーには、必要に応じてチームを安全に起動してから調整タスクを割り当てます。進行中の作業は中断しません。",
+      "taskFirstTarget": "担当者",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "保存済みの古いプロンプトを確認し、恒久的な指示を分離しました。記録は残しますが、スケジュールで実行しません。"
     },
     "title": {
       "createSchedule": "スケジュールの作成",
@@ -2086,7 +2102,8 @@
       "stillRunning": "タスクはまだ実行中...",
       "loadingLogs": "ログをロードする...",
       "errors": "エラー",
-      "close": "ふりがな"
+      "close": "ふりがな",
+      "openTask": "タスクを開く"
     },
     "cron": {
       "expression": "クロン式",
@@ -2124,7 +2141,9 @@
     "status": {
       "active": "アクティブ",
       "paused": "パユース",
-      "disabled": "バリアフリー"
+      "disabled": "バリアフリー",
+      "hostUnsupported": "Host のスケジュール機能は利用できません",
+      "saved": "保存済み"
     },
     "runStatus": {
       "pending": "ペンディング",
@@ -2134,7 +2153,9 @@
       "completed": "完了しました",
       "failed": "失敗した",
       "interrupted": "中断された",
-      "cancelled": "キャンセル"
+      "cancelled": "キャンセル",
+      "dispatched": "依頼済み",
+      "skipped": "スキップ"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2444,10 @@
       "hiddenCount": "隠される{{count}}",
       "trash": "トラッシュ",
       "gridView": "グリッドビュー",
-      "columnsView": "コラムビュー"
+      "columnsView": "コラムビュー",
+      "tableView": "テーブル表示",
+      "configureColumns": "列を選択",
+      "resizeColumn": "{{column}}の幅を変更"
     },
     "trash": {
       "title": "トラッシュ",

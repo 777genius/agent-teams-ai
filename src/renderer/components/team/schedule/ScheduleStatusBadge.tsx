@@ -58,6 +58,8 @@ const RUN_STATUS_CONFIG: Record<ScheduleRunStatus, { labelKey: string; className
   warm: { labelKey: 'schedule.runStatus.warm', className: 'text-cyan-400' },
   running: { labelKey: 'schedule.runStatus.running', className: 'text-emerald-400' },
   completed: { labelKey: 'schedule.runStatus.completed', className: 'text-emerald-400' },
+  dispatched: { labelKey: 'schedule.runStatus.dispatched', className: 'text-sky-400' },
+  skipped: { labelKey: 'schedule.runStatus.skipped', className: 'text-amber-400' },
   failed: { labelKey: 'schedule.runStatus.failed', className: 'text-red-400' },
   failed_interrupted: { labelKey: 'schedule.runStatus.interrupted', className: 'text-amber-400' },
   cancelled: { labelKey: 'schedule.runStatus.cancelled', className: 'text-zinc-400' },
@@ -78,6 +80,10 @@ function getRunStatusLabel(
       return t('schedule.runStatus.running');
     case 'completed':
       return t('schedule.runStatus.completed');
+    case 'dispatched':
+      return t('schedule.runStatus.dispatched');
+    case 'skipped':
+      return t('schedule.runStatus.skipped');
     case 'failed':
       return t('schedule.runStatus.failed');
     case 'failed_interrupted':

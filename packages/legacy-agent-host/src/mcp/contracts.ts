@@ -12,6 +12,8 @@ export type TeamMcpConnection = Pick<
   'execute' | 'lookup' | 'getTask' | 'listTasks'
 > & {
   readonly readQueries?: NonNullable<ReturnType<TeamOwner['connect']>['readQueries']>;
+  readonly readTaskPage?: (taskId: string, cursor?: string) => unknown;
+  readonly readKanbanPage?: (cursor?: string) => unknown;
   readonly groups?: TeamMcpGroupPort;
   readonly crossTeam?: TeamMcpCrossTeamPort;
   readonly workSync?: TeamMcpWorkSyncPort;

@@ -75,7 +75,8 @@ if (await exists(destination)) {
       'curl',
       [
         '--http1.1', '--fail', '--show-error', '--silent',
-        '--connect-timeout', '15', '--max-time', '60',
+        // Cold macOS runners can exceed 60 seconds for the pinned archive; integrity checks remain mandatory.
+        '--connect-timeout', '15', '--max-time', '900',
         '--max-filesize', String(maximumBytes),
         '--write-out', 'http_version=%{http_version} http_code=%{http_code} size_download=%{size_download} time_total=%{time_total}',
         '--output', temporary,

@@ -16,14 +16,14 @@ import type { TeamGroupChatsPorts } from './createTeamGroupChatsFeature.js';
 import type { GroupChatStorage } from './storage.js';
 
 function validText(value: unknown, label: string, max = 200): asserts value is string {
-  if (typeof value !== 'string' || !value.trim() || value.length > max)
+  if (typeof value !== 'string' || value.includes('\0') || !value.trim() || value.length > max)
     throw new GroupChatError('invalid-input', `Invalid ${label}`);
 }
 function names(value: unknown): asserts value is string[] {
   if (
     !Array.isArray(value) ||
     value.length > 200 ||
-    value.some((v) => typeof v !== 'string' || !v.trim() || v.trim() !== v) ||
+    value.some((v) => typeof v !== 'string' || v.includes('\0') || !v.trim() || v.trim() !== v) ||
     new Set(value).size !== value.length
   )
     throw new GroupChatError('invalid-input', 'Invalid member selection');

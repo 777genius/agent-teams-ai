@@ -68,9 +68,12 @@ export function parseBackendTeamOperation(
     case 'team.lead.context.read':
     case 'team.launch.model.configuration.read':
     case 'team.roster.read':
-    case 'team.snapshot':
       object(value, []);
       return {};
+    case 'team.snapshot': {
+      const p = object(value, ['cursor']);
+      return p.cursor === undefined ? {} : { cursor: text(p.cursor) };
+    }
     case 'team.activity.logs.read': {
       const p = object(value, ['memberName', 'taskId']);
       if (Object.hasOwn(p, 'memberName') === Object.hasOwn(p, 'taskId'))
@@ -204,6 +207,19 @@ export function parseBackendTeamOperation(
         rosterRevision: text(p.rosterRevision),
         attemptId: text(p.attemptId),
         memberIds,
+      };
+    }
+    case 'team.messages.page': {
+      const p = object(value, ['cursor', 'limit', 'groupChatId']);
+      if (
+        p.limit !== undefined &&
+        (!Number.isSafeInteger(p.limit) || (p.limit as number) < 1 || (p.limit as number) > 100)
+      )
+        throw new InvalidBackendOperation();
+      return {
+        ...(p.cursor === undefined ? {} : { cursor: text(p.cursor, 128) }),
+        ...(p.limit === undefined ? {} : { limit: p.limit as number }),
+        ...(p.groupChatId === undefined ? {} : { groupChatId: text(p.groupChatId, 128) }),
       };
     }
     case 'team.changes.read': {

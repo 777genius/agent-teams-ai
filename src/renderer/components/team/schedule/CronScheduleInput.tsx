@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { Combobox } from '@renderer/components/ui/combobox';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import {
@@ -10,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import { Cron } from 'croner';
+import { getValidScheduleNextRuns } from '@shared/utils/scheduleTiming';
 import cronstrue from 'cronstrue/i18n';
 import { AlertCircle, Calendar, Clock, Globe } from 'lucide-react';
 
@@ -32,6 +33,23 @@ const TIMEZONE_PRESETS = [
   { value: 'Asia/Kolkata', label: 'Kolkata (IST)' },
   { value: 'Australia/Sydney', label: 'Sydney (AEST)' },
 ] as const;
+
+const supportedTimezones = (): string[] => {
+  try {
+    return typeof Intl.supportedValuesOf === 'function'
+      ? Intl.supportedValuesOf('timeZone')
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const TIMEZONE_OPTIONS = [
+  ...TIMEZONE_PRESETS,
+  ...supportedTimezones()
+    .filter((zone) => !TIMEZONE_PRESETS.some((preset) => preset.value === zone))
+    .map((zone) => ({ value: zone, label: zone })),
+];
 
 const WARMUP_OPTIONS = [
   { value: 0, labelKey: 'none' },
@@ -65,6 +83,7 @@ interface CronScheduleInputProps {
   onTimezoneChange: (value: string) => void;
   warmUpMinutes: number;
   onWarmUpMinutesChange: (value: number) => void;
+  showWarmUp?: boolean;
 }
 
 // =============================================================================
@@ -78,8 +97,15 @@ export const CronScheduleInput = ({
   onTimezoneChange,
   warmUpMinutes,
   onWarmUpMinutesChange,
+  showWarmUp = true,
 }: CronScheduleInputProps): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
+  const { t, resolvedLanguage } = useAppTranslation('team');
+  const timezoneOptions = useMemo(() =>
+    TIMEZONE_OPTIONS.some((option) => option.value === timezone)
+      ? TIMEZONE_OPTIONS
+      : [{ value: timezone, label: timezone }, ...TIMEZONE_OPTIONS],
+    [timezone]
+  );
   // Parse and validate cron expression
   const cronInfo = useMemo(() => {
     if (!cronExpression.trim()) {
@@ -92,14 +118,12 @@ export const CronScheduleInput = ({
     }
 
     try {
-      const job = new Cron(cronExpression.trim(), { timezone, paused: true });
-      const runs = job.nextRuns(3);
-      job.stop();
+      const runs = getValidScheduleNextRuns(cronExpression, timezone, 3);
 
       let description: string;
       try {
         description = cronstrue.toString(cronExpression.trim(), {
-          locale: 'en',
+          locale: resolvedLanguage?.split('-')[0] ?? 'en',
           use24HourTimeFormat: true,
         });
       } catch {
@@ -125,10 +149,10 @@ export const CronScheduleInput = ({
         error: err instanceof Error ? err.message : t('schedule.cron.errors.invalidExpression'),
       };
     }
-  }, [cronExpression, timezone]);
+  }, [cronExpression, timezone, resolvedLanguage, t]);
 
   const formatNextRun = (date: Date): string => {
-    return date.toLocaleString('en-US', {
+    return date.toLocaleString(resolvedLanguage, {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -220,22 +244,18 @@ export const CronScheduleInput = ({
           <Globe className="size-3.5" />
           {t('schedule.cron.timezone')}
         </Label>
-        <Select value={timezone} onValueChange={onTimezoneChange}>
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder={t('schedule.cron.selectTimezone')} />
-          </SelectTrigger>
-          <SelectContent>
-            {TIMEZONE_PRESETS.map((tz) => (
-              <SelectItem key={tz.value} value={tz.value} className="text-xs">
-                {tz.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Combobox
+          options={timezoneOptions}
+          value={timezone}
+          onValueChange={onTimezoneChange}
+          placeholder={t('schedule.cron.selectTimezone')}
+          searchPlaceholder={t('schedule.cron.searchTimezone')}
+          emptyMessage={t('schedule.cron.noTimezones')}
+        />
       </div>
 
-      {/* Warm-up time */}
-      <div className="space-y-1.5">
+      {/* Warm-up applies only to legacy one-shot schedules. */}
+      {showWarmUp ? <div className="space-y-1.5">
         <Label className="label-optional">{t('schedule.cron.warmUpTime')}</Label>
         <Select
           value={String(warmUpMinutes)}
@@ -255,7 +275,7 @@ export const CronScheduleInput = ({
         <p className="text-[11px] text-[var(--color-text-muted)]">
           {t('schedule.cron.warmUpDescription')}
         </p>
-      </div>
+      </div> : null}
     </div>
   );
 };

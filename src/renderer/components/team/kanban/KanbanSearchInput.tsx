@@ -133,6 +133,7 @@ export const KanbanSearchInput = ({
         className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
       />
       <input
+        data-testid="kanban-search-input"
         ref={inputRef}
         type="text"
         placeholder={t('kanban.search.placeholder')}

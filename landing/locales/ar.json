@@ -136,7 +136,16 @@
       "launchProof": "حالة تشغيل الزملاء",
       "orgGovernance": "المؤسسات والنظرة العامة",
       "budgetControls": "ضوابط الميزانية",
-      "price": "السعر"
+      "price": "السعر",
+      "desktopPlatforms": "أنظمة سطح المكتب المدعومة"
+    },
+    "platforms": {
+      "desktopApp": "(تطبيق سطح مكتب)",
+      "cliBinaries": "(ملفات CLI التنفيذية)",
+      "noNativeDesktop": "لا يوجد تطبيق سطح مكتب أصلي (لوحة مستضافة ذاتيًا)",
+      "desktopIde": "(بيئة تطوير سطح مكتب)",
+      "cli": "(CLI)",
+      "wsl2": "عبر WSL2 (ليس أصليًا)"
     }
   },
   "screenshots": {

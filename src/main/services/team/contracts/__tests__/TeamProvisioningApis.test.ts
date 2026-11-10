@@ -931,6 +931,9 @@ describe('TeamProvisioning API binders', () => {
       resolveRuntimeRecipientProviderId(): Promise<'opencode'> {
         return Promise.resolve('opencode');
       },
+      resolveRuntimeRecipientProviderIdForUserSend(): Promise<'opencode'> {
+        return Promise.resolve('opencode');
+      },
       getLiveLeadProcessMessages(this: MessagingSource): InboxMessage[] {
         return this.liveMessages;
       },
@@ -975,6 +978,9 @@ describe('TeamProvisioning API binders', () => {
     await expect(api.resolveRuntimeRecipientProviderId('team-bound', 'worker')).resolves.toBe(
       'opencode'
     );
+    await expect(
+      api.resolveRuntimeRecipientProviderIdForUserSend('team-bound', 'worker')
+    ).resolves.toBe('opencode');
 
     pushLiveLeadProcessMessage('team-bound', {
       from: 'user',

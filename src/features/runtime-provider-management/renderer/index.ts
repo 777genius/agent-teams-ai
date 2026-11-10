@@ -5,6 +5,7 @@ export {
   isOpenCodeRuntimeUsable,
   isPrivateNetworkRuntimeLocalProviderUrl,
   resolveOpenCodeQuickConnectGate,
+  resolveOpenCodeQuickConnectRuntimeRevision,
 } from '../core/domain';
 export { CapturedClaudeAuthenticationPanel } from './CapturedClaudeAuthenticationPanel';
 export type { OpenCodeCatalogFailure } from './hooks/catalogFailure';
@@ -14,6 +15,7 @@ export type {
 } from './hooks/useOpenCodeAttachmentDeclarations';
 export { useOpenCodeAttachmentDeclarations } from './hooks/useOpenCodeAttachmentDeclarations';
 export { useOpenCodeConnectedModelCatalog } from './hooks/useOpenCodeConnectedModelCatalog';
+export { useOpenCodeDashboardConnectedCountProbe } from './hooks/useOpenCodeDashboardConnectedCountProbe';
 export {
   type OpenCodeLocalModelSetupActionState,
   useOpenCodeLocalModelSetup,
@@ -31,6 +33,7 @@ export {
   useOpenCodeProviderModelCatalog,
 } from './hooks/useOpenCodeProviderModelCatalog';
 export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOnboarding';
+export { useRuntimeProviderQuickConnect } from './hooks/useRuntimeProviderQuickConnect';
 export { isOpenCodeSupportInstallProgress } from './openCodeInstallLabels';
 export type { OpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { resolveOpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
@@ -41,10 +44,12 @@ export {
   type OpenCodeLocalModelSetupResult,
   type OpenCodeLocalModelSetupTarget,
 } from './openCodeLocalModelSetup';
-export type { RuntimeProviderDirectoryCacheSnapshot } from './runtimeProviderDirectoryCache';
+export type { RuntimeProviderConnectedCountEvidence, RuntimeProviderConnectedCountObservation, RuntimeProviderDirectoryCacheSnapshot } from './runtimeProviderDirectoryCache';
 export {
+  beginRuntimeProviderConnectedCountCheck,
   getRuntimeProviderDirectoryCacheSnapshot,
   getRuntimeProviderDirectoryCacheWithGlobalFallbackSnapshot,
+  useRuntimeProviderConnectedCount,
   useRuntimeProviderDirectoryCache,
   useRuntimeProviderDirectoryCacheWithGlobalFallback,
 } from './runtimeProviderDirectoryCache';

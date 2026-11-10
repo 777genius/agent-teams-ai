@@ -348,8 +348,27 @@ try {
     'testProject',
     `window.electronAPI.config.addCustomProjectPath(${JSON.stringify(data.project)})`
   );
+  // Dashboard no longer mounts the expensive provider UI. Navigate using the
+  // visible real button after the startup splash is gone.
   await cdp.wait(
-    'Boolean(document.querySelector("[data-testid=runtime-manage-anthropic]"))',
+    `(() => {
+      const button = document.querySelector('[data-testid=dashboard-manage-providers]');
+      if (document.getElementById('splash') || !button?.isConnected || button.disabled) return false;
+      button.scrollIntoView({ block: 'center', inline: 'nearest' });
+      const r = button.getBoundingClientRect();
+      if (!r.width || !r.height) return false;
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return hit === button || button.contains(hit);
+    })()`,
+    'Dashboard Manage Providers action'
+  );
+  await cdp.click('[data-testid=dashboard-manage-providers]');
+  await cdp.wait(
+    'Boolean(document.querySelector("[data-testid=provider-settings-page]")?.getClientRects().length)',
+    'Providers settings page'
+  );
+  await cdp.wait(
+    'Boolean(document.querySelector("[data-testid=runtime-manage-anthropic]")?.getClientRects().length)',
     'Anthropic Manage button'
   );
   await cdp.click('[data-testid=runtime-manage-anthropic]');
@@ -419,10 +438,11 @@ try {
   await cdp.clickText('Teams');
   await cdp.clickText('Create Team');
   record('create-team-opened');
-  await cdp.clickText('Custom path', 'document.querySelector("[role=dialog]")');
-  await cdp.fill('[role=dialog] input[aria-label="Custom working directory"]', data.project);
+  await cdp.wait('Boolean(document.querySelector("[data-testid=create-team-page]"))', 'Create Team page');
+  await cdp.clickText('Custom path', 'document.querySelector("[data-testid=create-team-page]")');
+  await cdp.fill('[data-testid=create-team-page] input[aria-label="Custom working directory"]', data.project);
   record('test-project-selected');
-  await cdp.click('[role=dialog] button[aria-label^="Anthropic provider,"]');
+  await cdp.click('[data-testid=create-team-page] button[aria-label^="Anthropic provider,"]');
   await cdp.wait(
     'Boolean(document.querySelector("[data-testid=team-model-selector-provider-nav-anthropic]"))',
     'Create Team model selector'
@@ -463,7 +483,7 @@ try {
   );
   await cdp.wait(
     `(() => {
-      const text = document.querySelector('[role=dialog]')?.innerText ?? '';
+      const text = document.querySelector('[data-testid=create-team-page]')?.innerText ?? '';
       const selected = ${selectedModelExpression};
       const lead = document.querySelector('[data-role="lead-row"] button[aria-label^="Anthropic provider,"]')?.getAttribute('aria-label') ?? '';
       return selected && lead.includes(${JSON.stringify(model)}) &&
@@ -473,7 +493,7 @@ try {
     'settled Create Team preflight for selected compatible model',
     180000
   );
-  const createTeamText = await cdp.evaluate('document.querySelector("[role=dialog]").innerText');
+  const createTeamText = await cdp.evaluate('document.querySelector("[data-testid=create-team-page]").innerText');
   assert(
     /Selected model checks[\s\S]*(available|compatible|verified)/i.test(createTeamText),
     'Selected-model preflight did not report a positive model check'
@@ -510,7 +530,7 @@ try {
     try {
       evidence.failureUi = (
         await cdp.evaluate(`(() =>
-        (document.querySelector('[role=dialog]')?.innerText ?? '')
+        (document.querySelector('[data-testid=create-team-page]')?.innerText ?? '')
           .split('\\n').map((line) => line.trim())
           .filter((line) => /selected provider|selected model|issue684-compatible-model|checking|preflight|anthropic/i.test(line))
           .slice(-24)

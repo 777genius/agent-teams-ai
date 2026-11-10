@@ -103,9 +103,6 @@ export const EffortLevelSelector: React.FC<EffortLevelSelectorProps> = ({
         </div>
       </div>
       <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">{presentation.helperText}</p>
-      {presentation.unavailableText ? (
-        <p className="mt-1 text-[11px] text-amber-300">{presentation.unavailableText}</p>
-      ) : null}
       {showsAnthropicMax ? (
         <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
           {t('effortLevel.maxDescription')}

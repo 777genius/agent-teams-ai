@@ -113,6 +113,19 @@ export function createDesktopUiControls(
       y: point.y,
     });
     point = record(await waitRead(target(selector, text), label + ' after pointer enter'));
+    // Async Host hydration can shift the DOM after hover. Check the original
+    // target is stable before ONE physical click, never replay an uncertain click.
+    let stableSamples = 0;
+    for (let sample = 0; sample < 15 && stableSamples < 2; sample++) {
+      await new Promise<void>((done) => setTimeout(done, 100));
+      const next = record(await waitRead(target(selector, text), label + ' stable target'));
+      stableSamples =
+        next.x === point.x && next.y === point.y && next.tag === point.tag
+          ? stableSamples + 1
+          : 0;
+      point = next;
+    }
+    assert.ok(stableSamples === 2, 'Original UI target did not settle before one click');
     assert.equal(typeof point.x, 'number');
     assert.equal(typeof point.y, 'number');
     options.assertOwnedRenderer();
@@ -140,8 +153,13 @@ export function createDesktopUiControls(
       clickCount: 1,
     });
   };
-  const scrollTo = async (selector: string, label: string, text?: string): Promise<void> => {
-    for (let attempt = 0; attempt < 12; attempt++) {
+  const scrollTo = async (
+    selector: string, label: string, text?: string, maxWheelEvents = 12
+  ): Promise<void> => {
+    assert.ok(Number.isSafeInteger(maxWheelEvents) && maxWheelEvents >= 1 && maxWheelEvents <= 32);
+    // Allow one final visibility read after the last wheel; never dispatch
+    // an extra input event after reaching the TEST-only bounded budget.
+    for (let attempt = 0; attempt <= maxWheelEvents; attempt++) {
       options.assertOwnedRenderer();
       const found = record(
         await waitRead(
@@ -161,6 +179,7 @@ export function createDesktopUiControls(
         )
       );
       if (found.visible === true) return;
+      if (attempt === maxWheelEvents) break;
       assert.equal(typeof found.x, 'number');
       assert.equal(typeof found.y, 'number');
       assert.equal(typeof found.delta, 'number');

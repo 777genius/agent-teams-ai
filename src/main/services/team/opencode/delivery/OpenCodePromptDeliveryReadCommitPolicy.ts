@@ -1,6 +1,10 @@
 import {
   classifyOpenCodeDeliveryReplyContract,
+  isOpenCodeConfiguredLeadReply,
+  isOpenCodeLeadDestinationProof,
+  isOpenCodeLeadReplyRecipient,
   isOpenCodeReplyOptionalDeliveryContract,
+  isOpenCodeReplyRequiredDeliveryRecipient,
 } from './OpenCodeDeliveryReplyContract';
 import {
   hasOpenCodeGroupAcknowledgement,
@@ -112,6 +116,8 @@ export function isOpenCodeDirectUserPromptDelivery(
 }
 
 export function isOpenCodePlainTextResponseReadCommitAllowed(input: {
+  configuredLeadName?: string | null;
+  knownPeerRecipient?: boolean;
   actionMode?: AgentActionMode;
   taskRefs?: TaskRef[];
   visibleReply?: OpenCodeVisibleReplyProof | null;
@@ -122,17 +128,25 @@ export function isOpenCodePlainTextResponseReadCommitAllowed(input: {
   ) => boolean;
 }): boolean {
   if (isOpenCodeDirectUserPromptDelivery(input.ledgerRecord)) {
-    return (
-      Boolean(
-        input.ledgerRecord?.visibleReplyInbox?.trim() &&
-        input.ledgerRecord?.visibleReplyMessageId?.trim()
-      ) && input.taskRefsIncludeAll(input.visibleReply?.message.taskRefs, input.taskRefs)
+    return Boolean(input.ledgerRecord?.visibleReplyInbox?.trim() &&
+      input.ledgerRecord?.visibleReplyMessageId?.trim() &&
+      input.taskRefsIncludeAll(input.visibleReply?.message.taskRefs, input.taskRefs));
+  }
+  const record = input.ledgerRecord;
+  if (isOpenCodeLeadReplyRecipient(record, input.configuredLeadName, input.knownPeerRecipient)) {
+    const proof = input.visibleReply;
+    return Boolean(
+      isOpenCodeLeadDestinationProof(record, input.configuredLeadName, proof) &&
+      proof?.message.source === 'runtime_delivery' &&
+      isOpenCodeVisibleReplySemanticallySufficient({
+        actionMode: input.actionMode, taskRefs: input.taskRefs,
+        text: proof.message.text, summary: proof.message.summary,
+      }).sufficient &&
+      input.taskRefsIncludeAll(proof.message.taskRefs, input.taskRefs)
     );
   }
-  const preview = input.ledgerRecord?.observedAssistantPreview?.trim();
-  if (!preview) {
-    return true;
-  }
+  const preview = record?.observedAssistantPreview?.trim();
+  if (!preview) return true;
   return isOpenCodeVisibleReplySemanticallySufficient({
     actionMode: input.actionMode,
     taskRefs: input.taskRefs,
@@ -185,6 +199,8 @@ function hasExactCompletedSilentChild(input: {
 }
 
 export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
+  configuredLeadName?: string | null;
+  knownPeerRecipient?: boolean;
   hasAcknowledgedInbound?: OpenCodeGroupAcknowledgementReader;
   teamName?: string;
   memberName?: string;
@@ -231,7 +247,11 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
   // child of this accepted prompt, never a merely idle or unanswered session.
   if (
     record &&
-    classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'teammate_report' &&
+    classifyOpenCodeDeliveryReplyContract(record.replyRecipient, input.knownPeerRecipient) === 'teammate_report' &&
+    !isOpenCodeConfiguredLeadReply(record, input.configuredLeadName) &&
+    // An absent roster cannot prove the recipient is a peer, even for a
+    // completed silent turn (which bypasses the responded-state branch below).
+    input.configuredLeadName !== null &&
     record.messageKind !== 'member_work_sync_nudge' &&
     record.runtimeSessionId?.trim() &&
     input.teamName === record.teamName &&
@@ -251,17 +271,30 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
       hasAcceptedMemberWorkSyncReport: input.hasAcceptedMemberWorkSyncReport,
     });
   }
+  // A missing roster cannot distinguish a custom lead from an ordinary peer.
+  if (
+    input.configuredLeadName === null && !input.knownPeerRecipient && record?.replyRecipient?.trim() &&
+    classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'teammate_report'
+  ) {
+    return false;
+  }
   // Informational notices and teammate reports never require a visible reply:
   // any assistant response fulfils them. Demanding progress proof or a
   // semantically sufficient answer here re-prompted members for messages that
   // asked nothing of them, and every retry cost another model turn.
-  if (isOpenCodeReplyOptionalDeliveryContract(input.ledgerRecord?.replyRecipient)) {
+  if (
+    isOpenCodeReplyOptionalDeliveryContract(input.ledgerRecord?.replyRecipient, input.knownPeerRecipient) &&
+    !isOpenCodeConfiguredLeadReply(input.ledgerRecord, input.configuredLeadName)
+  ) {
     return true;
   }
   if (state === 'responded_plain_text') {
     return isOpenCodePlainTextResponseReadCommitAllowed(input);
   }
   if (state === 'responded_visible_message') {
+    if (record && input.configuredLeadName !== undefined &&
+      isOpenCodeLeadReplyRecipient(record, input.configuredLeadName, input.knownPeerRecipient) &&
+      !isOpenCodeLeadDestinationProof(record, input.configuredLeadName, input.visibleReply)) return false;
     return (
       isOpenCodeVisibleReplyReadCommitAllowed({
         actionMode: input.actionMode,
@@ -360,7 +393,7 @@ export function getOpenCodeDeliveryPendingReason(input: {
   if (state === 'responded_plain_text') {
     const preview = record?.observedAssistantPreview?.trim();
     if (
-      isOpenCodeDirectUserPromptDelivery(record) &&
+      isOpenCodeReplyRequiredDeliveryRecipient(record?.replyRecipient) &&
       input.visibleReply &&
       !input.taskRefsIncludeAll(input.visibleReply.message.taskRefs, input.taskRefs)
     ) {
@@ -379,11 +412,8 @@ export function getOpenCodeDeliveryPendingReason(input: {
     ) {
       return 'plain_text_ack_only_still_requires_answer';
     }
-    if (
-      isOpenCodeDirectUserPromptDelivery(record) &&
-      !record?.visibleReplyMessageId &&
-      !record?.inboxReadCommittedAt
-    ) {
+    // A rejected reply may have a custom lead or a wrong-inbox receipt.
+    if (record && !record.groupChatId && !record.inboxReadCommittedAt) {
       return 'plain_text_visible_reply_not_materialized_yet';
     }
   }

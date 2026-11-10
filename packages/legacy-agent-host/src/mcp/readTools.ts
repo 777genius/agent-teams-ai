@@ -9,6 +9,7 @@ const id = z
   .max(128)
   .regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/);
 const name = z.string().min(1).max(128);
+const cursor = z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/);
 export const taskInventorySchema = z.strictObject({
   owner: name.optional(),
   status: z.enum(["pending", "in_progress", "completed"]).optional(),
@@ -22,6 +23,7 @@ export const taskInventorySchema = z.strictObject({
 /** Current bound Team only. No tool argument selects owner, root, actor or Runtime. */
 export function createReadMcpTools(
   reads: NonNullable<TeamMcpConnection["readQueries"]>,
+  readKanbanPage?: (cursor?: string) => unknown,
 ): BoundTool[] {
   const empty = z.strictObject({});
   return [
@@ -42,16 +44,22 @@ export function createReadMcpTools(
       : []),
     defineTool(
       "team_get",
-      "Read the current captured Team product snapshot.",
-      empty,
-      () => reads.getTeam(),
+      "Read a bounded Team page. Continue with nextCursor; taskParts indexes identify pieces of the same task whose history arrays concatenate in part order.",
+      z.strictObject({
+        cursor: z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).optional(),
+      }),
+      ({ cursor }) => reads.getTeam(cursor),
       false,
     ),
     defineTool(
       "kanban_get",
-      "Read canonical board state for this captured Team.",
-      empty,
-      () => reads.getKanbanState(),
+      "Read canonical board state for this captured Team. Large boards return signed nextCursor pages; merge tasks and columnOrder entries across pages.",
+      z.strictObject({ cursor: cursor.optional() }),
+      ({ cursor }) => {
+        if (readKanbanPage) return readKanbanPage(cursor);
+        if (cursor !== undefined) throw new Error('Kanban pagination unavailable');
+        return reads.getKanbanState();
+      },
       false,
     ),
     defineTool(

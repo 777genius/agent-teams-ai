@@ -33,6 +33,7 @@ import {
 } from './OpenCodeGatewayArtifactOwnership';
 import {
   createOpenCodeGlobalConfigEnvironmentResolver,
+  describeOpenCodeConfigReadFailure,
   readOpenCodeConfigTarget,
 } from './openCodeGlobalConfigOverrides';
 import { OpenCodeLocalProviderConfigWriter } from './OpenCodeLocalProviderConfigWriter';
@@ -310,7 +311,10 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
       if (error instanceof LocalProviderOperationError) {
         return this.listError(error.code, error.message, error.recoverable);
       }
-      return this.listError('config-invalid', 'Could not read the OpenCode config.');
+      return this.listError(
+        'config-invalid',
+        describeOpenCodeConfigReadFailure(error, input.scope)
+      );
     }
   }
 

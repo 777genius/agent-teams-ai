@@ -76,24 +76,26 @@ export function createHostCrossTeamApi(
       const source = selected(rows, excludeTeam);
       if (!source.ownerResourceRef)
         throw new HostTeamOperationError('unavailable', 'not-dispatched');
-      const targets = await Promise.all(
-        rows
-          .filter(
-            (row) =>
-              row.ownerResourceRef === source.ownerResourceRef &&
-              hostTeamSelectionKey(row.handle.handleId) !== excludeTeam
-          )
-          .map(async (row) => {
-            const product = await snapshot(row.handle, current);
-            const lead = product.members.find((member) => member.role === 'lead');
-            return {
-              teamName: hostTeamSelectionKey(row.handle.handleId),
-              displayName: row.label,
-              ...(lead ? { leadName: lead.name } : {}),
-              members: product.members.map((member) => ({ name: member.name })),
-            };
-          })
-      );
+      const targets = [];
+      // The captured transport refuses more than 32 outstanding requests.
+      // Preserve every same-owner destination without a competing queue.
+      for (const row of rows.filter(
+        (entry) =>
+          entry.ownerResourceRef === source.ownerResourceRef &&
+          hostTeamSelectionKey(entry.handle.handleId) !== excludeTeam
+      )) {
+        assertCurrent(current);
+        const product = await snapshot(row.handle, current);
+        // Trashed teams remain readable, but cannot receive messages.
+        if (product.lifecycle && product.lifecycle.deletedAt !== null) continue;
+        const lead = product.members.find((member) => member.role === 'lead');
+        targets.push({
+          teamName: hostTeamSelectionKey(row.handle.handleId),
+          displayName: row.label,
+          ...(lead ? { leadName: lead.name } : {}),
+          members: product.members.map((member) => ({ name: member.name })),
+        });
+      }
       assertCurrent(current);
       return targets;
     },

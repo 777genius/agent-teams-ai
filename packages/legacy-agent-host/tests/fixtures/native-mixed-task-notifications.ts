@@ -35,13 +35,25 @@ export function mixedNativeText(content: unknown): string {
     })
     .join('\n');
 }
+/** Strip native reminder envelopes with bounded linear scans, not a backtracking regex. */
+function withoutNativeReminders(text: string): string {
+  const opening = '<system-reminder>';
+  const closing = '</system-reminder>';
+  let result = '';
+  let offset = 0;
+  while (offset < text.length) {
+    const start = text.indexOf(opening, offset);
+    if (start < 0) break;
+    const end = text.indexOf(closing, start + opening.length);
+    if (end < 0) break;
+    result += text.slice(offset, start);
+    offset = end + closing.length;
+  }
+  return result + text.slice(offset);
+}
 export function mixedSemanticText(content: unknown): boolean {
   // Tool-result-only user carriers and native reminder-only carriers are not new inputs.
-  return (
-    mixedNativeText(content)
-      .replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '')
-      .trim().length > 0
-  );
+  return withoutNativeReminders(mixedNativeText(content)).trim().length > 0;
 }
 export interface MixedTaskNotice {
   actor: MixedNoticeActor;

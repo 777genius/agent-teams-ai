@@ -14,6 +14,14 @@ import type { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import type { TeamMetaFile, TeamMetaStore } from './TeamMetaStore';
 import type { TeamCreateConfigRequest } from '@shared/types';
 
+/** Disjoint proof: an occupied target was detected before team-specific mutation. */
+export class TeamDraftPreflightCollisionError extends Error {
+  constructor(teamName: string) {
+    super(`Team already exists: ${teamName}`);
+    this.name = 'TeamDraftPreflightCollisionError';
+  }
+}
+
 export async function createDraftTeamConfig(
   request: TeamCreateConfigRequest,
   stores: { teamMetaStore: TeamMetaStore; membersMetaStore: TeamMembersMetaStore }
@@ -38,7 +46,7 @@ export async function createDraftTeamConfig(
     }
   };
   if ((await pathExists(teamDir)) || (await pathExists(tasksDir))) {
-    throw new Error(`Team already exists: ${request.teamName}`);
+    throw new TeamDraftPreflightCollisionError(request.teamName);
   }
 
   try {

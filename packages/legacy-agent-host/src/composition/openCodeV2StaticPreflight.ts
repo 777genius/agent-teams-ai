@@ -143,6 +143,9 @@ function preflightOpenCodeV2SelectionCandidate(
     return { kind: 'hold', reason: 'runtime-version' };
   const delivery = lock.opencodeV2Delivery?.[selection.platform];
   const delivered = delivery?.engineVersions;
+  // Validate and return the same witness, even if manifest accessors change.
+  const sourceCommit: unknown = delivery?.sourceCommit;
+  const archiveSha256: unknown = delivery?.archive?.sha256;
   const [expectedPlatform, expectedArch] = selection.platform.split('-');
   // A digest for another OS or release is not an authenticated native engine
   // for this tuple. Selectors and delivery metadata must agree before probing.
@@ -154,8 +157,8 @@ function preflightOpenCodeV2SelectionCandidate(
       delivery?.platform !== expectedPlatform || delivery?.arch !== expectedArch ||
       !Array.isArray(delivered) || !delivered.every((value) => typeof value === 'string') ||
       !delivered.includes(selection.version) ||
-      typeof delivery?.sourceCommit !== 'string' || !commit.test(delivery.sourceCommit) ||
-      typeof delivery?.archive?.sha256 !== 'string' || !sha256.test(delivery.archive.sha256))
+      typeof sourceCommit !== 'string' || !commit.test(sourceCommit) ||
+      typeof archiveSha256 !== 'string' || !sha256.test(archiveSha256))
     return { kind: 'hold', reason: 'delivery' };
   if (selection.nativeReportedVersion !== selection.version)
     return { kind: 'hold', reason: 'native-version' };
@@ -174,7 +177,7 @@ function preflightOpenCodeV2SelectionCandidate(
     return { kind: 'hold', reason: 'binding' };
   return {
     kind: 'candidate', platform: selection.platform, version: selection.version,
-    sourceCommit: delivery.sourceCommit!, archiveSha256: delivery.archive!.sha256!,
+    sourceCommit, archiveSha256,
   };
 }
 

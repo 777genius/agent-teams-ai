@@ -1505,13 +1505,29 @@
       "labelPlaceholder": "ör. Günlük kod incelemesi, Gece testleri...",
       "maxBudgetUsd": "Maks. bütçe (USD)",
       "maxTurns": "Maks. tur",
+      "executionLimitsNote": "Bu sınırlar yalnızca bağımsız tek seferlik çalıştırmalar için geçerlidir. Zaten çalışan bir ekibe atanan görevler için geçerli değildir.",
       "noLimit": "Limit yok",
       "noMatches": "Aramanızla eşleşen ekip yok.",
       "noTeams": "Kullanılabilir ekip yok. Önce bir ekip oluşturun.",
       "searchTeams": "Ekiplerde ara...",
       "selectTeam": "Bir ekip seç...",
       "team": "Ekip",
-      "title": "Zamanlama"
+      "title": "Zamanlama",
+      "execution": "Çalıştırma",
+      "legacyNotice": "Mevcut tek seferlik zamanlama: kaydetmek önceki davranışı değiştirmez.",
+      "upgradeSmart": "Akıllı zamanlamaya geç",
+      "oneAgent": "Bir ajan",
+      "wholeTeam": "Tüm ekip",
+      "target": "Ekip çalışırken görevli üye",
+      "leadDefault": "Ekip lideri (varsayılan)",
+      "agentDescription": "Ekip kapalıysa bağımsız ajanı çalıştırır; açıksa görev atar.",
+      "teamDescription": "Ekip kapalıysa kayıtlı ekibi başlatır; açıksa lidere görev atar. Kayıtlı ayarları kullanır.",
+      "teamPathMissing": "Başlatma zamanlamadan önce ekibin proje klasörünü kaydedin.",
+      "taskFirstAgentDescription": "Seçilen ekip üyesine, gerekirse ekip güvenli şekilde başlatıldıktan sonra panoda bir görev atanır. Meşgul ajanların işi kesilmez.",
+      "taskFirstTeamDescription": "Ekip liderine, gerekirse ekip güvenli şekilde başlatıldıktan sonra bir koordinasyon görevi atanır. Devam eden işler kesilmez.",
+      "taskFirstTarget": "Şuna ata",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "Eski kayıtlı istemi inceledim ve kalıcı talimatları ayırdım. Metni saklayın ancak zamanlanmış işte çalıştırmayın."
     },
     "title": {
       "createSchedule": "Zamanlama Oluştur",
@@ -2086,7 +2102,8 @@
       "stillRunning": "Görev hâlâ çalışıyor...",
       "loadingLogs": "Günlükler yükleniyor...",
       "errors": "Hatalar",
-      "close": "Kapat"
+      "close": "Kapat",
+      "openTask": "Görevi aç"
     },
     "cron": {
       "expression": "Cron ifadesi",
@@ -2124,7 +2141,9 @@
     "status": {
       "active": "Etkin",
       "paused": "Duraklatıldı",
-      "disabled": "Devre dışı"
+      "disabled": "Devre dışı",
+      "hostUnsupported": "Host zamanlaması kullanılamıyor",
+      "saved": "Kaydedildi"
     },
     "runStatus": {
       "pending": "Beklemede",
@@ -2134,7 +2153,9 @@
       "completed": "Tamamlandı",
       "failed": "Başarısız",
       "interrupted": "Kesildi",
-      "cancelled": "İptal edildi"
+      "cancelled": "İptal edildi",
+      "dispatched": "İletildi",
+      "skipped": "Atlandı"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2444,10 @@
       "hiddenCount": "{{count}} gizli",
       "trash": "Çöp",
       "gridView": "Izgara görünümü",
-      "columnsView": "Sütun görünümü"
+      "columnsView": "Sütun görünümü",
+      "tableView": "Tablo görünümü",
+      "configureColumns": "Sütunları seç",
+      "resizeColumn": "{{column}} sütununu yeniden boyutlandır"
     },
     "trash": {
       "title": "Çöp",

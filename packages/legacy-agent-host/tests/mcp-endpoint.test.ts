@@ -394,6 +394,41 @@ test('real HTTP MCP mutations share the real Team receipt/files; reads create no
   assert.ok(!client.getInstructions()?.includes(endpoint.bearerToken));
 });
 
+test('oversized native mutation and lookup return the same bounded acknowledgement without replay', async (t) => {
+  const f = fixture(t);
+  const client = await connect(t, await f.endpoint());
+  const created = await receipt(client, 'task_create', {
+    commandId: 'TEST-large-ack-create',
+    subject: 'History for bounded MCP receipt',
+    owner: 'alice',
+  });
+  const taskId = created.value.effects.taskId;
+  for (let index = 0; index < 55; index++)
+    f.human.execute({
+      commandId: 'TEST-large-ack-comment-' + index,
+      operation: 'task.comment',
+      payload: { taskId, text: 'history-' + index + '-' + 'x'.repeat(6000) },
+    });
+  const args = { commandId: 'TEST-large-ack-update', taskId, subject: 'Updated history task' };
+  const updated = await receipt(client, 'task_update', args);
+  assert.equal(updated.value.phase, 'completed');
+  assert.notEqual(updated.response.isError, true);
+  assert.equal((updated.value as unknown as { resultOmitted?: boolean }).resultOmitted, true);
+  assert.ok(Buffer.byteLength(JSON.stringify(updated.value)) < 256 * 1024);
+  const persisted = f.alice.lookup(args.commandId);
+  assert.ok(persisted);
+  // Effect IDs are command-scoped, not aliases of the updated task ID.
+  assert.equal(updated.value.effects.taskId, persisted.effects.taskId);
+  assert.ok(Buffer.byteLength(JSON.stringify(persisted)) > 256 * 1024);
+  const before = f.taskBytes(taskId);
+  assert.deepEqual((await receipt(client, 'task_update', args)).value, updated.value);
+  assert.deepEqual(
+    (await call(client, 'command_lookup', { commandId: args.commandId })).value,
+    updated.value
+  );
+  assert.equal(f.taskBytes(taskId), before, 'replay and lookup must not change saved task');
+});
+
 test('captured actor drives lifecycle/comment/assignment; wrong actor cannot start another member task', async (t) => {
   const f = fixture(t);
   const alice = await connect(t, await f.endpoint());

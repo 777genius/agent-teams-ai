@@ -140,9 +140,8 @@ import {
   setTeamWatchScopeChangeListener,
 } from '@main/services/infrastructure/teamWatchScope';
 import { FileWatcherStartupCoordinator } from '@main/services/infrastructure/FileWatcherStartupCoordinator';
-import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
-import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
-import { SchedulerService } from '@main/services/schedule/SchedulerService';
+import { createSchedulerService } from '@main/services/schedule/createSchedulerService';
+import type { SchedulerService } from '@main/services/schedule/SchedulerService';
 import { JsonTaskChangePresenceRepository } from '@main/services/team/cache/JsonTaskChangePresenceRepository';
 import { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import { CrossTeamService } from '@main/services/team/CrossTeamService';
@@ -216,6 +215,7 @@ import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMes
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { AnnouncementsLifecycle } from './announcementsLifecycle';
+import { registerWindowZoomHandler } from '@features/appearance/main';
 import {
   bindMemberWorkSyncProvisioningRuntime,
   createDeferredWorkSyncStallObservation,
@@ -1256,6 +1256,7 @@ function registerAppStartupHandlers(): void {
   registerOpenCodeStartupCleanupHandlers(ipcMain);
   ipcMain.handle(APP_STARTUP_GET_STATUS, () => appStartupStatus);
   ipcMain.handle(APP_GET_WINDOWS_ELEVATION_STATUS, () => getWindowsElevationStatus());
+  registerWindowZoomHandler(ipcMain, () => mainWindow, syncTrafficLightPosition);
 }
 
 function cloneStartupSteps(): AppStartupStep[] {
@@ -2108,18 +2109,10 @@ async function initializeServices(): Promise<void> {
   const fileContentResolver = new FileContentResolver(teamMemberLogsFinder, gitDiffFallback);
   const reviewApplier = new ReviewApplierService();
 
-  // Create SchedulerService for cron-based task execution
-  const scheduleRepository = new JsonScheduleRepository();
-  const scheduledTaskExecutor = new ScheduledTaskExecutor();
-  schedulerService = new SchedulerService(
-    scheduleRepository,
-    scheduledTaskExecutor,
-    async (cwd: string) => {
-      const result = await teamProvisioningService.prepareForProvisioning(cwd, {
-        forceFresh: true,
-      });
-      return { ready: result.ready, message: result.message };
-    }
+  schedulerService = createSchedulerService(
+    teamIpcHandlerApis,
+    teamDataService,
+    teamProvisioningService
   );
   // Extension Store services
   const pluginCatalogService = new PluginCatalogService();
@@ -3094,7 +3087,7 @@ async function shutdownServices(): Promise<void> {
     branchStatusService = null;
 
     if (schedulerService) {
-      await runShutdownStep('scheduler stop', () => schedulerService.stop());
+      await runShutdownStep('scheduler stop', () => schedulerService.stop(), 20_000);
     }
 
     await runShutdownStep('skills watcher stop', () => skillsWatcherService?.stopAll());

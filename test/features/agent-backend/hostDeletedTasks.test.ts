@@ -60,9 +60,11 @@ function fixture() {
             human.execute({ ...payload, commandId: request.commandId } as TeamCommand)
           );
         case 'team.snapshot':
-          return success(human.readSnapshot());
+          return success(human.readSnapshot(payload.cursor ? { cursor: payload.cursor as string } : {}));
         case 'team.tasks.list':
-          return success(payload.deleted ? human.readDeletedTasks() : human.listTasks());
+          return success(payload.deleted
+            ? human.readDeletedTasks(payload.cursor ? { cursor: payload.cursor as string } : {})
+            : human.listTasks());
         case 'team.task.get':
           return success(human.getTask(payload.taskId as string));
         case 'team.roster.read':
@@ -194,6 +196,64 @@ it('restores a real canonical deleted Task through selected and global Trash wit
   );
 });
 
+it('retrieves >1 MiB deleted task history and details via bounded Trash pages before restoring', async () => {
+  const f = fixture();
+  const taskId = f.human.execute({
+    commandId: 'TEST-huge-trash-create',
+    operation: 'task.create',
+    payload: { subject: 'Large retained Trash history', owner: 'team-lead' },
+  }).effects.taskId;
+  const expected = Array.from({ length: 180 }, (_, index) =>
+    'TEST-trash-comment-' + index + '-' + 'x'.repeat(6000));
+  for (const [index, text] of expected.entries()) {
+    f.human.execute({
+      commandId: 'TEST-huge-trash-comment-' + index,
+      operation: 'task.comment',
+      payload: { taskId, text },
+    });
+  }
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  f.human.execute({
+    commandId: 'TEST-huge-trash-delete',
+    operation: 'task.lifecycle',
+    payload: { taskId, action: 'delete' },
+  });
+  expect(warning).toHaveBeenCalledExactlyOnceWith(
+    `[tasks] retracted 181 queued notification(s) for deleted task ${taskId}`
+  );
+  warning.mockRestore();
+  const persisted = f.human.getTask(taskId);
+  const retainedComments = persisted.comments as { text: string }[] | undefined;
+  expect(retainedComments?.map((row) => row.text)).toEqual(expected);
+  const first = f.human.readDeletedTasks() as { nextCursor: string | null };
+  expect(first.nextCursor).not.toBeNull();
+  expect(Buffer.byteLength(JSON.stringify(first))).toBeLessThan(384 * 1024);
+
+  const trash = await f.teams.getDeletedTasks(f.key);
+  expect(trash).toHaveLength(1);
+  expect(trash[0]?.id).toBe(taskId);
+  expect(trash[0]?.comments?.map((row) => row.text)).toEqual(expected);
+  // A direct unpaged task.get would exceed the Host's 1 MiB response cap.
+  expect(await f.teams.getTask(f.key, taskId)).toMatchObject({ id: taskId, status: 'deleted' });
+  const detail = await f.teams.getTask(f.key, taskId);
+  expect(detail?.comments?.map((row) => row.text)).toEqual(expected);
+  expect(vi.mocked(f.backend.invoke).mock.calls.some(
+    ([request]) => request.operation === 'task.get'
+  )).toBe(false);
+  const reads = vi.mocked(f.backend.invoke).mock.calls.filter(
+    ([request]) => request.operation === 'tasks.list'
+  );
+  expect(reads.length).toBeGreaterThan(1);
+  expect(reads[0]?.[0].payload).toEqual({ deleted: true });
+  expect(reads.at(-1)?.[0].payload).toHaveProperty('cursor');
+  // A stale continuation cannot read another revision.
+  await f.teams.restoreTask(f.key, taskId);
+  expect(() => f.human.readDeletedTasks({ cursor: first.nextCursor! })).toThrow();
+  expect(await f.teams.getDeletedTasks(f.key)).toEqual([]);
+  const restored = await f.teams.getTask(f.key, taskId);
+  expect(restored?.comments?.map((row) => row.text)).toEqual(expected);
+}, 90_000);
+
 it.each(['context', 'mutation'] as const)(
   'refuses a held Trash response after the original %s boundary changes',
   async (boundary) => {
@@ -244,6 +304,8 @@ it.each([
   { deleted: 'true' },
   { deleted: {} },
   { deleted: true, root: '/TEST' },
+  { deleted: true, cursor: 'bad-cursor' },
+  { cursor: '1.' + 'a'.repeat(64) },
 ])('rejects any nonfinite Trash query %j before transport', (value) => {
   expect(() =>
     parseBackendOperation({

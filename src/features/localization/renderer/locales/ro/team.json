@@ -1505,13 +1505,29 @@
       "labelPlaceholder": "ex., Revizuire zilnică de cod, Teste nocturne...",
       "maxBudgetUsd": "Buget maxim (USD)",
       "maxTurns": "Tururi maxime",
+      "executionLimitsNote": "Aceste limite se aplică doar rulărilor independente, o singură dată. Nu se aplică sarcinilor atribuite unei echipe care rulează deja.",
       "noLimit": "Fără limită",
       "noMatches": "Nicio echipă nu corespunde căutării tale.",
       "noTeams": "Nicio echipă disponibilă. Creează mai întâi o echipă.",
       "searchTeams": "Caută echipe...",
       "selectTeam": "Selectează o echipă...",
       "team": "Echipă",
-      "title": "Programare"
+      "title": "Programare",
+      "execution": "Execuție",
+      "legacyNotice": "Programare unică existentă: salvarea nu îi schimbă comportamentul.",
+      "upgradeSmart": "Treci la programare inteligentă",
+      "oneAgent": "Un agent",
+      "wholeTeam": "Întreaga echipă",
+      "target": "Destinatar când echipa rulează",
+      "leadDefault": "Liderul echipei (implicit)",
+      "agentDescription": "Dacă echipa este oprită, pornește un agent separat; dacă rulează, atribuie o sarcină.",
+      "teamDescription": "Dacă echipa este oprită, o pornește; dacă rulează, atribuie o sarcină liderului. Folosește setările salvate.",
+      "teamPathMissing": "Salvează folderul proiectului echipei înainte de a programa pornirea.",
+      "taskFirstAgentDescription": "Membrul ales primește o sarcină pe tablă după pornirea în siguranță a echipei, dacă este necesar. Agenții ocupați nu sunt întrerupți.",
+      "taskFirstTeamDescription": "Liderul primește o sarcină de coordonare după pornirea în siguranță a echipei, dacă este necesar. Lucrul în curs nu este întrerupt.",
+      "taskFirstTarget": "Atribuie către",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "Am verificat promptul vechi și am separat instrucțiunile permanente. Păstrează textul vechi, dar nu îl executa conform programării."
     },
     "title": {
       "createSchedule": "Creează programare",
@@ -2086,7 +2102,8 @@
       "stillRunning": "Sarcina încă rulează...",
       "loadingLogs": "Se încarcă jurnalele...",
       "errors": "Erori",
-      "close": "Închide"
+      "close": "Închide",
+      "openTask": "Deschide sarcina"
     },
     "cron": {
       "expression": "Expresie cron",
@@ -2124,7 +2141,9 @@
     "status": {
       "active": "Activă",
       "paused": "Întreruptă",
-      "disabled": "Dezactivată"
+      "disabled": "Dezactivată",
+      "hostUnsupported": "Programarea Host nu este disponibilă",
+      "saved": "Salvat"
     },
     "runStatus": {
       "pending": "În așteptare",
@@ -2134,7 +2153,9 @@
       "completed": "Finalizată",
       "failed": "Eșuată",
       "interrupted": "Întreruptă",
-      "cancelled": "Anulată"
+      "cancelled": "Anulată",
+      "dispatched": "Trimis",
+      "skipped": "Omis"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2444,10 @@
       "hiddenCount": "{{count}} ascunse",
       "trash": "Coș de gunoi",
       "gridView": "Vizualizare grilă",
-      "columnsView": "Vizualizare coloane"
+      "columnsView": "Vizualizare coloane",
+      "tableView": "Vizualizare tabel",
+      "configureColumns": "Alege coloanele",
+      "resizeColumn": "Redimensionează {{column}}"
     },
     "trash": {
       "title": "Coș de gunoi",

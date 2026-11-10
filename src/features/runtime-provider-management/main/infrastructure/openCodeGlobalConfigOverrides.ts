@@ -9,6 +9,24 @@ import { LocalProviderOperationError } from './OpenCodeLocalProviderSupport';
 
 import type { RuntimeLocalProviderScopeDto } from '../../contracts';
 
+export function describeOpenCodeConfigReadFailure(
+  error: unknown,
+  scope: 'global' | 'project',
+  action: 'read' | 'inspect' = 'read'
+): string {
+  const code =
+    error && typeof error === 'object' ? (error as { code?: unknown }).code : undefined;
+  const target = scope === 'project' ? 'project OpenCode config' : 'global OpenCode config';
+  if (code === 'EPERM' || code === 'EACCES') {
+    const remedy =
+      scope === 'project'
+        ? 'Grant Agent Teams access to the project folder in system privacy settings, or choose another project.'
+        : 'Check permissions for the global OpenCode config directory.';
+    return `Cannot ${action} the ${target}: access denied (${code}). ${remedy}`;
+  }
+  return `Could not ${action} the ${target}.`;
+}
+
 export const OPENCODE_GLOBAL_CONFIG_FILENAMES = ['opencode.json', 'opencode.jsonc'] as const;
 export const OPENCODE_PROJECT_CONFIG_CANDIDATES = [
   'opencode.json',
@@ -221,10 +239,13 @@ async function readOpenCodeGlobalConfigTarget(
     const homeStat = await fs.stat(homePath);
     if (!homeStat.isDirectory()) throw new Error('not-directory');
     realHomePath = await fs.realpath(homePath);
-  } catch {
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
     throw new LocalProviderOperationError(
       'config-invalid',
-      'The user home directory is not available for the global OpenCode config.'
+      code === 'EPERM' || code === 'EACCES'
+        ? `Cannot inspect the user home directory for the global OpenCode config: access denied (${code}). Check permissions for the user home directory.`
+        : 'The user home directory is not available for the global OpenCode config.'
     );
   }
 
@@ -256,7 +277,7 @@ async function readOpenCodeGlobalConfigTarget(
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         throw new LocalProviderOperationError(
           'config-invalid',
-          'Could not inspect the global OpenCode config directory.'
+          describeOpenCodeConfigReadFailure(error, 'global', 'inspect')
         );
       }
       if (!ensureDirectory) {
@@ -297,7 +318,7 @@ async function readOpenCodeGlobalConfigTarget(
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         throw new LocalProviderOperationError(
           'config-invalid',
-          'Could not inspect the global OpenCode config.'
+          describeOpenCodeConfigReadFailure(error, 'global', 'inspect')
         );
       }
     }
@@ -333,10 +354,13 @@ async function readOpenCodeProjectConfigTarget(
     const stat = await fs.stat(projectPath);
     if (!stat.isDirectory()) throw new Error('not-directory');
     realProjectPath = await fs.realpath(projectPath);
-  } catch {
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
     throw new LocalProviderOperationError(
-      'project-required',
-      'The selected project directory is not available.'
+      code === 'EPERM' || code === 'EACCES' ? 'config-invalid' : 'project-required',
+      code === 'EPERM' || code === 'EACCES'
+        ? describeOpenCodeConfigReadFailure(error, 'project', 'inspect')
+        : 'The selected project directory is not available.'
     );
   }
 
@@ -366,7 +390,7 @@ async function readOpenCodeProjectConfigTarget(
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         throw new LocalProviderOperationError(
           'config-invalid',
-          'Could not inspect the OpenCode project config.'
+          describeOpenCodeConfigReadFailure(error, 'project', 'inspect')
         );
       }
     }

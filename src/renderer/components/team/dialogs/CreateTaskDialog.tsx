@@ -196,7 +196,8 @@ export const CreateTaskDialog = ({
   );
 
   const requiresOwner = defaultStartImmediately === true;
-  const canSubmit = subject.trim().length > 0 && !submitting && (!requiresOwner || !!owner);
+  const ownerUnavailable = Boolean(owner && !members.some((candidate) => candidate.name === owner));
+  const canSubmit = subject.trim().length > 0 && !submitting && !ownerUnavailable && (!requiresOwner || !!owner);
 
   // Only show non-internal, non-deleted tasks as candidates for blocking
   const availableTasks = tasks.filter(
@@ -297,6 +298,7 @@ export const CreateTaskDialog = ({
             : t('tasks.createTask.selectMemberOptional')
         }
         allowUnassigned={!requiresOwner}
+        unavailableLabel={t('messages.manualQueue.recipientUnavailable')}
       />
     </div>
   );

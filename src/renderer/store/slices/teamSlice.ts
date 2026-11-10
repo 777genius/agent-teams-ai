@@ -189,6 +189,7 @@ import {
   collectTeamScopedVisibleLoadingResets,
   teamProvisioningAttemptTracker,
 } from '../team/teamScopedStateCleanup';
+import { preserveReliableTaskBoardSnapshot } from '../team/teamSnapshotReadFallback';
 import {
   structurallySharePlainValue,
   structurallyShareTeamSnapshot,
@@ -318,7 +319,6 @@ export {
 } from '../team/teamResolvedMembers';
 
 const logger = createLogger('teamSlice');
-
 const TEAM_GET_DATA_TIMEOUT_MS = 30_000;
 const TEAM_FETCH_TIMEOUT_MS = 90_000;
 const MEMBER_SPAWN_STATUSES_IPC_RETRY_BACKOFF_MS = 5_000;
@@ -399,7 +399,6 @@ function doesRuntimeFreshnessTimestampExtendVisible(
 ): boolean {
   if (!visibleTimestamp) return true;
   if (!cachedTimestamp) return false;
-
   const visibleMs = parseRuntimeFreshnessTimestampMs(visibleTimestamp);
   const cachedMs = parseRuntimeFreshnessTimestampMs(cachedTimestamp);
   if (visibleMs === null || cachedMs === null) {
@@ -1095,7 +1094,6 @@ function recordTaskEndTransitions(
     const eventKey = `${teamName}:${task.id}:completed`;
     if (reportedTaskEndKeys.has(eventKey)) continue;
     reportedTaskEndKeys.add(eventKey);
-
     const duration = calculateTaskImplementationDuration(task);
     recordTaskEnd({
       result: 'completed',
@@ -2985,16 +2983,17 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         }
 
         const previousForProjection = selectTeamDataForName(state, teamName) ?? previousData;
+        const reliableData = preserveReliableTaskBoardSnapshot(previousForProjection, data);
         const projectedTeamData = previousForProjection
           ? {
-              ...data,
+              ...reliableData,
               tasks: preserveKnownTaskChangePresence(
                 teamName,
                 previousForProjection.tasks,
-                data.tasks
+                reliableData.tasks
               ),
             }
-          : data;
+          : reliableData;
         const nextTeamData = structurallyShareTeamSnapshot(
           previousForProjection,
           projectedTeamData
@@ -3279,12 +3278,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         )
       )
         return;
+      const reliableData = preserveReliableTaskBoardSnapshot(previousData, data);
       const projectedTeamData = previousData
         ? {
-            ...data,
-            tasks: preserveKnownTaskChangePresence(teamName, previousData.tasks, data.tasks),
+            ...reliableData,
+            tasks: preserveKnownTaskChangePresence(teamName, previousData.tasks, reliableData.tasks),
           }
-        : data;
+        : reliableData;
       const nextTeamData = structurallyShareTeamSnapshot(previousData, projectedTeamData);
       let projectedGlobalTaskNotifications: GlobalTaskNotificationParams | null = null;
       const snapshotToken = dataResult.token;
@@ -3351,7 +3351,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       );
       recordLastResolvedTeamDataRefresh(teamName);
       const invalidationState = previousData
-        ? collectTaskChangeInvalidationState(teamName, previousData.tasks, data.tasks)
+        ? collectTaskChangeInvalidationState(teamName, previousData.tasks, nextTeamData.tasks)
         : { cacheKeys: [], taskIds: [] };
       if (invalidationState.cacheKeys.length > 0) {
         get().invalidateTaskChangePresence(invalidationState.cacheKeys);

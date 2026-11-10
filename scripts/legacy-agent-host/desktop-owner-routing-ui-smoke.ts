@@ -3,11 +3,12 @@ import { spawn, execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
 import { lstat, mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { digest, fileDigest } from './desktop-backend-fixture.ts';
+import { captureDesktopOwnerRoutingProduct } from './desktop-owner-routing-product-census.ts';
 import {
   assertOwnedCdpListener,
   command,
@@ -46,57 +47,6 @@ export interface DesktopOwnerRoutingContinuation {
 const teamA = 'test-desktop-backend';
 const teamB = 'test-owner-routing-b';
 const pause = () => new Promise<void>((done) => setTimeout(done, 100));
-
-/** TEST product bytes only; process leases are qualified separately by the epoch cleanup. */
-export async function captureDesktopOwnerRoutingProduct(source: string, destination: string) {
-  await mkdir(destination, { mode: 0o700 });
-  const files: { path: string; sha256: string; sizeBytes: number }[] = [];
-  let entries = 0;
-  const walk = async (directory: string): Promise<void> => {
-    const authority = /^teams\/[A-Za-z0-9][A-Za-z0-9_-]{0,127}\/\.host-owner$/.test(
-      directory.slice(source.length + 1)
-    );
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
-      assert.ok(++entries <= 2048, 'bounded offline owner product census');
-      assert.ok(!entry.isSymbolicLink());
-      if (
-        authority &&
-        /^authority\.lock(?:\.candidate-[1-9]\d*-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})?$/.test(
-          entry.name
-        )
-      ) {
-        assert.ok(entry.isFile(), 'original authority lock is a regular file');
-        continue;
-      }
-      if (
-        authority &&
-        /^authority\.lock-transition-v2(?:\.candidate-[1-9]\d*-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})?$/.test(
-          entry.name
-        )
-      ) {
-        assert.ok(entry.isDirectory(), 'original authority gate is a directory');
-        continue;
-      }
-      const path = join(directory, entry.name);
-      assert.ok(path.startsWith(source + '/'));
-      if (entry.isDirectory()) {
-        await walk(path);
-        continue;
-      }
-      if (!entry.isFile() || entry.name === '.legacy-agent-host-writer.lock') continue;
-      const relative = path.slice(source.length + 1);
-      const bytes = await readFile(path);
-      assert.ok(bytes.length <= 1024 * 1024);
-      const target = join(destination, relative);
-      await mkdir(dirname(target), { recursive: true, mode: 0o700 });
-      await writeFile(target, bytes, { flag: 'wx', mode: 0o600 });
-      files.push({ path: relative, sha256: digest(bytes), sizeBytes: bytes.length });
-    }
-  };
-  await walk(source);
-  files.sort((a, b) => a.path.localeCompare(b.path));
-  return files;
-}
 
 /** Three finite cold epochs after the original Taskboard epoch has fully cleaned up. */
 export async function runDesktopOwnerRoutingContinuation(
@@ -526,34 +476,34 @@ export async function runDesktopOwnerRoutingContinuation(
           assert.deepEqual(bAfter.files, bBefore.files, 'new original A mutation cannot affect B');
           const aBeforeBCreate = await snapshot('default-b-before-b-create-a', fixture.root);
           await openOriginalCreateForm(cdp, ui, join(fixture.root, 'workspace'), teamB);
-          await ui.scrollTo('[role="dialog"] #launch-team', 'original save-only selection');
+          await ui.scrollTo('[data-testid="create-team-page"] #launch-team', 'original save-only selection');
           assert.equal(
             await cdp.evaluate(
-              `document.querySelector('[role="dialog"] #launch-team')?.getAttribute('data-state')`
+              `document.querySelector('[data-testid="create-team-page"] #launch-team')?.getAttribute('data-state')`
             ),
             'checked'
           );
-          await ui.click('[role="dialog"] #launch-team', 'disable original Run after Create');
+          await ui.click('[data-testid="create-team-page"] #launch-team', 'disable original Run after Create');
           await ui.waitRead(
-            `document.querySelector('[role="dialog"] #launch-team')?.getAttribute('data-state')==='unchecked'`,
+            `document.querySelector('[data-testid="create-team-page"] #launch-team')?.getAttribute('data-state')==='unchecked'`,
             'original save-only retained'
           );
-          const provider = '[role="dialog"] button[aria-label*=" provider,"]';
+          const provider = '[data-testid="create-team-page"] button[aria-label*=" provider,"]';
           await ui.scrollTo(provider, 'original Anthropic model selector');
           if (
             !(await cdp.evaluate(
-              `Boolean(document.querySelector('[role="dialog"] [data-testid="team-model-selector-model-option"]'))`
+              `Boolean(document.querySelector('[data-testid="create-team-page"] [data-testid="team-model-selector-model-option"]'))`
             ))
           )
             await ui.click(provider, 'expand original model selector');
           const defaultOption =
-            '[role="dialog"] [data-testid="team-model-selector-model-option"][aria-label^="Default"]';
+            '[data-testid="create-team-page"] [data-testid="team-model-selector-model-option"][aria-label^="Default"]';
           await ui.scrollTo(defaultOption, 'original inherited Default model');
           await ui.click(defaultOption, 'save original Default without native readiness');
-          await ui.scrollTo('[role="dialog"] button', 'original save-only Create', 'Create');
-          await ui.click('[role="dialog"] button', 'original unbound Team Create once', 'Create');
+          await ui.scrollTo('[data-testid="create-team-page"] button', 'original save-only Create', 'Create');
+          await ui.click('[data-testid="create-team-page"] button', 'original unbound Team Create once', 'Create');
           await ui.waitRead(
-            `!document.querySelector('[role="dialog"] #team-name')`,
+            `!document.querySelector('[data-testid="create-team-page"] #team-name')`,
             'original save-only Create completed'
           );
           const directory = join(bRoot, 'hoststore/.host-team-registry/records');

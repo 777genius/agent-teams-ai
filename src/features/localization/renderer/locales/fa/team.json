@@ -1505,13 +1505,29 @@
       "labelPlaceholder": "مثلاً بازبینی روزانه کد، تست‌های شبانه...",
       "maxBudgetUsd": "حداکثر بودجه (USD)",
       "maxTurns": "حداکثر نوبت‌ها",
+      "executionLimitsNote": "این محدودیت‌ها فقط برای اجراهای مستقل و یک‌باره اعمال می‌شوند. برای وظایفی که به تیم در حال اجرا واگذار می‌شوند، اعمال نمی‌شوند.",
       "noLimit": "بدون محدودیت",
       "noMatches": "هیچ تیمی با جستجوی شما منطبق نیست.",
       "noTeams": "هیچ تیمی در دسترس نیست. ابتدا یک تیم ایجاد کنید.",
       "searchTeams": "جستجوی تیم‌ها...",
       "selectTeam": "یک تیم انتخاب کنید...",
       "team": "تیم",
-      "title": "زمان‌بندی"
+      "title": "زمان‌بندی",
+      "execution": "اجرا",
+      "legacyNotice": "زمان‌بندی تک‌مرحله‌ای موجود: ذخیره کردن رفتار قبلی را تغییر نمی‌دهد.",
+      "upgradeSmart": "تغییر به زمان‌بندی هوشمند",
+      "oneAgent": "یک عامل",
+      "wholeTeam": "کل تیم",
+      "target": "مسئول هنگام اجرای تیم",
+      "leadDefault": "سرپرست تیم (پیش‌فرض)",
+      "agentDescription": "اگر تیم خاموش باشد عامل مستقلی را اجرا می‌کند؛ در غیر این صورت وظیفه‌ای واگذار می‌کند.",
+      "teamDescription": "اگر تیم خاموش باشد آن را راه‌اندازی می‌کند؛ در غیر این صورت وظیفه‌ای به سرپرست می‌دهد. از تنظیمات ذخیره‌شده استفاده می‌شود.",
+      "teamPathMissing": "پیش از زمان‌بندی راه‌اندازی، پوشه پروژه تیم را ذخیره کنید.",
+      "taskFirstAgentDescription": "هم‌تیمی انتخاب‌شده پس از راه‌اندازی ایمن تیم در صورت نیاز، یک وظیفه در تابلو دریافت می‌کند. کار عامل‌های مشغول قطع نمی‌شود.",
+      "taskFirstTeamDescription": "رهبر تیم پس از راه‌اندازی ایمن تیم در صورت نیاز، یک وظیفه هماهنگی دریافت می‌کند. کارهای جاری قطع نمی‌شوند.",
+      "taskFirstTarget": "واگذاری به",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "پرامپت قدیمی را بررسی کرده و دستورهای دائمی را جدا کرده‌ام. متن قبلی حفظ شود اما در زمان‌بندی اجرا نشود."
     },
     "title": {
       "createSchedule": "ایجاد زمان‌بندی",
@@ -2086,7 +2102,8 @@
       "stillRunning": "وظیفه هنوز در حال اجرا است...",
       "loadingLogs": "در حال بارگذاری گزارش‌ها...",
       "errors": "خطاها",
-      "close": "بستن"
+      "close": "بستن",
+      "openTask": "باز کردن وظیفه"
     },
     "cron": {
       "expression": "عبارت Cron",
@@ -2124,7 +2141,9 @@
     "status": {
       "active": "فعال",
       "paused": "متوقف‌شده",
-      "disabled": "غیرفعال"
+      "disabled": "غیرفعال",
+      "hostUnsupported": "زمان‌بندی Host در دسترس نیست",
+      "saved": "ذخیره‌شده"
     },
     "runStatus": {
       "pending": "در انتظار",
@@ -2134,7 +2153,9 @@
       "completed": "تکمیل‌شده",
       "failed": "ناموفق",
       "interrupted": "قطع‌شده",
-      "cancelled": "لغوشده"
+      "cancelled": "لغوشده",
+      "dispatched": "ارسال شد",
+      "skipped": "رد شد"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2444,10 @@
       "hiddenCount": "{{count}} پنهان",
       "trash": "سطل زباله",
       "gridView": "نمای شبکه‌ای",
-      "columnsView": "نمای ستونی"
+      "columnsView": "نمای ستونی",
+      "tableView": "نمای جدول",
+      "configureColumns": "انتخاب ستون‌ها",
+      "resizeColumn": "تغییر عرض {{column}}"
     },
     "trash": {
       "title": "سطل زباله",

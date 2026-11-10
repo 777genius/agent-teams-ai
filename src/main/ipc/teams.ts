@@ -19,6 +19,7 @@ import {
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
+import { TeamDraftPreflightCollisionError } from '@main/services/team/createDraftTeamConfig';
 import { OpenCodeRetainedPrimaryRestartError } from '@main/services/team/provisioning/OpenCodeRetainedPrimaryRestartError';
 import {
   getTeamDataWorkerClient,
@@ -27,6 +28,7 @@ import {
 import {
   parseCreateTeamRequest,
   TeamRequestValidationError,
+  validateBootstrapOnlyLaunchRequest,
 } from '@main/services/team/TeamRequestValidation';
 import { getAppIconPath } from '@main/utils/appIcon';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -1042,6 +1044,11 @@ async function wrapTeamHandler<T>(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error(`[teams:${operation}] ${message}`);
+    if (operation === 'createConfig' && error instanceof TeamDraftPreflightCollisionError) {
+      // Existing on-disk team/tasks detected before this Create allocated anything.
+      // Post-allocation errors, transport failures, and uncertain side effects remain held.
+      return teamCreationFailureResult(new TeamCreationRefusal('conflict', 'not-dispatched'), message);
+    }
     return teamReadFailureResult(error);
   }
 }
@@ -2184,6 +2191,8 @@ async function handleLaunchTeamUnlocked(
   if (payload.prompt !== undefined && typeof payload.prompt !== 'string') {
     return { success: false, error: 'prompt must be a string' };
   }
+  const bootstrapError = validateBootstrapOnlyLaunchRequest(payload);
+  if (bootstrapError) return { success: false, error: bootstrapError };
 
   if (payload.model !== undefined && typeof payload.model !== 'string') {
     return { success: false, error: 'model must be a string' };
@@ -2224,6 +2233,7 @@ async function handleLaunchTeamUnlocked(
     if (meta) isDraft = true;
   }
 
+  if (isDraft && payload.bootstrapOnly) return { success: false, error: 'Finish team setup first' };
   if (isDraft) {
     const savedRequest = await getTeamDataService().getSavedRequest(tn);
     if (!savedRequest) {
@@ -2409,6 +2419,7 @@ async function handleLaunchTeamUnlocked(
           cwd,
           prompt:
             typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
+          bootstrapOnly: payload.bootstrapOnly === true ? true : undefined,
           providerId: launchProviderId,
           providerBackendId: launchProviderBackendValidation.value,
           model: rawLaunchModel,
@@ -2736,7 +2747,10 @@ async function handleSendMessage(
         : leadName !== null && memberName === leadName;
     const actionMode = payload.actionMode ?? 'do';
 
-    const recipientProviderId = await messaging.resolveRuntimeRecipientProviderId(tn, memberName);
+    const recipientProviderId = await messaging.resolveRuntimeRecipientProviderIdForUserSend(
+      tn,
+      memberName
+    );
     const isOpenCodeRecipient = recipientProviderId === 'opencode';
     if (validatedAttachments?.length) {
       const nativeAttachments = selectNativeMessageAttachments(

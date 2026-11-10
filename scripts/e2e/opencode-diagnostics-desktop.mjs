@@ -20,7 +20,14 @@ import {
 } from './opencode-diagnostics/packaged.mjs';
 import { verifyPackaged } from './opencode-diagnostics/packaged-verify.mjs';
 import {
+  prepareRealRuntimeFixture,
+  realRuntimeEnvironment,
+  verifyColdDashboardConnectedCount,
+  verifyRealRuntimeElectron,
+} from './opencode-diagnostics/real-runtime.mjs';
+import {
   catalogScenarios,
+  enterProviderSettings,
   verifyCatalog,
   waitForReadyCatalog,
 } from './opencode-diagnostics/catalog.mjs';
@@ -201,6 +208,27 @@ if (mode === 'seed-packaged') {
   };
   await preparePackagedProfile(data);
   data.projectSentinel = await prepareExistingProject(data);
+  await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data, null, 2));
+  console.log(dir);
+} else if (mode === 'seed-real') {
+  assert(root === undefined, 'Seed real provider test only in a fresh sandbox');
+  // The test-only screenshot and sanitized receipt must live under runner.temp,
+  // not os.tmpdir() (which can be /tmp on Linux cloud runners).
+  const tempParent = process.env.RUNNER_TEMP && path.isAbsolute(process.env.RUNNER_TEMP)
+    ? process.env.RUNNER_TEMP
+    : os.tmpdir();
+  const dir = await realpath(await mkdtemp(path.join(tempParent, 'opencode-diagnostics-e2e-')));
+  const data = {
+    root: dir,
+    home: path.join(dir, 'TEST-home'),
+    userData: path.join(dir, 'user-data'),
+    bin: path.join(dir, 'bin'),
+    temp: path.join(dir, 'tmp'),
+    node: process.execPath,
+    platform: process.platform,
+  };
+  await prepareRealRuntimeFixture(data, repo);
+  await writeFile(path.join(dir, 'scenario'), 'real-connected');
   await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data, null, 2));
   console.log(dir);
 } else if (mode === 'seed') {
@@ -405,6 +433,7 @@ if (mode === 'seed-packaged') {
   const data = await manifest();
   assert(!data.launcher, 'Sandbox already started; seed a new sandbox');
   const env = data.packaged ? await preparePackagedProfile(data) : isolatedEnvironment(data);
+  if (data.realRuntime) Object.assign(env, realRuntimeEnvironment(data));
   if (data.packaged) {
     assert.equal(process.platform, 'win32');
     assert.deepEqual(
@@ -579,11 +608,41 @@ if (mode === 'seed-packaged') {
           'JSON.stringify({ready:document.readyState,resources:performance.getEntriesByType("resource").slice(-6).map(r=>({name:r.name,duration:r.duration})),scripts:[...document.scripts].map(s=>s.src)})'
         )
       );
+      if (data.realRuntime) {
+        // A CDP endpoint can exist before React mounts. Do not time a blank renderer.
+        const mounted = await evaluate(
+          "Boolean(document.querySelector('[data-testid=dashboard-provider-summary]')?.getClientRects().length)"
+        );
+        console.log('E2E_DASHBOARD_MOUNTED=' + mounted);
+      }
     } else if (data.packaged) {
       await verifyPackaged({ root, data, evaluate, send, preloadScripts, scriptMetadata });
     } else {
       const scenario = (await readFile(path.join(root, 'scenario'), 'utf8')).trim();
-      if (scenario === cleanupScenario) {
+      // A real-runtime cold count must be proven before Settings can seed the cache.
+      const coldDashboard = scenario === 'real-connected'
+        ? await verifyColdDashboardConnectedCount({ root, evaluate, send })
+        : null;
+      // Startup cleanup also needs the mounted Providers page: its Manage
+      // control no longer lives on the passive Dashboard summary.
+      try {
+        await enterProviderSettings(evaluate, send);
+      } catch (navigationError) {
+        // Preserve an actual screenshot if navigation cannot become visible.
+        try {
+          const screenshot = await send('Page.captureScreenshot');
+          await writeFile(
+            path.join(root, `navigation-failure-${scenario}.png`),
+            Buffer.from(screenshot.data, 'base64')
+          );
+        } catch {
+          /* Keep the original navigation failure. */
+        }
+        throw navigationError;
+      }
+      if (scenario === 'real-connected') {
+        await verifyRealRuntimeElectron({ root, data, evaluate, send, coldDashboard });
+      } else if (scenario === cleanupScenario) {
         await verifyStartupCleanup({ root, evaluate, send });
       } else if (catalogScenarios.includes(scenario)) {
         await verifyCatalog({ root, scenario, evaluate, send });
@@ -730,5 +789,5 @@ if (mode === 'seed-packaged') {
   }
 } else
   throw new Error(
-    'Usage: seed [startup-cleanup] | seed-packaged --packaged-executable <exe> [--runtime-setup app-install] | start <sandbox> | inspect <sandbox> | verify <sandbox> | stop <sandbox>'
+    'Usage: seed [startup-cleanup] | seed-real | seed-packaged --packaged-executable <exe> [--runtime-setup app-install] | start <sandbox> | inspect <sandbox> | verify <sandbox> | stop <sandbox>'
   );
