@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
@@ -19,6 +20,7 @@ interface CreateTeamSurfaceProps {
   backDisabled?: boolean;
   children: ReactNode;
   headerActions?: ReactNode;
+  footer?: ReactNode;
   overlay: ReactNode;
 }
 
@@ -35,6 +37,7 @@ export const CreateTeamSurface = ({
   backDisabled = false,
   children,
   headerActions,
+  footer,
   overlay,
 }: CreateTeamSurfaceProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
@@ -67,8 +70,13 @@ export const CreateTeamSurface = ({
             <div className="ml-auto w-56 max-w-[40%] shrink-0">{headerActions}</div>
           ) : null}
         </header>
-        <div className="mx-auto w-full min-w-0 max-w-[64rem] space-y-4 px-4 pb-6 pt-4">
+        <div className="mx-auto w-full min-w-0 max-w-[64rem] shrink-0 space-y-4 px-4 pb-6 pt-4">
           {children}
+        </div>
+        <div className="grow border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)]">
+          <DialogFooter className="mx-auto w-full min-w-0 max-w-[64rem] px-4 pb-5 pt-4 sm:justify-between">
+            {footer}
+          </DialogFooter>
         </div>
         {overlay}
       </section>
@@ -88,6 +96,11 @@ export const CreateTeamSurface = ({
           ) : null}
         </div>
         {children}
+        {footer ? (
+          <DialogFooter className="-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between">
+            {footer}
+          </DialogFooter>
+        ) : null}
       </DialogContent>
       {overlay}
     </Dialog>

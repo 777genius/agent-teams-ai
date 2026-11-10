@@ -34,7 +34,6 @@ import { TeamRosterEditorSection } from '@renderer/components/team/members/TeamR
 import { AutoResizeTextarea } from '@renderer/components/ui/auto-resize-textarea';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
-import { DialogFooter } from '@renderer/components/ui/dialog';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
@@ -2382,6 +2381,230 @@ export const CreateTeamDialog = ({
             (presentation === 'page' && onBack ? onBack : onClose)();
           }}
           overlay={providerSettingsOverlay}
+          footer={
+            <>
+              <div className="min-w-0">
+                {canCreate && launchTeam ? (
+                  <CreateTeamProviderStatusStrip
+                    projectPath={effectiveCwd}
+                    disabled={isSubmitting}
+                    cliStatus={effectiveCliStatus}
+                    providerStatusOverride={effectiveCwd ? projectScopedOpenCodeStatus : null}
+                    sourceCliStatus={loadingCliStatus}
+                    cliStatusLoading={cliStatusLoading}
+                    cliProviderStatusLoading={cliProviderStatusLoading}
+                    multimodelEnabled={multimodelEnabled}
+                    codexSnapshotPending={codexSnapshotPending}
+                    openCodePreparationEvidence={openCodePreparationEvidence}
+                    providerIds={selectedMemberProviders}
+                    className="mb-2"
+                    label={t('create.prepare.selectedProvidersLabel')}
+                    layout="stacked"
+                    readyStatusText={t('create.prepare.readyStatus')}
+                    forceLoadingProviderIds={optionalPreflight.getPendingProviderPreflightIds(
+                      prepareState,
+                      selectedMemberProviders,
+                      prepareChecks
+                    )}
+                    showReadyProviders
+                  />
+                ) : null}
+                {canCreate && launchTeam && presentedPrepareState === 'loading' ? (
+                  <>
+                    <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+                      <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      <div>
+                        <span>
+                          {effectivePrepare.message ?? t('create.prepare.preparingEnvironment')}
+                        </span>
+                        <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
+                          {t('launch.prepare.preflight', {
+                            action: t('launch.prepare.action.launch'),
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <ProvisioningProviderStatusList
+                      checks={prepareChecks}
+                      className="mt-2"
+                      onOpenProviderSettings={(providerId) =>
+                        setProviderSettingsProviderId(providerId)
+                      }
+                    />
+                  </>
+                ) : null}
+                {canCreate && launchTeam ? (
+                  <TeammateRuntimeCompatibilityNotice
+                    analysis={teammateRuntimeCompatibility}
+                    showMemberErrors
+                  />
+                ) : null}
+                {canCreate &&
+                launchTeam &&
+                presentedPrepareState === 'ready' &&
+                !teammateRuntimeCompatibility.blocksSubmission &&
+                !launchAuthorityBlocked ? (
+                  <div>
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="size-3.5 shrink-0" />
+                      <span>
+                        {prepareChecks.some((check) => check.status === 'notes') ||
+                        prepareWarnings.length > 0
+                          ? t('create.prepare.selectedProvidersReadyWithNotes')
+                          : t('create.prepare.selectedProvidersReady')}
+                      </span>
+                    </div>
+                    {effectivePrepare.message ? (
+                      <p className="mt-0.5 pl-5 text-[11px] text-[var(--color-text-muted)]">
+                        {effectivePrepare.message}
+                      </p>
+                    ) : null}
+                    <ProvisioningProviderStatusList
+                      checks={prepareChecks}
+                      className="mt-1"
+                      onOpenProviderSettings={(providerId) =>
+                        setProviderSettingsProviderId(providerId)
+                      }
+                    />
+                    {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
+                      <div className="mt-0.5 space-y-0.5 pl-5">
+                        {prepareWarnings.map((warning, index) => (
+                          <p
+                            key={`${index}:${warning}`}
+                            className="text-[11px] text-sky-700 dark:text-sky-300"
+                          >
+                            {warning}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+                {canCreate &&
+                launchTeam &&
+                presentedPrepareState !== 'idle' &&
+                presentedPrepareState !== 'loading' &&
+                launchAuthorityBlocked ? (
+                  <ProviderLaunchAuthorityNotice
+                    id={CREATE_LAUNCH_AUTHORITY_BLOCKER_ID}
+                    action={t('launch.prepare.action.launch')}
+                    blockers={launchAuthorityBlockers}
+                    onOpenProviderSettings={setProviderSettingsProviderId}
+                  />
+                ) : null}
+                {canCreate && launchTeam && presentedPrepareState === 'failed' ? (
+                  <div className="text-xs">
+                    <div className="flex items-start gap-2 text-red-700 dark:text-red-300">
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium">
+                          {t('launch.prepare.blocked', {
+                            action: t('launch.prepare.action.launch'),
+                          })}
+                        </p>
+                        <p className="mt-0.5 text-red-700/80 dark:text-red-300/80">
+                          {effectivePrepare.message ?? t('launch.prepare.failed')}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
+                          {t('launch.prepare.preflight', {
+                            action: t('launch.prepare.action.launch'),
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    {!shouldHideProvisioningProviderStatusList(prepareChecks, prepareMessage) ? (
+                      <ProvisioningProviderStatusList
+                        checks={prepareChecks}
+                        className="mt-2"
+                        suppressDetailsMatching={prepareMessage}
+                        onOpenProviderSettings={(providerId) =>
+                          setProviderSettingsProviderId(providerId)
+                        }
+                      />
+                    ) : null}
+                    {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
+                      <div className="mt-1 space-y-0.5 pl-6">
+                        {prepareWarnings.map((warning, index) => (
+                          <p
+                            key={`${index}:${warning}`}
+                            className="text-[11px]"
+                            style={{ color: 'var(--warning-text)' }}
+                          >
+                            {warning}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                    <p className="mt-1 pl-6 text-[11px] text-[var(--color-text-muted)]">
+                      {getProvisioningFailureHint(effectivePrepare.message, prepareChecks, t)}
+                    </p>
+                    {experimentalLocalModelOverrideAvailable ? (
+                      <ExperimentalLocalModelOverrideCheckbox
+                        id="create-experimental-local-model"
+                        checked={allowExperimentalLocalModels}
+                        onCheckedChange={setAllowExperimentalLocalModels}
+                        label={t('launch.prepare.experimentalLocalModelOverride')}
+                        hint={t('launch.prepare.experimentalLocalModelOverrideHint')}
+                      />
+                    ) : null}
+                    {showCodexReconnectPrompt ? (
+                      <div className="pl-6">
+                        <CodexReconnectPrompt
+                          authUrl={codexAccount.snapshot?.login.authUrl ?? null}
+                          userCode={codexAccount.snapshot?.login.userCode ?? null}
+                          reconnectBusy={codexAccount.loading}
+                          onReconnect={() => handleCodexReconnect('browser')}
+                          onDeviceCodeReconnect={() => handleCodexReconnect('device_code')}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                <WorkspaceTrustLaunchNotice status={workspaceTrustStatus} />
+                <div className="flex items-center gap-2">
+                  {canOpenExistingTeam ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        onOpenTeam(request.teamName);
+                        onClose();
+                      }}
+                    >
+                      {t('create.actions.openExisting')}
+                    </Button>
+                  ) : null}
+                  <Button
+                    size="lg"
+                    className="min-w-32 text-sm"
+                    aria-describedby={
+                      launchAuthorityBlocked &&
+                      presentedPrepareState !== 'idle' &&
+                      presentedPrepareState !== 'loading'
+                        ? CREATE_LAUNCH_AUTHORITY_BLOCKER_ID
+                        : undefined
+                    }
+                    disabled={
+                      !canCreate ||
+                      !draftLoaded ||
+                      gatewayBindings.pending ||
+                      isSubmitting ||
+                      (launchTeam && !launchPreflightSelectionReady) ||
+                      (prepareState === 'loading' && !canSkipPreflight()) ||
+                      hasCreateFormErrors ||
+                      prepareBlocksCreate
+                    }
+                    onClick={handleSubmit}
+                  >
+                    {isSubmitting ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
+                    {createActionLabel}
+                  </Button>
+                </div>
+              </div>
+            </>
+          }
           headerActions={
             <CreateTeamTemplatePicker
               form={createTeamDraft}
@@ -2878,228 +3101,6 @@ export const CreateTeamDialog = ({
               {activeError}
             </p>
           ) : null}
-          <DialogFooter className="-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between">
-            <div className="min-w-0">
-              {canCreate && launchTeam ? (
-                <CreateTeamProviderStatusStrip
-                  projectPath={effectiveCwd}
-                  disabled={isSubmitting}
-                  cliStatus={effectiveCliStatus}
-                  providerStatusOverride={effectiveCwd ? projectScopedOpenCodeStatus : null}
-                  sourceCliStatus={loadingCliStatus}
-                  cliStatusLoading={cliStatusLoading}
-                  cliProviderStatusLoading={cliProviderStatusLoading}
-                  multimodelEnabled={multimodelEnabled}
-                  codexSnapshotPending={codexSnapshotPending}
-                  openCodePreparationEvidence={openCodePreparationEvidence}
-                  providerIds={selectedMemberProviders}
-                  className="mb-2"
-                  label={t('create.prepare.selectedProvidersLabel')}
-                  layout="stacked"
-                  readyStatusText={t('create.prepare.readyStatus')}
-                  forceLoadingProviderIds={optionalPreflight.getPendingProviderPreflightIds(
-                    prepareState,
-                    selectedMemberProviders,
-                    prepareChecks
-                  )}
-                  showReadyProviders
-                />
-              ) : null}
-              {canCreate && launchTeam && presentedPrepareState === 'loading' ? (
-                <>
-                  <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
-                    <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    <div>
-                      <span>
-                        {effectivePrepare.message ?? t('create.prepare.preparingEnvironment')}
-                      </span>
-                      <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
-                        {t('launch.prepare.preflight', {
-                          action: t('launch.prepare.action.launch'),
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                  <ProvisioningProviderStatusList
-                    checks={prepareChecks}
-                    className="mt-2"
-                    onOpenProviderSettings={(providerId) =>
-                      setProviderSettingsProviderId(providerId)
-                    }
-                  />
-                </>
-              ) : null}
-              {canCreate && launchTeam ? (
-                <TeammateRuntimeCompatibilityNotice
-                  analysis={teammateRuntimeCompatibility}
-                  showMemberErrors
-                />
-              ) : null}
-              {canCreate &&
-              launchTeam &&
-              presentedPrepareState === 'ready' &&
-              !teammateRuntimeCompatibility.blocksSubmission &&
-              !launchAuthorityBlocked ? (
-                <div>
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 className="size-3.5 shrink-0" />
-                    <span>
-                      {prepareChecks.some((check) => check.status === 'notes') ||
-                      prepareWarnings.length > 0
-                        ? t('create.prepare.selectedProvidersReadyWithNotes')
-                        : t('create.prepare.selectedProvidersReady')}
-                    </span>
-                  </div>
-                  {effectivePrepare.message ? (
-                    <p className="mt-0.5 pl-5 text-[11px] text-[var(--color-text-muted)]">
-                      {effectivePrepare.message}
-                    </p>
-                  ) : null}
-                  <ProvisioningProviderStatusList
-                    checks={prepareChecks}
-                    className="mt-1"
-                    onOpenProviderSettings={(providerId) =>
-                      setProviderSettingsProviderId(providerId)
-                    }
-                  />
-                  {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
-                    <div className="mt-0.5 space-y-0.5 pl-5">
-                      {prepareWarnings.map((warning, index) => (
-                        <p
-                          key={`${index}:${warning}`}
-                          className="text-[11px] text-sky-700 dark:text-sky-300"
-                        >
-                          {warning}
-                        </p>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-              {canCreate &&
-              launchTeam &&
-              presentedPrepareState !== 'idle' &&
-              presentedPrepareState !== 'loading' &&
-              launchAuthorityBlocked ? (
-                <ProviderLaunchAuthorityNotice
-                  id={CREATE_LAUNCH_AUTHORITY_BLOCKER_ID}
-                  action={t('launch.prepare.action.launch')}
-                  blockers={launchAuthorityBlockers}
-                  onOpenProviderSettings={setProviderSettingsProviderId}
-                />
-              ) : null}
-              {canCreate && launchTeam && presentedPrepareState === 'failed' ? (
-                <div className="text-xs">
-                  <div className="flex items-start gap-2 text-red-700 dark:text-red-300">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-medium">
-                        {t('launch.prepare.blocked', {
-                          action: t('launch.prepare.action.launch'),
-                        })}
-                      </p>
-                      <p className="mt-0.5 text-red-700/80 dark:text-red-300/80">
-                        {effectivePrepare.message ?? t('launch.prepare.failed')}
-                      </p>
-                      <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
-                        {t('launch.prepare.preflight', {
-                          action: t('launch.prepare.action.launch'),
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                  {!shouldHideProvisioningProviderStatusList(prepareChecks, prepareMessage) ? (
-                    <ProvisioningProviderStatusList
-                      checks={prepareChecks}
-                      className="mt-2"
-                      suppressDetailsMatching={prepareMessage}
-                      onOpenProviderSettings={(providerId) =>
-                        setProviderSettingsProviderId(providerId)
-                      }
-                    />
-                  ) : null}
-                  {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
-                    <div className="mt-1 space-y-0.5 pl-6">
-                      {prepareWarnings.map((warning, index) => (
-                        <p
-                          key={`${index}:${warning}`}
-                          className="text-[11px]"
-                          style={{ color: 'var(--warning-text)' }}
-                        >
-                          {warning}
-                        </p>
-                      ))}
-                    </div>
-                  ) : null}
-                  <p className="mt-1 pl-6 text-[11px] text-[var(--color-text-muted)]">
-                    {getProvisioningFailureHint(effectivePrepare.message, prepareChecks, t)}
-                  </p>
-                  {experimentalLocalModelOverrideAvailable ? (
-                    <ExperimentalLocalModelOverrideCheckbox
-                      id="create-experimental-local-model"
-                      checked={allowExperimentalLocalModels}
-                      onCheckedChange={setAllowExperimentalLocalModels}
-                      label={t('launch.prepare.experimentalLocalModelOverride')}
-                      hint={t('launch.prepare.experimentalLocalModelOverrideHint')}
-                    />
-                  ) : null}
-                  {showCodexReconnectPrompt ? (
-                    <div className="pl-6">
-                      <CodexReconnectPrompt
-                        authUrl={codexAccount.snapshot?.login.authUrl ?? null}
-                        userCode={codexAccount.snapshot?.login.userCode ?? null}
-                        reconnectBusy={codexAccount.loading}
-                        onReconnect={() => handleCodexReconnect('browser')}
-                        onDeviceCodeReconnect={() => handleCodexReconnect('device_code')}
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-2">
-              <WorkspaceTrustLaunchNotice status={workspaceTrustStatus} />
-              <div className="flex items-center gap-2">
-                {canOpenExistingTeam ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      onOpenTeam(request.teamName);
-                      onClose();
-                    }}
-                  >
-                    {t('create.actions.openExisting')}
-                  </Button>
-                ) : null}
-                <Button
-                  size="lg"
-                  className="min-w-32 text-sm"
-                  aria-describedby={
-                    launchAuthorityBlocked &&
-                    presentedPrepareState !== 'idle' &&
-                    presentedPrepareState !== 'loading'
-                      ? CREATE_LAUNCH_AUTHORITY_BLOCKER_ID
-                      : undefined
-                  }
-                  disabled={
-                    !canCreate ||
-                    !draftLoaded ||
-                    gatewayBindings.pending ||
-                    isSubmitting ||
-                    (launchTeam && !launchPreflightSelectionReady) ||
-                    (prepareState === 'loading' && !canSkipPreflight()) ||
-                    hasCreateFormErrors ||
-                    prepareBlocksCreate
-                  }
-                  onClick={handleSubmit}
-                >
-                  {isSubmitting ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
-                  {createActionLabel}
-                </Button>
-              </div>
-            </div>
-          </DialogFooter>
         </CreateTeamSurface>
       </OpenCodeSourceDirectoryProvider>
     </CreateTeamPageActivityContext.Provider>

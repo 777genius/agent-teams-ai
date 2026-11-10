@@ -753,7 +753,7 @@ describe('runProviderPrepareDiagnostics', () => {
     expect(prepareProvisioning).toHaveBeenCalledTimes(2);
   });
 
-  it('treats provider-level OpenCode busy after compatibility as launch-ready', async () => {
+  it('treats provider-level OpenCode busy after compatibility as deferred notes', async () => {
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
@@ -791,19 +791,18 @@ describe('runProviderPrepareDiagnostics', () => {
       prepareProvisioning,
     });
 
-    expect(result.status).toBe('ready');
+    expect(result.status).toBe('notes');
     expect(result.details).toEqual([
-      'kimi-k2.6 - available for launch',
-      'google/gemma-4-26b-a4b-it - available for launch',
+      'kimi-k2.6 - verification deferred - OpenCode session is busy; retry when idle.',
+      'google/gemma-4-26b-a4b-it - verification deferred - OpenCode session is busy; retry when idle.',
     ]);
-    expect(result.warnings).toEqual([]);
-    expect(result.details.join('\n')).not.toContain(
-      'verification deferred - OpenCode session is busy'
-    );
+    expect(result.warnings).toEqual(result.details);
+    expect(buildReusableProviderPrepareModelResults(result.modelResultsById)).toEqual({});
+    expect(result.details.join('\n')).not.toContain('available for launch');
     expect(prepareProvisioning).toHaveBeenCalledTimes(2);
   });
 
-  it('treats provider-level OpenCode busy after compatibility as launch-ready for one selected model', async () => {
+  it('treats provider-level OpenCode busy after compatibility as deferred notes for one selected model', async () => {
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
@@ -841,9 +840,10 @@ describe('runProviderPrepareDiagnostics', () => {
       prepareProvisioning,
     });
 
-    expect(result.status).toBe('ready');
-    expect(result.details).toEqual(['kimi-k2.6 - available for launch']);
-    expect(result.warnings).toEqual([]);
+    expect(result.status).toBe('notes');
+    expect(result.details).toEqual(['kimi-k2.6 - verification deferred - OpenCode session is busy; retry when idle.']);
+    expect(result.warnings).toEqual(result.details);
+    expect(buildReusableProviderPrepareModelResults(result.modelResultsById)).toEqual({});
     expect(prepareProvisioning).toHaveBeenCalledTimes(2);
   });
 

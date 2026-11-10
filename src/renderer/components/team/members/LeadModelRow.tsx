@@ -194,6 +194,7 @@ export const LeadModelRow = ({
       isLight={isLight}
       layout={isFlatRoster ? 'flat' : 'lead'}
       dataRole="lead-row"
+      expanded={!runtimeSelectionUnresolved && modelExpanded}
     >
       <div className="min-w-0">
         <RosterParticipantIdentity avatarSrc={agentAvatarUrl('team-lead', 32)}>
@@ -286,7 +287,7 @@ export const LeadModelRow = ({
         </div>
       ) : null}
       {!runtimeSelectionUnresolved && modelExpanded ? (
-        <div className="space-y-2 md:col-span-3">
+        <div className={cn('col-span-full min-w-0 space-y-2', isFlatRoster ? '-mx-1.5' : 'mx-0.5')}>
           <TeamModelSelector
             providerId={providerId}
             onProviderChange={onProviderChange}

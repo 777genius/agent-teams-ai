@@ -613,6 +613,19 @@ describe('optional provider preflight skip', () => {
       expect(prepareProvisioning).toHaveBeenCalledTimes(2);
     }
   );
+  it('rejoins an active selection after switching away and back without duplicate probes', async () => {
+    const fence = createProviderSubmissionFence();
+    const finishes: ((value: TeamProvisioningPrepareResult) => void)[] = [];
+    const prepareProvisioning = vi.fn(() => new Promise<TeamProvisioningPrepareResult>((resolve) => finishes.push(resolve)));
+    const input = { cwd: '/tmp/test-preflight', providerId: 'opencode' as const, selectedModelIds: [], prepareProvisioning };
+    const firstIdentity = { cacheKey: 'proof-a', requestSignature: 'model-a' };
+    const first = fence.runPreflight(firstIdentity, input);
+    const second = fence.runPreflight({ cacheKey: 'proof-b', requestSignature: 'model-b' }, input);
+    expect(fence.runPreflight(firstIdentity, input)).toBe(first);
+    expect(prepareProvisioning).toHaveBeenCalledTimes(2);
+    for (const finish of finishes) finish({ ready: true, message: 'ready' });
+    await Promise.all([first, second]);
+  });
   it('rejoins skipped OpenCode diagnostics with the same exact proof identity', async () => {
     const fence = createProviderSubmissionFence();
     const prepareProvisioning = vi.fn(async () => ({ ready: true, message: 'ready' }));
