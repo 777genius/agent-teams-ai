@@ -128,13 +128,19 @@ export const OptionalSettingsSection = ({
     <Collapsible
       open={isOpen}
       onOpenChange={handleOpenChange}
-      className={cn('rounded-t-lg border', className)}
-      style={{ borderColor: contentAccent }}
+      className={cn('border', isOpen ? 'rounded-t-lg' : 'rounded-none', className)}
+      style={{
+        borderColor: isOpen ? contentAccent : 'transparent',
+        borderTopColor: isOpen ? contentAccent : 'var(--color-border)',
+      }}
     >
       <CollapsibleTrigger asChild>
         <button
           type="button"
-          className="flex min-h-12 w-full items-center gap-2.5 rounded-t-[7px] px-2 py-2 text-left transition-colors hover:bg-[var(--color-surface-raised)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--color-border-emphasis)]"
+          className={cn(
+            'flex min-h-12 w-full items-center gap-2.5 px-2 py-2 text-left transition-colors hover:bg-[var(--color-surface-raised)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--color-border-emphasis)]',
+            isOpen ? 'rounded-t-[7px]' : 'rounded-none'
+          )}
           aria-expanded={isOpen}
           aria-controls={contentId}
         >
@@ -195,7 +201,7 @@ export const OptionalSettingsSection = ({
 
       <CollapsibleContent id={contentId} className="optional-settings-content">
         <div
-          className="border-l-2 border-t px-4 pb-4 pt-3"
+          className="border-t px-4 pb-4 pt-3"
           style={{
             backgroundColor: contentBackground,
             borderColor: contentAccent,

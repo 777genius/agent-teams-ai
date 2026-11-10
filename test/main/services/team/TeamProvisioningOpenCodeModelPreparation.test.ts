@@ -62,7 +62,9 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     expect(adapter.readProviderStatus).not.toHaveBeenCalled();
     expect(prepare).not.toHaveBeenCalled();
     expect(result.blockingMessages).toEqual([expect.stringContaining('OpenCode 1.18.0 or newer')]);
-    expect(result.blockingMessages[0]).toContain('The OPENCODE_BIN_PATH override pins this version');
+    expect(result.blockingMessages[0]).toContain(
+      'The OPENCODE_BIN_PATH override pins this version'
+    );
     expect(result.issues).toEqual([
       expect.objectContaining({
         modelId: 'opencode/big-pickle',
@@ -125,7 +127,9 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     expect(result.blockingMessages).toEqual([
       expect.stringContaining('require OpenCode 1.19.2 or newer'),
     ]);
-    expect(result.blockingMessages[0]).toContain('The OPENCODE_BIN_PATH override pins this version');
+    expect(result.blockingMessages[0]).toContain(
+      'The OPENCODE_BIN_PATH override pins this version'
+    );
   });
 
   it('resolves OpenRouter catalog aliases and provider-scoped model ids', () => {
@@ -627,6 +631,42 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
         scope: 'provider',
         severity: 'blocking',
         message: 'Token refresh failed: 401',
+      }),
+    ]);
+    expect(prepare).toHaveBeenCalledTimes(1);
+  });
+
+  it('surfaces a rate limit as a retryable model check instead of busy-session deferral', async () => {
+    const modelId = 'openrouter/nvidia/nemotron-3.5-super-vl:free';
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: false,
+      providerId: 'opencode',
+      reason: 'model_unavailable',
+      retryable: true,
+      diagnostics: [
+        'OpenCode session status busy',
+        'OpenCode retry status exposed a terminal provider error in 2100ms',
+        'Rate limit exceeded',
+      ],
+      warnings: [],
+    });
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter: createAdapter({ prepare }),
+      cwd: '/sandbox/TEST-rate-limited-model',
+      modelIds: [modelId],
+      verificationMode: 'deep',
+    });
+
+    expect(result.warnings).toEqual([
+      `Selected model ${modelId} could not be verified. Rate limit exceeded`,
+    ]);
+    expect(result.blockingMessages).toEqual([]);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        modelId,
+        scope: 'model',
+        severity: 'warning',
+        message: 'Rate limit exceeded',
       }),
     ]);
     expect(prepare).toHaveBeenCalledTimes(1);
