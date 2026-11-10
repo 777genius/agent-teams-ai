@@ -8,20 +8,8 @@ export function guardOpenCodeV2ObserverCleanup<Event>(
   closeNativeFeed: () => Promise<unknown>,
   finishOwned: () => Promise<boolean>,
 ): AsyncGenerator<Event, void, unknown> {
-  // Finalize even after close fails; retain that first failure afterwards.
-  const finalizeAfterClose = async <Result>(finalize: () => Promise<Result>): Promise<Result> => {
-    let closeFailure: { error: unknown } | undefined;
-    try {
-      await closeNativeFeed();
-    } catch (error) {
-      closeFailure = { error };
-    }
-    try {
-      return await finalize();
-    } finally {
-      if (closeFailure) throw closeFailure.error;
-    }
-  };
+  const finalizeAfterClose = <Result>(finalize: () => Promise<Result> | Result) =>
+    finalizeOpenCodeV2ObserverAfterClose(closeNativeFeed, finalize);
 
   // return() queues behind pending next() and may skip finally before the
   // first next(); wake the private feed and stop the owner first.
@@ -47,4 +35,26 @@ export function guardOpenCodeV2ObserverCleanup<Event>(
     }
   };
   return stream;
+}
+
+/**
+ * Finalize a private single-claim iterator even when closing its native feed
+ * rejects. The first close error is retained unless physical cleanup itself
+ * is UNKNOWN (which the caller must report as the stronger custody failure).
+ */
+export async function finalizeOpenCodeV2ObserverAfterClose<Result>(
+  closeNativeFeed: () => Promise<unknown>,
+  finalize: () => Promise<Result> | Result,
+): Promise<Result> {
+  let closeFailure: { error: unknown } | undefined;
+  try {
+    await closeNativeFeed();
+  } catch (error) {
+    closeFailure = { error };
+  }
+  try {
+    return await finalize();
+  } finally {
+    if (closeFailure) throw closeFailure.error;
+  }
 }

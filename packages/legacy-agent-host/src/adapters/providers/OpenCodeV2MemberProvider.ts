@@ -1,7 +1,7 @@
 import { createOpenCodeV2DriverFactory } from '@agent-teams/provider-implementations/opencode';
 import type { OpenCodeV2DriverConfig } from '@agent-teams/provider-implementations/opencode';
 import { runtimeDigest } from '../../runtime/identity.js';
-import { guardOpenCodeV2ObserverCleanup } from './OpenCodeV2ObserverCleanup.js';
+import { finalizeOpenCodeV2ObserverAfterClose, guardOpenCodeV2ObserverCleanup } from './OpenCodeV2ObserverCleanup.js';
 import { initialContextDigest } from '../../team-launch/context.js';
 import type { NativeContextEvidence } from '../../team-launch/contracts.js';
 import { preflightOpenCodeV2EffectiveExternalDirectory } from '../../composition/openCodeV2StaticPreflight.js';
@@ -610,10 +610,14 @@ export function createOpenCodeV2MemberProvider(
                     // the captured private session, before returning its inner
                     // iterator. close() uses the existing single-flight owner
                     // stop/confirmation and never replays a native mutation.
-                    if (authorityLost) await source.close();
-                    // Close the private single-claim feed before returning its
-                    // iterator; an in-flight next() otherwise cannot be canceled.
-                    await iterator.return?.();
+                    if (authorityLost) {
+                      // Even a rejected native close must not skip the inner
+                      // EventFeed iterator's finally/finalization path.
+                      await finalizeOpenCodeV2ObserverAfterClose(
+                        () => source.close(), () => iterator.return?.());
+                    } else {
+                      await iterator.return?.();
+                    }
                   } finally {
                     if ((authorityLost || exhausted) && !await finishOwned())
                       throw new Error('opencode.v2.owner-cleanup-unknown');

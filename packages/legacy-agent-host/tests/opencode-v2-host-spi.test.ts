@@ -13,7 +13,7 @@ const { runtimeProfileSchema } = await import(sourceMode
 const { createOpenCodeV2MemberProvider } = await import(sourceMode
   ? '../src/adapters/providers/OpenCodeV2MemberProvider.ts'
   : '../dist/adapters/providers/OpenCodeV2MemberProvider.js');
-const { guardOpenCodeV2ObserverCleanup } = await import(sourceMode
+const { finalizeOpenCodeV2ObserverAfterClose, guardOpenCodeV2ObserverCleanup } = await import(sourceMode
   ? '../src/adapters/providers/OpenCodeV2ObserverCleanup.ts'
   : '../dist/adapters/providers/OpenCodeV2ObserverCleanup.js');
 const { createOpenCodeMemberProvider } = await import(sourceMode
@@ -2738,4 +2738,28 @@ test('V2 observer abandonment finalizes after rejected private close for return 
       assert.equal(closes, 1, 'private close is never retried');
       assert.equal(physicalStops, 1, 'only the owned physical stop is signaled');
     }
+  });
+
+test('revoked V2 inner native observer finalizes despite rejected feed close',
+  { timeout: 3000 }, async () => {
+    const closeFailure = new Error('TEST revoked private feed close rejected');
+    let finalized = 0;
+    let closeCalls = 0;
+    const iterator = (async function* () {
+      try {
+        yield 'claimed';
+      } finally {
+        finalized++;
+      }
+    })();
+    await iterator.next();
+    await assert.rejects(
+      finalizeOpenCodeV2ObserverAfterClose(
+        async () => { closeCalls++; throw closeFailure; },
+        () => iterator.return(undefined),
+      ),
+      (error: unknown) => error === closeFailure,
+    );
+    assert.equal(finalized, 1, 'native iterator finalization cannot be skipped');
+    assert.equal(closeCalls, 1, 'a rejected close is never replayed');
   });
