@@ -15,6 +15,8 @@ import {
   fixtureShim,
   isolatedEnvironment,
   launchCommand,
+  allocateIsolatedCdpPort,
+  assertPortAvailable,
 } from './platform.mjs';
 
 test('OS process and listener output parsing fails closed', () => {
@@ -70,6 +72,16 @@ test('native shims quote absolute paths with spaces and reject expansion syntax'
   assert.throws(() => fixtureShim('C:\\%evil%\\node.exe', 'C:\\fixture.cjs', 'opencode', 'win32'));
   assert.throws(() => fixtureShim('/node', '/fixture', 'agent', 'linux'));
   assert.equal(launchCommand('win32').args[0], '/d');
+});
+test('isolated CDP port stays bound to the selected dev launcher', async () => {
+  const port = await allocateIsolatedCdpPort();
+  assert(Number.isSafeInteger(port) && port >= 1024 && port <= 65535);
+  await assertPortAvailable(port);
+  assert.deepEqual(launchCommand('linux', port), {
+    command: 'pnpm', args: ['dev', '--remoteDebuggingPort', String(port), '--noSandbox'],
+  });
+  assert.equal(launchCommand('win32', port).args.at(-1), `pnpm dev --remoteDebuggingPort ${port} --noSandbox`);
+  assert.throws(() => launchCommand('win32', 0));
 });
 test('environment drops inherited provider/config and runtime overrides', () => {
   const data = {
