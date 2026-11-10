@@ -1,4 +1,5 @@
 import { HostTeamOperationError } from './createHostTeamMutations';
+import { assembleTaskParts } from './readHostPagedSnapshot';
 
 import type { BackendHandle } from '../contracts';
 import type { AgentBackendApi } from '../contracts/operations';
@@ -19,32 +20,90 @@ export function createHostTaskReads(
   backend: AgentBackendApi,
   selected: (key: string) => Promise<CapturedTaskRead>
 ): Pick<TeamsAPI, 'getTask' | 'getDeletedTasks'> {
-  return {
-    async getTask(key, taskId) {
-      const read = await selected(key);
-      read.assertCurrent();
-      return read.snapshot.tasks.find((task) => task.id === taskId) ?? null;
-    },
-    async getDeletedTasks(key) {
-      const read = await selected(key);
-      read.assertCurrent();
+  /** A single captured Owner selection powers both Trash and deleted-task detail. */
+  const readDeletedTasks = async (read: CapturedTaskRead): Promise<TeamTaskWithKanban[]> => {
+    read.assertCurrent();
+    const tasks: TeamTaskWithKanban[] = [];
+    const parts = new Map<number, {
+      total: number;
+      values: Map<number, TeamTaskWithKanban>;
+    }>();
+    const seen = new Set<string>();
+    let revision: string | undefined;
+    let taskTotal: number | undefined;
+    let fragmented: boolean | undefined;
+    let cursor: string | undefined;
+    let completed = false;
+
+    // No partial Trash is published. Each continuation stays on the selected
+    // Host and under the original read-order/context fence.
+    for (let index = 0; index < 128; index++) {
       const result = await backend.invoke({
         handle: read.connection.handle,
         commandId: crypto.randomUUID(),
         operation: 'tasks.list',
-        payload: { deleted: true },
+        payload: { deleted: true, ...(cursor ? { cursor } : {}) },
       });
       read.assertCurrent();
       if (!result.ok) throw new HostTeamOperationError(result.code, result.outcome);
-      if (
-        !result.value ||
-        !('kind' in result.value) ||
-        result.value.kind !== 'deleted-tasks' ||
-        result.value.teamName !== read.canonicalTeamName ||
-        result.value.tasks.some((task) => task.status !== 'deleted')
-      )
+      const page = result.value;
+      if (!page || !('kind' in page) || page.kind !== 'deleted-tasks' ||
+          page.teamName !== read.canonicalTeamName ||
+          page.tasks.some((task) => task.status !== 'deleted'))
         throw new HostTeamOperationError('invalid-result', 'unknown');
-      return read.remapTasks(result.value.tasks);
+
+      if (index === 0) {
+        revision = page.revision;
+        taskTotal = page.taskTotal;
+        fragmented = !!page.taskParts;
+      } else if (!revision || page.revision !== revision ||
+                 page.taskTotal !== taskTotal || !!page.taskParts !== fragmented) {
+        throw new Error('Host deleted tasks changed during paged read');
+      }
+      if (page.taskParts) {
+        if (page.taskParts.length !== page.tasks.length || taskTotal === undefined)
+          throw new Error('Invalid Host deleted task fragments');
+        for (const [position, task] of page.tasks.entries()) {
+          const marker = page.taskParts[position];
+          if (!marker || marker.index >= taskTotal || marker.part >= marker.total)
+            throw new Error('Invalid Host deleted task part');
+          let group = parts.get(marker.index);
+          if (!group) {
+            group = { total: marker.total, values: new Map() };
+            parts.set(marker.index, group);
+          }
+          if (group.total !== marker.total || group.values.has(marker.part))
+            throw new Error('Duplicate Host deleted task fragment');
+          group.values.set(marker.part, task);
+        }
+      } else {
+        tasks.push(...page.tasks);
+      }
+      if (page.nextCursor === undefined || page.nextCursor === null) {
+        completed = true;
+        break;
+      }
+      if (!page.revision || seen.has(page.nextCursor))
+        throw new Error('Invalid Host deleted task continuation');
+      seen.add(page.nextCursor);
+      cursor = page.nextCursor;
+    }
+    if (!completed) throw new Error('Host deleted tasks exceeded page budget');
+    return read.remapTasks(fragmented
+      ? assembleTaskParts(parts, taskTotal ?? 0)
+      : tasks);
+  };
+  return {
+    async getTask(key, taskId) {
+      const read = await selected(key);
+      read.assertCurrent();
+      const active = read.snapshot.tasks.find((task) => task.id === taskId);
+      if (active) return active;
+      // No unpaged team.task.get: retained detail can exceed Host's 1 MiB frame.
+      return (await readDeletedTasks(read)).find((task) => task.id === taskId) ?? null;
+    },
+    async getDeletedTasks(key) {
+      return readDeletedTasks(await selected(key));
     },
   };
 }

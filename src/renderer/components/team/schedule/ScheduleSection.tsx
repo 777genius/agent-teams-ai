@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
@@ -21,10 +22,12 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { LaunchTeamDialogLoadingFallback } from '../dialogs/LaunchTeamDialogLoadingFallback';
 
+import { ScheduleAssignmentSummary } from './ScheduleAssignmentSummary';
 import { ScheduleEmptyState } from './ScheduleEmptyState';
 import { ScheduleRunLogDialog } from './ScheduleRunLogDialog';
 import { ScheduleRunRow } from './ScheduleRunRow';
 import { ScheduleStatusBadge } from './ScheduleStatusBadge';
+import { useScheduleActions } from './useScheduleActions';
 
 const LaunchTeamDialog = lazy(() =>
   import('../dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
@@ -46,6 +49,7 @@ interface ScheduleSectionProps {
 
 interface ScheduleRowProps {
   schedule: Schedule;
+  hostScheduleUnsupported: boolean;
   onEdit: (schedule: Schedule) => void;
   onDelete: (id: string) => void;
   onPause: (id: string) => void;
@@ -55,18 +59,27 @@ interface ScheduleRowProps {
 
 const ScheduleRow = ({
   schedule,
+  hostScheduleUnsupported,
   onEdit,
   onDelete,
   onPause,
   onResume,
   onTriggerNow,
 }: ScheduleRowProps): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
+  const { t, resolvedLanguage } = useAppTranslation('team');
+  const { t: tCommon } = useAppTranslation('common');
   const [expanded, setExpanded] = useState(false);
   const [selectedRun, setSelectedRun] = useState<ScheduleRun | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const runs = useStore(useShallow((s) => s.scheduleRuns[schedule.id] ?? []));
   const runsLoading = useStore((s) => s.scheduleRunsLoading[schedule.id] ?? false);
   const fetchRunHistory = useStore((s) => s.fetchRunHistory);
+  const savedStatusLabel =
+    schedule.status === 'active'
+      ? t('schedule.status.active')
+      : schedule.status === 'paused'
+        ? t('schedule.status.paused')
+        : t('schedule.status.disabled');
 
   const handleExpand = useCallback(() => {
     const next = !expanded;
@@ -79,44 +92,58 @@ const ScheduleRow = ({
   return (
     <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">
       {/* Header row */}
-      <div className="flex items-center gap-2 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2">
         {/* Expand toggle */}
         <button
           type="button"
           className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
           onClick={handleExpand}
+          aria-expanded={expanded}
+          aria-label={schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage)}
         >
           {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
         </button>
 
         {/* Info */}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-[1_1_12rem]">
           <div className="flex items-center gap-2">
             <span className="truncate text-xs font-medium text-[var(--color-text)]">
-              {schedule.label || getCronDescription(schedule.cronExpression)}
+              {schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage)}
             </span>
-            <ScheduleStatusBadge status={schedule.status} />
+            {hostScheduleUnsupported ? (
+              <span className="text-[10px] text-[var(--color-text-muted)]" role="status">
+                {t('schedule.status.hostUnsupported', {
+                  defaultValue: 'Host scheduling unavailable',
+                })}{' '}
+                · {t('schedule.status.saved', { defaultValue: 'Saved' })}: {savedStatusLabel}
+              </span>
+            ) : (
+              <ScheduleStatusBadge status={schedule.status} />
+            )}
           </div>
-          <div className="mt-0.5 flex items-center gap-3 text-[11px] text-[var(--color-text-muted)]">
-            {schedule.label ? <span>{getCronDescription(schedule.cronExpression)}</span> : null}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="cursor-default">
-                  {t('schedule.nextRun', { next: formatNextRun(schedule.nextRunAt) })}
-                </span>
-              </TooltipTrigger>
-              {schedule.nextRunAt ? (
-                <TooltipContent side="top" className="text-xs">
-                  {new Date(schedule.nextRunAt).toLocaleString()}
-                </TooltipContent>
-              ) : null}
-            </Tooltip>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--color-text-muted)]">
+            {schedule.label ? <span>{getCronDescription(schedule.cronExpression, resolvedLanguage)}</span> : null}
+            {!hostScheduleUnsupported && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-default">
+                    {t('schedule.nextRun', { next: formatNextRun(schedule.nextRunAt, resolvedLanguage) })}
+                  </span>
+                </TooltipTrigger>
+                {schedule.nextRunAt ? (
+                  <TooltipContent side="top" className="text-xs">
+                    {new Date(schedule.nextRunAt).toLocaleString(resolvedLanguage)}
+                  </TooltipContent>
+                ) : null}
+              </Tooltip>
+            )}
             <span>{schedule.timezone}</span>
           </div>
+          <ScheduleAssignmentSummary schedule={schedule} />
         </div>
 
         {/* Actions */}
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="ml-auto flex shrink-0 items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -124,7 +151,8 @@ const ScheduleRow = ({
                 size="sm"
                 className="size-7 p-0"
                 onClick={() => onTriggerNow(schedule.id)}
-                disabled={schedule.status !== 'active'}
+                aria-label={t('schedule.actions.runNow')}
+                disabled={schedule.status !== 'active' || hostScheduleUnsupported}
               >
                 <Zap className="size-3.5" />
               </Button>
@@ -132,17 +160,18 @@ const ScheduleRow = ({
             <TooltipContent side="top">{t('schedule.actions.runNow')}</TooltipContent>
           </Tooltip>
 
-          <Popover>
+          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="size-7 p-0">
+              <Button variant="ghost" size="sm" className="size-7 p-0" aria-label={tCommon('actions.moreActions')}>
                 <MoreHorizontal className="size-3.5" />
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-40 p-1">
               <button
                 type="button"
-                className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                onClick={() => onEdit(schedule)}
+                className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={hostScheduleUnsupported}
+                onClick={() => { setMenuOpen(false); onEdit(schedule); }}
               >
                 <Pencil className="mr-2 size-3.5" />
                 {t('schedule.actions.edit')}
@@ -151,7 +180,7 @@ const ScheduleRow = ({
                 <button
                   type="button"
                   className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                  onClick={() => onPause(schedule.id)}
+                  onClick={() => { setMenuOpen(false); onPause(schedule.id); }}
                 >
                   <Pause className="mr-2 size-3.5" />
                   {t('schedule.actions.pause')}
@@ -159,8 +188,9 @@ const ScheduleRow = ({
               ) : (
                 <button
                   type="button"
-                  className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                  onClick={() => onResume(schedule.id)}
+                  className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)] disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={hostScheduleUnsupported}
+                  onClick={() => { setMenuOpen(false); onResume(schedule.id); }}
                 >
                   <Play className="mr-2 size-3.5" />
                   {t('schedule.actions.resume')}
@@ -169,7 +199,7 @@ const ScheduleRow = ({
               <button
                 type="button"
                 className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-red-400 hover:bg-[var(--color-surface-raised)]"
-                onClick={() => onDelete(schedule.id)}
+                onClick={() => { setMenuOpen(false); onDelete(schedule.id); }}
               >
                 <Trash2 className="mr-2 size-3.5" />
                 {t('schedule.actions.delete')}
@@ -217,17 +247,12 @@ const ScheduleRow = ({
 
 export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const { schedules, pauseSchedule, resumeSchedule, deleteSchedule, triggerNow, fetchSchedules } =
-    useStore(
-      useShallow((s) => ({
-        schedules: s.schedules.filter((sch) => sch.teamName === teamName),
-        pauseSchedule: s.pauseSchedule,
-        resumeSchedule: s.resumeSchedule,
-        deleteSchedule: s.deleteSchedule,
-        triggerNow: s.triggerNow,
-        fetchSchedules: s.fetchSchedules,
-      }))
-    );
+  const hostScheduleUnsupported = isHostTeamSelectionKey(teamName);
+  const { schedules, fetchSchedules } = useStore(useShallow((s) => ({
+    schedules: s.schedules.filter((sch) => sch.teamName === teamName),
+    fetchSchedules: s.fetchSchedules,
+  })));
+  const { feedback, act: actOnSchedule } = useScheduleActions();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
@@ -238,41 +263,21 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
   }, [fetchSchedules]);
 
   const handleEdit = useCallback((schedule: Schedule) => {
+    if (hostScheduleUnsupported) return;
     setEditingSchedule(schedule);
     setDialogOpen(true);
-  }, []);
+  }, [hostScheduleUnsupported]);
 
   const handleCreate = useCallback(() => {
+    if (hostScheduleUnsupported) return;
     setEditingSchedule(null);
     setDialogOpen(true);
-  }, []);
+  }, [hostScheduleUnsupported]);
 
   const handleClose = useCallback(() => {
     setDialogOpen(false);
     setEditingSchedule(null);
   }, []);
-
-  const handleDelete = useCallback(
-    async (id: string) => {
-      try {
-        await deleteSchedule(id);
-      } catch (err) {
-        console.error('Failed to delete schedule:', err);
-      }
-    },
-    [deleteSchedule]
-  );
-
-  const handleTriggerNow = useCallback(
-    async (id: string) => {
-      try {
-        await triggerNow(id);
-      } catch (err) {
-        console.error('Failed to trigger schedule:', err);
-      }
-    },
-    [triggerNow]
-  );
 
   return (
     <div className="space-y-2 p-3">
@@ -281,16 +286,47 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
         <span className="text-[11px] font-medium text-[var(--color-text-muted)]">
           {schedules.length > 0 ? t('schedule.count', { count: schedules.length }) : ''}
         </span>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-6 gap-1 px-2 text-[11px]"
-          onClick={handleCreate}
-        >
-          <Plus className="size-3" />
-          {t('schedule.actions.addSchedule')}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className="inline-flex"
+              tabIndex={hostScheduleUnsupported ? 0 : undefined}
+              aria-label={
+                hostScheduleUnsupported ? 'Host-owned team scheduling is not yet supported' : undefined
+              }
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 gap-1 px-2 text-[11px]"
+                onClick={handleCreate}
+                disabled={hostScheduleUnsupported}
+              >
+                <Plus className="size-3" />
+                {t('schedule.actions.addSchedule')}
+              </Button>
+            </span>
+          </TooltipTrigger>
+          {hostScheduleUnsupported && (
+            <TooltipContent side="top">
+              Host-owned team scheduling is not yet supported
+            </TooltipContent>
+          )}
+        </Tooltip>
       </div>
+
+      {hostScheduleUnsupported && (
+        <p role="status" className="text-xs text-[var(--color-text-muted)]">
+          Host-owned teams cannot use schedules until owner-aware scheduling is qualified.
+          Existing schedules can be paused or deleted.
+        </p>
+      )}
+
+      {feedback ? (
+        <p role={feedback.kind === 'error' ? 'alert' : 'status'} className={`rounded border px-2 py-1.5 text-xs ${feedback.kind === 'error' ? 'border-red-500/30 text-red-400' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}>
+          {feedback.message}
+        </p>
+      ) : null}
 
       {/* Schedule list or empty state */}
       {schedules.length === 0 ? (
@@ -301,18 +337,19 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
             <ScheduleRow
               key={schedule.id}
               schedule={schedule}
+              hostScheduleUnsupported={hostScheduleUnsupported}
               onEdit={handleEdit}
-              onDelete={(id) => void handleDelete(id)}
-              onPause={(id) => void pauseSchedule(id)}
-              onResume={(id) => void resumeSchedule(id)}
-              onTriggerNow={(id) => void handleTriggerNow(id)}
+              onDelete={(id) => void actOnSchedule('delete', id)}
+              onPause={(id) => void actOnSchedule('pause', id)}
+              onResume={(id) => void actOnSchedule('resume', id)}
+              onTriggerNow={(id) => void actOnSchedule('run', id)}
             />
           ))}
         </div>
       )}
 
       {/* Create/Edit Dialog */}
-      {dialogOpen && (
+      {dialogOpen && !hostScheduleUnsupported && (
         <Suspense
           fallback={
             <LaunchTeamDialogLoadingFallback

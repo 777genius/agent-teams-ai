@@ -36,7 +36,7 @@ export async function runDesktopCreateUiSmoke(
     status: 'INCOMPLETE',
     steps,
     scope:
-      'Original CreateTeamDialog launch → scoped no-tool probe → one created Team/native session → SDK MCP/Bash/reply → original Stop/reload',
+      'Original Teams Create Page launch → scoped no-tool probe → one created Team/native session → SDK MCP/Bash/reply → original Stop/reload',
     excluded: ['real vendor access', 'Resume', 'mixed/advanced options', 'full Stage1'],
   };
   options.evidence.createLaunchDialogProof = proof;
@@ -66,50 +66,50 @@ export async function runDesktopCreateUiSmoke(
     'opening Create never creates Team'
   );
   await ui.scrollTo(
-    '[role="dialog"] button[aria-label*=" provider,"]',
+    '[data-testid="create-team-page"] button[aria-label*=" provider,"]',
     'original Create lead model'
   );
   await ui.click(
-    '[role="dialog"] button[aria-label*=" provider,"]',
+    '[data-testid="create-team-page"] button[aria-label*=" provider,"]',
     'expand original Create lead row'
   );
   await ui.scrollTo(
-    '[role="dialog"] [data-testid="team-model-selector-model-option"][aria-label^="Opus 4.6"]',
+    '[data-testid="create-team-page"] [data-testid="team-model-selector-model-option"][aria-label^="Opus 4.6"]',
     'original Create Opus4.6'
   );
   await ui.click(
-    '[role="dialog"] [data-testid="team-model-selector-model-option"][aria-label^="Opus 4.6"]',
+    '[data-testid="create-team-page"] [data-testid="team-model-selector-model-option"][aria-label^="Opus 4.6"]',
     'select original Create Opus4.6'
   );
-  await ui.scrollTo('[role="dialog"] button', 'original Create Medium effort', 'Medium');
-  await ui.click('[role="dialog"] button', 'select original Create Medium effort', 'Medium');
+  await ui.scrollTo('[data-testid="create-team-page"] button', 'original Create Medium effort', 'Medium');
+  await ui.click('[data-testid="create-team-page"] button', 'select original Create Medium effort', 'Medium');
   const optional = record(
     await ui.waitRead(
-      `(()=>{const b=[...document.querySelectorAll('[role="dialog"] button[aria-controls]')].find(e=>e.textContent.includes('Optional launch settings'));return b?{id:b.getAttribute('aria-controls'),expanded:b.getAttribute('aria-expanded')}:null})()`,
+      `(()=>{const b=[...document.querySelectorAll('[data-testid="create-team-page"] button[aria-controls]')].find(e=>e.textContent.includes('Optional launch settings'));return b?{id:b.getAttribute('aria-controls'),expanded:b.getAttribute('aria-expanded')}:null})()`,
       'original optional Create launch settings'
     )
   );
   if (optional.expanded !== 'true') {
-    const selector = `[role="dialog"] button[aria-controls=${JSON.stringify(optional.id)}]`;
+    const selector = `[data-testid="create-team-page"] button[aria-controls=${JSON.stringify(optional.id)}]`;
     await ui.scrollTo(selector, 'original Create details control');
     await ui.click(selector, 'expand original Create details');
   }
-  await ui.scrollTo('[role="dialog"] #team-prompt', 'original Create prompt');
-  await ui.click('[role="dialog"] #team-prompt', 'focus original Create prompt');
+  await ui.scrollTo('[data-testid="create-team-page"] #team-prompt', 'original Create prompt');
+  await ui.click('[data-testid="create-team-page"] #team-prompt', 'focus original Create prompt');
   await cdp.send('Input.insertText', { text: 'NATIVE_TEAM_ONE' });
   await ui.waitRead(
-    `document.querySelector('[role="dialog"] #team-prompt')?.value==='NATIVE_TEAM_ONE'`,
+    `document.querySelector('[data-testid="create-team-page"] #team-prompt')?.value==='NATIVE_TEAM_ONE'`,
     'original Create prompt retained'
   );
-  await ui.scrollTo('[role="dialog"] button', 'original Create launch submit', 'Create');
+  await ui.scrollTo('[data-testid="create-team-page"] button', 'original Create launch submit', 'Create');
   try {
-    await ui.click('[role="dialog"] button', 'submit original Create launch once', 'Create');
+    await ui.click('[data-testid="create-team-page"] button', 'submit original Create launch once', 'Create');
   } catch (error) {
     proof.submitDiagnostics = await readCreateDialogDiagnostics(cdp);
     throw error;
   }
   await ui.waitRead(
-    `!document.querySelector('[role="dialog"] #team-name')`,
+    `!document.querySelector('[data-testid="create-team-page"] #team-name')`,
     'original Create closes',
     90_000
   );

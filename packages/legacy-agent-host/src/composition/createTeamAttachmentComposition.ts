@@ -163,18 +163,54 @@ export function createTeamAttachmentComposition(options: {
                   messageMode: mode,
                 });
               } else {
-                const snapshot = selected.connection.readSnapshot() as {
-                  messages?: { messageId?: string; attachments?: unknown[] }[];
-                };
-                const messages =
-                  snapshot.messages?.filter((row) => row.messageId === messagePayload!.reference) ??
-                  [];
-                if (
-                  messages.length > 1 &&
-                  new Set(messages.map((row) => digest(row.attachments))).size > 1
-                )
+                // Every continuation retains the original read grant, team and revision.
+                // A message can be on a later page after many retained tasks.
+                const messages: { attachments?: unknown[] }[] = [];
+                let cursor: string | undefined;
+                let revision: string | undefined;
+                const seen = new Set<string>();
+                let completed = false;
+                for (let page = 0; page < 128; page++) {
+                  options.assertCurrent();
+                  const snapshot = selected.connection.readSnapshot(
+                    cursor ? { cursor } : {}
+                  ) as {
+                    teamName?: string;
+                    revision?: string;
+                    nextCursor?: string | null;
+                    messages?: { messageId?: string; attachments?: unknown[] }[];
+                  };
+                  if (
+                    snapshot.teamName !== selected.definition.binding.teamName ||
+                    typeof snapshot.revision !== 'string' ||
+                    !Array.isArray(snapshot.messages) ||
+                    (revision !== undefined && revision !== snapshot.revision)
+                  )
+                    throw new TeamOwnerError('hold');
+                  revision = snapshot.revision;
+                  messages.push(
+                    ...snapshot.messages.filter((row) => row.messageId === messagePayload!.reference)
+                  );
+                  const next = snapshot.nextCursor;
+                  if (next === null || next === undefined) {
+                    completed = true;
+                    break;
+                  }
+                  if (typeof next !== 'string' || seen.has(next))
+                    throw new TeamOwnerError('hold');
+                  seen.add(next);
+                  cursor = next;
+                }
+                if (!completed) throw new TeamOwnerError('hold');
+                // Continuation-only text fragments have no attachment metadata.
+                // The original first fragment keeps the canonical references.
+                const candidates = messages.flatMap((row) =>
+                  row.attachments === undefined ? [] : [row.attachments]
+                );
+                if (candidates.length > 1 &&
+                    new Set(candidates.map((value) => digest(value))).size > 1)
                   throw new TeamOwnerError('hold');
-                const metadata = messages[0]?.attachments ?? [];
+                const metadata = candidates[0] ?? [];
                 if (mode === 'list')
                   value = metadata.map((item) =>
                     attachmentMetadataSchema.parse(

@@ -262,9 +262,10 @@ export async function captureDesktopHostNotification(event: IpcMainInvokeEvent, 
               .listBindings(contextId)
               .bindings.find((row) => row.handle.handleId === handle.handleId)
           : undefined,
-      async readSnapshot(handle, current) {
+      async readSnapshot(handle, current, cursor) {
         const result = await original.feature.facade.invoke(
-          { handle, commandId: randomUUID(), operation: 'team.snapshot', payload: {} },
+          { handle, commandId: randomUUID(), operation: 'team.snapshot',
+            payload: cursor ? { cursor } : {} },
           { isCurrent: current }
         );
         if (

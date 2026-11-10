@@ -84,16 +84,42 @@ export async function runDesktopRosterLifecycleUiSmoke(
       'open existing application menu for saved Team'
     );
     await ui.click('button', 'open existing Teams list', 'Teams');
-    await ui.waitRead(
-      `Boolean(document.querySelector(${JSON.stringify('[data-team-name=' + JSON.stringify(hostTeamSelectionKey(options.fixture.handleId)) + ']')}))`,
+    // Compare captured identity in Node; never interpolate it into CDP JavaScript.
+    await poll(
+      async () => {
+        options.assertOwnedRenderer();
+        return cdp.evaluate(
+          "Array.from(document.querySelectorAll('[data-team-name]'), node => node.getAttribute('data-team-name'))"
+        );
+      },
+      (value) =>
+        Array.isArray(value) &&
+        value.includes(hostTeamSelectionKey(options.fixture.handleId)),
       'saved original neighbor Team proves Teams list loaded'
     );
   };
   const openTeam = async () => {
     await ui.scrollTo(teamSelector, 'exact UI-created stopped Team card');
     await ui.click(teamSelector, 'open exact UI-created stopped Team');
-    await ui.waitRead(
-      `window.__agentTeamsDevStore?.getState().selectedTeamName===${JSON.stringify(teamSelection)}&&[...document.querySelectorAll(${JSON.stringify(memberIdentitySelector)})].filter(e=>e.textContent.trim()===${JSON.stringify(originalLead.name === 'team-lead' ? 'lead' : String(originalLead.name))}&&e.getBoundingClientRect().width>0).length===1`,
+    await poll(
+      async () => {
+        options.assertOwnedRenderer();
+        return cdp.evaluate(`(() => ({
+          team: window.__agentTeamsDevStore?.getState().selectedTeamName,
+          labels: [...document.querySelectorAll('[data-section-id="team"] [role="button"] span.font-medium')]
+            .filter(e => e.getBoundingClientRect().width > 0)
+            .map(e => e.textContent.trim())
+        }))()`);
+      },
+      (value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+        const row = value as { team?: unknown; labels?: unknown };
+        return row.team === teamSelection &&
+          Array.isArray(row.labels) &&
+          row.labels.filter((name) =>
+            name === (originalLead.name === 'team-lead' ? 'lead' : String(originalLead.name))
+          ).length === 1;
+      },
       'original solo lead rendered'
     );
   };

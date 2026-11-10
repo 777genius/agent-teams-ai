@@ -10,7 +10,7 @@ import { projectTeamPosition } from './projectTeamChanges';
 import { projectTeamLifecycleSnapshot } from './projectTeamLifecycle';
 
 import type { BackendTeamSnapshot } from '../../../contracts/teamSnapshot';
-import type { KanbanState, TaskComment, TeamTaskWithKanban } from '@shared/types/team';
+import type { KanbanState, TaskComment, TaskHistoryEvent, TaskReviewInterval, TaskWorkInterval, TeamTaskWithKanban } from '@shared/types/team';
 
 function row(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -58,6 +58,64 @@ function comment(value: unknown): TaskComment {
       : { attachments: projectAttachmentMetadata(source.attachments) }),
   };
 }
+const taskStates = ['pending', 'in_progress', 'completed', 'deleted'] as const;
+const reviewStates = ['none', 'review', 'needsFix', 'approved'] as const;
+
+function workInterval(value: unknown): TaskWorkInterval {
+  const source = row(value);
+  return {
+    startedAt: text(source.startedAt),
+    ...(source.completedAt === undefined ? {} : { completedAt: text(source.completedAt) }),
+  };
+}
+function reviewInterval(value: unknown): TaskReviewInterval {
+  const source = row(value);
+  return {
+    reviewer: text(source.reviewer),
+    ...workInterval(source),
+  };
+}
+function workflowEvent(value: unknown): TaskHistoryEvent {
+  const source = row(value);
+  const base = {
+    id: text(source.id),
+    timestamp: text(source.timestamp),
+    ...(source.actor === undefined ? {} : { actor: text(source.actor) }),
+  };
+  switch (source.type) {
+    case 'task_created':
+      return { ...base, type: 'task_created', status: choice(source.status, taskStates) };
+    case 'status_changed':
+      return { ...base, type: 'status_changed',
+        from: choice(source.from, taskStates), to: choice(source.to, taskStates) };
+    case 'owner_changed':
+      return { ...base, type: 'owner_changed',
+        ...(source.from === undefined ? {} : { from: text(source.from) }),
+        ...(source.to === undefined ? {} : { to: text(source.to) }) };
+    case 'review_requested':
+      return { ...base, type: 'review_requested', from: choice(source.from, reviewStates),
+        to: choice(source.to, ['review'] as const),
+        ...(source.reviewer === undefined ? {} : { reviewer: text(source.reviewer) }),
+        ...(source.note === undefined ? {} : { note: text(source.note) }) };
+    case 'review_changes_requested':
+      return { ...base, type: 'review_changes_requested', from: choice(source.from, reviewStates),
+        to: choice(source.to, ['needsFix'] as const),
+        ...(source.note === undefined ? {} : { note: text(source.note) }) };
+    case 'review_approved':
+      return { ...base, type: 'review_approved', from: choice(source.from, reviewStates),
+        to: choice(source.to, ['approved'] as const),
+        ...(source.note === undefined ? {} : { note: text(source.note) }) };
+    case 'review_disapproved':
+      return { ...base, type: 'review_disapproved',
+        from: choice(source.from, ['approved'] as const),
+        to: choice(source.to, ['none'] as const) };
+    case 'review_started':
+      return { ...base, type: 'review_started', from: choice(source.from, reviewStates),
+        to: choice(source.to, ['review'] as const) };
+    default:
+      throw new Error('Invalid task workflow event');
+  }
+}
 export function projectTeamTask(value: unknown, teamName: string): TeamTaskWithKanban {
   const source = row(value);
   const result: TeamTaskWithKanban = {
@@ -86,6 +144,12 @@ export function projectTeamTask(value: unknown, teamName: string): TeamTaskWithK
   if (source.descriptionTaskRefs !== undefined)
     result.descriptionTaskRefs = refs(source.descriptionTaskRefs);
   if (source.promptTaskRefs !== undefined) result.promptTaskRefs = refs(source.promptTaskRefs);
+  if (source.workIntervals !== undefined)
+    result.workIntervals = array(source.workIntervals, workInterval);
+  if (source.reviewIntervals !== undefined)
+    result.reviewIntervals = array(source.reviewIntervals, reviewInterval);
+  if (source.historyEvents !== undefined)
+    result.historyEvents = array(source.historyEvents, workflowEvent);
   if (source.comments !== undefined) result.comments = array(source.comments, comment);
   if (source.attachments !== undefined)
     result.attachments = projectAttachmentMetadata(source.attachments);
@@ -110,7 +174,7 @@ function origin(value: unknown) {
     ...strings(r, ['fromHandleId', 'toHandleId']),
   };
 }
-function message(value: unknown): BackendTeamSnapshot['messages'][number] {
+export function projectTeamMessage(value: unknown): BackendTeamSnapshot['messages'][number] {
   const source = row(value);
   if (typeof source.read !== 'boolean') throw new Error('Invalid snapshot');
   return {
@@ -180,6 +244,63 @@ function kanban(value: unknown, teamName: string): KanbanState {
   return result;
 }
 
+
+/** Signed page offsets describe projected rows, never unvalidated raw payloads. */
+interface PartIndex {
+  index: number;
+  part: number;
+  total: number;
+  commentPart?: { index: number; part: number; total: number };
+}
+function readPartIndexes(
+  source: Record<string, unknown>,
+  totalKey: 'taskTotal' | 'messageTotal',
+  partsKey: 'taskParts' | 'messageParts',
+  itemsKey: 'tasks' | 'messages'
+): { total: number; parts: PartIndex[] } | undefined {
+  if (source[totalKey] === undefined && source[partsKey] === undefined) return undefined;
+  const total = source[totalKey];
+  if (typeof total !== 'number' || !Number.isSafeInteger(total) || total < 1 ||
+      !Array.isArray(source[itemsKey])) throw new Error('Invalid snapshot part count');
+  const parts = array(source[partsKey], (value) => {
+    const part = row(value);
+    const index = part.index, position = part.part, count = part.total;
+    if (typeof index !== 'number' || !Number.isSafeInteger(index) || index < 0 || index >= total ||
+        typeof position !== 'number' || !Number.isSafeInteger(position) || position < 0 ||
+        typeof count !== 'number' || !Number.isSafeInteger(count) || count < 1 || position >= count)
+      throw new Error('Invalid snapshot part index');
+    if (part.commentPart !== undefined) {
+      if (partsKey !== 'taskParts' || position === 0)
+        throw new Error('Invalid Host comment fragment');
+      const comment = row(part.commentPart);
+      const { index: commentIndex, part: commentPosition, total: commentTotal } = comment;
+      if (typeof commentIndex !== 'number' || !Number.isSafeInteger(commentIndex) ||
+          commentIndex < 0 ||
+          typeof commentPosition !== 'number' || !Number.isSafeInteger(commentPosition) ||
+          commentPosition < 0 ||
+          typeof commentTotal !== 'number' || !Number.isSafeInteger(commentTotal) ||
+          commentTotal < 2 || commentPosition >= commentTotal)
+        throw new Error('Invalid Host comment fragment');
+      return {
+        index, part: position, total: count,
+        commentPart: { index: commentIndex, part: commentPosition, total: commentTotal },
+      };
+    }
+    return { index, part: position, total: count };
+  });
+  if (parts.length !== source[itemsKey].length)
+    throw new Error('Invalid snapshot part count');
+  return { total, parts };
+}
+export function projectTaskParts(source: Record<string, unknown>): Pick<BackendTeamSnapshot, 'taskTotal' | 'taskParts'> {
+  const value = readPartIndexes(source, 'taskTotal', 'taskParts', 'tasks');
+  return value ? { taskTotal: value.total, taskParts: value.parts } : {};
+}
+function projectMessageParts(source: Record<string, unknown>): Pick<BackendTeamSnapshot, 'messageTotal' | 'messageParts'> {
+  const value = readPartIndexes(source, 'messageTotal', 'messageParts', 'messages');
+  return value ? { messageTotal: value.total, messageParts: value.parts } : {};
+}
+
 /** Product fields only; private paths, receipts, native IDs and arbitrary extras are omitted. */
 export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
   const source = row(value);
@@ -187,6 +308,12 @@ export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
   const teamName = text(source.teamName);
   const revision = text(source.revision);
   if (!/^[a-f0-9]{64}$/.test(revision)) throw new Error('Invalid snapshot revision');
+  const nextCursor = source.nextCursor;
+  if (
+    nextCursor !== undefined &&
+    nextCursor !== null &&
+    (typeof nextCursor !== 'string' || !/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.test(nextCursor))
+  ) throw new Error('Invalid snapshot page cursor');
   const configurationRevision = source.configurationRevision;
   if (
     configurationRevision !== undefined &&
@@ -199,6 +326,9 @@ export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
   return {
     teamName,
     revision,
+    ...(nextCursor === undefined ? {} : { nextCursor }),
+    ...projectTaskParts(source),
+    ...projectMessageParts(source),
     ...(source.runtimeNeverLaunched === true ? { runtimeNeverLaunched: true as const } : {}),
     ...(source.lifecycle === undefined
       ? {}
@@ -219,7 +349,7 @@ export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
           }
         : {}),
     })),
-    messages: array(source.messages, message),
+    messages: array(source.messages, projectTeamMessage),
     ...(source.processes === undefined
       ? {}
       : { processes: readBackendProcesses(source.processes) }),

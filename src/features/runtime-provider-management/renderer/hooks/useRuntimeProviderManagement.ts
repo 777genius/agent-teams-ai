@@ -12,7 +12,7 @@ import {
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
 import { saveOpenCodeModelForNewTeams } from '../adapters/createTeamDefaultModelWriter';
-import { observeRuntimeProviderDirectoryRevision } from '../runtimeProviderDirectoryCache';
+import { getRuntimeProviderDirectoryReadToken, observeRuntimeProviderDirectoryRevision } from '../runtimeProviderDirectoryCache';
 import {
   projectBaseDefaultMutation,
   projectClearedDefaultMutation,
@@ -99,7 +99,6 @@ interface UseRuntimeProviderManagementOptions {
     changeKind: RuntimeProviderChangeKind
   ) => Promise<boolean | void> | boolean | void;
 }
-
 export type RuntimeProviderModelPickerMode = 'use' | 'runtime-default';
 export type RuntimeProviderChangeKind =
   | 'connection'
@@ -547,13 +546,13 @@ export function useRuntimeProviderManagement(
         visibleEntryCount: directoryEntriesRef.current.length,
       });
       const projectContext = getProjectContextSnapshot();
+      const readToken = getRuntimeProviderDirectoryReadToken(projectContext.path);
       const requestSeq = directoryRequestSeq.current + 1;
       directoryRequestSeq.current = requestSeq;
       const requestIsCurrent = (): boolean =>
         directoryRequestSeq.current === requestSeq &&
         currentRuntimeRevision.current === settledRuntimeRevision &&
         isProjectContextCurrent(projectContext);
-
       if (keepVisibleRows) {
         setDirectoryRefreshing(true);
       } else {
@@ -575,7 +574,12 @@ export function useRuntimeProviderManagement(
           cursor,
           refresh: refreshDirectoryData,
         });
-        if (!requestIsCurrent()) {
+        // A credential mutation can invalidate this read without changing the
+        // request sequence. Never paint its pre-mutation directory into local state.
+        if (
+          !requestIsCurrent() ||
+          getRuntimeProviderDirectoryReadToken(projectContext.path) !== readToken
+        ) {
           return false;
         }
         if (response.error) {
@@ -606,6 +610,7 @@ export function useRuntimeProviderManagement(
           directory,
           presentEntry: presentDirectoryEntry,
           runtimeRevision: settledRuntimeRevision,
+          readToken,
         });
         if (commit.action === 'retain') {
           setWarningMessage(EMPTY_FULL_CATALOG_WARNING);
@@ -620,7 +625,10 @@ export function useRuntimeProviderManagement(
         );
         return true;
       } catch (loadError) {
-        if (requestIsCurrent()) {
+        if (
+          requestIsCurrent() &&
+          getRuntimeProviderDirectoryReadToken(projectContext.path) === readToken
+        ) {
           setDirectoryError(
             loadError instanceof Error ? loadError.message : 'Failed to load provider directory'
           );
@@ -1211,7 +1219,6 @@ export function useRuntimeProviderManagement(
     setSetupSubmitError(null);
     setSetupSubmitErrorDiagnostics(null);
   }, []);
-
   const submitConnect = useCallback(
     async (providerId: string): Promise<RuntimeProviderConnectOutcome | null> => {
       const {
@@ -1232,7 +1239,6 @@ export function useRuntimeProviderManagement(
         setSetupSubmitErrorDiagnostics(diagnostics);
         return null;
       }
-
       setSavingProviderId(providerId);
       setError(null);
       setErrorDiagnostics(null);
@@ -1413,7 +1419,6 @@ export function useRuntimeProviderManagement(
       settledRuntimeRevision,
     ]
   );
-
   const forgetProvider = useCallback(
     async (providerId: string): Promise<void> => {
       setSavingProviderId(providerId);
@@ -1493,7 +1498,6 @@ export function useRuntimeProviderManagement(
       settledRuntimeRevision,
     ]
   );
-
   const openModelPicker = useCallback(
     (providerId: string, mode: RuntimeProviderModelPickerMode): void => {
       setSelectedProviderId(providerId);
@@ -1507,21 +1511,17 @@ export function useRuntimeProviderManagement(
     },
     [openModelPickerState]
   );
-
   const openProviderCredentialPage = useCallback(async (providerId: string): Promise<void> => {
     const credentialUrl = getRuntimeProviderCredentialUrl(providerId);
     if (credentialUrl) {
       await api.openExternal(credentialUrl);
     }
   }, []);
-
   const openOAuthAuthorizationUrl = useCallback(async (value: string): Promise<void> => {
     const url = normalizeGitHubDeviceAuthorizationUrl(value);
     if (url) await api.openExternal(url);
   }, []);
-
   const closeModelPicker = closeModelPickerState;
-
   const useModelForNewTeams = useCallback((modelId: string): void => {
     saveOpenCodeModelForNewTeams(modelId);
     setSelectedModelId(modelId);

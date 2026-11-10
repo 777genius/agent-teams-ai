@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { BackendOperationsFacade } from '../../../src/features/agent-backend/main/adapters/input/BackendOperationsFacade';
+import { projectDeletedTasks } from '../../../src/features/agent-backend/main/adapters/output/projectDeletedTasks';
 import { projectTeamSnapshot } from '../../../src/features/agent-backend/main/adapters/output/projectTeamSnapshot';
+import { createHostBackendRenderer } from '../../../src/features/agent-backend/renderer/createHostBackendRenderer';
 import {
   createHostTeamsApi,
   hostTeamSelectionKey,
@@ -18,6 +20,8 @@ import {
   extractTaskRefsFromText,
   parseTaskLinkHref,
 } from '../../../src/renderer/utils/taskReferenceUtils';
+
+import { mockOwnerMessagesPage } from './hostMessagesPageFixture';
 
 import type { BackendLaunchSnapshot } from '../../../src/features/agent-backend/contracts/launch';
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
@@ -95,15 +99,19 @@ function fixture() {
       state: 'ready',
       bindings: [{ handle: { handleId: 'TEST-original-A' }, label: 'Host', members: [] }],
     }),
-    invoke: vi.fn().mockImplementation(async (request) => ({
-      ok: true,
-      value:
-        request.operation === 'team.launch.read'
-          ? null
-          : request.operation === 'process.list'
-            ? structuredClone(snapshot.processes ?? [])
-            : structuredClone(snapshot),
-    })),
+    invoke: vi.fn().mockImplementation(async (request) =>
+      request.operation === 'team.messages.page'
+        ? mockOwnerMessagesPage(snapshot, request.payload)
+        : {
+            ok: true,
+            value:
+              request.operation === 'team.launch.read'
+                ? null
+                : request.operation === 'process.list'
+                  ? structuredClone(snapshot.processes ?? [])
+                  : structuredClone(snapshot),
+          }
+    ),
   };
   return { key, snapshot, legacy, backend };
 }
@@ -625,6 +633,52 @@ describe('ordinary Host team read selection', () => {
     );
     expect(await teams.getData('same-display-team')).toEqual({ legacy: true });
   });
+  it('assembles bounded owner pages before publishing teams and rejects torn revisions', async () => {
+    const f = fixture();
+    const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+    const cursor = '1.' + 'a'.repeat(64);
+    const secondTask = {
+      ...f.snapshot.tasks[0],
+      id: '2',
+      subject: 'Task from continued page',
+      status: 'in_progress' as const,
+    };
+    const first = {
+      ...f.snapshot,
+      tasks: f.snapshot.tasks,
+      messages: f.snapshot.messages.slice(0, 1),
+      nextCursor: cursor,
+    };
+    const second = {
+      ...f.snapshot,
+      tasks: [secondTask],
+      messages: f.snapshot.messages.slice(1, 2),
+      nextCursor: null,
+    };
+    vi.mocked(f.backend.invoke).mockImplementation(async (request) =>
+      request.operation === 'team.snapshot'
+        ? { ok: true, value: request.payload.cursor ? second : first }
+        : invoke(request)
+    );
+    const teams = createHostTeamsApi(f.legacy, f.backend);
+    const data = await teams.getData(f.key);
+    expect(data.tasks.map((task) => task.subject)).toEqual([
+      'Actual task', 'Task from continued page',
+    ]);
+    expect(data.members[0]?.taskCount).toBe(2);
+    expect((await teams.getAllTasks()).map((task) => task.id)).toEqual(['1', '2']);
+    expect(f.backend.invoke).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: 'team.snapshot', payload: { cursor } })
+    );
+    vi.mocked(f.backend.invoke).mockImplementation(async (request) =>
+      request.operation === 'team.snapshot'
+        ? { ok: true, value: request.payload.cursor ? { ...second, revision: 'b'.repeat(64) } : first }
+        : invoke(request)
+    );
+    await expect(teams.getData(f.key)).rejects.toThrow('Host team changed during paged read');
+    expect(f.legacy.getData).not.toHaveBeenCalled();
+  });
+
   it('keeps original owner-qualified refs, global board identity and cursor pages', async () => {
     const f = fixture();
     const teams = createHostTeamsApi(f.legacy, f.backend);
@@ -638,12 +692,110 @@ describe('ordinary Host team read selection', () => {
     expect(page.messages[0].messageId).toBe('m2');
     const older = await teams.getMessagesPage(f.key, { limit: 1, cursor: page.nextCursor });
     expect(older.messages[0].messageId).toBe('m1');
-    f.snapshot.revision = 'b'.repeat(64);
-    f.snapshot.feed.sequence++;
-    await expect(teams.getMessagesPage(f.key, { cursor: page.nextCursor })).rejects.toThrow(
-      'expired'
-    );
+    // Owner-page cursors depend on retained messages, not the unrelated Team snapshot revision.
+    f.snapshot.messages.push({
+      from: 'alice',
+      text: 'third accepted message',
+      timestamp: '2026-01-03',
+      read: false,
+      messageId: 'm3',
+    });
+    await expect(teams.getMessagesPage(f.key, { cursor: page.nextCursor })).rejects.toMatchObject({
+      code: 'hold',
+    });
   });
+  it('treats owner message pages as reads without crossing their own captured fence', async () => {
+    const f = fixture();
+    const { teams } = createHostBackendRenderer(f.legacy, f.backend, () => () => true);
+    const newest = await teams.getMessagesPage(f.key, { limit: 1 });
+    expect(newest.messages.map((message) => message.messageId)).toEqual(['m2']);
+    const older = await teams.getMessagesPage(f.key, { limit: 1, cursor: newest.nextCursor });
+    expect(older.messages.map((message) => message.messageId)).toEqual(['m1']);
+    expect(f.legacy.getMessagesPage).not.toHaveBeenCalled();
+  });
+
+  it('opens a retained deleted Host task via bounded same-owner Trash pages with full comment/detail identity', async () => {
+    const f = fixture();
+    const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+    vi.mocked(f.backend.invoke).mockImplementation(async (request) =>
+      request.operation === 'tasks.list'
+        ? {
+            ok: true,
+            value: projectDeletedTasks({
+              kind: 'deleted-tasks',
+              teamName: f.snapshot.teamName,
+              tasks: [{
+                id: 'retained-1',
+                subject: 'Retained detail',
+                description: 'Original deleted task description',
+                status: 'deleted',
+                comments: [{
+                  id: 'comment-1',
+                  author: 'alice',
+                  text: 'Retained comment',
+                  createdAt: '2026-01-03',
+                  type: 'regular',
+                }],
+                descriptionTaskRefs: [{
+                  taskId: '1',
+                  displayId: '1',
+                  teamName: 'same-display-team',
+                }],
+                privateRoot: '/SECRET',
+              }],
+            }),
+          }
+        : invoke(request)
+    );
+    const task = await createHostTeamsApi(f.legacy, f.backend).getTask(f.key, 'retained-1');
+    expect(task).toMatchObject({
+      id: 'retained-1',
+      subject: 'Retained detail',
+      description: 'Original deleted task description',
+      status: 'deleted',
+      comments: [{ text: 'Retained comment', author: 'alice' }],
+    });
+    expect(task?.descriptionTaskRefs?.[0].teamName).toBe(f.key);
+    expect(JSON.stringify(task)).not.toContain('/SECRET');
+    expect(f.backend.invoke).toHaveBeenCalledWith(expect.objectContaining({
+      operation: 'tasks.list',
+      handle: { handleId: 'TEST-original-A' },
+      payload: { deleted: true },
+    }));
+    expect(f.backend.invoke).not.toHaveBeenCalledWith(
+      expect.objectContaining({ operation: 'task.get' })
+    );
+    expect(f.legacy.getTask).not.toHaveBeenCalled();
+  });
+
+  it.each(['identity', 'status', 'forbidden'] as const)(
+    'refuses %s retained task read without falling back to a legacy owner',
+    async (caseName) => {
+      const f = fixture();
+      const original = vi.mocked(f.backend.invoke).getMockImplementation()!;
+      vi.mocked(f.backend.invoke).mockImplementation(async (request) => {
+        if (request.operation !== 'tasks.list') return original(request);
+        if (caseName === 'forbidden')
+          return { ok: false, code: 'forbidden', outcome: 'not-dispatched' };
+        return {
+          ok: true,
+          value: {
+            kind: 'deleted-tasks',
+            teamName: caseName === 'identity' ? 'foreign-team' : f.snapshot.teamName,
+            tasks: [{
+              id: 'retained-1',
+              status: caseName === 'status' ? 'in_progress' : 'deleted',
+              subject: 'Not a valid retained task',
+            }],
+          },
+        };
+      });
+      await expect(createHostTeamsApi(f.legacy, f.backend).getTask(f.key, 'retained-1'))
+        .rejects.toThrow();
+      expect(f.legacy.getTask).not.toHaveBeenCalled();
+    }
+  );
+
   it('fails closed for unknown/unavailable handles and unsupported operations, zero legacy fallback', async () => {
     const f = fixture();
     const teams = createHostTeamsApi(f.legacy, f.backend);
@@ -699,6 +851,9 @@ describe('ordinary Host team read selection', () => {
       ],
     };
     const projected = projectTeamSnapshot(raw);
+    const continuation = '1.' + 'a'.repeat(64);
+    expect(projectTeamSnapshot({ ...raw, nextCursor: continuation }).nextCursor).toBe(continuation);
+    expect(() => projectTeamSnapshot({ ...raw, nextCursor: 'invalid' })).toThrow('page cursor');
     expect(projected.messages[0]).toMatchObject({ summary: 'Read-only', actionMode: 'ask' });
     expect(projected.messages[0]!.attachments).toEqual([
       { id: 'TEST-image', filename: 'TEST-native-chat.png', mimeType: 'image/png', size: 90 },

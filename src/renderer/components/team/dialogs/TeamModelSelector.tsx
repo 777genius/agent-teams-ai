@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import {
   CodexRuntimeUpdateDialog,
@@ -81,6 +81,7 @@ import {
 } from 'lucide-react';
 
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
+import { CreateTeamPageActivityContext } from './createTeamPageActivityContext';
 import { OpenCodeAuthRequiredModelsNotice } from './OpenCodeAuthRequiredModelsNotice';
 import { useOpenCodeDefaultMaterialization } from './openCodeDefaultMaterialization';
 import { formatOpenCodeDefaultRouteLabel } from './openCodeDefaultModel';
@@ -115,12 +116,15 @@ import {
   isOpenCodeProviderExplicitlyNotConnected,
   mergeOpenCodePassiveProviderStatus,
 } from './openCodeRuntimeStatusUi';
+import { getOpenCodeSidebarSourceState } from './openCodeSidebarSourceState';
+import { useOpenCodeSourceDirectory, useScopedOpenCodeStatus } from './OpenCodeSourceDirectoryProvider';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
 import * as unavailableSelection from './openCodeUnavailableSelection';
 import { selectVisibleOpenCodeModelOptions } from './openCodeVisibleModelOptions';
 import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';
 import { resolveRuntimeDefaultModelLabel } from './runtimeDefaultModelLabel';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
+import { TeamModelProviderActions } from './TeamModelProviderActions';
 import {
   OpenCodeCatalogRefreshErrorCard,
   ProviderStatusPanel,
@@ -158,7 +162,6 @@ export {
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 export { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
-
 interface ProviderDef {
   id: TeamProviderId;
   label: string;
@@ -208,7 +211,6 @@ interface OpenCodeModelGroup {
 }
 type OpenCodeModelGroupStatus = OpenCodeModelRoutePresentationStatus;
 type OpenCodeRouteFilterTag = 'connected' | 'configured' | 'local';
-
 interface OpenCodeModelOptionMetadata {
   option: TeamRuntimeModelOption;
   index: number;
@@ -224,13 +226,11 @@ interface OpenCodeModelOptionMetadata {
   isFree: boolean;
   isNew: boolean;
 }
-
 interface OpenCodeVirtualHeadingRow {
   kind: 'heading';
   key: string;
   group: OpenCodeModelGroup;
 }
-
 interface OpenCodeVirtualModelRow {
   kind: 'models';
   key: string;
@@ -239,24 +239,19 @@ interface OpenCodeVirtualModelRow {
 }
 type OpenCodeVirtualRow = OpenCodeVirtualHeadingRow | OpenCodeVirtualModelRow;
 type RenderModelOption = (option: TeamRuntimeModelOption) => React.JSX.Element;
-
 type ProviderModelCatalogItem = NonNullable<CliProviderStatus['modelCatalog']>['models'][number];
-
 interface OpenCodeModelCostRates {
   input: number | null;
   output: number | null;
   cacheRead: number | null;
   cacheWrite: number | null;
 }
-
 interface OpenCodeModelPricingInfo {
   free: boolean;
   summary: string | null;
   title: string | undefined;
 }
-
 type TeamTranslator = ReturnType<typeof useAppTranslation>['t'];
-
 const MODEL_GRID_RESPONSIVE_HEIGHT_CLASS = 'h-[clamp(320px,calc(100vh-300px),520px)]';
 const OPENCODE_MODEL_VIRTUALIZATION_THRESHOLD = 80;
 const OPENCODE_MODEL_GROUP_HEADING_ESTIMATE_PX = 38;
@@ -267,7 +262,6 @@ const PROVIDERS: ProviderDef[] = [
   { id: 'codex', label: 'Codex', comingSoon: false },
   { id: 'opencode', label: 'OpenCode', comingSoon: false },
 ];
-
 const CURATED_OPENCODE_PROVIDER_TABS = [
   { sourceId: 'cursor-acp', label: 'Cursor' },
   { sourceId: 'github-copilot', label: 'GitHub Copilot' },
@@ -277,7 +271,6 @@ const CURATED_OPENCODE_PROVIDER_TABS = [
   { sourceId: 'zai-coding-plan', label: 'Z.AI' },
   { sourceId: 'minimax-coding-plan', label: 'MiniMax' },
 ] as const;
-
 const OPEN_CODE_ROUTE_FILTER_TAG_ORDER: readonly OpenCodeRouteFilterTag[] = [
   'local',
   'configured',
@@ -303,7 +296,6 @@ const OPEN_CODE_ROUTE_FILTER_TAG_STYLES: Record<
       'border-emerald-600/50 dark:border-emerald-300/50 bg-emerald-500/10 dark:bg-emerald-300/10 text-emerald-800 dark:text-emerald-100',
   },
 };
-
 function getCuratedOpenCodeProviderTab(
   sourceId: string
 ): { sourceId: string; label: string } | null {
@@ -414,7 +406,6 @@ function buildOpenCodeVirtualRows({
   columnCount: number;
 }): OpenCodeVirtualRow[] {
   const rows: OpenCodeVirtualRow[] = [];
-
   if (defaultOptions.length > 0) {
     rows.push({
       kind: 'models',
@@ -1079,6 +1070,8 @@ export interface TeamModelSelectorProps {
   onProviderChange: (providerId: TeamProviderId) => void;
   value: string;
   onValueChange: (value: string) => void;
+  /** Automatic catalog changes never count as manual user edits. */
+  onNormalizedValueChange?: (value: string) => void;
   preserveSelectedModel?: boolean;
   limitContext?: boolean;
   projectPath?: string | null;
@@ -1092,6 +1085,7 @@ export interface TeamModelSelectorProps {
   modelIssueReasonByValue?: Partial<Record<string, string | null | undefined>>;
   modelUnavailableReasonByValue?: Partial<Record<string, string | null | undefined>>;
   onOpenProviderSettings?: (providerId: TeamProviderId) => void;
+  onManageProviders?: (providerId: TeamProviderId) => void;
   onOpenCodeProviderScopedStatusChange?: Parameters<
     typeof usePublishOpenCodeProviderScopedStatus
   >[0];
@@ -1102,6 +1096,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   onProviderChange,
   value,
   onValueChange,
+  onNormalizedValueChange,
   preserveSelectedModel = false,
   limitContext = false,
   projectPath = null,
@@ -1115,9 +1110,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   modelIssueReasonByValue,
   modelUnavailableReasonByValue,
   onOpenProviderSettings,
+  onManageProviders,
   onOpenCodeProviderScopedStatusChange,
 }) => {
   const { t } = useAppTranslation('team');
+  const creationPageActive = useContext(CreateTeamPageActivityContext);
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const selectedProviderId =
     disableGeminiOption && isGeminiUiFrozen() && providerId === 'gemini' ? 'anthropic' : providerId;
@@ -1144,6 +1141,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const openCodeProviderDirectoryCache = useRuntimeProviderDirectoryCacheWithGlobalFallback(
     openCodeCatalogScopeKey || null
   );
+  const sourceDiscovery = useOpenCodeSourceDirectory(openCodeCatalogScopeKey || null);
   const [pendingPrivateNetworkSetup, setPendingPrivateNetworkSetup] = useState<{
     target: OpenCodeLocalModelSetupTarget;
     projectPath: string;
@@ -1305,12 +1303,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     runtimeStatusLoading: openCodeRuntimeStatusLoading,
   });
   const openCodeProviderTabs = useMemo<OpenCodeProviderTabDef[]>(() => {
-    const passiveOpenCodeStatus =
-      effectiveProviderId === 'opencode'
-        ? passiveRuntimeProviderStatus
-        : runtimeProviderStatusById.get('opencode');
     const statuses = [
-      passiveOpenCodeStatus,
+      openCodePassiveProviderStatus,
       effectiveProviderId === 'opencode' ? runtimeProviderStatus : null,
     ];
     const availableTabsBySourceId = new Map<string, OpenCodeProviderTabDef>();
@@ -1389,9 +1383,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   }, [
     effectiveProviderId,
     openCodeProviderDirectoryCache?.entries,
-    passiveRuntimeProviderStatus,
+    openCodePassiveProviderStatus,
     runtimeProviderStatus,
-    runtimeProviderStatusById,
   ]);
   const cachedOpenCodeProviderLoadingRows = useMemo<OpenCodeProviderLoadingRowDef[]>(() => {
     const resolvedSourceIds = new Set(openCodeProviderTabs.map((tab) => tab.sourceId));
@@ -1719,19 +1712,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   ]);
 
   useEffect(() => {
-    if (isInspectingInactiveProvider) {
-      return;
-    }
-    if (shouldDeferModelNormalization) {
-      return;
-    }
+    if (isInspectingInactiveProvider) return;
+    if (shouldDeferModelNormalization) return;
     if (normalizedValue !== value) {
-      onValueChange(normalizedValue);
+      (onNormalizedValueChange ?? onValueChange)(normalizedValue);
     }
   }, [
     isInspectingInactiveProvider,
     normalizedValue,
     onValueChange,
+    onNormalizedValueChange,
     shouldDeferModelNormalization,
     value,
   ]);
@@ -2447,10 +2437,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       }
     }
 
-    const openCodeStatus =
-      effectiveProviderId === 'opencode'
-        ? passiveRuntimeProviderStatus
-        : (runtimeProviderStatusById.get('opencode') ?? null);
+    const openCodeStatus = openCodePassiveProviderStatus;
     const catalogModelById = new Map(
       (openCodeStatus?.modelCatalog?.models ?? []).flatMap((model) => [
         [model.id, model] as const,
@@ -2489,8 +2476,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     openCodeModelMetadata,
     openCodeScopedCatalog.freshModelCount,
     openCodeScopedCatalog.sourceProviderId,
-    passiveRuntimeProviderStatus,
-    runtimeProviderStatusById,
+    openCodePassiveProviderStatus,
   ]);
   const isOpenCodeSourceTabLoadable = (provider: OpenCodeProviderTabDef): boolean => {
     const visibleModelCount = openCodeSourceModelCountById.get(provider.sourceId) ?? 0;
@@ -2528,6 +2514,23 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const openCodeCatalogUnavailable =
     openCodeCatalogRefreshFailed ||
     (effectiveProviderId === 'opencode' && openCodePassiveCatalogState === 'unavailable');
+  const scopedOpenCodeStatus = useScopedOpenCodeStatus(openCodeCatalogScopeKey);
+  const {
+    loading: openCodeSourcesLoading,
+    unavailable: openCodeSourcesUnavailable,
+    failureKind: sourceFailureKind,
+  } = getOpenCodeSidebarSourceState({
+    directory: sourceDiscovery,
+    catalogLoading: openCodeCatalogLoading,
+    catalogUnavailable: openCodeCatalogUnavailable,
+    catalogRefreshFailed: openCodeCatalogRefreshFailed,
+    scopedLoading: openCodeCatalogScopeKey
+      ? scopedOpenCodeStatus?.statusCheckOutcome === 'pending'
+      : cliProviderStatusLoading.opencode === true,
+    bootstrapLoading: cliStatusLoading && !openCodePassiveProviderStatus,
+    passiveStatusFailed: openCodePassiveProviderStatus?.statusCheckOutcome === 'transient_error',
+    passiveCatalogFailed: openCodePassiveProviderStatus?.modelCatalogRefreshState === 'error',
+  });
   const retryOpenCodeCatalogRefresh = (): void => {
     openCodeScopedCatalog.refresh();
     invalidateCliProviderModelCatalog?.();
@@ -2544,13 +2547,25 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const shouldShowOpenCodeCatalogLoading =
     openCodeCatalogLoading && visibleConcreteModelOptionCount === 0;
   const shouldShowOpenCodeSourceSkeleton =
-    openCodeCatalogLoading &&
+    openCodeSourcesLoading &&
     openCodeProviderTabs.length === 0 &&
     cachedOpenCodeProviderLoadingRows.length === 0;
   const shouldShowCachedOpenCodeProviderRows =
-    (openCodeCatalogLoading || openCodeCatalogUnavailable) &&
+    (openCodeSourcesLoading || openCodeSourcesUnavailable) &&
     openCodeProviderTabs.length === 0 &&
     cachedOpenCodeProviderLoadingRows.length > 0;
+  const shouldShowOpenCodeSourceUnavailable =
+    !openCodeSourcesLoading &&
+    openCodeSourcesUnavailable &&
+    openCodeProviderTabs.length === 0 &&
+    cachedOpenCodeProviderLoadingRows.length === 0;
+  const shouldShowOpenCodeNoSources =
+    !openCodeSourcesLoading &&
+    !openCodeSourcesUnavailable &&
+    (sourceDiscovery?.loaded === true ||
+      openCodePassiveProviderStatus?.modelCatalogRefreshState === 'ready') &&
+    openCodeProviderTabs.length === 0 &&
+    cachedOpenCodeProviderLoadingRows.length === 0;
   const shouldShowOpenCodeFilterSkeleton =
     openCodeCatalogLoading && !shouldShowOpenCodeCatalogLoading;
   const shouldShowModelSearch =
@@ -3125,6 +3140,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               aria-label="Model providers"
               className="h-full min-h-full w-full flex-col items-stretch justify-start gap-1 overflow-visible rounded-none border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-sidebar)] p-2"
             >
+              <TeamModelProviderActions
+                providerId={providerId}
+                projectPath={openCodeCatalogScopeKey}
+                onManageProviders={onManageProviders}
+              />
               {PROVIDERS.map((provider) => {
                 const providerDisabledReason = getProviderDisabledReason(provider.id);
                 const providerSelectable = isProviderSelectable(provider.id);
@@ -3193,18 +3213,20 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               })}
               {openCodeProviderTabs.length > 0 ||
               shouldShowOpenCodeSourceSkeleton ||
-              shouldShowCachedOpenCodeProviderRows ? (
+              shouldShowCachedOpenCodeProviderRows ||
+              shouldShowOpenCodeSourceUnavailable ||
+              shouldShowOpenCodeNoSources ? (
                 <div
                   role="presentation"
                   className="flex items-center justify-between gap-2 px-2 pb-0.5 pt-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-muted)]"
                 >
                   <span>OpenCode sources</span>
-                  {openCodeCatalogLoading ? (
+                  {openCodeSourcesLoading ? (
                     <span className="flex items-center gap-1 normal-case tracking-normal">
                       <RefreshCw className="size-2.5 animate-spin" aria-hidden="true" />
                       Syncing models
                     </span>
-                  ) : openCodeCatalogUnavailable ? (
+                  ) : openCodeSourcesUnavailable ? (
                     <span className="flex items-center gap-1 normal-case tracking-normal text-amber-700/80 dark:text-amber-200/80">
                       <AlertTriangle className="size-2.5" aria-hidden="true" />
                       Refresh needed
@@ -3213,17 +3235,26 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 </div>
               ) : null}
               {shouldShowOpenCodeSourceSkeleton ? <OpenCodeProviderTabsLoadingSkeleton /> : null}
+              {shouldShowOpenCodeSourceUnavailable ? (
+                <p role="status" className="px-3 py-2 text-[11px] text-[var(--color-text-muted)]">
+                  {sourceDiscovery?.error ?? t('modelSelector.openCodeStatus.summary.temporarilyUnavailable')}
+                </p>
+              ) : shouldShowOpenCodeNoSources ? (
+                <p className="px-3 py-2 text-[11px] text-[var(--color-text-muted)]">
+                  {t('modelSelector.openCode.noSourcesFound')}
+                </p>
+              ) : null}
               {shouldShowCachedOpenCodeProviderRows
                 ? cachedOpenCodeProviderLoadingRows.map((provider) => (
                     <div
                       key={`loading:${provider.sourceId}`}
                       data-testid={`team-model-selector-provider-nav-loading-${provider.sourceId}`}
                       data-connection-status={provider.status}
-                      data-catalog-state={openCodeCatalogLoading ? 'loading' : 'refresh-failed'}
+                      data-catalog-state={openCodeSourcesLoading ? 'loading' : sourceFailureKind === 'status' ? 'status-error' : sourceFailureKind === 'directory' ? 'directory-error' : 'refresh-failed'}
                       role="status"
                       aria-label={
-                        !openCodeCatalogLoading
-                          ? `${provider.label} provider status is known, but its model catalog could not be refreshed.`
+                        !openCodeSourcesLoading
+                          ? `${provider.label}: ${sourceFailureKind === 'status' ? 'provider status check failed' : sourceFailureKind === 'directory' ? 'source discovery failed' : 'model catalog refresh failed'}.`
                           : provider.status === 'connected'
                             ? `${provider.label} is connected. Loading models.`
                             : `${provider.label} account status and models are loading.`
@@ -3246,7 +3277,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                           )}
                           aria-hidden="true"
                         />
-                        {!openCodeCatalogLoading ? (
+                        {!openCodeSourcesLoading ? (
                           <AlertTriangle
                             className="size-3 text-amber-700/80 dark:text-amber-200/80"
                             aria-hidden="true"
@@ -3255,8 +3286,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                           <RefreshCw className="size-3 animate-spin" aria-hidden="true" />
                         )}
                         <span className="sr-only">
-                          {!openCodeCatalogLoading
-                            ? 'Provider status known. Model catalog refresh failed.'
+                          {!openCodeSourcesLoading
+                            ? sourceFailureKind === 'status' ? 'Provider status check failed.' : sourceFailureKind === 'directory' ? 'Source discovery failed.' : 'Model catalog refresh failed.'
                             : provider.status === 'connected'
                               ? 'Connected. Loading models.'
                               : 'Checking account status and loading models.'}
@@ -3290,7 +3321,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 );
               })}
             </TabsList>
-
             <div className="flex min-h-0 min-w-0 flex-col bg-[var(--color-surface)]">
               {!multimodelAvailable ? (
                 <div className="border-b border-[var(--color-border-subtle)] px-3 py-2">
@@ -3299,7 +3329,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   </p>
                 </div>
               ) : null}
-
               <div className="flex min-h-0 flex-1 flex-col p-4">
                 {effectiveProviderId === 'codex' ? (
                   <>
@@ -3723,7 +3752,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           </div>
         </Tabs>
         <CodexRuntimeUpdateDialog
-          open={codexRuntimeDialogOpen}
+          open={creationPageActive && codexRuntimeDialogOpen}
           onOpenChange={setCodexRuntimeDialogOpen}
           status={codexRuntimeStatus}
           loading={codexRuntimeStatusLoading}
@@ -3731,7 +3760,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           onInstall={() => void installCodexRuntime?.()}
         />
         <OpenCodeLocalModelPrivateNetworkApprovalDialog
-          target={pendingPrivateNetworkSetup?.target ?? null}
+          target={creationPageActive ? pendingPrivateNetworkSetup?.target ?? null : null}
           onCancel={() => setPendingPrivateNetworkSetup(null)}
           onApprove={(target) => {
             const approvedProjectPath = pendingPrivateNetworkSetup?.projectPath;

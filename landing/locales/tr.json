@@ -136,7 +136,16 @@
       "launchProof": "Takım arkadaşı başlatma durumu",
       "orgGovernance": "Organizasyonlar ve Genel Bakış",
       "budgetControls": "Bütçe kontrolleri",
-      "price": "Fiyat"
+      "price": "Fiyat",
+      "desktopPlatforms": "Desteklenen masaüstü platformları"
+    },
+    "platforms": {
+      "desktopApp": "(masaüstü uygulaması)",
+      "cliBinaries": "(CLI ikili dosyaları)",
+      "noNativeDesktop": "Yerel masaüstü uygulaması yok (kendi sunucunuzda panel)",
+      "desktopIde": "(masaüstü IDE)",
+      "cli": "(CLI)",
+      "wsl2": "WSL2 üzerinden (yerel değil)"
     }
   },
   "screenshots": {

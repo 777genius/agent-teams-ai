@@ -1505,13 +1505,29 @@
       "labelPlaceholder": "bijv. Dagelijkse codereview, nachtelijke tests...",
       "maxBudgetUsd": "Max. budget (USD)",
       "maxTurns": "Max. beurten",
+      "executionLimitsNote": "Deze limieten gelden alleen voor zelfstandige eenmalige uitvoeringen. Ze gelden niet voor taken die aan een al actief team worden toegewezen.",
       "noLimit": "Geen limiet",
       "noMatches": "Geen teams komen overeen met je zoekopdracht.",
       "noTeams": "Geen teams beschikbaar. Maak eerst een team aan.",
       "searchTeams": "Teams zoeken...",
       "selectTeam": "Selecteer een team...",
       "team": "Team",
-      "title": "Planning"
+      "title": "Planning",
+      "execution": "Uitvoering",
+      "legacyNotice": "Bestaande eenmalige planning: opslaan verandert het huidige gedrag niet.",
+      "upgradeSmart": "Overschakelen naar slimme planning",
+      "oneAgent": "Eén agent",
+      "wholeTeam": "Hele team",
+      "target": "Ontvanger wanneer het team actief is",
+      "leadDefault": "Teamleider (standaard)",
+      "agentDescription": "Als het team uitstaat, start een losse agent; anders wordt een taak toegewezen.",
+      "teamDescription": "Als het team uitstaat, wordt het gestart; anders krijgt de teamleider een taak. Opgeslagen instellingen worden gebruikt.",
+      "teamPathMissing": "Sla eerst de projectmap van het team op voordat je een start plant.",
+      "taskFirstAgentDescription": "Het gekozen teamlid krijgt een taak op het bord nadat het team zo nodig veilig is gestart. Bezette agents worden niet onderbroken.",
+      "taskFirstTeamDescription": "De teamleider krijgt een coördinatietaak nadat het team zo nodig veilig is gestart. Lopend werk wordt niet onderbroken.",
+      "taskFirstTarget": "Toewijzen aan",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "Ik heb de oude prompt nagekeken en blijvende instructies gescheiden. Bewaar de tekst, maar voer die niet uit via dit schema."
     },
     "title": {
       "createSchedule": "Planning aanmaken",
@@ -2086,7 +2102,8 @@
       "stillRunning": "Taak loopt nog...",
       "loadingLogs": "Logboeken laden...",
       "errors": "Fouten",
-      "close": "Sluiten"
+      "close": "Sluiten",
+      "openTask": "Taak openen"
     },
     "cron": {
       "expression": "Cron-expressie",
@@ -2124,7 +2141,9 @@
     "status": {
       "active": "Actief",
       "paused": "Gepauzeerd",
-      "disabled": "Uitgeschakeld"
+      "disabled": "Uitgeschakeld",
+      "hostUnsupported": "Host-planning niet beschikbaar",
+      "saved": "Opgeslagen"
     },
     "runStatus": {
       "pending": "In behandeling",
@@ -2134,7 +2153,9 @@
       "completed": "Voltooid",
       "failed": "Mislukt",
       "interrupted": "Onderbroken",
-      "cancelled": "Geannuleerd"
+      "cancelled": "Geannuleerd",
+      "dispatched": "Verzonden",
+      "skipped": "Overgeslagen"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2444,10 @@
       "hiddenCount": "{{count}} verborgen",
       "trash": "Prullenbak",
       "gridView": "Rasterweergave",
-      "columnsView": "Kolomweergave"
+      "columnsView": "Kolomweergave",
+      "tableView": "Tabelweergave",
+      "configureColumns": "Kolommen kiezen",
+      "resizeColumn": "Breedte aanpassen: {{column}}"
     },
     "trash": {
       "title": "Prullenbak",

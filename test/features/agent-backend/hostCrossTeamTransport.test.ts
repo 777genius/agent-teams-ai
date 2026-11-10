@@ -166,6 +166,75 @@ it('existing CrossTeam API lists same-owner Teams and refuses mixed/foreign owne
   ).toHaveLength(1);
 });
 
+it('excludes trashed Host teams from the destination picker and restores them after recovery', async () => {
+  const f = fixture();
+  const source = hostTeamSelectionKey('source.with.dot');
+  const target = hostTeamSelectionKey('target');
+  let trashed = true;
+  f.invoke.mockImplementation(async (request) => {
+    if (request.operation !== 'team.snapshot') throw new Error('Unexpected TEST operation');
+    const teamName = request.handle.handleId;
+    return {
+      ok: true,
+      value: {
+        teamName,
+        revision: 'a'.repeat(64),
+        feed: { streamId: 'TEST-stream', sequence: 0, cursor: 'TEST-cursor' },
+        lifecycle: {
+          kind: 'team_lifecycle' as const,
+          revision: 'a'.repeat(64),
+          deletedAt: teamName === 'target' && trashed ? '2026-11-09T12:00:00Z' : null,
+          cleanupPending: false,
+        },
+        members: [{ name: 'lead', role: 'lead' as const }],
+        tasks: [],
+        messages: [],
+        kanbanState: { teamName, reviewers: [], tasks: {} },
+      },
+    };
+  });
+  expect(await f.api.listTargets(source)).toEqual([]);
+  expect(f.legacy.listTargets).not.toHaveBeenCalled();
+  trashed = false;
+  expect((await f.api.listTargets(source)).map((row) => row.teamName)).toEqual([target]);
+});
+
+it('bounds same-owner destination reads below the Host transport pending limit', async () => {
+  const f = fixture();
+  const extras = Array.from({ length: 40 }, (_, index) => ({
+    ...f.bindings[1]!,
+    handle: { handleId: `TEST-extra-${index}` },
+    label: `Extra ${index}`,
+  }));
+  f.bindings.splice(1, 0, ...extras);
+  let pending = 0;
+  let maximumPending = 0;
+  f.invoke.mockImplementation(async (request) => {
+    if (request.operation !== 'team.snapshot') throw new Error('Unexpected TEST read');
+    pending++;
+    maximumPending = Math.max(maximumPending, pending);
+    await Promise.resolve();
+    pending--;
+    return {
+      ok: true,
+      value: {
+        teamName: request.handle.handleId,
+        revision: 'a'.repeat(64),
+        feed: { streamId: 'TEST-stream', sequence: 0, cursor: 'TEST-cursor' },
+        members: [{ name: 'lead', role: 'lead' }],
+        tasks: [],
+        messages: [],
+        kanbanState: { teamName: request.handle.handleId, reviewers: [], tasks: {} },
+      },
+    };
+  });
+  const targets = await f.api.listTargets(hostTeamSelectionKey('source.with.dot'));
+  expect(targets).toHaveLength(41);
+  expect(maximumPending).toBe(1);
+  expect(targets.map((target) => target.teamName)).toContain(hostTeamSelectionKey('TEST-extra-39'));
+  expect(f.legacy.listTargets).not.toHaveBeenCalled();
+});
+
 it('projects only finite cross-Team origin and maps existing opaque navigation without parsing handles as display names', () => {
   const f = fixture(),
     origin = {

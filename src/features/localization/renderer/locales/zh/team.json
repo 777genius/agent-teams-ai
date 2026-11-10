@@ -1505,13 +1505,29 @@
       "labelPlaceholder": "例如，每日代码审核、每晚测试……",
       "maxBudgetUsd": "最高预算（美元）",
       "maxTurns": "最大转数",
+      "executionLimitsNote": "这些限制仅适用于独立的一次性运行，不适用于分配给已在运行的团队的任务。",
       "noLimit": "无限制",
       "noMatches": "没有团队符合您的搜索。",
       "noTeams": "没有可用的团队。首先创建一个团队。",
       "searchTeams": "搜寻队伍…",
       "selectTeam": "选择一个团队…",
       "team": "团队",
-      "title": "日程"
+      "title": "日程",
+      "execution": "执行方式",
+      "legacyNotice": "现有一次性计划任务：保存不会改变其原有行为。",
+      "upgradeSmart": "切换到智能计划",
+      "oneAgent": "单个智能体",
+      "wholeTeam": "整个团队",
+      "target": "团队运行时的执行者",
+      "leadDefault": "团队负责人（默认）",
+      "agentDescription": "团队未运行时单独启动智能体；团队运行时创建并分配任务。",
+      "teamDescription": "团队未运行时启动已保存的团队；运行时向负责人分配任务。使用已保存的提供商和项目设置。",
+      "teamPathMissing": "请先为团队保存项目目录，才能安排自动启动。",
+      "taskFirstAgentDescription": "如有需要，先安全启动团队，再将看板任务交给所选队友。不会中断正在忙碌的智能体。",
+      "taskFirstTeamDescription": "如有需要，先安全启动团队，再将协调任务交给负责人。不会中断正在进行的工作。",
+      "taskFirstTarget": "分配给",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "我已检查保存的旧提示并分离长期指令。保留旧文本，但不要在定时任务中运行。"
     },
     "title": {
       "createSchedule": "创建计划任务",
@@ -2086,7 +2102,8 @@
       "stillRunning": "任务仍在运行…",
       "loadingLogs": "正在加载日志…",
       "errors": "错误",
-      "close": "关闭"
+      "close": "关闭",
+      "openTask": "打开任务"
     },
     "cron": {
       "expression": "克朗表达式",
@@ -2124,7 +2141,9 @@
     "status": {
       "active": "活跃",
       "paused": "已暂停",
-      "disabled": "已停用"
+      "disabled": "已停用",
+      "hostUnsupported": "Host 调度不可用",
+      "saved": "已保存"
     },
     "runStatus": {
       "pending": "待办的",
@@ -2134,7 +2153,9 @@
       "completed": "完全的",
       "failed": "失败",
       "interrupted": "被打断",
-      "cancelled": "取消"
+      "cancelled": "取消",
+      "dispatched": "已派发",
+      "skipped": "已跳过"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2444,10 @@
       "hiddenCount": "{{count}} 隐藏",
       "trash": "垃圾",
       "gridView": "网格视图",
-      "columnsView": "列视图"
+      "columnsView": "列视图",
+      "tableView": "表格视图",
+      "configureColumns": "选择列",
+      "resizeColumn": "调整{{column}}列宽"
     },
     "trash": {
       "title": "垃圾",

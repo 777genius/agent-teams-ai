@@ -1505,13 +1505,29 @@
       "labelPlaceholder": "Par exemple, examen quotidien du code, tests nocturnes...",
       "maxBudgetUsd": "Budget maximal (USD)",
       "maxTurns": "Max tourne",
+      "executionLimitsNote": "Ces limites s’appliquent uniquement aux exécutions autonomes ponctuelles. Elles ne s’appliquent pas aux tâches confiées à une équipe déjà en cours d’exécution.",
       "noLimit": "Aucune limite",
       "noMatches": "Aucune équipe ne correspond à votre recherche.",
       "noTeams": "Aucune équipe disponible. Créez une équipe d'abord.",
       "searchTeams": "Équipes de recherche...",
       "selectTeam": "Sélectionnez une équipe...",
       "team": "Équipe",
-      "title": "Tableau"
+      "title": "Tableau",
+      "execution": "Exécution",
+      "legacyNotice": "Planification ponctuelle existante : l'enregistrement ne change pas son comportement.",
+      "upgradeSmart": "Passer à la planification intelligente",
+      "oneAgent": "Un agent",
+      "wholeTeam": "Toute l’équipe",
+      "target": "Destinataire lorsque l’équipe est active",
+      "leadDefault": "Responsable de l’équipe (par défaut)",
+      "agentDescription": "Si l’équipe est arrêtée, lance un agent autonome ; sinon, attribue une tâche.",
+      "teamDescription": "Si l’équipe est arrêtée, la démarre ; sinon, attribue une tâche au responsable. Utilise les paramètres enregistrés.",
+      "teamPathMissing": "Enregistrez le dossier du projet de l’équipe avant de planifier son démarrage.",
+      "taskFirstAgentDescription": "Le coéquipier choisi reçoit une tâche sur le tableau après le démarrage sécurisé de l'équipe, si nécessaire. Les agents occupés ne sont pas interrompus.",
+      "taskFirstTeamDescription": "Le responsable reçoit une tâche de coordination après le démarrage sécurisé de l'équipe, si nécessaire. Le travail en cours n'est pas interrompu.",
+      "taskFirstTarget": "Attribuer à",
+      "historicalPromptReviewRequired": "Vérifiez les anciennes instructions ponctuelles de l'équipe avant de planifier. Supprimez ou séparez d'abord l'ancien prompt de lancement.",
+      "historicalPromptAcknowledged": "J'ai vérifié l'ancien prompt et séparé les instructions durables. Conserver l'ancien texte sans l'exécuter pour cette planification."
     },
     "title": {
       "createSchedule": "Créer un calendrier",
@@ -2086,7 +2102,8 @@
       "stillRunning": "La tâche est toujours en cours...",
       "loadingLogs": "Chargement des journaux...",
       "errors": "Erreurs",
-      "close": "Fermer"
+      "close": "Fermer",
+      "openTask": "Ouvrir la tâche"
     },
     "cron": {
       "expression": "Expression de couronne",
@@ -2124,7 +2141,9 @@
     "status": {
       "active": "Activité",
       "paused": "Paus",
-      "disabled": "Handicapés"
+      "disabled": "Handicapés",
+      "hostUnsupported": "Planification Host indisponible",
+      "saved": "Enregistré"
     },
     "runStatus": {
       "pending": "En attente",
@@ -2134,7 +2153,9 @@
       "completed": "Achevé",
       "failed": "Échec",
       "interrupted": "Interruption",
-      "cancelled": "Annulé"
+      "cancelled": "Annulé",
+      "dispatched": "Transmis",
+      "skipped": "Ignoré"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2444,10 @@
       "hiddenCount": "{{count}} caché",
       "trash": "Corbeille",
       "gridView": "Affichage de la grille",
-      "columnsView": "Vue des colonnes"
+      "columnsView": "Vue des colonnes",
+      "tableView": "Vue en tableau",
+      "configureColumns": "Choisir les colonnes",
+      "resizeColumn": "Redimensionner {{column}}"
     },
     "trash": {
       "title": "Corbeille",

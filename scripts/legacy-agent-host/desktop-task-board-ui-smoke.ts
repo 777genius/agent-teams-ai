@@ -5,6 +5,7 @@ import { basename, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 
 import { createTeamController } from '../../packages/legacy-agent-host/dist/adapters/team/ControllerAdapter.js';
+import { readDesktopTaskBoardGroupSnapshot } from './desktop-task-board-group-page-read.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import {
   desktopTaskBoardAssignmentReadyExpression,
@@ -237,21 +238,12 @@ export async function runDesktopTaskBoardUiSmoke(
     assert.equal(matches.length, 1, 'exactly one business intent per actual control');
     return matches[0]!;
   };
-  const readGroupSnapshot = async (phase: string, taskIds: string[]) => {
+  const readGroupSnapshot = (phase: string, taskIds: string[]) => {
     assert.ok(group);
-    options.assertOwnedRenderer();
-    const result = record(
-      await cdp.evaluate(
-        `window.electronAPI.agentBackend.invoke(${desktopJsLiteral({ handle: { handleId: options.handleId }, commandId: 'TEST-task-board-group-snapshot-' + phase, operation: 'team.snapshot', payload: {} })})`
-      )
-    );
-    assert.equal(result.ok, true);
-    const snapshot = record(result.value);
-    assert.ok(Array.isArray(snapshot.tasks));
-    const tasks = snapshot.tasks.map(record);
-    assert.deepEqual(tasks.map((row) => row.id).sort(), [...taskIds].sort());
-    assert.ok(tasks.every((row) => row.groupChatId === group.groupChatId));
-    return snapshot;
+    return readDesktopTaskBoardGroupSnapshot(cdp, {
+      handleId: options.handleId, teamName, groupChatId: group.groupChatId,
+      phase, taskIds, assertOwnedRenderer: options.assertOwnedRenderer,
+    });
   };
   const selectGroupFilter = async (name: string) => {
     await ui.click('button[aria-label="Filter tasks"]', 'open original Task filters');
@@ -447,6 +439,12 @@ export async function runDesktopTaskBoardUiSmoke(
     'original dependency reference visible'
   );
   proof.dependencyScreenshot = await screenshot('ui-task-board-assigned-blocked.png');
+  // A background Task detail refresh can invalidate the owner revision after assignee
+  // persistence and before this single click. Require the actual action guard again.
+  await ui.waitRead(
+    desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, { contextId, surfaceId }),
+    'current original Task owner can edit before Mark resolved'
+  );
   await ui.click('[role="dialog"] button', 'clear original clarification once', 'Mark resolved');
   await ui.waitRead(
     `!document.querySelector('[role="dialog"]')?.textContent.includes('Awaiting clarification from you')`,

@@ -98,39 +98,39 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   const workspace = join(fixture.root, 'workspace');
   await openOriginalCreateForm(cdp, ui, workspace, mixedDesktopTeamName);
   await configureMixedCreateSettings(cdp, ui);
-  await ui.scrollTo('[role="dialog"] #launch-team', 'original Create save-only checkbox');
+  await ui.scrollTo('[data-testid="create-team-page"] #launch-team', 'original Create save-only checkbox');
   if (
     await cdp.evaluate(
-      `document.querySelector('[role="dialog"] #launch-team')?.getAttribute('data-state')==='checked'`
+      `document.querySelector('[data-testid="create-team-page"] #launch-team')?.getAttribute('data-state')==='checked'`
     )
   )
-    await ui.click('[role="dialog"] #launch-team', 'original Create save-only checkbox');
+    await ui.click('[data-testid="create-team-page"] #launch-team', 'original Create save-only checkbox');
   await ui.waitRead(
-    `document.querySelector('[role="dialog"] #launch-team')?.getAttribute('data-state')==='unchecked'`,
+    `document.querySelector('[data-testid="create-team-page"] #launch-team')?.getAttribute('data-state')==='unchecked'`,
     'Create save-only retained'
   );
   await ui.scrollTo(
-    '[role="dialog"] #sync-models-with-lead',
+    '[data-testid="create-team-page"] #sync-models-with-lead',
     'original independent provider settings'
   );
   if (
     await cdp.evaluate(
-      `document.querySelector('[role="dialog"] #sync-models-with-lead')?.getAttribute('data-state')==='checked'`
+      `document.querySelector('[data-testid="create-team-page"] #sync-models-with-lead')?.getAttribute('data-state')==='checked'`
     )
   )
     await ui.click(
-      '[role="dialog"] #sync-models-with-lead',
+      '[data-testid="create-team-page"] #sync-models-with-lead',
       'disable original provider/model synchronization'
     );
   await ui.waitRead(
-    `document.querySelector('[role="dialog"] #sync-models-with-lead')?.getAttribute('data-state')==='unchecked'`,
+    `document.querySelector('[data-testid="create-team-page"] #sync-models-with-lead')?.getAttribute('data-state')==='unchecked'`,
     'original independent provider settings retained'
   );
-  await ui.scrollTo('[role="dialog"] button', 'existing member JSON editor', 'Edit as JSON');
-  await ui.click('[role="dialog"] button', 'open existing member JSON editor', 'Edit as JSON');
-  await ui.scrollTo('[role="dialog"] .cm-editor', 'original member JSON input');
+  await ui.scrollTo('[data-testid="create-team-page"] button', 'existing member JSON editor', 'Edit as JSON');
+  await ui.click('[data-testid="create-team-page"] button', 'open existing member JSON editor', 'Edit as JSON');
+  await ui.scrollTo('[data-testid="create-team-page"] .cm-editor', 'original member JSON input');
   await ui.click(
-    '[role="dialog"] .cm-editor .cm-content .cm-line:first-child',
+    '[data-testid="create-team-page"] .cm-editor .cm-content .cm-line:first-child',
     'focus original member JSON input'
   );
   await cdp.send('Input.dispatchKeyEvent', {
@@ -150,17 +150,17 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     text: JSON.stringify(mixedConfiguredMembers, null, 2),
   });
   await ui.waitRead(
-    `(() => {const rows=[...document.querySelectorAll('[role="dialog"] [data-role="member-row"] input[aria-label^="Member "]')]; return rows.length===2&&rows[0].value==='bob'&&rows[1].value==='carol'})()`,
+    `(() => {const rows=[...document.querySelectorAll('[data-testid="create-team-page"] [data-role="member-row"] input[aria-label^="Member "]')]; return rows.length===2&&rows[0].value==='bob'&&rows[1].value==='carol'})()`,
     'original form renders the two entered provider rows'
   );
-  await ui.scrollTo('[role="dialog"] button', 'original save-only Create control', 'Create');
+  await ui.scrollTo('[data-testid="create-team-page"] button', 'original save-only Create control', 'Create');
   await ui.click(
-    '[role="dialog"] button',
+    '[data-testid="create-team-page"] button',
     'Create the original saved3-member roster once',
     'Create'
   );
   await ui.waitRead(
-    `!document.querySelector('[role="dialog"] #team-name')`,
+    `!document.querySelector('[data-testid="create-team-page"] #team-name')`,
     'original Create closes',
     90_000
   );
@@ -258,11 +258,32 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   assert.equal(((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0, 0);
   await ui.click('button', 'reopen original mixed Launch before Submit', 'Launch');
   proof.reopenedLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
-  await poll(
-    async () => modelRows.map((model) => model.probes.length),
-    (counts) => counts.every((count, index) => count > probesBeforeLaunch[index]! && count <= 8),
-    'all3 selected namespaces have actual bounded model preflights'
-  );
+  // Preserve a bounded, credential-free timing trace for each original provider
+  // preflight. All three native model checks and the original 90s deadline remain mandatory.
+  const preflightStartedAt = performance.now();
+  const preflightProbeTimeline: Array<{ elapsedMs: number; counts: number[] }> = [];
+  let previousProbeSignature = '';
+  let nextProbeSampleMs = 0;
+  try {
+    await poll(
+      async () => {
+        const counts = modelRows.map((model) => model.probes.length);
+        const elapsedMs = Math.round(performance.now() - preflightStartedAt);
+        const signature = counts.join(':');
+        if (signature !== previousProbeSignature || elapsedMs >= nextProbeSampleMs) {
+          preflightProbeTimeline.push({ elapsedMs, counts });
+          previousProbeSignature = signature;
+          nextProbeSampleMs = elapsedMs + 10_000;
+        }
+        return counts;
+      },
+      (counts) => counts.every((count, index) => count > probesBeforeLaunch[index]! && count <= 8),
+      'all3 selected namespaces have actual bounded model preflights'
+    );
+  } finally {
+    // Persist the original fixture's count-only timeline on PASS and INCOMPLETE.
+    proof.preflightProbeTimeline = preflightProbeTimeline;
+  }
   assert.equal(
     ((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0,
     0,
@@ -519,8 +540,20 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   assert.equal(record(after.savedSettings).allowExperimentalLocalModels, false);
   const configuredAfterStop = assertMixedSavedSettings(after, workspace, mixedEditedDescription);
   assert.deepEqual(configuredAfterStop, configuredAfterLaunch);
+  // Permit a single new TEST probe only after observing the original cold UI boundary.
+  // This grants neither a new native business input nor a repeated Launch submission.
+  models.beginColdReadbackProbes();
   await ui.click('button', 'reopen original mixed Launch after Stop/reload', 'Launch');
   proof.stoppedReloadLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
+  await poll(
+    async () => models.claude.probes.length,
+    (count) => count === 9,
+    'one fresh original cold Launch model preflight'
+  );
+  assert.deepEqual(models.claude.probes.slice(8), [
+    { phase: 'cold-readback', requestedModel: 'claude-opus-4-6', requestedEffort: 'medium' },
+  ]);
+  assert.deepEqual(models.claude.failures, []);
   assert.deepEqual(
     assertMixedSavedSettings(await ownerState(), workspace, mixedEditedDescription),
     configuredAfterStop

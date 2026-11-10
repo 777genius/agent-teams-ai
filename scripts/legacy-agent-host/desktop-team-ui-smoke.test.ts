@@ -12,6 +12,7 @@ import { readRendererBackendConnections } from './desktop-backend-observations.t
 import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
 import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-comment-input-target.ts';
 import { runDesktopTaskBoardAttachmentsUi } from './desktop-task-board-attachments-ui.ts';
+import { createDesktopUiControls } from './desktop-ui-controls.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -191,6 +192,7 @@ function assignmentRuntime(stage?: 'in-progress-comment') {
     surfaceId: captured.surfaceId,
     isOwner: true,
     canSubmit: true,
+    canEditNow: () => true,
     attachmentError: null,
     session: {
       ownerSurfaceId: captured.surfaceId,
@@ -343,6 +345,7 @@ test('original in-progress Task comment prerequisite requires its exact stage wi
     (f: ReturnType<typeof commentRuntime>) => { f.detail.identity.taskId = 'foreign-task'; },
     (f: ReturnType<typeof commentRuntime>) => { f.controller.surfaceId = 'foreign-surface'; },
     (f: ReturnType<typeof commentRuntime>) => { f.controller.isOwner = false; },
+    (f: ReturnType<typeof commentRuntime>) => { f.controller.canEditNow = () => false; },
   ]) {
     const f = commentRuntime();
     change(f);
@@ -379,6 +382,21 @@ test('Task attachment comment waits for its original focused owner after one cli
     };
     const ready = {
       owner,
+      inputProbe: {
+        present: true,
+        connected: true,
+        disabled: false,
+        focused: true,
+        ownerSurfaceId: owner.surfaceId,
+        ownerRevision: owner.ownerRevision,
+        expectedSurfaceId: owner.surfaceId,
+        detailPhase: 'ready',
+        refreshPending: false,
+        taskStatus: 'in_progress',
+        taskId: 'TEST-task',
+        activeContextId: owner.identity.contextId,
+        contextSwitching: false,
+      },
       settled: true,
       domValue: '',
       inputEnabled: true,
@@ -387,12 +405,25 @@ test('Task attachment comment waits for its original focused owner after one cli
       documentFocused: true,
     };
     const afterFocus = [
-      { ...ready, owner: null, settled: false, domValue: null, inputEnabled: false },
+      {
+        ...ready,
+        owner: null,
+        inputProbe: {
+          ...ready.inputProbe,
+          present: false,
+          connected: false,
+          ownerRevision: null,
+          focused: false,
+        },
+        settled: false,
+        domValue: null,
+        inputEnabled: false,
+      },
       {
         ...ready,
         owner: { ...owner, selector: '[role="dialog"] textarea[id="TEST-rebound-comment"]' },
       },
-      { ...ready, focused: false },
+      { ...ready, focused: false, inputProbe: { ...ready.inputProbe, focused: false } },
       ready,
     ];
     let focused = false,
@@ -524,6 +555,9 @@ test('original Task assignment prerequisite refuses receipt-only, pending and st
     'visible Task alone is not current accepted live authority'
   );
   f.work.teamUnavailable = false;
+  f.controller.canEditNow = () => false;
+  assert.equal(await f.evaluate(), null, 'original Task owner forbids editing');
+  f.controller.canEditNow = () => true;
   const result = await f.evaluate();
   assert.equal(result?.surfaceId, 'TEST-original-surface');
   assert.equal((result?.identity as { contextId: string }).contextId, 'TEST-context');
@@ -561,4 +595,50 @@ test('original Task assignment prerequisite rejects a foreign context, Team, Tas
     change(f);
     assert.equal(await f.evaluate(), null);
   }
+});
+
+test('original desktop click waits for stable target geometry, without repeating input', { timeout: 5000 }, async () => {
+  const points = [
+    { x: 100, y: 100, tag: 'BUTTON' },
+    { x: 100, y: 100, tag: 'BUTTON' },
+    { x: 100, y: 200, tag: 'BUTTON' },
+    { x: 100, y: 200, tag: 'BUTTON' },
+    { x: 100, y: 200, tag: 'BUTTON' },
+  ];
+  const dispatched: Record<string, unknown>[] = [];
+  const cdp = {
+    async evaluate(expression: string) {
+      assert.ok(expression.includes('document.querySelectorAll'));
+      return points.shift() ?? { x: 100, y: 200, tag: 'BUTTON' };
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      if (method === 'Input.dispatchMouseEvent') dispatched.push({ ...params });
+      return {};
+    },
+  };
+  const ui = createDesktopUiControls(cdp, { assertOwnedRenderer() {}, step() {} });
+  await ui.click('#TEST-original-toggle', 'TEST moving original toggle');
+  assert.deepEqual(dispatched.map(({ type }) => type), ['mouseMoved', 'mousePressed', 'mouseReleased']);
+  for (const event of dispatched) {
+    assert.equal(event.x, 100);
+    if (event.type !== 'mouseMoved') assert.equal(event.y, 200);
+  }
+});
+
+test('original desktop click refuses a constantly moving target before dispatch', { timeout: 5000 }, async () => {
+  let reads = 0;
+  const dispatched: string[] = [];
+  const cdp = {
+    async evaluate(expression: string) {
+      assert.ok(expression.includes('document.querySelectorAll'));
+      return { x: 100, y: 100 + reads++ * 10, tag: 'BUTTON' };
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      if (method === 'Input.dispatchMouseEvent') dispatched.push(String(params.type));
+      return {};
+    },
+  };
+  const ui = createDesktopUiControls(cdp, { assertOwnedRenderer() {}, step() {} });
+  await assert.rejects(ui.click('#TEST-original-toggle', 'TEST moving original toggle'), /did not settle before one click/);
+  assert.deepEqual(dispatched, ['mouseMoved'], 'no physical click after unstable ownership');
 });

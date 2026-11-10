@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  existsSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -105,6 +106,19 @@ function fixture(
   });
   return { registry, store, attached, close: () => lease.release() };
 }
+
+test('fresh Host registry and owner create every native path ancestor before fencing', (t) => {
+  const root = sandbox();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const registry = new FileTeamRegistryStore(root, () => {});
+  assert.equal(existsSync(join(root, '.host-team-registry')), false);
+  assert.deepEqual(registry.fenced(() => registry.readAll()), []);
+  assert.equal(existsSync(join(root, '.host-team-registry', 'records')), true);
+
+  const owner = new TeamOwnerStore(root, 'new-team');
+  assert.equal(owner.fenced(() => true), true);
+  assert.equal(existsSync(join(root, 'teams', 'new-team', '.host-owner')), true);
+});
 
 // A second Team, lost saved configuration, or different cold IDs would fail these product assertions.
 test('registry saves canonical product configuration and replays the same command after cold startup', () => {

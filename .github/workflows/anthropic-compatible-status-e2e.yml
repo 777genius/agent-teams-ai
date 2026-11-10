@@ -20,6 +20,7 @@ on:
       - src/main/utils/shellEnv.ts
       - src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts
       - src/renderer/store/slices/cliInstallerSlice.ts
+      - src/renderer/store/index.ts
       - src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx
       - src/main/services/team/provisioning/TeamProvisioningAnthropicDiagnosticModel.ts
       - src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts

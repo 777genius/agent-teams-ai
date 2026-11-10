@@ -76,7 +76,14 @@ function mount(
         <CreateTaskDialog
           open={open}
           teamName={teamName}
-          members={[]}
+          members={[{
+            name: 'alice',
+            status: 'idle',
+            currentTaskId: null,
+            taskCount: 0,
+            lastActiveAt: null,
+            messageCount: 0,
+          }]}
           tasks={[]}
           defaultSubject="ORIGINAL"
           defaultDescription="TEST description"

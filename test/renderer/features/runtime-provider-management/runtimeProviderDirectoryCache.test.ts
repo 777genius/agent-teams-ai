@@ -3,10 +3,17 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { runtimeProviderDirectoryInteraction } from '../../../../src/features/runtime-provider-management/renderer/view-models/runtimeProviderDirectoryInteraction';
 
 import {
+  beginRuntimeProviderConnectedCountCheck,
+  getRuntimeProviderConnectedCountEvidence,
+  getRuntimeProviderConnectedCountObservation,
   getRuntimeProviderDirectoryCacheSnapshot,
+  getRuntimeProviderDirectoryReadToken,
   invalidateRuntimeProviderDirectoryCache,
+  invalidateRuntimeProviderDirectoryScopeReads,
+  markRuntimeProviderDirectoryScopeUnverified,
   getRuntimeProviderDirectoryCacheWithGlobalFallbackSnapshot,
   observeRuntimeProviderDirectoryRevision,
+  publishRuntimeProviderConnectedCount,
   publishRuntimeProviderDirectoryCache,
   resetRuntimeProviderDirectoryCacheForTests,
 } from '../../../../src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
@@ -38,6 +45,184 @@ const providerEntry = {
 describe('runtimeProviderDirectoryCache', () => {
   afterEach(() => {
     resetRuntimeProviderDirectoryCacheForTests();
+  });
+
+  it('tracks only active scoped checks, including concurrent reads and invalidation', () => {
+    const project = '/tmp/checking';
+    const readToken = getRuntimeProviderDirectoryReadToken(project);
+    const stopFirst = beginRuntimeProviderConnectedCountCheck(project, readToken);
+    const stopSecond = beginRuntimeProviderConnectedCountCheck(project, readToken);
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(true);
+    expect(getRuntimeProviderConnectedCountEvidence('/tmp/other').checking).toBeUndefined();
+    stopFirst();
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(true);
+    stopSecond();
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBeUndefined();
+    stopSecond();
+
+    const stopStale = beginRuntimeProviderConnectedCountCheck(project, readToken);
+    invalidateRuntimeProviderDirectoryScopeReads(project);
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(true);
+    stopStale();
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(false);
+    const stopRejected = beginRuntimeProviderConnectedCountCheck(project, readToken);
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(false);
+    stopRejected();
+    const stopCurrent = beginRuntimeProviderConnectedCountCheck(project);
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(true);
+    stopCurrent();
+    expect(getRuntimeProviderConnectedCountEvidence(project).checking).toBe(false);
+
+    const stopGlobal = beginRuntimeProviderConnectedCountCheck('/tmp/global-invalidation');
+    invalidateRuntimeProviderDirectoryScopeReads(null);
+    expect(getRuntimeProviderConnectedCountEvidence('/tmp/global-invalidation').checking).toBe(true);
+    stopGlobal();
+    expect(getRuntimeProviderConnectedCountEvidence('/tmp/global-invalidation').checking).toBe(false);
+  });
+
+  it('fences count-only observations across project switches, credential writes and global logout', () => {
+    const revision = JSON.stringify(['ready', '1.2.3', '/bin/opencode']);
+    observeRuntimeProviderDirectoryRevision(revision);
+    const tokenA = getRuntimeProviderDirectoryReadToken('/tmp/project-a');
+    const tokenB = getRuntimeProviderDirectoryReadToken('/tmp/project-b');
+    const input = {
+      connected: 3,
+      runtimeRevision: revision,
+      fetchedAt: new Date().toISOString(),
+      source: 'summary-connected' as const,
+    };
+    publishRuntimeProviderConnectedCount({ ...input, projectPath: '/tmp/project-a', readToken: tokenA });
+    publishRuntimeProviderConnectedCount({ ...input, projectPath: '/tmp/project-b', readToken: tokenB });
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/project-a')?.connected).toBe(3);
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/project-b')?.connected).toBe(3);
+
+    invalidateRuntimeProviderDirectoryScopeReads('/tmp/project-a');
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/project-a')).toBeNull();
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/project-b')?.connected).toBe(3);
+    publishRuntimeProviderConnectedCount({ ...input, projectPath: '/tmp/project-a', readToken: tokenA });
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/project-a')).toBeNull();
+
+    invalidateRuntimeProviderDirectoryScopeReads(null);
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/project-b')).toBeNull();
+    publishRuntimeProviderConnectedCount({ ...input, projectPath: '/tmp/project-b', readToken: tokenB });
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/project-b')).toBeNull();
+  });
+
+  it('rejects stale in-flight reads after a credential change without touching other scopes', () => {
+    const oldReadToken = getRuntimeProviderDirectoryReadToken('/tmp/project-a');
+    const otherScopeToken = getRuntimeProviderDirectoryReadToken('/tmp/project-b');
+    markRuntimeProviderDirectoryScopeUnverified('/tmp/project-a');
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+      readToken: oldReadToken,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')).toBeNull();
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-b',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+      readToken: otherScopeToken,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-b')).not.toBeNull();
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [{ ...providerEntry, state: 'not-connected' }],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: true,
+      readToken: getRuntimeProviderDirectoryReadToken('/tmp/project-a'),
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.entries[0]?.state).toBe(
+      'not-connected'
+    );
+  });
+
+  it('fences old reads without downgrading the complete cache on successful refresh', () => {
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:00:00.000Z',
+      authoritative: true,
+      totalCount: 1,
+      nextCursor: null,
+    });
+    const previousToken = getRuntimeProviderDirectoryReadToken('/tmp/project-a');
+    invalidateRuntimeProviderDirectoryScopeReads('/tmp/project-a');
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.authoritative).toBe(true);
+    expect(getRuntimeProviderConnectedCountEvidence('/tmp/project-a').invalidated).toBe(true);
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [{ ...providerEntry, state: 'not-connected' }],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: false,
+      readToken: getRuntimeProviderDirectoryReadToken('/tmp/project-a'),
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.authoritative).toBe(true);
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.entries[0]?.state)
+      .toBe('not-connected');
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:02:00.000Z',
+      authoritative: true,
+      readToken: previousToken,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.entries[0]?.state)
+      .toBe('not-connected');
+  });
+
+  it('withdraws exact project authority after a global credential mutation without dropping rows', () => {
+    const globalRead = getRuntimeProviderDirectoryReadToken(null);
+    const projectARead = getRuntimeProviderDirectoryReadToken('/tmp/project-a');
+    const projectBRead = getRuntimeProviderDirectoryReadToken('/tmp/project-b');
+    for (const projectPath of [null, '/tmp/project-a', '/tmp/project-b']) {
+      publishRuntimeProviderDirectoryCache({
+        projectPath,
+        entries: [providerEntry],
+        fetchedAt: '2026-07-20T10:00:00.000Z',
+        authoritative: true,
+        totalCount: 1,
+        nextCursor: null,
+      });
+    }
+    invalidateRuntimeProviderDirectoryScopeReads(null);
+    expect(getRuntimeProviderDirectoryReadToken(null)).not.toBe(globalRead);
+    expect(getRuntimeProviderDirectoryReadToken('/tmp/project-a')).not.toBe(projectARead);
+    expect(getRuntimeProviderDirectoryReadToken('/tmp/project-b')).not.toBe(projectBRead);
+    expect(getRuntimeProviderDirectoryCacheSnapshot(null)?.authoritative).toBe(true);
+    for (const scope of ['/tmp/project-a', '/tmp/project-b']) {
+      expect(getRuntimeProviderDirectoryCacheSnapshot(scope)?.authoritative).toBe(false);
+      expect(getRuntimeProviderDirectoryCacheSnapshot(scope)?.entries[0]?.state).toBe('connected');
+    }
+    // In-flight project reads from before the global change cannot resurrect
+    // an inherited connection as an authoritative result.
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [providerEntry],
+      fetchedAt: '2026-07-20T10:01:00.000Z',
+      authoritative: true,
+      totalCount: 1,
+      nextCursor: null,
+      readToken: projectARead,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.authoritative).toBe(false);
+    publishRuntimeProviderDirectoryCache({
+      projectPath: '/tmp/project-a',
+      entries: [{ ...providerEntry, state: 'not-connected' }],
+      fetchedAt: '2026-07-20T10:02:00.000Z',
+      authoritative: true,
+      totalCount: 1,
+      nextCursor: null,
+      readToken: getRuntimeProviderDirectoryReadToken('/tmp/project-a'),
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.authoritative).toBe(true);
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-a')?.entries[0]?.state).toBe(
+      'not-connected'
+    );
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/project-b')?.authoritative).toBe(false);
   });
 
   it('keeps provider snapshots isolated by project scope', () => {

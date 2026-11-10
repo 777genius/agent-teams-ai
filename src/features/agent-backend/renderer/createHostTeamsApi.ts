@@ -27,7 +27,13 @@ import {
 } from './hostTeamRouting';
 import { projectHostMemberAttachmentCapabilities } from './projectHostMemberAttachmentCapabilities';
 import { projectHostSavedTeamRequest } from './projectHostSavedTeamRequest';
-import { readHostRosterConfiguration } from './readHostRosterConfiguration';
+import { readHostMessagesPage } from './readHostMessagesPage';
+import { readHostPagedSnapshot } from './readHostPagedSnapshot';
+import {
+  assertMatchingConfiguration,
+  readHostRosterConfiguration,
+  savedProjectPath,
+} from './readHostRosterConfiguration';
 import { createTeamCreationResultApi } from './readTeamCreationResult';
 import { remapHostCrossTeamMessages } from './remapHostCrossTeamMessages';
 import { TeamProductReadOrder } from './TeamProductReadOrder';
@@ -39,11 +45,10 @@ import {
 
 import type { BackendConnectionSnapshot } from '../contracts/connections';
 import type { AgentBackendApi } from '../contracts/operations';
-import type { BackendRosterConfiguration } from '../contracts/roster';
 import type { BackendTeamSnapshot } from '../contracts/teamSnapshot';
 import type { HostActivityReadOptions } from './readHostActivityLogs';
 import type { TeamsAPI } from '@shared/types/api';
-import type { InboxMessage, TeamTaskWithKanban, TeamViewSnapshot } from '@shared/types/team';
+import type { TeamTaskWithKanban, TeamViewSnapshot } from '@shared/types/team';
 
 export { hostTeamSelectionKey, isHostTeamSelectionKey } from './hostTeamRouting';
 
@@ -52,24 +57,6 @@ type CurrentScope = () => boolean;
 
 function current(check: CurrentScope): void {
   if (!check()) throw new Error('Team context changed');
-}
-function assertMatchingConfiguration(
-  snapshot: BackendTeamSnapshot,
-  configuration: BackendRosterConfiguration
-): void {
-  if (
-    snapshot.configurationRevision !== undefined &&
-    snapshot.configurationRevision !== configuration.revision
-  )
-    throw new Error('Team configuration changed');
-  if (
-    configuration.members.length !== snapshot.members.length ||
-    configuration.members.some(
-      (member) =>
-        !snapshot.members.some((row) => row.name === member.name && row.role === member.role)
-    )
-  )
-    throw new Error('Team roster changed');
 }
 function remapSnapshot(
   snapshot: BackendTeamSnapshot,
@@ -197,30 +184,7 @@ export function createHostTeamsApi(
     connection: Connection,
     check: CurrentScope
   ): Promise<{ data: BackendTeamSnapshot; assertCurrent(): void }> {
-    readOrder.capture(check);
-    const readFence = readOrder.readFence(connection.handle.handleId);
-    // Reads use a fresh transport correlation ID, never a mutation receipt or replay.
-    const result = await backend.invoke({
-      handle: connection.handle,
-      commandId: crypto.randomUUID(),
-      operation: 'team.snapshot',
-      payload: {},
-    });
-    current(check);
-    if (!result.ok) throw new Error(`Host team read ${result.code}`);
-    if (!result.value || !('revision' in result.value) || !('kanbanState' in result.value))
-      throw new Error('Invalid Host team snapshot');
-    const value = result.value;
-    readFence();
-    readOrder.acceptSnapshot(connection.handle.handleId, value);
-    return {
-      data: value,
-      assertCurrent: () => {
-        current(check);
-        readFence();
-        readOrder.assertCurrent(connection.handle.handleId, value.feed);
-      },
-    };
+    return readHostPagedSnapshot(backend, connection, check, readOrder);
   }
   async function resolveConnection(
     key: string,
@@ -265,12 +229,14 @@ export function createHostTeamsApi(
       let description = '',
         displayName = binding.label,
         color: string | undefined;
+      let projectPath: string | undefined;
       try {
         const configuration = await readHostRosterConfiguration(backend, binding.handle);
         assertMatchingConfiguration(data, configuration);
         description = configuration.savedSettings?.description ?? '';
         displayName = configuration.savedSettings?.displayName ?? binding.label;
         color = configuration.savedSettings?.color;
+        projectPath = savedProjectPath(configuration);
       } catch {
         // Unavailable saved settings leave ordinary product records readable.
       }
@@ -281,6 +247,7 @@ export function createHostTeamsApi(
         displayName,
         description,
         ...(color === undefined ? {} : { color }),
+        ...(projectPath === undefined ? {} : { projectPath }),
         memberCount: data.members.filter((member) => member.role === 'member').length,
         members: data.members,
         ...(data.members.find((member) => member.role === 'lead')
@@ -315,10 +282,12 @@ export function createHostTeamsApi(
       );
       observed.push(read.assertCurrent);
       let displayName = binding.label;
+      let projectPath: string | undefined;
       try {
         const configuration = await readHostRosterConfiguration(backend, binding.handle);
         assertMatchingConfiguration(data, configuration);
         displayName = configuration.savedSettings?.displayName ?? binding.label;
+        projectPath = savedProjectPath(configuration);
       } catch {
         // Product tasks remain readable while their saved presentation is unavailable.
       }
@@ -327,6 +296,7 @@ export function createHostTeamsApi(
           ...task,
           teamName: data.teamName,
           teamDisplayName: displayName,
+          ...(projectPath === undefined ? {} : { projectPath }),
         }))
       );
     }
@@ -495,41 +465,10 @@ export function createHostTeamsApi(
       key: string,
       options?: { cursor?: string | null; limit?: number; groupChatId?: string }
     ) {
-      const { snapshot, assertCurrent } = await selected(key, captureScope());
-      assertCurrent();
-      // A changed product revision invalidates older offsets instead of skipping/duplicating rows silently.
-      const scope =
-        options?.groupChatId === undefined
-          ? snapshot.revision
-          : `${snapshot.revision}.${options.groupChatId}`;
-      const parts = options?.cursor?.split(':') ?? [scope, '0'];
-      if (parts.length !== 2) throw new Error('Invalid Host messages cursor');
-      const [revision, offsetText] = parts;
-      const offset = Number(offsetText);
-      if (revision !== scope || !Number.isSafeInteger(offset) || offset < 0)
-        throw new Error('Host messages cursor expired');
-      const limit = options?.limit ?? 50;
-      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500)
-        throw new Error('Invalid Host messages page');
-      const unique = new Map<string, InboxMessage>();
-      for (const message of snapshot.messages) {
-        if (
-          options?.groupChatId !== undefined &&
-          (message.groupChatId !== options.groupChatId ||
-            message.messageId !== message.groupMessageId)
-        )
-          continue;
-        unique.set(message.messageId ?? JSON.stringify(message), message);
-      }
-      const messages = [...unique.values()].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-      const end = Math.max(0, messages.length - offset);
-      const start = Math.max(0, end - limit);
-      return {
-        messages: messages.slice(start, end),
-        nextCursor: start > 0 ? `${scope}:${offset + limit}` : null,
-        hasMore: start > 0,
-        feedRevision: snapshot.revision,
-      };
+      const check = captureScope();
+      const bindings = await connections(check);
+      const connection = await resolveConnection(key, check, bindings);
+      return readHostMessagesPage(backend, connection, bindings, key, options, check, readOrder);
     },
   };
   const mutations = createHostTeamMutations({

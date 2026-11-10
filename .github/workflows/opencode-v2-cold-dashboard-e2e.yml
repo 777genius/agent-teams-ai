@@ -1,0 +1,38 @@
+name: OpenCode V2 cold Dashboard packaged E2E
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/opencode-v2-cold-dashboard-e2e.yml'
+      - 'src/renderer/store/index.ts'
+      - '.github/workflows/opencode-packaged-e2e.yml'
+      - 'scripts/e2e/opencode-diagnostics/packaged-verify.mjs'
+      - 'scripts/e2e/opencode-diagnostics/real-runtime.mjs'
+      - 'scripts/e2e/opencode-diagnostics/real-runtime.test.mjs'
+      - 'scripts/e2e/opencode-diagnostics/run-packaged.mjs'
+      - 'scripts/e2e/opencode-diagnostics/packaged.mjs'
+      - 'scripts/e2e/opencode-diagnostics/v2-support-repair*.mjs'
+      - 'runtime.lock.json'
+      - 'src/renderer/components/dashboard/ProviderConnectionCounts.tsx'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts'
+      - 'src/features/runtime-provider-management/renderer/connectedCountObservationPolicy.ts'
+      - 'src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache.ts'
+      - 'src/renderer/components/dashboard/DashboardProviderSummary.tsx'
+      - 'src/features/runtime-provider-management/core/domain/runtimeProviderQuickConnect.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
+
+jobs:
+  windows-v2:
+    if: github.event.pull_request.draft != true
+    uses: ./.github/workflows/opencode-packaged-e2e.yml
+    with:
+      native_arch: x64
+      v2_support_repair: true
+    secrets: inherit

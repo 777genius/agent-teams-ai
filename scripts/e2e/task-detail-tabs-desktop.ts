@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFile, writeFile, rename, mkdir, realpath } from 'node:fs/promises';
+import { readFile, writeFile, rename, mkdir, realpath, utimes } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { join, dirname, resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -49,6 +49,7 @@ interface Cdp {
 }
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const sha = process.argv[2];
+const tableOnly = process.argv.includes('--table-only');
 assert(sha && /^[a-f0-9]{40}$/.test(sha), 'Supply the exact integrated source SHA');
 assert.equal(process.platform, 'linux', 'Hosted Linux desktop harness');
 assert(process.env.DISPLAY, 'Supply an isolated Xvfb DISPLAY');
@@ -70,6 +71,42 @@ const runtime = JSON.parse(await readFile(join(repo, 'runtime.lock.json'), 'utf8
 };
 const fixture: Fixture = prepareTaskTabsFixture(scratch, sha, runtime.version);
 const root = fixture.root;
+// Use isolated real files, not mocked React props, for the table smoke.
+const tableTeam = fixture.teams[0];
+const tableTaskPath = join(dirname(tableTeam.taskFile), '2.json');
+const tableStamp = new Date().toISOString();
+if (tableOnly) {
+for (const [id, status, subject] of [
+  ['2', 'pending', 'TABLE_E2E_PENDING'],
+  ['3', 'completed', 'TABLE_E2E_REVIEW'],
+  ['4', 'completed', 'TABLE_E2E_APPROVED'],
+] as const) {
+  await writeFile(join(dirname(tableTaskPath), id + '.json'), JSON.stringify({
+    id, displayId: id === '2' ? '2'.repeat(100) : id, subject, status, owner: tableTeam.secondOwner,
+    blockedBy: id === '2' ? ['1'] : [], blocks: [], related: [],
+    createdAt: tableStamp, comments: [],
+  }, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+}
+const tableKanbanState = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8'));
+tableKanbanState.tasks['3'] = { column: 'review', movedAt: tableStamp };
+tableKanbanState.tasks['4'] = { column: 'approved', movedAt: tableStamp };
+await writeFile(tableTeam.kanbanFile, JSON.stringify(tableKanbanState, null, 2) + '\n', { flag: 'w', mode: 0o600 });
+// Older, disposable files exercise full-snapshot reads and row virtualization
+// without pushing the four named task cases out of the initial viewport.
+const oldTaskStamp = new Date('2022-01-01T00:00:00Z');
+for (let start = 5; start < 1005; start += 40) {
+  await Promise.all(Array.from({ length: Math.min(40, 1005 - start) }, async (_, offset) => {
+    const id = String(start + offset);
+    const path = join(dirname(tableTaskPath), id + '.json');
+    const subject = Number(id) <= 54 ? 'TABLE_BATCH50_' + id : 'TABLE_VIRTUAL_' + id;
+    await writeFile(path, JSON.stringify({
+      id, subject, status: 'pending', owner: tableTeam.secondOwner,
+      createdAt: oldTaskStamp.toISOString(),
+    }) + '\n', { flag: 'wx', mode: 0o600 });
+    await utimes(path, oldTaskStamp, oldTaskStamp);
+  }));
+}
+}
 console.log(JSON.stringify({ fixture: root, testedSourceCommit: sha, fullTaskTabsE2E: false }));
 const transport = (await import(
   pathToFileURL(join(repo, 'scripts/e2e/comment-notification/cdp.mjs')).href
@@ -124,15 +161,39 @@ const reads: unknown[] = [];
 const diagnostics: unknown[] = [];
 let passed = false;
 let launchError: Error | undefined;
+/** Exercise Radix selectors with actual mouse input through Chromium CDP. */
+async function clickAppearanceControl(testId: string): Promise<void> {
+  assert(cdp, 'CDP must be connected before Appearance interactions');
+  const point = (await cdp.evaluate(`(() => {
+    const node = document.querySelector('[data-testid="${testId}"]');
+    if (!(node instanceof HTMLElement)) throw new Error('Appearance control missing: ${testId}');
+    node.scrollIntoView({ block: 'center', inline: 'nearest' });
+    const bounds = node.getBoundingClientRect();
+    if (bounds.width === 0 || bounds.height === 0) throw new Error('Appearance control hidden: ${testId}');
+    return { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+  })()`)) as { x: number; y: number };
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+}
+async function chooseAppearanceOption(triggerId: string, optionId: string): Promise<void> {
+  await clickAppearanceControl(triggerId);
+  await until(
+    () => cdp!.evaluate(`!!document.querySelector('[data-testid="${optionId}"]')`),
+    `Appearance option ${optionId} opens`
+  );
+  await clickAppearanceControl(optionId);
+}
 const receiptPath = join(root, 'electron-watcher-v7-' + sha.slice(0, 7) + '.json');
 async function receipt() {
   await writeFile(
     receiptPath,
     JSON.stringify(
       {
-        kind: 'task-detail-tabs-desktop-v1',
+        kind: tableOnly ? 'kanban-table-desktop-v1' : 'task-detail-tabs-desktop-v1',
         testedSourceCommit: sha,
-        fullTaskTabsE2E: passed,
+        fullTaskTabsE2E: passed && !tableOnly,
+        tableModeE2E: passed && tableOnly,
         passed,
         root,
         rendererPort,
@@ -217,6 +278,375 @@ try {
       throw e;
     }
   }, 'real IPC startup ready');
+  if (tableOnly) {
+  // Real TeamDetailView -> Kanban -> Table: UI, IPC watcher, and legacy modes.
+  const startedTableNavigationAt = Date.now();
+  const initialRendererOrigin = await cdp.evaluate('performance.timeOrigin') as number;
+  const navigateToTeam = async (): Promise<unknown> => cdp!.evaluate(
+    '(async()=>{if(!window.__agentTeamsDevStore || !window.electronAPI?.startup) return null;const ready=await window.electronAPI.startup.getStatus();if(!ready.ready) return null;const s=window.__agentTeamsDevStore.getState();await s.fetchTeams();await s.selectTeam(' +
+    JSON.stringify(tableTeam.teamName) +
+    ',{skipProjectAutoSelect:true});s.openTeamTab(' + JSON.stringify(tableTeam.teamName) +
+    ');const current=window.__agentTeamsDevStore.getState();const pane=current.paneLayout.panes.find(p=>p.id===current.paneLayout.focusedPaneId);return {origin:performance.timeOrigin,selectedTeamName:current.selectedTeamName,error:current.selectedTeamError,activeTab:pane?.tabs.find(t=>t.id===pane.activeTabId)?.type,activeTeam:pane?.tabs.find(t=>t.id===pane.activeTabId)?.teamName};})()'
+  );
+  const initialTeamNavigation = await navigateToTeam();
+  diagnostics.push({ kind: 'table-navigation', result: initialTeamNavigation });
+  assert.deepEqual(
+    { type: (initialTeamNavigation as { activeTab?: string }).activeTab, team: (initialTeamNavigation as { activeTeam?: string }).activeTeam },
+    { type: 'team', team: tableTeam.teamName },
+    'Actual team tab must be active before testing table'
+  );
+  // Vite can fully reload the renderer when lazy TeamDetailView / table dependencies
+  // are prebundled for the first time. Reopen only after observing a new document
+  // origin and a lost team tab; never retry ordinary navigation indefinitely.
+  let restoredAfterViteReload = 0;
+  await until(async () => {
+    try {
+      const probe = await cdp!.evaluate(`(()=>{
+        const s=window.__agentTeamsDevStore?.getState();
+        const pane=s?.paneLayout.panes.find(p=>p.id===s.paneLayout.focusedPaneId);
+        const active=pane?.tabs.find(t=>t.id===pane.activeTabId);
+        return {
+          origin:performance.timeOrigin,
+          tableButton:!!document.querySelector('[data-testid="kanban-view-table"]'),
+          activeType:active?.type,
+          activeTeam:active?.teamName,
+          selectedTeamName:s?.selectedTeamName,
+        };
+      })()`) as {
+        origin: number; tableButton: boolean; activeType?: string;
+        activeTeam?: string; selectedTeamName?: string;
+      };
+      if (probe.tableButton) return true;
+      if (
+        probe.origin !== initialRendererOrigin &&
+        probe.activeTeam !== tableTeam.teamName &&
+        restoredAfterViteReload < 2 &&
+        Date.now() - startedTableNavigationAt > 2500
+      ) {
+        const restored = await navigateToTeam();
+        if (restored) {
+          restoredAfterViteReload += 1;
+          diagnostics.push({ kind: 'vite-renderer-reload-navigation', attempt: restoredAfterViteReload, probe, restored });
+        }
+      }
+      return false;
+    } catch (error) {
+      if (/Execution context|Cannot find context|Cannot find object/i.test(String(error))) return false;
+      throw error;
+    }
+  }, 'real team Kanban view switch after Vite dependency optimization', 90000);
+  await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-table\"]').click()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');return !!root&&root.querySelectorAll('[data-testid=\"team-task-table-row\"]').length>=4&&[...root.querySelectorAll('[data-testid=\"team-task-table-row\"]')].some(r=>r.textContent.includes('TABLE_E2E_REVIEW')&&r.textContent.includes('РЕВЬЮ'));})()"
+  ), 'render four real task rows with authoritative review state');
+  const longIdRowHeight = await cdp.evaluate(
+    "(()=>{const row=document.querySelector('[data-testid=\"team-task-table-row\"][data-task-id=\"2\"]');return row?.getBoundingClientRect().height;})()"
+  ) as number;
+  assert(longIdRowHeight > 0 && longIdRowHeight <= 49,
+    'A long task display ID must not expand the fixed-height virtualized row');
+  await cdp.screenshot(join(root, 'kanban-table-dark.png'));
+  // Keep the task name visible while users scroll to columns on narrow panes.
+  await cdp.evaluate("(()=>{const scroller=document.querySelector('[data-testid=\"team-task-table-scroller\"]');if(!scroller)throw new Error('Table scroller missing');scroller.scrollLeft=220;})()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const sc=document.querySelector('[data-testid=\"team-task-table-scroller\"]');const task=document.querySelector('[data-testid=\"team-task-table-row\"][data-task-id=\"2\"] [data-testid=\"team-task-table-cell-task\"]');return !!sc&&!!task&&sc.scrollLeft>=200&&Math.abs(task.getBoundingClientRect().left-sc.getBoundingClientRect().left)<5;})()"
+  ), 'Task column stays pinned during horizontal scrolling');
+  await cdp.screenshot(join(root, 'kanban-table-pinned-task.png'));
+  await cdp.evaluate("document.querySelector('[data-testid=\"team-task-table-scroller\"]').scrollLeft=0");
+  // A table row must reuse the real task detail dialog, not a table-only editor.
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"team-task-table-row\"][data-task-id=\"3\"] [data-testid=\"team-task-table-open\"]');if(!button)throw new Error('Review task row action missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "(()=>{const dialog=document.querySelector('[role=\"dialog\"]');return !!dialog&&dialog.textContent?.includes('TABLE_E2E_REVIEW');})()"
+  ), 'existing task detail dialog opens from table');
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' });
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[role=\"dialog\"]')"
+  ), 'task detail closes before sorting');
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"team-task-table-header-status\"] button');if(!button)throw new Error('Table status sort header missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "['ascending','descending'].includes(document.querySelector('[data-testid=\"team-task-table-header-status\"]')?.getAttribute('aria-sort'))"
+  ), 'interactive table header sorting');
+  await cdp.evaluate("document.querySelector('[data-testid=\"team-task-table-settings\"]')?.click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"team-task-table-settings\"][data-state=\"open\"]')"
+  ), 'column customization opens');
+
+  const live = JSON.parse(await readFile(tableTaskPath, 'utf8'));
+  live.subject = 'TABLE_E2E_LIVE_UPDATED';
+  live.status = 'in_progress';
+  live.comments = [{ id: 'TABLE_E2E_COMMENT', author: 'user', createdAt: tableStamp, type: 'regular', text: 'live change' }];
+  const liveTemp = tableTaskPath + '.table-live.tmp';
+  await writeFile(liveTemp, JSON.stringify(live, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+  await rename(liveTemp, tableTaskPath);
+  await until(() => cdp!.evaluate(
+    "(()=>{const row=document.querySelector('[data-testid=\"team-task-table-row\"][data-task-id=\"2\"]');return !!row&&row.textContent.includes('TABLE_E2E_LIVE_UPDATED')&&row.textContent.includes('В РАБОТЕ');})()"
+  ), 'real watcher updates subject and status without manual refresh');
+  await until(() => cdp!.evaluate(
+    "(()=>{const row=document.querySelector('[data-testid=\"team-task-table-row\"][data-task-id=\"2\"]');return row?.querySelector('[data-testid=\"team-task-table-cell-commentCount\"]')?.textContent?.trim()==='1';})()"
+  ), 'live IPC watcher updates comment count from task snapshot');
+  await cdp.screenshot(join(root, 'kanban-table-live-updated.png'));
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' });
+  await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-grid\"]')?.click()");
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"team-task-table\"]') && !!document.querySelector('[data-testid=\"kanban-view-grid\"][aria-pressed=\"true\"]')"
+  ), 'return to legacy grid mode');
+  await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-columns\"]')?.click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"kanban-view-columns\"][aria-pressed=\"true\"]')"
+  ), 'legacy columns mode works');
+  // Exercise the actual shared search and virtualized DOM at 0, 1, 50 and 1004 tasks.
+  await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-table\"]')?.click()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');return !!root&&root.querySelector('[data-testid=team-task-table-count]')?.dataset.shown==='1004'&&root.querySelector('[data-testid=team-task-table-count]')?.dataset.total==='1004';})()"
+  ), 'full 1004-task snapshot is available in table');
+  const setTableSearch = async (value: string): Promise<void> => {
+    await cdp!.evaluate(`(()=>{
+      const input=document.querySelector('[data-testid="kanban-search-input"]');
+      if(!(input instanceof HTMLInputElement))throw new Error('Kanban search missing');
+      const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
+      if(!setter)throw new Error('Native input setter missing');
+      setter.call(input,${JSON.stringify(value)});
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+    })()`);
+  };
+  await setTableSearch('TABLE_BATCH50_');
+  await until(() => cdp!.evaluate(
+    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');const visible=[...root?.querySelectorAll('[data-testid=\"team-task-table-row\"]')??[]];return root?.querySelector('[data-testid=team-task-table-count]')?.dataset.shown==='50'&&root?.querySelector('[data-testid=team-task-table-count]')?.dataset.total==='50'&&visible.length>=2&&visible.length<40&&visible.every(row=>row.textContent?.includes('TABLE_BATCH50_'));})()"
+  ), 'shared search filters to 50 virtualized tasks');
+  await setTableSearch('TABLE_E2E_REVIEW');
+  await until(() => cdp!.evaluate(
+    "(()=>{const rows=document.querySelectorAll('[data-testid=\"team-task-table-row\"]');return rows.length===1&&rows[0].getAttribute('data-task-id')==='3'&&document.querySelector('[data-testid=team-task-table-count]')?.dataset.shown==='1'&&document.querySelector('[data-testid=team-task-table-count]')?.dataset.total==='1';})()"
+  ), 'shared search narrows to exactly one task');
+  await setTableSearch('TABLE_MATCH_NOT_FOUND_99999');
+  await until(() => cdp!.evaluate(
+    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');return !!root&&root.querySelectorAll('[data-testid=\"team-task-table-row\"]').length===0&&root.querySelector('[data-testid=team-task-table-count]')?.dataset.shown==='0'&&root.querySelector('[data-testid=team-task-table-count]')?.dataset.total==='0';})()"
+  ), 'shared search shows real empty-state table');
+  await setTableSearch('');
+  await until(() => cdp!.evaluate(
+    "(()=>{const root=document.querySelector('[data-testid=\"team-task-table\"]');const scroller=root?.querySelector('[data-testid=\"team-task-table-scroller\"]');const count=root?.querySelector('[data-testid=team-task-table-count]');const rendered=root?.querySelectorAll('[data-testid=\"team-task-table-row\"]').length??0;return count?.dataset.shown==='1004'&&count?.dataset.total==='1004'&&!!scroller&&scroller.scrollHeight>scroller.clientHeight&&rendered>0&&rendered<40;})()"
+  ), 'all 1004 tasks remain virtualized after clearing search');
+  await cdp.evaluate("(()=>{const scroller=document.querySelector('[data-testid=\"team-task-table-scroller\"]');if(!scroller)throw new Error('Table scroller missing');scroller.scrollTop=scroller.scrollHeight;})()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const rows=[...document.querySelectorAll('[data-testid=\"team-task-table-row\"]')];return rows.length>0&&rows.length<40&&rows.some(row=>Number(row.getAttribute('data-task-id'))>=500);})()"
+  ), 'virtualizer reaches distant rows without mounting the whole table');
+  await cdp.screenshot(join(root, 'kanban-table-1000-rows.png'));
+  // Real Electron regression: changing text size must resize the virtualized
+  // row estimate and actual rows together for long 1000+ task tables.
+  await cdp.evaluate(`(() => {
+    const key = 'agent-teams-appearance-v1';
+    const oldValue = localStorage.getItem(key);
+    window.__taskTablePriorAppearance = oldValue;
+    const existing = oldValue ? JSON.parse(oldValue) : {
+      version: 1, zoomPercent: 100, activeCustomThemeId: null, themes: [],
+    };
+    const newValue = JSON.stringify({ ...existing, fontSizePercent: 150 });
+    localStorage.setItem(key, newValue);
+    window.dispatchEvent(new StorageEvent('storage', { key, oldValue, newValue }));
+  })()`);
+  await until(() => cdp!.evaluate(
+    "(()=>{const el=document.querySelector('[data-testid=team-task-table-row]');const scroller=document.querySelector('[data-testid=team-task-table-scroller]');return !!el&&!!scroller&&el.getBoundingClientRect().height>=71&&el.getBoundingClientRect().height<=74&&scroller.scrollHeight>70000;})()"
+  ), '150% text size updates real 1004-row virtualizer offsets and row geometry');
+  await cdp.evaluate("document.querySelector('[data-testid=team-task-table-scroller]').scrollTop=1000000");
+  await until(() => cdp!.evaluate(
+    "(()=>{const rows=[...document.querySelectorAll('[data-testid=team-task-table-row]')];return rows.length>0&&rows.length<40&&rows.some(row=>Number(row.getAttribute('data-task-id'))>=900);})()"
+  ), '150% virtualized table still reaches distant tasks without skipping rows');
+  await cdp.screenshot(join(root, 'kanban-table-font-150-virtualized.png'));
+  await cdp.evaluate(`(() => {
+    const key = 'agent-teams-appearance-v1';
+    const oldValue = localStorage.getItem(key);
+    const newValue = window.__taskTablePriorAppearance;
+    if (newValue === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, newValue);
+    window.dispatchEvent(new StorageEvent('storage', { key, oldValue, newValue }));
+    delete window.__taskTablePriorAppearance;
+  })()`);
+  await until(() => cdp!.evaluate(
+    "(()=>{const el=document.querySelector('[data-testid=team-task-table-row]');const scroller=document.querySelector('[data-testid=team-task-table-scroller]');return !!el&&!!scroller&&el.getBoundingClientRect().height<=49&&scroller.scrollHeight<60000;})()"
+  ), 'Reset text size also restores 48px row virtualization and scroll extents');
+  reads.push({ kind: 'task-table-typography-virtualization-real-electron', tasks: 1004, scales: [100,150], scrollToDistantTask: true });
+  reads.push({ kind: 'table-real-electron-live', liveUpdate: true, sort: true, settings: true, legacyModes: true, taskDetail: true, searchCounts: [0, 1, 50], virtualizedTasks: 1004 });
+  // Qualify Appearance navigation and theme persistence in the same real Electron renderer.
+  await cdp.evaluate("window.__agentTeamsDevStore.getState().openSettingsTab('appearance')");
+  await until(() => cdp!.evaluate(
+    '!!document.querySelector(\'[data-testid="settings-nav-appearance"][aria-current="page"]\') && !!document.querySelector(\'[data-testid="appearance-theme-light"]\')'
+  ), 'Appearance page loads from Settings navigation');
+  const previousTheme = await cdp.evaluate(
+    "(async()=>{const theme=(await window.electronAPI.config.get()).general.theme;window.__taskTabsAppearanceInitialTheme=theme;return theme;})()"
+  ) as string;
+  assert(['dark', 'light', 'system'].includes(previousTheme), 'Known initial theme');
+  await cdp.evaluate(
+    `(()=>{const theme=window.__taskTabsAppearanceInitialTheme==='light'?'dark':'light';const button=document.querySelector('[data-testid="appearance-theme-'+theme+'"]');if(!(button instanceof HTMLButtonElement))throw Error('Theme button missing');button.click();})()`
+  );
+  await until(() => cdp!.evaluate(
+    `(async()=>{const theme=window.__taskTabsAppearanceInitialTheme==='light'?'dark':'light';const c=await window.electronAPI.config.get();return c.general.theme===theme&&document.documentElement.classList.contains(theme);})()`
+  ), 'Appearance saves and applies theme through real Electron IPC');
+  await cdp.evaluate("document.querySelector('[data-testid=\"settings-nav-general\"]').click()");
+  await until(() => cdp!.evaluate(
+    '!!document.querySelector(\'[data-testid="settings-nav-general"][aria-current="page"]\')'
+  ), 'General settings tab opens');
+  await cdp.evaluate("document.querySelector('[data-testid=\"settings-nav-appearance\"]').click()");
+  await until(() => cdp!.evaluate(
+    '!!document.querySelector(\'[data-testid="settings-nav-appearance"][aria-current="page"]\')'
+  ), 'Appearance reopens with the persisted selection');
+  await cdp.screenshot(join(root, 'settings-appearance-desktop.png'));
+  await cdp.evaluate(
+    `(()=>{const theme=window.__taskTabsAppearanceInitialTheme;const button=document.querySelector('[data-testid="appearance-theme-'+theme+'"]');if(!(button instanceof HTMLButtonElement))throw Error('Restore theme button missing');button.click();})()`
+  );
+  await until(() => cdp!.evaluate(
+    `(async()=>{const c=await window.electronAPI.config.get();return c.general.theme===window.__taskTabsAppearanceInitialTheme;})()`
+  ), 'Appearance restores fixture theme');
+  // Typography is independent of UI zoom and uses actual OS font fallback in Electron.
+  await chooseAppearanceOption('appearance-font-select', 'appearance-font-option-Georgia');
+  await chooseAppearanceOption('appearance-text-size', 'appearance-text-size-option-125');
+  await until(() => cdp!.evaluate(
+    "(()=>{const v=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const root=document.documentElement;const font=getComputedStyle(document.body).fontFamily;const size=parseFloat(getComputedStyle(document.querySelector('[data-testid=appearance-font-select]')).fontSize);return v?.fontFamily==='Georgia'&&v?.fontSizePercent===125&&root.style.getPropertyValue('--appearance-text-scale')==='1.25'&&font.includes('Georgia')&&size>=14.9&&size<=15.1;})()"
+  ), 'Appearance applies local font and 125% glyph/line height without changing zoom');
+  await cdp.screenshot(join(root, 'settings-appearance-typography-125-desktop.png'));
+  // Custom Appearance E2E: exercise the actual Electron renderer, IPC and persisted
+  // local preference store (never synthetic React props or fabricated E2E receipts).
+  await chooseAppearanceOption('appearance-ui-scale', 'appearance-ui-scale-option-125');
+  await until(() => cdp!.evaluate(
+    "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===125&&Math.abs(zoom-1.25)<0.02;})()"
+  ), 'Appearance applies and saves 125% through native Electron zoom');
+  await cdp.screenshot(join(root, 'settings-appearance-125-desktop.png'));
+  await chooseAppearanceOption('appearance-ui-scale', 'appearance-ui-scale-option-200');
+  await until(() => cdp!.evaluate(
+    "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===200&&Math.abs(zoom-2)<0.02;})()"
+  ), 'Appearance applies and saves 200% through native Electron zoom');
+  await until(() => cdp!.evaluate(
+    "(()=>{const ids=['appearance-ui-scale','appearance-custom-theme-select','appearance-edit-custom-themes','appearance-font-select','appearance-text-size'];const visible=ids.every(id=>{const el=document.querySelector('[data-testid='+id+']');if(!(el instanceof HTMLElement))return false;const box=el.getBoundingClientRect();return box.width>0&&box.left>=0&&box.right<=window.innerWidth-4;});const sidebar=document.getElementById('sidebar-tasks-panel');return visible&&(!sidebar||sidebar.getClientRects().length===0);})()"
+  ), '200% Appearance controls remain onscreen without task sidebar overflow');
+  await cdp.screenshot(join(root, 'settings-appearance-200-desktop.png'));
+  await cdp.evaluate("document.querySelector('[data-testid=appearance-font-select]')?.scrollIntoView({block:'center'})");
+  await cdp.screenshot(join(root, 'settings-appearance-fonts-at-200-desktop.png'));
+  // Ensure typography controls are reachable even in the narrow 200% viewport.
+  await until(() => cdp!.evaluate(
+    "(()=>{const ids=['appearance-font-select','appearance-font-discover','appearance-text-size'];return ids.every(id=>{const el=document.querySelector('[data-testid='+id+']');if(!(el instanceof HTMLElement))return false;el.scrollIntoView({block:'nearest'});const b=el.getBoundingClientRect();return b.width>0&&b.left>=0&&b.right<=innerWidth-4;});})()"
+  ), '200% font controls fit within the visible settings panel');
+  // A 200% native scale halves the CSS viewport; editing must still work.
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]').click()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const dialog=document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]');const editor=dialog?.querySelector('.cm-content');const save=dialog?.querySelector('[data-testid=\"appearance-theme-json-save\"]');if(!(editor instanceof HTMLElement)||!(save instanceof HTMLElement))return false;const box=save.getBoundingClientRect();return box.bottom<=innerHeight-2&&box.top>=0&&box.width>0&&editor.getBoundingClientRect().height>20;})()"
+  ), '200% JSON editor keeps its Save control and editor visible');
+  await cdp.screenshot(join(root, 'settings-appearance-editor-200-desktop.png'));
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-theme-json-cancel\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
+  ), '200% JSON editor cancels cleanly');
+  await chooseAppearanceOption('appearance-ui-scale', 'appearance-ui-scale-option-100');
+  await until(() => cdp!.evaluate(
+    "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===100&&Math.abs(zoom-1)<0.02;})()"
+  ), 'Appearance resets native scale to 100%');
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]');if(!(button instanceof HTMLButtonElement))throw Error('Theme editor missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"] .cm-content')"
+  ), 'Appearance JSON editor opens with real CodeMirror');
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"appearance-theme-json-save\"]');if(!(button instanceof HTMLButtonElement))throw Error('Theme save missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "(()=>{const record=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return record?.themes?.some(t=>t.id==='my-theme')&&!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]');})()"
+  ), 'Valid JSON theme is persisted and editor closes');
+  await chooseAppearanceOption('appearance-custom-theme-select', 'appearance-custom-theme-option-my-theme');
+  await until(() => cdp!.evaluate(
+    "(()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return value?.activeCustomThemeId==='my-theme'&&document.documentElement.classList.contains('custom-theme')&&document.documentElement.style.getPropertyValue('--color-accent')==='#6366f1';})()"
+  ), 'Custom theme applies CSS semantic tokens on the real root');
+  await cdp.screenshot(join(root, 'settings-appearance-custom-theme-desktop.png'));
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"appearance-theme-dark\"]');if(!(button instanceof HTMLButtonElement))throw Error('Built-in theme missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "(()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return value?.activeCustomThemeId===null&&!document.documentElement.classList.contains('custom-theme')&&document.documentElement.style.getPropertyValue('--color-accent')==='';})()"
+  ), 'Returning to built-in themes fully clears custom CSS overrides');
+  // Regression: a rejected save must not leave an armed Overwrite action when
+  // the editor is closed and reopened for a new session.
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"] .cm-content')"
+  ), 'Editor reopens for conflict recovery');
+  await cdp.evaluate(
+    "(()=>{const key='agent-teams-appearance-v1';const raw=localStorage.getItem(key);if(!raw)throw Error('Missing saved palette');window.__appearanceConflictFixture=raw;localStorage.setItem(key,JSON.stringify({...JSON.parse(raw),themes:[]}));document.querySelector('[data-testid=\"appearance-theme-json-save\"]').click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-json-error\"]')&&!!document.querySelector('[data-testid=\"appearance-theme-json-overwrite\"]')"
+  ), 'Editor detects conflicting saved themes');
+  await cdp.evaluate(
+    "(()=>{document.querySelector('[data-testid=\"appearance-theme-json-cancel\"]').click();const original=window.__appearanceConflictFixture;localStorage.setItem('agent-teams-appearance-v1',original);delete window.__appearanceConflictFixture;})()"
+  );
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
+  ), 'Cancelling a conflict closes the editor');
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"] .cm-content')&&!document.querySelector('[data-testid=\"appearance-theme-json-error\"]')&&!document.querySelector('[data-testid=\"appearance-theme-json-overwrite\"]')"
+  ), 'New editing session clears stale conflict and overwrite action');
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-theme-json-cancel\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
+  ), 'Clean editor cancellation');
+  // Exercise the manual local font fallback, which works even when the experimental
+  // browser installed-font API is unsupported or denied (e.g. opaque file origin).
+  // Exercise keyboard selection as well as pointer selection: long Radix menus
+  // may move when the pointer enters their scroll zone.
+  await clickAppearanceControl('appearance-font-select');
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=appearance-font-option-system]')"
+  ), 'Font menu opens for keyboard selection');
+  await cdp.evaluate("(()=>{const item=document.querySelector('[data-testid=appearance-font-option-system]');if(!(item instanceof HTMLElement))throw Error('System option missing');item.focus();})()");
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+  });
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+  });
+  await until(() => cdp!.evaluate(
+    "(()=>{const v=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return v?.fontFamily===null;})()"
+  ), 'System font selected through keyboard');
+  await clickAppearanceControl('appearance-font-other');
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=appearance-font-custom-input]')"
+  ), 'Manual font field opens');
+  await clickAppearanceControl('appearance-font-custom-input');
+  await cdp.send('Input.insertText', { text: 'Noto Sans' });
+  await clickAppearanceControl('appearance-font-custom-apply');
+  await until(() => cdp!.evaluate(
+    "(()=>{const v=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return v?.fontFamily==='Noto Sans'&&document.documentElement.style.getPropertyValue('--appearance-font-family').includes('Noto Sans');})()"
+  ), 'Manual font name persists and applies in actual Electron');
+  await cdp.screenshot(join(root, 'settings-appearance-manual-font-desktop.png'));
+  await cdp.evaluate("document.querySelector('[data-testid=\"settings-nav-general\"]')?.click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"settings-nav-general\"][aria-current=\"page\"]')"
+  ), 'Leave Appearance after typography selection');
+  await cdp.evaluate("document.querySelector('[data-testid=\"settings-nav-appearance\"]')?.click()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const font=document.querySelector('[data-testid=appearance-font-select]');const size=document.querySelector('[data-testid=appearance-text-size]');return !!font&&!!size&&font.textContent.includes('Noto Sans')&&size.textContent.includes('125%');})()"
+  ), 'Typography selection survives Settings navigation');
+  await clickAppearanceControl('appearance-font-select');
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=appearance-font-option-system]')"
+  ), 'System font option opens for reset');
+  await cdp.evaluate("document.querySelector('[data-testid=appearance-font-option-system]')?.focus()");
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+  });
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+  });
+  await chooseAppearanceOption('appearance-text-size', 'appearance-text-size-option-100');
+  await until(() => cdp!.evaluate(
+    "(()=>{const v=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return v?.fontFamily===null&&v?.fontSizePercent===100&&document.documentElement.style.getPropertyValue('--appearance-font-family')===''&&document.documentElement.style.getPropertyValue('--appearance-text-scale')==='1';})()"
+  ), 'System typography resets without affecting custom themes or native zoom');
+  reads.push({ kind: 'appearance-typography-real-electron', fontChoices: ['Georgia','Noto Sans','system'], textSizes: [100,125], persisted: true, customManualFont: true, restored: true });
+  reads.push({ kind: 'appearance-custom-theme-and-zoom-real-electron', customJsonSaved: true, cssApplied: true, builtinsRestored: true, scales: [100,125,200] });
+  reads.push({ kind: 'appearance-settings-real-electron', navigation: true, themeSaved: true, themeRestored: true });
+  }
+
+  if (!tableOnly) {
   await cdp.evaluate('window.__agentTeamsDevStore.getState().fetchAllTasks()');
   const names = fixture.teams.map((t) => t.teamName);
   await until(
@@ -464,6 +894,7 @@ try {
   await runTaskDeletionCases(cdp, fixture, (value) => reads.push(value));
   await cdp.evaluate('window.__taskTabsColdPageUnsubscribe?.()');
   await cdp.screenshot(join(root, 'electron-cold-page-v3.png'));
+  }
   const audit = (await readFile(join(root, 'runtime-audit.ndjson'), 'utf8')).trim();
   if (audit)
     for (const line of audit.split('\n')) {
@@ -497,7 +928,15 @@ try {
       );
     }
   assert.equal(faults.length, 0, 'Renderer faults');
-  closeEvidence = await shutdown.gracefulClose(cdp, port, app.pid);
+  if (tableOnly) {
+    // This workflow qualifies the task table, not app-close coordination.
+    // Keep its teardown deterministic: terminate only the detached fixture-owned
+    // process group and verify no owned process survived before reporting PASS.
+    await shutdown.stopOwnedGroup(app.pid);
+    closeEvidence = { mode: 'owned-process-group-cleanup', ownedProcessGroup: app.pid, exited: true };
+  } else {
+    closeEvidence = await shutdown.gracefulClose(cdp, port, app.pid);
+  }
   passed = true;
 } catch (error) {
   if (cdp) {
@@ -532,5 +971,5 @@ try {
   }
   await writeFile(join(root, 'electron-cold-page-v3.log'), logs, { mode: 0o600 });
   await receipt();
-  console.log(JSON.stringify({ passed, receiptPath, failure, fullTaskTabsE2E: passed }));
+  console.log(JSON.stringify({ passed, receiptPath, failure, fullTaskTabsE2E: passed && !tableOnly, tableModeE2E: passed && tableOnly }));
 }

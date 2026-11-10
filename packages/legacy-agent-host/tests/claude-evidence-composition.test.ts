@@ -658,7 +658,29 @@ test('registered captured workspace survives an actual selected checkpoint resto
   assert.equal(readFileSync(ledger, 'utf8'), originalBytes,
     'fresh restored input does not rewrite historical task evidence');
   await f.finishAndObserve(resumedRequest.inputId);
+  // The observer callback acknowledges delivery of the provider result, not
+  // completion of the Runtime's durable terminal write. Review is allowed only
+  // after the exact restored input has reached its persisted terminal phase.
+  let restoredInputTerminal = false;
+  const terminalDeadline = Date.now() + OBSERVATION_TIMEOUT_MS;
+  while (Date.now() < terminalDeadline) {
+    const state = await f.runtime.execute(f.binding.teamId, 'read', {
+      memberId: 'worker-id', expectedGeneration: restored.generation,
+    }) as { inputs: { inputId: string; phase: string }[] };
+    const matching = state.inputs.filter(input => input.inputId === resumedRequest.inputId);
+    assert.ok(matching.length <= 1, 'one original restored input identity');
+    if (matching.length === 1 && matching[0]!.phase === 'terminal') {
+      restoredInputTerminal = true;
+      break;
+    }
+    await new Promise<void>(resolve => setImmediate(resolve));
+  }
+  assert.equal(restoredInputTerminal, true, 'restored native result must settle durably before stopping');
   await f.runtime.execute(f.binding.teamId, 'stop', { memberId: 'worker-id', expectedGeneration: restored.generation });
+  // Stop confirms the selected member, but the coordinator may still be draining
+  // its previously queued owner work. Cold review must begin after its writers
+  // have quiesced, so the original captured-source identity remains stable.
+  await f.runtime.close();
   const later = join(f.root, 'later-main'); mkdirSync(later);
   const review = createHostTeamReview({ team: f.team, ownerStorageRoot: f.profile.owner.storageRoot, principalId: 'human',
     currentProjectPath: () => later, initialRuntimeMembers: [], assertCurrent() {}, processStartProbe: async () => 1 });

@@ -24,6 +24,8 @@
     0 0 0 1px rgba(129, 140, 248, 0.28), 0 10px 30px rgba(37, 99, 235, 0.24),
     0 0 22px rgba(129, 140, 248, 0.16);
   --color-text: #f1f5f9;
+  /* Translucent control tint follows the active light/dark/custom theme. */
+  --color-form-control-bg: color-mix(in srgb, var(--color-text) 6%, transparent);
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
   --color-accent: #818cf8;
@@ -875,9 +877,9 @@
 }
 
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
-    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: var(--appearance-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+    'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif);
+  font-size: calc(1rem * var(--appearance-text-scale, 1));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-surface);
@@ -890,9 +892,10 @@ body.theme-transitioning {
     color 0.2s ease;
 }
 
+/* Browser mode offsets CSS zoom so its viewport-sized layout still fits. */
 #root {
-  width: 100vw;
-  height: 100vh;
+  width: calc(100vw * var(--appearance-inverse-zoom, 1));
+  height: calc(100vh * var(--appearance-inverse-zoom, 1));
   overflow: hidden;
 }
 
@@ -921,6 +924,16 @@ a[href],
 [role='textbox'],
 [contenteditable='true'] {
   -webkit-app-region: no-drag;
+}
+
+/* Subtle native field tint; explicit component backgrounds still win. */
+:where(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),
+  textarea,
+  select,
+  [role='combobox']
+) {
+  background-color: var(--color-form-control-bg);
 }
 
 /* Prevent drag region bleed-through on Windows: all fixed overlays must be no-drag */
@@ -1259,6 +1272,12 @@ a[href],
     rgba(0, 0, 0, 0.04) 60%,
     transparent 100%
   );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-testid-loading='skeleton'] .skeleton-shimmer::after {
+    animation: none;
+  }
 }
 
 /* One-shot confirmation sweep after dashboard rate limits finish refreshing */

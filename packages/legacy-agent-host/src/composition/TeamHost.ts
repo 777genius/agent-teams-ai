@@ -18,7 +18,8 @@ import { createTeamReviewComposition } from './TeamReviewComposition.js';
 import { createStoppedImportComposition } from './createStoppedImportComposition.js';
 import { createTeamAttachmentComposition } from './createTeamAttachmentComposition.js';
 import { z } from 'zod';
-
+import { parseMessagesPageQuery } from './parseMessagesPageQuery.js';
+import { boundProductCommandReceipt } from '../team/boundProductCommandReceipt.js';
 import { acquireProfileWriterLease } from '../adapters/profile/ProfileWriterLease.js';
 import { createFilesystemTeamOwner } from '../adapters/team/createFilesystemTeamOwner.js';
 import { admitRegistryTeamNamespace } from '../adapters/team-registry/admitRegistryTeamNamespace.js';
@@ -338,6 +339,7 @@ export function createTeamHost(
         | 'getTask'
         | 'listTasks'
         | 'snapshot'
+        | 'messages.page'
         | 'activity.logs'
         | 'activity.stats'
         | 'lead.activity'
@@ -393,9 +395,14 @@ export function createTeamHost(
             };
           }
           if (operation === 'snapshot') {
-            z.object({}).strict().parse(input.payload);
-            return { ok: true, value: connection.readSnapshot() };
+            const query = z.object({ cursor: z.string().min(1).max(128).optional() }).strict().parse(input.payload);
+            return { ok: true, value: connection.readSnapshot(query.cursor ? { cursor: query.cursor } : {}) };
           }
+          if (operation === 'messages.page')
+            return {
+              ok: true,
+              value: connection.readMessagesPage(parseMessagesPageQuery(input.payload)),
+            };
           if (operation === 'lead.activity' || operation === 'lead.context') {
             z.object({}).strict().parse(input.payload);
             if (!runtime) throw new TeamOwnerError('hold');
@@ -420,16 +427,19 @@ export function createTeamHost(
           }
           if (operation === 'lookup') {
             const receipt = connection.lookup(input.commandId);
-            return { ok: true, value: receipt ? json(receipt) : null };
+            return { ok: true, value: receipt ? boundProductCommandReceipt(receipt) : null };
           }
           if (operation === 'listTasks') {
-            const query = z
-              .object({ deleted: z.literal(true).optional() })
-              .strict()
-              .parse(input.payload ?? {});
+            const query = z.strictObject({
+              deleted: z.literal(true).optional(),
+              cursor: z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).optional(),
+            }).parse(input.payload ?? {});
+            if (query.cursor !== undefined && query.deleted !== true)
+              throw new TeamOwnerError('invalid');
             return {
-              ok: true,
-              value: query.deleted ? connection.readDeletedTasks() : json(connection.listTasks()),
+              ok: true, value: query.deleted
+                ? connection.readDeletedTasks(query.cursor ? { cursor: query.cursor } : {})
+                : json(connection.listTasks()),
             };
           }
           if (operation === 'getTask') {
@@ -461,7 +471,7 @@ export function createTeamHost(
           } finally {
             runtime?.kick();
           }
-          return { ok: true, value: json(receipt) };
+          return { ok: true, value: boundProductCommandReceipt(receipt) };
         } catch (error) {
           const code =
             error instanceof TeamOwnerError
@@ -687,6 +697,7 @@ export function createTeamHost(
       capabilities: [
         'team.task',
         'team.snapshot',
+        'team.messages.page',
         'team.roster',
         'team.product-changes',
         'team.message',
@@ -726,6 +737,7 @@ export function createTeamHost(
         'team.task.get': method('getTask'),
         'team.tasks.list': method('listTasks'),
         'team.snapshot': method('snapshot'),
+        'team.messages.page': method('messages.page'),
         'team.roster.read': method('roster.read'),
         'team.roster.lookup': method('roster.lookup'),
         'team.roster.replace': method('roster.replace'),

@@ -1505,13 +1505,29 @@
       "labelPlaceholder": "Por exemplo, revisão diária do código, testes noturnos...",
       "maxBudgetUsd": "Orçamento máximo (USD)",
       "maxTurns": "Max voltas",
+      "executionLimitsNote": "Estes limites aplicam-se apenas a execuções autónomas pontuais. Não se aplicam a tarefas atribuídas a uma equipa que já está em execução.",
       "noLimit": "Sem limite",
       "noMatches": "Nenhuma equipa corresponde à sua busca.",
       "noTeams": "Não há equipas disponíveis. Criar uma equipa primeiro.",
       "searchTeams": "Equipas de busca...",
       "selectTeam": "Selecionar uma equipe...",
       "team": "Equipa",
-      "title": "Agendar"
+      "title": "Agendar",
+      "execution": "Execução",
+      "legacyNotice": "Agendamento avulso existente: guardar não altera o comportamento.",
+      "upgradeSmart": "Mudar para agendamento inteligente",
+      "oneAgent": "Um agente",
+      "wholeTeam": "Toda a equipa",
+      "target": "Responsável quando a equipa estiver ativa",
+      "leadDefault": "Líder da equipa (predefinição)",
+      "agentDescription": "Com a equipa parada, executa um agente isolado; com ela ativa, atribui uma tarefa.",
+      "teamDescription": "Com a equipa parada, inicia-a; com ela ativa, atribui uma tarefa ao líder. Usa as definições guardadas.",
+      "teamPathMissing": "Guarde a pasta do projeto da equipa antes de agendar o arranque.",
+      "taskFirstAgentDescription": "O colega selecionado recebe uma tarefa no quadro após o início seguro da equipa, se necessário. Os agentes ocupados não são interrompidos.",
+      "taskFirstTeamDescription": "O líder recebe uma tarefa de coordenação após o início seguro da equipa, se necessário. O trabalho em curso não é interrompido.",
+      "taskFirstTarget": "Atribuir a",
+      "historicalPromptReviewRequired": "Revise as instruções pontuais salvas da equipe antes de agendar. Remova ou separe o prompt antigo de inicialização primeiro.",
+      "historicalPromptAcknowledged": "Revisei o prompt antigo e separei as instruções permanentes. Guardar o texto antigo, mas não o executar no agendamento."
     },
     "title": {
       "createSchedule": "Criar agendamento",
@@ -2086,7 +2102,8 @@
       "stillRunning": "A tarefa ainda está em execução...",
       "loadingLogs": "A carregar os registos...",
       "errors": "Erros",
-      "close": "Fechar"
+      "close": "Fechar",
+      "openTask": "Abrir tarefa"
     },
     "cron": {
       "expression": "Expressão de Cron",
@@ -2124,7 +2141,9 @@
     "status": {
       "active": "Activo",
       "paused": "Pausa",
-      "disabled": "Desactivado"
+      "disabled": "Desactivado",
+      "hostUnsupported": "Agendamento do Host indisponível",
+      "saved": "Guardado"
     },
     "runStatus": {
       "pending": "Pendente",
@@ -2134,7 +2153,9 @@
       "completed": "Concluído",
       "failed": "Falha",
       "interrupted": "Interrompido",
-      "cancelled": "Cancelado"
+      "cancelled": "Cancelado",
+      "dispatched": "Enviado",
+      "skipped": "Ignorado"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2444,10 @@
       "hiddenCount": "{{count}} oculto",
       "trash": "Lixo",
       "gridView": "Visão da grade",
-      "columnsView": "Vista das colunas"
+      "columnsView": "Vista das colunas",
+      "tableView": "Vista de tabela",
+      "configureColumns": "Escolher colunas",
+      "resizeColumn": "Redimensionar {{column}}"
     },
     "trash": {
       "title": "Lixo",

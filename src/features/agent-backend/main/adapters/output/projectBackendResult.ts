@@ -36,6 +36,7 @@ import { projectTaskSubmission } from './projectTaskSubmission';
 import { projectTeamActivityLogs, projectTeamActivityStats } from './projectTeamActivity';
 import { projectTeamChanges } from './projectTeamChanges';
 import { projectTeamLifecycle } from './projectTeamLifecycle';
+import { projectTeamMessagesPage } from './projectTeamMessagesPage';
 import { projectTeamSnapshot } from './projectTeamSnapshot';
 import { projectInteractionPreview, projectToolApprovalSettings } from './projectToolApproval';
 
@@ -755,6 +756,8 @@ export function projectBackendResult(
     return { ok: true, value: readBackendAttachmentChunk(source.value, request.payload) };
   if (request.operation === 'team.snapshot')
     return { ok: true, value: projectTeamSnapshot(source.value) };
+  if (request.operation === 'team.messages.page')
+    return { ok: true, value: projectTeamMessagesPage(source.value) };
   if (request.operation === 'task.get') return { ok: true, value: task(source.value) };
   if (request.operation === 'tasks.list')
     return {

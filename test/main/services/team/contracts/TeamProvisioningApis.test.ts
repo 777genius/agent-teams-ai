@@ -127,6 +127,7 @@ function createSource() {
     relayLeadInboxMessages: vi.fn(() => Promise.resolve(0)),
     getOpenCodeRuntimeDeliveryStatus: vi.fn(() => Promise.resolve(null)),
     resolveRuntimeRecipientProviderId: vi.fn(() => Promise.resolve(undefined)),
+    resolveRuntimeRecipientProviderIdForUserSend: vi.fn(() => Promise.resolve(undefined)),
     getLiveLeadProcessMessages: vi.fn(() => []),
     getCurrentLeadSessionId: vi.fn(() => null),
     pushLiveLeadProcessMessage: vi.fn(),
@@ -217,6 +218,7 @@ describe('bindTeamIpcHandlerApis', () => {
       'relayLeadInboxMessages',
       'relayOpenCodeMemberInboxMessages',
       'resolveRuntimeRecipientProviderId',
+      'resolveRuntimeRecipientProviderIdForUserSend',
       'sendMessageToTeam',
     ]);
     expect(sortedKeys(api.toolApproval)).toEqual([

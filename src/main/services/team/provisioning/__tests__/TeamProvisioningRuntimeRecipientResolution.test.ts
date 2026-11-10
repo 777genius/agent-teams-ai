@@ -142,6 +142,16 @@ describe('TeamProvisioningRuntimeRecipientResolution', () => {
       ).toThrow('OpenCode runtime recipient Builder has no authoritative config identity');
     });
 
+    it('reports an unavailable config distinctly instead of claiming missing OpenCode identity', () => {
+      expect(() =>
+        resolveRuntimeRecipientProviderIdFromSources({
+          memberName: 'worker',
+          config: null,
+          metaMembers: [{ name: 'Worker', providerId: 'opencode' }],
+        })
+      ).toThrow('team config.json is unavailable');
+    });
+
     it('falls back to model inference when no explicit provider exists', () => {
       expect(
         resolveRuntimeRecipientProviderIdFromSources({

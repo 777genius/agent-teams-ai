@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 const windows = process.platform === 'win32';
-function powershell(script) {
+export function powershell(script) {
   return execFileSync(
     path.join(
       process.env.SystemRoot || 'C:\\Windows',

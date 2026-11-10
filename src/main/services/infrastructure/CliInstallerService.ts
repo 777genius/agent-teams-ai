@@ -388,19 +388,7 @@ function createCliInstallerRunDiag(): CliInstallerStatusRunDiag {
 }
 
 function resetGatherDiag(diag: CliInstallerStatusRunDiag): void {
-  diag.versionError = null;
-  diag.authAttempts = 0;
-  diag.authLastError = null;
-  diag.authStdoutLen = 0;
-  diag.authStdoutTail = '';
-  diag.authTimedOut = false;
-  diag.gatherError = null;
-  diag.shellEnvMs = null;
-  diag.binaryResolveMs = null;
-  diag.versionProbeMs = null;
-  diag.providerInitialWaitMs = null;
-  diag.totalMs = null;
-  diag.diagWriteScheduled = false;
+  Object.assign(diag, createCliInstallerRunDiag());
 }
 
 function cloneCliInstallerRunDiag(diag: CliInstallerStatusRunDiag): CliInstallerStatusRunDiag {
@@ -888,7 +876,24 @@ export class CliInstallerService {
         new Error('Provider runtime changed during status check. Refresh to retry.')
       );
     if (generation !== this.statusGatherGeneration) return obsoleteStatus();
-    const passiveRuntime = resolvePassiveProviderRuntime(this.latestStatusSnapshot, providerId);
+    // Explicit project-scoped preflight can race initial runtime discovery.
+    // Keep background/global status polling passive: it must not spawn shell
+    // discovery or invalidate an authoritative cached status.
+    const snapshot = this.latestStatusSnapshot;
+    let passiveRuntime = resolvePassiveProviderRuntime(snapshot, providerId);
+    if (options.projectPath && !snapshot?.binaryPath) {
+      const binaryPath = await ClaudeBinaryResolver.resolve();
+      if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+      const latest = this.latestStatusSnapshot;
+      passiveRuntime = resolvePassiveProviderRuntime(
+        latest?.binaryPath
+          ? latest
+          : binaryPath
+            ? { ...this.createInitialStatus(), binaryPath }
+            : latest,
+        providerId
+      );
+    }
     if ('errorStatus' in passiveRuntime) {
       return passiveRuntime.errorStatus;
     }

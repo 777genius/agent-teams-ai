@@ -9,7 +9,7 @@ import { performance } from 'node:perf_hooks';
 import { bounded } from './desktop-proof-bounds.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { assertOwnedCdpListener, command, processTable, selectedCdpPort, compiledBundleHashes, getTargets, portOccupied,
-  readRendererBackendConnections, safeGroupSnapshot, settledGroupMembers, observeOriginalAppReap, groupMembers } from './desktop-backend-observations.ts';
+  readRendererBackendConnections, safeGroupSnapshot, settledGroupMembers, observeOriginalAppReap, isCapturedOriginalNodeZombie, groupMembers } from './desktop-backend-observations.ts';
 import type { ProcessIdentity } from './desktop-backend-observations.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { readCapturedCandidateElectron } from './candidate-electron.ts';
@@ -334,14 +334,53 @@ export async function cleanupCapturedDesktopApp(options: {
         if (reaped.settled) remaining = reaped.remaining!;
       }
       if (remaining.length) {
-        assert.equal(observedIdentity, appIdentity, 'captured invocation identity remains current');
+        let originalZombie = false;
+        if (observedIdentity !== appIdentity) {
+          // Keep the original fail-closed signal boundary even for macOS's
+          // defunct rendering: a leader is eligible only if its start time,
+          // parent, process group and actual Z state still match this child.
+          const state = execFileSync(
+            '/bin/ps', ['-p', String(group), '-o', 'stat='],
+            { encoding: 'utf8', timeout: 3000 }
+          ).trim();
+          originalZombie = isCapturedOriginalNodeZombie({
+            expectedIdentity: appIdentity,
+            observedIdentity,
+            state,
+            childPid: app.pid,
+            group,
+            leader: groupMembers(group).find((entry) => entry.pid === group),
+            parentPid: process.pid,
+          });
+          if (originalZombie) {
+            evidence.originalZombieGuard = { group, state, status: 'verified-original-zombie' };
+          }
+        }
+        assert.ok(
+          observedIdentity === appIdentity || originalZombie,
+          'captured invocation identity remains current'
+        );
+        let groupSignalPermissionError: unknown;
         try {
           process.kill(-group, 'SIGTERM');
         } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+          const code = (error as NodeJS.ErrnoException).code;
+          if (code === 'EPERM') {
+            // On macOS a group of exiting/zombie descendants may reject killpg.
+            // Never infer success from EPERM or send a second, broader signal.
+            // Only a fresh complete group-absence census can clear this debt.
+            groupSignalPermissionError = error;
+            evidence.originalGroupSignal = 'EPERM: observing actual group absence';
+          } else if (code !== 'ESRCH') {
+            throw error;
+          }
         }
         const deadline = Date.now() + 30_000;
         while (Date.now() < deadline && (remaining = groupMembers(group)).length) await tick();
+        if (groupSignalPermissionError) {
+          if (remaining.length > 0) throw groupSignalPermissionError;
+          evidence.originalGroupSignal = 'EPERM followed by verified full group absence';
+        }
       }
     }
     capturedHostAbsent =

@@ -97,6 +97,54 @@ describe('TeamInboxReader', () => {
     expect(names).toEqual(['alice', 'bob']);
   });
 
+  it('does not treat malformed inbox filenames as team members', async () => {
+    hoisted.dirs.set(inboxDir, [
+      'alice.json',
+      'user.json',
+      'team-lead.json',
+      '--------------------------.json',
+      'bad name.json',
+      '   .json',
+      ' alice.json',
+      'alice .json',
+      'CON.json',
+      '*.json',
+    ]);
+    expect(await reader.listInboxNames('my-team')).toEqual(['alice', 'user', 'team-lead']);
+  });
+
+  it('still reads messages from an inbox with an invalid member name', async () => {
+    hoisted.dirs.set(inboxDir, ['alice.json', '--------------------------.json']);
+    hoisted.files.set(
+      '/mock/teams/my-team/inboxes/alice.json',
+      JSON.stringify([
+        {
+          from: 'bob',
+          text: 'regular inbox message',
+          timestamp: '2026-10-25T12:05:06.888Z',
+          read: false,
+          messageId: 'm-alice-inbox',
+        },
+      ])
+    );
+    hoisted.files.set(
+      '/mock/teams/my-team/inboxes/--------------------------.json',
+      JSON.stringify([
+        {
+          from: 'reviewer',
+          text: 'review approved',
+          timestamp: '2026-10-25T13:05:06.888Z',
+          read: false,
+          messageId: 'm-dash-inbox',
+        },
+      ])
+    );
+    expect((await reader.getMessages('my-team')).map((message) => message.messageId)).toEqual([
+      'm-dash-inbox',
+      'm-alice-inbox',
+    ]);
+  });
+
   it('getMessagesFor returns empty for corrupted JSON', async () => {
     hoisted.files.set('/mock/teams/my-team/inboxes/alice.json', '{bad');
     const messages = await reader.getMessagesFor('my-team', 'alice');

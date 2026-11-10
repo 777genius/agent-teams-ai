@@ -5,6 +5,8 @@
  * Performance: max 1000 files, max 1MB/file, 5s timeout via AbortController.
  */
 
+import { canUseGitWithoutMacInstallerPrompt } from '@main/utils/gitAvailability';
+import { createManagedGitEnv, getManagedGitExecutable, MANAGED_GIT_ENV_KEYS } from '@main/utils/managedGit';
 import { isGitInternalPath, isPathWithinRoot } from '@main/utils/pathValidation';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs/promises';
@@ -151,11 +153,20 @@ export class FileSearchService {
     }
 
     try {
+      const binary = getManagedGitExecutable();
+      if (binary === 'git' && !(await canUseGitWithoutMacInstallerPrompt())) return null;
       const git = simpleGit({
         baseDir: projectRoot,
-        allowEnvironment: ['GIT_OPTIONAL_LOCKS'],
+        binary,
+        // Binary is resolved by the app, never supplied by a search query.
+        unsafe: { allowUnsafeCustomBinary: true },
+        allowEnvironment: ['GIT_OPTIONAL_LOCKS', ...MANAGED_GIT_ENV_KEYS],
         timeout: { block: 10_000 },
       }).env('GIT_OPTIONAL_LOCKS', '0');
+      const environment = createManagedGitEnv(process.env, { gitCommand: true });
+      for (const key of MANAGED_GIT_ENV_KEYS) {
+        if (environment[key]) git.env(key, environment[key]);
+      }
 
       // Include tracked + untracked (excluding ignored) for better UX.
       // Use -z for safe parsing of filenames.

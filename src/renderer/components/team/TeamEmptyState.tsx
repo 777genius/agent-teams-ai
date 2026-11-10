@@ -4,12 +4,14 @@ import { Import, Plus } from 'lucide-react';
 
 interface TeamEmptyStateProps {
   canCreate: boolean;
+  hasCreationDraft?: boolean;
   onCreateTeam: () => void;
   onImportTeam?: () => void;
 }
 
 export const TeamEmptyState = ({
   canCreate,
+  hasCreationDraft = false,
   onCreateTeam,
   onImportTeam,
 }: TeamEmptyStateProps): React.JSX.Element => {
@@ -22,7 +24,9 @@ export const TeamEmptyState = ({
         <div className="mt-4 flex items-center justify-center gap-2">
           <Button size="sm" className="gap-1.5" disabled={!canCreate} onClick={onCreateTeam}>
             <Plus className="size-3.5" />
-            {t('list.actions.createTeam')}
+            {hasCreationDraft
+              ? t('create.draft.continue', { defaultValue: 'Continue creating' })
+              : t('list.actions.createTeam')}
           </Button>
           {onImportTeam ? (
             <Button

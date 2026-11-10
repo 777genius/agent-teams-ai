@@ -8,7 +8,7 @@ import {
   readSync,
   readdirSync,
 } from 'node:fs';
-import { isAbsolute, join, parse, resolve } from 'node:path';
+import { isAbsolute, join, parse, resolve, sep } from 'node:path';
 import { TeamOwnerError } from '../../team/contracts.js';
 import { digest } from '../../team/identity.js';
 import { storedTeamCreationSchema } from '../../team-registry/state.js';
@@ -35,7 +35,7 @@ export class FileTeamRegistryStore implements TeamRegistryStore {
   /** Every ancestor must be a plain directory, including on subsequent calls. */
   private directories(target: string, create: boolean): boolean {
     let part = parse(target).root;
-    for (const segment of target.slice(part.length).split('/').filter(Boolean)) {
+    for (const segment of target.slice(part.length).split(sep).filter(Boolean)) {
       part = join(part, segment);
       try {
         const stat = lstatSync(part);

@@ -241,37 +241,39 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expectCatalogWarnings('provider_directory', [first.error!, retry.error!]);
   });
 
-  it.each(['directory', 'models'] as const)(
-    'preserves normalized %s failures for joined subscribers and gives retries new IDs',
-    async (operation) => {
-      const client = new AgentTeamsRuntimeProviderManagementCliClient();
-      const request = { runtimeId: 'opencode' as const, projectPath: '/sandbox/catalog' };
-      const load = () =>
-        operation === 'directory'
-          ? client.loadProviderDirectory({ ...request, summary: true })
-          : client.loadModels({ ...request, providerId: 'openrouter' });
-      const payload = JSON.stringify({
-        schemaVersion: 1,
-        runtimeId: 'opencode',
-        error: {
-          code: 'runtime-unhealthy',
-          recoverable: true,
-          message: 'api_key=private-value',
-          diagnostics: {
-            reportId: 'upstream-fixed',
-            stage: 'catalog_http',
-            summary: 'Catalog unavailable token=private-value',
-            binaryPath: '/inner/http-client',
-            durationMs: 987654321,
-            timeoutMs: 5000,
-            exitCode: 99,
-            endpoint: 'http://localhost:1234/provider?token=private-value',
-            httpStatus: 503,
-            stderrPreview: 'inner failure token=private-value',
+  for (const operation of ['directory', 'models'] as const) {
+    for (const form of ['zero', 'legacy', 'json-exit', 'process', 'missing'] as const) {
+      it(
+        `preserves normalized ${operation} ${form} failures for joined subscribers and gives retries new IDs`,
+        async () => {
+        const client = new AgentTeamsRuntimeProviderManagementCliClient();
+        const request = { runtimeId: 'opencode' as const, projectPath: '/sandbox/catalog' };
+        const load = () =>
+          operation === 'directory'
+            ? client.loadProviderDirectory({ ...request, summary: true })
+            : client.loadModels({ ...request, providerId: 'openrouter' });
+        const payload = JSON.stringify({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          error: {
+            code: 'runtime-unhealthy',
+            recoverable: true,
+            message: 'api_key=private-value',
+            diagnostics: {
+              reportId: 'upstream-fixed',
+              stage: 'catalog_http',
+              summary: 'Catalog unavailable token=private-value',
+              binaryPath: '/inner/http-client',
+              durationMs: 987654321,
+              timeoutMs: 5000,
+              exitCode: 99,
+              endpoint: 'http://localhost:1234/provider?token=private-value',
+              httpStatus: 503,
+              stderrPreview: 'inner failure token=private-value',
+            },
           },
-        },
-      });
-      for (const form of ['zero', 'legacy', 'json-exit', 'process', 'missing'] as const) {
+        });
+
         execCliMock.mockReset();
         resolveBinaryMock.mockResolvedValue(form === 'missing' ? null : '/repo/cli-dev');
         if (form === 'legacy')
@@ -319,10 +321,9 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
           operation === 'directory' ? 'provider_directory' : 'provider_models',
           [first.error!, retry.error!]
         );
-      }
+      });
     }
-  );
-
+  }
   it('returns stderr details for failed model tests instead of hiding them behind the command', async () => {
     const error = new Error('Command failed: /repo/cli-dev runtime providers test-model');
     Object.assign(error, {

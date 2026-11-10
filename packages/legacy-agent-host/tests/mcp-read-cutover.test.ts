@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
 import {
   mkdtempSync,
   readFileSync,
@@ -11,7 +12,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import type { TestContext } from "node:test";
 import { createFilesystemTeamOwner } from "../dist/adapters/team/createFilesystemTeamOwner.js";
-import { createTeamPolicy } from "../dist/adapters/team/ControllerAdapter.js";
+import { createTeamController, createTeamPolicy } from "../dist/adapters/team/ControllerAdapter.js";
 import { TeamOwnerStore } from "../dist/adapters/team/TeamOwnerStore.js";
 import { TaskEffectPlan } from "../dist/adapters/team/TaskEffectPlan.js";
 import { TeamOwner } from "../dist/team/TeamOwner.js";
@@ -185,6 +186,178 @@ test("bound canonical queues/comments/board reads survive reopen and produce no 
   );
 });
 
+
+test("team_get keeps canonical 90-comment task readable with taskParts continuations", (t) => {
+  const f = fixture(t);
+  const taskId = f.user.execute({
+    commandId: "TEST-huge-task", operation: "task.create",
+    payload: { subject: "Large task history", owner: "alice" },
+  }).effects.taskId;
+  for (let index = 0; index < 90; index++)
+    f.user.execute({
+      commandId: "TEST-huge-comment-" + index,
+      operation: "task.comment",
+      payload: { taskId, text: "comment-" + index + "-" + "x".repeat(6000) },
+    });
+  const expected = f.user.getTask(taskId).comments as { text: string }[];
+  assert.equal(expected.length, 90);
+  const tools = createTeamMcpTools(f.owner.connect("alice"));
+  const fragments = new Map<number, { total: number; values: Map<number, unknown> }>();
+  let cursor: string | null = null;
+  let revision: string | undefined;
+  let pages = 0;
+  do {
+    const page = value(tools.call("team_get", cursor ? { cursor } : {})) as {
+      revision: string;
+      tasks: { id: string; comments?: { text: string }[] }[];
+      taskParts: { index: number; part: number; total: number }[];
+      nextCursor: string | null;
+    };
+    assert.ok(Buffer.byteLength(JSON.stringify(page)) < 256 * 1024);
+    assert.equal(revision === undefined || revision === page.revision, true);
+    revision = page.revision;
+    for (const [position, marker] of page.taskParts.entries()) {
+      const group = fragments.get(marker.index) ?? { total: marker.total, values: new Map() };
+      assert.equal(group.total, marker.total);
+      assert.equal(group.values.has(marker.part), false);
+      group.values.set(marker.part, page.tasks[position]);
+      fragments.set(marker.index, group);
+    }
+    cursor = page.nextCursor;
+    pages++;
+    assert.ok(pages < 128);
+  } while (cursor);
+  const group = [...fragments.values()].find((entry) =>
+    (entry.values.get(0) as { id?: string } | undefined)?.id === taskId);
+  assert.ok(group);
+  assert.equal(group.values.size, group.total);
+  const comments = [...group.values.entries()].sort(([a], [b]) => a - b)
+    .flatMap(([, row]) => (row as { comments?: { text: string }[] }).comments ?? []);
+  assert.deepEqual(comments.map((row) => row.text), expected.map((row) => row.text));
+  assert.ok(pages > 1);
+  // task_get is a separate native read and must return full retained history.
+  const chunks: string[] = [];
+  let taskCursor: string | null = null;
+  let taskRevision: string | undefined;
+  let taskPages = 0;
+  do {
+    const part = value(tools.call("task_get", {
+      taskId, ...(taskCursor === null ? {} : { cursor: taskCursor }),
+    })) as {
+      kind: string; revision: string; part: number; total: number;
+      chunk: string; nextCursor: string | null;
+    };
+    assert.equal(part.kind, "task-detail-chunk");
+    assert.equal(part.part, taskPages++);
+    assert.equal(taskRevision === undefined || taskRevision === part.revision, true);
+    taskRevision = part.revision;
+    chunks.push(part.chunk);
+    taskCursor = part.nextCursor;
+    assert.ok(taskPages < 128);
+  } while (taskCursor);
+  assert.deepEqual(JSON.parse(chunks.join("")), f.user.getTask(taskId));
+  const firstPage = value(tools.call("task_get", { taskId })) as { nextCursor: string };
+  assert.throws(
+    () => createTeamMcpTools(f.user).call("task_get", { taskId, cursor: firstPage.nextCursor }),
+    (error) => error instanceof TeamOwnerError && error.code === "hold",
+  );
+  f.user.execute({
+    commandId: "TEST-extra-comment", operation: "task.comment",
+    payload: { taskId, text: "later canonical edit invalidates task_get cursor" },
+  });
+  assert.throws(
+    () => tools.call("task_get", { taskId, cursor: firstPage.nextCursor }),
+    (error) => error instanceof TeamOwnerError && error.code === "hold",
+  );
+});
+
+test("team_get retains an accepted oversized Unicode task description with signed fragments", (t) => {
+  const f = fixture(t);
+  const description = "漢".repeat(140_000);
+  const taskId = f.user.execute({
+    commandId: "TEST-large-task-description",
+    operation: "task.create",
+    payload: { subject: "Large valid description", description },
+  }).effects.taskId;
+  const tool = createTeamMcpTools(f.user);
+  let cursor: string | null = null;
+  let pageCount = 0;
+  const chunks = new Map<number, string>();
+  do {
+    const page = value(tool.call("team_get", cursor ? { cursor } : {})) as {
+      tasks: { id: string; description?: string }[];
+      taskParts?: { index: number; part: number; total: number }[];
+      nextCursor: string | null;
+    };
+    assert.ok(page.taskParts);
+    assert.ok(Buffer.byteLength(JSON.stringify(page)) < 256 * 1024);
+    for (const [position, fragment] of page.tasks.entries()) {
+      if (fragment.id !== taskId || fragment.description === undefined) continue;
+      const marker: { index: number; part: number; total: number } | undefined =
+        page.taskParts?.[position];
+      assert.ok(marker);
+      assert.equal(marker.index, 0);
+      assert.equal(chunks.has(marker.part), false);
+      chunks.set(marker.part, fragment.description);
+    }
+    cursor = page.nextCursor;
+    assert.ok(++pageCount < 128);
+  } while (cursor);
+  assert.ok(pageCount > 1);
+  assert.equal([...chunks.entries()].sort(([a], [b]) => a - b)
+    .map(([, value]) => value).join(""), description);
+  assert.equal(f.user.getTask(taskId).description, description);
+});
+
+test("team_get pages retained >256 KiB task history within MCP response limits", (t) => {
+  const f = fixture(t);
+  for (let index = 0; index < 100; index++) {
+    f.user.execute({
+      commandId: `TEST-page-task-${index}`,
+      operation: "task.create",
+      payload: {
+        subject: `Retained task ${index}`,
+        description: `desc-${index}-${"x".repeat(3500)}`,
+      },
+    });
+  }
+  const original = f.user.readSnapshot() as { tasks: unknown[]; nextCursor: string | null };
+  // The Owner page may itself have a continuation; MCP must remain smaller.
+  assert.ok(Buffer.byteLength(JSON.stringify(original)) > 256 * 1024);
+
+  const tools = createTeamMcpTools(f.user);
+  const first = value(tools.call("team_get", {})) as {
+    tasks: { subject: string }[];
+    nextCursor: string | null;
+  };
+  assert.ok(first.nextCursor, "MCP must expose continuation for large original history");
+  const all = [...first.tasks];
+  let cursor: string | null = first.nextCursor;
+  let pages = 1;
+  while (cursor) {
+    const page = value(tools.call("team_get", { cursor })) as typeof first;
+    assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 128 * 1024);
+    all.push(...page.tasks);
+    cursor = page.nextCursor;
+    pages++;
+    assert.ok(pages <= 128);
+  }
+  assert.ok(pages > 1);
+  assert.equal(all.length, 100);
+  assert.equal(new Set(all.map((task) => task.subject)).size, 100);
+  assert.throws(() => tools.call("team_get", { cursor: "invalid" }));
+  const other = createTeamMcpTools(f.owner.connect("alice"));
+  assert.throws(() => other.call("team_get", { cursor: first.nextCursor }),
+    (error) => error instanceof TeamOwnerError && error.code === "hold");
+  f.user.execute({
+    commandId: "TEST-later-task",
+    operation: "task.create",
+    payload: { subject: "later task invalidates original continuation" },
+  });
+  assert.throws(() => tools.call("team_get", { cursor: first.nextCursor }),
+    (error) => error instanceof TeamOwnerError && error.code === "hold");
+});
+
 test("existing MCP create and owner-clear expose canonical payload and exact conjunctive inventory policy", async (t) => {
   const f = fixture(t);
   const tools = createTeamMcpTools(f.user);
@@ -239,6 +412,60 @@ test("existing MCP create and owner-clear expose canonical payload and exact con
     "completed",
   );
   assert.equal(f.user.getTask(second.effects.taskId).owner, undefined);
+});
+
+const require = createRequire(import.meta.url);
+const { writeKanbanState } = require("agent-teams-controller/src/internal/kanbanStore.js") as {
+  writeKanbanState(paths: Record<string, string>, teamName: string, state: unknown): void;
+};
+
+test("kanban_get pages a valid >256 KiB canonical board without losing order or authority", (t) => {
+  const f = fixture(t);
+  const ids = Array.from({ length: 4_800 }, (_, index) => "TEST-board-" + index);
+  const tasks = Object.fromEntries(ids.map((id) => [
+    id, { column: "approved", movedAt: "2026-11-09T10:00:00.000Z" },
+  ]));
+  const board = {
+    teamName: f.binding.teamName, reviewers: ["alice"],
+    tasks, columnOrder: { approved: ids },
+  };
+  writeKanbanState(createTeamController(f.root, f.binding.teamName).context.paths,
+    f.binding.teamName, board);
+  const canonical = f.policy.reads!.getKanbanState({ strict: true });
+  assert.ok(Buffer.byteLength(JSON.stringify(canonical)) > 256 * 1024);
+  const mcp = createTeamMcpTools(f.owner.connect("alice"));
+  const combined = { tasks: {} as Record<string, unknown>, columnOrder: [] as string[] };
+  let cursor: string | null = null;
+  let firstCursor: string | undefined;
+  let revision: string | undefined;
+  let pages = 0;
+  do {
+    const page = value(mcp.call("kanban_get", cursor ? { cursor } : {})) as {
+      revision: string; nextCursor: string | null;
+      tasks: Record<string, unknown>; columnOrder: { approved?: string[] };
+    };
+    assert.ok(Buffer.byteLength(JSON.stringify(page)) < 256 * 1024);
+    revision ??= page.revision;
+    assert.equal(page.revision, revision);
+    Object.assign(combined.tasks, page.tasks);
+    combined.columnOrder.push(...(page.columnOrder.approved ?? []));
+    if (pages === 0) firstCursor = page.nextCursor ?? undefined;
+    cursor = page.nextCursor;
+    assert.ok(++pages < 128);
+  } while (cursor);
+  assert.ok(pages > 1);
+  assert.deepEqual(combined.tasks, tasks);
+  assert.deepEqual(combined.columnOrder, ids);
+  assert.throws(
+    () => createTeamMcpTools(f.user).call("kanban_get", { cursor: firstCursor }),
+    (error) => error instanceof TeamOwnerError && error.code === "hold",
+  );
+  writeKanbanState(createTeamController(f.root, f.binding.teamName).context.paths,
+    f.binding.teamName, { ...board, reviewers: ["alice", "bob"] });
+  assert.throws(
+    () => mcp.call("kanban_get", { cursor: firstCursor }),
+    (error) => error instanceof TeamOwnerError && error.code === "hold",
+  );
 });
 
 test(

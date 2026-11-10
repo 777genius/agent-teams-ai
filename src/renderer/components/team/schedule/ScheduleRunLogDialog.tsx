@@ -36,9 +36,9 @@ interface ScheduleRunLogDialogProps {
 // Helpers
 // =============================================================================
 
-function formatTime(isoString: string): string {
+function formatTime(isoString: string, locale?: string): string {
   try {
-    return new Date(isoString).toLocaleString('en-US', {
+    return new Date(isoString).toLocaleString(locale, {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -73,7 +73,9 @@ export const ScheduleRunLogDialog = ({
   scheduleId,
   onClose,
 }: ScheduleRunLogDialogProps): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
+  const { t, resolvedLanguage } = useAppTranslation('team');
+  const openTaskDetailTab = useStore((state) => state.openTaskDetailTab);
+  const activeContextId = useStore((state) => state.activeContextId);
   // Read live run data from store — falls back to initial prop if not found
   const liveRun = useStore(
     useShallow((s) => {
@@ -157,7 +159,7 @@ export const ScheduleRunLogDialog = ({
 
           <span className="flex items-center gap-1 text-[var(--color-text-muted)]">
             <Clock className="size-3" />
-            {formatTime(run.startedAt)}
+            {formatTime(run.startedAt, resolvedLanguage)}
           </span>
 
           {run.durationMs != null ? (
@@ -189,6 +191,13 @@ export const ScheduleRunLogDialog = ({
               {run.summary ? (
                 <span className="ml-2 truncate text-[var(--color-text-muted)]">{run.summary}</span>
               ) : null}
+            </div>
+          ) : null}
+
+          {/* Smart dispatch is a recorded handoff, not a CLI transcript. */}
+          {!isRunning && (run.status === 'dispatched' || run.status === 'skipped') && run.summary ? (
+            <div className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-xs text-[var(--color-text-secondary)]">
+              {run.summary}
             </div>
           ) : null}
 
@@ -232,7 +241,7 @@ export const ScheduleRunLogDialog = ({
           ) : null}
 
           {/* Run error message (from ScheduleRun.error) */}
-          {!isRunning && run.error && !logs ? (
+          {!isRunning && run.error && (!logs || !logs.stderr.trim()) ? (
             <div className="flex items-start gap-2 rounded border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-300">
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
               <span className="whitespace-pre-wrap">{run.error}</span>
@@ -241,6 +250,18 @@ export const ScheduleRunLogDialog = ({
         </div>
 
         <DialogFooter className="pt-2">
+          {run.linkedTaskId && activeContextId ? (
+            <Button variant="outline" size="sm" onClick={() => {
+              const opened = openTaskDetailTab({
+                contextId: activeContextId,
+                teamName: run.teamName,
+                taskId: run.linkedTaskId!,
+              });
+              if (opened) onClose();
+            }}>
+              {t('schedule.runLog.openTask')}
+            </Button>
+          ) : null}
           <Button variant="outline" size="sm" onClick={onClose}>
             {t('schedule.runLog.close')}
           </Button>

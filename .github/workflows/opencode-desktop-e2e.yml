@@ -6,6 +6,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - scripts/e2e/opencode-diagnostics-desktop.mjs
+      - src/renderer/store/index.ts
       - scripts/e2e/opencode-diagnostics/**
       - test/scripts/opencodeStartupCleanupFixture.test.mjs
       - .github/workflows/opencode-desktop-e2e.yml
@@ -36,8 +37,16 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     strategy:
       fail-fast: false
+      # Keep the long catalog and Windows startup-cleanup qualification on
+      # independent disposable runners. Each retains its original full checks.
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            scenario: catalog
+          - os: windows-latest
+            scenario: catalog
+          - os: windows-latest
+            scenario: startup-cleanup
     runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.CI_LINUX_RUNNER || 'ubicloud-standard-4') || matrix.os }}
     timeout-minutes: 30
     steps:
@@ -54,6 +63,10 @@ jobs:
       - run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify harness safety
         run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs test/scripts/opencodeStartupCleanupFixture.test.mjs
+      # Stage1 extracts Host imports consumed by the Electron main bundle.
+      # pnpm install alone does not materialize the workspace dist exports.
+      - name: Build isolated Host before Electron startup
+        run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Configure disposable artifact directory
         shell: bash
         run: |
@@ -61,19 +74,19 @@ jobs:
           echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
           echo "TMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Verify Linux desktop
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.scenario == 'catalog'
         run: xvfb-run -a node scripts/e2e/opencode-diagnostics/run.mjs
       - name: Verify Windows desktop
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && matrix.scenario == 'catalog'
         shell: pwsh
         run: |
           node scripts/e2e/opencode-diagnostics/run.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Diagnose isolated Windows enumeration
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && matrix.scenario == 'catalog'
         run: node scripts/e2e/opencode-diagnostics/windows-enumeration-probe.mjs
       - name: Verify Windows startup cleanup recovery
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && matrix.scenario == 'startup-cleanup'
         shell: pwsh
         run: |
           node scripts/e2e/opencode-diagnostics/run.mjs --startup-cleanup
@@ -82,7 +95,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: opencode-desktop-${{ runner.os }}-${{ github.sha }}
+          name: opencode-desktop-${{ runner.os }}-${{ matrix.scenario }}-${{ github.sha }}
           retention-days: 14
           if-no-files-found: warn
           path: |

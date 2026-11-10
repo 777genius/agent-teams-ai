@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 
+import { applyCustomThemeToRoot, type CustomTheme, useAppearancePreferences } from '@features/appearance/renderer';
 import { useShallow } from 'zustand/react/shallow';
 
 import { useStore } from '../store';
@@ -94,16 +95,20 @@ export function useTheme(): {
   resolvedTheme: ResolvedTheme;
   isDark: boolean;
   isLight: boolean;
+  customTheme: CustomTheme | null;
 } {
   const configuredTheme = useStore(selectConfiguredTheme);
+  const { activeCustomThemeId, themes } = useAppearancePreferences();
+  const customTheme = themes.find((theme) => theme.id === activeCustomThemeId) ?? null;
   const systemTheme = useSystemTheme();
-  const resolvedTheme = configuredTheme === 'system' ? systemTheme : configuredTheme;
+  const resolvedTheme = customTheme?.base ?? (configuredTheme === 'system' ? systemTheme : configuredTheme);
 
   return {
     theme: configuredTheme,
     resolvedTheme,
     isDark: resolvedTheme === 'dark',
     isLight: resolvedTheme === 'light',
+    customTheme,
   };
 }
 
@@ -119,7 +124,7 @@ export function useThemeController(): ReturnType<typeof useTheme> {
       fetchConfig: s.fetchConfig,
     }))
   );
-  const { resolvedTheme } = themeState;
+  const { resolvedTheme, customTheme } = themeState;
 
   // Fetch config on mount if not loaded.
   // The centralized init chain also calls fetchConfig - configLoading guard
@@ -141,6 +146,7 @@ export function useThemeController(): ReturnType<typeof useTheme> {
 
     // Add new theme class
     root.classList.add(resolvedTheme);
+    applyCustomThemeToRoot(root, customTheme);
 
     const timer = window.setTimeout(() => {
       body.classList.remove('theme-transitioning');
@@ -150,7 +156,7 @@ export function useThemeController(): ReturnType<typeof useTheme> {
       window.clearTimeout(timer);
       body.classList.remove('theme-transitioning');
     };
-  }, [resolvedTheme]);
+  }, [resolvedTheme, customTheme]);
 
   useEffect(() => {
     writeCachedResolvedTheme(resolvedTheme);

@@ -1505,13 +1505,29 @@
       "labelPlaceholder": "mis., Ulasan kode harian, Tes Nightly...",
       "maxBudgetUsd": "Anggaran maksimum (USD)",
       "maxTurns": "Max ternyata",
+      "executionLimitsNote": "Batas ini hanya berlaku untuk eksekusi mandiri satu kali. Batas ini tidak berlaku untuk tugas yang diberikan kepada tim yang sedang berjalan.",
       "noLimit": "Tanpa batas",
       "noMatches": "Tak ada tim yang cocok dengan pencarianmu.",
       "noTeams": "Tidak ada tim yang tersedia. Buat tim dulu.",
       "searchTeams": "Tim pencari...",
       "selectTeam": "Pilih sebuah tim...",
       "team": "Tim",
-      "title": "Jadwal"
+      "title": "Jadwal",
+      "execution": "Eksekusi",
+      "legacyNotice": "Jadwal sekali jalan yang sudah ada: menyimpan tidak mengubah perilakunya.",
+      "upgradeSmart": "Beralih ke jadwal cerdas",
+      "oneAgent": "Satu agen",
+      "wholeTeam": "Seluruh tim",
+      "target": "Penerima saat tim berjalan",
+      "leadDefault": "Pemimpin tim (default)",
+      "agentDescription": "Saat tim mati, jalankan agen terpisah; saat aktif, berikan tugas kepada anggota.",
+      "teamDescription": "Saat tim mati, jalankan tim tersimpan; saat aktif, berikan tugas kepada pemimpin. Gunakan pengaturan tersimpan.",
+      "teamPathMissing": "Simpan folder proyek tim sebelum menjadwalkan peluncuran.",
+      "taskFirstAgentDescription": "Anggota tim terpilih menerima tugas di papan setelah tim dimulai dengan aman jika diperlukan. Agen yang sibuk tidak akan diganggu.",
+      "taskFirstTeamDescription": "Pemimpin tim menerima tugas koordinasi setelah tim dimulai dengan aman jika diperlukan. Pekerjaan yang berjalan tidak akan diganggu.",
+      "taskFirstTarget": "Tugaskan kepada",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "Saya telah meninjau prompt lama dan memisahkan instruksi permanen. Simpan teks lama, tetapi jangan jalankan dalam jadwal."
     },
     "title": {
       "createSchedule": "Buat Jadwal",
@@ -2086,7 +2102,8 @@
       "stillRunning": "Tugas masih berjalan...",
       "loadingLogs": "Memuat log...",
       "errors": "Galat",
-      "close": "Tutup"
+      "close": "Tutup",
+      "openTask": "Buka tugas"
     },
     "cron": {
       "expression": "Ekspresi cron",
@@ -2124,7 +2141,9 @@
     "status": {
       "active": "Aktif",
       "paused": "Ditahan",
-      "disabled": "Dinonaktifkan"
+      "disabled": "Dinonaktifkan",
+      "hostUnsupported": "Penjadwalan Host tidak tersedia",
+      "saved": "Tersimpan"
     },
     "runStatus": {
       "pending": "Menunggu",
@@ -2134,7 +2153,9 @@
       "completed": "Selesai",
       "failed": "Gagal",
       "interrupted": "Interupsi",
-      "cancelled": "Dibatalkan"
+      "cancelled": "Dibatalkan",
+      "dispatched": "Dikirim",
+      "skipped": "Dilewati"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2444,10 @@
       "hiddenCount": "{{count}} tersembunyi",
       "trash": "Tempat Sampah",
       "gridView": "Tilikan kisi",
-      "columnsView": "Tilikan kolom"
+      "columnsView": "Tilikan kolom",
+      "tableView": "Tampilan tabel",
+      "configureColumns": "Pilih kolom",
+      "resizeColumn": "Ubah lebar {{column}}"
     },
     "trash": {
       "title": "Tempat Sampah",

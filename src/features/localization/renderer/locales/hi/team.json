@@ -1505,13 +1505,29 @@
       "labelPlaceholder": "उदाहरण के लिए, दैनिक कोड समीक्षा, नाइटली परीक्षण...",
       "maxBudgetUsd": "अधिकतम बजट (USD)",
       "maxTurns": "मैक्स",
+      "executionLimitsNote": "ये सीमाएँ केवल अलग से एक बार चलाए गए कार्यों पर लागू होती हैं। पहले से चल रही टीम को सौंपे गए कार्यों पर ये लागू नहीं होतीं।",
       "noLimit": "सीमा नहीं",
       "noMatches": "कोई टीम आपकी खोज से मेल नहीं खाती।",
       "noTeams": "उपलब्ध नहीं है। पहले टीम बनाएं।",
       "searchTeams": "टीम खोजें...",
       "selectTeam": "एक टीम चुनें...",
       "team": "टीम",
-      "title": "अनुसूची"
+      "title": "अनुसूची",
+      "execution": "निष्पादन",
+      "legacyNotice": "यह पुराना एक-बार चलने वाला शेड्यूल है। सहेजने से इसका व्यवहार नहीं बदलेगा।",
+      "upgradeSmart": "स्मार्ट शेड्यूल पर जाएँ",
+      "oneAgent": "एक एजेंट",
+      "wholeTeam": "पूरी टीम",
+      "target": "टीम चल रही हो तो जिम्मेदार सदस्य",
+      "leadDefault": "टीम लीड (डिफ़ॉल्ट)",
+      "agentDescription": "टीम बंद हो तो अलग एजेंट चलाता है; चल रही हो तो कार्य सौंपता है।",
+      "teamDescription": "टीम बंद हो तो सहेजी गई टीम शुरू करता है; चल रही हो तो लीड को कार्य सौंपता है। सहेजी गई सेटिंग्स उपयोग होती हैं।",
+      "teamPathMissing": "शेड्यूल पर टीम शुरू करने से पहले उसका प्रोजेक्ट फ़ोल्डर सहेजें।",
+      "taskFirstAgentDescription": "चुने गए टीम सदस्य को ज़रूरत पड़ने पर टीम सुरक्षित रूप से शुरू होने के बाद बोर्ड पर कार्य दिया जाएगा। व्यस्त एजेंटों का काम बाधित नहीं होगा।",
+      "taskFirstTeamDescription": "टीम लीड को ज़रूरत पड़ने पर टीम सुरक्षित रूप से शुरू होने के बाद समन्वय कार्य दिया जाएगा। चल रहा काम बाधित नहीं होगा।",
+      "taskFirstTarget": "इसे सौंपें",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "पुराने सहेजे गए प्रॉम्प्ट की समीक्षा करके स्थायी निर्देश अलग कर दिए हैं। पुराना पाठ रखें, पर शेड्यूल पर न चलाएँ।"
     },
     "title": {
       "createSchedule": "अनुसूची बनाएँ",
@@ -2086,7 +2102,8 @@
       "stillRunning": "कार्य अभी भी चल रहा है...",
       "loadingLogs": "लोड हो रहा है...",
       "errors": "त्रुटियाँ",
-      "close": "बंद"
+      "close": "बंद",
+      "openTask": "कार्य खोलें"
     },
     "cron": {
       "expression": "क्रोन अभिव्यक्ति",
@@ -2124,7 +2141,9 @@
     "status": {
       "active": "सक्रिय",
       "paused": "दलित",
-      "disabled": "विकलांग"
+      "disabled": "विकलांग",
+      "hostUnsupported": "Host शेड्यूलिंग उपलब्ध नहीं है",
+      "saved": "सहेजा गया"
     },
     "runStatus": {
       "pending": "लंबित",
@@ -2134,7 +2153,9 @@
       "completed": "पूरा",
       "failed": "विफल",
       "interrupted": "अवरोधित",
-      "cancelled": "रद्द करना"
+      "cancelled": "रद्द करना",
+      "dispatched": "भेजा गया",
+      "skipped": "छोड़ा गया"
     }
   },
   "openCodeContextConfigHint": {
@@ -2423,7 +2444,10 @@
       "hiddenCount": "{{count}} छिपा हुआ",
       "trash": "ट्रैश",
       "gridView": "ग्रिड दृश्य",
-      "columnsView": "कॉलम view"
+      "columnsView": "कॉलम view",
+      "tableView": "तालिका दृश्य",
+      "configureColumns": "कॉलम चुनें",
+      "resizeColumn": "{{column}} की चौड़ाई बदलें"
     },
     "trash": {
       "title": "ट्रैश",
