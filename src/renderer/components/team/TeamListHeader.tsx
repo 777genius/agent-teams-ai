@@ -3,7 +3,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { Network, Plus, Search } from 'lucide-react';
+import { Import, Network, Plus, Search } from 'lucide-react';
 
 import { TeamListFilterPopover } from './TeamListFilterPopover';
 
@@ -63,7 +63,7 @@ export const TeamListHeader = ({
           <h2 className="shrink-0 text-base font-semibold text-[var(--color-text)]">
             {t('list.title')}
           </h2>
-          <div className="relative min-w-0 max-w-[150px] flex-1">
+          <div className="relative min-w-0 max-w-[250px] flex-1">
             <Search
               size={14}
               className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
@@ -94,17 +94,36 @@ export const TeamListHeader = ({
             onSettings={onManagementSettings}
             onManagementApplied={onManagementApplied}
           />
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={onOrganizations}>
-            <Network size={13} />
-            {t('list.actions.organizationMap')}
-          </Button>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" disabled={!canCreate} onClick={onImport}>
-                {t('list.actions.importTeam')}
+              <Button
+                variant="outline"
+                size="sm"
+                className="size-8 p-0"
+                onClick={onOrganizations}
+                aria-label={t('list.actions.organizationMap')}
+              >
+                <Network size={15} aria-hidden="true" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent className="max-w-72">{t('teamImport.description')}</TooltipContent>
+            <TooltipContent>{t('list.actions.organizationMap')}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="size-8 p-0"
+                  disabled={!canCreate}
+                  onClick={onImport}
+                  aria-label={t('list.actions.importTeam')}
+                >
+                  <Import size={15} aria-hidden="true" />
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-72">{t('teamImport.title')}</TooltipContent>
           </Tooltip>
           <Button className="gap-2" disabled={!canCreate} onClick={onCreate}>
             <Plus size={15} />

@@ -3364,7 +3364,7 @@
       "failed": "Run failed",
       "cancelled": "Cancelled"
     },
-    "title": "Manage teams with a prompt",
+    "title": "Manage with a prompt",
     "description": "Write a request for your external agent. Templates below are read-only references.",
     "taskLabel": "What should the agent do?",
     "taskTooLong": "Native runs support requests up to {{limit}} characters. Shorten the request to run it.",
