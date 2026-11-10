@@ -629,8 +629,20 @@ export function createOpenCodeV2MemberProvider(
                   // Retire the captured owner and wake the private feed first.
                   const stopping = finishOwned();
                   try {
-                    await source.close();
-                    await underlyingReturn(undefined);
+                    // Even a rejected private close must not skip the
+                    // generator's finally (lease timer, abort listener, feed).
+                    let closeFailure: { error: unknown } | undefined;
+                    try {
+                      await source.close();
+                    } catch (error) {
+                      closeFailure = { error };
+                    }
+                    try {
+                      await underlyingReturn(undefined);
+                    } finally {
+                      // Preserve the first close failure after finalization.
+                      if (closeFailure) throw closeFailure.error;
+                    }
                   } finally {
                     if (!await stopping)
                       throw new Error('opencode.v2.owner-cleanup-unknown');
@@ -645,8 +657,19 @@ export function createOpenCodeV2MemberProvider(
                 stream.throw = async (error) => {
                   const stopping = finishOwned();
                   try {
-                    await source.close();
-                    return await underlyingThrow(error);
+                    let closeFailure: { error: unknown } | undefined;
+                    try {
+                      await source.close();
+                    } catch (cause) {
+                      closeFailure = { error: cause };
+                    }
+                    try {
+                      return await underlyingThrow(error);
+                    } finally {
+                      // Never let an early close rejection strand the generator.
+                      // A return in this finally would swallow that rejection.
+                      if (closeFailure) throw closeFailure.error;
+                    }
                   } finally {
                     if (!await stopping)
                       throw new Error('opencode.v2.owner-cleanup-unknown', { cause: error });

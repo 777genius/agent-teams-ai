@@ -325,6 +325,7 @@ test('V2 Host authority function metadata cannot substitute a revoked allocation
       });
       const provider = createOpenCodeV2MemberProvider(input, captured);
       await assert.rejects(() => provider.factory.open(request()),
+        /opencode\.driver\.dependency-unavailable/,
         'the originally denied allocation must never become an authorized launch');
       assert.equal(metadataReads, 0, callback + '.' + property + ' getter must not execute');
       assert.equal(forgedChecks, 0, 'no forged Host authority invoked');
@@ -374,6 +375,7 @@ test('V2 owner policy getter cannot replace captured Host authority callbacks', 
   });
   const provider = createOpenCodeV2MemberProvider(input, captured);
   await assert.rejects(() => provider.factory.open(request()),
+    /opencode\.driver\.dependency-unavailable/,
     'a revoked captured Host lease must prevent native admission');
   assert.equal(calls.probe, 0);
   assert.equal(calls.permissions, 0);
