@@ -234,6 +234,9 @@ jobs:
                r.nativeSessionPermissionOrderReadbackProven!==true ||
                r.nativePermissionResolverProven!==true ||
                r.nativePermissionReplyRejectNoReplayProven!==true ||
+               r.nativeSavedAlwaysOverridesAskProven!==true ||
+               r.nativeExplicitDenyBeatsSavedAlwaysProven!==true ||
+               r.nativeSavedGrantSurvivesColdRestartProven!==true ||
                r.nativeUnauthenticatedDeleteRejected!==true ||
                r.nativeUnauthenticatedPermissionGrantRejected!==true ||
                r.nativeStalePermissionAfterRestartRejected!==true ||
@@ -249,6 +252,7 @@ jobs:
               'TEST_real_pending_permission_exists_before_cold_restart',
               'TEST_official_HTTP_session_created_event_persisted',
               'TEST_cold_native_permission_not_replayed_or_accepted',
+              'TEST_native_persisted_always_vs_deny_survives_cold_restart',
               'TEST_durable_HTTP_session_identity_survives_cold_restart_no_prompt',
               'TEST_real_published_HTTP_Stage1_SPI_ready_no_model_turn',
               'TEST_Stage1_SPI_readiness_recheck_and_owned_cleanup_no_replay',

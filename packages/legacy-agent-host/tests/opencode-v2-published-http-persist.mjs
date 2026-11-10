@@ -379,6 +379,81 @@ if (process.argv[2] === '--worker') {
     receipt.nativePermissionResolverProven=true;
     receipt.nativePermissionReplyRejectNoReplayProven=true;
     receipt.steps.push('TEST_published_native_permission_resolver_and_nonreplay');
+    // Actual native effective policy is NOT equal to the session's ordered
+    // readback: a TEST-only project-scoped "always" grant can override ASK.
+    // Keep this saved resource unique so the existing stale/unauthorized
+    // permission matrix cannot inherit the grant. No user config is touched.
+    const savedResource=join(root,'temp','TEST-saved-always-unique');
+    const savedRules=[{action:'external_directory',resource:'*',effect:'ask'}];
+    const savedCreated=await call('/api/session','POST',{
+      location:{directory:workspace},agent:'build',permissions:savedRules,
+    });
+    const savedId=savedCreated.data?.data?.id;
+    if(savedCreated.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(savedId||''))
+      throw Error('TEST_saved_permission_session_missing');
+    const savedPath='/api/session/'+encodeURIComponent(savedId);
+    const savedAsk=await call(savedPath+'/permission','POST',{
+      action:'external_directory',resources:[savedResource],save:[savedResource],
+    });
+    const savedRequestId=savedAsk.data?.data?.id;
+    if(savedAsk.status!==200||savedAsk.data?.data?.effect!=='ask'||
+       !/^per[A-Za-z0-9_-]+$/.test(savedRequestId||''))
+      throw Error('TEST_saved_permission_initial_ask_missing');
+    const savedPending=await call(savedPath+'/permission');
+    if(savedPending.status!==200||savedPending.data?.data?.length!==1||
+       savedPending.data.data[0]?.id!==savedRequestId||
+       savedPending.data.data[0]?.sessionID!==savedId)
+      throw Error('TEST_saved_permission_request_identity_mismatch');
+    if((await call(savedPath+'/permission/'+encodeURIComponent(savedRequestId)+
+       '/reply','POST',{decision:'always'})).status!==204)
+      throw Error('TEST_saved_permission_always_unconfirmed');
+    const savedReadback=await call(savedPath);
+    const savedCleared=await call(savedPath+'/permission');
+    if(savedReadback.status!==200||
+       JSON.stringify(savedReadback.data?.data?.permissions)!==JSON.stringify(savedRules)||
+       savedCleared.status!==200||savedCleared.data?.data?.length!==0||
+       preflightOpenCodeV2EffectiveExternalDirectory(savedRules,'ask').kind!=='policy-candidate')
+      throw Error('TEST_saved_permission_readback_or_cleanup_mismatch');
+    // A newly created session STILL reads back ASK, but the native resolver
+    // must observe the persisted project-wide grant for this exact resource.
+    const savedFollow=await call('/api/session','POST',{
+      location:{directory:workspace},agent:'build',permissions:savedRules,
+    });
+    const savedFollowId=savedFollow.data?.data?.id;
+    if(savedFollow.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(savedFollowId||'')||
+       savedFollowId===savedId)
+      throw Error('TEST_saved_permission_followup_session_missing');
+    const savedFollowPath='/api/session/'+encodeURIComponent(savedFollowId);
+    const savedFollowReadback=await call(savedFollowPath);
+    if(savedFollowReadback.status!==200||
+       JSON.stringify(savedFollowReadback.data?.data?.permissions)!==JSON.stringify(savedRules))
+      throw Error('TEST_saved_permission_followup_ask_not_captured');
+    const savedAllowed=await call(savedFollowPath+'/permission','POST',{
+      action:'external_directory',resources:[savedResource],
+    });
+    const savedFollowPending=await call(savedFollowPath+'/permission');
+    if(savedAllowed.status!==200||savedAllowed.data?.data?.effect!=='allow'||
+       savedFollowPending.status!==200||savedFollowPending.data?.data?.length!==0)
+      throw Error('TEST_saved_always_did_not_override_ask');
+    // An explicit captured DENY must remain stronger than that same saved
+    // approval. Never turn source-only ASK readback into execution proof.
+    const denyRules=[{action:'external_directory',resource:'*',effect:'deny'}];
+    const savedDeny=await call('/api/session','POST',{
+      location:{directory:workspace},agent:'build',permissions:denyRules,
+    });
+    const savedDenyId=savedDeny.data?.data?.id;
+    if(savedDeny.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(savedDenyId||''))
+      throw Error('TEST_saved_permission_deny_session_missing');
+    const savedDenyPath='/api/session/'+encodeURIComponent(savedDenyId);
+    const savedDenied=await call(savedDenyPath+'/permission','POST',{
+      action:'external_directory',resources:[savedResource],
+    });
+    const savedDenyPending=await call(savedDenyPath+'/permission');
+    if(savedDenied.status!==200||savedDenied.data?.data?.effect!=='deny'||
+       savedDenyPending.status!==200||savedDenyPending.data?.data?.length!==0)
+      throw Error('TEST_saved_allow_overrode_explicit_deny');
+    receipt.nativeSavedAlwaysOverridesAskProven=true;
+    receipt.nativeExplicitDenyBeatsSavedAlwaysProven=true;
     // A cold native restart must never let an old permission prompt grant a
     // new process authority. Capture three independent TEST permissions
     // before restart, then test reject/once/always against different stale IDs.
@@ -429,6 +504,22 @@ if (process.argv[2] === '--worker') {
     const after=await readLog(sessionId);
     if(after.id!==before.id||after.seq!==before.seq||after.sync!==before.sync)
       throw Error('TEST_cold_durable_event_identity_changed');
+    // Saved permissions must be evaluated by the newly started native
+    // process, not inferred from a cached session rules array or old PID.
+    const coldSaved=await call(savedFollowPath+'/permission','POST',{
+      action:'external_directory',resources:[savedResource],
+    });
+    const coldSavedPending=await call(savedFollowPath+'/permission');
+    const coldDenied=await call(savedDenyPath+'/permission','POST',{
+      action:'external_directory',resources:[savedResource],
+    });
+    const coldDenyPending=await call(savedDenyPath+'/permission');
+    if(coldSaved.status!==200||coldSaved.data?.data?.effect!=='allow'||
+       coldSavedPending.status!==200||coldSavedPending.data?.data?.length!==0||
+       coldDenied.status!==200||coldDenied.data?.data?.effect!=='deny'||
+       coldDenyPending.status!==200||coldDenyPending.data?.data?.length!==0)
+      throw Error('TEST_cold_saved_permission_policy_changed');
+    receipt.nativeSavedGrantSurvivesColdRestartProven=true;
     for (const claim of stalePermissionClaims) {
       const staleAfter=await call(claim.path+'/permission');
       if(staleAfter.status!==200||!Array.isArray(staleAfter.data?.data)||
@@ -493,6 +584,11 @@ if (process.argv[2] === '--worker') {
     receipt.nativeStalePermissionAfterRestartRejected=true;
     receipt.nativeStaleGrantAfterRestartRejected=true;
     receipt.steps.push('TEST_cold_native_permission_not_replayed_or_accepted');
+    for (const testPath of [savedPath,savedFollowPath,savedDenyPath]) {
+      if((await call(testPath,'DELETE')).status!==204)
+        throw Error('TEST_saved_permission_session_cleanup_failed');
+    }
+    receipt.steps.push('TEST_native_persisted_always_vs_deny_survives_cold_restart');
     receipt.durableHTTPEvents=1;
     receipt.steps.push('TEST_durable_HTTP_session_identity_survives_cold_restart_no_prompt');
 
