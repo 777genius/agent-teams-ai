@@ -22,6 +22,7 @@ interface CliInstallerServiceInternals {
     ) => Promise<CliProviderStatus[]>;
   };
   createInitialStatus: () => CliInstallationStatus;
+  updateLatestProviderStatus: (provider: CliProviderStatus) => void;
   checkAuthStatus: (
     binaryPath: string,
     result: CliInstallationStatus,
@@ -243,6 +244,77 @@ describe('CliInstallerService background provider status', () => {
       )).toMatchObject({ authenticated: newConnected });
     }
   );
+
+  test('external status publication supersedes an in-flight single-provider read', async () => {
+    const service = new CliInstallerService();
+    const internals = service as unknown as CliInstallerServiceInternals;
+    const snapshot = internals.createInitialStatus();
+    snapshot.flavor = 'agent_teams_orchestrator';
+    snapshot.installed = true;
+    snapshot.binaryPath = '/fake/runtime';
+    internals.latestStatusSnapshot = snapshot;
+
+    const base = {
+      ...createDefaultProviderStatus('codex'),
+      supported: true,
+      statusCheckOutcome: 'authoritative' as const,
+      statusCheckErrorCode: undefined,
+    };
+    const stale = { ...base, authenticated: true, verificationState: 'verified' as const };
+    const fresh = { ...base, authenticated: false, verificationState: 'unknown' as const };
+    let oldUpdate!: (provider: CliProviderStatus) => void;
+    let resolveOld!: (provider: CliProviderStatus) => void;
+    const bridge = vi.spyOn(internals.multimodelBridgeService, 'getProviderStatus')
+      .mockImplementationOnce((_binary, _provider, onUpdate) => {
+        oldUpdate = onUpdate!;
+        return new Promise((resolve) => { resolveOld = resolve; });
+      });
+
+    const oldRead = service.getProviderStatus('codex');
+    await vi.waitFor(() => expect(bridge).toHaveBeenCalledTimes(1));
+    // A separate credential/verification event can publish without starting
+    // another getProviderStatus request for the same provider.
+    internals.updateLatestProviderStatus(fresh);
+    oldUpdate(stale);
+    resolveOld(stale);
+    const obsolete = await oldRead;
+    expect(obsolete).toMatchObject({
+      providerId: 'codex',
+      authenticated: false,
+      statusCheckOutcome: 'pending',
+    });
+    expect(internals.latestStatusSnapshot?.providers.find(
+      (provider) => provider.providerId === 'codex'
+    )).toMatchObject({ authenticated: false });
+  });
+
+  test('a single read still accepts its own catalog hydration', async () => {
+    const service = new CliInstallerService();
+    const internals = service as unknown as CliInstallerServiceInternals;
+    const snapshot = internals.createInitialStatus();
+    snapshot.flavor = 'agent_teams_orchestrator';
+    snapshot.installed = true;
+    snapshot.binaryPath = '/fake/runtime';
+    internals.latestStatusSnapshot = snapshot;
+    const verified = {
+      ...createDefaultProviderStatus('codex'),
+      supported: true,
+      authenticated: true,
+      verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
+      statusCheckErrorCode: undefined,
+    };
+    vi.spyOn(internals.multimodelBridgeService, 'getProviderStatus')
+      .mockImplementationOnce(async (_binary, _provider, onUpdate) => {
+        onUpdate?.(verified);
+        return verified;
+      });
+    expect(await service.getProviderStatus('codex')).toMatchObject({
+      providerId: 'codex',
+      authenticated: true,
+      statusCheckOutcome: 'authoritative',
+    });
+  });
 
   test('does not use a runtime discovered before status was invalidated', async () => {
     const service = new CliInstallerService();
