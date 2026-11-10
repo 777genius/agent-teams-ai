@@ -96,6 +96,7 @@ export class SchedulerService {
   // ===========================================================================
 
   async start(): Promise<void> {
+    await this.stopBarrier.drainFinalizations();
     logger.info(`Scheduler starting, basePath=${getSchedulesBasePath()}`);
 
     this.stopped = false;
@@ -147,11 +148,12 @@ export class SchedulerService {
     this.warmUpTimers.clear();
 
     this.stopBarrier.cancelRetries();
-    await this.stopBarrier.drainFinalizations();
-
-    // Clear locks
-    this.activeRuns.clear();
-    this.cwdLock.clear();
+    try {
+      await this.stopBarrier.drainFinalizations();
+    } finally {
+      this.activeRuns.clear();
+      this.cwdLock.clear();
+    }
 
     logger.info('Scheduler stopped');
   }
@@ -687,7 +689,7 @@ export class SchedulerService {
       // Release locks before retry delay
       this.releaseRunLocks(schedule.id);
 
-      if (!this.stopped) await this.stopBarrier.waitForRetry(schedule.id, EXECUTION_RETRY_DELAY_MS);
+      if (!this.stopped) await this.stopBarrier.waitForRetry(EXECUTION_RETRY_DELAY_MS);
 
       // Bail if service was stopped during delay
       if (this.stopped) {
