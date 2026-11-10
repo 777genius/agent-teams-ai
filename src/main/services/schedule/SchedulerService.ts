@@ -72,6 +72,7 @@ export class SchedulerService {
 
   // Flag to prevent retry timers from firing after stop()
   private stopped = false;
+  private lifecycleEpoch = 0;
   private readonly stopBarrier = new SchedulerStopBarrier();
 
   constructor(
@@ -126,6 +127,7 @@ export class SchedulerService {
 
     // Prevent retry timers from dispatching new work after stop
     this.stopped = true;
+    this.lifecycleEpoch++;
 
     // Cancel all active executions
     this.executor.cancelAll();
@@ -356,6 +358,7 @@ export class SchedulerService {
   // Trigger Now
   // ===========================================================================
   async triggerNow(id: string): Promise<ScheduleRun> {
+    const generation = this.lifecycleEpoch;
     const schedule = await this.repository.getSchedule(id);
     if (!schedule) {
       throw new Error(`Schedule not found: ${id}`);
@@ -385,7 +388,7 @@ export class SchedulerService {
     };
 
     await this.repository.saveRun(run);
-    if (this.stopped) throw new Error('Scheduler stopped before dispatch');
+    if (this.stopped || generation !== this.lifecycleEpoch) throw new Error('Scheduler stopped before dispatch');
     this.emitChange({ type: 'run-started', scheduleId: id, teamName: schedule.teamName });
 
     // Execute in background (don't await — triggerNow returns immediately)
@@ -488,6 +491,7 @@ export class SchedulerService {
   }
 
   private async performWarmUp(schedule: Schedule, retryCount = 0): Promise<void> {
+    const generation = this.lifecycleEpoch;
     logger.info(
       `[${schedule.id}] Starting warm-up (attempt ${retryCount + 1}/${WARMUP_MAX_RETRIES})`
     );
@@ -506,7 +510,7 @@ export class SchedulerService {
     }
 
     // Retry
-    if (this.stopped) return;
+    if (this.stopped || generation !== this.lifecycleEpoch) return;
     if (retryCount < WARMUP_MAX_RETRIES - 1) {
       const retryTimer = setTimeout(() => {
         this.warmUpTimers.delete(schedule.id);
@@ -525,6 +529,7 @@ export class SchedulerService {
   // ===========================================================================
 
   private async onCronTick(scheduleId: string): Promise<void> {
+    const generation = this.lifecycleEpoch;
     const schedule = await this.repository.getSchedule(scheduleId);
     if (schedule?.status !== 'active') {
       logger.debug(`Cron tick for ${scheduleId} skipped (not active)`);
@@ -560,7 +565,7 @@ export class SchedulerService {
     };
 
     await this.repository.saveRun(run);
-    if (this.stopped) return;
+    if (this.stopped || generation !== this.lifecycleEpoch) return;
     this.emitChange({ type: 'run-started', scheduleId, teamName: schedule.teamName });
 
     this.dispatchRun(schedule, run);
@@ -577,6 +582,7 @@ export class SchedulerService {
   }
 
   private async executeRunInBackground(schedule: Schedule, run: ScheduleRun): Promise<void> {
+    const generation = this.lifecycleEpoch;
     const { id: scheduleId, launchConfig } = schedule;
 
     // Acquire locks
@@ -589,7 +595,7 @@ export class SchedulerService {
     try {
       const outcome = schedule.executionMode
         ? await this.smartDispatcher?.dispatch(schedule, run.id, () =>
-            this.stopped || this.activeRuns.get(scheduleId)?.id !== run.id
+            this.stopped || generation !== this.lifecycleEpoch || this.activeRuns.get(scheduleId)?.id !== run.id
           )
         : {
             kind: 'one_shot' as const,
@@ -600,7 +606,7 @@ export class SchedulerService {
               maxBudgetUsd: schedule.maxBudgetUsd,
             }),
           };
-      if (this.stopped) return;
+      if (this.stopped || generation !== this.lifecycleEpoch) return;
       finishFinalization = this.stopBarrier.beginFinalization();
       if (!outcome) throw new Error('Smart schedule dispatcher is unavailable');
       if (outcome.kind === 'skipped' || outcome.kind === 'dispatched') {
@@ -626,7 +632,7 @@ export class SchedulerService {
         }
       }
     } catch (err) {
-      if (this.stopped && !finishFinalization) return;
+      if ((this.stopped || generation !== this.lifecycleEpoch) && !finishFinalization) return;
       finishFinalization ??= this.stopBarrier.beginFinalization();
       const errorMsg = err instanceof Error ? err.message : String(err);
       if (schedule.executionMode) {
@@ -820,14 +826,6 @@ export class SchedulerService {
       teamName: fresh.teamName,
     });
   }
-
-  // ===========================================================================
-  // Recovery
-  // ===========================================================================
-
-  // ===========================================================================
-  // Helpers
-  // ===========================================================================
 
   private releaseRunLocks(scheduleId: string): void {
     this.activeRuns.delete(scheduleId);
