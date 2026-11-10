@@ -575,8 +575,34 @@ test('V2.2 native permission arrays cannot hide a later ALLOW with an iterator',
     },
   });
   assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(rules, 'deny'),
-    { kind: 'hold', reason: 'external-directory' });
+    { kind: 'hold', reason: 'rules' },
+    'a native JSON readback cannot contain an own iterator');
   assert.equal(iteratorCalls, 0, 'native policy admission must never execute a custom iterator');
+
+  // A one-element indexed snapshot previously passed as final DENY even
+  // though the same array yields a later ALLOW to an iterator-based resolver.
+  const forged = [deny];
+  let forgedIteratorCalls = 0;
+  Object.defineProperty(forged, Symbol.iterator, {
+    value: function* () {
+      forgedIteratorCalls++;
+      yield deny;
+      yield allow;
+    },
+  });
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(forged, 'deny'),
+    { kind: 'hold', reason: 'rules' },
+    'iterator-visible ALLOW cannot be hidden behind an indexed final DENY');
+  assert.equal(forgedIteratorCalls, 0, 'admission must never execute a forged iterator');
+
+  const extraField = [deny];
+  Object.defineProperty(extraField, 'untrusted', { value: 'not native JSON' });
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(extraField, 'deny'),
+    { kind: 'hold', reason: 'rules' },
+    'non-index own properties are not part of native JSON arrays');
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(
+    JSON.parse(JSON.stringify([deny])), 'deny'),
+  { kind: 'policy-candidate', effect: 'deny' });
 
   const getterRules = [deny];
   let getterCalls = 0;

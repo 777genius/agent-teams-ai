@@ -301,6 +301,11 @@ export function preflightOpenCodeV2EffectiveExternalDirectory(
     const length = Object.getOwnPropertyDescriptor(effectivePermissions, 'length')?.value;
     if (!Number.isSafeInteger(length) || length < 1 || length > 1024)
       return { kind: 'hold', reason: 'rules' };
+    // A JSON array has only its indexed slots and length. An own iterator
+    // could expose a later ALLOW to the native resolver while our indexed
+    // readback sees a final DENY. Reject extra keys without invoking them.
+    if (Reflect.ownKeys(effectivePermissions).length !== length + 1)
+      return { kind: 'hold', reason: 'rules' };
     // Native permission JSON consists of data fields. Reject accessors:
     // a getter may report DENY while being validated and ALLOW when the final
     // policy is read, creating a forged policy-candidate without a stable rule.
