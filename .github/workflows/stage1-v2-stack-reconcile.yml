@@ -1,4 +1,4 @@
-name: Stage1 V2 stack integration diagnostic (read-only)
+name: Stage1 V2 stack integration diagnostic (no ref writes)
 
 on:
   pull_request:
@@ -89,3 +89,61 @@ jobs:
           include-hidden-files: true
           retention-days: 7
           if-no-files-found: error
+
+  store-reviewed-lock-blob:
+    # One unreferenced, content-addressed blob only: no commit/ref or release writes.
+    if: github.repository == '777genius/agent-teams-ai' && github.event.pull_request.number == 1176 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'test/stage1-v2-stack-reconcile-20261110'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Store the independently hash-verified merged lock blob without moving refs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, hashlib, json, os, re, subprocess, urllib.request
+          parent = 'b28c0543f008244f010c30e2b0fa0afec18d87df'
+          child = '3479ae4338a9e891b45f34d6900887ba1cbfc08b'
+          ancestor = '171faf4fc88930815067bb0d6c51b76c0bb78071'
+          expected = '9bce60308bd4f5c91c5420b0d36f831e6b77f6ff'
+          expected_sha256 = '88d4818ed97e4349683d59a94af5c7f85fabeda76b0a42f0cbd50e15acfe3f1f'
+          def git(*args):
+              return subprocess.check_output(['git', *args])
+          assert git('merge-base', child, parent).decode().strip() == ancestor
+          merged = subprocess.run(['git', 'merge-tree', '--write-tree', child, parent], capture_output=True)
+          assert merged.returncode == 1
+          tree = merged.stdout.splitlines()[0].decode()
+          assert re.fullmatch(r'[0-9a-f]{40}', tree)
+          assert git('rev-parse', tree + ':pnpm-lock.yaml').decode().strip() == expected
+          data = git('cat-file', 'blob', expected)
+          assert len(data) == 956714
+          assert hashlib.sha256(data).hexdigest() == expected_sha256
+          assert hashlib.sha1(b'blob 956714\0' + data).hexdigest() == expected
+          # Store only the exact lock blob audited from original diagnostic 42913666602.
+          # No repository scripts, install hooks, git push or refs API are executed.
+          payload = json.dumps({'content': base64.b64encode(data).decode(), 'encoding': 'base64'}).encode()
+          request = urllib.request.Request(
+              'https://api.github.com/repos/777genius/agent-teams-ai/git/blobs',
+              data=payload, method='POST', headers={
+                  'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                  'Accept': 'application/vnd.github+json',
+                  'Content-Type': 'application/json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+              })
+          with urllib.request.urlopen(request, timeout=60) as response:
+              assert response.status == 201
+              raw = response.read(65537)
+          assert len(raw) <= 65536
+          result = json.loads(raw)
+          assert result.get('sha') == expected
+          print(json.dumps({'storedBlob': expected, 'sha256': expected_sha256, 'bytes': len(data), 'refsChanged': False}))
+          PY
