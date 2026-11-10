@@ -1,6 +1,7 @@
 import { createOpenCodeV2DriverFactory } from '@agent-teams/provider-implementations/opencode';
 import type { OpenCodeV2DriverConfig } from '@agent-teams/provider-implementations/opencode';
 import { types as nodeUtilTypes } from 'node:util';
+import { snapshotOpenCodeV2PermissionReadback } from './OpenCodeV2PermissionReadback.js';
 import { runtimeDigest } from '../../runtime/identity.js';
 import { finalizeOpenCodeV2ObserverAfterClose, guardOpenCodeV2ObserverCleanup } from './OpenCodeV2ObserverCleanup.js';
 import { initialContextDigest } from '../../team-launch/context.js';
@@ -370,7 +371,8 @@ export function createOpenCodeV2MemberProvider(
             // Source-only candidate plus owner-supplied native readback. The
             // production owner still must prove genuine engine custody and
             // cannot claim qualification from a scripted TEST receipt.
-            const effective = await capturedReadNativeEffectivePermissions(combined);
+            const effective = snapshotOpenCodeV2PermissionReadback(
+              await capturedReadNativeEffectivePermissions(combined));
             // Permissions must be read from THIS exact native session and
             // PID/start identity. A correctly ordered ruleset from another
             // session or a restarted process is not an authorization.
@@ -402,7 +404,8 @@ export function createOpenCodeV2MemberProvider(
                 attested.configRevision !== capturedConfigRevision) return false;
             // A process or policy may change during the initial native PUT.
             // Re-attest both after the mutation; never retry a lost PUT ACK.
-            const finalEffective = await capturedReadNativeEffectivePermissions(combined);
+            const finalEffective = snapshotOpenCodeV2PermissionReadback(
+              await capturedReadNativeEffectivePermissions(combined));
             if (!finalEffective ||
                 finalEffective.nativeSessionId !== profile.nativeSessionId ||
                 finalEffective.pid !== admittedCustody.pid ||

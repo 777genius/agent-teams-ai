@@ -2867,3 +2867,44 @@ test('revoked V2 inner native observer finalizes despite rejected feed close',
     assert.equal(finalized, 1, 'native iterator finalization cannot be skipped');
     assert.equal(closeCalls, 1, 'a rejected close is never replayed');
   });
+
+test('V2 rejects forged native permission envelopes before and after initial context PUT', async () => {
+  for (const phase of ['initial', 'final'] as const) {
+    for (const shape of ['identity-getter', 'proxy'] as const) {
+      const { captured, calls } = owner(true);
+      let getterCalls = 0;
+      const deny = { action: 'external_directory', resource: '*', effect: 'deny' };
+      const allow = { action: 'external_directory', resource: '*', effect: 'allow' };
+      captured.readNativeEffectivePermissions = async () => {
+        calls.permissions++;
+        const normal = testNativePermissionReadback([deny]);
+        if ((phase === 'initial' && calls.permissions !== 1) ||
+            (phase === 'final' && calls.permissions !== 2)) return normal;
+        if (shape === 'proxy') return new Proxy(normal, {});
+        const forged = testNativePermissionReadback([allow]);
+        Object.defineProperty(forged, 'nativeSessionId', {
+          enumerable: true,
+          get() {
+            getterCalls++;
+            // Old Host access to nativeSessionId ran this mutation BEFORE
+            // it checked the apparently final DENY rules.
+            forged.rules = [deny];
+            return v2Profile().nativeSessionId;
+          },
+        });
+        return forged;
+      };
+      const provider = createOpenCodeV2MemberProvider(context(), captured);
+      await assert.rejects(() => provider.factory.open(request()),
+        /opencode.driver.dependency-unavailable/,
+        'an accessor or Proxy is not a native JSON permission witness');
+      assert.equal(getterCalls, 0, 'Host must not execute native readback getters');
+      assert.equal(calls.context, phase === 'final' ? 1 : 0,
+        'a rejected initial readback never installs context; a final one never replays it');
+      assert.equal(calls.password, 0, 'no credentials after forged native permissions');
+      assert.equal(provider.isReady(), false);
+      assert.equal(calls.stop, 1, 'only the captured TEST-owned process stops');
+      assert.equal(await provider.cleanup(), true);
+    }
+  }
+});
