@@ -13,6 +13,7 @@ import { randomUUID } from 'crypto';
 
 import { computeScheduleNextRunAt } from './computeScheduleNextRunAt';
 import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
+import { SchedulerStopBarrier } from './SchedulerStopBarrier';
 
 import type { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import type { ScheduleRepository } from './ScheduleRepository';
@@ -63,9 +64,6 @@ export class SchedulerService {
   // Warm-up timers keyed by schedule ID (includes warm-up retry timers)
   private warmUpTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  // Execution retry delay timers keyed by schedule ID
-  private retryDelayTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
   // Active runs keyed by schedule ID (only one run per schedule at a time)
   private activeRuns = new Map<string, ScheduleRun>();
 
@@ -74,6 +72,8 @@ export class SchedulerService {
 
   // Flag to prevent retry timers from firing after stop()
   private stopped = false;
+  private lifecycleEpoch = 0;
+  private readonly stopBarrier = new SchedulerStopBarrier();
 
   constructor(
     repository: ScheduleRepository,
@@ -96,6 +96,7 @@ export class SchedulerService {
   // ===========================================================================
 
   async start(): Promise<void> {
+    await this.stopBarrier.drainFinalizations();
     logger.info(`Scheduler starting, basePath=${getSchedulesBasePath()}`);
 
     this.stopped = false;
@@ -127,6 +128,7 @@ export class SchedulerService {
 
     // Prevent retry timers from dispatching new work after stop
     this.stopped = true;
+    this.lifecycleEpoch++;
 
     // Cancel all active executions
     this.executor.cancelAll();
@@ -145,16 +147,13 @@ export class SchedulerService {
     }
     this.warmUpTimers.clear();
 
-    // Clear execution retry delay timers
-    for (const [id, timer] of this.retryDelayTimers) {
-      clearTimeout(timer);
-      logger.debug(`Cleared retry delay timer: ${id}`);
+    this.stopBarrier.cancelRetries();
+    try {
+      await this.stopBarrier.drainFinalizations();
+    } finally {
+      this.activeRuns.clear();
+      this.cwdLock.clear();
     }
-    this.retryDelayTimers.clear();
-
-    // Clear locks
-    this.activeRuns.clear();
-    this.cwdLock.clear();
 
     logger.info('Scheduler stopped');
   }
@@ -361,6 +360,7 @@ export class SchedulerService {
   // Trigger Now
   // ===========================================================================
   async triggerNow(id: string): Promise<ScheduleRun> {
+    const generation = this.lifecycleEpoch;
     const schedule = await this.repository.getSchedule(id);
     if (!schedule) {
       throw new Error(`Schedule not found: ${id}`);
@@ -390,10 +390,11 @@ export class SchedulerService {
     };
 
     await this.repository.saveRun(run);
+    if (this.stopped || generation !== this.lifecycleEpoch) throw new Error('Scheduler stopped before dispatch');
     this.emitChange({ type: 'run-started', scheduleId: id, teamName: schedule.teamName });
 
     // Execute in background (don't await — triggerNow returns immediately)
-    void this.executeRunInBackground(schedule, run);
+    this.dispatchRun(schedule, run);
 
     return run;
   }
@@ -452,6 +453,7 @@ export class SchedulerService {
   // ===========================================================================
 
   private scheduleWarmUp(schedule: Schedule): void {
+    if (this.stopped) return;
     this.clearWarmUpTimer(schedule.id);
 
     // Smart jobs dispatch through existing runtime services; warming up the
@@ -491,6 +493,7 @@ export class SchedulerService {
   }
 
   private async performWarmUp(schedule: Schedule, retryCount = 0): Promise<void> {
+    const generation = this.lifecycleEpoch;
     logger.info(
       `[${schedule.id}] Starting warm-up (attempt ${retryCount + 1}/${WARMUP_MAX_RETRIES})`
     );
@@ -509,6 +512,7 @@ export class SchedulerService {
     }
 
     // Retry
+    if (this.stopped || generation !== this.lifecycleEpoch) return;
     if (retryCount < WARMUP_MAX_RETRIES - 1) {
       const retryTimer = setTimeout(() => {
         this.warmUpTimers.delete(schedule.id);
@@ -527,6 +531,7 @@ export class SchedulerService {
   // ===========================================================================
 
   private async onCronTick(scheduleId: string): Promise<void> {
+    const generation = this.lifecycleEpoch;
     const schedule = await this.repository.getSchedule(scheduleId);
     if (schedule?.status !== 'active') {
       logger.debug(`Cron tick for ${scheduleId} skipped (not active)`);
@@ -562,16 +567,24 @@ export class SchedulerService {
     };
 
     await this.repository.saveRun(run);
+    if (this.stopped || generation !== this.lifecycleEpoch) return;
     this.emitChange({ type: 'run-started', scheduleId, teamName: schedule.teamName });
 
-    void this.executeRunInBackground(schedule, run);
+    this.dispatchRun(schedule, run);
   }
 
   // ===========================================================================
   // Execution
   // ===========================================================================
 
+  private dispatchRun(schedule: Schedule, run: ScheduleRun): void {
+    void this.executeRunInBackground(schedule, run).catch((error: unknown) => {
+      logger.error(`[${schedule.id}] Background run finalization failed: ${error}`);
+    });
+  }
+
   private async executeRunInBackground(schedule: Schedule, run: ScheduleRun): Promise<void> {
+    const generation = this.lifecycleEpoch;
     const { id: scheduleId, launchConfig } = schedule;
 
     // Acquire locks
@@ -579,11 +592,12 @@ export class SchedulerService {
     this.cwdLock.set(launchConfig.cwd, scheduleId);
 
     let retriedInternally = false;
+    let finishFinalization: (() => void) | undefined;
 
     try {
       const outcome = schedule.executionMode
         ? await this.smartDispatcher?.dispatch(schedule, run.id, () =>
-            this.stopped || this.activeRuns.get(scheduleId)?.id !== run.id
+            this.stopped || generation !== this.lifecycleEpoch || this.activeRuns.get(scheduleId)?.id !== run.id
           )
         : {
             kind: 'one_shot' as const,
@@ -594,6 +608,8 @@ export class SchedulerService {
               maxBudgetUsd: schedule.maxBudgetUsd,
             }),
           };
+      if (this.stopped || generation !== this.lifecycleEpoch) return;
+      finishFinalization = this.stopBarrier.beginFinalization();
       if (!outcome) throw new Error('Smart schedule dispatcher is unavailable');
       if (outcome.kind === 'skipped' || outcome.kind === 'dispatched') {
         await this.completeRun(run, outcome.kind, null, outcome.summary, undefined, outcome.taskId);
@@ -618,6 +634,8 @@ export class SchedulerService {
         }
       }
     } catch (err) {
+      if ((this.stopped || generation !== this.lifecycleEpoch) && !finishFinalization) return;
+      finishFinalization ??= this.stopBarrier.beginFinalization();
       const errorMsg = err instanceof Error ? err.message : String(err);
       if (schedule.executionMode) {
         // Never blindly retry a task write or a team launch: ACK may have been lost.
@@ -627,22 +645,17 @@ export class SchedulerService {
         retriedInternally = await this.handleRunFailure(schedule, run, null, errorMsg);
       }
     } finally {
-      // Skip cleanup if retry took over — retry's own finally will handle it
-      if (retriedInternally) return;
-
-      // Release locks only if this run still owns them (prevents double-release race)
-      const currentActive = this.activeRuns.get(scheduleId);
-      if (currentActive?.id === run.id) {
-        this.releaseRunLocks(scheduleId);
-      }
-
-      // Update schedule's lastRunAt and nextRunAt
-      await this.updateScheduleTimestamps(schedule);
-
-      // Schedule next warm-up
-      const freshSchedule = await this.repository.getSchedule(scheduleId);
-      if (freshSchedule?.status === 'active') {
-        this.scheduleWarmUp(freshSchedule);
+      try {
+        if (retriedInternally) return;
+        // Release only the locks owned by this run.
+        if (this.activeRuns.get(scheduleId)?.id === run.id) this.releaseRunLocks(scheduleId);
+        // A cancelled external dispatch cannot write after stop/fixture teardown.
+        if (!finishFinalization) return;
+        await this.updateScheduleTimestamps(schedule);
+        const freshSchedule = await this.repository.getSchedule(scheduleId);
+        if (!this.stopped && freshSchedule?.status === 'active') this.scheduleWarmUp(freshSchedule);
+      } finally {
+        finishFinalization?.();
       }
     }
   }
@@ -676,12 +689,7 @@ export class SchedulerService {
       // Release locks before retry delay
       this.releaseRunLocks(schedule.id);
 
-      await new Promise<void>((resolve) => {
-        const timer = setTimeout(resolve, EXECUTION_RETRY_DELAY_MS);
-        timer.unref();
-        this.retryDelayTimers.set(schedule.id, timer);
-      });
-      this.retryDelayTimers.delete(schedule.id);
+      if (!this.stopped) await this.stopBarrier.waitForRetry(EXECUTION_RETRY_DELAY_MS);
 
       // Bail if service was stopped during delay
       if (this.stopped) {
@@ -697,13 +705,13 @@ export class SchedulerService {
       }
 
       const freshSchedule = await this.repository.getSchedule(schedule.id);
-      if (freshSchedule?.status !== 'active') {
+      if (this.stopped || freshSchedule?.status !== 'active') {
         await this.completeRun(retryRun, 'failed', exitCode, undefined, error);
         return false;
       }
 
       // Dispatch retry — caller's finally must not run cleanup
-      void this.executeRunInBackground(freshSchedule, retryRun);
+      this.dispatchRun(freshSchedule, retryRun);
       return true;
     }
 
@@ -820,14 +828,6 @@ export class SchedulerService {
       teamName: fresh.teamName,
     });
   }
-
-  // ===========================================================================
-  // Recovery
-  // ===========================================================================
-
-  // ===========================================================================
-  // Helpers
-  // ===========================================================================
 
   private releaseRunLocks(scheduleId: string): void {
     this.activeRuns.delete(scheduleId);
