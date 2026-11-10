@@ -385,6 +385,7 @@ export class SchedulerService {
     };
 
     await this.repository.saveRun(run);
+    if (this.stopped) throw new Error('Scheduler stopped before dispatch');
     this.emitChange({ type: 'run-started', scheduleId: id, teamName: schedule.teamName });
 
     // Execute in background (don't await — triggerNow returns immediately)
@@ -559,6 +560,7 @@ export class SchedulerService {
     };
 
     await this.repository.saveRun(run);
+    if (this.stopped) return;
     this.emitChange({ type: 'run-started', scheduleId, teamName: schedule.teamName });
 
     this.dispatchRun(schedule, run);
@@ -679,7 +681,7 @@ export class SchedulerService {
       // Release locks before retry delay
       this.releaseRunLocks(schedule.id);
 
-      await this.stopBarrier.waitForRetry(schedule.id, EXECUTION_RETRY_DELAY_MS);
+      if (!this.stopped) await this.stopBarrier.waitForRetry(schedule.id, EXECUTION_RETRY_DELAY_MS);
 
       // Bail if service was stopped during delay
       if (this.stopped) {
@@ -695,7 +697,7 @@ export class SchedulerService {
       }
 
       const freshSchedule = await this.repository.getSchedule(schedule.id);
-      if (freshSchedule?.status !== 'active') {
+      if (this.stopped || freshSchedule?.status !== 'active') {
         await this.completeRun(retryRun, 'failed', exitCode, undefined, error);
         return false;
       }
