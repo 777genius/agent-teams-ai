@@ -5,9 +5,7 @@ import { basename, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 
 import { createTeamController } from '../../packages/legacy-agent-host/dist/adapters/team/ControllerAdapter.js';
-import { readHostPagedSnapshot } from '../../src/features/agent-backend/renderer/readHostPagedSnapshot.ts';
-import { TeamProductReadOrder } from '../../src/features/agent-backend/renderer/TeamProductReadOrder.ts';
-import type { BackendOperationResult } from '../../src/features/agent-backend/contracts/operations.ts';
+import { readDesktopTaskBoardGroupSnapshot } from './desktop-task-board-group-page-read.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import {
   desktopTaskBoardAssignmentReadyExpression,
@@ -240,24 +238,12 @@ export async function runDesktopTaskBoardUiSmoke(
     assert.equal(matches.length, 1, 'exactly one business intent per actual control');
     return matches[0]!;
   };
-  const readGroupSnapshot = async (phase: string, taskIds: string[]) => {
+  const readGroupSnapshot = (phase: string, taskIds: string[]) => {
     assert.ok(group);
-    // Reuse the original signed/revision-fenced page assembly, not its first page.
-    const { data: snapshot, assertCurrent } = await readHostPagedSnapshot(
-      { invoke: async (request) => {
-        options.assertOwnedRenderer();
-        return record(await cdp.evaluate(
-          `window.electronAPI.agentBackend.invoke(${desktopJsLiteral(request)})`
-        )) as unknown as BackendOperationResult;
-      } },
-      { handle: { handleId: options.handleId }, label: teamName, members: [] },
-      () => { options.assertOwnedRenderer(); return true; }, new TeamProductReadOrder()
-    );
-    assertCurrent();
-    assert.deepEqual(snapshot.tasks.map((row) => row.id).sort(), [...taskIds].sort());
-    assert.ok(snapshot.tasks.every((row) => row.groupChatId === group.groupChatId));
-    return { phase, revision: snapshot.revision, feed: snapshot.feed,
-      taskIds: snapshot.tasks.map((row) => row.id), groupChatId: group.groupChatId };
+    return readDesktopTaskBoardGroupSnapshot(cdp, {
+      handleId: options.handleId, teamName, groupChatId: group.groupChatId,
+      phase, taskIds, assertOwnedRenderer: options.assertOwnedRenderer,
+    });
   };
   const selectGroupFilter = async (name: string) => {
     await ui.click('button[aria-label="Filter tasks"]', 'open original Task filters');
