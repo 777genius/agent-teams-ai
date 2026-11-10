@@ -183,6 +183,29 @@ describe('Codex startup status revalidation', () => {
     }
   });
 
+
+  it('settles a failed recheck when the account push precedes the unknown status', async () => {
+    const test = fixture();
+    let finishRecheck!: (provider: CliProviderStatus) => void;
+    vi.mocked(api.cliInstaller.getProviderStatus).mockImplementationOnce(
+      () => new Promise((resolve) => { finishRecheck = resolve; })
+    );
+    try {
+      test.push();
+      test.store.setState({
+        cliStatus: { ...createLoadingMultimodelCliStatus(), providers: [test.unknown] },
+      });
+      await vi.waitFor(() => expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1));
+      expect(test.store.getState().codexStatusRecoveryPending).toBe(true);
+      finishRecheck(test.unknown);
+      await vi.waitFor(() => expect(test.store.getState().codexStatusRecoveryPending).toBe(false));
+      expect(test.accountApi.getCodexAccountSnapshot).not.toHaveBeenCalled();
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+    } finally {
+      test.cleanup();
+    }
+  });
+
   it('discovers an already warm account once and does not retry every account update after failure', async () => {
     const test = fixture();
     vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(test.unknown);

@@ -47,6 +47,7 @@ import {
 } from '../runtime/CliProviderModelAvailabilityService';
 import {
   createDegradedProviderStatus,
+  createPendingProviderStatus,
   createRuntimeStatusErrorProviderStatus,
   mergeProviderStatusDisplayEvidence,
 } from '../runtime/providerStatusCheckContract';
@@ -921,10 +922,16 @@ export class CliInstallerService {
         )
       : await this.multimodelBridgeService
           .getProviderStatus(binaryPath, providerId, handleCatalogUpdate)
-          .catch((error: unknown) => createRuntimeStatusErrorProviderStatus(providerId, error))
+          .catch((error: unknown) =>
+            read?.isCurrent() === false
+              ? createPendingProviderStatus(providerId)
+              : createRuntimeStatusErrorProviderStatus(providerId, error)
+          )
           .finally(read?.finish);
-    if (generation !== this.statusGatherGeneration || read?.isCurrent() === false)
-      return obsoleteStatus();
+    if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+    // A superseded read is not evidence of disconnection, even if it rejected.
+    // Never grant launch authority from an older result.
+    if (read?.isCurrent() === false) return createPendingProviderStatus(providerId);
     const mismatchStatus = projectMismatchedProviderStatus(providerId, providerStatus, this.now());
     if (mismatchStatus) {
       return mismatchStatus;

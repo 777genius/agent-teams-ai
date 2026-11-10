@@ -203,6 +203,46 @@ describe('CliInstallerService background provider status', () => {
     expect(result?.detailMessage).toContain('Provider runtime missing');
   });
 
+
+  test.each([true, false])(
+    'does not return a superseded provider error after a newer %s auth result',
+    async (newConnected) => {
+      const service = new CliInstallerService();
+      const internals = service as unknown as CliInstallerServiceInternals;
+      const status = internals.createInitialStatus();
+      status.flavor = 'agent_teams_orchestrator';
+      status.installed = true;
+      status.binaryPath = '/fake/runtime';
+      internals.latestStatusSnapshot = status;
+      const base = { ...createDefaultProviderStatus('codex'), supported: true };
+      const current = {
+        ...base,
+        authenticated: newConnected,
+        verificationState: 'verified' as const,
+        statusCheckOutcome: 'authoritative' as const,
+      };
+      let rejectOld!: (error: Error) => void;
+      const spy = vi.spyOn(internals.multimodelBridgeService, 'getProviderStatus')
+        .mockImplementationOnce(() => new Promise((_, reject) => { rejectOld = reject; }))
+        .mockResolvedValueOnce(current);
+      const older = service.getProviderStatus('codex');
+      await vi.waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
+      const newer = await service.getProviderStatus('codex');
+      expect(newer?.authenticated).toBe(newConnected);
+      rejectOld(new Error('Test-only obsolete provider transport failure'));
+      const obsolete = await older;
+      expect(obsolete).toMatchObject({
+        providerId: 'codex',
+        authenticated: false,
+        statusCheckOutcome: 'pending',
+        capabilities: { teamLaunch: false },
+      });
+      expect(internals.latestStatusSnapshot?.providers.find(
+        (provider) => provider.providerId === 'codex'
+      )).toMatchObject({ authenticated: newConnected });
+    }
+  );
+
   test('does not use a runtime discovered before status was invalidated', async () => {
     const service = new CliInstallerService();
     const internals = service as unknown as CliInstallerServiceInternals;
