@@ -1,0 +1,175 @@
+{
+  "nav": {
+    "features": "सुविधाएँ",
+    "screenshots": "स्क्रीनशॉट",
+    "docs": "दस्तावेज़",
+    "comparison": "तुलना",
+    "download": "डाउनलोड",
+    "pricing": "मुफ़्त",
+    "faq": "FAQ",
+    "viewOnGithub": "View on GitHub",
+    "openMenu": "मेनू खोलें",
+    "closeMenu": "मेनू बंद करें",
+    "short": {
+      "screenshots": "शॉट्स",
+      "docs": "Docs",
+      "download": "डाउनलोड",
+      "comparison": "तुलना",
+      "pricing": "मुफ्त"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "अभी डाउनलोड करें",
+    "ctaPrimary": "{platform} के लिए डाउनलोड करें",
+    "ctaSecondary": "तुलना करें",
+    "ctaDocs": "दस्तावेज़",
+    "preview": "प्रोडक्ट प्रीव्यू",
+    "trust": {
+      "agentTeams": "एजेंट टीमें",
+      "kanban": "कानबन बोर्ड",
+      "openSource": "ओपन सोर्स"
+    },
+    "watchDemo": "डेमो देखें",
+    "videoUnavailable": "वीडियो उपलब्ध नहीं",
+    "supportedProviders": "समर्थित AI providers",
+    "providers": "प्रदाता",
+    "models": "मॉडल",
+    "slogan": "बहुत कम करके बहुत कुछ करें",
+    "platformDefault": "आपके platform के लिए",
+    "guidesSetup": "Guides और setup",
+    "videoFrameLabel": "Agent Teams demo देखें",
+    "commandFeed": "Team command feed",
+    "liveDemo": "Live demo",
+    "demoVideoTitle": "Agent Teams demo video",
+    "demoTitle": "Agent Teams demo",
+    "demo": {
+      "ariaLabel": "Agent team demo",
+      "live": "LIVE",
+      "waiting": "Tasks का इंतज़ार...",
+      "activity": {
+        "authMiddleware": "Auth middleware implement हो रहा है...",
+        "unitTests": "API के लिए unit tests लिखे जा रहे हैं...",
+        "reviewPr": "PR #42 changes review हो रहे हैं...",
+        "ciPipeline": "CI/CD pipeline setup हो रही है...",
+        "refactorDatabase": "Database layer refactor हो रही है..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "Unit tests",
+        "ciSetup": "CI setup"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "IN PROGRESS",
+        "review": "REVIEW",
+        "done": "DONE"
+      }
+    }
+  },
+  "download": {
+    "title": "डाउनलोड",
+    "detected": "पहचाना गया",
+    "systemRequirements": "सिस्टम आवश्यकताएँ",
+    "version": "संस्करण {version}",
+    "readyToStart": "शुरू करने के लिए तैयार!"
+  },
+  "theme": {
+    "dark": "डार्क",
+    "light": "लाइट"
+  },
+  "language": {
+    "label": "भाषा",
+    "search": "भाषा खोजें…"
+  },
+  "features": {
+    "sectionTitle": "AI एजेंट ऑर्केस्ट्रेशन के लिए सब कुछ",
+    "sectionSubtitle": "शक्तिशाली उपकरण जो मल्टी-एजेंट सहयोग को वास्तव में काम करते हैं।"
+  },
+  "pricing": {
+    "sectionTitle": "इंस्टॉल मुफ़्त। मुफ़्त मॉडल शामिल।",
+    "sectionSubtitle": "मुफ़्त no-auth model से तुरंत शुरू करें - कोई account, API key या credit card नहीं। Claude Code, Codex, OpenCode/OpenRouter, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro या अन्य providers तभी जोड़ें जब आपको और models चाहिए।",
+    "getStarted": "अभी डाउनलोड करें",
+    "popular": "मुफ़्त",
+    "freeModelCallout": "मुफ़्त no-auth model शामिल",
+    "note": "Agent Teams का अपना कोई paid plan नहीं है। मुफ़्त no-auth model से आप तुरंत try कर सकते हैं; paid provider usage optional है और चुने गए provider पर निर्भर है।"
+  },
+  "testimonials": {
+    "sectionTitle": "डेवलपर्स क्या कहते हैं",
+    "sectionSubtitle": "असली डेवलपर्स से असली फ़ीडबैक",
+    "showMore": "और दिखाएँ",
+    "showLess": "कम दिखाएँ",
+    "feedbackCta": "अपना अनुभव साझा करना चाहते हैं? इस पर issue खोलें"
+  },
+  "faq": {
+    "sectionTitle": "सवाल हैं? हमारे पास जवाब हैं",
+    "subtitle": "Agent Teams के बारे में सब कुछ"
+  },
+  "comparison": {
+    "sectionTitle": "तुलना करें",
+    "sectionSubtitle": "अन्य AI कोडिंग टूल्स के साथ सुविधा-दर-सुविधा तुलना।",
+    "feature": "सुविधा",
+    "robotBubble": "खुद फैसला करें",
+    "features": {
+      "crossTeam": "क्रॉस-टीम संचार",
+      "agentMessaging": "एजेंट-टू-एजेंट मैसेजिंग",
+      "linkedTasks": "लिंक किए गए कार्य",
+      "sessionAnalysis": "सेशन विश्लेषण",
+      "taskAttachments": "कार्य अटैचमेंट",
+      "hunkReview": "हंक-लेवल रिव्यू",
+      "codeEditor": "बिल्ट-इन कोड एडिटर",
+      "teamAutonomy": "टीम स्वायत्तता",
+      "taskDeps": "कार्य निर्भरताएँ",
+      "reviewWorkflow": "रिव्यू वर्कफ़्लो",
+      "zeroSetup": "शून्य सेटअप",
+      "kanban": "कानबन बोर्ड",
+      "execLog": "एक्ज़ीक्यूशन लॉग",
+      "integratedTerminal": "टर्मिनल",
+      "runtimeLoad": "हर टीममेट का CPU/RAM",
+      "perTaskReview": "प्रति-कार्य कोड रिव्यू",
+      "flexAutonomy": "लचीली स्वायत्तता",
+      "worktree": "Git worktree आइसोलेशन",
+      "multiAgent": "मिक्स्ड AI टीममेट्स",
+      "liveWorkGraph": "लाइव टीम मैप",
+      "liveTeam": "लाइव टीममेट्स",
+      "teamWorkspace": "टीम वर्कस्पेस",
+      "launchProof": "टीममेट लॉन्च स्टेटस",
+      "orgGovernance": "संगठन और ग्लोबल ओवरव्यू",
+      "budgetControls": "बजट नियंत्रण",
+      "price": "कीमत"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "इसे एक्शन में देखें",
+    "sectionSubtitle": "ऐप के असली स्क्रीनशॉट — कानबन बोर्ड, कोड रिव्यू, एजेंट टीमें, और बहुत कुछ।"
+  },
+  "common": {
+    "learnMore": "और जानें",
+    "statusLabel": "स्थिति:",
+    "previous": "पिछला",
+    "next": "अगला"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "डेवलपर्स के लिए AI एजेंट ऑर्केस्ट्रेशन",
+    "robotBubble": "मैं इंतज़ार कर रहा हूँ",
+    "links": {
+      "github": "GitHub",
+      "author": "लेखक",
+      "docs": "दस्तावेज़"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - डेवलपर्स के लिए AI एजेंट ऑर्केस्ट्रेशन",
+    "homeDescription": "AI agent teams के लिए मुफ़्त open-source desktop app। मुफ़्त no-auth model से शुरू करें, फिर ज़रूरत पर Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro जोड़ें।",
+    "downloadTitle": "macOS, Windows और Linux के लिए Agent Teams डाउनलोड करें",
+    "downloadDescription": "macOS, Windows और Linux के लिए Agent Teams डाउनलोड करें। Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro एजेंट टीमों के लिए मुफ़्त ओपन-सोर्स डेस्कटॉप ऐप।"
+  },
+  "error": {
+    "notFoundTitle": "पेज नहीं मिला",
+    "notFoundDescription": "आप जो पेज ढूँढ रहे हैं वह मौजूद नहीं है या स्थानांतरित कर दिया गया है।",
+    "genericTitle": "कुछ गलत हो गया",
+    "genericDescription": "एक अप्रत्याशित त्रुटि हुई। कृपया बाद में पुनः प्रयास करें।",
+    "goHome": "होमपेज पर जाएँ"
+  }
+}

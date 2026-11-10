@@ -1,0 +1,22 @@
+{
+  "status": "INCOMPLETE",
+  "globalGoalUnchanged": true,
+  "progressClassification": "Progress: Native Desktop status source, captured Host health/catalog composition, presentation scope isolation, real IPC/test effects and Electron UI Task proof; remaining two Codex metadata invocations identified by strict sentinel.",
+  "sourceStatus": {
+    "mainStatusAttempt": "docs/plans/provider-migration/evidence/p5-native-status-attempt1.tar.gz",
+    "repair": "docs/plans/provider-migration/evidence/p5-native-status-repair-v1.tar.gz",
+    "desktopUi": "docs/plans/provider-migration/evidence/p5-desktop-team-ui-attempt12.tar.gz"
+  },
+  "currentChecks": {
+    "rootTS7": "PASS",
+    "hostStrict": "PASS",
+    "fullHostTests": 218,
+    "repairFocusedTests": 35,
+    "affectedFastLint": "PASS",
+    "sourceSizeGuard": "PASS",
+    "provisioningGuard": "PASS"
+  },
+  "remaining": "Full P0-P8/M01-M19 objective remains. Next: integrate native Codex account/model metadata and Claude status adapters via selected profile/Host; keep sentinel unchanged. Current CodexAccountAppServerClient/CodexAppServerSessionFactory starts ambient Main app-server; determine both remaining call origins before cutover. Ordinary Team launch settings, dynamic teams/full tool groups, mixed providers/recovery/review/settings and packaging still open.",
+  "cleanup": "All attempt12-owned processes retired; original failed Quit/cleanup receipt and fresh per-process recovery retained. No further live job or pending app cleanup.",
+  "activation": "Isolated worktree only; no release checkout changes, commit/push/merge or activation."
+}

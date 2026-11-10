@@ -1,0 +1,322 @@
+import { isOpenCodePromptDeliveryWatchdogRecordTerminal } from '../opencode/delivery/OpenCodePromptDeliveryFollowUpPolicy';
+import { isOpenCodePromptDeliveryCancelled } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
+
+import type { OpenCodeMemberInboxDelivery } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
+import type {
+  OpenCodePromptDeliveryLedgerRecord,
+  OpenCodePromptDeliveryLedgerStore,
+} from '../opencode/delivery/OpenCodePromptDeliveryLedger';
+import type { OpenCodeVisibleReplyProof } from '../opencode/delivery/OpenCodePromptDeliveryWatchdog';
+import type { RelayInboxMessage } from './TeamProvisioningInboxRelayPolicy';
+import type { AgentActionMode, TaskRef } from '@shared/types';
+
+/**
+ * Whether an unread inbox row's ledger record still owes the read-commit and
+ * can potentially be settled WITHOUT another delivery attempt.
+ *
+ * Two shapes qualify:
+ * - `failed_terminal`: the retry budget is gone, but the member may have
+ *   replied anyway (the destination proof landed after the budget ran out).
+ * - `responded` without `inboxReadCommittedAt`: the response was observed and
+ *   the record settled, but the relay pass that owed the commit never came
+ *   back - its commit failed, or the proof arrived through another channel
+ *   after the pass ended. The reply exists; only the read flag is missing.
+ *
+ * In both cases the ONLY safe recovery is proof-first: re-run the destination
+ * proof and the read-commit policy, and mark the row read only when they pass.
+ * The read flag is the double-delivery guard, so it must never be set from the
+ * record's status alone.
+ */
+export function isOpenCodeInboxReadCommitOwed(
+  record: Pick<OpenCodePromptDeliveryLedgerRecord, 'status' | 'inboxReadCommittedAt'>
+): boolean {
+  return (
+    record.status === 'failed_terminal' ||
+    (record.status === 'responded' && !record.inboxReadCommittedAt)
+  );
+}
+
+export interface OpenCodeInboxReadCommitRecoveryPorts {
+  applyDestinationProof(input: {
+    checkpoint?: () => void | Promise<void>;
+    ledger: OpenCodePromptDeliveryLedgerStore;
+    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+    teamName: string;
+    replyRecipient: string;
+    memberName: string;
+  }): Promise<{
+    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+    visibleReply: OpenCodeVisibleReplyProof | null;
+  }>;
+  isOpenCodeDeliveryResponseReadCommitAllowed(input: {
+    teamName: string;
+    memberName: string;
+    responseState?: OpenCodePromptDeliveryLedgerRecord['responseState'];
+    actionMode?: AgentActionMode;
+    taskRefs: TaskRef[];
+    visibleReply?: OpenCodeVisibleReplyProof | null;
+    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+  }): Promise<boolean>;
+  markInboxMessagesRead(
+    teamName: string,
+    memberName: string,
+    messages: RelayInboxMessage[]
+  ): Promise<void>;
+  logOpenCodePromptDeliveryEvent(
+    event: string,
+    record: OpenCodePromptDeliveryLedgerRecord,
+    extra?: Record<string, unknown>
+  ): void;
+  nowIso(): string;
+  getErrorMessage(error: unknown): string;
+}
+
+export type OpenCodeInboxReadCommitRecoveryOutcome =
+  | { outcome: 'aborted' }
+  | { outcome: 'committed'; delivery: OpenCodeMemberInboxDelivery }
+  | { outcome: 'commit_failed'; delivery: OpenCodeMemberInboxDelivery; diagnostic: string }
+  | { outcome: 'not_recovered' };
+
+/**
+ * Try to settle an owed read-commit from existing proof, spending no delivery
+ * attempt: re-run the destination proof, gate on the read-commit policy, then
+ * mark the inbox row read and stamp the ledger commit.
+ */
+export async function recoverOpenCodeOwedInboxReadCommit(input: {
+  teamName: string;
+  memberName: string;
+  canonicalMemberName: string;
+  laneId: string;
+  message: RelayInboxMessage;
+  ledger: OpenCodePromptDeliveryLedgerStore;
+  ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+  shouldAbort?: () => boolean;
+  /** The caller's cancellation checkpoint, threaded into the proof service. */
+  checkpoint?: () => void | Promise<void>;
+  ports: OpenCodeInboxReadCommitRecoveryPorts;
+}): Promise<OpenCodeInboxReadCommitRecoveryOutcome> {
+  // A cancelled record is a tombstone: its run was stopped, so there is no
+  // answer of its own to recover. Marking the row read from here would consume
+  // a message the stop never delivered, and the ledger write would be refused
+  // anyway - the two halves of the commit would disagree.
+  if (isOpenCodePromptDeliveryCancelled(input.ledgerRecord)) {
+    return { outcome: 'not_recovered' };
+  }
+  const wasTerminal = input.ledgerRecord.status === 'failed_terminal';
+  let recoveredRecord: OpenCodePromptDeliveryLedgerRecord | null = null;
+  let recoveredVisibleReply: OpenCodeVisibleReplyProof | null = null;
+  if (typeof input.ledger.applyDestinationProof === 'function') {
+    try {
+      const proof = await input.ports.applyDestinationProof({
+        checkpoint: input.checkpoint,
+        ledger: input.ledger,
+        ledgerRecord: input.ledgerRecord,
+        teamName: input.teamName,
+        replyRecipient: input.ledgerRecord.replyRecipient,
+        memberName: input.canonicalMemberName,
+      });
+      recoveredRecord = proof.ledgerRecord;
+      recoveredVisibleReply = proof.visibleReply;
+    } catch {
+      recoveredRecord = null;
+      recoveredVisibleReply = null;
+    }
+  }
+  if (input.shouldAbort?.()) {
+    return { outcome: 'aborted' };
+  }
+  // Every other step of this recovery degrades to "not recovered" rather than
+  // throwing, and the policy has to as well: the caller awaits this without a
+  // catch of its own, so a rejection here would end the whole relay pass -
+  // including the ordinary delivery of the message this recovery declined.
+  let recoveredReadAllowed = false;
+  if (recoveredRecord) {
+    try {
+      recoveredReadAllowed = await input.ports.isOpenCodeDeliveryResponseReadCommitAllowed({
+        teamName: input.teamName,
+        memberName: input.canonicalMemberName,
+        responseState: recoveredRecord.responseState,
+        actionMode: recoveredRecord.actionMode ?? undefined,
+        taskRefs: recoveredRecord.taskRefs,
+        visibleReply: recoveredVisibleReply,
+        ledgerRecord: recoveredRecord,
+      });
+    } catch (error) {
+      recoveredReadAllowed = false;
+      input.ports.logOpenCodePromptDeliveryEvent(
+        'opencode_prompt_delivery_read_commit_recovery_policy_failed',
+        recoveredRecord,
+        { error: input.ports.getErrorMessage(error) }
+      );
+    }
+  }
+  if (input.shouldAbort?.()) {
+    return { outcome: 'aborted' };
+  }
+  if (!recoveredRecord || !recoveredReadAllowed) {
+    return { outcome: 'not_recovered' };
+  }
+  // The commit is two writes against two stores, and they fail into different
+  // states, so they get one reason each. Reporting both under the read's reason
+  // would name the wrong operation for a stamp failure and hide the difference
+  // that matters: only a stamp failure leaves the row read.
+  const markReadFailureReason = wasTerminal
+    ? 'opencode_inbox_mark_read_failed_after_terminal_recovery'
+    : 'opencode_inbox_mark_read_failed_after_responded_recovery';
+  const stampFailureReason = wasTerminal
+    ? 'opencode_inbox_read_commit_stamp_failed_after_terminal_recovery'
+    : 'opencode_inbox_read_commit_stamp_failed_after_responded_recovery';
+  const commitFailed = (
+    reason: string,
+    error: unknown,
+    extraDelivery?: Partial<OpenCodeMemberInboxDelivery>
+  ): OpenCodeInboxReadCommitRecoveryOutcome => {
+    const diagnostic = `${reason}: ${input.ports.getErrorMessage(error)}`;
+    return {
+      outcome: 'commit_failed',
+      diagnostic,
+      delivery: { delivered: false, reason, diagnostics: [diagnostic], ...extraDelivery },
+    };
+  };
+  try {
+    await input.ports.markInboxMessagesRead(input.teamName, input.memberName, [input.message]);
+  } catch (error) {
+    // The row is still unread and the ledger is untouched, so the next relay
+    // pass selects this message again and re-runs the whole recovery.
+    return commitFailed(markReadFailureReason, error);
+  }
+  let committed: OpenCodePromptDeliveryLedgerRecord;
+  try {
+    committed = await input.ledger.markInboxReadCommitted({
+      id: recoveredRecord.id,
+      committedAt: input.ports.nowIso(),
+    });
+  } catch (error) {
+    // The row IS read now - the double-delivery guard is engaged - and only the
+    // ledger stamp is missing. Unread selection drops read rows, so no ordinary
+    // relay pass comes back here; the record is healed by
+    // `commitOpenCodeAlreadyReadInboxRow` on the next `onlyMessageId` pass over
+    // this row. Name that record, so the owed heal is addressable.
+    return commitFailed(stampFailureReason, error, {
+      ledgerRecordId: recoveredRecord.id,
+      laneId: input.laneId,
+    });
+  }
+  input.ports.logOpenCodePromptDeliveryEvent(
+    'opencode_prompt_delivery_inbox_committed_read',
+    committed,
+    wasTerminal ? { recoveredTerminal: true } : { recoveredResponded: true }
+  );
+  return {
+    outcome: 'committed',
+    delivery: {
+      delivered: true,
+      accepted: true,
+      responsePending: false,
+      responseState: committed.responseState,
+      ledgerStatus: committed.status,
+      ledgerRecordId: committed.id,
+      laneId: input.laneId,
+      visibleReplyMessageId: committed.visibleReplyMessageId ?? undefined,
+      visibleReplyCorrelation: committed.visibleReplyCorrelation ?? undefined,
+      diagnostics: committed.diagnostics,
+    },
+  };
+}
+
+const OPENCODE_INBOX_MESSAGE_MISSING_TERMINAL_REASON = 'opencode_inbox_message_missing';
+
+/**
+ * The relay read the inbox successfully and the target row is not in it: the
+ * row was DELETED, not momentarily unreadable - a failed inbox read surfaces as
+ * `opencode_inbox_read_failed` before the missing check and never reaches this
+ * path, and the in-flight fast path, which cannot tell the two apart, reports
+ * its own reason instead.
+ *
+ * With the row gone there is nothing left to deliver and nothing to
+ * read-commit, so a non-terminal record - typically 'responded' still owing
+ * `inboxReadCommittedAt` - would be re-armed by every pass that looks for
+ * unfinished work, for the life of the team, and each wake would find the same
+ * nothing. Settle the record instead; the reason records why.
+ *
+ * Best-effort: a failed lookup or write leaves the record for the next wake.
+ */
+export async function terminalizeOpenCodeMissingInboxRowRecord(input: {
+  teamName: string;
+  canonicalMemberName: string;
+  laneId: string;
+  inboxMessageId: string;
+  ledger: OpenCodePromptDeliveryLedgerStore;
+  ports: {
+    markOpenCodePromptLedgerFailedTerminal(input: {
+      ledger: OpenCodePromptDeliveryLedgerStore;
+      id: string;
+      reason: string;
+      diagnostics?: string[];
+      failedAt: string;
+      eventContext?: Record<string, unknown>;
+    }): Promise<OpenCodePromptDeliveryLedgerRecord>;
+    nowIso(): string;
+  };
+}): Promise<void> {
+  const record = await input.ledger
+    .getByInboxMessage({
+      teamName: input.teamName,
+      memberName: input.canonicalMemberName,
+      laneId: input.laneId,
+      inboxMessageId: input.inboxMessageId,
+    })
+    .catch(() => null);
+  // A cancelled record is already settled for good: the ledger refuses every
+  // write to it, so terminalizing here would only pretend to have changed it.
+  if (
+    !record ||
+    isOpenCodePromptDeliveryCancelled(record) ||
+    isOpenCodePromptDeliveryWatchdogRecordTerminal(record)
+  ) {
+    return;
+  }
+  try {
+    await input.ports.markOpenCodePromptLedgerFailedTerminal({
+      ledger: input.ledger,
+      id: record.id,
+      reason: OPENCODE_INBOX_MESSAGE_MISSING_TERMINAL_REASON,
+      diagnostics: [`${OPENCODE_INBOX_MESSAGE_MISSING_TERMINAL_REASON}: ${input.inboxMessageId}`],
+      failedAt: input.ports.nowIso(),
+      eventContext: { inboxRowMissing: true },
+    });
+  } catch {
+    // Left non-terminal: the next wake re-runs this settlement.
+  }
+}
+
+/**
+ * The inbox row is already read - the double-delivery guard is engaged - but
+ * the ledger record never got its `inboxReadCommittedAt` stamp (the commit
+ * crashed between the two writes, or another path marked the row). Stamp the
+ * ledger to match, so nothing keeps re-arming a record whose work is done.
+ * Best-effort: a failed heal returns the record unchanged.
+ */
+export async function commitOpenCodeAlreadyReadInboxRow(input: {
+  ledger: OpenCodePromptDeliveryLedgerStore;
+  record: OpenCodePromptDeliveryLedgerRecord;
+  ports: Pick<OpenCodeInboxReadCommitRecoveryPorts, 'logOpenCodePromptDeliveryEvent' | 'nowIso'>;
+}): Promise<OpenCodePromptDeliveryLedgerRecord> {
+  if (input.record.inboxReadCommittedAt) {
+    return input.record;
+  }
+  try {
+    const committed = await input.ledger.markInboxReadCommitted({
+      id: input.record.id,
+      committedAt: input.ports.nowIso(),
+    });
+    input.ports.logOpenCodePromptDeliveryEvent(
+      'opencode_prompt_delivery_inbox_committed_read',
+      committed,
+      { healedAlreadyReadInboxRow: true }
+    );
+    return committed;
+  } catch {
+    return input.record;
+  }
+}

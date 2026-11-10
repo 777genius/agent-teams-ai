@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "name": "v2-summary",
+  "taskId": "fixture-v2-summary",
+  "description": "Simple bundle v2 summary fixture generated from an exact file write.",
+  "projectRootToken": "__PROJECT_ROOT__",
+  "expected": {
+    "totalFiles": 1,
+    "warnings": [],
+    "relativePaths": [
+      "src/summary.ts"
+    ],
+    "relationKinds": []
+  }
+}

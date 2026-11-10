@@ -1,0 +1,388 @@
+import {
+  type MixedSecondaryLaneLaunchSetupPorts,
+  type MixedSecondaryLaneLaunchSetupRun,
+  setupMixedSecondaryLaneLaunch,
+} from './TeamProvisioningMixedSecondaryLaneLaunchSetup';
+import { publishMixedSecondaryLaneStatusInBackground } from './TeamProvisioningMixedSecondaryLaneStatusPublish';
+import {
+  appendDiagnosticOnce,
+  collectOpenCodeSecondaryLaneFailureDiagnostics,
+  isDefinitiveOpenCodePreLaunchFailure,
+  isRecoverableOpenCodeBootstrapPendingLaunchResult,
+  normalizeRecoverableOpenCodeBootstrapPendingLaunchResult,
+} from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+
+import type {
+  TeamRuntimeLaunchResult,
+  TeamRuntimeMemberLaunchEvidence,
+  TeamRuntimeMemberSpec,
+} from '../runtime/TeamRuntimeAdapter';
+import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
+import type { TeamCreateRequest } from '@shared/types';
+
+export interface MixedSecondaryLaneLaunchFlowRun extends MixedSecondaryLaneLaunchSetupRun {
+  request: Pick<
+    TeamCreateRequest,
+    'cwd' | 'skipPermissions' | 'allowExperimentalLocalModels' | 'color' | 'displayName'
+  >;
+}
+
+export interface MixedSecondaryLaneLaunchFlowPorts<
+  TRun extends MixedSecondaryLaneLaunchFlowRun,
+> extends MixedSecondaryLaneLaunchSetupPorts<TRun> {
+  prepareOpenCodeRuntimeLaneForLaunchGeneration(input: {
+    teamsBasePath: string;
+    teamName: string;
+    laneId: string;
+    runId: string;
+    reason: 'mixed_secondary_launch' | 'mixed_secondary_launch_stale_manifest_recovery';
+    forceReset?: boolean;
+  }): Promise<{ diagnostics: string[] }>;
+  buildOpenCodeSecondaryAppManagedLaunchPrompt(
+    run: TRun,
+    lane: MixedSecondaryRuntimeLaneState
+  ): Promise<string>;
+  guardCommittedOpenCodeSecondaryLaneEvidence(input: {
+    teamName: string;
+    laneId: string;
+    memberName: string;
+    result: TeamRuntimeLaunchResult;
+  }): Promise<TeamRuntimeLaunchResult>;
+  syncOpenCodeRuntimeToolApprovals(input: {
+    teamName: string;
+    runId: string;
+    laneId: string;
+    cwd: string;
+    members: Record<string, TeamRuntimeMemberLaunchEvidence>;
+    expectedMembers: TeamRuntimeMemberSpec[];
+    teamColor?: string;
+    teamDisplayName?: string;
+  }): void;
+}
+
+export async function launchSingleMixedSecondaryLaneWithPorts<
+  TRun extends MixedSecondaryLaneLaunchFlowRun,
+>(
+  run: TRun,
+  lane: MixedSecondaryRuntimeLaneState,
+  ports: MixedSecondaryLaneLaunchFlowPorts<TRun>
+): Promise<void> {
+  const setup = await setupMixedSecondaryLaneLaunch(run, lane, ports);
+  if (setup.outcome !== 'ready') {
+    return;
+  }
+  const {
+    adapter,
+    launchAttempt,
+    finishCancelledLane,
+    laneCwd,
+    laneRunId,
+    migration,
+    previousLaunchState,
+    requestedDiagnostics,
+    shouldAbortLaunch,
+  } = setup;
+
+  const cleanup = { attempted: false };
+  let launchResult: TeamRuntimeLaunchResult | null = null;
+  const finishLane = (): Promise<void> => {
+    cleanup.attempted = true;
+    return finishCancelledLane();
+  };
+
+  try {
+    if (shouldAbortLaunch()) {
+      await finishLane();
+      return;
+    }
+    await ports.prepareOpenCodeRuntimeLaneForLaunchGeneration({
+      teamsBasePath: ports.teamsBasePath(),
+      teamName: run.teamName,
+      laneId: lane.laneId,
+      runId: laneRunId,
+      reason: 'mixed_secondary_launch',
+    });
+    if (shouldAbortLaunch()) {
+      await finishLane();
+      return;
+    }
+    const appManagedLaunchPrompt = await ports.buildOpenCodeSecondaryAppManagedLaunchPrompt(
+      run,
+      lane
+    );
+    if (shouldAbortLaunch()) {
+      await finishLane();
+      return;
+    }
+    const laneExpectedMembers: TeamRuntimeMemberSpec[] = [
+      {
+        name: lane.member.name,
+        role: lane.member.role,
+        workflow: lane.member.workflow,
+        isolation: lane.member.isolation === 'worktree' ? ('worktree' as const) : undefined,
+        providerId: 'opencode',
+        model: lane.member.model,
+        effort: lane.member.effort,
+        cwd: laneCwd,
+      },
+    ];
+    const launchOpenCodeLane = () =>
+      launchAttempt.launch(() =>
+        adapter.launch({
+          runId: laneRunId,
+          laneId: lane.laneId,
+          teamName: run.teamName,
+          cwd: laneCwd,
+          prompt: appManagedLaunchPrompt,
+          providerId: 'opencode',
+          model: lane.member.model,
+          effort: lane.member.effort,
+          runtimeOnly: true,
+          skipPermissions: run.request.skipPermissions !== false,
+          ...(run.request.allowExperimentalLocalModels === true
+            ? { allowExperimentalLocalModels: true }
+            : {}),
+          expectedMembers: laneExpectedMembers,
+          previousLaunchState,
+          mayDispatch: () => launchAttempt.mayDispatch(),
+        })
+      );
+    let rawResult: TeamRuntimeLaunchResult;
+    try {
+      rawResult = await launchOpenCodeLane();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const staleManifestMessage = 'Bridge server runtime manifest high watermark is stale';
+      if (
+        message !== staleManifestMessage &&
+        message !== `OpenCode bridge failed: ${staleManifestMessage}`
+      ) {
+        throw error;
+      }
+      if (shouldAbortLaunch()) {
+        await finishLane();
+        return;
+      }
+      const recovery = await ports.prepareOpenCodeRuntimeLaneForLaunchGeneration({
+        teamsBasePath: ports.teamsBasePath(),
+        teamName: run.teamName,
+        laneId: lane.laneId,
+        runId: laneRunId,
+        reason: 'mixed_secondary_launch_stale_manifest_recovery',
+        forceReset: true,
+      });
+      lane.diagnostics = appendDiagnosticOnce(
+        [...lane.diagnostics, ...recovery.diagnostics],
+        'Retried OpenCode secondary launch after resetting stale runtime manifest.'
+      );
+      if (shouldAbortLaunch()) {
+        await finishLane();
+        return;
+      }
+      rawResult = await launchOpenCodeLane();
+    }
+    launchResult = rawResult;
+    if (shouldAbortLaunch()) {
+      await finishLane();
+      return;
+    }
+    // Treat the bridge result as provisional. The guard below is the single
+    // promotion gate that turns app-managed OpenCode bootstrap into
+    // confirmed_alive only after durable lane evidence exists on disk.
+    const result = await ports.guardCommittedOpenCodeSecondaryLaneEvidence({
+      teamName: run.teamName,
+      laneId: lane.laneId,
+      memberName: lane.member.name,
+      result: rawResult,
+    });
+    if (shouldAbortLaunch()) {
+      await finishLane();
+      return;
+    }
+    lane.launchFinishedAtMs = ports.nowMs();
+    const timingDiagnostic = ports.buildOpenCodeSecondaryLaneTimingDiagnostic(lane);
+    const memberEvidence = result.members[lane.member.name];
+    const resultWithTiming: TeamRuntimeLaunchResult = timingDiagnostic
+      ? {
+          ...result,
+          diagnostics: appendDiagnosticOnce(result.diagnostics, timingDiagnostic),
+          members: {
+            ...result.members,
+            ...(memberEvidence
+              ? {
+                  [lane.member.name]: {
+                    ...memberEvidence,
+                    diagnostics: appendDiagnosticOnce(
+                      memberEvidence.diagnostics ?? [],
+                      timingDiagnostic
+                    ),
+                  },
+                }
+              : {}),
+          },
+        }
+      : result;
+    const baseFailureDiagnostics = appendDiagnosticOnce(
+      [...requestedDiagnostics, ...migration.diagnostics],
+      timingDiagnostic
+    );
+    const recoverableBootstrapPending = isRecoverableOpenCodeBootstrapPendingLaunchResult(
+      resultWithTiming,
+      lane.member.name
+    );
+    const normalizedResult = recoverableBootstrapPending
+      ? normalizeRecoverableOpenCodeBootstrapPendingLaunchResult(
+          resultWithTiming,
+          lane.member.name,
+          baseFailureDiagnostics
+        )
+      : resultWithTiming;
+    lane.result = normalizedResult;
+    launchResult = normalizedResult;
+    ports.syncOpenCodeRuntimeToolApprovals({
+      teamName: run.teamName,
+      runId: laneRunId,
+      laneId: lane.laneId,
+      cwd: laneCwd,
+      members: normalizedResult.members,
+      expectedMembers: laneExpectedMembers,
+      teamColor: run.request.color,
+      teamDisplayName: run.request.displayName,
+    });
+    lane.warnings = [...normalizedResult.warnings];
+    const launchDiagnostics = appendDiagnosticOnce(
+      [...requestedDiagnostics, ...migration.diagnostics, ...normalizedResult.diagnostics],
+      timingDiagnostic
+    );
+    lane.diagnostics = launchDiagnostics;
+
+    if (recoverableBootstrapPending) {
+      await ports
+        .upsertOpenCodeRuntimeLaneIndexEntry({
+          teamsBasePath: ports.teamsBasePath(),
+          teamName: run.teamName,
+          laneId: lane.laneId,
+          state: 'active',
+          diagnostics: collectOpenCodeSecondaryLaneFailureDiagnostics(
+            normalizedResult,
+            lane.member.name,
+            baseFailureDiagnostics
+          ),
+        })
+        .catch(() => undefined);
+    } else if (
+      isDefinitiveOpenCodePreLaunchFailure(normalizedResult, lane.member.name) ||
+      normalizedResult.teamLaunchState === 'partial_failure'
+    ) {
+      const diagnostics = collectOpenCodeSecondaryLaneFailureDiagnostics(
+        normalizedResult,
+        lane.member.name,
+        baseFailureDiagnostics
+      );
+      await ports
+        .upsertOpenCodeRuntimeLaneIndexEntry({
+          teamsBasePath: ports.teamsBasePath(),
+          teamName: run.teamName,
+          laneId: lane.laneId,
+          state: 'degraded',
+          diagnostics,
+        })
+        .catch(() => undefined);
+      if (launchAttempt.wasBlockedBeforeLaunch()) {
+        lane.blockedBeforeLaunch = true;
+        await finishLane();
+      }
+    }
+  } catch (error) {
+    if (lane.runId !== laneRunId || !ports.isCurrentTrackedRun(run)) return;
+    let failure = error;
+    if (shouldAbortLaunch() && !cleanup.attempted) {
+      try {
+        await finishLane();
+        return;
+      } catch (cleanupError) {
+        if (lane.runId !== laneRunId || !ports.isCurrentTrackedRun(run)) return;
+        failure = cleanupError;
+      }
+    }
+    const message = failure instanceof Error ? failure.message : String(failure);
+    lane.launchFinishedAtMs = ports.nowMs();
+    const timingDiagnostic = ports.buildOpenCodeSecondaryLaneTimingDiagnostic(lane);
+    const primaryFailure =
+      cleanup.attempted &&
+      lane.runId === laneRunId &&
+      launchAttempt.wasBlockedBeforeLaunch() &&
+      launchResult?.runId === laneRunId &&
+      launchResult.preLaunchGate?.blocked === true
+        ? launchResult
+        : null;
+    let failureDiagnostics = appendDiagnosticOnce([message], timingDiagnostic);
+    if (primaryFailure) {
+      const cleanupDiagnostic = `OpenCode secondary lane reservation cleanup failed: ${message}`;
+      const member = primaryFailure.members[lane.member.name];
+      lane.result = {
+        ...primaryFailure,
+        diagnostics: appendDiagnosticOnce(primaryFailure.diagnostics, cleanupDiagnostic),
+        members: {
+          ...primaryFailure.members,
+          ...(member
+            ? {
+                [lane.member.name]: {
+                  ...member,
+                  diagnostics: appendDiagnosticOnce(member.diagnostics ?? [], cleanupDiagnostic),
+                },
+              }
+            : {}),
+        },
+      };
+      lane.warnings = [...primaryFailure.warnings];
+      failureDiagnostics = collectOpenCodeSecondaryLaneFailureDiagnostics(
+        lane.result,
+        lane.member.name,
+        appendDiagnosticOnce([...requestedDiagnostics, ...migration.diagnostics], timingDiagnostic)
+      );
+      lane.diagnostics = failureDiagnostics;
+    } else {
+      lane.result = {
+        runId: laneRunId,
+        teamName: run.teamName,
+        launchPhase: 'finished',
+        teamLaunchState: 'partial_failure',
+        members: {
+          [lane.member.name]: {
+            memberName: lane.member.name,
+            providerId: 'opencode',
+            launchState: 'failed_to_start',
+            agentToolAccepted: false,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            hardFailureReason: message,
+            diagnostics: appendDiagnosticOnce([message], timingDiagnostic),
+          },
+        },
+        warnings: [],
+        diagnostics: appendDiagnosticOnce([message], timingDiagnostic),
+      };
+      lane.warnings = [];
+      lane.diagnostics = appendDiagnosticOnce(
+        [...requestedDiagnostics, ...migration.diagnostics, message],
+        timingDiagnostic
+      );
+    }
+    await ports
+      .upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: ports.teamsBasePath(),
+        teamName: run.teamName,
+        laneId: lane.laneId,
+        state: 'degraded',
+        diagnostics: failureDiagnostics,
+      })
+      .catch(() => undefined);
+  } finally {
+    launchAttempt.finish();
+  }
+
+  lane.state = 'finished';
+  publishMixedSecondaryLaneStatusInBackground(run, lane, ports, 'finished');
+}

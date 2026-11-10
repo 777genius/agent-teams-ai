@@ -1,0 +1,99 @@
+{
+  "status": "SCOPED_PASS",
+  "date": "2026-10-23",
+  "scope": "Existing Composer twice and public guarded Quit API with real SDK0.3.305/Claude CLI2.1.305, plus actual pending provider open; separate same-profile startup and second Quit for each case; localhost inference only",
+  "runs": {
+    "activeQueuedQuit": {
+      "jobId": "1bf1ee0fde5ab763d507851dc479dd73",
+      "status": "PASS",
+      "rawReceiptSha256": "27842871c4374381dee99d8c0c5c15f2661395bc56c1f301a46108f0f5b39588",
+      "localEvidence": ".artifacts/provider-migration/m18-native-quit-attempt8",
+      "retainedFiles": 2145,
+      "cleanup": {
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "originalGroupAbsent": true,
+        "capturedHostAbsent": true,
+        "capturedNativeAbsent": true,
+        "writerLockReleased": true
+      }
+    },
+    "activeQueuedColdReadback": {
+      "jobId": "8adb79a6ba60db5bf715c6e4d5163e6f",
+      "status": "PASS",
+      "rawReceiptSha256": "42c1a64099c2d3bfcc60dcfbe03a6891feaadbad25012d76898083336fb1fe35",
+      "localEvidence": ".artifacts/provider-migration/m18-native-quit-readback-attempt2",
+      "retainedFiles": 2147,
+      "cleanup": {
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "originalGroupAbsent": true,
+        "capturedHostAbsent": true,
+        "capturedNativeAbsent": true,
+        "writerLockReleased": true
+      }
+    },
+    "pendingOpenQuit": {
+      "jobId": "39d4f304c98b967624139615048e7470",
+      "status": "PASS",
+      "rawReceiptSha256": "93412f5b6d2cb47ddc697673e718db271c5495d15e3e78547af9dd64579376b2",
+      "localEvidence": ".artifacts/provider-migration/m18-native-quit-attempt9",
+      "retainedFiles": 2137,
+      "cleanup": {
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "originalGroupAbsent": true,
+        "capturedHostAbsent": true,
+        "capturedNativeAbsent": true,
+        "writerLockReleased": true
+      }
+    },
+    "pendingOpenColdReadback": {
+      "jobId": "cf0996a122c07536945ddb4bcf611ac1",
+      "status": "PASS",
+      "rawReceiptSha256": "ea1e83358dc582c76c536eba3b6b1be1d9d35c43d8a0830f8e7e824df478d4c1",
+      "localEvidence": ".artifacts/provider-migration/m18-native-quit-readback-attempt3",
+      "retainedFiles": 2139,
+      "cleanup": {
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "originalGroupAbsent": true,
+        "capturedHostAbsent": true,
+        "capturedNativeAbsent": true,
+        "writerLockReleased": true
+      }
+    }
+  },
+  "accepted": [
+    "Active original input remains unknown; queued input cancelled without native dispatch; exactly one held inference request disconnected",
+    "Pending open has zero inputs/interactions/inference; sealed held/unknown open-unknown retains custody debt",
+    "Both original native children, Host and Electron/dev groups retire without harness process signals",
+    "Cold original profiles allocate no native children, do not replay input or commands, and retain exact Runtime/product state through second Quit",
+    "Source freeze and14 executed Electron bundle pins retained for every run"
+  ],
+  "fixes": [
+    "Cleanup chooses original provider with no attached in-memory driver before awaiting pending factory, including prior stop/reconcile",
+    "Repeated stop persists only changed full records, retaining UNKNOWN without duplicate state events",
+    "Exited original child cannot signal a possibly reused process group; unverifiable presence retains HOLD",
+    "Final best-effort diagnostic flush uses existing5s shutdown-step bound; domain/native cleanup budgets unchanged"
+  ],
+  "focusedVerification": {
+    "sharedTests": {
+      "jobId": "20536a2dde596fa2d2ef56dde5825fd0",
+      "passed": 54,
+      "failed": 0
+    },
+    "hostBuild": "b4284f6d5c415d72eff6c9a391856d3c exit0",
+    "hostTestTypes": "07fb6300618d09a287ca18aea0bfb663 exit0",
+    "sourceFileSize": "94db2bc83a30767abc39df7ee8fdedb4 exit0"
+  },
+  "priorFailures": "All earlier raw INCOMPLETE attempts retained unchanged. Cold readback attempt1 exposed duplicate held state events and remains failed; fresh corrected-source profiles supply current proof. No prior input/allocation replayed.",
+  "excluded": [
+    "Human macOS menu/button Quit interaction; existing public UI API is used",
+    "Automatic app.relaunch and new process custody handoff",
+    "Vendor inference/authentication",
+    "Other providers and supported OS tuples",
+    "Full M18 and full Stage1",
+    "Stage2"
+  ]
+}

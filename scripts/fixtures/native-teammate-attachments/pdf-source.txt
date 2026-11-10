@@ -1,0 +1,1 @@
+NATIVE-ATTACHMENT-PDF fixture source marker; the harness wraps this text in a minimal PDF.

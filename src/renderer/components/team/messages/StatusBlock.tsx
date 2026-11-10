@@ -1,0 +1,200 @@
+import { useEffect, useMemo, useState } from 'react';
+
+import { useAppTranslation } from '@features/localization/renderer';
+import { type ConversationScope, TEAM_FEED_SCOPE } from '@features/team-direct-chats/renderer';
+import { useStore } from '@renderer/store';
+import { computePendingCrossTeamReplies } from '@renderer/utils/crossTeamPendingReplies';
+import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
+import { isLeadMember } from '@shared/utils/leadDetection';
+import { ChevronRight } from 'lucide-react';
+
+import { ActiveTasksBlock } from '../activity/ActiveTasksBlock';
+import { PendingRepliesBlock } from '../activity/PendingRepliesBlock';
+
+import {
+  pendingApprovalsForConversation,
+  pendingRepliesForConversation,
+} from './messagesPanelStatusScope';
+
+import type {
+  DiscardQueuedUserMessagesResult,
+  InboxMessage,
+  ResolvedTeamMember,
+  TeamTaskWithKanban,
+} from '@shared/types';
+
+// Temporarily hide only the "In progress" task cards. Keep their rendering
+// code here so the section can be restored without affecting reply status.
+const SHOW_ACTIVE_TASKS = false;
+
+interface StatusBlockProps {
+  members: ResolvedTeamMember[];
+  tasks: TeamTaskWithKanban[];
+  messages: InboxMessage[];
+  pendingRepliesByMember: Record<string, number>;
+  scope?: ConversationScope;
+  isTeamAlive?: boolean;
+  /** Enables the queued-message discard control on queued pending entries. */
+  teamName?: string;
+  /** Called once a discard attempt settled against the inbox, with what it changed. */
+  onQueuedDiscarded?: (memberName: string, result: DiscardQueuedUserMessagesResult) => void;
+  /** Where the Messages panel is rendered — 'sidebar' hides "In progress" (already visible in MemberList). */
+  position?: 'sidebar' | 'inline';
+  /** Overlay keeps the toggle hovering over the previous section, flow keeps it in normal layout. */
+  layout?: 'overlay' | 'flow';
+  /** Pending delivery/reply status belongs above the composer in Full Screen. */
+  placement?: 'timeline' | 'composer';
+  onMemberClick?: (member: ResolvedTeamMember) => void;
+  onTaskClick?: (task: TeamTaskWithKanban) => void;
+}
+
+/**
+ * Self-contained status section that owns its own 1-second timer for
+ * cross-team pending reply TTL tracking. Isolates the timer-driven
+ * re-renders from the rest of MessagesPanel / ActivityTimeline so that
+ * text selection in messages is not disrupted.
+ */
+export const StatusBlock = ({
+  members,
+  tasks,
+  messages,
+  pendingRepliesByMember,
+  scope = TEAM_FEED_SCOPE,
+  isTeamAlive,
+  teamName,
+  onQueuedDiscarded,
+  position,
+  layout = 'overlay',
+  placement = 'timeline',
+  onMemberClick,
+  onTaskClick,
+}: StatusBlockProps): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
+  const pendingApprovals = useStore((state) => state.pendingApprovals);
+  const [collapsed, setCollapsed] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  const leadNames = useMemo(
+    () => members.filter(isLeadMember).map((member) => member.name),
+    [members]
+  );
+  const scopedPendingReplies = useMemo(
+    () => pendingRepliesForConversation(pendingRepliesByMember, scope, leadNames),
+    [pendingRepliesByMember, scope, leadNames]
+  );
+  const scopedPendingApprovals = useMemo(
+    () => pendingApprovalsForConversation(pendingApprovals, teamName, scope, leadNames),
+    [pendingApprovals, teamName, scope, leadNames]
+  );
+  const pendingCrossTeamReplies = useMemo(
+    () => (scope.kind === 'team-feed' ? computePendingCrossTeamReplies(messages, nowMs) : []),
+    [messages, nowMs, scope.kind]
+  );
+  const hasPendingReplies = useMemo(() => {
+    const hasMemberPendingReplies = Object.keys(scopedPendingReplies).some((name) =>
+      members.some((m) => m.name === name)
+    );
+    return (
+      hasMemberPendingReplies ||
+      pendingCrossTeamReplies.length > 0 ||
+      scopedPendingApprovals.length > 0
+    );
+  }, [members, scopedPendingReplies, pendingCrossTeamReplies.length, scopedPendingApprovals.length]);
+  const hasActiveTasks = useMemo(() => {
+    const tMap = new Map(tasks.map((t) => [t.id, t]));
+    return members.some((m) => {
+      if (!m.currentTaskId) return false;
+      const task = tMap.get(m.currentTaskId);
+      return isDisplayableCurrentTask(task);
+    });
+  }, [members, tasks]);
+
+  /** Whether the Status block has any visible items. */
+  const hasItems = useMemo(() => {
+    if (hasPendingReplies) return true;
+    return SHOW_ACTIVE_TASKS && hasActiveTasks;
+  }, [hasActiveTasks, hasPendingReplies]);
+
+  // Only pending reply TTL labels need a 1-second refresh.
+  useEffect(() => {
+    if (!hasPendingReplies) return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [hasPendingReplies]);
+
+  if (!hasItems) return null;
+
+  if (placement === 'composer') {
+    return (
+      <PendingRepliesBlock
+        members={members}
+        nowMs={nowMs}
+        messages={messages}
+        isTeamAlive={isTeamAlive}
+        pendingRepliesByMember={scopedPendingReplies}
+        pendingCrossTeamReplies={pendingCrossTeamReplies}
+        pendingApprovals={scopedPendingApprovals}
+        teamName={teamName}
+        onQueuedDiscarded={onQueuedDiscarded}
+        onMemberClick={onMemberClick}
+      />
+    );
+  }
+
+  const toggleButton = (
+    <button
+      type="button"
+      className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
+      onClick={() => setCollapsed((prev) => !prev)}
+      aria-label={collapsed ? 'Expand status' : 'Collapse status'}
+    >
+      <ChevronRight
+        size={12}
+        className={`shrink-0 transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
+      />
+      {t('messages.status.title')}
+    </button>
+  );
+  const flowInlineToggle = layout === 'flow' && !collapsed ? toggleButton : null;
+
+  return (
+    <>
+      {layout === 'overlay' ? (
+        <div className="relative h-0">
+          <div className="absolute -top-[19px] right-0 z-10">{toggleButton}</div>
+        </div>
+      ) : collapsed ? (
+        <div className="mb-2 flex justify-end">{toggleButton}</div>
+      ) : null}
+      {!collapsed && (
+        <div className={layout === 'overlay' ? 'mt-5' : ''}>
+          {hasPendingReplies ? (
+            <PendingRepliesBlock
+              members={members}
+              nowMs={nowMs}
+              messages={messages}
+              isTeamAlive={isTeamAlive}
+              pendingRepliesByMember={scopedPendingReplies}
+              pendingCrossTeamReplies={pendingCrossTeamReplies}
+              pendingApprovals={scopedPendingApprovals}
+              headerRight={flowInlineToggle}
+              teamName={teamName}
+              onQueuedDiscarded={onQueuedDiscarded}
+              onMemberClick={onMemberClick}
+            />
+          ) : null}
+          {SHOW_ACTIVE_TASKS && (
+            <ActiveTasksBlock
+              members={members}
+              tasks={tasks}
+              defaultCollapsed={position === 'sidebar'}
+              headerRight={!hasPendingReplies ? flowInlineToggle : undefined}
+              onMemberClick={onMemberClick}
+              onTaskClick={onTaskClick}
+            />
+          )}
+        </div>
+      )}
+    </>
+  );
+};

@@ -1,0 +1,86 @@
+diff --git a/dist/index.js b/dist/index.js
+index 944abc2652716a5047360c8abc2d48e700a3f3f8..e0d98a35aead8e057a304734627e0022643cb71c 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -62,6 +62,8 @@ var Presence = (props) => {
+ Presence.displayName = "Presence";
+ function usePresence(present) {
+   const [node, setNode] = React2.useState();
++  const nodeRef = React2.useRef();
++  const nodeCleanupGenerationRef = React2.useRef(0);
+   const stylesRef = React2.useRef(null);
+   const prevPresentRef = React2.useRef(present);
+   const prevAnimationNameRef = React2.useRef("none");
+@@ -146,8 +148,27 @@ function usePresence(present) {
+   return {
+     isPresent: ["mounted", "unmountSuspended"].includes(state),
+     ref: React2.useCallback((node2) => {
+-      stylesRef.current = node2 ? getComputedStyle(node2) : null;
+-      setNode(node2);
++      const syncNode = (nextNode) => {
++        if (nodeRef.current === nextNode) {
++          stylesRef.current = nextNode ? getComputedStyle(nextNode) : null;
++          return;
++        }
++        nodeRef.current = nextNode;
++        stylesRef.current = nextNode ? getComputedStyle(nextNode) : null;
++        setNode(nextNode);
++      };
++      nodeCleanupGenerationRef.current += 1;
++      const cleanupGeneration = nodeCleanupGenerationRef.current;
++      if (node2) {
++        syncNode(node2);
++        return;
++      }
++      queueMicrotask(() => {
++        if (nodeCleanupGenerationRef.current !== cleanupGeneration) {
++          return;
++        }
++        syncNode(null);
++      });
+     }, [])
+   };
+ }
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 0efe02a3c45790c11f94f71563bf1db7257b799f..67db6319fb2af1008e2da62ec8cdb21e4903ea1e 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -26,6 +26,8 @@ var Presence = (props) => {
+ Presence.displayName = "Presence";
+ function usePresence(present) {
+   const [node, setNode] = React2.useState();
++  const nodeRef = React2.useRef();
++  const nodeCleanupGenerationRef = React2.useRef(0);
+   const stylesRef = React2.useRef(null);
+   const prevPresentRef = React2.useRef(present);
+   const prevAnimationNameRef = React2.useRef("none");
+@@ -110,8 +112,27 @@ function usePresence(present) {
+   return {
+     isPresent: ["mounted", "unmountSuspended"].includes(state),
+     ref: React2.useCallback((node2) => {
+-      stylesRef.current = node2 ? getComputedStyle(node2) : null;
+-      setNode(node2);
++      const syncNode = (nextNode) => {
++        if (nodeRef.current === nextNode) {
++          stylesRef.current = nextNode ? getComputedStyle(nextNode) : null;
++          return;
++        }
++        nodeRef.current = nextNode;
++        stylesRef.current = nextNode ? getComputedStyle(nextNode) : null;
++        setNode(nextNode);
++      };
++      nodeCleanupGenerationRef.current += 1;
++      const cleanupGeneration = nodeCleanupGenerationRef.current;
++      if (node2) {
++        syncNode(node2);
++        return;
++      }
++      queueMicrotask(() => {
++        if (nodeCleanupGenerationRef.current !== cleanupGeneration) {
++          return;
++        }
++        syncNode(null);
++      });
+     }, [])
+   };
+ }

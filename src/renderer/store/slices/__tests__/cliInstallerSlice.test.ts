@@ -1,0 +1,965 @@
+import {
+  createCliInstallerSlice,
+  createLoadingMultimodelCliStatus,
+  getCliProviderStatusScopeKey,
+  reconcileCliStatus,
+} from '@renderer/store/slices/cliInstallerSlice';
+import { describe, expect, it, vi } from 'vitest';
+import { createStore } from 'zustand/vanilla';
+
+import type { CliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
+import type { ElectronAPI } from '@shared/types/api';
+import type {
+  CliProviderReasoningEffort,
+  CliProviderStatus,
+  OpenCodeRuntimeStatus,
+} from '@shared/types/cliInstaller';
+import type { StateCreator } from 'zustand';
+
+function createCliInstallerStore() {
+  return createStore<CliInstallerSlice>()(
+    createCliInstallerSlice as unknown as StateCreator<CliInstallerSlice>
+  );
+}
+
+function installElectronApi(openCodeRuntime: ElectronAPI['openCodeRuntime']): () => void {
+  const previousApi = window.electronAPI;
+  Object.defineProperty(window, 'electronAPI', {
+    configurable: true,
+    writable: true,
+    value: { openCodeRuntime } as ElectronAPI,
+  });
+  return () => {
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: previousApi,
+    });
+  };
+}
+
+describe('reconcileCliStatus', () => {
+  it('returns the previous status reference when a structurally identical clone arrives', () => {
+    // This mirrors the real IPC path: `CliInstallerService.cloneCliInstallationStatus()`
+    // (called from `publishStatusSnapshot()`) hands the renderer a fresh
+    // `CliInstallationStatus` whose `providers` are also freshly-cloned
+    // objects, even when nothing has actually changed. The merge function
+    // must compare provider content (not just reference) so that no-op
+    // progress ticks do not produce a new `cliStatus` identity and trigger
+    // a re-render storm across every consumer.
+    const current = createLoadingMultimodelCliStatus();
+    const incoming = structuredClone(current);
+
+    const merged = reconcileCliStatus(current, incoming);
+
+    expect(merged).toBe(current);
+  });
+
+  it('returns the previous status reference when an authenticated clone arrives', () => {
+    const base = createLoadingMultimodelCliStatus();
+    const current = {
+      ...base,
+      authLoggedIn: true,
+      authStatusChecking: false,
+      authMethod: 'oauth' as const,
+      providers: base.providers.map((provider, index) =>
+        index === 0
+          ? {
+              ...provider,
+              authenticated: true,
+              authMethod: 'oauth' as const,
+              supported: true,
+              verificationState: 'verified' as const,
+              statusCheckOutcome: 'authoritative' as const,
+              statusMessage: null,
+              models: ['model-a', 'model-b'],
+            }
+          : provider
+      ),
+    };
+    const incoming = structuredClone(current);
+
+    const merged = reconcileCliStatus(current, incoming);
+
+    expect(merged).toBe(current);
+  });
+
+  it('returns a new status when an incoming provider field actually differs', () => {
+    const current = createLoadingMultimodelCliStatus();
+    const incoming = structuredClone(current);
+    incoming.providers[0] = {
+      ...incoming.providers[0],
+      statusMessage: 'Verifying credentials...',
+    };
+
+    const merged = reconcileCliStatus(current, incoming);
+
+    expect(merged).not.toBe(current);
+    expect(merged.providers[0].statusMessage).toBe('Verifying credentials...');
+  });
+
+  it('returns current when a structurally identical populated provider clone arrives', () => {
+    // Mirrors the real IPC flow with a fully-populated provider: ChatGPT-Codex
+    // authenticated, with a model catalog, model availability records,
+    // runtime capabilities, available backends, and a selected backend.
+    // None of these fields are reference-stable across IPC clones, so the
+    // equality guard must compare them by content, not reference.
+    const base = createLoadingMultimodelCliStatus();
+    const populatedProvider = {
+      ...base.providers[1],
+      authenticated: true,
+      authMethod: 'codex_chatgpt' as const,
+      supported: true,
+      verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
+      statusMessage: null,
+      models: ['gpt-5.2'],
+      modelAvailability: [
+        {
+          modelId: 'gpt-5.2',
+          status: 'available' as const,
+          checkedAt: '2026-05-14T00:00:00.000Z',
+        },
+      ],
+      runtimeCapabilities: {
+        reasoningEffort: {
+          supported: true,
+          values: ['low', 'medium', 'high'] as CliProviderReasoningEffort[],
+        },
+      },
+      availableBackends: [
+        {
+          id: 'codex-native',
+          label: 'Codex native',
+          description: 'App-managed Codex runtime',
+          selectable: true,
+          recommended: true,
+          available: true,
+        },
+      ],
+      backend: { kind: 'codex-cli' as const, label: 'Codex CLI' },
+    };
+    const current = {
+      ...base,
+      authLoggedIn: true,
+      authStatusChecking: false,
+      authMethod: 'codex_chatgpt' as const,
+      providers: base.providers.map((provider, index) =>
+        index === 1 ? populatedProvider : provider
+      ),
+    };
+    const incoming = structuredClone(current);
+
+    const merged = reconcileCliStatus(current, incoming);
+
+    expect(merged).toBe(current);
+    expect(merged.providers[1]).toBe(current.providers[1]);
+  });
+
+  it('produces a new status when a cloned populated field actually changed', () => {
+    // Negative companion to the populated-clone test: confirms that when a
+    // cloned DTO field really differs, the merge does NOT preserve the
+    // previous reference (i.e. we never let stale data through).
+    const base = createLoadingMultimodelCliStatus();
+    const populatedProvider = {
+      ...base.providers[1],
+      authenticated: true,
+      authMethod: 'codex_chatgpt' as const,
+      supported: true,
+      verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
+      models: ['gpt-5.2'],
+      availableBackends: [
+        {
+          id: 'codex-native',
+          label: 'Codex native',
+          description: 'App-managed Codex runtime',
+          selectable: true,
+          recommended: true,
+          available: true,
+        },
+      ],
+    };
+    const current = {
+      ...base,
+      providers: base.providers.map((provider, index) =>
+        index === 1 ? populatedProvider : provider
+      ),
+    };
+    const incoming = structuredClone(current);
+    // Flip a nested DTO field on the cloned snapshot.
+    incoming.providers[1].availableBackends![0].available = false;
+
+    const merged = reconcileCliStatus(current, incoming);
+
+    expect(merged).not.toBe(current);
+    expect(merged.providers[1]).not.toBe(current.providers[1]);
+    expect(merged.providers[1].availableBackends?.[0].available).toBe(false);
+  });
+
+  it.each([
+    ['stale', 'anthropic'],
+    ['ready', 'codex'],
+  ] as const)(
+    'preserves status authentication but fails launch closed for a %s catalog owned by %s',
+    (catalogStatus, catalogProviderId) => {
+      const incoming = createLoadingMultimodelCliStatus();
+      incoming.authLoggedIn = true;
+      incoming.authMethod = 'oauth';
+      incoming.providers[0] = {
+        ...incoming.providers[0],
+        supported: true,
+        authenticated: true,
+        authMethod: 'oauth',
+        verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
+        capabilities: { ...incoming.providers[0].capabilities, teamLaunch: true },
+        runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'runtime' } },
+        modelCatalog: {
+          schemaVersion: 1,
+          providerId: catalogProviderId,
+          source: 'app-server',
+          status: catalogStatus,
+          fetchedAt: '2026-08-29T00:00:00.000Z',
+          staleAt: '2026-08-29T00:10:00.000Z',
+          defaultModelId: 'model-a',
+          defaultLaunchModel: 'model-a',
+          models: [],
+          diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+        },
+      };
+
+      const merged = reconcileCliStatus(null, incoming);
+
+      expect(merged.authLoggedIn).toBe(true);
+      expect(merged.authMethod).toBe('oauth');
+      expect(merged.providers[0]).toMatchObject({
+        authenticated: true,
+        authMethod: 'oauth',
+        capabilities: { teamLaunch: false },
+        modelCatalog: { providerId: catalogProviderId, status: 'stale' },
+      });
+    }
+  );
+
+  it('retains both model evidence arrays but revokes launch for authoritative exact-empty input', () => {
+    const current = createLoadingMultimodelCliStatus();
+    current.providers[1] = {
+      ...current.providers[1],
+      providerId: 'codex',
+      supported: true,
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      models: ['old-flat-model'],
+      modelAvailability: [
+        {
+          modelId: 'old-flat-model',
+          status: 'available',
+          checkedAt: '2026-08-28T00:00:00.000Z',
+        },
+      ],
+      capabilities: { ...current.providers[1].capabilities, teamLaunch: true },
+    };
+    const incoming = structuredClone(current);
+    incoming.providers[1] = {
+      ...incoming.providers[1],
+      models: [],
+      modelAvailability: [],
+      modelCatalogRefreshState: 'ready',
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'codex',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-08-29T00:00:00.000Z',
+        staleAt: '2100-01-01T00:00:00.000Z',
+        defaultModelId: null,
+        defaultLaunchModel: null,
+        models: [],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    };
+
+    const merged = reconcileCliStatus(current, incoming);
+
+    expect(merged.providers[1]).toMatchObject({
+      authenticated: true,
+      authMethod: 'chatgpt',
+      capabilities: { teamLaunch: false },
+      models: ['old-flat-model'],
+      modelAvailability: [{ modelId: 'old-flat-model', status: 'available' }],
+      modelCatalog: { status: 'stale', defaultModelId: null },
+      modelCatalogRefreshState: 'error',
+    });
+  });
+
+  it('retains both model evidence arrays and revokes launch for non-authoritative exact-empty input', () => {
+    const current = createLoadingMultimodelCliStatus();
+    current.providers[1] = {
+      ...current.providers[1],
+      supported: true,
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      models: ['old-flat-model'],
+      modelAvailability: [
+        {
+          modelId: 'old-flat-model',
+          status: 'available',
+          checkedAt: '2026-08-28T00:00:00.000Z',
+        },
+      ],
+      capabilities: { ...current.providers[1].capabilities, teamLaunch: true },
+    };
+    const incoming = structuredClone(current);
+    incoming.providers[1] = {
+      ...incoming.providers[1],
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      models: [],
+      modelAvailability: [],
+      modelCatalogRefreshState: 'ready',
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'codex',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-08-29T00:00:00.000Z',
+        staleAt: '2026-08-29T00:10:00.000Z',
+        defaultModelId: null,
+        defaultLaunchModel: null,
+        models: [],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    };
+
+    const merged = reconcileCliStatus(current, incoming);
+
+    expect(merged.providers[1]).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      capabilities: { teamLaunch: false },
+      models: ['old-flat-model'],
+      modelAvailability: [{ modelId: 'old-flat-model', status: 'available' }],
+      modelCatalog: { status: 'stale' },
+      modelCatalogRefreshState: 'error',
+    });
+  });
+});
+
+describe('OpenCode runtime rejection state', () => {
+  it('surfaces a rejected status check as failed without discarding known runtime identity', async () => {
+    const restoreApi = installElectronApi({
+      getStatus: async () => {
+        throw new Error('runtime status IPC unavailable');
+      },
+      install: async () => {
+        throw new Error('not used');
+      },
+      invalidateStatus: async () => undefined,
+      onProgress: () => () => undefined,
+    });
+    const store = createCliInstallerStore();
+    store.setState({
+      openCodeRuntimeStatus: {
+        installed: true,
+        binaryPath: '/known/opencode',
+        version: '1.16.0',
+        source: 'path',
+        state: 'ready',
+      },
+    });
+
+    try {
+      await store.getState().fetchOpenCodeRuntimeStatus();
+
+      expect(store.getState()).toMatchObject({
+        openCodeRuntimeStatusLoading: false,
+        openCodeRuntimeError: 'runtime status IPC unavailable',
+        openCodeRuntimeStatus: {
+          installed: true,
+          binaryPath: '/known/opencode',
+          version: '1.16.0',
+          source: 'path',
+          state: 'failed',
+          error: 'runtime status IPC unavailable',
+          progress: {
+            phase: 'failed',
+            detail: 'runtime status IPC unavailable',
+          },
+        },
+      });
+    } finally {
+      restoreApi();
+      vi.mocked(console.error).mockClear();
+    }
+  });
+
+  it('forwards an explicit V2 install choice through the bridge', async () => {
+    const install = vi.fn().mockResolvedValue({
+      installed: false,
+      source: 'missing',
+      state: 'failed',
+      error: 'TEST expected failure',
+    });
+    const restoreApi = installElectronApi({
+      getStatus: async () => ({ installed: false, source: 'missing', state: 'idle' }),
+      install,
+      invalidateStatus: async () => undefined,
+      onProgress: () => () => undefined,
+    });
+    try {
+      await createCliInstallerStore().getState().installOpenCodeRuntime({ generation: 'v2' });
+      expect(install).toHaveBeenCalledWith({ generation: 'v2' });
+    } finally {
+      restoreApi();
+    }
+  });
+
+  it('replaces the temporary checking state with failed when installation rejects', async () => {
+    const restoreApi = installElectronApi({
+      getStatus: async () => {
+        throw new Error('not used');
+      },
+      install: async () => {
+        throw new Error('download connection lost');
+      },
+      invalidateStatus: async () => undefined,
+      onProgress: () => () => undefined,
+    });
+    const store = createCliInstallerStore();
+
+    try {
+      await store.getState().installOpenCodeRuntime();
+
+      expect(store.getState()).toMatchObject({
+        openCodeRuntimeStatusLoading: false,
+        openCodeRuntimeError: 'download connection lost',
+        openCodeRuntimeStatus: {
+          installed: false,
+          source: 'missing',
+          state: 'failed',
+          error: 'download connection lost',
+          progress: {
+            phase: 'failed',
+            detail: 'download connection lost',
+          },
+        },
+      });
+    } finally {
+      restoreApi();
+      vi.mocked(console.error).mockClear();
+    }
+  });
+
+  it('keeps a working runtime usable while its update request is checking and then fails', async () => {
+    let resolveInstall!: (status: OpenCodeRuntimeStatus) => void;
+    const installResult = new Promise<OpenCodeRuntimeStatus>((resolve) => {
+      resolveInstall = resolve;
+    });
+    const restoreApi = installElectronApi({
+      getStatus: async () => {
+        throw new Error('not used');
+      },
+      install: () => installResult,
+      invalidateStatus: async () => undefined,
+      onProgress: () => () => undefined,
+    });
+    const store = createCliInstallerStore();
+    store.setState({
+      openCodeRuntimeStatus: {
+        installed: true,
+        binaryPath: '/known/opencode',
+        version: '1.18.1',
+        latestVersion: '1.18.32',
+        updateAvailable: true,
+        source: 'app-managed',
+        state: 'ready',
+      },
+    });
+
+    try {
+      const request = store.getState().installOpenCodeRuntime();
+      expect(store.getState().openCodeRuntimeStatus).toMatchObject({
+        installed: true,
+        binaryPath: '/known/opencode',
+        version: '1.18.1',
+        latestVersion: '1.18.32',
+        updateAvailable: true,
+        source: 'app-managed',
+        state: 'checking',
+      });
+
+      resolveInstall({
+        installed: true,
+        binaryPath: '/known/opencode',
+        version: '1.18.1',
+        latestVersion: '1.18.32',
+        updateAvailable: true,
+        source: 'app-managed',
+        state: 'failed',
+        error: 'registry unavailable',
+      });
+      await request;
+
+      expect(store.getState().openCodeRuntimeStatus).toMatchObject({
+        installed: true,
+        binaryPath: '/known/opencode',
+        source: 'app-managed',
+        state: 'failed',
+        latestVersion: '1.18.32',
+        updateAvailable: true,
+        error: 'registry unavailable',
+      });
+    } finally {
+      restoreApi();
+    }
+  });
+});
+
+describe('provider catalog invalidation races', () => {
+  it('settles an OpenCode partial response after the bounded retry', async () => {
+    const previousApi = window.electronAPI;
+    const partial = {
+      ...createLoadingMultimodelCliStatus().providers.find(
+        (provider) => provider.providerId === 'opencode'
+      )!,
+      statusCheckOutcome: 'pending' as const,
+      statusCheckErrorCode: 'partial_response' as const,
+    };
+    const getProviderStatus = vi.fn(async () => partial);
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: { cliInstaller: { getProviderStatus, verifyProviderModels: vi.fn() } },
+    });
+    const store = createCliInstallerStore();
+    const projectPath = '/sandbox/opencode-picker-test';
+    const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
+    const cached = {
+      ...partial,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      statusCheckErrorCode: undefined,
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-09-27T00:00:00.000Z',
+        staleAt: '2026-09-27T00:05:00.000Z',
+        defaultModelId: null,
+        defaultLaunchModel: null,
+        models: [],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    } as CliProviderStatus;
+    store.setState({
+      cliStatus: { ...createLoadingMultimodelCliStatus(), installed: true },
+      cliProviderStatusByScope: { [scopeKey]: cached },
+    });
+    try {
+      await store.getState().fetchCliProviderStatus('opencode', {
+        projectPath,
+      });
+      expect(getProviderStatus).toHaveBeenCalledTimes(2);
+      expect(store.getState().cliProviderStatusByScope[scopeKey]).toMatchObject({
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode: 'partial_response',
+        modelCatalogRefreshState: 'error',
+        modelCatalog: { status: 'stale' },
+        capabilities: { teamLaunch: false },
+      });
+    } finally {
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        writable: true,
+        value: previousApi,
+      });
+    }
+  });
+
+  it('clears fenced provider loading without allowing the old request to settle it later', async () => {
+    let resolveStatus!: (value: unknown) => void;
+    const pending = new Promise((resolve) => {
+      resolveStatus = resolve;
+    });
+    const previousApi = window.electronAPI;
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: {
+        cliInstaller: { getProviderStatus: vi.fn(() => pending), verifyProviderModels: vi.fn() },
+      },
+    });
+    const store = createCliInstallerStore();
+    store.setState({ cliStatus: { ...createLoadingMultimodelCliStatus(), installed: true } });
+    try {
+      const request = store.getState().fetchCliProviderStatus('codex');
+      expect(store.getState().cliProviderStatusLoading.codex).toBe(true);
+      store.getState().invalidateCliProviderModelCatalog();
+      expect(store.getState().cliProviderStatusLoading.codex).toBeUndefined();
+      resolveStatus({
+        providerId: 'codex',
+        models: [],
+        supported: true,
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        statusCheckOutcome: 'authoritative',
+        modelCatalogRefreshState: 'ready',
+        capabilities: { teamLaunch: false, oneShot: false, extensions: {} },
+      });
+      await request;
+      expect(store.getState().cliProviderStatusLoading.codex).toBeUndefined();
+    } finally {
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        writable: true,
+        value: previousApi,
+      });
+    }
+  });
+});
+
+describe('codex catalog watchdog races', () => {
+  it.each([false, true])(
+    'retries a loading catalog with retained cache=%s',
+    async (retainedCache) => {
+      vi.useFakeTimers();
+      const provider = {
+        ...createLoadingMultimodelCliStatus().providers.find(
+          (item) => item.providerId === 'codex'
+        )!,
+        modelCatalog: retainedCache
+          ? {
+              schemaVersion: 1 as const,
+              providerId: 'codex',
+              source: 'app-server' as const,
+              status: 'stale' as const,
+              fetchedAt: '2026-09-01T00:00:00.000Z',
+              staleAt: '2026-09-01T00:05:00.000Z',
+              defaultModelId: null,
+              defaultLaunchModel: null,
+              models: [],
+              diagnostics: {
+                configReadState: 'skipped' as const,
+                appServerState: 'healthy' as const,
+              },
+            }
+          : null,
+        modelCatalogRefreshState: 'loading' as const,
+        runtimeCapabilities: { modelCatalog: { dynamic: true } },
+      };
+      const previousApi = window.electronAPI;
+      const getProviderStatus = vi.fn().mockResolvedValue(provider);
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        writable: true,
+        value: {
+          cliInstaller: { getProviderStatus, invalidateStatus: vi.fn(async () => undefined) },
+        },
+      });
+      const store = createCliInstallerStore();
+      store.setState({ cliStatus: { ...createLoadingMultimodelCliStatus(), installed: true } });
+      try {
+        await store.getState().fetchCliProviderStatus('codex');
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+          await vi.advanceTimersByTimeAsync(5_000);
+        }
+        expect(getProviderStatus).toHaveBeenCalledTimes(7);
+        await vi.advanceTimersByTimeAsync(5_000);
+        expect(getProviderStatus).toHaveBeenCalledTimes(7);
+      } finally {
+        store.setState({ cliStatus: null });
+        await store.getState().invalidateCliStatus();
+        Object.defineProperty(window, 'electronAPI', {
+          configurable: true,
+          writable: true,
+          value: previousApi,
+        });
+        vi.useRealTimers();
+      }
+    }
+  );
+
+  it('keeps the newer retry timer when an older request rejects', async () => {
+    vi.useFakeTimers();
+    let rejectFirst!: (reason?: unknown) => void;
+    const first = new Promise((_, reject) => {
+      rejectFirst = reject;
+    });
+    let resolveSecond!: (value: unknown) => void;
+    const second = new Promise((resolve) => {
+      resolveSecond = resolve;
+    });
+    const previousApi = window.electronAPI;
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: {
+        cliInstaller: {
+          getProviderStatus: vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second),
+          invalidateStatus: vi.fn().mockResolvedValue(undefined),
+        },
+      },
+    });
+    const store = createCliInstallerStore();
+    store.setState({ cliStatus: { ...createLoadingMultimodelCliStatus(), installed: true } });
+    try {
+      const oldRequest = store.getState().fetchCliProviderStatus('codex');
+      store.getState().invalidateCliProviderModelCatalog();
+      const newerRequest = store.getState().fetchCliProviderStatus('codex');
+      const provider = {
+        ...createLoadingMultimodelCliStatus().providers.find(
+          (item) => item.providerId === 'codex'
+        )!,
+        modelCatalog: null,
+        modelCatalogRefreshState: 'loading' as const,
+        runtimeCapabilities: { modelCatalog: { dynamic: true } },
+      };
+      resolveSecond(provider);
+      await newerRequest;
+      expect(vi.getTimerCount()).toBe(1);
+      rejectFirst(new Error('superseded'));
+      await oldRequest;
+      vi.mocked(console.error).mockClear();
+      expect(vi.getTimerCount()).toBe(1);
+    } finally {
+      store.setState({ cliStatus: null });
+      await store.getState().invalidateCliStatus();
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        writable: true,
+        value: previousApi,
+      });
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('Codex catalog retry after main invalidation', () => {
+  function installLoadingCodex() {
+    vi.useFakeTimers();
+    const status = createLoadingMultimodelCliStatus();
+    const previousApi = window.electronAPI;
+    const getProviderStatus = vi.fn((providerId: string) =>
+      Promise.resolve({
+        ...status.providers.find((provider) => provider.providerId === providerId)!,
+        supported: true,
+        statusCheckOutcome: 'authoritative' as const,
+        modelCatalog: null,
+        modelCatalogRefreshState:
+          providerId === 'codex' ? ('loading' as const) : ('ready' as const),
+        runtimeCapabilities: { modelCatalog: { dynamic: true } },
+      })
+    );
+    const invalidateStatus = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: { cliInstaller: { getProviderStatus, invalidateStatus } },
+    });
+    const store = createCliInstallerStore();
+    store.setState({ cliStatus: status });
+    return {
+      store,
+      getProviderStatus,
+      invalidateStatus,
+      cleanup: async () => {
+        store.setState({ cliStatus: null });
+        invalidateStatus.mockResolvedValue(undefined);
+        await store.getState().invalidateCliStatus();
+        Object.defineProperty(window, 'electronAPI', {
+          configurable: true,
+          writable: true,
+          value: previousApi,
+        });
+        vi.useRealTimers();
+      },
+    };
+  }
+
+  it.each(['anthropic', 'opencode'] as const)(
+    'restores a loading Codex retry after the main acknowledgement and %s refresh',
+    async (providerId) => {
+      const fixture = installLoadingCodex();
+      let acknowledge!: () => void;
+      const acknowledgement = new Promise<void>((resolve) => {
+        acknowledge = resolve;
+      });
+      try {
+        await fixture.store.getState().fetchCliProviderStatus('codex');
+        fixture.invalidateStatus.mockReturnValueOnce(acknowledgement);
+        const invalidation = fixture.store.getState().invalidateCliStatus();
+        await vi.advanceTimersByTimeAsync(5_000);
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1);
+        expect(vi.getTimerCount()).toBe(0);
+
+        acknowledge();
+        await invalidation;
+        await fixture.store.getState().fetchCliProviderStatus(providerId);
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+        expect(vi.getTimerCount()).toBe(1);
+        await vi.advanceTimersByTimeAsync(5_000);
+        expect(fixture.getProviderStatus.mock.calls.map(([id]) => id)).toEqual([
+          'codex',
+          providerId,
+          'codex',
+        ]);
+      } finally {
+        acknowledge();
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it('does not restore retries after a rejected main invalidation', async () => {
+    const fixture = installLoadingCodex();
+    try {
+      await fixture.store.getState().fetchCliProviderStatus('codex');
+      fixture.invalidateStatus.mockRejectedValueOnce(new Error('Main invalidation failed'));
+      await expect(fixture.store.getState().invalidateCliStatus()).rejects.toThrow(
+        'Main invalidation failed'
+      );
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it.each(['pending', 'rejected'] as const)(
+    'does not let an old Codex success restore retries while main invalidation is %s',
+    async (invalidationState) => {
+      const fixture = installLoadingCodex();
+      let resolveOldStatus!: (value: unknown) => void;
+      const oldStatus = new Promise((resolve) => {
+        resolveOldStatus = resolve;
+      });
+      let acknowledge!: () => void;
+      let rejectAcknowledgement!: (error: Error) => void;
+      const acknowledgement = new Promise<void>((resolve, reject) => {
+        acknowledge = resolve;
+        rejectAcknowledgement = reject;
+      });
+      try {
+        await fixture.store.getState().fetchCliProviderStatus('codex');
+        const retainedProvider = fixture.store
+          .getState()
+          .cliStatus!.providers.find((provider) => provider.providerId === 'codex')!;
+        fixture.getProviderStatus.mockReturnValueOnce(oldStatus as never);
+        const oldRefresh = fixture.store.getState().fetchCliProviderStatus('codex');
+        fixture.invalidateStatus.mockReturnValueOnce(acknowledgement);
+        const invalidation = fixture.store.getState().invalidateCliStatus();
+        const settledInvalidation = invalidation.catch(() => undefined);
+        if (invalidationState === 'rejected') {
+          rejectAcknowledgement(new Error('Main invalidation failed'));
+          await settledInvalidation;
+        }
+
+        resolveOldStatus(retainedProvider);
+        await expect(oldRefresh).resolves.toBe(false);
+        await vi.advanceTimersByTimeAsync(5_000);
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+        expect(vi.getTimerCount()).toBe(0);
+
+        acknowledge();
+        await settledInvalidation;
+      } finally {
+        acknowledge();
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it.each(['pending', 'rejected'] as const)(
+    'does not let old bootstrap metadata restore retries while main invalidation is %s',
+    async (invalidationState) => {
+      const fixture = installLoadingCodex();
+      let resolveOldMetadata!: (value: unknown) => void;
+      const oldMetadata = new Promise((resolve) => {
+        resolveOldMetadata = resolve;
+      });
+      let acknowledge!: () => void;
+      let rejectAcknowledgement!: (error: Error) => void;
+      const acknowledgement = new Promise<void>((resolve, reject) => {
+        acknowledge = resolve;
+        rejectAcknowledgement = reject;
+      });
+      try {
+        await fixture.store.getState().fetchCliProviderStatus('codex');
+        const retainedMetadata = fixture.store.getState().cliStatus!;
+        Object.assign(window.electronAPI.cliInstaller, {
+          getStatus: vi.fn().mockReturnValueOnce(oldMetadata),
+        });
+        const oldBootstrap = fixture.store.getState().bootstrapCliStatus({
+          multimodelEnabled: true,
+          providerStatusMode: 'defer',
+        });
+        fixture.invalidateStatus.mockReturnValueOnce(acknowledgement);
+        const invalidation = fixture.store.getState().invalidateCliStatus();
+        const settledInvalidation = invalidation.catch(() => undefined);
+        if (invalidationState === 'rejected') {
+          rejectAcknowledgement(new Error('Main invalidation failed'));
+          await settledInvalidation;
+        }
+
+        resolveOldMetadata(retainedMetadata);
+        await oldBootstrap;
+        await vi.advanceTimersByTimeAsync(5_000);
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1);
+        expect(vi.getTimerCount()).toBe(0);
+
+        acknowledge();
+        await settledInvalidation;
+      } finally {
+        acknowledge();
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it('does not restore retries while a newer main invalidation is pending', async () => {
+    const fixture = installLoadingCodex();
+    let acknowledgeOld!: () => void;
+    let acknowledgeNew!: () => void;
+    const oldAcknowledgement = new Promise<void>((resolve) => {
+      acknowledgeOld = resolve;
+    });
+    const newAcknowledgement = new Promise<void>((resolve) => {
+      acknowledgeNew = resolve;
+    });
+    try {
+      await fixture.store.getState().fetchCliProviderStatus('codex');
+      fixture.invalidateStatus
+        .mockReturnValueOnce(oldAcknowledgement)
+        .mockReturnValueOnce(newAcknowledgement);
+      const oldInvalidation = fixture.store.getState().invalidateCliStatus();
+      const newInvalidation = fixture.store.getState().invalidateCliStatus();
+      acknowledgeOld();
+      await oldInvalidation;
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+
+      acknowledgeNew();
+      await newInvalidation;
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(fixture.getProviderStatus.mock.calls.map(([id]) => id)).toEqual(['codex', 'codex']);
+    } finally {
+      acknowledgeOld();
+      acknowledgeNew();
+      await fixture.cleanup();
+    }
+  });
+});

@@ -1,0 +1,32 @@
+{
+  "status": "INCOMPLETE",
+  "completedSlice": {
+    "status": "PASS",
+    "nativeJobId": "e0de9c02f45f6980f80fee1bedb8e609",
+    "consumerJobId": "3eb8000b307dda9eefc68bb4e8f31160",
+    "hostTrees": {
+      "sourceSha256": "c59530f468d5c69b3eab4533568bc60953df7cb45acbd2162bdd3ea3513e946d",
+      "distSha256": "f92e45f6d6a12208188692a238814e5f969a5fcf8d1dcf04bbe72fc3f38369b9"
+    },
+    "nativeReceiptSha256": "c7bf33d46a1cb9c5ec3149dc8471d13deeb8654646dc282c00e9caaaf4d0e0ca",
+    "ipcReceiptSha256": "01ab84f206f89c55e8e0de51c22aa94b554ff70fd06df728b36bc16b33dc7c9b",
+    "nativeScenario": "Captured original model context200000/output2000/input100000; limited probe context4096/output128 removes obsolete input ceiling. Actual Native effective limits validated before one model request; max_tokens128, zero tools, physical stop, same receipt after restart without inference replay.",
+    "consumerScenario": "Actual IPC/Main/Host/TEST-native: save context3072/output192 after verified probe; ordinary Test model uses the saved pair, project overrides/global inheritance and restart projection preserved.",
+    "checks": {
+      "rootTS7": "PASS",
+      "hostTestSourcesStrict": "PASS",
+      "focusedHostPolicyTests": 4,
+      "frontendIPC": 34,
+      "affectedFastLint": "PASS",
+      "sizeGuard": "PASS",
+      "provisioningGuard": "PASS"
+    },
+    "limits": "No actual Electron controls, vendor accounts, launch-settings consumption or full P0-P8/M01-M19 claim.",
+    "archive": "docs/plans/provider-migration/evidence/p5-model-limits-integration-v2.tar.gz",
+    "archiveSha256": "9c17630a20385116887d4b68b3b4f0a841149cb649ec578617b809771a6c1589"
+  },
+  "globalGoalUnchanged": true,
+  "next": "Cut over native Claude/Codex provider status/catalog and complete actual Electron controls under unchanged strict sentinel, then remaining P0-P8/M01-M19. Saved defaults/limits must still be consumed by ordinary Team/session launch configuration.",
+  "workingTreeOnly": true,
+  "pushMergeRelease": false
+}

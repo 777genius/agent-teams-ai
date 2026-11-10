@@ -1,0 +1,50 @@
+{
+  "event_id": "ab21e36a89684a398b4090487d6d962f",
+  "exception": {
+    "values": [
+      {
+        "type": "Error",
+        "value": "synthetic-dynamic",
+        "stacktrace": {
+          "frames": [
+            {
+              "filename": "file:///srv/workers/tmp/sentry-sdk-real-envelope-20261006-r6/synthetic%20app/out/renderer/assets/index-CymqvycE.js",
+              "function": "?",
+              "in_app": true,
+              "lineno": 97,
+              "colno": 42
+            },
+            {
+              "filename": "file:///srv/workers/tmp/sentry-sdk-real-envelope-20261006-r6/synthetic%20app/out/renderer/assets/dynamic-DijexZqW.js",
+              "function": "Object.syntheticDynamic",
+              "in_app": true,
+              "lineno": 10,
+              "colno": 9
+            }
+          ]
+        },
+        "mechanism": {
+          "type": "auto.browser.global_handlers.onunhandledrejection",
+          "handled": false
+        }
+      }
+    ]
+  },
+  "debug_meta": {
+    "images": [
+      {
+        "type": "sourcemap",
+        "code_file": "file:///srv/workers/tmp/sentry-sdk-real-envelope-20261006-r6/synthetic%20app/out/renderer/assets/index-CymqvycE.js",
+        "debug_id": "47825fba-04de-4f60-8738-6ebdb88e86ac"
+      },
+      {
+        "type": "sourcemap",
+        "code_file": "file:///srv/workers/tmp/sentry-sdk-real-envelope-20261006-r6/synthetic%20app/out/renderer/assets/dynamic-DijexZqW.js",
+        "debug_id": "28400e46-bb24-4a22-b91b-c2266ec22b71"
+      }
+    ]
+  },
+  "tags": {
+    "fixture.process": "renderer"
+  }
+}

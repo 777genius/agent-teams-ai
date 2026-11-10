@@ -1,0 +1,345 @@
+import React, { useEffect, useState } from 'react';
+
+import { useAppTranslation } from '@features/localization/renderer';
+import { OpenCodeLocalModelLimitsCard } from '@features/runtime-provider-management/renderer';
+import { UnselectedTeamProvider } from '@features/team-templates/renderer';
+import {
+  ANTHROPIC_LONG_CONTEXT_PRICING_URL,
+  ANTHROPIC_SONNET_EXTRA_USAGE_WARNING,
+  AnthropicExtraUsageWarning,
+} from '@renderer/components/team/dialogs/AnthropicExtraUsageWarning';
+import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
+import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitContextCheckbox';
+import { TeamModelBrandIcon } from '@renderer/components/team/dialogs/TeamModelBrandIcon';
+import {
+  getProviderScopedTeamModelLabel,
+  getTeamProviderLabel,
+  TeamModelSelector,
+  type TeamModelSelectorProps,
+} from '@renderer/components/team/dialogs/TeamModelSelector';
+import { useOpenCodeDefaultRouteLabel } from '@renderer/components/team/dialogs/useOpenCodeDefaultRouteLabel';
+import { useRuntimeDefaultModelLabel } from '@renderer/components/team/dialogs/useRuntimeDefaultModelLabel';
+import { Checkbox } from '@renderer/components/ui/checkbox';
+import { Label } from '@renderer/components/ui/label';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@renderer/components/ui/tooltip';
+import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { useTheme } from '@renderer/hooks/useTheme';
+import { cn } from '@renderer/lib/utils';
+import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
+import {
+  isAnthropicHaikuTeamModel,
+  isAnthropicSonnetOneMillionContextTeamModel,
+} from '@renderer/utils/teamModelCatalog';
+import { resolveTeamLeadColorName } from '@shared/utils/teamMemberColors';
+import { AlertTriangle, ChevronDown, ChevronRight, Info } from 'lucide-react';
+
+import { Button } from '../../ui/button';
+
+import { getModelTriggerToneClass } from './memberModelToneClasses';
+import { RosterParticipantFrame, RosterParticipantIdentity } from './RosterParticipantFrame';
+
+import type { EffortLevel, TeamProviderId } from '@shared/types';
+
+export { ANTHROPIC_LONG_CONTEXT_PRICING_URL, ANTHROPIC_SONNET_EXTRA_USAGE_WARNING };
+
+interface LeadModelRowProps {
+  runtimeSelectionUnresolved?: boolean;
+  providerId: TeamProviderId;
+  model: string;
+  effort?: EffortLevel;
+  limitContext: boolean;
+  onProviderChange: (providerId: TeamProviderId) => void;
+  onModelChange: (model: string) => void;
+  onEffortChange: (effort: string) => void;
+  onEffortAutoReset?: () => void;
+  onLimitContextChange: (value: boolean) => void;
+  syncModelsWithTeammates: boolean;
+  onSyncModelsWithTeammatesChange: (value: boolean) => void;
+  warningText?: string | null;
+  disableGeminiOption?: boolean;
+  providerNoticeById?: Partial<Record<TeamProviderId, React.ReactNode>>;
+  providerReadyById?: Partial<Record<TeamProviderId, boolean>>;
+  modelIssueText?: string | null;
+  modelAdvisoryReasonByValue?: Partial<Record<string, string | null | undefined>>;
+  modelIssueReasonByValue?: Partial<Record<string, string | null | undefined>>;
+  modelUnavailableReasonByValue?: Partial<Record<string, string | null | undefined>>;
+  onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
+  onOpenProviderSettings?: TeamModelSelectorProps['onOpenProviderSettings'];
+  showAnthropicContextLimit?: boolean;
+  disableAnthropicContextLimit?: boolean;
+  projectPath?: string | null;
+  layoutVariant?: 'default' | 'flat';
+}
+
+export const LeadModelRow = ({
+  runtimeSelectionUnresolved = false,
+  providerId,
+  model,
+  effort,
+  limitContext,
+  onProviderChange,
+  onModelChange,
+  onEffortChange,
+  onEffortAutoReset,
+  onLimitContextChange,
+  syncModelsWithTeammates,
+  onSyncModelsWithTeammatesChange,
+  warningText,
+  disableGeminiOption = false,
+  providerNoticeById,
+  providerReadyById,
+  modelIssueText,
+  modelAdvisoryReasonByValue,
+  modelIssueReasonByValue,
+  modelUnavailableReasonByValue,
+  onOpenCodeProviderScopedStatusChange,
+  onOpenProviderSettings,
+  showAnthropicContextLimit = providerId === 'anthropic',
+  disableAnthropicContextLimit,
+  projectPath,
+  layoutVariant = 'default',
+}: LeadModelRowProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  const { isLight } = useTheme();
+  const hasActiveProviderNotice = Boolean(providerNoticeById?.[providerId]);
+  const [modelExpanded, setModelExpanded] = useState(hasActiveProviderNotice);
+  const leadColorSet = getTeamColorSet(resolveTeamLeadColorName());
+  const openCodeDefault = useOpenCodeDefaultRouteLabel(
+    projectPath,
+    providerId === 'opencode' && !model.trim()
+  );
+  const runtimeDefault = useRuntimeDefaultModelLabel(
+    providerId,
+    limitContext,
+    !model.trim(),
+    projectPath
+  );
+  const resolvedDefault = openCodeDefault ?? runtimeDefault;
+  const modelButtonLabel = model.trim()
+    ? getProviderScopedTeamModelLabel(providerId, model.trim())
+    : resolvedDefault
+      ? t('modelSelector.defaultWithResolved', { model: resolvedDefault.label })
+      : t('members.leadModel.defaultModel');
+  // The trigger is narrow: lead with the model so truncation cuts the marker,
+  // not the model. The full label stays in the tooltip and aria-label.
+  const modelButtonText = resolvedDefault
+    ? t('modelSelector.defaultCompact', { model: resolvedDefault.modelLabel })
+    : modelButtonLabel;
+  const modelButtonAriaLabel = t('members.leadModel.providerModelAria', {
+    provider: getTeamProviderLabel(providerId),
+    model: modelButtonLabel,
+  });
+  const selectedModelIssueText =
+    model.trim() && modelIssueReasonByValue?.[model.trim()]
+      ? modelIssueReasonByValue[model.trim()]
+      : null;
+  const selectedModelUnavailableText =
+    model.trim() && modelUnavailableReasonByValue?.[model.trim()]
+      ? modelUnavailableReasonByValue[model.trim()]
+      : null;
+  const selectedModelAdvisoryText =
+    model.trim() && modelAdvisoryReasonByValue?.[model.trim()]
+      ? modelAdvisoryReasonByValue[model.trim()]
+      : null;
+  const currentModelIssueText =
+    modelIssueText ?? selectedModelUnavailableText ?? selectedModelIssueText ?? null;
+  const currentModelAdvisoryText = currentModelIssueText ? null : selectedModelAdvisoryText;
+  const hasModelIssue = Boolean(currentModelIssueText);
+  const hasModelAdvisory = Boolean(currentModelAdvisoryText);
+  const showSonnetExtraUsageWarning =
+    providerId === 'anthropic' &&
+    !limitContext &&
+    isAnthropicSonnetOneMillionContextTeamModel(model);
+  const warningMessages = [warningText?.trim() || null].filter((message): message is string =>
+    Boolean(message)
+  );
+  const hasWarnings = warningMessages.length > 0 || showSonnetExtraUsageWarning;
+  const contextLimitDisabled =
+    disableAnthropicContextLimit ??
+    (providerId === 'anthropic' && isAnthropicHaikuTeamModel(model));
+  const isFlatRoster = layoutVariant === 'flat';
+
+  useEffect(() => {
+    if (hasActiveProviderNotice && !modelExpanded) {
+      setModelExpanded(true);
+    }
+  }, [hasActiveProviderNotice, modelExpanded]);
+
+  const syncModelControl = (
+    <div className="flex min-w-0 items-center gap-2">
+      <Checkbox
+        id="sync-models-with-lead"
+        checked={syncModelsWithTeammates}
+        onCheckedChange={(checked) => onSyncModelsWithTeammatesChange(checked === true)}
+      />
+      <Label
+        htmlFor="sync-models-with-lead"
+        className="cursor-pointer truncate text-xs font-normal text-text-secondary"
+      >
+        {t('members.leadModel.syncWithTeammates')}
+      </Label>
+    </div>
+  );
+
+  return (
+    <RosterParticipantFrame
+      accentColor={leadColorSet.border}
+      isLight={isLight}
+      layout={isFlatRoster ? 'flat' : 'lead'}
+      dataRole="lead-row"
+    >
+      <div className="min-w-0">
+        <RosterParticipantIdentity avatarSrc={agentAvatarUrl('team-lead', 32)}>
+          <div className="flex h-8 min-w-0 items-center gap-3">
+            <span className="truncate text-sm font-semibold text-[var(--color-text)]">
+              {t('members.leadModel.leadShort')}
+            </span>
+            {!isFlatRoster ? (
+              <span className="shrink-0 text-xs text-[var(--color-text-secondary)]">
+                {t('members.leadModel.teamLead')}
+              </span>
+            ) : null}
+          </div>
+        </RosterParticipantIdentity>
+      </div>
+      <div className="min-w-0">
+        <div className="flex h-8 items-center px-1 text-xs text-[var(--color-text-secondary)]">
+          {isFlatRoster ? t('members.leadModel.teamLead') : syncModelControl}
+        </div>
+      </div>
+      <div className="min-w-0 space-y-1">
+        {runtimeSelectionUnresolved ? (
+          <UnselectedTeamProvider onSelect={onProviderChange} />
+        ) : (
+          <div
+            className={cn(
+              'flex flex-col gap-2 sm:flex-row sm:items-start',
+              isFlatRoster && 'sm:flex-wrap sm:gap-1.5'
+            )}
+          >
+            <div
+              className={cn(
+                'w-full min-w-0 space-y-1',
+                isFlatRoster ? 'sm:w-[170px] sm:min-w-[170px]' : 'sm:w-[150px] sm:min-w-[150px]'
+              )}
+            >
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        'h-8 w-full justify-start gap-1 overflow-hidden text-left',
+                        getModelTriggerToneClass(hasModelIssue, hasModelAdvisory)
+                      )}
+                      aria-label={modelButtonAriaLabel}
+                      onClick={() => setModelExpanded((prev) => !prev)}
+                    >
+                      {!runtimeSelectionUnresolved && modelExpanded ? (
+                        <ChevronDown className="size-3.5" />
+                      ) : (
+                        <ChevronRight className="size-3.5" />
+                      )}
+                      <TeamModelBrandIcon providerId={providerId} model={model} />
+                      <span className="min-w-0 flex-1 truncate">{modelButtonText}</span>
+                      {hasModelIssue ? (
+                        <AlertTriangle className="size-3.5 shrink-0 text-red-700 dark:text-red-300" />
+                      ) : null}
+                      {hasModelAdvisory ? (
+                        <Info className="size-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
+                      ) : null}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-80 break-words">
+                    {modelButtonLabel}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            {isFlatRoster ? (
+              <div className="flex h-8 min-w-0 items-center px-2 text-xs text-[var(--color-text-secondary)]">
+                {syncModelControl}
+              </div>
+            ) : null}
+          </div>
+        )}
+      </div>
+      {!runtimeSelectionUnresolved && hasWarnings ? (
+        <div className="md:col-span-3">
+          <div className="bg-amber-500/8 ml-3 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-700 dark:text-amber-200">
+            <Info className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
+            <div className="space-y-1">
+              {warningMessages.map((message) => (
+                <p key={message}>{message}</p>
+              ))}
+              {showSonnetExtraUsageWarning ? <AnthropicExtraUsageWarning /> : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {!runtimeSelectionUnresolved && modelExpanded ? (
+        <div className="space-y-2 md:col-span-3">
+          <TeamModelSelector
+            providerId={providerId}
+            onProviderChange={onProviderChange}
+            value={model}
+            limitContext={limitContext}
+            onValueChange={onModelChange}
+            projectPath={projectPath}
+            id="lead-model"
+            disableGeminiOption={disableGeminiOption}
+            providerNoticeById={providerNoticeById}
+            providerReadyById={providerReadyById}
+            modelAdvisoryReasonByValue={modelAdvisoryReasonByValue}
+            modelIssueReasonByValue={{
+              ...(modelIssueReasonByValue ?? {}),
+              ...(model.trim() && modelIssueText ? { [model.trim()]: modelIssueText } : {}),
+            }}
+            modelUnavailableReasonByValue={modelUnavailableReasonByValue}
+            onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
+            onOpenProviderSettings={onOpenProviderSettings}
+          />
+          <EffortLevelSelector
+            value={effort ?? ''}
+            onValueChange={onEffortChange}
+            onAutoReset={onEffortAutoReset}
+            id="lead-effort"
+            providerId={providerId}
+            model={model}
+            projectPath={projectPath}
+            limitContext={limitContext}
+          />
+          {providerId === 'opencode' ? (
+            <OpenCodeLocalModelLimitsCard model={model} projectPath={projectPath} />
+          ) : null}
+          {showAnthropicContextLimit ? (
+            <LimitContextCheckbox
+              id="lead-limit-context"
+              checked={limitContext}
+              onCheckedChange={onLimitContextChange}
+              disabled={contextLimitDisabled}
+              scopeLabel={
+                providerId === 'anthropic' ? undefined : t('members.leadModel.anthropicTeamWide')
+              }
+            />
+          ) : null}
+          <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
+            <Info className="mt-0.5 size-3.5 shrink-0 text-sky-600 dark:text-sky-400" />
+            <p className="text-[11px] leading-relaxed text-sky-700 dark:text-sky-300">
+              {t('members.leadModel.runtimeInheritance')}
+              {showAnthropicContextLimit
+                ? ` ${t('members.leadModel.anthropicContextLimit')}`
+                : null}
+            </p>
+          </div>
+        </div>
+      ) : null}
+    </RosterParticipantFrame>
+  );
+};

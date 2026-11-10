@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "peer": "claude_team",
+  "appVersion": "test-app",
+  "gitSha": null,
+  "buildId": null,
+  "bridgeProtocol": {
+    "minVersion": 1,
+    "currentVersion": 1,
+    "supportedCommands": [
+      "opencode.handshake",
+      "opencode.commandStatus",
+      "opencode.readiness",
+      "opencode.cleanupHosts",
+      "opencode.cleanupStartupHosts",
+      "opencode.launchTeam",
+      "opencode.reconcileTeam",
+      "opencode.stopTeam",
+      "opencode.stopOutcome",
+      "opencode.reconcileStop",
+      "opencode.answerPermission",
+      "opencode.listRuntimePermissions",
+      "opencode.getRuntimeTranscript",
+      "opencode.recoverDeliveryJournal",
+      "opencode.backfillTaskLedger"
+    ],
+    "opencodeTaskLedgerEvidenceContractVersion": 1,
+    "opencodeAppManagedBootstrapContractVersion": 1,
+    "opencodeDeliveryAcceptanceContractVersion": 2,
+    "opencodeFilePartsContractVersion": 2,
+    "expectedBehaviorFingerprintSchemaVersion": 2
+  },
+  "runtime": {
+    "providerId": "opencode",
+    "binaryPath": null,
+    "binaryFingerprint": null,
+    "version": null,
+    "capabilitySnapshotId": null,
+    "runtimeStoreManifestHighWatermark": null,
+    "activeRunId": null
+  },
+  "featureFlags": {
+    "opencodeTeamLaunch": true,
+    "opencodeStateChangingCommands": true
+  }
+}

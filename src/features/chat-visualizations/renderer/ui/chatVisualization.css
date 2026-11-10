@@ -1,0 +1,40 @@
+.chat-visualization-theme {
+  --chat-visualization-surface: var(--color-surface);
+  --chat-visualization-border: var(--color-border);
+  --chat-visualization-text: var(--color-text);
+  min-width: 0;
+  max-width: 100%;
+  color: var(--chat-visualization-text);
+}
+
+.chat-visualization-shell {
+  position: relative;
+  margin: 0.75rem 0;
+}
+
+.chat-visualization-inline {
+  overflow-x: auto;
+}
+
+.chat-visualization-compact {
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--chat-visualization-border);
+  border-radius: 0.5rem;
+  background: var(--chat-visualization-surface);
+}
+
+.chat-visualization-dialog {
+  width: min(72rem, calc(100vw - 2rem));
+  max-width: 72rem;
+}
+
+.chat-visualization-dialog-body {
+  min-width: 0;
+  overflow: auto;
+}

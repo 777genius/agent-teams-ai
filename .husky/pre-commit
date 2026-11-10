@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+cd "$(dirname "$0")/.." || exit 1
+
+# Git/IDE hooks often get a minimal PATH — Node lives outside it.
+export PATH="$HOME/.local/share/mise/shims:$HOME/.volta/bin:/opt/homebrew/bin:/usr/local/bin:$HOME/.linuxbrew/bin:$PATH"
+
+if [ -z "${NODE_SKIP_NVM:-}" ] && [ -f "$HOME/.nvm/nvm.sh" ]; then
+  NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+  export NVM_DIR
+  # shellcheck source=/dev/null
+  . "$HOME/.nvm/nvm.sh"
+fi
+
+exec ./node_modules/.bin/lint-staged

@@ -1,0 +1,1530 @@
+import {
+  memo,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { Sheet, type SheetRef } from 'react-modal-sheet';
+
+import { ChatVisualizationPresentationProvider } from '@features/chat-visualizations/renderer';
+import { useAppTranslation } from '@features/localization/renderer';
+import {
+  ChatUnreadBadges,
+  ConversationHeader,
+  TEAM_FEED_SCOPE,
+  useTeamConversationSurface,
+} from '@features/team-direct-chats/renderer';
+import { Button } from '@renderer/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@renderer/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { useComposerWorkingSummaries } from '@renderer/hooks/useComposerWorkingSummaries';
+import { useTeamMessagesExpanded } from '@renderer/hooks/useTeamMessagesExpanded';
+import { useStore } from '@renderer/store';
+import { selectTeamMessages } from '@renderer/store/slices/teamSlice';
+import { toMessageKey } from '@renderer/utils/teamMessageKey';
+import { CheckCheck, MessageSquare, MoreHorizontal } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
+
+import { type TimelineViewport } from '../activity/ActivityTimeline';
+import { isLeadThought } from '../activity/LeadThoughtsGroup';
+import {
+  CollapsibleTeamSection,
+  type CollapsibleTeamSectionVariant,
+} from '../CollapsibleTeamSection';
+import {
+  getTeamMessagesSidebarUiState,
+  setTeamMessagesSidebarUiState,
+} from '../sidebar/teamSidebarUiState';
+
+import { MessageHistoryNotice } from './MessageHistoryNotice';
+import { MessagesConversationList } from './MessagesConversationList';
+import {
+  FullScreenControl,
+  LatestMessageControl,
+  WideThreadHeader,
+} from './MessagesExpandedChrome';
+import { MessagesInlineBackButton } from './MessagesInlineBackButton';
+import { MessagesInlineLayoutActions, MessagesLayoutMenuItems } from './MessagesLayoutMenuItems';
+import {
+  conversationChrome,
+  conversationScopeKey,
+  filterScopedMessages,
+  scopedUnreadCounts,
+  scopedUnreadKeys,
+} from './messagesPanelConversations';
+import {
+  activityMessages,
+  canonicalTeamMessages,
+  conversationDraftAddress,
+  conversationIdentity as createConversationIdentity,
+  localDraftsByConversationScope,
+  outboxViewAddress,
+  replyCandidates,
+  visibleTeamMessages,
+} from './messagesPanelDerivedData';
+import {
+  findLatestRevisableUserSentMessage,
+  hasVisibleReplyForSendMessageDiagnostics,
+  reconcilePendingRepliesByMember,
+  trimString,
+} from './messagesPanelLogic';
+import { selectMessagesPanelTeamMentionMeta } from './messagesPanelTeamMentionMeta';
+import { MessagesSearchBar, MessagesSearchControls } from './MessagesSearchBar';
+import { MessagesSidebarSurface } from './MessagesSidebarSurface';
+import { type ExpandedChatHost, MessagesThreadPlacement } from './MessagesThreadPlacement';
+import { MessagesThreadUtilityMenuItems } from './MessagesThreadUtilityMenuItems';
+import { MessagesThreadView } from './MessagesThreadView';
+import { MessagesTimelineSection } from './MessagesTimelineSection';
+import { StatusBlock } from './StatusBlock';
+import { calculateBottomSheetGeometry, useBottomSheetLayout } from './useBottomSheetLayout';
+import { useComposerOutboxItems } from './useComposerOutboxItems';
+import { useCrossTeamDraftAddressAvailability } from './useCrossTeamDraftAddressAvailability';
+import { useMessageReplyRouting } from './useMessageReplyRouting';
+import { useMessageRevisionIntent } from './useMessageRevisionIntent';
+import { useMessagesComposerSections } from './useMessagesComposerSections';
+import { useMessagesGroupConversation } from './useMessagesGroupConversation';
+import { useMessagesMemberIdentities } from './useMessagesMemberIdentities';
+import {
+  useDirectThreadAutoOlder,
+  useResetScrollOnConversationChange,
+  useTeamChatListItems,
+  useThreadUnreadSnapshot,
+} from './useMessagesPanelChats';
+import { useMessagesPanelSend } from './useMessagesPanelSend';
+import { useMessagesReadState } from './useMessagesReadState';
+import { useMessagesTimelineActions } from './useMessagesTimelineActions';
+import { useOpenCodeDeliveryStatusRefresh } from './useOpenCodeDeliveryStatusRefresh';
+
+import type { ConversationViewportHandle } from '../activity/useConversationViewport';
+import type { ComposerDraftDestination } from './composerDraftDestination';
+import type { MessageRevisionTargetController } from './messageRevisionTarget';
+import type { MessagesFilterState } from './MessagesFilterPopover';
+import type { ComposerDraftAddress } from '@renderer/types/composerDraft';
+import type { MessageTaskSeed } from '@renderer/types/messageTaskSeed';
+import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
+import type { TaskIdClickHandler } from '@renderer/utils/taskReferenceUtils';
+import type {
+  DiscardQueuedUserMessagesResult,
+  InboxMessage,
+  ResolvedTeamMember,
+  TeamTaskWithKanban,
+} from '@shared/types';
+
+interface TimeWindow {
+  start: number;
+  end: number;
+}
+
+const BOTTOM_SHEET_HEADER_HEIGHT = 40;
+const BOTTOM_SHEET_COLLAPSED_SNAP_INDEX = 1;
+const BOTTOM_SHEET_COMPOSER_SNAP_INDEX = 2;
+const MESSAGES_SCROLL_TOP_PERSIST_DELAY_MS = 100;
+const EMPTY_REPLY_CANDIDATE_MESSAGES: InboxMessage[] = [];
+
+interface MessagesPanelProps {
+  isActive?: boolean;
+  teamName: string;
+  position: TeamMessagesPanelMode;
+  onPositionChange: (position: TeamMessagesPanelMode) => void;
+  mountPoint?: Element | null;
+  members: ResolvedTeamMember[];
+  tasks: TeamTaskWithKanban[];
+  isTeamAlive?: boolean;
+  leadActivity?: string;
+  leadContextUpdatedAt?: string;
+  timeWindow: TimeWindow | null;
+  /** Current lead session ID. */
+  currentLeadSessionId?: string;
+  /** Pending replies tracker (shared with parent for MemberList). */
+  pendingRepliesByMember: Record<string, number>;
+  /** Update pending replies tracker. */
+  onPendingReplyChange: (updater: (prev: Record<string, number>) => Record<string, number>) => void;
+  /** Callback when a member is clicked in the timeline. */
+  onMemberClick?: (member: ResolvedTeamMember) => void;
+  /** Callback when a task is clicked from timeline or status block. */
+  onTaskClick?: (task: TeamTaskWithKanban) => void;
+  /** Callback to open create task dialog from a message. */
+  onCreateTaskFromMessage?: (seed: MessageTaskSeed) => void;
+  /** Callback to open reply dialog for a message. */
+  onReplyToMessage?: (message: InboxMessage, recipientHint?: string) => void;
+  /** Callback when "Restart team" is clicked. */
+  onRestartTeam?: () => void;
+  onTaskIdClick?: TaskIdClickHandler;
+  /** Reports the rendered floating composer height so the parent can reserve scroll space. */
+  onFloatingComposerHeightChange?: (height: number) => void;
+  /** Parent-owned scroll viewport for the unchanged inline activity presentation. */
+  inlineScrollContainerRef?: RefObject<HTMLDivElement | null>;
+  /** Visual treatment for the inline section header. */
+  sectionVariant?: CollapsibleTeamSectionVariant;
+  /** Main-region host available only to the native team sidebar. */
+  expandedChatHost?: ExpandedChatHost;
+}
+
+const MessagesStatusSection = memo(StatusBlock);
+
+export const MessagesPanel = memo(function MessagesPanel({
+  isActive = true,
+  teamName,
+  position,
+  onPositionChange,
+  mountPoint,
+  members,
+  tasks,
+  isTeamAlive,
+  leadActivity,
+  leadContextUpdatedAt,
+  timeWindow,
+  currentLeadSessionId,
+  pendingRepliesByMember,
+  onPendingReplyChange,
+  onMemberClick,
+  onTaskClick,
+  onCreateTaskFromMessage,
+  onReplyToMessage,
+  onRestartTeam,
+  onTaskIdClick,
+  onFloatingComposerHeightChange,
+  inlineScrollContainerRef,
+  sectionVariant,
+  expandedChatHost,
+}: MessagesPanelProps): React.JSX.Element {
+  const { t } = useAppTranslation('team');
+  const globalMessagesError = useStore((s) => s.teamMessagesByName[teamName]?.messagesError);
+  const {
+    sendTeamMessage,
+    sendCrossTeamMessage,
+    sendingMessage,
+    sendMessageError,
+    sendMessageWarning,
+    sendMessageDebugDetails,
+    lastSendMessageResult,
+    clearSendMessageRuntimeDiagnostics,
+    refreshSendMessageRuntimeDeliveryStatus,
+    teamMentionMeta,
+    openTeamTab,
+    messages,
+    messagesEntryPresent,
+    messagesHasMore,
+    messagesLoadingHead,
+    messagesLoadingOlder,
+    historyReloadRequired,
+    loadOlderTeamMessages,
+    refreshTeamMessagesHead,
+    activeContextId,
+  } = useStore(
+    useShallow((s) => {
+      const messagesState = teamName ? s.teamMessagesByName[teamName] : undefined;
+      return {
+        sendTeamMessage: s.sendTeamMessage,
+        sendCrossTeamMessage: s.sendCrossTeamMessage,
+        sendingMessage: s.sendingMessage,
+        sendMessageError: s.sendMessageError,
+        sendMessageWarning: s.sendMessageWarning,
+        sendMessageDebugDetails: s.sendMessageDebugDetails,
+        lastSendMessageResult: s.lastSendMessageResult,
+        clearSendMessageRuntimeDiagnostics: s.clearSendMessageRuntimeDiagnostics,
+        refreshSendMessageRuntimeDeliveryStatus: s.refreshSendMessageRuntimeDeliveryStatus,
+        teamMentionMeta: selectMessagesPanelTeamMentionMeta(s.teams),
+        openTeamTab: s.openTeamTab,
+        messages: selectTeamMessages(s, teamName),
+        messagesEntryPresent: messagesState !== undefined,
+        messagesHasMore: messagesState?.hasMore ?? false,
+        messagesLoadingHead: messagesState?.loadingHead ?? false,
+        messagesLoadingOlder: messagesState?.loadingOlder ?? false,
+        historyReloadRequired: messagesState?.historyReloadRequired ?? false,
+        loadOlderTeamMessages: s.loadOlderTeamMessages,
+        refreshTeamMessagesHead: s.refreshTeamMessagesHead,
+        activeContextId: s.activeContextId,
+      };
+    })
+  );
+  const bootstrapHeadRefreshAttemptedForTeamRef = useRef<string | null>(null);
+  const loadOlderMessages = useCallback(async () => {
+    if (!messagesHasMore || messagesLoadingHead || messagesLoadingOlder) {
+      return;
+    }
+    await loadOlderTeamMessages(teamName);
+  }, [loadOlderTeamMessages, messagesHasMore, messagesLoadingHead, messagesLoadingOlder, teamName]);
+  const handleLoadOlderMessagesClick = useCallback(() => {
+    void loadOlderMessages();
+  }, [loadOlderMessages]);
+
+  const handleQueuedDiscarded = useCallback(
+    (memberName: string, result: DiscardQueuedUserMessagesResult) => {
+      // Only drop the pending entry when the member's queue is empty and this
+      // discard is what emptied it. A discard that removed nothing means the
+      // runtime took the message first, so the entry has to stay and become
+      // "delivered" on the next head refresh. A discard that removed rows while
+      // others were still queued has to keep it too: nothing recreates the
+      // entry - reconcilePendingRepliesByMember only ever removes, and the head
+      // refresh below reloads messages, not this map - so dropping it would
+      // hide the rows that survived until the user sends the member something
+      // new.
+      if (result.discarded > 0 && result.remainingQueued === 0) {
+        onPendingReplyChange((prev) => {
+          if (!(memberName in prev)) return prev;
+          const next = { ...prev };
+          delete next[memberName];
+          return next;
+        });
+      }
+      void refreshTeamMessagesHead(teamName);
+    },
+    [onPendingReplyChange, refreshTeamMessagesHead, teamName]
+  );
+
+  const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const floatingComposerMeasureRef = useRef<HTMLDivElement | null>(null);
+  const threadScrollRef = useRef<HTMLDivElement | null>(null);
+  const [threadScrollElement, setThreadScrollElement] = useState<HTMLDivElement | null>(null);
+  const listScrollRef = useRef<HTMLDivElement | null>(null);
+  const bottomSheetRef = useRef<SheetRef>(null);
+  const bottomSheetScrollRef = useRef<HTMLDivElement | null>(null);
+  const [bottomSheetScrollElement, setBottomSheetScrollElement] = useState<HTMLDivElement | null>(
+    null
+  );
+  const setThreadScrollNode = useCallback((node: HTMLDivElement | null) => {
+    threadScrollRef.current = node;
+    setThreadScrollElement(node);
+  }, []);
+  const setBottomSheetScrollNode = useCallback((node: HTMLDivElement | null) => {
+    bottomSheetScrollRef.current = node;
+    setBottomSheetScrollElement(node);
+  }, []);
+  // ActivityTimeline observes and virtualizes against the active scroll owner.
+  const activeScrollContainerRef =
+    position === 'inline'
+      ? (inlineScrollContainerRef ?? null)
+      : position === 'sidebar'
+        ? threadScrollRef
+        : bottomSheetScrollRef;
+  const activeScrollElement =
+    position === 'inline'
+      ? (inlineScrollContainerRef?.current ?? null)
+      : position === 'sidebar'
+        ? threadScrollElement
+        : bottomSheetScrollElement;
+
+  const activityTimelineViewport = useMemo<TimelineViewport | undefined>(() => {
+    if (!activeScrollContainerRef) return undefined;
+    return {
+      scrollElementRef: activeScrollContainerRef,
+      scrollElement: activeScrollElement,
+      observerRoot: activeScrollContainerRef,
+      scrollMargin: 0,
+      virtualizationEnabled: true,
+      virtualizationRowThreshold: position === 'sidebar' ? 48 : undefined,
+    };
+  }, [activeScrollContainerRef, activeScrollElement, position]);
+  const handleExpandContent = useCallback(() => {
+    // no-op: user is reading expanded content, not composing
+  }, []);
+
+  const sidebarStateKey = JSON.stringify([activeContextId, teamName]);
+  const currentSidebarKey = useRef(sidebarStateKey);
+  currentSidebarKey.current = sidebarStateKey;
+  const initialSidebarStateRef = useRef(getTeamMessagesSidebarUiState(sidebarStateKey));
+  const [messagesSearchQuery, setMessagesSearchQuery] = useState(
+    initialSidebarStateRef.current.messagesSearchQuery
+  );
+  const [messagesFilter, setMessagesFilter] = useState<MessagesFilterState>(
+    initialSidebarStateRef.current.messagesFilter
+  );
+  const [messagesFilterOpen, setMessagesFilterOpen] = useState(
+    initialSidebarStateRef.current.messagesFilterOpen
+  );
+  const [messagesCollapsed, setMessagesCollapsed] = useState(
+    initialSidebarStateRef.current.messagesCollapsed
+  );
+  const [messagesSearchBarVisible, setMessagesSearchBarVisible] = useState(
+    initialSidebarStateRef.current.messagesSearchBarVisible
+  );
+  const [expandedItemKey, setExpandedItemKey] = useState<string | null>(
+    initialSidebarStateRef.current.expandedItemKey
+  );
+  const [messagesScrollTop, setMessagesScrollTop] = useState(
+    initialSidebarStateRef.current.messagesScrollTop
+  );
+  const [listScrollTop, setListScrollTop] = useState(initialSidebarStateRef.current.listScrollTop);
+  const messagesScrollTopRef = useRef(initialSidebarStateRef.current.messagesScrollTop);
+  const messagesScrollPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const messagesScrollPersistTeamRef = useRef(sidebarStateKey);
+  const conversationHandleRef = useRef<ConversationViewportHandle | null>(null);
+  const [latestAvailable, setLatestAvailable] = useState(false);
+  const [unreadBelowCount, setUnreadBelowCount] = useState(0);
+  const handleFloatingFooterResize = useCallback(() => {
+    conversationHandleRef.current?.prepareLayoutChange();
+  }, []);
+  const isConversation = position === 'sidebar' || position === 'bottom-sheet';
+  const [bottomSheetSnapIndex, setBottomSheetSnapIndex] = useState(
+    initialSidebarStateRef.current.bottomSheetSnapIndex
+  );
+  const [sidebarThreadTarget, setSidebarThreadTarget] = useState<HTMLDivElement | null>(null);
+  const [sortChatsByActivity, setSortChatsByActivity] = useState(
+    () => initialSidebarStateRef.current.sortChatsByActivity === true
+  );
+  const [composerDestination, setComposerDestination] = useState<ComposerDraftDestination | null>(
+    null
+  );
+  const revisionNavigationGenerationRef = useRef(0);
+  const revisionPreparationRef = useRef<MessageRevisionTargetController | null>(null);
+  const handleRevisionPreparationChange = useCallback(
+    (controller: MessageRevisionTargetController | null) => {
+      revisionPreparationRef.current = controller;
+    },
+    []
+  );
+  const conversation = useTeamConversationSurface({
+    teamName,
+    contextId: activeContextId,
+    members,
+    position,
+    onScopeChange: () => setMessagesSearchQuery(''),
+  });
+  const { renderSurface, navigationSurface, scope, openChat, backToList, threadOpenedAt } =
+    conversation;
+  const groupConversation = useMessagesGroupConversation(
+    teamName,
+    activeContextId,
+    members,
+    scope,
+    {
+      textareaRef: composerTextareaRef,
+      autoFocusKey: threadOpenedAt,
+      suggestionPlacement: 'above',
+    }
+  );
+  const {
+    groupId,
+    group: activeGroup,
+    history: groupHistory,
+    archiveAction: groupArchiveAction,
+    renderComposer: renderGroupComposer,
+  } = groupConversation;
+  const effectiveMessages = groupId ? groupHistory.messages : messages;
+  const loadingOlderMessages = groupId ? groupHistory.loading : messagesLoadingOlder;
+  const hasMore = groupId ? groupHistory.hasMore : messagesHasMore;
+  const messagesError = groupId ? (groupHistory.error ?? undefined) : globalMessagesError;
+  const loadingInitialMessages =
+    effectiveMessages.length === 0 &&
+    (groupId ? groupHistory.loading : !messagesEntryPresent || messagesLoadingHead);
+  const loadConversationOlder = groupId ? groupHistory.loadOlder : loadOlderMessages;
+
+  const {
+    footerHeight: bottomSheetStickyTopHeight,
+    footerRef: bottomSheetStickyTopRef,
+    headerHeight: bottomSheetHeaderHeight,
+    headerRef: bottomSheetHeaderRef,
+    mountHeight: bottomSheetMountHeight,
+    searchRef: bottomSheetSearchRef,
+  } = useBottomSheetLayout({
+    active: position === 'bottom-sheet',
+    fallbackHeaderHeight: BOTTOM_SHEET_HEADER_HEIGHT,
+    mountPoint,
+    refreshKey: `${messagesSearchBarVisible}:${renderSurface}:${bottomSheetSnapIndex}`,
+  });
+  const scopeKey = conversationScopeKey(scope);
+  const expanded = position === 'sidebar' && expandedChatHost?.expanded === true;
+  const showChatList = navigationSurface === 'list' || expanded;
+  const conversationIdentity = createConversationIdentity({
+    teamName,
+    scopeKey,
+    threadOpenedAt,
+    searchQuery: messagesSearchQuery,
+    filter: messagesFilter,
+    timeWindow,
+  });
+  const handleOpenChat = useCallback(
+    (nextScope: typeof scope): void => {
+      if (
+        navigationSurface === 'thread' &&
+        conversationScopeKey(nextScope) === conversationScopeKey(scope)
+      ) {
+        return;
+      }
+      revisionNavigationGenerationRef.current += 1;
+      openChat(nextScope);
+    },
+    [navigationSurface, openChat, scope]
+  );
+
+  const handleExpandedChange = useCallback(
+    (nextExpanded: boolean): void => {
+      if (!expandedChatHost || nextExpanded === expandedChatHost.expanded) return;
+      if (nextExpanded && !expandedChatHost.available) return;
+      if (navigationSurface === 'thread') {
+        conversationHandleRef.current?.prepareLayoutChange();
+      }
+      if (nextExpanded && navigationSurface === 'list') {
+        revisionNavigationGenerationRef.current += 1;
+        openChat(TEAM_FEED_SCOPE);
+      }
+      expandedChatHost.onExpandedChange(nextExpanded);
+    },
+    [expandedChatHost, navigationSurface, openChat]
+  );
+
+  useLayoutEffect(() => {
+    if (expanded && navigationSurface === 'list') {
+      expandedChatHost?.onExpandedChange(false);
+    }
+  }, [expanded, expandedChatHost, navigationSurface]);
+
+  useEffect(() => {
+    initialSidebarStateRef.current = getTeamMessagesSidebarUiState(sidebarStateKey);
+    setMessagesSearchQuery(initialSidebarStateRef.current.messagesSearchQuery);
+    setMessagesFilter(initialSidebarStateRef.current.messagesFilter);
+    setMessagesFilterOpen(initialSidebarStateRef.current.messagesFilterOpen);
+    setMessagesCollapsed(initialSidebarStateRef.current.messagesCollapsed);
+    setMessagesSearchBarVisible(initialSidebarStateRef.current.messagesSearchBarVisible);
+    setExpandedItemKey(initialSidebarStateRef.current.expandedItemKey);
+    messagesScrollTopRef.current = initialSidebarStateRef.current.messagesScrollTop;
+    messagesScrollPersistTeamRef.current = sidebarStateKey;
+    setMessagesScrollTop(initialSidebarStateRef.current.messagesScrollTop);
+    setListScrollTop(initialSidebarStateRef.current.listScrollTop);
+    setBottomSheetSnapIndex(initialSidebarStateRef.current.bottomSheetSnapIndex);
+    setSortChatsByActivity(initialSidebarStateRef.current.sortChatsByActivity === true);
+  }, [sidebarStateKey]);
+
+  useEffect(() => {
+    const persistTeamName = sidebarStateKey;
+    return () => {
+      if (!messagesScrollPersistTimerRef.current) {
+        return;
+      }
+      clearTimeout(messagesScrollPersistTimerRef.current);
+      messagesScrollPersistTimerRef.current = null;
+      const pendingScrollTop = messagesScrollTopRef.current;
+      const persisted = getTeamMessagesSidebarUiState(persistTeamName);
+      if (Math.abs(persisted.messagesScrollTop - pendingScrollTop) >= 1) {
+        setTeamMessagesSidebarUiState(persistTeamName, {
+          ...persisted,
+          messagesScrollTop: pendingScrollTop,
+        });
+      }
+    };
+  }, [sidebarStateKey]);
+
+  const persistMessagesScrollTop = useCallback((nextScrollTop: number): void => {
+    messagesScrollTopRef.current = nextScrollTop;
+    const scheduledTeamName = messagesScrollPersistTeamRef.current;
+    if (messagesScrollPersistTimerRef.current) {
+      clearTimeout(messagesScrollPersistTimerRef.current);
+    }
+    messagesScrollPersistTimerRef.current = setTimeout(() => {
+      messagesScrollPersistTimerRef.current = null;
+      if (messagesScrollPersistTeamRef.current !== scheduledTeamName) {
+        return;
+      }
+      setMessagesScrollTop((current) =>
+        Math.abs(current - messagesScrollTopRef.current) < 1
+          ? current
+          : messagesScrollTopRef.current
+      );
+    }, MESSAGES_SCROLL_TOP_PERSIST_DELAY_MS);
+  }, []);
+
+  useEffect(() => {
+    if (isConversation && messagesScrollPersistTimerRef.current) {
+      clearTimeout(messagesScrollPersistTimerRef.current);
+      messagesScrollPersistTimerRef.current = null;
+    }
+  }, [isConversation]);
+
+  const handleListScroll = useCallback((event: React.UIEvent<HTMLDivElement>): void => {
+    setListScrollTop(event.currentTarget.scrollTop);
+  }, []);
+
+  useEffect(() => {
+    setTeamMessagesSidebarUiState(sidebarStateKey, {
+      messagesSearchQuery,
+      messagesFilter,
+      messagesFilterOpen,
+      messagesCollapsed,
+      messagesSearchBarVisible,
+      expandedItemKey,
+      messagesScrollTop,
+      listScrollTop,
+      bottomSheetSnapIndex,
+      conversationSurface: navigationSurface,
+      conversationScope: scope,
+      sortChatsByActivity,
+    });
+  }, [
+    sidebarStateKey,
+    messagesSearchQuery,
+    messagesFilter,
+    messagesFilterOpen,
+    messagesCollapsed,
+    messagesSearchBarVisible,
+    expandedItemKey,
+    messagesScrollTop,
+    listScrollTop,
+    bottomSheetSnapIndex,
+    navigationSurface,
+    scope,
+    sortChatsByActivity,
+  ]);
+
+  useEffect(() => {
+    const hasActiveParticipantFilter = messagesFilter.from.size > 0 || messagesFilter.to.size > 0;
+    if (
+      messagesSearchBarVisible ||
+      (messagesSearchQuery.trim().length === 0 && !hasActiveParticipantFilter)
+    ) {
+      return;
+    }
+    setMessagesSearchBarVisible(true);
+  }, [messagesFilter.from, messagesFilter.to, messagesSearchBarVisible, messagesSearchQuery]);
+
+  useEffect(() => {
+    if (!teamName || groupId) {
+      return;
+    }
+    if (effectiveMessages.length > 0) {
+      bootstrapHeadRefreshAttemptedForTeamRef.current = null;
+      return;
+    }
+    if (messagesLoadingHead || messagesLoadingOlder) {
+      return;
+    }
+    if (bootstrapHeadRefreshAttemptedForTeamRef.current === teamName) {
+      return;
+    }
+    bootstrapHeadRefreshAttemptedForTeamRef.current = teamName;
+    void refreshTeamMessagesHead(teamName).catch(() => undefined);
+  }, [
+    effectiveMessages.length,
+    groupId,
+    messagesLoadingHead,
+    messagesLoadingOlder,
+    refreshTeamMessagesHead,
+    teamName,
+  ]);
+
+  useLayoutEffect(() => {
+    if (position !== 'sidebar' || !showChatList) return;
+    const el = listScrollRef.current;
+    if (!el) return;
+    el.scrollTop = Math.min(listScrollTop, Math.max(0, el.scrollHeight - el.clientHeight));
+  }, [listScrollTop, position, showChatList]);
+  useResetScrollOnConversationChange({
+    enabled: !isConversation,
+    teamName,
+    scopeKey,
+    navigationSurface,
+    persistScrollTop: persistMessagesScrollTop,
+    scrollElementRef: activeScrollContainerRef ?? threadScrollRef,
+  });
+
+  const { leadNames, memberNames, normalizedMemberNames } = useMessagesMemberIdentities(members);
+  const { crossTeamReply, replyAddressRequest, handleReplyToTimelineMessage } =
+    useMessageReplyRouting({
+      contextId: activeContextId,
+      teamName,
+      scope,
+      members,
+      onReply: onReplyToMessage,
+      openTeamFeed: () => openChat(TEAM_FEED_SCOPE),
+      fetchTargets: () => useStore.getState().fetchCrossTeamTargets(),
+      focusComposer: () => composerTextareaRef.current?.focus(),
+    });
+  const canonicalMessages = useMemo(
+    () =>
+      canonicalTeamMessages(
+        [
+          ...new Map(
+            [...messages, ...groupHistory.knownMessages].map((message) => [
+              toMessageKey(message),
+              message,
+            ])
+          ).values(),
+        ],
+        leadNames
+      ),
+    [messages, groupHistory.knownMessages, leadNames]
+  );
+
+  const filteredMessages = useMemo(
+    () =>
+      visibleTeamMessages({
+        messages: effectiveMessages,
+        leadNames,
+        timeWindow,
+        filter: messagesFilter,
+        searchQuery: messagesSearchQuery,
+      }),
+    [effectiveMessages, leadNames, messagesFilter, messagesSearchQuery, timeWindow]
+  );
+  const threadMessages = useMemo(
+    () => filterScopedMessages(filteredMessages, scope, leadNames),
+    [filteredMessages, leadNames, scope]
+  );
+  const threadCanonicalMessages = useMemo(
+    () => filterScopedMessages(canonicalMessages, scope, leadNames),
+    [canonicalMessages, leadNames, scope]
+  );
+  const visibleConversationAddress = useMemo<ComposerDraftAddress>(
+    () => conversationDraftAddress(activeContextId, teamName, scope),
+    [activeContextId, scope, teamName]
+  );
+  const hasConversationSurface = useCrossTeamDraftAddressAvailability(
+    activeContextId,
+    normalizedMemberNames
+  );
+  const composerOutbox = useComposerOutboxItems({
+    contextId: activeContextId,
+    teamName,
+    viewAddress: outboxViewAddress(visibleConversationAddress, composerDestination),
+    destination: composerDestination,
+    canonicalMessages: threadCanonicalMessages,
+    canOpenAddress: hasConversationSurface,
+  });
+
+  const activityTimelineMessages = useMemo(
+    () =>
+      activityMessages({
+        messages: effectiveMessages,
+        leadNames,
+        timeWindow,
+        filter: messagesFilter,
+        searchQuery: messagesSearchQuery,
+        renderSurface,
+        scope,
+      }),
+    [
+      effectiveMessages,
+      leadNames,
+      messagesFilter,
+      messagesSearchQuery,
+      renderSurface,
+      scope,
+      timeWindow,
+    ]
+  );
+  const firstTimelineMessage = activityTimelineMessages[0];
+  const hasVisibleCurrentLeadThought =
+    firstTimelineMessage != null &&
+    isLeadThought(firstTimelineMessage) &&
+    (currentLeadSessionId ? firstTimelineMessage.leadSessionId === currentLeadSessionId : true);
+  const timelineLeadActivity = hasVisibleCurrentLeadThought ? leadActivity : undefined;
+  const timelineLeadContextUpdatedAt = hasVisibleCurrentLeadThought
+    ? leadContextUpdatedAt
+    : undefined;
+
+  const hasTrackedPendingReplies = useMemo(
+    () => Object.keys(pendingRepliesByMember).length > 0,
+    [pendingRepliesByMember]
+  );
+  const replyCandidateMessages = useMemo(
+    () =>
+      hasTrackedPendingReplies
+        ? replyCandidates(effectiveMessages)
+        : EMPTY_REPLY_CANDIDATE_MESSAGES,
+    [effectiveMessages, hasTrackedPendingReplies]
+  );
+  const sendMessageRuntimeReplyVisible = useMemo(
+    () => hasVisibleReplyForSendMessageDiagnostics(sendMessageDebugDetails, effectiveMessages),
+    [effectiveMessages, sendMessageDebugDetails]
+  );
+  const effectiveSendMessageWarning = sendMessageRuntimeReplyVisible ? null : sendMessageWarning;
+  const effectiveSendMessageDebugDetails = sendMessageRuntimeReplyVisible
+    ? null
+    : sendMessageDebugDetails;
+  const latestRevisableMessage = useMemo(
+    () => findLatestRevisableUserSentMessage(effectiveMessages, memberNames),
+    [effectiveMessages, memberNames]
+  );
+  const revisionMessageId = trimString(latestRevisableMessage?.messageId) || null;
+  const {
+    revisionRequest,
+    revisionPreparation,
+    handleReviseMessage,
+    cancelRevision: handleRevisionCancel,
+    completeRevision: handleRevisionComplete,
+    invalidatePendingRevisionIntent,
+  } = useMessageRevisionIntent({
+    teamName,
+    conversationKey: scopeKey,
+    directRecipient: scope.kind === 'direct' ? scope.participant : undefined,
+    revisionMessageId,
+    memberNames,
+    sendRevisionNotice: sendTeamMessage,
+    navigationGenerationRef: revisionNavigationGenerationRef,
+    prepareRevisionTarget: (recipient, signal) =>
+      revisionPreparationRef.current?.prepare(recipient, signal) ?? Promise.resolve(null),
+    isRevisionTargetCurrent: (target) => revisionPreparationRef.current?.isCurrent(target) === true,
+    focusComposer: () => composerTextareaRef.current?.focus(),
+  });
+
+  const handleBackToList = useCallback(() => {
+    revisionNavigationGenerationRef.current += 1;
+    handleRevisionCancel();
+    backToList();
+  }, [backToList, handleRevisionCancel]);
+
+  const timelineActions = useMessagesTimelineActions({
+    contextId: activeContextId,
+    teamName,
+    scopeKey,
+    scope,
+    members,
+    messages: activityTimelineMessages,
+    expandedItemKey,
+    setExpandedItemKey,
+    onCreateTask: onCreateTaskFromMessage,
+    onReply: handleReplyToTimelineMessage,
+    groupId,
+    groupQuote: groupConversation.quote,
+    onRevise: (message) => {
+      void handleReviseMessage(message);
+    },
+  });
+
+  const { readSet, markAllRead } = useMessagesReadState(
+    teamName,
+    activeContextId,
+    canonicalMessages,
+    groupHistory.messages,
+    messagesHasMore
+  );
+  const { expandedSet, toggle: toggleExpandOverride } = useTeamMessagesExpanded(teamName);
+  const pendingVisibleReadKeysRef = useRef<Set<string>>(new Set());
+  const visibleReadFlushFrameRef = useRef<number | null>(null);
+
+  const listUnread = useMemo(
+    () =>
+      scopedUnreadCounts(
+        canonicalMessages,
+        { kind: 'team-feed' },
+        readSet,
+        toMessageKey,
+        leadNames
+      ),
+    [canonicalMessages, leadNames, readSet]
+  );
+  const threadUnread = useMemo(
+    () => scopedUnreadCounts(canonicalMessages, scope, readSet, toMessageKey, leadNames),
+    [canonicalMessages, leadNames, readSet, scope]
+  );
+  const messagesUnreadCount = showChatList ? listUnread.unreadCount : threadUnread.unreadCount;
+  const messagesAttentionCount = showChatList
+    ? listUnread.attentionCount
+    : threadUnread.attentionCount;
+
+  const flushVisibleReadKeys = useCallback(() => {
+    visibleReadFlushFrameRef.current = null;
+    const keys = [...pendingVisibleReadKeysRef.current];
+    pendingVisibleReadKeysRef.current.clear();
+    markAllRead(keys);
+  }, [markAllRead]);
+
+  const handleMessageVisible = useCallback(
+    (message: InboxMessage) => {
+      pendingVisibleReadKeysRef.current.add(toMessageKey(message));
+      if (visibleReadFlushFrameRef.current !== null) return;
+      visibleReadFlushFrameRef.current = window.requestAnimationFrame(flushVisibleReadKeys);
+    },
+    [flushVisibleReadKeys]
+  );
+
+  useEffect(() => {
+    const pendingVisibleReadKeys = pendingVisibleReadKeysRef.current;
+    return () => {
+      if (visibleReadFlushFrameRef.current !== null) {
+        window.cancelAnimationFrame(visibleReadFlushFrameRef.current);
+        visibleReadFlushFrameRef.current = null;
+      }
+      pendingVisibleReadKeys.clear();
+    };
+  }, [activeContextId, teamName]);
+
+  const readState = useMemo(() => ({ readSet, getMessageKey: toMessageKey }), [readSet]);
+
+  const { teamNames, teamColorByName } = teamMentionMeta;
+  const workingDrafts = useComposerWorkingSummaries(activeContextId, teamName);
+  const localDraftsByScope = useMemo(
+    () => localDraftsByConversationScope(workingDrafts.summaries, activeContextId, teamName),
+    [workingDrafts.summaries, activeContextId, teamName]
+  );
+
+  const chatListItems = useTeamChatListItems({
+    members,
+    messages: canonicalMessages,
+    readSet,
+    teamFeedLabel: t('messages.chats.teamFeed'),
+    emptyPreview: t('messages.chats.emptyPreview'),
+    leadNames,
+    sortByActivity: sortChatsByActivity,
+    draftsByScope: localDraftsByScope,
+    enabled: showChatList,
+  });
+  useDirectThreadAutoOlder({
+    renderSurface,
+    scope,
+    threadOpenedAt,
+    scopedCount: threadMessages.length,
+    historyReloadRequired,
+    hasMore,
+    loadingOlder: loadingOlderMessages,
+    loadOlder: loadConversationOlder,
+  });
+  const { snapshot: unreadSnapshot, dismissUnreadKeys } = useThreadUnreadSnapshot({
+    renderSurface,
+    scope,
+    threadOpenedAt,
+    messages: threadCanonicalMessages,
+    readSet,
+  });
+  const { lockedRecipient, conversationTitle: defaultConversationTitle } = conversationChrome(
+    renderSurface,
+    scope,
+    members,
+    {
+      list: t('messages.title'),
+      teamFeed: t('messages.chats.teamFeed'),
+    }
+  );
+  const conversationTitle = groupId
+    ? (activeGroup?.name ?? t('messages.groups.unavailable'))
+    : defaultConversationTitle;
+
+  const handleMarkAllRead = useCallback(() => {
+    const keys = scopedUnreadKeys(threadCanonicalMessages, readSet, toMessageKey);
+    markAllRead(keys);
+    dismissUnreadKeys(keys);
+  }, [dismissUnreadKeys, markAllRead, readSet, threadCanonicalMessages]);
+
+  // Auto-clear pending replies when a member actually responds
+  useEffect(() => {
+    if (!hasTrackedPendingReplies) return;
+    const next = reconcilePendingRepliesByMember(pendingRepliesByMember, replyCandidateMessages);
+    if (next !== pendingRepliesByMember) onPendingReplyChange(() => next);
+  }, [
+    hasTrackedPendingReplies,
+    onPendingReplyChange,
+    pendingRepliesByMember,
+    replyCandidateMessages,
+  ]);
+
+  useEffect(() => {
+    if (!sendMessageRuntimeReplyVisible || !sendMessageDebugDetails?.messageId) return;
+    clearSendMessageRuntimeDiagnostics(sendMessageDebugDetails.messageId);
+  }, [
+    clearSendMessageRuntimeDiagnostics,
+    sendMessageDebugDetails?.messageId,
+    sendMessageRuntimeReplyVisible,
+  ]);
+
+  useOpenCodeDeliveryStatusRefresh(
+    teamName,
+    sendMessageDebugDetails,
+    sendMessageRuntimeReplyVisible,
+    refreshSendMessageRuntimeDeliveryStatus
+  );
+
+  const { handleSend, handleCrossTeamSend } = useMessagesPanelSend({
+    teamName,
+    sendTeamMessage,
+    sendCrossTeamMessage,
+    onPendingReplyChange,
+  });
+
+  const moveToInline = useCallback(() => {
+    expandedChatHost?.onExpandedChange(false);
+    onPositionChange('inline');
+  }, [expandedChatHost, onPositionChange]);
+
+  const moveToSidebar = useCallback(() => {
+    onPositionChange('sidebar');
+  }, [onPositionChange]);
+
+  const moveToBottomSheet = useCallback(() => {
+    expandedChatHost?.onExpandedChange(false);
+    setBottomSheetSnapIndex(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
+    onPositionChange('bottom-sheet');
+  }, [expandedChatHost, onPositionChange]);
+
+  const moveToFloatingComposer = useCallback(() => {
+    expandedChatHost?.onExpandedChange(false);
+    onPositionChange('floating-composer');
+  }, [expandedChatHost, onPositionChange]);
+
+  useLayoutEffect(() => {
+    if (position !== 'floating-composer' || !onFloatingComposerHeightChange) return undefined;
+
+    const node = floatingComposerMeasureRef.current;
+    if (!node) {
+      onFloatingComposerHeightChange(0);
+      return undefined;
+    }
+
+    const updateHeight = (): void => {
+      onFloatingComposerHeightChange(Math.ceil(node.getBoundingClientRect().height));
+    };
+
+    updateHeight();
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+      onFloatingComposerHeightChange(0);
+    };
+  }, [onFloatingComposerHeightChange, position]);
+
+  const snapBottomSheetTo = useCallback((snapIndex: number) => {
+    setBottomSheetSnapIndex(snapIndex);
+    bottomSheetRef.current?.snapTo(snapIndex);
+  }, []);
+
+  const toggleBottomSheetExpansion = useCallback(() => {
+    if (bottomSheetSnapIndex === BOTTOM_SHEET_COLLAPSED_SNAP_INDEX) {
+      snapBottomSheetTo(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
+      return;
+    }
+    snapBottomSheetTo(BOTTOM_SHEET_COLLAPSED_SNAP_INDEX);
+  }, [bottomSheetSnapIndex, snapBottomSheetTo]);
+
+  const {
+    contentHeight: bottomSheetContentHeight,
+    normalizedSnapIndex: normalizedBottomSheetSnapIndex,
+    snapPoints: bottomSheetSnapPoints,
+  } = useMemo(
+    () =>
+      calculateBottomSheetGeometry({
+        footerHeight: bottomSheetStickyTopHeight,
+        headerHeight: bottomSheetHeaderHeight,
+        mountHeight: bottomSheetMountHeight,
+        snapIndex: bottomSheetSnapIndex,
+      }),
+    [
+      bottomSheetHeaderHeight,
+      bottomSheetMountHeight,
+      bottomSheetSnapIndex,
+      bottomSheetStickyTopHeight,
+    ]
+  );
+
+  const {
+    renderDefaultComposerSection,
+    renderCompactComposerSection,
+    renderFloatingComposerSection,
+  } = useMessagesComposerSections({
+    groupId,
+    renderGroupComposer,
+    groupArchiveAction,
+    modeControls: {
+      label: t('messages.panelMode'),
+      sortChatsByActivity,
+      onSortChatsByActivityChange: setSortChatsByActivity,
+      onMoveToInline: moveToInline,
+      onMoveToBottomSheet: moveToBottomSheet,
+      onMoveToSidebar: moveToSidebar,
+      onMoveToFloatingComposer: moveToFloatingComposer,
+    },
+    teamName,
+    groupBroadcast: { group: groupConversation.catalog.defaultGroup },
+    members,
+    isTeamAlive,
+    sending: sendingMessage,
+    sendError: sendMessageError,
+    sendWarning: effectiveSendMessageWarning,
+    sendDebugDetails: effectiveSendMessageDebugDetails,
+    lastResult: lastSendMessageResult,
+    revisionRequest,
+    revisionPreparation,
+    revisableMessageId: revisionMessageId,
+    textareaRef: composerTextareaRef,
+    suggestionPlacement: isConversation ? ('above' as const) : undefined,
+    lockedRecipient,
+    autoFocusKey: threadOpenedAt,
+    draftAddressRequest: replyAddressRequest,
+    crossTeamReply,
+    workingDraftSummaries: workingDrafts.summaries,
+    onSend: handleSend,
+    onCrossTeamSend: handleCrossTeamSend,
+    onSubmitIntent: () => conversationHandleRef.current?.prepareSubmit(),
+    onDraftMutation: invalidatePendingRevisionIntent,
+    onRecoveryDestinationChange: setComposerDestination,
+    onRevisionPreparationChange: handleRevisionPreparationChange,
+    onRevisionCancel: handleRevisionCancel,
+    onRevisionComplete: handleRevisionComplete,
+  });
+
+  const renderStatusSection = (
+    position: 'inline' | 'sidebar',
+    placement?: 'composer'
+  ): React.JSX.Element | null =>
+    groupId ? null : (
+      <MessagesStatusSection
+        scope={renderSurface === 'thread' ? scope : TEAM_FEED_SCOPE}
+        members={members}
+        tasks={tasks}
+        messages={effectiveMessages}
+        isTeamAlive={isTeamAlive}
+        pendingRepliesByMember={pendingRepliesByMember}
+        teamName={teamName}
+        onQueuedDiscarded={handleQueuedDiscarded}
+        layout="flow"
+        position={position}
+        placement={placement}
+        onMemberClick={onMemberClick}
+        onTaskClick={onTaskClick}
+      />
+    );
+
+  const useWideChat = position === 'bottom-sheet' || (position === 'sidebar' && expanded);
+  const renderTimelineSection = (): React.JSX.Element => (
+    <ChatVisualizationPresentationProvider presentation={expanded ? 'inline' : 'card'}>
+      {composerOutbox.readError ? (
+        <p role="status" className="px-3 py-1 text-[10px] text-amber-400">
+          {t('messages.outbox.storageWarning')}
+        </p>
+      ) : null}
+      <MessageHistoryNotice error={messagesError} />
+      <MessagesTimelineSection
+        messages={activityTimelineMessages}
+        loading={loadingInitialMessages}
+        teamName={teamName}
+        members={members}
+        readState={readState}
+        allCollapsed={useWideChat ? false : messagesCollapsed}
+        expandOverrides={expandedSet}
+        onToggleExpandOverride={toggleExpandOverride}
+        currentLeadSessionId={currentLeadSessionId}
+        isTeamAlive={isTeamAlive}
+        leadActivity={timelineLeadActivity}
+        leadContextUpdatedAt={timelineLeadContextUpdatedAt}
+        teamNames={teamNames}
+        teamColorByName={teamColorByName}
+        onTeamClick={openTeamTab}
+        onMemberClick={onMemberClick}
+        onCreateTaskFromMessage={timelineActions.createTask}
+        onReplyToMessage={timelineActions.reply}
+        revisionMessageId={revisionMessageId}
+        onReviseMessage={timelineActions.revise}
+        onMessageVisible={handleMessageVisible}
+        presentation={isConversation ? 'conversation' : 'activity'}
+        appearance={useWideChat ? 'wide-chat' : 'compact'}
+        observationEnabled={!isConversation || isActive}
+        conversationIdentity={conversationIdentity}
+        conversationHandleRef={conversationHandleRef}
+        onLatestAvailable={setLatestAvailable}
+        onUnreadBelowChange={setUnreadBelowCount}
+        directParticipant={scope.kind === 'direct' ? scope.participant : undefined}
+        unreadSnapshot={unreadSnapshot}
+        emptyLabel={t('messages.chats.emptyThread')}
+        onRestartTeam={onRestartTeam}
+        onTaskIdClick={onTaskIdClick}
+        onExpandItem={timelineActions.expand}
+        onExpandContent={handleExpandContent}
+        viewport={activityTimelineViewport}
+        composerOutboxItems={composerOutbox.items}
+        onComposerOutboxCopy={composerOutbox.copy}
+        onComposerOutboxRestore={composerOutbox.restore}
+        onComposerOutboxDiscard={composerOutbox.discard}
+        hasMore={hasMore}
+        loadingOlderMessages={loadingOlderMessages}
+        onLoadOlderMessages={
+          groupId ? () => void groupHistory.loadOlder() : handleLoadOlderMessagesClick
+        }
+        expandedItem={timelineActions.expandedItem}
+        actionOwner={timelineActions.actionOwner}
+        expandedOwner={timelineActions.expandedOwner}
+        expandedItemKey={expandedItemKey}
+        onExpandDialogChange={timelineActions.closeExpand}
+      />
+    </ChatVisualizationPresentationProvider>
+  );
+  const searchControlProps = {
+    teamName,
+    members,
+    messages: effectiveMessages,
+    searchQuery: messagesSearchQuery,
+    onSearchQueryChange: setMessagesSearchQuery,
+    filter: messagesFilter,
+    filterOpen: messagesFilterOpen,
+    onFilterOpenChange: setMessagesFilterOpen,
+    onFilterApply: setMessagesFilter,
+    searchPlaceholder: t('messages.search.placeholder'),
+  };
+
+  const renderSearchAndFilterControls = (): React.JSX.Element => (
+    <MessagesSearchControls {...searchControlProps} />
+  );
+
+  const renderSearchAndFilterBar = (): React.JSX.Element => (
+    <MessagesSearchBar
+      {...searchControlProps}
+      collapsed={messagesCollapsed}
+      onToggleCollapsed={() => setMessagesCollapsed((value) => !value)}
+      expandLabel={t('messages.actions.expandAll')}
+      collapseLabel={t('messages.actions.collapseAll')}
+    />
+  );
+
+  const fullScreenControl = (
+    <FullScreenControl
+      label={t('messages.fullScreen.label')}
+      unavailableLabel={t('messages.fullScreen.teamOnly')}
+      available={expandedChatHost?.available === true}
+      expanded={expanded}
+      restoreFocusAfterChange={navigationSurface !== 'list'}
+      onExpandedChange={handleExpandedChange}
+    />
+  );
+  const wideThreadHeader = (
+    <WideThreadHeader
+      title={lockedRecipient ?? conversationTitle}
+      actions={groupArchiveAction}
+      participant={scope.kind === 'direct' ? scope.participant : undefined}
+      unreadCount={threadUnread.unreadCount}
+      attentionCount={threadUnread.attentionCount}
+      markAllReadLabel={t('messages.actions.markAllRead')}
+      actionsLabel={t('messages.actions.messageActions')}
+      collapsed={messagesCollapsed}
+      searchVisible={messagesSearchBarVisible}
+      onMarkAllRead={handleMarkAllRead}
+      onToggleCollapsed={() => setMessagesCollapsed((value) => !value)}
+      onToggleSearch={() => setMessagesSearchBarVisible((value) => !value)}
+    />
+  );
+
+  const renderSharedThreadView = (variant: 'sidebar' | 'wide'): React.JSX.Element => (
+    <MessagesThreadView
+      variant={variant}
+      floatingFooter={expanded}
+      onFloatingFooterResize={handleFloatingFooterResize}
+      header={variant === 'wide' && position !== 'bottom-sheet' ? wideThreadHeader : undefined}
+      headerFooter={groupConversation.boardAction}
+      search={messagesSearchBarVisible ? renderSearchAndFilterControls() : undefined}
+      composer={
+        variant === 'wide' ? renderCompactComposerSection() : renderDefaultComposerSection()
+      }
+      status={
+        expanded
+          ? null
+          : variant === 'wide'
+            ? renderStatusSection('inline')
+            : renderStatusSection('sidebar')
+      }
+      composerStatus={expanded ? renderStatusSection('sidebar', 'composer') : undefined}
+      timeline={renderTimelineSection()}
+      scrollRef={position === 'bottom-sheet' ? setBottomSheetScrollNode : setThreadScrollNode}
+      composerRef={position === 'bottom-sheet' ? bottomSheetStickyTopRef : undefined}
+      searchRef={bottomSheetSearchRef}
+      latestControl={
+        latestAvailable ? (
+          <LatestMessageControl
+            label={t('messages.actions.toLatest')}
+            unreadBelowCount={unreadBelowCount}
+            onReveal={() => conversationHandleRef.current?.revealLatest()}
+          />
+        ) : undefined
+      }
+    />
+  );
+
+  const renderChatList = (selected = false): React.JSX.Element => (
+    <MessagesConversationList
+      key={`${activeContextId}:${teamName}`}
+      items={chatListItems}
+      draftsByScope={localDraftsByScope}
+      conversation={groupConversation}
+      teamName={teamName}
+      members={members}
+      messages={canonicalMessages}
+      readSet={readSet}
+      selectedScope={selected ? scope : undefined}
+      isTeamAlive={isTeamAlive}
+      onOpen={handleOpenChat}
+    />
+  );
+
+  const renderMessagesContent = (): React.JSX.Element => (
+    <div className="pb-14">
+      {renderSurface === 'list' ? (
+        renderChatList()
+      ) : (
+        <>
+          {groupConversation.boardAction}
+          {renderDefaultComposerSection()}
+          {renderStatusSection('inline')}
+          {renderTimelineSection()}
+        </>
+      )}
+    </div>
+  );
+
+  // ---- Sidebar mode ----
+  if (position === 'sidebar') {
+    return (
+      <MessagesSidebarSurface
+        conversationHeader={
+          <ConversationHeader
+            actions={groupArchiveAction}
+            group={!!groupId}
+            title={showChatList ? t('messages.title') : (lockedRecipient ?? conversationTitle)}
+            unreadCount={messagesUnreadCount}
+            attentionCount={messagesAttentionCount}
+            onBack={!expanded && renderSurface === 'thread' ? handleBackToList : undefined}
+          />
+        }
+        showMarkAllRead={!showChatList && messagesUnreadCount > 0}
+        markAllReadLabel={t('messages.actions.markAllRead')}
+        onMarkAllRead={handleMarkAllRead}
+        fullScreenControl={fullScreenControl}
+        showThreadUtilities={!showChatList}
+        collapsed={messagesCollapsed}
+        searchVisible={messagesSearchBarVisible}
+        onToggleCollapsed={() => setMessagesCollapsed((value) => !value)}
+        onToggleSearch={() => setMessagesSearchBarVisible((value) => !value)}
+        showCollapse={!expanded}
+        panelActionsLabel={t('messages.actions.panelActions')}
+        messageActionsLabel={t('messages.actions.messageActions')}
+        layoutMenu={
+          <MessagesLayoutMenuItems
+            variant="sidebar"
+            showChatSort={showChatList}
+            sortChatsByActivity={sortChatsByActivity}
+            onSortChatsByActivityChange={setSortChatsByActivity}
+            onMoveToInline={moveToInline}
+            onMoveToBottomSheet={moveToBottomSheet}
+            onMoveToSidebar={moveToSidebar}
+            onMoveToFloatingComposer={moveToFloatingComposer}
+          />
+        }
+        showChatList={showChatList}
+        listScrollRef={listScrollRef}
+        onListScroll={handleListScroll}
+        chatList={renderChatList(expanded)}
+        threadSlotRef={setSidebarThreadTarget}
+        thread={
+          renderSurface === 'thread' ? (
+            <MessagesThreadPlacement
+              sidebarTarget={sidebarThreadTarget}
+              expandedHost={expandedChatHost}
+            >
+              {renderSharedThreadView(expanded ? 'wide' : 'sidebar')}
+            </MessagesThreadPlacement>
+          ) : null
+        }
+      />
+    );
+  }
+
+  if (position === 'floating-composer') {
+    return (
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40 px-4 pb-5 sm:px-6 sm:pb-6">
+        <div className="mx-auto flex w-full max-w-[500px] justify-center">
+          <div ref={floatingComposerMeasureRef} className="pointer-events-auto">
+            {renderFloatingComposerSection()}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (position === 'bottom-sheet') {
+    if (!mountPoint) {
+      return <div className="hidden" aria-hidden="true" />;
+    }
+
+    const isBottomSheetCollapsed =
+      normalizedBottomSheetSnapIndex === BOTTOM_SHEET_COLLAPSED_SNAP_INDEX;
+
+    return (
+      <Sheet
+        ref={bottomSheetRef}
+        isOpen
+        onClose={moveToInline}
+        mountPoint={mountPoint}
+        avoidKeyboard={false}
+        detent="full"
+        snapPoints={bottomSheetSnapPoints}
+        initialSnap={normalizedBottomSheetSnapIndex}
+        onSnap={setBottomSheetSnapIndex}
+        disableDismiss
+        disableScrollLocking
+        style={{ zIndex: 30 }}
+        className="!pointer-events-none !absolute !inset-0"
+        unstyled
+      >
+        <Sheet.Container
+          unstyled
+          className="flex max-h-full w-full flex-col overflow-hidden rounded-t-[20px] border border-[var(--color-border)] bg-[var(--color-surface-sidebar)] shadow-[0_-18px_48px_rgba(0,0,0,0.35)]"
+        >
+          <Sheet.Header
+            ref={bottomSheetHeaderRef}
+            unstyled
+            className="shrink-0 cursor-grab select-none border-b border-[var(--color-border)] bg-[var(--color-surface-sidebar)] active:cursor-grabbing"
+          >
+            <div className="relative h-10 px-3">
+              <div className="pointer-events-none absolute inset-x-0 top-1 flex justify-center">
+                <Sheet.DragIndicator
+                  className="!h-1 !w-9 cursor-grab !rounded-full active:cursor-grabbing"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--color-text-muted) 45%, transparent)',
+                  }}
+                />
+              </div>
+              <div className="flex h-full items-center gap-1.5">
+                <ConversationHeader
+                  actions={groupArchiveAction}
+                  group={!!groupId}
+                  title={lockedRecipient ?? conversationTitle}
+                  unreadCount={messagesUnreadCount}
+                  attentionCount={messagesAttentionCount}
+                  onBack={renderSurface === 'thread' ? handleBackToList : undefined}
+                />
+                <div
+                  className="ml-auto flex items-center gap-1"
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <DropdownMenu>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="size-[22px] p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] data-[state=open]:bg-[var(--color-surface-raised)] data-[state=open]:text-[var(--color-text-secondary)]"
+                            aria-label={t('messages.actions.bottomSheetActions')}
+                          >
+                            <MoreHorizontal size={14} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        {t('messages.actions.messageActions')}
+                      </TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="end" side="top" className="w-48">
+                      {renderSurface === 'thread' && messagesUnreadCount > 0 && (
+                        <DropdownMenuItem
+                          className="text-blue-400 focus:text-blue-300"
+                          onSelect={handleMarkAllRead}
+                        >
+                          <CheckCheck size={14} className="shrink-0" />
+                          <span>{t('messages.actions.markAllRead')}</span>
+                        </DropdownMenuItem>
+                      )}
+                      {renderSurface === 'thread' ? (
+                        <MessagesThreadUtilityMenuItems
+                          collapsed={messagesCollapsed}
+                          searchVisible={messagesSearchBarVisible}
+                          onToggleCollapsed={() => setMessagesCollapsed((value) => !value)}
+                          onToggleSearch={() => setMessagesSearchBarVisible((value) => !value)}
+                          showCollapse={false}
+                        />
+                      ) : null}
+                      <MessagesLayoutMenuItems
+                        variant="bottom-sheet"
+                        showChatSort={renderSurface === 'list'}
+                        sortChatsByActivity={sortChatsByActivity}
+                        onSortChatsByActivityChange={setSortChatsByActivity}
+                        onMoveToInline={moveToInline}
+                        onMoveToBottomSheet={moveToBottomSheet}
+                        onMoveToSidebar={moveToSidebar}
+                        onMoveToFloatingComposer={moveToFloatingComposer}
+                        isBottomSheetCollapsed={isBottomSheetCollapsed}
+                        onToggleBottomSheetExpansion={toggleBottomSheetExpansion}
+                      />
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            </div>
+          </Sheet.Header>
+          {!isBottomSheetCollapsed && (
+            <Sheet.Content
+              className="flex min-h-0 !shrink-0 !grow-0 overflow-hidden bg-[var(--color-surface-sidebar)]"
+              scrollClassName="flex h-full min-h-0 flex-col overflow-hidden"
+              style={{ height: bottomSheetContentHeight }}
+              disableDrag
+              disableScroll
+            >
+              {renderSurface === 'list' ? (
+                <div className="h-full overflow-y-auto pt-2">{renderChatList()}</div>
+              ) : (
+                renderSharedThreadView('wide')
+              )}
+            </Sheet.Content>
+          )}
+        </Sheet.Container>
+      </Sheet>
+    );
+  }
+
+  // ---- Inline mode (wrapped in CollapsibleTeamSection) ----
+  return (
+    <CollapsibleTeamSection
+      sectionId="messages"
+      variant={sectionVariant}
+      title={conversationTitle}
+      icon={
+        renderSurface === 'thread' ? (
+          <MessagesInlineBackButton label={t('messages.chats.back')} onBack={handleBackToList} />
+        ) : (
+          <MessageSquare size={14} />
+        )
+      }
+      badge={renderSurface === 'list' ? undefined : threadMessages.length}
+      secondaryBadge={
+        renderSurface === 'thread' && messagesUnreadCount > 0 ? messagesUnreadCount : undefined
+      }
+      afterBadge={
+        renderSurface === 'list' ? (
+          <ChatUnreadBadges
+            unreadCount={messagesUnreadCount}
+            attentionCount={messagesAttentionCount}
+          />
+        ) : messagesUnreadCount > 0 ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="pointer-events-auto flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-blue-400 transition-colors hover:bg-blue-500/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMarkAllRead();
+                }}
+              >
+                <CheckCheck size={12} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{t('messages.actions.markAllRead')}</TooltipContent>
+          </Tooltip>
+        ) : undefined
+      }
+      headerExtra={
+        <MessagesInlineLayoutActions
+          onMoveToBottomSheet={moveToBottomSheet}
+          onMoveToFloatingComposer={moveToFloatingComposer}
+          onMoveToSidebar={moveToSidebar}
+        >
+          {groupArchiveAction}
+        </MessagesInlineLayoutActions>
+      }
+      defaultOpen
+      action={
+        renderSurface === 'thread' ? (
+          <div className="flex items-center gap-2 px-2">{renderSearchAndFilterBar()}</div>
+        ) : undefined
+      }
+    >
+      {renderMessagesContent()}
+    </CollapsibleTeamSection>
+  );
+});

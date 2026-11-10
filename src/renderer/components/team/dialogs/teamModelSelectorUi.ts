@@ -1,0 +1,256 @@
+import { getTeamModelSourceBadgeLabel } from '@renderer/utils/teamModelCatalog';
+import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+import { compareVersions } from '@shared/utils/version';
+
+import type {
+  TeamModelRuntimeProviderStatus,
+  TeamRuntimeModelOption,
+} from '@renderer/utils/teamModelAvailability';
+
+const OPENCODE_SOURCES_WITHOUT_NEEDS_TEST_BADGE = new Set(['cursor-acp']);
+const OPENCODE_ROUTE_KINDS_WITHOUT_NEEDS_TEST_BADGE = new Set(['configured_local']);
+const OPENCODE_MODEL_GRID_MIN_CARD_WIDTH_PX = 140;
+const OPENCODE_MODEL_GRID_GAP_PX = 6;
+const OPENCODE_NO_REMOTE_CATALOG_AUTHORITY = '$no-remote-catalog';
+export const CODEX_ASTRA_MODEL_ID = 'gpt-6-astra';
+export const MINIMUM_CODEX_ASTRA_VERSION = '0.153.4';
+export const CODEX_ASTRA_UPDATE_REQUIRED_REASON = `Update Codex to ${MINIMUM_CODEX_ASTRA_VERSION} or newer to use GPT-6 Astra.`;
+
+export function getOpenCodeAuthFilteredModelOptions(input: {
+  options: readonly TeamRuntimeModelOption[];
+  providerStatus: TeamModelRuntimeProviderStatus | null | undefined;
+  catalogFresh: boolean;
+  selectedModel: string;
+  showAuthRequired: boolean;
+}): { options: TeamRuntimeModelOption[]; authRequiredCount: number } {
+  const { options, providerStatus, catalogFresh, selectedModel, showAuthRequired } = input;
+  if (
+    providerStatus?.providerId !== 'opencode' ||
+    !catalogFresh ||
+    providerStatus.modelCatalog?.providerId !== 'opencode'
+  ) {
+    return { options: [...options], authRequiredCount: 0 };
+  }
+
+  const gatedModels = new Map(
+    providerStatus.modelCatalog.models.flatMap((model) => {
+      if (model.metadata?.opencode?.accessKind !== 'not_authenticated') return [];
+      return [
+        [model.id, model.metadata.opencode.reason] as const,
+        [model.launchModel, model.metadata.opencode.reason] as const,
+      ];
+    })
+  );
+  let authRequiredCount = 0;
+  const visibleOptions = options.flatMap((option) => {
+    if (!option.value.trim() || !gatedModels.has(option.value)) return [option];
+    const authReason = gatedModels.get(option.value);
+    authRequiredCount += 1;
+    if (!showAuthRequired && option.value !== selectedModel) {
+      return [];
+    }
+    return [
+      {
+        ...option,
+        availabilityStatus: 'unavailable' as const,
+        availabilityReason: authReason || 'Connect this OpenCode provider to use this model.',
+      },
+    ];
+  });
+  return { options: visibleOptions, authRequiredCount };
+}
+
+interface CodexRuntimeUpdatePreviewStatus {
+  installed: boolean;
+  version?: string;
+  latestVersion: string | null;
+  updateAvailable: boolean;
+}
+
+export function addCodexAstraUpdatePreview(
+  providerId: string,
+  options: readonly TeamRuntimeModelOption[],
+  runtimeStatus: CodexRuntimeUpdatePreviewStatus | null | undefined
+): TeamRuntimeModelOption[] {
+  const currentVersion = runtimeStatus?.version?.trim();
+  if (
+    providerId !== 'codex' ||
+    !runtimeStatus?.installed ||
+    !runtimeStatus.updateAvailable ||
+    !runtimeStatus.latestVersion ||
+    !currentVersion ||
+    compareVersions(currentVersion, MINIMUM_CODEX_ASTRA_VERSION) >= 0 ||
+    compareVersions(runtimeStatus.latestVersion, MINIMUM_CODEX_ASTRA_VERSION) < 0
+  ) {
+    return [...options];
+  }
+
+  const existingAstraIndex = options.findIndex((option) => option.value === CODEX_ASTRA_MODEL_ID);
+  if (existingAstraIndex >= 0) {
+    return options.map((option, index) =>
+      index === existingAstraIndex
+        ? {
+            ...option,
+            availabilityStatus: 'unavailable',
+            availabilityReason: CODEX_ASTRA_UPDATE_REQUIRED_REASON,
+          }
+        : option
+    );
+  }
+
+  const preview: TeamRuntimeModelOption = {
+    value: CODEX_ASTRA_MODEL_ID,
+    label: 'GPT-6 Astra',
+    badgeLabel: '6-astra',
+    availabilityStatus: 'unavailable',
+    availabilityReason: CODEX_ASTRA_UPDATE_REQUIRED_REASON,
+  };
+  const defaultIndex = options.findIndex((option) => option.value === '');
+  const insertionIndex = defaultIndex < 0 ? 0 : defaultIndex + 1;
+  return [...options.slice(0, insertionIndex), preview, ...options.slice(insertionIndex)];
+}
+
+export function isCodexAstraUpdatePreview(option: TeamRuntimeModelOption): boolean {
+  return (
+    option.value === CODEX_ASTRA_MODEL_ID &&
+    option.availabilityReason === CODEX_ASTRA_UPDATE_REQUIRED_REASON
+  );
+}
+
+export interface OpenCodeSelectionScopeAssociation {
+  readonly value: string;
+  readonly scopeKey: string | null;
+}
+
+export function getOpenCodeSourceInfo(model: string): { id: string; label: string } | null {
+  const parsed = parseOpenCodeQualifiedModelRef(model);
+  if (!parsed) return null;
+  return {
+    id: parsed.sourceId,
+    label: getTeamModelSourceBadgeLabel('opencode', model) ?? parsed.sourceId,
+  };
+}
+
+export function deriveOpenCodeSelectionScopeAssociation(
+  committed: OpenCodeSelectionScopeAssociation,
+  value: string,
+  scopeKey: string | null
+): OpenCodeSelectionScopeAssociation {
+  return committed.value === value ? committed : { value, scopeKey };
+}
+
+export function getOpenCodeSelectionAuthorityScopeKey(
+  projectScopeKey: string,
+  sourceProviderId: string | null
+): string {
+  return JSON.stringify([
+    projectScopeKey.trim() || null,
+    sourceProviderId?.trim().toLowerCase() || OPENCODE_NO_REMOTE_CATALOG_AUTHORITY,
+  ]);
+}
+
+export function deriveOpenCodeSelectionAuthorityState(input: {
+  committed: OpenCodeSelectionScopeAssociation;
+  value: string;
+  scopeKey: string;
+  currentAuthorityConfirmsSelection: boolean;
+  localAuthorityLoading: boolean;
+}): {
+  current: OpenCodeSelectionScopeAssociation;
+  committed: OpenCodeSelectionScopeAssociation;
+  awaitingLocalAuthority: boolean;
+} {
+  const current = deriveOpenCodeSelectionScopeAssociation(
+    input.committed,
+    input.value,
+    input.scopeKey
+  );
+  return {
+    current,
+    committed:
+      input.currentAuthorityConfirmsSelection && current.scopeKey !== input.scopeKey
+        ? { value: input.value, scopeKey: input.scopeKey }
+        : current,
+    awaitingLocalAuthority: input.localAuthorityLoading && current.scopeKey !== input.scopeKey,
+  };
+}
+
+export function getOpenCodeModelGridColumnCount(width: number): number {
+  const safeWidth = Number.isFinite(width) ? Math.max(0, width) : 0;
+  if (safeWidth <= 0) return 1;
+  return Math.max(
+    1,
+    Math.floor(
+      (safeWidth + OPENCODE_MODEL_GRID_GAP_PX) /
+        (OPENCODE_MODEL_GRID_MIN_CARD_WIDTH_PX + OPENCODE_MODEL_GRID_GAP_PX)
+    )
+  );
+}
+
+export function resolveTeamModelSelectorValue(input: {
+  providerId: string;
+  value: string;
+  runtimeNormalizedValue: string;
+  preserveSelectedModel?: boolean;
+  isAppManagedLocalModel: boolean;
+  isInLocalOverlay: boolean;
+  isLocalLookupAuthoritative: boolean;
+  currentLocalAuthorityConfirmsSelection?: boolean;
+  shouldPreserveOpenCodeSelection?: boolean;
+}): string {
+  if (input.preserveSelectedModel && input.value.trim()) return input.value;
+  return input.providerId === 'opencode' &&
+    (input.shouldPreserveOpenCodeSelection !== false ||
+      input.currentLocalAuthorityConfirmsSelection === true) &&
+    (input.isAppManagedLocalModel ||
+      input.isInLocalOverlay ||
+      (!input.isLocalLookupAuthoritative && Boolean(parseOpenCodeQualifiedModelRef(input.value))))
+    ? input.value
+    : input.runtimeNormalizedValue;
+}
+
+export function shouldShowOpenCodeNeedsTestBadge(
+  proofState: string | null | undefined,
+  sourceId: string | null | undefined,
+  routeKind?: string | null,
+  model?: string | null
+): boolean {
+  return (
+    proofState === 'needs_probe' &&
+    model?.trim().toLowerCase() !== 'opencode/big-pickle' &&
+    !OPENCODE_SOURCES_WITHOUT_NEEDS_TEST_BADGE.has(sourceId?.trim().toLowerCase() ?? '') &&
+    !OPENCODE_ROUTE_KINDS_WITHOUT_NEEDS_TEST_BADGE.has(routeKind?.trim().toLowerCase() ?? '')
+  );
+}
+
+export function shouldElevateOpenCodeVirtualRow(
+  rowKind: 'heading' | 'models',
+  rowIndex: number,
+  activeStickyHeadingIndex: number | null
+): boolean {
+  return rowKind === 'heading' && rowIndex !== activeStickyHeadingIndex;
+}
+
+export function getActiveOpenCodeStickyHeadingIndex(
+  headingIndexes: readonly number[],
+  startIndex: number
+): number | null {
+  for (let index = headingIndexes.length - 1; index >= 0; index -= 1) {
+    const headingIndex = headingIndexes[index];
+    // When the heading itself is still the first visible row, rendering a
+    // sticky clone would paint the same label twice in exactly the same place.
+    // Promote it only after the original row has scrolled above the viewport.
+    if (headingIndex !== undefined && headingIndex < startIndex) {
+      return headingIndex;
+    }
+  }
+  return null;
+}
+
+export function shouldShowOpenCodeOverviewStatus(
+  providerId: string,
+  selectedSourceCount: number,
+  selectedRouteTagCount: number
+): boolean {
+  return providerId === 'opencode' && selectedSourceCount === 0 && selectedRouteTagCount === 0;
+}

@@ -1,0 +1,645 @@
+// @vitest-environment node
+import { execFile, execFileSync, spawn, spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
+import os from 'node:os';
+import path from 'node:path';
+
+import { describe, expect, it, vi } from 'vitest';
+
+interface SmokePackagedAppInternals {
+  getInternalStorageVerificationError(userDataDir: string, log: string): string | null;
+  terminateChild(
+    child: { pid?: number; exitCode: number | null; signalCode: string | null; kill: () => void },
+    closePromise: Promise<unknown>,
+    platform: string
+  ): Promise<void>;
+  waitForProcessClose(closePromise: Promise<unknown>, timeoutMs: number): Promise<boolean>;
+}
+
+interface SmokePackagedAppModule {
+  default?: { _internal?: SmokePackagedAppInternals };
+  _internal?: SmokePackagedAppInternals;
+}
+
+const requireFromTest: (id: string) => unknown = createRequire(import.meta.url);
+const smokePackagedApp = requireFromTest(
+  '../../../scripts/electron-builder/smokePackagedApp.cjs'
+) as SmokePackagedAppModule;
+const smokePackagedAppInternals = smokePackagedApp._internal ?? smokePackagedApp.default?._internal;
+if (!smokePackagedAppInternals) {
+  throw new Error('smokePackagedApp internals were not exported');
+}
+const { getInternalStorageVerificationError, terminateChild, waitForProcessClose } =
+  smokePackagedAppInternals;
+
+describe('smokePackagedApp internal storage verification', () => {
+  it('accepts an app.db file with the SQLite format header', () => {
+    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-storage-test-'));
+    try {
+      const storageDir = path.join(userDataDir, 'storage');
+      fs.mkdirSync(storageDir);
+      fs.writeFileSync(path.join(storageDir, 'app.db'), Buffer.from('SQLite format 3\0payload'));
+
+      expect(getInternalStorageVerificationError(userDataDir, 'renderer did-finish-load')).toBe(
+        null
+      );
+    } finally {
+      fs.rmSync(userDataDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a missing app.db file', () => {
+    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-storage-test-'));
+    try {
+      expect(getInternalStorageVerificationError(userDataDir, '')).toContain(
+        'SQLite database was not created'
+      );
+    } finally {
+      fs.rmSync(userDataDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a file without the SQLite format header', () => {
+    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-storage-test-'));
+    try {
+      const storageDir = path.join(userDataDir, 'storage');
+      fs.mkdirSync(storageDir);
+      fs.writeFileSync(path.join(storageDir, 'app.db'), 'not sqlite');
+
+      expect(getInternalStorageVerificationError(userDataDir, '')).toContain(
+        'invalid SQLite header'
+      );
+    } finally {
+      fs.rmSync(userDataDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects the internal-storage JSON fallback warning even with a valid database', () => {
+    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-storage-test-'));
+    try {
+      const storageDir = path.join(userDataDir, 'storage');
+      fs.mkdirSync(storageDir);
+      fs.writeFileSync(path.join(storageDir, 'app.db'), Buffer.from('SQLite format 3\0payload'));
+
+      expect(
+        getInternalStorageVerificationError(
+          userDataDir,
+          'internal-storage sqlite backend unavailable; falling back to JSON stores for this session'
+        )
+      ).toBe('Detected internal-storage SQLite fallback warning');
+    } finally {
+      fs.rmSync(userDataDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('smokePackagedApp shutdown handling', () => {
+  it('reports successful process closure before the timeout', async () => {
+    let resolveExit!: (value: unknown) => void;
+    const exitPromise = new Promise((resolve) => {
+      resolveExit = resolve;
+    });
+    const closed = waitForProcessClose(exitPromise, 1_000);
+    resolveExit({ code: 0, signal: null });
+
+    await expect(closed).resolves.toBe(true);
+  });
+
+  it('reports shutdown timeout instead of treating it as success', async () => {
+    vi.useFakeTimers();
+    try {
+      const exitPromise = new Promise(() => undefined);
+      const signal = vi.spyOn(process, 'kill').mockReturnValue(true);
+      const child = {
+        pid: 12345,
+        exitCode: 0,
+        signalCode: null,
+        kill: vi.fn(),
+      };
+
+      const termination = terminateChild(child, exitPromise, 'linux');
+      const rejection = expect(termination).rejects.toThrow('Timed out after 5000ms');
+      await vi.advanceTimersByTimeAsync(5_000);
+      await vi.advanceTimersByTimeAsync(5_000);
+
+      await rejection;
+      expect(signal).toHaveBeenCalledTimes(2);
+      expect(signal).toHaveBeenNthCalledWith(1, -12345, 'SIGTERM');
+      expect(signal).toHaveBeenNthCalledWith(2, -12345, 'SIGKILL');
+      expect(child.kill).not.toHaveBeenCalled();
+    } finally {
+      vi.restoreAllMocks();
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cleanup', () => {
+  const scriptPath = path.resolve(
+    import.meta.dirname,
+    '../../../scripts/electron-builder/smokePackagedApp.cjs'
+  );
+  const fixturePath = path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-process-TEST.cjs');
+
+  it.skipIf(process.platform !== 'linux').each(['preexisting', 'young', 'late', 'leader'])(
+    'preserves strict process birth and ownership boundaries for %s environments',
+    async (mode) => {
+      const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-baseline-TEST-'));
+      try {
+        const output = await new Promise<string>((resolve, reject) => {
+          execFile(
+            process.execPath,
+            [path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-baseline-TEST.ts'), mode],
+            {
+              cwd: sandbox,
+              env: { ...process.env, PACKAGED_SMOKE_FIXTURE_ROOT: sandbox },
+              encoding: 'utf8',
+              timeout: 12_000,
+            },
+            (error, stdout, stderr) => {
+              if (error) reject(new Error(`${error.message}\n${stdout}\n${stderr}`));
+              else resolve(stdout);
+            }
+          );
+        });
+        expect(JSON.parse(output)).toEqual({
+          mode,
+          nativeBirthBoundary: true,
+          predecessorUntouched: true,
+          lateOrYoungRejected: mode !== 'preexisting',
+          ownedDrained: mode === 'preexisting',
+        });
+        expect(
+          JSON.parse(fs.readFileSync(path.join(sandbox, 'baseline-cleanup.json'), 'utf8'))
+        ).toEqual({ remaining: [] });
+      } finally {
+        fs.rmSync(sandbox, { recursive: true, force: true });
+      }
+    },
+    14_000
+  );
+
+  it.skipIf(process.platform !== 'linux').each(['ownership-retiring', 'ownership-persistent', 'ownership-newly-observed'])(
+    'keeps same-birth unmarked process debt unsettled on %s',
+    async (mode) => {
+      const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-ownership-debt-TEST-'));
+      try {
+        const output = await new Promise<string>((resolve, reject) => {
+          execFile(process.execPath, [
+            path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-escaped-TEST.ts'), mode,
+          ], {
+            cwd: sandbox,
+            env: { ...process.env, PACKAGED_SMOKE_FIXTURE_ROOT: sandbox, PACKAGED_SMOKE_FIXTURE_MODE: mode },
+            encoding: 'utf8', timeout: 14_000,
+          }, (error, stdout, stderr) => {
+            if (error) reject(new Error(`${error.message}\n${stdout}\n${stderr}`));
+            else resolve(stdout);
+          });
+        });
+        expect(JSON.parse(output)).toEqual({ mode, samePidAndBirth: true,
+          settledOnlyAfterExit: mode === 'ownership-retiring',
+          persistentDebtRejected: mode !== 'ownership-retiring',
+          freshDebtRetained: mode === 'ownership-newly-observed',
+          unverifiedSignals: 0, sentinelUntouched: true });
+      } finally {
+        fs.rmSync(sandbox, { recursive: true, force: true });
+      }
+    }, 16_000
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'treats a same-uid non-dumpable process as unowned instead of failing the census',
+    async () => {
+      const child = spawn(
+        'python3',
+        ['-c', 'import ctypes,time;ctypes.CDLL(None).prctl(4,0);time.sleep(60)'],
+        { stdio: 'ignore' }
+      );
+      try {
+        let control = 'timeout';
+        const deadline = Date.now() + 5_000;
+        while (Date.now() < deadline) {
+          try {
+            fs.readFileSync(`/proc/${child.pid}/environ`);
+            control = 'readable';
+          } catch (error) {
+            control = (error as NodeJS.ErrnoException).code ?? 'unknown';
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        expect(control).toBe('EACCES');
+        const { createPackagedSmokeOwnership } = requireFromTest(
+          '../../../scripts/electron-builder/packagedSmokeOwnedProcesses.ts'
+        ) as {
+          createPackagedSmokeOwnership(options?: {
+            timeoutMs?: number;
+          }): { begin(): { pid: number }[] };
+        };
+        const ownership = createPackagedSmokeOwnership({ timeoutMs: 10_000 });
+        expect(ownership.begin().some((entry) => entry.pid === child.pid)).toBe(false);
+      } finally {
+        child.kill('SIGKILL');
+      }
+    },
+    15_000
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'keeps a marked non-dumpable descendant as unsettled debt until it exits',
+    async () => {
+      const { createPackagedSmokeOwnership } = requireFromTest(
+        '../../../scripts/electron-builder/packagedSmokeOwnedProcesses.ts'
+      ) as {
+        createPackagedSmokeOwnership(options?: {
+          timeoutMs?: number;
+        }): {
+          environment: Record<string, string>;
+          begin(pid?: number): { pid: number }[];
+          waitForExit(timeoutMs: number): Promise<boolean>;
+          finish(): unknown;
+        };
+      };
+      const ownership = createPackagedSmokeOwnership({ timeoutMs: 10_000 });
+      let grandchild: number | undefined;
+      const child = spawn(
+        process.execPath,
+        [
+          '-e',
+          "const {spawn}=require('node:child_process');" +
+            "const p=spawn('python3',['-c','import ctypes,time;ctypes.CDLL(None).prctl(4,0);time.sleep(60)'],{stdio:'ignore'});" +
+            'console.log(p.pid);setInterval(()=>{},1000);',
+        ],
+        { env: { ...process.env, ...ownership.environment }, stdio: ['ignore', 'pipe', 'ignore'] }
+      );
+      try {
+        grandchild = Number(
+          await new Promise<string>((resolve, reject) => {
+            child.once('error', reject);
+            child.stdout.once('data', (chunk: Buffer) => resolve(chunk.toString().trim()));
+          })
+        );
+        expect(Number.isInteger(grandchild)).toBe(true);
+        const deadline = Date.now() + 5_000;
+        let denied = false;
+        while (Date.now() < deadline) {
+          try {
+            fs.readFileSync(`/proc/${grandchild}/environ`);
+          } catch (error) {
+            denied = (error as NodeJS.ErrnoException).code === 'EACCES';
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        expect(denied).toBe(true);
+        ownership.begin(child.pid);
+        child.kill('SIGKILL');
+        await new Promise<void>((resolve) => child.once('close', () => resolve()));
+        expect(await ownership.waitForExit(1_500)).toBe(false);
+        expect(() => ownership.finish()).toThrow(/Unverifiable packaged smoke process/);
+      } finally {
+        if (grandchild !== undefined) {
+          try {
+            process.kill(grandchild, 'SIGKILL');
+          } catch {
+            // Already gone.
+          }
+        }
+        if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+      }
+    },
+    20_000
+  );
+
+  it.each(['app-success', 'app-failure', 'mcp-success', 'mcp-failure', 'owner-exited', 'delayed-kill'])(
+    'drains escaped owned processes and preserves an unrelated sentinel on %s',
+    async (mode) => {
+      const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-escaped-TEST-'));
+      try {
+        const output = await new Promise<string>((resolve, reject) => {
+          execFile(
+            process.execPath,
+            [path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-escaped-TEST.ts'), mode],
+            {
+              cwd: sandbox,
+              env: {
+                ...process.env,
+                PACKAGED_SMOKE_FIXTURE_ROOT: sandbox,
+                PACKAGED_SMOKE_FIXTURE_MODE: mode,
+              },
+              encoding: 'utf8',
+              timeout: 14_000,
+            },
+            (error, stdout, stderr) => {
+              if (error) reject(new Error(`${error.message}\n${stdout}\n${stderr}`));
+              else resolve(stdout);
+            }
+          );
+        });
+        expect(JSON.parse(output)).toMatchObject({
+          mode,
+          status: mode.endsWith('failure') ? 1 : 0,
+          escapedGone: true,
+          sentinelUntouched: true,
+          detached: true,
+          receiptPhases: ['begin', 'final'],
+          signals: ['SIGTERM', 'SIGKILL'],
+        });
+      } finally {
+        fs.rmSync(sandbox, { recursive: true, force: true });
+      }
+    },
+    16_000
+  );
+
+  it.each(['normal', 'retained-pipes', 'already-exited', 'silent-descendant', 'delayed-kill'])(
+    'closes %s fixture and lets its Node harness exit',
+    (mode) => {
+      const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-process-TEST-'));
+      try {
+        const output = execFileSync(process.execPath, [fixturePath, mode, scriptPath], {
+          cwd: sandbox,
+          encoding: 'utf8',
+          timeout: 8_000,
+        });
+        expect(output).toContain('cleanup verified: close=true');
+      } finally {
+        fs.rmSync(sandbox, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.concurrent.each([
+    'success',
+    'early-exit',
+    'timeout',
+    'failure-pattern',
+    'renderer-crash',
+    'failure-and-cleanup-error',
+  ])('cleans inherited pipes on the full harness %s path', async (mode) => {
+    const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-harness-TEST-'));
+    try {
+      const fixtureSource = `#!${process.execPath}
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const userDataDir = process.argv.find(arg => arg.startsWith('--user-data-dir=')).split('=')[1];
+          fs.mkdirSync(path.join(userDataDir, 'storage'));
+          fs.writeFileSync(path.join(userDataDir, 'storage/app.db'), Buffer.from('SQLite format 3\\0'));
+          const child = require('node:child_process').spawn(process.execPath, ['-e',
+            "process.on('SIGTERM', () => {}); setTimeout(() => process.exit(1), 6000); process.send('ready'); process.disconnect();"
+          ], { stdio: ['ignore', 'inherit', 'inherit', 'ipc'] });
+          child.once('message', () => {
+            if (${JSON.stringify(mode)} === 'early-exit') process.exit(2);
+            if (['success', 'renderer-crash'].includes(${JSON.stringify(mode)})) console.log('renderer did-finish-load');
+            if (${JSON.stringify(mode)} === 'renderer-crash') {
+              setTimeout(() => console.error('Renderer process gone: crashed'), 100);
+            }
+            if (${JSON.stringify(mode)}.startsWith('failure-')) console.log('MODULE_NOT_FOUND');
+          });
+          setTimeout(() => process.exit(1), 6000);
+        `;
+      fs.writeFileSync(path.join(sandbox, 'agent-teams-ai'), fixtureSource, { mode: 0o755 });
+      const nodeArgs = [scriptPath, sandbox, 'linux'];
+      if (mode === 'failure-and-cleanup-error') {
+        const hookPath = path.join(sandbox, 'cleanup-error-TEST.cjs');
+        fs.writeFileSync(
+          hookPath,
+          `
+            const kill = process.kill;
+            process.kill = function(pid, signal) {
+              const result = kill.call(this, pid, signal);
+              // Deliver the real exact-owned cleanup before injecting a diagnostic failure.
+              if (signal === 'SIGKILL') throw new Error('TEST cleanup failure');
+              return result;
+            };
+          `
+        );
+        nodeArgs.unshift('--require', hookPath);
+      }
+      const result = await new Promise<{
+        error: undefined;
+        status: number;
+        stdout: string;
+        stderr: string;
+      }>((resolve, reject) => {
+        execFile(
+          process.execPath,
+          nodeArgs,
+          {
+            cwd: sandbox,
+            encoding: 'utf8',
+            timeout: 8_000,
+            env: {
+              ...process.env,
+              TMPDIR: sandbox,
+              PACKAGED_SMOKE_TIMEOUT_MS: '2000',
+              PACKAGED_SMOKE_STABLE_MS: mode === 'renderer-crash' ? '400' : '0',
+              PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '2000',
+            },
+          },
+          (error, stdout, stderr) => {
+            if (!error) {
+              resolve({ error: undefined, status: 0, stdout, stderr });
+            } else if (typeof error.code === 'number' && !error.killed && !error.signal) {
+              // execFile reports normal nonzero exits as errors; preserve their exact status.
+              resolve({ error: undefined, status: error.code, stdout, stderr });
+            } else {
+              reject(new Error(error.message, { cause: error }));
+            }
+          }
+        );
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(mode === 'success' ? 0 : 1);
+      const failureReasons: Record<string, string> = {
+        'early-exit': 'Packaged app exited before startup completed: code=2',
+        timeout: 'Timed out after 2000ms waiting for packaged startup',
+        'failure-pattern': 'Detected startup failure pattern',
+        'renderer-crash': 'Detected startup failure pattern',
+        'failure-and-cleanup-error': 'Detected startup failure pattern',
+      };
+      if (mode !== 'success') expect(result.stderr).toContain(failureReasons[mode]);
+      if (mode === 'failure-and-cleanup-error') {
+        expect(result.stderr).toContain('Unable to signal owned packaged smoke process');
+        expect(result.stderr).not.toContain('TEST cleanup failure');
+        expect(result.stderr).toContain('Preserved TEST sandbox after cleanup failure');
+      } else {
+        expect(result.stdout, `Harness stderr:\n${result.stderr}`).toContain('stdio closed');
+      }
+      expect(result.stdout.includes('[smokePackagedApp] OK')).toBe(mode === 'success');
+      if (mode === 'success') {
+        expect(result.stdout.indexOf('stdio closed')).toBeLessThan(
+          result.stdout.indexOf('[smokePackagedApp] OK')
+        );
+      }
+    } finally {
+      fs.rmSync(sandbox, { recursive: true, force: true });
+    }
+  }, 8_000);
+
+  it('reports a failed executable spawn through cleanup without claiming success', () => {
+    const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-spawn-TEST-'));
+    try {
+      fs.writeFileSync(
+        path.join(sandbox, 'agent-teams-ai'),
+        '#!/nonexistent-packaged-smoke-TEST-interpreter\n',
+        { mode: 0o755 }
+      );
+      const result = spawnSync(process.execPath, [scriptPath, sandbox, 'linux'], {
+        cwd: sandbox,
+        encoding: 'utf8',
+        timeout: 8_000,
+        env: { ...process.env, PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '2000' },
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('ENOENT');
+      expect(result.stdout).toContain('stdio closed');
+      expect(result.stdout).not.toContain('[smokePackagedApp] OK');
+    } finally {
+      fs.rmSync(sandbox, { recursive: true, force: true });
+    }
+  });
+});
+
+describe.skipIf(process.platform === 'win32')('packaged smoke child isolation', () => {
+  // A poisoned inherited root or preload must fail before the fake package can
+  // produce the same readiness/storage or MCP handshake consumed in production.
+  it.each([
+    ['App', 'valid'],
+    ['App', 'invalid'],
+    ['Mcp', 'valid'],
+    ['Mcp', 'invalid'],
+  ])(
+    'isolates the %s child with a %s contract and removes its sandbox after close',
+    (kind, contract) => {
+      const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-isolation-TEST-'));
+      try {
+        const poison = path.join(sandbox, 'inherited-TEST');
+        fs.mkdirSync(poison);
+        const evidence = path.join(sandbox, 'evidence.json');
+        const preloadMarker = path.join(sandbox, 'preload-ran');
+        const preload = path.join(sandbox, 'preload-TEST.cjs');
+        fs.writeFileSync(
+          preload,
+          `require('node:fs').writeFileSync(${JSON.stringify(preloadMarker)}, 'ran');`
+        );
+        // Poison after the harness Node has started, so its own startup is safe.
+        const hook = path.join(sandbox, 'poison-env-TEST.cjs');
+        fs.writeFileSync(
+          hook,
+          `Object.assign(process.env, ${JSON.stringify({
+            HOME: poison,
+            USERPROFILE: poison,
+            CLAUDE_CONFIG_DIR: poison,
+            AGENT_TEAMS_ELECTRON_USER_DATA_DIR: poison,
+            AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: poison,
+            AGENT_TEAMS_MCP_CLAUDE_DIR: poison,
+            AGENT_TEAMS_MCP_TRANSPORT: 'httpStream',
+            ELECTRON_RUN_AS_NODE: '1',
+            NODE_OPTIONS: `--require ${preload}`,
+            Node_Options: `--require ${preload}`,
+            Electron_Run_As_Node: '1',
+            Agent_Teams_Electron_User_Data_Dir: poison,
+            Agent_Teams_Electron_Claude_Root: poison,
+            Agent_Teams_Mcp_Claude_Dir: poison,
+            Claude_Config_Dir: poison,
+          })});`
+        );
+        const resources = path.join(sandbox, 'resources', 'mcp-server');
+        fs.mkdirSync(resources, { recursive: true });
+        fs.writeFileSync(path.join(resources, 'index.js'), '// TEST server placeholder');
+        fs.writeFileSync(
+          path.join(sandbox, 'agent-teams-ai'),
+          `#!${process.execPath}
+        const fs = require('node:fs');
+        const path = require('node:path');
+        const assert = require('node:assert/strict');
+        const root = process.cwd();
+        try {
+          assert.notEqual(root, fs.realpathSync(${JSON.stringify(sandbox)}), 'cwd must be fresh TEST sandbox');
+          for (const key of ['HOME', 'USERPROFILE', 'CLAUDE_CONFIG_DIR',
+            'AGENT_TEAMS_ELECTRON_USER_DATA_DIR', 'AGENT_TEAMS_ELECTRON_CLAUDE_ROOT',
+            'AGENT_TEAMS_MCP_CLAUDE_DIR']) {
+            const resolved = fs.realpathSync(process.env[key]);
+            const relative = path.relative(root, resolved);
+            assert.ok(relative && !relative.startsWith('..') && !path.isAbsolute(relative), key + ' must stay inside sandbox');
+            assert.ok(fs.statSync(resolved).isDirectory(), key + ' directory must exist');
+          }
+          assert.ok(fs.existsSync(path.join(root, '.test-only')), 'explicit TEST marker');
+          assert.equal(process.env.HOME, process.env.USERPROFILE);
+          assert.equal(process.env.CLAUDE_CONFIG_DIR, process.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT);
+          assert.equal(process.env.CLAUDE_CONFIG_DIR, process.env.AGENT_TEAMS_MCP_CLAUDE_DIR);
+          assert.equal(process.env.PATH, ${JSON.stringify(process.env.PATH)}, 'preserve executable search path');
+          for (const key of ['HOME', 'USERPROFILE', 'CLAUDE_CONFIG_DIR',
+            'AGENT_TEAMS_ELECTRON_USER_DATA_DIR', 'AGENT_TEAMS_ELECTRON_CLAUDE_ROOT',
+            'AGENT_TEAMS_MCP_CLAUDE_DIR', 'AGENT_TEAMS_MCP_TRANSPORT']) {
+            assert.deepEqual(Object.keys(process.env).filter(name => name.toUpperCase() === key), [key], key + ' must have no case aliases');
+          }
+          assert.deepEqual(Object.keys(process.env).filter(key => key.toUpperCase() === 'NODE_OPTIONS'), [], 'no inherited preloads regardless of case');
+          assert.deepEqual(Object.keys(process.env).filter(key => key.toUpperCase() === 'ELECTRON_RUN_AS_NODE'), ${kind === 'Mcp' ? "['ELECTRON_RUN_AS_NODE']" : '[]'}, 'no inherited run-as-node aliases');
+          assert.equal(process.env.ELECTRON_RUN_AS_NODE, ${kind === 'Mcp' ? "'1'" : 'undefined'});
+          assert.equal(process.env.AGENT_TEAMS_MCP_TRANSPORT, 'stdio');
+          fs.writeFileSync(${JSON.stringify(evidence)}, JSON.stringify({ root }));
+        } catch (error) { console.error('TEST isolation failure: ' + error.message); process.exit(9); }
+        if (${JSON.stringify(kind)} === 'App') {
+          const userData = process.argv.find(arg => arg.startsWith('--user-data-dir=')).split('=')[1];
+          assert.equal(userData, process.env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR);
+          fs.mkdirSync(path.join(userData, 'storage'));
+          fs.writeFileSync(path.join(userData, 'storage/app.db'), Buffer.from(${contract === 'valid' ? "'SQLite format 3\\0'" : "'TEST invalid storage'"}));
+          console.log('renderer did-finish-load');
+          setInterval(() => {}, 1000);
+        } else {
+          // Keep the fake package alive until owned cleanup, as the App fixture does.
+          // Closing stdio must not race its natural exit against the ownership census.
+          setInterval(() => {}, 1000);
+          require('node:readline').createInterface({input: process.stdin}).on('line', line => {
+            const request = JSON.parse(line);
+            if (!request.id) return;
+            const result = request.method === 'initialize'
+              ? { protocolVersion: '2024-11-05' }
+              : { tools: ${contract === 'valid' ? "[{ name: 'TEST-only-tool' }]" : '[]'} };
+            console.log(JSON.stringify({ jsonrpc: '2.0', id: request.id, result }));
+          });
+        }
+      `,
+          { mode: 0o755 }
+        );
+        const env: NodeJS.ProcessEnv = {
+          ...process.env,
+          TMPDIR: sandbox,
+          PACKAGED_SMOKE_TIMEOUT_MS: '5000',
+          PACKAGED_SMOKE_STABLE_MS: '0',
+          PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '5000',
+        };
+        delete env.NODE_OPTIONS;
+        const script = path.resolve(
+          import.meta.dirname,
+          `../../../scripts/electron-builder/smokePackaged${kind}.cjs`
+        );
+        const result = spawnSync(process.execPath, ['--require', hook, script, sandbox, 'linux'], {
+          cwd: sandbox,
+          env,
+          encoding: 'utf8',
+          timeout: 20_000,
+        });
+        expect(result.error).toBeUndefined();
+        expect(result.stdout + result.stderr).not.toContain('TEST isolation failure');
+        expect(result.status, result.stdout + result.stderr).toBe(contract === 'valid' ? 0 : 1);
+        expect(result.stdout.includes(`[smokePackaged${kind}] OK`)).toBe(contract === 'valid');
+        if (contract === 'invalid') {
+          expect(result.stderr).toContain(
+            kind === 'App' ? 'invalid SQLite header' : 'tools/list failed'
+          );
+        }
+        const { root } = JSON.parse(fs.readFileSync(evidence, 'utf8')) as { root: string };
+        expect(fs.existsSync(root)).toBe(false);
+        expect(fs.existsSync(preloadMarker)).toBe(false);
+        expect(fs.readdirSync(poison)).toEqual([]);
+      } finally {
+        fs.rmSync(sandbox, { recursive: true, force: true });
+      }
+    }
+  );
+});

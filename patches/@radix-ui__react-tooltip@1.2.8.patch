@@ -1,0 +1,102 @@
+diff --git a/dist/index.js b/dist/index.js
+index 2d0d314a00082c458d2f551d715572cd1fa1b5c3..1954a52d7e25a2d733d57f2f32113af8a69a18bf 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -71,6 +71,29 @@ var PROVIDER_NAME = "TooltipProvider";
+ var DEFAULT_DELAY_DURATION = 700;
+ var TOOLTIP_OPEN = "tooltip.open";
+ var [TooltipProviderContextProvider, useTooltipProviderContext] = createTooltipContext(PROVIDER_NAME);
++function useGuardedNodeSetter(setNode) {
++  const nodeRef = React.useRef(null);
++  const nodeCleanupGenerationRef = React.useRef(0);
++  return React.useCallback((node) => {
++    const syncNode = (nextNode) => {
++      if (nodeRef.current === nextNode) return;
++      nodeRef.current = nextNode;
++      setNode(nextNode);
++    };
++    nodeCleanupGenerationRef.current += 1;
++    const cleanupGeneration = nodeCleanupGenerationRef.current;
++    if (node) {
++      syncNode(node);
++      return;
++    }
++    queueMicrotask(() => {
++      if (nodeCleanupGenerationRef.current !== cleanupGeneration) {
++        return;
++      }
++      syncNode(null);
++    });
++  }, [setNode]);
++}
+ var TooltipProvider = (props) => {
+   const {
+     __scopeTooltip,
+@@ -128,6 +151,7 @@ var Tooltip = (props) => {
+   const providerContext = useTooltipProviderContext(TOOLTIP_NAME, props.__scopeTooltip);
+   const popperScope = usePopperScope(__scopeTooltip);
+   const [trigger, setTrigger] = React.useState(null);
++  const setTriggerRef = useGuardedNodeSetter(setTrigger);
+   const contentId = (0, import_react_id.useId)();
+   const openTimerRef = React.useRef(0);
+   const disableHoverableContent = disableHoverableContentProp ?? providerContext.disableHoverableContent;
+@@ -185,7 +209,7 @@ var Tooltip = (props) => {
+       open,
+       stateAttribute,
+       trigger,
+-      onTriggerChange: setTrigger,
++      onTriggerChange: setTriggerRef,
+       onTriggerEnter: React.useCallback(() => {
+         if (providerContext.isOpenDelayedRef.current) handleDelayedOpen();
+         else handleOpen();
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 568389bf3ce8123fa6de6d298878b32d613e25cf..a809f654d8b2d84be0f5747384a180a0864c7d44 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -24,6 +24,29 @@ var PROVIDER_NAME = "TooltipProvider";
+ var DEFAULT_DELAY_DURATION = 700;
+ var TOOLTIP_OPEN = "tooltip.open";
+ var [TooltipProviderContextProvider, useTooltipProviderContext] = createTooltipContext(PROVIDER_NAME);
++function useGuardedNodeSetter(setNode) {
++  const nodeRef = React.useRef(null);
++  const nodeCleanupGenerationRef = React.useRef(0);
++  return React.useCallback((node) => {
++    const syncNode = (nextNode) => {
++      if (nodeRef.current === nextNode) return;
++      nodeRef.current = nextNode;
++      setNode(nextNode);
++    };
++    nodeCleanupGenerationRef.current += 1;
++    const cleanupGeneration = nodeCleanupGenerationRef.current;
++    if (node) {
++      syncNode(node);
++      return;
++    }
++    queueMicrotask(() => {
++      if (nodeCleanupGenerationRef.current !== cleanupGeneration) {
++        return;
++      }
++      syncNode(null);
++    });
++  }, [setNode]);
++}
+ var TooltipProvider = (props) => {
+   const {
+     __scopeTooltip,
+@@ -81,6 +104,7 @@ var Tooltip = (props) => {
+   const providerContext = useTooltipProviderContext(TOOLTIP_NAME, props.__scopeTooltip);
+   const popperScope = usePopperScope(__scopeTooltip);
+   const [trigger, setTrigger] = React.useState(null);
++  const setTriggerRef = useGuardedNodeSetter(setTrigger);
+   const contentId = useId();
+   const openTimerRef = React.useRef(0);
+   const disableHoverableContent = disableHoverableContentProp ?? providerContext.disableHoverableContent;
+@@ -138,7 +162,7 @@ var Tooltip = (props) => {
+       open,
+       stateAttribute,
+       trigger,
+-      onTriggerChange: setTrigger,
++      onTriggerChange: setTriggerRef,
+       onTriggerEnter: React.useCallback(() => {
+         if (providerContext.isOpenDelayedRef.current) handleDelayedOpen();
+         else handleOpen();

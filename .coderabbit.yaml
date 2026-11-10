@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+reviews:
+  auto_review:
+    enabled: true
+    drafts: true
+    base_branches:
+      - '.*'
+  auto_title_instructions: |
+    Follow Conventional Commits format: '<type>: <description>'
+    Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+    Keep description under 72 characters
+    Use imperative mood: "add" not "added", "fix" not "fixed"
+    Be concise but descriptive
+    Examples:
+      - "feat: add team kanban board with drag-and-drop"
+      - "fix: resolve CI lint errors in team services"
+      - "refactor: extract tooltip into separate component"

@@ -1,0 +1,1585 @@
+/* eslint-disable @typescript-eslint/naming-convention -- vi.mock component exports must stay PascalCase. */
+import React, { act } from 'react';
+import { createPortal } from 'react-dom';
+import { createRoot } from 'react-dom/client';
+
+import { createEncodedTaskReference } from '@renderer/utils/taskReferenceUtils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { MentionSuggestion } from '@renderer/types/mention';
+import type {
+  LeadActivityState,
+  ResolvedTeamMember,
+  TeamProvisioningProgress,
+} from '@shared/types';
+
+const draftHarness = vi.hoisted(() => {
+  const initialState = {
+    text: 'hello teammate',
+    chips: [] as unknown[],
+    attachments: [] as unknown[],
+    actionMode: 'do',
+    isSaved: true,
+    isLoaded: true,
+    editorContext: { kind: 'plain' } as
+      | { kind: 'plain' }
+      | {
+          kind: 'revision';
+          originalMessageId: string;
+          recipient: string;
+          requestId: string;
+        },
+    localEditCounter: 0,
+  };
+  const state = { ...initialState };
+  const pending = {
+    prepareGate: null as Promise<void> | null,
+    contextGate: null as Promise<void> | null,
+  };
+  const methods = {
+    addChip: vi.fn(),
+    addFiles: vi.fn().mockResolvedValue(undefined),
+    clearAttachmentError: vi.fn(),
+    clearAttachments: vi.fn(),
+    clearDraft: vi.fn(async () => {
+      state.text = '';
+      state.chips = [];
+      state.attachments = [];
+    }),
+    clearRevision: vi.fn(() => {
+      state.editorContext = { kind: 'plain' };
+    }),
+    handleDrop: vi.fn(),
+    handlePaste: vi.fn(),
+    beginAttempt: vi.fn(),
+    removeAttachment: vi.fn(),
+    removeChip: vi.fn(),
+    setRevision: vi.fn(
+      (context: typeof state.editorContext, content: { text: string; actionMode: string }) => {
+        if (state.text.length > 0) return false;
+        state.editorContext = context;
+        state.text = content.text;
+        state.actionMode = content.actionMode;
+        return true;
+      }
+    ),
+    setActionMode: vi.fn((mode: string) => {
+      state.actionMode = mode;
+    }),
+    setText: vi.fn((text: string) => {
+      state.text = text;
+      state.localEditCounter += 1;
+    }),
+    snapshot: vi.fn(() => ({
+      text: state.text,
+      chips: state.chips,
+      attachments: state.attachments,
+      actionMode: state.actionMode,
+    })),
+    stashWorking: vi.fn(),
+    restoreRecovery: vi.fn(),
+    moveWorkingAsNew: vi.fn(),
+    adoptWorking: vi.fn(),
+    flush: vi.fn().mockResolvedValue(undefined),
+  };
+
+  return {
+    methods,
+    reset: () => {
+      Object.assign(state, initialState);
+      pending.prepareGate = null;
+      pending.contextGate = null;
+      for (const method of Object.values(methods)) {
+        method.mockClear();
+      }
+    },
+    state,
+    pending,
+  };
+});
+
+const provisioningHarness = vi.hoisted(() => {
+  const state = {
+    active: false,
+    progress: null as TeamProvisioningProgress | null,
+    leadActivity: undefined as LeadActivityState | undefined,
+    currentRunId: undefined as string | undefined,
+  };
+  return {
+    reset: () => {
+      state.active = false;
+      state.progress = null;
+      state.leadActivity = undefined;
+      state.currentRunId = undefined;
+    },
+    state,
+  };
+});
+
+interface SuggestionHookOptions {
+  enabled?: boolean;
+}
+
+const suggestionHarness = vi.hoisted(() => {
+  const state = {
+    taskOptions: [] as SuggestionHookOptions[],
+    teamOptions: [] as SuggestionHookOptions[],
+    currentTaskSuggestions: [] as MentionSuggestion[],
+  };
+  return {
+    reset: () => {
+      state.taskOptions = [];
+      state.teamOptions = [];
+      state.currentTaskSuggestions = [];
+    },
+    state,
+  };
+});
+
+const storeHarness = vi.hoisted(() => {
+  const state = {
+    activeContextId: 'local',
+    isContextSwitching: false,
+    crossTeamTargets: [] as {
+      teamName: string;
+      displayName: string;
+      description?: string;
+      color?: string;
+      leadName?: string;
+      leadColor?: string;
+      members?: { name: string; role?: string; color?: string }[];
+      isOnline?: boolean;
+    }[],
+  };
+  const methods = {
+    // Returns a resolved Promise<boolean> to match the store contract: the composer
+    // chains `.then()` on this to clear its dedup ref and retry on failure.
+    fetchCrossTeamTargets: vi.fn().mockResolvedValue(true),
+    fetchSkillsCatalog: vi.fn(),
+  };
+  return {
+    methods,
+    reset: () => {
+      state.crossTeamTargets = [];
+      state.activeContextId = 'local';
+      state.isContextSwitching = false;
+      methods.fetchCrossTeamTargets.mockClear();
+      methods.fetchSkillsCatalog.mockClear();
+    },
+    state,
+  };
+});
+
+vi.mock('@renderer/api', () => ({
+  api: {
+    teams: {
+      aliveList: vi.fn(() => new Promise<string[]>(() => undefined)),
+    },
+  },
+}));
+
+vi.mock('@renderer/components/team/attachments/AttachmentPreviewList', () => ({
+  AttachmentPreviewList: () => null,
+}));
+
+vi.mock('@renderer/components/team/attachments/DropZoneOverlay', () => ({
+  DropZoneOverlay: () => null,
+}));
+
+vi.mock('@renderer/components/team/MemberBadge', () => ({
+  MemberBadge: ({ name }: { name: string }) => React.createElement('span', null, name),
+}));
+
+vi.mock('@renderer/components/team/messages/ActionModeSelector', () => ({
+  ActionModeSelector: ({ disabled }: { disabled?: boolean }) =>
+    React.createElement('button', { disabled, type: 'button' }, 'Do'),
+}));
+
+vi.mock('@renderer/components/team/messages/OpenCodeDeliveryWarning', () => ({
+  OpenCodeDeliveryWarning: () => null,
+}));
+
+vi.mock('@renderer/components/ui/MentionableTextarea', () => {
+  const MockMentionableTextarea = React.forwardRef<
+    HTMLTextAreaElement,
+    {
+      value: string;
+      placeholder?: string;
+      disabled?: boolean;
+      readOnly?: boolean;
+      onModEnter?: () => void;
+      onValueChange?: (value: string) => void;
+      className?: string;
+      surfaceClassName?: string;
+      footerClassName?: string;
+      cornerAction?: React.ReactNode;
+      cornerActionLeft?: React.ReactNode;
+      footerRight?: React.ReactNode;
+      showHint?: boolean;
+      onBlur?: React.FocusEventHandler<HTMLTextAreaElement>;
+      onFocus?: React.FocusEventHandler<HTMLTextAreaElement>;
+    }
+  >(
+    (
+      {
+        value,
+        placeholder,
+        disabled,
+        readOnly = true,
+        onModEnter,
+        onValueChange,
+        className,
+        surfaceClassName,
+        footerClassName,
+        cornerAction,
+        cornerActionLeft,
+        footerRight,
+        showHint,
+        onBlur,
+        onFocus,
+      },
+      ref
+    ) =>
+      React.createElement(
+        'div',
+        null,
+        React.createElement(
+          'div',
+          { className: surfaceClassName },
+          React.createElement('textarea', {
+            'aria-label': 'Message',
+            className,
+            disabled,
+            onBlur,
+            onFocus,
+            readOnly,
+            onInput: (event: React.FormEvent<HTMLTextAreaElement>) =>
+              onValueChange?.(event.currentTarget.value),
+            onKeyDown: (event: React.KeyboardEvent) => {
+              if (event.key === 'Enter') onModEnter?.();
+            },
+            ref,
+            value,
+            placeholder,
+          }),
+          React.createElement('div', null, cornerActionLeft),
+          React.createElement('div', null, cornerAction)
+        ),
+        React.createElement(
+          'div',
+          { className: footerClassName },
+          showHint
+            ? React.createElement('span', { 'data-composer-focus-hint': true }, 'hint')
+            : null,
+          footerRight
+        )
+      )
+  );
+  MockMentionableTextarea.displayName = 'MockMentionableTextarea';
+  return { MentionableTextarea: MockMentionableTextarea };
+});
+
+vi.mock('@renderer/components/ui/popover', () => {
+  const PopoverContext = React.createContext<{
+    onOpenChange?: (open: boolean) => void;
+    open?: boolean;
+  }>({});
+  return {
+    Popover: ({
+      children,
+      onOpenChange,
+      open,
+    }: {
+      children: React.ReactNode;
+      onOpenChange?: (open: boolean) => void;
+      open?: boolean;
+    }) => React.createElement(PopoverContext.Provider, { value: { onOpenChange, open } }, children),
+    PopoverContent: ({ children }: { children: React.ReactNode }) =>
+      React.createElement('div', null, children),
+    PopoverTrigger: ({ children }: { children: React.ReactElement<{ onClick?: () => void }> }) => {
+      const context = React.useContext(PopoverContext);
+      return React.cloneElement(children, {
+        onClick: () => {
+          children.props.onClick?.();
+          context.onOpenChange?.(!context.open);
+        },
+      });
+    },
+  };
+});
+
+vi.mock('@renderer/components/ui/tooltip', () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  TooltipContent: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', null, children),
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+}));
+
+/* eslint-enable @typescript-eslint/naming-convention -- End PascalCase vi.mock component exports. */
+
+vi.mock('@renderer/hooks/useComposerDraft', () => ({
+  useComposerDraft: (address: {
+    contextId: string;
+    teamName: string;
+    target: { kind: string };
+  }) => ({
+    text: draftHarness.state.text,
+    setText: draftHarness.methods.setText,
+    chips: draftHarness.state.chips,
+    addChip: draftHarness.methods.addChip,
+    removeChip: draftHarness.methods.removeChip,
+    attachments: draftHarness.state.attachments,
+    attachmentError: null,
+    canAddMore: true,
+    addFiles: draftHarness.methods.addFiles,
+    removeAttachment: draftHarness.methods.removeAttachment,
+    clearAttachments: draftHarness.methods.clearAttachments,
+    clearAttachmentError: draftHarness.methods.clearAttachmentError,
+    handlePaste: draftHarness.methods.handlePaste,
+    handleDrop: draftHarness.methods.handleDrop,
+    actionMode: draftHarness.state.actionMode,
+    setActionMode: draftHarness.methods.setActionMode,
+    editorContext: draftHarness.state.editorContext,
+    revisionContext:
+      draftHarness.state.editorContext.kind === 'revision'
+        ? draftHarness.state.editorContext
+        : null,
+    setRevision: draftHarness.methods.setRevision,
+    clearRevision: draftHarness.methods.clearRevision,
+    isSaved: draftHarness.state.isSaved,
+    isLoaded: draftHarness.state.isLoaded,
+    isRestoring: false,
+    persistenceStatus: 'durable',
+    readError: null,
+    address,
+    addressKey: JSON.stringify(address),
+    renderedAddressKey: JSON.stringify(address),
+    workingRevision: 'revision-1',
+    localEditCounter: draftHarness.state.localEditCounter,
+    loadGeneration: 1,
+    canSubmit: draftHarness.state.isLoaded,
+    snapshot: draftHarness.methods.snapshot,
+    clearDraft: draftHarness.methods.clearDraft,
+    flush: draftHarness.methods.flush,
+    beginAttempt: async (attemptId: string, prepareRequest: unknown) => {
+      if (draftHarness.pending.prepareGate) await draftHarness.pending.prepareGate;
+      const snapshot = {
+        content: draftHarness.methods.snapshot(),
+        editorContext: draftHarness.state.editorContext,
+      };
+      const preparedRequest =
+        typeof prepareRequest === 'function'
+          ? (prepareRequest as (value: typeof snapshot) => unknown)(snapshot)
+          : prepareRequest;
+      if (!preparedRequest) return null;
+      draftHarness.methods.beginAttempt(attemptId, preparedRequest);
+      return {
+        result: {
+          kind: 'prepared',
+          workingCleared: true,
+          currentWorkingRevision: 'attempt-revision',
+          status: 'durable',
+        },
+        address,
+        attempt: {
+          attemptId,
+          snapshot,
+          preparedRequest,
+          createdAt: 1,
+        },
+        localEditCounter: draftHarness.state.localEditCounter,
+      };
+    },
+    stashWorking: draftHarness.methods.stashWorking,
+    restoreRecovery: draftHarness.methods.restoreRecovery,
+    moveWorkingAsNew: draftHarness.methods.moveWorkingAsNew,
+    adoptWorking: draftHarness.methods.adoptWorking,
+  }),
+}));
+
+vi.mock('@renderer/components/team/messages/composerSubmission', () => ({
+  runComposerSubmission: vi.fn(
+    async ({
+      prepare,
+      isContextCurrent,
+      transport,
+    }: {
+      prepare: () => Promise<unknown>;
+      isContextCurrent: (prepared: unknown) => boolean;
+      transport: (prepared: unknown) => Promise<{
+        deliveredToInbox?: boolean;
+        deliveredViaStdin?: boolean;
+        messageId?: string;
+      }>;
+    }) => {
+      const prepared = await prepare();
+      if (draftHarness.pending.contextGate) await draftHarness.pending.contextGate;
+      if (!prepared || !isContextCurrent(prepared)) return { kind: 'blocked' };
+      try {
+        const result = await transport(prepared);
+        return {
+          kind:
+            result?.deliveredToInbox === true || result?.deliveredViaStdin === true
+              ? 'accepted'
+              : 'unconfirmed',
+          messageId: result?.messageId,
+        };
+      } catch (error) {
+        return {
+          kind: 'unconfirmed',
+          detail: error instanceof Error ? error.message : 'Transport failed',
+        };
+      }
+    }
+  ),
+}));
+
+vi.mock('@renderer/hooks/useTaskSuggestions', () => ({
+  getTaskSuggestionsForTeamNow: () => suggestionHarness.state.currentTaskSuggestions,
+  useTaskSuggestions: (_teamName: string | null, options: SuggestionHookOptions = {}) => {
+    suggestionHarness.state.taskOptions.push(options);
+    return { suggestions: [] };
+  },
+}));
+
+vi.mock('@renderer/hooks/useTeamSuggestions', () => ({
+  useTeamSuggestions: (_teamName: string | null, options: SuggestionHookOptions = {}) => {
+    suggestionHarness.state.teamOptions.push(options);
+    return { suggestions: [] };
+  },
+}));
+
+vi.mock('@renderer/store', () => ({
+  useStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({
+        activeContextId: storeHarness.state.activeContextId,
+        isContextSwitching: storeHarness.state.isContextSwitching,
+        crossTeamTargets: storeHarness.state.crossTeamTargets,
+        fetchCrossTeamTargets: storeHarness.methods.fetchCrossTeamTargets,
+        fetchSkillsCatalog: storeHarness.methods.fetchSkillsCatalog,
+        selectedTeamData: null,
+        selectedTeamName: null,
+        skillsProjectCatalogByProjectPath: {},
+        skillsUserCatalog: [],
+        leadActivityByTeam: { 'team-alpha': provisioningHarness.state.leadActivity },
+        currentRuntimeRunIdByTeam: { 'team-alpha': provisioningHarness.state.currentRunId },
+      }),
+    {
+      getState: () => ({
+        activeContextId: storeHarness.state.activeContextId,
+        isContextSwitching: storeHarness.state.isContextSwitching,
+      }),
+    }
+  ),
+}));
+
+vi.mock('@renderer/store/slices/teamSlice', () => ({
+  isTeamProvisioningActive: () => provisioningHarness.state.active,
+  getCurrentProvisioningProgressForTeam: () => provisioningHarness.state.progress,
+}));
+
+import { type MemberMessageComposerProps, MessageComposer } from './MessageComposer';
+import { acquireRevisionOperation, releaseRevisionOperation } from './revisionOperationLease';
+
+const members: ResolvedTeamMember[] = [
+  {
+    agentType: 'developer',
+    currentTaskId: null,
+    lastActiveAt: null,
+    messageCount: 0,
+    name: 'alice',
+    role: 'Developer',
+    status: 'idle',
+    taskCount: 0,
+  },
+  {
+    agentType: 'developer',
+    currentTaskId: null,
+    lastActiveAt: null,
+    messageCount: 0,
+    name: 'bob',
+    role: 'Developer',
+    status: 'idle',
+    taskCount: 0,
+  },
+];
+
+function renderComposer(overrides: Partial<MemberMessageComposerProps> = {}): {
+  host: HTMLDivElement;
+  render: (next?: Partial<MemberMessageComposerProps>) => void;
+  root: ReturnType<typeof createRoot>;
+  onSend: ReturnType<typeof vi.fn>;
+} {
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const onSend = vi.fn().mockResolvedValue({
+    deliveredToInbox: true,
+    deliveredViaStdin: false,
+    messageId: 'message-1',
+  });
+  const baseProps: MemberMessageComposerProps = {
+    teamName: 'team-alpha',
+    members,
+    isTeamAlive: true,
+    sending: false,
+    sendError: null,
+    sendWarning: null,
+    sendDebugDetails: null,
+    lastResult: null,
+    onSend,
+  };
+
+  const render = (next: Partial<MemberMessageComposerProps> = {}): void => {
+    act(() => {
+      root.render(React.createElement(MessageComposer, { ...baseProps, ...overrides, ...next }));
+    });
+  };
+  render();
+
+  return { host, render, root, onSend };
+}
+
+function getSendButton(host: HTMLElement): HTMLButtonElement {
+  const button = findSendButton(host);
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error('Send button not found');
+  }
+  return button;
+}
+
+function findSendButton(host: HTMLElement): HTMLButtonElement | undefined {
+  return Array.from(host.querySelectorAll('button')).find(
+    (candidate) => candidate.textContent?.trim() === 'Send'
+  );
+}
+
+function getSendSlot(host: HTMLElement): HTMLElement {
+  const slot = host.querySelector('.message-composer-send-slot');
+  if (!(slot instanceof HTMLElement)) {
+    throw new Error('Send animation slot not found');
+  }
+  return slot;
+}
+
+function getTextarea(host: HTMLElement): HTMLTextAreaElement {
+  const textarea = host.querySelector('textarea[aria-label="Message"]');
+  if (!(textarea instanceof HTMLTextAreaElement)) {
+    throw new Error('Message textarea not found');
+  }
+  return textarea;
+}
+
+function getButtonContainingText(host: HTMLElement, text: string): HTMLButtonElement {
+  const button = Array.from(host.querySelectorAll('button')).find((candidate) =>
+    candidate.textContent?.includes(text)
+  );
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Button containing "${text}" not found`);
+  }
+  return button;
+}
+
+describe('MessageComposer pending send lifecycle', () => {
+  beforeEach(() => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    draftHarness.reset();
+    provisioningHarness.reset();
+    suggestionHarness.reset();
+    storeHarness.reset();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('uses the shared controlled editor without member hooks and fences keyboard submission', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const send = vi.fn();
+    const textInput = {
+      label: 'Release discussion',
+      ariaLabel: 'Message',
+      value: 'Group reply',
+      readOnly: false,
+      disabled: false,
+      canSend: true,
+      sendLabel: 'Send',
+      onChange: vi.fn(),
+      onSend: send,
+    };
+    const render = (canSend: boolean, readOnly: boolean): void =>
+      act(() => {
+        root.render(
+          <MessageComposer teamName="team-alpha" textInput={{ ...textInput, canSend, readOnly }} />
+        );
+      });
+    try {
+      render(true, false);
+      expect(suggestionHarness.state.taskOptions).toEqual([]);
+      expect(suggestionHarness.state.teamOptions).toEqual([]);
+      expect(host.querySelector('.message-composer-recipient-selector')).toBeNull();
+      expect(host.textContent).not.toContain('Do');
+      expect(getTextarea(host).readOnly).toBe(false);
+      act(() => getSendButton(host).click());
+      expect(send).toHaveBeenCalledTimes(1);
+      render(false, true);
+      act(() => getTextarea(host).dispatchEvent(new Event('input', { bubbles: true })));
+      expect(textInput.onChange).not.toHaveBeenCalled();
+      expect(getTextarea(host).readOnly).toBe(true);
+      expect(getSendButton(host).disabled).toBe(true);
+      act(() =>
+        getTextarea(host).dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: 'Enter',
+            bubbles: true,
+          })
+        )
+      );
+      expect(send).toHaveBeenCalledTimes(1);
+      act(() =>
+        root.render(
+          <MessageComposer
+            teamName="team-alpha"
+            members={members}
+            sending={false}
+            sendError={null}
+            onSend={vi.fn()}
+          />
+        )
+      );
+      expect(suggestionHarness.state.taskOptions.length).toBeGreaterThan(0);
+      render(true, false);
+      expect(getTextarea(host).value).toBe('Group reply');
+      expect(host.querySelector('.message-composer-recipient-selector')).toBeNull();
+    } finally {
+      act(() => root.unmount());
+    }
+  });
+
+  it('renders the footer below the flat composer card', () => {
+    const { host, root } = renderComposer();
+    const layout = host.querySelector('.message-composer-flat-layout');
+    const toolbar = layout?.querySelector('.message-composer-flat-toolbar');
+    const body = layout?.querySelector('.message-composer-flat-body');
+    const footer = layout?.querySelector('.message-composer-flat-footer');
+    const sendButton = getSendButton(host);
+    const teamSelector = getButtonContainingText(host, 'team-alpha');
+    const recipientSelector = host.querySelector('.message-composer-recipient-selector');
+    const targetSelectors = host.querySelector('.message-composer-target-selectors');
+
+    expect(layout).not.toBeNull();
+    expect(toolbar).not.toBeNull();
+    expect(body).not.toBeNull();
+    expect(footer).not.toBeNull();
+    expect(body?.contains(footer ?? null)).toBe(false);
+    expect(body?.className).not.toContain('message-composer-orbit-surface');
+    expect(sendButton.className).toContain('message-composer-send-button');
+    expect(teamSelector.className).toContain('justify-end');
+    expect(targetSelectors?.className).toContain('w-fit');
+    expect(targetSelectors?.className).toContain('max-w-full');
+    expect(teamSelector.className).not.toContain('flex-1');
+    expect(recipientSelector?.className).not.toContain('flex-1');
+    expect(recipientSelector?.className).not.toContain('shrink-0');
+    expect(toolbar?.textContent).toContain('Group chat');
+    expect(toolbar?.textContent).toContain('Group chat');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('uses the toolbar width for the target selector instead of offline status', () => {
+    const { host, root } = renderComposer({ isTeamAlive: false });
+    const toolbar = host.querySelector('.message-composer-flat-toolbar');
+
+    expect(toolbar?.textContent).toContain('team-alpha');
+    expect(toolbar?.textContent).toContain('Group chat');
+    expect(toolbar?.textContent?.toLowerCase()).not.toContain('offline');
+    expect(toolbar?.className).toContain('grid-cols-[32px_minmax(0,1fr)]');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('returns to the current team group chat after leaving a locked direct chat', async () => {
+    const { host, onSend, render, root } = renderComposer({ lockedRecipient: 'bob' });
+
+    expect(host.querySelector('.message-composer-target-selectors')?.textContent).toContain('bob');
+    render({ lockedRecipient: undefined });
+    await act(async () => undefined);
+
+    const selectors = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('.message-composer-target-selectors > button')
+    );
+    expect(selectors.map((button) => button.textContent?.trim())).toEqual([
+      'team-alpha',
+      'Group chat',
+    ]);
+    await act(async () => getSendButton(host).click());
+    expect(onSend).toHaveBeenCalledWith(
+      'alice',
+      'hello teammate',
+      'hello teammate',
+      undefined,
+      'do',
+      [],
+      expect.any(String)
+    );
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('sends to the lead after switching from a teammate back to the group chat', async () => {
+    const { host, onSend, root } = renderComposer();
+
+    act(() => {
+      getButtonContainingText(host, 'bob').click();
+    });
+    const groupChatOptions = Array.from(host.querySelectorAll<HTMLButtonElement>('button')).filter(
+      (button) => button.textContent?.trim() === 'Group chat'
+    );
+    act(() => {
+      groupChatOptions.at(-1)?.click();
+    });
+    await act(async () => getSendButton(host).click());
+
+    expect(onSend).toHaveBeenCalledWith(
+      'alice',
+      'hello teammate',
+      'hello teammate',
+      undefined,
+      'do',
+      [],
+      expect.any(String)
+    );
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('prepares the exact snapshot before invoking transport', async () => {
+    const { host, onSend, root } = renderComposer();
+    await act(async () => getSendButton(host).click());
+    expect(draftHarness.methods.beginAttempt).toHaveBeenCalledOnce();
+    const [attemptId, preparedRequest] = draftHarness.methods.beginAttempt.mock.calls[0] as [
+      string,
+      { request: { messageId?: string } },
+    ];
+    expect(preparedRequest.request.messageId).toBe(attemptId);
+    expect(onSend.mock.calls[0]?.[6]).toBe(attemptId);
+    expect(onSend).toHaveBeenCalledWith(
+      'alice',
+      'hello teammate',
+      'hello teammate',
+      undefined,
+      'do',
+      [],
+      expect.any(String)
+    );
+    act(() => root.unmount());
+  });
+
+  it('resolves task refs from the synchronized draft when the initial text had none', async () => {
+    draftHarness.state.text = 'no task';
+    suggestionHarness.state.currentTaskSuggestions = [
+      {
+        id: 'task:team-alpha:task-42',
+        name: '42',
+        type: 'task',
+        taskId: 'task-42',
+        teamName: 'team-alpha',
+        insertText: createEncodedTaskReference('42', 'task-42', 'team-alpha'),
+      },
+    ];
+    let release!: () => void;
+    draftHarness.pending.prepareGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { host, onSend, root } = renderComposer();
+    expect(suggestionHarness.state.taskOptions.at(-1)?.enabled).toBe(false);
+    act(() => getSendButton(host).click());
+    draftHarness.state.text = 'Check #42';
+    await act(async () => release());
+    expect(onSend).toHaveBeenCalledWith(
+      'alice',
+      'Check #42',
+      'Check #42',
+      undefined,
+      'do',
+      [{ taskId: 'task-42', displayId: '42', teamName: 'team-alpha' }],
+      expect.any(String)
+    );
+    act(() => root.unmount());
+  });
+
+  it('does not send a slash command if the lead goes offline while draft sync is pending', async () => {
+    draftHarness.state.text = '/help';
+    let release!: () => void;
+    draftHarness.pending.prepareGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const leadMembers = [{ ...members[0], agentType: 'team-lead' }, members[1]];
+    const { host, onSend, render, root } = renderComposer({ members: leadMembers });
+    expect(getSendButton(host).disabled).toBe(false);
+    act(() => getSendButton(host).click());
+    render({ isTeamAlive: false });
+    await act(async () => release());
+    expect(draftHarness.methods.beginAttempt).not.toHaveBeenCalled();
+    expect(onSend).not.toHaveBeenCalled();
+    act(() => root.unmount());
+  });
+
+  it('checks the prepared lead rather than a newly selected teammate before transport', async () => {
+    draftHarness.state.text = '/help';
+    let release!: () => void;
+    draftHarness.pending.contextGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const leadMembers = [{ ...members[0], agentType: 'team-lead' }, members[1]];
+    const { host, onSend, render, root } = renderComposer({ members: leadMembers });
+    act(() => getSendButton(host).click());
+    await act(async () => undefined);
+    expect(draftHarness.methods.beginAttempt).toHaveBeenCalledOnce();
+    render({ lockedRecipient: 'bob' });
+    await act(async () => release());
+    expect(onSend).toHaveBeenCalledWith(
+      'alice',
+      '/help',
+      '/help',
+      undefined,
+      'delegate',
+      [],
+      expect.any(String)
+    );
+    act(() => root.unmount());
+  });
+
+  it('does not show stale global send diagnostics after draft address navigation', async () => {
+    const failedSend = vi.fn().mockRejectedValue(new Error('Alice delivery failed'));
+    const { host, render, root } = renderComposer({
+      lockedRecipient: 'alice',
+      onSend: failedSend,
+    });
+
+    await act(async () => getSendButton(host).click());
+    expect(host.textContent).toContain('Alice delivery failed');
+
+    render({ lockedRecipient: 'bob', sendError: 'stale Alice send failure' });
+    await act(async () => undefined);
+
+    expect(host.textContent).not.toContain('Alice delivery failed');
+    expect(host.textContent).not.toContain('stale Alice send failure');
+    act(() => root.unmount());
+  });
+
+  it('restores a revision request into the composer', async () => {
+    const revisionRequest = {
+      requestId: 'rev-1',
+      originalMessageId: 'msg-123',
+      originalText: 'incomplete message',
+      recipient: 'bob',
+      actionMode: 'ask' as const,
+    };
+    draftHarness.state.text = '';
+    const { render, root } = renderComposer();
+
+    render({ revisionRequest });
+    await act(async () => undefined);
+
+    expect(draftHarness.methods.setRevision).toHaveBeenCalled();
+    expect(draftHarness.state.text).toBe('incomplete message');
+    expect(draftHarness.state.actionMode).toBe('ask');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('wraps the next send as a correction for the revised message', async () => {
+    const revisionRequest = {
+      requestId: 'rev-1',
+      originalMessageId: 'msg-123',
+      originalText: 'incomplete message',
+      recipient: 'bob',
+      actionMode: 'ask' as const,
+    };
+    draftHarness.state.text = '';
+    const { host, onSend, render, root } = renderComposer();
+
+    render({ revisionRequest });
+    render({ revisionRequest });
+
+    await act(async () => getSendButton(host).click());
+
+    expect(onSend).toHaveBeenCalledWith(
+      'bob',
+      [
+        'Correction for my previous message (MessageId: msg-123).',
+        '',
+        'Please use this corrected version instead:',
+        '',
+        'incomplete message',
+      ].join('\n'),
+      'Correction for MessageId: msg-123',
+      undefined,
+      'ask',
+      [],
+      expect.any(String)
+    );
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('blocks a prepared correction when a newer message changes the revisable target', async () => {
+    draftHarness.state.editorContext = {
+      kind: 'revision',
+      originalMessageId: 'msg-123',
+      recipient: 'bob',
+      requestId: 'rev-1',
+    };
+    let release!: () => void;
+    draftHarness.pending.contextGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const onRevisionComplete = vi.fn();
+    const { host, onSend, render, root } = renderComposer({
+      lockedRecipient: 'bob',
+      revisableMessageId: 'msg-123',
+      onRevisionComplete,
+    });
+    act(() => getSendButton(host).click());
+    await act(async () => undefined);
+    expect(draftHarness.methods.beginAttempt).toHaveBeenCalledOnce();
+    render({ revisableMessageId: 'msg-456' });
+    await act(async () => release());
+    expect(onSend).not.toHaveBeenCalled();
+    expect(onRevisionComplete).not.toHaveBeenCalled();
+    act(() => root.unmount());
+  });
+
+  it('allows a prepared correction after its working revision context is cleared', async () => {
+    draftHarness.state.editorContext = {
+      kind: 'revision',
+      originalMessageId: 'msg-123',
+      recipient: 'bob',
+      requestId: 'rev-1',
+    };
+    let release!: () => void;
+    draftHarness.pending.contextGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const onRevisionComplete = vi.fn();
+    const { host, onSend, render, root } = renderComposer({
+      lockedRecipient: 'bob',
+      revisableMessageId: 'msg-123',
+      onRevisionComplete,
+    });
+    act(() => getSendButton(host).click());
+    await act(async () => undefined);
+    expect(draftHarness.methods.beginAttempt).toHaveBeenCalledOnce();
+    draftHarness.state.editorContext = { kind: 'plain' };
+    render({ revisableMessageId: 'msg-123' });
+    await act(async () => release());
+    expect(onSend).toHaveBeenCalledOnce();
+    expect(onRevisionComplete).toHaveBeenCalledWith('rev-1', expect.anything());
+    act(() => root.unmount());
+  });
+
+  it('cancels revision mode without clearing the draft', () => {
+    const onRevisionCancel = vi.fn();
+    const revisionRequest = {
+      requestId: 'rev-1',
+      originalMessageId: 'msg-123',
+      originalText: 'incomplete message',
+      recipient: 'bob',
+      actionMode: 'ask' as const,
+    };
+    draftHarness.state.text = '';
+    const { host, render, root } = renderComposer({ onRevisionCancel });
+
+    render({ revisionRequest });
+    render({ revisionRequest });
+
+    act(() => {
+      getButtonContainingText(host, 'Cancel').click();
+    });
+
+    expect(onRevisionCancel).toHaveBeenCalledOnce();
+    expect(draftHarness.methods.clearDraft).not.toHaveBeenCalled();
+    expect(draftHarness.state.text).toBe('incomplete message');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('keeps revision mode if the cancellation notice is not confirmed', async () => {
+    const onRevisionCancel = vi.fn(async () => false);
+    const revisionRequest = {
+      requestId: 'rev-1',
+      originalMessageId: 'msg-123',
+      originalText: 'incomplete message',
+      recipient: 'bob',
+    };
+    draftHarness.state.text = '';
+    const { host, render, root } = renderComposer({ onRevisionCancel });
+    render({ revisionRequest });
+    render({ revisionRequest });
+
+    await act(async () => getButtonContainingText(host, 'Cancel').click());
+
+    expect(onRevisionCancel).toHaveBeenCalledOnce();
+    expect(draftHarness.methods.clearRevision).not.toHaveBeenCalled();
+    expect(draftHarness.state.editorContext.kind).toBe('revision');
+    act(() => root.unmount());
+  });
+
+  it('does not clear another draft after cancellation resolves across navigation', async () => {
+    let resolveCancellation!: (confirmed: boolean) => void;
+    const onRevisionCancel = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveCancellation = resolve;
+        })
+    );
+    draftHarness.state.editorContext = {
+      kind: 'revision',
+      originalMessageId: 'msg-123',
+      recipient: 'bob',
+      requestId: 'rev-1',
+    };
+    const { host, render, root } = renderComposer({ onRevisionCancel });
+    act(() => getButtonContainingText(host, 'Cancel').click());
+    render({ teamName: 'another-team' });
+    await act(async () => resolveCancellation(true));
+
+    expect(onRevisionCancel).toHaveBeenCalledOnce();
+    expect(draftHarness.methods.clearRevision).not.toHaveBeenCalled();
+    act(() => root.unmount());
+  });
+
+  it('does not send a correction while cancellation is active', async () => {
+    draftHarness.state.editorContext = {
+      kind: 'revision',
+      originalMessageId: 'msg-123',
+      recipient: 'bob',
+      requestId: 'rev-1',
+    };
+    expect(acquireRevisionOperation('rev-1', 'cancel')).toBe(true);
+    const { host, onSend, root } = renderComposer();
+    try {
+      await act(async () => getSendButton(host).click());
+      expect(onSend).not.toHaveBeenCalled();
+    } finally {
+      releaseRevisionOperation('rev-1', 'cancel');
+      act(() => root.unmount());
+    }
+  });
+
+  it('keeps send enabled when stale provisioning state remains after the team is alive', async () => {
+    provisioningHarness.state.active = true;
+    const { host, onSend, root } = renderComposer({ isTeamAlive: true });
+
+    expect(getSendButton(host).disabled).toBe(false);
+
+    await act(async () => getSendButton(host).click());
+
+    expect(onSend).toHaveBeenCalledOnce();
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('does not render send until the draft contains non-whitespace text', () => {
+    draftHarness.state.text = '   ';
+    const { host, render, root } = renderComposer();
+
+    expect(findSendButton(host)).toBeUndefined();
+    expect(getSendSlot(host).dataset.visible).toBe('false');
+
+    draftHarness.state.text = 'ready';
+    render();
+
+    expect(getSendButton(host).disabled).toBe(false);
+    expect(getSendSlot(host).dataset.visible).toBe('true');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('keeps send disabled while provisioning before the team is alive', () => {
+    provisioningHarness.state.active = true;
+    const { host, onSend, root } = renderComposer({ isTeamAlive: false });
+
+    expect(getSendButton(host).disabled).toBe(true);
+
+    act(() => {
+      getSendButton(host).click();
+    });
+
+    expect(onSend).not.toHaveBeenCalled();
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it.each([false, true])(
+    'shows working startup copy without changing the alive=%s send gate',
+    (isTeamAlive) => {
+      provisioningHarness.state.active = true;
+      provisioningHarness.state.progress = {
+        runId: 'run-current',
+        teamName: 'team-alpha',
+        state: 'finalizing',
+        startedAt: '2026-09-06T12:00:00Z',
+        updatedAt: '2026-09-06T12:00:05Z',
+        message: 'Auditing bootstrap truth',
+      };
+      provisioningHarness.state.leadActivity = 'active';
+      provisioningHarness.state.currentRunId = 'run-current';
+      const { host, onSend, root } = renderComposer({ isTeamAlive });
+      expect(getSendButton(host).disabled).toBe(!isTeamAlive);
+      if (!isTeamAlive) {
+        expect(getTextarea(host).placeholder).toContain(
+          'Lead is working. Startup checks are finishing'
+        );
+        expect(getTextarea(host).placeholder).toContain('sending is not yet available');
+        expect(getTextarea(host).placeholder).not.toContain('will be queued');
+        act(() => getSendButton(host).click());
+        expect(onSend).not.toHaveBeenCalled();
+      } else {
+        expect(getTextarea(host).placeholder).not.toContain('Startup checks');
+      }
+      act(() => root.unmount());
+    }
+  );
+
+  it('does not add a hint footer when pointer focus enters through a Composer control', () => {
+    draftHarness.state.text = '';
+    const { host, root } = renderComposer();
+    const selector = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="Select Team: team-alpha"]'
+    );
+    expect(selector).not.toBeNull();
+    const hint = () => host.querySelector('[data-composer-focus-hint]');
+    expect(hint()).toBeNull();
+    act(() => {
+      selector!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      selector!.focus();
+    });
+    expect(document.activeElement).toBe(selector);
+    expect(hint()).toBeNull();
+    act(() => {
+      selector!.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+      selector!.click();
+    });
+    expect(storeHarness.methods.fetchCrossTeamTargets).toHaveBeenCalledTimes(1);
+    act(() => root.unmount());
+  });
+
+  it('keeps the hint footer while focus moves to Composer controls and clears it outside', () => {
+    draftHarness.state.text = '';
+    const { host, root } = renderComposer({
+      cornerActionPrefix: createPortal(
+        React.createElement('button', { id: 'TEST-portal-focus' }, 'portal'),
+        document.body
+      ),
+    });
+    const textarea = getTextarea(host);
+    const selector = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="Select Team: team-alpha"]'
+    );
+    expect(selector).not.toBeNull();
+    const hint = () => host.querySelector('[data-composer-focus-hint]');
+    const footer = () => host.querySelector('.message-composer-flat-footer');
+    expect(hint()).toBeNull();
+
+    act(() => textarea.focus());
+    expect(hint()).not.toBeNull();
+    expect(footer()?.textContent).toContain('Saved');
+
+    // Native pointerdown focuses this toolbar button before pointerup/click.
+    act(() => {
+      selector!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      selector!.focus();
+    });
+    expect(document.activeElement).toBe(selector);
+    expect(hint()).not.toBeNull();
+    expect(footer()?.textContent).not.toContain('Saved');
+    act(() => {
+      selector!.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+      selector!.click();
+    });
+    expect(storeHarness.methods.fetchCrossTeamTargets).toHaveBeenCalledTimes(1);
+
+    // React portal events bubble through Composer, but their DOM focus is outside it.
+    const portalButton = document.getElementById('TEST-portal-focus');
+    act(() => portalButton!.focus());
+    expect(document.activeElement).toBe(portalButton);
+    expect(hint()).toBeNull();
+    act(() => textarea.focus());
+    expect(hint()).not.toBeNull();
+
+    const outside = document.createElement('button');
+    document.body.appendChild(outside);
+    act(() => outside.focus());
+    expect(document.activeElement).toBe(outside);
+    expect(hint()).toBeNull();
+    act(() => textarea.focus());
+    expect(hint()).not.toBeNull();
+    act(() => root.unmount());
+    outside.remove();
+  });
+
+  it('does not autofocus the textarea until a chat thread is opened', () => {
+    const { host, root } = renderComposer();
+    expect(document.activeElement).not.toBe(getTextarea(host));
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('autofocuses the textarea when a chat thread is opened', async () => {
+    const { host, root } = renderComposer({ autoFocusKey: Date.parse('2026-09-18T09:00:00.000Z') });
+    const textarea = getTextarea(host);
+
+    await act(async () => {
+      await Promise.resolve();
+      await new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => resolve());
+      });
+    });
+
+    expect(document.activeElement).toBe(textarea);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('returns focus to the textarea after sending', () => {
+    const { host, root } = renderComposer();
+    const sendButton = getSendButton(host);
+    const textarea = getTextarea(host);
+
+    sendButton.focus();
+    expect(document.activeElement).toBe(sendButton);
+
+    act(() => {
+      sendButton.click();
+    });
+
+    expect(document.activeElement).toBe(textarea);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('returns focus to the textarea after selecting a recipient member', () => {
+    const { host, root } = renderComposer();
+    const bobButton = getButtonContainingText(host, 'bob');
+    const textarea = getTextarea(host);
+
+    bobButton.focus();
+    expect(document.activeElement).toBe(bobButton);
+
+    act(() => {
+      bobButton.click();
+    });
+
+    expect(document.activeElement).toBe(textarea);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('returns focus to the textarea after selecting a cross-team recipient', () => {
+    storeHarness.state.crossTeamTargets = [
+      {
+        teamName: 'team-beta',
+        displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
+      },
+    ];
+    const { host, root } = renderComposer({ onCrossTeamSend: vi.fn() });
+    const betaTeamButton = getButtonContainingText(host, 'Beta Team');
+    const textarea = getTextarea(host);
+
+    betaTeamButton.focus();
+    expect(document.activeElement).toBe(betaTeamButton);
+
+    act(() => {
+      betaTeamButton.click();
+    });
+
+    expect(document.activeElement).toBe(textarea);
+
+    const carolButton = getButtonContainingText(host, 'carol');
+    act(() => {
+      carolButton.click();
+    });
+
+    expect(document.activeElement).toBe(textarea);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('shows exact cross-team group and member draft markers in the selectors', async () => {
+    storeHarness.state.crossTeamTargets = [
+      {
+        teamName: 'team-beta',
+        displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
+      },
+    ];
+    const baseSummary = {
+      version: 1 as const,
+      workingRevision: 'draft-1',
+      updatedAt: 1,
+      attachmentCount: 0,
+      chipCount: 0,
+      editorKind: 'plain' as const,
+    };
+    const { host, root } = renderComposer({
+      onCrossTeamSend: vi.fn(),
+      workingDraftSummaries: [
+        {
+          ...baseSummary,
+          address: {
+            contextId: 'local',
+            teamName: 'team-alpha',
+            target: { kind: 'cross-team', toTeam: 'team-beta', toMember: null },
+          },
+          preview: 'group draft',
+        },
+        {
+          ...baseSummary,
+          workingRevision: 'draft-2',
+          address: {
+            contextId: 'local',
+            teamName: 'team-alpha',
+            target: { kind: 'cross-team', toTeam: 'team-beta', toMember: 'carol' },
+          },
+          preview: 'member draft',
+        },
+      ],
+    });
+
+    expect(getButtonContainingText(host, 'Beta Team').textContent).toContain('Draft: group draft');
+    expect(getButtonContainingText(host, 'Beta Team').textContent).toContain('+1');
+    act(() => getButtonContainingText(host, 'Beta Team').click());
+    await act(async () => undefined);
+    expect(getButtonContainingText(host, 'carol').textContent).toContain('Draft: member draft');
+    act(() => root.unmount());
+  });
+
+  it('sends to the selected teammate of another team', async () => {
+    storeHarness.state.crossTeamTargets = [
+      {
+        teamName: 'team-beta',
+        displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
+      },
+    ];
+    const onCrossTeamSend = vi.fn().mockResolvedValue({
+      deliveredToInbox: true,
+      messageId: 'cross-1',
+    });
+    const { host, render, root } = renderComposer({ onCrossTeamSend });
+
+    act(() => {
+      getButtonContainingText(host, 'Beta Team').click();
+    });
+    render();
+    await act(async () => undefined);
+    act(() => {
+      getButtonContainingText(host, 'carol').click();
+    });
+    await act(async () => undefined);
+    render();
+    await act(async () => getSendButton(host).click());
+
+    expect(onCrossTeamSend).toHaveBeenCalledWith(
+      'team-beta',
+      'hello teammate',
+      'hello teammate',
+      'do',
+      [],
+      'carol',
+      expect.any(String)
+    );
+    const [attemptId, preparedRequest] = draftHarness.methods.beginAttempt.mock.calls.at(-1) as [
+      string,
+      { request: { messageId?: string } },
+    ];
+    expect(preparedRequest.request.messageId).toBe(attemptId);
+    expect(onCrossTeamSend.mock.calls[0]?.[6]).toBe(attemptId);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('leaves Delegate mode when a cross-team direct recipient is selected', async () => {
+    storeHarness.state.crossTeamTargets = [
+      {
+        teamName: 'team-beta',
+        displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
+      },
+    ];
+    const { host, render, root } = renderComposer({ onCrossTeamSend: vi.fn() });
+    act(() => getButtonContainingText(host, 'Beta Team').click());
+    await act(async () => undefined);
+    expect(draftHarness.methods.setActionMode).toHaveBeenCalledWith('delegate');
+    render();
+    act(() => getButtonContainingText(host, 'carol').click());
+    await act(async () => undefined);
+
+    expect(draftHarness.methods.setActionMode).toHaveBeenLastCalledWith('do');
+    act(() => root.unmount());
+  });
+
+  it('refreshes cross-team targets every time the team picker reopens', async () => {
+    const { host, root } = renderComposer();
+    const teamSelector = getButtonContainingText(host, 'team-alpha');
+
+    await act(async () => {
+      teamSelector.click();
+      await Promise.resolve();
+    });
+    expect(storeHarness.methods.fetchCrossTeamTargets).toHaveBeenCalledTimes(1);
+
+    act(() => teamSelector.click());
+    await act(async () => {
+      teamSelector.click();
+      await Promise.resolve();
+    });
+    expect(storeHarness.methods.fetchCrossTeamTargets).toHaveBeenCalledTimes(2);
+
+    act(() => root.unmount());
+  });
+
+  it('falls back to the destination group chat when the selected member disappears', async () => {
+    storeHarness.state.crossTeamTargets = [
+      {
+        teamName: 'team-beta',
+        displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
+      },
+    ];
+    const onCrossTeamSend = vi.fn().mockResolvedValue({
+      deliveredToInbox: true,
+      messageId: 'cross-1',
+    });
+    const { host, render, root } = renderComposer({ onCrossTeamSend });
+
+    act(() => getButtonContainingText(host, 'Beta Team').click());
+    act(() => getButtonContainingText(host, 'carol').click());
+    storeHarness.state.crossTeamTargets = [
+      { teamName: 'team-beta', displayName: 'Beta Team', members: [] },
+    ];
+    render();
+    await act(async () => undefined);
+    await act(async () => getSendButton(host).click());
+
+    expect(onCrossTeamSend).toHaveBeenCalledWith(
+      'team-beta',
+      'hello teammate',
+      'hello teammate',
+      'delegate',
+      [],
+      undefined,
+      expect.any(String)
+    );
+    act(() => root.unmount());
+  });
+
+  it('clears cross-team routing state when a local direct chat is locked', async () => {
+    storeHarness.state.crossTeamTargets = [
+      {
+        teamName: 'team-beta',
+        displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
+      },
+    ];
+    const { host, render, root } = renderComposer({ onCrossTeamSend: vi.fn() });
+
+    act(() => {
+      getButtonContainingText(host, 'Beta Team').click();
+    });
+    expect(getTextarea(host).placeholder).toContain('Beta Team');
+
+    render({ lockedRecipient: 'bob' });
+    await act(async () => undefined);
+
+    expect(getTextarea(host).placeholder).not.toContain('Beta Team');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('defers expensive mention data until the matching trigger is typed', () => {
+    draftHarness.state.text = '';
+    const { host, render, root } = renderComposer();
+
+    expect(suggestionHarness.state.taskOptions.at(-1)?.enabled).toBe(false);
+    expect(suggestionHarness.state.teamOptions.at(-1)?.enabled).toBe(false);
+    expect(storeHarness.methods.fetchSkillsCatalog).not.toHaveBeenCalled();
+    expect(storeHarness.methods.fetchCrossTeamTargets).not.toHaveBeenCalled();
+
+    act(() => {
+      getTextarea(host).focus();
+    });
+
+    expect(suggestionHarness.state.taskOptions.at(-1)?.enabled).toBe(false);
+    expect(suggestionHarness.state.teamOptions.at(-1)?.enabled).toBe(false);
+    expect(storeHarness.methods.fetchSkillsCatalog).not.toHaveBeenCalled();
+    expect(storeHarness.methods.fetchCrossTeamTargets).not.toHaveBeenCalled();
+
+    draftHarness.state.text = '#';
+    render();
+
+    expect(suggestionHarness.state.taskOptions.at(-1)?.enabled).toBe(true);
+    expect(suggestionHarness.state.teamOptions.at(-1)?.enabled).toBe(false);
+    expect(storeHarness.methods.fetchSkillsCatalog).not.toHaveBeenCalled();
+
+    draftHarness.state.text = '@';
+    render();
+
+    expect(suggestionHarness.state.taskOptions.at(-1)?.enabled).toBe(false);
+    expect(suggestionHarness.state.teamOptions.at(-1)?.enabled).toBe(true);
+    expect(storeHarness.methods.fetchSkillsCatalog).not.toHaveBeenCalled();
+
+    draftHarness.state.text = '/';
+    render();
+
+    expect(storeHarness.methods.fetchSkillsCatalog).toHaveBeenCalledTimes(1);
+    expect(storeHarness.methods.fetchCrossTeamTargets).not.toHaveBeenCalled();
+
+    act(() => {
+      root.unmount();
+    });
+  });
+});

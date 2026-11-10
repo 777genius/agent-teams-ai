@@ -1,0 +1,38 @@
+import { validateTeamImportName } from '../../domain/teamImportPolicy';
+
+import type { TeamImportDraftRepositoryPort } from '../ports/TeamImportDraftRepositoryPort';
+import type { TeamImportReviewStorePort } from '../ports/TeamImportReviewStorePort';
+import type {
+  CreateTeamImportDraftRequest,
+  CreateTeamImportDraftResult,
+} from '@features/team-import/contracts';
+
+export class CreateTeamImportDraftUseCase {
+  constructor(
+    private readonly reviewStore: TeamImportReviewStorePort,
+    private readonly draftRepository: TeamImportDraftRepositoryPort
+  ) {}
+
+  async execute(request: CreateTeamImportDraftRequest): Promise<CreateTeamImportDraftResult> {
+    const reviewId = request.reviewId.trim();
+    if (!reviewId) throw new Error('Import review is required.');
+
+    const teamName = request.teamName.trim();
+    const teamNameError = validateTeamImportName(teamName);
+    if (teamNameError) throw new Error(`TEAM_IMPORT_VALIDATION:${teamNameError}`);
+
+    const preview = this.reviewStore.consume(reviewId);
+    if (!preview) throw new Error('This import preview expired. Choose the folder again.');
+    if (preview.blockingErrors.length > 0) {
+      throw new Error(preview.blockingErrors[0]);
+    }
+
+    try {
+      await this.draftRepository.createDraft(teamName, preview);
+      return { teamName };
+    } catch (error) {
+      this.reviewStore.restore(preview);
+      throw error;
+    }
+  }
+}

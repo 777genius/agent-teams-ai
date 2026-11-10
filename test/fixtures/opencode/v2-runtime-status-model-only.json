@@ -1,0 +1,180 @@
+{
+  "providers": {
+    "opencode": {
+      "providerId": "opencode",
+      "displayName": "OpenCode (75+ LLM providers)",
+      "supported": true,
+      "authenticated": false,
+      "authMethod": null,
+      "verificationState": "unknown",
+      "canLoginFromUi": false,
+      "capabilities": {
+        "teamLaunch": false,
+        "oneShot": false,
+        "extensions": {
+          "plugins": {
+            "status": "unsupported",
+            "ownership": "provider-scoped",
+            "reason": "capabilities_pending"
+          },
+          "mcp": {
+            "status": "unsupported",
+            "ownership": "provider-scoped",
+            "reason": "capabilities_pending"
+          },
+          "skills": {
+            "status": "unsupported",
+            "ownership": "provider-scoped",
+            "reason": "capabilities_pending"
+          },
+          "apiKeys": {
+            "status": "unsupported",
+            "ownership": "provider-scoped",
+            "reason": "capabilities_pending"
+          }
+        }
+      },
+      "statusMessage": "OpenCode V2 catalog available; capabilities_pending",
+      "detailMessage": "Authentication, team launch and one-shot execution remain unqualified. Only an existing verified V2 native selection is supported for reads.",
+      "selectedBackendId": null,
+      "resolvedBackendId": null,
+      "availableBackends": [],
+      "externalRuntimeDiagnostics": [
+        {
+          "id": "cli-bin",
+          "label": "OpenCode CLI",
+          "detected": true,
+          "statusMessage": "Read-scoped native selection",
+          "detailMessage": "/usr/local/bin/opencode"
+        }
+      ],
+      "models": [
+        "kimi-code-plan-global/kimi-for-coding",
+        "opencode/big-pickle",
+        "zai-coding-plan/glm-5.1"
+      ],
+      "backend": {
+        "kind": "opencode-cli",
+        "label": "OpenCode CLI",
+        "authMethodDetail": null
+      },
+      "statusCheckOutcome": "model_only",
+      "statusCheckErrorCode": null,
+      "runtimeCapabilities": {
+        "modelCatalog": {
+          "dynamic": true,
+          "source": "app-server"
+        }
+      },
+      "modelCatalog": {
+        "schemaVersion": 1,
+        "providerId": "opencode",
+        "source": "app-server",
+        "status": "ready",
+        "fetchedAt": "2026-10-30T18:20:00.000Z",
+        "staleAt": "2026-10-30T18:20:00.000Z",
+        "defaultModelId": "opencode/big-pickle",
+        "defaultLaunchModel": null,
+        "models": [
+          {
+            "id": "kimi-code-plan-global/kimi-for-coding",
+            "launchModel": "kimi-code-plan-global/kimi-for-coding",
+            "displayName": "kimi-code-plan-global/kimi-for-coding",
+            "hidden": false,
+            "supportedReasoningEfforts": [],
+            "defaultReasoningEffort": null,
+            "inputModalities": ["text"],
+            "supportsPersonality": false,
+            "isDefault": false,
+            "upgrade": false,
+            "source": "app-server",
+            "statusMessage": "capabilities_pending: catalog entry only",
+            "badgeLabel": null,
+            "metadata": {
+              "context": 262144,
+              "limits": {
+                "context": 262144,
+                "output": 32768
+              },
+              "free": false
+            }
+          },
+          {
+            "id": "opencode/big-pickle",
+            "launchModel": "opencode/big-pickle",
+            "displayName": "opencode/big-pickle",
+            "hidden": false,
+            "supportedReasoningEfforts": [],
+            "defaultReasoningEffort": null,
+            "inputModalities": ["text"],
+            "supportsPersonality": false,
+            "isDefault": true,
+            "upgrade": false,
+            "source": "app-server",
+            "statusMessage": "capabilities_pending: catalog entry only",
+            "badgeLabel": "Free",
+            "metadata": {
+              "context": 262144,
+              "limits": {
+                "context": 262144,
+                "output": 32768
+              },
+              "free": true,
+              "opencode": {
+                "providerId": "opencode",
+                "modelId": "big-pickle",
+                "sourceLabel": "OpenCode V2 native catalog",
+                "accessKind": "builtin_free",
+                "routeKind": "builtin_free",
+                "proofState": "needs_probe",
+                "requiresExecutionProof": true,
+                "reason": "Listed as free by OpenCode; selected-model execution proof is required."
+              }
+            }
+          },
+          {
+            "id": "zai-coding-plan/glm-5.1",
+            "launchModel": "zai-coding-plan/glm-5.1",
+            "displayName": "zai-coding-plan/glm-5.1",
+            "hidden": false,
+            "supportedReasoningEfforts": [],
+            "defaultReasoningEffort": null,
+            "inputModalities": ["text"],
+            "supportsPersonality": false,
+            "isDefault": false,
+            "upgrade": false,
+            "source": "app-server",
+            "statusMessage": "capabilities_pending: catalog entry only",
+            "badgeLabel": null,
+            "metadata": {
+              "context": 262144,
+              "limits": {
+                "context": 262144,
+                "output": 32768
+              },
+              "free": false
+            }
+          }
+        ],
+        "diagnostics": {
+          "configReadState": "ready",
+          "appServerState": "healthy",
+          "message": "capabilities_pending",
+          "code": "capabilities_pending"
+        }
+      },
+      "capabilitiesInfo": [
+        {
+          "id": "v2-catalog-read",
+          "label": "OpenCode V2 catalog read",
+          "enabled": true
+        },
+        {
+          "id": "team-launch",
+          "label": "Team launch",
+          "enabled": false
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "status": "PASS scoped Team-qualified native model-test API; ordinary prepareProvisioning/Launch/Create/Resume and full stage1 remain INCOMPLETE",
+  "evidence": "docs/plans/provider-migration/evidence/p5-team-model-probe-v1/manifest.json",
+  "hostSourceSha256": "63fbc9aead0157f12177e3677cf88b1971d1fe9bb04048269c952b7a85db9da1",
+  "hostDistSha256": "3e775d64fb7bdb16d02e80ef139b96c5117d54758a17d0a847a09d29ddb09676",
+  "providerArchive": "vendor/provider-migration/claude-probe-v3/agent-teams-provider-implementations-0.0.0.tgz",
+  "providerArchiveSha256": "543cfa030a0d0cda0c5b091c207906c6f175ed6cd9eec28090094ff0b085af59",
+  "implementation": "Finite team.launch.probe.start/read/cancel uses the original handle and caller command ID. Private native configuration comes from the selected Runtime member, not global management defaults. Existing ModelProbeOwner owns durable admission/replay/cancellation and namespace fences. Team/operator and member authority, launch/roster selection and original grant revisions guard SDK handoff/result. Context/effort are preserved; Main emits only finite application observations. No new lifecycle owner, Session SPI or UI.",
+  "native": {
+    "jobId": "2519a0b90f8565a8df753653bf834026",
+    "scope": "Actual SDK0.3.305/Claude CLI, Main facade and standalone Host with localhost inference in owned TEST roots; not Electron dialog or real vendor/auth qualification",
+    "modelRequests": 5,
+    "globalRequests": 3,
+    "teamRequests": 2,
+    "result": "Team used a distinct captured HOME/config/workspace/account namespace and separate loopback endpoint. Actual Team requests carried effort medium while global requests used high. Success, original cancellation, warm/cold replay without another model request, stale-roster rejection and authority revocation passed. Regrant changed the authority revision and old start/read returned conflict without another request. Member Runtime was unopened. Tools0, configured hook marker absent, all5 durable records resourceHeld:false, both Host exits confirmed.",
+    "custodyLimit": "Native process cleanup is enforced by the Host's existing CapturedProcess/ModelProbeOwner path; Main Host exit alone is not an independent observation of every provider descendant. Full UI/Quit/relaunch custody qualification remains open.",
+    "precedingRun": "b0b5605602c31e613687a2973d6800cf passed the earlier current-permission guard. It is retained in original TEST root/logs and is not relabeled as the final authority-revision proof."
+  },
+  "checks": {
+    "producer": "37f799c8f89fa17dae4d8f7a1b3af2b4: strict types,7 model tests, scoped oxlint0, active FMS0, build/immutable v3 pack PASS. One-million SDK beta/context evidence is controlled evidence; the final native Team case uses model-default context.",
+    "regression": "5aa978bf3b2108c1122868f4e855eca2: root and strict Host/test types,234 Host tests,170 frontend tests, scoped lint and source-size/provisioning guards PASS.2 opt-in native tests skipped in aggregate; current native scenario qualified separately.",
+    "authorityFinal": "2519a0b90f8565a8df753653bf834026: final root types,234 Host tests, source-size guard and actual Native case PASS after binding authority revisions.",
+    "packedConsumer": "80acaa846374abfcf7bf7ea05f81d54b: isolated packed consumer from the package cwd PASS, including runtime exports and declaration checks.",
+    "docs": "73f5a24e92aa53b88f93364bbbbe8cb8: producer docs:check and docs:protocol:check PASS, including5 frozen-authority checks. Feature README is outside the governed docs catalog; no accepted ADR was rewritten.",
+    "retainedFailures": "fbe89d698e2e2292a485889ac60bfea9 exact-optional type mismatch, e0a40b4f14a4df7970dcf9d52b68da6b expanded-result union guard, a21e034d9059b4f64eb6a4825cb38984 iterable test type. Original logs retained; no model requests occurred in those failing checks."
+  },
+  "remaining": "Connect the existing prepareProvisioning callback to this Team conversation with retained original intent, explicit retry semantics and original cancellation across context changes. Complete configuration/capability checks, authoritative roster/settings, create/launch/progress, selected Resume and all other P0-P8/M01-M19 acceptance. Existing UI only. Global Claude auth/status is not promoted by this API. Producer aggregate Darwin fixture failures, canonical Node26 qualification and final delivery gates remain open.",
+  "delivery": "Working-tree milestone, not final-source/release qualification. Stage2 excluded. No commits/push/PR/merge/rollout; draft PR descriptions must link exact-head plan/contracts/matrix."
+}

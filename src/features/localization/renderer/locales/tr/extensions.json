@@ -1,0 +1,688 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "Özel Ekle",
+      "openDashboard": "Panoyu Aç",
+      "refreshCatalog": "Kataloğu yenile"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "Eklentiler: {{status}}",
+      "skills": "Beceriler: {{status}}"
+    },
+    "desktopOnly": "Yalnızca masaüstü uygulamasında kullanılabilir.",
+    "provider": {
+      "checkingStatus": "Sağlayıcı durumu kontrol ediliyor...",
+      "connected": "Bağlandı",
+      "loading": "Yükleniyor...",
+      "needsSetup": "Kurulum gerekiyor",
+      "readyToConfigure": "Yapılandırmaya hazır",
+      "unsupported": "Desteklenmiyor"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "Eklentiler; eklentileri, MCP sunucularını, becerileri ve sağlayıcı bağlantılarını yönetmek için yapılandırılmış çalışma zamanına ihtiyaç duyar.",
+      "checkingAvailabilityTitle": "Eklenti çalışma zamanı kullanılabilirliği kontrol ediliyor",
+      "failedToStartDescription": "Çalışma zamanı başlangıç sağlık kontrolünü geçene kadar eklentiler devre dışıdır. Onarmak veya yeniden kurmak için Panoyu açın.",
+      "failedToStartTitle": "Yapılandırılmış çalışma zamanı bulundu ancak başlatılamadı",
+      "multimodelCapabilitiesDescription": "Sağlayıcı desteği bölüme göre değişebilir. Eklentiler yalnızca çalışma zamanının açıkça destek beyan ettiği yerlerde gösterilir.",
+      "multimodelCapabilitiesTitle": "Çoklu model çalışma zamanı yetenekleri",
+      "needsSignInDescription": "{{runtime}} bulundu{{version}}, ancak Panodan giriş yapana kadar eklenti kurulumları devre dışıdır.",
+      "needsSignInTitle": "{{runtime}} giriş gerektiriyor",
+      "notAvailableDescription": "Çalışma zamanı kurulana kadar eklentiler devre dışıdır. Kurmak ve tekrar denemek için Panoyu açın.",
+      "notAvailableTitle": "Yapılandırılmış çalışma zamanı kullanılamıyor",
+      "readyDescription": "Eklentiler bu sayfadan kurulabilir{{versionSuffix}}.",
+      "readyTitle": "{{runtime}} hazır",
+      "requiredForMutations": "Eklentileri kurmak veya kaldırmak için yapılandırılmış çalışma zamanı gereklidir. Panodan kurun veya onarın."
+    },
+    "sessionsRestartWarning": "Çalışan oturumlar yeniden başlatılana kadar eklenti değişikliklerini almaz.",
+    "tabs": {
+      "apiKeys": {
+        "description": "Çevrimiçi hizmetler için gizli anahtarlar. Eklentilerin, sunucuların ve entegrasyonların bağlanıp çalışabilmesi için bunları buraya ekleyin.",
+        "label": "API Anahtarları"
+      },
+      "mcpServers": {
+        "description": "Dış araçlara ve uygulamalara bağlantılar. Çalışma zamanının bu uygulamanın ötesinde veri okumasına veya işlem yapmasına olanak tanır.",
+        "label": "MCP Sunucuları"
+      },
+      "plugins": {
+        "description": "Çalışma zamanı için küçük eklentiler. Çoklu model modunda şu anda desteklendiğinde Anthropic oturumlarına uygulanır. Daha geniş sağlayıcı desteği geliştirme aşamasındadır.",
+        "label": "Eklentiler"
+      },
+      "skills": {
+        "description": "Yaygın işler için hazır talimatlar. Çalışma zamanının tekrarlanabilir görevleri daha tutarlı şekilde yönetmesine yardımcı olur.",
+        "label": "Beceriler"
+      }
+    },
+    "title": "Eklentiler"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} etkin",
+    "browseByFit": "Uygunluğa göre göz at",
+    "capabilities": "Yetenekler",
+    "categories": "Kategoriler",
+    "clearAllFilters": "Tüm filtreleri temizle",
+    "clearFilters": "Filtreleri temizle",
+    "counts": {
+      "capabilities": "{{count}} yetenek",
+      "categories": "{{count}} kategori",
+      "plugins": "{{count}} eklenti",
+      "capabilities_few": "{{count}} yetenek",
+      "capabilities_many": "{{count}} yetenek",
+      "capabilities_one": "{{count}} yetenek",
+      "capabilities_other": "{{count}} yetenek",
+      "categories_few": "{{count}} kategori",
+      "categories_many": "{{count}} kategori",
+      "categories_one": "{{count}} kategori",
+      "categories_other": "{{count}} kategori",
+      "plugins_few": "{{count}} eklenti",
+      "plugins_many": "{{count}} eklenti",
+      "plugins_one": "{{count}} eklenti",
+      "plugins_other": "{{count}} eklenti"
+    },
+    "empty": {
+      "description": "Yeni eklentiler için daha sonra tekrar kontrol edin",
+      "filteredDescription": "Arama veya filtre ölçütlerinizi ayarlamayı deneyin",
+      "filteredTitle": "Filtrelerinize uyan eklenti yok",
+      "title": "Kullanılabilir eklenti yok"
+    },
+    "filterDescription": "Kataloğu kategoriye, yeteneğe veya kurulu duruma göre daraltın.",
+    "installedOnly": "Yalnızca kurulu",
+    "providerSupportNotice": "Eklenti desteği şu anda yalnızca Anthropic (Claude) oturumları için garanti edilmektedir. Tüm agent'lar genelinde eklentileri desteklemeye çalışıyoruz.",
+    "resultsUpdateInstantly": "Filtreleri düzenledikçe sonuçlar anında güncellenir.",
+    "searchPlaceholder": "Eklentilerde ara...",
+    "selectedCount": "{{count}} seçili",
+    "showing": "{{total}} eklentiden {{shown}} tanesi gösteriliyor",
+    "sort": {
+      "category": "Kategori",
+      "nameAsc": "Ad A-Z",
+      "nameDesc": "Ad Z-A",
+      "popular": "Popüler"
+    },
+    "activeFilters_few": "{{count}} etkin",
+    "activeFilters_many": "{{count}} etkin",
+    "activeFilters_one": "{{count}} etkin",
+    "activeFilters_other": "{{count}} etkin",
+    "selectedCount_few": "{{count}} seçili",
+    "selectedCount_many": "{{count}} seçili",
+    "selectedCount_one": "{{count}} seçili",
+    "selectedCount_other": "{{count}} seçili"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "Ekle",
+      "cancel": "İptal",
+      "install": "Kur",
+      "installing": "Kuruluyor..."
+    },
+    "description": "Katalog olmadan manuel olarak bir sunucu ekleyin.",
+    "errors": {
+      "installFailed": "Kurulum başarısız oldu",
+      "invalidServerName": "Geçersiz sunucu adı. Alfasayısal karakterler, tireler, alt çizgiler, noktalar kullanın.",
+      "npmPackageRequired": "npm paket adı gereklidir",
+      "serverNameRequired": "Sunucu adı gereklidir",
+      "serverUrlRequired": "Sunucu URL'si gereklidir"
+    },
+    "fields": {
+      "environmentVariables": "Ortam Değişkenleri",
+      "headers": "Başlıklar",
+      "npmPackage": "npm Paketi",
+      "scope": "Kapsam",
+      "serverName": "Sunucu Adı",
+      "serverUrl": "Sunucu URL'si",
+      "transport": "Aktarım",
+      "transportType": "Aktarım Türü",
+      "versionOptional": "Sürüm (isteğe bağlı)"
+    },
+    "title": "Özel MCP Sunucusu Ekle",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stdio (npm)"
+    },
+    "placeholders": {
+      "headerName": "Header-Name",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "my-server",
+      "latest": "latest",
+      "value": "değer",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "Uzak MCP sunucuları, kayıt defteri bunları açıklamasa bile yine de özel başlıklar veya API anahtarları gerektirebilir. Kurulumdan sonra bağlantı başarısız olursa sağlayıcı dokümanlarını kontrol edin.",
+      "required": "Bu sunucu kimlik doğrulama gerektiriyor"
+    },
+    "diagnostics": {
+      "launchTarget": "Başlatma Hedefi"
+    },
+    "form": {
+      "autoFilled": "Otomatik dolduruldu",
+      "environmentVariables": "Ortam Değişkenleri",
+      "headers": "Başlıklar",
+      "scope": "Kapsam",
+      "serverName": "Sunucu Adı"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "Bu sunucu manuel kurulum gerektiriyor. Kurulum talimatları için depoyu kontrol edin.",
+      "manualSetupRequired": "Manuel kurulum gerekli",
+      "npmPackage": "npm: {{package}}",
+      "manage": "Kurulumu Yönet",
+      "install": "Sunucuyu Kur"
+    },
+    "links": {
+      "glama": "Glama",
+      "repository": "Depo",
+      "website": "Web sitesi"
+    },
+    "metadata": {
+      "author": "Yazar",
+      "githubStars": "GitHub Yıldızları",
+      "hosting": "Barındırma",
+      "installType": "Kurulum Türü",
+      "license": "Lisans",
+      "published": "Yayımlandı",
+      "source": "Kaynak",
+      "updated": "Güncellendi",
+      "version": "Sürüm"
+    },
+    "scope": {
+      "local": "Yerel",
+      "project": "Proje"
+    },
+    "tools": {
+      "title": "Araçlar ({{count}})",
+      "title_few": "Araçlar ({{count}})",
+      "title_many": "Araçlar ({{count}})",
+      "title_one": "Araçlar ({{count}})",
+      "title_other": "Araçlar ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "my-server"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "İptal",
+      "createSkill": "Beceri Oluştur",
+      "preparing": "Hazırlanıyor...",
+      "reviewAndCreate": "İncele Ve Oluştur",
+      "reviewAndSave": "İncele Ve Kaydet",
+      "saveSkill": "Beceriyi Kaydet"
+    },
+    "advanced": {
+      "customDescription": "Bu beceri özel bir markdown biçimi kullanır, bu yüzden doğrudan burada düzenleyin.",
+      "customTitle": "2. SKILL.md düzenleyicisi",
+      "description": "Çoğu kişi bunu atlayabilir. Yalnızca ham markdown dosyası üzerinde doğrudan kontrol istiyorsanız açın.",
+      "hide": "Gelişmiş Düzenleyiciyi Gizle",
+      "resetFromStructuredFields": "Yapılandırılmış Alanlardan Sıfırla",
+      "show": "Gelişmiş Düzenleyiciyi Göster",
+      "title": "4. Gelişmiş SKILL.md düzenleyicisi"
+    },
+    "basics": {
+      "description": "Bu beceriye açık bir ad verin, kimin kullanabileceğini seçin ve nerede bulunacağına karar verin.",
+      "title": "1. Temel Bilgiler"
+    },
+    "description": {
+      "create": "İş akışını sade bir dille açıklayın, oluşturulacak dosyaları inceleyin ve ardından kaydedin.",
+      "edit": "Bu beceriyi güncelleyin, ortaya çıkan dosya değişikliklerini inceleyin ve ardından kaydedin."
+    },
+    "extraFiles": {
+      "addedFiles": "Eklenen dosyalar:",
+      "assets": "Varlıklar",
+      "assetsDescription": "Yalnızca iş akışını açıklamaya yardımcı oluyorsa ekran görüntüleri veya paketlenmiş medya ekleyin.",
+      "description": "Yalnızca bu beceri gerçekten ihtiyaç duyuyorsa destekleyici dokümanlar, betikler veya varlıklar ekleyin.",
+      "lockedForEdits": "Kök ve klasör düzenlemeler için kilitli",
+      "optionalDescription": "İncelemeye dahil edilecek ve `SKILL.md` ile birlikte yazılacak başlangıç dosyaları ekleyin.",
+      "optionalTitle": "İsteğe bağlı dosyalar",
+      "references": "Referanslar",
+      "referencesDescription": "Çalışma zamanının bakabileceği destekleyici dokümanlar, bağlantılar veya örnekler ekleyin.",
+      "scripts": "Betikler",
+      "scriptsDescription": "Yardımcı komutlar veya kurulum notları ekleyin. Bu beceriyi paylaşmadan önce dikkatlice inceleyin.",
+      "title": "3. Ek dosyalar"
+    },
+    "fields": {
+      "compatibility": "Uyumluluk",
+      "description": "Açıklama",
+      "folderName": "Klasör adı",
+      "folderNameHint": "İncelemenin hemen çalışması için bunu beceri adından otomatik olarak öneririz.",
+      "invocation": "Nasıl kullanılması gerektiği",
+      "license": "Lisans",
+      "name": "Beceri adı",
+      "notes": "Ek notlar veya koruma önlemleri",
+      "root": "Nerede saklanacağı",
+      "scope": "Kimin kullanabileceği",
+      "steps": "İzlenecek ana adımlar",
+      "whenToUse": "Buna ne zaman başvurulacağı"
+    },
+    "instructions": {
+      "description": "Bu bölümler beceri dosyasını sizin için oluşturur, bu yüzden istemediğiniz sürece markdown düzenlemenize gerek yoktur.",
+      "locked": "Aşağıda manuel `SKILL.md` düzenlemesine geçtiğiniz için yapılandırılmış alanlar kilitli.",
+      "title": "2. Talimatlar"
+    },
+    "invocation": {
+      "auto": "Otomatik olarak kullanılabilir",
+      "manualOnly": "Yalnızca siz istediğinizde"
+    },
+    "placeholders": {
+      "description": "Bu becerinin neye yardımcı olduğu",
+      "name": "Kısa bir beceri adı yazın",
+      "notes": "Örnek: Eksik testleri, gerilemeleri ve riskli varsayımları belirtin.",
+      "steps": "1. İlgili dosyaları inceleyin.\n2. Önce ana riski açıklayın.\n3. En güvenli düzeltmeyi önerin.",
+      "whenToUse": "Örnek: Görev bir kod incelemesi veya hata önceliklendirme isteği olduğunda bunu kullanın.",
+      "license": "MIT",
+      "compatibility": "claude-code, cursor"
+    },
+    "review": {
+      "creating": "Beceri oluşturuluyor",
+      "hint": "Önce dosya değişikliklerini inceleyin, ardından bir sonraki adımda kaydetmeyi onaylayın.",
+      "saving": "Bu beceri kaydediliyor"
+    },
+    "root": {
+      "codexOnly": " - Yalnızca Codex",
+      "shared": " - Paylaşılan"
+    },
+    "scope": {
+      "project": "Proje: {{project}}",
+      "projectUnavailable": "Proje kullanılamıyor",
+      "user": "Kullanıcı"
+    },
+    "title": {
+      "create": "Beceri oluştur",
+      "edit": "Beceriyi düzenle"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "İptal",
+      "delete": "Sil",
+      "deleteSkill": "Beceriyi Sil",
+      "deleting": "Siliniyor...",
+      "editSkill": "Beceriyi Düzenle",
+      "openFolder": "Klasörü Aç",
+      "openSkillFile": "SKILL.md'yi Aç",
+      "retry": "Yeniden dene"
+    },
+    "badges": {
+      "assets": "Varlıklar",
+      "autoUse": "Otomatik kullanım",
+      "hasScripts": "Betikler içerir",
+      "manualUse": "Manuel kullanım",
+      "references": "Referanslar",
+      "storedIn": "{{root}} içinde saklanır"
+    },
+    "deleteDialog": {
+      "description": "Bu beceri silinip Çöp Kutusu'na taşınsın mı?",
+      "descriptionWithName": "\"{{name}}\" silinip Çöp Kutusu'na taşınsın mı? Gerekirse daha sonra Çöp Kutusu'ndan geri yükleyebilirsiniz.",
+      "title": "Beceri silinsin mi?"
+    },
+    "descriptionFallback": "Keşfedilen beceri meta verilerini ve ham talimatları inceleyin.",
+    "errors": {
+      "deleteFailed": "Beceri silinemedi",
+      "loadFailed": "Bu beceri yüklenemiyor."
+    },
+    "files": {
+      "advancedDetails": "Gelişmiş dosya ayrıntıları",
+      "assets": "Varlıklar",
+      "references": "Referanslar",
+      "scripts": "Betikler",
+      "storedAt": "Saklandığı yer"
+    },
+    "includes": {
+      "assets": "varlıklar",
+      "instructionsOnly": "Yalnızca beceri talimatları",
+      "references": "referanslar",
+      "scripts": "betikler"
+    },
+    "invocation": {
+      "auto": "Göreve uyduğunda otomatik olarak çalışır.",
+      "manualOnly": "Yalnızca açıkça istediğinizde çalışır."
+    },
+    "issues": {
+      "bundledScripts": "Bu beceri paketlenmiş betikler içerir",
+      "reviewCarefully": "Kullanmadan önce bu beceriyi dikkatlice inceleyin"
+    },
+    "loading": "Beceri ayrıntıları yükleniyor...",
+    "scope": {
+      "personal": "Kişisel becerileriniz",
+      "projectOnly": "Yalnızca bu proje"
+    },
+    "summary": {
+      "howUsed": "Nasıl kullanıldığı",
+      "included": "Nelerin dahil olduğu",
+      "whoCanUse": "Kimin kullanabileceği"
+    },
+    "titleFallback": "Beceri ayrıntıları"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "Beceri Oluştur",
+      "import": "İçe Aktar"
+    },
+    "badges": {
+      "assets": "Varlıklar",
+      "hasScripts": "Betikler içerir",
+      "needsAttention": "İlgilenilmesi gerekiyor",
+      "references": "Referanslar",
+      "storedIn": "{{root}} içinde saklanır"
+    },
+    "configuredRuntime": "yapılandırılmış çalışma zamanı",
+    "counts": {
+      "codexOnly": "{{count}} yalnızca Codex",
+      "personal": "{{count}} kişisel",
+      "project": "{{count}} proje",
+      "shared": "{{count}} paylaşılan",
+      "total": "{{count}} toplam",
+      "codexOnly_few": "{{count}} yalnızca Codex",
+      "codexOnly_many": "{{count}} yalnızca Codex",
+      "codexOnly_one": "{{count}} yalnızca Codex",
+      "codexOnly_other": "{{count}} yalnızca Codex",
+      "personal_few": "{{count}} kişisel",
+      "personal_many": "{{count}} kişisel",
+      "personal_one": "{{count}} kişisel",
+      "personal_other": "{{count}} kişisel",
+      "project_few": "{{count}} proje",
+      "project_many": "{{count}} proje",
+      "project_one": "{{count}} proje",
+      "project_other": "{{count}} proje",
+      "shared_few": "{{count}} paylaşılan",
+      "shared_many": "{{count}} paylaşılan",
+      "shared_one": "{{count}} paylaşılan",
+      "shared_other": "{{count}} paylaşılan",
+      "total_few": "{{count}} toplam",
+      "total_many": "{{count}} toplam",
+      "total_one": "{{count}} toplam",
+      "total_other": "{{count}} toplam"
+    },
+    "empty": {
+      "noMatches": "Aramanızla eşleşen beceri yok",
+      "noMatchesDescription": "Farklı bir arama terimi deneyin veya filtreleri değiştirin.",
+      "noSkills": "Henüz beceri yok",
+      "noSkillsDescription": "Tekrarlanabilir bir iş akışını öğretmek için ilk becerinizi oluşturun veya halihazırda kullandığınız birini içe aktarın."
+    },
+    "filters": {
+      "all": "Tüm beceriler",
+      "codexOnly": "Yalnızca Codex",
+      "hasScripts": "Betikler içerir",
+      "needsAttention": "İlgilenilmesi gerekiyor",
+      "personal": "Kişisel",
+      "project": "Proje",
+      "shared": "Paylaşılan"
+    },
+    "hero": {
+      "codexAvailable": "Bir beceri yalnızca Codex'e özel kalmalıysa `.codex` kullanın.",
+      "codexUnavailable": "Mevcut `.codex` becerileri burada düzenlenebilir kalır, ancak yeni yalnızca Codex becerileri Codex çalışma zamanının etkinleştirilmesini gerektirir.",
+      "description": "Beceriler, çalışma zamanının aynı türdeki görevi daha tutarlı şekilde yönetmesine yardımcı olan yeniden kullanılabilir talimatlardır.",
+      "guidance": "Her yerde istediğiniz alışkanlıklar için kişisel becerileri kullanın. Yalnızca tek bir kod tabanı içinde anlamlı olan iş akışları için proje becerilerini kullanın.",
+      "personalContext": "Şu anda yalnızca kişisel becerilerinizi görüyorsunuz.",
+      "projectContext": "{{project}} için olan becerilerle birlikte kişisel becerilerinizi görüyorsunuz.",
+      "title": "Tekrarlanabilir işleri öğretin"
+    },
+    "invocation": {
+      "auto": "Uyduğunda otomatik olarak çalışır",
+      "manualOnly": "Yalnızca açıkça istediğinizde çalışır"
+    },
+    "loading": {
+      "loading": "Beceriler yükleniyor...",
+      "refreshing": "Beceriler yenileniyor..."
+    },
+    "runtimeAudience": "`.claude`, `.cursor` ve `.agents` içindeki paylaşılan beceriler {{audience}} için kullanılabilir. `.codex` içinde saklanan beceriler, Codex desteği mevcut olduğunda yalnızca Codex'e özel kalır.",
+    "scope": {
+      "project": "Bu proje",
+      "user": "Kişisel"
+    },
+    "searchPlaceholder": "Beceri adına veya neye yardımcı olduğuna göre ara...",
+    "sections": {
+      "personal": {
+        "description": "Her yerde kullanılabilir olmasını istediğiniz alışkanlıklar ve talimatlar.",
+        "title": "Kişisel beceriler"
+      },
+      "project": {
+        "description": "Yalnızca bu kod tabanı için anlamlı olan iş akışları.",
+        "title": "Proje becerileri"
+      }
+    },
+    "sort": {
+      "label": "Becerileri sırala",
+      "name": "Ad",
+      "recent": "Son"
+    },
+    "status": {
+      "hasScripts": "Betikler içerir, bu yüzden dikkatlice inceleyin",
+      "needsAttention": "Güvenmeden önce ilgilenilmesi gerekiyor",
+      "ready": "Kullanıma hazır"
+    },
+    "success": {
+      "created": "Beceri başarıyla oluşturuldu.",
+      "imported": "Beceri başarıyla içe aktarıldı.",
+      "saved": "Beceri başarıyla kaydedildi."
+    }
+  },
+  "pluginDetail": {
+    "unknown": "Bilinmiyor",
+    "metadata": {
+      "author": "Yazar",
+      "category": "Kategori",
+      "source": "Kaynak",
+      "version": "Sürüm",
+      "capabilities": "Yetenekler",
+      "installs": "Kurulumlar"
+    },
+    "scope": {
+      "label": "Kapsam:",
+      "options": {
+        "user": "Kullanıcı (genel)",
+        "project": "Proje (paylaşılan)",
+        "local": "Yerel (gitignore'lı)"
+      }
+    },
+    "links": {
+      "homepage": "Ana sayfa",
+      "contact": "İletişim"
+    },
+    "readme": {
+      "loading": "README yükleniyor...",
+      "empty": "README yok."
+    }
+  },
+  "skillImport": {
+    "title": "Beceriyi içe aktar",
+    "description": "Mevcut bir beceri klasörü seçin, nelerin kopyalanacağını inceleyin, ardından desteklenen beceri konumlarınızdan birine içe aktarın.",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. Bir beceri klasörü seçin",
+        "description": "Bu, halihazırda bir `SKILL.md`, `Skill.md` veya `skill.md` dosyası içeren bir klasör olmalıdır."
+      },
+      "location": {
+        "title": "2. Nereye ait olduğuna karar verin",
+        "description": "Kişisel beceriler her yerde çalışır. Proje becerileri yalnızca tek bir kod tabanı için görünür."
+      }
+    },
+    "fields": {
+      "sourceFolder": "Kaynak klasör",
+      "destinationFolderName": "Hedef klasör adı",
+      "audience": "Kimin kullanabileceği",
+      "storage": "Nerede saklanacağı"
+    },
+    "placeholders": {
+      "defaultFolderName": "Varsayılan olarak kaynak klasör adı"
+    },
+    "actions": {
+      "browse": "Gözat",
+      "cancel": "İptal",
+      "preparing": "Hazırlanıyor...",
+      "reviewAndImport": "İncele Ve İçe Aktar",
+      "importSkill": "Beceriyi İçe Aktar",
+      "backToImport": "İçe Aktarmaya Dön"
+    },
+    "scope": {
+      "user": "Kullanıcı",
+      "project": "Proje: {{project}}",
+      "projectUnavailable": "Proje kullanılamıyor"
+    },
+    "rootSuffix": {
+      "codexOnly": " - Yalnızca Codex",
+      "shared": " - Paylaşılan"
+    },
+    "reviewHint": "Önce kopyalanan dosyaları inceleyin, ardından bir sonraki adımda içe aktarmayı onaylayın.",
+    "reviewLabel": "Bu beceri içe aktarılıyor",
+    "errors": {
+      "missingSkillFile": "Bu klasör henüz bir beceriye benzemiyor. Bir SKILL.md, Skill.md veya skill.md dosyasına ihtiyacı var.",
+      "symbolicLinks": "Bu klasör sembolik bağlantılar içeriyor. Bağlantılar yerine gerçek dosyaları içe aktarın.",
+      "tooManyFiles": "Bu beceri klasörü bir kerede içe aktarılamayacak kadar büyük. Fazladan dosyaları kaldırıp tekrar deneyin.",
+      "tooLarge": "Bu beceri klasörü güvenli şekilde içe aktarılamayacak kadar büyük. Büyük varlıkları azaltıp tekrar deneyin.",
+      "invalidFolderName": "Harfler, sayılar, noktalar, tireler veya alt çizgiler kullanarak daha basit bir hedef klasör adı seçin.",
+      "mustBeDirectory": "İçe aktarmak için tek bir dosya değil, bir klasör seçin.",
+      "reviewFailed": "İçe aktarma değişiklikleri incelenemedi",
+      "importFailed": "Beceri içe aktarılamadı"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "Ad A→Z",
+      "nameDesc": "Ad Z→A",
+      "toolsDesc": "En çok araç"
+    },
+    "health": {
+      "title": "MCP Sağlık Durumu",
+      "checkingViaRuntime": "Kurulu MCP sunucuları {{runtime}} aracılığıyla kontrol ediliyor ...",
+      "lastChecked": "Son kontrol {{time}}",
+      "description": "Kurulu MCP bağlantısını doğrulamak için bu sayfadan tanılama çalıştırın.",
+      "checking": "Kontrol ediliyor...",
+      "checkStatus": "Durumu Kontrol Et"
+    },
+    "diagnostics": {
+      "title": "Çalışma Zamanı MCP Tanılaması",
+      "serversCount": "{{count}} sunucu",
+      "serversCount_one": "{{count}} sunucu",
+      "serversCount_other": "{{count}} sunucu",
+      "waiting": "Tanılama sonuçları bekleniyor...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "Çalışma zamanı durumu kontrol ediliyor...",
+        "checkingRuntimeAvailability": "Çalışma zamanı kullanılabilirliği kontrol ediliyor...",
+        "runtimeFailedToStart": "Yapılandırılmış çalışma zamanı bulundu ancak başlatılamadı. Onarmak veya yeniden kurmak için Panoyu açın.",
+        "runtimeRequired": "Yapılandırılmış çalışma zamanı gereklidir. Panodan kurun veya onarın."
+      },
+      "serversCount_few": "{{count}} sunucu",
+      "serversCount_many": "{{count}} sunucu"
+    },
+    "searchPlaceholder": "MCP sunucularında ara...",
+    "runtime": {
+      "notAvailable": "{{runtime}} kullanılamıyor",
+      "notInstalled": "{{runtime}} kurulu değil",
+      "requiredDescription": "MCP sağlık kontrolleri {{runtime}} gerektirir. Kurmak veya onarmak için Panoya gidin."
+    },
+    "empty": {
+      "searchTitle": "Sunucu bulunamadı",
+      "title": "Kullanılabilir MCP sunucusu yok",
+      "searchDescription": "Farklı bir arama terimi deneyin",
+      "description": "Yeni sunucular için daha sonra tekrar kontrol edin"
+    },
+    "loadMore": "Daha fazla yükle"
+  },
+  "apiKeys": {
+    "description": "MCP sunucularını kurarken otomatik doldurmak için API anahtarlarını güvenli şekilde saklayın.",
+    "storage": {
+      "osKeychain": "Anahtarlar {{backend}} aracılığıyla şifrelenir ve kısıtlı dosya izinleriyle (yalnızca sahip) saklanır.",
+      "localEncryption": "İşletim sistemi anahtarlığı kullanılamıyor - anahtarlar AES-256 ile yerel olarak şifrelenir. Daha güçlü koruma için bir anahtarlık hizmeti kurun (gnome-keyring, kwallet)."
+    },
+    "actions": {
+      "add": "API Anahtarı Ekle",
+      "addFirst": "İlk anahtarınızı ekleyin",
+      "edit": "Düzenle",
+      "copied": "Kopyalandı!",
+      "copyEnvVarName": "Ortam değişkeni adını kopyala",
+      "confirmDelete": "Onaylamak için tekrar tıklayın",
+      "delete": "Sil"
+    },
+    "empty": {
+      "title": "Kaydedilmiş API anahtarı yok",
+      "description": "MCP sunucularını kurarken ortam değişkenlerini otomatik doldurmak için anahtarlar ekleyin."
+    },
+    "form": {
+      "addTitle": "API Anahtarı Ekle",
+      "editTitle": "API Anahtarını Düzenle",
+      "addDescription": "MCP sunucu kurulumlarında otomatik doldurmak için bir API anahtarı saklayın.",
+      "editDescription": "Anahtar ayrıntılarını güncelleyin. Değeri yeniden girmeniz gerekir.",
+      "keychainUnavailable": "İşletim sistemi anahtarlığı kullanılamıyor - anahtarlar AES-256 ile yerel olarak şifrelenir. İşletim sistemi düzeyinde koruma için gnome-keyring kurun.",
+      "name": "Ad",
+      "namePlaceholder": "ör. OpenAI Production",
+      "environmentVariableName": "Ortam Değişkeni Adı",
+      "envVarPlaceholder": "ör. OPENAI_API_KEY",
+      "value": "Değer",
+      "reenterValue": "Anahtar değerini yeniden girin",
+      "valuePlaceholder": "sk-...",
+      "scope": "Kapsam",
+      "userScopeLabel": "Kullanıcı (genel)",
+      "projectScopeLabel": "Proje: {{project}}",
+      "projectUnavailable": "Proje kullanılamıyor",
+      "boundTo": "{{path}} öğesine bağlı",
+      "cancel": "İptal",
+      "saving": "Kaydediliyor...",
+      "update": "Güncelle",
+      "save": "Kaydet",
+      "errors": {
+        "invalidEnvVarFormat": "Harf, rakam, alt çizgi kullanın. Bir harf veya alt çizgiyle başlamalıdır.",
+        "nameRequired": "Ad gereklidir",
+        "envVarRequired": "Ortam değişkeni adı gereklidir",
+        "invalidEnvVar": "Geçersiz ortam değişkeni adı",
+        "valueRequired": "Anahtar değeri gereklidir",
+        "projectScopeRequiresProject": "Proje kapsamlı API anahtarları etkin bir proje gerektirir",
+        "saveFailed": "Kaydedilemedi"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "Beceri değişikliklerini incele",
+    "description": "{{reviewLabel}} önce dosya sistemi değişikliklerini önizler. Aşağıda onaylayana kadar hiçbir şey yazılmaz.",
+    "noPreview": "Önizleme yok.",
+    "confirmPromptPrefix": "Aşağıdaki farkı inceleyin, ardından şunu kullanın:",
+    "confirmPromptSuffix": "bu değişiklikleri uygulamak için.",
+    "noChanges": "Henüz dosya değişikliği algılanmadı.",
+    "binaryBadge": "ikili",
+    "binaryPreviewHidden": "İkili dosya önizlemesi gösterilmez. Dosya olduğu gibi kopyalanacak.",
+    "summary": {
+      "fileChanges": "{{count}} dosya değişikliği",
+      "fileChanges_one": "{{count}} dosya değişikliği",
+      "fileChanges_other": "{{count}} dosya değişikliği",
+      "new": "{{count}} yeni",
+      "updated": "{{count}} güncellendi",
+      "removed": "{{count}} kaldırıldı",
+      "binary": "{{count}} ikili",
+      "fileChanges_few": "{{count}} dosya değişikliği",
+      "fileChanges_many": "{{count}} dosya değişikliği"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} araç",
+    "toolsCount_one": "{{count}} araç",
+    "toolsCount_other": "{{count}} araç",
+    "envCount": "{{count}} ortam değişkeni",
+    "envCount_one": "{{count}} ortam değişkeni",
+    "envCount_other": "{{count}} ortam değişkeni",
+    "auth": "Kimlik doğrulama",
+    "byAuthor": "yazan: {{author}}",
+    "hosting": {
+      "remote": "Uzak",
+      "local": "Yerel",
+      "both": "Her ikisi"
+    },
+    "toolsCount_few": "{{count}} araç",
+    "toolsCount_many": "{{count}} araç",
+    "envCount_few": "{{count}} ortam değişkeni",
+    "envCount_many": "{{count}} ortam değişkeni",
+    "repository": "Depo",
+    "website": "Web sitesi"
+  },
+  "installButton": {
+    "installing": "Kuruluyor...",
+    "removing": "Kaldırılıyor...",
+    "done": "Bitti",
+    "retry": "Yeniden dene",
+    "uninstall": "Kaldır",
+    "install": "Kur"
+  },
+  "pluginCard": {
+    "official": "Resmi"
+  }
+}

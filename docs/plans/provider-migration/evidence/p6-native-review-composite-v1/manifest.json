@@ -1,0 +1,208 @@
+{
+  "status": "READ_ONLY_RECONCILED",
+  "scope": "Scoped native Task-to-original Changes composite across two preserved source epochs",
+  "rawStatuses": [
+    "INCOMPLETE",
+    "INCOMPLETE"
+  ],
+  "nativeJob": "9b93a2936526e971688b83ace70e4897",
+  "continuationJob": "63a3f0be2f5ac1ad74e116e74e12f046",
+  "manifests": [
+    {
+      "directory": "p6-native-review-ui-attempt1",
+      "manifestSha256": "a1e140bb62517066f7773af26a979c932fd722265abfc7f13804187998131713",
+      "files": 473
+    },
+    {
+      "directory": "p6-native-review-continuation-attempt1",
+      "manifestSha256": "0bc198384637aaa233610b018fd7896cd218a0dd475a7ac3c401ab9a5ab91dd4",
+      "files": 493
+    }
+  ],
+  "receipts": {
+    "nativeSha256": "f89d101d9533b764e24d2c5a5d9a7e91dbb8ea2bc16a11427f730f14184c8360",
+    "continuationSha256": "08ed901d5d4a1fe32b4444593673467e2f19a5fce08808db050f5845ed3262ef",
+    "unchanged": true
+  },
+  "checks": {
+    "noNativeReplay": true,
+    "reconstructedExpectedSnapshot": {
+      "provenance": "RECONSTRUCTED from printed diff; not separately retained original bytes",
+      "sha256": "8a618f8264224ec6391e17ed7398d3ed9a8f26f3ca779bcc8cd0b57b1df2667e",
+      "rawAssertionDiffSha256": "b1671b25d988827ee312a119684780738b0b554d2a7465e6abc751c1dfe54828"
+    },
+    "runtimeActivityChanges": [
+      {
+        "path": "hoststore/runtime-sessions/b0e7eb7f787733bd67f3786b0e119e930fd4ad9a2afc197cc7875ac34d51aa98/00809c65c847d886f4f31541d4bf9360eca336de06ee3db14a11e861ea637ab6.json",
+        "before": 2,
+        "after": 4,
+        "addedEvents": [
+          {
+            "data": {
+              "kind": "state",
+              "state": {
+                "phase": "closed",
+                "custody": "released",
+                "sealed": true,
+                "nativeReady": false,
+                "control": null,
+                "diagnostic": null,
+                "queuedInputs": 0,
+                "activeInputs": 0,
+                "interactions": [],
+                "checkpoints": [],
+                "partial": false
+              }
+            },
+            "sequence": 3,
+            "eventId": "00809c65c847d886f4f31541d4bf9360eca336de06ee3db14a11e861ea637ab6:3"
+          },
+          {
+            "data": {
+              "kind": "state",
+              "state": {
+                "phase": "closed",
+                "custody": "released",
+                "sealed": true,
+                "nativeReady": false,
+                "control": null,
+                "diagnostic": null,
+                "queuedInputs": 0,
+                "activeInputs": 0,
+                "interactions": [],
+                "checkpoints": [],
+                "partial": false
+              }
+            },
+            "sequence": 4,
+            "eventId": "00809c65c847d886f4f31541d4bf9360eca336de06ee3db14a11e861ea637ab6:4"
+          }
+        ]
+      },
+      {
+        "path": "hoststore/runtime-sessions/b0e7eb7f787733bd67f3786b0e119e930fd4ad9a2afc197cc7875ac34d51aa98/a88a5412cded0e0abd568fe9eb88e473d9a5f42ab110f45bddfa7282d53cc4db.json",
+        "before": 51,
+        "after": 53,
+        "addedEvents": [
+          {
+            "data": {
+              "kind": "state",
+              "state": {
+                "phase": "closed",
+                "custody": "released",
+                "sealed": true,
+                "nativeReady": false,
+                "control": null,
+                "diagnostic": "observe-ended",
+                "queuedInputs": 0,
+                "activeInputs": 0,
+                "interactions": [],
+                "checkpoints": [
+                  {
+                    "checkpointId": "stop-a88a5412cded0e0abd568fe9eb88e473d9a5f42ab110f45bddfa7282d53cc4db",
+                    "status": "published",
+                    "reference": "cp1-b034f5be49aa6b14296784ad1b8b040b232e6d13698082254320dbc400072e2f"
+                  }
+                ],
+                "partial": false
+              }
+            },
+            "sequence": 52,
+            "eventId": "a88a5412cded0e0abd568fe9eb88e473d9a5f42ab110f45bddfa7282d53cc4db:52"
+          },
+          {
+            "data": {
+              "kind": "state",
+              "state": {
+                "phase": "closed",
+                "custody": "released",
+                "sealed": true,
+                "nativeReady": false,
+                "control": null,
+                "diagnostic": "observe-ended",
+                "queuedInputs": 0,
+                "activeInputs": 0,
+                "interactions": [],
+                "checkpoints": [
+                  {
+                    "checkpointId": "stop-a88a5412cded0e0abd568fe9eb88e473d9a5f42ab110f45bddfa7282d53cc4db",
+                    "status": "published",
+                    "reference": "cp1-b034f5be49aa6b14296784ad1b8b040b232e6d13698082254320dbc400072e2f"
+                  }
+                ],
+                "partial": false
+              }
+            },
+            "sequence": 53,
+            "eventId": "a88a5412cded0e0abd568fe9eb88e473d9a5f42ab110f45bddfa7282d53cc4db:53"
+          }
+        ]
+      }
+    ],
+    "runtimeBytesIdenticalAcrossEpochs": false,
+    "retainedRootBytesUnchanged": true
+  },
+  "limits": [
+    "Both raw runs remain INCOMPLETE; this is a read-only composite reconciliation.",
+    "Historical Undo/Redo/reload assertions follow the frozen executed helper and its failure checkpoint; no UI action was rerun.",
+    "No vendor inference qualification, full M13/M16/Stage1, release or merge claim."
+  ],
+  "archiveDescription": "Exact selected collection trees including their manifests, executed source/bundles, raw jobs, TEST Host/workspace snapshots; not full reproducible release closure.",
+  "files": [
+    {
+      "path": "retained-attempts.tar.gz",
+      "sha256": "b5424350c9276b613e201ecbdd22508be52141f446ca30bc45aa6d6a7a9edc58",
+      "sizeBytes": 8368753
+    },
+    {
+      "path": "reconciliation.json",
+      "sha256": "27eaa65ca060632f8e1e869957da0db84842b356f1ca9b4e4845a072b59cb46f",
+      "sizeBytes": 6290
+    },
+    {
+      "path": "native-receipt.json",
+      "sha256": "f89d101d9533b764e24d2c5a5d9a7e91dbb8ea2bc16a11427f730f14184c8360",
+      "sizeBytes": 258021
+    },
+    {
+      "path": "continuation-receipt.json",
+      "sha256": "08ed901d5d4a1fe32b4444593673467e2f19a5fce08808db050f5845ed3262ef",
+      "sizeBytes": 237534
+    },
+    {
+      "path": "original-history.png",
+      "sha256": "621453c7d24b0483bc577dfb9fadbdc0be5113081e670c4aee301801a45a2a7b",
+      "sizeBytes": 280624
+    },
+    {
+      "path": "reconciliation-source.ts",
+      "sha256": "967361be56db5aff52618e794de6afbca250055fce13453873ae9374f7318ba5",
+      "sizeBytes": 13096
+    },
+    {
+      "path": "persistence-comparator-source.ts",
+      "sha256": "1d7f847f3acdff97b927b16f8a1ca58035548dc97cd7ee1eb590844e6b850e89",
+      "sizeBytes": 3053
+    },
+    {
+      "path": "types7.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sizeBytes": 0
+    },
+    {
+      "path": "tests.log",
+      "sha256": "38b882091a52e67484873c085a1cb7bf8539bbbf19a6e6abde8175d6cec1b839",
+      "sizeBytes": 513
+    },
+    {
+      "path": "run.log",
+      "sha256": "98010d96fa21373348f66ecee7fdc275aa3f40631a9ecd52af76f42c67fc0291",
+      "sizeBytes": 185
+    },
+    {
+      "path": "collection-source.ts",
+      "sha256": "700ed16bfebd312372e836fcfb118250529a97da1d67faa43e3f328f0724d7b9",
+      "sizeBytes": 4678
+    }
+  ]
+}

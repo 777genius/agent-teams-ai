@@ -1,0 +1,77 @@
+name: Publish reviewed carried Mac release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag: { type: string, required: true }
+      prepared_run_id: { type: string, required: true }
+      prepared_artifact_id: { type: string, required: true }
+      plan_digest: { type: string, required: true }
+      native_receipt_json: { type: string, required: true }
+      publish_release: { type: boolean, default: false }
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: release-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish-reviewed-carry:
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Authenticate immutable prepared plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREPARED_RUN_ID: ${{ inputs.prepared_run_id }}
+          PREPARED_ARTIFACT_ID: ${{ inputs.prepared_artifact_id }}
+          PLAN_DIGEST: ${{ inputs.plan_digest }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ && "$PLAN_DIGEST" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$PREPARED_RUN_ID" =~ ^[1-9][0-9]*$ && "$PREPARED_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PREPARED_RUN_ID" > prepared-run.json
+          jq -e --arg sha "$GITHUB_SHA" '.head_sha == $sha and .path == ".github/workflows/stage-existing-partial-draft.yml" and .event == "workflow_dispatch" and .status == "completed" and .conclusion == "success"' prepared-run.json
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$PREPARED_ARTIFACT_ID" > prepared-artifact.json
+          jq -e --arg sha "$GITHUB_SHA" --argjson run "$PREPARED_RUN_ID" '.expired == false and .name == "existing-draft-stage-plan" and .workflow_run.id == $run and .workflow_run.head_sha == $sha and (.digest | test("^sha256:[a-f0-9]{64}$"))' prepared-artifact.json
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$PREPARED_ARTIFACT_ID/zip" > plan.zip
+          [[ "$(sha256sum plan.zip | cut -d ' ' -f 1)" == "$(jq -r '.digest | sub("^sha256:"; "")' prepared-artifact.json)" ]]
+          [[ "$(unzip -Z1 plan.zip | LC_ALL=C sort | tr '\n' ' ')" == "stage-plan.json stage-plan.sha256 " ]]
+          [[ "$(unzip -p plan.zip stage-plan.sha256)" == "$PLAN_DIGEST" ]]
+          unzip -p plan.zip stage-plan.json > stage-plan.json
+          [[ "$(sha256sum stage-plan.json | cut -d ' ' -f 1)" == "$PLAN_DIGEST" ]]
+          jq -e --arg sha "$GITHUB_SHA" --arg tag "$RELEASE_TAG" '.input.toolingSha == $sha and .input.target.tag == $tag and .input.mode == "carry-mac"' stage-plan.json
+      - name: Verify complete native readiness and optionally publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NATIVE_RECEIPT_JSON: ${{ inputs.native_receipt_json }}
+          PLAN_DIGEST: ${{ inputs.plan_digest }}
+          PUBLISH_RELEASE: ${{ inputs.publish_release }}
+        run: |
+          set -euo pipefail
+          flags=()
+          if [[ "$PUBLISH_RELEASE" == true ]]; then flags=(--publish); fi
+          pnpm exec tsx scripts/ci/publish-carried-release.ts --plan stage-plan.json --plan-digest "$PLAN_DIGEST" --output publication-result.json "${flags[@]}"
+      - name: Preserve readiness or publication result
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: carried-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: publication-result.json
+          if-no-files-found: warn

@@ -1,0 +1,264 @@
+import React, { useMemo } from 'react';
+
+import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team/dialogs/openCodeDefaultMaterialization';
+import { isAnthropicHaikuTeamModel } from '@renderer/utils/teamModelCatalog';
+
+import { LeadModelRow } from './LeadModelRow';
+import { MembersEditorSection } from './MembersEditorSection';
+
+import type { MemberDraft } from './membersEditorTypes';
+import type { GatewayMemberBindingsState } from '@features/gateway-provider/renderer';
+import type { TeamModelSelectorProps } from '@renderer/components/team/dialogs/TeamModelSelector';
+import type { MentionSuggestion } from '@renderer/types/mention';
+import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/types';
+
+interface TeamRosterEditorSectionProps {
+  members: MemberDraft[];
+  onMembersChange: (members: MemberDraft[]) => void;
+  /** Team name used for per-teammate gateway bindings on the member row. */
+  teamName?: string;
+  gatewayBindings?: GatewayMemberBindingsState;
+  fieldError?: string;
+  validateMemberName?: (name: string) => string | null;
+  showWorkflow?: boolean;
+  showJsonEditor?: boolean;
+  draftKeyPrefix?: string;
+  projectPath?: string | null;
+  taskSuggestions?: MentionSuggestion[];
+  teamSuggestions?: MentionSuggestion[];
+  onWorkflowSuggestionsNeeded?: () => void;
+  hideMembersContent?: boolean;
+  existingMembers?: readonly { name: string; color?: string; removedAt?: number | string | null }[];
+  defaultProviderId?: TeamProviderId;
+  inheritedProviderId: TeamProviderId;
+  inheritedModel: string;
+  inheritedEffort?: EffortLevel;
+  inheritModelSettingsByDefault?: boolean;
+  forceInheritedModelSettings?: boolean;
+  /** Whether main gives unset teammates the lead's model; defaults to the sync toggle. */
+  teammatesInheritLeadModel?: boolean;
+  lockProviderModel?: boolean;
+  modelLockReason?: string;
+  runtimeSelectionUnresolved?: boolean;
+  providerId: TeamProviderId;
+  model: string;
+  effort?: EffortLevel;
+  limitContext: boolean;
+  runtimeProviderStatusById?: ReadonlyMap<TeamProviderId, CliProviderStatus | null | undefined>;
+  providerReadyById?: Partial<Record<TeamProviderId, boolean>>;
+  onProviderChange: (providerId: TeamProviderId) => void;
+  onModelChange: (model: string) => void;
+  onEffortChange: (effort: string) => void;
+  onEffortAutoReset?: () => void;
+  onLimitContextChange: (value: boolean) => void;
+  syncModelsWithTeammates: boolean;
+  onSyncModelsWithTeammatesChange: (value: boolean) => void;
+  headerTop?: React.ReactNode;
+  headerBottom?: React.ReactNode;
+  leadProviderNoticeById?: Partial<Record<TeamProviderId, React.ReactNode>>;
+  softDeleteMembers?: boolean;
+  leadWarningText?: string | null;
+  memberWarningById?: Record<string, string | null | undefined>;
+  memberErrorById?: Record<string, string | null | undefined>;
+  memberInfoById?: Record<string, string | null | undefined>;
+  disableGeminiOption?: boolean;
+  leadModelIssueText?: string | null;
+  memberModelIssueById?: Record<string, string | null | undefined>;
+  modelAdvisoryReasonByProvider?: Partial<
+    Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
+  >;
+  modelIssueReasonByProvider?: Partial<
+    Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
+  >;
+  modelUnavailableReasonByProvider?: Partial<
+    Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
+  >;
+  onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
+  onOpenProviderSettings?: TeamModelSelectorProps['onOpenProviderSettings'];
+  showWorktreeIsolationControls?: boolean;
+  teammateWorktreeDefault?: boolean;
+  worktreeIsolationDisabledReason?: string | null;
+  onTeammateWorktreeDefaultChange?: (enabled: boolean) => void;
+}
+
+const TeamRosterEditorSectionImpl = ({
+  members,
+  onMembersChange,
+  teamName,
+  gatewayBindings,
+  fieldError,
+  validateMemberName,
+  showWorkflow = false,
+  showJsonEditor = true,
+  draftKeyPrefix,
+  projectPath,
+  taskSuggestions,
+  teamSuggestions,
+  onWorkflowSuggestionsNeeded,
+  hideMembersContent = false,
+  existingMembers,
+  defaultProviderId = 'anthropic',
+  inheritedProviderId,
+  inheritedModel,
+  inheritedEffort,
+  inheritModelSettingsByDefault = false,
+  forceInheritedModelSettings = false,
+  teammatesInheritLeadModel,
+  lockProviderModel = false,
+  modelLockReason,
+  runtimeSelectionUnresolved = false,
+  providerId,
+  model,
+  effort,
+  limitContext,
+  runtimeProviderStatusById,
+  providerReadyById,
+  onProviderChange,
+  onModelChange,
+  onEffortChange,
+  onEffortAutoReset,
+  onLimitContextChange,
+  syncModelsWithTeammates,
+  onSyncModelsWithTeammatesChange,
+  headerTop,
+  headerBottom,
+  leadProviderNoticeById,
+  softDeleteMembers = false,
+  leadWarningText,
+  memberWarningById,
+  memberErrorById,
+  memberInfoById,
+  disableGeminiOption = false,
+  leadModelIssueText,
+  memberModelIssueById,
+  modelAdvisoryReasonByProvider,
+  modelIssueReasonByProvider,
+  modelUnavailableReasonByProvider,
+  onOpenCodeProviderScopedStatusChange,
+  onOpenProviderSettings,
+  showWorktreeIsolationControls = false,
+  teammateWorktreeDefault = false,
+  worktreeIsolationDisabledReason,
+  onTeammateWorktreeDefaultChange,
+}: TeamRosterEditorSectionProps): React.JSX.Element => {
+  const canUseCustomMemberRuntimes =
+    !hideMembersContent && !forceInheritedModelSettings && !syncModelsWithTeammates;
+  const activeRuntimeMembers = canUseCustomMemberRuntimes
+    ? members.filter((member) => !member.removedAt)
+    : [];
+  const hasCustomAnthropicRuntime = activeRuntimeMembers.some(
+    (member) => member.providerId === 'anthropic'
+  );
+  const hasMemberAnthropicRuntimeWithContextChoice = activeRuntimeMembers.some((member) => {
+    if (member.providerId === 'anthropic') {
+      const memberModel = member.model?.trim();
+      return !memberModel || !isAnthropicHaikuTeamModel(memberModel);
+    }
+
+    if (member.providerId == null && providerId === 'anthropic') {
+      const memberModel = member.model?.trim();
+      return Boolean(memberModel && !isAnthropicHaikuTeamModel(memberModel));
+    }
+
+    return false;
+  });
+  const hasAnthropicRuntime = providerId === 'anthropic' || hasCustomAnthropicRuntime;
+  const disableAnthropicContextLimit =
+    providerId === 'anthropic' &&
+    isAnthropicHaikuTeamModel(model) &&
+    !hasMemberAnthropicRuntimeWithContextChoice;
+
+  const defaultMaterialization = useMemo(
+    () => ({ inheritsLeadModel: teammatesInheritLeadModel ?? forceInheritedModelSettings }),
+    [forceInheritedModelSettings, teammatesInheritLeadModel]
+  );
+
+  return (
+    // Create/Launch launch OpenCode Default as its concrete route (see the context).
+    <OpenCodeDefaultMaterializationContext.Provider value={defaultMaterialization}>
+      <MembersEditorSection
+        runtimeSelectionUnresolved={runtimeSelectionUnresolved}
+        members={members}
+        onChange={onMembersChange}
+        teamName={teamName}
+        gatewayBindings={gatewayBindings}
+        fieldError={fieldError}
+        validateMemberName={validateMemberName}
+        showWorkflow={showWorkflow}
+        showJsonEditor={showJsonEditor}
+        draftKeyPrefix={draftKeyPrefix}
+        projectPath={projectPath}
+        taskSuggestions={taskSuggestions}
+        teamSuggestions={teamSuggestions}
+        onWorkflowSuggestionsNeeded={onWorkflowSuggestionsNeeded}
+        toolbarLeading={headerTop}
+        layoutVariant="flat"
+        hideContent={hideMembersContent}
+        existingMembers={existingMembers}
+        defaultProviderId={defaultProviderId}
+        inheritedProviderId={inheritedProviderId}
+        inheritedModel={inheritedModel}
+        inheritedEffort={inheritedEffort}
+        limitContext={limitContext}
+        onLimitContextChange={onLimitContextChange}
+        runtimeProviderStatusById={runtimeProviderStatusById}
+        providerReadyById={providerReadyById}
+        inheritModelSettingsByDefault={inheritModelSettingsByDefault}
+        lockProviderModel={lockProviderModel}
+        forceInheritedModelSettings={forceInheritedModelSettings}
+        modelLockReason={modelLockReason}
+        softDeleteMembers={softDeleteMembers}
+        disableGeminiOption={disableGeminiOption}
+        memberModelIssueById={memberModelIssueById}
+        modelAdvisoryReasonByProvider={modelAdvisoryReasonByProvider}
+        modelIssueReasonByProvider={modelIssueReasonByProvider}
+        modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
+        onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
+        onOpenProviderSettings={onOpenProviderSettings}
+        showWorktreeIsolationControls={showWorktreeIsolationControls}
+        teammateWorktreeDefault={teammateWorktreeDefault}
+        worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
+        onTeammateWorktreeDefaultChange={onTeammateWorktreeDefaultChange}
+        headerExtra={
+          <div className="space-y-3">
+            <LeadModelRow
+              projectPath={projectPath}
+              runtimeSelectionUnresolved={runtimeSelectionUnresolved}
+              providerId={providerId}
+              model={model}
+              effort={effort}
+              limitContext={limitContext}
+              onProviderChange={onProviderChange}
+              onModelChange={onModelChange}
+              onEffortChange={onEffortChange}
+              onEffortAutoReset={onEffortAutoReset}
+              onLimitContextChange={onLimitContextChange}
+              syncModelsWithTeammates={syncModelsWithTeammates}
+              onSyncModelsWithTeammatesChange={onSyncModelsWithTeammatesChange}
+              warningText={leadWarningText}
+              disableGeminiOption={disableGeminiOption}
+              providerNoticeById={leadProviderNoticeById}
+              providerReadyById={providerReadyById}
+              modelIssueText={leadModelIssueText}
+              modelAdvisoryReasonByValue={modelAdvisoryReasonByProvider?.[providerId]}
+              modelIssueReasonByValue={modelIssueReasonByProvider?.[providerId]}
+              modelUnavailableReasonByValue={modelUnavailableReasonByProvider?.[providerId]}
+              onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
+              onOpenProviderSettings={onOpenProviderSettings}
+              showAnthropicContextLimit={hasAnthropicRuntime}
+              disableAnthropicContextLimit={disableAnthropicContextLimit}
+              layoutVariant="flat"
+            />
+            {headerBottom}
+          </div>
+        }
+        memberWarningById={memberWarningById}
+        memberErrorById={memberErrorById}
+        memberInfoById={memberInfoById}
+      />
+    </OpenCodeDefaultMaterializationContext.Provider>
+  );
+};
+
+export const TeamRosterEditorSection = React.memo(TeamRosterEditorSectionImpl);
+TeamRosterEditorSection.displayName = 'TeamRosterEditorSection';

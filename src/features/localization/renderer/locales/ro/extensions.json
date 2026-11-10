@@ -1,0 +1,688 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "Adaugă personalizat",
+      "openDashboard": "Deschide panoul",
+      "refreshCatalog": "Reîmprospătează catalogul"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "Pluginuri: {{status}}",
+      "skills": "Abilități: {{status}}"
+    },
+    "desktopOnly": "Disponibil doar în aplicația desktop.",
+    "provider": {
+      "checkingStatus": "Se verifică starea furnizorului...",
+      "connected": "Conectat",
+      "loading": "Se încarcă...",
+      "needsSetup": "Necesită configurare",
+      "readyToConfigure": "Gata de configurare",
+      "unsupported": "Neacceptat"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "Extensiile au nevoie de runtime-ul configurat pentru a gestiona pluginuri, servere MCP, abilități și conexiuni cu furnizorii.",
+      "checkingAvailabilityTitle": "Se verifică disponibilitatea runtime-ului pentru extensii",
+      "failedToStartDescription": "Extensiile sunt dezactivate până când runtime-ul trece verificarea de stare la pornire. Deschide panoul pentru a-l repara sau reinstala.",
+      "failedToStartTitle": "Runtime-ul configurat a fost găsit, dar pornirea a eșuat",
+      "multimodelCapabilitiesDescription": "Suportul furnizorilor poate diferi în funcție de secțiune. Pluginurile sunt afișate doar acolo unde runtime-ul declară explicit suport.",
+      "multimodelCapabilitiesTitle": "Capabilități ale runtime-ului multimodel",
+      "needsSignInDescription": "{{runtime}} a fost găsit{{version}}, dar instalările de pluginuri sunt dezactivate până când te autentifici din panou.",
+      "needsSignInTitle": "{{runtime}} necesită autentificare",
+      "notAvailableDescription": "Extensiile sunt dezactivate până când runtime-ul este instalat. Deschide panoul pentru a-l instala și reîncearcă.",
+      "notAvailableTitle": "Runtime-ul configurat nu este disponibil",
+      "readyDescription": "Pluginurile pot fi instalate din această pagină{{versionSuffix}}.",
+      "readyTitle": "{{runtime}} este pregătit",
+      "requiredForMutations": "Runtime-ul configurat este necesar pentru a instala sau dezinstala extensii. Instalează-l sau repară-l din panou."
+    },
+    "sessionsRestartWarning": "Sesiunile în execuție nu vor prelua modificările extensiilor până la repornire.",
+    "tabs": {
+      "apiKeys": {
+        "description": "Chei secrete pentru servicii online. Adaugă-le aici pentru ca pluginurile, serverele și integrările să se poată conecta și funcționa.",
+        "label": "Chei API"
+      },
+      "mcpServers": {
+        "description": "Conexiuni cu unelte și aplicații externe. Permit runtime-ului să citească date sau să execute acțiuni dincolo de această aplicație.",
+        "label": "Servere MCP"
+      },
+      "plugins": {
+        "description": "Suplimente mici pentru runtime. În modul multimodel se aplică în prezent sesiunilor Anthropic când sunt acceptate. Suportul mai larg al furnizorilor este în dezvoltare.",
+        "label": "Pluginuri"
+      },
+      "skills": {
+        "description": "Instrucțiuni gata făcute pentru sarcini comune. Ajută runtime-ul să gestioneze mai consecvent sarcinile repetabile.",
+        "label": "Abilități"
+      }
+    },
+    "title": "Extensii"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} active",
+    "browseByFit": "Răsfoiește după potrivire",
+    "capabilities": "Capabilități",
+    "categories": "Categorii",
+    "clearAllFilters": "Șterge toate filtrele",
+    "clearFilters": "Șterge filtrele",
+    "counts": {
+      "capabilities": "{{count}} capabilități",
+      "categories": "{{count}} categorii",
+      "plugins": "{{count}} pluginuri",
+      "capabilities_few": "{{count}} capabilități",
+      "capabilities_many": "{{count}} capabilități",
+      "capabilities_one": "{{count}} capabilitate",
+      "capabilities_other": "{{count}} capabilități",
+      "categories_few": "{{count}} categorii",
+      "categories_many": "{{count}} categorii",
+      "categories_one": "{{count}} categorie",
+      "categories_other": "{{count}} categorii",
+      "plugins_few": "{{count}} pluginuri",
+      "plugins_many": "{{count}} pluginuri",
+      "plugins_one": "{{count}} plugin",
+      "plugins_other": "{{count}} pluginuri"
+    },
+    "empty": {
+      "description": "Revino mai târziu pentru pluginuri noi",
+      "filteredDescription": "Încearcă să ajustezi criteriile de căutare sau de filtrare",
+      "filteredTitle": "Niciun plugin nu corespunde filtrelor tale",
+      "title": "Niciun plugin disponibil"
+    },
+    "filterDescription": "Restrânge catalogul după categorie, capabilitate sau stare de instalare.",
+    "installedOnly": "Doar instalate",
+    "providerSupportNotice": "Suportul pentru pluginuri este în prezent garantat doar pentru sesiunile Anthropic (Claude). Lucrăm pentru a accepta pluginuri pentru toți agenții.",
+    "resultsUpdateInstantly": "Rezultatele se actualizează instantaneu pe măsură ce rafinezi filtrele.",
+    "searchPlaceholder": "Caută pluginuri...",
+    "selectedCount": "{{count}} selectate",
+    "showing": "Se afișează {{shown}} din {{total}} pluginuri",
+    "sort": {
+      "category": "Categorie",
+      "nameAsc": "Nume A-Z",
+      "nameDesc": "Nume Z-A",
+      "popular": "Populare"
+    },
+    "activeFilters_few": "{{count}} active",
+    "activeFilters_many": "{{count}} active",
+    "activeFilters_one": "{{count}} activ",
+    "activeFilters_other": "{{count}} active",
+    "selectedCount_few": "{{count}} selectate",
+    "selectedCount_many": "{{count}} selectate",
+    "selectedCount_one": "{{count}} selectat",
+    "selectedCount_other": "{{count}} selectate"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "Adaugă",
+      "cancel": "Anulează",
+      "install": "Instalează",
+      "installing": "Se instalează..."
+    },
+    "description": "Adaugă un server manual fără catalog.",
+    "errors": {
+      "installFailed": "Instalarea a eșuat",
+      "invalidServerName": "Nume de server invalid. Folosește caractere alfanumerice, liniuțe, sublinieri, puncte.",
+      "npmPackageRequired": "Numele pachetului npm este necesar",
+      "serverNameRequired": "Numele serverului este necesar",
+      "serverUrlRequired": "URL-ul serverului este necesar"
+    },
+    "fields": {
+      "environmentVariables": "Variabile de mediu",
+      "headers": "Anteturi",
+      "npmPackage": "Pachet npm",
+      "scope": "Domeniu",
+      "serverName": "Nume server",
+      "serverUrl": "URL server",
+      "transport": "Transport",
+      "transportType": "Tip de transport",
+      "versionOptional": "Versiune (opțional)"
+    },
+    "title": "Adaugă server MCP personalizat",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stdio (npm)"
+    },
+    "placeholders": {
+      "headerName": "Nume-Antet",
+      "envVarName": "NUME_VAR_MEDIU",
+      "serverName": "serverul-meu",
+      "latest": "ultima",
+      "value": "valoare",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "Serverele MCP la distanță pot încă necesita anteturi personalizate sau chei API chiar și când registrul nu le descrie. Dacă conexiunea eșuează după instalare, verifică documentația furnizorului.",
+      "required": "Acest server necesită autentificare"
+    },
+    "diagnostics": {
+      "launchTarget": "Țintă de lansare"
+    },
+    "form": {
+      "autoFilled": "Completat automat",
+      "environmentVariables": "Variabile de mediu",
+      "headers": "Anteturi",
+      "scope": "Domeniu",
+      "serverName": "Nume server"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "Acest server necesită configurare manuală. Verifică depozitul pentru instrucțiuni de instalare.",
+      "manualSetupRequired": "Configurare manuală necesară",
+      "npmPackage": "npm: {{package}}",
+      "manage": "Gestionează instalarea",
+      "install": "Instalează serverul"
+    },
+    "links": {
+      "glama": "Glama",
+      "repository": "Depozit",
+      "website": "Site web"
+    },
+    "metadata": {
+      "author": "Autor",
+      "githubStars": "Stele GitHub",
+      "hosting": "Găzduire",
+      "installType": "Tip de instalare",
+      "license": "Licență",
+      "published": "Publicat",
+      "source": "Sursă",
+      "updated": "Actualizat",
+      "version": "Versiune"
+    },
+    "scope": {
+      "local": "Local",
+      "project": "Proiect"
+    },
+    "tools": {
+      "title": "Unelte ({{count}})",
+      "title_few": "Unelte ({{count}})",
+      "title_many": "Unelte ({{count}})",
+      "title_one": "Unealtă ({{count}})",
+      "title_other": "Unelte ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "serverul-meu"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "Anulează",
+      "createSkill": "Creează abilitate",
+      "preparing": "Se pregătește...",
+      "reviewAndCreate": "Revizuiește și creează",
+      "reviewAndSave": "Revizuiește și salvează",
+      "saveSkill": "Salvează abilitatea"
+    },
+    "advanced": {
+      "customDescription": "Această abilitate folosește un format markdown personalizat, așa că editeaz-o direct aici.",
+      "customTitle": "2. Editor SKILL.md",
+      "description": "Majoritatea oamenilor pot sări peste acest pas. Deschide-l doar dacă vrei control direct asupra fișierului markdown brut.",
+      "hide": "Ascunde editorul avansat",
+      "resetFromStructuredFields": "Resetează din câmpurile structurate",
+      "show": "Arată editorul avansat",
+      "title": "4. Editor SKILL.md avansat"
+    },
+    "basics": {
+      "description": "Dă acestei abilități un nume clar, alege cine o poate folosi și decide unde ar trebui să fie stocată.",
+      "title": "1. Elemente de bază"
+    },
+    "description": {
+      "create": "Descrie fluxul de lucru în limbaj simplu, revizuiește fișierele care vor fi create, apoi salvează-l.",
+      "edit": "Actualizează această abilitate, revizuiește modificările de fișiere rezultate, apoi salvează-l."
+    },
+    "extraFiles": {
+      "addedFiles": "Fișiere adăugate:",
+      "assets": "Resurse",
+      "assetsDescription": "Adaugă capturi de ecran sau media incluse doar dacă ajută la explicarea fluxului de lucru.",
+      "description": "Adaugă documente, scripturi sau resurse de suport doar dacă această abilitate chiar are nevoie de ele.",
+      "lockedForEdits": "Rădăcina și folderul sunt blocate pentru editări",
+      "optionalDescription": "Adaugă fișiere de start care vor fi incluse în revizuire și scrise împreună cu `SKILL.md`.",
+      "optionalTitle": "Fișiere opționale",
+      "references": "Referințe",
+      "referencesDescription": "Adaugă documente, linkuri sau exemple de suport pe care runtime-ul le poate consulta.",
+      "scripts": "Scripturi",
+      "scriptsDescription": "Adaugă comenzi de ajutor sau note de configurare. Revizuiește cu atenție înainte de a partaja această abilitate.",
+      "title": "3. Fișiere suplimentare"
+    },
+    "fields": {
+      "compatibility": "Compatibilitate",
+      "description": "Descriere",
+      "folderName": "Nume folder",
+      "folderNameHint": "Sugerăm acest lucru automat din numele abilității pentru ca revizuirea să funcționeze imediat.",
+      "invocation": "Cum ar trebui folosită",
+      "license": "Licență",
+      "name": "Nume abilitate",
+      "notes": "Note suplimentare sau măsuri de protecție",
+      "root": "Unde să fie stocată",
+      "scope": "Cine o poate folosi",
+      "steps": "Pașii principali de urmat",
+      "whenToUse": "Când să apelezi la aceasta"
+    },
+    "instructions": {
+      "description": "Aceste secțiuni generează fișierul abilității pentru tine, așa că nu trebuie să editezi markdown decât dacă vrei.",
+      "locked": "Câmpurile structurate sunt blocate deoarece ai trecut la editarea manuală a `SKILL.md` mai jos.",
+      "title": "2. Instrucțiuni"
+    },
+    "invocation": {
+      "auto": "Poate fi folosită automat",
+      "manualOnly": "Doar când o ceri"
+    },
+    "placeholders": {
+      "description": "La ce ajută această abilitate",
+      "name": "Scrie un nume concis pentru abilitate",
+      "notes": "Exemplu: Semnalează testele lipsă, regresiile și presupunerile riscante.",
+      "steps": "1. Inspectează fișierele relevante.\n2. Explică mai întâi riscul principal.\n3. Sugerează cea mai sigură remediere.",
+      "whenToUse": "Exemplu: Folosește aceasta când sarcina este o cerere de revizuire de cod sau de triaj al erorilor.",
+      "license": "MIT",
+      "compatibility": "claude-code, cursor"
+    },
+    "review": {
+      "creating": "Se creează o abilitate",
+      "hint": "Revizuiește mai întâi modificările de fișiere, apoi confirmă salvarea în pasul următor.",
+      "saving": "Se salvează această abilitate"
+    },
+    "root": {
+      "codexOnly": " - Doar Codex",
+      "shared": " - Partajat"
+    },
+    "scope": {
+      "project": "Proiect: {{project}}",
+      "projectUnavailable": "Proiect indisponibil",
+      "user": "Utilizator"
+    },
+    "title": {
+      "create": "Creează abilitate",
+      "edit": "Editează abilitatea"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "Anulează",
+      "delete": "Șterge",
+      "deleteSkill": "Șterge abilitatea",
+      "deleting": "Se șterge...",
+      "editSkill": "Editează abilitatea",
+      "openFolder": "Deschide folderul",
+      "openSkillFile": "Deschide SKILL.md",
+      "retry": "Reîncearcă"
+    },
+    "badges": {
+      "assets": "Resurse",
+      "autoUse": "Utilizare automată",
+      "hasScripts": "Are scripturi",
+      "manualUse": "Utilizare manuală",
+      "references": "Referințe",
+      "storedIn": "Stocat în {{root}}"
+    },
+    "deleteDialog": {
+      "description": "Ștergi această abilitate și o muți la coșul de gunoi?",
+      "descriptionWithName": "Ștergi \"{{name}}\" și o muți la coșul de gunoi? O poți restaura mai târziu din coș dacă este nevoie.",
+      "title": "Ștergi abilitatea?"
+    },
+    "descriptionFallback": "Inspectează metadatele descoperite ale abilității și instrucțiunile brute.",
+    "errors": {
+      "deleteFailed": "Ștergerea abilității a eșuat",
+      "loadFailed": "Imposibil de încărcat această abilitate."
+    },
+    "files": {
+      "advancedDetails": "Detalii avansate de fișier",
+      "assets": "Resurse",
+      "references": "Referințe",
+      "scripts": "Scripturi",
+      "storedAt": "Stocat la"
+    },
+    "includes": {
+      "assets": "resurse",
+      "instructionsOnly": "Doar instrucțiunile abilității",
+      "references": "referințe",
+      "scripts": "scripturi"
+    },
+    "invocation": {
+      "auto": "Rulează automat când se potrivește cu sarcina.",
+      "manualOnly": "Rulează doar când o ceri explicit."
+    },
+    "issues": {
+      "bundledScripts": "Această abilitate include scripturi incluse",
+      "reviewCarefully": "Revizuiește această abilitate cu atenție înainte de a o folosi"
+    },
+    "loading": "Se încarcă detaliile abilității...",
+    "scope": {
+      "personal": "Abilitățile tale personale",
+      "projectOnly": "Doar acest proiect"
+    },
+    "summary": {
+      "howUsed": "Cum este folosită",
+      "included": "Ce vine cu ea",
+      "whoCanUse": "Cine o poate folosi"
+    },
+    "titleFallback": "Detalii abilitate"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "Creează abilitate",
+      "import": "Importă"
+    },
+    "badges": {
+      "assets": "Resurse",
+      "hasScripts": "Are scripturi",
+      "needsAttention": "Necesită atenție",
+      "references": "Referințe",
+      "storedIn": "Stocat în {{root}}"
+    },
+    "configuredRuntime": "runtime-ul configurat",
+    "counts": {
+      "codexOnly": "{{count}} doar Codex",
+      "personal": "{{count}} personale",
+      "project": "{{count}} de proiect",
+      "shared": "{{count}} partajate",
+      "total": "{{count}} în total",
+      "codexOnly_few": "{{count}} doar Codex",
+      "codexOnly_many": "{{count}} doar Codex",
+      "codexOnly_one": "{{count}} doar Codex",
+      "codexOnly_other": "{{count}} doar Codex",
+      "personal_few": "{{count}} personale",
+      "personal_many": "{{count}} personale",
+      "personal_one": "{{count}} personală",
+      "personal_other": "{{count}} personale",
+      "project_few": "{{count}} de proiect",
+      "project_many": "{{count}} de proiect",
+      "project_one": "{{count}} de proiect",
+      "project_other": "{{count}} de proiect",
+      "shared_few": "{{count}} partajate",
+      "shared_many": "{{count}} partajate",
+      "shared_one": "{{count}} partajată",
+      "shared_other": "{{count}} partajate",
+      "total_few": "{{count}} în total",
+      "total_many": "{{count}} în total",
+      "total_one": "{{count}} în total",
+      "total_other": "{{count}} în total"
+    },
+    "empty": {
+      "noMatches": "Nicio abilitate nu corespunde căutării tale",
+      "noMatchesDescription": "Încearcă un alt termen de căutare sau schimbă filtrele.",
+      "noSkills": "Nicio abilitate încă",
+      "noSkillsDescription": "Creează-ți prima abilitate pentru a învăța un flux de lucru repetabil sau importă una pe care o folosești deja."
+    },
+    "filters": {
+      "all": "Toate abilitățile",
+      "codexOnly": "Doar Codex",
+      "hasScripts": "Are scripturi",
+      "needsAttention": "Necesită atenție",
+      "personal": "Personale",
+      "project": "De proiect",
+      "shared": "Partajate"
+    },
+    "hero": {
+      "codexAvailable": "Folosește `.codex` când o abilitate ar trebui să rămână doar pentru Codex.",
+      "codexUnavailable": "Abilitățile `.codex` existente rămân editabile aici, dar noile abilități doar pentru Codex necesită runtime-ul Codex activat.",
+      "description": "Abilitățile sunt instrucțiuni reutilizabile care ajută runtime-ul să gestioneze mai consecvent același tip de sarcină.",
+      "guidance": "Folosește abilitățile personale pentru obiceiuri pe care le vrei peste tot. Folosește abilitățile de proiect pentru fluxuri de lucru care au sens doar într-o singură bază de cod.",
+      "personalContext": "Vezi în acest moment doar abilitățile tale personale.",
+      "projectContext": "Vezi abilitățile pentru {{project}} plus abilitățile tale personale.",
+      "title": "Învață munca repetabilă"
+    },
+    "invocation": {
+      "auto": "Rulează automat când se potrivește",
+      "manualOnly": "Rulează doar când o ceri explicit"
+    },
+    "loading": {
+      "loading": "Se încarcă abilitățile...",
+      "refreshing": "Se reîmprospătează abilitățile..."
+    },
+    "runtimeAudience": "Abilitățile partajate din `.claude`, `.cursor` și `.agents` sunt disponibile pentru {{audience}}. Abilitățile stocate în `.codex` rămân doar pentru Codex când suportul Codex este disponibil.",
+    "scope": {
+      "project": "Acest proiect",
+      "user": "Personale"
+    },
+    "searchPlaceholder": "Caută după numele abilității sau la ce ajută...",
+    "sections": {
+      "personal": {
+        "description": "Obiceiuri și instrucțiuni pe care le vrei disponibile peste tot.",
+        "title": "Abilități personale"
+      },
+      "project": {
+        "description": "Fluxuri de lucru care au sens doar pentru această bază de cod.",
+        "title": "Abilități de proiect"
+      }
+    },
+    "sort": {
+      "label": "Sortează abilitățile",
+      "name": "Nume",
+      "recent": "Recente"
+    },
+    "status": {
+      "hasScripts": "Include scripturi, așa că revizuiește-o cu atenție",
+      "needsAttention": "Necesită atenție înainte să te bazezi pe ea",
+      "ready": "Gata de utilizare"
+    },
+    "success": {
+      "created": "Abilitate creată cu succes.",
+      "imported": "Abilitate importată cu succes.",
+      "saved": "Abilitate salvată cu succes."
+    }
+  },
+  "pluginDetail": {
+    "unknown": "Necunoscut",
+    "metadata": {
+      "author": "Autor",
+      "category": "Categorie",
+      "source": "Sursă",
+      "version": "Versiune",
+      "capabilities": "Capabilități",
+      "installs": "Instalări"
+    },
+    "scope": {
+      "label": "Domeniu:",
+      "options": {
+        "user": "Utilizator (global)",
+        "project": "Proiect (partajat)",
+        "local": "Local (ignorat de git)"
+      }
+    },
+    "links": {
+      "homepage": "Pagină principală",
+      "contact": "Contact"
+    },
+    "readme": {
+      "loading": "Se încarcă README...",
+      "empty": "Niciun README disponibil."
+    }
+  },
+  "skillImport": {
+    "title": "Importă abilitate",
+    "description": "Alege un folder de abilitate existent, revizuiește ce va fi copiat, apoi importă-l într-una dintre locațiile tale de abilități acceptate.",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. Alege un folder de abilitate",
+        "description": "Acesta ar trebui să fie un folder care conține deja un fișier `SKILL.md`, `Skill.md` sau `skill.md`."
+      },
+      "location": {
+        "title": "2. Decide unde îi este locul",
+        "description": "Abilitățile personale funcționează peste tot. Abilitățile de proiect apar doar pentru o singură bază de cod."
+      }
+    },
+    "fields": {
+      "sourceFolder": "Folder sursă",
+      "destinationFolderName": "Nume folder de destinație",
+      "audience": "Cine o poate folosi",
+      "storage": "Unde să fie stocată"
+    },
+    "placeholders": {
+      "defaultFolderName": "Implicit la numele folderului sursă"
+    },
+    "actions": {
+      "browse": "Răsfoiește",
+      "cancel": "Anulează",
+      "preparing": "Se pregătește...",
+      "reviewAndImport": "Revizuiește și importă",
+      "importSkill": "Importă abilitatea",
+      "backToImport": "Înapoi la import"
+    },
+    "scope": {
+      "user": "Utilizator",
+      "project": "Proiect: {{project}}",
+      "projectUnavailable": "Proiect indisponibil"
+    },
+    "rootSuffix": {
+      "codexOnly": " - Doar Codex",
+      "shared": " - Partajat"
+    },
+    "reviewHint": "Revizuiește mai întâi fișierele copiate, apoi confirmă importul în pasul următor.",
+    "reviewLabel": "Se importă această abilitate",
+    "errors": {
+      "missingSkillFile": "Acest folder nu pare încă o abilitate. Are nevoie de un fișier SKILL.md, Skill.md sau skill.md.",
+      "symbolicLinks": "Acest folder conține legături simbolice. Importă fișierele reale în loc de legături.",
+      "tooManyFiles": "Acest folder de abilitate este prea mare pentru a fi importat dintr-o dată. Elimină fișierele suplimentare și încearcă din nou.",
+      "tooLarge": "Acest folder de abilitate este prea mare pentru a fi importat în siguranță. Reduce resursele mari și încearcă din nou.",
+      "invalidFolderName": "Alege un nume de folder de destinație mai simplu folosind litere, cifre, puncte, liniuțe sau sublinieri.",
+      "mustBeDirectory": "Alege un folder de importat, nu un singur fișier.",
+      "reviewFailed": "Revizuirea modificărilor de import a eșuat",
+      "importFailed": "Importul abilității a eșuat"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "Nume A→Z",
+      "nameDesc": "Nume Z→A",
+      "toolsDesc": "Cele mai multe unelte"
+    },
+    "health": {
+      "title": "Stare de sănătate MCP",
+      "checkingViaRuntime": "Se verifică serverele MCP instalate prin {{runtime}} ...",
+      "lastChecked": "Ultima verificare {{time}}",
+      "description": "Rulează diagnostice din această pagină pentru a verifica conectivitatea MCP instalată.",
+      "checking": "Se verifică...",
+      "checkStatus": "Verifică starea"
+    },
+    "diagnostics": {
+      "title": "Diagnostice MCP runtime",
+      "serversCount": "{{count}} servere",
+      "serversCount_one": "{{count}} server",
+      "serversCount_other": "{{count}} servere",
+      "waiting": "Se așteaptă rezultatele diagnosticelor...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "Se verifică starea runtime-ului...",
+        "checkingRuntimeAvailability": "Se verifică disponibilitatea runtime-ului...",
+        "runtimeFailedToStart": "Runtime-ul configurat a fost găsit, dar pornirea a eșuat. Deschide panoul pentru a-l repara sau reinstala.",
+        "runtimeRequired": "Runtime-ul configurat este necesar. Instalează-l sau repară-l din panou."
+      },
+      "serversCount_few": "{{count}} servere",
+      "serversCount_many": "{{count}} servere"
+    },
+    "searchPlaceholder": "Caută servere MCP...",
+    "runtime": {
+      "notAvailable": "{{runtime}} indisponibil",
+      "notInstalled": "{{runtime}} nu este instalat",
+      "requiredDescription": "Verificările de sănătate MCP necesită {{runtime}}. Mergi la panou pentru a-l instala sau repara."
+    },
+    "empty": {
+      "searchTitle": "Niciun server găsit",
+      "title": "Niciun server MCP disponibil",
+      "searchDescription": "Încearcă un alt termen de căutare",
+      "description": "Revino mai târziu pentru servere noi"
+    },
+    "loadMore": "Încarcă mai multe"
+  },
+  "apiKeys": {
+    "description": "Stochează în siguranță chei API pentru completarea automată la instalarea serverelor MCP.",
+    "storage": {
+      "osKeychain": "Cheile sunt criptate prin {{backend}} și stocate cu permisiuni de fișier restricționate (doar proprietarul).",
+      "localEncryption": "Brelocul SO indisponibil - cheile sunt criptate local cu AES-256. Pentru protecție mai puternică, instalează un serviciu de breloc (gnome-keyring, kwallet)."
+    },
+    "actions": {
+      "add": "Adaugă cheie API",
+      "addFirst": "Adaugă prima ta cheie",
+      "edit": "Editează",
+      "copied": "Copiat!",
+      "copyEnvVarName": "Copiază numele variabilei de mediu",
+      "confirmDelete": "Apasă din nou pentru a confirma",
+      "delete": "Șterge"
+    },
+    "empty": {
+      "title": "Nicio cheie API salvată",
+      "description": "Adaugă chei pentru a completa automat variabilele de mediu la instalarea serverelor MCP."
+    },
+    "form": {
+      "addTitle": "Adaugă cheie API",
+      "editTitle": "Editează cheia API",
+      "addDescription": "Stochează o cheie API pentru completarea automată în instalările de servere MCP.",
+      "editDescription": "Actualizează detaliile cheii. Trebuie să reintroduci valoarea.",
+      "keychainUnavailable": "Brelocul SO indisponibil - chei criptate local cu AES-256. Instalează gnome-keyring pentru protecție la nivel de SO.",
+      "name": "Nume",
+      "namePlaceholder": "ex., OpenAI Production",
+      "environmentVariableName": "Numele variabilei de mediu",
+      "envVarPlaceholder": "ex., OPENAI_API_KEY",
+      "value": "Valoare",
+      "reenterValue": "Reintrodu valoarea cheii",
+      "valuePlaceholder": "sk-...",
+      "scope": "Domeniu",
+      "userScopeLabel": "Utilizator (global)",
+      "projectScopeLabel": "Proiect: {{project}}",
+      "projectUnavailable": "Proiect indisponibil",
+      "boundTo": "Legat de {{path}}",
+      "cancel": "Anulează",
+      "saving": "Se salvează...",
+      "update": "Actualizează",
+      "save": "Salvează",
+      "errors": {
+        "invalidEnvVarFormat": "Folosește litere, cifre, sublinieri. Trebuie să înceapă cu o literă sau o subliniere.",
+        "nameRequired": "Numele este necesar",
+        "envVarRequired": "Numele variabilei de mediu este necesar",
+        "invalidEnvVar": "Nume invalid de variabilă de mediu",
+        "valueRequired": "Valoarea cheii este necesară",
+        "projectScopeRequiresProject": "Cheile API la nivel de proiect necesită un proiect activ",
+        "saveFailed": "Salvarea a eșuat"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "Revizuiește modificările abilității",
+    "description": "{{reviewLabel}} previzualizează mai întâi modificările sistemului de fișiere. Nu se scrie nimic până nu confirmi mai jos.",
+    "noPreview": "Nicio previzualizare disponibilă.",
+    "confirmPromptPrefix": "Revizuiește diff-ul de mai jos, apoi folosește",
+    "confirmPromptSuffix": "pentru a aplica aceste modificări.",
+    "noChanges": "Nicio modificare de fișier detectată încă.",
+    "binaryBadge": "binar",
+    "binaryPreviewHidden": "Previzualizarea fișierelor binare nu este afișată. Fișierul va fi copiat ca atare.",
+    "summary": {
+      "fileChanges": "{{count}} modificări de fișiere",
+      "fileChanges_one": "{{count}} modificare de fișier",
+      "fileChanges_other": "{{count}} modificări de fișiere",
+      "new": "{{count}} noi",
+      "updated": "{{count}} actualizate",
+      "removed": "{{count}} eliminate",
+      "binary": "{{count}} binare",
+      "fileChanges_few": "{{count}} modificări de fișiere",
+      "fileChanges_many": "{{count}} modificări de fișiere"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} unelte",
+    "toolsCount_one": "{{count}} unealtă",
+    "toolsCount_other": "{{count}} unelte",
+    "envCount": "{{count}} variabile de mediu",
+    "envCount_one": "{{count}} variabilă de mediu",
+    "envCount_other": "{{count}} variabile de mediu",
+    "auth": "Autentificare",
+    "byAuthor": "de {{author}}",
+    "hosting": {
+      "remote": "La distanță",
+      "local": "Local",
+      "both": "Ambele"
+    },
+    "toolsCount_few": "{{count}} unelte",
+    "toolsCount_many": "{{count}} unelte",
+    "envCount_few": "{{count}} variabile de mediu",
+    "envCount_many": "{{count}} variabile de mediu",
+    "repository": "Depozit",
+    "website": "Site web"
+  },
+  "installButton": {
+    "installing": "Se instalează...",
+    "removing": "Se elimină...",
+    "done": "Gata",
+    "retry": "Reîncearcă",
+    "uninstall": "Dezinstalează",
+    "install": "Instalează"
+  },
+  "pluginCard": {
+    "official": "Oficial"
+  }
+}

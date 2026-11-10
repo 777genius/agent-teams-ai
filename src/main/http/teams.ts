@@ -1,0 +1,799 @@
+import { readNativeWorkSyncCurrentRuntimeInstanceId } from '@features/member-work-sync/main';
+import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
+import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getErrorMessage } from '@shared/utils/errorHandling';
+import { createLogger } from '@shared/utils/logger';
+import {
+  requireTeamRuntimeSelection,
+  TeamRuntimeSelectionError,
+} from '@shared/utils/teamRuntimeSelection';
+import { constants as fsConstants } from 'fs';
+import { access } from 'fs/promises';
+import { join } from 'path';
+
+import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
+import { registerTeamManagementRoutes } from './teams/teamManagementRoutes';
+import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
+import {
+  HttpBadRequestError,
+  parseCreateTeamRequest,
+  parseDraftLaunchCreateRequest,
+  parseLaunchRequest,
+  parseTeamConfigurationReadQuery,
+  withRuntimeTeamName,
+} from './teamRouteParsers';
+
+import type { HttpServices } from './index';
+import type { AppConnectionContext } from '@features/external-agent-connection/contracts';
+import type { MemberWorkSyncReportState } from '@features/member-work-sync/contracts';
+import type {
+  TeamHttpHandlerApis,
+  TeamHttpRuntimeApi,
+} from '@main/services/team/contracts/TeamProvisioningApis';
+import type {
+  TeamCreateConfigRequest,
+  TeamCreateRequest,
+  TeamCreateResponse,
+  TeamLaunchRequest,
+  TeamLaunchResponse,
+} from '@shared/types/team';
+import type { FastifyInstance } from 'fastify';
+
+const logger = createLogger('HTTP:teams');
+
+const RUNTIME_STOP_REPLAY_LIMIT = 64;
+const runtimeStopReplay = new Map<
+  string,
+  { ok: true; status: unknown; runtimeAdmission: { state: string } }
+>();
+
+function rememberMemberWorkSyncRuntimeStop(
+  localStopId: string,
+  value?: { ok: true; status: unknown; runtimeAdmission: { state: string } }
+) {
+  if (value) {
+    if (runtimeStopReplay.size >= RUNTIME_STOP_REPLAY_LIMIT) {
+      const oldest = runtimeStopReplay.keys().next().value;
+      if (oldest) {
+        runtimeStopReplay.delete(oldest);
+      }
+    }
+    runtimeStopReplay.set(localStopId, value);
+    return value;
+  }
+  return runtimeStopReplay.get(localStopId);
+}
+
+type LaunchBody = Omit<TeamLaunchRequest, 'teamName'>;
+type CreateTeamBody = TeamCreateConfigRequest;
+
+class HttpFeatureUnavailableError extends Error {}
+
+type TeamHttpProvisioningStartApi = TeamHttpHandlerApis['provisioningStart'];
+type TeamHttpProvisioningStatusApi = TeamHttpHandlerApis['provisioningStatus'];
+type TeamHttpRuntimeControlApi = TeamHttpHandlerApis['runtimeControl'];
+
+function isMemberWorkSyncReportState(value: string): value is MemberWorkSyncReportState {
+  return value === 'still_working' || value === 'blocked' || value === 'caught_up';
+}
+
+function assertValidMemberName(memberName: string): string {
+  const validatedMemberName = validateMemberName(memberName);
+  if (!validatedMemberName.valid) {
+    throw new HttpBadRequestError(validatedMemberName.error ?? 'Invalid memberName');
+  }
+  return validatedMemberName.value!;
+}
+
+function getTeamProvisioningStartApi(services: HttpServices): TeamHttpProvisioningStartApi {
+  const api = services.teamApis?.provisioningStart;
+  if (!api) {
+    throw new HttpFeatureUnavailableError('Team launch control is not available in this mode');
+  }
+  return api;
+}
+
+function getTeamProvisioningStatusApi(services: HttpServices): TeamHttpProvisioningStatusApi {
+  const api = services.teamApis?.provisioningStatus;
+  if (!api) {
+    throw new HttpFeatureUnavailableError('Team provisioning status is not available in this mode');
+  }
+  return api;
+}
+
+function getTeamRuntimeControlApi(services: HttpServices): TeamHttpRuntimeControlApi {
+  const api = services.teamApis?.runtimeControl;
+  if (!api) {
+    throw new HttpFeatureUnavailableError('Team runtime callbacks are not available in this mode');
+  }
+  return api;
+}
+
+function getTeamDataApi(services: HttpServices): NonNullable<HttpServices['teamDataApi']> {
+  if (!services.teamDataApi) {
+    throw new HttpFeatureUnavailableError('Team data control is not available in this mode');
+  }
+  return services.teamDataApi;
+}
+
+function getStatusCode(error: unknown, fallback: number = 500): number {
+  if (error instanceof Error && 'statusCode' in error && typeof error.statusCode === 'number')
+    return error.statusCode;
+  if (error instanceof Error && error.message.startsWith('TEAM_TRASHED:')) return 409;
+  if (error instanceof HttpBadRequestError) {
+    return 400;
+  }
+  if (isOpenCodeRuntimeValidationError(error)) {
+    return 400;
+  }
+  if (error instanceof HttpFeatureUnavailableError) {
+    return 501;
+  }
+  if (isRuntimeControlProviderRoutingError(error)) {
+    return 501;
+  }
+  if (error instanceof Error && error.name === 'RuntimeStaleEvidenceError') {
+    return 409;
+  }
+  if (error instanceof Error && error.name === 'TeamLaunchValidationError') {
+    // User-facing provisioning launch validation failure; the sub-500 status
+    // makes getResponseErrorMessage return the real message instead of the
+    // opaque "Internal server error".
+    return 422;
+  }
+  if (isTeamNotFoundError(error)) {
+    return 404;
+  }
+  if (error instanceof Error && error.message.startsWith('Team already exists')) {
+    return 409;
+  }
+  return fallback;
+}
+
+function isOpenCodeRuntimeValidationError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message.startsWith('OpenCode runtime payload ') ||
+      error.message.startsWith('OpenCode runtime permission ') ||
+      error.message.startsWith('Runtime delivery envelope ') ||
+      error.message.startsWith('Runtime delivery target '))
+  );
+}
+
+function isRuntimeControlProviderRoutingError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'RuntimeControlProviderRoutingError';
+}
+
+function isTeamNotFoundError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message.startsWith('Team not found') || /^Team "[^"]+" not found\b/.test(error.message))
+  );
+}
+
+function withValidatedRuntimeObservedAt(teamName: string, body: unknown): Record<string, unknown> {
+  const payload = withRuntimeTeamName(teamName, body);
+  if (!Object.prototype.hasOwnProperty.call(payload, 'observedAt')) {
+    return payload;
+  }
+  const observedAt = payload.observedAt;
+  if (
+    typeof observedAt !== 'string' ||
+    !observedAt.trim() ||
+    !Number.isFinite(Date.parse(observedAt))
+  ) {
+    throw new HttpBadRequestError('OpenCode runtime payload invalid observedAt');
+  }
+  return payload;
+}
+
+function shouldLogError(error: unknown): boolean {
+  const statusCode = getStatusCode(error);
+  return (
+    statusCode >= 500 &&
+    !(error instanceof HttpBadRequestError) &&
+    !(error instanceof HttpFeatureUnavailableError) &&
+    !isRuntimeControlProviderRoutingError(error)
+  );
+}
+
+function getResponseErrorMessage(
+  error: unknown,
+  statusCode: number = getStatusCode(error)
+): string {
+  if (
+    statusCode >= 500 &&
+    !(error instanceof HttpFeatureUnavailableError) &&
+    !isRuntimeControlProviderRoutingError(error)
+  ) {
+    return 'Internal server error';
+  }
+  return getErrorMessage(error);
+}
+
+async function getDraftSavedRequest(
+  services: HttpServices,
+  teamName: string
+): Promise<TeamCreateRequest | null> {
+  if (!services.teamDataApi) {
+    return null;
+  }
+
+  const configPath = join(getTeamsBasePath(), teamName, 'config.json');
+  try {
+    await access(configPath, fsConstants.F_OK);
+    return null;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  return getTeamDataApi(services).getSavedRequest(teamName);
+}
+
+function getMemberWorkSyncFeature(
+  services: HttpServices
+): NonNullable<HttpServices['memberWorkSyncFeature']> {
+  if (!services.memberWorkSyncFeature) {
+    throw new HttpBadRequestError('Member work sync feature is unavailable');
+  }
+  return services.memberWorkSyncFeature;
+}
+
+async function getTeamDataWithRuntimeOverlay(
+  services: HttpServices,
+  teamName: string
+): Promise<Awaited<ReturnType<NonNullable<HttpServices['teamDataApi']>['getTeamData']>>> {
+  const data = await getTeamDataApi(services).getTeamData(teamName);
+  let runtimeState: Awaited<ReturnType<TeamHttpRuntimeApi['getRuntimeState']>> | null = null;
+  try {
+    const runtimeApi = services.teamApis?.runtime;
+    runtimeState = (await runtimeApi?.getRuntimeState(teamName)) ?? null;
+  } catch {
+    runtimeState = null;
+  }
+
+  return typeof runtimeState?.isAlive === 'boolean'
+    ? { ...data, isAlive: runtimeState.isAlive }
+    : data;
+}
+
+export function registerTeamRoutes(app: FastifyInstance, services: HttpServices): void {
+  const managementFeature =
+    services.teamPromptManagement ?? services.externalAgentConnection?.teamPromptManagement;
+  registerTeamManagementRoutes(app, services);
+  registerTeamMemberDiagnosticsRoute(app, services, {
+    logger,
+    shouldLogError,
+    getStatusCode,
+    getResponseErrorMessage,
+    createFeatureUnavailableError: (message) => new HttpFeatureUnavailableError(message),
+    isTeamNotFoundError,
+  });
+  registerTeamLifecycleRoutes(app, services, {
+    logger,
+    shouldLogError,
+    getStatusCode,
+    getResponseErrorMessage,
+    createFeatureUnavailableError: (message) => new HttpFeatureUnavailableError(message),
+  });
+
+  app.get('/api/teams', async (_request, reply) => {
+    try {
+      return reply.send(await getTeamDataApi(services).listTeams());
+    } catch (error) {
+      if (shouldLogError(error)) {
+        logger.error('Error in GET /api/teams:', getErrorMessage(error));
+      }
+      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+    }
+  });
+
+  app.post<{ Body: CreateTeamBody }>('/api/teams', async (request, reply) => {
+    try {
+      const createRequest = parseCreateTeamRequest(request.body);
+      const management = managementFeature
+        ? await managementFeature.create(
+            createRequest,
+            (
+              request.body as CreateTeamBody & {
+                expectedContext?: AppConnectionContext;
+              }
+            ).expectedContext
+          )
+        : undefined;
+      if (!management) await getTeamDataApi(services).createTeamConfig(createRequest);
+      services.memberWorkSyncFeature?.resumeTeam(createRequest.teamName);
+      return reply.status(201).send({
+        ...management,
+        teamName: createRequest.teamName,
+        draft: true,
+        runtimeSelectionVersion: createRequest.runtimeSelectionVersion,
+        runtimeSelection:
+          createRequest.runtimeSelectionVersion === 1 && !createRequest.providerId
+            ? 'unresolved'
+            : 'selected',
+      });
+    } catch (error) {
+      if (shouldLogError(error)) {
+        logger.error('Error in POST /api/teams:', getErrorMessage(error));
+      }
+      return reply.status(getStatusCode(error)).send({
+        error: getResponseErrorMessage(error),
+        ...(error instanceof TeamRuntimeSelectionError ? { code: error.code } : {}),
+      });
+    }
+  });
+
+  app.get<{ Params: { teamName: string }; Querystring: { configuration?: string } }>(
+    '/api/teams/:teamName',
+    async (request, reply) => {
+      try {
+        const validatedTeamName = validateTeamName(request.params.teamName);
+        if (!validatedTeamName.valid) {
+          return reply.status(400).send({ error: validatedTeamName.error });
+        }
+
+        const configuration = parseTeamConfigurationReadQuery(request.query);
+        const teamName = validatedTeamName.value!;
+        if (configuration && !managementFeature)
+          throw new HttpFeatureUnavailableError(
+            'Team configuration snapshots are not available in this mode'
+          );
+        const savedDraft = configuration ? null : await getDraftSavedRequest(services, teamName);
+        if (savedDraft) {
+          return reply.send({
+            teamName,
+            pendingCreate: true,
+            savedRequest: savedDraft,
+          });
+        }
+
+        const taskActivityApi = services.teamApis?.taskActivity;
+        await taskActivityApi?.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
+        return reply.send(
+          configuration && managementFeature
+            ? await managementFeature.get(teamName)
+            : await getTeamDataWithRuntimeOverlay(services, teamName)
+        );
+      } catch (error) {
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in GET /api/teams/${request.params.teamName}:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      }
+    }
+  );
+
+  app.post<{ Params: { teamName: string }; Body: LaunchBody }>(
+    '/api/teams/:teamName/launch',
+    async (request, reply) => {
+      try {
+        const validatedTeamName = validateTeamName(request.params.teamName);
+        if (!validatedTeamName.valid) {
+          return reply.status(400).send({ error: validatedTeamName.error });
+        }
+
+        const teamName = validatedTeamName.value!;
+        const launch = async (): Promise<TeamCreateResponse | TeamLaunchResponse> => {
+          const draftSavedRequest = await getDraftSavedRequest(services, teamName);
+          let response!: TeamCreateResponse | TeamLaunchResponse;
+          if (draftSavedRequest) {
+            const createRequest = parseDraftLaunchCreateRequest(draftSavedRequest, request.body);
+            requireTeamRuntimeSelection(createRequest);
+            const provision = async () => {
+              response = await getTeamProvisioningStartApi(services).createTeam(
+                createRequest,
+                () => undefined
+              );
+              services.memberWorkSyncFeature?.resumeTeam(createRequest.teamName);
+            };
+            if (createRequest.teamName !== teamName)
+              await getTeamDataApi(services).renameDraftTeam(
+                teamName,
+                createRequest.teamName,
+                provision
+              );
+            else await provision();
+          } else {
+            response = await getTeamProvisioningStartApi(services).launchTeam(
+              parseLaunchRequest(teamName, request.body),
+              () => undefined
+            );
+          }
+          return response;
+        };
+        const response = managementFeature
+          ? await managementFeature.runLaunch(teamName, launch)
+          : await launch();
+        TeamConfigReader.invalidateListTeamsCache();
+        return reply.send(response);
+      } catch (error) {
+        const statusCode = getStatusCode(error);
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in POST /api/teams/${request.params.teamName}/launch:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(statusCode).send({
+          error: getResponseErrorMessage(error, statusCode),
+          ...(error instanceof TeamRuntimeSelectionError ? { code: error.code } : {}),
+        });
+      }
+    }
+  );
+
+  app.get<{ Params: { runId: string } }>(
+    '/api/teams/provisioning/:runId',
+    async (request, reply) => {
+      try {
+        const runId = request.params.runId?.trim();
+        if (!runId) {
+          return reply.status(400).send({ error: 'runId is required' });
+        }
+
+        return reply.send(
+          await getTeamProvisioningStatusApi(services).getProvisioningStatus(runId)
+        );
+      } catch (error) {
+        const message = getErrorMessage(error);
+        const statusCode = message === 'Unknown runId' ? 404 : getStatusCode(error);
+        if (shouldLogError(error) && statusCode !== 404) {
+          logger.error(`Error in GET /api/teams/provisioning/${request.params.runId}:`, message);
+        }
+        return reply.status(statusCode).send({ error: getResponseErrorMessage(error, statusCode) });
+      }
+    }
+  );
+
+  app.post<{ Params: { teamName: string }; Body: Record<string, unknown> }>(
+    '/api/teams/:teamName/opencode/runtime/bootstrap-checkin',
+    async (request, reply) => {
+      try {
+        const validatedTeamName = validateTeamName(request.params.teamName);
+        if (!validatedTeamName.valid) {
+          return reply.status(400).send({ error: validatedTeamName.error });
+        }
+        return reply.send(
+          await getTeamRuntimeControlApi(services).recordOpenCodeRuntimeBootstrapCheckin(
+            withRuntimeTeamName(validatedTeamName.value!, request.body)
+          )
+        );
+      } catch (error) {
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in POST /api/teams/${request.params.teamName}/opencode/runtime/bootstrap-checkin:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      }
+    }
+  );
+
+  app.post<{ Params: { teamName: string }; Body: Record<string, unknown> }>(
+    '/api/teams/:teamName/opencode/runtime/deliver-message',
+    async (request, reply) => {
+      try {
+        const validatedTeamName = validateTeamName(request.params.teamName);
+        if (!validatedTeamName.valid) {
+          return reply.status(400).send({ error: validatedTeamName.error });
+        }
+        return reply.send(
+          await getTeamRuntimeControlApi(services).deliverOpenCodeRuntimeMessage(
+            withRuntimeTeamName(validatedTeamName.value!, request.body)
+          )
+        );
+      } catch (error) {
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in POST /api/teams/${request.params.teamName}/opencode/runtime/deliver-message:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      }
+    }
+  );
+
+  app.post<{ Params: { teamName: string }; Body: Record<string, unknown> }>(
+    '/api/teams/:teamName/opencode/runtime/task-event',
+    async (request, reply) => {
+      try {
+        const validatedTeamName = validateTeamName(request.params.teamName);
+        if (!validatedTeamName.valid) {
+          return reply.status(400).send({ error: validatedTeamName.error });
+        }
+        return reply.send(
+          await getTeamRuntimeControlApi(services).recordOpenCodeRuntimeTaskEvent(
+            withRuntimeTeamName(validatedTeamName.value!, request.body)
+          )
+        );
+      } catch (error) {
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in POST /api/teams/${request.params.teamName}/opencode/runtime/task-event:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      }
+    }
+  );
+
+  app.post<{ Params: { teamName: string }; Body: Record<string, unknown> }>(
+    '/api/teams/:teamName/opencode/runtime/heartbeat',
+    async (request, reply) => {
+      try {
+        const validatedTeamName = validateTeamName(request.params.teamName);
+        if (!validatedTeamName.valid) {
+          return reply.status(400).send({ error: validatedTeamName.error });
+        }
+        return reply.send(
+          await getTeamRuntimeControlApi(services).recordOpenCodeRuntimeHeartbeat(
+            withValidatedRuntimeObservedAt(validatedTeamName.value!, request.body)
+          )
+        );
+      } catch (error) {
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in POST /api/teams/${request.params.teamName}/opencode/runtime/heartbeat:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      }
+    }
+  );
+
+  app.get<{ Params: { teamName: string } }>(
+    '/api/teams/:teamName/member-work-sync/diagnostics',
+    async (request, reply) => {
+      try {
+        const validatedTeamName = validateTeamName(request.params.teamName);
+        if (!validatedTeamName.valid) {
+          return reply.status(400).send({ error: validatedTeamName.error });
+        }
+        const feature = getMemberWorkSyncFeature(services);
+        const metrics = await feature.getMetrics({ teamName: validatedTeamName.value! });
+        return reply.send({
+          teamName: validatedTeamName.value!,
+          generatedAt: new Date().toISOString(),
+          queue: feature.getQueueDiagnostics(),
+          metrics,
+        });
+      } catch (error) {
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in GET /api/teams/${request.params.teamName}/member-work-sync/diagnostics:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      }
+    }
+  );
+
+  app.get<{ Params: { teamName: string } }>(
+    '/api/teams/:teamName/member-work-sync/metrics',
+    async (request, reply) => {
+      try {
+        const validatedTeamName = validateTeamName(request.params.teamName);
+        if (!validatedTeamName.valid) {
+          return reply.status(400).send({ error: validatedTeamName.error });
+        }
+        return reply.send(
+          await getMemberWorkSyncFeature(services).getMetrics({
+            teamName: validatedTeamName.value!,
+          })
+        );
+      } catch (error) {
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in GET /api/teams/${request.params.teamName}/member-work-sync/metrics:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      }
+    }
+  );
+
+  app.get<{ Params: { teamName: string; memberName: string } }>(
+    '/api/teams/:teamName/member-work-sync/:memberName',
+    async (request, reply) => {
+      try {
+        const validatedTeamName = validateTeamName(request.params.teamName);
+        if (!validatedTeamName.valid) {
+          return reply.status(400).send({ error: validatedTeamName.error });
+        }
+        const memberName = request.params.memberName?.trim();
+        if (!memberName) {
+          return reply.status(400).send({ error: 'memberName is required' });
+        }
+        return reply.send(
+          await getMemberWorkSyncFeature(services).getStatus({
+            teamName: validatedTeamName.value!,
+            memberName: assertValidMemberName(memberName),
+          })
+        );
+      } catch (error) {
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in GET /api/teams/${request.params.teamName}/member-work-sync/${request.params.memberName}:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      }
+    }
+  );
+
+  app.post<{ Params: { teamName: string; memberName: string }; Body: { forceNudge?: unknown } }>(
+    '/api/teams/:teamName/member-work-sync/:memberName/refresh',
+    async (request, reply) => {
+      try {
+        const validatedTeamName = validateTeamName(request.params.teamName);
+        if (!validatedTeamName.valid) {
+          return reply.status(400).send({ error: validatedTeamName.error });
+        }
+        const memberName = request.params.memberName?.trim();
+        if (!memberName) {
+          return reply.status(400).send({ error: 'memberName is required' });
+        }
+        return reply.send(
+          await getMemberWorkSyncFeature(services).refreshStatus({
+            teamName: validatedTeamName.value!,
+            memberName: assertValidMemberName(memberName),
+            ...(request.body?.forceNudge === true ? { forceNudge: true } : {}),
+          })
+        );
+      } catch (error) {
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in POST /api/teams/${request.params.teamName}/member-work-sync/${request.params.memberName}/refresh:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      }
+    }
+  );
+
+  app.post<{
+    Params: { teamName: string; memberName: string };
+    Body: {
+      incarnation?: unknown;
+      runtimeInstanceId?: unknown;
+      localStopId?: unknown;
+      reason?: unknown;
+    };
+  }>('/api/teams/:teamName/member-work-sync/:memberName/runtime-stop', async (request, reply) => {
+    try {
+      const validatedTeamName = validateTeamName(request.params.teamName);
+      if (!validatedTeamName.valid) {
+        return reply.status(400).send({ error: validatedTeamName.error });
+      }
+      const memberName = request.params.memberName?.trim();
+      if (!memberName) {
+        return reply.status(400).send({ error: 'memberName is required' });
+      }
+      const localStopId =
+        typeof request.body?.localStopId === 'string' ? request.body.localStopId.trim() : '';
+      if (!localStopId) {
+        return reply.status(400).send({ error: 'localStopId is required' });
+      }
+      const runtimeInstanceId =
+        typeof request.body?.runtimeInstanceId === 'string'
+          ? request.body.runtimeInstanceId.trim()
+          : '';
+      if (!runtimeInstanceId) {
+        return reply.status(400).send({ error: 'runtimeInstanceId is required' });
+      }
+      const reason =
+        typeof request.body?.reason === 'string' && request.body.reason.trim()
+          ? request.body.reason.trim()
+          : 'runtime_local_stop';
+      const currentRuntimeInstanceId = await readNativeWorkSyncCurrentRuntimeInstanceId({
+        teamsBasePath: getTeamsBasePath(),
+        teamName: validatedTeamName.value!,
+        memberName: assertValidMemberName(memberName),
+      });
+      if (currentRuntimeInstanceId && currentRuntimeInstanceId !== runtimeInstanceId) {
+        return reply.status(409).send({ error: 'stale_runtime_instance' });
+      }
+      const cached = rememberMemberWorkSyncRuntimeStop(localStopId);
+      if (cached) {
+        return reply.send(cached);
+      }
+      const status = await getMemberWorkSyncFeature(services).stopAutoResume({
+        teamName: validatedTeamName.value!,
+        memberName: assertValidMemberName(memberName),
+        reason,
+      });
+      const response = {
+        ok: true as const,
+        status,
+        runtimeAdmission: status.runtimeAdmission ?? { state: 'unknown' as const },
+      };
+      rememberMemberWorkSyncRuntimeStop(localStopId, response);
+      return reply.send(response);
+    } catch (error) {
+      if (shouldLogError(error)) {
+        logger.error(
+          `Error in POST /api/teams/${request.params.teamName}/member-work-sync/${request.params.memberName}/runtime-stop:`,
+          getErrorMessage(error)
+        );
+      }
+      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+    }
+  });
+
+  app.post<{ Params: { teamName: string }; Body: Record<string, unknown> }>(
+    '/api/teams/:teamName/member-work-sync/report',
+    async (request, reply) => {
+      try {
+        const validatedTeamName = validateTeamName(request.params.teamName);
+        if (!validatedTeamName.valid) {
+          return reply.status(400).send({ error: validatedTeamName.error });
+        }
+        const payload = withRuntimeTeamName(validatedTeamName.value!, request.body);
+        const memberName = typeof payload.memberName === 'string' ? payload.memberName.trim() : '';
+        const state = typeof payload.state === 'string' ? payload.state.trim() : '';
+        const agendaFingerprint =
+          typeof payload.agendaFingerprint === 'string' ? payload.agendaFingerprint.trim() : '';
+        if (!memberName || !state || !agendaFingerprint) {
+          return reply.status(400).send({
+            error: 'memberName, state, and agendaFingerprint are required',
+          });
+        }
+        const validatedMemberName = assertValidMemberName(memberName);
+        if (!isMemberWorkSyncReportState(state)) {
+          return reply
+            .status(400)
+            .send({ error: 'state must be still_working, blocked, or caught_up' });
+        }
+        const taskIds = Array.isArray(payload.taskIds)
+          ? [
+              ...new Set(
+                payload.taskIds
+                  .filter((taskId): taskId is string => typeof taskId === 'string')
+                  .map((taskId) => taskId.trim())
+                  .filter(Boolean)
+              ),
+            ]
+          : undefined;
+        return reply.send(
+          await getMemberWorkSyncFeature(services).report({
+            teamName: validatedTeamName.value!,
+            memberName: validatedMemberName,
+            state,
+            agendaFingerprint,
+            ...(typeof payload.reportToken === 'string'
+              ? { reportToken: payload.reportToken }
+              : {}),
+            ...(taskIds?.length ? { taskIds } : {}),
+            ...(typeof payload.note === 'string' ? { note: payload.note } : {}),
+            ...(typeof payload.reportedAt === 'string' ? { reportedAt: payload.reportedAt } : {}),
+            ...(typeof payload.leaseTtlMs === 'number' ? { leaseTtlMs: payload.leaseTtlMs } : {}),
+            source: 'mcp',
+          })
+        );
+      } catch (error) {
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in POST /api/teams/${request.params.teamName}/member-work-sync/report:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      }
+    }
+  );
+}

@@ -1,0 +1,310 @@
+{
+  "status": "SCOPED_NATIVE_CROSS_TEAM_PASS",
+  "scope": "Stage1 P4.2 / M05 native cross-Team compatibility: one existing mixed3 Team and second host-owned Team1, real pinned Claude SDK/CLI actors at cross-Team ends plus native baseline Claude/Codex/OpenCode; localhost inference only",
+  "originalJobId": "f324bc64720d10488afa2b3652568e7e",
+  "originalExitCode": 0,
+  "retentionJobId": "03b2296f0a1185839308e7ea64aefed6",
+  "retentionExitCode": 0,
+  "fixtureRoot": "/Volumes/Transcend/dev/TEST-native-cross-team-keyfix-successor-siuu9mw5/run-tmp/TEST-native-mixed-host-SZNp5f",
+  "retainedRoot": "/Volumes/Transcend/dev/TEST-native-cross-team-proposal-84fk3k1z/collector/retained-f324bc64720d10488afa2b3652568e7e",
+  "retention": {
+    "status": "RETAINED_SCOPED_NATIVE_CROSS_TEAM",
+    "workflowQualified": true,
+    "files": 1868,
+    "bytes": 129592196,
+    "qualificationIssues": [],
+    "writerReleased": true,
+    "manifestSha256": "b0debabfb3f0c4534781c1c3a34a4c0b1416616c30437c269f2f4d5c19da76a3",
+    "receiptSha256": "4c4cf495b2af51e65a2195d6c6d0e13b937ee697beb4e157f759e06c1c9c696c"
+  },
+  "artifacts": {
+    "source": "34ffe70ca762a0d1066ffdcce9c474f3dff2194e981f933e9b3c556220e98054",
+    "dist": "e4904a79473da2e2d640e9444cb7b5c359b18f40b173dde90b56282c238ec6d2",
+    "entry": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "providerSha256": "dad39edf2f02a23ae68768722b5bba2e7beddf2125ae79d0bacb4e8b303d1dce",
+    "executables": {
+      "claude": {
+        "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk-darwin-arm64@0.3.305/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude",
+        "sha256": "ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f"
+      },
+      "codex": {
+        "path": "/Users/belief/.codex/packages/standalone/releases/0.162.0-aarch64-apple-darwin/bin/codex",
+        "sha256": "8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57"
+      },
+      "opencode": {
+        "path": "/opt/homebrew/lib/node_modules/opencode-ai/bin/opencode.exe",
+        "sha256": "417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b"
+      }
+    },
+    "harness": "9bcb3c8b630acd45348f8968ccf38c6620805e42d695db2379034a2d857e68ab"
+  },
+  "sourceFreeze": {
+    "snapshotsBeforeModelHostNative": 9,
+    "beforeAfterEqual": true
+  },
+  "crossTeam": {
+    "forwardCommandId": "TEST-native-cross-forward",
+    "replyCommandId": "TEST-native-cross-reply",
+    "forwardInboundCommandId": "e5b71672-ad42-59db-8e6a-8f438f07faa5",
+    "replyInboundCommandId": "6478fba7-f073-5031-8aee-17b0c12a5d19",
+    "conversationId": "5228a890-add8-4326-a812-9b0bb541b2aa",
+    "replyToInferredFromActiveOriginalInput": true,
+    "sourceActor": "alice",
+    "targetActor": "dana",
+    "sourceTeam": "test-native-team",
+    "targetTeam": "test-native-cross-target",
+    "oneCanonicalCrossCommandPerSide": true,
+    "exactCurrentNativeAdmissions": true,
+    "noDesktopHandleAdoption": true,
+    "sourceModelRequests": 5,
+    "targetModelRequests": 3,
+    "humanAckCommandId": "TEST-native-cross-human-ack",
+    "humanAckText": "NATIVE_CROSS_DONE",
+    "targetStopCustody": "released"
+  },
+  "nativeBaseline": {
+    "providers": [
+      "claude",
+      "codex",
+      "opencode"
+    ],
+    "originalBusinessMessages": 6,
+    "completedTasks": [
+      {
+        "id": "ef457bbd-d2d3-52cf-9af4-bce0ff8e1b63",
+        "owner": "carol",
+        "createdBy": "carol",
+        "status": "completed"
+      },
+      {
+        "id": "4544a35f-12a6-5a53-8107-a1b6068cb701",
+        "owner": "alice",
+        "createdBy": "alice",
+        "status": "completed"
+      },
+      {
+        "id": "6318b104-2c34-5702-b735-eb4c65965866",
+        "owner": "bob",
+        "createdBy": "bob",
+        "status": "completed"
+      }
+    ],
+    "modelObservationCounts": [
+      12,
+      12,
+      12
+    ],
+    "modelFailures": [
+      [],
+      [],
+      []
+    ],
+    "observedScriptedInferenceRequests": 44
+  },
+  "runtime": {
+    "records": 4,
+    "inputs": 12,
+    "sessions": [
+      {
+        "binding": {
+          "backendId": "TEST-mixed-TEST-native-mixed-host-SZNp5f",
+          "teamId": "TEST-team",
+          "runId": "TEST-run",
+          "memberId": "alice-id",
+          "generation": "1"
+        },
+        "sessionRef": "TEST-session-alice",
+        "phase": "closed",
+        "custody": "released",
+        "sealed": true,
+        "nativeReady": false,
+        "inputs": [
+          {
+            "inputId": "d6d954c7-805f-5077-89c0-b068384902c6",
+            "messageId": "0e1d7d15-8f05-5ad0-8b5e-595d20e421a4",
+            "operationRef": "0b2b6dce-ef1c-480f-8076-c0f1e5be6344",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "5377bd4e-3bb8-5f88-82ea-eea6946ef5ce",
+            "messageId": "board-complete:test-native-team:ef457bbd-d2d3-52cf-9af4-bce0ff8e1b63",
+            "operationRef": "1f373d36-8592-464d-bfe7-b0922bdf1577",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "c91251cd-ee94-528a-99d3-68c04ce7aaa0",
+            "messageId": "d6ba7f60-f091-580a-8ea0-df06a625a95f",
+            "operationRef": "4cec8293-def1-4696-baf3-64812263ad99",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "f892b178-d414-55a9-9b83-18e0ec47cf87",
+            "messageId": "16c4ad12-8278-5453-8fa6-0b75fc621126",
+            "operationRef": "804c2788-3327-460e-bc2d-18afe684fc5e",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "6a7a0a61-2cb8-51b2-a089-c7d55178f7c6",
+            "messageId": "TEST-native-cross-reply",
+            "operationRef": "b88acf66-f1ec-4773-9a75-3d59c584ef82",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ]
+      },
+      {
+        "binding": {
+          "backendId": "TEST-mixed-TEST-native-mixed-host-SZNp5f",
+          "teamId": "TEST-team",
+          "runId": "TEST-run",
+          "memberId": "bob-id",
+          "generation": "1"
+        },
+        "sessionRef": "TEST-session-bob",
+        "phase": "closed",
+        "custody": "released",
+        "sealed": true,
+        "nativeReady": false,
+        "inputs": [
+          {
+            "inputId": "0b3d8f48-b020-52f1-8dbe-d35220a89d26",
+            "messageId": "d618d171-b8f9-5ca5-ad95-98a910b10ff8",
+            "operationRef": "933d200c-5fc3-463f-969b-d5d415469fc5",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "f948dd56-488c-50d0-84cb-f56588783856",
+            "messageId": "989350f7-4c90-4b04-b7db-eb9e54260e1a",
+            "operationRef": "fc3ba91c-8b95-46cc-b448-d9c3a3ce14f9",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "476bc218-6899-59ad-9db8-8df878dffc3d",
+            "messageId": "805ab745-e8ad-530e-befc-99fd08b3dd36",
+            "operationRef": "8f26c4a6-c702-492d-98f4-6ab9982a72ef",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ]
+      },
+      {
+        "binding": {
+          "backendId": "TEST-mixed-TEST-native-mixed-host-SZNp5f",
+          "teamId": "TEST-team",
+          "runId": "TEST-run",
+          "memberId": "carol-id",
+          "generation": "1"
+        },
+        "sessionRef": "TEST-session-carol",
+        "phase": "closed",
+        "custody": "released",
+        "sealed": true,
+        "nativeReady": false,
+        "inputs": [
+          {
+            "inputId": "46888fe4-7b5d-5844-a626-93f4312aaa03",
+            "messageId": "c54bbeee-925a-5436-b124-692faf77b7d2",
+            "operationRef": "8cfa00f6-e08c-47e5-b231-3d91945b5cea",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "717f8ec1-a149-5a2b-a81b-af34388d83f3",
+            "messageId": "088a3569-26ef-449f-85e7-c03bef03c900",
+            "operationRef": "76d80cce-0174-42ef-81e6-1c8bc2fb878c",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          },
+          {
+            "inputId": "d8dd05ab-6b29-50a3-a23c-bb0d97db3bfd",
+            "messageId": "47ae0344-b4e7-54b4-a031-f41db8abfc17",
+            "operationRef": "398f419b-5da1-4a98-a943-68afa40b2cc9",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ]
+      },
+      {
+        "binding": {
+          "backendId": "TEST-mixed-TEST-native-mixed-host-SZNp5f",
+          "teamId": "TEST-cross-target-team",
+          "runId": "TEST-cross-target-run",
+          "memberId": "dana-id",
+          "generation": "1"
+        },
+        "sessionRef": "TEST-cross-target-session",
+        "phase": "closed",
+        "custody": "released",
+        "sealed": true,
+        "nativeReady": false,
+        "inputs": [
+          {
+            "inputId": "64409f9f-2e8b-5b85-89d5-f300cde21f0c",
+            "messageId": "TEST-native-cross-forward",
+            "operationRef": "c727b760-69da-42c5-8a1f-afa61b3340c6",
+            "phase": "terminal",
+            "terminal": "succeeded"
+          }
+        ]
+      }
+    ],
+    "coldRestartOriginalInputsUnchanged": true,
+    "coldRestartNoNativeAllocationOrReplay": true
+  },
+  "capturedHosts": [
+    {
+      "pid": 45049,
+      "exitCode": 0,
+      "signalCode": null,
+      "stdoutValid": true
+    },
+    {
+      "pid": 51031,
+      "exitCode": 0,
+      "signalCode": null,
+      "stdoutValid": true
+    }
+  ],
+  "bugAndHistory": {
+    "originalFailedJob": "7a0c9a7465a9da21aa4750b7b696b11e",
+    "originalFailedStatusRemains": "INCOMPLETE",
+    "cause": "RuntimeTeamCoordinator keyed JSON property order instead of canonical five-field RuntimeBinding; reconstructed cross-Team sender lost active reply hint",
+    "fix": "Existing normalizeBinding before runtimeDigest in RuntimeTeamCoordinator.key; global runtimeDigest unchanged",
+    "corePatchSha256": "dd5108109d4de9f8fbb36aa8d1b32a8eb90ce9967d52fc25ca4f823b3117a490",
+    "focusedRegression": "exact old source RED b3853a, proposed GREEN eebcd5, strictTS7 PASS53f98d",
+    "oldRetainedRoot": "/Volumes/Transcend/dev/TEST-native-cross-team-proposal-84fk3k1z/collector/retained-7a0c9a7465a9da21aa4750b7b696b11e"
+  },
+  "excluded": [
+    "vendor authentication/inference",
+    "Desktop/UI workflow",
+    "full F06/mixed-provider groups/member restart/shared OpenCode backing isolation",
+    "kernel PID absence or natural Host exit qualification",
+    "full Stage1",
+    "Stage2"
+  ],
+  "effectsByCollector": "read-only toward original job/fixture/W; writes only outside retention/handoff, no native replay",
+  "retentionJobRawFiles": [
+    {
+      "path": "/Volumes/Transcend/dev/TEST-native-cross-team-keyfix-successor-siuu9mw5/retention-job-03b2296f0a1185839308e7ea64aefed6/meta.json",
+      "sha256": "63c9cd485de91a3766d7e06adb2be9b59c4c66bb0b41ac3e5c3e268f47ff706c"
+    },
+    {
+      "path": "/Volumes/Transcend/dev/TEST-native-cross-team-keyfix-successor-siuu9mw5/retention-job-03b2296f0a1185839308e7ea64aefed6/state.json",
+      "sha256": "ba0401ba8b1e95733280858bad2fd5029d206cd53abfd640babf23ee1cc64e5f"
+    },
+    {
+      "path": "/Volumes/Transcend/dev/TEST-native-cross-team-keyfix-successor-siuu9mw5/retention-job-03b2296f0a1185839308e7ea64aefed6/stdout.log",
+      "sha256": "784910abc1137cba1c41a308ed4236f277f47f9fdb433d4bee58490bc4da268a"
+    },
+    {
+      "path": "/Volumes/Transcend/dev/TEST-native-cross-team-keyfix-successor-siuu9mw5/retention-job-03b2296f0a1185839308e7ea64aefed6/stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

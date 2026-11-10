@@ -1,0 +1,426 @@
+{
+  "schemaVersion": 1,
+  "status": "RETAINED_SCOPED_UI_WORKFLOW",
+  "scope": "Existing Composer and technical approval/question Sheet through actual SDK/CLI, exact Runtime owner, captured preview and pending-policy synchronization; TEST setup launch, localhost scripted inference",
+  "fullM06Qualified": false,
+  "stage1Complete": false,
+  "stage2Included": false,
+  "actualJob": {
+    "jobId": "0fcfdc66419f9b98b080a2bf529d7892",
+    "mode": "approval-ui",
+    "result": {
+      "exit_code": 0,
+      "signal": null,
+      "duration_ms": 216144
+    },
+    "logsDrained": true,
+    "jobStateSha256": "f18a2d45cd522f8ea80cde9bf74a103412e9dd54a7074cc9014755d4623e57b8"
+  },
+  "retention": {
+    "directory": "/Volumes/Transcend/dev/TEST-claude-approval-prep-smso1qbm/collector/retained-approval-ui-0fcfdc66419f9b98b080a2bf529d7892",
+    "receipt": "retention.json",
+    "retentionSha256": "b3614e0a842eef663d4c40b1f49e4146f27066f6d1ceef48a0e080538bc7e99b",
+    "retainedFiles": 2580,
+    "retentionComplete": true,
+    "workflowQualified": true,
+    "qualificationIssues": [],
+    "rawReceiptSha256": "de0122a408f87c25a815a6e0542f29755d512ee8724d668d163cf3845e698368",
+    "collectorSourceSha256": "e629355e815525267268489104e4b995454311aa9bc535681cc12e271b8f05d8",
+    "provenanceNotes": [
+      "Host/dependency trees are frozen retention snapshots; original Host entry hash verified, no retrospective whole-tree startup pin claim"
+    ],
+    "bundleProvenance": "original-startup-pins"
+  },
+  "actualVersusControlled": {
+    "actual": "Existing Electron Composer/technical approval Sheet, Host Runtime owner, official Claude SDK/CLI execution and real native Read/Write/Bash/AskUserQuestion tool permission results. TEST setup allocates the captured launch; existing UI sends every turn and resolves interactions.",
+    "controlled": "Local scripted model only; actual native Claude executes all tools",
+    "ordinaryLaunchUiClaim": false,
+    "vendorInferenceOrAuthenticationClaim": false,
+    "initialPermissions": "manual"
+  },
+  "counters": {
+    "composerTurns": 6,
+    "uniqueInputIds": 6,
+    "modelRequests": 21,
+    "toolResults": 15,
+    "expectedDeniedToolResults": 2,
+    "runtimeInputsTerminalSucceeded": 6,
+    "resolvedInteractionCount": 6,
+    "uiEvidenceSteps": 57,
+    "modelFailures": 0,
+    "unexpectedNoToolsRequests": 0,
+    "modelProbes": 0
+  },
+  "covered": [
+    {
+      "turn": "M06_DENY_COMMAND",
+      "outcome": "Existing Deny on Bash permission; native tool result is_error=true; denied file absent; canonical reply observed."
+    },
+    {
+      "turn": "M06_ALLOW_WRITE",
+      "outcome": "Existing Preview changes shows original/modified bytes without write effect; existing Allow writes exact approved bytes; native tool result succeeds."
+    },
+    {
+      "turn": "M06_ALLOW_ALL",
+      "outcome": "Existing Allow all synchronizes the currently pending Write and preference; exact native file bytes observed."
+    },
+    {
+      "turn": "M06_AUTO_WRITE",
+      "outcome": "Next native Write succeeds with the host-lifetime preference; no additional Sheet-resolution click for this turn. Runtime still records its resolved permission interaction."
+    },
+    {
+      "turn": "M06_DENY_QUESTION",
+      "outcome": "Question remains explicit after Allow all; existing Deny yields expected native tool error and canonical reply."
+    },
+    {
+      "turn": "M06_ANSWER_QUESTION",
+      "outcome": "Exact existing TEST_BLUE option label clicked, then original Submit once; native AskUserQuestion result includes TEST_BLUE and canonical reply."
+    }
+  ],
+  "originalIdentities": {
+    "binding": {
+      "backendId": "TEST-desktop-owner-TEST-desktop-backend-MpqRoJ",
+      "teamId": "TEST-desktop-team",
+      "runId": "TEST-run-TEST-desktop-backend-MpqRoJ",
+      "memberId": "alice-id",
+      "generation": "1"
+    },
+    "commandsAndInteractions": [
+      {
+        "turn": "M06_DENY_COMMAND",
+        "commandId": "bd94d7ea-0659-48f5-ac34-7d610a80bf11",
+        "inputId": "ef8aeb81-4b2e-5d22-aaa9-62de940a3eeb",
+        "interactionRefs": [
+          {
+            "interactionRef": "709f8160-2577-49f4-b5fd-30964b40ac88",
+            "inputId": "ef8aeb81-4b2e-5d22-aaa9-62de940a3eeb",
+            "operationRef": "61222650-8763-473c-89ea-72c7dbd33429",
+            "kind": "permission",
+            "phase": "resolved"
+          }
+        ],
+        "modelRequests": 3,
+        "toolResults": [
+          {
+            "turn": "M06_DENY_COMMAND",
+            "step": 1,
+            "toolUseId": "m06_m06_deny_command_0",
+            "toolResultError": true
+          },
+          {
+            "turn": "M06_DENY_COMMAND",
+            "step": 2,
+            "toolUseId": "m06_m06_deny_command_1",
+            "toolResultError": false
+          }
+        ],
+        "canonicalReply": "DONE_M06_DENY_COMMAND"
+      },
+      {
+        "turn": "M06_ALLOW_WRITE",
+        "commandId": "38f08476-7a73-4c87-8fdb-aada4abc9a40",
+        "inputId": "be6482ef-2658-5040-9da5-e1b25a189b79",
+        "interactionRefs": [
+          {
+            "interactionRef": "21d43216-6f94-49a3-bb43-04c3996ffec4",
+            "inputId": "be6482ef-2658-5040-9da5-e1b25a189b79",
+            "operationRef": "86b5dbbe-10cd-44de-9968-e5085f3e6cb2",
+            "kind": "permission",
+            "phase": "resolved"
+          }
+        ],
+        "modelRequests": 4,
+        "toolResults": [
+          {
+            "turn": "M06_ALLOW_WRITE",
+            "step": 1,
+            "toolUseId": "m06_m06_allow_write_0",
+            "toolResultError": false
+          },
+          {
+            "turn": "M06_ALLOW_WRITE",
+            "step": 2,
+            "toolUseId": "m06_m06_allow_write_1",
+            "toolResultError": false
+          },
+          {
+            "turn": "M06_ALLOW_WRITE",
+            "step": 3,
+            "toolUseId": "m06_m06_allow_write_2",
+            "toolResultError": false
+          }
+        ],
+        "canonicalReply": "DONE_M06_ALLOW_WRITE"
+      },
+      {
+        "turn": "M06_ALLOW_ALL",
+        "commandId": "4e61ff90-3876-4bab-92db-934d7c974022",
+        "inputId": "6b09e855-a205-5238-9543-3ad7c29e6d34",
+        "interactionRefs": [
+          {
+            "interactionRef": "cd2082e7-11f1-4031-80f8-2cd207262371",
+            "inputId": "6b09e855-a205-5238-9543-3ad7c29e6d34",
+            "operationRef": "bcbe9105-5309-471a-b4ec-80fbf450b2f2",
+            "kind": "permission",
+            "phase": "resolved"
+          }
+        ],
+        "modelRequests": 4,
+        "toolResults": [
+          {
+            "turn": "M06_ALLOW_ALL",
+            "step": 1,
+            "toolUseId": "m06_m06_allow_all_0",
+            "toolResultError": false
+          },
+          {
+            "turn": "M06_ALLOW_ALL",
+            "step": 2,
+            "toolUseId": "m06_m06_allow_all_1",
+            "toolResultError": false
+          },
+          {
+            "turn": "M06_ALLOW_ALL",
+            "step": 3,
+            "toolUseId": "m06_m06_allow_all_2",
+            "toolResultError": false
+          }
+        ],
+        "canonicalReply": "DONE_M06_ALLOW_ALL"
+      },
+      {
+        "turn": "M06_AUTO_WRITE",
+        "commandId": "418129c5-65f2-4e63-b72b-6778acc7d8e2",
+        "inputId": "0c242e3e-6ce0-506f-b846-934e83877ede",
+        "interactionRefs": [
+          {
+            "interactionRef": "5a4ce469-678f-4625-b5c8-6b5b47551d5e",
+            "inputId": "0c242e3e-6ce0-506f-b846-934e83877ede",
+            "operationRef": "25ae2094-8408-4676-bef3-afbd9891b437",
+            "kind": "permission",
+            "phase": "resolved"
+          }
+        ],
+        "modelRequests": 4,
+        "toolResults": [
+          {
+            "turn": "M06_AUTO_WRITE",
+            "step": 1,
+            "toolUseId": "m06_m06_auto_write_0",
+            "toolResultError": false
+          },
+          {
+            "turn": "M06_AUTO_WRITE",
+            "step": 2,
+            "toolUseId": "m06_m06_auto_write_1",
+            "toolResultError": false
+          },
+          {
+            "turn": "M06_AUTO_WRITE",
+            "step": 3,
+            "toolUseId": "m06_m06_auto_write_2",
+            "toolResultError": false
+          }
+        ],
+        "canonicalReply": "DONE_M06_AUTO_WRITE"
+      },
+      {
+        "turn": "M06_DENY_QUESTION",
+        "commandId": "c87d6832-3bee-4b3b-adc5-018c42fe51c2",
+        "inputId": "4f86b580-74c3-5d9f-9ee8-5fb9475241e0",
+        "interactionRefs": [
+          {
+            "interactionRef": "dd562f94-5b60-4731-9f22-bb586ced118e",
+            "inputId": "4f86b580-74c3-5d9f-9ee8-5fb9475241e0",
+            "operationRef": "844dff98-07cf-4d25-974a-e51f64cd067e",
+            "kind": "question",
+            "phase": "resolved"
+          }
+        ],
+        "modelRequests": 3,
+        "toolResults": [
+          {
+            "turn": "M06_DENY_QUESTION",
+            "step": 1,
+            "toolUseId": "m06_m06_deny_question_0",
+            "toolResultError": true
+          },
+          {
+            "turn": "M06_DENY_QUESTION",
+            "step": 2,
+            "toolUseId": "m06_m06_deny_question_1",
+            "toolResultError": false
+          }
+        ],
+        "canonicalReply": "DONE_M06_DENY_QUESTION"
+      },
+      {
+        "turn": "M06_ANSWER_QUESTION",
+        "commandId": "cb9c1a5c-f936-48bb-87ee-2f7fc146290b",
+        "inputId": "73cd948f-3b27-5e2c-ade0-80b2001d308f",
+        "interactionRefs": [
+          {
+            "interactionRef": "ee15447a-5b10-45c3-9923-c2161bf5bce3",
+            "inputId": "73cd948f-3b27-5e2c-ade0-80b2001d308f",
+            "operationRef": "5ee370c9-6e51-4c43-b15c-53ff34b4ed73",
+            "kind": "question",
+            "phase": "resolved"
+          }
+        ],
+        "modelRequests": 3,
+        "toolResults": [
+          {
+            "turn": "M06_ANSWER_QUESTION",
+            "step": 1,
+            "toolUseId": "m06_m06_answer_question_0",
+            "toolResultError": false,
+            "answer": "TEST_BLUE"
+          },
+          {
+            "turn": "M06_ANSWER_QUESTION",
+            "step": 2,
+            "toolUseId": "m06_m06_answer_question_1",
+            "toolResultError": false
+          }
+        ],
+        "canonicalReply": "DONE_M06_ANSWER_QUESTION"
+      }
+    ],
+    "oneHumanCommandPerTurn": true,
+    "oneCanonicalReplyPerTurn": true,
+    "sameCapturedRuntimeBeforeAndAfterStop": true
+  },
+  "fileEffects": {
+    "deniedFileAbsent": "workspace/approval-denied.txt",
+    "writtenFiles": {
+      "approval-auto-next.txt": "M06_AUTO_WRITE_NATIVE_WRITE\n",
+      "approval-preview.txt": "TEST_APPROVED_NATIVE_WRITE\n",
+      "approval-auto.txt": "M06_ALLOW_ALL_NATIVE_WRITE\n"
+    },
+    "previewScreenshot": {
+      "retainedPath": "/Volumes/Transcend/dev/TEST-claude-approval-prep-smso1qbm/collector/retained-approval-ui-0fcfdc66419f9b98b080a2bf529d7892/ui-approval-preview.png",
+      "sha256": "70eb84ac74c521134dccb6c54b67697af3ca96e12f01f942725d4a598c55f64f"
+    }
+  },
+  "policy": {
+    "settingsProof": "Original Allow all synchronizes the pending Write and next Write; questions remain explicit after Allow all",
+    "persistence": "Host-lifetime preference only; this actual run does not qualify cold/restart policy."
+  },
+  "stop": {
+    "control": "Existing Stop once after all six completed turns",
+    "final": {
+      "phase": "closed",
+      "custody": "released",
+      "sealed": true,
+      "nativeReady": false
+    },
+    "nativeChildAbsentBeforeQuit": true,
+    "pendingPermissionCancelClaim": false,
+    "naturalQuitClaim": false
+  },
+  "currentAppCleanup": {
+    "quitRequested": true,
+    "cleanup": {
+      "processGroup": 60948,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+    },
+    "beforeHarnessCleanup": [],
+    "writerReleasedAtRetention": true,
+    "observedRemainingAtRetention": []
+  },
+  "preservedPriorFailure": {
+    "jobId": "8db825e6d1803a687fc2a69ec35415a0",
+    "retainedDirectory": "/Volumes/Transcend/dev/TEST-claude-approval-prep-smso1qbm/collector/retained-approval-ui-8db825e6d1803a687fc2a69ec35415a0",
+    "status": "INCOMPLETE",
+    "failure": "UI read timed out: TEST_BLUE; no mutation retry",
+    "completedTurnsBeforeFailure": 5,
+    "retentionStatus": "RETAINED_SCOPED_UI_FAILURE",
+    "retentionComplete": true,
+    "workflowQualified": false,
+    "retentionSha256": "b30f213f89a12ecb79fb4f76998d187b59d035e290b4c9f9bfe9ce6dbdbed4db",
+    "rawReceiptSha256": "7c50e82a80a3144ce57b84b3befd353b6ca146886f7d9f1a06744157fd32a47e",
+    "cause": "Question option full button text begins with literal \u25cb (radio glyph), so startsWith(TEST_BLUE) did not match. Submit correctly stayed disabled before selection.",
+    "testFix": {
+      "patchSha256": "52f929912c0b54eb21cba114fed851ec930aaa158fb81612b5566010cead043d",
+      "beforeHelperSha256": "ecd1356ab557d170ccc7cfdce8fa5a018d29c59182c2305e5f3ab4a909b00609",
+      "afterHelperSha256": "cfa19ffe26c7a0c46987e13ebe0147f922fc03e897b97b0616d37c54d82a3602",
+      "change": "Typed exact question-option-label matching on existing :scope > div > span; original prefix semantics for Preview changes and unique-target/geometry/hit/stable-read/single press-release checks retained. No production UI change, alternate form, replay or mutation retry."
+    }
+  },
+  "sourceEpoch": {
+    "selectedSourceCount": 1289,
+    "allRetainedSourceHashesVerified": true,
+    "beforeAfterRosterIdentical": true,
+    "keySourcePins": [
+      {
+        "path": "src/renderer/api/index.ts",
+        "sha256": "d57cc68ce63f4bc123cc614a29a4a7149759bc174a3299759a3685abf8f2cd62"
+      },
+      {
+        "path": "src/features/agent-backend/renderer/createHostToolApprovals.ts",
+        "sha256": "e140569c4ff8205caee38ba2d53836bc399881ce3144af23a3cd7042b6b64765"
+      },
+      {
+        "path": "src/renderer/components/team/ToolApprovalSheet.tsx",
+        "sha256": "eea793a7120ac58d42bd874bbcf97aa8d390252025c0e214f5229a601e323c6e"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-approval-model.ts",
+        "sha256": "bbc575ddea4e22f5dac1478bb65ce9f7aeff16c1d2177ac8bbae3a11d1a627f8"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-approval-ui-smoke.ts",
+        "sha256": "cfa19ffe26c7a0c46987e13ebe0147f922fc03e897b97b0616d37c54d82a3602"
+      },
+      {
+        "path": "src/renderer/store/slices/teamSlice.ts",
+        "sha256": "bb245413e1a67c0d3e5950230a301f38f45019577a57bda76ec9eea515e99016"
+      }
+    ],
+    "startupBundleCount": 14,
+    "allRetainedStartupBundleHashesVerified": true,
+    "runtimePins": {
+      "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "corepackPackageSha256": "1aff4cc6115c15ce4c51c5a3b8d20912c525e295cb09e1a70c4a27998db43fa2",
+      "corepackLibrarySha256": "89cc83cf02dafbb768017901147933023eb43d6ce6373f9698b8b2f29210a9fd",
+      "pnpmStubSha256": "aca1f0ffde27bd6ee1069a19884b622503187f359d4160e511dcb894935f8c29",
+      "profileSha256": "90c931596fb23101f6ec05ad8b7ad9e5080f22186449f867fc8a681a4531c689",
+      "descriptorSha256": "1c5ecd67f2b54cee5b0264c031c64a4e75a6f9ca54702e1e660c22d803ec6890",
+      "sentinelSha256": "8bdb34ee127a8469dcdfbe664e2764b4fb2e142cff6e8d314d41f3ca1c57d761",
+      "shellProbeSha256": "5b1da39fdd06e0c9086e609be8b34874a0eae887bd136002dea5a15658e0fd69",
+      "providerArchiveSha256": "dad39edf2f02a23ae68768722b5bba2e7beddf2125ae79d0bacb4e8b303d1dce",
+      "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+      "electronSha256": "113960c9bbaeb4c45e9d7080b2f94135a4b3c2cc285de312fb337fb834e3c34c",
+      "smokeSourceSha256": "4a9df80b2007fb9313390b4c859bf65c4e39febc923a5075ece3a8dc13ec9447",
+      "fixtureSourceSha256": "cbc87202ef4f0f419c315de86edb94b32a25461213c390e6237e914ea8eca92e",
+      "uiSourceSha256": "297c49e7cc7eb6f447440193a23ed8efa33f56c58a616f631fd554d78301110e"
+    },
+    "limitation": "Host/dependency trees are frozen retention snapshots; original Host entry hash verified; no retrospective whole-tree startup-pin claim."
+  },
+  "excluded": [
+    "Bash Allow",
+    "native pending-permission cancellation/interrupt",
+    "cold policy persistence",
+    "ordinary Launch UI",
+    "other provider interaction parity",
+    "vendor inference/authentication",
+    "natural Quit cleanup before explicit Stop",
+    "full M06/P8/Stage1",
+    "Stage2",
+    "merge/release"
+  ],
+  "summaryMethod": {
+    "source": "Retained bytes only: current and prior retention/raw receipts, executed source/bundle pins and fixture bytes. Historical TEST patch SHA reconstructed from retained executed helpers.",
+    "newKernelQueries": 0,
+    "newProcessObservations": 0,
+    "newApiOrUiCalls": 0,
+    "newNativeCalls": 0,
+    "worktreeWrites": 0
+  }
+}

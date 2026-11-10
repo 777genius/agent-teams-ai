@@ -1,0 +1,422 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "requestId": "TEST-transcript-read",
+  "command": "opencode.getRuntimeTranscript",
+  "completedAt": "2026-10-19T00:00:00.000Z",
+  "durationMs": 1,
+  "runtime": {
+    "providerId": "opencode",
+    "binaryPath": null,
+    "binaryFingerprint": null,
+    "version": "2.0.32",
+    "capabilitySnapshotId": null
+  },
+  "diagnostics": [],
+  "data": {
+    "sessionId": "ses_TESTunixComposite",
+    "durableState": "idle",
+    "messages": [
+      {
+        "id": "msg_TESTinput",
+        "parentId": null,
+        "role": "user",
+        "agent": null,
+        "providerId": null,
+        "modelId": null,
+        "createdAt": 10,
+        "completedAt": null,
+        "text": "TEST original request",
+        "reasoningText": "",
+        "previewText": "TEST original request",
+        "partTypes": [
+          "text"
+        ],
+        "reasoningPartCount": 0,
+        "toolCalls": [],
+        "contentBlocks": [
+          {
+            "type": "text",
+            "text": "TEST original request"
+          }
+        ],
+        "finishReason": null,
+        "errorName": null,
+        "errorMessage": null,
+        "hasError": false
+      },
+      {
+        "id": "msg_TESTassistant",
+        "parentId": null,
+        "role": "assistant",
+        "agent": "TEST-agent",
+        "providerId": "TEST-provider",
+        "modelId": "TEST-model",
+        "createdAt": 20,
+        "completedAt": 30,
+        "text": "",
+        "reasoningText": "",
+        "previewText": null,
+        "partTypes": [
+          "tool"
+        ],
+        "reasoningPartCount": 0,
+        "toolCalls": [
+          {
+            "callId": "TEST-execute",
+            "toolName": "execute",
+            "title": null,
+            "status": "completed",
+            "input": {
+              "code": "/* TEST fixture code */"
+            },
+            "output": [
+              {
+                "type": "text",
+                "text": "ALICE_EXEC:TEST-marker"
+              }
+            ],
+            "outputText": "ALICE_EXEC:TEST-marker",
+            "outputPreview": "ALICE_EXEC:TEST-marker",
+            "startedAt": 22,
+            "completedAt": 29,
+            "isError": false
+          },
+          {
+            "callId": null,
+            "toolName": "system.bash",
+            "title": null,
+            "source": {
+              "kind": "opencode-v2-code-mode-metadata",
+              "outerCallId": "TEST-execute",
+              "index": 0
+            },
+            "status": "completed",
+            "input": {
+              "command": "./.TEST-node-runtime sum.test.cjs",
+              "workdir": "/TEST/project"
+            },
+            "output": null,
+            "outputText": null,
+            "outputPreview": null,
+            "startedAt": null,
+            "completedAt": null,
+            "isError": false
+          },
+          {
+            "callId": null,
+            "toolName": "agent-teams.task_complete",
+            "title": null,
+            "source": {
+              "kind": "opencode-v2-code-mode-metadata",
+              "outerCallId": "TEST-execute",
+              "index": 1
+            },
+            "status": "completed",
+            "input": {
+              "teamName": "TEST-team",
+              "taskId": "TEST-task",
+              "actor": "alice"
+            },
+            "output": null,
+            "outputText": null,
+            "outputPreview": null,
+            "startedAt": null,
+            "completedAt": null,
+            "isError": false
+          },
+          {
+            "callId": null,
+            "toolName": "agent-teams.message_send",
+            "title": null,
+            "source": {
+              "kind": "opencode-v2-code-mode-metadata",
+              "outerCallId": "TEST-execute",
+              "index": 2
+            },
+            "status": "completed",
+            "input": {
+              "teamName": "TEST-team",
+              "from": "alice",
+              "to": "bob",
+              "text": "ACK:TEST-nonce"
+            },
+            "output": null,
+            "outputText": null,
+            "outputPreview": null,
+            "startedAt": null,
+            "completedAt": null,
+            "isError": false
+          }
+        ],
+        "contentBlocks": [
+          {
+            "type": "tool_use",
+            "id": "TEST-execute",
+            "name": "execute",
+            "title": null,
+            "status": "completed",
+            "input": {
+              "code": "/* TEST fixture code */"
+            },
+            "startedAt": 22,
+            "completedAt": 29
+          },
+          {
+            "type": "tool_result",
+            "toolUseId": "TEST-execute",
+            "toolName": "execute",
+            "title": null,
+            "status": "completed",
+            "contentText": "ALICE_EXEC:TEST-marker",
+            "contentPreview": "ALICE_EXEC:TEST-marker",
+            "rawContent": [
+              {
+                "type": "text",
+                "text": "ALICE_EXEC:TEST-marker"
+              }
+            ],
+            "isError": false,
+            "startedAt": 22,
+            "completedAt": 29
+          },
+          {
+            "type": "tool_use",
+            "id": null,
+            "name": "system.bash",
+            "title": null,
+            "status": "completed",
+            "input": {
+              "command": "./.TEST-node-runtime sum.test.cjs",
+              "workdir": "/TEST/project"
+            },
+            "startedAt": null,
+            "completedAt": null
+          },
+          {
+            "type": "tool_use",
+            "id": null,
+            "name": "agent-teams.task_complete",
+            "title": null,
+            "status": "completed",
+            "input": {
+              "teamName": "TEST-team",
+              "taskId": "TEST-task",
+              "actor": "alice"
+            },
+            "startedAt": null,
+            "completedAt": null
+          },
+          {
+            "type": "tool_use",
+            "id": null,
+            "name": "agent-teams.message_send",
+            "title": null,
+            "status": "completed",
+            "input": {
+              "teamName": "TEST-team",
+              "from": "alice",
+              "to": "bob",
+              "text": "ACK:TEST-nonce"
+            },
+            "startedAt": null,
+            "completedAt": null
+          }
+        ],
+        "finishReason": "stop",
+        "errorName": null,
+        "errorMessage": null,
+        "hasError": false
+      },
+      {
+        "id": "msg_TESTterminal",
+        "parentId": null,
+        "role": "system",
+        "agent": null,
+        "providerId": null,
+        "modelId": null,
+        "createdAt": 31,
+        "completedAt": null,
+        "text": "",
+        "reasoningText": "",
+        "previewText": null,
+        "partTypes": [
+          "idle"
+        ],
+        "reasoningPartCount": 0,
+        "toolCalls": [],
+        "contentBlocks": [],
+        "finishReason": null,
+        "errorName": null,
+        "errorMessage": null,
+        "hasError": false
+      }
+    ],
+    "logProjection": {
+      "sessionId": "ses_TESTunixComposite",
+      "durableState": "idle",
+      "sourceMessageCount": 3,
+      "projectedMessageCount": 3,
+      "syntheticMessageCount": 1,
+      "toolCallCount": 4,
+      "errorCount": 0,
+      "diagnostics": [
+        "v2_native_parent_ids_unavailable",
+        "v2_transcript_code_mode_nested_ids_results_unavailable:msg_TESTassistant:TEST-execute"
+      ],
+      "messages": [
+        {
+          "uuid": "msg_TESTinput",
+          "parentUuid": null,
+          "type": "user",
+          "timestamp": "1970-01-01T00:00:00.010Z",
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "TEST original request"
+            }
+          ],
+          "isMeta": false,
+          "sessionId": "ses_TESTunixComposite",
+          "toolCalls": [],
+          "toolResults": []
+        },
+        {
+          "uuid": "msg_TESTassistant",
+          "parentUuid": null,
+          "type": "assistant",
+          "timestamp": "1970-01-01T00:00:00.020Z",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "TEST-execute",
+              "name": "execute",
+              "input": {
+                "code": "/* TEST fixture code */"
+              }
+            },
+            {
+              "type": "tool_use",
+              "id": "msg_TESTassistant::tool::1",
+              "name": "system.bash",
+              "input": {
+                "command": "./.TEST-node-runtime sum.test.cjs",
+                "workdir": "/TEST/project"
+              }
+            },
+            {
+              "type": "tool_use",
+              "id": "msg_TESTassistant::tool::2",
+              "name": "agent-teams.task_complete",
+              "input": {
+                "teamName": "TEST-team",
+                "taskId": "TEST-task",
+                "actor": "alice"
+              }
+            },
+            {
+              "type": "tool_use",
+              "id": "msg_TESTassistant::tool::3",
+              "name": "agent-teams.message_send",
+              "input": {
+                "teamName": "TEST-team",
+                "from": "alice",
+                "to": "bob",
+                "text": "ACK:TEST-nonce"
+              }
+            }
+          ],
+          "model": "TEST-provider/TEST-model",
+          "agentName": "TEST-agent",
+          "isMeta": false,
+          "sessionId": "ses_TESTunixComposite",
+          "toolCalls": [
+            {
+              "id": "TEST-execute",
+              "name": "execute",
+              "input": {
+                "code": "/* TEST fixture code */"
+              },
+              "isTask": false
+            },
+            {
+              "id": "msg_TESTassistant::tool::1",
+              "name": "system.bash",
+              "input": {
+                "command": "./.TEST-node-runtime sum.test.cjs",
+                "workdir": "/TEST/project"
+              },
+              "isTask": false
+            },
+            {
+              "id": "msg_TESTassistant::tool::2",
+              "name": "agent-teams.task_complete",
+              "input": {
+                "teamName": "TEST-team",
+                "taskId": "TEST-task",
+                "actor": "alice"
+              },
+              "isTask": false
+            },
+            {
+              "id": "msg_TESTassistant::tool::3",
+              "name": "agent-teams.message_send",
+              "input": {
+                "teamName": "TEST-team",
+                "from": "alice",
+                "to": "bob",
+                "text": "ACK:TEST-nonce"
+              },
+              "isTask": false
+            }
+          ],
+          "toolResults": []
+        },
+        {
+          "uuid": "msg_TESTassistant::tool_results",
+          "parentUuid": "msg_TESTassistant",
+          "type": "user",
+          "timestamp": "1970-01-01T00:00:00.030Z",
+          "role": "user",
+          "content": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "TEST-execute",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "ALICE_EXEC:TEST-marker"
+                }
+              ]
+            }
+          ],
+          "model": "TEST-provider/TEST-model",
+          "agentName": "TEST-agent",
+          "isMeta": true,
+          "sessionId": "ses_TESTunixComposite",
+          "toolCalls": [],
+          "toolResults": [
+            {
+              "toolUseId": "TEST-execute",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "ALICE_EXEC:TEST-marker"
+                }
+              ],
+              "isError": false
+            }
+          ],
+          "sourceToolUseID": "TEST-execute",
+          "sourceToolAssistantUUID": "msg_TESTassistant"
+        }
+      ]
+    },
+    "diagnostics": [
+      "v2_native_parent_ids_unavailable",
+      "v2_transcript_code_mode_nested_ids_results_unavailable:msg_TESTassistant:TEST-execute"
+    ]
+  }
+}

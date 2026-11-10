@@ -1,0 +1,27 @@
+{
+  "status": "SCOPED_PASS",
+  "date": "2026-10-23",
+  "scope": "Existing Messages cross-Team selector, Send, target Reply through original Composer, canonical source/target receipts and renderer reload in one captured Host",
+  "jobId": "24487164f949a485ad895b54cf9d69c2",
+  "rawReceiptSha256": "27f21c3eba7130e9ebdb31a57361e3e72c5d333e32e754f5d1b9461ae000ef44",
+  "localEvidence": ".artifacts/provider-migration/p6-cross-team-ui-attempt3",
+  "commandIds": ["a8ee74f0-a602-4b9a-b94c-af27ed4985a5", "c1ad44eb-0152-4245-9dc6-bda268c805d5"],
+  "sourcePins": 1193,
+  "sourceBeforeEqualsAfter": true,
+  "electronBundlesRetained": 14,
+  "hostDistFilesRetained": 900,
+  "canonicalFilesRetained": 46,
+  "screenshotSha256": "8ab79b05667b54428b554fb98f19b756f6058a2213df2d208a9377a49bcd1b3e",
+  "visualInspection": "Existing team and Group chat views inspected; no replacement UI",
+  "cleanup": {
+    "capturedGroup": 69156,
+    "groupAbsentAtRetention": true,
+    "hostAbsent": true,
+    "appExitCode": null,
+    "appSignalCode": "SIGTERM",
+    "qualification": "Identity-checked harness cleanup; natural app shutdown is not qualified"
+  },
+  "priorAttempts": "Original missing paired-route and premature prepared/completed oracle failures retained separately; fresh attempt used new TEST identities without replay",
+  "retentionCorrection": "First collector incorrectly required natural exit; original collector refusal retained and collection corrected without repeating UI actions",
+  "excluded": ["native provider reply", "cross-owner protocol", "full M05", "natural Quit", "Stage2"]
+}

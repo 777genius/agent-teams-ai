@@ -1,0 +1,118 @@
+export function parseNumericSuffixName(name: string): { base: string; suffix: number } | null {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  const match = /^(.+)-(\d+)$/.exec(trimmed);
+  if (!match?.[1] || !match[2]) return null;
+  const suffix = Number(match[2]);
+  if (!Number.isFinite(suffix)) return null;
+  return { base: match[1], suffix };
+}
+
+const WINDOWS_RESERVED_MEMBER_FILE_STEMS = new Set([
+  'con',
+  'prn',
+  'aux',
+  'nul',
+  'com1',
+  'com2',
+  'com3',
+  'com4',
+  'com5',
+  'com6',
+  'com7',
+  'com8',
+  'com9',
+  'lpt1',
+  'lpt2',
+  'lpt3',
+  'lpt4',
+  'lpt5',
+  'lpt6',
+  'lpt7',
+  'lpt8',
+  'lpt9',
+]);
+
+function isWindowsReservedMemberFileSegment(name: string): boolean {
+  const normalized = name
+    .trim()
+    .replace(/[. ]+$/g, '')
+    .toLowerCase();
+  if (!normalized) return false;
+  const stem = normalized.split('.')[0] || normalized;
+  return WINDOWS_RESERVED_MEMBER_FILE_STEMS.has(stem);
+}
+
+export function validateTeamMemberNameFormat(name: string): string | null {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  if (trimmed.length < 1 || trimmed.length > 128) {
+    return 'Start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars';
+  }
+  if (!/^[a-zA-Z0-9]/.test(trimmed)) {
+    return 'Start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars';
+  }
+  if (!/^[a-zA-Z0-9._-]+$/.test(trimmed)) {
+    return 'Start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars';
+  }
+  if (/[. ]$/.test(trimmed)) {
+    return 'Member name cannot end with a space or period';
+  }
+  if (isWindowsReservedMemberFileSegment(trimmed)) {
+    return 'Member name is reserved on Windows';
+  }
+  return null;
+}
+
+/**
+ * Team runtimes may auto-suffix teammate names when a name already exists in config.json
+ * (e.g. "alice" → "alice-2"). We treat "-2+" as an auto-suffix only when the base
+ * name also exists among the current set of names.
+ *
+ * Important: do NOT treat "-1" as auto-suffix; it's commonly intentional ("dev-1").
+ */
+export function createCliAutoSuffixNameGuard(
+  allNames: Iterable<string>
+): (name: string) => boolean {
+  const trimmed: string[] = [];
+  const seen = new Set<string>();
+  for (const n of allNames) {
+    if (typeof n !== 'string') continue;
+    const t = n.trim();
+    if (!t) continue;
+    if (seen.has(t)) continue;
+    seen.add(t);
+    trimmed.push(t);
+  }
+
+  const allLower = new Set(trimmed.map((n) => n.toLowerCase()));
+
+  return (name: string): boolean => {
+    const info = parseNumericSuffixName(name);
+    if (!info) return true;
+    if (info.suffix < 2) return true;
+    return !allLower.has(info.base.toLowerCase());
+  };
+}
+
+const PROVISIONER_SUFFIX = '-provisioner';
+
+/**
+ * Team runtimes may create temporary "{name}-provisioner" agents during provisioning
+ * to spawn real teammates. These are always internal artifacts — never real teammates.
+ *
+ * Unlike numeric suffixes (alice-2) which can be intentional, "-provisioner" is a
+ * hardcoded CLI pattern that should never be exposed to the user. We unconditionally
+ * hide any name ending with "-provisioner" regardless of whether the base name exists.
+ */
+export function createCliProvisionerNameGuard(
+  _allNames: Iterable<string>
+): (name: string) => boolean {
+  return (name: string): boolean => {
+    const lower = name.trim().toLowerCase();
+    if (!lower.endsWith(PROVISIONER_SUFFIX)) return true;
+    const base = lower.slice(0, -PROVISIONER_SUFFIX.length);
+    // Keep bare "-provisioner" (no base) — that's not a CLI artifact pattern
+    return !base;
+  };
+}

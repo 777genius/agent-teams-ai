@@ -1,0 +1,101 @@
+#!/usr/bin/env node
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { readOpenCodeV2Contract } from '../../src/features/opencode-compatibility/core/domain/openCodeV2Contract.ts';
+import { readOpenCodeV2DeliveryMap } from '../../src/features/opencode-runtime-installer/core/domain/v2Delivery.ts';
+import { getExpectedRuntimeCliVersion } from '../lib/runtime-cli-version.mjs';
+
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(scriptDir, '..', '..');
+const runtimeLockPath = path.join(repoRoot, 'runtime.lock.json');
+const lock = JSON.parse(fs.readFileSync(runtimeLockPath, 'utf8'));
+
+function fail(message) {
+  console.error(`[verify-runtime-lock] ${message}`);
+  process.exit(1);
+}
+
+if (!lock || typeof lock !== 'object') {
+  fail('runtime.lock.json must contain an object');
+}
+
+const version = typeof lock.version === 'string' ? lock.version.trim() : '';
+const sourceRef = typeof lock.sourceRef === 'string' ? lock.sourceRef.trim() : '';
+const sourceRepository =
+  typeof lock.sourceRepository === 'string' ? lock.sourceRepository.trim() : '';
+const releaseRepository =
+  typeof lock.releaseRepository === 'string' ? lock.releaseRepository.trim() : '';
+const releaseTag = typeof lock.releaseTag === 'string' ? lock.releaseTag.trim() : '';
+const runtimeSourceRepository = '777genius/agent_teams_orchestrator';
+const publicRuntimeReleaseRepository = '777genius/agent_teams_orchestrator_binaries';
+
+if (!version) {
+  fail('version is required');
+}
+
+try {
+  getExpectedRuntimeCliVersion(lock);
+} catch (error) {
+  fail(error.message);
+}
+
+if (!sourceRef || sourceRef !== `v${version}`) {
+  fail(`sourceRef must match version. Expected v${version}, got ${sourceRef || '<empty>'}`);
+}
+
+if (sourceRepository !== runtimeSourceRepository) {
+  fail(
+    `sourceRepository must point at the canonical runtime source repository (${runtimeSourceRepository}), got ${sourceRepository || '<empty>'}.`
+  );
+}
+
+if (releaseRepository !== publicRuntimeReleaseRepository) {
+  fail(
+    `releaseRepository must point at the public runtime binary repository (${publicRuntimeReleaseRepository}), got ${releaseRepository || '<empty>'}.`
+  );
+}
+
+if (releaseTag !== `runtime-${sourceRef}`) {
+  fail(
+    `releaseTag must point at the namespaced public runtime release tag (runtime-${sourceRef}), got ${releaseTag || '<empty>'}.`
+  );
+}
+
+const SHA256_PATTERN = /^[0-9a-f]{64}$/;
+const requiredPlatforms = ['darwin-arm64', 'darwin-x64', 'linux-x64', 'win32-arm64', 'win32-x64'];
+const actualPlatforms = Object.keys(lock.assets ?? {}).sort();
+
+if (JSON.stringify(actualPlatforms) !== JSON.stringify(requiredPlatforms)) {
+  fail(
+    `assets must contain exactly ${requiredPlatforms.join(', ')}, got ${actualPlatforms.join(', ') || '<empty>'}.`
+  );
+}
+
+for (const [platform, asset] of Object.entries(lock.assets ?? {})) {
+  const file = typeof asset.file === 'string' ? asset.file : '';
+  if (!file.includes(`-v${version}.`)) {
+    fail(`asset ${platform} file must include -v${version}: ${file || '<empty>'}`);
+  }
+  const sha256 = typeof asset.sha256 === 'string' ? asset.sha256.trim().toLowerCase() : '';
+  if (!SHA256_PATTERN.test(sha256)) {
+    fail(
+      `asset ${platform} must pin a 64-hex sha256 of the published archive, got ${asset.sha256 ?? '<missing>'}.`
+    );
+  }
+}
+
+// The runtime release manifest publishes its OpenCode V2 contract (supported range and
+// qualified versions); the lock pins it verbatim. The app's own parser validates it.
+if (!readOpenCodeV2Contract(lock.opencodeV2)) {
+  fail('opencodeV2 must copy the published runtime manifest contract ({ range, qualified }).');
+}
+try {
+  readOpenCodeV2DeliveryMap(lock);
+} catch (error) {
+  fail(error.message);
+}
+
+console.log('[verify-runtime-lock] OK');

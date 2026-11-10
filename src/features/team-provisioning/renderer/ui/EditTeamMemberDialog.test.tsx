@@ -1,0 +1,929 @@
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const updateMemberSettings = vi.hoisted(() => vi.fn());
+const getSavedRequest = vi.hoisted(() => vi.fn());
+
+vi.mock('@renderer/api', () => ({ api: { teams: { updateMemberSettings, getSavedRequest } } }));
+vi.mock('@features/localization/renderer', () => ({
+  useAppTranslation: () => ({
+    t: (key: string, values?: { runtime?: string }) =>
+      key === 'editTeam.displayedRuntimeHint' ? `${key}: ${values?.runtime}` : key,
+  }),
+}));
+vi.mock('@renderer/components/ui/button', () => ({
+  Button: (props: React.ButtonHTMLAttributes<HTMLButtonElement>) =>
+    React.createElement('button', { ...props, type: 'button' }),
+}));
+vi.mock('@renderer/components/ui/dialog', () => ({
+  Dialog: ({
+    children,
+    onOpenChange,
+  }: {
+    children: React.ReactNode;
+    onOpenChange: (open: boolean) => void;
+  }) =>
+    React.createElement(
+      'div',
+      null,
+      React.createElement(
+        'button',
+        { type: 'button', 'data-testid': 'dismiss', onClick: () => onOpenChange(false) },
+        'dismiss'
+      ),
+      children
+    ),
+  DialogContent: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', null, children),
+  DialogDescription: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('p', null, children),
+  DialogFooter: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('footer', null, children),
+  DialogHeader: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('header', null, children),
+  DialogTitle: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('h2', null, children),
+}));
+vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
+  createMemberDraftsFromInputs: (members: Array<Record<string, unknown>>) =>
+    members.map((member) => ({
+      id: member.name,
+      name: member.name,
+      originalName: member.name,
+      roleSelection: member.role ?? '',
+      customRole: '',
+      workflow: member.workflow,
+      providerId: member.providerId,
+      providerBackendId: member.providerBackendId,
+      model: member.model === 'gpt-5.1-codex-mini' ? '' : (member.model ?? ''),
+      effort: member.effort,
+      fastMode: member.fastMode,
+      mcpPolicy: member.mcpPolicy,
+      isolation: member.isolation,
+    })),
+  MembersEditorSection: ({
+    members,
+    onChange,
+    singleMemberMode,
+    inheritedProviderId,
+    leadRuntimeSettingsOnly,
+    preserveSelectedModel,
+  }: {
+    members: Array<Record<string, unknown>>;
+    onChange: (members: Array<Record<string, unknown>>) => void;
+    singleMemberMode?: boolean;
+    inheritedProviderId?: string;
+    leadRuntimeSettingsOnly?: boolean;
+    preserveSelectedModel?: boolean;
+  }) =>
+    React.createElement(
+      React.Fragment,
+      null,
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          'data-testid': 'editor',
+          'data-single': String(singleMemberMode),
+          'data-inherited-provider': inheritedProviderId,
+          'data-selected-provider': members[0]?.providerId,
+          'data-selected-model': members[0]?.model,
+          'data-preserve-selected-model': String(preserveSelectedModel),
+          'data-lead-runtime-only': String(leadRuntimeSettingsOnly),
+          onClick: () => onChange([{ ...members[0], roleSelection: 'reviewer' }]),
+        },
+        'editor'
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          'data-testid': 'reserved-editor',
+          onClick: () =>
+            onChange([{ ...members[0], roleSelection: '__custom__', customRole: 'Team Lead' }]),
+        },
+        'reserved editor'
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          'data-testid': 'model-editor',
+          onClick: () => onChange([{ ...members[0], model: 'claude-opus-4-1' }]),
+        },
+        'model editor'
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          'data-testid': 'copilot-model-editor',
+          onClick: () => onChange([{ ...members[0], model: 'github-copilot/gpt-4.1' }]),
+        },
+        'copilot model editor'
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          'data-testid': 'effort-editor',
+          onClick: () => onChange([{ ...members[0], effort: 'medium' }]),
+        },
+        'effort editor'
+      )
+    ),
+}));
+
+import { fingerprintResolvedMember } from '../utils/memberSettingsPresentation';
+
+import { EditTeamMemberDialog } from './EditTeamMemberDialog';
+
+import type { ResolvedTeamMember } from '@shared/types';
+
+const member: ResolvedTeamMember = {
+  name: 'alice',
+  agentId: 'agent-1',
+  agentType: 'developer',
+  status: 'idle',
+  currentTaskId: null,
+  taskCount: 0,
+  lastActiveAt: null,
+  messageCount: 0,
+  role: 'developer',
+  providerId: 'anthropic',
+};
+
+let host: HTMLDivElement;
+let root: ReturnType<typeof createRoot>;
+let onClose: ReturnType<typeof vi.fn>;
+let onRefresh: ReturnType<typeof vi.fn>;
+let onRelaunchRequired: ReturnType<typeof vi.fn>;
+
+function render(overrides: Partial<React.ComponentProps<typeof EditTeamMemberDialog>> = {}): void {
+  root.render(
+    <EditTeamMemberDialog
+      open
+      teamName="alpha"
+      member={member}
+      isTeamAlive={false}
+      isTeamProvisioning={false}
+      isMixedTeam={false}
+      onClose={onClose}
+      onRefresh={onRefresh}
+      onRelaunchRequired={onRelaunchRequired}
+      {...overrides}
+    />
+  );
+}
+
+function saveButton(): HTMLButtonElement {
+  return Array.from(host.querySelectorAll('button')).find((button) =>
+    button.textContent?.includes('editTeam.actions.save')
+  )!;
+}
+
+beforeEach(() => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001');
+  updateMemberSettings.mockReset();
+  getSavedRequest
+    .mockReset()
+    .mockResolvedValue({ savedSettingsFingerprint: 'editor-team-baseline' });
+  onClose = vi.fn();
+  onRefresh = vi.fn(async () => {});
+  onRelaunchRequired = vi.fn();
+  host = document.createElement('div');
+  document.body.appendChild(host);
+  root = createRoot(host);
+});
+
+afterEach(() => {
+  act(() => root.unmount());
+  host.remove();
+  vi.restoreAllMocks();
+});
+
+describe('EditTeamMemberDialog', () => {
+  it('saves one draft with stable command identity and closes a no-op after refresh', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'no_changes',
+      memberName: 'alice',
+      previousFingerprint: 'same',
+      currentFingerprint: 'same',
+    });
+    act(() => render());
+    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-single')).toBe('true');
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        commandId: '00000000-0000-4000-8000-000000000001',
+        idempotencyKey: '00000000-0000-4000-8000-000000000001',
+        teamName: 'alpha',
+        memberName: 'alice',
+      })
+    );
+    expect(onRefresh).toHaveBeenCalledOnce();
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('sends explicit model/effort-only intent for a lead without reserved role fields', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'lead_restart_started',
+      memberName: 'team-lead',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+    });
+    act(() =>
+      render({
+        isLead: true,
+        isTeamAlive: true,
+        leadProviderId: 'anthropic',
+        member: { ...member, name: 'team-lead', agentType: 'team-lead', role: 'Team Lead' },
+      })
+    );
+    expect(
+      host.querySelector('[data-testid="editor"]')?.getAttribute('data-lead-runtime-only')
+    ).toBe('true');
+    expect(host.textContent).toContain('editTeam.leadRestartWarning');
+    expect(host.textContent).not.toContain('editTeam.memberRestartWarning');
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+    await act(async () => saveButton().click());
+
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetKind: 'lead',
+        leadRuntime: { model: 'claude-opus-4-1', effort: null },
+      })
+    );
+    expect(updateMemberSettings.mock.calls[0]?.[0]).not.toHaveProperty('settings');
+    expect(onRefresh).toHaveBeenCalledWith({
+      model: 'claude-opus-4-1',
+      effort: null,
+    });
+  });
+
+  it('does not promote an effective default model during an effort-only lead edit', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'lead_restart_started',
+      memberName: 'team-lead',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+    });
+    act(() =>
+      render({
+        isLead: true,
+        isTeamAlive: true,
+        leadProviderId: 'codex',
+        member: {
+          ...member,
+          name: 'team-lead',
+          agentType: 'team-lead',
+          providerId: 'codex',
+          model: 'gpt-5.6-sol',
+          effort: 'high',
+          configuredRuntimeSettings: {
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+          },
+        },
+      })
+    );
+    expect(saveButton().disabled).toBe(true);
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="effort-editor"]')?.click());
+    expect(saveButton().disabled).toBe(false);
+    await act(async () => saveButton().click());
+
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        leadRuntime: { model: null, effort: 'medium' },
+      })
+    );
+  });
+
+  it('refreshes and stays open on conflict', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'target_conflict',
+      memberName: 'alice',
+      expectedFingerprint: 'old',
+      actualFingerprint: 'new',
+    });
+    act(() => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(onRefresh).toHaveBeenCalledOnce();
+    expect(onRefresh).toHaveBeenCalledWith(undefined);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('editTeam.errors.settingsChanged');
+  });
+
+  it('stays open and allows a fresh command after a busy result', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'busy',
+      teamName: 'alpha',
+      memberName: 'alice',
+      replayed: false,
+    });
+    act(() => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(onClose).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('editTeam.errors.saveFailed');
+  });
+
+  it('refreshes and stays open when recovery is required', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'recovery_required',
+      memberName: 'alice',
+      previousFingerprint: 'old',
+      currentFingerprint: 'old',
+    });
+    act(() => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(onRefresh).toHaveBeenCalledOnce();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('editTeam.errors.saveFailed');
+  });
+
+  it('uses a fresh command identity when retrying a rolled-back lead restart', async () => {
+    vi.mocked(globalThis.crypto.randomUUID)
+      .mockReset()
+      .mockReturnValueOnce('00000000-0000-4000-8000-000000000001')
+      .mockReturnValueOnce('00000000-0000-4000-8000-000000000002');
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'lead_restart_rolled_back',
+      memberName: 'team-lead',
+      previousFingerprint: 'old',
+      currentFingerprint: 'old',
+    });
+    act(() =>
+      render({
+        isLead: true,
+        isTeamAlive: true,
+        leadProviderId: 'anthropic',
+        member: { ...member, name: 'team-lead', agentType: 'team-lead' },
+      })
+    );
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+
+    await act(async () => saveButton().click());
+    await act(async () => saveButton().click());
+
+    expect(updateMemberSettings.mock.calls.map(([request]) => request.commandId)).toEqual([
+      '00000000-0000-4000-8000-000000000001',
+      '00000000-0000-4000-8000-000000000002',
+    ]);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('refreshes current truth after a failed mutation', async () => {
+    updateMemberSettings.mockRejectedValue(new Error('failed'));
+    act(() => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(onRefresh).toHaveBeenCalledOnce();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('stays open and does not repeat refresh when refresh fails after a successful save', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'persisted_only',
+      memberName: 'alice',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+    });
+    onRefresh.mockRejectedValue(new Error('offline'));
+    act(() => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+
+    expect(updateMemberSettings).toHaveBeenCalledOnce();
+    expect(onRefresh).toHaveBeenCalledOnce();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('editTeam.errors.changesSavedRefreshFailed');
+  });
+
+  it('does not claim settings were saved when refresh fails after a no-op result', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'no_changes',
+      memberName: 'alice',
+      previousFingerprint: 'same',
+      currentFingerprint: 'same',
+    });
+    onRefresh.mockRejectedValue(new Error('offline'));
+    act(() => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+
+    expect(host.textContent).toContain('editTeam.errors.saveFailed');
+    expect(host.textContent).not.toContain('editTeam.errors.changesSavedRefreshFailed');
+  });
+
+  it('switches unsafe live edits to the existing relaunch action without mutation', async () => {
+    await act(async () => render({ isTeamAlive: true, isMixedTeam: true }));
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+    const relaunch = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('activity.actions.restartTeam')
+    )!;
+    act(() => relaunch.click());
+    expect(updateMemberSettings).not.toHaveBeenCalled();
+    expect(onRelaunchRequired).toHaveBeenCalledWith({
+      teamName: 'alpha',
+      memberName: 'alice',
+      targetKind: 'member',
+      expectedTeamSettingsFingerprint: 'editor-team-baseline',
+      expectedFingerprint: fingerprintResolvedMember(member),
+      settings: expect.objectContaining({ role: 'reviewer', model: 'claude-opus-4-1' }),
+    });
+  });
+
+  it('carries the draft when backend admission requires relaunch without persisting', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'team_relaunch_required',
+    });
+    await act(async () => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(onRelaunchRequired).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedFingerprint: fingerprintResolvedMember(member),
+        settings: expect.objectContaining({ model: 'claude-opus-4-1' }),
+      })
+    );
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('refuses a stale target before handing a draft to relaunch', async () => {
+    await act(async () => render({ isTeamAlive: true, isMixedTeam: true }));
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
+    act(() =>
+      render({
+        isTeamAlive: true,
+        isMixedTeam: true,
+        member: { ...member, agentId: 'replacement' },
+      })
+    );
+    const relaunch = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('activity.actions.restartTeam')
+    )!;
+    act(() => relaunch.click());
+    expect(onRelaunchRequired).not.toHaveBeenCalled();
+    expect(updateMemberSettings).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('editTeam.errors.settingsChanged');
+  });
+
+  it('blocks close while saving', async () => {
+    let resolve!: (value: unknown) => void;
+    updateMemberSettings.mockReturnValue(new Promise((done) => (resolve = done)));
+    act(() => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    act(() => saveButton().click());
+    expect(saveButton().disabled).toBe(true);
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="dismiss"]')?.click());
+    expect(onClose).not.toHaveBeenCalled();
+    await act(async () => {
+      resolve({
+        outcome: 'completed',
+        effect: 'persisted_only',
+        memberName: 'alice',
+        previousFingerprint: 'old',
+        currentFingerprint: 'new',
+      });
+      await Promise.resolve();
+    });
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('disables save for a normalized no-op', () => {
+    act(() => render());
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('disables save for a reserved role', () => {
+    act(() => render());
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="reserved-editor"]')?.click());
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('uses the lead provider for inherited model controls', () => {
+    act(() => render({ leadProviderId: 'codex' }));
+    expect(
+      host.querySelector('[data-testid="editor"]')?.getAttribute('data-inherited-provider')
+    ).toBe('codex');
+  });
+
+  it('does not persist effective inherited runtime values as explicit overrides', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'persisted_only',
+      memberName: 'alice',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+      replayed: false,
+    });
+    act(() =>
+      render({
+        leadProviderId: 'codex',
+        member: {
+          ...member,
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'effective-model',
+          selectedFastMode: 'on',
+          configuredRuntimeSettings: {},
+        },
+      })
+    );
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          providerId: null,
+          providerBackendId: null,
+          model: null,
+          fastMode: null,
+        }),
+      })
+    );
+  });
+
+  it('explains the displayed Copilot route while keeping inherited settings on a role edit', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'persisted_only',
+      memberName: 'alice',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+      replayed: false,
+    });
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        member: {
+          ...member,
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-5-mini',
+          configuredRuntimeSettings: {},
+        },
+      })
+    );
+    const editor = host.querySelector('[data-testid="editor"]');
+    expect(editor?.getAttribute('data-selected-provider')).toBeNull();
+    expect(editor?.getAttribute('data-selected-model')).toBe('');
+    expect(editor?.getAttribute('data-preserve-selected-model')).toBe('true');
+    expect(host.textContent).toContain('gpt-5-mini · via Github Copilot');
+    expect(host.textContent).toContain('editTeam.useDisplayedRuntime');
+
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({ providerId: null, model: null, role: 'reviewer' }),
+      })
+    );
+  });
+
+  it('keeps an explicit saved provider when it differs from the displayed route', async () => {
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        member: {
+          ...member,
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-5-mini',
+          configuredRuntimeSettings: { providerId: 'anthropic', model: 'haiku' },
+        },
+      })
+    );
+    const editor = host.querySelector('[data-testid="editor"]');
+    expect(editor?.getAttribute('data-selected-provider')).toBe('anthropic');
+    expect(editor?.getAttribute('data-selected-model')).toBe('haiku');
+    expect(editor?.getAttribute('data-preserve-selected-model')).toBe('true');
+    expect(host.textContent).toContain('gpt-5-mini · via Github Copilot');
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('explains a difference from an explicit saved model', async () => {
+    await act(async () =>
+      render({
+        leadProviderId: 'opencode',
+        member: {
+          ...member,
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-5-mini',
+          configuredRuntimeSettings: {
+            providerId: 'opencode',
+            model: 'github-copilot/gpt-4.1',
+          },
+        },
+      })
+    );
+    expect(host.textContent).toContain('gpt-5-mini · via Github Copilot');
+    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
+      'github-copilot/gpt-4.1'
+    );
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('does not report inherited lead model as a saved-settings mismatch', async () => {
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        leadModel: 'claude-opus-4-1',
+        leadEffort: 'high',
+        leadFastMode: 'on',
+        member: {
+          ...member,
+          providerId: 'anthropic',
+          model: 'claude-opus-4-1',
+          effort: 'high',
+          selectedFastMode: 'on',
+          configuredRuntimeSettings: {},
+        },
+      })
+    );
+    expect(host.textContent).not.toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).not.toContain('editTeam.useDisplayedRuntime');
+  });
+
+  it('keeps provider Default when lead-model sync is disabled', async () => {
+    getSavedRequest.mockResolvedValue({
+      savedSettingsFingerprint: 'editor-team-baseline',
+      syncModelsWithLead: false,
+    });
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        leadModel: 'claude-opus-4-1',
+        leadEffort: 'high',
+        member: {
+          ...member,
+          providerId: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          configuredRuntimeSettings: {},
+        },
+      })
+    );
+    expect(host.textContent).not.toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).not.toContain('editTeam.useDisplayedRuntime');
+    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
+      ''
+    );
+  });
+
+  it('explains an effort-only difference between the card and saved settings', async () => {
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        member: {
+          ...member,
+          providerId: 'anthropic',
+          model: 'claude-opus-4-1',
+          effort: 'high',
+          configuredRuntimeSettings: {
+            providerId: 'anthropic',
+            model: 'claude-opus-4-1',
+            effort: 'low',
+          },
+        },
+      })
+    );
+    expect(host.textContent).toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).toContain('editTeam.useDisplayedRuntime');
+    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
+      'claude-opus-4-1'
+    );
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('explains a fast-mode-only difference between the card and saved settings', async () => {
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        member: {
+          ...member,
+          providerId: 'anthropic',
+          model: 'claude-opus-4-1',
+          selectedFastMode: 'on',
+          configuredRuntimeSettings: {
+            providerId: 'anthropic',
+            model: 'claude-opus-4-1',
+            fastMode: 'off',
+          },
+        },
+      })
+    );
+    expect(host.textContent).toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).toContain('editTeam.useDisplayedRuntime');
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('explains a backend-only difference before copying the card settings', async () => {
+    await act(async () =>
+      render({
+        leadProviderId: 'opencode',
+        member: {
+          ...member,
+          providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
+          model: 'github-copilot/gpt-5-mini',
+          configuredRuntimeSettings: {
+            providerId: 'opencode',
+            providerBackendId: 'adapter',
+            model: 'github-copilot/gpt-5-mini',
+          },
+        },
+      })
+    );
+    expect(host.textContent).toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).toContain('editTeam.useDisplayedRuntime');
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('keeps a saved stale model through draft creation and a role-only save', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'persisted_only',
+      memberName: 'alice',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+      replayed: false,
+    });
+    act(() =>
+      render({
+        leadProviderId: 'codex',
+        member: {
+          ...member,
+          providerId: 'codex',
+          model: 'gpt-5.1-codex-mini',
+          configuredRuntimeSettings: { providerId: 'codex', model: 'gpt-5.1-codex-mini' },
+        },
+      })
+    );
+    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
+      'gpt-5.1-codex-mini'
+    );
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({ model: 'gpt-5.1-codex-mini', role: 'reviewer' }),
+      })
+    );
+  });
+
+  it('does not copy the displayed provider into a live role-only relaunch', async () => {
+    await act(async () =>
+      render({
+        isTeamAlive: true,
+        isMixedTeam: true,
+        leadProviderId: 'anthropic',
+        member: {
+          ...member,
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-5-mini',
+          configuredRuntimeSettings: {},
+        },
+      })
+    );
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    act(() =>
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent === 'activity.actions.restartTeam')
+        ?.click()
+    );
+    expect(onRelaunchRequired).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({ providerId: null, model: null, role: 'reviewer' }),
+      })
+    );
+    expect(updateMemberSettings).not.toHaveBeenCalled();
+  });
+
+  it('copies the displayed Copilot route only on explicit request', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'persisted_only',
+      memberName: 'alice',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+      replayed: false,
+    });
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        member: {
+          ...member,
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-5-mini',
+          configuredRuntimeSettings: {},
+        },
+      })
+    );
+    act(() =>
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent === 'editTeam.useDisplayedRuntime')
+        ?.click()
+    );
+    expect(
+      host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-provider')
+    ).toBe('opencode');
+    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
+      'github-copilot/gpt-5-mini'
+    );
+    act(() =>
+      host.querySelector<HTMLButtonElement>('[data-testid="copilot-model-editor"]')?.click()
+    );
+    await act(async () => saveButton().click());
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-4.1',
+        }),
+      })
+    );
+  });
+
+  it('shows the current task warning and the exact OpenCode lane action', () => {
+    act(() =>
+      render({
+        isTeamAlive: true,
+        member: {
+          ...member,
+          providerId: 'opencode',
+          configuredRuntimeSettings: { providerId: 'opencode' },
+          laneId: 'secondary-1',
+          laneKind: 'secondary',
+          currentTaskId: 'task-42',
+        },
+      })
+    );
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    expect(host.textContent).toContain('detail.actions.task: task-42');
+    expect(host.textContent).toContain('liveRuntimeStatus.lane');
+  });
+
+  it('updates the task warning from live props without resetting the open draft', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'persisted_only',
+      memberName: 'alice',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+      replayed: false,
+    });
+    act(() => render({ isTeamAlive: true }));
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    act(() => render({ isTeamAlive: true, member: { ...member, currentTaskId: 'task-42' } }));
+
+    expect(host.textContent).toContain('detail.actions.task: task-42');
+    await act(async () => saveButton().click());
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ settings: expect.objectContaining({ role: 'reviewer' }) })
+    );
+  });
+
+  it('keeps a disappeared target visible as stale and disables save', () => {
+    act(() => render({ targetAvailable: false }));
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    expect(host.textContent).toContain('editTeam.errors.settingsChanged');
+    expect(saveButton().disabled).toBe(true);
+  });
+});
+
+it('freezes saved launch defaults at editor opening through a later rerender and relaunch handoff', async () => {
+  await act(async () =>
+    render({ isTeamAlive: true, isMixedTeam: true, leadProviderId: 'anthropic' })
+  );
+  getSavedRequest.mockResolvedValue({ savedSettingsFingerprint: 'newer-team-defaults' });
+  await act(async () =>
+    render({ isTeamAlive: true, isMixedTeam: true, leadProviderId: 'anthropic' })
+  );
+  await act(async () =>
+    host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')!.click()
+  );
+  const button = Array.from(host.querySelectorAll('button')).find(
+    (button) => button.textContent === 'activity.actions.restartTeam'
+  )!;
+  await act(async () => button.click());
+  expect(getSavedRequest).toHaveBeenCalledTimes(1);
+  expect(onRelaunchRequired).toHaveBeenCalledWith(
+    expect.objectContaining({ expectedTeamSettingsFingerprint: 'editor-team-baseline' })
+  );
+});

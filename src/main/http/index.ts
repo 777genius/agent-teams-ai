@@ -1,0 +1,126 @@
+/**
+ * HTTP Route Registration Orchestrator.
+ *
+ * Registers all domain-specific route handlers on a Fastify instance.
+ * Each route file mirrors the corresponding IPC handler.
+ */
+import {
+  type OrganizationsFeatureFacade,
+  registerOrganizationsHttp,
+} from '@features/organizations/main';
+import {
+  type RecentProjectsFeatureFacade,
+  registerRecentProjectsHttp,
+} from '@features/recent-projects/main';
+import {
+  registerTeamGroupChatsHttp,
+  type TeamGroupChatsFeature,
+} from '@features/team-group-chats/main';
+import { registerTokenUsageHttp, type TokenUsageFeatureFacade } from '@features/token-usage/main';
+import {
+  registerWorkspaceTrustHttp,
+  type WorkspaceTrustStatusFeatureFacade,
+} from '@features/workspace-trust/main';
+import { createLogger } from '@shared/utils/logger';
+
+import { registerHttpAgentBackend } from './agentBackend';
+import { registerConfigRoutes } from './config';
+import { registerEventRoutes } from './events';
+import { registerNotificationRoutes } from './notifications';
+import { registerProjectRoutes } from './projects';
+import { registerSearchRoutes } from './search';
+import { registerSessionRoutes } from './sessions';
+import { registerSshRoutes } from './ssh';
+import { registerSubagentRoutes } from './subagents';
+import { registerTeamRoutes } from './teams';
+import { registerUpdaterRoutes } from './updater';
+import { registerUtilityRoutes } from './utility';
+import { registerValidationRoutes } from './validation';
+
+import type {
+  ChunkBuilder,
+  DataCache,
+  ProjectScanner,
+  SessionParser,
+  SubagentResolver,
+  UpdaterService,
+} from '../services';
+import type { SshConnectionManager } from '../services/infrastructure/SshConnectionManager';
+import type {
+  TeamHttpDataApi,
+  TeamHttpHandlerApis,
+} from '../services/team/contracts/TeamProvisioningApis';
+import type { HttpAgentBackendScope } from './agentBackend';
+import type { DesktopExternalAgentConnection } from '@features/external-agent-connection/main';
+import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
+import type { TeamPromptManagement } from '@features/team-prompt-management/main';
+import type { FastifyInstance } from 'fastify';
+
+const logger = createLogger('HTTP:routes');
+
+export interface HttpServices {
+  agentBackend?: HttpAgentBackendScope;
+  projectScanner: ProjectScanner;
+  sessionParser: SessionParser;
+  subagentResolver: SubagentResolver;
+  chunkBuilder: ChunkBuilder;
+  dataCache: DataCache;
+  recentProjectsFeature?: RecentProjectsFeatureFacade;
+  teamGroupChatsFeature?: TeamGroupChatsFeature;
+  organizationsFeature?: OrganizationsFeatureFacade;
+  tokenUsageFeature?: TokenUsageFeatureFacade;
+  memberWorkSyncFeature?: MemberWorkSyncFeatureFacade;
+  workspaceTrust?: WorkspaceTrustStatusFeatureFacade;
+  externalAgentConnection?: DesktopExternalAgentConnection & {
+    teamPromptManagement?: TeamPromptManagement;
+  };
+  updaterService: UpdaterService;
+  sshConnectionManager: SshConnectionManager;
+  teamApis?: TeamHttpHandlerApis;
+  teamDataApi?: TeamHttpDataApi;
+  teamPromptManagement?: TeamPromptManagement;
+}
+
+export function registerHttpRoutes(
+  app: FastifyInstance,
+  services: HttpServices,
+  sshModeSwitchCallback: (mode: 'local' | 'ssh') => Promise<void>
+): void {
+  if (services.agentBackend) registerHttpAgentBackend(app, services.agentBackend);
+  services.externalAgentConnection?.registerHttp(app);
+  if (services.teamGroupChatsFeature)
+    registerTeamGroupChatsHttp(app, services.teamGroupChatsFeature);
+  registerProjectRoutes(app, services);
+  registerSessionRoutes(app, services);
+  registerSearchRoutes(app, services);
+  registerSubagentRoutes(app, services);
+  if (services.teamDataApi || services.teamApis) {
+    registerTeamRoutes(app, services);
+  }
+  registerNotificationRoutes(app);
+  registerConfigRoutes(app, services.externalAgentConnection?.updateRoot);
+  registerValidationRoutes(app);
+  registerUtilityRoutes(app);
+  registerSshRoutes(
+    app,
+    services.sshConnectionManager,
+    sshModeSwitchCallback,
+    services.externalAgentConnection?.changeContext
+  );
+  registerUpdaterRoutes(app, services);
+  if (services.recentProjectsFeature) {
+    registerRecentProjectsHttp(app, services.recentProjectsFeature);
+  }
+  if (services.organizationsFeature) {
+    registerOrganizationsHttp(app, services.organizationsFeature);
+  }
+  if (services.tokenUsageFeature) {
+    registerTokenUsageHttp(app, services.tokenUsageFeature);
+  }
+  registerEventRoutes(app);
+  if (services.workspaceTrust) {
+    registerWorkspaceTrustHttp(app, services.workspaceTrust);
+  }
+
+  logger.info('All HTTP routes registered');
+}

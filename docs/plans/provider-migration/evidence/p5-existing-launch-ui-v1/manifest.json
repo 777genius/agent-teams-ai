@@ -1,0 +1,468 @@
+{
+  "status": "PASS scoped original LaunchTeamDialog Electron E2E",
+  "jobId": "84316d7c9d8d1aa97190f89b42136d85",
+  "scope": "Original LaunchTeamDialog controls through saved Team capture/standalone Host/actual Claude SDK and local inference, native MCP/Bash, Stop and settings readback after reload",
+  "hostSource": "e025edbe1143fb1bcf6a274066c32f298be366029434539b8d7a311630892603",
+  "hostDist": "886cca2f3bd9db82a245869936da85bbb1a5c9a7269c5c2bcbcc8b453648016f",
+  "assertions": [
+    "Original saved model/effort hydrate; original controls select Opus4.6/medium and type prompt",
+    "One scoped no-tool model probe; saved roster, fresh launch capture, one native input",
+    "Eight actual SDK/CLI localhost requests execute native MCP task/comment/message and Bash file effect/exit7",
+    "Reply visible in original thread; original Stop releases captured native child before Quit",
+    "Real renderer reload, original Launch dialog retains saved choices without new agent input",
+    "All six legacy sentinels allowed version/shell-environment preflight only, no refused commands before/after Quit",
+    "Captured standalone Host absent and TEST process group empty after bounded cleanup"
+  ],
+  "fixes": [
+    "Scoped readiness carries exact Team/draft/preparation/model selection and finite expiry; global Claude auth remains unchanged",
+    "Model probe waits for an already-running metadata read instead of leaving an admitted intent held",
+    "Configuration comparison excludes only observation time; roster/configuration/launch identity remain fenced",
+    "Deferred legacy provisioning warmup excluded while selected Host owns provider status"
+  ],
+  "cleanupBoundary": "Native release and Host physical exit observed. Main transport does not expose Host exit code; dev wrapper required scoped SIGTERM cleanup. No claim that wrapper exited naturally.",
+  "sourceBoundary": "Listed production sources compared before/after app, retained bytes verified against hashes. Not a full immutable dependency closure or release qualification.",
+  "checks": {
+    "scriptTypecheck": "84316d7c9d8d1aa97190f89b42136d85",
+    "productionTypecheckAndSizeGuard": "7c401b641ef44b787ca24b9964865f42",
+    "hostTests272": "26cffd12abb62dbfa99d3a3965cd2f12",
+    "focusedUi83": "13fb9d1810777ec96cc67985768c8c03",
+    "observedAtRegression29": "ba37c35b1579198ff90db7ac67aa5e8d",
+    "scopedLint": "7ca417d0dadc244c899240630b31e397"
+  },
+  "priorAttempts": [
+    {
+      "jobId": "cdda93bfc783f8088f86db8187e9e744",
+      "result": "Dialog/Stop/reload passed, aggregate rejected two real legacy warmup status commands; fixed without weakening sentinel"
+    },
+    {
+      "jobId": "7c401b641ef44b787ca24b9964865f42",
+      "result": "Typecheck/size guard passed, Electron read-only initial sidebar hydration exceeded30s before any UI action; cleanup confirmed. Initial read budget increased to90s, no mutation replay"
+    }
+  ],
+  "excluded": [
+    "Create/Resume controls",
+    "all roster/provider/advanced options",
+    "real vendor authentication/inference",
+    "full Stage1 P0-P8/M01-M19",
+    "Stage2",
+    "merge/release"
+  ],
+  "files": [
+    {
+      "path": "receipt.json",
+      "sha256": "88ac1fd955708702c7a5d26952615565d386fb94bb1f9befdf43fc14f9382c54"
+    },
+    {
+      "path": "ui-original-launch-native.png",
+      "sha256": "1a0eee55e806b2706135648a5ef6e4fe2b40d8e3c9e81b390120eb84b1aeb256"
+    },
+    {
+      "path": "desktop-app.log",
+      "sha256": "d50f4c1fcf21c439b0d44cb1ba558802d3952cb585f4d5f0f0c4e2510b78fd8e"
+    },
+    {
+      "path": "checks.stdout.log",
+      "sha256": "cccb163e958f0b05404ba19cecb8e24be0d1f3a644b9fe7bcf178aae66156e1f"
+    },
+    {
+      "path": "checks.stderr.log",
+      "sha256": "497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/contracts/index.ts",
+      "sha256": "48fe273a8eb9cbfda444d2c00fb90ef6e401e8052de626a41bb48f059445c4a2"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/composition/ClaudeManagementCoordinator.ts",
+      "sha256": "ad1516f9972bf00127a90fa11fe4a39b5bb47943ce2ca2e6f5648959a2cc9ece"
+    },
+    {
+      "path": "executed-source/src/shared/utils/capturedTeamReadiness.ts",
+      "sha256": "7c9d4e0927d730d4021e023eb730cccc87c0aff738bbffbfae2cc45e3d088154"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+      "sha256": "fd5e0f907d646aaf43c735ff99093a61176cccd832df585a3df10573c68c8d7d"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "sha256": "2971057f8a16ddd4ab717241e408c749356da8cc560a1bf1eef103dcb55758e0"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/dialogs/withCapturedTeamReadiness.ts",
+      "sha256": "8048e268489faffaa4c673fd06d72e4f535da3ec801d6cfef7e4c21d5f5c521d"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/dialogs/providerLaunchAuthority.ts",
+      "sha256": "d51817787bfe62f91cc3397769811ce9c0b04208ffc450e5be26eae1cd423204"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/dialogs/provisioningProviderChecks.ts",
+      "sha256": "6d3d28bab28dc1a0f0c65dd6e7ed03984468b3cd2fdcd89a8d00668d8f929207"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/main/application/prepareCapturedTeamModels.ts",
+      "sha256": "9915dfff168356e93aa6e0fc375451bd29fb1b4c438a867798ef87fd18c52d22"
+    },
+    {
+      "path": "executed-source/scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "sha256": "7c3d991df10b0b1a8e95c7818ebc7fc8a66c893755c7293e4db4195ff2676f72"
+    },
+    {
+      "path": "executed-source/scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+      "sha256": "b115dbc35090cf24fb62488776beda86aafafdf37901fb8bfb189c582dff1913"
+    },
+    {
+      "path": "executed-source/scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "sha256": "214e9821c314949ef67a155642cde4a27e504651d4971ff2f2f56eedf582fd6b"
+    },
+    {
+      "path": "executed-source/scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "sha256": "535f6e4210320d07b0acfb21bfc6693f45c36129ccac7ee1124ac2e9597de4aa"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts",
+      "sha256": "6814687e40c4a71785f8420043a9f49d4bac6841749fdaf756076141ff33ff38"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/composition/RuntimeTeamCaptures.ts",
+      "sha256": "29218a8c3c821815802784f780a98253547a3c47199b12aa2551fb4e6f40ac6f"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/composition/runtimeCaptureSource.ts",
+      "sha256": "4baee83fc76de835234384a153a3d8e85dfe55f4c5149864d1469bb1fb1d8ab8"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/team/TeamRuntimeRegistration.ts",
+      "sha256": "6309f9282281afaf271159a8f090617aa394e553d573308186456e8528f6a956"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "sha256": "18ec3842e54c6762db1328bb92cf98143f3a4f7ec5924b9f1a1e758456e862f0"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/dialogs/useLaunchDialogRosterSubmission.ts",
+      "sha256": "4be049abe377cdda5c0c70cdbaad2d07b2050d65af36743deb7bb561c28c331d"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/renderer/createHostTeamLaunchSubmission.ts",
+      "sha256": "9f55339e05f2bb0c0d6de2788f6999992b67dfac38e3c76056e71c7d31ca3490"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/renderer/createHostTeamProvisioning.ts",
+      "sha256": "a4b93b7ff9f56ccc358384447ccce0a299628ef1a442823c1d1b9b248cc6bfb2"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/renderer/createHostBackendRenderer.ts",
+      "sha256": "25543feb05c7d78b21fc1d32a83744f7e5696d71cbc25401a660f5adc522cff1"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/renderer/createHostTeamLaunch.ts",
+      "sha256": "427b998be84f7f22efa1b47c9b7ee992810d5fae853c030406e7f850d1418b35"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/renderer/createHostTeamRoster.ts",
+      "sha256": "f8aa324adb6a89c90dfcdadc08013590df0378197123d01e86cb436510f2011d"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/renderer/readHostLaunchConfiguration.ts",
+      "sha256": "0a941762cbd28bb0f686e5de42171b7003f6801f0f266e432830630f232cb4ae"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/renderer/projectHostSavedTeamRequest.ts",
+      "sha256": "3cc26ab63bfbb04dd1e09bbe1817276c82b489209fb63ac0a85af21d61665917"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/renderer/readHostRosterConfiguration.ts",
+      "sha256": "f9ff99170008696385f6a7f544f214edf5683259761931f90de6591a35d86f58"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/dialogs/launchDialogPrefill.ts",
+      "sha256": "3737f912c831488727607ec8930d05114672a4cb04de4c9e00059fa3fdc077de"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/dialogs/useLaunchDialogAdvancedSettings.ts",
+      "sha256": "6b21b53b86482ae0c52a20eccc22b7a2a6004622914634baa95a6e583d4bb6a0"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/dialogs/teamRelaunchFlow.ts",
+      "sha256": "c6783459c6005f30553b6f223914e6f7f0ed73a1e7dbb7818ca060fa50bc3f0a"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/dialogs/LaunchTeamDialog.types.ts",
+      "sha256": "9510bf4ec25e65033c1c4a6e87d1ef23c2846e7d1a59f604a5bb5ae5b4f14514"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/TeamDetailView.tsx",
+      "sha256": "66d93188a1d574d4ffd09e771b22aa28bb8e1a66195d6b5dbd24dbbf3a811706"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/TeamListView.tsx",
+      "sha256": "297b4444a219e78eee843f21fd745fee398a36cdb3e422960e76debd17d87f4c"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/main/adapters/output/projectLaunchConfiguration.ts",
+      "sha256": "12cd248010dc4fee2720273b68c24814d5d40456940f30a40ecddf8e7f0918ba"
+    },
+    {
+      "path": "executed-source/scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "sha256": "44b69cc58f119850fd45586c5e38d89094d03900a5a66c631502d909ff7c5597"
+    },
+    {
+      "path": "executed-source/scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "sha256": "bfdb7fd6296e2e07d210126e3bd37a63f119c5d284b715a4b5123cc4aa2fc8d2"
+    },
+    {
+      "path": "executed-source/scripts/legacy-agent-host/desktop-host-routing-proof.ts",
+      "sha256": "185123b91195dacd780440fe258b7dc9ff6356733d5b0c29d336d8003ce86c1e"
+    },
+    {
+      "path": "executed-source/scripts/legacy-agent-host/desktop-readback-fixture.ts",
+      "sha256": "2533f8de5bb9dd1ecbd424247c12dfd48f0ba16369f744ab637cd1fee7f5136f"
+    },
+    {
+      "path": "executed-source/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "sha256": "bca7f5d85e4c76fd8b1ab6dc4a586d765eff5b21661fe41f8fe97bfbee8ae6bf"
+    },
+    {
+      "path": "executed-source/scripts/legacy-agent-host/desktop-reply-visibility.ts",
+      "sha256": "2167afa39635f45d0ad6b16fd96fa81983d3a9e5dda52230f85df1b713c04e12"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/team/TeamProductChanges.ts",
+      "sha256": "7a6885c02a709e73c82f2f71dacbe9e685fa0769dfdb00bec62a2dcd05772711"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/team/TeamOwner.ts",
+      "sha256": "5a17cfd1db9362dc15523fda839297f7826570a78555f1e4817b30b0f1e17a9a"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/team/memberSettingsRelaunch.ts",
+      "sha256": "d8baad8a46f2dc6f243be59342b1858b3dde216fb2eb4354206aa81aed98cffd"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/team/TeamRosterTransitions.ts",
+      "sha256": "61d1560cc753eb8cedb8172f05c2640fff51df6ccd002c9b6c901189c015c3a2"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/team/rosterContracts.ts",
+      "sha256": "bf49babba220852903348aad6e9545a5d26c26d9ac9f151ded0089aad4d91b8e"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/team/rosterSchema.ts",
+      "sha256": "5eed3d7351fca107006b253387113262217e3e608bcc05ed98578b9efa91bb18"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/team/validateTeamCommand.ts",
+      "sha256": "221bf0912e78fee5c4ff5e9a94a025e5068346efb6f524ca1acba1356f1e3015"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/renderer/TeamProductReadOrder.ts",
+      "sha256": "506a0e72e1207626a3e0e246e82fc595f869b712e93fc188f9240e4ae5f9432f"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/main/adapters/output/projectTeamSnapshot.ts",
+      "sha256": "82bc7bd01e6307e0b2f6d8566a3f4901e93535681b49390ec84a3950d6654e52"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/contracts/teamSnapshot.ts",
+      "sha256": "c5bda58fa44283e91115858b0803b1c66fdf1ed4ceb35d5a10d03ca00b839723"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/renderer/createHostTeamChanges.ts",
+      "sha256": "3218fed52fa507752e1a640d5dc869dfbae796f0843970a428b41a0d9bed7555"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/main/adapters/output/projectTeamChanges.ts",
+      "sha256": "52bf95ea0aaa655a213b731cd61226674ee66ad4da2ed41123f6639cb58d6d1f"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/contracts/teamChanges.ts",
+      "sha256": "f6fc991df3ad30f57a463410654e0ada2b31596c3be54157bcd8476eadc21b54"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/contracts/operations.ts",
+      "sha256": "e41e7037f1ca58f13146bfb2ac01c47372423434e077d6d30e79b9ed695cb3c6"
+    },
+    {
+      "path": "executed-source/scripts/legacy-agent-host/desktop-composer-ui-smoke.ts",
+      "sha256": "634c44856c95fbe1bd386eb79b809d067ec03d4c4b0db2b2dd76b2cfc7cfea04"
+    },
+    {
+      "path": "executed-source/scripts/legacy-agent-host/desktop-backend-bridge-proof.ts",
+      "sha256": "faeabf8f90987d14d73fbb7fc9d2a0ea46ac2476780364ddab5c4b64d6a3c562"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/composition/TeamHost.ts",
+      "sha256": "886fe4ff48f8537f139d14507966343c649e65d2c9dae4aa3fb77f665b85b144"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "sha256": "e95c70a075929471b9febba2a4f5e2655b814155ea36d08ec924ceb72a5e201f"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/composition/executeTeamLaunch.ts",
+      "sha256": "2eb6e78971e37463ef13d9e7220b500baf246730fb3a08c087025182fd90e550"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/composition/launchConfiguration.ts",
+      "sha256": "582b75f2271b5aefed7083aedd98a495ecde950e11894ee6c4b50fdc74779a4f"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+      "sha256": "14f53b526c886bd73ba7ff00e1c69e3ed1736883d3ee9251f3e185f2858eed89"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/composition/restoreMemberSession.ts",
+      "sha256": "2fefc22025a8b282cb31b95bc4d3cd14c7a1030b972dc9b440cc1c1544f047bc"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts",
+      "sha256": "d4b5da698ac4d543a1b94c505bd73a13c552dbbdfaeb5955483303fdd5d47294"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/team-launch/contracts.ts",
+      "sha256": "13831c301dc014d03793ed2dce9607cf438757538b2fe6b88de8e8e406d4c6cb"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/team-launch/launchPreparation.ts",
+      "sha256": "c2d93c5da16129114209d43a66dd87f8e029de18088a36c44af38898ddb5e123"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/adapters/team/FileTeamRuntimeBindings.ts",
+      "sha256": "47318e79bebe782f40af97a252585e4ac81218b057fa831429ebe83dc3bef90e"
+    },
+    {
+      "path": "executed-source/packages/legacy-agent-host/src/team/ports.ts",
+      "sha256": "12c84f0580d7a759909614a27cb4afb8322f152cf5f2eabaad64902ae430fce0"
+    },
+    {
+      "path": "executed-source/electron.vite.config.ts",
+      "sha256": "5b3811d09050b7cfe24ecf4facbf66ef367584ebfe9dc5e15299c9e2ac62eaac"
+    },
+    {
+      "path": "executed-source/src/main/index.ts",
+      "sha256": "926bd4ad71babb333648da7df658717ae944e2cc7ca2cd7b97b00f754b2667ed"
+    },
+    {
+      "path": "executed-source/src/main/composition/createDesktopCodexFeatures.ts",
+      "sha256": "113e74886cd881dbeefc03069077bbf1533507b01a5eaf37cf07cd163e116990"
+    },
+    {
+      "path": "executed-source/src/main/ipc/agentBackend.ts",
+      "sha256": "a461eddcb849672b41fd456a387921c9974af97fe316098c6f9f9c70cea1f70b"
+    },
+    {
+      "path": "executed-source/src/preload/index.ts",
+      "sha256": "b861ef4bddc1c16cdd3dfc5b2d06d5f1fec47d01e55c1da754c6e403cc0fda04"
+    },
+    {
+      "path": "executed-source/src/main/ipc/cliInstaller.ts",
+      "sha256": "f2656ad2e23a09fe7b1d60bb2fb06c930033187658dbec3eced13af61a40c154"
+    },
+    {
+      "path": "executed-source/src/main/services/infrastructure/CliInstallerService.ts",
+      "sha256": "fa00bcc32228c8afe02fddef2de0a185cdc31fc9b0c1393168735aae98580518"
+    },
+    {
+      "path": "executed-source/src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+      "sha256": "cd459996fb9606fb1a4a95e7260602994f08f455a3fe729d94037013604716bd"
+    },
+    {
+      "path": "executed-source/src/features/runtime-provider-management/main/adapters/output/createCapturedCodexFeatures.ts",
+      "sha256": "42bd56f46caa0911d8866d68a43b42ea8cccab1ab0d563a62a85da0cb98f0f39"
+    },
+    {
+      "path": "executed-source/src/features/runtime-provider-management/main/adapters/output/CapturedCodexAuthCommands.ts",
+      "sha256": "06cce9d520f5614d2e8846b8e2c830d91c7d8cbb0c3e7215485a94b69d2a766e"
+    },
+    {
+      "path": "executed-source/src/features/runtime-provider-management/main/infrastructure/FileCodexAuthIntentStore.ts",
+      "sha256": "998a71c49fb63f21f44b08dcf09f5983925b20f0bd521e567c2b60004ffa26b5"
+    },
+    {
+      "path": "executed-source/src/features/runtime-provider-management/main/adapters/output/capturedCodexMetadata.ts",
+      "sha256": "580bbf6a9cec1742f232ba8125769edfba5d00bf7617d80a4eb6e621f208d414"
+    },
+    {
+      "path": "executed-source/src/features/runtime-provider-management/main/adapters/output/capturedCodexCatalog.ts",
+      "sha256": "b56a422d00e8b8ec72e85b5526b2e32bbb209e52609fe9c1d1f68b2d13e1d5da"
+    },
+    {
+      "path": "executed-source/src/features/codex-account/main/adapters/input/ipc/registerCodexAccountIpc.ts",
+      "sha256": "873f13d58d7c81c65adcdcf29d030b45018979647a84922b63a752007a529907"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/main/composition/DesktopBackendFeature.ts",
+      "sha256": "6447405389892395130863f1ff28c3d0eda34cb3a7df5409864038e4e2cad851"
+    },
+    {
+      "path": "executed-source/src/shared/types/cliInstaller.ts",
+      "sha256": "d12fd62e155ffebc165c5abd9d727073462047693421327ed063278c5aeff9a7"
+    },
+    {
+      "path": "executed-source/src/shared/utils/providerStatusAuthority.ts",
+      "sha256": "67241d584fdbef940ad2a0ef7eb459eb85af618bd907710d42c005821c2fa4fa"
+    },
+    {
+      "path": "executed-source/src/renderer/store/slices/cliInstallerStatusReconciliation.ts",
+      "sha256": "7232db16e52a08bcf06c4e820d4eb09352c2cabc000fc1a9799ed25fb91467d3"
+    },
+    {
+      "path": "executed-source/src/renderer/api/index.ts",
+      "sha256": "551a78971078f483c06d4053848b1df3f8eea1807704dedb48e96cf6ceecae16"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/renderer/createHostTeamsApi.ts",
+      "sha256": "5cb8acc13ddcf159fe5211def5b225402c68cd4e4064ba27dcf532330e9849c9"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/renderer/hostTeamRouting.ts",
+      "sha256": "06468d2e2b0c849fd51eb105ab69d21fffa357eb34026df2d010b1362392791e"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/renderer/createHostTeamLifecycle.ts",
+      "sha256": "bff3293bb60b3e11ef2422b7c15b7c08bb4ac015fd7b2541aecbe1488ea252b0"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/contracts/launch.ts",
+      "sha256": "e4750b4ad703fcb5a9f0b7ac46d892a82250971c646fd3082d709acebddfc7d8"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/main/adapters/output/projectLaunchSnapshot.ts",
+      "sha256": "88402704fd0967ffcf1188f968d95aae4928cbe193fd88d09e72430dfe226077"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+      "sha256": "1ec42ca4592e804c9df2a92f4382df7b2b9bc553e988e2b24b34cead1b853cd5"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/main/adapters/input/validateBackendOperation.ts",
+      "sha256": "ccf84dd343d605b3a3fe53765f034d4c441ad5dc5eedcfb3e5e3ce2bfc7d227e"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/main/adapters/input/BackendOperationsFacade.ts",
+      "sha256": "c1baef315da24ab5008104c68d5c9eaed52d506fe791a6516a1c96a8fe13e40f"
+    },
+    {
+      "path": "executed-source/src/features/agent-backend/renderer/createHostTeamMutations.ts",
+      "sha256": "cbe9b5ab7bbafff53a0bd03d9af2fd698a1039144a4cbe5201ace88904195f0f"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/dialogs/CreateTaskDialog.tsx",
+      "sha256": "b075bbe09e3349e0750c55e2d010d720b0a1fc22017bf2aba555b554f9d5dea5"
+    },
+    {
+      "path": "executed-source/src/renderer/components/team/messages/MessageComposer.tsx",
+      "sha256": "8f469fdab04ec8885bc5b8d47e4a631ca83da247ae5c0b72721122c8c41c15ee"
+    },
+    {
+      "path": "executed-source/scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "sha256": "3a73349af731d3d53260443c86e05f10af80e17e82e1d13da492458eb730a99e"
+    },
+    {
+      "path": "executed-source/.artifacts/provider-migration/run-desktop-launch.ts",
+      "sha256": "0e595c95f43f1bc5fe64b1e2d12f918e683b6abd6135bf44875ef65b54b7ddad"
+    }
+  ]
+}

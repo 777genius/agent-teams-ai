@@ -1,0 +1,113 @@
+{
+  "teamNamePrefix": "opencode-semantic-realistic",
+  "displayName": "OpenCode Semantic Realistic E2E",
+  "description": "Realistic Agent Teams OpenCode scenario for prompt contract and live model checks.",
+  "teamPromptLines": [
+    "You are an Agent Teams crew working on a production desktop app that coordinates multiple AI teammates.",
+    "The project has an Electron renderer, main-process services, OpenCode runtime bridges, MCP tools, task boards, and persistent message inboxes.",
+    "Your launch goal is to inspect a regression where OpenCode teammates receive app-delivered messages, but replies must be visible through the Agent Teams MCP message_send tool.",
+    "Treat the following constraints as production requirements: do not invent local team files, do not use SendMessage in OpenCode, do not answer only as plain assistant text when app MCP tools are available, and preserve taskRefs metadata when messages are tied to tasks.",
+    "The team must be careful with long context. You should preserve identity, task ownership, reply routing, and exact user-visible reply tokens even when the inbound prompt contains project context, prior notes, and task descriptions.",
+    "Known risk areas include stale runtime sessions, OpenCode provider catalogs, app-managed OpenRouter credentials, delayed runtime delivery, idle acknowledgements, fake task labels such as #00000000, and peer relay between OpenCode members.",
+    "When responding to the app Messages UI, use concise natural language in the text field and structured metadata in the MCP tool fields.",
+    "If you need to coordinate with another teammate, send a real team message to that teammate rather than pretending to have delegated work.",
+    "If a task ref is present, keep the visible #displayId text human-readable and include matching taskRefs metadata in the tool call.",
+    "Do not send readiness-only or idle acknowledgement messages like understood, ready, or no tasks unless the app explicitly asks for that visible status.",
+    "Primary files likely involved: TeamProvisioningService, OpenCodeTeamRuntimeAdapter, OpenCodeBridgeCommandHandler, runtime provider management, and Messages UI components.",
+    "Acceptance criteria: OpenCode members bootstrap silently, receive delivery prompts, reply through message_send, relay peer messages, and never synthesize fake task ids.",
+    "This scenario intentionally includes enough context to stress instruction retention without relying on a synthetic wall of unrelated text.",
+    "The test should remain deterministic in dry mode and opt-in for live model execution."
+  ],
+  "members": [
+    {
+      "name": "bob",
+      "role": "Developer",
+      "workflowLines": [
+        "Own OpenCode runtime delivery and direct app message replies.",
+        "When assigned a task-linked message, preserve taskRefs and summarize concrete findings.",
+        "Do not answer with plain assistant text when agent-teams_message_send is available."
+      ]
+    },
+    {
+      "name": "jack",
+      "role": "Reviewer",
+      "workflowLines": [
+        "Review peer relay behavior and verify that teammate-to-teammate messages are delivered through app inboxes.",
+        "Reply to the app user only after receiving an explicit relayed instruction.",
+        "Never prefix messages with fake task labels."
+      ]
+    }
+  ],
+  "projectFiles": [
+    {
+      "path": "AGENTS.md",
+      "contentLines": [
+        "# Test Project Instructions",
+        "Use Agent Teams MCP tools for team messages.",
+        "OpenCode teammates must call agent-teams_message_send for visible replies.",
+        "Preserve taskRefs on task-linked updates."
+      ]
+    },
+    {
+      "path": "src/runtimeDelivery.ts",
+      "contentLines": [
+        "export function normalizeDelivery(input: { text: string; taskRefs?: unknown[] }) {",
+        "  return { text: input.text.trim(), taskRefs: input.taskRefs ?? [] };",
+        "}"
+      ]
+    },
+    {
+      "path": "src/providerCatalog.ts",
+      "contentLines": [
+        "export const providerCatalog = ['openrouter/qwen/qwen3-coder', 'openrouter/minimax/minimax-m2.5'];"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "taskId": "task-59560c95-runtime-delivery",
+      "displayId": "59560c95",
+      "subject": "Verify OpenCode app runtime delivery preserves taskRefs",
+      "owner": "bob",
+      "comment": "Check that a direct app-delivered message is acknowledged through message_send with matching taskRefs metadata."
+    },
+    {
+      "taskId": "task-3375c939-peer-relay",
+      "displayId": "3375c939",
+      "subject": "Verify OpenCode peer relay reaches recipient runtime",
+      "owner": "jack",
+      "comment": "Check that a message from bob to jack is relayed and jack replies to the app user through message_send."
+    }
+  ],
+  "directDelivery": {
+    "memberName": "bob",
+    "replyRecipient": "user",
+    "actionMode": "ask",
+    "taskIndex": 0,
+    "expectedReplyToken": "OPENCODE_DIRECT_REALISTIC_OK",
+    "textLines": [
+      "Investigate the runtime delivery contract for task #59560c95.",
+      "Reply to the app user with exactly this token in your message text: OPENCODE_DIRECT_REALISTIC_OK.",
+      "Use agent-teams_message_send with to=\"user\" and from=\"bob\".",
+      "Include taskRefs metadata for task #59560c95 if the tool exposes taskRefs.",
+      "Do not answer only as plain assistant text.",
+      "Do not use SendMessage.",
+      "Do not prefix the reply with #00000000."
+    ]
+  },
+  "peerDelivery": {
+    "senderName": "bob",
+    "recipientName": "jack",
+    "replyRecipient": "jack",
+    "actionMode": "delegate",
+    "taskIndex": 1,
+    "peerToken": "OPENCODE_PEER_RELAY_INBOX_OK",
+    "expectedReplyToken": "OPENCODE_PEER_RELAY_USER_OK",
+    "textLines": [
+      "Send one team message to jack about task #3375c939.",
+      "The exact teammate message must include OPENCODE_PEER_RELAY_INBOX_OK and ask jack to reply to the app user with OPENCODE_PEER_RELAY_USER_OK.",
+      "Use agent-teams_message_send with to=\"jack\", from=\"bob\", and summary=\"peer relay\".",
+      "Do not reply to user instead of sending the team message."
+    ]
+  }
+}

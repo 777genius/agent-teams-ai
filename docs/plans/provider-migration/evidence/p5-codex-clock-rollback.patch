@@ -1,0 +1,28 @@
+--- a/packages/legacy-agent-host/src/management/CredentialCommandOwner.ts
++++ b/packages/legacy-agent-host/src/management/CredentialCommandOwner.ts
+@@ -170,8 +170,10 @@
+     }
+     const completedAt = latest?.refreshCompletedAtMs;
+     const elapsed = completedAt === undefined ? -1 : Date.now() - completedAt;
++    // Wall-clock rollback must not immediately rotate a token again. Match the
++    // consumer's existing conservative reuse policy until time catches up.
+     return latest?.kind === 'credential.refresh' && latest.phase === 'completed' &&
+-      elapsed >= 0 && elapsed <= command.reuseWindowMs ? latest : undefined;
++      completedAt !== undefined && elapsed <= command.reuseWindowMs ? latest : undefined;
+   }
+ 
+   private finishTime(resourceId: string): number {
+--- a/packages/legacy-agent-host/tests/management-credentials.test.ts
++++ b/packages/legacy-agent-host/tests/management-credentials.test.ts
+@@ -285,7 +285,10 @@
+   assert.equal((await owner().execute(aliased)).phase, 'completed');
+   assert.equal(effects, 1, 'same native namespace reuses the original rotation after Host restart');
+   assert.equal(f.store.read('TEST-alias')?.profileId, 'TEST-B', 'receipt retains its own selection');
+-  t.mock.timers.tick(21_000);
++  t.mock.timers.setTime(90_000);
++  await owner().execute(refresh('TEST-B', 'TEST-clock-rollback'));
++  assert.equal(effects, 1, 'wall-clock rollback must not force an immediate second rotation');
++  t.mock.timers.setTime(131_000);
+   await owner().execute(refresh('TEST-A', 'TEST-expired'));
+   assert.equal(effects, 2, 'a reused receipt must not extend the original rotation window');
+   await owner().execute({ profileId: 'TEST-B', configRevision: 'TEST-config',

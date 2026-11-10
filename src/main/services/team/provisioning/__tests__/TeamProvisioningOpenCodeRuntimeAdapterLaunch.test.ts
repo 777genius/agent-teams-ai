@@ -1,0 +1,1556 @@
+import { promises as fs } from 'node:fs';
+import * as os from 'node:os';
+import { join } from 'node:path';
+
+import { getTeamsBasePath,setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
+import { normalizePersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
+import { TeamLaunchStateStore } from '../../TeamLaunchStateStore';
+import {
+  buildOpenCodeRuntimeAdapterFinalProgress,
+  buildOpenCodeRuntimeAdapterLaunchInput,
+  type OpenCodeRuntimeAdapterLaunchPorts,
+  prepareOpenCodeRuntimeAdapterLaunchPreflight,
+  runOpenCodeTeamRuntimeAdapterLaunch,
+} from '../TeamProvisioningOpenCodeRuntimeAdapterLaunch';
+import {
+  OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS,
+  type OpenCodeSharedRuntimeFailureScope,
+} from '../TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
+
+import type {
+  TeamLaunchRuntimeAdapter,
+  TeamRuntimeLaunchInput,
+  TeamRuntimeLaunchResult,
+  TeamRuntimePreLaunchGate,
+} from '../../runtime';
+import type {
+  PersistedTeamLaunchSnapshot,
+  TeamCreateRequest,
+  TeamProvisioningProgress,
+} from '@shared/types';
+
+function progress(overrides: Partial<TeamProvisioningProgress> = {}): TeamProvisioningProgress {
+  return {
+    runId: 'run-1',
+    teamName: 'team-a',
+    state: 'spawning',
+    message: 'Starting OpenCode sessions through runtime adapter',
+    startedAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:01.000Z',
+    warnings: ['source warning'],
+    ...overrides,
+  };
+}
+
+function runtimeResult(overrides: Partial<TeamRuntimeLaunchResult> = {}): TeamRuntimeLaunchResult {
+  return {
+    runId: 'run-1',
+    teamName: 'team-a',
+    launchPhase: 'finished',
+    teamLaunchState: 'clean_success',
+    members: {},
+    warnings: [],
+    diagnostics: [],
+    ...overrides,
+  };
+}
+
+describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
+  it('publishes the first finished result after old Stop through the actual store', async () => {
+    const temp = await fs.mkdtemp(join(os.tmpdir(), 'recovery-launch-'));
+    setClaudeBasePathOverride(temp);
+    const store = new TeamLaunchStateStore();
+    const teamName = 'team-a';
+    await fs.mkdir(join(getTeamsBasePath(), teamName), { recursive: true });
+    let stoppedOldRun = false;
+    const calls: string[] = [];
+    const finished = createPersistedLaunchSnapshot({
+      teamName, expectedMembers: ['alice'], launchPhase: 'finished', members: {
+        alice: { name: 'alice', launchState: 'confirmed_alive', agentToolAccepted: true,
+          runtimeAlive: true, bootstrapConfirmed: true, hardFailure: false,
+          runtimeRunId: 'run-1', runtimeSessionId: 'session-a', lastEvaluatedAt: '2026-09-09T00:00:00.000Z' },
+      },
+    });
+    try {
+      await store.markStopped(teamName);
+      const lifecycle = {
+        getRuntimeAdapterRun: () => stoppedOldRun ? undefined : { runId: 'old-run', providerId: 'opencode' as const },
+        stopOpenCodeRuntimeAdapterTeam: async () => { stoppedOldRun = true; },
+        readLaunchState: (team: string) => store.read(team),
+        beginLaunchPublication: async (team: string, run: string, members: string[], isAuthorized: () => boolean) => {
+          expect(stoppedOldRun).toBe(true);
+          return store.beginLaunch(team, run, members, isAuthorized);
+        },
+      };
+      const owned = ownedPorts(calls, {
+        ...lifecycle,
+        persistOpenCodeRuntimeAdapterLaunchResult: async (result, input) => {
+          expect(await store.write(teamName, finished, { runId: input.runId, isAuthorized: () => true })).toBe(true);
+          return { result, snapshot: finished };
+        },
+      });
+      await runOpenCodeTeamRuntimeAdapterLaunch(launchParams(async () => runtimeResult()), owned.ports);
+      expect(await store.isStopped(teamName)).toBe(false);
+      expect(await store.read(teamName)).toMatchObject({ launchPhase: 'finished', summary: { confirmedCount: 1 } });
+      expect(JSON.parse(await fs.readFile(join(getTeamsBasePath(), teamName, 'launch-summary.json'), 'utf8')).publicationRunId).toBe('run-1');
+    } finally {
+      setClaudeBasePathOverride(null);
+      await fs.rm(temp, { recursive: true, force: true });
+    }
+  });
+
+  it('retains original admission when wrapper Stop arrives during launch preflight', async () => {
+    const temp = await fs.mkdtemp(join(os.tmpdir(), 'stop-admission-preflight-'));
+    setClaudeBasePathOverride(temp);
+    const store = new TeamLaunchStateStore();
+    await fs.mkdir(join(getTeamsBasePath(), 'team-a'), { recursive: true });
+    let entered!: () => void, release!: () => void;
+    const entering = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const launch = vi.fn(async () => runtimeResult());
+    const beginLaunchPublication = vi.fn(store.beginLaunch.bind(store));
+    const owned = ownedPorts([], {
+      getRuntimeAdapterRun: () => ({ runId: 'old', providerId: 'opencode' }),
+      readLaunchState: async () => {
+        entered();
+        await gate;
+        return null;
+      },
+      beginLaunchPublication,
+    });
+    try {
+      const pending = runOpenCodeTeamRuntimeAdapterLaunch(launchParams(launch), owned.ports);
+      await entering;
+      // The outer wrapper has admitted Stop but its runtime stopTeam call has
+      // not incremented the provisioning generation yet.
+      const authority = await store.beginStop('team-a');
+      release();
+      await pending;
+      expect(beginLaunchPublication).not.toHaveBeenCalled();
+      expect(launch).not.toHaveBeenCalled();
+      await store.markStopped('team-a', authority);
+      expect(await store.isStopped('team-a')).toBe(true);
+    } finally {
+      setClaudeBasePathOverride(null);
+      await fs.rm(temp, { recursive: true, force: true });
+    }
+  });
+
+  it('builds primary OpenCode runtime launch input without changing member defaults', () => {
+    const previousLaunchState = {
+      teamName: 'team-a',
+    } as TeamRuntimeLaunchInput['previousLaunchState'];
+    const { launchCwd, launchInput } = buildOpenCodeRuntimeAdapterLaunchInput({
+      runId: 'run-1',
+      teamName: 'team-a',
+      cwd: '/repo',
+      prompt: 'launch prompt',
+      request: {
+        model: 'gpt-5',
+        effort: 'high',
+        skipPermissions: undefined,
+        allowExperimentalLocalModels: true,
+      },
+      members: [
+        {
+          name: 'alice',
+          role: 'Engineer',
+          workflow: 'build',
+          isolation: 'worktree',
+          model: 'member-model',
+          effort: 'medium',
+          cwd: ' /repo/alice ',
+        },
+        {
+          name: 'bob',
+          role: 'Reviewer',
+        },
+      ] as TeamCreateRequest['members'],
+      previousLaunchState,
+      getOpenCodeRuntimeLaunchCwd: (baseCwd, members) => {
+        expect(baseCwd).toBe('/repo');
+        expect(members).toHaveLength(2);
+        return '/repo/runtime';
+      },
+    });
+
+    expect(launchCwd).toBe('/repo/runtime');
+    expect(launchInput).toEqual({
+      runId: 'run-1',
+      laneId: 'primary',
+      teamName: 'team-a',
+      cwd: '/repo/runtime',
+      prompt: 'launch prompt',
+      providerId: 'opencode',
+      model: 'gpt-5',
+      effort: 'high',
+      skipPermissions: true,
+      allowExperimentalLocalModels: true,
+      expectedMembers: [
+        {
+          name: 'alice',
+          role: 'Engineer',
+          workflow: 'build',
+          isolation: 'worktree',
+          providerId: 'opencode',
+          model: 'member-model',
+          effort: 'medium',
+          cwd: '/repo/alice',
+        },
+        {
+          name: 'bob',
+          role: 'Reviewer',
+          workflow: undefined,
+          isolation: undefined,
+          providerId: 'opencode',
+          model: 'gpt-5',
+          effort: 'high',
+          cwd: '/repo/runtime',
+        },
+      ],
+      previousLaunchState,
+    });
+  });
+
+  it('projects final progress for ready, pending, and failed adapter results', () => {
+    expect(
+      buildOpenCodeRuntimeAdapterFinalProgress({
+        launching: progress(),
+        result: runtimeResult({ teamLaunchState: 'clean_success' }),
+        updatedAt: '2026-01-01T00:00:02.000Z',
+      })
+    ).toMatchObject({
+      state: 'ready',
+      message: 'OpenCode team launch is ready',
+      warnings: ['source warning'],
+      updatedAt: '2026-01-01T00:00:02.000Z',
+      configReady: true,
+    });
+
+    expect(
+      buildOpenCodeRuntimeAdapterFinalProgress({
+        launching: progress(),
+        result: runtimeResult({
+          teamLaunchState: 'partial_pending',
+          warnings: ['runtime warning'],
+          diagnostics: ['waiting'],
+        }),
+        updatedAt: '2026-01-01T00:00:03.000Z',
+      })
+    ).toMatchObject({
+      state: 'ready',
+      message: 'OpenCode team launch is waiting for runtime evidence or permissions',
+      messageSeverity: 'warning',
+      warnings: ['runtime warning'],
+      cliLogsTail: 'waiting',
+      error: undefined,
+    });
+
+    expect(
+      buildOpenCodeRuntimeAdapterFinalProgress({
+        launching: progress(),
+        result: runtimeResult({
+          teamLaunchState: 'partial_failure',
+          diagnostics: ['missing bootstrap', 'permission denied'],
+        }),
+        updatedAt: '2026-01-01T00:00:04.000Z',
+      })
+    ).toMatchObject({
+      state: 'failed',
+      message: 'OpenCode team launch failed readiness gate',
+      messageSeverity: 'error',
+      error: 'missing bootstrap\npermission denied',
+      cliLogsTail: 'missing bootstrap\npermission denied',
+      configReady: true,
+    });
+  });
+
+  it.each(['stop-all', 'stop-team'])('runs previous OpenCode cleanup and pending cancellation before recording %s cancellation', async (scope) => {
+    const calls: string[] = [];
+    let stopAllGeneration = 0;
+    let stopTeamGeneration = 0;
+    const previousProgress = progress({ runId: 'pending-run', state: 'spawning' });
+
+    const result = await prepareOpenCodeRuntimeAdapterLaunchPreflight(
+      {
+        teamName: 'team-a',
+        members: [],
+        sourceWarning: 'source warning',
+        onProgress: vi.fn(),
+      },
+      {
+        getStopAllTeamsGeneration: () => stopAllGeneration,
+        getStopTeamGeneration: () => stopTeamGeneration,
+        getRuntimeAdapterRun: () => ({ runId: 'old-run', providerId: 'opencode' }),
+        readLaunchState: async () => null,
+        stopOpenCodeRuntimeAdapterTeam: async () => {
+          calls.push('stopPreviousRuntimeRun');
+        },
+        getProvisioningRun: () => 'pending-run',
+        getRuntimeAdapterProgress: () => previousProgress,
+        isCancellableRuntimeAdapterProgress: () => true,
+        cancelRuntimeAdapterProvisioning: async () => {
+          calls.push('cancelPreviousPendingRun');
+          if (scope === 'stop-all') stopAllGeneration += 1;
+          else stopTeamGeneration += 1;
+        },
+        recordCancelledOpenCodeRuntimeAdapterLaunch: (teamName, sourceWarning) => {
+          calls.push('recordCancelledLaunch');
+          expect(teamName).toBe('team-a');
+          expect(sourceWarning).toBe('source warning');
+          return { runId: 'cancelled-run' };
+        },
+      }
+    );
+
+    expect(result).toEqual({ runId: 'cancelled-run' });
+    expect(calls).toEqual([
+      'stopPreviousRuntimeRun',
+      'cancelPreviousPendingRun',
+      'recordCancelledLaunch',
+    ]);
+  });
+
+  describe('confirmed-dead primary runtime relaunch', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    const members: TeamCreateRequest['members'] = [
+      { name: 'team-lead', role: 'Team Lead', providerId: 'opencode' },
+      { name: 'alice', role: 'Engineer', providerId: 'opencode' },
+      { name: 'bob', role: 'Reviewer', providerId: 'opencode' },
+    ];
+
+    function previousSnapshot(snapshotMembers = members): PersistedTeamLaunchSnapshot {
+      return {
+        ...failedSnapshot(),
+        expectedMembers: snapshotMembers.map((member) => member.name),
+        members: Object.fromEntries(
+          snapshotMembers.map((member) => [
+            member.name,
+            {
+              ...failedSnapshot().members.alice,
+              name: member.name,
+              laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'opencode',
+              runtimeRunId: 'old-run',
+              runtimePid: member.name === 'bob' ? 42002 : 42001,
+            },
+          ])
+        ),
+      };
+    }
+
+    function previousPorts(snapshot: PersistedTeamLaunchSnapshot | null) {
+      const previousRun = { runId: 'old-run', providerId: 'opencode' };
+      return {
+        ...basePorts([]),
+        getRuntimeAdapterRun: () => previousRun,
+        readLaunchState: vi.fn(async () => snapshot),
+        stopOpenCodeRuntimeAdapterTeam: vi.fn(async () => {
+          throw new Error('strict stop rejected');
+        }),
+      };
+    }
+
+    function preflight(ports: OpenCodeRuntimeAdapterLaunchPorts, launchMembers = members) {
+      return prepareOpenCodeRuntimeAdapterLaunchPreflight(
+        { teamName: 'team-a', members: launchMembers, onProgress: vi.fn() },
+        ports
+      );
+    }
+
+    function mockGone() {
+      return vi.spyOn(process, 'kill').mockImplementation(() => {
+        throw Object.assign(new Error('gone'), { code: 'ESRCH' });
+      });
+    }
+
+    it('recognizes the complete dead primary after the production snapshot read normalization', async () => {
+      const probe = mockGone();
+      const snapshot = normalizePersistedLaunchSnapshot('team-a', previousSnapshot());
+      expect(snapshot?.expectedMembers).toEqual(['alice', 'bob']);
+      expect(Object.keys(snapshot!.members)).toEqual(['team-lead', 'alice', 'bob']);
+      const ports = previousPorts(snapshot);
+
+      await expect(preflight(ports)).resolves.toBeNull();
+
+      expect(ports.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+      expect(probe.mock.calls).toEqual([
+        [42001, 0],
+        [42002, 0],
+      ]);
+    });
+
+    it.each(['includes-lead', 'teammates-only'])(
+      'recognizes an agentType lead with a noncanonical name in a %s roster',
+      async (roster) => {
+        const probe = mockGone();
+        const namedLead = { ...members[0], name: 'coordinator', agentType: 'orchestrator' };
+        const launchMembers = [namedLead, ...members.slice(1)];
+        const rawSnapshot = previousSnapshot(launchMembers);
+        if (roster === 'teammates-only') rawSnapshot.expectedMembers = ['alice', 'bob'];
+        const snapshot = normalizePersistedLaunchSnapshot('team-a', rawSnapshot)!;
+        // The reader has only names, so it retains a noncanonical lead name
+        // when present in the roster. Request metadata identifies that lead.
+        expect(snapshot.expectedMembers).toEqual(rawSnapshot.expectedMembers);
+        expect(Object.keys(snapshot.members)).toEqual(['coordinator', 'alice', 'bob']);
+        const ports = previousPorts(snapshot);
+
+        await expect(preflight(ports, launchMembers)).resolves.toBeNull();
+
+        expect(ports.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+        expect(probe.mock.calls).toEqual([
+          [42001, 0],
+          [42002, 0],
+        ]);
+      }
+    );
+
+    it.each(['missing-lead', 'unknown-pid', 'live-lead'])(
+      'preserves strict stop for a named agentType lead with %s',
+      async (failure) => {
+        const probe = mockGone();
+        const namedLead = { ...members[0], name: 'coordinator', agentType: 'orchestrator' };
+        const launchMembers = [namedLead, ...members.slice(1)];
+        const rawSnapshot = previousSnapshot(launchMembers);
+        rawSnapshot.expectedMembers = ['alice', 'bob'];
+        const snapshot = normalizePersistedLaunchSnapshot('team-a', rawSnapshot)!;
+        if (failure === 'missing-lead') delete snapshot.members.coordinator;
+        if (failure === 'unknown-pid') delete snapshot.members.coordinator.runtimePid;
+        if (failure === 'live-lead') probe.mockReturnValue(true);
+        const ports = previousPorts(snapshot);
+
+        await expect(preflight(ports, launchMembers)).rejects.toThrow('strict stop rejected');
+
+        expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith('team-a', 'old-run');
+        if (failure === 'live-lead') expect(probe.mock.calls).toEqual([[42001, 0]]);
+        else expect(probe).not.toHaveBeenCalled();
+      }
+    );
+
+    it.each(['missing-lead', 'missing-teammate', 'partial-roster', 'unknown-pid', 'live-lead'])(
+      'preserves strict stop for a normalized snapshot with %s',
+      async (failure) => {
+        const probe = mockGone();
+        const snapshot = normalizePersistedLaunchSnapshot('team-a', previousSnapshot())!;
+        if (failure === 'missing-lead') delete snapshot.members['team-lead'];
+        if (failure === 'missing-teammate') delete snapshot.members.bob;
+        if (failure === 'partial-roster') snapshot.expectedMembers = ['alice'];
+        if (failure === 'unknown-pid') delete snapshot.members['team-lead'].runtimePid;
+        if (failure === 'live-lead') probe.mockReturnValue(true);
+        const ports = previousPorts(snapshot);
+
+        await expect(preflight(ports)).rejects.toThrow('strict stop rejected');
+        expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith('team-a', 'old-run');
+        if (failure !== 'live-lead') expect(probe).not.toHaveBeenCalled();
+      }
+    );
+
+    it('requires every unique PID to be gone and still invokes the normal new-run launch', async () => {
+      const probe = mockGone();
+      const snapshot = previousSnapshot();
+      const previous = previousPorts(snapshot);
+      const { ports } = ownedPorts([], {
+        getRuntimeAdapterRun: previous.getRuntimeAdapterRun,
+        readLaunchState: previous.readLaunchState,
+        stopOpenCodeRuntimeAdapterTeam: previous.stopOpenCodeRuntimeAdapterTeam,
+      });
+      const launch = vi.fn(async () => runtimeResult());
+      const input = launchParams(launch);
+      input.members = members;
+
+      await expect(runOpenCodeTeamRuntimeAdapterLaunch(input, ports)).resolves.toEqual({
+        runId: 'run-1',
+      });
+
+      expect(previous.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+      expect(probe.mock.calls).toEqual([
+        [42001, 0],
+        [42002, 0],
+      ]);
+      expect(launch).toHaveBeenCalledTimes(1);
+      // The adapter remains authoritative; no stopped or capability evidence is synthesized.
+      expect(previous.readLaunchState).toHaveBeenCalledTimes(2);
+    });
+
+    it('preserves runtime launch rejection after the frontend dead-process check', async () => {
+      mockGone();
+      const calls: string[] = [];
+      const previous = previousPorts(previousSnapshot());
+      const { ports } = ownedPorts(calls, {
+        getRuntimeAdapterRun: previous.getRuntimeAdapterRun,
+        readLaunchState: previous.readLaunchState,
+        stopOpenCodeRuntimeAdapterTeam: previous.stopOpenCodeRuntimeAdapterTeam,
+      });
+      const launch = vi.fn(async () =>
+        runtimeResult({
+          teamLaunchState: 'partial_failure',
+          diagnostics: ['replacement host ownership changed'],
+        })
+      );
+      const input = launchParams(launch);
+      input.members = members;
+
+      await runOpenCodeTeamRuntimeAdapterLaunch(input, ports);
+
+      expect(launch).toHaveBeenCalledTimes(1);
+      expect(calls).not.toContain('setAliveRun');
+      expect(previous.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+    });
+
+    it.each<[string, (snapshot: PersistedTeamLaunchSnapshot) => void]>([
+      [
+        'missing lead',
+        (s) => {
+          delete s.members['team-lead'];
+        },
+      ],
+      [
+        'missing teammate',
+        (s) => {
+          delete s.members.bob;
+        },
+      ],
+      [
+        'extra member',
+        (s) => {
+          s.members.extra = { ...s.members.alice, name: 'extra' };
+        },
+      ],
+      [
+        'partial expected roster',
+        (s) => {
+          s.expectedMembers.pop();
+        },
+      ],
+      [
+        'duplicate expected member',
+        (s) => {
+          s.expectedMembers[2] = 'alice';
+        },
+      ],
+      [
+        'foreign expected member',
+        (s) => {
+          s.expectedMembers[2] = 'other';
+        },
+      ],
+      [
+        'foreign team',
+        (s) => {
+          s.teamName = 'other-team';
+        },
+      ],
+      [
+        'foreign run',
+        (s) => {
+          s.members.bob.runtimeRunId = 'other-run';
+        },
+      ],
+      [
+        'secondary lane',
+        (s) => {
+          s.members.bob.laneId = 'secondary:bob';
+        },
+      ],
+      [
+        'other provider',
+        (s) => {
+          s.members.bob.providerId = 'codex';
+        },
+      ],
+      [
+        'missing PID',
+        (s) => {
+          delete s.members.bob.runtimePid;
+        },
+      ],
+      [
+        'zero PID',
+        (s) => {
+          s.members.bob.runtimePid = 0;
+        },
+      ],
+      [
+        'negative PID',
+        (s) => {
+          s.members.bob.runtimePid = -1;
+        },
+      ],
+      [
+        'fractional PID',
+        (s) => {
+          s.members.bob.runtimePid = 1.5;
+        },
+      ],
+      [
+        'nonfinite PID',
+        (s) => {
+          s.members.bob.runtimePid = Infinity;
+        },
+      ],
+      [
+        'member name mismatch',
+        (s) => {
+          s.members.bob.name = 'other';
+        },
+      ],
+      [
+        'unfinished snapshot',
+        (s) => {
+          s.launchPhase = 'active';
+        },
+      ],
+    ])('keeps strict stop for %s', async (_name, mutate) => {
+      const probe = mockGone();
+      const snapshot = previousSnapshot();
+      mutate(snapshot);
+      const ports = previousPorts(snapshot);
+      await expect(preflight(ports)).rejects.toThrow('strict stop rejected');
+      expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith('team-a', 'old-run');
+      expect(probe).not.toHaveBeenCalled();
+    });
+
+    it.each(['alive', 'EPERM', 'EIO', 'unknown'])(
+      'keeps strict stop when any PID is %s',
+      async (status) => {
+        const probe = vi.spyOn(process, 'kill').mockImplementation((pid) => {
+          if (pid === 42001) throw Object.assign(new Error('gone'), { code: 'ESRCH' });
+          if (status === 'alive') return true;
+          throw Object.assign(
+            new Error('probe failed'),
+            status === 'unknown' ? {} : { code: status }
+          );
+        });
+        const ports = previousPorts(previousSnapshot());
+        await expect(preflight(ports)).rejects.toThrow('strict stop rejected');
+        expect(probe.mock.calls).toEqual([
+          [42001, 0],
+          [42002, 0],
+        ]);
+      }
+    );
+
+    it('keeps strict stop when the current request omits the lead', async () => {
+      const probe = mockGone();
+      const ports = previousPorts(previousSnapshot());
+      await expect(
+        prepareOpenCodeRuntimeAdapterLaunchPreflight(
+          { teamName: 'team-a', members: members.slice(1), onProgress: vi.fn() },
+          ports
+        )
+      ).rejects.toThrow('strict stop rejected');
+      expect(probe).not.toHaveBeenCalled();
+    });
+
+    it.each(['spawning', 'unknown'])(
+      'keeps strict stop with %s pending launch evidence',
+      async (state) => {
+        const probe = mockGone();
+        const ports = previousPorts(previousSnapshot());
+        await expect(
+          preflight({
+            ...ports,
+            getProvisioningRun: () => 'old-run',
+            getRuntimeAdapterProgress: () =>
+              state === 'unknown' ? undefined : progress({ state: 'spawning' }),
+            isCancellableRuntimeAdapterProgress: () => true,
+          })
+        ).rejects.toThrow('strict stop rejected');
+        expect(probe).not.toHaveBeenCalled();
+      }
+    );
+
+    it('keeps strict stop if the persisted read fails or current ownership changes during it', async () => {
+      const probe = mockGone();
+      for (const changeOwner of [false, true]) {
+        const ports = previousPorts(previousSnapshot());
+        ports.readLaunchState.mockImplementation(async () => {
+          if (!changeOwner) throw new Error('unreadable');
+          ports.getRuntimeAdapterRun = () => ({ runId: 'new-owner', providerId: 'opencode' });
+          return previousSnapshot();
+        });
+        await expect(preflight(ports)).rejects.toThrow('strict stop rejected');
+      }
+      expect(probe).not.toHaveBeenCalled();
+    });
+  });
+
+  it('coordinates successful launch side effects in the original order', async () => {
+    const calls: string[] = [];
+    const request = {
+      teamName: 'team-a',
+      cwd: '/repo',
+      providerId: 'opencode',
+      color: 'blue',
+      displayName: 'Team A',
+      allowExperimentalLocalModels: true,
+      members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
+    } as TeamCreateRequest;
+    const launchResult = runtimeResult({
+      members: {
+        alice: {
+          memberName: 'alice',
+          providerId: 'opencode',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          diagnostics: [],
+        },
+      },
+    });
+    const adapter = {
+      launch: vi.fn(async () => {
+        calls.push('adapter.launch');
+        return launchResult;
+      }),
+    } as unknown as TeamLaunchRuntimeAdapter;
+    const provisioningRuns = new Map<string, string>();
+    const runtimeRuns = new Map<string, unknown>();
+    const aliveRuns = new Map<string, string>();
+
+    const result = await runOpenCodeTeamRuntimeAdapterLaunch(
+      {
+        adapter,
+        request,
+        members: request.members,
+        prompt: 'launch',
+        onProgress: vi.fn(),
+      },
+      {
+        ...basePorts(calls),
+        setProvisioningRun: (teamName, runId) => {
+          calls.push('setProvisioningRun');
+          provisioningRuns.set(teamName, runId);
+        },
+        getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+        persistOpenCodeRuntimeAdapterLaunchResult: async (resultToPersist, launchInput) => {
+          calls.push('persistLaunchResult');
+          expect(launchInput.expectedMembers).toMatchObject([
+            { name: 'alice', providerId: 'opencode', cwd: '/repo/runtime' },
+          ]);
+          return { result: resultToPersist };
+        },
+        syncOpenCodeRuntimeToolApprovals: (input) => {
+          calls.push('syncApprovals');
+          expect(input.teamColor).toBe('blue');
+          expect(input.teamDisplayName).toBe('Team A');
+        },
+        setRuntimeAdapterRun: (teamName, runtimeRun) => {
+          calls.push('setRuntimeRun');
+          runtimeRuns.set(teamName, runtimeRun);
+        },
+        setAliveRunId: (teamName, runId) => {
+          calls.push('setAliveRun');
+          aliveRuns.set(teamName, runId);
+        },
+        deleteProvisioningRunIfCurrent: (teamName, runId) => {
+          calls.push('deleteProvisioningRunIfCurrent');
+          if (provisioningRuns.get(teamName) === runId) {
+            provisioningRuns.delete(teamName);
+          }
+        },
+      }
+    );
+
+    expect(result).toEqual({ runId: 'run-1' });
+    expect(calls).toEqual([
+      'setProvisioningRun',
+      'setProgress:validating',
+      'resetTransientState',
+      'readLaunchState',
+      'beginLaunchPublication',
+      'getTeamsBasePath',
+      'migrateLegacyState',
+      'getTeamsBasePath',
+      'upsertLaneIndex',
+      'getLaunchCwd',
+      'setProgress:spawning',
+      'getTeamsBasePath',
+      'setActiveRunManifest',
+      'adapter.launch',
+      'persistLaunchResult',
+      'syncApprovals',
+      'setProgress:ready',
+      'setRuntimeRun',
+      'setAliveRun',
+      'invalidateRuntimeSnapshotCaches',
+      'deleteProvisioningRunIfCurrent',
+      'emitTeamProcessChange:ready',
+    ]);
+    expect(runtimeRuns.get('team-a')).toMatchObject({
+      runId: 'run-1',
+      providerId: 'opencode',
+      cwd: '/repo/runtime',
+      allowExperimentalLocalModels: true,
+    });
+    expect(aliveRuns.get('team-a')).toBe('run-1');
+  });
+
+  it('does not publish runtime ownership after persistence loses launch authority', async () => {
+    const calls: string[] = [];
+    let provisioningOwner: string | undefined;
+
+    const result = await runOpenCodeTeamRuntimeAdapterLaunch(
+      {
+        adapter: {
+          launch: vi.fn(async () => runtimeResult()),
+        } as unknown as TeamLaunchRuntimeAdapter,
+        request: {
+          teamName: 'team-a',
+          cwd: '/repo',
+          providerId: 'opencode',
+          members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
+        },
+        members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
+        prompt: 'launch',
+        onProgress: vi.fn(),
+      },
+      {
+        ...basePorts(calls),
+        setProvisioningRun: (_teamName, runId) => {
+          calls.push('setProvisioningRun');
+          provisioningOwner = runId;
+        },
+        getProvisioningRun: () => provisioningOwner,
+        persistOpenCodeRuntimeAdapterLaunchResult: async (launchResult) => {
+          calls.push('persistLaunchResult');
+          provisioningOwner = undefined;
+          return { result: launchResult };
+        },
+      }
+    );
+
+    expect(result).toEqual({ runId: 'run-1' });
+    expect(calls).toContain('clearPrimaryLaneIfOwned');
+    expect(calls).not.toContain('syncApprovals');
+    expect(calls).not.toContain('setRuntimeRun');
+    expect(calls).not.toContain('setAliveRun');
+  });
+
+  it('awaits one partial-failure artifact with snapshot diagnostics and statuses before cleanup', async () => {
+    const calls: string[] = [];
+    const artifact = deferred<void>();
+    const artifactInputs: unknown[] = [];
+    const { ports } = ownedPorts(calls, {
+      launchFailureArtifacts: {
+        write: async (input) => {
+          calls.push('artifact:start');
+          artifactInputs.push(input);
+          await artifact.promise;
+          calls.push('artifact:end');
+        },
+      },
+      persistOpenCodeRuntimeAdapterLaunchResult: async (result) => ({
+        result,
+        snapshot: failedSnapshot(),
+      }),
+    });
+
+    const launch = runOpenCodeTeamRuntimeAdapterLaunch(
+      launchParams(async () => failedRuntimeResult()),
+      ports
+    );
+    await waitForCall(calls, 'artifact:start');
+
+    expect(calls).not.toContain('clearLaneStorage');
+    expect(calls).not.toContain('deleteRuntimeOwnershipIfCurrent');
+    expect(artifactInputs).toEqual([
+      expect.objectContaining({
+        teamName: 'team-a',
+        runId: 'run-1',
+        startedAt: '2026-01-01T00:00:00.000Z',
+        cwd: '/repo/runtime',
+        providerId: 'opencode',
+        providerBackendId: 'opencode-cli',
+        model: 'openai/gpt-5',
+        expectedMembers: ['alice'],
+        effectiveMembers: [expect.objectContaining({ name: 'alice' })],
+        progress: expect.objectContaining({ state: 'failed' }),
+        launchSnapshot: expect.objectContaining({ teamName: 'team-a' }),
+        launchDiagnostics: [
+          expect.objectContaining({ detail: 'inventory timeout' }),
+          expect.objectContaining({ detail: 'config timeout' }),
+        ],
+        memberSpawnStatuses: {
+          alice: expect.objectContaining({ status: 'error', launchState: 'failed_to_start' }),
+        },
+      }),
+    ]);
+
+    artifact.resolve(undefined);
+    await expect(launch).resolves.toEqual({ runId: 'run-1' });
+    expect(calls.indexOf('artifact:end')).toBeLessThan(calls.indexOf('clearLaneStorage'));
+    expect(calls).toContain('deleteRuntimeOwnershipIfCurrent');
+  });
+
+  it('awaits a thrown setup failure artifact and preserves the original error object', async () => {
+    const calls: string[] = [];
+    const artifact = deferred<void>();
+    const setupError = new Error('launch-state read exploded');
+    const artifactInputs: unknown[] = [];
+    const { ports } = ownedPorts(calls, {
+      readLaunchState: async () => {
+        calls.push('readLaunchState');
+        throw setupError;
+      },
+      launchFailureArtifacts: {
+        write: async (input) => {
+          calls.push('artifact:start');
+          artifactInputs.push(input);
+          await artifact.promise;
+        },
+      },
+    });
+
+    const launch = runOpenCodeTeamRuntimeAdapterLaunch(
+      launchParams(async () => runtimeResult()),
+      ports
+    );
+    await waitForCall(calls, 'artifact:start');
+    expect(calls).not.toContain('clearLaneStorage');
+    expect(artifactInputs[0]).toEqual(
+      expect.objectContaining({
+        cwd: '/repo',
+        launchSnapshot: null,
+        launchDiagnostics: [expect.objectContaining({ detail: 'launch-state read exploded' })],
+      })
+    );
+    expect(artifactInputs[0]).not.toHaveProperty('memberSpawnStatuses');
+
+    artifact.resolve(undefined);
+    await expect(launch).rejects.toBe(setupError);
+    expect(calls).toContain('clearLaneStorage');
+  });
+
+  it('swallows an asynchronously rejected artifact port and completes owned cleanup', async () => {
+    const calls: string[] = [];
+    const artifact = deferred<void>();
+    const { ports } = ownedPorts(calls, {
+      launchFailureArtifacts: {
+        write: async () => {
+          calls.push('artifact:start');
+          await artifact.promise;
+        },
+      },
+      persistOpenCodeRuntimeAdapterLaunchResult: async (result) => ({
+        result,
+        snapshot: failedSnapshot(),
+      }),
+    });
+    const launch = runOpenCodeTeamRuntimeAdapterLaunch(
+      launchParams(async () => failedRuntimeResult()),
+      ports
+    );
+    await waitForCall(calls, 'artifact:start');
+    artifact.reject(new Error('artifact I/O failed'));
+
+    await expect(launch).resolves.toEqual({ runId: 'run-1' });
+    expect(calls).toContain('clearLaneStorage');
+    expect(calls).toContain('deleteRuntimeOwnershipIfCurrent');
+  });
+
+  it('preserves a thrown adapter error identity when the artifact port rejects', async () => {
+    const calls: string[] = [];
+    const adapterError = new Error('adapter exploded');
+    const { ports } = ownedPorts(calls, {
+      launchFailureArtifacts: {
+        write: async () => {
+          await Promise.resolve();
+          throw new Error('artifact I/O failed');
+        },
+      },
+    });
+
+    await expect(
+      runOpenCodeTeamRuntimeAdapterLaunch(
+        launchParams(async () => {
+          throw adapterError;
+        }),
+        ports
+      )
+    ).rejects.toBe(adapterError);
+    expect(calls).toContain('clearLaneStorage');
+    expect(calls).toContain('deleteRuntimeOwnershipIfCurrent');
+  });
+
+  it('preserves a thrown adapter error identity when run-owned cleanup also fails', async () => {
+    const calls: string[] = [];
+    const adapterError = new Error('adapter exploded');
+    const { ports } = ownedPorts(calls, {
+      clearOpenCodeRuntimeLaneStorage: async () => {
+        throw new Error('storage cleanup exploded');
+      },
+      deleteRuntimeOwnershipIfCurrent: () => {
+        throw new Error('ownership cleanup exploded');
+      },
+      invalidateRuntimeSnapshotCaches: () => {
+        throw new Error('cache cleanup exploded');
+      },
+      deleteProvisioningRunIfCurrent: () => {
+        throw new Error('provisioning cleanup exploded');
+      },
+    });
+
+    await expect(
+      runOpenCodeTeamRuntimeAdapterLaunch(
+        launchParams(async () => {
+          throw adapterError;
+        }),
+        ports
+      )
+    ).rejects.toBe(adapterError);
+  });
+
+  it.each(['clean_success', 'partial_pending'] as const)(
+    'writes no artifact for %s',
+    async (teamLaunchState) => {
+      const calls: string[] = [];
+      const write = vi.fn(async () => undefined);
+      const { ports } = ownedPorts(calls, {
+        launchFailureArtifacts: { write },
+      });
+      await runOpenCodeTeamRuntimeAdapterLaunch(
+        launchParams(async () => runtimeResult({ teamLaunchState })),
+        ports
+      );
+      expect(write).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['launch', 'persistence', 'progress'] as const)(
+    'writes zero and performs only owned cleanup when authority is lost during %s',
+    async (lossPoint) => {
+      const calls: string[] = [];
+      const gate = deferred<void>();
+      const write = vi.fn(async () => undefined);
+      const owned = ownedPorts(calls, { launchFailureArtifacts: { write } });
+      const adapter = async () => {
+        calls.push('adapter.launch');
+        if (lossPoint === 'launch') await gate.promise;
+        return failedRuntimeResult();
+      };
+      if (lossPoint === 'persistence') {
+        owned.ports.persistOpenCodeRuntimeAdapterLaunchResult = async (result) => {
+          calls.push('persistLaunchResult:start');
+          await gate.promise;
+          return { result, snapshot: failedSnapshot() };
+        };
+      }
+      if (lossPoint === 'progress') {
+        const original = owned.ports.setRuntimeAdapterProgress;
+        owned.ports.setRuntimeAdapterProgress = (nextProgress, onProgress) => {
+          const result = original(nextProgress, onProgress);
+          if (nextProgress.state === 'failed') owned.setOwner('newer-run');
+          return result;
+        };
+      }
+
+      const launch = runOpenCodeTeamRuntimeAdapterLaunch(launchParams(adapter), owned.ports);
+      if (lossPoint === 'launch') {
+        await waitForCall(calls, 'adapter.launch');
+        owned.setOwner('newer-run');
+        gate.resolve(undefined);
+      } else if (lossPoint === 'persistence') {
+        await waitForCall(calls, 'persistLaunchResult:start');
+        owned.setOwner('newer-run');
+        gate.resolve(undefined);
+      }
+      await expect(launch).resolves.toEqual({ runId: 'run-1' });
+      expect(write).not.toHaveBeenCalled();
+      expect(calls).not.toContain('clearLaneStorage');
+      expect(calls).not.toContain('deleteRuntimeOwnershipIfCurrent');
+      expect(calls).toContain('clearPrimaryLaneIfOwned');
+    }
+  );
+
+  it('does not delete newer ownership when authority is lost during the artifact wait', async () => {
+    const calls: string[] = [];
+    const artifact = deferred<void>();
+    const owned = ownedPorts(calls, {
+      persistOpenCodeRuntimeAdapterLaunchResult: async (result) => ({
+        result,
+        snapshot: failedSnapshot(),
+      }),
+      launchFailureArtifacts: {
+        write: async () => {
+          calls.push('artifact:start');
+          await artifact.promise;
+        },
+      },
+    });
+    const launch = runOpenCodeTeamRuntimeAdapterLaunch(
+      launchParams(async () => failedRuntimeResult()),
+      owned.ports
+    );
+    await waitForCall(calls, 'artifact:start');
+    owned.setOwner('newer-run');
+    artifact.resolve(undefined);
+
+    await expect(launch).resolves.toEqual({ runId: 'run-1' });
+    expect(calls).not.toContain('clearLaneStorage');
+    expect(calls).not.toContain('deleteRuntimeOwnershipIfCurrent');
+    expect(calls).toContain('clearPrimaryLaneIfOwned');
+  });
+
+  it('passes expectedRunId and skips ownership deletion when superseded during storage cleanup', async () => {
+    const calls: string[] = [];
+    const cleanup = deferred<void>();
+    const cleanupInputs: unknown[] = [];
+    const owned = ownedPorts(calls, {
+      persistOpenCodeRuntimeAdapterLaunchResult: async (result) => ({
+        result,
+        snapshot: failedSnapshot(),
+      }),
+      clearOpenCodeRuntimeLaneStorage: async (cleanupInput) => {
+        calls.push('clearLaneStorage:start');
+        cleanupInputs.push(cleanupInput);
+        await cleanup.promise;
+      },
+    });
+    const launch = runOpenCodeTeamRuntimeAdapterLaunch(
+      launchParams(async () => failedRuntimeResult()),
+      owned.ports
+    );
+    await waitForCall(calls, 'clearLaneStorage:start');
+    owned.setOwner('newer-run');
+    cleanup.resolve(undefined);
+
+    await expect(launch).resolves.toEqual({ runId: 'run-1' });
+    expect(cleanupInputs).toEqual([
+      expect.objectContaining({ expectedRunId: 'run-1', laneId: 'primary' }),
+    ]);
+    expect(calls).not.toContain('deleteRuntimeOwnershipIfCurrent');
+  });
+
+  it('consumes cancellation once at terminal handling and writes nothing', async () => {
+    const calls: string[] = [];
+    const launchGate = deferred<void>();
+    let cancelled = false;
+    let consumeCount = 0;
+    const write = vi.fn(async () => undefined);
+    const owned = ownedPorts(calls, {
+      launchFailureArtifacts: { write },
+      isCancelledRuntimeAdapterRunId: () => cancelled,
+      consumeCancelledRuntimeAdapterRunId: () => {
+        consumeCount += 1;
+        const wasCancelled = cancelled;
+        cancelled = false;
+        return wasCancelled;
+      },
+    });
+    const launch = runOpenCodeTeamRuntimeAdapterLaunch(
+      launchParams(async () => {
+        calls.push('adapter:waiting');
+        await launchGate.promise;
+        return failedRuntimeResult();
+      }),
+      owned.ports
+    );
+    await waitForCall(calls, 'adapter:waiting');
+    cancelled = true;
+    launchGate.resolve(undefined);
+
+    await expect(launch).resolves.toEqual({ runId: 'run-1' });
+    expect(consumeCount).toBe(1);
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  const MODELS_QUERY_TIMEOUT =
+    'Failed to query OpenCode models: OpenCode command timed out after 10000ms';
+  const RETRYABLE_PRE_LAUNCH_GATE: TeamRuntimePreLaunchGate = {
+    blocked: true,
+    reason: 'unknown_error',
+    retryable: true,
+  };
+
+  function transientTimeoutResult(): TeamRuntimeLaunchResult {
+    return runtimeResult({
+      teamLaunchState: 'partial_failure',
+      members: {
+        alice: {
+          memberName: 'alice',
+          providerId: 'opencode',
+          launchState: 'failed_to_start',
+          agentToolAccepted: false,
+          runtimeAlive: false,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          hardFailureReason: MODELS_QUERY_TIMEOUT,
+          diagnostics: [MODELS_QUERY_TIMEOUT],
+        },
+      },
+      diagnostics: [MODELS_QUERY_TIMEOUT],
+      preLaunchGate: RETRYABLE_PRE_LAUNCH_GATE,
+    });
+  }
+
+  function primaryRetryRequest(): TeamCreateRequest {
+    return {
+      teamName: 'team-a',
+      cwd: '/repo',
+      providerId: 'opencode',
+      members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
+    } as TeamCreateRequest;
+  }
+
+  function primaryRetryPorts(
+    calls: string[],
+    sharedRuntimeFailureScope: OpenCodeSharedRuntimeFailureScope
+  ): OpenCodeRuntimeAdapterLaunchPorts {
+    const provisioningRuns = new Map<string, string>();
+    return {
+      ...basePorts(calls),
+      sharedRuntimeFailureScope,
+      setProvisioningRun: (teamName, runId) => provisioningRuns.set(teamName, runId),
+      getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+      deleteProvisioningRunIfCurrent: (teamName, runId) => {
+        if (provisioningRuns.get(teamName) === runId) provisioningRuns.delete(teamName);
+      },
+    };
+  }
+
+  it('retries a transient shared runtime timeout once and publishes the healthy relaunch', async () => {
+    vi.useFakeTimers();
+    try {
+      const calls: string[] = [];
+      const adapter = {
+        launch: vi
+          .fn<TeamLaunchRuntimeAdapter['launch']>()
+          .mockResolvedValueOnce(transientTimeoutResult())
+          .mockResolvedValueOnce(runtimeResult()),
+      } as unknown as TeamLaunchRuntimeAdapter;
+
+      const launch = runOpenCodeTeamRuntimeAdapterLaunch(
+        {
+          adapter,
+          request: primaryRetryRequest(),
+          members: primaryRetryRequest().members,
+          prompt: 'launch',
+          onProgress: vi.fn(),
+        },
+        primaryRetryPorts(calls, {})
+      );
+      await vi.advanceTimersByTimeAsync(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS);
+
+      await expect(launch).resolves.toEqual({ runId: 'run-1' });
+      expect(adapter.launch).toHaveBeenCalledTimes(2);
+      expect(calls).toContain(
+        'logWarning:[team-a] OpenCode primary launch hit a transient shared runtime timeout; ' +
+          `retrying once in ${OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS}ms`
+      );
+      expect(calls).toContain('setAliveRun');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('spends the primary retry once: a second timeout inside the TTL window fails normally', async () => {
+    vi.useFakeTimers();
+    try {
+      const sharedRuntimeFailureScope: OpenCodeSharedRuntimeFailureScope = {};
+      const adapter = {
+        launch: vi.fn<TeamLaunchRuntimeAdapter['launch']>(async () => transientTimeoutResult()),
+      } as unknown as TeamLaunchRuntimeAdapter;
+
+      const first = runOpenCodeTeamRuntimeAdapterLaunch(
+        {
+          adapter,
+          request: primaryRetryRequest(),
+          members: primaryRetryRequest().members,
+          prompt: 'launch',
+          onProgress: vi.fn(),
+        },
+        primaryRetryPorts([], sharedRuntimeFailureScope)
+      );
+      await vi.advanceTimersByTimeAsync(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS);
+      await first;
+
+      expect(adapter.launch).toHaveBeenCalledTimes(2);
+
+      const second = runOpenCodeTeamRuntimeAdapterLaunch(
+        {
+          adapter,
+          request: primaryRetryRequest(),
+          members: primaryRetryRequest().members,
+          prompt: 'launch',
+          onProgress: vi.fn(),
+        },
+        primaryRetryPorts([], sharedRuntimeFailureScope)
+      );
+      await vi.advanceTimersByTimeAsync(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS);
+      await second;
+
+      // The relaunch seconds later inherits the still-blocking record and does
+      // not spend a fresh retry: one more attempt in total, not two.
+      expect(adapter.launch).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not relaunch when the run lost authority during the transient backoff', async () => {
+    vi.useFakeTimers();
+    try {
+      const calls: string[] = [];
+      const adapter = {
+        launch: vi.fn<TeamLaunchRuntimeAdapter['launch']>(async () => transientTimeoutResult()),
+      } as unknown as TeamLaunchRuntimeAdapter;
+      const provisioningRuns = new Map<string, string>();
+
+      const launch = runOpenCodeTeamRuntimeAdapterLaunch(
+        {
+          adapter,
+          request: primaryRetryRequest(),
+          members: primaryRetryRequest().members,
+          prompt: 'launch',
+          onProgress: vi.fn(),
+        },
+        {
+          ...basePorts(calls),
+          sharedRuntimeFailureScope: {},
+          setProvisioningRun: (teamName, runId) => provisioningRuns.set(teamName, runId),
+          getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+        }
+      );
+      await vi.advanceTimersByTimeAsync(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS - 1);
+      // A newer run took the team while the backoff was still pending.
+      provisioningRuns.set('team-a', 'successor-run');
+      await vi.advanceTimersByTimeAsync(1);
+
+      await expect(launch).resolves.toEqual({ runId: 'run-1' });
+      expect(adapter.launch).toHaveBeenCalledTimes(1);
+      expect(calls).not.toContain('setAliveRun');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
+  });
+  return { promise, resolve, reject };
+}
+
+async function waitForCall(calls: string[], expected: string): Promise<void> {
+  for (let attempt = 0; attempt < 50 && !calls.includes(expected); attempt += 1) {
+    await Promise.resolve();
+  }
+  expect(calls).toContain(expected);
+}
+
+function launchParams(
+  launch: () => Promise<TeamRuntimeLaunchResult>
+): Parameters<typeof runOpenCodeTeamRuntimeAdapterLaunch>[0] {
+  return {
+    adapter: {
+      launch: async () => {
+        return launch();
+      },
+    } as unknown as TeamLaunchRuntimeAdapter,
+    request: {
+      teamName: 'team-a',
+      cwd: '/repo',
+      providerId: 'opencode',
+      providerBackendId: 'opencode-cli',
+      model: 'openai/gpt-5',
+      members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
+    },
+    members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
+    prompt: 'launch',
+    onProgress: vi.fn(),
+  };
+}
+
+function failedRuntimeResult(): TeamRuntimeLaunchResult {
+  return runtimeResult({
+    teamLaunchState: 'partial_failure',
+    diagnostics: ['inventory timeout\nconfig timeout'],
+    members: {
+      alice: {
+        memberName: 'alice',
+        providerId: 'opencode',
+        launchState: 'failed_to_start',
+        agentToolAccepted: false,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: true,
+        hardFailureReason: 'readiness timed out',
+        diagnostics: ['readiness timed out'],
+      },
+    },
+  });
+}
+
+function failedSnapshot(): PersistedTeamLaunchSnapshot {
+  return {
+    version: 2,
+    teamName: 'team-a',
+    expectedMembers: ['alice'],
+    bootstrapExpectedMembers: ['alice'],
+    launchPhase: 'finished',
+    teamLaunchState: 'partial_failure',
+    members: {
+      alice: {
+        name: 'alice',
+        providerId: 'opencode',
+        launchState: 'failed_to_start',
+        agentToolAccepted: false,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: true,
+        hardFailureReason: 'readiness timed out',
+        lastEvaluatedAt: '2026-01-01T00:00:02.000Z',
+        diagnostics: ['readiness timed out'],
+      },
+    },
+    summary: {
+      confirmedCount: 0,
+      pendingCount: 0,
+      failedCount: 1,
+      runtimeAlivePendingCount: 0,
+    },
+    updatedAt: '2026-01-01T00:00:02.000Z',
+  } as PersistedTeamLaunchSnapshot;
+}
+
+function ownedPorts(
+  calls: string[],
+  overrides: Partial<OpenCodeRuntimeAdapterLaunchPorts> = {}
+): {
+  ports: OpenCodeRuntimeAdapterLaunchPorts;
+  setOwner(runId: string | undefined): void;
+} {
+  let owner: string | undefined;
+  const ports: OpenCodeRuntimeAdapterLaunchPorts = {
+    ...basePorts(calls),
+    setProvisioningRun: (_teamName, runId) => {
+      calls.push('setProvisioningRun');
+      owner = runId;
+    },
+    getProvisioningRun: () => owner,
+    ...overrides,
+  };
+  return {
+    ports,
+    setOwner: (runId) => {
+      owner = runId;
+    },
+  };
+}
+
+function basePorts(calls: string[]): OpenCodeRuntimeAdapterLaunchPorts {
+  return {
+    randomUUID: () => 'run-1',
+    nowIso: () => '2026-01-01T00:00:00.000Z',
+    nowMs: () => 1234,
+    sharedRuntimeFailureScope: {},
+    logWarning: (message) => {
+      calls.push(`logWarning:${message}`);
+    },
+    getStopAllTeamsGeneration: () => 0,
+    getStopTeamGeneration: () => 0,
+    getRuntimeAdapterRun: () => undefined,
+    stopOpenCodeRuntimeAdapterTeam: async () => {
+      calls.push('stopPreviousRuntimeRun');
+    },
+    getProvisioningRun: () => undefined,
+    getRuntimeAdapterProgress: () => undefined,
+    isCancellableRuntimeAdapterProgress: () => false,
+    cancelRuntimeAdapterProvisioning: async () => {
+      calls.push('cancelPreviousPendingRun');
+    },
+    recordCancelledOpenCodeRuntimeAdapterLaunch: () => {
+      calls.push('recordCancelledLaunch');
+      return { runId: 'cancelled-run' };
+    },
+    setProvisioningRun: () => {
+      calls.push('setProvisioningRun');
+    },
+    setRuntimeAdapterProgress: (nextProgress) => {
+      calls.push(`setProgress:${nextProgress.state}`);
+      return nextProgress;
+    },
+    beginLaunchPublication: async () => { calls.push('beginLaunchPublication'); return true; },
+    resetTeamScopedTransientStateForNewRun: () => {
+      calls.push('resetTransientState');
+    },
+    readLaunchState: async () => {
+      calls.push('readLaunchState');
+      return null;
+    },
+    clearPersistedLaunchState: async () => {
+      calls.push('clearPersistedLaunchState');
+    },
+    getTeamsBasePath: () => {
+      calls.push('getTeamsBasePath');
+      return '/workspace/teams';
+    },
+    migrateLegacyOpenCodeRuntimeState: async () => {
+      calls.push('migrateLegacyState');
+    },
+    upsertOpenCodeRuntimeLaneIndexEntry: async () => {
+      calls.push('upsertLaneIndex');
+    },
+    getOpenCodeRuntimeLaunchCwd: () => {
+      calls.push('getLaunchCwd');
+      return '/repo/runtime';
+    },
+    setOpenCodeRuntimeActiveRunManifest: async () => {
+      calls.push('setActiveRunManifest');
+    },
+    isCancelledRuntimeAdapterRunId: () => false,
+    consumeCancelledRuntimeAdapterRunId: () => false,
+    clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: async () => {
+      calls.push('clearPrimaryLaneIfOwned');
+    },
+    persistOpenCodeRuntimeAdapterLaunchResult: async (result) => {
+      calls.push('persistLaunchResult');
+      return { result };
+    },
+    launchFailureArtifacts: {
+      write: async () => {
+        calls.push('writeLaunchFailureArtifact');
+      },
+    },
+    syncOpenCodeRuntimeToolApprovals: () => {
+      calls.push('syncApprovals');
+    },
+    clearOpenCodeRuntimeLaneStorage: async () => {
+      calls.push('clearLaneStorage');
+    },
+    deleteRuntimeOwnershipIfCurrent: () => {
+      calls.push('deleteRuntimeOwnershipIfCurrent');
+    },
+    setRuntimeAdapterRun: () => {
+      calls.push('setRuntimeRun');
+    },
+    setAliveRunId: () => {
+      calls.push('setAliveRun');
+    },
+    invalidateRuntimeSnapshotCaches: () => {
+      calls.push('invalidateRuntimeSnapshotCaches');
+    },
+    deleteProvisioningRunIfCurrent: () => {
+      calls.push('deleteProvisioningRunIfCurrent');
+    },
+    emitTeamProcessChange: (event) => {
+      calls.push(`emitTeamProcessChange:${event.detail}`);
+    },
+  };
+}

@@ -1,0 +1,11 @@
+export { drawAgents, drawContextRing } from './draw-agents';
+export { drawEdges, bezierPoint, computeControlPoints, type ControlPoints } from './draw-edges';
+export { drawParticles, buildEdgeMap } from './draw-particles';
+export { drawEffects, createSpawnEffect, createCompleteEffect, type VisualEffect } from './draw-effects';
+export { drawTasks } from './draw-tasks';
+export { drawProcesses } from './draw-processes';
+export { drawBackground, createDepthParticles, updateDepthParticles, type DepthParticle } from './background-layer';
+export { BloomRenderer } from './bloom-renderer';
+export { findNodeAt } from './hit-detection';
+export { truncateText, drawHexagon, CLAUDE_SPARK_D } from './draw-misc';
+export { getGlowSprite, getAgentGlowSprite, measureTextCached } from './render-cache';

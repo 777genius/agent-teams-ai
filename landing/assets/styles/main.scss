@@ -1,0 +1,80 @@
+@use "./cyberpunk-hero";
+
+@import "./brand-tokens.css";
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  font-family: var(--at-font-sans);
+  background: rgb(var(--v-theme-background));
+  color: rgb(var(--v-theme-on-background));
+}
+
+.page {
+  position: relative;
+  overflow: clip;
+}
+
+.section {
+  padding: 64px 0;
+}
+
+.section-title {
+  margin-bottom: 24px;
+}
+
+.hero {
+  padding-top: 96px;
+}
+
+.anchor-offset {
+  scroll-margin-top: 96px;
+}
+
+/* Monospace accent font for technical elements */
+.mono {
+  font-family: var(--at-font-mono);
+}
+
+@media (max-width: 960px) {
+  .page {
+    padding: 32px 0 64px;
+  }
+
+  .section {
+    padding: 48px 0;
+  }
+
+  .hero {
+    padding-top: 72px;
+  }
+
+  .anchor-offset {
+    scroll-margin-top: 72px;
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 24px 0 48px;
+  }
+
+  .section {
+    padding: 40px 0;
+  }
+
+  .hero {
+    padding-top: 64px;
+  }
+
+  .anchor-offset {
+    scroll-margin-top: 64px;
+  }
+}
+
+.app-header {
+  backdrop-filter: blur(var(--at-blur-md));
+}

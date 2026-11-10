@@ -1,0 +1,631 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  assertBridgeEvidenceCanCommitToRuntimeStores,
+  assertBridgeResultCanMutateState,
+  createOpenCodeBridgeHandshakeIdentityHash,
+  createOpenCodeBridgeIdempotencyKey,
+  isOpenCodeBridgeCommandName,
+  OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+  OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
+  OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
+  OPEN_CODE_FILE_PARTS_CONTRACT_VERSION,
+  OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
+  type OpenCodeBridgeCommandEnvelope,
+  type OpenCodeBridgeHandshake,
+  type OpenCodeBridgePeerIdentity,
+  type OpenCodeBridgeRuntimeSnapshot,
+  type OpenCodeBridgeSuccess,
+  parseSingleBridgeJsonResult,
+  stableHash,
+  validateBridgeResultEnvelope,
+  validateOpenCodeBridgeHandshake,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import { createOpenCodeBridgeClientIdentity } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+
+describe('OpenCodeBridgeCommandContract', () => {
+  it('rejects bridge stdout with logs plus json', () => {
+    const result = parseSingleBridgeJsonResult('debug log\n{"ok":true}\n');
+
+    expect(result).toEqual({
+      ok: false,
+      error: 'Bridge stdout must contain exactly one JSON line, got 2',
+    });
+  });
+
+  it('parses exactly one bridge result JSON line', () => {
+    const stdout = `${JSON.stringify(
+      bridgeSuccess({
+        data: {
+          runId: 'run-1',
+          idempotencyKey: 'key-1',
+          runtimeStoreManifestHighWatermark: 10,
+        },
+      })
+    )}\n`;
+
+    const parsed = parseSingleBridgeJsonResult(stdout);
+
+    expect(parsed).toMatchObject({
+      ok: true,
+      value: {
+        ok: true,
+        requestId: 'req-1',
+        command: 'opencode.launchTeam',
+      },
+    });
+  });
+
+  it('accepts opencode.cleanupHosts as a bridge command', () => {
+    expect(isOpenCodeBridgeCommandName('opencode.cleanupHosts')).toBe(true);
+  });
+
+  it('accepts opencode.backfillTaskLedger as a read-only bridge command', () => {
+    expect(isOpenCodeBridgeCommandName('opencode.backfillTaskLedger')).toBe(true);
+  });
+
+  it('uses capability recovery attempt id as part of the launch idempotency key', () => {
+    const baseInput = {
+      command: 'opencode.launchTeam' as const,
+      teamName: 'team-a',
+      laneId: 'secondary:opencode:alice',
+      runId: 'run-1',
+      body: {
+        runId: 'run-1',
+        laneId: 'secondary:opencode:alice',
+        teamId: 'team-a',
+        teamName: 'team-a',
+        projectPath: '/repo',
+        selectedModel: 'openai/gpt-5.4-mini',
+        members: [{ name: 'alice', role: 'Developer', prompt: 'Launch' }],
+        leadPrompt: '',
+        expectedCapabilitySnapshotId: 'cap-1',
+        manifestHighWatermark: null,
+      },
+    };
+
+    expect(createOpenCodeBridgeIdempotencyKey(baseInput)).not.toBe(
+      createOpenCodeBridgeIdempotencyKey({
+        ...baseInput,
+        body: {
+          ...baseInput.body,
+          capabilitySnapshotRecoveryAttemptId: 'opencode-capability-recovery-test',
+        },
+      })
+    );
+  });
+
+  it('validates result request id and command against the command envelope', () => {
+    const envelope: OpenCodeBridgeCommandEnvelope<Record<string, never>> = {
+      schemaVersion: 1,
+      requestId: 'req-expected',
+      command: 'opencode.launchTeam',
+      cwd: '/tmp/project',
+      startedAt: '2026-04-21T12:00:00.000Z',
+      timeoutMs: 10_000,
+      body: {},
+    };
+
+    expect(validateBridgeResultEnvelope(bridgeSuccess({ requestId: 'other' }), envelope)).toEqual({
+      ok: false,
+      reason: 'OpenCode bridge requestId mismatch',
+    });
+
+    expect(
+      validateBridgeResultEnvelope(
+        bridgeSuccess({ requestId: 'req-expected', command: 'opencode.stopTeam' }),
+        envelope
+      )
+    ).toEqual({
+      ok: false,
+      reason: 'OpenCode bridge command mismatch',
+    });
+  });
+
+  it('accepts the additive transport watchdog timeout failure kind', () => {
+    const envelope: OpenCodeBridgeCommandEnvelope<Record<string, never>> = {
+      schemaVersion: 1,
+      requestId: 'req-1',
+      command: 'opencode.readiness',
+      cwd: '/tmp/project',
+      startedAt: '2026-04-21T12:00:00.000Z',
+      timeoutMs: 300_000,
+      body: {},
+    };
+    const failure = {
+      ok: false as const,
+      schemaVersion: 1 as const,
+      requestId: 'req-1',
+      command: 'opencode.readiness' as const,
+      completedAt: '2026-04-21T12:05:25.000Z',
+      durationMs: 325_000,
+      error: {
+        kind: 'transport_watchdog_timeout' as const,
+        message: 'OpenCode bridge transport watchdog timed out',
+        retryable: true,
+      },
+      diagnostics: [],
+    };
+
+    expect(validateBridgeResultEnvelope(failure, envelope)).toEqual({ ok: true });
+  });
+
+  it('does not allow state mutation when capability snapshot mismatches', () => {
+    const result = bridgeSuccess({
+      runtime: { capabilitySnapshotId: 'old-snapshot' },
+      data: { runId: 'run-1' },
+    });
+
+    expect(() =>
+      assertBridgeResultCanMutateState(result, {
+        requestId: 'req-1',
+        command: 'opencode.launchTeam',
+        runId: 'run-1',
+        capabilitySnapshotId: 'new-snapshot',
+      })
+    ).toThrow('OpenCode bridge capability snapshot mismatch');
+  });
+
+  it('allows state mutation for a launch capability recovery result', () => {
+    const result = bridgeSuccess({
+      runtime: { capabilitySnapshotId: 'new-snapshot' },
+      data: {
+        runId: 'run-1',
+        idempotencyKey: 'key-1',
+        runtimeStoreManifestHighWatermark: 10,
+        diagnostics: [
+          {
+            code: 'opencode_capability_snapshot_recovery',
+            severity: 'warning',
+            message: 'Accepted fresh OpenCode capability snapshot after app recovery attempt.',
+          },
+        ],
+      },
+    });
+
+    expect(() =>
+      assertBridgeResultCanMutateState(result, {
+        requestId: 'req-1',
+        command: 'opencode.launchTeam',
+        runId: 'run-1',
+        capabilitySnapshotId: 'old-snapshot',
+        allowCapabilitySnapshotRecovery: true,
+      })
+    ).not.toThrow();
+  });
+
+  it('does not allow capability recovery without orchestrator recovery evidence', () => {
+    const result = bridgeSuccess({
+      runtime: { capabilitySnapshotId: 'new-snapshot' },
+      data: { runId: 'run-1' },
+    });
+
+    expect(() =>
+      assertBridgeResultCanMutateState(result, {
+        requestId: 'req-1',
+        command: 'opencode.launchTeam',
+        runId: 'run-1',
+        capabilitySnapshotId: 'old-snapshot',
+        allowCapabilitySnapshotRecovery: true,
+      })
+    ).toThrow('OpenCode bridge capability snapshot mismatch');
+  });
+
+  it('allows state mutation when caller has no capability snapshot evidence to compare', () => {
+    const result = bridgeSuccess({
+      runtime: { capabilitySnapshotId: 'runtime-snapshot' },
+      data: { runId: 'run-1' },
+    });
+
+    expect(() =>
+      assertBridgeResultCanMutateState(result, {
+        requestId: 'req-1',
+        command: 'opencode.launchTeam',
+        runId: 'run-1',
+        capabilitySnapshotId: null,
+      })
+    ).not.toThrow();
+  });
+
+  it('rejects state-changing bridge evidence with stale manifest or idempotency mismatch', () => {
+    const result = bridgeSuccess({
+      data: {
+        runId: 'run-1',
+        idempotencyKey: 'key-1',
+        runtimeStoreManifestHighWatermark: 9,
+      },
+    });
+
+    expect(() =>
+      assertBridgeEvidenceCanCommitToRuntimeStores({
+        result,
+        requestId: 'req-1',
+        command: 'opencode.launchTeam',
+        runId: 'run-1',
+        capabilitySnapshotId: 'cap-1',
+        manifest: { highWatermark: 10 },
+        idempotencyKey: 'key-1',
+      })
+    ).toThrow('Bridge result manifest high watermark is stale');
+
+    expect(() =>
+      assertBridgeEvidenceCanCommitToRuntimeStores({
+        result: bridgeSuccess({
+          data: {
+            runId: 'run-1',
+            idempotencyKey: 'other-key',
+            runtimeStoreManifestHighWatermark: 10,
+          },
+        }),
+        requestId: 'req-1',
+        command: 'opencode.launchTeam',
+        runId: 'run-1',
+        capabilitySnapshotId: 'cap-1',
+        manifest: { highWatermark: 10 },
+        idempotencyKey: 'key-1',
+      })
+    ).toThrow('Bridge result idempotency key mismatch');
+  });
+
+  it('rejects handshake when server manifest high watermark is stale', () => {
+    const client = peerIdentity('claude_team');
+    const server = peerIdentity('agent_teams_orchestrator', {
+      runtimeStoreManifestHighWatermark: 9,
+    });
+    const handshake = buildHandshake({ client, server });
+
+    expect(
+      validateOpenCodeBridgeHandshake({
+        handshake,
+        expectedClient: client,
+        requiredCommand: 'opencode.launchTeam',
+        expectedCapabilitySnapshotId: 'cap-1',
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+      })
+    ).toEqual({
+      ok: false,
+      reason: 'Bridge server runtime manifest high watermark is stale',
+    });
+  });
+
+  it('rejects handshake when identity hash does not match peer evidence', () => {
+    const client = peerIdentity('claude_team');
+    const server = peerIdentity('agent_teams_orchestrator');
+    const handshake: OpenCodeBridgeHandshake = {
+      ...buildHandshake({ client, server }),
+      identityHash: 'tampered',
+    };
+
+    expect(
+      validateOpenCodeBridgeHandshake({
+        handshake,
+        expectedClient: client,
+        requiredCommand: 'opencode.launchTeam',
+        expectedCapabilitySnapshotId: 'cap-1',
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+      })
+    ).toEqual({
+      ok: false,
+      reason: 'Bridge handshake identity hash mismatch',
+    });
+  });
+
+  it('advertises and requires fingerprint schema v2 on both production handshake peers', () => {
+    const client = createOpenCodeBridgeClientIdentity({ appVersion: '1.0.0' });
+    const server = peerIdentity('agent_teams_orchestrator');
+    expect(client.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion).toBe(
+      OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION
+    );
+
+    const validate = () =>
+      validateOpenCodeBridgeHandshake({
+        handshake: buildHandshake({ client, server }),
+        expectedClient: client,
+        requiredCommand: 'opencode.launchTeam',
+        expectedCapabilitySnapshotId: 'cap-1',
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+      });
+    expect(validate()).toEqual({ ok: true });
+
+    for (const identity of [client, server]) {
+      delete identity.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion;
+      expect(validate()).toEqual({
+        ok: false,
+        reason:
+          'OpenCode expected behavior fingerprint schema version 2 is required. Update agent_teams_orchestrator and restart the app.',
+      });
+      identity.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion = 1;
+      expect(validate()).toEqual({
+        ok: false,
+        reason:
+          'OpenCode expected behavior fingerprint schema version 2 is required. Update agent_teams_orchestrator and restart the app.',
+      });
+      identity.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion =
+        OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION;
+    }
+  });
+
+  it('accepts handshake evidence contract version and rejects invalid values', () => {
+    const client = peerIdentity('claude_team');
+    const server = peerIdentity('agent_teams_orchestrator');
+    server.bridgeProtocol.opencodeTaskLedgerEvidenceContractVersion =
+      OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION;
+    const validHandshake = buildHandshake({ client, server });
+
+    expect(
+      validateOpenCodeBridgeHandshake({
+        handshake: validHandshake,
+        expectedClient: client,
+        requiredCommand: 'opencode.launchTeam',
+        expectedCapabilitySnapshotId: 'cap-1',
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+      })
+    ).toEqual({ ok: true });
+
+    server.bridgeProtocol.opencodeTaskLedgerEvidenceContractVersion = 0;
+    const invalidHandshake = buildHandshake({ client, server });
+
+    expect(
+      validateOpenCodeBridgeHandshake({
+        handshake: invalidHandshake,
+        expectedClient: client,
+        requiredCommand: 'opencode.launchTeam',
+        expectedCapabilitySnapshotId: 'cap-1',
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+      })
+    ).toEqual({
+      ok: false,
+      reason: 'Bridge handshake peer identity is invalid',
+    });
+  });
+
+  it('requires the delivery acceptance contract only for acceptance-mode sendMessage', () => {
+    const client = peerIdentity('claude_team');
+    const server = peerIdentity('agent_teams_orchestrator');
+    client.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    server.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    let handshake = withAcceptedCommands(buildHandshake({ client, server }), [
+      'opencode.launchTeam',
+      'opencode.stopTeam',
+      'opencode.sendMessage',
+    ]);
+
+    expect(
+      validateOpenCodeBridgeHandshake({
+        handshake,
+        expectedClient: client,
+        requiredCommand: 'opencode.sendMessage',
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+        requiresDeliveryAcceptanceContract: false,
+      })
+    ).toEqual({ ok: true });
+
+    expect(
+      validateOpenCodeBridgeHandshake({
+        handshake,
+        expectedClient: client,
+        requiredCommand: 'opencode.sendMessage',
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+        requiresDeliveryAcceptanceContract: true,
+      })
+    ).toEqual({
+      ok: false,
+      reason:
+        `OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version ${OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION}. Falling back to observed delivery mode is required.`,
+    });
+
+    server.bridgeProtocol.opencodeDeliveryAcceptanceContractVersion =
+      OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION;
+    handshake = withAcceptedCommands(buildHandshake({ client, server }), [
+      'opencode.launchTeam',
+      'opencode.stopTeam',
+      'opencode.sendMessage',
+    ]);
+
+    expect(
+      validateOpenCodeBridgeHandshake({
+        handshake,
+        expectedClient: client,
+        requiredCommand: 'opencode.sendMessage',
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+        requiresDeliveryAcceptanceContract: true,
+      })
+    ).toEqual({ ok: true });
+  });
+
+  it('requires the video file-parts contract only when sendMessage contains video', () => {
+    const client = peerIdentity('claude_team');
+    const server = peerIdentity('agent_teams_orchestrator');
+    client.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    server.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
+    const buildSendHandshake = () =>
+      withAcceptedCommands(buildHandshake({ client, server }), [
+        'opencode.launchTeam',
+        'opencode.stopTeam',
+        'opencode.sendMessage',
+      ]);
+    const validate = (requiresVideoFilePartsContract: boolean) =>
+      validateOpenCodeBridgeHandshake({
+        handshake: buildSendHandshake(),
+        expectedClient: client,
+        requiredCommand: 'opencode.sendMessage',
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+        requiresVideoFilePartsContract,
+      });
+
+    expect(validate(false)).toEqual({ ok: true });
+    expect(validate(true)).toEqual({
+      ok: false,
+      reason:
+        `OpenCode video file parts require orchestrator contract version ${OPEN_CODE_FILE_PARTS_CONTRACT_VERSION}. Update agent_teams_orchestrator and restart the app.`,
+    });
+    expect(
+      validateOpenCodeBridgeHandshake({
+        handshake: buildSendHandshake(),
+        expectedClient: client,
+        requiredCommand: 'opencode.sendMessage',
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+        requiresDeliveryAcceptanceContract: true,
+        requiresVideoFilePartsContract: true,
+      })
+    ).toEqual({
+      ok: false,
+      reason:
+        `OpenCode video file parts require orchestrator contract version ${OPEN_CODE_FILE_PARTS_CONTRACT_VERSION}. Update agent_teams_orchestrator and restart the app.`,
+    });
+
+    server.bridgeProtocol.opencodeFilePartsContractVersion =
+      OPEN_CODE_FILE_PARTS_CONTRACT_VERSION;
+    expect(validate(true)).toEqual({ ok: true });
+
+    server.bridgeProtocol.opencodeFilePartsContractVersion = 0;
+    expect(validate(true)).toEqual({
+      ok: false,
+      reason: 'Bridge handshake peer identity is invalid',
+    });
+  });
+
+  it('creates deterministic idempotency keys for equivalent JSON bodies', () => {
+    const first = createOpenCodeBridgeIdempotencyKey({
+      command: 'opencode.launchTeam',
+      teamName: 'Team A',
+      runId: 'run-1',
+      body: { a: 1, b: { c: true, d: ['x'] } },
+    });
+    const second = createOpenCodeBridgeIdempotencyKey({
+      command: 'opencode.launchTeam',
+      teamName: 'Team A',
+      runId: 'run-1',
+      body: { b: { d: ['x'], c: true }, a: 1 },
+    });
+
+    expect(first).toBe(second);
+    expect(first).toMatch(
+      /^opencode:opencode\.launchTeam:Team_A:no-lane:run-1:[a-f0-9]{32}$/
+    );
+    expect(stableHash({ b: 2, a: 1 })).toBe(stableHash({ a: 1, b: 2 }));
+  });
+});
+
+type BridgeSuccessOverrides = Omit<Partial<OpenCodeBridgeSuccess<unknown>>, 'runtime'> & {
+  runtime?: Partial<OpenCodeBridgeRuntimeSnapshot>;
+  data?: unknown;
+};
+
+function bridgeSuccess(overrides: BridgeSuccessOverrides = {}): OpenCodeBridgeSuccess<unknown> {
+  const { runtime: runtimeOverrides, ...rest } = overrides;
+  return {
+    ok: true,
+    schemaVersion: 1,
+    requestId: 'req-1',
+    command: 'opencode.launchTeam',
+    completedAt: '2026-04-21T12:00:01.000Z',
+    durationMs: 1000,
+    runtime: {
+      providerId: 'opencode',
+      binaryPath: '/usr/local/bin/opencode',
+      binaryFingerprint: 'bin-1',
+      version: '1.0.0',
+      capabilitySnapshotId: 'cap-1',
+      ...runtimeOverrides,
+    },
+    diagnostics: [],
+    data: {
+      runId: 'run-1',
+      idempotencyKey: 'key-1',
+      runtimeStoreManifestHighWatermark: 10,
+    },
+    ...rest,
+  };
+}
+
+function peerIdentity(
+  peer: OpenCodeBridgePeerIdentity['peer'],
+  runtimeOverrides: Partial<OpenCodeBridgePeerIdentity['runtime']> = {}
+): OpenCodeBridgePeerIdentity {
+  return {
+    schemaVersion: 1,
+    peer,
+    appVersion: '1.0.0',
+    gitSha: 'git-1',
+    buildId: 'build-1',
+    bridgeProtocol: {
+      minVersion: 1,
+      currentVersion: 1,
+      supportedCommands: [
+        'opencode.handshake',
+        'opencode.commandStatus',
+        'opencode.launchTeam',
+        'opencode.stopTeam',
+      ],
+      opencodeAppManagedBootstrapContractVersion:
+        OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+      expectedBehaviorFingerprintSchemaVersion:
+        OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
+    },
+    runtime: {
+      providerId: 'opencode',
+      binaryPath: '/usr/local/bin/opencode',
+      binaryFingerprint: 'bin-1',
+      version: '1.0.0',
+      capabilitySnapshotId: 'cap-1',
+      runtimeStoreManifestHighWatermark: 10,
+      activeRunId: 'run-1',
+      ...runtimeOverrides,
+    },
+    featureFlags: {
+      opencodeTeamLaunch: true,
+      opencodeStateChangingCommands: true,
+    },
+  };
+}
+
+function buildHandshake(input: {
+  client: OpenCodeBridgePeerIdentity;
+  server: OpenCodeBridgePeerIdentity;
+}): OpenCodeBridgeHandshake {
+  const withoutHash: Omit<OpenCodeBridgeHandshake, 'identityHash'> = {
+    schemaVersion: 1,
+    requestId: 'handshake-1',
+    client: input.client,
+    server: input.server,
+    agreedProtocolVersion: 1,
+    acceptedCommands: ['opencode.launchTeam', 'opencode.stopTeam'],
+    serverTime: '2026-04-21T12:00:00.000Z',
+  };
+
+  return {
+    ...withoutHash,
+    identityHash: createOpenCodeBridgeHandshakeIdentityHash(withoutHash),
+  };
+}
+
+function withAcceptedCommands(
+  handshake: OpenCodeBridgeHandshake,
+  acceptedCommands: OpenCodeBridgeHandshake['acceptedCommands']
+): OpenCodeBridgeHandshake {
+  const { identityHash: _identityHash, ...rest } = handshake;
+  const withoutHash: Omit<OpenCodeBridgeHandshake, 'identityHash'> = {
+    ...rest,
+    acceptedCommands,
+  };
+  return {
+    ...withoutHash,
+    identityHash: createOpenCodeBridgeHandshakeIdentityHash(withoutHash),
+  };
+}

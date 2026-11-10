@@ -1,0 +1,109 @@
+import { type ButtonHTMLAttributes, forwardRef, type MouseEvent } from 'react';
+
+import { useAppTranslation } from '@features/localization/renderer';
+import { formatActivityTimestamp } from '@renderer/components/team/activity/activityTimestamp';
+import { MemberIdentityAvatar } from '@renderer/components/team/members/MemberIdentityAvatar';
+import { displayMemberName } from '@renderer/utils/memberHelpers';
+import { Pin } from 'lucide-react';
+
+import { useChatMemberIdentity } from '../hooks/useChatMemberIdentity';
+import { projectChatPreview } from '../view-models/chatListViewModel';
+
+import { ChatPreviewLine } from './ChatPreviewLine';
+import { ChatUnreadBadges } from './ChatUnreadBadges';
+import { GroupChatAvatar } from './GroupChatAvatar';
+
+import type { ConversationScope } from '../../core/domain/conversationScope';
+import type { ChatListViewItem } from '../view-models/chatListViewModel';
+
+interface ChatListRowProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  'type' | 'children'
+> {
+  item: ChatListViewItem;
+  teamName: string;
+  pinned?: boolean;
+  onOpen: (scope: ConversationScope) => void;
+}
+
+export const ChatListRow = forwardRef<HTMLButtonElement, ChatListRowProps>(
+  ({ item, teamName, pinned = false, onOpen, className, onClick, ...props }, ref) => {
+    const { t } = useAppTranslation('team');
+    const preview = projectChatPreview(item, item.draft);
+    const time = preview.previewTimestamp ? formatActivityTimestamp(preview.previewTimestamp) : '';
+    const memberName = item.member?.name ?? item.displayName;
+    const identity = useChatMemberIdentity(teamName, memberName, item.member?.color);
+    const title =
+      item.scope.kind === 'direct' ? displayMemberName(item.displayName) : item.displayName;
+    const ariaLabel = pinned
+      ? `${t('messages.chats.rowAria', {
+          name: title,
+          unread: item.unreadCount,
+          attention: item.attentionCount,
+        })}, ${t('messages.chats.pinned')}`
+      : t('messages.chats.rowAria', {
+          name: title,
+          unread: item.unreadCount,
+          attention: item.attentionCount,
+        });
+
+    return (
+      <button
+        type="button"
+        {...props}
+        ref={ref}
+        className={`flex w-full items-start gap-2.5 overflow-visible rounded-md px-2 py-2 text-left transition-colors hover:bg-[var(--color-surface-raised)]${className ? ` ${className}` : ''}`}
+        aria-label={ariaLabel}
+        onClick={(event: MouseEvent<HTMLButtonElement>) => {
+          onClick?.(event);
+          if (event.defaultPrevented) {
+            return;
+          }
+          onOpen(item.scope);
+        }}
+      >
+        <span className="mt-0.5 shrink-0">
+          {item.scope.kind !== 'direct' ? (
+            <GroupChatAvatar />
+          ) : (
+            <MemberIdentityAvatar
+              name={identity.name}
+              color={identity.color}
+              avatarUrl={identity.avatarUrl}
+              presenceClass={identity.presenceClass}
+              presenceLabel={identity.presenceLabel}
+            />
+          )}
+        </span>
+        <span className="min-w-0 flex-1 overflow-hidden">
+          <span className="block min-w-0 truncate text-sm font-medium text-[var(--color-text)]">
+            {title}
+          </span>
+          <ChatPreviewLine
+            from={preview.previewFrom}
+            text={preview.previewText || (!preview.isDraft ? t('messages.chats.emptyPreview') : '')}
+            avatarUrl={
+              !item.draft && item.previewFrom ? identity.avatarUrlFor(item.previewFrom) : undefined
+            }
+            draft={item.draft}
+          />
+        </span>
+        <span className="mt-0.5 flex shrink-0 flex-col items-end gap-1 overflow-visible">
+          <span className="flex items-center gap-1">
+            {pinned ? (
+              <Pin size={10} className="text-[var(--color-text-muted)]" aria-hidden="true" />
+            ) : null}
+            {time ? (
+              <span className="text-[10px] tabular-nums text-[var(--color-text-muted)]">
+                {time}
+              </span>
+            ) : null}
+          </span>
+          <ChatUnreadBadges unreadCount={item.unreadCount} attentionCount={item.attentionCount} />
+        </span>
+      </button>
+    );
+  }
+);
+
+ChatListRow.displayName = 'ChatListRow';

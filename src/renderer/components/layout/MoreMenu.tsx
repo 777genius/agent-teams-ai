@@ -1,0 +1,318 @@
+/**
+ * MoreMenu - Dropdown menu behind a "..." icon for less-frequent toolbar actions.
+ *
+ * Groups: Teams, Settings, Extensions, Search, Schedules, Usage, Docs, Export (session-only), Analyze (session-only).
+ * Closes on outside click or Escape.
+ */
+
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+
+import { openAnnouncementHistory } from '@features/announcements/renderer';
+import { useAppTranslation } from '@features/localization/renderer';
+import { isElectronMode } from '@renderer/api';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { useStore } from '@renderer/store';
+import { triggerDownload } from '@renderer/utils/sessionExporter';
+import { formatShortcut } from '@renderer/utils/stringUtils';
+import {
+  Activity,
+  BookOpen,
+  Braces,
+  Calendar,
+  FileText,
+  Gauge,
+  MoreHorizontal,
+  Newspaper,
+  Puzzle,
+  Search,
+  Settings,
+  Type,
+  Users,
+} from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
+
+import type { SessionDetail } from '@renderer/types/data';
+import type { Tab } from '@renderer/types/tabs';
+import type { ExportFormat } from '@renderer/utils/sessionExporter';
+
+const DOCS_URL = 'https://777genius.github.io/agent-teams-ai/docs/';
+
+interface MoreMenuProps {
+  activeTab: Tab | undefined;
+  activeTabSessionDetail: SessionDetail | null;
+  activeTabId: string | null;
+}
+
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  shortcut?: string;
+  onClick: () => void;
+}
+
+export const MoreMenu = ({
+  activeTab,
+  activeTabSessionDetail,
+  activeTabId,
+}: Readonly<MoreMenuProps>): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
+  const [isOpen, setIsOpen] = useState(false);
+  const [buttonHover, setButtonHover] = useState(false);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const {
+    openCommandPalette,
+    openExtensionsTab,
+    openSessionReport,
+    openSchedulesTab,
+    openSettingsTab,
+    openTeamsTab,
+    openTab,
+  } = useStore(
+    useShallow((s) => ({
+      openCommandPalette: s.openCommandPalette,
+      openExtensionsTab: s.openExtensionsTab,
+      openSessionReport: s.openSessionReport,
+      openSchedulesTab: s.openSchedulesTab,
+      openSettingsTab: s.openSettingsTab,
+      openTeamsTab: s.openTeamsTab,
+      openTab: s.openTab,
+    }))
+  );
+
+  // Close on outside click or Escape
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent): void => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen]);
+
+  const handleExport = useCallback(
+    (format: ExportFormat) => {
+      if (activeTabSessionDetail) {
+        triggerDownload(activeTabSessionDetail, format);
+      }
+      setIsOpen(false);
+    },
+    [activeTabSessionDetail]
+  );
+
+  const handleOpenDocs = useCallback(async () => {
+    if (isElectronMode()) {
+      await window.electronAPI.openExternal(DOCS_URL);
+    } else {
+      window.open(DOCS_URL, '_blank', 'noopener,noreferrer');
+    }
+    setIsOpen(false);
+  }, []);
+
+  const isSessionWithData = activeTab?.type === 'session' && activeTabSessionDetail != null;
+
+  // Build menu sections
+  const topItems: MenuItem[] = [
+    ...(isElectronMode()
+      ? [
+          {
+            id: 'news',
+            label: t('announcements.title'),
+            icon: Newspaper,
+            onClick: () => {
+              setIsOpen(false);
+              triggerRef.current?.focus();
+              openAnnouncementHistory();
+            },
+          },
+        ]
+      : []),
+    {
+      id: 'teams',
+      label: t('layout.menu.teams'),
+      icon: Users,
+      onClick: () => {
+        openTeamsTab();
+        setIsOpen(false);
+      },
+    },
+    {
+      id: 'settings',
+      label: t('layout.menu.settings'),
+      icon: Settings,
+      onClick: () => {
+        openSettingsTab();
+        setIsOpen(false);
+      },
+    },
+    {
+      id: 'extensions',
+      label: t('layout.menu.extensions'),
+      icon: Puzzle,
+      onClick: () => {
+        openExtensionsTab();
+        setIsOpen(false);
+      },
+    },
+    {
+      id: 'search',
+      label: t('layout.menu.search'),
+      icon: Search,
+      shortcut: formatShortcut('K'),
+      onClick: () => {
+        openCommandPalette();
+        setIsOpen(false);
+      },
+    },
+    {
+      id: 'schedules',
+      label: t('layout.menu.schedules'),
+      icon: Calendar,
+      onClick: () => {
+        openSchedulesTab();
+        setIsOpen(false);
+      },
+    },
+    {
+      id: 'token-usage',
+      label: t('layout.menu.usage'),
+      icon: Gauge,
+      onClick: () => {
+        openTab({ type: 'token-usage', label: t('layout.menu.usage') });
+        setIsOpen(false);
+      },
+    },
+    {
+      id: 'docs',
+      label: t('layout.menu.docs'),
+      icon: BookOpen,
+      onClick: () => {
+        void handleOpenDocs();
+      },
+    },
+  ];
+
+  const sessionItems: MenuItem[] = isSessionWithData
+    ? [
+        {
+          id: 'export-md',
+          label: t('layout.menu.exportMarkdown'),
+          icon: FileText,
+          shortcut: '.md',
+          onClick: () => handleExport('markdown'),
+        },
+        {
+          id: 'export-json',
+          label: t('layout.menu.exportJson'),
+          icon: Braces,
+          shortcut: '.json',
+          onClick: () => handleExport('json'),
+        },
+        {
+          id: 'export-txt',
+          label: t('layout.menu.exportPlainText'),
+          icon: Type,
+          shortcut: '.txt',
+          onClick: () => handleExport('plaintext'),
+        },
+        {
+          id: 'analyze',
+          label: t('layout.menu.analyzeSession'),
+          icon: Activity,
+          onClick: () => {
+            if (activeTabId) openSessionReport(activeTabId);
+            setIsOpen(false);
+          },
+        },
+      ]
+    : [];
+
+  const renderItem = (item: MenuItem): React.JSX.Element => (
+    <button
+      key={item.id}
+      onClick={item.onClick}
+      onMouseEnter={() => setHoveredId(item.id)}
+      onMouseLeave={() => setHoveredId(null)}
+      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors"
+      style={{
+        color: hoveredId === item.id ? 'var(--color-text)' : 'var(--color-text-secondary)',
+        backgroundColor: hoveredId === item.id ? 'var(--color-surface-raised)' : 'transparent',
+      }}
+    >
+      <item.icon className="size-3.5" />
+      <span className="flex-1">{item.label}</span>
+      {item.shortcut && (
+        <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+          {item.shortcut}
+        </span>
+      )}
+    </button>
+  );
+
+  const separator = (
+    <div className="my-0.5" style={{ borderBottom: '1px solid var(--color-border)' }} />
+  );
+
+  return (
+    <div ref={containerRef} className="relative">
+      {/* Trigger button */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            ref={triggerRef}
+            onClick={() => setIsOpen(!isOpen)}
+            onMouseEnter={() => setButtonHover(true)}
+            onMouseLeave={() => setButtonHover(false)}
+            className="rounded-md p-2 transition-colors"
+            style={{
+              color: buttonHover || isOpen ? 'var(--color-text)' : 'var(--color-text-muted)',
+              backgroundColor:
+                buttonHover || isOpen ? 'var(--color-surface-raised)' : 'transparent',
+            }}
+            aria-label={t('actions.moreActions')}
+          >
+            <MoreHorizontal className="size-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{t('actions.moreActions')}</TooltipContent>
+      </Tooltip>
+
+      {/* Dropdown menu */}
+      {isOpen && (
+        <div
+          className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-md border py-1 shadow-lg"
+          style={{
+            backgroundColor: 'var(--color-surface-overlay)',
+            borderColor: 'var(--color-border)',
+          }}
+        >
+          {topItems.map(renderItem)}
+
+          {sessionItems.length > 0 && (
+            <>
+              {separator}
+              {sessionItems.map(renderItem)}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};

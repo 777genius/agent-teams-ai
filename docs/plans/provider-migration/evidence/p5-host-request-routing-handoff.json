@@ -1,0 +1,46 @@
+{
+  "status": "PASS scoped request-shaped Host routing and ordinary native UI regression; full P0-P8/M01-M19 INCOMPLETE",
+  "archive": "docs/plans/provider-migration/evidence/p5-host-request-routing-native-v1.tar.gz",
+  "archiveSha256": "f69a1c9e06573c3e5db41357b0273e171a0fb4ced77e4267253b75487917c968",
+  "archiveBytes": 24355280,
+  "archiveIntegrity": "All4151 regular entries read to completion and checked against declared tar size",
+  "nativeJobId": "66a271a455b966f97c94104a1984e5bf",
+  "receiptSha256": "ea573819174b7d55ac8194cc24a58d1e44a94e266a087eeca32a423589be0f99",
+  "source": "5d60239b90e10d6275715813b523541c207882901a3baa62140c0590030c76ad",
+  "dist": "ec661ee4bef638edb2594e0d0361f3107998fec2982db1c0fe5fecfa9e9bd53b",
+  "providerSha256": "3baf16ca2276d0a444be273fe6c36d5f71c0586a3ae521f01bfc22d8adff0204",
+  "implementation": {
+    "problem": "The ordinary renderer decorator recognized only positional string destinations. TeamsAPI launch/create/config/member-settings requests carry teamName in an object, so reserved Host destinations could enter a legacy handler.",
+    "change": "A small helper recognizes positional and request-shaped Team destinations, including notification click targets with absent/different top-level teamName. Unsupported Host operations refuse before legacy dispatch. Ordinary legacy requests retain their object identity and frozen bridge receiver.",
+    "scope": "No new owner, policy store, provider abstraction or settings mapping. Refusal closes misrouting; it does not replace required positive Launch/config/member/notification parity."
+  },
+  "checks": {
+    "focusedJobId": "2a55bbdf89a2ca5e6bc14913c5fd4233",
+    "focusedTests": 14,
+    "completeFrontendJobId": "c4c3a5789f850a7583df48791e5a6a95",
+    "completeFrontendTests": 106,
+    "rootPinnedTS7": "PASS Node24.21",
+    "maintainedScriptsStrict": "PASS including corrected helper",
+    "affectedFastLint": "PASS",
+    "sourceSize": "PASS3282 production files/153 unchanged frozen exceptions; app harness798/800 lines",
+    "provisioningGuard": "PASS",
+    "host": "Host source/dist remain byte-identical to the prior228/228 suite tuple. Unchanged full Host tests were not repeated; separate invocation counts are not added."
+  },
+  "nativeEvidence": {
+    "routing": "Six actual renderer unified API calls: launchTeam/createTeam/createConfig/updateMemberSettings and both notification destination shapes. Each gets the exact pre-dispatch renderer refusal, not an arbitrary legacy validation/transport failure. This is a negative API probe, not ordinary Launch signoff.",
+    "ordinaryControls": "Actual Electron/CDP Composer sends two original human commands through preload/Main/Host/D/Claude SDK0.3.305/CLI. Eleven localhost scripted model requests, no oracle failures. Actual MCP/Bash produces a canonical Task lifecycle; both replies are fully visible and Kanban/sidebar update automatically.",
+    "humanCommands": ["8a103e35-71ed-4325-a961-72d88287f75f", "b37e8bc8-b83d-459a-8752-6c7259088bef"],
+    "taskId": "ed2003d6-109c-5021-bcf6-e7c042f87f83",
+    "stop": "Ordinary Stop retires the captured Native child before Quit with closed/released Runtime. App exit0, captured Host absent and TEST group56370 empty.",
+    "sentinels": "Zero refused calls; allowed legacy --version discovery remains. No full fork-free claim.",
+    "sourceFreeze": "All selected hashes matched before/after flow and current files before archiving. Exact source snapshots, original receipts, TEST histories/state/logs/screenshots, managed logs and immutable provider tarball retained; reproducible caches/node_modules excluded."
+  },
+  "retainedAttempt1": {
+    "jobId": "4dbdf81292d4751647bbf5eda5be09ca",
+    "status": "INCOMPLETE aggregate exit1, preserved",
+    "receiptSha256": "c21421a9d70230e12cf9705faff566dbf992e55f452ea5dae5f704bcc06f6e1c",
+    "reason": "Harness imported /src/renderer/api/index.ts although Electron Vite serves src/renderer as root; corrected to /api/index.ts. Failure before Native setup, zero model requests. App exit0 and group37121 empty. Fresh successful scenario used a different sandbox; no prior successful business mutation replayed."
+  },
+  "nextImplementation": "Ordinary Launch/Resume must capture launch settings/roster/command identity, apply private configuration mapping and retain the selected binding. LaunchTeamDialog also calls getSavedRequest, preflight and replaceMembers before launchTeam; changing only launchTeam cannot close that workflow. Do not silently discard settings, substitute static descriptor launch or treat unsupported errors as parity.",
+  "scopeLimits": "Initial Native launch remains explicit TEST API setup. Ordinary Launch/Resume/config, complete10 MCP groups, dynamic/second/group/cross-Team, M13 review/evidence, remaining auth/attachments/activity/subagents, partial-owner merged lists and P7/P8 remain required. Provider owning aggregate gates/canonical Node26.11.1 and Host CMS adoption remain open. No vendor auth/model, packaged Quit/Relaunch or commit/push/merge/release qualification."
+}

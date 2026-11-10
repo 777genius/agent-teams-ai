@@ -1,0 +1,1075 @@
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  isOpenCodeProviderOAuthBridgeOutdated,
+  resolveOpenCodeQuickConnectGate,
+  resolveOpenCodeQuickConnectRuntimeRevision,
+  resolveOpenCodeQuickPlanState,
+} from '../../../../src/features/runtime-provider-management/core/domain/runtimeProviderQuickConnect';
+import { RuntimeProviderQuickConnect } from '../../../../src/features/runtime-provider-management/renderer/RuntimeProviderQuickConnect';
+
+import type {
+  RuntimeProviderCompanionStatusDto,
+  RuntimeProviderDirectoryEntryDto,
+} from '../../../../src/features/runtime-provider-management/contracts';
+import type { RuntimeProviderCompanionState } from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderCompanion';
+import type { RuntimeProviderQuickConnectDirectoryState } from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect';
+import type { CliProviderStatus, OpenCodeRuntimeStatus } from '../../../../src/shared/types';
+
+const mocks = vi.hoisted(() => ({
+  directory: null as RuntimeProviderQuickConnectDirectoryState | null,
+  companions: new Map<string, RuntimeProviderCompanionState>(),
+  quickConnectOptions: null as { enabled: boolean; runtimeRevision: string | null } | null,
+  companionOptions: new Map<string, boolean>(),
+  fetchCliProviderStatus: vi.fn(async () => true),
+  localProviderDialogProps: null as {
+    onConfigured: () => Promise<void> | void;
+  } | null,
+}));
+
+vi.mock('@renderer/store', () => ({
+  useStore: (selector: (state: unknown) => unknown) =>
+    selector({
+      repositoryGroups: [],
+      fetchCliProviderStatus: mocks.fetchCliProviderStatus,
+    }),
+}));
+
+vi.mock(
+  '../../../../src/features/runtime-provider-management/renderer/RuntimeLocalProviderSetupDialog',
+  () => ({
+    RuntimeLocalProviderSetupDialog: (props: { onConfigured: () => Promise<void> | void }) => {
+      mocks.localProviderDialogProps = props;
+      return null;
+    },
+  })
+);
+
+vi.mock('@features/localization/renderer', () => ({
+  useAppTranslation: () => ({ t: (key: string) => key }),
+}));
+
+vi.mock(
+  '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect',
+  () => ({
+    useRuntimeProviderQuickConnect: (options: {
+      enabled: boolean;
+      runtimeRevision: string | null;
+    }) => {
+      mocks.quickConnectOptions = options;
+      return mocks.directory;
+    },
+  })
+);
+
+vi.mock(
+  '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderCompanion',
+  () => ({
+    useRuntimeProviderCompanion: (companionId: string, enabled: boolean) => {
+      mocks.companionOptions.set(companionId, enabled);
+      return mocks.companions.get(companionId);
+    },
+  })
+);
+
+function entry(
+  providerId: string,
+  overrides: Partial<RuntimeProviderDirectoryEntryDto> = {}
+): RuntimeProviderDirectoryEntryDto {
+  return {
+    providerId,
+    displayName: providerId,
+    state: 'connected',
+    connectedAuthHint: 'oauth',
+    setupKind: 'connected',
+    ownership: ['managed'],
+    recommended: true,
+    modelCount: 1,
+    authMethods: ['oauth'],
+    defaultModelId: `${providerId}/auto`,
+    sources: ['inventory'],
+    sourceLabel: 'OpenCode',
+    providerSource: 'custom',
+    detail: null,
+    actions: [],
+    metadata: {
+      hasKnownModels: true,
+      requiresManualConfig: false,
+      supportedInlineAuth: true,
+      configuredAuthless: false,
+    },
+    ...overrides,
+  };
+}
+
+function companion(
+  companionId: 'kiro-cli' | 'cursor-agent',
+  runConnect = vi.fn(async () => undefined),
+  runAction = vi.fn(async () => undefined)
+): RuntimeProviderCompanionState {
+  const status: RuntimeProviderCompanionStatusDto = {
+    companionId,
+    displayName: companionId === 'kiro-cli' ? 'Kiro CLI' : 'Cursor Agent CLI',
+    phase: 'connected',
+    installed: true,
+    authenticated: true,
+    account: {
+      display: 'test@example.com',
+      email: 'test@example.com',
+      accountType: 'BuilderId',
+      region: null,
+    },
+    supportedActions:
+      companionId === 'kiro-cli' ? ['switch-account', 'logout', 'doctor', 'update'] : [],
+    binaryPath: '/tmp/companion',
+    version: '1.0.0',
+    percent: 100,
+    message: 'Connected',
+    detail: null,
+    error: null,
+    manualCommand: '',
+    manualUrl: '',
+    updatedAt: new Date(0).toISOString(),
+  };
+  return {
+    status,
+    loading: false,
+    runInstallAndConnect: vi.fn(async () => undefined),
+    runConnect,
+    runAction,
+    refresh: vi.fn(async () => undefined),
+  };
+}
+
+const openCodeProvider = {
+  providerId: 'opencode',
+  displayName: 'OpenCode',
+  supported: true,
+  authenticated: true,
+  authMethod: 'managed',
+  verificationState: 'verified',
+  models: [],
+  canLoginFromUi: false,
+  capabilities: { teamLaunch: true, oneShot: true, extensions: {} },
+} as unknown as CliProviderStatus;
+
+describe('RuntimeProviderQuickConnect', () => {
+  let host: HTMLDivElement;
+  let root: ReturnType<typeof createRoot>;
+
+  beforeEach(() => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    mocks.quickConnectOptions = null;
+    mocks.companionOptions.clear();
+    mocks.fetchCliProviderStatus.mockClear();
+    mocks.localProviderDialogProps = null;
+    mocks.companions = new Map([
+      ['kiro-cli', companion('kiro-cli')],
+      ['cursor-agent', companion('cursor-agent')],
+    ]);
+  });
+
+  afterEach(async () => {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  });
+
+  const renderQuickConnect = async (
+    projectPath: string | null = null,
+    onOpenCodeProviderAction: (
+      providerId: string,
+      action: 'connect' | 'reconnect' | 'select' | 'settings-connect'
+    ) => void = vi.fn()
+  ): Promise<void> => {
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnect, {
+          enabled: true,
+          cliStatusLoading: false,
+          providers: [openCodeProvider],
+          openCodeRuntimeStatus: {
+            installed: true,
+            source: 'app-managed',
+            state: 'ready',
+            version: '1.17.18',
+          },
+          openCodeRuntimeStatusLoading: false,
+          projectPath,
+          onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
+          onOpenCodeProviderAction,
+          onBrowseProviders: vi.fn(),
+        })
+      );
+    });
+  };
+
+  it('opens provider connection from an installed recognized native V2 runtime', async () => {
+    const onOpenCodeProviderAction = vi.fn();
+    const onBrowseProviders = vi.fn();
+    mocks.directory = {
+      entries: [
+        entry('openrouter', {
+          state: 'available',
+          connectedAuthHint: null,
+          setupKind: 'connect-api-key',
+          authMethods: ['api'],
+        }),
+      ],
+      loaded: true,
+      loading: false,
+      authoritativeLoaded: true,
+      authoritativePending: false,
+      error: null,
+      refresh: vi.fn(),
+    };
+    await act(() => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnect, {
+          enabled: true,
+          cliStatusLoading: false,
+          providers: [],
+          openCodeRuntimeStatus: {
+            installed: true,
+            source: 'path',
+            state: 'ready',
+            version: '2.0.32',
+          },
+          openCodeRuntimeStatusLoading: false,
+          onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
+          onOpenCodeProviderAction,
+          onBrowseProviders,
+        })
+      );
+      return Promise.resolve();
+    });
+    const connect = host.querySelector<HTMLButtonElement>(
+      '[data-testid="provider-quick-action-openrouter"]'
+    );
+    expect(connect).not.toBeNull();
+    expect(connect?.disabled).toBe(false);
+    expect(
+      host.querySelector('[data-testid="provider-quick-card-openrouter"]')?.textContent
+    ).toContain('cliStatus.quickConnect.v1CheckedUsingV2');
+    const browse = [...host.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('cliStatus.quickConnect.browseAll')
+    );
+    expect(browse).toBeDefined();
+    expect(browse?.disabled).toBe(false);
+    await act(() => {
+      connect?.click();
+      browse?.click();
+      return Promise.resolve();
+    });
+    expect(onOpenCodeProviderAction).toHaveBeenCalledWith('openrouter', 'settings-connect');
+    expect(onBrowseProviders).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps unsupported V2 subscription routes visible without claiming CLI authentication is model access', async () => {
+    const onOpenCodeProviderAction = vi.fn();
+    const onConnectedCountChange = vi.fn();
+    mocks.directory = {
+      entries: [
+        entry('openrouter'),
+        entry('xai'),
+        entry('github-copilot'),
+        entry('kiro'),
+        entry('cursor-acp'),
+      ],
+      loaded: true,
+      loading: false,
+      authoritativeLoaded: false,
+      authoritativePending: false,
+      error: null,
+      refresh: vi.fn(),
+    };
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnect, {
+          enabled: true,
+          cliStatusLoading: false,
+          providers: [openCodeProvider],
+          openCodeRuntimeStatus: {
+            installed: true,
+            source: 'path',
+            state: 'ready',
+            version: '2.1.4',
+            v2Support: 'ready',
+          },
+          openCodeRuntimeStatusLoading: false,
+          onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
+          onOpenCodeProviderAction,
+          onBrowseProviders: vi.fn(),
+          onConnectedCountChange,
+        })
+      );
+      await Promise.resolve();
+    });
+    for (const id of ['supergrok', 'github-copilot', 'kiro', 'cursor']) {
+      const card = host.querySelector(`[data-testid="provider-quick-card-${id}"]`);
+      expect(card?.textContent).toMatch(/requiresV1|cliSignedInRequiresV1/);
+      expect(card?.textContent).not.toContain('cliStatus.quickConnect.planConnected');
+      expect(host.querySelector(`[data-testid="provider-quick-action-${id}"]`)).toBeNull();
+    }
+    expect(host.querySelector('[data-testid="provider-quick-card-kiro"]')?.textContent).toContain(
+      'cliSignedInRequiresV1'
+    );
+    expect(host.querySelector('[data-testid="provider-quick-card-cursor"]')?.textContent).toContain(
+      'cliSignedInRequiresV1'
+    );
+    expect(
+      host.querySelector('[data-testid="provider-quick-card-openrouter"]')?.textContent
+    ).toContain('cliStatus.quickConnect.v1CheckedUsingV2');
+    // Help is accessible through the card's description tooltip, not rendered inline.
+    expect(
+      host.querySelector(
+        '[data-testid="provider-quick-card-openrouter"] [aria-label*="v1CheckedUsingV2Detail"]'
+      )
+    ).not.toBeNull();
+    expect(onConnectedCountChange).toHaveBeenLastCalledWith(1);
+    expect(onOpenCodeProviderAction).not.toHaveBeenCalled();
+  });
+
+  it('refreshes both the provider directory and project model catalog after local setup', async () => {
+    const refresh = vi.fn(async () => undefined);
+    mocks.directory = {
+      entries: [],
+      loaded: true,
+      loading: false,
+      authoritativeLoaded: true,
+      authoritativePending: false,
+      error: null,
+      refresh,
+    };
+
+    await renderQuickConnect('/tmp/local-model-project');
+    // The settled runtime identity reaches the directory hook.
+    expect(mocks.quickConnectOptions?.runtimeRevision).toBe('["ready","1.17.18",null]');
+    await act(async () => {
+      await mocks.localProviderDialogProps?.onConfigured();
+    });
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(mocks.fetchCliProviderStatus).toHaveBeenCalledWith('opencode', {
+      silent: false,
+      checkReason: 'manual_refresh',
+      projectPath: '/tmp/local-model-project',
+    });
+  });
+
+  it('keeps last-known connected cards actionable during a refresh error', async () => {
+    mocks.directory = {
+      entries: [
+        entry('openrouter'),
+        entry('vercel'),
+        entry('xai'),
+        entry('kiro', { metadata: { ...entry('kiro').metadata, configuredAuthless: true } }),
+        entry('cursor-acp', {
+          metadata: { ...entry('cursor-acp').metadata, configuredAuthless: true },
+        }),
+        entry('xiaomi-token-plan-sgp'),
+      ],
+      loaded: true,
+      loading: false,
+      authoritativeLoaded: true,
+      authoritativePending: false,
+      error: 'Refresh failed',
+      refresh: vi.fn(),
+    };
+
+    await renderQuickConnect();
+
+    expect(host.querySelector('[data-testid="provider-quick-action-supergrok"]')).not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="provider-quick-action-xiaomi-mimo-token-plan"]')
+    ).not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="provider-quick-card-supergrok"]')?.textContent
+    ).toContain('cliStatus.quickConnect.superGrokConnected');
+  });
+
+  it('preserves the last confirmed connected count while OpenCode updates', async () => {
+    const onConnectedCountChange = vi.fn();
+    mocks.directory = {
+      entries: [
+        entry('openrouter'),
+        entry('vercel'),
+        entry('xai'),
+        entry('github-copilot'),
+        entry('kiro', { metadata: { ...entry('kiro').metadata, configuredAuthless: true } }),
+        entry('cursor-acp', {
+          metadata: { ...entry('cursor-acp').metadata, configuredAuthless: true },
+        }),
+        entry('kimi-for-coding'),
+        entry('zai-coding-plan'),
+        entry('minimax-coding-plan'),
+        entry('xiaomi-token-plan-sgp'),
+      ],
+      loaded: true,
+      loading: false,
+      authoritativeLoaded: true,
+      authoritativePending: false,
+      error: null,
+      refresh: vi.fn(),
+    };
+    const renderWithStatus = async (state: OpenCodeRuntimeStatus['state']): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(RuntimeProviderQuickConnect, {
+            enabled: true,
+            cliStatusLoading: false,
+            providers: [openCodeProvider],
+            openCodeRuntimeStatus: {
+              installed: true,
+              source: 'app-managed',
+              state,
+              version: '1.17.18',
+            },
+            openCodeRuntimeStatusLoading: state !== 'ready',
+            onInstallOpenCode: vi.fn(),
+            onRefreshOpenCode: vi.fn(),
+            onOpenCodeProviderAction: vi.fn(),
+            onBrowseProviders: vi.fn(),
+            onConnectedCountChange,
+          })
+        );
+        await Promise.resolve();
+      });
+    };
+
+    await renderWithStatus('ready');
+    expect(onConnectedCountChange).toHaveBeenLastCalledWith(10);
+    await renderWithStatus('installing');
+    expect(onConnectedCountChange).toHaveBeenLastCalledWith(10);
+  });
+
+  it('routes OpenRouter management and Vercel setup through the verified provider flow', async () => {
+    const onOpenCodeProviderAction = vi.fn();
+    mocks.directory = {
+      entries: [
+        entry('openrouter'),
+        entry('vercel', {
+          state: 'available',
+          connectedAuthHint: null,
+          setupKind: 'connect-api-key',
+          authMethods: ['api'],
+        }),
+      ],
+      loaded: true,
+      loading: false,
+      authoritativeLoaded: true,
+      authoritativePending: false,
+      error: null,
+      refresh: vi.fn(),
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnect, {
+          enabled: true,
+          cliStatusLoading: false,
+          providers: [openCodeProvider],
+          openCodeRuntimeStatus: runtimeStatus(),
+          openCodeRuntimeStatusLoading: false,
+          onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
+          onOpenCodeProviderAction,
+          onBrowseProviders: vi.fn(),
+        })
+      );
+    });
+
+    expect(
+      host.querySelector('[data-testid="provider-quick-card-openrouter"]')?.textContent
+    ).toContain('OpenRouter');
+    expect(host.querySelector('[data-testid="provider-quick-card-vercel"]')?.textContent).toContain(
+      'Vercel AI Gateway'
+    );
+
+    await act(async () => {
+      host
+        .querySelector<HTMLButtonElement>('[data-testid="provider-quick-action-openrouter"]')
+        ?.click();
+      host
+        .querySelector<HTMLButtonElement>('[data-testid="provider-quick-action-vercel"]')
+        ?.click();
+    });
+
+    expect(onOpenCodeProviderAction).toHaveBeenNthCalledWith(1, 'openrouter', 'select');
+    expect(onOpenCodeProviderAction).toHaveBeenNthCalledWith(2, 'vercel', 'settings-connect');
+  });
+
+  it('routes every unavailable gateway state to provider settings', async () => {
+    const cases = [
+      {
+        entries: [],
+        loading: false,
+        loaded: true,
+        authoritativeLoaded: false,
+        authoritativePending: false,
+        error: 'directory unavailable',
+        expectedState: 'connectable',
+        expectedLabel: 'cliStatus.quickConnect.readyToConnect',
+      },
+      {
+        entries: [],
+        loading: false,
+        loaded: true,
+        authoritativeLoaded: false,
+        authoritativePending: false,
+        error: null,
+        expectedState: 'connectable',
+        expectedLabel: 'cliStatus.quickConnect.readyToConnect',
+      },
+      {
+        entries: [entry('openrouter', { state: 'error', setupKind: 'unsupported' })],
+        loading: false,
+        loaded: true,
+        authoritativeLoaded: true,
+        authoritativePending: false,
+        error: null,
+        expectedState: 'unavailable',
+        expectedLabel: 'cliStatus.quickConnect.notInCatalog',
+      },
+    ] as const;
+
+    for (const directory of cases) {
+      mocks.directory = { ...directory, refresh: vi.fn() };
+      const onOpenCodeProviderAction = vi.fn();
+      await renderQuickConnect(null, onOpenCodeProviderAction);
+
+      const card = host.querySelector('[data-testid="provider-quick-card-openrouter"]');
+      const action = host.querySelector<HTMLButtonElement>(
+        '[data-testid="provider-quick-action-openrouter"]'
+      );
+      expect(card?.querySelector(`[title="${directory.expectedLabel}"]`)?.className).toContain(
+        directory.expectedState === 'connectable'
+          ? 'text-sky-300'
+          : 'text-[var(--color-text-muted)]'
+      );
+      expect(card?.textContent).toContain(directory.expectedLabel);
+      expect(card?.textContent).toContain('cliStatus.quickConnect.checkAndConnect');
+      expect(action).not.toBeNull();
+
+      await act(async () => action?.click());
+      expect(onOpenCodeProviderAction).toHaveBeenCalledWith('openrouter', 'settings-connect');
+    }
+  });
+
+  it('does not report missing or negative seed providers as not found before reconciliation', async () => {
+    mocks.directory = {
+      entries: [
+        entry('zai-coding-plan'),
+        entry('openrouter', {
+          state: 'error',
+          setupKind: 'unsupported',
+          modelCount: null,
+          metadata: {
+            ...entry('openrouter').metadata,
+            hasKnownModels: false,
+            supportedInlineAuth: false,
+          },
+        }),
+      ],
+      loaded: true,
+      loading: false,
+      authoritativeLoaded: false,
+      authoritativePending: true,
+      error: null,
+      refresh: vi.fn(),
+    };
+
+    await renderQuickConnect();
+
+    const openRouterCard = host.querySelector('[data-testid="provider-quick-card-openrouter"]');
+    const vercelCard = host.querySelector('[data-testid="provider-quick-card-vercel"]');
+    expect(openRouterCard?.textContent).toContain('cliStatus.quickConnect.checkingPlan');
+    expect(vercelCard?.textContent).toContain('cliStatus.quickConnect.checkingPlan');
+    expect(openRouterCard?.textContent).not.toContain('cliStatus.quickConnect.notInCatalog');
+    expect(vercelCard?.textContent).not.toContain('cliStatus.quickConnect.notInCatalog');
+  });
+
+  it('re-verifies a signed-in companion when its OpenCode bridge is not ready', async () => {
+    const runConnect = vi.fn(async () => undefined);
+    mocks.companions.set('cursor-agent', companion('cursor-agent', runConnect));
+    mocks.directory = {
+      entries: [
+        entry('kiro', { metadata: { ...entry('kiro').metadata, configuredAuthless: true } }),
+      ],
+      loaded: true,
+      loading: false,
+      authoritativeLoaded: true,
+      authoritativePending: false,
+      error: null,
+      refresh: vi.fn(),
+    };
+
+    await renderQuickConnect();
+    const card = host.querySelector('[data-testid="provider-quick-card-cursor"]');
+    expect(card?.textContent).toContain('cliStatus.quickConnect.statusUnavailable');
+    const action = host.querySelector<HTMLButtonElement>(
+      '[data-testid="provider-quick-action-cursor"]'
+    );
+    await act(async () => action?.click());
+    expect(runConnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('switches a connected Kiro account through the explicit global-session action', async () => {
+    const runAction = vi.fn(async () => undefined);
+    mocks.companions.set('kiro-cli', companion('kiro-cli', undefined, runAction));
+    mocks.directory = {
+      entries: [
+        entry('kiro', { metadata: { ...entry('kiro').metadata, configuredAuthless: true } }),
+      ],
+      loaded: true,
+      loading: false,
+      authoritativeLoaded: true,
+      authoritativePending: false,
+      error: null,
+      refresh: vi.fn(),
+    };
+
+    await renderQuickConnect();
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-testid="provider-quick-action-kiro"]')?.click();
+    });
+    const switchAccount = [...document.body.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Switch account')
+    );
+    await act(async () => switchAccount?.click());
+    const confirm = [...document.body.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Sign out and continue')
+    );
+    await act(async () => confirm?.click());
+
+    expect(runAction).toHaveBeenCalledWith('switch-account');
+  });
+
+  it('routes the current MiMo endpoint through the reusable reconnect flow', async () => {
+    const onOpenCodeProviderAction = vi.fn();
+    mocks.directory = {
+      entries: [entry('xiaomi-token-plan-sgp')],
+      loaded: true,
+      loading: false,
+      authoritativeLoaded: true,
+      authoritativePending: false,
+      error: null,
+      refresh: vi.fn(),
+    };
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnect, {
+          enabled: true,
+          cliStatusLoading: false,
+          providers: [openCodeProvider],
+          openCodeRuntimeStatus: {
+            installed: true,
+            source: 'app-managed',
+            state: 'ready',
+            version: '1.17.18',
+          },
+          openCodeRuntimeStatusLoading: false,
+          onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
+          onOpenCodeProviderAction,
+          onBrowseProviders: vi.fn(),
+        })
+      );
+    });
+    await act(async () => {
+      host
+        .querySelector<HTMLButtonElement>(
+          '[data-testid="provider-quick-action-xiaomi-mimo-token-plan"]'
+        )
+        ?.click();
+    });
+    const input = document.body.querySelector<HTMLInputElement>(
+      '[data-testid="xiaomi-mimo-base-url"]'
+    );
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    await act(async () => {
+      setter?.call(input, 'https://token-plan-sgp.xiaomimimo.com/v1');
+      input?.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      document.body
+        .querySelector<HTMLButtonElement>('[data-testid="xiaomi-mimo-continue"]')
+        ?.click();
+    });
+
+    expect(onOpenCodeProviderAction).toHaveBeenCalledWith('xiaomi-token-plan-sgp', 'reconnect');
+  });
+
+  it.each(['native', 'support', 'support checking'] as const)(
+    'names the actual V2 %s installation target',
+    async (target) => {
+      await act(async () =>
+        root.render(
+          React.createElement(RuntimeProviderQuickConnect, {
+            enabled: true,
+            cliStatusLoading: false,
+            providers: [],
+            openCodeRuntimeStatus: {
+              installed: true,
+              source: 'override',
+              version: '2.1.4',
+              state: target === 'support checking' ? 'checking' : 'downloading',
+              v2Support: target.startsWith('support') ? 'required' : 'ready',
+              progress: {
+                phase: target === 'support checking' ? 'checking' : 'downloading',
+                percent: 42,
+                detail:
+                  target === 'support checking'
+                    ? 'Checking OpenCode V2 support files...'
+                    : target === 'support'
+                      ? 'Downloading OpenCode V2 support...'
+                      : 'Downloading native OpenCode...',
+              },
+            },
+            openCodeRuntimeStatusLoading: true,
+            onInstallOpenCode: vi.fn(),
+            onRefreshOpenCode: vi.fn(),
+            onOpenCodeProviderAction: vi.fn(),
+            onBrowseProviders: vi.fn(),
+          })
+        )
+      );
+      const label =
+        target === 'support checking'
+          ? 'cliStatus.runtimeInstall.v2SupportFiles: cliStatus.runtimeInstall.checking'
+          : target === 'support'
+            ? 'cliStatus.runtimeInstall.v2SupportFiles: cliStatus.runtimeInstall.installing'
+            : 'cliStatus.quickConnect.installingOpenCode';
+      for (const id of ['supergrok', 'xiaomi-mimo-token-plan']) {
+        const card = host.querySelector(`[data-testid="provider-quick-card-${id}"]`);
+        expect(card?.textContent).toContain(label);
+        expect(card?.textContent).not.toContain('cliStatus.quickConnect.checkingPlan');
+      }
+      expect(host.querySelector('[data-testid="provider-quick-action-supergrok"]')).toBeNull();
+    }
+  );
+
+  it('shows a failed native download and enables its install retry', async () => {
+    const onInstallOpenCode = vi.fn();
+    await act(async () =>
+      root.render(
+        React.createElement(RuntimeProviderQuickConnect, {
+          enabled: true,
+          cliStatusLoading: false,
+          providers: [],
+          openCodeRuntimeStatus: {
+            installed: false,
+            source: 'missing',
+            state: 'failed',
+            error: 'TEST native download failed',
+          },
+          openCodeRuntimeStatusLoading: false,
+          onInstallOpenCode,
+          onRefreshOpenCode: vi.fn(),
+          onOpenCodeProviderAction: vi.fn(),
+          onBrowseProviders: vi.fn(),
+        })
+      )
+    );
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+      'TEST native download failed'
+    );
+    const retry = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('cliStatus.quickConnect.retryOpenCode')
+    );
+    expect(retry?.disabled).toBe(false);
+    await act(async () => retry?.click());
+    expect(onInstallOpenCode).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['unknown', 'support required', 'support failed'] as const)(
+    'does not warm provider reads while native readiness is %s',
+    async (reason) => {
+      mocks.directory = {
+        entries: [],
+        loaded: false,
+        loading: true,
+        authoritativeLoaded: false,
+        authoritativePending: true,
+        error: null,
+        refresh: vi.fn(),
+      };
+
+      await act(async () => {
+        root.render(
+          React.createElement(RuntimeProviderQuickConnect, {
+            enabled: true,
+            cliStatusLoading: true,
+            providers: [],
+            openCodeRuntimeStatus:
+              reason === 'unknown'
+                ? null
+                : {
+                    installed: true,
+                    source: 'override',
+                    state: reason === 'support failed' ? 'failed' : 'idle',
+                    version: '2.1.4',
+                    v2Support: 'required',
+                    compatibleV2Version: '2.2.0',
+                    ...(reason === 'support required' && {
+                      error: 'V2 support files missing: ENOENT /TEST/cache/support/package.json',
+                    }),
+                    ...(reason === 'support failed' && {
+                      error: 'V2 support download failed: network unavailable',
+                    }),
+                  },
+            openCodeRuntimeStatusLoading: reason === 'unknown',
+            onInstallOpenCode: vi.fn(),
+            onRefreshOpenCode: vi.fn(),
+            onOpenCodeProviderAction: vi.fn(),
+            onBrowseProviders: vi.fn(),
+          })
+        );
+      });
+
+      expect(mocks.quickConnectOptions?.enabled).toBe(false);
+      expect(mocks.companionOptions).toEqual(
+        new Map([
+          ['kiro-cli', false],
+          ['cursor-agent', false],
+        ])
+      );
+      if (reason !== 'unknown') {
+        expect(host.textContent).toContain('cliStatus.runtimeInstall.v2SupportInstall');
+        expect(host.textContent).not.toContain('cliStatus.quickConnect.requiresOpenCode');
+        expect(host.textContent).not.toContain('cliStatus.quickConnect.checkingPlan');
+        expect(
+          host.querySelector(
+            '[data-testid="provider-quick-card-xiaomi-mimo-token-plan"] svg.animate-spin'
+          )
+        ).toBeNull();
+        expect(host.textContent).not.toContain('cliStatus.quickConnect.installOpenCode');
+        expect(host.textContent).not.toContain('cliStatus.quickConnect.retryOpenCode');
+        expect(host.textContent).not.toContain('ENOENT');
+        const notice = host.querySelector('[data-testid="provider-quick-opencode-prerequisite"]');
+        expect(notice?.textContent).not.toContain('cliStatus.runtimeInstall.overrideSelection');
+        expect(notice?.querySelector('button')?.textContent).toContain(
+          'cliStatus.runtimeInstall.v2SupportInstall'
+        );
+        if (reason === 'support failed') {
+          expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+            'V2 support download failed: network unavailable'
+          );
+        }
+      }
+    }
+  );
+});
+
+function runtimeStatus(overrides: Partial<OpenCodeRuntimeStatus> = {}): OpenCodeRuntimeStatus {
+  return {
+    installed: true,
+    version: '1.16.0',
+    source: 'app-managed',
+    state: 'ready',
+    ...overrides,
+  };
+}
+
+describe('runtimeProviderQuickConnect domain policy', () => {
+  it('keeps a selected native V2 unavailable until its separate support is ready', () => {
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: runtimeStatus({ version: '2.9.0', v2Support: 'required' }),
+        runtimeStatusLoading: false,
+        provider: null,
+        cliStatusLoading: false,
+      })
+    ).toBe('support-required');
+  });
+
+  it('compares OpenCode versions without treating newer minor versions as outdated', () => {
+    expect(isOpenCodeProviderOAuthBridgeOutdated(runtimeStatus({ version: '1.15.6' }))).toBe(true);
+    expect(isOpenCodeProviderOAuthBridgeOutdated(runtimeStatus({ version: '1.15.7' }))).toBe(false);
+    expect(isOpenCodeProviderOAuthBridgeOutdated(runtimeStatus({ version: '1.16.0' }))).toBe(false);
+    expect(isOpenCodeProviderOAuthBridgeOutdated(runtimeStatus({ version: '2.0.0' }))).toBe(false);
+  });
+
+  it('keeps runtime checking, installing, failed, missing, and ready states distinct', () => {
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: null,
+        runtimeStatusLoading: true,
+        provider: null,
+        cliStatusLoading: false,
+      })
+    ).toBe('checking');
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: runtimeStatus({ state: 'installing' }),
+        runtimeStatusLoading: false,
+        provider: null,
+        cliStatusLoading: false,
+      })
+    ).toBe('installing');
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: runtimeStatus({ state: 'failed', error: 'update failed' }),
+        runtimeStatusLoading: false,
+        provider: null,
+        cliStatusLoading: false,
+      })
+    ).toBe('ready');
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: runtimeStatus({ installed: false, state: 'failed', error: 'broken' }),
+        runtimeStatusLoading: false,
+        provider: null,
+        cliStatusLoading: false,
+      })
+    ).toBe('error');
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: runtimeStatus({ installed: false, state: 'idle' }),
+        runtimeStatusLoading: false,
+        provider: null,
+        cliStatusLoading: false,
+      })
+    ).toBe('missing');
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: null,
+        runtimeStatusLoading: false,
+        provider: openCodeProvider,
+        cliStatusLoading: false,
+      })
+    ).toBe('checking');
+  });
+
+  it('requires an installer status even when generic provider authentication is available', () => {
+    for (const status of [
+      null,
+      runtimeStatus({ installed: false, state: 'idle', source: 'missing' }),
+    ]) {
+      expect(
+        resolveOpenCodeQuickConnectGate({
+          runtimeStatus: status,
+          runtimeStatusLoading: false,
+          provider: openCodeProvider,
+          cliStatusLoading: false,
+        })
+      ).toBe(status === null ? 'checking' : 'missing');
+    }
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: runtimeStatus({
+          installed: true,
+          source: 'app-managed',
+          version: '1.18.29',
+        }),
+        runtimeStatusLoading: false,
+        provider: openCodeProvider,
+        cliStatusLoading: false,
+      })
+    ).toBe('ready');
+  });
+
+  it('changes the runtime revision only between settled runtimes', () => {
+    const ready = runtimeStatus({ version: '1.17.18', binaryPath: '/opencode' });
+    const revision = resolveOpenCodeQuickConnectRuntimeRevision({
+      gate: 'ready',
+      runtimeStatus: ready,
+    });
+
+    for (const gate of ['checking', 'installing', 'ready'] as const) {
+      expect(resolveOpenCodeQuickConnectRuntimeRevision({ gate, runtimeStatus: null })).toBeNull();
+    }
+    expect(
+      resolveOpenCodeQuickConnectRuntimeRevision({ gate: 'installing', runtimeStatus: ready })
+    ).toBeNull();
+    expect(
+      resolveOpenCodeQuickConnectRuntimeRevision({
+        gate: 'missing',
+        runtimeStatus: runtimeStatus({ installed: false, state: 'idle' }),
+      })
+    ).toBe('unavailable');
+    expect(
+      resolveOpenCodeQuickConnectRuntimeRevision({
+        gate: 'ready',
+        runtimeStatus: { ...ready, progress: { phase: 'ready', detail: 'Installed' } },
+      })
+    ).toBe(revision);
+    expect(
+      resolveOpenCodeQuickConnectRuntimeRevision({
+        gate: 'ready',
+        runtimeStatus: runtimeStatus({ version: '1.18.0', binaryPath: '/opencode' }),
+      })
+    ).not.toBe(revision);
+  });
+
+  it('only reports SuperGrok connected when the saved credential is OAuth', () => {
+    expect(
+      resolveOpenCodeQuickPlanState({
+        entry: entry('xai', { connectedAuthHint: 'oauth' }),
+        requiresOAuthCredential: true,
+      })
+    ).toBe('connected');
+    expect(
+      resolveOpenCodeQuickPlanState({
+        entry: entry('xai', { connectedAuthHint: 'api' }),
+        requiresOAuthCredential: true,
+      })
+    ).toBe('different-credential');
+  });
+
+  it('accepts explicit plugin credential evidence for a configured Cursor route', () => {
+    expect(
+      resolveOpenCodeQuickPlanState({
+        entry: entry('cursor-acp', {
+          connectedAuthHint: 'api',
+          metadata: {
+            hasKnownModels: true,
+            requiresManualConfig: false,
+            supportedInlineAuth: false,
+            configuredAuthless: true,
+          },
+        }),
+      })
+    ).toBe('connected');
+  });
+
+  it('requires an OpenCode update for SuperGrok unless OAuth is already connected', () => {
+    expect(
+      resolveOpenCodeQuickPlanState({
+        entry: entry('xai', { connectedAuthHint: 'api' }),
+        requiresOAuthCredential: true,
+        oauthBridgeOutdated: true,
+      })
+    ).toBe('update-required');
+    expect(
+      resolveOpenCodeQuickPlanState({
+        entry: entry('xai', { connectedAuthHint: 'oauth' }),
+        requiresOAuthCredential: true,
+        oauthBridgeOutdated: true,
+      })
+    ).toBe('connected');
+  });
+
+  it('maps connectable, manual, and absent providers without inventing connectivity', () => {
+    expect(
+      resolveOpenCodeQuickPlanState({
+        entry: entry('xai', { state: 'available', setupKind: 'connect-api-key' }),
+      })
+    ).toBe('connectable');
+    expect(
+      resolveOpenCodeQuickPlanState({
+        entry: entry('xai', { state: 'available', setupKind: 'configure-manually' }),
+      })
+    ).toBe('manual');
+    expect(resolveOpenCodeQuickPlanState({ entry: null })).toBe('unavailable');
+  });
+});

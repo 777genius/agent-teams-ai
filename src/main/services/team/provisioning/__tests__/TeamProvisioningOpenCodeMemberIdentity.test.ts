@@ -1,0 +1,311 @@
+import { describe, expect, it } from 'vitest';
+
+import { resolveOpenCodeMemberIdentityFromDirectory } from '../TeamProvisioningOpenCodeMemberIdentity';
+
+import type { TeamConfig } from '@shared/types';
+
+function createDirectory(config: TeamConfig) {
+  return {
+    config,
+    teamMeta: null,
+    metaMembers: [],
+  };
+}
+
+function createConfig(members: TeamConfig['members']): TeamConfig {
+  return {
+    name: 'identity-team',
+    projectPath: '/fake/identity-team',
+    members,
+  };
+}
+
+describe('TeamProvisioningOpenCodeMemberIdentity', () => {
+  it('rejects recipients that do not resolve to OpenCode', () => {
+    expect(
+      resolveOpenCodeMemberIdentityFromDirectory({
+        memberName: 'alice',
+        directory: createDirectory(
+          createConfig([
+            { name: 'lead', role: 'Team Lead', providerId: 'anthropic' },
+            { name: 'alice', role: 'Reviewer', providerId: 'anthropic' },
+          ])
+        ),
+      })
+    ).toEqual({ ok: false, reason: 'recipient_is_not_opencode' });
+  });
+
+  it('uses active secondary runtime lanes before planned lane identity', () => {
+    const identity = resolveOpenCodeMemberIdentityFromDirectory({
+      memberName: 'builder',
+      directory: createDirectory(
+        createConfig([
+          { name: 'lead', role: 'Team Lead', providerId: 'anthropic' },
+          { name: 'builder', role: 'Builder', providerId: 'opencode', cwd: '/fake/config-cwd' },
+        ])
+      ),
+      secondaryRuntimeRuns: [
+        {
+          laneId: 'opencode-secondary-builder',
+          memberName: 'builder-2',
+          cwd: '/fake/runtime-cwd',
+        },
+      ],
+    });
+
+    expect(identity).toMatchObject({
+      ok: true,
+      canonicalMemberName: 'builder',
+      laneId: 'opencode-secondary-builder',
+      laneIdentity: {
+        laneId: 'opencode-secondary-builder',
+        laneKind: 'secondary',
+        laneOwnerProviderId: 'opencode',
+      },
+      memberRuntimeCwd: '/fake/runtime-cwd',
+    });
+  });
+
+  it('uses OpenCode aggregate runtime identity when no secondary lane is active', () => {
+    const identity = resolveOpenCodeMemberIdentityFromDirectory({
+      memberName: 'worker',
+      directory: createDirectory(
+        createConfig([
+          {
+            name: 'lead',
+            role: 'Team Lead',
+            providerId: 'opencode',
+            model: 'openrouter/shared-model',
+          },
+          {
+            name: 'worker',
+            role: 'Builder',
+            providerId: 'opencode',
+            model: 'openrouter/shared-model',
+            cwd: '/fake/identity-team',
+          },
+        ])
+      ),
+      runtimeAdapterProviderId: 'opencode',
+    });
+
+    expect(identity).toMatchObject({
+      ok: true,
+      canonicalMemberName: 'worker',
+      laneIdentity: {
+        laneOwnerProviderId: 'opencode',
+      },
+      memberRuntimeCwd: '/fake/identity-team',
+    });
+  });
+
+  it('reconstructs a pure OpenCode secondary model lane without in-memory runtime state', () => {
+    const identity = resolveOpenCodeMemberIdentityFromDirectory({
+      memberName: 'worker',
+      directory: {
+        ...createDirectory(
+          createConfig([
+            {
+              name: 'team-lead',
+              role: 'Team Lead',
+              providerId: 'opencode',
+              model: 'minimax-coding-plan/MiniMax-M3',
+            },
+            {
+              name: 'worker',
+              role: 'Builder',
+              providerId: 'opencode',
+              model: 'zai-coding-plan/glm-5.2',
+            },
+          ])
+        ),
+        teamMeta: {
+          providerId: 'opencode',
+          model: 'minimax-coding-plan/MiniMax-M3',
+        },
+      },
+      runtimeAdapterProviderId: 'opencode',
+    });
+
+    expect(identity).toMatchObject({
+      ok: true,
+      canonicalMemberName: 'worker',
+      laneId: 'secondary:opencode:worker',
+      laneIdentity: {
+        laneId: 'secondary:opencode:worker',
+        laneKind: 'secondary',
+        laneOwnerProviderId: 'opencode',
+      },
+    });
+  });
+
+  it('keeps a same-model relaunch on the primary lane when config.json was not rewritten', () => {
+    const identity = resolveOpenCodeMemberIdentityFromDirectory({
+      memberName: 'atlas',
+      directory: {
+        ...createDirectory(
+          createConfig([
+            {
+              name: 'team-lead',
+              role: 'Team Lead',
+              providerId: 'opencode',
+              model: 'github-copilot/gpt-4.1',
+            },
+            {
+              name: 'atlas',
+              providerId: 'opencode',
+              model: 'github-copilot/gpt-4.1',
+            },
+          ])
+        ),
+        teamMeta: {
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-4.1',
+          launchIdentity: {
+            resolvedLaunchModel: 'github-copilot/gpt-5-mini',
+            selectedModel: 'github-copilot/gpt-5-mini',
+          },
+        },
+        metaMembers: [
+          {
+            name: 'atlas',
+            providerId: 'opencode',
+            model: 'github-copilot/gpt-5-mini',
+          },
+        ],
+      },
+      runtimeAdapterProviderId: 'opencode',
+    });
+
+    expect(identity).toMatchObject({
+      ok: true,
+      canonicalMemberName: 'atlas',
+      laneId: 'primary',
+      laneIdentity: {
+        laneId: 'primary',
+        laneKind: 'primary',
+        laneOwnerProviderId: 'opencode',
+      },
+    });
+  });
+
+  it('reconstructs a secondary lane after relaunch changes the teammate to a distinct model', () => {
+    const identity = resolveOpenCodeMemberIdentityFromDirectory({
+      memberName: 'atlas',
+      directory: {
+        ...createDirectory(
+          createConfig([
+            {
+              name: 'team-lead',
+              role: 'Team Lead',
+              providerId: 'opencode',
+              model: 'github-copilot/gpt-5-mini',
+            },
+            {
+              name: 'atlas',
+              providerId: 'opencode',
+              model: 'github-copilot/gpt-5-mini',
+            },
+          ])
+        ),
+        teamMeta: {
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-5-mini',
+          launchIdentity: {
+            resolvedLaunchModel: 'github-copilot/gpt-5-mini',
+            selectedModel: 'github-copilot/gpt-5-mini',
+          },
+        },
+        metaMembers: [
+          {
+            name: 'atlas',
+            providerId: 'opencode',
+            model: 'zai-coding-plan/glm-5.3-flash',
+          },
+        ],
+      },
+      runtimeAdapterProviderId: 'opencode',
+    });
+
+    expect(identity).toMatchObject({
+      ok: true,
+      canonicalMemberName: 'atlas',
+      laneId: 'secondary:opencode:atlas',
+      laneIdentity: {
+        laneId: 'secondary:opencode:atlas',
+        laneKind: 'secondary',
+        laneOwnerProviderId: 'opencode',
+      },
+    });
+  });
+
+  it('keeps the teammate on primary when relaunch only changes the lead onto the teammate model', () => {
+    const identity = resolveOpenCodeMemberIdentityFromDirectory({
+      memberName: 'atlas',
+      directory: {
+        ...createDirectory(
+          createConfig([
+            {
+              name: 'team-lead',
+              role: 'Team Lead',
+              providerId: 'opencode',
+              model: 'github-copilot/gpt-5-mini',
+            },
+            {
+              name: 'atlas',
+              providerId: 'opencode',
+              model: 'zai-coding-plan/glm-5.3-flash',
+            },
+          ])
+        ),
+        teamMeta: {
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-5-mini',
+          launchIdentity: {
+            resolvedLaunchModel: 'zai-coding-plan/glm-5.3-flash',
+            selectedModel: 'zai-coding-plan/glm-5.3-flash',
+          },
+        },
+        metaMembers: [
+          {
+            name: 'atlas',
+            providerId: 'opencode',
+            model: 'zai-coding-plan/glm-5.3-flash',
+          },
+        ],
+      },
+      runtimeAdapterProviderId: 'opencode',
+    });
+
+    expect(identity).toMatchObject({
+      ok: true,
+      canonicalMemberName: 'atlas',
+      laneId: 'primary',
+      laneIdentity: {
+        laneId: 'primary',
+        laneKind: 'primary',
+        laneOwnerProviderId: 'opencode',
+      },
+    });
+  });
+
+  it('delegates the runtime-only solo recipient fallback', () => {
+    const identity = resolveOpenCodeMemberIdentityFromDirectory({
+      memberName: 'solo',
+      directory: createDirectory(
+        createConfig([{ name: 'team-lead', role: 'Team Lead', providerId: 'opencode' }])
+      ),
+    });
+
+    expect(identity).toMatchObject({
+      ok: true,
+      canonicalMemberName: 'solo',
+      laneId: 'primary',
+      metaMember: {
+        name: 'solo',
+        role: 'Solo OpenCode Agent',
+        providerId: 'opencode',
+      },
+    });
+  });
+});

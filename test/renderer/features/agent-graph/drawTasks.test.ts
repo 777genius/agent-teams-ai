@@ -1,0 +1,287 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import {
+  drawColumnHeaders,
+  drawTasks,
+} from '../../../../packages/agent-graph/src/canvas/draw-tasks';
+
+import type { KanbanZoneInfo } from '../../../../packages/agent-graph/src/layout/kanbanLayout';
+import type { GraphNode } from '@claude-teams/agent-graph';
+
+function createMockContext() {
+  const arcCalls: Array<{ x: number; y: number; radius: number }> = [];
+  const roundRectCalls: Array<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    radius: number;
+  }> = [];
+  const fillTextCalls: Array<{ text: string; x: number; y: number }> = [];
+  const gradient = { addColorStop: vi.fn() };
+  let fillStyle: string | CanvasGradient | CanvasPattern = '';
+  let globalAlpha = 1;
+
+  const ctx = {
+    save: vi.fn(),
+    restore: vi.fn(),
+    beginPath: vi.fn(),
+    closePath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    arc: vi.fn((x: number, y: number, radius: number) => {
+      arcCalls.push({ x, y, radius });
+    }),
+    fill: vi.fn(),
+    stroke: vi.fn(),
+    clip: vi.fn(),
+    drawImage: vi.fn(),
+    setLineDash: vi.fn(),
+    clearRect: vi.fn(),
+    fillRect: vi.fn(),
+    strokeRect: vi.fn(),
+    translate: vi.fn(),
+    scale: vi.fn(),
+    roundRect: vi.fn((x: number, y: number, width: number, height: number, radius: number) => {
+      roundRectCalls.push({ x, y, width, height, radius });
+    }),
+    createRadialGradient: vi.fn(() => gradient),
+    createLinearGradient: vi.fn(() => gradient),
+    measureText: vi.fn((text: string) => ({ width: text.length * 4.5 })),
+    fillText: vi.fn((text: string, x: number, y: number) => {
+      fillTextCalls.push({ text: String(text), x, y });
+    }),
+    strokeText: vi.fn(),
+    shadowColor: '',
+    shadowBlur: 0,
+    shadowOffsetX: 0,
+    shadowOffsetY: 0,
+    strokeStyle: '',
+    lineWidth: 1,
+    font: '',
+    textAlign: 'left' as CanvasTextAlign,
+    textBaseline: 'alphabetic' as CanvasTextBaseline,
+    get fillStyle() {
+      return fillStyle;
+    },
+    set fillStyle(value: string | CanvasGradient | CanvasPattern) {
+      fillStyle = value;
+    },
+    get globalAlpha() {
+      return globalAlpha;
+    },
+    set globalAlpha(value: number) {
+      globalAlpha = value;
+    },
+  } as unknown as CanvasRenderingContext2D;
+
+  return { ctx, arcCalls, roundRectCalls, fillTextCalls };
+}
+
+function createTaskNode(hasLiveTaskLogs: boolean): GraphNode {
+  return {
+    id: 'task:demo:task-live',
+    kind: 'task',
+    label: '#1',
+    state: 'active',
+    displayId: '#1',
+    sublabel: 'Live log task',
+    taskStatus: 'in_progress',
+    reviewState: 'none',
+    hasLiveTaskLogs: hasLiveTaskLogs ? true : undefined,
+    domainRef: { kind: 'task', teamName: 'demo', taskId: 'task-live' },
+    x: 120,
+    y: 80,
+  };
+}
+
+describe('drawTasks', () => {
+  it('hides task headers when semantic zoom hides their task cards', () => {
+    const hidden = createMockContext();
+    const visible = createMockContext();
+    const zones: KanbanZoneInfo[] = [
+      {
+        ownerId: 'team:alpha',
+        ownerX: 0,
+        ownerY: 0,
+        headers: [{ label: 'In Progress', x: 120, y: 80, color: '#38bdf8' }],
+      },
+    ];
+
+    drawColumnHeaders(hidden.ctx, zones, 0.4, new Set());
+    drawColumnHeaders(visible.ctx, zones, 0.4, new Set(['team:alpha']));
+
+    expect(hidden.fillTextCalls).toHaveLength(0);
+    expect(visible.fillTextCalls.length).toBeGreaterThan(0);
+  });
+
+  it('shows empty task placeholders only at detail zoom', () => {
+    const summary = createMockContext();
+    const detail = createMockContext();
+    const zones: KanbanZoneInfo[] = [
+      {
+        ownerId: 'team:alpha',
+        ownerX: 0,
+        ownerY: 0,
+        headers: [{ label: 'In Progress', x: 120, y: 80, color: '#38bdf8' }],
+        emptyPlaceholder: { label: 'No active tasks', x: 120, y: 120, color: '#64748b' },
+      },
+    ];
+
+    drawColumnHeaders(summary.ctx, zones, 0.4, new Set());
+    drawColumnHeaders(detail.ctx, zones, 0.8, new Set());
+
+    expect(summary.fillTextCalls).toHaveLength(0);
+    expect(detail.fillTextCalls.some((call) => call.text === 'No active tasks')).toBe(true);
+  });
+
+  it('shows task content only at detail zoom unless the task is selected', () => {
+    const overview = createMockContext();
+    const summary = createMockContext();
+    const detail = createMockContext();
+    const selected = createMockContext();
+    const hierarchySummary = createMockContext();
+    const hierarchyOverview = createMockContext();
+    const persistentOverviewCard = createMockContext();
+    const node = createTaskNode(false);
+
+    drawTasks(overview.ctx, [node], 1, null, null, null, 0.1);
+    drawTasks(summary.ctx, [node], 1, null, null, null, 0.4);
+    drawTasks(detail.ctx, [node], 1, null, null, null, 0.8);
+    drawTasks(selected.ctx, [node], 1, node.id, null, null, 0.4);
+    drawTasks(
+      hierarchySummary.ctx,
+      [{ ...node, taskZoomVisibility: 'summary' }],
+      1,
+      null,
+      null,
+      null,
+      0.4
+    );
+    drawTasks(
+      hierarchyOverview.ctx,
+      [{ ...node, taskZoomVisibility: 'overview' }],
+      1,
+      null,
+      null,
+      null,
+      0.1
+    );
+    drawTasks(
+      persistentOverviewCard.ctx,
+      [{ ...node, taskZoomVisibility: 'overview', taskOverviewStyle: 'card' }],
+      1,
+      null,
+      null,
+      null,
+      0.1
+    );
+
+    expect(overview.fillTextCalls).toHaveLength(0);
+    expect(summary.fillTextCalls).toHaveLength(0);
+    expect(detail.fillTextCalls.some((call) => call.text === 'Live log task')).toBe(true);
+    expect(selected.fillTextCalls.some((call) => call.text === 'Live log task')).toBe(true);
+    expect(hierarchySummary.fillTextCalls.some((call) => call.text === 'Live log task')).toBe(true);
+    expect(hierarchyOverview.fillTextCalls.some((call) => call.text === 'Live log task')).toBe(
+      true
+    );
+    expect(hierarchyOverview.fillTextCalls.some((call) => call.text === '#1')).toBe(false);
+    expect(persistentOverviewCard.fillTextCalls.some((call) => call.text === '#1')).toBe(true);
+  });
+
+  it('does not draw a progress rail for finished tasks', () => {
+    const completed = createMockContext();
+    const approved = createMockContext();
+    const inProgress = createMockContext();
+    const railCall = (call: { x: number; y: number; width: number; height: number }) =>
+      call.x === -120 && call.y === 29 && call.width === 240 && call.height === 2;
+
+    drawTasks(
+      completed.ctx,
+      [{ ...createTaskNode(false), taskStatus: 'completed' }],
+      1,
+      null,
+      null,
+      null,
+      1
+    );
+    drawTasks(
+      approved.ctx,
+      [{ ...createTaskNode(false), reviewState: 'approved' }],
+      1,
+      null,
+      null,
+      null,
+      1
+    );
+    drawTasks(inProgress.ctx, [createTaskNode(false)], 1, null, null, null, 1);
+
+    expect(completed.roundRectCalls.some(railCall)).toBe(false);
+    expect(approved.roundRectCalls.some(railCall)).toBe(false);
+    expect(inProgress.roundRectCalls.some(railCall)).toBe(true);
+  });
+
+  it('wraps the in-progress segment smoothly across both rail edges', () => {
+    const wrapping = createMockContext();
+    const railWidth = 240;
+    const segmentWidth = railWidth * 0.34;
+    const travel = railWidth - segmentWidth;
+    const wrappingTime = (railWidth - segmentWidth / 2) / (travel * 0.28);
+
+    drawTasks(wrapping.ctx, [createTaskNode(false)], wrappingTime, null, null, null, 1);
+
+    const segmentCalls = wrapping.roundRectCalls.filter(
+      (call) => call.height === 2 && Math.abs(call.width - segmentWidth) < 0.001
+    );
+
+    expect(segmentCalls).toHaveLength(2);
+    expect(segmentCalls.some((call) => call.x > -120)).toBe(true);
+    expect(segmentCalls.some((call) => call.x < -120)).toBe(true);
+  });
+
+  it('draws the live log indicator only for task nodes with live log activity', () => {
+    const active = createMockContext();
+    drawTasks(active.ctx, [createTaskNode(true)], 1, null, null, null, 1);
+
+    const inactive = createMockContext();
+    drawTasks(inactive.ctx, [createTaskNode(false)], 1, null, null, null, 1);
+
+    expect(active.arcCalls.length).toBeGreaterThanOrEqual(3);
+    expect(inactive.arcCalls).toHaveLength(0);
+  });
+
+  it('wraps long task subjects into two canvas lines', () => {
+    const { ctx, fillTextCalls } = createMockContext();
+    const node = {
+      ...createTaskNode(false),
+      displayId: '0f505654',
+      sublabel:
+        'Review VitePress docs: Get missing developer page ready for publishing search analytics routing navigation validation checklist and docs',
+    };
+
+    drawTasks(ctx, [node], 1, null, null, null, 1);
+
+    const firstTitleLine = fillTextCalls.find((call) => call.y === -16);
+    const displayId = fillTextCalls.find((call) => call.text === '0f505654');
+    const secondTitleLine = fillTextCalls.find(
+      (call) => call.y > (firstTitleLine?.y ?? -Infinity) && call.y < (displayId?.y ?? Infinity)
+    );
+
+    expect(firstTitleLine?.text).toContain('Review VitePress docs');
+    expect(secondTitleLine?.text).toContain('...');
+    expect(displayId?.y).toBe(23);
+  });
+
+  it('keeps the compact single-line subject layout for short titles', () => {
+    const { ctx, fillTextCalls } = createMockContext();
+    drawTasks(ctx, [createTaskNode(false)], 1, null, null, null, 1);
+
+    const titleLine = fillTextCalls.find((call) => call.text === 'Live log task');
+    const secondTitleLine = fillTextCalls.find((call) => call.y === 2);
+    const displayId = fillTextCalls.find((call) => call.text === '#1');
+
+    expect(titleLine?.y).toBe(-12);
+    expect(secondTitleLine).toBeUndefined();
+    expect(displayId?.y).toBe(12);
+  });
+});

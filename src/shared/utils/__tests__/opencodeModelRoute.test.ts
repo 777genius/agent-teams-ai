@@ -1,0 +1,206 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  countConfiguredLocalOpenCodeCatalogModels,
+  getOpenCodeModelRoutePresentationStatus,
+  hasExplicitFreeOpenCodeModelId,
+  isKnownConfiguredLocalOpenCodeCatalogModel,
+  isOpenCodeLocalProviderId,
+  isOpenCodeModelExplicitlyFree,
+  isOpenCodeRouteAccessFreeWithoutKey,
+} from '../opencodeModelRoute';
+
+describe('opencodeModelRoute', () => {
+  it('classifies only known on-device providers as local', () => {
+    expect(isOpenCodeLocalProviderId('llama.cpp')).toBe(true);
+    expect(isOpenCodeLocalProviderId(' OLLAMA ')).toBe(true);
+    expect(isOpenCodeLocalProviderId('kiro')).toBe(false);
+    expect(isOpenCodeLocalProviderId('cursor-acp')).toBe(false);
+  });
+
+  it('uses the model source when partial route metadata omits providerId', () => {
+    expect(
+      getOpenCodeModelRoutePresentationStatus({
+        modelId: 'llama.cpp/qwen-test:0.5b',
+        providerId: null,
+        routeKind: 'configured_local',
+      })
+    ).toBe('local');
+    expect(
+      getOpenCodeModelRoutePresentationStatus({
+        modelId: 'kiro/auto',
+        providerId: null,
+        routeKind: 'configured_local',
+      })
+    ).toBe('configured');
+  });
+
+  it('does not label an unknown configured route as local', () => {
+    expect(getOpenCodeModelRoutePresentationStatus({ routeKind: 'configured_local' })).toBe(
+      'configured'
+    );
+  });
+
+  it('classifies connected and builtin-free routes directly', () => {
+    expect(getOpenCodeModelRoutePresentationStatus({ routeKind: 'connected_provider' })).toBe(
+      'connected'
+    );
+    expect(getOpenCodeModelRoutePresentationStatus({ routeKind: 'builtin_free' })).toBe('free');
+    expect(getOpenCodeModelRoutePresentationStatus({ routeKind: 'catalog_provider' })).toBeNull();
+  });
+
+  it('recognizes explicit free model ids', () => {
+    expect(hasExplicitFreeOpenCodeModelId('opencode/big-pickle')).toBe(true);
+    expect(hasExplicitFreeOpenCodeModelId('openrouter/model:free')).toBe(true);
+    expect(hasExplicitFreeOpenCodeModelId('provider/model-free')).toBe(true);
+    expect(hasExplicitFreeOpenCodeModelId('provider/free')).toBe(true);
+    expect(hasExplicitFreeOpenCodeModelId('openai/gpt-5.6')).toBe(false);
+  });
+
+  it('keeps explicit catalog free metadata for catalog routes', () => {
+    expect(
+      isOpenCodeModelExplicitlyFree({
+        modelId: 'community/model',
+        routeKind: 'catalog_provider',
+        free: true,
+      })
+    ).toBe(true);
+    expect(
+      isOpenCodeModelExplicitlyFree({
+        modelId: 'community/model',
+        routeKind: 'catalog_provider',
+        badgeLabel: 'Free',
+      })
+    ).toBe(true);
+  });
+
+  it('ignores stale free metadata on connected and configured routes', () => {
+    expect(
+      isOpenCodeModelExplicitlyFree({
+        modelId: 'openai/gpt-5.6',
+        routeKind: 'connected_provider',
+        free: true,
+        badgeLabel: 'Free',
+      })
+    ).toBe(false);
+    expect(
+      isOpenCodeModelExplicitlyFree({
+        modelId: 'kiro/auto',
+        routeKind: 'configured_local',
+        free: true,
+      })
+    ).toBe(false);
+  });
+
+  it('uses live Zen route metadata over a misleading free suffix', () => {
+    expect(
+      isOpenCodeModelExplicitlyFree({
+        modelId: 'opencode/paid:free',
+        routeKind: 'catalog_provider',
+        accessKind: 'not_authenticated',
+        free: false,
+      })
+    ).toBe(false);
+    expect(
+      isOpenCodeModelExplicitlyFree({
+        modelId: 'opencode/space-bunny-free',
+        routeKind: 'builtin_free',
+        accessKind: 'builtin_free',
+        free: true,
+      })
+    ).toBe(true);
+  });
+
+  it('keeps explicitly named free models on connected providers', () => {
+    expect(
+      isOpenCodeModelExplicitlyFree({
+        modelId: 'openrouter/community/model:free',
+        routeKind: 'connected_provider',
+      })
+    ).toBe(true);
+  });
+
+  it('counts only known configured-local routes, not companion config', () => {
+    expect(
+      countConfiguredLocalOpenCodeCatalogModels([
+        {
+          id: 'ollama/qwen',
+          launchModel: 'ollama/qwen',
+          metadata: { opencode: { providerId: 'ollama', routeKind: 'configured_local' } },
+        },
+        {
+          id: 'lmstudio/phi',
+          launchModel: 'lmstudio/phi',
+          metadata: { opencode: { providerId: 'lmstudio', routeKind: 'configured_local' } },
+        },
+        {
+          id: 'kiro/auto',
+          launchModel: 'kiro/auto',
+          metadata: { opencode: { providerId: 'kiro', routeKind: 'configured_local' } },
+        },
+      ])
+    ).toBe(2);
+  });
+
+  it('trusts a builtin_free route as access-free without a key', () => {
+    expect(isOpenCodeRouteAccessFreeWithoutKey({ routeKind: 'builtin_free' })).toBe(true);
+    expect(isOpenCodeRouteAccessFreeWithoutKey({ accessKind: 'builtin_free' })).toBe(true);
+  });
+
+  it('never claims access-free when the live check reports a blocker, even on a builtin_free route', () => {
+    expect(
+      isOpenCodeRouteAccessFreeWithoutKey({
+        routeKind: 'builtin_free',
+        accessKind: 'not_authenticated',
+      })
+    ).toBe(false);
+    expect(
+      isOpenCodeRouteAccessFreeWithoutKey({
+        routeKind: 'builtin_free',
+        accessKind: 'execution_failed',
+      })
+    ).toBe(false);
+  });
+
+  it('lets any present live access state override a builtin_free route kind', () => {
+    for (const accessKind of ['unknown_model', 'credentialed', 'no_model', 'verified']) {
+      expect(isOpenCodeRouteAccessFreeWithoutKey({ routeKind: 'builtin_free', accessKind })).toBe(
+        false
+      );
+    }
+    expect(
+      isOpenCodeRouteAccessFreeWithoutKey({ routeKind: 'builtin_free', accessKind: 'builtin_free' })
+    ).toBe(true);
+  });
+
+  it('does not promise free access for a route the provider refused on the free tier', () => {
+    expect(
+      isOpenCodeRouteAccessFreeWithoutKey({
+        routeKind: 'builtin_free',
+        accessKind: 'builtin_free',
+        failureCode: 'free_tier_restricted',
+      })
+    ).toBe(false);
+  });
+
+  it('does not treat a Go-style connected route as access-free', () => {
+    expect(
+      isOpenCodeRouteAccessFreeWithoutKey({ routeKind: 'connected_provider', free: true })
+    ).toBe(false);
+  });
+
+  it('keeps known local catalog models when the live overlay misses them', () => {
+    expect(
+      isKnownConfiguredLocalOpenCodeCatalogModel('ollama/qwen', {
+        id: 'ollama/qwen',
+        metadata: { opencode: { providerId: 'ollama', routeKind: 'configured_local' } },
+      })
+    ).toBe(true);
+    expect(
+      isKnownConfiguredLocalOpenCodeCatalogModel('corp-local/model', {
+        id: 'corp-local/model',
+        metadata: { opencode: { providerId: 'corp-local', routeKind: 'configured_local' } },
+      })
+    ).toBe(false);
+  });
+});

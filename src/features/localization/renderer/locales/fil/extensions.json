@@ -1,0 +1,688 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "Magdagdag ng Custom",
+      "openDashboard": "Buksan ang Dashboard",
+      "refreshCatalog": "I-refresh ang catalog"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "Plugins: {{status}}",
+      "skills": "Skills: {{status}}"
+    },
+    "desktopOnly": "Available sa desktop app lang.",
+    "provider": {
+      "checkingStatus": "Sinusuri ang status ng provider...",
+      "connected": "Konektado",
+      "loading": "Niloload...",
+      "needsSetup": "Kailangan ng setup",
+      "readyToConfigure": "Handa nang i-configure",
+      "unsupported": "Hindi sinusuportahan"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "Kailangan ng Extensions ang na-configure na runtime para mamahala ng mga plugin, MCP server, skill, at provider connection.",
+      "checkingAvailabilityTitle": "Sinusuri ang availability ng extensions runtime",
+      "failedToStartDescription": "Naka-disable ang Extensions hanggang sa pumasa ang runtime sa startup health check nito. Buksan ang Dashboard para ayusin o i-reinstall ito.",
+      "failedToStartTitle": "Nakita ang na-configure na runtime ngunit nabigong magsimula",
+      "multimodelCapabilitiesDescription": "Maaaring magkaiba ang suporta ng provider ayon sa seksyon. Ipinapakita ang mga plugin kung saan lang tahasang idineklara ng runtime ang suporta.",
+      "multimodelCapabilitiesTitle": "Mga kakayahan ng multimodel runtime",
+      "needsSignInDescription": "Nakita ang {{runtime}}{{version}}, ngunit naka-disable ang mga pag-install ng plugin hanggang sa mag-sign in ka mula sa Dashboard.",
+      "needsSignInTitle": "Kailangang mag-sign in ang {{runtime}}",
+      "notAvailableDescription": "Naka-disable ang Extensions hanggang sa ma-install ang runtime. Buksan ang Dashboard para i-install ito at subukang muli.",
+      "notAvailableTitle": "Hindi available ang na-configure na runtime",
+      "readyDescription": "Maaaring i-install ang mga plugin mula sa page na ito{{versionSuffix}}.",
+      "readyTitle": "Handa na ang {{runtime}}",
+      "requiredForMutations": "Kailangan ang na-configure na runtime para mag-install o mag-uninstall ng mga extension. I-install o ayusin ito mula sa Dashboard."
+    },
+    "sessionsRestartWarning": "Hindi makukuha ng mga tumatakbong session ang mga pagbabago sa extension hanggang sa ma-restart ang mga ito.",
+    "tabs": {
+      "apiKeys": {
+        "description": "Mga secret key para sa mga online service. Idagdag ang mga ito dito para makakonekta at gumana ang mga plugin, server, at integration.",
+        "label": "API Keys"
+      },
+      "mcpServers": {
+        "description": "Mga koneksyon sa mga panlabas na tool at app. Pinapayagan nila ang runtime na magbasa ng data o gumawa ng mga aksyon lampas sa app na ito.",
+        "label": "MCP Servers"
+      },
+      "plugins": {
+        "description": "Mga maliit na add-on para sa runtime. Sa multimodel mode, kasalukuyang nalalapat ang mga ito sa mga Anthropic session kapag sinusuportahan. Nasa development pa ang mas malawak na suporta ng provider.",
+        "label": "Plugins"
+      },
+      "skills": {
+        "description": "Mga handa nang tagubilin para sa mga karaniwang gawain. Tinutulungan nila ang runtime na hawakan ang mga paulit-ulit na task nang mas pare-pareho.",
+        "label": "Skills"
+      }
+    },
+    "title": "Extensions"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} aktibo",
+    "browseByFit": "Mag-browse ayon sa angkop",
+    "capabilities": "Mga Kakayahan",
+    "categories": "Mga Kategorya",
+    "clearAllFilters": "I-clear lahat ng filter",
+    "clearFilters": "I-clear ang mga filter",
+    "counts": {
+      "capabilities": "{{count}} kakayahan",
+      "categories": "{{count}} kategorya",
+      "plugins": "{{count}} plugin",
+      "capabilities_few": "{{count}} kakayahan",
+      "capabilities_many": "{{count}} kakayahan",
+      "capabilities_one": "{{count}} kakayahan",
+      "capabilities_other": "{{count}} kakayahan",
+      "categories_few": "{{count}} kategorya",
+      "categories_many": "{{count}} kategorya",
+      "categories_one": "{{count}} kategorya",
+      "categories_other": "{{count}} kategorya",
+      "plugins_few": "{{count}} plugin",
+      "plugins_many": "{{count}} plugin",
+      "plugins_one": "{{count}} plugin",
+      "plugins_other": "{{count}} plugin"
+    },
+    "empty": {
+      "description": "Bumalik mamaya para sa mga bagong plugin",
+      "filteredDescription": "Subukang ayusin ang iyong paghahanap o criteria ng filter",
+      "filteredTitle": "Walang plugin na tumutugma sa iyong mga filter",
+      "title": "Walang available na plugin"
+    },
+    "filterDescription": "Paliitin ang catalog ayon sa kategorya, kakayahan, o naka-install na state.",
+    "installedOnly": "Naka-install lang",
+    "providerSupportNotice": "Kasalukuyang ginagarantiya ang suporta sa plugin para sa mga Anthropic (Claude) session lang. Ginagawan namin ng paraan na suportahan ang mga plugin sa lahat ng agent.",
+    "resultsUpdateInstantly": "Agad na nag-a-update ang mga resulta habang pinipino mo ang mga filter.",
+    "searchPlaceholder": "Maghanap ng mga plugin...",
+    "selectedCount": "{{count}} napili",
+    "showing": "Ipinapakita ang {{shown}} ng {{total}} plugin",
+    "sort": {
+      "category": "Kategorya",
+      "nameAsc": "Pangalan A-Z",
+      "nameDesc": "Pangalan Z-A",
+      "popular": "Popular"
+    },
+    "activeFilters_few": "{{count}} aktibo",
+    "activeFilters_many": "{{count}} aktibo",
+    "activeFilters_one": "{{count}} aktibo",
+    "activeFilters_other": "{{count}} aktibo",
+    "selectedCount_few": "{{count}} napili",
+    "selectedCount_many": "{{count}} napili",
+    "selectedCount_one": "{{count}} napili",
+    "selectedCount_other": "{{count}} napili"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "Idagdag",
+      "cancel": "Kanselahin",
+      "install": "I-install",
+      "installing": "Ini-install..."
+    },
+    "description": "Magdagdag ng server nang manu-mano nang walang catalog.",
+    "errors": {
+      "installFailed": "Nabigo ang pag-install",
+      "invalidServerName": "Invalid na pangalan ng server. Gumamit ng mga alphanumeric na character, gitling, underscore, tuldok.",
+      "npmPackageRequired": "Kailangan ang pangalan ng npm package",
+      "serverNameRequired": "Kailangan ang pangalan ng server",
+      "serverUrlRequired": "Kailangan ang URL ng server"
+    },
+    "fields": {
+      "environmentVariables": "Environment Variables",
+      "headers": "Headers",
+      "npmPackage": "npm Package",
+      "scope": "Scope",
+      "serverName": "Server Name",
+      "serverUrl": "Server URL",
+      "transport": "Transport",
+      "transportType": "Transport Type",
+      "versionOptional": "Bersyon (opsyonal)"
+    },
+    "title": "Magdagdag ng Custom MCP Server",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stdio (npm)"
+    },
+    "placeholders": {
+      "headerName": "Header-Name",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "my-server",
+      "latest": "latest",
+      "value": "value",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "Maaaring kailanganin pa rin ng mga remote MCP server ang mga custom header o API key kahit hindi inilalarawan ng registry ang mga ito. Kung nabigo ang koneksyon pagkatapos i-install, tingnan ang mga docs ng provider.",
+      "required": "Kailangan ng authentication ng server na ito"
+    },
+    "diagnostics": {
+      "launchTarget": "Launch Target"
+    },
+    "form": {
+      "autoFilled": "Awtomatikong napunan",
+      "environmentVariables": "Environment Variables",
+      "headers": "Headers",
+      "scope": "Scope",
+      "serverName": "Server Name"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "Kailangan ng manu-manong setup ng server na ito. Tingnan ang repository para sa mga tagubilin sa pag-install.",
+      "manualSetupRequired": "Kailangan ng manu-manong setup",
+      "npmPackage": "npm: {{package}}",
+      "manage": "Pamahalaan ang Pag-install",
+      "install": "I-install ang Server"
+    },
+    "links": {
+      "glama": "Glama",
+      "repository": "Repository",
+      "website": "Website"
+    },
+    "metadata": {
+      "author": "May-akda",
+      "githubStars": "GitHub Stars",
+      "hosting": "Hosting",
+      "installType": "Uri ng Install",
+      "license": "Lisensya",
+      "published": "Nai-publish",
+      "source": "Pinagmulan",
+      "updated": "Na-update",
+      "version": "Bersyon"
+    },
+    "scope": {
+      "local": "Lokal",
+      "project": "Proyekto"
+    },
+    "tools": {
+      "title": "Mga Tool ({{count}})",
+      "title_few": "Mga Tool ({{count}})",
+      "title_many": "Mga Tool ({{count}})",
+      "title_one": "Mga Tool ({{count}})",
+      "title_other": "Mga Tool ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "my-server"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "Kanselahin",
+      "createSkill": "Lumikha ng Skill",
+      "preparing": "Naghahanda...",
+      "reviewAndCreate": "Suriin At Likhain",
+      "reviewAndSave": "Suriin At I-save",
+      "saveSkill": "I-save ang Skill"
+    },
+    "advanced": {
+      "customDescription": "Gumagamit ang skill na ito ng custom markdown format, kaya i-edit ito nang direkta dito.",
+      "customTitle": "2. SKILL.md editor",
+      "description": "Maaari itong laktawan ng karamihan. Buksan lang ito kung gusto mo ng direktang kontrol sa raw na markdown file.",
+      "hide": "Itago ang Advanced Editor",
+      "resetFromStructuredFields": "I-reset Mula sa Mga Structured Field",
+      "show": "Ipakita ang Advanced Editor",
+      "title": "4. Advanced SKILL.md editor"
+    },
+    "basics": {
+      "description": "Bigyan ang skill na ito ng malinaw na pangalan, piliin kung sino ang makakagamit nito, at magpasya kung saan ito dapat mailagay.",
+      "title": "1. Mga Pangunahin"
+    },
+    "description": {
+      "create": "Ilarawan ang workflow sa simpleng wika, suriin ang mga file na lilikhain, pagkatapos ay i-save ito.",
+      "edit": "I-update ang skill na ito, suriin ang mga resultang pagbabago sa file, pagkatapos ay i-save ito."
+    },
+    "extraFiles": {
+      "addedFiles": "Mga idinagdag na file:",
+      "assets": "Mga Asset",
+      "assetsDescription": "Magdagdag ng mga screenshot o naka-bundle na media kung tumutulong lang ang mga ito na ipaliwanag ang workflow.",
+      "description": "Magdagdag ng mga sumusuportang doc, script, o asset kung talagang kailangan ng skill na ito ng mga ito.",
+      "lockedForEdits": "Naka-lock para sa mga pag-edit ang root at folder",
+      "optionalDescription": "Magdagdag ng mga starter file na isasama sa review at isusulat kasama ang `SKILL.md`.",
+      "optionalTitle": "Mga opsyonal na file",
+      "references": "Mga Reference",
+      "referencesDescription": "Magdagdag ng mga sumusuportang doc, link, o halimbawa na maaaring tingnan ng runtime.",
+      "scripts": "Mga Script",
+      "scriptsDescription": "Magdagdag ng mga helper command o setup note. Suriing mabuti bago ibahagi ang skill na ito.",
+      "title": "3. Mga karagdagang file"
+    },
+    "fields": {
+      "compatibility": "Compatibility",
+      "description": "Paglalarawan",
+      "folderName": "Pangalan ng folder",
+      "folderNameHint": "Awtomatiko namin itong isinusuhestiyon mula sa pangalan ng skill para agad gumana ang review.",
+      "invocation": "Paano ito dapat gamitin",
+      "license": "Lisensya",
+      "name": "Pangalan ng skill",
+      "notes": "Mga karagdagang nota o guardrail",
+      "root": "Saan iimbak",
+      "scope": "Sino ang makakagamit nito",
+      "steps": "Mga pangunahing hakbang na susundin",
+      "whenToUse": "Kailan gagamitin ito"
+    },
+    "instructions": {
+      "description": "Ang mga seksyong ito ay bumubuo ng skill file para sa iyo, kaya hindi mo kailangang i-edit ang markdown maliban kung gusto mo.",
+      "locked": "Naka-lock ang mga structured field dahil lumipat ka sa manu-manong pag-edit ng `SKILL.md` sa ibaba.",
+      "title": "2. Mga Tagubilin"
+    },
+    "invocation": {
+      "auto": "Maaaring gamitin nang awtomatiko",
+      "manualOnly": "Kapag hiniling mo lang"
+    },
+    "placeholders": {
+      "description": "Ano ang tinutulungan ng skill na ito",
+      "name": "Magsulat ng maikling pangalan ng skill",
+      "notes": "Halimbawa: Tukuyin ang mga nawawalang test, regression, at mga mapanganib na palagay.",
+      "steps": "1. Suriin ang mga kaugnay na file.\n2. Ipaliwanag muna ang pangunahing panganib.\n3. Imungkahi ang pinakaligtas na ayos.",
+      "whenToUse": "Halimbawa: Gamitin ito kapag ang task ay isang code review o bug triage na kahilingan.",
+      "license": "MIT",
+      "compatibility": "claude-code, cursor"
+    },
+    "review": {
+      "creating": "Lumilikha ng skill",
+      "hint": "Suriin muna ang mga pagbabago sa file, pagkatapos ay kumpirmahin ang pag-save sa susunod na hakbang.",
+      "saving": "Sine-save ang skill na ito"
+    },
+    "root": {
+      "codexOnly": " - Codex lang",
+      "shared": " - Shared"
+    },
+    "scope": {
+      "project": "Proyekto: {{project}}",
+      "projectUnavailable": "Hindi available ang proyekto",
+      "user": "User"
+    },
+    "title": {
+      "create": "Lumikha ng skill",
+      "edit": "I-edit ang skill"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "Kanselahin",
+      "delete": "Tanggalin",
+      "deleteSkill": "Tanggalin ang Skill",
+      "deleting": "Tinatanggal...",
+      "editSkill": "I-edit ang Skill",
+      "openFolder": "Buksan ang Folder",
+      "openSkillFile": "Buksan ang SKILL.md",
+      "retry": "Subukang muli"
+    },
+    "badges": {
+      "assets": "Mga Asset",
+      "autoUse": "Awtomatikong paggamit",
+      "hasScripts": "May mga script",
+      "manualUse": "Manu-manong paggamit",
+      "references": "Mga Reference",
+      "storedIn": "Naka-store sa {{root}}"
+    },
+    "deleteDialog": {
+      "description": "Tanggalin ang skill na ito at ilipat sa Trash?",
+      "descriptionWithName": "Tanggalin ang \"{{name}}\" at ilipat sa Trash? Maaari mo itong ibalik mamaya mula sa Trash kung kailangan.",
+      "title": "Tanggalin ang skill?"
+    },
+    "descriptionFallback": "Suriin ang natuklasang skill metadata at raw na mga tagubilin.",
+    "errors": {
+      "deleteFailed": "Nabigong tanggalin ang skill",
+      "loadFailed": "Hindi ma-load ang skill na ito."
+    },
+    "files": {
+      "advancedDetails": "Advanced na detalye ng file",
+      "assets": "Mga Asset",
+      "references": "Mga Reference",
+      "scripts": "Mga Script",
+      "storedAt": "Naka-store sa"
+    },
+    "includes": {
+      "assets": "mga asset",
+      "instructionsOnly": "Ang mga tagubilin lang ng skill",
+      "references": "mga reference",
+      "scripts": "mga script"
+    },
+    "invocation": {
+      "auto": "Awtomatikong tumatakbo kapag tumugma sa task.",
+      "manualOnly": "Tumatakbo lang kapag tahasan mong hiniling."
+    },
+    "issues": {
+      "bundledScripts": "May kasamang mga script ang skill na ito",
+      "reviewCarefully": "Suriing mabuti ang skill na ito bago gamitin"
+    },
+    "loading": "Niloload ang mga detalye ng skill...",
+    "scope": {
+      "personal": "Ang iyong mga personal na skill",
+      "projectOnly": "Proyektong ito lang"
+    },
+    "summary": {
+      "howUsed": "Paano ito ginagamit",
+      "included": "Ano ang kasama nito",
+      "whoCanUse": "Sino ang makakagamit nito"
+    },
+    "titleFallback": "Mga detalye ng skill"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "Lumikha ng Skill",
+      "import": "I-import"
+    },
+    "badges": {
+      "assets": "Mga Asset",
+      "hasScripts": "May mga script",
+      "needsAttention": "Kailangan ng atensyon",
+      "references": "Mga Reference",
+      "storedIn": "Naka-store sa {{root}}"
+    },
+    "configuredRuntime": "ang na-configure na runtime",
+    "counts": {
+      "codexOnly": "{{count}} Codex lang",
+      "personal": "{{count}} personal",
+      "project": "{{count}} proyekto",
+      "shared": "{{count}} shared",
+      "total": "{{count}} kabuuan",
+      "codexOnly_few": "{{count}} Codex lang",
+      "codexOnly_many": "{{count}} Codex lang",
+      "codexOnly_one": "{{count}} Codex lang",
+      "codexOnly_other": "{{count}} Codex lang",
+      "personal_few": "{{count}} personal",
+      "personal_many": "{{count}} personal",
+      "personal_one": "{{count}} personal",
+      "personal_other": "{{count}} personal",
+      "project_few": "{{count}} proyekto",
+      "project_many": "{{count}} proyekto",
+      "project_one": "{{count}} proyekto",
+      "project_other": "{{count}} proyekto",
+      "shared_few": "{{count}} shared",
+      "shared_many": "{{count}} shared",
+      "shared_one": "{{count}} shared",
+      "shared_other": "{{count}} shared",
+      "total_few": "{{count}} kabuuan",
+      "total_many": "{{count}} kabuuan",
+      "total_one": "{{count}} kabuuan",
+      "total_other": "{{count}} kabuuan"
+    },
+    "empty": {
+      "noMatches": "Walang skill na tumutugma sa iyong paghahanap",
+      "noMatchesDescription": "Subukan ang ibang search term o palitan ang mga filter.",
+      "noSkills": "Wala pang skill",
+      "noSkillsDescription": "Likhain ang iyong unang skill para magturo ng paulit-ulit na workflow, o mag-import ng ginagamit mo na."
+    },
+    "filters": {
+      "all": "Lahat ng skill",
+      "codexOnly": "Codex lang",
+      "hasScripts": "May mga script",
+      "needsAttention": "Kailangan ng atensyon",
+      "personal": "Personal",
+      "project": "Proyekto",
+      "shared": "Shared"
+    },
+    "hero": {
+      "codexAvailable": "Gamitin ang `.codex` kapag dapat manatiling Codex-only ang isang skill.",
+      "codexUnavailable": "Mananatiling mae-edit dito ang mga umiiral na `.codex` skill, ngunit kailangan ng mga bagong Codex-only na skill na naka-enable ang Codex runtime.",
+      "description": "Ang mga skill ay magagamit-muling mga tagubilin na tumutulong sa runtime na hawakan ang parehong uri ng task nang mas pare-pareho.",
+      "guidance": "Gamitin ang mga personal na skill para sa mga gawi na gusto mo kahit saan. Gamitin ang mga project skill para sa mga workflow na makabuluhan lang sa loob ng isang codebase.",
+      "personalContext": "Nakikita mo lang ang iyong mga personal na skill sa ngayon.",
+      "projectContext": "Nakikita mo ang mga skill para sa {{project}} kasama ang iyong mga personal na skill.",
+      "title": "Magturo ng paulit-ulit na trabaho"
+    },
+    "invocation": {
+      "auto": "Awtomatikong tumatakbo kapag angkop",
+      "manualOnly": "Tumatakbo lang kapag tahasan mong hiniling"
+    },
+    "loading": {
+      "loading": "Niloload ang mga skill...",
+      "refreshing": "Nire-refresh ang mga skill..."
+    },
+    "runtimeAudience": "Ang mga shared na skill sa `.claude`, `.cursor`, at `.agents` ay available sa {{audience}}. Ang mga skill na naka-store sa `.codex` ay nananatiling Codex-only kapag available ang Codex support.",
+    "scope": {
+      "project": "Proyektong ito",
+      "user": "Personal"
+    },
+    "searchPlaceholder": "Maghanap ayon sa pangalan ng skill o kung ano ang tinutulungan nito...",
+    "sections": {
+      "personal": {
+        "description": "Mga gawi at tagubilin na gusto mong available kahit saan.",
+        "title": "Mga personal na skill"
+      },
+      "project": {
+        "description": "Mga workflow na makabuluhan lang para sa codebase na ito.",
+        "title": "Mga project skill"
+      }
+    },
+    "sort": {
+      "label": "Ayusin ang mga skill",
+      "name": "Pangalan",
+      "recent": "Kamakailan"
+    },
+    "status": {
+      "hasScripts": "May kasamang mga script, kaya suriing mabuti",
+      "needsAttention": "Kailangan ng atensyon bago ka umasa dito",
+      "ready": "Handa nang gamitin"
+    },
+    "success": {
+      "created": "Matagumpay na nalikha ang skill.",
+      "imported": "Matagumpay na na-import ang skill.",
+      "saved": "Matagumpay na na-save ang skill."
+    }
+  },
+  "pluginDetail": {
+    "unknown": "Hindi alam",
+    "metadata": {
+      "author": "May-akda",
+      "category": "Kategorya",
+      "source": "Pinagmulan",
+      "version": "Bersyon",
+      "capabilities": "Mga Kakayahan",
+      "installs": "Mga Install"
+    },
+    "scope": {
+      "label": "Scope:",
+      "options": {
+        "user": "User (global)",
+        "project": "Proyekto (shared)",
+        "local": "Lokal (gitignored)"
+      }
+    },
+    "links": {
+      "homepage": "Homepage",
+      "contact": "Contact"
+    },
+    "readme": {
+      "loading": "Niloload ang README...",
+      "empty": "Walang available na README."
+    }
+  },
+  "skillImport": {
+    "title": "I-import ang skill",
+    "description": "Pumili ng umiiral na skill folder, suriin kung ano ang kokopyahin, pagkatapos ay i-import ito sa isa sa iyong mga sinusuportahang skill location.",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. Pumili ng skill folder",
+        "description": "Dapat itong isang folder na naglalaman na ng `SKILL.md`, `Skill.md`, o `skill.md` na file."
+      },
+      "location": {
+        "title": "2. Magpasya kung saan ito nabibilang",
+        "description": "Gumagana ang mga personal na skill kahit saan. Lumalabas lang ang mga project skill para sa isang codebase."
+      }
+    },
+    "fields": {
+      "sourceFolder": "Source folder",
+      "destinationFolderName": "Pangalan ng destination folder",
+      "audience": "Sino ang makakagamit nito",
+      "storage": "Saan iimbak"
+    },
+    "placeholders": {
+      "defaultFolderName": "Nagde-default sa pangalan ng source folder"
+    },
+    "actions": {
+      "browse": "Mag-browse",
+      "cancel": "Kanselahin",
+      "preparing": "Naghahanda...",
+      "reviewAndImport": "Suriin At I-import",
+      "importSkill": "I-import ang Skill",
+      "backToImport": "Bumalik Sa Import"
+    },
+    "scope": {
+      "user": "User",
+      "project": "Proyekto: {{project}}",
+      "projectUnavailable": "Hindi available ang proyekto"
+    },
+    "rootSuffix": {
+      "codexOnly": " - Codex lang",
+      "shared": " - Shared"
+    },
+    "reviewHint": "Suriin muna ang mga kinopyang file, pagkatapos ay kumpirmahin ang import sa susunod na hakbang.",
+    "reviewLabel": "Ini-import ang skill na ito",
+    "errors": {
+      "missingSkillFile": "Hindi pa mukhang skill ang folder na ito. Kailangan nito ng SKILL.md, Skill.md, o skill.md na file.",
+      "symbolicLinks": "May mga symbolic link ang folder na ito. I-import ang mga totoong file sa halip na mga link.",
+      "tooManyFiles": "Masyadong malaki ang skill folder na ito para i-import nang sabay-sabay. Tanggalin ang mga karagdagang file at subukang muli.",
+      "tooLarge": "Masyadong malaki ang skill folder na ito para i-import nang ligtas. Bawasan ang malalaking asset at subukang muli.",
+      "invalidFolderName": "Pumili ng mas simpleng pangalan ng destination folder gamit ang mga letra, numero, tuldok, gitling, o underscore.",
+      "mustBeDirectory": "Pumili ng folder na i-import, hindi isang file.",
+      "reviewFailed": "Nabigong suriin ang mga pagbabago sa import",
+      "importFailed": "Nabigong i-import ang skill"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "Pangalan A→Z",
+      "nameDesc": "Pangalan Z→A",
+      "toolsDesc": "Pinakamaraming tool"
+    },
+    "health": {
+      "title": "MCP Health Status",
+      "checkingViaRuntime": "Sinusuri ang mga naka-install na MCP server sa pamamagitan ng {{runtime}} ...",
+      "lastChecked": "Huling sinuri {{time}}",
+      "description": "Magpatakbo ng diagnostics mula sa page na ito para i-verify ang naka-install na MCP connectivity.",
+      "checking": "Sinusuri...",
+      "checkStatus": "Suriin ang Status"
+    },
+    "diagnostics": {
+      "title": "Runtime MCP Diagnostics",
+      "serversCount": "{{count}} server",
+      "serversCount_one": "{{count}} server",
+      "serversCount_other": "{{count}} server",
+      "waiting": "Naghihintay ng mga resulta ng diagnostics...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "Sinusuri ang status ng runtime...",
+        "checkingRuntimeAvailability": "Sinusuri ang availability ng runtime...",
+        "runtimeFailedToStart": "Nakita ang na-configure na runtime ngunit nabigong magsimula. Buksan ang Dashboard para ayusin o i-reinstall ito.",
+        "runtimeRequired": "Kailangan ang na-configure na runtime. I-install o ayusin ito mula sa Dashboard."
+      },
+      "serversCount_few": "{{count}} server",
+      "serversCount_many": "{{count}} server"
+    },
+    "searchPlaceholder": "Maghanap ng mga MCP server...",
+    "runtime": {
+      "notAvailable": "Hindi available ang {{runtime}}",
+      "notInstalled": "Hindi naka-install ang {{runtime}}",
+      "requiredDescription": "Kailangan ng mga MCP health check ang {{runtime}}. Pumunta sa Dashboard para i-install o ayusin ito."
+    },
+    "empty": {
+      "searchTitle": "Walang nahanap na server",
+      "title": "Walang available na MCP server",
+      "searchDescription": "Subukan ang ibang search term",
+      "description": "Bumalik mamaya para sa mga bagong server"
+    },
+    "loadMore": "Mag-load pa"
+  },
+  "apiKeys": {
+    "description": "Ligtas na mag-store ng mga API key para sa auto-fill kapag nag-i-install ng mga MCP server.",
+    "storage": {
+      "osKeychain": "Naka-encrypt ang mga key sa pamamagitan ng {{backend}} at naka-store na may pinaghihigpitang file permission (owner-only).",
+      "localEncryption": "Hindi available ang OS keychain - naka-encrypt ang mga key nang lokal gamit ang AES-256. Para sa mas matibay na proteksyon, mag-install ng keyring service (gnome-keyring, kwallet)."
+    },
+    "actions": {
+      "add": "Magdagdag ng API Key",
+      "addFirst": "Idagdag ang iyong unang key",
+      "edit": "I-edit",
+      "copied": "Nakopya!",
+      "copyEnvVarName": "Kopyahin ang env var name",
+      "confirmDelete": "I-click muli para kumpirmahin",
+      "delete": "Tanggalin"
+    },
+    "empty": {
+      "title": "Walang naka-save na API key",
+      "description": "Magdagdag ng mga key para awtomatikong punan ang mga environment variable kapag nag-i-install ng mga MCP server."
+    },
+    "form": {
+      "addTitle": "Magdagdag ng API Key",
+      "editTitle": "I-edit ang API Key",
+      "addDescription": "Mag-store ng API key para sa auto-fill sa mga pag-install ng MCP server.",
+      "editDescription": "I-update ang mga detalye ng key. Kailangan mong muling ilagay ang value.",
+      "keychainUnavailable": "Hindi available ang OS keychain - naka-encrypt ang mga key gamit ang AES-256 nang lokal. Mag-install ng gnome-keyring para sa OS-level na proteksyon.",
+      "name": "Pangalan",
+      "namePlaceholder": "hal. OpenAI Production",
+      "environmentVariableName": "Pangalan ng Environment Variable",
+      "envVarPlaceholder": "hal. OPENAI_API_KEY",
+      "value": "Value",
+      "reenterValue": "Muling ilagay ang value ng key",
+      "valuePlaceholder": "sk-...",
+      "scope": "Scope",
+      "userScopeLabel": "User (global)",
+      "projectScopeLabel": "Proyekto: {{project}}",
+      "projectUnavailable": "Hindi available ang proyekto",
+      "boundTo": "Naka-bound sa {{path}}",
+      "cancel": "Kanselahin",
+      "saving": "Sine-save...",
+      "update": "I-update",
+      "save": "I-save",
+      "errors": {
+        "invalidEnvVarFormat": "Gumamit ng mga letra, numero, underscore. Dapat magsimula sa letra o underscore.",
+        "nameRequired": "Kailangan ang pangalan",
+        "envVarRequired": "Kailangan ang pangalan ng environment variable",
+        "invalidEnvVar": "Invalid na pangalan ng environment variable",
+        "valueRequired": "Kailangan ang value ng key",
+        "projectScopeRequiresProject": "Nangangailangan ng aktibong proyekto ang mga project-scoped na API key",
+        "saveFailed": "Nabigong mag-save"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "Suriin ang mga pagbabago sa skill",
+    "description": "Pino-preview muna ng {{reviewLabel}} ang mga pagbabago sa filesystem. Walang isusulat hanggang sa kumpirmahin mo sa ibaba.",
+    "noPreview": "Walang available na preview.",
+    "confirmPromptPrefix": "Suriin ang diff sa ibaba, pagkatapos ay gamitin ang",
+    "confirmPromptSuffix": "para ilapat ang mga pagbabagong ito.",
+    "noChanges": "Wala pang natukoy na pagbabago sa file.",
+    "binaryBadge": "binary",
+    "binaryPreviewHidden": "Hindi ipinapakita ang preview ng binary file. Kokopyahin ang file kung ano ito.",
+    "summary": {
+      "fileChanges": "{{count}} pagbabago sa file",
+      "fileChanges_one": "{{count}} pagbabago sa file",
+      "fileChanges_other": "{{count}} pagbabago sa file",
+      "new": "{{count}} bago",
+      "updated": "{{count}} na-update",
+      "removed": "{{count}} inalis",
+      "binary": "{{count}} binary",
+      "fileChanges_few": "{{count}} pagbabago sa file",
+      "fileChanges_many": "{{count}} pagbabago sa file"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} tool",
+    "toolsCount_one": "{{count}} tool",
+    "toolsCount_other": "{{count}} tool",
+    "envCount": "{{count}} env",
+    "envCount_one": "{{count}} env",
+    "envCount_other": "{{count}} env",
+    "auth": "Auth",
+    "byAuthor": "ni {{author}}",
+    "hosting": {
+      "remote": "Remote",
+      "local": "Lokal",
+      "both": "Pareho"
+    },
+    "toolsCount_few": "{{count}} tool",
+    "toolsCount_many": "{{count}} tool",
+    "envCount_few": "{{count}} env",
+    "envCount_many": "{{count}} env",
+    "repository": "Repository",
+    "website": "Website"
+  },
+  "installButton": {
+    "installing": "Ini-install...",
+    "removing": "Inaalis...",
+    "done": "Tapos na",
+    "retry": "Subukang muli",
+    "uninstall": "I-uninstall",
+    "install": "I-install"
+  },
+  "pluginCard": {
+    "official": "Opisyal"
+  }
+}

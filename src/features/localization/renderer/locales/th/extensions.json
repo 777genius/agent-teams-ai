@@ -1,0 +1,688 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "เพิ่มแบบกำหนดเอง",
+      "openDashboard": "เปิดแดชบอร์ด",
+      "refreshCatalog": "รีเฟรชแคตตาล็อก"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "ปลั๊กอิน: {{status}}",
+      "skills": "สกิล: {{status}}"
+    },
+    "desktopOnly": "ใช้งานได้เฉพาะในแอปเดสก์ท็อปเท่านั้น",
+    "provider": {
+      "checkingStatus": "กำลังตรวจสอบสถานะผู้ให้บริการ...",
+      "connected": "เชื่อมต่อแล้ว",
+      "loading": "กำลังโหลด...",
+      "needsSetup": "ต้องตั้งค่า",
+      "readyToConfigure": "พร้อมตั้งค่า",
+      "unsupported": "ไม่รองรับ"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "ส่วนขยายต้องใช้รันไทม์ที่ตั้งค่าไว้เพื่อจัดการปลั๊กอิน, เซิร์ฟเวอร์ MCP, สกิล และการเชื่อมต่อผู้ให้บริการ",
+      "checkingAvailabilityTitle": "กำลังตรวจสอบความพร้อมใช้งานของรันไทม์ส่วนขยาย",
+      "failedToStartDescription": "ส่วนขยายจะถูกปิดใช้งานจนกว่ารันไทม์จะผ่านการตรวจสอบสุขภาพตอนเริ่มต้น เปิดแดชบอร์ดเพื่อซ่อมแซมหรือติดตั้งใหม่",
+      "failedToStartTitle": "พบรันไทม์ที่ตั้งค่าไว้แต่เริ่มต้นไม่สำเร็จ",
+      "multimodelCapabilitiesDescription": "การรองรับผู้ให้บริการอาจแตกต่างกันในแต่ละส่วน ปลั๊กอินจะแสดงเฉพาะที่รันไทม์ประกาศการรองรับไว้อย่างชัดเจน",
+      "multimodelCapabilitiesTitle": "ความสามารถของรันไทม์หลายโมเดล",
+      "needsSignInDescription": "พบ {{runtime}}{{version}} แล้ว แต่การติดตั้งปลั๊กอินจะถูกปิดใช้งานจนกว่าคุณจะเข้าสู่ระบบจากแดชบอร์ด",
+      "needsSignInTitle": "{{runtime}} ต้องเข้าสู่ระบบ",
+      "notAvailableDescription": "ส่วนขยายจะถูกปิดใช้งานจนกว่าจะติดตั้งรันไทม์ เปิดแดชบอร์ดเพื่อติดตั้งแล้วลองอีกครั้ง",
+      "notAvailableTitle": "ไม่สามารถใช้รันไทม์ที่ตั้งค่าไว้ได้",
+      "readyDescription": "สามารถติดตั้งปลั๊กอินได้จากหน้านี้{{versionSuffix}}",
+      "readyTitle": "{{runtime}} พร้อมใช้งาน",
+      "requiredForMutations": "ต้องใช้รันไทม์ที่ตั้งค่าไว้เพื่อติดตั้งหรือถอนการติดตั้งส่วนขยาย ติดตั้งหรือซ่อมแซมจากแดชบอร์ด"
+    },
+    "sessionsRestartWarning": "เซสชันที่กำลังทำงานจะไม่รับการเปลี่ยนแปลงส่วนขยายจนกว่าจะรีสตาร์ท",
+    "tabs": {
+      "apiKeys": {
+        "description": "คีย์ลับสำหรับบริการออนไลน์ เพิ่มที่นี่เพื่อให้ปลั๊กอิน เซิร์ฟเวอร์ และการเชื่อมต่อสามารถเชื่อมต่อและทำงานได้",
+        "label": "API Keys"
+      },
+      "mcpServers": {
+        "description": "การเชื่อมต่อกับเครื่องมือและแอปภายนอก ช่วยให้รันไทม์อ่านข้อมูลหรือดำเนินการนอกเหนือจากแอปนี้",
+        "label": "เซิร์ฟเวอร์ MCP"
+      },
+      "plugins": {
+        "description": "ส่วนเสริมขนาดเล็กสำหรับรันไทม์ ในโหมดหลายโมเดล ปัจจุบันใช้กับเซสชัน Anthropic เมื่อรองรับ การรองรับผู้ให้บริการที่กว้างขึ้นกำลังพัฒนาอยู่",
+        "label": "ปลั๊กอิน"
+      },
+      "skills": {
+        "description": "คำสั่งสำเร็จรูปสำหรับงานทั่วไป ช่วยให้รันไทม์จัดการงานที่ทำซ้ำได้อย่างสม่ำเสมอยิ่งขึ้น",
+        "label": "สกิล"
+      }
+    },
+    "title": "ส่วนขยาย"
+  },
+  "pluginsPanel": {
+    "activeFilters": "ใช้งานอยู่ {{count}} รายการ",
+    "browseByFit": "เรียกดูตามความเหมาะสม",
+    "capabilities": "ความสามารถ",
+    "categories": "หมวดหมู่",
+    "clearAllFilters": "ล้างตัวกรองทั้งหมด",
+    "clearFilters": "ล้างตัวกรอง",
+    "counts": {
+      "capabilities": "{{count}} ความสามารถ",
+      "categories": "{{count}} หมวดหมู่",
+      "plugins": "{{count}} ปลั๊กอิน",
+      "capabilities_few": "{{count}} ความสามารถ",
+      "capabilities_many": "{{count}} ความสามารถ",
+      "capabilities_one": "{{count}} ความสามารถ",
+      "capabilities_other": "{{count}} ความสามารถ",
+      "categories_few": "{{count}} หมวดหมู่",
+      "categories_many": "{{count}} หมวดหมู่",
+      "categories_one": "{{count}} หมวดหมู่",
+      "categories_other": "{{count}} หมวดหมู่",
+      "plugins_few": "{{count}} ปลั๊กอิน",
+      "plugins_many": "{{count}} ปลั๊กอิน",
+      "plugins_one": "{{count}} ปลั๊กอิน",
+      "plugins_other": "{{count}} ปลั๊กอิน"
+    },
+    "empty": {
+      "description": "กลับมาดูใหม่ภายหลังสำหรับปลั๊กอินใหม่",
+      "filteredDescription": "ลองปรับการค้นหาหรือเงื่อนไขตัวกรอง",
+      "filteredTitle": "ไม่มีปลั๊กอินที่ตรงกับตัวกรองของคุณ",
+      "title": "ไม่มีปลั๊กอินให้ใช้งาน"
+    },
+    "filterDescription": "จำกัดแคตตาล็อกตามหมวดหมู่ ความสามารถ หรือสถานะการติดตั้ง",
+    "installedOnly": "ที่ติดตั้งแล้วเท่านั้น",
+    "providerSupportNotice": "ปัจจุบันการรองรับปลั๊กอินรับประกันเฉพาะเซสชัน Anthropic (Claude) เท่านั้น เรากำลังพัฒนาเพื่อรองรับปลั๊กอินในทุกเอเจนต์",
+    "resultsUpdateInstantly": "ผลลัพธ์จะอัปเดตทันทีเมื่อคุณปรับตัวกรอง",
+    "searchPlaceholder": "ค้นหาปลั๊กอิน...",
+    "selectedCount": "เลือกแล้ว {{count}} รายการ",
+    "showing": "แสดง {{shown}} จาก {{total}} ปลั๊กอิน",
+    "sort": {
+      "category": "หมวดหมู่",
+      "nameAsc": "ชื่อ A-Z",
+      "nameDesc": "ชื่อ Z-A",
+      "popular": "ยอดนิยม"
+    },
+    "activeFilters_few": "ใช้งานอยู่ {{count}} รายการ",
+    "activeFilters_many": "ใช้งานอยู่ {{count}} รายการ",
+    "activeFilters_one": "ใช้งานอยู่ {{count}} รายการ",
+    "activeFilters_other": "ใช้งานอยู่ {{count}} รายการ",
+    "selectedCount_few": "เลือกแล้ว {{count}} รายการ",
+    "selectedCount_many": "เลือกแล้ว {{count}} รายการ",
+    "selectedCount_one": "เลือกแล้ว {{count}} รายการ",
+    "selectedCount_other": "เลือกแล้ว {{count}} รายการ"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "เพิ่ม",
+      "cancel": "ยกเลิก",
+      "install": "ติดตั้ง",
+      "installing": "กำลังติดตั้ง..."
+    },
+    "description": "เพิ่มเซิร์ฟเวอร์ด้วยตนเองโดยไม่ใช้แคตตาล็อก",
+    "errors": {
+      "installFailed": "การติดตั้งล้มเหลว",
+      "invalidServerName": "ชื่อเซิร์ฟเวอร์ไม่ถูกต้อง ใช้ตัวอักษรและตัวเลข ขีดกลาง ขีดล่าง และจุด",
+      "npmPackageRequired": "ต้องระบุชื่อแพ็กเกจ npm",
+      "serverNameRequired": "ต้องระบุชื่อเซิร์ฟเวอร์",
+      "serverUrlRequired": "ต้องระบุ URL เซิร์ฟเวอร์"
+    },
+    "fields": {
+      "environmentVariables": "ตัวแปรสภาพแวดล้อม",
+      "headers": "เฮดเดอร์",
+      "npmPackage": "แพ็กเกจ npm",
+      "scope": "ขอบเขต",
+      "serverName": "ชื่อเซิร์ฟเวอร์",
+      "serverUrl": "URL เซิร์ฟเวอร์",
+      "transport": "Transport",
+      "transportType": "ประเภท Transport",
+      "versionOptional": "เวอร์ชัน (ไม่บังคับ)"
+    },
+    "title": "เพิ่มเซิร์ฟเวอร์ MCP แบบกำหนดเอง",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stdio (npm)"
+    },
+    "placeholders": {
+      "headerName": "Header-Name",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "my-server",
+      "latest": "latest",
+      "value": "value",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "เซิร์ฟเวอร์ MCP ระยะไกลอาจยังต้องใช้เฮดเดอร์แบบกำหนดเองหรือ API key แม้ว่ารีจิสทรีจะไม่ได้ระบุไว้ก็ตาม หากการเชื่อมต่อล้มเหลวหลังการติดตั้ง ให้ตรวจสอบเอกสารของผู้ให้บริการ",
+      "required": "เซิร์ฟเวอร์นี้ต้องมีการยืนยันตัวตน"
+    },
+    "diagnostics": {
+      "launchTarget": "เป้าหมายการเริ่มต้น"
+    },
+    "form": {
+      "autoFilled": "กรอกอัตโนมัติ",
+      "environmentVariables": "ตัวแปรสภาพแวดล้อม",
+      "headers": "เฮดเดอร์",
+      "scope": "ขอบเขต",
+      "serverName": "ชื่อเซิร์ฟเวอร์"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "เซิร์ฟเวอร์นี้ต้องตั้งค่าด้วยตนเอง ตรวจสอบคำแนะนำการติดตั้งในที่เก็บโค้ด",
+      "manualSetupRequired": "ต้องตั้งค่าด้วยตนเอง",
+      "npmPackage": "npm: {{package}}",
+      "manage": "จัดการการติดตั้ง",
+      "install": "ติดตั้งเซิร์ฟเวอร์"
+    },
+    "links": {
+      "glama": "Glama",
+      "repository": "ที่เก็บโค้ด",
+      "website": "เว็บไซต์"
+    },
+    "metadata": {
+      "author": "ผู้สร้าง",
+      "githubStars": "ดาว GitHub",
+      "hosting": "โฮสติ้ง",
+      "installType": "ประเภทการติดตั้ง",
+      "license": "สัญญาอนุญาต",
+      "published": "เผยแพร่",
+      "source": "แหล่งที่มา",
+      "updated": "อัปเดต",
+      "version": "เวอร์ชัน"
+    },
+    "scope": {
+      "local": "ในเครื่อง",
+      "project": "โปรเจกต์"
+    },
+    "tools": {
+      "title": "เครื่องมือ ({{count}})",
+      "title_few": "เครื่องมือ ({{count}})",
+      "title_many": "เครื่องมือ ({{count}})",
+      "title_one": "เครื่องมือ ({{count}})",
+      "title_other": "เครื่องมือ ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "my-server"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "ยกเลิก",
+      "createSkill": "สร้างสกิล",
+      "preparing": "กำลังเตรียม...",
+      "reviewAndCreate": "ตรวจสอบและสร้าง",
+      "reviewAndSave": "ตรวจสอบและบันทึก",
+      "saveSkill": "บันทึกสกิล"
+    },
+    "advanced": {
+      "customDescription": "สกิลนี้ใช้รูปแบบ markdown แบบกำหนดเอง จึงต้องแก้ไขที่นี่โดยตรง",
+      "customTitle": "2. ตัวแก้ไข SKILL.md",
+      "description": "คนส่วนใหญ่ข้ามส่วนนี้ได้ เปิดเฉพาะเมื่อคุณต้องการควบคุมไฟล์ markdown ดิบโดยตรง",
+      "hide": "ซ่อนตัวแก้ไขขั้นสูง",
+      "resetFromStructuredFields": "รีเซ็ตจากฟิลด์แบบมีโครงสร้าง",
+      "show": "แสดงตัวแก้ไขขั้นสูง",
+      "title": "4. ตัวแก้ไข SKILL.md ขั้นสูง"
+    },
+    "basics": {
+      "description": "ตั้งชื่อสกิลนี้ให้ชัดเจน เลือกผู้ที่สามารถใช้ได้ และกำหนดว่าจะเก็บไว้ที่ใด",
+      "title": "1. พื้นฐาน"
+    },
+    "description": {
+      "create": "อธิบายขั้นตอนการทำงานด้วยภาษาธรรมดา ตรวจสอบไฟล์ที่จะสร้าง จากนั้นบันทึก",
+      "edit": "อัปเดตสกิลนี้ ตรวจสอบการเปลี่ยนแปลงไฟล์ที่เกิดขึ้น จากนั้นบันทึก"
+    },
+    "extraFiles": {
+      "addedFiles": "ไฟล์ที่เพิ่ม:",
+      "assets": "แอสเซต",
+      "assetsDescription": "เพิ่มภาพหน้าจอหรือสื่อที่รวมไว้เฉพาะเมื่อช่วยอธิบายขั้นตอนการทำงาน",
+      "description": "เพิ่มเอกสารประกอบ สคริปต์ หรือแอสเซตเฉพาะเมื่อสกิลนี้จำเป็นต้องใช้จริง ๆ",
+      "lockedForEdits": "รากและโฟลเดอร์ถูกล็อกการแก้ไข",
+      "optionalDescription": "เพิ่มไฟล์เริ่มต้นที่จะรวมอยู่ในการตรวจสอบและเขียนพร้อมกับ `SKILL.md`",
+      "optionalTitle": "ไฟล์เพิ่มเติม",
+      "references": "เอกสารอ้างอิง",
+      "referencesDescription": "เพิ่มเอกสารประกอบ ลิงก์ หรือตัวอย่างที่รันไทม์สามารถดูได้",
+      "scripts": "สคริปต์",
+      "scriptsDescription": "เพิ่มคำสั่งช่วยเหลือหรือบันทึกการตั้งค่า ตรวจสอบอย่างรอบคอบก่อนแชร์สกิลนี้",
+      "title": "3. ไฟล์เพิ่มเติม"
+    },
+    "fields": {
+      "compatibility": "ความเข้ากันได้",
+      "description": "คำอธิบาย",
+      "folderName": "ชื่อโฟลเดอร์",
+      "folderNameHint": "เราแนะนำชื่อนี้อัตโนมัติจากชื่อสกิลเพื่อให้การตรวจสอบทำงานได้ทันที",
+      "invocation": "ควรใช้อย่างไร",
+      "license": "สัญญาอนุญาต",
+      "name": "ชื่อสกิล",
+      "notes": "บันทึกเพิ่มเติมหรือข้อควรระวัง",
+      "root": "เก็บไว้ที่ใด",
+      "scope": "ใครใช้ได้บ้าง",
+      "steps": "ขั้นตอนหลักที่ต้องทำ",
+      "whenToUse": "ควรใช้เมื่อใด"
+    },
+    "instructions": {
+      "description": "ส่วนเหล่านี้สร้างไฟล์สกิลให้คุณ คุณจึงไม่จำเป็นต้องแก้ไข markdown เว้นแต่ต้องการ",
+      "locked": "ฟิลด์แบบมีโครงสร้างถูกล็อกเพราะคุณสลับไปแก้ไข `SKILL.md` ด้วยตนเองด้านล่าง",
+      "title": "2. คำแนะนำ"
+    },
+    "invocation": {
+      "auto": "ใช้งานได้อัตโนมัติ",
+      "manualOnly": "เฉพาะเมื่อคุณร้องขอเท่านั้น"
+    },
+    "placeholders": {
+      "description": "สกิลนี้ช่วยอะไรได้บ้าง",
+      "name": "เขียนชื่อสกิลให้กระชับ",
+      "notes": "ตัวอย่าง: ชี้ให้เห็นการทดสอบที่ขาดหาย การถดถอย และสมมติฐานที่เสี่ยง",
+      "steps": "1. ตรวจสอบไฟล์ที่เกี่ยวข้อง\n2. อธิบายความเสี่ยงหลักก่อน\n3. แนะนำวิธีแก้ที่ปลอดภัยที่สุด",
+      "whenToUse": "ตัวอย่าง: ใช้เมื่องานเป็นการรีวิวโค้ดหรือการคัดแยกบั๊ก",
+      "license": "MIT",
+      "compatibility": "claude-code, cursor"
+    },
+    "review": {
+      "creating": "กำลังสร้างสกิล",
+      "hint": "ตรวจสอบการเปลี่ยนแปลงไฟล์ก่อน จากนั้นยืนยันการบันทึกในขั้นตอนถัดไป",
+      "saving": "กำลังบันทึกสกิลนี้"
+    },
+    "root": {
+      "codexOnly": " - Codex เท่านั้น",
+      "shared": " - ใช้ร่วมกัน"
+    },
+    "scope": {
+      "project": "โปรเจกต์: {{project}}",
+      "projectUnavailable": "ไม่สามารถใช้โปรเจกต์ได้",
+      "user": "ผู้ใช้"
+    },
+    "title": {
+      "create": "สร้างสกิล",
+      "edit": "แก้ไขสกิล"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "ยกเลิก",
+      "delete": "ลบ",
+      "deleteSkill": "ลบสกิล",
+      "deleting": "กำลังลบ...",
+      "editSkill": "แก้ไขสกิล",
+      "openFolder": "เปิดโฟลเดอร์",
+      "openSkillFile": "เปิด SKILL.md",
+      "retry": "ลองอีกครั้ง"
+    },
+    "badges": {
+      "assets": "แอสเซต",
+      "autoUse": "ใช้อัตโนมัติ",
+      "hasScripts": "มีสคริปต์",
+      "manualUse": "ใช้ด้วยตนเอง",
+      "references": "เอกสารอ้างอิง",
+      "storedIn": "เก็บไว้ใน {{root}}"
+    },
+    "deleteDialog": {
+      "description": "ลบสกิลนี้และย้ายไปยังถังขยะหรือไม่?",
+      "descriptionWithName": "ลบ \"{{name}}\" และย้ายไปยังถังขยะหรือไม่? คุณสามารถกู้คืนได้ภายหลังจากถังขยะหากจำเป็น",
+      "title": "ลบสกิลหรือไม่?"
+    },
+    "descriptionFallback": "ตรวจสอบเมตาดาตาของสกิลที่พบและคำแนะนำดิบ",
+    "errors": {
+      "deleteFailed": "ลบสกิลไม่สำเร็จ",
+      "loadFailed": "ไม่สามารถโหลดสกิลนี้ได้"
+    },
+    "files": {
+      "advancedDetails": "รายละเอียดไฟล์ขั้นสูง",
+      "assets": "แอสเซต",
+      "references": "เอกสารอ้างอิง",
+      "scripts": "สคริปต์",
+      "storedAt": "เก็บไว้ที่"
+    },
+    "includes": {
+      "assets": "แอสเซต",
+      "instructionsOnly": "เฉพาะคำแนะนำของสกิล",
+      "references": "เอกสารอ้างอิง",
+      "scripts": "สคริปต์"
+    },
+    "invocation": {
+      "auto": "รันอัตโนมัติเมื่อตรงกับงาน",
+      "manualOnly": "รันเฉพาะเมื่อคุณร้องขออย่างชัดเจน"
+    },
+    "issues": {
+      "bundledScripts": "สกิลนี้มีสคริปต์ที่รวมมาด้วย",
+      "reviewCarefully": "ตรวจสอบสกิลนี้อย่างรอบคอบก่อนใช้งาน"
+    },
+    "loading": "กำลังโหลดรายละเอียดสกิล...",
+    "scope": {
+      "personal": "สกิลส่วนตัวของคุณ",
+      "projectOnly": "โปรเจกต์นี้เท่านั้น"
+    },
+    "summary": {
+      "howUsed": "ใช้อย่างไร",
+      "included": "มีอะไรรวมมาด้วย",
+      "whoCanUse": "ใครใช้ได้บ้าง"
+    },
+    "titleFallback": "รายละเอียดสกิล"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "สร้างสกิล",
+      "import": "นำเข้า"
+    },
+    "badges": {
+      "assets": "แอสเซต",
+      "hasScripts": "มีสคริปต์",
+      "needsAttention": "ต้องดูแล",
+      "references": "เอกสารอ้างอิง",
+      "storedIn": "เก็บไว้ใน {{root}}"
+    },
+    "configuredRuntime": "รันไทม์ที่ตั้งค่าไว้",
+    "counts": {
+      "codexOnly": "{{count}} Codex เท่านั้น",
+      "personal": "{{count}} ส่วนตัว",
+      "project": "{{count}} โปรเจกต์",
+      "shared": "{{count}} ใช้ร่วมกัน",
+      "total": "{{count}} ทั้งหมด",
+      "codexOnly_few": "{{count}} Codex เท่านั้น",
+      "codexOnly_many": "{{count}} Codex เท่านั้น",
+      "codexOnly_one": "{{count}} Codex เท่านั้น",
+      "codexOnly_other": "{{count}} Codex เท่านั้น",
+      "personal_few": "{{count}} ส่วนตัว",
+      "personal_many": "{{count}} ส่วนตัว",
+      "personal_one": "{{count}} ส่วนตัว",
+      "personal_other": "{{count}} ส่วนตัว",
+      "project_few": "{{count}} โปรเจกต์",
+      "project_many": "{{count}} โปรเจกต์",
+      "project_one": "{{count}} โปรเจกต์",
+      "project_other": "{{count}} โปรเจกต์",
+      "shared_few": "{{count}} ใช้ร่วมกัน",
+      "shared_many": "{{count}} ใช้ร่วมกัน",
+      "shared_one": "{{count}} ใช้ร่วมกัน",
+      "shared_other": "{{count}} ใช้ร่วมกัน",
+      "total_few": "{{count}} ทั้งหมด",
+      "total_many": "{{count}} ทั้งหมด",
+      "total_one": "{{count}} ทั้งหมด",
+      "total_other": "{{count}} ทั้งหมด"
+    },
+    "empty": {
+      "noMatches": "ไม่มีสกิลที่ตรงกับการค้นหาของคุณ",
+      "noMatchesDescription": "ลองคำค้นหาอื่นหรือสลับตัวกรอง",
+      "noSkills": "ยังไม่มีสกิล",
+      "noSkillsDescription": "สร้างสกิลแรกของคุณเพื่อสอนขั้นตอนการทำงานที่ทำซ้ำได้ หรือนำเข้าสกิลที่คุณใช้อยู่แล้ว"
+    },
+    "filters": {
+      "all": "สกิลทั้งหมด",
+      "codexOnly": "Codex เท่านั้น",
+      "hasScripts": "มีสคริปต์",
+      "needsAttention": "ต้องดูแล",
+      "personal": "ส่วนตัว",
+      "project": "โปรเจกต์",
+      "shared": "ใช้ร่วมกัน"
+    },
+    "hero": {
+      "codexAvailable": "ใช้ `.codex` เมื่อต้องการให้สกิลเป็น Codex เท่านั้น",
+      "codexUnavailable": "สกิล `.codex` ที่มีอยู่ยังแก้ไขได้ที่นี่ แต่สกิล Codex เท่านั้นที่สร้างใหม่ต้องเปิดใช้งานรันไทม์ Codex",
+      "description": "สกิลคือคำแนะนำที่นำกลับมาใช้ใหม่ได้ ช่วยให้รันไทม์จัดการงานประเภทเดียวกันได้อย่างสม่ำเสมอยิ่งขึ้น",
+      "guidance": "ใช้สกิลส่วนตัวสำหรับนิสัยที่คุณต้องการให้มีทุกที่ ใช้สกิลโปรเจกต์สำหรับขั้นตอนการทำงานที่เหมาะกับโค้ดเบสเดียวเท่านั้น",
+      "personalContext": "ขณะนี้คุณเห็นเฉพาะสกิลส่วนตัวของคุณเท่านั้น",
+      "projectContext": "คุณกำลังดูสกิลสำหรับ {{project}} รวมถึงสกิลส่วนตัวของคุณ",
+      "title": "สอนงานที่ทำซ้ำได้"
+    },
+    "invocation": {
+      "auto": "รันอัตโนมัติเมื่อเหมาะสม",
+      "manualOnly": "รันเฉพาะเมื่อคุณร้องขออย่างชัดเจน"
+    },
+    "loading": {
+      "loading": "กำลังโหลดสกิล...",
+      "refreshing": "กำลังรีเฟรชสกิล..."
+    },
+    "runtimeAudience": "สกิลที่ใช้ร่วมกันใน `.claude`, `.cursor` และ `.agents` พร้อมใช้งานสำหรับ {{audience}} สกิลที่เก็บใน `.codex` จะเป็น Codex เท่านั้นเมื่อมีการรองรับ Codex",
+    "scope": {
+      "project": "โปรเจกต์นี้",
+      "user": "ส่วนตัว"
+    },
+    "searchPlaceholder": "ค้นหาตามชื่อสกิลหรือสิ่งที่ช่วยได้...",
+    "sections": {
+      "personal": {
+        "description": "นิสัยและคำแนะนำที่คุณต้องการให้มีทุกที่",
+        "title": "สกิลส่วนตัว"
+      },
+      "project": {
+        "description": "ขั้นตอนการทำงานที่เหมาะกับโค้ดเบสนี้เท่านั้น",
+        "title": "สกิลโปรเจกต์"
+      }
+    },
+    "sort": {
+      "label": "เรียงลำดับสกิล",
+      "name": "ชื่อ",
+      "recent": "ล่าสุด"
+    },
+    "status": {
+      "hasScripts": "มีสคริปต์ จึงควรตรวจสอบอย่างรอบคอบ",
+      "needsAttention": "ต้องดูแลก่อนที่คุณจะพึ่งพาได้",
+      "ready": "พร้อมใช้งาน"
+    },
+    "success": {
+      "created": "สร้างสกิลสำเร็จ",
+      "imported": "นำเข้าสกิลสำเร็จ",
+      "saved": "บันทึกสกิลสำเร็จ"
+    }
+  },
+  "pluginDetail": {
+    "unknown": "ไม่ทราบ",
+    "metadata": {
+      "author": "ผู้สร้าง",
+      "category": "หมวดหมู่",
+      "source": "แหล่งที่มา",
+      "version": "เวอร์ชัน",
+      "capabilities": "ความสามารถ",
+      "installs": "การติดตั้ง"
+    },
+    "scope": {
+      "label": "ขอบเขต:",
+      "options": {
+        "user": "ผู้ใช้ (ทั่วทั้งระบบ)",
+        "project": "โปรเจกต์ (ใช้ร่วมกัน)",
+        "local": "ในเครื่อง (ถูก gitignore)"
+      }
+    },
+    "links": {
+      "homepage": "หน้าแรก",
+      "contact": "ติดต่อ"
+    },
+    "readme": {
+      "loading": "กำลังโหลด README...",
+      "empty": "ไม่มี README"
+    }
+  },
+  "skillImport": {
+    "title": "นำเข้าสกิล",
+    "description": "เลือกโฟลเดอร์สกิลที่มีอยู่ ตรวจสอบสิ่งที่จะคัดลอก จากนั้นนำเข้าไปยังตำแหน่งสกิลที่รองรับตำแหน่งใดตำแหน่งหนึ่งของคุณ",
+    "steps": {
+      "chooseFolder": {
+        "title": "1. เลือกโฟลเดอร์สกิล",
+        "description": "ควรเป็นโฟลเดอร์ที่มีไฟล์ `SKILL.md`, `Skill.md` หรือ `skill.md` อยู่แล้ว"
+      },
+      "location": {
+        "title": "2. กำหนดว่าควรอยู่ที่ใด",
+        "description": "สกิลส่วนตัวใช้งานได้ทุกที่ สกิลโปรเจกต์จะแสดงเฉพาะในโค้ดเบสเดียวเท่านั้น"
+      }
+    },
+    "fields": {
+      "sourceFolder": "โฟลเดอร์ต้นทาง",
+      "destinationFolderName": "ชื่อโฟลเดอร์ปลายทาง",
+      "audience": "ใครใช้ได้บ้าง",
+      "storage": "เก็บไว้ที่ใด"
+    },
+    "placeholders": {
+      "defaultFolderName": "ค่าเริ่มต้นเป็นชื่อโฟลเดอร์ต้นทาง"
+    },
+    "actions": {
+      "browse": "เรียกดู",
+      "cancel": "ยกเลิก",
+      "preparing": "กำลังเตรียม...",
+      "reviewAndImport": "ตรวจสอบและนำเข้า",
+      "importSkill": "นำเข้าสกิล",
+      "backToImport": "กลับไปนำเข้า"
+    },
+    "scope": {
+      "user": "ผู้ใช้",
+      "project": "โปรเจกต์: {{project}}",
+      "projectUnavailable": "ไม่สามารถใช้โปรเจกต์ได้"
+    },
+    "rootSuffix": {
+      "codexOnly": " - Codex เท่านั้น",
+      "shared": " - ใช้ร่วมกัน"
+    },
+    "reviewHint": "ตรวจสอบไฟล์ที่คัดลอกก่อน จากนั้นยืนยันการนำเข้าในขั้นตอนถัดไป",
+    "reviewLabel": "กำลังนำเข้าสกิลนี้",
+    "errors": {
+      "missingSkillFile": "โฟลเดอร์นี้ยังไม่ดูเหมือนสกิล ต้องมีไฟล์ SKILL.md, Skill.md หรือ skill.md",
+      "symbolicLinks": "โฟลเดอร์นี้มีลิงก์สัญลักษณ์ นำเข้าไฟล์จริงแทนลิงก์",
+      "tooManyFiles": "โฟลเดอร์สกิลนี้ใหญ่เกินกว่าจะนำเข้าในครั้งเดียว ลบไฟล์ส่วนเกินแล้วลองอีกครั้ง",
+      "tooLarge": "โฟลเดอร์สกิลนี้ใหญ่เกินกว่าจะนำเข้าได้อย่างปลอดภัย ลดขนาดแอสเซตขนาดใหญ่แล้วลองอีกครั้ง",
+      "invalidFolderName": "เลือกชื่อโฟลเดอร์ปลายทางที่ง่ายกว่าโดยใช้ตัวอักษร ตัวเลข จุด ขีดกลาง หรือขีดล่าง",
+      "mustBeDirectory": "เลือกโฟลเดอร์เพื่อนำเข้า ไม่ใช่ไฟล์เดียว",
+      "reviewFailed": "ตรวจสอบการเปลี่ยนแปลงการนำเข้าไม่สำเร็จ",
+      "importFailed": "นำเข้าสกิลไม่สำเร็จ"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "ชื่อ A→Z",
+      "nameDesc": "ชื่อ Z→A",
+      "toolsDesc": "เครื่องมือมากที่สุด"
+    },
+    "health": {
+      "title": "สถานะการทำงาน MCP",
+      "checkingViaRuntime": "กำลังตรวจสอบเซิร์ฟเวอร์ MCP ที่ติดตั้งผ่าน {{runtime}} ...",
+      "lastChecked": "ตรวจสอบล่าสุด {{time}}",
+      "description": "รันการวินิจฉัยจากหน้านี้เพื่อยืนยันการเชื่อมต่อ MCP ที่ติดตั้งไว้",
+      "checking": "กำลังตรวจสอบ...",
+      "checkStatus": "ตรวจสอบสถานะ"
+    },
+    "diagnostics": {
+      "title": "การวินิจฉัย MCP ของรันไทม์",
+      "serversCount": "{{count}} เซิร์ฟเวอร์",
+      "serversCount_one": "{{count}} เซิร์ฟเวอร์",
+      "serversCount_other": "{{count}} เซิร์ฟเวอร์",
+      "waiting": "กำลังรอผลการวินิจฉัย...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "กำลังตรวจสอบสถานะรันไทม์...",
+        "checkingRuntimeAvailability": "กำลังตรวจสอบความพร้อมใช้งานของรันไทม์...",
+        "runtimeFailedToStart": "พบรันไทม์ที่ตั้งค่าไว้แต่เริ่มต้นไม่สำเร็จ เปิดแดชบอร์ดเพื่อซ่อมแซมหรือติดตั้งใหม่",
+        "runtimeRequired": "ต้องใช้รันไทม์ที่ตั้งค่าไว้ ติดตั้งหรือซ่อมแซมจากแดชบอร์ด"
+      },
+      "serversCount_few": "{{count}} เซิร์ฟเวอร์",
+      "serversCount_many": "{{count}} เซิร์ฟเวอร์"
+    },
+    "searchPlaceholder": "ค้นหาเซิร์ฟเวอร์ MCP...",
+    "runtime": {
+      "notAvailable": "{{runtime}} ไม่พร้อมใช้งาน",
+      "notInstalled": "{{runtime}} ยังไม่ได้ติดตั้ง",
+      "requiredDescription": "การตรวจสอบสถานะ MCP ต้องใช้ {{runtime}} ไปที่แดชบอร์ดเพื่อติดตั้งหรือซ่อมแซม"
+    },
+    "empty": {
+      "searchTitle": "ไม่พบเซิร์ฟเวอร์",
+      "title": "ไม่มีเซิร์ฟเวอร์ MCP ให้ใช้งาน",
+      "searchDescription": "ลองคำค้นหาอื่น",
+      "description": "กลับมาดูใหม่ภายหลังสำหรับเซิร์ฟเวอร์ใหม่"
+    },
+    "loadMore": "โหลดเพิ่มเติม"
+  },
+  "apiKeys": {
+    "description": "จัดเก็บ API key อย่างปลอดภัยเพื่อกรอกอัตโนมัติเมื่อติดตั้งเซิร์ฟเวอร์ MCP",
+    "storage": {
+      "osKeychain": "คีย์ถูกเข้ารหัสผ่าน {{backend}} และจัดเก็บด้วยสิทธิ์ไฟล์ที่จำกัด (เจ้าของเท่านั้น)",
+      "localEncryption": "ไม่สามารถใช้ keychain ของระบบปฏิบัติการได้ - คีย์ถูกเข้ารหัสในเครื่องด้วย AES-256 เพื่อการป้องกันที่แข็งแกร่งขึ้น ติดตั้งบริการ keyring (gnome-keyring, kwallet)"
+    },
+    "actions": {
+      "add": "เพิ่ม API Key",
+      "addFirst": "เพิ่มคีย์แรกของคุณ",
+      "edit": "แก้ไข",
+      "copied": "คัดลอกแล้ว!",
+      "copyEnvVarName": "คัดลอกชื่อตัวแปรสภาพแวดล้อม",
+      "confirmDelete": "คลิกอีกครั้งเพื่อยืนยัน",
+      "delete": "ลบ"
+    },
+    "empty": {
+      "title": "ยังไม่มี API key ที่บันทึกไว้",
+      "description": "เพิ่มคีย์เพื่อกรอกตัวแปรสภาพแวดล้อมอัตโนมัติเมื่อติดตั้งเซิร์ฟเวอร์ MCP"
+    },
+    "form": {
+      "addTitle": "เพิ่ม API Key",
+      "editTitle": "แก้ไข API Key",
+      "addDescription": "จัดเก็บ API key เพื่อกรอกอัตโนมัติในการติดตั้งเซิร์ฟเวอร์ MCP",
+      "editDescription": "อัปเดตรายละเอียดคีย์ คุณต้องป้อนค่าใหม่อีกครั้ง",
+      "keychainUnavailable": "ไม่สามารถใช้ keychain ของระบบปฏิบัติการได้ - คีย์ถูกเข้ารหัสด้วย AES-256 ในเครื่อง ติดตั้ง gnome-keyring เพื่อการป้องกันระดับระบบปฏิบัติการ",
+      "name": "ชื่อ",
+      "namePlaceholder": "เช่น OpenAI Production",
+      "environmentVariableName": "ชื่อตัวแปรสภาพแวดล้อม",
+      "envVarPlaceholder": "เช่น OPENAI_API_KEY",
+      "value": "ค่า",
+      "reenterValue": "ป้อนค่าคีย์อีกครั้ง",
+      "valuePlaceholder": "sk-...",
+      "scope": "ขอบเขต",
+      "userScopeLabel": "ผู้ใช้ (ทั่วทั้งระบบ)",
+      "projectScopeLabel": "โปรเจกต์: {{project}}",
+      "projectUnavailable": "ไม่สามารถใช้โปรเจกต์ได้",
+      "boundTo": "ผูกกับ {{path}}",
+      "cancel": "ยกเลิก",
+      "saving": "กำลังบันทึก...",
+      "update": "อัปเดต",
+      "save": "บันทึก",
+      "errors": {
+        "invalidEnvVarFormat": "ใช้ตัวอักษร ตัวเลข ขีดล่าง ต้องเริ่มต้นด้วยตัวอักษรหรือขีดล่าง",
+        "nameRequired": "ต้องระบุชื่อ",
+        "envVarRequired": "ต้องระบุชื่อตัวแปรสภาพแวดล้อม",
+        "invalidEnvVar": "ชื่อตัวแปรสภาพแวดล้อมไม่ถูกต้อง",
+        "valueRequired": "ต้องระบุค่าคีย์",
+        "projectScopeRequiresProject": "API key ที่กำหนดขอบเขตโปรเจกต์ต้องมีโปรเจกต์ที่ใช้งานอยู่",
+        "saveFailed": "บันทึกไม่สำเร็จ"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "ตรวจสอบการเปลี่ยนแปลงสกิล",
+    "description": "{{reviewLabel}} แสดงตัวอย่างการเปลี่ยนแปลงในระบบไฟล์ก่อน จะไม่มีการเขียนใด ๆ จนกว่าคุณจะยืนยันด้านล่าง",
+    "noPreview": "ไม่มีตัวอย่างให้แสดง",
+    "confirmPromptPrefix": "ตรวจสอบ diff ด้านล่าง จากนั้นใช้",
+    "confirmPromptSuffix": "เพื่อใช้การเปลี่ยนแปลงเหล่านี้",
+    "noChanges": "ยังไม่พบการเปลี่ยนแปลงไฟล์",
+    "binaryBadge": "ไบนารี",
+    "binaryPreviewHidden": "ไม่แสดงตัวอย่างไฟล์ไบนารี ไฟล์จะถูกคัดลอกตามเดิม",
+    "summary": {
+      "fileChanges": "เปลี่ยนแปลงไฟล์ {{count}} รายการ",
+      "fileChanges_one": "เปลี่ยนแปลงไฟล์ {{count}} รายการ",
+      "fileChanges_other": "เปลี่ยนแปลงไฟล์ {{count}} รายการ",
+      "new": "ใหม่ {{count}} รายการ",
+      "updated": "อัปเดต {{count}} รายการ",
+      "removed": "ลบ {{count}} รายการ",
+      "binary": "ไบนารี {{count}} รายการ",
+      "fileChanges_few": "เปลี่ยนแปลงไฟล์ {{count}} รายการ",
+      "fileChanges_many": "เปลี่ยนแปลงไฟล์ {{count}} รายการ"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} เครื่องมือ",
+    "toolsCount_one": "{{count}} เครื่องมือ",
+    "toolsCount_other": "{{count}} เครื่องมือ",
+    "envCount": "{{count}} ตัวแปร",
+    "envCount_one": "{{count}} ตัวแปร",
+    "envCount_other": "{{count}} ตัวแปร",
+    "auth": "การยืนยันตัวตน",
+    "byAuthor": "โดย {{author}}",
+    "hosting": {
+      "remote": "ระยะไกล",
+      "local": "ในเครื่อง",
+      "both": "ทั้งสอง"
+    },
+    "toolsCount_few": "{{count}} เครื่องมือ",
+    "toolsCount_many": "{{count}} เครื่องมือ",
+    "envCount_few": "{{count}} ตัวแปร",
+    "envCount_many": "{{count}} ตัวแปร",
+    "repository": "ที่เก็บโค้ด",
+    "website": "เว็บไซต์"
+  },
+  "installButton": {
+    "installing": "กำลังติดตั้ง...",
+    "removing": "กำลังลบ...",
+    "done": "เสร็จสิ้น",
+    "retry": "ลองอีกครั้ง",
+    "uninstall": "ถอนการติดตั้ง",
+    "install": "ติดตั้ง"
+  },
+  "pluginCard": {
+    "official": "ทางการ"
+  }
+}

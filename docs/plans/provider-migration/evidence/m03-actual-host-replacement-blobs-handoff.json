@@ -1,0 +1,42 @@
+{
+  "status": "PASS",
+  "scope": "Task and comment blob metadata/bytes through public RPC after natural closure and replacement of the actual Host process",
+  "originalJobId": "8e002cca880378c6b2e8c303b1a89c14",
+  "typecheckJobId": "26b60b8c0e95c85eadef7266eed42044",
+  "sourceHead": "a528caeb44efcb9be2b9d5db7f084065f2d771ad",
+  "sourceDelta": "Existing actual CLI case extended with76 lines; exact executed source below, no runtime/profile/production implementation change",
+  "test": "captured CLI owns canonical Team effects, frames policy diagnostics, and recovers same receipts",
+  "nodeVersion": "24.21.0",
+  "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+  "counts": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "assertions": [
+    "Actual captured CLI public Task creation and two blob uploads",
+    "Publish Task attachment and original comment attachment through Team commands",
+    "Original held ChildProcess stdin closes; observed exit0 and signalnull before replacement",
+    "New actual Host child opens the same original profile and storage root",
+    "Public Task/comment identity and attachment metadata unchanged",
+    "Public blob reader returns exact original bytes,size,SHA for both refs",
+    "Runtime-unconfigured profile; no runtime-sessions store"
+  ],
+  "sourcePins": [
+    {
+      "path": "packages/legacy-agent-host/tests/team-host.test.ts",
+      "sha256": "194dc2921f8e76c84a413567e4d510821ba623e68d39f7d8de35078fef896152"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/cli.js",
+      "sha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add"
+    }
+  ],
+  "environment": "Fresh outside TEST HOME/TMP, env-i, pinned Node24; fixture child also uses its own TEST HOME",
+  "excluded": [
+    "SDK/CLI model inference or native sessions",
+    "UI or full M03/Stage1",
+    "Large-file/lost-ACK matrix already covered separately",
+    "Stage2,merge,release"
+  ]
+}

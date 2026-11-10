@@ -1,0 +1,371 @@
+import { createLaunchGuard } from '@renderer/components/team/dialogs/providerLaunchAuthority';
+import {
+  getProviderLaunchReadinessDetail,
+  hasEffectiveProviderLaunchAuthority,
+} from '@renderer/utils/providerReadiness';
+import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
+import { describe, expect, it } from 'vitest';
+
+import type { CliProviderStatus } from '@shared/types';
+
+const NOW = Date.parse('2026-09-01T20:00:00.000Z');
+
+function createOpenCodeCatalog(model = 'opencode/big-pickle'): CliProviderStatus {
+  const base = createReadyProvider('anthropic');
+  return {
+    ...base,
+    providerId: 'opencode',
+    models: [model],
+    modelCatalog: {
+      ...base.modelCatalog!,
+      providerId: 'opencode',
+      models: [{ ...base.modelCatalog!.models[0]!, id: model, launchModel: model }],
+    },
+  };
+}
+
+function createTimedOutSource(): CliProviderStatus {
+  const source = createOpenCodeCatalog();
+  return {
+    ...source,
+    detailMessage: 'version 1.17.18 - auth /profile/auth.json',
+    modelCatalogRefreshState: 'error',
+    modelCatalog: {
+      ...source.modelCatalog!,
+      status: 'stale',
+      diagnostics: {
+        configReadState: 'ready',
+        appServerState: 'healthy',
+        message: 'OpenCode catalog overall deadline exceeded after 60000ms',
+      },
+    },
+  };
+}
+
+function createReadyProvider(providerId: 'anthropic' | 'codex'): CliProviderStatus {
+  const modelId = providerId === 'codex' ? 'gpt-5.6-sol' : 'opus';
+  return {
+    providerId,
+    displayName: providerId,
+    supported: true,
+    authenticated: true,
+    authMethod: providerId === 'codex' ? 'chatgpt' : 'api_key',
+    verificationState: 'verified',
+    statusCheckOutcome: 'authoritative',
+    canLoginFromUi: false,
+    statusMessage: null,
+    detailMessage: null,
+    models: [modelId],
+    modelAvailability: [],
+    modelCatalogRefreshState: 'ready',
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId,
+      source: 'app-server',
+      status: 'ready',
+      fetchedAt: '2026-09-01T19:55:00.000Z',
+      staleAt: '2026-09-01T20:05:00.000Z',
+      defaultModelId: modelId,
+      defaultLaunchModel: modelId,
+      models: [
+        {
+          id: modelId,
+          launchModel: modelId,
+          displayName: modelId,
+          hidden: false,
+          supportedReasoningEfforts: [],
+          defaultReasoningEffort: null,
+          inputModalities: ['text'],
+          supportsPersonality: false,
+          isDefault: true,
+          upgrade: false,
+          source: 'app-server',
+        },
+      ],
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    },
+    capabilities: {
+      teamLaunch: true,
+      oneShot: true,
+      extensions: createDefaultCliExtensionCapabilities(),
+    },
+  };
+}
+
+describe('createLaunchGuard', () => {
+  it('uses fresh exact-project authority when a duplicate source catalog timed out', () => {
+    const provider = createOpenCodeCatalog();
+    const guard = createLaunchGuard(['opencode'], new Map([['opencode', provider]]), {
+      selectedModels: ['opencode/big-pickle'],
+      scopedStatusBySourceId: new Map([['opencode', createTimedOutSource()]]),
+    });
+    expect(guard.blockers(true, NOW)).toEqual([]);
+    expect(guard.blocked(true, NOW)).toBe(false);
+    expect(guard.blocked(true, Date.parse(provider.modelCatalog!.staleAt))).toBe(true);
+  });
+
+  it.each([
+    'auth',
+    'auth-timeout',
+    'permanent',
+    'newer',
+    'invalid-date',
+    'future',
+    'missing-model',
+    'unavailable-model',
+    'unknown-model',
+    'unscoped',
+    'unknown-authority',
+    'expired',
+  ])('does not replace a source failure with unsafe %s evidence', (scenario) => {
+    const provider = createOpenCodeCatalog();
+    const source = createTimedOutSource();
+    if (scenario === 'auth') source.authenticated = false;
+    if (scenario === 'auth-timeout')
+      source.modelCatalog!.diagnostics.message = 'Authentication timed out';
+    if (scenario === 'permanent') source.modelCatalog!.diagnostics.code = 'authentication_required';
+    if (scenario === 'newer') source.modelCatalog!.fetchedAt = '2026-09-01T19:56:00.000Z';
+    if (scenario === 'invalid-date') source.modelCatalog!.fetchedAt = 'invalid';
+    if (scenario === 'future') source.modelCatalog!.fetchedAt = '2026-09-01T20:01:00.000Z';
+    if (scenario === 'unavailable-model' || scenario === 'unknown-model')
+      source.modelAvailability = [
+        {
+          modelId: 'opencode/big-pickle',
+          status: scenario === 'unknown-model' ? 'unknown' : 'unavailable',
+        },
+      ];
+    if (scenario === 'unknown-authority') provider.statusCheckOutcome = 'model_only';
+    if (scenario === 'expired') provider.modelCatalog!.staleAt = new Date(NOW).toISOString();
+    const guard = createLaunchGuard(
+      ['opencode'],
+      new Map([['opencode', scenario === 'unscoped' ? null : provider]]),
+      {
+        selectedModels: [
+          scenario === 'missing-model' ? 'opencode/other-model' : 'opencode/big-pickle',
+        ],
+        scopedStatusBySourceId: new Map([['opencode', source]]),
+      }
+    );
+    expect(guard.blocked(true, NOW)).toBe(true);
+  });
+
+  it.each(['auth', 'model'])(
+    'does not hide a second source %s failure behind the first timeout',
+    (failure) => {
+      const provider = createOpenCodeCatalog();
+      const otherModel = 'openrouter/auto';
+      provider.modelCatalog!.models.push({
+        ...provider.modelCatalog!.models[0]!,
+        id: otherModel,
+        launchModel: otherModel,
+      });
+      const otherSource = createTimedOutSource();
+      if (failure === 'auth') otherSource.authenticated = false;
+      else {
+        otherSource.modelCatalogRefreshState = 'ready';
+        otherSource.modelAvailability = [{ modelId: otherModel, status: 'unavailable' }];
+      }
+      const guard = createLaunchGuard(['opencode'], new Map([['opencode', provider]]), {
+        selectedModels: ['opencode/big-pickle', otherModel],
+        scopedStatusBySourceId: new Map([
+          ['opencode', createTimedOutSource()],
+          ['openrouter', otherSource],
+        ]),
+      });
+      expect(guard.blocked(true, NOW)).toBe(true);
+    }
+  );
+
+  it('shows the actual source catalog error before runtime inventory', () => {
+    const source = createTimedOutSource();
+    const guard = createLaunchGuard(['opencode'], new Map(), {
+      selectedModels: ['opencode/big-pickle'],
+      scopedStatusBySourceId: new Map([['opencode', source]]),
+    });
+    expect(guard.blockers(true, NOW)[0]?.detail).toBe(source.modelCatalog!.diagnostics.message);
+    expect(guard.blockers(true, NOW)[0]?.detail).not.toContain('auth.json');
+  });
+  it.each(['codex', 'anthropic'] as const)('shares fail-closed readiness for %s', (providerId) => {
+    const provider = createReadyProvider(providerId);
+    expect(hasEffectiveProviderLaunchAuthority(provider, NOW)).toBe(true);
+    expect(
+      hasEffectiveProviderLaunchAuthority(provider, Date.parse(provider.modelCatalog!.staleAt))
+    ).toBe(false);
+    for (const override of [
+      { modelCatalog: null },
+      { modelCatalogRefreshState: 'loading' as const },
+      { modelCatalogRefreshState: 'error' as const },
+      { authenticated: false },
+      { statusCheckOutcome: 'transient_error' as const },
+      { capabilities: { ...provider.capabilities, teamLaunch: false } },
+    ])
+      expect(hasEffectiveProviderLaunchAuthority({ ...provider, ...override }, NOW)).toBe(false);
+  });
+
+  it('explains catalog expiry before suggesting changes to connected Codex auth', () => {
+    const provider = createReadyProvider('codex');
+    provider.modelCatalogRefreshState = 'error';
+    provider.capabilities.teamLaunch = false;
+    provider.detailMessage = 'ChatGPT account is connected';
+    expect(getProviderLaunchReadinessDetail(provider, NOW)).toContain('catalog');
+    expect(getProviderLaunchReadinessDetail(provider, NOW)).not.toContain('reconnect');
+    provider.modelCatalogRefreshState = 'loading';
+    expect(getProviderLaunchReadinessDetail(provider, NOW)).toContain('being refreshed');
+  });
+
+  it('reports no blockers when every selected provider has current launch authority', () => {
+    const provider = createReadyProvider('anthropic');
+    const guard = createLaunchGuard(['anthropic'], new Map([['anthropic', provider]]));
+
+    expect(guard.blocked(true, NOW)).toBe(false);
+    expect(guard.blockers(true, NOW)).toEqual([]);
+  });
+
+  it('explains the Codex account/runtime mismatch instead of repeating an API-key error', () => {
+    const provider = createReadyProvider('codex');
+    const blockedProvider: CliProviderStatus = {
+      ...provider,
+      authenticated: false,
+      authMethod: null,
+      statusMessage: 'Codex native runtime unavailable',
+      detailMessage: 'Codex native runtime requires CODEX_API_KEY or OPENAI_API_KEY.',
+      capabilities: { ...provider.capabilities, teamLaunch: false },
+      connection: {
+        configurableAuthModes: ['auto', 'chatgpt', 'api_key'],
+        configuredAuthMode: 'auto',
+        supportsOAuth: false,
+        supportsApiKey: true,
+        apiKeyConfigured: false,
+        apiKeySource: null,
+        apiKeySourceLabel: null,
+        compatibleEndpoint: null,
+        codex: {
+          preferredAuthMode: 'auto',
+          effectiveAuthMode: 'chatgpt',
+          appServerState: 'healthy',
+          appServerStatusMessage: null,
+          managedAccount: { type: 'chatgpt', email: 'user@example.com', planType: 'pro' },
+          requiresOpenaiAuth: true,
+          localAccountArtifactsPresent: true,
+          localActiveChatgptAccountPresent: true,
+          login: { status: 'idle', error: null, startedAt: null },
+          rateLimits: null,
+          launchAllowed: true,
+          launchIssueMessage: null,
+          launchReadinessState: 'ready_chatgpt',
+          customProvider: {
+            enabled: false,
+            active: false,
+            baseUrl: '',
+            model: '',
+            issueMessage: null,
+          },
+        },
+      },
+    };
+    const guard = createLaunchGuard(['codex'], new Map([['codex', blockedProvider]]));
+
+    expect(guard.blockers(true, NOW)).toEqual([
+      expect.objectContaining({
+        providerId: 'codex',
+        detail: expect.stringContaining(
+          'ChatGPT account is connected, but the Codex runtime has not confirmed launch readiness'
+        ),
+      }),
+    ]);
+    expect(guard.blockers(true, NOW)[0]?.detail).not.toContain('CODEX_API_KEY');
+  });
+
+  it('does not block non-launch operations', () => {
+    const guard = createLaunchGuard(['codex'], new Map());
+
+    expect(guard.blockers(false, NOW)).toEqual([]);
+    expect(guard.blocked(false, NOW)).toBe(false);
+  });
+
+  it('delegates passive OpenCode authority to the strict launch attempt', () => {
+    const model = 'openrouter/auto';
+    const scopedProvider: CliProviderStatus = {
+      ...createReadyProvider('anthropic'),
+      providerId: 'opencode',
+      models: [model],
+      modelCatalog: {
+        ...createReadyProvider('anthropic').modelCatalog!,
+        providerId: 'opencode',
+        defaultModelId: model,
+        defaultLaunchModel: model,
+        models: [
+          {
+            ...createReadyProvider('anthropic').modelCatalog!.models[0]!,
+            id: model,
+            launchModel: model,
+            displayName: model,
+          },
+        ],
+      },
+    };
+    const provider: CliProviderStatus = {
+      ...createReadyProvider('anthropic'),
+      providerId: 'opencode',
+      displayName: 'OpenCode',
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'model_only',
+      models: [],
+      modelCatalog: null,
+      modelCatalogRefreshState: 'loading',
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      capabilities: {
+        ...createReadyProvider('anthropic').capabilities,
+        teamLaunch: false,
+      },
+    };
+    const guard = createLaunchGuard(['opencode'], new Map([['opencode', provider]]), {
+      selectedModels: [model],
+      scopedStatusBySourceId: new Map([['openrouter', scopedProvider]]),
+    });
+
+    expect(guard.blockers(true, NOW)).toEqual([]);
+  });
+
+  it('does not authorize model-only OpenCode status without a concrete scoped model', () => {
+    const provider: CliProviderStatus = {
+      ...createReadyProvider('anthropic'),
+      providerId: 'opencode',
+      statusCheckOutcome: 'model_only',
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      capabilities: {
+        ...createReadyProvider('anthropic').capabilities,
+        teamLaunch: false,
+      },
+    };
+    const guard = createLaunchGuard(['opencode'], new Map([['opencode', provider]]), {
+      selectedModels: [],
+      scopedStatusBySourceId: new Map(),
+    });
+
+    expect(guard.blocked(true, NOW)).toBe(true);
+  });
+
+  it('reports stale catalog authority even when the provider has an unrelated status detail', () => {
+    const provider = createReadyProvider('codex');
+    const staleProvider: CliProviderStatus = {
+      ...provider,
+      statusMessage: 'warming up',
+      detailMessage: 'first render',
+      modelCatalog: {
+        ...provider.modelCatalog!,
+        staleAt: '2026-09-01T19:59:00.000Z',
+      },
+      capabilities: { ...provider.capabilities, teamLaunch: false },
+    };
+    const guard = createLaunchGuard(['codex'], new Map([['codex', staleProvider]]));
+
+    expect(guard.blockers(true, NOW)).toEqual([
+      expect.objectContaining({
+        detail: 'The verified model catalog is unavailable or stale. Refresh provider status.',
+      }),
+    ]);
+  });
+});

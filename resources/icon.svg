@@ -1,0 +1,50 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#18181b"/>
+      <stop offset="100%" stop-color="#111113"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="48%" r="38%">
+      <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="edge1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="edge2" x1="1" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#c084fc"/>
+    </linearGradient>
+    <linearGradient id="edge3" x1="0.7" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#c084fc"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+
+  <!-- Subtle central glow -->
+  <circle cx="512" cy="470" r="320" fill="url(#glow)"/>
+
+  <!-- Triangle edges (connections between agents) -->
+  <line x1="354" y1="340" x2="670" y2="340" stroke="url(#edge1)" stroke-width="30" stroke-linecap="round" opacity="0.4"/>
+  <line x1="670" y1="340" x2="512" y2="640" stroke="url(#edge2)" stroke-width="30" stroke-linecap="round" opacity="0.4"/>
+  <line x1="512" y1="640" x2="354" y2="340" stroke="url(#edge3)" stroke-width="30" stroke-linecap="round" opacity="0.4"/>
+
+  <!-- Agent nodes — outer glow rings -->
+  <circle cx="354" cy="340" r="96" fill="#818cf8" opacity="0.12"/>
+  <circle cx="670" cy="340" r="96" fill="#a78bfa" opacity="0.12"/>
+  <circle cx="512" cy="640" r="104" fill="#c084fc" opacity="0.12"/>
+
+  <!-- Agent nodes — solid circles -->
+  <circle cx="354" cy="340" r="72" fill="#818cf8"/>
+  <circle cx="670" cy="340" r="72" fill="#a78bfa"/>
+  <circle cx="512" cy="640" r="80" fill="#c084fc"/>
+
+  <!-- Inner highlights (cores) -->
+  <circle cx="354" cy="340" r="28" fill="#e0e7ff"/>
+  <circle cx="670" cy="340" r="28" fill="#ede9fe"/>
+  <circle cx="512" cy="640" r="32" fill="#f3e8ff"/>
+</svg>

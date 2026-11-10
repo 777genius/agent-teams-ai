@@ -1,0 +1,92 @@
+{
+  "status": "scoped-checkpoint-complete",
+  "source": {
+    "repository": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host",
+    "branch": "feat/provider-host-contracts",
+    "base": "dfc1aa5ce1d357b732f66b9294651f96799c140a",
+    "commit": "4773c30624de598d64af484a4c368272e83496b4",
+    "author": "iliya <iliyazelenkog@gmail.com>",
+    "committer": "iliya <iliyazelenkog@gmail.com>"
+  },
+  "artifacts": [
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-artifacts/claude-capabilities-v1/agent-teams-provider-implementations-0.0.0.tgz",
+      "sha256": "68fa190a9abc2d8f128e0247ffc0f9bc8c3287c3adecf9f95d653184775122f3"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-artifacts/claude-capabilities-v1/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "sha256": "9b40cdd4865d1e9767738159df6f125517f2e04e39f879ca99731b97ba1a78ef"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-artifacts/claude-capabilities-v1/provider-claude-capabilities.bundle",
+      "sha256": "cca7f7bde25ee541db376e771c16f4b34305a55b6b4a3131b7ccefc6c3e273f3"
+    }
+  ],
+  "api": {
+    "exports": "Existing 14 Session SPI type exports unchanged; additive EventPayload compaction variant only.",
+    "compaction": {
+      "kind": "compaction",
+      "sourceRef": "sha256(JSON.stringify([native session ID, native message UUID]))",
+      "reason": ["manual", "automatic", "unknown"],
+      "attribution": "sessionRef always; operationRef/inputId only with positive native correlation; child boundaries excluded",
+      "dedup": "one bounded physical-session owner surviving turn resets; restored Host dedups same stable sourceRef"
+    },
+    "claudeConfig": {
+      "configNamespace": ["native-default", "custom-directory"],
+      "namespaceDefault": "omitted preserves existing explicit custom-directory validation; native-default requires CLAUDE_CONFIG_DIR to be absent and captured HOME/PATH/accountBinding",
+      "nativeOptions": [
+        "permissionMode",
+        "allowDangerouslySkipPermissions",
+        "settingSources",
+        "projectInstructions:{append?:string}",
+        "effort",
+        "fastMode",
+        "context:model-default|one-million"
+      ],
+      "instructions": "Selects native claude_code preset and optional trusted append; project CLAUDE.md requires selecting project in settingSources.",
+      "context": "Host-selected model is forwarded verbatim, including [1m]; one-million additionally requests pinned SDK beta; no hard 200K cap invented.",
+      "checkpoint": "Selected effective SDK options and explicit account namespace/home enter compatibility; omitted-options serialization verified equal to dfc1 baseline."
+    }
+  },
+  "passed": {
+    "providerNode26": 146,
+    "providerNode24": 146,
+    "contractsPackedNode26": 1,
+    "contractsPackedNode24": 1,
+    "legacyTypes": 14,
+    "sessionOwnerRoundtripSuite": 25,
+    "sdkProfileRejectingTests": 53,
+    "foundation": "all passed on final source",
+    "fmsActiveDiagnostics": 0,
+    "productBuild": true,
+    "rootStrictTypecheck": true,
+    "lint": true,
+    "exactPackedArtifactShaMatches": true
+  },
+  "remainingGaps": [
+    "check:changed routes check:fast; final /private/tmp run retains sole existing Foundation aggregate failure at scripts/ci/foundation-fixture-sharding.test.ts:219 under Mac Bash 3.2 (previously identified mapfile limitation); Linux aggregate pending. No gate weakening or new tooling installed.",
+    "No real SDK process/auth/native settings/context qualification in this checkpoint.",
+    "Subagents, attachments and user-hook composition remain unimplemented; Team/Host/reminder policy remains consumer-owned."
+  ],
+  "evidence": {
+    "committedProfile": "architecture/sdk-growth/provider-claude-capabilities.json",
+    "logs": [
+      ".cache/p1-claude-capabilities-node26.log",
+      ".cache/p1-claude-capabilities-node24.log",
+      ".cache/p1-claude-contracts-node26.log",
+      ".cache/p1-claude-contracts-node24.log",
+      ".cache/p1-claude-compatibility.log",
+      ".cache/p1-claude-owner-roundtrip.log",
+      ".cache/p1-claude-sdk-profile-final.log",
+      ".cache/p1-claude-foundation-final.log",
+      ".cache/p1-claude-fms-final.log",
+      ".cache/p1-claude-product-build.log",
+      ".cache/p1-claude-root-typecheck.log",
+      ".cache/p1-claude-exact-packed.log",
+      ".cache/p1-claude-changed-final.log",
+      ".cache/p1-default-checkpoint-compatibility.log"
+    ]
+  },
+  "frozenPredecessorArtifactsUnchanged": true,
+  "noPushPrMergeRelease": true
+}

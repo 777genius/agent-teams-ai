@@ -1,0 +1,40 @@
+/* Pale warning utilities are intended for dark surfaces. Keep legacy notices,
+   badges, links and search highlights readable across the light theme. */
+:root.light {
+  --color-warning-text: #854d0e;
+}
+
+:root.light
+  :is(
+    [class~='text-amber-100'],
+    [class~='text-amber-200'],
+    [class~='text-amber-300'],
+    [class~='text-amber-400'],
+    [class~='text-amber-500'],
+    [class~='text-yellow-100'],
+    [class~='text-yellow-200'],
+    [class~='text-yellow-300'],
+    [class~='text-yellow-400'],
+    [class~='text-yellow-500']
+  ) {
+  color: var(--color-warning-text);
+}
+
+:root.light
+  :is(
+    [class~='text-amber-100/70'],
+    [class~='text-amber-100/75'],
+    [class~='text-amber-100/80'],
+    [class~='text-amber-100/85'],
+    [class~='text-amber-100/90'],
+    [class~='text-amber-200/80'],
+    [class~='text-amber-300/80']
+  ) {
+  color: color-mix(in srgb, var(--color-warning-text) 90%, transparent);
+}
+
+:root.light [class~='hover:text-amber-100']:hover,
+:root.light [class~='hover:text-amber-200']:hover,
+:root.light [class~='hover:text-amber-300']:hover {
+  color: var(--color-warning-text);
+}

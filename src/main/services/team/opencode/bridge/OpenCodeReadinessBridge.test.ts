@@ -1,0 +1,339 @@
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+
+import { prepareCursorAcpLaunchMcpConfig } from '../config/CursorMcpConfigWriter';
+
+import {
+  OpenCodeReadinessBridge,
+  type OpenCodeReadinessBridgeCommandExecutor,
+  type OpenCodeReadinessBridgeOptions,
+} from './OpenCodeReadinessBridge';
+import {
+  resolveOpenCodeLaunchTimeoutMs,
+  resolveOpenCodeReadinessTimeoutMs,
+} from './OpenCodeReadinessTimeoutPolicy';
+
+import type { OpenCodeExecutionProof } from '../readiness/OpenCodeExecutionProof';
+import type { OpenCodeTeamLaunchReadiness } from '../readiness/OpenCodeTeamLaunchReadiness';
+
+vi.mock('../config/CursorMcpConfigWriter', () => ({
+  prepareCursorAcpLaunchMcpConfig: vi.fn(async () => undefined),
+}));
+
+describe('resolveOpenCodeLaunchTimeoutMs', () => {
+  it('keeps the standard launch timeout for regular OpenCode providers', () => {
+    expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'openai/gpt-5.4', members: [] })).toBe(
+      180_000
+    );
+  });
+
+  it('gives V2 runs the 300s launch budget on every platform', () => {
+    const v2 = { opencodeVersion: '2.0.32' } as OpenCodeExecutionProof;
+    expect(
+      resolveOpenCodeLaunchTimeoutMs(
+        { selectedModel: 'openai/gpt-5.4', members: [], executionProof: v2 },
+        undefined,
+        'darwin'
+      )
+    ).toBe(300_000);
+    expect(
+      resolveOpenCodeLaunchTimeoutMs(
+        { selectedModel: 'openai/gpt-5.4', members: [], executionProof: v2 },
+        undefined,
+        'win32'
+      )
+    ).toBe(300_000);
+    expect(
+      resolveOpenCodeLaunchTimeoutMs(
+        { selectedModel: 'openai/gpt-5.4', members: [], executionProof: v2 },
+        undefined,
+        'linux'
+      )
+    ).toBe(300_000);
+    // V1 gets the shared three-minute cold-start allowance everywhere.
+    expect(
+      resolveOpenCodeLaunchTimeoutMs(
+        {
+          selectedModel: 'openai/gpt-5.4',
+          members: [],
+          executionProof: { opencodeVersion: '1.2.3' } as OpenCodeExecutionProof,
+        },
+        undefined,
+        'darwin'
+      )
+    ).toBe(180_000);
+  });
+
+  it('gives local Ollama-style models a launch budget above the 7B dest:mcp wall', () => {
+    expect(
+      resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'ollama/qwen2.5-coder:7b-32k', members: [] })
+    ).toBe(420_000);
+    expect(
+      resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'llama.cpp/qwen-test:0.5b', members: [] })
+    ).toBe(420_000);
+  });
+
+  it('scales the timeout for serial native subscription CLI members', () => {
+    const members = [
+      { name: 'one', role: 'developer', prompt: 'one' },
+      { name: 'two', role: 'developer', prompt: 'two' },
+    ];
+
+    expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'cursor-acp/auto', members })).toBe(
+      600_000
+    );
+    expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'kiro/auto', members })).toBe(270_000);
+  });
+
+  it.each([
+    ['cursor-acp/auto', 0, 300_000],
+    ['cursor-acp/auto', 1, 570_000],
+    ['cursor-acp/auto', 2, 600_000],
+    ['cursor-acp/auto', 20, 600_000],
+    ['kiro/auto', 0, 180_000],
+    ['kiro/auto', 1, 180_000],
+    ['kiro/auto', 20, 600_000],
+    ['openai/gpt-5.4', 20, 180_000],
+  ] as const)('budgets %s with %i teammates', (selectedModel, count, expected) => {
+    const members = Array.from({ length: count }, (_, i) => ({
+      name: `member-${i}`,
+      role: 'developer',
+      prompt: 'fixture',
+    }));
+    expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel, members })).toBe(expected);
+  });
+
+  it('honors an explicit launch timeout override', () => {
+    expect(
+      resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'cursor-acp/auto', members: [] }, 42_000)
+    ).toBe(42_000);
+  });
+
+  it('uses one provider-independent readiness budget', () => {
+    expect(resolveOpenCodeReadinessTimeoutMs('cursor-acp/auto')).toBe(300_000);
+    expect(resolveOpenCodeReadinessTimeoutMs('kiro/auto')).toBe(300_000);
+    expect(resolveOpenCodeReadinessTimeoutMs('ollama/gemma4:12b')).toBe(300_000);
+    expect(resolveOpenCodeReadinessTimeoutMs('openai/gpt-5.4')).toBe(300_000);
+    expect(resolveOpenCodeReadinessTimeoutMs('cursor-acp/auto', 42_000)).toBe(42_000);
+  });
+});
+
+describe('OpenCodeReadinessBridge project identity', () => {
+  it('retrieves a Windows readiness snapshot across path casing changes', async () => {
+    const originalPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    const runtime = {
+      providerId: 'opencode' as const,
+      binaryPath: 'C:\\runtime\\opencode.exe',
+      binaryFingerprint: 'binary-1',
+      version: '1.18.2',
+      capabilitySnapshotId: 'capability-1',
+    };
+    const readiness: OpenCodeTeamLaunchReadiness = {
+      state: 'ready',
+      launchAllowed: true,
+      modelId: 'ollama/gemma4:12b',
+      availableModels: ['ollama/gemma4:12b'],
+      opencodeVersion: '1.18.2',
+      installMethod: 'unknown',
+      binaryPath: runtime.binaryPath,
+      hostHealthy: true,
+      appMcpConnected: true,
+      requiredToolsPresent: true,
+      permissionBridgeReady: true,
+      runtimeStoresReady: true,
+      supportLevel: 'production_supported',
+      missing: [],
+      diagnostics: [],
+      evidence: {
+        capabilitiesReady: true,
+        mcpToolProofRoute: '/experimental/tool/ids',
+        observedMcpTools: [],
+        runtimeStoreReadinessReason: 'runtime_store_manifest_valid',
+      },
+    };
+    const executor = {
+      execute: vi.fn(async () => ({
+        ok: true as const,
+        schemaVersion: 1 as const,
+        requestId: 'request-1',
+        command: 'opencode.readiness' as const,
+        completedAt: '2026-07-17T00:00:00.000Z',
+        durationMs: 1,
+        runtime,
+        diagnostics: [],
+        data: readiness,
+      })),
+    } as unknown as OpenCodeReadinessBridgeCommandExecutor;
+
+    try {
+      const bridge = new OpenCodeReadinessBridge(executor);
+      await bridge.checkOpenCodeTeamLaunchReadiness({
+        projectPath: 'C:\\Users\\Test\\Todo',
+        selectedModel: 'ollama/gemma4:12b',
+        requireExecutionProbe: true,
+      });
+
+      expect(
+        bridge.getLastOpenCodeRuntimeSnapshot('c:\\users\\test\\todo', 'ollama/gemma4:12b', true)
+      ).toEqual(runtime);
+      expect(bridge.getLastOpenCodeRuntimeSnapshot('c:\\users\\test\\todo')).toEqual(runtime);
+    } finally {
+      Object.defineProperty(process, 'platform', {
+        value: originalPlatform,
+        configurable: true,
+      });
+    }
+  });
+});
+
+describe('OpenCodeReadinessBridge free-tier version gate', () => {
+  const input = {
+    projectPath: '/workspace/test-project',
+    selectedModel: 'opencode/big-pickle',
+    requireExecutionProbe: true,
+  };
+
+  it('blocks a known outdated app-managed binary before dispatching readiness', async () => {
+    const execute = vi.fn();
+    const bridge = new OpenCodeReadinessBridge(
+      { execute } as unknown as OpenCodeReadinessBridgeCommandExecutor,
+      {
+        readOpenCodeRuntimeStatus: async () => ({ installed: true, version: '1.17.18' }),
+      }
+    );
+
+    const result = await bridge.checkOpenCodeTeamLaunchReadiness(input);
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      state: 'unsupported_version',
+      launchAllowed: false,
+      missing: [expect.stringContaining('OpenCode 1.18.0 or newer')],
+    });
+    expect(result.executionProof).toBeUndefined();
+    expect(
+      bridge.getLastOpenCodeRuntimeSnapshot(input.projectPath, input.selectedModel, true)
+    ).toBeNull();
+  });
+
+  it('tells users to change a pinned binary instead of updating the managed runtime', async () => {
+    const execute = vi.fn();
+    const bridge = new OpenCodeReadinessBridge(
+      { execute } as unknown as OpenCodeReadinessBridgeCommandExecutor,
+      {
+        readOpenCodeRuntimeStatus: async () => ({
+          installed: true,
+          version: '1.17.18',
+          binaryOverrideEnvName: 'OPENCODE_BIN_PATH',
+        }),
+      }
+    );
+
+    const result = await bridge.checkOpenCodeTeamLaunchReadiness(input);
+
+    expect(result.missing).toEqual([
+      expect.stringContaining('The OPENCODE_BIN_PATH override pins this version'),
+    ]);
+    expect(result.missing?.[0]).toContain('remove the override, then restart Agent Teams');
+    expect(result.missing?.[0]).not.toContain('provider status card');
+  });
+
+  it('uses a future minimum returned by the real readiness bridge', async () => {
+    const execute = vi.fn().mockResolvedValue({
+      ok: true,
+      runtime: {
+        providerId: 'opencode',
+        binaryPath: '/runtime/opencode',
+        binaryFingerprint: 'old',
+        version: '1.18.1',
+        capabilitySnapshotId: 'old-snapshot',
+      },
+      data: {
+        state: 'model_unavailable',
+        launchAllowed: false,
+        modelId: input.selectedModel,
+        opencodeVersion: '1.18.1',
+        missing: ['OpenCode 1.19.2 or newer is required to use the free tier'],
+        diagnostics: [],
+      },
+    });
+    const bridge = new OpenCodeReadinessBridge(
+      { execute } as unknown as OpenCodeReadinessBridgeCommandExecutor,
+      {
+        readOpenCodeRuntimeStatus: async () => ({
+          installed: true,
+          version: '1.18.1',
+          binaryOverrideEnvName: 'OPENCODE_BIN_PATH',
+        }),
+      }
+    );
+
+    const result = await bridge.checkOpenCodeTeamLaunchReadiness(input);
+
+    expect(execute).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({
+      state: 'unsupported_version',
+      launchAllowed: false,
+      missing: [expect.stringContaining('OpenCode 1.19.2 or newer')],
+    });
+    expect(result.missing?.[0]).toContain('The OPENCODE_BIN_PATH override pins this version');
+    expect(result.executionProof).toBeUndefined();
+    expect(
+      bridge.getLastOpenCodeRuntimeSnapshot(input.projectPath, input.selectedModel, true)
+    ).toBeNull();
+  });
+});
+
+describe('OpenCodeReadinessBridge cursor-acp MCP registration', () => {
+  const launchData = { runId: 'run-1', teamLaunchState: 'launched', members: {} };
+  const launchBody = {
+    runId: 'run-1',
+    laneId: 'lane-1',
+    teamName: 'team',
+    projectPath: 'C:\\workspaces\\example',
+    members: [],
+    leadPrompt: 'lead',
+    expectedCapabilitySnapshotId: null,
+    executionProof: { profileRootKey: 'account-1' },
+  } as unknown as Parameters<OpenCodeReadinessBridge['launchOpenCodeTeam']>[0];
+
+  const buildBridge = (
+    options: OpenCodeReadinessBridgeOptions
+  ): { bridge: OpenCodeReadinessBridge; execute: Mock } => {
+    const execute = vi.fn(async () => ({ ok: true, data: launchData }));
+    const bridge = new OpenCodeReadinessBridge(
+      { execute } as unknown as OpenCodeReadinessBridgeCommandExecutor,
+      options
+    );
+    return { bridge, execute };
+  };
+
+  beforeEach(() => {
+    vi.mocked(prepareCursorAcpLaunchMcpConfig).mockClear();
+  });
+
+  it.each(['cursor-acp/auto'])(
+    'leaves global registration untouched when launching %s',
+    async (selectedModel) => {
+      const { bridge, execute } = buildBridge({});
+
+      await expect(bridge.launchOpenCodeTeam({ ...launchBody, selectedModel })).resolves.toEqual(
+        launchData
+      );
+
+      expect(prepareCursorAcpLaunchMcpConfig).not.toHaveBeenCalled();
+      expect(execute).toHaveBeenCalledOnce();
+    }
+  );
+
+  it('registers nothing when no Agent Teams MCP URL is wired', async () => {
+    const { bridge, execute } = buildBridge({});
+
+    await expect(
+      bridge.launchOpenCodeTeam({ ...launchBody, selectedModel: 'cursor-acp/auto' })
+    ).resolves.toEqual(launchData);
+
+    expect(prepareCursorAcpLaunchMcpConfig).not.toHaveBeenCalled();
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+});

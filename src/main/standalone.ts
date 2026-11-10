@@ -1,0 +1,264 @@
+import { join } from 'node:path';
+
+import { DesktopBackendFeature } from '@features/agent-backend/main';
+import { createApplicationCommandLedgerFeature } from '@features/application-command-ledger/main';
+import { createInternalStorageFeature } from '@features/internal-storage/main';
+/**
+ * Standalone (non-Electron) entry point for Agent Teams AI.
+ *
+ * Runs the HTTP server + API without Electron, suitable for Docker
+ * or any headless/remote environment. The renderer is served as
+ * static files over HTTP.
+ *
+ * Environment variables:
+ * - HOST: Bind address (default '0.0.0.0')
+ * - PORT: Listen port (default 3456)
+ * - CLAUDE_ROOT: Path to .claude directory (default ~/.claude)
+ * - CORS_ORIGIN: CORS origin policy (default '*')
+ */
+// Note: Sentry is NOT imported here. @sentry/electron/main requires Electron
+// runtime which is unavailable in standalone (pure Node.js) mode. Standalone
+// error tracking can be added later with @sentry/node if needed.
+import { createRecentProjectsFeature } from '@features/recent-projects/main';
+import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
+import { createLogger } from '@shared/utils/logger';
+
+import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
+import {
+  getAutoDetectedClaudeBasePath,
+  getClaudeBasePath,
+  getHomeDir,
+  getProjectsBasePath,
+  getTodosBasePath,
+  setClaudeBasePathOverride,
+} from './utils/pathDecoder';
+
+import type { HttpServices } from './http';
+import type { HttpServer } from './services/infrastructure/HttpServer';
+import type { NotificationManager } from './services/infrastructure/NotificationManager';
+import type { ServiceContext } from './services/infrastructure/ServiceContext';
+import type { SshConnectionManager } from './services/infrastructure/SshConnectionManager';
+import type { UpdaterService } from './services/infrastructure/UpdaterService';
+import type { InternalStorageFeature } from '@features/internal-storage/main';
+
+const logger = createLogger('Standalone');
+
+// =============================================================================
+// Configuration
+// =============================================================================
+
+const HOST = process.env.HOST ?? '0.0.0.0';
+const PORT = parseInt(process.env.PORT ?? '3456', 10);
+const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
+
+// Default CORS to allow all in standalone mode (Docker isolation replaces CORS)
+if (!process.env.CORS_ORIGIN) {
+  process.env.CORS_ORIGIN = '*';
+}
+
+// =============================================================================
+// Stub services (Electron-only features unavailable in standalone)
+// =============================================================================
+
+/** No-op UpdaterService stub — auto-updater requires Electron. */
+const updaterServiceStub = {
+  checkForUpdates: async () => {},
+  downloadUpdate: async () => {},
+  quitAndInstall: async () => {},
+  setMainWindow: () => {},
+} as unknown as UpdaterService;
+
+/** No-op SshConnectionManager stub — SSH is managed per-user in the Electron app. */
+const sshConnectionManagerStub = {
+  getStatus: () => ({
+    state: 'disconnected' as const,
+    host: null,
+    error: null,
+    remoteProjectsPath: null,
+  }),
+  getProvider: () => new LocalFileSystemProvider(),
+  isRemote: () => false,
+  connect: async () => {},
+  disconnect: () => {},
+  testConnection: async () => ({ success: false, error: 'SSH not available in standalone mode' }),
+  getConfigHosts: async () => [],
+  resolveHostConfig: async () => null,
+  dispose: () => {},
+  on: () => sshConnectionManagerStub,
+  off: () => sshConnectionManagerStub,
+  emit: () => false,
+} as unknown as SshConnectionManager;
+
+// =============================================================================
+// Application State
+// =============================================================================
+
+let localContext: ServiceContext;
+let notificationManager: NotificationManager;
+let httpServer: HttpServer;
+let agentBackend: DesktopBackendFeature | undefined;
+let backendStorage: InternalStorageFeature | undefined;
+let backendCurrent = true;
+
+// =============================================================================
+// Lifecycle
+// =============================================================================
+
+async function start(): Promise<void> {
+  logger.info('Starting standalone server...');
+
+  // Apply Claude root override if set
+  if (CLAUDE_ROOT) {
+    setClaudeBasePathOverride(CLAUDE_ROOT);
+    logger.info(`Using CLAUDE_ROOT: ${CLAUDE_ROOT}`);
+  }
+
+  // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
+  const [{ HttpServer }, { NotificationManager }, { ServiceContext }] = await Promise.all([
+    import('./services/infrastructure/HttpServer'),
+    import('./services/infrastructure/NotificationManager'),
+    import('./services/infrastructure/ServiceContext'),
+  ]);
+
+  const projectsDir = getProjectsBasePath();
+  const todosDir = getTodosBasePath();
+
+  logger.info(`Projects directory: ${projectsDir}`);
+  logger.info(`Todos directory: ${todosDir}`);
+
+  // Create local context (the only context in standalone mode)
+  localContext = new ServiceContext({
+    id: 'local',
+    type: 'local',
+    fsProvider: new LocalFileSystemProvider(),
+    projectsDir,
+    todosDir,
+  });
+  localContext.start();
+
+  // Initialize notification manager
+  notificationManager = NotificationManager.getInstance();
+  localContext.fileWatcher.setNotificationManager(notificationManager);
+
+  // Create HTTP server
+  httpServer = new HttpServer();
+  const recentProjectsFeature = createRecentProjectsFeature({
+    getActiveContext: () => localContext,
+    getLocalContext: () => localContext,
+    logger: createLogger('Feature:RecentProjects'),
+  });
+
+  // Wire file watcher events to SSE broadcast
+  localContext.fileWatcher.on('file-change', (event: unknown) => {
+    httpServer.broadcast('file-change', event);
+  });
+  localContext.fileWatcher.on('todo-change', (event: unknown) => {
+    httpServer.broadcast('todo-change', event);
+  });
+
+  // Forward notification events to SSE
+  notificationManager.on('notification-new', (notification: unknown) => {
+    httpServer.broadcast('notification:new', notification);
+  });
+  notificationManager.on('notification-updated', (data: unknown) => {
+    httpServer.broadcast('notification:updated', data);
+  });
+  notificationManager.on('notification-clicked', (data: unknown) => {
+    httpServer.broadcast('notification:clicked', data);
+  });
+
+  const descriptorPath = process.env.AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH;
+  const descriptorHash = process.env.AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256;
+  backendStorage =
+    descriptorPath || descriptorHash
+      ? createInternalStorageFeature({
+          userDataPath: join(getClaudeBasePath(), 'agent-backend', 'http-state'),
+        })
+      : undefined;
+  const ledgerBackend = backendStorage?.applicationCommandLedgerBackend;
+  const commandRunner = ledgerBackend
+    ? createApplicationCommandLedgerFeature({ storageGateway: ledgerBackend.gateway }).runner
+    : null;
+  agentBackend = new DesktopBackendFeature({
+    descriptor:
+      descriptorPath || descriptorHash
+        ? { path: descriptorPath ?? '', sha256: descriptorHash ?? '' }
+        : null,
+    bindingDirectory: join(getClaudeBasePath(), 'agent-backend', 'http-bindings'),
+    commandRunner: () => commandRunner,
+  });
+
+  // Build services for HTTP routes
+  const services: HttpServices = {
+    agentBackend: {
+      feature: agentBackend,
+      contextId: localContext.id,
+      isCurrent: () => backendCurrent,
+    },
+    projectScanner: localContext.projectScanner,
+    sessionParser: localContext.sessionParser,
+    subagentResolver: localContext.subagentResolver,
+    chunkBuilder: localContext.chunkBuilder,
+    dataCache: localContext.dataCache,
+    recentProjectsFeature,
+    workspaceTrust: createWorkspaceTrustFeatures({
+      getClaudeConfigDir: getClaudeBasePath,
+      getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
+      getHomeDir,
+    }).status,
+    updaterService: updaterServiceStub,
+    sshConnectionManager: sshConnectionManagerStub,
+  };
+
+  // No-op mode switch handler (no SSH in standalone)
+  const modeSwitchHandler = async (): Promise<void> => {};
+
+  // Start the server
+  const port = await httpServer.start(services, modeSwitchHandler, PORT, HOST);
+  logger.info(`Standalone server running at http://${HOST}:${port}`);
+  logger.info('Open in your browser to view Claude Code sessions');
+}
+
+async function shutdown(): Promise<void> {
+  logger.info('Shutting down...');
+  backendCurrent = false;
+  const backendDrain = agentBackend?.shutdown();
+
+  if (httpServer?.isRunning()) {
+    await httpServer.stop();
+  }
+
+  await backendDrain;
+  await backendStorage?.dispose();
+
+  if (localContext) {
+    localContext.dispose();
+  }
+
+  logger.info('Shutdown complete');
+  process.exit(0);
+}
+
+// =============================================================================
+// Signal Handlers
+// =============================================================================
+
+// SIGINT works on all platforms (Ctrl+C), but SIGTERM does not exist on Windows.
+process.on('SIGINT', () => void shutdown());
+if (process.platform !== 'win32') {
+  process.on('SIGTERM', () => void shutdown());
+}
+
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled promise rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught exception:', error);
+});
+
+// =============================================================================
+// Start
+// =============================================================================
+
+void start();

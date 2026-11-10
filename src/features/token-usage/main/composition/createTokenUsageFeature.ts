@@ -1,0 +1,213 @@
+import { randomUUID } from 'crypto';
+
+import {
+  TokenUsageAnalyticsService,
+  TokenUsageBudgetNotificationEvaluator,
+} from '../../core/application';
+import { ClaudeJsonlUsageImporter } from '../infrastructure/ClaudeJsonlUsageImporter';
+import { createCliUsageImporter } from '../infrastructure/CliUsageImporters';
+import { CodexJsonlUsageImporter } from '../infrastructure/CodexJsonlUsageImporter';
+import { CompositeTokenUsageRunSourceDiscovery } from '../infrastructure/CompositeTokenUsageRunSourceDiscovery';
+import { GatewayUsageImporter } from '../infrastructure/GatewayUsageImporter';
+import { JsonTokenUsageBudgetNotificationStateRepository } from '../infrastructure/JsonTokenUsageBudgetNotificationStateRepository';
+import { JsonTokenUsageBudgetSettingsRepository } from '../infrastructure/JsonTokenUsageBudgetSettingsRepository';
+import { JsonTokenUsageLedgerRepository } from '../infrastructure/JsonTokenUsageLedgerRepository';
+import { createJsonFileUsageImporter } from '../infrastructure/JsonUsageImporters';
+import { OpenCodeSessionStoreRunSourceDiscovery } from '../infrastructure/OpenCodeSessionStoreRunSourceDiscovery';
+import { OpenCodeSqliteUsageImporter } from '../infrastructure/OpenCodeSqliteUsageImporter';
+import { TeamLaunchRunSourceDiscovery } from '../infrastructure/TeamLaunchRunSourceDiscovery';
+
+import type {
+  TokenUsageAnalyticsSnapshotDto,
+  TokenUsageBudgetSettingsDto,
+  TokenUsageBudgetSettingsUpdateRequestDto,
+  TokenUsageBudgetStatusDto,
+  TokenUsageEventDto,
+  TokenUsageRunDto,
+  TokenUsageSnapshotRequest,
+} from '../../contracts';
+import type {
+  TokenUsageAnalyticsServicePort,
+  TokenUsageBudgetNotificationSettingsPort,
+  TokenUsageBudgetNotificationSinkPort,
+  TokenUsageGatewayUsagePort,
+  TokenUsageImporterPort,
+  TokenUsageLoggerPort,
+  TokenUsageRealtimePublisherPort,
+  TokenUsageTaskAttributionSourcePort,
+} from '../../core/application';
+
+export interface TokenUsageFeatureFacade {
+  getSnapshot(request?: TokenUsageSnapshotRequest): Promise<TokenUsageAnalyticsSnapshotDto>;
+  refreshSnapshot(request?: TokenUsageSnapshotRequest): Promise<TokenUsageAnalyticsSnapshotDto>;
+  recordRuns(runs: readonly TokenUsageRunDto[]): Promise<void>;
+  ingestEvents(events: readonly TokenUsageEventDto[]): Promise<void>;
+  getBudgetSettings(): Promise<TokenUsageBudgetSettingsDto>;
+  getBudgetStatus(): Promise<TokenUsageBudgetStatusDto>;
+  dispose(): void;
+  updateBudgetSettings(
+    settings: TokenUsageBudgetSettingsUpdateRequestDto
+  ): Promise<TokenUsageBudgetSettingsDto>;
+}
+
+export interface CreateTokenUsageFeatureDeps {
+  ledgerPath: string;
+  budgetSettingsPath?: string;
+  budgetNotificationStatePath?: string;
+  teamsBasePath: string;
+  claudeProjectsBasePath?: string;
+  openCodeDataHomePath?: string;
+  importers?: readonly TokenUsageImporterPort[];
+  ccusageJsonPath?: string;
+  tokscaleJsonPath?: string;
+  ccusageCommand?: string;
+  ccusageArgs?: readonly string[];
+  tokscaleCommand?: string;
+  tokscaleArgs?: readonly string[];
+  commandImporterRefreshIntervalMs?: number;
+  budgetNotificationSink?: TokenUsageBudgetNotificationSinkPort;
+  budgetNotificationSettings?: TokenUsageBudgetNotificationSettingsPort;
+  publisher?: TokenUsageRealtimePublisherPort;
+  taskAttributionSource?: TokenUsageTaskAttributionSourcePort;
+  gatewayUsage?: TokenUsageGatewayUsagePort;
+  runMetadata?: { reconcileRuns(runs: readonly TokenUsageRunDto[]): Promise<TokenUsageRunDto[]> };
+  logger?: TokenUsageLoggerPort;
+}
+
+export function createTokenUsageFeature(
+  deps: CreateTokenUsageFeatureDeps
+): TokenUsageFeatureFacade {
+  const budgetSettingsRepository = deps.budgetSettingsPath
+    ? new JsonTokenUsageBudgetSettingsRepository(
+        deps.budgetSettingsPath,
+        deps.budgetNotificationSettings
+      )
+    : undefined;
+  const budgetNotificationEvaluator =
+    budgetSettingsRepository &&
+    deps.budgetNotificationStatePath &&
+    deps.budgetNotificationSink &&
+    deps.budgetNotificationSettings
+      ? new TokenUsageBudgetNotificationEvaluator({
+          state: new JsonTokenUsageBudgetNotificationStateRepository(
+            deps.budgetNotificationStatePath
+          ),
+          sink: deps.budgetNotificationSink,
+          settings: deps.budgetNotificationSettings,
+          clock: { now: () => new Date() },
+          logger: deps.logger,
+        })
+      : undefined;
+  const teamLaunchDiscovery = new TeamLaunchRunSourceDiscovery(deps.teamsBasePath);
+  const discovery = deps.openCodeDataHomePath
+    ? new CompositeTokenUsageRunSourceDiscovery([
+        teamLaunchDiscovery,
+        new OpenCodeSessionStoreRunSourceDiscovery(deps.teamsBasePath, deps.openCodeDataHomePath),
+      ])
+    : teamLaunchDiscovery;
+  const clock = { now: () => new Date() };
+  const ledger = new JsonTokenUsageLedgerRepository(deps.ledgerPath);
+  const importers = buildImporters(deps);
+  if (deps.gatewayUsage) {
+    importers.push(
+      new GatewayUsageImporter({
+        usage: deps.gatewayUsage,
+        ledger,
+        clock,
+        logger: deps.logger,
+      })
+    );
+  }
+  const service: TokenUsageAnalyticsServicePort = new TokenUsageAnalyticsService({
+    statusEpoch: randomUUID(),
+    ledger,
+    discovery: deps.runMetadata
+      ? {
+          discoverAppRuns: async () =>
+            deps.runMetadata!.reconcileRuns(await discovery.discoverAppRuns()),
+        }
+      : discovery,
+    importers,
+    clock,
+    budgets: budgetSettingsRepository,
+    budgetNotifications: budgetNotificationEvaluator,
+    budgetNotificationSettings: deps.budgetNotificationSettings,
+    publisher: deps.publisher,
+    taskAttributionSource: deps.taskAttributionSource,
+    gatewayUsage: deps.gatewayUsage,
+    logger: deps.logger,
+  });
+
+  const timer = setInterval(() => {
+    void service
+      .tick()
+      .catch((error: unknown) =>
+        deps.logger?.warn('Failed to update background budget status', error)
+      );
+  }, 60_000);
+  timer.unref?.();
+
+  return {
+    dispose: () => clearInterval(timer),
+    getBudgetStatus: () => service.getBudgetStatus(),
+    getSnapshot: (request) => service.getSnapshot(request),
+    refreshSnapshot: (request) => service.refreshSnapshot(request),
+    recordRuns: (runs) => service.recordRuns(runs),
+    ingestEvents: (events) => service.ingestEvents(events),
+    getBudgetSettings: () => service.getBudgetSettings(),
+    updateBudgetSettings: (settings) => service.updateBudgetSettings(settings),
+  };
+}
+
+function buildImporters(deps: CreateTokenUsageFeatureDeps): TokenUsageImporterPort[] {
+  const importers = [...(deps.importers ?? [])];
+  if (deps.openCodeDataHomePath) {
+    importers.push(
+      new OpenCodeSqliteUsageImporter({
+        runLookbackMs: 48 * 60 * 60 * 1000,
+        logger: deps.logger,
+      })
+    );
+  }
+  if (deps.claudeProjectsBasePath) {
+    importers.push(
+      new ClaudeJsonlUsageImporter({
+        projectsBasePath: deps.claudeProjectsBasePath,
+        enableSessionIdIndexFallback: false,
+        runLookbackMs: 48 * 60 * 60 * 1000,
+        logger: deps.logger,
+      }),
+      new CodexJsonlUsageImporter({
+        projectsBasePath: deps.claudeProjectsBasePath,
+        enableSessionIdIndexFallback: false,
+        runLookbackMs: 48 * 60 * 60 * 1000,
+        logger: deps.logger,
+      })
+    );
+  }
+  if (deps.ccusageJsonPath) {
+    importers.push(createJsonFileUsageImporter('ccusage', deps.ccusageJsonPath));
+  }
+  if (deps.tokscaleJsonPath) {
+    importers.push(createJsonFileUsageImporter('tokscale', deps.tokscaleJsonPath));
+  }
+  if (deps.ccusageCommand) {
+    importers.push(
+      createCliUsageImporter('ccusage', {
+        command: deps.ccusageCommand,
+        args: deps.ccusageArgs,
+        minRefreshIntervalMs: deps.commandImporterRefreshIntervalMs,
+      })
+    );
+  }
+  if (deps.tokscaleCommand) {
+    importers.push(
+      createCliUsageImporter('tokscale', {
+        command: deps.tokscaleCommand,
+        args: deps.tokscaleArgs,
+        minRefreshIntervalMs: deps.commandImporterRefreshIntervalMs,
+      })
+    );
+  }
+  return importers;
+}

@@ -1,0 +1,52 @@
+# Dependencies installed inside the image
+node_modules/
+landing/node_modules/
+
+# Local build output
+dist/
+dist-electron/
+dist-standalone/
+out/
+release/
+coverage/
+landing/.nuxt/
+landing/.output/
+electron.vite.config.*.mjs
+
+# Runtime and local caches
+.git/
+.pnpm-store/
+.runtime-download/
+resources/runtime/*
+!resources/runtime/.gitkeep
+.eslintcache
+.eslintcache-fast
+*.tsbuildinfo
+
+# Local-only data
+.claude/
+.home/
+.serena/
+.playwright-mcp/
+logs/
+*.log
+.env
+.env.*
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Local scratch artifacts
+notification_example/
+temp/
+eslint-fix/
+remotion/*
+.tmp-*
+agent-teams-reference-fix-*.png
+ORCHESTRATOR_RELEASE_RUNBOOK.local.md

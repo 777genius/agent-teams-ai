@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "archive": "docs/plans/provider-migration/evidence/p5-desktop-backend-bridge-v1.tar.gz",
+  "archiveSha256": "fcfad08e9f4a77d2892d3c5fb2af3283cfe84be6d0bd3582005d926ffa1ac118",
+  "manifestSha256": "e1171a3a1cd707b25f9745aa69d02c7c55a074834837bf187d4375b3713f9e19",
+  "stagingDirectory": "/var/folders/7b/ydmc_b0n251bc4hss4tz8y880000gn/T/TEST-p5-desktop-backend-evidence-62b0zffz",
+  "capturedAtUtc": "2026-10-21T17:42:08.385359+00:00",
+  "scope": "Desktop preload agentBackend API diagnostics through actual Electron main, standalone Host stdio and filesystem Team; 15 API diagnostic calls",
+  "result": "PASS for bounded backend bridge prerequisite only",
+  "apiDiagnosticCalls": 15,
+  "originalAttemptsRetained": 3,
+  "sourceFilesCopiedAfterRun": 35,
+  "compiledBundlesHashedNotCopied": 27,
+  "nativeHostTupleReference": {
+    "path": "docs/plans/provider-migration/evidence/p5-codex-host-native-v1.tar.gz",
+    "sha256": "2338bcbae58fb35d8962073bffd331f996e46fbf9fa026c6d35911c94da4b8c3",
+    "bytes": 276985,
+    "copied": false
+  },
+  "gateSummary": {
+    "aggregateAllGreenClaim": false,
+    "hostParallel": "Interrupted externally; raw p5-host-tests.log retained.",
+    "hostSerial": "125/126 with original fixture startup-readiness failure; raw log retained.",
+    "targetedCustody": "3/3 after corrected test startup deadline; p5-captured-custody-targeted-handoff.json remains explicitly reconstructed-from-tool-output=true; corrected test source copied after run, not launch-time hashed.",
+    "desktopShellInitial": "Original CLI startup failure retained.",
+    "desktopShellRetest": "16 tests passed after lazy import.",
+    "rootTypecheckAndFocusedLint": "PASS logs retained; empty lint stdout is preserved as observed.",
+    "sourceSize": "PASS log predates lowering main cap3719 to3711; actual current main source3711 still within the earlier cap.",
+    "nativeTestTypes": "PASS log retained.",
+    "criticalGuards": "30 tests reported passed separately by worker; no raw root log is invented or included."
+  },
+  "exclusions": [
+    "Actual user-control signoff",
+    "native Desktop Team/provider sessions",
+    "full P4/P5/P8",
+    "full fork-free/P5 sentinel qualification",
+    "legacy maintenance cutover"
+  ],
+  "maintenanceGap": "Refused legacy shutdown cleanup call retained in complete final sentinel census; full fork-free/P5 remains unqualified."
+}

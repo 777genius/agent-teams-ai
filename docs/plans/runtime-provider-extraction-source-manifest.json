@@ -1,0 +1,643 @@
+{
+  "schemaVersion": 1,
+  "status": "source-inventory-only",
+  "scope": "First Codex native donor cluster. Does not classify the full fork or authorize deletion of non-selected files.",
+  "sourceRepository": "https://github.com/777genius/agent_teams_orchestrator",
+  "baselineCommit": "38c09970c2925bb36a340c546ac53229f3d7bda5",
+  "sourceCommit": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+  "sourceCheckoutHeadObserved": "3bf24764f25dfd7588b9c8b23748fa0891fd85df",
+  "sourceCheckoutPolicy": "Read Git objects at sourceCommit; never copy dirty working-tree bytes, reset, or checkout the donor.",
+  "totals": {
+    "productionFiles": 20,
+    "physicalSourceLines": 5972,
+    "productionLinesDefinition": "All physical lines in selected source blobs, not diff additions, authorship, forecast changes, or final library size."
+  },
+  "extractionGate": "No file is build-closure-qualified by this inventory. Register ports/dependencies and pass package conformance first. Preserve existing behavior or name its accepted successor before retiring wrappers.",
+  "files": [
+    {
+      "sourcePath": "src/services/codexNative/CodexNativeTraceWriter.ts",
+      "sourceBlob": "862c39e446eee38e987712970ca8ab7a85f5b110",
+      "sourceSha256": "2bf0f43d92933a46a59fb36b38f60b347c3de7617c41869c8a5f4c9b64284f66",
+      "physicalLines": 488,
+      "disposition": {
+        "action": "move mechanism",
+        "targetOwner": "runtime/provider-adapter",
+        "reason": "Retain technical event capture; replace team identity, task freshness writes and trace paths with runtime-owned observation/binding ports."
+      },
+      "importsObserved": [
+        "../../utils/atomicWrite.js",
+        "../../utils/teammate.js",
+        "../boardTaskActivity/TaskLogFreshnessSignal.js",
+        "./jsonlMapper.js",
+        "./normalizedEvents.js",
+        "crypto",
+        "fs/promises",
+        "os",
+        "path"
+      ],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/CodexNativeTraceWriter.test.ts",
+          "sourceBlob": "3800e9c76e82e0cf8621ff11776c35a0562f94df",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/appServerApproval.ts",
+      "sourceBlob": "4f38a7503d0fb8f5e56e04e933b7620bf085c91a",
+      "sourceSha256": "feb96b8121369b8ded2b71954c4257d0c3fa6f3dc902a0ae92ed9c97692cd425",
+      "physicalLines": 457,
+      "disposition": {
+        "action": "move mechanism",
+        "targetOwner": "runtime/provider-adapter",
+        "reason": "Retain Codex approval protocol parsing/mapping only. Existing auto/manual launch-policy builders (including danger-full-access default) are not the new permission authority: translate explicit runtime-selected policy, with no implicit privilege defaults. Runtime owns permission decisions."
+      },
+      "importsObserved": [],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/appServerApproval.test.ts",
+          "sourceBlob": "e08f577683999c10ca6c1f138a3a18980d7cc4d2",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/nativeStartupContextPrompt.test.ts",
+          "sourceBlob": "6fdce9680ca05e9b9b28feefa8f4c44af3e84a0f",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/replApprovalTransport.test.ts",
+          "sourceBlob": "77dabaa1780df86b503863d3bd9f79a53ac3b72f",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/appServerRunner.ts",
+      "sourceBlob": "9e42b40d3d66137bc0e47ad0f92c871bee20458a",
+      "sourceSha256": "cdbaada15013bc9e679a68138de6a81094b667fdaabf4b52d3a2e3c5d767cf93",
+      "physicalLines": 972,
+      "disposition": {
+        "action": "move mechanism",
+        "targetOwner": "runtime/provider-adapter",
+        "reason": "Retain app-server JSON-RPC transport; inject owned launch/stop and binary/config resolution, do not copy process ownership."
+      },
+      "importsObserved": [
+        "../../utils/portableCli.js",
+        "../../utils/processKill.js",
+        "../runtimeBackends/codexBackendResolver.js",
+        "./appServerApproval.js",
+        "./execRunner.js",
+        "./normalizedEvents.js",
+        "node:child_process",
+        "node:fs/promises",
+        "node:os",
+        "node:path",
+        "node:readline"
+      ],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/CodexAppServerApproval.live-e2e.test.ts",
+          "sourceBlob": "4883a4e9c9108abbab2163fc7bec9f72643aed0f",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/appServerRunner.test.ts",
+          "sourceBlob": "6fa54aba8ab381c5eff88cafdb061b7cdec24756",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/replApprovalTransport.test.ts",
+          "sourceBlob": "77dabaa1780df86b503863d3bd9f79a53ac3b72f",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/approvalPromptBridge.ts",
+      "sourceBlob": "9cd9da245e3f88241b36fb8f10609f5093e931a5",
+      "sourceSha256": "01f3bc579510f80703b93b359d927325f9b9bb4b4b08ec0bda369dacce169032",
+      "physicalLines": 108,
+      "disposition": {
+        "action": "replace legacy wrapper",
+        "targetOwner": "runtime/technical-interactions",
+        "reason": "Replace Claude control/useCanUseTool/remote bridge types with consumer-owned technical interaction replies."
+      },
+      "importsObserved": [
+        "../../Tool.js",
+        "../../entrypoints/sdk/controlTypes.js",
+        "../../hooks/useCanUseTool.js",
+        "../../remote/remotePermissionBridge.js",
+        "../../utils/permissions/PermissionResult.js",
+        "./appServerApproval.js"
+      ],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/appServerApproval.test.ts",
+          "sourceBlob": "e08f577683999c10ca6c1f138a3a18980d7cc4d2",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/replApprovalTransport.test.ts",
+          "sourceBlob": "77dabaa1780df86b503863d3bd9f79a53ac3b72f",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/capabilities.ts",
+      "sourceBlob": "283ad23eb3b83d3d861261c260c2e5cb8e1dd6dc",
+      "sourceSha256": "292df6e602f39314f278594dd5acc50b39e0cf6e36fdfeac7eae050e633f83fb",
+      "physicalLines": 26,
+      "disposition": {
+        "action": "replace legacy wrapper",
+        "targetOwner": "runtime/provider-admission",
+        "reason": "Legacy phase0 headless-limited strings are not evidence for new app-server capabilities; populate only from qualified tests."
+      },
+      "importsObserved": ["./normalizedEvents.js"],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/customProviderConfigOverrides.ts",
+      "sourceBlob": "9de79c37f0c839a31a00f44042c85cbb49ea72f1",
+      "sourceSha256": "2e2b94b7774c11d4aa4d8c98158bab04a063443e2d73e5476bd054d2828143ec",
+      "physicalLines": 163,
+      "disposition": {
+        "action": "move mechanism",
+        "targetOwner": "runtime/provider-adapter",
+        "reason": "Retain provider config mapping; replace bootstrap globals and resolver dependencies with explicit private config inputs."
+      },
+      "importsObserved": ["../../bootstrap/state.js", "../runtimeBackends/codexBackendResolver.js"],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/customProviderConfigOverrides.test.ts",
+          "sourceBlob": "beb2d5c72be838fcf026be250b3640db42439139",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/execRunner.ts",
+      "sourceBlob": "6c702db34a168cf72a0321a2127ee42a7ec0c0a8",
+      "sourceSha256": "de184cab5c6e7d955f075445655ed308ba8a99253b79fe99207ea73e1cd50512",
+      "physicalLines": 687,
+      "disposition": {
+        "action": "move mechanism",
+        "targetOwner": "runtime/provider-adapter",
+        "reason": "Preserve useful bounded exec mechanism and existing behavior evidence; separate custody/stop, legacy trace and path resolution dependencies. Do not claim interactive parity from exec tests."
+      },
+      "importsObserved": [
+        "../../utils/portableCli.js",
+        "../../utils/processKill.js",
+        "../runtimeBackends/codexBackendResolver.js",
+        "./CodexNativeTraceWriter.js",
+        "./jsonlMapper.js",
+        "./normalizedEvents.js",
+        "node:child_process",
+        "node:fs",
+        "node:path",
+        "node:readline",
+        "node:stream"
+      ],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/CodexAppServerApproval.live-e2e.test.ts",
+          "sourceBlob": "4883a4e9c9108abbab2163fc7bec9f72643aed0f",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/appServerRunner.test.ts",
+          "sourceBlob": "6fa54aba8ab381c5eff88cafdb061b7cdec24756",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/execRunner.test.ts",
+          "sourceBlob": "51c333b5890a71bde9d8b6c76a54c5fe28188f3c",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/nativeStartupContextPrompt.test.ts",
+          "sourceBlob": "6fdce9680ca05e9b9b28feefa8f4c44af3e84a0f",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/strictMcpLaunch.safe-e2e.test.ts",
+          "sourceBlob": "9a3b9f99771dd0c75b13fef1dde4db63396fab09",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/jsonlMapper.ts",
+      "sourceBlob": "20dc3e8fc02af9888912db3c92a8289d4c4dae02",
+      "sourceSha256": "9f33cf14adbbe6a1e7d5bbb30f396624ecd5f0f2d64e2a0170b0d4c620663ba0",
+      "physicalLines": 546,
+      "disposition": {
+        "action": "move mechanism",
+        "targetOwner": "runtime/provider-adapter",
+        "reason": "Retain protocol event normalization; verify unknown events, correlation and complete/delta semantics against the selected backend."
+      },
+      "importsObserved": ["./normalizedEvents.js"],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/jsonlMapper.test.ts",
+          "sourceBlob": "d37d881a19bf249e39bf41626c3e2a4f75f99369",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/launchConfigOverrides.ts",
+      "sourceBlob": "29847cbaa420a9ef198988d616d9facfbad8bcb4",
+      "sourceSha256": "5ced5a52d69f8920dda570208a4e7d8f6dfe9ec8494dc52bab84e4363779db03",
+      "physicalLines": 55,
+      "disposition": {
+        "action": "replace legacy wrapper",
+        "targetOwner": "runtime/configuration",
+        "reason": "Remove ambient bootstrap state; runtime supplies explicit selected configuration."
+      },
+      "importsObserved": ["../../bootstrap/state.js"],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/launchConfigOverrides.test.ts",
+          "sourceBlob": "72df2c8b492f128a6ad8dbbc904d1837742a2e18",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/mcpConfigBridge.ts",
+      "sourceBlob": "94f2c85dd2c233dc2df5c4887965c97455031f85",
+      "sourceSha256": "7aecbfb3bb4073397643406c59d341958c625545a4c88794bbba7f841b921a42",
+      "physicalLines": 175,
+      "disposition": {
+        "action": "move mechanism",
+        "targetOwner": "runtime/provider-adapter",
+        "reason": "Retain Codex MCP config translation with explicit endpoint/config inputs; no old MCP config store or second tools authority."
+      },
+      "importsObserved": [
+        "../../bootstrap/state.js",
+        "../../utils/json.js",
+        "../mcp/config.js",
+        "../mcp/types.js",
+        "node:path"
+      ],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/mcpConfigBridge.test.ts",
+          "sourceBlob": "9817ea135ee38ca62b37b217d469f64f53c8bf0d",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/nativeStartupContextPrompt.ts",
+      "sourceBlob": "470ec0607439a63229b4a13bc3f2a13280c72f1c",
+      "sourceSha256": "a637c4a49467b026487a9c2801c77745632028e61518ddb6c3facf538a344f15",
+      "physicalLines": 31,
+      "disposition": {
+        "action": "reimplement product behavior",
+        "targetOwner": "orchestrator/member-context",
+        "reason": "Team bootstrap/role instructions belong to Orchestrator; driver receives already-built context."
+      },
+      "importsObserved": [
+        "../teamBootstrap/nativeAppManagedBootstrapContext.js",
+        "./appServerApproval.js"
+      ],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/nativeStartupContextPrompt.test.ts",
+          "sourceBlob": "6fdce9680ca05e9b9b28feefa8f4c44af3e84a0f",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/normalizedEvents.ts",
+      "sourceBlob": "633dc40a9353c8848de74840f0f73956bf7a97fc",
+      "sourceSha256": "f1add565814146233667549e6e13d6d8bd5e1bb37851e610301d9c8f58dc8eed",
+      "physicalLines": 65,
+      "disposition": {
+        "action": "move mechanism",
+        "targetOwner": "runtime/provider-adapter",
+        "reason": "Reuse technical normalized facts where they meet consumer contract; provider types stay private and do not become product DTOs."
+      },
+      "importsObserved": [],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/replTurnBridge.ts",
+      "sourceBlob": "e6d636cd4e7aa4263acf1981b4e9ea3d907820f5",
+      "sourceSha256": "b54aa670da216a59228864655e7df7d3020983257ca2a0ec0532d700d4277d97",
+      "physicalLines": 93,
+      "disposition": {
+        "action": "replace legacy wrapper",
+        "targetOwner": "runtime/composition",
+        "reason": "Replace Anthropic messages, Claude AppState, SDK message adapter and global usage dependencies with runtime session/event contract."
+      },
+      "importsObserved": [
+        "../../bootstrap/state.js",
+        "../../entrypoints/agentSdkTypes.js",
+        "../../remote/sdkMessageAdapter.js",
+        "../../state/AppState.js",
+        "../../types/message.js",
+        "../../utils/effort.js",
+        "../../utils/permissions/PermissionMode.js",
+        "../api/emptyUsage.js",
+        "./appServerApproval.js",
+        "./turnExecutor.js",
+        "@anthropic-ai/sdk/resources/messages.mjs"
+      ],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/replApprovalTransport.test.ts",
+          "sourceBlob": "77dabaa1780df86b503863d3bd9f79a53ac3b72f",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/replTurnBridge.test.ts",
+          "sourceBlob": "0ad4244d7e6ebcbb3fb936209d69294dca4d31ad",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/runtimeTurnSettledEmitter.ts",
+      "sourceBlob": "1280308e243c41d4aa3a0e2d7b4ec6cee19e8e49",
+      "sourceSha256": "e46ed0699e837e3dbee60b424b26773882f6b2092d9cb62617f789159dd680a1",
+      "physicalLines": 129,
+      "disposition": {
+        "action": "reimplement product behavior",
+        "targetOwner": "orchestrator/execution-observation",
+        "reason": "Old spool event mixes native turn outcome with team/member identity and Stop hook semantics. Runtime emits technical outcome; Orchestrator owns product attribution/projection."
+      },
+      "importsObserved": [
+        "../../bootstrap/state.js",
+        "../../utils/atomicWrite.js",
+        "../../utils/teammate.js",
+        "node:crypto",
+        "node:path"
+      ],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/runtimeTurnSettledEmitter.test.ts",
+          "sourceBlob": "0a629ee261c5453db0875bb4081cd97153971d2b",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/turnExecutor.test.ts",
+          "sourceBlob": "a3f47c7f36a8607ec20b68f2bdfc0633c8ed2e1c",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/signOffHarness.ts",
+      "sourceBlob": "f5c5498ca2f499a09768f0ff9f0c723b307e2f24",
+      "sourceSha256": "04e323e0397911a89a765bd7cb35a1e3ce963419c150a1fbfe930725448b3fe1",
+      "physicalLines": 255,
+      "disposition": {
+        "action": "retire with reason",
+        "targetOwner": "runtime/provider-conformance-tests",
+        "reason": "Replace old in-production sign-off helper with focused package contract/harness assertions before removing it. Retain behavioral tests; this is not authorization to drop capabilities."
+      },
+      "importsObserved": [
+        "./capabilities.js",
+        "./execRunner.js",
+        "./statusAuthority.js",
+        "./transcriptProjector.js",
+        "node:crypto"
+      ],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/signOffHarness.test.ts",
+          "sourceBlob": "f4187afb1e72a26377359eced41566b4fa6336ae",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/statusAuthority.ts",
+      "sourceBlob": "e1772e2efaa85b5936f1fa49db143d480b2a510c",
+      "sourceSha256": "f79561d5bb29ec05fa5c9fee37b4bd24b37409dd2ff38b8bd2e4e0910cda006e",
+      "physicalLines": 152,
+      "disposition": {
+        "action": "replace legacy wrapper",
+        "targetOwner": "runtime/provider-adapter + orchestrator/observation",
+        "reason": "Split technical warning/history/outcome facts from old Claude Message/UI construction; result must not complete product Work."
+      },
+      "importsObserved": ["../../types/message.js", "../../utils/messages.js", "./execRunner.js"],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/statusAuthority.test.ts",
+          "sourceBlob": "543daa6a039469b1cd0946a1a2f58388829794eb",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/transcriptProjector.ts",
+      "sourceBlob": "ad8cbe0e68698ff4ce38ef1b2ea70004239fe096",
+      "sourceSha256": "ea19f60b25fe0d642c582776716ac0761bff39c8bbc43941867965dc3f35ac02",
+      "physicalLines": 239,
+      "disposition": {
+        "action": "replace legacy wrapper",
+        "targetOwner": "orchestrator/observation + desktop/compatibility",
+        "reason": "Replace Anthropic/legacy Message projection and BoardTask transcript coupling with normalized facts and public projections; preserve UI message/chunk semantics in E."
+      },
+      "importsObserved": [
+        "../../bootstrap/state.js",
+        "../../entrypoints/sdk/coreTypes.js",
+        "../../types/message.js",
+        "../../utils/messages.js",
+        "../../utils/teammate.js",
+        "../api/emptyUsage.js",
+        "../boardTaskActivity/BoardTaskTranscriptProjector.js",
+        "./normalizedEvents.js",
+        "./statusAuthority.js",
+        "@anthropic-ai/sdk/resources/beta/messages/messages.mjs"
+      ],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/appServerRunner.test.ts",
+          "sourceBlob": "6fa54aba8ab381c5eff88cafdb061b7cdec24756",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/transcriptProjector.test.ts",
+          "sourceBlob": "9a641484ceba3c26fc1f504b6b6f5893bd0447bd",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/turnExecutor.ts",
+      "sourceBlob": "e3d7d2ceabc235ab36cad7a33210a09c9f5ac058",
+      "sourceSha256": "be0a248965c9e99c29157390993b0c9277492d1b154d0531ab60b05c46f1d65c",
+      "physicalLines": 934,
+      "disposition": {
+        "action": "replace legacy wrapper",
+        "targetOwner": "runtime/session-application + provider-adapter",
+        "reason": "Do not transplant Claude AppState/cost/globals/team settled workflow. Keep protocol mechanics in runners; consumer runtime coordinates session/operation lifecycle."
+      },
+      "importsObserved": [
+        "../../bootstrap/state.js",
+        "../../cost-tracker.js",
+        "../../entrypoints/agentSdkTypes.js",
+        "../../entrypoints/sdk/coreTypes.js",
+        "../../state/AppState.js",
+        "../../types/message.js",
+        "../../utils/effort.js",
+        "../../utils/fastMode.js",
+        "../../utils/messages.js",
+        "../../utils/permissions/PermissionMode.js",
+        "../../utils/queryHelpers.js",
+        "../../utils/sessionStorage.js",
+        "../../utils/workSyncActiveQueryIdentity.js",
+        "../../utils/workSyncTurnSettledOwnerGate.js",
+        "../runtimeBackends/codexBackendResolver.js",
+        "./appServerApproval.js",
+        "./appServerRunner.js",
+        "./customProviderConfigOverrides.js",
+        "./execRunner.js",
+        "./launchConfigOverrides.js",
+        "./mcpConfigBridge.js",
+        "./nativeStartupContextPrompt.js",
+        "./runtimeTurnSettledEmitter.js",
+        "./statusAuthority.js",
+        "./transcriptProjector.js",
+        "./userLoopbackProviderConfigOverrides.js",
+        "./workspaceTrustConfigOverrides.js",
+        "@anthropic-ai/sdk/resources/messages.mjs",
+        "crypto"
+      ],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/nativeStartupContextPrompt.test.ts",
+          "sourceBlob": "6fdce9680ca05e9b9b28feefa8f4c44af3e84a0f",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/replApprovalTransport.test.ts",
+          "sourceBlob": "77dabaa1780df86b503863d3bd9f79a53ac3b72f",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/strictMcpLaunch.safe-e2e.test.ts",
+          "sourceBlob": "9a3b9f99771dd0c75b13fef1dde4db63396fab09",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/turnExecutor.test.ts",
+          "sourceBlob": "a3f47c7f36a8607ec20b68f2bdfc0633c8ed2e1c",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/userLoopbackProviderConfigOverrides.ts",
+      "sourceBlob": "e977d0d3456bad6f53101dab4aa473ba1ccb64dd",
+      "sourceSha256": "bd284a9d2963aaa44e62448cc231a4b191d5b6562a0d295ecd1f6ee0ed05dd47",
+      "physicalLines": 328,
+      "disposition": {
+        "action": "move mechanism",
+        "targetOwner": "runtime/provider-adapter",
+        "reason": "Retain provider-specific config translation only with explicit custody/config policy; do not rediscover arbitrary user files or inherit settings silently."
+      },
+      "importsObserved": ["node:fs", "node:os", "node:path"],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/turnExecutor.test.ts",
+          "sourceBlob": "a3f47c7f36a8607ec20b68f2bdfc0633c8ed2e1c",
+          "executionStatus": "not-run-in-migration"
+        },
+        {
+          "path": "src/services/codexNative/userLoopbackProviderConfigOverrides.test.ts",
+          "sourceBlob": "1fb937204e1490603aede4dc252089660ed6086a",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    },
+    {
+      "sourcePath": "src/services/codexNative/workspaceTrustConfigOverrides.ts",
+      "sourceBlob": "0f40605384e951ff7f933ba0619d899b8b490328",
+      "sourceSha256": "5d8a0d41b6752fe68a25de366c38528f772eaf77e1193c0cf699751cd003a2b2",
+      "physicalLines": 69,
+      "disposition": {
+        "action": "replace legacy wrapper",
+        "targetOwner": "runtime/configuration",
+        "reason": "Replace bootstrap-global workspace trust mutation with explicit trusted workspace/config binding."
+      },
+      "importsObserved": ["../../bootstrap/state.js"],
+      "importsAudit": "Textual source inventory; not a complete build/dependency-closure proof. Every cross-boundary dependency must be resolved before moving this file.",
+      "existingTests": [
+        {
+          "path": "src/services/codexNative/workspaceTrustConfigOverrides.test.ts",
+          "sourceBlob": "12dd8ecf7c547407c24c314720111b309864d68b",
+          "executionStatus": "not-run-in-migration"
+        }
+      ],
+      "migrationStatus": "inventoried-not-moved",
+      "deleteAuthorization": false
+    }
+  ],
+  "observedDate": "2026-10-21",
+  "observedTimezone": "Europe/Kiev"
+}

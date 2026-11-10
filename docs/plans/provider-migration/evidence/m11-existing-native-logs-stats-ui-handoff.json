@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "status": "SCOPED_EXISTING_NATIVE_MEMBER_LOGS_STATS_UI_PASS",
+  "job": "9d96b17ac144438dc52f36f462739f58",
+  "runnerExitCode": 0,
+  "scope": "Existing MemberDetailDialog Logs/Stats before and after renderer reload, reading exact retained native Claude child activity; no new provider session, input or child execution.",
+  "rawReceipt": {
+    "path": ".artifacts/provider-migration/p6-native-activity-readback-attempt4/desktop-readback-receipt.json",
+    "sha256": "ac95817b0244804f1b9dae42af223256cd522edde28d14ae2b922ad20a23b48f"
+  },
+  "retention": {
+    "manifest": ".artifacts/provider-migration/p6-native-activity-readback-attempt4/retention-supplement.json",
+    "sha256": "6044c2d1c98e248717711bf5c724674216284eb285061459f4c3e0ff9950fb43",
+    "selectedSourceFiles": 803,
+    "mainPreloadFiles": 14,
+    "mainPreloadBytes": 12540495,
+    "hostSourceAndCompiledFiles": 767,
+    "screenshots": 4
+  },
+  "pins": {
+    "hostSourceTree": "3b738278dddddd56f2ddf4b56a622eedc84ca852588d0fb239be4b8e746e61d5",
+    "hostCompiledJsTree": "a694d688967c7206ef763b2b1759cd6c1fd8f40c04c3b497ca011bcf333005e7",
+    "providerArchive": "49448bf6897c008f1692f26730951393d6f9d31c8879ca664cda15f96b2dd46b",
+    "originalNativeProfile": "2070d0545bbeb48ef5f9633d79a8ac3b1f404ca384485dc38ae4ec5179563dec",
+    "originalNativeReceipt": "a2b9b521e4e82eb4cb38820900d912b361be264a3e541ed700348bbdcef6dbf5",
+    "originalActivityRecord": "a93ad84e9bf56afd9743f46a0fa5e864364b96f2df2939c59e19b58f89003bd9",
+    "canonicalOriginalStore": "e97b409a2beb3f70e783bb2a2145a0844a5503e8c1409a0d022635906a2f13b8"
+  },
+  "assertions": {
+    "originalLogsShowExactChildInputAndParentToolProvenance": true,
+    "originalChildStartedUsageFactCompletedRowsPreserved": true,
+    "logsStableAcrossRendererReload": true,
+    "statsStableExceptObservationTimestamp": true,
+    "childUsageNotAddedToReportedParentTotals": true,
+    "unknownNativeLifetimeCacheAndFileTotalsRemainUnavailable": true,
+    "noNewInputsOrNativeReplay": true,
+    "ordinaryReadFinalizerPassedAfterHostClose": true,
+    "canonical24FilesMatchPriorRetainedEpochAfterClose": true,
+    "originalProfileAndReceiptUnchanged": true,
+    "twoOriginalSessionsClosedAndReleased": true
+  },
+  "observedParentStats": {
+    "inputTokens": 80,
+    "outputTokens": 60,
+    "observedMessages": 2,
+    "toolUsage": {
+      "Agent": 3
+    },
+    "compactionObservations": 0,
+    "gaps": [
+      "incarnation"
+    ]
+  },
+  "closure": {
+    "processGroup": 93929,
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostAbsent": true,
+    "originalAppGroupAbsent": true,
+    "openRootReferences": 0,
+    "nativeReplay": false
+  },
+  "limits": [
+    "Readback of the earlier scoped native ordinary-child proof, not a new native child/model/auth qualification.",
+    "Task Activity/detail/logstream mapping remains open; full M11 and Stage1 remain open.",
+    "Retained activity reports the incarnation gap and unavailable native timestamps/cache/file/lifetime totals; child usage remains separate.",
+    "Earlier failed UI epochs remain separate and unchanged. Stage2 is excluded."
+  ],
+  "nativeSourceHandoff": "m11-ordinary-subagent-native-handoff.json",
+  "evidenceScope": "TEST-only existing Electron UI controls, actual canonical Host/native observations; no seeded activity or alternate UI."
+}

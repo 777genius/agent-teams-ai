@@ -1,0 +1,136 @@
+:root {
+  color-scheme: light dark;
+
+  --at-font-sans: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --at-font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --at-c-cyan: #00f0ff;
+  --at-c-cyan-strong: #00d4e6;
+  --at-c-cyan-deep: #0891b2;
+  --at-c-magenta: #ff00ff;
+  --at-c-green: #39ff14;
+  --at-c-gold: #ffd700;
+  --at-c-red: #ff4757;
+
+  --at-c-dark-0: #05070b;
+  --at-c-dark-1: #0a0a0f;
+  --at-c-dark-2: #12121a;
+  --at-c-dark-3: #1e293b;
+  --at-c-light-0: #ffffff;
+  --at-c-light-1: #f8fafc;
+  --at-c-light-2: #f0f2f5;
+
+  --at-c-text-dark-1: #e0e6ff;
+  --at-c-text-dark-2: #c8d6e5;
+  --at-c-text-dark-3: #a0a8c0;
+  --at-c-text-dark-muted: #8892b0;
+  --at-c-text-light-1: #1e293b;
+  --at-c-text-light-2: #475569;
+  --at-c-text-light-3: #64748b;
+
+  --at-c-bg: var(--at-c-dark-1);
+  --at-c-bg-soft: rgba(10, 10, 15, 0.8);
+  --at-c-surface: var(--at-c-dark-2);
+  --at-c-surface-soft: rgba(10, 10, 15, 0.6);
+  --at-c-surface-raised: rgba(30, 41, 59, 0.78);
+  --at-c-text: var(--at-c-text-dark-1);
+  --at-c-text-soft: var(--at-c-text-dark-2);
+  --at-c-text-muted: var(--at-c-text-dark-muted);
+  --at-c-border: rgba(0, 240, 255, 0.12);
+  --at-c-border-strong: rgba(0, 240, 255, 0.28);
+  --at-c-focus: rgba(0, 240, 255, 0.55);
+
+  --at-gradient-brand: linear-gradient(135deg, var(--at-c-cyan), var(--at-c-magenta));
+  --at-gradient-brand-text: linear-gradient(135deg, #e0e6ff 0%, var(--at-c-cyan) 50%, var(--at-c-magenta) 100%);
+  --at-gradient-success: linear-gradient(135deg, var(--at-c-cyan), var(--at-c-green));
+  --at-gradient-cyan-text: linear-gradient(135deg, #e0e6ff 0%, var(--at-c-cyan) 100%);
+  --at-gradient-panel: linear-gradient(135deg, rgba(0, 240, 255, 0.06), rgba(255, 0, 255, 0.035));
+
+  --at-radius-xs: 6px;
+  --at-radius-sm: 8px;
+  --at-radius-md: 10px;
+  --at-radius-lg: 12px;
+  --at-radius-xl: 16px;
+  --at-radius-2xl: 20px;
+  --at-radius-preview: 22px;
+  --at-radius-pill: 999px;
+
+  --at-shadow-cyan-sm: 0 4px 20px rgba(0, 240, 255, 0.3);
+  --at-shadow-cyan-md: 0 8px 32px rgba(0, 240, 255, 0.08);
+  --at-shadow-cyan-lg: 0 20px 60px rgba(0, 0, 0, 0.55), 0 0 30px rgba(0, 240, 255, 0.06);
+  --at-shadow-card: 0 16px 32px -10px rgba(0, 0, 0, 0.35);
+
+  --at-blur-sm: 8px;
+  --at-blur-md: 12px;
+  --at-blur-lg: 20px;
+  --at-glass-bg: rgba(10, 10, 15, 0.78);
+  --at-glass-bg-hover: rgba(10, 10, 15, 0.9);
+  --at-glass-border: 1px solid var(--at-c-border);
+  --at-glass-border-strong: 1px solid var(--at-c-border-strong);
+
+  --at-grid-line: rgba(0, 240, 255, 0.03);
+  --at-scanline: rgba(0, 240, 255, 0.008);
+  --at-transition-fast: 0.15s ease;
+  --at-transition-base: 0.25s ease;
+  --at-transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+  --at-z-header: 1000;
+}
+
+.v-theme--light,
+:root:not(.dark) {
+  --at-c-bg: var(--at-c-light-2);
+  --at-c-bg-soft: rgba(255, 255, 255, 0.82);
+  --at-c-surface: var(--at-c-light-0);
+  --at-c-surface-soft: rgba(255, 255, 255, 0.78);
+  --at-c-surface-raised: rgba(255, 255, 255, 0.92);
+  --at-c-text: var(--at-c-text-light-1);
+  --at-c-text-soft: var(--at-c-text-light-2);
+  --at-c-text-muted: var(--at-c-text-light-3);
+  --at-c-border: rgba(0, 0, 0, 0.08);
+  --at-c-border-strong: rgba(0, 139, 178, 0.3);
+  --at-c-focus: rgba(8, 145, 178, 0.5);
+  --at-glass-bg: rgba(255, 255, 255, 0.78);
+  --at-glass-bg-hover: rgba(255, 255, 255, 0.92);
+  --at-glass-border: 1px solid rgba(0, 0, 0, 0.08);
+  --at-glass-border-strong: 1px solid rgba(0, 139, 178, 0.25);
+  --at-shadow-card: 0 16px 32px -10px rgba(0, 0, 0, 0.12);
+  --at-shadow-cyan-lg: 0 20px 60px rgba(0, 180, 200, 0.12);
+  --at-grid-line: rgba(8, 145, 178, 0.045);
+}
+
+.v-theme--dark,
+.dark {
+  --at-c-bg: var(--at-c-dark-1);
+  --at-c-bg-soft: rgba(10, 10, 15, 0.8);
+  --at-c-surface: var(--at-c-dark-2);
+  --at-c-surface-soft: rgba(10, 10, 15, 0.6);
+  --at-c-surface-raised: rgba(30, 41, 59, 0.78);
+  --at-c-text: var(--at-c-text-dark-1);
+  --at-c-text-soft: var(--at-c-text-dark-2);
+  --at-c-text-muted: var(--at-c-text-dark-muted);
+  --at-c-border: rgba(0, 240, 255, 0.12);
+  --at-c-border-strong: rgba(0, 240, 255, 0.28);
+  --at-glass-bg: rgba(10, 10, 15, 0.78);
+  --at-glass-bg-hover: rgba(10, 10, 15, 0.92);
+}
+
+.at-gradient-text {
+  background: var(--at-gradient-brand-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.at-glass {
+  background: var(--at-glass-bg);
+  border: var(--at-glass-border);
+  backdrop-filter: blur(var(--at-blur-md));
+  -webkit-backdrop-filter: blur(var(--at-blur-md));
+  box-shadow: var(--at-shadow-cyan-md);
+}
+
+.at-focus-ring:focus-visible {
+  outline: 2px solid var(--at-c-focus);
+  outline-offset: 3px;
+}

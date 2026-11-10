@@ -1,0 +1,412 @@
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+
+import { useAppTranslation } from '@features/localization/renderer';
+import { useLazyFileContent } from '@renderer/hooks/useLazyFileContent';
+import { useVisibleFileSection } from '@renderer/hooks/useVisibleFileSection';
+import { useStore } from '@renderer/store';
+import { getFileHunkCount } from '@renderer/store/slices/changeReviewSlice';
+import {
+  findReviewFileByPath,
+  getFileReviewKey,
+  getReviewEntryKey,
+  normalizeReviewPathForIdentity,
+} from '@renderer/utils/reviewKey';
+
+import {
+  acceptAllChunks,
+  getChunks,
+  rejectAllChunks,
+  replayHunkDecisionsSmart,
+} from './CodeMirrorDiffUtils';
+import { FileSectionDiff } from './FileSectionDiff';
+import { FileSectionHeader } from './FileSectionHeader';
+import { FullDiffLoadingBanner } from './FullDiffLoadingBanner';
+import { getEffectiveReviewFileDecision } from './reviewContentPreview';
+
+import type { EditorView } from '@codemirror/view';
+import type {
+  ReviewDraftHistoryEntry,
+  ReviewSerializedEditorState,
+} from '@features/change-review-history/contracts';
+import type { FileChangeWithContent, HunkDecision } from '@shared/types';
+import type { EditorSelectionInfo } from '@shared/types/editor';
+import type { FileChangeSummary } from '@shared/types/review';
+
+interface ContinuousScrollViewProps {
+  files: FileChangeSummary[];
+  /** Original change-set order, before tree sorting, determines the latest editable entry. */
+  sourceFiles?: FileChangeSummary[];
+  fileContents: Record<string, FileChangeWithContent>;
+  fileContentsLoading: Record<string, boolean>;
+  globalDiffLoadingState?: {
+    totalFilesCount: number;
+    readyFilesCount: number;
+    loadingFilesCount: number;
+    snippetCount: number;
+    activeFileName?: string;
+  } | null;
+  reviewExternalChangesByFile: Record<string, { type: 'change' | 'add' | 'unlink' }>;
+  viewedSet: Set<string>;
+  editedContents: Record<string, string>;
+  draftHistoryEntries: Record<string, ReviewDraftHistoryEntry>;
+  hunkDecisions: Record<string, HunkDecision>;
+  fileDecisions: Record<string, HunkDecision>;
+  hunkContextHashesByFile: Record<string, Record<number, string>>;
+  collapseUnchanged: boolean;
+  applying: boolean;
+  filesApplying?: ReadonlySet<string>;
+  autoViewed: boolean;
+  discardCounters: Record<string, number>;
+  onHunkAccepted: (filePath: string, hunkIndex: number) => boolean | void;
+  onHunkRejected: (
+    filePath: string,
+    hunkIndex: number,
+    beforeContent: string,
+    afterContent: string
+  ) => boolean | void;
+  onFullyViewed: (filePath: string) => void;
+  onContentChanged: (filePath: string, content: string, previousContent?: string) => void;
+  onSerializedStateChanged: (filePath: string, state: ReviewSerializedEditorState) => void;
+  onSerializedStateRestoreError: (filePath: string, error: unknown) => void;
+  onDiscard: (filePath: string) => void;
+  onSave: (filePath: string) => void;
+  onReloadFromDisk: (filePath: string) => void;
+  onKeepDraft: (filePath: string) => void;
+  onAcceptFile: (filePath: string) => void;
+  onRejectFile: (filePath: string) => void;
+  onRestoreMissingFile?: (filePath: string, content: string) => void;
+  pathChangeLabels?: Record<
+    string,
+    | { kind: 'deleted' }
+    | { kind: 'copied' | 'moved' | 'renamed'; direction: 'from' | 'to'; otherPath: string }
+  >;
+  /** Controlled collapsed state (persisted by parent). If omitted, component manages it locally. */
+  collapsedFiles?: Set<string>;
+  onToggleCollapse?: (filePath: string) => void;
+  onVisibleFileChange: (filePath: string) => void;
+  scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+  editorViewMapRef: React.MutableRefObject<Map<string, EditorView>>;
+  isProgrammaticScroll: React.RefObject<boolean | null>;
+  teamName: string;
+  memberName: string | undefined;
+  fetchFileContent: (
+    teamName: string,
+    memberName: string | undefined,
+    filePath: string
+  ) => Promise<void>;
+  onSelectionChange?: (info: EditorSelectionInfo | null) => void;
+  globalHunkOffsets?: Record<string, number>;
+  totalReviewHunks?: number;
+}
+
+export const ContinuousScrollView = ({
+  files,
+  sourceFiles,
+  fileContents,
+  fileContentsLoading,
+  globalDiffLoadingState,
+  reviewExternalChangesByFile,
+  viewedSet,
+  editedContents,
+  draftHistoryEntries,
+  hunkDecisions,
+  fileDecisions,
+  hunkContextHashesByFile,
+  collapseUnchanged,
+  applying,
+  filesApplying,
+  autoViewed,
+  discardCounters,
+  onHunkAccepted,
+  onHunkRejected,
+  onFullyViewed,
+  onContentChanged,
+  onSerializedStateChanged,
+  onSerializedStateRestoreError,
+  onDiscard,
+  onSave,
+  onReloadFromDisk,
+  onKeepDraft,
+  onAcceptFile,
+  onRejectFile,
+  onRestoreMissingFile,
+  pathChangeLabels,
+  collapsedFiles: collapsedFilesProp,
+  onToggleCollapse: onToggleCollapseProp,
+  onVisibleFileChange,
+  scrollContainerRef,
+  editorViewMapRef,
+  isProgrammaticScroll,
+  teamName,
+  memberName,
+  fetchFileContent,
+  onSelectionChange,
+  globalHunkOffsets,
+  totalReviewHunks,
+}: ContinuousScrollViewProps): React.ReactElement => {
+  const { t } = useAppTranslation('team');
+  const setFileChunkCount = useStore((s) => s.setFileChunkCount);
+  const fileChunkCounts = useStore((s) => s.fileChunkCounts);
+  const [localCollapsedFiles, setLocalCollapsedFiles] = useState<Set<string>>(() => new Set());
+  const collapsedFiles = collapsedFilesProp ?? localCollapsedFiles;
+
+  const handleToggleCollapse = useCallback(
+    (filePath: string) => {
+      if (onToggleCollapseProp) {
+        onToggleCollapseProp(filePath);
+        return;
+      }
+      setLocalCollapsedFiles((prev) => {
+        const next = new Set(prev);
+        if (next.has(filePath)) {
+          next.delete(filePath);
+        } else {
+          next.add(filePath);
+        }
+        return next;
+      });
+    },
+    [onToggleCollapseProp]
+  );
+
+  const filePaths = useMemo(() => files.map((f) => getReviewEntryKey(files, f)), [files]);
+  const editableEntryKeys = useMemo(() => {
+    const orderedFiles = sourceFiles ?? files;
+    const latestByPath = new Map<string, string>();
+    for (const file of orderedFiles) {
+      latestByPath.set(
+        normalizeReviewPathForIdentity(file.filePath),
+        getReviewEntryKey(orderedFiles, file)
+      );
+    }
+    return new Set(latestByPath.values());
+  }, [files, sourceFiles]);
+  const editableEntryKeysRef = useRef(editableEntryKeys);
+  useLayoutEffect(() => {
+    editableEntryKeysRef.current = editableEntryKeys;
+  }, [editableEntryKeys]);
+
+  const { registerFileSectionRef } = useVisibleFileSection({
+    onVisibleFileChange,
+    scrollContainerRef,
+    isProgrammaticScroll,
+  });
+
+  const { registerLazyRef } = useLazyFileContent({
+    teamName,
+    memberName,
+    filePaths,
+    scrollContainerRef,
+    fileContents,
+    fileContentsLoading,
+    fetchFileContent,
+    enabled: true,
+  });
+
+  // Combined ref callback: registers element in both scroll-spy and lazy-load observers
+  const combinedRef = useCallback(
+    (filePath: string) => {
+      const sectionRef = registerFileSectionRef(filePath);
+      const lazyRef = registerLazyRef(filePath);
+
+      return (element: HTMLElement | null) => {
+        sectionRef(element);
+        lazyRef(element);
+      };
+    },
+    [registerFileSectionRef, registerLazyRef]
+  );
+
+  // Refs to avoid stale closures — decisions change frequently
+  const fileDecisionsRef = useRef(fileDecisions);
+  const hunkDecisionsRef = useRef(hunkDecisions);
+  const hunkHashesRef = useRef(hunkContextHashesByFile);
+  const editedContentsRef = useRef(editedContents);
+  useEffect(() => {
+    fileDecisionsRef.current = fileDecisions;
+    hunkDecisionsRef.current = hunkDecisions;
+    hunkHashesRef.current = hunkContextHashesByFile;
+    editedContentsRef.current = editedContents;
+  });
+
+  // Track which views have already had decisions replayed to prevent
+  // cascading re-replays on every render (useEffect in FileSectionDiff has no deps).
+  // When a view is destroyed/recreated (discard, lazy remount), the identity changes
+  // and replay runs once for the new instance.
+  const replayedViewsRef = useRef(new WeakSet<EditorView>());
+
+  const handleEditorViewReady = useCallback(
+    (filePath: string, view: EditorView | null) => {
+      if (view) {
+        const file = findReviewFileByPath(files, filePath);
+        const diskPath = file?.filePath ?? filePath;
+        const reviewKey = file ? getFileReviewKey(file) : filePath;
+        // Skip if this exact view instance was already processed
+        if (editorViewMapRef.current.get(filePath) === view && replayedViewsRef.current.has(view)) {
+          return;
+        }
+        editorViewMapRef.current.set(filePath, view);
+        replayedViewsRef.current.add(view);
+
+        // Store the actual CM chunk count (may differ from snippet count)
+        const chunks = getChunks(view.state);
+        if (chunks) {
+          setFileChunkCount(filePath, chunks.chunks.length);
+        }
+
+        // A recovered/manual draft is authoritative for the editor document. Replaying
+        // decisions into it would mutate only the visual buffer and corrupt native Undo.
+        if (diskPath in editedContents) return;
+
+        const replayIfUnedited = (replay: () => void): void => {
+          requestAnimationFrame(() => {
+            if (
+              editorViewMapRef.current.get(filePath) !== view ||
+              diskPath in editedContentsRef.current
+            ) {
+              return;
+            }
+            replay();
+          });
+        };
+
+        const fileDecision =
+          fileDecisionsRef.current[reviewKey] ?? fileDecisionsRef.current[filePath];
+        if (fileDecision === 'accepted' || fileDecision === 'rejected') {
+          // Sync file-level "Accept All" / "Reject All" decisions
+          replayIfUnedited(() => {
+            if (fileDecision === 'accepted') {
+              acceptAllChunks(view);
+            } else {
+              rejectAllChunks(view);
+            }
+          });
+        } else {
+          // Replay individual per-hunk decisions persisted from previous session
+          replayIfUnedited(() => {
+            replayHunkDecisionsSmart(
+              view,
+              reviewKey,
+              hunkDecisionsRef.current,
+              hunkHashesRef.current[reviewKey] ?? hunkHashesRef.current[filePath]
+            );
+          });
+        }
+      } else {
+        editorViewMapRef.current.delete(filePath);
+        // Don't clean replayedViewsRef — stale entries are harmless (WeakSet-like behavior
+        // is not needed since view instances are unique and old ones get GC'd)
+      }
+    },
+    [editedContents, editorViewMapRef, files, setFileChunkCount]
+  );
+
+  if (files.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-text-muted">
+        {t('review.continuousScroll.empty')}
+      </div>
+    );
+  }
+
+  return (
+    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
+      {globalDiffLoadingState ? (
+        <FullDiffLoadingBanner
+          totalFilesCount={globalDiffLoadingState.totalFilesCount}
+          readyFilesCount={globalDiffLoadingState.readyFilesCount}
+          loadingFilesCount={globalDiffLoadingState.loadingFilesCount}
+          snippetCount={globalDiffLoadingState.snippetCount}
+          activeFileName={globalDiffLoadingState.activeFileName}
+        />
+      ) : null}
+      {files.map((file) => {
+        const filePath = file.filePath;
+        const entryKey = getReviewEntryKey(files, file);
+        const editable = editableEntryKeys.has(entryKey);
+        const reviewKey = getFileReviewKey(file);
+        const content = fileContents[entryKey] ?? null;
+        const hasContent = entryKey in fileContents;
+        const hasEdits = filePath in editedContents;
+        const isViewed = viewedSet.has(filePath);
+        const decision = fileDecisions[reviewKey] ?? fileDecisions[filePath];
+        const effectiveDecision = getEffectiveReviewFileDecision(
+          file,
+          getFileHunkCount(entryKey, file.snippets.length, fileChunkCounts),
+          hunkDecisions,
+          decision
+        );
+        const fileApplying = applying || filesApplying?.has(entryKey) === true;
+
+        const isCollapsed = collapsedFiles.has(filePath);
+
+        return (
+          <div key={entryKey} ref={combinedRef(entryKey)} className="border-b border-border">
+            <FileSectionHeader
+              file={file}
+              reviewEntryKey={entryKey}
+              fileContent={content}
+              contentResolved={hasContent}
+              fileDecision={effectiveDecision}
+              externalChange={reviewExternalChangesByFile[filePath]}
+              pathChangeLabel={pathChangeLabels?.[filePath]}
+              hasEdits={hasEdits}
+              applying={fileApplying}
+              isCollapsed={isCollapsed}
+              onToggleCollapse={handleToggleCollapse}
+              onDiscard={onDiscard}
+              onSave={onSave}
+              onReloadFromDisk={onReloadFromDisk}
+              onKeepDraft={onKeepDraft}
+              onAcceptFile={onAcceptFile}
+              onRejectFile={onRejectFile}
+              onRestoreMissingFile={onRestoreMissingFile}
+            />
+
+            {!isCollapsed && (
+              <FileSectionDiff
+                file={file}
+                fileContent={content}
+                draftContent={editable ? editedContents[filePath] : undefined}
+                editable={editable}
+                isLoading={!hasContent}
+                applying={fileApplying}
+                collapseUnchanged={collapseUnchanged}
+                onHunkAccepted={(path, index) =>
+                  entryKey === path ? onHunkAccepted(path, index) : false
+                }
+                onHunkRejected={(path, index, before, after) =>
+                  entryKey === path ? onHunkRejected(path, index, before, after) : false
+                }
+                onFullyViewed={onFullyViewed}
+                onContentChanged={(path, nextContent, previous) => {
+                  if (editableEntryKeysRef.current.has(entryKey)) {
+                    onContentChanged(path, nextContent, previous);
+                  }
+                }}
+                serializedState={editable ? draftHistoryEntries[filePath]?.editorState : undefined}
+                onSerializedStateChanged={(path, state) => {
+                  if (editableEntryKeysRef.current.has(entryKey)) {
+                    onSerializedStateChanged(path, state);
+                  }
+                }}
+                onSerializedStateRestoreError={(path, error) => {
+                  if (editableEntryKeysRef.current.has(entryKey)) {
+                    onSerializedStateRestoreError(path, error);
+                  }
+                }}
+                onEditorViewReady={(_, view) => handleEditorViewReady(entryKey, view)}
+                discardCounter={discardCounters[filePath] ?? 0}
+                autoViewed={autoViewed}
+                isViewed={isViewed}
+                onSelectionChange={onSelectionChange}
+                globalHunkOffset={globalHunkOffsets?.[entryKey] ?? 0}
+                totalReviewHunks={totalReviewHunks}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};

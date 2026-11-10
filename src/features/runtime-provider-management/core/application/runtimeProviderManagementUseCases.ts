@@ -1,0 +1,98 @@
+import type { RuntimeProviderManagementPort } from './RuntimeProviderManagementPort';
+import type {
+  RuntimeProviderManagementClearProjectDefaultInput,
+  RuntimeProviderManagementConfigureModelLimitsInput,
+  RuntimeProviderManagementConnectApiKeyInput,
+  RuntimeProviderManagementConnectInput,
+  RuntimeProviderManagementDirectoryResponse,
+  RuntimeProviderManagementForgetInput,
+  RuntimeProviderManagementLoadDirectoryInput,
+  RuntimeProviderManagementLoadModelsInput,
+  RuntimeProviderManagementLoadSetupFormInput,
+  RuntimeProviderManagementLoadViewInput,
+  RuntimeProviderManagementModelLimitsResponse,
+  RuntimeProviderManagementModelsResponse,
+  RuntimeProviderManagementModelTestResponse,
+  RuntimeProviderManagementProviderResponse,
+  RuntimeProviderManagementSetDefaultModelInput,
+  RuntimeProviderManagementSetupFormResponse,
+  RuntimeProviderManagementTestModelInput,
+  RuntimeProviderManagementViewResponse,
+} from '@features/runtime-provider-management/contracts';
+
+export function loadRuntimeProviderManagementView(
+  port: RuntimeProviderManagementPort,
+  input: RuntimeProviderManagementLoadViewInput
+): Promise<RuntimeProviderManagementViewResponse> {
+  return port.loadView(input);
+}
+
+export function loadRuntimeProviderDirectory(
+  port: RuntimeProviderManagementPort,
+  input: RuntimeProviderManagementLoadDirectoryInput
+): Promise<RuntimeProviderManagementDirectoryResponse> {
+  return port.loadProviderDirectory(input);
+}
+
+export function loadRuntimeProviderSetupForm(
+  port: RuntimeProviderManagementPort,
+  input: RuntimeProviderManagementLoadSetupFormInput
+): Promise<RuntimeProviderManagementSetupFormResponse> {
+  return port.loadSetupForm(input);
+}
+
+export function connectRuntimeProvider(
+  port: RuntimeProviderManagementPort,
+  input: RuntimeProviderManagementConnectInput
+): Promise<RuntimeProviderManagementProviderResponse> {
+  return port.connectProvider(input);
+}
+
+export function connectRuntimeProviderWithApiKey(
+  port: RuntimeProviderManagementPort,
+  input: RuntimeProviderManagementConnectApiKeyInput
+): Promise<RuntimeProviderManagementProviderResponse> {
+  return port.connectWithApiKey(input);
+}
+
+export function forgetRuntimeProviderCredential(
+  port: RuntimeProviderManagementPort,
+  input: RuntimeProviderManagementForgetInput
+): Promise<RuntimeProviderManagementProviderResponse> {
+  return port.forgetCredential(input);
+}
+
+export function loadRuntimeProviderModels(
+  port: RuntimeProviderManagementPort,
+  input: RuntimeProviderManagementLoadModelsInput
+): Promise<RuntimeProviderManagementModelsResponse> {
+  return port.loadModels(input);
+}
+
+export function testRuntimeProviderModel(
+  port: RuntimeProviderManagementPort,
+  input: RuntimeProviderManagementTestModelInput
+): Promise<RuntimeProviderManagementModelTestResponse> {
+  return port.testModel(input);
+}
+
+export function setRuntimeProviderDefaultModel(
+  port: RuntimeProviderManagementPort,
+  input: RuntimeProviderManagementSetDefaultModelInput
+): Promise<RuntimeProviderManagementViewResponse> {
+  return port.setDefaultModel(input);
+}
+
+export function clearRuntimeProviderProjectDefault(
+  port: RuntimeProviderManagementPort,
+  input: RuntimeProviderManagementClearProjectDefaultInput
+): Promise<RuntimeProviderManagementViewResponse> {
+  return port.clearProjectDefaultModel(input);
+}
+
+export function configureRuntimeProviderModelLimits(
+  port: RuntimeProviderManagementPort,
+  input: RuntimeProviderManagementConfigureModelLimitsInput
+): Promise<RuntimeProviderManagementModelLimitsResponse> {
+  return port.configureModelLimits(input);
+}

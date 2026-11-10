@@ -1,0 +1,88 @@
+diff --git a/dist/index.js b/dist/index.js
+index 5cb1fd007d32021ad950d961dd4a0868576a2c0d..795a24fe0e75aaa042cad0a376a776f3e1436269 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -61,6 +61,29 @@ var ALIGN_OPTIONS = ["start", "center", "end"];
+ var POPPER_NAME = "Popper";
+ var [createPopperContext, createPopperScope] = (0, import_react_context.createContextScope)(POPPER_NAME);
+ var [PopperProvider, usePopperContext] = createPopperContext(POPPER_NAME);
++function useGuardedNodeSetter(setNode) {
++  const nodeRef = React.useRef(null);
++  const nodeCleanupGenerationRef = React.useRef(0);
++  return React.useCallback((node) => {
++    const syncNode = (nextNode) => {
++      if (nodeRef.current === nextNode) return;
++      nodeRef.current = nextNode;
++      setNode(nextNode);
++    };
++    nodeCleanupGenerationRef.current += 1;
++    const cleanupGeneration = nodeCleanupGenerationRef.current;
++    if (node) {
++      syncNode(node);
++      return;
++    }
++    queueMicrotask(() => {
++      if (nodeCleanupGenerationRef.current !== cleanupGeneration) {
++        return;
++      }
++      syncNode(null);
++    });
++  }, [setNode]);
++}
+ var Popper = (props) => {
+   const { __scopePopper, children } = props;
+   const [anchor, setAnchor] = React.useState(null);
+@@ -108,7 +131,8 @@ var PopperContent = React.forwardRef(
+     } = props;
+     const context = usePopperContext(CONTENT_NAME, __scopePopper);
+     const [content, setContent] = React.useState(null);
+-    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, (node) => setContent(node));
++    const setContentRef = useGuardedNodeSetter(setContent);
++    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setContentRef);
+     const [arrow, setArrow] = React.useState(null);
+     const arrowSize = (0, import_react_use_size.useSize)(arrow);
+     const arrowWidth = arrowSize?.width ?? 0;
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 9f84984eab84e32d20d6c052217da0e3b8374b40..0ffdb6313708ab3113c0ce40fe4519b6b605deff 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -26,6 +26,29 @@ var ALIGN_OPTIONS = ["start", "center", "end"];
+ var POPPER_NAME = "Popper";
+ var [createPopperContext, createPopperScope] = createContextScope(POPPER_NAME);
+ var [PopperProvider, usePopperContext] = createPopperContext(POPPER_NAME);
++function useGuardedNodeSetter(setNode) {
++  const nodeRef = React.useRef(null);
++  const nodeCleanupGenerationRef = React.useRef(0);
++  return React.useCallback((node) => {
++    const syncNode = (nextNode) => {
++      if (nodeRef.current === nextNode) return;
++      nodeRef.current = nextNode;
++      setNode(nextNode);
++    };
++    nodeCleanupGenerationRef.current += 1;
++    const cleanupGeneration = nodeCleanupGenerationRef.current;
++    if (node) {
++      syncNode(node);
++      return;
++    }
++    queueMicrotask(() => {
++      if (nodeCleanupGenerationRef.current !== cleanupGeneration) {
++        return;
++      }
++      syncNode(null);
++    });
++  }, [setNode]);
++}
+ var Popper = (props) => {
+   const { __scopePopper, children } = props;
+   const [anchor, setAnchor] = React.useState(null);
+@@ -73,7 +96,8 @@ var PopperContent = React.forwardRef(
+     } = props;
+     const context = usePopperContext(CONTENT_NAME, __scopePopper);
+     const [content, setContent] = React.useState(null);
+-    const composedRefs = useComposedRefs(forwardedRef, (node) => setContent(node));
++    const setContentRef = useGuardedNodeSetter(setContent);
++    const composedRefs = useComposedRefs(forwardedRef, setContentRef);
+     const [arrow, setArrow] = React.useState(null);
+     const arrowSize = useSize(arrow);
+     const arrowWidth = arrowSize?.width ?? 0;

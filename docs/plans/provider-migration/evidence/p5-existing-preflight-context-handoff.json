@@ -1,0 +1,20 @@
+{
+  "status": "PASS scoped existing-dialog context propagation, cache isolation and no-fork routing; positive captured Host preflight and full stage1 E2E remain INCOMPLETE",
+  "implementation": {
+    "existingUi": "Original LaunchTeamDialog binds every provider/model stage to its Team selection. Original CreateTeamDialog binds them to a create intent. No new controls, dialogs or reduced forms.",
+    "transport": "Optional eighth prepareProvisioning argument is a finite Team/create context, without owner/profile/config/native fields. Preload preserves it. Calls without context retain their old seven-argument wire shape.",
+    "main": "Existing IPC normalization moved intact out of the frozen oversized teams.ts into the same Main input adapter that checks destination. Reserved Host Teams always refuse before fork calls. New-create or unscoped requests also refuse when a Host descriptor is selected, including invalid/held selection. Existing captured legacy Teams keep normalized legacy preflight. Main also refuses unbound createTeam/createConfig before legacy writers when a Host is selected, so Skip preflight cannot accidentally launch or save through the old owner.",
+    "cache": "Request and model-proof cache keys include Team/create context. A late result or cached legacy-Team proof cannot satisfy another Team/create request. Binding copies and freezes the original context.",
+    "truth": "A scoped backend model test is not automatically proof of this Team's account/configuration/capabilities. Until that captured Host preparation is connected, existing UI receives ready:false. This is a routing prerequisite, not completed preflight or Launch/Create/Resume acceptance."
+  },
+  "checks": {
+    "jobId": "cfc82ac8c600118d7ed1dd05e7d23840",
+    "result": "Root typecheck PASS;513 tests in23 files PASS, including238 existing Team IPC tests,73 existing-dialog tests,74 optional-preflight tests, preload and captured backend contracts. Source-size and provisioning architecture guards PASS.",
+    "focusedFinalDialogAssertions": "2 existing React dialog tests PASS after adding assertions that their actual preparation callbacks send the original Team and create context. This is component/API evidence, not an actual Electron/native dialog E2E.",
+    "finalTypesAndLint": "Job2b0fd878382f079dae638305895c34c8: final existing-dialog assertions typecheck PASS; scoped lint0errors with1 pre-existing closeDialog hook warning; source-size and provisioning guards PASS.",
+    "creationGuard": "Job3e9d0a754b620ec38505003be4bdd565: root types and239 Team IPC tests PASS, including no legacy writer for Skip preflight/draft-only create on a selected Host. Combined job then failed only on new import ordering. The imports were sorted separately; scoped lint, source-size/provisioning guards and diff whitespace check PASS without repeating native/model effects.",
+    "nativeEffects": "No new model requests, provider sessions, auth operations or real-project actions were used for this context change. Earlier SDK/native model proof remains separately scoped in p5-claude-model-probe-handoff.json."
+  },
+  "next": "Implement positive Team-qualified native preparation against the original captured runtime configuration, reusing existing management probe admission/cancellation. Then authoritative roster/settings, ordinary launch/create/progress and selected Resume. Required full P0-P8/M01-M19 scope remains unchanged.",
+  "delivery": "Isolated worktree only. Stage2 excluded. Draft PRs must link exact-head plan/contracts/matrix; no main/release merge."
+}

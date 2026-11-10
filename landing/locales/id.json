@@ -1,0 +1,175 @@
+{
+  "nav": {
+    "features": "Fitur",
+    "screenshots": "Cuplikan layar",
+    "docs": "Dokumentasi",
+    "comparison": "Bandingkan",
+    "download": "Unduh",
+    "pricing": "Bebas",
+    "faq": "FAQ",
+    "viewOnGithub": "Tilik pada GitHub",
+    "openMenu": "Buka menu",
+    "closeMenu": "Tutup menu",
+    "short": {
+      "screenshots": "Gambar",
+      "docs": "Docs",
+      "download": "Unduh",
+      "comparison": "Banding",
+      "pricing": "Gratis"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "Unduh Sekarang",
+    "ctaPrimary": "Unduh untuk {platform}",
+    "ctaSecondary": "Bandingkan",
+    "ctaDocs": "Dokumentasi",
+    "preview": "Pratinjau produk",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Papan Kanban",
+      "openSource": "Buka Sumber"
+    },
+    "watchDemo": "Watch Demo",
+    "videoUnavailable": "Video tidak tersedia",
+    "supportedProviders": "Penyedia AI yang didukung",
+    "providers": "Penyedia",
+    "models": "Model",
+    "slogan": "Selesaikan banyak hal dengan sangat sedikit aksi",
+    "platformDefault": "Untuk platform Anda",
+    "guidesSetup": "Panduan dan penyiapan",
+    "videoFrameLabel": "Tonton demo Agent Teams",
+    "commandFeed": "Feed perintah tim",
+    "liveDemo": "Demo langsung",
+    "demoVideoTitle": "Video demo Agent Teams",
+    "demoTitle": "Demo Agent Teams",
+    "demo": {
+      "ariaLabel": "Demo tim agen",
+      "live": "LIVE",
+      "waiting": "Menunggu tugas...",
+      "activity": {
+        "authMiddleware": "Menerapkan middleware auth...",
+        "unitTests": "Menulis unit test untuk API...",
+        "reviewPr": "Meninjau perubahan PR #42...",
+        "ciPipeline": "Menyiapkan pipeline CI/CD...",
+        "refactorDatabase": "Merefactor layer database..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "Unit test",
+        "ciSetup": "Setup CI"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "BERJALAN",
+        "review": "REVIEW",
+        "done": "SELESAI"
+      }
+    }
+  },
+  "download": {
+    "title": "Unduh",
+    "detected": "Terdeteksi",
+    "systemRequirements": "Kebutuhan sistem",
+    "version": "Versi {version}",
+    "readyToStart": "Siap mulai!"
+  },
+  "theme": {
+    "dark": "Gelap",
+    "light": "Cahaya"
+  },
+  "language": {
+    "label": "Bahasa",
+    "search": "Cari bahasa..."
+  },
+  "features": {
+    "sectionTitle": "Everything you need for AI agen orkestra",
+    "sectionSubtitle": "Alat yang kuat yang membuat kolaborasi multi- agen benar-benar bekerja."
+  },
+  "pricing": {
+    "sectionTitle": "Bebas untuk memasang. Termasuk model gratis.",
+    "sectionSubtitle": "Mulailah dengan model gratis tanpa auth - tidak ada account, API kunci, atau kartu kredit. Sambung Claude Code, Codex, OpenCode/OpenRouter, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro, atau akses penyedia lain hanya ketika Anda ingin lebih banyak model.",
+    "getStarted": "Unduh Sekarang",
+    "popular": "Bebas",
+    "freeModelCallout": "Model bebas tanpa auth disertakan",
+    "note": "Agent Teams tidak memiliki tingkat dibayar. Model bebas tanpa auth memungkinkan Anda mencobanya segera; penggunaan penyedia yang dibayar adalah opsional dan dikendalikan oleh penyedia yang Anda pilih."
+  },
+  "testimonials": {
+    "sectionTitle": "Apa yang pengembang katakan",
+    "sectionSubtitle": "Umpan balik nyata dari pembangun nyata",
+    "showMore": "Tampilkan lebih banyak",
+    "showLess": "Tampilkan kurang",
+    "feedbackCta": "Ingin berbagi pengalaman Anda? Membuka masalah pada"
+  },
+  "faq": {
+    "sectionTitle": "Punya pertanyaan? Kami punya jawaban",
+    "subtitle": "Segala sesuatu yang Anda perlu tahu tentang Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Bagaimana kita membandingkan",
+    "sectionSubtitle": "Perbandingan fitur-dengan-fitur dengan yang lain AI alat kode.",
+    "feature": "Fitur",
+    "robotBubble": "Hakim sendiri",
+    "features": {
+      "crossTeam": "Cross- tim komunikasi",
+      "agentMessaging": "Agency-to-agent messaging",
+      "linkedTasks": "Tugas terkait",
+      "sessionAnalysis": "Analisis sesi",
+      "taskAttachments": "Lampiran tugas",
+      "hunkReview": "Ulasan tingkat Hunk-level",
+      "codeEditor": "Bawaan-dalam penyunting kode",
+      "teamAutonomy": "Otonomi tim",
+      "taskDeps": "Ketergantungan tugas",
+      "reviewWorkflow": "Ulasan alur kerja",
+      "zeroSetup": "Pengaturan nol",
+      "kanban": "Papan Kanban",
+      "execLog": "Log eksekusi",
+      "integratedTerminal": "Terminal",
+      "runtimeLoad": "CPU/RAM per rekan tim",
+      "perTaskReview": "Ulasan kode pertugas",
+      "flexAutonomy": "otonomi Fleksibel",
+      "worktree": "Isolasi pohon kerja git",
+      "multiAgent": "Campuran AI rekan tim",
+      "liveWorkGraph": "Peta tim langsung",
+      "liveTeam": "Live rekan tim",
+      "teamWorkspace": "Ruang kerja tim",
+      "launchProof": "Status peluncuran rekan tim",
+      "orgGovernance": "Organisasi & Gambaran Global",
+      "budgetControls": "Kontrol anggaran",
+      "price": "Harga"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Lihat dalam aksi",
+    "sectionSubtitle": "Gambar layar nyata dari aplikasi - papan kanban, ulasan kode, tim agen, dan banyak lagi."
+  },
+  "common": {
+    "learnMore": "Pelajari lagi",
+    "statusLabel": "Status:",
+    "previous": "Sebelumnya",
+    "next": "Berikutnya"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "AI agen orkestra untuk pengembang",
+    "robotBubble": "Aku menunggu",
+    "links": {
+      "github": "GitHub",
+      "author": "Penulis",
+      "docs": "Dokumentasi"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - AI Agen Orkestra untuk Pengembang",
+    "homeDescription": "Aplikasi desktop open-source bebas untuk AI Agen tim. Mulai dengan model bebas tanpa auth, kemudian hubungkan Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro ketika Anda membutuhkan lebih banyak model.",
+    "downloadTitle": "Unduh Agent Teams untuk macOS, Windows, dan Linux",
+    "downloadDescription": "Unduh Agent Teams untuk macOS, Windows, dan Linux. Aplikasi desktop open-source gratis untuk tim agen Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro."
+  },
+  "error": {
+    "notFoundTitle": "Halaman tak ditemukan",
+    "notFoundDescription": "Halaman yang Anda cari tidak ada atau telah dipindahkan.",
+    "genericTitle": "Sesuatu yang salah",
+    "genericDescription": "Terjadi galat yang tak terduga. Tolong coba lagi nanti.",
+    "goHome": "Menuju homepage"
+  }
+}

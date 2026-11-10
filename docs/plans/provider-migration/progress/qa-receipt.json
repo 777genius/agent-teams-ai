@@ -1,0 +1,51 @@
+{
+  "status": "completed-with-template-limitations",
+  "preview_open_count": 1,
+  "browser": "Brave background visible task tab",
+  "target_id": "09250109A1F46D040905F22102558E9D",
+  "formula_reconciled": true,
+  "code_totals_reconciled": true,
+  "filters_checked": 4,
+  "tasks_expanded_checked": 9,
+  "plot_points_checked": 9,
+  "loc_modes_checked": 2,
+  "legend_toggles_checked": true,
+  "theme_checked": true,
+  "print_handler_checked": "window.print stub once; no OS print dialog",
+  "desktop_default": {
+    "width": 1312,
+    "height": 682,
+    "horizontal_overflow": false,
+    "three_progress_bars_visible_near_viewport_bottom": true,
+    "loc_summary": "below first viewport at this height"
+  },
+  "mobile_default": {
+    "frame_width": 390,
+    "content_width": 386,
+    "horizontal_overflow": false
+  },
+  "dense_mobile_history": {
+    "horizontal_overflow": true,
+    "width": 521,
+    "cause": "bundled history comparison table; default page unexpanded does not clip"
+  },
+  "measurement_warning": "logical71,379 is lexical proxy, not measured semantic behavior-bearing LOC; exact semantic quantity unknown",
+  "snapshot": "2026-10-23T12:37:44.673807+00:00",
+  "late_root_updates": "Not retroactively incorporated; source snapshot frozen, current code may be newer",
+  "revision2": {
+    "preview_open_count_total": 1,
+    "new_browser_open": false,
+    "file_data_reconciliation": "PASS",
+    "generated_js_syntax": "node --check PASS",
+    "frozen_progress_unchanged": [
+      57.4,
+      79.4,
+      57.4
+    ],
+    "main_loc_kpi": "production source churn141609",
+    "secondary_loc_kpi": "source+local retained evidence census2561990, not PR size",
+    "semantic_done_loc": "not measured",
+    "new_scan": false,
+    "previous_snapshots": "unchanged immutable archives"
+  }
+}

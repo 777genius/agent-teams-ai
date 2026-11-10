@@ -1,0 +1,97 @@
+name: OpenCode diagnostics desktop E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    paths:
+      - scripts/e2e/opencode-diagnostics-desktop.mjs
+      - scripts/e2e/opencode-diagnostics/**
+      - test/scripts/opencodeStartupCleanupFixture.test.mjs
+      - .github/workflows/opencode-desktop-e2e.yml
+      # Compatibility states change the native runtime user-facing E2E.
+      - src/features/runtime-provider-management/core/domain/openCodeProviderCompatibility.ts
+      - src/features/runtime-provider-management/renderer/ui/OpenCodeProviderCompatibilityStatus.tsx
+      # Provider settings first-paint and status changes require isolated Electron
+      # proof on Windows and Linux, not only a renderer unit test.
+      - src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel.tsx
+      - src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts
+      - src/features/runtime-provider-management/renderer/hooks/maskRuntimeProviderStateForScope.ts
+      - src/features/runtime-provider-management/renderer/hooks/runtimeProviderDirectoryCatalogPolicy.ts
+      - src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect.ts
+      - src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache.ts
+      - src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx
+      - src/renderer/components/runtime/openCodeStatusPresentation.ts
+
+permissions:
+  contents: read
+
+# Canonical run supersession; see docs/ci-qualification.md#run-supersession.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
+
+jobs:
+  desktop:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.CI_LINUX_RUNNER || 'ubicloud-standard-4') || matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Verify harness safety
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs test/scripts/opencodeStartupCleanupFixture.test.mjs
+      - name: Configure disposable artifact directory
+        shell: bash
+        run: |
+          echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "TMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Verify Linux desktop
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node scripts/e2e/opencode-diagnostics/run.mjs
+      - name: Verify Windows desktop
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          node scripts/e2e/opencode-diagnostics/run.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Diagnose isolated Windows enumeration
+        if: runner.os == 'Windows'
+        run: node scripts/e2e/opencode-diagnostics/windows-enumeration-probe.mjs
+      - name: Verify Windows startup cleanup recovery
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          node scripts/e2e/opencode-diagnostics/run.mjs --startup-cleanup
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Preserve diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-desktop-${{ runner.os }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.png
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.txt
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.ndjson
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/manifest.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/desktop.log
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/**/app-errors.ndjson
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/**/opencode-bridge/diagnostics/latest.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/**/opencode-bridge/diagnostics/events.ndjson
