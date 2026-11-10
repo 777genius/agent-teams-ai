@@ -1,7 +1,7 @@
-/* Local inset tints stay subtly darker on standard and custom theme surfaces. */
+/* Subtle local tint: lighter in dark themes, darker in light themes. */
 :root {
-  --color-form-control-bg: rgba(0, 0, 0, 0.14);
-  --color-form-control-hover-bg: rgba(0, 0, 0, 0.2);
+  --color-form-control-bg: rgba(255, 255, 255, 0.025);
+  --color-form-control-hover-bg: rgba(255, 255, 255, 0.045);
 }
 
 :root.light {
