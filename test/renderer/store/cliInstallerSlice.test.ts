@@ -1329,6 +1329,63 @@ describe('cliInstallerSlice', () => {
       expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
     });
 
+    it('does not retry Codex from an abandoned bootstrap that settles after cleanup', async () => {
+      vi.useFakeTimers();
+      const codex = createMultimodelProvider({
+        providerId: 'codex',
+        displayName: 'Codex',
+        modelCatalogRefreshState: 'loading',
+        runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      });
+      const metadata = createDeferredValue<CliInstallationStatus>();
+      vi.mocked(api.cliInstaller.getStatus).mockReturnValueOnce(metadata.promise);
+      let mounted = true;
+      const bootstrapping = useStore.getState().bootstrapCliStatus({
+        multimodelEnabled: true,
+        providerStatusMode: 'defer',
+        isActive: () => mounted,
+      });
+      mounted = false;
+      metadata.resolve(createMultimodelStatus([codex]));
+      await bootstrapping;
+      await vi.advanceTimersByTimeAsync(5_100);
+      expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
+    });
+
+    it('cancels pending Codex startup retry but allows a subsequent active bootstrap', async () => {
+      vi.useFakeTimers();
+      const codex = createMultimodelProvider({
+        providerId: 'codex',
+        displayName: 'Codex',
+        modelCatalogRefreshState: 'loading',
+        runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      });
+      vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(createMultimodelStatus([codex]));
+      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(
+        createMultimodelProvider({
+          providerId: 'codex',
+          displayName: 'Codex',
+          modelCatalogRefreshState: 'ready',
+        })
+      );
+      let mounted = true;
+      const options = {
+        multimodelEnabled: true,
+        providerStatusMode: 'defer' as const,
+        isActive: () => mounted,
+      };
+      await useStore.getState().bootstrapCliStatus(options);
+      mounted = false;
+      await vi.advanceTimersByTimeAsync(5_100);
+      expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
+
+      mounted = true;
+      await useStore.getState().bootstrapCliStatus(options);
+      await vi.advanceTimersByTimeAsync(5_100);
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledWith('codex');
+    });
+
     it('does not hydrate pending providers when startup asks to defer provider status checks', async () => {
       const mockStatus = createMultimodelStatus([
         createDeferredProvider('anthropic', 'Anthropic'),

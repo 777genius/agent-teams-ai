@@ -267,9 +267,9 @@ export function initializeNotificationListeners(): () => void {
         const multimodelEnabled = useStore.getState().appConfig?.general?.multimodelEnabled ?? true;
         if (multimodelEnabled) {
           void (async () => {
-            await useStore
-              .getState()
-              .bootstrapCliStatus({ multimodelEnabled: true, providerStatusMode: 'defer' });
+            await useStore.getState().bootstrapCliStatus({
+              multimodelEnabled: true, providerStatusMode: 'defer', isActive: () => !disposed,
+            });
             if (disposed) return;
             if (deferredProviderStatusCleanup) {
               deferredProviderStatusCleanup();

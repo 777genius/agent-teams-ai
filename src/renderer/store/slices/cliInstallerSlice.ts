@@ -851,6 +851,7 @@ export interface CliInstallerSlice {
   bootstrapCliStatus: (options?: {
     multimodelEnabled?: boolean;
     providerStatusMode?: 'full' | 'defer';
+    isActive?: () => boolean;
   }) => Promise<void>;
   fetchCliStatus: () => Promise<void>;
   fetchCliProviderStatus: (
@@ -890,8 +891,10 @@ function clearCodexCatalogLoadingRefresh(providerId: CliProviderId): void {
 
 function scheduleCodexCatalogLoadingRefresh(
   get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>,
-  providerId: CliProviderId
+  providerId: CliProviderId,
+  isActive?: () => boolean
 ): void {
+  if (isActive?.() === false) return;
   const provider = getProviderStatus(get().cliStatus, providerId);
   if (!isCodexCatalogLoadingSnapshot(provider)) {
     clearCodexCatalogLoadingRefresh(providerId);
@@ -910,6 +913,10 @@ function scheduleCodexCatalogLoadingRefresh(
   codexCatalogLoadingRefreshAttempts.set(providerId, attempts + 1);
   const timer = setTimeout(() => {
     codexCatalogLoadingRefreshTimers.delete(providerId);
+    if (isActive?.() === false) {
+      codexCatalogLoadingRefreshAttempts.delete(providerId);
+      return;
+    }
     const latestProvider = getProviderStatus(get().cliStatus, providerId);
     if (!isCodexCatalogLoadingSnapshot(latestProvider)) {
       codexCatalogLoadingRefreshAttempts.delete(providerId);
@@ -923,9 +930,10 @@ function scheduleCodexCatalogLoadingRefresh(
 }
 
 function scheduleCodexCatalogLoadingRefreshes(
-  get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>
+  get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>,
+  isActive?: () => boolean
 ): void {
-  scheduleCodexCatalogLoadingRefresh(get, 'codex');
+  scheduleCodexCatalogLoadingRefresh(get, 'codex', isActive);
 }
 
 // =============================================================================
@@ -1064,7 +1072,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         };
       });
 
-      if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get);
+      if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get, options?.isActive);
 
       if (!metadata.installed) {
         if (epoch === cliStatusEpoch) {
