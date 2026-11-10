@@ -238,6 +238,7 @@ jobs:
                r.nativeExplicitDenyBeatsSavedAlwaysProven!==true ||
                r.nativeSavedGrantSurvivesColdRestartProven!==true ||
                r.nativeFreshSessionSavedGrantSurvivesColdRestartProven!==true ||
+               r.nativeSavedGrantRemainsProjectScopedAfterRestartProven!==true ||
                r.nativeUnauthenticatedDeleteRejected!==true ||
                r.nativeUnauthenticatedPermissionGrantRejected!==true ||
                r.nativeStalePermissionAfterRestartRejected!==true ||

@@ -545,6 +545,49 @@ if (process.argv[2] === '--worker') {
       throw Error('TEST_cold_fresh_session_saved_grant_unavailable');
     if((await call(coldFreshPath,'DELETE')).status!==204)
       throw Error('TEST_cold_fresh_saved_session_cleanup_failed');
+    // A saved "always" grant is PROJECT-scoped, never a process-wide
+    // wildcard. Use a second, physically different TEST workspace after
+    // restart and require the same resource to ASK again there. Only this
+    // run owns either directory or session; no ambient config is read.
+    const foreignWorkspace=join(root,'foreign-workspace');
+    mkdirSync(foreignWorkspace);
+    const foreignCreated=await call('/api/session','POST',{
+      location:{directory:foreignWorkspace},agent:'build',permissions:savedRules,
+    });
+    const foreignId=foreignCreated.data?.data?.id;
+    if(foreignCreated.status!==200||!/^ses_[A-Za-z0-9_-]+$/.test(foreignId||'')||
+       foreignId===coldFreshId)
+      throw Error('TEST_foreign_project_session_missing');
+    const foreignPath='/api/session/'+encodeURIComponent(foreignId);
+    const foreignReadback=await call(foreignPath);
+    if(foreignReadback.status!==200||
+       foreignReadback.data?.data?.id!==foreignId||
+       foreignReadback.data?.data?.location?.directory!==foreignWorkspace||
+       typeof foreignReadback.data?.data?.projectID!=='string'||
+       typeof coldFreshReadback.data?.data?.projectID!=='string'||
+       foreignReadback.data.data.projectID===coldFreshReadback.data.data.projectID||
+       JSON.stringify(foreignReadback.data?.data?.permissions)!==JSON.stringify(savedRules))
+      throw Error('TEST_foreign_project_identity_not_independent');
+    const foreignAsk=await call(foreignPath+'/permission','POST',{
+      action:'external_directory',resources:[savedResource],save:[savedResource],
+    });
+    const foreignRequestId=foreignAsk.data?.data?.id;
+    const foreignPending=await call(foreignPath+'/permission');
+    if(foreignAsk.status!==200||foreignAsk.data?.data?.effect!=='ask'||
+       !/^per[A-Za-z0-9_-]+$/.test(foreignRequestId||'')||
+       foreignPending.status!==200||!Array.isArray(foreignPending.data?.data)||
+       foreignPending.data.data.length!==1||
+       foreignPending.data.data[0]?.id!==foreignRequestId||
+       foreignPending.data.data[0]?.sessionID!==foreignId)
+      throw Error('TEST_saved_grant_leaked_across_projects');
+    if((await call(foreignPath+'/permission/'+encodeURIComponent(foreignRequestId)+
+       '/reply','POST',{decision:'reject'})).status!==204)
+      throw Error('TEST_foreign_project_permission_reject_failed');
+    const foreignCleared=await call(foreignPath+'/permission');
+    if(foreignCleared.status!==200||foreignCleared.data?.data?.length!==0||
+       (await call(foreignPath,'DELETE')).status!==204)
+      throw Error('TEST_foreign_project_permission_cleanup_failed');
+    receipt.nativeSavedGrantRemainsProjectScopedAfterRestartProven=true;
     receipt.nativeFreshSessionSavedGrantSurvivesColdRestartProven=true;
     receipt.nativeSavedGrantSurvivesColdRestartProven=true;
     for (const claim of stalePermissionClaims) {
