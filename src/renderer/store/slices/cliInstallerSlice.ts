@@ -879,6 +879,7 @@ let cliProviderStatusRequestId = 0;
 const cliProviderStatusActiveRequestIds = new Map<string, number>();
 const codexCatalogLoadingRefreshAttempts = new Map<CliProviderId, number>();
 const codexCatalogLoadingRefreshTimers = new Map<CliProviderId, ReturnType<typeof setTimeout>>();
+const codexCatalogLoadingRefreshActive = new Map<CliProviderId, (() => boolean) | undefined>();
 
 function clearCodexCatalogLoadingRefresh(providerId: CliProviderId): void {
   const timer = codexCatalogLoadingRefreshTimers.get(providerId);
@@ -887,6 +888,7 @@ function clearCodexCatalogLoadingRefresh(providerId: CliProviderId): void {
     codexCatalogLoadingRefreshTimers.delete(providerId);
   }
   codexCatalogLoadingRefreshAttempts.delete(providerId);
+  codexCatalogLoadingRefreshActive.delete(providerId);
 }
 
 function scheduleCodexCatalogLoadingRefresh(
@@ -901,6 +903,8 @@ function scheduleCodexCatalogLoadingRefresh(
     return;
   }
 
+  // An active startup may take over a retry queued by an earlier disposed mount.
+  codexCatalogLoadingRefreshActive.set(providerId, isActive);
   if (codexCatalogLoadingRefreshTimers.has(providerId)) {
     return;
   }
@@ -913,7 +917,9 @@ function scheduleCodexCatalogLoadingRefresh(
   codexCatalogLoadingRefreshAttempts.set(providerId, attempts + 1);
   const timer = setTimeout(() => {
     codexCatalogLoadingRefreshTimers.delete(providerId);
-    if (isActive?.() === false) {
+    const canRefresh = codexCatalogLoadingRefreshActive.get(providerId);
+    codexCatalogLoadingRefreshActive.delete(providerId);
+    if (canRefresh?.() === false) {
       codexCatalogLoadingRefreshAttempts.delete(providerId);
       return;
     }
