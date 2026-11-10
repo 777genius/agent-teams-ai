@@ -82,6 +82,36 @@ test('owner product census prunes exact transient authority sidecars before desc
     );
 });
 
+test('owner product census excludes exact board locks even when they disappear after enumeration', async (t) => {
+  const f = await fixture(t);
+  const boardDir = dirname(f.owner);
+  const token = '10000000-0000-4000-8000-000000000001';
+  const lock = join(boardDir, 'board-state.lock');
+  await writeFile(lock, '123\n1\n' + token + '\n');
+  await writeFile(lock + '.candidate-123-' + token, '123\n1\n' + token + '\n');
+  const gate = join(boardDir, 'board-state.lock-transition-v2');
+  for (const name of [gate, gate + '.candidate-123-' + token]) {
+    await mkdir(name);
+    await writeFile(join(name, 'owner-123-' + token), 'file-lock-transition-v2\n');
+  }
+  const malformed = 'board-state.lock.candidate-123-' + 'f'.repeat(36);
+  await writeFile(join(boardDir, malformed), 'ordinary lookalike');
+  const files = await removeAfterEnumeration(f.source, lock, () =>
+    captureDesktopOwnerRoutingProduct(f.source, f.destination)
+  );
+  assert.deepEqual(files.map((file) => file.path), [
+    'teams/test-team/' + malformed,
+    'teams/test-team/.host-owner/commands/original.json',
+    'teams/test-team/.host-owner/state.json',
+  ].sort());
+});
+
+test('owner product census rejects a directory masquerading as a board lock', async (t) => {
+  const f = await fixture(t);
+  await mkdir(join(dirname(f.owner), 'board-state.lock'));
+  await assert.rejects(captureDesktopOwnerRoutingProduct(f.source, f.destination));
+});
+
 test('owner product census still refuses a missing ordinary product after enumeration', async (t) => {
   const f = await fixture(t);
   await assert.rejects(
