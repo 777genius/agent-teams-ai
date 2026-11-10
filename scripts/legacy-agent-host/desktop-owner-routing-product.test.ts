@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 
-import { captureDesktopOwnerRoutingProduct } from './desktop-owner-routing-ui-smoke.ts';
+import { captureDesktopOwnerRoutingProduct } from './desktop-owner-routing-product-census.ts';
 import { waitForDesktopOwnerBackupStartup } from './desktop-owner-routing-fixture.ts';
 
 import type { TestContext } from 'node:test';
