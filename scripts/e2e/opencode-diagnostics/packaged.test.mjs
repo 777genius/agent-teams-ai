@@ -1555,6 +1555,8 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
     `
     export { sameIdentity, ownedTree } from ${JSON.stringify(platformHelper.href)};
     export const assertPortAvailable = () => { throw new Error('TEST_HANDOFF_VERIFIED_BEFORE_LAUNCH'); };
+    // This packaged-only mock must expose the dev E2E port helper, but never use it.
+    export const allocateIsolatedCdpPort = () => { throw new Error('TEST_PACKAGED_PORT_ALLOCATION_FORBIDDEN'); };
     export const processes = () => {
       if (process.argv[2] !== 'stop') return [];
       const launcher = {pid:101,parent:1,birth:${JSON.stringify(launcherBirth)},executable:'node'};
