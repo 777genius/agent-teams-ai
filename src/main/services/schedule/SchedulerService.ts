@@ -2,7 +2,6 @@
  * SchedulerService — orchestrates scheduled task execution via croner.
  *
  * Manages cron jobs, warm-up timers, execution lifecycle, and concurrency locks.
- * Uses one-shot `claude -p` executor (NOT launchTeam stream-json).
  */
 
 import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
