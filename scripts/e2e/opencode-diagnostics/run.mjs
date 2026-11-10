@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { catalogScenarios } from './catalog.mjs';
 const harness = fileURLToPath(new URL('../opencode-diagnostics-desktop.mjs', import.meta.url));
+const resourceSampler = fileURLToPath(new URL('./startup-resources.mjs', import.meta.url));
 const command = (mode, root) =>
   spawnSync(process.execPath, [harness, mode, ...(root ? [root] : [])], { encoding: 'utf8' });
 const scenarioOption = process.argv.slice(2).join(' ');
@@ -34,11 +35,23 @@ try {
   for (let i = 0; i < 120; i++) {
     if (exited) throw new Error('Desktop launcher exited; inspect desktop.log');
     inspection = command('inspect', root); // Ownership checked before every CDP request.
-    if (inspection.status === 0) break;
+    if (inspection.status === 0 &&
+      (!realRuntime || inspection.stdout.includes('E2E_DASHBOARD_MOUNTED=true'))) break;
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-  if (inspection?.status !== 0) throw new Error(inspection?.stderr || 'Renderer unavailable');
+  if (inspection?.status !== 0 || (realRuntime && !inspection.stdout.includes('E2E_DASHBOARD_MOUNTED=true')))
+    throw new Error('Mounted Dashboard unavailable within the owned renderer readiness budget');
   await writeFile(path.join(root, 'inspect.txt'), inspection.stdout);
+  const measure = (phase) => {
+    const result = spawnSync(process.execPath, [resourceSampler, root, phase], { encoding: 'utf8' });
+    if (result.status !== 0) throw new Error('Owned startup resource sample failed: ' + phase);
+    process.stdout.write(result.stdout);
+  };
+  if (realRuntime) {
+    measure('renderer-ready');
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+    measure('post-renderer-delay');
+  }
   for (const scenario of realRuntime
     ? ['real-connected']
     : startupCleanup
@@ -51,6 +64,7 @@ try {
       throw new Error(`Verification failed: ${scenario}; see sandbox artifacts`);
     process.stdout.write(result.stdout);
   }
+  if (realRuntime) measure('after-provider-settings');
 } catch (error) {
   primaryError = error;
   throw error;

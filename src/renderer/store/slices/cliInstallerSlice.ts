@@ -851,6 +851,7 @@ export interface CliInstallerSlice {
   bootstrapCliStatus: (options?: {
     multimodelEnabled?: boolean;
     providerStatusMode?: 'full' | 'defer';
+    isActive?: () => boolean;
   }) => Promise<void>;
   fetchCliStatus: () => Promise<void>;
   fetchCliProviderStatus: (
@@ -878,6 +879,7 @@ let cliProviderStatusRequestId = 0;
 const cliProviderStatusActiveRequestIds = new Map<string, number>();
 const codexCatalogLoadingRefreshAttempts = new Map<CliProviderId, number>();
 const codexCatalogLoadingRefreshTimers = new Map<CliProviderId, ReturnType<typeof setTimeout>>();
+const codexCatalogLoadingRefreshActive = new Map<CliProviderId, (() => boolean) | undefined>();
 
 function clearCodexCatalogLoadingRefresh(providerId: CliProviderId): void {
   const timer = codexCatalogLoadingRefreshTimers.get(providerId);
@@ -886,18 +888,23 @@ function clearCodexCatalogLoadingRefresh(providerId: CliProviderId): void {
     codexCatalogLoadingRefreshTimers.delete(providerId);
   }
   codexCatalogLoadingRefreshAttempts.delete(providerId);
+  codexCatalogLoadingRefreshActive.delete(providerId);
 }
 
 function scheduleCodexCatalogLoadingRefresh(
   get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>,
-  providerId: CliProviderId
+  providerId: CliProviderId,
+  isActive?: () => boolean
 ): void {
+  if (isActive?.() === false) return;
   const provider = getProviderStatus(get().cliStatus, providerId);
   if (!isCodexCatalogLoadingSnapshot(provider)) {
     clearCodexCatalogLoadingRefresh(providerId);
     return;
   }
 
+  // An active startup may take over a retry queued by an earlier disposed mount.
+  codexCatalogLoadingRefreshActive.set(providerId, isActive);
   if (codexCatalogLoadingRefreshTimers.has(providerId)) {
     return;
   }
@@ -910,6 +917,12 @@ function scheduleCodexCatalogLoadingRefresh(
   codexCatalogLoadingRefreshAttempts.set(providerId, attempts + 1);
   const timer = setTimeout(() => {
     codexCatalogLoadingRefreshTimers.delete(providerId);
+    const canRefresh = codexCatalogLoadingRefreshActive.get(providerId);
+    codexCatalogLoadingRefreshActive.delete(providerId);
+    if (canRefresh?.() === false) {
+      codexCatalogLoadingRefreshAttempts.delete(providerId);
+      return;
+    }
     const latestProvider = getProviderStatus(get().cliStatus, providerId);
     if (!isCodexCatalogLoadingSnapshot(latestProvider)) {
       codexCatalogLoadingRefreshAttempts.delete(providerId);
@@ -923,9 +936,10 @@ function scheduleCodexCatalogLoadingRefresh(
 }
 
 function scheduleCodexCatalogLoadingRefreshes(
-  get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>
+  get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>,
+  isActive?: () => boolean
 ): void {
-  scheduleCodexCatalogLoadingRefresh(get, 'codex');
+  scheduleCodexCatalogLoadingRefresh(get, 'codex', isActive);
 }
 
 // =============================================================================
@@ -1064,7 +1078,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         };
       });
 
-      if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get);
+      if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get, options?.isActive);
 
       if (!metadata.installed) {
         if (epoch === cliStatusEpoch) {

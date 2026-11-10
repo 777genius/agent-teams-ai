@@ -608,6 +608,13 @@ if (mode === 'seed-packaged') {
           'JSON.stringify({ready:document.readyState,resources:performance.getEntriesByType("resource").slice(-6).map(r=>({name:r.name,duration:r.duration})),scripts:[...document.scripts].map(s=>s.src)})'
         )
       );
+      if (data.realRuntime) {
+        // A CDP endpoint can exist before React mounts. Do not time a blank renderer.
+        const mounted = await evaluate(
+          "Boolean(document.querySelector('[data-testid=dashboard-provider-summary]')?.getClientRects().length)"
+        );
+        console.log('E2E_DASHBOARD_MOUNTED=' + mounted);
+      }
     } else if (data.packaged) {
       await verifyPackaged({ root, data, evaluate, send, preloadScripts, scriptMetadata });
     } else {
