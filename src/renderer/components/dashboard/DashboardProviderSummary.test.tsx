@@ -182,7 +182,7 @@ describe('DashboardProviderSummary (passive)', () => {
         checking: false,
         invalidated: false,
         observation: {
-          ...state.countEvidence!.observation!,
+          ...state.countEvidence.observation!,
           connected: 9,
           fetchedAt: new Date().toISOString(),
         },

@@ -9,6 +9,7 @@ import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts'
 interface StoreState {
   cliStatus: Record<string, unknown> | null;
   cliStatusLoading: boolean;
+  codexStatusRecoveryPending: boolean;
   cliProviderStatusLoading: Record<string, boolean>;
   cliStatusError: string | null;
   cliInstallerState:
@@ -124,6 +125,8 @@ vi.mock('@features/runtime-provider-management/renderer', async (importOriginal)
     await importOriginal<typeof import('@features/runtime-provider-management/renderer')>();
   return {
     ...actual,
+    // Count-only IPC and cache lifecycle have their own focused hook coverage.
+    useOpenCodeDashboardConnectedCountProbe: vi.fn(),
     useOpenCodeConnectedModelCatalog: (
       input: Parameters<typeof actual.useOpenCodeConnectedModelCatalog>[0]
     ) => {
@@ -287,6 +290,35 @@ async function flushLazyImports(): Promise<void> {
   await new Promise<void>((resolve) => {
     setTimeout(resolve, 0);
   });
+}
+
+function expectProviderIndicator(
+  host: HTMLElement,
+  id: 'anthropic' | 'codex',
+  state: 'connected' | 'checking' | 'unknown'
+): void {
+  const indicator = host.querySelector<HTMLElement>(`[data-testid="dashboard-${id}-status"]`);
+  expect(indicator).not.toBeNull();
+  expect(indicator?.textContent).toContain(id === 'anthropic' ? 'Anthropic' : 'Codex');
+  expect(indicator?.classList.contains('text-green-400')).toBe(state === 'connected');
+  if (state === 'checking') {
+    expect(
+      indicator?.querySelector('[role="status"][aria-label="Checking providers..."]')
+    ).not.toBeNull();
+    expect(indicator?.textContent).not.toContain('unknown');
+  } else {
+    expect(indicator?.querySelector('[role="status"]')).toBeNull();
+    if (state === 'unknown') expect(indicator?.textContent).toContain('unknown');
+    else expect(indicator?.textContent).not.toContain('unknown');
+  }
+}
+
+function expectSeparateProviderNames(host: HTMLElement): void {
+  const summary = host.querySelector<HTMLElement>('[data-testid="dashboard-main-provider-count"]');
+  expect(
+    Array.from(summary?.children ?? []).map((item) => item.getAttribute('data-testid'))
+  ).toEqual(['dashboard-anthropic-status', 'dashboard-codex-status']);
+  expect(summary?.textContent).not.toMatch(/[,/]/);
 }
 
 function createInstalledCliStatus(
@@ -468,6 +500,7 @@ describe('CLI status visibility during completed install state', () => {
     codexAccountHookState.logout.mockClear();
     storeState.cliStatus = createInstalledCliStatus();
     storeState.cliStatusLoading = false;
+    storeState.codexStatusRecoveryPending = false;
     storeState.cliProviderStatusLoading = {};
     storeState.cliStatusError = null;
     storeState.cliInstallerState = 'completed';
@@ -902,10 +935,10 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent)
-      .toContain('Checking providers...');
+    expectProviderIndicator(host, 'anthropic', 'checking');
+    expectProviderIndicator(host, 'codex', 'checking');
+    expectSeparateProviderNames(host);
     expect(host.textContent).toContain('Checking...');
-    expect(host.textContent).not.toContain('Providers: 0 connected');
     expect(host.textContent).not.toContain('Models unavailable for this runtime build');
 
     await act(async () => {
@@ -1048,8 +1081,9 @@ describe('CLI status visibility during completed install state', () => {
 
     expect(host.textContent).toContain('OpenCode');
     expect(host.textContent).toContain('Ready to run agents');
-    expect(host.textContent).toContain('Providers: 2 connected');
-    expect(host.textContent).toContain('Anthropic / Codex');
+    expectProviderIndicator(host, 'anthropic', 'connected');
+    expectProviderIndicator(host, 'codex', 'connected');
+    expectSeparateProviderNames(host);
     expect(host.textContent).not.toContain('Models available');
     expect(host.textContent).toContain('big-pickle');
     expect(host.textContent).not.toContain('Checking...');
@@ -1137,7 +1171,8 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1 connected');
+    expectProviderIndicator(host, 'anthropic', 'connected');
+    expectProviderIndicator(host, 'codex', 'checking');
     expect(host.textContent).toContain('ChatGPT account ready');
     expect(host.textContent).toContain('Loading models...');
     expect(host.textContent).not.toContain('Checking...');
@@ -1441,6 +1476,7 @@ describe('CLI status visibility during completed install state', () => {
   it('hides a transient Codex install action while account status is loading', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     codexAccountHookState.loading = true;
+    storeState.codexStatusRecoveryPending = true;
     storeState.cliInstallerState = 'idle';
     storeState.codexRuntimeStatus = {
       installed: false,
@@ -1479,13 +1515,11 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(host.textContent).toContain('Checking...');
-    // Account snapshot is loading, but there is no confirmed CLI connection count.
-    expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent)
-      .toContain('unknown');
+    // A pending account snapshot shows loading on Codex rather than Unknown.
+    expectProviderIndicator(host, 'codex', 'checking');
     expect(host.textContent).not.toContain('Codex CLI not found');
     expect(host.textContent).not.toContain('Ready to run agents');
     expect(host.textContent).not.toContain('Connect a provider to get started');
-    expect(host.textContent).not.toContain('Providers: 1 connected');
     expect(
       Array.from(host.querySelectorAll('button')).some(
         (button) => button.textContent?.trim() === 'Install'
@@ -2061,7 +2095,8 @@ describe('CLI status visibility during completed install state', () => {
     expect(host.textContent).toContain('Ready to run agents');
     expect(host.textContent).toContain('1 configured local');
     expect(host.textContent).not.toContain('Connect a provider to get started');
-    expect(host.textContent).not.toContain('Providers: 1 connected');
+    expectProviderIndicator(host, 'anthropic', 'unknown');
+    expectProviderIndicator(host, 'codex', 'unknown');
 
     await act(async () => {
       root.unmount();
@@ -2094,7 +2129,9 @@ describe('CLI status visibility during completed install state', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+      await act(async () =>
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }))
+      );
       expect(host.textContent).toContain('Unable to verify');
       expect(host.textContent).not.toContain(diagnostic);
       expect(host.textContent).not.toContain('Models unavailable for this runtime build');
@@ -2135,7 +2172,9 @@ describe('CLI status visibility during completed install state', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+      await act(async () =>
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }))
+      );
       expect(host.textContent).not.toContain('No models from connected providers');
       expect(host.textContent).not.toContain('Models unavailable for this runtime build');
       expect(host.textContent).toContain('minimax-m2.5-free');
@@ -3163,9 +3202,8 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(host.textContent).not.toContain('Authenticated');
-    expect(host.textContent).not.toContain('Providers: 1 connected');
-    expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent)
-      .toContain('unknown');
+    expectProviderIndicator(host, 'anthropic', 'unknown');
+    expectProviderIndicator(host, 'codex', 'unknown');
     expect(host.firstElementChild?.classList.contains('border-l-4')).toBe(false);
 
     await act(async () => {
@@ -3241,8 +3279,8 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent)
-      .toContain('unknown');
+    expectProviderIndicator(host, 'anthropic', 'unknown');
+    expectProviderIndicator(host, 'codex', 'unknown');
     expect(host.textContent).not.toContain('Ready to run agents');
     expect(host.firstElementChild?.classList.contains('border-l-4')).toBe(false);
 
@@ -3299,7 +3337,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1 connected');
+    expectProviderIndicator(host, 'anthropic', 'connected');
     expect(host.textContent).toContain('Anthropic');
 
     const collapseHeader = host.querySelector<HTMLElement>(
@@ -3312,12 +3350,13 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1 connected');
-    // The header is still labelled Anthropic / Codex, while provider cards are hidden.
-    expect(host.textContent).toContain('Anthropic / Codex');
+    expectProviderIndicator(host, 'anthropic', 'connected');
+    // The separate provider indicators remain visible while their cards are hidden.
+    expectSeparateProviderNames(host);
     expect(host.textContent).not.toContain('Connected via Anthropic subscription');
-    expect(host.querySelector('[data-testid="runtime-provider-quick-connect"]')?.closest('.hidden'))
-      .not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="runtime-provider-quick-connect"]')?.closest('.hidden')
+    ).not.toBeNull();
     expect(
       host.querySelector('[role="button"][aria-label="Expand provider details"]')
     ).not.toBeNull();
@@ -3426,7 +3465,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(secondHost.textContent).toContain('Providers: 1 connected');
+    expectProviderIndicator(secondHost, 'codex', 'connected');
     expect(secondHost.textContent).not.toContain('ChatGPT account ready');
     expect(
       secondHost.querySelector('[role="button"][aria-label="Expand provider details"]')
@@ -4007,7 +4046,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1 connected');
+    expectProviderIndicator(host, 'codex', 'connected');
     expect(host.textContent).toContain('ChatGPT account ready');
     expect(host.textContent).not.toContain(
       'Connect a ChatGPT account to use your Codex subscription.'
@@ -4458,7 +4497,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1 connected');
+    expectProviderIndicator(host, 'codex', 'checking');
     expect(host.textContent).toContain('5h left');
     expect(host.textContent).toContain('Weekly left');
     expect(host.textContent).toContain('resets');
@@ -4917,12 +4956,16 @@ describe('CLI status visibility during completed install state', () => {
     storeState.cliInstallerState = 'idle';
     const root = createRoot(document.createElement('div'));
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+      await act(async () =>
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }))
+      );
       storeState.bootstrapCliStatus.mockClear();
       for (let minute = 1; minute < 10; minute++) {
         await act(async () => vi.advanceTimersByTime(60_000));
         storeState.cliStatus = { ...storeState.cliStatus };
-        await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+        await act(async () =>
+          root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }))
+        );
       }
       expect(refreshOpenCodeCatalog).not.toHaveBeenCalled();
       await act(async () => vi.advanceTimersByTime(60_000));
@@ -4941,7 +4984,9 @@ describe('CLI status visibility during completed install state', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+      await act(async () =>
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }))
+      );
       storeState.fetchOpenCodeRuntimeStatus.mockClear();
       expect(quickConnectRefreshKeys.at(-1)).toBe(0);
       expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(0);
@@ -4991,7 +5036,9 @@ describe('CLI status visibility during completed install state', () => {
     const host = document.createElement('div');
     const root = createRoot(host);
     try {
-      await act(async () => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+      await act(async () =>
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }))
+      );
       storeState.fetchCliProviderStatus.mockClear();
       await act(async () => {
         (host.querySelector('[title="Re-check Codex"]') as HTMLButtonElement).click();
