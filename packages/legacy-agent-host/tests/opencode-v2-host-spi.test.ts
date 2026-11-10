@@ -22,6 +22,9 @@ const { createOpenCodeMemberProvider } = await import(sourceMode
 const { applyLaunchConfiguration } = await import(sourceMode
   ? '../src/composition/launchConfiguration.ts'
   : '../dist/composition/launchConfiguration.js');
+const { compileRuntimeMemberProfile } = await import(sourceMode
+  ? '../src/composition/runtimeCaptureSource.ts'
+  : '../dist/composition/runtimeCaptureSource.js');
 
 // Synthetic TEST-only fixtures use canonical paths of the current OS.
 // These do not attest a real native process or qualify the Desktop product.
@@ -751,6 +754,42 @@ test('corrected private V2 driver accepts canonical Windows TEST profile after c
   } finally {
     await opened.driver.close();
     assert.equal(await provider.cleanup(), true);
+  }
+});
+
+test('V2 team capture preserves implicit recipe model but rejects unqualified explicit choice', () => {
+  const base = runtimeProfileSchema.parse({ members: [nativeV2Profile()] }).members[0]!;
+  if (base.provider !== 'opencode') throw new Error('Expected OpenCode profile');
+  const source = {
+    commandId: 'TEST-command',
+    configurationRevision: 'TEST-settings-revision',
+    savedSettings: { cwd: base.cwd, providerId: 'opencode' as const },
+  };
+  const lead = { memberId: base.memberId, role: 'lead' as const, settings: {} };
+  const inherited = compileRuntimeMemberProfile(base, source, lead, 'opencode', 'TEST-launch');
+  if (inherited.provider !== 'opencode') throw new Error('Expected OpenCode profile');
+  assert.equal(inherited.model, base.model,
+    'no explicit UI model must preserve captured V2 recipe without bare-model override');
+  assert.equal(inherited.nativeOptions.providerId, base.nativeOptions.providerId);
+  assert.equal(inherited.nativeSessionId, base.nativeSessionId);
+  const teammate = compileRuntimeMemberProfile(base, source,
+    { ...lead, role: 'member' }, 'opencode', 'TEST-launch');
+  assert.equal(teammate.model, base.model,
+    'same-generation teammate must not inherit an invented bare-model selection');
+
+  const qualified = compileRuntimeMemberProfile(base, {
+    ...source,
+    savedSettings: { ...source.savedSettings, model: 'TEST-provider/TEST-model' },
+  }, lead, 'opencode', 'TEST-launch');
+  assert.equal(qualified.model, base.model,
+    'an explicit qualified selection can only confirm the captured model');
+  for (const selected of ['TEST-model', 'FOREIGN-provider/TEST-model']) {
+    assert.throws(() => compileRuntimeMemberProfile(base, {
+      ...source, savedSettings: { ...source.savedSettings, model: selected },
+    }, lead, 'opencode', 'TEST-launch'),
+    (error: unknown) => error instanceof Error && 'reason' in error &&
+      error.reason === 'launch-option-unsupported',
+    `V2 must reject an unqualified or foreign explicit catalog model: ${selected}`);
   }
 });
 
