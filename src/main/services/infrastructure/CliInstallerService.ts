@@ -906,6 +906,9 @@ export class CliInstallerService {
       if (!this.updateLatestProviderStatusIfCurrent(hydratedProviderStatus, generation)) {
         return;
       }
+      // This catalog update belongs to the current read. An unrelated explicit
+      // status publication still invalidates it through the revision fence.
+      read?.acknowledgePublication();
       if (this.latestStatusSnapshot) {
         this.publishStatusSnapshot(this.latestStatusSnapshot);
       }
