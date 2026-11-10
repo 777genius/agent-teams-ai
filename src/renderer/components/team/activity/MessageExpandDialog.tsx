@@ -1,6 +1,7 @@
 import { memo, useCallback, useMemo, useRef } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
 import {
   Dialog,
   DialogContent,
@@ -73,7 +74,7 @@ const DialogThoughtsContent = ({
     <div>
       {/* Header */}
       <div className="flex items-center gap-2 pb-3">
-        <img
+        <ParticipantAvatar
           src={
             avatarMap.get(LEAD_THOUGHT_SPEAKER_NAME) ??
             agentAvatarUrl(LEAD_THOUGHT_SPEAKER_NAME, 32)

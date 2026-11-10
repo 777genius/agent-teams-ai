@@ -358,7 +358,8 @@ vi.mock('@renderer/components/team/dialogs/ProjectPathSelector', () => ({
   },
 }));
 
-vi.mock('@renderer/components/ui/button', () => ({
+vi.mock('@renderer/components/ui/button', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@renderer/components/ui/button')>()),
   Button: ({
     children,
     onClick,

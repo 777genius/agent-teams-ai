@@ -1,3 +1,4 @@
+import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
 import { cn } from '@renderer/lib/utils';
 
 import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
@@ -74,7 +75,7 @@ export const RosterParticipantIdentity = ({
   return (
     <div className="flex min-w-0 items-center gap-2">
       {avatarSrc ? (
-        <img
+        <ParticipantAvatar
           src={avatarSrc}
           alt=""
           className="size-8 shrink-0 rounded-full bg-[var(--color-surface-raised)]"

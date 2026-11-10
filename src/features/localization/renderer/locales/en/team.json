@@ -3320,7 +3320,7 @@
     "label": "Team template",
     "placeholder": "Start from a team template",
     "confirmTitle": "Apply team template?",
-    "confirmMessage": "This replaces the description, prompt and teammates, resets runtime selection, disables Run after create and Solo team, and enables model sync. Continue?",
+    "confirmMessage": "This will replace your teammates, instructions and team settings with the template’s values.",
     "confirmAction": "Apply template",
     "names": {
       "software-product": "Software Product Team",

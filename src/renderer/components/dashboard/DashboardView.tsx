@@ -71,7 +71,7 @@ const CommandSearch = ({ value, onChange }: Readonly<CommandSearchProps>): React
   return (
     <div className="relative w-full">
       <div
-        className={`relative flex h-14 items-center gap-3 border-b px-4 transition-colors duration-200 ${
+        className={`relative flex h-14 items-center gap-3 border-b bg-[var(--color-form-control-bg)] px-4 transition-colors duration-200 ${
           isFocused ? 'border-zinc-500' : 'border-border hover:border-zinc-600'
         }`}
       >

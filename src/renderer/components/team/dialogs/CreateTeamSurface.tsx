@@ -18,6 +18,7 @@ interface CreateTeamSurfaceProps {
   onClose: () => void;
   backDisabled?: boolean;
   children: ReactNode;
+  headerActions?: ReactNode;
   overlay: ReactNode;
 }
 
@@ -33,6 +34,7 @@ export const CreateTeamSurface = ({
   onClose,
   backDisabled = false,
   children,
+  headerActions,
   overlay,
 }: CreateTeamSurfaceProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
@@ -47,15 +49,25 @@ export const CreateTeamSurface = ({
         className="flex size-full min-h-0 min-w-0 flex-col overflow-y-auto overflow-x-hidden"
       >
         <header className="sticky top-0 z-10 flex items-start gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
-          <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={backDisabled} aria-label={t('create.actions.backToTeams', { defaultValue: 'Back to teams' })}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            disabled={backDisabled}
+            aria-label={t('create.actions.backToTeams', { defaultValue: 'Back to teams' })}
+          >
             <ArrowLeft className="size-4" />
           </Button>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="text-base font-semibold text-[var(--color-text)]">{title}</h1>
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">{description}</p>
           </div>
+          {headerActions ? (
+            <div className="ml-auto w-56 max-w-[40%] shrink-0">{headerActions}</div>
+          ) : null}
         </header>
-        <div className="mx-auto w-full max-w-[64rem] min-w-0 space-y-4 px-4 pb-6 pt-4">
+        <div className="mx-auto w-full min-w-0 max-w-[64rem] space-y-4 px-4 pb-6 pt-4">
           {children}
         </div>
         {overlay}
@@ -66,10 +78,15 @@ export const CreateTeamSurface = ({
   return (
     <Dialog open={open} onOpenChange={(next) => !next && !backDisabled && onClose()}>
       <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[52rem]">
-        <DialogHeader>
-          <DialogTitle className="text-sm">{title}</DialogTitle>
-          <DialogDescription className="text-xs">{description}</DialogDescription>
-        </DialogHeader>
+        <div className="flex items-start gap-4 pr-5">
+          <DialogHeader className="min-w-0 flex-1">
+            <DialogTitle className="text-sm">{title}</DialogTitle>
+            <DialogDescription className="text-xs">{description}</DialogDescription>
+          </DialogHeader>
+          {headerActions ? (
+            <div className="ml-auto w-56 max-w-[40%] shrink-0">{headerActions}</div>
+          ) : null}
+        </div>
         {children}
       </DialogContent>
       {overlay}

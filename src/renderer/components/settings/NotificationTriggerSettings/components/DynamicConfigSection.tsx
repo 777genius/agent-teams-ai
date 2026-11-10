@@ -131,7 +131,7 @@ export const DynamicConfigSection = ({
               onChange={(e) => onMatchPatternChange(e.target.value)}
               placeholder={t('notificationTriggers.configuration.matchPatternPlaceholder')}
               disabled={saving}
-              className={`w-full rounded border bg-transparent px-2 py-1.5 font-mono text-sm text-text placeholder:text-text-muted focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${patternError ? 'border-red-500' : 'border-border'} ${saving ? 'cursor-not-allowed opacity-50' : ''} `}
+              className={`w-full rounded border bg-[var(--color-form-control-bg)] px-2 py-1.5 font-mono text-sm text-text placeholder:text-text-muted focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${patternError ? 'border-red-500' : 'border-border'} ${saving ? 'cursor-not-allowed opacity-50' : ''} `}
             />
             {patternError && (
               <p className="mt-1 flex items-center gap-1 text-xs text-red-400">
@@ -187,7 +187,7 @@ export const DynamicConfigSection = ({
                 onChange={(e) => onTokenThresholdChange(e.target.value)}
                 placeholder="0"
                 disabled={saving}
-                className={`w-20 rounded border border-border bg-transparent px-2 py-1 text-right text-sm text-text focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${saving ? 'cursor-not-allowed opacity-50' : ''} `}
+                className={`w-20 rounded border border-border bg-[var(--color-form-control-bg)] px-2 py-1 text-right text-sm text-text focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${saving ? 'cursor-not-allowed opacity-50' : ''} `}
               />
               <span className="text-xs text-text-muted">
                 {t('notificationTriggers.configuration.tokensUnit')}

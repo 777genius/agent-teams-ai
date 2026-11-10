@@ -167,7 +167,7 @@ export const GoToLineDialog = ({ onClose }: GoToLineDialogProps): React.ReactEle
           <div className="flex items-center gap-2">
             <Input
               ref={inputRef}
-              className="h-8 flex-1 bg-transparent text-sm"
+              className="h-8 flex-1 bg-[var(--color-form-control-bg)] text-sm"
               placeholder={t('editor.goToLine.placeholder')}
               value={value}
               onChange={(e) => setValue(e.target.value)}

@@ -223,4 +223,4 @@ export const getCursorClass = (disabled: boolean): string =>
  * Base className for select inputs in settings forms (theme-aware)
  */
 export const SELECT_INPUT_BASE =
-  'rounded border border-border bg-transparent px-2 py-1 text-sm text-text focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500';
+  'rounded border border-border bg-[var(--color-form-control-bg)] px-2 py-1 text-sm text-text focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500';

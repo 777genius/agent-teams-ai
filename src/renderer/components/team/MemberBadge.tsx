@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
 
+import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
 import {
   getTeamColorSet,
   getThemedBadge,
@@ -95,7 +96,7 @@ const MemberBadgeResolvedContent = memo(
     };
 
     const avatar = (
-      <img
+      <ParticipantAvatar
         src={resolvedAvatarUrl ?? agentAvatarUrl(name, avatarSize)}
         alt=""
         className={`${avatarClass} shrink-0 rounded-full bg-[var(--color-surface-raised)]`}

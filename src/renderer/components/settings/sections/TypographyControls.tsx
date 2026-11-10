@@ -9,15 +9,31 @@ import {
   useAppearancePreferences,
 } from '@features/appearance/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@renderer/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '@renderer/components/ui/select';
 
 import { SettingRow } from '../components';
 
 const SYSTEM_FONT = '__system_font__';
 const MAX_VISIBLE_FONT_CHOICES = 100;
 const FONT_SUGGESTIONS = [
-  'Arial', 'Consolas', 'Georgia', 'Inter', 'Menlo', 'Noto Sans',
-  'Roboto', 'Segoe UI', 'Tahoma', 'Times New Roman', 'Verdana',
+  'Arial',
+  'Consolas',
+  'Georgia',
+  'Inter',
+  'Menlo',
+  'Noto Sans',
+  'Roboto',
+  'Segoe UI',
+  'Tahoma',
+  'Times New Roman',
+  'Verdana',
 ] as const;
 
 /** Per-device UI typography. Editors and terminals manage their own monospace font. */
@@ -26,7 +42,9 @@ export const TypographyControls = (): React.JSX.Element => {
   const { fontFamily, fontSizePercent } = useAppearancePreferences();
   const [installedFonts, setInstalledFonts] = useState<string[]>([]);
   const [fontQuery, setFontQuery] = useState('');
-  const [discovery, setDiscovery] = useState<'idle' | 'loading' | 'loaded' | 'empty' | 'unavailable'>('idle');
+  const [discovery, setDiscovery] = useState<
+    'idle' | 'loading' | 'loaded' | 'empty' | 'unavailable'
+  >('idle');
   const [customOpen, setCustomOpen] = useState(false);
   const [customFont, setCustomFont] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -62,18 +80,20 @@ export const TypographyControls = (): React.JSX.Element => {
     setDiscovery('loading');
     setFontQuery('');
     // Trigger permission only after explicit user interaction (never on mount).
-    void listLocalFontFamilies().then((families) => {
-      if (families === null) {
+    void listLocalFontFamilies()
+      .then((families) => {
+        if (families === null) {
+          setInstalledFonts([]);
+          setDiscovery('unavailable');
+          return;
+        }
+        setInstalledFonts(families);
+        setDiscovery(families.length === 0 ? 'empty' : 'loaded');
+      })
+      .catch(() => {
         setInstalledFonts([]);
         setDiscovery('unavailable');
-        return;
-      }
-      setInstalledFonts(families);
-      setDiscovery(families.length === 0 ? 'empty' : 'loaded');
-    }).catch(() => {
-      setInstalledFonts([]);
-      setDiscovery('unavailable');
-    });
+      });
   };
 
   return (
@@ -92,16 +112,20 @@ export const TypographyControls = (): React.JSX.Element => {
               placeholder={t('general.appearance.fontFamily.placeholder')}
               value={fontQuery}
               onChange={(event) => setFontQuery(event.target.value)}
-              className="h-8 w-44 max-w-full rounded border border-border bg-surface-raised px-2 text-xs text-text"
+              className="h-8 w-44 max-w-full rounded border border-border bg-[var(--color-form-control-bg)] px-2 text-xs text-text"
             />
           )}
           <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
             <Select
               value={fontFamily === null ? SYSTEM_FONT : `family:${fontFamily}`}
               onValueChange={(value) => {
-                if (save(() => setAppearanceFontFamily(
-                  value === SYSTEM_FONT ? null : value.slice('family:'.length)
-                ))) {
+                if (
+                  save(() =>
+                    setAppearanceFontFamily(
+                      value === SYSTEM_FONT ? null : value.slice('family:'.length)
+                    )
+                  )
+                ) {
                   setCustomOpen(false);
                 }
               }}
@@ -109,7 +133,7 @@ export const TypographyControls = (): React.JSX.Element => {
               <SelectTrigger
                 data-testid="appearance-font-select"
                 aria-label={t('general.appearance.fontFamily.label')}
-                className="h-8 w-44 max-w-full bg-surface-raised text-xs text-text"
+                className="h-8 w-44 max-w-full bg-[var(--color-form-control-bg)] text-xs text-text"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -177,7 +201,7 @@ export const TypographyControls = (): React.JSX.Element => {
                 value={customFont}
                 onChange={(event) => setCustomFont(event.target.value)}
                 placeholder={t('general.appearance.fontFamily.placeholder')}
-                className="h-8 w-44 max-w-full min-w-0 rounded border border-border bg-surface-raised px-2 text-xs text-text"
+                className="h-8 w-44 min-w-0 max-w-full rounded border border-border bg-[var(--color-form-control-bg)] px-2 text-xs text-text"
               />
               <button
                 type="submit"
@@ -213,12 +237,14 @@ export const TypographyControls = (): React.JSX.Element => {
         <div className="flex max-w-full flex-wrap items-center gap-2">
           <Select
             value={String(fontSizePercent)}
-            onValueChange={(value) => { save(() => setAppearanceFontSize(Number(value))); }}
+            onValueChange={(value) => {
+              save(() => setAppearanceFontSize(Number(value)));
+            }}
           >
             <SelectTrigger
               data-testid="appearance-text-size"
               aria-label={t('general.appearance.textSize.label')}
-              className="h-8 w-24 bg-surface-raised text-xs text-text"
+              className="h-8 w-24 bg-[var(--color-form-control-bg)] text-xs text-text"
             >
               <SelectValue />
             </SelectTrigger>
@@ -237,14 +263,20 @@ export const TypographyControls = (): React.JSX.Element => {
           <button
             type="button"
             disabled={fontSizePercent === 100}
-            onClick={() => { save(() => setAppearanceFontSize(100)); }}
+            onClick={() => {
+              save(() => setAppearanceFontSize(100));
+            }}
             className="rounded border border-border px-2.5 py-1.5 text-xs text-text-secondary disabled:opacity-50"
           >
             {t('general.appearance.textSize.reset')}
           </button>
         </div>
       </SettingRow>
-      {error && <p role="alert" className="my-2 text-xs text-red-400">{error}</p>}
+      {error && (
+        <p role="alert" className="my-2 text-xs text-red-400">
+          {error}
+        </p>
+      )}
     </>
   );
 };
