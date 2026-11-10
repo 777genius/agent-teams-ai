@@ -1,6 +1,7 @@
 import { createOpenCodeV2DriverFactory } from '@agent-teams/provider-implementations/opencode';
 import type { OpenCodeV2DriverConfig } from '@agent-teams/provider-implementations/opencode';
 import { runtimeDigest } from '../../runtime/identity.js';
+import { guardOpenCodeV2ObserverCleanup } from './OpenCodeV2ObserverCleanup.js';
 import { initialContextDigest } from '../../team-launch/context.js';
 import type { NativeContextEvidence } from '../../team-launch/contracts.js';
 import { preflightOpenCodeV2EffectiveExternalDirectory } from '../../composition/openCodeV2StaticPreflight.js';
@@ -619,63 +620,7 @@ export function createOpenCodeV2MemberProvider(
                   }
                 }
                 })();
-                // Retain the native async-generator iterator's exact
-                // AsyncIterator<Event> type (including its own next/throw).
-                // Wrap only return(), never create a second EventFeed claim.
-                const underlyingReturn = stream.return.bind(stream);
-                stream.return = async () => {
-                  // Generator return alone queues behind a pending next() and
-                  // never executes finally when the generator was not started.
-                  // Retire the captured owner and wake the private feed first.
-                  const stopping = finishOwned();
-                  try {
-                    // Even a rejected private close must not skip the
-                    // generator's finally (lease timer, abort listener, feed).
-                    let closeFailure: { error: unknown } | undefined;
-                    try {
-                      await source.close();
-                    } catch (error) {
-                      closeFailure = { error };
-                    }
-                    try {
-                      await underlyingReturn(undefined);
-                    } finally {
-                      // Preserve the first close failure after finalization.
-                      if (closeFailure) throw closeFailure.error;
-                    }
-                  } finally {
-                    if (!await stopping)
-                      throw new Error('opencode.v2.owner-cleanup-unknown');
-                  }
-                  return { done: true as const, value: undefined };
-                };
-                // A consumer can also abandon the single-claim feed with
-                // throw(). Like return(), this queues behind a pending next()
-                // or skips generator finally if observation never started.
-                // Wake the private feed and retire only the captured owner.
-                const underlyingThrow = stream.throw.bind(stream);
-                stream.throw = async (error) => {
-                  const stopping = finishOwned();
-                  try {
-                    let closeFailure: { error: unknown } | undefined;
-                    try {
-                      await source.close();
-                    } catch (cause) {
-                      closeFailure = { error: cause };
-                    }
-                    try {
-                      return await underlyingThrow(error);
-                    } finally {
-                      // Never let an early close rejection strand the generator.
-                      // A return in this finally would swallow that rejection.
-                      if (closeFailure) throw closeFailure.error;
-                    }
-                  } finally {
-                    if (!await stopping)
-                      throw new Error('opencode.v2.owner-cleanup-unknown', { cause: error });
-                  }
-                };
-                return stream;
+                return guardOpenCodeV2ObserverCleanup(stream, () => source.close(), finishOwned);
               },
               respondToInteraction: async (reference, reply) => {
                 // V2 permission replies are native mutations. Never let a

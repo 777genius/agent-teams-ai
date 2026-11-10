@@ -13,6 +13,9 @@ const { runtimeProfileSchema } = await import(sourceMode
 const { createOpenCodeV2MemberProvider } = await import(sourceMode
   ? '../src/adapters/providers/OpenCodeV2MemberProvider.ts'
   : '../dist/adapters/providers/OpenCodeV2MemberProvider.js');
+const { guardOpenCodeV2ObserverCleanup } = await import(sourceMode
+  ? '../src/adapters/providers/OpenCodeV2ObserverCleanup.ts'
+  : '../dist/adapters/providers/OpenCodeV2ObserverCleanup.js');
 const { createOpenCodeMemberProvider } = await import(sourceMode
   ? '../src/adapters/providers/OpenCodeMemberProvider.ts'
   : '../dist/adapters/providers/OpenCodeMemberProvider.js');
@@ -2703,5 +2706,36 @@ test('late native prompt ACK stays UNKNOWN across re-attestation recovery and Ho
           server.close(error => error ? reject(error) : resolve());
         });
       }
+    }
+  });
+
+test('V2 observer abandonment finalizes after rejected private close for return and throw',
+  { timeout: 3000 }, async () => {
+    for (const operation of ['return', 'throw'] as const) {
+      const closeFailure = new Error('TEST private V2 observer close rejected');
+      let finalized = 0;
+      let closes = 0;
+      let physicalStops = 0;
+      const stream = guardOpenCodeV2ObserverCleanup((async function* () {
+        try {
+          yield 'native-test-event';
+        } finally {
+          finalized++;
+        }
+      })(), async () => {
+        closes++;
+        throw closeFailure;
+      }, async () => {
+        physicalStops++;
+        return true;
+      });
+      assert.equal((await stream.next()).value, 'native-test-event');
+      const result = operation === 'return' ? stream.return(undefined) :
+        stream.throw(new Error('TEST consumer throw'));
+      await assert.rejects(result, (error: unknown) => error === closeFailure,
+        'a private close rejection must remain visible after finalization');
+      assert.equal(finalized, 1, 'underlying generator finally must run');
+      assert.equal(closes, 1, 'private close is never retried');
+      assert.equal(physicalStops, 1, 'only the owned physical stop is signaled');
     }
   });
