@@ -492,3 +492,24 @@ test('V2.2 rejects unnormalized and V1-shaped permission captures without native
     assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(rules, 'deny'),
       { kind: 'hold', reason: 'rules' }, JSON.stringify(rules)?.slice(0, 200));
 });
+
+test('V2.2 rejects accessor-backed native permission rules without executing getters', () => {
+  // Under the former repeated-property-read validator a changing effect
+  // accessor could report DENY for admission then ALLOW afterwards.
+  for (const field of ['action', 'resource', 'effect'] as const) {
+    const rule = { action: 'external_directory', resource: '*', effect: 'deny' };
+    let reads = 0;
+    Object.defineProperty(rule, field, {
+      enumerable: true,
+      configurable: true,
+      get() {
+        reads++;
+        if (field === 'effect') return reads <= 3 ? 'deny' : 'allow';
+        return field === 'action' ? 'external_directory' : '*';
+      },
+    });
+    assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory([rule], 'deny'),
+      { kind: 'hold', reason: 'rules' }, field);
+    assert.equal(reads, 0, 'untrusted native rule getter must never run');
+  }
+});

@@ -263,19 +263,32 @@ export function preflightOpenCodeV2EffectiveExternalDirectory(
   if (!Array.isArray(effectivePermissions) ||
       effectivePermissions.length === 0 || effectivePermissions.length > 1024)
     return { kind: 'hold', reason: 'rules' };
+  // Native permission JSON consists of data fields. Reject accessors:
+  // a getter may report DENY while being validated and ALLOW when the final
+  // policy is read, creating a forged policy-candidate without a stable rule.
+  let last: { action: string; resource: string; effect: 'allow' | 'ask' | 'deny' } | undefined;
   for (const rule of effectivePermissions) {
     if (!rule || typeof rule !== 'object' || Array.isArray(rule) ||
-        Object.keys(rule).length !== 3 ||
-        !['action', 'resource', 'effect'].every((key) => Object.hasOwn(rule, key)) ||
-        typeof rule.action !== 'string' || !rule.action || rule.action.length > 256 ||
-        typeof rule.resource !== 'string' || !rule.resource || rule.resource.length > 8192 ||
-        !['allow', 'ask', 'deny'].includes(rule.effect))
+        Object.keys(rule).length !== 3)
       return { kind: 'hold', reason: 'rules' };
+    const action = Object.getOwnPropertyDescriptor(rule, 'action');
+    const resource = Object.getOwnPropertyDescriptor(rule, 'resource');
+    const effect = Object.getOwnPropertyDescriptor(rule, 'effect');
+    if (!action || !resource || !effect ||
+        !('value' in action) || !('value' in resource) || !('value' in effect))
+      return { kind: 'hold', reason: 'rules' };
+    const a: unknown = action.value;
+    const r: unknown = resource.value;
+    const e: unknown = effect.value;
+    if (typeof a !== 'string' || !a || a.length > 256 ||
+        typeof r !== 'string' || !r || r.length > 8192 ||
+        (e !== 'allow' && e !== 'ask' && e !== 'deny'))
+      return { kind: 'hold', reason: 'rules' };
+    last = { action: a, resource: r, effect: e };
   }
-  const last = effectivePermissions[effectivePermissions.length - 1];
   // An earlier broad guard may be overridden by an agent-specific rule,
   // including wildcards. Reject instead of trying to duplicate V2's matcher.
-  if (last.action !== 'external_directory' || last.resource !== '*' ||
+  if (!last || last.action !== 'external_directory' || last.resource !== '*' ||
       (last.effect !== 'ask' && last.effect !== 'deny') ||
       (required === 'deny' && last.effect !== 'deny'))
     return { kind: 'hold', reason: 'external-directory' };
