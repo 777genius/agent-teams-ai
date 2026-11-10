@@ -115,7 +115,9 @@ export function desktopF08ReadFaultExpression(handleId: string, selection: strin
       }
       const callers=['TEST_F08_originalStaleProductRead','TEST_F08_originalNewerProductRead'];
       const caller=callers.find(name=>stack.includes('at async '+name+' (')||stack.includes('at '+name+' ('));
-      if(!kind&&same&&request.operation==='team.snapshot'&&caller){
+      // One logical public getData may now make several signed Owner reads.
+      // Fault only its first physical page; authentic cursor continuations pass.
+      if(!kind&&same&&request.operation==='team.snapshot'&&caller&&request.payload?.cursor===undefined){
         if(before.team!==f.selection||before.loading||typeof request.commandId!=='string')throw Error('F08 explicit read scope changed');
         kind=caller===callers[0]?'same-A-stale-product-snapshot':'same-A-newer-snapshot';
         if(kind==='same-A-stale-product-snapshot'&&!f.staleProductArmed)throw Error('F08 stale product read not armed');
