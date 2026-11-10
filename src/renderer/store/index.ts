@@ -245,17 +245,15 @@ export function initializeNotificationListeners(): () => void {
   // Sessions sidebar tab when it first mounts; scanning it here made startup
   // pay for a hidden panel.
   void (async () => {
-    // Config: fast (in-memory read) — needed for theme before first paint.
+    // Load config for theme before first paint.
     await useStore.getState().fetchConfig();
     if (disposed) return;
-
-    // Sync renderer telemetry gate from loaded config
+    // Sync telemetry from loaded config.
     const loadedConfig = useStore.getState().appConfig;
     syncRendererTelemetry(loadedConfig?.general?.telemetryEnabled ?? true);
 
     if (api.cliInstaller) {
-      // Resolve the configured CLI flavor after config has loaded to avoid
-      // bootstrapping multimodel placeholder state in Claude-only mode.
+      // Resolve CLI flavor before creating multimodel placeholders.
       type NavigatorWithUserAgentData = Navigator & { userAgentData?: { platform?: string } };
       const nav: NavigatorWithUserAgentData | null =
         typeof navigator !== 'undefined' ? (navigator as NavigatorWithUserAgentData) : null;
@@ -309,8 +307,7 @@ export function initializeNotificationListeners(): () => void {
       }, delayMs);
     }
 
-    // Keep immediately visible startup data first; global task aggregation can
-    // scan all team task files, so hydrate it after the team list.
+    // Defer the global task scan until the initial team list is ready.
     await Promise.all([
       useStore.getState().fetchTeams(),
       useStore.getState().fetchNotifications(),
