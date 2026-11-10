@@ -1,0 +1,91 @@
+name: Stage1 V2 stack integration diagnostic (read-only)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/stage1-v2-stack-reconcile.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage1-v2-stack-diagnostic-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  integration-inputs:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Capture immutable three-way source inputs; do not execute them
+        shell: bash
+        env:
+          PARENT_SHA: b28c0543f008244f010c30e2b0fa0afec18d87df
+          CHILD_SHA: 3479ae4338a9e891b45f34d6900887ba1cbfc08b
+          BASE_SHA: 171faf4fc88930815067bb0d6c51b76c0bb78071
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re, subprocess
+          def git(*args):
+              return subprocess.check_output(['git', *args])
+          refs = {name: os.environ[name.upper() + '_SHA'] for name in ('base', 'parent', 'child')}
+          assert all(re.fullmatch(r'[0-9a-f]{40}', sha) for sha in refs.values())
+          for sha in refs.values():
+              assert git('cat-file', '-t', sha).strip() == b'commit'
+          assert git('merge-base', refs['parent'], refs['child']).decode().strip() == refs['base']
+          paths = git('diff', '--no-renames', '--name-only', '-z', refs['base'], refs['child']).decode().split('\0')
+          paths = [path for path in paths if path]
+          assert 0 < len(paths) <= 100
+          for path in paths:
+              parts = pathlib.PurePosixPath(path).parts
+              assert not path.startswith('/') and not any(part in ('.', '..', '.git') for part in parts)
+          out = pathlib.Path('stack-evidence')
+          out.mkdir(exist_ok=False)
+          merged = subprocess.run(['git', 'merge-tree', '--write-tree', refs['child'], refs['parent']], capture_output=True)
+          assert merged.returncode in (0, 1), merged.stderr.decode(errors='replace')
+          (out / 'merge-tree.txt').write_bytes(merged.stdout)
+          tree = merged.stdout.splitlines()[0].decode()
+          assert re.fullmatch(r'[0-9a-f]{40}', tree)
+          revisions = dict(refs, merged=tree)
+          manifest = {'refs': refs, 'trees': {}, 'mergeExitCode': merged.returncode, 'files': {}}
+          total = 0
+          for name, ref in revisions.items():
+              manifest['trees'][name] = git('rev-parse', ref + '^{tree}').decode().strip()
+              manifest['files'][name] = {}
+              for path in paths:
+                  entry = git('ls-tree', '-z', ref, '--', path)
+                  if not entry:
+                      manifest['files'][name][path] = None
+                      continue
+                  metadata, found = entry.rstrip(b'\0').split(b'\t', 1)
+                  mode, kind, sha = metadata.decode().split()
+                  assert found.decode() == path and kind == 'blob' and mode in ('100644', '100755')
+                  size = int(git('cat-file', '-s', sha))
+                  total += size
+                  assert 0 <= size <= 20 * 1024 * 1024 and total <= 80 * 1024 * 1024
+                  data = git('cat-file', 'blob', sha)
+                  assert len(data) == size
+                  assert hashlib.sha1(b'blob ' + str(size).encode() + b'\0' + data).hexdigest() == sha
+                  target = out / name / path
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  target.write_bytes(data)
+                  manifest['files'][name][path] = {'sha': sha, 'mode': mode, 'bytes': size, 'sha256': hashlib.sha256(data).hexdigest()}
+          (out / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+          print(json.dumps({'refs': refs, 'changedPaths': len(paths), 'bytes': total, 'mergeExitCode': merged.returncode}))
+          PY
+      - name: Preserve exact tracked sources for conflict review (not E2E PASS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1-v2-stack-integration-inputs
+          path: stack-evidence/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error
