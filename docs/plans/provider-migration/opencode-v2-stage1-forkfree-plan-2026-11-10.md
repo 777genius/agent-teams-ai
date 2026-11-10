@@ -102,9 +102,10 @@ Clean Architecture/SOLID/DRY означают явные зависимости 
 | Team UI | Tasks/Unicode comments/attachments/TaskRef, human/peer/group, review/apply/reject, notifications, exact selected model/member |
 | Lifecycle/UNKNOWN | Targeted stop/interrupt, sibling survives, Quit/crash/cold Resume, PID identity, lost ACK и zero replay |
 | Packaging/fork-free | Точные native bytes, без source checkout/system runtime dependency; Host path не вызывает legacy CLI даже для management |
+| Mixed retained V1 / Host V2 | В одном TEST-профиле старый V1 handle и новый Host-owned V2 handle; routing, Stop и cold readback каждого сохраняют состояние и процессы другого; без cross-owner relay |
 | Retained data | Старый owner не усыновлён; tasks/history/UNKNOWN/архивы сохранены; нет destructive migration |
 
-Релевантные M01–M19 и V01–V08 обязательны для новой композиции. Не считать native provider-only или старый runtime доказательством нового Host/Electron. Replay, лишние права, shared-process kill, fake success, исчезновение истории, неподтверждённый engine/dialect, hidden fallback и красные exact-head gates — **stop-ship**.
+Релевантные [M01–M19](compatibility-matrix.md) и [V01–V08: native V2 E2E contract matrix](https://github.com/777genius/agent-teams-ai/blob/866568ee421fa595f0c99d4e3dbc0f173062a87d/docs/plans/provider-migration/opencode-v2-host-integration.md#L158-L170) обязательны для новой композиции. Ссылка V01–V08 фиксирует определения проверок, а не возобновляет отложенный Stage 2 или старые version pins. Не считать native provider-only или старый runtime доказательством нового Host/Electron. Replay, лишние права, shared-process kill, fake success, исчезновение истории, неподтверждённый engine/dialect, hidden fallback и красные exact-head gates — **stop-ship**.
 
 ## 6. Порядок merge и ограничения
 
