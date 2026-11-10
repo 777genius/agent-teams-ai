@@ -3157,7 +3157,7 @@ async function shutdownServices(): Promise<void> {
     branchStatusService = null;
 
     if (schedulerService) {
-      await runShutdownStep('scheduler stop', () => schedulerService.stop());
+      await runShutdownStep('scheduler stop', () => schedulerService.stop(), 20_000);
     }
 
     await runShutdownStep('skills watcher stop', () => skillsWatcherService?.stopAll());
