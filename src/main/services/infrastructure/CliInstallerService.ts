@@ -56,6 +56,7 @@ import { getCliFlavorUiOptions, getConfiguredCliFlavor } from '../team/cliFlavor
 import { buildInitialCliInstallationStatus } from './cliInstallerInitialStatus';
 import {
   mergeProviderStatusPublication,
+  ProviderStatusPublicationRevisions,
   retainLatestProviderStatus,
 } from './cliInstallerProviderStatusUpdates';
 import {
@@ -406,9 +407,7 @@ function cloneCliInstallerRunDiag(diag: CliInstallerStatusRunDiag): CliInstaller
   return { ...diag };
 }
 
-// =============================================================================
 // Service
-// =============================================================================
 
 export class CliInstallerService {
   private mainWindow: BrowserWindow | null = null;
@@ -424,6 +423,7 @@ export class CliInstallerService {
   private lastHealthyStatusSnapshot: CliInstallationStatus | null = null;
   private lastHealthyStatusObservedAt = 0;
   private statusGatherGeneration = 0;
+  private readonly providerStatusRevisions = new ProviderStatusPublicationRevisions();
   private readonly latestProviderSignatures = new Map<CliProviderId, string | null>();
 
   constructor(private readonly now: () => number = Date.now) {}
@@ -737,6 +737,7 @@ export class CliInstallerService {
   }
 
   private updateLatestProviderStatus(providerStatus: CliProviderStatus): void {
+    this.providerStatusRevisions.published(providerStatus.providerId);
     if (
       this.latestStatusSnapshot?.flavor === 'agent_teams_orchestrator' &&
       !isFrontendProvider(providerStatus.providerId)
@@ -819,9 +820,7 @@ export class CliInstallerService {
     return provider;
   }
 
-  // ---------------------------------------------------------------------------
   // Public: getStatus
-  // ---------------------------------------------------------------------------
 
   async getStatus(options: CliInstallerGetStatusOptions = {}): Promise<CliInstallationStatus> {
     const statusStartedAt = Date.now();
@@ -911,6 +910,9 @@ export class CliInstallerService {
         this.publishStatusSnapshot(this.latestStatusSnapshot);
       }
     };
+    const finishRead = options.projectPath
+      ? undefined
+      : this.providerStatusRevisions.beginRead(providerId);
     const providerStatus = options.projectPath
       ? await this.multimodelBridgeService.getProviderStatus(
           binaryPath,
@@ -918,11 +920,10 @@ export class CliInstallerService {
           undefined,
           options
         )
-      : await this.multimodelBridgeService.getProviderStatus(
-          binaryPath,
-          providerId,
-          handleCatalogUpdate
-        );
+      : await this.multimodelBridgeService
+          .getProviderStatus(binaryPath, providerId, handleCatalogUpdate)
+          .catch((error: unknown) => createRuntimeStatusErrorProviderStatus(providerId, error))
+          .finally(finishRead);
     if (generation !== this.statusGatherGeneration) return obsoleteStatus();
     const mismatchStatus = projectMismatchedProviderStatus(providerId, providerStatus, this.now());
     if (mismatchStatus) {
@@ -1238,6 +1239,7 @@ export class CliInstallerService {
     generation: number
   ): Promise<void> {
     if (result.flavor === 'agent_teams_orchestrator') {
+      const canPublishProvider = this.providerStatusRevisions.captureAggregate();
       result.authStatusChecking = true;
       const hydratedProviderIds = new Set<CliProviderId>();
       const applyProviders = (
@@ -1254,7 +1256,8 @@ export class CliInstallerService {
           hydratedProviderIds,
           final,
           this.now(),
-          updatedProviderId
+          updatedProviderId,
+          canPublishProvider
         );
         if (!publication) return;
         Object.assign(result, publication);

@@ -36,6 +36,93 @@ afterEach(() => {
 
 describe('CliInstallerService background provider status', () => {
   const projectPath = '/sandbox/TEST-opencode-preflight';
+  test.each([
+    { startOrder: 'before', fails: false },
+    { startOrder: 'during', fails: false },
+    { startOrder: 'during', fails: true },
+  ])(
+    'fences aggregate started $startOrder provider read (failure=$fails) and permits fresh revocation',
+    async ({ startOrder, fails }) => {
+      vi.useFakeTimers();
+      const service = new CliInstallerService();
+      const internals = service as unknown as CliInstallerServiceInternals;
+      const result = internals.createInitialStatus();
+      result.flavor = 'agent_teams_orchestrator';
+      result.installed = true;
+      result.binaryPath = '/fake/runtime';
+      internals.latestStatusSnapshot = result;
+      const unknown = {
+        ...createDefaultProviderStatus('codex'),
+        supported: true,
+        statusCheckOutcome: 'authoritative' as const,
+        statusCheckErrorCode: undefined,
+        verificationState: 'unknown' as const,
+      };
+      const verified = { ...unknown, authenticated: true, verificationState: 'verified' as const };
+      let finishProvider!: (provider: CliProviderStatus) => void;
+      let rejectProvider!: (reason: Error) => void;
+      const providerCheck = vi
+        .spyOn(internals.multimodelBridgeService, 'getProviderStatus')
+        .mockReturnValueOnce(
+          new Promise((resolve, reject) => {
+            finishProvider = resolve;
+            rejectProvider = reject;
+          })
+        )
+        .mockResolvedValueOnce(unknown);
+      let providerRead: Promise<CliProviderStatus | null> | undefined;
+      if (startOrder === 'during') {
+        providerRead = service.getProviderStatus('codex');
+        await vi.waitFor(() => expect(providerCheck).toHaveBeenCalledTimes(1));
+      }
+      let finishAggregate!: (providers: CliProviderStatus[]) => void;
+      let publishAggregate!: (providers: CliProviderStatus[], providerId?: CliProviderId) => void;
+      vi.spyOn(internals.multimodelBridgeService, 'getProviderStatuses').mockImplementation(
+        (_binaryPath, onUpdate) => {
+          publishAggregate = onUpdate!;
+          return new Promise((resolve) => {
+            finishAggregate = resolve;
+          });
+        }
+      );
+      const pending = internals.checkAuthStatus(
+        result.binaryPath,
+        result,
+        {},
+        internals.statusGatherGeneration
+      );
+      await vi.advanceTimersByTimeAsync(1_500);
+      await pending;
+      providerRead ??= service.getProviderStatus('codex');
+      if (fails) rejectProvider(new Error('Test-only status read unavailable'));
+      else finishProvider(verified);
+      await providerRead;
+      expect(
+        internals.latestStatusSnapshot?.providers.find((p) => p.providerId === 'codex')
+          ?.authenticated
+      ).toBe(!fails);
+      const stale = fails ? verified : unknown;
+      publishAggregate([stale]);
+      expect(
+        internals.latestStatusSnapshot?.providers.find((p) => p.providerId === 'codex')
+          ?.authenticated
+      ).toBe(!fails);
+      publishAggregate([stale], 'codex');
+      finishAggregate([stale]);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(
+        internals.latestStatusSnapshot?.providers.find((p) => p.providerId === 'codex')
+          ?.authenticated
+      ).toBe(!fails);
+      await service.getProviderStatus('codex');
+      expect(providerCheck).toHaveBeenCalledTimes(2);
+      expect(
+        internals.latestStatusSnapshot?.providers.find((p) => p.providerId === 'codex')
+          ?.authenticated
+      ).toBe(false);
+    }
+  );
   test('resolves the runtime when project-scoped preflight races initial discovery', async () => {
     const service = new CliInstallerService();
     const internals = service as unknown as CliInstallerServiceInternals;
