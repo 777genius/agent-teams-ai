@@ -317,8 +317,10 @@ export function preflightOpenCodeV2EffectiveExternalDirectory(
       if (!slot || !('value' in slot))
         return { kind: 'hold', reason: 'rules' };
       const rule: unknown = slot.value;
+      // Native JSON records have exactly three own string keys. Reject
+      // hidden or symbol fields without evaluating their accessors.
       if (!rule || typeof rule !== 'object' || nodeUtilTypes.isProxy(rule) ||
-          Array.isArray(rule) || Object.keys(rule).length !== 3)
+          Array.isArray(rule) || Reflect.ownKeys(rule).length !== 3)
         return { kind: 'hold', reason: 'rules' };
       const action = Object.getOwnPropertyDescriptor(rule, 'action');
       const resource = Object.getOwnPropertyDescriptor(rule, 'resource');

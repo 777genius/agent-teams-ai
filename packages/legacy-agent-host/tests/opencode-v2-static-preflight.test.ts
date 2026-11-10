@@ -493,6 +493,26 @@ test('V2.2 rejects unnormalized and V1-shaped permission captures without native
       { kind: 'hold', reason: 'rules' }, JSON.stringify(rules)?.slice(0, 200));
 });
 
+test('V2.2 rejects hidden and symbol rule fields absent from native JSON', () => {
+  const deny = { action: 'external_directory', resource: '*', effect: 'deny' };
+  for (const hidden of ['non-enumerable', 'symbol'] as const) {
+    const rule = { ...deny };
+    let reads = 0;
+    Object.defineProperty(rule, hidden === 'symbol' ? Symbol('untrusted') : 'untrusted', {
+      enumerable: false,
+      get() { reads++; return 'allow'; },
+    });
+    assert.equal(Object.keys(rule).length, 3,
+      'enumerable-only validation misses a non-JSON own field');
+    assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory([rule], 'deny'),
+      { kind: 'hold', reason: 'rules' }, hidden);
+    assert.equal(reads, 0, 'native admission must never execute hidden getters');
+  }
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(
+    JSON.parse(JSON.stringify([deny])), 'deny'),
+  { kind: 'policy-candidate', effect: 'deny' });
+});
+
 test('V2.2 rejects accessor-backed native permission rules without executing getters', () => {
   // Under the former repeated-property-read validator a changing effect
   // accessor could report DENY for admission then ALLOW afterwards.
