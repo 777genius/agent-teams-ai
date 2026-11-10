@@ -3,6 +3,7 @@ import type {
   CodexAccountElectronApi,
   CodexAccountSnapshotDto,
 } from '@features/codex-account/contracts';
+import type { CliProviderStatus } from '@shared/types';
 import type { StoreApi } from 'zustand';
 
 type StatusStore = Pick<StoreApi<CliInstallerSlice>, 'getState' | 'setState' | 'subscribe'>;
@@ -10,6 +11,15 @@ type AccountApi = Pick<
   CodexAccountElectronApi,
   'getCodexAccountSnapshot' | 'onCodexAccountSnapshotChanged'
 >;
+
+function isStartupRecoveryCandidate(provider: CliProviderStatus | undefined): boolean {
+  if (!provider || provider.authenticated) return false;
+  return (
+    (provider.statusCheckOutcome === 'authoritative' && provider.verificationState === 'unknown') ||
+    (provider.statusCheckOutcome === 'transient_error' &&
+      provider.statusCheckErrorCode === 'timeout')
+  );
+}
 
 /** A cold passive probe can run before the managed account context is cached.
  * Account readiness only requests fresh runtime evidence; it never grants authority.
@@ -39,9 +49,7 @@ export function installCodexStartupStatusRevalidation(
     const recoveryCandidate =
       state.cliStatus?.flavor === 'agent_teams_orchestrator' &&
       state.cliStatus.installed &&
-      provider?.statusCheckOutcome === 'authoritative' &&
-      provider.verificationState === 'unknown' &&
-      !provider.authenticated;
+      isStartupRecoveryCandidate(provider);
     setPending(
       recheckPending ||
         Boolean(
@@ -69,9 +77,7 @@ export function installCodexStartupStatusRevalidation(
       !state.cliStatus.installed ||
       state.cliStatusLoading ||
       state.cliProviderStatusLoading.codex ||
-      provider?.statusCheckOutcome !== 'authoritative' ||
-      provider.verificationState !== 'unknown' ||
-      provider.authenticated
+      !isStartupRecoveryCandidate(provider)
     )
       return;
 

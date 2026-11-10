@@ -67,49 +67,68 @@ function fixture() {
 afterEach(() => vi.clearAllMocks());
 
 describe('Codex startup status revalidation', () => {
-  it('keeps recovery pending across the deferred account lookup and queued runtime check', async () => {
-    const test = fixture();
-    const pendingTransitions: boolean[] = [];
-    const unsubscribePending = test.store.subscribe((state) => {
-      if (pendingTransitions.at(-1) !== state.codexStatusRecoveryPending) {
-        pendingTransitions.push(state.codexStatusRecoveryPending);
-      }
-    });
-    let finishAccount!: (snapshot: CodexAccountSnapshotDto) => void;
-    let finishProvider!: (provider: CliProviderStatus) => void;
-    test.accountApi.getCodexAccountSnapshot.mockReturnValueOnce(
-      new Promise((resolve) => {
-        finishAccount = resolve;
-      })
-    );
-    vi.mocked(api.cliInstaller.getProviderStatus).mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          finishProvider = resolve;
-        })
-    );
-    try {
-      test.store.setState({
-        cliStatus: { ...createLoadingMultimodelCliStatus(), providers: [test.unknown] },
+  it.each(['unknown', 'timeout'] as const)(
+    'keeps recovery pending across the deferred account lookup and queued runtime check after %s',
+    async (initialStatus) => {
+      const test = fixture();
+      const pendingTransitions: boolean[] = [];
+      const unsubscribePending = test.store.subscribe((state) => {
+        if (pendingTransitions.at(-1) !== state.codexStatusRecoveryPending) {
+          pendingTransitions.push(state.codexStatusRecoveryPending);
+        }
       });
-      expect(test.store.getState().codexStatusRecoveryPending).toBe(true);
-      expect(test.store.getState().cliProviderStatusLoading.codex).not.toBe(true);
-      await vi.waitFor(() =>
-        expect(test.accountApi.getCodexAccountSnapshot).toHaveBeenCalledTimes(1)
+      let finishAccount!: (snapshot: CodexAccountSnapshotDto) => void;
+      let finishProvider!: (provider: CliProviderStatus) => void;
+      test.accountApi.getCodexAccountSnapshot.mockReturnValueOnce(
+        new Promise((resolve) => {
+          finishAccount = resolve;
+        })
       );
-      expect(test.store.getState().codexStatusRecoveryPending).toBe(true);
-      finishAccount(healthyAccount);
-      await vi.waitFor(() => expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1));
-      expect(test.store.getState().codexStatusRecoveryPending).toBe(true);
-      expect(test.store.getState().cliProviderStatusLoading.codex).toBe(true);
-      finishProvider({ ...test.unknown, authenticated: true, verificationState: 'verified' });
-      await vi.waitFor(() => expect(test.store.getState().codexStatusRecoveryPending).toBe(false));
-      expect(pendingTransitions).toEqual([true, false]);
-    } finally {
-      unsubscribePending();
-      test.cleanup();
+      vi.mocked(api.cliInstaller.getProviderStatus).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishProvider = resolve;
+          })
+      );
+      try {
+        test.store.setState({
+          cliStatus: {
+            ...createLoadingMultimodelCliStatus(),
+            providers: [
+              {
+                ...test.unknown,
+                ...(initialStatus === 'timeout'
+                  ? {
+                      statusCheckOutcome: 'transient_error' as const,
+                      statusCheckErrorCode: 'timeout' as const,
+                      verificationState: 'error' as const,
+                    }
+                  : {}),
+              },
+            ],
+          },
+        });
+        expect(test.store.getState().codexStatusRecoveryPending).toBe(true);
+        expect(test.store.getState().cliProviderStatusLoading.codex).not.toBe(true);
+        await vi.waitFor(() =>
+          expect(test.accountApi.getCodexAccountSnapshot).toHaveBeenCalledTimes(1)
+        );
+        expect(test.store.getState().codexStatusRecoveryPending).toBe(true);
+        finishAccount(healthyAccount);
+        await vi.waitFor(() => expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1));
+        expect(test.store.getState().codexStatusRecoveryPending).toBe(true);
+        expect(test.store.getState().cliProviderStatusLoading.codex).toBe(true);
+        finishProvider({ ...test.unknown, authenticated: true, verificationState: 'verified' });
+        await vi.waitFor(() =>
+          expect(test.store.getState().codexStatusRecoveryPending).toBe(false)
+        );
+        expect(pendingTransitions).toEqual([true, false]);
+      } finally {
+        unsubscribePending();
+        test.cleanup();
+      }
     }
-  });
+  );
 
   it.each(['signed out', 'lookup failed'] as const)(
     'settles recovery without retrying when the account is %s',
@@ -220,6 +239,36 @@ describe('Codex startup status revalidation', () => {
       test.push();
       await Promise.resolve();
       expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+    } finally {
+      test.cleanup();
+    }
+  });
+
+  it('bounds timeout recovery even when repeated account snapshots stay ready', async () => {
+    const test = fixture();
+    const timeout: CliProviderStatus = {
+      ...test.unknown,
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+      verificationState: 'error',
+    };
+    vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(timeout);
+    try {
+      test.store.setState({
+        cliStatus: { ...createLoadingMultimodelCliStatus(), providers: [timeout] },
+      });
+      // The one recovery read retains the store's existing single timeout retry.
+      await vi.waitFor(() => expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(2));
+      await vi.waitFor(() => expect(test.store.getState().codexStatusRecoveryPending).toBe(false));
+      test.push();
+      test.push();
+      await Promise.resolve();
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(2);
+      expect(test.store.getState().cliStatus?.providers[0]).toMatchObject({
+        authenticated: false,
+        statusCheckErrorCode: 'timeout',
+        capabilities: { teamLaunch: false },
+      });
     } finally {
       test.cleanup();
     }
