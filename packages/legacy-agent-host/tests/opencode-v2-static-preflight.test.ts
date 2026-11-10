@@ -513,6 +513,20 @@ test('V2.2 rejects hidden and symbol rule fields absent from native JSON', () =>
   { kind: 'policy-candidate', effect: 'deny' });
 });
 
+test('V2.2 rejects non-enumerable required rule fields omitted by native JSON', () => {
+  for (const field of ['action', 'resource', 'effect'] as const) {
+    const rule = { action: 'external_directory', resource: '*', effect: 'deny' };
+    Object.defineProperty(rule, field, { value: rule[field], enumerable: false });
+    assert.equal(Reflect.ownKeys(rule).length, 3,
+      'exact own-key cardinality alone cannot prove JSON-visible required fields');
+    assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory([rule], 'deny'),
+      { kind: 'hold', reason: 'rules' }, field);
+  }
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(
+    JSON.parse(JSON.stringify([{ action: 'external_directory', resource: '*', effect: 'deny' }])), 'deny'),
+  { kind: 'policy-candidate', effect: 'deny' });
+});
+
 test('V2.2 rejects accessor-backed native permission rules without executing getters', () => {
   // Under the former repeated-property-read validator a changing effect
   // accessor could report DENY for admission then ALLOW afterwards.

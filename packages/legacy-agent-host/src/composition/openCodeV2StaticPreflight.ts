@@ -326,7 +326,8 @@ export function preflightOpenCodeV2EffectiveExternalDirectory(
       const resource = Object.getOwnPropertyDescriptor(rule, 'resource');
       const effect = Object.getOwnPropertyDescriptor(rule, 'effect');
       if (!action || !resource || !effect ||
-          !('value' in action) || !('value' in resource) || !('value' in effect))
+          !('value' in action) || !('value' in resource) || !('value' in effect) ||
+          !action.enumerable || !resource.enumerable || !effect.enumerable)
         return { kind: 'hold', reason: 'rules' };
       const a: unknown = action.value;
       const r: unknown = resource.value;
