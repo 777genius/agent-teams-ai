@@ -5,7 +5,7 @@ import type {
 } from '@features/codex-account/contracts';
 import type { StoreApi } from 'zustand';
 
-type StatusStore = Pick<StoreApi<CliInstallerSlice>, 'getState' | 'subscribe'>;
+type StatusStore = Pick<StoreApi<CliInstallerSlice>, 'getState' | 'setState' | 'subscribe'>;
 type AccountApi = Pick<
   CodexAccountElectronApi,
   'getCodexAccountSnapshot' | 'onCodexAccountSnapshotChanged'
@@ -24,6 +24,32 @@ export function installCodexStartupStatusRevalidation(
   let rechecked = false;
   let snapshotReadStarted = false;
   let snapshotRevision = 0;
+  let accountLookupPending = false;
+  let recheckPending = false;
+
+  const setPending = (pending: boolean): void => {
+    if (store.getState().codexStatusRecoveryPending !== pending) {
+      store.setState({ codexStatusRecoveryPending: pending });
+    }
+  };
+  const updatePending = (): void => {
+    if (disposed) return;
+    const state = store.getState();
+    const provider = state.cliStatus?.providers.find((item) => item.providerId === 'codex');
+    const recoveryCandidate =
+      state.cliStatus?.flavor === 'agent_teams_orchestrator' &&
+      state.cliStatus.installed &&
+      provider?.statusCheckOutcome === 'authoritative' &&
+      provider.verificationState === 'unknown' &&
+      !provider.authenticated;
+    setPending(
+      recheckPending ||
+        Boolean(
+          recoveryCandidate &&
+          (accountLookupPending || !snapshotReadStarted || (accountReady && !rechecked))
+        )
+    );
+  };
 
   const applySnapshot = (snapshot: CodexAccountSnapshotDto): void => {
     accountReady =
@@ -51,25 +77,42 @@ export function installCodexStartupStatusRevalidation(
 
     if (accountReady) {
       rechecked = true;
-      void state.fetchCliProviderStatus('codex', { checkReason: 'runtime_event' }).catch(() => {
-        // The store owns errors. Repeated rate-limit pushes must not create a retry loop.
-      });
+      recheckPending = true;
+      updatePending();
+      void state
+        .fetchCliProviderStatus('codex', { checkReason: 'runtime_event' })
+        .catch(() => {
+          // The store owns errors. Repeated account pushes must not create a retry loop.
+        })
+        .finally(() => {
+          recheckPending = false;
+          updatePending();
+        });
     } else if (!snapshotReadStarted) {
       // Read only after an inconclusive startup probe, including when the account
       // was already warm before this listener attached. Avoid extra cold-start work.
       snapshotReadStarted = true;
+      accountLookupPending = true;
+      updatePending();
       const revision = snapshotRevision;
       void accountApi
         .getCodexAccountSnapshot()
         .then((snapshot) => {
           if (!disposed && revision === snapshotRevision) applySnapshot(snapshot);
         })
-        .catch(() => undefined);
+        .catch(() => undefined)
+        .finally(() => {
+          accountLookupPending = false;
+          scheduleCheck();
+        });
     }
   };
 
   function scheduleCheck(): void {
-    if (disposed || queued) return;
+    if (disposed) return;
+    // Publish the recovery gap synchronously, before scheduling its account read.
+    updatePending();
+    if (queued) return;
     queued = true;
     // Let the completed status request retire its in-flight deduplication entry
     // before starting the recheck; otherwise it would join the old unknown read.
@@ -90,5 +133,6 @@ export function installCodexStartupStatusRevalidation(
     disposed = true;
     unsubscribeAccount();
     unsubscribeStore();
+    setPending(false);
   };
 }

@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   cliStatusLoading: false,
   cliStatusError: null,
   cliProviderStatusLoading: {},
+  codexStatusRecoveryPending: false,
   openCodeRuntimeStatus: null as null | {
     installed: boolean;
     state: string;
@@ -69,6 +70,7 @@ describe('DashboardProviderSummary (passive)', () => {
     state.cliStatusLoading = false;
     state.openCodeRuntimeStatusLoading = false;
     state.cliProviderStatusLoading = {};
+    state.codexStatusRecoveryPending = false;
     state.countEvidence = null;
     state.openCodeRuntimeStatus = null;
     state.appConfig.general.multimodelEnabled = true;
@@ -78,7 +80,7 @@ describe('DashboardProviderSummary (passive)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('shows unknown status and opens Providers without starting IPC work', async () => {
+  it('shows startup checking and opens Providers without starting IPC work', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -86,8 +88,8 @@ describe('DashboardProviderSummary (passive)', () => {
       await act(async () => root.render(React.createElement(DashboardProviderSummary)));
       expect(host.querySelector('[data-testid="dashboard-provider-summary"]')).not.toBeNull();
       expect(
-        host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent
-      ).toContain('runtimeProvider.badges.unknown');
+        host.querySelector('[data-testid="dashboard-codex-status"] [role="status"]')
+      ).not.toBeNull();
       expect(state.getStatus).not.toHaveBeenCalled();
       expect(state.loadProviderDirectory).not.toHaveBeenCalled();
       expect(state.loadModels).not.toHaveBeenCalled();
@@ -96,6 +98,37 @@ describe('DashboardProviderSummary (passive)', () => {
       );
       await act(async () => button?.click());
       expect(state.openSettingsTab).toHaveBeenCalledExactlyOnceWith('providers');
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it('keeps Codex checking while account recovery is pending without changing RPC flags', async () => {
+    state.cliStatus = {
+      installed: true,
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'codex',
+          authenticated: false,
+          verificationState: 'unknown',
+          statusCheckOutcome: 'authoritative',
+        },
+      ],
+    };
+    state.codexStatusRecoveryPending = true;
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      const codex = host.querySelector('[data-testid="dashboard-codex-status"]');
+      expect(codex?.querySelector('[role="status"]')).not.toBeNull();
+      expect(codex?.textContent).not.toContain('runtimeProvider.badges.unknown');
+      expect(state.cliProviderStatusLoading).toEqual({});
+      state.codexStatusRecoveryPending = false;
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(codex?.querySelector('[role="status"]')).toBeNull();
+      expect(codex?.textContent).toContain('runtimeProvider.badges.unknown');
     } finally {
       await act(async () => root.unmount());
     }

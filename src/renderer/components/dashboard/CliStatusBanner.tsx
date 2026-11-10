@@ -850,6 +850,7 @@ const InstalledBanner = ({
   const { t: commonT } = useAppTranslation('common');
   const {
     summary: sharedConnectionSummary,
+    cliProviderStatusLoading: summaryProviderStatusLoading,
     multimodelEnabled,
     openCodeIsChecking,
   } = useProviderConnectionSummary(cliStatus, isActive);
@@ -898,7 +899,6 @@ const InstalledBanner = ({
     openCodeRuntimeStatus?.installed === true &&
     openCodeRuntimeStatus.v2Support === 'required' &&
     getOpenCodeGeneration(openCodeRuntimeStatus.version) === 'v2';
-
   return (
     <div
       className={`mb-6 overflow-hidden rounded-lg px-4 ${showExpandedContent ? `py-3 ${BANNER_MIN_H}` : 'py-2.5'}`}
@@ -1030,7 +1030,7 @@ const InstalledBanner = ({
                   summary={sharedConnectionSummary}
                   cliStatus={cliStatus}
                   cliStatusLoading={cliStatusLoading}
-                  providerStatusLoading={cliProviderStatusLoading}
+                  providerStatusLoading={summaryProviderStatusLoading}
                   multimodelEnabled={multimodelEnabled}
                   openCodeIsChecking={openCodeIsChecking}
                 />

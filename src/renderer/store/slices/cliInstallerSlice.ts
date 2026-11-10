@@ -821,6 +821,7 @@ export interface CliInstallerSlice {
   cliStatus: CliInstallationStatus | null;
   cliStatusLoading: boolean;
   cliProviderStatusLoading: Partial<Record<CliProviderId, boolean>>;
+  codexStatusRecoveryPending: boolean;
   cliProviderStatusByScope: Readonly<Record<string, CliProviderStatus>>;
   cliProviderStatusScopeRevision: number;
   cliStatusError: string | null;
@@ -954,6 +955,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   cliStatus: null,
   cliStatusLoading: false,
   cliProviderStatusLoading: {},
+  codexStatusRecoveryPending: false,
   cliProviderStatusByScope: {},
   cliProviderStatusScopeRevision: 0,
   cliStatusError: null,
@@ -1634,5 +1636,4 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       set({ codexRuntimeStatusLoading: false });
     }
   },
-
 });

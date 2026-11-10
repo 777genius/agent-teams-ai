@@ -1,4 +1,5 @@
 import { useAppTranslation } from '@features/localization/renderer';
+import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
 import { LoaderCircle } from 'lucide-react';
 
 import type { DashboardConnectionSummary } from './providerConnectionSummary';
@@ -48,14 +49,20 @@ export const ProviderConnectionCounts = ({
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted">
-      <span data-testid="dashboard-main-provider-count">
+      <span
+        data-testid="dashboard-main-provider-count"
+        className={multimodelEnabled ? 'contents' : undefined}
+      >
         {multimodelEnabled && !(cliStatus?.installed === false && !cliStatusLoading)
-          ? (['anthropic', 'codex'] as const).map((id, index) => {
+          ? (['anthropic', 'codex'] as const).map((id) => {
               const provider = cliStatus?.providers.find((item) => item.providerId === id);
               const checking =
                 cliStatusLoading ||
+                !cliStatus ||
                 providerStatusLoading[id] === true ||
-                provider?.statusCheckOutcome === 'pending';
+                provider?.statusCheckOutcome === 'pending' ||
+                provider?.statusMessage === 'Checking...' ||
+                provider?.statusMessage === CLI_PROVIDER_STATUS_DEFERRED_MESSAGE;
               const connected =
                 !checking &&
                 provider?.authenticated === true &&
@@ -64,28 +71,26 @@ export const ProviderConnectionCounts = ({
                   (provider.statusCheckOutcome == null &&
                     provider.verificationState === 'verified'));
               return (
-                <span key={id}>
-                  {index > 0 ? ', ' : null}
-                  <span
-                    data-testid={`dashboard-${id}-status`}
-                    className={connected ? 'text-green-400' : undefined}
-                  >
-                    {id === 'anthropic' ? 'Anthropic' : 'Codex'}
-                    {checking ? (
-                      <span
-                        role="status"
-                        aria-label={t('cliStatus.provider.checkingProviders')}
-                        className="ml-1 inline-flex items-center align-middle"
-                      >
-                        <LoaderCircle
-                          className="size-3.5 motion-safe:animate-spin"
-                          aria-hidden="true"
-                        />
-                      </span>
-                    ) : !connected && provider?.verificationState !== 'verified' ? (
-                      ` · ${unknown}`
-                    ) : null}
-                  </span>
+                <span
+                  key={id}
+                  data-testid={`dashboard-${id}-status`}
+                  className={connected ? 'text-green-400' : undefined}
+                >
+                  {id === 'anthropic' ? 'Anthropic' : 'Codex'}
+                  {checking ? (
+                    <span
+                      role="status"
+                      aria-label={t('cliStatus.provider.checkingProviders')}
+                      className="ml-1 inline-flex items-center align-middle"
+                    >
+                      <LoaderCircle
+                        className="size-3.5 motion-safe:animate-spin"
+                        aria-hidden="true"
+                      />
+                    </span>
+                  ) : !connected && provider?.verificationState !== 'verified' ? (
+                    ` · ${unknown}`
+                  ) : null}
                 </span>
               );
             })

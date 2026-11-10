@@ -67,6 +67,80 @@ function fixture() {
 afterEach(() => vi.clearAllMocks());
 
 describe('Codex startup status revalidation', () => {
+  it('keeps recovery pending across the deferred account lookup and queued runtime check', async () => {
+    const test = fixture();
+    const pendingTransitions: boolean[] = [];
+    const unsubscribePending = test.store.subscribe((state) => {
+      if (pendingTransitions.at(-1) !== state.codexStatusRecoveryPending) {
+        pendingTransitions.push(state.codexStatusRecoveryPending);
+      }
+    });
+    let finishAccount!: (snapshot: CodexAccountSnapshotDto) => void;
+    let finishProvider!: (provider: CliProviderStatus) => void;
+    test.accountApi.getCodexAccountSnapshot.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishAccount = resolve;
+      })
+    );
+    vi.mocked(api.cliInstaller.getProviderStatus).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishProvider = resolve;
+        })
+    );
+    try {
+      test.store.setState({
+        cliStatus: { ...createLoadingMultimodelCliStatus(), providers: [test.unknown] },
+      });
+      expect(test.store.getState().codexStatusRecoveryPending).toBe(true);
+      expect(test.store.getState().cliProviderStatusLoading.codex).not.toBe(true);
+      await vi.waitFor(() =>
+        expect(test.accountApi.getCodexAccountSnapshot).toHaveBeenCalledTimes(1)
+      );
+      expect(test.store.getState().codexStatusRecoveryPending).toBe(true);
+      finishAccount(healthyAccount);
+      await vi.waitFor(() => expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1));
+      expect(test.store.getState().codexStatusRecoveryPending).toBe(true);
+      expect(test.store.getState().cliProviderStatusLoading.codex).toBe(true);
+      finishProvider({ ...test.unknown, authenticated: true, verificationState: 'verified' });
+      await vi.waitFor(() => expect(test.store.getState().codexStatusRecoveryPending).toBe(false));
+      expect(pendingTransitions).toEqual([true, false]);
+    } finally {
+      unsubscribePending();
+      test.cleanup();
+    }
+  });
+
+  it.each(['signed out', 'lookup failed'] as const)(
+    'settles recovery without retrying when the account is %s',
+    async (outcome) => {
+      const test = fixture();
+      if (outcome === 'lookup failed')
+        test.accountApi.getCodexAccountSnapshot.mockRejectedValueOnce(
+          new Error('Test-only account unavailable')
+        );
+      else
+        test.accountApi.getCodexAccountSnapshot.mockResolvedValueOnce({
+          ...healthyAccount,
+          effectiveAuthMode: null,
+          launchAllowed: false,
+        });
+      try {
+        test.store.setState({
+          cliStatus: { ...createLoadingMultimodelCliStatus(), providers: [test.unknown] },
+        });
+        expect(test.store.getState().codexStatusRecoveryPending).toBe(true);
+        await vi.waitFor(() =>
+          expect(test.store.getState().codexStatusRecoveryPending).toBe(false)
+        );
+        expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
+        expect(test.accountApi.getCodexAccountSnapshot).toHaveBeenCalledTimes(1);
+      } finally {
+        test.cleanup();
+      }
+    }
+  );
+
   it('rechecks after account warming races the initial probe, without joining the old request', async () => {
     const test = fixture();
     let resolveInitial!: (provider: CliProviderStatus) => void;
@@ -118,6 +192,7 @@ describe('Codex startup status revalidation', () => {
       });
       await vi.waitFor(() => expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1));
       expect(test.accountApi.getCodexAccountSnapshot).toHaveBeenCalledTimes(1);
+      await vi.waitFor(() => expect(test.store.getState().codexStatusRecoveryPending).toBe(false));
       test.push();
       test.push();
       await Promise.resolve();
@@ -133,7 +208,9 @@ describe('Codex startup status revalidation', () => {
     test.store.setState({
       cliStatus: { ...createLoadingMultimodelCliStatus(), providers: [test.unknown] },
     });
+    expect(test.store.getState().codexStatusRecoveryPending).toBe(true);
     test.cleanup();
+    expect(test.store.getState().codexStatusRecoveryPending).toBe(false);
     await Promise.resolve();
     expect(test.unsubscribe).toHaveBeenCalledTimes(1);
     expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();

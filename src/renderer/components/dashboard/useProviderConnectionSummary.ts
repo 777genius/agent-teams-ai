@@ -25,7 +25,13 @@ export function useProviderConnectionSummary(
   const cliStatus = cliStatusOverride === undefined ? storedCliStatus : cliStatusOverride;
   const cliStatusLoading = useStore((state) => state.cliStatusLoading);
   const cliStatusError = useStore((state) => state.cliStatusError);
-  const cliProviderStatusLoading = useStore((state) => state.cliProviderStatusLoading);
+  const rawProviderStatusLoading = useStore((state) => state.cliProviderStatusLoading);
+  const recoveryPending = useStore((state) => state.codexStatusRecoveryPending ?? false);
+  const cliProviderStatusLoading = useMemo(
+    () =>
+      recoveryPending ? { ...rawProviderStatusLoading, codex: true } : rawProviderStatusLoading,
+    [rawProviderStatusLoading, recoveryPending]
+  );
   const openCodeRuntimeStatus = useStore((state) => state.openCodeRuntimeStatus);
   const openCodeRuntimeStatusLoading = useStore((state) => state.openCodeRuntimeStatusLoading);
   const selectedProjectId = useStore((state) => state.selectedProjectId);
