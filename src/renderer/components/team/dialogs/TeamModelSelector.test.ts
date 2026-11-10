@@ -4,7 +4,6 @@ import {
   addCodexAstraUpdatePreview,
   getOpenCodeAuthFilteredModelOptions,
   resolveTeamModelSelectorValue,
-  shouldElevateOpenCodeVirtualRow,
   shouldShowOpenCodeNeedsTestBadge,
   shouldShowOpenCodeOverviewStatus,
 } from './teamModelSelectorUi';
@@ -354,20 +353,6 @@ describe('shouldShowOpenCodeNeedsTestBadge', () => {
 
   it('does not show the badge for other proof states', () => {
     expect(shouldShowOpenCodeNeedsTestBadge('verified', 'cursor-acp')).toBe(false);
-  });
-});
-
-describe('shouldElevateOpenCodeVirtualRow', () => {
-  it('keeps the active heading below its sticky copy', () => {
-    expect(shouldElevateOpenCodeVirtualRow('heading', 4, 4)).toBe(false);
-  });
-
-  it('raises an incoming heading above the previous sticky heading', () => {
-    expect(shouldElevateOpenCodeVirtualRow('heading', 8, 4)).toBe(true);
-  });
-
-  it('never raises model rows', () => {
-    expect(shouldElevateOpenCodeVirtualRow('models', 5, 4)).toBe(false);
   });
 });
 

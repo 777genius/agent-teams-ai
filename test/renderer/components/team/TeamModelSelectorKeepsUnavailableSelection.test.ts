@@ -258,7 +258,6 @@ vi.mock('@tanstack/react-virtual', () => ({
 }));
 
 import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
-import { getActiveOpenCodeStickyHeadingIndex } from '@renderer/components/team/dialogs/teamModelSelectorUi';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 
 const PROJECT = '/tmp/keep-unavailable-selection';

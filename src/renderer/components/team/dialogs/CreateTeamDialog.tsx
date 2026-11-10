@@ -2478,7 +2478,7 @@ export const CreateTeamDialog = ({
                 </p>
               ) : null}
             </div>
-            <div className="space-y-4 md:col-span-2">
+            <div className="space-y-4 pt-4 md:col-span-2">
               <TeamRosterEditorSection
                 runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                 members={members}
