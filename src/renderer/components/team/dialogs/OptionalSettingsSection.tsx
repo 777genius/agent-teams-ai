@@ -1,6 +1,13 @@
+import './OptionalSettingsSection.css';
+
 import React, { useId, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@renderer/components/ui/collapsible';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { ChevronDown } from 'lucide-react';
@@ -112,82 +119,86 @@ export const OptionalSettingsSection = ({
     ? 'color-mix(in srgb, var(--color-text-muted) 64%, var(--color-text) 36%)'
     : 'color-mix(in srgb, var(--color-text-muted) 54%, white 46%)';
 
-  const handleToggleOpen = (): void => {
-    const nextOpen = !isOpen;
+  const handleOpenChange = (nextOpen: boolean): void => {
     setIsOpen(nextOpen);
     onOpenChange?.(nextOpen);
   };
 
   return (
-    <div className={cn('border-t border-[var(--color-border)]', className)}>
-      <button
-        type="button"
-        className="flex min-h-12 w-full items-center gap-2.5 px-2 py-2 text-left transition-colors hover:bg-[var(--color-surface-raised)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--color-border-emphasis)]"
-        onClick={handleToggleOpen}
-        aria-expanded={isOpen}
-        aria-controls={contentId}
-      >
-        <ChevronDown
-          className={cn(
-            'size-4 shrink-0 transition-transform duration-150',
-            isOpen && 'rotate-180'
-          )}
-          style={{ color: headerIconColor }}
-        />
+    <Collapsible
+      open={isOpen}
+      onOpenChange={handleOpenChange}
+      className={cn('rounded-t-lg border', className)}
+      style={{ borderColor: contentAccent }}
+    >
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex min-h-12 w-full items-center gap-2.5 rounded-t-[7px] px-2 py-2 text-left transition-colors hover:bg-[var(--color-surface-raised)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--color-border-emphasis)]"
+          aria-expanded={isOpen}
+          aria-controls={contentId}
+        >
+          <ChevronDown
+            className={cn(
+              'size-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none',
+              isOpen && 'rotate-180'
+            )}
+            style={{ color: headerIconColor }}
+          />
 
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="truncate text-sm font-medium" style={{ color: headerTitleColor }}>
-            {title}
-          </span>
-          <span
-            className="shrink-0 rounded-full border border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] font-medium"
-            style={{ color: headerMutedColor }}
-          >
-            {t('dialogs.optional.badge')}
-          </span>
-
-          {!isOpen && chips.length > 0 ? (
-            <div
-              className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden"
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="truncate text-sm font-medium" style={{ color: headerTitleColor }}>
+              {title}
+            </span>
+            <span
+              className="shrink-0 rounded-full border border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] font-medium"
               style={{ color: headerMutedColor }}
             >
-              <span aria-hidden="true" className="select-none text-[11px] opacity-50">
-                •
-              </span>
-              <div className="flex min-w-0 items-center gap-1.5">
-                {chips.map((chip, index) => (
-                  <React.Fragment key={`${chip}-${index}`}>
-                    {index > 0 ? (
+              {t('dialogs.optional.badge')}
+            </span>
+
+            {!isOpen && chips.length > 0 ? (
+              <div
+                className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden"
+                style={{ color: headerMutedColor }}
+              >
+                <span aria-hidden="true" className="select-none text-[11px] opacity-50">
+                  •
+                </span>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  {chips.map((chip, index) => (
+                    <React.Fragment key={`${chip}-${index}`}>
+                      {index > 0 ? (
+                        <span aria-hidden="true" className="select-none text-[11px] opacity-50">
+                          •
+                        </span>
+                      ) : null}
+                      <span className="truncate rounded-md border border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[11px]">
+                        {chip}
+                      </span>
+                    </React.Fragment>
+                  ))}
+                  {overflowCount > 0 ? (
+                    <>
                       <span aria-hidden="true" className="select-none text-[11px] opacity-50">
                         •
                       </span>
-                    ) : null}
-                    <span className="truncate rounded-md border border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[11px]">
-                      {chip}
-                    </span>
-                  </React.Fragment>
-                ))}
-                {overflowCount > 0 ? (
-                  <>
-                    <span aria-hidden="true" className="select-none text-[11px] opacity-50">
-                      •
-                    </span>
-                    <span className="shrink-0 text-[11px]">+{overflowCount}</span>
-                  </>
-                ) : null}
+                      <span className="shrink-0 text-[11px]">+{overflowCount}</span>
+                    </>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          ) : null}
-        </div>
-      </button>
+            ) : null}
+          </div>
+        </button>
+      </CollapsibleTrigger>
 
-      {isOpen ? (
+      <CollapsibleContent id={contentId} className="optional-settings-content">
         <div
-          id={contentId}
-          className="border-l-2 border-t border-t-[var(--color-border)] px-4 pb-4 pt-3"
+          className="border-l-2 border-t px-4 pb-4 pt-3"
           style={{
             backgroundColor: contentBackground,
-            borderLeftColor: contentAccent,
+            borderColor: contentAccent,
           }}
         >
           {description ? (
@@ -197,7 +208,7 @@ export const OptionalSettingsSection = ({
           ) : null}
           {children}
         </div>
-      ) : null}
-    </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 };
