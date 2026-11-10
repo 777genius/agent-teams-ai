@@ -24,7 +24,13 @@ export interface BackendTeamSnapshot {
   nextCursor?: string | null;
   /** Present only for nested task-history pages; parts match page.tasks in order. */
   taskTotal?: number;
-  taskParts?: { index: number; part: number; total: number }[];
+  taskParts?: {
+    index: number;
+    part: number;
+    total: number;
+    /** Present only when an individual comment's text spans multiple task parts. */
+    commentPart?: { index: number; part: number; total: number };
+  }[];
   /** Message text parts remain private to paged reads until reassembled. */
   messageTotal?: number;
   messageParts?: { index: number; part: number; total: number }[];

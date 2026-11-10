@@ -47,16 +47,21 @@ Exact reviewed sources:
   This fixture does **not** create or qualify a production Team/Task/Message API.
   **M11 sandbox Activity validation (9 Nov 2026, not production):**
   [Orchestrator Draft #100](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/100)
-  at exact HEAD [`300ccf92fd0e`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/300ccf92fd0ed93625b6010af1dc657ea56d66ae)
+  at exact HEAD [`ca0333f30e8f`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/ca0333f30e8f7a44422068c1aea066c3e2686be1)
   keeps the existing Activity read/ingress API fail-closed for uncloneable
   authority contexts and request payloads (throwing accessors, revoked
-  proxies, functions and symbols) before authorization or storage effects.
-  The scoped [native PostgreSQL 16 run](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42686737445)
-  passed all 4 jobs (Node 24/26 direct HEAD and merge-tree); the
-  [Architecture run](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42686737248)
-  passed 4/4. Two Codex review invocations reported no major findings on
-  this SHA, but share a provider and are not full security certification.
-  Mandatory trusted Docs remains **FAILURE** because the EF 2.1.0 dependency
+  proxies, functions and symbols), and rejects lone UTF-16 surrogates in
+  Activity evidence before authorization/storage while preserving valid astral
+  pairs. The [native PostgreSQL 16 run](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42745994896)
+  passed all 4 jobs (Node 24/26 direct HEAD and merge-tree), including the new
+  negative/positive Unicode test (11 PASS / 0 FAIL on both direct HEAD jobs).
+  [Architecture](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42745994806)
+  passed 4/4 across Linux, Node 24, macOS and Windows; Dependency Review
+  passed. One Codex review on this exact SHA reported no major findings;
+  two prior independent invocations covered the older `300ccf92` revision,
+  not this commit or full security certification.
+  Mandatory [trusted Docs](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42745995479)
+  remains **FAILURE** because the EF 2.1.0 dependency
   graph has no exact qualified five-package cohort
   ([owning issue #415](https://github.com/agent-teams-ai/.github/issues/415));
   parent Activity [#85](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/85)

@@ -575,3 +575,69 @@ test('removed teammate inbox remains readable for admin only after a persisted o
     'persisted removed-member history must survive reopen'
   );
 });
+
+
+test('one valid Unicode comment larger than either Owner page remains lossless and signed', () => {
+  const largeComment = {
+    id: 'large-comment', author: 'alice', type: 'regular',
+    createdAt: '2026-01-01T00:00:00Z', text: '漢'.repeat(200_000),
+  };
+  const small = (id: string) => ({
+    id, author: 'alice', type: 'regular',
+    createdAt: '2026-01-01T00:00:00Z', text: id,
+  });
+  const task = {
+    id: 'TEST-one-large-comment', subject: 'Large comment', status: 'pending',
+    comments: [small('before'), largeComment, small('after')],
+  };
+  const snapshot = {
+    teamName: 'TEST-team', revision: 'a'.repeat(64), members: [],
+    tasks: [task], messages: [],
+    kanbanState: { teamName: 'TEST-team', reviewers: [], tasks: {} },
+  };
+  const original = JSON.stringify(snapshot);
+  assert.ok(Buffer.byteLength(JSON.stringify(largeComment)) > 512 * 1024);
+  for (const maxBytes of [128 * 1024, 384 * 1024]) {
+    let cursor: string | undefined, pages = 0;
+    const comments = new Map<number, string>();
+    let total = 0;
+    do {
+      const page = pageOwnerSnapshot({
+        principalId: 'human', key: 'TEST-key', snapshot, maxBytes,
+        ...(cursor ? { cursor } : {}),
+      }) as {
+        tasks: { comments?: { id: string; text: string }[] }[];
+        taskParts: {
+          index: number; part: number; total: number;
+          commentPart?: { index: number; part: number; total: number };
+        }[];
+        nextCursor: string | null;
+      };
+      assert.ok(Buffer.byteLength(JSON.stringify(page)) <= maxBytes);
+      for (const [position, marker] of page.taskParts.entries()) {
+        if (!marker.commentPart) continue;
+        assert.equal(marker.index, 0);
+        assert.equal(marker.commentPart.index, 1);
+        const comment = page.tasks[position]!.comments?.[0];
+        assert.equal(comment?.id, largeComment.id);
+        assert.ok(!comments.has(marker.commentPart.part));
+        comments.set(marker.commentPart.part, comment!.text);
+        total = marker.commentPart.total;
+      }
+      if (pages === 0 && page.nextCursor) {
+        assert.throws(() => pageOwnerSnapshot({
+          principalId: 'foreign', key: 'TEST-key', snapshot,
+          maxBytes, cursor: page.nextCursor!,
+        }));
+      }
+      cursor = page.nextCursor ?? undefined;
+      assert.ok(++pages < 128);
+    } while (cursor);
+    assert.ok(total > 1);
+    assert.equal(comments.size, total);
+    assert.equal([...comments.entries()].sort(([a], [b]) => a - b)
+      .map(([, text]) => text).join(''), largeComment.text);
+    assert.ok(pages > 1);
+  }
+  assert.equal(JSON.stringify(snapshot), original);
+});

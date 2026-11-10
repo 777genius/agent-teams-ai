@@ -15,7 +15,8 @@ const TASK_ARRAY_FIELDS = [
   'blocks', 'blockedBy', 'related',
 ] as const;
 
-type TaskPart = { index: number; part: number; total: number };
+type CommentPart = { index: number; part: number; total: number };
+type TaskPart = { index: number; part: number; total: number; commentPart?: CommentPart };
 type Segment =
   | { kind: 'task'; value: JsonValue; part: TaskPart }
   | { kind: 'message'; value: JsonValue; part: TaskPart }
@@ -39,13 +40,48 @@ function taskSegments(tasks: JsonValue[], itemBudget: number): Segment[] {
     if (typeof id !== 'string' || typeof subject !== 'string' || typeof status !== 'string')
       throw new TeamOwnerError('hold');
     const base = { ...task };
-    const parts: JsonValue[] = [base];
+    const parts: { value: JsonValue; commentPart?: CommentPart }[] = [{ value: base }];
     for (const field of TASK_ARRAY_FIELDS) {
       const items = task[field];
       if (!Array.isArray(items)) continue;
       base[field] = [];
-      for (const item of items)
-        parts.push({ id, subject, status, [field]: [item] });
+      for (const [itemIndex, item] of items.entries()) {
+        const fragment = { id, subject, status, [field]: [item] };
+        if (field !== 'comments' ||
+            Buffer.byteLength(JSON.stringify(fragment)) + 64 <= itemBudget) {
+          parts.push({ value: fragment });
+          continue;
+        }
+        // A single valid comment may exceed the MCP page budget. Retain its
+        // identity and metadata while splitting only the original text.
+        if (!item || typeof item !== 'object' || Array.isArray(item))
+          throw new TeamOwnerError('hold');
+        const comment = item as Record<string, JsonValue>;
+        if (typeof comment.text !== 'string') throw new TeamOwnerError('hold');
+        const envelope = { id, subject, status, comments: [{ ...comment, text: '' }] };
+        const maxTextBytes = itemBudget - Buffer.byteLength(JSON.stringify(envelope)) - 64;
+        if (maxTextBytes <= 0) throw new TeamOwnerError('hold');
+        const chunks: string[] = [];
+        let chunk = '', bytes = 0;
+        for (const character of comment.text) {
+          const size = Buffer.byteLength(JSON.stringify(character)) - 2;
+          if (size > maxTextBytes) throw new TeamOwnerError('hold');
+          if (bytes + size > maxTextBytes) {
+            chunks.push(chunk);
+            chunk = '';
+            bytes = 0;
+          }
+          chunk += character;
+          bytes += size;
+        }
+        chunks.push(chunk);
+        for (const [part, text] of chunks.entries()) {
+          parts.push({
+            value: { id, subject, status, comments: [{ ...comment, text }] },
+            commentPart: { index: itemIndex, part, total: chunks.length },
+          });
+        }
+      }
     }
     // Projected text fields may be larger than the MCP or Desktop page budget.
     // Keep each fragment a valid task projection and reassemble only after all
@@ -63,22 +99,23 @@ function taskSegments(tasks: JsonValue[], itemBudget: number): Segment[] {
         const size = Buffer.byteLength(JSON.stringify(character)) - 2;
         if (size > maxBytes) throw new TeamOwnerError('hold');
         if (bytes + size > maxBytes) {
-          parts.push({ ...envelope, [field]: chunk });
+          parts.push({ value: { ...envelope, [field]: chunk } });
           chunk = '';
           bytes = 0;
         }
         chunk += character;
         bytes += size;
       }
-      if (chunk) parts.push({ ...envelope, [field]: chunk });
+      if (chunk) parts.push({ value: { ...envelope, [field]: chunk } });
     }
     // An unsupported oversized nested item still fails closed without data loss.
-    if (parts.length === 1 || parts.some((part) =>
-      Buffer.byteLength(JSON.stringify(part)) + 64 > itemBudget
+    if (parts.length === 1 || parts.some(({ value }) =>
+      Buffer.byteLength(JSON.stringify(value)) + 64 > itemBudget
     )) throw new TeamOwnerError('hold');
     for (const [part, fragment] of parts.entries())
-      segments.push({ kind: 'task', value: fragment,
-        part: { index, part, total: parts.length } });
+      segments.push({ kind: 'task', value: fragment.value,
+        part: { index, part, total: parts.length,
+          ...(fragment.commentPart ? { commentPart: fragment.commentPart } : {}) } });
   }
   return segments;
 }

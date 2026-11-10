@@ -250,6 +250,7 @@ interface PartIndex {
   index: number;
   part: number;
   total: number;
+  commentPart?: { index: number; part: number; total: number };
 }
 function readPartIndexes(
   source: Record<string, unknown>,
@@ -268,6 +269,23 @@ function readPartIndexes(
         typeof position !== 'number' || !Number.isSafeInteger(position) || position < 0 ||
         typeof count !== 'number' || !Number.isSafeInteger(count) || count < 1 || position >= count)
       throw new Error('Invalid snapshot part index');
+    if (part.commentPart !== undefined) {
+      if (partsKey !== 'taskParts' || position === 0)
+        throw new Error('Invalid Host comment fragment');
+      const comment = row(part.commentPart);
+      const { index: commentIndex, part: commentPosition, total: commentTotal } = comment;
+      if (typeof commentIndex !== 'number' || !Number.isSafeInteger(commentIndex) ||
+          commentIndex < 0 ||
+          typeof commentPosition !== 'number' || !Number.isSafeInteger(commentPosition) ||
+          commentPosition < 0 ||
+          typeof commentTotal !== 'number' || !Number.isSafeInteger(commentTotal) ||
+          commentTotal < 2 || commentPosition >= commentTotal)
+        throw new Error('Invalid Host comment fragment');
+      return {
+        index, part: position, total: count,
+        commentPart: { index: commentIndex, part: commentPosition, total: commentTotal },
+      };
+    }
     return { index, part: position, total: count };
   });
   if (parts.length !== source[itemsKey].length)

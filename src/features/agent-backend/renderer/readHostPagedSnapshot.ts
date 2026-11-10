@@ -15,10 +15,16 @@ const TASK_ARRAY_FIELDS = [
 ] as const;
 type Task = BackendTeamSnapshot['tasks'][number];
 type Message = BackendTeamSnapshot['messages'][number];
+type CommentPart = NonNullable<NonNullable<BackendTeamSnapshot['taskParts']>[number]['commentPart']>;
+interface TaskGroup {
+  total: number;
+  values: Map<number, Task>;
+  commentParts?: Map<number, CommentPart>;
+}
 
 /** Merge only projected task parts; never publish incomplete nested history. */
 export function assembleTaskParts(
-  groups: Map<number, { total: number; values: Map<number, Task> }>,
+  groups: Map<number, TaskGroup>,
   taskTotal: number
 ): BackendTeamSnapshot['tasks'] {
   if (groups.size !== taskTotal) throw new Error('Missing Host task pages');
@@ -29,11 +35,55 @@ export function assembleTaskParts(
     const base = group.values.get(0);
     if (!base) throw new Error('Missing Host task base');
     const merged: Record<string, unknown> = { ...base };
+    let pendingComment: {
+      index: number;
+      total: number;
+      next: number;
+      metadata: string;
+      value: NonNullable<Task['comments']>[number];
+    } | undefined;
     for (let part = 1; part < group.total; part++) {
       const value = group.values.get(part);
       if (!value || value.id !== base.id || value.subject !== base.subject ||
           value.status !== base.status) throw new Error('Mismatched Host task fragment');
       const extra = value as unknown as Record<string, unknown>;
+      const fragment = group.commentParts?.get(part);
+      if (fragment) {
+        // Publish only a complete comment from projected, identity-matched parts.
+        const items = extra.comments;
+        if (!Array.isArray(items) || items.length !== 1 ||
+            TASK_ARRAY_FIELDS.some((field) => field !== 'comments' && extra[field] !== undefined) ||
+            TASK_TEXT_FIELDS.some((field) => extra[field] !== undefined))
+          throw new Error('Invalid Host comment fragment');
+        const comment = items[0] as NonNullable<Task['comments']>[number] | undefined;
+        if (!comment || typeof comment.text !== 'string')
+          throw new Error('Invalid Host comment text');
+        const { text, ...identity } = comment;
+        const metadata = JSON.stringify(identity);
+        if (fragment.part === 0) {
+          if (pendingComment ||
+              fragment.index !== ((merged.comments as unknown[] | undefined)?.length ?? 0))
+            throw new Error('Out-of-order Host comment fragment');
+          pendingComment = {
+            index: fragment.index, total: fragment.total, next: 0,
+            metadata, value: { ...comment, text: '' },
+          };
+        }
+        if (!pendingComment || pendingComment.index !== fragment.index ||
+            pendingComment.total !== fragment.total || pendingComment.next !== fragment.part ||
+            pendingComment.metadata !== metadata)
+          throw new Error('Mismatched Host comment fragment');
+        pendingComment.value.text += text;
+        pendingComment.next++;
+        if (pendingComment.next === pendingComment.total) {
+          merged.comments = [
+            ...((merged.comments as unknown[] | undefined) ?? []), pendingComment.value,
+          ];
+          pendingComment = undefined;
+        }
+        continue;
+      }
+      if (pendingComment) throw new Error('Incomplete Host comment fragment');
       for (const field of TASK_ARRAY_FIELDS) {
         if (extra[field] === undefined) continue;
         const items = extra[field];
@@ -53,6 +103,7 @@ export function assembleTaskParts(
         merged[field] = (previous ?? '') + chunk;
       }
     }
+    if (pendingComment) throw new Error('Incomplete Host comment fragment');
     tasks.push(merged as unknown as Task);
   }
   return tasks;
@@ -101,7 +152,7 @@ export async function readHostPagedSnapshot(
   let cursor: string | undefined;
   let first: BackendTeamSnapshot | undefined;
   const tasks: BackendTeamSnapshot['tasks'] = [];
-  const taskParts = new Map<number, { total: number; values: Map<number, Task> }>();
+  const taskParts = new Map<number, TaskGroup>();
   const messages: BackendTeamSnapshot['messages'] = [];
   const messageParts = new Map<number, { total: number; values: Map<number, Message> }>();
   let kanbanState: BackendTeamSnapshot['kanbanState'] | undefined;
@@ -149,6 +200,10 @@ export async function readHostPagedSnapshot(
         if (group.total !== marker.total || group.values.has(marker.part))
           throw new Error('Duplicate Host task fragment');
         group.values.set(marker.part, task);
+        if (marker.commentPart) {
+          group.commentParts ??= new Map();
+          group.commentParts.set(marker.part, marker.commentPart);
+        }
       }
     } else {
       tasks.push(...page.tasks);
