@@ -122,6 +122,7 @@ import {
 } from './OpenCodeSourceDirectoryProvider';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
 import { OpenCodeVirtualizedModelGrid } from './OpenCodeVirtualizedModelGrid';
+import { ResponsiveModelGrid } from './ResponsiveModelGrid';
 import * as unavailableSelection from './openCodeUnavailableSelection';
 import { selectVisibleOpenCodeModelOptions } from './openCodeVisibleModelOptions';
 import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';
@@ -690,21 +691,23 @@ const ModelTooltip = ({
   content: React.ReactNode;
   disabled?: boolean;
 }>): React.JSX.Element => {
-  if (disabled || !content) {
+  if (!content) {
     return children;
   }
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent
-        side="top"
-        sideOffset={6}
-        collisionPadding={12}
-        className="z-[120] max-w-72 whitespace-pre-line text-pretty break-words leading-relaxed"
-      >
-        {content}
-      </TooltipContent>
+      {!disabled && (
+        <TooltipContent
+          side="top"
+          sideOffset={6}
+          collisionPadding={12}
+          className="z-[120] max-w-72 whitespace-pre-line text-pretty break-words leading-relaxed"
+        >
+          {content}
+        </TooltipContent>
+      )}
     </Tooltip>
   );
 };
@@ -776,10 +779,7 @@ const OpenCodeModelCatalogLoadingSkeleton = (): React.JSX.Element => {
           {t('modelSelector.openCode.loadingModels')}
         </span>
       </div>
-      <div
-        className="grid gap-1.5"
-        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
-      >
+      <ResponsiveModelGrid className="grid gap-1.5">
         {[0, 1, 2].map((index) => (
           <div
             key={index}
@@ -801,7 +801,7 @@ const OpenCodeModelCatalogLoadingSkeleton = (): React.JSX.Element => {
             />
           </div>
         ))}
-      </div>
+      </ResponsiveModelGrid>
     </div>
   );
 };
@@ -2686,8 +2686,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       >
         <span
           className={cn(
-            'flex flex-col justify-center gap-0.5',
-            isFlatOpenCodeCell ? 'min-w-0 items-start' : 'items-center'
+            'flex min-w-0 flex-col justify-center gap-0.5',
+            isFlatOpenCodeCell ? 'items-start' : 'items-center'
           )}
         >
           <OverflowModelName
@@ -3494,12 +3494,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       )}
                     >
                       {visibleDefaultModelOptions.length > 0 ? (
-                        <div
-                          className="grid border-l border-[var(--color-border-subtle)]"
-                          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
-                        >
+                        <ResponsiveModelGrid className="grid border-l border-[var(--color-border-subtle)]">
                           {visibleDefaultModelOptions.map(renderModelOption)}
-                        </div>
+                        </ResponsiveModelGrid>
                       ) : null}
                       <OpenCodeModelCatalogLoadingSkeleton />
                     </div>
@@ -3520,12 +3517,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       )}
                     >
                       {visibleDefaultModelOptions.length > 0 ? (
-                        <div
-                          className="grid border-l border-[var(--color-border-subtle)]"
-                          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
-                        >
+                        <ResponsiveModelGrid className="grid border-l border-[var(--color-border-subtle)]">
                           {visibleDefaultModelOptions.map(renderModelOption)}
-                        </div>
+                        </ResponsiveModelGrid>
                       ) : null}
                       {visibleOpenCodeModelGroups.map((group) => (
                         <section
@@ -3533,30 +3527,24 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                           data-testid="team-model-selector-opencode-group"
                         >
                           <OpenCodeModelGroupHeader group={group} sticky />
-                          <div
-                            className="grid border-l border-[var(--color-border-subtle)]"
-                            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
-                          >
+                          <ResponsiveModelGrid className="grid border-l border-[var(--color-border-subtle)]">
                             {group.options.map(renderModelOption)}
-                          </div>
+                          </ResponsiveModelGrid>
                         </section>
                       ))}
                     </div>
                   )
                 ) : (
-                  <div
+                  <ResponsiveModelGrid
                     data-testid="team-model-selector-model-grid"
                     className={cn(
                       '-mx-4 -mb-4 grid min-h-[240px] w-[calc(100%+2rem)] flex-none gap-1.5 rounded-none bg-[var(--color-surface)]',
                       shouldConstrainModelListHeight &&
                         cn('overflow-y-auto', MODEL_GRID_RESPONSIVE_HEIGHT_CLASS)
                     )}
-                    style={{
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                    }}
                   >
                     {visibleModelOptions.map((option) => renderModelOption(option))}
-                  </div>
+                  </ResponsiveModelGrid>
                 )}
                 {visibleModelOptions.length === 0 && !shouldShowOpenCodeCatalogLoading ? (
                   <div className="rounded-md border border-black/10 px-3 py-2 text-xs text-[var(--color-text-muted)] dark:border-white/10">

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addCodexAstraUpdatePreview,
   getOpenCodeAuthFilteredModelOptions,
+  getOpenCodeModelGridColumnCount,
   resolveTeamModelSelectorValue,
   shouldShowOpenCodeNeedsTestBadge,
   shouldShowOpenCodeOverviewStatus,
@@ -362,5 +363,22 @@ describe('shouldShowOpenCodeOverviewStatus', () => {
     expect(shouldShowOpenCodeOverviewStatus('opencode', 1, 0)).toBe(false);
     expect(shouldShowOpenCodeOverviewStatus('opencode', 0, 1)).toBe(false);
     expect(shouldShowOpenCodeOverviewStatus('anthropic', 0, 0)).toBe(false);
+  });
+});
+
+describe('responsive model grid columns', () => {
+  it.each([
+    [0, 2],
+    [Number.NaN, 2],
+    [Number.POSITIVE_INFINITY, 2],
+    [-100, 2],
+    [200, 2],
+    [431, 2],
+    [432, 3],
+    [577, 3],
+    [578, 4],
+    [1200, 4],
+  ])('maps width %s to %i columns', (width, expectedColumns) => {
+    expect(getOpenCodeModelGridColumnCount(width)).toBe(expectedColumns);
   });
 });

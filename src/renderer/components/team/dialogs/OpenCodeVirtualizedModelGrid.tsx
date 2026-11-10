@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef } from 'react';
 
 import { cn } from '@renderer/lib/utils';
 import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual';
 
-import { getOpenCodeModelGridColumnCount } from './teamModelSelectorUi';
+import { useModelGridColumnCount } from './ResponsiveModelGrid';
 
 import type { TeamRuntimeModelOption } from '@renderer/utils/teamModelAvailability';
 import type { VirtualItem } from '@tanstack/react-virtual';
@@ -70,26 +70,7 @@ export function OpenCodeVirtualizedModelGrid<Group extends ModelGroup>({
   heightClassName: string;
 }>): React.JSX.Element {
   const scrollParentRef = useRef<HTMLDivElement | null>(null);
-  const [gridWidth, setGridWidth] = useState(0);
-
-  useEffect(() => {
-    const element = scrollParentRef.current;
-    if (!element) return undefined;
-    const updateGridWidth = (): void => {
-      const nextWidth = element.clientWidth;
-      setGridWidth((previousWidth) => (previousWidth === nextWidth ? previousWidth : nextWidth));
-    };
-    updateGridWidth();
-    if (typeof ResizeObserver !== 'undefined') {
-      const resizeObserver = new ResizeObserver(updateGridWidth);
-      resizeObserver.observe(element);
-      return () => resizeObserver.disconnect();
-    }
-    window.addEventListener('resize', updateGridWidth);
-    return () => window.removeEventListener('resize', updateGridWidth);
-  }, []);
-
-  const columnCount = getOpenCodeModelGridColumnCount(gridWidth);
+  const columnCount = useModelGridColumnCount(scrollParentRef);
   const rows = useMemo(
     () => buildVirtualRows(defaultOptions, groups, columnCount),
     [columnCount, defaultOptions, groups]

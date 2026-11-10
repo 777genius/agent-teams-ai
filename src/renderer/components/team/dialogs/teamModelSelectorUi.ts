@@ -177,12 +177,15 @@ export function deriveOpenCodeSelectionAuthorityState(input: {
 
 export function getOpenCodeModelGridColumnCount(width: number): number {
   const safeWidth = Number.isFinite(width) ? Math.max(0, width) : 0;
-  if (safeWidth <= 0) return 1;
-  return Math.max(
-    1,
-    Math.floor(
-      (safeWidth + OPENCODE_MODEL_GRID_GAP_PX) /
-        (OPENCODE_MODEL_GRID_MIN_CARD_WIDTH_PX + OPENCODE_MODEL_GRID_GAP_PX)
+  if (safeWidth <= 0) return 2;
+  return Math.min(
+    4,
+    Math.max(
+      2,
+      Math.floor(
+        (safeWidth + OPENCODE_MODEL_GRID_GAP_PX) /
+          (OPENCODE_MODEL_GRID_MIN_CARD_WIDTH_PX + OPENCODE_MODEL_GRID_GAP_PX)
+      )
     )
   );
 }
