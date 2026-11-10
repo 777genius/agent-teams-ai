@@ -146,6 +146,7 @@ describe('useOpenCodeProviderModelCatalog', () => {
     expect(observed.at(-1)).toEqual({ status: 'ready', catalogState: 'fresh' });
     await act(async () => root.unmount());
   });
+
   it('does not busy-retry an expired OpenRouter snapshot reported as fresh', async () => {
     vi.useFakeTimers();
     const host = document.createElement('div');
@@ -178,7 +179,6 @@ describe('useOpenCodeProviderModelCatalog', () => {
     expect(apiMock.runtimeProviderManagement.loadModels).toHaveBeenCalledOnce();
     await act(async () => root.unmount());
   });
-
 });
 
 describe('normalizeModelResponseDiagnostics', () => {
