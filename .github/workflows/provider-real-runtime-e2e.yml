@@ -13,6 +13,13 @@ on:
       - 'scripts/e2e/opencode-diagnostics-desktop.mjs'
       - 'src/renderer/components/dashboard/DashboardProviderSummary.tsx'
       - 'src/renderer/store/index.ts'
+      # Run actual installed V1 + isolated Electron checks for shared catalog
+      # invalidation/recovery changes, not merely provider-count presentation.
+      - 'src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts'
+      - 'src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts'
+      - 'src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts'
       - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts'
       - '.github/workflows/provider-real-runtime-e2e.yml'
       - 'runtime.lock.json'
@@ -27,6 +34,13 @@ on:
       - 'scripts/e2e/opencode-diagnostics-desktop.mjs'
       - 'src/renderer/components/dashboard/DashboardProviderSummary.tsx'
       - 'src/renderer/store/index.ts'
+      # Run actual installed V1 + isolated Electron checks for shared catalog
+      # invalidation/recovery changes, not merely provider-count presentation.
+      - 'src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts'
+      - 'src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts'
+      - 'src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts'
       - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts'
       - '.github/workflows/provider-real-runtime-e2e.yml'
       - 'runtime.lock.json'

@@ -146,6 +146,39 @@ describe('useOpenCodeProviderModelCatalog', () => {
     expect(observed.at(-1)).toEqual({ status: 'ready', catalogState: 'fresh' });
     await act(async () => root.unmount());
   });
+
+  it('does not busy-retry an expired OpenRouter snapshot reported as fresh', async () => {
+    vi.useFakeTimers();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const observed: Array<{ status: string; catalogState: string | null }> = [];
+    const original = modelCatalogResponse('expired');
+    apiMock.runtimeProviderManagement.loadModels.mockResolvedValue({
+      ...original,
+      models: {
+        ...original.models,
+        freshUntil: new Date(Date.now() - 1_000).toISOString(),
+      },
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(HookProbe, {
+          onResult: (result) =>
+            observed.push({ status: result.status, catalogState: result.catalogState }),
+        })
+      );
+    });
+
+    expect(observed.at(-1)).toEqual({ status: 'ready', catalogState: 'stale' });
+    expect(apiMock.runtimeProviderManagement.loadModels).toHaveBeenCalledOnce();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(MODEL_CATALOG_FRESHNESS_MS);
+    });
+    expect(apiMock.runtimeProviderManagement.loadModels).toHaveBeenCalledOnce();
+    await act(async () => root.unmount());
+  });
 });
 
 describe('normalizeModelResponseDiagnostics', () => {

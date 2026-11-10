@@ -569,6 +569,8 @@ $ids = @($errors | ForEach-Object { $_.integratorReportId } | Where-Object { $_ 
     await log.close();
     await saveResults();
   }
-  if (cleanupFailed) break;
+  // Do not run a dependent restart after a failed verification: it would
+  // compare against an absent repair receipt and hide the original failure.
+  if (cleanupFailed || !result.passed) break;
 }
 process.exitCode = passed() ? 0 : 1;
