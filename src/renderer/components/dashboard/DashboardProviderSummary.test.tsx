@@ -100,6 +100,54 @@ describe('DashboardProviderSummary (passive)', () => {
       await act(async () => root.unmount());
     }
   });
+  it('keeps a fresh known count visible alongside the loader until remaining checks settle', async () => {
+    state.openCodeRuntimeStatus = {
+      installed: true,
+      state: 'ready',
+      version: '1.2.3',
+      binaryPath: '/test/opencode',
+    };
+    state.directoryReads.mockReturnValue({
+      entries: [{ providerId: 'openrouter', state: 'connected' }],
+      authoritative: false,
+      fetchedAt: new Date().toISOString(),
+      totalCount: 101,
+      nextCursor: '100',
+      runtimeRevision: JSON.stringify(['ready', '1.2.3', '/test/opencode']),
+    });
+    state.countEvidence = { checking: true, observation: null, invalidated: false };
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      const count = host.querySelector('[data-testid="dashboard-opencode-provider-count"]');
+      expect(count?.textContent).toContain('cliStatus.provider.connectedCount');
+      expect(count?.textContent).not.toContain('runtimeProvider.badges.unknown');
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+      state.countEvidence = { ...state.countEvidence, checking: false };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(count?.textContent).toContain('cliStatus.provider.connectedCount');
+      expect(count?.textContent).toContain('runtimeProvider.badges.unknown');
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).toBeNull();
+      state.directoryReads.mockReturnValue({
+        entries: [{ providerId: 'openrouter', state: 'connected' }],
+        authoritative: true,
+        fetchedAt: new Date().toISOString(),
+        totalCount: 1,
+        nextCursor: null,
+        runtimeRevision: JSON.stringify(['ready', '1.2.3', '/test/opencode']),
+      });
+      state.countEvidence = { ...state.countEvidence, checking: true };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(count?.textContent).toContain('cliStatus.provider.connectedCount');
+      expect(count?.textContent).not.toContain('runtimeProvider.badges.unknown');
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      state.directoryReads.mockReset();
+    }
+  });
+
   it('shows a small OpenCode loader only while a real status or directory check is pending', async () => {
     state.openCodeRuntimeStatusLoading = true;
     const host = document.createElement('div');

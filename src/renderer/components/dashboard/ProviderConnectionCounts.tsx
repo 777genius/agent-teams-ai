@@ -44,6 +44,8 @@ export const ProviderConnectionCounts = ({
             ? t('cliStatus.provider.connectedCount', { connected: summary.cliConnected })
             : `${t('cliStatus.provider.connectedCount', { connected: summary.cliConnected })} · ${unknown}`;
 
+  const openCodeCount = summary.openCodeConnected ?? summary.openCodeKnownConnected;
+
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted">
       <span data-testid="dashboard-main-provider-count">
@@ -92,29 +94,26 @@ export const ProviderConnectionCounts = ({
       {multimodelEnabled && (
         <span
           data-testid="dashboard-opencode-provider-count"
-          className={
-            summary.openCodeConnected != null && summary.openCodeConnected > 0
-              ? 'text-green-400'
-              : undefined
-          }
+          className={openCodeCount != null && openCodeCount > 0 ? 'text-green-400' : undefined}
         >
           OpenCode ·{' '}
-          {summary.openCodeConnected === null ? (
-            openCodeIsChecking ? (
-              <span
-                data-testid="dashboard-opencode-count-loading"
-                role="status"
-                aria-label={t('cliStatus.provider.checkingProviders')}
-                className="inline-flex items-center align-middle"
-              >
-                <LoaderCircle className="size-3.5 motion-safe:animate-spin" aria-hidden="true" />
-              </span>
-            ) : (
-              unknown
-            )
-          ) : (
-            t('cliStatus.provider.connectedCount', { connected: summary.openCodeConnected })
-          )}
+          {openCodeCount != null &&
+            t('cliStatus.provider.connectedCount', { connected: openCodeCount })}
+          {openCodeIsChecking ? (
+            <span
+              data-testid="dashboard-opencode-count-loading"
+              role="status"
+              aria-label={t('cliStatus.provider.checkingProviders')}
+              className={`inline-flex items-center align-middle ${openCodeCount != null ? 'ml-1' : ''}`}
+            >
+              <LoaderCircle className="size-3.5 motion-safe:animate-spin" aria-hidden="true" />
+            </span>
+          ) : summary.openCodeConnected === null ? (
+            <>
+              {openCodeCount != null ? ' · ' : null}
+              {unknown}
+            </>
+          ) : null}
         </span>
       )}
     </div>

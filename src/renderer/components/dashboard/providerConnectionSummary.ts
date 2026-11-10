@@ -21,7 +21,10 @@ type Directory = Pick<
   RuntimeProviderDirectoryCacheSnapshot,
   'authoritative' | 'runtimeRevision' | 'totalCount' | 'nextCursor' | 'fetchedAt'
 > & {
-  entries: readonly Pick<RuntimeProviderDirectoryCacheSnapshot['entries'][number], 'providerId' | 'state'>[];
+  entries: readonly Pick<
+    RuntimeProviderDirectoryCacheSnapshot['entries'][number],
+    'providerId' | 'state'
+  >[];
 };
 
 interface ConnectionSummaryInput {
@@ -53,6 +56,8 @@ export interface DashboardConnectionSummary {
   cliCountPending: boolean;
   /** Only exact, complete, current-runtime OpenCode directory snapshots are counted. */
   openCodeConnected: number | null;
+  /** Fresh connected rows from an incomplete directory, never an exact total. */
+  openCodeKnownConnected?: number;
 }
 
 function isCompleteDirectory(
@@ -63,16 +68,16 @@ function isCompleteDirectory(
   const fetchedAt = Date.parse(directory?.fetchedAt ?? '');
   return Boolean(
     runtimeRevision &&
-      Number.isFinite(fetchedAt) &&
-      fetchedAt <= nowMs &&
-      nowMs - fetchedAt <= DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS &&
-      directory?.authoritative &&
-      directory.runtimeRevision === runtimeRevision &&
-      directory.totalCount !== undefined &&
-      directory.totalCount !== null &&
-      directory.totalCount === directory.entries.length &&
-      directory.nextCursor == null &&
-      directory.entries.every((entry) => entry.state !== 'error')
+    Number.isFinite(fetchedAt) &&
+    fetchedAt <= nowMs &&
+    nowMs - fetchedAt <= DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS &&
+    directory?.authoritative &&
+    directory.runtimeRevision === runtimeRevision &&
+    directory.totalCount !== undefined &&
+    directory.totalCount !== null &&
+    directory.totalCount === directory.entries.length &&
+    directory.nextCursor == null &&
+    directory.entries.every((entry) => entry.state !== 'error')
   );
 }
 
@@ -94,7 +99,9 @@ export function getDashboardConnectionSummary({
 }: ConnectionSummaryInput): DashboardConnectionSummary {
   const mainProviders =
     cliStatus?.flavor === 'agent_teams_orchestrator' && cliStatus.installed
-      ? MAIN_PROVIDER_IDS.map((id) => cliStatus.providers.find((provider) => provider.providerId === id))
+      ? MAIN_PROVIDER_IDS.map((id) =>
+          cliStatus.providers.find((provider) => provider.providerId === id)
+        )
       : [];
   const settled = (provider: MainProvider | undefined): provider is MainProvider =>
     provider != null &&
@@ -107,8 +114,8 @@ export function getDashboardConnectionSummary({
     MAIN_PROVIDER_IDS.some(
       (id) =>
         providerStatusLoading[id] === true ||
-        cliStatus?.providers.find((provider) => provider.providerId === id)
-          ?.statusCheckOutcome === 'pending'
+        cliStatus?.providers.find((provider) => provider.providerId === id)?.statusCheckOutcome ===
+          'pending'
     );
   const cliCountComplete =
     !cliCountPending &&
@@ -139,7 +146,9 @@ export function getDashboardConnectionSummary({
   const newerGlobalEvidence =
     globalComplete && Date.parse(globalDirectory.fetchedAt) > countFetchedAt;
   const newerProjectEvidence =
-    projectPath !== null && projectComplete && projectDirectory !== null &&
+    projectPath !== null &&
+    projectComplete &&
+    projectDirectory !== null &&
     Date.parse(projectDirectory.fetchedAt) > countFetchedAt;
   const newerCompleteDirectory = newerGlobalEvidence || newerProjectEvidence;
   if (
@@ -160,7 +169,31 @@ export function getDashboardConnectionSummary({
   }
 
   if (countInvalidated || !globalComplete || !projectComplete) {
-    return { cliConnected, cliCountComplete, cliCountPending, openCodeConnected: null };
+    // Partial scoped summaries still establish connected identities. Use only
+    // current-runtime, fresh rows, and never inherit a global row into a project
+    // whose override is unknown. Mutations revoke this evidence altogether.
+    const partial = projectPath === null ? globalDirectory : projectDirectory;
+    const fetchedAt = Date.parse(partial?.fetchedAt ?? '');
+    const knownIds = new Set(
+      !countInvalidated &&
+        runtimeRevision &&
+        partial?.runtimeRevision === runtimeRevision &&
+        Number.isFinite(fetchedAt) &&
+        fetchedAt <= nowMs &&
+        nowMs - fetchedAt <= DASHBOARD_PROVIDER_CACHE_MAX_AGE_MS
+        ? partial.entries
+            .filter((entry) => entry.state === 'connected')
+            .map((entry) => entry.providerId.trim().toLowerCase())
+            .filter((id) => id && id !== 'opencode')
+        : []
+    );
+    return {
+      cliConnected,
+      cliCountComplete,
+      cliCountPending,
+      openCodeConnected: null,
+      ...(knownIds.size > 0 ? { openCodeKnownConnected: knownIds.size } : {}),
+    };
   }
 
   // The project snapshot may override a global connection with the same ID;

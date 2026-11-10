@@ -44,7 +44,10 @@ export function useRuntimeProviderQuickConnect({
   runtimeRevision,
 }: UseRuntimeProviderQuickConnectOptions): RuntimeProviderQuickConnectDirectoryState {
   const currentProjectScope = projectPath?.trim() ?? '';
-  const initialDirectoryCache = getRuntimeProviderDirectoryCacheSnapshot(projectPath, runtimeRevision);
+  const initialDirectoryCache = getRuntimeProviderDirectoryCacheSnapshot(
+    projectPath,
+    runtimeRevision
+  );
   const cacheSeenOnMount = useRef(initialDirectoryCache);
   const requestSequence = useRef(0);
   const previousRefreshKey = useRef(refreshKey);
@@ -87,8 +90,7 @@ export function useRuntimeProviderQuickConnect({
       if (
         (previousRuntimeRevision.current !== null &&
           runtimeRevision !== previousRuntimeRevision.current) ||
-        (cacheSeenOnMount.current &&
-          cacheSeenOnMount.current.runtimeRevision !== runtimeRevision)
+        (cacheSeenOnMount.current && cacheSeenOnMount.current.runtimeRevision !== runtimeRevision)
       ) {
         setEntries([]);
         setLoaded(false);
@@ -258,7 +260,7 @@ export function useRuntimeProviderQuickConnect({
       stopCountCheck?.();
       window.clearTimeout(timeout);
     };
-  }, [enabled, projectPath, refreshKey, refreshRequestSequence]);
+  }, [enabled, projectPath, refreshKey, refreshRequestSequence, settledRuntimeRevision]);
 
   // Passive effects run after React commits. Gate the returned snapshot during
   // that short transition so providers from the previous project or runtime

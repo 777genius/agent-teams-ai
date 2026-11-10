@@ -852,7 +852,7 @@ const InstalledBanner = ({
     summary: sharedConnectionSummary,
     multimodelEnabled,
     openCodeIsChecking,
-  } = useProviderConnectionSummary(cliStatus);
+  } = useProviderConnectionSummary(cliStatus, isActive);
   const runtimeBackendSummaryText = useMemo(
     () => buildProviderRuntimeBackendSummaryText(commonT),
     [commonT]
@@ -1840,11 +1840,9 @@ export const CliStatusBanner = ({
     refreshAnthropicSubscriptionLimits,
     shouldPollAnthropicSubscriptionLimits,
   ]);
-
   const handleInstall = useCallback(() => {
     installCli();
   }, [installCli]);
-
   const handleRefresh = useCallback(() => {
     openCodeDashboardCatalog.refresh();
     void (async () => {
@@ -1869,7 +1867,6 @@ export const CliStatusBanner = ({
   const refreshOpenCodeProviderDirectory = useCallback(() => {
     setProviderQuickConnectRefreshKey((current) => current + 1);
   }, []);
-
   const handleOpenCodeRefresh = useCallback(() => {
     refreshOpenCodeProviderDirectory();
     void (async () => {
@@ -1881,7 +1878,6 @@ export const CliStatusBanner = ({
     invalidateOpenCodeRuntimeStatus,
     refreshOpenCodeProviderDirectory,
   ]);
-
   const handleToggleProvidersCollapsed = useCallback(() => {
     setProvidersCollapsed((current) => {
       const next = !current;
@@ -1889,19 +1885,16 @@ export const CliStatusBanner = ({
       return next;
     });
   }, []);
-
   const handleCodexDashboardLogin = useCallback(() => {
     void (async () => {
       await codexAccount.startChatgptLogin('browser');
     })();
   }, [codexAccount]);
-
   const handleCodexDashboardDeviceCodeLogin = useCallback(() => {
     void (async () => {
       await codexAccount.startChatgptLogin('device_code');
     })();
   }, [codexAccount]);
-
   const recheckAuthState = useCallback(() => {
     openCodeDashboardCatalog.refresh();
     setIsVerifyingAuth(true);
@@ -1924,11 +1917,9 @@ export const CliStatusBanner = ({
     multimodelEnabled,
     openCodeDashboardCatalog.refresh,
   ]);
-
   const handleProviderLogin = useCallback((providerId: CliProviderId) => {
     setProviderTerminal({ providerId, action: 'login' });
   }, []);
-
   const handleProviderLogout = useCallback(
     (providerId: CliProviderId) => {
       void (async () => {
@@ -1956,7 +1947,6 @@ export const CliStatusBanner = ({
     },
     [effectiveCliStatus?.providers, settingsT, t]
   );
-
   const handleProviderManage = useCallback((providerId: CliProviderId) => {
     setManageProviderId(providerId);
     setManageRuntimeProviderId(null);

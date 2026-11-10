@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import {
+  useOpenCodeDashboardConnectedCountProbe,
   useRuntimeProviderConnectedCount,
   useRuntimeProviderDirectoryCache,
 } from '@features/runtime-provider-management/renderer';
+import { isElectronMode } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { resolveProjectPathById } from '@renderer/utils/projectLookup';
 
@@ -14,8 +16,11 @@ import {
 
 import type { CliInstallationStatus } from '@shared/types';
 
-/** Display-only selector: subscribing to snapshots never starts provider IPC. */
-export function useProviderConnectionSummary(cliStatusOverride?: CliInstallationStatus | null) {
+/** Passive by default; visible Settings may opt into a connected-summary refresh. */
+export function useProviderConnectionSummary(
+  cliStatusOverride?: CliInstallationStatus | null,
+  refreshConnectedCount = false
+) {
   const storedCliStatus = useStore((state) => state.cliStatus);
   const cliStatus = cliStatusOverride === undefined ? storedCliStatus : cliStatusOverride;
   const cliStatusLoading = useStore((state) => state.cliStatusLoading);
@@ -83,6 +88,18 @@ export function useProviderConnectionSummary(cliStatusOverride?: CliInstallation
     observedOpenCodeCount,
     countInvalidated: countEvidence?.invalidated ?? false,
     runtimeStatus: openCodeRuntimeStatus,
+  });
+
+  useOpenCodeDashboardConnectedCountProbe({
+    enabled:
+      refreshConnectedCount &&
+      isElectronMode() &&
+      multimodelEnabled &&
+      cliStatus?.installed === true &&
+      cliStatus.flavor === 'agent_teams_orchestrator',
+    projectPath,
+    runtimeStatus: openCodeRuntimeStatus,
+    connectedCount: summary.openCodeConnected,
   });
 
   return {
