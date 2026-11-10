@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - '.github/workflows/opencode-v2-cold-dashboard-e2e.yml'
+      - 'src/renderer/store/index.ts'
       - '.github/workflows/opencode-packaged-e2e.yml'
       - 'scripts/e2e/opencode-diagnostics/packaged-verify.mjs'
       - 'scripts/e2e/opencode-diagnostics/real-runtime.mjs'
