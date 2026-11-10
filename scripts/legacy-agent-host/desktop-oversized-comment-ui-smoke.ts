@@ -143,6 +143,8 @@ export async function runDesktopOversizedCommentUiSmoke(
   if (!requestedTaskDetailAlreadyOpen) {
     await ui.waitRead('Boolean(document.querySelector(' + desktopJsLiteral(card) + '))',
       'original Task card after cold readback');
+    // The completed Task may be below the visible Kanban grid row.
+    await ui.scrollTo(card + ' h5', 'visible completed Task card after cold readback');
     await ui.click(card + ' h5', 'open original Task detail after large comment');
   }
   await ui.waitRead(
