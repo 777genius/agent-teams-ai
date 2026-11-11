@@ -940,21 +940,40 @@ async function main() {
     // A settings dialog is allowed later, but Create itself must not trap focus.
     assert.equal(shot.dialogOpen, false, 'Create opened a dialog instead of a page');
     await captureScreenshot(cdp, fixture, 'opened');
+    // The input can render before the asynchronous persisted form and prompt drafts hydrate.
+    // Wait for the real UI's hydration gate before testing per-name defaults.
+    await cdp.waitFor(
+      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
+      'create-team form and prompt draft hydration'
+    );
 
     log('restore unedited Advanced CLI defaults for a saved team name');
     const customArgsSelector = '[data-testid=create-team-page] input[placeholder="--max-turns 5"]';
     const preferencesTeamName = `${unique}-saved-defaults`;
     await cdp.evaluate(`localStorage.setItem(${JSON.stringify(`team:lastCustomArgs:${preferencesTeamName}`)}, '--max-turns 2')`);
+    assert.equal(
+      await cdp.evaluate(`localStorage.getItem(${JSON.stringify(`team:lastCustomArgs:${preferencesTeamName}`)})`),
+      '--max-turns 2', 'E2E setup did not persist the saved CLI preference'
+    );
     await cdp.fill('#team-name', preferencesTeamName);
     const optionalSettingsButton = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
       .find(button => button.textContent?.includes('Optional launch settings')
         && button.getBoundingClientRect().width > 0)`;
     await cdp.click(optionalSettingsButton);
     await cdp.click(createButtonExpression('Advanced'));
-    await cdp.waitFor(
-      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 2'`,
-      'untouched per-name Advanced CLI defaults restored'
-    );
+    try {
+      await cdp.waitFor(
+        `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 2'`,
+        'untouched per-name Advanced CLI defaults restored'
+      );
+    } catch (error) {
+      const observed = await cdp.evaluate(`(() => ({
+        name: document.querySelector('#team-name')?.value,
+        stored: localStorage.getItem(${JSON.stringify(`team:lastCustomArgs:${preferencesTeamName}`)}),
+        actual: document.querySelector(${JSON.stringify(customArgsSelector)})?.value ?? null,
+      }))()`);
+      throw new Error(`Advanced CLI preference mismatch: ${JSON.stringify(observed)}`, { cause: error });
+    }
 
     log('edit Advanced CLI while the team name is explicitly empty');
     await cdp.fill('#team-name', '');
