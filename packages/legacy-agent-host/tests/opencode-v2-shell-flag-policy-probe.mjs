@@ -19,6 +19,7 @@ export async function observeShellFlagPermissionSplit(call, workspace, root) {
     const readback = await call(base);
     const saved = readback.data?.data?.permissions;
     if (readback.status !== 200 || readback.data?.data?.id !== id ||
+        readback.data?.data?.location?.directory !== workspace ||
         !Array.isArray(saved) || saved.length !== rules.length ||
         !rules.every((rule, index) => Object.keys(saved[index] || {}).length === 3 &&
           Object.entries(rule).every(([key, value]) => saved[index]?.[key] === value)))

@@ -6,14 +6,14 @@ const rules = [
   { action: 'shell', resource: '*', effect: 'allow' },
   { action: 'external_directory', resource: '*', effect: 'deny' },
 ];
-function fakeNative({ shellEffect = 'allow', externalEffect = 'deny' } = {}) {
+function fakeNative({ shellEffect = 'allow', externalEffect = 'deny', readbackDirectory = '/TEST-workspace' } = {}) {
   const calls = [], base = '/api/session/ses_TESTflag';
   async function call(path, method = 'GET', body) {
     calls.push({ path, method, body });
     if (path === '/api/session' && method === 'POST')
       return { status: 200, data: { data: { id: 'ses_TESTflag' } } };
     if (path === base && method === 'GET')
-      return { status: 200, data: { data: { id: 'ses_TESTflag', permissions: rules } } };
+      return { status: 200, data: { data: { id: 'ses_TESTflag', location: { directory: readbackDirectory }, permissions: rules } } };
     if (path === base && method === 'DELETE') return { status: 204 };
     if (path === base + '/permission' && method === 'POST')
       return { status: 200, data: { data: { effect: body.action === 'shell' ? shellEffect : externalEffect } } };
@@ -32,6 +32,13 @@ test('native decision split is never a tool-execution certificate', async () => 
     [undefined,'shell','external_directory']);
   assert.equal(calls[2].body.resources[0],'git -C /TEST-owned/temp/TEST-outside-shell-flag status');
   assert.equal(calls.at(-1).method,'DELETE');
+});
+test('foreign native workspace fails before permission evaluation and cleans only its session',async()=>{
+  const {call,calls}=fakeNative({readbackDirectory:'/TEST-other-workspace'});
+  await assert.rejects(observeShellFlagPermissionSplit(call,'/TEST-workspace','/TEST-owned'),
+    /TEST_shell_flag_native_rules_unqualified/);
+  assert.equal(calls.filter(x=>x.method==='DELETE').length,1);
+  assert.equal(calls.some(x=>x.path.endsWith('/permission')),false);
 });
 test('external ALLOW fails closed with exactly one cleanup',async()=>{
   const {call,calls}=fakeNative({externalEffect:'allow'});

@@ -125,7 +125,7 @@ if (process.argv[2] === '--worker') {
       catch(e){if(e.code!=='ESRCH')throw e;}
     }
     for (let n=0;n<60;n++) {
-      if (!present(-pid)) {child=undefined;return true;}
+      if (!present(-pid)) {if (child?.pid === pid) child = undefined;return true;}
       await delay(100);
     }
     return false;
@@ -178,7 +178,9 @@ if (process.argv[2] === '--worker') {
     return {status:res.status,text:txt,data:txt&&!txt.startsWith('data:')?JSON.parse(txt):null};
   }
   async function start() {
+    if (interruptionTask) throw Error('TEST_interrupted_before_start');
     port=await reservePort();env.TEST_V2_HTTP_PORT=String(port);
+    if (interruptionTask) throw Error('TEST_interrupted_before_start');
     stopSignalSent=false;
     child=spawn(process.execPath,[worker,'--worker'],{
       cwd:workspace,env,detached:true,stdio:'ignore',
