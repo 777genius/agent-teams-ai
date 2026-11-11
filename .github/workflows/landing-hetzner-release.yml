@@ -38,7 +38,7 @@ concurrency:
 jobs:
   build:
     name: Exact-SHA production-domain static artifacts
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6

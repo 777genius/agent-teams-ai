@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   publish-reviewed-carry:
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 60
     permissions:
       contents: write

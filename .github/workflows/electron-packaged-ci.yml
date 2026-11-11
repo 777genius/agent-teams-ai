@@ -52,7 +52,7 @@ concurrency:
 jobs:
   packaged-scope:
     name: classify packaged smoke
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10
     outputs:
       scope: ${{ steps.scope.outputs.scope }}
@@ -108,7 +108,7 @@ jobs:
           - platform: linux-x64
             arch: x64
             os: linux
-            runner: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+            runner: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
             pack: pack:linux
             bundle: release/linux-unpacked
 
@@ -202,7 +202,7 @@ jobs:
     needs: [packaged-scope, packaged-smoke]
     if: always() && !cancelled()
     name: ${{ github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'metadata packaged gate' || 'packaged full gate' }}
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6

@@ -32,7 +32,7 @@ concurrency:
 
 jobs:
   assemble-draft:
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 45
     steps:
       - name: Require reviewed immutable tooling SHA
