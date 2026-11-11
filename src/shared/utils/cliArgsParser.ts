@@ -177,7 +177,10 @@ function scanUserFlags(raw: string): { flags: string[]; missingValue?: string } 
 /** Short `claude` options that take no value, so a cluster like `-pr` goes on to `-r`. */
 const SHORT_FLAGS_WITHOUT_VALUE = new Set(['c', 'h', 'p', 'v']);
 
-/** `claude --help` options shown with a required `<value>`. */
+/**
+ * `claude --help` options shown with a required `<value>`, plus `--max-turns`, which the
+ * CLI accepts with a required value but leaves out of `--help`.
+ */
 const OPTIONS_WITH_REQUIRED_VALUE = new Set([
   '--add-dir',
   '--agent',
@@ -197,6 +200,7 @@ const OPTIONS_WITH_REQUIRED_VALUE = new Set([
   '--input-format',
   '--json-schema',
   '--max-budget-usd',
+  '--max-turns',
   '--mcp-config',
   '--model',
   '-n',

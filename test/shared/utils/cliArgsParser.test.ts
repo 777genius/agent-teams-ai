@@ -160,7 +160,8 @@ describe('extractUserFlags', () => {
     expect(extractUserFlags('-pcr abc')).toEqual(['-p', '-c', '-r']);
     // -d takes a value, so the `r` in `-dr` is its value, not a flag.
     expect(extractUserFlags('-dr')).toEqual(['-d']);
-    expect(extractUserFlags('--max-turns -1')).toEqual(['--max-turns', '-1']);
+    // --max-turns takes a required value, so `-1` is its value, not a flag.
+    expect(extractUserFlags('--max-turns -1')).toEqual(['--max-turns']);
   });
 
   it('skips the value of an option that requires one, even if it starts with a dash', () => {
@@ -189,6 +190,7 @@ describe('findOptionMissingValue', () => {
   it('reports an option that needs a value but ends the args', () => {
     expect(findOptionMissingValue('-n')).toBe('-n');
     expect(findOptionMissingValue('-pn')).toBe('-n');
+    expect(findOptionMissingValue('--max-turns')).toBe('--max-turns');
     expect(findOptionMissingValue('--verbose --append-system-prompt')).toBe(
       '--append-system-prompt'
     );
