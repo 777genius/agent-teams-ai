@@ -34,14 +34,16 @@ export function useProviderReadinessRevalidation(
     [fetchProvider, projectPath]
   );
   const attempted = useRef(new Set<CliProviderId>());
-  useEffect(() => {
-    attempted.current.clear();
-  }, [projectPath]);
   const bootstrapAttempted = useRef(false);
   // When a Codex sign-in completes outside the app after failed preflight,
   // revalidate once on the account event without a hidden dashboard poll.
   const codexAuthRechecked = useRef(false);
   const pendingCodexAuthRecheck = useRef(false);
+  useEffect(() => {
+    attempted.current.clear();
+    codexAuthRechecked.current = false;
+    pendingCodexAuthRecheck.current = false;
+  }, [projectPath]);
   useEffect(() => {
     if (!enabled || !providerIds.includes('codex')) {
       codexAuthRechecked.current = false;
@@ -56,7 +58,9 @@ export function useProviderReadinessRevalidation(
         pendingCodexAuthRecheck.current = false;
         return;
       }
-      const codex = cliStatus?.providers.find((provider) => provider.providerId === 'codex');
+      const codex = projectPath
+        ? scopedStatuses?.[getCliProviderStatusScopeKey('codex', projectPath)]
+        : cliStatus?.providers.find((provider) => provider.providerId === 'codex');
       if (
         codexAuthRechecked.current ||
         !attempted.current.has('codex') ||
@@ -69,9 +73,18 @@ export function useProviderReadinessRevalidation(
       }
       pendingCodexAuthRecheck.current = false;
       codexAuthRechecked.current = true;
-      void fetchProvider('codex').catch(() => undefined);
+      void refreshProvider('codex').catch(() => undefined);
     });
-  }, [cliStatus, enabled, fetchProvider, providerIds, providerLoading.codex, statusLoading]);
+  }, [
+    cliStatus,
+    enabled,
+    projectPath,
+    providerIds,
+    providerLoading.codex,
+    refreshProvider,
+    scopedStatuses,
+    statusLoading,
+  ]);
 
   useEffect(() => {
     if (
@@ -82,7 +95,9 @@ export function useProviderReadinessRevalidation(
       providerLoading.codex
     )
       return;
-    const codex = cliStatus?.providers.find((provider) => provider.providerId === 'codex');
+    const codex = projectPath
+        ? scopedStatuses?.[getCliProviderStatusScopeKey('codex', projectPath)]
+        : cliStatus?.providers.find((provider) => provider.providerId === 'codex');
     if (codex?.modelCatalogRefreshState === 'loading') return;
     pendingCodexAuthRecheck.current = false;
     if (
@@ -92,8 +107,17 @@ export function useProviderReadinessRevalidation(
     )
       return;
     codexAuthRechecked.current = true;
-    void fetchProvider('codex').catch(() => undefined);
-  }, [cliStatus, enabled, fetchProvider, providerIds, providerLoading.codex, statusLoading]);
+    void refreshProvider('codex').catch(() => undefined);
+  }, [
+    cliStatus,
+    enabled,
+    projectPath,
+    providerIds,
+    providerLoading.codex,
+    refreshProvider,
+    scopedStatuses,
+    statusLoading,
+  ]);
 
   useEffect(() => {
     if (!enabled) {
