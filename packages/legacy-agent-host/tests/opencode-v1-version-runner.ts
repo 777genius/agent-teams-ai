@@ -17,7 +17,7 @@ assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], {
   cwd: repo, encoding: 'utf8', timeout: 5000,
 }).trim(), sourceHead);
 const evidence = join(repo, 'opencode-v1-version-evidence');
-await mkdir(evidence);
+await mkdir(evidence, { recursive: true });
 
 /** Bound trusted-registry metadata before parsing; resolve each tag exactly once. */
 async function metadata(name: string, selector: string): Promise<Record<string, unknown>> {

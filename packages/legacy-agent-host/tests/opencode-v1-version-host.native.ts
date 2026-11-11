@@ -237,8 +237,13 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     const recovered = await host.rpc('runtime.read', envelope('TEST-recovered', { memberId: 'carol-id' }));
     assert.equal(recovered.ok, true);
     assert.equal(record(recovered.value).attached, false);
-    assert.equal((record(recovered.value).inputs as unknown[]).length, 1);
+    const recoveredInputs = (record(recovered.value).inputs as unknown[]).map(record);
+    assert.equal(recoveredInputs.length, 1);
+    assert.equal(recoveredInputs[0]?.inputId, inputId);
+    assert.equal(recoveredInputs[0]?.phase, 'terminal');
+    assert.equal(recoveredInputs[0]?.terminal, 'succeeded');
     await host.close(); hosts.push(host.facts()); host = undefined;
+    assert.deepEqual(model.failures, [], 'cold readback must not trigger rejected model requests');
     assert.equal(model.observations.length, callsBefore);
     assert.equal(await readFile(join(root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\n');
     assert.equal(await fileHash(binary), nativeDigest);
