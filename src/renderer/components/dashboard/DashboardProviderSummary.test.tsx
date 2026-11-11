@@ -18,6 +18,7 @@ const state = vi.hoisted(() => ({
     binaryPath: string;
   },
   openCodeRuntimeStatusLoading: false,
+  openCodeRuntimeError: null as string | null,
   countEvidence: null as null | {
     checking: boolean;
     observation: null | {
@@ -81,6 +82,7 @@ describe('DashboardProviderSummary (passive)', () => {
     state.cliStatus = null;
     state.cliStatusLoading = false;
     state.openCodeRuntimeStatusLoading = false;
+    state.openCodeRuntimeError = null;
     state.cliProviderStatusLoading = {};
     state.codexStatusRecoveryPending = false;
     state.countEvidence = null;
@@ -106,6 +108,13 @@ describe('DashboardProviderSummary (passive)', () => {
       expect(
         host.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent
       ).not.toContain('runtimeProvider.badges.unknown');
+      state.cliStatus = {
+        installed: true,
+        flavor: 'agent_teams_orchestrator',
+        providers: [],
+      };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
       expect(state.getStatus).not.toHaveBeenCalled();
       expect(state.loadProviderDirectory).not.toHaveBeenCalled();
       expect(state.loadModels).not.toHaveBeenCalled();
@@ -264,6 +273,7 @@ describe('DashboardProviderSummary (passive)', () => {
       await act(async () => root.render(React.createElement(DashboardProviderSummary)));
       expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
       state.countEvidence = { checking: false, observation: null, invalidated: false };
+      state.openCodeRuntimeError = 'Runtime status lookup failed';
       state.cliStatus = {
         installed: true,
         flavor: 'agent_teams_orchestrator',

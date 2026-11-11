@@ -34,6 +34,7 @@ export function useProviderConnectionSummary(
   );
   const openCodeRuntimeStatus = useStore((state) => state.openCodeRuntimeStatus);
   const openCodeRuntimeStatusLoading = useStore((state) => state.openCodeRuntimeStatusLoading);
+  const openCodeRuntimeError = useStore((state) => state.openCodeRuntimeError);
   const selectedProjectId = useStore((state) => state.selectedProjectId);
   const projects = useStore((state) => state.projects);
   const repositoryGroups = useStore((state) => state.repositoryGroups);
@@ -51,7 +52,10 @@ export function useProviderConnectionSummary(
   const observedOpenCodeCount = countEvidence?.observation ?? null;
   const openCodeIsChecking = Boolean(
     cliStatusLoading ||
-    (!cliStatus && !cliStatusError && !openCodeRuntimeStatus) ||
+    (!openCodeRuntimeStatus &&
+      !openCodeRuntimeError &&
+      !cliStatusError &&
+      cliStatus?.installed !== false) ||
     countEvidence?.checking ||
     openCodeRuntimeStatusLoading ||
     cliProviderStatusLoading?.opencode ||
