@@ -95,6 +95,7 @@ test('native receipt gate rejects forged digest, incomplete stages and cold rest
     r => { r.restartLogReadback.eventCount = 4097; },
     r => { r.restartLogReadback.eventCount = 1; }, // no watermark advance: impossible append
     r => { r.restartLogReadback.watermark = 1; r.restartLogReadback.eventCount = 2; },
+    r => { r.restartLogReadback.watermark = 1; r.restartLogReadback.eventCount = 1; }, // cannot backfill session.created after empty synced history
     r => { r.steps[0] = 'npm_wrapper_hashed'; },
     r => { r.steps.reverse(); },
     r => { r.steps[r.steps.indexOf('Host_unregistered_permission_reference_stale_no_native_change')] = 'Host_live_foreign_native_permission_stale_no_grant'; },

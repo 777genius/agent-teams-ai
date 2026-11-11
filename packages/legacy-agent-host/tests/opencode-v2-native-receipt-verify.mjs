@@ -92,6 +92,9 @@ export function isCompleteNativeHostReceipt(value, expectedSourceHead) {
     Number.isSafeInteger(recovered.eventCount) && recovered.eventCount >= log.eventCount &&
     recovered.eventCount <= 4096 &&
     recovered.eventCount <= recovered.watermark + 1 &&
+    // An empty history synced at position zero cannot acquire a later
+    // session.created at that already-synced position after cold restart.
+    (log.eventCount !== 0 || recovered.eventCount === 0) &&
     // The recovered cursor cannot introduce more events than newly durable positions.
     // Otherwise a forged cold-restart receipt could backfill an already synced slot.
     recovered.eventCount - log.eventCount <= recovered.watermark - log.watermark &&

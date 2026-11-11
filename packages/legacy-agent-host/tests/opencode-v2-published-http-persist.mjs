@@ -704,7 +704,24 @@ if (process.argv[2] === '--worker') {
       instructions,isCurrent:()=>true,canAllocate:()=>true,
       onProgress:()=>{},readCheckpoint:async()=>undefined,
     };
-    let instructionWrites=0;
+    let instructionWrites=0, instructionReads=0;
+    const readCurrentInstructions=async (capture,signal)=>{
+      if(signal.aborted||startIdentity(secondPid)!==startTicks||
+         capture.nativeSessionId!==sessionId||
+         capture.contextDigest!==initialContextDigest(capture.instructions)||
+         capture.generation!=='TEST-generation'||capture.configRevision!=='TEST-config')
+        return undefined;
+      const get=await call(entriesPath);
+      if(signal.aborted||startIdentity(secondPid)!==startTicks||
+         get.status!==200||!Array.isArray(get.data?.data)||
+         get.data.data.filter(e=>e?.key==='host-context').length!==1||
+         JSON.stringify(get.data.data.find(e=>e?.key==='host-context')?.value)!==
+           JSON.stringify({instructions:capture.instructions,digest:capture.contextDigest}))
+        return undefined;
+      instructionReads++;
+      return {nativeSessionId:sessionId,contextDigest:capture.contextDigest,
+        generation:capture.generation,configRevision:capture.configRevision};
+    };
     const owner={
       requiredExternalDirectory:'deny',
       readPassword:()=>password,
@@ -745,14 +762,11 @@ if (process.argv[2] === '--worker') {
         const put=await call(entriesPath+'/host-context','PUT',
           {value:{instructions:capture.instructions,digest:capture.contextDigest}});
         if(signal.aborted||put.status!==204)return undefined;
-        const get=await call(entriesPath);
-        if(get.status!==200||!Array.isArray(get.data?.data)||
-           get.data.data.filter(e=>e?.key==='host-context').length!==1||
-           JSON.stringify(get.data.data.find(e=>e?.key==='host-context')?.value)!==
-             JSON.stringify({instructions,digest:capture.contextDigest}))
-          return undefined;
-        return {nativeSessionId:sessionId,contextDigest:capture.contextDigest,
-          generation:capture.generation,configRevision:capture.configRevision};
+        return readCurrentInstructions(capture,signal);
+      },
+      async readAndAttestInitialContext(capture,signal) {
+        // Read-only current native GET; never resend the initial PUT.
+        return readCurrentInstructions(capture,signal);
       },
       stopOwned:stop,
       async confirmStopped() {
@@ -768,8 +782,9 @@ if (process.argv[2] === '--worker') {
          initialContextDigest(instructions)||instructionWrites!==1)
       throw Error('TEST_persisted_HTTP_Host_SPI_not_ready');
     const rechecked=await opened.driver.checkReadiness();
-    if(rechecked.ok!==true||!provider.isReady()||instructionWrites!==1)
-      throw Error('TEST_Host_SPI_rechecked_or_context_replayed');
+    if(rechecked.ok!==true||!provider.isReady()||instructionWrites!==1||
+       instructionReads!==3)
+      throw Error('TEST_Host_SPI_context_reattest_or_replay_failed');
     receipt.hostSpiReadinessProven=true;
     receipt.steps.push('TEST_real_published_HTTP_Stage1_SPI_ready_no_model_turn');
     const closed=await opened.driver.close();
