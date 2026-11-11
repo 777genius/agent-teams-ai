@@ -1,4 +1,5 @@
 import { MemberPresenceDot } from '@renderer/components/team/members/MemberPresenceDot';
+import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
@@ -32,7 +33,7 @@ export const MemberIdentityAvatar = ({
           boxShadow: isLight ? 'none' : `0 0 0 1px ${colors.badge}`,
         }}
       >
-        <img
+        <ParticipantAvatar
           src={avatarUrl ?? agentAvatarUrl(name)}
           alt=""
           className="size-7 rounded-full bg-[var(--color-surface-raised)]"

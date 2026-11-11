@@ -256,8 +256,8 @@ function masterAgentTeamsMcpCheckbox(host: HTMLElement): HTMLElement {
 }
 
 function addMemberButton(host: HTMLElement): HTMLButtonElement {
-  const button = Array.from(host.querySelectorAll<HTMLButtonElement>('button')).find((element) =>
-    element.textContent?.includes('Add member')
+  const button = Array.from(host.querySelectorAll<HTMLButtonElement>('button')).find(
+    (element) => element.getAttribute('aria-label') === 'Add member'
   );
   if (!button) {
     throw new Error('Add member button not found');
@@ -266,8 +266,8 @@ function addMemberButton(host: HTMLElement): HTMLButtonElement {
 }
 
 function editJsonButton(host: HTMLElement): HTMLButtonElement {
-  const button = Array.from(host.querySelectorAll<HTMLButtonElement>('button')).find((element) =>
-    element.textContent?.includes('Edit as JSON')
+  const button = Array.from(host.querySelectorAll<HTMLButtonElement>('button')).find(
+    (element) => element.getAttribute('aria-label') === 'Edit as JSON'
   );
   if (!button) {
     throw new Error('Edit as JSON button not found');
@@ -313,8 +313,8 @@ describe('MembersEditorSection runtime model selection', () => {
 
     expect(host.querySelector('button[aria-haspopup="menu"]')).toBeNull();
     expect(
-      Array.from(host.querySelectorAll('button')).some((button) =>
-        button.textContent?.includes('Add member')
+      Array.from(host.querySelectorAll('button')).some(
+        (button) => button.getAttribute('aria-label') === 'Add member'
       )
     ).toBe(false);
     expect(host.textContent).not.toContain('Members');
@@ -449,9 +449,7 @@ describe('MembersEditorSection worktree master checkbox', () => {
     const { host, rerender } = renderMembersEditor({ members: [removedAlice] });
 
     openSettingsMenu(host);
-    expect(
-      document.body.querySelector('[role="menuitemcheckbox"][aria-describedby]')
-    ).toBeNull();
+    expect(document.body.querySelector('[role="menuitemcheckbox"][aria-describedby]')).toBeNull();
     expect(masterAgentTeamsMcpCheckbox(host)).toBeTruthy();
 
     rerender([alice]);

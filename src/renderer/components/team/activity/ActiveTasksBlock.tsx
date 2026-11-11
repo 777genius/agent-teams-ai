@@ -1,6 +1,7 @@
 import { memo, type ReactNode, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
 import { CARD_BG, CARD_BORDER_STYLE, CARD_ICON_MUTED } from '@renderer/constants/cssVariables';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -139,7 +140,7 @@ export const ActiveTasksBlock = memo(function ActiveTasksBlock({
             >
               <div className="flex items-center gap-2 px-3 py-2">
                 <span className="relative inline-flex shrink-0">
-                  <img
+                  <ParticipantAvatar
                     src={avatarMap.get(member.name) ?? agentAvatarUrl(member.name, 24)}
                     alt=""
                     className="size-5 rounded-full bg-[var(--color-surface-raised)]"

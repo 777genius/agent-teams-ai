@@ -13,7 +13,13 @@ import {
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@renderer/components/ui/select';
 import { cn } from '@renderer/lib/utils';
 
 import { SettingRow, SettingsSectionHeader, SettingsToggle } from '../components';
@@ -106,13 +112,15 @@ export const AppearanceSection = ({
           <Select
             value={activeCustomThemeId ?? BUILTIN_THEME_OPTION}
             onValueChange={(value) =>
-              changeLocalPreference(() => setActiveCustomTheme(value === BUILTIN_THEME_OPTION ? null : value))
+              changeLocalPreference(() =>
+                setActiveCustomTheme(value === BUILTIN_THEME_OPTION ? null : value)
+              )
             }
           >
             <SelectTrigger
               data-testid="appearance-custom-theme-select"
               aria-label={t('general.appearance.customThemes.label')}
-              className="h-8 w-44 max-w-full bg-surface-raised text-xs text-text"
+              className="h-8 w-44 max-w-full bg-[var(--color-form-control-bg)] text-xs text-text"
             >
               <SelectValue />
             </SelectTrigger>
@@ -153,14 +161,12 @@ export const AppearanceSection = ({
         <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           <Select
             value={String(zoomPercent)}
-            onValueChange={(value) =>
-              changeLocalPreference(() => setAppearanceZoom(Number(value)))
-            }
+            onValueChange={(value) => changeLocalPreference(() => setAppearanceZoom(Number(value)))}
           >
             <SelectTrigger
               data-testid="appearance-ui-scale"
               aria-label={t('general.appearance.uiScale.label')}
-              className="h-8 w-24 bg-surface-raised text-xs text-text"
+              className="h-8 w-24 bg-[var(--color-form-control-bg)] text-xs text-text"
             >
               <SelectValue />
             </SelectTrigger>
@@ -188,7 +194,9 @@ export const AppearanceSection = ({
       </SettingRow>
       <TypographyControls />
       {localError && (
-        <p role="alert" className="my-2 text-xs text-red-400">{localError}</p>
+        <p role="alert" className="my-2 text-xs text-red-400">
+          {localError}
+        </p>
       )}
       <p className="py-2 text-xs text-text-muted">
         {t('general.appearance.customThemes.localOnly')}
@@ -235,7 +243,10 @@ export const AppearanceSection = ({
         themes={editingThemes}
         focusReturnRef={editorTriggerRef}
         onSave={(next, forceOverwrite) => {
-          if (!forceOverwrite && JSON.stringify(getLatestAppearance().themes) !== JSON.stringify(editingThemes)) {
+          if (
+            !forceOverwrite &&
+            JSON.stringify(getLatestAppearance().themes) !== JSON.stringify(editingThemes)
+          ) {
             throw new Error(t('general.appearance.customThemes.editor.conflict'));
           }
           setCustomThemes(next);

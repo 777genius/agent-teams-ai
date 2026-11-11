@@ -204,7 +204,6 @@ describe('CliInstallerService background provider status', () => {
     expect(result?.detailMessage).toContain('Provider runtime missing');
   });
 
-
   test.each([true, false])(
     'does not return a superseded provider error after a newer %s auth result',
     async (newConnected) => {
@@ -224,8 +223,14 @@ describe('CliInstallerService background provider status', () => {
         statusCheckErrorCode: undefined,
       };
       let rejectOld!: (error: Error) => void;
-      const spy = vi.spyOn(internals.multimodelBridgeService, 'getProviderStatus')
-        .mockImplementationOnce(() => new Promise((_, reject) => { rejectOld = reject; }))
+      const spy = vi
+        .spyOn(internals.multimodelBridgeService, 'getProviderStatus')
+        .mockImplementationOnce(
+          () =>
+            new Promise((_, reject) => {
+              rejectOld = reject;
+            })
+        )
         .mockResolvedValueOnce(current);
       const older = service.getProviderStatus('codex');
       await vi.waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
@@ -239,9 +244,11 @@ describe('CliInstallerService background provider status', () => {
         statusCheckOutcome: 'pending',
         capabilities: { teamLaunch: false },
       });
-      expect(internals.latestStatusSnapshot?.providers.find(
-        (provider) => provider.providerId === 'codex'
-      )).toMatchObject({ authenticated: newConnected });
+      expect(
+        internals.latestStatusSnapshot?.providers.find(
+          (provider) => provider.providerId === 'codex'
+        )
+      ).toMatchObject({ authenticated: newConnected });
     }
   );
 
@@ -288,25 +295,25 @@ describe('CliInstallerService background provider status', () => {
     )).toMatchObject({ authenticated: false });
   });
 
-  test('a single read still accepts its own catalog hydration', async () => {
+  test('a single provider read may publish its own catalog hydration', async () => {
     const service = new CliInstallerService();
     const internals = service as unknown as CliInstallerServiceInternals;
-    const snapshot = internals.createInitialStatus();
-    snapshot.flavor = 'agent_teams_orchestrator';
-    snapshot.installed = true;
-    snapshot.binaryPath = '/fake/runtime';
-    internals.latestStatusSnapshot = snapshot;
-    const verified = {
+    const status = internals.createInitialStatus();
+    status.flavor = 'agent_teams_orchestrator';
+    status.installed = true;
+    status.binaryPath = '/fake/runtime';
+    internals.latestStatusSnapshot = status;
+    const verified: CliProviderStatus = {
       ...createDefaultProviderStatus('codex'),
       supported: true,
       authenticated: true,
-      verificationState: 'verified' as const,
-      statusCheckOutcome: 'authoritative' as const,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
       statusCheckErrorCode: undefined,
     };
     vi.spyOn(internals.multimodelBridgeService, 'getProviderStatus')
-      .mockImplementationOnce(async (_binary, _provider, onUpdate) => {
-        onUpdate?.(verified);
+      .mockImplementationOnce(async (_binary, _provider, onCatalogUpdate) => {
+        onCatalogUpdate?.(verified);
         return verified;
       });
     expect(await service.getProviderStatus('codex')).toMatchObject({

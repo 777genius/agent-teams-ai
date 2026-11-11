@@ -51,7 +51,7 @@ export const IgnorePatternsSection = ({
             type="text"
             placeholder={t('notificationTriggers.ignorePatterns.placeholder')}
             disabled={disabled}
-            className={`flex-1 rounded border border-border bg-transparent px-2 py-1 font-mono text-xs text-text placeholder:text-text-muted focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${disabled ? 'cursor-not-allowed opacity-50' : ''} `}
+            className={`flex-1 rounded border border-border bg-[var(--color-form-control-bg)] px-2 py-1 font-mono text-xs text-text placeholder:text-text-muted focus:border-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500 ${disabled ? 'cursor-not-allowed opacity-50' : ''} `}
             onKeyDown={(e) => {
               if (!isImeComposing(e) && e.key === 'Enter' && e.currentTarget.value.trim()) {
                 e.preventDefault();

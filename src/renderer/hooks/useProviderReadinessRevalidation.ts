@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
+import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 import { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 
@@ -14,20 +15,35 @@ import type { CliInstallationStatus, CliProviderId } from '@shared/types';
 export function useProviderReadinessRevalidation(
   enabled: boolean,
   providerIds: readonly CliProviderId[],
-  cliStatus: CliInstallationStatus | null
+  cliStatus: CliInstallationStatus | null,
+  options?: { projectPath?: string | null }
 ): void {
+  const projectPath = options?.projectPath?.trim() || null;
+  const scopedStatuses = useStore((s) => (projectPath ? s.cliProviderStatusByScope : null));
   const fetchProvider = useStore((s) => s.fetchCliProviderStatus);
   const providerLoading = useStore((s) => s.cliProviderStatusLoading);
   const statusLoading = useStore((s) => s.cliStatusLoading);
   const bootstrapCliStatus = useStore((s) => s.bootstrapCliStatus);
   const fetchCliStatus = useStore((s) => s.fetchCliStatus);
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
+  const refreshProvider = useCallback(
+    (providerId: CliProviderId) =>
+      projectPath
+        ? fetchProvider(providerId, { projectPath, silent: true, checkReason: 'launch_preflight' })
+        : fetchProvider(providerId),
+    [fetchProvider, projectPath]
+  );
   const attempted = useRef(new Set<CliProviderId>());
   const bootstrapAttempted = useRef(false);
   // When a Codex sign-in completes outside the app after failed preflight,
   // revalidate once on the account event without a hidden dashboard poll.
   const codexAuthRechecked = useRef(false);
   const pendingCodexAuthRecheck = useRef(false);
+  useEffect(() => {
+    attempted.current.clear();
+    codexAuthRechecked.current = false;
+    pendingCodexAuthRecheck.current = false;
+  }, [projectPath]);
   useEffect(() => {
     if (!enabled || !providerIds.includes('codex')) {
       codexAuthRechecked.current = false;
@@ -42,21 +58,33 @@ export function useProviderReadinessRevalidation(
         pendingCodexAuthRecheck.current = false;
         return;
       }
-      const codex = cliStatus?.providers.find((provider) => provider.providerId === 'codex');
+      const codex = projectPath
+        ? scopedStatuses?.[getCliProviderStatusScopeKey('codex', projectPath)]
+        : cliStatus?.providers.find((provider) => provider.providerId === 'codex');
       if (
         codexAuthRechecked.current ||
         !attempted.current.has('codex') ||
         hasEffectiveProviderLaunchAuthority(codex)
-      ) return;
+      )
+        return;
       if (statusLoading || providerLoading.codex || codex?.modelCatalogRefreshState === 'loading') {
         pendingCodexAuthRecheck.current = true;
         return;
       }
       pendingCodexAuthRecheck.current = false;
       codexAuthRechecked.current = true;
-      void fetchProvider('codex').catch(() => undefined);
+      void refreshProvider('codex').catch(() => undefined);
     });
-  }, [cliStatus, enabled, fetchProvider, providerIds, providerLoading.codex, statusLoading]);
+  }, [
+    cliStatus,
+    enabled,
+    projectPath,
+    providerIds,
+    providerLoading.codex,
+    refreshProvider,
+    scopedStatuses,
+    statusLoading,
+  ]);
 
   useEffect(() => {
     if (
@@ -65,18 +93,31 @@ export function useProviderReadinessRevalidation(
       !providerIds.includes('codex') ||
       statusLoading ||
       providerLoading.codex
-    ) return;
-    const codex = cliStatus?.providers.find((provider) => provider.providerId === 'codex');
+    )
+      return;
+    const codex = projectPath
+      ? scopedStatuses?.[getCliProviderStatusScopeKey('codex', projectPath)]
+      : cliStatus?.providers.find((provider) => provider.providerId === 'codex');
     if (codex?.modelCatalogRefreshState === 'loading') return;
     pendingCodexAuthRecheck.current = false;
     if (
       codexAuthRechecked.current ||
       !attempted.current.has('codex') ||
       hasEffectiveProviderLaunchAuthority(codex)
-    ) return;
+    )
+      return;
     codexAuthRechecked.current = true;
-    void fetchProvider('codex').catch(() => undefined);
-  }, [cliStatus, enabled, fetchProvider, providerIds, providerLoading.codex, statusLoading]);
+    void refreshProvider('codex').catch(() => undefined);
+  }, [
+    cliStatus,
+    enabled,
+    projectPath,
+    providerIds,
+    providerLoading.codex,
+    refreshProvider,
+    scopedStatuses,
+    statusLoading,
+  ]);
 
   useEffect(() => {
     if (!enabled) {
@@ -98,7 +139,9 @@ export function useProviderReadinessRevalidation(
       const now = Date.now();
       let nextExpiry = Infinity;
       for (const providerId of providerIds) {
-        const provider = cliStatus.providers.find((item) => item.providerId === providerId);
+        const provider = projectPath
+          ? scopedStatuses?.[getCliProviderStatusScopeKey(providerId, projectPath)]
+          : cliStatus.providers.find((item) => item.providerId === providerId);
         if (provider && hasEffectiveProviderLaunchAuthority(provider, now)) {
           attempted.current.delete(providerId);
           nextExpiry = Math.min(nextExpiry, Date.parse(provider.modelCatalog!.staleAt));
@@ -111,7 +154,7 @@ export function useProviderReadinessRevalidation(
         )
           continue;
         attempted.current.add(providerId);
-        void fetchProvider(providerId).catch(() => {
+        void refreshProvider(providerId).catch(() => {
           // The store owns visible errors. Do not turn failure into an automatic loop.
         });
       }
@@ -130,6 +173,9 @@ export function useProviderReadinessRevalidation(
     multimodelEnabled,
     providerIds,
     providerLoading,
+    projectPath,
+    refreshProvider,
+    scopedStatuses,
     statusLoading,
   ]);
 }

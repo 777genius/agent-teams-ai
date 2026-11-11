@@ -3367,7 +3367,6 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-
   it('renders the Settings provider list inline while preserving dashboard collapse', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
@@ -3421,10 +3420,12 @@ describe('CLI status visibility during completed install state', () => {
       expect(host.textContent).not.toContain('Connected via Anthropic subscription');
 
       await act(async () => {
-        root.render(React.createElement(CliStatusBanner, {
-          isDashboardActive: true,
-          mode: 'settings',
-        }));
+        root.render(
+          React.createElement(CliStatusBanner, {
+            isDashboardActive: true,
+            mode: 'settings',
+          })
+        );
         await Promise.resolve();
       });
       const banner = host.querySelector<HTMLElement>('[data-testid="provider-status-banner"]');
@@ -3449,9 +3450,9 @@ describe('CLI status visibility during completed install state', () => {
         root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
         await Promise.resolve();
       });
-      expect(host.querySelector(
-        '[role="button"][aria-label="Expand provider details"]'
-      )).not.toBeNull();
+      expect(
+        host.querySelector('[role="button"][aria-label="Expand provider details"]')
+      ).not.toBeNull();
     } finally {
       await act(async () => {
         root.unmount();

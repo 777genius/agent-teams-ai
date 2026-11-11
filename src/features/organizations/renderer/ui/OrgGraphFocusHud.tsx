@@ -161,7 +161,7 @@ export const OrgGraphFocusHud = ({
               }
               value={query}
               placeholder={t('organizations.graph.focus.searchPlaceholder')}
-              className="h-8 w-full rounded-lg border border-white/10 bg-black/20 pl-8 pr-8 text-xs text-[var(--color-text)] outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-sky-300/40 focus:ring-2 focus:ring-sky-400/10"
+              className="h-8 w-full rounded-lg border border-white/10 bg-[var(--color-form-control-bg)] pl-8 pr-8 text-xs text-[var(--color-text)] outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-sky-300/40 focus:ring-2 focus:ring-sky-400/10"
               onFocus={() => setIsResultsOpen(true)}
               onChange={(event) => {
                 setQuery(event.target.value);

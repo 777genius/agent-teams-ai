@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
@@ -18,6 +19,8 @@ interface CreateTeamSurfaceProps {
   onClose: () => void;
   backDisabled?: boolean;
   children: ReactNode;
+  headerActions?: ReactNode;
+  footer?: ReactNode;
   overlay: ReactNode;
 }
 
@@ -33,6 +36,8 @@ export const CreateTeamSurface = ({
   onClose,
   backDisabled = false,
   children,
+  headerActions,
+  footer,
   overlay,
 }: CreateTeamSurfaceProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
@@ -46,17 +51,31 @@ export const CreateTeamSurface = ({
         data-testid="create-team-page"
         className="flex size-full min-h-0 min-w-0 flex-col overflow-y-auto overflow-x-hidden"
       >
-        <header className="sticky top-0 z-10 flex items-start gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
-          <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={backDisabled} aria-label={t('create.actions.backToTeams', { defaultValue: 'Back to teams' })}>
+        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            disabled={backDisabled}
+            aria-label={t('create.actions.backToTeams', { defaultValue: 'Back to teams' })}
+          >
             <ArrowLeft className="size-4" />
           </Button>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="text-base font-semibold text-[var(--color-text)]">{title}</h1>
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">{description}</p>
           </div>
+          {headerActions ? (
+            <div className="ml-auto min-w-0 max-w-[70%] shrink-0">{headerActions}</div>
+          ) : null}
         </header>
-        <div className="mx-auto w-full max-w-[64rem] min-w-0 space-y-4 px-4 pb-6 pt-4">
+        <div className="mx-auto w-full min-w-0 max-w-[64rem] shrink-0 space-y-4 px-4 pb-6 pt-4">
           {children}
+        </div>
+        <div className="grow border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)]">
+          <DialogFooter className="mx-auto w-full min-w-0 max-w-[64rem] px-4 pb-5 pt-4 sm:justify-between">
+            {footer}
+          </DialogFooter>
         </div>
         {overlay}
       </section>
@@ -66,11 +85,21 @@ export const CreateTeamSurface = ({
   return (
     <Dialog open={open} onOpenChange={(next) => !next && !backDisabled && onClose()}>
       <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[52rem]">
-        <DialogHeader>
-          <DialogTitle className="text-sm">{title}</DialogTitle>
-          <DialogDescription className="text-xs">{description}</DialogDescription>
-        </DialogHeader>
+        <div className="flex items-start gap-4 pr-5">
+          <DialogHeader className="min-w-0 flex-1">
+            <DialogTitle className="text-sm">{title}</DialogTitle>
+            <DialogDescription className="text-xs">{description}</DialogDescription>
+          </DialogHeader>
+          {headerActions ? (
+            <div className="ml-auto min-w-0 max-w-[70%] shrink-0">{headerActions}</div>
+          ) : null}
+        </div>
         {children}
+        {footer ? (
+          <DialogFooter className="-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between">
+            {footer}
+          </DialogFooter>
+        ) : null}
       </DialogContent>
       {overlay}
     </Dialog>

@@ -63,7 +63,7 @@ export const TriggerCardHeader = ({
                 }
               }}
               autoFocus
-              className="w-full rounded border border-border bg-transparent px-2 py-1 text-sm text-text focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded border border-border bg-[var(--color-form-control-bg)] px-2 py-1 text-sm text-text focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           ) : (
             <div className="flex items-center gap-2">

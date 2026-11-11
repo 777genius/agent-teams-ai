@@ -1301,24 +1301,51 @@ async function main() {
     const copiedDescription = await cdp.evaluate(
       "document.querySelector('#team-description')?.value"
     );
-    assert(copiedDescription, 'Copied team description did not hydrate');
+    assert.equal(
+      copiedDescription,
+      'Disposable Teams creation E2E fixture',
+      'Copied team description did not hydrate from its persisted config'
+    );
+    const templateConfirmationExpression =
+      "Array.from(document.querySelectorAll('[role=alertdialog]'))" +
+      ".find(dialog => dialog.querySelector('h2')?.textContent === 'Apply team template?')";
     const selectTemplate = async () => {
-      await cdp.click(
-        "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Team template\"]')"
-      );
-      await cdp.click(
-        "Array.from(document.querySelectorAll('[role=option]'))" +
-        ".find(option => option.textContent?.includes('Software Product Team'))"
-      );
-      await cdp.waitFor(
-        "document.querySelector('[role=dialog][aria-label=\"Apply team template?\"]')",
-        'template replacement confirmation'
-      );
+      const trigger = "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Team template\"]')";
+      const option = "Array.from(document.querySelectorAll('[role=option]'))" +
+        ".find(item => item.textContent?.includes('Software Product Team'))";
+      // A ready Radix trigger can miss one native click while the creation form
+      // commits its restored draft. Re-check the real hit target before retrying.
+      const triggerReady = "(() => { const button = " + trigger +
+        "; if (!button?.isConnected || button.disabled) return false;" +
+        " button.scrollIntoView({block:'center',inline:'nearest'});" +
+        " const rect=button.getBoundingClientRect();" +
+        " const hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);" +
+        " return rect.width>0 && rect.height>0 && (hit===button || button.contains(hit)); })()";
+      let optionReady = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await cdp.waitFor(triggerReady, 'visible unobstructed team template trigger', 15_000);
+        await cdp.click(trigger);
+        try {
+          await cdp.waitFor(option, 'Software Product Team option', 4_000);
+          optionReady = true;
+          break;
+        } catch (error) {
+          const open = await cdp.evaluate(
+            trigger + "?.getAttribute('aria-expanded') === 'true'"
+          );
+          // An open menu without the expected item is a genuine catalog/locale
+          // mismatch, not a missed click. Do not toggle it closed to hide it.
+          if (open || attempt === 2) throw error;
+        }
+      }
+      assert(optionReady, 'Team template options did not open');
+      await cdp.click(option);
+      await cdp.waitFor(templateConfirmationExpression, 'template replacement confirmation');
     };
     await selectTemplate();
     // Wait for the dialog's focus and Tab-trap effects before testing keyboard containment.
     await cdp.waitFor(
-      `document.querySelector('[role=dialog][aria-label="Apply team template?"]')?.contains(document.activeElement)`,
+      `(${templateConfirmationExpression})?.contains(document.activeElement)`,
       'template confirmation initial keyboard focus'
     );
     // A destructive confirmation must not expose background form fields to Tab.
@@ -1330,18 +1357,20 @@ async function main() {
     });
     assert(
       await cdp.evaluate(
-        "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"]')?.contains(document.activeElement)"
+        `(${templateConfirmationExpression})?.contains(document.activeElement)`
       ),
       'Template confirmation focus escaped into the background form'
     );
     await cdp.click(
-      "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"] button:not([data-confirm-btn])')"
+      `Array.from((${templateConfirmationExpression})?.querySelectorAll('button') ?? [])` +
+      ".find(button => button.textContent?.trim() === 'Cancel')"
     );
     assert.equal(await cdp.evaluate("document.querySelector('#team-description')?.value"),
       copiedDescription, 'Canceling template replacement discarded the copied description');
     await selectTemplate();
     await cdp.click(
-      "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"] button[data-confirm-btn]')"
+      `Array.from((${templateConfirmationExpression})?.querySelectorAll('button') ?? [])` +
+      ".find(button => button.textContent?.trim() === 'Apply template')"
     );
     await cdp.waitFor(
       "document.querySelector('#team-description')?.value === " +
@@ -1351,9 +1380,36 @@ async function main() {
     await captureScreenshot(cdp, fixture, 'template-confirmed');
 
     log('create from actual Organization Map and verify native placement');
-    await cdp.click(
-      "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')"
-    );
+    const backToTeams =
+      "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')";
+    const backHitTest = "(() => { const button=" + backToTeams +
+      "; if (!button?.isConnected || button.disabled) return false;" +
+      " button.scrollIntoView({block:'center',inline:'nearest'});" +
+      " const r=button.getBoundingClientRect();" +
+      " const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);" +
+      " return r.width>0 && r.height>0 && (hit===button || button.contains(hit)); })()";
+    // Radix confirmation can still be retiring when the create-page header
+    // becomes visible. A missed native click should not silently strand the
+    // draft, but never issue a second click once the page actually navigated.
+    let navigatedBack = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await cdp.waitFor(backHitTest, 'unobstructed Back to teams', 15_000);
+      await cdp.click(backToTeams);
+      try {
+        await cdp.waitFor(
+          "!document.querySelector('[data-testid=create-team-page]')",
+          'Back to teams navigation', 4_000
+        );
+        navigatedBack = true;
+        break;
+      } catch (error) {
+        const stillOnForm = await cdp.evaluate(
+          "Boolean(document.querySelector('[data-testid=create-team-page]'))"
+        );
+        if (!stillOnForm || attempt === 2) throw error;
+      }
+    }
+    assert(navigatedBack, 'Back to teams did not navigate after bounded native clicks');
     await cdp.waitFor(createButtonExpression('Continue creating'), 'template draft retained');
     const organizationName = 'e2e-org-' + randomUUID().slice(0, 8);
     const organization = await cdp.evaluate(

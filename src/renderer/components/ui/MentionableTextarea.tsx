@@ -1195,7 +1195,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
             <div
               ref={backdropRef}
               className={cn(
-                'pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-md border border-transparent px-3 py-2 text-sm text-[var(--color-text)]',
+                'pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-md border border-transparent bg-[var(--color-form-control-bg)] px-3 py-2 text-sm text-[var(--color-text)]',
                 hasCornerActions && cornerInsetClass
               )}
               style={{

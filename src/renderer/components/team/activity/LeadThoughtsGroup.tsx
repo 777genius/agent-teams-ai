@@ -13,6 +13,7 @@ import {
 import { useAppTranslation } from '@features/localization/renderer';
 import { CompactMarkdownPreview } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
+import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
   CARD_BG,
@@ -900,7 +901,7 @@ const LeadThoughtsGroupRowComponent = ({
                 ) : null}
                 {!compactHeader ? (
                   <div className="relative shrink-0">
-                    <img
+                    <ParticipantAvatar
                       src={agentAvatarUrl(leadName, 24)}
                       alt=""
                       className="size-5 rounded-full bg-[var(--color-surface-raised)]"
@@ -977,7 +978,7 @@ const LeadThoughtsGroupRowComponent = ({
               ) : null}
               {!compactHeader ? (
                 <div className="relative shrink-0">
-                  <img
+                  <ParticipantAvatar
                     src={agentAvatarUrl(leadName, 24)}
                     alt=""
                     className="size-5 rounded-full bg-[var(--color-surface-raised)]"

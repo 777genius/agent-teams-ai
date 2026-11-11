@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
@@ -110,15 +111,14 @@ export const MemberSelect = <T extends SelectableMember>({
     ariaLabel ?? (isAvatarTrigger ? `Select member: ${selectedLabel}` : undefined);
 
   const renderAvatarByName = (name: string): React.ReactNode => (
-    <img
+    <ParticipantAvatar
       src={avatarMap.get(name) ?? agentAvatarUrl(name, avatarSize)}
       alt=""
       className={`${avatarClass} shrink-0 rounded-full bg-[var(--color-surface-raised)]`}
       loading="lazy"
     />
   );
-  const renderMemberAvatar = (member: T): React.ReactNode =>
-    renderAvatarByName(member.name);
+  const renderMemberAvatar = (member: T): React.ReactNode => renderAvatarByName(member.name);
 
   // eslint-disable-next-line sonarjs/function-return-type -- option renderer returns mixed node structure
   const renderMemberInline = (member: T): React.ReactNode => {
@@ -127,7 +127,7 @@ export const MemberSelect = <T extends SelectableMember>({
     const label = resolveMemberLabel(member);
     return (
       <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
-        <img
+        <ParticipantAvatar
           src={avatarMap.get(member.name) ?? agentAvatarUrl(member.name, avatarSize)}
           alt=""
           className={`${avatarClass} shrink-0 rounded-full bg-[var(--color-surface-raised)]`}
@@ -150,57 +150,63 @@ export const MemberSelect = <T extends SelectableMember>({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <TooltipProvider delayDuration={150} skipDelayDuration={1500}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <PopoverTrigger asChild>
-            <button
-          type="button"
-          role="combobox"
-          aria-haspopup="listbox"
-          aria-expanded={open}
-          aria-controls={listboxId}
-          aria-label={triggerAriaLabel}
-          aria-invalid={unavailableSelection || undefined}
-          title={isAvatarTrigger && !unavailableSelection ? selectedLabel : undefined}
-          disabled={disabled}
-          className={cn(
-            isAvatarTrigger
-              ? `inline-flex ${avatarTriggerSize} shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-transparent p-0 text-xs shadow-sm transition-colors hover:bg-[var(--color-surface-raised)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50`
-              : `flex ${triggerHeight} w-full items-center justify-between rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1 text-xs shadow-sm transition-colors placeholder:text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50`,
-            className
-          )}
-        >
-          {isAvatarTrigger ? (
-            selectedMember ? (
-              renderMemberAvatar(selectedMember)
-            ) : value ? (
-              renderAvatarByName(value)
-            ) : (
-              <UserRound className="size-4 text-[var(--color-text-muted)]" />
-            )
-          ) : (
-            <>
-              <span className="min-w-0 truncate text-left">
-                {selectedMember ? (
-                  renderMemberInline(selectedMember)
-                ) : value === null && allowUnassigned ? (
-                  <span className="text-xs text-[var(--color-text-muted)]">
-                    {t('members.unassigned')}
-                  </span>
-                ) : (
-                  <span className="text-[var(--color-text-muted)]">{unavailableSelection && unavailableLabel ? `${selectedLabel} — ${unavailableLabel}` : value ? selectedLabel : placeholder}</span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                role="combobox"
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                aria-controls={listboxId}
+                aria-label={triggerAriaLabel}
+                aria-invalid={unavailableSelection || undefined}
+                title={isAvatarTrigger && !unavailableSelection ? selectedLabel : undefined}
+                disabled={disabled}
+                className={cn(
+                  isAvatarTrigger
+                    ? `inline-flex ${avatarTriggerSize} shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] p-0 text-xs shadow-sm transition-colors hover:bg-[var(--color-form-control-hover-bg)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50`
+                    : `flex ${triggerHeight} w-full items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-2 py-1 text-xs shadow-sm transition-colors placeholder:text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50`,
+                  className
                 )}
-              </span>
-              <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
-            </>
-          )}
-            </button>
-          </PopoverTrigger>
-        </TooltipTrigger>
-        {unavailableSelection && unavailableLabel ? (
-          <TooltipContent side="top">{unavailableLabel}</TooltipContent>
-        ) : null}
-      </Tooltip>
+              >
+                {isAvatarTrigger ? (
+                  selectedMember ? (
+                    renderMemberAvatar(selectedMember)
+                  ) : value ? (
+                    renderAvatarByName(value)
+                  ) : (
+                    <UserRound className="size-4 text-[var(--color-text-muted)]" />
+                  )
+                ) : (
+                  <>
+                    <span className="min-w-0 truncate text-left">
+                      {selectedMember ? (
+                        renderMemberInline(selectedMember)
+                      ) : value === null && allowUnassigned ? (
+                        <span className="text-xs text-[var(--color-text-muted)]">
+                          {t('members.unassigned')}
+                        </span>
+                      ) : (
+                        <span className="text-[var(--color-text-muted)]">
+                          {unavailableSelection && unavailableLabel
+                            ? `${selectedLabel} — ${unavailableLabel}`
+                            : value
+                              ? selectedLabel
+                              : placeholder}
+                        </span>
+                      )}
+                    </span>
+                    <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
+                  </>
+                )}
+              </button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          {unavailableSelection && unavailableLabel ? (
+            <TooltipContent side="top">{unavailableLabel}</TooltipContent>
+          ) : null}
+        </Tooltip>
       </TooltipProvider>
       <PopoverContent
         className={cn(
@@ -220,7 +226,7 @@ export const MemberSelect = <T extends SelectableMember>({
               value={search}
               onValueChange={setSearch}
               placeholder={searchPlaceholder ?? t('members.searchPlaceholder')}
-              className="flex h-8 w-full border-0 bg-transparent px-2 py-1 text-xs text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)]"
+              className="flex h-8 w-full border-0 bg-[var(--color-form-control-bg)] px-2 py-1 text-xs text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)]"
             />
           </div>
           <CommandPrimitive.List
@@ -279,7 +285,7 @@ export const MemberSelect = <T extends SelectableMember>({
                     }}
                     className="relative flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-xs outline-none data-[selected=true]:bg-[var(--color-surface-raised)] data-[selected=true]:text-[var(--color-text)]"
                   >
-                    <img
+                    <ParticipantAvatar
                       src={avatarMap.get(m.name) ?? agentAvatarUrl(m.name, avatarSize)}
                       alt=""
                       className={`${avatarClass} shrink-0 rounded-full bg-[var(--color-surface-raised)]`}

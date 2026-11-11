@@ -144,6 +144,7 @@ vi.mock('@renderer/store', () => ({
   useStore: (selector: (state: unknown) => unknown) =>
     selector({
       cliStatus: { providers: [{ providerId: 'anthropic', effectiveDefaultModel: null }] },
+      cliProviderStatusLoading: {},
     }),
 }));
 

@@ -48,7 +48,6 @@ import {
 import {
   createDegradedProviderStatus,
   createPendingProviderStatus,
-  createRuntimeStatusErrorProviderStatus,
   mergeProviderStatusDisplayEvidence,
 } from '../runtime/providerStatusCheckContract';
 import { ClaudeBinaryResolver } from '../team/ClaudeBinaryResolver';
@@ -62,6 +61,8 @@ import {
 } from './cliInstallerProviderStatusUpdates';
 import {
   createMismatchedProviderStatus,
+  createObsoleteProviderStatus,
+  createProviderReadFailureStatus,
   getAuthenticatedFrontendProvider,
   hasAuthenticatedFrontendProvider,
   isFrontendProvider,
@@ -821,6 +822,8 @@ export class CliInstallerService {
     return provider;
   }
 
+  // Public: getStatus
+
   async getStatus(options: CliInstallerGetStatusOptions = {}): Promise<CliInstallationStatus> {
     const statusStartedAt = Date.now();
     const providerStatusMode: CliInstallerProviderStatusMode = options.providerStatusMode ?? 'full';
@@ -869,9 +872,7 @@ export class CliInstallerService {
     // Cold polling stays passive. Explicit invalidation requests runtime-only rediscovery.
     const generation = this.statusGatherGeneration;
     await this.refreshInvalidatedRuntime(generation);
-    const obsoleteStatus = () => createRuntimeStatusErrorProviderStatus(
-      providerId, new Error('Provider runtime changed during status check. Refresh to retry.'));
-    if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+    if (generation !== this.statusGatherGeneration) return createObsoleteProviderStatus(providerId);
     // Explicit project-scoped preflight can race initial runtime discovery.
     // Keep background/global status polling passive: it must not spawn shell
     // discovery or invalidate an authoritative cached status.
@@ -879,7 +880,8 @@ export class CliInstallerService {
     let passiveRuntime = resolvePassiveProviderRuntime(snapshot, providerId);
     if (options.projectPath && !snapshot?.binaryPath) {
       const binaryPath = await ClaudeBinaryResolver.resolve();
-      if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+      if (generation !== this.statusGatherGeneration)
+        return createObsoleteProviderStatus(providerId);
       const latest = this.latestStatusSnapshot;
       passiveRuntime = resolvePassiveProviderRuntime(
         latest?.binaryPath
@@ -894,7 +896,6 @@ export class CliInstallerService {
       return passiveRuntime.errorStatus;
     }
     const { binaryPath } = passiveRuntime;
-
     const read = options.projectPath ? null : this.providerStatusRevisions.beginRead(providerId);
     const handleCatalogUpdate = (hydratedProviderStatus: CliProviderStatus): void => {
       if (read?.isCurrent() === false) return;
@@ -904,7 +905,6 @@ export class CliInstallerService {
       if (!this.updateLatestProviderStatusIfCurrent(hydratedProviderStatus, generation)) {
         return;
       }
-      // The revision fence distinguishes this read's hydration from external publications.
       read?.acknowledgePublication();
       if (this.latestStatusSnapshot) {
         this.publishStatusSnapshot(this.latestStatusSnapshot);
@@ -919,11 +919,11 @@ export class CliInstallerService {
         )
       : await this.multimodelBridgeService
           .getProviderStatus(binaryPath, providerId, handleCatalogUpdate)
-          .catch((error: unknown) => read?.isCurrent() === false
-            ? createPendingProviderStatus(providerId)
-            : createRuntimeStatusErrorProviderStatus(providerId, error))
+          .catch((error: unknown) =>
+            createProviderReadFailureStatus(providerId, error, read?.isCurrent())
+          )
           .finally(read?.finish);
-    if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+    if (generation !== this.statusGatherGeneration) return createObsoleteProviderStatus(providerId);
     if (read?.isCurrent() === false) return createPendingProviderStatus(providerId);
     const mismatchStatus = projectMismatchedProviderStatus(providerId, providerStatus, this.now());
     if (mismatchStatus) {
