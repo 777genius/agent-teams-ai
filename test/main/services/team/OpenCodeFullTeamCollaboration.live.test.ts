@@ -7,11 +7,13 @@ import { promisify } from 'node:util';
 
 import { describe, expect, it } from 'vitest';
 
+import { getOpenCodeLaneScopedRuntimeFilePath } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
-import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
+import { getTeamsBasePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 
 import { assertOpenCodeSmokeCleanup } from './assertOpenCodeSmokeCleanup';
+import { type FullPeerObservation,type FullPeerTarget, settleFullTeamPeers } from './openCodeFullPeerSettlement';
 import {
   classifyFailure,
   cleanupMetadata,
@@ -74,7 +76,7 @@ liveDescribe('OpenCode full paid team collaboration', () => {
       expect(await fs.realpath(projectPath)).not.toBe(await fs.realpath(process.cwd()));
       const tempDir = await fs.mkdtemp(path.join(requiredEnv('TMPDIR'), 'full-team-state-'));
       const claudeRoot = path.join(tempDir, '.claude');
-      await fs.mkdir(claudeRoot);
+      await fs.mkdir(claudeRoot, { mode: 0o700 });
       setClaudeBasePathOverride(claudeRoot);
       const teamName = `full-team-${randomUUID()}`;
       const proof: JsonRecord = {
@@ -106,6 +108,32 @@ liveDescribe('OpenCode full paid team collaboration', () => {
       }
       let harness: Awaited<ReturnType<typeof createHarness>> | undefined;
       let activeTranscript: { runId: string; snapshot: TeamAgentRuntimeSnapshot } | undefined;
+      let peerTargets: FullPeerTarget[] = [];
+      let peerSettlementAttempted = false;
+      async function settlePeers() {
+        if (!activeTranscript || peerTargets.length !== 4) return;
+        peerSettlementAttempted = true;
+        const binding = activeTranscript;
+        const laneIds = [...new Set(members.map(member => binding.snapshot.members[member].laneId))];
+        proof.peerSettlement = await settleFullTeamPeers({
+          teamName, runId: binding.runId, targets: peerTargets, timeoutMs: 120_000,
+          read: async () => {
+            const rows = (await Promise.all(members.map(async member =>
+              JSON.parse(await fs.readFile(path.join(getTeamsBasePath(), teamName, "inboxes", `${member}.json`), "utf8")) as FullPeerObservation["rows"]))).flat();
+            const receipts = (await Promise.all(laneIds.map(async laneId => {
+              if (!laneId) throw new Error("Missing owned lane");
+              const ledger = JSON.parse(await fs.readFile(getOpenCodeLaneScopedRuntimeFilePath({
+                teamsBasePath: getTeamsBasePath(), teamName, laneId,
+                fileName: "opencode-prompt-delivery-ledger.json",
+              }), "utf8")) as { schemaVersion: number; data: FullPeerObservation["receipts"] };
+              if (ledger.schemaVersion !== 1 || !Array.isArray(ledger.data)) throw new Error("Invalid owned ledger");
+              return ledger.data;
+            }))).flat();
+            return { rows, receipts };
+          },
+        });
+        await checkpoint(phase);
+      }
       const observed: Partial<Record<Member, ReturnType<typeof transcriptMetadata>>> = {};
       async function observe(member: Member) {
         if (!harness || !activeTranscript) return;
@@ -146,7 +174,11 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         // Hosted Linux may not provide a usable system Node. Use the actual
         // test runner's Node inside this disposable project, without granting
         // the team access to an unrelated host installation.
-        const nodeCommand = process.platform === 'linux' ? './.TEST-node-runtime' : 'node';
+        const quote = (value: string) => "'" + value.replaceAll("'", "'\\''") + "'";
+        const nodeCommand = process.platform === 'linux'
+          ? quote(path.join(projectPath, '.TEST-node-runtime')) : 'node';
+        const testScriptCommand = process.platform === 'linux'
+          ? quote(path.join(projectPath, 'sum.test.cjs')) : 'sum.test.cjs';
         if (process.platform === 'linux') {
           const nodeSource = await fs.realpath(process.execPath);
           const sourceStat = await fs.lstat(nodeSource);
@@ -181,7 +213,7 @@ liveDescribe('OpenCode full paid team collaboration', () => {
             skipPermissions: true,
             prompt: [
               `This is a disposable test project. Work only inside ${projectPath}.`,
-              'Never delegate or install packages. Do not modify files until assigned a board task.',
+              'Do not spawn agents or install packages. Lead may create board tasks for existing members when requested. Do not modify files until assigned a board task.',
               'When a peer message starts CHALLENGE:, use the team message tool to reply to its sender',
               'with ACK: followed by exactly the token after CHALLENGE:. Do not reply to ACK messages.',
               'Peer messages are independent of your board task; do not wait or sleep for them.',
@@ -219,10 +251,53 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         await checkpoint('assigned-work');
         const taskService = new TeamDataService();
         const reader = new TeamTaskReader();
+        await checkpoint('lead-assigned-work');
+        const leadSubject = `Lead assignment ${randomUUID()}`;
+        const leadMarker = `LEAD_ASSIGNED:${randomUUID()}`;
+        const leadRequest = await taskService.sendMessage(teamName, {
+          member: 'team-lead', from: 'user',
+          text: [
+            'Use agent-teams_task_create exactly once to create a board task; do not perform it yourself.',
+            `Set subject to exactly ${leadSubject}, owner to alice, createdBy to team-lead, and startImmediately to true.`,
+            `Set prompt to: Do not edit files. Add one task comment containing exactly ${leadMarker}. Then complete this task with task_complete.`,
+            'Do not create any other tasks or send follow-up messages.',
+          ].join('\n'),
+        });
+        proof.leadAssignmentRequestId = leadRequest.messageId;
+        await svc.relayInboxFileToLiveRecipient(teamName, 'team-lead');
+        let leadTaskId: string | undefined;
+        let leadTaskSubmitted = false;
+        await waitUntil(async () => {
+          const matches = (await reader.getTasks(teamName)).filter(task => task.subject === leadSubject);
+          expect(matches.length).toBeLessThanOrEqual(1);
+          const task = matches[0];
+          if (!task) return false;
+          expect(task.createdBy).toBe('team-lead');
+          expect(task.owner).toBe('alice');
+          leadTaskId = task.id;
+          if (!leadTaskSubmitted) {
+            leadTaskSubmitted = true;
+            await submitTaskOnce(svc, teamName, 'alice');
+          }
+          return task.status === 'completed' && task.comments?.some(comment =>
+            comment.author === 'alice' && comment.text === leadMarker) === true;
+        }, 300_000, 2_000);
+        const leadRuntime = snapshot.members['team-lead'];
+        expect(leadRuntime).toMatchObject({ alive: true, runtimeModel: model });
+        const leadTranscript = await getRuntimeTranscript({
+          bridgeClient, teamName, memberName: 'team-lead', projectPath,
+          originalBinding: { runId, laneId: leadRuntime.laneId ?? '',
+            runtimeSessionId: leadRuntime.runtimeSessionId ?? '' },
+        });
+        assertTranscriptModel(leadTranscript, model);
+        assertTranscriptSession(leadTranscript, leadRuntime.runtimeSessionId);
+        proof.leadAssignedTask = { id: leadTaskId, owner: 'alice', createdBy: 'team-lead',
+          completed: true, ownerCommentConfirmed: true };
+
         const aliceNonce = randomUUID();
         const bobNonce = randomUUID();
         const aliceCommand = `${nodeCommand} -e 'const {sum}=require("./sum.cjs"); const a=require("node:assert/strict"); a.equal(sum([2,-5,7]),4); a.equal(sum([]),0); a.throws(()=>sum([NaN]),TypeError); console.log("ALICE_EXEC:${aliceNonce}")'`;
-        const bobCommand = `${nodeCommand} sum.test.cjs`;
+        const bobCommand = `${nodeCommand} ${testScriptCommand}`;
         const taskBase = [
           `Work only in ${projectPath}; do not delegate or install packages.`,
           'Use bash to execute the supplied verification command verbatim in the project directory. Do not prepend cd or append commands.',
@@ -302,6 +377,20 @@ liveDescribe('OpenCode full paid team collaboration', () => {
           `ACK:${aliceNonce}`,
           `ACK:${bobNonce}`,
         ]);
+        peerTargets = [...challenges, ...acknowledgements].map(message => {
+          if (!message.from || !message.to || !message.text) throw new Error('Incomplete peer identity');
+          const recipient = snapshot.members[message.to];
+          if (!recipient?.laneId || !recipient.runtimeSessionId) throw new Error('Missing peer runtime binding');
+          return { messageId: message.messageId, from: message.from, to: message.to, text: message.text,
+            laneId: recipient.laneId, runtimeSessionId: recipient.runtimeSessionId };
+        });
+        // This headless harness has no desktop inbox watcher. Submit each ACK once;
+        // the settlement observer below performs no delivery or retry effects.
+        proof.peerAckRelayResults = await Promise.all(acknowledgements.map(message =>
+          submitPeerOnce(svc, teamName, message.to as Member, message.messageId)));
+        await checkpoint('peer-read-settlement');
+        await settlePeers();
+        expect((proof.peerSettlement as { settled: boolean }).settled).toBe(true);
         const toolProofs: JsonRecord[] = [];
         for (const member of members) {
           const transcript = await getRuntimeTranscript({
@@ -433,7 +522,7 @@ liveDescribe('OpenCode full paid team collaboration', () => {
             const nonce = randomUUID();
             const file = `relaunch-${member}.txt`;
             const marker = `RELAUNCH_EXEC:${member}:${nonce}`;
-            const command = `${nodeCommand} sum.test.cjs && ${nodeCommand} -e 'console.log("${marker}")'`;
+            const command = `${nodeCommand} ${testScriptCommand} && ${nodeCommand} -e 'console.log("${marker}")'`;
             const task = await taskService.createTask(teamName, {
               subject: `Fresh ${member} verification after relaunch`,
               owner: member,
@@ -523,6 +612,10 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         );
       } finally {
         if (harness) {
+          // Preserve the original assertion failure, but observe all known peer receipts before Stop.
+          if (!peerSettlementAttempted && peerTargets.length === 4) await settlePeers().catch(() => {
+            proof.peerSettlement = { settled: false, unavailable: true };
+          });
           await captureRuntime().catch((error) => {
             proof.captureFailure = classifyFailure(error);
           });
