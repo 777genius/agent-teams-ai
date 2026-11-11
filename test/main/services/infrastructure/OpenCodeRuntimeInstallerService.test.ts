@@ -2508,7 +2508,8 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
   });
 
-  it('updates the V2 CLI without changing its separately qualified engine', async () => {
+  it.skipIf(getLatestQualifiedOpenCodeV2Version(process.platform, process.arch) === null)(
+    'updates the V2 CLI without changing its separately qualified engine', async () => {
     const qualifiedEngine = getLatestQualifiedOpenCodeV2Version(process.platform, process.arch)!;
     const { version } = await mockV2Download({ cliVersion: '2.9.0' });
     expect(version).not.toBe(qualifiedEngine);
@@ -2534,7 +2535,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     const status = await service.getStatus();
     expect(status).toMatchObject({ version, latestVersion: version, updateAvailable: false });
     expect(getLatestQualifiedOpenCodeV2Version(process.platform, process.arch)).toBe(qualifiedEngine);
-  });
+    });
 
   it('preserves explicit override selection after installing V2 and explains activation', async () => {
     const override = path.join(tempRoot!, 'TEST-override');

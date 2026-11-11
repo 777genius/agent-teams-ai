@@ -52,11 +52,28 @@ export function resolveTeamModelProbeRecipe(options: {
         ...(profile.provider === 'codex'
           ? { modelProvider: profile.nativeOptions.modelProvider }
           : {}),
-        ...(profile.provider === 'opencode' ? { endpoint: profile.endpoint } : {}),
+        ...(profile.provider === 'opencode'
+          ? {
+              endpoint: profile.endpoint,
+              ...(profile.nativeGeneration === 'v2'
+                ? {
+                    nativeGeneration: profile.nativeGeneration,
+                    protocolRevision: profile.protocolRevision,
+                    nativeProviderId: profile.nativeOptions.providerId,
+                    model: profile.model,
+                    nativeVariant: profile.nativeOptions.variant,
+                  }
+                : {}),
+            }
+          : {}),
       });
     if (identity(defaults) !== identity(saved))
       throw new TeamLaunchError('conflict', 'probe-default-recipe');
-    if (input.model === '__provider_default__') recipe.model = defaults.model;
+    // A V2 native session has already bound its model; a draft Default
+    // must not replace it with a template's separate model identity.
+    if (input.model === '__provider_default__' &&
+        !(recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2'))
+      recipe.model = defaults.model;
     // Default resets only the requested application override. Other selected
     // native settings and the captured account/namespace remain unchanged.
     if (input.effort === undefined) {
@@ -69,7 +86,8 @@ export function resolveTeamModelProbeRecipe(options: {
         delete recipe.nativeOptions.reasoningEffort;
         if (defaults.nativeOptions.reasoningEffort !== undefined)
           recipe.nativeOptions.reasoningEffort = defaults.nativeOptions.reasoningEffort;
-      } else if (recipe.provider === 'opencode' && defaults.provider === 'opencode') {
+      } else if (recipe.provider === 'opencode' && defaults.provider === 'opencode' &&
+                 recipe.nativeGeneration !== 'v2') {
         delete recipe.nativeOptions.variant;
         if (defaults.nativeOptions.variant !== undefined)
           recipe.nativeOptions.variant = defaults.nativeOptions.variant;
@@ -101,7 +119,11 @@ export function applyTeamModelProbeSelection(
   input: TeamModelProbeSelection
 ) {
   return applyLaunchConfiguration(recipe, {
-    model: input.model === '__provider_default__' ? recipe.model : input.model,
+    // V2 Default is absence of an override, never a bare model selection.
+    ...(input.model === '__provider_default__' &&
+    recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2'
+      ? {}
+      : { model: input.model === '__provider_default__' ? recipe.model : input.model }),
     ...(input.effort === undefined ? {} : { effort: input.effort }),
     ...(input.context === undefined ? {} : { context: input.context }),
   });

@@ -21,7 +21,7 @@ import { executeTeamModelProbe } from '../dist/composition/teamLaunchModelProbe.
 import { ManagementResourceFence } from '../dist/management/ManagementResourceFence.js';
 import { ModelProbeOwner } from '../dist/management/ModelProbeOwner.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
-import { resolveTeamModelProbeRecipe } from '../dist/composition/teamModelProbeRecipe.js';
+import { resolveTeamModelProbeRecipe, applyTeamModelProbeSelection } from '../dist/composition/teamModelProbeRecipe.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import type { HostedTeam } from '../dist/composition/MemberEntry.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
@@ -770,6 +770,62 @@ for (const provider of ['claude', 'codex', 'opencode'] as const)
       );
       assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
     });
+
+test('V2 draft Default preserves the native session model and rejects drifted private defaults', (t) => {
+  const f = fixture(t);
+  const base = f.profile.runtime!.providerTemplates![0]!;
+  const template = runtimeMemberProfileSchema.parse({
+    provider: 'opencode',
+    nativeGeneration: 'v2',
+    protocolRevision: '2.0.21',
+    teamId: 'TEST-template-team',
+    memberId: 'TEST-template-member',
+    principalId: 'TEST-template-agent',
+    sessionId: 'TEST-template-session',
+    generation: 1,
+    configRevision: 'TEST-native-v2',
+    cwd: f.root,
+    model: 'TEST-bound-native-model',
+    accountBinding: 'TEST-v2-account',
+    executable: { path: join(f.root, 'TEST-native-engine'), sha256: 'a'.repeat(64) },
+    environment: {
+      HOME: f.root, XDG_CONFIG_HOME: f.root,
+      XDG_DATA_HOME: f.root, XDG_CACHE_HOME: f.root,
+    },
+    endpoint: 'http://127.0.0.1:19181',
+    limits: base.limits,
+    nativeOptions: { providerId: 'TEST-native-provider', agent: 'build', variant: 'TEST-variant' },
+  });
+  f.profile.runtime!.providerTemplates!.push(template);
+  const saved = runtimeMemberProfileSchema.parse({
+    ...template, nativeSessionId: 'ses_TESTbound',
+  });
+  const input: TeamModelProbeSelection = {
+    ...f.selection(),
+    model: '__provider_default__',
+    draft: { providerId: 'opencode', target: { kind: 'lead' }, workspace: f.root },
+  };
+  const recipe = () => resolveTeamModelProbeRecipe({
+    runtime: f.profile.runtime, team: f.team, input, saved,
+  });
+  assert.equal(recipe().model, saved.model);
+  const selected = applyTeamModelProbeSelection(recipe(), input);
+  assert.equal(selected.model, saved.model);
+  if (selected.provider !== 'opencode') throw Error('TEST_expected_opencode_profile');
+  assert.equal(selected.nativeSessionId, 'ses_TESTbound');
+  assert.equal(selected.nativeOptions.variant, 'TEST-variant');
+  assert.throws(() => applyTeamModelProbeSelection(recipe(), {
+    ...input, model: saved.model,
+  }), { reason: 'launch-option-unsupported' });
+
+  template.model = 'TEST-drifted-native-model';
+  assert.throws(recipe, { reason: 'probe-default-recipe' });
+  template.model = saved.model;
+  if (template.provider !== 'opencode') throw Error('TEST_expected_opencode_template');
+  template.nativeOptions.variant = 'TEST-drifted-variant';
+  assert.throws(recipe, { reason: 'probe-default-recipe' });
+  assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+});
 
 function testPolicyPlugin(root: string) {
   const path = join(root, 'TEST-opencode-policy.js'),
