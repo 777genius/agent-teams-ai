@@ -290,10 +290,12 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     resolveInteractiveShellEnvBestEffortMock.mockResolvedValue(process.env);
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () =>
+      vi.fn(async (input: string | URL | Request) =>
         Response.json({
-          name: 'opencode-ai',
+          name: String(input).endsWith('/opencode-ai/latest')
+            ? 'opencode-ai' : getOpenCodeRuntimePlatformCandidates()[0]!.packageName,
           version: '1.18.3',
+          optionalDependencies: { [getOpenCodeRuntimePlatformCandidates()[0]!.packageName]: '1.18.3' },
           dist: { tarball: 'https://example.test/opencode.tgz', integrity: 'sha512-test' },
         })
       )
@@ -1113,7 +1115,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       binaryPath,
     });
     expect(execCliMock).toHaveBeenCalledTimes(1);
-    expect(globalThis.fetch as ReturnType<typeof vi.fn>).toHaveBeenCalledOnce();
+    expect(globalThis.fetch as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(2);
   });
 
   it('compares the installed OpenCode version with the registry latest version', async () => {
@@ -2507,6 +2509,76 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     expect(status.error).toContain(options.error);
     expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
   });
+
+  it.skipIf(getLatestQualifiedOpenCodeV2Version(process.platform, process.arch) === null)(
+    'does not advertise a V2 update whose native platform package is missing',
+    async () => {
+      const { version } = await mockV2Download();
+      await expect(
+        createNativeOnlyInstaller().install({ generation: 'v2' })
+      ).resolves.toMatchObject({ state: 'ready', version });
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const fetchMetadata = vi.fn(async () =>
+        Response.json({
+          name: '@opencode/cli',
+          version: '2.9.0',
+          optionalDependencies: {},
+          dist: { tarball: 'https://example.test/root.tgz', integrity: 'sha512-test' },
+        })
+      );
+      vi.stubGlobal('fetch', fetchMetadata);
+      const status = await createNativeOnlyInstaller().getStatus();
+      expect(status).toMatchObject({ installed: true, state: 'ready', version });
+      expect(status.latestVersion).toBeUndefined();
+      expect(status.updateAvailable).not.toBe(true);
+      expect(fetchMetadata).toHaveBeenCalledOnce();
+    }
+  );
+
+  it.skipIf(getLatestQualifiedOpenCodeV2Version(process.platform, process.arch) === null)(
+    'offers a compatible V2 native update after the registry latest tag moves to V3',
+    async () => {
+      const { packageName, version } = await mockV2Download();
+      await expect(
+        createNativeOnlyInstaller().install({ generation: 'v2' })
+      ).resolves.toMatchObject({ state: 'ready', version });
+      const rootUrl = `https://registry.npmjs.org/${encodeURIComponent('@opencode/cli')}`;
+      const nativeUrl = `https://registry.npmjs.org/${encodeURIComponent(packageName)}/2.9.0`;
+      const dist = { tarball: 'https://example.test/package.tgz', integrity: 'sha512-test' };
+      const fetchMetadata = vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url === `${rootUrl}/latest`)
+          return Response.json({ name: '@opencode/cli', version: '3.0.0', dist });
+        if (url === rootUrl)
+          return Response.json({
+            name: '@opencode/cli',
+            versions: {
+              '2.9.0': {
+                name: '@opencode/cli',
+                version: '2.9.0',
+                optionalDependencies: { [packageName]: '2.9.0' },
+                dist,
+              },
+              '3.0.0': { name: '@opencode/cli', version: '3.0.0', dist },
+            },
+          });
+        if (url === nativeUrl) return Response.json({ name: packageName, version: '2.9.0', dist });
+        throw new Error(`Unexpected fetch: ${url}`);
+      });
+      vi.stubGlobal('fetch', fetchMetadata);
+      await expect(createNativeOnlyInstaller().getStatus()).resolves.toMatchObject({
+        installed: true,
+        version,
+        latestVersion: '2.9.0',
+        updateAvailable: true,
+      });
+      expect(fetchMetadata.mock.calls.map(([url]) => String(url))).toEqual([
+        `${rootUrl}/latest`,
+        rootUrl,
+        nativeUrl,
+      ]);
+    }
+  );
 
   it.skipIf(getLatestQualifiedOpenCodeV2Version(process.platform, process.arch) === null)(
     'updates the V2 CLI without changing its separately qualified engine', async () => {

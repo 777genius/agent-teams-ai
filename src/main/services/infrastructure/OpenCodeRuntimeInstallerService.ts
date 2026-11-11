@@ -623,7 +623,8 @@ export class OpenCodeRuntimeInstallerService {
       status.installed && status.source !== 'override'
         ? await withLatestOpenCodeVersion(
             status,
-            () => resolveLatestOpenCodeVersion(status.version),
+            () =>
+              resolveLatestOpenCodeVersion(status.version, getOpenCodeRuntimePlatformCandidates()),
             this.latestStatus?.latestVersion
           )
         : status;

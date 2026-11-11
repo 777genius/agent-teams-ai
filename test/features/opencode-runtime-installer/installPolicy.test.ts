@@ -109,7 +109,7 @@ describe('OpenCode installation policy', () => {
       const fetchMetadata = vi.fn().mockResolvedValue({ name: 'opencode-ai', version });
       await expect(selectOpenCodeInstallPackage('v1', '2.1.4', [], fetchMetadata))
         .rejects.toThrow('selected generation');
-      expect(fetchMetadata).toHaveBeenCalledTimes(1);
+      expect(fetchMetadata.mock.calls).toEqual([['opencode-ai', 'latest'], ['opencode-ai', null]]);
     }
   );
 
@@ -118,7 +118,7 @@ describe('OpenCode installation policy', () => {
       const fetchMetadata = vi.fn().mockResolvedValue({ name: '@opencode/cli', version });
       await expect(selectOpenCodeInstallPackage('v2', '2.1.4', [], fetchMetadata))
         .rejects.toThrow('selected generation');
-      expect(fetchMetadata).toHaveBeenCalledTimes(1);
+      expect(fetchMetadata.mock.calls).toEqual([['@opencode/cli', 'latest'], ['@opencode/cli', null]]);
     }
   );
 
@@ -173,5 +173,66 @@ describe('OpenCode installation policy', () => {
     const root = await selectOpenCodeRootPackage('v2', qualifiedV2EngineForHost, fetchMetadata);
     expect(root.version).toBe('2.9.0');
     expect(fetchMetadata).toHaveBeenCalledWith('@opencode/cli', 'latest');
+  });
+
+  for (const generation of ['v1', 'v2'] as const) {
+    it.skipIf(generation === 'v2' && qualifiedV2EngineForHost === null)(
+      `keeps latest ${generation} install in its generation when the global tag advances`,
+      async () => {
+        const rootName = generation === 'v1' ? 'opencode-ai' : '@opencode/cli';
+        const packageName = generation === 'v1' ? 'opencode-linux-x64' : '@opencode/cli-linux-x64';
+        const major = generation === 'v1' ? 1 : 2;
+        const expected = `${major}.20.10`;
+        const metadata = (version: string) => ({
+          name: rootName,
+          version,
+          optionalDependencies: { [packageName]: version },
+        });
+        const fetchMetadata = vi
+          .fn()
+          .mockResolvedValueOnce(metadata('3.0.0'))
+          .mockResolvedValueOnce({
+            name: rootName,
+            versions: {
+              [`${major}.20.2`]: metadata(`${major}.20.2`),
+              [expected]: metadata(expected),
+              [`${major}.21.0-beta.1`]: metadata(`${major}.21.0-beta.1`),
+              [`${major}.22.0+foreign`]: metadata(`${major}.22.0+foreign`),
+              [`${major}.23.0`]: { ...metadata(`${major}.23.0`), name: 'foreign' },
+              [`${major}.24.0`]: metadata(`${major}.25.0`),
+              '3.0.0': metadata('3.0.0'),
+            },
+          })
+          .mockResolvedValueOnce({ name: packageName, version: expected });
+        const selected = await selectOpenCodeInstallPackage(
+          generation,
+          qualifiedV2EngineForHost,
+          [{ packageName: 'opencode-linux-x64' }],
+          fetchMetadata
+        );
+        expect(selected.metadata.version).toBe(expected);
+        expect(fetchMetadata.mock.calls).toEqual([
+          [rootName, 'latest'],
+          [rootName, null],
+          [packageName, expected],
+        ]);
+      }
+    );
+  }
+
+  it.each([
+    { name: 'foreign-package', versions: { '1.20.0': { name: 'opencode-ai', version: '1.20.0' } } },
+    { name: 'opencode-ai', versions: [] },
+    { name: 'opencode-ai', versions: { '2.0.0': { name: 'opencode-ai', version: '2.0.0' } } },
+    { name: 'opencode-ai', versions: { '1.20.0': null } },
+  ])('refuses an invalid compatible release snapshot %#', async (registry) => {
+    const fetchMetadata = vi
+      .fn()
+      .mockResolvedValueOnce({ name: 'opencode-ai', version: '2.0.0' })
+      .mockResolvedValueOnce(registry);
+    await expect(selectOpenCodeInstallPackage('v1', '2.1.4', [], fetchMetadata)).rejects.toThrow(
+      'selected generation'
+    );
+    expect(fetchMetadata).toHaveBeenCalledTimes(2);
   });
 });

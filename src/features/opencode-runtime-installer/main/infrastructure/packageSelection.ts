@@ -1,6 +1,8 @@
 import {
   classifyNativeVersion,
   getOpenCodeV2EngineVersion,
+  parseOpenCodeSemver,
+  semverLt,
 } from '@features/opencode-compatibility';
 
 import type { OpenCodeInstallGeneration } from '../../contracts';
@@ -10,9 +12,28 @@ interface PackageMetadata {
   version?: string;
   optionalDependencies?: Record<string, string>;
   dist?: { tarball?: string; integrity?: string };
+  versions?: Record<string, PackageMetadata>;
 }
 
-type FetchPackageMetadata = (name: string, version?: string) => Promise<PackageMetadata>;
+type FetchPackageMetadata = (name: string, version?: string | null) => Promise<PackageMetadata>;
+type ResolvedPackage = PackageMetadata & { name: string; version: string };
+
+function isCompatibleRoot(
+  root: PackageMetadata | null | undefined,
+  name: string,
+  generation: OpenCodeInstallGeneration,
+  qualifiedV2Version: string | null
+): root is ResolvedPackage {
+  const classification =
+    typeof root?.version === 'string' ? classifyNativeVersion(root.version) : null;
+  return (
+    root?.name === name &&
+    classification?.kind === 'recognized' &&
+    classification.generation === generation &&
+    classification.version === root.version &&
+    (generation !== 'v2' || getOpenCodeV2EngineVersion(root.version) === qualifiedV2Version)
+  );
+}
 
 /** Resolve CLI metadata once; a moving CLI tag never changes the qualified V2 engine. */
 export async function selectOpenCodeRootPackage(
@@ -20,24 +41,48 @@ export async function selectOpenCodeRootPackage(
   qualifiedV2Version: string | null,
   fetchMetadata: FetchPackageMetadata,
   requestedVersion = 'latest'
-): Promise<PackageMetadata & { name: string; version: string }> {
+): Promise<ResolvedPackage> {
   if (generation === 'v2' && !qualifiedV2Version)
     throw new Error(
       'No compatible OpenCode V2 is qualified for this platform. Install V1 instead.'
     );
   const rootName = generation === 'v2' ? '@opencode/cli' : 'opencode-ai';
-  const root = await fetchMetadata(rootName, requestedVersion);
-  const classification = typeof root.version === 'string' ? classifyNativeVersion(root.version) : null;
+  let root = await fetchMetadata(rootName, requestedVersion);
+  // A global tag can move beyond the selected generation. Resolve a compatible
+  // stable release from one registry snapshot, without following the tag again.
   if (
-    root.name !== rootName ||
-    classification?.kind !== 'recognized' ||
-    classification.generation !== generation ||
-    classification.version !== root.version ||
-    (requestedVersion !== 'latest' && root.version !== requestedVersion) ||
-    (generation === 'v2' && getOpenCodeV2EngineVersion(root.version) !== qualifiedV2Version)
+    root?.name === rootName &&
+    requestedVersion === 'latest' &&
+    !isCompatibleRoot(root, rootName, generation, qualifiedV2Version)
+  ) {
+    const registry = await fetchMetadata(rootName, null);
+    if (
+      registry?.name !== rootName ||
+      !registry.versions ||
+      typeof registry.versions !== 'object' ||
+      Array.isArray(registry.versions)
+    )
+      throw new Error('OpenCode npm package version does not match the selected generation');
+    let latest: ResolvedPackage | undefined;
+    for (const [version, candidate] of Object.entries(registry.versions)) {
+      if (
+        candidate?.version !== version ||
+        !isCompatibleRoot(candidate, rootName, generation, qualifiedV2Version)
+      )
+        continue;
+      if (!latest || semverLt(parseOpenCodeSemver(latest.version)!, candidate.version))
+        latest = candidate;
+    }
+    if (!latest)
+      throw new Error('OpenCode npm package version does not match the selected generation');
+    root = latest;
+  }
+  if (
+    !isCompatibleRoot(root, rootName, generation, qualifiedV2Version) ||
+    (requestedVersion !== 'latest' && root.version !== requestedVersion)
   )
     throw new Error('OpenCode npm package version does not match the selected generation');
-  return { ...root, name: rootName, version: classification.version };
+  return root;
 }
 
 /** Pin native bytes to the resolved CLI release, independently of its execution engine. */
@@ -49,11 +94,14 @@ export async function selectOpenCodeInstallPackage(
   requestedVersion = 'latest'
 ): Promise<{
   packageName: string;
-  metadata: PackageMetadata;
+  metadata: ResolvedPackage;
   generation: OpenCodeInstallGeneration;
 }> {
   const root = await selectOpenCodeRootPackage(
-    generation, qualifiedV2Version, fetchMetadata, requestedVersion
+    generation,
+    qualifiedV2Version,
+    fetchMetadata,
+    requestedVersion
   );
   const names = candidates.map(({ packageName }) =>
     generation === 'v2' ? packageName.replace(/^opencode-/, '@opencode/cli-') : packageName
@@ -66,5 +114,5 @@ export async function selectOpenCodeInstallPackage(
   const metadata = await fetchMetadata(packageName, version);
   if (metadata.version !== version || metadata.name !== packageName)
     throw new Error('OpenCode native npm package identity mismatch');
-  return { packageName, metadata, generation };
+  return { packageName, metadata: { ...metadata, name: packageName, version }, generation };
 }
