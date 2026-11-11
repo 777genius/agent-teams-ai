@@ -2,7 +2,7 @@
 // Node worker is a TEST owner only; no production executable/Host custody or V01–V08 certificate.
 import { createHash, randomBytes } from 'node:crypto';
 import { spawn, execFileSync } from 'node:child_process';
-import { copyFileSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -175,7 +175,10 @@ if (process.argv[2] === '--worker') {
       chunks.push(chunk);
     }
     const txt=Buffer.concat(chunks).toString('utf8');
-    return {status:res.status,text:txt,data:txt&&!txt.startsWith('data:')?JSON.parse(txt):null};
+    // A heartbeat-prefixed SSE log is valid but does not start with "data:".
+    // Route the durable log as raw bytes to the dedicated bounded SSE parser.
+    const durableLog=/^\/api\/experimental\/session\/[^/]+\/log\?follow=false$/.test(path);
+    return {status:res.status,text:txt,data:txt&&!durableLog?JSON.parse(txt):null};
   }
   async function start() {
     if (interruptionTask) throw Error('TEST_interrupted_before_start');
@@ -196,9 +199,13 @@ if (process.argv[2] === '--worker') {
       try {const info=await call('/api/info');
         if(info.status===200&&info.data?.pid===child.pid&&info.data?.version==='2.0.21') {
           // Optional isolated negative-test handshake, never emitted normally.
-          if (process.env.OPENCODE_V2_TEST_READY_FILE)
-            writeFileSync(process.env.OPENCODE_V2_TEST_READY_FILE,
-              JSON.stringify({pid:child.pid,startIdentity:startTicks})+'\n');
+          if (process.env.OPENCODE_V2_TEST_READY_FILE) {
+            const marker=process.env.OPENCODE_V2_TEST_READY_FILE;
+            const pending=marker+'.'+process.pid+'.pending';
+            writeFileSync(pending,
+              JSON.stringify({pid:child.pid,startIdentity:startTicks})+'\n',{flag:'wx'});
+            renameSync(pending,marker);
+          }
           return child.pid;
         }
       } catch { /* Only read-only server-start polling. */ }
@@ -682,6 +689,17 @@ if (process.argv[2] === '--worker') {
       { action:'external_directory', resource:'*', effect:'deny' },
     ];
     const sessionPath='/api/session/'+encodeURIComponent(sessionId);
+    // A successful create is not a model-binding proof. Keep diagnostic
+    // output to fixed, non-sensitive categories if native admission fails.
+    const modelRead=await call(sessionPath);
+    const nativeModel=modelRead.data?.data?.model;
+    receipt.nativeModelReadback=modelRead.status!==200?'session-unreadable':
+      !nativeModel?'missing':
+      nativeModel.providerID==='TEST-provider' && nativeModel.id==='TEST-model' &&
+      (nativeModel.variant===undefined || nativeModel.variant===null)
+        ?'captured':'mismatch';
+    if(receipt.nativeModelReadback!=='captured')
+      throw Error('TEST_native_selected_model_unconfirmed');
     const entriesPath='/api/experimental/session/'+encodeURIComponent(sessionId)+
       '/instructions/entries';
     const executablePath=realpathSync(process.execPath);
@@ -781,7 +799,9 @@ if (process.argv[2] === '--worker') {
       },
     };
     const provider=createOpenCodeV2MemberProvider(context,owner);
+    receipt.hostAdmissionPhase='spi-open';
     const opened=await provider.factory.open(context.request);
+    receipt.hostAdmissionPhase='spi-opened';
     if(!provider.isReady()||
        provider.initialContextEvidence?.()?.contextDigest!==
          initialContextDigest(instructions)||instructionWrites!==1)

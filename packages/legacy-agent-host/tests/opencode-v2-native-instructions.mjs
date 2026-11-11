@@ -300,6 +300,18 @@ try {
   );
   receipt.steps.push('real_native_direct_shell_diagnostic_not_model_turn');
   const sessionPath='/api/session/'+encodeURIComponent(nativeSessionId);
+  // Diagnose model custody before the Host's fail-closed admission. Only a
+  // fixed classification enters the public receipt; never serialize native
+  // session bodies, IDs, model names, credentials or callback exceptions.
+  const modelRead=await native(sessionPath);
+  const nativeModel=modelRead.data?.data?.model;
+  receipt.nativeModelReadback=modelRead.status!==200?'session-unreadable':
+    !nativeModel?'missing':
+    nativeModel.providerID==='TEST-provider' && nativeModel.id==='TEST-model' &&
+    (nativeModel.variant===undefined || nativeModel.variant===null)
+      ?'captured':'mismatch';
+  if(receipt.nativeModelReadback!=='captured')
+    throw Error('native_selected_model_unconfirmed');
   const instructions='TEST-only Host role, team and workspace. Do not execute real tools.';
   const context={request:{
     tenantId:'TEST-tenant',projectId:'TEST-project',sessionId:'TEST-session',
@@ -400,7 +412,9 @@ try {
     stopOwned,confirmStopped,
   };
   const provider=createOpenCodeV2MemberProvider(context,owner);
+  receipt.hostAdmissionPhase='spi-open';
   const opened=await provider.factory.open(context.request);
+  receipt.hostAdmissionPhase='spi-opened';
   if(!provider.isReady() ||
      provider.initialContextEvidence?.()?.contextDigest!==initialContextDigest(instructions)||
      initialPutCount!==1)throw Error('host_spi_context_evidence_missing');
