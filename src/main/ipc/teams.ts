@@ -132,6 +132,7 @@ import {
 import {
   extractFlagsFromHelp,
   extractUserFlags,
+  findOptionMissingValue,
   PROTECTED_CLI_FLAGS,
 } from '@shared/utils/cliArgsParser';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -2420,7 +2421,12 @@ async function handleValidateCliArgs(
 
     const invalidFlags = userFlags.filter((f) => !knownFlags.has(f));
     const protectedFlags = userFlags.filter((f) => PROTECTED_CLI_FLAGS.has(f));
-    const allBad = [...new Set([...invalidFlags, ...protectedFlags])];
+    // An option that ends the args with no value would take the next app-managed
+    // argument as its value, so launch rejects it. Report it here too.
+    const missingValue = findOptionMissingValue(rawArgs);
+    const allBad = [
+      ...new Set([...invalidFlags, ...protectedFlags, ...(missingValue ? [missingValue] : [])]),
+    ];
 
     return {
       valid: allBad.length === 0,
