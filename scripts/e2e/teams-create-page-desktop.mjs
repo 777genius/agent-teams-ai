@@ -632,6 +632,34 @@ function createButtonExpression(label) {
       && !button.disabled && button.getBoundingClientRect().width > 0)`;
 }
 
+/**
+ * Use a genuine CDP mouse click only after the nested Advanced toggle is in
+ * view. Offscreen CDP clicks can be silently ignored on Linux.
+ */
+async function expandCreateAdvancedCli(client, toggle, inputSelector) {
+  const input = `document.querySelector(${JSON.stringify(inputSelector)})`;
+  if (await client.evaluate(`Boolean(${input})`)) return;
+  await client.waitFor(toggle, 'create-page Advanced CLI toggle');
+  // The Radix optional section animates its height with overflow hidden.
+  // A button can have a viewport rect yet be clipped and miss CDP mouse input.
+  await client.waitFor(`(() => {
+    const button = (${toggle});
+    if (!button) return false;
+    button.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+    const content = button.closest('.optional-settings-content');
+    if (content?.getAnimations().some(animation => animation.playState === 'running')) return false;
+    const rect = button.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const hit = document.elementFromPoint(x, y);
+    return rect.width > 0 && rect.height > 0 &&
+      x >= 0 && x < window.innerWidth && y >= 0 && y < window.innerHeight &&
+      Boolean(hit && button.contains(hit));
+  })()`, 'Advanced CLI toggle fully visible and receiving pointer events');
+  await client.click(toggle);
+  await client.waitFor(`Boolean(${input})`, 'Advanced CLI input expanded');
+}
+
 async function setBrowserWindowZoom(inspector, factor) {
   return inspector.evaluate(
     "(() => {" +
@@ -940,19 +968,102 @@ async function main() {
     // A settings dialog is allowed later, but Create itself must not trap focus.
     assert.equal(shot.dialogOpen, false, 'Create opened a dialog instead of a page');
     await captureScreenshot(cdp, fixture, 'opened');
+    // The input can render before the asynchronous persisted form and prompt drafts hydrate.
+    // Wait for the real UI's hydration gate before testing per-name defaults.
+    await cdp.waitFor(
+      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
+      'create-team form and prompt draft hydration'
+    );
 
-    log('enter team name with real Chromium keyboard events');
+    log('restore unedited Advanced CLI defaults for a saved team name');
+    const customArgsSelector = '[data-testid=create-team-page] input[placeholder="--max-turns 5"]';
+    const preferencesTeamName = `${unique}-saved-defaults`;
+    await cdp.evaluate(`localStorage.setItem(${JSON.stringify(`team:lastCustomArgs:${preferencesTeamName}`)}, '--max-turns 2')`);
+    assert.equal(
+      await cdp.evaluate(`localStorage.getItem(${JSON.stringify(`team:lastCustomArgs:${preferencesTeamName}`)})`),
+      '--max-turns 2', 'E2E setup did not persist the saved CLI preference'
+    );
+    await cdp.fill('#team-name', preferencesTeamName);
+    const optionalSettingsButton = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
+      .find(button => button.textContent?.includes('Optional launch settings')
+        && button.getBoundingClientRect().width > 0)`;
+    await cdp.click(optionalSettingsButton);
+    const createAdvancedToggle = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
+      .find(button => button.textContent?.trim() === 'Advanced' && !button.disabled
+        && button.getBoundingClientRect().width > 0)`;
+    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    try {
+      await cdp.waitFor(
+        `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 2'`,
+        'untouched per-name Advanced CLI defaults restored'
+      );
+    } catch (error) {
+      const observed = await cdp.evaluate(`(() => ({
+        name: document.querySelector('#team-name')?.value,
+        stored: localStorage.getItem(${JSON.stringify(`team:lastCustomArgs:${preferencesTeamName}`)}),
+        actual: document.querySelector(${JSON.stringify(customArgsSelector)})?.value ?? null,
+      }))()`);
+      throw new Error(`Advanced CLI preference mismatch: ${JSON.stringify(observed)}`, { cause: error });
+    }
+
+    log('edit Advanced CLI while the team name is explicitly empty');
+    await cdp.fill('#team-name', '');
+    await cdp.waitFor("document.querySelector('#team-name')?.value === ''", 'unnamed editor ready');
+    await cdp.fill(customArgsSelector, '--max-turns 5');
+    log('naming and renaming a team preserves in-progress Advanced CLI overrides');
     await cdp.fill('#team-name', unique);
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
+      'unnamed Advanced CLI edits retained after naming the team'
+    );
     await captureScreenshot(cdp, fixture, 'edited');
+    await cdp.fill('#team-name', unique + '-renamed');
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
+      'Advanced CLI input retained after team-name change'
+    );
+    await cdp.fill('#team-name', unique);
 
+    await cdp.evaluate("(() => { window.__createPageBeforeBack = document.querySelector('[data-testid=create-team-page]'); return true; })()");
     log('Back to Teams and resume saved draft');
     await cdp.click("document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')");
     await cdp.waitFor("!document.querySelector('[data-testid=create-team-page]')",
       'creation page closed on Back');
+    await cdp.waitFor('!window.__createPageBeforeBack?.isConnected', 'original editor unmounted after Back');
     await cdp.waitFor(createButtonExpression('Continue creating'), 'Continue creating button');
     await cdp.click(createButtonExpression('Continue creating'));
     await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
       'same team name restored after Back');
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page]') !== window.__createPageBeforeBack",
+      'new editor node created on resume'
+    );
+    await cdp.evaluate('delete window.__createPageBeforeBack');
+    // Resume hydrates the form and text drafts independently of restoring its name.
+    // Do not open the optional controls while they may still remount.
+    await cdp.waitFor(
+      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
+      'resumed creation form and text drafts hydrated'
+    );
+    const optionalExpandedAfterResume = await cdp.evaluate(
+      `${optionalSettingsButton}?.getAttribute('aria-expanded') === 'true'`
+    );
+    if (!optionalExpandedAfterResume) await cdp.click(optionalSettingsButton);
+    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    try {
+      await cdp.waitFor(
+        `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
+        'Advanced CLI edit retained after real editor unmount and resume'
+      );
+    } catch (error) {
+      const observed = await cdp.evaluate(`(() => ({
+        name: document.querySelector('#team-name')?.value,
+        actual: document.querySelector(${JSON.stringify(customArgsSelector)})?.value ?? null,
+        advancedButtonCount: [...document.querySelectorAll('[data-testid=create-team-page] button')].filter(b => b.textContent?.trim() === 'Advanced').length,
+        optionalOpen: document.querySelector('[data-testid=create-team-page] button[aria-expanded="true"]')?.textContent?.trim().slice(0, 50) ?? null,
+      }))()`);
+      throw new Error(`Advanced CLI resume mismatch: ${JSON.stringify(observed)}`, { cause: error });
+    }
     await captureScreenshot(cdp, fixture, 'resumed');
 
     log('open Providers Settings through the real model picker and resume the draft');
@@ -1169,6 +1280,22 @@ async function main() {
       "window.__agentTeamsDevStore.getState().getAllPaneTabs().filter(t => t.teamsCreationPage).length"
     );
     assert.equal(editorCount, 1, 'A second writable creation editor was opened');
+    // A pane split can remount CreateTeamDialog: verify session-only CLI edits survive.
+    const inputStillMounted = await cdp.evaluate(`Boolean(document.querySelector(${JSON.stringify(customArgsSelector)}))`);
+    if (!inputStillMounted) {
+      const optionalButton = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
+        .find(button => button.textContent?.includes('Optional launch settings')
+          && button.getBoundingClientRect().width > 0)`;
+      const expanded = await cdp.evaluate(`${optionalButton}?.getAttribute('aria-expanded') === 'true'`);
+      if (!expanded) await cdp.click(optionalButton);
+      await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    }
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
+      'Advanced CLI edits survived pane split / editor remount'
+    );
+    // Clear the test-only override before the actual process restart and native save.
+    await cdp.fill(customArgsSelector, ' ');
     await captureScreenshot(cdp, fixture, 'split-pane');
     await cdp.evaluate("(() => { " +
       "const s = window.__agentTeamsDevStore.getState(); " +
@@ -1553,6 +1680,11 @@ async function main() {
       retainedAcrossTabSwitch: true,
       manageProvidersNavigationRetainsDraft: true,
       retainedAcrossProcessRestart: true,
+      advancedCliRetainedAcrossRename: true,
+      advancedCliRetainedAcrossPaneSplit: true,
+      advancedCliRetainedAcrossBackRemount: true,
+      advancedCliRestoresUneditedDefaults: true,
+      unnamedAdvancedCliEditsRetained: true,
       launchStillModal: true,
       launchContentLoaded: true,
       configOnlyCreatedThroughUi: true,

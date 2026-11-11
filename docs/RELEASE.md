@@ -29,7 +29,84 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
-## v2.18.6 (Preparing draft)
+## v2.18.7 (Preparing draft)
+
+Target branch: `main`. Includes the verified published runtime `0.0.160`. Live team checks passed core scenarios on macOS and Linux with documented limitations; a complete successful live Windows team run remains unconfirmed. All release artifact, signing, notarization, and updater gates still apply.
+
+<!-- RELEASE_BODY_START v2.18.7 -->
+
+Create teams directly from the Teams page, organize work in a task table, and connect scheduled runs to board tasks. Provider settings and appearance controls are easier to manage.
+
+### What's New
+
+- Create teams from the Teams page, with confirmation before replacing a setup from a template.
+- View and manage tasks in a table alongside the board.
+- Opt into schedules that create linked board tasks and target individual members.
+- Customize local fonts, text size, app scaling, and portable JSON themes.
+- Manage provider connections in Settings and refresh provider status from model selectors.
+
+### Fixes
+
+- Keep OpenCode loading indicators visible until initial connection counts finish.
+- Deliver plain-text OpenCode teammate replies to the team lead.
+- Preserve Advanced CLI arguments and worktree settings when renaming teams.
+- Keep draft save indicators accurate while newer edits are still being saved.
+- Refresh Codex status after signing in.
+- Prevent repeated macOS developer-tools prompts when Git is needed.
+
+### macOS installation
+
+macOS 2.18.7 requires macOS 13 or later. macOS 12 users can keep using the existing signed 2.17.1 builds.
+
+If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.18.7 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/Agent.Teams.AI-2.18.7-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/Agent.Teams.AI-2.18.7-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/Agent.Teams.AI.Setup.2.18.7.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/Agent.Teams.AI.Setup.2.18.7-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/Agent.Teams.AI-2.18.7.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/agent-teams-ai_2.18.7_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/agent-teams-ai-2.18.7.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.7/agent-teams-ai-2.18.7.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+
+<!-- RELEASE_BODY_END v2.18.7 -->
+
+## v2.18.6 (Published 2026-11-05)
 
 Target branch: `main`. Build a fresh `v2.18.6` draft after runtime `0.0.157` is verified and publicly available, then pin its exact manifest in `runtime.lock.json`. The earlier `v2.18.5` draft is superseded; preserve its immutable tag. Notes cover the shipped changes since public `v2.18.4`. Sign and qualify all platform artifacts before any publication. The original 2.18.4 user's CPU source remains unconfirmed (issue #1098).
 

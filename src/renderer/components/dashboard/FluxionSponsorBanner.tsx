@@ -100,7 +100,12 @@ const PartnershipBanner = ({ onOpen }: { onOpen: () => void }): JSX.Element => {
   const becomeSponsor = t('cliStatus.actions.becomeSponsor');
 
   return (
-    <div className="flex min-h-[58px] w-[330px] shrink-0 items-center justify-between gap-3 rounded-lg border border-dashed border-[var(--color-border)] bg-white/[0.018] px-3 py-2">
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={becomeSponsor}
+      className="flex min-h-[58px] w-full min-w-0 items-center justify-between gap-3 rounded-lg border border-dashed border-[var(--color-border)] bg-white/[0.018] px-3 py-2 text-left transition-colors hover:bg-black/[0.025] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-border)] dark:hover:bg-white/[0.035]"
+    >
       <div className="flex min-w-0 items-center gap-2.5">
         <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-white/[0.05] text-[var(--color-text-muted)]">
           <Handshake className="size-3.5" />
@@ -114,16 +119,13 @@ const PartnershipBanner = ({ onOpen }: { onOpen: () => void }): JSX.Element => {
           </p>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={onOpen}
-        title={becomeSponsor}
-        aria-label={becomeSponsor}
-        className="flex size-7 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-text-secondary)] transition-colors hover:bg-white/5 hover:text-[var(--color-text)]"
+      <span
+        aria-hidden="true"
+        className="flex size-7 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-text-secondary)]"
       >
         <Plus className="size-3.5" />
-      </button>
-    </div>
+      </span>
+    </button>
   );
 };
 
@@ -132,15 +134,17 @@ export const FluxionSponsorBanner = (): JSX.Element | null => {
   const showSponsorFluxion = useDynamicFlag('showSponsorFluxion');
   const { t } = useAppTranslation('dashboard');
 
-  if (!showSponsorFluxion) return null;
-
   return (
     <section className="mt-3">
       <div className="flex gap-2">
-        <div className="min-w-0 flex-1">
-          <FluxionBanner />
+        {showSponsorFluxion ? (
+          <div className="min-w-0 flex-1">
+            <FluxionBanner />
+          </div>
+        ) : null}
+        <div className={showSponsorFluxion ? 'w-[330px] shrink-0' : 'w-1/2 min-w-0'}>
+          <PartnershipBanner onOpen={() => setSponsorDialogOpen(true)} />
         </div>
-        <PartnershipBanner onOpen={() => setSponsorDialogOpen(true)} />
       </div>
 
       <Dialog open={sponsorDialogOpen} onOpenChange={setSponsorDialogOpen}>
