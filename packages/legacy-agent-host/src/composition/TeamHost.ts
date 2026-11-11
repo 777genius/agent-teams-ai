@@ -131,12 +131,8 @@ export function createTeamHost(
     const managementProfiles = [
       ...(profile.management ?? []),
       ...(profile.runtime?.members.flatMap((member) => {
-        // V2 has no V1-compatible management/model-probe client. Exclude
-        // it from eager V1 startup registration, not from its Session SPI.
-        if (member.provider === 'opencode' && member.nativeGeneration === 'v2')
-          return [];
-        const selected = teamModelProbeProfile(member);
-        return selected ? [selected] : [];
+        if (member.provider === 'opencode' && member.nativeGeneration === 'v2') return [];
+        return [teamModelProbeProfile(member)];
       }) ?? []),
     ];
     if (
