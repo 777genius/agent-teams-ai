@@ -14,7 +14,7 @@ import { matchesOpenCodeV2ModelVariant } from '../dist/adapters/providers/OpenCo
 import { initialContextDigest } from '../dist/team-launch/context.js';
 import { preflightOpenCodeV2EffectiveExternalDirectory } from '../dist/composition/openCodeV2StaticPreflight.js';
 import { parseOwnedDurableLog, retainsOwnedDurablePrefix } from './opencode-v2-native-log-parse.mjs';
-import { isOwnedNativeSessionSnapshot } from './opencode-v2-native-session-guard.mjs';
+import { isOwnedNativeSessionSnapshot, nativeSessionModelVariant } from './opencode-v2-native-session-guard.mjs';
 import { probeNativeDirectShellEffect } from './opencode-v2-direct-shell-probe.mjs';
 
 const version = '2.0.21';
@@ -310,7 +310,7 @@ try {
     !nativeModel?'missing':
     nativeModel.providerID==='TEST-provider' && nativeModel.id==='TEST-model' &&
     matchesOpenCodeV2ModelVariant(undefined,
-      nativeModel.variant === undefined ? null : nativeModel.variant)
+      nativeSessionModelVariant(nativeModel))
       ?'captured':'mismatch';
   if(receipt.nativeModelReadback!=='captured')
     throw Error('native_selected_model_unconfirmed');
@@ -372,7 +372,7 @@ try {
       return {nativeSessionId,pid:child.pid,startIdentity:startTicks,
         directory:result.data.data.location.directory,
         modelProviderId:nativeModel?.providerID,modelId:nativeModel?.id,
-        modelVariant:nativeModel?.variant === undefined ? null : nativeModel.variant,
+        modelVariant:nativeSessionModelVariant(nativeModel),
         rules:result.data.data.permissions};
     },
     async installAndAttestInitialContext(capture,signal) {

@@ -9,3 +9,9 @@ export function isOwnedNativeSessionSnapshot(reply, sessionId, directory, permis
     observed.id === sessionId && observed.location?.directory === directory &&
     JSON.stringify(observed.permissions) === JSON.stringify(permissions);
 }
+
+/** Keep the exact native JSON variant; missing is not an attested null/default. */
+export function nativeSessionModelVariant(model) {
+  return model !== null && typeof model === 'object' && !Array.isArray(model) &&
+    Object.hasOwn(model, 'variant') ? model.variant : undefined;
+}

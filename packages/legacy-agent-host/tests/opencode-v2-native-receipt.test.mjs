@@ -11,7 +11,8 @@ import { fileURLToPath } from 'node:url';
 import { pinnedLinuxX64Avx2Digest } from './opencode-v2-native-test-pin.mjs';
 import { isCompleteNativeHostReceipt, REQUIRED_NATIVE_HOST_STEPS } from './opencode-v2-native-receipt-verify.mjs';
 import { parseOwnedDurableLog, retainsOwnedDurablePrefix } from './opencode-v2-native-log-parse.mjs';
-import { isOwnedNativeSessionSnapshot } from './opencode-v2-native-session-guard.mjs';
+import { isOwnedNativeSessionSnapshot, nativeSessionModelVariant } from './opencode-v2-native-session-guard.mjs';
+import { matchesOpenCodeV2ModelVariant } from '../dist/adapters/providers/OpenCodeV2ModelVariant.js';
 
 test('a failed native Host proof publishes only sanitized diagnostics and no raw paths', () => {
   const root = mkdtempSync(join(tmpdir(), 'TEST-v2-host-failure-receipt-'));
@@ -321,4 +322,24 @@ test('cold native log proof compares retained event content, not only counts and
     'a newly visible event at an already synced position is not durable append proof');
   assert.equal(retainsOwnedDurablePrefix(original, { ...unchanged, positions: undefined }), false);
   assert.equal(retainsOwnedDurablePrefix(original, { watermark: 2, eventCount: 1 }), false);
+});
+
+test('raw native V2 variant readback cannot attest a missing or inherited default', () => {
+  const inherited = Object.create({ variant: 'default' });
+  const fixtures = [
+    ['default', { variant: 'default' }, 'default', true],
+    ['null', { variant: null }, null, true],
+    ['named', { variant: 'high' }, 'high', false],
+    ['missing', {}, undefined, false],
+    ['undefined', { variant: undefined }, undefined, false],
+    ['inherited', inherited, undefined, false],
+    ['absent model', null, undefined, false],
+    ['malformed', { variant: new String('default') }, 'object', false],
+  ];
+  for (const [label, model, expected, accepted] of fixtures) {
+    const variant = nativeSessionModelVariant(model);
+    if (label === 'malformed') assert.equal(typeof variant, expected, label);
+    else assert.equal(variant, expected, label);
+    assert.equal(matchesOpenCodeV2ModelVariant(undefined, variant), accepted, label);
+  }
 });

@@ -41,6 +41,7 @@ if (process.argv[2] === '--worker') {
     execFileSync('git', ['rev-parse','HEAD'], {encoding:'utf8'}).trim() !== head)
     throw Error('TEST_source_or_prefix_unqualified');
   const { parseOwnedDurableLog, retainsOwnedDurablePrefix } = await import('./opencode-v2-native-log-parse.mjs');
+  const { nativeSessionModelVariant } = await import('./opencode-v2-native-session-guard.mjs');
   const root = mkdtempSync(join(tmpdir(), 'TEST-opencode-v2-persist-'));
   const receiptPath = resolve(process.env.OPENCODE_V2_TEST_HTTP_RECEIPT || 'opencode-v2-http-persist.json');
   const receipt = {kind:'TEST_V2_HTTP_DURABLE_DISCOVERY', sourceHead:head, version:'2.0.21',
@@ -699,7 +700,7 @@ if (process.argv[2] === '--worker') {
       !nativeModel?'missing':
       nativeModel.providerID==='TEST-provider' && nativeModel.id==='TEST-model' &&
       matchesOpenCodeV2ModelVariant(undefined,
-        nativeModel.variant === undefined ? null : nativeModel.variant)
+        nativeSessionModelVariant(nativeModel))
         ?'captured':'mismatch';
     if(receipt.nativeModelReadback!=='captured')
       throw Error('TEST_native_selected_model_unconfirmed');
@@ -776,7 +777,7 @@ if (process.argv[2] === '--worker') {
         return {nativeSessionId:sessionId,pid:secondPid,startIdentity:startTicks,
           directory:response.data.data.location.directory,
           modelProviderId:nativeModel?.providerID,modelId:nativeModel?.id,
-          modelVariant:nativeModel?.variant === undefined ? null : nativeModel.variant,
+          modelVariant:nativeSessionModelVariant(nativeModel),
           rules:response.data.data.permissions};
       },
       async installAndAttestInitialContext(capture,signal) {
