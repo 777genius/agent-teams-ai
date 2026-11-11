@@ -66,6 +66,15 @@ export interface OpenCodeV2OwnedSession {
     signal: AbortSignal
   ): Promise<Readonly<{ nativeSessionId: string; contextDigest: string;
     generation: string; configRevision: string }> | undefined>;
+  /** Read back the current native instruction entry on EVERY readiness probe.
+   * Unlike the initial PUT, this MUST be read-only and must never replay an
+   * uncertain instruction mutation or trust a cached installation receipt. */
+  readAndAttestInitialContext(
+    capture: Readonly<{ nativeSessionId: string; instructions: string; contextDigest: string;
+      generation: string; configRevision: string }>,
+    signal: AbortSignal
+  ): Promise<Readonly<{ nativeSessionId: string; contextDigest: string;
+    generation: string; configRevision: string }> | undefined>;
   /** Stop ONLY this capture's process tree, never a user/shared V1 process. */
   stopOwned(): Promise<boolean>;
   /** Confirm physical termination of the same PID/start identity. */
@@ -172,6 +181,7 @@ export function createOpenCodeV2MemberProvider(
   const capturedReadNativeCustody = captureDataCallback(owned, 'readNativeCustody');
   const capturedReadNativeEffectivePermissions = captureDataCallback(owned, 'readNativeEffectivePermissions');
   const capturedInstallAndAttestInitialContext = captureDataCallback(owned, 'installAndAttestInitialContext');
+  const capturedReadAndAttestInitialContext = captureDataCallback(owned, 'readAndAttestInitialContext');
   const capturedStopOwned = captureDataCallback(owned, 'stopOwned');
   const capturedConfirmStopped = captureDataCallback(owned, 'confirmStopped');
   // Capture the required product policy ONCE. A mutable owner object must
@@ -398,15 +408,16 @@ export function createOpenCodeV2MemberProvider(
             // A native session being reachable is NOT a ready Team member.
             // Initial role/team/workspace instructions need native readback;
             // never infer their installation from probe or a local digest.
+            const contextCapture = Object.freeze({
+              nativeSessionId: profile.nativeSessionId!,
+              instructions: capturedInstructions,
+              contextDigest,
+              generation: capturedGeneration,
+              configRevision: capturedConfigRevision,
+            });
             initialContextAttempt ??= Promise.resolve().then(() => {
               if (combined.aborted || !current()) return undefined;
-              return capturedInstallAndAttestInitialContext(Object.freeze({
-                nativeSessionId: profile.nativeSessionId!,
-                instructions: capturedInstructions,
-                contextDigest,
-                generation: capturedGeneration,
-                configRevision: capturedConfigRevision,
-              }), combined);
+              return capturedInstallAndAttestInitialContext(contextCapture, combined);
             });
             // A callback receipt is not an immutable native acknowledgement:
             // a getter could rewrite a foreign digest before the next field
@@ -418,6 +429,16 @@ export function createOpenCodeV2MemberProvider(
                 attested.contextDigest !== contextDigest ||
                 attested.generation !== capturedGeneration ||
                 attested.configRevision !== capturedConfigRevision) return false;
+            // The initial PUT receipt is not a renewable authority. On every
+            // re-attestation, verify the CURRENT native entry without another PUT.
+            const currentContext = snapshotOpenCodeV2InitialContextReadback(
+              await awaitOpenCodeV2OwnerReadback(
+                () => capturedReadAndAttestInitialContext(contextCapture, combined), combined));
+            if (!currentContext || combined.aborted || !current() ||
+                currentContext.nativeSessionId !== profile.nativeSessionId ||
+                currentContext.contextDigest !== contextDigest ||
+                currentContext.generation !== capturedGeneration ||
+                currentContext.configRevision !== capturedConfigRevision) return false;
             // A process or policy may change during the initial native PUT.
             // Re-attest both after the mutation; never retry a lost PUT ACK.
             const finalEffective = snapshotOpenCodeV2PermissionReadback(

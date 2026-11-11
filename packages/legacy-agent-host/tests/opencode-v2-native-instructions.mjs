@@ -318,6 +318,7 @@ try {
   instructions,isCurrent:()=>true,canAllocate:()=>true,
   onProgress:()=>{},readCheckpoint:async()=>undefined};
   let initialPutCount=0;
+  let nativeInstructionReadbacks=0;
   let nativeCustodyReads=0;
   let nativePermissionReads=0;
   const owner={
@@ -368,14 +369,27 @@ try {
       const put=await native(path+'/'+key,'PUT',
         {value:{instructions:capture.instructions,digest:capture.contextDigest}},signal);
       if(put.status!==204)throw Error('native_instruction_put_unconfirmed');
+      const confirmed=await this.readAndAttestInitialContext(capture,signal);
+      if(!confirmed)throw Error('native_instruction_readback_mismatch');
+      receipt.steps.push('actual_native_instruction_put_and_readback');
+      return confirmed;
+    },
+    async readAndAttestInitialContext(capture,signal) {
+      if(signal.aborted||startIdentity(child.pid)!==startTicks||
+         capture.nativeSessionId!==nativeSessionId||
+         capture.contextDigest!==initialContextDigest(capture.instructions)||
+         capture.generation!=='TEST-generation'||capture.configRevision!=='TEST-config')
+        return undefined;
+      const path='/api/experimental/session/'+encodeURIComponent(nativeSessionId)+
+        '/instructions/entries';
       const get=await native(path,'GET',undefined,signal);
       const entries=get.data?.data;
       if(get.status!==200||!Array.isArray(entries)||
-         entries.filter(x=>x?.key===key).length!==1 ||
-         JSON.stringify(entries.find(x=>x?.key===key)?.value)!==
+         entries.filter(x=>x?.key==='host-context').length!==1 ||
+         JSON.stringify(entries.find(x=>x?.key==='host-context')?.value)!==
            JSON.stringify({instructions:capture.instructions,digest:capture.contextDigest}))
-        throw Error('native_instruction_readback_mismatch');
-      receipt.steps.push('actual_native_instruction_put_and_readback');
+        return undefined;
+      nativeInstructionReadbacks++;
       return {nativeSessionId,contextDigest:capture.contextDigest,
         generation:capture.generation,configRevision:capture.configRevision};
     },
@@ -393,8 +407,9 @@ try {
   const rechecked=await opened.driver.checkReadiness();
   if(rechecked.ok!==true || !provider.isReady() || initialPutCount!==1)
     throw Error('native_host_recheck_replayed_initial_context');
-  if(nativeCustodyReads!==4||nativePermissionReads!==4)
-    throw Error('Host_failed_to_remeasure_actual_native_binary_and_PID');
+  if(nativeCustodyReads!==4||nativePermissionReads!==4||
+     nativeInstructionReadbacks!==3)
+    throw Error('Host_failed_to_reattest_native_custody_policy_or_instructions');
   receipt.nativeCustodyReadbacks=nativeCustodyReads;
   receipt.nativePermissionReadbacks=nativePermissionReads;
   receipt.steps.push('Host_remeasured_real_ELF_digest_PID_and_start_identity_on_recheck');

@@ -142,6 +142,10 @@ function owner(probeOk: boolean, effective: 'deny' | 'ask' | 'allow' = 'deny') {
       return { nativeSessionId: capture.nativeSessionId, contextDigest: capture.contextDigest,
         generation: capture.generation, configRevision: capture.configRevision };
     },
+    async readAndAttestInitialContext(capture) {
+      return { nativeSessionId: capture.nativeSessionId, contextDigest: capture.contextDigest,
+        generation: capture.generation, configRevision: capture.configRevision };
+    },
     async stopOwned() { calls.stop++; return true; },
     async confirmStopped() { calls.stopped++; return true; },
   };
@@ -169,7 +173,7 @@ test('V2 refuses uninstalled captured role and workflow instructions before nati
 test('V2 rejects accessor-backed native owner methods before getter can forge policy', () => {
   for (const name of [
     'readPassword', 'probe', 'readNativeCustody', 'readNativeEffectivePermissions',
-    'installAndAttestInitialContext', 'stopOwned', 'confirmStopped',
+    'installAndAttestInitialContext', 'readAndAttestInitialContext', 'stopOwned', 'confirmStopped',
   ] as const) {
     const { captured, calls } = owner(true);
     let getterCalls = 0;
@@ -354,7 +358,7 @@ test('V2 owner callback metadata cannot mutate permissions or physical stop duri
     // execute while capturing any of the seven callback identities.
     for (const callback of [
       'readPassword', 'probe', 'readNativeCustody', 'readNativeEffectivePermissions',
-      'installAndAttestInitialContext', 'stopOwned', 'confirmStopped',
+      'installAndAttestInitialContext', 'readAndAttestInitialContext', 'stopOwned', 'confirmStopped',
     ] as const) {
       for (const property of ['length', 'name'] as const) {
         const { captured, calls } = owner(true, 'allow');
@@ -1285,6 +1289,36 @@ test('V2 TEST-owned probe uses existing Session SPI; stop is idempotent and revo
   assert.equal(await provider.cleanup(), true);
   assert.equal(calls.stop, 1, 'same TEST owner stopped once');
   assert.equal(calls.stopped, 1);
+});
+
+
+test('V2 read-only native instruction drift revokes readiness without replaying the initial PUT', async () => {
+  for (const failure of ['changed-digest', 'missing-entry'] as const) {
+    const { captured, calls } = owner(true);
+    let reads = 0;
+    captured.readAndAttestInitialContext = async (capture) => {
+      reads++;
+      if (reads === 2 && failure === 'missing-entry') return undefined;
+      return { nativeSessionId: capture.nativeSessionId,
+        contextDigest: reads === 2 ? 'b'.repeat(64) : capture.contextDigest,
+        generation: capture.generation, configRevision: capture.configRevision };
+    };
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    const opened = await provider.factory.open(request());
+    assert.equal(provider.isReady(), true);
+    assert.equal(reads, 1, 'initial readiness requires a fresh native GET');
+    assert.equal(calls.context, 1, 'native instructions are installed exactly once');
+    const recheck = await opened.driver.checkReadiness();
+    assert.equal(recheck.ok, false, 'stale or absent readback revokes native readiness');
+    assert.equal(reads, 2, 'each subsequent probe fetches the current native entry');
+    assert.equal(provider.isReady(), false);
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.equal(calls.context, 1, 'never replay an uncertain or successful PUT');
+    assert.equal(calls.stop, 1, 'only the captured TEST owner is retired');
+    assert.equal(calls.password, 0);
+    assert.equal(await provider.cleanup(), true);
+    assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+  }
 });
 
 test('V2 rejects mutually matching malformed custody digests before native owner access', () => {
