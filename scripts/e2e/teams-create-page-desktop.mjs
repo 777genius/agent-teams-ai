@@ -1380,9 +1380,36 @@ async function main() {
     await captureScreenshot(cdp, fixture, 'template-confirmed');
 
     log('create from actual Organization Map and verify native placement');
-    await cdp.click(
-      "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')"
-    );
+    const backToTeams =
+      "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')";
+    const backHitTest = "(() => { const button=" + backToTeams +
+      "; if (!button?.isConnected || button.disabled) return false;" +
+      " button.scrollIntoView({block:'center',inline:'nearest'});" +
+      " const r=button.getBoundingClientRect();" +
+      " const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);" +
+      " return r.width>0 && r.height>0 && (hit===button || button.contains(hit)); })()";
+    // Radix confirmation can still be retiring when the create-page header
+    // becomes visible. A missed native click should not silently strand the
+    // draft, but never issue a second click once the page actually navigated.
+    let navigatedBack = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await cdp.waitFor(backHitTest, 'unobstructed Back to teams', 15_000);
+      await cdp.click(backToTeams);
+      try {
+        await cdp.waitFor(
+          "!document.querySelector('[data-testid=create-team-page]')",
+          'Back to teams navigation', 4_000
+        );
+        navigatedBack = true;
+        break;
+      } catch (error) {
+        const stillOnForm = await cdp.evaluate(
+          "Boolean(document.querySelector('[data-testid=create-team-page]'))"
+        );
+        if (!stillOnForm || attempt === 2) throw error;
+      }
+    }
+    assert(navigatedBack, 'Back to teams did not navigate after bounded native clicks');
     await cdp.waitFor(createButtonExpression('Continue creating'), 'template draft retained');
     const organizationName = 'e2e-org-' + randomUUID().slice(0, 8);
     const organization = await cdp.evaluate(
