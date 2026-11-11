@@ -640,14 +640,22 @@ async function expandCreateAdvancedCli(client, toggle, inputSelector) {
   const input = `document.querySelector(${JSON.stringify(inputSelector)})`;
   if (await client.evaluate(`Boolean(${input})`)) return;
   await client.waitFor(toggle, 'create-page Advanced CLI toggle');
-  await client.evaluate(`(${toggle})?.scrollIntoView({
-    block: 'center', inline: 'nearest', behavior: 'instant'
-  })`);
+  // The Radix optional section animates its height with overflow hidden.
+  // A button can have a viewport rect yet be clipped and miss CDP mouse input.
   await client.waitFor(`(() => {
-    const rect = (${toggle})?.getBoundingClientRect();
-    return Boolean(rect && rect.height > 0 &&
-      rect.top >= 0 && rect.bottom <= window.innerHeight);
-  })()`, 'Advanced CLI toggle inside the viewport');
+    const button = (${toggle});
+    if (!button) return false;
+    button.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+    const content = button.closest('.optional-settings-content');
+    if (content?.getAnimations().some(animation => animation.playState === 'running')) return false;
+    const rect = button.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const hit = document.elementFromPoint(x, y);
+    return rect.width > 0 && rect.height > 0 &&
+      x >= 0 && x < window.innerWidth && y >= 0 && y < window.innerHeight &&
+      Boolean(hit && button.contains(hit));
+  })()`, 'Advanced CLI toggle fully visible and receiving pointer events');
   await client.click(toggle);
   await client.waitFor(`Boolean(${input})`, 'Advanced CLI input expanded');
 }
