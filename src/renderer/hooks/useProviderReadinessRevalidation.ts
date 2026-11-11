@@ -96,8 +96,8 @@ export function useProviderReadinessRevalidation(
     )
       return;
     const codex = projectPath
-        ? scopedStatuses?.[getCliProviderStatusScopeKey('codex', projectPath)]
-        : cliStatus?.providers.find((provider) => provider.providerId === 'codex');
+      ? scopedStatuses?.[getCliProviderStatusScopeKey('codex', projectPath)]
+      : cliStatus?.providers.find((provider) => provider.providerId === 'codex');
     if (codex?.modelCatalogRefreshState === 'loading') return;
     pendingCodexAuthRecheck.current = false;
     if (
