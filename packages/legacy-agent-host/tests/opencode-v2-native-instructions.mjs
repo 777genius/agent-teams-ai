@@ -13,6 +13,7 @@ import { initialContextDigest } from '../dist/team-launch/context.js';
 import { preflightOpenCodeV2EffectiveExternalDirectory } from '../dist/composition/openCodeV2StaticPreflight.js';
 import { parseOwnedDurableLog, retainsOwnedDurablePrefix } from './opencode-v2-native-log-parse.mjs';
 import { isOwnedNativeSessionSnapshot } from './opencode-v2-native-session-guard.mjs';
+import { probeNativeDirectShellEffect } from './opencode-v2-direct-shell-probe.mjs';
 
 const version = '2.0.21';
 const pinnedLinuxX64Avx2Digest = 'f916986543348d7953d8d43aa048516cdbc3f84f4d0dc9c0c5b9d1da3030cea7';
@@ -279,6 +280,16 @@ try {
   receipt.steps.push('real_native_ask_permission_rejected_without_tool_execution');
   if((await native(askPath,'DELETE')).status!==204)
     throw Error('native_ask_TEST_session_delete_failed');
+  // A direct authenticated shell operation can yield a real TEST file effect,
+  // but it is not the model/tool-turn path and never qualifies permission
+  // enforcement or bypass resistance. A missing route/effect is explicit HOLD.
+  receipt.directShellProbe = await probeNativeDirectShellEffect(
+    native, workspace, async file => {
+      try { return readFileSync(join(workspace, file), 'utf8'); }
+      catch (error) { if (error?.code === 'ENOENT') return undefined; throw error; }
+    }
+  );
+  receipt.steps.push('real_native_direct_shell_diagnostic_not_model_turn');
   const sessionPath='/api/session/'+encodeURIComponent(nativeSessionId);
   const instructions='TEST-only Host role, team and workspace. Do not execute real tools.';
   const context={request:{

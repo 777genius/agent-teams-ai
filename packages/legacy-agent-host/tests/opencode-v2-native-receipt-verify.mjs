@@ -15,6 +15,7 @@ export const REQUIRED_NATIVE_HOST_STEPS = Object.freeze([
   "real_native_later_allow_resolver_observed_preflight_hold",
   "real_native_ordered_ask_readback_without_tool_execution",
   "real_native_ask_permission_rejected_without_tool_execution",
+  "real_native_direct_shell_diagnostic_not_model_turn",
   "actual_native_instruction_put_and_readback",
   "Host_existing_Session_SPI_ready_with_real_native_attestation",
   "Host_remeasured_real_ELF_digest_PID_and_start_identity_on_recheck",
@@ -47,6 +48,22 @@ export function isCompleteNativeHostReceipt(value, expectedSourceHead) {
     r.packagedElectronQualified === false && sourceSha(r.sourceHead) &&
     sha256(r.binarySha256) && pid(r.pid) && ticks(r.processStartTicks) &&
     r.nativeCustodyReadbacks === 4 && r.nativePermissionReadbacks === 4 &&
+    r.directShellProbe !== undefined && r.directShellProbe !== null &&
+    typeof r.directShellProbe === 'object' && !Array.isArray(r.directShellProbe) &&
+    r.directShellProbe.attempted === true &&
+    (r.directShellProbe.outcome === 'effect-confirmed' ||
+      r.directShellProbe.outcome === 'hold') &&
+    (r.directShellProbe.status === null ||
+      (Number.isInteger(r.directShellProbe.status) &&
+       r.directShellProbe.status >= 100 && r.directShellProbe.status <= 599)) &&
+    typeof r.directShellProbe.responseUncertain === 'boolean' &&
+    (r.directShellProbe.responseUncertain
+      ? r.directShellProbe.status === null && r.directShellProbe.outcome === 'hold'
+      : r.directShellProbe.status !== null) &&
+    (r.directShellProbe.outcome !== 'effect-confirmed' ||
+      r.directShellProbe.status === 200 || r.directShellProbe.status === 204) &&
+    r.directShellProbe.modelTurnProven === false &&
+    r.directShellProbe.toolPermissionEnforcementProven === false &&
     policy !== undefined && policy !== null && typeof policy === 'object' && !Array.isArray(policy) &&
     policy.capturedDeny === 'deny' && policy.laterAllow === 'allow' &&
     policy.laterAsk === 'ask' && policy.askRejected === true &&

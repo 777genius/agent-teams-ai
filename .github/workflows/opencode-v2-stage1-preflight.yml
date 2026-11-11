@@ -141,6 +141,8 @@ jobs:
         run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Check native TEST proof syntax
         run: node --check packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs
+      - name: Test direct-shell HTTP mutation/no-replay diagnostic boundary
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-direct-shell-probe.test.mjs
       - name: Install exact official V2 CLI in isolated runner prefix, without scripts
         shell: bash
         run: |
