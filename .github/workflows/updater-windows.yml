@@ -40,7 +40,7 @@ concurrency:
 jobs:
   tooling-quality:
     if: github.event_name == 'pull_request'
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -57,7 +57,7 @@ jobs:
 
   verified-windows-inputs:
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch' && inputs.input_mode == 'plan'
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - name: Require the exact reviewed tooling SHA
@@ -100,7 +100,7 @@ jobs:
     # credential and has only contents:read in its independent native job.
     permissions:
       contents: write
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6

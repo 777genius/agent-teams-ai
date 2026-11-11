@@ -34,7 +34,7 @@ concurrency:
 jobs:
   producer-quality:
     if: github.event_name == 'pull_request'
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -97,7 +97,7 @@ jobs:
 
   prepare-windows-inputs:
     if: github.repository == '777genius/agent-teams-ai' && github.event_name == 'workflow_dispatch'
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 25
     # GitHub exposes drafts only with repository push access. This trusted
     # dispatch downloads bytes; it performs no release mutations.
