@@ -189,7 +189,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
         const ref = interaction.interactionRef as string;
         assert.ok(!replies.has(ref), 'never retry an uncertain permission reply');
         replies.add(ref);
-        const granted = await host.rpc('runtime.interaction', envelope('TEST-once', {
+        const granted: Record<string, unknown> = await host.rpc('runtime.interaction', envelope('TEST-once', {
           memberId: 'carol-id', expectedGeneration: '1', inputId, interactionRef: ref,
           reply: { kind: 'permission', decision: 'allow' },
         }));
