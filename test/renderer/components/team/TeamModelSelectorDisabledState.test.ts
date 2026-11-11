@@ -278,8 +278,8 @@ vi.mock('@tanstack/react-virtual', () => ({
 }));
 
 import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team/dialogs/openCodeDefaultMaterialization';
-import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { OpenCodeSourceDirectoryContext } from '@renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider';
+import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
 import {
   getCliProviderStatusScopeKey,
   MULTIMODEL_PROVIDER_IDS,
