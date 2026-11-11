@@ -4,11 +4,14 @@ import {
   DEFAULT_OPENCODE_V1_INSTALL_VERSION,
   parseOpenCodeInstallOptions,
 } from '@features/opencode-runtime-installer';
-import { selectOpenCodeInstallPackage } from '@features/opencode-runtime-installer/main';
+import {
+  selectOpenCodeInstallPackage,
+  selectOpenCodeRootPackage,
+} from '@features/opencode-runtime-installer/main';
 import { describe, expect, it, vi } from 'vitest';
 
-// A moving npm tag, an unqualified platform or a malformed IPC input must not
-// authorize an arbitrary V2 package; an update must retain its generation.
+// Real contract + synthetic registry: a latest CLI must not become a new engine
+// or change the selected generation. No network, installed binary or user state.
 describe('OpenCode installation policy', () => {
   it('defaults fresh installs to V1 and retains the installed generation', () => {
     expect(chooseOpenCodeInstallGeneration(undefined, undefined, '2.1.4')).toBe('v1');
@@ -43,18 +46,34 @@ describe('OpenCode installation policy', () => {
     expect(() => parseOpenCodeInstallOptions(input)).toThrow();
   });
 
-  it('pins the first-time V1 package and rejects redirected root metadata', async () => {
-    const fetchMetadata = vi.fn(async (name: string, version?: string) => ({
-      name,
-      version: name === 'opencode-ai' ? '1.19.4' : version,
-      optionalDependencies: { 'opencode-linux-x64': DEFAULT_OPENCODE_V1_INSTALL_VERSION },
-    }));
-    await expect(selectOpenCodeInstallPackage(
+  it('resolves a fresh V1 latest tag once, then fetches exact native bytes', async () => {
+    const fetchMetadata = vi
+      .fn()
+      .mockResolvedValueOnce({
+        name: 'opencode-ai',
+        version: '1.20.1',
+        optionalDependencies: { 'opencode-linux-x64': '^1.20.1' },
+      })
+      .mockResolvedValueOnce({ name: 'opencode-linux-x64', version: '1.20.1' });
+    expect(DEFAULT_OPENCODE_V1_INSTALL_VERSION).toBe('latest');
+    const selected = await selectOpenCodeInstallPackage(
       'v1', '2.1.4', [{ packageName: 'opencode-linux-x64' }],
       fetchMetadata, DEFAULT_OPENCODE_V1_INSTALL_VERSION
+    );
+    expect(selected.generation).toBe('v1');
+    expect(selected.metadata.version).toBe('1.20.1');
+    expect(fetchMetadata.mock.calls).toEqual([
+      ['opencode-ai', 'latest'], ['opencode-linux-x64', '1.20.1'],
+    ]);
+  });
+
+  it('keeps an explicit package pin exact rather than accepting redirected root metadata', async () => {
+    const fetchMetadata = vi.fn().mockResolvedValue({ name: 'opencode-ai', version: '1.19.4' });
+    await expect(selectOpenCodeInstallPackage(
+      'v1', '2.1.4', [], fetchMetadata, '1.19.5'
     )).rejects.toThrow('selected generation');
     expect(fetchMetadata).toHaveBeenCalledTimes(1);
-    expect(fetchMetadata).toHaveBeenCalledWith('opencode-ai', DEFAULT_OPENCODE_V1_INSTALL_VERSION);
+    expect(fetchMetadata).toHaveBeenCalledWith('opencode-ai', '1.19.5');
   });
 
   it('refuses V2 on an unqualified platform before contacting npm', async () => {
@@ -65,37 +84,88 @@ describe('OpenCode installation policy', () => {
     expect(fetchMetadata).not.toHaveBeenCalled();
   });
 
-  it('fetches the exact tested V2 and refuses redirected native metadata', async () => {
+  it('updates the V2 CLI independently of the separately qualified execution engine', async () => {
     const fetchMetadata = vi
       .fn()
       .mockResolvedValueOnce({
         name: '@opencode/cli',
-        version: '2.0.32',
-        optionalDependencies: { '@opencode/cli-linux-x64': '2.0.32' },
+        version: '2.9.0',
+        optionalDependencies: { '@opencode/cli-linux-x64': '2.9.0' },
       })
-      .mockResolvedValueOnce({ name: '@opencode/cli-linux-arm64', version: '2.0.32' });
-    await expect(
-      selectOpenCodeInstallPackage(
-        'v2',
-        '2.0.32',
-        [{ packageName: 'opencode-linux-x64' }],
-        fetchMetadata
-      )
-    ).rejects.toThrow('identity mismatch');
+      .mockResolvedValueOnce({ name: '@opencode/cli-linux-x64', version: '2.9.0' });
+    const selected = await selectOpenCodeInstallPackage(
+      'v2', '2.1.4', [{ packageName: 'opencode-linux-x64' }], fetchMetadata
+    );
+    expect(selected.generation).toBe('v2');
+    expect(selected.metadata.version).toBe('2.9.0');
     expect(fetchMetadata.mock.calls).toEqual([
-      ['@opencode/cli', '2.0.32'],
-      ['@opencode/cli-linux-x64', '2.0.32'],
+      ['@opencode/cli', 'latest'], ['@opencode/cli-linux-x64', '2.9.0'],
     ]);
   });
 
-  it('does not upgrade a V1 installation to a different generation via npm latest', async () => {
-    await expect(
-      selectOpenCodeInstallPackage('v1', '2.0.32', [], () =>
-        Promise.resolve({
-          name: 'opencode-ai',
-          version: '2.0.32',
-        })
-      )
-    ).rejects.toThrow('selected generation');
+  it.each(['1.15.9', '1.20.0-beta.1', 'v1.20.0', '1.20.0+foreign', '2.1.4', '3.0.0'])(
+    'does not silently change V1 generation or accept non-stable root %s', async (version) => {
+      const fetchMetadata = vi.fn().mockResolvedValue({ name: 'opencode-ai', version });
+      await expect(selectOpenCodeInstallPackage('v1', '2.1.4', [], fetchMetadata))
+        .rejects.toThrow('selected generation');
+      expect(fetchMetadata).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each(['1.19.5', '2.9.0-beta.1', '2.9.0+foreign', '3.0.0'])(
+    'does not silently downgrade V2 or admit out-of-contract CLI %s', async (version) => {
+      const fetchMetadata = vi.fn().mockResolvedValue({ name: '@opencode/cli', version });
+      await expect(selectOpenCodeInstallPackage('v2', '2.1.4', [], fetchMetadata))
+        .rejects.toThrow('selected generation');
+      expect(fetchMetadata).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it('does not accept a latest CLI as an unqualified execution engine', async () => {
+    const fetchMetadata = vi.fn().mockResolvedValue({ name: '@opencode/cli', version: '2.9.0' });
+    await expect(selectOpenCodeInstallPackage('v2', '2.9.0', [], fetchMetadata))
+      .rejects.toThrow('selected generation');
+  });
+
+  it.each(['v1', 'v2'] as const)('rejects foreign %s root metadata', async (generation) => {
+    const version = generation === 'v1' ? '1.20.1' : '2.9.0';
+    const fetchMetadata = vi.fn().mockResolvedValue({ name: 'foreign-package', version });
+    await expect(selectOpenCodeInstallPackage(generation, '2.1.4', [], fetchMetadata))
+      .rejects.toThrow('selected generation');
+    expect(fetchMetadata).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['v1', 'v2'] as const)('refuses redirected %s native metadata', async (generation) => {
+    const rootName = generation === 'v1' ? 'opencode-ai' : '@opencode/cli';
+    const name = generation === 'v1' ? 'opencode-linux-x64' : '@opencode/cli-linux-x64';
+    const version = generation === 'v1' ? '1.20.1' : '2.9.0';
+    const fetchMetadata = vi
+      .fn()
+      .mockResolvedValueOnce({ name: rootName, version, optionalDependencies: { [name]: version } })
+      .mockResolvedValueOnce({ name: name.replace('x64', 'arm64'), version });
+    await expect(selectOpenCodeInstallPackage(
+      generation, '2.1.4', [{ packageName: 'opencode-linux-x64' }], fetchMetadata
+    )).rejects.toThrow('identity mismatch');
+    expect(fetchMetadata.mock.calls).toEqual([[rootName, 'latest'], [name, version]]);
+  });
+
+  it('does not follow a moving root tag or mismatched native version', async () => {
+    const fetchMetadata = vi
+      .fn()
+      .mockResolvedValueOnce({
+        name: 'opencode-ai', version: '1.20.1',
+        optionalDependencies: { 'opencode-linux-x64': '1.20.2' },
+      });
+    await expect(selectOpenCodeInstallPackage(
+      'v1', '2.1.4', [{ packageName: 'opencode-linux-x64' }], fetchMetadata
+    )).rejects.toThrow('differs from its root');
+    expect(fetchMetadata).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the same root resolution for update checks and installation', async () => {
+    const fetchMetadata = vi.fn().mockResolvedValue({ name: '@opencode/cli', version: '2.9.0' });
+    const root = await selectOpenCodeRootPackage('v2', '2.1.4', fetchMetadata);
+    expect(root.version).toBe('2.9.0');
+    expect(fetchMetadata).toHaveBeenCalledWith('@opencode/cli', 'latest');
   });
 });

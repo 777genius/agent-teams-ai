@@ -7,4 +7,7 @@ export {
   verifyOpenCodeRuntimePackageIntegrity,
 } from './infrastructure/nativePackageDownload';
 export { extractOpenCodePackage } from './infrastructure/packageExtraction';
-export { selectOpenCodeInstallPackage } from './infrastructure/packageSelection';
+export {
+  selectOpenCodeInstallPackage,
+  selectOpenCodeRootPackage,
+} from './infrastructure/packageSelection';

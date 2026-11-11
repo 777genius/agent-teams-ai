@@ -1,7 +1,7 @@
 import type { OpenCodeInstallGeneration, OpenCodeRuntimeInstallOptions } from '../../contracts';
 
-/** Fixed V1 baseline for a first-time implicit install; explicit updates still use latest V1. */
-export const DEFAULT_OPENCODE_V1_INSTALL_VERSION = '1.19.5';
+/** Resolve the latest stable V1 CLI to exact verified bytes before a fresh install. */
+export const DEFAULT_OPENCODE_V1_INSTALL_VERSION = 'latest';
 
 /** Keep updates in their installed generation; fresh installs default to stable V1. */
 export function chooseOpenCodeInstallGeneration(

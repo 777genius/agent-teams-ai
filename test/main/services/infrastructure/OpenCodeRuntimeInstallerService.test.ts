@@ -292,6 +292,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       'fetch',
       vi.fn(async () =>
         Response.json({
+          name: 'opencode-ai',
           version: '1.18.3',
           dist: { tarball: 'https://example.test/opencode.tgz', integrity: 'sha512-test' },
         })
@@ -936,7 +937,6 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     );
     const manifestPath = path.join(tempRoot!, 'data', 'runtimes', 'opencode', 'current.json');
     await mkdir(path.dirname(binaryPath), { recursive: true });
-    await mkdir(path.dirname(manifestPath), { recursive: true });
     await writeFile(binaryPath, 'binary', { mode: 0o755 });
     await writeFile(
       manifestPath,
@@ -974,7 +974,6 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     );
     const manifestPath = path.join(tempRoot!, 'data', 'runtimes', 'opencode', 'current.json');
     await mkdir(path.dirname(binaryPath), { recursive: true });
-    await mkdir(path.dirname(manifestPath), { recursive: true });
     await writeFile(binaryPath, 'binary', { mode: 0o755 });
     await writeFile(
       manifestPath,
@@ -1320,7 +1319,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       });
       process.env.APPDATA = tempRoot!;
 
-      const olderBinaryPath = path.join(tempRoot!, 'nvm', 'v20.10.0', 'opencode.cmd');
+      const olderBinaryPath = path.join(tempRoot!, 'nvm', 'v20.20.0', 'opencode.cmd');
       const shimPath = path.join(tempRoot!, 'nvm', 'v22.22.1', 'opencode.cmd');
       const binaryPath = path.join(
         tempRoot!,
@@ -2046,6 +2045,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         const url = String(input);
         if (url.endsWith('/opencode-ai/latest')) {
           return Response.json({
+            name: 'opencode-ai',
             version: '1.18.3',
             dist: { tarball: 'https://example.test/root.tgz', integrity },
             optionalDependencies: { [platformPackage]: '1.18.3' },
@@ -2053,6 +2053,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         }
         if (url.includes(`/${platformPackage}/1.18.3`)) {
           return Response.json({
+            name: platformPackage,
             version: '1.18.3',
             dist: { tarball: 'https://example.test/platform.tgz', integrity },
           });
@@ -2096,12 +2097,14 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
           const url = String(input);
           if (url.endsWith('/opencode-ai/latest'))
             return Response.json({
+              name: 'opencode-ai',
               version: '1.18.3',
               dist: { tarball: 'https://example.test/root.tgz', integrity },
               optionalDependencies: { [platformPackage]: '1.18.3' },
             });
           if (url.includes(`/${platformPackage}/1.18.3`))
             return Response.json({
+              name: platformPackage,
               version: '1.18.3',
               dist: { tarball: 'https://example.test/platform.tgz', integrity },
             });
@@ -2175,7 +2178,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     const integrity = `sha512-${createHash('sha512').update(tarball).digest('base64')}`;
     const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => {
       const url = String(input);
-      if (url.endsWith('/opencode-ai/1.19.5')) {
+      if (url.endsWith('/opencode-ai/latest')) {
         return Response.json({
           name: 'opencode-ai',
           version: '1.19.5',
@@ -2185,6 +2188,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       }
       if (url.includes(`/${platformPackage}/1.19.5`)) {
         return Response.json({
+          name: platformPackage,
           version: '1.19.5',
           dist: { tarball: 'https://example.test/platform.tgz', integrity },
         });
@@ -2205,7 +2209,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       state: 'failed',
       error: 'binary verification failed',
     });
-    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/opencode-ai/1.19.5'))).toBe(
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/opencode-ai/latest'))).toBe(
       true
     );
     const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'opencode');
@@ -2253,9 +2257,15 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
   });
 
   async function mockV2Download(
-    overrides: { metadataVersion?: string; binaryVersion?: string; integrity?: string } = {}
+    overrides: {
+      cliVersion?: string;
+      metadataVersion?: string;
+      binaryVersion?: string;
+      integrity?: string;
+    } = {}
   ): Promise<{ packageName: string; version: string }> {
-    const version = getLatestQualifiedOpenCodeV2Version(process.platform, process.arch)!;
+    const version =
+      overrides.cliVersion ?? getLatestQualifiedOpenCodeV2Version(process.platform, process.arch)!;
     const packageName = getOpenCodeRuntimePlatformCandidates()[0]!.packageName.replace(
       /^opencode-/,
       '@opencode/cli-'
@@ -2489,6 +2499,34 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     expect(status.state).toBe('failed');
     expect(status.error).toContain(options.error);
     expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+  });
+
+  it('updates the V2 CLI without changing its separately qualified engine', async () => {
+    const qualifiedEngine = getLatestQualifiedOpenCodeV2Version(process.platform, process.arch)!;
+    const { version } = await mockV2Download({ cliVersion: '2.9.0' });
+    expect(version).not.toBe(qualifiedEngine);
+    const support = {
+      withStatus: vi.fn(async (status: import('@shared/types').OpenCodeRuntimeStatus) =>
+        status.installed ? { ...status, v2Support: 'ready' as const } : status
+      ),
+      install: vi.fn(async () => undefined),
+    };
+    const service = new OpenCodeRuntimeInstallerService(support);
+    await expect(service.install({ generation: 'v2' })).resolves.toMatchObject({
+      installed: true,
+      state: 'ready',
+      version,
+      compatibleV2Version: qualifiedEngine,
+    });
+    expect(support.install).toHaveBeenCalledWith(version, expect.any(Function));
+    expect(
+      vi.mocked(fetch).mock.calls.some(([url]) =>
+        String(url).endsWith(`${encodeURIComponent('@opencode/cli')}/latest`)
+      )
+    ).toBe(true);
+    const status = await service.getStatus();
+    expect(status).toMatchObject({ version, latestVersion: version, updateAvailable: false });
+    expect(getLatestQualifiedOpenCodeV2Version(process.platform, process.arch)).toBe(qualifiedEngine);
   });
 
   it('preserves explicit override selection after installing V2 and explains activation', async () => {
