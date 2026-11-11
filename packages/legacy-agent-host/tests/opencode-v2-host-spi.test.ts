@@ -2193,6 +2193,31 @@ test('lost native V2 initial-context ACK cannot replay a write or conceal UNKNOW
   }
 });
 
+test('hung native stop ACK is bounded, never re-signalled or treated as clean', { timeout: 7000 }, async () => {
+  const { captured, calls } = owner(true);
+  captured.stopOwned = () => { calls.stop++; return new Promise<boolean>(() => {}); };
+  captured.confirmStopped = async () => { calls.stopped++; return false; };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const start = Date.now();
+  assert.equal(await provider.cleanup(), false);
+  assert.ok(Date.now() - start < 6000, 'a missing native stop ACK must not hold cleanup indefinitely');
+  assert.equal(calls.stop, 1, 'never repeat a possibly applied native stop signal');
+  assert.equal(calls.stopped, 1, 'physical readback attempted once');
+  assert.equal(await provider.cleanup(), false);
+  assert.equal(calls.stop, 1);
+});
+
+test('a stuck native physical readback cannot fabricate cleanup success', { timeout: 7000 }, async () => {
+  const { captured, calls } = owner(true);
+  captured.confirmStopped = () => { calls.stopped++; return new Promise<boolean>(() => {}); };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const start = Date.now();
+  assert.equal(await provider.cleanup(), false);
+  assert.ok(Date.now() - start < 6000, 'read-only custody confirmation must also be bounded');
+  assert.equal(calls.stop, 1, 'no second stop while physical status is unknown');
+  assert.equal(calls.stopped, 1);
+});
+
 test('cleanup retries only read-only physical confirmation after uncertain stop ACK', async () => {
   const { captured, calls } = owner(true);
   captured.stopOwned = async () => { calls.stop++; return false; };

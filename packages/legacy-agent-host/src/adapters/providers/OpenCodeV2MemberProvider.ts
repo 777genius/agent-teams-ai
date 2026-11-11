@@ -16,6 +16,23 @@ import type { MemberProvider, MemberProviderContext } from './MemberProvider.js'
 // equal strings supplied by a malformed private selection and owner.
 const nativeSha256Hex = /^[a-f0-9]{64}$/;
 
+// An unacknowledged physical stop can stay pending forever. A deadline ends
+// only the wait, never grants process custody or authorizes a second signal.
+const NATIVE_STOP_ACK_WAIT_MS = 2_000;
+async function waitForNativeStopResult(pending: Promise<boolean>): Promise<boolean> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      pending,
+      new Promise<boolean>(resolve => {
+        timeout = setTimeout(() => resolve(false), NATIVE_STOP_ACK_WAIT_MS);
+      }),
+    ]);
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout);
+  }
+}
+
 /**
  * A separately selected, TEST-owned native V2 engine and session. The provider
  * does not launch a shared CLI, adopt a V1 session, read user configs, or
@@ -211,6 +228,7 @@ export function createOpenCodeV2MemberProvider(
   let wasEverReady = false;
   let pinnedProcessIdentity: Readonly<{ pid: number; startIdentity: string }> | undefined;
   let stopAttempt: Promise<boolean> | undefined;
+  let boundedStopAttempt: Promise<boolean> | undefined;
   let checking: Promise<boolean> | undefined;
   // Re-attestation may temporarily fence readiness without revoking Host authority.
   // Existing observers must wait for a definitive result, not drop native events.
@@ -262,11 +280,13 @@ export function createOpenCodeV2MemberProvider(
     // A stop with an uncertain ACK is never submitted twice. Subsequent
     // cleanup checks may ONLY read physical status for this same owned PID.
     stopAttempt ??= Promise.resolve().then(() => capturedStopOwned()).catch(() => false);
-    await stopAttempt;
+    // Keep exactly one original signal even when its ACK never resolves.
+    boundedStopAttempt ??= waitForNativeStopResult(stopAttempt);
+    await boundedStopAttempt;
     if (physicallyStopped) return true;
-    checking ??= Promise.resolve().then(() => capturedConfirmStopped())
-      .catch(() => false)
-      .then((stopped) => {
+    checking ??= waitForNativeStopResult(
+      Promise.resolve().then(() => capturedConfirmStopped()).catch(() => false)
+    ).then((stopped) => {
         // Only literal true attests physical termination of the pinned PID.
         // Structured native responses cannot become cleanup=confirmed.
         const confirmed = stopped === true;
