@@ -805,6 +805,27 @@ test('V2 team capture preserves implicit recipe model but rejects unqualified ex
   assert.equal(teammate.model, base.model,
     'same-generation teammate must not inherit an invented bare-model selection');
 
+  // Existing saved UI effort must not reselect a native V2 variant.
+  const variantBase = runtimeProfileSchema.parse({ members: [{
+    ...nativeV2Profile(),
+    nativeOptions: { ...nativeV2Profile().nativeOptions, variant: 'high' },
+  }] }).members[0]!;
+  const inheritedEffort = compileRuntimeMemberProfile(variantBase, {
+    ...source, savedSettings: { ...source.savedSettings, effort: 'high' },
+  }, lead, 'opencode', 'TEST-launch');
+  if (inheritedEffort.provider !== 'opencode') throw Error('Expected V2 profile');
+  assert.equal(inheritedEffort.nativeOptions.variant, 'high');
+  assert.equal(inheritedEffort.model, variantBase.model,
+    'an inherited matching effort cannot switch the saved native model');
+  assert.equal(inheritedEffort.nativeSessionId, variantBase.nativeSessionId,
+    'an inherited matching effort cannot switch the native session');
+  assert.throws(() => compileRuntimeMemberProfile(variantBase, {
+    ...source, savedSettings: { ...source.savedSettings, effort: 'low' },
+  }, lead, 'opencode', 'TEST-launch'), (error: unknown) =>
+    error instanceof Error && 'reason' in error &&
+    error.reason === 'launch-option-unsupported',
+  'changing a saved V2 effort must stay rejected before native admission');
+
   const qualified = compileRuntimeMemberProfile(base, {
     ...source,
     savedSettings: { ...source.savedSettings, model: 'TEST-provider/TEST-model' },

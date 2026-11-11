@@ -274,7 +274,12 @@ export function compileRuntimeMemberProfile(
     // is not an explicit catalog selection and must not be passed as a bare ID.
     ...(base.provider === 'opencode' && base.nativeGeneration === 'v2' &&
         selectedModel === undefined ? {} : { model }),
-    ...(effort === undefined ? {} : { effort }),
+    // A saved V2 variant is already bound to its native session. Repeated
+    // inherited effort does not select a new variant; let native admission
+    // attest it. Any differing effort remains an unsupported V2 override.
+    ...(effort === undefined ||
+      (base.provider === 'opencode' && base.nativeGeneration === 'v2' &&
+       effort === base.nativeOptions.variant) ? {} : { effort }),
     ...(base.provider === 'opencode' || fast === undefined || fast === 'inherit'
       ? {}
       : { fastMode: fast === 'on' }),

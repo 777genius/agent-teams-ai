@@ -124,7 +124,12 @@ export function applyTeamModelProbeSelection(
     recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2'
       ? {}
       : { model: input.model === '__provider_default__' ? recipe.model : input.model }),
-    ...(input.effort === undefined ? {} : { effort: input.effort }),
+    // A saved V2 variant is an immutable selection, not a launch-time effort
+    // override. Preserve an unchanged selection for native attestation, but
+    // send any changed effort through the existing fail-closed V2 gate.
+    ...(input.effort === undefined ||
+      (recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2' &&
+       input.effort === recipe.nativeOptions.variant) ? {} : { effort: input.effort }),
     ...(input.context === undefined ? {} : { context: input.context }),
   });
 }

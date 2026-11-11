@@ -820,6 +820,21 @@ test('V2 draft Default preserves the native session model and rejects drifted pr
     ...input, model: saved.model,
   }), { reason: 'launch-option-unsupported' });
 
+  // The model probe can show a saved effort without treating the same V2
+  // native variant as a request to change it.
+  const knownVariant = runtimeMemberProfileSchema.parse({
+    ...saved, nativeOptions: { ...saved.nativeOptions, variant: 'high' },
+  });
+  const unchanged = applyTeamModelProbeSelection(knownVariant, {
+    ...input, effort: 'high',
+  });
+  if (unchanged.provider !== 'opencode') throw Error('TEST_expected_opencode_profile');
+  assert.equal(unchanged.nativeSessionId, saved.nativeSessionId);
+  assert.equal(unchanged.nativeOptions.variant, 'high');
+  assert.throws(() => applyTeamModelProbeSelection(knownVariant, {
+    ...input, effort: 'low',
+  }), { reason: 'launch-option-unsupported' });
+
   template.model = 'TEST-drifted-native-model';
   assert.throws(recipe, { reason: 'probe-default-recipe' });
   template.model = saved.model;
