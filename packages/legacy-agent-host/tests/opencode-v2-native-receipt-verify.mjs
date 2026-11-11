@@ -82,13 +82,16 @@ export function isCompleteNativeHostReceipt(value, expectedSourceHead) {
     log.readOnly === true && log.synced === true &&
     Number.isSafeInteger(log.watermark) && log.watermark >= 0 &&
     Number.isSafeInteger(log.eventCount) && log.eventCount >= 0 &&
-    log.eventCount <= 4096 && log.modelTurnProven === false &&
+    log.eventCount <= 4096 &&
+    // Every event occupies a distinct durable position at or before the sync cursor.
+    log.eventCount <= log.watermark + 1 && log.modelTurnProven === false &&
     recovered !== undefined && recovered !== null &&
     typeof recovered === 'object' && !Array.isArray(recovered) &&
     recovered.readOnly === true && recovered.synced === true &&
     Number.isSafeInteger(recovered.watermark) && recovered.watermark >= log.watermark &&
     Number.isSafeInteger(recovered.eventCount) && recovered.eventCount >= log.eventCount &&
     recovered.eventCount <= 4096 &&
+    recovered.eventCount <= recovered.watermark + 1 &&
     // The recovered cursor cannot introduce more events than newly durable positions.
     // Otherwise a forged cold-restart receipt could backfill an already synced slot.
     recovered.eventCount - log.eventCount <= recovered.watermark - log.watermark &&

@@ -84,6 +84,7 @@ test('native receipt gate rejects forged digest, incomplete stages and cold rest
     r => { r.nativeLogReadback.modelTurnProven = true; },
     r => { r.nativeLogReadback.watermark = -1; },
     r => { r.nativeLogReadback.eventCount = 4097; },
+    r => { r.nativeLogReadback.eventCount = 2; r.restartLogReadback.eventCount = 2; }, // two events cannot fit below watermark zero
     r => { r.steps.splice(r.steps.indexOf('native_cold_restart_durable_log_cursor_read_only'), 1); },
     r => { delete r.restartLogReadback; },
     r => { r.restartLogReadback.synced = false; },
@@ -147,6 +148,11 @@ test('native receipt gate rejects forged digest, incomplete stages and cold rest
     mutate(candidate);
     assert.equal(isCompleteNativeHostReceipt(candidate), false);
   }
+  const oneEventAtSyncZero = completeReceiptFixture();
+  oneEventAtSyncZero.nativeLogReadback.eventCount = 1;
+  oneEventAtSyncZero.restartLogReadback.eventCount = 1;
+  assert.equal(isCompleteNativeHostReceipt(oneEventAtSyncZero), true,
+    'one native event may occupy the position at watermark zero');
   assert.equal(isCompleteNativeHostReceipt(completeReceiptFixture(), 'a'.repeat(40)), true);
   assert.equal(isCompleteNativeHostReceipt(completeReceiptFixture(), 'b'.repeat(40)), false,
     'an otherwise valid native receipt cannot authorize another PR HEAD');
