@@ -9,7 +9,8 @@ const rules = [
 ];
 function fake({ status = 204, foreign = false, foreignAfterShell = false,
                 unreadableAfterShell = false, throwOnShell = false,
-                cleanupStatus = 204 } = {}) {
+                cleanupStatus = 204, foreignBeforeCleanup = false,
+                unreadableBeforeCleanup = false } = {}) {
   const calls = [];
   const base = '/api/session/ses_TEST_direct_shell';
   async function call(path, method = 'GET', body) {
@@ -18,9 +19,11 @@ function fake({ status = 204, foreign = false, foreignAfterShell = false,
       return { status: 200, data: { data: { id: 'ses_TEST_direct_shell' } } };
     if (path === base && method === 'GET') {
       const afterMutation = calls.some(x => x.path === base + '/shell' && x.method === 'POST');
-      if (afterMutation && unreadableAfterShell) throw Error('TEST_postmutation_readback_lost');
+      const readNumber = calls.filter(x => x.path === base && x.method === 'GET').length;
+      if (afterMutation && (unreadableAfterShell || (unreadableBeforeCleanup && readNumber >= 3)))
+        throw Error('TEST_postmutation_readback_lost');
       return { status: 200, data: { data: {
-        id: foreign || (afterMutation && foreignAfterShell)
+        id: foreign || (afterMutation && foreignAfterShell) || (foreignBeforeCleanup && readNumber >= 3)
           ? 'ses_FOREIGN' : 'ses_TEST_direct_shell',
         location: { directory: '/TEST/workspace' }, permissions: rules,
       } } };
@@ -81,12 +84,12 @@ test('uncertain HTTP ACK remains HOLD even if the TEST file was written', async 
   assert.equal(counted(calls, '/shell'), 1);
   assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 1);
 });
-test('foreign-session native readback refuses shell mutation but cleans once', async () => {
+test('foreign-session native readback refuses shell mutation and foreign cleanup', async () => {
   const { call, calls } = fake({ foreign: true });
   await assert.rejects(probeNativeDirectShellEffect(call, '/TEST/workspace',
     async () => DIRECT_SHELL_EXPECTED), /TEST_direct_shell_session_not_owned/);
   assert.equal(counted(calls, '/shell'), 0);
-  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 1);
+  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 0);
 });
 test('unexpected workspace contents never count as successful direct shell', async () => {
   const { call, calls } = fake();
@@ -123,7 +126,7 @@ test('post-mutation foreign session never qualifies an observed file effect', as
   assert.equal(result.outcome, 'hold');
   assert.equal(counted(calls, '/shell'), 1);
   assert.equal(counted(calls, '/ses_TEST_direct_shell', 'GET'), 2);
-  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 1);
+  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 0);
 });
 
 test('post-mutation unreadable session remains HOLD, without retry', async () => {
@@ -134,5 +137,26 @@ test('post-mutation unreadable session remains HOLD, without retry', async () =>
   assert.equal(result.outcome, 'hold');
   assert.equal(counted(calls, '/shell'), 1);
   assert.equal(counted(calls, '/ses_TEST_direct_shell', 'GET'), 2);
-  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 1);
+  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 0);
+});
+
+// Cleanup is a second native mutation; pre-mutation ownership alone cannot authorize it.
+test('identity swap before cleanup blocks DELETE after a successful native effect', async () => {
+  const { call, calls } = fake({ foreignBeforeCleanup: true });
+  await assert.rejects(probeNativeDirectShellEffect(call, '/TEST/workspace',
+    async () => calls.some(x => x.path.endsWith('/shell') && x.method === 'POST')
+      ? DIRECT_SHELL_EXPECTED : undefined), /TEST_direct_shell_cleanup_ownership_unconfirmed/);
+  assert.equal(counted(calls, '/shell'), 1);
+  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'GET'), 3);
+  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 0);
+});
+
+test('unreadable pre-cleanup ownership cannot cause blind DELETE', async () => {
+  const { call, calls } = fake({ unreadableBeforeCleanup: true });
+  await assert.rejects(probeNativeDirectShellEffect(call, '/TEST/workspace',
+    async () => calls.some(x => x.path.endsWith('/shell') && x.method === 'POST')
+      ? DIRECT_SHELL_EXPECTED : undefined), /TEST_direct_shell_cleanup_ownership_unconfirmed/);
+  assert.equal(counted(calls, '/shell'), 1);
+  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'GET'), 3);
+  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 0);
 });

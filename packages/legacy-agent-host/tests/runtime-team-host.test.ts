@@ -61,6 +61,14 @@ test('mixed Host boots V2 Session SPI profile without invoking V1 management reg
       const original = selected.runtime!.members[0]!;
       const root = selected.owner.storageRoot;
       const v2Root = join(root, 'TEST-v2');
+      // Stage1 requires a roster delivery and principal grant even for an
+      // unstarted V2 member in a mixed team. Preserve the V1/Claude member.
+      const team = selected.teams[0]!;
+      const bob = team.members.find(member => member.memberId === 'bob-id')!;
+      bob.delivery = { ...team.binding, runId: team.scope.runId,
+        memberId: 'bob-id', generation: '1' };
+      team.grants.push({ principalId: 'TEST-v2-principal', memberName: 'bob',
+        permissions: ['read', 'task.write', 'message.write'] });
       selected.runtime!.members.push({
         provider: 'opencode',
         nativeGeneration: 'v2',

@@ -9,7 +9,7 @@ export const DIRECT_SHELL_EXPECTED = 'TEST_V2_NATIVE_DIRECT_SHELL_EFFECT\n';
 /**
  * Try one mutation in a disposable native session and inspect only its owned
  * workspace. A transport/ACK failure is HOLD, never a reason to resend.
- * Cleanup sends exactly one DELETE; uncertain deletion is a hard failure.
+ * Cleanup sends one DELETE only after fresh native session ownership proof.
  */
 export async function probeNativeDirectShellEffect(
   call, workspace, readEffect, sleep = (ms) => delay(ms)
@@ -25,10 +25,12 @@ export async function probeNativeDirectShellEffect(
   if (created.status !== 200 || !/^ses_[A-Za-z0-9_-]+$/.test(id || ''))
     throw Error('TEST_direct_shell_session_create_unconfirmed');
   const base = '/api/session/' + encodeURIComponent(id);
+  let cleanupAuthorized = false;
   try {
     const snapshot = await call(base);
     if (!isOwnedNativeSessionSnapshot(snapshot, id, workspace, rules))
       throw Error('TEST_direct_shell_session_not_owned');
+    cleanupAuthorized = true;
     // Fresh TEST evidence must be absent BEFORE the only native mutation.
     // A stale file can otherwise masquerade as an acknowledged shell effect.
     if (await readEffect(DIRECT_SHELL_EFFECT_FILE) !== undefined)
@@ -65,6 +67,7 @@ export async function probeNativeDirectShellEffect(
       try {
         postMutationOwned = isOwnedNativeSessionSnapshot(await call(base), id, workspace, rules);
       } catch { /* No new native mutation or inferred positive evidence. */ }
+      if (!postMutationOwned) cleanupAuthorized = false;
     }
     return {
       attempted: true,
@@ -75,9 +78,17 @@ export async function probeNativeDirectShellEffect(
       toolPermissionEnforcementProven: false,
     };
   } finally {
-    // Never retry a potentially applied DELETE or modify a foreign session.
-    const removed = await call(base, 'DELETE');
-    if (removed.status !== 204)
-      throw Error('TEST_direct_shell_session_cleanup_unconfirmed');
+    // Do not mutate foreign/unknown native sessions. Even a previously
+    // valid session ID is not fresh ownership authority for DELETE.
+    if (cleanupAuthorized) {
+      let stillOwned = false;
+      try {
+        stillOwned = isOwnedNativeSessionSnapshot(await call(base), id, workspace, rules);
+      } catch { /* Missing attestation is not cleanup authority. */ }
+      if (!stillOwned) throw Error('TEST_direct_shell_cleanup_ownership_unconfirmed');
+      const removed = await call(base, 'DELETE');
+      if (removed.status !== 204)
+        throw Error('TEST_direct_shell_session_cleanup_unconfirmed');
+    }
   }
 }
