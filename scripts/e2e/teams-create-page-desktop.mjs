@@ -960,7 +960,14 @@ async function main() {
       .find(button => button.textContent?.includes('Optional launch settings')
         && button.getBoundingClientRect().width > 0)`;
     await cdp.click(optionalSettingsButton);
-    await cdp.click(createButtonExpression('Advanced'));
+    const createAdvancedToggle = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
+      .find(button => button.textContent?.trim() === 'Advanced' && !button.disabled
+        && button.getBoundingClientRect().width > 0)`;
+    await cdp.click(createAdvancedToggle);
+    await cdp.waitFor(
+      `Boolean(document.querySelector(${JSON.stringify(customArgsSelector)}))`,
+      'Advanced CLI section expanded by its page-scoped toggle'
+    );
     try {
       await cdp.waitFor(
         `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 2'`,
@@ -1013,7 +1020,7 @@ async function main() {
     );
     if (!optionalExpandedAfterResume) await cdp.click(optionalSettingsButton);
     const hasAdvancedInput = await cdp.evaluate(`Boolean(document.querySelector(${JSON.stringify(customArgsSelector)}))`);
-    if (!hasAdvancedInput) await cdp.click(createButtonExpression('Advanced'));
+    if (!hasAdvancedInput) await cdp.click(createAdvancedToggle);
     await cdp.waitFor(
       `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
       'Advanced CLI edit retained after real editor unmount and resume'
@@ -1242,7 +1249,7 @@ async function main() {
           && button.getBoundingClientRect().width > 0)`;
       const expanded = await cdp.evaluate(`${optionalButton}?.getAttribute('aria-expanded') === 'true'`);
       if (!expanded) await cdp.click(optionalButton);
-      await cdp.click(createButtonExpression('Advanced'));
+      await cdp.click(createAdvancedToggle);
     }
     await cdp.waitFor(
       `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
