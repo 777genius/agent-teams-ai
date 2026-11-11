@@ -972,7 +972,9 @@ export class TeamProvisioningMemberLifecycleController {
         await directGatewayArgs?.beginLaunch?.();
         child = spawnCli(claudePath, runtimeArgs, {
           cwd,
-          detached: true,
+          // Windows DETACHED_PROCESS leaves the teammate without any console, so every
+          // shell/git child it spawns allocates a new visible console window.
+          detached: process.platform !== 'win32',
           env: {
             ...provisioningEnv.env,
             ...nativeBootstrapEnv,
