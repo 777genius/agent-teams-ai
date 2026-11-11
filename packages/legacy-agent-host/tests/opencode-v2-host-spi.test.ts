@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { once } from 'node:events';
+import { getEventListeners, once } from 'node:events';
 import { createServer } from 'node:http';
 import { test } from 'node:test';
 import type { MemberProviderContext } from '../src/adapters/providers/MemberProvider.ts';
@@ -13,6 +13,9 @@ const { runtimeProfileSchema } = await import(sourceMode
 const { createOpenCodeV2MemberProvider } = await import(sourceMode
   ? '../src/adapters/providers/OpenCodeV2MemberProvider.ts'
   : '../dist/adapters/providers/OpenCodeV2MemberProvider.js');
+const { raceOpenCodeV2Revocation } = await import(sourceMode
+  ? '../src/adapters/providers/OpenCodeV2RevocationWait.ts'
+  : '../dist/adapters/providers/OpenCodeV2RevocationWait.js');
 const { finalizeOpenCodeV2ObserverAfterClose, guardOpenCodeV2ObserverCleanup } = await import(sourceMode
   ? '../src/adapters/providers/OpenCodeV2ObserverCleanup.ts'
   : '../dist/adapters/providers/OpenCodeV2ObserverCleanup.js');
@@ -3244,4 +3247,35 @@ test('V2 rejects forged native initial-context ACK before final policy readback'
     assert.equal(calls.stop, 1, 'only this TEST-owned native engine is retired');
     assert.equal(await provider.cleanup(), true);
   }
+});
+
+
+test('V2 observation revocation waits detach listeners on repeated native events', async () => {
+  const controller = new AbortController();
+  for (let index = 0; index < 256; index++) {
+    const result = await raceOpenCodeV2Revocation(Promise.resolve(index), controller.signal);
+    assert.deepEqual(result, { kind: 'event', value: index });
+    assert.equal(getEventListeners(controller.signal, 'abort').length, 0,
+      'each successful EventFeed next() must remove its cancellation listener');
+  }
+  const idle = raceOpenCodeV2Revocation(new Promise<never>(() => {}), controller.signal);
+  assert.equal(getEventListeners(controller.signal, 'abort').length, 1,
+    'one idle read maintains exactly one revocation listener');
+  controller.abort();
+  assert.deepEqual(await idle, { kind: 'revoked' });
+  assert.equal(getEventListeners(controller.signal, 'abort').length, 0,
+    'a revoked idle read must not retain a cancellation listener');
+});
+
+test('V2 observation revocation waits consume errors and detach on failure', async () => {
+  const controller = new AbortController();
+  await assert.rejects(
+    raceOpenCodeV2Revocation(Promise.reject(new Error('TEST-native-next-rejected')), controller.signal),
+    /TEST-native-next-rejected/);
+  assert.equal(getEventListeners(controller.signal, 'abort').length, 0);
+  controller.abort();
+  assert.deepEqual(await raceOpenCodeV2Revocation(
+    Promise.reject(new Error('TEST-late-error-after-revocation')), controller.signal),
+    { kind: 'revoked' }, 'a late rejection is consumed without recreating authority');
+  assert.equal(getEventListeners(controller.signal, 'abort').length, 0);
 });

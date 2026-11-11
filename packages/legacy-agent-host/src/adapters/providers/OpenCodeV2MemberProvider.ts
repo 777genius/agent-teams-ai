@@ -12,6 +12,7 @@ import { preflightOpenCodeV2EffectiveExternalDirectory } from '../../composition
 import { hasUntrustedOpenCodeBinaryOverride } from '../../composition/openCodeV2Environment.js';
 import { waitForNativeStopResult } from './OpenCodeV2StopAckWait.js';
 import { awaitOpenCodeV2OwnerReadback } from './OpenCodeV2OwnerReadback.js';
+import { raceOpenCodeV2Revocation } from './OpenCodeV2RevocationWait.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 // The native executable witness must be a canonical SHA-256, not merely two
 // equal strings supplied by a malformed private selection and owner.
@@ -555,9 +556,9 @@ export function createOpenCodeV2MemberProvider(
                 // after end(). That is safe for its own Session semantics, but
                 // must NOT leak events across a revoked Host generation.
                 const iterator = source.observe()[Symbol.asyncIterator]();
-                let wakeRevocation!: () => void;
-                const revoked = new Promise<void>((resolve) => { wakeRevocation = resolve; });
-                const onAbort = () => wakeRevocation();
+                const revocation = new AbortController();
+                const wakeRevocation = () => revocation.abort();
+                const onAbort = wakeRevocation;
                 abort.signal.addEventListener('abort', onAbort, { once: true });
                 if (abort.signal.aborted) onAbort();
                 // Host allocation/lease authority can be revoked without a
@@ -578,13 +579,13 @@ export function createOpenCodeV2MemberProvider(
                 let exhausted = false;
                 let authorityLost = false;
                 const waitForAttestation = async (): Promise<boolean> => {
-                  while (current()) {
+                  while (current() && !revocation.signal.aborted) {
                     if (ready && pendingReattestations.size === 0) return true;
                     const checks = [...pendingReattestations];
                     if (checks.length === 0) return false;
                     // A temporary recheck fences events but cannot consume or
                     // terminate the single private EventFeed observer.
-                    await Promise.race([Promise.all(checks), revoked]);
+                    await raceOpenCodeV2Revocation(Promise.all(checks), revocation.signal);
                   }
                   return false;
                 };
@@ -596,10 +597,7 @@ export function createOpenCodeV2MemberProvider(
                     }
                     // Do not strand a Host observer waiting on EventFeed.next()
                     // when seal/lease loss occurs with no further native event.
-                    const outcome = await Promise.race([
-                      iterator.next().then(value => ({ kind: 'event' as const, value })),
-                      revoked.then(() => ({ kind: 'revoked' as const })),
-                    ]);
+                    const outcome = await raceOpenCodeV2Revocation(iterator.next(), revocation.signal);
                     // Authority must be checked AFTER awaiting next(): EventFeed
                     // may already have queued a native event before revocation.
                     if (outcome.kind === 'revoked' || !current()) {
