@@ -155,6 +155,71 @@ describe('selected provider readiness revalidation', () => {
     expect(state.fetchCliProviderStatus).toHaveBeenCalledTimes(3);
   });
 
+  it('rechecks scoped Codex after sign-in even when global Codex looks ready, including project switches', async () => {
+    const staleCodex = {
+      ...catalogProvider('codex', Date.now() - 1),
+      authenticated: false,
+      modelCatalogRefreshState: 'error' as const,
+    };
+    projectPath = '/test/project-a';
+    state.cliProviderStatusByScope = {
+      [getCliProviderStatusScopeKey('codex', projectPath)]: staleCodex,
+    };
+    await render();
+    const scopedA = {
+      projectPath: '/test/project-a', silent: true, checkReason: 'launch_preflight',
+    };
+    expect(state.fetchCliProviderStatus).toHaveBeenCalledExactlyOnceWith('codex', scopedA);
+
+    const signedIn = {
+      managedAccount: { type: 'chatgpt' }, login: { status: 'idle' },
+    } as CodexAccountSnapshotDto;
+    await act(async () => { accountChanged?.({}, signedIn); });
+    expect(state.fetchCliProviderStatus).toHaveBeenCalledTimes(2);
+    expect(state.fetchCliProviderStatus).toHaveBeenLastCalledWith('codex', scopedA);
+
+    projectPath = '/test/project-b';
+    state.cliProviderStatusByScope = {
+      ...state.cliProviderStatusByScope,
+      [getCliProviderStatusScopeKey('codex', projectPath)]: staleCodex,
+    };
+    await render();
+    expect(state.fetchCliProviderStatus).toHaveBeenCalledTimes(3);
+    const scopedB = {
+      projectPath: '/test/project-b', silent: true, checkReason: 'launch_preflight',
+    };
+    expect(state.fetchCliProviderStatus).toHaveBeenLastCalledWith('codex', scopedB);
+    await act(async () => { accountChanged?.({}, signedIn); });
+    expect(state.fetchCliProviderStatus).toHaveBeenCalledTimes(4);
+    expect(state.fetchCliProviderStatus).toHaveBeenLastCalledWith('codex', scopedB);
+  });
+
+  it('defers a scoped Codex account recheck and resumes in the same project', async () => {
+    projectPath = '/test/pending-codex';
+    state.cliProviderStatusByScope = {
+      [getCliProviderStatusScopeKey('codex', projectPath)]: {
+        ...catalogProvider('codex', Date.now() - 1),
+        authenticated: false,
+        modelCatalogRefreshState: 'error',
+      },
+    };
+    await render();
+    state.cliProviderStatusLoading = { codex: true };
+    await render();
+    const signedIn = {
+      managedAccount: { type: 'chatgpt' }, login: { status: 'idle' },
+    } as CodexAccountSnapshotDto;
+    await act(async () => { accountChanged?.({}, signedIn); });
+    expect(state.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+    state.cliProviderStatusLoading = {};
+    status = { ...status };
+    await render();
+    expect(state.fetchCliProviderStatus).toHaveBeenCalledTimes(2);
+    expect(state.fetchCliProviderStatus).toHaveBeenLastCalledWith('codex', {
+      projectPath, silent: true, checkReason: 'launch_preflight',
+    });
+  });
+
   it('rechecks selected Codex once when account sign-in completes after failed preflight', async () => {
     status = {
       ...status,
