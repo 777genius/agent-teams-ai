@@ -35,7 +35,20 @@ Target branch: `main`. Includes the verified published runtime `0.0.160`. Live t
 
 <!-- RELEASE_BODY_START v2.18.7 -->
 
-Simplified the Dashboard and improved team creation and launch. Added a task table and built-in Git, improved schedules, and fixed OpenCode teammates sometimes not replying. Customize local fonts, text size, app scaling, and portable JSON themes.
+Simplified the Dashboard and improved team creation and launch. Added a tasks table, built-in Git, improved schedules, and fixed OpenCode teammates sometimes not replying. Customize local fonts, text size, app scaling, and portable JSON themes. Simplified the Team screen.
+
+<img width="1312" height="823" alt="image" src="https://github.com/user-attachments/assets/443ec4eb-f2ca-4b31-890c-c1a97b78bdea" />
+
+
+<img width="1312" height="823" alt="image" src="https://github.com/user-attachments/assets/e7f8ecdf-752e-44b7-b684-5dabed7f3ae1" />
+
+<img width="981" height="422" alt="image" src="https://github.com/user-attachments/assets/06093eac-8903-4edb-99ec-50240a8608c3" />
+
+<img width="1312" height="823" alt="image" src="https://github.com/user-attachments/assets/534b81e3-41e9-4af7-ace5-83091ca77e35" />
+
+
+<img width="832" height="742" alt="image" src="https://github.com/user-attachments/assets/4cd91e21-2974-4dba-8c51-14db289b5880" />
+
 
 ### What's New
 
