@@ -10,28 +10,12 @@ import { initialContextDigest } from '../../team-launch/context.js';
 import type { NativeContextEvidence } from '../../team-launch/contracts.js';
 import { preflightOpenCodeV2EffectiveExternalDirectory } from '../../composition/openCodeV2StaticPreflight.js';
 import { hasUntrustedOpenCodeBinaryOverride } from '../../composition/openCodeV2Environment.js';
+import { waitForNativeStopResult } from './OpenCodeV2StopAckWait.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 
 // The native executable witness must be a canonical SHA-256, not merely two
 // equal strings supplied by a malformed private selection and owner.
 const nativeSha256Hex = /^[a-f0-9]{64}$/;
-
-// An unacknowledged physical stop can stay pending forever. A deadline ends
-// only the wait, never grants process custody or authorizes a second signal.
-const NATIVE_STOP_ACK_WAIT_MS = 2_000;
-async function waitForNativeStopResult(pending: Promise<boolean>): Promise<boolean> {
-  let timeout: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      pending,
-      new Promise<boolean>(resolve => {
-        timeout = setTimeout(() => resolve(false), NATIVE_STOP_ACK_WAIT_MS);
-      }),
-    ]);
-  } finally {
-    if (timeout !== undefined) clearTimeout(timeout);
-  }
-}
 
 /**
  * A separately selected, TEST-owned native V2 engine and session. The provider
