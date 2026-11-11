@@ -22,7 +22,7 @@ jobs:
         run: |
           python - <<'PY'
           """One-time verified Git object preparation. Never changes a branch/ref."""
-          import base64, difflib, hashlib, io, json, os, subprocess, tarfile, urllib.error, urllib.parse, urllib.request, zipfile
+          import base64, difflib, hashlib, io, json, os, subprocess, tarfile, traceback, urllib.error, urllib.parse, urllib.request, zipfile
           from pathlib import Path
 
           REPO = '777genius/agent-teams-ai'
@@ -99,7 +99,8 @@ jobs:
                           data = response.read(200001)
                           assert len(data) <= 200000
                           return data
-                  raise RuntimeError('GitHub request failed with HTTP ' + str(error.code)) from None
+                  print('GitHub HTTP status:', error.code)
+                  raise RuntimeError('GitHub request failed') from None
 
           def read_at_base(path):
               assert path in ALLOWED or path.startswith('vendor/provider-migration/' + OLD_DIR + '/')
@@ -127,6 +128,7 @@ jobs:
               assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == BASE
               assert subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip() == BASE_TREE
               references = subprocess.check_output(['git', 'grep', '-l', '-F', OLD_DIR], text=True).splitlines()
+              print('Exact checkout archive consumers:', json.dumps(references))
               assert sorted(references) == sorted(ALLOWED), 'unexpected archive consumers require review'
               # No install, native execution, source commit or ref update is performed.
               metadata = request('/repos/' + SOURCE_REPO + '/actions/artifacts/' + str(ARTIFACT))
@@ -135,6 +137,7 @@ jobs:
               run = request('/repos/' + SOURCE_REPO + '/actions/runs/' + str(RUN))
               assert run['conclusion'] == 'success' and run['head_sha'] == SOURCE
               packages, source_receipt = checked_packages(request('/repos/' + SOURCE_REPO + '/actions/artifacts/' + str(ARTIFACT) + '/zip', redirect=True))
+              print('Original checked artifact identity verified')
               integrity = {}
               tree = []
               for name, data in packages.items():
@@ -155,6 +158,7 @@ jobs:
               ]:
                   old = read_at_base(path).decode('utf8')
                   count = old.count(OLD_DIR)
+                  print('Preparing exact consumer:', path, 'references:', count)
                   assert count == expected_count if expected_count is not None else 2 <= count <= 50
                   new = old.replace(OLD_DIR, NEW_DIR)
                   if path == 'pnpm-lock.yaml':
@@ -190,8 +194,9 @@ jobs:
               try:
                   prepare()
               except Exception as error:
-                  # No native/source data, token, HTTP body or signed URL in public errors.
-                  print('Verified provider object preparation failed: ' + type(error).__name__)
+                  # Fixed code locations only: no exception payload, token or signed URL.
+                  locations = [(frame.name, frame.lineno) for frame in traceback.extract_tb(error.__traceback__) if frame.filename == '<stdin>']
+                  print('Verified provider object preparation failed:', type(error).__name__, locations)
                   raise SystemExit(1)
           PY
       - name: Preserve preparation diff and provenance (not native qualification)
