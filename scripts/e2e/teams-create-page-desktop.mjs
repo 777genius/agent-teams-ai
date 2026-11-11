@@ -1110,6 +1110,31 @@ async function main() {
           getComputedStyle(back).visibility === 'visible';
       })()`);
       assert(visibleAtZoom, 'Back button disappeared at native Electron 200% zoom');
+      const headerLayout = await cdp.evaluate(`(() => {
+        const header = document.querySelector('[data-testid="create-team-page"] > header');
+        const title = header?.querySelector('h1')?.getBoundingClientRect();
+        const parent = header?.getBoundingClientRect();
+        const actions = Array.from(header?.querySelectorAll('button') ?? [])
+          .filter((button) => button.getAttribute('aria-label') !== 'Back to teams')
+          .map((button) => button.getBoundingClientRect())
+          .filter((rect) => rect.width > 0 && rect.height > 0);
+        const intersects = (a, b) =>
+          a.left < b.right - 1 && a.right > b.left + 1 &&
+          a.top < b.bottom - 1 && a.bottom > b.top + 1;
+        return {
+          titleVisible: Boolean(title && title.width > 0 && title.height > 0),
+          actionsVisible: actions.length,
+          overlap: Boolean(title && actions.some((rect) => intersects(title, rect))),
+          overflow: Boolean(parent && actions.some((rect) =>
+            rect.left < parent.left - 1 || rect.right > parent.right + 1)),
+        };
+      })()`);
+      assert(
+        headerLayout.titleVisible && headerLayout.actionsVisible >= 2 &&
+          !headerLayout.overlap && !headerLayout.overflow,
+        'Create Team header title/actions overlap or overflow at native 200% zoom: ' +
+          JSON.stringify(headerLayout)
+      );
       await captureScreenshot(cdp, fixture, 'native-electron-zoom-200');
       assert(Math.abs((await setActualZoom(1)) - 1) <= 0.05,
         'BrowserWindow did not restore 100% zoom');
