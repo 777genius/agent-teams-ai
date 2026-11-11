@@ -273,6 +273,10 @@ if (process.argv[2] === '--worker') {
         throw Error('TEST_native_late_permission_override_not_fenced');
     }
     receipt.nativeSessionPermissionOrderReadbackProven=true;
+    const {observeShellFlagPermissionSplit}=await import('./opencode-v2-shell-flag-policy-probe.mjs');
+    const shellFlag=await observeShellFlagPermissionSplit(call,workspace,root);
+    receipt.nativeShellFlagPermissionSplitObserved=shellFlag.decisionSplitObserved;
+    receipt.steps.push('TEST_native_shell_flag_permission_split_not_tool_enforcement');
     // This checks the real published V2 Permission.Service resolver, NOT a
     // session readback, model turn, tool execution, or effective agent policy.
     // All resources are disposable and outside this TEST workspace only.

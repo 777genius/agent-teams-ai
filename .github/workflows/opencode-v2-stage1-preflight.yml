@@ -188,6 +188,8 @@ jobs:
         run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Check isolated durable-HTTP TEST harness syntax
         run: node --check packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs
+      - name: Check TEST shell-flag permission split diagnostic (no tool execution)
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-shell-flag-policy-probe.test.mjs
       - name: Negative SDK setup cleanup and HOLD receipt (no worker launch)
         env:
           OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
@@ -232,6 +234,7 @@ jobs:
                r.processCustodyQualified!==false || r.cleanup!==true ||
                r.durableHTTPEvents!==1 || r.hostSpiReadinessProven!==true ||
                r.nativeSessionPermissionOrderReadbackProven!==true ||
+               r.nativeShellFlagPermissionSplitObserved!==true ||
                r.nativePermissionResolverProven!==true ||
                r.nativePermissionReplyRejectNoReplayProven!==true ||
                r.nativeSavedAlwaysOverridesAskProven!==true ||
@@ -249,6 +252,7 @@ jobs:
             const requiredSteps=[
               'TEST_published_server_real_authenticated_HTTP_ready',
               'TEST_no_unauthenticated_HTTP_access',
+              'TEST_native_shell_flag_permission_split_not_tool_enforcement',
               'TEST_native_unauthenticated_mutations_rejected',
               'TEST_published_native_permission_resolver_and_nonreplay',
               'TEST_real_pending_permission_exists_before_cold_restart',
