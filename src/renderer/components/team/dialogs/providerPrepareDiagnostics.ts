@@ -1228,11 +1228,12 @@ export async function runProviderPrepareDiagnostics({
           runtimeDetailLines = [];
           runtimeWarnings = [];
           for (const modelId of compatibilityPassedModelIds) {
-            recordTerminalModelResult(modelId, {
-              status: 'ready',
-              line: buildModelAvailableLine(providerId, modelId),
-              warningLine: null,
-            });
+            const line = buildModelVerificationDeferredLine(
+              providerId,
+              modelId,
+              'OpenCode session is busy; retry when idle.'
+            );
+            recordTerminalModelResult(modelId, { status: 'notes', line, warningLine: line });
           }
           handledBusyDeepDeferral = true;
         }

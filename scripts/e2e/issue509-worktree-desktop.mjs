@@ -295,7 +295,7 @@ class Cdp {
 }
 
 const button = (text) => `Array.from(document.querySelectorAll('button')).find(e =>
-  e.textContent.trim() === ${JSON.stringify(text)} && e.getBoundingClientRect().width > 0)`;
+  (e.textContent.trim() === ${JSON.stringify(text)} || e.getAttribute('aria-label') === ${JSON.stringify(text)}) && e.getBoundingClientRect().width > 0)`;
 const row = (name) => `Array.from(document.querySelectorAll('[data-role="member-row"]')).find(e =>
   Array.from(e.querySelectorAll('input')).some(input => input.value === ${JSON.stringify(name)}))`;
 const checkbox = (name) => `(${row(name)})?.querySelector('[id$="-worktree-isolation"]')`;

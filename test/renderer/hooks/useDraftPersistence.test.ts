@@ -189,6 +189,36 @@ describe('draft hydration ordering', () => {
     vi.unstubAllGlobals();
   });
 
+  it('ignores a prior text write after switching keys and back', async () => {
+    let releaseSave!: () => void;
+    const oldWrite = new Promise<void>((resolve) => { releaseSave = resolve; });
+    const save = vi.spyOn(draftStorage, 'saveDraft').mockImplementation(() => oldWrite);
+    const load = vi.spyOn(draftStorage, 'loadDraft').mockResolvedValue(null);
+    let draft!: ReturnType<typeof useDraftPersistence>;
+    function Input({ draftKey }: { draftKey: string }): ReactElement {
+      draft = useDraftPersistence({ key: draftKey, debounceMs: 5 });
+      return createElement('textarea', { value: draft.value, readOnly: true });
+    }
+    const root = createRoot(document.createElement('div'));
+    vi.useFakeTimers();
+    try {
+      await act(async () => { root.render(createElement(Input, { draftKey: 'text:A' })); });
+      await act(async () => { draft.setValue('old text'); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(5); });
+      expect(save).toHaveBeenCalledTimes(1);
+      await act(async () => { root.render(createElement(Input, { draftKey: 'text:B' })); });
+      await act(async () => { root.render(createElement(Input, { draftKey: 'text:A' })); });
+      expect(draft.isSaved).toBe(false);
+      await act(async () => { releaseSave(); await Promise.resolve(); });
+      expect(draft.value).toBe('');
+      expect(draft.isSaved).toBe(false);
+    } finally {
+      await act(async () => { root.unmount(); });
+      vi.useRealTimers();
+      save.mockRestore();
+      load.mockRestore();
+    }
+  });
   it('does not show Saved for a superseded create-team prompt write', async () => {
     let releaseSave!: () => void;
     let releaseNewSave!: () => void;

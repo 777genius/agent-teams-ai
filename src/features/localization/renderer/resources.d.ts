@@ -4657,6 +4657,7 @@ export default interface Resources {
         "taskFirstAgentDescription": "The selected teammate receives a board task after the team is safely started, if needed. Busy agents are not interrupted.",
         "taskFirstTarget": "Assign to",
         "taskFirstTeamDescription": "The team lead receives a coordination task after the team is safely started, if needed. Existing work is not interrupted.",
+        "taskFirstWholeTeam": "Via team lead",
         "team": "Team",
         "teamDescription": "Starts the saved team if stopped; otherwise assigns a task to its lead. Uses saved team provider and project settings.",
         "teamPathMissing": "The team needs a saved project folder before scheduling a launch.",
@@ -6410,6 +6411,7 @@ export default interface Resources {
       "title": "Running Teams"
     },
     "schedule": {
+      "actionFailed": "Schedule action failed",
       "actions": {
         "addSchedule": "Add Schedule",
         "delete": "Delete",
@@ -6439,6 +6441,8 @@ export default interface Resources {
           "mondayAtNine": "Monday at 9am",
           "weekdaysAtNine": "Weekdays at 9am"
         },
+        "noTimezones": "No matching timezones",
+        "searchTimezone": "Search timezones...",
         "selectTimezone": "Select timezone",
         "timezone": "Timezone",
         "warmUpDescription": "Prepares selected providers before scheduled execution",
@@ -6451,6 +6455,7 @@ export default interface Resources {
         },
         "warmUpTime": "Warm-up time"
       },
+      "deleteConfirmation": "Delete schedule \"{{label}}\"? Its run history will also be removed.",
       "empty": {
         "description": "Create a schedule to run team tasks automatically on a cron schedule.",
         "title": "No schedules yet"
@@ -6470,6 +6475,7 @@ export default interface Resources {
         "stillRunning": "Task is still running...",
         "title": "Run Log"
       },
+      "runRequested": "Run requested. Check history to see whether work was handed off.",
       "runStatus": {
         "cancelled": "Cancelled",
         "completed": "Completed",

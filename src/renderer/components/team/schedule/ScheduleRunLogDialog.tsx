@@ -36,9 +36,9 @@ interface ScheduleRunLogDialogProps {
 // Helpers
 // =============================================================================
 
-function formatTime(isoString: string): string {
+function formatTime(isoString: string, locale?: string): string {
   try {
-    return new Date(isoString).toLocaleString('en-US', {
+    return new Date(isoString).toLocaleString(locale, {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -73,7 +73,7 @@ export const ScheduleRunLogDialog = ({
   scheduleId,
   onClose,
 }: ScheduleRunLogDialogProps): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
+  const { t, resolvedLanguage } = useAppTranslation('team');
   const openTaskDetailTab = useStore((state) => state.openTaskDetailTab);
   const activeContextId = useStore((state) => state.activeContextId);
   // Read live run data from store — falls back to initial prop if not found
@@ -159,7 +159,7 @@ export const ScheduleRunLogDialog = ({
 
           <span className="flex items-center gap-1 text-[var(--color-text-muted)]">
             <Clock className="size-3" />
-            {formatTime(run.startedAt)}
+            {formatTime(run.startedAt, resolvedLanguage)}
           </span>
 
           {run.durationMs != null ? (

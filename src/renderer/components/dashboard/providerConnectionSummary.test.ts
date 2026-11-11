@@ -13,10 +13,30 @@ const baseCliStatus = {
   installed: true,
   flavor: 'agent_teams_orchestrator',
   providers: [
-    { providerId: 'anthropic' as const, authenticated: true, verificationState: 'verified' as const, statusCheckOutcome: 'authoritative' as const },
-    { providerId: 'codex' as const, authenticated: false, verificationState: 'verified' as const, statusCheckOutcome: 'authoritative' as const },
-    { providerId: 'gemini' as const, authenticated: true, verificationState: 'verified' as const, statusCheckOutcome: 'authoritative' as const },
-    { providerId: 'opencode' as const, authenticated: true, verificationState: 'verified' as const, statusCheckOutcome: 'authoritative' as const },
+    {
+      providerId: 'anthropic' as const,
+      authenticated: true,
+      verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
+    },
+    {
+      providerId: 'codex' as const,
+      authenticated: false,
+      verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
+    },
+    {
+      providerId: 'gemini' as const,
+      authenticated: true,
+      verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
+    },
+    {
+      providerId: 'opencode' as const,
+      authenticated: true,
+      verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
+    },
   ],
 };
 const globalDirectory = {
@@ -43,7 +63,12 @@ const input = {
 
 describe('getDashboardConnectionSummary (no IPC)', () => {
   it('counts verified CLI logins separately from complete OpenCode directory connections', () => {
-    expect(getDashboardConnectionSummary(input)).toEqual({ cliConnected: 1, cliCountComplete: true, cliCountPending: false, openCodeConnected: 2 });
+    expect(getDashboardConnectionSummary(input)).toEqual({
+      cliConnected: 1,
+      cliCountComplete: true,
+      cliCountPending: false,
+      openCodeConnected: 2,
+    });
   });
 
   it('never counts an OpenCode host or inventory-only fallback as a separate CLI credential', () => {
@@ -80,7 +105,9 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
       cliConnected: 1,
       cliCountComplete: false,
     });
-    expect(getDashboardConnectionSummary({ ...input, cliStatusLoading: true }).cliCountComplete).toBe(false);
+    expect(
+      getDashboardConnectionSummary({ ...input, cliStatusLoading: true }).cliCountComplete
+    ).toBe(false);
   });
 
   it('ignores disabled Gemini even when its status is missing or marked loading', () => {
@@ -95,11 +122,13 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
       cliCountComplete: true,
       cliCountPending: false,
     });
-    expect(getDashboardConnectionSummary({
-      ...input,
-      cliStatus,
-      providerStatusLoading: { gemini: true },
-    })).toMatchObject({
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        cliStatus,
+        providerStatusLoading: { gemini: true },
+      })
+    ).toMatchObject({
       cliConnected: 0,
       cliCountComplete: true,
       cliCountPending: false,
@@ -107,27 +136,141 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
   });
 
   it('does not claim an exact OpenCode count for partial, absent or stale directories', () => {
-    expect(getDashboardConnectionSummary({ ...input, globalDirectory: null }).openCodeConnected).toBeNull();
-    expect(getDashboardConnectionSummary({
+    expect(
+      getDashboardConnectionSummary({ ...input, globalDirectory: null }).openCodeConnected
+    ).toBeNull();
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        globalDirectory: { ...globalDirectory, authoritative: false },
+      }).openCodeConnected
+    ).toBeNull();
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        globalDirectory: { ...globalDirectory, nextCursor: 'next' },
+      }).openCodeConnected
+    ).toBeNull();
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        globalDirectory: { ...globalDirectory, totalCount: 100 },
+      }).openCodeConnected
+    ).toBeNull();
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        globalDirectory: { ...globalDirectory, runtimeRevision: 'replaced' },
+      }).openCodeConnected
+    ).toBeNull();
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        runtimeStatus: { ...runtimeStatus, state: 'checking' as const },
+      }).openCodeConnected
+    ).toBeNull();
+  });
+
+  it('exposes fresh partial connected rows as a lower bound without claiming an exact total', () => {
+    const partial = {
+      ...globalDirectory,
+      authoritative: false,
+      totalCount: 101,
+      nextCursor: '100',
+    };
+    expect(getDashboardConnectionSummary({ ...input, globalDirectory: partial })).toMatchObject({
+      openCodeConnected: null,
+      openCodeKnownConnected: 2,
+    });
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        globalDirectory: partial,
+        countInvalidated: true,
+      }).openCodeKnownConnected
+    ).toBeUndefined();
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        globalDirectory: partial,
+        projectPath: '/test/other-project',
+      }).openCodeKnownConnected
+    ).toBeUndefined();
+  });
+
+  it('keeps the previous scoped count only during a bounded actual recheck, then replaces it', () => {
+    const nowMs = Date.parse('2026-11-10T16:00:00Z');
+    const observation = {
+      connected: 11,
+      runtimeRevision: revision,
+      source: 'summary-connected' as const,
+      fetchedAt: new Date(nowMs - 121_000).toISOString(),
+    };
+    const checking = {
       ...input,
-      globalDirectory: { ...globalDirectory, authoritative: false },
-    }).openCodeConnected).toBeNull();
-    expect(getDashboardConnectionSummary({
+      projectPath: '/test/project-a',
+      globalDirectory: null,
+      observedOpenCodeCount: observation,
+      countChecking: true,
+      nowMs,
+    };
+    expect(getDashboardConnectionSummary(checking)).toMatchObject({
+      openCodeConnected: null,
+      openCodePreviousConnected: 11,
+    });
+    for (const change of [
+      { countChecking: false },
+      { countInvalidated: true },
+      { runtimeStatus: { ...runtimeStatus, version: 'different-runtime' } },
+      // The scoped cache selector supplies no observation for another project.
+      { projectPath: '/test/project-b', observedOpenCodeCount: null },
+      { nowMs: nowMs + 120_000 },
+    ]) {
+      expect(
+        getDashboardConnectionSummary({ ...checking, ...change }).openCodePreviousConnected
+      ).toBeUndefined();
+    }
+    expect(
+      getDashboardConnectionSummary({
+        ...checking,
+        observedOpenCodeCount: {
+          ...observation,
+          connected: 9,
+          fetchedAt: new Date(nowMs).toISOString(),
+        },
+      })
+    ).toMatchObject({ openCodeConnected: 9 });
+    expect(
+      getDashboardConnectionSummary({
+        ...checking,
+        observedOpenCodeCount: {
+          ...observation,
+          connected: 9,
+          fetchedAt: new Date(nowMs).toISOString(),
+        },
+      }).openCodePreviousConnected
+    ).toBeUndefined();
+  });
+
+  it('retains a complete directory count as previous display data while its expired evidence is rechecked', () => {
+    const nowMs = Date.parse('2026-11-10T16:00:00Z');
+    const previous = {
       ...input,
-      globalDirectory: { ...globalDirectory, nextCursor: 'next' },
-    }).openCodeConnected).toBeNull();
-    expect(getDashboardConnectionSummary({
-      ...input,
-      globalDirectory: { ...globalDirectory, totalCount: 100 },
-    }).openCodeConnected).toBeNull();
-    expect(getDashboardConnectionSummary({
-      ...input,
-      globalDirectory: { ...globalDirectory, runtimeRevision: 'replaced' },
-    }).openCodeConnected).toBeNull();
-    expect(getDashboardConnectionSummary({
-      ...input,
-      runtimeStatus: { ...runtimeStatus, state: 'checking' as const },
-    }).openCodeConnected).toBeNull();
+      countChecking: true,
+      nowMs,
+      globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 121_000).toISOString() },
+    };
+    expect(getDashboardConnectionSummary(previous)).toMatchObject({
+      openCodeConnected: null,
+      openCodePreviousConnected: 2,
+    });
+    expect(
+      getDashboardConnectionSummary({ ...previous, countChecking: false }).openCodePreviousConnected
+    ).toBeUndefined();
+    expect(
+      getDashboardConnectionSummary({ ...previous, countInvalidated: true })
+        .openCodePreviousConnected
+    ).toBeUndefined();
   });
 
   it('uses only fresh runtime-matched count observations for the active project', () => {
@@ -147,44 +290,57 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
       nowMs,
     };
     expect(getDashboardConnectionSummary(scoped).openCodeConnected).toBe(7);
-    expect(getDashboardConnectionSummary({
-      ...scoped, observedOpenCodeCount: { ...observation, runtimeRevision: 'previous-runtime' },
-    }).openCodeConnected).toBeNull();
-    expect(getDashboardConnectionSummary({
-      ...scoped, observedOpenCodeCount: {
-        ...observation, fetchedAt: new Date(nowMs - 121_000).toISOString(),
-      },
-    }).openCodeConnected).toBeNull();
+    expect(
+      getDashboardConnectionSummary({
+        ...scoped,
+        observedOpenCodeCount: { ...observation, runtimeRevision: 'previous-runtime' },
+      }).openCodeConnected
+    ).toBeNull();
+    expect(
+      getDashboardConnectionSummary({
+        ...scoped,
+        observedOpenCodeCount: {
+          ...observation,
+          fetchedAt: new Date(nowMs - 121_000).toISOString(),
+        },
+      }).openCodeConnected
+    ).toBeNull();
   });
 
   it('discards a project count if global credentials are reobserved more recently', () => {
     const nowMs = Date.parse('2026-11-08T13:10:00Z');
-    expect(getDashboardConnectionSummary({
-      ...input,
-      projectPath: '/work/project',
-      projectDirectory: null, // Scoped directory remains unknown
-      globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 5_000).toISOString() },
-      observedOpenCodeCount: {
-        connected: 7,
-        runtimeRevision: revision,
-        source: 'summary-connected',
-        fetchedAt: new Date(nowMs - 30_000).toISOString(),
-      },
-      nowMs,
-    }).openCodeConnected).toBeNull();
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        projectPath: '/work/project',
+        projectDirectory: null, // Scoped directory remains unknown
+        globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 5_000).toISOString() },
+        observedOpenCodeCount: {
+          connected: 7,
+          runtimeRevision: revision,
+          source: 'summary-connected',
+          fetchedAt: new Date(nowMs - 30_000).toISOString(),
+        },
+        nowMs,
+      }).openCodeConnected
+    ).toBeNull();
   });
 
   it('prefers a newer complete full directory over an earlier filtered observation', () => {
     const nowMs = Date.parse('2026-11-08T12:00:00Z');
-    expect(getDashboardConnectionSummary({
-      ...input,
-      globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 5_000).toISOString() },
-      observedOpenCodeCount: {
-        connected: 9, runtimeRevision: revision, source: 'summary-connected',
-        fetchedAt: new Date(nowMs - 20_000).toISOString(),
-      },
-      nowMs,
-    }).openCodeConnected).toBe(2);
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 5_000).toISOString() },
+        observedOpenCodeCount: {
+          connected: 9,
+          runtimeRevision: revision,
+          source: 'summary-connected',
+          fetchedAt: new Date(nowMs - 20_000).toISOString(),
+        },
+        nowMs,
+      }).openCodeConnected
+    ).toBe(2);
   });
 
   it('requires both complete global and project snapshots before reporting a project count', () => {
@@ -196,68 +352,85 @@ describe('getDashboardConnectionSummary (no IPC)', () => {
       ],
       totalCount: 2,
     };
-    expect(getDashboardConnectionSummary({
-      ...input,
-      projectPath: '/work/project',
-      projectDirectory: null,
-    }).openCodeConnected).toBeNull();
-    expect(getDashboardConnectionSummary({
-      ...input,
-      projectPath: '/work/project',
-      projectDirectory,
-    }).openCodeConnected).toBe(2); // xai (global), private project; openrouter overridden
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        projectPath: '/work/project',
+        projectDirectory: null,
+      }).openCodeConnected
+    ).toBeNull();
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        projectPath: '/work/project',
+        projectDirectory,
+      }).openCodeConnected
+    ).toBe(2); // xai (global), private project; openrouter overridden
   });
 
   it('expires cached OpenCode observations without treating stale counts as live', () => {
     const nowMs = Date.parse('2026-11-07T12:00:00Z');
-    expect(getDashboardConnectionSummary({
-      ...input,
-      globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 119_000).toISOString() },
-      nowMs,
-    }).openCodeConnected).toBe(2);
-    expect(getDashboardConnectionSummary({
-      ...input,
-      globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 121_000).toISOString() },
-      nowMs,
-    }).openCodeConnected).toBeNull();
-    expect(getDashboardConnectionSummary({
-      ...input,
-      globalDirectory: { ...globalDirectory, fetchedAt: 'invalid' },
-      nowMs,
-    }).openCodeConnected).toBeNull();
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 119_000).toISOString() },
+        nowMs,
+      }).openCodeConnected
+    ).toBe(2);
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        globalDirectory: { ...globalDirectory, fetchedAt: new Date(nowMs - 121_000).toISOString() },
+        nowMs,
+      }).openCodeConnected
+    ).toBeNull();
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        globalDirectory: { ...globalDirectory, fetchedAt: 'invalid' },
+        nowMs,
+      }).openCodeConnected
+    ).toBeNull();
   });
 
   it('does not reuse full-directory counts after a credential mutation until a new validated read', () => {
-    expect(getDashboardConnectionSummary({
-      ...input,
-      globalDirectory, countInvalidated: true,
-    }).openCodeConnected).toBeNull();
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        globalDirectory,
+        countInvalidated: true,
+      }).openCodeConnected
+    ).toBeNull();
   });
 
   it('does not claim an exact count when one cached directory entry has unresolved status', () => {
-    expect(getDashboardConnectionSummary({
-      ...input,
-      globalDirectory: {
-        ...globalDirectory,
-        entries: [
-          { providerId: 'openrouter', state: 'error' as const },
-          ...globalDirectory.entries.slice(1),
-        ],
-      },
-    }).openCodeConnected).toBeNull();
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        globalDirectory: {
+          ...globalDirectory,
+          entries: [
+            { providerId: 'openrouter', state: 'error' as const },
+            ...globalDirectory.entries.slice(1),
+          ],
+        },
+      }).openCodeConnected
+    ).toBeNull();
   });
 
   it('deduplicates case-folded OpenCode ids and excludes the OpenCode host entry', () => {
-    expect(getDashboardConnectionSummary({
-      ...input,
-      globalDirectory: {
-        ...globalDirectory,
-        entries: [
-          { providerId: 'OpenRouter', state: 'connected' as const },
-          { providerId: 'openrouter', state: 'connected' as const },
-          { providerId: 'opencode', state: 'connected' as const },
-        ],
-      },
-    }).openCodeConnected).toBe(1);
+    expect(
+      getDashboardConnectionSummary({
+        ...input,
+        globalDirectory: {
+          ...globalDirectory,
+          entries: [
+            { providerId: 'OpenRouter', state: 'connected' as const },
+            { providerId: 'openrouter', state: 'connected' as const },
+            { providerId: 'opencode', state: 'connected' as const },
+          ],
+        },
+      }).openCodeConnected
+    ).toBe(1);
   });
 });

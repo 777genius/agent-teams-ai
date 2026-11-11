@@ -1693,6 +1693,7 @@
       "taskFirstAgentDescription": "The selected teammate receives a board task after the team is safely started, if needed. Busy agents are not interrupted.",
       "taskFirstTeamDescription": "The team lead receives a coordination task after the team is safely started, if needed. Existing work is not interrupted.",
       "taskFirstTarget": "Assign to",
+      "taskFirstWholeTeam": "Via team lead",
       "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
       "historicalPromptAcknowledged": "I've reviewed the saved prompt and separated any lasting instructions. Keep the old prompt, but never run it for scheduled work."
     },
@@ -2270,6 +2271,9 @@
     }
   },
   "schedule": {
+    "actionFailed": "Schedule action failed",
+    "deleteConfirmation": "Delete schedule \"{{label}}\"? Its run history will also be removed.",
+    "runRequested": "Run requested. Check history to see whether work was handed off.",
     "count": "{{count}} schedules",
     "count_one": "{{count}} schedule",
     "count_other": "{{count}} schedules",
@@ -2304,6 +2308,8 @@
       "nextRuns": "Next runs:",
       "timezone": "Timezone",
       "selectTimezone": "Select timezone",
+      "searchTimezone": "Search timezones...",
+      "noTimezones": "No matching timezones",
       "warmUpTime": "Warm-up time",
       "warmUpDescription": "Prepares selected providers before scheduled execution",
       "errors": {
@@ -3314,7 +3320,7 @@
     "label": "Team template",
     "placeholder": "Start from a team template",
     "confirmTitle": "Apply team template?",
-    "confirmMessage": "This replaces the description, prompt and teammates, resets runtime selection, disables Run after create and Solo team, and enables model sync. Continue?",
+    "confirmMessage": "This will replace your teammates, instructions and team settings with the template’s values.",
     "confirmAction": "Apply template",
     "names": {
       "software-product": "Software Product Team",
@@ -3358,7 +3364,7 @@
       "failed": "Run failed",
       "cancelled": "Cancelled"
     },
-    "title": "Manage teams with a prompt",
+    "title": "Manage with a prompt",
     "description": "Write a request for your external agent. Templates below are read-only references.",
     "taskLabel": "What should the agent do?",
     "taskTooLong": "Native runs support requests up to {{limit}} characters. Shorten the request to run it.",

@@ -239,15 +239,25 @@ vi.mock('@features/codex-account/renderer', async (importOriginal) => {
 });
 
 const useVirtualizerMock = vi.fn(
-  (options: { count: number }) =>
+  (options: {
+    count: number;
+    rangeExtractor?: (range: {
+      startIndex: number;
+      endIndex: number;
+      overscan: number;
+      count: number;
+    }) => number[];
+  }) =>
     ({
       getVirtualItems: () =>
-        Array.from({ length: Math.min(options.count, 9) }, (_, index) => ({
-          index,
-          key: index,
-          start: index * 92,
-          size: 92,
-        })),
+        (options.rangeExtractor?.({
+          startIndex: 0,
+          endIndex: Math.min(options.count - 1, 8),
+          overscan: 0,
+          count: options.count,
+        }) ?? Array.from({ length: Math.min(options.count, 9) }, (_, index) => index)).map(
+          (index) => ({ index, key: index, start: index * 92, size: 92 })
+        ),
       getTotalSize: () => options.count * 92,
       measureElement: () => undefined,
     }) as const
@@ -270,7 +280,6 @@ vi.mock('@tanstack/react-virtual', () => ({
 import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team/dialogs/openCodeDefaultMaterialization';
 import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { OpenCodeSourceDirectoryContext } from '@renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider';
-import { getActiveOpenCodeStickyHeadingIndex } from '@renderer/components/team/dialogs/teamModelSelectorUi';
 import {
   getCliProviderStatusScopeKey,
   MULTIMODEL_PROVIDER_IDS,
@@ -2723,10 +2732,13 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('virtualizes large OpenCode model lists instead of rendering every model tile', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const models = Array.from(
-      { length: 160 },
-      (_, index) => `openrouter/test/model-${String(index).padStart(3, '0')}`
-    );
+    const models = [
+      ...Array.from(
+        { length: 160 },
+        (_, index) => `openrouter/test/model-${String(index).padStart(3, '0')}`
+      ),
+      'zai/glm-next',
+    ];
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
       providers: [
@@ -2780,33 +2792,41 @@ describe('TeamModelSelector disabled Codex models', () => {
         }
       | undefined;
     expect(virtualizerOptions?.count).toBeGreaterThan(80);
-    const headingIndex = Array.from(
+    const headingIndexes = Array.from(
       { length: virtualizerOptions?.count ?? 0 },
       (_, index) => index
-    ).find((index) => String(virtualizerOptions?.getItemKey?.(index)).startsWith('heading:'));
-    expect(headingIndex).toBeTypeOf('number');
+    ).filter((index) => String(virtualizerOptions?.getItemKey?.(index)).startsWith('heading:'));
+    expect(headingIndexes).toHaveLength(2);
+    const headingIndex = headingIndexes[0];
     expect(virtualizerOptions?.estimateSize?.(headingIndex ?? 0)).toBe(38);
     expect(virtualizerOptions?.estimateSize?.((headingIndex ?? 0) + 1)).toBe(74);
-    expect(getActiveOpenCodeStickyHeadingIndex([headingIndex ?? 0], headingIndex ?? 0)).toBeNull();
-    expect(getActiveOpenCodeStickyHeadingIndex([headingIndex ?? 0], (headingIndex ?? 0) + 1)).toBe(
-      headingIndex
-    );
-
     const extractedIndexes = virtualizerOptions?.rangeExtractor?.({
       startIndex: (headingIndex ?? 0) + 4,
       endIndex: (headingIndex ?? 0) + 8,
       overscan: 2,
       count: virtualizerOptions?.count ?? 0,
     });
-    expect(extractedIndexes).toContain(headingIndex);
+    expect(extractedIndexes).toEqual(expect.arrayContaining(headingIndexes));
     expect(host.textContent).toContain('OpenRouter');
     expect(host.textContent).toContain('test/model-159');
     expect(host.textContent).not.toContain('test/model-000');
 
-    const groupHeader = host.querySelector<HTMLElement>(
+    const groups = Array.from(host.querySelectorAll<HTMLElement>(
       '[data-testid="team-model-selector-opencode-group"]'
+    ));
+    const stickyHeaders = host.querySelectorAll<HTMLElement>(
+      '[data-testid="team-model-selector-sticky-group-header"]'
     );
-    expect(groupHeader?.parentElement?.className).toContain('z-30');
+    expect(groups).toHaveLength(2);
+    expect(stickyHeaders).toHaveLength(groups.length);
+    for (const [index, group] of groups.entries()) {
+      const start = headingIndexes[index] ?? 0;
+      const end = headingIndexes[index + 1] ?? virtualizerOptions?.count ?? 0;
+      expect(stickyHeaders[index]?.parentElement).toBe(group);
+      expect(group.style.top).toBe(`${start * 92}px`);
+      expect(group.style.height).toBe(`${(end - start) * 92}px`);
+      expect(group.querySelectorAll('h4')).toHaveLength(1);
+    }
 
     const unselectedModelCells = Array.from(
       host.querySelectorAll<HTMLElement>(

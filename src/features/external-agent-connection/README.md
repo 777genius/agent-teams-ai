@@ -53,3 +53,9 @@ process completion status. Provider authentication and custom endpoint policy
 remain owned by the existing provider services. Root switches and app shutdown
 cancel owned runs. Native CLI compatibility still requires sandbox protocol proof
 for the installed binary version; unit lifecycle checks do not replace that proof.
+
+The shared prompt action is available from both the Teams list and creation
+header. Its optional `onManagementApplied` callback follows newly accepted
+committed changes in the popup's live app/root context; merely opening, copying
+or closing the popup does not invoke it. Creation navigation preserves its
+autosaved form, description and prompt drafts.

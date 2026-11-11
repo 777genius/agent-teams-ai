@@ -202,6 +202,47 @@ export function verifyCompleteConnectedSourceSummary(response, expected) {
 }
 
 /**
+ * Close only the verified provider dialog. An asynchronous provider panel may
+ * ignore one click during a UI transition, so retry only after rechecking that
+ * the same dialog's close button is enabled and hit-testable. A persistently
+ * blocked or unclosed dialog still fails the E2E.
+ */
+export async function closeProviderManageDialog(evaluate, click, provider, options = {}) {
+  const { pollMs = 250, maxPolls = 80, retryAfterPolls = 8, maxClicks = 3 } = options;
+  const closeControl = "document.querySelector('[role=\"dialog\"][data-state=\"open\"] button.absolute.right-3.top-3')";
+  let foundReadyClose = false;
+  let clickCount = 0;
+  let nextClickPoll = 0;
+  for (let poll = 0; poll < maxPolls; poll++) {
+    const state = await evaluate(`(() => {
+      const dialog = document.querySelector('[role="dialog"][data-state="open"]');
+      if (!dialog) return 'closed';
+      const selected = dialog.querySelector('[role="tab"][data-state="active"]')?.id || '';
+      if (!selected.endsWith(${JSON.stringify('-trigger-' + provider)})) return 'wrong-provider';
+      const button = ${closeControl};
+      if (!button?.isConnected || button.disabled || !button.getClientRects().length) return 'blocked';
+      button.scrollIntoView({block:'nearest'});
+      const r = button.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return hit === button || button.contains(hit) ? 'ready' : 'blocked';
+    })()`);
+    if (state === 'closed') return;
+    assert.notEqual(state, 'wrong-provider', 'Manage ' + provider + ' changed dialog during close');
+    if (state === 'ready') {
+      foundReadyClose = true;
+      if (poll >= nextClickPoll && clickCount < maxClicks) {
+        await click(closeControl);
+        clickCount++;
+        nextClickPoll = poll + retryAfterPolls;
+      }
+    }
+    if (pollMs > 0) await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+  assert(foundReadyClose, 'Manage ' + provider + ' dialog close control obstructed');
+  assert.fail('Manage ' + provider + ' dialog did not close');
+}
+
+/**
  * Read-only desktop regression: each Settings → Providers Manage action opens
  * its own provider panel and closes without changing credentials.
  */
@@ -255,17 +296,9 @@ export async function verifyProviderManageDialogs(evaluate, send, reportStage = 
     }
     assert(contentVisible, 'Manage ' + provider + ' settings panel content missing');
     reportStage(provider + ':close');
-    await clickControl(evaluate, send,
-      "document.querySelector('[role=\"dialog\"][data-state=\"open\"] button.absolute.right-3.top-3')");
-    let closed = false;
-    for (let attempt = 0; attempt < 40; attempt++) {
-      closed = await evaluate(
-        "document.querySelector('[role=\"dialog\"]') === null"
-      );
-      if (closed) break;
-      await new Promise((resolve) => setTimeout(resolve, 250));
-    }
-    assert(closed, 'Manage ' + provider + ' dialog did not close');
+    await closeProviderManageDialog(
+      evaluate, (control) => clickControl(evaluate, send, control), provider
+    );
     reportStage(provider + ':done');
     verified.push(provider);
   }
@@ -274,6 +307,38 @@ export async function verifyProviderManageDialogs(evaluate, send, reportStage = 
 
 export async function verifyRealRuntimeElectron({ root, data, evaluate, send, coldDashboard }) {
   assert(data.realRuntime === true, 'Real runtime E2E must not use the fixture shim');
+  // Settings has no collapsing shell; the Dashboard keeps its independent preference.
+  let inlineLayout = null;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    inlineLayout = await evaluate(`(() => {
+      const page = document.querySelector('[data-testid="provider-settings-page"]');
+      const banner = page?.querySelector('[data-testid="provider-status-banner"]');
+      const header = banner?.querySelector('[data-testid="provider-status-banner-header"]');
+      if (!banner || !header || !header.getClientRects().length) return null;
+      return {
+        inline: !banner.classList.contains('rounded-lg'),
+        background: getComputedStyle(banner).backgroundColor,
+        borderBottom: getComputedStyle(header).borderBottomWidth,
+        headerInteractive: header.matches('[role="button"], [aria-expanded]'),
+        collapseButtons: banner.querySelectorAll(
+          '[aria-label="Collapse provider details"], [aria-label="Expand provider details"]'
+        ).length,
+        visibleProviderRows: [...banner.querySelectorAll('div.grid.border-b')].filter(
+          row => row.getClientRects().length && row.textContent.includes('Anthropic')
+        ).length,
+      };
+    })()`);
+    if (inlineLayout?.visibleProviderRows) break;
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  assert(inlineLayout?.inline, 'Settings provider banner retained the Dashboard card shell');
+  assert.match(inlineLayout.background, /^(?:rgba\(0, 0, 0, 0\)|transparent)$/,
+    'Settings provider background differs from its parent surface');
+  assert.equal(inlineLayout.borderBottom, '1px', 'Settings provider header divider missing');
+  assert.equal(inlineLayout.headerInteractive, false, 'Settings header must not be collapsible');
+  assert.equal(inlineLayout.collapseButtons, 0, 'Settings retained collapse affordances');
+  assert(inlineLayout.visibleProviderRows > 0, 'Settings provider details are not visible');
+
   let header = '';
   const headerStarted = performance.now();
   for (let attempt = 0; attempt < 120; attempt++) {
@@ -322,6 +387,7 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send, co
     manageStage: 'starting',
     manageResult: 'pending',
     manageDialogsVerified: [],
+    inlineSettingsLayout: { passed: true, visibleProviderRows: inlineLayout.visibleProviderRows },
   };
   const screenshot = await send('Page.captureScreenshot', { format: 'png' });
   assert(typeof screenshot.data === 'string');
@@ -342,6 +408,7 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send, co
       message.includes('Manage control missing') ? 'control_unavailable' :
       message.includes('different provider tab') ? 'wrong_provider_tab' :
       message.includes('settings panel content missing') ? 'provider_content_missing' :
+      message.includes('dialog close control obstructed') ? 'dialog_close_control_obstructed' :
       message.includes('dialog did not close') ? 'dialog_close_failed' :
       message.includes('Required desktop control unavailable') ? 'desktop_click_unavailable' :
       'other';

@@ -233,6 +233,7 @@ export function decideOpenCodeStalePendingResolution(input: {
   /** `decideOpenCodePromptDeliveryTurnActivity` over the same observation. */
   turnActivity?: { active: boolean; reason: string } | null;
   hasExecutionEvidence?: boolean;
+  knownPeerRecipient?: boolean;
   nowMs: number;
   config: OpenCodeStalePendingPolicyConfig;
 }): OpenCodeStalePendingResolution {
@@ -306,11 +307,11 @@ export function decideOpenCodeStalePendingResolution(input: {
     input.laneKind === 'primary' &&
     !isUserPrompt &&
     turnCompleted &&
-    isOpenCodeReplyOptionalDeliveryContract(record.replyRecipient)
+    isOpenCodeReplyOptionalDeliveryContract(record.replyRecipient, input.knownPeerRecipient)
   ) {
     return { action: 'settle_plain_text', reason: OPENCODE_LEAD_PLAIN_TEXT_TURN_END_REASON };
   }
-  if (turnCompleted && isOpenCodeReplyOptionalDeliveryContract(record.replyRecipient)) {
+  if (turnCompleted && isOpenCodeReplyOptionalDeliveryContract(record.replyRecipient, input.knownPeerRecipient)) {
     return { action: 'settle_plain_text', reason: OPENCODE_REPLY_OPTIONAL_TURN_END_REASON };
   }
 

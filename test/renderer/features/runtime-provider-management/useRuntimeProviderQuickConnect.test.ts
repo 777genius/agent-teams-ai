@@ -123,6 +123,20 @@ describe('useRuntimeProviderQuickConnect', () => {
     current = null;
   });
 
+  it('revalidates the count when runtime identity settles after the first summary', async () => {
+    const connected = directoryResponse();
+    connected.directory!.entries[0]!.state = 'connected';
+    connected.directory!.fetchedAt = new Date().toISOString();
+    loadProviderDirectory.mockResolvedValue(connected);
+    await renderHarness({ runtimeRevision: null });
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/test-project')).toBeNull();
+    await renderHarness({ runtimeRevision: 'runtime-ready' });
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/test-project')).toMatchObject({
+      connected: 1,
+      runtimeRevision: 'runtime-ready',
+    });
+  });
+
   it('drops a warm cache when an initially unknown binary resolves to a different version', async () => {
     observeRuntimeProviderDirectoryRevision('runtime-old');
     publishRuntimeProviderDirectoryCache({
@@ -340,19 +354,19 @@ describe('useRuntimeProviderQuickConnect', () => {
 
   it('keeps the settled runtime across a re-check and reloads only on a real change', async () => {
     const ready = '["ready","1.17.18","/opencode"]';
-    // The first settled identity after startup is a baseline, not a change.
+    // The first settled identity revalidates the previously unscoped summary.
     await renderHarness({ runtimeRevision: null });
     await renderHarness({ runtimeRevision: ready });
     // A re-check clears the status while it runs, then reports the same runtime.
     await renderHarness({ runtimeRevision: null });
     await renderHarness({ runtimeRevision: ready });
     await renderHarness({ runtimeRevision: ready });
-    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
     expect(loadProviderDirectory.mock.calls[0]?.[0]).toMatchObject({ refresh: false });
 
     await renderHarness({ runtimeRevision: '["ready","1.18.0","/opencode"]' });
-    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
-    expect(loadProviderDirectory.mock.calls[1]?.[0]).toMatchObject({ refresh: true });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(3);
+    expect(loadProviderDirectory.mock.calls[2]?.[0]).toMatchObject({ refresh: true });
   });
 
   it('keeps a refresh request when the grid is disabled before the read starts', async () => {

@@ -11,9 +11,11 @@ const MODEL_TRIGGER_ADVISORY_CLASS =
   'border-amber-600/45 bg-amber-500/10 text-amber-800 hover:border-amber-600/60 hover:bg-amber-500/15 hover:text-amber-900 dark:border-amber-300/45 dark:bg-amber-300/10 dark:text-amber-100 dark:hover:border-amber-300/60 dark:hover:bg-amber-300/15 dark:hover:text-amber-50';
 
 /** Advisory wins when both apply, matching the previous class merge order. */
-export function getModelTriggerToneClass(hasIssue: boolean, hasAdvisory: boolean): string | null {
+export function getModelTriggerToneClass(hasIssue: boolean, hasAdvisory: boolean): string {
   if (hasAdvisory) return MODEL_TRIGGER_ADVISORY_CLASS;
-  return hasIssue ? MODEL_TRIGGER_ISSUE_CLASS : null;
+  return hasIssue
+    ? MODEL_TRIGGER_ISSUE_CLASS
+    : 'bg-[var(--color-form-control-bg)] hover:bg-[var(--color-form-control-hover-bg)]';
 }
 
 export function getModelNoticeTextClass(hasIssue: boolean): string {

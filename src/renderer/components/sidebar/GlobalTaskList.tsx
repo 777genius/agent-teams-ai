@@ -1072,7 +1072,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
 
         {searchVisible && (
           <div className="flex items-center gap-1.5 px-2 pb-1.5">
-            <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-2 py-1">
               <Search className="size-3 shrink-0 text-text-muted" />
               <input
                 ref={searchInputRef}

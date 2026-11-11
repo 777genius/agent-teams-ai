@@ -684,21 +684,6 @@ export class ClaudeMultimodelBridgeService {
     providerIds: readonly CliProviderId[],
     projectPath?: string | null
   ): number {
-    if (providerIds.length === 1) {
-      const hydrationKey = this.getProviderStatusHydrationKey(
-        binaryPath,
-        providerIds[0],
-        projectPath
-      );
-      const currentGeneration = this.providerStatusHydrationGenerations.get(hydrationKey);
-      if (
-        currentGeneration !== undefined &&
-        this.providerStatusHydrationInFlight.has(hydrationKey)
-      ) {
-        return currentGeneration;
-      }
-    }
-
     const generation = ++this.providerStatusHydrationGeneration;
     for (const providerId of providerIds) {
       this.providerStatusHydrationGenerations.set(
@@ -925,7 +910,10 @@ export class ClaudeMultimodelBridgeService {
           })
         : Promise.resolve(null);
 
-    const context = await resolveRuntimeStatusExecutionContext(providerId, getProviderStatusCommandCwd(options.projectPath));
+    const context = await resolveRuntimeStatusExecutionContext(
+      providerId,
+      getProviderStatusCommandCwd(options.projectPath)
+    );
     const modelListPromise = execCli(
       binaryPath,
       ['model', 'list', '--json', '--provider', providerId, ...context.projectArgs],
@@ -1226,7 +1214,10 @@ export class ClaudeMultimodelBridgeService {
     connectionIssues: Partial<Record<CliProviderId, string>>,
     options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
   ): Promise<CliProviderStatus> {
-    const context = await resolveRuntimeStatusExecutionContext(providerId, getProviderStatusCommandCwd(options.projectPath));
+    const context = await resolveRuntimeStatusExecutionContext(
+      providerId,
+      getProviderStatusCommandCwd(options.projectPath)
+    );
     const args = ['runtime', 'status', '--json', '--provider', providerId];
     if (options.summary) {
       args.push('--summary');

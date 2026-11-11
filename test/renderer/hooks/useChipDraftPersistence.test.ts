@@ -92,6 +92,38 @@ describe('chip draft persistence via draftStorage', () => {
     expect(() => JSON.parse(raw!)).toThrow();
   });
 
+  it('ignores a prior chips write after switching keys and back', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let releaseSave!: () => void;
+    const oldWrite = new Promise<void>((resolve) => { releaseSave = resolve; });
+    const save = vi.spyOn(draftStorage, 'saveDraft').mockImplementation(() => oldWrite);
+    const load = vi.spyOn(draftStorage, 'loadDraft').mockResolvedValue(null);
+    let draft!: ReturnType<typeof useChipDraftPersistence>;
+    function Input({ draftKey }: { draftKey: string }): ReactElement {
+      draft = useChipDraftPersistence(draftKey);
+      return createElement('span', { 'data-saved': draft.isSaved });
+    }
+    const root = createRoot(document.createElement('div'));
+    vi.useFakeTimers();
+    try {
+      await act(async () => { root.render(createElement(Input, { draftKey: 'chips:A' })); });
+      await act(async () => { draft.setChips([makeChip()]); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      expect(save).toHaveBeenCalledTimes(1);
+      await act(async () => { root.render(createElement(Input, { draftKey: 'chips:B' })); });
+      await act(async () => { root.render(createElement(Input, { draftKey: 'chips:A' })); });
+      expect(draft.isSaved).toBe(false);
+      await act(async () => { releaseSave(); await Promise.resolve(); });
+      expect(draft.chips).toEqual([]);
+      expect(draft.isSaved).toBe(false);
+    } finally {
+      await act(async () => { root.unmount(); });
+      vi.useRealTimers();
+      save.mockRestore();
+      load.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
   it('does not show Saved when an older chip write finishes after an edit', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     let releaseSave!: () => void;

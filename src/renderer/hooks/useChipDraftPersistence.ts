@@ -53,6 +53,7 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
   const generationRef = useRef(key.startsWith('createTeam:') ? currentCreateTeamDraftGeneration() : undefined);
 
   useEffect(() => {
+    if (keyRef.current !== key) editRevisionRef.current++;
     keyRef.current = key;
   }, [key]);
   // Ref for current chips — allows addChip/removeChip to read latest value

@@ -36,6 +36,7 @@ export function useDraftPersistence({
   const editRevisionRef = useRef(0);
 
   useEffect(() => {
+    if (keyRef.current !== key) editRevisionRef.current++;
     keyRef.current = key;
   }, [key]);
 

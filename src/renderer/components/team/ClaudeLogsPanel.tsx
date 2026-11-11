@@ -99,7 +99,7 @@ export const ClaudeLogsPanel = ({
           {data.total > 0 ? (
             <div
               className={cn(
-                'flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1',
+                'flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-2 py-1',
                 compactMetaInTooltip ? 'min-w-0 max-w-48 flex-1' : 'w-48'
               )}
             >

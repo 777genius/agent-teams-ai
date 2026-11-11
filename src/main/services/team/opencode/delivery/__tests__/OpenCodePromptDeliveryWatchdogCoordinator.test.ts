@@ -125,9 +125,10 @@ function makeCoordinator(
   const visibleReplyProofService = {
     applyDestinationProof: vi.fn(),
     materializePlainTextReplyIfNeeded: vi.fn(),
+    getConfiguredLeadName: vi.fn(async () => 'team-lead'),
   } as unknown as Pick<
     OpenCodeVisibleReplyProofService,
-    'applyDestinationProof' | 'materializePlainTextReplyIfNeeded'
+    'applyDestinationProof' | 'materializePlainTextReplyIfNeeded' | 'getConfiguredLeadName'
   >;
 
   return createOpenCodePromptDeliveryWatchdogCoordinator({

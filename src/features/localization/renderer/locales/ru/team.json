@@ -1625,12 +1625,12 @@
     "schedule": {
       "agentDescription": "Если команда выключена — отдельный запуск агента. Если запущена — назначается задача.",
       "execution": "Выполнение",
-      "labelOptional": "Label (optional)",
-      "labelPlaceholder": "Например: Daily code review, Nightly tests...",
+      "labelOptional": "Название (необязательно)",
+      "labelPlaceholder": "Например: ежедневная проверка кода, ночные тесты...",
       "leadDefault": "Лид команды (по умолчанию)",
       "legacyNotice": "Существующее одноразовое расписание — сохранение не меняет его поведение.",
-      "maxBudgetUsd": "Max budget (USD)",
-      "maxTurns": "Max turns",
+      "maxBudgetUsd": "Максимальный бюджет (USD)",
+      "maxTurns": "Максимум ходов",
       "noLimit": "Без лимита",
       "noMatches": "Команды не найдены по поиску.",
       "noTeams": "Нет доступных команд. Сначала создайте команду.",
@@ -1647,6 +1647,7 @@
       "taskFirstAgentDescription": "Выбранный тиммейт получит задачу на доске после безопасного запуска команды, если он потребуется. Занятых агентов не прерываем.",
       "taskFirstTeamDescription": "Лид получит задачу на координацию после безопасного запуска команды, если он потребуется. Текущая работа не прерывается.",
       "taskFirstTarget": "Поручить",
+      "taskFirstWholeTeam": "Через лида команды",
       "historicalPromptReviewRequired": "Перед созданием расписания проверьте сохранённые разовые инструкции команды. Сначала очистите или отделите старый промпт запуска.",
       "historicalPromptAcknowledged": "Старый промпт проверен, постоянные инструкции отделены. Сохранить старый текст, но не выполнять его по расписанию."
     },
@@ -2217,28 +2218,31 @@
     }
   },
   "schedule": {
-    "count": "{{count}} schedules",
-    "count_one": "{{count}} schedule",
-    "count_few": "{{count}} schedules",
-    "count_many": "{{count}} schedules",
-    "count_other": "{{count}} schedules",
-    "nextRun": "Next: {{next}}",
+    "actionFailed": "Не удалось выполнить действие с расписанием",
+    "deleteConfirmation": "Удалить расписание \"{{label}}\"? История его запусков также будет удалена.",
+    "runRequested": "Запуск запрошен. Проверьте в истории, была ли передана задача.",
+    "count": "{{count}} расписаний",
+    "count_one": "{{count}} расписание",
+    "count_few": "{{count}} расписания",
+    "count_many": "{{count}} расписаний",
+    "count_other": "{{count}} расписаний",
+    "nextRun": "Следующий запуск: {{next}}",
     "actions": {
       "runNow": "Запустить сейчас",
       "edit": "Редактировать",
       "pause": "Пауза",
       "resume": "Возобновить",
       "delete": "Удалить",
-      "addSchedule": "Добавить schedule"
+      "addSchedule": "Добавить расписание"
     },
     "runHistory": {
-      "loading": "Загрузка run history...",
+      "loading": "Загрузка истории запусков...",
       "empty": "Запусков ещё нет"
     },
     "runLog": {
       "title": "Лог запуска",
-      "exitCode": "exit {{code}}",
-      "retryCount": "retry {{count}}/{{max}}",
+      "exitCode": "Код выхода {{code}}",
+      "retryCount": "Повтор {{count}}/{{max}}",
       "stillRunning": "Задача ещё выполняется...",
       "loadingLogs": "Загрузка логов...",
       "errors": "Ошибки",
@@ -2251,6 +2255,8 @@
       "nextRuns": "Следующие запуски:",
       "timezone": "Часовой пояс",
       "selectTimezone": "Выберите часовой пояс",
+      "searchTimezone": "Поиск часового пояса...",
+      "noTimezones": "Часовые пояса не найдены",
       "warmUpTime": "Время прогрева",
       "warmUpDescription": "Подготавливает выбранных провайдеров перед запуском по расписанию",
       "errors": {

@@ -7,6 +7,50 @@ import {
 
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
 
+/** Tracks request order rather than authentication strength: fresh negative evidence wins too. */
+export class ProviderStatusPublicationRevisions {
+  private readonly revisions = new Map<CliProviderId, number>();
+  private readonly readOwners = new Map<CliProviderId, object>();
+
+  published(providerId: CliProviderId): void {
+    this.revisions.set(providerId, (this.revisions.get(providerId) ?? 0) + 1);
+  }
+
+  beginRead(providerId: CliProviderId): {
+    finish: () => void;
+    isCurrent: () => boolean;
+    acknowledgePublication: () => void;
+  } {
+    const owner = {};
+    this.readOwners.set(providerId, owner);
+    this.published(providerId);
+    let revision = this.revisions.get(providerId)!;
+    const isCurrent = () =>
+      this.readOwners.get(providerId) === owner &&
+      this.revisions.get(providerId) === revision;
+    // Independent status publications supersede this read even when no newer
+    // read was started. Only this read's own catalog callback may advance it.
+    return {
+      finish: () => {
+        if (!isCurrent()) return;
+        this.published(providerId);
+        revision = this.revisions.get(providerId)!;
+      },
+      isCurrent,
+      acknowledgePublication: () => {
+        if (this.readOwners.get(providerId) === owner)
+          revision = this.revisions.get(providerId)!;
+      },
+    };
+  }
+
+  captureAggregate(): (providerId: CliProviderId) => boolean {
+    const captured = new Map(this.revisions);
+    return (providerId) =>
+      (captured.get(providerId) ?? 0) === (this.revisions.get(providerId) ?? 0);
+  }
+}
+
 /** A hydration delta must never replay other providers from its original summary. */
 export function mergeProviderStatusPublication(
   incoming: CliProviderStatus[],
@@ -14,10 +58,12 @@ export function mergeProviderStatusPublication(
   hydratedProviderIds: Set<CliProviderId>,
   final: boolean,
   now: number,
-  updatedProviderId?: CliProviderId
+  updatedProviderId?: CliProviderId,
+  canPublishProvider: (providerId: CliProviderId) => boolean = () => true
 ): Pick<CliInstallationStatus, 'providers' | 'authLoggedIn' | 'authMethod'> | null {
   let merged = incoming;
   if (updatedProviderId !== undefined) {
+    if (!canPublishProvider(updatedProviderId)) return null;
     if (incoming.length !== 1 || incoming[0].providerId !== updatedProviderId) return null;
     hydratedProviderIds.add(updatedProviderId);
     const found = current.some((provider) => provider.providerId === updatedProviderId);
@@ -34,6 +80,13 @@ export function mergeProviderStatusPublication(
         : provider
     );
   }
+  // A provider refresh can supersede both a summary row and its later catalog
+  // hydration. Retain the newer result regardless of whether it authenticated.
+  merged = merged.map((provider) =>
+    canPublishProvider(provider.providerId)
+      ? provider
+      : (current.find((latest) => latest.providerId === provider.providerId) ?? provider)
+  );
   const providers = filterFrontendProviders(merged).map((provider) =>
     projectProviderAuthority(provider, now)
   );

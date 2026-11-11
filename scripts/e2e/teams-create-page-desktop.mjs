@@ -632,6 +632,282 @@ function createButtonExpression(label) {
       && !button.disabled && button.getBoundingClientRect().width > 0)`;
 }
 
+async function setBrowserWindowZoom(inspector, factor) {
+  return inspector.evaluate(
+    "(() => {" +
+    "const moduleRequire = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);" +
+    "if (!moduleRequire) throw new Error('Electron main inspector cannot require modules');" +
+    "const { BrowserWindow } = moduleRequire('electron');" +
+    "const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http://localhost:'));" +
+    "if (!win) throw new Error('Isolated app BrowserWindow not found');" +
+    "win.webContents.setZoomFactor(" + JSON.stringify(factor) + ");" +
+    "return win.webContents.getZoomFactor();" +
+    "})()"
+  );
+}
+
+async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebuggerUrl) {
+  const scheduleLabel = 'schedule-visual-e2e-' + randomUUID().slice(0, 8);
+  log('reject invalid cron and timezone at the actual native IPC boundary');
+  for (const { timing, expectedError } of [
+    { timing: { cronExpression: 'not a cron', timezone: 'UTC' }, expectedError: /cron/i },
+    { timing: { cronExpression: '0 9 * * *', timezone: 'Mars/Olympus' }, expectedError: /time ?zone/i },
+  ]) {
+    const invalidInput = {
+      teamName: fixture.teamName,
+      ...timing,
+      launchConfig: { cwd: fixture.projectPath, prompt: 'No execution' },
+    };
+    const result = await client.evaluate(
+      'window.electronAPI.schedules.create(' + JSON.stringify(invalidInput) +
+        ').then(() => "UNEXPECTED_SUCCESS", error => String(error?.message ?? error))'
+    );
+    assert.notEqual(result, 'UNEXPECTED_SUCCESS', 'Native IPC accepted invalid schedule timing');
+    assert(expectedError.test(result), 'Native IPC returned an unrelated error: ' + result);
+  }
+
+  log('open real Schedules UI in isolated Electron');
+  await client.evaluate('window.__agentTeamsDevStore.getState().openSchedulesTab()');
+  await client.waitFor(createButtonExpression('Add Schedule'), 'Schedules screen ready', 45_000);
+  await client.click(createButtonExpression('Add Schedule'));
+  await client.waitFor("document.querySelector('[role=dialog] #schedule-label')",
+    'actual schedule editor loaded', 45_000);
+  await captureScreenshot(client, fixture, 'schedules-editor-opened');
+  // The empty-state page also has a "Create Schedule" button behind the modal.
+  // Target the enabled dialog submit, not the background trigger.
+  const saveButton = "Array.from(document.querySelectorAll('[role=dialog] button'))" +
+    ".find(button => button.textContent?.trim() === 'Create Schedule')";
+  await client.click(saveButton);
+  await client.waitFor(
+    "document.querySelector('[role=dialog]')?.textContent?.includes('Team is required')",
+    'pristine form shows a reason after Save', 20_000);
+  await captureScreenshot(client, fixture, 'schedules-pristine-submit-validation');
+
+  log('select the fixture team and review its saved one-time startup prompt');
+  await client.click("document.querySelector('[role=dialog] button[role=combobox]')");
+  const teamOption = "Array.from(document.querySelectorAll('[cmdk-item]'))" +
+    ".find(option => option.textContent?.includes(" + JSON.stringify(fixture.teamName) + "))";
+  await client.click(teamOption);
+  await client.waitFor(
+    "document.querySelector('#schedule-saved-prompt-reviewed')",
+    'saved prompt acknowledgement visible before Save', 45_000);
+  await captureScreenshot(client, fixture, 'schedules-old-prompt-review');
+
+  await client.fill('#schedule-label', scheduleLabel);
+  await client.fill('#dialog-prompt', 'Review the fixture project and write a short status update.');
+  log('invalid cron is field-level visible and blocks Save');
+  await client.fill('input[placeholder="0 9 * * 1-5"]', 'not a cron');
+  await client.waitFor("(" + saveButton + ")?.disabled === true",
+    'invalid cron blocks the Create Schedule action');
+  await captureScreenshot(client, fixture, 'schedules-invalid-cron');
+  assert.equal(
+    (await client.evaluate('window.electronAPI.schedules.list()')).some(s => s.label === scheduleLabel),
+    false, 'Invalid cron was persisted before Save'
+  );
+
+  await client.fill('input[placeholder="0 9 * * 1-5"]', '*/30 * * * *');
+  await client.click("document.querySelector('#schedule-saved-prompt-reviewed')");
+  await client.waitFor("(" + saveButton + ")?.disabled === false",
+    'valid schedule and reviewed old prompt allow Save', 45_000);
+  await captureScreenshot(client, fixture, 'schedules-ready-to-create');
+  await client.click(saveButton);
+  await client.waitFor("!document.querySelector('[role=dialog]')",
+    'schedule saved through the actual UI', 45_000);
+  const savedSchedules = await client.evaluate('window.electronAPI.schedules.list()');
+  const scheduled = savedSchedules.find(s => s.label === scheduleLabel);
+  assert(scheduled?.taskFirst === true && scheduled.teamName === fixture.teamName,
+    'New UI schedule did not persist its selected team and task-first mode');
+  assert.equal(scheduled.timezone, Intl.DateTimeFormat().resolvedOptions().timeZone,
+    'Schedule changed the selected local IANA timezone');
+  const invalidEditResult = await client.evaluate(
+    'window.electronAPI.schedules.update(' + JSON.stringify(scheduled.id) +
+      ', { cronExpression: "not a cron" }).then(() => "UNEXPECTED_SUCCESS", ' +
+      'error => String(error?.message ?? error))'
+  );
+  assert.notEqual(invalidEditResult, 'UNEXPECTED_SUCCESS',
+    'Native IPC accepted invalid edit of an active schedule');
+  assert(/cron/i.test(invalidEditResult),
+    'Native IPC rejected invalid edit for the wrong reason: ' + invalidEditResult);
+  const afterRejectedEdit = (await client.evaluate('window.electronAPI.schedules.list()'))
+    .find(s => s.id === scheduled.id);
+  assert.equal(afterRejectedEdit?.cronExpression, '*/30 * * * *',
+    'Rejected timing edit corrupted the saved active schedule');
+  assert.equal(afterRejectedEdit?.status, 'active',
+    'Rejected timing edit deactivated the saved schedule');
+
+  log('exercise list presentation in dark/light and native Electron 200% zoom');
+  for (const theme of ['light', 'dark']) {
+    await client.evaluate(
+      "window.__agentTeamsDevStore.setState(s => ({ appConfig: { ...s.appConfig, general: { ...s.appConfig?.general, theme: " +
+        JSON.stringify(theme) + " } } }))"
+    );
+    await client.waitFor(
+      "document.documentElement.classList.contains(" + JSON.stringify(theme) + ")",
+      'schedules ' + theme + ' theme applied');
+    await captureScreenshot(client, fixture, 'schedules-list-' + theme);
+  }
+  const initialViewportWidth = await client.evaluate('window.innerWidth');
+  const zoomInspector = await CdpClient.connect(inspectorWebSocketDebuggerUrl);
+  try {
+    await zoomInspector.send('Runtime.enable');
+    const factor = await setBrowserWindowZoom(zoomInspector, 2);
+    assert(Math.abs(factor - 2) <= 0.05, 'Schedule window did not accept native 200% zoom');
+    await client.waitFor(
+      'window.innerWidth < ' + JSON.stringify(initialViewportWidth * 0.7),
+      'native Electron zoom narrowed the schedules viewport');
+    const zoomGeometry = await client.evaluate(`(() => {
+      const row = Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))
+        .find(el => el.textContent?.includes(${JSON.stringify(scheduleLabel)}) &&
+          el.querySelector('button[aria-label="More actions"]'));
+      const container = row?.closest('.overflow-y-auto');
+      const viewport = container?.getBoundingClientRect();
+      const rect = row?.querySelector('button[aria-label="More actions"]')?.getBoundingClientRect();
+      return { actionLeft: rect?.left, actionRight: rect?.right, actionWidth: rect?.width,
+        paneLeft: viewport?.left, paneRight: viewport?.right, paneWidth: viewport?.width,
+        paneScrollWidth: container?.scrollWidth, windowWidth: window.innerWidth };
+    })()`);
+    assert(
+      zoomGeometry.actionWidth > 0 && zoomGeometry.actionLeft >= zoomGeometry.paneLeft &&
+        zoomGeometry.actionRight <= zoomGeometry.paneRight,
+      'Schedule actions overflowed pane at native Electron 200% zoom: ' + JSON.stringify(zoomGeometry)
+    );
+    await captureScreenshot(client, fixture, 'schedules-list-native-electron-zoom-200');
+  } finally {
+    try {
+      await setBrowserWindowZoom(zoomInspector, 1);
+    } finally {
+      zoomInspector.close();
+    }
+  }
+  await client.waitFor(
+    'window.innerWidth >= ' + JSON.stringify(initialViewportWidth * 0.95),
+    'schedules viewport restored after native zoom');
+
+  log('capture the schedule UI at a genuinely narrow viewport');
+  await client.send('Emulation.setDeviceMetricsOverride', {
+    width: 700, height: 760, deviceScaleFactor: 1, mobile: false,
+  });
+  try {
+    await client.waitFor('window.innerWidth <= 700', 'narrow renderer viewport');
+    const narrowActionsVisible = await client.evaluate(`(() => {
+      const row = Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))
+        .find(el => el.textContent?.includes(${JSON.stringify(scheduleLabel)}) &&
+          el.querySelector('button[aria-label="More actions"]'));
+      const rect = row?.querySelector('button[aria-label="More actions"]')?.getBoundingClientRect();
+      return !!rect && rect.width > 0 && rect.left >= 0 && rect.right <= window.innerWidth;
+    })()`);
+    assert(narrowActionsVisible, 'Schedule actions overflowed narrow viewport');
+    await captureScreenshot(client, fixture, 'schedules-list-narrow-700');
+  } finally {
+    await client.send('Emulation.clearDeviceMetricsOverride');
+  }
+
+  log('edit the real schedule without migrating its task-first semantics');
+  const more = "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))" +
+    ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+    "row.querySelector('button[aria-label=\\\"More actions\\\"]'))" +
+    "?.querySelector('button[aria-label=\\\"More actions\\\"]')";
+  await client.click(more);
+  await client.click(createButtonExpression('Edit'));
+  await client.waitFor("document.querySelector('[role=dialog] #schedule-label')",
+    'existing schedule editor loaded', 45_000);
+  await client.fill('input[placeholder="0 9 * * 1-5"]', '0 * * * *');
+  await client.waitFor(createButtonExpression('Save Changes'), 'edited schedule can save');
+  await captureScreenshot(client, fixture, 'schedules-edit');
+  await client.click(createButtonExpression('Save Changes'));
+  await client.waitFor("!document.querySelector('[role=dialog]')", 'schedule edit persisted');
+  const afterEdit = (await client.evaluate('window.electronAPI.schedules.list()'))
+    .find(s => s.id === scheduled.id);
+  assert.equal(afterEdit?.cronExpression, '0 * * * *');
+  assert.equal(afterEdit.taskFirst, true, 'Edit silently changed schedule execution semantics');
+
+  log('pause and resume the schedule through the real actions menu');
+  await client.click(more);
+  await client.click(createButtonExpression('Pause'));
+  await client.waitFor(
+    "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]')).some(row => " +
+      "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+      "row.textContent?.includes('Paused'))",
+    'schedule paused in the UI', 45_000);
+  const pausedRecord = (await client.evaluate('window.electronAPI.schedules.list()'))
+    .find(s => s.id === scheduled.id);
+  assert.equal(pausedRecord?.status, 'paused', 'Pause action did not persist');
+  await captureScreenshot(client, fixture, 'schedules-paused');
+
+  await client.click(more);
+  await client.click(createButtonExpression('Resume'));
+  await client.waitFor(
+    "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]')).some(row => " +
+      "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+      "row.textContent?.includes('Active'))",
+    'schedule resumed in the UI', 45_000);
+  const resumedRecord = (await client.evaluate('window.electronAPI.schedules.list()'))
+    .find(s => s.id === scheduled.id);
+  assert.equal(resumedRecord?.status, 'active', 'Resume action did not persist');
+  await captureScreenshot(client, fixture, 'schedules-resumed');
+
+  log('run now and inspect the actual schedule run history');
+  const runNow = "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))" +
+    ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+    "row.querySelector('button[aria-label=\\\"Run now\\\"]'))" +
+    "?.querySelector('button[aria-label=\\\"Run now\\\"]')";
+  await client.click(runNow);
+  await client.waitFor(
+    "Array.from(document.querySelectorAll('[role=status]')).some(el => el.textContent?.includes('Run requested'))",
+    'run-now feedback visible', 45_000);
+  const createdRuns = await client.evaluate(
+    'window.electronAPI.schedules.getRuns(' + JSON.stringify(scheduled.id) + ')');
+  assert(createdRuns.length > 0, 'Run now created no persisted run');
+  const expand = "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))" +
+    ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+    "row.querySelector('button[aria-expanded]'))?.querySelector('button[aria-expanded]')";
+  await client.click(expand);
+  await client.waitFor(
+    "Array.from(document.querySelectorAll('[data-testid=schedule-list-item]')).some(row => " +
+      "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+      "row.querySelector('div[role=button]'))",
+    'run history row visible');
+  await captureScreenshot(client, fixture, 'schedules-run-history');
+  await client.click("Array.from(document.querySelectorAll('[data-testid=schedule-list-item]'))" +
+    ".find(row => row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+    "row.querySelector('div[role=button]'))?.querySelector('div[role=button]')");
+  await client.waitFor(
+    "document.querySelector('[role=dialog]')?.textContent?.includes('Run Log')",
+    'run log dialog opened');
+  await captureScreenshot(client, fixture, 'schedules-run-log');
+  await client.click("Array.from(document.querySelectorAll('[role=dialog] button'))" +
+    ".find(button => button.textContent?.trim() === 'Close')");
+  await client.waitFor("!document.querySelector('[role=dialog]')",
+    'run log dialog closed');
+
+  log('destructive action demands confirmation and Cancel preserves the record');
+  await client.click(more);
+  await client.click(createButtonExpression('Delete'));
+  await client.waitFor("document.querySelector('[role=dialog][aria-label=Delete]')",
+    'schedule deletion confirmation');
+  await captureScreenshot(client, fixture, 'schedules-delete-confirm');
+  await client.click("document.querySelector('[role=dialog][aria-label=Delete] button:not([data-confirm-btn])')");
+  assert((await client.evaluate('window.electronAPI.schedules.list()')).some(s => s.id === scheduled.id),
+    'Cancel deleted a scheduled task');
+  await client.waitFor("!document.querySelector('[role=dialog]')",
+    'delete confirmation closed');
+
+  await client.click(more);
+  await client.click(createButtonExpression('Delete'));
+  await client.click("document.querySelector('[role=dialog][aria-label=Delete] button[data-confirm-btn]')");
+  await client.waitFor(
+    "!Array.from(document.querySelectorAll('[data-testid=schedule-list-item]')).some(row => " +
+      "row.textContent?.includes(" + JSON.stringify(scheduleLabel) + ") && " +
+      "row.querySelector('button[aria-label=\\\"More actions\\\"]'))",
+    'confirmed schedule disappeared from UI', 45_000);
+  assert.equal(
+    (await client.evaluate('window.electronAPI.schedules.list()')).some(s => s.id === scheduled.id),
+    false, 'Confirmed deletion was not persisted'
+  );
+  await captureScreenshot(client, fixture, 'schedules-deleted');
+  return { scheduleLabel, scheduleId: scheduled.id, createdAndDeleted: true };
+}
+
 async function main() {
   const fixture = await seedFixture();
   const unique = `create-page-e2e-${randomUUID().slice(0, 8)}`;
@@ -665,14 +941,25 @@ async function main() {
     assert.equal(shot.dialogOpen, false, 'Create opened a dialog instead of a page');
     await captureScreenshot(cdp, fixture, 'opened');
 
-    log('edit Advanced CLI before naming the team');
-    await cdp.click(`Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
-      .find(button => button.textContent?.includes('Optional launch settings')
-        && button.getBoundingClientRect().width > 0)`);
-    await cdp.click(createButtonExpression('Advanced'));
+    log('restore unedited Advanced CLI defaults for a saved team name');
     const customArgsSelector = '[data-testid=create-team-page] input[placeholder="--max-turns 5"]';
-    await cdp.fill(customArgsSelector, '--max-turns 5');
+    const preferencesTeamName = `${unique}-saved-defaults`;
+    await cdp.evaluate(`localStorage.setItem(${JSON.stringify(`team:lastCustomArgs:${preferencesTeamName}`)}, '--max-turns 2')`);
+    await cdp.fill('#team-name', preferencesTeamName);
+    const optionalSettingsButton = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
+      .find(button => button.textContent?.includes('Optional launch settings')
+        && button.getBoundingClientRect().width > 0)`;
+    await cdp.click(optionalSettingsButton);
+    await cdp.click(createButtonExpression('Advanced'));
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 2'`,
+      'untouched per-name Advanced CLI defaults restored'
+    );
 
+    log('edit Advanced CLI while the team name is explicitly empty');
+    await cdp.fill('#team-name', '');
+    await cdp.waitFor("document.querySelector('#team-name')?.value === ''", 'unnamed editor ready');
+    await cdp.fill(customArgsSelector, '--max-turns 5');
     log('naming and renaming a team preserves in-progress Advanced CLI overrides');
     await cdp.fill('#team-name', unique);
     await cdp.waitFor(
@@ -687,14 +974,31 @@ async function main() {
     );
     await cdp.fill('#team-name', unique);
 
+    await cdp.evaluate("(() => { window.__createPageBeforeBack = document.querySelector('[data-testid=create-team-page]'); return true; })()");
     log('Back to Teams and resume saved draft');
     await cdp.click("document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')");
     await cdp.waitFor("!document.querySelector('[data-testid=create-team-page]')",
       'creation page closed on Back');
+    await cdp.waitFor('!window.__createPageBeforeBack?.isConnected', 'original editor unmounted after Back');
     await cdp.waitFor(createButtonExpression('Continue creating'), 'Continue creating button');
     await cdp.click(createButtonExpression('Continue creating'));
     await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
       'same team name restored after Back');
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page]') !== window.__createPageBeforeBack",
+      'new editor node created on resume'
+    );
+    await cdp.evaluate('delete window.__createPageBeforeBack');
+    const optionalExpandedAfterResume = await cdp.evaluate(
+      `${optionalSettingsButton}?.getAttribute('aria-expanded') === 'true'`
+    );
+    if (!optionalExpandedAfterResume) await cdp.click(optionalSettingsButton);
+    const hasAdvancedInput = await cdp.evaluate(`Boolean(document.querySelector(${JSON.stringify(customArgsSelector)}))`);
+    if (!hasAdvancedInput) await cdp.click(createButtonExpression('Advanced'));
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
+      'Advanced CLI edit retained after real editor unmount and resume'
+    );
     await captureScreenshot(cdp, fixture, 'resumed');
 
     log('open Providers Settings through the real model picker and resume the draft');
@@ -832,19 +1136,7 @@ async function main() {
     // This local inspector is enabled only in the disposable E2E launch. It
     // changes a *real* BrowserWindow property, not CSS zoom or CDP pinch scale.
     const inspector = await CdpClient.connect(started.inspectorWebSocketDebuggerUrl);
-    const setActualZoom = async (factor) => {
-      return inspector.evaluate(
-        "(() => {" +
-        "const moduleRequire = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);" +
-        "if (!moduleRequire) throw new Error('Electron main inspector cannot require modules');" +
-        "const { BrowserWindow } = moduleRequire('electron');" +
-        "const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http://localhost:'));" +
-        "if (!win) throw new Error('Isolated app BrowserWindow not found');" +
-        "win.webContents.setZoomFactor(" + JSON.stringify(factor) + ");" +
-        "return win.webContents.getZoomFactor();" +
-        "})()"
-      );
-    };
+    const setActualZoom = (factor) => setBrowserWindowZoom(inspector, factor);
     try {
       await inspector.send('Runtime.enable');
       const actualFactor = await setActualZoom(2);
@@ -864,6 +1156,31 @@ async function main() {
           getComputedStyle(back).visibility === 'visible';
       })()`);
       assert(visibleAtZoom, 'Back button disappeared at native Electron 200% zoom');
+      const headerLayout = await cdp.evaluate(`(() => {
+        const header = document.querySelector('[data-testid="create-team-page"] > header');
+        const title = header?.querySelector('h1')?.getBoundingClientRect();
+        const parent = header?.getBoundingClientRect();
+        const actions = Array.from(header?.querySelectorAll('button') ?? [])
+          .filter((button) => button.getAttribute('aria-label') !== 'Back to teams')
+          .map((button) => button.getBoundingClientRect())
+          .filter((rect) => rect.width > 0 && rect.height > 0);
+        const intersects = (a, b) =>
+          a.left < b.right - 1 && a.right > b.left + 1 &&
+          a.top < b.bottom - 1 && a.bottom > b.top + 1;
+        return {
+          titleVisible: Boolean(title && title.width > 0 && title.height > 0),
+          actionsVisible: actions.length,
+          overlap: Boolean(title && actions.some((rect) => intersects(title, rect))),
+          overflow: Boolean(parent && actions.some((rect) =>
+            rect.left < parent.left - 1 || rect.right > parent.right + 1)),
+        };
+      })()`);
+      assert(
+        headerLayout.titleVisible && headerLayout.actionsVisible >= 2 &&
+          !headerLayout.overlap && !headerLayout.overflow,
+        'Create Team header title/actions overlap or overflow at native 200% zoom: ' +
+          JSON.stringify(headerLayout)
+      );
       await captureScreenshot(cdp, fixture, 'native-electron-zoom-200');
       assert(Math.abs((await setActualZoom(1)) - 1) <= 0.05,
         'BrowserWindow did not restore 100% zoom');
@@ -1071,24 +1388,51 @@ async function main() {
     const copiedDescription = await cdp.evaluate(
       "document.querySelector('#team-description')?.value"
     );
-    assert(copiedDescription, 'Copied team description did not hydrate');
+    assert.equal(
+      copiedDescription,
+      'Disposable Teams creation E2E fixture',
+      'Copied team description did not hydrate from its persisted config'
+    );
+    const templateConfirmationExpression =
+      "Array.from(document.querySelectorAll('[role=alertdialog]'))" +
+      ".find(dialog => dialog.querySelector('h2')?.textContent === 'Apply team template?')";
     const selectTemplate = async () => {
-      await cdp.click(
-        "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Team template\"]')"
-      );
-      await cdp.click(
-        "Array.from(document.querySelectorAll('[role=option]'))" +
-        ".find(option => option.textContent?.includes('Software Product Team'))"
-      );
-      await cdp.waitFor(
-        "document.querySelector('[role=dialog][aria-label=\"Apply team template?\"]')",
-        'template replacement confirmation'
-      );
+      const trigger = "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Team template\"]')";
+      const option = "Array.from(document.querySelectorAll('[role=option]'))" +
+        ".find(item => item.textContent?.includes('Software Product Team'))";
+      // A ready Radix trigger can miss one native click while the creation form
+      // commits its restored draft. Re-check the real hit target before retrying.
+      const triggerReady = "(() => { const button = " + trigger +
+        "; if (!button?.isConnected || button.disabled) return false;" +
+        " button.scrollIntoView({block:'center',inline:'nearest'});" +
+        " const rect=button.getBoundingClientRect();" +
+        " const hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);" +
+        " return rect.width>0 && rect.height>0 && (hit===button || button.contains(hit)); })()";
+      let optionReady = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await cdp.waitFor(triggerReady, 'visible unobstructed team template trigger', 15_000);
+        await cdp.click(trigger);
+        try {
+          await cdp.waitFor(option, 'Software Product Team option', 4_000);
+          optionReady = true;
+          break;
+        } catch (error) {
+          const open = await cdp.evaluate(
+            trigger + "?.getAttribute('aria-expanded') === 'true'"
+          );
+          // An open menu without the expected item is a genuine catalog/locale
+          // mismatch, not a missed click. Do not toggle it closed to hide it.
+          if (open || attempt === 2) throw error;
+        }
+      }
+      assert(optionReady, 'Team template options did not open');
+      await cdp.click(option);
+      await cdp.waitFor(templateConfirmationExpression, 'template replacement confirmation');
     };
     await selectTemplate();
     // Wait for the dialog's focus and Tab-trap effects before testing keyboard containment.
     await cdp.waitFor(
-      `document.querySelector('[role=dialog][aria-label="Apply team template?"]')?.contains(document.activeElement)`,
+      `(${templateConfirmationExpression})?.contains(document.activeElement)`,
       'template confirmation initial keyboard focus'
     );
     // A destructive confirmation must not expose background form fields to Tab.
@@ -1100,18 +1444,20 @@ async function main() {
     });
     assert(
       await cdp.evaluate(
-        "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"]')?.contains(document.activeElement)"
+        `(${templateConfirmationExpression})?.contains(document.activeElement)`
       ),
       'Template confirmation focus escaped into the background form'
     );
     await cdp.click(
-      "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"] button:not([data-confirm-btn])')"
+      `Array.from((${templateConfirmationExpression})?.querySelectorAll('button') ?? [])` +
+      ".find(button => button.textContent?.trim() === 'Cancel')"
     );
     assert.equal(await cdp.evaluate("document.querySelector('#team-description')?.value"),
       copiedDescription, 'Canceling template replacement discarded the copied description');
     await selectTemplate();
     await cdp.click(
-      "document.querySelector('[role=dialog][aria-label=\\\"Apply team template?\\\"] button[data-confirm-btn]')"
+      `Array.from((${templateConfirmationExpression})?.querySelectorAll('button') ?? [])` +
+      ".find(button => button.textContent?.trim() === 'Apply template')"
     );
     await cdp.waitFor(
       "document.querySelector('#team-description')?.value === " +
@@ -1121,9 +1467,36 @@ async function main() {
     await captureScreenshot(cdp, fixture, 'template-confirmed');
 
     log('create from actual Organization Map and verify native placement');
-    await cdp.click(
-      "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')"
-    );
+    const backToTeams =
+      "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Back to teams\"]')";
+    const backHitTest = "(() => { const button=" + backToTeams +
+      "; if (!button?.isConnected || button.disabled) return false;" +
+      " button.scrollIntoView({block:'center',inline:'nearest'});" +
+      " const r=button.getBoundingClientRect();" +
+      " const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);" +
+      " return r.width>0 && r.height>0 && (hit===button || button.contains(hit)); })()";
+    // Radix confirmation can still be retiring when the create-page header
+    // becomes visible. A missed native click should not silently strand the
+    // draft, but never issue a second click once the page actually navigated.
+    let navigatedBack = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await cdp.waitFor(backHitTest, 'unobstructed Back to teams', 15_000);
+      await cdp.click(backToTeams);
+      try {
+        await cdp.waitFor(
+          "!document.querySelector('[data-testid=create-team-page]')",
+          'Back to teams navigation', 4_000
+        );
+        navigatedBack = true;
+        break;
+      } catch (error) {
+        const stillOnForm = await cdp.evaluate(
+          "Boolean(document.querySelector('[data-testid=create-team-page]'))"
+        );
+        if (!stillOnForm || attempt === 2) throw error;
+      }
+    }
+    assert(navigatedBack, 'Back to teams did not navigate after bounded native clicks');
     await cdp.waitFor(createButtonExpression('Continue creating'), 'template draft retained');
     const organizationName = 'e2e-org-' + randomUUID().slice(0, 8);
     const organization = await cdp.evaluate(
@@ -1232,15 +1605,21 @@ async function main() {
     );
     await captureScreenshot(cdp, fixture, 'organization-created');
 
+    const scheduleUiEvidence = await exerciseScheduleUx(cdp, fixture, log, started.inspectorWebSocketDebuggerUrl);
+
     const results = {
       success: true,
+      scheduleUiEvidence,
       unique,
       retainedAcrossBack: true,
       retainedAcrossTabSwitch: true,
       manageProvidersNavigationRetainsDraft: true,
       retainedAcrossProcessRestart: true,
       advancedCliRetainedAcrossRename: true,
-      advancedCliRetainedAcrossPaneRemount: true,
+      advancedCliRetainedAcrossPaneSplit: true,
+      advancedCliRetainedAcrossBackRemount: true,
+      advancedCliRestoresUneditedDefaults: true,
+      unnamedAdvancedCliEditsRetained: true,
       launchStillModal: true,
       launchContentLoaded: true,
       configOnlyCreatedThroughUi: true,

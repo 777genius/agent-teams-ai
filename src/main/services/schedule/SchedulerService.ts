@@ -7,11 +7,13 @@
 
 import { getSchedulesBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
+import { getValidScheduleNextRuns } from '@shared/utils/scheduleTiming';
 import { Cron } from 'croner';
 import { randomUUID } from 'crypto';
 
 import { computeScheduleNextRunAt } from './computeScheduleNextRunAt';
 import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
+import { SchedulerStopBarrier } from './SchedulerStopBarrier';
 
 import type { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import type { ScheduleRepository } from './ScheduleRepository';
@@ -62,9 +64,6 @@ export class SchedulerService {
   // Warm-up timers keyed by schedule ID (includes warm-up retry timers)
   private warmUpTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  // Execution retry delay timers keyed by schedule ID
-  private retryDelayTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
   // Active runs keyed by schedule ID (only one run per schedule at a time)
   private activeRuns = new Map<string, ScheduleRun>();
 
@@ -73,6 +72,8 @@ export class SchedulerService {
 
   // Flag to prevent retry timers from firing after stop()
   private stopped = false;
+  private lifecycleEpoch = 0;
+  private readonly stopBarrier = new SchedulerStopBarrier();
 
   constructor(
     repository: ScheduleRepository,
@@ -95,6 +96,7 @@ export class SchedulerService {
   // ===========================================================================
 
   async start(): Promise<void> {
+    await this.stopBarrier.drainFinalizations();
     logger.info(`Scheduler starting, basePath=${getSchedulesBasePath()}`);
 
     this.stopped = false;
@@ -112,7 +114,7 @@ export class SchedulerService {
     for (const schedule of schedules) {
       if (schedule.status === 'active') {
         this.createCronJob(schedule);
-        activeCount++;
+        if (this.cronJobs.has(schedule.id)) activeCount++;
       }
     }
 
@@ -126,6 +128,7 @@ export class SchedulerService {
 
     // Prevent retry timers from dispatching new work after stop
     this.stopped = true;
+    this.lifecycleEpoch++;
 
     // Cancel all active executions
     this.executor.cancelAll();
@@ -144,16 +147,13 @@ export class SchedulerService {
     }
     this.warmUpTimers.clear();
 
-    // Clear execution retry delay timers
-    for (const [id, timer] of this.retryDelayTimers) {
-      clearTimeout(timer);
-      logger.debug(`Cleared retry delay timer: ${id}`);
+    this.stopBarrier.cancelRetries();
+    try {
+      await this.stopBarrier.drainFinalizations();
+    } finally {
+      this.activeRuns.clear();
+      this.cwdLock.clear();
     }
-    this.retryDelayTimers.clear();
-
-    // Clear locks
-    this.activeRuns.clear();
-    this.cwdLock.clear();
 
     logger.info('Scheduler stopped');
   }
@@ -174,6 +174,9 @@ export class SchedulerService {
   }
 
   async createSchedule(input: CreateScheduleInput): Promise<Schedule> {
+    const cronExpression = input.cronExpression.trim();
+    const timezone = input.timezone.trim();
+    getValidScheduleNextRuns(cronExpression, timezone);
     if (input.taskFirst && input.executionMode !== 'agent' && input.executionMode !== 'team') {
       throw new Error('Task-first schedule requires agent or team executionMode');
     }
@@ -185,8 +188,8 @@ export class SchedulerService {
       ...(input.taskFirst && { taskFirst: true as const, reviewedSavedPrompt: input.reviewedSavedPrompt }),
       ...(input.targetMember !== undefined && { targetMember: input.targetMember }),
       label: input.label,
-      cronExpression: input.cronExpression,
-      timezone: input.timezone,
+      cronExpression,
+      timezone,
       status: 'active',
       warmUpMinutes: input.warmUpMinutes ?? 15,
       maxConsecutiveFailures: 3,
@@ -198,35 +201,39 @@ export class SchedulerService {
       launchConfig: input.launchConfig,
     };
     schedule.nextRunAt = computeScheduleNextRunAt(schedule) ?? undefined;
-    await this.repository.saveSchedule(schedule);
-    this.createCronJob(schedule);
-
+    const job = this.prepareCronJob(schedule);
+    try {
+      await this.repository.saveSchedule(schedule);
+    } catch (error) {
+      job.stop();
+      throw error;
+    }
+    this.activateCronJob(schedule, job);
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: schedule.id,
       teamName: schedule.teamName,
       detail: 'created',
     });
-
     logger.info(`Schedule created: ${schedule.id} for team ${schedule.teamName}`);
     return schedule;
   }
 
   async updateSchedule(id: string, patch: UpdateSchedulePatch): Promise<Schedule> {
     const existing = await this.repository.getSchedule(id);
-    if (!existing) {
-      throw new Error(`Schedule not found: ${id}`);
-    }
+    if (!existing) throw new Error(`Schedule not found: ${id}`);
     if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
-
+    const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
+    const cronExpression = (patch.cronExpression ?? existing.cronExpression).trim();
+    const timezone = (patch.timezone ?? existing.timezone).trim();
+    if (cronChanged) getValidScheduleNextRuns(cronExpression, timezone);
     const updated: Schedule = {
       ...existing,
       ...(patch.executionMode !== undefined && { executionMode: patch.executionMode }),
       ...(patch.targetMember !== undefined && { targetMember: patch.targetMember }),
       ...(patch.reviewedSavedPrompt && { reviewedSavedPrompt: true as const }),
       ...(patch.label !== undefined && { label: patch.label }),
-      ...(patch.cronExpression !== undefined && { cronExpression: patch.cronExpression }),
-      ...(patch.timezone !== undefined && { timezone: patch.timezone }),
+      ...(cronChanged && { cronExpression, timezone }),
       ...(patch.warmUpMinutes !== undefined && { warmUpMinutes: patch.warmUpMinutes }),
       ...(patch.maxTurns !== undefined && { maxTurns: patch.maxTurns }),
       ...(patch.maxBudgetUsd !== undefined && { maxBudgetUsd: patch.maxBudgetUsd }),
@@ -235,20 +242,22 @@ export class SchedulerService {
       }),
       updatedAt: new Date().toISOString(),
     };
-
     // Reschedule cron job if expression or timezone changed
-    const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
-
     const reschedule = cronChanged || patch.warmUpMinutes !== undefined || patch.executionMode !== undefined;
-    if (reschedule) {
-      this.removeCronJob(id);
-      if (updated.status === 'active') {
-        updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
-        this.createCronJob(updated);
-      }
+    if (reschedule && updated.status === 'active') updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
+    const nextJob = reschedule && updated.status === 'active'
+      ? this.prepareCronJob(updated)
+      : null;
+    try {
+      await this.repository.saveSchedule(updated);
+    } catch (error) {
+      nextJob?.stop();
+      throw error;
     }
-
-    await this.repository.saveSchedule(updated);
+    if (reschedule) {
+      if (nextJob) this.activateCronJob(updated, nextJob);
+      else this.removeCronJob(id);
+    }
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: updated.id,
@@ -261,43 +270,25 @@ export class SchedulerService {
 
   async deleteSchedule(id: string): Promise<void> {
     const existing = await this.repository.getSchedule(id);
-    if (!existing) {
-      throw new Error(`Schedule not found: ${id}`);
-    }
-
-    // Cancel active run if any
+    if (!existing) throw new Error(`Schedule not found: ${id}`);
+    // Do not stop a live schedule unless the durable deletion succeeds.
+    await this.repository.deleteSchedule(id);
     const activeRun = this.activeRuns.get(id);
-    if (activeRun) {
-      this.executor.cancel(activeRun.id);
-    }
+    if (activeRun) this.executor.cancel(activeRun.id);
     this.removeCronJob(id);
     this.releaseRunLocks(id);
-
-    await this.repository.deleteSchedule(id);
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: id,
       teamName: existing.teamName,
       detail: 'deleted',
     });
-
     logger.info(`Schedule deleted: ${id}`);
   }
 
   async pauseSchedule(id: string): Promise<void> {
     const existing = await this.repository.getSchedule(id);
-    if (!existing) {
-      throw new Error(`Schedule not found: ${id}`);
-    }
-
-    // Pause cron job
-    const job = this.cronJobs.get(id);
-    if (job) {
-      job.pause();
-    }
-
-    // Clear warm-up timer
-    this.clearWarmUpTimer(id);
+    if (!existing) throw new Error(`Schedule not found: ${id}`);
 
     const updated: Schedule = {
       ...existing,
@@ -305,7 +296,10 @@ export class SchedulerService {
       updatedAt: new Date().toISOString(),
     };
 
+    // Persistence errors must not leave an active record without a live job.
     await this.repository.saveSchedule(updated);
+    this.cronJobs.get(id)?.pause();
+    this.clearWarmUpTimer(id);
     this.emitChange({
       type: 'schedule-paused',
       scheduleId: id,
@@ -317,13 +311,10 @@ export class SchedulerService {
 
   async resumeSchedule(id: string): Promise<void> {
     const existing = await this.repository.getSchedule(id);
-    if (!existing) {
-      throw new Error(`Schedule not found: ${id}`);
-    }
+    if (!existing) throw new Error(`Schedule not found: ${id}`);
 
-    // Remove old job and recreate to get fresh next-run timing
-    this.removeCronJob(id);
-
+    // A historic invalid schedule must be repaired before it can be resumed.
+    getValidScheduleNextRuns(existing.cronExpression, existing.timezone);
     const updated: Schedule = {
       ...existing,
       status: 'active',
@@ -332,9 +323,14 @@ export class SchedulerService {
     };
 
     updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
-    this.createCronJob(updated);
-
-    await this.repository.saveSchedule(updated);
+    const job = this.prepareCronJob(updated);
+    try {
+      await this.repository.saveSchedule(updated);
+    } catch (error) {
+      job.stop();
+      throw error;
+    }
+    this.activateCronJob(updated, job);
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: id,
@@ -364,6 +360,7 @@ export class SchedulerService {
   // Trigger Now
   // ===========================================================================
   async triggerNow(id: string): Promise<ScheduleRun> {
+    const generation = this.lifecycleEpoch;
     const schedule = await this.repository.getSchedule(id);
     if (!schedule) {
       throw new Error(`Schedule not found: ${id}`);
@@ -393,10 +390,11 @@ export class SchedulerService {
     };
 
     await this.repository.saveRun(run);
+    if (this.stopped || generation !== this.lifecycleEpoch) throw new Error('Scheduler stopped before dispatch');
     this.emitChange({ type: 'run-started', scheduleId: id, teamName: schedule.teamName });
 
     // Execute in background (don't await — triggerNow returns immediately)
-    void this.executeRunInBackground(schedule, run);
+    this.dispatchRun(schedule, run);
 
     return run;
   }
@@ -415,25 +413,27 @@ export class SchedulerService {
   // Cron Job Management
   // ===========================================================================
 
+  /** Prepare the replacement without touching the currently active cron timer. */
+  private prepareCronJob(schedule: Schedule): Cron {
+    return new Cron(schedule.cronExpression, { timezone: schedule.timezone, paused: true },
+      () => void this.onCronTick(schedule.id));
+  }
+
+  private activateCronJob(schedule: Schedule, job: Cron): void {
+    this.removeCronJob(schedule.id);
+    this.cronJobs.set(schedule.id, job);
+    job.resume();
+    this.scheduleWarmUp(schedule);
+    logger.info(`Cron job created for schedule ${schedule.id}: "${schedule.cronExpression}" ` +
+      `(timezone: ${schedule.timezone}, next: ${job.nextRun()?.toISOString() ?? 'never'})`);
+  }
+
+  /** Historic records may be invalid: log and keep the rest of startup running. */
   private createCronJob(schedule: Schedule): void {
-    if (this.cronJobs.has(schedule.id)) {
-      this.removeCronJob(schedule.id);
-    }
-
     try {
-      const job = new Cron(schedule.cronExpression, { timezone: schedule.timezone }, () => {
-        void this.onCronTick(schedule.id);
-      });
-
-      this.cronJobs.set(schedule.id, job);
-
-      // Set warm-up timer for the next run
-      this.scheduleWarmUp(schedule);
-
-      logger.info(
-        `Cron job created for schedule ${schedule.id}: "${schedule.cronExpression}" ` +
-          `(timezone: ${schedule.timezone}, next: ${job.nextRun()?.toISOString() ?? 'never'})`
-      );
+      getValidScheduleNextRuns(schedule.cronExpression, schedule.timezone);
+      const job = this.prepareCronJob(schedule);
+      this.activateCronJob(schedule, job);
     } catch (err) {
       logger.error(`Failed to create cron job for ${schedule.id}: ${err}`);
     }
@@ -453,6 +453,7 @@ export class SchedulerService {
   // ===========================================================================
 
   private scheduleWarmUp(schedule: Schedule): void {
+    if (this.stopped) return;
     this.clearWarmUpTimer(schedule.id);
 
     // Smart jobs dispatch through existing runtime services; warming up the
@@ -492,6 +493,7 @@ export class SchedulerService {
   }
 
   private async performWarmUp(schedule: Schedule, retryCount = 0): Promise<void> {
+    const generation = this.lifecycleEpoch;
     logger.info(
       `[${schedule.id}] Starting warm-up (attempt ${retryCount + 1}/${WARMUP_MAX_RETRIES})`
     );
@@ -510,6 +512,7 @@ export class SchedulerService {
     }
 
     // Retry
+    if (this.stopped || generation !== this.lifecycleEpoch) return;
     if (retryCount < WARMUP_MAX_RETRIES - 1) {
       const retryTimer = setTimeout(() => {
         this.warmUpTimers.delete(schedule.id);
@@ -528,6 +531,7 @@ export class SchedulerService {
   // ===========================================================================
 
   private async onCronTick(scheduleId: string): Promise<void> {
+    const generation = this.lifecycleEpoch;
     const schedule = await this.repository.getSchedule(scheduleId);
     if (schedule?.status !== 'active') {
       logger.debug(`Cron tick for ${scheduleId} skipped (not active)`);
@@ -563,16 +567,24 @@ export class SchedulerService {
     };
 
     await this.repository.saveRun(run);
+    if (this.stopped || generation !== this.lifecycleEpoch) return;
     this.emitChange({ type: 'run-started', scheduleId, teamName: schedule.teamName });
 
-    void this.executeRunInBackground(schedule, run);
+    this.dispatchRun(schedule, run);
   }
 
   // ===========================================================================
   // Execution
   // ===========================================================================
 
+  private dispatchRun(schedule: Schedule, run: ScheduleRun): void {
+    void this.executeRunInBackground(schedule, run).catch((error: unknown) => {
+      logger.error(`[${schedule.id}] Background run finalization failed: ${error}`);
+    });
+  }
+
   private async executeRunInBackground(schedule: Schedule, run: ScheduleRun): Promise<void> {
+    const generation = this.lifecycleEpoch;
     const { id: scheduleId, launchConfig } = schedule;
 
     // Acquire locks
@@ -580,11 +592,12 @@ export class SchedulerService {
     this.cwdLock.set(launchConfig.cwd, scheduleId);
 
     let retriedInternally = false;
+    let finishFinalization: (() => void) | undefined;
 
     try {
       const outcome = schedule.executionMode
         ? await this.smartDispatcher?.dispatch(schedule, run.id, () =>
-            this.stopped || this.activeRuns.get(scheduleId)?.id !== run.id
+            this.stopped || generation !== this.lifecycleEpoch || this.activeRuns.get(scheduleId)?.id !== run.id
           )
         : {
             kind: 'one_shot' as const,
@@ -595,6 +608,8 @@ export class SchedulerService {
               maxBudgetUsd: schedule.maxBudgetUsd,
             }),
           };
+      if (this.stopped || generation !== this.lifecycleEpoch) return;
+      finishFinalization = this.stopBarrier.beginFinalization();
       if (!outcome) throw new Error('Smart schedule dispatcher is unavailable');
       if (outcome.kind === 'skipped' || outcome.kind === 'dispatched') {
         await this.completeRun(run, outcome.kind, null, outcome.summary, undefined, outcome.taskId);
@@ -619,6 +634,8 @@ export class SchedulerService {
         }
       }
     } catch (err) {
+      if ((this.stopped || generation !== this.lifecycleEpoch) && !finishFinalization) return;
+      finishFinalization ??= this.stopBarrier.beginFinalization();
       const errorMsg = err instanceof Error ? err.message : String(err);
       if (schedule.executionMode) {
         // Never blindly retry a task write or a team launch: ACK may have been lost.
@@ -628,22 +645,17 @@ export class SchedulerService {
         retriedInternally = await this.handleRunFailure(schedule, run, null, errorMsg);
       }
     } finally {
-      // Skip cleanup if retry took over — retry's own finally will handle it
-      if (retriedInternally) return;
-
-      // Release locks only if this run still owns them (prevents double-release race)
-      const currentActive = this.activeRuns.get(scheduleId);
-      if (currentActive?.id === run.id) {
-        this.releaseRunLocks(scheduleId);
-      }
-
-      // Update schedule's lastRunAt and nextRunAt
-      await this.updateScheduleTimestamps(schedule);
-
-      // Schedule next warm-up
-      const freshSchedule = await this.repository.getSchedule(scheduleId);
-      if (freshSchedule?.status === 'active') {
-        this.scheduleWarmUp(freshSchedule);
+      try {
+        if (retriedInternally) return;
+        // Release only the locks owned by this run.
+        if (this.activeRuns.get(scheduleId)?.id === run.id) this.releaseRunLocks(scheduleId);
+        // A cancelled external dispatch cannot write after stop/fixture teardown.
+        if (!finishFinalization) return;
+        await this.updateScheduleTimestamps(schedule);
+        const freshSchedule = await this.repository.getSchedule(scheduleId);
+        if (!this.stopped && freshSchedule?.status === 'active') this.scheduleWarmUp(freshSchedule);
+      } finally {
+        finishFinalization?.();
       }
     }
   }
@@ -677,12 +689,7 @@ export class SchedulerService {
       // Release locks before retry delay
       this.releaseRunLocks(schedule.id);
 
-      await new Promise<void>((resolve) => {
-        const timer = setTimeout(resolve, EXECUTION_RETRY_DELAY_MS);
-        timer.unref();
-        this.retryDelayTimers.set(schedule.id, timer);
-      });
-      this.retryDelayTimers.delete(schedule.id);
+      if (!this.stopped) await this.stopBarrier.waitForRetry(EXECUTION_RETRY_DELAY_MS);
 
       // Bail if service was stopped during delay
       if (this.stopped) {
@@ -698,13 +705,13 @@ export class SchedulerService {
       }
 
       const freshSchedule = await this.repository.getSchedule(schedule.id);
-      if (freshSchedule?.status !== 'active') {
+      if (this.stopped || freshSchedule?.status !== 'active') {
         await this.completeRun(retryRun, 'failed', exitCode, undefined, error);
         return false;
       }
 
       // Dispatch retry — caller's finally must not run cleanup
-      void this.executeRunInBackground(freshSchedule, retryRun);
+      this.dispatchRun(freshSchedule, retryRun);
       return true;
     }
 
@@ -779,14 +786,13 @@ export class SchedulerService {
 
     if (shouldAutoPause) {
       logger.warn(`[${schedule.id}] Auto-pausing after ${newCount} consecutive failures`);
-      const job = this.cronJobs.get(schedule.id);
-      if (job) job.pause();
-      this.clearWarmUpTimer(schedule.id);
     }
 
     await this.repository.saveSchedule(updated);
 
     if (shouldAutoPause) {
+      this.cronJobs.get(schedule.id)?.pause();
+      this.clearWarmUpTimer(schedule.id);
       this.emitChange({
         type: 'schedule-paused',
         scheduleId: schedule.id,
@@ -822,14 +828,6 @@ export class SchedulerService {
       teamName: fresh.teamName,
     });
   }
-
-  // ===========================================================================
-  // Recovery
-  // ===========================================================================
-
-  // ===========================================================================
-  // Helpers
-  // ===========================================================================
 
   private releaseRunLocks(scheduleId: string): void {
     this.activeRuns.delete(scheduleId);

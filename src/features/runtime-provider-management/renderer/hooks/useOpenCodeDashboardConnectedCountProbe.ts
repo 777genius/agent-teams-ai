@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { api } from '@renderer/api';
 
@@ -35,9 +35,9 @@ export function useOpenCodeDashboardConnectedCountProbe({
   runtimeStatus,
   connectedCount,
 }: DashboardConnectedCountProbeOptions): void {
+  const [attemptRevision, retry] = useState(0);
   const revision =
-    runtimeStatus?.state === 'ready' &&
-    isOpenCodeRuntimeUsable(runtimeStatus)
+    runtimeStatus?.state === 'ready' && isOpenCodeRuntimeUsable(runtimeStatus)
       ? JSON.stringify(['ready', runtimeStatus.version ?? null, runtimeStatus.binaryPath ?? null])
       : null;
   // This changes on invalidation; the Dashboard's existing external-store
@@ -54,23 +54,40 @@ export function useOpenCodeDashboardConnectedCountProbe({
     for (const [attemptKey, startedAt] of recentAttempts) {
       if (now - startedAt >= RETRY_AFTER_MS) recentAttempts.delete(attemptKey);
     }
-    if (recentAttempts.has(key) || activeReads.has(key)) return;
+    const attemptedAt = recentAttempts.get(key);
+    if (attemptedAt !== undefined) {
+      // Expiry can precede the retry deadline when the response was cached.
+      // Wake an active pane once the cooldown ends; a rerender alone is not
+      // guaranteed after the visible evidence has already become Unknown.
+      const timer = window.setTimeout(
+        () => retry((value) => value + 1),
+        Math.max(1, attemptedAt + RETRY_AFTER_MS - now + 10)
+      );
+      return () => window.clearTimeout(timer);
+    }
+    if (activeReads.has(key)) return;
     recentAttempts.set(key, now);
 
     const endCheck = beginRuntimeProviderConnectedCountCheck(projectPath, token);
-    const request = api.runtimeProviderManagement.loadProviderDirectory({
-      runtimeId: 'opencode',
-      summary: true,
-      projectPath,
-      query: null,
-      filter: 'connected',
-      limit: 100,
-      cursor: null,
-      refresh: false,
-    })
+    const request = api.runtimeProviderManagement
+      .loadProviderDirectory({
+        runtimeId: 'opencode',
+        summary: true,
+        projectPath,
+        query: null,
+        filter: 'connected',
+        limit: 100,
+        cursor: null,
+        refresh: false,
+      })
       .then((response) => {
-        if (response.schemaVersion !== 1 || response.runtimeId !== 'opencode' ||
-            response.error || !response.directory) return;
+        if (
+          response.schemaVersion !== 1 ||
+          response.runtimeId !== 'opencode' ||
+          response.error ||
+          !response.directory
+        )
+          return;
         const connected = countCompleteDirectoryConnections(response.directory, 'connected');
         if (connected === null) return;
         publishRuntimeProviderConnectedCount({
@@ -83,14 +100,15 @@ export function useOpenCodeDashboardConnectedCountProbe({
         });
       })
       .catch(() => {
-        // No false zero and no automatic retry loop on unavailable inventory.
+        // Failed inventory stays Unknown until the bounded retry cooldown.
       })
       .finally(() => {
         endCheck();
         if (activeReads.get(key) === request) activeReads.delete(key);
+        retry((value) => value + 1);
       });
     activeReads.set(key, request);
     // Do not cancel a started read on tab changes: it is already running,
     // and the generation token still prevents publishing stale data.
-  }, [enabled, projectPath, revision, connectedCount, readToken]);
+  }, [enabled, projectPath, revision, connectedCount, readToken, attemptRevision]);
 }

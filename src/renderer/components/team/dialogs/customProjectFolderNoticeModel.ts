@@ -3,7 +3,6 @@ import type { CustomProjectFolderModel } from './useCustomProjectFolder';
 export type CustomProjectFolderNoticeTone = 'muted' | 'warning' | 'error';
 
 export type CustomProjectFolderNoticeMessage =
-  | 'createAutomatically'
   | 'folder.missingCreatedOnSubmit'
   | 'folder.missingRequiredBeforeCreate'
   | 'folder.missingMustExist'
@@ -19,10 +18,11 @@ export interface CustomProjectFolderNotice {
 
 type NoticeInput = Pick<
   CustomProjectFolderModel,
-  'status' | 'createsMissingOnSubmit' | 'requiredBeforeSubmit'
+  'path' | 'checking' | 'status' | 'createsMissingOnSubmit' | 'requiredBeforeSubmit'
 >;
 
 export function getCustomProjectFolderNotice(input: NoticeInput): CustomProjectFolderNotice | null {
+  if (!input.path.trim() || input.checking) return null;
   switch (input.status) {
     case 'missing':
       if (!input.createsMissingOnSubmit) {
@@ -39,12 +39,9 @@ export function getCustomProjectFolderNotice(input: NoticeInput): CustomProjectF
       if (!input.createsMissingOnSubmit) {
         return { tone: 'error', message: 'folder.unknown', canCreate: false };
       }
-      return { tone: 'muted', message: 'createAutomatically', canCreate: false };
+      return null;
     case 'idle':
-      // Existence is not known here, so only repeat the submit-time guarantee where it holds.
-      return input.createsMissingOnSubmit
-        ? { tone: 'muted', message: 'createAutomatically', canCreate: false }
-        : null;
+      return null;
     case 'checking':
     case 'exists':
       return null;
