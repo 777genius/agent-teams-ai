@@ -2427,6 +2427,15 @@ git push origin <branch>
 
 ### 2. Runtime release gate
 
+Owner policy: merge runtime-only bump PRs without waiting for CI/CD after reviewing
+that the diff changes only the runtime package version or the verified frontend
+`runtime.lock.json` pin, plus optional accompanying release documentation. No
+runtime or frontend implementation changes may use this fast path. Use the
+existing owner/admin merge permission when checks
+are pending; do not change branch protection. Runtime artifact builds,
+qualification, exact-draft promotion, and anonymous-download verification below
+remain mandatory. This fast path does not authorize a frontend release.
+
 Every app release must prove whether the packaged `claude-multimodel` runtime is
 current. The app release workflow stages runtime assets from `runtime.lock.json`,
 so an app draft can be built from fresh UI code while still bundling an old
