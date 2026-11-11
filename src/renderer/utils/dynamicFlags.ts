@@ -71,6 +71,8 @@ const subscribe = (listener: () => void): (() => void) => {
   return () => listeners.delete(listener);
 };
 
-/** Returns `false` while the remote value is still loading to avoid a show-then-hide flash. */
+/** Dev follows local flags; packaged apps wait for the remote value to avoid a flash. */
 export const useDynamicFlag = (name: keyof DynamicFlags): boolean =>
-  useSyncExternalStore(subscribe, () => state.status !== 'loading' && state.flags[name]);
+  useSyncExternalStore(subscribe, () =>
+    import.meta.env.DEV ? BUNDLED_FLAGS[name] : state.status !== 'loading' && state.flags[name]
+  );
