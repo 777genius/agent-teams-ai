@@ -177,7 +177,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     const deadline = Date.now() + 75_000;
     while (Date.now() < deadline) {
       assert.deepEqual(model.failures, []);
-      const result = await host.rpc('runtime.read', envelope('TEST-read', { memberId: 'carol-id' }));
+      const result: Record<string, unknown> = await host.rpc('runtime.read', envelope('TEST-read', { memberId: 'carol-id' }));
       assert.equal(result.ok, true);
       const state = record(result.value);
       const pending = (state.interactions as unknown[]).map(record).filter(row => row.phase === 'pending');
