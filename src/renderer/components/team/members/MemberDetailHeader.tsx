@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
 import { Badge } from '@renderer/components/ui/badge';
 import { DialogDescription, DialogTitle } from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -156,7 +157,7 @@ export const MemberDetailHeader = ({
   return (
     <div className="flex items-center gap-3">
       <div className="relative shrink-0">
-        <img
+        <ParticipantAvatar
           src={avatarMap.get(member.name) ?? agentAvatarUrl(member.name, 96)}
           alt={member.name}
           className="size-12 rounded-full bg-[var(--color-surface-raised)]"

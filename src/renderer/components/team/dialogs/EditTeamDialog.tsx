@@ -543,7 +543,7 @@ export const EditTeamDialog = ({
               onKeyDown={(e) => {
                 if (!isImeComposing(e) && e.key === 'Enter' && !saving && name.trim()) handleSave();
               }}
-              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-border-emphasis)]"
+              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-border-emphasis)]"
               placeholder={t('editTeam.placeholders.teamName')}
             />
           </div>
@@ -562,7 +562,7 @@ export const EditTeamDialog = ({
                 setDescription(e.target.value);
               }}
               rows={3}
-              className="w-full resize-none rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-border-emphasis)]"
+              className="w-full resize-none rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-border-emphasis)]"
               placeholder={t('editTeam.placeholders.description')}
             />
           </div>

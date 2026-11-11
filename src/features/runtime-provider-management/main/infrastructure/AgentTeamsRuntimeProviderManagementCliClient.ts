@@ -1334,10 +1334,14 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     return response;
   }
 
-  private invalidateDirectoryResponseCache(): void {
+  private invalidateDirectoryResponseCache(preserveRefreshes = false): void {
     this.directoryResponseCacheGeneration += 1;
     this.directoryResponseCache.clear();
-    this.directoryResponseInFlight.clear();
+    for (const key of this.directoryResponseInFlight.keys()) {
+      if (!preserveRefreshes || !key.startsWith('refresh:')) {
+        this.directoryResponseInFlight.delete(key);
+      }
+    }
   }
 
   private getModelResponseCacheKey(
@@ -1549,7 +1553,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       if (existingRefresh) {
         return existingRefresh;
       }
-      this.invalidateDirectoryResponseCache();
+      this.invalidateDirectoryResponseCache(true);
       // A catalog refresh should make the next model picker read fresh data,
       // but it must not turn an already-visible model load into an AbortError.
       this.invalidateModelResponseCache(false);

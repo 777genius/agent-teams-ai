@@ -1,0 +1,27 @@
+/* Subtle local tint: lighter in dark themes, darker in light themes. */
+:root {
+  --color-form-control-bg: rgba(255, 255, 255, 0.025);
+  --color-form-control-hover-bg: rgba(255, 255, 255, 0.045);
+}
+
+:root.light {
+  --color-form-control-bg: rgba(0, 0, 0, 0.035);
+  --color-form-control-hover-bg: rgba(0, 0, 0, 0.06);
+}
+
+/* Native field defaults; composed fields and error states can override them. */
+:where(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not(
+      [type='file']
+    ):not([type='hidden']),
+  textarea:not(.xterm-helper-textarea),
+  select,
+  [role='combobox']
+) {
+  background-color: var(--color-form-control-bg);
+}
+
+/* cmdk searches use the same surface, including custom picker implementations. */
+input[cmdk-input] {
+  background-color: var(--color-form-control-bg);
+}

@@ -437,7 +437,7 @@ export const ReviewFileTree = ({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('review.fileTree.searchPlaceholder')}
-            className="h-8 w-full rounded border border-border bg-surface px-7 text-xs text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            className="h-8 w-full rounded border border-border bg-[var(--color-form-control-bg)] px-7 text-xs text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500/30"
           />
         </div>
 

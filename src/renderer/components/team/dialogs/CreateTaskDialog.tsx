@@ -177,7 +177,8 @@ export const CreateTaskDialog = ({
 
   const requiresOwner = defaultStartImmediately === true;
   const ownerUnavailable = Boolean(owner && !members.some((candidate) => candidate.name === owner));
-  const canSubmit = subject.trim().length > 0 && !submitting && !ownerUnavailable && (!requiresOwner || !!owner);
+  const canSubmit =
+    subject.trim().length > 0 && !submitting && !ownerUnavailable && (!requiresOwner || !!owner);
 
   // Only show non-internal, non-deleted tasks as candidates for blocking
   const availableTasks = tasks.filter(
@@ -388,7 +389,7 @@ export const CreateTaskDialog = ({
                             placeholder={t('tasks.createTask.searchTasks')}
                             value={blockedBySearch}
                             onChange={(e) => setBlockedBySearch(e.target.value)}
-                            className="w-full bg-transparent py-0.5 pl-5 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
+                            className="w-full bg-[var(--color-form-control-bg)] py-0.5 pl-5 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
                           />
                         </div>
                       ) : null}
@@ -462,7 +463,7 @@ export const CreateTaskDialog = ({
                             placeholder={t('tasks.createTask.searchTasks')}
                             value={relatedSearch}
                             onChange={(e) => setRelatedSearch(e.target.value)}
-                            className="w-full bg-transparent py-0.5 pl-5 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
+                            className="w-full bg-[var(--color-form-control-bg)] py-0.5 pl-5 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
                           />
                         </div>
                       ) : null}

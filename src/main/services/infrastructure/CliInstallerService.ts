@@ -47,7 +47,7 @@ import {
 } from '../runtime/CliProviderModelAvailabilityService';
 import {
   createDegradedProviderStatus,
-  createRuntimeStatusErrorProviderStatus,
+  createPendingProviderStatus,
   mergeProviderStatusDisplayEvidence,
 } from '../runtime/providerStatusCheckContract';
 import { ClaudeBinaryResolver } from '../team/ClaudeBinaryResolver';
@@ -56,10 +56,13 @@ import { getCliFlavorUiOptions, getConfiguredCliFlavor } from '../team/cliFlavor
 import { buildInitialCliInstallationStatus } from './cliInstallerInitialStatus';
 import {
   mergeProviderStatusPublication,
+  ProviderStatusPublicationRevisions,
   retainLatestProviderStatus,
 } from './cliInstallerProviderStatusUpdates';
 import {
   createMismatchedProviderStatus,
+  createObsoleteProviderStatus,
+  createProviderReadFailureStatus,
   getAuthenticatedFrontendProvider,
   hasAuthenticatedFrontendProvider,
   isFrontendProvider,
@@ -406,9 +409,7 @@ function cloneCliInstallerRunDiag(diag: CliInstallerStatusRunDiag): CliInstaller
   return { ...diag };
 }
 
-// =============================================================================
 // Service
-// =============================================================================
 
 export class CliInstallerService {
   private mainWindow: BrowserWindow | null = null;
@@ -424,6 +425,7 @@ export class CliInstallerService {
   private lastHealthyStatusSnapshot: CliInstallationStatus | null = null;
   private lastHealthyStatusObservedAt = 0;
   private statusGatherGeneration = 0;
+  private readonly providerStatusRevisions = new ProviderStatusPublicationRevisions();
   private readonly latestProviderSignatures = new Map<CliProviderId, string | null>();
 
   constructor(private readonly now: () => number = Date.now) {}
@@ -737,6 +739,7 @@ export class CliInstallerService {
   }
 
   private updateLatestProviderStatus(providerStatus: CliProviderStatus): void {
+    this.providerStatusRevisions.published(providerStatus.providerId);
     if (
       this.latestStatusSnapshot?.flavor === 'agent_teams_orchestrator' &&
       !isFrontendProvider(providerStatus.providerId)
@@ -819,9 +822,7 @@ export class CliInstallerService {
     return provider;
   }
 
-  // ---------------------------------------------------------------------------
   // Public: getStatus
-  // ---------------------------------------------------------------------------
 
   async getStatus(options: CliInstallerGetStatusOptions = {}): Promise<CliInstallationStatus> {
     const statusStartedAt = Date.now();
@@ -871,12 +872,7 @@ export class CliInstallerService {
     // Cold polling stays passive. Explicit invalidation requests runtime-only rediscovery.
     const generation = this.statusGatherGeneration;
     await this.refreshInvalidatedRuntime(generation);
-    const obsoleteStatus = () =>
-      createRuntimeStatusErrorProviderStatus(
-        providerId,
-        new Error('Provider runtime changed during status check. Refresh to retry.')
-      );
-    if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+    if (generation !== this.statusGatherGeneration) return createObsoleteProviderStatus(providerId);
     // Explicit project-scoped preflight can race initial runtime discovery.
     // Keep background/global status polling passive: it must not spawn shell
     // discovery or invalidate an authoritative cached status.
@@ -884,7 +880,8 @@ export class CliInstallerService {
     let passiveRuntime = resolvePassiveProviderRuntime(snapshot, providerId);
     if (options.projectPath && !snapshot?.binaryPath) {
       const binaryPath = await ClaudeBinaryResolver.resolve();
-      if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+      if (generation !== this.statusGatherGeneration)
+        return createObsoleteProviderStatus(providerId);
       const latest = this.latestStatusSnapshot;
       passiveRuntime = resolvePassiveProviderRuntime(
         latest?.binaryPath
@@ -899,14 +896,16 @@ export class CliInstallerService {
       return passiveRuntime.errorStatus;
     }
     const { binaryPath } = passiveRuntime;
-
+    const read = options.projectPath ? null : this.providerStatusRevisions.beginRead(providerId);
     const handleCatalogUpdate = (hydratedProviderStatus: CliProviderStatus): void => {
+      if (read?.isCurrent() === false) return;
       if (hydratedProviderStatus.providerId !== providerId) {
         return;
       }
       if (!this.updateLatestProviderStatusIfCurrent(hydratedProviderStatus, generation)) {
         return;
       }
+      read?.acknowledgePublication();
       if (this.latestStatusSnapshot) {
         this.publishStatusSnapshot(this.latestStatusSnapshot);
       }
@@ -918,18 +917,21 @@ export class CliInstallerService {
           undefined,
           options
         )
-      : await this.multimodelBridgeService.getProviderStatus(
-          binaryPath,
-          providerId,
-          handleCatalogUpdate
-        );
-    if (generation !== this.statusGatherGeneration) return obsoleteStatus();
+      : await this.multimodelBridgeService
+          .getProviderStatus(binaryPath, providerId, handleCatalogUpdate)
+          .catch((error: unknown) =>
+            createProviderReadFailureStatus(providerId, error, read?.isCurrent())
+          )
+          .finally(read?.finish);
+    if (generation !== this.statusGatherGeneration) return createObsoleteProviderStatus(providerId);
+    if (read?.isCurrent() === false) return createPendingProviderStatus(providerId);
     const mismatchStatus = projectMismatchedProviderStatus(providerId, providerStatus, this.now());
     if (mismatchStatus) {
       return mismatchStatus;
     }
     if (!options.projectPath) {
       this.updateLatestProviderStatusIfCurrent(providerStatus, generation);
+      read?.acknowledgePublication();
     }
     return projectProviderAuthority(providerStatus, this.now());
   }
@@ -1238,6 +1240,7 @@ export class CliInstallerService {
     generation: number
   ): Promise<void> {
     if (result.flavor === 'agent_teams_orchestrator') {
+      const canPublishProvider = this.providerStatusRevisions.captureAggregate();
       result.authStatusChecking = true;
       const hydratedProviderIds = new Set<CliProviderId>();
       const applyProviders = (
@@ -1254,7 +1257,8 @@ export class CliInstallerService {
           hydratedProviderIds,
           final,
           this.now(),
-          updatedProviderId
+          updatedProviderId,
+          canPublishProvider
         );
         if (!publication) return;
         Object.assign(result, publication);

@@ -10,9 +10,24 @@ const state = vi.hoisted(() => ({
   cliStatusLoading: false,
   cliStatusError: null,
   cliProviderStatusLoading: {},
-  openCodeRuntimeStatus: null as null | { installed: boolean; state: string; version: string; binaryPath: string },
+  codexStatusRecoveryPending: false,
+  openCodeRuntimeStatus: null as null | {
+    installed: boolean;
+    state: string;
+    version: string;
+    binaryPath: string;
+  },
   openCodeRuntimeStatusLoading: false,
-  countEvidence: null as null | { checking: boolean; observation: null; invalidated: boolean },
+  countEvidence: null as null | {
+    checking: boolean;
+    observation: null | {
+      connected: number;
+      fetchedAt: string;
+      runtimeRevision: string;
+      source: 'summary-connected';
+    };
+    invalidated: boolean;
+  },
   openSettingsTab: vi.fn(),
   openTab: vi.fn(),
   selectedProjectId: null,
@@ -27,7 +42,10 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock('@features/localization/renderer', () => ({
-  useAppTranslation: () => ({ t: (key: string) => key }),
+  useAppTranslation: () => ({
+    t: (key: string, values?: { connected?: number }) =>
+      values?.connected === undefined ? key : `${key} ${values.connected}`,
+  }),
 }));
 vi.mock('@features/runtime-provider-management/renderer', () => ({
   useRuntimeProviderDirectoryCache: () => state.directoryReads() ?? null,
@@ -45,7 +63,10 @@ vi.mock('@renderer/api', () => ({
   },
 }));
 vi.mock('@renderer/utils/providerReadiness', () => ({
-  hasEffectiveProviderLaunchAuthority: (provider: { providerId: string; modelCatalog?: { staleAt: string } }) =>
+  hasEffectiveProviderLaunchAuthority: (provider: {
+    providerId: string;
+    modelCatalog?: { staleAt: string };
+  }) =>
     provider.providerId === 'gemini' ||
     (provider.modelCatalog !== undefined && Date.parse(provider.modelCatalog.staleAt) > Date.now()),
 }));
@@ -61,6 +82,7 @@ describe('DashboardProviderSummary (passive)', () => {
     state.cliStatusLoading = false;
     state.openCodeRuntimeStatusLoading = false;
     state.cliProviderStatusLoading = {};
+    state.codexStatusRecoveryPending = false;
     state.countEvidence = null;
     state.openCodeRuntimeStatus = null;
     state.appConfig.general.multimodelEnabled = true;
@@ -70,25 +92,158 @@ describe('DashboardProviderSummary (passive)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('shows unknown status and opens Providers without starting IPC work', async () => {
+  it('shows startup checking and opens Providers without starting IPC work', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
     try {
       await act(async () => root.render(React.createElement(DashboardProviderSummary)));
       expect(host.querySelector('[data-testid="dashboard-provider-summary"]')).not.toBeNull();
-      expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent)
-        .toContain('runtimeProvider.badges.unknown');
+      expect(
+        host.querySelector('[data-testid="dashboard-codex-status"] [role="status"]')
+      ).not.toBeNull();
       expect(state.getStatus).not.toHaveBeenCalled();
       expect(state.loadProviderDirectory).not.toHaveBeenCalled();
       expect(state.loadModels).not.toHaveBeenCalled();
-      const button = host.querySelector<HTMLButtonElement>('[data-testid="dashboard-manage-providers"]');
+      const button = host.querySelector<HTMLButtonElement>(
+        '[data-testid="dashboard-manage-providers"]'
+      );
       await act(async () => button?.click());
       expect(state.openSettingsTab).toHaveBeenCalledExactlyOnceWith('providers');
     } finally {
       await act(async () => root.unmount());
     }
   });
+
+  it('keeps Codex checking while account recovery is pending without changing RPC flags', async () => {
+    state.cliStatus = {
+      installed: true,
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'codex',
+          authenticated: false,
+          verificationState: 'unknown',
+          statusCheckOutcome: 'authoritative',
+        },
+      ],
+    };
+    state.codexStatusRecoveryPending = true;
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      const codex = host.querySelector('[data-testid="dashboard-codex-status"]');
+      expect(codex?.querySelector('[role="status"]')).not.toBeNull();
+      expect(codex?.textContent).not.toContain('runtimeProvider.badges.unknown');
+      expect(state.cliProviderStatusLoading).toEqual({});
+      state.codexStatusRecoveryPending = false;
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(codex?.querySelector('[role="status"]')).toBeNull();
+      expect(codex?.textContent).toContain('runtimeProvider.badges.unknown');
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+  it('shows expired count 11 beside an actual recheck spinner until fresh count 9 replaces it', async () => {
+    vi.useFakeTimers();
+    const now = Date.parse('2026-11-10T16:00:00Z');
+    vi.setSystemTime(now);
+    state.openCodeRuntimeStatus = {
+      installed: true,
+      state: 'ready',
+      version: '1.2.3',
+      binaryPath: '/test/opencode',
+    };
+    state.countEvidence = {
+      checking: true,
+      invalidated: false,
+      observation: {
+        connected: 11,
+        fetchedAt: new Date(now - 121_000).toISOString(),
+        runtimeRevision: JSON.stringify(['ready', '1.2.3', '/test/opencode']),
+        source: 'summary-connected',
+      },
+    };
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      const count = host.querySelector('[data-testid="dashboard-opencode-provider-count"]');
+      expect(count?.textContent).toContain('cliStatus.provider.connectedCount 11');
+      expect(count?.textContent).not.toContain('runtimeProvider.badges.unknown');
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+      // A hung recheck cannot keep a stale number indefinitely.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(120_000);
+      });
+      expect(count?.textContent).not.toContain('connectedCount 11');
+      state.countEvidence = {
+        checking: false,
+        invalidated: false,
+        observation: {
+          ...state.countEvidence.observation!,
+          connected: 9,
+          fetchedAt: new Date().toISOString(),
+        },
+      };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(count?.textContent).toContain('cliStatus.provider.connectedCount 9');
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps a fresh known count visible alongside the loader until remaining checks settle', async () => {
+    state.openCodeRuntimeStatus = {
+      installed: true,
+      state: 'ready',
+      version: '1.2.3',
+      binaryPath: '/test/opencode',
+    };
+    state.directoryReads.mockReturnValue({
+      entries: [{ providerId: 'openrouter', state: 'connected' }],
+      authoritative: false,
+      fetchedAt: new Date().toISOString(),
+      totalCount: 101,
+      nextCursor: '100',
+      runtimeRevision: JSON.stringify(['ready', '1.2.3', '/test/opencode']),
+    });
+    state.countEvidence = { checking: true, observation: null, invalidated: false };
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      const count = host.querySelector('[data-testid="dashboard-opencode-provider-count"]');
+      expect(count?.textContent).toContain('cliStatus.provider.connectedCount');
+      expect(count?.textContent).not.toContain('runtimeProvider.badges.unknown');
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+      state.countEvidence = { ...state.countEvidence, checking: false };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(count?.textContent).toContain('cliStatus.provider.connectedCount');
+      expect(count?.textContent).toContain('runtimeProvider.badges.unknown');
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).toBeNull();
+      state.directoryReads.mockReturnValue({
+        entries: [{ providerId: 'openrouter', state: 'connected' }],
+        authoritative: true,
+        fetchedAt: new Date().toISOString(),
+        totalCount: 1,
+        nextCursor: null,
+        runtimeRevision: JSON.stringify(['ready', '1.2.3', '/test/opencode']),
+      });
+      state.countEvidence = { ...state.countEvidence, checking: true };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(count?.textContent).toContain('cliStatus.provider.connectedCount');
+      expect(count?.textContent).not.toContain('runtimeProvider.badges.unknown');
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      state.directoryReads.mockReset();
+    }
+  });
+
   it('shows a small OpenCode loader only while a real status or directory check is pending', async () => {
     state.openCodeRuntimeStatusLoading = true;
     const host = document.createElement('div');
@@ -97,8 +252,9 @@ describe('DashboardProviderSummary (passive)', () => {
     try {
       await act(async () => root.render(React.createElement(DashboardProviderSummary)));
       expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
-      expect(host.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent)
-        .not.toContain('runtimeProvider.badges.unknown');
+      expect(
+        host.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent
+      ).not.toContain('runtimeProvider.badges.unknown');
       state.openCodeRuntimeStatusLoading = false;
       state.countEvidence = { checking: true, observation: null, invalidated: false };
       await act(async () => root.render(React.createElement(DashboardProviderSummary)));
@@ -106,8 +262,9 @@ describe('DashboardProviderSummary (passive)', () => {
       state.countEvidence = { checking: false, observation: null, invalidated: false };
       await act(async () => root.render(React.createElement(DashboardProviderSummary)));
       expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).toBeNull();
-      expect(host.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent)
-        .toContain('runtimeProvider.badges.unknown');
+      expect(
+        host.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent
+      ).toContain('runtimeProvider.badges.unknown');
       expect(state.loadProviderDirectory).not.toHaveBeenCalled();
       expect(state.loadModels).not.toHaveBeenCalled();
     } finally {
@@ -115,10 +272,80 @@ describe('DashboardProviderSummary (passive)', () => {
     }
   });
 
+  it('shows each main provider independently while its status is checked', async () => {
+    state.cliStatus = {
+      installed: true,
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'anthropic',
+          authenticated: true,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
+        },
+        {
+          providerId: 'codex',
+          authenticated: false,
+          verificationState: 'unknown',
+          statusCheckOutcome: 'pending',
+        },
+      ],
+    };
+    state.cliProviderStatusLoading = { codex: true };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-anthropic-status"]')?.className).toContain(
+        'text-green-400'
+      );
+      expect(
+        host.querySelector('[data-testid="dashboard-codex-status"] [role="status"]')
+      ).not.toBeNull();
+      state.cliProviderStatusLoading = {};
+      state.cliStatus = {
+        installed: true,
+        flavor: 'agent_teams_orchestrator',
+        providers: [
+          {
+            providerId: 'anthropic',
+            authenticated: true,
+            verificationState: 'verified',
+            statusCheckOutcome: 'authoritative',
+          },
+          {
+            providerId: 'codex',
+            authenticated: true,
+            verificationState: 'verified',
+            statusCheckOutcome: 'authoritative',
+          },
+        ],
+      };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-codex-status"]')?.className).toContain(
+        'text-green-400'
+      );
+      expect(
+        host.querySelector('[data-testid="dashboard-codex-status"] [role="status"]')
+      ).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('ignores stale aggregate pending once individual checking has settled', async () => {
     state.cliStatus = {
-      installed: true, flavor: 'agent_teams_orchestrator',
-      providers: [{ providerId: 'opencode', authenticated: false, verificationState: 'unknown', statusCheckOutcome: 'pending' }],
+      installed: true,
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          authenticated: false,
+          verificationState: 'unknown',
+          statusCheckOutcome: 'pending',
+        },
+      ],
     };
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -150,16 +377,24 @@ describe('DashboardProviderSummary (passive)', () => {
     document.body.appendChild(host);
     const root = createRoot(host);
     try {
-      await act(async () => root.render(React.createElement(DashboardProviderSummary, { isActive: false })));
-      expect(state.connectedCountProbe).toHaveBeenLastCalledWith(expect.objectContaining({
-        enabled: false,
-        connectedCount: null,
-      }));
-      await act(async () => root.render(React.createElement(DashboardProviderSummary, { isActive: true })));
-      expect(state.connectedCountProbe).toHaveBeenLastCalledWith(expect.objectContaining({
-        enabled: true,
-        connectedCount: null,
-      }));
+      await act(async () =>
+        root.render(React.createElement(DashboardProviderSummary, { isActive: false }))
+      );
+      expect(state.connectedCountProbe).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          enabled: false,
+          connectedCount: null,
+        })
+      );
+      await act(async () =>
+        root.render(React.createElement(DashboardProviderSummary, { isActive: true }))
+      );
+      expect(state.connectedCountProbe).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          enabled: true,
+          connectedCount: null,
+        })
+      );
       expect(state.loadProviderDirectory).not.toHaveBeenCalled();
       expect(state.loadModels).not.toHaveBeenCalled();
     } finally {
@@ -174,8 +409,9 @@ describe('DashboardProviderSummary (passive)', () => {
     const root = createRoot(host);
     try {
       await act(async () => root.render(React.createElement(DashboardProviderSummary)));
-      expect(host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent)
-        .toContain('cliStatus.quickConnect.cliNotInstalled');
+      expect(
+        host.querySelector('[data-testid="dashboard-main-provider-count"]')?.textContent
+      ).toContain('cliStatus.quickConnect.cliNotInstalled');
       expect(state.getStatus).not.toHaveBeenCalled();
       expect(state.loadProviderDirectory).not.toHaveBeenCalled();
       expect(state.loadModels).not.toHaveBeenCalled();
@@ -188,7 +424,14 @@ describe('DashboardProviderSummary (passive)', () => {
     state.cliStatus = {
       installed: true,
       flavor: 'agent_teams_orchestrator',
-      providers: [{ providerId: 'gemini', authenticated: true, verificationState: 'verified', statusCheckOutcome: 'authoritative' }],
+      providers: [
+        {
+          providerId: 'gemini',
+          authenticated: true,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
+        },
+      ],
     };
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -209,11 +452,15 @@ describe('DashboardProviderSummary (passive)', () => {
     const now = Date.parse('2026-11-08T13:00:00Z');
     vi.setSystemTime(now);
     state.cliStatus = {
-      installed: true, flavor: 'agent_teams_orchestrator',
-      providers: [{
-        providerId: 'anthropic', authenticated: true,
-        modelCatalog: { staleAt: new Date(now + 1000).toISOString() },
-      }],
+      installed: true,
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'anthropic',
+          authenticated: true,
+          modelCatalog: { staleAt: new Date(now + 1000).toISOString() },
+        },
+      ],
     };
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -221,7 +468,9 @@ describe('DashboardProviderSummary (passive)', () => {
     try {
       await act(async () => root.render(React.createElement(DashboardProviderSummary)));
       expect(host.textContent).toContain('cliStatus.provider.readyToRunAgents');
-      await act(async () => { await vi.advanceTimersByTimeAsync(1015); });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1015);
+      });
       expect(host.textContent).not.toContain('cliStatus.provider.readyToRunAgents');
       expect(state.loadProviderDirectory).not.toHaveBeenCalled();
       expect(state.loadModels).not.toHaveBeenCalled();
@@ -234,7 +483,11 @@ describe('DashboardProviderSummary (passive)', () => {
   it('keeps direct-Claude auth checking ahead of an old authenticated snapshot', async () => {
     state.appConfig.general.multimodelEnabled = false;
     state.cliStatus = {
-      installed: true, flavor: 'claude', providers: [], authLoggedIn: true, authStatusChecking: true,
+      installed: true,
+      flavor: 'claude',
+      providers: [],
+      authLoggedIn: true,
+      authStatusChecking: true,
     };
     const host = document.createElement('div');
     document.body.appendChild(host);

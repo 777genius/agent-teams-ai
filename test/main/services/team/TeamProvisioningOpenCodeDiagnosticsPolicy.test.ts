@@ -211,7 +211,7 @@ describe('TeamProvisioningOpenCodeDiagnosticsPolicy', () => {
     expect(looksLikeOpenCodeProviderPrepareDiagnostic('model verification timed out')).toBe(false);
   });
 
-  it('selects provider prepare reasons before generic OpenCode model failures', () => {
+  it('keeps terminal model failures above incidental provider prepare warnings', () => {
     const prepare = {
       ok: false,
       providerId: 'opencode',
@@ -222,7 +222,9 @@ describe('TeamProvisioningOpenCodeDiagnosticsPolicy', () => {
     } satisfies Extract<TeamRuntimePrepareResult, { ok: false }>;
 
     expect(selectOpenCodePrepareProviderDiagnostic(prepare)).toBe('bridge stdout was empty');
-    expect(selectOpenCodeModelPreparePrimaryReason(prepare)).toBe('bridge stdout was empty');
+    expect(selectOpenCodeModelPreparePrimaryReason(prepare)).toBe(
+      'model not found in live OpenCode catalog'
+    );
 
     const mcpPrepare = {
       ...prepare,
@@ -230,7 +232,9 @@ describe('TeamProvisioningOpenCodeDiagnosticsPolicy', () => {
     } satisfies Extract<TeamRuntimePrepareResult, { ok: false }>;
 
     expect(selectOpenCodePrepareProviderDiagnostic(mcpPrepare)).toBe('mcp_unavailable');
-    expect(selectOpenCodeModelPreparePrimaryReason(mcpPrepare)).toBe('mcp_unavailable');
+    expect(selectOpenCodeModelPreparePrimaryReason(mcpPrepare)).toBe(
+      'model not found in live OpenCode catalog'
+    );
   });
 
   it.each([
@@ -261,6 +265,27 @@ describe('TeamProvisioningOpenCodeDiagnosticsPolicy', () => {
       expect(isOpenCodeModelPrepareBusyDeferred(prepare, reason)).toBe(false);
     }
   );
+
+  it('reports a terminal rate limit after an earlier busy status without deferring as session occupancy', () => {
+    const prepare = {
+      ok: false,
+      providerId: 'opencode',
+      reason: 'model_unavailable',
+      retryable: true,
+      diagnostics: [
+        'OpenCode session status busy',
+        'OpenCode retry status exposed a terminal provider error in 2100ms',
+        'Rate limit exceeded',
+      ],
+      warnings: [],
+    } satisfies Extract<TeamRuntimePrepareResult, { ok: false }>;
+
+    const reason = selectOpenCodeModelPreparePrimaryReason(prepare);
+    expect(reason).toBe('Rate limit exceeded');
+    expect(isOpenCodeModelPrepareBusyDeferred(prepare, reason)).toBe(false);
+    // A stale caller-selected busy reason cannot override the provider evidence either.
+    expect(isOpenCodeModelPrepareBusyDeferred(prepare, 'OpenCode session status busy')).toBe(false);
+  });
 
   it('defers retryable busy prepare failures without hiding model verification timeouts', () => {
     const busyPrepare = {
