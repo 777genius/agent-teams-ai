@@ -38,7 +38,7 @@ concurrency:
 jobs:
   linux-appimage-tooling-quality:
     if: github.event_name == 'pull_request'
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
@@ -61,7 +61,7 @@ jobs:
     permissions:
       contents: write
       actions: read
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
@@ -143,7 +143,7 @@ jobs:
   linux-predecessor-availability:
     if: github.event_name == 'workflow_dispatch'
     needs: verified-inputs
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     permissions:
       contents: read
@@ -201,7 +201,7 @@ jobs:
   linux-native-ota:
     if: github.event_name == 'workflow_dispatch'
     needs: verified-inputs
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     permissions:
       contents: read
