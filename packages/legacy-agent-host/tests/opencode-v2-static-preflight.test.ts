@@ -1,0 +1,778 @@
+import assert from 'node:assert/strict';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { mkdtemp, realpath, rm, symlink, truncate, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { test } from 'node:test';
+import type { OpenCodeV2RuntimeLock, OpenCodeV2Selection } from '../src/composition/openCodeV2StaticPreflight.ts';
+
+const sourceMode = process.env.LEGACY_PROVIDER_SOURCE_TEST === '1';
+const { isCanonicalOpenCodeV2Directory, preflightOpenCodeV2Selection, preflightOpenCodeV2CurrentProduct, measureOpenCodeV2Executable, preflightOpenCodeV2EffectiveExternalDirectory }: typeof import('../src/composition/openCodeV2StaticPreflight.ts') =
+  await import(sourceMode
+    ? '../src/composition/openCodeV2StaticPreflight.ts'
+    : '../dist/composition/openCodeV2StaticPreflight.js');
+
+// The real checkout is verified separately below. Unit-positive coverage must
+// not require a product release to keep shipping a historical private engine.
+const checkoutLock = JSON.parse(readFileSync(new URL('../../../runtime.lock.json', import.meta.url), 'utf8')) as OpenCodeV2RuntimeLock;
+// TEST-only historical contract fixture: neither real delivery nor launch proof.
+const lock: OpenCodeV2RuntimeLock = {
+  version: 'TEST-static-preflight',
+  opencodeV2: { qualified: {
+    'darwin-arm64': ['2.0.0'], 'darwin-x64': ['2.0.0'],
+    'linux-x64': ['2.0.0'], 'linux-arm64': ['2.0.0'],
+    'win32-arm64': ['2.1.4'], 'win32-x64': ['2.1.4'],
+  } },
+  opencodeV2Delivery: Object.fromEntries(
+    ['darwin-arm64', 'darwin-x64', 'linux-x64'].map(tuple => {
+      const [platform, arch] = tuple.split('-');
+      return [tuple, {
+        schemaVersion: 1, bridgeProtocol: 1, runtimeVersion: 'TEST-static-preflight',
+        platform: platform!, arch: arch!, engineVersions: ['2.0.0'],
+        sourceCommit: 'c'.repeat(40), archive: { sha256: 'd'.repeat(64) },
+      }];
+    })
+  ),
+};
+const selected: OpenCodeV2Selection = {
+  generation: 'v2', platform: 'darwin-arm64', version: '2.0.0',
+  nativeReportedVersion: '2.0.0',
+  executableSha256: 'a'.repeat(64), observedExecutableSha256: 'a'.repeat(64),
+  endpoint: 'http://127.0.0.1:14321', directory: '/TEST-opencode-v2-workspace',
+  nativeSessionId: 'ses_TESTowned', sessionBinding: 'TEST-owner/generation1',
+  accountBinding: 'TEST-isolated-account',
+};
+
+test('V2.0 creates a static candidate, never a native readiness/launch receipt', () => {
+  assert.deepEqual(preflightOpenCodeV2Selection(selected, lock), {
+    kind: 'candidate', platform: 'darwin-arm64', version: '2.0.0',
+    sourceCommit: lock.opencodeV2Delivery!['darwin-arm64']!.sourceCommit,
+    archiveSha256: lock.opencodeV2Delivery!['darwin-arm64']!.archive!.sha256,
+  });
+});
+
+test('malformed top-level JSON captures HOLD without throwing or starting native work', () => {
+  for (const malformed of [null, false, 'v2', [], 123]) {
+    assert.deepEqual(preflightOpenCodeV2Selection(
+      malformed as unknown as OpenCodeV2Selection, lock
+    ), { kind: 'hold', reason: 'binding' }, String(malformed));
+    assert.deepEqual(preflightOpenCodeV2Selection(
+      selected, malformed as unknown as OpenCodeV2RuntimeLock
+    ), { kind: 'hold', reason: 'runtime-version' }, String(malformed));
+  }
+});
+
+test('V2 native session binding matches pinned private driver alphabet, not merely URL-safe IDs', () => {
+  for (const nativeSessionId of ['ses_TESTowned1', 'ses_a1', 'ses_' + 'a'.repeat(256)])
+    assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, nativeSessionId }, lock).kind,
+      'candidate', nativeSessionId);
+  for (const nativeSessionId of ['ses_', 'ses_a-b', 'ses_a_b', 'ses_bad/other', 'ses_bad?x=1', 'ses_bad#section', 'ses_bad%2fother',
+    'ses_bad\\\\other', 'ses_' + 'a'.repeat(257)])
+    assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, nativeSessionId }, lock),
+      { kind: 'hold', reason: 'binding' }, nativeSessionId);
+});
+
+test('driver version and runtime manifest qualification are separate gates', () => {
+  for (const version of ['2.0.32', '2.1.4', '3.0.0', '1.19.4'])
+    assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, version, nativeReportedVersion: version }, lock),
+      { kind: 'hold', reason: 'driver-version' });
+  assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, version: '2.0.21', nativeReportedVersion: '2.0.21' }, lock),
+    { kind: 'hold', reason: 'runtime-version' });
+  for (const platform of ['win32-x64', 'win32-arm64'])
+    assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, platform }, lock),
+      { kind: 'hold', reason: 'runtime-version' });
+  assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, platform: 'linux-arm64' }, lock),
+    { kind: 'hold', reason: 'delivery' });
+});
+
+test('a current-main 2.1.4-only runtime lock cannot activate an older private V2 driver', () => {
+  // Fail-closed regression for the observed main 0.0.157 generation split.
+  // This is a deliberate synthetic shape, not a copied product lock or proof
+  // that the unqualified 2.1.4 driver/protocol is implemented in Host.
+  const qualified = Object.fromEntries([
+    'darwin-arm64', 'linux-x64', 'win32-arm64', 'win32-x64',
+  ].map(platform => [platform, ['2.1.4']]));
+  const delivery = Object.fromEntries(
+    Object.entries(lock.opencodeV2Delivery ?? {}).map(([platform, descriptor]) =>
+      [platform, { ...descriptor, runtimeVersion: '0.0.157', engineVersions: ['2.1.4'] }]
+    )
+  );
+  const mainV2Only: OpenCodeV2RuntimeLock = {
+    ...lock, version: '0.0.157', opencodeV2: { qualified }, opencodeV2Delivery: delivery,
+  };
+  for (const platform of [
+    'darwin-arm64', 'darwin-x64', 'linux-arm64',
+    'linux-x64', 'win32-arm64', 'win32-x64',
+  ]) {
+    assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, platform }, mainV2Only),
+      { kind: 'hold', reason: 'runtime-version' }, platform);
+    assert.deepEqual(preflightOpenCodeV2Selection({
+      ...selected, platform, version: '2.1.4', nativeReportedVersion: '2.1.4',
+    }, mainV2Only), { kind: 'hold', reason: 'driver-version' }, platform);
+  }
+});
+
+test('V2 static candidate must match the current product release and exact delivery', () => {
+  assert.equal(preflightOpenCodeV2Selection(selected, lock).kind, 'candidate');
+  assert.equal(preflightOpenCodeV2CurrentProduct(selected, lock, lock).kind, 'candidate');
+  const staleRelease: OpenCodeV2RuntimeLock = { ...lock, version: '0.0.157' };
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock, staleRelease),
+    { kind: 'hold', reason: 'current-product' });
+
+  const replacedBinary: OpenCodeV2RuntimeLock = structuredClone(lock);
+  replacedBinary.opencodeV2Delivery!['darwin-arm64']!.archive!.sha256 = 'b'.repeat(64);
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock, replacedBinary),
+    { kind: 'hold', reason: 'current-product' });
+  const changedSource: OpenCodeV2RuntimeLock = structuredClone(lock);
+  changedSource.opencodeV2Delivery!['darwin-arm64']!.sourceCommit = 'b'.repeat(40);
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock, changedSource),
+    { kind: 'hold', reason: 'current-product' });
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock,
+    {} as OpenCodeV2RuntimeLock), { kind: 'hold', reason: 'current-product' });
+});
+
+test('V2 current-main live checkout never inherits a TEST-only historical candidate', (t) => {
+  // CI checks out actual main into a separate read-only directory; no network
+  // lookup in a test, no history rewrites and no local user configuration.
+  const currentProductPath = process.env.OPENCODE_V2_CURRENT_PRODUCT_LOCK;
+  if (!currentProductPath) { t.skip('real-main manifest supplied by dedicated Actions job'); return; }
+  const productLock = JSON.parse(readFileSync(currentProductPath, 'utf8')) as OpenCodeV2RuntimeLock;
+  assert.equal(typeof productLock.version, 'string');
+  assert.notEqual(productLock.version, lock.version,
+    'the TEST-only manifest must never be used as a product lock');
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock, productLock),
+    { kind: 'hold', reason: 'current-product' });
+});
+
+test('the actual checkout keeps unqualified product engines behind the private driver gate', () => {
+  assert.match(checkoutLock.version ?? '', /^\d+\.\d+\.\d+$/,
+    'read the actual release manifest, not the TEST fixture');
+  const qualified = checkoutLock.opencodeV2?.qualified;
+  assert.ok(qualified && Object.keys(qualified).length > 0);
+  let checked = 0;
+  for (const [platform, versions] of Object.entries(qualified)) {
+    assert.ok(Array.isArray(versions));
+    for (const version of versions) {
+      assert.equal(typeof version, 'string');
+      assert.deepEqual(preflightOpenCodeV2Selection({
+        ...selected, platform, version, nativeReportedVersion: version,
+      }, checkoutLock), { kind: 'hold', reason: 'driver-version' },
+      `${platform}/${version}: product qualification is not private Host qualification`);
+      checked++;
+    }
+  }
+  assert.ok(checked > 0, 'at least one real product engine must be checked');
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock, checkoutLock),
+    { kind: 'hold', reason: 'current-product' });
+});
+
+test('no implicit V1 promotion, forged binary, endpoint, identity or missing native proof', () => {
+  const cases: Array<[Partial<OpenCodeV2Selection>, string]> = [
+    [{ generation: 'v1' }, 'generation'],
+    [{ platform: 'unknown' }, 'platform'],
+    [{ nativeReportedVersion: '2.0.32' }, 'native-version'],
+    [{ observedExecutableSha256: 'b'.repeat(64) }, 'binary-digest'],
+    [{ observedExecutableSha256: 'invalid' }, 'binary-digest'],
+    [{ observedExecutableSha256: 'B'.repeat(64) }, 'binary-digest'],
+    [{ executableSha256: '' }, 'binary-digest'],
+    [{ endpoint: 'http://localhost:14321' }, 'binding'],
+    [{ endpoint: 'http://127.0.0.1:65536' }, 'binding'],
+    [{ endpoint: 'http://127.0.0.1:99999' }, 'binding'],
+    [{ endpoint: 'http://127.0.0.1:00080' }, 'binding'],
+    [{ endpoint: 'http://127.0.0.1:14321/foreign' }, 'binding'],
+    [{ nativeSessionId: 'V1_session' }, 'binding'],
+    [{ sessionBinding: '' }, 'binding'],
+    [{ sessionBinding: ' \t ' }, 'binding'],
+    [{ accountBinding: '' }, 'binding'],
+    [{ accountBinding: '   ' }, 'binding'],
+  ];
+  for (const [change, reason] of cases)
+    assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, ...change }, lock),
+      { kind: 'hold', reason }, JSON.stringify(change));
+});
+
+test('V2 loopback endpoint validation accepts the top IANA TCP port without a verbose regex', () => {
+  for (const port of [1, 14321, 65535])
+    assert.deepEqual(preflightOpenCodeV2Selection({
+      ...selected, endpoint: `http://127.0.0.1:${port}`,
+    }, lock).kind, 'candidate', String(port));
+});
+
+test('missing or damaged platform delivery cannot be promoted to V2 candidate', () => {
+  const withoutDelivery: OpenCodeV2RuntimeLock = lock.opencodeV2 ? { opencodeV2: lock.opencodeV2 } : {};
+  assert.deepEqual(preflightOpenCodeV2Selection(selected, withoutDelivery),
+    { kind: 'hold', reason: 'delivery' });
+  assert.deepEqual(preflightOpenCodeV2Selection(selected, {
+    ...lock,
+    opencodeV2Delivery: {
+      ...lock.opencodeV2Delivery,
+      'darwin-arm64': {
+        ...lock.opencodeV2Delivery?.['darwin-arm64'],
+        archive: { sha256: 'bad' },
+      },
+    },
+  }), { kind: 'hold', reason: 'delivery' });
+  // Delivery metadata must explicitly include the selected engine, even when other
+  // descriptor fields are well-formed.
+  assert.deepEqual(preflightOpenCodeV2Selection(selected, {
+    ...lock,
+    opencodeV2Delivery: {
+      ...lock.opencodeV2Delivery,
+      'darwin-arm64': {
+        ...lock.opencodeV2Delivery?.['darwin-arm64'],
+        engineVersions: ['2.0.32', '2.1.4'],
+      },
+    },
+  }), { kind: 'hold', reason: 'delivery' });
+});
+
+test('V2 workspace bindings are lexically canonical on their selected host OS', () => {
+  assert.equal(isCanonicalOpenCodeV2Directory('darwin-arm64', selected.directory), true);
+  for (const directory of ['/', '/TEST-opencode-v2-workspace/', '/TEST/../foreign', '/TEST//duplicate', 'relative/workspace', '/TEST\u0000foreign']) {
+    assert.equal(isCanonicalOpenCodeV2Directory('darwin-arm64', directory), false);
+    assert.deepEqual(preflightOpenCodeV2Selection({ ...selected, directory }, lock),
+      { kind: 'hold', reason: 'binding' });
+  }
+
+  // Windows tuples remain unqualified in the product manifest. These fixtures
+  // validate only native path syntax and do NOT promote a Windows driver version.
+  assert.equal(isCanonicalOpenCodeV2Directory('win32-x64', 'C:\\TEST\\owned'), true);
+  for (const directory of [
+    'C:\\', 'C:TEST\\owned', '\\\\server\\share\\owned', 'C:\\TEST\\..\\other',
+    'C:/TEST/owned', 'C:\\TEST\\\\owned', 'C:\\TEST\\owned\\', 'C:\\TEST\\\0owned',
+    'C:\\ ', 'C:\\TEST.\\owned', 'C:\\TEST \\owned', 'C:\\TEST\\owned.', 'C:\\TEST\\owned ',
+  ]) assert.equal(isCanonicalOpenCodeV2Directory('win32-x64', directory), false, JSON.stringify(directory));
+});
+
+
+test('V2 Windows workspace capture refuses device aliases and stream syntax', () => {
+  // The lexical guard is not a filesystem or native process-custody proof.
+  for (const directory of [
+    'C:\\TEST\\CON', 'C:\\TEST\\con.log', 'C:\\NUL\\owned',
+    'C:\\TEST\\CONIN$', 'C:\\TEST\\CONOUT$', 'C:\\TEST\\CONIN$.txt', 'C:\\TEST\\conout$.log',
+    'C:\\TEST\\prn.txt', 'C:\\TEST\\AUX', 'C:\\TEST\\com1',
+    'C:\\TEST\\LPT9.txt', 'C:\\TEST\\COM¹', 'C:\\TEST\\lpt².log',
+    'C:\\TEST\\item:stream', 'C:\\TEST\\file::$DATA',
+    'C:\\TEST\\bad<name', 'C:\\TEST\\bad>name',
+    'C:\\TEST\\bad"quote', 'C:\\TEST\\bad|pipe',
+    'C:\\TEST\\bad?question', 'C:\\TEST\\bad*asterisk',
+    'C:\\TEST\\' + String.fromCharCode(1) + 'control',
+  ]) {
+    assert.equal(isCanonicalOpenCodeV2Directory('win32-x64', directory),
+      false, JSON.stringify(directory));
+  }
+  for (const directory of [
+    'C:\\TEST\\owned', 'C:\\TEST\\com10', 'C:\\TEST\\conifer',
+    'C:\\TEST\\.config',
+  ]) {
+    assert.equal(isCanonicalOpenCodeV2Directory('win32-x64', directory),
+      true, JSON.stringify(directory));
+  }
+});
+
+test('V2 static preflight refuses malformed JSON version lists and non-string binding captures', () => {
+  // An unvalidated manifest can contain a string instead of a string array.
+  // String.includes('2.0.0') would incorrectly admit this forged substring.
+  for (const versions of ['unqualified-2.0.0', 200, null, { release: '2.0.0' }, ['2.0.0', 200]]) {
+    const damaged = {
+      ...lock,
+      opencodeV2: {
+        ...lock.opencodeV2,
+        qualified: { ...lock.opencodeV2?.qualified, 'darwin-arm64': versions },
+      },
+    } as unknown as OpenCodeV2RuntimeLock;
+    assert.deepEqual(preflightOpenCodeV2Selection(selected, damaged),
+      { kind: 'hold', reason: 'runtime-version' }, JSON.stringify(versions));
+  }
+  for (const versions of ['prefix-2.0.0-suffix', 200, null, { release: '2.0.0' }, ['2.0.0', false]]) {
+    const damaged = {
+      ...lock,
+      opencodeV2Delivery: {
+        ...lock.opencodeV2Delivery,
+        'darwin-arm64': {
+          ...lock.opencodeV2Delivery?.['darwin-arm64'],
+          engineVersions: versions,
+        },
+      },
+    } as unknown as OpenCodeV2RuntimeLock;
+    assert.deepEqual(preflightOpenCodeV2Selection(selected, damaged),
+      { kind: 'hold', reason: 'delivery' }, JSON.stringify(versions));
+  }
+  for (const [key, value] of [
+    ['sessionBinding', 123],
+    ['sessionBinding', { id: 'TEST-owner' }],
+    ['accountBinding', 456],
+    ['accountBinding', ['TEST-account']],
+  ] as const) {
+    const damaged = { ...selected, [key]: value } as unknown as OpenCodeV2Selection;
+    assert.deepEqual(preflightOpenCodeV2Selection(damaged, lock),
+      { kind: 'hold', reason: 'binding' }, key);
+  }
+});
+
+test('V2 delivery release and OS identity cannot be borrowed from another tuple', () => {
+  const original = lock.opencodeV2Delivery?.['darwin-arm64'];
+  assert.ok(original);
+  for (const changed of [
+    { platform: 'linux' },
+    { platform: 'win32' },
+    { arch: 'x64' },
+    { runtimeVersion: '0.0.999' },
+    { runtimeVersion: null },
+    { schemaVersion: 2 },
+    { schemaVersion: '1' },
+    { bridgeProtocol: 99 },
+    { bridgeProtocol: '1' },
+  ]) {
+    const corrupted = {
+      ...lock,
+      opencodeV2Delivery: {
+        ...lock.opencodeV2Delivery,
+        'darwin-arm64': { ...original, ...changed },
+      },
+    } as unknown as OpenCodeV2RuntimeLock;
+    assert.deepEqual(preflightOpenCodeV2Selection(selected, corrupted),
+      { kind: 'hold', reason: 'delivery' }, JSON.stringify(changed));
+  }
+  for (const field of ['schemaVersion', 'bridgeProtocol'] as const) {
+    const broken: OpenCodeV2RuntimeLock = structuredClone(lock);
+    const descriptor = broken.opencodeV2Delivery?.['darwin-arm64'];
+    assert.ok(descriptor);
+    delete descriptor[field];
+    assert.deepEqual(preflightOpenCodeV2Selection(selected, broken),
+      { kind: 'hold', reason: 'delivery' }, field);
+  }
+  for (const version of [undefined, '', '0.0.999']) {
+    const corrupted: OpenCodeV2RuntimeLock = { ...lock };
+    if (version === undefined) delete corrupted.version;
+    else corrupted.version = version;
+    assert.deepEqual(preflightOpenCodeV2Selection(selected, corrupted),
+      { kind: 'hold', reason: 'delivery' }, String(version));
+  }
+});
+
+test('V2 preflight rejects one-element JSON arrays masquerading as trusted witnesses', () => {
+  const original = lock.opencodeV2Delivery?.['darwin-arm64'];
+  assert.ok(original?.sourceCommit && original.archive?.sha256);
+  for (const changed of [
+    { sourceCommit: [original.sourceCommit] },
+    { archive: { sha256: [original.archive.sha256] } },
+  ]) {
+    const corrupted = {
+      ...lock,
+      opencodeV2Delivery: {
+        ...lock.opencodeV2Delivery,
+        'darwin-arm64': { ...original, ...changed },
+      },
+    } as unknown as OpenCodeV2RuntimeLock;
+    assert.deepEqual(preflightOpenCodeV2Selection(selected, corrupted),
+      { kind: 'hold', reason: 'delivery' }, JSON.stringify(changed));
+  }
+  for (const [changed, reason] of [
+    [{ executableSha256: [selected.executableSha256],
+      observedExecutableSha256: [selected.observedExecutableSha256] }, 'binary-digest'],
+    [{ endpoint: [selected.endpoint] }, 'binding'],
+    [{ nativeSessionId: [selected.nativeSessionId] }, 'binding'],
+  ] as const) {
+    const malformed = { ...selected, ...changed } as unknown as OpenCodeV2Selection;
+    assert.deepEqual(preflightOpenCodeV2Selection(malformed, lock),
+      { kind: 'hold', reason }, JSON.stringify(changed));
+  }
+});
+
+
+test('V01 TEST-owned executable measurement hashes actual file bytes (not a caller-supplied observed string)', async (t) => {
+  const temp = await mkdtemp(join(tmpdir(), 'TEST-v2-exe-'));
+  t.after(() => rm(temp, { recursive: true, force: true }));
+  const canonicalRoot = await realpath(temp);
+  const file = join(canonicalRoot, 'TEST-native-engine.bin');
+  const bytes = 'TEST-owned native fixture bytes, NOT an installed OpenCode engine';
+  const digest = createHash('sha256').update(bytes).digest('hex');
+  await writeFile(file, bytes);
+
+  // Empty/sparse unbounded inputs are not native executable candidates. A
+  // sparse fixture avoids hashing or allocating one gigabyte on the runner.
+  const empty = join(canonicalRoot, 'TEST-empty-executable');
+  await writeFile(empty, '');
+  assert.deepEqual(await measureOpenCodeV2Executable(empty, digest), {
+    kind: 'hold', reason: 'path',
+  });
+  if (process.platform !== 'win32') {
+    const oversized = join(canonicalRoot, 'TEST-oversized-executable');
+    await writeFile(oversized, '');
+    await truncate(oversized, 1024 * 1024 * 1024 + 1);
+    assert.deepEqual(await measureOpenCodeV2Executable(oversized, digest), {
+      kind: 'hold', reason: 'path',
+    });
+  }
+
+  assert.deepEqual(await measureOpenCodeV2Executable(file, digest), {
+    kind: 'measured', executableSha256: digest,
+  });
+  assert.deepEqual(await measureOpenCodeV2Executable(file, 'f'.repeat(64)), {
+    kind: 'hold', reason: 'digest',
+  });
+  assert.deepEqual(await measureOpenCodeV2Executable(file, 'F'.repeat(64)), {
+    kind: 'hold', reason: 'digest',
+  });
+  assert.deepEqual(await measureOpenCodeV2Executable(join(canonicalRoot, 'TEST-missing-file'), digest), {
+    kind: 'hold', reason: 'read',
+  });
+  assert.deepEqual(await measureOpenCodeV2Executable(file + '/../foreign', digest), {
+    kind: 'hold', reason: 'path',
+  });
+  // Same oracle runs on Linux and Windows; Windows must not admit UNC, ADS or
+  // reserved device aliases as process binaries.
+  for (const unsafePath of [
+    '\\\\server\\share\\engine.exe',
+    'C:\\TEST\\engine.exe:alternate',
+    'C:\\TEST\\CON.exe',
+    'C:\\TEST\\engine.exe.',
+  ]) {
+    assert.deepEqual(await measureOpenCodeV2Executable(unsafePath, digest), {
+      kind: 'hold', reason: 'path',
+    }, unsafePath);
+  }
+
+  if (process.platform !== 'win32') {
+    const alias = join(canonicalRoot, 'TEST-symlink-engine');
+    await symlink(file, alias);
+    assert.deepEqual(await measureOpenCodeV2Executable(alias, digest), {
+      kind: 'hold', reason: 'path',
+    });
+  }
+
+  await writeFile(file, bytes + '-mutated');
+  assert.deepEqual(await measureOpenCodeV2Executable(file, digest), {
+    kind: 'hold', reason: 'digest',
+  });
+  await rm(file);
+  assert.deepEqual(await measureOpenCodeV2Executable(file, digest), {
+    kind: 'hold', reason: 'read',
+  });
+});
+
+test('V01 read-only measurement rejects a TEST-owned FIFO without blocking native preflight', async (t) => {
+  // Windows device aliases are rejected lexically. POSIX mkfifo is a real
+  // blocking-open regression, so invoke the measurement in a TEST-owned child
+  // with a hard deadline; never leave a waiting open() in the CI runner.
+  if (process.platform === 'win32') { t.skip('POSIX FIFO only'); return; }
+  const temp = await mkdtemp(join(tmpdir(), 'TEST-v2-fifo-'));
+  t.after(() => rm(temp, { recursive: true, force: true }));
+  const fifo = join(await realpath(temp), 'TEST-native-engine-fifo');
+  execFileSync('mkfifo', [fifo]);
+  const moduleUrl = new URL(sourceMode
+    ? '../src/composition/openCodeV2StaticPreflight.ts'
+    : '../dist/composition/openCodeV2StaticPreflight.js', import.meta.url).href;
+  const probe = `const { measureOpenCodeV2Executable } = await import(process.argv[1]);
+const proof = await measureOpenCodeV2Executable(process.argv[2], process.argv[3]);
+process.stdout.write(JSON.stringify(proof));`;
+  const child = spawnSync(process.execPath, [
+    '--input-type=module', '-e', probe, moduleUrl, fifo, 'a'.repeat(64),
+  ], { encoding: 'utf8', timeout: 3000 });
+  assert.ifError(child.error);
+  assert.equal(child.status, 0, child.stderr);
+  assert.deepEqual(JSON.parse(child.stdout), { kind: 'hold', reason: 'path' });
+});
+
+
+test('V2.2 effective external-directory permission requires a FINAL universal guard', () => {
+  const base = [{ action: '*', resource: '*', effect: 'allow' }];
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(base, 'ask'),
+    { kind: 'hold', reason: 'external-directory' },
+    'V2 default allows external_directory; cannot inherit V1 ask semantics');
+  const ask = [...base, { action: 'external_directory', resource: '*', effect: 'ask' }];
+  const deny = [...base, { action: 'external_directory', resource: '*', effect: 'deny' }];
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(ask, 'ask'),
+    { kind: 'policy-candidate', effect: 'ask' });
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(deny, 'ask'),
+    { kind: 'policy-candidate', effect: 'deny' });
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(deny, 'deny'),
+    { kind: 'policy-candidate', effect: 'deny' });
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(ask, 'deny'),
+    { kind: 'hold', reason: 'external-directory' },
+    'a captured deny must not be weakened to ask');
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(ask, 'unknown' as 'ask'),
+    { kind: 'hold', reason: 'rules' });
+});
+
+test('V2.2 later agent/wildcard rules cannot override captured external-directory ask/deny', () => {
+  const defaultRules = [{ action: '*', resource: '*', effect: 'allow' }];
+  for (const guard of ['ask', 'deny'] as const) {
+    for (const tail of [
+      { action: 'external_directory', resource: '/TEST/other/*', effect: 'allow' },
+      { action: '*', resource: '*', effect: 'allow' },
+      { action: 'external_directory', resource: '*', effect: 'allow' },
+    ]) {
+      assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory([
+        ...defaultRules, { action: 'external_directory', resource: '*', effect: guard }, tail,
+      ], guard), { kind: 'hold', reason: 'external-directory' });
+    }
+  }
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory([
+    ...defaultRules,
+    { action: 'external_directory', resource: '/TEST/other/*', effect: 'allow' },
+    { action: 'external_directory', resource: '*', effect: 'deny' },
+  ], 'deny'), { kind: 'policy-candidate', effect: 'deny' },
+  'a final broad deny supersedes earlier narrow grants under last-match-wins');
+});
+
+test('V2.2 rejects unnormalized and V1-shaped permission captures without native effects', () => {
+  const last = { action: 'external_directory', resource: '*', effect: 'deny' };
+  const invalid: unknown[] = [
+    null, undefined, {}, 'external_directory', [], new Array(1025).fill(last),
+    [{ permission: { external_directory: 'deny' } }],
+    [{ ...last, effect: 'always' }],
+    [{ ...last, action: 1 }],
+    [{ ...last, resource: '' }],
+    [{ ...last, source: 'unverified-user-config' }],
+    [null, last],
+  ];
+  for (const rules of invalid)
+    assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(rules, 'deny'),
+      { kind: 'hold', reason: 'rules' }, JSON.stringify(rules)?.slice(0, 200));
+});
+
+test('V2.2 rejects hidden and symbol rule fields absent from native JSON', () => {
+  const deny = { action: 'external_directory', resource: '*', effect: 'deny' };
+  for (const hidden of ['non-enumerable', 'symbol'] as const) {
+    const rule = { ...deny };
+    let reads = 0;
+    Object.defineProperty(rule, hidden === 'symbol' ? Symbol('untrusted') : 'untrusted', {
+      enumerable: false,
+      get() { reads++; return 'allow'; },
+    });
+    assert.equal(Object.keys(rule).length, 3,
+      'enumerable-only validation misses a non-JSON own field');
+    assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory([rule], 'deny'),
+      { kind: 'hold', reason: 'rules' }, hidden);
+    assert.equal(reads, 0, 'native admission must never execute hidden getters');
+  }
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(
+    JSON.parse(JSON.stringify([deny])), 'deny'),
+  { kind: 'policy-candidate', effect: 'deny' });
+});
+
+test('V2.2 rejects non-enumerable required rule fields omitted by native JSON', () => {
+  for (const field of ['action', 'resource', 'effect'] as const) {
+    const rule = { action: 'external_directory', resource: '*', effect: 'deny' };
+    Object.defineProperty(rule, field, { value: rule[field], enumerable: false });
+    assert.equal(Reflect.ownKeys(rule).length, 3,
+      'exact own-key cardinality alone cannot prove JSON-visible required fields');
+    assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory([rule], 'deny'),
+      { kind: 'hold', reason: 'rules' }, field);
+  }
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(
+    JSON.parse(JSON.stringify([{ action: 'external_directory', resource: '*', effect: 'deny' }])), 'deny'),
+  { kind: 'policy-candidate', effect: 'deny' });
+});
+
+test('V2.2 rejects accessor-backed native permission rules without executing getters', () => {
+  // Under the former repeated-property-read validator a changing effect
+  // accessor could report DENY for admission then ALLOW afterwards.
+  for (const field of ['action', 'resource', 'effect'] as const) {
+    const rule = { action: 'external_directory', resource: '*', effect: 'deny' };
+    let reads = 0;
+    Object.defineProperty(rule, field, {
+      enumerable: true,
+      configurable: true,
+      get() {
+        reads++;
+        if (field === 'effect') return reads <= 3 ? 'deny' : 'allow';
+        return field === 'action' ? 'external_directory' : '*';
+      },
+    });
+    assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory([rule], 'deny'),
+      { kind: 'hold', reason: 'rules' }, field);
+    assert.equal(reads, 0, 'untrusted native rule getter must never run');
+  }
+});
+
+test('V2.2 throwing native permission envelopes fail closed without a Host exception', () => {
+  const deny = { action: 'external_directory', resource: '*', effect: 'deny' };
+  const revoked = Proxy.revocable([deny], {});
+  revoked.revoke();
+  const invalid: unknown[] = [
+    new Proxy([deny], { get(target, key, receiver) {
+      if (key === 'length') throw new Error('TEST native array length failed');
+      return Reflect.get(target, key, receiver);
+    } }),
+    [new Proxy(deny, { ownKeys() { throw new Error('TEST native ownKeys failed'); } })],
+    [new Proxy(deny, { getOwnPropertyDescriptor() {
+      throw new Error('TEST native descriptor failed');
+    } })],
+    revoked.proxy,
+  ];
+  for (const rules of invalid) {
+    assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(rules, 'deny'),
+      { kind: 'hold', reason: 'rules' },
+      'a malformed native policy response must not throw or authorize access');
+  }
+});
+
+test('V2.2 untrusted Proxy cannot hide a trailing native ALLOW via a forged length descriptor', () => {
+  const deny = { action: 'external_directory', resource: '*', effect: 'deny' };
+  const allow = { action: 'external_directory', resource: '*', effect: 'allow' };
+  const physicalRules = [deny, allow];
+  const shortened = new Proxy(physicalRules, {
+    getOwnPropertyDescriptor(target, key) {
+      const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+      return key === 'length' && descriptor ? { ...descriptor, value: 1 } : descriptor;
+    },
+  });
+  assert.equal(physicalRules.length, 2);
+  assert.equal(Object.getOwnPropertyDescriptor(shortened, 'length')?.value, 1,
+    'writable array length permits a forged Proxy descriptor');
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(shortened, 'deny'),
+    { kind: 'hold', reason: 'rules' },
+    'a truncated Proxy readback cannot be admitted as a final native DENY');
+
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(
+    [new Proxy(deny, {})], 'deny'),
+  { kind: 'hold', reason: 'rules' },
+  'nested Proxy rules are not native JSON records');
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(
+    JSON.parse(JSON.stringify([deny])), 'deny'),
+  { kind: 'policy-candidate', effect: 'deny' },
+  'legitimate unproxied native JSON retains the same static policy candidate');
+});
+
+test('V2.2 native permission arrays cannot hide a later ALLOW with an iterator', () => {
+  const deny = { action: 'external_directory', resource: '*', effect: 'deny' };
+  const allow = { action: 'external_directory', resource: '*', effect: 'allow' };
+  const rules = [deny, allow];
+  let iteratorCalls = 0;
+  Object.defineProperty(rules, Symbol.iterator, {
+    value: function* () {
+      iteratorCalls++;
+      yield deny; // The actual final native rule is ALLOW, not this DENY.
+    },
+  });
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(rules, 'deny'),
+    { kind: 'hold', reason: 'rules' },
+    'a native JSON readback cannot contain an own iterator');
+  assert.equal(iteratorCalls, 0, 'native policy admission must never execute a custom iterator');
+
+  // A one-element indexed snapshot previously passed as final DENY even
+  // though the same array yields a later ALLOW to an iterator-based resolver.
+  const forged = [deny];
+  let forgedIteratorCalls = 0;
+  Object.defineProperty(forged, Symbol.iterator, {
+    value: function* () {
+      forgedIteratorCalls++;
+      yield deny;
+      yield allow;
+    },
+  });
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(forged, 'deny'),
+    { kind: 'hold', reason: 'rules' },
+    'iterator-visible ALLOW cannot be hidden behind an indexed final DENY');
+  assert.equal(forgedIteratorCalls, 0, 'admission must never execute a forged iterator');
+
+  const extraField = [deny];
+  Object.defineProperty(extraField, 'untrusted', { value: 'not native JSON' });
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(extraField, 'deny'),
+    { kind: 'hold', reason: 'rules' },
+    'non-index own properties are not part of native JSON arrays');
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(
+    JSON.parse(JSON.stringify([deny])), 'deny'),
+  { kind: 'policy-candidate', effect: 'deny' });
+
+  const getterRules = [deny];
+  let getterCalls = 0;
+  Object.defineProperty(getterRules, '0', {
+    enumerable: true, configurable: true,
+    get() {
+      getterCalls++;
+      return deny;
+    },
+  });
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(getterRules, 'deny'),
+    { kind: 'hold', reason: 'rules' });
+  assert.equal(getterCalls, 0, 'native policy admission must never execute an array-index getter');
+
+  const sparse = new Array(2);
+  sparse[1] = deny;
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(sparse, 'deny'),
+    { kind: 'hold', reason: 'rules' }, 'native JSON cannot contain inherited or sparse rule slots');
+});
+
+
+test('V2.2 refuses inherited iterator and rule serialization overrides outside native JSON', () => {
+  const deny = { action: 'external_directory', resource: '*', effect: 'deny' };
+  const allow = { action: 'external_directory', resource: '*', effect: 'allow' };
+  // This array has only index 0 and length as own keys, but its inherited
+  // iterator exposes a later ALLOW to a consumer using for...of.
+  const inherited = Object.create(Array.prototype) as object;
+  let iteratorCalls = 0;
+  Object.defineProperty(inherited, Symbol.iterator, {
+    value: function* () {
+      iteratorCalls++;
+      yield deny;
+      yield allow;
+    },
+  });
+  const rules = [deny];
+  Object.setPrototypeOf(rules, inherited);
+  assert.deepEqual(Reflect.ownKeys(rules), ['0', 'length']);
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(rules, 'deny'),
+    { kind: 'hold', reason: 'rules' },
+    'an inherited iterator must not forge a final native DENY');
+  assert.equal(iteratorCalls, 0, 'admission must not execute inherited iterator code');
+  assert.deepEqual([...rules], [deny, allow], 'the real iterator exposes a later ALLOW');
+
+  // Native JSON.parse records cannot inherit toJSON, which can serialize a
+  // validated DENY as ALLOW when handed to another consumer.
+  const inheritedRule = { ...deny };
+  let serializationCalls = 0;
+  Object.setPrototypeOf(inheritedRule, {
+    toJSON() { serializationCalls++; return allow; },
+  });
+  assert.equal(Reflect.ownKeys(inheritedRule).length, 3);
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory([inheritedRule], 'deny'),
+    { kind: 'hold', reason: 'rules' },
+    'inherited rule semantics are not native JSON');
+  assert.equal(serializationCalls, 0, 'admission must not invoke inherited serializers');
+  assert.equal(JSON.parse(JSON.stringify(inheritedRule)).effect, 'allow');
+
+  assert.deepEqual(preflightOpenCodeV2EffectiveExternalDirectory(
+    JSON.parse(JSON.stringify([deny])), 'deny'),
+  { kind: 'policy-candidate', effect: 'deny' }, 'canonical native JSON stays accepted');
+});
+
+test('V2 static preflight rejects throwing capture envelopes without crashing Host admission', () => {
+  const revokedSelection = Proxy.revocable({ ...selected }, {});
+  revokedSelection.revoke();
+  assert.deepEqual(preflightOpenCodeV2Selection(revokedSelection.proxy, lock),
+    { kind: 'hold', reason: 'binding' });
+
+  const revokedLock = Proxy.revocable({ ...lock }, {});
+  revokedLock.revoke();
+  assert.deepEqual(preflightOpenCodeV2Selection(selected, revokedLock.proxy),
+    { kind: 'hold', reason: 'binding' });
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, lock, revokedLock.proxy),
+    { kind: 'hold', reason: 'current-product' });
+
+  const throwingManifest = { ...lock };
+  Object.defineProperty(throwingManifest, 'opencodeV2', {
+    get() { throw new Error('TEST native manifest unavailable'); },
+  });
+  assert.deepEqual(preflightOpenCodeV2Selection(selected, throwingManifest),
+    { kind: 'hold', reason: 'binding' });
+
+  let versionReads = 0;
+  const changingStageLock = { ...lock };
+  Object.defineProperty(changingStageLock, 'version', {
+    get() {
+      if (++versionReads >= 4) throw new Error('TEST late manifest revocation');
+      return lock.version;
+    },
+  });
+  // The fourth read is the cross-product comparison, after a candidate was
+  // computed. A late revocation must still fail closed, not escape the gate.
+  assert.deepEqual(preflightOpenCodeV2CurrentProduct(selected, changingStageLock, lock),
+    { kind: 'hold', reason: 'current-product' });
+  assert.equal(versionReads, 4);
+});
