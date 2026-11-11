@@ -469,7 +469,11 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       const qualified = path.join(tempRoot!, 'TEST-bin-v1');
       for (const binDir of [unqualified, qualified]) {
         await mkdir(binDir, { recursive: true });
-        await writeFile(path.join(binDir, 'opencode'), 'TEST native version probe', { mode: 0o755 });
+        await writeFile(
+          path.join(binDir, getTestNativeOpenCodeBinaryName()),
+          'TEST native version probe',
+          { mode: 0o755 }
+        );
       }
       execCliMock.mockImplementation(async (command: string) => ({
         stdout: command.startsWith(unqualified) ? '2.999.0\n' : '1.18.3\n',
@@ -477,13 +481,13 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       }));
       process.env.PATH = [unqualified, qualified].join(path.delimiter);
       expect(await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })).toBe(
-        path.join(qualified, 'opencode')
+        path.join(qualified, getTestNativeOpenCodeBinaryName())
       );
       // Alone on PATH it is still discovered; launch refuses it with its qualification status.
       clearOpenCodeRuntimeBinaryResolverCache();
       process.env.PATH = unqualified;
       expect(await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })).toBe(
-        path.join(unqualified, 'opencode')
+        path.join(unqualified, getTestNativeOpenCodeBinaryName())
       );
     } finally {
       qualification.mockRestore();
@@ -723,12 +727,15 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       process.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = wrapperBinary;
       execCliMock.mockResolvedValue({ stdout: 'opencode v2.0.32\n', stderr: '' });
 
-      await expect(createNativeOnlyInstaller().getReadinessStatus()).resolves.toMatchObject({
+      const status = await createNativeOnlyInstaller().getReadinessStatus();
+      expect(status).toMatchObject({
         installed: true,
-        binaryPath: await realpath(platformBinary),
         version: '2.0.32',
         source: 'override',
       });
+      expect(status.binaryPath).toBeDefined();
+      // Windows temporary paths can use 8.3 aliases even when realpath expands them.
+      expect(await realpath(status.binaryPath!)).toBe(await realpath(platformBinary));
     });
 
     it('names an unsupported override and its version next to the fallback binary', async () => {
