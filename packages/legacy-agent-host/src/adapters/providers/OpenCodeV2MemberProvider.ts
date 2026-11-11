@@ -173,7 +173,6 @@ export function createOpenCodeV2MemberProvider(
   const capturedInstallAndAttestInitialContext = captureDataCallback(owned, 'installAndAttestInitialContext');
   const capturedStopOwned = captureDataCallback(owned, 'stopOwned');
   const capturedConfirmStopped = captureDataCallback(owned, 'confirmStopped');
-
   // Capture the required product policy ONCE. A mutable owner object must
   // never turn an original external-directory deny into a later ask.
   const requiredExternalDirectory = owned.requiredExternalDirectory;
@@ -624,6 +623,7 @@ export function createOpenCodeV2MemberProvider(
                     }
                     if (authorityLost) break;
                     yield outcome.value.value;
+                    capturedOnProgress();
                   }
                 } catch (error) {
                   if (!await finishOwned())

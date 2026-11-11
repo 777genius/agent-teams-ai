@@ -151,8 +151,8 @@ if (process.argv[2] === '--worker') {
       process.exit(signal === 'SIGINT' ? 130 : 143);
     })();
   }
-  process.once('SIGINT', () => { void interruptOwned('SIGINT'); });
-  process.once('SIGTERM', () => { void interruptOwned('SIGTERM'); });
+  process.on('SIGINT', () => { void interruptOwned('SIGINT'); });
+  process.on('SIGTERM', () => { void interruptOwned('SIGTERM'); });
 
   async function reservePort() {
     const s = createServer();
