@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
+import { toCronstrueLocale } from '@renderer/utils/scheduleFormatters';
 import { getValidScheduleNextRuns } from '@shared/utils/scheduleTiming';
 import cronstrue from 'cronstrue/i18n';
 import { AlertCircle, Calendar, Clock, Globe } from 'lucide-react';
@@ -36,9 +37,7 @@ const TIMEZONE_PRESETS = [
 
 const supportedTimezones = (): string[] => {
   try {
-    return typeof Intl.supportedValuesOf === 'function'
-      ? Intl.supportedValuesOf('timeZone')
-      : [];
+    return typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : [];
   } catch {
     return [];
   }
@@ -100,10 +99,11 @@ export const CronScheduleInput = ({
   showWarmUp = true,
 }: CronScheduleInputProps): React.JSX.Element => {
   const { t, resolvedLanguage } = useAppTranslation('team');
-  const timezoneOptions = useMemo(() =>
-    TIMEZONE_OPTIONS.some((option) => option.value === timezone)
-      ? TIMEZONE_OPTIONS
-      : [{ value: timezone, label: timezone }, ...TIMEZONE_OPTIONS],
+  const timezoneOptions = useMemo(
+    () =>
+      TIMEZONE_OPTIONS.some((option) => option.value === timezone)
+        ? TIMEZONE_OPTIONS
+        : [{ value: timezone, label: timezone }, ...TIMEZONE_OPTIONS],
     [timezone]
   );
   // Parse and validate cron expression
@@ -123,7 +123,7 @@ export const CronScheduleInput = ({
       let description: string;
       try {
         description = cronstrue.toString(cronExpression.trim(), {
-          locale: resolvedLanguage?.split('-')[0] ?? 'en',
+          locale: toCronstrueLocale(resolvedLanguage),
           use24HourTimeFormat: true,
         });
       } catch {
@@ -255,27 +255,29 @@ export const CronScheduleInput = ({
       </div>
 
       {/* Warm-up applies only to legacy one-shot schedules. */}
-      {showWarmUp ? <div className="space-y-1.5">
-        <Label className="label-optional">{t('schedule.cron.warmUpTime')}</Label>
-        <Select
-          value={String(warmUpMinutes)}
-          onValueChange={(val) => onWarmUpMinutesChange(Number(val))}
-        >
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {WARMUP_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={String(opt.value)} className="text-xs">
-                {t(`schedule.cron.warmUpOptions.${opt.labelKey}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-[11px] text-[var(--color-text-muted)]">
-          {t('schedule.cron.warmUpDescription')}
-        </p>
-      </div> : null}
+      {showWarmUp ? (
+        <div className="space-y-1.5">
+          <Label className="label-optional">{t('schedule.cron.warmUpTime')}</Label>
+          <Select
+            value={String(warmUpMinutes)}
+            onValueChange={(val) => onWarmUpMinutesChange(Number(val))}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {WARMUP_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={String(opt.value)} className="text-xs">
+                  {t(`schedule.cron.warmUpOptions.${opt.labelKey}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-[var(--color-text-muted)]">
+            {t('schedule.cron.warmUpDescription')}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 };

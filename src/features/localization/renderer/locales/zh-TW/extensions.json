@@ -1,0 +1,688 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "新增自訂",
+      "openDashboard": "開啟儀表板",
+      "refreshCatalog": "重新整理目錄"
+    },
+    "capabilities": {
+      "mcp": "MCP：{{status}}",
+      "plugins": "外掛：{{status}}",
+      "skills": "技能：{{status}}"
+    },
+    "desktopOnly": "僅在桌面應用程式中可用。",
+    "provider": {
+      "checkingStatus": "正在檢查供應商狀態…",
+      "connected": "已連線",
+      "loading": "載入中…",
+      "needsSetup": "需要設定",
+      "readyToConfigure": "準備設定",
+      "unsupported": "不支援"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "擴充功能需要設定的執行環境來管理外掛、MCP 伺服器、技能和供應商連線。",
+      "checkingAvailabilityTitle": "檢查擴充功能執行環境可用性",
+      "failedToStartDescription": "在執行環境通過啟動健康檢查之前，擴充功能會維持停用。請開啟儀表板進行修復或重新安裝。",
+      "failedToStartTitle": "已找到設定的執行環境但啟動失敗",
+      "multimodelCapabilitiesDescription": "不同功能的供應商支援可能不同。僅當執行環境明確宣告支援時才會顯示外掛。",
+      "multimodelCapabilitiesTitle": "多模型執行環境功能",
+      "needsSignInDescription": "找到了 {{runtime}}{{version}}，但在您從儀表板登入之前，外掛安裝將被停用。",
+      "needsSignInTitle": "{{runtime}} 需要登入",
+      "notAvailableDescription": "在安裝執行環境之前，擴充功能將被停用。開啟儀表板進行安裝並重試。",
+      "notAvailableTitle": "設定的執行環境不可用",
+      "readyDescription": "可以從此頁面安裝外掛 {{versionSuffix}}。",
+      "readyTitle": "{{runtime}} 已準備好",
+      "requiredForMutations": "安裝或解除安裝擴充功能需要設定的執行環境。從儀表板安裝或修復它。"
+    },
+    "sessionsRestartWarning": "正在執行的工作階段在重新啟動之前不會取得擴充功能變更。",
+    "tabs": {
+      "apiKeys": {
+        "description": "線上服務的金鑰。將它們新增到此處，以便外掛、伺服器和整合可以連線和工作。",
+        "label": "API 金鑰"
+      },
+      "mcpServers": {
+        "description": "與外部工具和應用程式的連線，讓執行環境能讀取資料或執行此應用程式以外的動作。",
+        "label": "MCP 伺服器"
+      },
+      "plugins": {
+        "description": "執行環境的小型附加元件。在多模型模式下，目前只會在支援時套用到 Anthropic 工作階段。更多供應商的支援正在開發中。",
+        "label": "外掛"
+      },
+      "skills": {
+        "description": "常見工作的現成指示，協助執行環境更一致地處理可重複的任務。",
+        "label": "技能"
+      }
+    },
+    "title": "擴充功能"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} 活躍",
+    "browseByFit": "按適合瀏覽",
+    "capabilities": "能力",
+    "categories": "類別",
+    "clearAllFilters": "清除所有篩選條件",
+    "clearFilters": "清除篩選條件",
+    "counts": {
+      "capabilities": "{{count}} 能力",
+      "categories": "{{count}} 類別",
+      "plugins": "{{count}} 外掛",
+      "capabilities_few": "{{count}} 能力",
+      "capabilities_many": "{{count}} 能力",
+      "capabilities_one": "{{count}} 能力",
+      "capabilities_other": "{{count}} 能力",
+      "categories_few": "{{count}} 類別",
+      "categories_many": "{{count}} 類別",
+      "categories_one": "{{count}} 類別",
+      "categories_other": "{{count}} 類別",
+      "plugins_few": "{{count}} 外掛",
+      "plugins_many": "{{count}} 外掛",
+      "plugins_one": "{{count}} 外掛",
+      "plugins_other": "{{count}} 外掛"
+    },
+    "empty": {
+      "description": "稍後回來檢視新外掛",
+      "filteredDescription": "請嘗試調整搜尋或篩選條件",
+      "filteredTitle": "沒有外掛符合您的篩選條件",
+      "title": "沒有可用的外掛"
+    },
+    "filterDescription": "按類別、功能或安裝狀態縮小目錄範圍。",
+    "installedOnly": "僅已安裝",
+    "providerSupportNotice": "目前僅保證 Anthropic (Claude) 工作階段的外掛支援。我們正在努力支援所有代理的外掛。",
+    "resultsUpdateInstantly": "調整篩選條件時，結果會立即更新。",
+    "searchPlaceholder": "搜尋外掛…",
+    "selectedCount": "已選擇 {{count}}",
+    "showing": "正在顯示 {{shown}} / {{total}} 個外掛",
+    "sort": {
+      "category": "類別",
+      "nameAsc": "名稱 A-Z",
+      "nameDesc": "名稱 Z-A",
+      "popular": "受歡迎的"
+    },
+    "activeFilters_few": "{{count}} 活躍",
+    "activeFilters_many": "{{count}} 活躍",
+    "activeFilters_one": "{{count}} 活躍",
+    "activeFilters_other": "{{count}} 活躍",
+    "selectedCount_few": "已選擇 {{count}}",
+    "selectedCount_many": "已選擇 {{count}}",
+    "selectedCount_one": "已選擇 {{count}}",
+    "selectedCount_other": "已選擇 {{count}}"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "新增",
+      "cancel": "取消",
+      "install": "安裝",
+      "installing": "正在安裝…"
+    },
+    "description": "手動新增伺服器，無需目錄。",
+    "errors": {
+      "installFailed": "安裝失敗",
+      "invalidServerName": "伺服器名稱無效。請使用英數字元、連字號、底線或句點。",
+      "npmPackageRequired": "npm 包名是必需的",
+      "serverNameRequired": "伺服器名稱為必填項",
+      "serverUrlRequired": "伺服器 URL 為必填項"
+    },
+    "fields": {
+      "environmentVariables": "環境變數",
+      "headers": "標頭",
+      "npmPackage": "npm 包",
+      "scope": "範圍",
+      "serverName": "伺服器名稱",
+      "serverUrl": "伺服器 URL",
+      "transport": "傳輸",
+      "transportType": "傳輸類型",
+      "versionOptional": "版本（選填）"
+    },
+    "title": "新增自訂 MCP 伺服器",
+    "transport": {
+      "httpSse": "HTTP/SSE",
+      "stdio": "Stdio (npm)"
+    },
+    "placeholders": {
+      "headerName": "標頭名稱",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "我的伺服器",
+      "latest": "最新的",
+      "value": "價值",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "即使 Registry 沒有說明，遠端 MCP 伺服器仍可能需要自訂標頭或 API 金鑰。如果安裝後連線失敗，請查看供應商的文件。",
+      "required": "該伺服器需要認證"
+    },
+    "diagnostics": {
+      "launchTarget": "傳送目標"
+    },
+    "form": {
+      "autoFilled": "自動填充",
+      "environmentVariables": "環境變數",
+      "headers": "標頭",
+      "scope": "範圍",
+      "serverName": "伺服器名稱"
+    },
+    "install": {
+      "httpTransport": "HTTP：{{transport}}",
+      "manualSetupDescription": "該伺服器需要手動設定。檢查儲存庫以取得安裝說明。",
+      "manualSetupRequired": "需要手動設定",
+      "npmPackage": "npm: {{package}}",
+      "manage": "管理安裝",
+      "install": "安裝伺服器"
+    },
+    "links": {
+      "glama": "格拉瑪",
+      "repository": "儲存庫",
+      "website": "網站"
+    },
+    "metadata": {
+      "author": "作者",
+      "githubStars": "GitHub 之星",
+      "hosting": "託管",
+      "installType": "安裝類型",
+      "license": "執照",
+      "published": "已發表",
+      "source": "來源",
+      "updated": "已更新",
+      "version": "版本"
+    },
+    "scope": {
+      "local": "本機",
+      "project": "專案"
+    },
+    "tools": {
+      "title": "工具（{{count}}）",
+      "title_few": "工具（{{count}}）",
+      "title_many": "工具（{{count}}）",
+      "title_one": "工具（{{count}}）",
+      "title_other": "工具（{{count}}）"
+    },
+    "placeholders": {
+      "serverName": "我的伺服器"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "取消",
+      "createSkill": "建立技能",
+      "preparing": "正在準備…",
+      "reviewAndCreate": "審查和建立",
+      "reviewAndSave": "檢視並儲存",
+      "saveSkill": "儲存技能"
+    },
+    "advanced": {
+      "customDescription": "該技能使用自訂的 markdown 格式，所以直接在這裡編輯。",
+      "customTitle": "2.SKILL.md 編輯器",
+      "description": "大多數人可以跳過這一點。僅當您想直接控制原始 Markdown 檔案時才開啟它。",
+      "hide": "隱藏高階編輯器",
+      "resetFromStructuredFields": "從結構化欄位重設",
+      "show": "顯示高階編輯器",
+      "title": "4.高階 SKILL.md 編輯器"
+    },
+    "basics": {
+      "description": "給這個技能一個清晰的名稱，選擇誰可以使用它，並決定它應該存在的位置。",
+      "title": "1. 基礎知識"
+    },
+    "description": {
+      "create": "用通俗易懂的語言描述工作流程，檢視將建立的檔案，然後儲存。",
+      "edit": "更新此技能，檢視生成的檔案變更，然後儲存。"
+    },
+    "extraFiles": {
+      "addedFiles": "新增的檔案：",
+      "assets": "資產",
+      "assetsDescription": "僅當螢幕截圖或隨附媒體有助於解釋工作流程時才新增它們。",
+      "description": "僅當該技能確實需要時才新增支援文件、指令碼或資產。",
+      "lockedForEdits": "根目錄和資料夾已鎖定以進行編輯",
+      "optionalDescription": "新增入門檔案，這些檔案會納入審查，並與「SKILL.md」一起寫入。",
+      "optionalTitle": "可選檔案",
+      "references": "參考",
+      "referencesDescription": "新增執行環境可以檢視的支援文件、連結或範例。",
+      "scripts": "指令碼",
+      "scriptsDescription": "新增輔助指令或設定說明。分享此技能前請仔細檢查。",
+      "title": "3. 額外檔案"
+    },
+    "fields": {
+      "compatibility": "相容性",
+      "description": "描述",
+      "folderName": "資料夾名稱",
+      "folderNameHint": "我們會根據技能名稱自動建議此操作，以便立即進行審查。",
+      "invocation": "應該如何使用",
+      "license": "執照",
+      "name": "技能名稱",
+      "notes": "額外註解或防護規則",
+      "root": "存放在哪裡",
+      "scope": "誰可以使用它",
+      "steps": "需要遵循的主要步驟",
+      "whenToUse": "何時達到這個目標"
+    },
+    "instructions": {
+      "description": "這些區塊會為您產生技能檔案，除非您想要，否則不需要編輯 Markdown。",
+      "locked": "結構化欄位被鎖定，因為您切換到下面的手動「SKILL.md」編輯。",
+      "title": "2. 使用說明"
+    },
+    "invocation": {
+      "auto": "可以自動使用",
+      "manualOnly": "只有當你要求的時候"
+    },
+    "placeholders": {
+      "description": "這項技能可以協助做什麼",
+      "name": "寫出簡潔的技能名稱",
+      "notes": "範例：指出缺失的測試、迴歸和風險假設。",
+      "steps": "1.檢查相關檔案。2、先說明主要風險。3.提出最安全的修復建議。",
+      "whenToUse": "範例：當任務是程式碼審查或錯誤分類請求時使用此選項。",
+      "license": "麻省理工學院",
+      "compatibility": "Claude Code，游標"
+    },
+    "review": {
+      "creating": "建立技能",
+      "hint": "首先檢視檔案變更，然後在下一步中確認儲存。",
+      "saving": "儲存此技能"
+    },
+    "root": {
+      "codexOnly": "- 僅 Codex",
+      "shared": "- 共享"
+    },
+    "scope": {
+      "project": "專案：{{project}}",
+      "projectUnavailable": "專案不可用",
+      "user": "使用者"
+    },
+    "title": {
+      "create": "建立技能",
+      "edit": "編輯技能"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "取消",
+      "delete": "刪除",
+      "deleteSkill": "刪除技能",
+      "deleting": "正在刪除…",
+      "editSkill": "編輯技能",
+      "openFolder": "開啟資料夾",
+      "openSkillFile": "開啟技能.md",
+      "retry": "重試"
+    },
+    "badges": {
+      "assets": "資產",
+      "autoUse": "自動使用",
+      "hasScripts": "有指令碼",
+      "manualUse": "手動使用",
+      "references": "參考",
+      "storedIn": "儲存在 {{root}} 中"
+    },
+    "deleteDialog": {
+      "description": "刪除該技能並將其移至垃圾桶？",
+      "descriptionWithName": "刪除「{{name}}」並移至垃圾桶？如有需要，稍後可從垃圾桶還原。",
+      "title": "刪除技能？"
+    },
+    "descriptionFallback": "檢查發現的技能後設資料和原始指令。",
+    "errors": {
+      "deleteFailed": "刪除技能失敗",
+      "loadFailed": "無法載入該技能。"
+    },
+    "files": {
+      "advancedDetails": "高階檔案詳細資訊",
+      "assets": "資產",
+      "references": "參考",
+      "scripts": "指令碼",
+      "storedAt": "儲存於"
+    },
+    "includes": {
+      "assets": "資產",
+      "instructionsOnly": "只是技能說明",
+      "references": "參考",
+      "scripts": "指令碼"
+    },
+    "invocation": {
+      "auto": "符合任務時自動執行。",
+      "manualOnly": "僅當您明確要求時才執行。"
+    },
+    "issues": {
+      "bundledScripts": "該技能包括隨附指令碼",
+      "reviewCarefully": "使用此技能之前請仔細檢視"
+    },
+    "loading": "正在載入技能詳細資訊…",
+    "scope": {
+      "personal": "你的個人技能",
+      "projectOnly": "僅此專案"
+    },
+    "summary": {
+      "howUsed": "如何使用",
+      "included": "附帶什麼",
+      "whoCanUse": "誰可以使用它"
+    },
+    "titleFallback": "技能詳情"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "建立技能",
+      "import": "進口"
+    },
+    "badges": {
+      "assets": "資產",
+      "hasScripts": "有指令碼",
+      "needsAttention": "需要注意",
+      "references": "參考",
+      "storedIn": "儲存在 {{root}} 中"
+    },
+    "configuredRuntime": "設定的執行環境",
+    "counts": {
+      "codexOnly": "{{count}} 僅限 Codex",
+      "personal": "{{count}} 個人",
+      "project": "{{count}} 專案",
+      "shared": "{{count}} 共享",
+      "total": "{{count}} 總計",
+      "codexOnly_few": "{{count}} 僅限 Codex",
+      "codexOnly_many": "{{count}} 僅限 Codex",
+      "codexOnly_one": "{{count}} 僅限 Codex",
+      "codexOnly_other": "{{count}} 僅限 Codex",
+      "personal_few": "{{count}} 個人",
+      "personal_many": "{{count}} 個人",
+      "personal_one": "{{count}} 個人",
+      "personal_other": "{{count}} 個人",
+      "project_few": "{{count}} 專案",
+      "project_many": "{{count}} 專案",
+      "project_one": "{{count}} 專案",
+      "project_other": "{{count}} 專案",
+      "shared_few": "{{count}} 共享",
+      "shared_many": "{{count}} 共享",
+      "shared_one": "{{count}} 共享",
+      "shared_other": "{{count}} 共享",
+      "total_few": "{{count}} 總計",
+      "total_many": "{{count}} 總計",
+      "total_one": "{{count}} 總計",
+      "total_other": "{{count}} 總計"
+    },
+    "empty": {
+      "noMatches": "沒有符合您搜尋條件的技能",
+      "noMatchesDescription": "請嘗試其他搜尋詞或切換篩選條件。",
+      "noSkills": "還沒有技能",
+      "noSkillsDescription": "建立第一項技能來教會可重複的工作流程，或匯入您已在使用的技能。"
+    },
+    "filters": {
+      "all": "所有技能",
+      "codexOnly": "僅 Codex",
+      "hasScripts": "有指令碼",
+      "needsAttention": "需要注意",
+      "personal": "個人的",
+      "project": "專案",
+      "shared": "共享"
+    },
+    "hero": {
+      "codexAvailable": "當技能應僅適用於 Codex 時，請使用「.codex」。",
+      "codexUnavailable": "現有的「.codex」技能在此處保持可編輯狀態，但新的僅限 Codex 的技能需要啟用 Codex 執行環境。",
+      "description": "技能是可重複使用的指示，協助執行環境更一致地處理同類任務。",
+      "guidance": "個人技能適合想在任何地方都套用的習慣；專案技能適合只在單一程式碼庫中才有意義的工作流程。",
+      "personalContext": "您現在只能看到您的個人技能。",
+      "projectContext": "您正在看到 {{project}} 的技能以及您的個人技能。",
+      "title": "教會可重複的工作"
+    },
+    "invocation": {
+      "auto": "適合時自動執行",
+      "manualOnly": "僅在您明確要求時執行"
+    },
+    "loading": {
+      "loading": "技能載入中…",
+      "refreshing": "技能重新整理…"
+    },
+    "runtimeAudience": "{{audience}} 可以使用「.claude」、「.cursor」和「.agents」中的共享技能。當 Codex 支援可用時，儲存在「.codex」中的技能僅適用於 Codex。",
+    "scope": {
+      "project": "此專案",
+      "user": "個人的"
+    },
+    "searchPlaceholder": "依技能名稱或用途搜尋…",
+    "sections": {
+      "personal": {
+        "description": "想在任何地方都能使用的習慣與指示。",
+        "title": "個人技能"
+      },
+      "project": {
+        "description": "僅對此程式碼庫有意義的工作流程。",
+        "title": "專案技能"
+      }
+    },
+    "sort": {
+      "label": "排序技巧",
+      "name": "姓名",
+      "recent": "最近的"
+    },
+    "status": {
+      "hasScripts": "包含指令碼，請仔細檢視",
+      "needsAttention": "在仰賴它之前需要注意",
+      "ready": "準備使用"
+    },
+    "success": {
+      "created": "技能建立成功。",
+      "imported": "技能匯入成功。",
+      "saved": "技能儲存成功。"
+    }
+  },
+  "pluginDetail": {
+    "unknown": "未知",
+    "metadata": {
+      "author": "作者",
+      "category": "類別",
+      "source": "來源",
+      "version": "版本",
+      "capabilities": "能力",
+      "installs": "安裝量"
+    },
+    "scope": {
+      "label": "範圍：",
+      "options": {
+        "user": "使用者（全球）",
+        "project": "專案（共享）",
+        "local": "本機（gitignored）"
+      }
+    },
+    "links": {
+      "homepage": "首頁",
+      "contact": "接觸"
+    },
+    "readme": {
+      "loading": "正在載入自述檔案…",
+      "empty": "沒有可用的自述檔案。"
+    }
+  },
+  "skillImport": {
+    "title": "匯入技能",
+    "description": "選擇一個現有技能資料夾，檢視將複製的內容，然後將其匯入到您支援的技能位置之一。",
+    "steps": {
+      "chooseFolder": {
+        "title": "1.選擇技能資料夾",
+        "description": "該資料夾應該已包含「SKILL.md」、「Skill.md」或「skill.md」檔案。"
+      },
+      "location": {
+        "title": "2. 決定它所屬的地方",
+        "description": "個人技能無處不在。專案技能僅針對一個程式碼庫顯示。"
+      }
+    },
+    "fields": {
+      "sourceFolder": "原始檔夾",
+      "destinationFolderName": "目標資料夾名稱",
+      "audience": "誰可以使用它",
+      "storage": "存放在哪裡"
+    },
+    "placeholders": {
+      "defaultFolderName": "預設為原始檔夾名稱"
+    },
+    "actions": {
+      "browse": "瀏覽",
+      "cancel": "取消",
+      "preparing": "正在準備…",
+      "reviewAndImport": "審查和匯入",
+      "importSkill": "匯入技能",
+      "backToImport": "返回匯入"
+    },
+    "scope": {
+      "user": "使用者",
+      "project": "專案：{{project}}",
+      "projectUnavailable": "專案不可用"
+    },
+    "rootSuffix": {
+      "codexOnly": "- 僅 Codex",
+      "shared": "- 共享"
+    },
+    "reviewHint": "首先檢查複製的檔案，然後在下一步中確認匯入。",
+    "reviewLabel": "匯入此技能",
+    "errors": {
+      "missingSkillFile": "這個資料夾看起來還不像技能。它需要 SKILL.md、Skill.md 或 skill.md 檔案。",
+      "symbolicLinks": "該資料夾包含符號連結。匯入真實檔案而不是連結。",
+      "tooManyFiles": "該技能資料夾太大，無法一次匯入。刪除多餘的檔案並重試。",
+      "tooLarge": "該技能資料夾太大，無法安全匯入。修剪大量資產並重試。",
+      "invalidFolderName": "請改用只含字母、數字、句點、連字號或底線的目標資料夾名稱。",
+      "mustBeDirectory": "選擇要匯入的資料夾，而不是單個檔案。",
+      "reviewFailed": "無法審查匯入變更",
+      "importFailed": "技能匯入失敗"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "名稱 A→Z",
+      "nameDesc": "名稱 Z→A",
+      "toolsDesc": "大多數工具"
+    },
+    "health": {
+      "title": "MCP 健康狀況",
+      "checkingViaRuntime": "透過 {{runtime}} 檢查已安裝的 MCP 伺服器…",
+      "lastChecked": "最後檢查 {{time}}",
+      "description": "從此頁面執行診斷以驗證已安裝的 MCP 連線。",
+      "checking": "檢查…",
+      "checkStatus": "檢查狀態"
+    },
+    "diagnostics": {
+      "title": "執行環境 MCP 診斷",
+      "serversCount": "{{count}} 伺服器",
+      "serversCount_one": "{{count}} 伺服器",
+      "serversCount_other": "{{count}} 伺服器",
+      "waiting": "等待診斷結果…",
+      "disableReasons": {
+        "checkingRuntimeStatus": "正在檢查執行環境狀態…",
+        "checkingRuntimeAvailability": "檢查執行環境可用性…",
+        "runtimeFailedToStart": "已找到設定的執行環境，但啟動失敗。開啟儀表板進行修復或重新安裝。",
+        "runtimeRequired": "需要設定的執行環境。從儀表板安裝或修復它。"
+      },
+      "serversCount_few": "{{count}} 伺服器",
+      "serversCount_many": "{{count}} 伺服器"
+    },
+    "searchPlaceholder": "搜尋 MCP 伺服器…",
+    "runtime": {
+      "notAvailable": "{{runtime}} 不可用",
+      "notInstalled": "{{runtime}} 未安裝",
+      "requiredDescription": "MCP 健康檢查需要 {{runtime}}。請前往儀表板安裝或修復。"
+    },
+    "empty": {
+      "searchTitle": "未找到伺服器",
+      "title": "沒有可用的 MCP 伺服器",
+      "searchDescription": "嘗試不同的搜尋詞",
+      "description": "稍後回來檢視新伺服器"
+    },
+    "loadMore": "載入更多"
+  },
+  "apiKeys": {
+    "description": "安全儲存 API 金鑰，以便在安裝 MCP 伺服器時自動填充。",
+    "storage": {
+      "osKeychain": "金鑰透過 {{backend}} 加密並以受限檔案權限儲存（僅限所有者）。",
+      "localEncryption": "無法使用作業系統鑰匙圈：金鑰會在本機以 AES-256 加密。如需更強的保護，請安裝鑰匙圈服務（gnome-keyring、kwallet）。"
+    },
+    "actions": {
+      "add": "新增 API 金鑰",
+      "addFirst": "新增第一組金鑰",
+      "edit": "編輯",
+      "copied": "複製了！",
+      "copyEnvVarName": "複製環境變數名稱",
+      "confirmDelete": "再次點選確認",
+      "delete": "刪除"
+    },
+    "empty": {
+      "title": "未儲存 API 金鑰",
+      "description": "安裝 MCP 伺服器時新增金鑰以自動填充環境變數。"
+    },
+    "form": {
+      "addTitle": "新增 API 金鑰",
+      "editTitle": "編輯 API 金鑰",
+      "addDescription": "儲存 API 金鑰以便在 MCP 伺服器安裝中自動填充。",
+      "editDescription": "更新金鑰詳細資料。您必須重新輸入金鑰值。",
+      "keychainUnavailable": "無法使用作業系統鑰匙圈：金鑰會在本機以 AES-256 加密。安裝 gnome-keyring 可取得作業系統層級的保護。",
+      "name": "姓名",
+      "namePlaceholder": "例如 OpenAI 製作",
+      "environmentVariableName": "環境變數名稱",
+      "envVarPlaceholder": "例如 OPENAI_API_KEY",
+      "value": "價值",
+      "reenterValue": "重新輸入鍵值",
+      "valuePlaceholder": "sk-…",
+      "scope": "範圍",
+      "userScopeLabel": "使用者（全球）",
+      "projectScopeLabel": "專案：{{project}}",
+      "projectUnavailable": "專案不可用",
+      "boundTo": "繫結到 {{path}}",
+      "cancel": "取消",
+      "saving": "儲存…",
+      "update": "更新",
+      "save": "儲存",
+      "errors": {
+        "invalidEnvVarFormat": "請使用字母、數字和底線，且必須以字母或底線開頭。",
+        "nameRequired": "姓名為必填項",
+        "envVarRequired": "環境變數名稱為必填項",
+        "invalidEnvVar": "環境變數名稱無效",
+        "valueRequired": "鍵值必填",
+        "projectScopeRequiresProject": "專案範圍的 API 金鑰需要一個活動專案",
+        "saveFailed": "儲存失敗"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "檢視技能變更",
+    "description": "{{reviewLabel}} 首先預覽檔案系統變更。在您確認以下內容之前，不會寫入任何內容。",
+    "noPreview": "沒有可用的預覽。",
+    "confirmPromptPrefix": "檢視下面的差異，然後使用",
+    "confirmPromptSuffix": "以套用這些變更。",
+    "noChanges": "尚未偵測到檔案變更。",
+    "binaryBadge": "二進位制",
+    "binaryPreviewHidden": "不顯示二進位制檔案預覽。檔案將按原樣複製。",
+    "summary": {
+      "fileChanges": "{{count}} 檔案變更",
+      "fileChanges_one": "{{count}} 檔案變更",
+      "fileChanges_other": "{{count}} 檔案變更",
+      "new": "{{count}} 新",
+      "updated": "{{count}} 已更新",
+      "removed": "{{count}} 已刪除",
+      "binary": "{{count}} 二進位制",
+      "fileChanges_few": "{{count}} 檔案變更",
+      "fileChanges_many": "{{count}} 檔案變更"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} 工具",
+    "toolsCount_one": "{{count}} 工具",
+    "toolsCount_other": "{{count}} 工具",
+    "envCount": "{{count}} 環境",
+    "envCount_one": "{{count}} 環境",
+    "envCount_other": "{{count}} 環境",
+    "auth": "授權",
+    "byAuthor": "作者：{{author}}",
+    "hosting": {
+      "remote": "偏僻的",
+      "local": "本機",
+      "both": "兩個都"
+    },
+    "toolsCount_few": "{{count}} 工具",
+    "toolsCount_many": "{{count}} 工具",
+    "envCount_few": "{{count}} 環境",
+    "envCount_many": "{{count}} 環境",
+    "repository": "儲存庫",
+    "website": "網站"
+  },
+  "installButton": {
+    "installing": "正在安裝…",
+    "removing": "正在刪除…",
+    "done": "完畢",
+    "retry": "重試",
+    "uninstall": "解除安裝",
+    "install": "安裝"
+  },
+  "pluginCard": {
+    "official": "官方的"
+  }
+}
