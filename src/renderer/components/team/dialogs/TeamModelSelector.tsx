@@ -71,6 +71,7 @@ import {
   ChevronDown,
   Filter,
   Info,
+  LoaderCircle,
   RefreshCw,
   Search,
   Server,
@@ -2954,6 +2955,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   provider.comingSoon || !(providerSelectable || providerInspectable);
                 const statusBadge = getProviderStatusBadge(provider.id);
                 const statusBadgeLabel = getProviderStatusBadgeLabel(statusBadge);
+                const providerNavLoading =
+                  provider.id === 'opencode' && openCodeRuntimeStatusUiState === 'checking';
                 const providerTooltip =
                   providerDisabledReason ??
                   (statusBadge === 'Multimodel off'
@@ -2976,13 +2979,25 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
                         {provider.label}
                       </span>
-                      {statusBadgeLabel ? (
+                      {providerNavLoading || statusBadgeLabel ? (
                         <span
                           data-testid={`team-model-selector-provider-nav-status-${provider.id}`}
                           className="shrink-0 rounded bg-black/[0.05] px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-muted)] dark:bg-white/[0.05]"
-                          aria-label={statusBadge ?? undefined}
+                          role={providerNavLoading ? 'status' : undefined}
+                          aria-label={
+                            providerNavLoading
+                              ? t('modelSelector.openCodeStatus.summary.checking')
+                              : (statusBadge ?? undefined)
+                          }
                         >
-                          {statusBadgeLabel}
+                          {providerNavLoading ? (
+                            <LoaderCircle
+                              className="size-3 motion-safe:animate-spin"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            statusBadgeLabel
+                          )}
                         </span>
                       ) : null}
                     </TabsTrigger>

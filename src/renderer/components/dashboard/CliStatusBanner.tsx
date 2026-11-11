@@ -915,7 +915,7 @@ const InstalledBanner = ({
         data-testid="provider-status-banner-header"
         className={`flex items-center justify-between ${
           inline
-            ? 'border-b border-[var(--color-border-subtle)] pb-3 pt-1 font-semibold'
+            ? 'pb-3 pt-1 font-semibold'
             : showCollapseControl
               ? `${
                   showExpandedContent ? '-mx-4 -mt-3 px-4 pb-1 pt-4' : '-mx-4 -my-2.5 px-4 py-3.5'
