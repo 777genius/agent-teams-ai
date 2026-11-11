@@ -4200,7 +4200,8 @@ describe('TeamModelSelector disabled Codex models', () => {
     const pendingStatus = openCodeButton?.querySelector(
       '[data-testid="team-model-selector-provider-nav-status-opencode"]'
     );
-    expect(pendingStatus?.getAttribute('role')).toBe('status');
+    const loadingAnnouncement = openCodeButton?.querySelector('[role="status"]');
+    expect(loadingAnnouncement?.textContent).toBe('OpenCode status: checking runtime');
     expect(pendingStatus?.getAttribute('aria-label')).toBe('OpenCode status: checking runtime');
     expect(pendingStatus?.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
     expect(openCodeButton?.textContent).not.toContain('Install');
@@ -5233,9 +5234,10 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(openCodeButton?.textContent).toContain('team only');
     expect(
       openCodeButton?.querySelector(
-        '[data-testid="team-model-selector-provider-nav-status-opencode"][role="status"]'
+        '[data-testid="team-model-selector-provider-nav-status-opencode"] svg'
       )
     ).toBeNull();
+    expect(openCodeButton?.querySelector('[role="status"]')?.textContent).toBe('');
 
     await act(async () => {
       openCodeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));

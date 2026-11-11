@@ -2981,11 +2981,21 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
                         {provider.label}
                       </span>
+                      {provider.id === 'opencode' ? (
+                        <span
+                          role="status"
+                          className="sr-only"
+                          data-testid="team-model-selector-opencode-loading-announcement"
+                        >
+                          {providerNavLoading
+                            ? t('modelSelector.openCodeStatus.summary.checking')
+                            : ''}
+                        </span>
+                      ) : null}
                       {providerNavLoading || statusBadgeLabel ? (
                         <span
                           data-testid={`team-model-selector-provider-nav-status-${provider.id}`}
                           className="shrink-0 rounded bg-black/[0.05] px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-muted)] dark:bg-white/[0.05]"
-                          role={providerNavLoading ? 'status' : undefined}
                           aria-label={
                             providerNavLoading
                               ? t('modelSelector.openCodeStatus.summary.checking')

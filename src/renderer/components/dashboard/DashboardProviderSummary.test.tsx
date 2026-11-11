@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -49,6 +50,8 @@ vi.mock('@features/localization/renderer', () => ({
   }),
 }));
 vi.mock('@features/runtime-provider-management/renderer', () => ({
+  isOpenCodeRuntimeUsable: (runtime: typeof state.openCodeRuntimeStatus) =>
+    runtime?.installed === true,
   useRuntimeProviderDirectoryCache: () => state.directoryReads() ?? null,
   useRuntimeProviderConnectedCount: () => state.countEvidence,
   useOpenCodeDashboardConnectedCountProbe: state.connectedCountProbe,
@@ -300,6 +303,44 @@ describe('DashboardProviderSummary (passive)', () => {
       ).toContain('runtimeProvider.badges.unknown');
       expect(state.loadProviderDirectory).not.toHaveBeenCalled();
       expect(state.loadModels).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it('covers ready-runtime count discovery before effects, then settles a failed probe to Unknown', async () => {
+    state.cliStatus = { installed: true, flavor: 'agent_teams_orchestrator', providers: [] };
+    state.openCodeRuntimeStatus = {
+      installed: true,
+      state: 'ready',
+      version: '1.18.31',
+      binaryPath: '/test/opencode',
+    };
+    // No effects run during this render: the count probe cannot publish checking yet.
+    const initial = document.createElement('div');
+    initial.innerHTML = renderToStaticMarkup(React.createElement(DashboardProviderSummary));
+    expect(
+      initial.querySelector('[data-testid="dashboard-opencode-count-loading"]')
+    ).not.toBeNull();
+    expect(
+      initial.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent
+    ).not.toContain('runtimeProvider.badges.unknown');
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      state.countEvidence = { checking: true, observation: null, invalidated: false };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+      // Failed empty probes remove their cache entry. Aggregate loading must not
+      // keep either the initial pending state or a stale checking signal alive.
+      state.countEvidence = null;
+      state.cliStatusLoading = true;
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).toBeNull();
+      expect(
+        host.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent
+      ).toContain('runtimeProvider.badges.unknown');
     } finally {
       await act(async () => root.unmount());
     }
