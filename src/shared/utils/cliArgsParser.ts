@@ -133,9 +133,11 @@ export function extractUserFlags(raw: string): string[] {
     if (/^-[A-Za-z]/.test(token)) {
       const shortFlags = expandShortFlagToken(token);
       flags.push(...shortFlags);
-      // `-n NAME`: the CLI reads the next token as the value, even if it starts with `-`.
+      // `-n NAME` or `-pn NAME`: when the token ends with an option that requires a
+      // value, the CLI reads the next token as that value, even if it starts with `-`.
       const last = shortFlags[shortFlags.length - 1];
-      if (token === last && OPTIONS_WITH_REQUIRED_VALUE.has(last)) i++;
+      const wholeToken = `-${shortFlags.map((flag) => flag.slice(1)).join('')}`;
+      if (token === wholeToken && OPTIONS_WITH_REQUIRED_VALUE.has(last)) i++;
       continue;
     }
     // Normalize the `--flag=value` form to the bare flag name so protected-flag

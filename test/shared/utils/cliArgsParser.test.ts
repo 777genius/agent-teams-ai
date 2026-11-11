@@ -167,6 +167,10 @@ describe('extractUserFlags', () => {
       '--append-system-prompt',
     ]);
     expect(extractUserFlags('-n -rname -p')).toEqual(['-n', '-p']);
+    // `-n` at the end of a cluster also takes the next token.
+    expect(extractUserFlags('-pn -review')).toEqual(['-p', '-n']);
+    // An attached value (`-nfoo`) leaves the next token as a flag.
+    expect(extractUserFlags('-nfoo -r abc')).toEqual(['-n', '-r']);
     // An attached value is already part of the token, so the next token is a flag.
     expect(extractUserFlags('--append-system-prompt=x -r abc')).toEqual([
       '--append-system-prompt',
