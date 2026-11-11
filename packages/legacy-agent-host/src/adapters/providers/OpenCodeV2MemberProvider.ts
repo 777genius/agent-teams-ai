@@ -148,7 +148,11 @@ export function createOpenCodeV2MemberProvider(
       inheritedBinaryOverride() ||
       selected.mcpPolicyPlugin ||
       selected.capturedMcpServers || selected.capturedMcpSource ||
-      selected.mcpCatalogSource || selected.nativeOptions.toolApprovalMode !== undefined ||
+      selected.mcpCatalogSource || // The saved V2 role/workflow instructions live separately from the
+      // generic Host context. Until both are installed and natively attested,
+      // refuse launch rather than silently dropping captured policy.
+      (selected.nativeOptions.instructions?.length ?? 0) !== 0 ||
+      selected.nativeOptions.toolApprovalMode !== undefined ||
       (selected.extraArgs?.length ?? 0) !== 0)
     throw new Error('OpenCode V2 requires a separate native profile and owner');
 

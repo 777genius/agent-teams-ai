@@ -145,6 +145,24 @@ function owner(probeOk: boolean, effective: 'deny' | 'ask' | 'allow' = 'deny') {
   return { calls, captured };
 }
 
+test('V2 refuses uninstalled captured role and workflow instructions before native access', () => {
+  const selected = nativeV2Profile();
+  const profile = {
+    ...selected,
+    nativeOptions: {
+      ...selected.nativeOptions,
+      instructions: 'TEST-captured-role-and-workflow',
+    },
+  };
+  const { captured, calls } = owner(true);
+  assert.throws(() => createOpenCodeV2MemberProvider(context(profile), captured),
+    /OpenCode V2 requires a separate native profile and owner/,
+    'attesting only generic Host instructions must not silently drop V2 role/workflow');
+  assert.deepEqual(calls,
+    { probe: 0, permissions: 0, context: 0, password: 0, stop: 0, stopped: 0 },
+    'unattested instructions are rejected before reading credentials or native custody');
+});
+
 test('V2 rejects accessor-backed native owner methods before getter can forge policy', () => {
   for (const name of [
     'readPassword', 'probe', 'readNativeCustody', 'readNativeEffectivePermissions',
