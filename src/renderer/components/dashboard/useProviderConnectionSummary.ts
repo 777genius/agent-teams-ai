@@ -50,6 +50,8 @@ export function useProviderConnectionSummary(
   const countEvidence = useRuntimeProviderConnectedCount(projectPath);
   const observedOpenCodeCount = countEvidence?.observation ?? null;
   const openCodeIsChecking = Boolean(
+    cliStatusLoading ||
+    (!cliStatus && !cliStatusError && !openCodeRuntimeStatus) ||
     countEvidence?.checking ||
     openCodeRuntimeStatusLoading ||
     cliProviderStatusLoading?.opencode ||

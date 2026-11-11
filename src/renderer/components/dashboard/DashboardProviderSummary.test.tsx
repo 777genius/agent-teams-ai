@@ -102,6 +102,10 @@ describe('DashboardProviderSummary (passive)', () => {
       expect(
         host.querySelector('[data-testid="dashboard-codex-status"] [role="status"]')
       ).not.toBeNull();
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+      expect(
+        host.querySelector('[data-testid="dashboard-opencode-provider-count"]')?.textContent
+      ).not.toContain('runtimeProvider.badges.unknown');
       expect(state.getStatus).not.toHaveBeenCalled();
       expect(state.loadProviderDirectory).not.toHaveBeenCalled();
       expect(state.loadModels).not.toHaveBeenCalled();
@@ -260,6 +264,11 @@ describe('DashboardProviderSummary (passive)', () => {
       await act(async () => root.render(React.createElement(DashboardProviderSummary)));
       expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
       state.countEvidence = { checking: false, observation: null, invalidated: false };
+      state.cliStatus = {
+        installed: true,
+        flavor: 'agent_teams_orchestrator',
+        providers: [],
+      };
       await act(async () => root.render(React.createElement(DashboardProviderSummary)));
       expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).toBeNull();
       expect(
