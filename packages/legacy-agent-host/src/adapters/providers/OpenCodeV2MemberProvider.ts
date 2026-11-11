@@ -11,12 +11,11 @@ import type { NativeContextEvidence } from '../../team-launch/contracts.js';
 import { preflightOpenCodeV2EffectiveExternalDirectory } from '../../composition/openCodeV2StaticPreflight.js';
 import { hasUntrustedOpenCodeBinaryOverride } from '../../composition/openCodeV2Environment.js';
 import { waitForNativeStopResult } from './OpenCodeV2StopAckWait.js';
+import { awaitOpenCodeV2OwnerReadback } from './OpenCodeV2OwnerReadback.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
-
 // The native executable witness must be a canonical SHA-256, not merely two
 // equal strings supplied by a malformed private selection and owner.
 const nativeSha256Hex = /^[a-f0-9]{64}$/;
-
 /**
  * A separately selected, TEST-owned native V2 engine and session. The provider
  * does not launch a shared CLI, adopt a V1 session, read user configs, or
@@ -71,7 +70,6 @@ export interface OpenCodeV2OwnedSession {
   /** Confirm physical termination of the same PID/start identity. */
   confirmStopped(): Promise<boolean>;
 }
-
 /**
  * Capture native owner and Host authority callbacks from data descriptors
  * without executing accessors or function metadata getters. Prototype
@@ -104,7 +102,6 @@ function captureDataCallback<T extends object, K extends keyof T>(
   }
   throw new Error(`OpenCode V2 requires data-property ${callbackOwner} callbacks`);
 }
-
 /**
  * Stage1's existing Session SPI, with a completely separate V2 adapter.
  * Only a private, explicitly injected generation-selected composition may
@@ -349,7 +346,7 @@ export function createOpenCodeV2MemberProvider(
           try {
             if (!current() || signal.aborted) return false;
             const combined = AbortSignal.any([signal, abort.signal]);
-            const valid = await capturedProbe(combined);
+            const valid = await awaitOpenCodeV2OwnerReadback(() => capturedProbe(combined), combined);
             // A native owner probe must affirm readiness with literal true.
             // Truthy objects or numeric receipts are not native custody proof.
             if (valid !== true || combined.aborted || !current()) return false;
@@ -357,7 +354,7 @@ export function createOpenCodeV2MemberProvider(
             // A loopback HTTP success or a wrapper/package hash is not native
             // custody. Even identical bytes in a restarted PID cannot inherit
             // the old member's authority without a new Host capture.
-            const custody = await capturedReadNativeCustody(combined);
+            const custody = await awaitOpenCodeV2OwnerReadback(() => capturedReadNativeCustody(combined), combined);
             // Native custody is JSON data, never a Proxy or getter-backed
             // identity that can rewrite the next field during admission.
             const admittedCustody = snapshotOpenCodeV2CustodyReadback(custody);
@@ -380,7 +377,7 @@ export function createOpenCodeV2MemberProvider(
             // production owner still must prove genuine engine custody and
             // cannot claim qualification from a scripted TEST receipt.
             const effective = snapshotOpenCodeV2PermissionReadback(
-              await capturedReadNativeEffectivePermissions(combined));
+              await awaitOpenCodeV2OwnerReadback(() => capturedReadNativeEffectivePermissions(combined), combined));
             // Permissions must be read from THIS exact native session and
             // PID/start identity. A correctly ordered ruleset from another
             // session or a restarted process is not an authorization.
@@ -414,7 +411,8 @@ export function createOpenCodeV2MemberProvider(
             // A callback receipt is not an immutable native acknowledgement:
             // a getter could rewrite a foreign digest before the next field
             // comparison. Capture only own, enumerable JSON data fields.
-            const attested = snapshotOpenCodeV2InitialContextReadback(await initialContextAttempt);
+            const attested = snapshotOpenCodeV2InitialContextReadback(
+              await awaitOpenCodeV2OwnerReadback(() => initialContextAttempt!, combined));
             if (!attested || combined.aborted || !current() ||
                 attested.nativeSessionId !== profile.nativeSessionId ||
                 attested.contextDigest !== contextDigest ||
@@ -423,7 +421,7 @@ export function createOpenCodeV2MemberProvider(
             // A process or policy may change during the initial native PUT.
             // Re-attest both after the mutation; never retry a lost PUT ACK.
             const finalEffective = snapshotOpenCodeV2PermissionReadback(
-              await capturedReadNativeEffectivePermissions(combined));
+              await awaitOpenCodeV2OwnerReadback(() => capturedReadNativeEffectivePermissions(combined), combined));
             const finalPolicy = finalEffective && preflightOpenCodeV2EffectiveExternalDirectory(
               finalEffective.rules, requiredExternalDirectory);
             if (!finalEffective || finalPolicy?.kind !== 'policy-candidate' ||
@@ -432,7 +430,8 @@ export function createOpenCodeV2MemberProvider(
                 finalEffective.pid !== admittedCustody.pid ||
                 finalEffective.startIdentity !== admittedCustody.startIdentity ||
                 combined.aborted || !current()) return false;
-            const finalCustodyReceipt = await capturedReadNativeCustody(combined);
+            const finalCustodyReceipt = await awaitOpenCodeV2OwnerReadback(
+              () => capturedReadNativeCustody(combined), combined);
             // Re-attest process custody after the native context PUT. A
             // getter-backed or Proxy identity is not a native witness.
             const finalCustody = snapshotOpenCodeV2CustodyReadback(finalCustodyReceipt);

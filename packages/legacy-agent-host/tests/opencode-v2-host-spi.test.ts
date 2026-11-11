@@ -2272,6 +2272,56 @@ test('sealing a ready V2 capture initiates its own physical stop before explicit
   assert.equal(calls.stopped, 1);
 });
 
+test('initial native probe ignoring abort cannot strand Host open',
+  { timeout: 5000 }, async () => {
+    const { captured, calls } = owner(true);
+    const entered = Promise.withResolvers<void>();
+    captured.probe = async () => {
+      calls.probe++;
+      entered.resolve();
+      return new Promise<boolean>(() => {}); // Ignores AbortSignal.
+    };
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    const opening = provider.factory.open(request());
+    await entered.promise;
+    provider.seal();
+    await assert.rejects(opening, /opencode.driver.dependency-unavailable/);
+    assert.equal(provider.isReady(), false);
+    assert.equal(calls.permissions, 0, 'aborted probe never attests permissions');
+    assert.equal(calls.context, 0, 'no native context after abort');
+    assert.equal(await provider.cleanup(), true);
+    assert.equal(calls.stop, 1, 'one TEST-owned physical stop');
+  });
+
+test('native re-attestation ignoring abort releases the readiness fence',
+  { timeout: 5000 }, async () => {
+    const { captured, calls } = owner(true);
+    const entered = Promise.withResolvers<void>();
+    let hang = false;
+    captured.probe = async () => {
+      calls.probe++;
+      if (hang) {
+        entered.resolve();
+        return new Promise<boolean>(() => {}); // Never ACKs on abort.
+      }
+      return true;
+    };
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    const opened = await provider.factory.open(request());
+    assert.equal(provider.isReady(), true);
+    hang = true;
+    const checking = opened.driver.checkReadiness();
+    await entered.promise;
+    const result = await checking;
+    assert.equal(result.ok, false, 'aborted ACK never certifies readiness');
+    assert.equal(provider.isReady(), false);
+    assert.equal(calls.context, 1, 'no native instruction replay');
+    assert.equal(await provider.cleanup(), true);
+    assert.equal(calls.stop, 1, 'never repeat owner stop');
+    assert.deepEqual(await opened.driver.close(),
+      { logicallyClosed: true, cleanup: 'confirmed' });
+  });
+
 test('sealing aborts an in-flight V2 native probe before permission or context installation', async () => {
   const { captured, calls } = owner(true);
   const entered = Promise.withResolvers<void>();
