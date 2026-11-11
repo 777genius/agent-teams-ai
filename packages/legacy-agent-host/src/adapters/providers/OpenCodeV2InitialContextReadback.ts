@@ -40,3 +40,17 @@ export function snapshotOpenCodeV2InitialContextReadback(
     return undefined;
   }
 }
+
+/** Compare a JSON-safe native instruction receipt with the captured identity.
+ * Reuse the same descriptor guard for the original PUT and each read-only GET. */
+export function matchesOpenCodeV2InitialContextReadback(
+  receipt: NativeInitialContextReadback | undefined,
+  expected: NativeInitialContextReadback,
+): boolean {
+  const snapshot = snapshotOpenCodeV2InitialContextReadback(receipt);
+  return snapshot !== undefined &&
+    snapshot.nativeSessionId === expected.nativeSessionId &&
+    snapshot.contextDigest === expected.contextDigest &&
+    snapshot.generation === expected.generation &&
+    snapshot.configRevision === expected.configRevision;
+}
