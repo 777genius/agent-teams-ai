@@ -1,7 +1,7 @@
 /** Linux CI only: exact npm installation per TEST case; never touches an existing user runtime. */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -18,6 +18,12 @@ assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], {
 }).trim(), sourceHead);
 const evidence = join(repo, 'opencode-v1-version-evidence');
 await mkdir(evidence, { recursive: true });
+// Clean only the three receipts owned by this invocation before any registry
+// request or native launch. A failed rerun must never upload a prior PASS as
+// if it belonged to the current exact-HEAD qualification.
+await Promise.all(['1.19.4', '1.19.5', 'latest'].map(selector =>
+  rm(join(evidence, `native-v1-${selector}.json`), { force: true })));
+
 
 /** Bound trusted-registry metadata before parsing; resolve each tag exactly once. */
 async function metadata(name: string, selector: string): Promise<Record<string, unknown>> {
