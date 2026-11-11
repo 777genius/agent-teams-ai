@@ -57,7 +57,15 @@ async function stopOwned() {
   if (!child?.pid) { receipt.cleanup = true; return true; }
   const pid = child.pid;
   if (!stopRequested) {
-    if (startIdentity(pid) !== startTicks) return false;
+    if (startIdentity(pid) !== startTicks) {
+      // The old leader can exit normally before cleanup. Do not signal an
+      // unverified/reused process group; only accept physical absence of both.
+      if (!present(pid) && !present(-pid)) {
+        receipt.cleanup = true;
+        return true;
+      }
+      return false;
+    }
     stopRequested = true;
     try { process.kill(-pid, 'SIGTERM'); } catch (error) {
       if (error.code !== 'ESRCH') throw error;
