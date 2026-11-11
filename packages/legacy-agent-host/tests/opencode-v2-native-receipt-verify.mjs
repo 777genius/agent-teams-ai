@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { pinnedLinuxX64Avx2Digest } from './opencode-v2-native-test-pin.mjs';
 
 export const REQUIRED_NATIVE_HOST_STEPS = Object.freeze([
   "pinned_actual_ELF_measured",
@@ -46,7 +47,7 @@ export function isCompleteNativeHostReceipt(value, expectedSourceHead) {
     r.cleanup === true && r.error === undefined && r.cleanupError === undefined &&
     r.qualified === false && r.productQualified === false &&
     r.packagedElectronQualified === false && sourceSha(r.sourceHead) &&
-    sha256(r.binarySha256) && pid(r.pid) && ticks(r.processStartTicks) &&
+    sha256(r.binarySha256) && r.binarySha256 === pinnedLinuxX64Avx2Digest && pid(r.pid) && ticks(r.processStartTicks) &&
     r.nativeCustodyReadbacks === 4 && r.nativePermissionReadbacks === 4 &&
     r.directShellProbe !== undefined && r.directShellProbe !== null &&
     typeof r.directShellProbe === 'object' && !Array.isArray(r.directShellProbe) &&

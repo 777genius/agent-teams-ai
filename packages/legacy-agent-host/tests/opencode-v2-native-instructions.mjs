@@ -3,6 +3,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { pinnedLinuxX64Avx2Digest } from './opencode-v2-native-test-pin.mjs';
 import { readFileSync, realpathSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -16,7 +17,7 @@ import { isOwnedNativeSessionSnapshot } from './opencode-v2-native-session-guard
 import { probeNativeDirectShellEffect } from './opencode-v2-direct-shell-probe.mjs';
 
 const version = '2.0.21';
-const pinnedLinuxX64Avx2Digest = 'f916986543348d7953d8d43aa048516cdbc3f84f4d0dc9c0c5b9d1da3030cea7';
+
 const receiptPath = resolve(process.env.OPENCODE_V2_HOST_NATIVE_RECEIPT || 'opencode-v2-host-native-instructions.json');
 const receipt = { kind: 'TEST_NATIVE_HOST_SPI_INSTRUCTIONS', version, qualified: false,
   productQualified: false, packagedElectronQualified: false, steps: [], cleanup: false };

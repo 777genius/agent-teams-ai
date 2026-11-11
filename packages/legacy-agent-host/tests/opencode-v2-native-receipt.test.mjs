@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { pinnedLinuxX64Avx2Digest } from './opencode-v2-native-test-pin.mjs';
 import { isCompleteNativeHostReceipt, REQUIRED_NATIVE_HOST_STEPS } from './opencode-v2-native-receipt-verify.mjs';
 import { parseOwnedDurableLog, retainsOwnedDurablePrefix } from './opencode-v2-native-log-parse.mjs';
 import { isOwnedNativeSessionSnapshot } from './opencode-v2-native-session-guard.mjs';
@@ -46,7 +47,7 @@ function completeReceiptFixture() {
   return {
     kind: 'TEST_NATIVE_HOST_SPI_INSTRUCTIONS', version: '2.0.21',
     cleanup: true, qualified: false, productQualified: false,
-    packagedElectronQualified: false, sourceHead: 'a'.repeat(40), binarySha256: 'f'.repeat(64),
+    packagedElectronQualified: false, sourceHead: 'a'.repeat(40), binarySha256: pinnedLinuxX64Avx2Digest,
     pid: 1101, processStartTicks: '123456', nativeCustodyReadbacks: 4,
     nativePermissionReadbacks: 4, steps: [...REQUIRED_NATIVE_HOST_STEPS],
     directShellProbe: { attempted: true, outcome: 'hold', status: 404,
@@ -64,7 +65,7 @@ function completeReceiptFixture() {
     restartLogReadback: { readOnly: true, synced: true, watermark: 0,
       eventCount: 0, modelTurnProven: false },
     restart: { priorPid: 1101, priorStartTicks: '123456', pid: 1102,
-      startTicks: '123489', readOnly: true, actualBinarySha256: 'f'.repeat(64) },
+      startTicks: '123489', readOnly: true, actualBinarySha256: pinnedLinuxX64Avx2Digest },
   };
 }
 
@@ -99,6 +100,7 @@ test('native receipt gate rejects forged digest, incomplete stages and cold rest
     r => { delete r.sourceHead; },
     r => { r.binarySha256 = 'unverified'; },
     r => { r.binarySha256 = 'F'.repeat(64); },
+    r => { r.binarySha256 = 'f'.repeat(64); r.restart.actualBinarySha256 = 'f'.repeat(64); },
     r => { r.nativeCustodyReadbacks = 3; },
     r => { r.nativePermissionReadbacks = 3; },
     r => { delete r.directShellProbe; },
