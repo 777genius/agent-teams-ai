@@ -14,7 +14,9 @@ import { hasUntrustedOpenCodeBinaryOverride } from '../../composition/openCodeV2
 import { waitForNativeStopResult } from './OpenCodeV2StopAckWait.js';
 import { awaitOpenCodeV2OwnerReadback } from './OpenCodeV2OwnerReadback.js';
 import { raceOpenCodeV2Revocation } from './OpenCodeV2RevocationWait.js';
+import { createOpenCodeV2RequestAdmission } from './OpenCodeV2RequestAdmission.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
+import type { Session } from '@agent-teams/provider-session-contracts';
 import type { OpenCodeV2OwnedSession } from './OpenCodeV2OwnedSession.js';
 export type { OpenCodeV2OwnedSession } from './OpenCodeV2OwnedSession.js';
 // The native executable witness must be a canonical SHA-256, not merely two
@@ -173,26 +175,31 @@ export function createOpenCodeV2MemberProvider(
   let initialContextAttempt: ReturnType<OpenCodeV2OwnedSession['installAndAttestInitialContext']> | undefined;
   const contextDigest = initialContextDigest(capturedInstructions);
   const abort = new AbortController();
+  let closingCheckpoint: ReturnType<Session['checkpoint']> | undefined;
+  let checkpointSource: Session | undefined;
+  let closingCheckpointRead = false;
+  const captureUnchanged = () => !inheritedBinaryOverride() &&
+    runtimeDigest(context.request) === originalRequest &&
+    runtimeDigest(context.endpoint.binding) === originalEndpointBinding &&
+    runtimeDigest(context.profile) === originalProfile &&
+    context.instructions === capturedInstructions && !inheritedBinaryOverride();
 
   const current = () => {
     if (sealed || qualificationRevoked) return false;
     try {
       // Only literal boolean true is a valid captured Host lease. A Promise,
       // boxed boolean, number or arbitrary truthy object is not authority.
-      if (!inheritedBinaryOverride() && capturedIsCurrent() === true &&
-          capturedCanAllocate() === true &&
-          runtimeDigest(context.request) === originalRequest &&
-          runtimeDigest(context.endpoint.binding) === originalEndpointBinding &&
-          runtimeDigest(context.profile) === originalProfile &&
-          context.instructions === capturedInstructions &&
-          !inheritedBinaryOverride()) return true;
+      if (captureUnchanged() && capturedIsCurrent() === true &&
+          // Allocation reads the Runtime store. Once admitted, lifetime checks
+          // must use the captured fence-safe lease, including inside dispatch.
+          (wasEverReady || capturedCanAllocate() === true) && captureUnchanged()) return true;
     } catch {
       // A failed Host authority callback cannot grant an existing native
       // process another turn. Treat errors as permanent lease revocation,
       // not a transient readiness probe or a recoverable model failure.
     }
     // A temporarily lost Host authority is not a renewable V2 lease.
-    // Latch revocation even if allocation becomes available again before
+    // Latch revocation even if the captured lease becomes current again before
     // the next asynchronous native readiness check.
     qualificationRevoked = true;
     ready = false;
@@ -234,6 +241,16 @@ export function createOpenCodeV2MemberProvider(
   // Never expose readiness, a checkpoint or a native mutation until ALL
   // native readbacks for the captured owner have settled.
   const admissionSettled = () => ready && pendingReattestations.size === 0;
+  const requests = createOpenCodeV2RequestAdmission({
+    isCurrent: current, isReady: () => ready,
+    reattestations: pendingReattestations, signal: abort.signal,
+  });
+  const captureClosingCheckpoint = () => {
+    try {
+      if (closingCheckpoint || qualificationRevoked || !admissionSettled() || !captureUnchanged()) return;
+      closingCheckpoint = checkpointSource?.checkpoint();
+    } catch { closingCheckpoint = { ok: false, code: 'unavailable' }; }
+  };
 
   const factory = createOpenCodeV2DriverFactory({
     capabilities: ['text', 'tools', 'permission', 'interrupt', 'checkpoint'],
@@ -267,20 +284,21 @@ export function createOpenCodeV2MemberProvider(
           generation: request.generation,
         },
         limits: profile.limits,
+        beforeRequest: requests.beforeRequest,
         readPassword: () => {
           // Native transports may request credentials after a submit started
           // but while a different Host re-attestation is still unproven.
           // The owner projection itself is also untrusted to preserve the
           // inherited executable environment: recheck AFTER its callback so
           // a synchronous override/revocation cannot authorize a network I/O.
-          if (!admissionSettled() || !current())
+          if (!ready || !requests.hasRequest() || !current())
             throw new Error('V2 native custody revoked');
           const password = capturedReadPassword();
           // A native credential reader must return a primitive string. A boxed
           // or forged value can execute toString() later in the HTTP Basic
           // encoder, after Host authority was checked and before network I/O.
           // Reject blank and control-bearing credentials before ANY native HTTP.
-          if (typeof password !== 'string' || password.trim().length === 0 || /[\x00-\x1f\x7f]/.test(password) || !admissionSettled() || !current())
+          if (typeof password !== 'string' || password.trim().length === 0 || /[\x00-\x1f\x7f]/.test(password) || !ready || !requests.hasRequest() || !current())
             throw new Error('V2 native custody revoked');
           return password;
         },
@@ -288,14 +306,15 @@ export function createOpenCodeV2MemberProvider(
           if (qualificationRevoked) return false;
           const reattestation = Promise.withResolvers<void>();
           pendingReattestations.add(reattestation.promise);
-          // Even an already-aborted check, or a temporarily lost Host lease,
-          // invalidates old readiness before any early return.
-          ready = false;
-          initialEvidence = undefined;
           let accepted = false;
           try {
             if (!current() || signal.aborted) return false;
             const combined = AbortSignal.any([signal, abort.signal]);
+            // Pending probes block new transport admissions. Existing requests
+            // keep their verified credential lease until their finally releases it.
+            if (!await requests.waitForDrain(combined)) return false;
+            ready = false;
+            initialEvidence = undefined;
             const valid = await awaitOpenCodeV2OwnerReadback(() => capturedProbe(combined), combined);
             // A native owner probe must affirm readiness with literal true.
             // Truthy objects or numeric receipts are not native custody proof.
@@ -438,6 +457,7 @@ export function createOpenCodeV2MemberProvider(
         try {
           const opened = await factory.open(request);
           const source = opened.driver;
+          checkpointSource = source;
           return {
             ...opened,
             driver: {
@@ -730,7 +750,17 @@ export function createOpenCodeV2MemberProvider(
     },
     isReady: () => admissionSettled() && current(),
     initialContextEvidence: () => admissionSettled() && current() ? initialEvidence : undefined,
+    checkpointBeforeClose: (sessionRef) => {
+      if (closingCheckpointRead || qualificationRevoked || checkpointSource?.sessionRef !== sessionRef)
+        return { ok: false, code: 'unavailable' };
+      closingCheckpointRead = true;
+      if (!sealed && current()) captureClosingCheckpoint();
+      return closingCheckpoint ? structuredClone(closingCheckpoint) : { ok: false, code: 'unavailable' };
+    },
     seal: () => {
+      // Local evidence only: composition has already sealed its public lease.
+      // Runtime may consume this once under its original closing/owned/idle fence.
+      if (!sealed) captureClosingCheckpoint();
       sealed = true;
       ready = false;
       initialEvidence = undefined;

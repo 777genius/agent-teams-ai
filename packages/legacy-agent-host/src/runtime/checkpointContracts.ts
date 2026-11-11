@@ -87,5 +87,6 @@ export interface CheckpointCoordinatorOptions {
   hostIncarnation: string;
   authorize: RuntimeOwnerOptions['authorize'];
   driver(binding: RuntimeBinding): Session | undefined;
+  checkpointBeforeClose?: RuntimeOwnerOptions['checkpointBeforeClose'];
   idleTimeoutMs?: number;
 }

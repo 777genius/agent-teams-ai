@@ -197,6 +197,12 @@ export class RuntimeTeamCoordinator {
           this.runtime.observeProviderActivity(binding, sessionRef, activity),
         onProgress: () => this.kick(),
       }),
+      checkpointBeforeClose: (binding, sessionRef) => {
+        const entry = this.entries.get(this.key(binding));
+        if (!entry || runtimeDigest(entry.binding) !== runtimeDigest(binding))
+          return { ok: false, code: 'unavailable' };
+        return entry.provider?.checkpointBeforeClose?.(sessionRef);
+      },
       authorize: (binding, action, intent) => {
         options.assertWriter();
         const entry =

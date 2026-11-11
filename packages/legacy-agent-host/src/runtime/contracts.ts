@@ -3,6 +3,7 @@ import type {
   DriverFactory,
   InteractionReply,
   OpenConfig,
+  Session,
 } from '@agent-teams/provider-session-contracts';
 import type { JsonValue } from '../contracts.js';
 import type { InputPreparationRequest, PreparedInputProof, RuntimeContextEpoch, RuntimeInputPreparation } from './inputPreparation.js';
@@ -124,6 +125,8 @@ export interface RuntimeOwnerOptions {
   maxPendingInteractions?: number;
   interactionTtlMs?: number;
   checkpoints?: CheckpointStorage;
+  /** Private captured-provider capability; called only under the original closing-session fence. */
+  checkpointBeforeClose?(binding: RuntimeBinding, sessionRef: string): ReturnType<Session['checkpoint']> | undefined;
   events?: RuntimeEventStorage;
   checkpointIdleTimeoutMs?: number;
 }

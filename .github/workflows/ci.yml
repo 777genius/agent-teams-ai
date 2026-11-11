@@ -824,8 +824,8 @@ jobs:
         env:
           LEGACY_NATIVE_MIXED_HOST_GO: '1'
           LEGACY_NATIVE_MIXED_RESTORE_GO: '1'
-          LEGACY_NATIVE_PROVIDER_ARTIFACT: vendor/provider-migration/opencode-v2-host-05896780/agent-teams-provider-implementations-0.0.0.tgz
-          LEGACY_NATIVE_PROVIDER_SHA256: 8809d9e11e523bc02751698a993d1dd3cedd4e71382c79a487c3a56c9a89c87f
+          LEGACY_NATIVE_PROVIDER_ARTIFACT: vendor/provider-migration/opencode-v2-host-8f169316/agent-teams-provider-implementations-0.0.0.tgz
+          LEGACY_NATIVE_PROVIDER_SHA256: f09f5bef6736e3549bd186225a5950ccc257549fd938a48909d726298a5367ae
         run: |
           set -euo pipefail
           unset LEGACY_NATIVE_MIXED_PEERS_GO LEGACY_NATIVE_MIXED_CROSS_TEAM_GO

@@ -1703,35 +1703,30 @@ test('native probe loss after initial Host readiness revokes the capture permane
   assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
 });
 
-test('lost Host allocation authority during recheck cannot resurrect cached V2 readiness', async () => {
+test('lost Host lifetime authority during recheck cannot resurrect cached V2 readiness', async () => {
   const { captured, calls } = owner(true);
   const input = context();
-  let canAllocate = true;
-  input.canAllocate = () => canAllocate;
+  let leaseCurrent = true;
+  input.isCurrent = () => leaseCurrent;
   const provider = createOpenCodeV2MemberProvider(input, captured);
   const opened = await provider.factory.open(request());
   assert.equal(provider.isReady(), true);
 
-  canAllocate = false;
+  leaseCurrent = false;
   assert.equal((await opened.driver.checkReadiness()).ok, false);
-  canAllocate = true;
+  leaseCurrent = true;
   assert.equal(provider.isReady(), false, 'stale attestation cannot revive when Host lease returns');
   assert.equal(provider.initialContextEvidence?.(), undefined);
-  assert.equal(calls.stop, 1, 'lost allocation stops the original TEST-owned process');
+  assert.equal(calls.stop, 1, 'lost lifetime lease stops the original TEST-owned process');
   assert.equal(calls.context, 1, 'initial native instructions are never replayed');
   assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
 });
 
-test('throwing Host authority guard permanently revokes a ready V2 native owner', async () => {
-  for (const failedGuard of ['binding', 'allocation'] as const) {
+test('throwing Host lifetime guard permanently revokes a ready V2 native owner', async () => {
     const input = context();
     let unavailable = false;
     input.isCurrent = () => {
-      if (failedGuard === 'binding' && unavailable) throw new Error('TEST binding unavailable');
-      return true;
-    };
-    input.canAllocate = () => {
-      if (failedGuard === 'allocation' && unavailable) throw new Error('TEST lease unavailable');
+      if (unavailable) throw new Error('TEST binding unavailable');
       return true;
     };
     const { captured, calls } = owner(true);
@@ -1740,7 +1735,7 @@ test('throwing Host authority guard permanently revokes a ready V2 native owner'
     assert.equal(provider.isReady(), true);
     unavailable = true;
     assert.equal(provider.isReady(), false,
-      'an exception from either Host authority callback is not affirmative custody');
+      'an exception from the captured lifetime callback is not affirmative custody');
     unavailable = false;
     assert.equal(provider.isReady(), false, 'recovering the callback cannot renew the captured PID');
     assert.equal(provider.initialContextEvidence?.(), undefined);
@@ -1754,26 +1749,20 @@ test('throwing Host authority guard permanently revokes a ready V2 native owner'
     assert.equal(calls.context, 1, 'never replay initial instructions');
     assert.equal(calls.password, 0, 'revoked credentials are never read');
     assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
-  }
 });
 
 test('transient authority loss observed without native recheck cannot revive V2 readiness', async () => {
-  for (const lost of ['allocation', 'binding'] as const) {
     const { captured, calls } = owner(true);
     const input = context();
-    let allocated = true;
     let bound = true;
-    input.canAllocate = () => allocated;
     input.isCurrent = () => bound;
     const provider = createOpenCodeV2MemberProvider(input, captured);
     const opened = await provider.factory.open(request());
     assert.equal(provider.isReady(), true);
     assert.notEqual(provider.initialContextEvidence?.(), undefined);
 
-    if (lost === 'allocation') allocated = false;
-    else bound = false;
+    bound = false;
     assert.equal(provider.isReady(), false, 'one observed lapse revokes the capture');
-    allocated = true;
     bound = true;
     assert.equal(provider.isReady(), false, 'restored Host authority cannot renew a V2 capture');
     assert.equal(provider.initialContextEvidence?.(), undefined);
@@ -1783,7 +1772,30 @@ test('transient authority loss observed without native recheck cannot revive V2 
     assert.equal(calls.stopped, 1, 'physical stop must be confirmed');
     assert.equal(calls.context, 1, 'no second native instructions installation');
     assert.equal(calls.permissions, 2, 'revoked owner must not read native policy again');
-  }
+});
+
+test('admitted V2 readiness and rechecks never reacquire the Runtime allocation fence', async () => {
+  const { captured, calls } = owner(true);
+  const input = context();
+  let admitted = false;
+  let allocationReads = 0;
+  input.canAllocate = () => {
+    allocationReads++;
+    assert.equal(admitted, false, 'an admitted provider must not reenter its Runtime member lock');
+    return true;
+  };
+  const provider = createOpenCodeV2MemberProvider(input, captured);
+  const opened = await provider.factory.open(request());
+  admitted = true;
+  const readsAtAdmission = allocationReads;
+  assert.ok(readsAtAdmission > 0, 'initial admission still checks allocation authority');
+  assert.equal(provider.isReady(), true);
+  assert.notEqual(provider.initialContextEvidence?.(), undefined);
+  assert.equal((await opened.driver.checkReadiness()).ok, true);
+  assert.equal(opened.driver.checkpoint().ok, true);
+  assert.equal(allocationReads, readsAtAdmission, 'all lifetime reads use the fence-safe captured lease');
+  assert.equal(calls.stop, 0, 'a nonreentrant allocation store cannot retire an admitted owner');
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
 });
 
 
@@ -2581,6 +2593,42 @@ test('retained V2 driver handle cannot mutate or checkpoint after Host seal', as
   assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
 });
 
+test('trusted closing capability retains one settled checkpoint after public V2 handles are sealed', async () => {
+  const { captured } = owner(true);
+  const input = context();
+  let current = true;
+  input.isCurrent = () => current;
+  const provider = createOpenCodeV2MemberProvider(input, captured);
+  const opened = await provider.factory.open(request());
+  const expected = opened.driver.checkpoint();
+  assert.equal(expected.ok, true);
+  // Composition seals its own lease before asking each original provider to
+  // seal. Final local evidence is consumed only by its trusted Runtime fence.
+  current = false;
+  provider.seal();
+  assert.deepEqual(opened.driver.checkpoint(), { ok: false, code: 'unavailable' });
+  assert.deepEqual(provider.checkpointBeforeClose?.('foreign-session'), { ok: false, code: 'unavailable' });
+  assert.deepEqual(provider.checkpointBeforeClose?.(opened.driver.sessionRef), expected);
+  assert.deepEqual(provider.checkpointBeforeClose?.(opened.driver.sessionRef), { ok: false, code: 'unavailable' });
+  assert.equal(provider.isReady(), false, 'teardown evidence never renews public admission');
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+});
+
+test('a revoked V2 capture cannot retain a closing checkpoint for a later lease', async () => {
+  const { captured } = owner(true);
+  const input = context();
+  let current = true;
+  input.isCurrent = () => current;
+  const provider = createOpenCodeV2MemberProvider(input, captured);
+  const opened = await provider.factory.open(request());
+  current = false;
+  assert.equal(provider.isReady(), false, 'observed lease loss permanently revokes qualification');
+  current = true;
+  provider.seal();
+  assert.deepEqual(provider.checkpointBeforeClose?.(opened.driver.sessionRef), { ok: false, code: 'unavailable' });
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+});
+
 
 test('V2 owner cleanup never follows replaced process-stop or confirmation callbacks',
   async () => {
@@ -2855,7 +2903,7 @@ test('idle observer revokes an expired native V2 lease without seal or native ev
   { timeout: 3000 }, async () => {
     const { captured, calls } = owner(true);
     let leaseValid = true;
-    const ctx = { ...context(), canAllocate: () => leaseValid };
+    const ctx = { ...context(), isCurrent: () => leaseValid };
     const provider = createOpenCodeV2MemberProvider(ctx, captured);
     const opened = await provider.factory.open(request());
     assert.equal(provider.isReady(), true);
@@ -3040,6 +3088,105 @@ test('pending native V2 re-attestation fences concurrent controls without retiri
     assert.equal(calls.stop, 1, 'only Host seal stops the original native owner');
   });
 
+test('active native V2 polling drains before re-attestation and resumes without sealing the turn',
+  { timeout: 10000 }, async () => {
+    const within = async <T>(work: Promise<T>): Promise<T> => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        return await Promise.race([work, new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('TEST native polling handshake timeout')), 2000);
+        })]);
+      } finally { clearTimeout(timer); }
+    };
+    const profile = v2Profile();
+    profile.limits.timeoutMs = 5000;
+    const sessionPath = '/api/session/' + profile.nativeSessionId;
+    const heldRead = Promise.withResolvers<void>();
+    const releaseRead = Promise.withResolvers<void>();
+    const probeEntered = Promise.withResolvers<void>();
+    const releaseProbe = Promise.withResolvers<void>();
+    const resumedPoll = Promise.withResolvers<void>();
+    let handed = false, held = false, suspendProbe = false, resumed = false;
+    let postCount = 0, requestCount = 0;
+    const server = createServer((req, res) => {
+      requestCount++;
+      const path = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
+      const json = (value: unknown) => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(value)); };
+      if (req.method === 'GET' && path === sessionPath) {
+        const reply = () => json({ data: { id: profile.nativeSessionId,
+          location: { directory: profile.cwd }, agent: 'TEST-agent',
+          model: { providerID: 'TEST-provider', id: 'TEST-model' }, time: { created: 1 } } });
+        if (handed && !held) {
+          held = true; heldRead.resolve(); void releaseRead.promise.then(reply);
+        } else reply();
+      } else if (path.endsWith('/log')) {
+        res.setHeader('content-type', 'text/event-stream');
+        res.end([
+          { id: 'evt_created', type: 'session.created', durable: { aggregateID: profile.nativeSessionId, seq: 0 },
+            data: { sessionID: profile.nativeSessionId }, location: { directory: profile.cwd } },
+          { type: 'log.synced', aggregateID: profile.nativeSessionId, seq: 0 },
+        ].map(value => 'data: ' + JSON.stringify(value) + '\n\n').join(''));
+      } else if (path.endsWith('/message')) {
+        json({ data: [], cursor: { next: null, previous: null } });
+      } else if (path.endsWith('/permission')) {
+        json({ data: [] });
+        if (resumed) resumedPoll.resolve();
+      } else if (req.method === 'POST' && path.endsWith('/prompt')) {
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', () => {
+          const input = JSON.parse(body) as { id: string; text: string };
+          postCount++; handed = true;
+          json({ data: { id: input.id, sessionID: profile.nativeSessionId, type: 'user',
+            delivery: 'queue', time: { created: 1 }, payload: { text: input.text } } });
+        });
+      } else { res.writeHead(404); res.end(); }
+    });
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+    profile.endpoint = 'http://127.0.0.1:' + address.port;
+    const { captured, calls } = owner(true);
+    captured.probe = async () => {
+      calls.probe++;
+      if (suspendProbe) { probeEntered.resolve(); await releaseProbe.promise; }
+      return true;
+    };
+    const provider = createOpenCodeV2MemberProvider(context(profile), captured);
+    const opened = await provider.factory.open(request());
+    try {
+      assert.equal((await opened.driver.submit({ inputId: 'TEST-poll', operationRef: 'TEST-poll-op', content: 'TEST' })).ok, true);
+      await within(heldRead.promise);
+      const beforeProbe = calls.probe;
+      suspendProbe = true;
+      const recheck = opened.driver.checkReadiness();
+      await new Promise<void>(resolve => setImmediate(resolve));
+      assert.equal(calls.probe, beforeProbe, 'read in flight keeps its existing verified admission');
+      releaseRead.resolve();
+      await within(probeEntered.promise);
+      const passwordAtProbe = calls.password, requestsAtProbe = requestCount;
+      await new Promise(resolve => setTimeout(resolve, 50));
+      assert.equal(calls.password, passwordAtProbe, 'the following poll waits before reading credentials');
+      assert.equal(requestCount, requestsAtProbe, 'no native polling request during unverified admission');
+      assert.equal(calls.stop, 0, 'waiting for a proof does not seal the current native turn');
+      resumed = true; releaseProbe.resolve();
+      const reattested = await within(recheck);
+      assert.ok(reattested && typeof reattested === 'object' && 'ok' in reattested);
+      assert.equal(reattested.ok, true);
+      await within(resumedPoll.promise);
+      assert.equal(provider.isReady(), true, 'the same active driver polls successfully after admission');
+      assert.equal(postCount, 1, 're-attestation never resubmits a prompt');
+      assert.equal(calls.stop, 0);
+    } finally {
+      releaseRead.resolve(); releaseProbe.resolve();
+      await opened.driver.close();
+      await provider.cleanup();
+      server.closeAllConnections();
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
+  });
+
 // Even though the corrected V2 driver admits canonical Windows directories,
 // drive-relative paths must fail before a native probe or credential access.
 test('private V2 driver refuses drive-relative Windows cwd before network access',
@@ -3055,7 +3202,7 @@ test('private V2 driver refuses drive-relative Windows cwd before network access
     assert.equal(await provider.cleanup(), true);
   });
 
-test('late native prompt ACK stays UNKNOWN across re-attestation recovery and Host seal',
+test('late native prompt ACK stays UNKNOWN when re-attestation waits for its request or Host seals',
   { timeout: 15000 }, async () => {
     // An outer node:test timeout alone cannot release unresolved promises or
     // close live peers. Bound each synthetic HTTP/re-attestation handshake.
@@ -3070,7 +3217,7 @@ test('late native prompt ACK stays UNKNOWN across re-attestation recovery and Ho
       }
     };
     // Independent disposable peers: active turns must never cross TEST sessions.
-    for (const mode of ['recheck', 'recheck-restored', 'seal'] as const) {
+    for (const mode of ['recheck', 'seal'] as const) {
       const profile = v2Profile();
       const postSeen = Promise.withResolvers<void>();
       const releaseAck = Promise.withResolvers<void>();
@@ -3153,18 +3300,12 @@ test('late native prompt ACK stays UNKNOWN across re-attestation recovery and Ho
         await within(postSeen.promise, mode + ' POST received');
         if (mode !== 'seal') {
           suspendRecheck = true;
+          const probesBeforeCheck = calls.probe;
           const recheck = opened.driver.checkReadiness();
-          await within(recheckEntered.promise, 're-attestation started');
+          await new Promise<void>(resolve => setImmediate(resolve));
           assert.equal(provider.isReady(), false);
-          if (mode === 'recheck-restored') {
-            completeRecheck.resolve();
-            const recoveredReadback = await within(recheck, 'successful re-attestation');
-            assert.ok(recoveredReadback && typeof recoveredReadback === 'object' &&
-              'ok' in recoveredReadback, 're-attestation returns a structured SPI reply');
-            assert.equal(recoveredReadback.ok, true);
-            assert.equal(provider.isReady(), true, 'owner restored before late native POST ACK');
-            assert.equal(calls.stop, 0, 'a successful probe alone must not retire the owner');
-          }
+          assert.equal(calls.probe, probesBeforeCheck,
+            'a new probe cannot invalidate credentials held by the unfinished POST');
           releaseAck.resolve();
           assert.deepEqual(await within(pending, mode + ' native ACK'), { ok: false, code: 'unknown' },
             'late POST ACK cannot inherit newly restored readiness after an intervening probe');
@@ -3174,14 +3315,11 @@ test('late native prompt ACK stays UNKNOWN across re-attestation recovery and Ho
           // A probe by itself must not stop the PID; an uncertain mutation does.
           assert.equal(calls.stop, 1, 'uncertain native handoff retires only its TEST-owned PID');
           assert.equal(provider.isReady(), false, 'no renewed readiness after UNKNOWN delivery');
-          if (mode === 'recheck') {
-            provider.seal();
-            completeRecheck.resolve();
-            const sealedReadback = await within(recheck, 'sealed re-attestation');
-            assert.ok(sealedReadback && typeof sealedReadback === 'object' && 'ok' in sealedReadback,
-              'the private Session SPI must return a structured readiness result');
-            assert.equal(sealedReadback.ok, false, 'seal revokes the suspended native probe');
-          }
+          provider.seal();
+          completeRecheck.resolve();
+          const sealedReadback = await within(recheck, 'sealed re-attestation');
+          assert.ok(sealedReadback && typeof sealedReadback === 'object' && 'ok' in sealedReadback);
+          assert.equal(sealedReadback.ok, false, 'uncertain mutation revokes the waiting native probe');
         } else {
           provider.seal();
           releaseAck.resolve();

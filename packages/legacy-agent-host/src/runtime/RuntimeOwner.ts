@@ -71,6 +71,7 @@ export class RuntimeOwner {
       hostIncarnation: options.hostIncarnation,
       authorize: options.authorize,
       driver: (binding) => this.drivers.get(this.key(binding)),
+      ...(options.checkpointBeforeClose ? { checkpointBeforeClose: options.checkpointBeforeClose } : {}),
       ...(options.checkpoints ? { storage: options.checkpoints } : {}),
       ...(options.checkpointIdleTimeoutMs === undefined
         ? {}

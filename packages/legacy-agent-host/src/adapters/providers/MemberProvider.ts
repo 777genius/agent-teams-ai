@@ -5,7 +5,7 @@ import type {
   RegisteredProcessCapture,
   RegistrarBinding,
 } from '../../process/registeredProcessContracts.js';
-import type { DriverFactory, OpenConfig } from '@agent-teams/provider-session-contracts';
+import type { DriverFactory, OpenConfig, Session } from '@agent-teams/provider-session-contracts';
 import type { TeamMcpEndpoint, TeamMcpConnection } from '../../mcp/contracts.js';
 import type { NativeContextEvidence } from '../../team-launch/contracts.js';
 import type { RuntimeMemberProfile } from '../../composition/runtimeProfile.js';
@@ -40,6 +40,8 @@ export interface MemberProvider {
   isReady(): boolean;
   /** Installed exact initial context, acknowledged through successful D native configuration/readiness. */
   initialContextEvidence?(): NativeContextEvidence | undefined;
+  /** Composition-only final evidence for Runtime's original closing/owned/idle session. */
+  checkpointBeforeClose?(sessionRef: string): ReturnType<Session['checkpoint']>;
   seal(): void;
   cleanup(): Promise<boolean>;
 }
