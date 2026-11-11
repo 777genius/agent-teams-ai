@@ -40,7 +40,7 @@ if (process.argv[2] === '--worker') {
   if (!prefix?.startsWith('/') || !/^[a-f0-9]{40}$/.test(head || '') ||
     execFileSync('git', ['rev-parse','HEAD'], {encoding:'utf8'}).trim() !== head)
     throw Error('TEST_source_or_prefix_unqualified');
-  const { parseOwnedDurableLog } = await import('./opencode-v2-native-log-parse.mjs');
+  const { parseOwnedDurableLog, retainsOwnedDurablePrefix } = await import('./opencode-v2-native-log-parse.mjs');
   const root = mkdtempSync(join(tmpdir(), 'TEST-opencode-v2-persist-'));
   const receiptPath = resolve(process.env.OPENCODE_V2_TEST_HTTP_RECEIPT || 'opencode-v2-http-persist.json');
   const receipt = {kind:'TEST_V2_HTTP_DURABLE_DISCOVERY', sourceHead:head, version:'2.0.21',
@@ -213,7 +213,7 @@ if (process.argv[2] === '--worker') {
     const outcome=parseOwnedDurableLog(response.text,id,workspace,e=>events.push(e));
     if(outcome.eventCount!==1||events[0]?.type!=='session.created')
       throw Error('TEST_durable_session_create_missing');
-    return {id:events[0].id,seq:events[0].durable.seq,sync:outcome.watermark};
+    return {...outcome,positions:[events[0].durable.seq],fingerprints:[hash(JSON.stringify(events[0]))]};
   }
   try {
     const firstPid=await start();
@@ -508,7 +508,7 @@ if (process.argv[2] === '--worker') {
     if(restored.status!==200||restored.data?.data?.id!==sessionId)
       throw Error('TEST_cold_session_readback_failed');
     const after=await readLog(sessionId);
-    if(after.id!==before.id||after.seq!==before.seq||after.sync!==before.sync)
+    if(after.watermark!==before.watermark||after.eventCount!==before.eventCount||!retainsOwnedDurablePrefix(before,after))
       throw Error('TEST_cold_durable_event_identity_changed');
     // Saved permissions must be evaluated by the newly started native
     // process, not inferred from a cached session rules array or old PID.
