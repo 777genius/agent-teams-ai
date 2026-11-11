@@ -632,6 +632,26 @@ function createButtonExpression(label) {
       && !button.disabled && button.getBoundingClientRect().width > 0)`;
 }
 
+/**
+ * Use a genuine CDP mouse click only after the nested Advanced toggle is in
+ * view. Offscreen CDP clicks can be silently ignored on Linux.
+ */
+async function expandCreateAdvancedCli(client, toggle, inputSelector) {
+  const input = `document.querySelector(${JSON.stringify(inputSelector)})`;
+  if (await client.evaluate(`Boolean(${input})`)) return;
+  await client.waitFor(toggle, 'create-page Advanced CLI toggle');
+  await client.evaluate(`(${toggle})?.scrollIntoView({
+    block: 'center', inline: 'nearest', behavior: 'instant'
+  })`);
+  await client.waitFor(`(() => {
+    const rect = (${toggle})?.getBoundingClientRect();
+    return Boolean(rect && rect.height > 0 &&
+      rect.top >= 0 && rect.bottom <= window.innerHeight);
+  })()`, 'Advanced CLI toggle inside the viewport');
+  await client.click(toggle);
+  await client.waitFor(`Boolean(${input})`, 'Advanced CLI input expanded');
+}
+
 async function setBrowserWindowZoom(inspector, factor) {
   return inspector.evaluate(
     "(() => {" +
@@ -963,11 +983,7 @@ async function main() {
     const createAdvancedToggle = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
       .find(button => button.textContent?.trim() === 'Advanced' && !button.disabled
         && button.getBoundingClientRect().width > 0)`;
-    await cdp.click(createAdvancedToggle);
-    await cdp.waitFor(
-      `Boolean(document.querySelector(${JSON.stringify(customArgsSelector)}))`,
-      'Advanced CLI section expanded by its page-scoped toggle'
-    );
+    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
     try {
       await cdp.waitFor(
         `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 2'`,
@@ -1019,8 +1035,7 @@ async function main() {
       `${optionalSettingsButton}?.getAttribute('aria-expanded') === 'true'`
     );
     if (!optionalExpandedAfterResume) await cdp.click(optionalSettingsButton);
-    const hasAdvancedInput = await cdp.evaluate(`Boolean(document.querySelector(${JSON.stringify(customArgsSelector)}))`);
-    if (!hasAdvancedInput) await cdp.click(createAdvancedToggle);
+    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
     await cdp.waitFor(
       `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
       'Advanced CLI edit retained after real editor unmount and resume'
@@ -1249,7 +1264,7 @@ async function main() {
           && button.getBoundingClientRect().width > 0)`;
       const expanded = await cdp.evaluate(`${optionalButton}?.getAttribute('aria-expanded') === 'true'`);
       if (!expanded) await cdp.click(optionalButton);
-      await cdp.click(createAdvancedToggle);
+      await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
     }
     await cdp.waitFor(
       `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
