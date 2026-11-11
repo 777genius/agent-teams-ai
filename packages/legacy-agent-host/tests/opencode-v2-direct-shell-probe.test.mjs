@@ -37,7 +37,8 @@ test('one owned direct shell file effect is not a model/tool authorization certi
   const result = await probeNativeDirectShellEffect(
     call, '/TEST/workspace', async file => {
       assert.equal(file, DIRECT_SHELL_EFFECT_FILE);
-      return DIRECT_SHELL_EXPECTED;
+      return calls.some(x => x.path.endsWith('/shell') && x.method === 'POST')
+        ? DIRECT_SHELL_EXPECTED : undefined;
     });
   assert.deepEqual(result, { attempted: true, outcome: 'effect-confirmed', status: 204,
     responseUncertain: false, modelTurnProven: false,
@@ -60,14 +61,15 @@ test('success without an actual file effect is HOLD, not fabricated proof', asyn
   let reads = 0;
   const result = await probeNativeDirectShellEffect(call, '/TEST/workspace',
     async () => { reads++; return undefined; }, async () => {});
-  assert.equal(reads, 12);
+  assert.equal(reads, 13, 'one preflight absence and twelve read-only post-mutation checks');
   assert.equal(result.outcome, 'hold');
   assert.equal(counted(calls, '/shell'), 1);
 });
 test('uncertain HTTP ACK remains HOLD even if the TEST file was written', async () => {
   const { call, calls } = fake({ throwOnShell: true });
   const result = await probeNativeDirectShellEffect(call, '/TEST/workspace',
-    async () => DIRECT_SHELL_EXPECTED);
+    async () => calls.some(x => x.path.endsWith('/shell') && x.method === 'POST')
+      ? DIRECT_SHELL_EXPECTED : undefined);
   assert.equal(result.outcome, 'hold');
   assert.equal(result.responseUncertain, true);
   assert.equal(result.status, null);
@@ -84,14 +86,24 @@ test('foreign-session native readback refuses shell mutation but cleans once', a
 test('unexpected workspace contents never count as successful direct shell', async () => {
   const { call, calls } = fake();
   await assert.rejects(probeNativeDirectShellEffect(call, '/TEST/workspace',
-    async () => 'FORGED'), /TEST_direct_shell_unexpected_file_effect/);
+    async () => calls.some(x => x.path.endsWith('/shell') && x.method === 'POST')
+      ? 'FORGED' : undefined), /TEST_direct_shell_unexpected_file_effect/);
   assert.equal(counted(calls, '/shell'), 1);
   assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 1);
 });
 test('uncertain cleanup is an error even after native shell success', async () => {
   const { call, calls } = fake({ cleanupStatus: 503 });
   await assert.rejects(probeNativeDirectShellEffect(call, '/TEST/workspace',
-    async () => DIRECT_SHELL_EXPECTED), /TEST_direct_shell_session_cleanup_unconfirmed/);
+    async () => calls.some(x => x.path.endsWith('/shell') && x.method === 'POST')
+      ? DIRECT_SHELL_EXPECTED : undefined), /TEST_direct_shell_session_cleanup_unconfirmed/);
   assert.equal(counted(calls, '/shell'), 1);
+  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 1);
+});
+
+test('a preexisting marker cannot counterfeit a fresh native shell effect', async () => {
+  const { call, calls } = fake();
+  await assert.rejects(probeNativeDirectShellEffect(call, '/TEST/workspace',
+    async () => DIRECT_SHELL_EXPECTED), /TEST_direct_shell_stale_effect_preexisting/);
+  assert.equal(counted(calls, '/shell'), 0);
   assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 1);
 });

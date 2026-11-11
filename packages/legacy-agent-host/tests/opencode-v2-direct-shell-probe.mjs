@@ -29,6 +29,10 @@ export async function probeNativeDirectShellEffect(
     const snapshot = await call(base);
     if (!isOwnedNativeSessionSnapshot(snapshot, id, workspace, rules))
       throw Error('TEST_direct_shell_session_not_owned');
+    // Fresh TEST evidence must be absent BEFORE the only native mutation.
+    // A stale file can otherwise masquerade as an acknowledged shell effect.
+    if (await readEffect(DIRECT_SHELL_EFFECT_FILE) !== undefined)
+      throw Error('TEST_direct_shell_stale_effect_preexisting');
     let status = null;
     let responseUncertain = false;
     // One and only one native shell submission. A rejected HTTP response, a
