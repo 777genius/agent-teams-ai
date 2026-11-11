@@ -1,0 +1,205 @@
+name: Prepare verified Stage1 provider Git objects
+on:
+  push:
+    branches: [chore/stage1-provider-import-4f7cd2ac]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  prepare:
+    if: github.repository == '777genius/agent-teams-ai' && github.ref == 'refs/heads/chore/stage1-provider-import-4f7cd2ac'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: 5951879ce8ce369987dc2fcb3e8798a6ef964a2b
+          persist-credentials: false
+      - name: Validate immutable checked packages and prepare objects without updating refs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          """One-time verified Git object preparation. Never changes a branch/ref."""
+          import base64, difflib, hashlib, io, json, os, subprocess, tarfile, urllib.error, urllib.parse, urllib.request, zipfile
+          from pathlib import Path
+
+          REPO = '777genius/agent-teams-ai'
+          BASE = '5951879ce8ce369987dc2fcb3e8798a6ef964a2b'
+          BASE_TREE = '82d06d0c5872e29c219cb8ffbbe87bcb6d759c83'
+          SOURCE_REPO = 'agent-teams-ai/old-provider-implementations'
+          SOURCE = '4f7cd2ac21ddb78be753bb541f0023ee0525bdb9'
+          RUN = 42855249625
+          ARTIFACT = 13782551886
+          ARCHIVE_SHA = 'a2f05b759ebdd46a12cf3dd5e92c591cc537fda8aa7168e3f60bea9ba473d0ea'
+          OLD_DIR = 'opencode-v2-host-05896780'
+          NEW_DIR = 'opencode-v2-host-4f7cd2ac'
+          PACKAGES = {
+              'agent-teams-provider-implementations-0.0.0.tgz': (155865, 'b2924bf99f3bb8004159257e0fd2147a95e8a7ccd8264385265103d0f182ced8', '289250ca17e5c6f245aba506f96d9667bfec4b09'),
+              'agent-teams-provider-session-contracts-0.0.0.tgz': (6220, 'aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db', 'beaa6ead57324fc9478c91954d8a2fdfbab27458'),
+          }
+
+          def git_hash(data):
+              return hashlib.sha1(f'blob {len(data)}\0'.encode() + data).hexdigest()
+
+          def checked_packages(data):
+              assert len(data) == 162995 and hashlib.sha256(data).hexdigest() == ARCHIVE_SHA
+              with zipfile.ZipFile(io.BytesIO(data)) as archive:
+                  assert sorted(archive.namelist()) == sorted([*PACKAGES, 'receipt.json'])
+                  assert all(item.file_size <= 200000 for item in archive.infolist())
+                  assert archive.testzip() is None
+                  receipt = json.loads(archive.read('receipt.json'))
+                  assert receipt['sourceCommit'] == SOURCE
+                  assert receipt['qualification'] == 'source-and-packed-consumer-only'
+                  assert receipt['nativeHostQualified'] is False and receipt['packagedElectronQualified'] is False
+                  result = {}
+                  for name, (size, digest, blob) in PACKAGES.items():
+                      content = archive.read(name)
+                      assert len(content) == size and hashlib.sha256(content).hexdigest() == digest
+                      assert git_hash(content) == blob
+                      assert sum(p == {'file': name, 'bytes': size, 'sha256': digest} for p in receipt['packages']) == 1
+                      result[name] = content
+                  assert len(receipt['packages']) == 2
+                  return result, receipt
+
+          def package_manifest(data):
+              with tarfile.open(fileobj=io.BytesIO(data), mode='r:gz') as archive:
+                  entry = archive.getmember('package/package.json')
+                  assert entry.isfile() and entry.size < 20000
+                  return json.load(archive.extractfile(entry))
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          OPENER = urllib.request.build_opener(NoRedirect())
+
+          def request(path, body=None, redirect=False):
+              assert path.startswith('/repos/' + REPO + '/') or path.startswith('/repos/' + SOURCE_REPO + '/')
+              if body is not None:
+                  assert path in ['/repos/' + REPO + '/git/blobs', '/repos/' + REPO + '/git/trees']
+              req = urllib.request.Request('https://api.github.com' + path,
+                  data=None if body is None else json.dumps(body).encode(),
+                  headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json',
+                           'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json'})
+              try:
+                  with OPENER.open(req, timeout=40) as response:
+                      data = response.read(4 * 1024 * 1024 + 1)
+                      assert len(data) <= 4 * 1024 * 1024
+                      return json.loads(data)
+              except urllib.error.HTTPError as error:
+                  if redirect and error.code == 302:
+                      location = error.headers['Location']
+                      url = urllib.parse.urlsplit(location)
+                      assert url.scheme == 'https' and not url.username and not url.password
+                      assert url.hostname.endswith('.blob.core.windows.net') or url.hostname.endswith('.actions.githubusercontent.com')
+                      # Never forward the GitHub token to the signed artifact host.
+                      with OPENER.open(urllib.request.Request(location), timeout=40) as response:
+                          data = response.read(200001)
+                          assert len(data) <= 200000
+                          return data
+                  raise RuntimeError('GitHub request failed with HTTP ' + str(error.code)) from None
+
+          def read_at_base(path):
+              assert path in ALLOWED or path.startswith('vendor/provider-migration/' + OLD_DIR + '/')
+              data = Path(path).read_bytes()
+              assert len(data) <= 2 * 1024 * 1024
+              expected = subprocess.check_output(['git', 'rev-parse', BASE + ':' + path], text=True).strip()
+              assert git_hash(data) == expected
+              return data
+
+          ALLOWED = [
+              'packages/legacy-agent-host/package.json', 'pnpm-workspace.yaml', 'pnpm-lock.yaml',
+              'scripts/legacy-agent-host/desktop-native-stop-fixture.ts',
+              'packages/legacy-agent-host/tests/native-opencode-host.native.ts',
+          ]
+
+          def create_blob(data):
+              expected = git_hash(data)
+              result = request('/repos/' + REPO + '/git/blobs', {'content': base64.b64encode(data).decode(), 'encoding': 'base64'})
+              assert result['sha'] == expected
+              return expected
+
+          def prepare():
+              assert os.environ['GITHUB_REPOSITORY'] == REPO
+              assert os.environ['GITHUB_REF'] == 'refs/heads/chore/stage1-provider-import-4f7cd2ac'
+              assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == BASE
+              assert subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip() == BASE_TREE
+              references = subprocess.check_output(['git', 'grep', '-l', '-F', OLD_DIR], text=True).splitlines()
+              assert sorted(references) == sorted(ALLOWED), 'unexpected archive consumers require review'
+              # No install, native execution, source commit or ref update is performed.
+              metadata = request('/repos/' + SOURCE_REPO + '/actions/artifacts/' + str(ARTIFACT))
+              assert metadata['expired'] is False and metadata['digest'] == 'sha256:' + ARCHIVE_SHA
+              assert metadata['workflow_run']['id'] == RUN and metadata['workflow_run']['head_sha'] == SOURCE
+              run = request('/repos/' + SOURCE_REPO + '/actions/runs/' + str(RUN))
+              assert run['conclusion'] == 'success' and run['head_sha'] == SOURCE
+              packages, source_receipt = checked_packages(request('/repos/' + SOURCE_REPO + '/actions/artifacts/' + str(ARTIFACT) + '/zip', redirect=True))
+              integrity = {}
+              tree = []
+              for name, data in packages.items():
+                  old = read_at_base('vendor/provider-migration/' + OLD_DIR + '/' + name)
+                  a, b = package_manifest(old), package_manifest(data)
+                  for key in ['name', 'version', 'dependencies', 'peerDependencies', 'optionalDependencies', 'exports', 'engines']:
+                      assert a.get(key) == b.get(key), 'provider dependency/export contract changed'
+                  old_integrity = 'sha512-' + base64.b64encode(hashlib.sha512(old).digest()).decode()
+                  new_integrity = 'sha512-' + base64.b64encode(hashlib.sha512(data).digest()).decode()
+                  integrity[name] = (old_integrity, new_integrity)
+                  tree.append({'path': 'vendor/provider-migration/' + NEW_DIR + '/' + name, 'mode': '100644', 'type': 'blob', 'sha': create_blob(data)})
+              patch = ''
+              changed = []
+              for path, expected_count in [
+                  ('packages/legacy-agent-host/package.json', 2), ('pnpm-workspace.yaml', 1),
+                  ('pnpm-lock.yaml', None), ('scripts/legacy-agent-host/desktop-native-stop-fixture.ts', 1),
+                  ('packages/legacy-agent-host/tests/native-opencode-host.native.ts', 1),
+              ]:
+                  old = read_at_base(path).decode('utf8')
+                  count = old.count(OLD_DIR)
+                  assert count == expected_count if expected_count is not None else 2 <= count <= 50
+                  new = old.replace(OLD_DIR, NEW_DIR)
+                  if path == 'pnpm-lock.yaml':
+                      for name, (before, after) in integrity.items():
+                          if before == after:
+                              continue
+                          # Replace only the selected package's single tarball-resolution line.
+                          lines = new.splitlines(keepends=True)
+                          matches = [i for i, line in enumerate(lines) if NEW_DIR + '/' + name in line and 'integrity:' in line]
+                          assert len(matches) == 1 and before in lines[matches[0]]
+                          lines[matches[0]] = lines[matches[0]].replace(before, after)
+                          new = ''.join(lines)
+                  if path.endswith(('desktop-native-stop-fixture.ts', 'native-opencode-host.native.ts')):
+                      before = '8809d9e11e523bc02751698a993d1dd3cedd4e71382c79a487c3a56c9a89c87f'
+                      assert old.count(before) == 1
+                      new = new.replace(before, PACKAGES['agent-teams-provider-implementations-0.0.0.tgz'][1])
+                  assert old != new and OLD_DIR not in new
+                  tree.append({'path': path, 'mode': '100644', 'type': 'blob', 'sha': create_blob(new.encode())})
+                  changed.append({'path': path, 'oldPathCount': count, 'before': git_hash(old.encode()), 'after': git_hash(new.encode())})
+                  patch += ''.join(difflib.unified_diff(old.splitlines(True), new.splitlines(True), fromfile='a/' + path, tofile='b/' + path))
+              receipt_bytes = (json.dumps(source_receipt, indent=2) + '\n').encode()
+              tree.append({'path': 'vendor/provider-migration/' + NEW_DIR + '/receipt.json', 'mode': '100644', 'type': 'blob', 'sha': create_blob(receipt_bytes)})
+              prepared = request('/repos/' + REPO + '/git/trees', {'base_tree': BASE_TREE, 'tree': tree})
+              report = {'baseCommit': BASE, 'baseTree': BASE_TREE, 'preparedTree': prepared['sha'], 'entries': tree,
+                        'sourceCommit': SOURCE, 'sourceWorkflow': RUN, 'sourceArtifact': ARTIFACT,
+                        'archiveSha256': ARCHIVE_SHA, 'changed': changed, 'refsUpdated': False,
+                        'nativeHostQualified': False, 'packagedElectronQualified': False}
+              Path('provider-import-receipt.json').write_text(json.dumps(report, indent=2) + '\n')
+              Path('provider-import.patch').write_text(patch)
+              print(json.dumps(report, indent=2))
+
+          if __name__ == '__main__':
+              try:
+                  prepare()
+              except Exception as error:
+                  # No native/source data, token, HTTP body or signed URL in public errors.
+                  print('Verified provider object preparation failed: ' + type(error).__name__)
+                  raise SystemExit(1)
+          PY
+      - name: Preserve preparation diff and provenance (not native qualification)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: stage1-provider-import-4f7cd2ac
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            provider-import-receipt.json
+            provider-import.patch
