@@ -800,6 +800,7 @@ test('V2 draft Default preserves the native session model and rejects drifted pr
   const saved = runtimeMemberProfileSchema.parse({
     ...template, nativeSessionId: 'ses_TESTbound',
   });
+  if (saved.provider !== 'opencode') throw Error('TEST_expected_saved_opencode_profile');
   const { effort: _effort, context: _context, ...selection } = f.selection();
   const input: TeamModelProbeSelection = {
     ...selection,
