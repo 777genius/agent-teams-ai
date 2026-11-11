@@ -161,6 +161,23 @@ describe('extractUserFlags', () => {
     expect(extractUserFlags('-dr')).toEqual(['-d']);
     expect(extractUserFlags('--max-turns -1')).toEqual(['--max-turns', '-1']);
   });
+
+  it('skips the value of an option that requires one, even if it starts with a dash', () => {
+    expect(extractUserFlags('--append-system-prompt "-review the patch"')).toEqual([
+      '--append-system-prompt',
+    ]);
+    expect(extractUserFlags('-n -rname -p')).toEqual(['-n', '-p']);
+    // An attached value is already part of the token, so the next token is a flag.
+    expect(extractUserFlags('--append-system-prompt=x -r abc')).toEqual([
+      '--append-system-prompt',
+      '-r',
+    ]);
+  });
+
+  it('keeps a non-letter remainder of a short cluster so validation can report it', () => {
+    expect(extractUserFlags('-p1')).toEqual(['-p', '-1']);
+    expect(extractUserFlags('-pc2')).toEqual(['-p', '-c', '-2']);
+  });
 });
 
 describe('PROTECTED_CLI_FLAGS', () => {

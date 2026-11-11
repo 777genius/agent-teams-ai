@@ -126,33 +126,87 @@ export function extractFlagsFromHelp(helpOutput: string): Set<string> {
  */
 export function extractUserFlags(raw: string): string[] {
   const tokens = parseCliArgs(raw);
-  return tokens
-    .filter((token) => token.startsWith('-'))
-    .flatMap((token) => {
-      if (/^-[A-Za-z]/.test(token)) {
-        return expandShortFlagToken(token);
-      }
-      // Normalize the `--flag=value` form to the bare flag name so protected-flag
-      // checks (PROTECTED_CLI_FLAGS.has(...)) cannot be bypassed by appending
-      // `=value` (e.g. `--mcp-config=/evil`, `--dangerously-skip-permissions=1`).
-      // parseCliArgs splits only on whitespace/quotes, so `--flag=value` arrives
-      // as a single token and would otherwise miss an exact-match blocklist.
-      const equalsIndex = token.indexOf('=');
-      return [equalsIndex === -1 ? token : token.slice(0, equalsIndex)];
-    });
+  const flags: string[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (!token.startsWith('-')) continue;
+    if (/^-[A-Za-z]/.test(token)) {
+      const shortFlags = expandShortFlagToken(token);
+      flags.push(...shortFlags);
+      // `-n NAME`: the CLI reads the next token as the value, even if it starts with `-`.
+      const last = shortFlags[shortFlags.length - 1];
+      if (token === last && OPTIONS_WITH_REQUIRED_VALUE.has(last)) i++;
+      continue;
+    }
+    // Normalize the `--flag=value` form to the bare flag name so protected-flag
+    // checks (PROTECTED_CLI_FLAGS.has(...)) cannot be bypassed by appending
+    // `=value` (e.g. `--mcp-config=/evil`, `--dangerously-skip-permissions=1`).
+    // parseCliArgs splits only on whitespace/quotes, so `--flag=value` arrives
+    // as a single token and would otherwise miss an exact-match blocklist.
+    const equalsIndex = token.indexOf('=');
+    flags.push(equalsIndex === -1 ? token : token.slice(0, equalsIndex));
+    // `--append-system-prompt "-review it"`: the CLI reads the next token as the
+    // value of an option that requires one, even if it starts with `-`.
+    if (equalsIndex === -1 && OPTIONS_WITH_REQUIRED_VALUE.has(token)) i++;
+  }
+  return flags;
 }
 
 /** Short `claude` options that take no value, so a cluster like `-pr` goes on to `-r`. */
 const SHORT_FLAGS_WITHOUT_VALUE = new Set(['c', 'h', 'p', 'v']);
 
+/** `claude --help` options shown with a required `<value>`. */
+const OPTIONS_WITH_REQUIRED_VALUE = new Set([
+  '--add-dir',
+  '--agent',
+  '--agents',
+  '--allowedTools',
+  '--allowed-tools',
+  '--append-system-prompt',
+  '--autocompact',
+  '--betas',
+  '--debug-file',
+  '--disallowedTools',
+  '--disallowed-tools',
+  '--effort',
+  '--environment',
+  '--fallback-model',
+  '--file',
+  '--input-format',
+  '--json-schema',
+  '--max-budget-usd',
+  '--mcp-config',
+  '--model',
+  '-n',
+  '--name',
+  '--output-format',
+  '--permission-mode',
+  '--permission-prompts',
+  '--plugin-dir',
+  '--plugin-url',
+  '--remote-control-session-name-prefix',
+  '--session-id',
+  '--setting-sources',
+  '--settings',
+  '--system-prompt',
+  '--system-prompt-snapshot',
+  '--tools',
+]);
+
 /**
  * Splits a short-option token the way the CLI reads it, so protected checks see
- * `-r` in `-rabc`, `-r=abc` and `-pr`.
+ * `-r` in `-rabc`, `-r=abc` and `-pr`. A non-letter after a no-value option stays
+ * as its own flag (`-p1` gives `-p`, `-1`), so validation still reports it.
  */
 function expandShortFlagToken(token: string): string[] {
   const flags: string[] = [];
-  for (const ch of token.slice(1)) {
-    if (!/[A-Za-z]/.test(ch)) break;
+  const letters = token.slice(1);
+  for (let i = 0; i < letters.length; i++) {
+    const ch = letters[i];
+    if (!/[A-Za-z]/.test(ch)) {
+      flags.push(`-${letters.slice(i)}`);
+      break;
+    }
     flags.push(`-${ch}`);
     if (!SHORT_FLAGS_WITHOUT_VALUE.has(ch)) break;
   }
