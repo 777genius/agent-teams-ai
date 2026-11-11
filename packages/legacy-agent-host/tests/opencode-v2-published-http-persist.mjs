@@ -684,6 +684,8 @@ if (process.argv[2] === '--worker') {
       await import('../dist/adapters/providers/OpenCodeV2MemberProvider.js');
     const { initialContextDigest } =
       await import('../dist/team-launch/context.js');
+    const { matchesOpenCodeV2ModelVariant } =
+      await import('../dist/adapters/providers/OpenCodeV2ModelVariant.js');
     const instructions = 'TEST Host-owned team, member and workspace instructions';
     const requiredRules = [
       { action:'external_directory', resource:'*', effect:'deny' },
@@ -696,7 +698,8 @@ if (process.argv[2] === '--worker') {
     receipt.nativeModelReadback=modelRead.status!==200?'session-unreadable':
       !nativeModel?'missing':
       nativeModel.providerID==='TEST-provider' && nativeModel.id==='TEST-model' &&
-      (nativeModel.variant===undefined || nativeModel.variant===null)
+      matchesOpenCodeV2ModelVariant(undefined,
+        nativeModel.variant === undefined ? null : nativeModel.variant)
         ?'captured':'mismatch';
     if(receipt.nativeModelReadback!=='captured')
       throw Error('TEST_native_selected_model_unconfirmed');

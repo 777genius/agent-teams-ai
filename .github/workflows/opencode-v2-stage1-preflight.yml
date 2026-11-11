@@ -88,6 +88,8 @@ jobs:
         run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Typecheck Host TEST contracts
         run: pnpm --filter @agent-teams/legacy-agent-host typecheck:test
+      - name: Verify captured and native model variants through Host SPI
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-model-variant.test.ts packages/legacy-agent-host/tests/opencode-v2-model-variant-spi.test.ts
       - name: Verify generation-preserving install and update policy
         run: pnpm exec vitest run test/features/opencode-runtime-installer/installPolicy.test.ts test/main/services/infrastructure/OpenCodeRuntimeInstallerService.test.ts
       - name: Execute V2 static preflight, current-main lock and FIFO negatives

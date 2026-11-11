@@ -10,6 +10,7 @@ import { join, resolve } from 'node:path';
 import { createServer } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createOpenCodeV2MemberProvider } from '../dist/adapters/providers/OpenCodeV2MemberProvider.js';
+import { matchesOpenCodeV2ModelVariant } from '../dist/adapters/providers/OpenCodeV2ModelVariant.js';
 import { initialContextDigest } from '../dist/team-launch/context.js';
 import { preflightOpenCodeV2EffectiveExternalDirectory } from '../dist/composition/openCodeV2StaticPreflight.js';
 import { parseOwnedDurableLog, retainsOwnedDurablePrefix } from './opencode-v2-native-log-parse.mjs';
@@ -308,7 +309,8 @@ try {
   receipt.nativeModelReadback=modelRead.status!==200?'session-unreadable':
     !nativeModel?'missing':
     nativeModel.providerID==='TEST-provider' && nativeModel.id==='TEST-model' &&
-    (nativeModel.variant===undefined || nativeModel.variant===null)
+    matchesOpenCodeV2ModelVariant(undefined,
+      nativeModel.variant === undefined ? null : nativeModel.variant)
       ?'captured':'mismatch';
   if(receipt.nativeModelReadback!=='captured')
     throw Error('native_selected_model_unconfirmed');

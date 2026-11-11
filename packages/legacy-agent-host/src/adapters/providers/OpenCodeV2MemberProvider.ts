@@ -2,6 +2,7 @@ import { createOpenCodeV2DriverFactory } from '@agent-teams/provider-implementat
 import type { OpenCodeV2DriverConfig } from '@agent-teams/provider-implementations/opencode';
 import { types as nodeUtilTypes } from 'node:util';
 import { snapshotOpenCodeV2PermissionReadback } from './OpenCodeV2PermissionReadback.js';
+import { matchesOpenCodeV2ModelVariant } from './OpenCodeV2ModelVariant.js';
 import { snapshotOpenCodeV2CustodyReadback } from './OpenCodeV2CustodyReadback.js';
 import { matchesOpenCodeV2InitialContextReadback } from './OpenCodeV2InitialContextReadback.js';
 import { runtimeDigest } from '../../runtime/identity.js';
@@ -343,7 +344,7 @@ export function createOpenCodeV2MemberProvider(
                 effective.nativeSessionId !== profile.nativeSessionId || effective.directory !== profile.cwd ||
                 effective.modelProviderId !== profile.nativeOptions.providerId ||
                 effective.modelId !== profile.model ||
-                effective.modelVariant !== (profile.nativeOptions.variant ?? null) ||
+                !matchesOpenCodeV2ModelVariant(profile.nativeOptions.variant, effective.modelVariant) ||
                 effective.pid !== admittedCustody.pid ||
                 effective.startIdentity !== admittedCustody.startIdentity ||
                 combined.aborted || !current()) return false;
@@ -373,7 +374,7 @@ export function createOpenCodeV2MemberProvider(
                 finalEffective.nativeSessionId !== profile.nativeSessionId || finalEffective.directory !== profile.cwd ||
                 finalEffective.modelProviderId !== profile.nativeOptions.providerId ||
                 finalEffective.modelId !== profile.model ||
-                finalEffective.modelVariant !== (profile.nativeOptions.variant ?? null) ||
+                !matchesOpenCodeV2ModelVariant(profile.nativeOptions.variant, finalEffective.modelVariant) ||
                 finalEffective.pid !== admittedCustody.pid ||
                 finalEffective.startIdentity !== admittedCustody.startIdentity ||
                 combined.aborted || !current()) return false;
