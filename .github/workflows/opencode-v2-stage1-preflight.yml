@@ -18,6 +18,14 @@ on:
       # every Host source/test change invalidates the exact native proof.
       - packages/legacy-agent-host/src/**
       - packages/legacy-agent-host/tests/**
+      # Selection/update policy is tested with the same pinned Node/workspace.
+      - src/features/opencode-runtime-installer/**
+      - src/features/opencode-compatibility/**
+      - src/main/services/infrastructure/openCodeRuntimeLatestVersion.ts
+      - src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts
+      - src/main/services/infrastructure/openCodeRuntimePackageMetadata.ts
+      - test/features/opencode-runtime-installer/**
+      - test/main/services/infrastructure/OpenCodeRuntimeInstallerService.test.ts
       - vendor/provider-migration/**
       - scripts/ci/install-dependencies-with-retry.mjs
       - test/scripts/installDependenciesWithRetry.test.mjs
@@ -80,6 +88,8 @@ jobs:
         run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Typecheck Host TEST contracts
         run: pnpm --filter @agent-teams/legacy-agent-host typecheck:test
+      - name: Verify generation-preserving install and update policy
+        run: pnpm exec vitest run test/features/opencode-runtime-installer/installPolicy.test.ts test/main/services/infrastructure/OpenCodeRuntimeInstallerService.test.ts
       - name: Execute V2 static preflight, current-main lock and FIFO negatives
         env:
           OPENCODE_V2_CURRENT_PRODUCT_LOCK: ${{ github.workspace }}/.current-product-lock/runtime.lock.json
