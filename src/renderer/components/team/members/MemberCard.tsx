@@ -1075,7 +1075,7 @@ export const MemberCard = memo(function MemberCard({
     >
       <div
         className={cn(
-          'group relative cursor-pointer overflow-hidden rounded py-1.5',
+          'group/member group relative cursor-pointer overflow-hidden rounded py-1.5',
           rowSurfaceBleedClass
         )}
         style={undefined}
@@ -1258,6 +1258,16 @@ export const MemberCard = memo(function MemberCard({
             ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-2.5 justify-self-end">
+            {!isRemoved && !passive && (
+              <div className="pointer-events-none opacity-0 group-focus-within/member:pointer-events-auto group-focus-within/member:opacity-100 group-hover/member:pointer-events-auto group-hover/member:opacity-100 [@media(any-pointer:coarse)]:pointer-events-auto [@media(any-pointer:coarse)]:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
+                <MemberQuickActions
+                  onSendMessage={onSendMessage}
+                  onAssignTask={onAssignTask}
+                  onEditMember={onEditMember}
+                  editDisabled={isTeamProvisioning}
+                />
+              </div>
+            )}
             {showLaunchBadge ? (
               <span
                 className="flex shrink-0 items-center gap-1"
@@ -1498,14 +1508,6 @@ export const MemberCard = memo(function MemberCard({
               totalTasks={totalTasks}
               progressPercent={progressPercent}
             />
-            {!isRemoved && !passive && (
-              <MemberQuickActions
-                onSendMessage={onSendMessage}
-                onAssignTask={onAssignTask}
-                onEditMember={onEditMember}
-                editDisabled={isTeamProvisioning}
-              />
-            )}
             {canRestoreMember ? (
               <Tooltip>
                 <TooltipTrigger asChild>

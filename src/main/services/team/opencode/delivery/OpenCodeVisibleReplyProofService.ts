@@ -6,6 +6,7 @@ import {
   materializeOpenCodeGroupReply,
   type OpenCodeGroupReplySender,
 } from './OpenCodeGroupVisibleReply';
+import { isMisaddressedLeadPlainTextProof, materializeOpenCodeLeadPlainTextReply } from './OpenCodeLeadPlainTextReply';
 import {
   assertOpenCodePromptDeliveryNotCancelled,
   OpenCodePromptDeliveryCancelledError,
@@ -53,6 +54,18 @@ export interface OpenCodeVisibleReplyProofServiceDependencies {
     'correlateRuntimeDeliveryReply' | 'mergeRuntimeDeliveryTaskRefs' | 'sendMessage'
   >;
   getConfiguredLeadName: (teamName: string) => Promise<string | null>;
+  isConfiguredPeerRecipient?: (teamName: string, recipient: string) => Promise<boolean>;
+  readExactAssistantText?: (input: {
+    teamName: string;
+    memberName: string;
+    laneId: string;
+    runId: string;
+    sessionId: string;
+    assistantMessageId: string;
+    requireFailedMessageSendProof?: boolean;
+    runtimePromptMessageId?: string;
+    expectedReplyRecipient?: string;
+  }) => Promise<string | null>;
   emitRuntimeDeliveryReplyAdvisoryRefresh: (teamName: string, message: InboxMessage) => void;
   warn: (message: string) => void;
   getErrorMessage: (error: unknown) => string;
@@ -66,6 +79,13 @@ export class OpenCodeVisibleReplyProofService {
 
   constructor(private readonly deps: OpenCodeVisibleReplyProofServiceDependencies) {
     this.nowIso = deps.nowIso ?? (() => new Date().toISOString());
+  }
+
+  async getConfiguredLeadName(teamName: string): Promise<string | null> {
+    return this.deps.getConfiguredLeadName(teamName);
+  }
+  isConfiguredPeerRecipient(teamName: string, recipient: string): Promise<boolean> {
+    return this.deps.isConfiguredPeerRecipient?.(teamName, recipient) ?? Promise.resolve(false);
   }
 
   async findByRelayOfMessageId(input: {
@@ -339,6 +359,7 @@ export class OpenCodeVisibleReplyProofService {
     return getOpenCodeVisibleReplyInboxCandidates({
       replyRecipient: input.replyRecipient,
       configuredLeadName,
+      knownPeerRecipient: await this.isConfiguredPeerRecipient(input.teamName, input.replyRecipient ?? ''),
       includeUserFallbackForLeadRecipient: input.includeUserFallbackForLeadRecipient,
     });
   }
@@ -496,6 +517,8 @@ export class OpenCodeVisibleReplyProofService {
     if (!visibleReply) {
       return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     }
+    if (await isMisaddressedLeadPlainTextProof(input.ledgerRecord, input.teamName,
+      visibleReply, this.deps.getConfiguredLeadName, this.deps.isConfiguredPeerRecipient)) return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     const enriched = await this.ensureVisibleReplyTaskRefs({
       checkpoint: () =>
         assertOpenCodePromptDeliveryNotCancelled(
@@ -557,7 +580,6 @@ export class OpenCodeVisibleReplyProofService {
     }
     return { ledgerRecord, visibleReply: visibleReplyForProof };
   }
-
   async materializePlainTextReplyIfNeeded(
     input: Parameters<
       OpenCodeVisibleReplyProofService['materializePlainTextReplyIfNeededCurrent']
@@ -575,7 +597,6 @@ export class OpenCodeVisibleReplyProofService {
       return { ledgerRecord: error.record ?? input.ledgerRecord, visibleReply: null };
     }
   }
-
   private async materializePlainTextReplyIfNeededCurrent(input: {
     checkpoint?: () => void | Promise<void>;
     ledger: OpenCodePromptDeliveryLedgerStore;
@@ -587,7 +608,11 @@ export class OpenCodeVisibleReplyProofService {
     ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
     visibleReply: OpenCodeVisibleReplyProof | null;
   }> {
-    if (input.visibleReply) {
+    if (
+      input.visibleReply &&
+      (input.ledgerRecord.groupChatId ||
+        isOpenCodeDirectUserPromptDelivery(input.ledgerRecord))
+    ) {
       return { ledgerRecord: input.ledgerRecord, visibleReply: input.visibleReply };
     }
     if (input.ledgerRecord.groupChatId) {
@@ -605,9 +630,24 @@ export class OpenCodeVisibleReplyProofService {
           ),
       });
     }
+    // Work-sync nudges need an accepted status/report receipt, never a chat echo.
+    if (input.ledgerRecord.messageKind === 'member_work_sync_nudge') {
+      return { ledgerRecord: input.ledgerRecord, visibleReply: input.visibleReply ?? null };
+    }
     const materializedFromMessageSendToolError =
       input.ledgerRecord.responseState === 'tool_error' &&
       hasOpenCodeObservedMessageSendToolCall(input.ledgerRecord);
+    if (!isOpenCodeDirectUserPromptDelivery(input.ledgerRecord)) {
+      return materializeOpenCodeLeadPlainTextReply({
+        ...input,
+        ports: {
+          ...this.deps,
+          nowIso: this.nowIso,
+          findByRelayOfMessageId: (request) => this.findByRelayOfMessageId(request),
+          ensureVisibleReplyTaskRefs: (request) => this.ensureVisibleReplyTaskRefs(request),
+        },
+      });
+    }
     if (
       !canMaterializeOpenCodePlainTextReply(input.ledgerRecord) ||
       !isOpenCodeDirectUserPromptDelivery(input.ledgerRecord) ||
@@ -616,7 +656,6 @@ export class OpenCodeVisibleReplyProofService {
     ) {
       return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     }
-
     const text = input.ledgerRecord.observedAssistantPreview?.trim();
     if (!text) {
       return { ledgerRecord: input.ledgerRecord, visibleReply: null };
@@ -629,7 +668,6 @@ export class OpenCodeVisibleReplyProofService {
     if (!semantic.sufficient) {
       return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     }
-
     const messageId = buildPlainTextVisibleReplyMessageId(input.ledgerRecord);
     const existing = await this.findByRelayOfMessageId({
       teamName: input.teamName,
@@ -682,7 +720,6 @@ export class OpenCodeVisibleReplyProofService {
       this.deps.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, existingForProof.message);
       return { ledgerRecord, visibleReply: existingForProof };
     }
-
     const timestamp =
       input.ledgerRecord.respondedAt ??
       input.ledgerRecord.lastObservedAt ??
@@ -754,7 +791,6 @@ export class OpenCodeVisibleReplyProofService {
     }
   }
 }
-
 export type {
   OpenCodeVisibleReplyProofServiceHost,
   OpenCodeVisibleReplyProofServiceHostOptions,

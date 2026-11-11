@@ -96,7 +96,16 @@ function isContextSwitchRequestCurrent(
   );
 }
 
+function stripTransientTeamsCreation(tab: Tab): Tab {
+  // One-time copy/organization seeds are not workspace snapshot data.
+  // Durable creation work is restored via the separate draft repository.
+  return tab.type === 'teams'
+    ? { ...tab, teamsCreationPage: false, teamsCreationSeed: undefined }
+    : tab;
+}
+
 function normalizeRestoredTab(tab: Tab, contextId: string): Tab | null {
+  if (tab.type === 'teams') return stripTransientTeamsCreation(tab);
   if ((tab as { type?: string }).type !== 'usage') {
     if (!isTaskDetailTab(tab)) return tab;
     if (
@@ -266,11 +275,17 @@ function captureSnapshot(state: AppState, contextId: string): ContextSnapshot {
     unreadCount: state.unreadCount,
 
     // Tab/pane state
-    openTabs: state.openTabs,
+    openTabs: state.openTabs.map(stripTransientTeamsCreation),
     activeTabId: state.activeTabId,
     selectedTabIds: state.selectedTabIds,
     activeProjectId: state.activeProjectId,
-    paneLayout: state.paneLayout,
+    paneLayout: {
+      ...state.paneLayout,
+      panes: state.paneLayout.panes.map((pane) => ({
+        ...pane,
+        tabs: pane.tabs.map(stripTransientTeamsCreation),
+      })),
+    },
 
     // UI state
     sidebarCollapsed: state.sidebarCollapsed,

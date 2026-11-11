@@ -1,5 +1,3 @@
-import type { CreateTeamDialogProps } from './CreateTeamDialog.types';
-export type { ActiveTeamRef, TeamCopyData } from './CreateTeamDialog.types';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -18,7 +16,6 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import { TeamTemplatePicker } from '@features/team-templates/renderer';
 import {
   useWorkspaceTrustStatus,
   WorkspaceTrustLaunchNotice,
@@ -37,14 +34,6 @@ import { TeamRosterEditorSection } from '@renderer/components/team/members/TeamR
 import { AutoResizeTextarea } from '@renderer/components/ui/auto-resize-textarea';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@renderer/components/ui/dialog';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
@@ -55,6 +44,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@renderer/components/ui/tooltip';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
@@ -65,14 +60,15 @@ import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import {
+  currentCreateTeamDraftGeneration,
+  isCreateTeamDraftGenerationCurrent,
+} from '@renderer/services/createTeamDraftGeneration';
+import {
   applyStoredCreateTeamMemberRuntimePreferences,
-  getStoredCreateTeamEffort,
   getStoredCreateTeamFastMode as getStoredTeamFastMode,
-  getStoredCreateTeamLimitContext,
   getStoredCreateTeamMemberRuntimePreferences,
   getStoredCreateTeamModel as getStoredTeamModel,
   getStoredCreateTeamProvider as getStoredTeamProvider,
-  getStoredCreateTeamSkipPermissions,
   migrateLegacyCreateTeamPreferences,
   setStoredCreateTeamEffort,
   setStoredCreateTeamFastMode,
@@ -82,6 +78,7 @@ import {
   setStoredCreateTeamProvider,
   setStoredCreateTeamSkipPermissions,
 } from '@renderer/services/createTeamPreferences';
+import { resetCreateTeamDraft } from '@renderer/services/resetCreateTeamDraft';
 import { useStore } from '@renderer/store';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { resolveAnthropicProviderRuntimeSelection } from '@renderer/utils/anthropicRuntimeSelection';
@@ -101,15 +98,25 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
+import { assignCreatedTeamToOrganization } from './assignCreatedTeamToOrganization';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
+import { consumeTeamCopySeedOnce } from './createTeamCopySeed';
+import { buildDefaultTeamDescription } from './createTeamDescription';
+import { CreateTeamHeaderActions } from './CreateTeamHeaderActions';
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
 import {
   getOrganizationPlacementUnitKindKey,
   getOrganizationPlacementUnitOptions,
   getOrganizationUnitLabel,
 } from './createTeamOrganizationPlacement';
-import { sanitizeTeamName, validateRequest } from './createTeamSubmissionValidation';
+import { CreateTeamPageActivityContext } from './createTeamPageActivityContext';
+import {
+  sanitizeTeamName,
+  validateRequest,
+  validateTeamNameInline,
+} from './createTeamSubmissionValidation';
+import { CreateTeamSurface } from './CreateTeamSurface';
 import {
   buildProviderModelChecksMap,
   collectDialogMemberProviderIds,
@@ -146,7 +153,10 @@ import {
 } from './providerLaunchAuthority';
 import { ProviderLaunchAuthorityNotice } from './ProviderLaunchAuthorityNotice';
 import { isSameProviderPrepareAttempt } from './providerPrepareAttemptIdentity';
-import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
+import {
+  appendProviderPrepareInvalidationEpoch,
+  buildProviderPrepareModelCacheKey,
+} from './providerPrepareCacheKey';
 import {
   mergeReusableProviderPrepareModelResults,
   type ProviderPrepareDiagnosticsModelResult,
@@ -158,9 +168,11 @@ import {
 } from './providerPrepareRequestSignature';
 import {
   getShortLivedProviderPrepareModelIssueReasons,
+  invalidateShortLivedProviderPrepareModelResults,
   storeShortLivedProviderPrepareModelResults,
 } from './providerPrepareShortLivedCache';
 import { getProvisioningModelIssue } from './provisioningModelIssues';
+import { alignProvisioningChecks } from './provisioningProviderChecks';
 import { ProvisioningProviderRuntimeSettingsDialog } from './ProvisioningProviderRuntimeSettingsDialog';
 import {
   deriveEffectiveProvisioningPrepareState,
@@ -197,6 +209,7 @@ import {
   WorktreeGitReadinessBanner,
 } from './WorktreeGitReadinessBanner';
 
+import type { CreateTeamDialogProps } from './CreateTeamDialog.types';
 import type {
   OrganizationPlacementSelection,
   OrganizationStructurePayload,
@@ -210,6 +223,8 @@ import type {
   TeamProviderId,
 } from '@shared/types';
 
+export type { ActiveTeamRef, TeamCopyData } from './CreateTeamDialog.types';
+
 const TEAM_COLOR_NAMES = [
   'blue',
   'green',
@@ -220,64 +235,16 @@ const TEAM_COLOR_NAMES = [
   'orange',
   'pink',
 ] as const;
-
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
 const CREATE_LAUNCH_AUTHORITY_BLOCKER_ID = 'create-team-launch-authority-blocker';
-
 function getProviderLabel(providerId: TeamProviderId): string {
   return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
 }
 
-function alignProvisioningChecks(
-  existingChecks: ProvisioningProviderCheck[],
-  providerIds: TeamProviderId[]
-): ProvisioningProviderCheck[] {
-  const existingByProviderId = new Map(
-    existingChecks.map((check) => [check.providerId, check] as const)
-  );
-  return providerIds.map(
-    (providerId) =>
-      existingByProviderId.get(providerId) ?? {
-        providerId,
-        status: 'pending',
-        backendSummary: null,
-        details: [],
-      }
-  );
-}
-
-function validateTeamNameInline(
-  name: string,
-  t: ReturnType<typeof useAppTranslation>['t']
-): string | null {
-  const trimmed = name.trim();
-  if (!trimmed) return null;
-  const sanitized = sanitizeTeamName(trimmed);
-  if (!sanitized) {
-    return t('create.validation.nameMustContainLetterOrDigit');
-  }
-  if (sanitized.length > 64) {
-    return t('create.validation.nameTooLong');
-  }
-  return null;
-}
-
-function buildDefaultTeamDescription(
-  teamName: string,
-  t: ReturnType<typeof useAppTranslation>['t']
-): string {
-  const trimmedName = teamName.trim();
-  return trimmedName.length > 0
-    ? t('create.defaultDescription.named', { teamName: trimmedName })
-    : t('create.defaultDescription.fallback');
-}
-
-function isCurrentPrepareGeneration(ref: { current: number }, generation: number): boolean {
-  return ref.current === generation;
-}
-
 export const CreateTeamDialog = ({
   open,
+  presentation = 'dialog',
+  active = true,
   canCreate,
   provisioningErrorsByTeam,
   clearProvisioningError,
@@ -289,9 +256,22 @@ export const CreateTeamDialog = ({
   defaultProjectPath,
   forceDefaultProjectSelection = false,
   onClose,
+  onBack,
+  onManagementApplied,
   onCreate,
   onOpenTeam,
 }: CreateTeamDialogProps): React.JSX.Element => {
+  const createGenerationRef = useRef(currentCreateTeamDraftGeneration());
+  const creationPageMountedRef = useRef(true);
+  useEffect(() => {
+    creationPageMountedRef.current = true;
+    return () => {
+      creationPageMountedRef.current = false;
+    };
+  }, []);
+  const stillOwnsCreatePage = (generation: number): boolean =>
+    presentation !== 'page' ||
+    (creationPageMountedRef.current && isCreateTeamDraftGenerationCurrent(generation));
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
@@ -337,6 +317,7 @@ export const CreateTeamDialog = ({
   );
 
   // ── Persisted draft state (survives tab navigation) ──────────────────
+  const createTeamDraft = useCreateTeamDraft();
   const {
     runtimeSelectionVersion,
     runtimeProviderId,
@@ -362,9 +343,24 @@ export const CreateTeamDialog = ({
     setLaunchTeam,
     teamColor,
     setTeamColor,
+    limitContext,
+    setLimitContext: setLimitContextRaw,
+    skipPermissions,
+    setSkipPermissions: setSkipPermissionsRaw,
+    selectedEffort,
+    setSelectedEffort: setSelectedEffortRaw,
+    selectedFastMode,
+    setSelectedFastMode: setSelectedFastModeRaw,
+    organizationPlacementEnabled,
+    setOrganizationPlacementEnabled,
+    organizationPlacementOrganizationId,
+    setOrganizationPlacementOrganizationId,
+    organizationPlacementParentId,
+    setOrganizationPlacementParentId,
     isLoaded: draftLoaded,
+    restoredFromStorage,
     clearDraft,
-  } = useCreateTeamDraft();
+  } = createTeamDraft;
   const runtimeSelectionUnresolved = runtimeSelectionVersion === 1 && !runtimeProviderId;
   const descriptionDraft = useDraftPersistence({ key: 'createTeam:description' });
   const promptDraft = useDraftPersistence({ key: 'createTeam:prompt' });
@@ -400,7 +396,6 @@ export const CreateTeamDialog = ({
   const prepareUnmountGenerationRef = useRef(0);
   const appliedDefaultProjectPathRef = useRef<string | null>(null);
   const forcedDefaultProjectModePathRef = useRef<string | null>(null);
-  const lastAutoDescriptionRef = useRef<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     teamName?: string;
     members?: string;
@@ -412,10 +407,6 @@ export const CreateTeamDialog = ({
   const [organizationStructure, setOrganizationStructure] =
     useState<OrganizationStructurePayload | null>(null);
   const [organizationStructureLoading, setOrganizationStructureLoading] = useState(false);
-  const [organizationPlacementEnabled, setOrganizationPlacementEnabled] = useState(false);
-  const [organizationPlacementOrganizationId, setOrganizationPlacementOrganizationId] =
-    useState('');
-  const [organizationPlacementParentId, setOrganizationPlacementParentId] = useState('');
   const [organizationPlacementError, setOrganizationPlacementError] = useState<string | null>(null);
   const [conflictDismissed, setConflictDismissed] = useState(false);
   const [selectedProviderId, setSelectedProviderIdRaw] = useState<TeamProviderId>(() =>
@@ -424,10 +415,7 @@ export const CreateTeamDialog = ({
   const [selectedModel, setSelectedModelRaw] = useState(() =>
     getStoredTeamModel(normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled))
   );
-  const [limitContext, setLimitContextRaw] = useState(getStoredCreateTeamLimitContext);
-  const [skipPermissions, setSkipPermissionsRaw] = useState(getStoredCreateTeamSkipPermissions);
-  const [selectedEffort, setSelectedEffortRaw] = useState(getStoredCreateTeamEffort);
-  const [selectedFastMode, setSelectedFastModeRaw] = useState<TeamFastMode>(getStoredTeamFastMode);
+  const [copySeedReady, setCopySeedReady] = useState(!initialData);
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
   const advancedKey = useMemo(() => sanitizeTeamName(teamName.trim()) || '_new_', [teamName]);
   const [worktreeEnabled, setWorktreeEnabledRaw] = useState(false);
@@ -444,13 +432,17 @@ export const CreateTeamDialog = ({
 
   useEffect(() => {
     if (!open) {
-      setOrganizationPlacementEnabled(false);
       setOrganizationPlacementError(null);
       return undefined;
     }
-
+    if (!draftLoaded) return undefined;
     let cancelled = false;
     const preferredPlacement = initialOrganizationPlacement ?? null;
+    if (!restoredFromStorage && preferredPlacement) {
+      setOrganizationPlacementEnabled(true);
+      setOrganizationPlacementOrganizationId(preferredPlacement.organizationId);
+      setOrganizationPlacementParentId(preferredPlacement.parentUnitId);
+    }
     setOrganizationStructureLoading(true);
     void api.organizations
       .getOrganizationStructure()
@@ -465,11 +457,11 @@ export const CreateTeamDialog = ({
             : undefined) ??
           payload.organizations[0] ??
           null;
-        setOrganizationPlacementEnabled(Boolean(preferredPlacement));
-        setOrganizationPlacementOrganizationId(organization?.id ?? '');
-        setOrganizationPlacementParentId(
-          preferredPlacement?.parentUnitId ?? organization?.rootNodeId ?? ''
-        );
+        if (!restoredFromStorage && !preferredPlacement) {
+          setOrganizationPlacementEnabled(false);
+          setOrganizationPlacementOrganizationId(organization?.id ?? '');
+          setOrganizationPlacementParentId(organization?.rootNodeId ?? '');
+        }
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -484,9 +476,15 @@ export const CreateTeamDialog = ({
     return () => {
       cancelled = true;
     };
-  }, [initialOrganizationPlacement, open]);
-
-  // Re-read localStorage when advancedKey changes
+  }, [
+    draftLoaded,
+    initialOrganizationPlacement,
+    open,
+    restoredFromStorage,
+    setOrganizationPlacementEnabled,
+    setOrganizationPlacementOrganizationId,
+    setOrganizationPlacementParentId,
+  ]);
   useEffect(() => {
     const storedEnabled =
       localStorage.getItem(`team:lastWorktreeEnabled:${advancedKey}`) === 'true';
@@ -495,7 +493,6 @@ export const CreateTeamDialog = ({
     setWorktreeNameRaw(storedName);
     setCustomArgsRaw(localStorage.getItem(`team:lastCustomArgs:${advancedKey}`) ?? '');
   }, [advancedKey]);
-
   const setLimitContext = useCallback((value: boolean): void => {
     setLimitContextRaw(value);
     setStoredCreateTeamLimitContext(value);
@@ -548,13 +545,14 @@ export const CreateTeamDialog = ({
     setConflictDismissed(false);
   };
 
-  const resetFormState = (): void => {
+  const resetFormState = async (): Promise<void> => {
+    gatewayBindings.releaseRetained();
     clearDraft();
-    lastAutoDescriptionRef.current = null;
     descriptionDraft.clearDraft();
     promptDraft.clearDraft();
     promptChipDraft.clearChipDraft();
     resetUIState();
+    if (presentation === 'page') await resetCreateTeamDraft();
   };
 
   const persistCurrentMemberRuntimePreferences = useCallback(
@@ -589,6 +587,7 @@ export const CreateTeamDialog = ({
   });
   const { scope: openCodeLocalModelScope, gatewayBindings } = useDialogMemberModelScope({
     enabled: open,
+    retainedGatewayOwnerKey: presentation === 'page' ? 'createTeam' : undefined,
     teamName: sanitizeTeamName(teamName.trim()),
     projectPath: effectiveCwd,
     selectedProviderId,
@@ -635,7 +634,10 @@ export const CreateTeamDialog = ({
       open && launchPreflightSelectionReady && selectedMemberProviders.includes('anthropic')
     );
   const openCodeCatalogEnabled = shouldLoadOpenCodeDialogCatalog(
-    open, launchTeam, multimodelEnabled, selectedMemberProviders
+    open,
+    launchTeam,
+    multimodelEnabled,
+    selectedMemberProviders
   );
   useEffect(() => {
     if (open && dialogTeamNameKey) {
@@ -772,6 +774,7 @@ export const CreateTeamDialog = ({
       selectedEffort,
     ]
   );
+
   const runtimeProviderLoadingById = useMemo(
     () =>
       new Map(
@@ -815,6 +818,7 @@ export const CreateTeamDialog = ({
   const pendingPrepareProviderSignatureByIdRef = useRef(new Map<TeamProviderId, string>());
   const prepareProviderRequestSeqByIdRef = useRef(new Map<TeamProviderId, number>());
   const prepareWarningsByProviderIdRef = useRef(new Map<TeamProviderId, string[]>());
+
   useEffect(() => {
     runtimeBackendSummaryByProviderRef.current = runtimeBackendSummaryByProvider;
   }, [runtimeBackendSummaryByProvider]);
@@ -861,6 +865,7 @@ export const CreateTeamDialog = ({
       (prepareProviderRequestSeqByIdRef.current.get(providerId) ?? 0) + 1
     );
     prepareWarningsByProviderIdRef.current.delete(providerId);
+    invalidateShortLivedProviderPrepareModelResults(providerId);
     setPrepareProviderInvalidationEpochById((current) => ({
       ...current,
       [providerId]: (current[providerId] ?? 0) + 1,
@@ -898,7 +903,7 @@ export const CreateTeamDialog = ({
       // React StrictMode replays effect cleanup/setup in development; defer
       // invalidation so the replay does not cancel the live prepare request.
       queueMicrotask(() => {
-        if (!isCurrentPrepareGeneration(prepareUnmountGenerationRef, generation)) {
+        if (prepareUnmountGenerationRef.current !== generation) {
           return;
         }
         cancelScheduledIdleSet(idleHandles);
@@ -985,14 +990,14 @@ export const CreateTeamDialog = ({
       const providerModelChecksSignature = buildProviderPrepareModelChecksSignature(
         new Map([[providerId, selectedModelChecksByProvider.get(providerId) ?? []]])
       );
-      const cacheKey = buildProviderPrepareModelCacheKey({
+      const cacheKey = appendProviderPrepareInvalidationEpoch(buildProviderPrepareModelCacheKey({
         cwd: effectiveCwd,
         providerId,
         backendSummary,
         limitContext: effectiveAnthropicRuntimeLimitContext,
         runtimeStatusSignature: providerRuntimeStatusSignature,
         modelChecksSignature: providerModelChecksSignature,
-      });
+      }), prepareProviderInvalidationEpochById[providerId]);
       const issueReasons = getShortLivedProviderPrepareModelIssueReasons({
         providerId,
         cacheKey,
@@ -1017,6 +1022,7 @@ export const CreateTeamDialog = ({
     effectiveAnthropicRuntimeLimitContext,
     effectiveCwd,
     prepareChecks,
+    prepareProviderInvalidationEpochById,
     runtimeBackendSummaryByProvider,
     runtimeProviderStatusById,
     selectedModelChecksByProvider,
@@ -1074,7 +1080,7 @@ export const CreateTeamDialog = ({
   ]);
 
   useEffect(() => {
-    if (submissionFence.busy) return;
+    if (submissionFence.busy || (open && !active)) return;
     if (
       !open ||
       !canCreate ||
@@ -1097,7 +1103,6 @@ export const CreateTeamDialog = ({
       }
       return;
     }
-
     if (typeof api.teams.prepareProvisioning !== 'function') {
       cancelScheduledIdleSet(prepareIdleHandlesRef.current);
       prepareRequestSeqRef.current += 1;
@@ -1111,7 +1116,6 @@ export const CreateTeamDialog = ({
       setPrepareMessage(t('create.prepare.unsupportedPreload'));
       return;
     }
-
     const selectedProviderIdSet = new Set(selectedMemberProviders);
     for (const providerId of Array.from(lastPrepareProviderSignatureByIdRef.current.keys())) {
       if (!selectedProviderIdSet.has(providerId)) {
@@ -1121,7 +1125,6 @@ export const CreateTeamDialog = ({
         prepareWarningsByProviderIdRef.current.delete(providerId);
       }
     }
-
     const loadingProviderIds = selectedMemberProviders.filter((providerId) =>
       runtimeProviderLoadingById.get(providerId)
     );
@@ -1133,6 +1136,7 @@ export const CreateTeamDialog = ({
       limitContext: effectiveAnthropicRuntimeLimitContext,
       runtimeProviderStatusById,
       cachedModelResultsByCacheKey: prepareModelResultsCacheRef.current,
+      invalidationEpochByProviderId: prepareProviderInvalidationEpochById,
     });
     const changedPlans = providerPlans.filter((plan) => {
       if (runtimeProviderLoadingById.get(plan.providerId)) return false;
@@ -1159,13 +1163,11 @@ export const CreateTeamDialog = ({
     ): void => {
       const selectedWarnings = getSelectedWarnings();
       setPrepareWarnings(selectedWarnings);
-
       if (nextChecks.some((check) => check.status === 'pending' || check.status === 'checking')) {
         setPrepareState('loading');
         setPrepareMessage(pendingMessage);
         return;
       }
-
       const anyFailure = nextChecks.some((check) => check.status === 'failed');
       const anyNotes =
         selectedWarnings.length > 0 || nextChecks.some((check) => check.status === 'notes');
@@ -1181,7 +1183,6 @@ export const CreateTeamDialog = ({
             : t('create.prepare.ready')
       );
     };
-
     let checks = alignProvisioningChecks(prepareChecksRef.current, selectedMemberProviders);
     for (const providerId of loadingProviderIds) {
       const current = providerPlans.find(
@@ -1219,15 +1220,12 @@ export const CreateTeamDialog = ({
         : (prepareMessageRef.current ??
             getProvisioningProviderProgressMessage([], selectedMemberProviders.length, t))
     );
-
     if (changedPlans.length === 0) {
       return;
     }
-
     for (const plan of changedPlans) {
       pendingPrepareProviderSignatureByIdRef.current.set(plan.providerId, plan.requestSignature);
     }
-
     const idleHandle = scheduleIdle(() => {
       prepareIdleHandlesRef.current.delete(idleHandle);
       const generation = prepareRequestSeqRef.current;
@@ -1336,6 +1334,7 @@ export const CreateTeamDialog = ({
     prepareIdleHandlesRef.current.add(idleHandle);
   }, [
     open,
+    active,
     canCreate,
     launchTeam,
     prepareState,
@@ -1355,16 +1354,13 @@ export const CreateTeamDialog = ({
     selectedMemberProviders,
     t,
   ]);
-
   useEffect(() => {
     if (!open) {
       setWorkflowMentionSuggestionsEnabled(false);
       return;
     }
-
     setProjectsLoading(true);
     setProjectsError(null);
-
     let cancelled = false;
     void (async () => {
       try {
@@ -1372,7 +1368,6 @@ export const CreateTeamDialog = ({
         if (cancelled) {
           return;
         }
-
         setProjects(nextProjects);
       } catch (error) {
         if (cancelled) {
@@ -1388,18 +1383,24 @@ export const CreateTeamDialog = ({
         }
       }
     })();
-
     return () => {
       cancelled = true;
     };
   }, [open, defaultProjectPath, t]);
-
   useEffect(() => {
     if (!open || !draftLoaded) {
       return;
     }
-
+    if (runtimeSelectionVersion === 1 && runtimeProviderId) {
+      const draftProviderId = normalizeLeadProviderForMode(runtimeProviderId, multimodelEnabled);
+      setSelectedProviderIdRaw(draftProviderId);
+      setSelectedModelRaw(normalizeExplicitTeamModelForUi(draftProviderId, runtimeModel ?? ''));
+    }
     if (initialData) {
+      if (!consumeTeamCopySeedOnce(initialData)) {
+        setCopySeedReady(true);
+        return;
+      }
       const nextSyncModelsWithLead =
         initialData.syncModelsWithLead ??
         !initialData.members.some(
@@ -1458,19 +1459,12 @@ export const CreateTeamDialog = ({
           initialData.members.every((member) => member.isolation === 'worktree')
       );
       setSyncModelsWithLead(nextSyncModelsWithLead, { persistStoredPreference: false });
+      setCopySeedReady(true);
       return;
     }
-
-    if (runtimeSelectionVersion === 1 && runtimeProviderId) {
-      const draftProviderId = normalizeLeadProviderForMode(runtimeProviderId, multimodelEnabled);
-      setSelectedProviderIdRaw(draftProviderId);
-      setSelectedModelRaw(normalizeExplicitTeamModelForUi(draftProviderId, runtimeModel ?? ''));
-    }
-
     if (members.length > 0) {
       return;
     }
-
     const initialRosterDrafts = buildInitialRosterMemberDrafts({ multimodelEnabled });
     if (initialRosterDrafts.length === 0) {
       return;
@@ -1480,9 +1474,8 @@ export const CreateTeamDialog = ({
         ? initialRosterDrafts
         : applyStoredCreateTeamMemberRuntimePreferences(initialRosterDrafts)
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialData is checked once on open/draftLoaded
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- copy inputs are one-shot for this editor
   }, [open, draftLoaded]);
-
   useEffect(() => {
     if (!open || !draftLoaded || initialData || syncModelsWithLead || members.length === 0) {
       return;
@@ -1496,7 +1489,6 @@ export const CreateTeamDialog = ({
     persistCurrentMemberRuntimePreferences,
     syncModelsWithLead,
   ]);
-
   useEffect(() => {
     if (!open || initialData || !draftLoaded) {
       return;
@@ -1505,29 +1497,6 @@ export const CreateTeamDialog = ({
       setTeamName(suggestedTeamName);
     }
   }, [initialData, open, suggestedTeamName, draftLoaded]); // eslint-disable-line react-hooks/exhaustive-deps -- teamName read once
-
-  useEffect(() => {
-    if (!open || initialData) {
-      return;
-    }
-    const resolvedTeamName = teamName.trim() || suggestedTeamName;
-    const nextAutoDescription = buildDefaultTeamDescription(resolvedTeamName, t);
-    const currentDescription = descriptionDraft.value.trim();
-    const previousAutoDescription = lastAutoDescriptionRef.current?.trim() ?? '';
-    const shouldSyncDescription =
-      currentDescription.length === 0 || currentDescription === previousAutoDescription;
-
-    if (shouldSyncDescription && descriptionDraft.value !== nextAutoDescription) {
-      lastAutoDescriptionRef.current = nextAutoDescription;
-      descriptionDraft.setValue(nextAutoDescription);
-      return;
-    }
-
-    if (currentDescription === nextAutoDescription) {
-      lastAutoDescriptionRef.current = nextAutoDescription;
-    }
-  }, [descriptionDraft, initialData, open, suggestedTeamName, t, teamName]);
-
   useEffect(() => {
     if (!open || !forceDefaultProjectSelection) {
       forcedDefaultProjectModePathRef.current = null;
@@ -1540,28 +1509,41 @@ export const CreateTeamDialog = ({
       forcedDefaultProjectModePathRef.current = null;
       return;
     }
-
     const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
+    if (restoredFromStorage && (selectedProjectPath || customCwd)) {
+      forcedDefaultProjectModePathRef.current = normalizedDefaultProjectPath;
+      return;
+    }
     if (forcedDefaultProjectModePathRef.current === normalizedDefaultProjectPath) {
       return;
     }
-
     // Apply navigation context once. Later mode changes are explicit user choices.
     forcedDefaultProjectModePathRef.current = normalizedDefaultProjectPath;
     if (cwdMode !== 'project') {
       setCwdMode('project');
     }
-  }, [cwdMode, defaultProjectPath, draftLoaded, forceDefaultProjectSelection, open, setCwdMode]);
-  // Pre-select defaultProjectPath when the draft and projects are loaded.
+  }, [
+    cwdMode,
+    customCwd,
+    defaultProjectPath,
+    draftLoaded,
+    forceDefaultProjectSelection,
+    open,
+    restoredFromStorage,
+    selectedProjectPath,
+    setCwdMode,
+  ]);
   useEffect(() => {
     if (!open) {
       appliedDefaultProjectPathRef.current = null;
       return;
     }
-    if (!draftLoaded) {
-      return;
-    }
-    if (cwdMode !== 'project') {
+    if (!draftLoaded) return;
+    if (cwdMode !== 'project') return;
+    if (restoredFromStorage && selectedProjectPath) {
+      appliedDefaultProjectPathRef.current = defaultProjectPath
+        ? normalizePath(defaultProjectPath)
+        : null;
       return;
     }
     const nextSelection = resolvePreferredProjectPathSelection({
@@ -1584,28 +1566,23 @@ export const CreateTeamDialog = ({
     projects,
     selectedProjectPath,
     defaultProjectPath,
+    restoredFromStorage,
     setSelectedProjectPath,
   ]);
-
-  // Ephemeral paths are cleared; a deleted project stays selected so the picker can
-  // mark it and explain why launch is blocked instead of silently switching projects.
   useEffect(() => {
     if (open && cwdMode === 'project' && isEphemeralProjectPath(selectedProjectPath)) {
       setSelectedProjectPath('');
     }
   }, [open, cwdMode, selectedProjectPath, setSelectedProjectPath]);
-
   const { suggestions: taskSuggestions } = useTaskSuggestions(null, {
     enabled: workflowMentionSuggestionsEnabled,
   });
   const { suggestions: teamMentionSuggestions } = useTeamSuggestions(null, {
     enabled: workflowMentionSuggestionsEnabled,
   });
-
   const description = descriptionDraft.value;
   const prompt = promptDraft.value;
   const memberColorMap = useMemo(() => buildMemberDraftColorMap(members), [members]);
-
   const mentionSuggestions = useMemo(
     () =>
       soloTeam
@@ -1620,7 +1597,6 @@ export const CreateTeamDialog = ({
         : buildMemberDraftSuggestions(members, memberColorMap),
     [memberColorMap, members, soloTeam, t]
   );
-
   const effectiveModel = useMemo(
     () =>
       computeEffectiveTeamModel(
@@ -1721,8 +1697,13 @@ export const CreateTeamDialog = ({
         : null,
     [codexRuntimeSelection, selectedFastMode, selectedProviderId]
   );
-
   useEffect(() => {
+    if (!draftLoaded || !copySeedReady) return;
+    if (runtimeSelectionVersion === 1 && runtimeProviderId) {
+      const draftProvider = normalizeLeadProviderForMode(runtimeProviderId, multimodelEnabled);
+      const draftModel = normalizeExplicitTeamModelForUi(draftProvider, runtimeModel ?? '');
+      if (selectedProviderId !== draftProvider || selectedModel !== draftModel) return;
+    }
     if (selectedProviderId !== 'anthropic' && selectedProviderId !== 'codex') {
       setAnthropicRuntimeNotice(null);
       return;
@@ -1731,7 +1712,6 @@ export const CreateTeamDialog = ({
       setAnthropicRuntimeNotice(null);
       return;
     }
-
     const reconciliation =
       selectedProviderId === 'anthropic'
         ? reconcileAnthropicRuntimeSelections({
@@ -1769,7 +1749,6 @@ export const CreateTeamDialog = ({
               selectedFastMode,
             }),
           };
-
     const notices: string[] = [];
     if (selectedEffortForCurrentSelection !== selectedEffort) {
       setSelectedEffortRaw(selectedEffortForCurrentSelection);
@@ -1795,7 +1774,13 @@ export const CreateTeamDialog = ({
     anthropicRuntimeSelection,
     codexRuntimeSelection,
     codexSnapshotPending,
+    copySeedReady,
+    draftLoaded,
     effectiveAnthropicRuntimeLimitContext,
+    multimodelEnabled,
+    runtimeModel,
+    runtimeProviderId,
+    runtimeSelectionVersion,
     runtimeProviderStatusById,
     selectedEffort,
     selectedEffortForCurrentSelection,
@@ -1803,7 +1788,6 @@ export const CreateTeamDialog = ({
     selectedModel,
     selectedProviderId,
   ]);
-
   const sanitizedTeamName = sanitizeTeamName(teamName.trim());
   const teamNameInlineError = validateTeamNameInline(teamName, t);
   const isSubmittedTeamName = submittedTeamNameRef.current === sanitizedTeamName;
@@ -1813,7 +1797,6 @@ export const CreateTeamDialog = ({
     !isSubmittedTeamName &&
     provisioningTeamNames.includes(sanitizedTeamName) &&
     !isNameTakenByExistingTeam;
-
   const request = useMemo<TeamCreateRequest>(
     () => ({
       runtimeSelectionVersion,
@@ -1940,7 +1923,6 @@ export const CreateTeamDialog = ({
     teammateRuntimeCompatibility.blocksSubmission ||
     worktreeGitBlocksSubmission ||
     (launchTeam && customProjectFolder.blocksSubmit);
-
   const internalArgs = useMemo(() => {
     const args: string[] = [];
     args.push('--input-format', 'stream-json', '--output-format', 'stream-json');
@@ -1971,7 +1953,6 @@ export const CreateTeamDialog = ({
     selectedProviderId,
     skipPermissions,
   ]);
-
   const launchOptionalSummary = useMemo(() => {
     const summary: string[] = [];
     if (prompt.trim()) summary.push(t('create.optional.summary.leadPrompt'));
@@ -2003,14 +1984,12 @@ export const CreateTeamDialog = ({
     worktreeEnabled,
     worktreeName,
   ]);
-
   const teamDetailsSummary = useMemo(() => {
     const summary: string[] = [];
     if (description.trim()) summary.push(t('create.optional.summary.description'));
     if (teamColor) summary.push(t('create.optional.summary.color', { color: teamColor }));
     return summary;
   }, [description, t, teamColor]);
-
   const handleSyncModelsWithLeadChange = useCallback(
     (checked: boolean): void => {
       setSyncModelsWithLead(checked);
@@ -2019,11 +1998,9 @@ export const CreateTeamDialog = ({
         setMembers(members.map(clearMemberModelOverrides));
         return;
       }
-
       if (getStoredCreateTeamMemberRuntimePreferences().length === 0) {
         return;
       }
-
       const nextMembers = applyStoredCreateTeamMemberRuntimePreferences(members);
       const hasRuntimeChanges = nextMembers.some((member, index) => {
         const previousMember = members[index];
@@ -2039,7 +2016,6 @@ export const CreateTeamDialog = ({
     },
     [members, persistCurrentMemberRuntimePreferences, setMembers, setSyncModelsWithLead]
   );
-
   const activeError =
     localError ?? modelValidationError ?? provisioningErrorsByTeam[request.teamName] ?? null;
   const effectivePrepare = useMemo(
@@ -2071,9 +2047,7 @@ export const CreateTeamDialog = ({
   const activePlacementOrganization =
     organizationPlacementOrganizations.find(
       (organization) => organization.id === organizationPlacementOrganizationId
-    ) ??
-    organizationPlacementOrganizations[0] ??
-    null;
+    ) ?? (organizationPlacementEnabled ? null : (organizationPlacementOrganizations[0] ?? null));
   const organizationPlacementParentOptions = useMemo(
     () =>
       getOrganizationPlacementUnitOptions(
@@ -2086,8 +2060,7 @@ export const CreateTeamDialog = ({
     organizationPlacementParentOptions.find(
       (option) => option.unit.id === organizationPlacementParentId
     )?.unit ??
-    organizationPlacementParentOptions[0]?.unit ??
-    null;
+    (organizationPlacementEnabled ? null : (organizationPlacementParentOptions[0]?.unit ?? null));
   const selectedOrganizationPlacement = useMemo<OrganizationPlacementSelection | null>(() => {
     if (!organizationPlacementEnabled || !activePlacementOrganization || !activePlacementParent) {
       return null;
@@ -2109,14 +2082,39 @@ export const CreateTeamDialog = ({
     const norm = normalizePath(effectiveCwd);
     return activeTeams.find((t) => normalizePath(t.projectPath) === norm) ?? null;
   }, [activeTeams, effectiveCwd, launchTeam]);
-
   useEffect(() => {
     setConflictDismissed(false);
   }, [conflictingTeam?.teamName, effectiveCwd]);
-
+  /** Complete accepted work without stealing focus or deleting a remounted editor's edits. */
+  const finishAcceptedCreation = async (name: string, cwd?: string): Promise<void> => {
+    const generation = createGenerationRef.current;
+    if (presentation === 'page' && !isCreateTeamDraftGenerationCurrent(generation)) return;
+    if (!stillOwnsCreatePage(generation)) {
+      // With no open editor, there is no newer in-progress form to retire.
+      if (
+        !useStore
+          .getState()
+          .getAllPaneTabs()
+          .some((tab) => tab.type === 'teams' && tab.teamsCreationPage)
+      )
+        await resetCreateTeamDraft();
+      return;
+    }
+    await resetFormState();
+    if (!stillOwnsCreatePage(generation + 1)) return;
+    const tab = presentation === 'page' ? useStore.getState().getActiveTab() : null;
+    if (presentation !== 'page' || (tab?.type === 'teams' && tab.teamsCreationPage)) {
+      onOpenTeam(name, cwd);
+    }
+    onClose();
+  };
   const handleSubmit = (): void => {
     if (gatewayBindings.pending) return;
     if (!canCreate || !draftLoaded) return;
+    if (organizationPlacementEnabled && !selectedOrganizationPlacement) {
+      setLocalError(t('create.organizationPlacement.invalidSelection'));
+      return;
+    }
     if (launchTeam && !launchPreflightSelectionReady) return;
     if (submissionFence.busy || isSubmitting) return;
     if (prepareState === 'loading' && !canSkipPreflight()) return;
@@ -2172,7 +2170,6 @@ export const CreateTeamDialog = ({
     setLocalError(null);
     submittedTeamNameRef.current = request.teamName;
     setIsSubmitting(true);
-
     if (!launchTeam) {
       void (async () => {
         try {
@@ -2216,20 +2213,20 @@ export const CreateTeamDialog = ({
               extraCliArgs: request.extraCliArgs,
             })
           );
-          if (selectedOrganizationPlacement) {
-            try {
-              await api.organizations.assignTeamToUnit({
-                ...selectedOrganizationPlacement,
-                teamName: request.teamName,
-                label: request.displayName || request.teamName,
-              });
-            } catch (error) {
-              console.warn('[Organizations] Failed to place created team in organization', error);
-            }
-          }
-          onOpenTeam(request.teamName, configOnlyCwd);
-          resetFormState();
-          onClose();
+          await assignCreatedTeamToOrganization({
+            placement: selectedOrganizationPlacement,
+            teamName: request.teamName,
+            label: request.displayName || request.teamName,
+            failureTitle: t('create.placementFailure.title', {
+              defaultValue: 'Team created, not placed',
+            }),
+            failureMessage: t('create.placementFailure.message', {
+              teamName: request.teamName,
+              defaultValue: 'Assign this team from the Organization Map; do not create it again.',
+            }),
+            acknowledgeLabel: t('create.placementFailure.acknowledge', { defaultValue: 'Got it' }),
+          });
+          await finishAcceptedCreation(request.teamName, configOnlyCwd);
         } catch (error) {
           optionalPreflight.resumeInterruptedProviderPreflight(
             prepareChecksRef.current,
@@ -2246,7 +2243,6 @@ export const CreateTeamDialog = ({
       })();
       return;
     }
-
     void (async () => {
       try {
         if (!syncModelsWithLead) {
@@ -2255,9 +2251,7 @@ export const CreateTeamDialog = ({
         await gatewayBindings.run(() =>
           onCreate(request, selectedOrganizationPlacement ?? undefined)
         );
-        onOpenTeam(request.teamName, effectiveCwd || undefined);
-        resetFormState();
-        onClose();
+        await finishAcceptedCreation(request.teamName, effectiveCwd || undefined);
       } catch (error) {
         optionalPreflight.resumeInterruptedProviderPreflight(
           prepareChecksRef.current,
@@ -2273,7 +2267,6 @@ export const CreateTeamDialog = ({
       }
     })();
   };
-
   const handleTeamNameChange = (value: string): void => {
     setTeamName(value);
     setFieldErrors((prev) => {
@@ -2289,7 +2282,6 @@ export const CreateTeamDialog = ({
       return rest;
     });
   };
-
   const rosterHeaderTop = useMemo(
     () => (
       <div className="flex items-center gap-2">
@@ -2308,7 +2300,6 @@ export const CreateTeamDialog = ({
     ),
     [setSoloTeam, soloTeam, t]
   );
-
   const rosterHeaderBottom = useMemo(
     () =>
       showRosterTeammateRuntimeCompatibility ||
@@ -2356,754 +2347,760 @@ export const CreateTeamDialog = ({
         ? t('create.actions.skipPreflightAndCreate')
         : t('create.prepare.checkingProviders')
       : t('create.actions.create');
+  const providerSettingsOverlay = (
+    <ProvisioningProviderRuntimeSettingsDialog
+      openProviderId={active ? providerSettingsProviderId : null}
+      onOpenProviderIdChange={(providerId) => setProviderSettingsProviderId(providerId)}
+      providers={effectiveCliStatus?.providers ?? []}
+      projectPath={effectiveCwd || null}
+      disabled={isSubmitting}
+      onProviderRuntimeChanged={invalidatePrepareProvider}
+    />
+  );
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) {
-          resetUIState();
-          onClose();
-        }
-      }}
-    >
-      <OpenCodeSourceDirectoryProvider enabled={open && multimodelEnabled} projectPath={effectiveCwd}>
-      <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[52rem]">
-        <ScopedCatalogLoaders configuration={openCodeCatalogLoaderConfiguration} />
-        <DialogHeader>
-          <DialogTitle className="text-sm">
-            {initialData ? t('create.title.copy') : t('create.title.create')}
-          </DialogTitle>
-          <DialogDescription className="text-xs">
-            {initialData ? t('create.description.copy') : t('create.description.create')}
-          </DialogDescription>
-        </DialogHeader>
-        {conflictingTeam && !conflictDismissed ? (
-          <div
-            className="rounded-md border p-3 text-xs"
-            style={{
-              backgroundColor: 'var(--warning-bg)',
-              borderColor: 'var(--warning-border)',
-              color: 'var(--warning-text)',
-            }}
-          >
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-              <div className="min-w-0 flex-1 space-y-1">
-                <p className="font-medium">
-                  {t('create.conflict.title', { team: conflictingTeam.displayName })}
-                </p>
-                <p className="opacity-80">{t('create.conflict.description')}</p>
-                <p className="text-[11px] opacity-70">
-                  {t('create.conflict.workingDirectory')}{' '}
-                  <span className="font-mono">{effectiveCwd}</span>
-                </p>
-              </div>
-              <button
-                type="button"
-                className="shrink-0 rounded p-0.5 opacity-60 transition-colors hover:opacity-100"
-                onClick={() => setConflictDismissed(true)}
-              >
-                <X className="size-3.5" />
-              </button>
-            </div>
-          </div>
-        ) : null}
-        {!canCreate ? (
-          <p
-            className="rounded border p-2 text-xs"
-            style={{
-              backgroundColor: 'var(--warning-bg)',
-              borderColor: 'var(--warning-border)',
-              color: 'var(--warning-text)',
-            }}
-          >
-            {t('create.localOnly')}
-          </p>
-        ) : null}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-1.5 md:col-span-2">
-            <Label htmlFor="team-name">{t('create.fields.teamName')}</Label>
-            <Input
-              id="team-name"
-              className={cn(
-                'h-8 text-xs',
-                (fieldErrors.teamName || teamNameInlineError || isNameTakenByExistingTeam) &&
-                  'border-[var(--field-error-border)] bg-[var(--field-error-bg)] focus-visible:ring-[var(--field-error-border)]'
-              )}
-              value={teamName}
-              onChange={(event) => handleTeamNameChange(event.target.value)}
-              placeholder={suggestedTeamName}
-            />
-            {isNameTakenByExistingTeam ? (
-              <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
-                {t('create.errors.nameExists')}
-              </p>
-            ) : teamNameInlineError ? (
-              <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
-                {teamNameInlineError}
-              </p>
-            ) : isNameProvisioning ? (
-              <p className="text-[11px]" style={{ color: 'var(--warning-text)' }}>
-                {t('create.errors.nameLaunching')}
-              </p>
-            ) : fieldErrors.teamName ? (
-              <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
-                {fieldErrors.teamName}
-              </p>
-            ) : null}
-            {sanitizedTeamName && sanitizedTeamName !== teamName.trim() ? (
-              <p className="text-[11px] text-[var(--color-text-muted)]">
-                {t('create.onDisk')} <span className="font-mono">{sanitizedTeamName}</span>
-              </p>
-            ) : null}
-          </div>
-          <div className="space-y-4 md:col-span-2">
-            <TeamTemplatePicker
-              onApply={(draft) => {
-                setRuntimeSelection(1);
-                setLaunchTeam(false);
-                setSoloTeam(false);
-                setSyncModelsWithLead(true, { persistStoredPreference: false });
-                descriptionDraft.setValue(draft.description ?? '');
-                promptDraft.setValue(draft.prompt ?? '');
-                setMembers(
-                  buildInitialRosterMemberDrafts({
-                    copiedMembers: draft.members,
-                    multimodelEnabled: true,
-                  })
-                );
-              }}
-            />
-            <TeamRosterEditorSection
-              runtimeSelectionUnresolved={runtimeSelectionUnresolved}
-              members={members}
-              onMembersChange={setMembers}
-              teamName={dialogTeamNameKey || undefined}
-              gatewayBindings={gatewayBindings}
-              fieldError={fieldErrors.members}
-              validateMemberName={validateMemberNameInline}
-              showWorkflow
-              draftKeyPrefix="createTeam"
-              projectPath={effectiveCwd || null}
-              taskSuggestions={taskSuggestions}
-              teamSuggestions={teamMentionSuggestions}
-              onWorkflowSuggestionsNeeded={enableWorkflowMentionSuggestions}
-              defaultProviderId={selectedProviderId}
-              inheritedProviderId={selectedProviderId}
-              inheritedModel={selectedModel}
-              inheritedEffort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
-              inheritModelSettingsByDefault
-              lockProviderModel={runtimeSelectionUnresolved || syncModelsWithLead}
-              forceInheritedModelSettings={runtimeSelectionUnresolved || syncModelsWithLead}
-              modelLockReason={t('create.memberModelLockReason')}
-              hideMembersContent={soloTeam}
-              providerId={selectedProviderId}
-              model={selectedModel}
-              effort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
-              limitContext={effectiveAnthropicRuntimeLimitContext}
-              runtimeProviderStatusById={runtimeProviderStatusById}
-              onOpenCodeProviderScopedStatusChange={handleOpenCodeProviderScopedStatusChange}
-              onOpenProviderSettings={setProviderSettingsProviderId}
-              providerReadyById={providerReadyById}
-              onProviderChange={setSelectedProviderId}
-              onModelChange={setSelectedModel}
-              onEffortChange={setSelectedEffort}
-              onLimitContextChange={setLimitContext}
-              syncModelsWithTeammates={syncModelsWithLead}
-              onSyncModelsWithTeammatesChange={handleSyncModelsWithLeadChange}
-              showWorktreeIsolationControls={!soloTeam}
-              teammateWorktreeDefault={teammateWorktreeDefault}
-              worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
-              onTeammateWorktreeDefaultChange={setTeammateWorktreeDefault}
-              disableGeminiOption={isGeminiUiFrozen()}
-              leadModelIssueText={leadModelIssueText}
-              memberWarningById={teammateRuntimeCompatibility.memberWarningById}
-              memberErrorById={teammateRuntimeCompatibility.memberErrorById}
-              memberModelIssueById={memberModelIssueById}
-              memberInfoById={memberWorkspaceInfo}
-              modelAdvisoryReasonByProvider={
-                shortLivedModelIssueReasons.modelAdvisoryReasonByProvider
-              }
-              modelIssueReasonByProvider={shortLivedModelIssueReasons.modelIssueReasonByProvider}
-              modelUnavailableReasonByProvider={
-                shortLivedModelIssueReasons.modelUnavailableReasonByProvider
-              }
-              headerTop={rosterHeaderTop}
-              headerBottom={rosterHeaderBottom}
-            />
-          </div>
-          <div
-            className="rounded-lg border border-[var(--color-border-emphasis)] p-4 shadow-sm md:col-span-2"
-            style={{
-              backgroundColor: isLight
-                ? 'color-mix(in srgb, var(--color-surface-overlay) 24%, white 76%)'
-                : 'var(--color-surface-overlay)',
-            }}
-          >
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id="launch-team"
-                className="mt-1 shrink-0"
-                checked={launchTeam}
-                onCheckedChange={(checked) => setLaunchTeam(checked === true)}
-              />
-              <div className="space-y-1">
-                <Label htmlFor="launch-team" className="cursor-pointer text-sm font-semibold">
-                  {t('create.launchAfterCreate.label')}
-                </Label>
-                <p
-                  className="text-xs"
-                  style={{
-                    color: isLight
-                      ? 'color-mix(in srgb, var(--color-text-muted) 54%, var(--color-text) 46%)'
-                      : 'var(--color-text-muted)',
-                  }}
-                >
-                  {t('create.launchAfterCreate.description')}
-                </p>
-              </div>
-            </div>
-
-            {launchTeam ? (
-              <div className="mt-4 space-y-4">
-                <ProjectPathSelector
-                  cwdMode={cwdMode}
-                  onCwdModeChange={setCwdMode}
-                  selectedProjectPath={selectedProjectPath}
-                  onSelectedProjectPathChange={setSelectedProjectPath}
-                  customCwd={customCwd}
-                  onCustomCwdChange={setCustomCwd}
-                  projects={projects}
-                  projectsLoading={projectsLoading}
-                  projectsError={projectsError}
-                  fieldError={fieldErrors.cwd}
-                  customFolder={customProjectFolder}
-                />
-
-                <OptionalSettingsSection
-                  title={t('create.optional.launchSettingsTitle')}
-                  description={t('create.optional.launchSettingsDescription')}
-                  summary={launchOptionalSummary}
-                  onOpenChange={(isOpen) => {
-                    if (isOpen) {
-                      enableWorkflowMentionSuggestions();
-                    }
-                  }}
-                >
-                  <div className="space-y-4">
-                    {selectedProviderId === 'anthropic' ? (
-                      <div className="space-y-2">
-                        <AnthropicFastModeSelector
-                          value={selectedFastMode}
-                          onValueChange={setSelectedFastMode}
-                          providerFastModeDefault={anthropicProviderFastModeDefault}
-                          model={selectedModel}
-                          projectPath={effectiveCwd}
-                          limitContext={effectiveAnthropicRuntimeLimitContext}
-                          id="create-fast-mode"
-                        />
-                        {anthropicRuntimeNotice ? (
-                          <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
-                            <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
-                            <p>{anthropicRuntimeNotice}</p>
-                          </div>
-                        ) : null}
+    <CreateTeamPageActivityContext.Provider value={active}>
+      <OpenCodeSourceDirectoryProvider
+        enabled={open && multimodelEnabled}
+        projectPath={effectiveCwd}
+      >
+        <CreateTeamSurface
+          presentation={presentation}
+          open={open}
+          isCopy={Boolean(initialData)}
+          backDisabled={isSubmitting}
+          onClose={() => {
+            resetUIState();
+            (presentation === 'page' && onBack ? onBack : onClose)();
+          }}
+          overlay={providerSettingsOverlay}
+          footer={
+            <>
+              <div className="min-w-0">
+                {canCreate && launchTeam ? (
+                  <CreateTeamProviderStatusStrip
+                    projectPath={effectiveCwd}
+                    disabled={isSubmitting}
+                    cliStatus={effectiveCliStatus}
+                    providerStatusOverride={effectiveCwd ? projectScopedOpenCodeStatus : null}
+                    sourceCliStatus={loadingCliStatus}
+                    cliStatusLoading={cliStatusLoading}
+                    cliProviderStatusLoading={cliProviderStatusLoading}
+                    multimodelEnabled={multimodelEnabled}
+                    codexSnapshotPending={codexSnapshotPending}
+                    openCodePreparationEvidence={openCodePreparationEvidence}
+                    providerIds={selectedMemberProviders}
+                    className="mb-2"
+                    label={t('create.prepare.selectedProvidersLabel')}
+                    layout="stacked"
+                    readyStatusText={t('create.prepare.readyStatus')}
+                    forceLoadingProviderIds={optionalPreflight.getPendingProviderPreflightIds(
+                      prepareState,
+                      selectedMemberProviders,
+                      prepareChecks
+                    )}
+                    showReadyProviders
+                  />
+                ) : null}
+                {canCreate && launchTeam && presentedPrepareState === 'loading' ? (
+                  <>
+                    <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+                      <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      <div>
+                        <span>
+                          {effectivePrepare.message ?? t('create.prepare.preparingEnvironment')}
+                        </span>
+                        <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
+                          {t('launch.prepare.preflight', {
+                            action: t('launch.prepare.action.launch'),
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <ProvisioningProviderStatusList
+                      checks={prepareChecks}
+                      className="mt-2"
+                      onOpenProviderSettings={(providerId) =>
+                        setProviderSettingsProviderId(providerId)
+                      }
+                    />
+                  </>
+                ) : null}
+                {canCreate && launchTeam ? (
+                  <TeammateRuntimeCompatibilityNotice
+                    analysis={teammateRuntimeCompatibility}
+                    showMemberErrors
+                  />
+                ) : null}
+                {canCreate &&
+                launchTeam &&
+                presentedPrepareState === 'ready' &&
+                !teammateRuntimeCompatibility.blocksSubmission &&
+                !launchAuthorityBlocked ? (
+                  <div>
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="size-3.5 shrink-0" />
+                      <span>
+                        {prepareChecks.some((check) => check.status === 'notes') ||
+                        prepareWarnings.length > 0
+                          ? t('create.prepare.selectedProvidersReadyWithNotes')
+                          : t('create.prepare.selectedProvidersReady')}
+                      </span>
+                    </div>
+                    {effectivePrepare.message ? (
+                      <p className="mt-0.5 pl-5 text-[11px] text-[var(--color-text-muted)]">
+                        {effectivePrepare.message}
+                      </p>
+                    ) : null}
+                    <ProvisioningProviderStatusList
+                      checks={prepareChecks}
+                      className="mt-1"
+                      onOpenProviderSettings={(providerId) =>
+                        setProviderSettingsProviderId(providerId)
+                      }
+                    />
+                    {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
+                      <div className="mt-0.5 space-y-0.5 pl-5">
+                        {prepareWarnings.map((warning, index) => (
+                          <p
+                            key={`${index}:${warning}`}
+                            className="text-[11px] text-sky-700 dark:text-sky-300"
+                          >
+                            {warning}
+                          </p>
+                        ))}
                       </div>
                     ) : null}
-                    {selectedProviderId === 'codex' ? (
-                      <div className="space-y-2">
-                        <CodexFastModeSelector
-                          value={selectedFastMode}
-                          onValueChange={setSelectedFastMode}
-                          model={selectedModel}
-                          providerBackendId={
-                            resolveUiOwnedProviderBackendId(
-                              'codex',
-                              runtimeProviderStatusById.get('codex')
-                            ) ?? undefined
-                          }
-                          id="create-fast-mode"
-                        />
-                        {anthropicRuntimeNotice ? (
-                          <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
-                            <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
-                            <p>{anthropicRuntimeNotice}</p>
-                          </div>
-                        ) : null}
+                  </div>
+                ) : null}
+                {canCreate &&
+                launchTeam &&
+                presentedPrepareState !== 'idle' &&
+                presentedPrepareState !== 'loading' &&
+                launchAuthorityBlocked ? (
+                  <ProviderLaunchAuthorityNotice
+                    id={CREATE_LAUNCH_AUTHORITY_BLOCKER_ID}
+                    action={t('launch.prepare.action.launch')}
+                    blockers={launchAuthorityBlockers}
+                    onOpenProviderSettings={setProviderSettingsProviderId}
+                  />
+                ) : null}
+                {canCreate && launchTeam && presentedPrepareState === 'failed' ? (
+                  <div className="text-xs">
+                    <div className="flex items-start gap-2 text-red-700 dark:text-red-300">
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium">
+                          {t('launch.prepare.blocked', {
+                            action: t('launch.prepare.action.launch'),
+                          })}
+                        </p>
+                        <p className="mt-0.5 text-red-700/80 dark:text-red-300/80">
+                          {effectivePrepare.message ?? t('launch.prepare.failed')}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
+                          {t('launch.prepare.preflight', {
+                            action: t('launch.prepare.action.launch'),
+                          })}
+                        </p>
                       </div>
-                    ) : null}
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="team-prompt" className="label-optional">
-                        {t('create.fields.prompt')}
-                      </Label>
-                      <MentionableTextarea
-                        id="team-prompt"
-                        className="text-xs"
-                        minRows={3}
-                        maxRows={12}
-                        value={prompt}
-                        onValueChange={promptDraft.setValue}
-                        suggestions={soloTeam ? [] : mentionSuggestions}
-                        teamSuggestions={teamMentionSuggestions}
-                        taskSuggestions={taskSuggestions}
-                        projectPath={effectiveCwd || null}
-                        chips={promptChipDraft.chips}
-                        onChipRemove={promptChipDraft.removeChip}
-                        onFileChipInsert={promptChipDraft.addChip}
-                        placeholder={t('create.placeholders.prompt')}
-                        footerRight={
-                          promptDraft.isSaved ? (
-                            <span className="text-[10px] text-[var(--color-text-muted)]">
-                              {t('create.saved')}
-                            </span>
-                          ) : null
+                    </div>
+                    {!shouldHideProvisioningProviderStatusList(prepareChecks, prepareMessage) ? (
+                      <ProvisioningProviderStatusList
+                        checks={prepareChecks}
+                        className="mt-2"
+                        suppressDetailsMatching={prepareMessage}
+                        onOpenProviderSettings={(providerId) =>
+                          setProviderSettingsProviderId(providerId)
                         }
                       />
-                    </div>
-
-                    <SkipPermissionsCheckbox
-                      id="create-skip-permissions"
-                      checked={skipPermissions}
-                      onCheckedChange={setSkipPermissions}
-                    />
-
-                    <AdvancedCliSection
-                      teamName={advancedKey}
-                      internalArgs={internalArgs}
-                      worktreeEnabled={worktreeEnabled}
-                      onWorktreeEnabledChange={setWorktreeEnabled}
-                      worktreeName={worktreeName}
-                      onWorktreeNameChange={setWorktreeName}
-                      customArgs={customArgs}
-                      onCustomArgsChange={setCustomArgs}
-                    />
+                    ) : null}
+                    {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
+                      <div className="mt-1 space-y-0.5 pl-6">
+                        {prepareWarnings.map((warning, index) => (
+                          <p
+                            key={`${index}:${warning}`}
+                            className="text-[11px]"
+                            style={{ color: 'var(--warning-text)' }}
+                          >
+                            {warning}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                    <p className="mt-1 pl-6 text-[11px] text-[var(--color-text-muted)]">
+                      {getProvisioningFailureHint(effectivePrepare.message, prepareChecks, t)}
+                    </p>
+                    {experimentalLocalModelOverrideAvailable ? (
+                      <ExperimentalLocalModelOverrideCheckbox
+                        id="create-experimental-local-model"
+                        checked={allowExperimentalLocalModels}
+                        onCheckedChange={setAllowExperimentalLocalModels}
+                        label={t('launch.prepare.experimentalLocalModelOverride')}
+                        hint={t('launch.prepare.experimentalLocalModelOverrideHint')}
+                      />
+                    ) : null}
+                    {showCodexReconnectPrompt ? (
+                      <div className="pl-6">
+                        <CodexReconnectPrompt
+                          authUrl={codexAccount.snapshot?.login.authUrl ?? null}
+                          userCode={codexAccount.snapshot?.login.userCode ?? null}
+                          reconnectBusy={codexAccount.loading}
+                          onReconnect={() => handleCodexReconnect('browser')}
+                          onDeviceCodeReconnect={() => handleCodexReconnect('device_code')}
+                        />
+                      </div>
+                    ) : null}
                   </div>
-                </OptionalSettingsSection>
+                ) : null}
               </div>
-            ) : null}
-          </div>
-
-          <div className="md:col-span-2">
-            <OptionalSettingsSection
-              title={t('create.optional.teamDetailsTitle')}
-              description={t('create.optional.teamDetailsDescription')}
-              summary={[...teamDetailsSummary, ...organizationPlacementSummary]}
-            >
-              <div className="space-y-4">
-                <div className="space-y-3 border-b border-[var(--color-border)] pb-4">
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold">
-                      {t('create.organizationPlacement.title')}
-                    </p>
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                      {t('create.organizationPlacement.description')}
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      id="organization-placement-enabled"
-                      className="mt-1 shrink-0"
-                      checked={organizationPlacementEnabled}
-                      disabled={
-                        organizationStructureLoading ||
-                        organizationPlacementOrganizations.length === 0
-                      }
-                      onCheckedChange={(checked) =>
-                        setOrganizationPlacementEnabled(checked === true)
-                      }
-                    />
-                    <div className="min-w-0 space-y-1">
-                      <Label
-                        htmlFor="organization-placement-enabled"
-                        className="cursor-pointer text-sm font-semibold"
-                      >
-                        {t('create.organizationPlacement.addToOrganization')}
-                      </Label>
-                      {organizationPlacementError ? (
-                        <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
-                          {organizationPlacementError}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <div className="space-y-0.5">
-                        <Label className="text-xs">
-                          {t('create.organizationPlacement.organizationLabel')}
-                        </Label>
-                        <p className="text-[11px] text-[var(--color-text-muted)]">
-                          {t('create.organizationPlacement.organizationHelp')}
-                        </p>
-                      </div>
-                      <Select
-                        value={activePlacementOrganization?.id ?? ''}
-                        disabled={
-                          !organizationPlacementEnabled ||
-                          organizationPlacementOrganizations.length === 0
-                        }
-                        onValueChange={(value) => {
-                          setOrganizationPlacementOrganizationId(value);
-                          const organization = organizationPlacementOrganizations.find(
-                            (candidate) => candidate.id === value
-                          );
-                          setOrganizationPlacementParentId(organization?.rootNodeId ?? '');
-                        }}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue
-                            placeholder={t('create.organizationPlacement.organizationPlaceholder')}
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {organizationPlacementOrganizations.map((organization) => (
-                            <SelectItem key={organization.id} value={organization.id}>
-                              {organization.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="space-y-0.5">
-                        <Label className="text-xs">
-                          {t('create.organizationPlacement.groupOrRootLabel')}
-                        </Label>
-                        <p className="text-[11px] text-[var(--color-text-muted)]">
-                          {t('create.organizationPlacement.groupOrRootHelp')}
-                        </p>
-                      </div>
-                      <Select
-                        value={activePlacementParent?.id ?? ''}
-                        disabled={
-                          !organizationPlacementEnabled ||
-                          organizationPlacementParentOptions.length === 0
-                        }
-                        onValueChange={setOrganizationPlacementParentId}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue
-                            placeholder={t('create.organizationPlacement.groupOrRootPlaceholder')}
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {organizationPlacementParentOptions.map((option) => (
-                            <SelectItem key={option.unit.id} value={option.unit.id}>
-                              <span
-                                className="flex min-w-0 items-center gap-2"
-                                style={{ paddingLeft: `${Math.min(option.depth, 6) * 12}px` }}
-                              >
-                                <span className="truncate">
-                                  {getOrganizationUnitLabel(option.unit)}
-                                </span>
-                                <span className="shrink-0 text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">
-                                  {t(getOrganizationPlacementUnitKindKey(option.unit))}
-                                </span>
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="team-description" className="label-optional">
-                    {t('create.fields.description')}
-                  </Label>
-                  <AutoResizeTextarea
-                    id="team-description"
-                    className="text-xs"
-                    minRows={2}
-                    maxRows={8}
-                    value={description}
-                    onChange={(event) => descriptionDraft.setValue(event.target.value)}
-                    placeholder={t('create.placeholders.description')}
-                  />
-                  {descriptionDraft.isSaved ? (
-                    <span className="text-[10px] text-[var(--color-text-muted)]">
-                      {t('create.saved')}
-                    </span>
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                <WorkspaceTrustLaunchNotice status={workspaceTrustStatus} />
+                <div className="flex items-center gap-2">
+                  {canOpenExistingTeam ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        onOpenTeam(request.teamName);
+                        onClose();
+                      }}
+                    >
+                      {t('create.actions.openExisting')}
+                    </Button>
                   ) : null}
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="label-optional">{t('create.fields.color')}</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {TEAM_COLOR_NAMES.map((colorName) => {
-                      const colorSet = getTeamColorSet(colorName);
-                      const isSelected = teamColor === colorName;
-                      return (
-                        <button
-                          key={colorName}
-                          type="button"
-                          className={cn(
-                            'flex size-7 items-center justify-center rounded-full border-2 transition-all',
-                            isSelected ? 'scale-110' : 'opacity-70 hover:opacity-100'
-                          )}
-                          style={{
-                            backgroundColor: getThemedBadge(colorSet, isLight),
-                            borderColor: isSelected ? colorSet.border : 'transparent',
-                          }}
-                          title={colorName}
-                          onClick={() => setTeamColor(isSelected ? '' : colorName)}
-                        >
-                          <span
-                            className="size-3.5 rounded-full"
-                            style={{ backgroundColor: colorSet.border }}
-                          />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </OptionalSettingsSection>
-          </div>
-        </div>
-        {activeError ? (
-          <p
-            className="rounded border p-2 text-xs"
-            style={{
-              color: 'var(--field-error-text)',
-              borderColor: 'var(--field-error-border)',
-              backgroundColor: 'var(--field-error-bg)',
-            }}
-          >
-            {activeError}
-          </p>
-        ) : null}
-        <DialogFooter className="-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between">
-          <div className="min-w-0">
-            {canCreate && launchTeam ? (
-              <CreateTeamProviderStatusStrip
-                projectPath={effectiveCwd}
-                disabled={isSubmitting}
-                cliStatus={effectiveCliStatus}
-                providerStatusOverride={effectiveCwd ? projectScopedOpenCodeStatus : null}
-                sourceCliStatus={loadingCliStatus}
-                cliStatusLoading={cliStatusLoading}
-                cliProviderStatusLoading={cliProviderStatusLoading}
-                multimodelEnabled={multimodelEnabled}
-                codexSnapshotPending={codexSnapshotPending}
-                openCodePreparationEvidence={openCodePreparationEvidence}
-                providerIds={selectedMemberProviders}
-                className="mb-2"
-                label={t('create.prepare.selectedProvidersLabel')}
-                layout="stacked"
-                readyStatusText={t('create.prepare.readyStatus')}
-                forceLoadingProviderIds={optionalPreflight.getPendingProviderPreflightIds(
-                  prepareState,
-                  selectedMemberProviders,
-                  prepareChecks
-                )}
-                showReadyProviders
-              />
-            ) : null}
-            {canCreate && launchTeam && presentedPrepareState === 'loading' ? (
-              <>
-                <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
-                  <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  <div>
-                    <span>
-                      {effectivePrepare.message ?? t('create.prepare.preparingEnvironment')}
-                    </span>
-                    <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
-                      {t('launch.prepare.preflight', {
-                        action: t('launch.prepare.action.launch'),
-                      })}
-                    </p>
-                  </div>
-                </div>
-                <ProvisioningProviderStatusList
-                  checks={prepareChecks}
-                  className="mt-2"
-                  onOpenProviderSettings={(providerId) => setProviderSettingsProviderId(providerId)}
-                />
-              </>
-            ) : null}
-            {canCreate && launchTeam ? (
-              <TeammateRuntimeCompatibilityNotice
-                analysis={teammateRuntimeCompatibility}
-                showMemberErrors
-              />
-            ) : null}
-            {canCreate &&
-            launchTeam &&
-            presentedPrepareState === 'ready' &&
-            !teammateRuntimeCompatibility.blocksSubmission &&
-            !launchAuthorityBlocked ? (
-              <div>
-                <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  <CheckCircle2 className="size-3.5 shrink-0" />
-                  <span>
-                    {prepareChecks.some((check) => check.status === 'notes') ||
-                    prepareWarnings.length > 0
-                      ? t('create.prepare.selectedProvidersReadyWithNotes')
-                      : t('create.prepare.selectedProvidersReady')}
-                  </span>
-                </div>
-                {effectivePrepare.message ? (
-                  <p className="mt-0.5 pl-5 text-[11px] text-[var(--color-text-muted)]">
-                    {effectivePrepare.message}
-                  </p>
-                ) : null}
-                <ProvisioningProviderStatusList
-                  checks={prepareChecks}
-                  className="mt-1"
-                  onOpenProviderSettings={(providerId) => setProviderSettingsProviderId(providerId)}
-                />
-                {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
-                  <div className="mt-0.5 space-y-0.5 pl-5">
-                    {prepareWarnings.map((warning, index) => (
-                      <p
-                        key={`${index}:${warning}`}
-                        className="text-[11px] text-sky-700 dark:text-sky-300"
-                      >
-                        {warning}
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-            {canCreate &&
-            launchTeam &&
-            presentedPrepareState !== 'idle' &&
-            presentedPrepareState !== 'loading' &&
-            launchAuthorityBlocked ? (
-              <ProviderLaunchAuthorityNotice
-                id={CREATE_LAUNCH_AUTHORITY_BLOCKER_ID}
-                action={t('launch.prepare.action.launch')}
-                blockers={launchAuthorityBlockers}
-                onOpenProviderSettings={setProviderSettingsProviderId}
-              />
-            ) : null}
-            {canCreate && launchTeam && presentedPrepareState === 'failed' ? (
-              <div className="text-xs">
-                <div className="flex items-start gap-2 text-red-700 dark:text-red-300">
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="font-medium">
-                      {t('launch.prepare.blocked', {
-                        action: t('launch.prepare.action.launch'),
-                      })}
-                    </p>
-                    <p className="mt-0.5 text-red-700/80 dark:text-red-300/80">
-                      {effectivePrepare.message ?? t('launch.prepare.failed')}
-                    </p>
-                    <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
-                      {t('launch.prepare.preflight', {
-                        action: t('launch.prepare.action.launch'),
-                      })}
-                    </p>
-                  </div>
-                </div>
-                {!shouldHideProvisioningProviderStatusList(prepareChecks, prepareMessage) ? (
-                  <ProvisioningProviderStatusList
-                    checks={prepareChecks}
-                    className="mt-2"
-                    suppressDetailsMatching={prepareMessage}
-                    onOpenProviderSettings={(providerId) =>
-                      setProviderSettingsProviderId(providerId)
+                  <Button
+                    size="lg"
+                    className="min-w-32 text-sm"
+                    aria-describedby={
+                      launchAuthorityBlocked &&
+                      presentedPrepareState !== 'idle' &&
+                      presentedPrepareState !== 'loading'
+                        ? CREATE_LAUNCH_AUTHORITY_BLOCKER_ID
+                        : undefined
                     }
-                  />
-                ) : null}
-                {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
-                  <div className="mt-1 space-y-0.5 pl-6">
-                    {prepareWarnings.map((warning, index) => (
-                      <p
-                        key={`${index}:${warning}`}
-                        className="text-[11px]"
-                        style={{ color: 'var(--warning-text)' }}
-                      >
-                        {warning}
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
-                <p className="mt-1 pl-6 text-[11px] text-[var(--color-text-muted)]">
-                  {getProvisioningFailureHint(effectivePrepare.message, prepareChecks, t)}
-                </p>
-                {experimentalLocalModelOverrideAvailable ? (
-                  <ExperimentalLocalModelOverrideCheckbox
-                    id="create-experimental-local-model"
-                    checked={allowExperimentalLocalModels}
-                    onCheckedChange={setAllowExperimentalLocalModels}
-                    label={t('launch.prepare.experimentalLocalModelOverride')}
-                    hint={t('launch.prepare.experimentalLocalModelOverrideHint')}
-                  />
-                ) : null}
-                {showCodexReconnectPrompt ? (
-                  <div className="pl-6">
-                    <CodexReconnectPrompt
-                      authUrl={codexAccount.snapshot?.login.authUrl ?? null}
-                      userCode={codexAccount.snapshot?.login.userCode ?? null}
-                      reconnectBusy={codexAccount.loading}
-                      onReconnect={() => handleCodexReconnect('browser')}
-                      onDeviceCodeReconnect={() => handleCodexReconnect('device_code')}
-                    />
-                  </div>
-                ) : null}
+                    disabled={
+                      !canCreate ||
+                      !draftLoaded ||
+                      gatewayBindings.pending ||
+                      isSubmitting ||
+                      (launchTeam && !launchPreflightSelectionReady) ||
+                      (prepareState === 'loading' && !canSkipPreflight()) ||
+                      hasCreateFormErrors ||
+                      prepareBlocksCreate
+                    }
+                    onClick={handleSubmit}
+                  >
+                    {isSubmitting ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
+                    {createActionLabel}
+                  </Button>
+                </div>
               </div>
-            ) : null}
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-2">
-            <WorkspaceTrustLaunchNotice status={workspaceTrustStatus} />
-            <div className="flex items-center gap-2">
-              {canOpenExistingTeam ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    onOpenTeam(request.teamName);
-                    onClose();
-                  }}
+            </>
+          }
+          headerActions={
+            <CreateTeamHeaderActions
+              local={canCreate}
+              isLight={isLight}
+              onManagementApplied={onManagementApplied}
+              form={createTeamDraft}
+              descriptionDraft={descriptionDraft}
+              promptDraft={promptDraft}
+              defaultDescription={buildDefaultTeamDescription()}
+              hasPromptChips={promptChipDraft.chips.length > 0}
+              clearPromptChips={promptChipDraft.clearChipDraft}
+              disabled={isSubmitting || !open || !active}
+            />
+          }
+        >
+          <ScopedCatalogLoaders configuration={openCodeCatalogLoaderConfiguration} />
+          {conflictingTeam && !conflictDismissed ? (
+            <div
+              className="rounded-md border p-3 text-xs"
+              style={{
+                backgroundColor: 'var(--warning-bg)',
+                borderColor: 'var(--warning-border)',
+                color: 'var(--warning-text)',
+              }}
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="font-medium">
+                    {t('create.conflict.title', { team: conflictingTeam.displayName })}
+                  </p>
+                  <p className="opacity-80">{t('create.conflict.description')}</p>
+                  <p className="text-[11px] opacity-70">
+                    {t('create.conflict.workingDirectory')}{' '}
+                    <span className="font-mono">{effectiveCwd}</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="shrink-0 rounded p-0.5 opacity-60 transition-colors hover:opacity-100"
+                  onClick={() => setConflictDismissed(true)}
                 >
-                  {t('create.actions.openExisting')}
-                </Button>
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {!canCreate ? (
+            <p
+              className="rounded border p-2 text-xs"
+              style={{
+                backgroundColor: 'var(--warning-bg)',
+                borderColor: 'var(--warning-border)',
+                color: 'var(--warning-text)',
+              }}
+            >
+              {t('create.localOnly')}
+            </p>
+          ) : null}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="w-full max-w-[24rem] space-y-1.5 md:col-span-2">
+              <Label htmlFor="team-name">{t('create.fields.teamName')}</Label>
+              <Input
+                id="team-name"
+                className={cn(
+                  'h-8 text-xs',
+                  (fieldErrors.teamName || teamNameInlineError || isNameTakenByExistingTeam) &&
+                    'border-[var(--field-error-border)] bg-[var(--field-error-bg)] focus-visible:ring-[var(--field-error-border)]'
+                )}
+                value={teamName}
+                onChange={(event) => handleTeamNameChange(event.target.value)}
+                placeholder={suggestedTeamName}
+              />
+              {isNameTakenByExistingTeam ? (
+                <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                  {t('create.errors.nameExists')}
+                </p>
+              ) : teamNameInlineError ? (
+                <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                  {teamNameInlineError}
+                </p>
+              ) : isNameProvisioning ? (
+                <p className="text-[11px]" style={{ color: 'var(--warning-text)' }}>
+                  {t('create.errors.nameLaunching')}
+                </p>
+              ) : fieldErrors.teamName ? (
+                <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                  {fieldErrors.teamName}
+                </p>
               ) : null}
-              <Button
-                size="lg"
-                className="min-w-32 text-sm"
-                aria-describedby={
-                  launchAuthorityBlocked &&
-                  presentedPrepareState !== 'idle' &&
-                  presentedPrepareState !== 'loading'
-                    ? CREATE_LAUNCH_AUTHORITY_BLOCKER_ID
-                    : undefined
+              {sanitizedTeamName && sanitizedTeamName !== teamName.trim() ? (
+                <p className="text-[11px] text-[var(--color-text-muted)]">
+                  {t('create.onDisk')} <span className="font-mono">{sanitizedTeamName}</span>
+                </p>
+              ) : null}
+            </div>
+            <div className="space-y-4 pt-4 md:col-span-2">
+              <TeamRosterEditorSection
+                runtimeSelectionUnresolved={runtimeSelectionUnresolved}
+                members={members}
+                onMembersChange={setMembers}
+                teamName={dialogTeamNameKey || undefined}
+                gatewayBindings={gatewayBindings}
+                fieldError={fieldErrors.members}
+                validateMemberName={validateMemberNameInline}
+                showWorkflow
+                draftKeyPrefix="createTeam"
+                projectPath={effectiveCwd || null}
+                taskSuggestions={taskSuggestions}
+                teamSuggestions={teamMentionSuggestions}
+                onWorkflowSuggestionsNeeded={enableWorkflowMentionSuggestions}
+                defaultProviderId={selectedProviderId}
+                inheritedProviderId={selectedProviderId}
+                inheritedModel={selectedModel}
+                inheritedEffort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
+                inheritModelSettingsByDefault
+                lockProviderModel={runtimeSelectionUnresolved || syncModelsWithLead}
+                forceInheritedModelSettings={runtimeSelectionUnresolved || syncModelsWithLead}
+                modelLockReason={t('create.memberModelLockReason')}
+                hideMembersContent={soloTeam}
+                providerId={selectedProviderId}
+                model={selectedModel}
+                effort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
+                limitContext={effectiveAnthropicRuntimeLimitContext}
+                runtimeProviderStatusById={runtimeProviderStatusById}
+                onOpenCodeProviderScopedStatusChange={handleOpenCodeProviderScopedStatusChange}
+                onOpenProviderSettings={setProviderSettingsProviderId}
+                onManageProviders={invalidatePrepareProvider}
+                providerReadyById={providerReadyById}
+                onProviderChange={setSelectedProviderId}
+                onModelChange={setSelectedModel}
+                onEffortChange={setSelectedEffort}
+                onLimitContextChange={setLimitContext}
+                syncModelsWithTeammates={syncModelsWithLead}
+                onSyncModelsWithTeammatesChange={handleSyncModelsWithLeadChange}
+                showWorktreeIsolationControls={!soloTeam}
+                teammateWorktreeDefault={teammateWorktreeDefault}
+                worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
+                onTeammateWorktreeDefaultChange={setTeammateWorktreeDefault}
+                disableGeminiOption={isGeminiUiFrozen()}
+                leadModelIssueText={leadModelIssueText}
+                memberWarningById={teammateRuntimeCompatibility.memberWarningById}
+                memberErrorById={teammateRuntimeCompatibility.memberErrorById}
+                memberModelIssueById={memberModelIssueById}
+                memberInfoById={memberWorkspaceInfo}
+                modelAdvisoryReasonByProvider={
+                  shortLivedModelIssueReasons.modelAdvisoryReasonByProvider
                 }
-                disabled={
-                  !canCreate ||
-                  !draftLoaded ||
-                  gatewayBindings.pending ||
-                  isSubmitting ||
-                  (launchTeam && !launchPreflightSelectionReady) ||
-                  (prepareState === 'loading' && !canSkipPreflight()) ||
-                  hasCreateFormErrors ||
-                  prepareBlocksCreate
+                modelIssueReasonByProvider={shortLivedModelIssueReasons.modelIssueReasonByProvider}
+                modelUnavailableReasonByProvider={
+                  shortLivedModelIssueReasons.modelUnavailableReasonByProvider
                 }
-                onClick={handleSubmit}
+                headerTop={rosterHeaderTop}
+                headerBottom={rosterHeaderBottom}
+              />
+            </div>
+            <div
+              className="rounded-lg border border-[var(--color-border-emphasis)] p-4 shadow-sm md:col-span-2"
+              style={{
+                backgroundColor: isLight
+                  ? 'color-mix(in srgb, var(--color-surface-overlay) 24%, white 76%)'
+                  : 'var(--color-surface-overlay)',
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="launch-team"
+                  className="mt-1 shrink-0"
+                  checked={launchTeam}
+                  onCheckedChange={(checked) => setLaunchTeam(checked === true)}
+                />
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="launch-team" className="cursor-pointer text-sm font-semibold">
+                    {t('create.launchAfterCreate.label')}
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={t('create.launchAfterCreate.description')}
+                          className="rounded text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)]"
+                        >
+                          <Info className="size-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-72">
+                        {t('create.launchAfterCreate.description')}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+              {launchTeam ? (
+                <div className="mt-4 space-y-4">
+                  <ProjectPathSelector
+                    cwdMode={cwdMode}
+                    onCwdModeChange={setCwdMode}
+                    selectedProjectPath={selectedProjectPath}
+                    onSelectedProjectPathChange={(path) =>
+                      setSelectedProjectPath(path, { explicit: true })
+                    }
+                    customCwd={customCwd}
+                    onCustomCwdChange={setCustomCwd}
+                    projects={projects}
+                    projectsLoading={projectsLoading}
+                    projectsError={projectsError}
+                    fieldError={fieldErrors.cwd}
+                    customFolder={customProjectFolder}
+                  />
+                  <OptionalSettingsSection
+                    title={t('create.optional.launchSettingsTitle')}
+                    description={t('create.optional.launchSettingsDescription')}
+                    summary={launchOptionalSummary}
+                    onOpenChange={(isOpen) => {
+                      if (isOpen) {
+                        enableWorkflowMentionSuggestions();
+                      }
+                    }}
+                  >
+                    <div className="space-y-4">
+                      {selectedProviderId === 'anthropic' ? (
+                        <div className="space-y-2">
+                          <AnthropicFastModeSelector
+                            value={selectedFastMode}
+                            onValueChange={setSelectedFastMode}
+                            providerFastModeDefault={anthropicProviderFastModeDefault}
+                            model={selectedModel}
+                            projectPath={effectiveCwd}
+                            limitContext={effectiveAnthropicRuntimeLimitContext}
+                            id="create-fast-mode"
+                          />
+                          {anthropicRuntimeNotice ? (
+                            <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+                              <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
+                              <p>{anthropicRuntimeNotice}</p>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      {selectedProviderId === 'codex' ? (
+                        <div className="space-y-2">
+                          <CodexFastModeSelector
+                            value={selectedFastMode}
+                            onValueChange={setSelectedFastMode}
+                            model={selectedModel}
+                            providerBackendId={
+                              resolveUiOwnedProviderBackendId(
+                                'codex',
+                                runtimeProviderStatusById.get('codex')
+                              ) ?? undefined
+                            }
+                            id="create-fast-mode"
+                          />
+                          {anthropicRuntimeNotice ? (
+                            <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+                              <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
+                              <p>{anthropicRuntimeNotice}</p>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="team-prompt" className="label-optional">
+                          {t('create.fields.prompt')}
+                        </Label>
+                        <MentionableTextarea
+                          id="team-prompt"
+                          className="text-xs"
+                          minRows={3}
+                          maxRows={12}
+                          value={prompt}
+                          onValueChange={promptDraft.setValue}
+                          suggestions={soloTeam ? [] : mentionSuggestions}
+                          teamSuggestions={teamMentionSuggestions}
+                          taskSuggestions={taskSuggestions}
+                          projectPath={effectiveCwd || null}
+                          chips={promptChipDraft.chips}
+                          onChipRemove={promptChipDraft.removeChip}
+                          onFileChipInsert={promptChipDraft.addChip}
+                          placeholder={t('create.placeholders.prompt')}
+                          footerRight={
+                            promptDraft.isSaved ? (
+                              <span className="text-[10px] text-[var(--color-text-muted)]">
+                                {t('create.saved')}
+                              </span>
+                            ) : null
+                          }
+                        />
+                      </div>
+                      <SkipPermissionsCheckbox
+                        id="create-skip-permissions"
+                        checked={skipPermissions}
+                        onCheckedChange={setSkipPermissions}
+                      />
+                      <AdvancedCliSection
+                        teamName={advancedKey}
+                        internalArgs={internalArgs}
+                        worktreeEnabled={worktreeEnabled}
+                        onWorktreeEnabledChange={setWorktreeEnabled}
+                        worktreeName={worktreeName}
+                        onWorktreeNameChange={setWorktreeName}
+                        customArgs={customArgs}
+                        onCustomArgsChange={setCustomArgs}
+                      />
+                    </div>
+                  </OptionalSettingsSection>
+                </div>
+              ) : null}
+            </div>
+            <div className="md:col-span-2">
+              <OptionalSettingsSection
+                title={t('create.optional.teamDetailsTitle')}
+                description={t('create.optional.teamDetailsDescription')}
+                summary={[...teamDetailsSummary, ...organizationPlacementSummary]}
               >
-                {isSubmitting ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
-                {createActionLabel}
-              </Button>
+                <div className="space-y-4">
+                  <div className="space-y-3 border-b border-[var(--color-border)] pb-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold">
+                        {t('create.organizationPlacement.title')}
+                      </p>
+                      <p className="text-xs text-[var(--color-text-muted)]">
+                        {t('create.organizationPlacement.description')}
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="organization-placement-enabled"
+                        className="mt-1 shrink-0"
+                        checked={organizationPlacementEnabled}
+                        disabled={
+                          organizationStructureLoading ||
+                          (!organizationPlacementEnabled &&
+                            organizationPlacementOrganizations.length === 0)
+                        }
+                        onCheckedChange={(checked) =>
+                          setOrganizationPlacementEnabled(checked === true)
+                        }
+                      />
+                      <div className="min-w-0 space-y-1">
+                        <Label
+                          htmlFor="organization-placement-enabled"
+                          className="cursor-pointer text-sm font-semibold"
+                        >
+                          {t('create.organizationPlacement.addToOrganization')}
+                        </Label>
+                        {organizationPlacementError ? (
+                          <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                            {organizationPlacementError}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <div className="space-y-0.5">
+                          <Label className="text-xs">
+                            {t('create.organizationPlacement.organizationLabel')}
+                          </Label>
+                          <p className="text-[11px] text-[var(--color-text-muted)]">
+                            {t('create.organizationPlacement.organizationHelp')}
+                          </p>
+                        </div>
+                        <Select
+                          value={activePlacementOrganization?.id ?? ''}
+                          disabled={
+                            !organizationPlacementEnabled ||
+                            organizationPlacementOrganizations.length === 0
+                          }
+                          onValueChange={(value) => {
+                            setOrganizationPlacementOrganizationId(value);
+                            const organization = organizationPlacementOrganizations.find(
+                              (candidate) => candidate.id === value
+                            );
+                            setOrganizationPlacementParentId(organization?.rootNodeId ?? '');
+                          }}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue
+                              placeholder={t(
+                                'create.organizationPlacement.organizationPlaceholder'
+                              )}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {organizationPlacementOrganizations.map((organization) => (
+                              <SelectItem key={organization.id} value={organization.id}>
+                                {organization.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="space-y-0.5">
+                          <Label className="text-xs">
+                            {t('create.organizationPlacement.groupOrRootLabel')}
+                          </Label>
+                          <p className="text-[11px] text-[var(--color-text-muted)]">
+                            {t('create.organizationPlacement.groupOrRootHelp')}
+                          </p>
+                        </div>
+                        <Select
+                          value={activePlacementParent?.id ?? ''}
+                          disabled={
+                            !organizationPlacementEnabled ||
+                            organizationPlacementParentOptions.length === 0
+                          }
+                          onValueChange={setOrganizationPlacementParentId}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue
+                              placeholder={t('create.organizationPlacement.groupOrRootPlaceholder')}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {organizationPlacementParentOptions.map((option) => (
+                              <SelectItem key={option.unit.id} value={option.unit.id}>
+                                <span
+                                  className="flex min-w-0 items-center gap-2"
+                                  style={{ paddingLeft: `${Math.min(option.depth, 6) * 12}px` }}
+                                >
+                                  <span className="truncate">
+                                    {getOrganizationUnitLabel(option.unit)}
+                                  </span>
+                                  <span className="shrink-0 text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">
+                                    {t(getOrganizationPlacementUnitKindKey(option.unit))}
+                                  </span>
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="team-description" className="label-optional">
+                      {t('create.fields.description')}
+                    </Label>
+                    <AutoResizeTextarea
+                      id="team-description"
+                      className="text-xs"
+                      minRows={2}
+                      maxRows={8}
+                      value={description}
+                      onChange={(event) => descriptionDraft.setValue(event.target.value)}
+                      placeholder={t('create.placeholders.description')}
+                    />
+                    {descriptionDraft.isSaved ? (
+                      <span className="text-[10px] text-[var(--color-text-muted)]">
+                        {t('create.saved')}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="label-optional">{t('create.fields.color')}</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {TEAM_COLOR_NAMES.map((colorName) => {
+                        const colorSet = getTeamColorSet(colorName);
+                        const isSelected = teamColor === colorName;
+                        return (
+                          <button
+                            key={colorName}
+                            type="button"
+                            className={cn(
+                              'flex size-7 items-center justify-center rounded-full border-2 transition-all',
+                              isSelected ? 'scale-110' : 'opacity-70 hover:opacity-100'
+                            )}
+                            style={{
+                              backgroundColor: getThemedBadge(colorSet, isLight),
+                              borderColor: isSelected ? colorSet.border : 'transparent',
+                            }}
+                            title={colorName}
+                            onClick={() => setTeamColor(isSelected ? '' : colorName)}
+                          >
+                            <span
+                              className="size-3.5 rounded-full"
+                              style={{ backgroundColor: colorSet.border }}
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </OptionalSettingsSection>
             </div>
           </div>
-        </DialogFooter>
-      </DialogContent>
+          {activeError ? (
+            <p
+              className="rounded border p-2 text-xs"
+              style={{
+                color: 'var(--field-error-text)',
+                borderColor: 'var(--field-error-border)',
+                backgroundColor: 'var(--field-error-bg)',
+              }}
+            >
+              {activeError}
+            </p>
+          ) : null}
+        </CreateTeamSurface>
       </OpenCodeSourceDirectoryProvider>
-      <ProvisioningProviderRuntimeSettingsDialog
-        openProviderId={providerSettingsProviderId}
-        onOpenProviderIdChange={(providerId) => setProviderSettingsProviderId(providerId)}
-        providers={effectiveCliStatus?.providers ?? []}
-        projectPath={effectiveCwd || null}
-        disabled={isSubmitting}
-        onProviderRuntimeChanged={invalidatePrepareProvider}
-      />
-    </Dialog>
+    </CreateTeamPageActivityContext.Provider>
   );
 };

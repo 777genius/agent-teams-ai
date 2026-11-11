@@ -184,7 +184,7 @@ export const SearchInFilesPanel = ({
 
       {/* Search input */}
       <div className="border-b border-border p-2">
-        <div className="flex items-center gap-1 rounded border border-border bg-surface px-2 py-1">
+        <div className="flex items-center gap-1 rounded border border-border bg-[var(--color-form-control-bg)] px-2 py-1">
           <Search className="size-3.5 shrink-0 text-text-muted" />
           <input
             ref={inputRef}

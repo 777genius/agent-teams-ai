@@ -127,7 +127,7 @@ export const QuickOpenDialog = ({
         <Command label={t('editor.quickOpen.title')} shouldFilter={true}>
           <Command.Input
             placeholder={t('editor.quickOpen.searchPlaceholder')}
-            className="w-full border-b border-border bg-transparent px-4 py-3 text-sm text-text outline-none placeholder:text-text-muted"
+            className="w-full border-b border-border bg-[var(--color-form-control-bg)] px-4 py-3 text-sm text-text outline-none placeholder:text-text-muted"
             autoFocus
           />
           <Command.List className="max-h-80 overflow-y-auto p-1">

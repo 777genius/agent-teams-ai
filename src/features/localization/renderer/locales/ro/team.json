@@ -1521,7 +1521,12 @@
       "leadDefault": "Liderul echipei (implicit)",
       "agentDescription": "Dacă echipa este oprită, pornește un agent separat; dacă rulează, atribuie o sarcină.",
       "teamDescription": "Dacă echipa este oprită, o pornește; dacă rulează, atribuie o sarcină liderului. Folosește setările salvate.",
-      "teamPathMissing": "Salvează folderul proiectului echipei înainte de a programa pornirea."
+      "teamPathMissing": "Salvează folderul proiectului echipei înainte de a programa pornirea.",
+      "taskFirstAgentDescription": "Membrul ales primește o sarcină pe tablă după pornirea în siguranță a echipei, dacă este necesar. Agenții ocupați nu sunt întrerupți.",
+      "taskFirstTeamDescription": "Liderul primește o sarcină de coordonare după pornirea în siguranță a echipei, dacă este necesar. Lucrul în curs nu este întrerupt.",
+      "taskFirstTarget": "Atribuie către",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "Am verificat promptul vechi și am separat instrucțiunile permanente. Păstrează textul vechi, dar nu îl executa conform programării."
     },
     "title": {
       "createSchedule": "Creează programare",
@@ -2096,7 +2101,8 @@
       "stillRunning": "Sarcina încă rulează...",
       "loadingLogs": "Se încarcă jurnalele...",
       "errors": "Erori",
-      "close": "Închide"
+      "close": "Închide",
+      "openTask": "Deschide sarcina"
     },
     "cron": {
       "expression": "Expresie cron",

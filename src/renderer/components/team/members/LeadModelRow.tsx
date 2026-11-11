@@ -70,6 +70,7 @@ interface LeadModelRowProps {
   modelUnavailableReasonByValue?: Partial<Record<string, string | null | undefined>>;
   onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
   onOpenProviderSettings?: TeamModelSelectorProps['onOpenProviderSettings'];
+  onManageProviders?: TeamModelSelectorProps['onManageProviders'];
   showAnthropicContextLimit?: boolean;
   disableAnthropicContextLimit?: boolean;
   projectPath?: string | null;
@@ -99,6 +100,7 @@ export const LeadModelRow = ({
   modelUnavailableReasonByValue,
   onOpenCodeProviderScopedStatusChange,
   onOpenProviderSettings,
+  onManageProviders,
   showAnthropicContextLimit = providerId === 'anthropic',
   disableAnthropicContextLimit,
   projectPath,
@@ -192,6 +194,7 @@ export const LeadModelRow = ({
       isLight={isLight}
       layout={isFlatRoster ? 'flat' : 'lead'}
       dataRole="lead-row"
+      expanded={!runtimeSelectionUnresolved && modelExpanded}
     >
       <div className="min-w-0">
         <RosterParticipantIdentity avatarSrc={agentAvatarUrl('team-lead', 32)}>
@@ -219,13 +222,13 @@ export const LeadModelRow = ({
           <div
             className={cn(
               'flex flex-col gap-2 sm:flex-row sm:items-start',
-              isFlatRoster && 'sm:flex-wrap sm:gap-1.5'
+              isFlatRoster && 'sm:flex-nowrap sm:gap-1.5'
             )}
           >
             <div
               className={cn(
                 'w-full min-w-0 space-y-1',
-                isFlatRoster ? 'sm:w-[170px] sm:min-w-[170px]' : 'sm:w-[150px] sm:min-w-[150px]'
+                isFlatRoster ? 'sm:w-[170px] sm:min-w-[140px]' : 'sm:w-[150px] sm:min-w-[150px]'
               )}
             >
               <TooltipProvider delayDuration={300}>
@@ -284,7 +287,7 @@ export const LeadModelRow = ({
         </div>
       ) : null}
       {!runtimeSelectionUnresolved && modelExpanded ? (
-        <div className="space-y-2 md:col-span-3">
+        <div className={cn('col-span-full min-w-0 space-y-2', isFlatRoster ? '-mx-1.5' : 'mx-0.5')}>
           <TeamModelSelector
             providerId={providerId}
             onProviderChange={onProviderChange}
@@ -304,6 +307,7 @@ export const LeadModelRow = ({
             modelUnavailableReasonByValue={modelUnavailableReasonByValue}
             onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
             onOpenProviderSettings={onOpenProviderSettings}
+            onManageProviders={onManageProviders}
           />
           <EffortLevelSelector
             value={effort ?? ''}

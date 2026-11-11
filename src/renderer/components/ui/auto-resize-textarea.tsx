@@ -76,7 +76,7 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
     return (
       <textarea
         className={cn(
-          'flex w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm shadow-sm transition-[height] duration-100 ease-in-out placeholder:text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50',
+          'flex w-full rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm shadow-sm transition-[height] duration-100 ease-in-out placeholder:text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50',
           className
         )}
         ref={setRefs}

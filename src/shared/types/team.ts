@@ -885,6 +885,8 @@ export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunc
   teamName: string;
   cwd: string;
   prompt?: string;
+  /** Explicit opt-in: start the configured runtime without replaying saved one-time work. */
+  bootstrapOnly?: true;
   providerId?: TeamProviderId;
   providerBackendId?: TeamProviderBackendId;
   model?: string;
@@ -934,6 +936,8 @@ export interface CreateTaskRequest {
   prompt?: string;
   promptTaskRefs?: TaskRef[];
   startImmediately?: boolean;
+  /** Opt-in internal scheduling: store an owned task silently until readiness is proven. */
+  notifyOwner?: false;
 }
 
 export type LeadActivityState = 'active' | 'idle' | 'offline';

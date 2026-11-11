@@ -6,6 +6,14 @@ on:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - scripts/e2e/opencode-diagnostics-desktop.mjs
+      - src/renderer/store/index.ts
+      # The #1153 catalog recovery and snapshot-freshness boundaries also affect
+      # native Desktop provider UX, even when the E2E harness itself is unchanged.
+      - src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts
+      - src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts
+      - src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts
+      - src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts
+      - src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts
       - scripts/e2e/opencode-diagnostics/**
       - test/scripts/opencodeStartupCleanupFixture.test.mjs
       - .github/workflows/opencode-desktop-e2e.yml

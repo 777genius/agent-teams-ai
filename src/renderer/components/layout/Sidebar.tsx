@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { TaskFoldersHost, useTaskFoldersDocked } from '@features/task-folders/renderer';
+import { isElectronMode } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { formatShortcut } from '@renderer/utils/stringUtils';
 import { PanelLeft } from 'lucide-react';
@@ -35,7 +36,7 @@ const MIN_WIDTH = 200;
 const MAX_WIDTH = 500;
 const DEFAULT_WIDTH = 280;
 
-export const Sidebar = (): React.JSX.Element => {
+export const Sidebar = ({ hideOnNarrowSettings = false }: { hideOnNarrowSettings?: boolean }): React.JSX.Element => {
   const { t } = useAppTranslation('common');
   const { activeContextId, sidebarCollapsed, toggleSidebar } = useStore(
     useShallow((s) => ({
@@ -59,7 +60,10 @@ export const Sidebar = (): React.JSX.Element => {
     (e: MouseEvent) => {
       if (!isResizing) return;
 
-      const newWidth = window.innerWidth - e.clientX;
+      // Browser CSS zoom scales pointer coordinates but not our stored CSS width.
+      // Electron native zoom already exposes adjusted viewport coordinates.
+      const browserZoom = isElectronMode() ? 1 : Number(document.documentElement.style.zoom) || 1;
+      const newWidth = (window.innerWidth - e.clientX) / browserZoom;
       if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
         setWidth(newWidth);
       }
@@ -103,7 +107,7 @@ export const Sidebar = (): React.JSX.Element => {
   return (
     <div
       ref={sidebarRef}
-      className="relative flex shrink-0 flex-col overflow-hidden border-l"
+      className={`relative flex shrink-0 flex-col overflow-hidden border-l ${hideOnNarrowSettings ? 'appearance-settings-task-sidebar' : ''}`}
       style={{
         backgroundColor: 'var(--color-surface-sidebar)',
         borderColor: 'var(--color-border)',
@@ -140,7 +144,7 @@ export const Sidebar = (): React.JSX.Element => {
             <PanelLeft className="size-3.5" />
           </button>
 
-          <span className="flex-1 text-[13px] font-semibold text-text">
+          <span className="flex-1 text-[calc(13px*var(--appearance-text-scale,1))] font-semibold text-text">
             {t('tasksPanel.title')}
           </span>
           <TaskFoldersHost

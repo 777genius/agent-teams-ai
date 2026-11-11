@@ -117,7 +117,7 @@ export const MessageComposerRecipientSelector = ({
             <input
               ref={searchRef}
               type="text"
-              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] py-1 pl-6 pr-2 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
+              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] py-1 pl-6 pr-2 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
               placeholder={t('messageComposer.recipient.searchPlaceholder')}
               value={search}
               onChange={(event) => setSearch(event.target.value)}

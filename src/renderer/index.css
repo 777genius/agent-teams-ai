@@ -875,9 +875,21 @@
 }
 
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
-    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: var(
+    --appearance-font-family,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif
+  );
+  font-size: calc(1rem * var(--appearance-text-scale, 1));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-surface);
@@ -890,9 +902,10 @@ body.theme-transitioning {
     color 0.2s ease;
 }
 
+/* Browser mode offsets CSS zoom so its viewport-sized layout still fits. */
 #root {
-  width: 100vw;
-  height: 100vh;
+  width: calc(100vw * var(--appearance-inverse-zoom, 1));
+  height: calc(100vh * var(--appearance-inverse-zoom, 1));
   overflow: hidden;
 }
 
@@ -1259,6 +1272,12 @@ a[href],
     rgba(0, 0, 0, 0.04) 60%,
     transparent 100%
   );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-testid-loading='skeleton'] .skeleton-shimmer::after {
+    animation: none;
+  }
 }
 
 /* One-shot confirmation sweep after dashboard rate limits finish refreshing */

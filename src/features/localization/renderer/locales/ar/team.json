@@ -1521,7 +1521,12 @@
       "leadDefault": "قائد الفريق (افتراضي)",
       "agentDescription": "إذا كان الفريق متوقفًا، يشغّل وكيلاً مستقلاً؛ وإذا كان يعمل، ينشئ مهمة ويسندها.",
       "teamDescription": "إذا كان الفريق متوقفًا، يشغّله؛ وإذا كان يعمل، يسند مهمة إلى قائده. يستخدم الإعدادات المحفوظة.",
-      "teamPathMissing": "احفظ مجلد مشروع الفريق قبل جدولة تشغيله."
+      "teamPathMissing": "احفظ مجلد مشروع الفريق قبل جدولة تشغيله.",
+      "taskFirstAgentDescription": "يتلقى عضو الفريق المحدد مهمة في اللوحة بعد تشغيل الفريق بأمان عند الحاجة. لن تتم مقاطعة الوكلاء المشغولين.",
+      "taskFirstTeamDescription": "يتلقى قائد الفريق مهمة تنسيق بعد تشغيل الفريق بأمان عند الحاجة. لن تتم مقاطعة العمل الجاري.",
+      "taskFirstTarget": "إسناد إلى",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "راجعت المطالبة القديمة وفصلت التعليمات الدائمة. احتفظ بالنص القديم، لكن لا تنفذه مع الجدول."
     },
     "title": {
       "createSchedule": "الجدول الزمني المحدد",
@@ -2096,7 +2101,8 @@
       "stillRunning": "المهمة لا تزال جارية...",
       "loadingLogs": "سجلات الشحن...",
       "errors": "الأخطاء",
-      "close": "اقترب"
+      "close": "اقترب",
+      "openTask": "فتح المهمة"
     },
     "cron": {
       "expression": "التعبير الحرفي",

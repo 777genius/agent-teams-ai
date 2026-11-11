@@ -41,6 +41,7 @@ if (
     'models-four-errors',
     'partial-success',
     'catalog-retry',
+    'connected-summary',
     'catalog-timeout',
   ].includes(scenario)
 )
@@ -137,15 +138,32 @@ function catalogCommand(operation) {
     const flag = args[i];
     if (flags.has(flag)) return refuse();
     if (['--json', '--summary', '--refresh'].includes(flag)) flags.set(flag, true);
-    else if (['--runtime', '--provider', '--filter', '--limit'].includes(flag) && args[i + 1])
+    else if (['--runtime', '--provider', '--filter', '--limit', '--cursor'].includes(flag) && args[i + 1])
       flags.set(flag, args[++i]);
     else return refuse();
   }
   if (flags.get('--runtime') !== 'opencode' || flags.get('--json') !== true) return refuse();
   const sources = ['opencode', 'anthropic', 'google', 'openrouter'];
+  // A fifth connected source distinguishes this scenario from the retained prior count.
+  const catalogSources = scenario === 'connected-summary'
+    ? [...sources, 'fixture-connected']
+    : sources;
   const source = flags.get('--provider');
-  if (operation === 'models' && !sources.includes(source)) return refuse();
+  if (operation === 'models' && !catalogSources.includes(source)) return refuse();
   if (operation === 'directory' && source) return refuse();
+  const filter = flags.get('--filter') || 'all';
+  const limit = flags.has('--limit') ? Number(flags.get('--limit')) : 100;
+  const cursor = flags.get('--cursor') ?? null;
+  if (
+    operation === 'directory' &&
+    (
+      !['all', 'connected'].includes(filter) ||
+      // Native startup-cleanup requests 250 entries. Keep a bounded fixture
+      // page size without rejecting that production read.
+      !Number.isSafeInteger(limit) || limit < 1 || limit > 250 ||
+      (cursor !== null && (!/^(0|[1-9]\d*)$/.test(cursor) || !Number.isSafeInteger(Number(cursor))))
+    )
+  ) return refuse();
   const emit = () => {
     const failed =
       (operation === 'directory' && scenario === 'directory-error') ||
@@ -159,41 +177,73 @@ function catalogCommand(operation) {
         recoverable: true,
         message: `Fixture ${operation} ${source || 'directory'} failed api_key=DO_NOT_COPY_THIS_SECRET`,
       };
-    else if (operation === 'directory')
+    else if (operation === 'directory') {
+      const connectedEntries = catalogSources.map((providerId) => ({
+        providerId,
+        displayName: providerId,
+        state: 'connected',
+        setupKind: 'connect-api-key',
+        ownership: [],
+        recommended: false,
+        modelCount: 1,
+        authMethods: [],
+        defaultModelId: null,
+        sources: ['opencode-provider'],
+        sourceLabel: null,
+        providerSource: null,
+        detail: null,
+        actions: [],
+        metadata: {
+          hasKnownModels: true,
+          requiresManualConfig: false,
+          supportedInlineAuth: true,
+          configuredAuthless: false,
+        },
+      }));
+      // This one scenario forces QuickConnect's incomplete all-summary branch.
+      // Available-only providers are not model sources or authenticated counts.
+      const availableEntries = scenario === 'connected-summary'
+        ? Array.from({ length: 100 }, (_, index) => ({
+            ...connectedEntries[0],
+            providerId: `fixture-available-${String(index).padStart(3, '0')}`,
+            displayName: `Available fixture ${index}`,
+            state: 'available',
+            setupKind: 'available-readonly',
+            sources: ['seed'],
+            modelCount: 0,
+            metadata: {
+              hasKnownModels: false,
+              requiresManualConfig: false,
+              supportedInlineAuth: false,
+              configuredAuthless: false,
+            },
+          }))
+        : [];
+      // Put connected sources on page two so its count cannot be guessed from page one.
+      const allEntries = scenario === 'connected-summary'
+        ? [...availableEntries, ...connectedEntries]
+        : [...connectedEntries, ...availableEntries];
+      const filteredEntries = filter === 'connected'
+        ? allEntries.filter((entry) => entry.state === 'connected')
+        : allEntries;
+      const offset = cursor === null ? 0 : Number(cursor);
+      const page = filteredEntries.slice(offset, offset + limit);
       response.directory = {
         runtimeId: 'opencode',
-        totalCount: 4,
-        returnedCount: 4,
+        totalCount: filteredEntries.length,
+        returnedCount: page.length,
         query: null,
-        filter: 'all',
-        limit: 100,
-        cursor: null,
-        nextCursor: null,
+        filter,
+        limit,
+        cursor,
+        nextCursor: offset + page.length < filteredEntries.length
+          ? String(offset + page.length)
+          : null,
         fetchedAt: new Date().toISOString(),
         diagnostics: [],
-        entries: sources.map((providerId) => ({
-          providerId,
-          displayName: providerId,
-          state: 'connected',
-          setupKind: 'connect-api-key',
-          ownership: [],
-          recommended: false,
-          modelCount: 1,
-          authMethods: [],
-          defaultModelId: null,
-          sources: ['opencode-provider'],
-          sourceLabel: null,
-          providerSource: null,
-          detail: null,
-          actions: [],
-          metadata: {
-            hasKnownModels: true,
-            requiresManualConfig: false,
-            supportedInlineAuth: true,
-            configuredAuthless: false,
-          },
-        })),
+        entries: page,
       };
+    }
     else
       response.models = {
         runtimeId: 'opencode',
@@ -236,6 +286,13 @@ function catalogCommand(operation) {
     process.stderr.write('fixture catalog waiting api_key=DO_NOT_COPY_THIS_SECRET\n');
     // Outlive the 300s catalog budget so the app must terminate this fixture.
     setTimeout(emit, 360000);
+  } else if (operation === 'directory' && scenario === 'connected-summary' && filter === 'connected') {
+    // The UI must first show an incomplete count, then consume this read.
+    setTimeout(emit, 3000);
+  } else if (operation === 'directory' && scenario === 'connected-summary' &&
+             cursor === '100' && flags.get('--refresh') === true) {
+    // Do not let the completed full directory explain the early header update.
+    setTimeout(emit, 9000);
   } else emit();
 }
 function refuse() {

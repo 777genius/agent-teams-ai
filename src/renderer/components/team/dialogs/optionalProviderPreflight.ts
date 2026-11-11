@@ -236,6 +236,7 @@ export function createProviderSubmissionFence() {
         if (previous.expiresAt !== Infinity) diagnostics.delete(key);
         return previous.promise;
       }
+      if (previous?.expiresAt === Infinity) return previous.promise;
       const entry = { promise: run(), interrupted: false, expiresAt: Infinity };
       entry.promise = entry.promise.then(
         (result) => {

@@ -1,0 +1,142 @@
+name: Real Runtime Provider Count E2E
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/e2e/provider-real-runtime-*.ts'
+      - 'scripts/e2e/opencode-diagnostics/startup-resources.mjs'
+      - 'scripts/e2e/opencode-diagnostics/startup-resources.test.mjs'
+      - 'scripts/e2e/opencode-diagnostics/run.mjs'
+      - 'scripts/e2e/opencode-diagnostics/real-runtime.mjs'
+      - 'scripts/e2e/opencode-diagnostics-desktop.mjs'
+      - 'src/renderer/components/dashboard/DashboardProviderSummary.tsx'
+      - 'src/renderer/store/index.ts'
+      # Run actual installed V1 + isolated Electron checks for shared catalog
+      # invalidation/recovery changes, not merely provider-count presentation.
+      - 'src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts'
+      - 'src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts'
+      - 'src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts'
+      - '.github/workflows/provider-real-runtime-e2e.yml'
+      - 'runtime.lock.json'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    paths:
+      - 'scripts/e2e/provider-real-runtime-*.ts'
+      - 'scripts/e2e/opencode-diagnostics/startup-resources.mjs'
+      - 'scripts/e2e/opencode-diagnostics/startup-resources.test.mjs'
+      - 'scripts/e2e/opencode-diagnostics/run.mjs'
+      - 'scripts/e2e/opencode-diagnostics/real-runtime.mjs'
+      - 'scripts/e2e/opencode-diagnostics-desktop.mjs'
+      - 'src/renderer/components/dashboard/DashboardProviderSummary.tsx'
+      - 'src/renderer/store/index.ts'
+      # Run actual installed V1 + isolated Electron checks for shared catalog
+      # invalidation/recovery changes, not merely provider-count presentation.
+      - 'src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts'
+      - 'src/features/runtime-provider-management/core/application/loadOpenCodeScopedCatalog.ts'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.ts'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeProviderModelCatalog.ts'
+      - 'src/renderer/components/dashboard/useOpenCodeDashboardStatus.ts'
+      - 'src/features/runtime-provider-management/renderer/hooks/useOpenCodeDashboardConnectedCountProbe.ts'
+      - '.github/workflows/provider-real-runtime-e2e.yml'
+      - 'runtime.lock.json'
+
+permissions:
+  contents: read
+
+# Canonical run supersession: each PR cancels only itself; a default-branch
+# push retains independent post-merge evidence instead of cancelling it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
+
+jobs:
+  real-runtime:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
+    name: pinned CLI metadata (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x64
+            runner: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+          - platform: win32-x64
+            runner: windows-2022
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: Verify pure provider-count contract
+        run: node --test scripts/e2e/provider-real-runtime-policy.test.ts scripts/e2e/opencode-diagnostics/real-runtime.test.mjs scripts/e2e/opencode-diagnostics/startup-resources.test.mjs
+      - name: Install genuine OpenCode V1 in runner-owned scratch
+        shell: bash
+        run: |
+          # npm 11/12 blocks dependency postinstall by default. Permit only this
+          # reviewed, pinned public V1 package inside the disposable test prefix.
+          node -e "const fs = require('node:fs'); const path = require('node:path'); const dir = path.join(process.env.RUNNER_TEMP, 'real-opencode-v1'); fs.mkdirSync(dir, {recursive:true}); fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({name:'agent-teams-test-opencode',private:true,version:'1.0.0',allowScripts:{'opencode-ai@1.18.31':true}}));"
+          npm install --prefix "$RUNNER_TEMP/real-opencode-v1" --no-audit --no-fund opencode-ai@1.18.31
+          # On Windows, use the real native V1 executable. The npm .cmd shim
+          # is a launcher, not a native OpenCode identity, and can obscure the
+          # source of a provider-status probe failure. Never fall back silently.
+          node -e "const fs = require('node:fs'); const path = require('node:path'); const root = path.join(process.env.RUNNER_TEMP, 'real-opencode-v1', 'node_modules'); const win = process.platform === 'win32'; const binary = win ? path.join(root, 'opencode-windows-x64', 'bin', 'opencode.exe') : path.join(root, '.bin', 'opencode'); if (win) { const pkg = JSON.parse(fs.readFileSync(path.join(root, 'opencode-windows-x64', 'package.json'), 'utf8')); if (pkg.version !== '1.18.31') throw Error('Wrong native OpenCode V1 version'); } if (!fs.statSync(binary, {throwIfNoEntry:false})?.isFile()) throw Error('Native OpenCode V1 install missing'); fs.appendFileSync(process.env.GITHUB_ENV, 'REAL_OPENCODE_TEST_BINARY=' + binary + String.fromCharCode(10));"
+      - name: Stage verified published runtime archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/stage-runtime.mjs
+      - name: Verify actual pinned executable version
+        run: node scripts/ci/verify-staged-runtime-version.mjs
+      - name: Execute genuine CLI, connected-filter and full-directory comparison
+        env:
+          PROVIDER_REAL_E2E_EVIDENCE: ${{ runner.temp }}/provider-real-runtime-e2e/evidence.json
+        run: node scripts/e2e/provider-real-runtime-e2e.ts
+      - name: Install desktop Electron test dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Verify isolated desktop harness guardrails
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs
+      - name: Verify real pinned runtime through Linux Electron IPC and UI
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node scripts/e2e/opencode-diagnostics/run.mjs --real-runtime
+      - name: Verify real pinned runtime through Windows Electron IPC and UI
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          node scripts/e2e/opencode-diagnostics/run.mjs --real-runtime
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Preserve sanitized real Electron connection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-runtime-electron-ipc-${{ matrix.platform }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.png
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold-dashboard.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold-dashboard.png
+      - name: Preserve owned startup resource samples
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-runtime-startup-resources-${{ matrix.platform }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/opencode-diagnostics-e2e-*/startup-resource-metrics.json
+      - name: Preserve sanitized count and timing evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-runtime-provider-count-${{ matrix.platform }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/provider-real-runtime-e2e/evidence.json

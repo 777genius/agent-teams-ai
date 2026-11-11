@@ -130,7 +130,8 @@
       "create": "Create",
       "creating": "Creating...",
       "openExisting": "Open Existing Team",
-      "skipPreflightAndCreate": "Skip preflight and create"
+      "skipPreflightAndCreate": "Skip preflight and create",
+      "backToTeams": "Back to teams"
     },
     "conflict": {
       "description": "Running two teams in the same directory is risky - they may conflict editing the same files. Consider using a different directory or a git worktree for isolation.",
@@ -231,7 +232,8 @@
       "kind": {
         "root": "Root",
         "group": "Group"
-      }
+      },
+      "invalidSelection": "Choose a valid organization and destination before creating the team."
     },
     "defaultDescription": {
       "fallback": "Team for provisioning flow",
@@ -240,7 +242,17 @@
     "defaultWorkflows": {
       "reviewer": "Review every completed task in the project. Read the code changes, check for correctness, style, and potential issues. Approve the task or request changes with clear feedback."
     },
-    "memberModelLockReason": "This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort."
+    "memberModelLockReason": "This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort.",
+    "draft": {
+      "replaceConfirmation": "You have an unfinished team draft. Starting this action will replace it. Continue?",
+      "replace": "Replace draft",
+      "continue": "Continue creating"
+    },
+    "placementFailure": {
+      "title": "Team created, but not added to the organization",
+      "message": "Team {{teamName}} was created. Assign it from the Organization Map; do not create it again.",
+      "acknowledge": "Got it"
+    }
   },
   "editTeam": {
     "actions": {
@@ -1067,9 +1079,9 @@
       "notReadyTitle": "OpenCode is not ready for team launch",
       "freeModelsAvailableTitle": "Free models are in OpenCode Zen",
       "providerNotConnectedTitle": "OpenCode provider is not connected",
-      "authRequiredModels": "Models requiring a provider connection: {{count}}. They are hidden from the choices by default.",
-      "showAuthRequired": "Show these models",
-      "hideAuthRequired": "Hide these models",
+      "authRequiredModels": "{{count}} OpenCode catalog models require an account or API key for their provider. They are hidden until connected; showing them does not make them usable.",
+      "showAuthRequired": "Show unavailable models",
+      "hideAuthRequired": "Hide unavailable models",
       "readyTitle": "OpenCode is ready",
       "readyMessage": "OpenCode passed provider readiness. Select it to use OpenCode models for this team.",
       "useOpenCode": "Use OpenCode",
@@ -1677,7 +1689,13 @@
       "teamPathMissing": "The team needs a saved project folder before scheduling a launch.",
       "title": "Schedule",
       "upgradeSmart": "Switch to smart scheduling",
-      "wholeTeam": "Whole team"
+      "wholeTeam": "Whole team",
+      "taskFirstAgentDescription": "The selected teammate receives a board task after the team is safely started, if needed. Busy agents are not interrupted.",
+      "taskFirstTeamDescription": "The team lead receives a coordination task after the team is safely started, if needed. Existing work is not interrupted.",
+      "taskFirstTarget": "Assign to",
+      "taskFirstWholeTeam": "Via team lead",
+      "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
+      "historicalPromptAcknowledged": "I've reviewed the saved prompt and separated any lasting instructions. Keep the old prompt, but never run it for scheduled work."
     },
     "title": {
       "createSchedule": "Create Schedule",
@@ -2253,6 +2271,9 @@
     }
   },
   "schedule": {
+    "actionFailed": "Schedule action failed",
+    "deleteConfirmation": "Delete schedule \"{{label}}\"? Its run history will also be removed.",
+    "runRequested": "Run requested. Check history to see whether work was handed off.",
     "count": "{{count}} schedules",
     "count_one": "{{count}} schedule",
     "count_other": "{{count}} schedules",
@@ -2278,7 +2299,8 @@
       "stillRunning": "Task is still running...",
       "loadingLogs": "Loading logs...",
       "errors": "Errors",
-      "close": "Close"
+      "close": "Close",
+      "openTask": "Open task"
     },
     "cron": {
       "expression": "Cron expression",
@@ -2286,6 +2308,8 @@
       "nextRuns": "Next runs:",
       "timezone": "Timezone",
       "selectTimezone": "Select timezone",
+      "searchTimezone": "Search timezones...",
+      "noTimezones": "No matching timezones",
       "warmUpTime": "Warm-up time",
       "warmUpDescription": "Prepares selected providers before scheduled execution",
       "errors": {
@@ -2681,7 +2705,7 @@
       "addTask": "Add task",
       "noTasks": "No tasks"
     },
-    "title": "Kanban",
+    "title": "Tasks",
     "columns": {
       "todo": "TODO",
       "inProgress": "IN PROGRESS",
@@ -3295,6 +3319,9 @@
   "templates": {
     "label": "Team template",
     "placeholder": "Start from a team template",
+    "confirmTitle": "Apply team template?",
+    "confirmMessage": "This will replace your teammates, instructions and team settings with the template’s values.",
+    "confirmAction": "Apply template",
     "names": {
       "software-product": "Software Product Team",
       "marketing": "Marketing Team",
@@ -3337,7 +3364,7 @@
       "failed": "Run failed",
       "cancelled": "Cancelled"
     },
-    "title": "Manage teams with a prompt",
+    "title": "Manage with a prompt",
     "description": "Write a request for your external agent. Templates below are read-only references.",
     "taskLabel": "What should the agent do?",
     "taskTooLong": "Native runs support requests up to {{limit}} characters. Shorten the request to run it.",

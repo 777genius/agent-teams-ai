@@ -17,6 +17,11 @@ const createSchedule = vi.fn();
 const updateSchedule = vi.fn();
 const teamRosterEditorSectionMock = vi.hoisted(() => ({ lastProps: null as any }));
 const projectPathSelectorMock = vi.hoisted(() => ({ onSelect: (_path: string) => {} }));
+const modelAutoNormalizeMock = vi.hoisted(() => ({
+  callback: null as ((value: string) => void) | null,
+  manualCallback: null as ((value: string) => void) | null,
+  providerCallback: null as ((value: TeamProviderId) => void) | null,
+}));
 type TestCliStatus = Pick<CliInstallationStatus, 'providers'> &
   Partial<Pick<CliInstallationStatus, 'flavor'>>;
 const createTeamDraftMock = vi.hoisted(() => ({
@@ -64,6 +69,20 @@ const createTeamDraftMock = vi.hoisted(() => ({
     setLaunchTeam: vi.fn(),
     teamColor: 'slate',
     setTeamColor: vi.fn(),
+    limitContext: false,
+    setLimitContext: vi.fn(),
+    skipPermissions: true,
+    setSkipPermissions: vi.fn(),
+    selectedEffort: '' as string,
+    setSelectedEffort: vi.fn(),
+    selectedFastMode: 'inherit' as 'inherit' | 'on' | 'off',
+    setSelectedFastMode: vi.fn(),
+    organizationPlacementEnabled: false,
+    setOrganizationPlacementEnabled: vi.fn(),
+    organizationPlacementOrganizationId: '',
+    setOrganizationPlacementOrganizationId: vi.fn(),
+    organizationPlacementParentId: '',
+    setOrganizationPlacementParentId: vi.fn(),
     isLoaded: true,
     clearDraft: vi.fn(),
   },
@@ -339,7 +358,8 @@ vi.mock('@renderer/components/team/dialogs/ProjectPathSelector', () => ({
   },
 }));
 
-vi.mock('@renderer/components/ui/button', () => ({
+vi.mock('@renderer/components/ui/button', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@renderer/components/ui/button')>()),
   Button: ({
     children,
     onClick,
@@ -418,6 +438,7 @@ vi.mock('@renderer/components/ui/dialog', () => ({
       : null,
   DialogContent: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
+  DialogTrigger: ({ children }: { children: React.ReactNode }) => children,
   DialogHeader: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
   DialogTitle: ({ children }: { children: React.ReactNode }) =>
@@ -523,7 +544,10 @@ vi.mock('@renderer/utils/teamProviderRuntimeStatusLoading', async (importOrigina
   isTeamProviderRuntimeStatusLoading: vi.fn(() => false),
 }));
 
-vi.mock('@renderer/components/team/dialogs/providerPrepareCacheKey', () => ({
+vi.mock('@renderer/components/team/dialogs/providerPrepareCacheKey', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('@renderer/components/team/dialogs/providerPrepareCacheKey')
+  >()),
   buildProviderPrepareModelCacheKey: () => 'prepare-cache-key',
 }));
 
@@ -596,8 +620,17 @@ vi.mock('@renderer/components/team/dialogs/ProvisioningProviderStatusList', () =
 }));
 
 vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
-  TeamModelSelector: ({ value }: { value: string }) =>
-    React.createElement('div', { 'data-testid': 'team-model-selector' }, `model:${value}`),
+  TeamModelSelector: ({ value, onProviderChange, onValueChange, onNormalizedValueChange }: {
+    value: string;
+    onProviderChange: (value: TeamProviderId) => void;
+    onValueChange: (value: string) => void;
+    onNormalizedValueChange?: (value: string) => void;
+  }) => {
+    modelAutoNormalizeMock.providerCallback = onProviderChange;
+    modelAutoNormalizeMock.callback = onNormalizedValueChange ?? null;
+    modelAutoNormalizeMock.manualCallback = onValueChange;
+    return React.createElement('div', { 'data-testid': 'team-model-selector' }, `model:${value}`);
+  },
   computeEffectiveTeamModel: vi.fn((model: string) => model || undefined),
   formatTeamModelSummary: (providerId: string, model: string, effort?: string) =>
     [providerId, model, effort].filter(Boolean).join(' '),
@@ -1032,15 +1065,8 @@ describe('LaunchTeamDialog', () => {
         });
         expect(updateSchedule).toHaveBeenCalledTimes(1);
         const config = updateSchedule.mock.calls[0]?.[1]?.launchConfig;
-        expect(config.model).toBe(
-          phase === 'confirmed'
-            ? 'gateway/project-default'
-            : phase === 'explicit'
-              ? 'gateway/explicit'
-              : phase === 'legacy'
-                ? 'catalog-fallback'
-                : undefined
-        );
+        // Edits to an existing schedule must not silently persist runtime catalog defaults.
+        expect(config.model).toBe(phase === 'explicit' ? 'gateway/explicit' : undefined);
         if (phase !== 'legacy' && phase !== 'initial-loading')
           expect(fetchCliProviderStatus).toHaveBeenCalledWith(
             'anthropic',
@@ -4701,6 +4727,311 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
+  it('creates task-first team assignment without one-shot model and budget settings', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.teamByName = {
+      'team-alpha': {
+        teamName: 'team-alpha',
+        displayName: 'Alpha',
+        projectPath: '/tmp/project',
+        leadName: 'lead',
+        members: [{ name: 'alice', role: 'Developer' }],
+      },
+    } as any;
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      members: [{ name: 'alice', role: 'Developer' }],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'schedule',
+            open: true,
+            teamName: 'team-alpha',
+            onClose: vi.fn(),
+          })
+        );
+        await flush();
+      });
+      expect(host.textContent).toContain('The selected teammate receives a board task');
+      expect(host.querySelector('[data-testid="team-model-selector"]')).toBeNull();
+      expect(host.querySelector('#schedule-max-turns')).toBeNull();
+      expect(host.querySelector('#schedule-max-budget')).toBeNull();
+
+      const prompt = host.querySelector('#dialog-prompt') as HTMLTextAreaElement;
+      expect(prompt).toBeTruthy();
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(
+          prompt, 'Review the current changes'
+        );
+        prompt.dispatchEvent(new Event('input', { bubbles: true }));
+        await flush();
+      });
+      const submit = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent?.trim() === 'Create Schedule'
+      );
+      expect(submit).toBeTruthy();
+      expect(submit?.disabled, host.textContent ?? '').toBe(false);
+      await act(async () => {
+        submit?.click();
+        await flush();
+      });
+      expect(createSchedule).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          executionMode: 'agent',
+          taskFirst: true,
+          targetMember: '',
+          launchConfig: expect.objectContaining({
+            cwd: '/tmp/project',
+            prompt: 'Review the current changes',
+            providerId: 'anthropic',
+            model: undefined,
+            effort: undefined,
+            skipPermissions: undefined,
+          }),
+        })
+      );
+    } finally {
+      await act(async () => root.unmount());
+      vi.mocked(api.teams.getSavedRequest).mockReset();
+      storeState.teamByName = {};
+    }
+  });
+
+  it('rejects new task-first schedules with unreviewed historical launch work', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.teamByName = {
+      'team-alpha': {
+        teamName: 'team-alpha',
+        displayName: 'Alpha',
+        projectPath: '/tmp/project',
+        leadName: 'lead',
+        members: [{ name: 'alice', role: 'Developer' }],
+      },
+    } as any;
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      prompt: 'Old task that must not be executed',
+      members: [{ name: 'alice', role: 'Developer' }],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'schedule',
+            open: true,
+            teamName: 'team-alpha',
+            onClose: vi.fn(),
+          })
+        );
+        await flush();
+      });
+      const prompt = host.querySelector('#dialog-prompt') as HTMLTextAreaElement;
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(
+          prompt, 'New task'
+        );
+        prompt.dispatchEvent(new Event('input', { bubbles: true }));
+        await flush();
+      });
+      const submit = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent?.trim() === 'Create Schedule'
+      );
+      expect(submit).toBeTruthy();
+      await act(async () => {
+        submit?.click();
+        await flush();
+      });
+      expect(createSchedule).not.toHaveBeenCalled();
+      expect(host.textContent).toContain('Review the team');
+      expect(host.textContent).toContain('saved one-time instructions');
+      expect(host.textContent).toContain('Old task that must not be executed');
+      // This test's Checkbox mock renders a native input, not Radix's button.
+      const acknowledgment = host.querySelector('#schedule-saved-prompt-reviewed') as HTMLInputElement;
+      expect(acknowledgment).toBeTruthy();
+      await act(async () => {
+        acknowledgment.click();
+        await flush();
+      });
+      await act(async () => {
+        submit?.click();
+        await flush();
+      });
+      expect(createSchedule).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          taskFirst: true,
+          reviewedSavedPrompt: true,
+          launchConfig: expect.objectContaining({ prompt: 'New task' }),
+        })
+      );
+    } finally {
+      await act(async () => root.unmount());
+      vi.mocked(api.teams.getSavedRequest).mockReset();
+      storeState.teamByName = {};
+    }
+  });
+
+  it('prevents editing a schedule with a removed recipient until one is reselected', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.teamByName = {
+      'team-alpha': {
+        teamName: 'team-alpha',
+        displayName: 'Alpha',
+        projectPath: '/tmp/project',
+        leadName: 'lead',
+        members: [{ name: 'alice', role: 'Developer' }],
+      },
+    } as any;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(LaunchTeamDialog, {
+          mode: 'schedule',
+          open: true,
+          teamName: 'team-alpha',
+          onClose: vi.fn(),
+          schedule: {
+            id: 'schedule-stale-target',
+            teamName: 'team-alpha',
+            executionMode: 'agent',
+            targetMember: 'removed-member',
+            cronExpression: '0 9 * * 1-5',
+            timezone: 'UTC',
+            status: 'active',
+            warmUpMinutes: 0,
+            maxConsecutiveFailures: 3,
+            consecutiveFailures: 0,
+            maxTurns: 50,
+            createdAt: '2026-11-07T00:00:00.000Z',
+            updatedAt: '2026-11-07T00:00:00.000Z',
+            launchConfig: {
+              cwd: '/tmp/project',
+              prompt: 'Review PRs',
+              providerId: 'anthropic',
+            },
+          } as any,
+        }));
+        await flush();
+      });
+      expect(host.textContent).toContain('removed-member');
+      expect(host.textContent).toContain('This recipient is no longer available.');
+      const save = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent?.trim() === 'Save Changes'
+      );
+      expect(save).toBeTruthy();
+      expect(save?.disabled).toBe(true);
+      expect(updateSchedule).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+      storeState.teamByName = {};
+    }
+  });
+
+
+  it('blocks a saved non-lead recipient while roster data is unavailable', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.teamByName = {};
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(LaunchTeamDialog, {
+          mode: 'schedule', open: true, teamName: 'team-alpha', onClose: vi.fn(),
+          schedule: {
+            id: 'no-roster', teamName: 'team-alpha', executionMode: 'agent',
+            targetMember: 'alice', cronExpression: '0 9 * * 1-5', timezone: 'UTC',
+            status: 'active', warmUpMinutes: 0, maxConsecutiveFailures: 3,
+            consecutiveFailures: 0, maxTurns: 50,
+            createdAt: '2026-11-08T00:00:00.000Z',
+            updatedAt: '2026-11-08T00:00:00.000Z',
+            launchConfig: { cwd: '/tmp/project', prompt: 'Check PRs', providerId: 'anthropic' },
+          } as any,
+        }));
+        await flush();
+      });
+      const save = [...host.querySelectorAll('button')].find(
+        (button) => button.textContent?.trim() === 'Save Changes'
+      );
+      expect(save?.disabled).toBe(true);
+      expect(host.textContent).toContain('Member roster unavailable');
+      expect(updateSchedule).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it('preserves invisible legacy team model settings when editing a schedule', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.teamByName = {
+      'team-alpha': {
+        teamName: 'team-alpha', projectPath: '/tmp/project', leadName: 'lead',
+        members: [{ name: 'alice', role: 'Developer' }],
+      },
+    } as any;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(LaunchTeamDialog, {
+          mode: 'schedule', open: true, teamName: 'team-alpha', onClose: vi.fn(),
+          schedule: {
+            id: 'legacy-team-config', teamName: 'team-alpha', executionMode: 'team',
+            cronExpression: '0 9 * * 1-5', timezone: 'UTC', status: 'active',
+            warmUpMinutes: 0, maxConsecutiveFailures: 3,
+            consecutiveFailures: 0, maxTurns: 40,
+            createdAt: '2026-11-08T00:00:00.000Z',
+            updatedAt: '2026-11-08T00:00:00.000Z',
+            launchConfig: {
+              cwd: '/tmp/project', prompt: 'Review changes',
+              providerId: 'opencode', model: 'opencode/previous-model',
+              effort: 'high', fastMode: 'off', skipPermissions: false,
+            },
+          } as any,
+        }));
+        await flush();
+      });
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+        teamName: 'team-alpha', cwd: '/tmp/project',
+        providerId: 'opencode', members: [{ name: 'alice' }],
+      });
+      const save = [...host.querySelectorAll('button')].find(
+        (button) => button.textContent?.trim() === 'Save Changes'
+      );
+      expect(save).toBeTruthy();
+      await act(async () => {
+        save?.click();
+        await flush();
+      });
+      expect(updateSchedule).toHaveBeenCalledExactlyOnceWith(
+        'legacy-team-config',
+        expect.objectContaining({
+          launchConfig: expect.objectContaining({
+            providerId: 'opencode', model: 'opencode/previous-model',
+            effort: 'high', fastMode: 'off', skipPermissions: false,
+          }),
+        })
+      );
+    } finally {
+      await act(async () => root.unmount());
+      storeState.teamByName = {};
+    }
+  });
+
   it('saves an explicitly selected whole-team mode without a migration', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.teamByName = {
@@ -4750,7 +5081,11 @@ describe('LaunchTeamDialog', () => {
         await flush();
       });
 
-      expect(host.querySelector('button#schedule-member')).toBeTruthy();
+      const recipientSelect = host.querySelector(
+        'button[role="combobox"][aria-label="Target when team is running"]'
+      );
+      expect(recipientSelect).toBeTruthy();
+      expect(recipientSelect?.textContent).toContain('alice');
       const wholeTeam = Array.from(host.querySelectorAll('button')).find(
         (button) => button.textContent?.trim() === 'Whole team'
       );
@@ -4792,7 +5127,179 @@ describe('LaunchTeamDialog', () => {
     }
   });
 
-  it('preserves Codex schedule backend lane and effort and defaults missing fast mode to off', async () => {
+  it('keeps an existing Gemini one-shot provider when editing an unrelated schedule field', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.teamByName = {
+      'team-alpha': {
+        teamName: 'team-alpha', projectPath: '/tmp/project', leadName: 'lead',
+        members: [{ name: 'alice', role: 'Developer' }],
+      },
+    } as any;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(LaunchTeamDialog, {
+          mode: 'schedule', open: true, teamName: 'team-alpha', onClose: vi.fn(),
+          schedule: {
+            id: 'legacy-gemini', teamName: 'team-alpha',
+            cronExpression: '0 9 * * 1-5', timezone: 'UTC', status: 'active',
+            warmUpMinutes: 15, maxConsecutiveFailures: 3, consecutiveFailures: 0,
+            maxTurns: 50, createdAt: '2026-11-08T00:00:00.000Z',
+            updatedAt: '2026-11-08T00:00:00.000Z',
+            launchConfig: {
+              cwd: '/tmp/project', prompt: 'Run the existing check',
+              providerId: 'gemini', model: 'gemini-2.5-pro', skipPermissions: false,
+            },
+          } as any,
+        }));
+        await flush();
+      });
+      await flushCustomFolderProbe();
+      // The model catalog can reconcile the visible default without a user
+      // selecting a new model; that must not rewrite a legacy runtime profile.
+      expect(modelAutoNormalizeMock.callback).toBeTruthy();
+      await act(async () => {
+        modelAutoNormalizeMock.callback?.('sonnet');
+        await flush();
+      });
+      const save = [...host.querySelectorAll('button')].find(
+        (button) => button.textContent?.trim() === 'Save Changes'
+      );
+      expect(save).toBeTruthy();
+      expect(save?.disabled, host.textContent ?? '').toBe(false);
+      await act(async () => {
+        save?.click();
+        await flush();
+      });
+      expect(updateSchedule).toHaveBeenCalledExactlyOnceWith('legacy-gemini', expect.objectContaining({
+        launchConfig: expect.objectContaining({
+          providerId: 'gemini', model: 'gemini-2.5-pro', skipPermissions: false,
+        }),
+      }));
+    } finally {
+      await act(async () => root.unmount());
+      storeState.teamByName = {};
+    }
+  });
+
+  it('preserves omitted runtime fields when editing an old one-shot schedule', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.teamByName = {
+      'team-alpha': {
+        teamName: 'team-alpha', projectPath: '/tmp/project', leadName: 'lead',
+        members: [{ name: 'alice', role: 'Developer' }],
+      },
+    } as any;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(LaunchTeamDialog, {
+          mode: 'schedule', open: true, teamName: 'team-alpha', onClose: vi.fn(),
+          schedule: {
+            id: 'legacy-no-model', teamName: 'team-alpha',
+            cronExpression: '0 9 * * 1-5', timezone: 'UTC', status: 'active',
+            warmUpMinutes: 15, maxConsecutiveFailures: 3, consecutiveFailures: 0,
+            maxTurns: 50, createdAt: '2026-11-08T00:00:00.000Z',
+            updatedAt: '2026-11-08T00:00:00.000Z',
+            launchConfig: {
+              cwd: '/tmp/project', prompt: 'Run the existing check', providerId: 'gemini',
+            },
+          } as any,
+        }));
+        await flush();
+      });
+      await flushCustomFolderProbe();
+      expect(modelAutoNormalizeMock.callback).toBeTruthy();
+      await act(async () => {
+        modelAutoNormalizeMock.callback?.('sonnet');
+        await flush();
+      });
+      const save = [...host.querySelectorAll('button')].find(
+        (button) => button.textContent?.trim() === 'Save Changes'
+      );
+      expect(save).toBeTruthy();
+      expect(save?.disabled, host.textContent ?? '').toBe(false);
+      await act(async () => {
+        save?.click();
+        await flush();
+      });
+      expect(updateSchedule).toHaveBeenCalledExactlyOnceWith('legacy-no-model', expect.objectContaining({
+        launchConfig: expect.objectContaining({
+          providerId: 'gemini', model: undefined, effort: undefined,
+          fastMode: undefined, resolvedFastMode: undefined,
+          providerBackendId: undefined, skipPermissions: undefined,
+        }),
+      }));
+    } finally {
+      await act(async () => root.unmount());
+      storeState.teamByName = {};
+    }
+  });
+
+  it('switches the provider with an explicitly chosen model on a hidden Gemini schedule', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.teamByName = {
+      'team-alpha': {
+        teamName: 'team-alpha', projectPath: '/tmp/project', leadName: 'lead',
+        members: [{ name: 'alice', role: 'Developer' }],
+      },
+    } as any;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(LaunchTeamDialog, {
+          mode: 'schedule', open: true, teamName: 'team-alpha', onClose: vi.fn(),
+          schedule: {
+            id: 'legacy-gemini', teamName: 'team-alpha',
+            cronExpression: '0 9 * * 1-5', timezone: 'UTC', status: 'active',
+            warmUpMinutes: 15, maxConsecutiveFailures: 3, consecutiveFailures: 0,
+            maxTurns: 50, createdAt: '2026-11-08T00:00:00.000Z',
+            updatedAt: '2026-11-08T00:00:00.000Z',
+            launchConfig: {
+              cwd: '/tmp/project', prompt: 'Run the existing check',
+              providerId: 'gemini', model: 'gemini-2.5-pro', skipPermissions: false,
+            },
+          } as any,
+        }));
+        await flush();
+      });
+      await flushCustomFolderProbe();
+      expect(modelAutoNormalizeMock.manualCallback).toBeTruthy();
+      await act(async () => {
+        // The picker mock does not normalize Gemini automatically: simulate
+        // an explicit Anthropic provider choice before the model choice.
+        modelAutoNormalizeMock.providerCallback?.('anthropic');
+        await flush();
+        modelAutoNormalizeMock.manualCallback?.('sonnet');
+        await flush();
+      });
+      const save = [...host.querySelectorAll('button')].find(
+        (button) => button.textContent?.trim() === 'Save Changes'
+      );
+      expect(save).toBeTruthy();
+      expect(save?.disabled, host.textContent ?? '').toBe(false);
+      await act(async () => {
+        save?.click();
+        await flush();
+      });
+      expect(updateSchedule).toHaveBeenCalledExactlyOnceWith('legacy-gemini', expect.objectContaining({
+        launchConfig: expect.objectContaining({
+          providerId: 'anthropic', model: 'sonnet', skipPermissions: false,
+        }),
+      }));
+    } finally {
+      await act(async () => root.unmount());
+      storeState.teamByName = {};
+    }
+  });
+
+  it('preserves Codex schedule backend lane, effort and omitted fast-mode fields', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -4866,8 +5373,8 @@ describe('LaunchTeamDialog', () => {
         providerBackendId: 'codex-native',
         model: 'gpt-5.4',
         effort: 'xhigh',
-        fastMode: 'off',
-        resolvedFastMode: false,
+        fastMode: undefined,
+        resolvedFastMode: undefined,
         skipPermissions: true,
       },
     });
@@ -6020,8 +6527,13 @@ describe('LaunchTeamDialog', () => {
       await createPromise;
       await flush();
     });
-    expect(onOpenTeam).toHaveBeenCalledWith('team-alpha', '/tmp/project');
-    expect(onClose).toHaveBeenCalledOnce();
+    await vi.waitFor(() => {
+      expect(onOpenTeam, (host.textContent ?? '').slice(-1200)).toHaveBeenCalledWith(
+        'team-alpha',
+        '/tmp/project'
+      );
+      expect(onClose).toHaveBeenCalledOnce();
+    });
 
     await act(async () => {
       root.unmount();

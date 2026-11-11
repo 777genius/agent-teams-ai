@@ -63,6 +63,7 @@ import {
 } from './team/teamManagementNotices';
 import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
 import { getVisibleTeamNamesInAnyPane } from './team/teamViewVisibility';
+import { installCodexStartupStatusRevalidation } from './codexStartupStatusRevalidation';
 import { nextTeamAliveFromLeadActivity } from './leadActivityTeamAlive';
 import {
   decideProcessFanoutDryRun,
@@ -178,9 +179,7 @@ function noteTeamChangeEventBurst(teamName: string, eventType: string, visible: 
   teamChangeEventDiagnostics.set(teamName, diagnostic);
 }
 
-// =============================================================================
 // Store Creation
-// =============================================================================
 
 export const useStore = create<AppState>()((...args) => ({
   ...createProjectSlice(...args),
@@ -217,13 +216,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   window.__agentTeamsDevStore = useStore;
 }
 
-// =============================================================================
-// Re-exports
-// =============================================================================
-
-// =============================================================================
 // Store Initialization - Subscribe to IPC Events
-// =============================================================================
 
 /**
  * Initialize notification event listeners and fetch initial notification count.
@@ -232,6 +225,13 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
 export function initializeNotificationListeners(): () => void {
   void cleanupCommentReadState();
   const cleanupFns: (() => void)[] = [];
+  if (
+    api.cliInstaller &&
+    typeof api.onCodexAccountSnapshotChanged === 'function' &&
+    typeof api.getCodexAccountSnapshot === 'function'
+  ) {
+    cleanupFns.push(installCodexStartupStatusRevalidation(useStore, api));
+  }
   cleanupFns.push(installTeamRefreshFanoutDebugBridge());
   let cliStatusTimer: ReturnType<typeof setTimeout> | null = null;
   let deferredProviderStatusCleanup: (() => void) | null = null;
@@ -245,16 +245,15 @@ export function initializeNotificationListeners(): () => void {
   // Sessions sidebar tab when it first mounts; scanning it here made startup
   // pay for a hidden panel.
   void (async () => {
-    // Config: fast (in-memory read) — needed for theme before first paint.
+    // Load config for theme before first paint.
     await useStore.getState().fetchConfig();
-
-    // Sync renderer telemetry gate from loaded config
+    if (disposed) return;
+    // Sync telemetry from loaded config.
     const loadedConfig = useStore.getState().appConfig;
     syncRendererTelemetry(loadedConfig?.general?.telemetryEnabled ?? true);
 
     if (api.cliInstaller) {
-      // Resolve the configured CLI flavor after config has loaded to avoid
-      // bootstrapping multimodel placeholder state in Claude-only mode.
+      // Resolve CLI flavor before creating multimodel placeholders.
       type NavigatorWithUserAgentData = Navigator & { userAgentData?: { platform?: string } };
       const nav: NavigatorWithUserAgentData | null =
         typeof navigator !== 'undefined' ? (navigator as NavigatorWithUserAgentData) : null;
@@ -268,14 +267,18 @@ export function initializeNotificationListeners(): () => void {
         const multimodelEnabled = useStore.getState().appConfig?.general?.multimodelEnabled ?? true;
         if (multimodelEnabled) {
           void (async () => {
-            await useStore
-              .getState()
-              .bootstrapCliStatus({ multimodelEnabled: true, providerStatusMode: 'defer' });
+            await useStore.getState().bootstrapCliStatus({
+              multimodelEnabled: true,
+              providerStatusMode: 'defer',
+              isActive: () => !disposed,
+            });
+            if (disposed) return;
             if (deferredProviderStatusCleanup) {
               deferredProviderStatusCleanup();
             }
             deferredProviderStatusCleanup = scheduleStartupIdleTask(
               () => {
+                if (disposed) return;
                 const providerIds = getIncompleteMultimodelProviderIds(
                   useStore.getState().cliStatus
                 );
@@ -305,9 +308,7 @@ export function initializeNotificationListeners(): () => void {
         cliStatusTimer = null;
       }, delayMs);
     }
-
-    // Keep immediately visible startup data first; global task aggregation can
-    // scan all team task files, so hydrate it after the team list.
+    // Defer the global task scan until the initial team list is ready.
     await Promise.all([
       useStore.getState().fetchTeams(),
       useStore.getState().fetchNotifications(),
@@ -356,7 +357,6 @@ export function initializeNotificationListeners(): () => void {
   let inProgressChangePresencePollInFlight = false;
   let teamMessageFallbackPollInFlight = false;
   const inProgressChangePresenceCursorByTeam = new Map<string, number>();
-
   let teamListRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   let globalTasksRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   const pendingTeamListRefreshDiagnostics = new Map<string, Set<string>>();

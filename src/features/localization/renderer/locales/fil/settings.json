@@ -201,7 +201,46 @@
           "system": "System"
         }
       },
-      "title": "Hitsura"
+      "title": "Hitsura",
+      "customThemes": {
+        "label": "Mga custom na tema",
+        "description": "Mga pinangalanang JSON palette batay sa Dark o Light.",
+        "none": "Built-in na tema",
+        "edit": "I-edit ang JSON",
+        "localOnly": "Sa device o browser na ito lang nase-save ang mga tema, zoom at font.",
+        "editor": {
+          "title": "I-edit ang mga tema (JSON)",
+          "description": "Hanggang 8 tema. Kulay ay #RRGGBB. Valid na JSON lamang ang ilalapat; ang bakanteng themes array ay magtatanggal sa lahat.",
+          "cancel": "Kanselahin",
+          "save": "I-save ang mga tema",
+          "conflict": "Binago ang mga tema sa ibang tab. Napanatili ang JSON draft mo; suriin ito o tahasang patungan ang mas bagong tema.",
+          "overwrite": "Patungan ang mas bagong tema",
+          "invalidJson": "Hindi wastong JSON syntax",
+          "invalidTheme": "Hindi wastong theme palette. Suriin ang mga field, kulay, at contrast."
+        }
+      },
+      "uiScale": {
+        "label": "Laki ng interface",
+        "description": "Baguhin ang laki ng buong app nang hindi binabago ang zoom ng system o browser.",
+        "reset": "I-reset"
+      },
+      "fontFamily": {
+        "label": "Font ng interface",
+        "description": "Pumili ng font na naka-install sa device. Hindi mababago ang mga font ng editor at terminal.",
+        "system": "Default ng system",
+        "other": "Ibang font…",
+        "placeholder": "Pangalan ng naka-install na font",
+        "apply": "Ilapat",
+        "discover": "Hanapin ang mga naka-install na font",
+        "loaded": "Naidagdag sa listahan ang mga naka-install na font.",
+        "unavailable": "Hindi maipakita ang mga font dito. Ilagay nang manu-mano ang pangalan.",
+        "empty": "Walang nakitang naka-install na font. Ipasok nang manu-mano ang pangalan."
+      },
+      "textSize": {
+        "label": "Laki ng teksto",
+        "description": "Baguhin ang laki ng teksto nang hindi binabago ang zoom ng interface.",
+        "reset": "I-reset"
+      }
     },
     "browserAccess": {
       "serverMode": {

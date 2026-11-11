@@ -9,6 +9,17 @@ import { createGatewayBindingDraft } from './GatewayBindingDraft';
 import type { GatewayMemberBindingDto } from '../../contracts';
 
 const NO_MEMBERS: ReadonlySet<string> = new Set();
+// Creation has one editor per renderer. Its provisional receipts must survive
+// in-tab navigation, while ordinary launch/add-member dialogs keep discard-on-close.
+const retainedDraftSessions = new Map<string, ReturnType<typeof createGatewayBindingDraft>>();
+
+/** Explicit replacement discards only receipts owned by that creation editor. */
+export function discardRetainedGatewayBindingDraft(ownerKey: string): void {
+  const session = retainedDraftSessions.get(ownerKey);
+  if (!session) return;
+  retainedDraftSessions.delete(ownerKey);
+  session.discard();
+}
 
 export interface GatewayMemberBindingsState {
   boundMemberNames: ReadonlySet<string>;
@@ -25,12 +36,16 @@ export function useGatewayMemberBindings(
   draft?: {
     memberNames: readonly string[];
     mode: 'roster' | 'addition';
+    retainedOwnerKey?: string;
   }
 ): GatewayMemberBindingsState & {
   run<T>(operation: () => T | Promise<T>, confirmedNames?: readonly string[]): Promise<T>;
   markSaved(names: readonly string[]): void;
+  releaseRetained(): void;
+  discardRetained(): void;
 } {
   const name = teamName?.trim() ?? '';
+  const retainedOwnerKey = draft?.retainedOwnerKey;
   const mounted = useRef(true);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [bindingRequests, setBindingRequests] = useState(0);
@@ -38,13 +53,19 @@ export function useGatewayMemberBindings(
     if (mounted.current) setBindingRequests((count) => Math.max(0, count + (pending ? 1 : -1)));
   }, []);
   const draftSession = useRef<ReturnType<typeof createGatewayBindingDraft> | null>(null);
-  if (!draftSession.current)
-    draftSession.current = createGatewayBindingDraft(unbindGatewayMember, (error) => {
-      createLogger('GatewayBindingDraft').warn(
-        `Could not discard a draft gateway binding: ${String(error)}`
-      );
-      if (mounted.current) setDraftError(error instanceof Error ? error.message : String(error));
-    });
+  if (!draftSession.current) {
+    const existing = retainedOwnerKey ? retainedDraftSessions.get(retainedOwnerKey) : undefined;
+    draftSession.current =
+      existing ??
+      createGatewayBindingDraft(unbindGatewayMember, (error) => {
+        createLogger('GatewayBindingDraft').warn(
+          `Could not discard a draft gateway binding: ${String(error)}`
+        );
+        if (mounted.current) setDraftError(error instanceof Error ? error.message : String(error));
+      });
+    if (retainedOwnerKey && !existing)
+      retainedDraftSessions.set(retainedOwnerKey, draftSession.current);
+  }
   const session = draftSession.current;
   const run = useCallback(
     async <T>(operation: () => T | Promise<T>, confirmedNames?: readonly string[]): Promise<T> => {
@@ -62,19 +83,22 @@ export function useGatewayMemberBindings(
     draft?.memberNames.map((member) => member.trim()).filter(Boolean) ?? []
   );
   useEffect(() => {
+    // A retained creation form has not hydrated its name on the first render.
+    // Do not retire the previous receipt before the saved draft is restored.
+    if (retainedOwnerKey && !name) return;
     session.update(
       name && draftMode
         ? { teamName: name, memberNames: JSON.parse(memberNamesKey) as string[], mode: draftMode }
         : null
     );
-  }, [session, name, memberNamesKey, draftMode]);
+  }, [session, name, memberNamesKey, draftMode, retainedOwnerKey]);
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
-      session.discard();
+      if (!retainedOwnerKey) session.discard();
     };
-  }, [session]);
+  }, [session, retainedOwnerKey]);
   const sequence = useRef(0);
   const [state, setState] = useState<{
     teamName: string;
@@ -123,6 +147,15 @@ export function useGatewayMemberBindings(
       onBindingPendingChange,
       markSaved: (names: readonly string[]) =>
         session.markSaved(name, names, draftMode === 'roster'),
+      releaseRetained: () => {
+        if (retainedOwnerKey && retainedDraftSessions.get(retainedOwnerKey) === session)
+          retainedDraftSessions.delete(retainedOwnerKey);
+      },
+      discardRetained: () => {
+        if (retainedOwnerKey && retainedDraftSessions.get(retainedOwnerKey) === session)
+          retainedDraftSessions.delete(retainedOwnerKey);
+        session.discard();
+      },
       refresh,
     }),
     [
@@ -132,6 +165,7 @@ export function useGatewayMemberBindings(
       draftError,
       session,
       draftMode,
+      retainedOwnerKey,
       bindingRequests,
       onBindingPendingChange,
       run,

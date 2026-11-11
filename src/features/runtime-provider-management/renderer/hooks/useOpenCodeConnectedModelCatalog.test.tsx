@@ -141,6 +141,45 @@ describe('connected OpenCode dashboard catalog', () => {
     });
   });
 
+  it.each(['google', 'openrouter', 'anthropic'] as const)(
+    'finishes the %s model read before status recovery can invalidate its cache',
+    async (source) => {
+      mocks.directory.mockResolvedValue(directory(['opencode', source]));
+      let finishSource!: () => void;
+      let statusRecoveryStarted = false;
+      const recovered = vi.fn(() => {
+        statusRecoveryStarted = true;
+      });
+      mocks.models.mockImplementation(({ providerId }) => {
+        if (providerId === 'opencode') return Promise.resolve(models('opencode'));
+        return new Promise((resolve) => {
+          finishSource = () => {
+            const response = models(source);
+            // Simulates a successful CLI result being relabelled stale by an
+            // overlapping status recovery/cache generation change in main.
+            response.models.catalogState = statusRecoveryStarted ? 'stale' : 'fresh';
+            resolve(response);
+          };
+        });
+      });
+
+      await act(async () => root.render(<Probe onCatalogRecovery={recovered} />));
+      expect(mocks.models.mock.calls.map(([input]) => input.providerId)).toEqual([
+        'opencode',
+        source,
+      ]);
+      expect(recovered).not.toHaveBeenCalled();
+
+      await act(async () => finishSource());
+      expect(recovered).toHaveBeenCalledTimes(1);
+      expect(observed.failures).toEqual([]);
+      expect(new Set(observed.providerStatus?.models)).toEqual(
+        new Set([`${source}/model-0`, 'opencode/model-0'])
+      );
+      expect(observed.providerStatus?.modelCatalogRefreshState).toBe('ready');
+    }
+  );
+
   it.each(['stale', 'expired', 'failed'] as const)(
     'does not report %s OpenCode reads or another source success as recovery',
     async (condition) => {

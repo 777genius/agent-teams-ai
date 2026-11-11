@@ -192,11 +192,17 @@ vi.mock('@renderer/components/ui/tabs', () => {
 const storeState = {
   cliStatus: null as unknown,
   cliStatusLoading: false,
+  cliStatusError: null as string | null,
   cliProviderStatusLoading: {} as Record<string, boolean>,
   cliProviderStatusByScope: {} as Record<string, unknown>,
   cliProviderStatusScopeRevision: 0,
   appConfig: { general: { multimodelEnabled: true } },
   fetchCliProviderStatus: vi.fn().mockResolvedValue(undefined),
+  fetchCliStatus: vi.fn().mockResolvedValue(undefined),
+  invalidateCliStatus: vi.fn().mockResolvedValue(undefined),
+  invalidateOpenCodeRuntimeStatus: vi.fn().mockResolvedValue(undefined),
+  invalidateCodexRuntimeStatus: vi.fn().mockResolvedValue(undefined),
+  openSettingsTab: vi.fn(),
   openCodeRuntimeStatus: null as OpenCodeRuntimeStatus | null,
   openCodeRuntimeStatusLoading: false,
   openCodeRuntimeError: null as string | null,
@@ -218,7 +224,10 @@ const codexAccountHookState = {
 };
 
 vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: unknown) => unknown) => selector(storeState),
+  useStore: Object.assign(
+    (selector: (state: unknown) => unknown) => selector(storeState),
+    { getState: () => storeState }
+  ),
 }));
 
 vi.mock('@features/codex-account/renderer', async (importOriginal) => {
@@ -230,15 +239,25 @@ vi.mock('@features/codex-account/renderer', async (importOriginal) => {
 });
 
 const useVirtualizerMock = vi.fn(
-  (options: { count: number }) =>
+  (options: {
+    count: number;
+    rangeExtractor?: (range: {
+      startIndex: number;
+      endIndex: number;
+      overscan: number;
+      count: number;
+    }) => number[];
+  }) =>
     ({
       getVirtualItems: () =>
-        Array.from({ length: Math.min(options.count, 9) }, (_, index) => ({
-          index,
-          key: index,
-          start: index * 92,
-          size: 92,
-        })),
+        (options.rangeExtractor?.({
+          startIndex: 0,
+          endIndex: Math.min(options.count - 1, 8),
+          overscan: 0,
+          count: options.count,
+        }) ?? Array.from({ length: Math.min(options.count, 9) }, (_, index) => index)).map(
+          (index) => ({ index, key: index, start: index * 92, size: 92 })
+        ),
       getTotalSize: () => options.count * 92,
       measureElement: () => undefined,
     }) as const
@@ -261,8 +280,10 @@ vi.mock('@tanstack/react-virtual', () => ({
 import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team/dialogs/openCodeDefaultMaterialization';
 import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { OpenCodeSourceDirectoryContext } from '@renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider';
-import { getActiveOpenCodeStickyHeadingIndex } from '@renderer/components/team/dialogs/teamModelSelectorUi';
-import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
+import {
+  getCliProviderStatusScopeKey,
+  MULTIMODEL_PROVIDER_IDS,
+} from '@renderer/store/slices/cliInstallerSlice';
 
 /** Renders inside the Create/Launch roster, where OpenCode Default names its route. */
 const inMaterializingRoster = (element: React.ReactElement): React.ReactElement =>
@@ -273,6 +294,263 @@ const inMaterializingRoster = (element: React.ReactElement): React.ReactElement 
   );
 
 describe('TeamModelSelector disabled Codex models', () => {
+  it('invalidates the selected Create Team preflight before opening provider Settings', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [{ providerId: 'anthropic', authenticated: true, supported: true,
+        verificationState: 'verified', statusCheckOutcome: 'authoritative',
+        models: ['sonnet'], capabilities: { teamLaunch: true, oneShot: true } }],
+    };
+    const onManageProviders = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, {
+        providerId: 'anthropic',
+        onProviderChange: () => undefined,
+        value: '',
+        onValueChange: () => undefined,
+        onManageProviders,
+      }));
+      await Promise.resolve();
+    });
+    const manage = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-manage-providers"]'
+    );
+    expect(manage).not.toBeNull();
+    await act(async () => manage?.click());
+    expect(onManageProviders).toHaveBeenCalledExactlyOnceWith('anthropic');
+    expect(storeState.openSettingsTab).toHaveBeenCalledExactlyOnceWith('providers');
+    await act(async () => root.unmount());
+  });
+
+  it('refreshes every provider and the selected project without editing the selected model', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [{
+        providerId: 'anthropic',
+        authenticated: true,
+        supported: true,
+        verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
+        models: ['sonnet'],
+        capabilities: { teamLaunch: true, oneShot: true },
+      }],
+    };
+    const projectPath = '/tmp/provider-refresh-project';
+    const metadataRead = createDeferred<void>();
+    storeState.fetchCliStatus.mockReturnValueOnce(metadataRead.promise);
+    storeState.fetchCliProviderStatus.mockResolvedValue(true);
+    const onProviderChange = vi.fn();
+    const onValueChange = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, {
+        providerId: 'anthropic',
+        onProviderChange,
+        value: '',
+        onValueChange,
+        projectPath,
+      }));
+      await Promise.resolve();
+    });
+    const refresh = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-refresh-providers"]'
+    );
+    expect(refresh).not.toBeNull();
+    expect(refresh?.getAttribute('aria-label')).toBe('Refresh');
+    await act(async () => {
+      refresh?.click();
+      await Promise.resolve();
+    });
+    expect(storeState.invalidateCliStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.invalidateOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.invalidateCodexRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCodexRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(refresh?.disabled).toBe(true);
+    await act(async () => refresh?.click());
+    expect(storeState.invalidateCliStatus).toHaveBeenCalledTimes(1);
+    expect(
+      storeState.fetchCliProviderStatus.mock.calls.filter(([, options]) =>
+        options?.checkReason === 'manual_refresh'
+      )
+    ).toHaveLength(0);
+
+    await resolveDeferred(metadataRead, undefined);
+    await vi.waitFor(() => expect(refresh?.disabled).toBe(false));
+    expect(
+      storeState.fetchCliProviderStatus.mock.calls.filter(([, options]) =>
+        options?.checkReason === 'manual_refresh'
+      )
+    ).toEqual([
+      ...MULTIMODEL_PROVIDER_IDS.map((id) => [id, { checkReason: 'manual_refresh' }]),
+      ['opencode', { checkReason: 'manual_refresh', projectPath }],
+      ['anthropic', { checkReason: 'manual_refresh', projectPath }],
+    ]);
+    expect(onProviderChange).not.toHaveBeenCalled();
+    expect(onValueChange).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it('keeps checking Codex and CLI providers when OpenCode cache invalidation fails', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    storeState.fetchCliProviderStatus.mockResolvedValue(true);
+    storeState.invalidateOpenCodeRuntimeStatus.mockRejectedValueOnce(new Error('runtime offline'));
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, {
+        providerId: 'anthropic',
+        onProviderChange: () => undefined,
+        value: '',
+        onValueChange: () => undefined,
+      }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-refresh-providers"]'
+      )?.click();
+      await Promise.resolve();
+    });
+    expect(storeState.invalidateOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.invalidateCodexRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCodexRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('codex', {
+      checkReason: 'manual_refresh',
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Error');
+    await act(async () => root.unmount());
+  });
+
+  it('keeps native CLI auth untouched instead of checking orchestrator providers', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = { flavor: 'claude', installed: true, providers: [] };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, {
+        providerId: 'anthropic',
+        onProviderChange: () => undefined,
+        value: '',
+        onValueChange: () => undefined,
+        projectPath: '/tmp/native-cli-refresh',
+      }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-refresh-providers"]'
+      )?.click();
+      await Promise.resolve();
+    });
+    expect(storeState.invalidateCliStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliProviderStatus.mock.calls.filter(([, options]) =>
+      options?.checkReason === 'manual_refresh'
+    )).toHaveLength(0);
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it('reports a provider that resolves to an unsuccessful status check', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    storeState.fetchCliProviderStatus.mockResolvedValue(false);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, {
+        providerId: 'anthropic',
+        onProviderChange: () => undefined,
+        value: '',
+        onValueChange: () => undefined,
+      }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-refresh-providers"]'
+      )?.click();
+      await Promise.resolve();
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Error');
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('anthropic', {
+      checkReason: 'manual_refresh',
+    });
+    await act(async () => root.unmount());
+  });
+
+  it('reports metadata errors even when status checks succeed', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    storeState.fetchCliStatus.mockImplementationOnce(async () => {
+      storeState.cliStatusError = 'metadata refresh failed';
+    });
+    storeState.fetchCliProviderStatus.mockResolvedValue(true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, {
+        providerId: 'anthropic',
+        onProviderChange: () => undefined,
+        value: '',
+        onValueChange: () => undefined,
+      }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>(
+        '[data-testid="team-model-selector-refresh-providers"]'
+      )?.click();
+      await Promise.resolve();
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Error');
+    await act(async () => root.unmount());
+  });
+
+  it('keeps the refresh control usable after a status invalidation failure', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    storeState.invalidateCliStatus.mockRejectedValueOnce(new Error('unavailable'));
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, {
+        providerId: 'anthropic',
+        onProviderChange: () => undefined,
+        value: '',
+        onValueChange: () => undefined,
+      }));
+      await Promise.resolve();
+    });
+    const refresh = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-refresh-providers"]'
+    );
+    await act(async () => {
+      refresh?.click();
+      await Promise.resolve();
+    });
+    expect(refresh?.disabled).toBe(false);
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Error');
+    expect(storeState.fetchCliStatus).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
   it('keeps legacy Anthropic status global without requesting a project scope', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
@@ -498,10 +776,16 @@ describe('TeamModelSelector disabled Codex models', () => {
     Reflect.deleteProperty(window, 'electronAPI');
     storeState.cliStatus = null;
     storeState.cliStatusLoading = false;
+    storeState.cliStatusError = null;
     storeState.cliProviderStatusLoading = {};
     storeState.cliProviderStatusByScope = {};
     storeState.cliProviderStatusScopeRevision = 0;
     storeState.fetchCliProviderStatus.mockReset().mockResolvedValue(undefined);
+    storeState.fetchCliStatus.mockReset().mockResolvedValue(undefined);
+    storeState.invalidateCliStatus.mockReset().mockResolvedValue(undefined);
+    storeState.invalidateOpenCodeRuntimeStatus.mockReset().mockResolvedValue(undefined);
+    storeState.invalidateCodexRuntimeStatus.mockReset().mockResolvedValue(undefined);
+    storeState.openSettingsTab.mockClear();
     storeState.openCodeRuntimeStatus = null;
     storeState.openCodeRuntimeStatusLoading = false;
     storeState.openCodeRuntimeError = null;
@@ -1516,11 +1800,11 @@ describe('TeamModelSelector disabled Codex models', () => {
     const authNotice = host.querySelector(
       '[data-testid="team-model-selector-opencode-auth-required"]'
     );
-    expect(authNotice?.textContent).toContain('Models requiring a provider connection: 1');
+    expect(authNotice?.textContent).toContain('1 OpenCode catalog models require an account or API key');
 
     await act(async () => {
       Array.from(authNotice?.querySelectorAll('button') ?? [])
-        .find((button) => button.textContent?.includes('Show these models'))
+        .find((button) => button.textContent?.includes('Show unavailable models'))
         ?.click();
       await Promise.resolve();
     });
@@ -1552,7 +1836,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
     await act(async () => {
       Array.from(authNotice?.querySelectorAll('button') ?? [])
-        .find((button) => button.textContent?.includes('Hide these models'))
+        .find((button) => button.textContent?.includes('Hide unavailable models'))
         ?.click();
       await Promise.resolve();
     });
@@ -2448,10 +2732,13 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('virtualizes large OpenCode model lists instead of rendering every model tile', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const models = Array.from(
-      { length: 160 },
-      (_, index) => `openrouter/test/model-${String(index).padStart(3, '0')}`
-    );
+    const models = [
+      ...Array.from(
+        { length: 160 },
+        (_, index) => `openrouter/test/model-${String(index).padStart(3, '0')}`
+      ),
+      'zai/glm-next',
+    ];
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
       providers: [
@@ -2505,33 +2792,41 @@ describe('TeamModelSelector disabled Codex models', () => {
         }
       | undefined;
     expect(virtualizerOptions?.count).toBeGreaterThan(80);
-    const headingIndex = Array.from(
+    const headingIndexes = Array.from(
       { length: virtualizerOptions?.count ?? 0 },
       (_, index) => index
-    ).find((index) => String(virtualizerOptions?.getItemKey?.(index)).startsWith('heading:'));
-    expect(headingIndex).toBeTypeOf('number');
+    ).filter((index) => String(virtualizerOptions?.getItemKey?.(index)).startsWith('heading:'));
+    expect(headingIndexes).toHaveLength(2);
+    const headingIndex = headingIndexes[0];
     expect(virtualizerOptions?.estimateSize?.(headingIndex ?? 0)).toBe(38);
     expect(virtualizerOptions?.estimateSize?.((headingIndex ?? 0) + 1)).toBe(74);
-    expect(getActiveOpenCodeStickyHeadingIndex([headingIndex ?? 0], headingIndex ?? 0)).toBeNull();
-    expect(getActiveOpenCodeStickyHeadingIndex([headingIndex ?? 0], (headingIndex ?? 0) + 1)).toBe(
-      headingIndex
-    );
-
     const extractedIndexes = virtualizerOptions?.rangeExtractor?.({
       startIndex: (headingIndex ?? 0) + 4,
       endIndex: (headingIndex ?? 0) + 8,
       overscan: 2,
       count: virtualizerOptions?.count ?? 0,
     });
-    expect(extractedIndexes).toContain(headingIndex);
+    expect(extractedIndexes).toEqual(expect.arrayContaining(headingIndexes));
     expect(host.textContent).toContain('OpenRouter');
     expect(host.textContent).toContain('test/model-159');
     expect(host.textContent).not.toContain('test/model-000');
 
-    const groupHeader = host.querySelector<HTMLElement>(
+    const groups = Array.from(host.querySelectorAll<HTMLElement>(
       '[data-testid="team-model-selector-opencode-group"]'
+    ));
+    const stickyHeaders = host.querySelectorAll<HTMLElement>(
+      '[data-testid="team-model-selector-sticky-group-header"]'
     );
-    expect(groupHeader?.parentElement?.className).toContain('z-30');
+    expect(groups).toHaveLength(2);
+    expect(stickyHeaders).toHaveLength(groups.length);
+    for (const [index, group] of groups.entries()) {
+      const start = headingIndexes[index] ?? 0;
+      const end = headingIndexes[index + 1] ?? virtualizerOptions?.count ?? 0;
+      expect(stickyHeaders[index]?.parentElement).toBe(group);
+      expect(group.style.top).toBe(`${start * 92}px`);
+      expect(group.style.height).toBe(`${(end - start) * 92}px`);
+      expect(group.querySelectorAll('h4')).toHaveLength(1);
+    }
 
     const unselectedModelCells = Array.from(
       host.querySelectorAll<HTMLElement>(

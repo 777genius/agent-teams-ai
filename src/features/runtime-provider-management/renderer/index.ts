@@ -14,6 +14,7 @@ export type {
 } from './hooks/useOpenCodeAttachmentDeclarations';
 export { useOpenCodeAttachmentDeclarations } from './hooks/useOpenCodeAttachmentDeclarations';
 export { useOpenCodeConnectedModelCatalog } from './hooks/useOpenCodeConnectedModelCatalog';
+export { useOpenCodeDashboardConnectedCountProbe } from './hooks/useOpenCodeDashboardConnectedCountProbe';
 export {
   type OpenCodeLocalModelSetupActionState,
   useOpenCodeLocalModelSetup,
@@ -42,10 +43,12 @@ export {
   type OpenCodeLocalModelSetupResult,
   type OpenCodeLocalModelSetupTarget,
 } from './openCodeLocalModelSetup';
-export type { RuntimeProviderDirectoryCacheSnapshot } from './runtimeProviderDirectoryCache';
+export type { RuntimeProviderConnectedCountEvidence, RuntimeProviderConnectedCountObservation, RuntimeProviderDirectoryCacheSnapshot } from './runtimeProviderDirectoryCache';
 export {
+  beginRuntimeProviderConnectedCountCheck,
   getRuntimeProviderDirectoryCacheSnapshot,
   getRuntimeProviderDirectoryCacheWithGlobalFallbackSnapshot,
+  useRuntimeProviderConnectedCount,
   useRuntimeProviderDirectoryCache,
   useRuntimeProviderDirectoryCacheWithGlobalFallback,
 } from './runtimeProviderDirectoryCache';

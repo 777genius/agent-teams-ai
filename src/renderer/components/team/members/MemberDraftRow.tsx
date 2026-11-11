@@ -122,6 +122,7 @@ interface MemberDraftRowProps {
   modelUnavailableReasonByProvider?: ModelReasonByProvider;
   onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
   onOpenProviderSettings?: TeamModelSelectorProps['onOpenProviderSettings'];
+  onManageProviders?: TeamModelSelectorProps['onManageProviders'];
   showWorktreeIsolationControls?: boolean;
   worktreeIsolationDisabledReason?: string | null;
   onWorktreeIsolationChange?: (id: string, enabled: boolean) => void;
@@ -186,6 +187,7 @@ export const MemberDraftRow = ({
   modelUnavailableReasonByProvider,
   onOpenCodeProviderScopedStatusChange,
   onOpenProviderSettings,
+  onManageProviders,
   preserveSelectedModel = false,
   showWorktreeIsolationControls = false,
   worktreeIsolationDisabledReason,
@@ -378,6 +380,7 @@ export const MemberDraftRow = ({
       layout={isFlatRoster ? 'flat' : 'member'}
       dataRole="member-row"
       removed={isRemoved}
+      expanded={!isRemoved && (modelExpanded || workflowExpanded || mcpExpanded)}
     >
       <div className="min-w-0 space-y-0.5">
         <RosterParticipantIdentity avatarSrc={avatarSrc}>
@@ -693,7 +696,7 @@ export const MemberDraftRow = ({
         </div>
       ) : null}
       {modelExpanded && (
-        <div className="space-y-2 pl-3 md:col-span-3">
+        <div className={cn('col-span-full min-w-0 space-y-2', isFlatRoster ? '-mx-1.5' : 'mx-0.5')}>
           {lockProviderModel && lockedModelAction ? (
             <div className="space-y-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
               <div className="space-y-1">
@@ -755,6 +758,7 @@ export const MemberDraftRow = ({
                 }
                 onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
                 onOpenProviderSettings={onOpenProviderSettings}
+                onManageProviders={onManageProviders}
               />
               {/* Teammate gateway settings are temporarily hidden. Existing bindings are preserved. */}
               <EffortLevelSelector

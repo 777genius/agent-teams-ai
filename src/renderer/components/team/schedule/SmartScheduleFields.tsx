@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MemberSelect } from '@renderer/components/ui/MemberSelect';
+import { validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { CronScheduleInput } from './CronScheduleInput';
@@ -11,13 +12,13 @@ import { CronScheduleInput } from './CronScheduleInput';
 import type { TeamSummary } from '@shared/types';
 
 export type EditableScheduleMode = 'legacy' | 'agent' | 'team';
-const DEFAULT_LEAD_VALUE = '__default_lead__';
 
 interface SmartScheduleFieldsProps {
   isLight: boolean;
   expanded: boolean;
   onToggle: () => void;
   mode: EditableScheduleMode;
+  taskFirst?: boolean;
   onModeChange: (mode: EditableScheduleMode) => void;
   targetMember: string;
   onTargetMemberChange: (name: string) => void;
@@ -38,6 +39,7 @@ export const SmartScheduleFields = ({
   expanded,
   onToggle,
   mode,
+  taskFirst = false,
   onModeChange,
   targetMember,
   onTargetMemberChange,
@@ -52,18 +54,45 @@ export const SmartScheduleFields = ({
   onWarmUpMinutesChange,
 }: SmartScheduleFieldsProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const leadName = team?.leadName?.trim() ?? '';
-  const memberOptions = React.useMemo(() => {
-    const roster = team?.members ?? [];
-    // TeamSummary supplies the canonical lead separately from teammate rows.
-    // Add only that real lead identity for display; do not synthesize runtime status.
-    if (!leadName) {
-      // Local UI-only default. Never write the placeholder as a member identity.
-      return [{ name: DEFAULT_LEAD_VALUE, agentType: 'team-lead' }, ...roster];
-    }
-    if (roster.some((member) => member.name === leadName)) return roster;
-    return [{ name: leadName, role: 'Lead', agentType: 'team-lead' }, ...roster];
-  }, [leadName, team?.members]);
+  const leadName = team?.leadName?.trim() || 'team-lead';
+  const savedTarget = targetMember.trim();
+  // Only normalize the picker display; saving without a selection preserves the original target.
+  const pickerTarget =
+    savedTarget && savedTarget.toLowerCase() === leadName.toLowerCase()
+      ? leadName
+      : savedTarget || leadName;
+  const recipientMembers = React.useMemo(() => {
+    const source = team?.members ?? [];
+    const lead = source.find(
+      (member) => member.name.trim().toLowerCase() === leadName.toLowerCase()
+    );
+    const members: NonNullable<TeamSummary['members']> = [
+      lead ? { ...lead, name: leadName } : { name: leadName },
+      ...source.filter((member) => member !== lead),
+    ];
+    const seen = new Set<string>();
+    return members.flatMap((member) => {
+      const name = member.name.trim();
+      const key = name.toLowerCase();
+      if (!name || seen.has(key)) return [];
+      if (name !== leadName && validateTeamMemberNameFormat(name)) return [];
+      seen.add(key);
+      return [{
+        name,
+        agentId: member.agentId,
+        role: member.role,
+        color: member.color,
+      }];
+    });
+  }, [leadName, team]);
+  const missingSavedMember = Boolean(
+    savedTarget && team && !recipientMembers.some((member) => member.name === pickerTarget)
+  );
+  const invalidRosterNames = (team?.members ?? []).flatMap((member) => {
+    if (member.name.trim().toLowerCase() === leadName.toLowerCase()) return [];
+    const reason = validateTeamMemberNameFormat(member.name);
+    return reason ? [{ name: member.name, reason }] : [];
+  });
 
   return (
     <div
@@ -118,39 +147,52 @@ export const SmartScheduleFields = ({
                 className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${mode === option ? 'border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] text-[var(--color-text)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
                 onClick={() => onModeChange(option)}
               >
-                {t(option === 'agent' ? 'launch.schedule.oneAgent' : 'launch.schedule.wholeTeam')}
+                {t(option === 'agent' ? 'launch.schedule.oneAgent' : taskFirst ? 'launch.schedule.taskFirstWholeTeam' : 'launch.schedule.wholeTeam')}
               </button>
             ))}
           </div>
         )}
         {mode === 'agent' ? (
           <>
-            <Label htmlFor="schedule-member" className="text-xs">
-              {t('launch.schedule.target')}
+            <Label className="text-xs">
+              {t(taskFirst ? 'launch.schedule.taskFirstTarget' : 'launch.schedule.target')}
             </Label>
             <MemberSelect
-              id="schedule-member"
-              members={memberOptions}
-              value={targetMember || leadName || DEFAULT_LEAD_VALUE}
-              onChange={(name) =>
-                onTargetMemberChange(name === leadName || name === DEFAULT_LEAD_VALUE ? '' : (name ?? ''))
+              members={recipientMembers}
+              value={pickerTarget}
+              onChange={(name) => onTargetMemberChange(name === leadName ? '' : (name ?? ''))}
+              placeholder={
+                savedTarget && !recipientMembers.some((member) => member.name === pickerTarget)
+                  ? savedTarget
+                  : t('launch.schedule.leadDefault')
               }
-              placeholder={t('launch.schedule.leadDefault')}
-              ariaLabel={t('launch.schedule.target')}
               getMemberLabel={(member) =>
-                member.name === leadName || member.name === DEFAULT_LEAD_VALUE
-                  ? t('launch.schedule.leadDefault')
-                  : member.name
+                member.name !== leadName
+                  ? member.name
+                  : leadName === 'team-lead'
+                    ? t('launch.schedule.leadDefault')
+                    : `${leadName} — ${t('launch.schedule.leadDefault')}`
               }
-              disabled={!team}
+              ariaLabel={t(taskFirst ? 'launch.schedule.taskFirstTarget' : 'launch.schedule.target')}
+              size="md"
             />
+            {missingSavedMember ? (
+              <p role="alert" className="text-xs text-[var(--warning-text)]">
+                {t('messages.manualQueue.recipientUnavailable')}
+              </p>
+            ) : null}
+            {invalidRosterNames.map(({ name, reason }) => (
+              <p key={name} className="text-xs text-[var(--color-text-muted)]">
+                {name}: {reason}
+              </p>
+            ))}
             <p className="text-[11px] text-[var(--color-text-muted)]">
-              {t('launch.schedule.agentDescription')}
+              {t(taskFirst ? 'launch.schedule.taskFirstAgentDescription' : 'launch.schedule.agentDescription')}
             </p>
           </>
         ) : mode === 'team' ? (
           <p className="text-[11px] text-[var(--color-text-muted)]">
-            {t('launch.schedule.teamDescription')}
+            {t(taskFirst ? 'launch.schedule.taskFirstTeamDescription' : 'launch.schedule.teamDescription')}
           </p>
         ) : null}
       </div>

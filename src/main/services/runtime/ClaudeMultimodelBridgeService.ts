@@ -38,6 +38,7 @@ import {
   readRuntimeStatusCommand,
   RuntimeStatusCommandError,
 } from './runtimeStatusCommandDiagnostics';
+import { resolveRuntimeStatusExecutionContext } from './runtimeStatusExecutionContext';
 
 import type {
   CliProviderId,
@@ -683,21 +684,6 @@ export class ClaudeMultimodelBridgeService {
     providerIds: readonly CliProviderId[],
     projectPath?: string | null
   ): number {
-    if (providerIds.length === 1) {
-      const hydrationKey = this.getProviderStatusHydrationKey(
-        binaryPath,
-        providerIds[0],
-        projectPath
-      );
-      const currentGeneration = this.providerStatusHydrationGenerations.get(hydrationKey);
-      if (
-        currentGeneration !== undefined &&
-        this.providerStatusHydrationInFlight.has(hydrationKey)
-      ) {
-        return currentGeneration;
-      }
-    }
-
     const generation = ++this.providerStatusHydrationGeneration;
     for (const providerId of providerIds) {
       this.providerStatusHydrationGenerations.set(
@@ -924,14 +910,18 @@ export class ClaudeMultimodelBridgeService {
           })
         : Promise.resolve(null);
 
+    const context = await resolveRuntimeStatusExecutionContext(
+      providerId,
+      getProviderStatusCommandCwd(options.projectPath)
+    );
     const modelListPromise = execCli(
       binaryPath,
-      ['model', 'list', '--json', '--provider', providerId],
+      ['model', 'list', '--json', '--provider', providerId, ...context.projectArgs],
       {
         timeout: PROVIDER_MODELS_TIMEOUT_MS,
         maxBuffer: PROVIDER_MODELS_MAX_BUFFER_BYTES,
         env,
-        cwd: getProviderStatusCommandCwd(options.projectPath),
+        cwd: context.cwd,
       }
     );
 
@@ -1224,10 +1214,15 @@ export class ClaudeMultimodelBridgeService {
     connectionIssues: Partial<Record<CliProviderId, string>>,
     options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
   ): Promise<CliProviderStatus> {
+    const context = await resolveRuntimeStatusExecutionContext(
+      providerId,
+      getProviderStatusCommandCwd(options.projectPath)
+    );
     const args = ['runtime', 'status', '--json', '--provider', providerId];
     if (options.summary) {
       args.push('--summary');
     }
+    args.push(...context.projectArgs);
     const timeout = this.getProviderStatusRuntimeTimeout(binaryPath, providerId, options);
     const parsed = await readRuntimeStatusCommand(
       binaryPath,
@@ -1236,9 +1231,11 @@ export class ClaudeMultimodelBridgeService {
         timeout,
         maxBuffer: PROVIDER_STATUS_MAX_BUFFER_BYTES,
         env,
-        cwd: getProviderStatusCommandCwd(options.projectPath),
+        cwd: context.cwd,
       },
-      extractJsonObject<UnifiedRuntimeStatusResponse>
+      extractJsonObject<UnifiedRuntimeStatusResponse>,
+      undefined,
+      getProviderStatusCommandCwd(options.projectPath)
     );
     const mappedProvider = this.applyConnectionIssue(
       this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId]),

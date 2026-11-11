@@ -241,6 +241,7 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
         verificationState: 'error',
         statusCheckOutcome: 'transient_error',
         statusCheckErrorCode: 'timeout',
+        statusMessage: 'Provider status unavailable',
         capabilities: {
           ...createDynamicCatalogProvider().capabilities,
           teamLaunch: false,
@@ -255,6 +256,7 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
       verificationState: 'error',
       statusCheckOutcome: 'transient_error',
       statusCheckErrorCode: 'timeout',
+      statusMessage: 'Provider status unavailable',
       capabilities: { teamLaunch: false },
       modelCatalog: { status: 'stale' },
       connection: { codex: { launchAllowed: true, effectiveAuthMode: 'chatgpt' } },

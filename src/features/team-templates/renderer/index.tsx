@@ -1,4 +1,17 @@
+import { useEffect, useState } from 'react';
+
 import { useAppTranslation } from '@features/localization/renderer';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@renderer/components/ui/alert-dialog';
+import { buttonVariants } from '@renderer/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -15,29 +28,80 @@ import type { TeamProviderId } from '@shared/types';
 
 export const TeamTemplatePicker = ({
   onApply,
+  confirmBeforeApply = false,
+  disabled = false,
 }: {
   onApply: (draft: ReturnType<typeof applyTeamTemplate>) => void;
+  /** Ask before replacing non-default content in the owning form. */
+  confirmBeforeApply?: boolean;
+  /** Prevent replacement while persisted form fields are hydrating. */
+  disabled?: boolean;
 }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const { t: tCommon } = useAppTranslation('common');
+  const [pendingTemplate, setPendingTemplate] = useState<(typeof TEAM_TEMPLATES)[number] | null>(
+    null
+  );
+  useEffect(() => {
+    if (disabled) setPendingTemplate(null);
+  }, [disabled]);
   return (
-    <Select
-      value=""
-      onValueChange={(id) => {
-        const template = TEAM_TEMPLATES.find((entry) => entry.id === id);
-        if (template) onApply(applyTeamTemplate(template));
-      }}
-    >
-      <SelectTrigger aria-label={t('templates.label')}>
-        <SelectValue placeholder={t('templates.placeholder')} />
-      </SelectTrigger>
-      <SelectContent>
-        {TEAM_TEMPLATES.map((template) => (
-          <SelectItem key={template.id} value={template.id}>
-            {t(`templates.names.${template.id}`)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <>
+      <Select
+        disabled={disabled}
+        value=""
+        onValueChange={(id) => {
+          const template = TEAM_TEMPLATES.find((entry) => entry.id === id);
+          if (!template) return;
+          if (!confirmBeforeApply) {
+            onApply(applyTeamTemplate(template));
+            return;
+          }
+          setPendingTemplate(template);
+        }}
+      >
+        <SelectTrigger aria-label={t('templates.label')}>
+          <SelectValue placeholder={t('templates.placeholder')} />
+        </SelectTrigger>
+        <SelectContent>
+          {TEAM_TEMPLATES.map((template) => (
+            <SelectItem key={template.id} value={template.id}>
+              {t(`templates.names.${template.id}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <AlertDialog
+        open={pendingTemplate !== null && !disabled}
+        onOpenChange={(next) => !next && setPendingTemplate(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('templates.confirmTitle', { defaultValue: 'Apply team template?' })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('templates.confirmMessage', {
+                defaultValue:
+                  'This will replace your teammates, instructions and team settings with the template’s values.',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tCommon('actions.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: 'default' })}
+              onClick={() => {
+                if (pendingTemplate && !disabled) onApply(applyTeamTemplate(pendingTemplate));
+                setPendingTemplate(null);
+              }}
+            >
+              {t('templates.confirmAction', { defaultValue: 'Apply template' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

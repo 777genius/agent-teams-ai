@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import {
   CodexRuntimeUpdateDialog,
@@ -63,7 +63,6 @@ import {
   type OpenCodeModelRoutePresentationStatus,
 } from '@shared/utils/opencodeModelRoute';
 import { isTeamProviderId } from '@shared/utils/teamProvider';
-import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual';
 import { Command as CommandPrimitive } from 'cmdk';
 import {
   AlertTriangle,
@@ -81,6 +80,7 @@ import {
 } from 'lucide-react';
 
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
+import { CreateTeamPageActivityContext } from './createTeamPageActivityContext';
 import { OpenCodeAuthRequiredModelsNotice } from './OpenCodeAuthRequiredModelsNotice';
 import { useOpenCodeDefaultMaterialization } from './openCodeDefaultMaterialization';
 import { formatOpenCodeDefaultRouteLabel } from './openCodeDefaultModel';
@@ -116,13 +116,19 @@ import {
   mergeOpenCodePassiveProviderStatus,
 } from './openCodeRuntimeStatusUi';
 import { getOpenCodeSidebarSourceState } from './openCodeSidebarSourceState';
-import { useOpenCodeSourceDirectory, useScopedOpenCodeStatus } from './OpenCodeSourceDirectoryProvider';
+import {
+  useOpenCodeSourceDirectory,
+  useScopedOpenCodeStatus,
+} from './OpenCodeSourceDirectoryProvider';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
 import * as unavailableSelection from './openCodeUnavailableSelection';
+import { OpenCodeVirtualizedModelGrid } from './OpenCodeVirtualizedModelGrid';
 import { selectVisibleOpenCodeModelOptions } from './openCodeVisibleModelOptions';
 import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';
+import { ResponsiveModelGrid } from './ResponsiveModelGrid';
 import { resolveRuntimeDefaultModelLabel } from './runtimeDefaultModelLabel';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
+import { TeamModelProviderActions } from './TeamModelProviderActions';
 import {
   OpenCodeCatalogRefreshErrorCard,
   ProviderStatusPanel,
@@ -130,14 +136,11 @@ import {
 import {
   addCodexAstraUpdatePreview,
   deriveOpenCodeSelectionAuthorityState,
-  getActiveOpenCodeStickyHeadingIndex,
-  getOpenCodeModelGridColumnCount,
   getOpenCodeSelectionAuthorityScopeKey,
   getOpenCodeSourceInfo,
   isCodexAstraUpdatePreview,
   type OpenCodeSelectionScopeAssociation,
   resolveTeamModelSelectorValue,
-  shouldElevateOpenCodeVirtualRow,
   shouldShowOpenCodeNeedsTestBadge,
   shouldShowOpenCodeOverviewStatus,
 } from './teamModelSelectorUi';
@@ -160,7 +163,6 @@ export {
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 export { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
-
 interface ProviderDef {
   id: TeamProviderId;
   label: string;
@@ -210,7 +212,6 @@ interface OpenCodeModelGroup {
 }
 type OpenCodeModelGroupStatus = OpenCodeModelRoutePresentationStatus;
 type OpenCodeRouteFilterTag = 'connected' | 'configured' | 'local';
-
 interface OpenCodeModelOptionMetadata {
   option: TeamRuntimeModelOption;
   index: number;
@@ -226,50 +227,27 @@ interface OpenCodeModelOptionMetadata {
   isFree: boolean;
   isNew: boolean;
 }
-
-interface OpenCodeVirtualHeadingRow {
-  kind: 'heading';
-  key: string;
-  group: OpenCodeModelGroup;
-}
-
-interface OpenCodeVirtualModelRow {
-  kind: 'models';
-  key: string;
-  options: TeamRuntimeModelOption[];
-  isLastInGroup: boolean;
-}
-type OpenCodeVirtualRow = OpenCodeVirtualHeadingRow | OpenCodeVirtualModelRow;
-type RenderModelOption = (option: TeamRuntimeModelOption) => React.JSX.Element;
-
 type ProviderModelCatalogItem = NonNullable<CliProviderStatus['modelCatalog']>['models'][number];
-
 interface OpenCodeModelCostRates {
   input: number | null;
   output: number | null;
   cacheRead: number | null;
   cacheWrite: number | null;
 }
-
 interface OpenCodeModelPricingInfo {
   free: boolean;
   summary: string | null;
   title: string | undefined;
 }
-
 type TeamTranslator = ReturnType<typeof useAppTranslation>['t'];
-
 const MODEL_GRID_RESPONSIVE_HEIGHT_CLASS = 'h-[clamp(320px,calc(100vh-300px),520px)]';
 const OPENCODE_MODEL_VIRTUALIZATION_THRESHOLD = 80;
-const OPENCODE_MODEL_GROUP_HEADING_ESTIMATE_PX = 38;
-const OPENCODE_MODEL_ROW_ESTIMATE_PX = 74;
 const OPENCODE_LOCAL_MODELS_TAB_ID = 'opencode-local-models';
 const PROVIDERS: ProviderDef[] = [
   { id: 'anthropic', label: 'Anthropic', comingSoon: false },
   { id: 'codex', label: 'Codex', comingSoon: false },
   { id: 'opencode', label: 'OpenCode', comingSoon: false },
 ];
-
 const CURATED_OPENCODE_PROVIDER_TABS = [
   { sourceId: 'cursor-acp', label: 'Cursor' },
   { sourceId: 'github-copilot', label: 'GitHub Copilot' },
@@ -279,7 +257,6 @@ const CURATED_OPENCODE_PROVIDER_TABS = [
   { sourceId: 'zai-coding-plan', label: 'Z.AI' },
   { sourceId: 'minimax-coding-plan', label: 'MiniMax' },
 ] as const;
-
 const OPEN_CODE_ROUTE_FILTER_TAG_ORDER: readonly OpenCodeRouteFilterTag[] = [
   'local',
   'configured',
@@ -305,7 +282,6 @@ const OPEN_CODE_ROUTE_FILTER_TAG_STYLES: Record<
       'border-emerald-600/50 dark:border-emerald-300/50 bg-emerald-500/10 dark:bg-emerald-300/10 text-emerald-800 dark:text-emerald-100',
   },
 };
-
 function getCuratedOpenCodeProviderTab(
   sourceId: string
 ): { sourceId: string; label: string } | null {
@@ -404,46 +380,6 @@ function isFreeOpenCodeModelOption({
     free: pricingInfo?.free,
     badgeLabel: option.badgeLabel,
   });
-}
-
-function buildOpenCodeVirtualRows({
-  defaultOptions,
-  groups,
-  columnCount,
-}: {
-  defaultOptions: TeamRuntimeModelOption[];
-  groups: OpenCodeModelGroup[];
-  columnCount: number;
-}): OpenCodeVirtualRow[] {
-  const rows: OpenCodeVirtualRow[] = [];
-
-  if (defaultOptions.length > 0) {
-    rows.push({
-      kind: 'models',
-      key: 'default',
-      options: defaultOptions,
-      isLastInGroup: true,
-    });
-  }
-
-  for (const group of groups) {
-    rows.push({
-      kind: 'heading',
-      key: `heading:${group.groupId}`,
-      group,
-    });
-
-    for (let start = 0; start < group.options.length; start += columnCount) {
-      rows.push({
-        kind: 'models',
-        key: `models:${group.groupId}:${start}`,
-        options: group.options.slice(start, start + columnCount),
-        isLastInGroup: start + columnCount >= group.options.length,
-      });
-    }
-  }
-
-  return rows;
 }
 
 function getOpenCodeModelGroupStatus(
@@ -711,9 +647,8 @@ const OpenCodeModelGroupHeader = ({
   return (
     <div
       className={cn(
-        'flex min-h-9 items-center gap-2 border-y border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-2 py-1.5',
-        sticky &&
-          'sticky top-0 z-20 shadow-[0_6px_14px_-10px_rgba(0,0,0,0.9)] supports-[backdrop-filter]:bg-[color-mix(in_srgb,var(--color-surface)_94%,transparent)] supports-[backdrop-filter]:backdrop-blur-md'
+        'flex min-h-9 items-center gap-2 border-y border-[var(--color-border-subtle)] bg-[var(--color-surface-sidebar)] px-2 py-1.5',
+        sticky && 'sticky top-0 z-20 shadow-[0_6px_14px_-10px_rgba(0,0,0,0.9)]'
       )}
     >
       {group.sourceInfo ? (
@@ -756,21 +691,23 @@ const ModelTooltip = ({
   content: React.ReactNode;
   disabled?: boolean;
 }>): React.JSX.Element => {
-  if (disabled || !content) {
+  if (!content) {
     return children;
   }
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent
-        side="top"
-        sideOffset={6}
-        collisionPadding={12}
-        className="z-[120] max-w-72 whitespace-pre-line text-pretty break-words leading-relaxed"
-      >
-        {content}
-      </TooltipContent>
+      {!disabled && (
+        <TooltipContent
+          side="top"
+          sideOffset={6}
+          collisionPadding={12}
+          className="z-[120] max-w-72 whitespace-pre-line text-pretty break-words leading-relaxed"
+        >
+          {content}
+        </TooltipContent>
+      )}
     </Tooltip>
   );
 };
@@ -827,149 +764,6 @@ const ModelInfoTooltip = ({
   </ModelTooltip>
 );
 
-const OpenCodeVirtualizedModelGrid = ({
-  defaultOptions,
-  groups,
-  renderModelOption,
-}: Readonly<{
-  defaultOptions: TeamRuntimeModelOption[];
-  groups: OpenCodeModelGroup[];
-  renderModelOption: RenderModelOption;
-}>): React.JSX.Element => {
-  const scrollParentRef = useRef<HTMLDivElement | null>(null);
-  const [gridWidth, setGridWidth] = useState(0);
-
-  useEffect(() => {
-    const element = scrollParentRef.current;
-    if (!element) {
-      return undefined;
-    }
-
-    const updateGridWidth = (): void => {
-      const nextWidth = element.clientWidth;
-      setGridWidth((previousWidth) => (previousWidth === nextWidth ? previousWidth : nextWidth));
-    };
-    updateGridWidth();
-
-    if (typeof ResizeObserver !== 'undefined') {
-      const resizeObserver = new ResizeObserver(updateGridWidth);
-      resizeObserver.observe(element);
-      return () => resizeObserver.disconnect();
-    }
-
-    window.addEventListener('resize', updateGridWidth);
-    return () => window.removeEventListener('resize', updateGridWidth);
-  }, []);
-
-  const columnCount = useMemo(() => getOpenCodeModelGridColumnCount(gridWidth), [gridWidth]);
-  const rows = useMemo(
-    () => buildOpenCodeVirtualRows({ defaultOptions, groups, columnCount }),
-    [columnCount, defaultOptions, groups]
-  );
-  const stickyHeadingIndexes = useMemo(
-    () => rows.flatMap((row, index) => (row.kind === 'heading' ? [index] : [])),
-    [rows]
-  );
-  const activeStickyHeadingIndexRef = useRef<number | null>(null);
-  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual API limitation, not fixable in user code
-  const rowVirtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => scrollParentRef.current,
-    getItemKey: (index) => rows[index]?.key ?? index,
-    estimateSize: (index) =>
-      rows[index]?.kind === 'heading'
-        ? OPENCODE_MODEL_GROUP_HEADING_ESTIMATE_PX
-        : OPENCODE_MODEL_ROW_ESTIMATE_PX,
-    rangeExtractor: (range) => {
-      activeStickyHeadingIndexRef.current = getActiveOpenCodeStickyHeadingIndex(
-        stickyHeadingIndexes,
-        range.startIndex
-      );
-      const indexes = new Set(defaultRangeExtractor(range));
-      if (activeStickyHeadingIndexRef.current !== null) {
-        indexes.add(activeStickyHeadingIndexRef.current);
-      }
-      return [...indexes].sort((left, right) => left - right);
-    },
-    overscan: 6,
-  });
-  const virtualRows = rowVirtualizer.getVirtualItems();
-  const activeStickyHeadingRow =
-    activeStickyHeadingIndexRef.current === null ? null : rows[activeStickyHeadingIndexRef.current];
-
-  return (
-    <div
-      ref={scrollParentRef}
-      data-testid="team-model-selector-model-grid"
-      className={cn(
-        '-mx-4 -mb-4 w-[calc(100%+2rem)] flex-none overflow-y-auto rounded-none bg-[var(--color-surface)]',
-        MODEL_GRID_RESPONSIVE_HEIGHT_CLASS
-      )}
-    >
-      {activeStickyHeadingRow?.kind === 'heading' ? (
-        <div className="sticky top-0 z-20 h-0 overflow-visible">
-          <div
-            data-sticky="true"
-            data-testid="team-model-selector-sticky-group-header"
-            className="w-full shadow-[0_6px_14px_-10px_rgba(0,0,0,0.9)]"
-          >
-            <OpenCodeModelGroupHeader group={activeStickyHeadingRow.group} />
-          </div>
-        </div>
-      ) : null}
-      <div
-        className="relative w-full"
-        style={{
-          height: rowVirtualizer.getTotalSize(),
-        }}
-      >
-        {virtualRows.map((virtualRow) => {
-          const row = rows[virtualRow.index];
-          if (!row) {
-            return null;
-          }
-
-          return (
-            <div
-              key={row.key}
-              ref={rowVirtualizer.measureElement}
-              data-index={virtualRow.index}
-              className={cn(
-                'absolute left-0 top-0 w-full',
-                shouldElevateOpenCodeVirtualRow(
-                  row.kind,
-                  virtualRow.index,
-                  activeStickyHeadingIndexRef.current
-                ) && 'z-30'
-              )}
-              style={{
-                transform: `translateY(${virtualRow.start}px)`,
-              }}
-            >
-              {row.kind === 'heading' ? (
-                <div data-testid="team-model-selector-opencode-group">
-                  <OpenCodeModelGroupHeader group={row.group} />
-                </div>
-              ) : (
-                <div className={cn(row.isLastInGroup && 'pb-4')}>
-                  <div
-                    className="grid border-l border-[var(--color-border-subtle)]"
-                    style={{
-                      gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
-                    }}
-                  >
-                    {row.options.map(renderModelOption)}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
 const OpenCodeModelCatalogLoadingSkeleton = (): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   return (
@@ -985,10 +779,7 @@ const OpenCodeModelCatalogLoadingSkeleton = (): React.JSX.Element => {
           {t('modelSelector.openCode.loadingModels')}
         </span>
       </div>
-      <div
-        className="grid gap-1.5"
-        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
-      >
+      <ResponsiveModelGrid className="grid gap-1.5">
         {[0, 1, 2].map((index) => (
           <div
             key={index}
@@ -1010,7 +801,7 @@ const OpenCodeModelCatalogLoadingSkeleton = (): React.JSX.Element => {
             />
           </div>
         ))}
-      </div>
+      </ResponsiveModelGrid>
     </div>
   );
 };
@@ -1080,6 +871,8 @@ export interface TeamModelSelectorProps {
   onProviderChange: (providerId: TeamProviderId) => void;
   value: string;
   onValueChange: (value: string) => void;
+  /** Automatic catalog changes never count as manual user edits. */
+  onNormalizedValueChange?: (value: string) => void;
   preserveSelectedModel?: boolean;
   limitContext?: boolean;
   projectPath?: string | null;
@@ -1093,6 +886,7 @@ export interface TeamModelSelectorProps {
   modelIssueReasonByValue?: Partial<Record<string, string | null | undefined>>;
   modelUnavailableReasonByValue?: Partial<Record<string, string | null | undefined>>;
   onOpenProviderSettings?: (providerId: TeamProviderId) => void;
+  onManageProviders?: (providerId: TeamProviderId) => void;
   onOpenCodeProviderScopedStatusChange?: Parameters<
     typeof usePublishOpenCodeProviderScopedStatus
   >[0];
@@ -1103,6 +897,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   onProviderChange,
   value,
   onValueChange,
+  onNormalizedValueChange,
   preserveSelectedModel = false,
   limitContext = false,
   projectPath = null,
@@ -1116,9 +911,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   modelIssueReasonByValue,
   modelUnavailableReasonByValue,
   onOpenProviderSettings,
+  onManageProviders,
   onOpenCodeProviderScopedStatusChange,
 }) => {
   const { t } = useAppTranslation('team');
+  const creationPageActive = useContext(CreateTeamPageActivityContext);
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const selectedProviderId =
     disableGeminiOption && isGeminiUiFrozen() && providerId === 'gemini' ? 'anthropic' : providerId;
@@ -1716,19 +1513,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   ]);
 
   useEffect(() => {
-    if (isInspectingInactiveProvider) {
-      return;
-    }
-    if (shouldDeferModelNormalization) {
-      return;
-    }
+    if (isInspectingInactiveProvider) return;
+    if (shouldDeferModelNormalization) return;
     if (normalizedValue !== value) {
-      onValueChange(normalizedValue);
+      (onNormalizedValueChange ?? onValueChange)(normalizedValue);
     }
   }, [
     isInspectingInactiveProvider,
     normalizedValue,
     onValueChange,
+    onNormalizedValueChange,
     shouldDeferModelNormalization,
     value,
   ]);
@@ -2892,8 +2686,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       >
         <span
           className={cn(
-            'flex flex-col justify-center gap-0.5',
-            isFlatOpenCodeCell ? 'min-w-0 items-start' : 'items-center'
+            'flex min-w-0 flex-col justify-center gap-0.5',
+            isFlatOpenCodeCell ? 'items-start' : 'items-center'
           )}
         >
           <OverflowModelName
@@ -3073,7 +2867,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       : effectiveProviderId;
   return (
     <TooltipProvider delayDuration={150} skipDelayDuration={1500}>
-      <div className="mb-5">
+      <div className="isolate mb-5">
         <Tabs
           orientation="vertical"
           value={activeProviderTabId}
@@ -3147,6 +2941,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               aria-label="Model providers"
               className="h-full min-h-full w-full flex-col items-stretch justify-start gap-1 overflow-visible rounded-none border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-sidebar)] p-2"
             >
+              <TeamModelProviderActions
+                providerId={providerId}
+                projectPath={openCodeCatalogScopeKey}
+                onManageProviders={onManageProviders}
+              />
               {PROVIDERS.map((provider) => {
                 const providerDisabledReason = getProviderDisabledReason(provider.id);
                 const providerSelectable = isProviderSelectable(provider.id);
@@ -3239,7 +3038,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               {shouldShowOpenCodeSourceSkeleton ? <OpenCodeProviderTabsLoadingSkeleton /> : null}
               {shouldShowOpenCodeSourceUnavailable ? (
                 <p role="status" className="px-3 py-2 text-[11px] text-[var(--color-text-muted)]">
-                  {sourceDiscovery?.error ?? t('modelSelector.openCodeStatus.summary.temporarilyUnavailable')}
+                  {sourceDiscovery?.error ??
+                    t('modelSelector.openCodeStatus.summary.temporarilyUnavailable')}
                 </p>
               ) : shouldShowOpenCodeNoSources ? (
                 <p className="px-3 py-2 text-[11px] text-[var(--color-text-muted)]">
@@ -3252,7 +3052,15 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       key={`loading:${provider.sourceId}`}
                       data-testid={`team-model-selector-provider-nav-loading-${provider.sourceId}`}
                       data-connection-status={provider.status}
-                      data-catalog-state={openCodeSourcesLoading ? 'loading' : sourceFailureKind === 'status' ? 'status-error' : sourceFailureKind === 'directory' ? 'directory-error' : 'refresh-failed'}
+                      data-catalog-state={
+                        openCodeSourcesLoading
+                          ? 'loading'
+                          : sourceFailureKind === 'status'
+                            ? 'status-error'
+                            : sourceFailureKind === 'directory'
+                              ? 'directory-error'
+                              : 'refresh-failed'
+                      }
                       role="status"
                       aria-label={
                         !openCodeSourcesLoading
@@ -3289,7 +3097,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                         )}
                         <span className="sr-only">
                           {!openCodeSourcesLoading
-                            ? sourceFailureKind === 'status' ? 'Provider status check failed.' : sourceFailureKind === 'directory' ? 'Source discovery failed.' : 'Model catalog refresh failed.'
+                            ? sourceFailureKind === 'status'
+                              ? 'Provider status check failed.'
+                              : sourceFailureKind === 'directory'
+                                ? 'Source discovery failed.'
+                                : 'Model catalog refresh failed.'
                             : provider.status === 'connected'
                               ? 'Connected. Loading models.'
                               : 'Checking account status and loading models.'}
@@ -3323,8 +3135,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 );
               })}
             </TabsList>
-
-            <div className="flex min-h-0 min-w-0 flex-col bg-[var(--color-surface)]">
+            <div className="flex min-h-0 min-w-0 flex-col bg-[var(--color-surface-sidebar)]">
               {!multimodelAvailable ? (
                 <div className="border-b border-[var(--color-border-subtle)] px-3 py-2">
                   <p className="text-[11px] text-[var(--color-text-muted)]">
@@ -3332,7 +3143,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   </p>
                 </div>
               ) : null}
-
               <div className="flex min-h-0 flex-1 flex-col p-4">
                 {effectiveProviderId === 'codex' ? (
                   <>
@@ -3684,12 +3494,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       )}
                     >
                       {visibleDefaultModelOptions.length > 0 ? (
-                        <div
-                          className="grid border-l border-[var(--color-border-subtle)]"
-                          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
-                        >
+                        <ResponsiveModelGrid className="grid border-l border-[var(--color-border-subtle)]">
                           {visibleDefaultModelOptions.map(renderModelOption)}
-                        </div>
+                        </ResponsiveModelGrid>
                       ) : null}
                       <OpenCodeModelCatalogLoadingSkeleton />
                     </div>
@@ -3698,6 +3505,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       defaultOptions={visibleDefaultModelOptions}
                       groups={visibleOpenCodeModelGroups}
                       renderModelOption={renderModelOption}
+                      renderGroupHeader={(group) => <OpenCodeModelGroupHeader group={group} />}
+                      heightClassName={MODEL_GRID_RESPONSIVE_HEIGHT_CLASS}
                     />
                   ) : (
                     <div
@@ -3708,12 +3517,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       )}
                     >
                       {visibleDefaultModelOptions.length > 0 ? (
-                        <div
-                          className="grid border-l border-[var(--color-border-subtle)]"
-                          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
-                        >
+                        <ResponsiveModelGrid className="grid border-l border-[var(--color-border-subtle)]">
                           {visibleDefaultModelOptions.map(renderModelOption)}
-                        </div>
+                        </ResponsiveModelGrid>
                       ) : null}
                       {visibleOpenCodeModelGroups.map((group) => (
                         <section
@@ -3721,30 +3527,24 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                           data-testid="team-model-selector-opencode-group"
                         >
                           <OpenCodeModelGroupHeader group={group} sticky />
-                          <div
-                            className="grid border-l border-[var(--color-border-subtle)]"
-                            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
-                          >
+                          <ResponsiveModelGrid className="grid border-l border-[var(--color-border-subtle)]">
                             {group.options.map(renderModelOption)}
-                          </div>
+                          </ResponsiveModelGrid>
                         </section>
                       ))}
                     </div>
                   )
                 ) : (
-                  <div
+                  <ResponsiveModelGrid
                     data-testid="team-model-selector-model-grid"
                     className={cn(
                       '-mx-4 -mb-4 grid min-h-[240px] w-[calc(100%+2rem)] flex-none gap-1.5 rounded-none bg-[var(--color-surface)]',
                       shouldConstrainModelListHeight &&
                         cn('overflow-y-auto', MODEL_GRID_RESPONSIVE_HEIGHT_CLASS)
                     )}
-                    style={{
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                    }}
                   >
                     {visibleModelOptions.map((option) => renderModelOption(option))}
-                  </div>
+                  </ResponsiveModelGrid>
                 )}
                 {visibleModelOptions.length === 0 && !shouldShowOpenCodeCatalogLoading ? (
                   <div className="rounded-md border border-black/10 px-3 py-2 text-xs text-[var(--color-text-muted)] dark:border-white/10">
@@ -3756,7 +3556,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           </div>
         </Tabs>
         <CodexRuntimeUpdateDialog
-          open={codexRuntimeDialogOpen}
+          open={creationPageActive && codexRuntimeDialogOpen}
           onOpenChange={setCodexRuntimeDialogOpen}
           status={codexRuntimeStatus}
           loading={codexRuntimeStatusLoading}
@@ -3764,7 +3564,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           onInstall={() => void installCodexRuntime?.()}
         />
         <OpenCodeLocalModelPrivateNetworkApprovalDialog
-          target={pendingPrivateNetworkSetup?.target ?? null}
+          target={creationPageActive ? (pendingPrivateNetworkSetup?.target ?? null) : null}
           onCancel={() => setPendingPrivateNetworkSetup(null)}
           onApprove={(target) => {
             const approvedProjectPath = pendingPrivateNetworkSetup?.projectPath;

@@ -492,7 +492,7 @@ const TeamFilterSelector = ({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t('tokenUsage.filters.filterTeams')}
-            className="mt-2 h-9 w-full rounded-sm border border-[var(--color-border-emphasis)] bg-surface px-3 text-sm text-text outline-none placeholder:text-text-muted focus:border-fuchsia-500/60"
+            className="mt-2 h-9 w-full rounded-sm border border-[var(--color-border-emphasis)] bg-[var(--color-form-control-bg)] px-3 text-sm text-text outline-none placeholder:text-text-muted focus:border-fuchsia-500/60"
           />
         </div>
         <div className="max-h-72 overflow-auto p-2">
