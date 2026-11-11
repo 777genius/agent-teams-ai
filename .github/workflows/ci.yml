@@ -107,7 +107,7 @@ jobs:
           cache: pnpm
       # Force exit: a broken gate wait loop must fail this step, not hang it.
       - name: Test feedback policy
-        run: node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
+        run: node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts test/scripts/installDependenciesWithRetry.test.mjs
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Guard runtime artifacts

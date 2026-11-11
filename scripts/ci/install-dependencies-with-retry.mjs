@@ -9,6 +9,7 @@ const TERMINAL_INSTALL_ERROR =
   /\bERR_PNPM_(?:OUTDATED_LOCKFILE|UNSUPPORTED_ENGINE|FETCH_404)\b|(?:response code|status(?: code)?)[=: ]+4\d\d/i;
 const ENGINE_FAILURE = /\bUnsupported engine\b/i;
 const ENGINE_WARNING = /(?:\[\s*WARN(?:ING)?\s*\]|\bWARN(?:ING)?)\s*Unsupported engine\b/i;
+const ENGINE_WARNING_PREFIX = /^\s*(?:\[\s*WARN(?:ING)?\s*\]|WARN(?:ING)?\b)/i;
 
 // pnpm colors warnings and HTTP diagnostics when a terminal is detected.
 const ANSI_COLORS = /\x1b\[[0-9;]*m/g;
@@ -21,7 +22,7 @@ function hasTerminalInstallFailure(output) {
   // pnpm may warn about an unrelated workspace's Node engine before a
   // transient Electron download 5xx. A warning must not suppress retries.
   return TERMINAL_INSTALL_ERROR.test(output) || output.split(/\r?\n/).some((line) =>
-    ENGINE_FAILURE.test(line) && !ENGINE_WARNING.test(line));
+    ENGINE_FAILURE.test(line) && !ENGINE_WARNING.test(line) && !ENGINE_WARNING_PREFIX.test(line));
 }
 
 export function isRetryableInstallFailure(output) {
@@ -34,6 +35,9 @@ export function isRetryableInstallFailure(output) {
 // A shared tail would lose that code and could wrongly retry an HTTP 404.
 export function createInstallFailureTracker() {
   const tails = { stdout: '', stderr: '' };
+  // An unfinished warning can exceed the retained suffix; keep its prefix
+  // classification independently to avoid treating its engine text as fatal.
+  const warningLines = { stdout: false, stderr: false };
   let retryableFailureSeen = false;
   let terminalFailureSeen = false;
 
@@ -45,8 +49,17 @@ export function createInstallFailureTracker() {
       const combined = tails[source] + chunk.toString('utf8');
       const normalized = stripColorCodes(combined);
       retryableFailureSeen ||= RETRYABLE_NETWORK_ERROR.test(normalized);
-      terminalFailureSeen ||= hasTerminalInstallFailure(normalized);
-      tails[source] = combined.slice(-256);
+      terminalFailureSeen ||= TERMINAL_INSTALL_ERROR.test(normalized);
+      const lines = normalized.split(/\r?\n/);
+      lines.forEach((line, index) => {
+        const warning =
+          (index === 0 && warningLines[source]) ||
+          ENGINE_WARNING_PREFIX.test(line) || ENGINE_WARNING.test(line);
+        if (ENGINE_FAILURE.test(line) && !warning) terminalFailureSeen = true;
+        if (index === lines.length - 1) warningLines[source] = warning;
+      });
+      // Only retain the current line for markers split across chunks.
+      tails[source] = lines[lines.length - 1].slice(-256);
     },
     snapshot() {
       return { retryableFailureSeen, terminalFailureSeen };
