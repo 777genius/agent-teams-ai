@@ -7,7 +7,8 @@ const rules = [
   { action: 'shell', resource: '*', effect: 'allow' },
   { action: 'external_directory', resource: '*', effect: 'deny' },
 ];
-function fake({ status = 204, foreign = false, throwOnShell = false,
+function fake({ status = 204, foreign = false, foreignAfterShell = false,
+                unreadableAfterShell = false, throwOnShell = false,
                 cleanupStatus = 204 } = {}) {
   const calls = [];
   const base = '/api/session/ses_TEST_direct_shell';
@@ -15,11 +16,15 @@ function fake({ status = 204, foreign = false, throwOnShell = false,
     calls.push({ path, method, body });
     if (path === '/api/session' && method === 'POST')
       return { status: 200, data: { data: { id: 'ses_TEST_direct_shell' } } };
-    if (path === base && method === 'GET')
+    if (path === base && method === 'GET') {
+      const afterMutation = calls.some(x => x.path === base + '/shell' && x.method === 'POST');
+      if (afterMutation && unreadableAfterShell) throw Error('TEST_postmutation_readback_lost');
       return { status: 200, data: { data: {
-        id: foreign ? 'ses_FOREIGN' : 'ses_TEST_direct_shell',
+        id: foreign || (afterMutation && foreignAfterShell)
+          ? 'ses_FOREIGN' : 'ses_TEST_direct_shell',
         location: { directory: '/TEST/workspace' }, permissions: rules,
       } } };
+    }
     if (path === base + '/shell' && method === 'POST') {
       if (throwOnShell) throw Error('TEST_lost_mutation_ack');
       return { status };
@@ -105,5 +110,29 @@ test('a preexisting marker cannot counterfeit a fresh native shell effect', asyn
   await assert.rejects(probeNativeDirectShellEffect(call, '/TEST/workspace',
     async () => DIRECT_SHELL_EXPECTED), /TEST_direct_shell_stale_effect_preexisting/);
   assert.equal(counted(calls, '/shell'), 0);
+  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 1);
+});
+
+// False attestation guard: same TEST file is insufficient if the native
+// session has changed identity after the one authorized shell submission.
+test('post-mutation foreign session never qualifies an observed file effect', async () => {
+  const { call, calls } = fake({ foreignAfterShell: true });
+  const result = await probeNativeDirectShellEffect(call, '/TEST/workspace',
+    async () => calls.some(x => x.path.endsWith('/shell') && x.method === 'POST')
+      ? DIRECT_SHELL_EXPECTED : undefined);
+  assert.equal(result.outcome, 'hold');
+  assert.equal(counted(calls, '/shell'), 1);
+  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'GET'), 2);
+  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 1);
+});
+
+test('post-mutation unreadable session remains HOLD, without retry', async () => {
+  const { call, calls } = fake({ unreadableAfterShell: true });
+  const result = await probeNativeDirectShellEffect(call, '/TEST/workspace',
+    async () => calls.some(x => x.path.endsWith('/shell') && x.method === 'POST')
+      ? DIRECT_SHELL_EXPECTED : undefined);
+  assert.equal(result.outcome, 'hold');
+  assert.equal(counted(calls, '/shell'), 1);
+  assert.equal(counted(calls, '/ses_TEST_direct_shell', 'GET'), 2);
   assert.equal(counted(calls, '/ses_TEST_direct_shell', 'DELETE'), 1);
 });

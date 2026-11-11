@@ -57,9 +57,18 @@ export async function probeNativeDirectShellEffect(
     }
     if (effect !== undefined && effect !== DIRECT_SHELL_EXPECTED)
       throw Error('TEST_direct_shell_unexpected_file_effect');
+    // A marker alone is not a bound native effect: the same session must
+    // still have the captured workspace and ordered rules after the mutation.
+    // Failed read-only re-attestation is HOLD; never replay the shell POST.
+    let postMutationOwned = false;
+    if (accepted && effect === DIRECT_SHELL_EXPECTED) {
+      try {
+        postMutationOwned = isOwnedNativeSessionSnapshot(await call(base), id, workspace, rules);
+      } catch { /* No new native mutation or inferred positive evidence. */ }
+    }
     return {
       attempted: true,
-      outcome: accepted && effect === DIRECT_SHELL_EXPECTED ? 'effect-confirmed' : 'hold',
+      outcome: postMutationOwned ? 'effect-confirmed' : 'hold',
       status,
       responseUncertain,
       modelTurnProven: false,
