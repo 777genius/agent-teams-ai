@@ -355,7 +355,7 @@ try {
          !isOwnedNativeSessionSnapshot(result,nativeSessionId,workspace,permissionRules))
         throw Error('native_session_readback_mismatch');
       return {nativeSessionId,pid:child.pid,startIdentity:startTicks,
-        rules:result.data.data.permissions};
+        directory:result.data.data.location.directory,rules:result.data.data.permissions};
     },
     async installAndAttestInitialContext(capture,signal) {
       if(capture.nativeSessionId!==nativeSessionId ||

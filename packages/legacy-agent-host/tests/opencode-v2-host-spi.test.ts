@@ -120,7 +120,7 @@ function testNativeCustody() {
 
 function testNativePermissionReadback(rules: unknown) {
   const custody = testNativeCustody();
-  return { nativeSessionId: v2Profile().nativeSessionId,
+  return { nativeSessionId: v2Profile().nativeSessionId, directory: v2Profile().cwd,
     pid: custody.pid, startIdentity: custody.startIdentity, rules };
 }
 
@@ -1482,7 +1482,7 @@ test('V2 rejects getter-backed native executable digests before the first mutati
 
 test('V2 permission readbacks must bind to the captured session and process before and after context PUT', async () => {
   for (const phase of ['initial', 'final'] as const) {
-    for (const mismatch of ['session', 'pid', 'start'] as const) {
+    for (const mismatch of ['session', 'pid', 'start', 'directory'] as const) {
       const { captured, calls } = owner(true);
       const original = captured.readNativeEffectivePermissions;
       let reads = 0;
@@ -1497,6 +1497,7 @@ test('V2 permission readbacks must bind to the captured session and process befo
           ...(mismatch === 'session' ? { nativeSessionId: 'ses_FOREIGN' } : {}),
           ...(mismatch === 'pid' ? { pid: proof.pid + 1 } : {}),
           ...(mismatch === 'start' ? { startIdentity: 'TEST-foreign-start' } : {}),
+          ...(mismatch === 'directory' ? { directory: v2Profile().cwd + '-FOREIGN' } : {}),
         };
       };
       const provider = createOpenCodeV2MemberProvider(context(), captured);
@@ -1513,6 +1514,31 @@ test('V2 permission readbacks must bind to the captured session and process befo
       assert.equal(await provider.cleanup(), true);
     }
   }
+});
+
+test('V2 readmission rejects a changed native workspace without replaying context', async () => {
+  const { captured, calls } = owner(true);
+  const original = captured.readNativeEffectivePermissions;
+  let reads = 0;
+  captured.readNativeEffectivePermissions = async (signal) => {
+    const proof = await original(signal);
+    if (!proof) return proof;
+    reads++;
+    return reads >= 3 ? { ...proof, directory: v2Profile().cwd + '-FOREIGN' } : proof;
+  };
+  const provider = createOpenCodeV2MemberProvider(context(), captured);
+  const opened = await provider.factory.open(request());
+  assert.equal(provider.isReady(), true);
+  assert.equal(reads, 2);
+  assert.equal(calls.context, 1);
+  assert.equal((await opened.driver.checkReadiness()).ok, false);
+  assert.equal(provider.isReady(), false);
+  assert.equal(provider.initialContextEvidence?.(), undefined);
+  assert.equal(reads, 3, 'the new admission re-reads native session scope');
+  assert.equal(calls.context, 1, 'a drift cannot re-submit the original native PUT');
+  assert.equal(calls.stop, 1, 'only the TEST-owned process is stopped');
+  assert.equal(await provider.cleanup(), true);
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
 });
 
 test('V2 Host revokes a ready capture when the actual PID/start identity changes', async () => {

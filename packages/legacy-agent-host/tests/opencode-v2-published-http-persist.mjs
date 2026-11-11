@@ -751,6 +751,7 @@ if (process.argv[2] === '--worker') {
            response.data?.data?.location?.directory!==workspace)
           throw Error('TEST_native_session_identity_unconfirmed');
         return {nativeSessionId:sessionId,pid:secondPid,startIdentity:startTicks,
+          directory:response.data.data.location.directory,
           rules:response.data.data.permissions};
       },
       async installAndAttestInitialContext(capture,signal) {

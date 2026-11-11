@@ -48,7 +48,7 @@ export interface OpenCodeV2OwnedSession {
    * and start identity, not just the credentials or loopback address.
    */
   readNativeEffectivePermissions(signal: AbortSignal): Promise<Readonly<{
-    nativeSessionId: string;
+    nativeSessionId: string; directory: string;
     pid: number;
     startIdentity: string;
     rules: unknown;
@@ -401,7 +401,7 @@ export function createOpenCodeV2MemberProvider(
               effective.rules, requiredExternalDirectory);
             if (!effective || initialPolicy?.kind !== 'policy-candidate' ||
                 initialPolicy.effect === 'ask' ||
-                effective.nativeSessionId !== profile.nativeSessionId ||
+                effective.nativeSessionId !== profile.nativeSessionId || effective.directory !== profile.cwd ||
                 effective.pid !== admittedCustody.pid ||
                 effective.startIdentity !== admittedCustody.startIdentity ||
                 combined.aborted || !current()) return false;
@@ -428,7 +428,7 @@ export function createOpenCodeV2MemberProvider(
               finalEffective.rules, requiredExternalDirectory);
             if (!finalEffective || finalPolicy?.kind !== 'policy-candidate' ||
                 finalPolicy.effect === 'ask' ||
-                finalEffective.nativeSessionId !== profile.nativeSessionId ||
+                finalEffective.nativeSessionId !== profile.nativeSessionId || finalEffective.directory !== profile.cwd ||
                 finalEffective.pid !== admittedCustody.pid ||
                 finalEffective.startIdentity !== admittedCustody.startIdentity ||
                 combined.aborted || !current()) return false;
