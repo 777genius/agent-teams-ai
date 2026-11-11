@@ -2,7 +2,11 @@ import {
   validateTeammateName,
   validateTeamName,
 } from '@main/services/team/TeamIdentifierValidation';
-import { extractUserFlags, PROTECTED_CLI_FLAGS } from '@shared/utils/cliArgsParser';
+import {
+  extractUserFlags,
+  findOptionMissingValue,
+  PROTECTED_CLI_FLAGS,
+} from '@shared/utils/cliArgsParser';
 import {
   formatEffortLevelListForProvider,
   isTeamEffortLevelForProvider,
@@ -127,6 +131,10 @@ export function assertOptionalExtraCliArgs(value: unknown): string | undefined {
     throw new TeamRequestValidationError(
       `extraCliArgs contains app-managed flags: ${[...new Set(protectedFlags)].join(', ')}`
     );
+  }
+  const missingValue = findOptionMissingValue(extraCliArgs);
+  if (missingValue) {
+    throw new TeamRequestValidationError(`extraCliArgs ends with ${missingValue} but no value`);
   }
   return extraCliArgs;
 }

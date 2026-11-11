@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   extractFlagsFromHelp,
   extractUserFlags,
+  findOptionMissingValue,
   parseCliArgs,
   PROTECTED_CLI_FLAGS,
 } from '@shared/utils/cliArgsParser';
@@ -181,6 +182,24 @@ describe('extractUserFlags', () => {
   it('keeps a non-letter remainder of a short cluster so validation can report it', () => {
     expect(extractUserFlags('-p1')).toEqual(['-p', '-1']);
     expect(extractUserFlags('-pc2')).toEqual(['-p', '-c', '-2']);
+  });
+});
+
+describe('findOptionMissingValue', () => {
+  it('reports an option that needs a value but ends the args', () => {
+    expect(findOptionMissingValue('-n')).toBe('-n');
+    expect(findOptionMissingValue('-pn')).toBe('-n');
+    expect(findOptionMissingValue('--verbose --append-system-prompt')).toBe(
+      '--append-system-prompt'
+    );
+  });
+
+  it('accepts options that have their value', () => {
+    expect(findOptionMissingValue('-n name')).toBeUndefined();
+    expect(findOptionMissingValue('-pn -dash-name')).toBeUndefined();
+    expect(findOptionMissingValue('-nname')).toBeUndefined();
+    expect(findOptionMissingValue('--append-system-prompt=x')).toBeUndefined();
+    expect(findOptionMissingValue('-p --verbose')).toBeUndefined();
   });
 });
 

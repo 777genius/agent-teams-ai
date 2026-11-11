@@ -125,8 +125,22 @@ export function extractFlagsFromHelp(helpOutput: string): Set<string> {
  * extractUserFlags('')                              // []
  */
 export function extractUserFlags(raw: string): string[] {
+  return scanUserFlags(raw).flags;
+}
+
+/**
+ * Returns the option that needs a value but ends the args with none (`-n`, `-pn`,
+ * `--model`). Appended args would then supply that value, for example a
+ * `--settings` flag the app adds after them.
+ */
+export function findOptionMissingValue(raw: string): string | undefined {
+  return scanUserFlags(raw).missingValue;
+}
+
+function scanUserFlags(raw: string): { flags: string[]; missingValue?: string } {
   const tokens = parseCliArgs(raw);
   const flags: string[] = [];
+  let missingValue: string | undefined;
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
     if (!token.startsWith('-')) continue;
@@ -137,7 +151,10 @@ export function extractUserFlags(raw: string): string[] {
       // value, the CLI reads the next token as that value, even if it starts with `-`.
       const last = shortFlags[shortFlags.length - 1];
       const wholeToken = `-${shortFlags.map((flag) => flag.slice(1)).join('')}`;
-      if (token === wholeToken && OPTIONS_WITH_REQUIRED_VALUE.has(last)) i++;
+      if (token === wholeToken && OPTIONS_WITH_REQUIRED_VALUE.has(last)) {
+        if (i === tokens.length - 1) missingValue = last;
+        i++;
+      }
       continue;
     }
     // Normalize the `--flag=value` form to the bare flag name so protected-flag
@@ -149,9 +166,12 @@ export function extractUserFlags(raw: string): string[] {
     flags.push(equalsIndex === -1 ? token : token.slice(0, equalsIndex));
     // `--append-system-prompt "-review it"`: the CLI reads the next token as the
     // value of an option that requires one, even if it starts with `-`.
-    if (equalsIndex === -1 && OPTIONS_WITH_REQUIRED_VALUE.has(token)) i++;
+    if (equalsIndex === -1 && OPTIONS_WITH_REQUIRED_VALUE.has(token)) {
+      if (i === tokens.length - 1) missingValue = token;
+      i++;
+    }
   }
-  return flags;
+  return { flags, missingValue };
 }
 
 /** Short `claude` options that take no value, so a cluster like `-pr` goes on to `-r`. */
