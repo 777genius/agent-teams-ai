@@ -1310,17 +1310,37 @@ async function main() {
       "Array.from(document.querySelectorAll('[role=alertdialog]'))" +
       ".find(dialog => dialog.querySelector('h2')?.textContent === 'Apply team template?')";
     const selectTemplate = async () => {
-      await cdp.click(
-        "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Team template\"]')"
-      );
-      await cdp.click(
-        "Array.from(document.querySelectorAll('[role=option]'))" +
-        ".find(option => option.textContent?.includes('Software Product Team'))"
-      );
-      await cdp.waitFor(
-        templateConfirmationExpression,
-        'template replacement confirmation'
-      );
+      const trigger = "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Team template\"]')";
+      const option = "Array.from(document.querySelectorAll('[role=option]'))" +
+        ".find(item => item.textContent?.includes('Software Product Team'))";
+      // A ready Radix trigger can miss one native click while the creation form
+      // commits its restored draft. Re-check the real hit target before retrying.
+      const triggerReady = "(() => { const button = " + trigger +
+        "; if (!button?.isConnected || button.disabled) return false;" +
+        " button.scrollIntoView({block:'center',inline:'nearest'});" +
+        " const rect=button.getBoundingClientRect();" +
+        " const hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);" +
+        " return rect.width>0 && rect.height>0 && (hit===button || button.contains(hit)); })()";
+      let optionReady = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await cdp.waitFor(triggerReady, 'visible unobstructed team template trigger', 15_000);
+        await cdp.click(trigger);
+        try {
+          await cdp.waitFor(option, 'Software Product Team option', 4_000);
+          optionReady = true;
+          break;
+        } catch (error) {
+          const open = await cdp.evaluate(
+            trigger + "?.getAttribute('aria-expanded') === 'true'"
+          );
+          // An open menu without the expected item is a genuine catalog/locale
+          // mismatch, not a missed click. Do not toggle it closed to hide it.
+          if (open || attempt === 2) throw error;
+        }
+      }
+      assert(optionReady, 'Team template options did not open');
+      await cdp.click(option);
+      await cdp.waitFor(templateConfirmationExpression, 'template replacement confirmation');
     };
     await selectTemplate();
     // Wait for the dialog's focus and Tab-trap effects before testing keyboard containment.
