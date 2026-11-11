@@ -52,6 +52,11 @@ export type TeamModelProbeSelection = z.infer<typeof teamModelProbeSelectionSche
 
 /** Native mechanism config is derived from the exact private Runtime selection, never a global default. */
 export function teamModelProbeProfile(base: RuntimeMemberProfile): ProviderManagementProfile {
+  // OpenCode V2 does not share V1's management client or model-probe protocol.
+  // Until a separately attested native V2 probe exists, refuse before any
+  // management process or probe journal can be admitted.
+  if (base.provider === 'opencode' && base.nativeGeneration === 'v2')
+    throw new TeamLaunchError('invalid', 'probe-v2-unsupported');
   const key = `team-probe-${runtimeDigest(base)}`;
   const common = {
     profileId: key,

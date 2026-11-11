@@ -17,7 +17,7 @@ import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesyste
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { ClaudeManagementCoordinator } from '../dist/composition/ClaudeManagementCoordinator.js';
 import { RuntimeTeamCoordinator } from '../dist/composition/RuntimeTeamCoordinator.js';
-import { executeTeamModelProbe } from '../dist/composition/teamLaunchModelProbe.js';
+import { executeTeamModelProbe, teamModelProbeProfile } from '../dist/composition/teamLaunchModelProbe.js';
 import { ManagementResourceFence } from '../dist/management/ManagementResourceFence.js';
 import { ModelProbeOwner } from '../dist/management/ModelProbeOwner.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
@@ -814,6 +814,7 @@ test('V2 draft Default preserves the native session model and rejects drifted pr
   if (selected.provider !== 'opencode') throw Error('TEST_expected_opencode_profile');
   assert.equal(selected.nativeSessionId, 'ses_TESTbound');
   assert.equal(selected.nativeOptions.variant, 'TEST-variant');
+  assert.throws(() => teamModelProbeProfile(selected), { reason: 'probe-v2-unsupported' });
   assert.throws(() => applyTeamModelProbeSelection(recipe(), {
     ...input, model: saved.model,
   }), { reason: 'launch-option-unsupported' });
