@@ -314,11 +314,14 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send, co
       const page = document.querySelector('[data-testid="provider-settings-page"]');
       const banner = page?.querySelector('[data-testid="provider-status-banner"]');
       const header = banner?.querySelector('[data-testid="provider-status-banner-header"]');
-      if (!banner || !header || !header.getClientRects().length) return null;
+      const quickConnect = page?.querySelector('section[aria-labelledby="provider-quick-connect-title"]');
+      if (!banner || !header || !quickConnect || !header.getClientRects().length ||
+          !quickConnect.getClientRects().length) return null;
       return {
         inline: !banner.classList.contains('rounded-lg'),
         background: getComputedStyle(banner).backgroundColor,
-        borderBottom: getComputedStyle(header).borderBottomWidth,
+        headerBorderBottom: getComputedStyle(header).borderBottomWidth,
+        quickConnectBorderTop: getComputedStyle(quickConnect).borderTopWidth,
         headerInteractive: header.matches('[role="button"], [aria-expanded]'),
         collapseButtons: banner.querySelectorAll(
           '[aria-label="Collapse provider details"], [aria-label="Expand provider details"]'
@@ -334,7 +337,10 @@ export async function verifyRealRuntimeElectron({ root, data, evaluate, send, co
   assert(inlineLayout?.inline, 'Settings provider banner retained the Dashboard card shell');
   assert.match(inlineLayout.background, /^(?:rgba\(0, 0, 0, 0\)|transparent)$/,
     'Settings provider background differs from its parent surface');
-  assert.equal(inlineLayout.borderBottom, '1px', 'Settings provider header divider missing');
+  assert.equal(inlineLayout.headerBorderBottom, '0px',
+    'Settings provider header duplicated the Quick Connect divider');
+  assert.equal(inlineLayout.quickConnectBorderTop, '1px',
+    'Settings Quick Connect section divider missing');
   assert.equal(inlineLayout.headerInteractive, false, 'Settings header must not be collapsible');
   assert.equal(inlineLayout.collapseButtons, 0, 'Settings retained collapse affordances');
   assert(inlineLayout.visibleProviderRows > 0, 'Settings provider details are not visible');
