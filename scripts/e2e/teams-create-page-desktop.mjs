@@ -1031,15 +1031,31 @@ async function main() {
       'new editor node created on resume'
     );
     await cdp.evaluate('delete window.__createPageBeforeBack');
+    // Resume hydrates the form and text drafts independently of restoring its name.
+    // Do not open the optional controls while they may still remount.
+    await cdp.waitFor(
+      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
+      'resumed creation form and text drafts hydrated'
+    );
     const optionalExpandedAfterResume = await cdp.evaluate(
       `${optionalSettingsButton}?.getAttribute('aria-expanded') === 'true'`
     );
     if (!optionalExpandedAfterResume) await cdp.click(optionalSettingsButton);
     await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
-    await cdp.waitFor(
-      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
-      'Advanced CLI edit retained after real editor unmount and resume'
-    );
+    try {
+      await cdp.waitFor(
+        `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === '--max-turns 5'`,
+        'Advanced CLI edit retained after real editor unmount and resume'
+      );
+    } catch (error) {
+      const observed = await cdp.evaluate(`(() => ({
+        name: document.querySelector('#team-name')?.value,
+        actual: document.querySelector(${JSON.stringify(customArgsSelector)})?.value ?? null,
+        advancedButtonCount: [...document.querySelectorAll('[data-testid=create-team-page] button')].filter(b => b.textContent?.trim() === 'Advanced').length,
+        optionalOpen: document.querySelector('[data-testid=create-team-page] button[aria-expanded="true"]')?.textContent?.trim().slice(0, 50) ?? null,
+      }))()`);
+      throw new Error(`Advanced CLI resume mismatch: ${JSON.stringify(observed)}`, { cause: error });
+    }
     await captureScreenshot(cdp, fixture, 'resumed');
 
     log('open Providers Settings through the real model picker and resume the draft');
