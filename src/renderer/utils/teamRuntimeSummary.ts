@@ -38,7 +38,10 @@ export function formatTeamRuntimeSummary(
   const modelAlreadyCarriesProviderBrand = doesTeamModelCarryProviderBrand(providerId, modelLabel);
 
   const providerActsAsBackendOnly =
-    providerId !== 'anthropic' && Boolean(modelLabel) && !modelAlreadyCarriesProviderBrand;
+    Boolean(providerLabel) &&
+    providerId !== 'anthropic' &&
+    Boolean(modelLabel) &&
+    !modelAlreadyCarriesProviderBrand;
 
   const parts = modelAlreadyCarriesProviderBrand
     ? [modelLabel, effortLabel]

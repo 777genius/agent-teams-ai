@@ -276,7 +276,7 @@ function slideNext() {
           v-for="(shot, idx) in screenshots"
           :key="idx"
           class="screenshots-section__slide"
-          :data-swiper-autoplay="idx === 0 ? 8000 : 4000"
+          :data-swiper-autoplay="idx === 0 ? 7000 : 4000"
         >
           <div
             class="screenshots-section__card"

@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -9,10 +9,12 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const screenshotsDir = resolve(repoRoot, 'docs/screenshots');
 const previewsDir = resolve(screenshotsDir, 'previews');
 const staticEntries = [
-  ...screenshots.map(({ path, previewPath }) => ({
-    source: path.replace(/^screenshots\//, ''),
-    preview: previewPath.replace(/^screenshots\//, ''),
-  })),
+  ...screenshots
+    .filter(({ path }) => !path.endsWith('.gif'))
+    .map(({ path, previewPath }) => ({
+      source: path.replace(/^screenshots\//, ''),
+      preview: previewPath.replace(/^screenshots\//, ''),
+    })),
 ];
 
 const magickCheck = spawnSync('magick', ['-version'], { stdio: 'ignore' });
@@ -54,6 +56,15 @@ for (const { source, preview } of staticEntries) {
   }
 }
 
+// Keep historical URLs usable while the carousel and README share the
+// descriptive canonical filename.
+copyFileSync(resolve(screenshotsDir, 'team-chat.png'), resolve(screenshotsDir, '12.png'));
+copyFileSync(resolve(previewsDir, 'team-chat.webp'), resolve(previewsDir, '12.webp'));
+copyFileSync(
+  resolve(screenshotsDir, '1.png'),
+  resolve(repoRoot, 'landing/public/screenshots/product-preview.png')
+);
+
 const animatedResult = spawnSync(
   'ffmpeg',
   [
@@ -64,7 +75,7 @@ const animatedResult = spawnSync(
     '-i',
     resolve(screenshotsDir, 'task-detail-animated.gif'),
     '-filter_complex',
-    'fps=15,scale=800:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle',
+    'fps=12,scale=1000:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle',
     '-loop',
     '0',
     resolve(previewsDir, 'task-detail-animated.gif'),
