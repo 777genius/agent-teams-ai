@@ -154,6 +154,7 @@ function scanUserFlags(raw: string): { flags: string[]; missingValue?: string } 
       if (token === wholeToken && OPTIONS_WITH_REQUIRED_VALUE.has(last)) {
         if (i === tokens.length - 1) missingValue = last;
         i++;
+        flags.push(...protectedLongFlagIn(tokens[i]));
       }
       continue;
     }
@@ -169,9 +170,22 @@ function scanUserFlags(raw: string): { flags: string[]; missingValue?: string } 
     if (equalsIndex === -1 && OPTIONS_WITH_REQUIRED_VALUE.has(token)) {
       if (i === tokens.length - 1) missingValue = token;
       i++;
+      flags.push(...protectedLongFlagIn(tokens[i]));
     }
   }
   return { flags, missingValue };
+}
+
+/**
+ * A skipped option value is still checked for a protected long flag such as
+ * `--settings`. The CLI reads it as a value, but later launch steps that split
+ * `--settings` arguments out of the raw list would still apply it.
+ */
+function protectedLongFlagIn(value: string | undefined): string[] {
+  if (!value?.startsWith('--')) return [];
+  const equalsIndex = value.indexOf('=');
+  const name = equalsIndex === -1 ? value : value.slice(0, equalsIndex);
+  return PROTECTED_CLI_FLAGS.has(name) ? [name] : [];
 }
 
 /** Short `claude` options that take no value, so a cluster like `-pr` goes on to `-r`. */

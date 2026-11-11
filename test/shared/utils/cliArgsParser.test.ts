@@ -220,6 +220,15 @@ describe('PROTECTED_CLI_FLAGS', () => {
     expect(PROTECTED_CLI_FLAGS.has('--worktree')).toBe(false);
   });
 
+  it('still reports a protected long flag in a skipped value position', () => {
+    // Launch splits --settings out of the raw args, so it must not hide behind a value.
+    const hits = (raw: string) =>
+      extractUserFlags(raw).filter((flag) => PROTECTED_CLI_FLAGS.has(flag));
+    expect(hits(`--append-system-prompt --settings '{"env":{}}' prompt`)).toEqual(['--settings']);
+    expect(hits('-n --settings={} x')).toEqual(['--settings']);
+    expect(hits('--append-system-prompt "-review the patch"')).toEqual([]);
+  });
+
   it('covers the CLI aliases of protected flags', () => {
     // `claude --help` lists `--disallowedTools, --disallowed-tools` and `-r, --resume`.
     const injected = '--disallowed-tools=Bash -r abc -rabc -pr abc';
