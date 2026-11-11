@@ -151,6 +151,16 @@ describe('extractUserFlags', () => {
     );
     expect(protectedHits).toEqual(['--mcp-config', '--permission-mode']);
   });
+
+  it('reads short flag clusters and attached values like the CLI does', () => {
+    expect(extractUserFlags('-rabc')).toEqual(['-r']);
+    expect(extractUserFlags('-r=abc')).toEqual(['-r']);
+    expect(extractUserFlags('-pr abc')).toEqual(['-p', '-r']);
+    expect(extractUserFlags('-pcr abc')).toEqual(['-p', '-c', '-r']);
+    // -d takes a value, so the `r` in `-dr` is its value, not a flag.
+    expect(extractUserFlags('-dr')).toEqual(['-d']);
+    expect(extractUserFlags('--max-turns -1')).toEqual(['--max-turns', '-1']);
+  });
 });
 
 describe('PROTECTED_CLI_FLAGS', () => {
@@ -166,5 +176,12 @@ describe('PROTECTED_CLI_FLAGS', () => {
     expect(PROTECTED_CLI_FLAGS.has('--model')).toBe(true);
     expect(PROTECTED_CLI_FLAGS.has('--effort')).toBe(true);
     expect(PROTECTED_CLI_FLAGS.has('--worktree')).toBe(false);
+  });
+
+  it('covers the CLI aliases of protected flags', () => {
+    // `claude --help` lists `--disallowedTools, --disallowed-tools` and `-r, --resume`.
+    const injected = '--disallowed-tools=Bash -r abc -rabc -pr abc';
+    const hits = extractUserFlags(injected).filter((flag) => PROTECTED_CLI_FLAGS.has(flag));
+    expect(hits).toEqual(['--disallowed-tools', '-r', '-r', '-r']);
   });
 });

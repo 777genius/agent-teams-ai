@@ -23,11 +23,13 @@ export const PROTECTED_CLI_FLAGS = new Set([
   '--setting-sources',
   '--mcp-config',
   '--disallowedTools',
+  '--disallowed-tools',
   '--verbose',
   '--model',
   '--effort',
   '--teammate-mode',
   '--resume',
+  '-r',
   '--settings',
   '--permission-mode',
   '--permission-prompt-tool',
@@ -126,13 +128,33 @@ export function extractUserFlags(raw: string): string[] {
   const tokens = parseCliArgs(raw);
   return tokens
     .filter((token) => token.startsWith('-'))
-    .map((token) => {
+    .flatMap((token) => {
+      if (/^-[A-Za-z]/.test(token)) {
+        return expandShortFlagToken(token);
+      }
       // Normalize the `--flag=value` form to the bare flag name so protected-flag
       // checks (PROTECTED_CLI_FLAGS.has(...)) cannot be bypassed by appending
       // `=value` (e.g. `--mcp-config=/evil`, `--dangerously-skip-permissions=1`).
       // parseCliArgs splits only on whitespace/quotes, so `--flag=value` arrives
       // as a single token and would otherwise miss an exact-match blocklist.
       const equalsIndex = token.indexOf('=');
-      return equalsIndex === -1 ? token : token.slice(0, equalsIndex);
+      return [equalsIndex === -1 ? token : token.slice(0, equalsIndex)];
     });
+}
+
+/** Short `claude` options that take no value, so a cluster like `-pr` goes on to `-r`. */
+const SHORT_FLAGS_WITHOUT_VALUE = new Set(['c', 'h', 'p', 'v']);
+
+/**
+ * Splits a short-option token the way the CLI reads it, so protected checks see
+ * `-r` in `-rabc`, `-r=abc` and `-pr`.
+ */
+function expandShortFlagToken(token: string): string[] {
+  const flags: string[] = [];
+  for (const ch of token.slice(1)) {
+    if (!/[A-Za-z]/.test(ch)) break;
+    flags.push(`-${ch}`);
+    if (!SHORT_FLAGS_WITHOUT_VALUE.has(ch)) break;
+  }
+  return flags;
 }
