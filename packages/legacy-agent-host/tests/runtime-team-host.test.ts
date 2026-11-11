@@ -55,6 +55,47 @@ test('task recovery never returns a prior receipt for a changed command with una
   assert.equal(tasks.ok, true); assert.equal(tasks.value.length, 1);
 });
 
+test('mixed Host boots V2 Session SPI profile without invoking V1 management registration', async (t) => {
+  const f = await fixture(t, {
+    changeProfile(selected) {
+      const original = selected.runtime!.members[0]!;
+      const root = selected.owner.storageRoot;
+      const v2Root = join(root, 'TEST-v2');
+      selected.runtime!.members.push({
+        provider: 'opencode',
+        nativeGeneration: 'v2',
+        protocolRevision: '2.0.21',
+        teamId: original.teamId,
+        memberId: 'bob-id',
+        principalId: 'TEST-v2-principal',
+        sessionId: 'TEST-v2-host-session',
+        nativeSessionId: 'ses_TESTv2owned',
+        generation: 1,
+        configRevision: 'TEST-v2-captured',
+        cwd: root,
+        model: 'TEST-v2-native-model',
+        accountBinding: 'TEST-v2-account',
+        executable: { path: join(v2Root, 'TEST-native'), sha256: 'd'.repeat(64) },
+        environment: {
+          HOME: join(v2Root, 'home'),
+          XDG_CONFIG_HOME: join(v2Root, 'config'),
+          XDG_DATA_HOME: join(v2Root, 'data'),
+          XDG_CACHE_HOME: join(v2Root, 'cache'),
+        },
+        endpoint: 'http://127.0.0.1:19181',
+        nativeOptions: { providerId: 'TEST-v2-provider', agent: 'build' },
+        limits: { ...original.limits, inputBytes: 8192 },
+      });
+    },
+  });
+  const launch = await f.rpc('team.launch.read', {}) as { ok: boolean };
+  assert.equal(launch.ok, true);
+  assert.equal(f.opens(), 0, 'V2 bootstrap cannot allocate a V1 client or native provider');
+  const opened = await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean };
+  assert.equal(opened.ok, true, 'unrelated Claude runtime remains operable');
+  assert.equal(f.opens(), 1, 'only the explicitly opened Claude TEST provider is allocated');
+});
+
 test('two captured teams may share an original run ID without sharing launch ownership', async (t) => {
   const f = await fixture(t, {
     changeProfile(profile) {
