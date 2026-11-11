@@ -95,6 +95,7 @@ describe('DashboardProviderSummary (passive)', () => {
   });
 
   it('shows startup checking and opens Providers without starting IPC work', async () => {
+    state.cliStatusLoading = true;
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -113,8 +114,21 @@ describe('DashboardProviderSummary (passive)', () => {
         flavor: 'agent_teams_orchestrator',
         providers: [],
       };
+      state.cliStatusLoading = false;
       await act(async () => root.render(React.createElement(DashboardProviderSummary)));
       expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+      state.openCodeRuntimeStatusLoading = true;
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+      state.openCodeRuntimeStatusLoading = false;
+      state.openCodeRuntimeStatus = {
+        installed: true,
+        state: 'ready',
+        version: '1.2.3',
+        binaryPath: '/test/opencode',
+      };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).toBeNull();
       expect(state.getStatus).not.toHaveBeenCalled();
       expect(state.loadProviderDirectory).not.toHaveBeenCalled();
       expect(state.loadModels).not.toHaveBeenCalled();
@@ -354,6 +368,13 @@ describe('DashboardProviderSummary (passive)', () => {
   });
 
   it('ignores stale aggregate pending once individual checking has settled', async () => {
+    state.cliStatusLoading = true;
+    state.openCodeRuntimeStatus = {
+      installed: true,
+      state: 'ready',
+      version: '1.2.3',
+      binaryPath: '/test/opencode',
+    };
     state.cliStatus = {
       installed: true,
       flavor: 'agent_teams_orchestrator',
@@ -375,6 +396,9 @@ describe('DashboardProviderSummary (passive)', () => {
       state.cliProviderStatusLoading = { opencode: true };
       await act(async () => root.render(React.createElement(DashboardProviderSummary)));
       expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).not.toBeNull();
+      state.cliProviderStatusLoading = { opencode: false };
+      await act(async () => root.render(React.createElement(DashboardProviderSummary)));
+      expect(host.querySelector('[data-testid="dashboard-opencode-count-loading"]')).toBeNull();
     } finally {
       await act(async () => root.unmount());
     }

@@ -50,12 +50,15 @@ export function useProviderConnectionSummary(
   const projectDirectory = useRuntimeProviderDirectoryCache(projectPath);
   const countEvidence = useRuntimeProviderConnectedCount(projectPath);
   const observedOpenCodeCount = countEvidence?.observation ?? null;
+  // Native discovery starts after CLI metadata arrives. Keep that cold-start gap
+  // checking, but don't let an unrelated aggregate refresh override a settled runtime.
+  const openCodeDiscoveryPending =
+    !openCodeRuntimeStatus &&
+    !openCodeRuntimeError &&
+    !cliStatusError &&
+    cliStatus?.installed !== false;
   const openCodeIsChecking = Boolean(
-    cliStatusLoading ||
-    (!openCodeRuntimeStatus &&
-      !openCodeRuntimeError &&
-      !cliStatusError &&
-      cliStatus?.installed !== false) ||
+    openCodeDiscoveryPending ||
     countEvidence?.checking ||
     openCodeRuntimeStatusLoading ||
     cliProviderStatusLoading?.opencode ||

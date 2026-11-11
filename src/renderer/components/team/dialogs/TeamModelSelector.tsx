@@ -2956,7 +2956,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 const statusBadge = getProviderStatusBadge(provider.id);
                 const statusBadgeLabel = getProviderStatusBadgeLabel(statusBadge);
                 const providerNavLoading =
-                  provider.id === 'opencode' && openCodeRuntimeStatusUiState === 'checking';
+                  provider.id === 'opencode' &&
+                  openCodeRuntimeStatusUiState === 'checking' &&
+                  !getProviderOverrideDisabledReason(provider.id);
                 const providerTooltip =
                   providerDisabledReason ??
                   (statusBadge === 'Multimodel off'
