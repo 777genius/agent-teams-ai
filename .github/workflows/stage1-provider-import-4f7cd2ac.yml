@@ -111,6 +111,7 @@ jobs:
               return data
 
           ALLOWED = [
+              '.github/workflows/ci.yml',
               'packages/legacy-agent-host/package.json', 'pnpm-workspace.yaml', 'pnpm-lock.yaml',
               'scripts/legacy-agent-host/desktop-native-stop-fixture.ts',
               'packages/legacy-agent-host/tests/native-opencode-host.native.ts',
@@ -152,6 +153,7 @@ jobs:
               patch = ''
               changed = []
               for path, expected_count in [
+                  ('.github/workflows/ci.yml', 1),
                   ('packages/legacy-agent-host/package.json', 2), ('pnpm-workspace.yaml', 1),
                   ('pnpm-lock.yaml', None), ('scripts/legacy-agent-host/desktop-native-stop-fixture.ts', 1),
                   ('packages/legacy-agent-host/tests/native-opencode-host.native.ts', 1),
@@ -171,7 +173,7 @@ jobs:
                           assert len(matches) == 1 and before in lines[matches[0]]
                           lines[matches[0]] = lines[matches[0]].replace(before, after)
                           new = ''.join(lines)
-                  if path.endswith(('desktop-native-stop-fixture.ts', 'native-opencode-host.native.ts')):
+                  if path == '.github/workflows/ci.yml' or path.endswith(('desktop-native-stop-fixture.ts', 'native-opencode-host.native.ts')):
                       before = '8809d9e11e523bc02751698a993d1dd3cedd4e71382c79a487c3a56c9a89c87f'
                       assert old.count(before) == 1
                       new = new.replace(before, PACKAGES['agent-teams-provider-implementations-0.0.0.tgz'][1])
