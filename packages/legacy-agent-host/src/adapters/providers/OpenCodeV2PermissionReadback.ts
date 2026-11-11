@@ -1,6 +1,6 @@
 import { types as nodeUtilTypes } from 'node:util';
 
-type NativePermissionReadback = Readonly<{
+export type NativePermissionReadback = Readonly<{
   nativeSessionId: string;
   directory: string;
   modelProviderId: string;

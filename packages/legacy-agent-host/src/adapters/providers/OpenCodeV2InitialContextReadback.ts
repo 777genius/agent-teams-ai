@@ -1,10 +1,14 @@
 import { types as nodeUtilTypes } from 'node:util';
 
-type NativeInitialContextReadback = Readonly<{
+export type NativeInitialContextReadback = Readonly<{
   nativeSessionId: string;
   contextDigest: string;
   generation: string;
   configRevision: string;
+}>;
+
+export type NativeInitialContextCapture = NativeInitialContextReadback & Readonly<{
+  instructions: string;
 }>;
 
 /**
