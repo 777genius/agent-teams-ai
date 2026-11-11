@@ -118,9 +118,12 @@ function testNativeCustody() {
   };
 }
 
-function testNativePermissionReadback(rules: unknown) {
+function testNativePermissionReadback(rules: unknown, variant: string | null = null) {
   const custody = testNativeCustody();
-  return { nativeSessionId: v2Profile().nativeSessionId, directory: v2Profile().cwd,
+  const selected = v2Profile();
+  return { nativeSessionId: selected.nativeSessionId, directory: selected.cwd,
+    modelProviderId: selected.nativeOptions.providerId,
+    modelId: selected.model, modelVariant: variant,
     pid: custody.pid, startIdentity: custody.startIdentity, rules };
 }
 
@@ -1482,7 +1485,8 @@ test('V2 rejects getter-backed native executable digests before the first mutati
 
 test('V2 permission readbacks must bind to the captured session and process before and after context PUT', async () => {
   for (const phase of ['initial', 'final'] as const) {
-    for (const mismatch of ['session', 'pid', 'start', 'directory'] as const) {
+    for (const mismatch of ['session', 'pid', 'start', 'directory',
+      'provider', 'model', 'variant', 'missing-model'] as const) {
       const { captured, calls } = owner(true);
       const original = captured.readNativeEffectivePermissions;
       let reads = 0;
@@ -1498,6 +1502,10 @@ test('V2 permission readbacks must bind to the captured session and process befo
           ...(mismatch === 'pid' ? { pid: proof.pid + 1 } : {}),
           ...(mismatch === 'start' ? { startIdentity: 'TEST-foreign-start' } : {}),
           ...(mismatch === 'directory' ? { directory: v2Profile().cwd + '-FOREIGN' } : {}),
+          ...(mismatch === 'provider' ? { modelProviderId: 'FOREIGN-provider' } : {}),
+          ...(mismatch === 'model' ? { modelId: 'FOREIGN-model' } : {}),
+          ...(mismatch === 'variant' ? { modelVariant: 'high' } : {}),
+          ...(mismatch === 'missing-model' ? { modelId: undefined as unknown as string } : {}),
         };
       };
       const provider = createOpenCodeV2MemberProvider(context(), captured);
@@ -1757,6 +1765,60 @@ test('transient authority loss observed without native recheck cannot revive V2 
   }
 });
 
+
+test('V2 Host re-attests native provider, model and variant without replaying context', async () => {
+  for (const changed of ['provider', 'model', 'variant'] as const) {
+    const { captured, calls } = owner(true);
+    const original = captured.readNativeEffectivePermissions;
+    let reads = 0;
+    captured.readNativeEffectivePermissions = async (signal) => {
+      const proof = await original(signal);
+      if (!proof) return proof;
+      reads++;
+      if (reads < 3) return proof;
+      return {
+        ...proof,
+        ...(changed === 'provider' ? { modelProviderId: 'FOREIGN-provider' } : {}),
+        ...(changed === 'model' ? { modelId: 'FOREIGN-model' } : {}),
+        ...(changed === 'variant' ? { modelVariant: 'high' } : {}),
+      };
+    };
+    const provider = createOpenCodeV2MemberProvider(context(), captured);
+    const opened = await provider.factory.open(request());
+    assert.equal(provider.isReady(), true, 'initial native model capture is valid');
+    assert.equal(reads, 2, 'model identity is read both before and after native context PUT');
+    assert.equal((await opened.driver.checkReadiness()).ok, false);
+    assert.equal(provider.isReady(), false, 'changed native selection revokes readiness');
+    assert.equal(provider.initialContextEvidence?.(), undefined);
+    assert.equal(reads, 3, 're-admission reads the current native model identity');
+    assert.equal(calls.context, 1, 'model drift cannot replay initial instructions');
+    assert.equal(calls.stop, 1, 'stop only the original TEST-owned process');
+    assert.equal(await provider.cleanup(), true);
+  }
+});
+
+test('V2 Host admits only the explicitly captured native variant', async () => {
+  const selected = nativeV2Profile();
+  const profile = { ...selected, nativeOptions: { ...selected.nativeOptions, variant: 'high' } };
+  const wrong = owner(true);
+  const refused = createOpenCodeV2MemberProvider(context(profile), wrong.captured);
+  await assert.rejects(() => refused.factory.open(request()), /opencode.driver.dependency-unavailable/);
+  assert.equal(wrong.calls.context, 0, 'missing native variant cannot install instructions');
+  assert.equal(await refused.cleanup(), true);
+  const accepted = owner(true);
+  accepted.captured.readNativeEffectivePermissions = async () => {
+    accepted.calls.permissions++;
+    return testNativePermissionReadback([
+      { action: 'external_directory', resource: '*', effect: 'deny' },
+    ], 'high');
+  };
+  const provider = createOpenCodeV2MemberProvider(context(profile), accepted.captured);
+  const opened = await provider.factory.open(request());
+  assert.equal(provider.isReady(), true);
+  assert.equal((await opened.driver.checkReadiness()).ok, true);
+  assert.equal(accepted.calls.context, 1, 'variant recheck must not replay instructions');
+  assert.deepEqual(await opened.driver.close(), { logicallyClosed: true, cleanup: 'confirmed' });
+});
 
 test('policy relaxed during native instructions cannot pass final Host admission', async () => {
   const { captured, calls } = owner(true);

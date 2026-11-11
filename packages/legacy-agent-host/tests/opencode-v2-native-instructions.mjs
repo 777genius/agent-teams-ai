@@ -354,8 +354,12 @@ try {
       if(signal.aborted||startIdentity(child.pid)!==startTicks||
          !isOwnedNativeSessionSnapshot(result,nativeSessionId,workspace,permissionRules))
         throw Error('native_session_readback_mismatch');
+      const nativeModel=result.data.data.model;
       return {nativeSessionId,pid:child.pid,startIdentity:startTicks,
-        directory:result.data.data.location.directory,rules:result.data.data.permissions};
+        directory:result.data.data.location.directory,
+        modelProviderId:nativeModel?.providerID,modelId:nativeModel?.id,
+        modelVariant:nativeModel?.variant === undefined ? null : nativeModel.variant,
+        rules:result.data.data.permissions};
     },
     async installAndAttestInitialContext(capture,signal) {
       if(capture.nativeSessionId!==nativeSessionId ||

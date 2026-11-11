@@ -43,12 +43,13 @@ export interface OpenCodeV2OwnedSession {
     version: string;
   }> | undefined>;
   /**
-   * Read back fully assembled rules from THIS owned native engine and
-   * session, not a user config fragment. Bind the readback to the real PID
+   * Read back fully assembled rules AND selected provider/model/variant from
+   * THIS owned native session, not a user config fragment. Bind to real PID
    * and start identity, not just the credentials or loopback address.
    */
   readNativeEffectivePermissions(signal: AbortSignal): Promise<Readonly<{
     nativeSessionId: string; directory: string;
+    modelProviderId: string; modelId: string; modelVariant: string | null;
     pid: number;
     startIdentity: string;
     rules: unknown;
@@ -402,6 +403,9 @@ export function createOpenCodeV2MemberProvider(
             if (!effective || initialPolicy?.kind !== 'policy-candidate' ||
                 initialPolicy.effect === 'ask' ||
                 effective.nativeSessionId !== profile.nativeSessionId || effective.directory !== profile.cwd ||
+                effective.modelProviderId !== profile.nativeOptions.providerId ||
+                effective.modelId !== profile.model ||
+                effective.modelVariant !== (profile.nativeOptions.variant ?? null) ||
                 effective.pid !== admittedCustody.pid ||
                 effective.startIdentity !== admittedCustody.startIdentity ||
                 combined.aborted || !current()) return false;
@@ -429,6 +433,9 @@ export function createOpenCodeV2MemberProvider(
             if (!finalEffective || finalPolicy?.kind !== 'policy-candidate' ||
                 finalPolicy.effect === 'ask' ||
                 finalEffective.nativeSessionId !== profile.nativeSessionId || finalEffective.directory !== profile.cwd ||
+                finalEffective.modelProviderId !== profile.nativeOptions.providerId ||
+                finalEffective.modelId !== profile.model ||
+                finalEffective.modelVariant !== (profile.nativeOptions.variant ?? null) ||
                 finalEffective.pid !== admittedCustody.pid ||
                 finalEffective.startIdentity !== admittedCustody.startIdentity ||
                 combined.aborted || !current()) return false;

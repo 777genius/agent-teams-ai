@@ -224,6 +224,7 @@ if (process.argv[2] === '--worker') {
     receipt.steps.push('TEST_no_unauthenticated_HTTP_access');
     const created=await call('/api/session','POST',{
       location:{directory:workspace},agent:'build',
+      model:{providerID:'TEST-provider',id:'TEST-model'},
       permissions:[{action:'external_directory',resource:'*',effect:'deny'}],
     });
     const sessionId=created.data?.data?.id;
@@ -750,8 +751,11 @@ if (process.argv[2] === '--worker') {
            response.data?.data?.id!==sessionId||
            response.data?.data?.location?.directory!==workspace)
           throw Error('TEST_native_session_identity_unconfirmed');
+        const nativeModel=response.data.data.model;
         return {nativeSessionId:sessionId,pid:secondPid,startIdentity:startTicks,
           directory:response.data.data.location.directory,
+          modelProviderId:nativeModel?.providerID,modelId:nativeModel?.id,
+          modelVariant:nativeModel?.variant === undefined ? null : nativeModel.variant,
           rules:response.data.data.permissions};
       },
       async installAndAttestInitialContext(capture,signal) {
