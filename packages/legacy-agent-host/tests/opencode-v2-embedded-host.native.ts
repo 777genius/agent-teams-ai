@@ -170,8 +170,10 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
           } },
         nativeOptions: { providerId: 'TEST-local', agent: 'TEST-member', toolApprovalMode: 'manual',
           instructions: `${CONTEXT_MARKER}. You are carol of test-native-team working only in ${join(root, 'workspace')}.` },
+        // TEST readiness includes cold startup and custody/policy readback; the
+        // original Darwin x64 trace reached the initial context PUT at 60.7s.
         limits: { queuedInputs: 2, inputBytes: 8192, outputBytes: 1_000_000,
-          outputEvents: 1500, pendingInteractions: 4, timeoutMs: 60_000 },
+          outputEvents: 1500, pendingInteractions: 4, timeoutMs: 120_000 },
       }] },
     };
     profile.runtime!.members[0] = applyLaunchConfiguration(profile.runtime!.members[0]!, {

@@ -129,7 +129,9 @@ export async function prepareDesktopOpenCodeV2Recipe(options: {
       outputBytes: 1_000_000,
       outputEvents: 1500,
       pendingInteractions: 4,
-      timeoutMs: 60_000,
+      // TEST readiness includes cold startup and custody/policy readback; the
+      // original Darwin x64 trace reached the initial context PUT at 60.7s.
+      timeoutMs: 120_000,
     },
   };
   runtimeProfileSchema.parse({ members: [recipe] });
