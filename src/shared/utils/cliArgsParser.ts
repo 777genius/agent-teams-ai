@@ -137,12 +137,24 @@ export function findOptionMissingValue(raw: string): string | undefined {
   return scanUserFlags(raw).missingValue;
 }
 
+/**
+ * Flags the CLI does not know, protected flags, and an option left without its
+ * value. Launch rejects all of them, so Validate reports them together.
+ */
+export function findInvalidUserFlags(raw: string, knownFlags: Set<string>): string[] {
+  const { flags, missingValue } = scanUserFlags(raw);
+  const invalid = flags.filter((flag) => !knownFlags.has(flag));
+  const protectedFlags = flags.filter((flag) => PROTECTED_CLI_FLAGS.has(flag));
+  return [...new Set([...invalid, ...protectedFlags, ...(missingValue ? [missingValue] : [])])];
+}
+
 function scanUserFlags(raw: string): { flags: string[]; missingValue?: string } {
   const tokens = parseCliArgs(raw);
   const flags: string[] = [];
   let missingValue: string | undefined;
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i];
+  let i = 0;
+  while (i < tokens.length) {
+    const token = tokens[i++];
     if (!token.startsWith('-')) continue;
     if (/^-[A-Za-z]/.test(token)) {
       const shortFlags = expandShortFlagToken(token);
@@ -152,9 +164,8 @@ function scanUserFlags(raw: string): { flags: string[]; missingValue?: string } 
       const last = shortFlags[shortFlags.length - 1];
       const wholeToken = `-${shortFlags.map((flag) => flag.slice(1)).join('')}`;
       if (token === wholeToken && OPTIONS_WITH_REQUIRED_VALUE.has(last)) {
-        if (i === tokens.length - 1) missingValue = last;
-        i++;
-        flags.push(...protectedLongFlagIn(tokens[i]));
+        if (i === tokens.length) missingValue = last;
+        flags.push(...protectedLongFlagIn(tokens[i++]));
       }
       continue;
     }
@@ -168,9 +179,8 @@ function scanUserFlags(raw: string): { flags: string[]; missingValue?: string } 
     // `--append-system-prompt "-review it"`: the CLI reads the next token as the
     // value of an option that requires one, even if it starts with `-`.
     if (equalsIndex === -1 && OPTIONS_WITH_REQUIRED_VALUE.has(token)) {
-      if (i === tokens.length - 1) missingValue = token;
-      i++;
-      flags.push(...protectedLongFlagIn(tokens[i]));
+      if (i === tokens.length) missingValue = token;
+      flags.push(...protectedLongFlagIn(tokens[i++]));
     }
   }
   return { flags, missingValue };

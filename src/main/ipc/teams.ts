@@ -129,12 +129,7 @@ import {
   parseTeamMemberRestartResult,
   type TeamMemberRestartResult,
 } from '@shared/types/teamMemberRestart';
-import {
-  extractFlagsFromHelp,
-  extractUserFlags,
-  findOptionMissingValue,
-  PROTECTED_CLI_FLAGS,
-} from '@shared/utils/cliArgsParser';
+import { extractFlagsFromHelp, findInvalidUserFlags } from '@shared/utils/cliArgsParser';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
@@ -2417,16 +2412,7 @@ async function handleValidateCliArgs(
   return wrapTeamHandler('validateCliArgs', async () => {
     const helpOutput = await getTeamProvisioningPreflightApi().getCliHelpOutput();
     const knownFlags = extractFlagsFromHelp(helpOutput);
-    const userFlags = extractUserFlags(rawArgs);
-
-    const invalidFlags = userFlags.filter((f) => !knownFlags.has(f));
-    const protectedFlags = userFlags.filter((f) => PROTECTED_CLI_FLAGS.has(f));
-    // An option that ends the args with no value would take the next app-managed
-    // argument as its value, so launch rejects it. Report it here too.
-    const missingValue = findOptionMissingValue(rawArgs);
-    const allBad = [
-      ...new Set([...invalidFlags, ...protectedFlags, ...(missingValue ? [missingValue] : [])]),
-    ];
+    const allBad = findInvalidUserFlags(rawArgs, knownFlags);
 
     return {
       valid: allBad.length === 0,

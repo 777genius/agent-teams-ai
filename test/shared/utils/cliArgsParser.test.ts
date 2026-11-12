@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   extractFlagsFromHelp,
   extractUserFlags,
+  findInvalidUserFlags,
   findOptionMissingValue,
   parseCliArgs,
   PROTECTED_CLI_FLAGS,
@@ -202,6 +203,23 @@ describe('findOptionMissingValue', () => {
     expect(findOptionMissingValue('-nname')).toBeUndefined();
     expect(findOptionMissingValue('--append-system-prompt=x')).toBeUndefined();
     expect(findOptionMissingValue('-p --verbose')).toBeUndefined();
+  });
+});
+
+describe('findInvalidUserFlags', () => {
+  const known = new Set(['--model', '-p', '-n', '--append-system-prompt']);
+
+  it('reports unknown, protected and value-less options once each', () => {
+    expect(findInvalidUserFlags('-p --nope --nope', known)).toEqual(['--nope']);
+    expect(findInvalidUserFlags('--model x', known)).toEqual(['--model']);
+    expect(findInvalidUserFlags('-p --append-system-prompt', known)).toEqual([
+      '--append-system-prompt',
+    ]);
+  });
+
+  it('accepts valid args', () => {
+    expect(findInvalidUserFlags('-p -n name --append-system-prompt "-x"', known)).toEqual([]);
+    expect(findInvalidUserFlags('', known)).toEqual([]);
   });
 });
 
