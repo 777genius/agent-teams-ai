@@ -2,13 +2,13 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:net';
-import { mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, isAbsolute, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import { record } from './fixtures/native-claude-team/model.ts';
-import { fileHash, startHost, tick, treeHash } from './fixtures/native-host.ts';
+import { fileHash, nativeHostEnvironment, startHost, tick, treeHash } from './fixtures/native-host.ts';
 import { CONTEXT_MARKER, startOpenCodeModel } from './fixtures/native-opencode-team/model.ts';
 import { assertNativeV1Source, buildNativeV1Host } from './opencode-v1-version-source.ts';
 
@@ -24,7 +24,8 @@ test('embedded 2.1.4 performs native tools, MCP, once approval and cold Host Res
   timeout: 300_000, skip: process.env.OPENCODE_V2_EMBEDDED_HOST_GO !== '1',
 }, async () => {
   assert.ok(process.platform === 'linux' && process.arch === 'x64' ||
-    process.platform === 'darwin' && (process.arch === 'arm64' || process.arch === 'x64'));
+    (process.platform === 'darwin' || process.platform === 'win32') &&
+      (process.arch === 'arm64' || process.arch === 'x64'));
   assert.equal(process.version, 'v24.21.0');
   const bun = await realpath(process.env.OPENCODE_V2_EMBEDDED_BUN!);
   const engine = await realpath(process.env.OPENCODE_V2_EMBEDDED_GRAPH!);
@@ -33,7 +34,7 @@ test('embedded 2.1.4 performs native tools, MCP, once approval and cold Host Res
   const approvalMode = process.env.OPENCODE_V2_EMBEDDED_APPROVAL_MODE ?? 'manual';
   assert.ok(approvalMode === 'manual' || approvalMode === 'auto');
   assert.match(manifestSha256, /^[a-f0-9]{64}$/);
-  assert.ok(receiptPath?.startsWith('/'));
+  assert.ok(receiptPath && isAbsolute(receiptPath));
   const repo = resolve(import.meta.dirname, '../../..'), pkg = join(repo, 'packages/legacy-agent-host');
   const sourceHead = process.env.OPENCODE_V2_TEST_SOURCE_HEAD!;
   await buildNativeV1Host(repo, sourceHead);
@@ -44,6 +45,7 @@ test('embedded 2.1.4 performs native tools, MCP, once approval and cold Host Res
   let model: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
   let passed = false, cleanup = false;
   let originalFailure: unknown;
+  let windowsShellSha256: string | undefined;
   const cleanupErrors: unknown[] = [];
   const digests = {
     bun: await fileHash(bun), manifest: await fileHash(join(engine, 'opencode-v2-engine-manifest.json')),
@@ -57,6 +59,14 @@ test('embedded 2.1.4 performs native tools, MCP, once approval and cold Host Res
   try {
     for (const name of ['home', 'tmp', 'workspace', 'store', 'config', 'data', 'cache'])
       await mkdir(join(root, name), { mode: 0o700 });
+    const environment = nativeHostEnvironment(node, root);
+    if (process.platform === 'win32') {
+      // Native 2.1.4 selects this shell from the isolated PATH. The inference
+      // oracle additionally requires its actual advertised tool description.
+      const shell = await realpath(join(environment.SystemRoot!, 'System32/WindowsPowerShell/v1.0/powershell.exe'));
+      assert.ok((await stat(shell)).isFile(), 'actual Windows PowerShell is required for the native shell turn');
+      windowsShellSha256 = await fileHash(shell);
+    }
     model = await startOpenCodeModel({ nativeGeneration: 'v2' });
     const namespace = basename(root);
     const owner = {
@@ -88,9 +98,9 @@ test('embedded 2.1.4 performs native tools, MCP, once approval and cold Host Res
         endpoint: await endpoint(), accountBinding: 'TEST-localhost-account',
         executable: { path: bun, sha256: digests.bun },
         environment: {
-          HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'),
+          ...environment,
           XDG_CONFIG_HOME: join(root, 'config'), XDG_DATA_HOME: join(root, 'data'),
-          XDG_CACHE_HOME: join(root, 'cache'), PATH: `${dirname(node)}:/usr/bin:/bin`, NO_COLOR: '1',
+          XDG_CACHE_HOME: join(root, 'cache'), NO_COLOR: '1',
         },
         embedded: { directory: engine, manifestSha256, version: '2.1.4',
           platform: process.platform, arch: process.arch as 'arm64' | 'x64',
@@ -221,7 +231,9 @@ test('embedded 2.1.4 performs native tools, MCP, once approval and cold Host Res
       await writeFile(receiptPath, JSON.stringify({
         kind: 'TEST_NATIVE_V2_EMBEDDED_HOST', status: passed && cleanup ? 'PASS' : 'INCOMPLETE',
         sourceHead, platform: `${process.platform}-${process.arch}`,
-        version: '2.1.4', approvalMode, nodeVersion: process.version, digests, steps, cleanup,
+        version: '2.1.4', approvalMode, nodeVersion: process.version,
+        digests: { ...digests, ...(windowsShellSha256 ? { windowsShell: windowsShellSha256 } : {}) },
+        steps, cleanup,
         hosts: hosts.map(({ exitCode, signalCode, stdoutValid }) => ({ exitCode, signalCode, stdoutValid })),
         modelOrigin: 'localhost-scripted', modelRequests: model?.observations.length ?? 0,
         modelFailures: model?.failures ?? [], vendorAuthQualified: false,

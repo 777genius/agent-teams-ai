@@ -324,6 +324,7 @@ export async function startOpenCodeModel(
       };
       if (notice) notificationObservations.push({ ...observation, notice });
       else observations.push(observation);
+      const windowsV2 = options.nativeGeneration === 'v2' && process.platform === 'win32';
       const first = [
         {
           name: 'task_create',
@@ -337,7 +338,9 @@ export async function startOpenCodeModel(
         {
           name: 'bash',
           input: {
-            command: "printf 'ONE\\n' >> native-effect.txt; exit 7",
+            command: windowsV2
+              ? "[System.IO.File]::AppendAllText((Join-Path (Get-Location) 'native-effect.txt'), \"ONE`n\"); exit 7"
+              : "printf 'ONE\\n' >> native-effect.txt; exit 7",
             description: 'TEST partial effect and failed shell exit',
           },
         },
@@ -346,7 +349,7 @@ export async function startOpenCodeModel(
           input: {
             commandId: 'opencode-task-comment',
             taskId,
-            text: 'OpenCode native Bash wrote TEST bytes and exited seven.',
+            text: 'OpenCode native shell wrote TEST bytes and exited seven.',
           },
         },
         { name: 'task_complete', input: { commandId: 'opencode-task-complete', taskId } },
@@ -359,7 +362,9 @@ export async function startOpenCodeModel(
         {
           name: 'bash',
           input: {
-            command: "printf 'TWO\\n' >> native-effect.txt",
+            command: windowsV2
+              ? "[System.IO.File]::AppendAllText((Join-Path (Get-Location) 'native-effect.txt'), \"TWO`n\")"
+              : "printf 'TWO\\n' >> native-effect.txt",
             description: 'TEST second sequential input',
           },
         },
@@ -412,6 +417,12 @@ export async function startOpenCodeModel(
               : name === `team_${action.name}`
         );
         assert.ok(chosen, `actual OpenCode catalog contains ${action.name}`);
+        if (windowsV2 && action.name === 'bash') {
+          const offered = (body.tools as unknown[]).map(record)
+            .map(tool => record(tool.function)).find(tool => tool.name === chosen);
+          assert.match(String(offered?.description), /Commands run on Windows using powershell\./,
+            'Windows shell syntax requires the actual native PowerShell tool selection');
+        }
         delta = {
           role: 'assistant',
           tool_calls: [

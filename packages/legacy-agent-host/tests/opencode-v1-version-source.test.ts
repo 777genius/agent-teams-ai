@@ -49,6 +49,18 @@ test('native V1 source admission rejects changed, staged and untracked relevant 
     await writeFile(extra,'export const unknown = true;\n');
     assert.throws(()=>assertNativeV1Source(repo,head),/untracked native source/);
     await rm(extra);
+    for (const relative of [
+      'runtime.lock.json',
+      'packages/legacy-agent-host/native/registered-process-darwin.c',
+      'packages/legacy-agent-host/scripts/buildProcessNativeArtifact.ts',
+      'scripts/legacy-agent-host/prepare-opencode-v2-native.ts',
+    ]) {
+      const input = join(repo, relative);
+      await mkdir(join(input, '..'), { recursive: true });
+      await writeFile(input, 'TEST untracked qualification input');
+      assert.throws(() => assertNativeV1Source(repo, head), /untracked native source/, relative);
+      await rm(input);
+    }
     await writeFile(join(repo,'TEST-unrelated-notes.txt'),'unrelated');
     assert.doesNotThrow(()=>assertNativeV1Source(repo,head));
   } finally {await rm(repo,{recursive:true,force:true});}

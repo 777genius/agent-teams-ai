@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { delimiter, dirname, isAbsolute, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { TEAM_HOST_DISPOSE_TIMEOUT_MS } from '../../src/contracts.ts';
 
@@ -106,6 +106,22 @@ export async function closeNativeHostInput(
   }
 }
 
+/** Disposable native environment; never inherit user configuration or PATH. */
+export function nativeHostEnvironment(node: string, root: string, gitBinDirectory?: string): Record<string, string> {
+  const windows = process.platform === 'win32';
+  const systemRoot = windows ? process.env.SystemRoot : undefined;
+  if (windows) assert.ok(systemRoot && isAbsolute(systemRoot), 'Windows system directory is required');
+  const systemDirectories = windows
+    ? [join(systemRoot!, 'System32/WindowsPowerShell/v1.0'), join(systemRoot!, 'System32')]
+    : ['/usr/bin', '/bin'];
+  return {
+    HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'),
+    ...(windows ? { USERPROFILE: join(root, 'home'), TEMP: join(root, 'tmp'), TMP: join(root, 'tmp'),
+      SystemRoot: systemRoot!, WINDIR: systemRoot! } : {}),
+    PATH: [dirname(node), ...(gitBinDirectory ? [gitBinDirectory] : []), ...systemDirectories].join(delimiter),
+  };
+}
+
 export function startHost(options: {
   node: string;
   entry: string;
@@ -123,14 +139,7 @@ export function startHost(options: {
     {
       cwd: options.root,
       env: {
-        HOME: join(options.root, 'home'),
-        TMPDIR: join(options.root, 'tmp'),
-        PATH: [
-          dirname(options.node),
-          ...(options.gitBinDirectory ? [options.gitBinDirectory] : []),
-          '/usr/bin',
-          '/bin',
-        ].join(':'),
+        ...nativeHostEnvironment(options.node, options.root, options.gitBinDirectory),
         LEGACY_AGENT_HOST_PROFILE_PATH: options.profile,
         LEGACY_AGENT_HOST_PROFILE_SHA256: options.profileHash,
       },

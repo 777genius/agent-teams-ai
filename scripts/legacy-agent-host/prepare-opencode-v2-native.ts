@@ -6,6 +6,7 @@ import { appendFile, lstat, mkdir, mkdtemp, readFile, realpath, writeFile } from
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { buildProcessNativeArtifact } from '../../packages/legacy-agent-host/scripts/buildProcessNativeArtifact.ts';
+import { assertNativeV1Source } from '../../packages/legacy-agent-host/tests/opencode-v1-version-source.ts';
 import { verifyOpenCodeV2EmbeddedGraph } from '../../packages/legacy-agent-host/dist/adapters/providers/OpenCodeV2EmbeddedGraph.js';
 import { isQualifiedDarwinBuild } from '../../packages/legacy-agent-host/dist/process/qualifiedDarwinBuild.js';
 import { readOpenCodeV2DeliveryMap } from '../../src/features/opencode-runtime-installer/core/domain/v2Delivery.ts';
@@ -34,11 +35,14 @@ async function pin(file: string) {
 async function prepare() {
   assert.equal(process.version, 'v24.21.0');
   const platform = `${process.platform}-${process.arch}`;
-  assert.ok(['linux-x64', 'darwin-arm64', 'darwin-x64'].includes(platform));
+  assert.ok(
+    ['linux-x64', 'darwin-arm64', 'darwin-x64', 'win32-x64', 'win32-arm64'].includes(platform)
+  );
   assert.equal(platform, process.env.OPENCODE_V2_TEST_PLATFORM);
   const sourceHead = readCommand('git', ['rev-parse', 'HEAD']);
   assert.match(sourceHead, /^[a-f0-9]{40}$/);
   assert.equal(sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+  assertNativeV1Source(repository, sourceHead);
   const receiptPath = process.env.OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT!;
   assert.ok(receiptPath && isAbsolute(receiptPath));
   const root = await realpath(
@@ -56,19 +60,23 @@ async function prepare() {
     stage: 'selection',
   };
   await writeFile(receiptPath, JSON.stringify(evidence), { mode: 0o600, flag: 'wx' });
+  let failure: { error: unknown } | undefined;
   try {
     const lock = JSON.parse(await readFile(join(repository, 'runtime.lock.json'), 'utf8'));
     const selected = readOpenCodeV2DeliveryMap(lock)?.[platform];
     assert.ok(selected);
     assert.deepEqual(selected.engineVersions, ['2.1.4']);
-    assert.equal(selected.requiredBunVersion, process.platform === 'darwin' ? '1.4.4' : '1.3.11');
+    assert.equal(
+      selected.requiredBunVersion,
+      process.platform === 'darwin' ? '1.4.4' : process.platform === 'win32' ? '1.4.3' : '1.3.11'
+    );
     assert.match(lock.releaseRepository, /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/);
     assert.match(lock.releaseTag, /^[A-Za-z0-9_.-]+$/);
     // The preceding existing stage-runtime step validates the complete base archive SHA.
     // Recheck its source/Bun inventory before selecting its real Bun; never execute cli.js.
     const base = await realpath(join(repository, 'resources/runtime'));
     assert.equal(verifyExternalOpenCodeV2Base(base, lock, platform), true);
-    const bun = await pin(join(base, 'bun/bun'));
+    const bun = await pin(join(base, 'bun', process.platform === 'win32' ? 'bun.exe' : 'bun'));
     evidence.baseArchiveSha256 = lock.assets[platform].sha256;
     evidence.runtimeSource = selected.sourceCommit;
     evidence.bun = { ...bun, version: selected.requiredBunVersion };
@@ -180,7 +188,7 @@ async function prepare() {
     evidence.manifestSha256 = selected.manifest.sha256;
     env.OPENCODE_V2_EMBEDDED_GRAPH = graph;
     env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256 = selected.manifest.sha256;
-    assert.equal(readCommand('git', ['rev-parse', 'HEAD']), sourceHead);
+    assertNativeV1Source(repository, sourceHead);
     assert.deepEqual(await pin(bun.path), bun);
     assert.ok(process.env.GITHUB_ENV, 'CI input staging requires the current job environment file');
     for (const value of Object.values(env)) assert.ok(!/[\r\n\0]/.test(value));
@@ -192,9 +200,16 @@ async function prepare() {
     );
     evidence.status = 'READY';
     evidence.stage = 'prepared';
+  } catch (error) {
+    failure = { error };
   } finally {
-    await writeFile(receiptPath, JSON.stringify(evidence, null, 2) + '\n', { mode: 0o600 });
+    try {
+      await writeFile(receiptPath, JSON.stringify(evidence, null, 2) + '\n', { mode: 0o600 });
+    } catch (error) {
+      failure ??= { error };
+    }
   }
+  if (failure) throw failure.error;
 }
 
 await prepare();

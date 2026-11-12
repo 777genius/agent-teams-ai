@@ -15,7 +15,7 @@ import {
 } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
 import { desktopBackendEnvironment, digest, fileDigest } from './desktop-backend-fixture.ts';
-import { prepareDesktopOpenCodeV2Recipe } from './desktop-opencode-v2-fixture.ts';
+import { desktopOpenCodeV2ManagementProfile, prepareDesktopOpenCodeV2Recipe } from './desktop-opencode-v2-fixture.ts';
 import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
@@ -290,6 +290,7 @@ stream_max_retries = 0
   const opencode = options.openCodeV2 ? await prepareDesktopOpenCodeV2Recipe({
     repo: join(import.meta.dirname, '../..'), root: base.root, node: base.node,
     selection: { ...options.openCodeV2, endpoint: options.openCodeEndpoint,
+      managementEndpoint: options.openCodeManagementEndpoint,
       modelUrl: options.models.opencode.url },
     identity: common('opencode'),
   }) : {
@@ -363,7 +364,8 @@ stream_max_retries = 0
       timeoutMs: 15000,
       modelProbeTimeoutMs: 30000,
     },
-    ...(!options.openCodeV2 ? [{
+    ...(options.openCodeV2 ? [desktopOpenCodeV2ManagementProfile(opencode,
+      options.openCodeManagementEndpoint, `${profile.owner.profileId}:opencode`)] : [{
       provider: 'opencode',
       profileId: `${profile.owner.profileId}:opencode`,
       accountBinding: opencode.accountBinding,
@@ -374,7 +376,7 @@ stream_max_retries = 0
       endpoint: options.openCodeManagementEndpoint,
       timeoutMs: 15000,
       modelProbeTimeoutMs: 30000,
-    } as const] : []),
+    } as const]),
   ];
   for (const item of management) {
     profile.management!.push(item);

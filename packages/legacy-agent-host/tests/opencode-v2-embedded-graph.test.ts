@@ -14,8 +14,10 @@ const server = 'local-cli/node_modules/@opencode/server-v2.1.4';
 const effect = 'local-cli/node_modules/effect';
 const nativeTuple =
   (process.platform === 'linux' && process.arch === 'x64') ||
-  (process.platform === 'darwin' && ['arm64', 'x64'].includes(process.arch));
+  (['darwin', 'win32'].includes(process.platform) && ['arm64', 'x64'].includes(process.arch));
 const tupleOptions = { skip: !nativeTuple };
+const requiredBunVersion =
+  process.platform === 'darwin' ? '1.4.4' : process.platform === 'win32' ? '1.4.3' : '1.3.11';
 
 async function fixture(t: TestContext) {
   const directory = await realpath(await mkdtemp(path.join(tmpdir(), 'TEST-embedded-delivery-')));
@@ -42,7 +44,7 @@ async function fixture(t: TestContext) {
     schemaVersion: 1,
     platform: process.platform,
     arch: process.arch,
-    requiredBunVersion: process.platform === 'darwin' ? '1.4.4' : '1.3.11',
+    requiredBunVersion,
     engineVersions: ['2.1.4'],
     files: Object.entries(files).map(([name, bytes]) => ({
       path: name,
@@ -70,7 +72,7 @@ test(
     const graph = await verifyOpenCodeV2EmbeddedGraph(selection);
     assert.equal(graph.modulePath, path.join(directory, server, 'dist/process.js'));
     assert.equal(graph.effectPath, path.join(directory, effect, 'dist/index.js'));
-    assert.equal(graph.requiredBunVersion, process.platform === 'darwin' ? '1.4.4' : '1.3.11');
+    assert.equal(graph.requiredBunVersion, requiredBunVersion);
   }
 );
 
@@ -162,11 +164,10 @@ test(
     const { directory, selection } = await fixture(t);
     const manifestPath = path.join(directory, 'opencode-v2-engine-manifest.json');
     const original = JSON.parse(await readFile(manifestPath, 'utf8'));
-    for (const requiredBunVersion of [
-      '0.0.1',
-      process.platform === 'darwin' ? '1.3.11' : '1.4.4',
-    ]) {
-      const manifest = JSON.stringify({ ...original, requiredBunVersion });
+    for (const otherVersion of ['0.0.1', '1.3.11', '1.4.4', '1.4.3'].filter(
+      (value) => value !== requiredBunVersion
+    )) {
+      const manifest = JSON.stringify({ ...original, requiredBunVersion: otherVersion });
       await writeFile(manifestPath, manifest);
       await assert.rejects(
         verifyOpenCodeV2EmbeddedGraph({ ...selection, manifestSha256: hash(manifest) })

@@ -15,6 +15,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { mock, test } from 'node:test';
+import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 
 const candidateBuild = process.env.OPENCODE_V2_EMBEDDED_DARWIN_CANDIDATE_BUILD;
@@ -36,8 +37,6 @@ if (candidateBuild) {
     namedExports: { isQualifiedDarwinBuild: (value: unknown) => value === candidateBuild },
   });
 }
-const { CapturedProcess } = await import('../dist/adapters/providers/CapturedProcess.js');
-const { createProcessCustody } = await import('../dist/composition/processCustody.js');
 
 const digest = async (file: string) =>
   createHash('sha256')
@@ -85,6 +84,12 @@ test(
   async () => {
     assert.equal(process.platform, 'darwin');
     assert.ok(['arm64', 'x64'].includes(process.arch));
+    assert.equal(process.version, 'v24.21.0');
+    const sourceHead = process.env.OPENCODE_V2_TEST_SOURCE_HEAD!;
+    const repo = join(import.meta.dirname, '../../..');
+    const hostBuild = await buildNativeV1Host(repo, sourceHead);
+    const { CapturedProcess } = await import('../dist/adapters/providers/CapturedProcess.js');
+    const { createProcessCustody } = await import('../dist/composition/processCustody.js');
     const bun = await realpath(process.env.OPENCODE_V2_EMBEDDED_BUN!);
     const bunSha256 = process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256!;
     assert.match(bunSha256, /^[a-f0-9]{64}$/);
@@ -102,7 +107,8 @@ test(
       cleanup = false;
     const evidence: Record<string, unknown> = {
       kind: candidateBuild ? 'TEST_DARWIN_CUSTODY_CANDIDATE' : 'TEST_DARWIN_CUSTODY_PRODUCT_PATH',
-      sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
+      sourceHead,
+      hostBuild,
       platform: process.platform,
       arch: process.arch,
       osBuild:
@@ -113,6 +119,8 @@ test(
         }).trim(),
       productQualified: false,
       bunSha256,
+      processArtifactManifestSha256:
+        process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256,
     };
     try {
       await mkdir(join(root, 'home'));
@@ -180,6 +188,7 @@ test(
       );
       evidence.replacementRefused = true;
       evidence.siblingSurvivedTargetStop = true;
+      await assertNativeV1Build(repo, sourceHead, hostBuild);
     } catch (error) {
       failure = error;
     } finally {
@@ -197,6 +206,10 @@ test(
           child.stderr.destroy();
           child.unref();
         }
+      if (cleanup)
+        await rm(root, { recursive: true, force: true }).catch((error) => {
+          failure ??= error;
+        });
       evidence.cleanup = cleanup ? 'confirmed' : 'unknown';
       evidence.status = !failure && cleanup ? 'PASS' : 'HOLD';
       const receipt = process.env.OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT;
@@ -205,10 +218,6 @@ test(
           mode: 0o600,
           flag: 'wx',
         }).catch((error) => {
-          failure ??= error;
-        });
-      if (cleanup)
-        await rm(root, { recursive: true, force: true }).catch((error) => {
           failure ??= error;
         });
     }

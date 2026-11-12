@@ -5,6 +5,7 @@ import { basename, dirname, join } from 'node:path';
 import { verifyOpenCodeV2EmbeddedGraph } from '../../packages/legacy-agent-host/dist/adapters/providers/OpenCodeV2EmbeddedGraph.js';
 import { runtimeProfileSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
 import { readPackagedProcessArtifact } from '../../packages/legacy-agent-host/dist/process/readPackagedProcessArtifact.js';
+import { openCodeManagementProfileSchema } from '../../packages/legacy-agent-host/dist/management/profile.js';
 import { readOpenCodeV2DeliveryMap } from '../../src/features/opencode-runtime-installer/core/domain/v2Delivery.ts';
 import { CONTEXT_MARKER } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import type { OpenCodeMemberProfile } from '../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
@@ -16,6 +17,7 @@ export interface DesktopOpenCodeV2Selection {
   readonly engineDirectory: string;
   readonly modelUrl: string;
   readonly endpoint: string;
+  readonly managementEndpoint: string;
   readonly processCustody?: TeamHostProfile['processCustody'];
 }
 
@@ -38,7 +40,8 @@ export async function prepareDesktopOpenCodeV2Recipe(options: {
   );
   assert.match(basename(root), /^TEST-desktop-backend-/);
   assert.equal(await realpath(root), root);
-  for (const value of [selection.modelUrl, selection.endpoint]) {
+  assert.notEqual(selection.managementEndpoint, selection.endpoint);
+  for (const value of [selection.modelUrl, selection.endpoint, selection.managementEndpoint]) {
     const url = new URL(value);
     assert.equal(url.protocol, 'http:');
     assert.equal(url.hostname, '127.0.0.1');
@@ -130,4 +133,33 @@ export async function prepareDesktopOpenCodeV2Recipe(options: {
   };
   runtimeProfileSchema.parse({ members: [recipe] });
   return recipe;
+}
+
+/** The same captured V2 delivery supplies the existing native catalog and no-tool model probe. */
+export function desktopOpenCodeV2ManagementProfile(
+  member: OpenCodeMemberProfile,
+  endpoint: string,
+  profileId: string
+) {
+  assert.equal(member.nativeGeneration, 'v2');
+  assert.equal(member.protocolRevision, '2.1.4');
+  assert.ok(member.embedded);
+  assert.notEqual(endpoint, member.endpoint);
+  return openCodeManagementProfileSchema.parse({
+    provider: 'opencode',
+    nativeGeneration: 'v2',
+    protocolRevision: '2.1.4',
+    profileId,
+    configRevision: 'TEST-opencode-management',
+    accountBinding: member.accountBinding,
+    cwd: member.cwd,
+    executable: member.executable,
+    environment: member.environment,
+    embedded: member.embedded,
+    nativeModel: { providerId: member.nativeOptions.providerId, modelId: member.model },
+    ...(member.nativeOptions.variant ? { variant: member.nativeOptions.variant } : {}),
+    endpoint,
+    timeoutMs: 120_000,
+    modelProbeTimeoutMs: 120_000,
+  });
 }

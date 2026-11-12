@@ -15,7 +15,7 @@ import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/comp
 import { prepareNativeReviewWorkspace } from './desktop-native-review-fixture.ts';
 import { prepareDesktopReviewLedger } from './desktop-review-fixture.ts';
 import { prepareDesktopStoppedImport } from './desktop-stopped-import-fixture.ts';
-import { prepareDesktopOpenCodeV2Recipe } from './desktop-opencode-v2-fixture.ts';
+import { desktopOpenCodeV2ManagementProfile, prepareDesktopOpenCodeV2Recipe } from './desktop-opencode-v2-fixture.ts';
 import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
 
 export const digest = (bytes: Uint8Array | string): string =>
@@ -477,8 +477,8 @@ export async function prepareDesktopBackendFixture(
     if (options.launchDialog) team.members[0]!.role = 'lead';
     profile.runtime = { members: [member],
       ...(options.creation ? { providerTemplates: [structuredClone(member)] } : {}) };
-    // V1 management must never receive this Bun executable. V2 model preflight
-    // remains an explicit Host HOLD until its own native management adapter is qualified.
+    profile.management = [desktopOpenCodeV2ManagementProfile(member,
+      options.nativeOpenCodeV2.managementEndpoint, 'TEST-opencode-v2-management')];
   }
   let uiSeed:
     | {
@@ -632,16 +632,17 @@ export async function prepareDesktopBackendFixture(
         },
       },
     ],
-    ...(options.nativeCodex || (options.launchDialog && !options.nativeOpenCodeV2)
+    ...(options.nativeCodex || options.launchDialog || options.nativeOpenCodeV2
       ? {
           management: [
             {
-              runtimeId: options.launchDialog ? 'claude' : 'codex',
+              runtimeId: options.nativeOpenCodeV2 ? 'opencode' : options.launchDialog ? 'claude' : 'codex',
               owner: ownerRef,
               contextId: 'local',
               projectPath: null,
-              profileId: options.launchDialog ? 'TEST-claude-management' : 'TEST-codex-metadata',
-              configRevision: options.launchDialog
+              profileId: options.nativeOpenCodeV2 ? 'TEST-opencode-v2-management' :
+                options.launchDialog ? 'TEST-claude-management' : 'TEST-codex-metadata',
+              configRevision: options.nativeOpenCodeV2 ? 'TEST-opencode-management' : options.launchDialog
                 ? 'TEST-claude-management-config'
                 : 'TEST-codex-config',
             },

@@ -166,6 +166,7 @@ jobs:
       - name: Confirm native ELF interruption and original process identity
         env:
           OPENCODE_V2_TEST_NPM_ROOT: ${{ runner.temp }}/opencode-v2-host-cli/node_modules/@opencode
+          OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
         run: node --test packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs
       - name: Exercise real pinned native server against existing Host Session SPI
         env:
@@ -319,6 +320,9 @@ jobs:
     name: Embedded V2.1.4 original Host (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -332,6 +336,12 @@ jobs:
           - os: macos-15-intel
             platform: darwin-x64
             candidate-build: 24G830
+          - os: windows-2022
+            platform: win32-x64
+            candidate-build: ''
+          - os: windows-11-arm
+            platform: win32-arm64
+            candidate-build: ''
     env:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
@@ -342,6 +352,7 @@ jobs:
       OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: ${{ matrix.candidate-build }}
       OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ github.workspace }}/opencode-v2-embedded-inputs.json
       OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: ${{ github.workspace }}/opencode-v2-darwin-custody.json
+      OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: ${{ github.workspace }}/opencode-v2-windows-custody.json
       OPENCODE_V2_EMBEDDED_HOST_RECEIPT: ${{ github.workspace }}/opencode-v2-embedded-host.json
     steps:
       - uses: actions/checkout@v6
@@ -365,7 +376,7 @@ jobs:
       - name: Build original Host and its pinned provider implementation
         run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Check original graph and custody boundaries
-        run: node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts
       - name: Stage checksum-pinned base archive without executing the legacy CLI
         env:
           GH_TOKEN: ${{ github.token }}
@@ -393,16 +404,50 @@ jobs:
             assert.equal(r.replacementRefused, true);
             assert.equal(r.siblingSurvivedTargetStop, true);
             assert.equal(r.bunSha256, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
+            assert.equal(r.processArtifactManifestSha256, process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256);
             assert.notEqual(r.original.startIdentity, r.sibling.startIdentity);
             if (candidate) assert.equal(r.osBuild, process.env.OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD);
           "
+      - name: Prove original Windows Job custody and surviving descendant cleanup
+        if: runner.os == 'Windows'
+        env:
+          OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_GO: '1'
+        run: node --test packages/legacy-agent-host/tests/windows-job-custody.native.ts
+      - name: Require exact Windows original-process evidence
+        if: runner.os == 'Windows'
+        run: |
+          node --input-type=module -e "
+            import assert from 'node:assert/strict';
+            import fs from 'node:fs';
+            const r = JSON.parse(fs.readFileSync(process.env.OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT, 'utf8'));
+            assert.equal(r.kind, 'TEST_WINDOWS_ORIGINAL_JOB_CUSTODY');
+            assert.equal(r.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+            assert.equal(r.platform, process.env.OPENCODE_V2_TEST_PLATFORM);
+            assert.equal(r.nodeVersion, 'v24.21.0');
+            assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);
+            assert.equal(r.captureBeforeInput, true);
+            assert.equal(r.descendantSurvivedRootExit, true);
+            assert.equal(r.originalJobCleanup, 'confirmed');
+            assert.equal(r.neighborSurvivedTargetStop, true);
+            assert.equal(r.neighborJobCleanup, 'confirmed');
+            assert.equal(r.bunSha256, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
+            assert.equal(r.manifestSha256, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);
+            assert.equal(r.productQualified, false); assert.equal(r.desktopQualified, false);
+          "
       - name: Check original Desktop private recipe composition
-        if: env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED == '1'
+        if: env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED == '1' && runner.os != 'Windows'
         run: node --test scripts/legacy-agent-host/desktop-opencode-v2-fixture.test.ts
       - name: Exercise native model, tool, MCP, approval, Stop and cold Host Resume
         if: env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED == '1'
         env:
           OPENCODE_V2_EMBEDDED_HOST_GO: '1'
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts
+      - name: Exercise Windows automatic approval and cold Host Resume
+        if: runner.os == 'Windows' && env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED == '1'
+        env:
+          OPENCODE_V2_EMBEDDED_HOST_GO: '1'
+          OPENCODE_V2_EMBEDDED_APPROVAL_MODE: auto
+          OPENCODE_V2_EMBEDDED_HOST_RECEIPT: ${{ github.workspace }}/opencode-v2-embedded-host-auto.json
         run: node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts
       - name: Require product-path Host proof after exact candidate qualification
         run: |
@@ -411,13 +456,16 @@ jobs:
             import fs from 'node:fs';
             assert.equal(process.env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED, '1',
               'HOLD: candidate custody evidence is available; qualify only this exact tuple and rerun the unmodified product path');
-            const r = JSON.parse(fs.readFileSync(process.env.OPENCODE_V2_EMBEDDED_HOST_RECEIPT, 'utf8'));
+            const receipts = [[process.env.OPENCODE_V2_EMBEDDED_HOST_RECEIPT, 'manual']];
+            if (process.platform === 'win32') receipts.push(['opencode-v2-embedded-host-auto.json', 'auto']);
+            for (const [path, mode] of receipts) {
+            const r = JSON.parse(fs.readFileSync(path, 'utf8'));
             assert.equal(r.kind, 'TEST_NATIVE_V2_EMBEDDED_HOST');
             assert.equal(r.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
             assert.equal(r.platform, process.env.OPENCODE_V2_TEST_PLATFORM);
             assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);
             assert.equal(r.nodeVersion, 'v24.21.0'); assert.equal(r.version, '2.1.4');
-            assert.equal(r.approvalMode, 'manual'); assert.equal(r.modelRequests, 8);
+            assert.equal(r.approvalMode, mode); assert.equal(r.modelRequests, 8);
             assert.deepEqual(r.modelFailures, []);
             assert.equal(r.digests.bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
             assert.equal(r.digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);
@@ -429,6 +477,8 @@ jobs:
             ]);
             assert.equal(r.vendorAuthQualified, false);
             assert.equal(r.desktopQualified, false); assert.equal(r.releaseQualified, false);
+            if (process.platform === 'win32') assert.match(r.digests.windowsShell, /^[a-f0-9]{64}$/);
+            }
           "
       - name: Preserve exact native evidence or candidate HOLD
         if: always()
@@ -440,4 +490,6 @@ jobs:
           path: |
             opencode-v2-embedded-inputs.json
             opencode-v2-darwin-custody.json
+            opencode-v2-windows-custody.json
             opencode-v2-embedded-host.json
+            opencode-v2-embedded-host-auto.json

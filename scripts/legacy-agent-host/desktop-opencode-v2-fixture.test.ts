@@ -15,7 +15,7 @@ const repo = resolve(import.meta.dirname, '../..');
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 
 test(
-  'Desktop captures embedded delivery in its original private Host descriptor without V1 management',
+  'Desktop captures embedded delivery and native management in its original private Host descriptor',
   {
     skip: !bunPath || !bunSha256 || !engineDirectory,
     timeout: 60_000,
@@ -51,6 +51,7 @@ test(
           }
         : {}),
       endpoint: 'http://127.0.0.1:41789',
+      managementEndpoint: 'http://127.0.0.1:41791',
       modelUrl: 'http://127.0.0.1:41790',
     };
     const fixture = await prepareDesktopBackendFixture(repo, {
@@ -78,11 +79,23 @@ test(
     assert.equal(member.environment.OPENCODE_CLI_PATH, undefined);
     assert.equal(member.environment.OPENCODE_SERVER_PASSWORD, undefined);
     assert.deepEqual(profile.runtime!.providerTemplates, [member]);
-    assert.equal(profile.management, undefined, 'Bun cannot enter a V1 management process');
+    assert.equal(profile.management?.length, 1);
+    const management = profile.management![0]!;
+    assert.equal(management.provider, 'opencode');
+    if (management.provider !== 'opencode') throw new Error('Missing native V2 management recipe');
+    assert.equal(management.nativeGeneration, 'v2');
+    assert.equal(management.protocolRevision, '2.1.4');
+    assert.deepEqual(management.embedded, member.embedded);
+    assert.deepEqual(management.executable, member.executable);
+    assert.deepEqual(management.nativeModel, { providerId: 'TEST-local', modelId: 'TEST-model' });
+    assert.equal(management.endpoint, selection.managementEndpoint);
     assert.equal(profile.teams[0]!.savedSettings?.model, 'TEST-local/TEST-model');
     assert.equal(profile.teams[0]!.members[0]!.role, 'lead');
     const descriptor = JSON.parse(await readFile(fixture.descriptorPath, 'utf8'));
-    assert.equal(descriptor.management, undefined);
+    assert.equal(descriptor.management.length, 1);
+    assert.equal(descriptor.management[0].runtimeId, 'opencode');
+    assert.equal(descriptor.management[0].profileId, management.profileId);
+    assert.equal(descriptor.management[0].configRevision, management.configRevision);
     assert.equal(
       descriptor.owners[0].profile.env.LEGACY_AGENT_HOST_PROFILE_SHA256,
       fixture.pins.profileSha256

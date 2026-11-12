@@ -100,7 +100,9 @@ export async function verifyOpenCodeV2EmbeddedGraph(
       ? '1.3.11'
       : selection.platform === 'darwin' && ['arm64', 'x64'].includes(selection.arch)
         ? '1.4.4'
-        : undefined;
+        : selection.platform === 'win32' && ['arm64', 'x64'].includes(selection.arch)
+          ? '1.4.3'
+          : undefined;
   if (
     manifest.schemaVersion !== 1 ||
     manifest.platform !== selection.platform ||

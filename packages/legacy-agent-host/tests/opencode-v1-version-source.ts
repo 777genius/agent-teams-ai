@@ -1,4 +1,4 @@
-/** Exact-source build boundary for the disposable V1 compatibility matrix. */
+/** Exact-source build boundary for disposable native Host qualification. */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFile, rm } from 'node:fs/promises';
@@ -15,12 +15,30 @@ export interface NativeV1HostBuild {
 // Include the harness, transitive local package, compiler inputs and vendored
 // provider archives. Unrelated working-tree files cannot affect this build.
 const inputs = [
-  'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml',
-  'packages/legacy-agent-host/src', 'packages/legacy-agent-host/tests',
-  'packages/legacy-agent-host/package.json', 'packages/legacy-agent-host/tsconfig.json',
-  'packages/legacy-agent-host/tsconfig.test.json', 'packages/task-change-ledger/src',
-  'packages/task-change-ledger/package.json', 'packages/task-change-ledger/tsconfig.json',
+  'package.json',
+  'pnpm-lock.yaml',
+  'pnpm-workspace.yaml',
+  'runtime.lock.json',
+  'packages/legacy-agent-host/src',
+  'packages/legacy-agent-host/tests',
+  'packages/legacy-agent-host/native',
+  'packages/legacy-agent-host/scripts',
+  'packages/legacy-agent-host/package.json',
+  'packages/legacy-agent-host/tsconfig.json',
+  'packages/legacy-agent-host/tsconfig.test.json',
+  'packages/task-change-ledger/src',
+  'packages/task-change-ledger/package.json',
+  'packages/task-change-ledger/tsconfig.json',
   'vendor/provider-migration',
+  'scripts/legacy-agent-host',
+  'scripts/stage-runtime.mjs',
+  'scripts/lib/opencode-v2-base-inventory.mts',
+  'scripts/lib/runtime-archive-checksum.mjs',
+  'scripts/lib/runtime-payload-cache.mjs',
+  'scripts/lib/github-release-download-error.mjs',
+  'src/features/opencode-runtime-installer/core/domain/v2Delivery.ts',
+  'src/features/opencode-runtime-installer/main/infrastructure/v2SupportArchive.ts',
+  'src/features/opencode-runtime-installer/main/infrastructure/runtimeZip.ts',
 ];
 
 export function assertNativeV1Source(repo: string, sourceHead: string): void {

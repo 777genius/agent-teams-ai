@@ -33,6 +33,25 @@ export interface CapturedProcessLaunch {
   signal?: AbortSignal;
 }
 
+/** An original OS handle/tree captured synchronously before private child input. */
+export interface CapturedProcessTree {
+  readExecutable(): {
+    executablePath: string;
+    executableSha256: string;
+    pid: number;
+    startIdentity: string;
+  };
+  observe(): 'present' | 'absent' | 'unknown';
+  terminate(): void;
+}
+
+export interface CapturedProcessTreeSource {
+  capture(
+    child: ChildProcess,
+    executable: { path: string; sha256: string }
+  ): CapturedProcessTree;
+}
+
 export class CapturedProcess implements CapturedProcessPort {
   private readonly processRoots = new Map<
     ChildProcess,
@@ -41,13 +60,15 @@ export class CapturedProcess implements CapturedProcessPort {
   private readonly children = new Set<ChildProcess>();
   private readonly failed = new Set<ChildProcess>();
   private readonly retired = new Set<ChildProcess>();
+  private readonly nativeTrees = new Map<ChildProcess, CapturedProcessTree>();
   private sealed = false;
 
   constructor(
     private readonly profile: CapturedProcessProfile,
     private readonly canAllocate: () => boolean = () => true,
     private readonly processCustody?: RegisteredProcessRootSource,
-    private readonly canCaptureRegisteredProcess: () => boolean = canAllocate
+    private readonly canCaptureRegisteredProcess: () => boolean = canAllocate,
+    private readonly processTreeSource?: CapturedProcessTreeSource
   ) {
     this.verifyExecutable();
     this.verifyDirectories();
@@ -89,6 +110,25 @@ export class CapturedProcess implements CapturedProcessPort {
       detached: process.platform !== 'win32',
     });
     this.children.add(child);
+    child.once('error', () => {
+      if (child.pid === undefined) this.failed.add(child);
+    });
+    // Consume diagnostics without retaining provider credentials, prompt or MCP capabilities.
+    child.stderr.on('data', () => {});
+    if (this.processTreeSource) {
+      try {
+        this.nativeTrees.set(child, this.processTreeSource.capture(child, this.profile.executable));
+      } catch {
+        // Never return an uncaptured child to the caller that owns its private
+        // stdin. The original ChildProcess remains retained for cleanup; there
+        // is no later PID lookup or attempt to acquire another process tree.
+        this.seal();
+        child.stdin.on('error', () => {});
+        child.stdin.end();
+        try { child.kill(); } catch { /* Unknown cleanup stays held. */ }
+        throw new Error('Native process tree unavailable');
+      }
+    }
     // Capture only the actual original handle before the first yield. Denial is retained,
     // never repaired by adopting this numeric PID later or changing Team readiness.
     try {
@@ -102,13 +142,16 @@ export class CapturedProcess implements CapturedProcessPort {
     } catch {
       this.processRoots.set(child, undefined);
     }
-    child.once('error', () => {
-      if (child.pid === undefined) this.failed.add(child);
-    });
-    // Consume diagnostics without retaining provider credentials, prompt or MCP capabilities.
-    child.stderr.on('data', () => {});
     return child;
   };
+
+  readNativeExecutable(child: ChildProcess): ReturnType<CapturedProcessTree['readExecutable']> {
+    if (this.sealed || !this.canCaptureRegisteredProcess() || !this.children.has(child) || this.exited(child))
+      throw new Error('Native executable observation unavailable');
+    const tree = this.nativeTrees.get(child);
+    if (!tree) throw new Error('Native executable observation unavailable');
+    return tree.readExecutable();
+  }
 
   captureRegisteredProcess(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture {
     if (this.sealed || !this.canCaptureRegisteredProcess()) throw new Error('process:hold');
@@ -140,6 +183,12 @@ export class CapturedProcess implements CapturedProcessPort {
 
   private signal(signal: NodeJS.Signals): void {
     for (const child of this.children) {
+      if (this.processTreeSource) {
+        // The retained OS job still owns descendants after its original root
+        // exits. It is never selected again by a numeric PID or process group.
+        try { this.nativeTrees.get(child)?.terminate(); } catch { /* Recheck original handles. */ }
+        continue;
+      }
       // After root reap, a positive numeric group probe may name a replacement.
       // Absence can still settle cleanup; surviving unverified groups stay held.
       if (this.exited(child)) continue;
@@ -167,6 +216,16 @@ export class CapturedProcess implements CapturedProcessPort {
   private groupPresent(child: ChildProcess): boolean {
     if (this.retired.has(child)) return false;
     if (child.pid === undefined) return !this.failed.has(child);
+    if (this.processTreeSource) {
+      try {
+        const state = this.nativeTrees.get(child)?.observe();
+        if (state === 'absent') {
+          if (this.exited(child)) this.retired.add(child);
+          return false;
+        }
+      } catch { /* Native query failures cannot prove cleanup. */ }
+      return true;
+    }
     // A Windows parent exit is insufficient proof for its native descendants.
     if (process.platform === 'win32') return true;
     try {

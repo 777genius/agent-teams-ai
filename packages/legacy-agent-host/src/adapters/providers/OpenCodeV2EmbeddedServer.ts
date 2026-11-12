@@ -3,13 +3,14 @@ import { lstat, readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CapturedProcess } from './CapturedProcess.js';
+import { createWindowsJobCustody } from './WindowsJobCustody.js';
 import {
   verifyOpenCodeV2EmbeddedGraph,
   verifyOpenCodeV2EmbeddedManifest,
 } from './OpenCodeV2EmbeddedGraph.js';
 
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
-import type { CapturedProcessProfile } from './CapturedProcess.js';
+import type { CapturedProcessProfile, CapturedProcessTreeSource } from './CapturedProcess.js';
 import type { OpenCodeV2EmbeddedSelection } from './OpenCodeV2EmbeddedGraph.js';
 import type {
   RegistrarBinding,
@@ -23,6 +24,8 @@ const environmentKeys = new Set([
   'PATH',
   'HOME',
   'USERPROFILE',
+  'SystemRoot',
+  'WINDIR',
   'XDG_CONFIG_HOME',
   'XDG_DATA_HOME',
   'XDG_CACHE_HOME',
@@ -92,7 +95,9 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   );
   if (
     options.profile.provider !== 'opencode' ||
-    (process.platform !== 'linux' && (process.platform !== 'darwin' || !readDarwinExecutable))
+    (process.platform !== 'linux' &&
+      process.platform !== 'win32' &&
+      (process.platform !== 'darwin' || !readDarwinExecutable))
   )
     return fail();
   const profile = structuredClone(options.profile);
@@ -114,11 +119,20 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
     Object.entries(profile.environment).filter(([key]) => environmentKeys.has(key))
   );
   if (!profile.environment.HOME) return fail();
+  let windowsCustody: CapturedProcessTreeSource | undefined;
   const custody = new CapturedProcess(
     profile,
     options.canAllocate,
     options.processCustody,
-    options.canCaptureRegisteredProcess ?? options.canAllocate
+    options.canCaptureRegisteredProcess ?? options.canAllocate,
+    process.platform === 'win32'
+      ? {
+          capture(child, executable) {
+            if (!windowsCustody) return fail();
+            return windowsCustody.capture(child, executable);
+          },
+        }
+      : undefined
   );
   const password = randomBytes(32).toString('base64url');
   const nonce = randomBytes(32).toString('hex');
@@ -134,9 +148,12 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
     signal.throwIfAborted();
     if (!child?.pid || !alive()) return fail();
     const pid = child.pid;
-    if (process.platform === 'darwin') {
+    if (process.platform === 'darwin' || process.platform === 'win32') {
       await verifyOpenCodeV2EmbeddedManifest(embedded);
-      const actual = readDarwinExecutable!(child, profile.executable);
+      const actual =
+        process.platform === 'darwin'
+          ? readDarwinExecutable!(child, profile.executable)
+          : custody.readNativeExecutable(child);
       if (
         actual.pid !== pid ||
         actual.executablePath !== profile.executable.path ||
@@ -212,7 +229,11 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
       ]);
       try {
         combined.throwIfAborted();
-        await verifyOpenCodeV2EmbeddedGraph(embedded, combined);
+        if (process.platform === 'win32') {
+          // The source verifies the selected graph before loading its exact
+          // target N-API binary. Capture remains synchronous before private stdin.
+          windowsCustody = await createWindowsJobCustody(embedded, combined);
+        } else await verifyOpenCodeV2EmbeddedGraph(embedded, combined);
         for (const directory of [configDirectory, path.dirname(databasePath)]) {
           if (
             !path.isAbsolute(directory) ||
@@ -249,7 +270,12 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
         combined.throwIfAborted();
         child = custody.launch({
           command: profile.executable.path,
-          args: ['--no-env-file', '--config=/dev/null', '--no-install', entry],
+          args: [
+            '--no-env-file',
+            process.platform === 'win32' ? '--config=NUL' : '--config=/dev/null',
+            '--no-install',
+            entry,
+          ],
           cwd: profile.cwd,
         });
         child.stdin.on('error', () => {});
