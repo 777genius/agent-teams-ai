@@ -214,7 +214,11 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     await app.close(); app = undefined; source();
     assert.equal(natives.some(originalLinuxProcessPresent), false, 'all original native processes gone after ordinary Quit');
     passed = true;
-  } catch (error) { failure = error; }
+  } catch (error) {
+    failure = error;
+    if (error instanceof AggregateError && error.errors.some(value =>
+      value instanceof Error && value.message === 'original app cleanup unknown')) cleanupErrors.push(error);
+  }
   finally {
     if (app && legacySubmitted && !legacyStopped) {
       try { await app.call(`window.__TEST_retainedApi.teams.stop(${literal(legacyTeam)})`); }

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createWriteStream, readFileSync, readdirSync } from 'node:fs';
+import { createWriteStream, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { readFile, readdir, readlink, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileHash } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
@@ -43,7 +43,7 @@ export async function startRetainedOpenCodeApp(input: {
     environment: input.env,
   });
   const child = capture.launch({ command: input.node, cwd: input.repo,
-    args: [join(input.repo, 'node_modules/electron-vite/bin/electron-vite.js'), 'dev',
+    args: ['--max-old-space-size=1024', join(input.repo, 'node_modules/electron-vite/bin/electron-vite.js'), 'dev',
       // electron-vite rewrites ELECTRON_CLI_ARGS from its parsed passthrough.
       '--remoteDebuggingPort', String(input.port), '--', '--ozone-platform=headless',
       '--headless', '--disable-gpu', '--no-sandbox', '--remote-debugging-address=127.0.0.1'] });
@@ -80,9 +80,11 @@ export async function startRetainedOpenCodeApp(input: {
   let cdp: Cdp | undefined;
   let electron: ReturnType<typeof linuxProcessIdentity> | undefined;
   let failure: unknown;
+  let phase = 'inspector';
   const assertCurrent = () => {
     if (ancestryFailure) throw ancestryFailure;
-    assert.equal(originalLinuxProcessPresent(original), true, 'original dev launcher remains current');
+    assert.equal(originalLinuxProcessPresent(original), true,
+      `original dev launcher remains current (exit=${child.exitCode}, signal=${child.signalCode})`);
     if (electron) assert.equal(originalLinuxProcessPresent(electron), true, 'original Electron remains current');
   };
   try {
@@ -109,7 +111,9 @@ export async function startRetainedOpenCodeApp(input: {
       const matches = targets.filter(row => row.type === 'page' && /^http:\/\/localhost:\d+\//.test(row.url));
       assert.ok(matches.length <= 1); return matches[0]?.webSocketDebuggerUrl ? matches[0] : null;
     }, 'original Electron inspector and renderer', 180_000);
+    phase = 'CDP connect';
     cdp = await Cdp.connect(target.webSocketDebuggerUrl!);
+    phase = 'original preload';
     await waitFor(async () => await cdp!.evaluate<boolean>(
       'Boolean(window.electronAPI?.teams && window.electronAPI?.agentBackend)&&!document.getElementById("splash")') || null,
     'original preload and startup', 120_000);
@@ -125,6 +129,7 @@ export async function startRetainedOpenCodeApp(input: {
       }, `one original call ${id}`, timeout);
       assert.equal(result.state, 'done', result.message); return result.value as T;
     };
+    phase = 'original renderer API';
     await call("import('/api/index.ts').then(module => {window.__TEST_retainedApi=module.api;return true})");
     return { cdp, call, assertCurrent, original, electron: electron!,
       async nativeChildren(executable: string) {
@@ -144,15 +149,25 @@ export async function startRetainedOpenCodeApp(input: {
         await new Promise<void>(resolve => log.end(resolve));
       },
       async cleanup() {
+        // Close the captured Electron before its dev launcher; losing the
+        // launcher first cannot authorize later numeric process-group signals.
+        try { await cdp?.send('Browser.close'); } catch { /* Original custody still decides cleanup. */ }
         cdp?.close(); const stopped = await capture.confirmStopped(); clearInterval(ancestryTimer);
         await new Promise<void>(resolve => log.end(resolve)); return stopped;
       },
     };
   } catch (error) { failure = error; }
+  try { await cdp?.send('Browser.close'); } catch { /* No numeric process adoption after root exit. */ }
   cdp?.close();
   const stopped = await capture.confirmStopped();
   clearInterval(ancestryTimer);
   await new Promise<void>(resolve => log.end(resolve));
-  if (!stopped) throw new AggregateError([failure, new Error('original app cleanup unknown')]);
-  throw failure;
+  const reason = failure instanceof Error ? failure.message : String(failure);
+  writeFileSync(join(input.root, `coexistence-app-${input.epoch}-failure.json`), JSON.stringify({
+    phase, reason, original, electron, exitCode: child.exitCode, signalCode: child.signalCode,
+    cleanupConfirmed: stopped,
+  }, null, 2), { mode: 0o600 });
+  if (!stopped) throw new AggregateError([failure, new Error('original app cleanup unknown')],
+    `Original app startup failed during ${phase}: ${reason}; original app cleanup unknown`);
+  throw new Error(`Original app startup failed during ${phase}: ${reason}`, { cause: failure });
 }

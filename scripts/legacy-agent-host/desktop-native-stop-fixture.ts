@@ -91,6 +91,20 @@ export async function prepareDesktopNativeStop(options: {
       permissions: options.manualPermissions ? 'manual' : 'bypass',
     })),
   };
+  if (options.provider === 'opencode') {
+    assertOwnedCdpListener(group);
+    const response = object(await cdp.evaluate(
+      `window.electronAPI.runtimeProviderManagement.loadModels(${JSON.stringify({
+        runtimeId: 'opencode', providerId: 'TEST-local', projectPath: null,
+      })})`
+    ));
+    assert.equal(response.error, undefined, 'actual native catalog is ready before Runtime allocation');
+    assert.equal(response.runtimeId, 'opencode');
+    const catalog = object(response.models);
+    assert.equal(catalog.providerId, 'TEST-local');
+    assert.ok(Array.isArray(catalog.models) && catalog.models.some(value =>
+      object(value).modelId === 'TEST-model' && object(value).providerId === 'TEST-local'));
+  }
   const metadata = options.provider === 'opencode' ? readDesktopNativeHostProcesses(fixture) : undefined;
   if (metadata) {
     assert.equal(metadata.host.groupId, group, 'metadata belongs to the captured TEST Host');
