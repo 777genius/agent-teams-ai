@@ -70,7 +70,9 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
   }
   await ui.waitRead(`document.querySelector('[role="dialog"] #dialog-prompt')?.value===''&&!document.querySelector('[role="dialog"] #dialog-prompt')?.disabled`,
     'original saved prompt hydration');
-  await ui.waitRead(`[...document.querySelectorAll('[role="dialog"] button[aria-label*=" provider,"]')].some(node=>node.textContent.trim()==='TEST-model')`,
+  // The original button includes a brand monogram in textContent. Its accessible
+  // name carries the exact provider/model label without that decorative text.
+  await ui.waitRead(`Boolean(document.querySelector('[role="dialog"] button[aria-label="OpenCode provider, TEST-model"]'))`,
     'exact captured V2 model displayed');
   await ui.scrollTo('[role="dialog"] #dialog-prompt', 'original V2 review prompt');
   await ui.click('[role="dialog"] #dialog-prompt', 'focus original V2 review bootstrap');
