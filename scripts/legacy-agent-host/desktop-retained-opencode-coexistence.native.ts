@@ -212,7 +212,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
         typeof member.runtimeSessionId === 'string' && member.runtimeSessionId.length > 0 ? state : null;
     }, 'actual retained V1 native session and original bootstrap ready', 180_000);
     const send = async (key: string, to: string, marker: string) => {
-      await callTeams('sendMessage', [key, { to, text: marker }]);
+      await callTeams('sendMessage', [key, { member: to, text: marker }]);
       await waitFor(async () => { assert.deepEqual(model.failures, []); return model.markers.has(marker) || null; }, 'original owner receives ' + marker, 90_000);
     };
     await waitLegacyControl();
