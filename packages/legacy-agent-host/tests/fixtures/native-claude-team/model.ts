@@ -18,6 +18,7 @@ import { assertNativeChatAttachments } from './chat-attachments.ts';
 import { assertNativeMessagePdf } from '../native-message-pdf.ts';
 import { contextCompactionScript } from '../native-claude-compaction/model.ts';
 import type { CompactionScenario } from '../native-claude-compaction/model.ts';
+import { nativeScheduleScript, type NativeScheduleScenario } from '../native-claude-schedules/model.ts';
 import { nativeMemberCreationScript } from './member-creation.ts';
 import type { NativeMemberCreationScenario } from './member-creation.ts';
 import { ordinarySubagentScript } from '../native-claude-subagent/model.ts';
@@ -150,6 +151,7 @@ export async function startNativeTeamModel(
     crossTeam?: NativeCrossTeamScenario;
     ordinarySubagents?: { workspace: string; parentStopRequested?: () => boolean };
     contextCompaction?: CompactionScenario;
+    nativeSchedules?: NativeScheduleScenario;
     nativeMemberCreation?: NativeMemberCreationScenario;
     requireVisibleReply?: boolean;
     /** TEST Quit proof: hold one real first-turn inference until its client is closed. */
@@ -176,6 +178,9 @@ export async function startNativeTeamModel(
   const groupChats = options.groupChats ? nativeGroupChatScript(nativeToolReceipt) : undefined;
   const compaction = options.contextCompaction
     ? contextCompactionScript(options.contextCompaction, nativeToolReceipt)
+    : undefined;
+  const schedules = options.nativeSchedules
+    ? nativeScheduleScript(options.nativeSchedules, nativeToolReceipt)
     : undefined;
   const ordinary = options.ordinarySubagents
     ? ordinarySubagentScript(
@@ -238,6 +243,11 @@ export async function startNativeTeamModel(
           groupChats.respond(body, tools),
           typeof body.model === 'string' ? body.model : undefined
         );
+        return;
+      }
+      const scheduleBlock = schedules?.respond(body, tools);
+      if (scheduleBlock) {
+        emitResponse(response, ++sequence, scheduleBlock, String(body.model));
         return;
       }
       if (compaction) {
@@ -629,6 +639,7 @@ export async function startNativeTeamModel(
     crossTeamRequests: crossTeam?.requests ?? [],
     ordinaryRequests: ordinary?.requests ?? [],
     compactionRequests: compaction?.requests ?? [],
+    ...(schedules ? { scheduleRequests: schedules.requests } : {}),
     get compactionTokenRequests() {
       return compactionTokenRequests;
     },

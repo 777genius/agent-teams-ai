@@ -3,6 +3,7 @@ import type { OwnerState } from '../../packages/legacy-agent-host/dist/team/owne
 import { NATIVE_MEMBER } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/member-creation.ts';
 import assert from 'node:assert/strict';
 import { nativeProcessReadbackAction } from './desktop-native-process-readback.ts';
+import { desktopScheduleScenario } from './desktop-schedule-fixture.ts';
 import { startProcessModel } from './desktop-native-process-model.ts';
 import { readProcessServices } from './desktop-native-process-fixture.ts';
 import { startDesktopMixedModels } from './desktop-mixed-native-fixture.ts';
@@ -62,6 +63,8 @@ export async function prepareDesktopProofMode(
     'explicit known proof mode'
   );
   const mixedMode = mode === 'native-mixed-create-launch-ui';
+  const scheduleUiMode = process.env.LEGACY_DESKTOP_SCHEDULE_UI === '1';
+  if (scheduleUiMode) assert.equal(mode, 'native-launch-ui', 'schedule proof extends the existing Launch mode');
   const processUiMode = mode === 'native-process-ui';
   const controlledProcessMode = mode === 'process-cold-ui';
   if (controlledProcessMode) {
@@ -376,6 +379,7 @@ export async function prepareDesktopProofMode(
               : launchDialogMode || createLaunchMode
                 ? await startNativeTeamModel({
                     allowModelProbes: true,
+                    ...(scheduleUiMode ? { nativeSchedules: desktopScheduleScenario(fixtureRoot) } : {}),
                     ...(nativeMemberCreation ? { nativeMemberCreation } : {}),
                     ...(resumeMode
                       ? { uiGeneratedMessageIds: true, captureHistoryMarkers: true }
