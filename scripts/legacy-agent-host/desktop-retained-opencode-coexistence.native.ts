@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import { assertNativeV1Source, buildNativeV1Host } from '../../packages/legacy-agent-host/tests/opencode-v1-version-source.ts';
 import { fileHash as fileDigest } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
 import { waitFor } from '../e2e/release-updater/cdp.mts';
-import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import { startRetainedOpenCodeModel } from './desktop-retained-opencode-model.ts';
 import { originalLinuxProcessPresent, selectedLinuxProcesses, startRetainedOpenCodeApp, testNamespaceLinuxProcesses } from './desktop-retained-opencode-app.ts';
 
@@ -17,7 +17,7 @@ const record = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Record<string, unknown>;
 };
 const json = async (path: string) => record(JSON.parse(await readFile(path, 'utf8')));
-const literal = (value: unknown) => JSON.stringify(value);
+const literal = desktopJsLiteral;
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 async function reservePort() {
   const server = createServer();
@@ -197,13 +197,14 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
       const spawn = await callTeams('getMemberSpawnStatuses', [legacyTeam]);
       const member = record(record(state.members).bob ?? {});
       const status = record(record(spawn.statuses).bob ?? {});
-      proof.legacyReadiness = { runId: state.runId, alive: member.alive,
+      proof.legacyReadiness = { runId: state.runId, spawnRunId: spawn.runId, alive: member.alive,
         bootstrapConfirmed: status.bootstrapConfirmed, historicalBootstrapConfirmed: member.historicalBootstrapConfirmed,
         nativeSessionPresent: typeof member.runtimeSessionId === 'string',
         status: status.status, hardFailureReason: status.hardFailureReason };
-      if (state.runId !== runId || spawn.runId !== runId) return null;
+      if (spawn.runId !== runId) return null;
       assert.notEqual(status.hardFailure, true, String(status.hardFailureReason ?? status.error));
       assert.notEqual(status.status, 'error', String(status.error));
+      if (state.runId !== runId) return null;
       return member.alive === true && status.bootstrapConfirmed === true &&
         member.historicalBootstrapConfirmed === true && member.runtimeModel === 'TEST-legacy/TEST-model' &&
         typeof member.runtimeSessionId === 'string' && member.runtimeSessionId.length > 0 ? state : null;

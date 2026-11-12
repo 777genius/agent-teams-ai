@@ -4,6 +4,7 @@ import { lstat, readFile, readdir, readlink, realpath, stat } from 'node:fs/prom
 import { join } from 'node:path';
 import { fileHash } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
 import { Cdp, waitFor } from '../e2e/release-updater/cdp.mts';
+import { desktopJsLiteral } from './desktop-ui-controls.ts';
 
 export function linuxProcessIdentity(pid: number) {
   const text = readFileSync(`/proc/${pid}/stat`, 'utf8');
@@ -140,7 +141,7 @@ export async function startRetainedOpenCodeApp(input: {
     await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true });
     phase = 'original preload';
     await waitFor(async () => await cdp!.evaluate<boolean>(
-      `location.origin===${JSON.stringify(new URL(target.url).origin)}&&document.readyState==='complete'&&
+      `location.origin===${desktopJsLiteral(new URL(target.url).origin)}&&document.readyState==='complete'&&
        Boolean(window.electronAPI?.teams && window.electronAPI?.agentBackend)&&
        document.getElementById('root')?.childElementCount>0&&!document.getElementById('splash')`) || null,
     'original preload and startup', 120_000);
@@ -150,9 +151,9 @@ export async function startRetainedOpenCodeApp(input: {
       const callPhase = phase;
       phase = `${callPhase}: dispatch ${id}`;
       try {
-        await cdp!.evaluate(`(() => { const calls=window.__TEST_retainedCalls??={}; if(calls[${JSON.stringify(id)}])throw Error('duplicate');
-          calls[${JSON.stringify(id)}]={state:'pending'}; Promise.resolve().then(async()=>(${expression})).then(
-            value=>{calls[${JSON.stringify(id)}]={state:'done',value}},error=>{calls[${JSON.stringify(id)}]={state:'failed',message:String(error?.message??error)}});return true})()`);
+        await cdp!.evaluate(`(() => { const calls=window.__TEST_retainedCalls??={}; if(calls[${desktopJsLiteral(id)}])throw Error('duplicate');
+          calls[${desktopJsLiteral(id)}]={state:'pending'}; Promise.resolve().then(async()=>(${expression})).then(
+            value=>{calls[${desktopJsLiteral(id)}]={state:'done',value}},error=>{calls[${desktopJsLiteral(id)}]={state:'failed',message:String(error?.message??error)}});return true})()`);
       } catch (error) {
         if (!(error instanceof Error) || error.message !== 'CDP timeout: Runtime.evaluate') throw error;
         // An uncertain inspector acknowledgement never authorizes resubmission.
@@ -163,7 +164,7 @@ export async function startRetainedOpenCodeApp(input: {
         assertCurrent();
         try {
           const value = await cdp!.evaluate<{ state: string; value?: T; message?: string } | undefined>(
-            `window.__TEST_retainedCalls?.[${JSON.stringify(id)}]`);
+            `window.__TEST_retainedCalls?.[${desktopJsLiteral(id)}]`);
           return value && value.state !== 'pending' ? value : null;
         } catch (error) {
           if (error instanceof Error && error.message === 'CDP timeout: Runtime.evaluate') return null;

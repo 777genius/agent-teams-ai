@@ -537,6 +537,138 @@ jobs:
       - name: Build and mount DMG fixture
         run: node scripts/ci/verify-dmg-artwork.mts
 
+  retained-opencode-coexistence:
+    name: Retained OpenCode V1 and Host V2 original Desktop
+    needs: plan
+    if: >-
+      needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse == 'false' &&
+      ((github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      TMPDIR: ${{ runner.temp }}
+      OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      OPENCODE_V2_TEST_PLATFORM: linux-x64
+      OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ runner.temp }}/retained-opencode-v2-inputs.json
+      OPENCODE_V1_V2_INPUTS_RECEIPT: ${{ runner.temp }}/retained-opencode-inputs.json
+      OPENCODE_V1_V2_COEXISTENCE_RECEIPT: ${{ runner.temp }}/retained-opencode-coexistence.json
+      OPENCODE_V1_V2_RETAINED_CUSTODY_SOURCE: ${{ github.workspace }}/.runtime-download/TEST-retained-runtime-source
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Install frozen workspace and original Electron
+        run: |
+          set -euo pipefail
+          node scripts/ci/install-dependencies-with-retry.mjs
+          node scripts/ensure-electron-install.cjs --strict
+      - name: Rebuild original SQLite for the pinned Electron ABI
+        timeout-minutes: 10
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createRequire } from 'node:module';
+          import { rebuild } from '@electron/rebuild';
+          const require = createRequire(import.meta.url);
+          const electronVersion = require('electron/package.json').version;
+          assert.equal(electronVersion, '44.10.1');
+          await rebuild({ buildPath: process.cwd(), electronVersion, force: true, onlyModules: ['better-sqlite3'] });
+          NODE
+      - name: Build existing Host and stage checksum-pinned retained release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pnpm --filter @agent-teams/legacy-agent-host build
+          node scripts/stage-runtime.mjs --platform linux-x64
+      - name: Prepare existing verified V2 graph and original Bun
+        run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
+      - name: Select stock helper source from the verified retained release
+        id: retained-source
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { appendFileSync, readFileSync } from 'node:fs';
+          const lock = JSON.parse(readFileSync('runtime.lock.json', 'utf8'));
+          const commit = readFileSync('resources/runtime/COMMIT_SHA', 'utf8').trim();
+          assert.equal(lock.sourceRepository, '777genius/agent_teams_orchestrator');
+          assert.equal(commit, lock.opencodeV2Delivery['linux-x64'].sourceCommit);
+          assert.match(commit, /^[a-f0-9]{40}$/);
+          appendFileSync(process.env.GITHUB_OUTPUT, `repository=${lock.sourceRepository}\ncommit=${commit}\n`);
+          NODE
+      - name: Checkout unchanged helper source in ignored TEST inputs
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ steps.retained-source.outputs.repository }}
+          ref: ${{ steps.retained-source.outputs.commit }}
+          path: .runtime-download/TEST-retained-runtime-source
+          persist-credentials: false
+      - name: Stage exact retained V1 and existing TEST package manager
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          selected_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-retained-opencode-inputs-XXXXXX")"
+          printf '{"name":"test-retained-opencode-inputs","private":true}\n' > "$selected_inputs/package.json"
+          pnpm --dir "$selected_inputs" add --ignore-scripts --save-exact opencode-ai@1.19.4 opencode-linux-x64@1.19.4 corepack@0.36.0
+          printf 'OPENCODE_V1_V2_TEST_PACKAGES=%s\n' "$selected_inputs" >> "$GITHUB_ENV"
+      - name: Bind retained inputs and exact stock helper source without launching a session
+        run: node scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts
+      - name: Exercise original retained V1 and new Host V2 controls once
+        env:
+          OPENCODE_V1_V2_COEXISTENCE_GO: '1'
+        run: |
+          set -euo pipefail
+          node --test scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts 2>&1 | tee "$RUNNER_TEMP/retained-opencode-coexistence.log"
+      - name: Require complete same-source business, Stop, cold and cleanup evidence
+        if: always()
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const r = JSON.parse(readFileSync(process.env.OPENCODE_V1_V2_COEXISTENCE_RECEIPT, 'utf8'));
+          assert.equal(r.kind, 'TEST_NATIVE_RETAINED_V1_HOST_V2_DESKTOP');
+          assert.equal(r.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);
+          assert.deepEqual(r.cleanupFailures, []); assert.deepEqual(r.modelFailures, []);
+          assert.equal(r.releaseQualified, false); assert.equal(r.vendorAuthQualified, false);
+          assert.equal(r.inputs.retainedRuntime.sourceBuiltRetainedHelper.kind, 'EXACT_RELEASE_SOURCE_BUILD');
+          assert.equal(r.inputs.retainedRuntime.sourceBuiltRetainedHelper.publishedRuntimeComplete, false);
+          const observed = new Set(r.steps.map(step => step.observed));
+          for (const step of ['actual_legacy_fork_V1_history_before_new_Host_selection',
+            'retained_legacy_fork_owner_before_new_Host_runtime', 'both_actual_owner_inputs_through_original_renderer_routing',
+            'both_original_Stop_controls_preserve_the_other_actual_owner', 'same_profile_cold_original_UI_reads_both_histories_without_replay'])
+            assert.ok(observed.has(step), step);
+          const markers = r.modelObservations.filter(row => row.marker).map(row => row.marker).sort();
+          assert.deepEqual(markers, ['TEST_RETAINED_V1_HISTORY', 'TEST_RETAINED_V1_FIRST', 'TEST_RETAINED_V1_AFTER_STOP',
+            'TEST_OWNED_V2_FIRST', 'TEST_OWNED_V2_AFTER_STOP'].sort());
+          NODE
+      - name: Preserve original coexistence receipts and failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retained-opencode-coexistence-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/retained-opencode-*.json
+            ${{ runner.temp }}/retained-opencode-*.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/claude/teams/test-retained-opencode-v1/launch-failure-artifacts/**
+
   stage1-desktop:
     name: Stage 1 source Desktop (${{ matrix.label }})
     # Run native/UI acceptance on ready Stage1 source PR and its integration PRs.
@@ -1126,7 +1258,7 @@ jobs:
   # authenticated complete success. See docs/ci-qualification.md.
   full-qualification:
     name: Full qualification
-    needs: [plan, validate, test, lint, task-change-ledger-windows, focused, source, dmg-artwork]
+    needs: [plan, validate, test, lint, task-change-ledger-windows, focused, source, dmg-artwork, retained-opencode-coexistence]
     if: always() && !cancelled()
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     steps:
@@ -1136,6 +1268,15 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
+      - name: Require selected retained V1 and Host V2 native Desktop qualification
+        if: >-
+          needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse == 'false' &&
+          ((github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||
+          (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository &&
+          (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))
+        env:
+          RETAINED_COEXISTENCE_RESULT: ${{ needs.retained-opencode-coexistence.result }}
+        run: test "$RETAINED_COEXISTENCE_RESULT" = success
       # The script deadline (METADATA_GATE.waitMs, 90 min) fails the gate first;
       # this timeout bounds the last proof after it. Either outcome is a failure.
       - name: Verify completed current-code qualification after metadata edits
