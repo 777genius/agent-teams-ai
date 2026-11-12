@@ -30,6 +30,7 @@ import {
 } from './nativeGateContext';
 import { nativeLossScenario, nativeReleaseScenario } from './nativeGateRawScenarios';
 import { runNativePendingWriteGate } from './nativePendingWriteGate';
+import { nativeFacadeScenario } from './nativeFacadeScenario';
 
 async function preResumeCancellation(context: GateContext): Promise<void> {
   const { broker, fixture, owner, marker, spec, track, retain, phase } = context;
@@ -453,6 +454,8 @@ export async function runNativeGate(
     );
     phase('complete');
     await runScenario('pre-resume-cancel', () => preResumeCancellation(context));
+    await runScenario('facade-stdio', () => nativeFacadeScenario(context, false, sentinel));
+    await runScenario('facade-cancel', () => nativeFacadeScenario(context, true, sentinel));
     for (const mode of ['tree', 'root-first'] as const)
       await runScenario(mode, () => treeScenario(context, mode, sentinel));
     for (const mode of ['flood', 'breakaway'] as const)
@@ -496,6 +499,8 @@ export async function runNativeGate(
           'blocked-output-independent-stop',
           'breakaway-denied',
           'pre-resume-cancel-first-nonce',
+          'facade-private-stdin-after-native-owner-tail-exit',
+          'facade-pre-resume-cancel-no-private-input',
           'birth-failure-unknown-first-nonce',
           'owner-eof',
           'accounting-failure-latched-unknown-distinct-reconciliation',

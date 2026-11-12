@@ -24,7 +24,7 @@ static PROCESS_INFORMATION child(const std::wstring& executable,const std::wstri
 int wmain(int argc,wchar_t** argv) {
   if(argc<2) return 22;
   std::wstring mode=argv[1];
-  if(mode==L"tree"||mode==L"root-first"||mode==L"flood"||mode==L"breakaway") {
+  if(mode==L"tree"||mode==L"root-first"||mode==L"flood"||mode==L"breakaway"||mode==L"stdio") {
     // The target-only first observable effect precedes child creation/output/scenario work.
     if(argc!=4||wcslen(argv[3])!=36) return 31;
     HANDLE marker=CreateFileW(argv[2],GENERIC_WRITE,0,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);
@@ -46,6 +46,26 @@ int wmain(int argc,wchar_t** argv) {
   }
   if(mode==L"leaf") { Sleep(60000); return 0; }
   if(mode==L"sentinel") { std::puts("sentinel"); std::fflush(stdout); Sleep(60000); return 0; }
+  if(mode==L"stdio") {
+    char bytes[8192]; DWORD count=0;
+    for(;;) {
+      if(!ReadFile(GetStdHandle(STD_INPUT_HANDLE),bytes,sizeof(bytes),&count,nullptr)) {
+        if(GetLastError()!=ERROR_BROKEN_PIPE) return 39;
+        break;
+      }
+      if(!count) break;
+      DWORD offset=0;
+      while(offset<count) {
+        DWORD written=0;
+        if(!WriteFile(GetStdHandle(STD_OUTPUT_HANDLE),bytes+offset,count-offset,&written,nullptr)||!written) return 38;
+        offset+=written;
+      }
+    }
+    const char output[]="TEST native stdout tail\n", error[]="TEST native stderr tail\n";
+    if(!WriteFile(GetStdHandle(STD_OUTPUT_HANDLE),output,sizeof(output)-1,&count,nullptr)||count!=sizeof(output)-1) return 40;
+    if(!WriteFile(GetStdHandle(STD_ERROR_HANDLE),error,sizeof(error)-1,&count,nullptr)||count!=sizeof(error)-1) return 41;
+    return 7;
+  }
   std::vector<wchar_t> path(32768);
   auto n=GetModuleFileNameW(nullptr,path.data(),static_cast<DWORD>(path.size()));
   if(!n||n>=path.size()) return 26;

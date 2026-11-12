@@ -9,6 +9,8 @@ type GateScenario =
   | 'bootstrap'
   | 'sentinel'
   | 'pre-resume-cancel'
+  | 'facade-stdio'
+  | 'facade-cancel'
   | 'tree'
   | 'root-first'
   | 'flood'

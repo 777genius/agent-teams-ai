@@ -75,6 +75,9 @@ Darwin x64/ARM64 и Linux x64 сохраняют прежние маршруты
 Первый implementation slice: существующий broker core вынесен в Host package, Main paths переэкспортируют его.
 Host build, tooling typecheck и **45 existing protocol/gate tests PASS**. Wire/native behaviour не изменялся;
 SDK facade, product wiring и Windows/native qualification остаются следующим срезом.
+Второй срез добавляет structural SDK facade и сценарий в existing native gate: **5 facade + 45 protocol tests PASS**,
+Host build/tooling typecheck PASS. Проверка Windows x64/ARM64 запускается отдельно на опубликованном SHA;
+Node 24.21 добавлен к существующим Node 26/Electron gates. Provider wiring ещё не завершён.
 
 Сохраняется `CapturedProcess` и существующие provider adapters; новый supervisor/framework не вводится.
 Предпочтительный кандидат после дополнительного R3 — существующий atomic owned-process broker с его target stdio;
