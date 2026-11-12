@@ -58,6 +58,7 @@ export async function startOpenCodeModel(
     holdInitialTurnResponse?: boolean;
     principalId?: () => string;
     selectedModel?: { id: string; effort?: string };
+    selectedOutputTokens?: number;
     selectedConfiguration?: { scope: string };
   } = {}
 ) {
@@ -85,6 +86,7 @@ export async function startOpenCodeModel(
     priorTurn: boolean;
     requestedModel?: string;
     requestedEffort?: string;
+    requestedOutputTokens?: number;
     priorNativeToolIds?: string[];
     visibleReplyContract?: boolean;
     incomingMessageId?: string;
@@ -121,6 +123,9 @@ export async function startOpenCodeModel(
         assert.equal(body.reasoning_effort, options.selectedModel.effort,
           'actual native request applies the selected named variant');
       }
+      if (options.selectedOutputTokens !== undefined)
+        assert.equal(body.max_tokens, options.selectedOutputTokens,
+          'actual native request uses the saved selected-model output limit');
       if (options.selectedConfiguration) {
         assert.equal(body.test_config_scope, options.selectedConfiguration.scope,
           'actual native request retains its original private model body');
@@ -335,6 +340,7 @@ export async function startOpenCodeModel(
         priorTurn: JSON.stringify(messages).includes('OPENCODE_TEAM_ONE'),
         ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
         ...(typeof body.reasoning_effort === 'string' ? { requestedEffort: body.reasoning_effort } : {}),
+        ...(options.selectedOutputTokens === undefined ? {} : { requestedOutputTokens: Number(body.max_tokens) }),
         ...(options.captureHistoryMarkers ? { priorNativeToolIds: messages.flatMap(message =>
           Array.isArray(message.tool_calls) ? message.tool_calls.map(record)
             .filter(call => typeof call.id === 'string' && /^TEST_OPENCODE_TEAM_ONE_[0-6]$/.test(call.id))

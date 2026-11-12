@@ -536,6 +536,8 @@ jobs:
               { providerId: 'TEST-local', modelId: 'TEST-model-B', variant: 'high' });
             assert.deepEqual(r.configurationSelection,
               { scope: 'project', original: 'project-A', later: 'project-B' });
+            assert.deepEqual(r.preferencesSelection,
+              { nativeDefault: 'TEST-local/TEST-model', appDefault: 'TEST-local/TEST-model-B' });
             assert.deepEqual(r.modelFailures, []);
             assert.equal(r.digests.bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
             assert.equal(r.digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);

@@ -397,6 +397,11 @@ export async function prepareDesktopCapturedTeam(
         if (!connection) return denied;
         const isCurrent = () =>
           isLatest() && current() && original.feature.authorizeHandle(contextId, connection.handle);
+        const requestedProviders = [capturedRequest.providerId, ...(capturedRequest.providerIds ?? []),
+          ...(capturedRequest.modelChecks ?? []).map(row => row.providerId),
+          ...(capturedRequest.selectedModelChecks ?? []).map(row => row.providerId)];
+        if (capturedRequest.cwd && requestedProviders.includes('opencode'))
+          await original.feature.refreshLaunchConfiguration(contextId, capturedRequest.cwd, { isCurrent }, connection.handle);
         return await prepareCapturedTeamModels({
           handle: connection.handle,
           request: capturedRequest,

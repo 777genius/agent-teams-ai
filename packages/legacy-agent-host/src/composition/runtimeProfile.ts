@@ -8,6 +8,7 @@ import { hasUntrustedOpenCodeBinaryOverride } from './openCodeV2Environment.js';
 import { isCanonicalOpenCodeV2Directory } from './openCodeV2StaticPreflight.js';
 import { openCodeV2EmbeddedProfileSchema } from './openCodeV2EmbeddedProfile.js';
 import { capturedMcpServersSchema } from '../mcp-catalog/capturedServer.js';
+import { openCodeManagedPreferencesSchema } from './openCodeManagedPreferences.js';
 
 const id = z.string().min(1).max(256);
 const path = nativeProfilePathSchema;
@@ -147,6 +148,7 @@ const opencode = common
     protocolRevision: z.enum(['1.18.35', '1.19.4', '2.0.0', '2.0.21', '2.1.4']),
     nativeGeneration: z.literal('v2').optional(),
     embedded: openCodeV2EmbeddedProfileSchema.optional(),
+    managedPreferences: openCodeManagedPreferencesSchema.optional(),
     mcpPolicyPlugin: z
       .object({ path, sha256: z.string().regex(/^[a-f0-9]{64}$/) })
       .strict()

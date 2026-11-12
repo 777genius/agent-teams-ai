@@ -2,6 +2,9 @@ import { isAbsolute, resolve } from 'node:path';
 import { z } from 'zod';
 import { openCodeV2EmbeddedProfileSchema } from './openCodeV2EmbeddedProfile.js';
 import { openCodeConfigurationReferenceSchema, openCodeConfiguredModelSchema } from './openCodeConfigurationReference.js';
+import { openCodeManagedPreferencesSchema } from './openCodeManagedPreferences.js';
+export { openCodeManagedPreferencesSchema, openCodeManagedPreferencesDigest } from './openCodeManagedPreferences.js';
+export type { OpenCodeManagedPreferences } from './openCodeManagedPreferences.js';
 import { runtimeSourceRefusalSchema } from '../management/runtimeSourceVerification.js';
 export { runtimeSourceRefusalSchema };
 export type { RuntimeSourceRefusal } from '../management/runtimeSourceVerification.js';
@@ -65,6 +68,7 @@ export const runtimeSourceCandidateSchema = z
     nativeCli: nativeCli.optional(),
     openCodeConfiguration: openCodeConfigurationReferenceSchema.optional(),
     openCodeDefault: openCodeConfiguredModelSchema.optional(),
+    openCodePreferences: openCodeManagedPreferencesSchema.optional(),
   })
   .strict();
 export type RuntimeSourceCandidate = z.infer<typeof runtimeSourceCandidateSchema>;
@@ -95,6 +99,8 @@ export const runtimeSourceSummarySchema = z
     engineVersion: id.optional(),
     /** Read-only freshness check; no source paths, contents or credentials leave the Host. */
     configurationCurrent: z.boolean().optional(),
+    /** Safe preference values remain private to the captured recipe. */
+    preferencesDigest: hash.optional(),
   })
   .strict();
 export type RuntimeSourceSummary = z.infer<typeof runtimeSourceSummarySchema>;
@@ -125,6 +131,7 @@ export const publishRuntimeSourceSchema = z
 export type PublishRuntimeSource = z.infer<typeof publishRuntimeSourceSchema>;
 export const refreshRuntimeConfigurationSchema = z.object({
   grant: runtimeSourceGrantSchema, commandId: id, expectedRevision: hash,
+  openCodePreferences: openCodeManagedPreferencesSchema.optional(),
 }).strict();
 export type RuntimeConfigurationRefreshIntent = Omit<
   z.infer<typeof refreshRuntimeConfigurationSchema>, 'grant'>;

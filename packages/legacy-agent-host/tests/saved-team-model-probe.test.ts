@@ -804,6 +804,52 @@ for (const provider of ['claude', 'codex', 'opencode'] as const)
       assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
     });
 
+test('V1 saved Default rebases only its proven limit overlay and resets the native provider/model pair', (t) => {
+  const f = fixture(t);
+  selectProvider(f, 'opencode');
+  const template = f.profile.runtime!.providerTemplates![0]!;
+  assert(template.provider === 'opencode');
+  template.model = 'default';
+  template.managedPreferences = { defaultModelId: 'TEST-local/default', modelLimitOverrides: {
+    'TEST-local/default': { contextTokens: 32000, outputTokens: 1000 },
+    'TEST-other/chosen': { contextTokens: 64000, outputTokens: 2000 },
+  } };
+  template.environment.OPENCODE_CONFIG_CONTENT = JSON.stringify({ provider: {
+    'TEST-local': { models: { default: { limit: { context: 9000, output: 90 } } } },
+    'TEST-other': { models: { chosen: { limit: { context: 8000, output: 80 } } } },
+  }, testUnrelated: 'TEST-preserved' });
+  const roster = f.team.connection.readRoster();
+  f.team.connection.replaceRoster({
+    commandId: 'TEST-qualified-nondefault', expectedRevision: roster.revision,
+    savedSettings: { ...roster.savedSettings, cwd: f.root, providerId: 'opencode',
+      model: 'TEST-other/chosen', syncModelsWithLead: false, limitContext: true },
+    members: roster.members.filter(row => row.role === 'member').map(row => ({ name: row.name })),
+  });
+  const input = f.selection();
+  const original = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+  assert.equal(original.model, 'chosen');
+  assert.equal(original.providerId, 'TEST-other');
+  const originalConfig = JSON.parse(original.profile!.environment.OPENCODE_CONFIG_CONTENT!);
+  assert.deepEqual(originalConfig.provider['TEST-other'].models.chosen.limit, { context: 64000, output: 2000 });
+  const { effort: _effort, ...withoutEffort } = input;
+  const fresh = f.runtime.captureLaunchModelProbe('TEST-imported-team', {
+    ...withoutEffort, model: '__provider_default__',
+    draft: { providerId: 'opencode', target: { kind: 'lead' }, workspace: f.root },
+  }, 'start');
+  assert.equal(fresh.model, 'default');
+  assert.equal(fresh.providerId, 'TEST-local');
+  const config = JSON.parse(fresh.profile!.environment.OPENCODE_CONFIG_CONTENT!);
+  assert.deepEqual(config.provider['TEST-local'].models.default.limit, { context: 32000, output: 1000 });
+  assert.deepEqual(config.provider['TEST-other'].models.chosen.limit, { context: 8000, output: 80 });
+  assert.equal(config.testUnrelated, 'TEST-preserved');
+  assert.equal(fresh.profile?.accountBinding, original.profile?.accountBinding);
+  assert.equal(fresh.isCurrent(), true);
+  assert.equal(original.isCurrent(), true);
+  assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), [], 'inspection does not allocate a Team');
+  template.environment.TEST_UNRELATED_CHANGE = 'TEST-new-private-value';
+  assert.equal(fresh.isCurrent(), false, 'only the derived selected limits are normalized');
+});
+
 test('V2 draft Default preserves the native session model and rejects drifted private defaults', (t) => {
   const f = fixture(t);
   const base = f.profile.runtime!.providerTemplates![0]!;

@@ -13,6 +13,7 @@ import { BackendRoutingError } from '../application/backendBinding';
 import type { CapturedHostClient } from './CapturedHostClient';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 import type {
+  OpenCodeManagedPreferences,
   RuntimeConfigurationRefreshIntent,
   RuntimeSourceGrant,
   RuntimeSourcePublication,
@@ -30,6 +31,7 @@ export class CapturedRuntimeSourceError extends BackendRoutingError {
 
 /** Private Main port for an existing descriptor grant; it is never exposed through generic management invoke. */
 export interface CapturedRuntimeSources {
+  capturePreferences?(): Promise<OpenCodeManagedPreferences>;
   current(): Promise<RuntimeSourceSummary>;
   retained(): Promise<RuntimeSourceSummary[]>;
   publish(input: RuntimeSourcePublishIntent): Promise<RuntimeSourcePublication>;
@@ -44,6 +46,7 @@ export function captureRuntimeSources(options: {
   start(): Promise<unknown>;
   ownerAvailable(): boolean;
   foregroundCurrent(): boolean;
+  capturePreferences?(): Promise<OpenCodeManagedPreferences>;
 }): CapturedRuntimeSources {
   const grant = runtimeSourceGrantSchema.parse(structuredClone(options.grant));
   const summary = (raw: unknown) => {
@@ -102,6 +105,7 @@ export function captureRuntimeSources(options: {
     return reply.value;
   };
   return Object.freeze({
+    ...(options.capturePreferences ? { capturePreferences: options.capturePreferences } : {}),
     current: async () => summary(await request('current')),
     retained: async () =>
       runtimeSourceSummarySchema

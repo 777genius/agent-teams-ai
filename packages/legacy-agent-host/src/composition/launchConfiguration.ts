@@ -3,6 +3,8 @@ import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { runtimeMemberProfileSchema } from './runtimeProfile.js';
 import { selectOpenCodeV2LaunchModel } from './openCodeV2ModelSelection.js';
+import { withOpenCodeModelLimits } from '../adapters/providers/withOpenCodeModelLimits.js';
+import { openCodeManagedPreferencesDigest, selectedOpenCodeManagedLimits } from './openCodeManagedPreferences.js';
 import type { RuntimeMemberProfile } from './runtimeProfile.js';
 
 const id = z
@@ -80,6 +82,15 @@ export function applyLaunchConfiguration(
       prefix && selected.model.startsWith(prefix)
         ? selected.model.slice(prefix.length)
         : selected.model;
+    if (profile.provider === 'opencode' && selected.model.includes('/') &&
+        !selected.model.startsWith(prefix!) && selected.model !== base.model) {
+      const separator = selected.model.indexOf('/');
+      if (profile.nativeOptions.providerId.includes('/') || separator < 1)
+        throw new TeamLaunchError('invalid', 'launch-option-unsupported');
+      profile.nativeOptions.providerId = selected.model.slice(0, separator);
+      profile.model = selected.model.slice(separator + 1);
+      delete profile.nativeOptions.variant;
+    }
   }
   if (profile.provider === 'claude') {
     if (selected.effort === 'none' || selected.effort === 'minimal' || selected.effort === 'ultra')
@@ -127,6 +138,14 @@ export function applyLaunchConfiguration(
       };
   }
 
-  profile.configRevision = `launch-${runtimeDigest({ revision: base.configRevision, options: selected })}`;
+  const preferences = profile.provider === 'opencode' ? profile.managedPreferences : undefined;
+  if (profile.provider === 'opencode' && profile.nativeGeneration !== 'v2') {
+    const limits = selectedOpenCodeManagedLimits(preferences, `${profile.nativeOptions.providerId}/${profile.model}`);
+    if (limits) profile.environment = withOpenCodeModelLimits(profile, {
+      providerId: profile.nativeOptions.providerId, modelId: `${profile.nativeOptions.providerId}/${profile.model}`, limits,
+    }).environment;
+  }
+  profile.configRevision = `launch-${runtimeDigest({ revision: base.configRevision, options: selected,
+    ...(preferences ? { preferences: openCodeManagedPreferencesDigest(preferences) } : {}) })}`;
   return runtimeMemberProfileSchema.parse(profile);
 }

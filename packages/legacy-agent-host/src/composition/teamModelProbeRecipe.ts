@@ -2,6 +2,8 @@ import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { resolveCapturedRuntimeRecipe, resolveRuntimeRecipe, runtimeProviderId } from './runtimeRecipe.js';
 import { applyLaunchConfiguration } from './launchConfiguration.js';
+import { selectedOpenCodeManagedLimits } from './openCodeManagedPreferences.js';
+import { withOpenCodeModelLimits } from '../adapters/providers/withOpenCodeModelLimits.js';
 import type { HostedTeam } from './MemberEntry.js';
 import type { RuntimeMemberProfile, RuntimeProfile } from './runtimeProfile.js';
 import type { TeamModelProbeSelection } from './teamLaunchModelProbe.js';
@@ -43,7 +45,9 @@ export function resolveTeamModelProbeRecipe(options: {
     throw new TeamLaunchError('conflict', 'probe-draft-target');
   const sameProvider = saved && runtimeProviderId(saved) === draft.providerId;
   const recipe = sameProvider ? structuredClone(saved) : privateRecipe();
-  if (sameProvider && (input.model === '__provider_default__' || input.effort === undefined)) {
+  const savedV1Preferences = sameProvider && saved.provider === 'opencode' &&
+    saved.nativeGeneration !== 'v2' && saved.managedPreferences;
+  if (sameProvider && (input.model === '__provider_default__' || input.effort === undefined || savedV1Preferences)) {
     const defaults = privateRecipe();
     const identity = (profile: RuntimeMemberProfile) =>
       runtimeDigest({
@@ -58,6 +62,7 @@ export function resolveTeamModelProbeRecipe(options: {
         ...(profile.provider === 'opencode'
           ? {
               endpoint: profile.endpoint,
+              ...(profile.managedPreferences ? { managedPreferences: profile.managedPreferences } : {}),
               ...(profile.nativeGeneration === 'v2'
                 ? {
                     nativeGeneration: profile.nativeGeneration,
@@ -79,17 +84,29 @@ export function resolveTeamModelProbeRecipe(options: {
             }
           : {}),
       });
-    if (identity(defaults) !== identity(saved))
+    let expected = defaults;
+    if (savedV1Preferences && saved.provider === 'opencode' && defaults.provider === 'opencode') {
+      const modelId = `${saved.nativeOptions.providerId}/${saved.model}`;
+      const limits = selectedOpenCodeManagedLimits(defaults.managedPreferences, modelId);
+      if (limits) expected = withOpenCodeModelLimits(defaults, {
+        providerId: saved.nativeOptions.providerId, modelId, limits,
+      });
+    }
+    if (identity(expected) !== identity(saved))
       throw new TeamLaunchError('conflict', 'probe-default-recipe');
+    // Rebase only a proven derived V1 limit overlay, so changing the selected
+    // model never carries the previous model's application override forward.
+    if (savedV1Preferences) recipe.environment = structuredClone(defaults.environment);
     // An externally owned old V2 session cannot change its pair. A fresh embedded
     // probe uses the original private default without rebinding the account/engine.
     if (input.model === '__provider_default__' &&
         !(recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2' && !recipe.embedded))
       recipe.model = defaults.model;
     if (input.model === '__provider_default__' && recipe.provider === 'opencode' &&
-        defaults.provider === 'opencode' && recipe.embedded && defaults.embedded) {
+        defaults.provider === 'opencode' &&
+        (recipe.nativeGeneration !== 'v2' || (recipe.embedded && defaults.embedded))) {
       recipe.nativeOptions.providerId = defaults.nativeOptions.providerId;
-      recipe.embedded = structuredClone(defaults.embedded);
+      if (defaults.embedded) recipe.embedded = structuredClone(defaults.embedded);
       delete recipe.nativeOptions.variant;
       if (defaults.nativeOptions.variant !== undefined)
         recipe.nativeOptions.variant = defaults.nativeOptions.variant;

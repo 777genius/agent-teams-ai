@@ -17,6 +17,9 @@ import { acquireProfileWriterLease } from '../dist/adapters/profile/ProfileWrite
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { RuntimeSourceNativeVersion } from '../dist/adapters/providers/RuntimeSourceNativeVersion.js';
 import { RuntimeSourceIndex } from '../dist/composition/RuntimeSourceIndex.js';
+import { applyLaunchConfiguration } from '../dist/composition/launchConfiguration.js';
+import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
+import { teamModelProbeProfile } from '../dist/composition/teamLaunchModelProbe.js';
 import { assertRuntimeSourceNativePolicy } from '../dist/composition/runtimeSourceQualification.js';
 import { assertRuntimeSourceQualification } from '../dist/composition/verifyRuntimeSourceCandidate.js';
 import { providerManagementProfileSchema } from '../dist/management/profile.js';
@@ -150,6 +153,90 @@ function fixture(t: TestContext, provider: 'codex' | 'claude' | 'opencode' = 'co
     reads: () => (existsSync(marker) ? readFileSync(marker, 'utf8').trim().split('\n') : []),
   };
 }
+
+test('V1 preferences publish once, retain lost-ACK A and apply only the actual selected model limits', async (t) => {
+  const f = fixture(t, 'opencode');
+  const limits = { contextTokens: 32000, outputTokens: 1000 };
+  const preferencesA = { defaultModelId: 'TEST-local/default', modelLimitOverrides: {
+    'TEST-local/default': limits,
+    'TEST-other/chosen': { contextTokens: 64000, outputTokens: 2000 },
+  } };
+  const preferencesB = { defaultModelId: 'TEST-other/chosen', modelLimitOverrides: {} };
+  const input = { grant: f.grant, commandId: 'TEST-preferences-A',
+    expectedRevision: f.index.current({ grant: f.grant }).revision,
+    openCodePreferences: preferencesA };
+  const write = FileManagementCommandStore.prototype.write;
+  const fault = t.mock.method(FileManagementCommandStore.prototype, 'write',
+    function (this: FileManagementCommandStore, row: Parameters<typeof write>[0]) {
+      if (row.commandId === input.commandId && row.phase === 'published')
+        throw new Error('TEST preferences lost ACK');
+      write.call(this, row);
+    });
+  await assert.rejects(f.index.refreshConfiguration(input, admitted => {
+    assert(admitted.provider === 'opencode');
+    assert.equal(JSON.parse(admitted.environment.OPENCODE_CONFIG_CONTENT!).model, preferencesA.defaultModelId);
+  }), /TEST preferences lost ACK/);
+  fault.mock.restore();
+  const cold = new RuntimeSourceIndex(f.profile, f.assertWriter);
+  const original = cold.lookup({ grant: f.grant, commandId: input.commandId });
+  assert.equal(original?.phase, 'published');
+  assert.deepEqual(await cold.refreshConfiguration({ ...input, openCodePreferences: preferencesB },
+    () => assert.fail('original retry must not re-admit B')), original);
+  const seed = runtimeMemberProfileSchema.parse({
+    provider: 'opencode', protocolRevision: '1.19.4',
+    teamId: 'TEST-team', memberId: 'TEST-member', principalId: 'TEST-principal',
+    sessionId: 'TEST-session', generation: 1, configRevision: 'TEST-config',
+    accountBinding: 'TEST-account', cwd: f.root, endpoint: 'http://127.0.0.1:19182',
+    executable: f.profile.management![0]!.executable, model: 'original',
+    environment: { HOME: f.root, PATH: '/usr/bin:/bin', XDG_CONFIG_HOME: join(f.root, 'config'),
+      XDG_DATA_HOME: join(f.root, 'config'), XDG_CACHE_HOME: join(f.root, 'config'), OPENCODE_CONFIG_CONTENT: JSON.stringify({
+      small_model: 'TEST-seed/original', testPreserved: 'TEST-native-config',
+      provider: {
+        'TEST-local': { models: { default: { limit: { context: 9000, output: 90 }, name: 'TEST-default' } } },
+        'TEST-other': { models: { chosen: { limit: { context: 8000, output: 80 }, name: 'TEST-chosen' } } },
+      },
+    }) },
+    nativeOptions: { providerId: 'TEST-seed', agent: 'TEST-agent', instructions: 'TEST-context' },
+    limits: { queuedInputs: 1, inputBytes: 4096, outputBytes: 8192, outputEvents: 100,
+      pendingInteractions: 1, timeoutMs: 1000 },
+  });
+  const reference = { sourceId: f.grant.targetId, revision: original!.selection!.revision };
+  const scope = { teamId: 'TEST-team', projectId: 'TEST-context', workspaceId: 'TEST-context' };
+  const capturedA = cold.resolveRecipe(reference, scope, f.root, seed);
+  const defaultLaunch = applyLaunchConfiguration(capturedA, {});
+  assert(defaultLaunch.provider === 'opencode');
+  assert.equal(defaultLaunch.nativeOptions.providerId, 'TEST-local');
+  assert.equal(defaultLaunch.model, 'default');
+  const defaultConfig = JSON.parse(defaultLaunch.environment.OPENCODE_CONFIG_CONTENT!);
+  assert.deepEqual(defaultConfig.provider['TEST-local'].models.default.limit, { context: 32000, output: 1000 });
+  assert.deepEqual(defaultConfig.provider['TEST-other'].models.chosen.limit, { context: 8000, output: 80 });
+  assert.equal(defaultConfig.testPreserved, 'TEST-native-config');
+  const explicit = applyLaunchConfiguration(capturedA, { model: 'TEST-other/chosen' });
+  assert(explicit.provider === 'opencode');
+  assert.equal(explicit.nativeOptions.providerId, 'TEST-other');
+  assert.equal(explicit.model, 'chosen');
+  const selectedConfig = JSON.parse(explicit.environment.OPENCODE_CONFIG_CONTENT!);
+  assert.deepEqual(selectedConfig.provider['TEST-other'].models.chosen.limit, { context: 64000, output: 2000 });
+  assert.deepEqual(selectedConfig.provider['TEST-local'].models.default.limit, { context: 9000, output: 90 });
+  const probe = teamModelProbeProfile(explicit);
+  assert(probe.provider === 'opencode');
+  assert.deepEqual(probe.managedPreferences, preferencesA);
+  assert.equal(probe.environment.OPENCODE_CONFIG_CONTENT, explicit.environment.OPENCODE_CONFIG_CONTENT);
+  const next = await cold.refreshConfiguration({ ...input, commandId: 'TEST-preferences-B',
+    expectedRevision: reference.revision, openCodePreferences: preferencesB }, () => {});
+  assert.notEqual(next.selection!.revision, reference.revision);
+  assert.deepEqual(cold.resolveRecipe(reference, scope, f.root, seed), capturedA);
+  assert.deepEqual(await cold.refreshConfiguration(input, () => assert.fail('retained A')), original);
+  await assert.rejects(cold.refreshConfiguration({ ...input, commandId: 'TEST-preferences-invalid',
+    expectedRevision: next.selection!.revision, openCodePreferences: {
+      defaultModelId: `${'x'.repeat(257)}/model`, modelLimitOverrides: {},
+    } }, () => assert.fail('unrepresentable default')));
+  assert.equal(f.store.read('TEST-preferences-invalid'), undefined, 'invalid default reserves no recovery command');
+  assert.equal(cold.current({ grant: f.grant }).revision, next.selection!.revision);
+  assert.deepEqual(f.reads(), [], 'preference capture never starts the model or version executable');
+  await cold.close();
+  await f.index.close();
+});
 
 test(
   'native-only installer intent shares the exact full-candidate receipt and replay identity',
