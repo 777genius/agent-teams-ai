@@ -17,6 +17,7 @@ import { BackendOwnerRouter } from '../application/BackendOwnerRouter';
 import { createCapturedHostBackup } from '../application/createCapturedHostBackup';
 import { prepareCreatedHostTeam } from '../application/createdHostTeam';
 import { ForegroundModelChecks } from '../application/ForegroundModelChecks';
+import { refreshCapturedRuntimeConfiguration } from '../application/refreshCapturedRuntimeConfiguration';
 import { CapturedHostClient } from '../infrastructure/CapturedHostClient';
 import { captureProviderManagement } from '../infrastructure/CapturedProviderManagement';
 import { CapturedRosterCommands } from '../infrastructure/CapturedRosterCommands';
@@ -685,7 +686,7 @@ export class DesktopBackendFeature {
     return this.captureManagementTarget(
       selected,
       guard,
-      sources ? await sources.current() : undefined
+      sources ? await refreshCapturedRuntimeConfiguration(sources) : undefined
     );
   }
 

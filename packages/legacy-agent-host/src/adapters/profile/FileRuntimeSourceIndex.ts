@@ -30,6 +30,7 @@ export const runtimeSourceRecordSchema = z
     commandId: z.string().min(1).max(256),
     grant: runtimeSourceGrantSchema,
     candidate: runtimeSourceCandidateSchema,
+    intent: z.literal('configuration').optional(),
   })
   .strict();
 export type RuntimeSourceRecord = z.infer<typeof runtimeSourceRecordSchema>;

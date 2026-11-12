@@ -319,6 +319,50 @@ test(
     assert.deepEqual(await cold.publish(native, () => assert.fail('native replay')), selected);
     assert.deepEqual(await cold.publish(full, () => assert.fail('full replay')), selected);
     assert.deepEqual(f.reads(), ['TEST-v2-first', 'TEST-v2-next', 'TEST-v2-later']);
+
+    const configPath = join(f.root, 'opencode.json');
+    const writeConfig = (model: string) => writeFileSync(configPath, JSON.stringify({
+      model: `TEST-provider/${model}#high`,
+      provider: { 'TEST-provider': { options: { apiKey: 'TEST-config-secret' },
+        models: { [model]: { limit: { context: 32000 }, variants: { high: { reasoningEffort: 'high' } } } },
+      } },
+    }), { mode: 0o600 });
+    writeConfig('TEST-config-A');
+    assert.equal(cold.current({ grant: f.grant }).configurationCurrent, false);
+    const refresh = { grant: f.grant, commandId: 'TEST-config-refresh',
+      expectedRevision: cold.current({ grant: f.grant }).revision };
+    const write = FileManagementCommandStore.prototype.write;
+    const fault = t.mock.method(FileManagementCommandStore.prototype, 'write',
+      function (this: FileManagementCommandStore, row: Parameters<typeof write>[0]) {
+        if (row.commandId === refresh.commandId && row.phase === 'published')
+          throw new Error('TEST config lost ACK');
+        write.call(this, row);
+      });
+    await assert.rejects(cold.refreshConfiguration(refresh, admitted => {
+      assert(admitted.provider === 'opencode');
+      assert.deepEqual(admitted.nativeModel, { providerId: 'TEST-provider', modelId: 'TEST-config-A' });
+      assert.equal(admitted.variant, 'high');
+      assert.equal(admitted.embedded?.configurationSource?.scope, 'project');
+      assert.ok(!JSON.stringify(admitted).includes('TEST-config-secret'));
+    }), /TEST config lost ACK/);
+    fault.mock.restore();
+    const afterAckLoss = new RuntimeSourceIndex(f.profile, f.assertWriter);
+    const originalRefresh = afterAckLoss.lookup({ grant: f.grant, commandId: refresh.commandId });
+    assert.equal(originalRefresh?.phase, 'published');
+    assert.equal(afterAckLoss.current({ grant: f.grant }).configurationCurrent, true);
+    writeConfig('TEST-config-B');
+    assert.equal(afterAckLoss.current({ grant: f.grant }).configurationCurrent, false);
+    assert.deepEqual(await afterAckLoss.refreshConfiguration(refresh, () => assert.fail('config replay')),
+      originalRefresh, 'lost ACK recovers only original publication even after its source changes');
+    const next = await afterAckLoss.refreshConfiguration({ ...refresh, commandId: 'TEST-config-next',
+      expectedRevision: originalRefresh!.selection!.revision }, admitted => {
+      assert(admitted.provider === 'opencode');
+      assert.equal(admitted.nativeModel?.modelId, 'TEST-config-B');
+    });
+    assert.notEqual(next.selection?.revision, originalRefresh?.selection?.revision);
+    assert.deepEqual(afterAckLoss.lookup({ grant: f.grant, commandId: refresh.commandId }), originalRefresh);
+    assert.ok(!readFileSync(join(f.root, 'runtime-sources', 'index.json'), 'utf8').includes('TEST-config-secret'));
+    assert.equal(f.reads().length, 5, 'two publications verify native CLI once; replay has no process effect');
     await f.index.close();
   }
 );

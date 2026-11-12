@@ -1,6 +1,6 @@
 # 07. Настройки провайдера, лимиты, skills, MCP и plugins
 
-Статус: план реализации; production не изменён, новый native proof не выполнен.
+Статус: source capture/publication foundation реализован и проверен; native consumption и G1–G4 ещё открыты.
 Цель: сохранить применимые возможности существующего frontend, используя уже выделенных владельцев.
 Новая архитектура не даёт основания игнорировать сохранённую настройку или объявить рабочий control unsupported.
 Публикация source/profile revisions целиком принадлежит [06](06-runtime-installation-profiles.md).
@@ -241,6 +241,16 @@ Unit список сокращён до новых опасных mapping/source
 - Source candidate для config-only публикации сохраняет прежний executable/engine/source kind; для исходного seed допустим `captured`, без выдуманного `bundled/path` provenance. Existing installer native selection сохраняет свой прежний набор source kinds.
 - Выделенный read-only mapper сначала проверяется на official `@opencode/schema@2.1.4` (registry metadata/pack/tar SHA512 совпадают). Donor `2.0.32` validator не подключается к новой схеме. Raw selected values остаются только private process input; index хранит references.
 - Native package должен присутствовать в выбранном verified engine graph; capture config не разрешает ambient install/import. Arbitrary credential `{file:...}` не становится поддержанным от строки в JSON: existing app-owned gateway marker требует отдельной квалификации, остальные сохраняют доказанный strict-source предел.
+
+### R6 — проверенный source foundation и следующая native граница
+
+- `OpenCodeConfigurationSource` фиксирует global/project JSONC sources; `openCodeSelectedProviderConfiguration` валидирует selected aliases/limits/variants по точной схеме 2.1.4. В source record остаются references/digests и структурированный default provider/model/variant.
+- `RuntimeSourceIndex.refreshConfiguration` использует существующий receipt и original publication snapshot. Проверен lost ACK после pointer publish: cold retry возвращает A даже после изменения файла на B; новый command публикует B, retained A не переназначается. Malformed JSONC не становится пустым config.
+- `refreshCapturedRuntimeConfiguration` подключён в существующий Main management capture. Неприменимые providers сохраняют прежний путь; актуальные references не создают новую revision при повторном Refresh. Публикация source сама по себе ещё не доказывает native model request.
+- Проверки foundation: Host build/testtypes и Main focused TypeScript PASS; 51 focused Host checks, в том числе четыре новых config/codec cases, PASS; source refresh/recovery subset 16/16 и существующий Main/Host source integration 4/4 PASS. Реальный native/Desktop запуск ожидает штатного CI.
+- Повторно прочитан [R1]: launch materializer берёт `snapshot.selectedAuthCredential`; `options.apiKey` лишь требует наличия resolved credential. Доказанного приоритета отличающегося config key нет. До native qualification конфликтующий key должен давать scoped отказ; ни новый credential store, ни silent override не вводятся.
+- Catalog baseline [R1] `materializeOpenCodeV2CatalogScope` импортирует **все declared models выбранного provider**, launch — только выбранный model. Следующая native интеграция сохраняет эту разницу и source fence.
+- Повторный просмотр official 2.1.4 уточнил package boundary: `AISDKNative.rewrite` переводит известные legacy SDKs (включая `@ai-sdk/openai-compatible`) в bundled native providers; **оставшийся dynamic SDK** попадает в loader с `npm.add`. Перед native consumption нужно использовать этот native rewrite, затем exact resolution внутри verified delivery. Не копировать package registry и не подменять SDK вручную; маршрут ambient установки не допускается.
 
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts

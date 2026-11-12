@@ -1,4 +1,5 @@
 import {
+  refreshRuntimeConfigurationSchema,
   runtimeSourceCandidateSchema,
   runtimeSourceGrantSchema,
   runtimeSourceNativeSelectionSchema,
@@ -12,6 +13,7 @@ import { BackendRoutingError } from '../application/backendBinding';
 import type { CapturedHostClient } from './CapturedHostClient';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 import type {
+  RuntimeConfigurationRefreshIntent,
   RuntimeSourceGrant,
   RuntimeSourcePublication,
   RuntimeSourcePublishIntent,
@@ -31,6 +33,7 @@ export interface CapturedRuntimeSources {
   current(): Promise<RuntimeSourceSummary>;
   retained(): Promise<RuntimeSourceSummary[]>;
   publish(input: RuntimeSourcePublishIntent): Promise<RuntimeSourcePublication>;
+  refreshConfiguration(input: RuntimeConfigurationRefreshIntent): Promise<RuntimeSourcePublication>;
   recover(): Promise<RuntimeSourcePublication | null>;
   lookup(commandId: string): Promise<RuntimeSourcePublication | null>;
 }
@@ -47,16 +50,16 @@ export function captureRuntimeSources(options: {
     const selected = runtimeSourceSummarySchema.parse(raw);
     if (
       selected.sourceId !== grant.targetId ||
-      (selected.sourceKind === 'captured'
-        ? selected.profileId !== grant.profileId || selected.configRevision !== grant.configRevision
-        : selected.profileId !== `runtime-source:${selected.revision}` ||
-          selected.configRevision !== `runtime-source:${selected.revision}`)
+      !((selected.sourceKind === 'captured' && selected.profileId === grant.profileId &&
+        selected.configRevision === grant.configRevision) ||
+        (selected.profileId === `runtime-source:${selected.revision}` &&
+          selected.configRevision === `runtime-source:${selected.revision}`))
     )
       throw new BackendRoutingError('hold', 'unknown');
     return selected;
   };
   const request = async (
-    operation: 'current' | 'retained' | 'publish' | 'lookup' | 'recover',
+    operation: 'current' | 'retained' | 'publish' | 'lookup' | 'recover' | 'refreshConfiguration',
     payload: object = {}
   ) => {
     const retained = operation === 'lookup' || operation === 'retained';
@@ -78,7 +81,7 @@ export function captureRuntimeSources(options: {
     const reply = await options.client.request(
       `runtime.source.${operation}`,
       JSON.parse(JSON.stringify({ ...payload, grant })) as JsonValue,
-      { control: operation !== 'publish' && operation !== 'recover' }
+      { control: !['publish', 'recover', 'refreshConfiguration'].includes(operation) }
     );
     check('unknown');
     if (
@@ -130,6 +133,13 @@ export function captureRuntimeSources(options: {
       if (result?.selection) summary(result.selection);
       if (result && result.commandId !== commandId)
         throw new BackendRoutingError('hold', 'unknown');
+      return result;
+    },
+    refreshConfiguration: async (input: RuntimeConfigurationRefreshIntent) => {
+      const captured = refreshRuntimeConfigurationSchema.omit({ grant: true }).parse(structuredClone(input));
+      const result = runtimeSourcePublicationSchema.parse(await request('refreshConfiguration', captured));
+      if (result.selection) summary(result.selection);
+      if (result.commandId !== captured.commandId) throw new BackendRoutingError('hold', 'unknown');
       return result;
     },
     recover: async () => {

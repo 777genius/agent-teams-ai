@@ -1,6 +1,7 @@
 import { isAbsolute, resolve } from 'node:path';
 import { z } from 'zod';
 import { openCodeV2EmbeddedProfileSchema } from './openCodeV2EmbeddedProfile.js';
+import { openCodeConfigurationReferenceSchema, openCodeConfiguredModelSchema } from './openCodeConfigurationReference.js';
 import { runtimeSourceRefusalSchema } from '../management/runtimeSourceVerification.js';
 export { runtimeSourceRefusalSchema };
 export type { RuntimeSourceRefusal } from '../management/runtimeSourceVerification.js';
@@ -57,18 +58,20 @@ export type RuntimeSourceGrant = z.infer<typeof runtimeSourceGrantSchema>;
 /** A source reference only: accounts, credentials, environment and native session IDs stay in the seed. */
 export const runtimeSourceCandidateSchema = z
   .object({
-    sourceKind: z.enum(['bundled', 'app-managed', 'path', 'override']),
+    sourceKind: z.enum(['captured', 'bundled', 'app-managed', 'path', 'override']),
     executable,
     embedded: embeddedDelivery.optional(),
     /** The CLI selecting the runtime generation; for embedded V2 it is not the Bun executor. */
     nativeCli: nativeCli.optional(),
+    openCodeConfiguration: openCodeConfigurationReferenceSchema.optional(),
+    openCodeDefault: openCodeConfiguredModelSchema.optional(),
   })
   .strict();
 export type RuntimeSourceCandidate = z.infer<typeof runtimeSourceCandidateSchema>;
 /** Installer selection without access to the Host's private execution paths. */
 export const runtimeSourceNativeSelectionSchema = z
   .object({
-    sourceKind: runtimeSourceCandidateSchema.shape.sourceKind,
+    sourceKind: z.enum(['bundled', 'app-managed', 'path', 'override']),
     nativeCli,
     embedded: embeddedDelivery.optional(),
   })
@@ -90,6 +93,8 @@ export const runtimeSourceSummarySchema = z
     nativeGeneration: z.enum(['v1', 'v2']).optional(),
     cliVersion: id.optional(),
     engineVersion: id.optional(),
+    /** Read-only freshness check; no source paths, contents or credentials leave the Host. */
+    configurationCurrent: z.boolean().optional(),
   })
   .strict();
 export type RuntimeSourceSummary = z.infer<typeof runtimeSourceSummarySchema>;
@@ -114,9 +119,15 @@ export const publishRuntimeSourceSchema = z
     commandId: id,
     expectedRevision: hash,
     candidate: runtimeSourceCandidateSchema,
+    intent: z.literal('configuration').optional(),
   })
   .strict();
 export type PublishRuntimeSource = z.infer<typeof publishRuntimeSourceSchema>;
+export const refreshRuntimeConfigurationSchema = z.object({
+  grant: runtimeSourceGrantSchema, commandId: id, expectedRevision: hash,
+}).strict();
+export type RuntimeConfigurationRefreshIntent = Omit<
+  z.infer<typeof refreshRuntimeConfigurationSchema>, 'grant'>;
 export const publishRuntimeSourceRequestSchema = z.union([
   publishRuntimeSourceSchema,
   z

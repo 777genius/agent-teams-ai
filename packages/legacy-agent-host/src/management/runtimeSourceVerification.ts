@@ -8,6 +8,8 @@ export const runtimeSourceRefusalSchema = z.enum([
   'native-outcome-unknown',
   'cleanup-unconfirmed',
   'source-changed',
+  'configuration-invalid',
+  'configuration-changed',
 ]);
 export type RuntimeSourceRefusal = z.infer<typeof runtimeSourceRefusalSchema>;
 
