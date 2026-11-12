@@ -2996,7 +2996,7 @@ test('late executable alias during a suspended V2 native probe cannot renew auth
 test('native progress callback cannot expose a V2 lease before its own admission fence settles',
   async () => {
     const { captured, calls } = owner(true);
-    let provider!: ReturnType<typeof createOpenCodeV2MemberProvider>;
+    // eslint-disable-next-line prefer-const -- The initial readiness callback observes the unassigned driver.
     let driver: { checkpoint: () => unknown } | undefined;
     const snapshots: Array<{ ready: boolean; evidence: boolean; checkpoint?: unknown }> = [];
     const capturedContext = {
@@ -3012,7 +3012,7 @@ test('native progress callback cannot expose a V2 lease before its own admission
         });
       },
     };
-    provider = createOpenCodeV2MemberProvider(capturedContext, captured);
+    const provider = createOpenCodeV2MemberProvider(capturedContext, captured);
     const opened = await provider.factory.open(request());
     driver = opened.driver;
     try {
@@ -3088,7 +3088,7 @@ test('pending native V2 re-attestation fences concurrent controls without retiri
     assert.equal(calls.stop, 1, 'only Host seal stops the original native owner');
   });
 
-test('active native V2 polling drains before re-attestation and resumes without sealing the turn',
+test('active native V2 polling drains before re-attestation and normal close preserves known cleanup',
   { timeout: 10000 }, async () => {
     const within = async <T>(work: Promise<T>): Promise<T> => {
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -3106,18 +3106,27 @@ test('active native V2 polling drains before re-attestation and resumes without 
     const probeEntered = Promise.withResolvers<void>();
     const releaseProbe = Promise.withResolvers<void>();
     const resumedPoll = Promise.withResolvers<void>();
+    const closingRead = Promise.withResolvers<void>(), releaseClosingRead = Promise.withResolvers<void>();
     let handed = false, held = false, suspendProbe = false, resumed = false;
+    let holdForClose = false, closeReadReleased = false, closeReadCancelled = false;
     let postCount = 0, requestCount = 0;
     const server = createServer((req, res) => {
       requestCount++;
       const path = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
       const json = (value: unknown) => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(value)); };
       if (req.method === 'GET' && path === sessionPath) {
-        const reply = () => json({ data: { id: profile.nativeSessionId,
+        const body = JSON.stringify({ data: { id: profile.nativeSessionId,
           location: { directory: profile.cwd }, agent: 'TEST-agent',
           model: { providerID: 'TEST-provider', id: 'TEST-model' }, time: { created: 1 } } });
+        const reply = () => { if (!res.headersSent) res.setHeader('content-type', 'application/json'); res.end(body); };
         if (handed && !held) {
           held = true; heldRead.resolve(); void releaseRead.promise.then(reply);
+        } else if (holdForClose) {
+          holdForClose = false;
+          res.setHeader('content-type', 'application/json'); res.write(' ');
+          res.once('close', () => { if (!closeReadReleased) closeReadCancelled = true; });
+          closingRead.resolve();
+          void releaseClosingRead.promise.then(() => { closeReadReleased = true; reply(); });
         } else reply();
       } else if (path.endsWith('/log')) {
         res.setHeader('content-type', 'text/event-stream');
@@ -3178,8 +3187,22 @@ test('active native V2 polling drains before re-attestation and resumes without 
       assert.equal(provider.isReady(), true, 'the same active driver polls successfully after admission');
       assert.equal(postCount, 1, 're-attestation never resubmits a prompt');
       assert.equal(calls.stop, 0);
+      holdForClose = true;
+      await within(closingRead.promise);
+      const passwordBeforeClose = calls.password, requestsBeforeClose = requestCount;
+      const closing = opened.driver.close();
+      await new Promise<void>(resolve => setImmediate(resolve));
+      assert.equal(provider.isReady(), false, 'close fences new native authority synchronously');
+      assert.equal(calls.stop, 0, 'original finite body drains before its process is retired');
+      assert.equal(calls.password, passwordBeforeClose, 'no late credential read after close begins');
+      assert.equal(requestCount, requestsBeforeClose, 'no new native request after close begins');
+      assert.equal(closeReadCancelled, false, 'normal close does not manufacture uncertain body cleanup');
+      releaseClosingRead.resolve();
+      assert.deepEqual(await within(closing), { logicallyClosed: true, cleanup: 'confirmed' });
+      assert.equal(calls.stop, 1);
+      assert.equal(postCount, 1, 'close never replays the original native prompt');
     } finally {
-      releaseRead.resolve(); releaseProbe.resolve();
+      releaseRead.resolve(); releaseProbe.resolve(); releaseClosingRead.resolve();
       await opened.driver.close();
       await provider.cleanup();
       server.closeAllConnections();

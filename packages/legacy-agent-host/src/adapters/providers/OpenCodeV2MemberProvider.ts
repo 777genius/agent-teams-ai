@@ -170,6 +170,7 @@ export function createOpenCodeV2MemberProvider(
   let stopAttempt: Promise<boolean> | undefined;
   let boundedStopAttempt: Promise<boolean> | undefined;
   let checking: Promise<boolean> | undefined;
+  let closingDrain: Promise<boolean> | undefined;
   // Re-attestation may temporarily fence readiness without revoking Host authority.
   // Existing observers must wait for a definitive result, not drop native events.
   const pendingReattestations = new Set<Promise<void>>();
@@ -221,6 +222,7 @@ export function createOpenCodeV2MemberProvider(
     sealed = true;
     ready = false;
     initialEvidence = undefined;
+    if (closingDrain) await closingDrain;
     abort.abort();
     // A stop with an uncertain ACK is never submitted twice. Subsequent
     // cleanup checks may ONLY read physical status for this same owned PID.
@@ -252,6 +254,10 @@ export function createOpenCodeV2MemberProvider(
     isCurrent: current, isReady: () => ready,
     reattestations: pendingReattestations, signal: abort.signal,
   });
+  const closeAdmission = () => {
+    sealed = true; ready = false; initialEvidence = undefined;
+    return closingDrain ??= requests.close(AbortSignal.timeout(5000));
+  };
   const captureClosingCheckpoint = () => {
     try {
       if (closingCheckpoint || qualificationRevoked || !admissionSettled() || !captureUnchanged()) return;
@@ -433,7 +439,7 @@ export function createOpenCodeV2MemberProvider(
                 qualificationRevoked = true;
                 ready = false;
                 initialEvidence = undefined;
-                abort.abort();
+                if (!closingDrain) abort.abort();
                 // A previously live member must not leave the loosened native
                 // process running while Host reports an unready session.
                 // Only its captured owner may perform this physical stop.
@@ -727,12 +733,13 @@ export function createOpenCodeV2MemberProvider(
               checkpoint: () => admissionSettled() && current() ? source.checkpoint() :
                 { ok: false as const, code: 'unavailable' as const },
               close: async () => {
-                // Retire the captured TEST-owned native process immediately.
-                // The private SPI bounds shutdown and can return UNKNOWN
-                // before its own confirmStopped callback is reached.
+                // Fence credentials before draining admitted native I/O. Aborting
+                // a live body first can make the strict SPI retain UNKNOWN custody.
+                const drained = closeAdmission();
                 const stopped = finishOwned();
                 let privateCleanupConfirmed = false;
                 try {
+                  await drained;
                   privateCleanupConfirmed = (await source.close()).cleanup === 'confirmed';
                 } catch {
                   // The independent physical stop/readback still decides custody.
@@ -740,7 +747,7 @@ export function createOpenCodeV2MemberProvider(
                 const physicallyStopped = await stopped;
                 return {
                   logicallyClosed: true as const,
-                  cleanup: physicallyStopped && privateCleanupConfirmed ?
+                  cleanup: (await drained) && physicallyStopped && privateCleanupConfirmed ?
                     'confirmed' as const : 'unknown' as const,
                 };
               },
@@ -766,15 +773,12 @@ export function createOpenCodeV2MemberProvider(
       // Local evidence only: composition has already sealed its public lease.
       // Runtime may consume this once under its original closing/owned/idle fence.
       if (!sealed) captureClosingCheckpoint();
-      sealed = true;
-      ready = false;
-      initialEvidence = undefined;
-      abort.abort();
-      // Sealing revokes native custody immediately, even if the caller has
-      // not yet reached its asynchronous cleanup phase. finishOwned retains
-      // the single-stop/physical-confirmation discipline.
+      closeAdmission();
       void finishOwned();
     },
-    cleanup: finishOwned,
+    cleanup: async () => {
+      const drained = closeAdmission(), stopped = await finishOwned();
+      return (await drained) && stopped;
+    },
   };
 }
