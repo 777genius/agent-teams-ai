@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { chmod, copyFile, cp, lstat, mkdir, readFile, realpath, rm, writeFile, appendFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { isAbsolute, join, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { stageNode } from './stage-node.ts';
 import { candidateDigest, stageCandidateClosure } from './candidate-closure.ts';
@@ -64,15 +64,19 @@ for (const name of ['@agent-teams/provider-implementations', '@agent-teams/provi
   const reference: unknown = installed.dependencies[name];
   assert.ok(typeof reference === 'string' && reference.startsWith('file:') && reference.endsWith('.tgz'));
   const archive = await realpath(resolve(repo, 'packages/legacy-agent-host', reference.slice(5)));
+  const archiveName = basename(archive), archiveDirectory = dirname(archive);
+  assert.ok(archiveName && !archiveName.startsWith('-') && !archiveName.includes(':'));
   const selected = packages.find(row => row.name === name);
   assert.ok(selected);
-  const members = execFileSync('tar', ['-tf', archive], { encoding: 'utf8', timeout: 30_000,
+  const members = execFileSync('tar', ['-tf', archiveName], { cwd: archiveDirectory, encoding: 'utf8', timeout: 30_000,
     maxBuffer: 4 * 1024 * 1024 }).trim().split(/\r?\n/);
   assert.ok(members.every(member => member.startsWith('package/') && !member.split('/').includes('..')));
   const unpacked = join(await realpath(process.env.RUNNER_TEMP!), `TEST-provider-census-${randomUUID()}`);
   await mkdir(unpacked);
   try {
-    execFileSync('tar', ['-xf', archive, '-C', unpacked], { timeout: 30_000, stdio: 'pipe' });
+    execFileSync('tar', ['-xf', archiveName, '-C', unpacked], {
+      cwd: archiveDirectory, timeout: 30_000, stdio: 'pipe',
+    });
     const paths = members.filter(member => !member.endsWith('/')).map(member => member.slice(8)).sort();
     assert.deepEqual(paths, selected.files.map(file => file.path).sort());
     for (const file of selected.files)

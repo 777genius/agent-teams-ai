@@ -161,7 +161,7 @@ jobs:
         shell: bash
         run: |
           node node_modules/@typescript/native/bin/tsc -p tsconfig.legacy-agent-host-scripts.json
-          node --test scripts/legacy-agent-host/candidate-closure.test.ts scripts/legacy-agent-host/packaged-opencode-v2-inputs.test.ts
+          node --test scripts/legacy-agent-host/candidate-closure.test.ts scripts/legacy-agent-host/packaged-opencode-v2-inputs.test.ts scripts/legacy-agent-host/stage-node.test.ts
       - name: Package unsigned test bundle
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
