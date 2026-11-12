@@ -67,7 +67,7 @@ for (const name of ['@agent-teams/provider-implementations', '@agent-teams/provi
   const selected = packages.find(row => row.name === name);
   assert.ok(selected);
   const members = execFileSync('tar', ['-tf', archive], { encoding: 'utf8', timeout: 30_000,
-    maxBuffer: 4 * 1024 * 1024 }).trim().split('\n');
+    maxBuffer: 4 * 1024 * 1024 }).trim().split(/\r?\n/);
   assert.ok(members.every(member => member.startsWith('package/') && !member.split('/').includes('..')));
   const unpacked = join(await realpath(process.env.RUNNER_TEMP!), `TEST-provider-census-${randomUUID()}`);
   await mkdir(unpacked);
