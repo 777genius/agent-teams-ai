@@ -11,6 +11,27 @@ export interface OwnedBackupResourceProof { sha256: string; ownerVersion: string
 const sha = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const same = (left: { dev: number; ino: number }, right: { dev: number; ino: number }) => left.dev === right.dev && left.ino === right.ino;
 
+/** Same unsupported-directory policy as the existing lifecycle durability IO.
+ * The restored file is flushed before publication; storage failures still hold. */
+function syncRestoredDirectory(path: string): void {
+  let directory: number | undefined, failure: unknown, closeFailure: unknown;
+  try { directory = openSync(path, constants.O_RDONLY); fsyncSync(directory); }
+  catch (error) { failure = error; }
+  finally {
+    if (directory !== undefined) {
+      try { closeSync(directory); } catch (error) { closeFailure = error; }
+    }
+  }
+  if (failure !== undefined) {
+    const code = (failure as NodeJS.ErrnoException).code;
+    const unsupported = code === 'EINVAL' || code === 'ENOSYS' || code === 'ENOTSUP' ||
+      code === 'EOPNOTSUPP' || (process.platform === 'win32' &&
+        (code === 'EACCES' || code === 'EPERM' || code === 'EISDIR' || code === 'EBADF'));
+    if (!unsupported) throw failure;
+  }
+  if (closeFailure !== undefined) throw closeFailure;
+}
+
 /** Called by the existing owner-scoped backup adapter while its existing identity/publication fence is held. */
 export class OwnerBackupResourceAccess {
   constructor(private readonly store: TeamOwnerStore, private readonly binding: TeamBinding) {}
@@ -54,8 +75,7 @@ export class OwnerBackupResourceAccess {
         writeFileSync(staged, bytes, { flag: 'wx', mode: 0o600, flush: true });
         if (!same(identity, lstatSync(parent)) || this.version(path) !== proof.ownerVersion) throw new TeamOwnerError('hold');
         try { linkSync(staged, target); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'EEXIST') return 'current'; throw error; }
-        const directory = openSync(parent, constants.O_RDONLY);
-        try { fsyncSync(directory); } finally { closeSync(directory); }
+        syncRestoredDirectory(parent);
         return 'restored';
       });
     } catch { return 'held'; }
