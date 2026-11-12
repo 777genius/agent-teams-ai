@@ -284,6 +284,47 @@ interface OriginalAppReapInput {
   deadline: number;
 }
 
+/** Read-only absence observation after this exact child has already exited naturally. */
+export async function observeExitedAppGroup(
+  input: Pick<OriginalAppReapInput, 'child' | 'group' | 'hostPid' | 'initialMembers' | 'deadline'>,
+  readTable: () => ProcessIdentity[] = processTable
+) {
+  const initialMembers = input.initialMembers.map((member) => ({ ...member }));
+  let remaining: ProcessIdentity[] | null = null;
+  let capturedHostAbsent: boolean | null = null;
+  let capturedDescendantsAbsent: boolean | null = null;
+  const result = (settled: boolean, reason: string) => ({
+    settled, reason, initialMembers, remaining, capturedHostAbsent, capturedDescendantsAbsent,
+    appExitCode: input.child.exitCode, appSignalCode: input.child.signalCode,
+  });
+  if (
+    !Number.isSafeInteger(input.group) || input.group <= 0 || input.child.pid !== input.group ||
+    input.child.exitCode !== 0 || input.child.signalCode !== null ||
+    !Number.isSafeInteger(input.hostPid) || input.hostPid <= 0 || input.hostPid === input.group ||
+    !Number.isFinite(input.deadline) || initialMembers.length === 0 ||
+    initialMembers.some((member) => member.pid === input.group || member.pgid !== input.group)
+  ) return result(false, 'ineligible-original-natural-exit-observation');
+
+  while (Date.now() < input.deadline) {
+    let table: ProcessIdentity[];
+    try { table = readTable(); }
+    catch { return result(false, 'process-table-unavailable'); }
+    remaining = table.filter((member) => member.pgid === input.group);
+    capturedHostAbsent = !table.some((member) => member.pid === input.hostPid);
+    capturedDescendantsAbsent = initialMembers.every((original) =>
+      !table.some((member) => member.pid === original.pid));
+    if (Date.now() >= input.deadline) break;
+    if (table.some((member) => member.pid === input.group))
+      return result(false, 'captured-leader-pid-reappeared');
+    if (remaining.length === 0 && capturedHostAbsent && capturedDescendantsAbsent)
+      return result(true, 'original-natural-exit-and-fresh-absence');
+    await new Promise<void>((resolve) =>
+      setTimeout(resolve, Math.min(100, Math.max(0, input.deadline - Date.now())))
+    );
+  }
+  return result(false, 'original-observation-deadline');
+}
+
 /** Observations only after a refused signal guard; this function has no signal capability. */
 export async function observeOriginalAppReap(
   input: OriginalAppReapInput,
