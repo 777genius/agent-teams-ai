@@ -3,6 +3,7 @@
 // saved-model inference. No team is launched; every provider request is localhost.
 import assert from 'node:assert/strict';
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -593,7 +594,6 @@ try {
     scope:
       'native saved model -> exact bundled released executable -> local Messages PONG; fixture launch endpoint credentials supplied directly',
   };
-  assert.equal(await readFile(sentinel, 'utf8'), 'preserve-existing-project\n');
   // The direct command's close event does not settle app-owned native children.
   // Use one natural-drain observation for every final synchronous assertion.
   const finalObservation = await waitSettled(
@@ -626,6 +626,7 @@ try {
     [],
     'No unfinished native runtime child is permitted at success'
   );
+  assert.equal(readFileSync(sentinel, 'utf8'), 'preserve-existing-project\n');
   record('saved-model-inference-and-native-children-complete', {
     diagnosticCount: complete.length,
   });
