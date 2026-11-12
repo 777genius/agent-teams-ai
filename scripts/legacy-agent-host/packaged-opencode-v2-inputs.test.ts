@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { chmod, copyFile, mkdir, mkdtemp, readFile, readlink, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { candidateDigest } from './candidate-closure.ts';
-import { packagedOpenCodeV2Scenario, preservePackagedOpenCodeV2DependencyLinks, readPackagedOpenCodeV2 } from './packaged-opencode-v2-inputs.ts';
+import { packagedOpenCodeV2Scenario, preservePackagedOpenCodeV2DependencyLinks, readPackagedOpenCodeV2, renameCapturedPackagedBundle } from './packaged-opencode-v2-inputs.ts';
 import type { PackagedOpenCodeV2Manifest } from './packaged-opencode-v2-inputs.ts';
 import type { TestContext } from 'node:test';
 
@@ -273,6 +274,55 @@ test('packaged scenario rejects an available source checkout and an ambient Node
     /system Node cannot qualify the candidate/);
 });
 
+test('initial packaged relocation retries only the same directory into its empty private destination', async t => {
+  for (const disposition of ['transient', 'persistent', 'permanent', 'cross-device',
+    'source-rebound', 'parent-rebound', 'destination-occupied'] as const) await t.test(disposition, async t => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST packaged relocation ')));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    const source = join(root, 'тест candidate'), parent = join(root, 'TEST-private'), destination = join(parent, 'candidate');
+    await mkdir(source); await mkdir(parent); await writeFile(join(source, 'payload'), 'TEST-original-bytes');
+    const before = await fs.lstat(source, { bigint: true });
+    const originalRename = fs.rename;
+    const failure = Object.assign(new Error(`TEST ${disposition} relocation refusal`),
+      { code: disposition === 'permanent' ? 'EIO' : disposition === 'cross-device' ? 'EXDEV' : 'EPERM' });
+    let attempts = 0;
+    t.mock.method(fs, 'rename', async (from: Parameters<typeof fs.rename>[0], to: Parameters<typeof fs.rename>[1]) => {
+      assert.equal(from, source); assert.equal(to, destination); attempts++;
+      if (disposition === 'transient' && attempts > 1) return originalRename(from, to);
+      if (disposition === 'source-rebound') {
+        await originalRename(source, `${source}-original`); await mkdir(source);
+        await writeFile(join(source, 'payload'), 'TEST-replacement-bytes');
+      } else if (disposition === 'parent-rebound') {
+        await originalRename(parent, `${parent}-original`); await mkdir(parent);
+      } else if (disposition === 'destination-occupied') {
+        await mkdir(destination); await writeFile(join(destination, 'payload'), 'TEST-foreign-bytes');
+      }
+      throw failure;
+    });
+    try {
+      if (disposition === 'transient') await renameCapturedPackagedBundle(source, destination);
+      else if (['persistent', 'permanent', 'cross-device'].includes(disposition))
+        await assert.rejects(renameCapturedPackagedBundle(source, destination), error => error === failure);
+      else await assert.rejects(renameCapturedPackagedBundle(source, destination), /relocation binding changed/);
+    } finally { t.mock.restoreAll(); }
+    assert.equal(attempts, disposition === 'transient' ? 2 : disposition === 'persistent' ? 6 : 1);
+    if (disposition === 'transient') {
+      await assert.rejects(fs.lstat(source), { code: 'ENOENT' });
+      const after = await fs.lstat(destination, { bigint: true });
+      for (const key of ['dev', 'ino', 'birthtimeNs'] as const) assert.equal(after[key], before[key]);
+      assert.equal(await readFile(join(destination, 'payload'), 'utf8'), 'TEST-original-bytes');
+    } else {
+      assert.equal(await readFile(join(source, 'payload'), 'utf8'),
+        disposition === 'source-rebound' ? 'TEST-replacement-bytes' : 'TEST-original-bytes');
+      if (disposition === 'source-rebound')
+        assert.equal(await readFile(join(`${source}-original`, 'payload'), 'utf8'), 'TEST-original-bytes');
+      if (disposition === 'destination-occupied')
+        assert.equal(await readFile(join(destination, 'payload'), 'utf8'), 'TEST-foreign-bytes');
+      else await assert.rejects(fs.lstat(destination), { code: 'ENOENT' });
+    }
+  });
+});
+
 test('packaged cancellation restores inputs only after original native cleanup is attested',
   { skip: process.version !== 'v24.21.0', timeout: 60_000 }, async t => {
   for (const disposition of ['clean-error', 'timeout-clean', 'unknown'] as const) await t.test(disposition, async t => {
@@ -282,6 +332,7 @@ test('packaged cancellation restores inputs only after original native cleanup i
     // It never starts Host, Bun, a provider or an Electron application.
     for (const name of ['scripts/legacy-agent-host/run-packaged-opencode-v2.ts',
       'scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts', 'scripts/legacy-agent-host/candidate-closure.ts',
+      'packages/task-change-ledger/src/review/io/transientFsRetry.ts',
       'packages/legacy-agent-host/tests/fixtures/native-host.ts',
       'packages/legacy-agent-host/tests/opencode-v1-version-source.ts', 'packages/legacy-agent-host/src/contracts.ts']) {
       await mkdir(dirname(join(repo, name)), { recursive: true });

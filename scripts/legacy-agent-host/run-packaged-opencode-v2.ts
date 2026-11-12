@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { cp, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { candidateDigest } from './candidate-closure.ts';
-import { readPackagedOpenCodeV2 } from './packaged-opencode-v2-inputs.ts';
+import { readPackagedOpenCodeV2, renameCapturedPackagedBundle } from './packaged-opencode-v2-inputs.ts';
 import { nativeHostEnvironment } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
 import { assertNativeV1Source } from '../../packages/legacy-agent-host/tests/opencode-v1-version-source.ts';
 
@@ -39,7 +39,21 @@ const receipt: Record<string, unknown> = { kind: 'TEST_PACKAGED_V2_QUALIFICATION
   sourceHead, platform: requestedPlatform, cleanup: false, phase: 'relocation',
   desktopJourneyQualified: false, vendorAuthQualified: false, releaseQualified: false };
 try {
-  try { await rename(originalBundle, relocatedBundle); bundleMoved = true; }
+  let originalAppAsarSha256: string | undefined;
+  if (process.platform === 'win32') {
+    const originalResources = join(originalBundle, 'resources');
+    originalAppAsarSha256 = await candidateDigest(join(originalResources, 'app.asar'));
+    const original = await readPackagedOpenCodeV2({ resourcesRoot: join(originalResources, 'legacy-agent-host'),
+      manifestSha256: process.env.OPENCODE_V2_PACKAGED_MANIFEST_SHA256!,
+      appAsar: join(originalResources, 'app.asar'), appAsarSha256: originalAppAsarSha256 });
+    assert.equal(original.manifest.sourceHead, sourceHead);
+    assert.equal(await candidateDigest(harness), original.manifest.harnessSha256);
+  }
+  try {
+    if (process.platform === 'win32') await renameCapturedPackagedBundle(originalBundle, relocatedBundle);
+    else await rename(originalBundle, relocatedBundle);
+    bundleMoved = true;
+  }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'EXDEV') throw error;
     await cp(originalBundle, relocatedBundle, { recursive: true, force: false, errorOnExist: true, verbatimSymlinks: true });
@@ -47,7 +61,7 @@ try {
   }
   const capture = { resourcesRoot: join(resources, 'legacy-agent-host'),
     manifestSha256: process.env.OPENCODE_V2_PACKAGED_MANIFEST_SHA256!,
-    appAsar: join(resources, 'app.asar'), appAsarSha256: await candidateDigest(join(resources, 'app.asar')) };
+    appAsar: join(resources, 'app.asar'), appAsarSha256: originalAppAsarSha256 ?? await candidateDigest(join(resources, 'app.asar')) };
   const captured = await readPackagedOpenCodeV2(capture);
   assert.equal(captured.manifest.sourceHead, sourceHead);
   assert.equal(await candidateDigest(harness), captured.manifest.harnessSha256);

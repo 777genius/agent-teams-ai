@@ -1,6 +1,7 @@
 /** TEST-only capture of the existing builder's unpacked Host resources. */
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import fs from 'node:fs/promises';
 import { lstat, readFile, readdir, readlink, realpath, symlink, unlink } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -8,6 +9,7 @@ import { candidateDigest } from './candidate-closure.ts';
 import type { CandidatePackage } from './candidate-closure.ts';
 import type { StagedNode } from './stage-node.ts';
 import type { PackagedNativeHostInputs } from '../../packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts';
+import { RENAME_TREE_RETRY, retryOnTransientFsError } from '../../packages/task-change-ledger/src/review/io/transientFsRetry.ts';
 
 export interface PackagedOpenCodeV2Capture {
   resourcesRoot: string;
@@ -40,6 +42,37 @@ const inside = (root: string, target: string) => {
   const value = relative(root, target);
   return value !== '' && value !== '..' && !value.startsWith(`..${sep}`) && !isAbsolute(value);
 };
+
+/** Initial Windows TEST relocation only; a retry never proves process cleanup. */
+export async function renameCapturedPackagedBundle(source: string, destination: string): Promise<void> {
+  const parent = dirname(destination);
+  assert.ok(isAbsolute(source) && isAbsolute(destination) && source !== destination);
+  assert.ok(!inside(source, destination) && !inside(parent, source));
+  const selected = [source, parent];
+  const identities = await Promise.all(selected.map(async path => {
+    assert.equal(await realpath(path), path);
+    const info = await lstat(path, { bigint: true });
+    assert.ok(info.isDirectory() && !info.isSymbolicLink());
+    return { dev: info.dev, ino: info.ino, birthtimeNs: info.birthtimeNs };
+  }));
+  await retryOnTransientFsError(async () => {
+    // A changed source, rebound private parent or occupied destination is a hold,
+    // even when the guard's underlying filesystem error happens to be transient.
+    try {
+      for (let index = 0; index < selected.length; index++) {
+        const path = selected[index]!;
+        assert.equal(await realpath(path), path);
+        const info = await lstat(path, { bigint: true });
+        assert.ok(info.isDirectory() && !info.isSymbolicLink());
+        assert.deepEqual({ dev: info.dev, ino: info.ino, birthtimeNs: info.birthtimeNs }, identities[index]);
+      }
+      await assert.rejects(lstat(destination), { code: 'ENOENT' });
+    } catch (error) {
+      throw new Error('Captured packaged relocation binding changed', { cause: error });
+    }
+    await fs.rename(source, destination);
+  }, RENAME_TREE_RETRY);
+}
 
 /** No acquisition, repair, PATH lookup or source fallback occurs in the reader. */
 export async function readPackagedOpenCodeV2(capture: PackagedOpenCodeV2Capture) {
