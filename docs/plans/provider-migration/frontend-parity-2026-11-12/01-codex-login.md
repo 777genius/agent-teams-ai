@@ -23,6 +23,10 @@ Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 - [Stage 1: `CapturedCodexAuthCommands`](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/src/features/runtime-provider-management/main/adapters/output/CapturedCodexAuthCommands.ts).
 - Поставленный `CodexAppServerClient` имеет read/refresh/logout, но не публичные login start/cancel методы.
 - Следовательно, нужен небольшой source change в provider library, а не обход Host старым ambient app-server.
+- R2 проверил source `d58500bc983e897506e23d7b0bc8da1209864edd`: `adapters/codex-protocol/app-server.ts`
+  имеет `readAccount/refreshAccount/logoutAccount`; `account/login/completed` сейчас попадает в generic unsupported event.
+- Existing UI также позволяет скопировать ссылку и device code и повторно открыть страницу входа:
+  [CodexLoginLinkCopyButton](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/runtime/CodexLoginLinkCopyButton.tsx).
 
 ## 2. Пользовательский результат и приёмка
 
@@ -35,6 +39,7 @@ Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 7. Перезапуск UI восстанавливает наблюдение за исходным target; неизвестный результат не превращается в автоматический повтор.
 8. Ошибка входа, таймаут и неподтверждённая очистка отображаются честно; счётчик «вошёл» требует account readback.
 9. Существующие refresh/logout/API-key сценарии продолжают работать после добавления login.
+10. Copy link/code и повторное открытие исходной ссылки работают в Settings, banner и Create/Launch reconnect; новый login не создаётся.
 
 ## 3. Минимальная архитектура
 
@@ -45,8 +50,11 @@ Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 - [Stage 1: `OAuthOperationOwner`](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/packages/legacy-agent-host/src/management/OAuthOperationOwner.ts).
 - Codex-specific native conversation адаптирует browser/device code к существующим start/read/cancel владельца OAuth.
 - Не копировать 342 строки старого login manager и не создавать второй общий OAuth engine.
-- Browser URL остаётся Main-only и открывается через существующий `openExternal` boundary после проверки URL.
-- Device user code — отдельное краткоживущее поле существующего account DTO для выбранной операции; это не access token.
+- Host authorization reply остаётся private Host→Main; generic `management.oauth.progress` не содержит URL/code.
+- Существующий Codex account DTO сохраняет краткоживущие `authUrl/userCode` для выбранной операции и authorised renderer,
+  чтобы прежние copy/reopen controls продолжали работать; durable store, diagnostics и общий progress их не получают.
+- URL проверяется как HTTPS без userinfo и открывается через существующий `openExternal` boundary; новый auto-open при read запрещён.
+- Device user code — отображаемый код для vendor страницы, не access token и не authorization code для `oauth.complete`.
 - Не отправлять native loginId, credentials, process paths и произвольные native instructions в публичные progress events.
 - Durable intent хранит operationId и исходный target, но не пароль, token, authorization URL или device code.
 - При cold restart возможно только чтение receipt или явная неподтверждённость; восстановление UI не запускает новый login.
@@ -61,6 +69,9 @@ Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 - Добавить типизированные start/cancel/completion методы только для уже используемого `account/login/*` протокола.
 - Поддержать ровно browser и device code; не делать универсальный raw RPC интерфейс для Desktop.
 - Проверить completion filter по исходному loginId и закрытие notification subscription вместе с client.
+- Зарегистрировать typed login observer до отправки start; bounded early-completion buffer связывается с ответом по exact loginId.
+- Отсутствующий/чужой loginId не объявлять успехом по тому, что другой account/read уже вернул пользователя; ambiguous outcome сохраняется.
+- Оба режима завершаются `nativeCompletion`; device-code route использует `completionMethod: auto`, не paste-code flow.
 - Изменения делать в исходниках owning repo, собрать immutable archive и записать source commit + digest.
 - Vendored `dist`, tgz bytes и lockfile integrity вручную не редактировать.
 - Archive update и проверка внешнего consumer проходят штатным путём provider repo и frontend pin.
@@ -75,6 +86,9 @@ Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 - Для device code расширить private authorization reply; не включать code в persisted/public OAuth snapshot.
 - Logout/refresh и login должны сериализоваться по тому же auth namespace через существующий fence.
 - После cancel сначала закрыть исходную native conversation; completed race разрешить по фактическому receipt/readback.
+- `OAuthOperationOwner.finish` доверяет `complete()` и сам не закрывает child: Codex `complete()` обязан проверить account
+  и завершить client/custody до `true`; cleanup=false не освобождает namespace под completed receipt.
+- Проверить login против refresh/logout: общий resource fence сериализует mutations; owner readback не ждёт собственной reservation.
 
 ### Шаг C — account facade и UI observation
 
@@ -103,10 +117,12 @@ Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 | --- | --- | --- |
 | Browser happy path | Войти, открыть выданный URL, завершить controlled native login | Один start; pending → account readback; UI показывает исходный account |
 | Device code | Выбрать device code, увидеть/скопировать код, завершить вход | Код только в нужной панели; account обновлён; секреты не попали в receipt |
+| Early completion + reopen | Completion приходит до start reply; затем copy/reopen в прежнем reconnect UI | Не потерян exact loginId; одна операция; исходная ссылка/код доступны без повторного start |
 | Double click + cancel | Дважды нажать вход, отменить до открытия и при ожидании | Один native child; отмена исходного loginId; cleanup подтверждён |
 | Потерянный ответ | Удержать completion/ACK, переподключить UI | Read исходной операции; нет повторного start и повторного browser open |
 | Смена выбора | Начать на A, выбрать B, отменить/завершить A | B не получает credentials/состояние A; A очищается своим владельцем |
 | Regression | После login выполнить refresh, logout, затем API-key сценарий | Прежняя семантика account/quota/предпочтения; нет новых запусков модели |
+| Fence/cleanup | Пока login pending вызвать refresh/logout; задержать native cleanup после completion | Нет deadlock, credential race или ложного completed; namespace остаётся held до cleanup |
 | Native qualification | Pinned Codex + выделенный тестовый account, оба способа входа | Native completion и account readback на выбранных bytes; отдельная маркировка доступа |
 
 В тестовых receipts: commit/archive hashes, profile revision, operationId, последовательность фаз и cleanup result.
@@ -115,7 +131,7 @@ Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 
 ## 6. Ограниченный unit список
 
-- Один table-driven тест для correlation start/completed/cancel по исходному loginId, включая cancel-before-allocation.
+- Расширить existing protocol table для early/foreign/missing loginId и cancel-before-allocation; не копировать старый manager suite.
 - Один тест receipt/target mismatch и duplicate operationId с другим mode/profile.
 - Один тест public projection: запрет credentials/native instructions и срок жизни device-code presentation.
 - Не дублировать unit-тестами каждую ветку UI hook: переходы состояния покрываются Desktop E2E.
@@ -146,10 +162,17 @@ Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 - Исправлено: readiness передана общему profile порту; сохранён отдельный native qualification результат.
 - Проверены cited symbols и существующие account/Host proof harness; production в R1 не изменён.
 
-### R2 — независимое cross-review, pending
+### R2 — независимое cross-review, выполнено 2026-11-12
 
-- Проверить ownership/cancel races, совместимость DTO и отсутствие двойного учёта плана 06.
-- Записать reviewer, точный docs commit, находки и исправления; отметка pending снимается только после реального review.
+Reviewer: `estimate_platform_acceptance`; входной docs commit `bedaf5aae9d81033704636b5362472ddab5818d3`.
+Прочитаны actual-main manager/UI, source D `d58500bc…`, Host OAuth owner/fences и Codex management adapter.
+
+- **R2-01-01:** Main-only URL исключал прежний Copy/reopen UI. Сохранена ephemeral Codex DTO projection; общий progress/store остаются без URL/code.
+- **R2-01-02:** Device code можно ошибочно принять за paste authorization code. Явно назначены native completion и `auto` для обоих режимов.
+- **R2-01-03:** Notification после start subscription теряла early completion; добавлены bounded pre-reply correlation и exact-ID native test.
+- **R2-01-04:** OAuth owner не закрывает child на success сам; `complete()` теперь обязана включать account readback и подтверждённый cleanup.
+- **R2-01-05:** Последовательный regression не проверял login/logout/refresh fence; добавлен один общий race/cleanup E2E.
+- LOC остаётся предварительной оценкой; UI copy/reopen переиспользует существующие controls, новый auth framework не нужен.
 
 ### R3 — повторное review после R2, pending
 
