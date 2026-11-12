@@ -53,6 +53,7 @@ export function createScheduledRunProvider(context: ScheduledRunProviderContext)
       sessionRef: profile.sessionId,
       trustedBinding: `scheduled/${request.tenantId}/${request.projectId}/${request.sessionId}`,
       cwd: profile.cwd, model: profile.model, accountBinding: profile.accountBinding,
+      executablePath: profile.executable.path,
       configRevision: profile.configRevision, environment: { ...profile.environment },
       sessionPersistence: 'ephemeral',
       ...(profile.configNamespace ? { configNamespace: profile.configNamespace } : {}),

@@ -49,6 +49,7 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
     // Stable principal scope across technical generations; MCP and Runtime separately fence generation.
     trustedBinding: `${context.endpoint.binding.backendId}/${context.endpoint.binding.teamId}/${context.endpoint.binding.runId}/${profile.memberId}`,
     cwd: profile.cwd,
+    executablePath: profile.executable.path,
     model: profile.model,
     accountBinding: profile.accountBinding,
     configRevision: profile.configRevision,
