@@ -1,0 +1,157 @@
+# 01. Codex: вход через браузер и device code в Host
+
+Статус: план реализации; production-код этим документом не меняется.
+Основание: сохранить возможности текущего Desktop frontend при включённом Host.
+Baseline frontend: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
+Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
+Ветка интеграции: `feat/provider-host-frontend-parity-20261112`; merge в main не входит в этот срез.
+
+## 1. Что уже существует и что теряется
+
+- В текущем UI доступны вход ChatGPT через браузер, вход по device code, отмена, refresh и logout.
+- `useCodexAccountSnapshot` вызывает существующий account API и наблюдает pending login даже при скрытой панели Providers.
+- [Main: `useCodexAccountSnapshot`](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/features/codex-account/renderer/hooks/useCodexAccountSnapshot.ts).
+- `CodexLoginSessionManager.start` открывает выбранный app-server и вызывает `account/login/start`.
+- Browser использует тип `chatgpt`, device code — `chatgptDeviceCode`; завершение приходит через `account/login/completed`.
+- `cancel` отменяет исходный loginId и закрывает именно принадлежащую операции сессию; pending start также отменяется.
+- [Main: `CodexLoginSessionManager.start/cancel`](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/features/codex-account/main/infrastructure/CodexLoginSessionManager.ts).
+- [Main: существующие protocol/lifecycle tests](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/features/codex-account/main/infrastructure/__tests__/CodexLoginSessionManager.test.ts).
+- Это рабочий программный маршрут и проверенный protocol baseline; данный аудит не выполнял новый вход в настоящий аккаунт.
+- В Host-фасаде `startChatgptLogin` и `cancelLogin` сейчас возвращают `unsupported`, `subscribe` пуст, login всегда `idle`.
+- [Stage 1: `createCapturedCodexFeatures`](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/src/features/runtime-provider-management/main/adapters/output/createCapturedCodexFeatures.ts).
+- `CapturedCodexAuthCommands` уже реализует durable refresh/logout; повторять эту инфраструктуру не нужно.
+- [Stage 1: `CapturedCodexAuthCommands`](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/src/features/runtime-provider-management/main/adapters/output/CapturedCodexAuthCommands.ts).
+- Поставленный `CodexAppServerClient` имеет read/refresh/logout, но не публичные login start/cancel методы.
+- Следовательно, нужен небольшой source change в provider library, а не обход Host старым ambient app-server.
+
+## 2. Пользовательский результат и приёмка
+
+1. Пользователь нажимает «Войти» и получает тот же выбор browser/device-code, что в текущем приложении.
+2. Повторный клик при pending login наблюдает исходную операцию; второй процесс и второй вход не запускаются.
+3. После завершения обновляются account, quota и доступность запуска из выбранного профиля.
+4. Выбор `auto/chatgpt/api_key` сохраняет прежнюю семантику; успешный login не меняет предпочтение самовольно.
+5. Отмена работает до старта app-server, при ожидании браузера и при device-code ожидании.
+6. Смена проекта/профиля не переносит pending login на новый target и не отменяет чужую операцию.
+7. Перезапуск UI восстанавливает наблюдение за исходным target; неизвестный результат не превращается в автоматический повтор.
+8. Ошибка входа, таймаут и неподтверждённая очистка отображаются честно; счётчик «вошёл» требует account readback.
+9. Существующие refresh/logout/API-key сценарии продолжают работать после добавления login.
+
+## 3. Минимальная архитектура
+
+- Оставить существующие account DTO, preload API, экран и hook; новая панель входа не нужна.
+- Main захватывает выбранный `CapturedProviderManagement` один раз до первого внешнего эффекта.
+- Host владеет login lifecycle, native child, auth namespace и окончательным результатом.
+- Повторно использовать `OAuthOperationOwner`, `ManagementCommandStore` и `ManagementResourceFence`.
+- [Stage 1: `OAuthOperationOwner`](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/packages/legacy-agent-host/src/management/OAuthOperationOwner.ts).
+- Codex-specific native conversation адаптирует browser/device code к существующим start/read/cancel владельца OAuth.
+- Не копировать 342 строки старого login manager и не создавать второй общий OAuth engine.
+- Browser URL остаётся Main-only и открывается через существующий `openExternal` boundary после проверки URL.
+- Device user code — отдельное краткоживущее поле существующего account DTO для выбранной операции; это не access token.
+- Не отправлять native loginId, credentials, process paths и произвольные native instructions в публичные progress events.
+- Durable intent хранит operationId и исходный target, но не пароль, token, authorization URL или device code.
+- При cold restart возможно только чтение receipt или явная неподтверждённость; восстановление UI не запускает новый login.
+- Общие profile revision/recapture правила принадлежат плану 06; здесь используется его порт, без нового registry.
+
+## 4. Изменения по шагам
+
+### Шаг A — подтвердить контракт native login
+
+- В source repo `agent-teams-ai/old-provider-implementations` найти исходный `CodexAppServerClient` и его protocol codecs.
+- Зафиксировать выбранный source commit и версии native Codex до изменения; источник не выбирать по stale default branch.
+- Добавить типизированные start/cancel/completion методы только для уже используемого `account/login/*` протокола.
+- Поддержать ровно browser и device code; не делать универсальный raw RPC интерфейс для Desktop.
+- Проверить completion filter по исходному loginId и закрытие notification subscription вместе с client.
+- Изменения делать в исходниках owning repo, собрать immutable archive и записать source commit + digest.
+- Vendored `dist`, tgz bytes и lockfile integrity вручную не редактировать.
+- Archive update и проверка внешнего consumer проходят штатным путём provider repo и frontend pin.
+
+### Шаг B — native conversation под существующим Host owner
+
+- Расширить `packages/legacy-agent-host/src/composition/CodexManagementCoordinator.ts` фабрикой Codex login conversation.
+- Выделить небольшой `CodexLoginConversation.ts` рядом с provider adapters, если lifecycle не помещается в текущий host.
+- Использовать `CapturedProcess`/`codexByteTransport`, захваченный HOME/CODEX_HOME и существующее custody закрытие.
+- Подключить Codex flow к management routing, не смешивать его с conversation Session SPI.
+- В `packages/legacy-agent-host/src/management/contracts.ts` добавить только безопасное представление нужного состояния.
+- Для device code расширить private authorization reply; не включать code в persisted/public OAuth snapshot.
+- Logout/refresh и login должны сериализоваться по тому же auth namespace через существующий fence.
+- После cancel сначала закрыть исходную native conversation; completed race разрешить по фактическому receipt/readback.
+
+### Шаг C — account facade и UI observation
+
+- В `createCapturedCodexFeatures.ts` заменить два unsupported метода адаптацией к captured login flow.
+- Восстановить `subscribe` и проецировать реальное login состояние вместо постоянного `idle`.
+- Переиспользовать intent/restore подход `CapturedProviderOAuth`; Codex presentation не проталкивать в общий provider DTO.
+- Account read после completion выполняется на исходном target, затем UI принимает его только для текущего выбора.
+- `setMainWindow` и dispose должны подключать/снимать нужные подписки, без скрытого повторного открытия браузера.
+- `getLaunchReadiness` получает фактическую доступность из общей profile readiness, а не из наличия email.
+- Binary path override продолжает отклоняться captured boundary; выбор executable выполняет план 06.
+
+### Шаг D — end-to-end доказательства
+
+- Расширить существующий Desktop account proof и общий Host/D protocol fixture; отдельный тестовый framework не вводить.
+- Для integration использовать новые sandbox HOME/CODEX_HOME и только TEST credentials.
+- Сначала зафиксировать regression refresh/logout, затем browser/device-code и cancel/restart сценарии ниже.
+- После protocol proof выполнить native Codex smoke на pinned binary; genuine account completion фиксировать отдельным receipt.
+- Fixture PASS не называть доказательством успешного входа в настоящий ChatGPT account.
+
+## 5. E2E, являющиеся основным критерием
+
+База: `scripts/legacy-agent-host/desktop-codex-account-proof.ts`, `desktop-backend-smoke.ts`, actual Host/D fixture.
+Донор lifecycle сценариев: `packages/legacy-agent-host/tests/management-oauth-host.e2e.ts`; его старые pins обновлять только штатно.
+
+| Сценарий | Действие через существующий UI/API | Проверяемый результат |
+| --- | --- | --- |
+| Browser happy path | Войти, открыть выданный URL, завершить controlled native login | Один start; pending → account readback; UI показывает исходный account |
+| Device code | Выбрать device code, увидеть/скопировать код, завершить вход | Код только в нужной панели; account обновлён; секреты не попали в receipt |
+| Double click + cancel | Дважды нажать вход, отменить до открытия и при ожидании | Один native child; отмена исходного loginId; cleanup подтверждён |
+| Потерянный ответ | Удержать completion/ACK, переподключить UI | Read исходной операции; нет повторного start и повторного browser open |
+| Смена выбора | Начать на A, выбрать B, отменить/завершить A | B не получает credentials/состояние A; A очищается своим владельцем |
+| Regression | После login выполнить refresh, logout, затем API-key сценарий | Прежняя семантика account/quota/предпочтения; нет новых запусков модели |
+| Native qualification | Pinned Codex + выделенный тестовый account, оба способа входа | Native completion и account readback на выбранных bytes; отдельная маркировка доступа |
+
+В тестовых receipts: commit/archive hashes, profile revision, operationId, последовательность фаз и cleanup result.
+Не записывать login URLs с чувствительными query, device code, tokens или пользовательские credentials.
+Доступ к реальному тестовому аккаунту не заменять чтением пользовательского HOME.
+
+## 6. Ограниченный unit список
+
+- Один table-driven тест для correlation start/completed/cancel по исходному loginId, включая cancel-before-allocation.
+- Один тест receipt/target mismatch и duplicate operationId с другим mode/profile.
+- Один тест public projection: запрет credentials/native instructions и срок жизни device-code presentation.
+- Не дублировать unit-тестами каждую ветку UI hook: переходы состояния покрываются Desktop E2E.
+
+## 7. Зависимости, объём и риски
+
+- Владение: этот срез — account login и Codex native methods; план 06 — capture/profile revision/readiness.
+- План 03 может менять ту же provider library, но Session controls не смешиваются с account methods.
+- Archive publish/pin имеет одного владельца интеграции: два параллельных среза не выпускают несовместимые pins.
+- План 02 использует существующие credential owners, но не меняет Codex account presentation.
+- Объём production: **500–900** новых/существенно изменённых строк; перемещения/generated excluded.
+- Проверки: **450–800** строк E2E/fixture и **100–180** строк критичных unit; это оценка, не quota.
+- Сложность **5/10**; ожидаемая надёжность после приёмки **8/10**; уверенность оценки **7/10**.
+- Надёжность — инженерная оценка, не вероятность отсутствия ошибок и не уже достигнутая характеристика.
+- Главные риски: completion/cancel race, device code projection и сохранение original target при смене профиля.
+- Реальный vendor login может требовать интерактивного тестового доступа; его отсутствие отмечается как неполная квалификация.
+- Кодовый срез считается готовым после E2E и required gates на exact HEAD; native auth evidence показывается отдельно.
+
+## 8. Реальные круги review
+
+### R1 — авторская критика, выполнена 2026-11-12
+
+- Найдено: generic OAuth public progress намеренно исключает authorization details; слепой reuse терял бы device-code UI.
+- Исправлено: code выделен в private authorization reply и краткоживущую account projection, без хранения в intents/events.
+- Найдено: старый login manager подтверждает протокол, но не наличие login API в новом D artifact.
+- Исправлено: добавлен отдельный source-repo extension и immutable archive gate; запрещена правка vendored dist.
+- Найдено: успешный account read не доказывает model launch readiness.
+- Исправлено: readiness передана общему profile порту; сохранён отдельный native qualification результат.
+- Проверены cited symbols и существующие account/Host proof harness; production в R1 не изменён.
+
+### R2 — независимое cross-review, pending
+
+- Проверить ownership/cancel races, совместимость DTO и отсутствие двойного учёта плана 06.
+- Записать reviewer, точный docs commit, находки и исправления; отметка pending снимается только после реального review.
+
+### R3 — повторное review после R2, pending
+
+- Проверить исправленные риски, минимальность реализации и достаточность E2E для существующего UI.
+- Зафиксировать оставшиеся вопросы native login qualification и только затем принять implementation-ready версию.
