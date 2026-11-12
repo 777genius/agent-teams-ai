@@ -760,6 +760,10 @@ async function afterPack(context) {
     );
   }
 
+  if (targetPlatform === 'win32' && await fileExists(path.join(context.appOutDir, 'resources/legacy-agent-host/opencode-v2-candidate.json')))
+    await (await import('../legacy-agent-host/packaged-opencode-v2-inputs.ts'))
+      .preservePackagedOpenCodeV2DependencyLinks(await fs.promises.realpath(path.join(context.appOutDir, 'resources/legacy-agent-host')),
+        { manifestSha256: process.env.OPENCODE_V2_PACKAGED_MANIFEST_SHA256, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD });
   await signManagedGitBinaries(context);
 
   if (removedPaths.length > 0) {

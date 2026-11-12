@@ -52,9 +52,11 @@ test('native V1 source admission rejects changed, staged and untracked relevant 
     await rm(extra);
     for (const relative of [
       'runtime.lock.json',
+      'legacy-host.lock.json',
       'packages/legacy-agent-host/native/registered-process-darwin.c',
       'packages/legacy-agent-host/scripts/buildProcessNativeArtifact.ts',
       'scripts/legacy-agent-host/prepare-opencode-v2-native.ts',
+      'scripts/electron-builder/afterPack.cjs',
     ]) {
       const input = join(repo, relative);
       await mkdir(join(input, '..'), { recursive: true });

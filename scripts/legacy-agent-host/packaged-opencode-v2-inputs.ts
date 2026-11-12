@@ -1,7 +1,7 @@
 /** TEST-only capture of the existing builder's unpacked Host resources. */
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { lstat, readFile, readdir, realpath } from 'node:fs/promises';
+import { lstat, readFile, readdir, readlink, realpath, symlink, unlink } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { candidateDigest } from './candidate-closure.ts';
@@ -167,6 +167,39 @@ export async function readPackagedOpenCodeV2(capture: PackagedOpenCodeV2Capture)
   assert.ok((await lstat(capture.appAsar)).isFile() && hash(capture.appAsarSha256));
   assert.equal(await candidateDigest(capture.appAsar), capture.appAsarSha256);
   return { capture: { ...capture }, manifest, node, entry, hostPackage, bun, engine, processCustody };
+}
+
+/** The builder copies Windows directory links as absolute junctions. Restore
+ * only the already attested relative Host links before signing or relocation. */
+export async function preservePackagedOpenCodeV2DependencyLinks(
+  resourcesRoot: string, expected: { manifestSha256: string; sourceHead: string }
+): Promise<void> {
+  const appAsar = join(dirname(resourcesRoot), 'app.asar');
+  const capture = { resourcesRoot, manifestSha256: expected.manifestSha256,
+    appAsar, appAsarSha256: await candidateDigest(appAsar) };
+  const before = await readPackagedOpenCodeV2(capture);
+  assert.equal(before.manifest.sourceHead, expected.sourceHead);
+  for (const pkg of before.manifest.packages) {
+    for (const [name, key] of Object.entries(pkg.dependencies)) {
+      const link = join(resourcesRoot, 'host', pkg.path, 'node_modules', name);
+      const target = join(resourcesRoot, 'host/packages', key);
+      assert.equal(await realpath(dirname(link)), dirname(link));
+      assert.equal(await realpath(target), target);
+      assert.ok((await lstat(link)).isSymbolicLink());
+      assert.equal(await realpath(link), target, 'only its original in-bundle dependency may be rewritten');
+      if (isAbsolute(await readlink(link))) {
+        // Build-owned candidate only; a failed replacement leaves packaging
+        // incomplete. Do not convert foreign targets or repair missing inputs.
+        assert.equal(await realpath(link), target);
+        await unlink(link);
+        await symlink(relative(dirname(link), target), link, 'dir');
+      }
+      assert.equal(isAbsolute(await readlink(link)), false);
+      assert.equal(await realpath(link), target);
+    }
+  }
+  const after = await readPackagedOpenCodeV2(capture);
+  assert.deepEqual(after.manifest, before.manifest);
 }
 
 /** Only the actual relocated application and its bundled Node can run this scenario. */

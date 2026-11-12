@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmod, copyFile, mkdir, mkdtemp, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, mkdtemp, readFile, readlink, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 import { test } from 'node:test';
 import { candidateDigest } from './candidate-closure.ts';
-import { packagedOpenCodeV2Scenario, readPackagedOpenCodeV2 } from './packaged-opencode-v2-inputs.ts';
+import { packagedOpenCodeV2Scenario, preservePackagedOpenCodeV2DependencyLinks, readPackagedOpenCodeV2 } from './packaged-opencode-v2-inputs.ts';
 import type { PackagedOpenCodeV2Manifest } from './packaged-opencode-v2-inputs.ts';
 import type { TestContext } from 'node:test';
 
@@ -58,6 +58,16 @@ async function fixture(t: TestContext) {
     const file = await put(`${engineDirectory}/${path}`, bytes!);
     engineFiles.push({ ...file, path, bytes: Buffer.byteLength(bytes!) });
   }
+  if (process.platform === 'win32') {
+    const name = `@yuuang/ffi-rs-win32-${process.arch}-msvc`;
+    for (const [path, bytes] of [
+      [`local-cli/node_modules/${name}/package.json`, JSON.stringify({ name, version: '1.3.7' })],
+      [`local-cli/node_modules/${name}/ffi-rs.win32-${process.arch}-msvc.node`, 'TEST-binding-never-loaded'],
+    ]) {
+      const file = await put(`${engineDirectory}/${path}`, bytes!);
+      engineFiles.push({ ...file, path, bytes: Buffer.byteLength(bytes!) });
+    }
+  }
   const engine = await put(`${engineDirectory}/opencode-v2-engine-manifest.json`, JSON.stringify({
     schemaVersion: 1, platform: process.platform, arch: process.arch,
     requiredBunVersion: bunVersion, engineVersions: ['2.1.4'], files: engineFiles,
@@ -102,6 +112,46 @@ test('packaged capture measures actual Host files, its real graph validator and 
   assert.equal(selected.entry, join(f.capture.resourcesRoot, f.manifest.hostEntry));
   assert.equal(selected.node, join(f.capture.resourcesRoot, f.manifest.nodeExecutable));
   assert.equal(selected.manifest.sourceHead, f.manifest.sourceHead);
+});
+
+async function absoluteDependency(f: Awaited<ReturnType<typeof fixture>>, foreign = false) {
+  const name = 'TEST-dependency', payload = JSON.stringify({ name, version: 'TEST' });
+  await f.put('host/packages/0001/package.json', payload);
+  f.manifest.packages[0]!.dependencies[name] = '0001';
+  f.manifest.packages.push({ name, version: 'TEST', path: 'packages/0001',
+    files: [{ path: 'package.json', sha256: hash(payload), executable: false }],
+    dependencies: {}, missingOptional: [] });
+  const link = join(f.capture.resourcesRoot, 'host/packages/0000/node_modules', name);
+  await mkdir(dirname(link));
+  await symlink(foreign ? f.root : join(f.capture.resourcesRoot, 'host/packages/0001'), link,
+    process.platform === 'win32' ? 'junction' : 'dir');
+  await f.save();
+  return link;
+}
+
+test('builder junction conversion preserves only attested dependency links across actual bundle relocation', async t => {
+  const f = await fixture(t), link = await absoluteDependency(f);
+  assert.equal(isAbsolute(await readlink(link)), true);
+  const bytes = await readFile(join(f.capture.resourcesRoot, 'opencode-v2-candidate.json'));
+  await preservePackagedOpenCodeV2DependencyLinks(f.capture.resourcesRoot,
+    { manifestSha256: f.capture.manifestSha256, sourceHead: f.manifest.sourceHead });
+  assert.equal(isAbsolute(await readlink(link)), false);
+  assert.deepEqual(await readFile(join(f.capture.resourcesRoot, 'opencode-v2-candidate.json')), bytes);
+  const oldBundle = dirname(dirname(f.capture.resourcesRoot)), movedBundle = join(f.root, 'Relocated App');
+  await rename(oldBundle, movedBundle);
+  const capture = { ...f.capture,
+    resourcesRoot: join(movedBundle, 'resources/legacy-agent-host'),
+    appAsar: join(movedBundle, 'resources/app.asar') };
+  await assert.rejects(realpath(f.capture.resourcesRoot), { code: 'ENOENT' });
+  assert.deepEqual((await readPackagedOpenCodeV2(capture)).manifest, f.manifest);
+});
+
+test('builder link normalization refuses a foreign junction before mutating the candidate', async t => {
+  const f = await fixture(t), link = await absoluteDependency(f, true), target = await readlink(link);
+  await assert.rejects(preservePackagedOpenCodeV2DependencyLinks(f.capture.resourcesRoot,
+    { manifestSha256: f.capture.manifestSha256, sourceHead: f.manifest.sourceHead }),
+    /packaged dependency must remain in its captured closure/);
+  assert.equal(await readlink(link), target);
 });
 
 test('packaged capture refuses changed Host bytes and unlisted resolution payloads', async t => {
