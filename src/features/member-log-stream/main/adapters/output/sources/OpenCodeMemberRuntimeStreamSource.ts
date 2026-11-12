@@ -1,3 +1,4 @@
+import { recordRetainedHistoryDiagnostic } from '@main/utils/retainedHistoryRequestDiagnostic';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { mapOpenCodeRuntimeTranscriptMessagesToParsedMessages } from '@main/services/team/taskLogs/stream/OpenCodeRuntimeProjectionMapper';
 
@@ -61,17 +62,22 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
   async load(input: MemberLogStreamSourceInput): Promise<MemberLogStreamSourceResult> {
     const binding = await this.bindingReader.read(input);
     if (binding.kind === 'unavailable') {
+      recordRetainedHistoryDiagnostic('binding_unavailable', input, binding.reason);
       const warning = unavailableOpenCodeTranscriptWarning(binding);
       return this.loadVisibleActivityFallback(input, [warning], warning.message);
     }
-    const currentResult = async (result: MemberLogStreamSourceResult) =>
-      (await this.bindingReader.isCurrent(input, binding))
-        ? result
-        : this.loadVisibleActivityFallback(
-            input,
-            [unavailableOpenCodeTranscriptWarning()],
-            'opencode_runtime_unavailable'
-          );
+    const currentResult = async (result: MemberLogStreamSourceResult) => {
+      const current = await this.bindingReader.isCurrent(input, binding);
+      if (current) return result;
+      recordRetainedHistoryDiagnostic(
+        'binding_no_longer_current', { ...input, ...binding }, binding.mode
+      );
+      return this.loadVisibleActivityFallback(
+        input,
+        [unavailableOpenCodeTranscriptWarning()],
+        'opencode_runtime_unavailable'
+      );
+    };
     const cacheKey = [
       binding.cacheKey,
       input.teamName,
@@ -114,6 +120,7 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
   ): Promise<MemberLogStreamSourceResult> {
     const binaryPath = await this.binaryResolver.resolve();
     if (!binaryPath) {
+      recordRetainedHistoryDiagnostic('binary_unavailable', { ...input, ...binding }, binding.mode);
       return this.loadVisibleActivityFallback(
         input,
         [
@@ -126,6 +133,7 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
       );
     }
 
+    let stage = 'get_transcript';
     try {
       const transcript = await this.runtimeBridge.getOpenCodeTranscript(binaryPath, {
         teamId: input.teamName,
@@ -136,6 +144,7 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
         sessionId: binding.sessionId,
         timeoutMs: input.budget.openCodeTimeoutMs,
       });
+      stage = 'project_messages';
       const projectedMessages = transcript?.logProjection?.messages ?? [];
       const parsedMessages = mapOpenCodeRuntimeTranscriptMessagesToParsedMessages(
         projectedMessages
@@ -144,11 +153,13 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
         return this.loadVisibleActivityFallback(input, [], 'opencode_missing_runtime_session');
       }
 
+      stage = 'apply_budget';
       const budgeted = applyMemberLogMessageBudget(parsedMessages, input.budget);
       if (budgeted.messages.length === 0) {
         return this.loadVisibleActivityFallback(input, [], 'opencode_no_renderable_chunks');
       }
 
+      stage = 'build_chunks';
       const chunks = this.chunkBuilder.buildBundleChunks(budgeted.messages);
       if (chunks.length === 0) {
         return this.loadVisibleActivityFallback(input, [], 'opencode_no_renderable_chunks');
@@ -163,6 +174,7 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
         );
       }
 
+      stage = 'build_segment';
       const participant = buildMemberParticipant(input.memberName);
       const sessionId =
         transcript?.sessionId ??
@@ -226,6 +238,7 @@ export class OpenCodeMemberRuntimeStreamSource implements MemberLogStreamSource 
         },
       };
     } catch (error) {
+      recordRetainedHistoryDiagnostic('source_failure', { ...input, ...binding }, stage, error);
       const warning = classifyOpenCodeTranscriptError(error);
       return this.loadVisibleActivityFallback(input, [warning], warning.message);
     }

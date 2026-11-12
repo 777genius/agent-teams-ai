@@ -11,6 +11,7 @@ import { fileHash as fileDigest } from '../../packages/legacy-agent-host/tests/f
 import { waitFor } from '../e2e/release-updater/cdp.mts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import { startRetainedOpenCodeModel } from './desktop-retained-opencode-model.ts';
+import { collectRetainedHistoryRequestDiagnostics } from './desktop-retained-opencode-request-diagnostics.ts';
 import { captureRetainedHistoryIdentity, finiteHistoryDiagnosticError, readRetainedOfflineHistory,
   type RetainedHistoryIdentity } from './desktop-retained-opencode-history-diagnostics.ts';
 import { originalLinuxProcessPresent, selectedLinuxProcesses, snapshotLinuxProcesses, startRetainedOpenCodeApp, testNamespaceLinuxProcesses } from './desktop-retained-opencode-app.ts';
@@ -110,7 +111,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
   const save = () => writeFile(receiptPath, JSON.stringify({ ...proof, cleanup,
     modelObservations: model.observations, modelFailures: model.failures }, null, 2), { mode: 0o600 });
   const historyIdentities: Record<string, unknown>[] = [];
-  let coldHistoryFailure: { phase: string; expected: RetainedHistoryIdentity; coldStoreSha256?: string } | undefined;
+  let coldHistoryFailure: { phase: string; expected: RetainedHistoryIdentity; startedAt: number; endedAt?: number; coldStoreSha256?: string } | undefined;
   const captureHistoryIdentity = async (root: string, expected: RetainedHistoryIdentity, phase: string, captureNativeRun = false) => {
     let value: Record<string, unknown>;
     try { value = await captureRetainedHistoryIdentity(root, expected, phase); }
@@ -318,7 +319,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const retainedData = await callTeams('getData', [legacyTeam]);
     assert.deepEqual(retainedData.tasks, savedLegacy.tasks);
     assert.deepEqual(retainedData.messages, savedLegacy.messages);
-    coldHistoryFailure = { phase: 'upgrade_cold', expected: firstHistoryIdentity };
+    coldHistoryFailure = { phase: 'upgrade_cold', expected: firstHistoryIdentity, startedAt: Date.now() };
     assert.deepEqual(await readLegacyReply(originalLegacyMember, 'REPLY_TEST_RETAINED_V1_HISTORY'), historicalReply,
       JSON.stringify({ legacyHistoryRead: proof.legacyHistoryRead }).slice(0, 8000));
     coldHistoryFailure = undefined;
@@ -398,7 +399,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     assert.deepEqual(record(after.host).messages, record(before.host).messages);
     assert.equal(await callTeams<boolean>('processAlive', [legacyTeam]), false);
     assert.equal(await callTeams<boolean>('processAlive', [hostKey]), false);
-    coldHistoryFailure = { phase: 'final_cold', expected: finalHistoryIdentity };
+    coldHistoryFailure = { phase: 'final_cold', expected: finalHistoryIdentity, startedAt: Date.now() };
     assert.deepEqual(await readLegacyReply(relaunchedMember, 'REPLY_TEST_RETAINED_V1_AFTER_STOP'), finalLegacyReply,
       JSON.stringify({ legacyHistoryRead: proof.legacyHistoryRead }).slice(0, 8000));
     coldHistoryFailure = undefined;
@@ -415,6 +416,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     passed = true;
   } catch (error) {
     failure = error;
+    if (coldHistoryFailure) coldHistoryFailure.endedAt = Date.now();
     if (error instanceof AggregateError && error.errors.some(value =>
       value instanceof Error && value.message === 'original app cleanup unknown')) cleanupErrors.push(error);
     if (coldHistoryFailure && fixture) {
@@ -445,6 +447,14 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     if (failure) proof.failure = failure instanceof Error ? failure.message : String(failure);
     proof.cleanupFailures = cleanupErrors.map(error => error instanceof Error ? error.message : String(error));
     if (failure && coldHistoryFailure) {
+      let request: Record<string, unknown> = { kind: 'not_read', reason: 'original_cleanup_unconfirmed' };
+      if (cleanup && fixture) {
+        try {
+          request = await collectRetainedHistoryRequestDiagnostics(fixture.root, coldHistoryFailure.expected,
+            coldHistoryFailure.startedAt, coldHistoryFailure.endedAt ?? coldHistoryFailure.startedAt);
+        } catch { request = { kind: 'collector_error' }; }
+      }
+      proof.legacyHistoryOriginalRequest = request;
       let offline: Record<string, unknown> = { kind: 'not_run', reason: 'original_cleanup_unconfirmed' };
       if (cleanup && fixture) {
         try {
@@ -460,6 +470,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
         for (const identity of historyIdentities)
           console.error('TEST_RETAINED_HISTORY_IDENTITY ' + JSON.stringify(identity));
         console.error('TEST_RETAINED_HISTORY_OFFLINE ' + JSON.stringify(offline));
+        console.error('TEST_RETAINED_HISTORY_REQUEST ' + JSON.stringify(request));
       } catch (error) { proof.legacyHistoryDiagnosticPrintError = finiteHistoryDiagnosticError(error); }
     }
     await save();
