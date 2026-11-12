@@ -32,7 +32,7 @@ test('captured V2 runtime and its derived management probe accept only the curre
   }
 });
 
-test('the ordinary probe preserves V1 POSIX paths and admits a Windows drive path only for native OpenCode', () => {
+test('ordinary probe drafts use current native OS paths while selected V2 keeps stricter canonical admission', () => {
   const base = { launchId: 'TEST-launch', rosterRevision: 'TEST-roster', memberId: 'TEST-member', model: 'TEST-model',
     draft: { providerId: 'opencode', target: { kind: 'lead' }, workspace: nativePath('workspace') } };
   assert.equal(teamModelProbeSelectionSchema.safeParse(base).success, true);
@@ -41,14 +41,14 @@ test('the ordinary probe preserves V1 POSIX paths and admits a Windows drive pat
     assert.equal(teamModelProbeSelectionSchema.safeParse({ ...base, draft: { ...base.draft, workspace: bad } }).success, false);
   }
   for (const workspace of ['/repo/', '//server/share/workspace']) {
-    assert.equal(teamModelProbeSelectionSchema.safeParse({ ...base, draft: { ...base.draft, workspace } }).success, true,
-      'an unselected draft retains the original V1 POSIX path rule');
+    assert.equal(teamModelProbeSelectionSchema.safeParse({ ...base, draft: { ...base.draft, workspace } }).success,
+      process.platform !== 'win32', 'legacy POSIX draft admission remains on POSIX hosts only');
     assert.equal(runtimeProfileSchema.safeParse({ members: [{ ...member(), cwd: workspace }] }).success, false,
       'a selected V2 runtime still refuses a noncanonical or foreign path before allocation');
   }
   for (const providerId of ['anthropic', 'codex']) {
     assert.equal(teamModelProbeSelectionSchema.safeParse({ ...base,
-      draft: { ...base.draft, providerId, workspace: 'C:\\TEST\\workspace' } }).success, false,
-    'other providers do not gain Windows qualification from the OpenCode path');
+      draft: { ...base.draft, providerId, workspace: 'C:\\TEST\\workspace' } }).success, process.platform === 'win32',
+    'all providers use native OS draft paths; allocation still requires their captured broker and identity');
   }
 });

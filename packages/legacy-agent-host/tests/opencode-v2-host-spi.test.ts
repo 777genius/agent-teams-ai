@@ -76,14 +76,11 @@ function nativeV2Profile() {
   };
 }
 
-// The existing V1 capture stays POSIX-only even on Windows.
+// P08 uses native OS paths for V1 as well; this helper does not qualify a binary or custody.
 function v1Profile() {
   return {
-    ...v2Profile(), nativeGeneration: undefined, protocolRevision: '1.19.4' as const,
-    nativeSessionId: undefined, cwd: '/TEST-only-opencode-v2',
-    environment: Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
-      .map(key => [key, '/TEST-only-opencode-v2/' + key])),
-    executable: { path: '/TEST-only-opencode-v2/native-engine', sha256: 'a'.repeat(64) },
+    ...nativeV2Profile(), nativeGeneration: undefined, protocolRevision: '1.19.4' as const,
+    nativeSessionId: undefined,
   };
 }
 
@@ -729,7 +726,7 @@ test('V2 profile is explicit and cannot inherit V1 plugin, auto-permission, argv
   ] }).success, true, 'unchanged V1 default remains valid');
 });
 
-test('native V2 captures canonical OS paths without widening legacy V1 paths', () => {
+test('native V2 and V1 use their captured OS paths without admitting foreign Windows paths', () => {
   const base = v2Profile();
   const windows = process.platform === 'win32';
   const winSep = String.fromCharCode(92);
@@ -756,14 +753,11 @@ test('native V2 captures canonical OS paths without widening legacy V1 paths', (
     'V2 must reject noncanonical native namespace paths');
   const legacy = { ...selected, nativeGeneration: undefined, protocolRevision: '1.19.4',
     nativeSessionId: undefined };
-  if (windows) {
-    assert.equal(runtimeProfileSchema.safeParse({ members: [legacy] }).success, false,
-      'do not expand legacy V1 path policy for Windows');
-    const v1Posix = v1Profile();
-    assert.equal(runtimeProfileSchema.safeParse({ members: [v1Posix] }).success, true);
-  } else {
-    assert.equal(runtimeProfileSchema.safeParse({ members: [legacy] }).success, true);
-  }
+  assert.equal(runtimeProfileSchema.safeParse({ members: [legacy] }).success, true,
+    'P08 selects native OS paths for both generations; this is lexical admission only');
+  if (windows) assert.equal(runtimeProfileSchema.safeParse({ members: [
+    { ...v1Profile(), cwd: '/TEST-foreign-posix' },
+  ] }).success, false, 'a POSIX path cannot stand in for the Windows V1 workspace');
 });
 
 test('corrected private V2 driver accepts canonical Windows TEST profile after captured owner proof', async () => {
