@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFile, readdir, realpath } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { assertOwnedCdpListener, command, processTable } from './desktop-backend-observations.ts';
 import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
@@ -13,14 +13,23 @@ const object = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 const tick = () => new Promise<void>((done) => setTimeout(done, 100));
-export const desktopNativeProviderArtifact = Object.freeze({
-  path: 'vendor/provider-migration/codex-account-login-09c2859/agent-teams-provider-implementations-0.0.0.tgz',
-  sha256: '691a7a62cdd5a92e2edb120f2c409790c9ca16215495cdf9daa099b3b8748bd9',
-});
+/** Follow the frozen Host dependency and its checked-in receipt, never a stale proof-only pin. */
+export async function readDesktopNativeProviderArtifact(repo: string) {
+  const manifest = object(JSON.parse(await readFile(join(repo, 'packages/legacy-agent-host/package.json'), 'utf8')));
+  const dependency = object(manifest.dependencies)['@agent-teams/provider-implementations'];
+  assert.ok(typeof dependency === 'string' &&
+    /^file:\.\.\/\.\.\/vendor\/provider-migration\/[a-z0-9-]+\/agent-teams-provider-implementations-0\.0\.0\.tgz$/.test(dependency));
+  const path = dependency.slice('file:../../'.length);
+  const receipt = object(JSON.parse(await readFile(join(repo, dirname(path), 'source-receipt.json'), 'utf8')));
+  const sha256 = object(object(receipt.packages)['provider-implementations']).newSha256;
+  assert.ok(typeof sha256 === 'string' && /^[a-f0-9]{64}$/.test(sha256));
+  return { path, sha256 };
+}
 export async function verifyDesktopNativeStopArtifact(
   repo: string,
-  selected = desktopNativeProviderArtifact
+  selected?: { path: string; sha256: string }
 ): Promise<void> {
+  selected ??= await readDesktopNativeProviderArtifact(repo);
   const archive = join(repo, selected.path);
   assert.equal(await fileDigest(archive), selected.sha256);
   const providerRoot = await realpath(

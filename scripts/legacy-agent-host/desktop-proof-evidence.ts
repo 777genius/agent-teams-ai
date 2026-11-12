@@ -1,4 +1,4 @@
-import { desktopNativeProviderArtifact } from './desktop-native-stop-fixture.ts';
+import { readDesktopNativeProviderArtifact } from './desktop-native-stop-fixture.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -212,7 +212,8 @@ export async function desktopProofEvidence(options: {
     pins: {
       ...fixture.pins,
       providerArchiveSha256: await fileDigest(
-        join(import.meta.dirname, '../../' + desktopNativeProviderArtifact.path)
+        join(import.meta.dirname, '../../' +
+          (await readDesktopNativeProviderArtifact(join(import.meta.dirname, '../..'))).path)
       ),
       pnpmSha256,
       electronSha256: await fileDigest(electron),
