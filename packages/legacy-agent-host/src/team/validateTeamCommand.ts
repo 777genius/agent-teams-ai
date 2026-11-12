@@ -5,6 +5,7 @@ import {
 } from '../attachments/uploadContracts.js';
 import { isGroupUuid } from '../group-chats/model.js';
 import { TeamOwnerError } from './contracts.js';
+import { validateExpectedTaskRecipient } from './expectedTaskRecipient.js';
 import { safeSegment, stableJson } from './identity.js';
 import type { TeamCommand, TaskRef } from './contracts.js';
 
@@ -40,8 +41,13 @@ export function validateTeamCommand(command: TeamCommand): void {
   const payload = command.payload;
   if (!payload || typeof payload !== 'object' || Array.isArray(payload))
     throw new TeamOwnerError('invalid');
+  if ((command.operation === 'task.create' || command.operation === 'task.start') &&
+    command.payload.expectedRecipient !== undefined)
+    validateExpectedTaskRecipient(command.payload.expectedRecipient);
   switch (command.operation) {
     case 'task.create':
+      if (command.payload.notifyOwner !== undefined && command.payload.notifyOwner !== false)
+        throw new TeamOwnerError('invalid');
       if (command.payload.groupChatId !== undefined && !isGroupUuid(command.payload.groupChatId))
         throw new TeamOwnerError('invalid');
       validateRefs(command.payload.descriptionTaskRefs);
@@ -197,6 +203,8 @@ export function validateTeamCommand(command: TeamCommand): void {
       'prompt',
       'promptTaskRefs',
       'startImmediately',
+      'notifyOwner',
+      'expectedRecipient',
       'descriptionTaskRefs',
     ],
     'task.update': ['taskId', 'subject', 'description'],
@@ -208,7 +216,7 @@ export function validateTeamCommand(command: TeamCommand): void {
     'task.clarification': ['taskId', 'value'],
     'task.assign': ['taskId', 'owner'],
     'task.lifecycle': ['taskId', 'action'],
-    'task.start': ['taskId', 'notification'],
+    'task.start': ['taskId', 'notification', 'expectedRecipient'],
     'task.comment': ['taskId', 'text', 'taskRefs', 'attachments'],
     'task.review': [
       'taskId',

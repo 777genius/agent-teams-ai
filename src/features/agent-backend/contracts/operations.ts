@@ -86,6 +86,14 @@ export interface BackendTaskRef {
   teamName: string;
 }
 
+export interface BackendTaskRecipient {
+  name: string;
+  memberId: string;
+  runId: string;
+  generation: string;
+  requireIdle?: true;
+}
+
 export interface BackendOperationPayloads
   extends
     BackendGroupPayloads,
@@ -111,10 +119,12 @@ export interface BackendOperationPayloads
     prompt?: string;
     promptTaskRefs?: BackendTaskRef[];
     startImmediately?: boolean;
+    notifyOwner?: false;
+    expectedRecipient?: BackendTaskRecipient;
     descriptionTaskRefs?: BackendTaskRef[];
   };
   'task.update': { taskId: string; subject?: string; description?: string };
-  'task.start': { taskId: string; notification: 'legacy' | 'user' };
+  'task.start': { taskId: string; notification: 'legacy' | 'user'; expectedRecipient?: BackendTaskRecipient };
   'task.board.clear': { taskId: string };
   'task.board.order': {
     columnId: 'todo' | 'in_progress' | 'done' | 'review' | 'approved';

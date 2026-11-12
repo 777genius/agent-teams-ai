@@ -1,6 +1,7 @@
 import { assertGroupOriginal, groupTargetCommand } from '../group-chats/groupDelivery.js';
 import { validateCrossTeamTargetContext } from '../cross-team/crossTeamInbound.js';
 import { captureCommandSelection } from './captureCommandSelection.js';
+import { assertExpectedTaskRecipient } from './expectedTaskRecipient.js';
 import { validateCommandAttachments } from './validateCommandAttachments.js';
 import {
   teamCommandPath,
@@ -85,6 +86,8 @@ export function executeTeamCommand(
     )
       throw new TeamOwnerError('conflict');
     let receipt = readProductCommand(options.store, command.commandId);
+    if (!receipt) assertExpectedTaskRecipient(command, options.state().members,
+      () => options.policy.taskBoard(grant.memberName));
     const {
       messageRecipient,
       messageRecipientRole,

@@ -20,6 +20,7 @@ import { parseBackendTeamOperation } from './teamOperationValues';
 import type {
   BackendOperationPayloads,
   BackendOperationRequest,
+  BackendTaskRecipient,
   BackendTaskRef,
 } from '../../../contracts/operations';
 
@@ -28,6 +29,14 @@ export { InvalidBackendOperation, object, stringArray, text } from './backendOpe
 function description(value: unknown): string {
   if (value === '') return '';
   return text(value, 200_000);
+}
+
+function taskRecipient(value: unknown): BackendTaskRecipient {
+  const row = object(value, ['name', 'memberId', 'runId', 'generation', 'requireIdle']);
+  if (row.requireIdle !== undefined && row.requireIdle !== true) throw new InvalidBackendOperation();
+  return { name: text(row.name, 256), memberId: text(row.memberId, 256),
+    runId: text(row.runId, 256), generation: text(row.generation, 256),
+    ...(row.requireIdle === true ? { requireIdle: true as const } : {}) };
 }
 
 function refs(value: unknown): BackendTaskRef[] {
@@ -128,12 +137,15 @@ function payload(
         'prompt',
         'promptTaskRefs',
         'startImmediately',
+        'notifyOwner',
+        'expectedRecipient',
         'descriptionTaskRefs',
       ]);
       if (p.groupChatId !== undefined && !isGroupUuid(p.groupChatId))
         throw new InvalidBackendOperation();
       if (p.startImmediately !== undefined && typeof p.startImmediately !== 'boolean')
         throw new InvalidBackendOperation();
+      if (p.notifyOwner !== undefined && p.notifyOwner !== false) throw new InvalidBackendOperation();
       return {
         subject: text(p.subject, 20_000),
         ...(p.groupChatId === undefined ? {} : { groupChatId: p.groupChatId }),
@@ -141,6 +153,8 @@ function payload(
         ...(p.prompt === undefined ? {} : { prompt: description(p.prompt) }),
         ...(p.promptTaskRefs === undefined ? {} : { promptTaskRefs: refs(p.promptTaskRefs) }),
         ...(p.startImmediately === undefined ? {} : { startImmediately: p.startImmediately }),
+        ...(p.notifyOwner === false ? { notifyOwner: false as const } : {}),
+        ...(p.expectedRecipient === undefined ? {} : { expectedRecipient: taskRecipient(p.expectedRecipient) }),
         ...(p.description === undefined ? {} : { description: description(p.description) }),
         ...(p.owner === undefined ? {} : { owner: text(p.owner) }),
         ...(p.blockedBy === undefined ? {} : { blockedBy: stringArray(p.blockedBy) }),
@@ -207,10 +221,11 @@ function payload(
       return { taskId: text(p.taskId), owner: p.owner === null ? null : text(p.owner) };
     }
     case 'task.start': {
-      const p = object(value, ['taskId', 'notification']);
+      const p = object(value, ['taskId', 'notification', 'expectedRecipient']);
       if (p.notification !== 'legacy' && p.notification !== 'user')
         throw new InvalidBackendOperation();
-      return { taskId: text(p.taskId), notification: p.notification };
+      return { taskId: text(p.taskId), notification: p.notification,
+        ...(p.expectedRecipient === undefined ? {} : { expectedRecipient: taskRecipient(p.expectedRecipient) }) };
     }
     case 'task.lifecycle': {
       const p = object(value, ['taskId', 'action']);

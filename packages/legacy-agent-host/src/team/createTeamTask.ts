@@ -11,7 +11,7 @@ export function createTeamTask(
   teamName: string
 ): JsonValue {
   if (receipt.command.operation !== 'task.create') throw new TeamOwnerError('invalid');
-  const payload = receipt.command.payload;
+  const { expectedRecipient: _precondition, ...payload } = receipt.command.payload;
   let task = board.createTask({
     ...payload,
     ...(payload.startImmediately === true ? { notifyOwner: false } : {}),
