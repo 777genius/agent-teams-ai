@@ -190,16 +190,17 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     assert.ok(retainedAfterRelaunch.every(originalLinuxProcessPresent), 'Host Stop preserves retained V1 native owner');
     await send(legacyTeam, 'bob', 'TEST_RETAINED_V1_AFTER_STOP');
     steps.push({ observed: 'both_original_Stop_controls_preserve_the_other_actual_owner' });
-    const before = { legacy: await callTeams('getData', [legacyTeam]), host: await callTeams('getData', [hostKey]) };
     const screenshot = await app.cdp.send<{ data: string }>('Page.captureScreenshot', { format: 'png' });
     await writeFile(join(root, 'coexistence-original-ui.png'), Buffer.from(screenshot.data, 'base64'), { mode: 0o600 });
     await callTeams('stop', [legacyTeam]);
     legacyStopped = true;
+    const before = { legacy: await callTeams('getData', [legacyTeam]), host: await callTeams('getData', [hostKey]) };
     const callsBeforeCold = model.observations.length;
     await app.close(); app = undefined; source();
     app = await start(2);
     const after = { legacy: await callTeams('getData', [legacyTeam]), host: await callTeams('getData', [hostKey]) };
     assert.deepEqual(record(after.legacy).tasks, record(before.legacy).tasks);
+    assert.deepEqual(record(after.legacy).messages, record(before.legacy).messages);
     assert.deepEqual(record(after.host).tasks, record(before.host).tasks);
     assert.deepEqual(record(after.host).messages, record(before.host).messages);
     assert.equal(await callTeams<boolean>('processAlive', [legacyTeam]), false);

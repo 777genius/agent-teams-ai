@@ -113,6 +113,10 @@ export async function startRetainedOpenCodeApp(input: {
     }, 'original Electron inspector and renderer', 180_000);
     phase = 'CDP connect';
     cdp = await Cdp.connect(target.webSocketDebuggerUrl!);
+    await cdp.send('Runtime.enable');
+    await cdp.send('Log.enable');
+    await cdp.send('Page.bringToFront');
+    await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true });
     phase = 'original preload';
     await waitFor(async () => await cdp!.evaluate<boolean>(
       'Boolean(window.electronAPI?.teams && window.electronAPI?.agentBackend)&&!document.getElementById("splash")') || null,
@@ -120,14 +124,30 @@ export async function startRetainedOpenCodeApp(input: {
     let sequence = 0;
     const call = async <T = Record<string, unknown>>(expression: string, timeout = 120_000): Promise<T> => {
       assertCurrent(); const id = `TEST-call-${input.epoch}-${++sequence}`;
-      await cdp!.evaluate(`(() => { const calls=window.__TEST_retainedCalls??={}; if(calls[${JSON.stringify(id)}])throw Error('duplicate');
-        calls[${JSON.stringify(id)}]={state:'pending'}; Promise.resolve().then(async()=>(${expression})).then(
-          value=>{calls[${JSON.stringify(id)}]={state:'done',value}},error=>{calls[${JSON.stringify(id)}]={state:'failed',message:String(error?.message??error)}});return true})()`);
+      const callPhase = phase;
+      phase = `${callPhase}: dispatch ${id}`;
+      try {
+        await cdp!.evaluate(`(() => { const calls=window.__TEST_retainedCalls??={}; if(calls[${JSON.stringify(id)}])throw Error('duplicate');
+          calls[${JSON.stringify(id)}]={state:'pending'}; Promise.resolve().then(async()=>(${expression})).then(
+            value=>{calls[${JSON.stringify(id)}]={state:'done',value}},error=>{calls[${JSON.stringify(id)}]={state:'failed',message:String(error?.message??error)}});return true})()`);
+      } catch (error) {
+        if (!(error instanceof Error) || error.message !== 'CDP timeout: Runtime.evaluate') throw error;
+        // An uncertain inspector acknowledgement never authorizes resubmission.
+        // Only the already submitted call's immutable TEST slot is observed next.
+      }
+      phase = `${callPhase}: observe ${id}`;
       const result = await waitFor(async () => {
-        assertCurrent(); const value = await cdp!.evaluate<{ state: string; value?: T; message?: string }>(`window.__TEST_retainedCalls[${JSON.stringify(id)}]`);
-        return value?.state !== 'pending' ? value : null;
+        assertCurrent();
+        try {
+          const value = await cdp!.evaluate<{ state: string; value?: T; message?: string } | undefined>(
+            `window.__TEST_retainedCalls?.[${JSON.stringify(id)}]`);
+          return value && value.state !== 'pending' ? value : null;
+        } catch (error) {
+          if (error instanceof Error && error.message === 'CDP timeout: Runtime.evaluate') return null;
+          throw error;
+        }
       }, `one original call ${id}`, timeout);
-      assert.equal(result.state, 'done', result.message); return result.value as T;
+      assert.equal(result.state, 'done', result.message); phase = callPhase; return result.value as T;
     };
     phase = 'original renderer API';
     await call("import('/api/index.ts').then(module => {window.__TEST_retainedApi=module.api;return true})");
@@ -165,7 +185,7 @@ export async function startRetainedOpenCodeApp(input: {
   const reason = failure instanceof Error ? failure.message : String(failure);
   writeFileSync(join(input.root, `coexistence-app-${input.epoch}-failure.json`), JSON.stringify({
     phase, reason, original, electron, exitCode: child.exitCode, signalCode: child.signalCode,
-    cleanupConfirmed: stopped,
+    cleanupConfirmed: stopped, rendererEvents: cdp?.events.slice(-30),
   }, null, 2), { mode: 0o600 });
   if (!stopped) throw new AggregateError([failure, new Error('original app cleanup unknown')],
     `Original app startup failed during ${phase}: ${reason}; original app cleanup unknown`);
