@@ -446,9 +446,9 @@ export async function runDesktopTaskBoardUiSmoke(
     'original dependency reference visible'
   );
   proof.dependencyScreenshot = await screenshot('ui-task-board-assigned-blocked.png');
-  // Re-read the original owner and the exact hit-tested control together after
-  // pointer enter, immediately before one physical press. No effect retry.
-  await measuredClick(
+  // Re-read the original owner and enabled hit-tested control at each shared
+  // settling sample before one physical press. No effect retry.
+  await ui.clickExpression(
     `(async()=>{
       const owner=await ${desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, { contextId, surfaceId })};
       if(!owner)return null;
@@ -458,8 +458,7 @@ export async function runDesktopTaskBoardUiSmoke(
         return buttons.length===1?buttons[0]:null;
       `)};
     })()`,
-    'clear original clarification once',
-    true
+    'clear original clarification once'
   );
   await ui.waitRead(
     `!document.querySelector('[role="dialog"]')?.textContent.includes('Awaiting clarification from you')`,

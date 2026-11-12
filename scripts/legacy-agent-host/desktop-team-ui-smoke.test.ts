@@ -642,3 +642,33 @@ test('original desktop click refuses a constantly moving target before dispatch'
   await assert.rejects(ui.click('#TEST-original-toggle', 'TEST moving original toggle'), /did not settle before one click/);
   assert.deepEqual(dispatched, ['mouseMoved'], 'no physical click after unstable ownership');
 });
+
+test('original owner-qualified click rereads its full expression through unavailability at unchanged coordinates', { timeout: 5000 }, async () => {
+  const expression = '(async () => TEST_currentOwnerAndEnabledControl())()';
+  const observations = [
+    { x: 100, y: 100 },
+    { x: 100, y: 100 },
+    null,
+    { x: 100, y: 100 },
+    { x: 100, y: 100 },
+  ];
+  const dispatched: Record<string, unknown>[] = [];
+  let reads = 0;
+  const ui = createDesktopUiControls({
+    async evaluate(actual: string) {
+      assert.equal(actual, expression, 'every sample executes the original owner-qualified lookup');
+      reads++;
+      return observations.length ? observations.shift() : { x: 100, y: 100 };
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      if (method === 'Input.dispatchMouseEvent') dispatched.push({ ...params });
+      return {};
+    },
+  }, { assertOwnedRenderer() {}, step() {} });
+  await ui.clickExpression(expression, 'TEST original owner-qualified control');
+  assert.ok(reads >= 5, 'temporary unavailability is observed before the ready control settles');
+  assert.deepEqual(dispatched.map(({ type }) => type), ['mouseMoved', 'mousePressed', 'mouseReleased']);
+  assert.deepEqual(dispatched.slice(1).map(({ x, y }) => ({ x, y })), [
+    { x: 100, y: 100 }, { x: 100, y: 100 },
+  ], 'only one press/release at the eligible original target');
+});
