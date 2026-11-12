@@ -306,3 +306,34 @@ export function startHost(options: {
     }),
   };
 }
+
+/** Failure-only evidence: no native authority, raw output, or dependency on the relocated checkout. */
+export async function writeNativeFailureReceipt(options: {
+  kind: 'TEST_NATIVE_V2_FAILURE_RECEIPT' | 'TEST_PACKAGED_V2_FAILURE_RECEIPT';
+  sourceHead: string;
+  platform: string;
+  serialized: string;
+  details?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    const { serialized, details, ...identity } = options;
+    const header = { ...identity, diagnosticOnly: true, serializedBytes: Buffer.byteLength(serialized),
+      serializedSha256: createHash('sha256').update(serialized).digest('hex') };
+    let line = JSON.stringify({ ...header, receiptJson: serialized, details }) + '\n';
+    if (Buffer.byteLength(line) > 256 * 1024)
+      line = JSON.stringify({ ...header, receiptJson: null, receiptOmitted: true }) + '\n';
+    await new Promise<void>(done => {
+      const finish = () => { clearTimeout(timer); done(); };
+      const onError = () => finish();
+      // Bound only diagnostic backpressure after the existing native/cleanup decision.
+      const timer = setTimeout(finish, 2000);
+      process.stdout.once('error', onError);
+      try {
+        process.stdout.write(line, error => {
+          if (!error) process.stdout.off('error', onError);
+          finish();
+        });
+      } catch { finish(); }
+    });
+  } catch { /* Diagnostic publication cannot replace the original failure. */ }
+}

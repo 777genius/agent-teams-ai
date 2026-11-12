@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import { record } from './fixtures/native-claude-team/model.ts';
-import { fileHash, nativeHostEnvironment, startHost, tick, treeHash } from './fixtures/native-host.ts';
+import { fileHash, nativeHostEnvironment, startHost, tick, treeHash, writeNativeFailureReceipt } from './fixtures/native-host.ts';
 import { CONTEXT_MARKER, startOpenCodeModel } from './fixtures/native-opencode-team/model.ts';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
 import { readNativeMessageImage, uploadNativeMessageImage } from './fixtures/native-message-image.ts';
@@ -315,6 +315,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     try { await model?.close(); } catch (error) { cleanupErrors.push(error); }
     signal?.removeEventListener('abort', cancelOriginalHost);
     cleanup = cleanupErrors.length === 0;
+    let serialized: string | undefined;
+    let receiptWritten = false;
     try {
       const receipt = {
         kind: packaged ? 'TEST_PACKAGED_NATIVE_V2_HOST' : 'TEST_NATIVE_V2_EMBEDDED_HOST',
@@ -335,16 +337,16 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         modelFailures: model?.failures ?? [], vendorAuthQualified: false,
         desktopQualified: false, releaseQualified: false,
       };
-      const serialized = JSON.stringify(receipt, null, 2) + '\n';
+      serialized = JSON.stringify(receipt, null, 2) + '\n';
       await writeFile(receiptPath, serialized, { mode: 0o600 });
-      if (!passed || !cleanup) process.stdout.write(JSON.stringify({
-        kind: 'TEST_NATIVE_V2_FAILURE_RECEIPT', sourceHead, platform: `${process.platform}-${process.arch}`,
-        receiptBytes: Buffer.byteLength(serialized),
-        receiptSha256: createHash('sha256').update(serialized).digest('hex'),
-        receipt: Buffer.byteLength(serialized) <= 256 * 1024 ? receipt : null,
-        hostDiagnostics: hosts.map(({ diagnosticBytes, frames }) => ({ diagnosticBytes, frames: frames.slice(-16) })),
-      }) + '\n');
+      receiptWritten = true;
     } catch (error) { cleanupErrors.push(error); }
+    if (serialized !== undefined && (originalFailure !== undefined || cleanupErrors.length > 0 || !passed)) {
+      await writeNativeFailureReceipt({
+        kind: 'TEST_NATIVE_V2_FAILURE_RECEIPT', sourceHead, platform: `${process.platform}-${process.arch}`, serialized,
+        details: { receiptWritten, hosts: hosts.map(({ diagnosticBytes, frames }) => ({ diagnosticBytes, frames: frames.slice(-16) })) },
+      });
+    }
   }
   if (originalFailure !== undefined) throw originalFailure;
   if (cleanupErrors.length) throw new AggregateError(cleanupErrors, 'TEST native Host cleanup or receipt failed');

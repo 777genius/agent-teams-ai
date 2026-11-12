@@ -1,12 +1,12 @@
 /** Run the existing Host scenario using only the actual unsigned candidate's resources. */
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { cp, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { candidateDigest } from './candidate-closure.ts';
 import { readPackagedOpenCodeV2, renameCapturedPackagedBundle } from './packaged-opencode-v2-inputs.ts';
-import { nativeHostEnvironment } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
+import { nativeHostEnvironment, writeNativeFailureReceipt } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
 import { assertNativeV1Source } from '../../packages/legacy-agent-host/tests/opencode-v1-version-source.ts';
 
 const repo = await realpath(resolve(import.meta.dirname, '../..'));
@@ -171,17 +171,18 @@ finally {
   receipt.legacyRuntimeRestored = !legacyMoved;
   receipt.status = passed && receipt.cleanup ? 'PASS' : 'INCOMPLETE';
   receipt.phase = 'finished';
+  let serialized: string | undefined;
+  let receiptWritten = false;
   try {
-    const serialized = JSON.stringify(receipt, null, 2) + '\n';
+    serialized = JSON.stringify(receipt, null, 2) + '\n';
     await writeFile(receiptPath, serialized, { mode: 0o600 });
-    if (receipt.status !== 'PASS') process.stdout.write(JSON.stringify({
-      kind: 'TEST_PACKAGED_V2_FAILURE_RECEIPT', sourceHead, platform: requestedPlatform,
-      receiptBytes: Buffer.byteLength(serialized),
-      receiptSha256: createHash('sha256').update(serialized).digest('hex'),
-      receipt: Buffer.byteLength(serialized) <= 256 * 1024 ? receipt : null,
-    }) + '\n');
+    receiptWritten = true;
   }
   catch (error) { cleanupErrors.push(error); }
+  if (serialized !== undefined && (originalFailure !== undefined || cleanupErrors.length > 0 || !passed)) {
+    await writeNativeFailureReceipt({ kind: 'TEST_PACKAGED_V2_FAILURE_RECEIPT', sourceHead,
+      platform: requestedPlatform, serialized, details: { receiptWritten } });
+  }
 }
 if (originalFailure !== undefined) {
   if (cleanupErrors.length) throw new AggregateError([originalFailure, ...cleanupErrors],
