@@ -87,6 +87,7 @@ test(
     const steps: string[] = [];
     const hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
     const nativePids = new Map<string, number>();
+    const nativeEffectPids = new Set<number>();
     const commands = new Map<
       PermissionTurn,
       { request: unknown; receipt: Record<string, unknown>; inputId: string }
@@ -367,18 +368,34 @@ test(
 
       const revokedInput = await send('ask', 'REVOKE');
       const revoked = await permission(revokedInput);
-      // Adversarial change to this disposable TEST owner's persisted grant.
-      // It only removes authority; all responses/cleanup still run in the real Host.
-      const authorityPath = join(root, 'store/teams/test-native-policy/.host-owner/state.json');
-      const authority = JSON.parse(await readFile(authorityPath, 'utf8')) as {
-        grants: { principalId: string; revoked?: boolean; revision?: number }[];
-      };
-      const grant = authority.grants.find((row) => row.principalId === 'ask-session')!;
-      assert.ok(grant);
-      grant.revoked = true;
-      grant.revision = (grant.revision ?? 1) + 1;
-      await writeFile(authorityPath, JSON.stringify(authority), { mode: 0o600 });
-      assert.equal((await answer(revokedInput, revoked.interactionRef, 'allow')).ok, false);
+      // Adversarial removal of this disposable TEST member's authority under the
+      // original Team store's fence; no second Team/Runtime owner is created.
+      const { TeamOwnerStore } = await import('../dist/adapters/team/TeamOwnerStore.js');
+      const authorityStore = new TeamOwnerStore(join(root, 'store'), 'test-native-policy');
+      authorityStore.fenced(() => {
+        const authority = authorityStore.read<{
+          grants: { principalId: string; revoked?: boolean; revision?: number }[];
+        }>('state.json')!;
+        const grant = authority.grants.find((row) => row.principalId === 'ask-session')!;
+        assert.ok(grant);
+        grant.revoked = true;
+        grant.revision = (grant.revision ?? 1) + 1;
+        authorityStore.write('state.json', authority);
+      });
+      const revokedReply = await answer(revokedInput, revoked.interactionRef, 'allow');
+      // A successful RPC envelope may carry the held result of an attempted
+      // control. It is not a native permission ACK: Runtime records UNKNOWN.
+      if (revokedReply.ok) {
+        const replyState = value(revokedReply);
+        assert.equal(replyState.nativeReady, false);
+        assert.equal(
+          (replyState.interactions as Record<string, unknown>[]).find(
+            (row) => row.interactionRef === revoked.interactionRef
+          )?.phase,
+          'unknown'
+        );
+      }
+      assert.equal((await state('ask')).nativeReady, false);
       const revokedStop = value(
         await control('stop', { memberId: 'ask', expectedGeneration: '1' })
       );
@@ -397,6 +414,7 @@ test(
       );
       const shellPid = Number((await readFile(join(activeDirectory, 'active.pid'), 'utf8')).trim());
       assert.ok(Number.isSafeInteger(shellPid) && shellPid > 0 && !absent(shellPid));
+      nativeEffectPids.add(shellPid);
       const stopped = value(await control('stop', { memberId: 'deny', expectedGeneration: '1' }));
       assert.equal(stopped.phase, 'closed');
       assert.equal(stopped.custody, 'released');
@@ -472,6 +490,10 @@ test(
         })
       );
       assert.equal(restored.nativeReady, true);
+      const restoredChildren = await directChildren(host.facts().pid!);
+      assert.equal(restoredChildren.length, 1, 'cold restore owns only the selected sibling child');
+      nativePids.set('sibling-restored', restoredChildren[0]!);
+      assert.equal(await fileHash('/proc/' + restoredChildren[0] + '/exe'), digests.bun);
       await new Promise<void>((done) => setTimeout(done, 300));
       assert.equal(model.requests.length, callsBeforeCold);
       assert.deepEqual(model.failures, []);
@@ -514,6 +536,9 @@ test(
       }
       for (const pid of nativePids.values())
         if (!absent(-pid)) cleanupErrors.push(Error('TEST original native group remains'));
+      for (const pid of nativeEffectPids)
+        if (!absent(pid))
+          cleanupErrors.push(Error('TEST observed native foreground effect remains'));
       cleanup = cleanupErrors.length === 0;
       if (cleanup)
         try {
