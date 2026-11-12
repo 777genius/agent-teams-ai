@@ -185,6 +185,12 @@ describe('extractUserFlags', () => {
     expect(extractUserFlags('-p1')).toEqual(['-p', '-1']);
     expect(extractUserFlags('-pc2')).toEqual(['-p', '-c', '-2']);
   });
+
+  it('reads a long option after a short flag cluster like the CLI does', () => {
+    expect(extractUserFlags('-p-resume=other-session')).toEqual(['-p', '--resume']);
+    expect(extractUserFlags(`-p-settings='{"env":{}}'`)).toEqual(['-p', '--settings']);
+    expect(extractUserFlags(`-p-settings '{"env":{}}' -r abc`)).toEqual(['-p', '--settings', '-r']);
+  });
 });
 
 describe('findOptionMissingValue', () => {
@@ -244,6 +250,8 @@ describe('PROTECTED_CLI_FLAGS', () => {
       extractUserFlags(raw).filter((flag) => PROTECTED_CLI_FLAGS.has(flag));
     expect(hits(`--append-system-prompt --settings '{"env":{}}' prompt`)).toEqual(['--settings']);
     expect(hits('-n --settings={} x')).toEqual(['--settings']);
+    expect(hits('-p-resume=other-session')).toEqual(['--resume']);
+    expect(hits(`-p-settings='{"env":{}}'`)).toEqual(['--settings']);
     expect(hits('--append-system-prompt "-review the patch"')).toEqual([]);
   });
 

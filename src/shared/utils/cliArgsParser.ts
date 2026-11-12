@@ -254,7 +254,10 @@ function expandShortFlagToken(token: string): string[] {
   for (let i = 0; i < letters.length; i++) {
     const ch = letters[i];
     if (!/[A-Za-z]/.test(ch)) {
-      flags.push(`-${letters.slice(i)}`);
+      // The CLI reads the rest as its own option, so `-p-resume=x` is `--resume=x`.
+      const rest = `-${letters.slice(i)}`;
+      const equalsIndex = rest.startsWith('--') ? rest.indexOf('=') : -1;
+      flags.push(equalsIndex === -1 ? rest : rest.slice(0, equalsIndex));
       break;
     }
     flags.push(`-${ch}`);

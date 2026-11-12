@@ -33,6 +33,15 @@ describe('HTTP team route parsers', () => {
       () => assertOptionalExtraCliArgs('--dangerously-skip-permissions=1'),
       'app-managed flags'
     );
+    // A long option after a short flag cluster is read by the CLI as its own option.
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs('-p-resume=other-session'),
+      'app-managed flags'
+    );
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs(`-p-settings='{"env":{"FOO":"bar"}}'`),
+      'app-managed flags'
+    );
     // A genuinely user-safe flag (not app-managed) passes through untouched.
     expect(assertOptionalExtraCliArgs('--max-turns=5')).toBe('--max-turns=5');
   });
