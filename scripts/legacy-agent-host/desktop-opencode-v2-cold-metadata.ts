@@ -24,6 +24,37 @@ export function assertCapturedColdMetadataAbsent(
   evidence: Row,
   observed?: ReturnType<typeof processTable>
 ): void {
+  if (evidence.mixedCreateLaunchProof !== undefined) {
+    const mixed = row(evidence.mixedCreateLaunchProof);
+    assert.ok(mixed.openCodeGeneration === 'v1' || mixed.openCodeGeneration === 'v2');
+    // V1 retains its existing argv observation. V2 captures this original
+    // detached metadata child before any mixed Runtime allocation.
+    if (mixed.openCodeGeneration === 'v2' || mixed.originalMetadataChildBeforeLaunch !== undefined) {
+      assert.equal(mixed.openCodeGeneration, 'v2');
+      assert.equal(mixed.status, 'PASS');
+      const child = row(mixed.originalMetadataChildBeforeLaunch);
+      const physical = row(row(mixed.isolatedMemberRestart).physical);
+      const host = row(physical.originalHost), selectedHost = row(evidence.hostChild);
+      assert.deepEqual(physical.currentHost, host);
+      assert.equal(host.pid, selectedHost.pid);
+      assert.equal(host.parentPid, selectedHost.ppid);
+      assert.equal(host.groupId, selectedHost.pgid);
+      assert.ok(Number.isSafeInteger(host.pid) && Number(host.pid) > 1);
+      assert.ok(typeof host.birth === 'string' && host.birth.length > 0);
+      assert.deepEqual(physical.managementChild, child);
+      assert.deepEqual(mixed.managementChildBeforeStop, child);
+      assert.deepEqual(mixed.managementChildAfterStop, child);
+      assert.ok(Number.isSafeInteger(child.pid) && Number(child.pid) > 1);
+      assert.equal(child.parentPid, host.pid);
+      assert.ok(typeof child.birth === 'string' && child.birth.length > 0);
+      assert.equal(
+        (observed ?? processTable()).some((current) => current.pid === child.pid),
+        false,
+        'the original mixed metadata child is absent after guarded Quit, before harness cleanup'
+      );
+      mixed.managementChildAbsentBeforeHarnessCleanup = true;
+    }
+  }
   if (evidence.coldOpenCodeMetadata === undefined) return;
   const proof = row(evidence.coldOpenCodeMetadata),
     captured = row(proof.captured);

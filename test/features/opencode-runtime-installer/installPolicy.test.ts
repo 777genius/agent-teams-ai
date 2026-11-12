@@ -105,7 +105,7 @@ describe('OpenCode installation policy', () => {
     ]);
   });
 
-  it.each(['1.15.9', '1.20.0-beta.1', 'v1.20.0', '1.20.0+foreign', '2.1.4', '3.0.0'])(
+  it.each(['1.15.9', '1.20.0-beta.1', '1.20.0+foreign', '2.1.4', '3.0.0'])(
     'does not silently change V1 generation or accept non-stable root %s', async (version) => {
       const fetchMetadata = vi.fn().mockResolvedValue({ name: 'opencode-ai', version });
       await expect(selectOpenCodeInstallPackage('v1', '2.1.4', [], fetchMetadata))
@@ -113,6 +113,23 @@ describe('OpenCode installation policy', () => {
       expect(fetchMetadata.mock.calls).toEqual([['opencode-ai', 'latest'], ['opencode-ai', null]]);
     }
   );
+
+  it.each([
+    undefined, null, 12010, 'garbage', 'v1.20.10', 'opencode v2.20.10',
+    ' 1.20.10', '1.20.10\n', '01.20.10', '1.020.10', '1.20.010',
+    '1.20.10-beta..1', '1.20.10-beta.01', '1.20.10+',
+  ])('refuses malformed latest root version without reading a valid fallback snapshot: %j', async version => {
+    const nativeName = 'opencode-linux-x64';
+    const valid = { name: 'opencode-ai', version: '1.20.10',
+      optionalDependencies: { [nativeName]: '1.20.10' } };
+    const fetchMetadata = vi.fn()
+      .mockResolvedValueOnce({ ...valid, version })
+      .mockResolvedValueOnce({ name: 'opencode-ai', versions: { '1.20.10': valid } })
+      .mockResolvedValueOnce({ name: nativeName, version: '1.20.10', dist });
+    await expect(selectOpenCodeInstallPackage('v1', '2.1.4',
+      [{ packageName: nativeName }], fetchMetadata)).rejects.toThrow('selected generation');
+    expect(fetchMetadata.mock.calls).toEqual([['opencode-ai', 'latest']]);
+  });
 
   it.each(['1.19.5', '2.9.0-beta.1', '2.9.0+foreign', '3.0.0'])(
     'does not silently downgrade V2 or admit out-of-contract CLI %s', async (version) => {
@@ -151,7 +168,7 @@ describe('OpenCode installation policy', () => {
       generation, generation === 'v2' ? qualifiedV2EngineForHost : '2.1.4',
       [{ packageName: 'opencode-linux-x64' }], fetchMetadata
     )).rejects.toThrow('identity mismatch');
-    expect(fetchMetadata.mock.calls).toEqual([[rootName, 'latest'], [name, version], [rootName, null]]);
+    expect(fetchMetadata.mock.calls).toEqual([[rootName, 'latest'], [name, version]]);
       }
     );
   }
@@ -166,7 +183,7 @@ describe('OpenCode installation policy', () => {
     await expect(selectOpenCodeInstallPackage(
       'v1', '2.1.4', [{ packageName: 'opencode-linux-x64' }], fetchMetadata
     )).rejects.toThrow('differs from its root');
-    expect(fetchMetadata).toHaveBeenCalledTimes(2);
+    expect(fetchMetadata).toHaveBeenCalledTimes(1);
   });
 
   it.skipIf(qualifiedV2EngineForHost === null)('uses the same root resolution for update checks and installation', async () => {
@@ -177,9 +194,11 @@ describe('OpenCode installation policy', () => {
   });
 
   for (const generation of ['v1', 'v2'] as const) {
-    it.skipIf(generation === 'v2' && qualifiedV2EngineForHost === null)(
-      `keeps latest ${generation} install in its generation when the global tag advances`,
-      async () => {
+    it.skipIf(generation === 'v2' && qualifiedV2EngineForHost === null).each([
+      '3.0.0', '3.0.0-beta.1', '3.0.0+build.1',
+    ])(
+      `keeps latest ${generation} install in its generation when the global tag advances to %s`,
+      async advancedVersion => {
         const rootName = generation === 'v1' ? 'opencode-ai' : '@opencode/cli';
         const packageName = generation === 'v1' ? 'opencode-linux-x64' : '@opencode/cli-linux-x64';
         const major = generation === 'v1' ? 1 : 2;
@@ -191,7 +210,7 @@ describe('OpenCode installation policy', () => {
         });
         const fetchMetadata = vi
           .fn()
-          .mockResolvedValueOnce(metadata('3.0.0'))
+          .mockResolvedValueOnce(metadata(advancedVersion))
           .mockResolvedValueOnce({
             name: rootName,
             versions: {
@@ -199,8 +218,6 @@ describe('OpenCode installation policy', () => {
               [expected]: metadata(expected),
               [`${major}.21.0-beta.1`]: metadata(`${major}.21.0-beta.1`),
               [`${major}.22.0+foreign`]: metadata(`${major}.22.0+foreign`),
-              [`${major}.23.0`]: { ...metadata(`${major}.23.0`), name: 'foreign' },
-              [`${major}.24.0`]: metadata(`${major}.25.0`),
               '3.0.0': metadata('3.0.0'),
             },
           })
@@ -243,19 +260,16 @@ describe('OpenCode installation policy', () => {
             [`${major}.20.9`]: root(`${major}.20.9`),
             [`${major}.20.8`]: root(`${major}.20.8`),
             [`${major}.20.7`]: root(`${major}.20.7`),
-            [`${major}.20.6`]: root(`${major}.20.6`, expected),
+            [`${major}.20.6`]: root(`${major}.20.6`),
             [expected]: root(expected),
             [`${major}.20.1`]: root(`${major}.20.1`),
             '3.0.0': root('3.0.0'),
           },
         };
-        if (name === packageName && version === latest) throw new Error('TEST native HTTP 404');
+        if (name === packageName && version === latest)
+          throw Object.assign(new Error('TEST native HTTP 404'), { status: 404 });
         if (name === packageName && version === null) return {
           name: packageName, versions: {
-            [`${major}.20.9`]: { name: packageName, version: expected, dist },
-            [`${major}.20.8`]: { name: 'foreign', version: `${major}.20.8`, dist },
-            [`${major}.20.7`]: { name: packageName, version: `${major}.20.7` },
-            [`${major}.20.6`]: { name: packageName, version: `${major}.20.6`, dist },
             [expected]: { name: packageName, version: expected, dist },
             [`${major}.20.1`]: { name: packageName, version: `${major}.20.1`, dist },
           },
@@ -276,7 +290,7 @@ describe('OpenCode installation policy', () => {
     const fetchMetadata = vi.fn()
       .mockResolvedValueOnce({ name: 'opencode-ai', version: '1.20.1',
         optionalDependencies: { 'opencode-linux-x64': '1.20.1' } })
-      .mockRejectedValueOnce(new Error('TEST native HTTP 404'));
+      .mockRejectedValueOnce(Object.assign(new Error('TEST native HTTP 404'), { status: 404 }));
     await expect(selectOpenCodeInstallPackage(
       'v1', '2.1.4', [{ packageName: 'opencode-linux-x64' }], fetchMetadata, '1.20.1'
     )).rejects.toThrow('TEST native HTTP 404');
@@ -286,10 +300,92 @@ describe('OpenCode installation policy', () => {
   });
 
   it.each([
+    Object.assign(new Error('TEST native HTTP 500'), { status: 500 }),
+    Object.assign(new Error('TEST native HTTP 503'), { status: 503 }),
+    Object.assign(new Error('TEST native socket timeout'), { code: 'ETIMEDOUT' }),
+    new Error('TEST native HTTP 404 without structured status'),
+  ])('does not resolve an older release after native transport failure: %s', async failure => {
+    const nativeName = 'opencode-linux-x64';
+    const root = (version: string) => ({ name: 'opencode-ai', version,
+      optionalDependencies: { [nativeName]: version } });
+    const fetchMetadata = vi.fn()
+      .mockResolvedValueOnce(root('1.20.10'))
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce({ name: 'opencode-ai', versions: { '1.20.2': root('1.20.2') } })
+      .mockResolvedValueOnce({ name: nativeName, versions: {
+        '1.20.2': { name: nativeName, version: '1.20.2', dist },
+      } });
+    await expect(selectOpenCodeInstallPackage('v1', '2.1.4',
+      [{ packageName: nativeName }], fetchMetadata)).rejects.toBe(failure);
+    expect(fetchMetadata.mock.calls).toEqual([['opencode-ai', 'latest'], [nativeName, '1.20.10']]);
+  });
+
+  it.each([
+    { name: 'foreign-native', version: '1.20.10', dist },
+    { name: 'opencode-linux-x64', version: '1.20.2', dist },
+    { name: 'opencode-linux-x64', version: '1.20.10' },
+    { name: 'opencode-linux-x64', version: '1.20.10', dist: { ...dist, integrity: '' } },
+  ])('fails malformed exact native metadata without falling back %#', async metadata => {
+    const fetchMetadata = vi.fn()
+      .mockResolvedValueOnce({ name: 'opencode-ai', version: '1.20.10',
+        optionalDependencies: { 'opencode-linux-x64': '1.20.10' } })
+      .mockResolvedValueOnce(metadata);
+    await expect(selectOpenCodeInstallPackage('v1', '2.1.4',
+      [{ packageName: 'opencode-linux-x64' }], fetchMetadata)).rejects.toThrow(/identity mismatch|distribution is missing/);
+    expect(fetchMetadata).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['root', 'native'])('preserves %s snapshot transport failure after a real native 404', async failedSnapshot => {
+    const failure = Object.assign(new Error('TEST snapshot HTTP 503'), { status: 503 });
+    const root = { name: 'opencode-ai', version: '1.20.10',
+      optionalDependencies: { 'opencode-linux-x64': '1.20.10' } };
+    const fetchMetadata = vi.fn(async (name: string, version?: string | null) => {
+      if (version === 'latest') return root;
+      if (version === '1.20.10') throw Object.assign(new Error('TEST native missing'), { status: 404 });
+      if (name === 'opencode-ai' && failedSnapshot !== 'root')
+        return { name, versions: { '1.20.10': root } };
+      throw failure;
+    });
+    await expect(selectOpenCodeInstallPackage('v1', '2.1.4',
+      [{ packageName: 'opencode-linux-x64' }], fetchMetadata)).rejects.toBe(failure);
+    expect(fetchMetadata).toHaveBeenCalledTimes(failedSnapshot === 'root' ? 3 : 4);
+  });
+
+  it.each([
+    { name: 'foreign-native', version: '1.20.10', dist },
+    { name: 'opencode-linux-x64', version: '1.20.2', dist },
+    { name: 'opencode-linux-x64', version: '1.20.10' },
+  ])('does not skip invalid present snapshot entries to select an older release %#', async metadata => {
+    const nativeName = 'opencode-linux-x64';
+    const root = (version: string) => ({ name: 'opencode-ai', version,
+      optionalDependencies: { [nativeName]: version } });
+    const fetchMetadata = vi.fn()
+      .mockResolvedValueOnce(root('1.20.10'))
+      .mockRejectedValueOnce(Object.assign(new Error('TEST native missing'), { status: 404 }))
+      .mockResolvedValueOnce({ name: 'opencode-ai', versions: {
+        '1.20.10': root('1.20.10'), '1.20.2': root('1.20.2'),
+      } })
+      .mockResolvedValueOnce({ name: nativeName, versions: {
+        '1.20.10': metadata, '1.20.2': { name: nativeName, version: '1.20.2', dist },
+      } });
+    await expect(selectOpenCodeInstallPackage('v1', '2.1.4',
+      [{ packageName: nativeName }], fetchMetadata)).rejects.toThrow(/identity mismatch|distribution is missing/);
+    expect(fetchMetadata).toHaveBeenCalledTimes(4);
+  });
+
+  it.each([
     { name: 'foreign-package', versions: { '1.20.0': { name: 'opencode-ai', version: '1.20.0' } } },
     { name: 'opencode-ai', versions: [] },
     { name: 'opencode-ai', versions: { '2.0.0': { name: 'opencode-ai', version: '2.0.0' } } },
     { name: 'opencode-ai', versions: { '1.20.0': null } },
+    { name: 'opencode-ai', versions: {
+      '1.20.10': { name: 'foreign', version: '1.20.10' },
+      '1.20.2': { name: 'opencode-ai', version: '1.20.2' },
+    } },
+    { name: 'opencode-ai', versions: {
+      '1.20.10': { name: 'opencode-ai', version: '1.20.9' },
+      '1.20.2': { name: 'opencode-ai', version: '1.20.2' },
+    } },
   ])('refuses an invalid compatible release snapshot %#', async (registry) => {
     const fetchMetadata = vi
       .fn()

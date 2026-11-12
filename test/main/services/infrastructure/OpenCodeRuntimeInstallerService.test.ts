@@ -12,7 +12,7 @@ vi.mock('@shared/utils/logger', async (importOriginal) => {
 });
 
 import { createHash } from 'crypto';
-import { link, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'fs/promises';
+import { link, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -2048,7 +2048,79 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     );
   });
 
-  it('does not replace a verified identical runtime during reinstall', async () => {
+  for (const generation of ['v1', 'v2'] as const) {
+    it.skipIf(generation === 'v2' && getLatestQualifiedOpenCodeV2Version(process.platform, process.arch) === null).each([
+      'older-tag', 'older-after-404', 'native-http-500', 'native-identity-mismatch',
+    ])(`preserves verified ${generation} bytes and binding before download on %s`, async scenario => {
+      const major = generation === 'v1' ? 1 : 2;
+      const previousVersion = `${major}.20.9`, older = `${major}.20.2`, latest = `${major}.20.10`;
+      const rootName = generation === 'v1' ? 'opencode-ai' : '@opencode/cli';
+      const candidate = getOpenCodeRuntimePlatformCandidates()[0]!.packageName;
+      const packageName = generation === 'v1' ? candidate : candidate.replace(/^opencode-/, '@opencode/cli-');
+      const executable = getTestNativeOpenCodeBinaryName();
+      const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'opencode');
+      const packageRoot = path.join(runtimeRoot, 'versions', previousVersion, packageName,
+        ...(generation === 'v2' ? ['11111111-1111-4111-8111-111111111111'] : []));
+      const binaryPath = path.join(packageRoot, ...(generation === 'v2' ? ['bin'] : []), executable);
+      const manifestPath = path.join(runtimeRoot, 'current.json');
+      const binaryBytes = Buffer.concat([Buffer.from(process.platform === 'darwin' ? 'cffaedfe'
+        : process.platform === 'win32' ? '4d5a0000' : '7f454c46', 'hex'), Buffer.from('TEST retained native bytes')]);
+      await mkdir(path.dirname(binaryPath), { recursive: true });
+      await writeFile(binaryPath, binaryBytes, { mode: 0o755 });
+      if (generation === 'v2') await writeOpenCodeNpmPackage(packageRoot, { name: packageName, version: previousVersion });
+      const manifestBytes = JSON.stringify({ schemaVersion: 1, version: previousVersion, platformPackage: packageName,
+        binaryPath, integrity: 'sha512-TEST-retained', installedAt: '2026-05-12T00:00:00.000Z' });
+      await writeFile(manifestPath, manifestBytes);
+      mockOpenCodeVersions({ [binaryPath]: previousVersion });
+      const before = await lstat(binaryPath);
+      const entriesBefore = await readdir(runtimeRoot);
+      const heldBridgeEnv: NodeJS.ProcessEnv = {};
+      await ensureOpenCodeBridgeRuntimeBinaryEnv({ targetEnv: heldBridgeEnv,
+        resolveVerifiedOpenCodeRuntimeBinaryPath: resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath,
+        isSupportedOpenCodeRuntimeBinaryPath });
+      const bindingBefore = { ...heldBridgeEnv };
+      expect(Object.values(heldBridgeEnv)).toContain(binaryPath);
+      const dist = { tarball: 'https://example.test/must-not-download.tgz', integrity: 'sha512-test' };
+      const root = (version: string) => ({ name: rootName, version, dist,
+        optionalDependencies: { [packageName]: version } });
+      const rootUrl = `https://registry.npmjs.org/${encodeURIComponent(rootName)}`;
+      const nativeUrl = `https://registry.npmjs.org/${encodeURIComponent(packageName)}`;
+      const fetchMetadata = vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url === `${rootUrl}/latest`) return Response.json(root(scenario === 'older-tag' ? older : latest));
+        if (url === rootUrl) return Response.json({ name: rootName,
+          versions: { [latest]: root(latest), [older]: root(older) } });
+        if (url === nativeUrl) return Response.json({ name: packageName,
+          versions: { [older]: { name: packageName, version: older, dist } } });
+        if (url === `${nativeUrl}/${latest}` || url === `${nativeUrl}/${older}`) {
+          if (scenario === 'older-after-404') return new Response('TEST not published', { status: 404 });
+          if (scenario === 'native-http-500') return new Response('TEST unavailable', { status: 500 });
+          return Response.json({ name: scenario === 'native-identity-mismatch' ? 'foreign-native' : packageName,
+            version: scenario === 'older-tag' ? older : latest, dist });
+        }
+        throw new Error(`Unexpected download or metadata request: ${url}`);
+      });
+      vi.stubGlobal('fetch', fetchMetadata);
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const result = await createNativeOnlyInstaller().install({ generation });
+      expect(result).toMatchObject({ installed: true, source: 'app-managed', state: 'failed',
+        version: previousVersion, binaryPath });
+      expect(result.error).toMatch(scenario.startsWith('older-') ? /would downgrade/
+        : scenario === 'native-http-500' ? /HTTP 500/ : /identity mismatch/);
+      expect(fetchMetadata).toHaveBeenCalledTimes(scenario === 'older-after-404' ? 4 : 2);
+      expect(fetchMetadata.mock.calls.some(([url]) => String(url) === dist.tarball)).toBe(false);
+      expect(await readFile(manifestPath, 'utf8')).toBe(manifestBytes);
+      expect(await readFile(binaryPath)).toEqual(binaryBytes);
+      expect((await lstat(binaryPath)).ino).toBe(before.ino);
+      expect(await readdir(runtimeRoot)).toEqual(entriesBefore);
+      expect(heldBridgeEnv).toEqual(bindingBefore);
+      expect(await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).toBe(binaryPath);
+      expect(consoleError).toHaveBeenCalledTimes(1);
+    });
+  }
+
+  it.each([false, true])('preserves verified V1 runtime bytes during reinstall (changed integrity=%s)', async changedIntegrity => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const platformPackage = getOpenCodeRuntimePlatformCandidates()[0]!.packageName;
     const executableName = process.platform === 'win32' ? 'opencode.exe' : 'opencode';
     const binaryPath = path.join(
@@ -2075,11 +2147,18 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         version: '1.18.3',
         platformPackage,
         binaryPath,
-        integrity,
+        integrity: changedIntegrity ? 'sha512-previous-verified-package' : integrity,
         installedAt: '2026-05-12T00:00:00.000Z',
       })}\n`,
       'utf8'
     );
+    const before = await lstat(binaryPath);
+    const manifestBefore = await readFile(manifestPath, 'utf8');
+    const heldBridgeEnv: NodeJS.ProcessEnv = {};
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({ targetEnv: heldBridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath,
+      isSupportedOpenCodeRuntimeBinaryPath });
+    const bindingBefore = { ...heldBridgeEnv };
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: string | URL | Request): Promise<Response> => {
@@ -2108,13 +2187,21 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       })
     );
 
-    await expect(createNativeOnlyInstaller().install({ generation: 'v1' })).resolves.toMatchObject({
+    const result = await createNativeOnlyInstaller().install({ generation: 'v1' });
+    expect(result).toMatchObject({
       installed: true,
       source: 'app-managed',
-      state: 'ready',
+      state: changedIntegrity ? 'failed' : 'ready',
       binaryPath,
     });
     await expect(readFile(binaryPath, 'utf8')).resolves.toBe('existing working runtime');
+    expect((await lstat(binaryPath)).ino).toBe(before.ino);
+    expect(heldBridgeEnv).toEqual(bindingBefore);
+    if (changedIntegrity) {
+      expect(result.error).toContain('Existing OpenCode V1 installation differs');
+      expect(await readFile(manifestPath, 'utf8')).toBe(manifestBefore);
+      expect(consoleError).toHaveBeenCalledTimes(1);
+    } else expect(consoleError).not.toHaveBeenCalled();
 
     const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'opencode');
     const entries = await readdir(runtimeRoot);

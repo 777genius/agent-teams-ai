@@ -25,7 +25,10 @@ export async function fetchOpenCodePackageMetadata(
       signal: controller.signal,
       ...(version === null ? { headers: { Accept: 'application/vnd.npm.install-v1+json' } } : {}),
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status} from ${url}`);
+    if (!response.ok)
+      throw Object.assign(new Error(`HTTP ${response.status} from ${url}`), {
+        status: response.status,
+      });
     const parsed = (await response.json()) as NpmPackageMetadata;
     if (
       version === null

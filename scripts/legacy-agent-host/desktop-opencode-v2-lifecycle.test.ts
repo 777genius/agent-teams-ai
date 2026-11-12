@@ -86,6 +86,55 @@ test('cold cleanup proves the captured detached metadata child absent before rec
   assert.deepEqual(absent, {});
 });
 
+test('mixed Quit proves its original detached metadata child absent without adopting an orphan or reused PID', () => {
+  const host = { pid: 10, parentPid: 1, groupId: 9, birth: 'TEST-host-birth', command: '/TEST/node' };
+  const child = { pid: 11, parentPid: 10, groupId: 11, birth: 'TEST-metadata-birth', command: '/TEST/bun' };
+  const original = {
+    hostChild: { pid: 10, ppid: 1, pgid: 9 },
+    mixedCreateLaunchProof: {
+      status: 'PASS', openCodeGeneration: 'v2', originalMetadataChildBeforeLaunch: child,
+      managementChildBeforeStop: child, managementChildAfterStop: child,
+      isolatedMemberRestart: { physical: { originalHost: host, currentHost: host, managementChild: child } },
+    },
+  };
+  for (const current of [
+    { pid: 11, ppid: 10, pgid: 11 },
+    { pid: 11, ppid: 1, pgid: 11 },
+    { pid: 11, ppid: 99, pgid: 99 },
+  ]) {
+    const evidence = structuredClone(original);
+    assert.throws(() => assertCapturedColdMetadataAbsent(evidence, [current]), /mixed metadata child/);
+    assert.equal('managementChildAbsentBeforeHarnessCleanup' in evidence.mixedCreateLaunchProof, false);
+  }
+  for (const field of ['managementChildBeforeStop', 'managementChildAfterStop']) {
+    const evidence = structuredClone(original);
+    (evidence.mixedCreateLaunchProof as Record<string, unknown>)[field] = { ...child, birth: 'TEST-replaced' };
+    assert.throws(() => assertCapturedColdMetadataAbsent(evidence, []));
+  }
+  const wrongHost = structuredClone(original);
+  wrongHost.hostChild.pid = 99;
+  assert.throws(() => assertCapturedColdMetadataAbsent(wrongHost, []));
+  const wrongBinding = structuredClone(original);
+  wrongBinding.mixedCreateLaunchProof.originalMetadataChildBeforeLaunch.parentPid = 99;
+  assert.throws(() => assertCapturedColdMetadataAbsent(wrongBinding, []));
+  const evidence = structuredClone(original);
+  assertCapturedColdMetadataAbsent(evidence, [{ pid: 42, ppid: 1, pgid: 42 }]);
+  assert.deepEqual(evidence.mixedCreateLaunchProof,
+    { ...original.mixedCreateLaunchProof, managementChildAbsentBeforeHarnessCleanup: true });
+  assert.equal('coldOpenCodeMetadata' in evidence, false, 'mixed proof is not a synthetic cold receipt');
+});
+
+test('V2 mixed cleanup requires its pre-Launch observation while V1 proof stays unchanged', () => {
+  const evidence = { mixedCreateLaunchProof: { status: 'PASS', openCodeGeneration: 'v1' } };
+  assertCapturedColdMetadataAbsent(evidence, []);
+  assert.deepEqual(evidence, { mixedCreateLaunchProof: { status: 'PASS', openCodeGeneration: 'v1' } });
+  for (const changed of [
+    { status: 'PASS', openCodeGeneration: 'v2' },
+    { status: 'PASS' },
+    { status: 'PASS', openCodeGeneration: 'v1', originalMetadataChildBeforeLaunch: {} },
+  ]) assert.throws(() => assertCapturedColdMetadataAbsent({ mixedCreateLaunchProof: changed }, []));
+});
+
 test('cold metadata preserves only the exact pending-open UNKNOWN witnessed by original Quit', () => {
   const session = {
     phase: 'held',

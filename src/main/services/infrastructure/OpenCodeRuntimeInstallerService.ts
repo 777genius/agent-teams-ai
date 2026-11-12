@@ -2,6 +2,8 @@ import {
   classifyNativeVersion,
   getLatestQualifiedOpenCodeV2Version,
   isRecognizedOpenCodeRuntimeVersion,
+  parseOpenCodeSemver,
+  semverLt,
 } from '@features/opencode-compatibility';
 import {
   chooseOpenCodeInstallGeneration,
@@ -821,6 +823,16 @@ export class OpenCodeRuntimeInstallerService {
           : undefined
       );
       const platformMetadata = selected.metadata;
+      const previousVersion = classifyNativeVersion(previousStatus.version ?? '');
+      if (
+        previousStatus.installed &&
+        previousVersion.kind === 'recognized' &&
+        previousVersion.generation === generation &&
+        semverLt(parseOpenCodeSemver(platformMetadata.version)!, previousVersion.version)
+      )
+        throw new Error(
+          `Resolved OpenCode ${platformMetadata.version} would downgrade the verified selected ${previousVersion.version}; keeping the current runtime`
+        );
 
       this.publishProgress({
         phase: 'downloading',
@@ -887,7 +899,19 @@ export class OpenCodeRuntimeInstallerService {
           isAbsoluteExistingFile(binaryPath) &&
           (await probeOpenCodeBinaryVersion(binaryPath)).ok;
         if (!canReuseExistingRuntime) {
-          await fsp.rm(versionDir, { recursive: true, force: true });
+          if (generation === 'v1') {
+            const exists = await fsp.lstat(versionDir).then(
+              () => true,
+              (error: unknown) => {
+                if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+                throw error;
+              }
+            );
+            if (exists)
+              throw new Error(
+                'Existing OpenCode V1 installation differs from the selected package; keeping its original bytes'
+              );
+          } else await fsp.rm(versionDir, { recursive: true, force: true });
           await fsp.mkdir(path.dirname(versionDir), { recursive: true });
           await renamePathWithRetry(tempDir, versionDir);
         }

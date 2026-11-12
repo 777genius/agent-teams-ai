@@ -57,6 +57,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   const steps: Record<string, unknown>[] = [];
   const proof: Record<string, unknown> = {
     status: 'INCOMPLETE',
+    openCodeGeneration: models.openCodeGeneration,
     steps,
     scope:
       'Original configured Create save-only3 members → original Edit description/Save/reload/reopen → original Launch hydration/close/reopen/preflights → one fresh3-member native capture → one original Launch lead prompt and2 Composer inputs/MCP/effects/replies → original mixed group/directed Bob input/three-provider ACK → original isolated Bob Restart/three-provider continuation → Stop/reload/Launch readback',

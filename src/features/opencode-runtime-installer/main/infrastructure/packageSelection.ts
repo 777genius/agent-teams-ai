@@ -50,11 +50,13 @@ function compatibleRoots(
     throw new Error('OpenCode npm package version does not match the selected generation');
   const roots: ResolvedPackage[] = [];
   for (const [version, candidate] of Object.entries(registry.versions)) {
+    if (!isCompatibleRoot({ name, version }, name, generation, qualifiedV2Version)) continue;
     if (
-      candidate?.version === version &&
-      isCompatibleRoot(candidate, name, generation, qualifiedV2Version)
+      candidate?.version !== version ||
+      !isCompatibleRoot(candidate, name, generation, qualifiedV2Version)
     )
-      roots.push(candidate);
+      throw new Error('OpenCode npm package version does not match the selected generation');
+    roots.push(candidate);
   }
   return roots.sort((left, right) =>
     left.version === right.version
@@ -74,6 +76,22 @@ function hasNativeDistribution(metadata: PackageMetadata | null | undefined): bo
   );
 }
 
+function isMissingPackage(error: unknown): boolean {
+  return error instanceof Error && 'status' in error && error.status === 404;
+}
+
+function declaredNativeVersion(root: ResolvedPackage, name: string): string | undefined {
+  const dependencies = root.optionalDependencies;
+  if (dependencies === undefined) return undefined;
+  if (!dependencies || typeof dependencies !== 'object' || Array.isArray(dependencies))
+    throw new Error('Invalid OpenCode native dependency metadata');
+  const dependency = dependencies[name];
+  if (dependency === undefined) return undefined;
+  if (typeof dependency !== 'string' || dependency.replace(/^[~^]/, '') !== root.version)
+    throw new Error('OpenCode native package version differs from its root package');
+  return root.version;
+}
+
 /** Resolve CLI metadata once; a moving CLI tag never changes the qualified V2 engine. */
 export async function selectOpenCodeRootPackage(
   generation: OpenCodeInstallGeneration,
@@ -87,6 +105,13 @@ export async function selectOpenCodeRootPackage(
     );
   const rootName = generation === 'v2' ? '@opencode/cli' : 'opencode-ai';
   let root = await fetchMetadata(rootName, requestedVersion);
+  if (
+    typeof root?.version !== 'string' ||
+    root.version !== root.version.trim() ||
+    !/^\d/.test(root.version) ||
+    !parseOpenCodeSemver(root.version)
+  )
+    throw new Error('OpenCode npm package version does not match the selected generation');
   // A global tag can move beyond the selected generation. Resolve a compatible
   // stable release from one registry snapshot, without following the tag again.
   if (
@@ -141,54 +166,63 @@ export async function selectOpenCodeInstallPackage(
   const names = candidates.map(({ packageName }) =>
     generation === 'v2' ? packageName.replace(/^opencode-/, '@opencode/cli-') : packageName
   );
-  let originalError: unknown;
-  try {
-    const packageName = names.find((name) => typeof root.optionalDependencies?.[name] === 'string');
-    if (!packageName) throw new Error('No OpenCode binary package is available for this platform');
-    const version = root.optionalDependencies![packageName].replace(/^[~^]/, '');
-    if (version !== root.version)
-      throw new Error('OpenCode native package version differs from its root package');
-    const metadata = await fetchSelected(packageName, version);
-    if (metadata?.version !== version || metadata.name !== packageName)
-      throw new Error('OpenCode native npm package identity mismatch');
-    if (!hasNativeDistribution(metadata))
-      throw new Error('OpenCode native npm package distribution is missing');
-    return { packageName, metadata: { ...metadata, name: packageName, version }, generation };
-  } catch (error) {
-    if (requestedVersion !== 'latest') throw error;
-    originalError = error;
-  }
-  try {
-    const roots = compatibleRoots(
-      await fetchSelected(root.name, null),
-      root.name,
-      generation,
-      qualifiedV2Version
-    );
-    for (const candidate of roots) {
-      for (const packageName of names) {
-        const dependency = candidate.optionalDependencies?.[packageName];
-        if (typeof dependency !== 'string' || dependency.replace(/^[~^]/, '') !== candidate.version)
-          continue;
-        const registry = await fetchSelected(packageName, null).catch(() => undefined);
-        const metadata = registry?.versions?.[candidate.version];
-        if (
-          registry?.name !== packageName ||
-          Array.isArray(registry.versions) ||
-          metadata?.name !== packageName ||
-          metadata.version !== candidate.version ||
-          !hasNativeDistribution(metadata)
-        )
-          continue;
-        return {
-          packageName,
-          metadata: { ...metadata, name: packageName, version: candidate.version },
-          generation,
-        };
-      }
+  let originalError: unknown = new Error(
+    'No OpenCode binary package is available for this platform'
+  );
+  const packageName = names.find((name) => declaredNativeVersion(root, name) !== undefined);
+  if (packageName) {
+    try {
+      const metadata = await fetchSelected(packageName, root.version);
+      if (metadata?.version !== root.version || metadata.name !== packageName)
+        throw new Error('OpenCode native npm package identity mismatch');
+      if (!hasNativeDistribution(metadata))
+        throw new Error('OpenCode native npm package distribution is missing');
+      return {
+        packageName,
+        metadata: { ...metadata, name: packageName, version: root.version },
+        generation,
+      };
+    } catch (error) {
+      if (!isMissingPackage(error)) throw error;
+      originalError = error;
     }
-  } catch {
-    // Preserve the original failure when no independently qualified pair exists.
+  }
+  if (requestedVersion !== 'latest') throw originalError;
+  const roots = compatibleRoots(
+    await fetchSelected(root.name, null),
+    root.name,
+    generation,
+    qualifiedV2Version
+  );
+  for (const candidate of roots) {
+    for (const name of names) {
+      if (declaredNativeVersion(candidate, name) === undefined) continue;
+      let registry: PackageMetadata;
+      try {
+        registry = await fetchSelected(name, null);
+      } catch (error) {
+        if (!isMissingPackage(error)) throw error;
+        continue;
+      }
+      if (
+        registry?.name !== name ||
+        !registry.versions ||
+        typeof registry.versions !== 'object' ||
+        Array.isArray(registry.versions)
+      )
+        throw new Error('OpenCode native npm registry identity mismatch');
+      const metadata = registry.versions[candidate.version];
+      if (metadata === undefined) continue;
+      if (metadata?.name !== name || metadata.version !== candidate.version)
+        throw new Error('OpenCode native npm package identity mismatch');
+      if (!hasNativeDistribution(metadata))
+        throw new Error('OpenCode native npm package distribution is missing');
+      return {
+        packageName: name,
+        metadata: { ...metadata, name, version: candidate.version },
+        generation,
+      };
+    }
   }
   throw originalError;
 }
