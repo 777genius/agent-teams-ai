@@ -58,10 +58,10 @@ jobs:
           set -euo pipefail
           pnpm --filter @agent-teams/legacy-agent-host build
           node scripts/stage-runtime.mjs --platform linux-x64
-      - name: Verify observational diagnostics and exact captured model identity
+      - name: Verify passive transcript reads and exact captured model identity
         run: |
           set -euo pipefail
-          pnpm exec vitest run test/main/utils/retainedHistoryRequestDiagnostic.test.ts --maxWorkers=1
+          pnpm exec vitest run test/main/services/runtime/ClaudeMultimodelBridgeService.test.ts test/main/services/runtime/providerAwareCliEnv.test.ts src/main/services/runtime/ClaudeMultimodelBridgeService.test.ts --maxWorkers=1
           pnpm typecheck
           pnpm typecheck:legacy-host-scripts
           pnpm --filter @agent-teams/legacy-agent-host typecheck:test

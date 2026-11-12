@@ -1,4 +1,3 @@
-import { recordRetainedHistoryDiagnostic } from '@main/utils/retainedHistoryRequestDiagnostic';
 import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
 import { isMissingDirectory } from '@main/utils/directoryPresence';
 import { execCliWithOpenCodeRecovery as execCli } from '@main/utils/openCodeNodeModulesJunction';
@@ -1793,59 +1792,47 @@ export class ClaudeMultimodelBridgeService {
       timeoutMs?: number;
     }
   ): Promise<OpenCodeRuntimeTranscriptResponse['transcript'] | null> {
-    let stage = 'build_cli_env';
+    // History reads retain their original owner and must not prepare unrelated provider launches.
+    const { env } = buildPassiveProviderStatusCliEnv({ binaryPath, providerId: 'opencode' });
+    const args = [
+      'runtime',
+      'transcript',
+      '--json',
+      '--provider',
+      'opencode',
+      '--team',
+      params.teamId,
+      '--member',
+      params.memberName,
+      '--projection-only',
+    ];
+    if (typeof params.limit === 'number') {
+      args.push('--limit', String(params.limit));
+    }
+    if (typeof params.laneId === 'string' && params.laneId.trim().length > 0) {
+      args.push('--lane', params.laneId.trim());
+    }
+    if (typeof params.sessionId === 'string' && params.sessionId.trim().length > 0) {
+      args.push('--session-id', params.sessionId.trim());
+    }
+
+    if (typeof params.runId === 'string' && params.runId.trim().length > 0) {
+      args.push('--run-id', params.runId.trim());
+    }
+
+    const outputDir = await mkdtemp(path.join(tmpdir(), 'opencode-transcript-'));
+    const outputPath = path.join(outputDir, 'transcript.json');
     try {
-      const { env } = await this.buildCliEnv(binaryPath);
-      const args = [
-        'runtime',
-        'transcript',
-        '--json',
-        '--provider',
-        'opencode',
-        '--team',
-        params.teamId,
-        '--member',
-        params.memberName,
-        '--projection-only',
-      ];
-      if (typeof params.limit === 'number') {
-        args.push('--limit', String(params.limit));
-      }
-      if (typeof params.laneId === 'string' && params.laneId.trim().length > 0) {
-        args.push('--lane', params.laneId.trim());
-      }
-      if (typeof params.sessionId === 'string' && params.sessionId.trim().length > 0) {
-        args.push('--session-id', params.sessionId.trim());
-      }
-
-      if (typeof params.runId === 'string' && params.runId.trim().length > 0) {
-        args.push('--run-id', params.runId.trim());
-      }
-
-      stage = 'create_output_directory';
-      const outputDir = await mkdtemp(path.join(tmpdir(), 'opencode-transcript-'));
-      const outputPath = path.join(outputDir, 'transcript.json');
-      try {
-        stage = 'exec';
-        await execCli(binaryPath, [...args, '--output', outputPath], {
-          timeout: params.timeoutMs ?? PROVIDER_STATUS_TIMEOUT_MS,
-          env,
-        });
-        stage = 'read_output';
-        const output = await readFile(outputPath, 'utf8');
-        stage = 'parse_output';
-        const parsed = extractJsonObject<OpenCodeRuntimeTranscriptResponse>(output);
-        stage = 'select_transcript';
-        return parsed.providerId === 'opencode' ? (parsed.transcript ?? null) : null;
-      } finally {
-        await rm(outputDir, { recursive: true, force: true }).catch(() => undefined);
-      }
-    } catch (error) {
-      recordRetainedHistoryDiagnostic('bridge_failure', {
-        teamName: params.teamId, memberName: params.memberName, laneId: params.laneId,
-        runId: params.runId, sessionId: params.sessionId,
-      }, stage, error);
-      throw error;
+      await execCli(binaryPath, [...args, '--output', outputPath], {
+        timeout: params.timeoutMs ?? PROVIDER_STATUS_TIMEOUT_MS,
+        env,
+      });
+      const parsed = extractJsonObject<OpenCodeRuntimeTranscriptResponse>(
+        await readFile(outputPath, 'utf8')
+      );
+      return parsed.providerId === 'opencode' ? (parsed.transcript ?? null) : null;
+    } finally {
+      await rm(outputDir, { recursive: true, force: true }).catch(() => undefined);
     }
   }
 
