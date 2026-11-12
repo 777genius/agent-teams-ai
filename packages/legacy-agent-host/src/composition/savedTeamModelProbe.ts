@@ -5,7 +5,7 @@ import {
   resolveTeamModelProbeRecipe,
   applyTeamModelProbeSelection,
 } from './teamModelProbeRecipe.js';
-import { captureRuntimeSource, compileRuntimeCapture } from './runtimeCaptureSource.js';
+import { captureRuntimeSource, compileRuntimeCapture, runtimeCaptureSourceSchema } from './runtimeCaptureSource.js';
 import {
   captureTeamModelProbe,
   teamModelProbeProfile,
@@ -16,6 +16,7 @@ import { assertCapturedRosterCurrent } from './teamRoster.js';
 import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { TeamHostProfile } from './TeamHost.js';
+import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import type { TeamModelProbeSelection } from './teamLaunchModelProbe.js';
 import type { JsonValue } from '../contracts.js';
 
@@ -24,6 +25,7 @@ export const isSavedTeamModelSource = (sourceId: string) => sourceId.startsWith(
 export const savedTeamModelContext = teamModelProbeContext;
 type Options = {
   profile: TeamHostProfile;
+  sources?: RuntimeRecipeSources;
   team: HostedTeam;
   assertCurrent(): void;
 };
@@ -48,9 +50,10 @@ function source(options: Options) {
     team,
     'model-preflight',
     'model-preflight',
-    roster
+    roster,
+    options.sources ? { sources: options.sources } : {}
   );
-  const compiled = compileRuntimeCapture(profile, team, captured, 'model-preflight');
+  const compiled = compileRuntimeCapture(profile, team, captured, 'model-preflight', options.sources);
   const sourceId = `${prefix}${runtimeDigest({ owner: profile.owner, authority, captured })}`;
   options.assertCurrent();
   return { sourceId, captured, profiles: compiled.profiles };
@@ -129,6 +132,8 @@ export function captureSavedTeamModelProbe(
       team,
       input,
       saved: saved.profiles.find((member) => member.memberId === input.memberId),
+      ...(options.sources ? { sources: options.sources } : {}),
+      sourceReference: saved.captured.recipeSources?.find(reference => reference.memberId === input.memberId),
     });
   const selected = recipe();
   const selectionDigest = runtimeDigest(selected);
@@ -176,6 +181,7 @@ export function isCurrentCapturedTeam(team: HostedTeam | undefined): boolean {
 /** The Runtime coordinator supplies its exact owners; saved inspection never becomes a capture. */
 export function captureTeamModelProbeSelection(options: {
   profile: TeamHostProfile;
+  sources?: RuntimeRecipeSources;
   team: HostedTeam | undefined;
   capturedTeam: HostedTeam | undefined;
   launch: TeamLaunchOwner | undefined;
@@ -207,6 +213,9 @@ export function captureTeamModelProbeSelection(options: {
     launch,
     team,
     runtime: options.profile.runtime,
+    ...(options.sources ? { sources: options.sources } : {}),
+    sourceReference: team.capture === undefined ? undefined : runtimeCaptureSourceSchema.parse(team.capture)
+      .recipeSources?.find(reference => reference.memberId === input.memberId),
     input,
     action,
     principalId: options.profile.principalId,

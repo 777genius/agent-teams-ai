@@ -1,10 +1,11 @@
 import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
-import { resolveRuntimeRecipe, runtimeProviderId } from './runtimeRecipe.js';
+import { resolveCapturedRuntimeRecipe, resolveRuntimeRecipe, runtimeProviderId } from './runtimeRecipe.js';
 import { applyLaunchConfiguration } from './launchConfiguration.js';
 import type { HostedTeam } from './MemberEntry.js';
 import type { RuntimeMemberProfile, RuntimeProfile } from './runtimeProfile.js';
 import type { TeamModelProbeSelection } from './teamLaunchModelProbe.js';
+import type { RuntimeRecipeSources, RuntimeSourceReference } from './runtimeSourceContracts.js';
 
 /** Model-only draft selection. It creates no roster, grants, capture or conversation bindings. */
 export function resolveTeamModelProbeRecipe(options: {
@@ -12,6 +13,8 @@ export function resolveTeamModelProbeRecipe(options: {
   team: HostedTeam;
   input: TeamModelProbeSelection;
   saved: RuntimeMemberProfile | undefined;
+  sources?: RuntimeRecipeSources;
+  sourceReference?: RuntimeSourceReference | undefined;
 }): RuntimeMemberProfile {
   const { input, saved, team } = options;
   const draft = input.draft;
@@ -97,7 +100,7 @@ export function resolveTeamModelProbeRecipe(options: {
   }
   function privateRecipe() {
     // A new member never borrows an existing member's native account/session.
-    return resolveRuntimeRecipe(
+    const seed = resolveRuntimeRecipe(
       row
         ? options.runtime
         : {
@@ -110,6 +113,10 @@ export function resolveTeamModelProbeRecipe(options: {
       input.memberId,
       desiredProviderId
     );
+    const projectPath = roster.savedSettings?.cwd ?? team.definition.savedSettings?.cwd ?? seed.cwd;
+    const reference = sameProvider ? options.sourceReference :
+      options.sources?.currentForRecipe(team.definition.scope, projectPath, seed);
+    return resolveCapturedRuntimeRecipe(seed, reference, team.definition.scope, projectPath, options.sources);
   }
   if (draft.workspace !== undefined) recipe.cwd = draft.workspace;
   return recipe;

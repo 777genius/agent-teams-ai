@@ -225,6 +225,17 @@ Hash/platform/malformed receipt suites переиспользовать; same-ve
 - Root рассмотрел ограниченный срез и разрешил publication. Общий root typecheck переносится на combined gate: первый local запуск завершён exit 137 без TS diagnostics во время параллельных сборок; Host checks выше завершены успешно.
 - Осталось: installer/discovery→native qualification→publication, поддержка нового version/generation и artifact retention, source consumers Create/Edit/Relaunch и P05/P07, реальные native/Desktop journeys раздела 7. Main merge/activation не выполнялись.
 
+## 11. Source-aware Create и model consumers — 2026-11-12
+
+- `captureCreateTeamDraft` и saved/captured model selection читают тот же source reference, что runtime capture. Legacy seed digest остаётся прежним; новая revision входит в draft/source evidence.
+- Create проверяет source до registry mutation и сверяет фактический original capture перед start. Новая зелёная проверка current C не разрешает старый pending capture B; исходный уже admitted start продолжает использовать прежний receipt.
+- Captured Edit/default берёт private recipe из retained revision, saved model configuration — из current revision. Publication не меняет действующие bindings и не возвращает default к seed executable.
+- Отмена Create probe использует exact original intent в existing probe journal, без recapture текущего executor. Предыдущий seed context поддерживается для upgrade/recovery; чужой draft не может отменить исходный probe.
+- R1 обнаружил потерю original cleanup после смены source и ложное использование fresh C proof для pending B; исправлены обе границы до review.
+- Host build, test types, targeted lint и source-size guard — PASS. `team-create-launch`, `saved-team-model-probe`, `runtime-source-selection`, `management-model-probe`: **53/53 PASS**.
+- Добавлены 5 сценариев с реальными source index/Team registry/capture/probe journals и тестовым provider driver. Это проверка composition/recovery, не native inference или Desktop UI E2E.
+- Срез не объявляет готовыми installer/new-version/V1↔V2 qualification, V2 model/variant mapping, config parity или полный Create recovery UI после source conflict. Эти пункты остаются в 05/06/07 и финальной native/Desktop приёмке.
+
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/runtime/openCodeRuntimeBinaryEnv.ts
 [M3]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/settings/sections/CliStatusSection.tsx

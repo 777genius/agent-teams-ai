@@ -157,6 +157,16 @@ export class ModelProbeOwner {
   }
 
   /** Composition cleanup only: the retained context binds the exact original Team selection. */
+  readContextual(commandId: string, context: string): ProviderModelProbeSnapshot | null {
+    this.assertAdmission();
+    const saved = this.options.store.read(id.parse(commandId));
+    if (!saved) return null;
+    if (saved.kind !== 'model.probe' || saved.context !== context)
+      throw new ManagementCommandError('conflict');
+    return this.snapshot(saved);
+  }
+
+  /** Composition cleanup only: the retained context binds the exact original Team selection. */
   async cancelContextual(commandId: string, context: string): Promise<ProviderModelProbeSnapshot> {
     this.assertAdmission();
     const saved = this.options.store.read(id.parse(commandId));

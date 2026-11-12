@@ -63,6 +63,15 @@ export const runtimeCaptureSourceSchema = z
   .strict();
 export type RuntimeCaptureSource = z.infer<typeof runtimeCaptureSourceSchema>;
 
+/** Logical member names compare a Create preflight with its later registry-assigned member IDs. */
+export function runtimeCaptureSourceSelections(source: RuntimeCaptureSource) {
+  return (source.recipeSources ?? []).map(({ memberId, ...reference }) => {
+    const member = source.members.find(row => row.memberId === memberId);
+    if (!member) throw new TeamLaunchError('hold', 'capture-source-references');
+    return { memberName: member.name, ...reference };
+  }).sort((a, b) => a.memberName.localeCompare(b.memberName));
+}
+
 function refuse(reason: string): never {
   throw new TeamLaunchError('invalid', reason);
 }

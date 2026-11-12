@@ -28,13 +28,15 @@ import { ModelProbeOwner } from '../dist/management/ModelProbeOwner.js';
 import { ManagementResourceFence } from '../dist/management/ManagementResourceFence.js';
 import { TeamRegistry } from '../dist/team-registry/TeamRegistry.js';
 import { TeamLaunchError } from '../dist/team-launch/contracts.js';
+import { digest } from '../dist/team/identity.js';
+import { runtimeSourceSelectionFixture } from './fixtures/runtime-source-selection.ts';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { HostedTeam } from '../dist/composition/MemberEntry.js';
 import type { CreateTeamLaunchPreparationInput } from '../dist/team-registry/createLaunchContracts.js';
 import type { Session } from '@agent-teams/provider-session-contracts';
 
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
-function fixture() {
+function fixture(withSources = false) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-create-launch-')));
   for (const name of ['project', 'home', 'config']) mkdirSync(join(root, name));
   const profile: TeamHostProfile = {
@@ -92,6 +94,8 @@ function fixture() {
   const assertCurrent = () => {
     if (!current) throw new TeamLaunchError('hold', 'TEST-writer');
   };
+  const sources = withSources ? runtimeSourceSelectionFixture(profile, assertCurrent) : undefined;
+  const openedExecutables: string[] = [], probeProfiles: string[] = [];
   const teams = new Map<string, HostedTeam>();
   const registry = new TeamRegistry({
     ownerId: profile.owner.ownerId,
@@ -138,10 +142,12 @@ function fixture() {
   const createRuntime = () =>
     new RuntimeTeamCoordinator({
       profile,
+      ...(sources ? { sources: sources.index } : {}),
       teams,
       assertWriter: assertCurrent,
       createProvider: (context) => {
         opens++;
+        openedExecutables.push(context.profile.executable.path);
         let ended!: () => void;
         const done = new Promise<void>((resolve) => {
           ended = resolve;
@@ -187,10 +193,11 @@ function fixture() {
     fence: new ManagementResourceFence(store.list()),
     assertWriter: assertCurrent,
     select: (id, revision) => claude.target(id, revision),
-    prepare: () => ({
+    prepare: (input) => ({
       timeoutMs: 90000,
       run: () => {
         spends++;
+        probeProfiles.push(input.profileId);
         return new Promise((resolve) => pending.push(resolve));
       },
       close: async () => true,
@@ -199,6 +206,7 @@ function fixture() {
   const createCoordinator = () =>
     new CreateTeamLaunchCoordinator({
       profile,
+      ...(sources ? { sources: sources.index } : {}),
       registry,
       runtime,
       assertCurrent,
@@ -231,9 +239,15 @@ function fixture() {
   return {
     root,
     profile,
+    sources,
+    openedExecutables,
+    probeProfiles,
     input,
     get coordinator() {
       return coordinator;
+    },
+    get runtime() {
+      return runtime;
     },
     registry,
     teams,
@@ -261,6 +275,101 @@ function fixture() {
     },
   };
 }
+
+test('published source is shared by Create preflight and launch, while retained model defaults survive another publication', async () => {
+  const f = fixture(true);
+  try {
+    const selected = await f.sources!.publish('TEST-source-B');
+    const preview = captureCreateTeamDraft(f.profile, f.input, true, f.sources!.index);
+    assert.ok(preview.selections.every(row => row.selection.profile.executable.path === selected.executable.path));
+    await f.coordinator.prepare('start', f.input);
+    await f.green();
+    assert.equal(f.probeProfiles[0], preview.selections[0]!.selection.profile.profileId);
+    const created = await f.coordinator.submit('TEST-source-create', f.input);
+    await tick();
+    assert.deepEqual(f.openedExecutables, [selected.executable.path, selected.executable.path]);
+    const team = f.teams.get(created.creation.record.teamId)!;
+    const originalSources = f.runtime.readLaunchSourceSelections(created.creation.record.teamId, created.launch.launchId);
+    assert.ok(originalSources.every(row => row.revision === selected.selection.revision));
+    await f.sources!.publish('TEST-source-C');
+    const retained = f.runtime.captureLaunchModelProbe(created.creation.record.teamId, {
+      launchId: created.launch.launchId,
+      rosterRevision: created.launch.rosterRevision,
+      memberId: team.definition.members[0]!.memberId,
+      model: '__provider_default__',
+      draft: { providerId: 'anthropic', target: { kind: 'lead' }, workspace: join(f.root, 'project') },
+    }, 'start');
+    assert.equal(retained.profile?.executable.path, selected.executable.path);
+    assert.equal(retained.model, 'TEST-model');
+    assert.equal(retained.isCurrent(), true);
+    await f.coordinator.submit('TEST-source-create', f.input);
+    assert.equal(f.opens(), 2);
+    assert.equal(f.spends(), 1);
+  } finally { await f.close(); }
+});
+
+test('source publication invalidates old Create proof but exact cancellation still settles its original intent', async () => {
+  const f = fixture(true);
+  try {
+    await f.sources!.publish('TEST-source-B');
+    const running = await f.coordinator.prepare('start', f.input);
+    await f.sources!.publish('TEST-source-C');
+    await assert.rejects(f.coordinator.submit('TEST-source-create', f.input));
+    assert.equal(existsSync(join(f.root, 'teams')), false);
+    assert.equal(f.opens(), 0);
+    const changed = structuredClone(f.input);
+    changed.draft.savedSettings.prompt = 'TEST-foreign-intent';
+    await assert.rejects(f.coordinator.prepare('cancel', changed), { code: 'conflict' });
+    const cancelled = await f.coordinator.prepare('cancel', f.input);
+    assert.equal(cancelled.probes[0]!.commandId, running.probes[0]!.commandId);
+    assert.equal(cancelled.probes[0]!.phase, 'cancelled');
+    assert.equal(f.spends(), 1);
+    assert.equal((await f.coordinator.prepare('cancel', f.input)).probes[0]!.phase, 'cancelled');
+  } finally { await f.close(); }
+});
+
+test('legacy seed probe receipts remain cancellable after the first source publication', async () => {
+  const f = fixture(true);
+  try {
+    const initial = await f.coordinator.prepare('read', f.input);
+    const seed = captureCreateTeamDraft(f.profile, f.input);
+    const selection = seed.selections[0]!.selection;
+    const context = digest({ draftDigest: seed.draftDigest, preparationId: f.input.preparationId, selection });
+    f.probes.start({
+      commandId: initial.probes[0]!.commandId,
+      profileId: selection.profile.profileId, configRevision: selection.profile.configRevision,
+      providerId: selection.providerId, modelId: selection.model, context,
+      ...(selection.effort === undefined ? {} : { effort: selection.effort }),
+      ...(selection.context === undefined ? {} : { modelContext: selection.context }),
+    });
+    assert.equal((await f.coordinator.prepare('read', f.input)).probes[0]!.phase, 'running');
+    await f.sources!.publish('TEST-legacy-to-B');
+    assert.equal((await f.coordinator.prepare('cancel', f.input)).probes[0]!.phase, 'cancelled');
+    assert.equal(f.spends(), 1);
+  } finally { await f.close(); }
+});
+
+test('a renewed current-source proof cannot start an older pending capture after interrupted Create admission', async () => {
+  const f = fixture(true);
+  try {
+    await f.sources!.publish('TEST-source-B');
+    await f.coordinator.prepare('start', f.input);
+    await f.green();
+    const read = f.runtime.readLaunchSourceSelections.bind(f.runtime);
+    f.runtime.readLaunchSourceSelections = () => { throw new TeamLaunchError('hold', 'TEST-interrupted-before-start'); };
+    await assert.rejects(f.coordinator.submit('TEST-source-create', f.input), { code: 'hold' });
+    f.runtime.readLaunchSourceSelections = read;
+    assert.equal(f.registry.list('TEST-context').teams.length, 1);
+    assert.equal(f.opens(), 0);
+    await f.sources!.publish('TEST-source-C');
+    const renewed = { ...f.input, preparationId: 'TEST-source-C-preflight' };
+    await f.coordinator.prepare('start', renewed);
+    await f.green();
+    await assert.rejects(f.coordinator.submit('TEST-source-create', renewed), { reason: 'creation-source-changed' });
+    assert.equal(f.opens(), 0);
+    assert.equal(f.spends(), 2);
+  } finally { await f.close(); }
+});
 
 // Unauthorized or unsupported input becoming a Team, probe spend or captured session makes this red.
 test('draft preflight rejects unsupported intent and foreign context before Team writes or probe spend', async () => {

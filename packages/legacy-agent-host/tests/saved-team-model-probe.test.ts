@@ -23,6 +23,7 @@ import { ModelProbeOwner } from '../dist/management/ModelProbeOwner.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
 import { resolveTeamModelProbeRecipe, applyTeamModelProbeSelection } from '../dist/composition/teamModelProbeRecipe.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
+import { runtimeSourceSelectionFixture } from './fixtures/runtime-source-selection.ts';
 import type { HostedTeam } from '../dist/composition/MemberEntry.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { ProviderManagementProfile } from '../dist/management/profile.js';
@@ -44,7 +45,7 @@ function files(root: string, prefix = ''): unknown[] {
         ];
   });
 }
-function fixture(t: TestContext) {
+function fixture(t: TestContext, withSources = false) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-saved-model-source-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const binding = {
@@ -162,8 +163,12 @@ function fixture(t: TestContext) {
     connection: owner.connect(profile.principalId),
   };
   let current = true;
+  const sources = withSources ? runtimeSourceSelectionFixture(profile, () => {
+    if (!current) throw new Error('TEST-stale-owner');
+  }) : undefined;
   const runtime = new RuntimeTeamCoordinator({
     profile,
+    ...(sources ? { sources: sources.index } : {}),
     teams: new Map([[binding.teamId, team]]),
     assertWriter: () => {
       if (!current) throw new Error('TEST-stale-owner');
@@ -205,6 +210,7 @@ function fixture(t: TestContext) {
   return {
     root,
     profile,
+    sources,
     owner,
     team,
     runtime,
@@ -215,6 +221,33 @@ function fixture(t: TestContext) {
     },
   };
 }
+
+test('saved model evidence follows the published source and cannot authorize a later source revision', async (t) => {
+  const f = fixture(t, true);
+  const seed = f.view();
+  const selected = await f.sources!.publish('TEST-saved-source-B');
+  const current = f.view();
+  assert.notEqual(current.source.sourceId, seed.source.sourceId);
+  const input = f.selection();
+  const captured = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+  assert.equal(captured.profile?.executable.path, selected.executable.path);
+  assert.equal(captured.isCurrent(), true);
+  const { effort: _effort, ...withoutEffort } = input;
+  const defaults = f.runtime.captureLaunchModelProbe('TEST-imported-team', {
+    ...withoutEffort, model: '__provider_default__',
+    draft: { providerId: 'anthropic', target: { kind: 'lead' }, workspace: f.root },
+  }, 'start');
+  assert.equal(defaults.profile?.executable.path, selected.executable.path);
+  assert.equal(defaults.model, 'TEST-default-model');
+  await f.sources!.publish('TEST-saved-source-C');
+  assert.equal(captured.isCurrent(), false);
+  assert.equal(defaults.isCurrent(), false);
+  assert.throws(() => f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start'), { reason: 'saved-model-source' });
+  const cleanup = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'cancel');
+  assert.equal(cleanup.profile, null);
+  assert.equal(cleanup.context, captured.context);
+  assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+});
 
 test('never-captured saved/imported lead and Alice resolve explicit private recipes without any product/runtime writes', (t) => {
   const f = fixture(t),

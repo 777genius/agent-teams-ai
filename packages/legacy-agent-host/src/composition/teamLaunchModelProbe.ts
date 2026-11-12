@@ -150,6 +150,8 @@ export function captureTeamModelProbe(options: {
   entries: readonly MemberEntry[];
   team: import('./MemberEntry.js').HostedTeam;
   runtime: RuntimeProfile | undefined;
+  sources?: import('./runtimeSourceContracts.js').RuntimeRecipeSources;
+  sourceReference?: import('./runtimeSourceContracts.js').RuntimeSourceReference | undefined;
   input: TeamModelProbeSelection;
   action: 'start' | 'read' | 'cancel';
   principalId: string;
@@ -164,6 +166,8 @@ export function captureTeamModelProbe(options: {
       team: options.team,
       input,
       saved: entry?.baseProfile,
+      ...(options.sources ? { sources: options.sources } : {}),
+      sourceReference: options.sourceReference,
     });
   const selected = recipe();
   const source = runtimeDigest({ entry: entry?.profile, recipe: selected });

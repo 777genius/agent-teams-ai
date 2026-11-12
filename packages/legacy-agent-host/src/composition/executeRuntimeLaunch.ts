@@ -18,6 +18,7 @@ import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { JsonValue } from '../contracts.js';
 import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { TeamHostProfile } from './TeamHost.js';
+import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 
 export type RuntimeLaunchAsyncOperation = 'capture' | 'start' | 'retry';
 export type RuntimeLaunchSyncOperation =
@@ -29,6 +30,7 @@ export type RuntimeLaunchSyncOperation =
 export type RuntimeLaunchOperation = RuntimeLaunchAsyncOperation | RuntimeLaunchSyncOperation;
 interface LaunchComposition {
   profile: TeamHostProfile;
+  sources?: RuntimeRecipeSources;
   teams: ReadonlyMap<string, HostedTeam>;
   capturedTeams: ReadonlyMap<string, HostedTeam>;
   launches: ReadonlyMap<string, TeamLaunchOwner>;
@@ -75,6 +77,7 @@ export function executeRuntimeLaunch(
     if (!team) throw new TeamLaunchError('invalid', 'team');
     return readSavedTeamModelConfiguration({
       profile: options.profile,
+      ...(options.sources ? { sources: options.sources } : {}),
       team,
       assertCurrent: () => {
         options.assertCurrent();

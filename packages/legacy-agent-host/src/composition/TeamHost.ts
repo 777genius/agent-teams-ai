@@ -306,6 +306,7 @@ export function createTeamHost(
       registry && runtime && management
         ? new CreateTeamLaunchCoordinator({
             profile,
+            ...(sources ? { sources } : {}),
             registry,
             runtime,
             management,

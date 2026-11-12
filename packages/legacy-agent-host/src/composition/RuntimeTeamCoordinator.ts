@@ -33,6 +33,7 @@ import { createMemberEntry, createPreparedMemberEntry } from './createMemberEntr
 import { projectRuntimeActivity } from './runtimeActivityProjection.js';
 import { createRuntimeTeamLaunch } from './createRuntimeTeamLaunch.js';
 import { RuntimeTeamCaptures } from './RuntimeTeamCaptures.js';
+import { runtimeCaptureSourceSchema, runtimeCaptureSourceSelections } from './runtimeCaptureSource.js';
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import { ToolEvidenceWindows } from '../evidence/ToolEvidenceWindows.js';
 import { captureTeamModelProbeSelection, isCurrentCapturedTeam } from './savedTeamModelProbe.js';
@@ -413,6 +414,7 @@ export class RuntimeTeamCoordinator {
     return executeRuntimeLaunch(
       {
         profile: this.options.profile,
+        ...(this.options.sources ? { sources: this.options.sources } : {}),
         teams: this.options.teams,
         capturedTeams: this.capturedTeams,
         launches: this.launches,
@@ -439,6 +441,7 @@ export class RuntimeTeamCoordinator {
   ) {
     return captureTeamModelProbeSelection({
       profile: this.options.profile,
+      ...(this.options.sources ? { sources: this.options.sources } : {}),
       team: this.options.teams.get(teamId),
       capturedTeam: this.capturedTeams.get(teamId),
       launch: this.launches.get(teamId),
@@ -450,6 +453,16 @@ export class RuntimeTeamCoordinator {
         if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
       },
     });
+  }
+
+  /** Private composition evidence; this does not select current sources or expose private recipes over RPC. */
+  readLaunchSourceSelections(teamId: string, launchId: string) {
+    this.options.assertWriter();
+    if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
+    const selected = this.retainedLaunches.get(runtimeDigest({ teamId, launchId }));
+    if (!selected) throw new TeamLaunchError('hold', 'capture-source-unavailable');
+    return selected.team.capture === undefined ? [] :
+      runtimeCaptureSourceSelections(runtimeCaptureSourceSchema.parse(selected.team.capture));
   }
 
   /** Prove original resources released before changing their saved product settings. */
