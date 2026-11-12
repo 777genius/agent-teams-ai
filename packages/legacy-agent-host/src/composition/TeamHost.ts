@@ -1,7 +1,4 @@
-import {
-  createTeamCreationMethods,
-  createTeamRegistryMethods,
-} from './createTeamCreationMethods.js';
+import { createTeamCreationMethods, createTeamRegistryMethods } from './createTeamCreationMethods.js';
 import { createHostGroupComposition } from './createHostGroupComposition.js';
 import { preflightNativeMemberModel } from './preflightNativeMemberModel.js';
 import { createProviderManagementMethods } from './createProviderManagementMethods.js';
@@ -47,10 +44,7 @@ import type { JsonValue } from '../contracts.js';
 import type { ProviderOAuthSnapshot } from '../management/contracts.js';
 import type { TeamCommand } from '../team/contracts.js';
 import type { HostedTeam } from './RuntimeTeamCoordinator.js';
-import type {
-  MemberProvider,
-  MemberProviderContext,
-} from '../adapters/providers/MemberProvider.js';
+import type { MemberProvider, MemberProviderContext } from '../adapters/providers/MemberProvider.js';
 
 const id = z.string().min(1).max(256);
 const segment = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
