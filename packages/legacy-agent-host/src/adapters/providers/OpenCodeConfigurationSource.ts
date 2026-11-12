@@ -1,5 +1,13 @@
 import { createHash } from 'node:crypto';
-import { closeSync, constants, fstatSync, lstatSync, openSync, readSync } from 'node:fs';
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readSync,
+  realpathSync,
+} from 'node:fs';
 import { dirname, isAbsolute, join, parse as parsePath, resolve, sep } from 'node:path';
 
 import { getNodeValue, parseTree } from 'jsonc-parser';
@@ -63,11 +71,11 @@ function sources(input: Input, scope: 'global' | 'project') {
   return { files, projectStart: files.length - project.length, inline };
 }
 
-/** Stable FD read. Missing config is captured explicitly; unreadable/symlinked input is not absence. */
+/** Read-only donor paths may contain links; their original mapping belongs to the capture. */
 function readSource(path: string) {
   let fd: number | undefined;
-  const identities: unknown[] = [];
-  try {
+  const locate = () => {
+    const identities: unknown[] = [];
     const root = parsePath(path).root;
     let directory = root;
     for (const part of dirname(path).slice(root.length).split(sep).filter(Boolean)) {
@@ -78,30 +86,55 @@ function readSource(path: string) {
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT')
           return {
-            digest: managementDigest({ path, identities, missing: directory }),
-            bytes: undefined,
+            identity: { path, identities, missing: directory },
           };
         throw error;
       }
-      if (!stat.isDirectory() || stat.isSymbolicLink()) invalid();
-      identities.push([directory, stat.dev, stat.ino]);
+      if (stat.isSymbolicLink()) {
+        const target = realpathSync(directory),
+          resolved = lstatSync(target);
+        if (!resolved.isDirectory()) invalid();
+        identities.push([directory, stat.dev, stat.ino, target, resolved.dev, resolved.ino]);
+      } else {
+        if (!stat.isDirectory()) invalid();
+        identities.push([directory, stat.dev, stat.ino]);
+      }
     }
     let entry;
     try {
       entry = lstatSync(path);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT')
-        return { digest: managementDigest({ path, identities, missing: path }), bytes: undefined };
+        return { identity: { path, identities, missing: path } };
       throw error;
     }
-    if (!entry.isFile() || entry.isSymbolicLink() || entry.nlink !== 1 || entry.size > maximum)
-      invalid();
-    fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const target = realpathSync(path),
+      file = lstatSync(target);
+    if (!file.isFile() || file.isSymbolicLink() || file.size > maximum) invalid();
+    return {
+      target,
+      file,
+      identity: {
+        path,
+        identities,
+        ...(target === path ? {} : { target }),
+        ...(entry.isSymbolicLink() ? { link: [entry.dev, entry.ino] } : {}),
+        file: [file.dev, file.ino, file.mode, file.uid],
+      },
+    };
+  };
+  try {
+    const original = locate();
+    if (!original.target || !original.file)
+      return { digest: managementDigest(original.identity), bytes: undefined };
+    const identity = managementDigest(original.identity);
+    // Follow the captured config reference once, then open only its canonical file.
+    fd = openSync(original.target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
     const before = fstatSync(fd);
     if (
       !before.isFile() ||
-      before.dev !== entry.dev ||
-      before.ino !== entry.ino ||
+      before.dev !== original.file.dev ||
+      before.ino !== original.file.ino ||
       before.size > maximum
     )
       changed();
@@ -114,22 +147,17 @@ function readSource(path: string) {
     }
     if (readSync(fd, Buffer.alloc(1), 0, 1, offset) !== 0) changed();
     const after = fstatSync(fd),
-      current = lstatSync(path);
+      current = locate();
     if (
       before.size !== after.size ||
       before.mtimeMs !== after.mtimeMs ||
       before.ctimeMs !== after.ctimeMs ||
-      after.nlink !== 1 ||
-      current.isSymbolicLink() ||
-      current.dev !== before.dev ||
-      current.ino !== before.ino
+      managementDigest(current.identity) !== identity
     )
       changed();
     return {
       digest: managementDigest({
-        path,
-        identities,
-        file: [before.dev, before.ino, before.mode, before.uid],
+        ...original.identity,
         bytes: hash(bytes),
       }),
       bytes,

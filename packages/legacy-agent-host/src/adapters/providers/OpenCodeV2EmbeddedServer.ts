@@ -123,6 +123,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   // Keep that source inside this owned DB namespace. Host imports only its
   // captured selected key through the finite native credential mechanism.
   profile.environment.XDG_DATA_HOME = path.dirname(databasePath);
+  profile.environment.XDG_CONFIG_HOME = configDirectory;
   if (!profile.environment.HOME) return fail();
   let windowsCustody: CapturedProcessTreeSource | undefined;
   const custody = new CapturedProcess(

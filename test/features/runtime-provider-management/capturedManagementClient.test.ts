@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { expect, it, vi } from 'vitest';
 
+import { CapturedRuntimeSourceError } from '../../../src/features/agent-backend/main';
 import { parseManagementCatalog } from '../../../src/features/runtime-provider-management/main/adapters/output/capturedManagementCatalog';
 import { createCapturedRuntimeProviderManagementClient } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient';
 
@@ -91,6 +92,31 @@ function fixture(declaredInputModalities?: JsonValue, generation: 'v1' | 'v2' = 
     },
   };
 }
+
+it('source capture and native catalog failures keep scoped configuration guidance without raw contents', async () => {
+  const f = fixture(undefined, 'v2');
+  f.capture.mockRejectedValueOnce(new CapturedRuntimeSourceError('configuration-invalid'));
+  expect((await f.port.loadView({ runtimeId: 'opencode' })).error).toMatchObject({
+    code: 'runtime-misconfigured',
+    recoverable: true,
+    message:
+      'OpenCode configuration could not be applied. Check the selected provider and model settings, then refresh.',
+  });
+  f.target.request = async () => ({
+    ok: false,
+    code: 'held',
+    reason: 'configuration-changed',
+    raw: 'TEST-private-config-or-token-must-not-escape',
+  });
+  const result = await f.port.loadModels({ runtimeId: 'opencode', providerId: 'TEST-provider' });
+  expect(result.error).toMatchObject({
+    code: 'runtime-misconfigured',
+    recoverable: true,
+    message:
+      'OpenCode configuration changed during this action. Refresh provider settings and try again.',
+  });
+  expect(JSON.stringify(result)).not.toContain('TEST-private-config-or-token-must-not-escape');
+});
 
 it('maps native catalogs/models without private metadata or invented model execution/default proof', async () => {
   const f = fixture();

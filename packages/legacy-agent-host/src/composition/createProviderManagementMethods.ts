@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { OpenCodeManagementError } from '../adapters/providers/OpenCodeManagementHost.js';
+import { OpenCodeConfigurationError } from '../adapters/providers/OpenCodeConfigurationSource.js';
 import { ManagementCommandError } from '../management/commandRecords.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import type { HostMethod } from '../index.js';
@@ -66,6 +67,7 @@ export function createProviderManagementMethods(
           } catch (error) {
             return {
               ok: false,
+              ...(error instanceof OpenCodeConfigurationError ? { reason: error.reason } : {}),
               code:
                 error instanceof OpenCodeManagementError || error instanceof ManagementCommandError
                   ? error.code

@@ -11,6 +11,7 @@ import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import { record } from './fixtures/native-claude-team/model.ts';
 import { fileHash, nativeHostEnvironment, startHost, tick, treeHash, writeNativeFailureReceipt } from './fixtures/native-host.ts';
 import { CONTEXT_MARKER, startOpenCodeModel } from './fixtures/native-opencode-team/model.ts';
+import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
 import { readNativeMessageImage, uploadNativeMessageImage } from './fixtures/native-message-image.ts';
 
@@ -126,7 +127,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       windowsShellSha256 = await fileHash(shell);
     }
     model = await startOpenCodeModel({ nativeGeneration: 'v2', nativeMessageImage: true,
-      selectedModel: { id: 'TEST-model-B', effort: 'high' } });
+      selectedModel: { id: 'TEST-model-B', effort: 'high' },
+      selectedConfiguration: { scope: 'project-A' } });
     const namespace = basename(root);
     const owner = {
       ownerId: `TEST-owner-${namespace}`, revision: 'TEST-revision', storageRoot: join(root, 'store'),
@@ -163,17 +165,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         },
         embedded: { directory: engine, manifestSha256, version: '2.1.4',
           platform: process.platform, arch: process.arch as 'arm64' | 'x64',
-          externalDirectory: 'deny', providerConfiguration: {
-            package: 'aisdk:@ai-sdk/openai-compatible',
-            settings: { baseURL: `${model.url}/v1`, apiKey: 'TEST-LOCALHOST-ONLY' },
-            models: {
-              'TEST-model': { name: 'TEST-model', limit: { context: 200000, output: 2000 },
-                capabilities: { tools: true, input: ['text', 'image'], output: ['text'] } },
-              'TEST-model-B': { name: 'TEST-model-B', limit: { context: 200000, output: 2000 },
-                capabilities: { tools: true, input: ['text', 'image'], output: ['text'] },
-                variants: [{ id: 'high', body: { reasoning_effort: 'high' } }] },
-            },
-          } },
+          externalDirectory: 'deny' },
         nativeOptions: { providerId: 'TEST-local', agent: 'TEST-member', toolApprovalMode: 'manual',
           instructions: `${CONTEXT_MARKER}. You are carol of test-native-team working only in ${join(root, 'workspace')}.` },
         // TEST readiness includes cold startup and custody/policy readback; the
@@ -186,6 +178,35 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       model: 'TEST-local/TEST-model-B', effort: 'high',
       permissions: approvalMode === 'auto' ? 'bypass' : 'manual',
     });
+    const globalDirectory = join(root, 'home/.config/opencode');
+    await mkdir(globalDirectory, { recursive: true, mode: 0o700 });
+    await writeFile(join(globalDirectory, 'opencode.json'), JSON.stringify({
+      model: 'TEST-local/TEST-model', provider: { 'TEST-local': {
+        npm: '@ai-sdk/openai-compatible',
+        options: { baseURL: `${model.url}/v1`, apiKey: 'TEST-LOCALHOST-ONLY' },
+        models: Object.fromEntries(['TEST-model', 'TEST-model-B'].map(id => [id, {
+          name: id, limit: { context: 200000, output: 2000 },
+          capabilities: { tools: true, input: ['text', 'image'], output: ['text'] },
+          body: { test_config_scope: 'global' }, headers: { 'x-test-config-scope': 'global' },
+          ...(id.endsWith('-B') ? { variants: [{ id: 'high', body: { reasoning_effort: 'high' } }] } : {}),
+        }])),
+      } },
+    }), { mode: 0o600 });
+    const projectPath = join(root, 'workspace/opencode.jsonc');
+    const projectConfig = (scope: string) => JSON.stringify({
+      model: 'TEST-local/TEST-model-B#high', provider: { 'TEST-local': { models: {
+        'TEST-model-B': { body: { test_config_scope: scope }, headers: { 'x-test-config-scope': scope } },
+      } } },
+    });
+    const originalProjectConfig = projectConfig('project-A');
+    await writeFile(projectPath, originalProjectConfig, { mode: 0o600 });
+    await mkdir(join(root, 'data/opencode'), { mode: 0o700 });
+    await writeFile(join(root, 'data/opencode/auth.json'), JSON.stringify({
+      'TEST-local': { type: 'api', key: 'TEST-LOCALHOST-ONLY' },
+    }), { mode: 0o600 });
+    const member = profile.runtime!.members[0]!;
+    assert(member.provider === 'opencode' && member.embedded);
+    member.embedded.configurationSource = captureOpenCodeConfigurationSource(member).reference;
     const profilePath = join(root, 'profile.json');
     const bytes = JSON.stringify(profile);
     await writeFile(profilePath, bytes, { mode: 0o600 });
@@ -204,6 +225,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     // Observe the existing 120-second embedded startup plus MCP readiness; never retry the intent.
     const opened = await host.rpc('runtime.open', envelope('TEST-open', { memberId: 'carol-id' }), 180_000);
     assert.equal(opened.ok, true, JSON.stringify(opened));
+    await writeFile(projectPath, projectConfig('project-B'), { mode: 0o600 });
     lastInputProgress = nativeInputProgress(record(opened.value));
     assert.equal(record(opened.value).nativeReady, true, JSON.stringify(opened));
     steps.push('original_host_embedded_native_and_mcp_ready');
@@ -271,6 +293,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     const failedShellObserved = (record(record(activity.value).latest).tools as unknown[]).map(record).some(row =>
       record(row.data).kind === 'tool-result' && record(row.data).isError === true);
     steps.push('native_model_tool_effect_permission_mcp_task_and_reply_completed_once');
+    steps.push('changed_project_config_did_not_retarget_running_native_session');
     steps.push('original_uploaded_PNG_native_image_inference_and_public_readback');
     const checkpoint = await host.rpc('runtime.checkpoint', envelope('TEST-checkpoint', {
       memberId: 'carol-id', checkpointId: 'TEST-before-cold',
@@ -281,6 +304,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     assert.equal(record(stopped.value).custody, 'released');
     await host.close(); hosts.push(host.facts()); host = undefined;
     steps.push('checkpoint_and_original_host_native_cleanup_confirmed');
+    await writeFile(projectPath, originalProjectConfig, { mode: 0o600 });
     const callsBefore = model.observations.length;
     host = start(); await host.rpc('host.handshake', { protocolVersion: 1 });
     for (const [index, command] of commands.entries()) {
@@ -334,6 +358,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         sourceHead, platform: `${process.platform}-${process.arch}`,
         version: '2.1.4', approvalMode, nodeVersion: process.version,
         modelSelection: { providerId: 'TEST-local', modelId: 'TEST-model-B', variant: 'high' },
+        configurationSelection: { scope: 'project', original: 'project-A', later: 'project-B' },
         digests: { ...digests, ...(windowsShellSha256 ? { windowsShell: windowsShellSha256 } : {}) },
         steps, cleanup,
         inputObservation: { reads: inputReadCount, last: lastInputProgress ?? null },

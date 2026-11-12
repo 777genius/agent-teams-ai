@@ -16,6 +16,7 @@ import { createOpenCodeV2EmbeddedServer } from './OpenCodeV2EmbeddedServer.js';
 import { openCodeV2NoToolConfig } from './OpenCodeV2EmbeddedConfig.js';
 import { attestOpenCodeV2ModelSelection } from './OpenCodeV2ModelSelection.js';
 import { captureOpenCodeV2SessionCredential } from './OpenCodeV2SessionCredential.js';
+import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
 
 import type { Session } from '@agent-teams/provider-session-contracts';
 import type { ModelProbeInput, NativeModelProbe } from '../../management/ModelProbeOwner.js';
@@ -83,7 +84,6 @@ export function createOpenCodeV2ModelProbe(
   let ready: Awaited<ReturnType<NonNullable<typeof server>['start']>> | undefined;
   let deadline = 0;
   const nativeSessionId = 'ses_' + captured.slice(0, 40);
-  const { config, selection } = openCodeV2NoToolConfig(profile);
   const contextCurrent = () => {
     if (
       closed ||
@@ -110,8 +110,11 @@ export function createOpenCodeV2ModelProbe(
       return false;
     }
   };
-  const credential = captureOpenCodeV2SessionCredential(profile, input.providerId, contextCurrent);
-  const current = () => contextCurrent() && credential.isCurrent();
+  const configuration = captureOpenCodeV2Configuration(profile, profile.nativeModel, contextCurrent);
+  const { config, selection } = openCodeV2NoToolConfig(profile, configuration.configuration);
+  const credential = captureOpenCodeV2SessionCredential(profile, input.providerId,
+    () => contextCurrent() && configuration.isCurrent());
+  const current = () => contextCurrent() && configuration.isCurrent() && credential.isCurrent();
   let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];
   const assertCurrent = (signal?: AbortSignal) => {
     signal?.throwIfAborted();

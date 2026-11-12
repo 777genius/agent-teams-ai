@@ -58,6 +58,7 @@ export async function startOpenCodeModel(
     holdInitialTurnResponse?: boolean;
     principalId?: () => string;
     selectedModel?: { id: string; effort?: string };
+    selectedConfiguration?: { scope: string };
   } = {}
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate));
@@ -119,6 +120,13 @@ export async function startOpenCodeModel(
         assert.equal(body.model, options.selectedModel.id, 'actual native request uses the selected model');
         assert.equal(body.reasoning_effort, options.selectedModel.effort,
           'actual native request applies the selected named variant');
+      }
+      if (options.selectedConfiguration) {
+        assert.equal(body.test_config_scope, options.selectedConfiguration.scope,
+          'actual native request retains its original private model body');
+        assert.equal(request.headers['x-test-config-scope'], options.selectedConfiguration.scope,
+          'actual native request retains its original private model headers');
+        assert.equal(request.headers.authorization, 'Bearer TEST-LOCALHOST-ONLY');
       }
       const messages = (Array.isArray(body.messages) ? body.messages : []).map(record);
       const user = messages.filter((item) => item.role === 'user');

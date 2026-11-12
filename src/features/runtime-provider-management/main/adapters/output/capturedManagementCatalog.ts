@@ -1,3 +1,5 @@
+import { CapturedRuntimeSourceError } from '@features/agent-backend/main';
+
 import type * as Dto from '../../../contracts';
 import type {
   ProviderAuthenticationMethod,
@@ -85,7 +87,11 @@ function authOptions(value: unknown): ProviderAuthenticationMethod[] | undefined
 }
 export function managementValue(value: unknown): unknown {
   const result = object(value);
-  if (result.ok !== true) throw new Error('Provider management outcome unavailable');
+  if (result.ok !== true) {
+    if (result.reason === 'configuration-invalid' || result.reason === 'configuration-changed')
+      throw new CapturedRuntimeSourceError(result.reason);
+    throw new Error('Provider management outcome unavailable');
+  }
   return result.value;
 }
 

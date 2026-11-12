@@ -489,12 +489,14 @@ jobs:
             assert.equal(receipt.digests.bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
             assert.equal(receipt.digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);
             if (kind === 'TEST_NATIVE_V2_MODEL_PROBE') {
+              assert.equal(receipt.configurationSource, 'global-symlink-project-regular');
               assert.deepEqual(receipt.requests, [
-                { tools: 0, promptMatched: true, model: 'TEST-model' },
-                { tools: 0, promptMatched: true, model: 'TEST-model-B', effort: 'high' },
-                { tools: 0, promptMatched: true, model: 'TEST-model-B', effort: 'high' },
+                { tools: 0, promptMatched: true, model: 'TEST-model', configScope: 'global' },
+                { tools: 0, promptMatched: true, model: 'TEST-model-B', effort: 'high', configScope: 'project' },
+                { tools: 0, promptMatched: true, model: 'TEST-model-B', effort: 'high', configScope: 'project' },
               ]);
               assert.ok(receipt.steps.includes('unlisted_variant_refused_without_model_request_and_owned_cleanup_confirmed'));
+              assert.ok(receipt.steps.includes('published_global_and_project_sources_reached_native_body_headers_limits_and_default'));
             }
             if (kind === 'TEST_NATIVE_V2_CREDENTIAL') {
               assert.equal(receipt.nativeCredentialCount, 3);
@@ -532,12 +534,15 @@ jobs:
             assert.equal(r.approvalMode, mode); assert.equal(r.modelRequests, 11);
             assert.deepEqual(r.modelSelection,
               { providerId: 'TEST-local', modelId: 'TEST-model-B', variant: 'high' });
+            assert.deepEqual(r.configurationSelection,
+              { scope: 'project', original: 'project-A', later: 'project-B' });
             assert.deepEqual(r.modelFailures, []);
             assert.equal(r.digests.bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
             assert.equal(r.digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);
             assert.deepEqual(r.steps, [
               'original_host_embedded_native_and_mcp_ready',
               'native_model_tool_effect_permission_mcp_task_and_reply_completed_once',
+              'changed_project_config_did_not_retarget_running_native_session',
               'original_uploaded_PNG_native_image_inference_and_public_readback',
               'checkpoint_and_original_host_native_cleanup_confirmed',
               'cold_host_restored_native_history_without_model_or_tool_replay',

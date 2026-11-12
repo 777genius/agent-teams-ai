@@ -14,6 +14,7 @@ import { createOpenCodeV2EmbeddedServer } from './OpenCodeV2EmbeddedServer.js';
 import { isConfiguredAuthless } from './openCodeConfiguredAuthless.js';
 import { captureOpenCodeV2SessionCredential } from './OpenCodeV2SessionCredential.js';
 import { OpenCodeV2CredentialScope } from './OpenCodeV2CredentialScope.js';
+import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
 
 import type { ProviderManagementCatalog } from '../../management/contracts.js';
 import type { OpenCodeManagementProfile } from '../../management/profile.js';
@@ -49,6 +50,8 @@ export class OpenCodeV2ManagementHost {
   private server?: ReturnType<typeof createOpenCodeV2EmbeddedServer>;
   private ready?: Awaited<ReturnType<NonNullable<OpenCodeV2ManagementHost['server']>['start']>>;
   private readonly catalogCredential?: ReturnType<typeof captureOpenCodeV2SessionCredential>;
+  private readonly configuration: ReturnType<typeof captureOpenCodeV2Configuration>;
+  private readonly configuredProviderId: string;
 
   constructor(
     raw: OpenCodeManagementProfile,
@@ -57,6 +60,7 @@ export class OpenCodeV2ManagementHost {
     private readonly options: {
       retainedCommandId?: string;
       catalogProviderId?: string;
+      configurationProviderId?: string;
       connected?(providerId: string, authDigest: string): boolean;
     } = {},
   ) {
@@ -70,14 +74,20 @@ export class OpenCodeV2ManagementHost {
     try {
       for (const directory of [this.profile.cwd, ...['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
         .map(key => this.profile.environment[key])]) {
-        if (!directory) return held();
+        if (!directory) throw new OpenCodeManagementError('held');
         const stat = lstatSync(directory, { bigint: true });
-        if (!stat.isDirectory() || stat.isSymbolicLink() || realpathSync(directory) !== directory) return held();
+        if (!stat.isDirectory() || stat.isSymbolicLink() || realpathSync(directory) !== directory)
+          throw new OpenCodeManagementError('held');
         this.directories.set(directory, { dev: stat.dev, ino: stat.ino });
       }
     } catch { held(); }
+    this.configuredProviderId = this.options.configurationProviderId ??
+      this.options.catalogProviderId ?? this.profile.nativeModel!.providerId;
+    this.configuration = captureOpenCodeV2Configuration(this.profile,
+      { providerId: this.configuredProviderId, modelId: this.profile.nativeModel!.modelId },
+      () => this.selectionCurrent(), 'catalog');
     if (this.options.catalogProviderId) this.catalogCredential = captureOpenCodeV2SessionCredential(
-      this.profile, this.options.catalogProviderId, () => this.selectionCurrent());
+      this.profile, this.options.catalogProviderId, () => this.selectionCurrent() && this.configuration.isCurrent());
   }
 
   private selectionCurrent(): boolean {
@@ -94,7 +104,7 @@ export class OpenCodeV2ManagementHost {
   }
 
   private current(): boolean {
-    return this.selectionCurrent() && (this.catalogCredential?.isCurrent() ?? true);
+    return this.selectionCurrent() && this.configuration.isCurrent() && (this.catalogCredential?.isCurrent() ?? true);
   }
 
   matchesCatalog(providerId: string | undefined): boolean {
@@ -128,7 +138,7 @@ export class OpenCodeV2ManagementHost {
       embedded: this.profile.embedded!,
       databasePath: join(data, 'catalog.sqlite'),
       configDirectory: configuration,
-      config: openCodeV2NoToolConfig(this.profile).config,
+      config: openCodeV2NoToolConfig(this.profile, this.configuration.configuration, this.configuredProviderId).config,
       canAllocate: () => this.current(),
       startupTimeoutMs: Math.min(this.profile.timeoutMs, 180_000),
       ...(this.processCustody ? { processCustody: this.processCustody } : {}),
@@ -197,7 +207,7 @@ export class OpenCodeV2ManagementHost {
           const provider = providers.get(id);
           const integration = integrations.get(provider ? provider.integrationId ?? '' : id);
           const models = catalog.models.filter(model => model.providerId === id && model.enabled);
-          const configuration = id === selected.providerId ? this.profile.embedded?.providerConfiguration : undefined;
+          const configuration = id === this.configuredProviderId ? this.configuration.configuration : undefined;
           const configuredAuthless = !!configuration && isConfiguredAuthless({ id,
             npm: ['aisdk:@ai-sdk/openai-compatible', '@opencode/ai/providers/openai-compatible']
               .includes(String(configuration.package)) ? '@ai-sdk/openai-compatible' : undefined,

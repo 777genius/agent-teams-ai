@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { linkSync, mkdtempSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
@@ -111,6 +111,24 @@ test('new or replaced config invalidates its original reference; malformed JSONC
   assert.throws(() => captureOpenCodeConfigurationSource(f.input), {
     reason: 'configuration-invalid',
   });
+  if (process.platform !== 'win32') {
+    const first = join(f.root, 'linked-A.json'), second = join(f.root, 'linked-B.json');
+    f.write(first, { model: 'TEST-local/TEST-linked' });
+    f.write(second, { model: 'TEST-local/TEST-linked' });
+    rmSync(path);
+    symlinkSync(first, path);
+    const linked = captureOpenCodeConfigurationSource(f.input);
+    assert.equal(linked.read().model, 'TEST-local/TEST-linked');
+    rmSync(path);
+    symlinkSync(second, path);
+    assert.equal(linked.isCurrent(), false, 'same bytes at a new link target do not preserve original identity');
+    assert.throws(() => captureOpenCodeConfigurationSource(f.input, linked.reference), {
+      reason: 'configuration-changed',
+    });
+    rmSync(path);
+    linkSync(first, path);
+    assert.equal(captureOpenCodeConfigurationSource(f.input).read().model, 'TEST-local/TEST-linked');
+  }
 });
 
 test('selected V2 declaration preserves alias, limits, variant body and captured environment without importing another model', () => {

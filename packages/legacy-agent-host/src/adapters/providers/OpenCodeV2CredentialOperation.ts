@@ -32,6 +32,7 @@ export function createOpenCodeV2CredentialOperation(
   const current = () => ownerCurrent() && auth.isCurrent();
   const check = () => { if (!current()) held(); };
   const host = new OpenCodeV2ManagementHost(profile, current, options.processCustody, {
+    configurationProviderId: command.providerId,
     retainedCommandId: command.commandId,
   });
   async function close(): Promise<boolean> {

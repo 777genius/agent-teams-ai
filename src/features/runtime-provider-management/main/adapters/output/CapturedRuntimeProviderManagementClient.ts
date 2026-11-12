@@ -1,3 +1,5 @@
+import { CapturedRuntimeSourceError } from '@features/agent-backend/main';
+
 import { validManagedModelLimits } from '../../../core/domain/managedProviderPreferences';
 
 import {
@@ -32,13 +34,18 @@ export interface CapturedRuntimeProviderManagementDependencies {
   captureClaude?: CapturedRuntimeProviderManagementDependencies['capture'];
 }
 
-const unavailable = () => ({
+const unavailable = (error?: unknown) => ({
   schemaVersion: 1 as const,
   runtimeId: 'opencode' as const,
   error: {
-    code: 'runtime-unhealthy' as const,
-    message:
-      'Unable to confirm provider state. Refresh provider settings before repeating this action.',
+    code: error instanceof CapturedRuntimeSourceError &&
+      ['configuration-invalid', 'configuration-changed'].includes(error.reason)
+      ? 'runtime-misconfigured' as const : 'runtime-unhealthy' as const,
+    message: error instanceof CapturedRuntimeSourceError && error.reason === 'configuration-invalid'
+      ? 'OpenCode configuration could not be applied. Check the selected provider and model settings, then refresh.'
+      : error instanceof CapturedRuntimeSourceError && error.reason === 'configuration-changed'
+        ? 'OpenCode configuration changed during this action. Refresh provider settings and try again.'
+        : 'Unable to confirm provider state. Refresh provider settings before repeating this action.',
     recoverable: true,
   },
 });
@@ -213,7 +220,7 @@ export function createCapturedRuntimeProviderManagementClient(
           message: 'The key was saved, but the model check failed. Check the key and connect again.',
           recoverable: true },
       };
-      return unavailable();
+      return unavailable(error);
     }
   };
   const port: RuntimeProviderManagementPort = {
@@ -221,8 +228,8 @@ export function createCapturedRuntimeProviderManagementClient(
       const captured = { ...input };
       try {
         return await view(await capture(captured), captured.projectPath ?? null);
-      } catch {
-        return unavailable();
+      } catch (error) {
+        return unavailable(error);
       }
     },
     async loadProviderDirectory(input) {
@@ -264,8 +271,8 @@ export function createCapturedRuntimeProviderManagementClient(
             fetchedAt: new Date().toISOString(),
           },
         };
-      } catch {
-        return unavailable();
+      } catch (error) {
+        return unavailable(error);
       }
     },
     async loadModels(input) {
@@ -308,8 +315,8 @@ export function createCapturedRuntimeProviderManagementClient(
             nextCursor: result.next,
           },
         };
-      } catch {
-        return unavailable();
+      } catch (error) {
+        return unavailable(error);
       } finally {
         if (group) {
           const entries = modelLoads.get(group);
@@ -360,8 +367,8 @@ export function createCapturedRuntimeProviderManagementClient(
             selected(await catalog(target, captured.providerId), captured.providerId)
           ),
         };
-      } catch {
-        return unavailable();
+      } catch (error) {
+        return unavailable(error);
       }
     },
     async loadSetupForm(input) {
@@ -421,8 +428,8 @@ export function createCapturedRuntimeProviderManagementClient(
               ? { kind: 'model-request', freeModelPreferred: false, mayUseQuotaOrBalance: true } : null,
           },
         };
-      } catch {
-        return unavailable();
+      } catch (error) {
+        return unavailable(error);
       }
     },
     testModel: (input) => probes.test(input),
@@ -483,8 +490,8 @@ export function createCapturedRuntimeProviderManagementClient(
         }
         await preferences.store!.setDefault(scope, captured.modelId);
         return await view(target, projectPath, previous);
-      } catch {
-        return unavailable();
+      } catch (error) {
+        return unavailable(error);
       }
     },
     async clearProjectDefaultModel(input) {
@@ -497,8 +504,8 @@ export function createCapturedRuntimeProviderManagementClient(
         const previous = await readCatalog(target);
         await preferences.store!.setDefault('project', null);
         return await view(target, captured.projectPath, previous);
-      } catch {
-        return unavailable();
+      } catch (error) {
+        return unavailable(error);
       }
     },
     async configureModelLimits(input) {
@@ -549,8 +556,8 @@ export function createCapturedRuntimeProviderManagementClient(
             diagnostics: [],
           },
         };
-      } catch {
-        return unavailable();
+      } catch (error) {
+        return unavailable(error);
       }
     },
     cancelModelLoad: async ({ requestGroupId }) => {

@@ -9,6 +9,7 @@ import { createOpenCodeV2EmbeddedServer } from './OpenCodeV2EmbeddedServer.js';
 import { openCodeV2EmbeddedConfig } from './OpenCodeV2EmbeddedConfig.js';
 import { attestOpenCodeV2ModelSelection } from './OpenCodeV2ModelSelection.js';
 import { captureOpenCodeV2SessionCredential } from './OpenCodeV2SessionCredential.js';
+import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
 import { runtimeDigest } from '../../runtime/identity.js';
 import { hasUntrustedOpenCodeBinaryOverride } from '../../composition/openCodeV2Environment.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
@@ -34,7 +35,6 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
   const profile = selected, embedded = selected.embedded;
   const capturedRequest = runtimeDigest(context.request), capturedProfile = runtimeDigest(context.profile);
   const capturedEndpoint = runtimeDigest(context.endpoint.binding), instructions = context.instructions;
-  const { config, selection, requiredToolNames } = openCodeV2EmbeddedConfig(context);
   const abort = new AbortController();
   let sealed = false, opened = false, cleanupUnknown = false, nativeImages = false;
   let delegate: MemberProvider | undefined;
@@ -47,8 +47,12 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
     runtimeDigest(context.request) === capturedRequest && runtimeDigest(context.profile) === capturedProfile &&
     runtimeDigest(context.endpoint.binding) === capturedEndpoint && context.instructions === instructions &&
     !hasUntrustedOpenCodeBinaryOverride(process.env);
-  const credential = captureOpenCodeV2SessionCredential(profile, profile.nativeOptions.providerId, contextCurrent);
-  const current = () => contextCurrent() && credential.isCurrent();
+  const configuration = captureOpenCodeV2Configuration(profile,
+    { providerId: profile.nativeOptions.providerId, modelId: profile.model }, contextCurrent);
+  const { config, selection, requiredToolNames } = openCodeV2EmbeddedConfig(context, configuration.configuration);
+  const credential = captureOpenCodeV2SessionCredential(profile, profile.nativeOptions.providerId,
+    () => contextCurrent() && configuration.isCurrent());
+  const current = () => contextCurrent() && configuration.isCurrent() && credential.isCurrent();
   let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];
   const matchesSelection = (observed: Awaited<ReturnType<OwnedClient['readSession']>>) =>
     runtimeDigest({ agent: observed.agent, model: observed.model, permissions: observed.permissions,
@@ -188,6 +192,7 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
             assertCurrent(); signal.throwIfAborted();
             nativeImages = catalog.models.some(model => model.id === profile.model && model.enabled && model.inputModalities.includes('image'));
           }
+          configuration.bindRunningSession();
           return true;
         }
         if (signal.aborted || !current() || Date.now() >= deadline) return false;

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readdirSync, realpathSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -7,6 +7,9 @@ import { test } from 'node:test';
 import { OpenCodeManagementHost } from '../dist/adapters/providers/OpenCodeManagementHost.js';
 import { createOpenCodeV2ModelProbe } from '../dist/adapters/providers/OpenCodeV2ModelProbe.js';
 import { attestOpenCodeV2ModelSelection } from '../dist/adapters/providers/OpenCodeV2ModelSelection.js';
+import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
+import { captureOpenCodeV2Configuration } from '../dist/adapters/providers/OpenCodeV2CapturedConfiguration.js';
+import { openCodeV2NoToolConfig } from '../dist/adapters/providers/OpenCodeV2EmbeddedConfig.js';
 import { applyLaunchConfiguration } from '../dist/composition/launchConfiguration.js';
 import { selectOpenCodeV2ManagementModel } from '../dist/composition/openCodeV2ModelSelection.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
@@ -109,6 +112,47 @@ test(
     );
   }
 );
+
+test('private native config preserves selected declarations and running A while a new source B invalidates pending captures',
+  { skip: !supported }, t => {
+    const f = fixture();
+    t.after(f.cleanup);
+    mkdirSync(join(f.root, 'opencode'));
+    writeFileSync(join(f.root, 'opencode/opencode.json'), JSON.stringify({
+      provider: { 'TEST-provider': { npm: '@ai-sdk/openai-compatible',
+        options: { baseURL: 'http://127.0.0.1:12345/v1' }, models: {
+          'TEST-model': { name: 'global A', limit: { context: 32000 } },
+          'TEST-B': { name: 'global B', headers: { 'x-test-config': 'TEST-original-private-header' },
+            body: { test_scope: 'global' }, limit: { context: 64000, output: 256 } },
+        } },
+      },
+    }), { mode: 0o600 });
+    const project = join(f.root, 'opencode.json');
+    writeFileSync(project, JSON.stringify({ provider: { 'TEST-provider': {
+      models: { 'TEST-B': { body: { test_scope: 'project-A' }, limit: { output: 128 } } },
+    } } }), { mode: 0o600 });
+    f.management.embedded!.configurationSource = captureOpenCodeConfigurationSource(f.management).reference;
+    let current = true;
+    const choice = { providerId: 'TEST-provider', modelId: 'TEST-B' };
+    const running = captureOpenCodeV2Configuration(f.management, choice, () => current);
+    const pending = captureOpenCodeV2Configuration(f.management, choice, () => current, 'catalog');
+    assert.deepEqual(Object.keys(running.configuration!.models!), ['TEST-B']);
+    assert.deepEqual(Object.keys(pending.configuration!.models!), ['TEST-model', 'TEST-B']);
+    const native = openCodeV2NoToolConfig(f.management, running.configuration).config;
+    assert.deepEqual(native.providers!['TEST-provider']!.models, {
+      'TEST-B': { name: 'global B', headers: { 'x-test-config': 'TEST-original-private-header' },
+        body: { test_scope: 'project-A' }, limit: { context: 64000, output: 128 } },
+    });
+    assert.ok(!JSON.stringify(f.management).includes('TEST-original-private-header'));
+    running.bindRunningSession();
+    writeFileSync(project, '{"model":"TEST-provider/TEST-replacement"}', { mode: 0o600 });
+    assert.equal(pending.isCurrent(), false);
+    assert.equal(running.isCurrent(), true, 'native A already owns its immutable private input');
+    assert.throws(() => captureOpenCodeV2Configuration(f.management, choice, () => true),
+      { reason: 'configuration-changed' });
+    current = false;
+    assert.equal(running.isCurrent(), false, 'source pinning never widens the original owner');
+  });
 
 test(
   'embedded V2 derives an explicit probe choice without allocation or foreign provider configuration',
