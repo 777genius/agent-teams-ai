@@ -40,10 +40,10 @@ export async function startRetainedOpenCodeApp(input: {
   const executable = await realpath(join(input.repo, 'node_modules/electron/dist/electron'));
   const capture = new CapturedProcess({ provider: 'opencode', cwd: input.repo,
     executable: { path: input.node, sha256: await fileHash(input.node) },
-    environment: input.env,
+    environment: { ...input.env, AGENT_TEAMS_DISABLE_SOURCEMAPS: '1' },
   });
   const child = capture.launch({ command: input.node, cwd: input.repo,
-    args: ['--max-old-space-size=1024', join(input.repo, 'node_modules/electron-vite/bin/electron-vite.js'), 'dev',
+    args: ['--max-old-space-size=1536', join(input.repo, 'node_modules/electron-vite/bin/electron-vite.js'), 'dev',
       // electron-vite rewrites ELECTRON_CLI_ARGS from its parsed passthrough.
       '--remoteDebuggingPort', String(input.port), '--', '--ozone-platform=headless',
       '--headless', '--disable-gpu', '--no-sandbox', '--remote-debugging-address=127.0.0.1'] });
