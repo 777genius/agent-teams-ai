@@ -377,6 +377,13 @@ export async function runDesktopTaskBoardUiSmoke(
     commandId: setupCommandId,
     taskId,
   });
+  // The owner ACK precedes the board refresh, which can reorder the two cards.
+  // Observe the original card's new badge before measuring its one detail click.
+  await ui.waitRead(`(() => {
+    const node=document.querySelector(${desktopJsLiteral(card(taskId))});
+    return node&&[...node.querySelectorAll('span')].some(span=>span.textContent.trim()==='Awaiting user');
+  })()`, 'original Task card has rendered the completed clarification setup');
+  await ui.scrollTo(`${card(taskId)} h5`, 'original clarified Task title in its refreshed position');
   await ui.click(`${card(taskId)} h5`, 'open original Task detail');
   await ui.waitRead(
     `document.querySelector('[role="dialog"]')?.textContent.includes('Awaiting clarification from you')`,
