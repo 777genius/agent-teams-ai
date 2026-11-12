@@ -9,7 +9,11 @@ import {
   realpathSync,
 } from 'node:fs';
 import { verifyOpenCodeV2EmbeddedGraph } from '../adapters/providers/OpenCodeV2EmbeddedGraph.js';
+import { captureOpenCodeConfigurationSource, OpenCodeConfigurationError } from '../adapters/providers/OpenCodeConfigurationSource.js';
 import { ManagementCommandError } from '../management/commandRecords.js';
+import { assertRuntimeSourceNativePolicy } from './runtimeSourceQualification.js';
+import { runtimeDigest } from '../runtime/identity.js';
+import { readOpenCodeConfiguredModel, selectOpenCodeV2ProviderConfiguration } from './openCodeSelectedProviderConfiguration.js';
 import type { ProviderManagementProfile } from '../management/profile.js';
 import type { RuntimeSourceCandidate } from './runtimeSourceContracts.js';
 
@@ -21,8 +25,18 @@ export function assertRuntimeSourceQualification(
   const held = (): never => {
     throw new ManagementCommandError('held');
   };
-  if (candidate.executable.sha256 !== seed.executable.sha256) held();
+  assertRuntimeSourceNativePolicy(seed, candidate);
+  if (
+    candidate.executable.sha256 !== seed.executable.sha256 &&
+    (!candidate.nativeCli || (seed.provider === 'opencode' && seed.nativeGeneration === 'v2'))
+  )
+    held();
   const embedded = seed.provider === 'opencode' ? seed.embedded : undefined;
+  if (candidate.openCodeConfiguration && (!embedded || seed.provider !== 'opencode' ||
+      seed.nativeGeneration !== 'v2')) held();
+  if (candidate.openCodeDefault && !candidate.openCodeConfiguration) held();
+  if (candidate.sourceKind === 'captured' &&
+      (candidate.executable.path !== seed.executable.path || candidate.executable.sha256 !== seed.executable.sha256)) held();
   if (
     candidate.embedded &&
     (!embedded ||
@@ -34,17 +48,35 @@ export function assertRuntimeSourceQualification(
     held();
 }
 
-/** This first admission supports relocation/repair of qualified seed bytes, not unqualified upgrades. */
+/** Qualification precedes any native allocation; the whole immutable engine delivery remains pinned. */
 export async function verifyRuntimeSourceCandidate(
   seed: ProviderManagementProfile,
   candidate: RuntimeSourceCandidate
 ): Promise<void> {
   assertRuntimeSourceQualification(seed, candidate);
+  const configuration = candidate.openCodeConfiguration
+    ? captureOpenCodeConfigurationSource(seed, candidate.openCodeConfiguration) : undefined;
+  if (configuration && seed.provider === 'opencode') {
+    const config = configuration.read(), selected = readOpenCodeConfiguredModel(config);
+    if (runtimeDigest(selected ?? null) !== runtimeDigest(candidate.openCodeDefault ?? null) ||
+        !(selected ?? seed.nativeModel)) throw new OpenCodeConfigurationError('configuration-changed');
+    selectOpenCodeV2ProviderConfiguration(config, (selected ?? seed.nativeModel)!, seed.environment);
+  }
+  verifyRuntimeSourceExecutable(candidate.executable);
+  if (candidate.nativeCli && candidate.nativeCli.executable.path !== candidate.executable.path)
+    verifyRuntimeSourceExecutable(candidate.nativeCli.executable);
+  const embedded = seed.provider === 'opencode' ? seed.embedded : undefined;
+  if (embedded) await verifyOpenCodeV2EmbeddedGraph(candidate.embedded ?? embedded);
+  if (configuration && !configuration.isCurrent())
+    throw new OpenCodeConfigurationError('configuration-changed');
+}
+
+/** Exact bytes, measured on the original descriptor before and after the read. */
+export function verifyRuntimeSourceExecutable(executable: { path: string; sha256: string }): void {
   const held = (): never => {
     throw new ManagementCommandError('held');
   };
-  const embedded = seed.provider === 'opencode' ? seed.embedded : undefined;
-  const path = candidate.executable.path;
+  const path = executable.path;
   if (realpathSync(path) !== path) held();
   const before = lstatSync(path, { bigint: true });
   if (
@@ -67,11 +99,10 @@ export async function verifyRuntimeSourceCandidate(
       before.mtimeNs !== after.mtimeNs ||
       before.ctimeNs !== after.ctimeNs ||
       BigInt(bytes.length) !== before.size ||
-      createHash('sha256').update(bytes).digest('hex') !== candidate.executable.sha256
+      createHash('sha256').update(bytes).digest('hex') !== executable.sha256
     )
       held();
   } finally {
     closeSync(fd);
   }
-  if (embedded) await verifyOpenCodeV2EmbeddedGraph(candidate.embedded ?? embedded);
 }

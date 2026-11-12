@@ -1,6 +1,6 @@
 # 03. Slash-команды и настройки действующей сессии
 
-Статус: план после R2; базовый маршрут определён, спорные native действия ещё не implementation-ready.
+Статус: R4 source gate уточнён; Claude compact, ограниченный native output и captured skills идут в реализацию. Native/Desktop acceptance ещё открыт.
 Frontend baseline: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Stage 1 baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 Old runtime source: `777genius/agent_teams_orchestrator@e13edcd3d4ffbecc0272ae30195cc6b15b710ee7`.
@@ -189,3 +189,62 @@ Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b
 - Native inventory — первый исполняемый шаг, не причина откладывать уже доказанный compact/skill slice. Неясные offered groups остаются явными gates до их acceptance.
 - Общий conversation journey с P07/P10 проверяет compact → tool → cold Resume; existing lost-ACK/epoch tests расширяются без второго полного suite.
 - План принят для исполнения discovery и базового среза. Review не заменяет native proof спорных команд и не разрешает скрыть control вместо исправления.
+
+### R4 — exact SDK и текущая Host composition, выполнено 2026-11-12
+
+Входные опубликованные реализации: frontend `ff22eefbaa7459941befb6c47a72e1508aaef7bc`,
+D `7b6fe181` с explicit captured Claude executable; установлен SDK `0.3.305`.
+SDK source references ниже относятся к файлу `@anthropic-ai/claude-agent-sdk/sdk.d.ts` из exact pinned package,
+а не к будущему API или SDK из ambient PATH.
+
+1. **Источник доступных skills.** `Query.supportedCommands()` возвращает список текущей native сессии;
+   `SlashCommand` содержит `name`, `aliases`, `builtin`, description/argument hint.
+   `SDKCommandsChangedMessage` обновляет этот список внутри той же Query.
+   В D добавить optional read-only callback с bounded projection имён/aliases/builtin и чтением из
+   **той Query, которой принадлежит отправляемый input**. Host сохраняет этот снимок только у captured
+   `ClaudeMemberProvider`; новый scanner, поиск произвольного skill path и management Query не нужны.
+   Builtin marker не даёт автоматического разрешения всем командам: первый срез допускает только
+   proven `/compact`, source-supported `/cost` и `/review`, плюс actual native non-builtin skills.
+   Aliases разрешаются по exact native names и builtin precedence, без подмены одноимённой skill.
+
+2. **Обычный durable маршрут.** Убрать blanket renderer refusal только для captured Host route,
+   сохранив ограничения Composer: user → живой lead, без attachments/cross-team/group delivery.
+   Host проверяет actual provider, original member generation и доступную команду; UI-поле providerId
+   само по себе не authority. Команда идёт через прежний `message.send`/outbox/Runtime input ledger.
+   `formatTeamMessage` сохраняет raw command без rich-message wrapper только для этого явно
+   квалифицированного случая. Старые durable receipts должны продолжать восстанавливать прежние bytes.
+   Сохранить original commandId/inputId при lost ACK; повторный read или переключение foreground не
+   делает новый submit. Generic `Session.control`, второй журнал и повторный native CLI не добавлять.
+
+3. **Контекст после compact.** Pending team reminder нельзя вставлять перед slash, иначе native
+   parser перестанет видеть команду. Local compact/cost оставляют pending reminder следующему
+   обычному model turn; skill/review не должны потерять обязательные team/MCP инструкции.
+   Использовать existing context preparation и captured system configuration; отдельный prompt
+   «выполни команду» запрещён. В native journey проверить повторный compact и последующий tool turn.
+
+4. **Результат и provenance.** `SDKResultSuccess` имеет `local_command`, `user_message_uuid` /
+   `user_message_uuids`, `result`; эти поля позволяют связать локальный результат с original input.
+   `SDKLocalCommandOutputMessage` (`system/local_command_output`) **не имеет input UUID**:
+   его нельзя приписывать текущему запросу только по времени. Первый срез нормализует локальный
+   текст лишь при совпадении native command и уже доказанной input correlation; plain assistant,
+   background и child output не становятся результатом команды. Main отображает этот output в
+   исходной conversation, используя existing runtime activity identity; старое правило «следующий
+   thought после slash» не используется. `/cost` обязан показать actual output, включая subscription
+   сообщение; отсутствие подтверждения не превращается в нулевые usage или успешный ACK.
+
+5. **Provider boundaries.** Codex native app-server и OpenCode V1/V2 не получают Claude slash parser.
+   Для old TUI-only suggestions сохраняется явный отказ с доступными launch settings из P05.
+   Source-supported `/review` и skills проверяются отдельно от TUI-only controls. Если exact native
+   artifact не исполняет какой-либо рабочий old handler, gate остаётся открытым до конкретного
+   adapter/UX решения; удаление suggestion само по себе не считается восстановленной возможностью.
+
+6. **Минимальные проверки.** Один critical D test на bounded catalog + correlated local output и
+   чужой/background frame; existing Host message/epoch tests расширить отказами actor/member/provider,
+   exact raw bytes и unchanged lost-ACK identity. Actual native journey — compact → cost → captured
+   project/user skill с args → tool → cold resume; одна отдельная проверка plugin command при P07
+   captured settings. Desktop journey подтверждает доступную команду и видимый original result.
+   Эти fixtures запускаются штатным remote CI; локальные socket/Desktop ограничения не обходятся.
+
+Review decisions: не расширять frozen 800-line `RuntimeOwner`, не вводить control framework,
+не переносить hooks/secrets в renderer, не объявлять полный `supportedCommands` список поддержкой
+всех TUI действий. Source gate определяет реализацию; статус PASS требует actual native/Desktop receipts.

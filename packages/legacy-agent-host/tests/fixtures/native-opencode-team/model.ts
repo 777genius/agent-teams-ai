@@ -57,6 +57,8 @@ export async function startOpenCodeModel(
     captureHistoryMarkers?: boolean;
     holdInitialTurnResponse?: boolean;
     principalId?: () => string;
+    selectedModel?: { id: string; effort?: string };
+    selectedConfiguration?: { scope: string };
   } = {}
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate));
@@ -82,6 +84,7 @@ export async function startOpenCodeModel(
     contextEffective: boolean;
     priorTurn: boolean;
     requestedModel?: string;
+    requestedEffort?: string;
     priorNativeToolIds?: string[];
     visibleReplyContract?: boolean;
     incomingMessageId?: string;
@@ -113,6 +116,18 @@ export async function startOpenCodeModel(
         chunks.push(chunk);
       }
       const body = record(JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown);
+      if (options.selectedModel) {
+        assert.equal(body.model, options.selectedModel.id, 'actual native request uses the selected model');
+        assert.equal(body.reasoning_effort, options.selectedModel.effort,
+          'actual native request applies the selected named variant');
+      }
+      if (options.selectedConfiguration) {
+        assert.equal(body.test_config_scope, options.selectedConfiguration.scope,
+          'actual native request retains its original private model body');
+        assert.equal(request.headers['x-test-config-scope'], options.selectedConfiguration.scope,
+          'actual native request retains its original private model headers');
+        assert.equal(request.headers.authorization, 'Bearer TEST-LOCALHOST-ONLY');
+      }
       const messages = (Array.isArray(body.messages) ? body.messages : []).map(record);
       const user = messages.filter((item) => item.role === 'user');
       if (
@@ -319,6 +334,7 @@ export async function startOpenCodeModel(
         contextEffective,
         priorTurn: JSON.stringify(messages).includes('OPENCODE_TEAM_ONE'),
         ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+        ...(typeof body.reasoning_effort === 'string' ? { requestedEffort: body.reasoning_effort } : {}),
         ...(options.captureHistoryMarkers ? { priorNativeToolIds: messages.flatMap(message =>
           Array.isArray(message.tool_calls) ? message.tool_calls.map(record)
             .filter(call => typeof call.id === 'string' && /^TEST_OPENCODE_TEAM_ONE_[0-6]$/.test(call.id))
@@ -467,7 +483,7 @@ export async function startOpenCodeModel(
         id: `TEST-opencode-response-${observations.length + notificationObservations.length}`,
         object: 'chat.completion.chunk',
         created: 1700000000,
-        model: 'TEST-model',
+        model: options.selectedModel?.id ?? 'TEST-model',
         choices: [{ index: 0, delta: value, finish_reason: finish }],
       });
       response.writeHead(200, { 'content-type': 'text/event-stream' });

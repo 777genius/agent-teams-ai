@@ -8,7 +8,7 @@ Frontend получает retained verified archive `691a7a62…`; Session SPI p
 Host core опубликован в `0d1b2ccb50bfdcf3d4c5d6804cba0dc0ab388958`: bounded early-ID correlation,
 browser/device completion, exact cancel, ChatGPT readback и confirmed original custody.
 Контролируемые Host/D/child проверки: **23/23 PASS** (`codex-login`, `codex-metadata`, `management-oauth`).
-Следующий Main slice сохраняет существующий account IPC/DTO/presenter и поддерживает subscribe/copy/reopen/cancel.
+Main slice `7f4316c36cd0e942f5c2d0277a284f9c7180538f` сохраняет существующий account IPC/DTO/presenter и поддерживает subscribe/copy/reopen/cancel.
 Login intent хранит только operation ID, target ID, mode и **original context ID**; credential rows остаются совместимыми.
 Cold recovery использует прежний context grant; запись login без context остаётся held и не заимствует текущий контекст.
 Перед публикацией account/URL Main сравнивает свежий foreground target ID; исходные read/cancel остаются у старого owner.
@@ -19,6 +19,13 @@ browser, device code, потерянный ответ с повторным Main
 Дополнительные Host metadata проверки: **3/3 PASS**, включая ChatGPT account вместе с captured API key без выдачи key bytes.
 Эти результаты не являются actual Electron button proof и не доказывают вход в vendor account.
 Native browser/device completion, реальный Electron Login UI и финальные exact-SHA CI receipts пока открыты.
+Реальные Settings-кнопки вынесены в отдельный Ready test-only [PR #1187](https://github.com/777genius/agent-teams-ai/pull/1187),
+commit `e7d02adff43da420e4aed3d3cdb8e7a479c8aac7`: отдельный Linux `codex-login-ui` job, прежний Stage 1 gate не изменён.
+Локальный Electron не стартовал: обычный listen получил EPERM, штатная эскалация отклонена policy; UI/native PASS не заявлен.
+Harness narrow typecheck, 15 CI-policy tests и focused lint пройдены; native start/cancel проверяются штатным CI.
+Уточнение known-rejection реализовано отдельным срезом: exact native `success:false` + confirmed cleanup дают `failed/native-rejected`.
+Host/D/TEST child и критичный cleanup invariant: **26/26 PASS**; Main account tests: **13/13 PASS**, включая явный retry другим режимом.
+EOF/lost reply/чужой ID/wrong-account по-прежнему не разрешают автоматический повтор. Native error остаётся приватным.
 Основание: сохранить возможности текущего Desktop frontend при включённом Host.
 Baseline frontend: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
@@ -58,6 +65,8 @@ Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 8. Ошибка входа, таймаут и неподтверждённая очистка отображаются честно; счётчик «вошёл» требует account readback.
 9. Существующие refresh/logout/API-key сценарии продолжают работать после добавления login.
 10. Copy link/code и повторное открытие исходной ссылки работают в Settings, banner и Create/Launch reconnect; новый login не создаётся.
+11. Точный native `account/login/completed(success:false)` разрешает новый **явный** вход только после confirmed original cleanup.
+    EOF, lost reply, чужой ID, неверный account readback и неизвестная очистка остаются held; raw native error в UI не передаётся.
 
 ## 3. Минимальная архитектура
 
@@ -146,6 +155,7 @@ Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 | Смена выбора | Начать на A, выбрать B, отменить/завершить A | B не получает credentials/состояние A; A очищается своим владельцем |
 | Regression | После login выполнить refresh, logout, затем API-key сценарий | Прежняя семантика account/quota/предпочтения; нет новых запусков модели |
 | Fence/cleanup | Пока login pending вызвать refresh/logout; задержать native cleanup после completion | Нет deadlock, credential race или ложного completed; namespace остаётся held до cleanup |
+| Подтверждённый отказ | Получить exact-ID `success:false`, дождаться cleanup, повторить вход кнопкой | Ошибка без URL/code/raw native error; один новый вход только по явному действию; uncertain outcome остаётся held |
 | Native qualification | Pinned Codex + выделенный тестовый account, оба способа входа | Native completion и account readback на выбранных bytes; отдельная маркировка доступа |
 
 В тестовых receipts: commit/archive hashes, profile revision, operationId, последовательность фаз и cleanup result.

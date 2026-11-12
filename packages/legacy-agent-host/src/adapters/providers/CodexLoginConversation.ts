@@ -33,6 +33,11 @@ export class CodexLoginConversation implements OAuthNativeConversation {
   private sealed = false;
   private closing?: Promise<boolean>;
 
+  /** Only the exact native completion is a rejection; EOF/abort/lost replies are unknown. */
+  get nativeRejectionConfirmed(): boolean {
+    return this.completed?.loginId === this.loginId && this.completed?.success === false;
+  }
+
   constructor(
     profile: CodexManagementProfile,
     private readonly type: CodexAccountLoginType,

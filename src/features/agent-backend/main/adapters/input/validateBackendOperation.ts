@@ -309,9 +309,14 @@ function payload(
         'messageId',
         'summary',
         'actionMode',
+        'nativeCommand',
         'attachments',
       ]);
-      if (parseStandaloneSlashCommand(text(p.text, 200_000))) throw new InvalidBackendOperation();
+      const native = parseStandaloneSlashCommand(text(p.text, 200_000));
+      if ((p.nativeCommand !== undefined && p.nativeCommand !== true) ||
+        Boolean(native) !== (p.nativeCommand === true) ||
+        (native && p.attachments !== undefined && messageAttachmentReferencesSchema.parse(p.attachments).length > 0))
+        throw new InvalidBackendOperation();
       if (
         p.actionMode !== undefined &&
         (typeof p.actionMode !== 'string' || !['do', 'ask', 'delegate'].includes(p.actionMode))
@@ -320,6 +325,7 @@ function payload(
       return {
         to: text(p.to),
         text: text(p.text, 200_000),
+        ...(native ? { nativeCommand: true as const } : {}),
         ...(p.attachments === undefined
           ? {}
           : { attachments: messageAttachmentReferencesSchema.parse(p.attachments) }),

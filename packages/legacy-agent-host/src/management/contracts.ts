@@ -35,6 +35,8 @@ export interface ProviderCredentialReceipt {
   kind: 'credential.set' | 'credential.forget' | 'credential.refresh';
   providerId: string;
   phase: 'completed' | 'held';
+  /** Native failed terminal and original cleanup were confirmed; the saved key remains unverified. */
+  reason?: 'verification-rejected';
 }
 
 export interface ProviderModelProbeLimits {
@@ -81,11 +83,12 @@ export interface ProviderOAuthSnapshot {
     | 'cancelling'
     | 'completed'
     | 'cancelled'
+    | 'failed'
     | 'held';
   completionMethod: 'auto' | 'code' | null;
   sequence: number;
   expiresAt: number;
-  reason?: 'cancelled' | 'expired' | 'native-outcome-unknown' | 'owner-changed';
+  reason?: 'cancelled' | 'expired' | 'native-rejected' | 'native-outcome-unknown' | 'owner-changed';
 }
 
 export interface ProviderManagementCatalog {

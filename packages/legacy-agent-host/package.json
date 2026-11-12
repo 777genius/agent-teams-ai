@@ -56,6 +56,10 @@
       "types": "./dist/composition/runtimeSourceContracts.d.ts",
       "import": "./dist/composition/runtimeSourceContracts.js"
     },
+    "./scheduled-runs": {
+      "types": "./dist/composition/scheduledRunContracts.d.ts",
+      "import": "./dist/composition/scheduledRunContracts.js"
+    },
     "./runtime/filesystem": {
       "types": "./dist/adapters/runtime/FileRuntimeStore.d.ts",
       "import": "./dist/adapters/runtime/FileRuntimeStore.js"
@@ -277,7 +281,7 @@
     "@typescript/native": "npm:typescript@7.0.2"
   },
   "dependencies": {
-    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/native-paths-bc1c93b5/agent-teams-provider-implementations-0.0.0.tgz",
+    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/claude-commands-04e40ea0/agent-teams-provider-implementations-0.0.0.tgz",
     "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz",
     "@modelcontextprotocol/sdk": "1.32.0",
     "agent-teams-controller": "workspace:*",

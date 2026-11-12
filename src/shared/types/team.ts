@@ -745,6 +745,7 @@ export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'>, Native
   name: string;
   /** Presentation provenance only; does not assert native liveness or grant control. */
   runtimeOwner?: 'captured-host';
+  sessionCommands?: readonly { name: string; description: string }[];
   /** Opaque configured-state token from an application owner, never native identity. */
   configuredSettingsFingerprint?: string;
   agentId?: string;
@@ -826,6 +827,7 @@ export interface TeamMemberSnapshot extends Pick<TeamMember, 'joinedAt'>, Native
   name: string;
   /** Presentation provenance only; does not assert native liveness or grant control. */
   runtimeOwner?: 'captured-host';
+  sessionCommands?: readonly { name: string; description: string }[];
   /** Opaque configured-state token from an application owner, never native identity. */
   configuredSettingsFingerprint?: string;
   agentId?: string;
@@ -1147,6 +1149,8 @@ export interface TeamAgentRuntimeEntry {
   memberName: string;
   alive: boolean;
   restartable: boolean;
+  /** Host logical generation used for original-recipient preconditions; never a native PID. */
+  runtimeGeneration?: string;
   backendType?: TeamAgentRuntimeBackendType;
   providerId?: TeamProviderId;
   providerBackendId?: TeamProviderBackendId;

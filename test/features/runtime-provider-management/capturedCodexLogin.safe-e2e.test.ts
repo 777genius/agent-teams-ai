@@ -31,7 +31,7 @@ import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 /** Actual account IPC/Main → Host/D → controlled child. Electron UI/vendor login are separate gates. */
-async function fixture(scenario: 'early' | 'pending', sameContext = false) {
+async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', sameContext = false) {
   const repo = resolve(import.meta.dirname, '../../..');
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-codex-login-main-')));
   for (const name of [
@@ -286,6 +286,38 @@ for (const mode of ['browser', 'device_code'] as const) {
     }
   }, 30_000);
 }
+
+it('exact native rejection clears the private intent after cleanup and permits only an explicit new login', async () => {
+  const f = await fixture('rejected-then-pending');
+  try {
+    const api = f.create();
+    const observations: CodexAccountSnapshotDto[] = [];
+    api.feature.subscribe(snapshot => observations.push(snapshot));
+    await api.invoke(CODEX_ACCOUNT_START_CHATGPT_LOGIN, { mode: 'browser' });
+    await vi.waitFor(async () => {
+      const state = await api.invoke(CODEX_ACCOUNT_GET_SNAPSHOT);
+      expect(state.login).toMatchObject({ status: 'failed', error: 'Codex did not complete sign-in. You can try signing in again.' });
+      expect(state.login.authUrl).toBeUndefined();
+      expect(state.login.userCode).toBeUndefined();
+    });
+    expect(await f.store.pendingLogin()).toBeNull();
+    await api.invoke(CODEX_ACCOUNT_GET_SNAPSHOT);
+    expect((await f.wire('a')).filter(row => row.method === 'account/login/start')).toHaveLength(1);
+    await api.invoke(CODEX_ACCOUNT_START_CHATGPT_LOGIN, { mode: 'device_code' });
+    await vi.waitFor(async () => expect((await api.invoke(CODEX_ACCOUNT_GET_SNAPSHOT)).login).toMatchObject({
+      status: 'pending', userCode: 'TEST-PRIVATE-CODE',
+    }));
+    expect((await f.wire('a')).filter(row => row.method === 'account/login/start').map(row => row.params?.type))
+      .toEqual(['chatgpt', 'chatgptDeviceCode']);
+    expect((await f.store.pendingLogin())?.kind).toBe('login.device_code');
+    await api.invoke(CODEX_ACCOUNT_CANCEL_CHATGPT_LOGIN);
+    expect(await f.store.pendingLogin()).toBeNull();
+    expect((await f.wire('a')).filter(row => row.method === 'account/logout')).toHaveLength(0);
+    expect(JSON.stringify(observations)).not.toContain('TEST-PRIVATE-NATIVE-ERROR');
+  } finally {
+    await f.cleanup();
+  }
+}, 30_000);
 
 it('a lost login response survives Main recreation and a different context, with original cancel and no replay/logout', async () => {
   const f = await fixture('pending');

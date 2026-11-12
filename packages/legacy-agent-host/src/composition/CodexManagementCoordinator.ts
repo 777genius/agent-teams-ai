@@ -68,6 +68,7 @@ export class CodexManagementCoordinator {
     return {
       timeoutMs: conversation.timeoutMs,
       nativeCompletion: conversation.nativeCompletion,
+      get nativeRejectionConfirmed() { return conversation.nativeRejectionConfirmed; },
       authorize: (fields, signal) => conversation.authorize(fields, signal),
       complete: async (code, signal) => (await conversation.complete(code, signal)) && close(),
       close,

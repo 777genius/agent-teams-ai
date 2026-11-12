@@ -459,6 +459,12 @@ jobs:
           OPENCODE_V2_MODEL_PROBE_GO: '1'
           OPENCODE_V2_MODEL_PROBE_RECEIPT: ${{ github.workspace }}/opencode-v2-model-probe.json
         run: node --test packages/legacy-agent-host/tests/opencode-v2-model-probe.native.ts
+      - name: Exercise native key connection, saved-key reuse and cold original-intent recovery
+        if: runner.os == 'Linux' && env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED == '1'
+        env:
+          OPENCODE_V2_CREDENTIAL_GO: '1'
+          OPENCODE_V2_CREDENTIAL_RECEIPT: ${{ github.workspace }}/opencode-v2-credentials.json
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-credentials.native.ts
       - name: Exercise effective permissions and active Stop with a surviving sibling
         if: runner.os == 'Linux' && env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED == '1'
         env:
@@ -473,6 +479,7 @@ jobs:
           import { readFileSync } from 'node:fs';
           for (const [path, kind] of [
             ['opencode-v2-model-probe.json', 'TEST_NATIVE_V2_MODEL_PROBE'],
+            ['opencode-v2-credentials.json', 'TEST_NATIVE_V2_CREDENTIAL'],
             ['opencode-v2-permission-lifecycle.json', 'TEST_NATIVE_V2_PERMISSION_LIFECYCLE'],
           ]) {
             const receipt = JSON.parse(readFileSync(path, 'utf8'));
@@ -481,6 +488,31 @@ jobs:
             assert.equal(receipt.status, 'PASS'); assert.equal(receipt.cleanup, true);
             assert.equal(receipt.digests.bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
             assert.equal(receipt.digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);
+            if (kind === 'TEST_NATIVE_V2_MODEL_PROBE') {
+              assert.equal(receipt.configurationSource, 'global-symlink-project-regular');
+              assert.deepEqual(receipt.requests, [
+                { tools: 0, promptMatched: true, model: 'TEST-model', configScope: 'global' },
+                { tools: 0, promptMatched: true, model: 'TEST-model-B', effort: 'high', configScope: 'project' },
+                { tools: 0, promptMatched: true, model: 'TEST-model-B', effort: 'high', configScope: 'project' },
+              ]);
+              assert.ok(receipt.steps.includes('unlisted_variant_refused_without_model_request_and_owned_cleanup_confirmed'));
+              assert.ok(receipt.steps.includes('published_global_and_project_sources_reached_native_body_headers_limits_and_default'));
+            }
+            if (kind === 'TEST_NATIVE_V2_CREDENTIAL') {
+              assert.equal(receipt.nativeCredentialCount, 3);
+              assert.deepEqual(receipt.requests, ['refused', 'OK', 'OK', 'timeout'].map(outcome => ({
+                authorizationMatched: true, tools: 0, promptMatched: true, outcome,
+              })));
+              for (const step of [
+                'passive_all_provider_directory_without_import_or_inference',
+                'native_key_one_verification_original_receipt_after_lost_ack',
+                'native_401_saved_unverified_then_cold_explicit_corrected_key_succeeds',
+                'cold_directory_and_explicit_check_reuse_saved_selected_key',
+                'cold_unverified_original_intent_blocks_changed_key_and_new_id_without_replay',
+                'selected_native_db_only_foreign_auth_preserved_secret_free_receipts',
+              ]) assert.ok(receipt.steps.includes(step));
+              assert.equal(receipt.vendorAuthQualified, false);
+            }
           }
           NODE
       - name: Require product-path Host proof after exact candidate qualification
@@ -500,12 +532,17 @@ jobs:
             assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);
             assert.equal(r.nodeVersion, 'v24.21.0'); assert.equal(r.version, '2.1.4');
             assert.equal(r.approvalMode, mode); assert.equal(r.modelRequests, 11);
+            assert.deepEqual(r.modelSelection,
+              { providerId: 'TEST-local', modelId: 'TEST-model-B', variant: 'high' });
+            assert.deepEqual(r.configurationSelection,
+              { scope: 'project', original: 'project-A', later: 'project-B' });
             assert.deepEqual(r.modelFailures, []);
             assert.equal(r.digests.bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
             assert.equal(r.digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);
             assert.deepEqual(r.steps, [
               'original_host_embedded_native_and_mcp_ready',
               'native_model_tool_effect_permission_mcp_task_and_reply_completed_once',
+              'changed_project_config_did_not_retarget_running_native_session',
               'original_uploaded_PNG_native_image_inference_and_public_readback',
               'checkpoint_and_original_host_native_cleanup_confirmed',
               'cold_host_restored_native_history_without_model_or_tool_replay',
@@ -529,4 +566,5 @@ jobs:
             opencode-v2-embedded-host.json
             opencode-v2-embedded-host-auto.json
             opencode-v2-model-probe.json
+            opencode-v2-credentials.json
             opencode-v2-permission-lifecycle.json

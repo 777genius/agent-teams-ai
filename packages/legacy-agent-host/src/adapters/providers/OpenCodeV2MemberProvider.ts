@@ -160,7 +160,8 @@ export function createOpenCodeV2MemberProvider(
       executableSha256: profile.executable.sha256, platform: embedded.platform, arch: embedded.arch },
       selection: { nativeOptions: profile.nativeOptions, model: profile.model,
         externalDirectory: embedded.externalDirectory,
-        providerConfiguration: embedded.providerConfiguration ?? null } } : {}),
+        providerConfiguration: embedded.providerConfiguration ?? null,
+        ...(embedded.configurationSource ? { configurationSource: embedded.configurationSource } : {}) } } : {}),
   });
   let sealed = false;
   let allocated = false;

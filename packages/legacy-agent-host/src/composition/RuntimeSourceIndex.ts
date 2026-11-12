@@ -1,5 +1,7 @@
 import { FileRuntimeSourceIndex } from '../adapters/profile/FileRuntimeSourceIndex.js';
 import { FileManagementCommandStore } from '../adapters/providers/FileManagementCommandStore.js';
+import { RuntimeSourceNativeVersion } from '../adapters/providers/RuntimeSourceNativeVersion.js';
+import { captureOpenCodeConfigurationSource, OpenCodeConfigurationError } from '../adapters/providers/OpenCodeConfigurationSource.js';
 import {
   ManagementCommandError,
   storedRuntimeSourceCommandSchema,
@@ -7,16 +9,22 @@ import {
 import { providerManagementProfileSchema } from '../management/profile.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { runtimeMemberProfileSchema } from './runtimeProfile.js';
+import { applyOpenCodeRuntimeSource } from './applyOpenCodeRuntimeSource.js';
+import { readOpenCodeConfiguredModel, selectOpenCodeV2ProviderConfiguration } from './openCodeSelectedProviderConfiguration.js';
 import {
   publishRuntimeSourceSchema,
+  publishRuntimeSourceRequestSchema,
   runtimeSourceGrantSchema,
   runtimeSourceLookupSchema,
   runtimeSourceReadSchema,
+  refreshRuntimeConfigurationSchema,
 } from './runtimeSourceContracts.js';
 import {
   assertRuntimeSourceQualification,
   verifyRuntimeSourceCandidate,
+  verifyRuntimeSourceExecutable,
 } from './verifyRuntimeSourceCandidate.js';
+import { RuntimeSourceAdmissionError } from './runtimeSourceQualification.js';
 import type { RuntimeSourceRecord } from '../adapters/profile/FileRuntimeSourceIndex.js';
 import type { ProviderManagementProfile } from '../management/profile.js';
 import type {
@@ -25,6 +33,11 @@ import type {
 } from '../management/commandRecords.js';
 import type { TeamHostProfile } from './TeamHost.js';
 import type { RuntimeMemberProfile } from './runtimeProfile.js';
+import type { RegisteredProcessRootSource } from '../process/registeredProcessContracts.js';
+import type {
+  RuntimeSourceNativeCheck,
+  RuntimeSourceNativeIdentity,
+} from '../management/runtimeSourceVerification.js';
 import type {
   RuntimeRecipeSources,
   RuntimeSourceGrant,
@@ -32,6 +45,8 @@ import type {
   RuntimeSourceReference,
   RuntimeSourceSummary,
   RuntimeSourceTeamScope,
+  RuntimeSourceCandidate,
+  PublishRuntimeSource,
 } from './runtimeSourceContracts.js';
 
 function fail(code: 'invalid' | 'conflict' | 'held'): never {
@@ -42,10 +57,26 @@ function fail(code: 'invalid' | 'conflict' | 'held'): never {
 export class RuntimeSourceIndex implements RuntimeRecipeSources {
   private readonly store: FileRuntimeSourceIndex;
   private readonly commands: ManagementCommandStore;
+  private readonly pending = new Map<
+    string,
+    { fingerprint: string; result: Promise<RuntimeSourcePublication> }
+  >();
+  private readonly checks = new Map<string, RuntimeSourceNativeCheck>();
+  private sealed = false;
+  private closing: Promise<void> | undefined;
 
   constructor(
     private readonly profile: TeamHostProfile,
-    private readonly assertWriter: () => void
+    private readonly assertWriter: () => void,
+    private readonly options: {
+      processCustody?: RegisteredProcessRootSource;
+      assertCleanupWriter?(): void;
+      createNativeCheck?(
+        seed: ProviderManagementProfile,
+        candidate: RuntimeSourceCandidate,
+        isCurrent: () => boolean
+      ): RuntimeSourceNativeCheck;
+    } = {}
   ) {
     this.store = new FileRuntimeSourceIndex(profile.owner.storageRoot, assertWriter);
     this.commands = new FileManagementCommandStore(profile.owner.storageRoot);
@@ -71,7 +102,16 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       ? index.records.find((row) => row.revision === pointer.revision)!
       : undefined;
     if (record && runtimeDigest(record.grant) !== runtimeDigest(grant)) fail('conflict');
-    return this.summary(grant, seed, record);
+    const summary = this.summary(grant, seed, record);
+    if (seed.provider === 'opencode' && seed.nativeGeneration === 'v2' && seed.embedded) {
+      const reference = record?.candidate.openCodeConfiguration ?? seed.embedded.configurationSource;
+      try {
+        const current = captureOpenCodeConfigurationSource(seed, reference, () => !this.sealed,
+          grant.projectPath === null ? 'global' : 'project');
+        summary.configurationCurrent = reference !== undefined && current.isCurrent();
+      } catch { summary.configurationCurrent = false; }
+    }
+    return summary;
   }
 
   retained(raw: unknown): RuntimeSourceSummary[] {
@@ -99,36 +139,203 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     const record = this.read().records.find((row) => row.commandId === commandId);
     if (!record) {
       if (saved.phase === 'published') fail('held');
-      return { commandId, phase: 'prepared' };
+      if (saved.phase === 'verifying' && !this.checks.has(commandId))
+        return { commandId, phase: 'held', reason: 'native-outcome-unknown' };
+      return { commandId, phase: saved.phase, ...(saved.reason ? { reason: saved.reason } : {}) };
     }
     if (record.revision !== saved.revision || runtimeDigest(record.grant) !== runtimeDigest(grant))
       fail('held');
-    if (saved.phase !== 'published') this.commands.write({ ...saved, phase: 'published' });
+    if (saved.phase !== 'published')
+      this.commands.write({ ...saved, phase: 'published', resourceHeld: false });
     return { commandId, phase: 'published', selection: this.summary(grant, seed, record) };
+  }
+
+  /** A restarted installer may finish one original journaled selection; it cannot invent a new one. */
+  async recover(
+    raw: unknown,
+    admit: (profile: ProviderManagementProfile) => void
+  ): Promise<RuntimeSourcePublication | null> {
+    this.assertWriter();
+    if (this.sealed) fail('held');
+    const { grant } = runtimeSourceReadSchema.parse(raw);
+    this.seed(grant);
+    const unfinished = [...this.commands.list()].filter(
+      (row): row is StoredRuntimeSourceCommand =>
+        row.kind === 'runtime.source' &&
+        row.sourceId === grant.targetId &&
+        row.phase !== 'published' &&
+        (row.phase !== 'held' || row.resourceHeld)
+    );
+    if (!unfinished.length) return null;
+    if (unfinished.length !== 1) return fail('held');
+    const saved = unfinished[0]!;
+    const input = this.publicationSnapshot(saved, grant);
+    return this.publish(input, admit);
+  }
+
+  private publicationSnapshot(
+    saved: StoredRuntimeSourceCommand,
+    grant: RuntimeSourceGrant
+  ): PublishRuntimeSource {
+    if (!saved.publicationJson) return fail('held');
+    let input: PublishRuntimeSource;
+    try {
+      input = publishRuntimeSourceSchema.parse(JSON.parse(saved.publicationJson));
+    } catch {
+      return fail('held');
+    }
+    const seed = this.seed(grant);
+    if (
+      runtimeDigest(input.grant) !== runtimeDigest(grant) ||
+      input.commandId !== saved.commandId ||
+      input.expectedRevision !== saved.expectedRevision ||
+      runtimeDigest(input) !== saved.fingerprint ||
+      saved.sourceId !== grant.targetId ||
+      saved.resourceId !== grant.targetId ||
+      saved.profileId !== seed.profileId ||
+      saved.configRevision !== seed.configRevision ||
+      saved.providerId !== seed.provider ||
+      saved.selectionDigest !== this.seedRevision(grant, seed) ||
+      saved.revision !==
+        runtimeDigest({
+          previousRevision: input.expectedRevision,
+          commandId: input.commandId,
+          grant: input.grant,
+          candidate: input.candidate,
+          ...(input.intent ? { intent: input.intent } : {}),
+        })
+    )
+      return fail('held');
+    return input;
   }
 
   async publish(
     raw: unknown,
     admit: (profile: ProviderManagementProfile) => void
   ): Promise<RuntimeSourcePublication> {
-    const input = publishRuntimeSourceSchema.parse(raw),
-      seed = this.seed(input.grant);
+    this.assertWriter();
+    if (this.sealed) fail('held');
+    const input = this.capturePublication(raw);
+    const fingerprint = runtimeDigest(input),
+      pending = this.pending.get(input.commandId);
+    if (pending) {
+      if (pending.fingerprint !== fingerprint) fail('conflict');
+      return pending.result;
+    }
+    const result = this.publishCandidate(input, admit);
+    this.pending.set(input.commandId, { fingerprint, result });
+    try {
+      return await result;
+    } finally {
+      if (this.pending.get(input.commandId)?.result === result)
+        this.pending.delete(input.commandId);
+    }
+  }
+
+  /** Same publication owner; retry resumes its original config snapshot, never captures a replacement. */
+  async refreshConfiguration(
+    raw: unknown,
+    admit: (profile: ProviderManagementProfile) => void
+  ): Promise<RuntimeSourcePublication> {
+    this.assertWriter();
+    if (this.sealed) fail('held');
+    const input = refreshRuntimeConfigurationSchema.parse(raw), seed = this.seed(input.grant);
+    const prior = this.commands.read(input.commandId);
+    if (prior) {
+      if (prior.kind !== 'runtime.source') fail('conflict');
+      const original = this.publicationSnapshot(prior, input.grant);
+      if (original.intent !== 'configuration' || original.expectedRevision !== input.expectedRevision)
+        fail('conflict');
+      return this.publish(original, admit);
+    }
+    if (seed.provider !== 'opencode' || seed.nativeGeneration !== 'v2' || !seed.embedded)
+      fail('invalid');
+    if (this.current({ grant: input.grant }).revision !== input.expectedRevision) fail('conflict');
+    const previous = this.read().records.find(record => record.grant.targetId === input.grant.targetId &&
+      record.revision === input.expectedRevision);
+    const captured = captureOpenCodeConfigurationSource(seed, undefined, () => !this.sealed,
+      input.grant.projectPath === null ? 'global' : 'project');
+    const config = captured.read(), configuredModel = readOpenCodeConfiguredModel(config);
+    const selectedModel = configuredModel ?? seed.nativeModel;
+    if (!selectedModel) fail('invalid');
+    selectOpenCodeV2ProviderConfiguration(config, selectedModel, seed.environment);
+    const candidate: RuntimeSourceCandidate = { ...(previous?.candidate ??
+      { sourceKind: 'captured', executable: seed.executable }), openCodeConfiguration: captured.reference };
+    delete candidate.openCodeDefault;
+    if (configuredModel) candidate.openCodeDefault = configuredModel;
+    return this.publish({ ...input, intent: 'configuration', candidate: {
+      ...candidate,
+    } }, admit);
+  }
+
+  private capturePublication(raw: unknown): PublishRuntimeSource {
+    const input = publishRuntimeSourceRequestSchema.parse(structuredClone(raw));
+    if ('candidate' in input) return input;
+    const seed = this.seed(input.grant),
+      seedRevision = this.seedRevision(input.grant, seed);
+    const previous =
+      input.expectedRevision === seedRevision
+        ? undefined
+        : this.read().records.find(
+            (row) =>
+              row.grant.targetId === input.grant.targetId && row.revision === input.expectedRevision
+          );
+    if (
+      (!previous && input.expectedRevision !== seedRevision) ||
+      (previous && runtimeDigest(previous.grant) !== runtimeDigest(input.grant))
+    )
+      fail('conflict');
+    const selection = input.nativeSelection;
+    const embedded = selection.embedded ?? previous?.candidate.embedded;
+    // Replay inherits only the original expected revision; current is never a repair/default source.
+    return publishRuntimeSourceSchema.parse({
+      grant: input.grant,
+      commandId: input.commandId,
+      expectedRevision: input.expectedRevision,
+      candidate: {
+        sourceKind: selection.sourceKind,
+        executable:
+          seed.provider === 'opencode' && seed.nativeGeneration === 'v2'
+            ? (previous?.candidate.executable ?? seed.executable)
+            : selection.nativeCli.executable,
+        ...(embedded ? { embedded } : {}),
+        nativeCli: selection.nativeCli,
+        ...(previous?.candidate.openCodeConfiguration
+          ? { openCodeConfiguration: previous.candidate.openCodeConfiguration } : {}),
+        ...(previous?.candidate.openCodeDefault ? { openCodeDefault: previous.candidate.openCodeDefault } : {}),
+      },
+    });
+  }
+
+  private async publishCandidate(
+    input: PublishRuntimeSource,
+    admit: (profile: ProviderManagementProfile) => void
+  ): Promise<RuntimeSourcePublication> {
+    const seed = this.seed(input.grant);
     const fingerprint = runtimeDigest(input),
       prior = this.commands.read(input.commandId);
     if (prior) {
       if (prior.kind !== 'runtime.source' || prior.fingerprint !== fingerprint) fail('conflict');
+      if (prior.phase === 'held' && prior.resourceHeld)
+        await this.settleRetainedCleanup(prior, seed, input.candidate);
       const known = this.lookup({ grant: input.grant, commandId: input.commandId });
-      if (known?.phase === 'published') return known;
+      if (known?.phase === 'published' || known?.phase === 'held') return known;
     }
     if (this.current({ grant: input.grant }).revision !== input.expectedRevision) fail('conflict');
+    assertRuntimeSourceQualification(seed, input.candidate);
+    if ((input.intent === 'configuration' && !input.candidate.openCodeConfiguration) ||
+        (input.candidate.openCodeConfiguration && input.candidate.openCodeConfiguration.scope !==
+          (input.grant.projectPath === null ? 'global' : 'project'))) fail('invalid');
+    this.assertSourceReleased(input.grant.targetId, input.commandId);
     const selection = {
       previousRevision: input.expectedRevision,
       commandId: input.commandId,
       grant: input.grant,
       candidate: input.candidate,
+      ...(input.intent ? { intent: input.intent } : {}),
     };
     const record: RuntimeSourceRecord = { ...selection, revision: runtimeDigest(selection) };
-    const receipt: StoredRuntimeSourceCommand = storedRuntimeSourceCommandSchema.parse({
+    let receipt: StoredRuntimeSourceCommand = storedRuntimeSourceCommandSchema.parse({
       schemaVersion: 1,
       kind: 'runtime.source',
       commandId: input.commandId,
@@ -142,11 +349,48 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       sourceId: input.grant.targetId,
       revision: record.revision,
       expectedRevision: input.expectedRevision,
+      publicationJson: JSON.stringify(input),
       phase: 'prepared',
     });
     if (!prior) this.commands.write(receipt);
-    await verifyRuntimeSourceCandidate(seed, input.candidate);
+    else {
+      const saved = this.commands.read(input.commandId);
+      if (!saved || saved.kind !== 'runtime.source') fail('held');
+      receipt = saved;
+    }
+    try {
+      await verifyRuntimeSourceCandidate(seed, input.candidate);
+    } catch (error) {
+      if (error instanceof OpenCodeConfigurationError)
+        this.commands.write({ ...receipt, phase: 'held', resourceHeld: false, reason: error.reason });
+      throw error;
+    }
+    if (input.candidate.nativeCli && receipt.phase !== 'verified')
+      receipt = await this.verifyNative(seed, input.candidate, receipt);
+    if (receipt.phase === 'held')
+      return {
+        commandId: input.commandId,
+        phase: 'held',
+        ...(receipt.reason ? { reason: receipt.reason } : {}),
+      };
     this.assertWriter();
+    if (this.sealed) fail('held');
+    try {
+      verifyRuntimeSourceExecutable(input.candidate.executable);
+      if (input.candidate.nativeCli)
+        verifyRuntimeSourceExecutable(input.candidate.nativeCli.executable);
+      if (input.candidate.openCodeConfiguration)
+        captureOpenCodeConfigurationSource(seed, input.candidate.openCodeConfiguration);
+    } catch (error) {
+      const reason = error instanceof OpenCodeConfigurationError ? error.reason : 'source-changed';
+      this.commands.write({
+        ...receipt,
+        phase: 'held',
+        resourceHeld: false,
+        reason,
+      });
+      throw new RuntimeSourceAdmissionError(reason);
+    }
     const known = this.lookup({ grant: input.grant, commandId: input.commandId });
     if (known?.phase === 'published') return known;
     // Admission preserves original auth/config bindings and cannot replace a previously admitted profile ID.
@@ -158,6 +402,145 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       phase: 'published',
       selection: this.summary(input.grant, seed, record),
     };
+  }
+
+  private assertSourceReleased(sourceId: string, commandId: string): void {
+    for (const row of this.commands.list())
+      if (
+        row.kind === 'runtime.source' &&
+        row.sourceId === sourceId &&
+        row.commandId !== commandId &&
+        (row.resourceHeld || ['prepared', 'verifying', 'verified'].includes(row.phase))
+      )
+        fail('held');
+  }
+
+  private async verifyNative(
+    seed: ProviderManagementProfile,
+    candidate: RuntimeSourceCandidate,
+    receipt: StoredRuntimeSourceCommand
+  ): Promise<StoredRuntimeSourceCommand> {
+    this.assertWriter();
+    if (this.sealed) fail('held');
+    this.assertSourceReleased(receipt.sourceId, receipt.commandId);
+    const claimed: StoredRuntimeSourceCommand = {
+      ...receipt,
+      phase: 'verifying',
+      resourceHeld: true,
+    };
+    this.commands.write(claimed);
+    let check: RuntimeSourceNativeCheck | undefined,
+      identity: RuntimeSourceNativeIdentity | undefined,
+      failure: unknown,
+      clean = false;
+    try {
+      const current = () => {
+        try {
+          this.assertWriter();
+          return !this.sealed;
+        } catch {
+          return false;
+        }
+      };
+      check =
+        this.options.createNativeCheck?.(seed, candidate, current) ??
+        new RuntimeSourceNativeVersion(seed, candidate, current, this.options.processCustody);
+      this.checks.set(receipt.commandId, check);
+      identity = await check.run();
+    } catch (error) {
+      failure = error;
+    } finally {
+      clean = check ? await check.close().catch(() => false) : true;
+      if (clean) this.checks.delete(receipt.commandId);
+    }
+    (this.options.assertCleanupWriter ?? this.assertWriter)();
+    let current = !this.sealed;
+    try {
+      this.assertWriter();
+    } catch {
+      current = false;
+    }
+    const accepted = current && clean && this.identityMatches(seed, candidate, identity);
+    const saved: StoredRuntimeSourceCommand = accepted
+      ? { ...claimed, ...identity, phase: 'verified', resourceHeld: false }
+      : {
+          ...claimed,
+          ...identity,
+          phase: 'held',
+          resourceHeld: !clean,
+          reason: !clean
+            ? 'cleanup-unconfirmed'
+            : failure instanceof RuntimeSourceAdmissionError
+              ? failure.reason
+              : 'native-outcome-unknown',
+        };
+    this.commands.write(saved);
+    return saved;
+  }
+
+  private identityMatches(
+    seed: ProviderManagementProfile,
+    candidate: RuntimeSourceCandidate,
+    identity:
+      | { nativeVersion?: string | undefined; seedNativeVersion?: string | undefined }
+      | undefined
+  ): boolean {
+    return (
+      candidate.nativeCli !== undefined &&
+      identity?.nativeVersion === candidate.nativeCli.version &&
+      (seed.provider !== 'claude' ||
+        candidate.executable.sha256 === seed.executable.sha256 ||
+        identity?.seedNativeVersion === candidate.nativeCli?.version)
+    );
+  }
+
+  private async settleRetainedCleanup(
+    receipt: StoredRuntimeSourceCommand,
+    seed: ProviderManagementProfile,
+    candidate: RuntimeSourceCandidate
+  ): Promise<void> {
+    const check = this.checks.get(receipt.commandId);
+    if (!check || !(await check.close().catch(() => false))) return;
+    this.assertWriter();
+    this.checks.delete(receipt.commandId);
+    const { reason: _reason, ...released } = receipt;
+    this.commands.write(
+      this.identityMatches(seed, candidate, receipt)
+        ? { ...released, phase: 'verified', resourceHeld: false }
+        : { ...released, phase: 'held', resourceHeld: false, reason: 'native-outcome-unknown' }
+    );
+  }
+
+  seal(): void {
+    this.sealed = true;
+  }
+
+  close(): Promise<void> {
+    this.sealed = true;
+    if (!this.closing)
+      this.closing = (async () => {
+        const closed = await Promise.all(
+          [...this.checks].map(async ([commandId, check]) => {
+            const clean = await check.close().catch(() => false);
+            if (clean) {
+              (this.options.assertCleanupWriter ?? this.assertWriter)();
+              const saved = this.commands.read(commandId);
+              if (saved?.kind === 'runtime.source' && saved.resourceHeld)
+                this.commands.write({
+                  ...saved,
+                  phase: 'held',
+                  resourceHeld: false,
+                  reason: 'native-outcome-unknown',
+                });
+              this.checks.delete(commandId);
+            }
+            return clean;
+          })
+        );
+        await Promise.allSettled([...this.pending.values()].map((entry) => entry.result));
+        if (closed.some((value) => !value)) fail('held');
+      })();
+    return this.closing;
   }
 
   retainedManagementProfiles(): ProviderManagementProfile[] {
@@ -202,11 +585,9 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     )
       fail('held');
     return runtimeMemberProfileSchema.parse({
-      ...structuredClone(recipe),
+      ...(recipe.provider === 'opencode'
+        ? applyOpenCodeRuntimeSource(recipe, record.candidate) : structuredClone(recipe)),
       executable: record.candidate.executable,
-      ...(recipe.provider === 'opencode' && recipe.embedded && record.candidate.embedded
-        ? { embedded: { ...recipe.embedded, ...record.candidate.embedded } }
-        : {}),
     });
   }
 
@@ -285,6 +666,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       profileId: record ? `runtime-source:${record.revision}` : seed.profileId,
       configRevision: record ? `runtime-source:${record.revision}` : seed.configRevision,
       sourceKind: record?.candidate.sourceKind ?? 'captured',
+      ...(record?.candidate.nativeCli ? { cliVersion: record.candidate.nativeCli.version } : {}),
       ...(seed.provider === 'opencode'
         ? {
             nativeGeneration: seed.nativeGeneration ?? 'v1',
@@ -298,13 +680,11 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     const seed = this.seed(record.grant),
       selected = this.summary(record.grant, seed, record);
     return providerManagementProfileSchema.parse({
-      ...structuredClone(seed),
+      ...(seed.provider === 'opencode'
+        ? applyOpenCodeRuntimeSource(seed, record.candidate) : structuredClone(seed)),
       profileId: selected.profileId,
       configRevision: selected.configRevision,
       executable: record.candidate.executable,
-      ...(seed.provider === 'opencode' && seed.embedded && record.candidate.embedded
-        ? { embedded: { ...seed.embedded, ...record.candidate.embedded } }
-        : {}),
     });
   }
 
@@ -324,9 +704,17 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       )
         fail('held');
       const receipt = this.commands.read(record.commandId);
+      if (receipt?.kind === 'runtime.source' && receipt.publicationJson)
+        this.publicationSnapshot(receipt, record.grant);
       if (
         !receipt ||
         receipt.kind !== 'runtime.source' ||
+        receipt.resourceHeld ||
+        receipt.phase === 'held' ||
+        receipt.phase === 'verifying' ||
+        (record.candidate.nativeCli &&
+          (!['verified', 'published'].includes(receipt.phase) ||
+            !this.identityMatches(seed, record.candidate, receipt))) ||
         receipt.revision !== record.revision ||
         receipt.sourceId !== sourceId ||
         receipt.resourceId !== sourceId ||
@@ -341,6 +729,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
             commandId: record.commandId,
             expectedRevision: record.previousRevision,
             candidate: record.candidate,
+            ...(record.intent ? { intent: record.intent } : {}),
           })
       )
         fail('held');

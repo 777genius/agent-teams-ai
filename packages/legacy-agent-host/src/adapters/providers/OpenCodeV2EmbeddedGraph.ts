@@ -17,6 +17,12 @@ export interface VerifiedOpenCodeV2EmbeddedGraph {
   effectPath: string;
   requiredBunVersion: string;
   windowsJobBinding?: Readonly<{ path: string; sha256: string }>;
+  /** Available only inside the actual Bun executor, after the complete delivery check. */
+  configurationModules?: Readonly<{
+    providerPath: string;
+    nativeRewritePath: string;
+    resolvePackage(specifier: string): Promise<string>;
+  }>;
 }
 
 const manifestName = 'opencode-v2-engine-manifest.json';
@@ -244,6 +250,7 @@ export async function verifyOpenCodeV2EmbeddedGraph(
   };
   // The Node parent verifies every delivered byte. Import-only package exports
   // are resolved by the actual Bun executor, immediately before its first import.
+  let configurationModules: VerifiedOpenCodeV2EmbeddedGraph['configurationModules'];
   if (process.versions.bun) {
     for (const [name, subpath] of [
       ['core', 'bus'],
@@ -265,6 +272,19 @@ export async function verifyOpenCodeV2EmbeddedGraph(
     }
     await verifyDependency(modulePath, '@effect/platform-node', 'NodeHttpServer', effectVersion);
     await verifyDependency(modulePath, '@effect/platform-node-shared', 'NodeStream', effectVersion);
+    const providerPath = await verifyDependency(modulePath, '@opencode/core', 'provider', selection.version);
+    const nativeRewritePath = await verifyDependency(modulePath, '@opencode/core', 'aisdk-native', selection.version);
+    configurationModules = Object.freeze({ providerPath, nativeRewritePath,
+      async resolvePackage(specifier: string) {
+        if (!/^(?:@[A-Za-z0-9._-]+\/)?[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/u.test(specifier) ||
+            specifier.split('/').some(part => part === '.' || part === '..')) return hold();
+        const packageName = specifier.startsWith('@') ? specifier.split('/').slice(0, 2).join('/')
+          : specifier.split('/')[0]!;
+        const entry = await checkedEntry(resolveFrom(providerPath, specifier));
+        await packageAt(entry, packageName, packageName === '@opencode/ai' ? selection.version : undefined);
+        return entry;
+      },
+    });
   }
   let windowsJobBinding: VerifiedOpenCodeV2EmbeddedGraph['windowsJobBinding'];
   if (selection.platform === 'win32') {
@@ -278,5 +298,6 @@ export async function verifyOpenCodeV2EmbeddedGraph(
   }
   await verifyOpenCodeV2EmbeddedManifest(selection);
   signal?.throwIfAborted();
-  return { modulePath, effectPath, requiredBunVersion, ...(windowsJobBinding ? { windowsJobBinding } : {}) };
+  return { modulePath, effectPath, requiredBunVersion, ...(windowsJobBinding ? { windowsJobBinding } : {}),
+    ...(configurationModules ? { configurationModules } : {}) };
 }

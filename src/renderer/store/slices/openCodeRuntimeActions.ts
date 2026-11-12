@@ -94,7 +94,19 @@ export function createOpenCodeRuntimeActions(
     });
   };
   return {
-    applyOpenCodeRuntimeProgress: applyProgress,
+    applyOpenCodeRuntimeProgress: (status) =>
+      applyProgress(
+        installInFlight && status.state === 'ready'
+          ? {
+              ...status,
+              state: 'checking',
+              progress: {
+                phase: 'checking',
+                detail: 'Confirming the selected OpenCode runtime...',
+              },
+            }
+          : status
+      ),
     fetchOpenCodeRuntimeStatus: async () => {
       if (!api.openCodeRuntime) return;
       if (installInFlight) return installInFlight;
