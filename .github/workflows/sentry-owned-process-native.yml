@@ -7,6 +7,8 @@ on:
       - '.github/workflows/sentry-owned-process-native.yml'
       - 'tools/owned-process-broker/**'
       - 'src/main/utils/ownedProcess/**'
+      - 'packages/legacy-agent-host/src/owned-process/**'
+      - 'packages/legacy-agent-host/package.json'
       - 'scripts/build/buildOwnedProcessBroker.ts'
       - 'eslint.config.js'
   workflow_dispatch:
@@ -57,6 +59,10 @@ jobs:
           $head | Set-Content native-evidence/source-sha.txt
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build shared Host process primitive
+        run: |
+          pnpm --filter @agent-teams/legacy-agent-host build
+          if ($LASTEXITCODE -ne 0) { throw 'Host process primitive build failed' }
       - name: Check typed protocol and policy
         run: |
           node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json

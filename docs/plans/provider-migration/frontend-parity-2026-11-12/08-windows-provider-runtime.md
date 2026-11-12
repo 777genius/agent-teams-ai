@@ -67,10 +67,14 @@ Darwin x64/ARM64 и Linux x64 сохраняют прежние маршруты
 8. Поставленный Host работает без checkout, ambient system Node и случайного native module из PATH/cache.
 9. Общие path/profile изменения сохраняют исходные bytes, digests и binding старых Darwin captures;
    прочитать старую запись не означает нормализовать её или перепубликовать под новой identity.
-10. До Job admission исполняется только pinned bootstrap; provider/plugin code и его descendants ещё не существуют.
-    Root-bootstrap identity не выдаётся за actual CLI identity; provider stdin открывается после readiness ACK.
+10. До Job admission provider/plugin code и его descendants не исполняются.
+    Broker/launcher identity не выдаётся за actual CLI identity; provider stdin открывается после установки authority.
 
 ## 4. Минимальное решение и повторное использование
+
+Первый implementation slice: существующий broker core вынесен в Host package, Main paths переэкспортируют его.
+Host build, tooling typecheck и **45 existing protocol/gate tests PASS**. Wire/native behaviour не изменялся;
+SDK facade, product wiring и Windows/native qualification остаются следующим срезом.
 
 Сохраняется `CapturedProcess` и существующие provider adapters; новый supervisor/framework не вводится.
 Предпочтительный кандидат после дополнительного R3 — существующий atomic owned-process broker с его target stdio;

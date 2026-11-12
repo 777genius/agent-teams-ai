@@ -251,6 +251,10 @@
     "./group-chats/public-values": {
       "types": "./dist/group-chats/publicValues.d.ts",
       "import": "./dist/group-chats/publicValues.js"
+    },
+    "./owned-process": {
+      "types": "./dist/owned-process/index.d.ts",
+      "import": "./dist/owned-process/index.js"
     }
   },
   "bin": {
