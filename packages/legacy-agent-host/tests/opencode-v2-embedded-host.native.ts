@@ -65,6 +65,8 @@ export interface PackagedNativeHostInputs {
 
 /** Same native scenario for source qualification and the separately captured packaged candidate. */
 export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeHostInputs, signal?: AbortSignal) {
+  const startedAt = performance.now();
+  const elapsedMs = () => Math.round(performance.now() - startedAt);
   signal?.throwIfAborted();
   assert.ok(process.platform === 'linux' && process.arch === 'x64' ||
     (process.platform === 'darwin' || process.platform === 'win32') &&
@@ -91,8 +93,10 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   const entry = packaged ? packaged.entry : join(pkg, 'dist/cli.js');
   assert.equal(await realpath(process.execPath), node, 'scenario and Host must use the selected original Node');
   const steps: string[] = [], hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
+  const phaseElapsedMs: Record<string, number> = {};
+  const completeStep = (step: string) => { steps.push(step); phaseElapsedMs[step] = elapsedMs(); };
   let host: ReturnType<typeof startHost> | undefined;
-  // Packaged TEST cancellation retains the original Host's existing cleanup owner.
+  // TEST cancellation retains the original Host's existing cleanup owner.
   const cancelOriginalHost = () => { host?.child.stdin.end(); };
   signal?.addEventListener('abort', cancelOriginalHost, { once: true });
   let model: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
@@ -228,7 +232,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     await writeFile(projectPath, projectConfig('project-B'), { mode: 0o600 });
     lastInputProgress = nativeInputProgress(record(opened.value));
     assert.equal(record(opened.value).nativeReady, true, JSON.stringify(opened));
-    steps.push('original_host_embedded_native_and_mcp_ready');
+    completeStep('original_host_embedded_native_and_mcp_ready');
     const imageReference = await uploadNativeMessageImage(host, envelope, 'carol');
     const commands = ['ONE', 'TWO'].map(label => envelope(`TEST-original-message-${label}`, {
       operation: 'message.send', payload: { to: 'carol', text: `OPENCODE_TEAM_${label}`,
@@ -292,9 +296,9 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     assert.equal(activity.ok, true);
     const failedShellObserved = (record(record(activity.value).latest).tools as unknown[]).map(record).some(row =>
       record(row.data).kind === 'tool-result' && record(row.data).isError === true);
-    steps.push('native_model_tool_effect_permission_mcp_task_and_reply_completed_once');
-    steps.push('changed_project_config_did_not_retarget_running_native_session');
-    steps.push('original_uploaded_PNG_native_image_inference_and_public_readback');
+    completeStep('native_model_tool_effect_permission_mcp_task_and_reply_completed_once');
+    completeStep('changed_project_config_did_not_retarget_running_native_session');
+    completeStep('original_uploaded_PNG_native_image_inference_and_public_readback');
     const checkpoint = await host.rpc('runtime.checkpoint', envelope('TEST-checkpoint', {
       memberId: 'carol-id', checkpointId: 'TEST-before-cold',
     }));
@@ -303,7 +307,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     assert.equal(stopped.ok, true); assert.equal(record(stopped.value).phase, 'closed');
     assert.equal(record(stopped.value).custody, 'released');
     await host.close(); hosts.push(host.facts()); host = undefined;
-    steps.push('checkpoint_and_original_host_native_cleanup_confirmed');
+    completeStep('checkpoint_and_original_host_native_cleanup_confirmed');
     await writeFile(projectPath, originalProjectConfig, { mode: 0o600 });
     const callsBefore = model.observations.length;
     host = start(); await host.rpc('host.handshake', { protocolVersion: 1 });
@@ -333,7 +337,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     }));
     assert.equal(resumedStop.ok, true); assert.equal(record(resumedStop.value).custody, 'released');
     await host.close(); hosts.push(host.facts()); host = undefined;
-    steps.push('cold_host_restored_native_history_without_model_or_tool_replay');
+    completeStep('cold_host_restored_native_history_without_model_or_tool_replay');
     assert.equal(failedShellObserved, true, 'native shell exit 7 is reported as a failed tool');
     if (packaged) await packaged.verify();
     else await assertNativeV1Build(repo, sourceHead, sourceBuild!);
@@ -353,14 +357,14 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     try {
       const receipt = {
         kind: packaged ? 'TEST_PACKAGED_NATIVE_V2_HOST' : 'TEST_NATIVE_V2_EMBEDDED_HOST',
-        status: passed && cleanup ? 'PASS' : 'INCOMPLETE',
+        status: passed && cleanup && !signal?.aborted ? 'PASS' : 'INCOMPLETE',
         ...(packaged ? { packaged: packaged.evidence } : {}),
         sourceHead, platform: `${process.platform}-${process.arch}`,
         version: '2.1.4', approvalMode, nodeVersion: process.version,
         modelSelection: { providerId: 'TEST-local', modelId: 'TEST-model-B', variant: 'high' },
         configurationSelection: { scope: 'project', original: 'project-A', later: 'project-B' },
         digests: { ...digests, ...(windowsShellSha256 ? { windowsShell: windowsShellSha256 } : {}) },
-        steps, cleanup,
+        steps, cleanup, phaseElapsedMs, elapsedMs: elapsedMs(), cancelled: signal?.aborted === true,
         inputObservation: { reads: inputReadCount, last: lastInputProgress ?? null },
         ...(passive ? { passiveNativeDiagnostics: passive.entries } : {}),
         failureCode: originalFailure instanceof Error && 'code' in originalFailure &&
@@ -374,9 +378,14 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       };
       serialized = JSON.stringify(receipt, null, 2) + '\n';
       await writeFile(receiptPath, serialized, { mode: 0o600 });
+      if (signal?.aborted && receipt.status === 'PASS') {
+        receipt.status = 'INCOMPLETE'; receipt.cancelled = true;
+        serialized = JSON.stringify(receipt, null, 2) + '\n';
+        await writeFile(receiptPath, serialized, { mode: 0o600 });
+      }
       receiptWritten = true;
     } catch (error) { cleanupErrors.push(error); }
-    if (serialized !== undefined && (originalFailure !== undefined || cleanupErrors.length > 0 || !passed)) {
+    if (serialized !== undefined && (originalFailure !== undefined || cleanupErrors.length > 0 || !passed || signal?.aborted)) {
       await writeNativeFailureReceipt({
         kind: 'TEST_NATIVE_V2_FAILURE_RECEIPT', sourceHead, platform: `${process.platform}-${process.arch}`, serialized,
         details: { receiptWritten, hosts: hosts.map(({ diagnosticBytes, frames }) => ({ diagnosticBytes, frames: frames.slice(-16) })) },
@@ -385,10 +394,14 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   }
   if (originalFailure !== undefined) throw originalFailure;
   if (cleanupErrors.length) throw new AggregateError(cleanupErrors, 'TEST native Host cleanup or receipt failed');
+  signal?.throwIfAborted();
   assert.equal(passed, true);
 }
 
 if (process.env.OPENCODE_V2_PACKAGED_GO !== '1')
   test('embedded 2.1.4 performs native tools, MCP, once approval and cold Host Resume without replay', {
-    timeout: 300_000, skip: process.env.OPENCODE_V2_EMBEDDED_HOST_GO !== '1',
-  }, () => runOpenCodeV2EmbeddedHostNative());
+    // Exact c57 Darwin x64 receipt completed both turns and cold restore in 323s.
+    // Only this outer TEST budget grows; native startup/turn/cleanup limits stay fixed.
+    timeout: process.platform === 'darwin' && process.arch === 'x64' ? 420_000 : 300_000,
+    skip: process.env.OPENCODE_V2_EMBEDDED_HOST_GO !== '1',
+  }, context => runOpenCodeV2EmbeddedHostNative(undefined, context.signal));
