@@ -1,6 +1,6 @@
 # 07. Настройки провайдера, лимиты, skills, MCP и plugins
 
-Статус: source capture/publication foundation реализован и проверен; native consumption и G1–G4 ещё открыты.
+Статус: source capture/publication и selected native config реализованы; app default/V1 saved limits и actual acceptance G1–G4 ещё открыты.
 Цель: сохранить применимые возможности существующего frontend, используя уже выделенных владельцев.
 Новая архитектура не даёт основания игнорировать сохранённую настройку или объявить рабочий control unsupported.
 Публикация source/profile revisions целиком принадлежит [06](06-runtime-installation-profiles.md).
@@ -261,6 +261,69 @@ Unit список сокращён до новых опасных mapping/source
 - Existing native model-probe fixture должен использовать global config через symlink и project override, затем наблюдать реальные model/body/headers/limits/default. Existing Team fixture меняет config после readiness и требует исходные A settings во всех последующих запросах. Проверка scoped UI error сохраняет safe reason без raw config/token.
 - Промежуточные проверки native input: Host build и 28 focused tests PASS до последнего type-only/noise fix; Main focused TypeScript, 11 management UI tests, fast lint без ошибок и source-size guard PASS. Общий Host rebuild/testtypes выполнить после согласованного P03 package pin; actual native/Desktop и G1–G4 остаются открытыми до штатного CI.
 
+### R8 — сохранённый app default и V1 limits до фактического launch
+
+**Повторное source review перед реализацией; выбран private snapshot в existing recipe, согласовано с root.**
+P07 native config опубликован `6a2bb4b88bffbe001e16ff7fd27430f330b43517`.
+Он не закрывает отдельную цепочку preference file → новый launch: UI уже читает/сохраняет default и limits,
+но source recipe пока не получает эти значения. Именно эту цепочку исправляет следующий срез.
+
+1. **Сохранить donor precedence.** [R6] хранит app preferences; [R7] выбирает project default,
+   затем all-projects default. В [R1] `prepareProfileInternal` (`3581–3654`) default накладывается на imported config,
+   а limits объединяются global → project; `applyOpenCodeModelLimitOverrides` (`927–962`) задаёт
+   `limit: { context, output }` выбранного qualified model. V2 `materializeOpenCodeV2CatalogScope`
+   (`4021–4050`) тоже предпочитает app default перед config default, но не подключает V1 limits editor.
+   Явно выбранная в Team модель остаётся выше default. Очистка project default возвращает global/native fallback.
+
+2. **Один preference owner.** Переиспользовать [S7] `FileManagedProviderPreferences.capture/read` и
+   `resolveManagedPreferences`; добавить узкий read-only export из `runtime-provider-management/main`.
+   Он получает original descriptor roots и guard, возвращает только resolved default и числовые
+   `contextTokens/outputTokens` по qualified model ID. Не переносить неизвестные поля, timestamps, paths,
+   raw config или credentials в Host DTO. Global capture не читает project preferences другой вкладки.
+   Запись остаётся в существующих `setDefault`/`setLimits`, с сохранением посторонних полей.
+
+3. **Использовать existing source publication/recovery.** Передать canonical safe snapshot через
+   существующий `runtime.source.refreshConfiguration`, сохранить его в той же immutable candidate/recipe.
+   Digest входит в прежнюю source/config revision; одинаковые семантические значения не создают revision
+   из-за timestamps или порядка ключей. V1 получает этот refresh без V2 config import; V2 сохраняет R5–R7
+   references и получает app default. Retry старого command использует original `publicationJson`,
+   даже если preference file уже B. Новый command может опубликовать B; retained A остаётся A.
+   Не добавлять второй settings store/journal или Host reader пользовательских preference paths.
+
+4. **Применять limits после реального выбора модели.** `applyOpenCodeRuntimeSource` задаёт app default
+   для следующего base recipe; existing `applyLaunchConfiguration` затем сохраняет explicit Team selection.
+   После этого применить **только V1 override реально выбранного qualified model** через existing
+   `withOpenCodeModelLimits`, обобщив его environment helper при необходимости. Safe snapshot остаётся
+   private частью recipe, а все overrides не разворачиваются в `OPENCODE_CONFIG_CONTENT`.
+   Это сохраняет non-default model и нынешний inline budget. V2 принимает app default, а declared limits
+   продолжают идти через strict selected config; новый V2 editor/override route не вводится.
+   Native preflight и actual launch должны видеть одинаковые selected values; cross-provider qualified
+   model обновляет provider/model как одну пару, без чужого providerConfiguration.
+
+5. **Связать Save/Refresh и первый запуск.** Existing management capture сравнивает safe snapshot digest
+   вместе с configuration references. Успешный Save остаётся успешным даже при failed Refresh, с прежним
+   предупреждением и без ложного native verification. До **новой** Create/saved-Team preparation вызвать
+   тот же узкий captured OpenCode refresh для исходных context/project/owner; это применит уже сохранённые
+   preferences и после перезапуска приложения, когда Settings ещё не открывали. Сначала original guard,
+   recover/publish, затем capture/probe; read/cancel/lookup/submit существующей preparation не перечитывают
+   настройки и не переадресуют исходный intent. Existing schedule capture переиспользует тот же recipe,
+   без второго scheduler preference reader. `DesktopBackendFeature` получает только узкий method/call,
+   существующий `captureScheduledRuns` сохраняется.
+
+6. **Минимальные проверки и повторное ревью.** Расширить existing preference/source integration cases:
+   project → global fallback; saved file → source → new launch; explicit non-default model со своим V1 limit;
+   successful Save + failed Refresh; lost ACK retry с A после записи B. Использовать существующие native
+   fixtures: V1 effective config/readback с app default и selected limit; V2 model B против native default A,
+   с проверкой actual request. Already running A продолжает работу после публикации B. Actual Desktop
+   journey использует те же descriptor preference roots и штатный remote CI. Не добавлять unit на каждый
+   getter/mapper и не дублировать проверенные parsers/atomic write primitives. Перед publication проверить
+   cross-feature barrel, original-owner fence, отсутствие secret fields и прежние size/protocol budgets;
+   при приближении `RuntimeSourceIndex` к 800 строкам вынести только stateless projection, без нового owner.
+
+**Результат R8 review:** отвергнуто разворачивание всех limit overrides в inline config до model selection:
+оно теряло non-default choice или раздувало private config. Выбран snapshot + selected-only application.
+Ни работающий receipt, ни mocked preferences test не закрывают native/Desktop acceptance сами по себе.
+
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts
 [M3]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/extensions/ExtensionStoreView.tsx
@@ -277,3 +340,6 @@ Unit список сокращён до новых опасных mapping/source
 [R3]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/features/runtimeProviderManagement/adapters/opencode/OpenCodeProviderManagementAdapter.ts
 [R4]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/bridge/OpenCodeV2LaunchPlan.ts
 [R5]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/catalog/OpenCodeV2RuntimeStatus.ts
+[R6]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/OpenCodeManagedPreferences.ts
+[R7]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/OpenCodeManagedDefaultSelection.ts
+[S7]: https://github.com/777genius/agent-teams-ai/blob/6a2bb4b88bffbe001e16ff7fd27430f330b43517/src/features/runtime-provider-management/main/infrastructure/FileManagedProviderPreferences.ts
