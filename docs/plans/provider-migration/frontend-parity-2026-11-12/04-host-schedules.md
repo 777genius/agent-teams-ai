@@ -229,3 +229,11 @@ Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b
 - Node 24.21: **110/110 PASS** в четырёх scheduler suites. Новые три сценария используют real Croner, real JSON repository, production Main facade и child Team Host: foreground A→B, lost ACK/cold readback/pruning, actual cron/pause/resume/delete, concurrent Run now/slow persistence/Quit.
 - Fixture намеренно без native provider: unavailable launch оставляет одну quiet pending task. Этот PASS не означает model/whole-team launch readiness. Полноценные launch/start/one-shot и Desktop остаются обязательными следующими проверками.
 - Canonical TS7 focused typecheck и fast lint PASS (два прежних no-unsafe-finally warning). Full-workspace typed lint в локальной среде завершён системой с 137 без diagnostics; полный gate остаётся на CI.
+
+### Finite provider prerequisite
+
+- D [`39a79c80`](https://github.com/agent-teams-ai/old-provider-implementations/commit/39a79c805247d1d0ba36d0344a1b76f1fcb20960) добавляет private Claude `sessionPersistence: ephemeral`: SDK получает `persistSession: false`, checkpoint/restore запрещены до чтения checkpoint. Прежний default и digest при отсутствии опции сохранены.
+- Combined D source `b4499afb` прошёл full `pnpm check` на Node 24.21.0 и 26.11.1 / pnpm 11.18.0; immutable archive проходит existing packed consumers. Frontend frozen install Node 24.21.0 / pnpm 11.22.0 — PASS.
+- Сверена stable schema pinned Codex 0.162.0: `ThreadStartParams.ephemeral` существует; в generated stable/experimental schema нет native max-turns/max-budget полей. Это только schema evidence, не model/cleanup qualification.
+- Host implementation сохраняет один immutable app capture рядом с existing launch captures; исходный RuntimeOwner ledger владеет open/input/terminal/close. Native MCP snapshot использует прежние captured recipe artifacts. Не создаются Team member, Task Board task или новый daemon.
+- Native finite execution, low-limit loop, original cancellation/unknown recovery и Desktop UI всё ещё требуют 04-G1/G2 и приёмки выше. Поля неподдерживаемых Codex limits не будут молча переданы как будто применённые.

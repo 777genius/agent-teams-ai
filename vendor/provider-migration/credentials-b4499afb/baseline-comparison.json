@@ -1,0 +1,33 @@
+{
+  "provider-implementations": {
+    "oldSha256": "ceafcfc99defd2a402cef7091041bf46bd828c3baeff8bc05529f06f397fd384",
+    "newSha256": "659039aad0693903555be363ce055bf0c50864b385486f8313f6f3b6600a1cc2",
+    "changed": [
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.js",
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/factory.js",
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/open-session.js",
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/session.js",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-catalog.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-catalog.js",
+      "package/dist/features/provider-session-implementation/internal.d.ts",
+      "package/dist/features/provider-session-implementation/internal.js",
+      "package/dist/opencode.d.ts",
+      "package/dist/opencode.js"
+    ],
+    "added": [
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-client.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-client.js",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-wire.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-wire.js"
+    ],
+    "removed": []
+  },
+  "provider-session-contracts": {
+    "oldSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+    "newSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+    "changed": [],
+    "added": [],
+    "removed": []
+  }
+}

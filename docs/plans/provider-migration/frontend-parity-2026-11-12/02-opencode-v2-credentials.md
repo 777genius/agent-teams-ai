@@ -163,6 +163,19 @@ Native vendor PASS прикладывается только для реальн
 
 ## 8. Review
 
+### Implementation receipts — первый source slice
+
+- D key protocol опубликован в [`b4499afb`](https://github.com/agent-teams-ai/old-provider-implementations/commit/b4499afb7a48c4efb67e4a494690aca0921672ef).
+- Сверен официальный `@opencode/client@2.1.4`: archive SHA256 `bf888e996a3cc8e2884ca1d5503b00de4d8253af012facc62305c9156451e197`, npm integrity проверен.
+- Finite credential client: native integration read, единственный key POST, exact readback, rollback только собственного credential; Session SPI не расширен.
+- Protocol invariants: 5/5 PASS; full `pnpm check` на Node 24.21.0 и 26.11.1 / pnpm 11.18.0 PASS, включая packed consumers.
+- Combined immutable provider archive SHA256 `659039aad0693903555be363ce055bf0c50864b385486f8313f6f3b6600a1cc2`; SPI archive остался побайтно прежним.
+- Host `OpenCodeV2CredentialScope` использует existing captured `XDG_DATA_HOME/opencode/auth.json`; HOME alternative остаётся read-only conflict input.
+- Scope build и три группы critical invariant tests PASS: cold read/preservation/owned rollback, foreign conflict, namespace/symlink/revocation.
+- Compare-before-publication действует под Host writer lease; он не объявляется cross-process CAS с независимым внешним CLI.
+- **P02 ещё не завершён:** подключение Host transaction, единая connect-verification, UI intent/recovery и native/Desktop gate остаются следующими шагами.
+- Protocol fixtures не являются квалификацией реального vendor key или successful native model request.
+
 ### R1 — авторская критика, выполнена 2026-11-12
 
 - Найдено: прежняя оценка могла принять все разрешённые UI routes за квалифицированную V2 auth поддержку.
