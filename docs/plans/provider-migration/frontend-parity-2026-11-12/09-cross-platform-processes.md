@@ -1,6 +1,6 @@
 # 09. Processes: registry, состояние, история и Stop на Windows/Linux
 
-Статус: план реализации; production-код не изменён. R1/R2 выполнены ниже; R3 — pending.
+Статус: план реализации; production-код не изменён. R1/R2 и focused R3 выполнены; Windows service-launch gate открыт.
 Область: M19 существующего frontend, без нового process supervisor и без Stage 2.
 Main не сливается; выпуск/включение Host по умолчанию в этот план не входят.
 
@@ -76,23 +76,50 @@ controller storage, Main/Host transport и существующий `ProcessesSe
 - Если stopped-import сохраняет legacy row, действие к живому legacy owner остаётся у него до остановки/перехода.
 - Unknown platform/version сохраняется как неподдержанная read-only история либо явный bounded error, не как пустой список.
 
-### 4.2. Windows
+### 4.2. Windows: проверенный reuse и незакрытая граница service birth
 
-- Переиспользовать `WindowsJobKernel`: `openProcess`, `readProcess`, `alive`, membership и opaque handles.
-- Добавить минимальные target-handle signal и ancestry/member observations, необходимые именно registry adapter.
-- `TerminateJobObject` provider Job не является реализацией Processes → Stop одной строки.
-- Для service с детьми удерживается отдельный проверенный scope: original target и принадлежащие ему descendants.
-- Nested Job использует тот же kernel API, но позднее assignment одного service не включает уже созданных children.
-- До реализации Stop выбрать проверяемый admission barrier: existing SDK/tool launch hook создаёт service в отдельном
-  scope до исполнения, либо bounded native handoff доказывает включение всех прежних descendants и закрывает новые births.
-- Вариант handoff допустим только с подтверждённым OS primitive; PID scan, ancestry snapshot и повторные обходы сами
-  по себе не закрывают гонку. Непроверенный native механизм не принимается как уже готовое решение.
-- Source/native feasibility gate проходит M19-02 через actual SDK launch до registry/UI wiring;
-  если штатного birth/handoff boundary нет, пересмотреть узкий launch hook и оценку, не вводить второй supervisor.
-- Перед signal отдельный target scope замкнут; иначе результат остаётся UNKNOWN, а обязательный baseline — незакрытым.
-- Нельзя объявлять complete после остановки root, оставив ребёнка живым или приняв чужого соседа за descendant.
-- Native proof включает actual SDK-launched service с ребёнком; только controlled Job fixture недостаточно.
-- При невозможности доказать lineage операция отказывает безопасно, но baseline common workflow остаётся открытым до исправления.
+- `WindowsJobKernel` умеет original HANDLE/FILETIME/executable, `isMember`, Job count/terminate; ancestry/adopt/subtree API в нём нет.
+- Existing `owned-process-broker` создаёт **один новый root** в собственном ненаследуемом no-breakaway Job:
+  `PROC_THREAD_ATTRIBUTE_JOB_LIST` + `CREATE_SUSPENDED`; `resume(installOwner)` допускает выполнение после записи owner.
+- `Stop` держит original root HANDLE, вызывает `TerminateJobObject` только своего Job и требует fresh `ActiveProcesses=0` + root exit.
+- [S-broker: native admission/Stop](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/tools/owned-process-broker/broker.cpp).
+- [S-port: existing allocation/resume/Stop contract](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/src/main/utils/ownedProcess/contract.ts).
+- Его protocol имеет Launch/Resume/Stop/Release/RootExit: нет adopt existing PID, descendant-handle inventory,
+  arbitrary subtree selection, read-only Job observation или cold reconnection к unnamed Job. Stop не заменяет чтение.
+- [S-wire: actual finite opcodes](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/tools/owned-process-broker/protocol.h).
+- Это unactivated slice: текущие product launch factories его не импортируют; native gate не является product integration.
+- Main/Host `process_register` получает PID **после запуска**. Existing actual SDK fixture сначала создаёт два Bash background services,
+  затем регистрирует primary: один provider Job содержит и выбранный service, и живого соседа.
+- [S-journey: actual birth-before-register](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/scripts/legacy-agent-host/desktop-native-process-model.ts).
+- Поздний `AssignProcessToJobObject(target)` не помещает прежних children в новый Job. Snapshot/PPID scans и повторные обходы
+  не закрывают новые births; уничтожение provider Job нарушает targeted Stop. Подтверждённого handoff primitive в source нет.
+
+**Минимальный безопасный кандидат:** переиспользовать одну existing allocation **на service до его первого выполнения**,
+не создавать новый broker/daemon. Private binding связывает service allocation с registrar generation и её original root/birth;
+`process_register` выбирает только уже доказанный launch scope. Stop использует сохранённую capability этой allocation,
+не реконструирует scope из PID. Отдельный provider allocation и соседний service остаются живы.
+Это кандидат, а не реализованный общий SDK hook: P08 gated bootstrap охватывает provider, а не будущие внутренние tool spawns.
+Claude `PreToolUse` даёт только `updatedInput`, не OS creation handle; D Codex app-server client вообще не launcher.
+Подмена shell-команды wrapper-строкой без доказанных quoting/stdio/background/cancellation semantics gate не закрывает.
+
+**09-WG — ограниченный feasibility gate до registry/UI wiring:**
+
+1. В existing native gate подготовить две service allocations внутри живого outer fixture; дети до/после register,
+   root-first exit и Stop первой. Original handles/health второй и outer process должны доказать сохранение соседей.
+2. Назвать и проверить **actual** pre-birth seam каждого current provider/tool path, включая два services из одного native shell task.
+   Сохраняются прежний Bash/exec/background результат, registration PID, stream/notification semantics; одна allocation на весь shell
+   недопустима, если Stop выбранного service убивает второй service из того же task.
+3. Если native provider не предоставляет этот seam, описать точное минимальное source изменение и пересчитать работу;
+   обычные уже запущенные services нельзя объявить metadata-only и считать весь M19 выполненным. Без seam Windows baseline открыт.
+4. Для выбранного service-scoped пути согласовать async broker boundary: `RegisteredProcessNative.signal` сейчас synchronous,
+   тогда как broker Stop async. Requested сохраняется **до** await; read остаётся без signal, duplicate не создаёт второй attempt.
+5. Если projection должна видеть children после root exit, добавить небольшой read-only Job observation в тот же private protocol
+   или доказать иной existing путь; **сейчас такого opcode нет**. RootExit/PID gone не является tree cleanup.
+6. Прогнать actual SDK M19-01/02 на Windows x64/ARM64; controlled native gate отдельно квалифицирует primitive, не заменяет Desktop.
+
+P08 bootstrap и service-broker путь не смешиваются в authority: provider Job никогда не получает service Stop.
+При control/Host loss kill-on-close может остановить service; cold lookup наблюдает original outcome, не открывает новый Job по PID.
+Existing broker сохраняет unknown attempt и genuine private receipt; не создавать второй durable journal поверх `TeamProcessCommands`.
 
 ### 4.3. Linux
 
@@ -135,9 +162,10 @@ controller storage, Main/Host transport и существующий `ProcessesSe
 2. **Версия private capture.** Изменить `process/registeredProcessContracts.ts`, `validateProcessRecords.ts`,
    `projectProcessViews.ts`; сохранить v1/v2 decoding и original processRef старых persisted records.
    Unit-проверки нужны для опасных identity/version rules, а не для каждого нового DTO.
-3. **Windows adapter.** Добавить `process/WindowsRegisteredProcess.ts`; минимально расширить общий kernel из P08.
-   Подтвердить service-scope admission до подключения UI Stop: root/children до и после register и независимый service.
-   Не копировать `WindowsJobCustody` и не выдавать provider-level create-in-job из P08 за service-level closure.
+3. **Windows adapter — после 09-WG.** Добавить `process/WindowsRegisteredProcess.ts`, связывающий original service scope с registry.
+   При выборе existing broker переиспользовать `ownedProcess/contract.ts`, `windowsBroker.ts` и `tools/owned-process-broker`;
+   только подтверждённый seam/async observation адаптировать, без копирования kernel, протокола или WindowsJobCustody.
+   Provider-level gated bootstrap из P08 не доказывает service-level closure; exact SDK/tool seam фиксируется до implementation.
 4. **Linux adapter.** Добавить `process/LinuxRegisteredProcess.ts` и `native/registered-process-linux.c`.
    Реализовать capture/observe/signal через fixed native API; pidfd и identity никогда не приходят из renderer.
 5. **Composition.** Изменить `composition/processCustody.ts`, `createMemberProcessMcpPort.ts`,
@@ -150,7 +178,9 @@ controller storage, Main/Host transport и существующий `ProcessesSe
    `ControllerProcessPolicy.ts` остаётся мостом к прежнему processStore, без новой базы history.
 7. **Packaging.** Расширить `readPackagedProcessArtifact.ts`, `scripts/buildProcessNativeArtifact.ts`,
    `scripts/qualifyRegisteredProcessNative.ts` и candidate staging для OS backend selection.
-   Windows использует поставку P08; Linux фиксирует N-API, architecture, libc/kernel capability, source/binary digests.
+   Windows kernel использует поставку P08; при выбранном broker добавить его exact EXE/manifest через existing `buildOwnedProcessBroker.ts`.
+   Existing `.github/workflows/sentry-owned-process-native.yml` проверяет x64/ARM64 Node/Electron; packaged product inclusion отдельно обязательно.
+   Linux фиксирует N-API, architecture, libc/kernel capability, source/binary digests.
    Нативная сборка выполняется в build actor; runtime загружает только проверенный packaged artifact.
 8. **UI/CI.** Existing `ProcessesSection.tsx` и host process adapter получают описанное recovery-состояние;
    focused existing UI test проверяет различие query/retry, внешний вид раздела не переписывается.
@@ -164,7 +194,7 @@ Snapshot схемы или `process.platform='win32'` на Linux не счита
 | ID | Сценарий | Наблюдаемый результат |
 | --- | --- | --- |
 | M19-01 | SDK/tool запускает service → MCP register → existing Processes → Stop | Правильная строка; original process отсутствует; другой service и foreign neighbor продолжают health reply |
-| M19-02 | Actual SDK service создаёт child до/после register и на admission boundary | Доказан замкнутый service scope; Stop завершает его; provider и соседний service живы; provider Job count недостаточен |
+| M19-02 | Actual SDK: early/late child, root-first exit, два services из одного tool task; Stop одной строки | Scope замкнут до birth; весь выбранный service остановлен; provider/сосед живы; shell/provider Job count недостаточен |
 | M19-03 | Original завершается; stale capture сравнивается с replacement incarnation | Новый process не получает signal; original row остаётся history; не превращается в новую live row |
 | M19-04 | Crash после requested до native и lost ACK после effect; cold lookup → explicit retry → duplicate retry | Lookup не сигналит; same-live original получает один новый attempt по linked intent; replacement/соседи живы; unregister не скрывает pending |
 | M19-05 | Cold retained readback и отдельно surviving controlled service | История/label/URL сохраняются; same-live exact identity допускает один Stop; absent/stale не дают повторный kill |
@@ -196,7 +226,8 @@ Typecheck, native build qualification, focused Desktop/packaged сценарии
 С reuse existing commands/UI/harness: **1 000–1 900 production LOC**, **1 000–1 800 test/E2E LOC**.
 Общий Windows loader/Job kernel, посчитанный в P08, здесь повторно не считается; только registry-specific добавления.
 Новый Linux adapter/нативный source/packaging входят в эту оценку; vendor/generated и переносы исключены.
-R2 учитывает ранее недостаточно определённые linked-retry contract и service admission; это оценка, не лимит корректного решения.
+Диапазон условен до 09-WG: reuse самого broker уменьшает native работу, но pre-birth SDK/tool seam пока не найден.
+Неизвестный объём provider-source integration не маскируется в оценке «готового Windows adapter»; после gate обновить LOC/CI tuples.
 Если доказательство Windows service-tree ownership требует большого отдельного supervisor, сначала пересмотреть подход;
 такой supervisor не является принятой архитектурой или скрытым условием малого LOC.
 Сложность **9/10**; уверенность в LOC **5/10**; ожидаемая надёжность после описанной приёмки **8/10**.
@@ -232,5 +263,20 @@ Reviewer: `/root/estimate_profiles_models`; исходная опубликов�
 - **R2-09-04:** legacy decoder мог сохранить смысл, но изменить bytes/hash. Darwin corpus теперь проверяется byte-for-byte;
   native/Desktop, actual SDK и controlled cold evidence разделены, platform claims ограничены baseline tuples.
 
-R3: pending — повторная критика исправленного плана, packaging tuple и выполнимости CI.
-Production реализация начнётся после требуемых кругов планового review.
+## 11. R3: focused native feasibility review, выполнено 2026-11-12
+
+Reviewer: `/root/estimate_platform_acceptance`; входная версия P09 `ce577820717e0357b5ccbcf944ef8d4c71c627a2`.
+Прочитаны broker.cpp/protocol.h, OwnedLaunchPort/windowsBroker, WindowsJobKernel/Custody, process MCP registration,
+actual SDK process fixture и `.github/workflows/sentry-owned-process-native.yml`; production/CI не запускались и не менялись.
+
+- **R3-09-01:** existing broker доказывает новый Job-root, но не capture уже существующего service subtree.
+  Убрана неопределённая надежда на native handoff; описаны реальные primitives, отсутствующие API и кандидат pre-birth service scope.
+- **R3-09-02:** одна scope на provider либо shell task может убить соседний service. Добавлен actual двух-service tool case в 09-WG/M19-02.
+- **R3-09-03:** broker Stop async, current native signal sync; нельзя ждать внутри Team fence либо выдавать async Promise за accepted.
+  Добавлен explicit requested-before-await gate и повторное использование единственного durable owner.
+- **R3-09-04:** RootExit не покрывает surviving children, protocol не умеет read-only Job observation/cold adopt.
+  Названо минимальное возможное protocol дополнение как новая работа, а не уже доступная функция; cold PID re-adoption исключён.
+- **R3-09-05:** existing Windows CI staging не доказывает product packaging или SDK launch interception.
+  Reuse build/gate paths сохранён, actual packaged/Desktop proof обязателен; Windows service-launch gate остаётся открытым.
+
+Focused R3 не закрывает 09-WG: до реализации требуется конкретный provider/tool seam, а не согласие с абстрактной схемой.
