@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
+import { closeSync, createReadStream, createWriteStream, openSync } from 'node:fs';
 import { chmod, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve, win32 } from 'node:path';
 import { Readable, Transform } from 'node:stream';
@@ -98,9 +98,14 @@ export function extractNodeArchiveMember(archivePath: string, destination: strin
     // The inbox BSD tar reads the pinned ZIP. Git's GNU tar on PATH does not.
     tar = win32.join(systemRoot, 'System32', 'tar.exe');
   }
-  execFileSync(tar, ['-xf', name, '-C', resolve(destination), member], {
-    cwd: dirname(archive), timeout: 30_000, stdio: 'pipe',
-  });
+  // Node opens Unicode paths with the native Windows API; inbox tar can lose
+  // those characters in -f/-C arguments. Keep the selected archive as stdin.
+  const archiveFd = openSync(archive, 'r');
+  try {
+    execFileSync(tar, [name.endsWith('.tar.gz') ? '-xzf' : '-xf', '-', member], {
+      cwd: resolve(destination), timeout: 30_000, stdio: [archiveFd, 'pipe', 'pipe'],
+    });
+  } finally { closeSync(archiveFd); }
 }
 
 /** Build-time acquisition only. The installed app never downloads or resolves Node from PATH. */

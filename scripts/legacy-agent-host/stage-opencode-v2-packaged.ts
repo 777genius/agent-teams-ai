@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { closeSync, openSync } from 'node:fs';
 import { chmod, copyFile, cp, lstat, mkdir, readFile, realpath, rm, writeFile, appendFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, dirname, isAbsolute, join, resolve, win32 } from 'node:path';
@@ -80,9 +81,13 @@ for (const name of ['@agent-teams/provider-implementations', '@agent-teams/provi
   const unpacked = join(await realpath(process.env.RUNNER_TEMP!), `TEST-provider-census-${randomUUID()}`);
   await mkdir(unpacked);
   try {
-    execFileSync(archiveReader, ['-xf', archiveName, '-C', unpacked], {
-      cwd: archiveDirectory, timeout: 30_000, stdio: 'pipe',
-    });
+    // Node preserves Unicode source/destination paths before the native reader runs.
+    const archiveFd = openSync(archive, 'r');
+    try {
+      execFileSync(archiveReader, ['-xzf', '-'], {
+        cwd: unpacked, timeout: 30_000, stdio: [archiveFd, 'pipe', 'pipe'],
+      });
+    } finally { closeSync(archiveFd); }
     const paths = members.filter(member => !member.endsWith('/')).map(member => member.slice(8)).sort();
     assert.deepEqual(paths, selected.files.map(file => file.path).sort());
     for (const file of selected.files)

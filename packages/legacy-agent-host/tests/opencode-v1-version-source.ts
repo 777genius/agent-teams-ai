@@ -1,6 +1,7 @@
 /** Exact-source build boundary for disposable native Host qualification. */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { closeSync, openSync } from 'node:fs';
 import { lstat, mkdtemp, readFile, readdir, realpath, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -117,9 +118,13 @@ async function verifyInstalledArchive(archive: string, installed: string, name: 
   assert.deepEqual(actual.sort(), expected, 'installed provider file census must match its selected archive');
   const unpacked = await realpath(await mkdtemp(join(tmpdir(), 'TEST-native-provider-census-')));
   try {
-    execFileSync(archiveReader, ['-xf', archiveName, '-C', unpacked], {
-      cwd: archiveDirectory, timeout: 30_000, stdio: 'pipe',
-    });
+    // Pass native paths through Node rather than inbox tar's ANSI -C argument.
+    const archiveFd = openSync(archive, 'r');
+    try {
+      execFileSync(archiveReader, ['-xzf', '-'], {
+        cwd: unpacked, timeout: 30_000, stdio: [archiveFd, 'pipe', 'pipe'],
+      });
+    } finally { closeSync(archiveFd); }
     for (const member of expected) assert.deepEqual(
       await readFile(join(installed, member)), await readFile(join(unpacked, 'package', member)),
       'installed provider bytes must match their selected immutable archive');

@@ -11,7 +11,7 @@ import { fileHash as fileDigest } from '../../packages/legacy-agent-host/tests/f
 import { waitFor } from '../e2e/release-updater/cdp.mts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import { startRetainedOpenCodeModel } from './desktop-retained-opencode-model.ts';
-import { originalLinuxProcessPresent, selectedLinuxProcesses, startRetainedOpenCodeApp, testNamespaceLinuxProcesses } from './desktop-retained-opencode-app.ts';
+import { originalLinuxProcessPresent, selectedLinuxProcesses, snapshotLinuxProcesses, startRetainedOpenCodeApp, testNamespaceLinuxProcesses } from './desktop-retained-opencode-app.ts';
 
 const record = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Record<string, unknown>;
@@ -32,6 +32,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
 }, async () => {
   assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
   assert.equal(process.version, 'v24.21.0');
+  const processBaseline = await snapshotLinuxProcesses();
   const repo = resolve(import.meta.dirname, '../..');
   const head = process.env.OPENCODE_V2_TEST_SOURCE_HEAD!;
   const receiptPath = process.env.OPENCODE_V1_V2_COEXISTENCE_RECEIPT!;
@@ -102,6 +103,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
   const natives: Awaited<ReturnType<typeof selectedLinuxProcesses>> = [];
   const proof: Record<string, unknown> = { kind: 'TEST_NATIVE_RETAINED_V1_HOST_V2_DESKTOP', sourceHead: head,
     status: 'INCOMPLETE', platform: 'linux-x64', build, steps,
+    processBaseline: processBaseline.map(({ pid, birth }) => ({ pid, birth })),
     vendorAuthQualified: false, releaseQualified: false };
   const save = () => writeFile(receiptPath, JSON.stringify({ ...proof, cleanup,
     modelObservations: model.observations, modelFailures: model.failures }, null, 2), { mode: 0o600 });
@@ -348,7 +350,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     if (fixture) {
       try {
         // Absence check only: an early detached child never becomes a new signal target.
-        assert.deepEqual(await testNamespaceLinuxProcesses(fixture.root), [],
+        assert.deepEqual(await testNamespaceLinuxProcesses(fixture.root, processBaseline), [],
           'unreconciled TEST native namespace survives cleanup');
       } catch (error) { cleanupErrors.push(error); }
     }

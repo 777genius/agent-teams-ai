@@ -16,15 +16,32 @@ export function originalLinuxProcessPresent(original: ReturnType<typeof linuxPro
   try { const now = linuxProcessIdentity(original.pid); return now.birth === original.birth && now.state !== 'Z'; }
   catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false; throw error; }
 }
-export async function selectedLinuxProcesses(executable: string) {
+/** Kernel identities only: protected executable/environment files are not inspected. */
+export async function snapshotLinuxProcesses() {
   const values: ReturnType<typeof linuxProcessIdentity>[] = [];
   for (const name of await readdir('/proc')) {
     if (!/^[0-9]+$/.test(name)) continue;
     try {
       if ((await lstat(`/proc/${name}`)).uid !== process.getuid!()) continue;
-      const identity = linuxProcessIdentity(Number(name));
-      if (identity.state !== 'Z' && await readlink(`/proc/${name}/exe`) === executable &&
-        linuxProcessIdentity(Number(name)).birth === identity.birth) values.push(identity);
+      values.push(Object.freeze(linuxProcessIdentity(Number(name))));
+    } catch (error) {
+      if (!['ENOENT', 'ESRCH'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error;
+    }
+  }
+  return Object.freeze(values);
+}
+
+export async function selectedLinuxProcesses(executable: string,
+  owns: (identity: ReturnType<typeof linuxProcessIdentity>) => boolean) {
+  const values: ReturnType<typeof linuxProcessIdentity>[] = [];
+  for (const identity of await snapshotLinuxProcesses()) {
+    // Same-UID runner services can deny exe access. Only the original observed
+    // ancestry/group may be probed; an inaccessible owned identity stays UNKNOWN.
+    if (identity.state === 'Z' || !owns(identity)) continue;
+    try {
+      if (await readlink(`/proc/${identity.pid}/exe`) !== executable) continue;
+      const after = linuxProcessIdentity(identity.pid);
+      if (after.birth === identity.birth && owns(after)) values.push(after);
     } catch (error) {
       if (!['ENOENT', 'ESRCH'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error;
     }
@@ -33,19 +50,20 @@ export async function selectedLinuxProcesses(executable: string) {
 }
 
 /** Absence evidence only. A namespace match never authorizes signaling a process. */
-export async function testNamespaceLinuxProcesses(namespace: string) {
+export async function testNamespaceLinuxProcesses(namespace: string,
+  baseline: readonly ReturnType<typeof linuxProcessIdentity>[]) {
   const values: ReturnType<typeof linuxProcessIdentity>[] = [];
   assert.equal(await realpath(namespace), namespace);
-  for (const name of await readdir('/proc')) {
-    if (!/^[0-9]+$/.test(name)) continue;
+  const preexisting = new Set(baseline.map(identity => `${identity.pid}:${identity.birth}`));
+  for (const identity of await snapshotLinuxProcesses()) {
+    // The snapshot precedes creation of this fresh TEST namespace. Exclude only
+    // those exact original identities; PID reuse and new unreadable children fail.
+    if (identity.state === 'Z' || preexisting.has(`${identity.pid}:${identity.birth}`)) continue;
     try {
-      if ((await lstat(`/proc/${name}`)).uid !== process.getuid!()) continue;
-      const identity = linuxProcessIdentity(Number(name));
-      if (identity.state === 'Z') continue;
-      const executable = await readlink(`/proc/${name}/exe`);
-      const environment = await readFile(`/proc/${name}/environ`, 'utf8');
+      const executable = await readlink(`/proc/${identity.pid}/exe`);
+      const environment = await readFile(`/proc/${identity.pid}/environ`, 'utf8');
       if ((executable.startsWith(namespace + '/') || environment.includes(namespace)) &&
-        linuxProcessIdentity(Number(name)).birth === identity.birth) values.push(identity);
+        linuxProcessIdentity(identity.pid).birth === identity.birth) values.push(identity);
     } catch (error) {
       if (!['ENOENT', 'ESRCH'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error;
     }
@@ -113,7 +131,9 @@ export async function startRetainedOpenCodeApp(input: {
   try {
     const target = await waitFor(async () => {
       assertCurrent();
-      const candidates = (await selectedLinuxProcesses(executable)).filter(row => row.group === original.group);
+      observeDescendants();
+      const candidates = await selectedLinuxProcesses(executable,
+        row => row.group === original.group && descendants.has(key(row)));
       let listener: ReturnType<typeof linuxProcessIdentity> | undefined;
       for (const candidate of candidates) {
         const sockets = new Set<string>();
@@ -179,7 +199,7 @@ export async function startRetainedOpenCodeApp(input: {
     return { cdp, call, assertCurrent, original, electron: electron!,
       async nativeChildren(executable: string) {
         assertCurrent(); observeDescendants();
-        return (await selectedLinuxProcesses(executable)).filter(value => descendants.has(key(value)));
+        return selectedLinuxProcesses(executable, value => descendants.has(key(value)));
       },
       async nativeImageChildren(sha256: string, namespace: string) {
         assertCurrent(); observeDescendants();

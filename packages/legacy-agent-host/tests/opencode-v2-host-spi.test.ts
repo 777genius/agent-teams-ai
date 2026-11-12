@@ -3088,7 +3088,8 @@ test('pending native V2 re-attestation fences concurrent controls without retiri
     assert.equal(calls.stop, 1, 'only Host seal stops the original native owner');
   });
 
-test('active native V2 polling drains before re-attestation and normal close preserves known cleanup',
+for (const ending of ['close', 'revoked', 'observer-return'] as const)
+test(`active native V2 polling drains before re-attestation and ${ending} preserves known cleanup`,
   { timeout: 10000 }, async () => {
     const within = async <T>(work: Promise<T>): Promise<T> => {
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -3162,8 +3163,13 @@ test('active native V2 polling drains before re-attestation and normal close pre
       if (suspendProbe) { probeEntered.resolve(); await releaseProbe.promise; }
       return true;
     };
-    const provider = createOpenCodeV2MemberProvider(context(profile), captured);
+    let leaseCurrent = true;
+    const provider = createOpenCodeV2MemberProvider({ ...context(profile), isCurrent: () => leaseCurrent }, captured);
     const opened = await provider.factory.open(request());
+    const observer = opened.driver.observe()[Symbol.asyncIterator]();
+    assert.equal(typeof observer.return, 'function');
+    const observing = (async () => { while (!(await observer.next()).done) { /* Drain original events. */ } })();
+    void observing.catch(() => {});
     try {
       assert.equal((await opened.driver.submit({ inputId: 'TEST-poll', operationRef: 'TEST-poll-op', content: 'TEST' })).ok, true);
       await within(heldRead.promise);
@@ -3190,21 +3196,29 @@ test('active native V2 polling drains before re-attestation and normal close pre
       holdForClose = true;
       await within(closingRead.promise);
       const passwordBeforeClose = calls.password, requestsBeforeClose = requestCount;
-      const closing = opened.driver.close();
+      if (ending === 'revoked') {
+        leaseCurrent = false;
+        assert.equal(provider.isReady(), false, 'revoked authority is fenced synchronously');
+      }
+      const closing = ending === 'observer-return'
+        ? Promise.resolve(observer.return?.()).then(() => opened.driver.close())
+        : opened.driver.close();
       await new Promise<void>(resolve => setImmediate(resolve));
       assert.equal(provider.isReady(), false, 'close fences new native authority synchronously');
       assert.equal(calls.stop, 0, 'original finite body drains before its process is retired');
       assert.equal(calls.password, passwordBeforeClose, 'no late credential read after close begins');
       assert.equal(requestCount, requestsBeforeClose, 'no new native request after close begins');
-      assert.equal(closeReadCancelled, false, 'normal close does not manufacture uncertain body cleanup');
+      assert.equal(closeReadCancelled, false, 'retirement does not manufacture uncertain body cleanup');
       releaseClosingRead.resolve();
       assert.deepEqual(await within(closing), { logicallyClosed: true, cleanup: 'confirmed' });
+      await within(observing);
       assert.equal(calls.stop, 1);
       assert.equal(postCount, 1, 'close never replays the original native prompt');
     } finally {
       releaseRead.resolve(); releaseProbe.resolve(); releaseClosingRead.resolve();
       await opened.driver.close();
       await provider.cleanup();
+      await observing.catch(() => {});
       server.closeAllConnections();
       await new Promise<void>(resolve => server.close(() => resolve()));
     }

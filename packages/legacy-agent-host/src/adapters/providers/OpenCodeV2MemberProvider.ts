@@ -215,9 +215,8 @@ export function createOpenCodeV2MemberProvider(
     qualificationRevoked = true;
     ready = false;
     initialEvidence = undefined;
-    abort.abort();
-    // This is the captured TEST-owned process only. finishOwned deduplicates
-    // the stop attempt and allows read-only confirmation after an unknown ACK.
+    // Fence admission before retiring the captured process. Its already
+    // admitted finite response must drain before physical termination.
     void finishOwned();
     return false;
   };
@@ -225,7 +224,7 @@ export function createOpenCodeV2MemberProvider(
     sealed = true;
     ready = false;
     initialEvidence = undefined;
-    if (closingDrain) await closingDrain;
+    await closeAdmission();
     abort.abort();
     // A stop with an uncertain ACK is never submitted twice. Subsequent
     // cleanup checks may ONLY read physical status for this same owned PID.
@@ -449,7 +448,7 @@ export function createOpenCodeV2MemberProvider(
                 qualificationRevoked = true;
                 ready = false;
                 initialEvidence = undefined;
-                if (!closingDrain) abort.abort();
+                if (!wasEverReady) abort.abort();
                 // A previously live member must not leave the loosened native
                 // process running while Host reports an unready session.
                 // Only its captured owner may perform this physical stop.
@@ -478,6 +477,7 @@ export function createOpenCodeV2MemberProvider(
         try {
           const opened = await factory.open(request);
           const source = opened.driver;
+          const closePrivate = async () => { await closeAdmission(); return source.close(); };
           checkpointSource = source;
           return {
             ...opened,
@@ -560,7 +560,6 @@ export function createOpenCodeV2MemberProvider(
                   } catch {
                     // A broken authority provider is not affirmative custody.
                     qualificationRevoked = true;
-                    abort.abort();
                     void finishOwned();
                   }
                 }, 250);
@@ -629,7 +628,7 @@ export function createOpenCodeV2MemberProvider(
                       // Even a rejected native close must not skip the inner
                       // EventFeed iterator's finally/finalization path.
                       await finalizeOpenCodeV2ObserverAfterClose(
-                        () => source.close(), () => iterator.return?.());
+                        closePrivate, () => iterator.return?.());
                     } else {
                       await iterator.return?.();
                     }
@@ -639,7 +638,7 @@ export function createOpenCodeV2MemberProvider(
                   }
                 }
                 })();
-                return guardOpenCodeV2ObserverCleanup(stream, () => source.close(), finishOwned);
+                return guardOpenCodeV2ObserverCleanup(stream, closePrivate, finishOwned);
               },
               respondToInteraction: async (reference, reply) => {
                 // V2 permission replies are native mutations. Never let a
