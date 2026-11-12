@@ -175,7 +175,7 @@ export async function prepareDesktopProofMode(
     createConfigMode ||
     createLaunchMode;
   const openCodeGeneration = process.env.LEGACY_DESKTOP_OPENCODE_GENERATION;
-  assert.ok(openCodeGeneration === undefined || openCodeGeneration === 'v2',
+  assert.ok(openCodeGeneration === undefined || openCodeGeneration === '' || openCodeGeneration === 'v2',
     'explicit known Desktop OpenCode generation');
   const mixedModels = mixedMode ? await startDesktopMixedModels(fixtureRoot,
     openCodeGeneration === 'v2' ? { nativeGeneration: 'v2' } : {}) : undefined;

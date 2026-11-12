@@ -303,7 +303,7 @@ static napi_value initialize(napi_env env, napi_value exports) {
     {"observeOriginal", NULL, observe_original, NULL, NULL, NULL, napi_default, NULL},
     {"osBuild", NULL, os_build, NULL, NULL, NULL, napi_default, NULL},
   };
-  TRY(napi_define_properties(env, exports, 5, methods));
+  TRY(napi_define_properties(env, exports, sizeof(methods) / sizeof(methods[0]), methods));
   return exports;
 }
 NAPI_MODULE(NODE_GYP_MODULE_NAME, initialize)

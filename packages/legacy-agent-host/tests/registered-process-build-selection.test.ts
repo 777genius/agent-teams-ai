@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire, syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { test } from 'node:test';
 import { buildProcessNativeArtifact } from '../scripts/buildProcessNativeArtifact.ts';
 import { createQualifiedDarwinProcessApi } from '../dist/process/DarwinRegisteredProcess.js';
@@ -64,7 +64,8 @@ function bridge(t: TestContext, osBuild: QualifiedDarwinBuild = '24G624') {
     signalOriginal: () => { state.signals++; return 0; },
   };
   t.mock.method(process, 'dlopen', (module: object, path: string) => {
-    assert.equal(path, artifact.path);
+    // Windows dlopen uses the namespaced spelling of the same canonical TEST file.
+    assert.equal(realpathSync(path), artifact.path);
     Object.assign(module, { exports: native });
   });
   t.after(() => {
@@ -158,11 +159,19 @@ test('builder keeps unknown candidates out of product admission and refuses chan
   assert.throws(() => buildProcessNativeArtifact({ ...input, outputDirectory: join(root, 'wrong-arch') },
     { osBuild: build, architecture: 'x64' }), /Unsupported TEST candidate/);
   assert.equal(compiled, before);
-  const candidate = buildProcessNativeArtifact({ ...input, outputDirectory: join(root, 'candidate') },
-    { osBuild: build, architecture: 'arm64' });
-  assert.equal(candidate.manifest.osBuild, build);
-  assert.throws(() => readPackagedProcessArtifact(candidate), /unavailable/,
-    'compilation alone never admits a prospective tuple to the product');
+  const candidateInput = { ...input, outputDirectory: join(root, 'candidate') };
+  if (sep === '/') {
+    const candidate = buildProcessNativeArtifact(candidateInput, { osBuild: build, architecture: 'arm64' });
+    assert.equal(candidate.manifest.osBuild, build);
+    assert.throws(() => readPackagedProcessArtifact(candidate), /unavailable/,
+      'compilation alone never admits a prospective tuple to the product');
+  } else {
+    // Mocking the OS does not turn a real Windows filesystem path into a Darwin
+    // TEST namespace. The candidate's POSIX-only path gate must still refuse it.
+    assert.throws(() => buildProcessNativeArtifact(candidateInput, { osBuild: build, architecture: 'arm64' }),
+      /Unsupported TEST candidate/);
+    assert.equal(compiled, before);
+  }
   build = '24G624'; changeAfterCompile = true;
   assert.throws(() => buildProcessNativeArtifact({ ...input, outputDirectory: join(root, 'changed') }), /build tuple changed/);
   assert.equal(existsSync(join(root, 'changed', 'manifest.json')), false);
