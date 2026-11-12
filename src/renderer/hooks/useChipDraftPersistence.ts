@@ -53,6 +53,7 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
   const generationRef = useRef(key.startsWith('createTeam:') ? currentCreateTeamDraftGeneration() : undefined);
 
   useEffect(() => {
+    if (keyRef.current !== key) editRevisionRef.current++;
     keyRef.current = key;
   }, [key]);
   // Ref for current chips — allows addChip/removeChip to read latest value
@@ -141,8 +142,11 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
       if (pending.value.length === 0) {
         void draftStorage.deleteDraft(pending.key, generationRef.current);
       } else {
+        const saveRevision = editRevisionRef.current;
         void draftStorage.saveDraft(pending.key, JSON.stringify(pending.value), generationRef.current).then(() => {
-          if (mountedRef.current) setIsSaved(true);
+          if (mountedRef.current && editRevisionRef.current === saveRevision && keyRef.current === pending.key) {
+            setIsSaved(true);
+          }
         });
       }
     }, DEBOUNCE_MS);

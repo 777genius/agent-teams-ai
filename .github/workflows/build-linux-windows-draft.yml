@@ -39,7 +39,7 @@ jobs:
       matrix:
         include:
           - job_name: release-linux x64
-            runner: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+            runner: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
             platform: linux
             arch: x64
             runtime: linux-x64
@@ -235,7 +235,7 @@ jobs:
 
   draft:
     needs: package
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     permissions:
       contents: write
