@@ -446,13 +446,21 @@ export async function runDesktopTaskBoardUiSmoke(
     'original dependency reference visible'
   );
   proof.dependencyScreenshot = await screenshot('ui-task-board-assigned-blocked.png');
-  // A background Task detail refresh can invalidate the owner revision after assignee
-  // persistence and before this single click. Require the actual action guard again.
-  await ui.waitRead(
-    desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, { contextId, surfaceId }),
-    'current original Task owner can edit before Mark resolved'
+  // Re-read the original owner and the exact hit-tested control together after
+  // pointer enter, immediately before one physical press. No effect retry.
+  await measuredClick(
+    `(async()=>{
+      const owner=await ${desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, { contextId, surfaceId })};
+      if(!owner)return null;
+      return ${pointOf(`
+        const dialog=document.getElementById(owner.inputId)?.closest('[role="dialog"]');
+        const buttons=[...dialog?.querySelectorAll('button')??[]].filter(e=>e.textContent.trim()==='Mark resolved');
+        return buttons.length===1?buttons[0]:null;
+      `)};
+    })()`,
+    'clear original clarification once',
+    true
   );
-  await ui.click('[role="dialog"] button', 'clear original clarification once', 'Mark resolved');
   await ui.waitRead(
     `!document.querySelector('[role="dialog"]')?.textContent.includes('Awaiting clarification from you')`,
     'clarification banner cleared'

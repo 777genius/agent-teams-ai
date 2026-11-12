@@ -125,8 +125,8 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     await mkdir(legacyProject, { mode: 0o700 });
     for (const folder of ['legacy-runtime-data', 'legacy-runtime-cache', 'state']) await mkdir(join(root, folder), { mode: 0o700 });
     const legacyConfig = { $schema: 'https://opencode.ai/config.json', plugin: [],
-      model: 'TEST-legacy/TEST-model', small_model: 'TEST-legacy/TEST-model',
-      enabled_providers: ['TEST-legacy'], provider: { 'TEST-legacy': { npm: '@ai-sdk/openai-compatible',
+      model: 'test-legacy/TEST-model', small_model: 'test-legacy/TEST-model',
+      enabled_providers: ['test-legacy'], provider: { 'test-legacy': { npm: '@ai-sdk/openai-compatible',
         name: 'TEST retained V1 local only', options: { baseURL: `${model.url}/legacy/v1`, apiKey: 'TEST-LOCALHOST-ONLY' },
         models: { 'TEST-model': { name: 'TEST-model', tool_call: true,
           limit: { context: 200000, output: 2000 } } } } } };
@@ -208,7 +208,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
       assert.notEqual(status.status, 'error', String(status.error));
       if (state.runId !== runId) return null;
       return member.alive === true && status.bootstrapConfirmed === true &&
-        member.historicalBootstrapConfirmed === true && member.runtimeModel === 'TEST-legacy/TEST-model' &&
+        member.historicalBootstrapConfirmed === true && member.runtimeModel === 'test-legacy/TEST-model' &&
         typeof member.runtimeSessionId === 'string' && member.runtimeSessionId.length > 0 ? state : null;
     }, 'actual retained V1 native session and original bootstrap ready', 180_000);
     const send = async (key: string, to: string, marker: string) => {
@@ -219,8 +219,8 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     await app.call(`window.electronAPI.config.addCustomProjectPath(${literal(legacyProject)})`);
     legacySubmitted = true;
     const created = await callTeams('createTeam', [{ teamName: legacyTeam, cwd: legacyProject,
-      providerId: 'opencode', model: 'TEST-legacy/TEST-model', skipPermissions: true,
-      runtimeSelectionVersion: 1, members: [{ name: 'bob', role: 'Developer', providerId: 'opencode', model: 'TEST-legacy/TEST-model', mcpPolicy: { mode: 'appOnly' } }] }], 240_000);
+      providerId: 'opencode', model: 'test-legacy/TEST-model', skipPermissions: true,
+      runtimeSelectionVersion: 1, members: [{ name: 'bob', role: 'Developer', providerId: 'opencode', model: 'test-legacy/TEST-model', mcpPolicy: { mode: 'appOnly' } }] }], 240_000);
     assert.equal(typeof created.runId, 'string');
     const originalLegacyRuntime = await waitLegacyRuntime(created.runId);
     const legacyTask = await callTeams('createTask', [legacyTeam, { subject: 'TEST retained V1 sidebar record' }]);
@@ -259,7 +259,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     assert.equal(model.observations.length, callsBeforeUpgrade, 'Host selection never replays retained V1 input');
     legacyStopped = false;
     const retainedLaunch = await callTeams('launchTeam', [{ teamName: legacyTeam, cwd: legacyProject,
-      providerId: 'opencode', model: 'TEST-legacy/TEST-model', skipPermissions: true, runtimeSelectionVersion: 1 }], 240_000);
+      providerId: 'opencode', model: 'test-legacy/TEST-model', skipPermissions: true, runtimeSelectionVersion: 1 }], 240_000);
     assert.equal(typeof retainedLaunch.runId, 'string'); assert.notEqual(retainedLaunch.runId, created.runId);
     await waitLegacyRuntime(retainedLaunch.runId);
     const legacyProcesses = await legacyChildren();
@@ -293,7 +293,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     assert.ok(hostProcesses.every(originalLinuxProcessPresent), 'legacy Stop preserves all original V2 native children');
     await send(hostKey, 'alice', 'TEST_OWNED_V2_AFTER_STOP');
     const relaunched = await callTeams('launchTeam', [{ teamName: legacyTeam, cwd: legacyProject,
-      providerId: 'opencode', model: 'TEST-legacy/TEST-model', skipPermissions: true, runtimeSelectionVersion: 1 }], 240_000);
+      providerId: 'opencode', model: 'test-legacy/TEST-model', skipPermissions: true, runtimeSelectionVersion: 1 }], 240_000);
     assert.equal(typeof relaunched.runId, 'string'); assert.notEqual(relaunched.runId, retainedLaunch.runId);
     await waitLegacyRuntime(relaunched.runId);
     const retainedAfterRelaunch = await legacyChildren(); assert.ok(retainedAfterRelaunch.length > 0); natives.push(...retainedAfterRelaunch);

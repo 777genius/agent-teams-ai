@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import { CONTEXT_MARKER, REQUIRED_TOOLS, startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import { checkpoint, jsonDigest, originalHistoryMarker } from './desktop-resume-records.ts';
 import { separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fixture.ts';
-import { assertCapturedColdMetadataAbsent, assertColdOpenCodeRuntimeRecords } from './desktop-opencode-v2-cold-metadata.ts';
+import { assertCapturedDesktopMetadataAbsent, assertFirstResumeMetadataAbsent, assertColdOpenCodeRuntimeRecords } from './desktop-opencode-v2-cold-metadata.ts';
 
 const messageId = '11111111-2222-4333-8444-555555555555';
 const tools = ['shell', ...REQUIRED_TOOLS.map(name => 'agent-teams_' + name)]
@@ -70,19 +70,19 @@ test('cold cleanup proves the captured detached metadata child absent before rec
     children: [{ pid: 11, parentPid: 10, groupId: 11, birth: 'TEST-metadata-birth', command: '/TEST/bun' }],
   } };
   const proof: Record<string, unknown> = structuredClone(original);
-  const evidence = { coldOpenCodeMetadata: proof };
-  assert.throws(() => assertCapturedColdMetadataAbsent(evidence, [{ pid: 11, ppid: 10, pgid: 11 }]));
+  const evidence = { hostChild: { pid: 10, ppid: 1, pgid: 10 }, coldOpenCodeMetadata: proof };
+  assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [{ pid: 11, ppid: 10, pgid: 11 }]));
   assert.equal(proof.metadataAbsentBeforeHarnessCleanup, undefined);
-  assert.throws(() => assertCapturedColdMetadataAbsent(evidence, [{ pid: 11, ppid: 1, pgid: 11 }]));
+  assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [{ pid: 11, ppid: 1, pgid: 11 }]));
   assert.equal(proof.metadataAbsentBeforeHarnessCleanup, undefined, 'orphaning is not physical termination');
   // A reused numeric PID is deliberately uncertain, never adopted or signalled.
-  assert.throws(() => assertCapturedColdMetadataAbsent(evidence, [{ pid: 11, ppid: 99, pgid: 99 }]));
+  assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [{ pid: 11, ppid: 99, pgid: 99 }]));
   assert.equal(proof.metadataAbsentBeforeHarnessCleanup, undefined);
-  assertCapturedColdMetadataAbsent(evidence, [{ pid: 42, ppid: 1, pgid: 42 }]);
+  assertCapturedDesktopMetadataAbsent(evidence, [{ pid: 42, ppid: 1, pgid: 42 }]);
   assert.equal(proof.metadataAbsentBeforeHarnessCleanup, true);
   assert.deepEqual(proof.captured, original.captured);
   const absent: Record<string, unknown> = {};
-  assertCapturedColdMetadataAbsent(absent, []);
+  assertCapturedDesktopMetadataAbsent(absent, []);
   assert.deepEqual(absent, {});
 });
 
@@ -103,22 +103,22 @@ test('mixed Quit proves its original detached metadata child absent without adop
     { pid: 11, ppid: 99, pgid: 99 },
   ]) {
     const evidence = structuredClone(original);
-    assert.throws(() => assertCapturedColdMetadataAbsent(evidence, [current]), /mixed metadata child/);
+    assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [current]), /mixed metadata child/);
     assert.equal('managementChildAbsentBeforeHarnessCleanup' in evidence.mixedCreateLaunchProof, false);
   }
   for (const field of ['managementChildBeforeStop', 'managementChildAfterStop']) {
     const evidence = structuredClone(original);
     (evidence.mixedCreateLaunchProof as Record<string, unknown>)[field] = { ...child, birth: 'TEST-replaced' };
-    assert.throws(() => assertCapturedColdMetadataAbsent(evidence, []));
+    assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, []));
   }
   const wrongHost = structuredClone(original);
   wrongHost.hostChild.pid = 99;
-  assert.throws(() => assertCapturedColdMetadataAbsent(wrongHost, []));
+  assert.throws(() => assertCapturedDesktopMetadataAbsent(wrongHost, []));
   const wrongBinding = structuredClone(original);
   wrongBinding.mixedCreateLaunchProof.originalMetadataChildBeforeLaunch.parentPid = 99;
-  assert.throws(() => assertCapturedColdMetadataAbsent(wrongBinding, []));
+  assert.throws(() => assertCapturedDesktopMetadataAbsent(wrongBinding, []));
   const evidence = structuredClone(original);
-  assertCapturedColdMetadataAbsent(evidence, [{ pid: 42, ppid: 1, pgid: 42 }]);
+  assertCapturedDesktopMetadataAbsent(evidence, [{ pid: 42, ppid: 1, pgid: 42 }]);
   assert.deepEqual(evidence.mixedCreateLaunchProof,
     { ...original.mixedCreateLaunchProof, managementChildAbsentBeforeHarnessCleanup: true });
   assert.equal('coldOpenCodeMetadata' in evidence, false, 'mixed proof is not a synthetic cold receipt');
@@ -126,13 +126,100 @@ test('mixed Quit proves its original detached metadata child absent without adop
 
 test('V2 mixed cleanup requires its pre-Launch observation while V1 proof stays unchanged', () => {
   const evidence = { mixedCreateLaunchProof: { status: 'PASS', openCodeGeneration: 'v1' } };
-  assertCapturedColdMetadataAbsent(evidence, []);
+  assertCapturedDesktopMetadataAbsent(evidence, []);
   assert.deepEqual(evidence, { mixedCreateLaunchProof: { status: 'PASS', openCodeGeneration: 'v1' } });
   for (const changed of [
     { status: 'PASS', openCodeGeneration: 'v2' },
     { status: 'PASS' },
     { status: 'PASS', openCodeGeneration: 'v1', originalMetadataChildBeforeLaunch: {} },
-  ]) assert.throws(() => assertCapturedColdMetadataAbsent({ mixedCreateLaunchProof: changed }, []));
+  ]) assert.throws(() => assertCapturedDesktopMetadataAbsent({ mixedCreateLaunchProof: changed }, []));
+});
+
+test('every hot V2 flow requires its own captured metadata child absent before fallback cleanup', () => {
+  const host = { pid: 10, parentPid: 1, groupId: 9, birth: 'TEST-host-birth', command: '/TEST/node' };
+  const child = { pid: 11, parentPid: 10, groupId: 11, birth: 'TEST-metadata-birth', command: '/TEST/bun' };
+  const captured = { host, children: [child] };
+  const flows = [
+    { mode: 'native-review-ui', key: 'nativeReviewUiProof', capture: 'originalMetadataBeforeLaunch',
+      proof: { status: 'PASS', provider: 'opencode-v2', originalMetadataBeforeLaunch: captured, stop: { metadata: child } } },
+    { mode: 'native-launch-ui', key: 'launchDialogProof', capture: 'originalMetadataBeforeLaunch',
+      proof: { status: 'PASS', provider: 'opencode', originalMetadataBeforeLaunch: captured, metadataAfterStop: captured } },
+    ...['native-stop-ui', 'native-conversation-ui', 'native-quit-ui'].flatMap(mode =>
+      (mode === 'native-quit-ui' ? ['ready', 'opening'] : ['ready']).map(status => ({
+        mode, key: 'nativeSetup', capture: 'metadataBeforeLaunch', proof: { status, metadataBeforeLaunch: captured },
+      }))),
+  ];
+  for (const flow of flows) {
+    const source: Record<string, unknown> = { mode: flow.mode, nativeProvider: 'opencode', nativeGeneration: 'v2',
+      hostChild: { pid: 10, ppid: 1, pgid: 9 }, [flow.key]: flow.proof };
+    for (const current of [{ pid: 11, ppid: 10, pgid: 11 }, { pid: 11, ppid: 1, pgid: 11 }, { pid: 11, ppid: 99, pgid: 99 }]) {
+      const evidence = structuredClone(source), proof = evidence[flow.key] as Record<string, unknown>;
+      assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [current]), /metadata child/);
+      assert.equal(proof.metadataAbsentBeforeHarnessCleanup, undefined);
+    }
+    for (const change of [
+      (evidence: Record<string, unknown>) => { delete (evidence[flow.key] as Record<string, unknown>)[flow.capture]; },
+      (evidence: Record<string, unknown>) => { delete evidence.nativeGeneration; },
+      (evidence: Record<string, unknown>) => { evidence.nativeProvider = 'claude'; },
+      (evidence: Record<string, unknown>) => { evidence.hostChild = { pid: 99, ppid: 1, pgid: 9 }; },
+      (evidence: Record<string, unknown>) => {
+        (evidence[flow.key] as Record<string, unknown>)[flow.capture] = { host, children: [{ ...child, parentPid: 99 }] };
+      },
+    ]) {
+      const evidence = structuredClone(source); change(evidence);
+      assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, []));
+    }
+    const evidence = structuredClone(source);
+    assertCapturedDesktopMetadataAbsent(evidence, [{ pid: 42, ppid: 1, pgid: 42 }]);
+    assert.equal((evidence[flow.key] as Record<string, unknown>).metadataAbsentBeforeHarnessCleanup, true);
+  }
+});
+
+test('cold Resume records first metadata absence before the second spawn and binds the second epoch separately', () => {
+  const capture = (pid: number) => ({
+    host: { pid, parentPid: 1, groupId: pid - 1, birth: 'TEST-host-' + pid, command: '/TEST/node' },
+    children: [{ pid: pid + 1, parentPid: pid, groupId: pid + 1, birth: 'TEST-metadata-' + pid, command: '/TEST/bun' }],
+  });
+  const first = capture(10), second = capture(20);
+  const launch: Record<string, unknown> = { provider: 'opencode', status: 'INCOMPLETE', stop: { releasedBeforeQuit: true },
+    originalMetadataBeforeLaunch: first, metadataAfterStop: first };
+  const boundary: Record<string, unknown> = { provider: 'opencode', status: 'INCOMPLETE',
+    firstEpoch: { host: { pid: 10, ppid: 1, pgid: 9 } },
+    firstCleanup: { appExitCode: 0, appSignalCode: null, remaining: [], capturedHostAbsent: true, writerLockReleased: true } };
+  const evidence: Record<string, unknown> = { mode: 'native-resume-ui', nativeProvider: 'opencode', nativeGeneration: 'v2',
+    launchDialogProof: launch, coldResumeBoundary: boundary };
+  for (const current of [{ pid: 11, ppid: 10, pgid: 11 }, { pid: 11, ppid: 1, pgid: 11 }, { pid: 11, ppid: 99, pgid: 99 }]) {
+    assert.throws(() => assertFirstResumeMetadataAbsent(evidence, [current]), /first Resume metadata child/);
+    assert.equal(boundary.firstMetadataAbsentBeforeSecondSpawn, undefined);
+  }
+  for (const changed of [
+    { ...boundary, secondEpoch: {} },
+    { ...boundary, firstEpoch: { host: { pid: 99, ppid: 1, pgid: 9 } } },
+    { ...boundary, firstCleanup: { ...(boundary.firstCleanup as object), appSignalCode: 'SIGTERM' } },
+  ]) assert.throws(() => assertFirstResumeMetadataAbsent({ ...evidence, coldResumeBoundary: changed }, []));
+  assertFirstResumeMetadataAbsent(evidence, []);
+  assert.equal(boundary.firstMetadataAbsentBeforeSecondSpawn, true);
+  launch.status = 'PASS'; boundary.status = 'PASS';
+  boundary.secondEpoch = { host: { pid: 20, ppid: 1, pgid: 19 } };
+  evidence.hostChild = { pid: 20, ppid: 1, pgid: 19 };
+  const resume: Record<string, unknown> = { provider: 'opencode', status: 'PASS',
+    originalMetadataBeforeResume: second, metadataAfterSecondStop: second };
+  evidence.resumeDialogProof = resume;
+  for (const current of [{ pid: 21, ppid: 20, pgid: 21 }, { pid: 21, ppid: 1, pgid: 21 }, { pid: 21, ppid: 99, pgid: 99 }]) {
+    assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [current]), /second Resume metadata child/);
+    assert.equal(resume.metadataAbsentBeforeHarnessCleanup, undefined);
+  }
+  assert.throws(() => assertCapturedDesktopMetadataAbsent({ ...evidence,
+    coldResumeBoundary: { ...boundary, firstMetadataAbsentBeforeSecondSpawn: undefined } }, []));
+  assert.throws(() => assertCapturedDesktopMetadataAbsent({ ...evidence,
+    resumeDialogProof: { ...resume, originalMetadataBeforeResume: first, metadataAfterSecondStop: first } }, []));
+  assert.throws(() => assertCapturedDesktopMetadataAbsent({ ...evidence, hostChild: { pid: 10, ppid: 1, pgid: 9 } }, []));
+  assertCapturedDesktopMetadataAbsent(evidence, []);
+  assert.equal(resume.metadataAbsentBeforeHarnessCleanup, true);
+  assert.throws(() => assertFirstResumeMetadataAbsent(evidence, []), /before the second app spawn/);
+  const legacy = { mode: 'native-resume-ui', resumeProvider: 'claude', launchDialogProof: { provider: 'claude' } };
+  const unchanged = structuredClone(legacy); assertFirstResumeMetadataAbsent(legacy, []);
+  assertCapturedDesktopMetadataAbsent(legacy, []); assert.deepEqual(legacy, unchanged);
 });
 
 test('cold metadata preserves only the exact pending-open UNKNOWN witnessed by original Quit', () => {

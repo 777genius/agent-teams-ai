@@ -85,6 +85,7 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
   assert.ok(model.probes.length > 0 && model.probes.every(row => row.tools === 0));
   assert.equal(model.observations.length, 0, 'preflight never dispatches the business prompt');
   const metadata = readDesktopNativeHostProcesses(fixture, options.group); assert.equal(metadata.children.length, 1);
+  proof.originalMetadataBeforeLaunch = metadata;
   await captureReadiness(cdp, fixture.handleId, proof, options.assertOwnedRenderer, 'before-original-submit');
   await ui.scrollTo('[role="dialog"] button', 'original V2 Launch team ready', 'Launch team');
   await ui.click('[role="dialog"] button', 'original V2 Launch team once', 'Launch team');

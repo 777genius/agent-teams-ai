@@ -380,7 +380,7 @@ jobs:
       - name: Build original Host and its pinned provider implementation
         run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Check original graph and custody boundaries
-        run: node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts packages/legacy-agent-host/tests/owner-scoped-backup.test.ts
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts packages/legacy-agent-host/tests/owner-scoped-backup.test.ts packages/legacy-agent-host/tests/member-attachment-delivery.test.ts
       - name: Stage checksum-pinned base archive without executing the legacy CLI
         env:
           GH_TOKEN: ${{ github.token }}

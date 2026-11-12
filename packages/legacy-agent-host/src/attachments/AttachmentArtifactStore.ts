@@ -10,8 +10,9 @@ import {
   readFileSync,
   realpathSync,
 } from 'node:fs';
-import { dirname, join, parse, resolve } from 'node:path';
+import { dirname, join, parse, resolve, sep } from 'node:path';
 import { atomicWriteSync } from '../adapters/lifecycle/atomicWriteSync.js';
+import { syncDirectorySync } from '../adapters/lifecycle/durablePathOperations.js';
 import { TeamOwnerError } from '../team/contracts.js';
 import { digest } from '../team/identity.js';
 import { ATTACHMENT_CHUNK_BYTES, attachmentMetadataSchema } from './contracts.js';
@@ -91,7 +92,7 @@ export class AttachmentArtifactStore {
     });
     // Every ancestor belongs to the explicit owner namespace; never follow a substituted symlink.
     let part = parse(target).root;
-    for (const segment of dirname(target).slice(part.length).split('/')) {
+    for (const segment of dirname(target).slice(part.length).split(sep)) {
       part = join(part, segment);
       try {
         const stat = lstatSync(part);
@@ -220,19 +221,17 @@ export class AttachmentArtifactStore {
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
         atomicWriteSync(path, complete, { mode: 0o600 });
-        const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
-        try {
-          fsyncSync(fd);
-        } finally {
-          closeSync(fd);
-        }
-        const dir = openSync(dirname(path), constants.O_RDONLY);
-        try {
-          fsyncSync(dir);
-        } finally {
-          closeSync(dir);
-        }
       }
+      // A prior publication may have failed its durable sync. An identical retry
+      // must flush the verified payload again before it can complete the manifest.
+      // Windows FlushFileBuffers requires write access to this original file handle.
+      const fd = openSync(path, constants.O_RDWR | constants.O_NOFOLLOW);
+      try {
+        fsyncSync(fd);
+      } finally {
+        closeSync(fd);
+      }
+      syncDirectorySync(dirname(path));
       manifest.completed = true;
       this.store.write(key, manifest);
     }

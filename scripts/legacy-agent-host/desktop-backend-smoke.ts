@@ -23,7 +23,7 @@ import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { desktopProofEvidence } from './desktop-proof-evidence.ts';
 import { runDesktopNativeReview } from './desktop-native-review-compose.ts';
 import { desktopReadbackArtifacts, runDesktopNativeReadback } from './desktop-readback-fixture.ts';
-import { assertCapturedColdMetadataAbsent, captureDesktopOpenCodeV2ColdMetadata } from './desktop-opencode-v2-cold-metadata.ts';
+import { assertCapturedDesktopMetadataAbsent, assertFirstResumeMetadataAbsent, captureDesktopOpenCodeV2ColdMetadata } from './desktop-opencode-v2-cold-metadata.ts';
 import { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
 import { captureDesktopCodexNativeInputs, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
@@ -465,7 +465,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
           assert.equal(originalApp.exitCode, 0, 'original captured app exits normally before second spawn');
           assert.equal(originalApp.signalCode, null);
           assert.deepEqual(remaining, [], 'no group cleanup fallback before cold Resume');
-          assert.equal(hostAbsent, true); assert.equal(writerReleased, true);
+          assert.equal(hostAbsent, true); assert.equal(writerReleased, true); assertFirstResumeMetadataAbsent(evidence);
           const postQuit = await readDesktopNativeStopSessions(fixture.root);
           const definition = object((object(JSON.parse(await readFile(fixture.profilePath, 'utf8'))).teams as unknown[])[0]);
           const descriptorMember = object((definition.members as unknown[]).find(value => object(value).memberId === object(sourceSessions[0]!.binding).memberId));
@@ -618,7 +618,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       false,
       'captured standalone Host retired during guarded app Quit'
     );
-    assertCapturedColdMetadataAbsent(evidence);
+    assertCapturedDesktopMetadataAbsent(evidence);
     await verifyDesktopNativeQuitAfterShutdown(mode, fixture.root, evidence, nativeChildren, openCodeLifecycleModel ?? conversationModel, group);
     if (activitySource) await finalizeDesktopActivityReadback(evidence, activitySource, () => assert.equal(processTable().some(row => row.pid === hostPid), false));
     evidence.status = 'PASS';
