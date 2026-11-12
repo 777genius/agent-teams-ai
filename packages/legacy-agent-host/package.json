@@ -56,6 +56,10 @@
       "types": "./dist/composition/runtimeSourceContracts.d.ts",
       "import": "./dist/composition/runtimeSourceContracts.js"
     },
+    "./scheduled-runs": {
+      "types": "./dist/composition/scheduledRunContracts.d.ts",
+      "import": "./dist/composition/scheduledRunContracts.js"
+    },
     "./runtime/filesystem": {
       "types": "./dist/adapters/runtime/FileRuntimeStore.d.ts",
       "import": "./dist/adapters/runtime/FileRuntimeStore.js"

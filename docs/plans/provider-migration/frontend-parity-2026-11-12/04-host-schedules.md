@@ -1,8 +1,11 @@
 # 04. Расписания для команд, обслуживаемых Host
 
-Статус: R1–R3 пройдены; durable target и smart Host adapter подключены в Main.
-Scheduler regression: **110 PASS**, включая три real child Host/JSON/Croner сценария.
-Native model execution, Desktop acceptance, finite one-shot и limits gate ещё открыты;
+Статус: R1–R4 пройдены; durable target, smart adapter и finite Host one-shot подключены в Main.
+Текущий scheduler regression: **143 PASS**, включая три real child Host/JSON/Croner сценария;
+ещё **4 Host/RPC + 3 existing ordinary-delegation checks PASS**.
+Host build, focused Main/renderer TypeScript, changed production fast lint (0 errors),
+source-size и diff-check прошли. Это не native/Desktop acceptance.
+Нативные Claude/Codex, фактический limit gate и Desktop journey ещё открыты;
 UI пока сохраняет ограничение до проверки полного execution path.
 Frontend baseline: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Stage 1 baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.

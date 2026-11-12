@@ -4,6 +4,8 @@ import { preflightNativeMemberModel } from './preflightNativeMemberModel.js';
 import { createProviderManagementMethods } from './createProviderManagementMethods.js';
 import { createHostProviderManagementComposition } from './createHostProviderManagementComposition.js';
 import { createRuntimeSourceMethods } from './createRuntimeSourceMethods.js';
+import { createHostScheduledRunComposition } from './createHostScheduledRunComposition.js';
+import { envelopeSchema, equalFields, hostOwnerSchema, json } from './teamHostEnvelope.js';
 import { join } from 'node:path';
 import { createHostTeamLifecycleComposition } from './createHostTeamLifecycleComposition.js';
 import { createHostWorkSyncComposition } from './createHostWorkSyncComposition.js';
@@ -24,7 +26,6 @@ import { createFilesystemTeamOwner } from '../adapters/team/createFilesystemTeam
 import { admitRegistryTeamNamespace } from '../adapters/team-registry/admitRegistryTeamNamespace.js';
 import { FileTeamRegistryStore } from '../adapters/team-registry/FileTeamRegistryStore.js';
 import { TeamRegistry } from '../team-registry/TeamRegistry.js';
-import { teamRegistryScopeSchema } from '../team-registry/contracts.js';
 import { hostedTeamDefinitionSchema } from '../team-registry/definition.js';
 import { createHostServer } from '../index.js';
 import { TEAM_HOST_DISPOSE_TIMEOUT_MS } from '../contracts.js';
@@ -47,29 +48,16 @@ import type { ProviderOAuthSnapshot } from '../management/contracts.js';
 import type { TeamCommand } from '../team/contracts.js';
 import type { HostedTeam } from './RuntimeTeamCoordinator.js';
 import type { MemberProvider, MemberProviderContext } from '../adapters/providers/MemberProvider.js';
+import type { ScheduledRunProvider, ScheduledRunProviderContext } from '../adapters/providers/ScheduledRunProvider.js';
 
 const id = z.string().min(1).max(256);
 const segment = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
-const hash = z.string().regex(/^[a-f0-9]{64}$/);
-const scope = teamRegistryScopeSchema;
-const owner = z
-  .object({
-    ownerId: id,
-    revision: id,
-    storageRoot: id,
-    profileId: id,
-    protocolVersion: z.literal(1),
-    buildId: id,
-    nodeSha256: hash,
-    hostEntrySha256: hash,
-  })
-  .strict();
 
 /** Private captured composition data, never an IPC/tool argument or renderer DTO. */
 export const teamHostProfileSchema = z
   .object({
     schemaVersion: z.literal(1),
-    owner,
+    owner: hostOwnerSchema,
     principalId: id,
     reviewTransport: z.literal('review-v1').optional(),
     runtime: runtimeProfileSchema.optional(),
@@ -85,24 +73,6 @@ export const teamHostProfileSchema = z
 
 export type TeamHostProfile = z.infer<typeof teamHostProfileSchema>;
 
-const envelopeSchema = z
-  .object({
-    commandId: id,
-    binding: z.object({ schemaVersion: z.literal(1), handleId: id, owner, scope }).strict(),
-    payload: z.unknown(),
-  })
-  .strict();
-
-function json(value: unknown): JsonValue {
-  return JSON.parse(JSON.stringify(value)) as JsonValue;
-}
-
-function equalFields(a: object, b: object): boolean {
-  const left = Object.entries(a).sort(([x], [y]) => x.localeCompare(y));
-  const right = Object.entries(b).sort(([x], [y]) => x.localeCompare(y));
-  return JSON.stringify(left) === JSON.stringify(right);
-}
-
 /**
  * Captured product owner and optional real provider Runtime. Aggregate bootstrap
  * readiness is separate from an individual native member's readiness.
@@ -110,7 +80,8 @@ function equalFields(a: object, b: object): boolean {
 export function createTeamHost(
   rawProfile: TeamHostProfile,
   streams: Pick<HostServerOptions, 'input' | 'output' | 'limits'>,
-  composition?: { createProvider(context: MemberProviderContext): MemberProvider }
+  composition?: { createProvider(context: MemberProviderContext): MemberProvider;
+    createScheduledProvider?(context: ScheduledRunProviderContext): ScheduledRunProvider }
 ): HostServer {
   const profile = structuredClone(teamHostProfileSchema.parse(rawProfile));
   assertAccountNamespaces([
@@ -122,6 +93,7 @@ export function createTeamHost(
   let sealed = false;
   let runtime: RuntimeTeamCoordinator | undefined;
   let management: ProviderManagementCoordinator | undefined;
+  let scheduledRuns: ReturnType<typeof createHostScheduledRunComposition> | undefined;
   let emitOAuthProgress: ((snapshot: ProviderOAuthSnapshot) => void) | undefined;
   try {
     const processCustody = createProcessCustody(profile.processCustody);
@@ -136,6 +108,10 @@ export function createTeamHost(
       if (sealed) throw new TeamOwnerError('hold');
       lease.assertCurrent();
     };
+    if (profile.runtime) scheduledRuns = createHostScheduledRunComposition({ profile, teams,
+      assertWriter: () => lease.assertCurrent(), ...(sources ? { sources } : {}),
+      ...(processCustody ? { processCustody } : {}),
+      ...(composition?.createScheduledProvider ? { createProvider: composition.createScheduledProvider } : {}) });
     const crossTeam = createHostCrossTeamComposition({
       profile,
       teams,
@@ -474,7 +450,7 @@ export function createTeamHost(
       select(raw) {
         if (sealed) throw new TeamOwnerError('hold');
         lease.assertCurrent();
-        const input = z.object({ owner, commandId: id, payload: z.unknown() }).strict().parse(raw);
+        const input = z.object({ owner: hostOwnerSchema, commandId: id, payload: z.unknown() }).strict().parse(raw);
         if (!registry || !equalFields(input.owner, profile.owner))
           throw new TeamOwnerError('forbidden');
         return { registry, commandId: input.commandId, payload: input.payload };
@@ -485,7 +461,7 @@ export function createTeamHost(
       select(raw) {
         if (sealed) throw new TeamLaunchError('hold', 'sealed');
         lease.assertCurrent();
-        const input = z.object({ owner, commandId: id, payload: z.unknown() }).strict().parse(raw);
+        const input = z.object({ owner: hostOwnerSchema, commandId: id, payload: z.unknown() }).strict().parse(raw);
         if (!creationLaunch || !equalFields(input.owner, profile.owner))
           throw new TeamLaunchError('forbidden', 'creation-owner');
         return {
@@ -694,6 +670,7 @@ export function createTeamHost(
         ...(profile.reviewTransport ? ['team.review'] : []),
         ...(creationLaunch ? ['team.creation'] : []),
         ...(sources ? ['runtime.sources'] : []),
+        ...(scheduledRuns ? ['schedule.run'] : []),
         ...(profile.management?.length
           ? [
               'management.catalog',
@@ -748,6 +725,7 @@ export function createTeamHost(
         ...managementMethods,
         ...createRuntimeSourceMethods(sources, management, assertCurrent),
         ...runtimeMethods,
+        ...scheduledRuns?.methods,
         ...launchMethods,
         ...review.methods,
       },
@@ -755,6 +733,7 @@ export function createTeamHost(
         review.seal();
         sealed = true;
         runtime?.seal();
+        scheduledRuns?.seal();
         management?.seal();
         sources?.seal();
       },
@@ -763,6 +742,7 @@ export function createTeamHost(
         try {
           const results = await Promise.allSettled([
             runtime?.close(),
+            scheduledRuns?.close(),
             management?.close(),
             sources?.close(),
             workSync.close(),
@@ -783,6 +763,7 @@ export function createTeamHost(
   } catch (error) {
     sealed = true;
     runtime?.seal();
+    scheduledRuns?.seal();
     management?.seal();
     lease.release();
     throw error;

@@ -6,6 +6,7 @@
 
 import { getSchedulesBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
+import { initialScheduleLimits, patchScheduleLimits } from '@shared/utils/scheduleLimits';
 import { getValidScheduleNextRuns } from '@shared/utils/scheduleTiming';
 import { Cron } from 'croner';
 import { randomUUID } from 'crypto';
@@ -202,8 +203,7 @@ export class SchedulerService {
       warmUpMinutes: input.warmUpMinutes ?? 15,
       maxConsecutiveFailures: 3,
       consecutiveFailures: 0,
-      maxTurns: input.maxTurns ?? 50,
-      maxBudgetUsd: input.maxBudgetUsd,
+      ...initialScheduleLimits(selected),
       createdAt: now,
       updatedAt: now,
       launchConfig: input.launchConfig,
@@ -247,8 +247,7 @@ export class SchedulerService {
       ...(patch.label !== undefined && { label: patch.label }),
       ...(cronChanged && { cronExpression, timezone }),
       ...(patch.warmUpMinutes !== undefined && { warmUpMinutes: patch.warmUpMinutes }),
-      ...(patch.maxTurns !== undefined && { maxTurns: patch.maxTurns }),
-      ...(patch.maxBudgetUsd !== undefined && { maxBudgetUsd: patch.maxBudgetUsd }),
+      ...patchScheduleLimits({ ...existing, hostTarget }, patch),
       ...(patch.launchConfig && {
         launchConfig: { ...existing.launchConfig, ...patch.launchConfig },
       }),

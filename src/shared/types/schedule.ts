@@ -61,7 +61,7 @@ export interface Schedule {
   warmUpMinutes: number;
   maxConsecutiveFailures: number;
   consecutiveFailures: number;
-  maxTurns: number;
+  maxTurns?: number;
   maxBudgetUsd?: number;
   createdAt: string;
   updatedAt: string;
@@ -154,7 +154,8 @@ export interface UpdateSchedulePatch {
   cronExpression?: string;
   timezone?: string;
   warmUpMinutes?: number;
-  maxTurns?: number;
-  maxBudgetUsd?: number;
+  /** Null explicitly removes a saved limit. */
+  maxTurns?: number | null;
+  maxBudgetUsd?: number | null;
   launchConfig?: Partial<ScheduleLaunchConfig>;
 }

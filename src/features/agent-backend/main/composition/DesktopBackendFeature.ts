@@ -21,6 +21,7 @@ import { CapturedHostClient } from '../infrastructure/CapturedHostClient';
 import { captureProviderManagement } from '../infrastructure/CapturedProviderManagement';
 import { CapturedRosterCommands } from '../infrastructure/CapturedRosterCommands';
 import { captureRuntimeSources } from '../infrastructure/CapturedRuntimeSources';
+import { CapturedScheduledRuns } from '../infrastructure/CapturedScheduledRuns';
 import { CapturedTeamRegistry } from '../infrastructure/CapturedTeamRegistry';
 import { FileHandleBindingStore } from '../infrastructure/FileHandleBindingStore';
 import { loadDesktopBackendDescriptor } from '../infrastructure/loadDesktopBackendDescriptor';
@@ -427,6 +428,26 @@ export class DesktopBackendFeature {
         guard: current,
       });
     });
+  }
+
+  /** Restored background schedules retain this exact owner/router independently of the visible tab. */
+  async captureScheduledRuns(contextId: string, handle: BackendHandle, scheduleId: string, guard: BackendRequestGuard) {
+    handle = Object.freeze({ ...handle });
+    assertBackendRequestGuard(guard);
+    await this.initialize();
+    assertBackendRequestGuard(guard);
+    const router = this.router, definition = this.handleDefinitions().find(row => row.handleId === handle.handleId);
+    if (!router || !definition || this.sealed || !this.authorizeHandle(contextId, handle))
+      throw new BackendRoutingError('forbidden');
+    await router.startOwner(definition.owner);
+    const owned = { isCurrent: () => !this.sealed && this.router === router && this.authorizeHandle(contextId, handle) };
+    const current = { isCurrent: () => owned.isCurrent() && guard.isCurrent() };
+    assertBackendRequestGuard(current);
+    return new CapturedScheduledRuns((operation, runId, payload) => router.request(handle, {
+      commandId: operation === 'start' ? runId : `${runId}:${operation}`,
+      method: `schedule.run.${operation}`, payload, control: operation !== 'start',
+      guard: operation === 'cancel' ? owned : current,
+    }), scheduleId);
   }
 
   /** Existing backup scheduler captures one exact foreground owner set per invocation. */

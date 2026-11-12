@@ -493,6 +493,12 @@ describe('SchedulerService', () => {
     expect(updated.maxTurns).toBe(100);
     expect(events.length).toBeGreaterThanOrEqual(2);
 
+    const budget = await service.updateSchedule(schedule.id, { maxBudgetUsd: 0 });
+    expect(budget.maxBudgetUsd).toBe(0);
+    const cleared = await service.updateSchedule(schedule.id, { maxBudgetUsd: null });
+    expect(cleared.maxBudgetUsd).toBeUndefined();
+    expect(cleared.maxTurns).toBe(100);
+
     await service.stop();
   });
 

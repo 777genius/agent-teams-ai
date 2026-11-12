@@ -4,6 +4,9 @@ import {
   restoreHostScheduleTarget,
 } from '@features/agent-backend/main';
 
+import { runCapturedScheduledTask } from './runCapturedScheduledTask';
+
+import type { CapturedScheduleRunPort } from './runCapturedScheduledTask';
 import type { DesktopBackendFeature } from '@features/agent-backend/main';
 import type { HostScheduleRuntimeFactory } from '@main/services/schedule/SelectedScheduleDispatcher';
 import type { IpcMainInvokeEvent } from 'electron';
@@ -17,6 +20,14 @@ interface DesktopScheduleScope {
 
 /** Uses the existing Desktop shell and binding store; no scheduler-specific owner registry. */
 export function createDesktopHostSchedules(current: () => DesktopScheduleScope | undefined) {
+  const active = new Map<string, Promise<CapturedScheduleRunPort>>();
+  const cancel = async (runId: string) => {
+    const original = active.get(runId);
+    if (!original) return;
+    const result = await (await original).cancel(runId);
+    if (result.cleanup === 'confirmed') { if (active.get(runId) === original) active.delete(runId); }
+    else throw new Error('Original scheduled process cleanup remains unconfirmed');
+  };
   return {
     /** Only the authenticated foreground may create/rebind a background schedule target. */
     async capture(event: IpcMainInvokeEvent, teamName: string) {
@@ -34,9 +45,37 @@ export function createDesktopHostSchedules(current: () => DesktopScheduleScope |
       const original = current();
       if (!original?.selected) throw new Error('Captured Host scheduler is unavailable');
       const target = await restoreHostScheduleTarget(original.feature, options.schedule.teamName,
-        options.schedule.hostTarget, () => current() === original && original.selected && options.isCancelled?.() !== true);
+        options.schedule.hostTarget, () => current() === original && original.selected);
       return new HostSmartScheduleRuntimeAdapter({ target, selection: options.schedule.teamName,
-        runId: options.runId, taskFirst: options.schedule.taskFirst, getPreviousRuns: options.getPreviousRuns });
+        runId: options.runId, taskFirst: options.schedule.taskFirst, getPreviousRuns: options.getPreviousRuns,
+        isCancelled: options.isCancelled,
+        async runOneShot(request, expectedRosterRevision) {
+          const scheduleId = options.schedule.id;
+          if (!scheduleId || request.runId !== options.runId || active.has(request.runId))
+            throw new Error('Scheduled occurrence is already admitted');
+          const captured = original.feature.captureScheduledRuns(target.target.contextId,
+            { handleId: target.target.handleId }, scheduleId, { isCurrent: target.isCurrent });
+          active.set(request.runId, captured);
+          let port: CapturedScheduleRunPort | undefined;
+          try {
+            port = await captured;
+            const result = await runCapturedScheduledTask(port, request, expectedRosterRevision, scheduleId,
+              () => options.isCancelled?.() === true);
+            if (active.get(request.runId) === captured) active.delete(request.runId);
+            return result;
+          } catch (error) {
+            // Cleanup only this captured owner; a lost reply never starts another occurrence.
+            if (port) await cancel(request.runId).catch(() => {});
+            else if (active.get(request.runId) === captured) active.delete(request.runId); // No start was sent.
+            throw error;
+          }
+        } });
     }) satisfies HostScheduleRuntimeFactory['create'],
+    cancel,
+    async cancelAll() {
+      const results = await Promise.allSettled([...active.keys()].map(cancel));
+      const failure = results.find(value => value.status === 'rejected');
+      if (failure?.status === 'rejected') throw failure.reason;
+    },
   };
 }
