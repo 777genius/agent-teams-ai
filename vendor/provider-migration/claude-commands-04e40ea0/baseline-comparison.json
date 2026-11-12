@@ -1,0 +1,24 @@
+{
+  "provider-implementations": {
+    "oldSha256": "c035a09d5b6795e5f440b0d5ffef52d23604f31618232a36356c7133f63b11e6",
+    "newSha256": "dc3c3d50ab47fe54985436e3647e85c62987dfce6fc11da58ecbe317d82d92ec",
+    "changed": [
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.js",
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/session.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/session.js"
+    ],
+    "added": [
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/commands.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/commands.js"
+    ],
+    "removed": []
+  },
+  "provider-session-contracts": {
+    "oldSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+    "newSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+    "changed": [],
+    "added": [],
+    "removed": []
+  }
+}

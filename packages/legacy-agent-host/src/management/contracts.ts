@@ -35,6 +35,8 @@ export interface ProviderCredentialReceipt {
   kind: 'credential.set' | 'credential.forget' | 'credential.refresh';
   providerId: string;
   phase: 'completed' | 'held';
+  /** Native failed terminal and original cleanup were confirmed; the saved key remains unverified. */
+  reason?: 'verification-rejected';
 }
 
 export interface ProviderModelProbeLimits {

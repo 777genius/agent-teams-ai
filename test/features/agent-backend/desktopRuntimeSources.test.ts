@@ -5,11 +5,17 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promi
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { afterEach, expect, it } from 'vitest';
+
+import { afterEach, expect, it, vi } from 'vitest';
+
 import { DesktopBackendFeature } from '../../../src/features/agent-backend/main/composition/DesktopBackendFeature';
-import type { DesktopBackendDescriptor } from '../../../src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor';
+import { CapturedOpenCodeRuntimeInstaller } from '../../../src/features/opencode-runtime-installer/main/application/CapturedOpenCodeRuntimeInstaller';
+import { captureOpenCodeNativeSelection } from '../../../src/features/opencode-runtime-installer/main/infrastructure/captureOpenCodeNativeSelection';
+
 import type { ProviderManagementOperation } from '../../../src/features/agent-backend/main/infrastructure/CapturedProviderManagement';
+import type { DesktopBackendDescriptor } from '../../../src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor';
 import type { TeamHostProfile } from '@agent-teams/legacy-agent-host/team-host';
+import type { OpenCodeRuntimeStatus } from '@shared/types';
 
 const roots: string[] = [],
   features: DesktopBackendFeature[] = [];
@@ -19,7 +25,7 @@ afterEach(async () => {
 });
 const digest = (bytes: string | Buffer) => createHash('sha256').update(bytes).digest('hex');
 
-async function fixture() {
+async function fixture(runtimeId: 'claude' | 'opencode' = 'claude') {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-desktop-sources-')));
   roots.push(root);
   await mkdir(join(root, '.claude'), { mode: 0o700 });
@@ -35,7 +41,10 @@ import { createTeamHost } from ${JSON.stringify(hostUrl)};
 const server = createTeamHost(JSON.parse(readFileSync(${JSON.stringify(profileFile)}, 'utf8')), { input: process.stdin, output: process.stdout });
 void server.closed.then(() => process.exit(0));`;
   await writeFile(hostEntry, source, { mode: 0o600 });
-  const bytes = '#!/bin/sh\nprintf TEST-runtime-selection\n';
+  const bytes =
+    runtimeId === 'claude'
+      ? '#!/bin/sh\nprintf "2.1.34 (Claude Code)\\n"\n'
+      : '#!/bin/sh\nprintf "1.19.4\\n"\n';
   const original = { path: join(root, 'TEST-cli-seed'), sha256: digest(bytes) };
   const replacement = { path: join(root, 'TEST-cli-repaired'), sha256: digest(bytes) };
   for (const executable of [original, replacement])
@@ -92,9 +101,24 @@ void server.closed.then(() => process.exit(0));`;
       },
     ],
   };
+  if (runtimeId === 'opencode')
+    profile.management = [
+      {
+        provider: 'opencode',
+        nativeGeneration: 'v1',
+        endpoint: 'http://127.0.0.1:19182',
+        profileId: 'TEST-management',
+        configRevision: 'TEST-config',
+        accountBinding: 'TEST-account',
+        cwd: root,
+        executable: original,
+        environment: { HOME: root, PATH: '/usr/bin:/bin' },
+        timeoutMs: 1000,
+      },
+    ];
   await writeFile(profileFile, JSON.stringify(profile), { mode: 0o600 });
   const binding = {
-    runtimeId: 'claude' as const,
+    runtimeId,
     owner: { ownerId: owner.ownerId, revision: owner.revision },
     contextId: 'TEST-context',
     projectPath: root,
@@ -153,15 +177,30 @@ it('real Main/Host publication preserves legacy target bytes and restores every 
   await expect(
     selected.request('runtime.source.publish' as ProviderManagementOperation, {})
   ).rejects.toMatchObject({ code: 'invalid-binding' });
-  await sources.publish({
+  const nativeSelection = {
     commandId: 'TEST-publish-2',
     expectedRevision: first.selection!.revision,
-    candidate: { sourceKind: 'override', executable: f.original },
-  });
+    ...(process.platform === 'win32'
+      ? { candidate: { sourceKind: 'override' as const, executable: f.original } }
+      : {
+          nativeSelection: {
+            sourceKind: 'override' as const,
+            nativeCli: { executable: f.original, version: '2.1.34' },
+          },
+        }),
+  };
+  const second = await sources.publish(nativeSelection);
+  expect(second.selection?.cliVersion).toBe(process.platform === 'win32' ? undefined : '2.1.34');
+  expect(await sources.recover()).toBeNull();
   expect(await sources.lookup('TEST-publish-1')).toEqual(first);
   expect(JSON.stringify(await sources.current())).not.toContain(f.root);
   await desktop.shutdown();
   const restarted = f.open();
+  expect(
+    await (
+      await restarted.captureRuntimeSources('TEST-context', f.root, 'claude')
+    ).publish(nativeSelection)
+  ).toEqual(second);
   const restored = await restarted.restoreProviderManagement('TEST-context', selected.targetId);
   expect(restored.profileId).toBe(selected.profileId);
   expect(restored.targetId).toBe(selected.targetId);
@@ -176,3 +215,173 @@ it('real Main/Host publication preserves legacy target bytes and restores every 
     restarted.captureRuntimeSources('TEST-foreign', f.root, 'claude')
   ).rejects.toMatchObject({ code: 'unavailable' });
 }, 20000);
+
+it.skipIf(process.platform === 'win32')(
+  'installed CLI is admitted by the real Host and immediate Refresh reuses its exact receipt',
+  async () => {
+    const f = await fixture('opencode'),
+      desktop = f.open();
+    const oldTarget = await desktop.captureProviderManagement('TEST-context', f.root);
+    const sources = await desktop.captureRuntimeSources('TEST-context', f.root, 'opencode');
+    const binaryPath = join(f.root, 'TEST-installed-opencode'),
+      marker = join(f.root, 'TEST-version-observation');
+    await writeFile(binaryPath, `#!/bin/sh\nprintf "1.19.5\\n"\nprintf x >> '${marker}'\n`, {
+      mode: 0o700,
+    });
+    const selected: OpenCodeRuntimeStatus = {
+      installed: true,
+      state: 'ready',
+      source: 'app-managed',
+      version: '1.19.5',
+      binaryPath,
+    };
+    const install = vi.fn(async () => selected),
+      getReadinessStatus = vi.fn(async () => selected);
+    const service = new CapturedOpenCodeRuntimeInstaller({
+      native: { install, getReadinessStatus },
+      captureSelection: (status, original) =>
+        captureOpenCodeNativeSelection(status, original, {
+          captureInstalled: async () => {
+            throw new Error('V1 cannot acquire V2 support');
+          },
+        }),
+    });
+    const status = await service.install(sources, { generation: 'v1' });
+    expect(status).toMatchObject({
+      installed: true,
+      state: 'ready',
+      source: 'app-managed',
+      version: '1.19.5',
+    });
+    expect(status.binaryPath).toBeUndefined();
+    expect((await sources.current()).revision).toBe(status.sourceRevision);
+    expect((await desktop.captureProviderManagement('TEST-context', f.root)).targetId).not.toBe(
+      oldTarget.targetId
+    );
+    expect(
+      (await desktop.restoreProviderManagement('TEST-context', oldTarget.targetId)).profileId
+    ).toBe(oldTarget.profileId);
+    expect(await service.selectInstalled(sources)).toEqual(status);
+    expect(await readFile(marker, 'utf8')).toBe('x');
+    expect(install).toHaveBeenCalledExactlyOnceWith({ generation: 'v1' });
+    await desktop.shutdown();
+    const restarted = f.open();
+    expect(
+      (await (await restarted.captureRuntimeSources('TEST-context', f.root, 'opencode')).current())
+        .revision
+    ).toBe(status.sourceRevision);
+  },
+  20000
+);
+
+it.skipIf(process.platform === 'win32')(
+  'installer lost ACK reports its original publication even when a later selection is current',
+  async () => {
+    const f = await fixture('opencode'),
+      desktop = f.open();
+    const sources = await desktop.captureRuntimeSources('TEST-context', f.root, 'opencode');
+    const binaryPath = join(f.root, 'TEST-installed-B'),
+      nextPath = join(f.root, 'TEST-installed-C');
+    await writeFile(binaryPath, '#!/bin/sh\nprintf "1.19.5\\n"\n', { mode: 0o700 });
+    await writeFile(nextPath, '#!/bin/sh\nprintf "1.19.6\\n"\n', { mode: 0o700 });
+    const native: OpenCodeRuntimeStatus = {
+      installed: true,
+      source: 'path',
+      state: 'ready',
+      version: '1.19.5',
+      binaryPath,
+    };
+    let originalRevision: string | undefined;
+    const service = new CapturedOpenCodeRuntimeInstaller({
+      native: {
+        install: async () => native,
+        getReadinessStatus: async () => native,
+      },
+      captureSelection: (status, original) =>
+        captureOpenCodeNativeSelection(status, original, {
+          captureInstalled: async () => {
+            throw new Error('Unexpected V2 support');
+          },
+        }),
+    });
+    const result = await service.install(
+      {
+        ...sources,
+        publish: async (input) => {
+          const first = await sources.publish(input);
+          originalRevision = first.selection!.revision;
+          await sources.publish({
+            commandId: 'TEST-independent-C',
+            expectedRevision: originalRevision,
+            nativeSelection: {
+              sourceKind: 'override',
+              nativeCli: {
+                executable: { path: nextPath, sha256: digest(await readFile(nextPath)) },
+                version: '1.19.6',
+                generation: 'v1',
+              },
+            },
+          });
+          throw new Error('TEST-publication-ACK-lost');
+        },
+      },
+      { generation: 'v1' }
+    );
+    expect(result).toMatchObject({
+      state: 'ready',
+      version: '1.19.5',
+      sourceRevision: originalRevision,
+    });
+    expect((await sources.current()).cliVersion).toBe('1.19.6');
+    expect(result.sourceRevision).not.toBe((await sources.current()).revision);
+  },
+  20000
+);
+
+it.skipIf(process.platform === 'win32')(
+  'restarted installer resumes the Host snapshot before any new acquisition',
+  async () => {
+    const f = await fixture('opencode'),
+      desktop = f.open();
+    const sources = await desktop.captureRuntimeSources('TEST-context', f.root, 'opencode');
+    const original = await sources.current(),
+      binaryPath = join(f.root, 'TEST-interrupted-selection');
+    const bytes = '#!/bin/sh\nprintf "1.19.5\\n"\n';
+    await expect(
+      sources.publish({
+        commandId: 'TEST-original-install',
+        expectedRevision: original.revision,
+        nativeSelection: {
+          sourceKind: 'app-managed',
+          nativeCli: {
+            executable: { path: binaryPath, sha256: digest(bytes) },
+            version: '1.19.5',
+            generation: 'v1',
+          },
+        },
+      })
+    ).rejects.toThrow();
+    expect((await sources.lookup('TEST-original-install'))?.phase).toBe('prepared');
+    await desktop.shutdown();
+    await writeFile(binaryPath, bytes, { mode: 0o700 });
+    const install = vi.fn(async (): Promise<OpenCodeRuntimeStatus> => {
+      throw new Error('New acquisition forbidden');
+    });
+    const service = new CapturedOpenCodeRuntimeInstaller({
+      native: { install, getReadinessStatus: install },
+      captureSelection: async () => {
+        throw new Error('Original candidate must come from Host');
+      },
+    });
+    const restartedSources = await f
+      .open()
+      .captureRuntimeSources('TEST-context', f.root, 'opencode');
+    const status = await service.install(restartedSources, { generation: 'v1' });
+    expect(status).toMatchObject({ state: 'ready', version: '1.19.5' });
+    expect(install).not.toHaveBeenCalled();
+    expect((await restartedSources.lookup('TEST-original-install'))?.selection?.revision).toBe(
+      status.sourceRevision
+    );
+  },
+  20000
+);

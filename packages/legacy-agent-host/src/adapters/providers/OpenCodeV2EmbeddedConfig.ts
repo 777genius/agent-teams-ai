@@ -2,12 +2,19 @@ import { createTeamMcpTools } from '../../mcp/tools.js';
 import type { MemberProviderContext } from './MemberProvider.js';
 import type { OpenCodeV2SessionPermissionRule } from '@agent-teams/provider-implementations/opencode';
 import type { OpenCodeManagementProfile } from '../../management/profile.js';
+import type { OpenCodeV2EmbeddedProfile } from '../../composition/openCodeV2EmbeddedProfile.js';
+
+type ProviderConfiguration = OpenCodeV2EmbeddedProfile['providerConfiguration'];
 
 /** Read-only metadata and the explicit model probe share one native no-tool policy. */
-export function openCodeV2NoToolConfig(profile: OpenCodeManagementProfile) {
+export function openCodeV2NoToolConfig(profile: OpenCodeManagementProfile,
+  providerConfiguration?: ProviderConfiguration,
+  configuredProviderId = profile.nativeModel?.providerId) {
   if (profile.nativeGeneration !== 'v2' || profile.protocolRevision !== '2.1.4' ||
       !profile.embedded || !profile.nativeModel)
     throw new Error('OpenCode V2 management selection unavailable');
+  if (configuredProviderId === profile.nativeModel.providerId)
+    providerConfiguration ??= profile.embedded.providerConfiguration;
   const permissions = [{ action: '*', resource: '*', effect: 'deny' as const }];
   const selection = {
     agent: 'agent-teams-model-probe',
@@ -17,6 +24,8 @@ export function openCodeV2NoToolConfig(profile: OpenCodeManagementProfile) {
   };
   const model = { providerID: selection.model.providerID, model: selection.model.id,
     variant: selection.model.variant };
+  const providers: Record<string, NonNullable<ProviderConfiguration>> | undefined =
+    providerConfiguration && configuredProviderId ? { [configuredProviderId]: providerConfiguration } : undefined;
   return { selection, config: {
     update: 'disable', share: 'disabled', snapshots: false, warming: false, plugins: [],
     permissions, model, default_agent: selection.agent,
@@ -29,18 +38,18 @@ export function openCodeV2NoToolConfig(profile: OpenCodeManagementProfile) {
       [selection.agent]: { model, permissions, mode: 'primary', steps: 1 },
       title: { disabled: true }, summary: { disabled: true },
     },
-    ...(profile.embedded.providerConfiguration ? {
-      providers: { [selection.model.providerID]: profile.embedded.providerConfiguration },
-    } : {}),
+    ...(providers ? { providers } : {}),
   } };
 }
 
 /** The existing captured Host policy, translated once to the native V2 schema. */
-export function openCodeV2EmbeddedConfig(context: MemberProviderContext) {
+export function openCodeV2EmbeddedConfig(context: MemberProviderContext,
+  providerConfiguration?: ProviderConfiguration) {
   const profile = context.profile;
   if (profile.provider !== 'opencode' || profile.protocolRevision !== '2.1.4' ||
       profile.nativeGeneration !== 'v2' || !profile.embedded)
     throw new Error('OpenCode V2 embedded selection unavailable');
+  providerConfiguration ??= profile.embedded.providerConfiguration;
   const manual = profile.nativeOptions.toolApprovalMode !== 'auto';
   const permissions: OpenCodeV2SessionPermissionRule[] = [
     { action: '*', resource: '*', effect: 'deny' },
@@ -72,8 +81,8 @@ export function openCodeV2EmbeddedConfig(context: MemberProviderContext) {
       headers: { Authorization: `Bearer ${context.endpoint.bearerToken}` },
       oauth: false, codemode: false,
     } } },
-    ...(profile.embedded.providerConfiguration ? {
-      providers: { [selection.model.providerID]: profile.embedded.providerConfiguration },
+    ...(providerConfiguration ? {
+      providers: { [selection.model.providerID]: providerConfiguration },
     } : {}),
   };
   return { config, selection, requiredToolNames: createTeamMcpTools(context.connection)

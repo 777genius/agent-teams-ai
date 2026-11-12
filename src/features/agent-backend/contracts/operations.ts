@@ -167,6 +167,7 @@ export interface BackendOperationPayloads
     messageId?: string;
     summary?: string;
     actionMode?: 'do' | 'ask' | 'delegate';
+    nativeCommand?: true;
     attachments?: AttachmentReference[];
   };
   'team.activity.logs.read': BackendTeamActivityLogsQuery;
@@ -325,6 +326,7 @@ export interface BackendCommandReceipt {
 export interface BackendRuntimeSnapshot {
   memberId: string;
   attachmentCapabilities?: NativeAttachmentCapabilities;
+  sessionCommands?: readonly { name: string; description: string }[];
   generation?: string;
   phase: string;
   sealed: boolean;

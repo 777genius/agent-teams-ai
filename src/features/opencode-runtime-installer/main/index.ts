@@ -2,6 +2,7 @@ export {
   getOpenCodeV2SupportRoot,
   OpenCodeV2SupportInstaller,
 } from './application/OpenCodeV2SupportInstaller';
+export { createCapturedOpenCodeRuntimeInstaller } from './composition/createCapturedOpenCodeRuntimeInstaller';
 export {
   downloadOpenCodePackage,
   verifyOpenCodeRuntimePackageIntegrity,

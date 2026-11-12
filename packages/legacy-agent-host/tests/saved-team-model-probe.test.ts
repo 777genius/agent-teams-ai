@@ -895,6 +895,16 @@ test('V2 draft Default preserves the native session model and rejects drifted pr
   assert.equal(teamModelProbeProfile(embeddedRecipe()).provider, 'opencode');
   if (embeddedTemplate.provider !== 'opencode' || !embeddedTemplate.embedded)
     throw Error('TEST_expected_embedded_template');
+  embeddedTemplate.model = 'TEST-new-private-default';
+  embeddedTemplate.nativeOptions.variant = 'low';
+  embeddedTemplate.embedded.providerConfiguration = { models: { 'TEST-new-private-default': {} } };
+  const freshDefault = applyTeamModelProbeSelection(embeddedRecipe(), input);
+  assert.equal(freshDefault.model, 'TEST-new-private-default');
+  if (freshDefault.provider !== 'opencode') throw Error('TEST_expected_opencode_default');
+  assert.equal(freshDefault.nativeOptions.variant, 'low');
+  assert.deepEqual(freshDefault.embedded?.providerConfiguration,
+    embeddedTemplate.embedded.providerConfiguration);
+  assert.equal(embeddedSaved.model, 'TEST-bound-native-model', 'saved native history is unchanged');
   embeddedTemplate.embedded.manifestSha256 = 'c'.repeat(64);
   assert.throws(embeddedRecipe, { reason: 'probe-default-recipe' });
   assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);

@@ -1,9 +1,14 @@
 # 04. Расписания для команд, обслуживаемых Host
 
-Статус: R1–R3 пройдены; durable target и smart Host adapter подключены в Main.
-Scheduler regression: **110 PASS**, включая три real child Host/JSON/Croner сценария.
-Native model execution, Desktop acceptance, finite one-shot и limits gate ещё открыты;
+Статус: R1–R4 пройдены; durable target, smart adapter и finite Host one-shot подключены в Main.
+Текущий scheduler regression: **143 PASS**, включая три real child Host/JSON/Croner сценария;
+ещё **4 Host/RPC + 3 existing ordinary-delegation checks PASS**.
+Host build, focused Main/renderer TypeScript, changed production fast lint (0 errors),
+source-size и diff-check прошли. Это не native/Desktop acceptance.
+Нативные Claude/Codex, фактический limit gate и Desktop journey ещё открыты;
 UI пока сохраняет ограничение до проверки полного execution path.
+R5: подготовлен bounded native Host fixture для actual Claude/Codex; static TypeScript и lint проверены,
+но запуск native/GUI остаётся отдельным CI gate и не считается пройденным.
 Frontend baseline: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Stage 1 baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 Цель: сохранить нынешние schedule controls и режимы выполнения при выбранном Host.
@@ -229,3 +234,88 @@ Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b
 - Node 24.21: **110/110 PASS** в четырёх scheduler suites. Новые три сценария используют real Croner, real JSON repository, production Main facade и child Team Host: foreground A→B, lost ACK/cold readback/pruning, actual cron/pause/resume/delete, concurrent Run now/slow persistence/Quit.
 - Fixture намеренно без native provider: unavailable launch оставляет одну quiet pending task. Этот PASS не означает model/whole-team launch readiness. Полноценные launch/start/one-shot и Desktop остаются обязательными следующими проверками.
 - Canonical TS7 focused typecheck и fast lint PASS (два прежних no-unsafe-finally warning). Full-workspace typed lint в локальной среде завершён системой с 137 без diagnostics; полный gate остаётся на CI.
+
+### Finite provider prerequisite
+
+- D [`39a79c80`](https://github.com/agent-teams-ai/old-provider-implementations/commit/39a79c805247d1d0ba36d0344a1b76f1fcb20960) добавляет private Claude `sessionPersistence: ephemeral`: SDK получает `persistSession: false`, checkpoint/restore запрещены до чтения checkpoint. Прежний default и digest при отсутствии опции сохранены.
+- Combined D source `b4499afb` прошёл full `pnpm check` на Node 24.21.0 и 26.11.1 / pnpm 11.18.0; immutable archive проходит existing packed consumers. Frontend frozen install Node 24.21.0 / pnpm 11.22.0 — PASS.
+- Сверена stable schema pinned Codex 0.162.0: `ThreadStartParams.ephemeral` существует; в generated stable/experimental schema нет native max-turns/max-budget полей. Это только schema evidence, не model/cleanup qualification.
+- Host implementation сохраняет один immutable app capture рядом с existing launch captures; исходный RuntimeOwner ledger владеет open/input/terminal/close. Native MCP snapshot использует прежние captured recipe artifacts. Не создаются Team member, Task Board task или новый daemon.
+- Native finite execution, low-limit loop, original cancellation/unknown recovery и Desktop UI всё ещё требуют 04-G1/G2 и приёмки выше. Поля неподдерживаемых Codex limits не будут молча переданы как будто применённые.
+
+## R4 — finite execution и сверка фактических возможностей
+
+- Повторно проверен old one-shot `ScheduledTaskExecutor.buildArgs` и native branch
+  `QueryEngine.ts` на baseline выше: native Codex не применял общие turn/budget
+  flags. Exact `codex@0.162.0` `ThreadStartParams` также не содержит этих лимитов.
+  В Host Codex поля недоступны с объяснением; явное Save очищает старые значения,
+  а raw admission с неподдержанными limits/tool lists отвергается до запуска.
+  Claude сохраняет native limit flags и typed `disallowedTools`; budget `0`
+  валиден, явное очищение budget отличается от отсутствующего update.
+- Один immutable schedule intent использует существующий Runtime ledger; отдельного
+  execution journal нет. Разные scheduleId получают разные Runtime member slots,
+  последовательные occurrences одного расписания требуют cleanup предыдущего.
+  Cancel до Start, во время native open и при потерянном ACK использует original
+  scheduleId/runId. Не вводить общий app wall-clock timeout поверх прежней семантики.
+- Дополнительная сверка ordinary Claude delegation: normal Host уже имеет
+  `createClaudeSubagents.ts` и `ClaudeSubagentLogProjection.ts`, а старый one-shot
+  не запрещал обычный Agent. Переиспользовать bounded native subagent port для
+  исходного finite input, не создавать Team member/task и не выдавать Team authority.
+  Parent input, operation, session, original schedule control и native permission
+  mode остаются обязательными; lifecycle и cleanup принадлежат тому же Runtime.
+- Существующий schedule log UI получает retained text/tools, final result и usage
+  только из подтверждённых Runtime observations. Cold log gap показывается явно;
+  отсутствие native результата или cleanup не превращается в completed.
+- Четыре targeted Host/RPC integration сценария покрывают replay/restart/следующий
+  occurrence, cancel/open race, uncertain cleanup и два независимых расписания.
+  Это controlled Session проверки, не native acceptance. Дополнять их широким
+  набором однотипных units не требуется; далее native Claude/Codex и Desktop journey
+  через существующие TEST fixtures, затем снятие blanket Host UI restriction.
+
+## R5 — нативный one-shot без дополнительной unit-матрицы
+
+- `scheduled-run-host.native.ts` использует настоящий child Host, Claude SDK 0.3.305 и Codex 0.162.0;
+  локальный model oracle задаёт только ответы модели. Настоящий Bash/exec создаёт файл, а следующий запрос
+  обязан содержать результат исходного tool call. Проверяются выбранные model/effort, terminal и cleanup.
+- В том же конечном сценарии проверяются native Claude max-turns/low-budget, отказ неподдерживаемого Codex
+  limit до model request, active cancellation, отсутствие скрытых Team tasks и transcript persistence,
+  повтор original intent и cold read того же результата без нового native input.
+- Перед запуском проверяются clean immutable source HEAD, точный установленный provider archive/dist,
+  Host source/dist, native binary и private captured profile. Receipt связывает эти hashes и результат;
+  PASS требует и выполнения сценария, и cleanup, и неизменности исходных artifacts.
+- Общий archive verifier перенесён в существующие Host TEST fixtures, чтобы native test не импортировал
+  Desktop orchestration за пределами package root. Desktop использует тот же verifier через прежний API.
+- TypeScript и fast lint проверяют fixture локально. Actual native run выполняется штатным Linux CI;
+  Desktop Add/Edit/Pause/Resume/Run now/history и smart dispatch остаются следующей отдельной приёмкой.
+
+## R6 — Desktop controls через существующий native harness
+
+- Узкий `LEGACY_DESKTOP_SCHEDULE_UI=1` variant существующего `native-launch-ui` переиспользует `desktop-backend-smoke`, existing private Host fixture,
+  CDP Input controls и `native-claude-team/model.ts`. Один optional TEST script отвечает за schedule prompts;
+  второй app runner, обёртка над production Scheduler или подмена renderer store не нужны.
+- Fixture заранее сохраняет один прежний one-shot record без Host target. Пользовательский Edit/Save в реальном
+  `LaunchTeamDialog` должен выполнить явный rebind. Затем Pause/Resume/Run now дают один actual Claude run,
+  native Bash файл, completed history и текст в прежнем `ScheduleRunLogDialog`.
+- Add создаёт обычный task-first schedule из прежних полей cron/timezone/prompt. Run now запускает сохранённую
+  остановленную Host-команду и одну связанную board task; actual SDK через Team MCP завершает эту task и отвечает
+  пользователю. Повторные UI read/reload не создают новый occurrence и не повторяют original work.
+- Скрипт модели выбирает task из original Host ledger и требует её ID в native input. Он не выполняет app mutations:
+  Bash, task_complete и message_send выполняются самим native SDK. Inference receipts и счётчики разделяют one-shot
+  от task-first; отсутствие reply/cleanup не даёт PASS.
+- Снятие blanket `ScheduleSection` restriction публикуется после actual finite Host gate; Desktop proof остаётся
+  обязательным до завершения P04. Existing Croner/JSON/child-Host integration уже покрывает настоящий tick и
+  stop barrier; второй набор аналогичных unit tests не добавляется.
+
+## R7 — запуск native gate без нового CI контура
+
+- `scheduled-run-host.native.ts` запускается в существующем Linux x64 job P01: он уже устанавливает
+  Node 24.21.0, собирает Host и получает exact Codex 0.162.0. Claude 0.3.305 берётся из frozen dependency graph;
+  проверяются оба binary SHA и действующий D archive, а не отдельная устаревающая proof-only зависимость.
+- Один новый шаг перед Desktop login выполняет обе finite provider проверки и требует два оригинальных
+  PASS receipt с cleanup и неизменными исходниками/артефактами. Logs/receipts сохраняются существующим upload.
+  Время job увеличивается только на максимальный бюджет этого добавленного сценария; новый runner/job не нужен.
+- Перед следующим прогоном child PR синхронизируется с опубликованной parity base. GitHub workflow из merge ref
+  и checkout исходников из PR HEAD должны проверять одинаковую версию контрактов; удаление новых assertions
+  или заполнение отсутствующих receipt полей без выполнения исходного сценария не допускается.
+- После actual finite gate отдельный commit включает доступность прежних Schedule controls, затем тот же
+  Desktop runner выполняет R6. До обоих результатов P04 не считается принятым end-to-end.

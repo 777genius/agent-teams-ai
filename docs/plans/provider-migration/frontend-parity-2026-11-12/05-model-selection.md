@@ -1,6 +1,6 @@
 # 05. Выбор модели, default и проверка перед запуском
 
-Статус: план реализации; production не изменён, новые E2E ещё не выполнены.
+Статус: реализован первый Host slice выбора embedded V2 model/variant; новые native/ Desktop E2E ещё не выполнены.
 Область: существующие Desktop Create/Edit/Relaunch и Provider Settings для Claude, Codex, OpenCode V1/V2.
 Результат: выбранные пользователем модель и применимые параметры доходят до реального нового запуска.
 Команды `/model`, `/effort`, `/fast` работающей сессии принадлежат [03](03-session-commands.md).
@@ -197,6 +197,33 @@ Native engine + observable localhost response отделены от mocked Host 
 - Подтверждено: draft model derivation не публикует общий pointer; probe и launch сравнивают selection, а их tool policies остаются разными.
 - Selection/config/next-launch/restart — один совместный E2E с P06/P07/P10; новый unit suite на каждый mapper не нужен.
 - План принят для реализации после минимального P06 contract; G1/G2 native results и captured Edit/Relaunch остаются критериями приёмки.
+
+## 10. Первый implementation slice и повторная проверка
+
+**2026-11-12, P05 model/variant foundation; acceptance остаётся открытым.**
+
+### R1 — native contract и минимальное изменение
+
+- Pinned engine `2.1.4` публикует named variants в `Model.variants`; native `withVariant` применяет только объявленный ID, а `default` означает отсутствие override. Проверены `core/dist/types/model.d.ts` и `core/dist/chunks/location-xewrm1yq.js` из закреплённого engine graph.
+- D `old-provider-implementations@4a42ab8cefb9421325c36a91983af4a4d598f46d` добавляет в existing `readCatalog` только список variant IDs. Settings/headers/body не попадают в public catalog. Existing protocol tests расширены двумя критичными проверками malformed/duplicate variant и отсутствия private settings; новый registry не создаётся.
+- `openCodeV2ModelSelection.ts` выводит native pair из existing UI choice до allocation. Смена provider удаляет private configuration предыдущего provider; executable/environment/account/engine остаются исходными. При смене модели прежний variant не наследуется молча.
+- `launchConfiguration` и finite model probe применяют общий derivation. Старые externally owned V2 `2.0.0/2.0.21` сохраняют прежний captured-only предел; новая возможность относится к owned embedded `2.1.4`.
+- `OpenCodeV2ModelSelection` читает actual native catalog перед `session.create`: выбранный model должен быть enabled/default для этого captured config, variant — объявлен, а рабочая Team требует native tool capability. После await повторяется original owner/deadline fence. Это проверка допуска, не второй model journal.
+- Saved Default может выбрать текущую private model/config recipe для нового embedded запуска. Account/environment/executable/engine identity сравниваются прежним способом; история уже running session не переписывается.
+
+### R2 — проверка границ и компактные tests
+
+- Перепроверены bare/qualified model IDs, provider-prefixed native ID, foreign provider configuration, engine drift и отмена до allocation. Existing saved/create/journal tests переиспользованы; добавлен один короткий critical native-catalog admission case.
+- P02 credential capture теперь отказывает уже при revoked construction. Existing regression test проверяет оба момента: отозванный owner до preparation и потерю authority после preparation до run; оба не создают child/namespace.
+- Host build и test types — PASS. Четыре existing suites (`opencode-v2-model-probe`, `saved-team-model-probe`, `management-model-probe`, `team-create-launch`) — **56/56 PASS**. Fast lint — 0 errors; deliberate control-character ID regex имеет existing warning class. Source size guard — PASS, limit 800 не увеличен.
+- D full `pnpm check` — PASS на Node `24.21.0` и `26.11.1` перед публикацией variants slice. Следующий immutable consumer pin должен включать этот commit; старая projection без variants отказывает, а не выдаёт ложный PASS.
+
+### R3 — наблюдаемое native доказательство и остающаяся работа
+
+- Existing `opencode-v2-model-probe.native.ts` теперь должен выполнить original model A, другой model B с объявленным `high`, затем отменённый B/high. Actual HTTP body обязан содержать правильные model/`reasoning_effort`, tools отсутствуют; неизвестный variant не вызывает четвёртый model request. Cold recovery использует original journal без replay.
+- Existing `opencode-v2-embedded-host.native.ts` выбирает B/high через production `applyLaunchConfiguration`; все 11 фактических native model requests, Team tools, attachment и cold restore проверяют этот выбор. Workflow требует новый `modelSelection` receipt и точные probe observations.
+- Эти native journeys подготовлены и typechecked, **ещё не исполнены**. Local socket/Desktop ограничение не обходится; native proof выполняется штатным remote CI после нового D pin. Они не заменяют Desktop Create/Edit/Relaunch acceptance.
+- Ещё открыты: 07-G1/G2 baseline/selected config, project/global Default → actual new launch, custom global/project declarations, full Desktop 05-E1…E6, и проверка конкретных existing Claude/Codex/V1 choices в общем acceptance. Первый slice не объявляет весь P05 завершённым.
 
 [M0]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/runtime.lock.json
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/runtime/ClaudeMultimodelBridgeService.ts

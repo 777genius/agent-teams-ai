@@ -3,6 +3,7 @@ import { lstat, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { verifyOpenCodeV2EmbeddedGraph } from './OpenCodeV2EmbeddedGraph.js';
+import { bindOpenCodeV2ConfiguredPackages } from './OpenCodeV2ConfiguredPackages.js';
 
 import type { OpenCodeV2EmbeddedSelection } from './OpenCodeV2EmbeddedGraph.js';
 
@@ -137,6 +138,9 @@ async function start(value: unknown): Promise<void> {
   );
   if (process.versions.bun !== graph.requiredBunVersion) return fail();
   controller.signal.throwIfAborted();
+  stage = 'configuration';
+  const nativeConfig = await bindOpenCodeV2ConfiguredPackages(config, graph);
+  controller.signal.throwIfAborted();
   stage = 'effect';
   const { Effect, Scope, Exit } = (await import(
     pathToFileURL(graph.effectPath).href
@@ -158,7 +162,7 @@ async function start(value: unknown): Promise<void> {
         app: { name: 'agent-teams-stage1-host', version: '2.1.4' },
         database: { path: input.databasePath },
         events: { persist: true },
-        config: { directory: configDirectory, project: false, content: JSON.stringify(config) },
+        config: { directory: configDirectory, project: false, content: JSON.stringify(nativeConfig) },
         models: { fetch: false, snapshot: true },
         fs: { filewatcher: false, fff: false },
       })

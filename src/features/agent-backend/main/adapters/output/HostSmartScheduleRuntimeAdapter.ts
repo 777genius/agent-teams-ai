@@ -28,11 +28,12 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
     runId?: string;
     taskFirst?: true;
     getPreviousRuns(scheduleId: string, runId: string): Promise<ScheduleRun[]>;
-    runOneShot?(request: ExecutionRequest): Promise<ScheduledTaskResult>;
+    isCancelled?(): boolean;
+    runOneShot?(request: ExecutionRequest, expectedRosterRevision: string): Promise<ScheduledTaskResult>;
   }) {}
 
   private assertTeam(team: string): void {
-    if (team !== this.options.selection || !this.options.target.isCurrent())
+    if (team !== this.options.selection || !this.options.target.isCurrent() || this.options.isCancelled?.())
       throw new Error('Original scheduled team is unavailable');
   }
 
@@ -245,7 +246,10 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
   }
 
   async runOneShot(request: ExecutionRequest): Promise<ScheduledTaskResult> {
+    this.assertTeam(this.options.selection);
     if (!this.options.runOneShot) throw new Error('Host standalone schedule owner is unavailable');
-    return this.options.runOneShot(request);
+    const roster = await this.roster();
+    this.assertTeam(this.options.selection);
+    return this.options.runOneShot(request, roster.revision);
   }
 }

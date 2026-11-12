@@ -9,6 +9,7 @@ import { CapturedProcess } from './CapturedProcess.js';
 import { createClaudeCloseDiagnostic } from './createClaudeCloseDiagnostic.js';
 import { claudeSessionExists } from './claudeSessionExists.js';
 import { claudeMcpServers } from './claudeMcpServers.js';
+import { claudeSessionCommands } from './claudeSessionCommands.js';
 import { createTeamMcpTools } from '../../mcp/tools.js';
 
 import type { ClaudeConfig } from '@agent-teams/provider-implementations/claude';
@@ -38,12 +39,14 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
   );
   let ready = false;
   let sealed = false;
+  let commands: ReturnType<typeof claudeSessionCommands> = [];
   const required = createTeamMcpTools(context.connection)
     .list()
     .map((tool) => tool.name);
   const config: ClaudeConfig = {
     sessionRef: profile.sessionId,
     observeClose: createClaudeCloseDiagnostic(selectedBinding, profile.sessionId),
+    observeCommands: (value) => { commands = claudeSessionCommands(value); },
     ...(context.toolEvidence ? { capture: context.toolEvidence } : {}),
     ...(context.attachments ? { attachments: context.attachments } : {}),
     // Stable principal scope across technical generations; MCP and Runtime separately fence generation.
@@ -158,6 +161,7 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
       ? { captureRegisteredProcess: custody.captureRegisteredProcess.bind(custody) }
       : {}),
     isReady: () => ready && !sealed && context.isCurrent(),
+    sessionCommands: () => ready && !sealed && context.isCurrent() && capturedMcpSourceCurrent(profile) ? commands : [],
     initialContextEvidence: () =>
       ready && !sealed && context.isCurrent()
         ? {

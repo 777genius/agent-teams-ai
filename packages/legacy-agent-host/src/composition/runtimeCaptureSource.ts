@@ -304,9 +304,8 @@ export function compileRuntimeMemberProfile(
     // is not an explicit catalog selection and must not be passed as a bare ID.
     ...(base.provider === 'opencode' && base.nativeGeneration === 'v2' &&
         selectedModel === undefined ? {} : { model }),
-    // A saved V2 variant is already bound to its native session. Repeated
-    // inherited effort does not select a new variant; let native admission
-    // attest it. Any differing effort remains an unsupported V2 override.
+    // Preserve the historical unchanged variant mapping. A changed embedded
+    // selection is attested against its native catalog before session creation.
     ...(effort === undefined ||
       (base.provider === 'opencode' && base.nativeGeneration === 'v2' &&
        effort === base.nativeOptions.variant) ? {} : { effort }),

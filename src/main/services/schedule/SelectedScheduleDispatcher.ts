@@ -6,7 +6,7 @@ import { SmartScheduleDispatcher } from './SmartScheduleDispatcher';
 import type { SmartScheduleOutcome, SmartScheduleRuntimePort } from './SmartScheduleDispatcher';
 import type { Schedule, ScheduleRun } from '@shared/types';
 
-type ScheduleAdmission = Pick<Schedule, 'teamName' | 'hostTarget' | 'executionMode' | 'taskFirst' | 'launchConfig'>;
+type ScheduleAdmission = Pick<Schedule, 'teamName' | 'hostTarget' | 'executionMode' | 'taskFirst' | 'launchConfig'> & Partial<Pick<Schedule, 'id'>>;
 export interface ScheduleDispatcher {
   readonly supportsHost?: boolean;
   assertCanSchedule(schedule: ScheduleAdmission): Promise<void>;

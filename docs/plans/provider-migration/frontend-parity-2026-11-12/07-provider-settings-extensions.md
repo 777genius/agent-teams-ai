@@ -1,6 +1,6 @@
 # 07. Настройки провайдера, лимиты, skills, MCP и plugins
 
-Статус: план реализации; production не изменён, новый native proof не выполнен.
+Статус: source capture/publication и selected native config реализованы; app default/V1 saved limits и actual acceptance G1–G4 ещё открыты.
 Цель: сохранить применимые возможности существующего frontend, используя уже выделенных владельцев.
 Новая архитектура не даёт основания игнорировать сохранённую настройку или объявить рабочий control unsupported.
 Публикация source/profile revisions целиком принадлежит [06](06-runtime-installation-profiles.md).
@@ -219,6 +219,111 @@ Unit список сокращён до новых опасных mapping/source
 - Live slash и prelaunch config не дублируют state machine; файлы общего recipe меняет P06, model probe — P05.
 - План принят для bounded G1–G4 и последующей реализации. Ни неподтверждённый V2 editor, ни external MCP не записаны как готовые capabilities.
 
+## 11. Уточнение implementation boundary после P05/P06
+
+**R4 — повторное source/ownership review, 2026-11-12; согласовано с root до расширения source owner.**
+
+- В [R1] `getOpenCodeConfigImportPaths`/`readSafeOpenCodeRuntimeConfigImport`/`readProjectOpenCodeRuntimeConfig` подтверждён порядок: canonical HOME → XDG → explicit `OPENCODE_CONFIG` → inline `OPENCODE_CONFIG_CONTENT` → project root `opencode.json`/`opencode.jsonc`. Выбранный provider merge сохраняет project precedence; ambient executable plugins в новый V2 graph не импортируются.
+- Начать с маленького read-only selected-config adapter: strict selected model mapping по [R2], bounded JSONC read и source fingerprint. Host выводит пути из **исходного private profile** (`HOME`, XDG, explicit config, cwd); Main/renderer не передают произвольный файл. Не переносить whole donor profile manager.
+- Existing P06 source record хранит только выбранные file references/digests и inline digest. Raw config, API key, headers и environment values не идут в source index, receipt или renderer DTO. При материализации selected declaration Host проверяет исходные paths/digests до и после bounded read; changed/malformed source даёт scoped отказ.
+- Existing Save/Refresh захватывает новый source reference через того же P06 owner. Новый pointer применяется только к новым captures. Already captured run/receipt сохраняет original reference; повторный probe/launch не перечитывает иной источник под старой revision.
+- P02 остаётся owner credential source. Config `options.apiKey` и env/file substitutions получают private captured port с `digest/isCurrent/readKey`; один native import выбирается по подтверждённому donor precedence. Custom provider без native integration использует только private selected config и source fence; native credential ID для него не выдумывается.
+- Проверено: existing `CapturedRuntimeProviderManagementClient.view(previous)` уже сохраняет успешную запись preferences при failed refresh, поэтому второй default store/новый recovery flow не нужен. Проверка **default → actual new launch** и применение persisted V1 limits остаются обязательными отдельными пунктами.
+- P05 native fixtures подготовлены для model B/declared `high`, но ещё не исполнялись. P07 расширит тот же observable request для global/project override; G1…G4 не считаются закрытыми от наличия fixtures или source trace.
+- Root владеет `DesktopBackendFeature`: config integration передаёт ему только узкий capture/refresh hook. Production/test file cap 800 и текущие protocol budgets не увеличиваются; проверки ограничены strict alias/variant mapping, changed original source и общим native journey.
+
+### R5 — конкретный refresh/retry и global/project порядок
+
+- Main-only `runtime.source.refreshConfiguration({commandId, expectedRevision})` получает grant из original descriptor. Host сам захватывает config references и публикует их через существующие `RuntimeSourceIndex`/`runtime.source` receipt; renderer не получает read-file API.
+- Повтор того же command после lost ACK/Host restart использует **original `publicationJson`** и original expected revision. Он не захватывает обновившийся config под прежним command ID. Неопределённый или изменённый original source остаётся scoped held, без второго native эффекта.
+- Global capture читает только HOME/XDG/explicit/inline sources. Он не читает `seed.cwd` как project и не переносит его config в другой проект. Project capture добавляет только original project root files; такой reference нельзя применить к другому cwd.
+- Existing Save/Refresh: capture original context → recover existing source intent → publish captured config reference → получить новый management target → читать/probe выбранную модель. Next launch берёт тот же revision; already captured launch остаётся со своим reference/config.
+- Source candidate для config-only публикации сохраняет прежний executable/engine/source kind; для исходного seed допустим `captured`, без выдуманного `bundled/path` provenance. Existing installer native selection сохраняет свой прежний набор source kinds.
+- Выделенный read-only mapper сначала проверяется на official `@opencode/schema@2.1.4` (registry metadata/pack/tar SHA512 совпадают). Donor `2.0.32` validator не подключается к новой схеме. Raw selected values остаются только private process input; index хранит references.
+- Native package должен присутствовать в выбранном verified engine graph; capture config не разрешает ambient install/import. Arbitrary credential `{file:...}` не становится поддержанным от строки в JSON: existing app-owned gateway marker требует отдельной квалификации, остальные сохраняют доказанный strict-source предел.
+
+### R6 — проверенный source foundation и следующая native граница
+
+- `OpenCodeConfigurationSource` фиксирует global/project JSONC sources; `openCodeSelectedProviderConfiguration` валидирует selected aliases/limits/variants по точной схеме 2.1.4. В source record остаются references/digests и структурированный default provider/model/variant.
+- `RuntimeSourceIndex.refreshConfiguration` использует существующий receipt и original publication snapshot. Проверен lost ACK после pointer publish: cold retry возвращает A даже после изменения файла на B; новый command публикует B, retained A не переназначается. Malformed JSONC не становится пустым config.
+- `refreshCapturedRuntimeConfiguration` подключён в существующий Main management capture. Неприменимые providers сохраняют прежний путь; актуальные references не создают новую revision при повторном Refresh. Публикация source сама по себе ещё не доказывает native model request.
+- Проверки foundation: Host build/testtypes и Main focused TypeScript PASS; 51 focused Host checks, в том числе четыре новых config/codec cases, PASS; source refresh/recovery subset 16/16 и существующий Main/Host source integration 4/4 PASS. Реальный native/Desktop запуск ожидает штатного CI.
+- Повторно прочитан [R1]: launch materializer берёт `snapshot.selectedAuthCredential`; `options.apiKey` лишь требует наличия resolved credential. Доказанного приоритета отличающегося config key нет. До native qualification конфликтующий key должен давать scoped отказ; ни новый credential store, ни silent override не вводятся.
+- Catalog baseline [R1] `materializeOpenCodeV2CatalogScope` импортирует **все declared models выбранного provider**, launch — только выбранный model. Следующая native интеграция сохраняет эту разницу и source fence.
+- Повторный просмотр official 2.1.4 уточнил package boundary: `AISDKNative.rewrite` переводит известные legacy SDKs (включая `@ai-sdk/openai-compatible`) в bundled native providers; **оставшийся dynamic SDK** попадает в loader с `npm.add`. Перед native consumption нужно использовать этот native rewrite, затем exact resolution внутри verified delivery. Не копировать package registry и не подменять SDK вручную; маршрут ambient установки не допускается.
+
+### R7 — native input и исправление найденной совместимости paths
+
+- Native consumption использует один private `OpenCodeV2CapturedConfiguration`: для запуска только selected model, для catalog — все declared models выбранного provider. Raw headers/body/API key не добавляются в durable profile или receipt; config key должен совпадать с original P02 credential, иначе возвращается scoped ошибка.
+- После native readiness работающая сессия сохраняет исходный private config A. `captureMemberProviderAuthority` проверяет original entry/profile/config и Team grant, а не current `RuntimeSourceIndex` pointer; `OpenCodeV2CredentialScope` проверяет original auth source. Поэтому изменение config или публикация B не останавливают A и не переназначают его. Pending probe/catalog и cold capture по старому reference сохраняют source freshness gate.
+- Root review подтвердил exact native package rewrite + manifest-contained resolution в существующем EmbeddedGraph. Builtin declaration остаётся для полной native translation; remaining dynamic SDK получает только проверенный file URL до engine start. Второй package manager и ambient install не вводятся.
+- Найдено несовпадение с [R1] `readSafeOpenCodeRuntimeConfigFile`: donor читает обычные symlinked/hardlinked config через `readFile`, тогда как новый read-only reader отвергал их. Исправить **существующий** `OpenCodeConfigurationSource.readSource`: зафиксировать canonical target и identities исходного link/ancestors, читать canonical target через stable FD, проверить path mapping и fstat до/после. Retarget даже на файл с одинаковым содержимым меняет captured identity; новый файловый owner/journal не нужен.
+- Existing native model-probe fixture должен использовать global config через symlink и project override, затем наблюдать реальные model/body/headers/limits/default. Existing Team fixture меняет config после readiness и требует исходные A settings во всех последующих запросах. Проверка scoped UI error сохраняет safe reason без raw config/token.
+- Промежуточные проверки native input: Host build и 28 focused tests PASS до последнего type-only/noise fix; Main focused TypeScript, 11 management UI tests, fast lint без ошибок и source-size guard PASS. Общий Host rebuild/testtypes выполнить после согласованного P03 package pin; actual native/Desktop и G1–G4 остаются открытыми до штатного CI.
+
+### R8 — сохранённый app default и V1 limits до фактического launch
+
+**Повторное source review перед реализацией; выбран private snapshot в existing recipe, согласовано с root.**
+P07 native config опубликован `6a2bb4b88bffbe001e16ff7fd27430f330b43517`.
+Он не закрывает отдельную цепочку preference file → новый launch: UI уже читает/сохраняет default и limits,
+но source recipe пока не получает эти значения. Именно эту цепочку исправляет следующий срез.
+
+1. **Сохранить donor precedence.** [R6] хранит app preferences; [R7] выбирает project default,
+   затем all-projects default. В [R1] `prepareProfileInternal` (`3581–3654`) default накладывается на imported config,
+   а limits объединяются global → project; `applyOpenCodeModelLimitOverrides` (`927–962`) задаёт
+   `limit: { context, output }` выбранного qualified model. V2 `materializeOpenCodeV2CatalogScope`
+   (`4021–4050`) тоже предпочитает app default перед config default, но не подключает V1 limits editor.
+   Явно выбранная в Team модель остаётся выше default. Очистка project default возвращает global/native fallback.
+
+2. **Один preference owner.** Переиспользовать [S7] `FileManagedProviderPreferences.capture/read` и
+   `resolveManagedPreferences`; добавить узкий read-only export из `runtime-provider-management/main`.
+   Он получает original descriptor roots и guard, возвращает только resolved default и числовые
+   `contextTokens/outputTokens` по qualified model ID. Не переносить неизвестные поля, timestamps, paths,
+   raw config или credentials в Host DTO. Global capture не читает project preferences другой вкладки.
+   Запись остаётся в существующих `setDefault`/`setLimits`, с сохранением посторонних полей.
+
+3. **Использовать existing source publication/recovery.** Передать canonical safe snapshot через
+   существующий `runtime.source.refreshConfiguration`, сохранить его в той же immutable candidate/recipe.
+   Digest входит в прежнюю source/config revision; одинаковые семантические значения не создают revision
+   из-за timestamps или порядка ключей. V1 получает этот refresh без V2 config import; V2 сохраняет R5–R7
+   references и получает app default. Retry старого command использует original `publicationJson`,
+   даже если preference file уже B. Новый command может опубликовать B; retained A остаётся A.
+   Не добавлять второй settings store/journal или Host reader пользовательских preference paths.
+
+4. **Применять limits после реального выбора модели.** `applyOpenCodeRuntimeSource` задаёт app default
+   для следующего base recipe; existing `applyLaunchConfiguration` затем сохраняет explicit Team selection.
+   После этого применить **только V1 override реально выбранного qualified model** через existing
+   `withOpenCodeModelLimits`, обобщив его environment helper при необходимости. Safe snapshot остаётся
+   private частью recipe, а все overrides не разворачиваются в `OPENCODE_CONFIG_CONTENT`.
+   Это сохраняет non-default model и нынешний inline budget. V2 принимает app default, а declared limits
+   продолжают идти через strict selected config; новый V2 editor/override route не вводится.
+   Native preflight и actual launch должны видеть одинаковые selected values; cross-provider qualified
+   model обновляет provider/model как одну пару, без чужого providerConfiguration.
+
+5. **Связать Save/Refresh и первый запуск.** Existing management capture сравнивает safe snapshot digest
+   вместе с configuration references. Успешный Save остаётся успешным даже при failed Refresh, с прежним
+   предупреждением и без ложного native verification. До **новой** Create/saved-Team preparation вызвать
+   тот же узкий captured OpenCode refresh для исходных context/project/owner; это применит уже сохранённые
+   preferences и после перезапуска приложения, когда Settings ещё не открывали. Сначала original guard,
+   recover/publish, затем capture/probe; read/cancel/lookup/submit существующей preparation не перечитывают
+   настройки и не переадресуют исходный intent. Existing schedule capture переиспользует тот же recipe,
+   без второго scheduler preference reader. `DesktopBackendFeature` получает только узкий method/call,
+   существующий `captureScheduledRuns` сохраняется.
+
+6. **Минимальные проверки и повторное ревью.** Расширить existing preference/source integration cases:
+   project → global fallback; saved file → source → new launch; explicit non-default model со своим V1 limit;
+   successful Save + failed Refresh; lost ACK retry с A после записи B. Использовать существующие native
+   fixtures: V1 effective config/readback с app default и selected limit; V2 model B против native default A,
+   с проверкой actual request. Already running A продолжает работу после публикации B. Actual Desktop
+   journey использует те же descriptor preference roots и штатный remote CI. Не добавлять unit на каждый
+   getter/mapper и не дублировать проверенные parsers/atomic write primitives. Перед publication проверить
+   cross-feature barrel, original-owner fence, отсутствие secret fields и прежние size/protocol budgets;
+   при приближении `RuntimeSourceIndex` к 800 строкам вынести только stateless projection, без нового owner.
+
+**Результат R8 review:** отвергнуто разворачивание всех limit overrides в inline config до model selection:
+оно теряло non-default choice или раздувало private config. Выбран snapshot + selected-only application.
+Ни работающий receipt, ни mocked preferences test не закрывают native/Desktop acceptance сами по себе.
+
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts
 [M3]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/extensions/ExtensionStoreView.tsx
@@ -235,3 +340,6 @@ Unit список сокращён до новых опасных mapping/source
 [R3]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/features/runtimeProviderManagement/adapters/opencode/OpenCodeProviderManagementAdapter.ts
 [R4]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/bridge/OpenCodeV2LaunchPlan.ts
 [R5]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/catalog/OpenCodeV2RuntimeStatus.ts
+[R6]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/OpenCodeManagedPreferences.ts
+[R7]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/OpenCodeManagedDefaultSelection.ts
+[S7]: https://github.com/777genius/agent-teams-ai/blob/6a2bb4b88bffbe001e16ff7fd27430f330b43517/src/features/runtime-provider-management/main/infrastructure/FileManagedProviderPreferences.ts

@@ -12,6 +12,7 @@ import type { RuntimeMemberProfile } from '../../composition/runtimeProfile.js';
 import type { ToolEvidenceCapture } from '../../evidence/captureContracts.js';
 import type { CodexEvidenceCapture } from '../../evidence/codexCaptureContracts.js';
 import type { OpenCodeEvidenceCapture } from '../../evidence/opencodeCaptureContracts.js';
+import type { NativeSessionCommandCapability } from '../../team/nativeSessionCommand.js';
 
 export interface MemberProviderContext {
   profile: RuntimeMemberProfile;
@@ -36,6 +37,8 @@ export interface MemberProviderContext {
 export interface MemberProvider {
   factory: DriverFactory;
   readonly attachmentCapabilities?: Readonly<NativeAttachmentCapabilities>;
+  /** Live captured provider capability, never a renderer-declared provider or arbitrary skill path. */
+  sessionCommands?(): readonly NativeSessionCommandCapability[];
   captureRegisteredProcess?(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture;
   isReady(): boolean;
   /** Installed exact initial context, acknowledged through successful D native configuration/readiness. */

@@ -68,7 +68,7 @@ export function createRuntimeMemberProviderFactory(options: {
   readRuntime: RuntimeOwner['readCapturedSession'];
   readCheckpoint: RuntimeOwner['readCheckpoint'];
   observe: RuntimeOwner['observeProviderActivity'];
-  onProgress(): void;
+  onProgress(entry: MemberEntry): void;
 }): RuntimeOwnerOptions['driverFactory'] {
   return {
     open: async (request, assertAllocation) => {
@@ -219,7 +219,7 @@ export function createRuntimeMemberProviderFactory(options: {
           canAllocate: authority.canAllocate,
           canCaptureRegisteredProcess: authority.isCurrent,
           readCheckpoint: options.readCheckpoint,
-          onProgress: options.onProgress,
+          onProgress: () => options.onProgress(entry),
         });
         options.captureInteractions(entry);
         entry.provider = provider;

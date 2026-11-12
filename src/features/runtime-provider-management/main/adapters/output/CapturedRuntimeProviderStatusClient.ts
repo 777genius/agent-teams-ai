@@ -21,7 +21,10 @@ import type { RuntimeProviderStatusPort } from '../../../core/application';
 import type { CaptureClaudeMetadata } from './capturedClaudeMetadata';
 import type { CaptureCodexMetadata } from './capturedCodexMetadata';
 import type { CatalogProvider } from './capturedManagementCatalog';
-import type { CapturedProviderManagement } from '@features/agent-backend/main';
+import type {
+  CapturedProviderManagement,
+  CapturedRuntimeSources,
+} from '@features/agent-backend/main';
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
 
 const providers: CliProviderId[] = ['anthropic', 'codex', 'opencode'];
@@ -41,6 +44,7 @@ export interface CapturedRuntimeProviderStatusDependencies {
   ): Promise<CapturedProviderManagement>;
   captureCodex?: CaptureCodexMetadata;
   captureClaude?: CaptureClaudeMetadata;
+  captureSources?(): Promise<Pick<CapturedRuntimeSources, 'current'>>;
   now?(): number;
   captureGuard?(): () => boolean;
 }
@@ -163,16 +167,39 @@ export function createCapturedRuntimeProviderStatusClient(
   const port: RuntimeProviderStatusPort = {
     async readOpenCodeRuntimeStatus() {
       const current = deps.captureGuard?.() ?? (() => true);
+      const sources = await deps.captureSources?.();
+      const selection = await sources?.current();
       const target = await deps.capture(null);
       const runtime = parseManagementRuntime(await target.request('catalog', {}), target);
       if (!target.isCurrent() || !current()) throw new Error('Native status context changed');
-      if (runtime.generation === 'v1') return null;
+      if (
+        selection &&
+        (selection.profileId !== target.profileId ||
+          selection.configRevision !== target.configRevision ||
+          selection.nativeGeneration !== runtime.generation ||
+          (await sources!.current()).revision !== selection.revision)
+      )
+        throw new Error('Native runtime selection changed');
+      if (runtime.generation === 'v1' && !selection?.cliVersion) return null;
       return {
         installed: true,
-        source: 'captured-host',
+        source:
+          selection && selection.sourceKind !== 'captured' && selection.sourceKind !== 'bundled'
+            ? selection.sourceKind
+            : 'captured-host',
         state: 'ready',
-        version: runtime.version,
-        v2Support: 'ready',
+        ...(selection?.cliVersion
+          ? { version: selection.cliVersion }
+          : runtime.generation === 'v2'
+            ? { version: runtime.version }
+            : {}),
+        ...(runtime.generation === 'v2'
+          ? {
+              v2Support: 'ready' as const,
+              ...(selection ? { engineVersion: runtime.version } : {}),
+            }
+          : {}),
+        ...(selection ? { sourceRevision: selection.revision } : {}),
       };
     },
     async getProviderStatus(providerId, options = {}) {

@@ -1,5 +1,14 @@
 /** Finite source closure for captured management, lifecycle, WorkSync and native roster. */
 export const desktopProofManagementSources = [
+  'src/features/agent-backend/main/adapters/output/projectNativeSessionCommands.ts',
+  'src/renderer/utils/skillCommandSuggestions.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts',
+  'src/features/runtime-provider-management/main/adapters/output/CapturedProviderCredentials.ts',
+  'src/features/agent-backend/main/application/refreshCapturedRuntimeConfiguration.ts',
+  'src/features/agent-backend/main/infrastructure/CapturedScheduledRuns.ts',
+  'src/main/composition/runCapturedScheduledTask.ts',
+  'src/shared/utils/scheduleLimits.ts',
+  'src/renderer/components/team/schedule/ScheduleExecutionLimits.tsx',
   'src/features/runtime-provider-management/main/infrastructure/runtimeProviderErrorBoundary.ts',
   'src/features/runtime-provider-management/main/infrastructure/runtimeProviderModelRequestTracker.ts',
   'scripts/legacy-agent-host/desktop-skills-fixture.ts',

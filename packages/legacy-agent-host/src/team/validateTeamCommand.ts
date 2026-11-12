@@ -6,6 +6,7 @@ import {
 import { isGroupUuid } from '../group-chats/model.js';
 import { TeamOwnerError } from './contracts.js';
 import { validateExpectedTaskRecipient } from './expectedTaskRecipient.js';
+import { parseNativeSessionCommand } from './nativeSessionCommand.js';
 import { safeSegment, stableJson } from './identity.js';
 import type { TeamCommand, TaskRef } from './contracts.js';
 
@@ -171,6 +172,10 @@ export function validateTeamCommand(command: TeamCommand): void {
       validateRefs(command.payload.taskRefs);
       safeSegment(command.payload.to);
       validateTeamText(command.payload.text);
+      if (command.payload.nativeCommand !== undefined &&
+        (command.payload.nativeCommand !== true || !parseNativeSessionCommand(command.payload.text) ||
+          command.payload.attachments?.length))
+        throw new TeamOwnerError('invalid');
       if (command.payload.messageId !== undefined) {
         validateTeamText(command.payload.messageId);
         if (
@@ -228,7 +233,7 @@ export function validateTeamCommand(command: TeamCommand): void {
       'comment',
       'taskRefs',
     ],
-    'message.send': ['to', 'text', 'taskRefs', 'messageId', 'summary', 'actionMode', 'attachments'],
+    'message.send': ['to', 'text', 'taskRefs', 'messageId', 'summary', 'actionMode', 'nativeCommand', 'attachments'],
   };
   if (
     Object.keys(command).some((key) => !['commandId', 'operation', 'payload'].includes(key)) ||

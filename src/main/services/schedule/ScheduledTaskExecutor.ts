@@ -111,7 +111,7 @@ export interface ScheduledTaskResult {
 export interface ExecutionRequest {
   runId: string;
   config: ScheduleLaunchConfig;
-  maxTurns: number;
+  maxTurns?: number;
   maxBudgetUsd?: number;
 }
 
@@ -218,7 +218,7 @@ export class ScheduledTaskExecutor {
       'stream-json',
       '--verbose',
       '--max-turns',
-      String(maxTurns),
+      String(maxTurns ?? 50),
       '--no-session-persistence',
     ];
 

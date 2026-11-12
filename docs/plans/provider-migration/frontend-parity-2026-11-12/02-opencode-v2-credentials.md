@@ -1,6 +1,6 @@
 # 02. OpenCode V2: существующие маршруты подключения по ключу
 
-Статус: план реализации; изменения production и native credentials не выполнялись.
+Статус: D protocol/directory опубликованы; Host/Main реализация и native journey подготовлены, итоговые native/Desktop gates ещё не завершены.
 Frontend baseline: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Host baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 Цель: существующие V2 key-connect/original-intent reconnect и проверка подключения работают через Host; V1 forget сохраняется.
@@ -95,11 +95,12 @@ Host baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 - Сохранить V1 shared-auth conflict guard и compare-before-remove для owned connection; rollback не должен удалять изменение другого владельца.
 - `completed` выдаётся только после известного результата и подтверждённой очистки принадлежащего operation ресурса.
 - Неизвестный outcome сохраняет исходный commandId/target; последующее действие сначала делает lookup, не повторную запись.
+- Подтверждённый native failed terminal отличать от boolean false/timeout. После своего `key-published`, qualified failed terminal и confirmed cleanup обычный новый Connect может явно исправить ключ, только если текущий authDigest совпадает с исходной owned publication. Чужой V1 ключ и unknown POST таким разрешением не становятся.
 
 ### Шаг C — совместимость с профилями и app flow
 
 - В `CapturedRuntimeProviderManagementClient.ts` сохранить plain-key вариант без лишнего auth selector.
-- Для неизвестного исхода добавить/reuse compact durable intent со ссылкой на target и commandId, без ключа.
+- Для неизвестного исхода использовать только existing Host credential ledger: `credential.pending` находит исходный незавершённый intent, `credential.resume` проверяет exact payload fingerprint и читает receipt. Отдельного Main journal нет.
 - Не вводить generic command bus ради одного pending credential intent.
 - В `OpenCodeV2ManagementHost.ts` убрать постоянные пустые auth methods только для доказанного selected route.
 - Подключить native authenticated/configured observations и показать их существующей projection `capturedManagementCatalog.ts`.
@@ -109,6 +110,7 @@ Host baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
   что даёт self-conflict. Один внешний owner/fence и persisted original verification reference, без второго command journal.
 - Самостоятельный Test model по-прежнему проходит обычный ModelProbeOwner; connect не делает второй автоматический probe.
 - При неудаче probe сохранить native transaction state: original intent может остаться pending/held после credential publication.
+- Qualified native rejection возвращает безопасный `verification-rejected`: UI сообщает, что ключ сохранён, а модель не прошла проверку, и позволяет явный corrected Connect. Transport unknown остаётся pending; его не превращают в rejection по одному cleanup.
 - В UI не показывать общий successful connect и не удалять pending marker; показывать исходную ошибку verification с доступным readback/recovery.
 - Не создавать автоматический повторный Test model или альтернативную модель после pending/failed original proof.
 - При forget не удалять чужой HOME/config, external credentials или credentials других providerIds.
@@ -133,6 +135,7 @@ Test provider использует localhost и isolated TEST auth namespace; н
 | Reconnect + restart | Повторить исходный connect, открыть приложение снова; затем проверить conflicting key | Original receipt/readback без повторного POST; конфликт не перезаписывает credential; preferences сохранены |
 | V1 Forget / V2 boundary | V1 удаление при env auth; проверить action set V2 и owned rollback race | V1 scope сохранён; V2 rollback не превращён в новый forget; чужой credential не удалён |
 | Потеря ответа | Удержать ACK после native set, переподключить UI | Lookup исходного command; нет второго set и переноса на новый profile |
+| Исправление своего неверного ключа | Native HTTP401 → configured/unverified → restart → обычный Connect с исправленным ключом | Qualified failed terminal + cleanup + неизменённый owned authDigest; новая явная операция успешна, чужой ключ не заменён |
 | Ошибка проверки / fence | Credential publication выполнена; original probe success/error/unknown под тем же owner | Нет self-conflict fence; pending/held сохраняется; нет второго inference, false connected или потери evidence |
 | Граница V1/V2 | В рамках предыдущего V1 journey проверить запрещённый V2 OAuth route | V1 regression PASS; V2 не предлагает ложный поддержанный OAuth workflow |
 
@@ -162,6 +165,30 @@ Native vendor PASS прикладывается только для реальн
 - Готовность: existing controls и V1 regression работают, restart подтверждён readback, V2 action-set gate закрыт и required gates успешны на exact HEAD.
 
 ## 8. Review
+
+### Implementation receipts — первый source slice
+
+- D key protocol опубликован в [`b4499afb`](https://github.com/agent-teams-ai/old-provider-implementations/commit/b4499afb7a48c4efb67e4a494690aca0921672ef).
+- Сверен официальный `@opencode/client@2.1.4`: archive SHA256 `bf888e996a3cc8e2884ca1d5503b00de4d8253af012facc62305c9156451e197`, npm integrity проверен.
+- Finite credential client: native integration read, единственный key POST, exact readback, rollback только собственного credential; Session SPI не расширен.
+- Protocol invariants: 5/5 PASS; full `pnpm check` на Node 24.21.0 и 26.11.1 / pnpm 11.18.0 PASS, включая packed consumers.
+- Combined immutable provider archive SHA256 `659039aad0693903555be363ce055bf0c50864b385486f8313f6f3b6600a1cc2`; SPI archive остался побайтно прежним.
+- Host `OpenCodeV2CredentialScope` использует existing captured `XDG_DATA_HOME/opencode/auth.json`; HOME alternative остаётся read-only conflict input.
+- Scope build и три группы critical invariant tests PASS: cold read/preservation/owned rollback, foreign conflict, namespace/symlink/revocation.
+- Compare-before-publication действует под Host writer lease; он не объявляется cross-process CAS с независимым внешним CLI.
+- **P02 ещё не завершён:** подключение Host transaction, единая connect-verification, UI intent/recovery и native/Desktop gate остаются следующими шагами.
+- Protocol fixtures не являются квалификацией реального vendor key или successful native model request.
+
+### Implementation receipts — Host/Main wiring и native journey
+
+- D private credential witness опубликован в [`189bd47`](https://github.com/agent-teams-ai/old-provider-implementations/commit/189bd47ccd33edd9d5abedf7075f3e53dd38bb42); all-provider directory — в [`91eb501`](https://github.com/agent-teams-ai/old-provider-implementations/commit/91eb501568286b4c99135271c88f335a6136928b). Combined Node24/26 checks и immutable package validation PASS.
+- `OpenCodeV2CredentialOperation` использует existing owner/fence, native key POST/readback, guarded native auth.json publication и один finite probe. `OpenCodeV2SessionCredential` импортирует только выбранный key; private witness хранится в native session metadata, не в instructions.
+- Exact core2.1.4 source выявил migration всех ключей из Global.data/auth.json в новую БД. `OpenCodeV2EmbeddedServer` задаёт private child XDG_DATA_HOME внутри owned DB namespace; исходный account scope остаётся Host capture.
+- Passive directory не импортирует ключи. Saved source показывается как configured/unverified; connected требует последнюю завершённую verification для текущего authDigest. Более новый failed/unknown intent не скрывается старым успехом.
+- Main сохраняет existing forms, V2 native key selector и V1 Forget. Fresh Connect получает UUID; original pending/resume — только read/fingerprint control, без повторной отправки. Дополнительного UI или credential journal нет.
+- Critical preflight до последнего integration review: Host build/testtypes, 31 Host tests, 11 Main tests, focused Main types и fast lint PASS. После R4 нужен общий rebuild/testtypes на финальном combined tree.
+- `opencode-v2-credentials.native.ts` и Linux preflight step подготовлены: actual401 → cold corrected key → success, lost ACK readback, saved-key Check, отдельный timeout → cold no-replay. Native SQLite читается только для TEST evidence: один credential на intent и отсутствие foreign key; секреты не входят в receipt.
+- Этот journey ещё должен пройти в штатном CI. Desktop Providers/Quick Connect и regional route acceptance остаются открытыми; source/fake preflight не выдаётся за native/vendor/Desktop PASS.
 
 ### R1 — авторская критика, выполнена 2026-11-12
 
@@ -203,3 +230,11 @@ Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b
 - Подтверждены plain-key, original-intent recovery и compare-before-remove rollback; V2 standalone forget не добавлен за пределами baseline.
 - Найден двойной V1 regression budget; сценарии объединены. Shared account UI startup/reconnect использует P10, native key protocol проверяется отдельно от Codex login.
 - План принят для реализации; native key/action-set и actual durable namespace ещё требуют исполнения, а не только source review.
+
+### R4 — integration review: неверный ключ и неизвестный ответ
+
+- Reviewer: root; проверены exact2.1.4 `v2-turn-projection.ts`, `driver-session.ts`, native `Integration.connection.key` и credential storage API.
+- Найдено: boolean false от probe не различает подтверждённый отказ и потерянный ответ. `wasRejected()` теперь принимает только исходный qualified `execution.failed` с matching idle snapshot; transport/outcome unknown не даёт права повторять операцию.
+- Согласован узкий путь исправления своего подтверждённо записанного неверного ключа через обычный Connect. Existing ledger даёт authority только для последней rejected publication с неизменённым authDigest и подтверждённой очисткой.
+- Новый явный UUID использует обычный native key POST в своей private DB и guarded writer существующего auth.json. Старые DB/receipts остаются исходными; прямых DB mutations, automatic delete-and-replace и нового repair UI нет.
+- Native acceptance раздельно проверяет HTTP401/corrected key и timeout/no-replay. Пока эти проверки не прошли, R4 является review кода, а не native qualification.

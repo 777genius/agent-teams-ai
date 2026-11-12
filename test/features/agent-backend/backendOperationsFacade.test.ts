@@ -363,6 +363,10 @@ describe('finite captured backend transport facade', () => {
       await facade.invoke({ ...request, payload: { ...request.payload, text: '/compact now' } })
     ).toEqual({ ok: false, code: 'invalid', outcome: 'not-dispatched' });
     expect(router.request).not.toHaveBeenCalled();
+    expect(await facade.invoke({ ...request, payload: { ...request.payload, text: '/compact now', nativeCommand: true } })).toMatchObject({ ok: true });
+    expect(router.request).toHaveBeenCalledWith(request.handle,
+      expect.objectContaining({ payload: { operation: 'message.send', payload: { ...request.payload, text: '/compact now', nativeCommand: true } } }));
+    router.request.mockClear();
     router.request.mockResolvedValue({
       ok: true,
       value: {

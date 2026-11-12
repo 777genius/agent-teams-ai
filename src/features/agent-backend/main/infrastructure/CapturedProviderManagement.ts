@@ -23,6 +23,8 @@ const methods = [
   'extension.pending',
   'credential',
   'credential.lookup',
+  'credential.pending',
+  'credential.resume',
   'oauth.start',
   'oauth.read',
   'oauth.authorization',
@@ -116,7 +118,9 @@ export function captureProviderManagement(options: {
         operation === 'oauth.read' ||
         operation === 'probe.read' ||
         operation === 'probe.cancel' ||
-        operation === 'credential.lookup';
+        operation === 'credential.lookup' ||
+        operation === 'credential.pending' ||
+        operation === 'credential.resume';
       check(retained, 'not-dispatched');
       await start();
       check(retained, 'not-dispatched');

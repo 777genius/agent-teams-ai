@@ -24,6 +24,8 @@ import type {
 } from './executeRuntimeLaunch.js';
 import { readLeadObservation } from './readLeadObservation.js';
 import { createTeamContextPreparation } from './createTeamContextPreparation.js';
+import { assertNativeSessionCommand, nativeSessionCommandAuthorized } from './nativeSessionCommandAdmission.js';
+import { publishNativeCommandOutput } from './publishNativeCommandOutput.js';
 import { projectRuntimeMember } from './projectRuntimeMember.js';
 import type { ProcessCustody } from './processCustody.js';
 import type { TeamMcpCrossTeamPort } from '../mcp/nativeCrossTeamContracts.js';
@@ -198,7 +200,10 @@ export class RuntimeTeamCoordinator {
         readCheckpoint: (reference, request) => this.runtime.readCheckpoint(reference, request),
         observe: (binding, sessionRef, activity) =>
           this.runtime.observeProviderActivity(binding, sessionRef, activity),
-        onProgress: () => this.kick(),
+        onProgress: (entry) => {
+          try { if (!this.sealed) publishNativeCommandOutput(entry, this.runtime); } catch { /* Original output remains recoverable. */ }
+          this.kick();
+        },
       }),
       checkpointBeforeClose: (binding, sessionRef) => {
         const entry = this.entries.get(this.key(binding));
@@ -218,7 +223,8 @@ export class RuntimeTeamCoordinator {
               )
             : undefined);
         if (!entry) return false;
-        if (intent) return entry.team.owner.authorizeDeliveryIntent(intent, action);
+        if (intent) return entry.team.owner.authorizeDeliveryIntent(intent, action) &&
+          ((action !== 'admit' && action !== 'dispatch') || nativeSessionCommandAuthorized(entry, intent));
         return (
           entry.team.owner.authorizeMemberBinding(binding, action) ||
           (action === 'read' &&
@@ -530,6 +536,7 @@ export class RuntimeTeamCoordinator {
           for (const entry of this.entries.values()) {
             if (this.sealed) break;
             try {
+              publishNativeCommandOutput(entry, this.runtime);
               const current = this.runtime.readSession(entry.binding);
               if (
                 current.attached &&
@@ -641,6 +648,14 @@ export class RuntimeTeamCoordinator {
       raw,
       commandId
     );
+  }
+
+  assertNativeMessage(teamId: string, command: import('../team/contracts.js').TeamCommand): void {
+    this.options.assertWriter();
+    const team = this.options.teams.get(teamId);
+    if (!team || this.sealed) throw new RuntimeOwnerError('hold');
+    assertNativeSessionCommand({ team, entries: this.entries.values(), runtime: this.runtime,
+      isCurrent: entry => this.isCurrent(entry) }, command);
   }
 
   private activityProjection(

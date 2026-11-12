@@ -28,6 +28,7 @@ import { projectLaunchSnapshot } from './projectLaunchSnapshot';
 import { projectLeadObservation } from './projectLeadObservation';
 import { isMemberActionRequest, projectMemberActionResult } from './projectMemberActionResult';
 import { projectMemberCheckpoints } from './projectMemberCheckpoints';
+import { projectNativeSessionCommands } from './projectNativeSessionCommands';
 import { projectProcessResult } from './projectProcessResult';
 import { projectReviewResult } from './projectReviewResult';
 import { projectRosterConfiguration, projectRosterReceipt } from './projectRoster';
@@ -255,6 +256,8 @@ function runtime(value: unknown, request: BackendOperationRequest): BackendRunti
       };
     }),
   };
+  if (source.sessionCommands !== undefined)
+    result.sessionCommands = projectNativeSessionCommands(source.sessionCommands, result);
   if (source.attachmentCapabilities !== undefined) {
     if (
       !result.generation ||
