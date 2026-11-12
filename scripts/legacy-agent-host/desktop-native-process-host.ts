@@ -8,8 +8,8 @@ import { startHost } from '../../packages/legacy-agent-host/tests/fixtures/nativ
 import { TEAM_HOST_DISPOSE_TIMEOUT_MS } from '../../packages/legacy-agent-host/src/contracts.ts';
 import { createProcessCustody } from '../../packages/legacy-agent-host/dist/composition/processCustody.js';
 import { createControllerProcessPolicy } from '../../packages/legacy-agent-host/dist/process/ControllerProcessPolicy.js';
+import { createDesktopProcessRootOracle } from './desktop-process-root-oracle.ts';
 import type {
-  RegisteredProcessCapture,
   ProcessObservation,
 } from '../../packages/legacy-agent-host/dist/process/registeredProcessContracts.js';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
@@ -149,28 +149,31 @@ async function qualifyOriginalNativeRegistration(
   assert.equal(primary.label, PROCESS_LABEL);
   assert.equal(primary.capturedByCommand, PROCESS_REGISTER_ID);
   assert.ok(primary.capturedNative, 'canonical original registration supplies root identity');
-  assert.ok(primary.capturedNative.version === 1 || primary.capturedNative.version === 2,
-    'Existing actual SDK fixture selects Darwin custody');
-  // Only the original immutable root is projected into the observation target slot.
-  // No captureRoot/capture/signal call, PID selection, or replacement-root adoption.
-  const rootCapture: RegisteredProcessCapture = {
-    ...structuredClone(primary.capturedNative),
-    target: structuredClone(primary.capturedNative.root),
-  };
   const custody = createProcessCustody(profile.processCustody);
   assert.ok(custody);
-  assert.equal(custody.observe(rootCapture), 'same-live', 'original root oracle before crash');
+  assert.ok(profile.processCustody);
+  const rootOracle = createDesktopProcessRootOracle({ node: fixture.node,
+    capture: primary.capturedNative, selection: profile.processCustody,
+    observe: capture => custody.observe(capture) });
+  const { rootCapture } = rootOracle;
+  assert.equal(rootOracle.observe(), 'same-live', 'original SDK root before any Stop or crash');
+  const linux = primary.capturedNative.version === 3;
+  const adapter = linux ? 'LinuxRegisteredProcess' : 'DarwinRegisteredProcess';
   const oraclePaths = [
     'scripts/legacy-agent-host/desktop-native-process-host.ts',
-    'packages/legacy-agent-host/src/process/DarwinRegisteredProcess.ts',
-    'packages/legacy-agent-host/dist/process/DarwinRegisteredProcess.js',
+    'scripts/legacy-agent-host/desktop-process-root-oracle.ts',
+    `packages/legacy-agent-host/src/process/${adapter}.ts`,
+    `packages/legacy-agent-host/dist/process/${adapter}.js`,
     'packages/legacy-agent-host/dist/composition/processCustody.js',
+    ...(linux ? ['packages/legacy-agent-host/native/registered-process-linux.c',
+      'packages/legacy-agent-host/dist/process/loadProcessNativeArtifact.js',
+      'packages/legacy-agent-host/dist/process/readPackagedProcessArtifact.js',
+      'packages/legacy-agent-host/dist/process/validateProcessRecords.js'] : []),
   ];
-  assert.ok(profile.processCustody);
   const sourceOracle = await Promise.all(
     [
       ...oraclePaths.map((path) => resolve(import.meta.dirname, '../..', path)),
-      ...['manifest.json', 'registered-process.node', 'registered-process-darwin.c'].map((name) =>
+      ...['manifest.json', 'registered-process.node', ...(linux ? [] : ['registered-process-darwin.c'])].map((name) =>
         join(profile.processCustody!.directory, name)
       ),
     ].map(async (path) => ({ path, sha256: await fileDigest(path) }))
@@ -179,6 +182,7 @@ async function qualifyOriginalNativeRegistration(
     original,
     canonicalPrimary: primary,
     rootCapture,
+    ...(linux ? { originalLinuxRoot: rootOracle.rootIdentity } : {}),
     registry: { path: processesPath, sha256: registrySha256 },
     sourceOracle,
     processCustody: profile.processCustody,
@@ -192,7 +196,7 @@ async function qualifyOriginalNativeRegistration(
     originalBackgroundTasks: model.backgroundTasks,
     notificationAcksBeforeCrash: structuredClone(model.notificationAcks),
   };
-  return { receipt: beforeCrash, custody };
+  return { receipt: beforeCrash, custody, rootOracle };
 }
 
 /** Explicit Root GO must include the intentional crash of this original owned Host ChildProcess. */
@@ -256,6 +260,7 @@ export async function qualifyNativeRegistrationThenCrash(
     );
     const { inputId, rootCapture, sourceOracle, canonicalPrimary: primary } = beforeCrash;
     assert.ok(primary.capturedNative);
+    assert.ok(rootCapture, 'historical intentional-crash/Desktop path remains the selected Darwin proof');
     await writeFile(
       join(fixture.root, 'native-process-before-crash.json'),
       JSON.stringify(beforeCrash, null, 2),
@@ -438,15 +443,15 @@ export async function qualifyNativeRegistrationThenStop(
     const lines = text.trim().split('\n').filter(Boolean); assert.ok(lines.length <= 3);
     return lines.map(line => row(JSON.parse(line)));
   };
-  const wait = async (check: () => Promise<boolean>, label: string) => {
+  const wait = async (check: () => Promise<boolean>, label: string, intervalMs = 100) => {
     const deadline = Date.now() + 30_000;
-    do { if (await check()) return; await delay(100); } while (Date.now() < deadline);
+    do { if (await check()) return; await delay(intervalMs); } while (Date.now() < deadline);
     throw new Error(`Original normal process observation exhausted: ${label}; no replay`);
   };
   let failure: unknown;
   try {
     const original = await qualifyOriginalNativeRegistration(fixture, model, host, profile, envelope);
-    const { receipt: before, custody } = original;
+    const { receipt: before, custody, rootOracle } = original;
     proof.original = before; await retain();
     await writeFile(join(fixture.root, 'native-process-before-normal-stop.json'),
       JSON.stringify(before, null, 2), { mode: 0o600, flag: 'wx' });
@@ -487,14 +492,14 @@ export async function qualifyNativeRegistrationThenStop(
     assert.equal(runtime.phase, 'closed'); assert.equal(runtime.custody, 'released');
     proof.runtime = runtime;
     await close();
-    await wait(async () => custody.observe(before.rootCapture) === 'absent', 'original SDK root absent');
+    await wait(async () => rootOracle.observe() === 'absent', 'original SDK root absent', 3000);
     await wait(async () => (await lifecycle('neighbor')).some(event => event.event === 'closed'),
       'original neighbor lifecycle closed during owner cleanup');
     const neighborLifecycle = await lifecycle('neighbor');
     const neighbor = qualifyNativeServiceCompletion('neighbor', before.services.neighbor, neighborLifecycle);
     assert.equal(neighbor.exitReason, 'SIGTERM', 'neighbor TTL is not proof of owner cleanup');
     proof.neighborLifecycle = neighborLifecycle;
-    proof.originalRootObservation = custody.observe(before.rootCapture);
+    proof.originalRootObservation = 'absent';
     proof.originalTargetObservation = custody.observe(before.canonicalPrimary.capturedNative);
     const rows = createControllerProcessPolicy(before.registry.path).readStrict();
     assert.equal(rows.length, 1);

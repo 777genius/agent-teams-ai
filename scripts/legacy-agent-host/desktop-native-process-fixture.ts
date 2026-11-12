@@ -71,7 +71,8 @@ export async function prepareProcessFixture(
 ) {
   const processArtifact = options.processArtifact ?? PROCESS_ARTIFACT;
   if (options.processArtifact) {
-    assert.match(processArtifact.directory, /^\/private\/tmp\/TEST-[^/]+\//);
+    assert.match(processArtifact.directory, process.platform === 'linux'
+      ? /^\/(?:[^/]+\/)*TEST-[^/]+\/[^\0\r\n]*$/ : /^\/private\/tmp\/TEST-[^/]+\//);
     assert.equal(await realpath(processArtifact.directory), processArtifact.directory);
   }
   assert.equal(

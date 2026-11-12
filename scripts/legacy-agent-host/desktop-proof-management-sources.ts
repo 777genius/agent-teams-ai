@@ -181,4 +181,7 @@ export const desktopProofManagementSources = [
   'packages/legacy-agent-host/src/process/LinuxRegisteredProcess.ts',
   'packages/legacy-agent-host/src/process/loadProcessNativeArtifact.ts',
   'packages/legacy-agent-host/native/registered-process-linux.c',
+  'scripts/legacy-agent-host/desktop-claude-native-selection.ts',
+  'scripts/legacy-agent-host/desktop-process-root-oracle.ts',
+  'scripts/legacy-agent-host/qualify-linux-process-sdk.ts',
 ] as const;
