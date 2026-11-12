@@ -94,7 +94,7 @@ export function assertOwnedCdpListener(group: number): number {
   let output: string;
   try {
     output = execFileSync(
-      '/usr/sbin/lsof',
+      process.platform === 'linux' ? '/usr/bin/lsof' : '/usr/sbin/lsof',
       [
         '-nP',
         '-a',

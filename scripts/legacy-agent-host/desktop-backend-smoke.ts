@@ -26,7 +26,7 @@ import { desktopReadbackArtifacts, runDesktopNativeReadback } from './desktop-re
 import { assertCapturedDesktopMetadataAbsent, assertFirstResumeMetadataAbsent, captureDesktopOpenCodeV2ColdMetadata } from './desktop-opencode-v2-cold-metadata.ts';
 import { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
-import { captureDesktopCodexNativeInputs, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
+import { captureDesktopCodexNativeInputs, captureDesktopCodexAccountInput, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
 import { runDesktopF08ReadTimingProof, runDesktopHostRoutingProof } from './desktop-host-routing-proof.ts';
 import { startDesktopCodexQuestionModel } from './desktop-codex-question-model.ts';
 import { prepareDesktopCodexQuestionFixture, prepareDesktopCodexQuestionLaunch, waitDesktopCodexQuestionRenderer } from './desktop-codex-question-fixture.ts';
@@ -100,7 +100,6 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     '1',
     'root must authorize actual pnpm dev:mcp launch'
   );
-  assert.equal(process.platform, 'darwin', 'this captured process evidence uses macOS ps/lsof');
   assert.equal(
     await portOccupied(),
     false,
@@ -109,6 +108,13 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const repo = resolve(import.meta.dirname, '../..');
   const packedRelaunchMode = process.env.LEGACY_DESKTOP_PROOF_MODE === 'packed-app-relaunch-ui';
   const mode = packedRelaunchMode ? 'native-launch-ui' : process.env.LEGACY_DESKTOP_PROOF_MODE ?? 'bridge-diagnostics';
+  const codexAccountMode = ['codex-account-read', 'codex-account-auth', 'codex-login-ui'].includes(mode);
+  assert.ok(process.platform === 'darwin' || (process.platform === 'linux' && codexAccountMode),
+    'Linux Desktop portability is currently qualified only for the bounded Codex account modes');
+  if (process.platform === 'linux') {
+    assert.match(process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '', /^:\d+$/u, 'explicit isolated TEST X display');
+    assert.ok(process.env.LEGACY_DESKTOP_TEST_XAUTHORITY, 'explicit TEST display authorization file');
+  }
   const quitScenario = process.env.LEGACY_DESKTOP_QUIT_SCENARIO;
   assert.ok(quitScenario === undefined || (mode === 'native-quit-ui' && quitScenario === 'pending-open'), 'explicit TEST Quit scenario');
   const startupDiagnosticMode = mode === 'startup-diagnostic-ui';
@@ -124,7 +130,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   conversationModel = model; mixedModels = selectedMixedModels;
   codexResumeModel = selectedCodexResumeModel;
   openCodeLifecycleModel = selectedOpenCodeModel; openCodeReviewModel = selectedOpenCodeReviewModel;
-  const nativeInputs = mixedMode || codexResumeMode ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
+  const nativeInputs = codexAccountMode ? await captureDesktopCodexAccountInput(process.env.LEGACY_DESKTOP_CODEX_PATH!)
+    : mixedMode || codexResumeMode ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
   const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = questionUiMode ? await prepareDesktopBackendFixture(repo, {
     seedUiTask: true, pnpmEntry: pnpm, nativeClaude: { path: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
@@ -156,7 +163,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   if (startupDiagnosticMode || mixedMode) Object.assign(fixture.appEnvironment, { LEGACY_DESKTOP_STARTUP_DIAGNOSTICS: '1' });
   const activitySource = baseFixture.activitySource;
   const require = createRequire(import.meta.url);
-  if (!packed && (questionUiMode || processUiMode || nativeReviewMode || nativeStopMode || readbackMode || launchDialogMode || createConfigMode || legacyImportMode))
+  if (!packed && (codexAccountMode || questionUiMode || processUiMode || nativeReviewMode || nativeStopMode || readbackMode || launchDialogMode || createConfigMode || legacyImportMode))
     await verifyDesktopNativeStopArtifact(repo);
   const cdpLibrary = require('../e2e/comment-notification/cdp.mjs') as CdpLibrary;
   assert.equal(typeof cdpLibrary.CdpClient.connect, 'function');
@@ -180,7 +187,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     const electronPackage = require.resolve('electron/package.json');
     const electronRoot = resolve(electronPackage, '..');
     const electronRelative = (await readFile(join(electronRoot, 'path.txt'), 'utf8')).trim();
-    assert.equal(electronRelative, 'Electron.app/Contents/MacOS/Electron');
+    assert.equal(electronRelative, process.platform === 'linux' ? 'electron' : 'Electron.app/Contents/MacOS/Electron');
     electron = await realpath(join(electronRoot, 'dist', electronRelative));
   }
   assert.ok((await stat(electron)).isFile());
@@ -198,6 +205,14 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     codexResumeModel,
     openCodeLifecycleModel, openCodeReviewModel,
   });
+  if (mode === 'codex-login-ui') {
+    evidence.source = {
+      head: execFileSync('/usr/bin/git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
+      dirty: execFileSync('/usr/bin/git', ['status', '--porcelain', '--untracked-files=no'], { cwd: repo, encoding: 'utf8' }).trim().length > 0,
+    };
+    evidence.scope = 'Existing Electron Codex Settings controls through preload/Main/Host/D and pinned native app-server: fresh browser/device login start, private link/code, copy and cancel. No authenticated account completion.';
+    evidence.excluded = ['authenticated vendor login completion', 'vendor inference', 'personal browser navigation', 'other OS tuples', 'Desktop team launch', 'full Stage1/release/default activation'];
+  }
   if (quitScenario === 'pending-open') {
     evidence.scope = 'Actual native provider open pending, zero inputs, guarded existing Quit API and physical cleanup; explicit TEST setup';
     evidence.excluded = (evidence.excluded as string[]).filter(value => value !== 'pending provider-open');
@@ -235,7 +250,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   );
   // Invoke the pinned pnpm JS entry through selected Node: no /usr/bin/env
   // shebang exec transition can invalidate the captured leader identity.
-  const invocation = packed ? [packed.executable, `--remote-debugging-port=${selectedCdpPort}`] : [fixture.node, pnpm, 'dev:mcp', '--remoteDebuggingPort', String(selectedCdpPort)];
+  const invocation = packed ? [packed.executable, `--remote-debugging-port=${selectedCdpPort}`] : [fixture.node, pnpm, 'dev:mcp', '--remoteDebuggingPort', String(selectedCdpPort), ...(process.platform === 'linux' ? ['--noSandbox'] : [])];
   let app = spawn(invocation[0]!, invocation.slice(1), {
     cwd: packed ? fixture.root : repo,
     env: packed ? { ...fixture.appEnvironment, NODE_ENV: 'production', PATH: join(fixture.root, 'bin') + ':/usr/bin:/bin' } : fixture.appEnvironment,
@@ -290,7 +305,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       ? await captureDesktopOpenCodeV2ColdMetadata(cdp, { root: fixture.root, node: fixture.node, hostEntry: fixture.hostEntry,
         group, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) }) : undefined;
     if (coldMetadata) hostPid = coldMetadata.hostPid;
-    if (['codex-account-read', 'codex-account-auth'].includes(mode)) {
+    if (codexAccountMode) {
       const readyUntil = Date.now() + 60000;
       let initial: Record<string, unknown> | undefined;
       while (Date.now() < readyUntil) {
@@ -565,7 +580,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
             }
           : {}),
       });
-    } else if (['codex-account-read', 'codex-account-auth'].includes(mode)) {
+    } else if (codexAccountMode) {
       await runDesktopCodexAccountProof(cdp, {mode, fixture, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group)});
     } else {
       await runDesktopBackendBridgeProof(cdp, {
@@ -774,6 +789,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     console.log(JSON.stringify({ status: evidence.status, receipt: receiptPath }));
     if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
     if (controlledProcessMode) assert.equal(evidence.status, 'PASS', 'controlled process cold UI proof incomplete; original evidence retained');
+    if (mode === 'codex-login-ui') assert.equal(evidence.status, 'PASS', 'Codex login UI proof incomplete; inspect its retained finite receipt');
     assert.ok(
       !cleanupFailure && remaining !== null && remaining.length === 0,
       'captured group cleanup unconfirmed; receipt retains debt and no further signal is authorized'

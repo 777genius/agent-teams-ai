@@ -22,6 +22,15 @@ export const digest = (bytes: Uint8Array | string): string =>
   createHash('sha256').update(bytes).digest('hex');
 export const fileDigest = async (path: string): Promise<string> => digest(await readFile(path));
 
+/** Official @openai/codex 0.162.0 native packages, qualified independently per tuple. */
+export function desktopCodexSha256(): string {
+  if (process.platform === 'linux' && process.arch === 'x64')
+    return '50ed828f357c655a3c82054d346cab8434f24901f14ec19b8267571bdd008b38';
+  if (process.platform === 'darwin' && process.arch === 'arm64')
+    return '8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57';
+  throw new Error('This Desktop Codex TEST tuple has no qualified native binary pin');
+}
+
 const quoteShellArgument = (value: string): string => "'" + value.replaceAll("'", "'\\''") + "'";
 
 /** Shell bootstrap preserves the captured absolute Node even inside an app bundle path. */
@@ -59,6 +68,7 @@ export async function prepareDesktopBackendFixture(
     taskBoardGroup?: boolean;
     seedUiPreferences?: boolean;
     seedCodexApiKey?: boolean;
+    observeCodexLoginOpen?: boolean;
     launchDialog?: boolean;
     creation?: boolean;
     reviewUi?: boolean;
@@ -74,7 +84,7 @@ export async function prepareDesktopBackendFixture(
     throw new Error('Embedded V2 requires its explicit captured TEST fixture');
   const node =
     options.candidateRuntime?.nodeExecutable ??
-    (await realpath(options.nativeOpenCodeV2 ? process.execPath :
+    (await realpath(options.nativeOpenCodeV2 || process.platform === 'linux' ? process.execPath :
       join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')));
   const hostEntry =
     options.candidateRuntime?.hostEntry ??
@@ -130,6 +140,16 @@ export async function prepareDesktopBackendFixture(
     ? "#!/bin/sh\nprintf 'TEST refuses package-manager execution in packed app\\n' >&2\nexit 78\n"
     : `#!/bin/sh\nexec ${quoteShellArgument(node)} ${quoteShellArgument(pnpmEntry)} "$@"\n`;
   await writeFile(join(root, 'bin/pnpm'), pnpmStubSource, { mode: 0o700 });
+  if (options.observeCodexLoginOpen && process.platform === 'linux') {
+    // Exercise Electron's real openExternal dispatch without opening a personal browser.
+    // The TEST OS opener retains only a digest, never the private URL or device code.
+    await writeFile(join(root, 'bin/xdg-open'), desktopNodeScriptHeader(node) +
+      `import {appendFileSync} from 'node:fs';\nimport {createHash} from 'node:crypto';\n` +
+      `const args=process.argv.slice(2);let url;try{url=args.length===1?new URL(args[0]):null}catch{process.exit(78)}\n` +
+      `if(!url||url.protocol!=='https:'||url.hostname!=='auth.openai.com'||url.username||url.password)process.exit(78);\n` +
+      `appendFileSync(${JSON.stringify(join(root, 'external-open.jsonl'))},JSON.stringify({sha256:createHash('sha256').update(url.href).digest('hex')})+'\\n',{mode:0o600});\n`,
+    { mode: 0o700, flag: 'wx' });
+  }
   if (options.approvalUi) {
     for (const [name, content] of [
       ['approval-preview.txt', 'TEST_ORIGINAL_PRIVATE_BYTES\n'],
@@ -420,8 +440,7 @@ export async function prepareDesktopBackendFixture(
     if (
       binary !== options.nativeCodex.path ||
       (await fileDigest(binary)) !== options.nativeCodex.sha256 ||
-      options.nativeCodex.sha256 !==
-        '8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57'
+      options.nativeCodex.sha256 !== desktopCodexSha256()
     )
       throw new Error('Unqualified TEST Codex executable');
     await writeFile(
@@ -752,6 +771,11 @@ export function desktopBackendEnvironment(
     PATH: `${join(root, 'bin')}:${dirname(node)}:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin`,
     SHELL: join(root, 'bin/shell-env'),
     NODE_ENV: 'development',
+    ...(process.platform === 'linux' ? {
+      DISPLAY: process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '',
+      XAUTHORITY: process.env.LEGACY_DESKTOP_TEST_XAUTHORITY ?? '',
+    } : {}),
+    ...(process.env.LEGACY_DESKTOP_COREPACK_HOME ? { COREPACK_HOME: process.env.LEGACY_DESKTOP_COREPACK_HOME } : {}),
     NO_COLOR: '1',
     // A TEST HOME changes pnpm's store lookup. Report drift without installing
     // into the frozen worktree; the harness verifies its selected archive bytes.

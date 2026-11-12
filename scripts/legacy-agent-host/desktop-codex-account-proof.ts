@@ -3,6 +3,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { bounded } from './desktop-proof-bounds.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
+import { runDesktopCodexLoginUiProof } from './desktop-codex-login-ui-proof.ts';
 /** Original Codex account diagnostic mode; keeps the captured renderer and exact operation sequence. */
 export async function runDesktopCodexAccountProof(
   cdp: UiCdpPort,
@@ -18,12 +19,13 @@ export async function runDesktopCodexAccountProof(
     assert.ok(value && typeof value === 'object' && !Array.isArray(value));
     return value as Record<string, unknown>;
   };
-  assert.ok(['codex-account-read', 'codex-account-auth'].includes(mode));
+  assert.ok(['codex-account-read', 'codex-account-auth', 'codex-login-ui'].includes(mode));
   assert.ok(
     process.env.LEGACY_DESKTOP_CODEX_PATH,
     'metadata proof needs the pinned native TEST profile'
   );
   options.assertOwnedRenderer();
+  if (mode === 'codex-login-ui') return runDesktopCodexLoginUiProof(cdp, options);
   if (mode === 'codex-account-auth') {
     const before = object(evidence.codexInitialAccount);
     assert.equal(object(before.managedAccount).type, 'api_key');
