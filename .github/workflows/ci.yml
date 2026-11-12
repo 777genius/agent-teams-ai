@@ -602,6 +602,11 @@ jobs:
           - mode: native-review-ui
             label: native review and cold readback
             readback: native-review-readback-ui
+          - mode: native-review-ui
+            variant: native-v2-review-ui
+            label: OpenCode V2 native Review and cold readback
+            opencode_generation: v2
+            readback: native-review-readback-ui
           - mode: task-board-cross-team-ui
             label: existing Task board and cross-Team controls
     env:
@@ -808,6 +813,12 @@ jobs:
           const receipt = JSON.parse(readFileSync(path, 'utf8'));
           assert.equal(receipt.mode, expectedMode);
           assert.equal(receipt.status, 'PASS', 'INCOMPLETE remains an acceptance failure');
+          if (phase === 'desktop' && expectedMode === 'native-review-ui' && process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2') {
+            assert.equal(receipt.nativeReviewUiProof?.provider, 'opencode-v2');
+            assert.equal(receipt.nativeReviewUiProof?.status, 'PASS');
+            assert.equal(receipt.nativeReviewUiProof?.events?.length, 1);
+            assert.equal(receipt.nativeReviewUiProof.events[0].nativeCaptureProof.kind, 'opencode-update-patch-v2');
+          }
           if (phase === 'desktop' && expectedMode === 'native-resume-ui') {
             const provider = process.env.LEGACY_DESKTOP_RESUME_PROVIDER || 'claude';
             assert.equal(receipt.resumeProvider, provider);
@@ -868,8 +879,8 @@ jobs:
         env:
           LEGACY_NATIVE_MIXED_HOST_GO: '1'
           LEGACY_NATIVE_MIXED_RESTORE_GO: '1'
-          LEGACY_NATIVE_PROVIDER_ARTIFACT: vendor/provider-migration/opencode-v2-host-b0ed6a29/agent-teams-provider-implementations-0.0.0.tgz
-          LEGACY_NATIVE_PROVIDER_SHA256: 27076be24ab9ed0a76bfdc639e88e2906f3daa0e5c86de11de60fb02900082e7
+          LEGACY_NATIVE_PROVIDER_ARTIFACT: vendor/provider-migration/opencode-v2-host-c8e81cce/agent-teams-provider-implementations-0.0.0.tgz
+          LEGACY_NATIVE_PROVIDER_SHA256: 0101298ac680448a4dec6b60c40e297a13caa484d453c47cb4a9c957e4ebbba8
         run: |
           set -euo pipefail
           unset LEGACY_NATIVE_MIXED_PEERS_GO LEGACY_NATIVE_MIXED_CROSS_TEAM_GO

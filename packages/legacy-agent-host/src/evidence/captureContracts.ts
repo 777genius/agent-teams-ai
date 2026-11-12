@@ -26,6 +26,7 @@ export interface ClaudeNativeFileEffectProof {
 export type NativeFileEffectProof =
   | ClaudeNativeFileEffectProof
   | import('./codexCaptureContracts.js').CodexUpdatePatchProof
+  | import('./opencodeCaptureContracts.js').OpenCodeV2UpdatePatchProof
   | import('./opencodeCaptureContracts.js').OpenCodeUpdatePatchProof;
 export interface FileImage {
   readonly exists?: boolean;

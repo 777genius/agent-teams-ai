@@ -151,7 +151,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     const envelope = (commandId: string, payload: unknown) => ({ commandId, binding, payload });
     host = start();
     await host.rpc('host.handshake', { protocolVersion: 1 });
-    const opened = await host.rpc('runtime.open', envelope('TEST-open', { memberId: 'carol-id' }));
+    // Observe the existing 120-second embedded startup plus MCP readiness; never retry the intent.
+    const opened = await host.rpc('runtime.open', envelope('TEST-open', { memberId: 'carol-id' }), 180_000);
     assert.equal(opened.ok, true, JSON.stringify(opened));
     assert.equal(record(opened.value).nativeReady, true, JSON.stringify(opened));
     steps.push('original_host_embedded_native_and_mcp_ready');
@@ -225,7 +226,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     const restored = await host.rpc('runtime.restore', envelope('TEST-restore', {
       memberId: 'carol-id', reference: record(checkpoint.value).reference,
       expectedGeneration: record(opened.value).generation,
-    }));
+    }), 180_000);
     assert.equal(restored.ok, true, JSON.stringify(restored));
     assert.equal(record(restored.value).nativeReady, true);
     assert.notEqual(record(restored.value).generation, record(opened.value).generation);

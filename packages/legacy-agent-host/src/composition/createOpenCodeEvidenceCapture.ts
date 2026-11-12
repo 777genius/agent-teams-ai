@@ -63,6 +63,7 @@ export function createOpenCodeEvidenceCapture(options: {
         throw new Error('Captured evidence generation changed');
     };
     return createOpenCodeInputEvidenceCapture({
+      ...(entry.profile.nativeGeneration === 'v2' ? { nativeGeneration: 'v2' } : {}),
       captured: {
         binding,
         profileId: options.profileId,

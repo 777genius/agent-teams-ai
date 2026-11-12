@@ -9,6 +9,7 @@ import { assertNativeReviewPersistence } from './desktop-native-review-continuat
 import { readNativeReviewRuntimeRecords } from './desktop-native-review-runtime.ts';
 import { readNativeReviewSeed } from './desktop-native-review-fixture.ts';
 import { REVIEW_TASK_SUBJECT } from './desktop-native-review-model.ts';
+import { V2_REVIEW_SUBJECT } from './desktop-opencode-v2-review-model.ts';
 import {
   createDesktopReviewHunkControls,
   readDesktopReviewDecisions,
@@ -71,7 +72,7 @@ export async function runDesktopNativeReviewReadback(
   );
   const review = createDesktopReviewHunkControls(cdp, {
     taskId,
-    subject: REVIEW_TASK_SUBJECT,
+    subject: original.provider === 'opencode-v2' ? V2_REVIEW_SUBJECT : REVIEW_TASK_SUBJECT,
     fileLabel: 'native-review.ts',
     assertOwnedRenderer: options.assertOwnedRenderer,
     step: (value) => {

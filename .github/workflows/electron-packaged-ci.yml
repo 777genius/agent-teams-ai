@@ -83,8 +83,6 @@ jobs:
     env:
       OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
       OPENCODE_V2_TEST_PLATFORM: ${{ matrix.platform }}
-      OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ runner.temp }}/opencode-v2-packaged-inputs.json
-      OPENCODE_V2_PACKAGED_RECEIPT: ${{ runner.temp }}/opencode-v2-packaged.json
 
     steps:
       - uses: actions/checkout@v6
@@ -152,6 +150,7 @@ jobs:
       - name: Prepare actual pinned V2 Bun, engine and admitted process custody
         env:
           GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+          OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ runner.temp }}/opencode-v2-packaged-inputs.json
         run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
       - name: Prefill pinned macOS arm64 Host Node archive
         if: matrix.platform == 'darwin-arm64'
@@ -197,6 +196,8 @@ jobs:
         # in finally. No parent shell may keep the Windows checkout as its cwd.
         shell: bash
         working-directory: ${{ runner.temp }}
+        env:
+          OPENCODE_V2_PACKAGED_RECEIPT: ${{ runner.temp }}/opencode-v2-packaged.json
         run: node "${{ github.workspace }}/scripts/legacy-agent-host/run-packaged-opencode-v2.ts" "${{ matrix.bundle }}" "${{ matrix.platform }}"
       - name: Preserve exact packaged Host evidence
         if: always()

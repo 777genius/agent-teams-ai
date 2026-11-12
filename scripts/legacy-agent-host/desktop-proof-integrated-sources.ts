@@ -1,5 +1,15 @@
 /** Finite source closure of the integrated lifecycle, WorkSync and member-action checkpoint. */
 export const desktopProofIntegratedSources = [
+  'packages/legacy-agent-host/src/evidence/qualifyOpenCodeV2FileChange.ts',
+  'packages/legacy-agent-host/src/evidence/OpenCodeInputEvidenceWriter.ts',
+  'packages/legacy-agent-host/src/evidence/captureContracts.ts',
+  'packages/legacy-agent-host/src/evidence/opencodeCaptureContracts.ts',
+  'packages/legacy-agent-host/src/composition/createOpenCodeEvidenceCapture.ts',
+  'packages/legacy-agent-host/tests/opencode-v2-update-patch.test.ts',
+  'packages/task-change-ledger/src/nativeCaptureProof.ts',
+  'packages/task-change-ledger/tests/opencode-v2-native-proof.test.ts',
+  'scripts/legacy-agent-host/desktop-opencode-v2-review-model.ts',
+  'scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-opencode-v2-lifecycle.test.ts',
   'scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts',
   'scripts/legacy-agent-host/run-packaged-opencode-v2.ts',

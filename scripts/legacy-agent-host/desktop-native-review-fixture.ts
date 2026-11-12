@@ -21,7 +21,7 @@ export interface NativeReviewSeed {
 }
 const digest = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 /** Index-only dirty TEST setup. No Tasks, events, native inputs or ledger rows are fabricated. */
-export async function prepareNativeReviewWorkspace(root: string): Promise<void> {
+export async function prepareNativeReviewWorkspace(root: string, provider: 'claude' | 'opencode-v2' = 'claude'): Promise<void> {
   assert.equal(await realpath(root), root);
   assert.match(basename(root), /^TEST-desktop-backend-[A-Za-z0-9]+$/);
   const workspace = join(root, 'workspace'),
@@ -44,14 +44,15 @@ export async function prepareNativeReviewWorkspace(root: string): Promise<void> 
     mode: 0o600,
     flag: 'wx',
   });
-  const partialCoverage = {
+  const partialCoverage = provider === 'claude' ? {
     failedPath: join(workspace, 'native-review-failed.txt'), failedBefore: 'FAILED_BEFORE\n', failedAfter: 'FAILED_BEFORE\nFAILED\nFAILED_HOOK\n',
     failureHookPath: join(workspace, 'native-review-failure-hook-side.txt'),
     failureHookBefore: 'FAILURE_HOOK_BEFORE\n', failureHookAfter: 'FAILURE_HOOK_BEFORE\nFAILURE_HOOK_LATE\n',
     backgroundPath: join(workspace, 'native-review-background.txt'), backgroundBefore: 'BACKGROUND_BEFORE\n', backgroundAfter: 'BACKGROUND_BEFORE\nBACKGROUND\n',
     hookSidePath: join(workspace, 'native-review-hook-side.txt'), hookBefore: 'HOOK_BEFORE\n', hookAfter: 'HOOK_BEFORE\nHOOK_LATE\n',
     writePath: join(workspace, 'native-review-write.txt'), hookLog: join(root, 'native-review-post-hook.ndjson'),
-  };
+  } : undefined;
+  if (partialCoverage) {
   for (const [path, content] of [[partialCoverage.failedPath, partialCoverage.failedBefore],
     [partialCoverage.backgroundPath, partialCoverage.backgroundBefore], [partialCoverage.hookSidePath, partialCoverage.hookBefore],
     [partialCoverage.failureHookPath, partialCoverage.failureHookBefore]] as const)
@@ -67,9 +68,10 @@ export async function prepareNativeReviewWorkspace(root: string): Promise<void> 
     PostToolUse: [{ matcher: 'Write', hooks: [command] }],
     PostToolUseFailure: [{ matcher: 'Bash', hooks: [command] }],
   } }), { mode: 0o600, flag: 'wx' });
+  }
   const seed: NativeReviewSeed = {
     schemaVersion: 1,
-    partialCoverage,
+    ...(partialCoverage ? { partialCoverage } : {}),
     filePath,
     index,
     before,

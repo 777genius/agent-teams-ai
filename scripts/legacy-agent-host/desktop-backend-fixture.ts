@@ -473,7 +473,7 @@ export async function prepareDesktopBackendFixture(
     team.grants.push({ principalId: member.principalId, memberName: 'alice',
       permissions: ['read', 'task.write', 'message.write'] });
     team.savedSettings = { cwd: member.cwd, providerId: 'opencode',
-      model: `${member.nativeOptions.providerId}/${member.model}`, skipPermissions: false };
+      model: `${member.nativeOptions.providerId}/${member.model}`, skipPermissions: options.nativeReviewUi === true };
     if (options.launchDialog) team.members[0]!.role = 'lead';
     profile.runtime = { members: [member],
       ...(options.creation ? { providerTemplates: [structuredClone(member)] } : {}) };
@@ -575,7 +575,7 @@ export async function prepareDesktopBackendFixture(
     if (!uiSeed) throw new Error('Review UI needs its canonical captured Task seed');
     await prepareDesktopReviewLedger(root, uiSeed.taskId);
   }
-  if (options.nativeReviewUi) await prepareNativeReviewWorkspace(root);
+  if (options.nativeReviewUi) await prepareNativeReviewWorkspace(root, options.nativeOpenCodeV2 ? 'opencode-v2' : 'claude');
   if (options.stoppedImportUi)
     await prepareDesktopStoppedImport(root, {
       priorRun: process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1',
@@ -626,7 +626,9 @@ export async function prepareDesktopBackendFixture(
           // This TEST profile verifies workflows, not startup latency. Cold source
           // startup competes with Electron builds; timeout semantics have focused tests.
           startupTimeoutMs: 60_000,
-          requestTimeoutMs: 60_000,
+          // The embedded V2 startup has its own 120s bound, including graph
+          // verification. Its TEST caller must let that original bound settle.
+          requestTimeoutMs: options.nativeOpenCodeV2 ? 180_000 : 60_000,
           writeTimeoutMs: 5000,
           shutdownTimeoutMs: 10_000,
         },

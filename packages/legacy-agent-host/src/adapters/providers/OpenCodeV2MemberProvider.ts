@@ -69,6 +69,7 @@ export function createOpenCodeV2MemberProvider(
   const originalEndpointBinding = runtimeDigest(context.endpoint.binding);
   const originalProfile = runtimeDigest(context.profile);
   const capturedInstructions = context.instructions;
+  const capturedEvidence = context.opencodeEvidence;
   // Retain original Host authority before a native owner getter can swap
   // these callbacks. Binding via Function.prototype.bind itself invokes
   // attacker-controlled .name/.length getters during capture.
@@ -297,6 +298,7 @@ export function createOpenCodeV2MemberProvider(
           generation: request.generation,
         },
         limits: profile.limits,
+        ...(embedded && capturedEvidence ? { capture: capturedEvidence } : {}),
         beforeRequest: requests.beforeRequest,
         readPassword: () => {
           // Native transports may request credentials after a submit started

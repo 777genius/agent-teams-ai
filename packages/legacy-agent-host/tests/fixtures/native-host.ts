@@ -213,14 +213,19 @@ export function startHost(options: {
   }
   return {
     child,
-    async rpc(method: string, params: unknown): Promise<Record<string, unknown>> {
+    async rpc(method: string, params: unknown, timeoutMs = 60_000): Promise<Record<string, unknown>> {
       assert.ok(!exited && stdoutValid);
+      assert.ok(
+        timeoutMs === 60_000 ||
+          (timeoutMs === 180_000 && (method === 'runtime.open' || method === 'runtime.restore')),
+        'Only native startup may use the extended TEST observation window'
+      );
       const id = ++nextId;
       const response = new Promise<unknown>((resolve, reject) => {
         const timer = setTimeout(() => {
           pending.delete(id);
-          reject(new Error(`Host RPC ${method} exceeded 60 seconds; intent retained`));
-        }, 60_000);
+          reject(new Error(`Host RPC ${method} exceeded ${timeoutMs / 1000} seconds; intent retained`));
+        }, timeoutMs);
         pending.set(id, { resolve, reject, timer });
       });
       child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');

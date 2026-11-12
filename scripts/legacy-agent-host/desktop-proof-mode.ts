@@ -9,6 +9,7 @@ import { startDesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { startDesktopApprovalModel } from './desktop-approval-model.ts';
 import { LEGACY_IMPORT_TEAM } from './desktop-stopped-import-fixture.ts';
 import { startNativeReviewModel } from './desktop-native-review-model.ts';
+import { startOpenCodeV2ReviewModel } from './desktop-opencode-v2-review-model.ts';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -179,7 +180,9 @@ export async function prepareDesktopProofMode(
   assert.ok(openCodeGeneration === undefined || openCodeGeneration === '' || openCodeGeneration === 'v2',
     'explicit known Desktop OpenCode generation');
   const openCodeLifecycleMode = openCodeGeneration === 'v2' &&
-    ['native-resume-ui', 'native-stop-ui', 'native-quit-ui', 'native-quit-readback-ui'].includes(mode);
+    ['native-resume-ui', 'native-stop-ui', 'native-quit-ui', 'native-quit-readback-ui', 'native-review-ui', 'native-review-readback-ui'].includes(mode);
+  const openCodeReviewMode = openCodeGeneration === 'v2' && nativeReviewMode;
+  if (openCodeReviewMode) assert.equal(nativeReviewContinuationMode, false);
   if (resumeProvider === 'opencode') assert.ok(resumeMode && openCodeLifecycleMode);
   if (openCodeLifecycleMode && resumeMode) assert.equal(resumeProvider, 'opencode');
   const mixedModels = mixedMode ? await startDesktopMixedModels(fixtureRoot,
@@ -257,12 +260,24 @@ export async function prepareDesktopProofMode(
       return member.principalId;
     },
   }) : undefined;
-  const openCodeLifecycleModel = openCodeLifecycleMode && !readbackMode ? await startOpenCodeModel({
+  const openCodeLifecycleModel = openCodeLifecycleMode && !openCodeReviewMode && !readbackMode ? await startOpenCodeModel({
     nativeGeneration: 'v2', memberName: 'alice', uiGeneratedMessageIds: true,
     captureHistoryMarkers: resumeMode, allowModelProbes: resumeMode,
     holdInitialTurnResponse: mode === 'native-quit-ui',
     principalId: () => {
       if (!resumeMode) return 'alice-session';
+      const state = record(JSON.parse(readFileSync(join(fixtureRoot(), 'hoststore/teams/test-desktop-backend/.host-owner/state.json'), 'utf8')));
+      assert.ok(Array.isArray(state.runtimeCaptures) && state.runtimeCaptures.length === 1);
+      const members = record(state.runtimeCaptures[0]).members;
+      assert.ok(Array.isArray(members) && members.length === 1);
+      const member = record(members[0]); assert.equal(member.memberId, 'alice-id');
+      assert.ok(typeof member.principalId === 'string' && member.principalId.startsWith('agent:'));
+      return member.principalId;
+    },
+  }) : undefined;
+  const openCodeReviewModel = openCodeReviewMode && !nativeReviewReadbackMode ? await startOpenCodeV2ReviewModel({
+    workspace: () => join(fixtureRoot(), 'workspace'),
+    principalId: () => {
       const state = record(JSON.parse(readFileSync(join(fixtureRoot(), 'hoststore/teams/test-desktop-backend/.host-owner/state.json'), 'utf8')));
       assert.ok(Array.isArray(state.runtimeCaptures) && state.runtimeCaptures.length === 1);
       const members = record(state.runtimeCaptures[0]).members;
@@ -455,5 +470,6 @@ export async function prepareDesktopProofMode(
     codexResumeModel,
     openCodeLifecycleMode,
     openCodeLifecycleModel,
+    openCodeReviewModel,
   };
 }

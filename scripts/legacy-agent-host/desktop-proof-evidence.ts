@@ -7,6 +7,7 @@ import type { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
 import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
 import type { startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
+import type { startOpenCodeV2ReviewModel } from './desktop-opencode-v2-review-model.ts';
 export async function desktopProofEvidence(options: {
   mode: string;
   fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>;
@@ -20,6 +21,7 @@ export async function desktopProofEvidence(options: {
   conversationModel?: Awaited<ReturnType<typeof startNativeTeamModel>> | undefined;
   codexResumeModel?: Awaited<ReturnType<typeof startCodexModel>> | undefined;
   openCodeLifecycleModel?: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
+  openCodeReviewModel?: Awaited<ReturnType<typeof startOpenCodeV2ReviewModel>> | undefined;
 }): Promise<Record<string, unknown>> {
   const {
     mode,
@@ -33,6 +35,7 @@ export async function desktopProofEvidence(options: {
     conversationModel,
     codexResumeModel,
     openCodeLifecycleModel,
+    openCodeReviewModel,
   } = options;
   const resumeEvidence: Record<string, unknown> = {};
   if (mode === 'native-resume-ui') {
@@ -63,6 +66,11 @@ export async function desktopProofEvidence(options: {
   return {
     status: 'INCOMPLETE',
     mode,
+    ...(openCodeReviewModel ? { nativeProvider: 'opencode', nativeGeneration: 'v2', model: {
+      observations: openCodeReviewModel.observations, probes: openCodeReviewModel.probes,
+      failures: openCodeReviewModel.failures,
+      inference: 'Local scripted model; original V2 tools and Host own every file and Task effect',
+    } } : {}),
     ...resumeEvidence,
     ...(openCodeLifecycleModel ? { nativeProvider: 'opencode', nativeGeneration: 'v2', model: {
       observations: openCodeLifecycleModel.observations, probes: openCodeLifecycleModel.probes,
