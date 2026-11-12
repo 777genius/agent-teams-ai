@@ -552,14 +552,17 @@ jobs:
         shell: bash
     env:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
-      TMPDIR: ${{ runner.temp }}
       OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
       OPENCODE_V2_TEST_PLATFORM: linux-x64
-      OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ runner.temp }}/retained-opencode-v2-inputs.json
-      OPENCODE_V1_V2_INPUTS_RECEIPT: ${{ runner.temp }}/retained-opencode-inputs.json
-      OPENCODE_V1_V2_COEXISTENCE_RECEIPT: ${{ runner.temp }}/retained-opencode-coexistence.json
       OPENCODE_V1_V2_RETAINED_CUSTODY_SOURCE: ${{ github.workspace }}/.runtime-download/TEST-retained-runtime-source
     steps:
+      - name: Bind private TEST receipt paths after runner allocation
+        run: |
+          set -euo pipefail
+          printf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT=%s/retained-opencode-v2-inputs.json\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'OPENCODE_V1_V2_INPUTS_RECEIPT=%s/retained-opencode-inputs.json\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'OPENCODE_V1_V2_COEXISTENCE_RECEIPT=%s/retained-opencode-coexistence.json\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}

@@ -21,11 +21,12 @@ export async function selectedLinuxProcesses(executable: string) {
   for (const name of await readdir('/proc')) {
     if (!/^[0-9]+$/.test(name)) continue;
     try {
+      if ((await lstat(`/proc/${name}`)).uid !== process.getuid!()) continue;
       const identity = linuxProcessIdentity(Number(name));
       if (identity.state !== 'Z' && await readlink(`/proc/${name}/exe`) === executable &&
         linuxProcessIdentity(Number(name)).birth === identity.birth) values.push(identity);
     } catch (error) {
-      if (!['ENOENT', 'ESRCH', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error;
+      if (!['ENOENT', 'ESRCH'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error;
     }
   }
   return values;

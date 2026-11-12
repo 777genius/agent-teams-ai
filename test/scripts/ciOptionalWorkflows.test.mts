@@ -102,6 +102,9 @@ test('selected retained V1/Host V2 acceptance is required by the existing Full q
   assert.match(gate, /needs: \[[^\]]*retained-opencode-coexistence[^\]]*\]/);
   assert.match(gate, /RETAINED_COEXISTENCE_RESULT: \$\{\{ needs\.retained-opencode-coexistence\.result \}\}/);
   assert.match(gate, /run: test "\$RETAINED_COEXISTENCE_RESULT" = success/);
+  assert.doesNotMatch(job.split('\n    steps:\n')[0], /\$\{\{\s*runner\./,
+    'runner context is unavailable before a job is allocated');
+  assert.match(job, /printf 'TMPDIR=%s\\n' "\$RUNNER_TEMP" >> "\$GITHUB_ENV"/);
   assert.doesNotMatch(job, /continue-on-error:/);
   assert.match(job, /OPENCODE_V1_V2_COEXISTENCE_GO: '1'/);
   assert.match(job, /node --test scripts\/legacy-agent-host\/desktop-retained-opencode-coexistence\.native\.ts/);
