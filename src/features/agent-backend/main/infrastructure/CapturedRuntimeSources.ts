@@ -2,6 +2,7 @@ import {
   runtimeSourceCandidateSchema,
   runtimeSourceGrantSchema,
   runtimeSourcePublicationSchema,
+  runtimeSourceRefusalSchema,
   runtimeSourceSummarySchema,
 } from '@agent-teams/legacy-agent-host/runtime-sources';
 
@@ -13,8 +14,16 @@ import type {
   RuntimeSourceCandidate,
   RuntimeSourceGrant,
   RuntimeSourcePublication,
+  RuntimeSourceRefusal,
   RuntimeSourceSummary,
 } from '@agent-teams/legacy-agent-host/runtime-sources';
+
+export class CapturedRuntimeSourceError extends BackendRoutingError {
+  constructor(readonly reason: RuntimeSourceRefusal) {
+    super('hold', 'unknown');
+    this.message = `Runtime source selection: ${reason}`;
+  }
+}
 
 /** Private Main port for an existing descriptor grant; it is never exposed through generic management invoke. */
 export interface CapturedRuntimeSources {
@@ -83,6 +92,10 @@ export function captureRuntimeSources(options: {
     ) {
       const code =
         reply && typeof reply === 'object' && !Array.isArray(reply) ? reply.code : undefined;
+      const reason = runtimeSourceRefusalSchema.safeParse(
+        reply && typeof reply === 'object' && !Array.isArray(reply) ? reply.reason : undefined
+      );
+      if (reason.success) throw new CapturedRuntimeSourceError(reason.data);
       throw new BackendRoutingError(code === 'conflict' ? 'binding-conflict' : 'hold', 'unknown');
     }
     return reply.value;

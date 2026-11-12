@@ -128,7 +128,7 @@ export function createTeamHost(
     const providerManagement = createHostProviderManagementComposition(profile, () => {
       if (sealed) throw new ManagementCommandError('held');
       lease.assertCurrent();
-    }, snapshot => emitOAuthProgress?.(snapshot), processCustody);
+    }, snapshot => emitOAuthProgress?.(snapshot), processCustody, () => lease.assertCurrent());
     management = providerManagement.management;
     const sources = providerManagement.sources;
     const teams = new Map<string, HostedTeam>();
@@ -756,6 +756,7 @@ export function createTeamHost(
         sealed = true;
         runtime?.seal();
         management?.seal();
+        sources?.seal();
       },
       async onDispose() {
         review.seal();
@@ -763,6 +764,7 @@ export function createTeamHost(
           const results = await Promise.allSettled([
             runtime?.close(),
             management?.close(),
+            sources?.close(),
             workSync.close(),
           ]);
           const backups = await Promise.allSettled([lifecycle.shutdown()]);

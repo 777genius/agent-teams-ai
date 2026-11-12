@@ -1,6 +1,9 @@
 import { isAbsolute, resolve } from 'node:path';
 import { z } from 'zod';
 import { openCodeV2EmbeddedProfileSchema } from './openCodeV2EmbeddedProfile.js';
+import { runtimeSourceRefusalSchema } from '../management/runtimeSourceVerification.js';
+export { runtimeSourceRefusalSchema };
+export type { RuntimeSourceRefusal } from '../management/runtimeSourceVerification.js';
 import type { RuntimeMemberProfile } from './runtimeProfile.js';
 
 const id = z
@@ -15,6 +18,14 @@ const path = z
   .max(8192)
   .refine((value) => !value.includes('\0') && isAbsolute(value) && resolve(value) === value);
 const executable = z.object({ path, sha256: hash }).strict();
+const nativeVersion = z.string().regex(/^(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})$/);
+const nativeCli = z
+  .object({
+    executable,
+    version: nativeVersion,
+    generation: z.enum(['v1', 'v2']).optional(),
+  })
+  .strict();
 const teamScope = z.object({ teamId: id, projectId: id, workspaceId: id }).strict();
 export type RuntimeSourceTeamScope = z.infer<typeof teamScope>;
 const embeddedDelivery = z
@@ -49,6 +60,8 @@ export const runtimeSourceCandidateSchema = z
     sourceKind: z.enum(['bundled', 'app-managed', 'path', 'override']),
     executable,
     embedded: embeddedDelivery.optional(),
+    /** The CLI selecting the runtime generation; for embedded V2 it is not the Bun executor. */
+    nativeCli: nativeCli.optional(),
   })
   .strict();
 export type RuntimeSourceCandidate = z.infer<typeof runtimeSourceCandidateSchema>;
@@ -70,11 +83,16 @@ export type RuntimeSourceSummary = z.infer<typeof runtimeSourceSummarySchema>;
 export const runtimeSourcePublicationSchema = z
   .object({
     commandId: id,
-    phase: z.enum(['prepared', 'published']),
+    phase: z.enum(['prepared', 'verifying', 'verified', 'held', 'published']),
     selection: runtimeSourceSummarySchema.optional(),
+    reason: runtimeSourceRefusalSchema.optional(),
   })
   .strict()
-  .refine((value) => (value.phase === 'published') === (value.selection !== undefined));
+  .refine(
+    (value) =>
+      (value.phase === 'published') === (value.selection !== undefined) &&
+      (value.reason === undefined || value.phase === 'held')
+  );
 export type RuntimeSourcePublication = z.infer<typeof runtimeSourcePublicationSchema>;
 
 export const publishRuntimeSourceSchema = z

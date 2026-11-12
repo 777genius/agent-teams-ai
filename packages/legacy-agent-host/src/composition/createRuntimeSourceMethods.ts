@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ManagementCommandError } from '../management/commandRecords.js';
+import { RuntimeSourceAdmissionError } from './runtimeSourceQualification.js';
 import type { HostMethod } from '../index.js';
 import type { JsonValue } from '../contracts.js';
 import type { RuntimeSourceIndex } from './RuntimeSourceIndex.js';
@@ -31,6 +32,7 @@ export function createRuntimeSourceMethods(
           } catch (error) {
             return {
               ok: false,
+              ...(error instanceof RuntimeSourceAdmissionError ? { reason: error.reason } : {}),
               code:
                 error instanceof ManagementCommandError
                   ? error.code

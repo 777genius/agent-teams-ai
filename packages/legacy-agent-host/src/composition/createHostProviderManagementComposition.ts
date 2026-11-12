@@ -10,10 +10,14 @@ export function createHostProviderManagementComposition(
   profile: TeamHostProfile,
   assertWriter: () => void,
   onOAuthProgress: (snapshot: ProviderOAuthSnapshot) => void,
-  processCustody?: RegisteredProcessRootSource
+  processCustody?: RegisteredProcessRootSource,
+  assertCleanupWriter = assertWriter
 ) {
   const sources = profile.management?.length
-    ? new RuntimeSourceIndex(profile, assertWriter)
+    ? new RuntimeSourceIndex(profile, assertWriter, {
+        assertCleanupWriter,
+        ...(processCustody ? { processCustody } : {}),
+      })
     : undefined;
   const profiles = [
     ...(profile.management ?? []),

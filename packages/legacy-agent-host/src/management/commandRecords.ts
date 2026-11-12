@@ -3,6 +3,7 @@ import { storedSkillCommandSchema } from '../skills/skillRecords.js';
 import { managementCommandIdentityShape as common } from './commandIdentity.js';
 import { storedExtensionCommandSchema } from '../extensions/extensionRecords.js';
 import { modelProbeLimitsSchema } from './modelLimits.js';
+import { runtimeSourceRefusalSchema } from './runtimeSourceVerification.js';
 
 const id = z.string().min(1).max(256);
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
@@ -92,16 +93,22 @@ export const storedModelProbeSchema = z
   );
 export type StoredModelProbe = z.infer<typeof storedModelProbeSchema>;
 
-/** Publication reuses the management journal; it does not acquire an auth-resource fence. */
+/** Publication owns only its finite source verification; native auth fences remain separate. */
 export const storedRuntimeSourceCommandSchema = z.object({
   ...common,
   kind: z.literal('runtime.source'),
-  phase: z.enum(['prepared', 'published']),
+  phase: z.enum(['prepared', 'verifying', 'verified', 'held', 'published']),
   sourceId: hash,
   revision: hash,
   expectedRevision: hash,
-  resourceHeld: z.literal(false),
-}).strict();
+  resourceHeld: z.boolean(),
+  nativeVersion: id.optional(),
+  seedNativeVersion: id.optional(),
+  reason: runtimeSourceRefusalSchema.optional(),
+}).strict().refine(value =>
+  (value.phase === 'verifying' ? value.resourceHeld : value.phase === 'held' || !value.resourceHeld) &&
+  (value.phase !== 'verified' || value.nativeVersion !== undefined) &&
+  (value.reason === undefined || value.phase === 'held'));
 export type StoredRuntimeSourceCommand = z.infer<typeof storedRuntimeSourceCommandSchema>;
 
 export const storedManagementCommandSchema = z.union([
