@@ -540,7 +540,7 @@ jobs:
   stage1-desktop:
     name: Stage 1 source Desktop (${{ matrix.label }})
     # Run native/UI acceptance on ready Stage1 source PR and its integration PRs.
-    # Draft, forked and unrelated PRs do not allocate the eleven macOS proof jobs.
+    # Draft, forked and unrelated PRs do not allocate these macOS proof jobs.
     if: >-
       (github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.head.repo.full_name == github.repository)))
@@ -552,6 +552,10 @@ jobs:
         include:
           - mode: native-mixed-create-launch-ui
             label: mixed Create and Launch
+          - mode: native-mixed-create-launch-ui
+            variant: native-mixed-v2-create-launch-ui
+            label: mixed Create and Launch with OpenCode V2
+            opencode_generation: v2
           - mode: native-create-ui
             label: Create with native launch
           - mode: native-create-ui
@@ -593,9 +597,14 @@ jobs:
       LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH: ${{ matrix.import_launch || '' }}
       LEGACY_DESKTOP_NATIVE_MEMBER_CREATE: ${{ matrix.native_member_create || '' }}
       LEGACY_DESKTOP_RESUME_PROVIDER: ${{ matrix.resume_provider || '' }}
+      LEGACY_DESKTOP_OPENCODE_GENERATION: ${{ matrix.opencode_generation || '' }}
+      OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+      OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ github.workspace }}/opencode-v2-desktop-inputs.json
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Record actual macOS tuple before native qualification
         run: |
@@ -605,7 +614,7 @@ jobs:
           test "$(uname -m)" = arm64
           printf 'Actual build: '
           sw_vers -buildVersion
-          git rev-parse HEAD
+          test "$(git rev-parse HEAD)" = "$OPENCODE_V2_TEST_SOURCE_HEAD"
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
@@ -711,6 +720,17 @@ jobs:
             qualification: 'Source Desktop and localhost inference only; no installed/packed or vendor-auth claim',
           }, null, 2));
           NODE
+      - name: Stage exact OpenCode V2 base for original Desktop acceptance
+        if: matrix.opencode_generation == 'v2'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/stage-runtime.mjs --platform darwin-arm64
+      - name: Prepare verified V2 graph and product process custody for original Desktop
+        if: matrix.opencode_generation == 'v2'
+        run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
+      - name: Require qualified product custody before original Desktop V2 Launch
+        if: matrix.opencode_generation == 'v2'
+        run: test "$OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED" = 1
       - name: Check existing UI fixtures and run original Desktop controls once
         run: |
           set -euo pipefail
@@ -824,8 +844,8 @@ jobs:
         env:
           LEGACY_NATIVE_MIXED_HOST_GO: '1'
           LEGACY_NATIVE_MIXED_RESTORE_GO: '1'
-          LEGACY_NATIVE_PROVIDER_ARTIFACT: vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-implementations-0.0.0.tgz
-          LEGACY_NATIVE_PROVIDER_SHA256: cad37e034245ca90a797cc6c3b436a132f35f7da61ba41cef436ac7b0a775d18
+          LEGACY_NATIVE_PROVIDER_ARTIFACT: vendor/provider-migration/opencode-v2-host-b0ed6a29/agent-teams-provider-implementations-0.0.0.tgz
+          LEGACY_NATIVE_PROVIDER_SHA256: 27076be24ab9ed0a76bfdc639e88e2906f3daa0e5c86de11de60fb02900082e7
         run: |
           set -euo pipefail
           unset LEGACY_NATIVE_MIXED_PEERS_GO LEGACY_NATIVE_MIXED_CROSS_TEAM_GO
@@ -873,6 +893,7 @@ jobs:
             ${{ runner.temp }}/stage1-setup-${{ matrix.variant || matrix.mode }}.log
             ${{ runner.temp }}/stage1-native-restore.log
             ${{ runner.temp }}/stage1-native-restore-inputs.json
+            opencode-v2-desktop-inputs.json
             /private/tmp/TEST-stage1-inputs-*/input-pins.json
             /private/tmp/TEST-desktop-backend-*/*.json
             /private/tmp/TEST-desktop-backend-*/*.png

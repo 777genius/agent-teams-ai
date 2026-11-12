@@ -21,6 +21,8 @@ import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
+import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
+import { command } from './desktop-backend-observations.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { openOriginalCreateForm } from './desktop-create-config-ui-smoke.ts';
 import {
@@ -290,6 +292,25 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     'all3 scoped model preflights finish before the one runtime capture'
   );
   await ui.scrollTo('[role="dialog"] button', 'original mixed Launch team control', 'Launch team');
+  let capturedMetadataChild: ProcessFact | undefined;
+  if (process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2') {
+    await ui.waitRead(
+      `[...document.querySelectorAll('[role="dialog"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)`,
+      'all native preflights finish and enable original Launch'
+    );
+    capturedMetadataChild = await poll(async () => {
+      const table = processFacts();
+      const hosts = table.filter(value => value.groupId === options.appGroup &&
+        command(value.pid) === `${fixture.node} ${fixture.hostEntry}`);
+      assert.equal(hosts.length, 1);
+      const children = table.filter(value => value.parentPid === hosts[0]!.pid);
+      return children.length === 1 && children[0]!.command === process.env.OPENCODE_V2_EMBEDDED_BUN
+        ? children[0] : undefined;
+    }, value => value !== undefined, 'one original metadata child before any runtime allocation');
+    assert.ok(capturedMetadataChild);
+    assert.equal(((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0, 0);
+    proof.originalMetadataChildBeforeLaunch = capturedMetadataChild;
+  }
   await startMixedProgressObservation(cdp);
   await ui.click(
     '[role="dialog"] button',
@@ -433,6 +454,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     appGroup: options.appGroup,
     node: fixture.node,
     hostEntry: fixture.hostEntry,
+    ...(capturedMetadataChild ? { capturedMetadataChild } : {}),
     assertOwnedRenderer: assertCurrent,
     step: (value) => steps.push(value),
   });

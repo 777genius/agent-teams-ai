@@ -23,6 +23,7 @@ import {
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
+import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 
 type Row = Record<string, unknown>;
 const row = (value: unknown): Row => {
@@ -48,6 +49,7 @@ export async function runDesktopMixedMemberRestartUiSmoke(
     node: string;
     hostEntry: string;
     models: DesktopMixedModels;
+    capturedMetadataChild?: ProcessFact;
     assertOwnedRenderer(): void;
     step(value: Row): void;
   }
@@ -97,6 +99,8 @@ export async function runDesktopMixedMemberRestartUiSmoke(
   assert.equal(managementEndpoint.origin, managementProfile.endpoint);
   assert.ok(managementEndpoint.port);
   const managementCommand = `${executablePaths.opencode} serve --hostname 127.0.0.1 --port ${managementEndpoint.port}`;
+  if (managementProfile.nativeGeneration === 'v2') assert.ok(options.capturedMetadataChild);
+  else assert.equal(options.capturedMetadataChild, undefined);
   const tableBefore = processFacts();
   const hosts = tableBefore.filter(
     (value) =>
@@ -121,7 +125,7 @@ export async function runDesktopMixedMemberRestartUiSmoke(
   const { managementChild, runtimeChildren } = selectMixedProcessChildren(
     childrenBefore,
     executablePaths,
-    managementCommand,
+    options.capturedMetadataChild ?? managementCommand,
     childCommandsBefore
   );
   const oldBobChild = runtimeChildren.find((value) => value.command === codexPath)!;

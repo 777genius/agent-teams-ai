@@ -614,11 +614,11 @@ test(
     assert.equal(nativeVersion, '1.19.4');
     const providerArchive = join(
       repo,
-      'vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-implementations-0.0.0.tgz'
+      'vendor/provider-migration/opencode-v2-host-b0ed6a29/agent-teams-provider-implementations-0.0.0.tgz'
     );
     assert.equal(
       await fileHash(providerArchive),
-      'cad37e034245ca90a797cc6c3b436a132f35f7da61ba41cef436ac7b0a775d18'
+      '27076be24ab9ed0a76bfdc639e88e2906f3daa0e5c86de11de60fb02900082e7'
     );
     // Same bounded archive/installed-JS comparison as the existing Desktop verifier,
     // kept inside the package test boundary; no UI-helper or runtime import.

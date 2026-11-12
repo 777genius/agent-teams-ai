@@ -1,6 +1,39 @@
 import { createTeamMcpTools } from '../../mcp/tools.js';
 import type { MemberProviderContext } from './MemberProvider.js';
 import type { OpenCodeV2SessionPermissionRule } from '@agent-teams/provider-implementations/opencode';
+import type { OpenCodeManagementProfile } from '../../management/profile.js';
+
+/** Read-only metadata and the explicit model probe share one native no-tool policy. */
+export function openCodeV2NoToolConfig(profile: OpenCodeManagementProfile) {
+  if (profile.nativeGeneration !== 'v2' || profile.protocolRevision !== '2.1.4' ||
+      !profile.embedded || !profile.nativeModel)
+    throw new Error('OpenCode V2 management selection unavailable');
+  const permissions = [{ action: '*', resource: '*', effect: 'deny' as const }];
+  const selection = {
+    agent: 'agent-teams-model-probe',
+    model: { providerID: profile.nativeModel.providerId, id: profile.nativeModel.modelId,
+      variant: profile.variant ?? 'default' },
+    permissions,
+  };
+  const model = { providerID: selection.model.providerID, model: selection.model.id,
+    variant: selection.model.variant };
+  return { selection, config: {
+    update: 'disable', share: 'disabled', snapshots: false, warming: false, plugins: [],
+    permissions, model, default_agent: selection.agent,
+    policies: [
+      { action: 'tool.use', resource: '*', effect: 'deny' },
+      { action: 'integration.use', resource: '*', effect: 'deny' },
+    ],
+    mcp: { servers: {} },
+    agents: {
+      [selection.agent]: { model, permissions, mode: 'primary', steps: 1 },
+      title: { disabled: true }, summary: { disabled: true },
+    },
+    ...(profile.embedded.providerConfiguration ? {
+      providers: { [selection.model.providerID]: profile.embedded.providerConfiguration },
+    } : {}),
+  } };
+}
 
 /** The existing captured Host policy, translated once to the native V2 schema. */
 export function openCodeV2EmbeddedConfig(context: MemberProviderContext) {

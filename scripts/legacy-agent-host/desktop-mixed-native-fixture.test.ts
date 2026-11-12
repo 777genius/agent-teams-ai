@@ -1081,6 +1081,19 @@ test('Mixed Restart conserves the management and both runtime peers while replac
   assert.deepEqual(proof.currentHost, host);
 });
 
+test('V2 Mixed separates metadata by its original pre-Launch identity even when both Bun arguments match', () => {
+  const equalCommands = new Map(commands);
+  equalCommands.set(11, '/TEST/opencode --no-env-file --no-install embedded-child.js');
+  equalCommands.set(14, equalCommands.get(11)!);
+  const selected = selectMixedProcessChildren(before, paths, management, equalCommands);
+  assert.deepEqual(selected.managementChild, management);
+  assert.deepEqual(selected.runtimeChildren, [claude, codex, opencode]);
+  for (const stale of [{ ...management, birth: 'TEST-reused-PID' },
+    { ...management, parentPid: 99 }, { ...management, groupId: 99 }])
+    assert.throws(() => selectMixedProcessChildren(before, paths, stale, equalCommands));
+  assert.throws(() => selectMixedProcessChildren([...before, processFact(16, '/TEST/opencode')], paths, management, equalCommands));
+});
+
 test('Mixed Restart refuses old Bob, peer PID reuse, Host replacement and unexplained child changes', () => {
   for (const changed of [
     [host, ...before],

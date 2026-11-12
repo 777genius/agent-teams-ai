@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import { fileHash, startHost, tick } from './fixtures/native-host.ts';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
-import type { ProviderModelProbeSnapshot } from '../dist/management/contracts.js';
+import type { ProviderManagementCatalog, ProviderModelProbeSnapshot } from '../dist/management/contracts.js';
 
 const value = <T>(result: Record<string, unknown>): T => {
   assert.equal(result.ok, true, JSON.stringify(result));
@@ -58,6 +58,10 @@ test(
       passed = false,
       cleanup = false;
     const cleanupErrors: unknown[] = [];
+    const selectedRuntimeEndpoint = createServer((_request, response) => {
+      failures.push('TEST_catalog_used_selected_runtime_endpoint');
+      response.writeHead(409); response.end();
+    });
     const model = createServer((request, response) => {
       void (async () => {
         assert.equal(request.method, 'POST');
@@ -115,6 +119,9 @@ test(
       await new Promise<void>((done) => model.listen(0, '127.0.0.1', done));
       const address = model.address();
       assert.ok(address && typeof address !== 'string');
+      await new Promise<void>(done => selectedRuntimeEndpoint.listen(0, '127.0.0.1', done));
+      const selectedAddress = selectedRuntimeEndpoint.address();
+      assert.ok(selectedAddress && typeof selectedAddress !== 'string');
       const profile: TeamHostProfile = {
         schemaVersion: 1,
         principalId: 'TEST-human',
@@ -139,7 +146,7 @@ test(
             accountBinding: 'TEST-account',
             cwd: join(root, 'workspace'),
             executable: { path: bun, sha256: digests.bun },
-            endpoint: 'http://127.0.0.1:19332',
+            endpoint: `http://127.0.0.1:${selectedAddress.port}`,
             timeoutMs: 30000,
             modelProbeTimeoutMs: 60000,
             nativeModel: { providerId: 'TEST-local', modelId: 'TEST-model' },
@@ -285,7 +292,33 @@ test(
             : 'actual_native_no_tool_request_completed_once_and_owned_child_gone'
         );
       }
+      const catalogInput = { profileId: base.profileId, configRevision: base.configRevision,
+        providerId: base.providerId };
+      const catalog = value<ProviderManagementCatalog>(await host.rpc('management.catalog', catalogInput));
+      assert.equal(catalog.configuredDefaultModelId, 'TEST-local/TEST-model');
+      assert.equal(catalog.providers.length, 1);
+      assert.deepEqual(catalog.providers[0]!.models, [{ modelId: 'TEST-model', displayName: 'TEST-model',
+        contextTokens: 200000, outputTokens: 128, free: null, declaredInputModalities: ['text'] }]);
+      assert.equal(catalog.providers[0]!.connected, false, 'read-only inventory does not certify credentials');
+      assert.equal(catalog.providers[0]!.configuredAuthless, true, 'captured loopback route requires a separate model probe');
+      assert.deepEqual(catalog.providers[0]!.authMethods, []);
+      assert.ok(!JSON.stringify(catalog).includes('TEST-LOCALHOST-ONLY'));
+      assert.deepEqual(value(await host.rpc('management.catalog', catalogInput)), catalog);
+      assert.equal(requests.length, 2, 'metadata reads do not execute a model request');
+      const metadataChildren: number[] = [];
+      for (const candidate of (await readdir('/proc')).filter(name => /^\d+$/.test(name))) {
+        const stat = await readFile(`/proc/${candidate}/stat`, 'utf8').catch(() => undefined);
+        if (!stat) continue;
+        const fields = stat.slice(stat.lastIndexOf(') ') + 2).trim().split(/\s+/);
+        if (Number(fields[1]) === host.facts().pid && fields[0] !== 'Z') metadataChildren.push(Number(candidate));
+      }
+      assert.equal(metadataChildren.length, 1, 'repeated native catalog reads retain one original metadata child');
+      nativePids.push(metadataChildren[0]!);
+      assert.equal(await fileHash(`/proc/${metadataChildren[0]}/exe`), digests.bun);
+      steps.push('native_read_only_catalog_reused_original_child_without_model_request');
       await host.close();
+      assert.throws(() => process.kill(-metadataChildren[0]!, 0), { code: 'ESRCH' });
+      assert.equal(selectedRuntimeEndpoint.listening, true, 'metadata never adopts or stops the selected runtime endpoint');
       hosts.push(host.facts());
       host = undefined;
       await assertNativeV1Build(repo, sourceHead, build);
@@ -326,6 +359,8 @@ test(
       for (const release of gates) release();
       model.closeAllConnections();
       await new Promise<void>((done) => model.close(() => done()));
+      selectedRuntimeEndpoint.closeAllConnections();
+      await new Promise<void>(done => selectedRuntimeEndpoint.close(() => done()));
       for (const pid of nativePids)
         try {
           assert.throws(() => process.kill(-pid, 0), { code: 'ESRCH' });

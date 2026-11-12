@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/SecCode.h>
+#include <Security/SecBase.h>
 #include <inttypes.h>
 #include <libproc.h>
 #include <mach/mach.h>

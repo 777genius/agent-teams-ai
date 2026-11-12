@@ -20,6 +20,7 @@ import { ManagementResourceFence } from '../management/ManagementResourceFence.j
 import { OAuthOperationOwner } from '../management/OAuthOperationOwner.js';
 import { ModelProbeOwner } from '../management/ModelProbeOwner.js';
 import { createOpenCodeV2ModelProbe } from '../adapters/providers/OpenCodeV2ModelProbe.js';
+import { OpenCodeV2ManagementHost } from '../adapters/providers/OpenCodeV2ManagementHost.js';
 
 import type { ProviderManagementCatalog, ProviderOAuthSnapshot } from '../management/contracts.js';
 import type {
@@ -34,6 +35,8 @@ import type { RegisteredProcessRootSource } from '../process/registeredProcessCo
 export class ProviderManagementCoordinator {
   private readonly profiles = new Map<string, OpenCodeManagementProfile>();
   private readonly hosts = new Map<string, OpenCodeManagementHost>();
+  private readonly v2Hosts = new Map<string, OpenCodeV2ManagementHost>();
+  private readonly processCustody: RegisteredProcessRootSource | undefined;
   private sealed = false;
   readonly codex: CodexManagementCoordinator;
   readonly claude: ClaudeManagementCoordinator;
@@ -54,6 +57,7 @@ export class ProviderManagementCoordinator {
       processCustody?: RegisteredProcessRootSource;
     } = {}
   ) {
+    this.processCustody = options.processCustody;
     if (new Set(profiles.map((profile) => profile.profileId)).size !== profiles.length)
       throw new ManagementCommandError('invalid');
     this.codex = new CodexManagementCoordinator(
@@ -108,7 +112,9 @@ export class ProviderManagementCoordinator {
           if (command.providerId !== 'anthropic' || command.kind !== 'credential.forget')
             throw new ManagementCommandError('invalid');
         } else if (this.profiles.has(command.profileId)) {
-          if (command.kind === 'credential.refresh') throw new ManagementCommandError('invalid');
+          if (command.kind === 'credential.refresh' ||
+              this.select(command.profileId, command.configRevision).nativeGeneration === 'v2')
+            throw new ManagementCommandError('invalid');
         } else if (command.providerId !== 'codex' || command.kind === 'credential.set')
           throw new ManagementCommandError('invalid');
       },
@@ -125,6 +131,7 @@ export class ProviderManagementCoordinator {
       prepare: (input) => {
         if (this.claude.has(input.profileId)) return this.claudeAuth.prepare(input);
         const profile = this.select(input.profileId, input.configRevision);
+        if (profile.nativeGeneration === 'v2') throw new ManagementCommandError('invalid');
         const host = this.getHost(profile);
         const timeoutMs = profile.oauthTimeoutMs ?? 17 * 60_000;
         return {
@@ -386,6 +393,23 @@ export class ProviderManagementCoordinator {
       .strict()
       .parse(raw);
     const profile = this.select(input.profileId, input.configRevision);
+    if (profile.nativeGeneration === 'v2') {
+      let host = this.v2Hosts.get(profile.profileId);
+      if (!host) {
+        const target = this.credentialTarget(profile);
+        host = new OpenCodeV2ManagementHost(profile, () => {
+          try {
+            this.assertCurrent();
+            assertManagementTarget(target, this.credentialTarget(this.select(input.profileId, input.configRevision)));
+            return true;
+          } catch { return false; }
+        }, this.processCustody);
+        this.v2Hosts.set(profile.profileId, host);
+      }
+      const result = await host.catalog(input.providerId, input.includeModels);
+      this.assertCurrent();
+      return result;
+    }
     const host = this.getHost(profile);
     const result = await host.run((client) =>
       readOpenCodeCatalog(
@@ -412,6 +436,7 @@ export class ProviderManagementCoordinator {
     this.extensions.seal();
     this.probes.seal();
     for (const host of this.hosts.values()) void host.close().catch(() => {});
+    for (const host of this.v2Hosts.values()) void host.close().catch(() => {});
   }
 
   async close(): Promise<void> {
@@ -424,6 +449,7 @@ export class ProviderManagementCoordinator {
       this.extensions.close().then(() => true),
       this.probes.close().then(() => true),
       ...[...this.hosts.values()].map((host) => host.close()),
+      ...[...this.v2Hosts.values()].map((host) => host.close()),
     ]);
     if (results.some((result) => result.status === 'rejected' || result.value !== true))
       throw new OpenCodeManagementError('held');

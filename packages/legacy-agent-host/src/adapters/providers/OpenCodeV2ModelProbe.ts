@@ -12,6 +12,7 @@ import { ManagementCommandError } from '../../management/commandRecords.js';
 import { managementDigest } from '../../management/identity.js';
 import { openCodeManagementProfileSchema } from '../../management/profile.js';
 import { createOpenCodeV2EmbeddedServer } from './OpenCodeV2EmbeddedServer.js';
+import { openCodeV2NoToolConfig } from './OpenCodeV2EmbeddedConfig.js';
 
 import type { Session } from '@agent-teams/provider-session-contracts';
 import type { ModelProbeInput, NativeModelProbe } from '../../management/ModelProbeOwner.js';
@@ -83,16 +84,7 @@ export function createOpenCodeV2ModelProbe(
   let ready: Awaited<ReturnType<NonNullable<typeof server>['start']>> | undefined;
   let deadline = 0;
   const nativeSessionId = 'ses_' + captured.slice(0, 40);
-  const permissions = [{ action: '*', resource: '*', effect: 'deny' as const }];
-  const selection = {
-    agent: 'agent-teams-model-probe',
-    model: {
-      providerID: nativeModel.providerId,
-      id: nativeModel.modelId,
-      variant: profile.variant ?? 'default',
-    },
-    permissions,
-  };
+  const { config, selection } = openCodeV2NoToolConfig(profile);
   const current = () => {
     if (
       closed ||
@@ -206,11 +198,6 @@ export function createOpenCodeV2ModelProbe(
     assertCurrent(signal);
     const configuration = await namespace(profile.environment.XDG_CONFIG_HOME!);
     assertCurrent(signal);
-    const model = {
-      providerID: nativeModel.providerId,
-      model: nativeModel.modelId,
-      variant: selection.model.variant,
-    };
     server = createOpenCodeV2EmbeddedServer({
       profile,
       embedded,
@@ -219,31 +206,7 @@ export function createOpenCodeV2ModelProbe(
       startupTimeoutMs: Math.min(profile.timeoutMs, timeoutMs),
       canAllocate: current,
       ...(options.processCustody ? { processCustody: options.processCustody } : {}),
-      config: {
-        update: 'disable',
-        share: 'disabled',
-        snapshots: false,
-        warming: false,
-        plugins: [],
-        permissions,
-        model,
-        default_agent: selection.agent,
-        policies: [
-          { action: 'tool.use', resource: '*', effect: 'deny' },
-          { action: 'integration.use', resource: '*', effect: 'deny' },
-        ],
-        mcp: { servers: {} },
-        agents: {
-          [selection.agent]: { model, permissions, mode: 'primary', steps: 1 },
-          title: { disabled: true },
-          summary: { disabled: true },
-        },
-        ...(embedded.providerConfiguration
-          ? {
-              providers: { [nativeModel.providerId]: embedded.providerConfiguration },
-            }
-          : {}),
-      },
+      config,
     });
     ready = await server.start(signal);
     assertCurrent(signal);
@@ -293,6 +256,7 @@ export function createOpenCodeV2ModelProbe(
                   permissions: observed.permissions,
                 }) === managementDigest(selection) &&
                 (await client.savedPermissionsEmpty()) &&
+                (await client.builtinPluginsOnly()) &&
                 (await client.readMcp()).length === 0
               );
             }),
