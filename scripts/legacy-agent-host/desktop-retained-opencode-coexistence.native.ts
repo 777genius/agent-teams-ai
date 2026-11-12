@@ -11,6 +11,8 @@ import { fileHash as fileDigest } from '../../packages/legacy-agent-host/tests/f
 import { waitFor } from '../e2e/release-updater/cdp.mts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import { startRetainedOpenCodeModel } from './desktop-retained-opencode-model.ts';
+import { captureRetainedHistoryIdentity, finiteHistoryDiagnosticError, readRetainedOfflineHistory,
+  type RetainedHistoryIdentity } from './desktop-retained-opencode-history-diagnostics.ts';
 import { originalLinuxProcessPresent, selectedLinuxProcesses, snapshotLinuxProcesses, startRetainedOpenCodeApp, testNamespaceLinuxProcesses } from './desktop-retained-opencode-app.ts';
 
 const record = (value: unknown): Record<string, unknown> => {
@@ -107,6 +109,18 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     vendorAuthQualified: false, releaseQualified: false };
   const save = () => writeFile(receiptPath, JSON.stringify({ ...proof, cleanup,
     modelObservations: model.observations, modelFailures: model.failures }, null, 2), { mode: 0o600 });
+  const historyIdentities: Record<string, unknown>[] = [];
+  let coldHistoryFailure: { phase: string; expected: RetainedHistoryIdentity; coldStoreSha256?: string } | undefined;
+  const captureHistoryIdentity = async (root: string, expected: RetainedHistoryIdentity, phase: string, captureNativeRun = false) => {
+    let value: Record<string, unknown>;
+    try { value = await captureRetainedHistoryIdentity(root, expected, phase); }
+    catch (error) { value = { phase, error: finiteHistoryDiagnosticError(error) }; }
+    if (captureNativeRun) {
+      const binding = value.nativeBinding as { kind?: unknown; runtimeRunId?: unknown } | undefined;
+      expected.runtimeRunId = binding?.kind === 'bound' && typeof binding.runtimeRunId === 'string' ? binding.runtimeRunId : null;
+    }
+    historyIdentities.push(value); return value;
+  };
   try {
     fixture = await prepareDesktopBackendFixture(repo, {
       pnpmEntry: process.env.OPENCODE_V1_V2_COREPACK_ENTRY!, seedUiTask: true,
@@ -285,7 +299,12 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
       'old owner exposes actual completed native history', 90_000);
     const seedProcesses = await legacyChildren();
     assert.ok(seedProcesses.length > 0, 'real old-owner V1 native process'); natives.push(...seedProcesses);
+    const firstHistoryIdentity: RetainedHistoryIdentity = { teamName: legacyTeam, memberName: 'bob',
+      laneId: String(originalLegacyMember.laneId), publicationRunId: String(created.runId), runtimeRunId: null,
+      sessionId: String(originalNativeSession), replyUuid: String(historicalReply.replyUuid) };
+    await captureHistoryIdentity(root, firstHistoryIdentity, 'before_first_stop', true);
     await callTeams('stop', [legacyTeam]); legacyStopped = true;
+    await captureHistoryIdentity(root, firstHistoryIdentity, 'after_first_stop');
     const savedLegacy = await callTeams('getData', [legacyTeam]);
     const callsBeforeUpgrade = model.observations.length;
     steps.push({ observed: 'actual_legacy_fork_V1_history_before_new_Host_selection', runId: created.runId,
@@ -299,8 +318,10 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const retainedData = await callTeams('getData', [legacyTeam]);
     assert.deepEqual(retainedData.tasks, savedLegacy.tasks);
     assert.deepEqual(retainedData.messages, savedLegacy.messages);
+    coldHistoryFailure = { phase: 'upgrade_cold', expected: firstHistoryIdentity };
     assert.deepEqual(await readLegacyReply(originalLegacyMember, 'REPLY_TEST_RETAINED_V1_HISTORY'), historicalReply,
       JSON.stringify({ legacyHistoryRead: proof.legacyHistoryRead }).slice(0, 8000));
+    coldHistoryFailure = undefined;
     assert.equal(await callTeams<boolean>('processAlive', [legacyTeam]), false);
     assert.equal(model.observations.length, callsBeforeUpgrade, 'Host selection never replays retained V1 input');
     legacyStopped = false;
@@ -357,8 +378,13 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     steps.push({ observed: 'both_original_Stop_controls_preserve_the_other_actual_owner', history: finalLegacyReply });
     const screenshot = await app.cdp.send<{ data: string }>('Page.captureScreenshot', { format: 'png' });
     await writeFile(join(root, 'coexistence-original-ui.png'), Buffer.from(screenshot.data, 'base64'), { mode: 0o600 });
+    const finalHistoryIdentity: RetainedHistoryIdentity = { teamName: legacyTeam, memberName: 'bob',
+      laneId: String(relaunchedMember.laneId), publicationRunId: String(relaunched.runId), runtimeRunId: null,
+      sessionId: String(relaunchedMember.runtimeSessionId), replyUuid: String(finalLegacyReply.replyUuid) };
+    await captureHistoryIdentity(root, finalHistoryIdentity, 'before_final_stop', true);
     await callTeams('stop', [legacyTeam]);
     legacyStopped = true;
+    await captureHistoryIdentity(root, finalHistoryIdentity, 'after_final_stop');
     const before = { legacy: await callTeams('getData', [legacyTeam]), host: await callTeams('getData', [hostKey]) };
     const callsBeforeCold = model.observations.length;
     await recordAppChildren();
@@ -372,8 +398,10 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     assert.deepEqual(record(after.host).messages, record(before.host).messages);
     assert.equal(await callTeams<boolean>('processAlive', [legacyTeam]), false);
     assert.equal(await callTeams<boolean>('processAlive', [hostKey]), false);
+    coldHistoryFailure = { phase: 'final_cold', expected: finalHistoryIdentity };
     assert.deepEqual(await readLegacyReply(relaunchedMember, 'REPLY_TEST_RETAINED_V1_AFTER_STOP'), finalLegacyReply,
       JSON.stringify({ legacyHistoryRead: proof.legacyHistoryRead }).slice(0, 8000));
+    coldHistoryFailure = undefined;
     await new Promise<void>(resolve => setTimeout(resolve, 500));
     assert.equal(model.observations.length, callsBeforeCold, 'cold startup never replays either owner business input');
     assert.deepEqual(model.failures, []);
@@ -389,6 +417,12 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     failure = error;
     if (error instanceof AggregateError && error.errors.some(value =>
       value instanceof Error && value.message === 'original app cleanup unknown')) cleanupErrors.push(error);
+    if (coldHistoryFailure && fixture) {
+      const snapshot = await captureHistoryIdentity(fixture.root, coldHistoryFailure.expected,
+        coldHistoryFailure.phase + '_failed_before_cleanup');
+      const runtimeStore = snapshot.runtimeStore as { sha256?: unknown } | undefined;
+      if (typeof runtimeStore?.sha256 === 'string') coldHistoryFailure.coldStoreSha256 = runtimeStore.sha256;
+    }
   }
   finally {
     if (app && legacySubmitted && !legacyStopped) {
@@ -410,6 +444,24 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     proof.status = passed && cleanup ? 'PASS' : 'FAIL';
     if (failure) proof.failure = failure instanceof Error ? failure.message : String(failure);
     proof.cleanupFailures = cleanupErrors.map(error => error instanceof Error ? error.message : String(error));
+    if (failure && coldHistoryFailure) {
+      let offline: Record<string, unknown> = { kind: 'not_run', reason: 'original_cleanup_unconfirmed' };
+      if (cleanup && fixture) {
+        try {
+          verifyRetainedSource();
+          assert.equal(await fileDigest(bun), process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
+          offline = readRetainedOfflineHistory({ root: fixture.root, helperSource, bun,
+            expected: coldHistoryFailure.expected, coldStoreSha256: coldHistoryFailure.coldStoreSha256 });
+          verifyRetainedSource();
+        } catch (error) { offline = { kind: 'diagnostic_error', error: finiteHistoryDiagnosticError(error) }; }
+      }
+      proof.legacyHistoryDiagnostics = { identities: historyIdentities, offline };
+      try {
+        for (const identity of historyIdentities)
+          console.error('TEST_RETAINED_HISTORY_IDENTITY ' + JSON.stringify(identity));
+        console.error('TEST_RETAINED_HISTORY_OFFLINE ' + JSON.stringify(offline));
+      } catch (error) { proof.legacyHistoryDiagnosticPrintError = finiteHistoryDiagnosticError(error); }
+    }
     await save();
   }
   if (failure && cleanupErrors.length) throw new AggregateError([failure, ...cleanupErrors], 'coexistence and cleanup failed');
