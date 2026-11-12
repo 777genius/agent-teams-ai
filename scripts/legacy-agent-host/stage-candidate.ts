@@ -47,7 +47,8 @@ export async function stageCandidate(options: CandidateStageOptions) {
     for (const path of [
       'dist/process/readPackagedProcessArtifact.js',
       'dist/composition/processCustody.js',
-      'dist/process/DarwinRegisteredProcess.js',
+      `dist/process/${platform === 'linux-x64' ? 'LinuxRegisteredProcess' : 'DarwinRegisteredProcess'}.js`,
+      'dist/process/loadProcessNativeArtifact.js',
     ])
       if (!host.files.some((file) => file.path === path))
         throw new Error('Compiled M19 bridge absent from Host closure');

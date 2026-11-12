@@ -415,3 +415,129 @@ original-process signal/exit: [pidfd_open](https://man7.org/linux/man-pages/man2
 - Matching paths и finite authenticated Xvfb step добавлены в существующий Linux native workflow; draft/repository guard прежний.
   Повторно используются общие P01 Linux Node/display/Corepack/lsof seams; stage1 macOS workflow не расширяется.
   Реальный Linux UI результат ещё **pending**. Packaged UI, supported older kernels/libc и Windows service scope остаются открытыми.
+
+## 18. Закрытые причины следующего CI падения, без преждевременного PASS
+
+- Run `43319965104` на `b3c64cc` снова прошёл Linux kernel gates в repository Node, Host Node и Electron.
+  Genuine SDK остановился в `open-unknown` до первого model request: SDK выбирал свой bundled Claude вместо captured executable.
+  D [`7b6fe181`](https://github.com/agent-teams-ai/old-provider-implementations/commit/7b6fe18170ee51bf7d679a9ba85801963e07271a)
+  теперь передаёт caller-selected absolute `executablePath` в штатный `pathToClaudeCodeExecutable`; изменять профиль после capture нельзя.
+  Native custody checks не ослаблены. Проверены реальный SDK spawn request без process allocation, полные Node 24/26 checks
+  и retained packed consumer. Выбранный provider artifact — `c035a09d5b6795e5f440b0d5ffef52d23604f31618232a36356c7133f63b11e6`.
+- Windows x64/ARM того же run обнаружил linker `LNK1181 kernelbase.lib`. TEST helper использует штатный `GetModuleHandleW`
+  + `GetProcAddress` для `CompareObjectHandles` с точной SDK function signature; отсутствующий export закрывает gate.
+  Числовой PID не заменяет kernel object comparison. Новый frontend source `74a356e7` опубликован в #1188;
+  native run `43324122047` должен подтвердить обе Windows архитектуры и Linux SDK/cold UI. Результат пока **pending**.
+- На exact `74a356e7` [Windows x64 job 131552128523](https://github.com/777genius/agent-teams-ai/actions/runs/43324122047/job/131552128523)
+  завершён **SUCCESS**: все23 native gates под Node26.12.1, Electron44.10.1/Node24.22.1 и HostNode24.21.0.
+  В каждом runtime завершены TEST `debug-service-cancel`, `debug-service`, `debug-service-root-first`; independent controller
+  подтвердил `rootExitCode=0/activeProcesses=0`. Это x64 native feasibility с retained HANDLE/nested Job,
+  не vendor SDK compatibility, не production registration/Stop/cold recovery. ARM64 и Linux SDK/UI ещё pending.
+
+## 19. Linux packed M19: тот же сценарий на реальном builder output
+
+- Candidate adapters теперь допускают ровно `linux-x64`; прежний Darwin путь сохраняется. Existing `stageCandidate`
+  переносит полный установленный Host graph, pinned Node, provider tarballs, Claude SDK, Codex helper pair, OpenCode V1
+  и проверенный process artifact. Нового package manager, владельца процессов или parallel recovery implementation нет.
+- `qualify-linux-process-packed.ts` требует успешные original SDK и source cold UI receipts с exact hashes,
+  собирает unsigned Electron directory штатным builder и передаёт captured packed paths в **тот же** cold UI scenario.
+  Проверяются native/Host/provider bytes, package dependency links, app executable/asar, renderer/resources freeze,
+  original-ref Stop/history, соседний service и окончательная native cleanup. Guard/draft/repository policy прежние.
+  `installerClaim` и `sdkColdSurvivalClaim` остаются false; это узкая проверка installed-layout M19, не вся release матрица.
+- Локально из стабильного child `74a356e7` materialized **120 пакетов / 7 917 файлов**; manifest
+  `f46284dbb234036185e3975494e8cbe3b9f5a77bcda8e919a51ffb031a9f0521`, Host dist до/после идентичен.
+  Provider/SPI tarballs совпали с выбранными bytes; Node/native bridge прошли отдельный relocation proof.
+  Candidate regressions **4/4**, script types/source-size/diff/YAML PASS. Managed Git и terminal runtime staged штатно
+  с locked SHA verification. Product renderer build локально завершён системой с exit 137; builder/UI PASS не заявляется.
+- Matching Linux workflow готовит настоящий production bundle, сохраняет shipping terminal/Git resources и запускает packed
+  proof после source UI PASS. Hosted packed build/ UI, older-kernel warm/cold parity, ABI tuples и Windows production service Stop
+  остаются открыты до фактических отдельных receipts. OpenCode V2 delivery/install qualification этим M19 fixture не подменяется.
+
+## 20. Older Linux: проверенные границы и узкий план до production source
+
+**Статус: план, реализации warm path ещё нет.** Этот addendum не меняет advertised OS minimum и не объявляет cold recovery
+на старом kernel решённым. Frozen packed patch из §19 остаётся отдельным срезом к `74a356e7`.
+
+- Main baseline из §14 не задаёт Linux kernel/glibc minimum. Самый старый **явно закреплённый host** в существующей CI — Ubuntu
+  22.04 package lane; его deb GUI работает в Ubuntu 24.04 container. Это разные границы: container не проверяет старый kernel.
+- Pinned [Node 24.21.0 BUILDING.md](https://github.com/nodejs/node/blob/v24.21.0/BUILDING.md) объявляет x64 kernel ≥4.18,
+  glibc ≥2.28 и официальный RHEL 8 build. Это ограничение выбранного Node, не новое утверждение о всём продукте.
+  Native artifact пока требует GLIBC2.33: `readelf --dyn-syms` установил две причины — `stat` и `fstat`; syscall/pidfs не требует
+  именно этой libc. Сборка на Ubuntu 22.04 сама по себе не доказывает floor2.28.
+- [pidfd_open](https://man7.org/linux/man-pages/man2/pidfd_open.2.html) доступен upstream с5.3, возвращает original kernel descriptor
+  и поддерживает exit polling. [pidfd_send_signal](https://man7.org/linux/man-pages/man2/pidfd_send_signal.2.html) сигналит именно
+  этот объект и не выбирает новый процесс после PID reuse. Это отдельная возможность от
+  [durable pidfs inode](https://www.freedesktop.org/software/systemd/man/latest/sd_pidfd_get_inode_id.html).
+  Проверяется фактическая capability; release string и distro backports не заменяют probe.
+- Сейчас `TeamHost.ts → createProcessCustody → createQualifiedLinuxProcessApi → kernelIdentity` требует pidfs ещё при создании
+  Host. Поэтому выбранный artifact на старом ядре может блокировать unrelated Host functionality. Это обязательный defect,
+  а не допустимое отключение только кнопки Stop. `CapturedProcess.launch` уже отдельно удерживает неуспешную registration capture
+  и не возвращается к позднему PID adoption; этот существующий boundary сохраняется.
+
+### Минимальная реализация в существующем owner
+
+1. `registered-process-linux.c`: разделить `pidfd-live` и `pidfs-inode64` capability probe. Сохранить текущий durable path.
+   Для warm root/service удерживать **реальный original pidfd** в private N-API handle object с finalizer; poll/read/signal
+   используют тот же descriptor, не повторяют `pidfd_open(storedPid)`. Один source/loader, без daemon/helper server.
+   Initial root capture остаётся синхронным до первого yield/private stdin. Отдельно проверить pinned Node/libuv reaping boundary;
+   null `exitCode` само по себе original identity не доказывает.
+   В [pinned libuv process.c](https://github.com/nodejs/node/blob/v24.21.0/deps/uv/src/unix/process.c) `uv__chld` вызывает loop-owned
+   `uv__wait_children`, который reap-ит только `process->pid`; [signal.c](https://github.com/nodejs/node/blob/v24.21.0/deps/uv/src/unix/signal.c)
+   ставит notification + `SA_RESTART`, без `SIG_IGN/SA_NOCLDWAIT`. Capture до yield использует этот boundary; посторонний reaper недопустим.
+2. Admission остаётся bounded native walk: root parent/PGID/SID, same-session либо live ancestry ≤16, retained descriptors
+   для всей цепочки, повторная проверка alive/PPID/SID перед выдачей capture. Чужой target, смена lineage, отказ kernel capability
+   или недоказанное initial root — отказ конкретной process action. Root-as-service и SID/PID эвристики не добавляются.
+3. `LinuxRegisteredProcess.ts`: тот же Host-level `ProcessCustody` хранит private handle objects и finite capture-key mapping.
+   Persisted warm record получает отдельный discriminant/owner-instance/capture key, а не выдуманный `pidfdId`.
+   Key — только lookup в текущем owner; signal authority возникает из retained native object + original binding/current fence.
+   Повторная registration того же live объекта должна вернуть тот же capture; lookup по PID допускается только как индекс
+   к уже удержанному и заново проверенному descriptor, никогда как право захватить replacement.
+4. `registeredProcessContracts.ts` / `validateProcessRecords.ts`: новый private capture вариант, строгий decoder, старые Darwin
+   v1/v2 и Linux durable v3 без изменений. Existing processes.json / command owner / receipt journal остаются единственными.
+   Private fields по-прежнему не выходят в Desktop/MCP projection. Размер native retention ограничен существующими registry/
+   command bounds; descriptor освобождается после доказанного exit либо owner disposal, без смены объекта под старым key.
+5. Cold Host без original handle возвращает `unknown/held`, `canTerminate=false`; восстановление по PID/start ticks/proc inode
+   запрещено. Уже durably completed `observed-absent` receipt может доказывать окончательность **того же original capture**:
+   `TeamProcessCommands` должен переиспользовать этот terminal proof для history/release, чтобы не превращать завершённый Stop
+   в вечный held после рестарта. Requested/accepted/lost ACK и metadata-stopped таким доказательством не являются.
+6. `processCustody.ts` / `TeamHost.ts`: подтверждённое отсутствие kernel capability не обрушает весь Host; metadata/прочие команды
+   остаются доступны, native process action получает finite unsupported/held result в существующей UI/diagnostics projection.
+   Artifact hash/schema/loader integrity failure не маскируется общим catch и не превращается в разрешённый fallback.
+
+### ABI-поставка и реальная приёмка
+
+- Сначала штатный glibc2.28 build на поддерживаемом RHEL8-family toolchain: официальный
+  [UBI8 image](https://catalog.redhat.com/software/containers/ubi8/ubi/5c359854d70cc534b3a3784e), фиксированный resolved digest,
+  официальный compiler/binutils + pinned Node24/N-API headers. Это build-only container в existing Linux CI.
+  Перед source change проверить фактические UAPI syscall declarations; недостающие headers требуют явно зафиксированного
+  штатного header package, а не symbol-version hacks или подмены libc. Первый artifact обязан измерить floor ≤2.28 через readelf.
+- `buildLinuxProcessNativeArtifact.ts` сохраняет compiler/header/source/inspector/image identity и вычисленный ABI minimum.
+  Один и тот же binary должен реально загрузиться под Node24 в glibc2.28 userspace и пройти existing native suites под
+  repository Node и Electron на квалифицированном kernel; отсутствие capability не считается PASS/skip нужного сценария.
+- Existing finite actor/harness дополняется опасными случаями: warm Stop при отсутствии pidfs; service пережил provider root;
+  sibling/foreign процессы остаются живы; отказ при SID/ancestry drift; повторная registration не меняет original ref;
+  lost ACK без второго signal; новый Host не принимает старый warm key; completed absent history/release переживает restart.
+  Unit нужны только для новых discriminants, binding/terminal-proof правил; отдельные mapper tests не добавляются.
+- Старый kernel проверяется на **реальном** existing Ubuntu22 host с записанными kernel/capabilities. Container на новом kernel
+  проверяет только libc. Если штатный host уже получил pidfs, execution warm path на нём полезен, но не подменяет old-kernel
+  acceptance. Отдельно остаются kernels без pidfd capability и GUI/package ABI tuples; новый support minimum не объявляется.
+  В частности, Node baseline kernel4.18 без фактического pidfd получает explicit unavailable process capability с сохранением
+  остальных функций Host; этот режим не называется full warm Stop parity.
+- Оценка добавления/существенного изменения: **280–440 production LOC**, **220–360 native/E2E LOC**, **50–90 build/CI LOC**
+  с reuse нынешних harness и command owner. Сложность7/10, confidence6/10 до native old-kernel/ABI receipt.
+  Review gate до implementation: initial-root reaping proof, terminal absent reuse, supported toolchain image/declarations.
+
+## 21. CI `74a356e7`: Windows обе архитектуры PASS, Linux SDK readiness defect
+
+- [Native run43324122047](https://github.com/777genius/agent-teams-ai/actions/runs/43324122047) завершён на exact `74a356e7`.
+  Windows x64 job131552128523 и ARM64 job131552128478 — **SUCCESS**: реальные Node26, Electron44 и HostNode24 lanes,
+  включая retained-HANDLE/nested-Job service gates. Это TEST feasibility/P08 evidence, не production P09 service-stop parity.
+- Linux job131552128047: Node26/HostNode24/Electron native identity/cold-original gates **PASS**. Step11 genuine SDK service
+  scenario **FAIL**, cold Processes UI не запускался. Actual SDK теперь использует выбранный native Claude и advertised MCP catalog.
+  Retained artifact13993238362 (`5e384f29580a2b81894be1790898a01b90a82aa0b2413cd2c7235aeb1a1de9c3`) показывает readiness race:
+  background task принят в23:20:25.394, oracle запросил metadata в23:20:25.468, neighbor server опубликовался в23:20:25.551.
+- Узкий TEST fix: после двух original background receipts ждать только первоначальную публикацию services ≤10s;
+  missing file разрешает повторить **read**, без повторного Bash/MCP/native signal. Уже существующая некорректная metadata
+  немедленно отклоняется. Foreground fixture публикует JSON атомарным rename. Sealed failure/no-replay rule сохраняется.
+  Delayed-file/corrupt-file/deadline regression и scripts TS **PASS** локально; новый genuine SDK/ColdUI/packed receipt ещё нужен.
+  Source fix не переносит незавершённый §20 native source в child PR и не заменяет недостающее доказательство UI.

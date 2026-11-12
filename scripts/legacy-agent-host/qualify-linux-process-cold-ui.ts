@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { treeHash } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
+import { readCapturedCandidateElectron } from './candidate-electron.ts';
 
 const repository = fileURLToPath(new URL('../../', import.meta.url));
 const row = (value: unknown): Record<string, unknown> => {
@@ -29,12 +30,14 @@ async function pinned(value: unknown, maximum = 512 * 1024 * 1024) {
 /** Real cold Host/ProcessesSection positive Stop, separate from the completed genuine SDK window. */
 export async function qualifyLinuxProcessColdUi(input: {
   output: string; sdkReceipt: string; sdkReceiptSha256: string; pnpmEntry: string;
+  packedCapture?: { path: string; sha256: string };
 }) {
   assert.equal(process.env.LEGACY_PROCESS_COLD_UI_GO, '1');
   for (const name of ['LEGACY_M19_ORIGINAL_HOST_CRASH_GO', 'LEGACY_M19_PROVIDER_UI_GO',
     'LEGACY_DESKTOP_READBACK_ROOT', 'LEGACY_M19_COLD_UI_ACTION']) assert.equal(process.env[name], undefined);
   assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
   assert.equal(process.version, 'v24.21.0');
+  if (input.packedCapture) assert.equal(process.env.LEGACY_STAGE1_P7_GO, '1');
   assert.match(process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '', /^:\d+$/);
   assert.ok(process.env.LEGACY_DESKTOP_TEST_XAUTHORITY && process.env.LEGACY_DESKTOP_COREPACK_HOME);
   assert.match(input.output, /^\/(?:[^/]+\/)*TEST-[^/]+$/);
@@ -57,29 +60,46 @@ export async function qualifyLinuxProcessColdUi(input: {
     const matches = trees.filter(tree => tree.path === path); assert.equal(matches.length, 1);
     return hash(matches[0]!.sha256);
   };
-  const node = await originalPin(await realpath(process.execPath));
+  const sourceNode = await originalPin(await realpath(process.execPath));
   const hostPath = await realpath(join(repository, 'packages/legacy-agent-host/dist/cli.js'));
-  const host = { ...await originalPin(hostPath),
+  const sourceHost = { ...await originalPin(hostPath),
     sourceSha256: originalTree(join(repository, 'packages/legacy-agent-host/src')),
     distSha256: originalTree(join(repository, 'packages/legacy-agent-host/dist')) };
-  const claude = await pinned(sdk.claude), entry = await originalPin(await realpath(input.pnpmEntry));
+  const sourceClaude = await pinned(sdk.claude), entry = await originalPin(await realpath(input.pnpmEntry));
+  const packedCapture = input.packedCapture ? await pinned(input.packedCapture, 32 * 1024) : undefined;
+  const packed = packedCapture ? await readCapturedCandidateElectron(packedCapture) : undefined;
+  const node = packed ? await pinned({ path: packed.runtime.nodeExecutable, sha256: sourceNode.sha256 }) : sourceNode;
+  const host = packed ? { ...await pinned({ path: packed.runtime.hostEntry, sha256: sourceHost.sha256 }),
+    sourceSha256: sourceHost.sourceSha256, distSha256: sourceHost.distSha256 } : sourceHost;
+  const claude = packed ? await pinned({ path: packed.runtime.claudeExecutable, sha256: sourceClaude.sha256 }) : sourceClaude;
+  if (packed) {
+    assert.equal(packed.runtime.nodeVersion, process.version);
+    assert.equal(packed.runtime.claudeSdkVersion, sdk.sdkVersion);
+    assert.equal(packed.runtime.processCustody.manifestSha256, row(sdk.selection).manifestSha256);
+    assert.equal(await treeHash(dirname(host.path), '.js'), sourceHost.distSha256);
+    const sourceProvider = await realpath(join(repository, 'packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations'));
+    const packedProvider = await realpath(join(dirname(dirname(host.path)), 'node_modules/@agent-teams/provider-implementations'));
+    assert.equal(await treeHash(join(packedProvider, 'dist'), '.js'), originalTree(join(sourceProvider, 'dist')));
+  }
   const packagePin = await originalPin(join(dirname(entry.path), '../package.json'));
   const library = await originalPin(join(dirname(entry.path), 'lib/corepack.cjs'));
   const capturePath = join(output, 'controlled-capture.json');
   await writeFile(capturePath, JSON.stringify({ schemaVersion: 1, platform: 'linux-x64', node, host, claude,
-    corepack: { entry, package: packagePin, library }, processArtifact: sdk.selection }),
+    corepack: { entry, package: packagePin, library }, processArtifact: packed?.runtime.processCustody ?? sdk.selection }),
   { mode: 0o600, flag: 'wx' });
   const capture = await pinned({ path: capturePath, sha256: await fileDigest(capturePath) });
   const self = await pinned({ path: import.meta.filename, sha256: await fileDigest(import.meta.filename) });
   const verify = async () => {
     for (const pin of [sdkReceipt, self, capture, ...sourcePins]) await pinned(pin);
     for (const tree of trees) assert.equal(await treeHash(text(tree.path), text(tree.suffix)), hash(tree.sha256));
+    if (packedCapture) assert.deepEqual(await readCapturedCandidateElectron(packedCapture), packed);
   };
   await verify();
   const receiptPath = join(output, 'cold-ui-receipt.json'), logPath = join(output, 'cold-ui.log');
   const proof: Record<string, unknown> = { schemaVersion: 1, status: 'INCOMPLETE', sdkReceipt, capture,
     scope: 'Linux controlled native services, cold Host restart, existing ProcessesSection original-ref Stop/history',
-    sdkColdSurvivalClaim: false, packagedClaim: false, providerSessions: 0, wrapper: self };
+    sdkColdSurvivalClaim: false, packagedClaim: false, providerSessions: 0, wrapper: self,
+    ...(packedCapture ? { packedCapture, packedCandidate: packed } : {}) };
   await writeFile(receiptPath, JSON.stringify(proof), { mode: 0o600, flag: 'wx' });
   const log = openSync(logPath, 'wx', 0o600);
   let failure: unknown;
@@ -94,6 +114,8 @@ export async function qualifyLinuxProcessColdUi(input: {
         LEGACY_DESKTOP_PNPM_PATH: entry.path, LEGACY_DESKTOP_PNPM_SHA256: entry.sha256,
         LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: packagePin.sha256, LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: library.sha256,
         LEGACY_DESKTOP_COREPACK_HOME: process.env.LEGACY_DESKTOP_COREPACK_HOME,
+        ...(packedCapture ? { LEGACY_STAGE1_P7_GO: '1', LEGACY_DESKTOP_PACKED_CAPTURE_PATH: packedCapture.path,
+          LEGACY_DESKTOP_PACKED_CAPTURE_SHA256: packedCapture.sha256 } : {}),
         LEGACY_DESKTOP_TEST_DISPLAY: process.env.LEGACY_DESKTOP_TEST_DISPLAY,
         LEGACY_DESKTOP_TEST_XAUTHORITY: process.env.LEGACY_DESKTOP_TEST_XAUTHORITY,
       },
@@ -106,6 +128,10 @@ export async function qualifyLinuxProcessColdUi(input: {
     fixtureRoot = dirname(desktopReceipt);
     const receipt = await json(desktopReceipt);
     assert.equal(receipt.mode, 'process-cold-ui'); assert.equal(receipt.status, 'PASS');
+    if (packed) {
+      assert.equal(receipt.packedCandidateVerifiedAfterCleanup, true);
+      assert.deepEqual(receipt.packedCandidate, packed);
+    }
     assert.equal(records.filter(value => value.receipt === desktopReceipt && value.status === 'PASS').length, 1);
     const controlled = row(receipt.controlledProcessColdUi), ui = row(receipt.nativeProcessUi);
     assert.equal(controlled.status, 'PASS'); assert.equal(ui.status, 'PASS');
@@ -147,6 +173,7 @@ export async function qualifyLinuxProcessColdUi(input: {
       catch (error) { failure ??= error; }
     }
     if (failure) { proof.status = 'INCOMPLETE'; proof.failure = failure instanceof Error ? failure.message : String(failure); }
+    proof.packagedClaim = packed !== undefined && !failure;
     proof.log = { path: logPath, sha256: await fileDigest(logPath) };
     await writeFile(receiptPath, JSON.stringify(proof, null, 2), { mode: 0o600 });
     console.log(JSON.stringify({ root: output, receipt: receiptPath, status: proof.status }));
@@ -156,7 +183,9 @@ export async function qualifyLinuxProcessColdUi(input: {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const [output, sdkReceipt, sdkReceiptSha256, pnpmEntry, ...extra] = process.argv.slice(2);
-  assert.ok(output && sdkReceipt && sdkReceiptSha256 && pnpmEntry && extra.length === 0);
-  await qualifyLinuxProcessColdUi({ output, sdkReceipt, sdkReceiptSha256, pnpmEntry });
+  const [output, sdkReceipt, sdkReceiptSha256, pnpmEntry, packedPath, packedSha256, ...extra] = process.argv.slice(2);
+  assert.ok(output && sdkReceipt && sdkReceiptSha256 && pnpmEntry && extra.length === 0 &&
+    ((packedPath === undefined && packedSha256 === undefined) || (packedPath && packedSha256)));
+  await qualifyLinuxProcessColdUi({ output, sdkReceipt, sdkReceiptSha256, pnpmEntry,
+    ...(packedPath && packedSha256 ? { packedCapture: { path: packedPath, sha256: packedSha256 } } : {}) });
 }

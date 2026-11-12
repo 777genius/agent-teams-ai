@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
+import { setTimeout as delay } from 'node:timers/promises';
 import type { ServerResponse } from 'node:http';
 import {
   CONTEXT_MARKER,
@@ -30,6 +31,22 @@ export interface Service {
   pid: number;
   port: number;
   url: string;
+}
+/** Native background acceptance precedes service readiness. Read only; never repeat Bash. */
+export async function waitForNativeProcessServices(
+  read: () => Promise<{ primary: Service; neighbor: Service }>,
+  timeoutMs = 10_000
+) {
+  assert.ok(Number.isSafeInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 10_000);
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    try { return await read(); }
+    catch (error) {
+      if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ENOENT') throw error;
+      assert.ok(Date.now() < deadline, 'original native services did not publish before the deadline');
+      await delay(Math.min(50, Math.max(1, deadline - Date.now())));
+    }
+  }
 }
 export function qualifyNativeServiceCompletion(
   role: 'primary' | 'neighbor',
@@ -350,7 +367,7 @@ export async function startProcessModel(options: {
         };
       } else if (step === 2) {
         assert.equal(last?.tool_use_id, 'TEST_process_tool_1');
-        const { primary, neighbor } = await options.services();
+        const { primary, neighbor } = await waitForNativeProcessServices(options.services);
         assert.notEqual(primary.pid, neighbor.pid);
         assert.equal(originalServices, undefined);
         originalServices = structuredClone({ primary, neighbor });

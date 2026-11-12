@@ -13,6 +13,7 @@ import { acquireProfileWriterLease } from '../../packages/legacy-agent-host/dist
 import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import type { Service } from './desktop-native-process-model.ts';
+import type { CandidateRuntimePaths } from './candidate-runtime-paths.ts';
 
 export const PROCESS_ARTIFACT = {
   directory: '/Volumes/Transcend/dev/TEST-m19-cold-reboot-prep-xqpztswh/native-artifact',
@@ -67,6 +68,7 @@ export async function prepareProcessFixture(
     pnpmEntry: string;
     nativeClaude: { path: string; sha256: string; modelUrl: string };
     processArtifact?: { directory: string; manifestSha256: string };
+    candidateRuntime?: CandidateRuntimePaths;
   }
 ) {
   const processArtifact = options.processArtifact ?? PROCESS_ARTIFACT;

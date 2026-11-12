@@ -113,7 +113,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const packedCapturePath = process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH;
   const packed = packedCapturePath ? await readCapturedCandidateElectron({ path: packedCapturePath, sha256: process.env.LEGACY_DESKTOP_PACKED_CAPTURE_SHA256! }) : undefined;
   const permittedSentinelObservation = (row: Record<string, unknown>) => (mode === 'skills-ui' && isSkillsMetadataRefusal(row)) || (!packed ? row.allowed === true : row.executable === 'shell-env' ? row.allowed === true : row.allowed === false && row.argc === 1 && Array.isArray(row.flags) && row.flags.length === 1 && row.flags[0] === '--version');
-  if (packed) assert.equal(mode, 'native-launch-ui', 'one bounded packed workflow reuses the original native Launch proof');
+  if (packed) assert.ok(mode === 'native-launch-ui' || (process.platform === 'linux' && process.arch === 'x64' && mode === 'process-cold-ui'), 'bounded packed Launch or Linux cold process proof');
   if (packedRelaunchMode) assert.ok(packed, 'automatic app relaunch is an explicit captured packed scope');
   const { mixedMode, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel, openCodeLifecycleMode, openCodeLifecycleModel: selectedOpenCodeModel, openCodeReviewModel: selectedOpenCodeReviewModel } =
     await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
@@ -231,7 +231,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   );
   // Invoke the pinned pnpm JS entry through selected Node: no /usr/bin/env
   // shebang exec transition can invalidate the captured leader identity.
-  const invocation = packed ? [packed.executable, `--remote-debugging-port=${selectedCdpPort}`] : [fixture.node, pnpm, 'dev:mcp', '--remoteDebuggingPort', String(selectedCdpPort), ...(process.platform === 'linux' ? ['--noSandbox'] : [])];
+  const invocation = packed ? [packed.executable, `--remote-debugging-port=${selectedCdpPort}`, ...(process.platform === 'linux' ? ['--no-sandbox'] : [])] : [fixture.node, pnpm, 'dev:mcp', '--remoteDebuggingPort', String(selectedCdpPort), ...(process.platform === 'linux' ? ['--noSandbox'] : [])];
   let app = spawn(invocation[0]!, invocation.slice(1), {
     cwd: packed ? fixture.root : repo,
     env: packed ? { ...fixture.appEnvironment, NODE_ENV: 'production', PATH: join(fixture.root, 'bin') + ':/usr/bin:/bin' } : fixture.appEnvironment,

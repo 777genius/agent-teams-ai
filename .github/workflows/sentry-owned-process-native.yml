@@ -22,6 +22,11 @@ on:
       - 'packages/legacy-agent-host/package.json'
       - 'scripts/legacy-agent-host/qualify-linux-process-sdk.ts'
       - 'scripts/legacy-agent-host/qualify-linux-process-cold-ui.ts'
+      - 'scripts/legacy-agent-host/qualify-linux-process-packed.ts'
+      - 'scripts/legacy-agent-host/candidate-*.ts'
+      - 'scripts/legacy-agent-host/stage-candidate.ts'
+      - 'scripts/legacy-agent-host/stage-node.ts'
+      - 'scripts/legacy-agent-host/desktop-proof-fixture.ts'
       - 'scripts/legacy-agent-host/desktop-claude-native-selection.ts'
       - 'scripts/legacy-agent-host/desktop-process-root-oracle.ts'
       - 'scripts/legacy-agent-host/desktop-controlled-process-fixture.ts'
@@ -49,7 +54,7 @@ jobs:
     if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
     name: registered native (linux x64 pidfs)
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
@@ -137,6 +142,52 @@ jobs:
             bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/qualify-linux-process-cold-ui.ts "$@"' \
             bash "$RUNNER_TEMP/TEST-linux-cold-ui-$GITHUB_RUN_ID" "$sdk_receipt" "$sdk_receipt_sha" "$LINUX_PROCESS_PNPM_ENTRY" \
             2>&1 | tee native-evidence/linux-cold-ui.log
+      - name: Prepare pinned Linux candidate inputs and production bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node --max-old-space-size=8192 node_modules/electron-vite/bin/electron-vite.js build
+          node scripts/ci/verify-radix-renderer-bundle.mjs
+          node scripts/stage-managed-git.mjs --platform linux-x64
+          node scripts/stage-terminal-platform-runtime.mjs --platform linux-x64
+          selected_pack_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-linux-packed-inputs-XXXXXX")"
+          printf '{"private":true}\n' > "$selected_pack_inputs/package.json"
+          pnpm --dir "$selected_pack_inputs" add --ignore-scripts --save-exact @openai/codex@0.162.0-linux-x64 opencode-linux-x64@1.19.4
+          node --input-type=module - "$selected_pack_inputs" "$RUNNER_TEMP/TEST-linux-node24-$GITHUB_RUN_ID/selection.json" <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const [root, selectionPath] = process.argv.slice(2);
+          const pin = path => { path = realpathSync(path); return { path, sha256: createHash('sha256').update(readFileSync(path)).digest('hex') }; };
+          const codexRoot = realpathSync(join(root, 'node_modules/@openai/codex'));
+          const opencodeRoot = realpathSync(join(root, 'node_modules/opencode-linux-x64'));
+          const codexPackage = JSON.parse(readFileSync(join(codexRoot, 'package.json'), 'utf8'));
+          const opencodePackage = JSON.parse(readFileSync(join(opencodeRoot, 'package.json'), 'utf8'));
+          assert.equal(codexPackage.name, '@openai/codex'); assert.equal(codexPackage.version, '0.162.0-linux-x64');
+          assert.equal(opencodePackage.name, 'opencode-linux-x64'); assert.equal(opencodePackage.version, '1.19.4');
+          const bin = join(codexRoot, 'vendor/x86_64-unknown-linux-musl/bin');
+          const { directory, manifestSha256 } = JSON.parse(readFileSync(selectionPath, 'utf8'));
+          writeFileSync(join(root, 'candidate-native-capture.json'), JSON.stringify({ schemaVersion: 1, platform: 'linux-x64',
+            codex: { ...pin(join(bin, 'codex')), protocolRevision: '0.162.0', codeModeHost: pin(join(bin, 'codex-code-mode-host')) },
+            opencode: { ...pin(join(opencodeRoot, 'bin/opencode')), protocolRevision: '1.19.4' },
+            processCustody: { directory, manifestSha256 } }), { mode: 0o600, flag: 'wx' });
+          NODE
+          printf 'LINUX_PROCESS_NATIVE_CAPTURE=%s\n' "$selected_pack_inputs/candidate-native-capture.json" >> "$GITHUB_ENV"
+      - name: Genuine packed Electron cold Host Processes Stop and history
+        env:
+          LEGACY_STAGE1_P7_GO: '1'
+          LEGACY_PROCESS_COLD_UI_GO: '1'
+        run: |
+          set -euo pipefail
+          cold_receipt="$RUNNER_TEMP/TEST-linux-cold-ui-$GITHUB_RUN_ID/cold-ui-receipt.json"
+          cold_receipt_sha=$(node -e "console.log(require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync(process.argv[1])).digest('hex'))" "$cold_receipt")
+          native_capture_sha=$(node -e "console.log(require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync(process.argv[1])).digest('hex'))" "$LINUX_PROCESS_NATIVE_CAPTURE")
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x900x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/qualify-linux-process-packed.ts "$@"' \
+            bash "$RUNNER_TEMP/TEST-linux-packed-$GITHUB_RUN_ID" "$cold_receipt" "$cold_receipt_sha" "$LINUX_PROCESS_PNPM_ENTRY" "$LINUX_PROCESS_NATIVE_CAPTURE" "$native_capture_sha" \
+            2>&1 | tee native-evidence/linux-packed.log
       - name: Retain original SDK receipt and private TEST fixture
         if: always()
         run: |
@@ -158,6 +209,21 @@ jobs:
             for name in cold-ui-receipt.json cold-ui.log controlled-capture.json fixture; do
               if test -e "$cold_root/$name"; then cp -R "$cold_root/$name" native-evidence/cold-ui/; fi
             done
+          fi
+      - name: Retain packed closure, builder and original UI receipts
+        if: always()
+        run: |
+          set -euo pipefail
+          packed_root="$RUNNER_TEMP/TEST-linux-packed-$GITHUB_RUN_ID"
+          if test -d "$packed_root"; then
+            mkdir -p native-evidence/packed
+            for name in packed-receipt.json candidate-build.log packed-capture.json TEST-packed-cold-ui; do
+              if test -e "$packed_root/$name"; then cp -R "$packed_root/$name" native-evidence/packed/; fi
+            done
+            if test -f "$packed_root/candidate/legacy-agent-host/candidate.json"; then
+              cp "$packed_root/candidate/legacy-agent-host/candidate.json" native-evidence/packed/candidate.json
+              cp "$packed_root/candidate/electron-builder.candidate.json" native-evidence/packed/
+            fi
           fi
       - name: Retain exact Linux source, artifact and native receipts
         if: always()

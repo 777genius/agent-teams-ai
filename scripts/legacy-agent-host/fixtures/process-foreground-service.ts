@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { appendFile, readFile, realpath, writeFile } from 'node:fs/promises';
+import { appendFile, readFile, realpath, rename, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 const startedAt = Date.now(),
   ttlMs = 300_000;
@@ -42,8 +42,9 @@ const server = createServer((req, res) => {
 await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
 const address = server.address();
 assert.ok(address && typeof address !== 'string');
+const publication = join(root, `workspace/process-${role}.json`);
 await writeFile(
-  join(root, `workspace/process-${role}.json`),
+  publication + '.pending',
   JSON.stringify({
     role,
     nonce,
@@ -53,6 +54,7 @@ await writeFile(
   }),
   { mode: 0o600, flag: 'wx' }
 );
+await rename(publication + '.pending', publication);
 await record({ event: 'listening', port: address.port, ttlMs, startedAt });
 let closing = false;
 const close = async (reason: string) => {

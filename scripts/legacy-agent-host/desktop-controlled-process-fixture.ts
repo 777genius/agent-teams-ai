@@ -19,6 +19,7 @@ import { prepareProcessFixture, probeProcessService, readProcessServices } from 
 import { PROCESS_LABEL, qualifyNativeServiceCompletion } from './desktop-native-process-model.ts';
 import { desktopClaudeSha256 } from './desktop-claude-native-selection.ts';
 import { createDesktopProcessRootOracle } from './desktop-process-root-oracle.ts';
+import type { CandidateRuntimePaths } from './candidate-runtime-paths.ts';
 
 const row = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
@@ -49,7 +50,7 @@ export interface ControlledProcessUiSource {
 }
 
 /** Trusted TEST setup; no provider model/session or production capture entrypoint is introduced. */
-export async function prepareControlledProcessFixture(repo: string, pnpm: string) {
+export async function prepareControlledProcessFixture(repo: string, pnpm: string, candidate?: CandidateRuntimePaths) {
   assert.equal(process.env.LEGACY_PROCESS_COLD_UI_GO, '1');
   assert.equal(process.env.LEGACY_M19_ORIGINAL_HOST_CRASH_GO, undefined);
   assert.equal(process.env.LEGACY_DESKTOP_READBACK_ROOT, undefined);
@@ -70,7 +71,7 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
   const packageEntry = await pinned(corepack.entry), packagePin = await pinned(corepack.package), library = await pinned(corepack.library);
   assert.equal(node.path, await realpath(process.execPath));
   if (!linux) assert.equal(node.path, await realpath(join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')));
-  assert.equal(hostPin.path, await realpath(join(repo, 'packages/legacy-agent-host/dist/cli.js')));
+  assert.equal(hostPin.path, await realpath(candidate?.hostEntry ?? join(repo, 'packages/legacy-agent-host/dist/cli.js')));
   assert.equal(packageEntry.path, pnpm);
   assert.equal(packagePin.path, await realpath(join(dirname(pnpm), '../package.json')));
   assert.equal(library.path, await realpath(join(dirname(pnpm), 'lib/corepack.cjs')));
@@ -79,6 +80,12 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
   assert.equal(claude.sha256, desktopClaudeSha256());
   const selection = row(capture.processArtifact);
   const artifact = { directory: text(selection.directory), manifestSha256: text(selection.manifestSha256) };
+  if (candidate) {
+    assert.equal(linux, true, 'bounded Linux packed process proof');
+    assert.equal(node.path, candidate.nodeExecutable); assert.equal(node.sha256, candidate.nodeSha256);
+    assert.equal(hostPin.sha256, candidate.hostEntrySha256); assert.equal(claude.path, candidate.claudeExecutable);
+    assert.deepEqual(artifact, candidate.processCustody);
+  }
   privatePath(artifact.directory);
   const bridge = linux ? readPackagedLinuxProcessArtifact(artifact) : readPackagedProcessArtifact(artifact);
   const manifest = await pinned({ path: join(artifact.directory, 'manifest.json'), sha256: artifact.manifestSha256 });
@@ -89,7 +96,9 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
   if (!linux) assert.equal(artifactSource.sha256, 'a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5');
   assert.equal(await fileDigest(nativeSource), artifactSource.sha256);
   const fixture = await prepareProcessFixture(repo, { pnpmEntry: pnpm, processArtifact: artifact,
+    ...(candidate ? { candidateRuntime: candidate } : {}),
     nativeClaude: { ...claude, modelUrl: 'http://127.0.0.1:9' } });
+  assert.equal(fixture.node, node.path); assert.equal(fixture.hostEntry, hostPin.path);
   const profile = JSON.parse(await readFile(fixture.profilePath, 'utf8')) as TeamHostProfile;
   delete profile.runtime; // Controlled service authority is separate from teammate Runtime allocation.
   const profileBytes = JSON.stringify(profile);
