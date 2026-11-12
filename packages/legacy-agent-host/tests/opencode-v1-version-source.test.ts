@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { cp, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve, win32 } from 'node:path';
 import { test } from 'node:test';
 
 import { assertNativeV1Build, assertNativeV1Source, buildNativeV1Host, measureNativeV1Host } from './opencode-v1-version-source.ts';
@@ -13,13 +13,15 @@ async function fixture(archiveDirectory = 'TEST-provider') {
   await writeFile(join(repo,'.gitignore'),'**/dist/\n**/node_modules/\n');
   await mkdir(join(repo,'vendor/provider-migration', archiveDirectory),{recursive:true});
   const dependencies: Record<string, string> = {};
+  const archiveReader = process.platform === 'win32'
+    ? win32.join(process.env.SystemRoot!, 'System32', 'tar.exe') : 'tar';
   for (const name of ['provider-implementations', 'provider-session-contracts']) {
     const packed = join(repo, 'TEST-pack', name), payload = join(packed, 'package');
     await mkdir(join(payload, 'dist'), { recursive: true });
     await writeFile(join(payload, 'package.json'), JSON.stringify({ name: `@agent-teams/${name}`, version: 'TEST', type: 'module' }));
     await writeFile(join(payload, 'dist/index.js'), 'export const TEST = true;\n');
     const archive = `vendor/provider-migration/${archiveDirectory}/${name}.tgz`;
-    execFileSync('tar', ['-czf', basename(archive), '-C', packed, 'package'], {
+    execFileSync(archiveReader, ['-czf', basename(archive), '-C', packed, 'package'], {
       cwd: dirname(join(repo, archive)), timeout: 5000,
     });
     const installed = join(repo, 'packages/legacy-agent-host/node_modules/@agent-teams', name);
@@ -86,6 +88,15 @@ test('native source admission verifies local archives with colon-containing pare
   const { repo, head } = await fixture(process.platform === 'win32' ? 'TEST-provider' : 'TEST:provider');
   try {
     const built = await buildNativeV1Host(repo, head);
+    if (process.platform === 'win32') {
+      const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toLowerCase() !== 'path'));
+      env.PATH = join(repo, 'TEST-no-ambient-tools');
+      const measured = execFileSync(process.execPath, ['--input-type=module', '--eval',
+        `import { measureNativeV1Host } from ${JSON.stringify(new URL('./opencode-v1-version-source.ts', import.meta.url).href)};
+process.stdout.write(JSON.stringify(await measureNativeV1Host(process.argv[1])));`, repo],
+      { env, encoding: 'utf8', timeout: 30_000 });
+      assert.deepEqual(JSON.parse(measured), built, 'actual Windows archive census requires no ambient tar or shell');
+    }
     for (const name of ['provider-implementations', 'provider-session-contracts']) {
       const root = join(repo, 'packages/legacy-agent-host/node_modules/@agent-teams', name);
       const file = join(root, 'dist/index.js'), original = await readFile(file);

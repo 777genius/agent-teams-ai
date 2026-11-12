@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { lstat, mkdtemp, readFile, readdir, realpath, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep, win32 } from 'node:path';
 
 import { fileHash, treeHash } from './fixtures/native-host.ts';
 
@@ -71,7 +71,14 @@ async function verifyInstalledArchive(archive: string, installed: string, name: 
   // archive, using its local basename with both GNU and BSD tar.
   const archiveName = basename(archive), archiveDirectory = dirname(archive);
   assert.ok(archiveName && !archiveName.startsWith('-') && !archiveName.includes(':'));
-  const tar = (args: string[]) => execFileSync('tar', args, {
+  let archiveReader = 'tar';
+  if (process.platform === 'win32') {
+    const systemRoot = process.env.SystemRoot;
+    assert.ok(typeof systemRoot === 'string' && /^[A-Za-z]:[\\/]/u.test(systemRoot));
+    // Git's GNU tar cannot use a native Windows -C path. Keep the inbox reader.
+    archiveReader = win32.join(systemRoot, 'System32', 'tar.exe');
+  }
+  const tar = (args: string[]) => execFileSync(archiveReader, args, {
     cwd: archiveDirectory,
     encoding: 'utf8', timeout: 30_000, maxBuffer: 4 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'],
   }).trim().split(/\r?\n/);
@@ -110,7 +117,7 @@ async function verifyInstalledArchive(archive: string, installed: string, name: 
   assert.deepEqual(actual.sort(), expected, 'installed provider file census must match its selected archive');
   const unpacked = await realpath(await mkdtemp(join(tmpdir(), 'TEST-native-provider-census-')));
   try {
-    execFileSync('tar', ['-xf', archiveName, '-C', unpacked], {
+    execFileSync(archiveReader, ['-xf', archiveName, '-C', unpacked], {
       cwd: archiveDirectory, timeout: 30_000, stdio: 'pipe',
     });
     for (const member of expected) assert.deepEqual(

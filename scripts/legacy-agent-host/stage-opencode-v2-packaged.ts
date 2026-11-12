@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { chmod, copyFile, cp, lstat, mkdir, readFile, realpath, rm, writeFile, appendFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve, win32 } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { stageNode } from './stage-node.ts';
 import { candidateDigest, stageCandidateClosure } from './candidate-closure.ts';
@@ -60,6 +60,12 @@ if (process.platform === 'darwin') {
 // Retain the existing candidate's exact installed-versus-selected-archive census.
 const installed = JSON.parse(await readFile(join(repo, 'packages/legacy-agent-host/package.json'), 'utf8'));
 const artifacts: PackagedOpenCodeV2Manifest['artifacts'] = [];
+let archiveReader = 'tar';
+if (process.platform === 'win32') {
+  const systemRoot = process.env.SystemRoot;
+  assert.ok(typeof systemRoot === 'string' && /^[A-Za-z]:[\\/]/u.test(systemRoot));
+  archiveReader = win32.join(systemRoot, 'System32', 'tar.exe');
+}
 for (const name of ['@agent-teams/provider-implementations', '@agent-teams/provider-session-contracts']) {
   const reference: unknown = installed.dependencies[name];
   assert.ok(typeof reference === 'string' && reference.startsWith('file:') && reference.endsWith('.tgz'));
@@ -68,13 +74,13 @@ for (const name of ['@agent-teams/provider-implementations', '@agent-teams/provi
   assert.ok(archiveName && !archiveName.startsWith('-') && !archiveName.includes(':'));
   const selected = packages.find(row => row.name === name);
   assert.ok(selected);
-  const members = execFileSync('tar', ['-tf', archiveName], { cwd: archiveDirectory, encoding: 'utf8', timeout: 30_000,
+  const members = execFileSync(archiveReader, ['-tf', archiveName], { cwd: archiveDirectory, encoding: 'utf8', timeout: 30_000,
     maxBuffer: 4 * 1024 * 1024 }).trim().split(/\r?\n/);
   assert.ok(members.every(member => member.startsWith('package/') && !member.split('/').includes('..')));
   const unpacked = join(await realpath(process.env.RUNNER_TEMP!), `TEST-provider-census-${randomUUID()}`);
   await mkdir(unpacked);
   try {
-    execFileSync('tar', ['-xf', archiveName, '-C', unpacked], {
+    execFileSync(archiveReader, ['-xf', archiveName, '-C', unpacked], {
       cwd: archiveDirectory, timeout: 30_000, stdio: 'pipe',
     });
     const paths = members.filter(member => !member.endsWith('/')).map(member => member.slice(8)).sort();
