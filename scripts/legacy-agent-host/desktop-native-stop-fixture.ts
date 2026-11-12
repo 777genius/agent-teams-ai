@@ -91,6 +91,30 @@ export async function prepareDesktopNativeStop(options: {
       permissions: options.manualPermissions ? 'manual' : 'bypass',
     })),
   };
+  const metadata = options.provider === 'opencode' ? readDesktopNativeHostProcesses(fixture) : undefined;
+  if (metadata) {
+    assert.equal(metadata.host.groupId, group, 'metadata belongs to the captured TEST Host');
+    assert.equal(metadata.children.length, 1, 'capture metadata before Runtime allocation');
+    assert.ok(command(metadata.children[0]!.pid).startsWith(executable));
+  }
+  const observeNative = () => {
+    if (metadata) {
+      const current = readDesktopNativeHostProcesses(fixture);
+      const runtime = separateDesktopOpenCodeRuntimeChildren(metadata, current,
+        current.children.length === 1 ? 0 : 1);
+      return { hostPid: current.host.pid, nativeChildren: runtime.map(child => ({
+        pid: child.pid, ppid: child.parentPid, pgid: child.groupId,
+      })) };
+    }
+    const table = processTable();
+    const hosts = table.filter(row => row.pgid === group &&
+      command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
+    assert.equal(hosts.length, 1);
+    const hostPid = hosts[0]!.pid;
+    return { hostPid, nativeChildren: table.filter(row =>
+      row.ppid === hostPid && command(row.pid).startsWith(executable)) };
+  };
+  const readinessMs = options.provider === 'opencode' ? 180_000 : 45_000;
   const start = await invokeSetup('team.launch.start', 'TEST-explicit-sandbox-setup-launch', {
     launchId: selection.launchId,
     rosterRevision: selection.rosterRevision,
@@ -100,7 +124,7 @@ export async function prepareDesktopNativeStop(options: {
   assert.equal(start.ok, true, `TEST configured launch response: ${JSON.stringify(start)}`);
   if (options.returnAt === 'opening') {
     assert.ok(fixture.root, 'exact TEST Runtime store for pending-open observation');
-    const deadline = Date.now() + 45_000;
+    const deadline = Date.now() + readinessMs;
     do {
       const sessions: Record<string, unknown>[] = await readDesktopNativeStopSessions(
         fixture.root
@@ -117,15 +141,7 @@ export async function prepareDesktopNativeStop(options: {
         assert.equal(session.nativeReady, false);
         assert.equal(session.sealed, false);
         assert.deepEqual(session.inputs, []);
-        const table = processTable();
-        const hosts = table.filter(
-          (row) => row.pgid === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`
-        );
-        assert.equal(hosts.length, 1);
-        const hostPid = hosts[0]!.pid;
-        const nativeChildren = table.filter(
-          (row) => row.ppid === hostPid && command(row.pid).startsWith(executable)
-        );
+        const { hostPid, nativeChildren } = observeNative();
         if (nativeChildren.length) {
           assert.equal(nativeChildren.length, 1);
           evidence.nativeSetup = {
@@ -135,6 +151,7 @@ export async function prepareDesktopNativeStop(options: {
             launch: selection,
             session,
             nativeChildren,
+            ...(metadata ? { metadataBeforeLaunch: metadata } : {}),
             nativeExecutableSha256: await fileDigest(executable),
           };
           return { hostPid, nativeChildren };
@@ -144,7 +161,7 @@ export async function prepareDesktopNativeStop(options: {
     } while (Date.now() < deadline);
     throw new Error('No actual pending native open observed; no launch or Quit retry');
   }
-  const readyDeadline = Date.now() + 45_000;
+  const readyDeadline = Date.now() + readinessMs;
   let ready = object(start.value);
   while (ready.status !== 'ready' && Date.now() < readyDeadline) {
     await tick();
@@ -155,15 +172,7 @@ export async function prepareDesktopNativeStop(options: {
   }
   assert.equal(ready.status, 'ready');
   assert.equal(ready.ready, expectedMembers);
-  const table = processTable();
-  const hosts = table.filter(
-    (row) => row.pgid === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`
-  );
-  assert.equal(hosts.length, 1);
-  const hostPid = hosts[0]!.pid;
-  const nativeChildren = table.filter(
-    (row) => row.ppid === hostPid && command(row.pid).startsWith(executable)
-  );
+  const { hostPid, nativeChildren } = observeNative();
   assert.equal(
     nativeChildren.length,
     expectedMembers,
@@ -176,6 +185,7 @@ export async function prepareDesktopNativeStop(options: {
     status: 'ready',
     launch: ready,
     nativeChildren,
+    ...(metadata ? { metadataBeforeLaunch: metadata } : {}),
     nativeExecutableSha256: await fileDigest(executable),
   };
   return { hostPid, nativeChildren };
