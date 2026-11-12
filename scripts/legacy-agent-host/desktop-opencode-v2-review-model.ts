@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
 import { CONTEXT_MARKER } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
+import { isOpenCodeModelProbe } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model-probe.ts';
 import { nativeToolReceipt, record } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
 import type { ServerResponse } from 'node:http';
 
 export const V2_REVIEW_BOOTSTRAP = 'TEST_NATIVE_V2_REVIEW_BOOTSTRAP';
 export const V2_REVIEW_SUBJECT = 'TEST_NATIVE_V2_REVIEW_WORK';
 export const V2_REVIEW_TOOL_PREFIX = 'TEST_NATIVE_V2_REVIEW_work_';
-const probePrompt = 'Reply only OK. Do not use tools, access files or run commands.';
 type Row = Record<string, unknown>;
 function content(message: Row): string {
   if (typeof message.content === 'string') return message.content;
@@ -50,8 +50,7 @@ export async function startOpenCodeV2ReviewModel(options: {
       const users = messages.filter(row => row.role === 'user');
       const tools = (Array.isArray(body.tools) ? body.tools : []).map(record)
         .map(row => String(record(row.function).name));
-      if (tools.length === 0 && users.length === 1 && content(users[0]!) === probePrompt &&
-          messages.every(row => row.role === 'user' || row.role === 'system')) {
+      if (isOpenCodeModelProbe(body, 'v2')) {
         assert.ok(probes.length < 8);
         probes.push({ model: 'TEST-model', tools: 0 });
         emit(response, `TEST-v2-review-probe-${probes.length}`, { role: 'assistant', content: 'OK' }, false);

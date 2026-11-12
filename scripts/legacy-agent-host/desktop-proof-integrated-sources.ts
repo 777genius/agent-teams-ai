@@ -1,5 +1,14 @@
 /** Finite source closure of the integrated lifecycle, WorkSync and member-action checkpoint. */
 export const desktopProofIntegratedSources = [
+  'packages/legacy-agent-host/tests/fixtures/native-opencode-team/model-probe.ts',
+  'packages/legacy-agent-host/tests/opencode-native-model-probe-shape.test.ts',
+  'packages/legacy-agent-host/tests/captured-runtime-mcp-recipes.test.ts',
+  'packages/legacy-agent-host/tests/opencode-v2-model-probe.native.ts',
+  'src/features/runtime-provider-management/core/domain/runtimeProviderQuickConnect.ts',
+  'src/main/ipc/openCodeRuntime.test.ts',
+  'src/main/ipc/openCodeRuntime.ts',
+  'test/features/runtime-provider-management/capturedRuntimeStatus.test.ts',
+  'test/renderer/features/runtime-provider-management/runtimeProviderQuickConnect.test.ts',
   'packages/legacy-agent-host/tests/opencode-v2-management-recovery.test.ts',
   'packages/legacy-agent-host/src/adapters/providers/WindowsJobCustody.ts',
   'scripts/legacy-agent-host/desktop-retained-opencode-app.ts',

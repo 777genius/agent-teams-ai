@@ -17,6 +17,7 @@ import { createServer } from 'node:http';
 import { nativePeerTurn, nativePeerActions } from '../native-peers.ts';
 
 import { nativeToolReceipt, record } from '../native-claude-team/model.ts';
+import { isOpenCodeModelProbe } from './model-probe.ts';
 
 export const CONTEXT_MARKER = 'TEST_OPENCODE_CAPTURED_MEMBER_CONTEXT_V1';
 export const REQUIRED_TOOLS = [
@@ -114,22 +115,9 @@ export async function startOpenCodeModel(
       const body = record(JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown);
       const messages = (Array.isArray(body.messages) ? body.messages : []).map(record);
       const user = messages.filter((item) => item.role === 'user');
-      const probeText =
-        user.length === 1 &&
-        messages.every((item) => item.role === 'user' || item.role === 'system')
-          ? typeof user[0]?.content === 'string'
-            ? user[0].content
-            : Array.isArray(user[0]?.content) &&
-                user[0].content.every(
-                  (raw) => record(raw).type === 'text' && typeof record(raw).text === 'string'
-                )
-              ? user[0].content.map((raw) => String(record(raw).text)).join('\n')
-              : undefined
-          : undefined;
       if (
         options.allowModelProbes &&
-        probeText === 'Reply only OK. Do not use tools, access files or run commands.' &&
-        (!Array.isArray(body.tools) || body.tools.length === 0)
+        isOpenCodeModelProbe(body, options.nativeGeneration ?? 'v1')
       ) {
         assert.ok(probes.length < 8, 'bounded original-dialog model probes');
         probes.push({
