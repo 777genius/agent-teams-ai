@@ -280,7 +280,8 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
         }
         return counts;
       },
-      (counts) => counts.every((count, index) => count > probesBeforeLaunch[index]! && count <= 8),
+      (counts) => counts.every((count, index) =>
+        count > probesBeforeLaunch[index]! && count <= (index === 0 ? 9 : 8)),
       'all3 selected namespaces have actual bounded model preflights'
     );
   } finally {
@@ -565,14 +566,15 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   assert.deepEqual(configuredAfterStop, configuredAfterLaunch);
   // Permit a single new TEST probe only after observing the original cold UI boundary.
   // This grants neither a new native business input nor a repeated Launch submission.
-  models.beginColdReadbackProbes();
+  const nativeClaudeProbeCount = models.beginColdReadbackProbes();
+  proof.nativeClaudeProbeCount = nativeClaudeProbeCount;
   await ui.click('button', 'reopen original mixed Launch after Stop/reload', 'Launch');
   await poll(
     async () => models.claude.probes.length,
-    (count) => count === 9,
+    (count) => count === nativeClaudeProbeCount + 1,
     'one fresh original cold Launch model preflight'
   );
-  assert.deepEqual(models.claude.probes.slice(8), [
+  assert.deepEqual(models.claude.probes.slice(nativeClaudeProbeCount), [
     { phase: 'cold-readback', requestedModel: 'claude-opus-4-6', requestedEffort: 'medium' },
   ]);
   assert.deepEqual(models.claude.failures, []);

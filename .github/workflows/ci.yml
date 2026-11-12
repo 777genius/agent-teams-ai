@@ -1099,6 +1099,7 @@ jobs:
             /private/tmp/TEST-desktop-backend-*/home/Downloads/**
             /private/tmp/TEST-desktop-backend-*/native-codex/config/config.toml
             /private/tmp/TEST-desktop-backend-*/native-codex/config/sessions/**
+            /private/tmp/TEST-desktop-backend-*/providers/opencode/data/opencode/log/opencode.log
             /private/tmp/TEST-native-mixed-host-*/**
 
   stage1-process-diagnostic:

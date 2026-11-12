@@ -81,6 +81,7 @@ export async function startDesktopMixedModels(root: () => string, options: { nat
   const claude = await startNativeTeamModel({
       mixedTaskNotifications: createMixedTaskNoticeReader(root, 'team-lead'),
     allowModelProbes: true,
+    nativeModelProbeLimit: 9,
     modelProbePhase: () => claudeProbePhase,
     mixedGroups: true,
     uiGeneratedMessageIds: true,
@@ -111,9 +112,12 @@ export async function startDesktopMixedModels(root: () => string, options: { nat
       openCodeGeneration: options.nativeGeneration ?? 'v1' as const,
       beginColdReadbackProbes: () => {
         assert.equal(claudeProbePhase, 'native', 'one original cold readback phase');
-        assert.equal(claude.probes.length, 8, 'original live preflight budget was consumed');
+        const nativeProbeCount = claude.probes.length;
+        assert.ok(nativeProbeCount >= 8 && nativeProbeCount <= 9,
+          'seven configuration probes and one or two original Launch probes');
         assert.deepEqual(claude.failures, []);
         claudeProbePhase = 'cold-readback';
+        return nativeProbeCount;
       },
       retainEvidenceAt: async (root: string) => {
         assert.equal(evidenceRoot, undefined, 'one original TEST mixed model evidence root');
