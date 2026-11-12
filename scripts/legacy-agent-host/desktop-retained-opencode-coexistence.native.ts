@@ -81,6 +81,10 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     });
     const root = fixture.root, legacyProject = join(root, 'legacy-workspace');
     proof.root = root;
+    const appConfigPath = join(root, 'claude', 'agent-teams-config.json');
+    const appConfig = await json(appConfigPath);
+    appConfig.httpServer = { enabled: false, port: await reservePort() };
+    await writeFile(appConfigPath, JSON.stringify(appConfig), { mode: 0o600 });
     await mkdir(legacyProject, { mode: 0o700 });
     for (const folder of ['legacy-runtime-data', 'legacy-runtime-cache', 'state']) await mkdir(join(root, folder), { mode: 0o700 });
     const legacyConfig = { $schema: 'https://opencode.ai/config.json', plugin: [],
@@ -106,6 +110,10 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
       OPENCODE_CLI_PATH: v1, OPENCODE_BIN_PATH: v1, CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: v1,
       CLAUDE_MULTIMODEL_DATA_HOME: join(root, 'legacy-runtime-data'),
       CLAUDE_MULTIMODEL_CACHE_HOME: join(root, 'legacy-runtime-cache'),
+      // The retained owner needs the product's existing bound control/MCP
+      // supervisor. The Host-only base fixture deliberately disables it.
+      CLAUDE_TEAM_OPENCODE_MCP_HTTP: '1',
+      CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT: String(await reservePort()),
       XDG_STATE_HOME: join(root, 'state'), OPENCODE_DISABLE_AUTOUPDATE: '1',
       OPENCODE_DISABLE_MODELS_FETCH: '1', OPENCODE_DISABLE_LSP_DOWNLOAD: '1',
       OPENCODE_DISABLE_CLAUDE_CODE: '1', NO_PROXY: '127.0.0.1,localhost',
@@ -137,10 +145,20 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
       app!.call<T>(`${api}[${literal(method)}](...${literal(args)})`, timeout);
     const host = (operation: string, commandId: string, payload: unknown) => app!.call(
       `window.__TEST_retainedApi.agentBackend.invoke(${literal({ handle: { handleId: fixture!.handleId }, operation, commandId, payload })})`);
+    const waitLegacyControl = () => waitFor(async () => {
+      const info = await app!.call('window.electronAPI.externalAgentConnection.getConnectionInfo()');
+      assert.notEqual(record(info.mcp).status, 'error', String(info.reason));
+      return record(info.control).status === 'ready' && record(info.mcp).status === 'ready' || null;
+    }, 'original Desktop control and MCP owner ready', 90_000);
+    const recordAppChildren = async () => {
+      for (const executable of [node, await realpath(join(repo, 'node_modules/electron/dist/electron'))])
+        natives.push(...await app!.nativeChildren(executable));
+    };
     const send = async (key: string, to: string, marker: string) => {
       await callTeams('sendMessage', [key, { to, text: marker }]);
       await waitFor(async () => { assert.deepEqual(model.failures, []); return model.markers.has(marker) || null; }, 'original owner receives ' + marker, 90_000);
     };
+    await waitLegacyControl();
     await app.call(`window.electronAPI.config.addCustomProjectPath(${literal(legacyProject)})`);
     legacySubmitted = true;
     const created = await callTeams('createTeam', [{ teamName: legacyTeam, cwd: legacyProject,
@@ -174,9 +192,11 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     steps.push({ observed: 'actual_legacy_fork_V1_history_before_new_Host_selection', runId: created.runId,
       nativeSessionId: originalNativeSession, taskId: legacyTask.id,
       logSessionId: historicalLog.sessionId, logProjectId: historicalLog.projectId, seedProcesses });
+    await recordAppChildren();
     await app.close(); app = undefined; source();
     assert.equal(seedProcesses.some(originalLinuxProcessPresent), false);
     app = await start(1);
+    await waitLegacyControl();
     const retainedData = await callTeams('getData', [legacyTeam]);
     assert.deepEqual(retainedData.tasks, savedLegacy.tasks);
     assert.deepEqual(retainedData.messages, savedLegacy.messages);
@@ -240,8 +260,10 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     legacyStopped = true;
     const before = { legacy: await callTeams('getData', [legacyTeam]), host: await callTeams('getData', [hostKey]) };
     const callsBeforeCold = model.observations.length;
+    await recordAppChildren();
     await app.close(); app = undefined; source();
     app = await start(2);
+    await waitLegacyControl();
     const after = { legacy: await callTeams('getData', [legacyTeam]), host: await callTeams('getData', [hostKey]) };
     assert.deepEqual(record(after.legacy).tasks, record(before.legacy).tasks);
     assert.deepEqual(record(after.legacy).messages, record(before.legacy).messages);
@@ -256,6 +278,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     await ui.observeInput(); await ui.clickSidebar('TEST retained V1 sidebar record');
     await ui.clickSidebar(fixture.uiSeed!.subject);
     steps.push({ observed: 'same_profile_cold_original_UI_reads_both_histories_without_replay' });
+    await recordAppChildren();
     await app.close(); app = undefined; source();
     assert.equal(natives.some(originalLinuxProcessPresent), false, 'all original native processes gone after ordinary Quit');
     passed = true;
@@ -276,7 +299,8 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     if (fixture) {
       try {
         // Absence check only: an early detached child never becomes a new signal target.
-        for (const executable of [v1, bun]) for (const process of await selectedLinuxProcesses(executable)) {
+        for (const executable of [v1, bun, node,
+          await realpath(join(repo, 'node_modules/electron/dist/electron'))]) for (const process of await selectedLinuxProcesses(executable)) {
           try {
             const environment = await readFile(`/proc/${process.pid}/environ`, 'utf8');
             assert.equal(environment.includes(fixture.root), false, 'unreconciled TEST native namespace survives cleanup');
