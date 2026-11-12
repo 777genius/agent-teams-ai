@@ -225,8 +225,10 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
       const stream: Record<string, unknown> = await app!.call(`window.__TEST_retainedApi.memberLogStream.getMemberLogStream(
         ${literal(legacyTeam)},'bob',${literal({ laneId, limitSegments: 30, forceRefresh: true })})`);
       assert.ok(Array.isArray(stream.segments));
+      const responseShapes: Record<string, unknown>[] = [];
       proof.legacyHistoryRead = { laneId, nativeSessionId, coverage: stream.coverage,
-        warnings: stream.warnings, sources: stream.segments.map(value => record(value).source) };
+        warnings: stream.warnings, sources: stream.segments.map(value => record(value).source),
+        actors: stream.segments.slice(0, 4).map(value => record(value).actor), responses: responseShapes };
       const segments = stream.segments.map(record).filter(segment => {
         const source = record(segment.source), actor = record(segment.actor);
         return source.provider === 'opencode_runtime' && source.label === 'OpenCode runtime' &&
@@ -243,12 +245,16 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
           assert.ok(Array.isArray(chunk.responses));
           for (const responseValue of chunk.responses) {
             const response = record(responseValue);
+            const shape: Record<string, unknown> = { type: response.type, role: response.role,
+              sessionId: response.sessionId, uuid: response.uuid, expectedTextMatched: null };
+            if (responseShapes.length < 16) responseShapes.push(shape);
             if (response.type !== 'assistant' || response.role !== 'assistant' ||
               response.sessionId !== nativeSessionId) continue;
             const text = typeof response.content === 'string' ? response.content :
               Array.isArray(response.content) ? response.content.map(record)
                 .filter(block => block.type === 'text' && typeof block.text === 'string')
                 .map(block => block.text).join('') : '';
+            shape.expectedTextMatched = text === expectedReply;
             if (text !== expectedReply) continue;
             assert.ok(typeof response.uuid === 'string' && response.uuid.length > 0);
             replies.push({ provider: 'opencode_runtime', laneId, nativeSessionId,
