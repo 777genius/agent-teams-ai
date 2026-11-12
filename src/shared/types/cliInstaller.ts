@@ -487,6 +487,10 @@ export interface OpenCodeRuntimeInstallProgress {
 }
 
 export interface OpenCodeRuntimeStatus {
+  /** Captured engine version is separate from the selecting native CLI version. */
+  engineVersion?: string;
+  /** Opaque Host selection revision; no private paths or configuration cross this boundary. */
+  sourceRevision?: string;
   /** Availability of optional support; native installation identity is separate. */
   v2Support?: 'ready' | 'required';
   /** Exact newest V2 qualified by the pinned runtime for this native platform. */

@@ -19,12 +19,14 @@ export function createRuntimeSourceMethods(
     lookup: (raw) => sources.lookup(raw),
     publish: (raw) =>
       sources.publish(raw, (profile) => management.admitRuntimeSourceProfile(profile)),
+    recover: (raw) =>
+      sources.recover(raw, (profile) => management.admitRuntimeSourceProfile(profile)),
   };
   return Object.fromEntries(
     Object.entries(actions).map(([name, action]) => [
       `runtime.source.${name}`,
       {
-        lane: name === 'publish' ? 'work' : 'control',
+        lane: name === 'publish' || name === 'recover' ? 'work' : 'control',
         async handle(raw: unknown): Promise<JsonValue> {
           try {
             assertCurrent();

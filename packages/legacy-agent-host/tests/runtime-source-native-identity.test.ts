@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -19,6 +20,7 @@ import { RuntimeSourceIndex } from '../dist/composition/RuntimeSourceIndex.js';
 import { assertRuntimeSourceNativePolicy } from '../dist/composition/runtimeSourceQualification.js';
 import { assertRuntimeSourceQualification } from '../dist/composition/verifyRuntimeSourceCandidate.js';
 import { providerManagementProfileSchema } from '../dist/management/profile.js';
+import { runtimeDigest } from '../dist/runtime/identity.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type {
   RuntimeSourceCandidate,
@@ -388,6 +390,78 @@ test(
 );
 
 test(
+  'installer restart recovers the one prepared original intent before any replacement selection',
+  { skip: process.platform === 'win32' ? 'POSIX process fixture' : false },
+  async (t) => {
+    const f = fixture(t),
+      input = f.input('TEST-prepared-recovery');
+    const path = input.candidate.executable.path,
+      parked = path + '.TEST-parked';
+    renameSync(path, parked);
+    await assert.rejects(f.index.publish(input, () => assert.fail('missing original bytes')));
+    assert.equal(f.store.read(input.commandId)?.phase, 'prepared');
+    renameSync(parked, path);
+    await assert.rejects(
+      f.index.publish(f.input('TEST-replacement'), () => {}),
+      { code: 'held' }
+    );
+    assert.deepEqual(f.reads(), []);
+    const cold = new RuntimeSourceIndex(f.profile, f.assertWriter);
+    const recovered = await cold.recover({ grant: f.grant }, () => {});
+    assert.equal(recovered?.commandId, input.commandId);
+    assert.equal(recovered?.phase, 'published');
+    assert.equal(
+      await cold.recover({ grant: f.grant }, () => assert.fail('already complete')),
+      null
+    );
+    assert.deepEqual(f.reads(), ['TEST-prepared-recovery']);
+    await cold.close();
+  }
+);
+
+test('source recovery refuses missing, changed and ambiguous durable intent snapshots', async (t) => {
+  const f = fixture(t),
+    input = f.input('TEST-original-intent');
+  rmSync(input.candidate.executable.path);
+  await assert.rejects(f.index.publish(input, () => assert.fail('missing original bytes')));
+  const receipt = f.store.read(input.commandId)!;
+  assert(receipt.kind === 'runtime.source');
+  const { publicationJson: _snapshot, ...legacy } = receipt;
+  f.store.write(legacy);
+  await assert.rejects(
+    f.index.recover({ grant: f.grant }, () => {}),
+    { code: 'held' }
+  );
+  f.store.write({
+    ...receipt,
+    publicationJson: JSON.stringify({ ...input, expectedRevision: '0'.repeat(64) }),
+  });
+  await assert.rejects(
+    f.index.recover({ grant: f.grant }, () => {}),
+    { code: 'held' }
+  );
+  f.store.write(receipt);
+  const second = { ...input, commandId: 'TEST-second-intent' };
+  f.store.write({
+    ...receipt,
+    commandId: second.commandId,
+    fingerprint: runtimeDigest(second),
+    publicationJson: JSON.stringify(second),
+    revision: runtimeDigest({
+      previousRevision: second.expectedRevision,
+      commandId: second.commandId,
+      grant: second.grant,
+      candidate: second.candidate,
+    }),
+  });
+  await assert.rejects(
+    f.index.recover({ grant: f.grant }, () => {}),
+    { code: 'held' }
+  );
+  assert.deepEqual(f.reads(), []);
+});
+
+test(
   'verified pre-publication recovery reuses its original native observation without another version process',
   {
     skip: process.platform === 'win32' ? 'POSIX process fixture' : false,
@@ -402,7 +476,12 @@ test(
     );
     assert.equal(f.index.lookup({ grant: f.grant, commandId: input.commandId })?.phase, 'verified');
     assert.equal(
-      (await new RuntimeSourceIndex(f.profile, f.assertWriter).publish(input, () => {})).phase,
+      (
+        await new RuntimeSourceIndex(f.profile, f.assertWriter).recover(
+          { grant: f.grant },
+          () => {}
+        )
+      )?.phase,
       'published'
     );
     assert.deepEqual(f.reads(), ['TEST-before-admission']);
@@ -435,6 +514,10 @@ test('unknown cleanup is retained; only the original live handle may settle it w
     },
   });
   assert.equal((await cold.publish(input, () => assert.fail('cold publication'))).phase, 'held');
+  assert.equal(
+    (await cold.recover({ grant: f.grant }, () => assert.fail('cold recovery')))?.phase,
+    'held'
+  );
   const held = f.store.read(input.commandId)!;
   if (held.kind !== 'runtime.source') assert.fail('Expected source receipt');
   const { reason: _reason, nativeVersion: _version, seedNativeVersion: _seed, ...claimed } = held;
@@ -446,6 +529,10 @@ test('unknown cleanup is retained; only the original live handle may settle it w
     reason: 'native-outcome-unknown',
   });
   assert.equal((await cold.publish(input, () => assert.fail('unknown claim'))).phase, 'held');
+  assert.equal(
+    (await cold.recover({ grant: f.grant }, () => assert.fail('unknown recovery')))?.phase,
+    'held'
+  );
   f.store.write(held);
   assert.equal((await index.publish(input, () => {})).phase, 'published');
   assert.equal(runs, 1);

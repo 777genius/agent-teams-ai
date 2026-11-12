@@ -1,4 +1,5 @@
 import { parseOpenCodeInstallOptions } from '@features/opencode-runtime-installer';
+import { createCapturedOpenCodeRuntimeInstaller } from '@features/opencode-runtime-installer/main';
 import {
   OPENCODE_RUNTIME_GET_STATUS,
   OPENCODE_RUNTIME_INSTALL,
@@ -8,7 +9,11 @@ import {
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
-import { captureDesktopStatusRequest, getDesktopProviderStatusPort } from './agentBackend';
+import {
+  captureDesktopRuntimeSources,
+  captureDesktopStatusRequest,
+  getDesktopProviderStatusPort,
+} from './agentBackend';
 
 import type { OpenCodeRuntimeInstallerService } from '../services';
 import type { IpcResult, OpenCodeRuntimeStatus } from '@shared/types';
@@ -17,11 +22,13 @@ import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 const logger = createLogger('IPC:openCodeRuntime');
 
 let service: OpenCodeRuntimeInstallerService | null = null;
+let capturedInstaller: ReturnType<typeof createCapturedOpenCodeRuntimeInstaller> | null = null;
 
 export function initializeOpenCodeRuntimeHandlers(
   openCodeRuntimeService: OpenCodeRuntimeInstallerService
 ): void {
   service = openCodeRuntimeService;
+  capturedInstaller = createCapturedOpenCodeRuntimeInstaller(openCodeRuntimeService);
 }
 
 export function registerOpenCodeRuntimeHandlers(ipcMain: IpcMain): void {
@@ -72,9 +79,13 @@ async function handleInstall(
   options?: unknown
 ): Promise<IpcResult<OpenCodeRuntimeStatus>> {
   try {
+    const validated = parseOpenCodeInstallOptions(options);
+    const captured = captureDesktopRuntimeSources(_event, 'opencode');
     return {
       success: true,
-      data: await requireService().install(parseOpenCodeInstallOptions(options)),
+      data: captured
+        ? await capturedInstaller!.install(await captured, validated)
+        : await requireService().install(validated),
     };
   } catch (error) {
     const message = getErrorMessage(error);
@@ -83,9 +94,15 @@ async function handleInstall(
   }
 }
 
-function handleInvalidateStatus(_event: IpcMainInvokeEvent): IpcResult<void> {
+async function handleInvalidateStatus(_event: IpcMainInvokeEvent): Promise<IpcResult<void>> {
   try {
     requireService().invalidateStatusCache();
+    const captured = captureDesktopRuntimeSources(_event, 'opencode');
+    if (captured) {
+      const status = await capturedInstaller!.selectInstalled(await captured);
+      if (status.state !== 'ready')
+        throw new Error(status.error ?? 'OpenCode selection could not be confirmed.');
+    }
     return { success: true, data: undefined };
   } catch (error) {
     const message = getErrorMessage(error);

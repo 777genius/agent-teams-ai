@@ -27,7 +27,6 @@ import { FileCodexAuthIntentStore } from '@features/runtime-provider-management/
 import { createCapturedCodexFeatures } from '@features/runtime-provider-management/main';
 import {
   createCapturedRuntimeProviderManagementClient,
-  createCapturedRuntimeProviderStatusClient,
   FileProviderOAuthIntentStore,
 } from '@features/runtime-provider-management/main';
 import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
@@ -35,6 +34,7 @@ import { createLogger } from '@shared/utils/logger';
 import { shell } from 'electron';
 
 import { createDesktopHostSchedules } from '../composition/createDesktopHostSchedules';
+import { createDesktopProviderStatusPort } from '../composition/createDesktopProviderStatusPort';
 import { createLegacySourceWriteAdmissionPolicy } from '../composition/legacySourceWriteAdmission';
 import { configureCapturedExtensionCommandRunner } from '../services/extensions/runtime/CapturedExtensionCommandLedger';
 import { CapturedNativeExtensions } from '../services/extensions/runtime/CapturedNativeExtensions';
@@ -50,6 +50,7 @@ import type { LegacySourceWriteAdmissionPolicy } from '@agent-teams/legacy-agent
 import type { StoppedTeamImportResult } from '@features/agent-backend/contracts';
 import type {
   CapturedReviewWatch,
+  CapturedRuntimeSources,
   CapturedTeamModelRequest,
   LegacyStoppedSourceOwners,
 } from '@features/agent-backend/main';
@@ -269,8 +270,12 @@ export async function captureDesktopHostNotification(event: IpcMainInvokeEvent, 
           : undefined,
       async readSnapshot(handle, current, cursor) {
         const result = await original.feature.facade.invoke(
-          { handle, commandId: randomUUID(), operation: 'team.snapshot',
-            payload: cursor ? { cursor } : {} },
+          {
+            handle,
+            commandId: randomUUID(),
+            operation: 'team.snapshot',
+            payload: cursor ? { cursor } : {},
+          },
           { isCurrent: current }
         );
         if (
@@ -544,7 +549,10 @@ export function getDesktopCodexFeatures(preferredAuthMode?: () => CodexAccountAu
     (targetId, originalContextId) => {
       const contextSelection = original.captureSelection();
       return original.feature.restoreProviderManagement(originalContextId, targetId, {
-        isCurrent: () => active === original && contextSelection.contextId === originalContextId && contextSelection.isCurrent(),
+        isCurrent: () =>
+          active === original &&
+          contextSelection.contextId === originalContextId &&
+          contextSelection.isCurrent(),
       });
     }
   );
@@ -569,50 +577,27 @@ export function captureDesktopStatusRequest(event: IpcMainInvokeEvent): (() => b
 export function getDesktopProviderStatusPort() {
   const original = active;
   if (!original?.selected) return undefined;
-  const capture = (projectPath: string | null, isCurrent?: () => boolean) => {
-    const contextSelection = original.captureSelection();
-    const contextId = contextSelection.contextId;
-    return original.feature.captureProviderManagement(contextId, projectPath, {
-      isCurrent: () =>
-        active === original && contextSelection?.isCurrent() === true && (isCurrent?.() ?? true),
-    });
-  };
-  return createCapturedRuntimeProviderStatusClient({
-    capture,
-    captureClaude: (projectPath) => {
-      const contextSelection = original.captureSelection();
-      const contextId = contextSelection.contextId;
-      return original.feature.captureProviderManagement(
-        contextId,
-        projectPath,
-        { isCurrent: () => active === original && contextSelection?.isCurrent() === true },
-        'claude'
-      );
-    },
-    captureCodex: (projectPath) => {
-      const contextSelection = original.captureSelection();
-      const contextId = contextSelection.contextId;
-      return original.feature.captureProviderManagement(
-        contextId,
-        projectPath,
-        {
-          isCurrent: () => active === original && contextSelection?.isCurrent() === true,
-        },
-        'codex'
-      );
-    },
-    captureGuard: () => {
-      const contextSelection = original.captureSelection();
-      return () => active === original && contextSelection?.isCurrent() === true;
-    },
-    readHealth: () => {
-      const contextSelection = original.captureSelection();
-      const contextId = contextSelection.contextId;
-      return original.feature.readRuntimeHealth(contextId, {
-        isCurrent: () => active === original && contextSelection?.isCurrent() === true,
-      });
-    },
+  return createDesktopProviderStatusPort({
+    feature: original.feature,
+    captureSelection: original.captureSelection,
+    isCurrent: () => active === original,
   });
+}
+
+/** Private installer authority comes from the original desktop descriptor, never an IPC path. */
+export function captureDesktopRuntimeSources(
+  event: IpcMainInvokeEvent,
+  runtimeId: 'opencode'
+): Promise<CapturedRuntimeSources> | undefined {
+  const original = active;
+  if (!original?.selected) return undefined;
+  const context = original.captureSelection(),
+    contextId = original.captureSender(event);
+  if (!contextId || contextId !== context.contextId)
+    throw new Error('Runtime installation sender is unavailable');
+  const isCurrent = createCapturedSenderGuard(original, event, contextId, context);
+  if (!isCurrent()) throw new Error('Runtime installation context changed');
+  return original.feature.captureRuntimeSources(contextId, null, runtimeId, { isCurrent });
 }
 
 export function registerDesktopAgentBackend(options: BackendShellOptions): void {

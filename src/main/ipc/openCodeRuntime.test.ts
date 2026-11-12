@@ -9,6 +9,7 @@ import {
   registerOpenCodeRuntimeHandlers,
 } from './openCodeRuntime';
 
+import type { CapturedRuntimeSources } from '@features/agent-backend/main';
 import type { OpenCodeRuntimeInstallerService } from '@main/services';
 import type { OpenCodeRuntimeStatus } from '@shared/types';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
@@ -18,14 +19,18 @@ const selected = vi.hoisted(() => ({
     | { readOpenCodeRuntimeStatus?(): Promise<OpenCodeRuntimeStatus | null> }
     | undefined,
   current: (() => true) as (() => boolean) | null,
+  sources: undefined as CapturedRuntimeSources | undefined,
 }));
 vi.mock('./agentBackend', () => ({
   getDesktopProviderStatusPort: () => selected.native,
   captureDesktopStatusRequest: () => selected.current,
+  captureDesktopRuntimeSources: () =>
+    selected.sources ? Promise.resolve(selected.sources) : undefined,
 }));
 afterEach(() => {
   selected.native = undefined;
   selected.current = () => true;
+  selected.sources = undefined;
   vi.restoreAllMocks();
 });
 

@@ -108,6 +108,9 @@ export const storedRuntimeSourceCommandSchema = z.object({
   resourceHeld: z.boolean(),
   nativeVersion: id.optional(),
   seedNativeVersion: id.optional(),
+  // Exact private source input for recovery; credentials/environment are not part of this contract.
+  publicationJson: z.string().max(2 * 1024 * 1024)
+    .refine(value => Buffer.byteLength(value) <= 2 * 1024 * 1024).optional(),
   reason: runtimeSourceRefusalSchema.optional(),
 }).strict().refine(value =>
   (value.phase === 'verifying' ? value.resourceHeld : value.phase === 'held' || !value.resourceHeld) &&

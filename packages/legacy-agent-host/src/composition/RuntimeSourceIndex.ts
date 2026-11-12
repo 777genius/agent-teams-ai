@@ -137,6 +137,64 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     return { commandId, phase: 'published', selection: this.summary(grant, seed, record) };
   }
 
+  /** A restarted installer may finish one original journaled selection; it cannot invent a new one. */
+  async recover(
+    raw: unknown,
+    admit: (profile: ProviderManagementProfile) => void
+  ): Promise<RuntimeSourcePublication | null> {
+    this.assertWriter();
+    if (this.sealed) fail('held');
+    const { grant } = runtimeSourceReadSchema.parse(raw);
+    this.seed(grant);
+    const unfinished = [...this.commands.list()].filter(
+      (row): row is StoredRuntimeSourceCommand =>
+        row.kind === 'runtime.source' &&
+        row.sourceId === grant.targetId &&
+        row.phase !== 'published' &&
+        (row.phase !== 'held' || row.resourceHeld)
+    );
+    if (!unfinished.length) return null;
+    if (unfinished.length !== 1) return fail('held');
+    const saved = unfinished[0]!;
+    const input = this.publicationSnapshot(saved, grant);
+    return this.publish(input, admit);
+  }
+
+  private publicationSnapshot(
+    saved: StoredRuntimeSourceCommand,
+    grant: RuntimeSourceGrant
+  ): PublishRuntimeSource {
+    if (!saved.publicationJson) return fail('held');
+    let input: PublishRuntimeSource;
+    try {
+      input = publishRuntimeSourceSchema.parse(JSON.parse(saved.publicationJson));
+    } catch {
+      return fail('held');
+    }
+    const seed = this.seed(grant);
+    if (
+      runtimeDigest(input.grant) !== runtimeDigest(grant) ||
+      input.commandId !== saved.commandId ||
+      input.expectedRevision !== saved.expectedRevision ||
+      runtimeDigest(input) !== saved.fingerprint ||
+      saved.sourceId !== grant.targetId ||
+      saved.resourceId !== grant.targetId ||
+      saved.profileId !== seed.profileId ||
+      saved.configRevision !== seed.configRevision ||
+      saved.providerId !== seed.provider ||
+      saved.selectionDigest !== this.seedRevision(grant, seed) ||
+      saved.revision !==
+        runtimeDigest({
+          previousRevision: input.expectedRevision,
+          commandId: input.commandId,
+          grant: input.grant,
+          candidate: input.candidate,
+        })
+    )
+      return fail('held');
+    return input;
+  }
+
   async publish(
     raw: unknown,
     admit: (profile: ProviderManagementProfile) => void
@@ -212,7 +270,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     }
     if (this.current({ grant: input.grant }).revision !== input.expectedRevision) fail('conflict');
     assertRuntimeSourceQualification(seed, input.candidate);
-    this.assertSourceReleased(input.grant.targetId);
+    this.assertSourceReleased(input.grant.targetId, input.commandId);
     const selection = {
       previousRevision: input.expectedRevision,
       commandId: input.commandId,
@@ -234,6 +292,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       sourceId: input.grant.targetId,
       revision: record.revision,
       expectedRevision: input.expectedRevision,
+      publicationJson: JSON.stringify(input),
       phase: 'prepared',
     });
     if (!prior) this.commands.write(receipt);
@@ -279,9 +338,14 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     };
   }
 
-  private assertSourceReleased(sourceId: string): void {
+  private assertSourceReleased(sourceId: string, commandId: string): void {
     for (const row of this.commands.list())
-      if (row.kind === 'runtime.source' && row.sourceId === sourceId && row.resourceHeld)
+      if (
+        row.kind === 'runtime.source' &&
+        row.sourceId === sourceId &&
+        row.commandId !== commandId &&
+        (row.resourceHeld || ['prepared', 'verifying', 'verified'].includes(row.phase))
+      )
         fail('held');
   }
 
@@ -292,7 +356,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
   ): Promise<StoredRuntimeSourceCommand> {
     this.assertWriter();
     if (this.sealed) fail('held');
-    this.assertSourceReleased(receipt.sourceId);
+    this.assertSourceReleased(receipt.sourceId, receipt.commandId);
     const claimed: StoredRuntimeSourceCommand = {
       ...receipt,
       phase: 'verifying',
@@ -578,6 +642,8 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       )
         fail('held');
       const receipt = this.commands.read(record.commandId);
+      if (receipt?.kind === 'runtime.source' && receipt.publicationJson)
+        this.publicationSnapshot(receipt, record.grant);
       if (
         !receipt ||
         receipt.kind !== 'runtime.source' ||

@@ -31,6 +31,7 @@ export interface CapturedRuntimeSources {
   current(): Promise<RuntimeSourceSummary>;
   retained(): Promise<RuntimeSourceSummary[]>;
   publish(input: RuntimeSourcePublishIntent): Promise<RuntimeSourcePublication>;
+  recover(): Promise<RuntimeSourcePublication | null>;
   lookup(commandId: string): Promise<RuntimeSourcePublication | null>;
 }
 
@@ -55,7 +56,7 @@ export function captureRuntimeSources(options: {
     return selected;
   };
   const request = async (
-    operation: 'current' | 'retained' | 'publish' | 'lookup',
+    operation: 'current' | 'retained' | 'publish' | 'lookup' | 'recover',
     payload: object = {}
   ) => {
     const retained = operation === 'lookup' || operation === 'retained';
@@ -77,7 +78,7 @@ export function captureRuntimeSources(options: {
     const reply = await options.client.request(
       `runtime.source.${operation}`,
       JSON.parse(JSON.stringify({ ...payload, grant })) as JsonValue,
-      { control: operation !== 'publish' }
+      { control: operation !== 'publish' && operation !== 'recover' }
     );
     check('unknown');
     if (
@@ -129,6 +130,11 @@ export function captureRuntimeSources(options: {
       if (result?.selection) summary(result.selection);
       if (result && result.commandId !== commandId)
         throw new BackendRoutingError('hold', 'unknown');
+      return result;
+    },
+    recover: async () => {
+      const result = runtimeSourcePublicationSchema.nullable().parse(await request('recover'));
+      if (result?.selection) summary(result.selection);
       return result;
     },
   });
