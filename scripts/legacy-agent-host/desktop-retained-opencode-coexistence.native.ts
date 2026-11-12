@@ -215,6 +215,51 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
       await callTeams('sendMessage', [key, { member: to, text: marker }]);
       await waitFor(async () => { assert.deepEqual(model.failures, []); return model.markers.has(marker) || null; }, 'original owner receives ' + marker, 90_000);
     };
+    const readLegacyReply = async (member: Record<string, unknown>, expectedReply: string): Promise<Record<string, unknown> | null> => {
+      assert.equal(member.memberName, 'bob'); assert.equal(member.providerId, 'opencode');
+      const laneId = member.laneId, nativeSessionId = member.runtimeSessionId;
+      assert.ok(typeof laneId === 'string' && laneId.length > 0);
+      assert.ok(typeof nativeSessionId === 'string' && nativeSessionId.length > 0);
+      assert.deepEqual(model.failures, []);
+      // This is the original member UI's native reader; generic JSONL logs are its fallback.
+      const stream: Record<string, unknown> = await app!.call(`window.__TEST_retainedApi.memberLogStream.getMemberLogStream(
+        ${literal(legacyTeam)},'bob',${literal({ laneId, limitSegments: 30, forceRefresh: true })})`);
+      assert.ok(Array.isArray(stream.segments));
+      proof.legacyHistoryRead = { laneId, nativeSessionId, coverage: stream.coverage,
+        warnings: stream.warnings, sources: stream.segments.map(value => record(value).source) };
+      const segments = stream.segments.map(record).filter(segment => {
+        const source = record(segment.source), actor = record(segment.actor);
+        return source.provider === 'opencode_runtime' && source.label === 'OpenCode runtime' &&
+          source.sessionId === nativeSessionId && source.laneId === laneId &&
+          actor.memberName === 'bob' && actor.sessionId === nativeSessionId;
+      });
+      assert.ok(segments.length <= 1, 'native history binding is unambiguous');
+      const replies: Record<string, unknown>[] = [];
+      for (const segment of segments) {
+        assert.ok(Array.isArray(segment.chunks));
+        for (const value of segment.chunks) {
+          const chunk = record(value);
+          if (chunk.chunkType !== 'ai') continue;
+          assert.ok(Array.isArray(chunk.responses));
+          for (const responseValue of chunk.responses) {
+            const response = record(responseValue);
+            if (response.type !== 'assistant' || response.role !== 'assistant' ||
+              response.sessionId !== nativeSessionId) continue;
+            const text = typeof response.content === 'string' ? response.content :
+              Array.isArray(response.content) ? response.content.map(record)
+                .filter(block => block.type === 'text' && typeof block.text === 'string')
+                .map(block => block.text).join('') : '';
+            if (text !== expectedReply) continue;
+            assert.ok(typeof response.uuid === 'string' && response.uuid.length > 0);
+            replies.push({ provider: 'opencode_runtime', laneId, nativeSessionId,
+              replyUuid: response.uuid, replyContentSha256: digest(JSON.stringify(response.content)) });
+          }
+        }
+      }
+      assert.ok(replies.length <= 1, 'one actual native assistant reply');
+      assert.deepEqual(model.failures, []);
+      return replies[0] ?? null;
+    };
     await waitLegacyControl();
     await app.call(`window.electronAPI.config.addCustomProjectPath(${literal(legacyProject)})`);
     legacySubmitted = true;
@@ -225,19 +270,13 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const originalLegacyRuntime = await waitLegacyRuntime(created.runId);
     const legacyTask = await callTeams('createTask', [legacyTeam, { subject: 'TEST retained V1 sidebar record' }]);
     assert.equal(typeof legacyTask.id, 'string');
-    const originalNativeSession = record(record(originalLegacyRuntime.members).bob).runtimeSessionId;
+    const originalLegacyMember = record(record(originalLegacyRuntime.members).bob);
+    const originalNativeSession = originalLegacyMember.runtimeSessionId;
     assert.equal(typeof originalNativeSession, 'string'); assert.ok(originalNativeSession);
     await send(legacyTeam, 'bob', 'TEST_RETAINED_V1_HISTORY');
-    const historicalLog = await waitFor(async () => {
-      const logs = await callTeams<unknown[]>('getMemberLogs', [legacyTeam, 'bob']);
-      return logs.map(record).find(log => typeof log.lastOutputPreview === 'string' &&
-        log.lastOutputPreview.includes('REPLY_TEST_RETAINED_V1_HISTORY')) ?? null;
-    }, 'old owner exposes actual completed native history', 90_000);
-    assert.equal(typeof historicalLog.projectId, 'string');
-    assert.equal(typeof historicalLog.sessionId, 'string');
-    const historicalDetail = () => app!.call(`window.__TEST_retainedApi.getSessionDetail(
-      ${literal(historicalLog.projectId)},${literal(historicalLog.sessionId)},{bypassCache:true})`);
-    assert.ok(JSON.stringify(await historicalDetail()).includes('REPLY_TEST_RETAINED_V1_HISTORY'));
+    const historicalReply = await waitFor(
+      () => readLegacyReply(originalLegacyMember, 'REPLY_TEST_RETAINED_V1_HISTORY'),
+      'old owner exposes actual completed native history', 90_000);
     const seedProcesses = await legacyChildren();
     assert.ok(seedProcesses.length > 0, 'real old-owner V1 native process'); natives.push(...seedProcesses);
     await callTeams('stop', [legacyTeam]); legacyStopped = true;
@@ -245,7 +284,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const callsBeforeUpgrade = model.observations.length;
     steps.push({ observed: 'actual_legacy_fork_V1_history_before_new_Host_selection', runId: created.runId,
       nativeSessionId: originalNativeSession, taskId: legacyTask.id,
-      logSessionId: historicalLog.sessionId, logProjectId: historicalLog.projectId, seedProcesses });
+      history: historicalReply, seedProcesses });
     await recordAppChildren();
     await app.close(); app = undefined; source();
     assert.equal(seedProcesses.some(originalLinuxProcessPresent), false);
@@ -254,7 +293,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const retainedData = await callTeams('getData', [legacyTeam]);
     assert.deepEqual(retainedData.tasks, savedLegacy.tasks);
     assert.deepEqual(retainedData.messages, savedLegacy.messages);
-    assert.ok(JSON.stringify(await historicalDetail()).includes('REPLY_TEST_RETAINED_V1_HISTORY'));
+    assert.deepEqual(await readLegacyReply(originalLegacyMember, 'REPLY_TEST_RETAINED_V1_HISTORY'), historicalReply);
     assert.equal(await callTeams<boolean>('processAlive', [legacyTeam]), false);
     assert.equal(model.observations.length, callsBeforeUpgrade, 'Host selection never replays retained V1 input');
     legacyStopped = false;
@@ -295,7 +334,8 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const relaunched = await callTeams('launchTeam', [{ teamName: legacyTeam, cwd: legacyProject,
       providerId: 'opencode', model: 'test-legacy/TEST-model', skipPermissions: true, runtimeSelectionVersion: 1 }], 240_000);
     assert.equal(typeof relaunched.runId, 'string'); assert.notEqual(relaunched.runId, retainedLaunch.runId);
-    await waitLegacyRuntime(relaunched.runId);
+    const relaunchedRuntime = await waitLegacyRuntime(relaunched.runId);
+    const relaunchedMember = record(record(relaunchedRuntime.members).bob);
     const retainedAfterRelaunch = await legacyChildren(); assert.ok(retainedAfterRelaunch.length > 0); natives.push(...retainedAfterRelaunch);
     await ui.clickSidebar(fixture.uiSeed!.subject);
     await ui.click('button[aria-label="Stop"]', 'ordinary Host V2 Stop', 'Stop');
@@ -304,7 +344,10 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     }, 'Host V2 Stop confirms original custody', 90_000);
     assert.ok(retainedAfterRelaunch.every(originalLinuxProcessPresent), 'Host Stop preserves retained V1 native owner');
     await send(legacyTeam, 'bob', 'TEST_RETAINED_V1_AFTER_STOP');
-    steps.push({ observed: 'both_original_Stop_controls_preserve_the_other_actual_owner' });
+    const finalLegacyReply = await waitFor(
+      () => readLegacyReply(relaunchedMember, 'REPLY_TEST_RETAINED_V1_AFTER_STOP'),
+      'retained owner completes native reply after Host Stop', 90_000);
+    steps.push({ observed: 'both_original_Stop_controls_preserve_the_other_actual_owner', history: finalLegacyReply });
     const screenshot = await app.cdp.send<{ data: string }>('Page.captureScreenshot', { format: 'png' });
     await writeFile(join(root, 'coexistence-original-ui.png'), Buffer.from(screenshot.data, 'base64'), { mode: 0o600 });
     await callTeams('stop', [legacyTeam]);
@@ -322,6 +365,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     assert.deepEqual(record(after.host).messages, record(before.host).messages);
     assert.equal(await callTeams<boolean>('processAlive', [legacyTeam]), false);
     assert.equal(await callTeams<boolean>('processAlive', [hostKey]), false);
+    assert.deepEqual(await readLegacyReply(relaunchedMember, 'REPLY_TEST_RETAINED_V1_AFTER_STOP'), finalLegacyReply);
     await new Promise<void>(resolve => setTimeout(resolve, 500));
     assert.equal(model.observations.length, callsBeforeCold, 'cold startup never replays either owner business input');
     assert.deepEqual(model.failures, []);
