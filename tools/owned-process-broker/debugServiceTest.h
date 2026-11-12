@@ -3,6 +3,7 @@
 // never into the product broker. No attach-by-PID, API fallback or SDK claim.
 #include "ownedJob.h"
 #include "protocol.h"
+#include <io.h>
 #include <map>
 #include <mutex>
 #include <set>
@@ -16,6 +17,18 @@ struct Service {
 };
 inline std::mutex recordsMutex;
 inline std::map<DWORD,Service> records;
+// One bounded TEST diagnostic record, on a private regular-file fd. It never
+// holds target stdio open and is not a command or a production wire receipt.
+enum class Stage : DWORD { RetainRoot=1, RetainJob, Wait, RootIdentity, RetainChild,
+  ChildIdentity, OuterMembership, CreateJob, AssignJob, VerifyJob, ImageClose,
+  DllClose, Rip, Continue, JobClose, RootClose };
+inline void failure(Stage stage,DWORD error,const DEBUG_EVENT& event={}) noexcept {
+  const DWORD record[4]={static_cast<DWORD>(stage),error,event.dwDebugEventCode,event.dwProcessId};
+  const auto file=reinterpret_cast<HANDLE>(_get_osfhandle(4));
+  if(file==INVALID_HANDLE_VALUE||GetFileType(file)!=FILE_TYPE_DISK) return;
+  DWORD written=0;
+  WriteFile(file,record,sizeof(record),&written,nullptr); // best effort; exit remains failure
+}
 
 inline uint64_t birthOf(HANDLE process) {
   FILETIME created{},exit{},kernel{},user{};
@@ -28,21 +41,43 @@ inline HANDLE duplicate(HANDLE original) {
     0,FALSE,DUPLICATE_SAME_ACCESS)) throw GetLastError();
   return retained;
 }
-inline void capture(const DEBUG_EVENT& event,HANDLE outer) {
+inline HANDLE retainProcess(HANDLE original) {
+  HANDLE retained=nullptr;
+  // A debug event promises memory access, not Job assignment/query/wait rights.
+  // Ask Windows for the exact needed access on the SAME original object. A
+  // denied request fails admission; it never falls back to reopening a PID.
+  constexpr DWORD access=PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE|
+    PROCESS_SET_QUOTA|PROCESS_TERMINATE;
+  if(!DuplicateHandle(GetCurrentProcess(),original,GetCurrentProcess(),&retained,
+    access,FALSE,0)) throw GetLastError();
+  return retained;
+}
+inline void capture(const DEBUG_EVENT& event,HANDLE outer,Stage& stage) {
   const HANDLE original=event.u.CreateProcessInfo.hProcess;
-  BOOL member=FALSE;
-  if(!original||GetProcessId(original)!=event.dwProcessId||
-    !IsProcessInJob(original,outer,&member)||!member) throw DWORD{ERROR_INVALID_DATA};
+  if(!original) throw DWORD{ERROR_INVALID_HANDLE};
   std::lock_guard<std::mutex> lock(recordsMutex);
   if(records.size()>=64||records.count(event.dwProcessId)) throw DWORD{ERROR_INVALID_DATA};
   Service selected;
   try {
     // This exact handle came from the kernel create event, before user-mode code.
     // Duplicate because ContinueDebugEvent closes the system-owned handle on exit.
-    selected.process=duplicate(original); selected.birth=birthOf(selected.process);
+    stage=Stage::RetainChild; selected.process=retainProcess(original);
+    stage=Stage::ChildIdentity;
+    const DWORD pid=GetProcessId(selected.process);
+    if(!pid) throw GetLastError();
+    if(pid!=event.dwProcessId||!CompareObjectHandles(original,selected.process))
+      throw DWORD{ERROR_INVALID_DATA};
+    selected.birth=birthOf(selected.process);
+    stage=Stage::OuterMembership; BOOL member=FALSE;
+    if(!IsProcessInJob(selected.process,outer,&member)) throw GetLastError();
+    if(!member) throw DWORD{ERROR_INVALID_DATA};
+    stage=Stage::CreateJob;
     selected.job=owned_job::create();
-    if(!AssignProcessToJobObject(selected.job,selected.process)||
-      !IsProcessInJob(selected.process,selected.job,&member)||!member) throw GetLastError();
+    stage=Stage::AssignJob;
+    if(!AssignProcessToJobObject(selected.job,selected.process)) throw GetLastError();
+    stage=Stage::VerifyJob;
+    if(!IsProcessInJob(selected.process,selected.job,&member)) throw GetLastError();
+    if(!member) throw DWORD{ERROR_INVALID_DATA};
     records.emplace(event.dwProcessId,selected);
   } catch(...) {
     if(selected.job) CloseHandle(selected.job);
@@ -54,10 +89,12 @@ inline void capture(const DEBUG_EVENT& event,HANDLE outer) {
 /** Called on the same existing admission thread that invoked CreateProcessW. */
 inline bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::timed_mutex>& stateLock) {
   HANDLE observedRoot=nullptr,observedOuter=nullptr;
+  Stage stage=Stage::RetainRoot;
   // The ordinary watcher closes its root handle on exit. Retain both originals
   // while the existing admission lock still prevents observer/release races.
-  try { observedRoot=duplicate(root); observedOuter=duplicate(outer); }
-  catch(...) { if(observedRoot) CloseHandle(observedRoot); return false; }
+  try { observedRoot=duplicate(root); stage=Stage::RetainJob; observedOuter=duplicate(outer); }
+  catch(DWORD error) { failure(stage,error); if(observedRoot) CloseHandle(observedRoot); return false; }
+  catch(...) { failure(stage,ERROR_INVALID_DATA); if(observedRoot) CloseHandle(observedRoot); return false; }
   stateLock.unlock();
   bool ok=true;
   std::set<DWORD> initialBreakpoints;
@@ -70,18 +107,22 @@ inline bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::tim
         QueryInformationJobObject(observedOuter,JobObjectBasicAccountingInformation,
           &accounting,sizeof(accounting),nullptr)&&accounting.ActiveProcesses==0) break;
       if(error==ERROR_SEM_TIMEOUT) continue;
-      ok=false; break;
+      failure(Stage::Wait,error,event); ok=false; break;
     }
     DWORD continuation=DBG_CONTINUE;
     try {
       if(event.dwDebugEventCode==CREATE_PROCESS_DEBUG_EVENT) {
         if(event.dwProcessId==rootPid) {
-          if(GetProcessId(event.u.CreateProcessInfo.hProcess)!=GetProcessId(observedRoot)||
-            birthOf(event.u.CreateProcessInfo.hProcess)!=birthOf(observedRoot)) throw DWORD{ERROR_INVALID_DATA};
-        } else capture(event,observedOuter);
+          stage=Stage::RootIdentity;
+          // Kernel object equality needs no assumed query rights on debug handles.
+          if(!CompareObjectHandles(event.u.CreateProcessInfo.hProcess,observedRoot))
+            throw DWORD{ERROR_INVALID_DATA};
+        } else capture(event,observedOuter,stage);
+        stage=Stage::ImageClose;
         if(event.u.CreateProcessInfo.hFile&&!CloseHandle(event.u.CreateProcessInfo.hFile))
           throw GetLastError();
       } else if(event.dwDebugEventCode==LOAD_DLL_DEBUG_EVENT) {
+        stage=Stage::DllClose;
         if(event.u.LoadDll.hFile&&!CloseHandle(event.u.LoadDll.hFile)) throw GetLastError();
       } else if(event.dwDebugEventCode==EXCEPTION_DEBUG_EVENT) {
         // Feasibility fixture only: ordinary initial loader breakpoint is handled;
@@ -89,15 +130,19 @@ inline bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::tim
         const bool initial=event.u.Exception.ExceptionRecord.ExceptionCode==EXCEPTION_BREAKPOINT&&
           initialBreakpoints.insert(event.dwProcessId).second;
         if(!initial) continuation=DBG_EXCEPTION_NOT_HANDLED;
-      } else if(event.dwDebugEventCode==RIP_EVENT) throw DWORD{ERROR_INVALID_DATA};
-    } catch(...) { ok=false; }
+      } else if(event.dwDebugEventCode==RIP_EVENT) { stage=Stage::Rip; throw event.u.RipInfo.dwError; }
+    } catch(DWORD error) { failure(stage,error,event); ok=false; }
+    catch(...) { failure(stage,ERROR_INVALID_DATA,event); ok=false; }
     if(!ok) TerminateJobObject(observedOuter,1); // Failed prebirth admission never releases unowned code.
     // Never wait for root/Job exit here: EXIT cannot finish until this continuation.
-    if(!ContinueDebugEvent(event.dwProcessId,event.dwThreadId,continuation)) ok=false;
+    if(!ContinueDebugEvent(event.dwProcessId,event.dwThreadId,continuation)) {
+      if(ok) failure(Stage::Continue,GetLastError(),event);
+      ok=false;
+    }
     if(!ok) break;
   }
-  if(!CloseHandle(observedOuter)) ok=false;
-  if(!CloseHandle(observedRoot)) ok=false;
+  if(!CloseHandle(observedOuter)) { if(ok) failure(Stage::JobClose,GetLastError()); ok=false; }
+  if(!CloseHandle(observedRoot)) { if(ok) failure(Stage::RootClose,GetLastError()); ok=false; }
   // The bounded retained originals are closed by broker process teardown after
   // its genuine whole-provider release. Production retirement is not claimed.
   return ok;

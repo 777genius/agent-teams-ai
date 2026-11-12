@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readFileSync, writeFileSync } from 'node:fs';
 import { Duplex } from 'node:stream';
 
 import { encodeFrame, encodeLaunch, FrameDecoder, Op } from '@agent-teams/legacy-agent-host/owned-process';
@@ -15,14 +15,39 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
   mode: 'pre-resume-cancel' | 'service-pair' | 'service-first', sentinel: ChildProcess): Promise<void> {
   const { events, owner, marker, spec, fixture, track, phase } = context;
   const identity = owner(), start = marker();
-  const raw = spawn(debugBroker, [], { stdio: ['pipe', 'pipe', 'pipe', 'overlapped'], windowsHide: true });
+  const diagnosticPath = `${start.path}.debug-failure`;
+  const diagnosticFd = openSync(diagnosticPath, 'wx');
+  const raw = (() => {
+    try {
+      return spawn(debugBroker, [], {
+        stdio: ['pipe', 'pipe', 'pipe', 'overlapped', diagnosticFd], windowsHide: true,
+      });
+    } finally { closeSync(diagnosticFd); }
+  })();
   track(raw, 'raw-broker');
+  raw.once('exit', events.guard((code: number | null) => {
+    const bytes = readFileSync(diagnosticPath);
+    assert.ok(bytes.length === 0 || bytes.length === 16, 'One bounded native failure record');
+    if (bytes.length) {
+      const stages = ['none', 'retain-root', 'retain-job', 'wait', 'root-identity', 'retain-child',
+        'child-identity', 'outer-membership', 'create-job', 'assign-job', 'verify-job', 'image-close',
+        'dll-close', 'rip', 'continue', 'job-close', 'root-close'];
+      console.error(JSON.stringify({ debugServiceFailure: {
+        stage: stages[bytes.readUInt32LE(0)] ?? bytes.readUInt32LE(0), win32Error: bytes.readUInt32LE(4),
+        event: bytes.readUInt32LE(8), pid: bytes.readUInt32LE(12),
+      } }));
+    }
+    assert.equal(code, 0, 'TEST debug broker must not die before completing its native gate');
+    assert.equal(bytes.length, 0, 'Success cannot mask a native debug failure');
+  }));
   const exited = new Promise<number | null>((resolve, reject) => {
     raw.once('exit', resolve); raw.once('error', reject);
   });
   void exited.catch(() => undefined);
   const pipe = raw.stdio[3];
   assert.ok(pipe instanceof Duplex);
+  const { stdin, stdout, stderr } = raw;
+  assert.ok(stdin && stdout && stderr, 'TEST target stdio pipes are present');
   const decoder = new FrameDecoder(identity.processGeneration);
   const replies = new Map<bigint, { opcode: number; resolve(frame: Frame): void }>();
   let lastId = 0n;
@@ -41,10 +66,10 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
   };
   const output = createFixtureOutputCollector();
   let text = '';
-  raw.stdout.on('data', events.guard((chunk: Buffer) => {
+  stdout.on('data', events.guard((chunk: Buffer) => {
     output.push(chunk); text += chunk.toString();
   }));
-  raw.stderr.resume();
+  stderr.resume();
   phase('prepare');
   const prepared = await request(Op.launch, Op.prepared,
     encodeLaunch(spec(mode === 'pre-resume-cancel' ? 'tree' : mode, start)));
@@ -97,7 +122,7 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
     assert.equal(adjacent.process.exitCode, null, 'Other service original HANDLE remains unsignaled');
     assert.equal(root.process.exitCode, null, 'Provider original HANDLE remains unsignaled');
     assert.equal(sentinel.exitCode, null);
-    raw.stdin.write('TEST provider remains functional\n');
+    stdin.write('TEST provider remains functional\n');
     await waitFor(() => text.includes('{"providerAlive":true}'), 3000, events);
   }
   phase('stop');
@@ -112,7 +137,7 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
   if (neighborExit) assert.equal(await timeout(events.wait(neighborExit)), 0);
   if (mode === 'pre-resume-cancel') assert.equal(existsSync(start.path), false);
   phase('target-drain');
-  await waitFor(() => raw.stdout.readableEnded && raw.stderr.readableEnded, 3000, events);
+  await waitFor(() => stdout.readableEnded && stderr.readableEnded, 3000, events);
   phase('release-ack');
   await request(Op.release, Op.released, Buffer.alloc(0));
   phase('broker-exit');
