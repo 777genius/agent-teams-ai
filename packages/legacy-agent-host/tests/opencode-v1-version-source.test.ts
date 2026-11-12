@@ -2,24 +2,26 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { cp, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 
 import { assertNativeV1Build, assertNativeV1Source, buildNativeV1Host, measureNativeV1Host } from './opencode-v1-version-source.ts';
 
-async function fixture() {
+async function fixture(archiveDirectory = 'TEST-provider') {
   const repo=await mkdtemp(join(tmpdir(),'TEST-v1-source-build-'));
   const git=(...args:string[])=>execFileSync('git',args,{cwd:repo,encoding:'utf8',timeout:5000}).trim();
   await writeFile(join(repo,'.gitignore'),'**/dist/\n**/node_modules/\n');
-  await mkdir(join(repo,'vendor/provider-migration/TEST-provider'),{recursive:true});
+  await mkdir(join(repo,'vendor/provider-migration', archiveDirectory),{recursive:true});
   const dependencies: Record<string, string> = {};
   for (const name of ['provider-implementations', 'provider-session-contracts']) {
     const packed = join(repo, 'TEST-pack', name), payload = join(packed, 'package');
     await mkdir(join(payload, 'dist'), { recursive: true });
     await writeFile(join(payload, 'package.json'), JSON.stringify({ name: `@agent-teams/${name}`, version: 'TEST', type: 'module' }));
     await writeFile(join(payload, 'dist/index.js'), 'export const TEST = true;\n');
-    const archive = `vendor/provider-migration/TEST-provider/${name}.tgz`;
-    execFileSync('tar', ['-czf', join(repo, archive), '-C', packed, 'package'], { timeout: 5000 });
+    const archive = `vendor/provider-migration/${archiveDirectory}/${name}.tgz`;
+    execFileSync('tar', ['-czf', basename(archive), '-C', packed, 'package'], {
+      cwd: dirname(join(repo, archive)), timeout: 5000,
+    });
     const installed = join(repo, 'packages/legacy-agent-host/node_modules/@agent-teams', name);
     await mkdir(join(installed, '..'), { recursive: true });
     await cp(payload, installed, { recursive: true });
@@ -79,8 +81,9 @@ test('native V1 source admission rejects changed, staged and untracked relevant 
   } finally {await rm(repo,{recursive:true,force:true});}
 });
 
-test('native source admission binds ignored installed provider and contracts bytes before and after execution', async () => {
-  const { repo, head } = await fixture();
+test('native source admission verifies local archives with colon-containing parents and installed bytes before and after execution', async () => {
+  // Windows already has a drive colon; POSIX supplies the same GNU tar hazard.
+  const { repo, head } = await fixture(process.platform === 'win32' ? 'TEST-provider' : 'TEST:provider');
   try {
     const built = await buildNativeV1Host(repo, head);
     for (const name of ['provider-implementations', 'provider-session-contracts']) {

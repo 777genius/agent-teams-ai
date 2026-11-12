@@ -91,7 +91,7 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
   await ui.waitRead(`!document.querySelector('[role="dialog"] #dialog-prompt')`, 'Launch dialog closes', 180_000);
   const initial = await poll(owner, state => Array.isArray(state.runtimeCaptures) && state.runtimeCaptures.length === 1, 'one original runtime capture');
   const capture = record((initial.runtimeCaptures as unknown[])[0]);
-  assert.equal(record(initial.savedSettings).model, 'TEST-local/TEST-model');
+  assert.equal(record(initial.savedSettings).model, 'test-local/TEST-model');
   assert.equal(record(initial.savedSettings).skipPermissions, true);
   const taskId = await poll(async () => model.taskId(), id => id.length > 0, 'actual native MCP Task');
   assert.match(taskId, /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/, 'canonical Host task UUID');

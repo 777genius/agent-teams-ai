@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { lstat, mkdtemp, readFile, readdir, realpath, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 import { fileHash, treeHash } from './fixtures/native-host.ts';
 
@@ -67,17 +67,22 @@ async function installedDependency(parent: string, name: string): Promise<string
 
 /** Same finite archive census as packaged staging; ignored installed bytes are not source evidence. */
 async function verifyInstalledArchive(archive: string, installed: string, name: string): Promise<void> {
+  // GNU tar treats a drive colon in -f as a remote host. Keep the same selected
+  // archive, using its local basename with both GNU and BSD tar.
+  const archiveName = basename(archive), archiveDirectory = dirname(archive);
+  assert.ok(archiveName && !archiveName.startsWith('-') && !archiveName.includes(':'));
   const tar = (args: string[]) => execFileSync('tar', args, {
+    cwd: archiveDirectory,
     encoding: 'utf8', timeout: 30_000, maxBuffer: 4 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'],
   }).trim().split(/\r?\n/);
-  const members = tar(['-tf', archive]);
+  const members = tar(['-tf', archiveName]);
   assert.ok(members.length > 0 && members.length <= 4096);
   assert.equal(new Set(members).size, members.length);
   assert.ok(members.every(member => member.startsWith('package/') &&
     !/[\\:\0]/.test(member) && member.slice(8).split('/').every((part, index, parts) =>
       (part.length > 0 || index === parts.length - 1) && part !== '.' && part !== '..')));
   // Reject links before extraction so a selected archive cannot redirect writes.
-  const modes = tar(['-tvf', archive]);
+  const modes = tar(['-tvf', archiveName]);
   assert.equal(modes.length, members.length);
   assert.ok(modes.every(line => line.startsWith('-') || line.startsWith('d')));
   const expected = members.filter(member => !member.endsWith('/')).map(member => member.slice(8)).sort();
@@ -105,7 +110,9 @@ async function verifyInstalledArchive(archive: string, installed: string, name: 
   assert.deepEqual(actual.sort(), expected, 'installed provider file census must match its selected archive');
   const unpacked = await realpath(await mkdtemp(join(tmpdir(), 'TEST-native-provider-census-')));
   try {
-    execFileSync('tar', ['-xf', archive, '-C', unpacked], { timeout: 30_000, stdio: 'pipe' });
+    execFileSync('tar', ['-xf', archiveName, '-C', unpacked], {
+      cwd: archiveDirectory, timeout: 30_000, stdio: 'pipe',
+    });
     for (const member of expected) assert.deepEqual(
       await readFile(join(installed, member)), await readFile(join(unpacked, 'package', member)),
       'installed provider bytes must match their selected immutable archive');

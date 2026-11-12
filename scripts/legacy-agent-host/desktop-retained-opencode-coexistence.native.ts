@@ -267,7 +267,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const launch = record(selection.value);
     const started = await host('team.launch.start', 'TEST-coexist-launch-once', {
       launchId: launch.launchId, rosterRevision: launch.rosterRevision,
-      configuration: { members: [{ memberId: 'alice-id', model: 'TEST-local/TEST-model', permissions: 'bypass' }] },
+      configuration: { members: [{ memberId: 'alice-id', model: 'test-local/TEST-model', permissions: 'bypass' }] },
     }); assert.equal(started.ok, true, JSON.stringify(started));
     await waitFor(async () => { const value = await host('runtime.read', 'TEST-coexist-native-read', { memberId: 'alice-id' });
       assert.equal(value.ok, true); return record(value.value).nativeReady === true ? value : null;

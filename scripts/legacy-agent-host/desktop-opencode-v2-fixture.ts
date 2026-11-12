@@ -118,7 +118,7 @@ export async function prepareDesktopOpenCodeV2Recipe(options: {
     },
     embedded,
     nativeOptions: {
-      providerId: 'TEST-local',
+      providerId: 'test-local',
       agent: 'TEST-member',
       toolApprovalMode: 'manual',
       instructions: CONTEXT_MARKER,

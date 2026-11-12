@@ -110,4 +110,9 @@ test('selected retained V1/Host V2 acceptance is required by the existing Full q
   assert.match(job, /node --test scripts\/legacy-agent-host\/desktop-retained-opencode-coexistence\.native\.ts/);
   assert.match(job, /assert\.equal\(r\.status, 'PASS'\); assert\.equal\(r\.cleanup, true\)/);
   assert.match(job, /path: \.runtime-download\/TEST-retained-runtime-source/);
+  assert.match(job, /repository: 777genius\/agent_teams_orchestrator\n {10}ref: f5c69c2e9024ffc36a5db5eafe30f53539b52f62/);
+  assert.match(job, /assert\.equal\(commit, 'f5c69c2e9024ffc36a5db5eafe30f53539b52f62'\)/);
+  assert.match(job, /assert\.equal\(commit, lock\.opencodeV2Delivery\['linux-x64'\]\.sourceCommit\)/);
+  assert.doesNotMatch(job, /steps\.retained-source\.outputs\./,
+    'the stock helper checkout must never accept a source-derived repository or ref');
 });

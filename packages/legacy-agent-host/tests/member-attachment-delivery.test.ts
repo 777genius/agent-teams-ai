@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { AttachmentArtifactStore } from '../dist/attachments/AttachmentArtifactStore.js';
+import { bindOpenCodeV2AttachmentPort } from '../dist/adapters/providers/OpenCodeV2AttachmentPort.js';
 import { createMemberAttachmentPort } from '../dist/composition/createMemberAttachmentPort.js';
 import { assertSafeRuntimeProjection } from './fixtures/native-host.ts';
 import { fixture } from './native-member-actions-fixture.ts';
@@ -167,6 +168,107 @@ test('captured mixed attachment delivery retains custody identity and native ord
       await delivery.port.resolve({ ...request, trustedBinding: 'TEST-foreign' }, signal),
       undefined
     );
+    // The V2 checkpoint binding is stable across runs, while this real Host
+    // port must still validate the exact current owner/run/claimed input.
+    const stableBinding = 'TEST-stable-V2-checkpoint-binding';
+    const stableRequest = { ...request, trustedBinding: stableBinding };
+    assert.equal(await delivery.port.resolve(stableRequest, signal), undefined);
+    let current = true;
+    const bridge = bindOpenCodeV2AttachmentPort(
+      delivery.port,
+      stableBinding,
+      request.trustedBinding,
+      () => current
+    );
+    const resolved = await bridge.resolve(stableRequest, signal);
+    assert.deepEqual(resolved?.binding, stableRequest);
+    assert.deepEqual(resolved?.bytes, files[0]!.bytes);
+    assert.equal(sha(readFileSync(resolved!.nativePath!)), refs[0]!.digest);
+    for (const foreign of [
+      { trustedBinding: 'TEST-foreign-V2-binding' },
+      { sessionRef: 'TEST-foreign-session' },
+      { inputId: 'TEST-foreign-input' },
+      { operationRef: 'TEST-foreign-operation' },
+      { fingerprint: inputHash(original) },
+      { reference: refs[1]! },
+    ])
+      assert.equal(await bridge.resolve({ ...stableRequest, ...foreign }, signal), undefined);
+    const wrongRun = bindOpenCodeV2AttachmentPort(
+      delivery.port,
+      stableBinding,
+      'TEST-backend/TEST-team/TEST-other-run/L',
+      () => current
+    );
+    assert.equal(await wrongRun.resolve(stableRequest, signal), undefined);
+    const getterReads = { model: 0, revision: 0, mimeTypes: 0, resolve: 0 };
+    const capturedSource = {
+      get model() {
+        getterReads.model++;
+        return delivery.port.model;
+      },
+      get revision() {
+        getterReads.revision++;
+        return delivery.port.revision;
+      },
+      get mimeTypes() {
+        getterReads.mimeTypes++;
+        return delivery.port.mimeTypes;
+      },
+      get resolve() {
+        getterReads.resolve++;
+        return async function (this: unknown, ...args: Parameters<typeof delivery.port.resolve>) {
+          assert.equal(this, capturedSource);
+          return delivery.port.resolve(...args);
+        };
+      },
+    };
+    const captured = bindOpenCodeV2AttachmentPort(
+      capturedSource,
+      stableBinding,
+      request.trustedBinding,
+      () => current
+    );
+    assert.deepEqual((await captured.resolve(stableRequest, signal))?.bytes, files[0]!.bytes);
+    assert.deepEqual(getterReads, { model: 1, revision: 1, mimeTypes: 1, resolve: 1 });
+    for (const field of [
+      'trustedBinding',
+      'sessionRef',
+      'inputId',
+      'operationRef',
+      'fingerprint',
+    ] as const) {
+      const wrongReturn = bindOpenCodeV2AttachmentPort(
+        {
+          ...delivery.port,
+          async resolve(binding, signal) {
+            const value = await delivery.port.resolve(binding, signal);
+            assert.ok(value);
+            return { ...value, binding: { ...value.binding, [field]: 'TEST-swapped' } };
+          },
+        },
+        stableBinding,
+        request.trustedBinding,
+        () => current
+      );
+      assert.equal(await wrongReturn.resolve(stableRequest, signal), undefined);
+    }
+    const revoked = bindOpenCodeV2AttachmentPort(
+      {
+        ...delivery.port,
+        async resolve(binding, signal) {
+          const value = await delivery.port.resolve(binding, signal);
+          current = false;
+          return value;
+        },
+      },
+      stableBinding,
+      request.trustedBinding,
+      () => current
+    );
+    await assert.rejects(revoked.resolve(stableRequest, signal), /attachment authority revoked/);
+    current = true;
+    const aborted = AbortSignal.abort();
+    await assert.rejects(bridge.resolve(stableRequest, aborted), { name: 'AbortError' });
     delivered = true;
     return {
       ok: true,

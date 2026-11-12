@@ -15,6 +15,7 @@ import { waitForNativeStopResult } from './OpenCodeV2StopAckWait.js';
 import { awaitOpenCodeV2OwnerReadback } from './OpenCodeV2OwnerReadback.js';
 import { raceOpenCodeV2Revocation } from './OpenCodeV2RevocationWait.js';
 import { createOpenCodeV2RequestAdmission } from './OpenCodeV2RequestAdmission.js';
+import { bindOpenCodeV2AttachmentPort } from './OpenCodeV2AttachmentPort.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 import type { Session } from '@agent-teams/provider-session-contracts';
 import type { OpenCodeV2OwnedSession } from './OpenCodeV2OwnedSession.js';
@@ -300,7 +301,12 @@ export function createOpenCodeV2MemberProvider(
         },
         limits: profile.limits,
         ...(embedded && capturedEvidence ? { capture: capturedEvidence } : {}),
-        ...(embedded && capturedAttachments ? { attachments: capturedAttachments } : {}),
+        ...(embedded && capturedAttachments ? { attachments: bindOpenCodeV2AttachmentPort(
+          capturedAttachments, trustedBinding,
+          [context.endpoint.binding.backendId, context.endpoint.binding.teamId,
+            context.endpoint.binding.runId, context.endpoint.binding.memberId].join('/'),
+          current,
+        ) } : {}),
         beforeRequest: requests.beforeRequest,
         readPassword: () => {
           // Native transports may request credentials after a submit started

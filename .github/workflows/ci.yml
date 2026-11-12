@@ -598,24 +598,22 @@ jobs:
           node scripts/stage-runtime.mjs --platform linux-x64
       - name: Prepare existing verified V2 graph and original Bun
         run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
-      - name: Select stock helper source from the verified retained release
-        id: retained-source
+      - name: Verify the retained release matches the pinned stock helper source
         run: |
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
-          import { appendFileSync, readFileSync } from 'node:fs';
+          import { readFileSync } from 'node:fs';
           const lock = JSON.parse(readFileSync('runtime.lock.json', 'utf8'));
           const commit = readFileSync('resources/runtime/COMMIT_SHA', 'utf8').trim();
           assert.equal(lock.sourceRepository, '777genius/agent_teams_orchestrator');
           assert.equal(commit, lock.opencodeV2Delivery['linux-x64'].sourceCommit);
-          assert.match(commit, /^[a-f0-9]{40}$/);
-          appendFileSync(process.env.GITHUB_OUTPUT, `repository=${lock.sourceRepository}\ncommit=${commit}\n`);
+          assert.equal(commit, 'f5c69c2e9024ffc36a5db5eafe30f53539b52f62');
           NODE
       - name: Checkout unchanged helper source in ignored TEST inputs
         uses: actions/checkout@v6
         with:
-          repository: ${{ steps.retained-source.outputs.repository }}
-          ref: ${{ steps.retained-source.outputs.commit }}
+          repository: 777genius/agent_teams_orchestrator
+          ref: f5c69c2e9024ffc36a5db5eafe30f53539b52f62
           path: .runtime-download/TEST-retained-runtime-source
           persist-credentials: false
       - name: Stage exact retained V1 and existing TEST package manager

@@ -278,7 +278,7 @@ export async function runDesktopComposerUiSmoke(
     nativeInputs: inputIds.length,
     nativeChildAbsentBeforeQuit: true,
     custody: 'released',
-    effectiveModel: openCode ? 'TEST-local/TEST-model' : 'claude-opus-4-6',
+    effectiveModel: openCode ? 'test-local/TEST-model' : 'claude-opus-4-6',
     ...(openCode ? { nativeGeneration: 'v2' } : { effectiveEffort: 'medium' }),
   };
 }

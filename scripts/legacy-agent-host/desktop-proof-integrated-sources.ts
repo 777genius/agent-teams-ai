@@ -549,6 +549,7 @@ export const desktopProofIntegratedSources = [
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts',
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts',
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2MemberProvider.ts',
+  'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2AttachmentPort.ts',
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2PermissionReadback.ts',
   'packages/legacy-agent-host/src/composition/openCodeV2EmbeddedProfile.ts',
   'packages/legacy-agent-host/native/registered-process-darwin.c',

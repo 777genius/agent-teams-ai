@@ -305,9 +305,9 @@ stream_max_retries = 0
       OPENCODE_CONFIG_CONTENT: JSON.stringify({
         autoupdate: false,
         share: 'disabled',
-        enabled_providers: ['TEST-local'],
-        model: 'TEST-local/TEST-model',
-        small_model: 'TEST-local/TEST-model',
+        enabled_providers: ['test-local'],
+        model: 'test-local/TEST-model',
+        small_model: 'test-local/TEST-model',
         permission: { '*': 'deny', bash: 'allow' },
         agent: {
           title: { disable: true },
@@ -316,7 +316,7 @@ stream_max_retries = 0
         },
         compaction: { auto: false },
         provider: {
-          'TEST-local': {
+          'test-local': {
             npm: '@ai-sdk/openai-compatible',
             name: 'TEST fixture',
             options: {
@@ -336,7 +336,7 @@ stream_max_retries = 0
       NO_COLOR: '1',
     },
     nativeOptions: {
-      providerId: 'TEST-local',
+      providerId: 'test-local',
       agent: 'TEST-member',
       instructions: openCodeContext,
     },

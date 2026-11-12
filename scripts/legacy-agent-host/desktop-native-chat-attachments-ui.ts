@@ -78,11 +78,11 @@ export async function prepareNativeChatAttachments(
     nodeId: found.nodeIds[0],
     files: inputFiles.map(([name]) => join(directory, name)),
   });
+  const pendingSelector = `${composerSelector} img[alt=${JSON.stringify(CHAT_IMAGE_NAME)}]`;
   await ui.waitRead(
-    `(() => {const e=document.querySelector(${desktopJsLiteral(composerSelector)});return Boolean(e)&&${options.openCodeV2 ? 'true' : `e.textContent.includes(${desktopJsLiteral(CHAT_FILE_NAME)})`}&&Boolean(e.querySelector('img'));})()`,
+    `(() => {const e=document.querySelector(${desktopJsLiteral(composerSelector)});return Boolean(e)&&${options.openCodeV2 ? 'true' : `e.textContent.includes(${desktopJsLiteral(CHAT_FILE_NAME)})`}&&document.querySelectorAll(${desktopJsLiteral(pendingSelector)}).length===1;})()`,
     'original pending chat attachment controls'
   );
-  const pendingSelector = `${composerSelector} img[alt=${JSON.stringify(CHAT_IMAGE_NAME)}]`;
   const pending = row(
     await ui.waitRead(
       `(() => {const e=[...document.querySelectorAll(${desktopJsLiteral(pendingSelector)})];return e.length===1&&e[0].complete&&e[0].naturalWidth===2&&e[0].naturalHeight===1?{src:e[0].currentSrc||e[0].src}:null;})()`,

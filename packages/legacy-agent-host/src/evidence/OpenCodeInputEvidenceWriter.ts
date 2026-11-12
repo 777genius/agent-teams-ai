@@ -284,6 +284,9 @@ export function createOpenCodeInputEvidenceCapture(
               NATIVE_INTERVAL_WARNING,
               'Execution sequence is unqualified; zero denotes unknown.',
               'Only an exact existing-text edit patch chain is qualified; selected workspace coverage remains partial.',
+              ...(request.dialect === 'v2'
+                ? ['Native V2 read resolution at execution is unqualified; file images attest only the original input window boundaries.']
+                : []),
             ]),
           };
           if (!options.windows.add(key, window)) {

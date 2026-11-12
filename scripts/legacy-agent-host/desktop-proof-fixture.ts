@@ -149,7 +149,7 @@ export async function prepareDesktopProofFixture(
       : {}),
   });
   if (selectedV2) return { ...fixture,
-    openCodeV2: { model: 'TEST-local/TEST-model', modelId: 'TEST-model', displayName: 'TEST-model' } };
+    openCodeV2: { model: 'test-local/TEST-model', modelId: 'TEST-model', displayName: 'TEST-model' } };
   if (options.codexResumeMode) {
     assert.equal(mode, 'native-resume-ui');
     assert.ok(options.modelUrl && process.env.LEGACY_DESKTOP_CODEX_PATH);

@@ -86,7 +86,7 @@ export async function prepareDesktopNativeStop(options: {
   const configuration = {
     members: memberIds.map((memberId) => ({
       memberId,
-      model: options.provider === 'opencode' ? 'TEST-local/TEST-model' : 'claude-opus-4-6',
+      model: options.provider === 'opencode' ? 'test-local/TEST-model' : 'claude-opus-4-6',
       ...(options.provider === 'opencode' ? {} : { effort: 'medium', fastMode: false, context: 'model-default' }),
       permissions: options.manualPermissions ? 'manual' : 'bypass',
     })),
@@ -95,15 +95,22 @@ export async function prepareDesktopNativeStop(options: {
     assertOwnedCdpListener(group);
     const response = object(await cdp.evaluate(
       `window.electronAPI.runtimeProviderManagement.loadModels(${JSON.stringify({
-        runtimeId: 'opencode', providerId: 'TEST-local', projectPath: null,
+        runtimeId: 'opencode', providerId: 'test-local', projectPath: null,
       })})`
     ));
     assert.equal(response.error, undefined, 'actual native catalog is ready before Runtime allocation');
     assert.equal(response.runtimeId, 'opencode');
     const catalog = object(response.models);
-    assert.equal(catalog.providerId, 'TEST-local');
-    assert.ok(Array.isArray(catalog.models) && catalog.models.some(value =>
-      object(value).modelId === 'TEST-local/TEST-model' && object(value).providerId === 'TEST-local'));
+    assert.equal(catalog.providerId, 'test-local');
+    assert.ok(Array.isArray(catalog.models));
+    const model = catalog.models.find(value =>
+      object(value).modelId === 'test-local/TEST-model' && object(value).providerId === 'test-local');
+    assert.ok(model);
+    if (process.env.LEGACY_DESKTOP_CHAT_ATTACHMENTS === '1') {
+      const inputs = object(model).declaredInputModalities;
+      assert.ok(Array.isArray(inputs) && inputs.includes('image'),
+        'the actual native catalog declares image input before the original Composer is used');
+    }
   }
   const metadata = options.provider === 'opencode' ? readDesktopNativeHostProcesses(fixture, group) : undefined;
   if (metadata) {

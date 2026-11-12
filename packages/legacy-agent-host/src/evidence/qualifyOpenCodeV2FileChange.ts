@@ -12,7 +12,11 @@ const id = (value: unknown, prefix = ''): value is string => typeof value === 's
 type Result = { kind: 'qualified'; file: string; lastCallId: string; proof: OpenCodeV2UpdatePatchProof } |
   { kind: 'gap'; reason: string };
 
-/** Only the attested 2.1.4 local read/edit profile; native event sequence proves nonoverlap. */
+/**
+ * Qualifies only selected edit bytes in the attested 2.1.4 read/edit profile.
+ * Event sequence proves nonoverlap; boundary images do not attest native read
+ * resolution at execution, including temporary symlink or junction replacement.
+ */
 export function qualifyOpenCodeV2FileChange(
   request: OpenCodeV2AfterRequest, workspace: string, before: WorkspaceSnapshot, after: WorkspaceSnapshot
 ): Result {
@@ -49,8 +53,9 @@ export function qualifyOpenCodeV2FileChange(
       const path = resolve(workspace, input.path), rel = relative(workspace, path);
       if (!rel || rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) throw new Error('foreign-v2-native-path');
       if (item.tool === 'read') {
-        // The existing snapshot images reject symlinks in every path component.
-        // An ignored/uncaptured read has no such evidence and cannot qualify.
+        // Existing images reject symlinks in every component at both boundaries.
+        // They do not attest the native read's resolved path between boundaries.
+        // An ignored/uncaptured read has no boundary evidence and cannot qualify.
         for (const snapshot of [before, after]) {
           const image = snapshot.files.get(path);
           if (image?.exists !== true || image.reason || !image.content || !image.sha256)

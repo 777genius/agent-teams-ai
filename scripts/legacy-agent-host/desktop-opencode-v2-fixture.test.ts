@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
 import { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import { prepareDesktopOpenCodeV2Recipe } from './desktop-opencode-v2-fixture.ts';
+import { parseOpenCodeQualifiedModelRef } from '../../src/shared/utils/opencodeModelRef.ts';
 
 const bunPath = process.env.OPENCODE_V2_EMBEDDED_BUN;
 const bunSha256 = process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256;
@@ -53,6 +54,7 @@ test(
       endpoint: 'http://127.0.0.1:41789',
       managementEndpoint: 'http://127.0.0.1:41791',
       modelUrl: 'http://127.0.0.1:41790',
+      imageInput: true,
     };
     const fixture = await prepareDesktopBackendFixture(repo, {
       pnpmEntry: join(root, 'dist/pnpm.js'),
@@ -87,9 +89,19 @@ test(
     assert.equal(management.protocolRevision, '2.1.4');
     assert.deepEqual(management.embedded, member.embedded);
     assert.deepEqual(management.executable, member.executable);
-    assert.deepEqual(management.nativeModel, { providerId: 'TEST-local', modelId: 'TEST-model' });
+    assert.deepEqual(management.nativeModel, { providerId: 'test-local', modelId: 'TEST-model' });
+    assert.deepEqual(member.embedded?.providerConfiguration?.models, {
+      'TEST-model': {
+        name: 'TEST-model',
+        limit: { context: 200000, output: 2000 },
+        capabilities: { tools: true, input: ['text', 'image'], output: ['text'] },
+      },
+    });
     assert.equal(management.endpoint, selection.managementEndpoint);
-    assert.equal(profile.teams[0]!.savedSettings?.model, 'TEST-local/TEST-model');
+    assert.equal(profile.teams[0]!.savedSettings?.model, 'test-local/TEST-model');
+    assert.equal(parseOpenCodeQualifiedModelRef(profile.teams[0]!.savedSettings?.model)?.sourceId,
+      management.nativeModel?.providerId,
+      'the original Composer catalog scope selects the exact native provider');
     assert.equal(profile.teams[0]!.members[0]!.role, 'lead');
     const descriptor = JSON.parse(await readFile(fixture.descriptorPath, 'utf8'));
     assert.equal(descriptor.management.length, 1);
