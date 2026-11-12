@@ -52,6 +52,19 @@ inline HANDLE retainProcess(HANDLE original) {
     access,FALSE,0)) throw GetLastError();
   return retained;
 }
+inline bool sameObject(HANDLE first,HANDLE second) {
+  // The SDK used by the native runners omits KernelBase.lib. Resolve the same
+  // documented export from the already loaded system DLL; never load a path or
+  // substitute a PID comparison. Missing support remains an admission failure.
+  static const auto compare=[] {
+    const auto module=GetModuleHandleW(L"KernelBase.dll");
+    if(!module) throw GetLastError();
+    const auto address=GetProcAddress(module,"CompareObjectHandles");
+    if(!address) throw GetLastError();
+    return reinterpret_cast<decltype(&CompareObjectHandles)>(address);
+  }();
+  return compare(first,second)!=FALSE;
+}
 inline void capture(const DEBUG_EVENT& event,HANDLE outer,Stage& stage) {
   const HANDLE original=event.u.CreateProcessInfo.hProcess;
   if(!original) throw DWORD{ERROR_INVALID_HANDLE};
@@ -65,7 +78,7 @@ inline void capture(const DEBUG_EVENT& event,HANDLE outer,Stage& stage) {
     stage=Stage::ChildIdentity;
     const DWORD pid=GetProcessId(selected.process);
     if(!pid) throw GetLastError();
-    if(pid!=event.dwProcessId||!CompareObjectHandles(original,selected.process))
+    if(pid!=event.dwProcessId||!sameObject(original,selected.process))
       throw DWORD{ERROR_INVALID_DATA};
     selected.birth=birthOf(selected.process);
     stage=Stage::OuterMembership; BOOL member=FALSE;
@@ -115,7 +128,7 @@ inline bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::tim
         if(event.dwProcessId==rootPid) {
           stage=Stage::RootIdentity;
           // Kernel object equality needs no assumed query rights on debug handles.
-          if(!CompareObjectHandles(event.u.CreateProcessInfo.hProcess,observedRoot))
+          if(!sameObject(event.u.CreateProcessInfo.hProcess,observedRoot))
             throw DWORD{ERROR_INVALID_DATA};
         } else capture(event,observedOuter,stage);
         stage=Stage::ImageClose;

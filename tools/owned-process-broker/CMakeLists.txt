@@ -17,7 +17,6 @@ target_compile_definitions(owned-process-broker-birth-failure PRIVATE OWNED_PROC
 target_compile_definitions(owned-process-broker-accounting-failure PRIVATE OWNED_PROCESS_TEST_ACCOUNTING_FAILURE)
 target_compile_definitions(owned-process-broker-release-delay PRIVATE OWNED_PROCESS_TEST_RELEASE_DELAY OWNED_PROCESS_TEST_POST_LAUNCH_PENDING_READ OWNED_PROCESS_TEST_RELEASE_CONTENTION)
 target_compile_definitions(owned-process-broker-debug-service PRIVATE OWNED_PROCESS_TEST_DEBUG_SERVICE)
-target_link_libraries(owned-process-broker-debug-service PRIVATE kernelbase)
 foreach(target owned-process-broker owned-process-fixture owned-process-broker-birth-failure owned-process-gate-controller owned-process-broker-accounting-failure owned-process-broker-release-delay owned-process-broker-debug-service owned-process-pending-write-fixture)
   target_compile_features(${target} PRIVATE cxx_std_17)
   target_compile_options(${target} PRIVATE /W4 /WX /guard:cf /utf-8)

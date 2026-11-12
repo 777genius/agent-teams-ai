@@ -72,7 +72,9 @@ async function qualifyOriginalNativeRegistration(
       envelope('TEST-process-ready-read', { memberId: 'alice-id' })
     );
     assert.equal(state.ok, true);
-    if (row(state.value).nativeReady === true) {
+    const observed = row(state.value);
+    assert.notEqual(observed.phase, 'held', `Original native SDK open held: ${String(observed.diagnostic)}`);
+    if (observed.nativeReady === true) {
       ready = true;
       break;
     }

@@ -59,6 +59,7 @@ import {
 } from './desktop-team-ui-smoke.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import {
+  assertDesktopProofEnvironment,
   assertOwnedCdpListener,
   command,
   groupMembers,
@@ -95,20 +96,15 @@ function assertNoNativeHostChildren(group: number, fixture: {node: string; hostE
   for (const host of hosts) assert.equal(table.filter(row=>row.ppid===host.pid).length,0,'readback never allocates a native child');
 }
 async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
-  assert.equal(
-    process.env.LEGACY_DESKTOP_BACKEND_GO,
-    '1',
-    'root must authorize actual pnpm dev:mcp launch'
-  );
-  assert.equal(process.platform, 'darwin', 'this captured process evidence uses macOS ps/lsof');
+  const repo = resolve(import.meta.dirname, '../..');
+  const packedRelaunchMode = process.env.LEGACY_DESKTOP_PROOF_MODE === 'packed-app-relaunch-ui';
+  const mode = packedRelaunchMode ? 'native-launch-ui' : process.env.LEGACY_DESKTOP_PROOF_MODE ?? 'bridge-diagnostics';
+  assertDesktopProofEnvironment(mode === 'process-cold-ui');
   assert.equal(
     await portOccupied(),
     false,
     'Selected CDP port is occupied; refuse without attaching to or stopping another app'
   );
-  const repo = resolve(import.meta.dirname, '../..');
-  const packedRelaunchMode = process.env.LEGACY_DESKTOP_PROOF_MODE === 'packed-app-relaunch-ui';
-  const mode = packedRelaunchMode ? 'native-launch-ui' : process.env.LEGACY_DESKTOP_PROOF_MODE ?? 'bridge-diagnostics';
   const quitScenario = process.env.LEGACY_DESKTOP_QUIT_SCENARIO;
   assert.ok(quitScenario === undefined || (mode === 'native-quit-ui' && quitScenario === 'pending-open'), 'explicit TEST Quit scenario');
   const startupDiagnosticMode = mode === 'startup-diagnostic-ui';
@@ -180,7 +176,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     const electronPackage = require.resolve('electron/package.json');
     const electronRoot = resolve(electronPackage, '..');
     const electronRelative = (await readFile(join(electronRoot, 'path.txt'), 'utf8')).trim();
-    assert.equal(electronRelative, 'Electron.app/Contents/MacOS/Electron');
+    assert.equal(electronRelative, process.platform === 'linux' ? 'electron' : 'Electron.app/Contents/MacOS/Electron');
     electron = await realpath(join(electronRoot, 'dist', electronRelative));
   }
   assert.ok((await stat(electron)).isFile());
@@ -235,7 +231,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   );
   // Invoke the pinned pnpm JS entry through selected Node: no /usr/bin/env
   // shebang exec transition can invalidate the captured leader identity.
-  const invocation = packed ? [packed.executable, `--remote-debugging-port=${selectedCdpPort}`] : [fixture.node, pnpm, 'dev:mcp', '--remoteDebuggingPort', String(selectedCdpPort)];
+  const invocation = packed ? [packed.executable, `--remote-debugging-port=${selectedCdpPort}`] : [fixture.node, pnpm, 'dev:mcp', '--remoteDebuggingPort', String(selectedCdpPort), ...(process.platform === 'linux' ? ['--noSandbox'] : [])];
   let app = spawn(invocation[0]!, invocation.slice(1), {
     cwd: packed ? fixture.root : repo,
     env: packed ? { ...fixture.appEnvironment, NODE_ENV: 'production', PATH: join(fixture.root, 'bin') + ':/usr/bin:/bin' } : fixture.appEnvironment,

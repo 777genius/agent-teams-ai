@@ -12,6 +12,17 @@ export interface ProcessIdentity {
 }
 export const selectedCdpPort = Number(process.env.LEGACY_DESKTOP_CDP_PORT ?? 9222);
 assert.ok(Number.isInteger(selectedCdpPort) && selectedCdpPort >= 1024 && selectedCdpPort <= 65535);
+/** Preserve explicit TEST admission before even probing the selected renderer port. */
+export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
+  assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1', 'root must authorize actual pnpm dev:mcp launch');
+  assert.ok(process.platform === 'darwin' ||
+    (process.platform === 'linux' && process.arch === 'x64' && linuxModeAllowed),
+    'Linux Desktop portability requires an explicitly bounded proof mode');
+  if (process.platform === 'linux') {
+    assert.match(process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '', /^:\d+$/u, 'explicit isolated TEST X display');
+    assert.ok(process.env.LEGACY_DESKTOP_TEST_XAUTHORITY, 'explicit TEST display authorization file');
+  }
+}
 export async function portOccupied(port = selectedCdpPort): Promise<boolean> {
   return new Promise<boolean>((done) => {
     const socket = createConnection({ host: '127.0.0.1', port });
@@ -94,7 +105,7 @@ export function assertOwnedCdpListener(group: number): number {
   let output: string;
   try {
     output = execFileSync(
-      '/usr/sbin/lsof',
+      process.platform === 'linux' ? '/usr/bin/lsof' : '/usr/sbin/lsof',
       [
         '-nP',
         '-a',
