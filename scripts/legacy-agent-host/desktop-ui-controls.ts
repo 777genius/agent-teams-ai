@@ -102,9 +102,14 @@ export function createDesktopUiControls(
     if(!hit||!(hit===e||e.contains(hit))||e.matches(':disabled'))return null;
     return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName};
   })()`;
-  const click = async (selector: string, label: string, text?: string): Promise<void> => {
+  const clickExpression = async (
+    expression: string,
+    label: string,
+    selector?: string,
+    text?: string
+  ): Promise<void> => {
     await cdp.send('Page.bringToFront');
-    let point = record(await waitRead(target(selector, text), label));
+    let point = record(await waitRead(expression, label));
     options.assertOwnedRenderer();
     step({ action: 'mouseMoved', label: 'hover ' + label, selector, target: point });
     await cdp.send('Input.dispatchMouseEvent', {
@@ -112,13 +117,13 @@ export function createDesktopUiControls(
       x: point.x,
       y: point.y,
     });
-    point = record(await waitRead(target(selector, text), label + ' after pointer enter'));
+    point = record(await waitRead(expression, label + ' after pointer enter'));
     // Async Host hydration can shift the DOM after hover. Check the original
     // target is stable before ONE physical click, never replay an uncertain click.
     let stableSamples = 0;
     for (let sample = 0; sample < 15 && stableSamples < 2; sample++) {
       await new Promise<void>((done) => setTimeout(done, 100));
-      const next = record(await waitRead(target(selector, text), label + ' stable target'));
+      const next = record(await waitRead(expression, label + ' stable target'));
       stableSamples =
         next.x === point.x && next.y === point.y && next.tag === point.tag
           ? stableSamples + 1
@@ -153,6 +158,8 @@ export function createDesktopUiControls(
       clickCount: 1,
     });
   };
+  const click = (selector: string, label: string, text?: string): Promise<void> =>
+    clickExpression(target(selector, text), label, selector, text);
   const scrollTo = async (
     selector: string, label: string, text?: string, maxWheelEvents = 12
   ): Promise<void> => {
@@ -266,5 +273,5 @@ export function createDesktopUiControls(
     });
     await click('[role="dialog"] button', 'Open team', 'Open team');
   };
-  return { observeInput, waitRead, click, clickSidebar, scrollTo };
+  return { observeInput, waitRead, click, clickExpression, clickSidebar, scrollTo };
 }
