@@ -232,6 +232,16 @@ Unit список сокращён до новых опасных mapping/source
 - P05 native fixtures подготовлены для model B/declared `high`, но ещё не исполнялись. P07 расширит тот же observable request для global/project override; G1…G4 не считаются закрытыми от наличия fixtures или source trace.
 - Root владеет `DesktopBackendFeature`: config integration передаёт ему только узкий capture/refresh hook. Production/test file cap 800 и текущие protocol budgets не увеличиваются; проверки ограничены strict alias/variant mapping, changed original source и общим native journey.
 
+### R5 — конкретный refresh/retry и global/project порядок
+
+- Main-only `runtime.source.refreshConfiguration({commandId, expectedRevision})` получает grant из original descriptor. Host сам захватывает config references и публикует их через существующие `RuntimeSourceIndex`/`runtime.source` receipt; renderer не получает read-file API.
+- Повтор того же command после lost ACK/Host restart использует **original `publicationJson`** и original expected revision. Он не захватывает обновившийся config под прежним command ID. Неопределённый или изменённый original source остаётся scoped held, без второго native эффекта.
+- Global capture читает только HOME/XDG/explicit/inline sources. Он не читает `seed.cwd` как project и не переносит его config в другой проект. Project capture добавляет только original project root files; такой reference нельзя применить к другому cwd.
+- Existing Save/Refresh: capture original context → recover existing source intent → publish captured config reference → получить новый management target → читать/probe выбранную модель. Next launch берёт тот же revision; already captured launch остаётся со своим reference/config.
+- Source candidate для config-only публикации сохраняет прежний executable/engine/source kind; для исходного seed допустим `captured`, без выдуманного `bundled/path` provenance. Existing installer native selection сохраняет свой прежний набор source kinds.
+- Выделенный read-only mapper сначала проверяется на official `@opencode/schema@2.1.4` (registry metadata/pack/tar SHA512 совпадают). Donor `2.0.32` validator не подключается к новой схеме. Raw selected values остаются только private process input; index хранит references.
+- Native package должен присутствовать в выбранном verified engine graph; capture config не разрешает ambient install/import. Arbitrary credential `{file:...}` не становится поддержанным от строки в JSON: existing app-owned gateway marker требует отдельной квалификации, остальные сохраняют доказанный strict-source предел.
+
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts
 [M3]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/extensions/ExtensionStoreView.tsx
