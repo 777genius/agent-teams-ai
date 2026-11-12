@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { Duplex } from 'node:stream';
 
 import { encodeFrame, encodeLaunch, FrameDecoder, Op } from '@agent-teams/legacy-agent-host/owned-process';
@@ -72,6 +72,7 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
     neighborExit = adjacent.exit;
     if (mode === 'service-first') {
       phase('root-exit');
+      writeFileSync(`${start.path}.branch-release`, start.nonce, { flag: 'wx' });
       assert.equal(await timeout(events.wait(serviceWitnesses[0]!.exit)), 0);
     }
     const selected = Buffer.alloc(17);

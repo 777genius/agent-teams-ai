@@ -118,7 +118,9 @@ int wmain(int argc,wchar_t** argv) {
   const bool branch=mode==L"branch"||mode==L"branch-first";
   if(!branch) std::printf("{\"root\":{\"pid\":%lu,\"birth\":\"%016llx\"}}\n",
     GetCurrentProcessId(),static_cast<unsigned long long>(birth(GetCurrentProcess())));
-  auto a=child(executable,branch?L"leaf":mode==L"service-first"?L"branch-first":L"branch"), b=child(executable,L"leaf");
+  const std::wstring branchMode=mode==L"service-first"
+    ? L"branch-first \""+std::wstring(argv[2])+L".branch-release\"" : L"branch";
+  auto a=child(executable,branch?std::wstring(L"leaf"):branchMode), b=child(executable,L"leaf");
   std::printf("{\"children\":[{\"pid\":%lu,\"birth\":\"%016llx\"},{\"pid\":%lu,\"birth\":\"%016llx\"}],\"parent\":%lu}\n",
     a.dwProcessId,static_cast<unsigned long long>(birth(a.hProcess)),
     b.dwProcessId,static_cast<unsigned long long>(birth(b.hProcess)),GetCurrentProcessId());
@@ -129,7 +131,16 @@ int wmain(int argc,wchar_t** argv) {
     if(!ReadFile(GetStdHandle(STD_INPUT_HANDLE),&ack,1,&count,nullptr)||count!=1||ack!='1') return 48;
     return 0;
   }
-  if(mode==L"root-first"||mode==L"branch-first") return 0;
+  if(mode==L"branch-first") {
+    if(argc!=3) return 49;
+    const auto deadline=GetTickCount64()+10000;
+    while(GetFileAttributesW(argv[2])==INVALID_FILE_ATTRIBUTES) {
+      if(GetLastError()!=ERROR_FILE_NOT_FOUND||GetTickCount64()>=deadline) return 50;
+      Sleep(5); // Wait for explicit TEST witness-captured barrier, never infer capture from time.
+    }
+    return 0;
+  }
+  if(mode==L"root-first") return 0;
   if(mode==L"service-pair"||mode==L"service-first") {
     char input[64]; DWORD count=0;
     while(ReadFile(GetStdHandle(STD_INPUT_HANDLE),input,sizeof(input),&count,nullptr)&&count) {
