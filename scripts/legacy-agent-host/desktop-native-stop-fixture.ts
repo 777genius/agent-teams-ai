@@ -103,7 +103,7 @@ export async function prepareDesktopNativeStop(options: {
     const catalog = object(response.models);
     assert.equal(catalog.providerId, 'TEST-local');
     assert.ok(Array.isArray(catalog.models) && catalog.models.some(value =>
-      object(value).modelId === 'TEST-model' && object(value).providerId === 'TEST-local'));
+      object(value).modelId === 'TEST-local/TEST-model' && object(value).providerId === 'TEST-local'));
   }
   const metadata = options.provider === 'opencode' ? readDesktopNativeHostProcesses(fixture) : undefined;
   if (metadata) {
