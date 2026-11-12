@@ -10,7 +10,7 @@ Host baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 
 - Providers, Quick Connect и onboarding используют общий `RuntimeProviderManagementPort`.
 - `AgentTeamsRuntimeProviderManagementCliClient.connectProvider` передаёт API key существующему `runtime providers connect`.
-- [Main: `connectProvider` и `forgetProvider`](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts).
+- [Main: `connectProvider` и `forgetCredential`](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts).
 - V2 plain-key route намеренно не передаёт auth option selector; это сохранённый regression invariant.
 - [Main: `buildSetupAuthSelector` tests](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementInternals.test.ts).
 - Onboarding выбирает Kimi CN/global integration по выбранному пользователем домену аккаунта.
@@ -23,6 +23,9 @@ Host baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 - Он согласует native connection с shared auth mirror и защищает существующие V1 credentials; эти ограничения нельзя потерять при переносе.
 - [Native donor: `connectOpenCodeV2Provider`, `buildOpenCodeV2KeySetupForm`, `rollbackOpenCodeV2OwnedConnection`](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/features/runtimeProviderManagement/adapters/opencode/OpenCodeV2ProviderManagement.ts).
 - Source read подтверждает реализацию key route, но не версию установленного у пользователя CLI и не vendor account success.
+- `submitConnect` передаёт reconnect напрямую в connectProvider, без автоматического forget; native connect требует initially empty private connection store.
+- Поэтому бесшовная замена произвольного existing key не доказана baseline и не объявляется новой обязанностью parity.
+- [Main: `submitConnect` и отдельный `forgetProvider`](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts).
 - В Stage 1 `ProviderManagementCoordinator.credentials.validate` отвергает все V2 credential mutations.
 - OAuth V2 также отвергается; изменение этого ограничения не требуется для parity указанных key routes.
 - [Stage 1: `ProviderManagementCoordinator`](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts).
@@ -34,13 +37,14 @@ Host baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 
 1. Из существующей карточки провайдера пользователь открывает форму и сохраняет ключ в выбранном V2 account scope.
 2. При необходимости выбирает прежний regional route; ключ не отправляется провайдеру другого региона.
-3. Reconnect заменяет только собственный managed key, сохраняя provider/model preferences; чужой/native connection не удаляется.
+3. Reconnect сохраняет existing route semantics: подтверждённый original intent читается повторно, конфликтующий existing connection не перезаписывается.
 4. Forget удаляет managed credential выбранного scope и честно показывает оставшийся env/config доступ, если он есть.
 5. Connect сохраняет показанную формой проверку одной модели; «ключ сохранён» и «подключение проверено» остаются разными результатами.
 6. После перезапуска приложения выбранное подключение остаётся доступным; временный metadata namespace не становится хранилищем ключа.
 7. Неудачный native ответ/потерянный ACK не приводит к автоматическому повтору credential mutation.
 8. V2 OAuth routes, уже заблокированные main, сохраняют прежние объяснения; этот срез не выдаёт их за новые возможности.
-9. На V1 те же controls и сохранённые credentials продолжают работать.
+9. Forget и последующий connect остаются отдельными явными действиями; новый автоматический delete-and-replace workflow не вводится.
+10. На V1 те же controls и сохранённые credentials продолжают работать.
 
 ## 3. Минимальная архитектура и reuse
 
@@ -91,7 +95,9 @@ Host baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 - Подключить native authenticated/configured observations и показать их существующей projection `capturedManagementCatalog.ts`.
 - Согласовать с планом 06 момент смены revision после credential change; текущая операция завершает исходный target.
 - Connect verification выполняется через выбранный актуальный target по общему порту плана 05, без второй случайной probe.
-- При неудаче probe сохранить честное разделение: credential write состоялась, доступ к модели не подтверждён.
+- При неудаче probe сохранить native transaction state: original intent может остаться pending/held после credential publication.
+- В UI не показывать общий successful connect и не удалять pending marker; показывать исходную ошибку verification с доступным readback/recovery.
+- Не создавать автоматический повторный Test model или альтернативную модель после pending/failed original proof.
 - При forget не удалять чужой HOME/config, external credentials или credentials других providerIds.
 
 ### Шаг D — E2E и regression
@@ -109,12 +115,12 @@ Test provider использует localhost и isolated TEST auth namespace; н
 
 | Сценарий | Пользовательское действие | Обязательная проверка |
 | --- | --- | --- |
-| Первое подключение | Providers → выбранный V2 provider → key connect → Test model | Один set; native readback; отдельный probe result; runnable выбранная модель |
+| Первое подключение | Providers → выбранный V2 provider → key connect с объявленной verification | Один set и одна connect-verification; native readback; verified выбранная модель |
 | Regional key route | Выбрать Kimi CN/global, сохранить TEST key | Исходный providerId/region совпадает от UI до native request; соседний scope неизменён |
-| Reconnect + restart | Заменить key, закрыть и открыть приложение | Новое значение действует в native request; старое не используется; preferences сохранены |
+| Reconnect + restart | Повторить исходный connect, открыть приложение снова; затем проверить conflicting key | Original receipt/readback без повторного POST; конфликт не перезаписывает credential; preferences сохранены |
 | Forget | Удалить managed connection при наличии/отсутствии env auth | Удалён только managed key; UI честно показывает оставшийся источник доступа |
 | Потеря ответа | Удержать ACK после native set, переподключить UI | Lookup исходного command; нет второго set и переноса на новый profile |
-| Ошибка проверки | Сохранение удалось, provider вернул auth/model error | UI различает сохранение и probe; не показывает успешное выполнение модели |
+| Ошибка проверки | Credential publication выполнена, original probe вернул error/unknown | Pending/held intent сохранён по native policy; нет второго inference, false connected или потери исходного evidence |
 | Граница V1/V2 | V1 connect/forget, V2 запрещённый OAuth route | V1 regression PASS; V2 не предлагает ложный поддержанный OAuth workflow |
 
 Receipt содержит route identity, scope fingerprint, commandId, native effect count, probe result и cleanup result.
@@ -156,10 +162,16 @@ Native vendor PASS прикладывается только для реальн
 - Исправлено: сохранены connect verification и owned rollback; plain-key scope не расширен до дополнительных auth forms.
 - Проверены actual coordinator refusals и существующий CredentialCommandOwner; новые production API ещё не заявлены существующими.
 
-### R2 — независимое cross-review, pending
+### R2 — независимое cross-review, исправления внесены 2026-11-12
 
-- Проверить native scope contract, отсутствие дублирования планов 05/06 и достаточность cold-restart E2E.
-- Зафиксировать reviewer, docs commit и реальные исправления; наличие раздела не означает пройденного review.
+- Reviewer: root; reviewed docs commit `01547868`, PR #1186.
+- Найдено: обещание замены existing key было шире native `before.connections.length === 0`; UI reconnect не выполняет forget автоматически.
+- Исправлено: сохранены original-intent reconnect и conflict semantics; явный forget отделён от connect, seamless replacement не обещан.
+- Найдено: таблица connect → Test model могла требовать вторую автоматическую inference сверх существующей connect verification.
+- Исправлено: один connect включает одну объявленную verification; дополнительные explicit Test действия не являются автоматическим шагом.
+- Найдено: probe failure в donor сохраняет pending intent, а не обязательно завершённую запись с простым error status.
+- Исправлено: acceptance/E2E сохраняют original pending/held и запрещают ложный connected, новый inference и удаление evidence.
+- Повторная проверка root после этих исправлений ожидается; R2 не объявляется принятой автоматически.
 
 ### R3 — повторное review после R2, pending
 
