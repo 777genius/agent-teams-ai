@@ -231,7 +231,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
           try {
             const environment = await readFile(`/proc/${process.pid}/environ`, 'utf8');
             assert.equal(environment.includes(fixture.root), false, 'unreconciled TEST native namespace survives cleanup');
-          } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+          } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') cleanupErrors.push(error); }
         }
       } catch (error) { cleanupErrors.push(error); }
     }

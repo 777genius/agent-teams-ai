@@ -40,14 +40,13 @@ export async function startRetainedOpenCodeApp(input: {
   const executable = await realpath(join(input.repo, 'node_modules/electron/dist/electron'));
   const capture = new CapturedProcess({ provider: 'opencode', cwd: input.repo,
     executable: { path: input.node, sha256: await fileHash(input.node) },
-    environment: { ...input.env, ELECTRON_CLI_ARGS: JSON.stringify([
-      '--ozone-platform=headless', '--headless', '--disable-gpu', '--no-sandbox',
-      '--remote-debugging-address=127.0.0.1',
-    ]) },
+    environment: input.env,
   });
   const child = capture.launch({ command: input.node, cwd: input.repo,
     args: [join(input.repo, 'node_modules/electron-vite/bin/electron-vite.js'), 'dev',
-      '--remoteDebuggingPort', String(input.port)] });
+      // electron-vite rewrites ELECTRON_CLI_ARGS from its parsed passthrough.
+      '--remoteDebuggingPort', String(input.port), '--', '--ozone-platform=headless',
+      '--headless', '--disable-gpu', '--no-sandbox', '--remote-debugging-address=127.0.0.1'] });
   assert.ok(child.pid);
   // Birth/group captured synchronously before any yield or cleanup signal.
   const original = linuxProcessIdentity(child.pid);
