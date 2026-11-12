@@ -75,7 +75,7 @@ export async function prepareDesktopBackendFixture(
     throw new Error('Embedded V2 requires its explicit captured TEST fixture');
   const node =
     options.candidateRuntime?.nodeExecutable ??
-    (await realpath(options.nativeOpenCodeV2 ? process.execPath :
+    (await realpath(options.nativeOpenCodeV2 || process.platform === 'linux' ? process.execPath :
       join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')));
   const hostEntry =
     options.candidateRuntime?.hostEntry ??
@@ -752,6 +752,7 @@ export function desktopBackendEnvironment(
     PATH: `${join(root, 'bin')}:${dirname(node)}:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin`,
     SHELL: join(root, 'bin/shell-env'),
     NODE_ENV: 'development',
+    ...(process.env.LEGACY_DESKTOP_COREPACK_HOME ? { COREPACK_HOME: process.env.LEGACY_DESKTOP_COREPACK_HOME } : {}),
     NO_COLOR: '1',
     // A TEST HOME changes pnpm's store lookup. Report drift without installing
     // into the frozen worktree; the harness verifies its selected archive bytes.
