@@ -89,6 +89,8 @@ export interface TeamLaunchRecord {
   definition: TeamLaunchDefinition;
   fingerprint: string;
   startCommandId?: string;
+  /** Undefined preserves the captured saved prompt; null starts without an initial task. */
+  initialPrompt?: string | null;
   /** Original pre-allocation source for starts without a separate option preparation. */
   sourceRosterRevision?: string;
   /** Original aggregate admission time; not reset by polling/replay/retry. */

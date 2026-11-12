@@ -97,6 +97,7 @@ R2 source refs: old runtime `e13edcd3d4ffbecc0272ae30195cc6b15b710ee7`; provider
 - Host читает authoritative projection через existing queries; не создавать второй sync cache, polling loop или выдуманный PID.
 - Реализовать saved request/member statuses/lead/task/previous runs; повторная проверка original generation остаётся у existing mutation owner.
 - Writes идут через existing Host task.create/start/launch/attach; каждый effect получает отдельный стабильный commandId из runId + operation.
+- `team.launch.start.initialPrompt` использует существующую launch record: omitted сохраняет saved prompt, `null` означает bootstrap-only, строка — instructions этого occurrence. Original start command сохраняет выбор до prompt/native effect; replay с другим выбором отклоняется. Saved team settings не переписываются ради расписания.
 - Сохранить task-create ID=runId где это требуется legacy; launch/start IDs отличны, чтобы один ledger ID не столкнулся с другим fingerprint.
 - При потерянном create ACK восстановить linkedTaskId из original command receipt, а не считать taskId равным runId без доказательства.
 - `readyMember` в dispatcher заменить/дополнить узким capability/readiness port, сохранив legacy PID правила своего adapter.
@@ -213,3 +214,9 @@ Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b
 - Existing safe-e2e с mock side effects остаётся integration test. Native acceptance добавляет Desktop→Host task/launch, один реальный Croner tick; остальные случаи Run now.
 - Create/launch/start имеют разные stable effect IDs, lost create ACK восстанавливает original receipt до повторного occurrence; taskId не угадывается из runId.
 - План принят для implementation; finite one-shot seam и Codex limits G1/G2 остаются отдельными gates, OpenCode one-shot не добавляется сверх baseline.
+
+## 9. Implementation receipts
+
+- Awaitable runtime predicates и cancellation recheck перед effects: 66 existing scheduler/real-repository checks PASS; Host adapter ещё не подключён.
+- Launch initial-prompt intent: сохранён в existing launch record до effects, без изменения saved prompt. Node 24.21 Host build PASS; 26 launch-owner cases PASS, включая lost reply/reconstruction для saved, bootstrap-only и occurrence prompt и отказ от подмены исходного intent.
+- Это проверка owner/integration seam. Desktop schedule E2E, finite one-shot и native limit gates остаются открытыми.

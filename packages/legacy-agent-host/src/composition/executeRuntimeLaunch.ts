@@ -137,6 +137,12 @@ export function executeRuntimeLaunch(
           .strict()
           .parse(raw).memberIds
       : undefined;
+  // An occurrence may replace the initial task or request bootstrap only. The
+  // existing launch owner persists and compares this intent before beforeOpen.
+  const initialPrompt = operation === 'start' && raw && typeof raw === 'object' &&
+    'initialPrompt' in raw && raw.initialPrompt !== undefined
+    ? raw.initialPrompt
+    : team.definition.savedSettings?.prompt;
   const run = () =>
     executeTeamLaunch({
       launch,
@@ -146,7 +152,7 @@ export function executeRuntimeLaunch(
       commandId,
       ...(operation === 'start' &&
       team.configurationRevision &&
-      team.definition.savedSettings?.prompt?.trim()
+      typeof initialPrompt === 'string' && initialPrompt.trim()
         ? {
             beforeOpen: () => {
               const lead = team.definition.members.find((member) => member.role === 'lead');
@@ -155,7 +161,7 @@ export function executeRuntimeLaunch(
                 team.connection.execute({
                   commandId: effectId('launch-prompt', team.definition.binding.teamId, commandId),
                   operation: 'message.send',
-                  payload: { to: lead.name, text: team.definition.savedSettings!.prompt! },
+                  payload: { to: lead.name, text: initialPrompt },
                 });
               } catch {
                 throw new TeamLaunchError('hold', 'launch-prompt-pending');

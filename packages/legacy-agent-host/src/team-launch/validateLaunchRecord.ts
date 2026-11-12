@@ -30,6 +30,10 @@ export function validateLaunchRecord(
   )
     throw new TeamLaunchError('hold', 'record-corrupt');
   validateNativeRetries(record);
+  if (record.initialPrompt !== undefined && (!record.startCommandId ||
+    (record.initialPrompt !== null && (typeof record.initialPrompt !== 'string' ||
+      !record.initialPrompt.trim() || record.initialPrompt.length > 100_000))))
+    throw new TeamLaunchError('hold', 'record-corrupt');
   validateRestoreJournal(record);
   validateResumePreparations(record);
   if (

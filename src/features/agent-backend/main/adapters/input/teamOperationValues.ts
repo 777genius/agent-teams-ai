@@ -188,10 +188,14 @@ export function parseBackendTeamOperation(
       return { rosterCommandId: text(p.rosterCommandId) };
     }
     case 'team.launch.start': {
-      const p = object(value, ['launchId', 'rosterRevision', 'configuration']);
+      const p = object(value, ['launchId', 'rosterRevision', 'configuration', 'initialPrompt']);
+      if (p.initialPrompt !== undefined && p.initialPrompt !== null &&
+        (typeof p.initialPrompt !== 'string' || !p.initialPrompt.trim() || p.initialPrompt.length > 100_000))
+        throw new InvalidBackendOperation();
       return {
         launchId: text(p.launchId),
         rosterRevision: text(p.rosterRevision),
+        ...(p.initialPrompt === undefined ? {} : { initialPrompt: p.initialPrompt }),
         ...(p.configuration === undefined
           ? {}
           : { configuration: launchConfiguration(p.configuration) }),

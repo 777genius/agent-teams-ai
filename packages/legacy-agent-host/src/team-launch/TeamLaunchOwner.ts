@@ -110,10 +110,14 @@ export class TeamLaunchOwner {
   start(
     commandId: string,
     preparationFingerprint?: string,
-    beforeOpen?: () => void
+    beforeOpen?: () => void,
+    initialPrompt?: string | null
   ): TeamLaunchSummary {
     if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
     this.id(commandId);
+    if (initialPrompt !== undefined && initialPrompt !== null &&
+      (typeof initialPrompt !== 'string' || !initialPrompt.trim() || initialPrompt.length > 100_000))
+      throw new TeamLaunchError('invalid', 'launch-prompt');
     this.options.authorized('control', () => {
       const record = this.load();
       if (record.preparation?.fingerprint !== preparationFingerprint)
@@ -122,10 +126,13 @@ export class TeamLaunchOwner {
         throw new TeamLaunchError('conflict', 'launch-command');
       if (record.startCommandId && record.startCommandId !== commandId)
         throw new TeamLaunchError('conflict', 'launch-command');
+      if (record.startCommandId && record.initialPrompt !== initialPrompt)
+        throw new TeamLaunchError('conflict', 'launch-prompt');
       if (!record.startCommandId) {
         record.startCommandId = commandId;
         record.sourceRosterRevision = record.definition.rosterRevision;
         record.startedAtMs = this.now();
+        if (initialPrompt !== undefined) record.initialPrompt = initialPrompt;
         this.write(record);
       }
     });

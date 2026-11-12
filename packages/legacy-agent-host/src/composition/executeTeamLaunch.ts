@@ -60,7 +60,10 @@ export function executeTeamLaunch(options: {
     return json(launch.retry({ ...input, commandId }));
   }
   const input = scope
-    .extend({ configuration: launchConfigurationSchema.optional() })
+    .extend({
+      configuration: launchConfigurationSchema.optional(),
+      initialPrompt: z.string().min(1).max(100_000).refine((value) => Boolean(value.trim())).nullable().optional(),
+    })
     .strict()
     .parse(options.payload);
   const current = launch.read();
@@ -103,7 +106,7 @@ export function executeTeamLaunch(options: {
       }
   } else if (input.rosterRevision !== current.rosterRevision)
     throw new TeamLaunchError('conflict', 'launch-scope');
-  return json(launch.start(commandId, fingerprint, options.beforeOpen));
+  return json(launch.start(commandId, fingerprint, options.beforeOpen, input.initialPrompt));
 }
 
 export function selectedLaunchConfiguration(

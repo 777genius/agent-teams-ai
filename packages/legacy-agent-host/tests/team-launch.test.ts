@@ -332,6 +332,32 @@ test('source launch times retain original admission across read/replay/reconstru
   assert.equal(f.make('next-host').launch.read().startedAtMs, admitted.startedAtMs);
 });
 
+test('initial prompt belongs to the original launch intent across a lost reply and restart', async (t) => {
+  for (const prompt of [undefined, null, 'TEST scheduled instructions']) {
+    await t.test(String(prompt), async (t) => {
+      const f = await setup(t, ['A']);
+      const original = f.make();
+      let callbacks = 0;
+      assert.throws(() => original.launch.start('TEST-schedule-start', undefined, () => {
+        callbacks++;
+        throw new Error('TEST lost reply before native allocation');
+      }, prompt), /TEST lost reply/);
+      assert.equal(f.opens.size, 0);
+      original.launch.seal();
+      const recovered = f.make('TEST-next-host');
+      const changed = prompt === null ? 'TEST changed task' : null;
+      assert.throws(() => recovered.launch.start('TEST-schedule-start', undefined,
+        () => { callbacks++; }, changed), /conflict/);
+      assert.equal(callbacks, 1, 'conflicting prompt cannot reach the task/native effect');
+      recovered.launch.start('TEST-schedule-start', undefined, () => { callbacks++; }, prompt);
+      await settle(recovered.launch);
+      assert.equal(callbacks, 2);
+      assert.equal(f.opens.get('A'), 1);
+      recovered.launch.seal();
+    });
+  }
+});
+
 test('ready launch retains policy-skipped members without waiting for their native allocation', async (t) => {
   const f = await setup(t, ['A', 'skipped']);
   f.definition.members[1]!.skipped = true;

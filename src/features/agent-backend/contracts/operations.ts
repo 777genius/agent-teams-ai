@@ -184,6 +184,8 @@ export interface BackendOperationPayloads
     launchId: string;
     rosterRevision: string;
     configuration?: BackendLaunchConfiguration;
+    /** Omitted uses the saved prompt; null is a bootstrap-only launch. */
+    initialPrompt?: string | null;
   };
   'team.launch.retry': {
     launchId: string;
