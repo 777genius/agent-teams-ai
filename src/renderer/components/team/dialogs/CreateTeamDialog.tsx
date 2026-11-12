@@ -62,6 +62,9 @@ import { cn } from '@renderer/lib/utils';
 import {
   currentCreateTeamDraftGeneration,
   isCreateTeamDraftGenerationCurrent,
+  patchCreateTeamAdvancedSession,
+  readCreateTeamAdvancedSession,
+  restoreCreateTeamAdvancedDefaults,
 } from '@renderer/services/createTeamDraftGeneration';
 import {
   applyStoredCreateTeamMemberRuntimePreferences,
@@ -418,9 +421,10 @@ export const CreateTeamDialog = ({
   const [copySeedReady, setCopySeedReady] = useState(!initialData);
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
   const advancedKey = useMemo(() => sanitizeTeamName(teamName.trim()) || '_new_', [teamName]);
-  const [worktreeEnabled, setWorktreeEnabledRaw] = useState(false);
-  const [worktreeName, setWorktreeNameRaw] = useState('');
-  const [customArgs, setCustomArgsRaw] = useState('');
+  const advancedPreferencesEditedRef = useRef(Boolean(readCreateTeamAdvancedSession()?.edited));
+  const [worktreeEnabled, setWorktreeEnabledRaw] = useState(readCreateTeamAdvancedSession()?.worktreeEnabled ?? false);
+  const [worktreeName, setWorktreeNameRaw] = useState(readCreateTeamAdvancedSession()?.worktreeName ?? '');
+  const [customArgs, setCustomArgsRaw] = useState(readCreateTeamAdvancedSession()?.customArgs ?? '');
   useEffect(() => {
     migrateLegacyCreateTeamPreferences();
   }, []);
@@ -429,7 +433,6 @@ export const CreateTeamDialog = ({
       setProviderSettingsProviderId(null);
     }
   }, [open]);
-
   useEffect(() => {
     if (!open) {
       setOrganizationPlacementError(null);
@@ -486,28 +489,29 @@ export const CreateTeamDialog = ({
     setOrganizationPlacementParentId,
   ]);
   useEffect(() => {
+    // Restore per-name defaults until Advanced CLI has been manually edited.
+    if (!draftLoaded || !copySeedReady || !teamName.trim() || advancedPreferencesEditedRef.current) return;
     const storedEnabled =
       localStorage.getItem(`team:lastWorktreeEnabled:${advancedKey}`) === 'true';
     const storedName = localStorage.getItem(`team:lastWorktreeName:${advancedKey}`) ?? '';
+    const storedArgs = localStorage.getItem(`team:lastCustomArgs:${advancedKey}`) ?? '';
     setWorktreeEnabledRaw(storedEnabled && Boolean(storedName));
     setWorktreeNameRaw(storedName);
-    setCustomArgsRaw(localStorage.getItem(`team:lastCustomArgs:${advancedKey}`) ?? '');
-  }, [advancedKey]);
+    setCustomArgsRaw(storedArgs);
+    restoreCreateTeamAdvancedDefaults(storedEnabled && Boolean(storedName), storedName, storedArgs);
+  }, [advancedKey, copySeedReady, draftLoaded, teamName]);
   const setLimitContext = useCallback((value: boolean): void => {
     setLimitContextRaw(value);
     setStoredCreateTeamLimitContext(value);
   }, []);
-
   const setSkipPermissions = useCallback((value: boolean): void => {
     setSkipPermissionsRaw(value);
     setStoredCreateTeamSkipPermissions(value);
   }, []);
-
   const setSelectedEffort = useCallback((value: string): void => {
     setSelectedEffortRaw(value);
     setStoredCreateTeamEffort(value);
   }, []);
-
   const setSelectedFastMode = useCallback((value: TeamFastMode): void => {
     setSelectedFastModeRaw(value);
     setStoredCreateTeamFastMode(value);
@@ -515,8 +519,9 @@ export const CreateTeamDialog = ({
   const enableWorkflowMentionSuggestions = useCallback((): void => {
     setWorkflowMentionSuggestionsEnabled(true);
   }, []);
-
   const setWorktreeEnabled = (value: boolean): void => {
+    advancedPreferencesEditedRef.current = true;
+    patchCreateTeamAdvancedSession({ worktreeEnabled: value, worktreeName: value ? worktreeName : '' });
     setWorktreeEnabledRaw(value);
     localStorage.setItem(`team:lastWorktreeEnabled:${advancedKey}`, String(value));
     if (!value) {
@@ -525,10 +530,14 @@ export const CreateTeamDialog = ({
     }
   };
   const setWorktreeName = (value: string): void => {
+    advancedPreferencesEditedRef.current = true;
+    patchCreateTeamAdvancedSession({ worktreeName: value });
     setWorktreeNameRaw(value);
     localStorage.setItem(`team:lastWorktreeName:${advancedKey}`, value);
   };
   const setCustomArgs = (value: string): void => {
+    advancedPreferencesEditedRef.current = true;
+    patchCreateTeamAdvancedSession({ customArgs: value });
     setCustomArgsRaw(value);
     localStorage.setItem(`team:lastCustomArgs:${advancedKey}`, value);
   };
@@ -544,7 +553,6 @@ export const CreateTeamDialog = ({
     setAllowExperimentalLocalModels(false);
     setConflictDismissed(false);
   };
-
   const resetFormState = async (): Promise<void> => {
     gatewayBindings.releaseRetained();
     clearDraft();
@@ -554,7 +562,6 @@ export const CreateTeamDialog = ({
     resetUIState();
     if (presentation === 'page') await resetCreateTeamDraft();
   };
-
   const persistCurrentMemberRuntimePreferences = useCallback(
     (nextMembers: readonly MemberDraft[] = members): void => {
       setStoredCreateTeamMemberRuntimePreferences(nextMembers);
@@ -774,7 +781,6 @@ export const CreateTeamDialog = ({
       selectedEffort,
     ]
   );
-
   const runtimeProviderLoadingById = useMemo(
     () =>
       new Map(
@@ -818,11 +824,9 @@ export const CreateTeamDialog = ({
   const pendingPrepareProviderSignatureByIdRef = useRef(new Map<TeamProviderId, string>());
   const prepareProviderRequestSeqByIdRef = useRef(new Map<TeamProviderId, number>());
   const prepareWarningsByProviderIdRef = useRef(new Map<TeamProviderId, string[]>());
-
   useEffect(() => {
     runtimeBackendSummaryByProviderRef.current = runtimeBackendSummaryByProvider;
   }, [runtimeBackendSummaryByProvider]);
-
   useEffect(() => {
     const sanitized = clearInheritedMemberModelsUnavailableForProvider({
       members,
@@ -844,15 +848,12 @@ export const CreateTeamDialog = ({
     selectedProviderId,
     setMembers,
   ]);
-
   useEffect(() => {
     prepareChecksRef.current = prepareChecks;
   }, [prepareChecks]);
-
   useEffect(() => {
     prepareMessageRef.current = prepareMessage;
   }, [prepareMessage]);
-
   const invalidatePrepareProvider = useCallback((providerId: CliProviderId): void => {
     if (!isTeamProviderId(providerId)) {
       return;
@@ -878,7 +879,6 @@ export const CreateTeamDialog = ({
     providerIds: selectedMemberProviders,
     invalidatePrepareProvider,
   });
-
   useEffect(() => {
     if (!open) {
       cancelScheduledIdleSet(prepareIdleHandlesRef.current);

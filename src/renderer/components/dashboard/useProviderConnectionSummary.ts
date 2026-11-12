@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import {
+  isOpenCodeRuntimeUsable,
   useOpenCodeDashboardConnectedCountProbe,
   useRuntimeProviderConnectedCount,
   useRuntimeProviderDirectoryCache,
@@ -34,6 +35,7 @@ export function useProviderConnectionSummary(
   );
   const openCodeRuntimeStatus = useStore((state) => state.openCodeRuntimeStatus);
   const openCodeRuntimeStatusLoading = useStore((state) => state.openCodeRuntimeStatusLoading);
+  const openCodeRuntimeError = useStore((state) => state.openCodeRuntimeError);
   const selectedProjectId = useStore((state) => state.selectedProjectId);
   const projects = useStore((state) => state.projects);
   const repositoryGroups = useStore((state) => state.repositoryGroups);
@@ -49,12 +51,13 @@ export function useProviderConnectionSummary(
   const projectDirectory = useRuntimeProviderDirectoryCache(projectPath);
   const countEvidence = useRuntimeProviderConnectedCount(projectPath);
   const observedOpenCodeCount = countEvidence?.observation ?? null;
-  const openCodeIsChecking = Boolean(
-    countEvidence?.checking ||
-    openCodeRuntimeStatusLoading ||
-    cliProviderStatusLoading?.opencode ||
-    openCodeRuntimeStatus?.state === 'checking'
-  );
+  // Native discovery starts after CLI metadata arrives. Keep that cold-start gap
+  // checking, but don't let an unrelated aggregate refresh override a settled runtime.
+  const openCodeDiscoveryPending =
+    !openCodeRuntimeStatus &&
+    !openCodeRuntimeError &&
+    !cliStatusError &&
+    cliStatus?.installed !== false;
   const [expiryRevision, expire] = useState(0);
   useEffect(() => {
     const snapshots = [
@@ -102,6 +105,35 @@ export function useProviderConnectionSummary(
     countChecking: countEvidence?.checking ?? false,
     runtimeStatus: openCodeRuntimeStatus,
   });
+
+  const readyCountScope =
+    multimodelEnabled &&
+    cliStatus?.installed === true &&
+    cliStatus.flavor === 'agent_teams_orchestrator' &&
+    openCodeRuntimeStatus?.state === 'ready' &&
+    isOpenCodeRuntimeUsable(openCodeRuntimeStatus)
+      ? JSON.stringify([
+          projectPath,
+          openCodeRuntimeStatus.version,
+          openCodeRuntimeStatus.binaryPath,
+        ])
+      : null;
+  const [countEffectsScope, setCountEffectsScope] = useState<string | null>(null);
+  useEffect(() => setCountEffectsScope(readyCountScope), [readyCountScope]);
+  // Cover the first render before a count probe can publish checking. Once effects
+  // run, only an actual check owns the loader, including after a failed probe.
+  const initialCountPending =
+    summary.openCodeConnected === null &&
+    readyCountScope !== null &&
+    countEffectsScope !== readyCountScope;
+  const openCodeIsChecking = Boolean(
+    openCodeDiscoveryPending ||
+    initialCountPending ||
+    countEvidence?.checking ||
+    openCodeRuntimeStatusLoading ||
+    cliProviderStatusLoading?.opencode ||
+    openCodeRuntimeStatus?.state === 'checking'
+  );
 
   useOpenCodeDashboardConnectedCountProbe({
     enabled:

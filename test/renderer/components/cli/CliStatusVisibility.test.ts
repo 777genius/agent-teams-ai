@@ -3434,7 +3434,7 @@ describe('CLI status visibility during completed install state', () => {
       );
       expect(banner?.style.backgroundColor).toBe('transparent');
       expect(banner?.classList.contains('rounded-lg')).toBe(false);
-      expect(header?.classList.contains('border-b')).toBe(true);
+      expect(header?.classList.contains('border-b')).toBe(false);
       expect(header?.getAttribute('role')).toBeNull();
       expect(header?.getAttribute('aria-expanded')).toBeNull();
       expect(host.textContent).toContain('Connected via Anthropic subscription');

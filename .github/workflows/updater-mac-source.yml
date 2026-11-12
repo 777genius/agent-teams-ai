@@ -106,7 +106,7 @@ jobs:
     name: mac-source-signatures
     needs: mac-source-probe
     if: always() && github.repository == '777genius/agent-teams-ai'
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - name: Require reviewed immutable tooling SHA

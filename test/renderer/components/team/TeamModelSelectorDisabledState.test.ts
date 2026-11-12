@@ -4158,7 +4158,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('shows Check instead of Install while OpenCode readiness is pending', async () => {
+  it('shows an accessible spinner instead of Install while OpenCode readiness is pending', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
       providers: [
@@ -4197,7 +4197,13 @@ describe('TeamModelSelector disabled Codex models', () => {
     const openCodeButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('OpenCode')
     );
-    expect(openCodeButton?.textContent).toContain('Check');
+    const pendingStatus = openCodeButton?.querySelector(
+      '[data-testid="team-model-selector-provider-nav-status-opencode"]'
+    );
+    const loadingAnnouncement = openCodeButton?.querySelector('[role="status"]');
+    expect(loadingAnnouncement?.textContent).toBe('OpenCode status: checking runtime');
+    expect(pendingStatus?.getAttribute('aria-label')).toBe('OpenCode status: checking runtime');
+    expect(pendingStatus?.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
     expect(openCodeButton?.textContent).not.toContain('Install');
     expect(openCodeButton?.getAttribute('aria-description')).toBe(
       'OpenCode runtime status is still loading.'
@@ -5178,6 +5184,7 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('uses role-specific provider disabled copy before OpenCode readiness gating', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.openCodeRuntimeStatusLoading = true;
     storeState.cliStatus = {
       providers: [
         {
@@ -5225,6 +5232,12 @@ describe('TeamModelSelector disabled Codex models', () => {
       'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic or Codex for one-shot schedules.'
     );
     expect(openCodeButton?.textContent).toContain('team only');
+    expect(
+      openCodeButton?.querySelector(
+        '[data-testid="team-model-selector-provider-nav-status-opencode"] svg'
+      )
+    ).toBeNull();
+    expect(openCodeButton?.querySelector('[role="status"]')?.textContent).toBe('');
 
     await act(async () => {
       openCodeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));

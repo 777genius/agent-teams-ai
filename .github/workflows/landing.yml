@@ -35,7 +35,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -93,7 +93,7 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     if: github.event_name != 'pull_request'
     permissions:
       pages: write
@@ -109,7 +109,7 @@ jobs:
     name: Live GitHub Pages smoke
     needs: deploy
     if: github.event_name != 'pull_request'
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Verify public landing HTML after deployment
         run: |

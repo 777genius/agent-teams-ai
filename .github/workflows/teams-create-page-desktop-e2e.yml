@@ -75,6 +75,14 @@ jobs:
           sudo apt-get install -y xvfb
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Ensure Electron is installed before measuring app startup
+        run: node ./scripts/ensure-electron-install.cjs --strict
+      # Stage the real, checksum-pinned terminal runtime outside the CDP startup deadline.
+      - name: Stage pinned terminal runtime on Windows
+        if: runner.os == 'Windows'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node ./scripts/ensure-terminal-platform-runtime.mjs
       - name: Exercise actual Electron Create/Back/Resume/Copy/Launch
         shell: bash
         env:
