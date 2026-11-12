@@ -15,13 +15,14 @@ import type { CapturedProviderManagement } from '@features/agent-backend/main';
 import type { CodexChatgptLoginMode, CodexLoginStateDto } from '@features/codex-account/contracts';
 
 const unavailable = 'Unable to confirm the original Codex sign-in. No new login was started.';
+const rejected = 'Codex did not complete sign-in. You can try signing in again.';
 const idle = (): CodexLoginStateDto => ({ status: 'idle', error: null, startedAt: null });
 const object = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(unavailable);
   return value as Record<string, unknown>;
 };
 const terminal = (phase: ProviderOAuthSnapshot['phase']) =>
-  ['completed', 'cancelled', 'held'].includes(phase);
+  ['completed', 'cancelled', 'failed', 'held'].includes(phase);
 
 interface Login {
   intent: CodexAuthIntent;
@@ -210,8 +211,10 @@ export class CapturedCodexLogin {
         'cancelling',
         'completed',
         'cancelled',
+        'failed',
         'held',
       ].includes(String(value.phase)) ||
+      (value.phase === 'failed' && value.reason !== 'native-rejected') ||
       ![null, 'auto'].includes(value.completionMethod as 'auto' | null) ||
       !Number.isSafeInteger(value.sequence) ||
       Number(value.sequence) < 1 ||
@@ -252,7 +255,7 @@ export class CapturedCodexLogin {
             : receipt.phase === 'cancelled'
               ? 'cancelled'
               : 'failed',
-        error: receipt.phase === 'held' ? unavailable : null,
+        error: receipt.phase === 'held' ? unavailable : receipt.phase === 'failed' ? rejected : null,
         startedAt: entry.state.startedAt,
       };
       entry.settled = true;

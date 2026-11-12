@@ -21,7 +21,7 @@ const notifyLogin = (id: string | null, success = true) =>
     JSON.stringify({
       jsonrpc: '2.0',
       method: 'account/login/completed',
-      params: { loginId: id, success, error: null },
+      params: { loginId: id, success, error: success ? null : 'TEST-PRIVATE-NATIVE-ERROR' },
     }) + '\n'
   );
 const saveLogin = () => writeFileSync(loginAccount, 'true', { mode: 0o600 });
@@ -65,6 +65,11 @@ lines.on('line', (line) => {
     } else {
       notifyLogin('TEST-foreign');
       notifyLogin(null);
+      if (loginCase === 'rejected' ||
+        (loginCase === 'rejected-then-pending' && !existsSync(join(process.env.HOME!, 'TEST-rejected-once')))) {
+        writeFileSync(join(process.env.HOME!, 'TEST-rejected-once'), 'true', { mode: 0o600 });
+        notifyLogin(loginId, false);
+      }
       if (['early', 'wrong-account', 'reply-lost'].includes(loginCase)) {
         if (loginCase !== 'wrong-account') saveLogin();
         notifyLogin(loginId);

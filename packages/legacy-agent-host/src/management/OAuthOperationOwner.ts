@@ -30,6 +30,8 @@ export interface OAuthNativeConversation {
   readonly timeoutMs: number;
   /** Native browser callbacks may complete while the optional paste-code UI remains open. */
   readonly nativeCompletion?: Promise<boolean>;
+  /** Finite native failure witness, independent of whether original cleanup succeeds. */
+  readonly nativeRejectionConfirmed?: boolean;
   authorize(
     fields: Record<string, string> | undefined,
     signal: AbortSignal
@@ -241,7 +243,7 @@ export class OAuthOperationOwner {
     const current = this.active.get(saved.commandId)?.saved ?? saved;
     const unavailable =
       !this.active.has(saved.commandId) &&
-      !['completed', 'cancelled', 'held'].includes(current.phase);
+      !['completed', 'cancelled', 'failed', 'held'].includes(current.phase);
     return {
       operationId: current.commandId,
       profileId: current.profileId,
@@ -337,7 +339,8 @@ export class OAuthOperationOwner {
       // An explicit code submission owns its original completion command and native outcome.
       if (entry.saved.completionCommandId) return;
       if (!ok) {
-        await this.stop(entry, 'native-outcome-unknown');
+        await this.stop(entry, entry.native.nativeRejectionConfirmed === true
+          ? 'native-rejected' : 'native-outcome-unknown');
         return;
       }
       if (!['waiting-for-code', 'waiting-for-browser'].includes(entry.saved.phase)) return;
@@ -381,8 +384,9 @@ export class OAuthOperationOwner {
       } catch {
         /* Retain unknown writer custody. */
       }
-      entry.saved.phase =
-        clean && (reason === 'cancelled' || reason === 'expired') ? 'cancelled' : 'held';
+      entry.saved.phase = !clean ? 'held'
+        : reason === 'native-rejected' ? 'failed'
+          : reason === 'cancelled' || reason === 'expired' ? 'cancelled' : 'held';
       entry.saved.resourceHeld = !clean;
       entry.saved.sequence++;
       try {

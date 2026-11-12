@@ -49,6 +49,7 @@ function fixture(
     timeoutMs?: number;
     closeFails?: boolean;
     blockClose?: boolean;
+    confirmedRejection?: boolean;
     store?: (base: ManagementCommandStore) => ManagementCommandStore;
   } = {}
 ) {
@@ -95,6 +96,7 @@ function fixture(
     conversations.push(native);
     return {
       timeoutMs: options.timeoutMs ?? 30_000,
+      ...(options.confirmedRejection ? { nativeCompletion: Promise.resolve(false), nativeRejectionConfirmed: true } : {}),
       async authorize() {
         assert.equal(base.read(input.operationId)?.phase, 'authorizing');
         native.authorizeCalls++;
@@ -333,6 +335,30 @@ test('unconfirmed OAuth writer cleanup remains held for credential mutations and
   assert.equal(f.countWrites(), 0);
   await assert.rejects(f.owner.close(), { code: 'held' });
 });
+
+for (const clean of [true, false]) {
+  test(`confirmed native rejection requires original cleanup before retry: cleanup=${clean}`, async (t) => {
+    const f = fixture({ confirmedRejection: true, blockClose: true });
+    t.after(() => f.cleanup());
+    f.owner.start(initial);
+    const native = f.conversations[0]!;
+    native.authorize.resolve({ ...authorization, completionMethod: 'auto' });
+    await until(() => native.closeCalls === 1);
+    assert.equal(f.owner.read(lookup)?.phase, 'cancelling');
+    const next = { ...initial, operationId: 'TEST-explicit-retry' };
+    assert.throws(() => f.owner.start(next), { code: 'busy' });
+    native.close.resolve(clean);
+    await until(() => f.owner.read(lookup)?.phase === (clean ? 'failed' : 'held'));
+    assert.equal(f.owner.read(lookup)?.reason, 'native-rejected');
+    assert.equal(f.base.read(initial.operationId)?.resourceHeld, !clean);
+    assert.equal(f.owner.authorization(lookup), null);
+    assert.equal(native.completeCalls, 0, 'rejection cannot become successful completion');
+    if (clean) {
+      assert.equal(f.owner.start(next).phase, 'authorizing');
+      f.conversations[1]!.close.resolve(true);
+    } else assert.throws(() => f.owner.start(next), { code: 'held' });
+  });
+}
 
 test('completion admission loss stops the original flow without submitting a code', async (t) => {
   const f = fixture({

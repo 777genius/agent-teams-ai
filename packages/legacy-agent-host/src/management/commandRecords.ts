@@ -43,6 +43,7 @@ export const storedOAuthCommandSchema = z
       'cancelling',
       'completed',
       'cancelled',
+      'failed',
       'held',
     ]),
     completionMethod: z.enum(['auto', 'code']).nullable(),
@@ -50,12 +51,15 @@ export const storedOAuthCommandSchema = z
     completionFingerprint: hash.optional(),
     sequence: z.number().int().min(1),
     expiresAt: z.number().int().positive(),
-    reason: z.enum(['cancelled', 'expired', 'native-outcome-unknown', 'owner-changed']).optional(),
+    reason: z.enum(['cancelled', 'expired', 'native-rejected', 'native-outcome-unknown', 'owner-changed']).optional(),
   })
   .strict()
   .refine((value) => {
-    if (['completed', 'cancelled'].includes(value.phase) && value.resourceHeld) return false;
-    if (!['completed', 'cancelled', 'held'].includes(value.phase) && !value.resourceHeld)
+    if (['completed', 'cancelled', 'failed'].includes(value.phase) && value.resourceHeld) return false;
+    if (!['completed', 'cancelled', 'failed', 'held'].includes(value.phase) && !value.resourceHeld)
+      return false;
+    if (value.phase === 'failed' && value.reason !== 'native-rejected') return false;
+    if (value.reason === 'native-rejected' && !['cancelling', 'failed', 'held'].includes(value.phase))
       return false;
     if ((value.completionCommandId === undefined) !== (value.completionFingerprint === undefined))
       return false;

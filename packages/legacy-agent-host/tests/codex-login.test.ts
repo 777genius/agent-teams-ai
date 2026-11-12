@@ -104,6 +104,7 @@ async function fixture(t: TestContext, scenario: string) {
           'TEST-PRIVATE-CODE',
           'TEST-private-state',
           'TEST-native-login',
+          'TEST-PRIVATE-NATIVE-ERROR',
         ])
           assert.equal(text.includes(forbidden), false);
         progress.push(raw as ProviderOAuthSnapshot);
@@ -124,7 +125,7 @@ async function fixture(t: TestContext, scenario: string) {
       if (state.phase === phase) return state;
       assert.ok(Date.now() < deadline, `Expected ${phase}, observed ${state.phase}`);
       assert.ok(
-        !['completed', 'held', 'cancelled'].includes(state.phase),
+        !['completed', 'held', 'cancelled', 'failed'].includes(state.phase),
         `Unexpected ${state.phase}`
       );
       await tick();
@@ -216,6 +217,7 @@ for (const scenario of [
   'overflow',
   'wrong-account',
   'reply-lost',
+  'rejected',
 ]) {
   test(
     `captured Codex login across actual Host/D/TEST process: ${scenario}`,
@@ -272,7 +274,7 @@ for (const scenario of [
         ? 'cancelled'
         : ['early', 'device'].includes(scenario)
           ? 'completed'
-          : 'held';
+          : scenario === 'rejected' ? 'failed' : 'held';
       await f.wait(phase);
       const wire = await f.wire();
       assert.equal(
@@ -307,6 +309,7 @@ for (const scenario of [
           'TEST-PRIVATE-CODE',
           'TEST-private-state',
           'TEST-native-login',
+          'TEST-PRIVATE-NATIVE-ERROR',
         ])
           assert.equal(saved.includes(forbidden), false, 'durable state contains routing only');
       }

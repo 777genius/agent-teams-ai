@@ -81,11 +81,12 @@ export interface ProviderOAuthSnapshot {
     | 'cancelling'
     | 'completed'
     | 'cancelled'
+    | 'failed'
     | 'held';
   completionMethod: 'auto' | 'code' | null;
   sequence: number;
   expiresAt: number;
-  reason?: 'cancelled' | 'expired' | 'native-outcome-unknown' | 'owner-changed';
+  reason?: 'cancelled' | 'expired' | 'native-rejected' | 'native-outcome-unknown' | 'owner-changed';
 }
 
 export interface ProviderManagementCatalog {
