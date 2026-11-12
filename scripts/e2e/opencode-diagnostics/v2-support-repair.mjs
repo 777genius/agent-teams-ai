@@ -4,6 +4,11 @@ import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { lstat, open, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
+import runtimeLock from '../../../runtime.lock.json' with { type: 'json' };
+import {
+  engineForNativeVersion,
+  readOpenCodeV2Contract,
+} from '../../../src/features/opencode-compatibility/core/domain/openCodeV2Contract.ts';
 import {
   parseOpenCodeV2DeliveryManifest,
   parseOpenCodeV2InstalledReceipt,
@@ -11,6 +16,7 @@ import {
 } from '../../../src/features/opencode-runtime-installer/core/domain/v2Delivery.ts';
 
 const HELPER = 'local-cli/opencodeV2RunOwner.js';
+const QUALIFICATION = readOpenCodeV2Contract(runtimeLock.opencodeV2);
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const samePath = (left, right) => process.platform === 'win32'
   ? left.toLowerCase() === right.toLowerCase() : left === right;
@@ -71,6 +77,9 @@ export async function v2SupportSnapshot(data, verifyFiles = 'all') {
   readOpenCodeV2DeliveryMap({ version: descriptor.runtimeVersion, assets: { [platformKey]: {} },
     opencodeV2: { qualified: { [platformKey]: descriptor.engineVersions } },
     opencodeV2Delivery: { [platformKey]: descriptor } });
+  assert(QUALIFICATION, 'Pinned OpenCode V2 qualification is invalid');
+  assert.deepEqual(descriptor.engineVersions, QUALIFICATION.qualified[platformKey],
+    'Bundled engine qualification differs from the pinned runtime contract');
   assert.equal(String(await bounded(await physical(base, 'VERSION'), 128)).trim(), descriptor.runtimeVersion);
   assert.equal(String(await bounded(await physical(base, 'COMMIT_SHA'), 128)).trim(), descriptor.sourceCommit);
   const identity = JSON.parse(await bounded(await physical(base, 'opencode-delivery.json'), 4096));
@@ -81,8 +90,9 @@ export async function v2SupportSnapshot(data, verifyFiles = 'all') {
   assert(current.schemaVersion === 1 && /^2\.\d+\.\d+$/.test(current.version) &&
     current.platformPackage === `@opencode/cli-${process.platform === 'win32' ? 'windows' : process.platform}-${process.arch}` &&
     /^sha512-[A-Za-z0-9+/]+={0,2}$/.test(current.integrity), 'Verified managed native V2 identity required');
-  assert(descriptor.engineVersions.includes(current.version),
-    'Native V2 package is absent from the bundled qualification');
+  const engineVersion = engineForNativeVersion(QUALIFICATION, [platformKey], current.version);
+  assert(engineVersion && descriptor.engineVersions.includes(engineVersion),
+    'Native V2 package has no qualified bundled engine');
   const nativeRelative = path.relative(data.userData, current.binaryPath).split(path.sep).join('/');
   assert(nativeRelative.startsWith('data/runtimes/opencode/versions/'));
   const nativeFile = await physical(data.userData, nativeRelative);
@@ -122,18 +132,19 @@ export async function v2SupportSnapshot(data, verifyFiles = 'all') {
       assert.equal(await digest(file), row.sha256, 'Installed support checksum mismatch');
     }
   }));
-  return { descriptor, receipt, instanceRoot, filesVerified: rows.length,
+  return { descriptor, receipt, instanceRoot, engineVersion, filesVerified: rows.length,
     native: { binaryPath: nativeFile, version: current.version, platformPackage: current.platformPackage,
       integrity: current.integrity, currentSha256: sha(currentBytes), sha256: await digest(nativeFile) } };
 }
 
 /** Warm starts must reuse the exact successfully installed cold selection. */
 export function assertV2SupportWarmReuse(baseline, observed) {
-  assert(baseline?.native && baseline?.descriptor && baseline?.receipt &&
-    observed?.native && observed?.descriptor && observed?.receipt,
+  assert(baseline?.native && baseline?.descriptor && baseline?.receipt && baseline?.engineVersion &&
+    observed?.native && observed?.descriptor && observed?.receipt && observed?.engineVersion,
   'Verified cold support baseline required');
   assert.deepEqual(observed.native, baseline.native, 'Warm start changed native selection or bytes');
   assert.deepEqual(observed.descriptor, baseline.descriptor, 'Warm start changed pinned delivery');
+  assert.equal(observed.engineVersion, baseline.engineVersion, 'Warm start changed qualified engine');
   assert.deepEqual(observed.receipt, baseline.receipt, 'Warm start changed support selection');
 }
 
@@ -165,6 +176,7 @@ export async function verifyV2SupportRepair(data, restarted = false) {
   const after = await v2SupportSnapshot(data, 'all');
   assert.deepEqual(after.native, repair.before.native, 'Support repair changed native selection or bytes');
   assert.deepEqual(after.descriptor, repair.before.descriptor, 'Support repair changed pinned delivery');
+  assert.equal(after.engineVersion, repair.before.engineVersion, 'Support repair changed qualified engine');
   assert.notEqual(after.receipt.instance, repair.before.receipt.instance, 'Support repair reused corrupted instance');
   const priorRoot = await physical(data.userData,
     `data/runtimes/opencode-v2/${after.descriptor.runtimeVersion}/${after.descriptor.platform}-${after.descriptor.arch}/${after.descriptor.archive.sha256}/${repair.before.receipt.instance}`, true);
