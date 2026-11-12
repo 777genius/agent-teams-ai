@@ -566,7 +566,6 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   // This grants neither a new native business input nor a repeated Launch submission.
   models.beginColdReadbackProbes();
   await ui.click('button', 'reopen original mixed Launch after Stop/reload', 'Launch');
-  proof.stoppedReloadLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
   await poll(
     async () => models.claude.probes.length,
     (count) => count === 9,
@@ -576,6 +575,16 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     { phase: 'cold-readback', requestedModel: 'claude-opus-4-6', requestedEffort: 'medium' },
   ]);
   assert.deepEqual(models.claude.failures, []);
+  // The cold preflight replaces its status panel and moves the optional header.
+  // Observe its original completed UI before the one settings click; never retry
+  // a click that may already have reached a different control during hydration.
+  await ui.waitRead(`(() => {
+    const dialog=document.querySelector('[role="dialog"]');
+    return dialog?.textContent.includes('All selected providers are ready.') &&
+      [...dialog.querySelectorAll('button')].some(button=>
+        button.textContent.trim()==='Launch team'&&!button.disabled);
+  })()`, 'original cold Launch preflights settled before reading saved settings');
+  proof.stoppedReloadLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
   assert.deepEqual(
     assertMixedSavedSettings(await ownerState(), workspace, mixedEditedDescription),
     configuredAfterStop
