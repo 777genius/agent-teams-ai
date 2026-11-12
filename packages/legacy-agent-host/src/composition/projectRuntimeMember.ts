@@ -19,7 +19,7 @@ export function projectRuntimeMember(options: {
     !!record?.nativeReady &&
     !!entry.provider?.isReady() &&
     options.isCurrent();
-  const attachmentCapabilities =
+  const captured =
     nativeReady &&
     observed.attached &&
     record !== undefined &&
@@ -27,9 +27,9 @@ export function projectRuntimeMember(options: {
     record.custody === 'owned' &&
     !record.sealed &&
     runtimeDigest(record.binding) === runtimeDigest(binding) &&
-    runtimeDigest(observed.record) === runtimeDigest(record)
-      ? entry.provider?.attachmentCapabilities
-      : undefined;
+    runtimeDigest(observed.record) === runtimeDigest(record);
+  const attachmentCapabilities = captured ? entry.provider?.attachmentCapabilities : undefined;
+  const sessionCommands = captured ? entry.provider?.sessionCommands?.() ?? [] : undefined;
   return {
     memberId: entry.profile.memberId,
     generation: binding.generation,
@@ -38,6 +38,7 @@ export function projectRuntimeMember(options: {
     custody: record?.custody ?? 'released',
     nativeReady,
     attached: observed.attached,
+    ...(sessionCommands ? { sessionCommands: sessionCommands.map(({ name, description }) => ({ name, description })) } : {}),
     ...(attachmentCapabilities
       ? {
           attachmentCapabilities: {

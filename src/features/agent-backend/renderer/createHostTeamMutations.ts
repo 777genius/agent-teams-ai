@@ -151,6 +151,9 @@ export function createHostTeamMutations(options: {
       source?.forEach((ref) => collect(ref.teamName));
     }
     const target = await options.resolve(key, current, [...referenceTeams]);
+    if (payload.nativeCommand === true &&
+      target.members?.filter(member => member.name === payload.to && member.role === 'lead').length !== 1)
+      return unsupported();
     if (destination === 'captured-lead') {
       const leads = target.members?.filter((member) => member.role === 'lead') ?? [];
       const lead = leads[0];
@@ -546,8 +549,9 @@ export function createHostTeamMutations(options: {
         'summary',
         'actionMode',
       ]);
-      if (parseStandaloneSlashCommand(request.text)) return unsupported();
+      const native = parseStandaloneSlashCommand(request.text);
       const files = attachments(request.attachments, 'message');
+      if (native && files.length) return unsupported();
       const taskRefs = refs(request.taskRefs);
       const receipt = await execute(
         key,
@@ -557,6 +561,7 @@ export function createHostTeamMutations(options: {
           payload: {
             to: request.member,
             text: request.text,
+            ...(native ? { nativeCommand: true as const } : {}),
             ...(request.messageId === undefined ? {} : { messageId: request.messageId }),
             ...(request.summary === undefined ? {} : { summary: request.summary }),
             ...(request.actionMode === undefined ? {} : { actionMode: request.actionMode }),

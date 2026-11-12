@@ -415,6 +415,11 @@ export function createTeamHost(
           const command = { ...payload, commandId: input.commandId } as TeamCommand;
           let receipt;
           try {
+            if (command.operation === 'message.send' && command.payload?.nativeCommand === true &&
+              !connection.lookup(input.commandId, command)) {
+              if (!runtime) throw new TeamOwnerError('invalid');
+              runtime.assertNativeMessage(selected.definition.binding.teamId, command);
+            }
             receipt = connection.execute(command);
           } catch (error) {
             if (

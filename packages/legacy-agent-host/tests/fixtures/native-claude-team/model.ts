@@ -175,7 +175,7 @@ export async function startNativeTeamModel(
   const crossTeam = options.crossTeam ? nativeCrossTeamScript(options.crossTeam) : undefined;
   const groupChats = options.groupChats ? nativeGroupChatScript(nativeToolReceipt) : undefined;
   const compaction = options.contextCompaction
-    ? contextCompactionScript(options.contextCompaction)
+    ? contextCompactionScript(options.contextCompaction, nativeToolReceipt)
     : undefined;
   const ordinary = options.ordinarySubagents
     ? ordinarySubagentScript(

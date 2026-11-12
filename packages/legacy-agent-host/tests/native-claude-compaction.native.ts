@@ -13,6 +13,10 @@ import { deliveryFingerprint, normalizeBinding } from '../dist/runtime/identity.
 import { preparedInputProof } from '../dist/runtime/inputPreparation.js';
 import { effectId } from '../dist/team/identity.js';
 import { fileHash, tick, treeHash, startHost } from './fixtures/native-host.ts';
+import {
+  readNativeProviderArtifact,
+  verifyNativeProviderArtifact,
+} from './fixtures/native-provider-artifact.ts';
 import { processFacts } from './fixtures/native-input-capture.ts';
 import {
   CONTEXT_MARKER,
@@ -24,6 +28,9 @@ import {
   COMPACT_SEED,
   COMPACT_VERIFY,
   COMPACT_FOLLOWUP,
+  PROJECT_COMMAND_BODY,
+  USER_COMMAND_BODY,
+  COMMAND_ARGS,
 } from './fixtures/native-claude-compaction/model.ts';
 import type { CompactionPhase } from './fixtures/native-claude-compaction/model.ts';
 import type { ProcessFact } from './fixtures/native-input-capture.ts';
@@ -47,6 +54,7 @@ const sourcePaths = [
   'tests/fixtures/native-peers.ts',
   'tests/fixtures/native-host.ts',
   'tests/fixtures/native-input-capture.ts',
+  'tests/fixtures/native-provider-artifact.ts',
 ];
 
 /** TEST-only bounded inspection of actual native transcript rows, never a product reader. */
@@ -80,7 +88,7 @@ async function nativeBoundaries(config: string) {
 }
 
 test(
-  'actual native compact -> supported current roster/Task recapture -> exactly one prepared original input, with cold proof recovery',
+  'actual marked Claude commands, local cost output, captured project/user skills and compact context recover their original receipts',
   { timeout: 300_000 },
   async (t) => {
     assert.equal(
@@ -94,6 +102,10 @@ test(
     assert.equal(await realpath(process.execPath), node);
     const entry = join(pkg, 'dist/cli.js'),
       artifactPath = resolve(repo, required('LEGACY_NATIVE_PROVIDER_ARTIFACT'));
+    const selectedArtifact = await readNativeProviderArtifact(repo);
+    assert.equal(artifactPath, resolve(repo, selectedArtifact.path));
+    assert.equal(required('LEGACY_NATIVE_PROVIDER_SHA256'), selectedArtifact.sha256);
+    await verifyNativeProviderArtifact(repo, selectedArtifact);
     const providerEntry = await realpath(
       join(pkg, 'node_modules/@agent-teams/provider-implementations/dist/claude.js')
     );
@@ -249,10 +261,10 @@ test(
       nativeTools: [],
       autoAllowedTools: [],
       nativeOptions: {
-        settingSources: [],
+        settingSources: ['user', 'project'],
         context: 'model-default',
         projectInstructions: {
-          append: `${CONTEXT_MARKER} TEST-only native compact qualification. No filesystem effects or tool calls requested.`,
+          append: `${CONTEXT_MARKER} TEST-only native compact and command qualification. Only explicitly requested Team MCP messages are permitted.`,
         },
       },
       limits: {
@@ -264,6 +276,25 @@ test(
         timeoutMs: 45_000,
       },
     };
+    const commandSources = [] as { path: string; sha256: string }[];
+    for (const [path, contents] of [
+      [
+        join(member.cwd, '.claude/commands/test-project-command.md'),
+        `---\ndescription: TEST captured project command\n---\n${PROJECT_COMMAND_BODY}\nArguments: $ARGUMENTS\nSend the requested TEST reply using the captured Team message_send tool.\n`,
+      ],
+      [
+        join(environment.CLAUDE_CONFIG_DIR, 'skills/test-user-command/SKILL.md'),
+        `---\nname: test-user-command\ndescription: TEST captured user command\nuser-invocable: true\n---\n${USER_COMMAND_BODY}\nArguments: $ARGUMENTS\nSend the requested TEST reply using the captured Team message_send tool.\n`,
+      ],
+      [
+        join(member.cwd, '.claude/skills/test-hidden-command/SKILL.md'),
+        '---\nname: test-hidden-command\ndescription: TEST model-only skill\nuser-invocable: false\n---\nTEST_HIDDEN_SKILL_MUST_NOT_BE_USER_INVOKED\n',
+      ],
+    ]) {
+      await mkdir(dirname(path!), { recursive: true, mode: 0o700 });
+      await writeFile(path!, contents!, { mode: 0o600 });
+      commandSources.push({ path: path!, sha256: await fileHash(path!) });
+    }
     const profile: TeamHostProfile = {
       schemaVersion: 1,
       owner,
@@ -385,7 +416,7 @@ test(
       while (Date.now() < deadline) {
         assert.deepEqual(model.failures, []);
         const result = await rpc('runtime.read', 'TEST-m10-ready', { memberId });
-        if (record(result.value).nativeReady === true) return;
+        if (record(result.value).nativeReady === true) return record(result.value);
         await tick();
       }
       throw new Error('Actual native member did not reach captured MCP readiness');
@@ -410,7 +441,14 @@ test(
       const command: TeamCommand = {
         commandId,
         operation: 'message.send',
-        payload: { to: 'lead', text, ...(rich ? { actionMode: 'ask' as const } : {}) },
+        payload: {
+          to: 'lead',
+          text,
+          ...(rich ? { actionMode: 'ask' as const } : {}),
+          ...(text.startsWith('/')
+            ? { nativeCommand: true as const, messageId: commandId, actionMode: 'ask' as const }
+            : {}),
+        },
       };
       const result = await rpc('team.execute', commandId, {
         operation: command.operation,
@@ -429,7 +467,20 @@ test(
         launchId: launch.launchId,
         rosterRevision: launch.rosterRevision,
       });
-      await ready('lead-id');
+      const initialReady = await ready('lead-id');
+      const commands = (initialReady.sessionCommands as unknown[]).map(record);
+      for (const name of ['compact', 'cost', 'test-project-command', 'test-user-command'])
+        assert.ok(
+          commands.some((command) => command.name === name),
+          `actual Query advertises ${name}`
+        );
+      for (const name of ['test-hidden-command', 'model', 'effort', 'fast', 'clear'])
+        assert.equal(
+          commands.some((command) => command.name === name),
+          false,
+          `unqualified ${name} is not offered`
+        );
+      proofs.commandCatalog = { commands, commandSources };
       captureChildren(1);
       await send('TEST-m10-seed', COMPACT_SEED);
       phase = 'compact';
@@ -474,6 +525,71 @@ test(
         epoch,
         events: compactRows,
         originalInputs: originalRuntime.inputs,
+      };
+      const beforeCostRequests = model.compactionRequests.length;
+      await send('TEST-p03-cost', '/cost');
+      const costInput = runtime(initialBinding).inputs.find(
+        (input) => input.intent.inputId === inputId('TEST-p03-cost')
+      );
+      assert.ok(costInput);
+      assert.equal(
+        costInput.intent.content,
+        '/cost',
+        'marked rich message reaches the native parser without a wrapper'
+      );
+      assert.equal(
+        costInput.preparation,
+        undefined,
+        'local command does not consume the pending Team reminder'
+      );
+      assert.equal(state().contextEpochs?.[0]?.represented, undefined);
+      const userInbox = async () =>
+        JSON.parse(
+          await readFile(
+            join(owner.storageRoot, 'teams', binding.teamName, 'inboxes/user.json'),
+            'utf8'
+          )
+        ) as Record<string, unknown>[];
+      let costReply: Record<string, unknown> | undefined;
+      const outputDeadline = Date.now() + 10_000;
+      while (Date.now() < outputDeadline && !costReply) {
+        try {
+          costReply = (await userInbox()).find((row) => row.summary === '/cost');
+        } catch {
+          /* Original output publication may follow its terminal by one iterator tick. */
+        }
+        if (!costReply) await tick();
+      }
+      assert.ok(
+        costReply && typeof costReply.text === 'string' && costReply.text.length > 0,
+        'actual native local output is visible in the original conversation'
+      );
+      assert.equal(costReply.from, 'lead');
+      assert.equal(
+        model.compactionRequests.length,
+        beforeCostRequests,
+        '/cost must not spend a model request'
+      );
+      const costEvents =
+        events
+          .readActivity(initialBinding)
+          ?.events.filter((event) => event.inputId === costInput.intent.inputId) ?? [];
+      const local = costEvents.filter(
+        (event) =>
+          event.operationRef === costInput.operationRef &&
+          event.data.kind === 'text' &&
+          typeof event.data.messageRef === 'string' &&
+          event.data.messageRef.startsWith('local-command:')
+      );
+      assert.equal(local.length, 1);
+      assert.equal(local[0]!.data.text, costReply.text);
+      proofs.localCommand = {
+        command: '/cost',
+        inputId: costInput.intent.inputId,
+        events: costEvents,
+        reply: costReply,
+        modelRequestsUnchanged: true,
+        pendingContextPreserved: true,
       };
       const stopped = await rpc('runtime.stop', 'TEST-m10-stop-before-roster', {
         memberId: 'lead-id',
@@ -619,6 +735,28 @@ test(
         outbox,
         represented: state().contextEpochs?.[0]?.represented,
       };
+      for (const selected of ['project-command', 'user-command'] as const) {
+        phase = selected;
+        const name = selected === 'project-command' ? 'test-project-command' : 'test-user-command';
+        await send(`TEST-p03-${selected}`, `/${name} ${COMMAND_ARGS}`);
+        const skillInput = runtime().inputs.find(
+          (input) => input.intent.inputId === inputId(`TEST-p03-${selected}`)
+        );
+        assert.ok(skillInput && skillInput.intent.content === `/${name} ${COMMAND_ARGS}`);
+        assert.equal(skillInput.preparation, undefined);
+        assert.equal(
+          (await userInbox()).filter((row) => row.text === `TEST_P03_${selected}_VISIBLE_REPLY`)
+            .length,
+          1,
+          'actual captured skill executes its Team MCP reply once'
+        );
+      }
+      proofs.namedCommands = {
+        project: true,
+        user: true,
+        exactArguments: COMMAND_ARGS,
+        nativeTeamReplies: 2,
+      };
       for (const member of currentMembers) {
         const result = await rpc('runtime.stop', 'TEST-m10-stop-current', {
           memberId: member.memberId,
@@ -649,7 +787,12 @@ test(
         preparedInputProof(preparationBeforeCold)
       );
       assert.equal(model.compactionRequests.length, requestsBeforeCold);
-      assert.equal(requestsBeforeCold, 4);
+      assert.equal(requestsBeforeCold, 8);
+      assert.equal(
+        (await userInbox()).filter((row) => row.summary === '/cost').length,
+        1,
+        'cold original lookup does not duplicate the native reply'
+      );
       assert.equal(
         processFacts().filter(
           (row) => row.parentPid === host!.child.pid && row.command === native.path
@@ -666,10 +809,20 @@ test(
       };
       assert.deepEqual(
         model.compactionRequests.map((row) => row.phase),
-        ['seed', 'compact', 'verify', 'followup']
+        [
+          'seed',
+          'compact',
+          'verify',
+          'followup',
+          'project-command',
+          'project-command',
+          'user-command',
+          'user-command',
+        ]
       );
       assert.deepEqual(model.failures, []);
       assert.equal(await fileHash(untouchedPath), untouchedSha256);
+      for (const source of commandSources) assert.equal(await fileHash(source.path), source.sha256);
       passed = true;
     } catch (error) {
       originalFailure = error;
@@ -749,6 +902,8 @@ test(
         assert.equal(final.hostDist, artifacts.host.distSha256);
         assert.equal(final.hostEntry, artifacts.host.entrySha256);
         assert.deepEqual(final.fixtureSources, artifacts.fixtureSources);
+        for (const source of commandSources)
+          assert.equal(await fileHash(source.path), source.sha256);
         assert.equal(await fileHash(untouchedPath), untouchedSha256);
         receipt.sourcePinsUnchanged = true;
         receipt.unrelatedWorkspacePreserved = true;

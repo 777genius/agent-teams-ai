@@ -148,6 +148,8 @@ export type TeamCommand = { commandId: string } & (
         messageId?: string;
         summary?: string;
         actionMode?: 'do' | 'ask' | 'delegate';
+        /** Explicit raw native format; the captured Host separately proves actor and capability. */
+        nativeCommand?: true;
         attachments?: readonly AttachmentReference[];
       };
     }

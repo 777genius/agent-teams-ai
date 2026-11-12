@@ -875,6 +875,70 @@ jobs:
             qualification: 'Source Desktop and localhost inference only; no installed/packed or vendor-auth claim',
           }, null, 2));
           NODE
+      - name: Verify captured Claude commands and original native receipt recovery
+        if: matrix.mode == 'native-create-ui' && !matrix.variant
+        run: |
+          set -euo pipefail
+          resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { spawnSync } from 'node:child_process';
+          import { closeSync, openSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          import { fileHash, treeHash } from './packages/legacy-agent-host/tests/fixtures/native-host.ts';
+          import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+          const repo = process.cwd();
+          const provider = await readNativeProviderArtifact(repo);
+          await verifyNativeProviderArtifact(repo, provider);
+          const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');
+          const providerEntry = realpathSync('packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/claude.js');
+          const pins = {
+            LEGACY_NATIVE_CLAUDE_COMPACTION_GO: '1',
+            LEGACY_NATIVE_COMPACTION_NODE: node,
+            LEGACY_NATIVE_PROVIDER_ARTIFACT: provider.path,
+            LEGACY_NATIVE_PROVIDER_SHA256: provider.sha256,
+            LEGACY_NATIVE_CLAUDE_SHA256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f',
+            LEGACY_NATIVE_PROVIDER_DIST_SHA256: await treeHash(dirname(providerEntry), '.js'),
+            LEGACY_NATIVE_HOST_SOURCE_SHA256: await treeHash('packages/legacy-agent-host/src', '.ts'),
+            LEGACY_NATIVE_HOST_DIST_SHA256: await treeHash('packages/legacy-agent-host/dist', '.js'),
+          };
+          writeFileSync(join(process.env.RUNNER_TEMP, 'stage1-native-commands-inputs.json'), JSON.stringify({
+            sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
+            node: { path: node, sha256: await fileHash(node) }, provider, pins,
+            scope: 'Actual native Query commands through marked Host message.send; Desktop selection is separate',
+          }, null, 2));
+          const logPath = join(process.env.RUNNER_TEMP, 'stage1-native-commands.log');
+          const logFd = openSync(logPath, 'w', 0o600);
+          let run;
+          try {
+            run = spawnSync(node, ['--test', 'packages/legacy-agent-host/tests/native-claude-compaction.native.ts'], {
+              cwd: repo, env: { ...process.env, ...pins }, stdio: ['ignore', logFd, logFd], timeout: 330_000,
+            });
+          } finally { closeSync(logFd); }
+          assert.ok(statSync(logPath).size <= 8 * 1024 * 1024, 'bounded original native fixture log');
+          const log = readFileSync(logPath, 'utf8');
+          console.log(log);
+          assert.equal(run.error, undefined); assert.equal(run.status, 0);
+          const matches = [...log.matchAll(/TEST receipt: (\/private\/tmp\/TEST-native-claude-compaction-[^/\s]+\/receipt\.json)/g)];
+          assert.equal(matches.length, 1, 'one original native command journey');
+          const receipt = JSON.parse(readFileSync(realpathSync(matches[0][1]), 'utf8'));
+          assert.equal(receipt.status, 'SCOPED_PASS');
+          assert.equal(receipt.cleanupConfirmed, true);
+          assert.equal(receipt.physicalNativeCleanup.qualified, true);
+          assert.equal(receipt.sourcePinsUnchanged, true);
+          assert.equal(receipt.artifacts.provider.sha256, provider.sha256);
+          assert.equal(receipt.artifacts.host.sourceSha256, pins.LEGACY_NATIVE_HOST_SOURCE_SHA256);
+          assert.equal(receipt.artifacts.host.distSha256, pins.LEGACY_NATIVE_HOST_DIST_SHA256);
+          assert.equal(receipt.proofs.localCommand.command, '/cost');
+          assert.equal(receipt.proofs.localCommand.modelRequestsUnchanged, true);
+          assert.equal(receipt.proofs.localCommand.pendingContextPreserved, true);
+          assert.equal(receipt.proofs.namedCommands.project, true);
+          assert.equal(receipt.proofs.namedCommands.user, true);
+          assert.equal(receipt.proofs.namedCommands.nativeTeamReplies, 2);
+          assert.equal(receipt.proofs.coldRecovery.exactOriginalReceipts, 7);
+          assert.equal(receipt.proofs.coldRecovery.noNativeAllocation, true);
+          assert.equal(receipt.proofs.coldRecovery.modelRequestsUnchanged, true);
+          assert.equal(receipt.modelRequests.length, 8);
+          NODE
       - name: Stage exact OpenCode V2 base for original Desktop acceptance
         if: matrix.opencode_generation == 'v2'
         env:
@@ -1082,6 +1146,10 @@ jobs:
             ${{ runner.temp }}/stage1-setup-${{ matrix.variant || matrix.mode }}.log
             ${{ runner.temp }}/stage1-native-restore.log
             ${{ runner.temp }}/stage1-native-restore-inputs.json
+            ${{ runner.temp }}/stage1-native-commands.log
+            ${{ runner.temp }}/stage1-native-commands-inputs.json
+            /private/tmp/TEST-native-claude-compaction-*/receipt.json
+            /private/tmp/TEST-native-claude-compaction-*/host-stderr.log
             opencode-v2-desktop-inputs.json
             /private/tmp/TEST-stage1-inputs-*/input-pins.json
             /private/tmp/TEST-desktop-backend-*/*.json
