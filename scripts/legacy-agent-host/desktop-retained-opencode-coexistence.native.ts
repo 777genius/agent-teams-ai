@@ -333,7 +333,56 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     steps.push({ observed: 'both_actual_owner_inputs_through_original_renderer_routing', hostProcesses });
     let ui = createDesktopUiControls(app.cdp, { assertOwnedRenderer: app.assertCurrent, step: value => steps.push(value) });
     await ui.observeInput();
-    await ui.clickSidebar('TEST retained V1 sidebar record');
+    try {
+      await ui.clickSidebar('TEST retained V1 sidebar record');
+    } catch (error) {
+      if (error instanceof Error &&
+        error.message === 'UI read timed out: visible sidebar seed row; no mutation retry') {
+        try {
+          app.assertCurrent();
+          proof.sidebarVisibility = await app.cdp.evaluate(`(() => {
+  const subject = ${literal('TEST retained V1 sidebar record')};
+  const rows = [...document.querySelectorAll('#sidebar-tasks-panel .sidebar-task-item')]
+    .filter(e => [...e.querySelectorAll('span')].some(s => s.textContent.trim() === subject));
+  const rect = e => {
+    if (!(e instanceof Element)) return null;
+    const r = e.getBoundingClientRect();
+    return { x:r.x, y:r.y, width:r.width, height:r.height, top:r.top, bottom:r.bottom, left:r.left, right:r.right };
+  };
+  const style = e => {
+    const s = getComputedStyle(e);
+    const known = (value, values) => values.includes(value) ? value : 'other';
+    return { display:known(s.display,['none','block','flex','grid','contents','inline','inline-block','inline-flex']),
+      visibility:known(s.visibility,['visible','hidden','collapse']),
+      position:known(s.position,['static','relative','absolute','fixed','sticky']),
+      overflowY:known(s.overflowY,['auto','scroll','hidden','visible','clip']),
+      overflowX:known(s.overflowX,['auto','scroll','hidden','visible','clip']),
+      contentVisibility:known(s.contentVisibility,['auto','hidden','visible']) };
+  };
+  const row = rows.length === 1 ? rows[0] : null, bounds = rect(row);
+  const center = bounds ? { x:bounds.x + bounds.width/2, y:bounds.y + bounds.height/2 } : null;
+  const hit = center ? document.elementFromPoint(center.x,center.y) : null;
+  const relation = !hit ? 'none' : hit === row ? 'target' : row?.contains(hit) ? 'descendant' :
+    hit.closest('#sidebar-tasks-panel') ? 'other_sidebar' :
+    hit.closest('[role="dialog"],[role="alertdialog"]') ? 'dialog' : 'other';
+  const ancestors = [];
+  for (let e = row?.parentElement; e && ancestors.length < 8; e = e.parentElement)
+    ancestors.push({ rect:rect(e), style:style(e), taskPanel:e.id === 'sidebar-tasks-panel',
+      scrollTop:e.scrollTop, scrollLeft:e.scrollLeft, clientHeight:e.clientHeight, scrollHeight:e.scrollHeight,
+      clientWidth:e.clientWidth, scrollWidth:e.scrollWidth, inert:e.inert === true, ariaHidden:e.getAttribute('aria-hidden') === 'true' });
+  const dialogs = [...document.querySelectorAll('[role="dialog"],[role="alertdialog"]')]
+    .filter(e => { const r=rect(e); return r && r.width>0 && r.height>0; });
+  return { kind:'TEST_RETAINED_SIDEBAR_VISIBILITY', rowCount:rows.length,
+    viewport:{ width:innerWidth,height:innerHeight }, panel:rect(document.getElementById('sidebar-tasks-panel')),
+    row:bounds, rowStyle:row ? style(row) : null, center,
+    centerInViewport:center ? center.x>=0 && center.x<innerWidth && center.y>=0 && center.y<innerHeight : null,
+    hitRelation:relation, hitRect:rect(hit), hitStyle:hit ? style(hit) : null,
+    visibleDialogCount:dialogs.length, dialogRects:dialogs.slice(0,3).map(rect), ancestors };
+})()`);
+        } catch { proof.sidebarVisibility = { kind: 'diagnostic_unavailable' }; }
+      }
+      throw error;
+    }
     await ui.click('button[aria-label="Stop"]', 'ordinary retained V1 Stop', 'Stop');
     await waitFor(async () => await callTeams<boolean>('processAlive', [legacyTeam]) === false || null, 'retained V1 Stop settles', 120_000);
     assert.ok(hostProcesses.every(originalLinuxProcessPresent), 'legacy Stop preserves all original V2 native children');
@@ -410,6 +459,11 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     proof.status = passed && cleanup ? 'PASS' : 'FAIL';
     if (failure) proof.failure = failure instanceof Error ? failure.message : String(failure);
     proof.cleanupFailures = cleanupErrors.map(error => error instanceof Error ? error.message : String(error));
+    if (proof.sidebarVisibility) {
+      try { console.error('TEST_RETAINED_SIDEBAR_VISIBILITY ' + JSON.stringify({
+        cleanupConfirmed: cleanup, observation: proof.sidebarVisibility,
+      })); } catch { proof.sidebarVisibilityPrintFailed = true; }
+    }
     await save();
   }
   if (failure && cleanupErrors.length) throw new AggregateError([failure, ...cleanupErrors], 'coexistence and cleanup failed');
