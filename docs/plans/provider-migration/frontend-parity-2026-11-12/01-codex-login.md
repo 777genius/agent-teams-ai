@@ -1,6 +1,10 @@
 # 01. Codex: вход через браузер и device code в Host
 
 Статус: план реализации; production-код этим документом не меняется.
+Первый source slice опубликован: [provider PR #8](https://github.com/agent-teams-ai/old-provider-implementations/pull/8),
+commit `09c2859f932be6eeb6fe26289bb997d8e0a81289`. Typed start/cancel/private completion готовы;
+`pnpm check` PASS на Node 24.21.0 и 26.11.1 / pnpm 11.18.0 (509 source tests + два packed consumers на каждом).
+Frontend получает retained verified archive `691a7a62…`; Session SPI pin не меняется. Host/UI/native login acceptance ещё открыта.
 Основание: сохранить возможности текущего Desktop frontend при включённом Host.
 Baseline frontend: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
