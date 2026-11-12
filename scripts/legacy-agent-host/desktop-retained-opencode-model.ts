@@ -35,7 +35,7 @@ export async function startRetainedOpenCodeModel() {
       assert.equal(JSON.stringify(messages).includes(otherPrefix), false,
         'no business input or history crosses the original owner boundary');
       const lastUser = JSON.stringify(messages.findLast(message => message.role === 'user')?.content);
-      const marker = lastUser?.match(/TEST_(?:RETAINED_V1|OWNED_V2)_(?:FIRST|AFTER_STOP)/)?.[0] ?? null;
+      const marker = [...lastUser?.matchAll(/TEST_(?:RETAINED_V1|OWNED_V2)_(?:HISTORY|FIRST|AFTER_STOP)/g) ?? []].at(-1)?.[0] ?? null;
       if (marker) {
         assert.ok(marker.startsWith(ownPrefix));
         assert.equal(markers.has(marker), false, 'no repeated business inference'); markers.add(marker);

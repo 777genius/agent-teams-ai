@@ -119,7 +119,9 @@ export async function startRetainedOpenCodeApp(input: {
     await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true });
     phase = 'original preload';
     await waitFor(async () => await cdp!.evaluate<boolean>(
-      'Boolean(window.electronAPI?.teams && window.electronAPI?.agentBackend)&&!document.getElementById("splash")') || null,
+      `location.origin===${JSON.stringify(new URL(target.url).origin)}&&document.readyState==='complete'&&
+       Boolean(window.electronAPI?.teams && window.electronAPI?.agentBackend)&&
+       document.getElementById('root')?.childElementCount>0&&!document.getElementById('splash')`) || null,
     'original preload and startup', 120_000);
     let sequence = 0;
     const call = async <T = Record<string, unknown>>(expression: string, timeout = 120_000): Promise<T> => {

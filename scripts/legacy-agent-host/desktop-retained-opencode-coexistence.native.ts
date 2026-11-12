@@ -119,33 +119,81 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
       v2: { version: '2.1.4', bunSha256: await fileDigest(bun) }, profileSha256: digest(profileBytes),
       descriptorSha256: digest(descriptorBytes), nodeSha256: await fileDigest(node) };
     await save(); source();
-    const start = (epoch: number) => startRetainedOpenCodeApp({ repo, root, node, env: environment, port: 9222, epoch });
+    const start = (epoch: number, env: Record<string, string> = environment) =>
+      startRetainedOpenCodeApp({ repo, root, node, env, port: 9222, epoch });
     // Reserve and release the exact CDP port before launch; discovery subsequently requires original custody.
     const checkPort = createServer();
     await new Promise<void>((resolve, reject) => { checkPort.once('error', reject); checkPort.listen(9222, '127.0.0.1', resolve); });
     await new Promise<void>((resolve, reject) => checkPort.close(error => error ? reject(error) : resolve()));
-    app = await start(1);
+    // Reproduce a genuine saved old-owner team before enabling the new Host.
+    // Main correctly refuses creating a new legacy team once Host is selected.
+    const legacyEnvironment: Record<string, string> = { ...environment };
+    delete legacyEnvironment.AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH;
+    delete legacyEnvironment.AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256;
+    app = await start(0, legacyEnvironment);
     const hostKey = 'host-team:' + encodeURIComponent(fixture.handleId);
     const api = 'window.__TEST_retainedApi.teams';
     const callTeams = <T = Record<string, unknown>>(method: string, args: unknown[], timeout?: number) =>
       app!.call<T>(`${api}[${literal(method)}](...${literal(args)})`, timeout);
     const host = (operation: string, commandId: string, payload: unknown) => app!.call(
       `window.__TEST_retainedApi.agentBackend.invoke(${literal({ handle: { handleId: fixture!.handleId }, operation, commandId, payload })})`);
+    const send = async (key: string, to: string, marker: string) => {
+      await callTeams('sendMessage', [key, { to, text: marker }]);
+      await waitFor(async () => { assert.deepEqual(model.failures, []); return model.markers.has(marker) || null; }, 'original owner receives ' + marker, 90_000);
+    };
     await app.call(`window.electronAPI.config.addCustomProjectPath(${literal(legacyProject)})`);
     legacySubmitted = true;
     const created = await callTeams('createTeam', [{ teamName: legacyTeam, cwd: legacyProject,
       providerId: 'opencode', model: 'TEST-legacy/TEST-model', skipPermissions: true,
       runtimeSelectionVersion: 1, members: [{ name: 'bob', role: 'Developer', providerId: 'opencode', model: 'TEST-legacy/TEST-model', mcpPolicy: { mode: 'appOnly' } }] }], 240_000);
     assert.equal(typeof created.runId, 'string');
-    await waitFor(async () => {
+    const originalLegacyRuntime = await waitFor(async () => {
       const state = await callTeams('getTeamAgentRuntime', [legacyTeam]);
       return record(state.members).bob && record(record(state.members).bob).alive === true ? state : null;
     }, 'actual retained V1 app runtime ready', 180_000);
     const legacyTask = await callTeams('createTask', [legacyTeam, { subject: 'TEST retained V1 sidebar record' }]);
     assert.equal(typeof legacyTask.id, 'string');
+    const originalNativeSession = record(record(originalLegacyRuntime.members).bob).runtimeSessionId;
+    assert.equal(typeof originalNativeSession, 'string'); assert.ok(originalNativeSession);
+    await send(legacyTeam, 'bob', 'TEST_RETAINED_V1_HISTORY');
+    const historicalLog = await waitFor(async () => {
+      const logs = await callTeams<unknown[]>('getMemberLogs', [legacyTeam, 'bob']);
+      return logs.map(record).find(log => typeof log.lastOutputPreview === 'string' &&
+        log.lastOutputPreview.includes('REPLY_TEST_RETAINED_V1_HISTORY')) ?? null;
+    }, 'old owner exposes actual completed native history', 90_000);
+    assert.equal(typeof historicalLog.projectId, 'string');
+    assert.equal(typeof historicalLog.sessionId, 'string');
+    const historicalDetail = () => app!.call(`window.__TEST_retainedApi.getSessionDetail(
+      ${literal(historicalLog.projectId)},${literal(historicalLog.sessionId)},{bypassCache:true})`);
+    assert.ok(JSON.stringify(await historicalDetail()).includes('REPLY_TEST_RETAINED_V1_HISTORY'));
+    const seedProcesses = await app.nativeChildren(v1);
+    assert.ok(seedProcesses.length > 0, 'real old-owner V1 native process'); natives.push(...seedProcesses);
+    await callTeams('stop', [legacyTeam]); legacyStopped = true;
+    const savedLegacy = await callTeams('getData', [legacyTeam]);
+    const callsBeforeUpgrade = model.observations.length;
+    steps.push({ observed: 'actual_legacy_fork_V1_history_before_new_Host_selection', runId: created.runId,
+      nativeSessionId: originalNativeSession, taskId: legacyTask.id,
+      logSessionId: historicalLog.sessionId, logProjectId: historicalLog.projectId, seedProcesses });
+    await app.close(); app = undefined; source();
+    assert.equal(seedProcesses.some(originalLinuxProcessPresent), false);
+    app = await start(1);
+    const retainedData = await callTeams('getData', [legacyTeam]);
+    assert.deepEqual(retainedData.tasks, savedLegacy.tasks);
+    assert.deepEqual(retainedData.messages, savedLegacy.messages);
+    assert.ok(JSON.stringify(await historicalDetail()).includes('REPLY_TEST_RETAINED_V1_HISTORY'));
+    assert.equal(await callTeams<boolean>('processAlive', [legacyTeam]), false);
+    assert.equal(model.observations.length, callsBeforeUpgrade, 'Host selection never replays retained V1 input');
+    legacyStopped = false;
+    const retainedLaunch = await callTeams('launchTeam', [{ teamName: legacyTeam, cwd: legacyProject,
+      providerId: 'opencode', model: 'TEST-legacy/TEST-model', skipPermissions: true, runtimeSelectionVersion: 1 }], 240_000);
+    assert.equal(typeof retainedLaunch.runId, 'string'); assert.notEqual(retainedLaunch.runId, created.runId);
+    await waitFor(async () => {
+      const state = await callTeams('getTeamAgentRuntime', [legacyTeam]);
+      return record(state.members).bob && record(record(state.members).bob).alive === true ? state : null;
+    }, 'retained legacy owner launches under same TEST profile with Host selected', 180_000);
     const legacyProcesses = await app.nativeChildren(v1);
-    assert.ok(legacyProcesses.length > 0, 'real selected V1 native process'); natives.push(...legacyProcesses);
-    steps.push({ observed: 'actual_legacy_fork_V1_team_before_new_Host_runtime', runId: created.runId, legacyProcesses });
+    assert.ok(legacyProcesses.length > 0); natives.push(...legacyProcesses);
+    steps.push({ observed: 'retained_legacy_fork_owner_before_new_Host_runtime', runId: retainedLaunch.runId, legacyProcesses });
     const selection = await host('team.launch.read', 'TEST-coexist-launch-read', {}); assert.equal(selection.ok, true);
     const launch = record(selection.value);
     const started = await host('team.launch.start', 'TEST-coexist-launch-once', {
@@ -160,10 +208,6 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const both = await callTeams<unknown[]>('list', []);
     assert.ok(both.some(value => record(value).teamName === legacyTeam));
     assert.ok(both.some(value => record(value).teamName === hostKey));
-    const send = async (key: string, to: string, marker: string) => {
-      await callTeams('sendMessage', [key, { to, text: marker }]);
-      await waitFor(async () => { assert.deepEqual(model.failures, []); return model.markers.has(marker) || null; }, 'original owner receives ' + marker, 90_000);
-    };
     await send(legacyTeam, 'bob', 'TEST_RETAINED_V1_FIRST');
     await send(hostKey, 'alice', 'TEST_OWNED_V2_FIRST');
     await waitFor(async () => { const state = await host('runtime.read', 'TEST-coexist-terminal', { memberId: 'alice-id' });
@@ -179,7 +223,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     await send(hostKey, 'alice', 'TEST_OWNED_V2_AFTER_STOP');
     const relaunched = await callTeams('launchTeam', [{ teamName: legacyTeam, cwd: legacyProject,
       providerId: 'opencode', model: 'TEST-legacy/TEST-model', skipPermissions: true, runtimeSelectionVersion: 1 }], 240_000);
-    assert.equal(typeof relaunched.runId, 'string'); assert.notEqual(relaunched.runId, created.runId);
+    assert.equal(typeof relaunched.runId, 'string'); assert.notEqual(relaunched.runId, retainedLaunch.runId);
     await waitFor(async () => await callTeams<boolean>('processAlive', [legacyTeam]) || null, 'explicit retained V1 relaunch ready', 180_000);
     const retainedAfterRelaunch = await app.nativeChildren(v1); assert.ok(retainedAfterRelaunch.length > 0); natives.push(...retainedAfterRelaunch);
     await ui.clickSidebar(fixture.uiSeed!.subject);
