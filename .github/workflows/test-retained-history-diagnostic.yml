@@ -1,143 +1,142 @@
-name: TEST retained history request diagnosis
-run-name: "TEST retained history original request at ${{ github.sha }}"
+name: Read original Task board failure evidence
+
 on:
   push:
     branches:
       - test/opencode-retained-history-diagnostic-20261112
+
 permissions:
-  contents: read
   actions: read
-  pull-requests: read
-concurrency:
-  group: TEST-retained-history-request-${{ github.ref }}
-  cancel-in-progress: false
+
 jobs:
-  retained-opencode-coexistence:
-    name: Retained OpenCode V1 and Host V2 original Desktop
+  read-original-artifact:
+    name: Read original Task board artifact without replay
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    defaults:
-      run:
-        shell: bash
-    env:
-      AGENT_TEAMS_INSTALL_PROFILE: node-ci
-      OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-      OPENCODE_V2_TEST_PLATFORM: linux-x64
-      OPENCODE_V1_V2_RETAINED_CUSTODY_SOURCE: ${{ github.workspace }}/.runtime-download/TEST-retained-runtime-source
+    timeout-minutes: 5
     steps:
-      - name: Bind private TEST receipt paths after runner allocation
-        run: |
-          set -euo pipefail
-          printf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
-          printf 'OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT=%s/retained-opencode-v2-inputs.json\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
-          printf 'OPENCODE_V1_V2_INPUTS_RECEIPT=%s/retained-opencode-inputs.json\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
-          printf 'OPENCODE_V1_V2_COEXISTENCE_RECEIPT=%s/retained-opencode-coexistence.json\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24.21.0
-          cache: pnpm
-      - name: Install frozen workspace and original Electron
-        run: |
-          set -euo pipefail
-          node scripts/ci/install-dependencies-with-retry.mjs
-          node scripts/ensure-electron-install.cjs --strict
-      - name: Rebuild original SQLite for the pinned Electron ABI
-        timeout-minutes: 10
-        run: |
-          node -e "require('node:assert/strict').equal(require('electron/package.json').version, '44.10.1')"
-          pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1
-      - name: Build existing Host and stage checksum-pinned retained release
+      - name: Verify archived bytes and read original TEST evidence
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          pnpm --filter @agent-teams/legacy-agent-host build
-          node scripts/stage-runtime.mjs --platform linux-x64
-      - name: Verify passive transcript reads and exact captured model identity
-        run: |
-          set -euo pipefail
-          pnpm exec vitest run test/main/services/runtime/ClaudeMultimodelBridgeService.test.ts test/main/services/runtime/providerAwareCliEnv.test.ts src/main/services/runtime/ClaudeMultimodelBridgeService.test.ts --maxWorkers=1
-          pnpm typecheck
-          pnpm typecheck:legacy-host-scripts
-          pnpm --filter @agent-teams/legacy-agent-host typecheck:test
-          node --test packages/legacy-agent-host/tests/opencode-v2-model-probe.test.ts
-      - name: Prepare existing verified V2 graph and original Bun
-        run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
-      - name: Verify the retained release matches the pinned stock helper source
-        run: |
-          node --input-type=module <<'NODE'
-          import assert from 'node:assert/strict';
-          import { readFileSync } from 'node:fs';
-          const lock = JSON.parse(readFileSync('runtime.lock.json', 'utf8'));
-          const commit = readFileSync('resources/runtime/COMMIT_SHA', 'utf8').trim();
-          assert.equal(lock.sourceRepository, '777genius/agent_teams_orchestrator');
-          assert.equal(commit, lock.opencodeV2Delivery['linux-x64'].sourceCommit);
-          assert.equal(commit, 'f5c69c2e9024ffc36a5db5eafe30f53539b52f62');
-          NODE
-      - name: Checkout unchanged helper source in ignored TEST inputs
-        uses: actions/checkout@v6
-        with:
-          repository: 777genius/agent_teams_orchestrator
-          ref: f5c69c2e9024ffc36a5db5eafe30f53539b52f62
-          path: .runtime-download/TEST-retained-runtime-source
-          persist-credentials: false
-      - name: Stage exact retained V1 and existing TEST package manager
-        timeout-minutes: 5
-        run: |
-          set -euo pipefail
-          selected_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-retained-opencode-inputs-XXXXXX")"
-          printf '{"name":"test-retained-opencode-inputs","private":true}\n' > "$selected_inputs/package.json"
-          pnpm --dir "$selected_inputs" add --ignore-scripts --save-exact opencode-ai@1.19.4 opencode-linux-x64@1.19.4 corepack@0.36.0
-          printf 'OPENCODE_V1_V2_TEST_PACKAGES=%s\n' "$selected_inputs" >> "$GITHUB_ENV"
-      - name: Bind retained inputs and exact stock helper source without launching a session
-        run: node scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts
-      - name: Exercise original retained V1 and new Host V2 controls once
-        env:
-          OPENCODE_V1_V2_COEXISTENCE_GO: '1'
-        run: |
-          set -euo pipefail
-          node --test scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts
-          node --test scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts 2>&1 | tee "$RUNNER_TEMP/retained-opencode-coexistence.log"
-      - name: Require complete same-source business, Stop, cold and cleanup evidence
-        if: always()
-        run: |
-          node --input-type=module <<'NODE'
-          import assert from 'node:assert/strict';
-          import { readFileSync } from 'node:fs';
-          const r = JSON.parse(readFileSync(process.env.OPENCODE_V1_V2_COEXISTENCE_RECEIPT, 'utf8'));
-          assert.equal(r.kind, 'TEST_NATIVE_RETAINED_V1_HOST_V2_DESKTOP');
-          assert.equal(r.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
-          assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);
-          assert.deepEqual(r.cleanupFailures, []); assert.deepEqual(r.modelFailures, []);
-          assert.equal(r.releaseQualified, false); assert.equal(r.vendorAuthQualified, false);
-          assert.equal(r.inputs.retainedRuntime.sourceBuiltRetainedHelper.kind, 'EXACT_RELEASE_SOURCE_BUILD');
-          assert.equal(r.inputs.retainedRuntime.sourceBuiltRetainedHelper.publishedRuntimeComplete, false);
-          const observed = new Set(r.steps.map(step => step.observed));
-          for (const step of ['actual_legacy_fork_V1_history_before_new_Host_selection',
-            'retained_legacy_fork_owner_before_new_Host_runtime', 'both_actual_owner_inputs_through_original_renderer_routing',
-            'both_original_Stop_controls_preserve_the_other_actual_owner', 'same_profile_cold_original_UI_reads_both_histories_without_replay'])
-            assert.ok(observed.has(step), step);
-          const markers = r.modelObservations.filter(row => row.marker).map(row => row.marker).sort();
-          assert.deepEqual(markers, ['TEST_RETAINED_V1_HISTORY', 'TEST_RETAINED_V1_FIRST', 'TEST_RETAINED_V1_AFTER_STOP',
-            'TEST_OWNED_V2_FIRST', 'TEST_OWNED_V2_AFTER_STOP'].sort());
-          NODE
-      - name: Preserve original coexistence receipts and failure diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: retained-opencode-coexistence-${{ github.event.pull_request.head.sha || github.sha }}
-          retention-days: 14
-          if-no-files-found: warn
-          path: |
-            ${{ runner.temp }}/retained-opencode-*.json
-            ${{ runner.temp }}/retained-opencode-*.log
-            ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.json
-            ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.log
-            ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.png
-            ${{ runner.temp }}/TEST-desktop-backend-*/claude/teams/test-retained-opencode-v1/launch-failure-artifacts/**
+          gh api --method GET repos/777genius/agent-teams-ai/actions/artifacts/13960886450 > "$RUNNER_TEMP/original-task-board-artifact.json"
+          gh api --method GET repos/777genius/agent-teams-ai/actions/artifacts/13960886450/zip > "$RUNNER_TEMP/original-task-board.zip"
+          python3 - <<'PY'
+          import hashlib, io, json, math, os, re, sys, zipfile
+          from pathlib import Path
 
+          artifact, run, size = 13960886450, 43245915803, 917427
+          head = "922539d627a93af09e472dc52fd6e233b0a330ac"
+          sha = "54eea4fdfe728099b6c787b8c6b136cb257ea9fee41e56509cb7095922c80c86"
+          name = "stage1-source-desktop-task-board-cross-team-ui-7f3b2c4d691e613f424e180f8764f2954b2d2037"
+          failure = "UI read timed out: clarification banner cleared; no mutation retry"
+          clear = "clear original clarification once"
+          obj = lambda x: x if isinstance(x, dict) else {}
+          arr = lambda x: x if isinstance(x, list) else []
+          def check(ok, reason):
+              if not ok: raise AssertionError(reason)
+          def number(x):
+              return round(x, 3) if type(x) in (int, float) and math.isfinite(x) and abs(x) < 10000000 else None
+          def enum(x, choices):
+              return x if x in choices and type(x) in (str, type(None)) else "other"
+          def coords(x):
+              return {k: number(obj(x).get(k)) for k in ("x", "y")}
+          def element(x):
+              x = obj(x)
+              return {
+                  "tag": str(x.get("tag", ""))[:20],
+                  "className": str(x.get("className", ""))[:120],
+                  "ariaLabel": enum(x.get("ariaLabel"), ("Mark resolved", "Close", None))
+              }
+          def phase(x):
+              return enum(x, ("prepared", "accepted", "pending", "running", "completed", "rejected", "failed", "unknown", None))
+
+          try:
+              temp = Path(os.environ["RUNNER_TEMP"])
+              meta = json.loads((temp / "original-task-board-artifact.json").read_text())
+              check((meta.get("id"), meta.get("name"), meta.get("size_in_bytes"), meta.get("digest"), meta.get("expired")) == (artifact, name, size, "sha256:" + sha, False), "artifact_metadata_mismatch")
+              check((obj(meta.get("workflow_run")).get("id"), obj(meta.get("workflow_run")).get("head_sha")) == (run, head), "artifact_provenance_mismatch")
+              path = temp / "original-task-board.zip"
+              check(path.stat().st_size == size, "archive_size_mismatch")
+              raw = path.read_bytes()
+              check(hashlib.sha256(raw).hexdigest() == sha, "archive_sha256_mismatch")
+              archive = zipfile.ZipFile(io.BytesIO(raw))
+              infos = archive.infolist()
+              check(len(infos) <= 2048 and sum(i.file_size for i in infos) <= 64 * 1024 * 1024, "archive_bounds")
+              names = [i.filename for i in infos]
+              check(len(names) == len(set(names)), "duplicate_member")
+              index, selected = {i.filename: i for i in infos}, {}
+              def read_json(member, label):
+                  check(member in index and not index[member].is_dir() and index[member].file_size <= 2 * 1024 * 1024, "json_member_bounds")
+                  data = archive.read(index[member])
+                  value = json.loads(data)
+                  check(isinstance(value, dict), "json_object_required")
+                  selected[label] = {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+                  return value
+              receipts = [n for n in names if n == "desktop-backend-receipt.json" or n.endswith("/desktop-backend-receipt.json")]
+              check(len(receipts) == 1, "original_receipt_count")
+              prefix = receipts[0][:-len("desktop-backend-receipt.json")]
+              receipt = read_json(receipts[0], "originalReceipt")
+              check(receipt.get("mode") == "task-board-cross-team-ui" and receipt.get("failure") == failure and receipt.get("status") == "INCOMPLETE", "original_failure_mismatch")
+              proof = obj(receipt.get("taskBoardUiProof"))
+              assignment = obj(proof.get("assignmentReceipt"))
+              command = obj(assignment.get("command"))
+              task_id = obj(command.get("payload")).get("taskId")
+              check(isinstance(task_id, str) and re.fullmatch(r"[A-Za-z0-9_-]{1,128}", task_id), "task_identity")
+              check(command.get("operation") == "task.assign" and assignment.get("phase") == "completed" and assignment.get("principalId") == "TEST-human", "completed_assignment")
+              task = read_json(prefix + "hoststore/tasks/test-desktop-backend/" + task_id + ".json", "canonicalTask")
+              check(task.get("id") == task_id, "canonical_task_identity")
+              command_prefix = prefix + "hoststore/teams/test-desktop-backend/.host-owner/commands/"
+              command_names = sorted(n for n in names if n.startswith(command_prefix) and re.fullmatch(r"[A-Za-z0-9_-]+\.json", n[len(command_prefix):]))
+              check(len(command_names) <= 128, "command_count")
+              matching = []
+              for i, member in enumerate(command_names):
+                  row = read_json(member, "command" + str(i))
+                  c = obj(row.get("command"))
+                  p = obj(c.get("payload"))
+                  if c.get("operation") == "task.clarification" and p.get("taskId") == task_id:
+                      matching.append({
+                          "isSetup": row.get("commandId") == "TEST-task-board-clarification-setup",
+                          "phase": phase(row.get("phase")), "principalMatches": row.get("principalId") == "TEST-human",
+                          "value": enum(p.get("value"), ("user", "lead", None)), "valuePresent": "value" in p,
+                          "errorPresent": any(row.get(k) is not None for k in ("error", "failure", "rejection"))
+                      })
+              check(len(matching) <= 16, "clarification_count")
+              steps, snap = arr(proof.get("steps")), obj(receipt.get("rendererFailureSnapshot"))
+              events, dialogs = arr(snap.get("inputEvents")), arr(snap.get("dialogs"))
+              check(len(steps) <= 1024 and len(events) <= 96 and len(dialogs) <= 3, "observation_bounds")
+              clicks = [obj(x.get("target")) for x in map(obj, steps) if x.get("action") == "mouseClick" and x.get("label") == clear]
+              labels = (clear, "open original Task detail", "assign alice through original member option", "open original assignee picker 1", "open original assignee picker 2")
+              step_rows = [{"action": enum(x.get("action"), ("mouseMoved", "mouseClick", "mouseWheel", None)), "label": enum(x.get("label"), labels), "timeMs": number(x.get("monotonicMs")), "target": coords(x.get("target")), "attempted": x.get("state") == "attempted"} for x in map(obj, steps[-12:])]
+              event_rows = [{
+                  "type": enum(x.get("type"), ("pointerdown", "pointerup", "pointercancel", "pointermove", "click", "keydown", "keyup", "focusin", "focusout")),
+                  "timeMs": number(x.get("timeMs")), **coords(x), "button": number(x.get("button")), "buttons": number(x.get("buttons")),
+                  "trusted": x.get("trusted") is True, "target": element(x.get("target")),
+                  "focusAfter": element(x.get("focusAfterDispatch")),
+                  "preventedAfter": x.get("defaultPreventedAfterDispatch") is True
+              } for x in map(obj, events[-24:])]
+              buttons = [obj(b) for d in map(obj, dialogs) for b in arr(d.get("buttons")) if obj(b).get("text") == "Mark resolved"]
+              button_rows = [{"disabled": b.get("disabled"), **{k: number(b.get(k)) for k in ("x", "y", "width", "height")}} for b in buttons[:4]]
+              cleanup = obj(receipt.get("cleanup"))
+              report = {
+                  "artifactId": artifact, "runId": run, "head": head, "archiveBytes": size, "archiveSha256": sha,
+                  "verifiedMetadataAndBytes": True, "noScenarioExecuted": True, "selectedJsonBytes": selected,
+                  "originalStatus": "INCOMPLETE", "originalFailure": "clarification_banner_timeout",
+                  "sourceFreezeEqual": isinstance(receipt.get("selectedSourceHashesBeforeApp"), list) and receipt.get("selectedSourceHashesBeforeApp") == receipt.get("selectedSourceHashesAfterFlow"),
+                  "cleanup": {"capturedHostAbsent": cleanup.get("capturedHostAbsent"), "remainingCount": len(cleanup["remaining"]) if isinstance(cleanup.get("remaining"), list) else None, "failurePresent": "cleanupFailure" in cleanup},
+                  "assignment": {"completed": True, "canEditNow": obj(proof.get("assignmentUiReady")).get("canEditNow")},
+                  "canonicalTask": {"owner": enum(task.get("owner"), ("alice", None)), "needsClarification": enum(task.get("needsClarification"), ("user", "lead", None))},
+                  "commands": {"totalFiles": len(command_names), "matching": matching, "clearCount": sum(x["valuePresent"] and x["value"] is None for x in matching)},
+                  "steps": {"total": len(steps), "clearClickAttempts": len(clicks), "tail": step_rows},
+                  "renderer": {"available": bool(snap) and snap.get("unavailable") is not True, "focused": snap.get("documentFocused"), "visibility": enum(snap.get("visibility"), ("visible", "hidden", None)), "inputEventCount": len(events), "tail": event_rows, "bannerDialogCount": sum("Awaiting clarification from you" in str(obj(d).get("text", "")) for d in dialogs), "markResolvedButtons": button_rows},
+                  "limits": ["Harness and renderer clocks differ.", "Button rectangles are from the timeout snapshot.", "Canonical files were uploaded after original cleanup.", "No app, Host or scenario is executed."]
+              }
+              output = json.dumps(report, separators=(",", ":"), ensure_ascii=True, allow_nan=False)
+              check(len(output) <= 32000, "report_bound")
+              print("TEST_ORIGINAL_TASK_BOARD_ARTIFACT " + output)
+          except Exception as error:
+              reason = str(error) if type(error) is AssertionError else type(error).__name__
+              print("TEST_ORIGINAL_TASK_BOARD_ARTIFACT " + json.dumps({"status": "UNAVAILABLE", "reason": reason}))
+              sys.exit(1)
+          PY
