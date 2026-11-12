@@ -179,7 +179,13 @@ Native reuse: `native-claude-compaction.native.ts`, Codex resume и OpenCode fix
 - Найдено: generic 21-command/TUI promise завышал объём и требовал несуществующих methods.
 - Исправлено: указаны имеющиеся APIs, discovery gate, сниженная базовая оценка и отдельно неопределённый резерв; нет обещания готовности спорных групп.
 
-### R3 — повторное review после R2, pending
+### R3 — интеграционное review, выполнено 2026-11-12
 
-- Проверить evidence matrix, согласованность с 05/07 и решения visible UI mismatches; не скрыть работающие функции.
-- Проверить minimal reuse и готовность native gates; этот review не заменяет actual Desktop/native исполнения при реализации.
+Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b00bb31`.
+Повторно прочитаны old `commandsHeadless` filter, Stage1 composer guard и actual native manual-compaction proof.
+
+- Подтверждён minimal path Claude compact через existing input ledger; отдельные Session.control/journal/settings framework не требуются.
+- Skills/config принадлежат P07, prelaunch selection P05, live capability проверяется здесь; один mapping не объявляется общей четырёхпровайдерной поддержкой.
+- Native inventory — первый исполняемый шаг, не причина откладывать уже доказанный compact/skill slice. Неясные offered groups остаются явными gates до их acceptance.
+- Общий conversation journey с P07/P10 проверяет compact → tool → cold Resume; existing lost-ACK/epoch tests расширяются без второго полного suite.
+- План принят для исполнения discovery и базового среза. Review не заменяет native proof спорных команд и не разрешает скрыть control вместо исправления.

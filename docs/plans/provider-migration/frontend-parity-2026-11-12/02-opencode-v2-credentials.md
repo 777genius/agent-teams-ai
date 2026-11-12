@@ -117,7 +117,7 @@ Host baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 
 - Расширить имеющийся V2 desktop fixture и native management test; единый TEST provider записывает число native effects.
 - Пройти V2 UI connect/original-intent reconnect/readback и V1 forget после cold restart на тех же artifact bytes.
-- Выполнить один V1 regression route с теми же UI controls, чтобы общий client не сломал старое подключение.
+- Включить V1 connect/forget в тот же regression journey, без второй дублирующей E2E-строки.
 - Реальные vendor routes квалифицировать отдельно от controlled TEST key route; receipt явно называет проверенный route.
 
 ## 5. Существенные E2E
@@ -134,7 +134,7 @@ Test provider использует localhost и isolated TEST auth namespace; н
 | V1 Forget / V2 boundary | V1 удаление при env auth; проверить action set V2 и owned rollback race | V1 scope сохранён; V2 rollback не превращён в новый forget; чужой credential не удалён |
 | Потеря ответа | Удержать ACK после native set, переподключить UI | Lookup исходного command; нет второго set и переноса на новый profile |
 | Ошибка проверки / fence | Credential publication выполнена; original probe success/error/unknown под тем же owner | Нет self-conflict fence; pending/held сохраняется; нет второго inference, false connected или потери evidence |
-| Граница V1/V2 | V1 connect/forget, V2 запрещённый OAuth route | V1 regression PASS; V2 не предлагает ложный поддержанный OAuth workflow |
+| Граница V1/V2 | В рамках предыдущего V1 journey проверить запрещённый V2 OAuth route | V1 regression PASS; V2 не предлагает ложный поддержанный OAuth workflow |
 
 Receipt содержит route identity, scope fingerprint, commandId, native effect count, probe result и cleanup result.
 В логах, screenshots и receipts отсутствуют raw keys, credential payload и пользовательские auth paths.
@@ -194,7 +194,12 @@ Native vendor PASS прикладывается только для реальн
 - **R2-02-06:** V1 `/auth` и session-owned V2 wire не дают generic credential authority. Названы реальные integration APIs и узкий management scope.
 - Проверены source functions/tests, owner reservation и temporary V2 metadata namespaces. Production не изменён; R3 gate остаётся обязательным.
 
-### R3 — повторное review после R2, pending
+### R3 — интеграционное review, выполнено 2026-11-12
 
-- Перепроверить поддержку именно existing key routes и ограниченность изменений в generic owners.
-- Утвердить implementation-ready план только после устранения найденных противоречий и фиксации native qualification границ.
+Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b00bb31`.
+Сопоставлены donor `connectOpenCodeV2Provider`, actual action set, `CredentialCommandOwner`, management admission и P05/P06/P10.
+
+- Подтверждён один credential intent/fence: finite connect verification внутри него, public Test model отдельно. Self-conflict не устраняется ослаблением fencing.
+- Подтверждены plain-key, original-intent recovery и compare-before-remove rollback; V2 standalone forget не добавлен за пределами baseline.
+- Найден двойной V1 regression budget; сценарии объединены. Shared account UI startup/reconnect использует P10, native key protocol проверяется отдельно от Codex login.
+- План принят для реализации; native key/action-set и actual durable namespace ещё требуют исполнения, а не только source review.

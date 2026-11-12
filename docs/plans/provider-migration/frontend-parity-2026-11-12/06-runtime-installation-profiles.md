@@ -74,6 +74,8 @@ Management captures получают profileId/configRevision той же availa
 05 выводит model-specific candidate из base revision, не пишет current pointer на каждую смену draft model.
 07 публикует config input через этот же use case, не создаёт второй settings-profile registry.
 Account plan передаёт существующий bound auth-resource reference; plaintext credentials не попадают в selection records.
+Revision фиксирует auth source/namespace, не его изменяемые secret bytes: explicit login/logout сохраняют native semantics.
+Внешняя замена credential/config/executable файла проверяется соответствующим owner; она не разрешает silent rebind и не требует второго vault.
 Новый profileId привязывается к immutable revision и добавляется через existing private admission; старый ID не перезаписывается.
 Retained references вычисляются из existing captures/management receipts; отдельные refcount store, GC daemon и миграция journals не нужны.
 
@@ -202,7 +204,13 @@ Hash/platform/malformed receipt suites переиспользовать; same-ve
 Исправлено: current/retained lookup разделены, immutable revision получает новый profileId через existing admission, original target остаётся доступным.
 Найдено: retention лишь executable недостаточен для V2 graph; внешний PATH нельзя гарантировать неизменяемым.
 Исправлено: сохранена app-owned dependency closure, external mutation даёт held; unit budget сокращён за reuse existing suites.
-**R3 — совместное ревью 01/02/03/05/07 и platform plan: pending; закрыть контракт и file ownership до implementation.**
+**R3 — интеграционное ревью, выполнено root 2026-11-12; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b00bb31`.**
+
+- Проверены actual static capture/restore в `DesktopBackendFeature`, private `admitTeamProbeProfile` и `ProfileWriterLease`.
+- Подтверждено: публикация требует Main-only trusted grant и Host verification; добавить одну map/current-pointer проекцию, а не менять descriptor задним числом.
+- Найдена неоднозначность «immutable account»: сохранён source binding, не копия secret bytes. Explicit credential mutation и внешняя замена не маскируются новой revision.
+- Один writer P06 владеет `DesktopBackendFeature`, `runtimeRecipe`, `runtimeCaptureSource`, `RuntimeTeamCaptures` и новым source index; P01/P02/P05/P07 передают небольшие mapping patches последовательно.
+- Минимальный contract и recovery seed требуют peer review перед подключением consumers. План принят для этого первого среза; installer/native/active-old E2E ещё не выполнены.
 
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/runtime/openCodeRuntimeBinaryEnv.ts

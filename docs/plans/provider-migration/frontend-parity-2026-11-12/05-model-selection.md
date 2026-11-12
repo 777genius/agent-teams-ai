@@ -77,6 +77,9 @@ Renderer передаёт существующий app choice, а не executabl
 Default preference, captured profile и active session имеют разных владельцев и не должны дублировать состояние.
 Общий selection digest не включает operationId/sessionId, probe-agent имя и deny-all tool policy; эти различия проверяются отдельно по назначению.
 Для credentials сохраняется account/resource binding и его действительность; секреты не включаются в public proof metadata.
+Такая привязка фиксирует выбранный auth source/namespace, а не обещает неизменность содержимого внешнего credential файла.
+Явные login/logout/credential mutations сохраняют прежнюю семантику; при исчезновении доступа возвращается реальная ошибка,
+без копирования токена в profile revision или автоматического выбора другого account.
 
 ## 5. Порядок реализации и контракты
 
@@ -187,8 +190,13 @@ Vendor access квалифицируется отдельно при выдел�
 Найдено: 400–650 строк unit/contract повторяли уже имеющиеся preference/normalization tests.
 Исправлено: новый unit объём ограничен опасными admission/cancel cases, E2E остаётся главным доказательством.
 Native engine + observable localhost response отделены от mocked Host receipt и отдельной vendor qualification.
-**R3 — интеграционное ревью с 02/03/06/07: pending; проверить shared ownership и отсутствие двойного бюджета.**
-План не считается прошедшим R2/R3 только потому, что перечислил эти стадии.
+**R3 — интеграционное ревью, выполнено root 2026-11-12; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b00bb31`.**
+
+- Перепроверены capture/restore в `DesktopBackendFeature`, immutable admission coordinator и границы P02/P03/P06/P07.
+- Найдено: immutable account binding можно ошибочно прочитать как snapshot secret bytes. Уточнён original source/namespace, сохранена семантика явных auth mutations без нового token store.
+- Подтверждено: draft model derivation не публикует общий pointer; probe и launch сравнивают selection, а их tool policies остаются разными.
+- Selection/config/next-launch/restart — один совместный E2E с P06/P07/P10; новый unit suite на каждый mapper не нужен.
+- План принят для реализации после минимального P06 contract; G1/G2 native results и captured Edit/Relaunch остаются критериями приёмки.
 
 [M0]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/runtime.lock.json
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/runtime/ClaudeMultimodelBridgeService.ts

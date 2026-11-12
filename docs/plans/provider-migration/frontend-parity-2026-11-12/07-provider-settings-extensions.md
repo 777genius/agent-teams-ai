@@ -102,6 +102,8 @@ Fixture фиксирует полученный model/variant/body/tool call; mo
 Нужен небольшой selected-provider config adapter: JSONC read/precedence/declared model translation по R1/R2.
 Он отдаёт private prepared configuration в publication use case 06; renderer получает только existing summary/diagnostics.
 Auth-bearing headers/settings materialize через existing bound credential/source owner; selection index 06 не становится второй plaintext копией секрета.
+Read/probe/launch должны использовать тот же captured source либо выявить изменение до effect. External file mutation не трактовать
+как автоматически применённую новую revision; explicit auth mutations не обещают сохранение старых token bytes для active session.
 Не импортировать whole user config/ambient executable plugins в V2 ради обхода captured-profile ограничения.
 Предыдущий working plugin route сохраняется отдельным квалифицированным adapter, если G4 подтвердит требование.
 Не переносить 4 000 строк legacy `OpenCodeProfileManager`: извлечь только выбранную data transformation и explicit IO port.
@@ -209,7 +211,13 @@ Existing precedence, foreign path, unrelated preferences и original-target look
 Найдено: Host providerConfiguration — generic JSON, тогда как donor строго валидирует aliases/partial variants; config может содержать auth material.
 Исправлено: strict native codec/package availability и bound-secret materialization обязательны; source index не хранит второй auth store.
 Unit список сокращён до новых опасных mapping/source-mutation cases; existing extension/fencing suites переиспользуются.
-**R3 — интеграционное ревью с 02/03/05/06: pending; проверить secret ownership, exact profile reuse и двойной счёт tests.**
+**R3 — интеграционное ревью, выполнено root 2026-11-12; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b00bb31`.**
+
+- Проверены selected config/limits границы, management admission и P02/P03/P05/P06; generic bounded JSON не объявлен native config validation.
+- Найдено: auth headers могли стать второй persisted secret copy или silently reread между probe/launch. Уточнён existing owner/source capture, изменение проверяется до effect.
+- G1/G2 даёт один native selection/config journey совместно с P05/P06; G3/G4 сохраняют отдельный tool/native effect, без полной provider×plugin матрицы.
+- Live slash и prelaunch config не дублируют state machine; файлы общего recipe меняет P06, model probe — P05.
+- План принят для bounded G1–G4 и последующей реализации. Ни неподтверждённый V2 editor, ни external MCP не записаны как готовые capabilities.
 
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts

@@ -52,7 +52,7 @@ R2 source refs: old runtime `e13edcd3d4ffbecc0272ae30195cc6b15b710ee7`; provider
 4. Whole-team schedule запускает остановленную настроенную команду с прежней семантикой instructions.
 5. Task-first сначала создаёт видимую board task, затем bootstrap-only launch и start выбранного владельца.
 6. Повторный tick при незавершённой task-first задаче сохраняет ссылку на неё и не создаёт новую.
-7. Pause останавливает будущие occurrences; delete/quit отдельно отменяют принадлежащий scheduler one-shot и закрывают следующий dispatch.
+7. Pause останавливает только будущие occurrences; delete отменяет принадлежащий scheduler one-shot, но не уже запущенную команду; Quit использует existing shutdown barrier.
 8. После restart история остаётся связанной с исходной задачей/командой; неизвестный ACK не означает повтор launch/task write.
 9. Удалённая команда, сменённый backend и недействительная profile revision дают объяснимый skip/failure, без запуска другого target.
 10. Существующие legacy schedules продолжают читаться и исполняться по старому пути.
@@ -200,7 +200,13 @@ Receipts фиксируют scheduleId/runId/commandId, captured target, task li
 - Найдено: 06 ошибочно считался владельцем logical team registry; исправлено на existing router/registry + profile-only dependency.
 - Native gate остаётся открытым: review плана не объявляет one-shot/limit proof выполненным.
 
-### R3 — повторное review после R2, pending
+### R3 — интеграционное review, выполнено 2026-11-12
 
-- Перепроверить lost-ACK/task-first cases и отсутствие второго scheduler/очереди.
-- Убедиться, что принятие плана не зависит от отключения current UI modes или обхода profile/custody правил.
+Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b00bb31`.
+Сопоставлены `SmartScheduleDispatcher`, `createSchedulerService`, `ScheduledTaskExecutor`, native limit donor и P06/P10.
+
+- Подтверждены reuse Croner/repository/history, awaitable runtime port и native-effect recheck; новый scheduler/cache не нужен.
+- Уточнена краткая acceptance формулировка pause/delete/quit, чтобы она не объединяла разные baseline effects.
+- Existing safe-e2e с mock side effects остаётся integration test. Native acceptance добавляет Desktop→Host task/launch, один реальный Croner tick; остальные случаи Run now.
+- Create/launch/start имеют разные stable effect IDs, lost create ACK восстанавливает original receipt до повторного occurrence; taskId не угадывается из runId.
+- План принят для implementation; finite one-shot seam и Codex limits G1/G2 остаются отдельными gates, OpenCode one-shot не добавляется сверх baseline.

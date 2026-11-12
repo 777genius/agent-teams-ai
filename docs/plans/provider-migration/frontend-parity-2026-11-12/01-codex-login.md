@@ -86,6 +86,8 @@ Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 - Для device code расширить private authorization reply; не включать code в persisted/public OAuth snapshot.
 - Logout/refresh и login должны сериализоваться по тому же auth namespace через существующий fence.
 - После cancel сначала закрыть исходную native conversation; completed race разрешить по фактическому receipt/readback.
+- Cancel не вызывает logout и не удаляет уже сохранённые native credentials. Если completion успел раньше отмены,
+  состояние аккаунта читается отдельно: отменённое ожидание не означает откат состоявшегося входа.
 - `OAuthOperationOwner.finish` доверяет `complete()` и сам не закрывает child: Codex `complete()` обязан проверить account
   и завершить client/custody до `true`; cleanup=false не освобождает namespace под completed receipt.
 - Проверить login против refresh/logout: общий resource fence сериализует mutations; owner readback не ждёт собственной reservation.
@@ -103,6 +105,8 @@ Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 ### Шаг D — end-to-end доказательства
 
 - Расширить существующий Desktop account proof и общий Host/D protocol fixture; отдельный тестовый framework не вводить.
+- Нынешний account proof вызывает API через CDP и исключает ChatGPT login. Добавить нажатия существующих browser/device
+  кнопок и проверку панели; прямой API setup допустим только для подготовки, не вместо пользовательского действия.
 - Для integration использовать новые sandbox HOME/CODEX_HOME и только TEST credentials.
 - Сначала зафиксировать regression refresh/logout, затем browser/device-code и cancel/restart сценарии ниже.
 - После protocol proof выполнить native Codex smoke на pinned binary; genuine account completion фиксировать отдельным receipt.
@@ -174,7 +178,12 @@ Reviewer: `estimate_platform_acceptance`; входной docs commit `bedaf5aae9
 - **R2-01-05:** Последовательный regression не проверял login/logout/refresh fence; добавлен один общий race/cleanup E2E.
 - LOC остаётся предварительной оценкой; UI copy/reopen переиспользует существующие controls, новый auth framework не нужен.
 
-### R3 — повторное review после R2, pending
+### R3 — интеграционное review, выполнено 2026-11-12
 
-- Проверить исправленные риски, минимальность реализации и достаточность E2E для существующего UI.
-- Зафиксировать оставшиеся вопросы native login qualification и только затем принять implementation-ready версию.
+Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b00bb31`.
+Повторно проверены `CodexLoginSessionManager.cancel`, `OAuthOperationOwner.finish`, private management capture и P02/P06/P10.
+
+- Найдено: cancel/completion формулировка могла потребовать удаления уже опубликованного account. Уточнены cancel≠logout и account readback без rollback credentials.
+- Найдено: existing Desktop account harness не нажимает Login и не доказывает UI flow. Добавлены реальные control actions; общий setup с P02/P10 переиспользуется.
+- Подтверждены границы: D только typed native codec, Host — process/auth lifecycle, P06 — source revision, Main — прежняя account projection. Второго OAuth engine/store нет.
+- План принят для реализации. Native vendor completion остаётся отдельной незакрытой квалификацией; R3 не является её PASS.
