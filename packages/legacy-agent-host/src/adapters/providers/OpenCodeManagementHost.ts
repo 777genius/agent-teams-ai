@@ -77,6 +77,7 @@ export class OpenCodeManagementHost {
     }
     if (
       this.profile.provider !== 'opencode' ||
+      this.profile.nativeGeneration === 'v2' ||
       !this.profile.profileId ||
       !this.profile.accountBinding ||
       !this.profile.configRevision ||

@@ -15,10 +15,11 @@ import { withOpenCodeModelLimits } from '../adapters/providers/withOpenCodeModel
 import { readOpenCodeCatalog } from '../adapters/providers/readOpenCodeCatalog.js';
 import { FileManagementCommandStore } from '../adapters/providers/FileManagementCommandStore.js';
 import { CredentialCommandOwner } from '../management/CredentialCommandOwner.js';
-import { ManagementCommandError } from '../management/commandRecords.js';
+import { assertManagementTarget, ManagementCommandError } from '../management/commandRecords.js';
 import { ManagementResourceFence } from '../management/ManagementResourceFence.js';
 import { OAuthOperationOwner } from '../management/OAuthOperationOwner.js';
 import { ModelProbeOwner } from '../management/ModelProbeOwner.js';
+import { createOpenCodeV2ModelProbe } from '../adapters/providers/OpenCodeV2ModelProbe.js';
 
 import type { ProviderManagementCatalog, ProviderOAuthSnapshot } from '../management/contracts.js';
 import type {
@@ -27,6 +28,7 @@ import type {
 } from '../management/profile.js';
 import { providerManagementProfileSchema } from '../management/profile.js';
 import type { CredentialCommand, CredentialTarget } from '../management/CredentialCommandOwner.js';
+import type { RegisteredProcessRootSource } from '../process/registeredProcessContracts.js';
 
 /** The captured Host owns management process custody; Team policy and Session SPI stay separate. */
 export class ProviderManagementCoordinator {
@@ -47,7 +49,10 @@ export class ProviderManagementCoordinator {
     profiles: ProviderManagementProfile[],
     private readonly assertWriter: () => void,
     storageRoot: string,
-    options: { onOAuthProgress?(snapshot: ProviderOAuthSnapshot): void } = {}
+    options: {
+      onOAuthProgress?(snapshot: ProviderOAuthSnapshot): void;
+      processCustody?: RegisteredProcessRootSource;
+    } = {}
   ) {
     if (new Set(profiles.map((profile) => profile.profileId)).size !== profiles.length)
       throw new ManagementCommandError('invalid');
@@ -175,6 +180,18 @@ export class ProviderManagementCoordinator {
           (input.effort !== undefined && input.effort !== profile.variant)
         )
           throw new ManagementCommandError('invalid');
+        if (profile.nativeGeneration === 'v2') {
+          const target = this.credentialTarget(profile);
+          return createOpenCodeV2ModelProbe(profile, input, () => {
+            try {
+              this.assertCurrent();
+              assertManagementTarget(target, this.credentialTarget(
+                this.select(input.profileId, input.configRevision)
+              ));
+              return isCurrent();
+            } catch { return false; }
+          }, options.processCustody ? { processCustody: options.processCustody } : {});
+        }
         const host = this.getHost(profile);
         const timeoutMs = profile.modelProbeTimeoutMs ?? 90000;
         if (!input.limits)

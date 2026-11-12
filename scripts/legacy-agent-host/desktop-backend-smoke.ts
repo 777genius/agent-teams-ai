@@ -134,6 +134,15 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   if (mixedModels) await mixedModels.retainEvidenceAt(baseFixture.root);
   const fixture = questionUiMode ? await prepareDesktopCodexQuestionFixture(baseFixture, { executable: process.env.LEGACY_DESKTOP_CODEX_PATH!, model: questionModel! }) : mixedMode ? await prepareDesktopMixedNativeFixture(baseFixture, {
     models: selectedMixedModels!, codexPath: process.env.LEGACY_DESKTOP_CODEX_PATH!, openCodePath: process.env.LEGACY_DESKTOP_OPENCODE_PATH!,
+    ...(process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2' ? {
+      openCodeV2: { bunPath: process.env.OPENCODE_V2_EMBEDDED_BUN!,
+        bunSha256: process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256!,
+        engineDirectory: process.env.OPENCODE_V2_EMBEDDED_GRAPH!,
+        processCustody: {
+          directory: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY!,
+          manifestSha256: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256!,
+        } },
+    } : {}),
     openCodeEndpoint: await reserveMixedOpenCodeEndpoint(),
     openCodeManagementEndpoint: await reserveMixedOpenCodeEndpoint(),
   }) : baseFixture;

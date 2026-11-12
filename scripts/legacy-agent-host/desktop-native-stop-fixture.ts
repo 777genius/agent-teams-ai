@@ -11,8 +11,8 @@ const object = (value: unknown): Record<string, unknown> => {
 };
 const tick = () => new Promise<void>((done) => setTimeout(done, 100));
 export const desktopNativeProviderArtifact = Object.freeze({
-  path: 'vendor/provider-migration/opencode-v2-host-8f169316/agent-teams-provider-implementations-0.0.0.tgz',
-  sha256: 'f09f5bef6736e3549bd186225a5950ccc257549fd938a48909d726298a5367ae',
+  path: 'vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-implementations-0.0.0.tgz',
+  sha256: 'cad37e034245ca90a797cc6c3b436a132f35f7da61ba41cef436ac7b0a775d18',
 });
 export async function verifyDesktopNativeStopArtifact(
   repo: string,

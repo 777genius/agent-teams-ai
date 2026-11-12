@@ -41,19 +41,21 @@ if (process.argv[2] === '--worker') {
     execFileSync('git', ['rev-parse','HEAD'], {encoding:'utf8'}).trim() !== head)
     throw Error('TEST_source_or_prefix_unqualified');
   const { parseOwnedDurableLog, retainsOwnedDurablePrefix } = await import('./opencode-v2-native-log-parse.mjs');
-  const { nativeSessionModelVariant } = await import('./opencode-v2-native-session-guard.mjs');
-  const root = mkdtempSync(join(tmpdir(), 'TEST-opencode-v2-persist-'));
+  const { isOwnedNativeSessionSnapshot, nativeSessionModelVariant } =
+    await import('./opencode-v2-native-session-guard.mjs');
+  const { signalCapturedNativeGroup } = await import('./opencode-v2-native-process-guard.mjs');
   const receiptPath = resolve(process.env.OPENCODE_V2_TEST_HTTP_RECEIPT || 'opencode-v2-http-persist.json');
   const receipt = {kind:'TEST_V2_HTTP_DURABLE_DISCOVERY', sourceHead:head, version:'2.0.21',
     qualified:false, packagedElectronQualified:false, modelTurnProven:false,
     processCustodyQualified:false, steps:[], cleanup:false};
   const hash = value => createHash('sha256').update(value).digest('hex');
-  const db = join(root,'data','v2.sqlite');
-  const workspace = join(root,'workspace');
-  let worker, password, env;
+  let root, db, workspace, worker, password, env;
   // No native worker exists during setup; still finalize a failed TEST
   // receipt and remove the owned temporary root on any package/IO failure.
   try {
+    root=mkdtempSync(join(tmpdir(), 'TEST-opencode-v2-persist-'));
+    db=join(root,'data','v2.sqlite');
+    workspace=join(root,'workspace');
     for (const name of ['home','workspace','config','data','cache','state','temp'])
       mkdirSync(join(root,name));
     const canonicalPrefix = realpathSync(prefix);
@@ -93,15 +95,18 @@ if (process.argv[2] === '--worker') {
     receipt.failure = /^TEST_[A-Za-z0-9_]+$/.test(error?.message || '')
       ? error.message : 'TEST_published_HTTP_persist_unqualified';
     try {
-      rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:100});
+      if (root) rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:100});
       receipt.cleanup = true;
     } catch {
       receipt.cleanup = false;
+      receipt.cleanupError = 'TEST_worker_cleanup_unknown';
     }
-    writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n');
+    try { writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n'); }
+    catch { /* Preserve the first safe setup failure if receipt IO also fails. */ }
     throw Error(receipt.failure);
   }
   let child, port, startTicks, stopSignalSent = false;
+  const cancellation = new AbortController();
   function startIdentity(pid) {
     try {
       const stat=readFileSync('/proc/'+pid+'/stat','utf8');
@@ -118,15 +123,16 @@ if (process.argv[2] === '--worker') {
   async function stop() {
     if (!child?.pid) return true;
     const pid=child.pid;
-    const actual=startIdentity(pid);
-    if(actual!==undefined && actual!==startTicks)return false;
-    if(!stopSignalSent && actual===startTicks) {
+    if(!stopSignalSent) {
+      const result=signalCapturedNativeGroup(pid,startTicks,{
+        readIdentity:startIdentity,present,signal:(group,signal)=>process.kill(group,signal),
+      });
+      if(result==='unknown')return false;
+      if(result==='absent'){child=undefined;return true;}
       stopSignalSent=true;
-      try {process.kill(-pid,'SIGTERM');}
-      catch(e){if(e.code!=='ESRCH')throw e;}
     }
     for (let n=0;n<60;n++) {
-      if (!present(-pid)) {if (child?.pid === pid) child = undefined;return true;}
+      if (!present(pid)&&!present(-pid)) {if (child?.pid === pid) child = undefined;return true;}
       await delay(100);
     }
     return false;
@@ -136,19 +142,31 @@ if (process.argv[2] === '--worker') {
   // Share one cancellation promise with normal catch/finally: stopping the
   // worker may reject an in-flight HTTP request. That rejection must neither
   // overwrite the interrupted receipt nor terminate the parent before reaping.
-  let interruptionTask;
+  let interruptionTask, cleanupTask;
+  function cleanupOwnedRoot() {
+    return cleanupTask ??= (async () => {
+      try {
+        receipt.cleanup=await stop();
+        if(receipt.cleanup)rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:100});
+      } catch {receipt.cleanup=false;}
+      if(!receipt.cleanup) {
+        receipt.cleanupError='TEST_worker_cleanup_unknown';
+        child?.unref();
+        process.exitCode ||= 1;
+      }
+    })();
+  }
+  function persistReceipt() {
+    try {writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n');}
+    catch {process.exitCode ||= 1;}
+  }
   function interruptOwned(signal) {
     if (interruptionTask) return;
+    receipt.failure ??= 'TEST_interrupted_' + signal;
+    cancellation.abort();
     interruptionTask = (async () => {
-      receipt.failure = 'TEST_interrupted_' + signal;
-      let cleaned = false;
-      try {
-        cleaned = await stop();
-        if (cleaned) rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:100});
-      } catch { cleaned = false; }
-      receipt.cleanup = cleaned;
-      try { writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n'); }
-      catch { /* Failed receipt persistence cannot qualify this TEST. */ }
+      await cleanupOwnedRoot();
+      persistReceipt();
       process.exit(signal === 'SIGINT' ? 130 : 143);
     })();
   }
@@ -164,7 +182,7 @@ if (process.argv[2] === '--worker') {
   }
   async function call(path,method='GET',payload) {
     const res=await fetch('http://127.0.0.1:'+port+path,{
-      method,redirect:'error',signal:AbortSignal.timeout(7000),
+      method,redirect:'error',signal:AbortSignal.any([AbortSignal.timeout(7000),cancellation.signal]),
       headers:{authorization:'Basic '+Buffer.from('opencode:'+password).toString('base64'),
         ...(payload?{'content-type':'application/json'}:{})},
       body:payload?JSON.stringify(payload):undefined,
@@ -182,10 +200,11 @@ if (process.argv[2] === '--worker') {
     return {status:res.status,text:txt,data:txt&&!durableLog?JSON.parse(txt):null};
   }
   async function start() {
-    if (interruptionTask) throw Error('TEST_interrupted_before_start');
+    cancellation.signal.throwIfAborted();
     port=await reservePort();env.TEST_V2_HTTP_PORT=String(port);
-    if (interruptionTask) throw Error('TEST_interrupted_before_start');
+    cancellation.signal.throwIfAborted();
     stopSignalSent=false;
+    startTicks=undefined;
     child=spawn(process.execPath,[worker,'--worker'],{
       cwd:workspace,env,detached:true,stdio:'ignore',
     });
@@ -206,11 +225,16 @@ if (process.argv[2] === '--worker') {
             writeFileSync(pending,
               JSON.stringify({pid:child.pid,startIdentity:startTicks})+'\n',{flag:'wx'});
             renameSync(pending,marker);
+            // The cancellation test owns the next action. Do not finish the
+            // normal scenario before its parent has delivered the signal.
+            cancellation.signal.throwIfAborted();
+            await new Promise(resolve=>cancellation.signal.addEventListener('abort',resolve,{once:true}));
+            cancellation.signal.throwIfAborted();
           }
           return child.pid;
         }
-      } catch { /* Only read-only server-start polling. */ }
-      await delay(125);
+      } catch { cancellation.signal.throwIfAborted(); }
+      await delay(125,undefined,{signal:cancellation.signal});
     }
     throw Error('TEST_published_HTTP_server_start_unqualified');
   }
@@ -248,10 +272,8 @@ if (process.argv[2] === '--worker') {
     if(anonymousDelete.status!==401)
       throw Error('TEST_native_unauthenticated_delete_not_rejected');
     const afterAnonymousDelete=await call('/api/session/'+encodeURIComponent(sessionId));
-    if(afterAnonymousDelete.status!==200||
-       afterAnonymousDelete.data?.data?.id!==sessionId||
-       afterAnonymousDelete.data?.data?.permissions?.[0]?.action!=='external_directory'||
-       afterAnonymousDelete.data?.data?.permissions?.[0]?.effect!=='deny')
+    if(!isOwnedNativeSessionSnapshot(afterAnonymousDelete,sessionId,workspace,
+      [{action:'external_directory',resource:'*',effect:'deny'}]))
       throw Error('TEST_native_unauthenticated_delete_changed_session');
     receipt.nativeUnauthenticatedDeleteRejected=true;
     // A real native session round-trip of ordered permission rules, NOT a
@@ -274,10 +296,7 @@ if (process.argv[2] === '--worker') {
         throw Error('TEST_native_ordered_session_create_unqualified');
       const readback=await call('/api/session/'+encodeURIComponent(testId));
       const nativeRules=readback.data?.data?.permissions;
-      if(readback.status!==200 || readback.data?.data?.id!==testId ||
-         !Array.isArray(nativeRules) || nativeRules.length!==rules.length ||
-         !rules.every((rule,index)=>Object.keys(nativeRules[index]||{}).length===3 &&
-           Object.entries(rule).every(([key,value])=>nativeRules[index]?.[key]===value)))
+      if(!isOwnedNativeSessionSnapshot(readback,testId,workspace,rules))
         throw Error('TEST_native_permission_order_readback_unqualified');
       const admission=preflightOpenCodeV2EffectiveExternalDirectory(nativeRules,'deny');
       if((admission.kind==='policy-candidate')!==admissible)
@@ -823,21 +842,21 @@ if (process.argv[2] === '--worker') {
     receipt.steps.push('TEST_Stage1_SPI_readiness_recheck_and_owned_cleanup_no_replay');
   } catch (e) {
     if (interruptionTask) await interruptionTask;
-    receipt.failure = /^TEST_[A-Za-z0-9_]+$/.test(e?.message || '')
+    receipt.failure ??= /^TEST_[A-Za-z0-9_]+$/.test(e?.message || '')
       ? e.message : 'TEST_published_HTTP_persist_unqualified';
-    throw Error(receipt.failure);
+    process.exitCode ||= 1;
   } finally {
     if (interruptionTask) {
       await interruptionTask;
     } else {
-      receipt.cleanup=await stop().catch(()=>false);
+      await cleanupOwnedRoot();
       // SIGINT/SIGTERM may arrive while stop() is awaiting worker exit.
       // Its owner must finish the shared interruption receipt and process exit
       // before normal cleanup can write a competing success/failure receipt.
       if (interruptionTask) await interruptionTask;
-      if(receipt.cleanup)rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:100});
-      writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n');
+      else persistReceipt();
     }
   }
+  if(receipt.failure)throw Error(receipt.failure);
   if(!receipt.cleanup)throw Error('TEST_worker_cleanup_unknown');
 }

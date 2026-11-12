@@ -4,6 +4,7 @@ import type { TeamMcpNativeMemberCreationPort } from '../mcp/nativeMemberCreatio
 import { createClaudeMemberProvider } from '../adapters/providers/ClaudeMemberProvider.js';
 import { createCodexMemberProvider } from '../adapters/providers/CodexMemberProvider.js';
 import { createOpenCodeMemberProvider } from '../adapters/providers/OpenCodeMemberProvider.js';
+import { createOpenCodeV2EmbeddedMemberProvider } from '../adapters/providers/OpenCodeV2EmbeddedMemberProvider.js';
 import { startTeamMcpEndpoint } from '../mcp/endpoint.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
@@ -85,10 +86,11 @@ export function createRuntimeMemberProviderFactory(options: {
       if (!entry || options.isSealed() || entry.provider || !assertAllocation)
         throw new RuntimeOwnerError('hold');
       // A selected V2 member must never fall through to the legacy V1 provider.
-      // Until native process/permissions are qualified, only an explicitly
-      // injected Stage1 V2 owner may open the existing Session SPI.
+      // The owned embedded engine is selected by trusted composition only.
+      // Other V2 execution surfaces still require an explicitly injected owner.
       if (entry.profile.provider === 'opencode' &&
-          entry.profile.nativeGeneration === 'v2' && !options.createProvider)
+          entry.profile.nativeGeneration === 'v2' && !options.createProvider &&
+          !(entry.profile.protocolRevision === '2.1.4' && entry.profile.embedded))
         throw new RuntimeOwnerError('hold');
       const authority = captureMemberProviderAuthority({
         entry,
@@ -195,7 +197,9 @@ export function createRuntimeMemberProviderFactory(options: {
             ? createClaudeMemberProvider
             : entry.profile.provider === 'codex'
               ? createCodexMemberProvider
-              : createOpenCodeMemberProvider)
+              : entry.profile.nativeGeneration === 'v2'
+                ? createOpenCodeV2EmbeddedMemberProvider
+                : createOpenCodeMemberProvider)
         )({
           profile: entry.profile,
           request,

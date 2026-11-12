@@ -22,24 +22,40 @@ const file = (path: string, expected: string) => {
     throw new Error('Process artifact build input changed');
 };
 /** Packaging actor only. Never imported/called by Host startup, Main, renderer or MCP. */
-export function buildProcessNativeArtifact(input: {
-  compiler: string;
-  compilerSha256: string;
-  sdkRoot: string;
-  sdkSettingsSha256: string;
-  headersRoot: string;
-  headers: readonly { file: string; sha256: string }[];
-  source: string;
-  sourceSha256: string;
-  outputDirectory: string;
-}) {
-  if (process.platform !== 'darwin' || process.arch !== 'arm64')
+export function buildProcessNativeArtifact(
+  input: {
+    compiler: string;
+    compilerSha256: string;
+    sdkRoot: string;
+    sdkSettingsSha256: string;
+    headersRoot: string;
+    headers: readonly { file: string; sha256: string }[];
+    source: string;
+    sourceSha256: string;
+    outputDirectory: string;
+  },
+  candidate?: { osBuild: string; architecture: 'arm64' | 'x64' }
+) {
+  if (process.platform !== 'darwin' || !['arm64', 'x64'].includes(process.arch))
     throw new Error('Unsupported build tuple');
-  const hostBuild = () => execFileSync('/usr/sbin/sysctl', ['-n', 'kern.osversion'], {
-    encoding: 'utf8', timeout: 5_000, maxBuffer: 1024,
-  }).trim();
+  const hostBuild = () =>
+    execFileSync('/usr/sbin/sysctl', ['-n', 'kern.osversion'], {
+      encoding: 'utf8',
+      timeout: 5_000,
+      maxBuffer: 1024,
+    }).trim();
   const osBuild = hostBuild();
-  if (!isQualifiedDarwinBuild(osBuild)) throw new Error('Unsupported build tuple');
+  // An isolated TEST candidate may compile the actual selected tuple. The product
+  // manifest loader still refuses it until native evidence qualifies that build.
+  if (
+    candidate &&
+    (candidate.osBuild !== osBuild ||
+      candidate.architecture !== process.arch ||
+      !/^\d{2}[A-Z]\d{2,5}$/.test(candidate.osBuild) ||
+      !/\/TEST-[^/]+\//.test(input.outputDirectory))
+  )
+    throw new Error('Unsupported TEST candidate build tuple');
+  if (!isQualifiedDarwinBuild(osBuild) && !candidate) throw new Error('Unsupported build tuple');
   const required = ['node_api.h', 'node_api_types.h', 'js_native_api.h', 'js_native_api_types.h'];
   if (
     new Set(input.headers.map((row) => row.file)).size !== input.headers.length ||
@@ -82,6 +98,10 @@ export function buildProcessNativeArtifact(input: {
       '-Wall',
       '-Wextra',
       '-Werror',
+      '-framework',
+      'Security',
+      '-framework',
+      'CoreFoundation',
       input.source,
       '-o',
       library,
@@ -93,7 +113,7 @@ export function buildProcessNativeArtifact(input: {
     schemaVersion: 1,
     abi: 'napi-8',
     platform: 'darwin',
-    architecture: 'arm64',
+    architecture: process.arch,
     osBuild,
     library: 'registered-process.node',
     sourceSha256: input.sourceSha256,

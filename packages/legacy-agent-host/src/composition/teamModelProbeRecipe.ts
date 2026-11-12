@@ -62,6 +62,7 @@ export function resolveTeamModelProbeRecipe(options: {
                     nativeProviderId: profile.nativeOptions.providerId,
                     model: profile.model,
                     nativeVariant: profile.nativeOptions.variant,
+                    ...(profile.embedded ? { embedded: profile.embedded } : {}),
                   }
                 : {}),
             }

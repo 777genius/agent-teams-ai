@@ -43,6 +43,7 @@ export interface CaptureFileUpdateScenario {
 }
 export async function startOpenCodeModel(
   options: {
+    nativeGeneration?: 'v2';
     sharedSessionProbe?: boolean;
     nativeMessageImage?: boolean;
     mixedGroups?: boolean;
@@ -278,7 +279,9 @@ export async function startOpenCodeModel(
         }
       }
       const contextEffective = JSON.stringify(
-        messages.filter((item) => item.role === 'system')
+        // V2 renders durable instruction entries as context messages. The
+        // original TEST business input contains no marker in either dialect.
+        options.nativeGeneration === 'v2' ? messages : messages.filter((item) => item.role === 'system')
       ).includes(CONTEXT_MARKER);
       assert.ok(contextEffective, 'native model request contains selected member instructions');
       const tools = (Array.isArray(body.tools) ? body.tools : [])
@@ -399,10 +402,14 @@ export async function startOpenCodeModel(
             (turn === 'OPENCODE_TEAM_ONE' ? first : second))[step];
       let delta: Record<string, unknown>;
       if (action) {
+        const nativeAction = options.nativeGeneration === 'v2' && action.name === 'bash'
+          ? 'shell' : action.name;
         const chosen = tools.find((name) =>
           ['bash', 'read', 'edit'].includes(action.name)
-            ? name === action.name
-            : name === `team_${action.name}`
+            ? name === nativeAction
+            : options.nativeGeneration === 'v2'
+              ? [`agent-teams_${action.name}`, `mcp__agent-teams__${action.name}`].includes(name)
+              : name === `team_${action.name}`
         );
         assert.ok(chosen, `actual OpenCode catalog contains ${action.name}`);
         delta = {

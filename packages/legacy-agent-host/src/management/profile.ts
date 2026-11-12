@@ -1,13 +1,26 @@
 import { z } from 'zod';
 
 import { nativeProcessProfileSchema } from '../composition/nativeProcessProfile.js';
+import { openCodeV2EmbeddedProfileSchema } from '../composition/openCodeV2EmbeddedProfile.js';
+import { isCanonicalOpenCodeV2Directory } from '../composition/openCodeV2StaticPreflight.js';
 
 export const openCodeManagementProfileSchema = nativeProcessProfileSchema
   .extend({
+    cwd: z.string().min(1).max(8192),
+    executable: nativeProcessProfileSchema.shape.executable.extend({
+      path: z.string().min(1).max(8192),
+    }),
     provider: z.literal('opencode'),
     profileId: z.string().min(1).max(256),
     accountBinding: z.string().min(1).max(256),
     configRevision: z.string().min(1).max(256),
+    nativeGeneration: z.enum(['v1', 'v2']).optional(),
+    protocolRevision: z.literal('2.1.4').optional(),
+    embedded: openCodeV2EmbeddedProfileSchema.optional(),
+    nativeModel: z.object({
+      providerId: z.string().min(1).max(256).refine(value => !/[\0\r\n]/u.test(value)),
+      modelId: z.string().min(1).max(256).refine(value => !/[\0\r\n]/u.test(value)),
+    }).strict().optional(),
     variant: z
       .string()
       .min(1)
@@ -27,7 +40,23 @@ export const openCodeManagementProfileSchema = nativeProcessProfileSchema
       .max(17 * 60_000)
       .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    const paired = value.protocolRevision === '2.1.4' && value.embedded !== undefined &&
+      value.nativeModel !== undefined;
+    if (value.nativeGeneration === 'v2' ? !paired :
+      value.protocolRevision !== undefined || value.embedded !== undefined || value.nativeModel !== undefined)
+      context.addIssue({ code: 'custom', message: 'OpenCode V2 management requires the captured embedded model selection' });
+    if (value.nativeGeneration === 'v2' && value.embedded) {
+      const platform = `${value.embedded.platform}-${value.embedded.arch}`;
+      if (![value.cwd, value.executable.path, ...['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
+        .map(key => value.environment[key])].every(directory =>
+          typeof directory === 'string' && isCanonicalOpenCodeV2Directory(platform, directory)))
+        context.addIssue({ code: 'custom', message: 'OpenCode V2 management requires canonical native paths' });
+    } else if (!nativeProcessProfileSchema.safeParse(value).success) {
+      context.addIssue({ code: 'custom', message: 'Legacy OpenCode management requires its captured POSIX profile' });
+    }
+  });
 
 export type OpenCodeManagementProfile = z.infer<typeof openCodeManagementProfileSchema>;
 

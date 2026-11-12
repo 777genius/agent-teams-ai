@@ -47,6 +47,7 @@ export function applyLaunchConfiguration(
   // cannot change it. Reject explicit effort until a separate native variant
   // attestation exists; a matching captured string alone proves nothing.
   const v2 = base.provider === 'opencode' && base.nativeGeneration === 'v2';
+  const embeddedV2 = v2 && base.protocolRevision === '2.1.4' && base.embedded !== undefined;
   // A slash inside a custom provider ID makes the flattened catalog alias
   // ambiguous with another provider's model path. Without structured catalog
   // provenance, an explicit choice cannot attest that captured native pair.
@@ -62,7 +63,7 @@ export function applyLaunchConfiguration(
     // provenance and must not select another native session by accident.
     const modelMatches = selected.model === undefined ||
       selected.model === qualifiedCapturedModel;
-    if (selected.permissions !== undefined || selected.effort !== undefined || !modelMatches)
+    if ((!embeddedV2 && selected.permissions !== undefined) || selected.effort !== undefined || !modelMatches)
       throw new TeamLaunchError('invalid', 'launch-option-unsupported');
   }
   const profile = structuredClone(base);

@@ -14,7 +14,7 @@ export function readPackagedProcessArtifact(selected: PackagedProcessArtifactSel
   };
   if (
     process.platform !== 'darwin' ||
-    process.arch !== 'arm64' ||
+    !['arm64', 'x64'].includes(process.arch) ||
     !/^[a-f0-9]{64}$/.test(selected.manifestSha256) ||
     realpathSync(selected.directory) !== selected.directory ||
     !lstatSync(selected.directory).isDirectory()
@@ -42,13 +42,16 @@ export function readPackagedProcessArtifact(selected: PackagedProcessArtifactSel
     row.schemaVersion !== 1 ||
     row.abi !== 'napi-8' ||
     row.platform !== 'darwin' ||
-    row.architecture !== 'arm64' ||
+    row.architecture !== process.arch ||
     !isQualifiedDarwinBuild(row.osBuild) ||
     row.library !== 'registered-process.node' ||
     typeof row.binarySha256 !== 'string' ||
     !/^[a-f0-9]{64}$/.test(row.binarySha256)
   )
     return unavailable();
-  return { path: join(selected.directory, 'registered-process.node'), sha256: row.binarySha256,
-    osBuild: row.osBuild };
+  return {
+    path: join(selected.directory, 'registered-process.node'),
+    sha256: row.binarySha256,
+    osBuild: row.osBuild,
+  };
 }

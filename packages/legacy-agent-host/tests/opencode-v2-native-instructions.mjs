@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { pinnedLinuxX64Avx2Digest } from './opencode-v2-native-test-pin.mjs';
-import { readFileSync, realpathSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { readFileSync, realpathSync, mkdtempSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createServer } from 'node:net';
@@ -16,26 +16,19 @@ import { preflightOpenCodeV2EffectiveExternalDirectory } from '../dist/compositi
 import { parseOwnedDurableLog, retainsOwnedDurablePrefix } from './opencode-v2-native-log-parse.mjs';
 import { isOwnedNativeSessionSnapshot, nativeSessionModelVariant } from './opencode-v2-native-session-guard.mjs';
 import { probeNativeDirectShellEffect } from './opencode-v2-direct-shell-probe.mjs';
+import { signalCapturedNativeGroup } from './opencode-v2-native-process-guard.mjs';
 
 const version = '2.0.21';
 
 const receiptPath = resolve(process.env.OPENCODE_V2_HOST_NATIVE_RECEIPT || 'opencode-v2-host-native-instructions.json');
 const receipt = { kind: 'TEST_NATIVE_HOST_SPI_INSTRUCTIONS', version, qualified: false,
   productQualified: false, packagedElectronQualified: false, steps: [], cleanup: false };
-const root = mkdtempSync(join(tmpdir(), 'TEST-stage1-v2-host-'));
-const workspace = join(root, 'workspace');
-for (const part of ['workspace','home','config','cache','data','state','temp']) mkdirSync(join(root,part));
 const password = randomBytes(24).toString('hex');
-const env = {
-  PATH: process.env.PATH || '/usr/bin:/bin',
-  HOME: join(root,'home'), XDG_CONFIG_HOME: join(root,'config'),
-  XDG_CACHE_HOME: join(root,'cache'), XDG_DATA_HOME: join(root,'data'),
-  XDG_STATE_HOME: join(root,'state'), TMPDIR: join(root,'temp'),
-  OPENCODE_SERVER_PASSWORD: password, OPENCODE_DISABLE_MODELS_FETCH: 'true',
-  CI: 'true', NO_COLOR: '1',
-};
+let root, workspace, env;
 const digest = (value) => createHash('sha256').update(value).digest('hex');
 let child, startTicks, stopRequested = false, nativeSessionId, endpoint;
+const cancellation = new AbortController();
+let interruptionTask, cleanupTask;
 const binaryRoot = process.env.OPENCODE_V2_TEST_NPM_ROOT;
 function startIdentity(pid) {
   try {
@@ -59,19 +52,12 @@ async function stopOwned() {
   if (!child?.pid) { receipt.cleanup = true; return true; }
   const pid = child.pid;
   if (!stopRequested) {
-    if (startIdentity(pid) !== startTicks) {
-      // The old leader can exit normally before cleanup. Do not signal an
-      // unverified/reused process group; only accept physical absence of both.
-      if (!present(pid) && !present(-pid)) {
-        receipt.cleanup = true;
-        return true;
-      }
-      return false;
-    }
+    const result = signalCapturedNativeGroup(pid, startTicks, {
+      readIdentity: startIdentity, present, signal: (group, signal) => process.kill(group, signal),
+    });
+    if (result === 'unknown') return false;
+    if (result === 'absent') { receipt.cleanup = true; return true; }
     stopRequested = true;
-    try { process.kill(-pid, 'SIGTERM'); } catch (error) {
-      if (error.code !== 'ESRCH') throw error;
-    }
   }
   return confirmStopped();
 }
@@ -85,6 +71,35 @@ async function confirmStopped() {
   }
   return false;
 }
+function cleanupOwnedRoot() {
+  return cleanupTask ??= (async () => {
+    try {
+      receipt.cleanup = await stopOwned();
+      if (receipt.cleanup && root) rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:100});
+    } catch { receipt.cleanup = false; }
+    if (!receipt.cleanup) {
+      receipt.cleanupError = 'native_process_cleanup_unconfirmed';
+      child?.unref(); // UNKNOWN must fail finitely while retaining its namespace.
+      process.exitCode ||= 1;
+    }
+  })();
+}
+function persistReceipt() {
+  try { writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n'); }
+  catch { process.exitCode ||= 1; }
+}
+function interruptOwned(signal) {
+  if (interruptionTask) return;
+  receipt.error ??= 'native_host_test_interrupted_' + signal;
+  cancellation.abort();
+  interruptionTask = (async () => {
+    await cleanupOwnedRoot();
+    persistReceipt();
+    process.exit(signal === 'SIGINT' ? 130 : 143);
+  })();
+}
+process.on('SIGINT', () => interruptOwned('SIGINT'));
+process.on('SIGTERM', () => interruptOwned('SIGTERM'));
 async function port() {
   const s = createServer();
   await new Promise((ok,reject)=>s.once('error',reject).listen(0,'127.0.0.1',ok));
@@ -114,7 +129,8 @@ async function native(path, method='GET', body, signal=AbortSignal.timeout(12000
       authorization: 'Basic '+Buffer.from('opencode:'+password).toString('base64'),
       ...(body===undefined?{}:{'content-type':'application/json'}),
     },
-    body: body===undefined?undefined:JSON.stringify(body), signal,
+    body: body===undefined?undefined:JSON.stringify(body),
+    signal: AbortSignal.any([signal,cancellation.signal]),
   });
   const text=await readBoundedNativeBody(response,'unbounded_native_response');
   return { status:response.status, data:text?JSON.parse(text):undefined };
@@ -124,7 +140,7 @@ async function native(path, method='GET', body, signal=AbortSignal.timeout(12000
 async function readOwnedDurableLog(sessionId) {
   const path='/api/experimental/session/'+encodeURIComponent(sessionId)+'/log?follow=false';
   const response=await fetch(endpoint+path, {
-    redirect:'error',signal:AbortSignal.timeout(12000),
+    redirect:'error',signal:AbortSignal.any([AbortSignal.timeout(12000),cancellation.signal]),
     headers:{authorization:'Basic '+Buffer.from('opencode:'+password).toString('base64')},
   });
   if(response.status!==200)throw Error('native_durable_log_read_unconfirmed');
@@ -137,6 +153,15 @@ async function readOwnedDurableLog(sessionId) {
   return {...cursor,fingerprints,positions};
 }
 try {
+  root=mkdtempSync(join(tmpdir(), 'TEST-stage1-v2-host-'));
+  workspace=join(root, 'workspace');
+  for (const part of ['workspace','home','config','cache','data','state','temp']) mkdirSync(join(root,part));
+  env={
+    PATH:process.env.PATH||'/usr/bin:/bin', HOME:join(root,'home'),
+    XDG_CONFIG_HOME:join(root,'config'), XDG_CACHE_HOME:join(root,'cache'),
+    XDG_DATA_HOME:join(root,'data'), XDG_STATE_HOME:join(root,'state'), TMPDIR:join(root,'temp'),
+    OPENCODE_SERVER_PASSWORD:password, OPENCODE_DISABLE_MODELS_FETCH:'true', CI:'true', NO_COLOR:'1',
+  };
   if (process.platform !== 'linux' || process.arch !== 'x64' ||
       !binaryRoot?.startsWith('/')) throw Error('unsupported_TEST_host');
   if (!/avx2/i.test(readFileSync('/proc/cpuinfo','utf8'))) throw Error('avx2_TEST_pin_unavailable');
@@ -164,11 +189,13 @@ try {
   if(execFileSync(binary,['--version'],{cwd:workspace,env,encoding:'utf8',timeout:12000}).trim()
       !== 'opencode v'+version)throw Error('binary_version_mismatch');
   const p=await port();
+  cancellation.signal.throwIfAborted();
   child=spawn(binary,['serve','--hostname','127.0.0.1','--port',String(p)],
     {cwd:workspace,env,detached:true,stdio:'ignore'});
+  // Capture custody synchronously before any signal handler can run at an await.
+  startTicks=child.pid?startIdentity(child.pid):undefined;
   await once(child,'spawn');
   if(!child.pid)throw Error('owned_native_pid_missing');
-  startTicks=startIdentity(child.pid);
   if(!startTicks || digest(readFileSync('/proc/'+child.pid+'/exe'))!==hash)
     throw Error('actual_engine_identity_mismatch');
   receipt.pid=child.pid;receipt.processStartTicks=startTicks;
@@ -177,14 +204,24 @@ try {
   let info;
   for(let i=0;i<70;i++) {
     try { const value=await native('/api/info'); if(value.status===200){info=value.data;break;} }
-    catch { /* TEST server startup only; never retry a mutating request */ }
-    await delay(150);
+    catch { cancellation.signal.throwIfAborted(); }
+    await delay(150,undefined,{signal:cancellation.signal});
   }
   if(info?.pid!==child.pid||info.version!==version)throw Error('native_server_pid_or_version');
   receipt.steps.push('native_loopback_authenticated_identity');
+  if (process.env.OPENCODE_V2_HOST_NATIVE_READY_FILE) {
+    const marker=process.env.OPENCODE_V2_HOST_NATIVE_READY_FILE;
+    const pending=marker+'.'+process.pid+'.pending';
+    writeFileSync(pending,JSON.stringify({pid:child.pid,startIdentity:startTicks})+'\n',{flag:'wx'});
+    renameSync(pending,marker);
+    cancellation.signal.throwIfAborted();
+    await once(cancellation.signal,'abort');
+    cancellation.signal.throwIfAborted();
+  }
   // A TEST-native server must not accidentally expose its management API
   // without authentication, including after the same isolated HOME restarts.
-  const unauthenticated=await fetch(endpoint+'/api/info',{redirect:'error',signal:AbortSignal.timeout(4000)});
+  const unauthenticated=await fetch(endpoint+'/api/info',{
+    redirect:'error',signal:AbortSignal.any([AbortSignal.timeout(4000),cancellation.signal])});
   if(unauthenticated.status!==401)throw Error('native_loopback_auth_not_enforced');
   receipt.steps.push('native_loopback_unauthenticated_request_rejected');
   const permissionRules=[{action:'external_directory',resource:'*',effect:'deny'}];
@@ -570,11 +607,12 @@ try {
   stopRequested=false;
   receipt.cleanup=false;
   const resumedPort=await port();
+  cancellation.signal.throwIfAborted();
   child=spawn(binary,['serve','--hostname','127.0.0.1','--port',String(resumedPort)],
     {cwd:workspace,env,detached:true,stdio:'ignore'});
+  startTicks=child.pid?startIdentity(child.pid):undefined;
   await once(child,'spawn');
   if(!child.pid)throw Error('restarted_native_pid_missing');
-  startTicks=startIdentity(child.pid);
   if(!startTicks ||
      (child.pid===priorPid&&startTicks===priorStartTicks) ||
      digest(readFileSync('/proc/'+child.pid+'/exe'))!==hash)
@@ -585,13 +623,13 @@ try {
     try {
       const result=await native('/api/info');
       if(result.status===200){resumedInfo=result.data;break;}
-    } catch { /* Read-only restart readiness, never retry a mutation. */ }
-    await delay(150);
+    } catch { cancellation.signal.throwIfAborted(); }
+    await delay(150,undefined,{signal:cancellation.signal});
   }
   if(resumedInfo?.pid!==child.pid||resumedInfo.version!==version)
     throw Error('restarted_native_server_identity_unconfirmed');
   const resumedUnauthenticated=await fetch(endpoint+'/api/info',
-    {redirect:'error',signal:AbortSignal.timeout(4000)});
+    {redirect:'error',signal:AbortSignal.any([AbortSignal.timeout(4000),cancellation.signal])});
   if(resumedUnauthenticated.status!==401)
     throw Error('restarted_native_loopback_auth_not_enforced');
   const resumed=await native(sessionPath);
@@ -623,24 +661,11 @@ try {
   // This TEST artifact is publicly downloadable. Native/Node exceptions may
   // contain runner paths, credentials or raw HTTP payloads; never serialize
   // their message, cause or stack. The completed step list locates the phase.
-  receipt.error='native_host_test_failed';
-  process.exitCode=1;
+  receipt.error ??= 'native_host_test_failed';
+  process.exitCode ||= 1;
 } finally {
-  try {
-    if(!receipt.cleanup && child?.pid) {
-      const ok=await stopOwned();
-      if(!ok)throw Error('native_TEST_process_cleanup_unconfirmed');
-    }
-  } catch {
-    // Cleanup uncertainty stays visible without leaking arbitrary exception text.
-    receipt.cleanupError='native_process_cleanup_unconfirmed';
-    process.exitCode=1;
-  }
-  // No process allocation means there is no child tree to clean up.
-  // This makes pre-allocation failures clean without inventing PID custody.
-  if (!child?.pid) receipt.cleanup=true;
-  try { writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n'); }
-  catch { process.exitCode=1; } // A missing proof receipt must fail the job.
-  if(receipt.cleanup)rmSync(root,{recursive:true,force:true});
+  await cleanupOwnedRoot();
+  if (interruptionTask) await interruptionTask;
+  else persistReceipt();
 }
 if(process.exitCode)process.stderr.write('native_host_test_failed; inspect sanitized receipt\n');

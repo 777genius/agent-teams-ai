@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@agent-teams/provider-session-contracts': file:vendor/provider-migration/opencode-v2-host-8f169316/agent-teams-provider-session-contracts-0.0.0.tgz
+  '@agent-teams/provider-session-contracts': file:vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-session-contracts-0.0.0.tgz
   '@openuidev/react-headless>@ag-ui/core': 1.0.3
   zod@4: 4.6.7
   '@modelcontextprotocol/sdk': 1.32.0
@@ -837,11 +837,11 @@ importers:
   packages/legacy-agent-host:
     dependencies:
       '@agent-teams/provider-implementations':
-        specifier: file:../../vendor/provider-migration/opencode-v2-host-8f169316/agent-teams-provider-implementations-0.0.0.tgz
-        version: file:vendor/provider-migration/opencode-v2-host-8f169316/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)
+        specifier: file:../../vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-implementations-0.0.0.tgz
+        version: file:vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)
       '@agent-teams/provider-session-contracts':
-        specifier: file:../../vendor/provider-migration/opencode-v2-host-8f169316/agent-teams-provider-session-contracts-0.0.0.tgz
-        version: file:vendor/provider-migration/opencode-v2-host-8f169316/agent-teams-provider-session-contracts-0.0.0.tgz
+        specifier: file:../../vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-session-contracts-0.0.0.tgz
+        version: file:vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-session-contracts-0.0.0.tgz
       '@agent-teams/task-change-ledger':
         specifier: workspace:*
         version: link:../task-change-ledger
@@ -897,13 +897,13 @@ packages:
       zod:
         optional: true
 
-  '@agent-teams/provider-implementations@file:vendor/provider-migration/opencode-v2-host-8f169316/agent-teams-provider-implementations-0.0.0.tgz':
-    resolution: {integrity: sha512-DyFMW/Ac9j2/UbYH65JmXfp68Eec9uhR8WpK5IFk5FjirbiZmiCcoP2e2HG5/A685PfhKEccO2lwy0t9cRP4dQ==, tarball: file:vendor/provider-migration/opencode-v2-host-8f169316/agent-teams-provider-implementations-0.0.0.tgz}
+  '@agent-teams/provider-implementations@file:vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-implementations-0.0.0.tgz':
+    resolution: {integrity: sha512-utiZ1yfQU4dwweAmumhGccK93TXhcRor0ZwC35u9H9eOqkJLgH3lTS9WL1Kl8U5KoasSNXGOH5cF90Ei6JEF3g==, tarball: file:vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-implementations-0.0.0.tgz}
     version: 0.0.0
     engines: {node: '>=24.21.0 <25 || >=26.11.1 <27'}
 
-  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/opencode-v2-host-8f169316/agent-teams-provider-session-contracts-0.0.0.tgz':
-    resolution: {integrity: sha512-DnVXK40iBmyDx/lRRGYPY65Ek6yCbyncbqMs8Ridcc7kXthAl/aAc4wO4idedyNDKm1QG/tgxYJb9YVMqs4KMw==, tarball: file:vendor/provider-migration/opencode-v2-host-8f169316/agent-teams-provider-session-contracts-0.0.0.tgz}
+  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-session-contracts-0.0.0.tgz':
+    resolution: {integrity: sha512-DnVXK40iBmyDx/lRRGYPY65Ek6yCbyncbqMs8Ridcc7kXthAl/aAc4wO4idedyNDKm1QG/tgxYJb9YVMqs4KMw==, tarball: file:vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-session-contracts-0.0.0.tgz}
     version: 0.0.0
     engines: {node: '>=24.21.0 <25 || >=26.11.1 <27'}
 
@@ -12788,9 +12788,9 @@ snapshots:
     optionalDependencies:
       zod: 4.6.7
 
-  '@agent-teams/provider-implementations@file:vendor/provider-migration/opencode-v2-host-8f169316/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)':
+  '@agent-teams/provider-implementations@file:vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)':
     dependencies:
-      '@agent-teams/provider-session-contracts': file:vendor/provider-migration/opencode-v2-host-8f169316/agent-teams-provider-session-contracts-0.0.0.tgz
+      '@agent-teams/provider-session-contracts': file:vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-session-contracts-0.0.0.tgz
       '@anthropic-ai/claude-agent-sdk': 0.3.305(@anthropic-ai/sdk@0.122.0(zod@4.6.7))(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7))(zod@4.6.7)
       '@anthropic-ai/sdk': 0.122.0(zod@4.6.7)
       '@modelcontextprotocol/sdk': 1.32.0(supports-color@10.2.2)(zod@4.6.7)
@@ -12799,7 +12799,7 @@ snapshots:
       - '@cfworker/json-schema'
       - supports-color
 
-  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/opencode-v2-host-8f169316/agent-teams-provider-session-contracts-0.0.0.tgz': {}
+  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/opencode-v2-host-5a46332d/agent-teams-provider-session-contracts-0.0.0.tgz': {}
 
   '@alloc/quick-lru@5.2.0': {}
 

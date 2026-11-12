@@ -15,6 +15,8 @@ import {
 } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
 import { desktopBackendEnvironment, digest, fileDigest } from './desktop-backend-fixture.ts';
+import { prepareDesktopOpenCodeV2Recipe } from './desktop-opencode-v2-fixture.ts';
+import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 
@@ -73,7 +75,7 @@ export function readMixedCapturedPrincipal(
 }
 
 /** Called only inside the explicitly authorized desktop proof; no agent starts here. */
-export async function startDesktopMixedModels(root: () => string) {
+export async function startDesktopMixedModels(root: () => string, options: { nativeGeneration?: 'v2' } = {}) {
   assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1');
   let claudeProbePhase: 'native' | 'cold-readback' = 'native';
   const claude = await startNativeTeamModel({
@@ -96,6 +98,7 @@ export async function startDesktopMixedModels(root: () => string) {
       principalId: () => readMixedCapturedPrincipal(root(), 'codex'),
     });
     opencode = await startOpenCodeModel({
+      ...(options.nativeGeneration ? { nativeGeneration: options.nativeGeneration } : {}),
       mixedTaskNotifications: createMixedTaskNoticeReader(root, 'carol'),
       allowModelProbes: true,
       mixedGroups: true,
@@ -105,6 +108,7 @@ export async function startDesktopMixedModels(root: () => string) {
     let evidenceRoot: string | undefined;
     return {
       ...selected,
+      openCodeGeneration: options.nativeGeneration ?? 'v1' as const,
       beginColdReadbackProbes: () => {
         assert.equal(claudeProbePhase, 'native', 'one original cold readback phase');
         assert.equal(claude.probes.length, 8, 'original live preflight budget was consumed');
@@ -167,6 +171,8 @@ export async function prepareDesktopMixedNativeFixture(
     openCodePath: string;
     openCodeEndpoint: string;
     openCodeManagementEndpoint: string;
+    openCodeV2?: Pick<DesktopOpenCodeV2Selection,
+      'bunPath' | 'bunSha256' | 'engineDirectory' | 'processCustody'>;
     models: DesktopMixedModels;
   }
 ) {
@@ -178,6 +184,8 @@ export async function prepareDesktopMixedNativeFixture(
   assert.ok(profile.creation?.contextIds.includes('local'));
   const claude = profile.runtime?.providerTemplates?.find((item) => item.provider === 'claude');
   assert.ok(claude?.provider === 'claude');
+  assert.equal(options.models.openCodeGeneration, options.openCodeV2 ? 'v2' : 'v1',
+    'the native oracle and selected engine must use the same protocol');
   assert.equal(profile.runtime!.providerTemplates!.length, 1);
   claude.nativeOptions = { ...claude.nativeOptions, settingSources: [] };
   assert.notEqual(options.openCodeManagementEndpoint, options.openCodeEndpoint);
@@ -190,7 +198,7 @@ export async function prepareDesktopMixedNativeFixture(
   }
   for (const [path, sha] of [
     [options.codexPath, codeXHash],
-    [options.openCodePath, openCodeHash],
+    ...(!options.openCodeV2 ? [[options.openCodePath, openCodeHash]] : []),
   ]) {
     assert.ok(path && sha);
     assert.equal(await realpath(path), path);
@@ -279,7 +287,12 @@ stream_max_retries = 0
       developerInstructions: codexContext,
     },
   };
-  const opencode = {
+  const opencode = options.openCodeV2 ? await prepareDesktopOpenCodeV2Recipe({
+    repo: join(import.meta.dirname, '../..'), root: base.root, node: base.node,
+    selection: { ...options.openCodeV2, endpoint: options.openCodeEndpoint,
+      modelUrl: options.models.opencode.url },
+    identity: common('opencode'),
+  }) : {
     ...common('opencode'),
     provider: 'opencode' as const,
     protocolRevision: '1.19.4' as const,
@@ -327,6 +340,11 @@ stream_max_retries = 0
       instructions: openCodeContext,
     },
   };
+  if (options.openCodeV2?.processCustody) {
+    if (profile.processCustody)
+      assert.deepEqual(profile.processCustody, options.openCodeV2.processCustody);
+    profile.processCustody = options.openCodeV2.processCustody;
+  }
   profile.runtime!.providerTemplates!.push(codex, opencode);
   const descriptor = record(JSON.parse(await readFile(base.descriptorPath, 'utf8')));
   assert.ok(Array.isArray(descriptor.management) && descriptor.management.length === 1);
@@ -345,7 +363,7 @@ stream_max_retries = 0
       timeoutMs: 15000,
       modelProbeTimeoutMs: 30000,
     },
-    {
+    ...(!options.openCodeV2 ? [{
       provider: 'opencode',
       profileId: `${profile.owner.profileId}:opencode`,
       accountBinding: opencode.accountBinding,
@@ -356,7 +374,7 @@ stream_max_retries = 0
       endpoint: options.openCodeManagementEndpoint,
       timeoutMs: 15000,
       modelProbeTimeoutMs: 30000,
-    },
+    } as const] : []),
   ];
   for (const item of management) {
     profile.management!.push(item);

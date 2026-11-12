@@ -842,6 +842,28 @@ test('V2 draft Default preserves the native session model and rejects drifted pr
   if (template.provider !== 'opencode') throw Error('TEST_expected_opencode_template');
   template.nativeOptions.variant = 'TEST-drifted-variant';
   assert.throws(recipe, { reason: 'probe-default-recipe' });
+
+  // The new embedded path binds the native delivery graph as part of the
+  // same private Default recipe; a model match cannot hide an engine change.
+  const embedded = {
+    version: '2.1.4' as const, platform: process.platform, arch: process.arch,
+    directory: join(f.root, 'TEST-engine'), manifestSha256: 'b'.repeat(64),
+    externalDirectory: 'deny' as const,
+  };
+  const embeddedSaved = runtimeMemberProfileSchema.parse({ ...saved,
+    protocolRevision: '2.1.4', embedded });
+  const embeddedTemplate = runtimeMemberProfileSchema.parse({ ...embeddedSaved,
+    nativeSessionId: undefined });
+  f.profile.runtime!.providerTemplates = [embeddedTemplate];
+  const embeddedRecipe = () => resolveTeamModelProbeRecipe({
+    runtime: f.profile.runtime, team: f.team, input, saved: embeddedSaved,
+  });
+  assert.equal(embeddedRecipe().model, saved.model);
+  assert.equal(teamModelProbeProfile(embeddedRecipe()).provider, 'opencode');
+  if (embeddedTemplate.provider !== 'opencode' || !embeddedTemplate.embedded)
+    throw Error('TEST_expected_embedded_template');
+  embeddedTemplate.embedded.manifestSha256 = 'c'.repeat(64);
+  assert.throws(embeddedRecipe, { reason: 'probe-default-recipe' });
   assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
 });
 

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import type { NativeV1HostBuild } from './opencode-v1-version-source.ts';
 
 /** Required original native stages; a green process or hand-written ACK alone cannot pass. */
 export const V1_VERSION_HOST_STEPS = [
@@ -10,7 +11,9 @@ export const V1_VERSION_HOST_STEPS = [
 ] as const;
 
 /** Validate a sanitized receipt against the exact source and selected CLI of this TEST run. */
-export function verifyNativeV1VersionReceipt(value: unknown, sourceHead: string, version: string): void {
+export function verifyNativeV1VersionReceipt(
+  value: unknown, sourceHead: string, version: string, build: NativeV1HostBuild,
+): void {
   assert.match(sourceHead, /^[a-f0-9]{40}$/);
   assert.match(version, /^1\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/);
   assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value));
@@ -33,6 +36,10 @@ export function verifyNativeV1VersionReceipt(value: unknown, sourceHead: string,
   assert.equal(r.nodeVersion, 'v24.21.0');
   for (const key of ['nativeDigest', 'nodeDigest', 'providerDigest', 'hostSourceDigest', 'hostDistDigest'])
     assert.ok(typeof r[key] === 'string' && /^[a-f0-9]{64}$/.test(r[key] as string), key);
+  for (const key of ['hostSourceDigest', 'hostDistDigest', 'providerDigest'] as const) {
+    assert.match(build[key], /^[a-f0-9]{64}$/);
+    assert.equal(r[key], build[key], 'receipt must attest the source and build from this runner');
+  }
   assert.equal(typeof r.nativeIntegrity, 'string');
   assert.match(r.nativeIntegrity as string, /^sha512-[A-Za-z0-9+/]+={0,2}$/);
   assert.equal(Buffer.from((r.nativeIntegrity as string).slice(7), 'base64').length, 64);

@@ -19,20 +19,20 @@ function sandbox(t: TestContext) {
   t.after(() => rmSync(root, { recursive: true, force: true }));
   return root;
 }
-function darwin(t: TestContext) {
-  for (const [key, value] of [['platform', 'darwin'], ['arch', 'arm64']] as const) {
+function darwin(t: TestContext, architecture = 'arm64') {
+  for (const [key, value] of [['platform', 'darwin'], ['arch', architecture]] as const) {
     const descriptor = Object.getOwnPropertyDescriptor(process, key)!;
     Object.defineProperty(process, key, { ...descriptor, value });
     t.after(() => Object.defineProperty(process, key, descriptor));
   }
 }
-function selected(t: TestContext, osBuild: string) {
+function selected(t: TestContext, osBuild: string, architecture = process.arch) {
   const directory = sandbox(t);
   const path = join(directory, 'registered-process.node');
   writeFileSync(path, 'TEST bytes; never a native addon');
   const manifestPath = join(directory, 'manifest.json');
   writeFileSync(manifestPath, JSON.stringify({ schemaVersion: 1, abi: 'napi-8',
-    platform: 'darwin', architecture: 'arm64', osBuild, library: 'registered-process.node',
+    platform: 'darwin', architecture, osBuild, library: 'registered-process.node',
     binarySha256: hash(path) }));
   return { directory, manifestSha256: hash(manifestPath) };
 }
@@ -41,7 +41,8 @@ function selected(t: TestContext, osBuild: string) {
 function bridge(t: TestContext, osBuild: QualifiedDarwinBuild = '24G624') {
   const artifact = readPackagedProcessArtifact(selected(t, osBuild));
   const state = { current: String(osBuild), root: String(osBuild), target: String(osBuild),
-    observations: 0, signals: 0 };
+    observations: 0, signals: 0, executablePath: '', executableBirth: '12345',
+    executableReads: 0, executableVersion: 2, afterExecutableRead: () => {} };
   const identity = (pid: number, sessionId: number, build: string) => ({
     auditToken: [501, 501, 20, 501, 20, pid, 100, 2], sessionId,
     bootId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', osBuild: build,
@@ -49,6 +50,14 @@ function bridge(t: TestContext, osBuild: QualifiedDarwinBuild = '24G624') {
   const native = {
     osBuild: () => state.current,
     captureRoot: (pid: number) => identity(pid, pid, state.root),
+    readRootExecutable: (_boot: string, token: readonly number[], sid: number) => {
+      state.executableReads++;
+      const value = { ...identity(token[5]!, sid, state.current),
+        executablePath: state.executablePath, birth: state.executableBirth };
+      value.auditToken[7] = state.executableVersion;
+      state.afterExecutableRead();
+      return value;
+    },
     captureDescendant: (_boot: string, root: readonly number[], pid: number) =>
       identity(pid, root[5]!, state.target),
     observeOriginal: () => { state.observations++; return 'same-live'; },
@@ -112,7 +121,7 @@ test('saved historical records remain readable; control requires root, target, s
   assert.throws(() => root.capture(1001, registrar)); assert.equal(state.signals, 0);
 });
 
-test('builder emits its actual finite host tuple and never publishes a manifest for unknown or changed hosts', t => {
+test('builder keeps unknown candidates out of product admission and refuses changed hosts', t => {
   darwin(t);
   const root = sandbox(t), headersRoot = join(root, 'headers'), sdkRoot = join(root, 'sdk');
   mkdirSync(headersRoot); mkdirSync(sdkRoot);
@@ -144,7 +153,63 @@ test('builder emits its actual finite host tuple and never publishes a manifest 
   build = '24G999'; const before = compiled;
   assert.throws(() => buildProcessNativeArtifact({ ...input, outputDirectory: join(root, 'unknown') }), /Unsupported build tuple/);
   assert.equal(compiled, before); assert.equal(existsSync(join(root, 'unknown')), false);
+  assert.throws(() => buildProcessNativeArtifact({ ...input, outputDirectory: join(root, 'wrong-candidate') },
+    { osBuild: '24G998', architecture: 'arm64' }), /Unsupported TEST candidate/);
+  assert.throws(() => buildProcessNativeArtifact({ ...input, outputDirectory: join(root, 'wrong-arch') },
+    { osBuild: build, architecture: 'x64' }), /Unsupported TEST candidate/);
+  assert.equal(compiled, before);
+  const candidate = buildProcessNativeArtifact({ ...input, outputDirectory: join(root, 'candidate') },
+    { osBuild: build, architecture: 'arm64' });
+  assert.equal(candidate.manifest.osBuild, build);
+  assert.throws(() => readPackagedProcessArtifact(candidate), /unavailable/,
+    'compilation alone never admits a prospective tuple to the product');
   build = '24G624'; changeAfterCompile = true;
   assert.throws(() => buildProcessNativeArtifact({ ...input, outputDirectory: join(root, 'changed') }), /build tuple changed/);
   assert.equal(existsSync(join(root, 'changed', 'manifest.json')), false);
+});
+
+test('native executable observations reuse the original captured child and reject changed bytes or birth', t => {
+  darwin(t);
+  const { artifact, state } = bridge(t);
+  const binary = join(sandbox(t), 'TEST-bun');
+  writeFileSync(binary, 'TEST selected executable bytes; never executed');
+  const executable = { path: binary, sha256: hash(binary) };
+  state.executablePath = binary;
+  const api = createQualifiedDarwinProcessApi(artifact);
+  const child = new ChildProcess(); Object.defineProperty(child, 'pid', { value: 1000 });
+  assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
+  assert.equal(state.executableReads, 0, 'a numeric PID does not grant executable observation');
+  let current = true;
+  api.captureRoot(child, () => current);
+  const first = api.readRootExecutable(child, executable);
+  assert.deepEqual(first, { executablePath: binary, executableSha256: executable.sha256,
+    pid: 1000, startIdentity: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:1000:2:12345' });
+  assert.equal(state.executableReads, 2, 'kernel identity is rechecked after the file hash');
+  assert.throws(() => api.captureRoot(child, () => true), /unavailable/, 'the same handle is never recaptured');
+  const replacement = new ChildProcess(); Object.defineProperty(replacement, 'pid', { value: 1000 });
+  assert.throws(() => api.readRootExecutable(replacement, executable), /unavailable/);
+  state.executableVersion++;
+  assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
+  state.executableVersion--;
+  state.afterExecutableRead = () => { state.executableBirth = '12346'; };
+  assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
+  state.afterExecutableRead = () => {};
+  state.executableBirth = '12345';
+  writeFileSync(binary, 'TEST changed executable bytes');
+  assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
+  current = false;
+  const reads = state.executableReads;
+  assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
+  assert.equal(state.executableReads, reads);
+  current = true; child.emit('exit', 0, null);
+  assert.throws(() => api.readRootExecutable(child, executable), /unavailable/);
+});
+
+test('x64 selects only its own finite OS artifact; this synthetic boundary is not a native qualification', t => {
+  darwin(t, 'x64');
+  assert.equal(readPackagedProcessArtifact(selected(t, '24G624')).osBuild, '24G624');
+  assert.throws(() => readPackagedProcessArtifact(selected(t, '24G624', 'arm64')), /unavailable/);
+  assert.throws(() => readPackagedProcessArtifact(selected(t, '24G999')), /unavailable/);
+  const { artifact } = bridge(t);
+  assert.equal(typeof createQualifiedDarwinProcessApi(artifact).readRootExecutable, 'function');
 });

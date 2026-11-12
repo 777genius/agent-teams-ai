@@ -18,10 +18,18 @@ on:
       # every Host source/test change invalidates the exact native proof.
       - packages/legacy-agent-host/src/**
       - packages/legacy-agent-host/tests/**
+      - packages/legacy-agent-host/native/**
+      - packages/legacy-agent-host/scripts/**
+      - scripts/legacy-agent-host/**
+      - scripts/stage-runtime.mjs
+      - scripts/lib/opencode-v2-base-inventory.mts
+      - scripts/lib/runtime-archive-checksum.mjs
+      - scripts/lib/runtime-payload-cache.mjs
       # Selection/update policy is tested with the same pinned Node/workspace.
       - src/features/opencode-runtime-installer/**
       - src/features/opencode-compatibility/**
-      - src/main/services/infrastructure/openCodeRuntimeLatestVersion.ts
+      - src/main/services/infrastructure/openCode*.ts
+      - src/main/services/runtime/openCode*.ts
       - src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts
       - src/main/services/infrastructure/openCodeRuntimePackageMetadata.ts
       - test/features/opencode-runtime-installer/**
@@ -95,7 +103,7 @@ jobs:
       - name: Execute V2 static preflight, current-main lock and FIFO negatives
         env:
           OPENCODE_V2_CURRENT_PRODUCT_LOCK: ${{ github.workspace }}/.current-product-lock/runtime.lock.json
-        run: node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts
       - name: Native V1 baseline and latest Host compatibility (Linux TEST)
         if: matrix.os == 'ubuntu-24.04'
         timeout-minutes: 20
@@ -155,6 +163,10 @@ jobs:
             --package-lock=true --ignore-scripts --no-audit --no-fund @opencode/cli@2.0.21
           npm ls --prefix "$RUNNER_TEMP/opencode-v2-host-cli" --depth=0 @opencode/cli
           test -s "$RUNNER_TEMP/opencode-v2-host-cli/package-lock.json"
+      - name: Confirm native ELF interruption and original process identity
+        env:
+          OPENCODE_V2_TEST_NPM_ROOT: ${{ runner.temp }}/opencode-v2-host-cli/node_modules/@opencode
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs
       - name: Exercise real pinned native server against existing Host Session SPI
         env:
           OPENCODE_V2_TEST_NPM_ROOT: ${{ runner.temp }}/opencode-v2-host-cli/node_modules/@opencode
@@ -302,3 +314,130 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
           path: opencode-v2-http-persist.json
+
+  embedded-v2-native-host:
+    name: Embedded V2.1.4 original Host (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux-x64
+            candidate-build: ''
+          - os: macos-15
+            platform: darwin-arm64
+            candidate-build: 24H232
+          - os: macos-15-intel
+            platform: darwin-x64
+            candidate-build: 24G830
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      npm_config_audit: 'false'
+      npm_config_fund: 'false'
+      OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+      OPENCODE_V2_TEST_PLATFORM: ${{ matrix.platform }}
+      OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD: ${{ matrix.candidate-build }}
+      OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ github.workspace }}/opencode-v2-embedded-inputs.json
+      OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT: ${{ github.workspace }}/opencode-v2-darwin-custody.json
+      OPENCODE_V2_EMBEDDED_HOST_RECEIPT: ${{ github.workspace }}/opencode-v2-embedded-host.json
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Require immutable source HEAD and record actual runner tuple
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$OPENCODE_V2_TEST_SOURCE_HEAD"
+          uname -sm
+          if [ "$RUNNER_OS" = macOS ]; then /usr/sbin/sysctl -n kern.osversion; fi
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Install exact source workspace dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build original Host and its pinned provider implementation
+        run: pnpm --filter @agent-teams/legacy-agent-host build
+      - name: Check original graph and custody boundaries
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts
+      - name: Stage checksum-pinned base archive without executing the legacy CLI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/stage-runtime.mjs --platform ${{ matrix.platform }}
+      - name: Prepare exact Bun, engine graph and original-process artifact
+        run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
+      - name: Prove actual Darwin executable custody and adversarial cleanup
+        if: runner.os == 'macOS'
+        env:
+          OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_GO: '1'
+        run: node --experimental-test-module-mocks --test packages/legacy-agent-host/tests/registered-process-executable.native.ts
+      - name: Require complete Darwin evidence for this exact candidate or product tuple
+        if: runner.os == 'macOS'
+        run: |
+          node --input-type=module -e "
+            import assert from 'node:assert/strict';
+            import fs from 'node:fs';
+            const r = JSON.parse(fs.readFileSync(process.env.OPENCODE_V2_EMBEDDED_DARWIN_CUSTODY_RECEIPT, 'utf8'));
+            const candidate = process.env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED !== '1';
+            assert.equal(r.kind, candidate ? 'TEST_DARWIN_CUSTODY_CANDIDATE' : 'TEST_DARWIN_CUSTODY_PRODUCT_PATH');
+            assert.equal(r.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+            assert.equal(r.platform + '-' + r.arch, process.env.OPENCODE_V2_TEST_PLATFORM);
+            assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, 'confirmed');
+            assert.equal(r.productQualified, false);
+            assert.equal(r.replacementRefused, true);
+            assert.equal(r.siblingSurvivedTargetStop, true);
+            assert.equal(r.bunSha256, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
+            assert.notEqual(r.original.startIdentity, r.sibling.startIdentity);
+            if (candidate) assert.equal(r.osBuild, process.env.OPENCODE_V2_TEST_DARWIN_CANDIDATE_BUILD);
+          "
+      - name: Check original Desktop private recipe composition
+        if: env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED == '1'
+        run: node --test scripts/legacy-agent-host/desktop-opencode-v2-fixture.test.ts
+      - name: Exercise native model, tool, MCP, approval, Stop and cold Host Resume
+        if: env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED == '1'
+        env:
+          OPENCODE_V2_EMBEDDED_HOST_GO: '1'
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts
+      - name: Require product-path Host proof after exact candidate qualification
+        run: |
+          node --input-type=module -e "
+            import assert from 'node:assert/strict';
+            import fs from 'node:fs';
+            assert.equal(process.env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED, '1',
+              'HOLD: candidate custody evidence is available; qualify only this exact tuple and rerun the unmodified product path');
+            const r = JSON.parse(fs.readFileSync(process.env.OPENCODE_V2_EMBEDDED_HOST_RECEIPT, 'utf8'));
+            assert.equal(r.kind, 'TEST_NATIVE_V2_EMBEDDED_HOST');
+            assert.equal(r.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+            assert.equal(r.platform, process.env.OPENCODE_V2_TEST_PLATFORM);
+            assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);
+            assert.equal(r.nodeVersion, 'v24.21.0'); assert.equal(r.version, '2.1.4');
+            assert.equal(r.approvalMode, 'manual'); assert.equal(r.modelRequests, 8);
+            assert.deepEqual(r.modelFailures, []);
+            assert.equal(r.digests.bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
+            assert.equal(r.digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);
+            assert.deepEqual(r.steps, [
+              'original_host_embedded_native_and_mcp_ready',
+              'native_model_tool_effect_permission_mcp_task_and_reply_completed_once',
+              'checkpoint_and_original_host_native_cleanup_confirmed',
+              'cold_host_restored_native_history_without_model_or_tool_replay',
+            ]);
+            assert.equal(r.vendorAuthQualified, false);
+            assert.equal(r.desktopQualified, false); assert.equal(r.releaseQualified, false);
+          "
+      - name: Preserve exact native evidence or candidate HOLD
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: opencode-v2-embedded-native-${{ matrix.platform }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            opencode-v2-embedded-inputs.json
+            opencode-v2-darwin-custody.json
+            opencode-v2-embedded-host.json

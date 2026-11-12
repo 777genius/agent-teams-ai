@@ -9,12 +9,22 @@ import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { test } from 'node:test';
 
-for (const [signalName, exitCode] of [['SIGINT', 130], ['SIGTERM', 143]]) {
-  test(signalName+' reaps the owned published server and emits a HOLD receipt', {
-    timeout: 60_000,
+const harnesses=[
+  {name:'published HTTP',script:'opencode-v2-published-http-persist.mjs',
+    prefix:'OPENCODE_V2_TEST_SDK_PREFIX',receipt:'OPENCODE_V2_TEST_HTTP_RECEIPT',
+    ready:'OPENCODE_V2_TEST_READY_FILE',failure:'failure',failurePrefix:'TEST_interrupted_'},
+  {name:'native ELF',script:'opencode-v2-native-instructions.mjs',
+    prefix:'OPENCODE_V2_TEST_NPM_ROOT',receipt:'OPENCODE_V2_HOST_NATIVE_RECEIPT',
+    ready:'OPENCODE_V2_HOST_NATIVE_READY_FILE',failure:'error',failurePrefix:'native_host_test_interrupted_'},
+];
+assert.ok(harnesses.some(harness=>process.env[harness.prefix]),
+  'configure at least one pinned native TEST installation');
+for (const harness of harnesses) for (const [signalName, exitCode] of [['SIGINT', 130], ['SIGTERM', 143]]) {
+  test(signalName+' reaps the owned '+harness.name+' server and emits a HOLD receipt', {
+    timeout: 60_000,skip:!process.env[harness.prefix],
   }, async () => {
     const head = process.env.OPENCODE_V2_TEST_SOURCE_HEAD;
-    const prefix = process.env.OPENCODE_V2_TEST_SDK_PREFIX;
+    const prefix = process.env[harness.prefix];
     assert.match(head ?? '', /^[a-f0-9]{40}$/);
     assert.ok(prefix?.startsWith('/'));
     assert.equal(process.platform, 'linux');
@@ -27,15 +37,13 @@ for (const [signalName, exitCode] of [['SIGINT', 130], ['SIGTERM', 143]]) {
     let interruptionSent = false;
     try {
       parent = spawn(process.execPath, [
-        resolve('packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs'),
+        resolve('packages/legacy-agent-host/tests',harness.script),
       ], {
         cwd: process.cwd(),
         env: {
           ...process.env, TMPDIR: temp,
           OPENCODE_V2_TEST_SOURCE_HEAD: head,
-          OPENCODE_V2_TEST_SDK_PREFIX: prefix,
-          OPENCODE_V2_TEST_HTTP_RECEIPT: receiptPath,
-          OPENCODE_V2_TEST_READY_FILE: marker,
+          [harness.prefix]:prefix,[harness.receipt]:receiptPath,[harness.ready]:marker,
         },
         stdio: 'ignore',
       });
@@ -48,6 +56,9 @@ for (const [signalName, exitCode] of [['SIGINT', 130], ['SIGTERM', 143]]) {
       const owner = JSON.parse(readFileSync(marker, 'utf8'));
       assert.ok(Number.isSafeInteger(owner.pid) && owner.pid > 1);
       assert.match(owner.startIdentity, /^\d+$/);
+      await delay(300);
+      assert.equal(parent.exitCode,null,'the ready handshake must hold until the test signals');
+      assert.equal(existsSync(receiptPath),false,'readiness must not finish the ordinary scenario');
       // Do not signal the native process/group here; its parent alone owns it.
       assert.equal(parent.kill(signalName), true, 'signal only the owned TEST parent');
       interruptionSent = true;
@@ -68,8 +79,7 @@ for (const [signalName, exitCode] of [['SIGINT', 130], ['SIGTERM', 143]]) {
       const receipt = JSON.parse(readFileSync(receiptPath, 'utf8'));
       assert.equal(receipt.sourceHead, head);
       assert.equal(receipt.qualified, false);
-      assert.equal(receipt.modelTurnProven, false);
-      assert.equal(receipt.failure, 'TEST_interrupted_' + signalName);
+      assert.equal(receipt[harness.failure],harness.failurePrefix+signalName);
       assert.equal(receipt.cleanup, true);
       assert.deepEqual(readdirSync(temp), [], 'owned temporary root was not removed');
       let groupAlive = false;

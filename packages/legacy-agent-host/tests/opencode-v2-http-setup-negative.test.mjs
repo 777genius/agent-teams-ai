@@ -94,6 +94,63 @@ test('failed published V2 SDK setup emits HOLD receipt and cleans only its TEST 
   }
 });
 
+for (const [script, receiptVariable, failureKey, failure] of [
+  ['opencode-v2-published-http-persist.mjs', 'OPENCODE_V2_TEST_HTTP_RECEIPT',
+    'failure', 'TEST_published_HTTP_persist_unqualified'],
+  ['opencode-v2-native-instructions.mjs', 'OPENCODE_V2_HOST_NATIVE_RECEIPT',
+    'error', 'native_host_test_failed'],
+]) {
+  test(script + ' records namespace allocation failure before any process exists', () => {
+    const head=process.env.OPENCODE_V2_TEST_SOURCE_HEAD;
+    assert.match(head??'',/^[a-f0-9]{40}$/);
+    const fixture=mkdtempSync(join(tmpdir(),'TEST-v2-no-namespace-'));
+    try {
+      const receiptPath=join(fixture,'receipt.json');
+      const prefix=join(fixture,'empty-prefix');
+      mkdirSync(prefix);
+      const attempt=spawnSync(process.execPath,[resolve('packages/legacy-agent-host/tests',script)],{
+        cwd:process.cwd(),encoding:'utf8',timeout:10_000,
+        env:{...process.env,TMPDIR:join(fixture,'missing-temp'),
+          OPENCODE_V2_TEST_SOURCE_HEAD:head,OPENCODE_V2_TEST_SDK_PREFIX:prefix,
+          [receiptVariable]:receiptPath},
+      });
+      assert.equal(attempt.error,undefined);
+      assert.equal(attempt.signal,null);
+      assert.notEqual(attempt.status,0);
+      const receipt=JSON.parse(readFileSync(receiptPath,'utf8'));
+      assert.equal(receipt[failureKey],failure);
+      assert.equal(receipt.cleanup,true);
+      assert.equal(receipt.qualified,false);
+      assert.deepEqual(receipt.steps,[]);
+      assert.equal(Object.hasOwn(receipt,'pid'),false);
+      assert.deepEqual(readdirSync(prefix),[]);
+      assert.equal(existsSync(join(fixture,'missing-temp')),false);
+    } finally {rmSync(fixture,{recursive:true,force:true});}
+  });
+}
+
+test('receipt IO failure preserves the first sanitized setup error and removes its namespace', () => {
+  const head=process.env.OPENCODE_V2_TEST_SOURCE_HEAD;
+  assert.match(head??'',/^[a-f0-9]{40}$/);
+  const fixture=mkdtempSync(join(tmpdir(),'TEST-v2-receipt-io-'));
+  try {
+    const temp=join(fixture,'tmp');
+    const prefix=join(fixture,'empty-prefix');
+    mkdirSync(temp);mkdirSync(prefix);
+    const attempt=spawnSync(process.execPath,[resolve(
+      'packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs')],{
+      cwd:process.cwd(),encoding:'utf8',timeout:10_000,
+      env:{...process.env,TMPDIR:temp,OPENCODE_V2_TEST_SOURCE_HEAD:head,
+        OPENCODE_V2_TEST_SDK_PREFIX:prefix,OPENCODE_V2_TEST_HTTP_RECEIPT:fixture},
+    });
+    assert.equal(attempt.error,undefined);
+    assert.notEqual(attempt.status,0);
+    assert.match(attempt.stderr,/Error: TEST_published_HTTP_persist_unqualified/);
+    assert.doesNotMatch(attempt.stderr,/EISDIR|ENOENT/);
+    assert.deepEqual(readdirSync(temp),[]);
+  } finally {rmSync(fixture,{recursive:true,force:true});}
+});
+
 test('valid published SDK post-copy failure cannot modify its shared prefix', {
   skip: !process.env.OPENCODE_V2_TEST_SDK_PREFIX,
 }, () => {

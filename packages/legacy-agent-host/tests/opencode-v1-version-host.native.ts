@@ -12,6 +12,7 @@ import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import { record } from './fixtures/native-claude-team/model.ts';
 import { fileHash, startHost, tick, treeHash } from './fixtures/native-host.ts';
 import { CONTEXT_MARKER, startOpenCodeModel } from './fixtures/native-opencode-team/model.ts';
+import { assertNativeV1Build } from './opencode-v1-version-source.ts';
 
 const enabled = process.env.OPENCODE_V1_VERSION_HOST_GO === '1';
 
@@ -33,6 +34,12 @@ test('selected stable V1 executes native tools through Host and retains cold rec
   const receiptPath = process.env.OPENCODE_V1_TEST_RECEIPT;
   assert.ok(receiptPath && receiptPath.startsWith('/'));
   const repo = resolve(import.meta.dirname, '../../..');
+  const expectedBuild = {
+    hostSourceDigest: process.env.OPENCODE_V1_TEST_HOST_SOURCE_DIGEST ?? '',
+    hostDistDigest: process.env.OPENCODE_V1_TEST_HOST_DIST_DIGEST ?? '',
+    providerDigest: process.env.OPENCODE_V1_TEST_PROVIDER_DIGEST ?? '',
+  };
+  await assertNativeV1Build(repo, sourceHead, expectedBuild);
   const pkg = join(repo, 'packages/legacy-agent-host');
   const node = await realpath(process.execPath);
   const entry = join(pkg, 'dist/cli.js');
@@ -60,6 +67,8 @@ test('selected stable V1 executes native tools through Host and retains cold rec
   let hostSourceDigest: string | undefined;
   let hostDistDigest: string | undefined;
   let failure = false;
+  let primaryError: unknown;
+  const cleanupErrors: unknown[] = [];
   try {
     const rootManifest = JSON.parse(await readFile(join(prefix, 'node_modules/opencode-ai/package.json'), 'utf8'));
     assert.equal(rootManifest.name, 'opencode-ai');
@@ -99,6 +108,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     assert.equal(typeof providerReference, 'string');
     assert.ok((providerReference as string).startsWith('file:../../vendor/provider-migration/'));
     providerDigest = await fileHash(resolve(pkg, (providerReference as string).slice(5)));
+    assert.deepEqual({ hostSourceDigest, hostDistDigest, providerDigest }, expectedBuild);
     steps.push('native_version_package_integrity_and_source_measured');
 
     model = await startOpenCodeModel();
@@ -249,15 +259,18 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     assert.equal(await fileHash(binary), nativeDigest);
     assert.equal(await treeHash(join(pkg, 'src'), '.ts'), hostSourceDigest);
     assert.equal(await treeHash(join(pkg, 'dist'), '.js'), hostDistDigest);
+    await assertNativeV1Build(repo, sourceHead, expectedBuild);
     steps.push('cold_receipt_readback_without_native_replay_or_source_mutation');
     passed = true;
-  } catch (error) { failure = true; throw error; }
+  } catch (error) { failure = true; primaryError = error; }
   finally {
     try {
       if (host) { await host.close(); hosts.push(host.facts()); host = undefined; }
-      cleanup = true;
-    } finally {
-      await model?.close();
+    } catch (error) { cleanupErrors.push(error); }
+    try { await model?.close(); }
+    catch (error) { cleanupErrors.push(error); }
+    cleanup = cleanupErrors.length === 0;
+    try {
       await writeFile(receiptPath, JSON.stringify({
         kind: 'TEST_NATIVE_V1_VERSION_HOST', sourceHead, platform: `${process.platform}-${process.arch}`,
         status: passed && cleanup && !failure ? 'PASS' : 'INCOMPLETE', cleanup,
@@ -268,6 +281,10 @@ test('selected stable V1 executes native tools through Host and retains cold rec
         modelOrigin: 'localhost-scripted', modelRequests: model?.observations.length ?? 0,
         vendorAuthQualified: false, desktopQualified: false, releaseQualified: false,
       }, null, 2) + '\n', { mode: 0o600 });
-    }
+    } catch (error) { cleanupErrors.push(error); }
   }
+  if (failure && cleanupErrors.length)
+    throw new AggregateError([primaryError, ...cleanupErrors], 'TEST native V1 execution and cleanup failed');
+  if (failure) throw primaryError;
+  if (cleanupErrors.length) throw new AggregateError(cleanupErrors, 'TEST native V1 cleanup failed');
 });

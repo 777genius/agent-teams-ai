@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
+import { isCanonicalOpenCodeV2Directory } from './openCodeV2StaticPreflight.js';
 import {
   resolveTeamModelProbeRecipe,
   applyTeamModelProbeSelection,
@@ -40,11 +41,19 @@ export const teamModelProbeSelectionSchema = z
           .string()
           .min(1)
           .max(8192)
-          .startsWith('/')
           .refine((value) => !/[\0\r\n]/u.test(value))
           .optional(),
       })
       .strict()
+      .superRefine((value, context) => {
+        if (value.workspace !== undefined &&
+          !(value.providerId === 'opencode'
+            ? isCanonicalOpenCodeV2Directory(`${process.platform}-${process.arch}`, value.workspace)
+            : value.workspace.startsWith('/'))) {
+          context.addIssue({ code: 'custom', path: ['workspace'],
+            message: 'Model probe workspace must match the selected native platform' });
+        }
+      })
       .optional(),
   })
   .strict();
@@ -52,10 +61,9 @@ export type TeamModelProbeSelection = z.infer<typeof teamModelProbeSelectionSche
 
 /** Native mechanism config is derived from the exact private Runtime selection, never a global default. */
 export function teamModelProbeProfile(base: RuntimeMemberProfile): ProviderManagementProfile {
-  // OpenCode V2 does not share V1's management client or model-probe protocol.
-  // Until a separately attested native V2 probe exists, refuse before any
-  // management process or probe journal can be admitted.
-  if (base.provider === 'opencode' && base.nativeGeneration === 'v2')
+  // Old externally supplied V2 sessions have no finite owned model-probe path.
+  if (base.provider === 'opencode' && base.nativeGeneration === 'v2' &&
+      (base.protocolRevision !== '2.1.4' || !base.embedded))
     throw new TeamLaunchError('invalid', 'probe-v2-unsupported');
   const key = `team-probe-${runtimeDigest(base)}`;
   const common = {
@@ -89,6 +97,11 @@ export function teamModelProbeProfile(base: RuntimeMemberProfile): ProviderManag
       provider: 'opencode',
       endpoint: base.endpoint,
       ...(base.nativeOptions.variant === undefined ? {} : { variant: base.nativeOptions.variant }),
+      ...(base.nativeGeneration === 'v2' ? {
+        nativeGeneration: 'v2' as const, protocolRevision: '2.1.4' as const,
+        embedded: structuredClone(base.embedded!),
+        nativeModel: { providerId: base.nativeOptions.providerId, modelId: base.model },
+      } : {}),
     };
   return {
     ...common,

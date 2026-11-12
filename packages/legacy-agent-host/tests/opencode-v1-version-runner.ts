@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import { verifyNativeV1VersionReceipt } from './opencode-v1-version-receipt.ts';
+import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
 
 assert.equal(process.platform, 'linux');
 assert.equal(process.arch, 'x64');
@@ -23,7 +24,7 @@ await mkdir(evidence, { recursive: true });
 // if it belonged to the current exact-HEAD qualification.
 await Promise.all(['1.19.4', '1.19.5', 'latest'].map(selector =>
   rm(join(evidence, `native-v1-${selector}.json`), { force: true })));
-
+const build = await buildNativeV1Host(repo, sourceHead);
 
 /** Bound trusted-registry metadata before parsing; resolve each tag exactly once. */
 async function metadata(name: string, selector: string): Promise<Record<string, unknown>> {
@@ -82,13 +83,19 @@ for (const selector of ['1.19.4', '1.19.5', 'latest']) {
   assert.equal(lock.packages['node_modules/opencode-ai'].integrity, dist.integrity,
     'moving registry metadata must not replace the exact selected root bytes');
   const receiptPath = join(evidence, `native-v1-${selector}.json`);
+  await assertNativeV1Build(repo, sourceHead, build);
   execFileSync(process.execPath, ['--test', join(import.meta.dirname, 'opencode-v1-version-host.native.ts')], {
     cwd: repo, timeout: 240_000, stdio: 'inherit', env: {
       ...environment, OPENCODE_V1_VERSION_HOST_GO: '1', OPENCODE_V1_TEST_SOURCE_HEAD: sourceHead,
       OPENCODE_V1_TEST_EXPECTED_VERSION: version, OPENCODE_V1_TEST_PACKAGE_PREFIX: prefix,
       OPENCODE_V1_TEST_RECEIPT: receiptPath,
+      OPENCODE_V1_TEST_HOST_SOURCE_DIGEST: build.hostSourceDigest,
+      OPENCODE_V1_TEST_HOST_DIST_DIGEST: build.hostDistDigest,
+      OPENCODE_V1_TEST_PROVIDER_DIGEST: build.providerDigest,
     },
   });
-  verifyNativeV1VersionReceipt(JSON.parse(await readFile(receiptPath, 'utf8')), sourceHead, version);
+  await assertNativeV1Build(repo, sourceHead, build);
+  verifyNativeV1VersionReceipt(JSON.parse(await readFile(receiptPath, 'utf8')), sourceHead, version, build);
+  await rm(prefix, { recursive: true, force: true });
   console.log(`TEST V1 ${selector} resolved once to ${version}: native Host receipt verified`);
 }

@@ -128,30 +128,34 @@ export function createTeamHost(
   let management: ProviderManagementCoordinator | undefined;
   let emitOAuthProgress: ((snapshot: ProviderOAuthSnapshot) => void) | undefined;
   try {
+    const processCustody = createProcessCustody(profile.processCustody);
     const managementProfiles = [
       ...(profile.management ?? []),
       ...(profile.runtime?.members.flatMap((member) => {
-        if (member.provider === 'opencode' && member.nativeGeneration === 'v2') return [];
+        if (member.provider === 'opencode' && member.nativeGeneration === 'v2' &&
+          !(member.protocolRevision === '2.1.4' && member.embedded)) return [];
         return [teamModelProbeProfile(member)];
       }) ?? []),
     ];
     if (
       managementProfiles.length ||
       (profile.creation &&
-        profile.runtime?.providerTemplates?.some((row) => row.provider === 'claude'))
+        profile.runtime?.providerTemplates?.some((row) => row.provider === 'claude' ||
+          row.provider === 'opencode' && row.nativeGeneration === 'v2' &&
+          row.protocolRevision === '2.1.4' && row.embedded !== undefined))
     )
       management = new ProviderManagementCoordinator(
         managementProfiles,
         () => lease.assertCurrent(),
         profile.owner.storageRoot,
-        { onOAuthProgress: (snapshot) => emitOAuthProgress?.(snapshot) }
+        { onOAuthProgress: (snapshot) => emitOAuthProgress?.(snapshot),
+          ...(processCustody ? { processCustody } : {}) }
       );
     const teams = new Map<string, HostedTeam>();
     const assertCurrent = () => {
       if (sealed) throw new TeamOwnerError('hold');
       lease.assertCurrent();
     };
-    const processCustody = createProcessCustody(profile.processCustody);
     const crossTeam = createHostCrossTeamComposition({
       profile,
       teams,

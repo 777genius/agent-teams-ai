@@ -9,6 +9,8 @@ export type NativePermissionReadback = Readonly<{
   pid: number;
   startIdentity: string;
   rules: unknown;
+  /** Exact owned 2.1.4 native inventories, checked afresh before admission. */
+  policyIsolation?: 'builtin-only-empty-saved';
 }>;
 
 /**
@@ -24,9 +26,13 @@ export function snapshotOpenCodeV2PermissionReadback(
     if (!receipt || typeof receipt !== 'object' || nodeUtilTypes.isProxy(receipt))
       return undefined;
     const prototype = Object.getPrototypeOf(receipt);
+    const ownKeys = Reflect.ownKeys(receipt);
     if ((prototype !== Object.prototype && prototype !== null) ||
-        Reflect.ownKeys(receipt).length !== 8)
+        (ownKeys.length !== 8 && ownKeys.length !== 9))
       return undefined;
+    const isolation = Object.getOwnPropertyDescriptor(receipt, 'policyIsolation');
+    if (ownKeys.length === 9 && (!isolation || !('value' in isolation) ||
+        !isolation.enumerable || isolation.value !== 'builtin-only-empty-saved')) return undefined;
     const keys = ['nativeSessionId', 'directory', 'modelProviderId', 'modelId',
       'modelVariant', 'pid', 'startIdentity', 'rules'] as const;
     const fields = keys.map(key => Object.getOwnPropertyDescriptor(receipt, key));
@@ -41,6 +47,7 @@ export function snapshotOpenCodeV2PermissionReadback(
       pid: fields[5]!.value as number,
       startIdentity: fields[6]!.value as string,
       rules: fields[7]!.value as unknown,
+      ...(isolation ? { policyIsolation: 'builtin-only-empty-saved' as const } : {}),
     });
   } catch {
     return undefined;

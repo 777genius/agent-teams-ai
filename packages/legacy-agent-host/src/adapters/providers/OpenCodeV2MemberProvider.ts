@@ -56,8 +56,8 @@ function captureDataCallback<T extends object, K extends keyof T>(
 }
 /**
  * Stage1's existing Session SPI, with a completely separate V2 adapter.
- * Only a private, explicitly injected generation-selected composition may
- * supply the owned session. The default Host still refuses V2 allocation.
+ * A private generation-selected composition supplies the owned native session.
+ * The embedded selection also binds its verified graph and executable bytes.
  */
 export function createOpenCodeV2MemberProvider(
   context: MemberProviderContext,
@@ -79,11 +79,13 @@ export function createOpenCodeV2MemberProvider(
   const capturedReadCheckpoint = captureDataCallback(context, 'readCheckpoint', 'Host authority');
   const capturedOnProgress = captureDataCallback(context, 'onProgress', 'Host authority');
   const selected = structuredClone(context.profile);
+  const embedded = selected.provider === 'opencode' && selected.protocolRevision === '2.1.4'
+    ? selected.embedded : undefined;
   // A trusted profile alone cannot sanitize an override inherited from
   // the parent Host process. Refuse V2 before any TEST owner access.
   const inheritedBinaryOverride = () => hasUntrustedOpenCodeBinaryOverride(process.env);
   if (selected.provider !== 'opencode' || selected.nativeGeneration !== 'v2' ||
-      (selected.protocolRevision !== '2.0.0' && selected.protocolRevision !== '2.0.21') ||
+      (selected.protocolRevision !== '2.0.0' && selected.protocolRevision !== '2.0.21' && !embedded) ||
       // The private owner is selected for one immutable Host allocation. Reject
       // cross-session, cross-generation or foreign MCP endpoint captures before
       // even reading TEST-owned credentials or starting a native probe.
@@ -101,8 +103,8 @@ export function createOpenCodeV2MemberProvider(
       selected.mcpCatalogSource || // The saved V2 role/workflow instructions live separately from the
       // generic Host context. Until both are installed and natively attested,
       // refuse launch rather than silently dropping captured policy.
-      (selected.nativeOptions.instructions?.length ?? 0) !== 0 ||
-      selected.nativeOptions.toolApprovalMode !== undefined ||
+      (!embedded && (selected.nativeOptions.instructions?.length ?? 0) !== 0) ||
+      (!embedded && selected.nativeOptions.toolApprovalMode !== undefined) ||
       (selected.extraArgs?.length ?? 0) !== 0)
     throw new Error('OpenCode V2 requires a separate native profile and owner');
 
@@ -151,6 +153,11 @@ export function createOpenCodeV2MemberProvider(
     },
     memberId: profile.memberId,
     sessionId: profile.sessionId,
+    ...(embedded ? { engine: { manifestSha256: embedded.manifestSha256,
+      executableSha256: profile.executable.sha256, platform: embedded.platform, arch: embedded.arch },
+      selection: { nativeOptions: profile.nativeOptions, model: profile.model,
+        externalDirectory: embedded.externalDirectory,
+        providerConfiguration: embedded.providerConfiguration ?? null } } : {}),
   });
   let sealed = false;
   let allocated = false;
@@ -273,7 +280,7 @@ export function createOpenCodeV2MemberProvider(
         endpoint: profile.endpoint,
         directory: profile.cwd,
         nativeSessionId: profile.nativeSessionId!,
-        version: profile.protocolRevision as '2.0.0' | '2.0.21',
+        version: profile.protocolRevision as '2.0.0' | '2.0.21' | '2.1.4',
         configRevision: profile.configRevision,
         trustedBinding,
         accountBinding: profile.accountBinding,
@@ -350,16 +357,13 @@ export function createOpenCodeV2MemberProvider(
             // Permissions must be read from THIS exact native session and
             // PID/start identity. A correctly ordered ruleset from another
             // session or a restarted process is not an authorization.
-            // A V2.0.21 session ASK rule alone is not effective ASK:
-            // persisted project-scoped "always" grants can resolve it to ALLOW,
-            // as the isolated native TEST demonstrates. The current owner
-            // readback only attests session rules, not persisted grants or plugin
-            // resolution. Hold an effective ASK until that native proof exists.
-            // A stricter session DENY is tested to win before grants/hooks.
+            // ASK also needs native saved-grant/plugin isolation. Only the owned
+            // 2.1.4 composition reads both inventories; earlier dialects stay HOLD.
             const initialPolicy = effective && preflightOpenCodeV2EffectiveExternalDirectory(
               effective.rules, requiredExternalDirectory);
             if (!effective || initialPolicy?.kind !== 'policy-candidate' ||
-                initialPolicy.effect === 'ask' ||
+                (initialPolicy.effect === 'ask' && !(profile.protocolRevision === '2.1.4' &&
+                  profile.embedded && effective.policyIsolation === 'builtin-only-empty-saved')) ||
                 effective.nativeSessionId !== profile.nativeSessionId || effective.directory !== profile.cwd ||
                 effective.modelProviderId !== profile.nativeOptions.providerId ||
                 effective.modelId !== profile.model ||
@@ -389,7 +393,8 @@ export function createOpenCodeV2MemberProvider(
             const finalPolicy = finalEffective && preflightOpenCodeV2EffectiveExternalDirectory(
               finalEffective.rules, requiredExternalDirectory);
             if (!finalEffective || finalPolicy?.kind !== 'policy-candidate' ||
-                finalPolicy.effect === 'ask' ||
+                (finalPolicy.effect === 'ask' && !(profile.protocolRevision === '2.1.4' &&
+                  profile.embedded && finalEffective.policyIsolation === 'builtin-only-empty-saved')) ||
                 finalEffective.nativeSessionId !== profile.nativeSessionId || finalEffective.directory !== profile.cwd ||
                 finalEffective.modelProviderId !== profile.nativeOptions.providerId ||
                 finalEffective.modelId !== profile.model ||
