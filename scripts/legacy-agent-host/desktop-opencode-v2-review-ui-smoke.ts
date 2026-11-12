@@ -33,6 +33,7 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
   fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>>;
   model: Awaited<ReturnType<typeof startOpenCodeV2ReviewModel>>;
   evidence: Row;
+  group: number;
   observeOwnedHost(): void;
   assertOwnedRenderer(): void;
 }) {
@@ -83,7 +84,7 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
     'original captured V2 readiness permits Launch', 120_000);
   assert.ok(model.probes.length > 0 && model.probes.every(row => row.tools === 0));
   assert.equal(model.observations.length, 0, 'preflight never dispatches the business prompt');
-  const metadata = readDesktopNativeHostProcesses(fixture); assert.equal(metadata.children.length, 1);
+  const metadata = readDesktopNativeHostProcesses(fixture, options.group); assert.equal(metadata.children.length, 1);
   await captureReadiness(cdp, fixture.handleId, proof, options.assertOwnedRenderer, 'before-original-submit');
   await ui.scrollTo('[role="dialog"] button', 'original V2 Launch team ready', 'Launch team');
   await ui.click('[role="dialog"] button', 'original V2 Launch team once', 'Launch team');
@@ -137,12 +138,12 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
   assert.ok(changes && changes.warnings.length > 0);
   const changed = changes.files.find(row => row.filePath === seed.filePath); assert.ok(changed && changed.snippets.length > 0);
   assert.ok(changed.snippets.every(snippet => snippet.ledger?.nativeCapture === 'qualified'));
-  const children = separateDesktopOpenCodeRuntimeChildren(metadata, readDesktopNativeHostProcesses(fixture), 1);
+  const children = separateDesktopOpenCodeRuntimeChildren(metadata, readDesktopNativeHostProcesses(fixture, options.group), 1);
   await ui.scrollTo('button[aria-label="Stop"]', 'original targeted Stop before Review');
   await ui.click('button[aria-label="Stop"]', 'original V2 Stop once', 'Stop');
   const stopped = await poll(sessions, values => values.length === 1 && values[0]!.phase === 'closed' && values[0]!.custody === 'released', 'original native Runtime released');
-  await poll(async () => readDesktopNativeHostProcesses(fixture), state => !state.children.some(row => row.pid === children[0]!.pid), 'original runtime physically absent');
-  separateDesktopOpenCodeRuntimeChildren(metadata, readDesktopNativeHostProcesses(fixture), 0);
+  await poll(async () => readDesktopNativeHostProcesses(fixture, options.group), state => !state.children.some(row => row.pid === children[0]!.pid), 'original runtime physically absent');
+  separateDesktopOpenCodeRuntimeChildren(metadata, readDesktopNativeHostProcesses(fixture, options.group), 0);
   Object.assign(proof, { taskId, capture, runtime: stopped[0], originalRuntimeInput, events,
     stop: { children, metadata: metadata.children[0], releasedBeforeReview: true } });
   const review = createDesktopReviewHunkControls(cdp, { taskId, subject: V2_REVIEW_SUBJECT,

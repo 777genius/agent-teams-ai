@@ -105,7 +105,7 @@ export async function prepareDesktopNativeStop(options: {
     assert.ok(Array.isArray(catalog.models) && catalog.models.some(value =>
       object(value).modelId === 'TEST-local/TEST-model' && object(value).providerId === 'TEST-local'));
   }
-  const metadata = options.provider === 'opencode' ? readDesktopNativeHostProcesses(fixture) : undefined;
+  const metadata = options.provider === 'opencode' ? readDesktopNativeHostProcesses(fixture, group) : undefined;
   if (metadata) {
     assert.equal(metadata.host.groupId, group, 'metadata belongs to the captured TEST Host');
     assert.equal(metadata.children.length, 1, 'capture metadata before Runtime allocation');
@@ -113,7 +113,7 @@ export async function prepareDesktopNativeStop(options: {
   }
   const observeNative = () => {
     if (metadata) {
-      const current = readDesktopNativeHostProcesses(fixture);
+      const current = readDesktopNativeHostProcesses(fixture, group);
       const runtime = separateDesktopOpenCodeRuntimeChildren(metadata, current,
         current.children.length === 1 ? 0 : 1);
       return { hostPid: current.host.pid, nativeChildren: runtime.map(child => ({
@@ -242,13 +242,14 @@ export async function readDesktopNativeStopSessions(
 }
 
 /** Read-only observations; original Host custody remains the only process owner. */
-export function readDesktopNativeHostProcesses(fixture: { node: string; hostEntry: string }): {
+export function readDesktopNativeHostProcesses(fixture: { node: string; hostEntry: string }, group: number): {
   host: ProcessFact;
   children: ProcessFact[];
 } {
+  assert.ok(Number.isSafeInteger(group) && group > 0, 'original captured Desktop group');
   const table = processFacts();
-  const hosts = table.filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
-  assert.equal(hosts.length, 1, 'one exact TEST Host executable');
+  const hosts = table.filter(row => row.groupId === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
+  assert.equal(hosts.length, 1, 'one exact TEST Host in the original captured Desktop group');
   const host = hosts[0]!;
   return { host, children: table.filter(row => row.parentPid === host.pid) };
 }

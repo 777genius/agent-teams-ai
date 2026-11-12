@@ -126,6 +126,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   codexResumeModel?: Awaited<ReturnType<typeof startCodexModel>>;
   openCodeModel?: Awaited<ReturnType<typeof startOpenCodeModel>>;
   assertOwnedRenderer(): void;
+  capturedGroup(): number;
   restartAfterStop?(): Promise<UiCdpPort>;
 }): Promise<void> {
   const { fixture, evidence } = options;
@@ -220,7 +221,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   let originalMetadata: ReturnType<typeof readDesktopNativeHostProcesses> | undefined;
   if (opencode) {
     await ui.waitRead(`[...document.querySelectorAll('[role="dialog"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)`, 'original preflight completes before any runtime allocation');
-    originalMetadata = await poll(async () => readDesktopNativeHostProcesses(fixture),
+    originalMetadata = await poll(async () => readDesktopNativeHostProcesses(fixture, options.capturedGroup()),
       row => row.children.length === 1, 'one original metadata child before Launch');
     assert.equal(originalMetadata.children[0]!.command, process.env.OPENCODE_V2_EMBEDDED_BUN);
     assert.equal(((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0, 0);
@@ -307,17 +308,17 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   const screenshotPath = join(fixture.root, 'ui-original-launch-native.png');
   await writeFile(screenshotPath, Buffer.from(screenshot.data, 'base64'), { mode: 0o600 });
   proof.screenshot = { path: screenshotPath, sha256: await fileDigest(screenshotPath) };
-  const hostRows = processTable().filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
+  const hostRows = processTable().filter(row => row.pgid === options.capturedGroup() && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
   assert.equal(hostRows.length, 1, 'only this TEST Host executable may be selected');
   const hostPid = hostRows[0]!.pid;
   const children = originalMetadata
-    ? separateDesktopOpenCodeRuntimeChildren(originalMetadata, readDesktopNativeHostProcesses(fixture), 1)
+    ? separateDesktopOpenCodeRuntimeChildren(originalMetadata, readDesktopNativeHostProcesses(fixture, options.capturedGroup()), 1)
     : processTable().filter(row => row.ppid === hostPid);
   assert.ok(children.length >= 1, 'actual native child present before Stop');
   if (codex) proof.codeModeHost = { status: 'capture-attempted' };
   const helper = codex ? await captureCodexCodeModeProcess(hostPid, codex.nativeInputs) : undefined;
   if (helper) proof.codeModeHost = helper;
-  if (codex) proof.runtimeMcpEndpointSha256 = await codexRuntimeEndpointHash(fixture);
+  if (codex) proof.runtimeMcpEndpointSha256 = await codexRuntimeEndpointHash(fixture, options.capturedGroup());
   await ui.scrollTo('button[aria-label="Stop"]', 'visible original Stop control');
   await ui.click('button[aria-label="Stop"]', 'original Stop once', 'Stop');
   await poll(async () => { const rows = await capturedSessions(); if (helper) observeCodexCodeModeProcess(helper); return rows; }, rows => rows.length === 1 && rows[0]!.phase === 'closed' && rows[0]!.custody === 'released', 'native cleanup released');
@@ -326,7 +327,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     return { rows, helperAbsent: !observed || observed.state === 'absent' };
   }, value => value.helperAbsent && children.every(child => !value.rows.some(row => row.pid === child.pid)), 'captured native children and original helper physically absent');
   if (originalMetadata) {
-    const remaining = readDesktopNativeHostProcesses(fixture);
+    const remaining = readDesktopNativeHostProcesses(fixture, options.capturedGroup());
     separateDesktopOpenCodeRuntimeChildren(originalMetadata, remaining, 0);
     proof.metadataAfterStop = remaining;
   }

@@ -77,7 +77,8 @@ test(
       canAllocate: () => true,
       endpoint,
     });
-    let cleanup = false;
+    let cleanup = false, failed = false, primary: unknown;
+    const cleanupErrors: unknown[] = [];
     try {
       const ready = await server.start();
       assert.equal(ready.endpoint, endpoint);
@@ -116,10 +117,18 @@ test(
       assert.equal(await server.confirmStopped(), true);
       assert.equal(await server.readNativeCustody(new AbortController().signal), undefined);
       assert.throws(() => process.kill(-ready.pid, 0), { code: 'ESRCH' });
-    } finally {
-      cleanup = await server.confirmStopped();
-      if (cleanup) await rm(root, { recursive: true, force: true });
-      assert.equal(cleanup, true, 'physical child cleanup must be confirmed');
+    } catch (error) { failed = true; primary = error; }
+    finally {
+      cleanup = false;
+      // Reuse the original single-flight stop even after an early assertion/fetch failure.
+      try { await server.stopOwned(); } catch (error) { cleanupErrors.push(error); }
+      try { cleanup = await server.confirmStopped(); } catch (error) { cleanupErrors.push(error); }
+      if (!cleanup) cleanupErrors.push(new Error('physical child cleanup must be confirmed'));
+      if (cleanup) try { await rm(root, { recursive: true, force: true }); }
+      catch (error) { cleanupErrors.push(error); }
     }
+    if (failed && cleanupErrors.length) throw new AggregateError([primary, ...cleanupErrors], 'Native proof and cleanup failed');
+    if (failed) throw primary;
+    if (cleanupErrors.length) throw new AggregateError(cleanupErrors, 'Native proof cleanup failed');
   }
 );

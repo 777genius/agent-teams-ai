@@ -213,10 +213,13 @@ export async function startRetainedOpenCodeApp(input: {
         assertCurrent();
         await cdp!.evaluate('void window.electronAPI.windowControls.close(); true');
         const until = Date.now() + 45_000;
-        while (originalLinuxProcessPresent(original) && Date.now() < until)
+        // Kernel disappearance can precede Node's original child exit callback.
+        while ((originalLinuxProcessPresent(original) ||
+          (child.exitCode === null && child.signalCode === null)) && Date.now() < until)
           await new Promise<void>(resolve => setTimeout(resolve, 100));
         assert.equal(originalLinuxProcessPresent(original), false, 'ordinary Quit reaps original launcher');
         assert.equal(child.exitCode, 0, 'normal app exit');
+        assert.equal(child.signalCode, null, 'ordinary Quit is not signal termination');
         cdp!.close(); assert.equal(await capture.confirmStopped(), true, 'original app process group released');
         clearInterval(ancestryTimer);
         await new Promise<void>(resolve => log.end(resolve));

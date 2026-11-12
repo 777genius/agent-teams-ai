@@ -400,6 +400,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         fixture, seed: fixture.uiSeed, evidence, ...(conversationModel ? { model: conversationModel } : {}),
         ...(codexResumeModel ? { codexResumeModel } : {}),
         ...(openCodeLifecycleModel ? { openCodeModel: openCodeLifecycleModel } : {}),
+        capturedGroup: () => group,
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
         ...(mode === 'native-resume-ui' ? { restartAfterStop: async () => {
           assert.ok(cdp && !packed && (conversationModel || codexResumeModel || openCodeLifecycleModel));

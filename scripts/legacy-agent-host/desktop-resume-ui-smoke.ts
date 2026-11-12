@@ -16,14 +16,14 @@ import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fix
 import type { startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 
 /** Read only the current captured TEST Host's exact native child; never signal or adopt it. */
-export async function codexRuntimeEndpointHash(fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>): Promise<string> {
+export async function codexRuntimeEndpointHash(fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>, group: number): Promise<string> {
   assert.equal(await fileDigest(fixture.profilePath), fixture.pins.profileSha256);
   const profile = await json(fixture.profilePath), members = record(profile.runtime).members;
   assert.ok(Array.isArray(members) && members.length === 1);
   const member = record(members[0]); assert.equal(member.provider, 'codex'); assert.equal(member.memberId, 'alice-id');
   const executable = record(member.executable);
   assert.equal(await fileDigest(String(executable.path)), executable.sha256);
-  const table = processTable(), hosts = table.filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
+  const table = processTable(), hosts = table.filter(row => row.pgid === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
   assert.equal(hosts.length, 1);
   const native = table.filter(row => row.ppid === hosts[0]!.pid).map(row => command(row.pid))
     .filter(value => value.startsWith(`${executable.path} `) && value.includes(' app-server --listen stdio://'));
@@ -43,6 +43,7 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   savedSettings: Record<string, unknown>;
   nativeTask: Record<string, unknown>;
   assertOwnedRenderer(): void;
+  capturedGroup(): number;
 }): Promise<void> {
   const { fixture, evidence, model, firstCapture } = options;
   const codex = fixture.codexResume;
@@ -144,7 +145,7 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   await ui.scrollTo('[role="dialog"] button', 'visible original Resume submit', 'Resume selected checkpoints');
   let originalMetadata: ReturnType<typeof readDesktopNativeHostProcesses> | undefined;
   if (opencode) {
-    originalMetadata = await poll(async () => readDesktopNativeHostProcesses(fixture),
+    originalMetadata = await poll(async () => readDesktopNativeHostProcesses(fixture, options.capturedGroup()),
       row => row.children.length === 1, 'cold Host metadata child before Resume allocation');
     assert.equal(originalMetadata.children[0]!.command, process.env.OPENCODE_V2_EMBEDDED_BUN);
     proof.originalMetadataBeforeResume = originalMetadata;
@@ -187,7 +188,7 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   if (codex) {
     const original = record(evidence.launchDialogProof).runtimeMcpEndpointSha256;
     assert.match(String(original), /^[a-f0-9]{64}$/);
-    const resumed = await codexRuntimeEndpointHash(fixture);
+    const resumed = await codexRuntimeEndpointHash(fixture, options.capturedGroup());
     assert.notEqual(resumed, original, 'cold Host exposes a new managed MCP URL while resuming the same native thread');
     proof.runtimeMcpEndpoints = { originalSha256: original, resumedSha256: resumed };
   }
@@ -239,10 +240,10 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   assert.ok(Array.isArray(inbox));
   for (const reply of [firstReply, secondReply]) assert.equal(inbox.map(record).filter(row => row.text === reply && row.from === 'alice').length, 1);
   await revealDesktopReply(cdp, firstReply, { assertOwnedRenderer: options.assertOwnedRenderer, step });
-  const hosts = processTable().filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
+  const hosts = processTable().filter(row => row.pgid === options.capturedGroup() && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
   assert.equal(hosts.length, 1);
   const children = originalMetadata
-    ? separateDesktopOpenCodeRuntimeChildren(originalMetadata, readDesktopNativeHostProcesses(fixture), 1)
+    ? separateDesktopOpenCodeRuntimeChildren(originalMetadata, readDesktopNativeHostProcesses(fixture, options.capturedGroup()), 1)
     : processTable().filter(row => row.ppid === hosts[0]!.pid);
   assert.ok(children.length >= 1);
   if (codex) proof.codeModeHost = { status: 'capture-attempted' };
@@ -276,7 +277,7 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
     return { rows, helperAbsent: !observed || observed.state === 'absent' };
   }, value => value.helperAbsent && children.every(child => !value.rows.some(row => row.pid === child.pid)), 'resumed native children and original helper physically absent before Quit');
   if (originalMetadata) {
-    const remaining = readDesktopNativeHostProcesses(fixture);
+    const remaining = readDesktopNativeHostProcesses(fixture, options.capturedGroup());
     separateDesktopOpenCodeRuntimeChildren(originalMetadata, remaining, 0);
     proof.metadataAfterSecondStop = remaining;
   }
