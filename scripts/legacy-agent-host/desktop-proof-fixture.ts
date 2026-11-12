@@ -13,6 +13,7 @@ import { prepareDesktopCodexResumeFixture } from './desktop-codex-resume-fixture
 import { prepareControlledProcessFixture } from './desktop-controlled-process-fixture.ts';
 import { reserveMixedOpenCodeEndpoint } from './desktop-mixed-native-fixture.ts';
 import { prepareDesktopScheduleFixture } from './desktop-schedule-fixture.ts';
+import { prepareDesktopNativeCommandsFixture } from './desktop-native-commands-fixture.ts';
 
 /** TEST fixture composition; no app or provider process starts here. */
 export async function prepareDesktopProofFixture(
@@ -48,6 +49,12 @@ export async function prepareDesktopProofFixture(
     controlledProcess?: Awaited<ReturnType<typeof prepareControlledProcessFixture>>['controlledProcess'];
   }
 > {
+  if (process.env.LEGACY_DESKTOP_COMMANDS_UI === '1') {
+    assert.equal(mode, 'native-launch-ui');
+    assert.notEqual(process.env.LEGACY_DESKTOP_SCHEDULE_UI, '1');
+    assert.ok(options.modelUrl && !options.candidateRuntime);
+    return prepareDesktopNativeCommandsFixture(repo, pnpm, options.modelUrl);
+  }
   if (process.env.LEGACY_DESKTOP_SCHEDULE_UI === '1') {
     assert.equal(mode, 'native-launch-ui');
     assert.ok(options.modelUrl && !options.candidateRuntime);

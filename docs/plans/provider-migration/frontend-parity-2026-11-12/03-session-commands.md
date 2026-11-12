@@ -1,6 +1,6 @@
 # 03. Slash-команды и настройки действующей сессии
 
-Статус: R4 source gate уточнён; Claude compact, ограниченный native output и captured skills идут в реализацию. Native/Desktop acceptance ещё открыт.
+Статус: R5 Host/Main/Composer и native fixture опубликованы; Desktop command journey реализован для штатного CI. Actual native/Desktop acceptance ещё открыт.
 Frontend baseline: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Stage 1 baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 Old runtime source: `777genius/agent_teams_orchestrator@e13edcd3d4ffbecc0272ae30195cc6b15b710ee7`.
@@ -295,3 +295,11 @@ captured plugin command вместе с P07; спорные Codex/OpenCode comma
 source checks, ни removal неподходящей suggestion не закрывают эти gates. Если SDK local result
 не возвращает доказуемый original UUID/output, требуется штатный supported boundary, а не
 ослабление correlation или присвоение несвязанного `system/local_command_output`.
+
+R5 UI implementation checkpoint: три TEST helpers и узкие hooks существующего Launch готовы.
+`nativeCommands`/`commandRequests` остаются optional и взаимоисключаются с schedule variant.
+CI запускает followup `native-launch-ui` только в существующей base `native-create-ui` lane;
+новые job/runner и production APIs не добавлены. Строгий retained receipt проверяет четыре
+original sends, два native local outputs, три inference requests, неизменные IDs после reload,
+обычный Stop, physical cleanup и source freeze. Focused scripts types, fast lint, YAML и
+source-size guard PASS; фактический native/Desktop результат ожидается от remote CI.
