@@ -3,6 +3,7 @@ interface FixtureChild {
   birth: string;
 }
 interface FixtureOutput {
+  readonly root: FixtureChild | undefined;
   readonly children: readonly FixtureChild[];
   readonly push: (chunk: Buffer) => void;
   readonly hasFinal: () => boolean;
@@ -13,8 +14,11 @@ export function createFixtureOutputCollector(): FixtureOutput {
   let output = '';
   let final = false;
   const children: FixtureChild[] = [];
+  let root: FixtureChild | undefined;
   function collectRecord(record: string): void {
     const line = record.endsWith('\r') ? record.slice(0, -1) : record;
+    if (line.startsWith('{"root"') && line.endsWith('}'))
+      root = (JSON.parse(line) as { root: FixtureChild }).root;
     if (line.startsWith('{"children"') && line.endsWith('}')) {
       const parsed = JSON.parse(line) as { children: FixtureChild[] };
       for (const entry of parsed.children)
@@ -23,6 +27,7 @@ export function createFixtureOutputCollector(): FixtureOutput {
     if (line === '{"final":true}') final = true;
   }
   return {
+    get root() { return root; },
     children,
     push: (chunk) => {
       if (output.length + chunk.length > 65536)

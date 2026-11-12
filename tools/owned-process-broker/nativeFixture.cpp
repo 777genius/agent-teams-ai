@@ -24,9 +24,9 @@ static PROCESS_INFORMATION child(const std::wstring& executable,const std::wstri
 int wmain(int argc,wchar_t** argv) {
   if(argc<2) return 22;
   std::wstring mode=argv[1];
-  if(mode==L"tree"||mode==L"root-first"||mode==L"flood"||mode==L"breakaway"||mode==L"stdio") {
+  if(mode==L"tree"||mode==L"root-first"||mode==L"flood"||mode==L"breakaway"||mode==L"stdio"||mode==L"selection") {
     // The target-only first observable effect precedes child creation/output/scenario work.
-    if(argc!=4||wcslen(argv[3])!=36) return 31;
+    if((mode==L"selection"?argc!=7:argc!=4)||wcslen(argv[3])!=36) return 31;
     HANDLE marker=CreateFileW(argv[2],GENERIC_WRITE,0,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);
     if(marker==INVALID_HANDLE_VALUE) return 32;
     char nonce[36];
@@ -46,6 +46,17 @@ int wmain(int argc,wchar_t** argv) {
   }
   if(mode==L"leaf") { Sleep(60000); return 0; }
   if(mode==L"sentinel") { std::puts("sentinel"); std::fflush(stdout); Sleep(60000); return 0; }
+  if(mode==L"selection") {
+    if(std::wstring(argv[4])!=L""||std::wstring(argv[5])!=L"space quote \" slash\\ end\\"||
+      std::wstring(argv[6])!=L"\u042f\u65e5") return 42;
+    wchar_t selected[32768], current[32768];
+    if(!GetEnvironmentVariableW(L"TEST_CAPTURED_VALUE",selected,32768)||
+      std::wstring(selected)!=L"space quote \" slash\\ end\\ \u042f\u65e5") return 43;
+    if(!GetEnvironmentVariableW(L"TEST_CAPTURED_CWD",selected,32768)||
+      !GetCurrentDirectoryW(32768,current)||std::wstring(selected)!=current) return 44;
+    if(GetEnvironmentVariableW(L"TEST_UNCAPTURED_PARENT",selected,32768)!=0) return 45;
+    mode=L"stdio";
+  }
   if(mode==L"stdio") {
     char bytes[8192]; DWORD count=0;
     for(;;) {
@@ -100,6 +111,8 @@ int wmain(int argc,wchar_t** argv) {
   if(mode!=L"tree"&&mode!=L"root-first"&&mode!=L"branch") return 28;
   BOOL inJob=FALSE;
   if(!IsProcessInJob(GetCurrentProcess(),nullptr,&inJob)||!inJob) return 29;
+  if(mode!=L"branch") std::printf("{\"root\":{\"pid\":%lu,\"birth\":\"%016llx\"}}\n",
+    GetCurrentProcessId(),static_cast<unsigned long long>(birth(GetCurrentProcess())));
   auto a=child(executable,mode==L"branch"?L"leaf":L"branch"), b=child(executable,L"leaf");
   std::printf("{\"children\":[{\"pid\":%lu,\"birth\":\"%016llx\"},{\"pid\":%lu,\"birth\":\"%016llx\"}]}\n",
     a.dwProcessId,static_cast<unsigned long long>(birth(a.hProcess)),

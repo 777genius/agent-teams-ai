@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
-import { isCanonicalOpenCodeV2Directory } from './openCodeV2StaticPreflight.js';
+import { isNativeProfilePath } from './nativeProcessProfile.js';
 import {
   resolveTeamModelProbeRecipe,
   applyTeamModelProbeSelection,
@@ -46,13 +46,10 @@ export const teamModelProbeSelectionSchema = z
       })
       .strict()
       .superRefine((value, context) => {
-        // Generation is selected later from the captured recipe. Keep V1's
-        // existing POSIX shape here; the resolved V2 profile enforces canonical
-        // paths again before any native allocation.
+        // Native OS comes from this Host; the captured profile still owns the
+        // executable, broker and directory identity before any allocation.
         if (value.workspace !== undefined &&
-          !(value.workspace.startsWith('/') ||
-            (value.providerId === 'opencode' &&
-             isCanonicalOpenCodeV2Directory(`${process.platform}-${process.arch}`, value.workspace)))) {
+          !isNativeProfilePath(value.workspace)) {
           context.addIssue({ code: 'custom', path: ['workspace'],
             message: 'Model probe workspace must match the selected native platform' });
         }
@@ -75,6 +72,7 @@ export function teamModelProbeProfile(base: RuntimeMemberProfile): ProviderManag
     cwd: base.cwd,
     executable: { ...base.executable },
     environment: { ...base.environment },
+    ...(base.windowsBroker ? { windowsBroker: { ...base.windowsBroker } } : {}),
     accountBinding: base.accountBinding,
     timeoutMs: Math.min(base.limits.timeoutMs, 30000),
     modelProbeTimeoutMs: 90000,

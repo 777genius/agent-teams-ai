@@ -285,4 +285,12 @@ stdin/stdout, killed/exitCode, kill и on/once/off для exit/error. Поэто
 
 **R3-08-04:** ранее не учитывался готовый atomic broker с stdio, из-за чего gate проектировался заново.
 Исправлено: broker reuse — первый кандидат, Node gate — условная альтернатива; выбор проверяется конкретным SDK/stdio contract.
+
+## 9. Implementation receipts
+
+- Existing Windows broker core переиспользуется Host и Main; структурный SDK process facade не выдаёт PID broker за PID провайдера. Pending capability удерживается до async prepare; исходные owner/observers устанавливаются до resume/stdin.
+- `WindowsCapturedProcess` сохраняет original capability и подтверждает Stop + Job empty + release. POSIX ChildProcess и отдельный V2 process-tree path сохранены. Реальные Windows paths допускаются без подмены на POSIX; broker path/digest/arch берутся из private captured profile.
+- Host build, Host test types и native-tooling TypeScript PASS. Focused suite: 65 passed, один существующий skip отдельного dedicated-main gate; protocol suite 45/45 PASS. Native harness добавляет product CapturedProcess, Unicode/space paths, quoted argv, captured env/binary stdin, root-first descendants и соседний sentinel.
+- Provider library source `bc1c93b5eedd410b519559ee5bbe036a50fc5670`: exact Node 24.21.0 и 26.11.1 `pnpm check` PASS, по 510 source tests + packed consumers. В frontend подключён immutable archive SHA-256 `ceafcfc99defd2a402cef7091041bf46bd828c3baeff8bc05529f06f397fd384`; Session SPI bytes неизменны. Frozen frontend install PASS.
+- **Открыто:** actual Windows runner/native-provider/Desktop proof, trusted candidate delivery и P09 service-specific custody. Generic candidate staging сохраняет прежний Unix gate до завершения Windows registered-service ownership; fixture preparation не является Windows PASS. Draft-only CI policy не ослаблялась.
 P09 поздняя service registration/subtree этим не закрывается. Production и native execution этим дополнением не подтверждены.

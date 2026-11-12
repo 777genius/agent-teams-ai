@@ -11,7 +11,7 @@ export interface ObservableNativeProcess extends Pick<EventEmitter, 'on' | 'once
   readonly stdin: Writable;
   readonly stdout: Readable;
   readonly stderr: Readable;
-  readonly pid: number | undefined;
+  readonly pid?: number | undefined;
   readonly killed: boolean;
   readonly exitCode: number | null;
   readonly signalCode: NodeJS.Signals | null;

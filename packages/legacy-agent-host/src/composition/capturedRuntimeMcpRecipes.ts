@@ -6,6 +6,7 @@ import { readCapturedMcpBytes } from '../mcp-catalog/capturedFile.js';
 import { capturedMcpServersSchema } from '../mcp-catalog/capturedServer.js';
 import { capturedMcpSourceSchema } from '../mcp-catalog/capturedSource.js';
 import { runtimeMemberProfileSchema } from './runtimeProfile.js';
+import { nativeProfilePathSchema } from './nativeProcessProfile.js';
 import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
 import { readCodexMcpCatalog } from '../adapters/providers/readCodexMcpCatalog.js';
 import { runtimeDigest } from '../runtime/identity.js';
@@ -31,7 +32,7 @@ const overlaySchema = z
     capturedMcpServers: capturedMcpServersSchema,
     capturedMcpSource: capturedMcpSourceSchema.optional(),
     mcpPolicyPlugin: z
-      .object({ path: z.string().min(1).max(8192).startsWith('/'), sha256: hash })
+      .object({ path: nativeProfilePathSchema, sha256: hash })
       .strict()
       .optional(),
     capturedMcpCatalog: z.unknown().optional(),

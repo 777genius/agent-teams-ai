@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
+import { ChildProcess } from 'node:child_process';
 import { lstat, readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,7 +10,7 @@ import {
   verifyOpenCodeV2EmbeddedManifest,
 } from './OpenCodeV2EmbeddedGraph.js';
 
-import type { ChildProcessWithoutNullStreams } from 'node:child_process';
+import type { ObservableNativeProcess } from '../../owned-process/processFacade.js';
 import type { CapturedProcessProfile, CapturedProcessTreeSource } from './CapturedProcess.js';
 import type { OpenCodeV2EmbeddedSelection } from './OpenCodeV2EmbeddedGraph.js';
 import type {
@@ -137,7 +138,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   const password = randomBytes(32).toString('base64url');
   const nonce = randomBytes(32).toString('hex');
   const lifecycle = new AbortController();
-  let child: ChildProcessWithoutNullStreams | undefined;
+  let child: ObservableNativeProcess | undefined;
   let ready: OpenCodeV2EmbeddedReady | undefined;
   let starting: Promise<OpenCodeV2EmbeddedReady> | undefined;
   let stopping: Promise<boolean> | undefined;
@@ -150,8 +151,10 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
     const pid = child.pid;
     if (process.platform === 'darwin' || process.platform === 'win32') {
       await verifyOpenCodeV2EmbeddedManifest(embedded);
+      // Darwin custody consumes the real original Node child, never a broker IO facade.
+      if (process.platform === 'darwin' && !(child instanceof ChildProcess)) return fail();
       const actual =
-        process.platform === 'darwin'
+        process.platform === 'darwin' && child instanceof ChildProcess
           ? readDarwinExecutable!(child, profile.executable)
           : custody.readNativeExecutable(child);
       if (

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { nativeProcessProfileSchema } from '../composition/nativeProcessProfile.js';
+import { nativeProcessProfileSchema, isNativeProfilePath } from '../composition/nativeProcessProfile.js';
 import { openCodeV2EmbeddedProfileSchema } from '../composition/openCodeV2EmbeddedProfile.js';
 import { isCanonicalOpenCodeV2Directory } from '../composition/openCodeV2StaticPreflight.js';
 
@@ -54,7 +54,7 @@ export const openCodeManagementProfileSchema = nativeProcessProfileSchema
           typeof directory === 'string' && isCanonicalOpenCodeV2Directory(platform, directory)))
         context.addIssue({ code: 'custom', message: 'OpenCode V2 management requires canonical native paths' });
     } else if (!nativeProcessProfileSchema.safeParse(value).success) {
-      context.addIssue({ code: 'custom', message: 'Legacy OpenCode management requires its captured POSIX profile' });
+      context.addIssue({ code: 'custom', message: 'Legacy OpenCode management requires its captured native profile' });
     }
   });
 
@@ -83,8 +83,7 @@ export const codexManagementProfileSchema = nativeProcessProfileSchema
         ['HOME', 'CODEX_HOME'].every(
           (key) =>
             typeof value[key] === 'string' &&
-            value[key]!.startsWith('/') &&
-            !value[key]!.includes('\0')
+            isNativeProfilePath(value[key]!)
         ),
       'Captured Codex HOME and CODEX_HOME are required'
     ),
@@ -108,7 +107,7 @@ export const claudeManagementProfileSchema = nativeProcessProfileSchema
   .strict()
   .refine((value) => {
     const path = (entry: unknown) =>
-      typeof entry === 'string' && entry.startsWith('/') && !entry.includes('\0');
+      typeof entry === 'string' && isNativeProfilePath(entry);
     return (
       path(value.environment.HOME) &&
       !!value.environment.PATH &&

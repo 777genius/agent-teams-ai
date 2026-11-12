@@ -1,0 +1,26 @@
+{
+  "provider-implementations": {
+    "oldSha256": "691a7a62cdd5a92e2edb120f2c409790c9ca16215495cdf9daa099b3b8748bd9",
+    "newSha256": "ceafcfc99defd2a402cef7091041bf46bd828c3baeff8bc05529f06f397fd384",
+    "changed": [
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.js",
+      "package/dist/features/provider-session-implementation/adapters/claude-sdk/native-management-config.js",
+      "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.js",
+      "package/dist/features/provider-session-implementation/adapters/codex-protocol/model-probe-config.js",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-config.js",
+      "package/dist/features/provider-session-implementation/adapters/provider-session-io/attachments.js"
+    ],
+    "added": [
+      "package/dist/features/provider-session-implementation/adapters/provider-session-io/native-path.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/provider-session-io/native-path.js"
+    ],
+    "removed": []
+  },
+  "provider-session-contracts": {
+    "oldSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+    "newSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+    "changed": [],
+    "added": [],
+    "removed": []
+  }
+}

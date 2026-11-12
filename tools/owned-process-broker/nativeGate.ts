@@ -31,6 +31,7 @@ import {
 import { nativeLossScenario, nativeReleaseScenario } from './nativeGateRawScenarios';
 import { runNativePendingWriteGate } from './nativePendingWriteGate';
 import { nativeFacadeScenario } from './nativeFacadeScenario';
+import { nativeCapturedScenario } from './nativeCapturedScenario';
 
 async function preResumeCancellation(context: GateContext): Promise<void> {
   const { broker, fixture, owner, marker, spec, track, retain, phase } = context;
@@ -456,6 +457,9 @@ export async function runNativeGate(
     await runScenario('pre-resume-cancel', () => preResumeCancellation(context));
     await runScenario('facade-stdio', () => nativeFacadeScenario(context, false, sentinel));
     await runScenario('facade-cancel', () => nativeFacadeScenario(context, true, sentinel));
+    for (const provider of ['claude', 'codex', 'opencode'] as const)
+      await runScenario(`capture-${provider}`, () => nativeCapturedScenario(context, provider, false, sentinel));
+    await runScenario('capture-root-first', () => nativeCapturedScenario(context, 'claude', true, sentinel));
     for (const mode of ['tree', 'root-first'] as const)
       await runScenario(mode, () => treeScenario(context, mode, sentinel));
     for (const mode of ['flood', 'breakaway'] as const)
@@ -501,6 +505,8 @@ export async function runNativeGate(
           'pre-resume-cancel-first-nonce',
           'facade-private-stdin-after-native-owner-tail-exit',
           'facade-pre-resume-cancel-no-private-input',
+          'captured-provider-native-argv-env-cwd-and-stop',
+          'captured-root-first-original-descendants-and-neighbor',
           'birth-failure-unknown-first-nonce',
           'owner-eof',
           'accounting-failure-latched-unknown-distinct-reconciliation',

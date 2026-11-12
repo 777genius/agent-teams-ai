@@ -3,18 +3,14 @@ import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementa
 import { capturedMcpSourceSchema } from '../mcp-catalog/capturedSource.js';
 import { z } from 'zod';
 
-import { nativeProcessProfileSchema } from './nativeProcessProfile.js';
+import { nativeProcessProfileSchema, nativeProfilePathSchema } from './nativeProcessProfile.js';
 import { hasUntrustedOpenCodeBinaryOverride } from './openCodeV2Environment.js';
 import { isCanonicalOpenCodeV2Directory } from './openCodeV2StaticPreflight.js';
 import { openCodeV2EmbeddedProfileSchema } from './openCodeV2EmbeddedProfile.js';
 import { capturedMcpServersSchema } from '../mcp-catalog/capturedServer.js';
 
 const id = z.string().min(1).max(256);
-const path = z
-  .string()
-  .min(1)
-  .max(8192)
-  .refine((value) => value.startsWith('/'));
+const path = nativeProfilePathSchema;
 const boundedStrings = z.array(z.string().min(1).max(256)).max(256);
 
 const common = nativeProcessProfileSchema.extend({
@@ -137,9 +133,8 @@ const codex = common
   })
   .strict();
 
-// V2's native paths are OS-specific. Keep the historical POSIX-only V1
-// capture intact, but admit canonical Windows paths for a separately selected V2
-// engine; the common nativeProcessProfileSchema remains unchanged for others.
+// V2 additionally validates its captured engine selection. Every native path
+// stays in the current Host OS; Windows legacy launches require the private broker.
 const opencode = common
   .extend({
     cwd: z.string().min(1).max(8192),
@@ -173,8 +168,8 @@ const opencode = common
           .max(256 * 1024),
       })
       .strict(),
-    // Validate HOME/XDG together with nativeGeneration below, not with the
-    // POSIX-only common path rule. Windows V2 cannot use a fake /cwd alias.
+    // Validate HOME/XDG together with nativeGeneration below. Windows cannot use
+    // a fake /cwd alias for either generation.
     environment: common.shape.environment,
     nativeOptions: z
       .object({
