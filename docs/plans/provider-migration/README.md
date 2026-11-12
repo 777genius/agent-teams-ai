@@ -1,5 +1,17 @@
 # Provider migration: двухэтапная программа
 
+## Актуальное продолжение — 12 ноября 2026
+
+[Полное соответствие текущему frontend: десять отдельных планов](frontend-parity-2026-11-12/README.md)
+ведётся в [draft PR #1186](https://github.com/777genius/agent-teams-ai/pull/1186), база —
+`feat/provider-migration-stage-1`. По новому поручению владельца сохраняются existing
+UI-возможности Claude Code, Codex, OpenCode V1 и V2. Планы прошли три круга ревью;
+реализация и E2E выполняются, новая полная приёмка пока не заявлена.
+
+Следующий текст сохраняет исторические checkpoints и их прежние ограничения.
+Scope «только V1» ниже не описывает новую работу. Stage 2, release, включение Host
+по умолчанию и merge в `main` по-прежнему не выполняются.
+
 **Физическое отделение провайдеров (25 октября):** исходники `provider-implementations`
 и независимого Session SPI теперь находятся в [old-provider-implementations](https://github.com/agent-teams-ai/old-provider-implementations).
 Перенос подготовлен в [draft PR #1](https://github.com/agent-teams-ai/old-provider-implementations/pull/1), CI Node 24/26 прошёл;

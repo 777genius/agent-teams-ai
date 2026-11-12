@@ -1,6 +1,6 @@
 # Stage 1: полное соответствие существующему frontend
 
-Дата: 12 ноября 2026. Статус: планы и независимое ревью; реализация пунктов ещё не принята.
+Дата: 12 ноября 2026. Статус: планы прошли три круга ревью; начата параллельная реализация. Native gates и приёмка ещё открыты.
 
 ## Цель и исходное состояние
 
@@ -70,7 +70,7 @@ Stage 1 полной совместимостью существующего UI 
    P06/P08 и необходимые native controls. Параллельно независимые P01/P04 и
    provider adapters; после стабилизации контрактов — P02/P05/P07/P09.
    Изменения общего файла интегрирует один назначенный владелец.
-   Входные gates: P08 admission до исполнения root; P09 отдельный service scope
+   Входные gates: P08 admission до provider/plugin execution; P09 отдельный service scope
    до Stop wiring; P07 bounded source/native probes неизвестных V2 capabilities.
 6. **Приёмка по ходу работы.** Проверять затронутый путь сразу. Полные дорогие
    матрицы запускать на объединённом интеграционном SHA и повторять только
@@ -98,9 +98,12 @@ SHA. Отсутствие авторизации CLI не является по�
   используется; P05 владеет отдельным пользовательским probe/prelaunch сценарием.
 - В P08 одна общая Windows primitive для запуска/владения процессами; P09
   добавляет зарегистрированную identity, наблюдение и stop, не второй process manager.
-- Job admission P08 предшествует исполнению root; успешный spawn-then-assign smoke
+- Job admission P08 предшествует исполнению provider/plugins; успешный spawn-then-assign smoke
   не исключает раннего child. P09 service Stop сохраняет provider Job и соседа,
   позднее assignment root или PID snapshot не доказывает service-tree closure.
+- Для P08 сначала переиспользовать существующий atomic-launch broker и его target stdio,
+  если узкий structural spawn adapter сохраняет pinned SDK contract. Доверенный Node bootstrap
+  с gate — альтернативный вариант, не вторая обязательная реализация. Новый native protocol не нужен.
 - Requested-before-native recovery P09 использует явный linked retry в прежнем
   journal. Lookup не посылает signal; UNKNOWN не превращается в known-not-sent;
   same-live original не остаётся навсегда без доступного действия Stop.
@@ -137,6 +140,11 @@ Unit-тест добавляется только когда он защищае
 В планах оценки тестового LOC пересчитываются под этот подход. Старый диапазон
 10,8–19,9 тыс. строк не является ни обязательством, ни критерием завершения.
 
+P10 объединяет acceptance в семь групп: accounts; selection/config; conversation;
+schedules; upgrade/recovery; packaged runtime + Processes; опасные native границы.
+Один build используется для всех подходящих сценариев своего OS tuple. Existing
+unit suites расширяются только новым инвариантом; helper/mapping coverage не является целью.
+
 ## Завершение и доказательства
 
 - Все ранее работающие возможности из P01–P09 выполняются через прежний UI;
@@ -162,7 +170,7 @@ Unit-тест добавляется только когда он защищае
 | --- | --- | --- |
 | R1 | Выполнен при создании | Убрана прежняя цель по объёму unit-тестов; отделены live controls от prelaunch, общий profile lifecycle от provider-specific настроек, Windows launch от Processes |
 | R2 | Общая страница проверена `/root/estimate_profiles_models` | Исправлены P02 scope, native/Desktop evidence, platform census, shared custody/retry boundaries и V2 uncertainty gates; R2 каждого P01–P10 указан в его документе |
-| R3 | Ожидает интеграционного ревью | Проверить очередь реализации и границы общей ответственности |
+| R3 | Выполнен root с focused reviews трёх исполнителей | Уточнены auth cancellation/source binding, reuse compact, finite schedules, existing Windows broker, service pre-birth gate и реальные CI/harness границы; implementation acceptance не объявлена |
 
 Исходная published ревизия этой страницы для R2:
 [`92d88845657e845f9b5080c1617245342c7061ab`](https://github.com/777genius/agent-teams-ai/blob/92d88845657e845f9b5080c1617245342c7061ab/docs/plans/provider-migration/frontend-parity-2026-11-12/README.md).
@@ -170,3 +178,15 @@ Unit-тест добавляется только когда он защищае
 `CapturedProcess`, `WindowsJobCustody`, `TeamProcessCommands`, original Processes UI.
 Уточнение V2 forget сверено с R2 владельца P02; этот review не выдаётся за новое
 независимое ревью собственных P05–P07 или за завершённый R3 всей серии.
+
+R3 входные published SHA: `cda065d869ccffb5930ed2a817b3e0654b00bb31` и
+`263e913941ed4257094a3b9f30c7c06d0a046a39`; P09/P10 findings опубликованы в
+`e746c703eada8e446c71cf9954b449903c59ea77`. Root сопоставил existing capture/restore,
+writer lease, OAuth completion, headless command filter, scheduler dispatcher и
+broker/SDK spawn contract. Дополнительные findings и ссылки — в R3 каждого плана.
+
+Первая параллельная волна: P01 typed Codex protocol и Host account flow; P06 trusted
+source revisions/capture/restore; P08 reusable native broker/spawn seam; root — P04
+schedule adapter и интеграция. P02/P03/P05/P07 подключаются следующими срезами после
+готовых shared contracts. P09 `09-WG` остаётся отдельной задачей исследования native
+service-launch seam; работа остальных пунктов от него не зависит.
