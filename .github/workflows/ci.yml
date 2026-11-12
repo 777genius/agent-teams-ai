@@ -624,6 +624,7 @@ jobs:
           OPENCODE_V1_V2_COEXISTENCE_GO: '1'
         run: |
           set -euo pipefail
+          node --test scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts
           node --test scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts 2>&1 | tee "$RUNNER_TEMP/retained-opencode-coexistence.log"
       - name: Require complete same-source business, Stop, cold and cleanup evidence
         if: always()

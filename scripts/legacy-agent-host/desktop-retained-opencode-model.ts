@@ -3,7 +3,8 @@ import { createServer } from 'node:http';
 
 /** A finite inference oracle. Only the genuine selected engines execute tools or write history. */
 export async function startRetainedOpenCodeModel() {
-  const observations: { owner: 'legacy' | 'host'; marker: string | null; tools: string[] }[] = [];
+  const observations: { owner: 'legacy' | 'host'; marker: string | null; tools: string[];
+    strictLaunch?: { model: string; challenge: string } }[] = [];
   const failures: string[] = [];
   const markers = new Set<string>();
   const server = createServer((request, response) => {
@@ -34,7 +35,8 @@ export async function startRetainedOpenCodeModel() {
       const otherPrefix = owner === 'legacy' ? 'TEST_OWNED_V2_' : 'TEST_RETAINED_V1_';
       assert.equal(JSON.stringify(messages).includes(otherPrefix), false,
         'no business input or history crosses the original owner boundary');
-      const lastUser = JSON.stringify(messages.findLast(message => message.role === 'user')?.content);
+      const lastUserContent = messages.findLast(message => message.role === 'user')?.content;
+      const lastUser = JSON.stringify(lastUserContent);
       const marker = [...lastUser?.matchAll(/TEST_(?:RETAINED_V1|OWNED_V2)_(?:HISTORY|FIRST|AFTER_STOP)/g) ?? []].at(-1)?.[0] ?? null;
       if (marker) {
         assert.ok(marker.startsWith(ownPrefix));
@@ -44,8 +46,21 @@ export async function startRetainedOpenCodeModel() {
         const tool = value as { function?: { name?: unknown } };
         assert.equal(typeof tool.function?.name, 'string'); return tool.function!.name as string;
       }) : [];
-      observations.push({ owner, marker, tools });
-      const content = marker ? `REPLY_${marker}` : 'PONG';
+      let strictLaunch: { model: string; challenge: string } | undefined;
+      if (lastUser?.includes('STRICT_LAUNCH_')) {
+        assert.equal(owner, 'legacy'); assert.equal(marker, null);
+        assert.ok(body.tools === undefined || Array.isArray(body.tools) && body.tools.length === 0,
+          'strict launch inference advertises no tools');
+        const prompt = typeof lastUserContent === 'string' ? lastUserContent :
+          Array.isArray(lastUserContent) && lastUserContent.length === 1 &&
+          lastUserContent[0]?.type === 'text' ? lastUserContent[0].text : undefined;
+        assert.equal(typeof prompt, 'string');
+        const match = /^Output only this exact token: (STRICT_LAUNCH_[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12})$/.exec(prompt);
+        assert.ok(match && match[0] === prompt, 'only the original exact native strict-launch request');
+        strictLaunch = { model: body.model, challenge: match[1]! };
+      }
+      observations.push({ owner, marker, tools, ...(strictLaunch ? { strictLaunch } : {}) });
+      const content = marker ? `REPLY_${marker}` : strictLaunch?.challenge ?? 'PONG';
       if (body.stream === true) {
         response.writeHead(200, { 'content-type': 'text/event-stream' });
         for (const [delta, finish_reason] of [[{ role: 'assistant', content }, null], [{}, 'stop']] as const)
