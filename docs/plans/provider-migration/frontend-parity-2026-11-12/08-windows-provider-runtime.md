@@ -1,6 +1,6 @@
 # 08. Windows: полноценный Host runtime для Claude, Codex и OpenCode V1
 
-Статус: план реализации; production-код не изменён. R1 — выполнен ниже; R2/R3 — pending.
+Статус: план реализации; production-код не изменён. R1/R2 выполнены ниже; R3 — pending.
 Область: сохранение существующих Windows-возможностей приложения в Stage 1.
 Main не сливается; переключение основного backend и Stage 2 в эту работу не входят.
 
@@ -42,6 +42,9 @@ Stop → повторный Launch/Resume для каждого заявленн
 Не добавляются новые платформы: Linux ARM64 исключён до отдельного подтверждения baseline.
 Darwin x64/ARM64 и Linux x64 сохраняют прежние маршруты и получают ограниченную регрессионную проверку.
 Наличие binary для OS не заменяет доказательство его запуска и поддержанных функций.
+До реализации составить короткую таблицу provider × Windows arch × исходный launcher:
+заявленный в actual main маршрут получает обязательный successor, с точной версией и видом поставки.
+Нельзя расширять обещание на отсутствующий у provider binary или исключать работающий baseline по результату нового preflight.
 
 ## 3. Acceptance до начала реализации
 
@@ -53,6 +56,8 @@ Darwin x64/ARM64 и Linux x64 сохраняют прежние маршруты
 6. UNKNOWN не превращается в success по timeout; последующий запуск не присваивает старое дерево.
 7. Cold restart не повторяет доставленный input; Resume возвращает выбранную native историю.
 8. Поставленный Host работает без checkout, ambient system Node и случайного native module из PATH/cache.
+9. Общие path/profile изменения сохраняют исходные bytes, digests и binding старых Darwin captures;
+   прочитать старую запись не означает нормализовать её или перепубликовать под новой identity.
 
 ## 4. Минимальное решение и повторное использование
 
@@ -80,21 +85,26 @@ Windows Job kernel/custody переиспользуются вместе с их
 - V2 продолжает использовать ту же dependency; совпадающие bytes не загружаются под двумя независимыми владельцами.
 - Передать tree source в Claude/Codex/V1 runtime adapters и short-lived management/model/auth children.
 - Обнаруженный child остаётся собственностью launch даже при rejected configuration или отказе bootstrap.
-- Root, запускающий потомков до первого input, должен быть помещён в Job до появления таких потомков.
-- Сначала проверить actual selected launchers на этот race; если требуется, добавить узкий native create-in-job bridge.
-- Bridge обязан сохранить existing stdin/stdout/stderr transport; сканирование PID после запуска его не заменяет.
+- Любой выполняемый root помещается в Job до начала его исполнения: ранний descendant возможен до первого provider input.
+- Existing `CapturedProcess.spawn` → `WindowsJobCustody.capture` → `kernel.assign` не обеспечивает этот barrier.
+- До adapter wiring выбрать и квалифицировать узкий native create-in-job bridge: создание уже в Job либо suspended create,
+  assignment и только затем resume. Отсутствие воспроизведённой гонки не разрешает оставить spawn-then-assign.
+- Bridge сохраняет existing stdin/stdout/stderr transport и exact recipe; сканирование PID после запуска его не заменяет.
+- Отказ assignment/capture или cancel до resume завершает original suspended root, закрывает Job/handles и не разрешает input.
 - Retained Job handle позволяет закончить cleanup после root exit; handle закрывается ровно после подтверждённой очистки.
 - После Host crash новый Host читает durable UNKNOWN и разрешённое восстановление; он не принимает numeric PID за ownership.
 
 ## 5. Порядок реализации и затрагиваемые места
 
 1. **Сначала native harness и baseline.** Расширить `windows-job-custody.native.ts` и existing mixed fixture:
-   зафиксировать executable, launcher kind, path cases, descendant timing и фактическую нужду в create-in-job bridge.
+   зафиксировать executable, launcher kind, path cases и проверку barrier для раннего descendant.
+   Выбор native bridge — обязательное входное решение, а не условие, зависящее от удачного расписания теста.
    Выпустить failing receipt для каждого отсутствующего маршрута; не маскировать unsupported skip как PASS.
 2. **Общий path/recipe capture.** Изменить `nativeProcessProfile.ts`, `runtimeProfile.ts`,
    `management/profile.ts`; небольшой helper расположить рядом с `CapturedProcess.ts`.
    Учесть `mcpPolicyPlugin.path`, cwd и все provider config roots, а не только executable.
    Новые profile fields остаются private composition; старые POSIX profiles читаются без миграции active sessions.
+   Для старого Darwin corpus проверить исходные bytes/digests до и после чтения; новые discriminator fields не дописываются назад.
 3. **Общий native loader.** Изменить `WindowsJobCustody.ts`, `OpenCodeV2EmbeddedGraph.ts`,
    `OpenCodeV2EmbeddedServer.ts`; добавить shared dependency capture без копирования всей V2 dependency graph.
    Проверить OS/arch/ABI/digest до загрузки; несовпадение прекращает новый launch до provider input.
@@ -121,21 +131,24 @@ Provider CLI/SDK, OS processes, Host и UI настоящие; scripted localhos
 | --- | --- | --- |
 | W01 | Windows x64/ARM64: Create/Launch/Send/tool/Stop Claude, Codex и V1 | Native effect + reply; stopped original Job и owned descendants; независимый сосед жив |
 | W02 | Пробелы/кириллица, supported `.cmd`/npm shim, captured env с case aliases | Правильные argv/cwd/config; нет command injection/другого PATH binary; неизменная выбранная identity |
-| W03 | CLI сразу создаёт descendant; затем parent выходит до ответа | Потомок не выходит из Job; failed/closed Runtime не выдаёт cleanup пока он жив |
+| W03 | CLI сразу создаёт descendant; parent выходит до ответа; отдельно cancel/assign failure до resume | Root не исполняется до Job admission; потомок не выходит из Job; failure не оставляет root; cleanup требует отсутствия всего дерева |
 | W04 | В середине input Stop одного member, второй работает; потерян ACK Stop | Один captured stop effect; second member продолжает reply; retry возвращает receipt, не сигналит новый PID |
 | W05 | Crash Host после tool effect и durable admission, затем cold reconnect | Нет повторного input/tool; original UNKNOWN виден; новое поколение не принимает старую numeric identity |
 | W06 | Auth/model/catalog timeout или cancel на short-lived native child | Нет оставшегося child/Job; повторная операция возможна; concurrent session не остановлена |
 | W07 | Stop → exact checkpoint → cold Resume, затем fresh relaunch | Resume сохраняет нужную native history; fresh run имеет новую identity; оба cleanup подтверждены |
 | W08 | Packaged candidate, checkout/legacy/runtime search paths недоступны | Bundled exact native ABI загружен; Launch/tool/Stop работают; подменённый artifact отклонён до input |
 
-W01, W03, W06, W08 обязательны на обеих заявляемых Windows архитектурах.
+W01, W03, W06, W08 обязательны на каждой заявляемой паре provider/Windows arch из baseline таблицы.
 Остальные сценарии распределяются по provider/transport рискам; общая матрица не требует всех сочетаний моделей.
 W03 нельзя закрыть лишь controlled child: после него actual supported launcher также проходит boundary.
+Для W03 controlled fixture подтверждает порядок admission/resume; один успешный timing race не доказывает отсутствие окна.
+Ограниченный Darwin regression включает неизменность старой serialized identity, а не только успешный новый launch.
 Cold UI/registered service identity из плана 09 не считается выполненной W05 автоматически.
 
 ## 7. Узкие unit-проверки и доказательства
 
-Unit tests нужны для path/recipe escaping, env key ambiguity, native artifact identity и Job membership/retirement.
+Точечные units нужны лишь для новых опасных правил escaping/env ambiguity и отказов native admission/retirement,
+которые не покрывает existing harness; реальные ancestry, создание потомков и cleanup доказываются native journeys.
 Не добавлять snapshot каждого mapper или копию oracle под новым именем.
 Existing `windows-job-custody.test.ts` расширяется; отдельный generic framework для тестов не создаётся.
 Каждый native receipt содержит commit/tree, OS/arch/build, provider version/digest, launch/session/Job identity,
@@ -148,7 +161,7 @@ Existing `windows-job-custody.test.ts` расширяется; отдельны�
 
 Оценка после reuse: **900–1 800 production LOC**, **1 000–1 800 test/E2E LOC**.
 Считаются новые/существенно изменённые строки; перенос Windows loader, vendor/generated/lock и тесты планов 06/07/09/10 не прибавляются.
-Верхняя граница включает небольшой create-in-job bridge; если actual launcher требует нового большого transport,
+Диапазон включает обязательный небольшой create-in-job bridge; если actual launcher требует нового большого transport,
 оценка пересматривается после W03, а функциональность не исключается ради исходной цифры.
 Зависимости: 06 предоставляет captured selection; 07 — effective config; 09 потребляет общий native dependency; 10 выполняет общую приёмку.
 Сложность **8/10**; уверенность в LOC **6/10**; достижимая надёжность после перечисленной приёмки **8/10**.
@@ -165,6 +178,21 @@ Existing `windows-job-custody.test.ts` расширяется; отдельны�
 - **R1-08-04:** строгая V2 path policy могла потерять baseline UNC/alias cases; добавлен census до изменения policy.
 - **R1-08-05:** границы с installer и registry были склонны к двойному учёту; owner/shared loader и LOC разведены.
 
-R2: pending — независимая критика контрактов, native race и совместимости планов 06/07/09.
+## 10. R2: независимое ревью и исправления
+
+Reviewer: `/root/estimate_profiles_models`; исходная опубликованная ревизия плана:
+[`7c4c77156879ed6d5a2bfce058efdfbd612ed112`](https://github.com/777genius/agent-teams-ai/blob/7c4c77156879ed6d5a2bfce058efdfbd612ed112/docs/plans/provider-migration/frontend-parity-2026-11-12/08-windows-provider-runtime.md).
+Повторно прочитаны `CapturedProcess.launch`, `createWindowsJobCustodyForKernel` и `WindowsJobKernel.assign`
+на закреплённой Stage 1 базе; сопоставлены границы P06/P09/P10. Тесты и production не изменялись.
+
+- **R2-08-01:** условный bridge оставлял доказанную структуру spawn-before-assign. Теперь native admission до исполнения
+  обязателен; W03 проверяет раннего потомка и отказ/cancel до resume, без объявления PID scan решением.
+- **R2-08-02:** общий path helper мог незаметно изменить hash прежних Darwin записей. Добавлен byte-preserving decoder
+  и чтение legacy corpus без записи/нового binding; новую схему используют только новые captures.
+- **R2-08-03:** фраза «обе архитектуры» могла обещать отсутствующие provider tuples. Введён явный baseline census;
+  все заявленные маршруты обязательны, native proof и original Desktop proof остаются отдельными.
+- **R2-08-04:** unit-бюджет мог дублировать native harness. Оставлены только локальные опасные инварианты;
+  общий Job loader принадлежит P08, Processes не получает второго supervisor.
+
 R3: pending — повторная критика исправленного плана и runnable acceptance matrix.
 Реализация начинается только после завершения требуемых кругов планового review.

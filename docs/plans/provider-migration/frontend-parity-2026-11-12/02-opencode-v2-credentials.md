@@ -3,7 +3,7 @@
 Статус: план реализации; изменения production и native credentials не выполнялись.
 Frontend baseline: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Host baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
-Цель: существующие connect/reconnect/forget и проверка выбранного подключения работают через Host.
+Цель: существующие V2 key-connect/original-intent reconnect и проверка подключения работают через Host; V1 forget сохраняется.
 Новые OAuth-интеграции, новые подписочные планы и новый secrets service в этот срез не входят.
 
 ## 1. Точный baseline и граница доказательства
@@ -32,18 +32,24 @@ Host baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 - `OpenCodeV2ManagementHost` показывает только selected provider; `authMethods: []`, `connected: false` выставлены явно.
 - [Stage 1: `OpenCodeV2ManagementHost.read`](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts).
 - Работающий V1 connect/forget сохраняется и служит донором receipt/fence поведения, но не V2 protocol codec.
+- Дополнительный R2 проверил donor `e13edcd…`: [V2 directory](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/features/runtimeProviderManagement/adapters/opencode/OpenCodeV2ProviderDirectory.ts) предлагает connect/use/configure, без forget.
+- `forgetManagedCredential` остаётся в V1 managed-client; [explicit regression](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/features/runtimeProviderManagement/adapters/opencode/OpenCodeProviderManagementAdapter.test.ts)
+  `legacy provider mutations reject v2 inventory before host acquisition` прямо включает forget.
+- Поэтому успешный V2 disconnect не является доказанным old workflow; native `credential.remove` в donor используется для owned rollback.
+- Перед implementation проверить существующие V2 Settings/Quick Connect controls: если они всё же предлагают forget,
+  зафиксировать это как existing-UI/native mismatch с отдельным решением R3, не выдавать за перенесённую рабочую функцию.
 
 ## 2. Пользовательские истории и acceptance
 
 1. Из существующей карточки провайдера пользователь открывает форму и сохраняет ключ в выбранном V2 account scope.
 2. При необходимости выбирает прежний regional route; ключ не отправляется провайдеру другого региона.
 3. Reconnect сохраняет existing route semantics: подтверждённый original intent читается повторно, конфликтующий existing connection не перезаписывается.
-4. Forget удаляет managed credential выбранного scope и честно показывает оставшийся env/config доступ, если он есть.
+4. V1 Forget продолжает удалять managed credential и показывать оставшийся env/config доступ; V2 не получает выдуманного supported action.
 5. Connect сохраняет показанную формой проверку одной модели; «ключ сохранён» и «подключение проверено» остаются разными результатами.
 6. После перезапуска приложения выбранное подключение остаётся доступным; временный metadata namespace не становится хранилищем ключа.
 7. Неудачный native ответ/потерянный ACK не приводит к автоматическому повтору credential mutation.
 8. V2 OAuth routes, уже заблокированные main, сохраняют прежние объяснения; этот срез не выдаёт их за новые возможности.
-9. Forget и последующий connect остаются отдельными явными действиями; новый автоматический delete-and-replace workflow не вводится.
+9. Новый автоматический delete-and-replace workflow не вводится; V2 conflict не разрешается скрытым вызовом rollback как пользовательского forget.
 10. На V1 те же controls и сохранённые credentials продолжают работать.
 
 ## 3. Минимальная архитектура и reuse
@@ -66,18 +72,22 @@ Host baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 
 ### Шаг A — зафиксировать поддерживаемый native key contract
 
-- Использовать прочитанный `connectOpenCodeV2Provider` как native donor; отдельно сопоставить actual packaged CLI version и forget route.
+- Использовать прочитанный `connectOpenCodeV2Provider` как native donor; сопоставить actual packaged CLI version и V2 action-set gate.
 - Записать immutable source permalink, native V2 version и точный credential namespace до начала кода.
 - Для каждого visible route проверить plain-key method и providerId/region; дополнительные auth forms baseline сейчас отвергает.
-- Отдельно проверить, что native API допускает set/forget без запуска conversation и без побочного OAuth.
-- Если текущий D API не экспортирует нужный метод, добавить узкий typed codec в source repo `agent-teams-ai/old-provider-implementations`.
+- Отдельно проверить key-connect и owned rollback без conversation allocation/побочного OAuth; объявленная model verification идёт следующим явным этапом того же intent.
+- Конкретные donor APIs: `integration.get({location,integrationID})`, `integration.connect.key({location,integrationID,key})`,
+  `credential.remove({credentialID})` только для доказанного owned rollback; форму pinned 2.1.4 сверить с delivered SDK.
+- Если текущий D API не экспортирует нужный метод, добавить узкий typed management codec в source repo `agent-teams-ai/old-provider-implementations`.
+- Не ослаблять allowlist session-owned V2 transport ради global credential API; management adapter получает отдельный finite captured scope.
 - Собрать immutable artifact штатным путём и обновить frontend pin; не редактировать tgz/dist вручную.
 - Если main route реально не работает на выбранном native V2, зафиксировать это в capability matrix и исправить доступный native adapter.
 - Неподтверждённый маршрут не скрывать молча и не считать закрытым одной формой в UI.
 
 ### Шаг B — V2 credential effect через существующего владельца
 
-- В `packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts` разрешить только qualified V2 set/forget.
+- В `packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts` разрешить qualified V2 set и его owned rollback;
+  самостоятельный V2 forget не добавлять без результата baseline gate/R3 выше.
 - Оставить запрет refresh/OAuth для маршрутов, у которых такого native контракта нет.
 - Добавить узкий V2 credential adapter рядом с `OpenCodeV2ManagementHost.ts`; общий coordinator остаётся диспетчером.
 - Использовать существующие owner/resource fences и process custody, а не второй journal или отдельный daemon.
@@ -94,7 +104,10 @@ Host baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 - В `OpenCodeV2ManagementHost.ts` убрать постоянные пустые auth methods только для доказанного selected route.
 - Подключить native authenticated/configured observations и показать их существующей projection `capturedManagementCatalog.ts`.
 - Согласовать с планом 06 момент смены revision после credential change; текущая операция завершает исходный target.
-- Connect verification выполняется через выбранный актуальный target по общему порту плана 05, без второй случайной probe.
+- Connect verification переиспользует finite native probe из P05 внутри того же credential intent и того же target.
+- Не вызывать публичный `ModelProbeOwner.start` из `CredentialCommandOwner.perform`: оба резервируют тот же resourceId,
+  что даёт self-conflict. Один внешний owner/fence и persisted original verification reference, без второго command journal.
+- Самостоятельный Test model по-прежнему проходит обычный ModelProbeOwner; connect не делает второй автоматический probe.
 - При неудаче probe сохранить native transaction state: original intent может остаться pending/held после credential publication.
 - В UI не показывать общий successful connect и не удалять pending marker; показывать исходную ошибку verification с доступным readback/recovery.
 - Не создавать автоматический повторный Test model или альтернативную модель после pending/failed original proof.
@@ -103,7 +116,7 @@ Host baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 ### Шаг D — E2E и regression
 
 - Расширить имеющийся V2 desktop fixture и native management test; единый TEST provider записывает число native effects.
-- Пройти UI create/connect/reconnect/forget и readback после cold restart на тех же artifact bytes.
+- Пройти V2 UI connect/original-intent reconnect/readback и V1 forget после cold restart на тех же artifact bytes.
 - Выполнить один V1 regression route с теми же UI controls, чтобы общий client не сломал старое подключение.
 - Реальные vendor routes квалифицировать отдельно от controlled TEST key route; receipt явно называет проверенный route.
 
@@ -118,9 +131,9 @@ Test provider использует localhost и isolated TEST auth namespace; н
 | Первое подключение | Providers → выбранный V2 provider → key connect с объявленной verification | Один set и одна connect-verification; native readback; verified выбранная модель |
 | Regional key route | Выбрать Kimi CN/global, сохранить TEST key | Исходный providerId/region совпадает от UI до native request; соседний scope неизменён |
 | Reconnect + restart | Повторить исходный connect, открыть приложение снова; затем проверить conflicting key | Original receipt/readback без повторного POST; конфликт не перезаписывает credential; preferences сохранены |
-| Forget | Удалить managed connection при наличии/отсутствии env auth | Удалён только managed key; UI честно показывает оставшийся источник доступа |
+| V1 Forget / V2 boundary | V1 удаление при env auth; проверить action set V2 и owned rollback race | V1 scope сохранён; V2 rollback не превращён в новый forget; чужой credential не удалён |
 | Потеря ответа | Удержать ACK после native set, переподключить UI | Lookup исходного command; нет второго set и переноса на новый profile |
-| Ошибка проверки | Credential publication выполнена, original probe вернул error/unknown | Pending/held intent сохранён по native policy; нет второго inference, false connected или потери исходного evidence |
+| Ошибка проверки / fence | Credential publication выполнена; original probe success/error/unknown под тем же owner | Нет self-conflict fence; pending/held сохраняется; нет второго inference, false connected или потери evidence |
 | Граница V1/V2 | V1 connect/forget, V2 запрещённый OAuth route | V1 regression PASS; V2 не предлагает ложный поддержанный OAuth workflow |
 
 Receipt содержит route identity, scope fingerprint, commandId, native effect count, probe result и cleanup result.
@@ -144,9 +157,9 @@ Native vendor PASS прикладывается только для реальн
 - Сложность **6/10**; ожидаемая надёжность после приёмки **8/10**; уверенность размера **6/10**.
 - Это оценка реализации известных key routes, не обещание поддержки всех upstream plugins.
 - Главный риск — temporary V2 catalog namespace: записанный туда ключ исчезнет после cleanup и даст ложный happy path.
-- Второй риск — vendor route может требовать native feature, которой нет в текущем D API; source extension входит в диапазон только для set/forget.
+- Второй риск — vendor route может требовать native feature, которой нет в текущем D API; source extension входит в диапазон для key-connect/owned rollback.
 - OAuth browser integration и новые companion adapters не маскировать как небольшой key adapter change.
-- Готовность: existing controls работают, после restart и forget результат подтверждён native readback, required gates успешны на exact HEAD.
+- Готовность: existing controls и V1 regression работают, restart подтверждён readback, V2 action-set gate закрыт и required gates успешны на exact HEAD.
 
 ## 8. Review
 
@@ -172,6 +185,14 @@ Native vendor PASS прикладывается только для реальн
 - Найдено: probe failure в donor сохраняет pending intent, а не обязательно завершённую запись с простым error status.
 - Исправлено: acceptance/E2E сохраняют original pending/held и запрещают ложный connected, новый inference и удаление evidence.
 - Повторная проверка root после этих исправлений ожидается; R2 не объявляется принятой автоматически.
+
+Дополнительный независимый R2: reviewer `estimate_platform_acceptance`, 2026-11-12;
+входной docs commit `bedaf5aae9d81033704636b5362472ddab5818d3`, D source `d58500bc…`, donor `e13edcd…`.
+
+- **R2-02-04:** V2 forget был назван working baseline без handler; найден explicit donor rejection. Разделены V1 regression, V2 action-set gate и owned rollback.
+- **R2-02-05:** nested public model probe занял бы reservation credential owner. Указан reuse finite native probe под одним intent/fence.
+- **R2-02-06:** V1 `/auth` и session-owned V2 wire не дают generic credential authority. Названы реальные integration APIs и узкий management scope.
+- Проверены source functions/tests, owner reservation и temporary V2 metadata namespaces. Production не изменён; R3 gate остаётся обязательным.
 
 ### R3 — повторное review после R2, pending
 
