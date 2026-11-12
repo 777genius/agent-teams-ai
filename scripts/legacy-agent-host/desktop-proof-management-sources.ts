@@ -1,5 +1,15 @@
 /** Finite source closure for captured management, lifecycle, WorkSync and native roster. */
 export const desktopProofManagementSources = [
+  'scripts/legacy-agent-host/desktop-codex-login-fixture.ts',
+  'scripts/legacy-agent-host/desktop-codex-login-ui-proof.ts',
+  'src/renderer/components/runtime/CodexLoginLinkCopyButton.tsx',
+  'src/renderer/components/dashboard/CliStatusBanner.tsx',
+  'src/renderer/components/settings/SettingsView.tsx',
+  'src/renderer/components/settings/SettingsTabs.tsx',
+  'src/features/localization/renderer/locales/en/common.json',
+  'src/features/localization/renderer/locales/en/settings.json',
+  'src/features/runtime-provider-management/main/adapters/output/CapturedCodexLogin.ts',
+  'packages/legacy-agent-host/src/adapters/providers/CodexLoginConversation.ts',
   'src/features/runtime-provider-management/main/infrastructure/runtimeProviderErrorBoundary.ts',
   'src/features/runtime-provider-management/main/infrastructure/runtimeProviderModelRequestTracker.ts',
   'scripts/legacy-agent-host/desktop-skills-fixture.ts',

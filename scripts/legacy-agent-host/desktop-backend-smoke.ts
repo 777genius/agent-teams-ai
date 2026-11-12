@@ -9,7 +9,7 @@ import { runDesktopNativeExtensionsUiSmoke } from './desktop-native-extensions-u
 import { isSkillsMetadataRefusal } from './desktop-skills-fixture.ts';
 import { readCapturedCandidateElectron } from './candidate-electron.ts';
 import { bounded } from './desktop-proof-bounds.ts';
-import { runDesktopCodexAccountProof } from './desktop-codex-account-proof.ts';
+import { runDesktopCodexAccountProof, readDesktopCodexInitialAccount } from './desktop-codex-account-proof.ts';
 import { runDesktopActivityUiSmoke, finalizeDesktopActivityReadback } from './desktop-activity-ui-smoke.ts';
 import { processFixtureBashCommand } from './desktop-native-process-fixture.ts';
 import { qualifyPreparedProcessRegistration } from './desktop-native-process-host.ts';
@@ -305,36 +305,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       ? await captureDesktopOpenCodeV2ColdMetadata(cdp, { root: fixture.root, node: fixture.node, hostEntry: fixture.hostEntry,
         group, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) }) : undefined;
     if (coldMetadata) hostPid = coldMetadata.hostPid;
-    if (codexAccountMode) {
-      const readyUntil = Date.now() + 60000;
-      let initial: Record<string, unknown> | undefined;
-      while (Date.now() < readyUntil) {
-        assertOwnedCdpListener(group);
-        try {
-          initial = object(
-            await bounded(
-              cdp.evaluate('window.electronAPI.getCodexAccountSnapshot()'),
-              20000,
-              'read account IPC readiness'
-            )
-          );
-          break;
-        } catch (error) {
-          if (
-            !(error instanceof Error) ||
-            !/No handler registered for ['"]codexAccount:getSnapshot/.test(error.message)
-          )
-            throw error;
-          // The missing handler proves this read was not dispatched. No mutation is retried.
-          await tick();
-        }
-      }
-      assert.ok(initial, 'Codex account handler becomes ready before any auth mutation');
-      evidence.codexInitialAccount = {
-        managedAccount: initial.managedAccount,
-        appServerState: initial.appServerState,
-      };
-    }
+    if (codexAccountMode) await readDesktopCodexInitialAccount(cdp, { evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     let nativeChildren: ProcessIdentity[] = [];
     if (conversationMode) await runDesktopHostRoutingProof(cdp, fixture, evidence);
     if (questionUiMode) {
