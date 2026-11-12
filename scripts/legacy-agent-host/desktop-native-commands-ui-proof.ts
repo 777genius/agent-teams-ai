@@ -6,10 +6,13 @@ import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/ide
 import {
   COMMAND_ARGS,
   COMPACT_AUTHORIZATION,
+  REVIEW_ARGS,
 } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-compaction/model.ts';
 import {
   NATIVE_COMMAND_UI_REPLY,
   NATIVE_COMMAND_UI_REPLY_ID,
+  NATIVE_REVIEW_UI_REPLY,
+  NATIVE_REVIEW_UI_REPLY_ID,
 } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-commands/model.ts';
 import { sanitizeDisplayContent } from '../../src/shared/utils/contentSanitizer.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
@@ -138,7 +141,13 @@ export async function runDesktopNativeCommandsUiProof(
       'captured native command suggestions'
     );
     assert.ok(Array.isArray(catalog));
-    for (const required of ['/compact', '/cost', '/test-project-command', '/test-user-command'])
+    for (const required of [
+      '/compact',
+      '/cost',
+      '/review',
+      '/test-project-command',
+      '/test-user-command',
+    ])
       assert.ok(catalog.includes(required));
     for (const excluded of ['/test-hidden-command', '/model', '/effort', '/fast', '/clear'])
       assert.equal(catalog.includes(excluded), false);
@@ -286,24 +295,47 @@ export async function runDesktopNativeCommandsUiProof(
     undefined,
     'local /cost preserves the pending Team reminder'
   );
-  await writeFile(nativeCommandUiState(root), JSON.stringify({ phase: 'project-command' }), {
-    mode: 0o600,
-  });
-  await send('test-project-command', COMMAND_ARGS);
-  const skillRows = (await inbox()).filter((row) => row.messageId === NATIVE_COMMAND_UI_REPLY_ID);
-  assert.equal(skillRows.length, 1);
-  assert.equal(skillRows[0]!.text, NATIVE_COMMAND_UI_REPLY);
-  await ui.waitRead(
-    `document.body.innerText.includes(${desktopJsLiteral(NATIVE_COMMAND_UI_REPLY)})`,
-    'actual captured skill MCP reply visible'
-  );
-  await revealDesktopReply(cdp, NATIVE_COMMAND_UI_REPLY, {
-    assertOwnedRenderer: options.assertOwnedRenderer,
-    step,
-  });
+  for (const selected of [
+    {
+      phase: 'project-command',
+      name: 'test-project-command',
+      args: COMMAND_ARGS,
+      replyId: NATIVE_COMMAND_UI_REPLY_ID,
+      reply: NATIVE_COMMAND_UI_REPLY,
+    },
+    {
+      phase: 'review',
+      name: 'review',
+      args: REVIEW_ARGS,
+      replyId: NATIVE_REVIEW_UI_REPLY_ID,
+      reply: NATIVE_REVIEW_UI_REPLY,
+    },
+  ] as const) {
+    await writeFile(nativeCommandUiState(root), JSON.stringify({ phase: selected.phase }), {
+      mode: 0o600,
+    });
+    const original = await send(selected.name, selected.args);
+    const replies = (await inbox()).filter((row) => row.messageId === selected.replyId);
+    assert.equal(replies.length, 1);
+    assert.equal(replies[0]!.text, selected.reply);
+    await ui.waitRead(
+      `document.body.innerText.includes(${desktopJsLiteral(selected.reply)})`,
+      'actual native /' + selected.name + ' MCP reply visible'
+    );
+    await revealDesktopReply(cdp, selected.reply, {
+      assertOwnedRenderer: options.assertOwnedRenderer,
+      step,
+    });
+    if (selected.phase === 'review')
+      proof.builtinReview = {
+        ...original,
+        exactArguments: selected.args,
+        replyId: selected.replyId,
+      };
+  }
   assert.deepEqual(
     model.commandRequests.map((value) => record(value).phase),
-    ['compact', 'project-command', 'project-command']
+    ['compact', 'project-command', 'project-command', 'review', 'review']
   );
   await writeFile(nativeCommandUiState(root), JSON.stringify({ phase: 'idle' }), {
     mode: 0o600,
@@ -325,8 +357,8 @@ export async function runDesktopNativeCommandsUiProof(
   await ui.clickSidebar(options.seed.subject);
   await ui.click('button[aria-label^="alice,"]', 'open same lead conversation after reload');
   await ui.waitRead(
-    `document.body.innerText.includes(${desktopJsLiteral(NATIVE_COMMAND_UI_REPLY)})`,
-    'same native reply after reload'
+    `document.body.innerText.includes(${desktopJsLiteral(NATIVE_REVIEW_UI_REPLY)})`,
+    'same native review reply after reload'
   );
   assert.deepEqual((await session()).inputs, before.inputs);
   assert.deepEqual(await commandRows(), before.commands);

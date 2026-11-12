@@ -934,10 +934,14 @@ jobs:
           assert.equal(receipt.proofs.namedCommands.project, true);
           assert.equal(receipt.proofs.namedCommands.user, true);
           assert.equal(receipt.proofs.namedCommands.nativeTeamReplies, 2);
-          assert.equal(receipt.proofs.coldRecovery.exactOriginalReceipts, 7);
+          assert.equal(receipt.proofs.builtinReview.command, '/review');
+          assert.equal(receipt.proofs.builtinReview.exactArguments, 'TEST_NATIVE_P03_EXACT_REVIEW_ARGUMENTS');
+          assert.equal(receipt.proofs.builtinReview.nativeTeamReplies, 1);
+          assert.equal(receipt.proofs.builtinReview.nativeRequests, 2);
+          assert.equal(receipt.proofs.coldRecovery.exactOriginalReceipts, 8);
           assert.equal(receipt.proofs.coldRecovery.noNativeAllocation, true);
           assert.equal(receipt.proofs.coldRecovery.modelRequestsUnchanged, true);
-          assert.equal(receipt.modelRequests.length, 8);
+          assert.equal(receipt.modelRequests.length, 10);
           NODE
       - name: Stage exact OpenCode V2 base for original Desktop acceptance
         if: matrix.opencode_generation == 'v2'
@@ -1126,11 +1130,14 @@ jobs:
           assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
           const proof = receipt.nativeCommandsUiProof;
           assert.equal(proof.status, 'PASS');
-          assert.deepEqual(proof.commands.map(row => row.name), ['cost', 'compact', 'cost', 'test-project-command']);
-          assert.equal(new Set(proof.commands.map(row => row.inputId)).size, 4);
+          assert.deepEqual(proof.commands.map(row => row.name), ['cost', 'compact', 'cost', 'test-project-command', 'review']);
+          assert.equal(new Set(proof.commands.map(row => row.inputId)).size, 5);
           assert.equal(proof.localReplies.length, 2);
           for (const reply of proof.localReplies) assert.match(reply.nativeMessageRef, /^local-command:.+/);
-          assert.deepEqual(proof.commandRequests.map(row => row.phase), ['compact', 'project-command', 'project-command']);
+          assert.deepEqual(proof.commandRequests.map(row => row.phase), ['compact', 'project-command', 'project-command', 'review', 'review']);
+          assert.equal(proof.builtinReview.name, 'review');
+          assert.equal(proof.builtinReview.exactArguments, 'TEST_NATIVE_P03_EXACT_REVIEW_ARGUMENTS');
+          assert.equal(proof.builtinReview.replyId, 'TEST-p03-ui-review-native-reply');
           assert.equal(proof.originalIdsRetainedAfterReload, true);
           assert.equal(proof.noReplayAfterReload, true); assert.equal(proof.sourcesUnchanged, true);
           console.log(JSON.stringify({ status: receipt.status, receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,

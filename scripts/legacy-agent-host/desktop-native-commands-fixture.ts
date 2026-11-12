@@ -98,7 +98,7 @@ export function desktopNativeCommandScenario(root: () => string): NativeCommandU
       const row = JSON.parse(readFileSync(nativeCommandUiState(root()), 'utf8')) as {
         phase: NativeCommandUiPhase;
       };
-      assert.ok(['idle', 'compact', 'project-command'].includes(row.phase));
+      assert.ok(['idle', 'compact', 'project-command', 'review'].includes(row.phase));
       return row.phase;
     },
   };
