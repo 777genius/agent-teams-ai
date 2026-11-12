@@ -160,6 +160,18 @@ export async function startRetainedOpenCodeApp(input: {
     await cdp.send('Log.enable');
     await cdp.send('Page.bringToFront');
     await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true });
+    // Ozone can expose a 1x1 viewport despite the original BrowserWindow bounds.
+    // Match the existing real Electron smokes before any original renderer work.
+    phase = 'desktop viewport';
+    assertCurrent();
+    await cdp.send('Page.enable');
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false,
+    });
+    await waitFor(async () => {
+      assertCurrent();
+      return await cdp!.evaluate<boolean>('innerWidth === 1440 && innerHeight === 1000') || null;
+    }, 'original desktop viewport', 30_000);
     phase = 'original preload';
     await waitFor(async () => await cdp!.evaluate<boolean>(
       `location.origin===${desktopJsLiteral(new URL(target.url).origin)}&&document.readyState==='complete'&&
