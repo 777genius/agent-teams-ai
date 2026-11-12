@@ -237,3 +237,32 @@ Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b
 - Сверена stable schema pinned Codex 0.162.0: `ThreadStartParams.ephemeral` существует; в generated stable/experimental schema нет native max-turns/max-budget полей. Это только schema evidence, не model/cleanup qualification.
 - Host implementation сохраняет один immutable app capture рядом с existing launch captures; исходный RuntimeOwner ledger владеет open/input/terminal/close. Native MCP snapshot использует прежние captured recipe artifacts. Не создаются Team member, Task Board task или новый daemon.
 - Native finite execution, low-limit loop, original cancellation/unknown recovery и Desktop UI всё ещё требуют 04-G1/G2 и приёмки выше. Поля неподдерживаемых Codex limits не будут молча переданы как будто применённые.
+
+## R4 — finite execution и сверка фактических возможностей
+
+- Повторно проверен old one-shot `ScheduledTaskExecutor.buildArgs` и native branch
+  `QueryEngine.ts` на baseline выше: native Codex не применял общие turn/budget
+  flags. Exact `codex@0.162.0` `ThreadStartParams` также не содержит этих лимитов.
+  В Host Codex поля недоступны с объяснением; явное Save очищает старые значения,
+  а raw admission с неподдержанными limits/tool lists отвергается до запуска.
+  Claude сохраняет native limit flags и typed `disallowedTools`; budget `0`
+  валиден, явное очищение budget отличается от отсутствующего update.
+- Один immutable schedule intent использует существующий Runtime ledger; отдельного
+  execution journal нет. Разные scheduleId получают разные Runtime member slots,
+  последовательные occurrences одного расписания требуют cleanup предыдущего.
+  Cancel до Start, во время native open и при потерянном ACK использует original
+  scheduleId/runId. Не вводить общий app wall-clock timeout поверх прежней семантики.
+- Дополнительная сверка ordinary Claude delegation: normal Host уже имеет
+  `createClaudeSubagents.ts` и `ClaudeSubagentLogProjection.ts`, а старый one-shot
+  не запрещал обычный Agent. Переиспользовать bounded native subagent port для
+  исходного finite input, не создавать Team member/task и не выдавать Team authority.
+  Parent input, operation, session, original schedule control и native permission
+  mode остаются обязательными; lifecycle и cleanup принадлежат тому же Runtime.
+- Существующий schedule log UI получает retained text/tools, final result и usage
+  только из подтверждённых Runtime observations. Cold log gap показывается явно;
+  отсутствие native результата или cleanup не превращается в completed.
+- Четыре targeted Host/RPC integration сценария покрывают replay/restart/следующий
+  occurrence, cancel/open race, uncertain cleanup и два независимых расписания.
+  Это controlled Session проверки, не native acceptance. Дополнять их широким
+  набором однотипных units не требуется; далее native Claude/Codex и Desktop journey
+  через существующие TEST fixtures, затем снятие blanket Host UI restriction.
