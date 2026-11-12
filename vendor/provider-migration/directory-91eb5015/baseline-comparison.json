@@ -1,0 +1,26 @@
+{
+  "provider-implementations": {
+    "oldSha256": "cbd2b267b97f9ae758dfeb2fff8d02e2ef31ca31dfe4bbf0aca1fb428638b13a",
+    "newSha256": "9ec9000471ce7beb1d8e2501f361a5d4d9d9c25465dacf99bda506105d1eb739",
+    "changed": [
+      "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-policy.js",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-input-validation.js",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-catalog.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-catalog.js",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-session-client.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-session-client.js"
+    ],
+    "added": [
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-directory.d.ts",
+      "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-directory.js"
+    ],
+    "removed": []
+  },
+  "provider-session-contracts": {
+    "oldSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+    "newSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+    "changed": [],
+    "added": [],
+    "removed": []
+  }
+}
