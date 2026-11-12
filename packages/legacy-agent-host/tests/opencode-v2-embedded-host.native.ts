@@ -21,6 +21,30 @@ async function endpoint(): Promise<string> {
   return `http://127.0.0.1:${address.port}`;
 }
 
+/** Failure evidence is finite public state only: no inputs, IDs, paths or native error text. */
+function nativeInputProgress(value: Record<string, unknown>) {
+  const choice = (entry: unknown, values: readonly string[]) =>
+    typeof entry === 'string' && values.includes(entry) ? entry : null;
+  const rows = (entries: unknown) => Array.isArray(entries) ? entries.slice(0, 8).map(entry =>
+    entry && typeof entry === 'object' && !Array.isArray(entry) ? entry as Record<string, unknown> : {}) : [];
+  return {
+    phase: choice(value.phase, ['unopened', 'opening', 'allocated', 'closing', 'closed', 'held']),
+    custody: choice(value.custody, ['owned', 'released', 'unknown']),
+    nativeReady: typeof value.nativeReady === 'boolean' ? value.nativeReady : null,
+    attached: typeof value.attached === 'boolean' ? value.attached : null,
+    sealed: typeof value.sealed === 'boolean' ? value.sealed : null,
+    diagnostic: choice(value.diagnostic, ['open-unknown', 'observe-ended', 'observe-failed', 'readiness-unavailable', 'close-unknown']),
+    inputs: rows(value.inputs).map(input => ({
+      phase: choice(input.phase, ['admitted', 'claimed', 'consumed', 'terminal', 'cancelled', 'rejected', 'not-sent', 'unknown']),
+      terminal: choice(input.terminal, ['succeeded', 'failed', 'cancelled']),
+    })),
+    interactions: rows(value.interactions).map(interaction => ({
+      kind: choice(interaction.kind, ['permission', 'question']),
+      phase: choice(interaction.phase, ['pending', 'responding', 'resolved', 'unknown']),
+    })),
+  };
+}
+
 export interface PackagedNativeHostInputs {
   sourceHead: string;
   node: string;
@@ -68,6 +92,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   let model: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
   let passed = false, cleanup = false;
   let originalFailure: unknown;
+  let lastInputProgress: ReturnType<typeof nativeInputProgress> | undefined;
+  let inputReadCount = 0;
   let windowsShellSha256: string | undefined;
   const cleanupErrors: unknown[] = [];
   const digests = {
@@ -154,6 +180,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     // Observe the existing 120-second embedded startup plus MCP readiness; never retry the intent.
     const opened = await host.rpc('runtime.open', envelope('TEST-open', { memberId: 'carol-id' }), 180_000);
     assert.equal(opened.ok, true, JSON.stringify(opened));
+    lastInputProgress = nativeInputProgress(record(opened.value));
     assert.equal(record(opened.value).nativeReady, true, JSON.stringify(opened));
     steps.push('original_host_embedded_native_and_mcp_ready');
     const command = envelope('TEST-original-message', {
@@ -171,6 +198,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       const result: Record<string, unknown> = await host.rpc('runtime.read', envelope('TEST-read', { memberId: 'carol-id' }));
       assert.equal(result.ok, true);
       const state = record(result.value);
+      inputReadCount++;
+      lastInputProgress = nativeInputProgress(state);
       for (const interaction of (state.interactions as unknown[]).map(record).filter(row => row.phase === 'pending')) {
         assert.equal(interaction.kind, 'permission'); assert.equal(interaction.inputId, inputId);
         assert.equal(typeof interaction.interactionRef, 'string');
@@ -263,6 +292,11 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         version: '2.1.4', approvalMode, nodeVersion: process.version,
         digests: { ...digests, ...(windowsShellSha256 ? { windowsShell: windowsShellSha256 } : {}) },
         steps, cleanup,
+        inputObservation: { reads: inputReadCount, last: lastInputProgress ?? null },
+        failureCode: originalFailure instanceof Error && 'code' in originalFailure &&
+          typeof originalFailure.code === 'string' &&
+          ['ERR_ASSERTION', 'ABORT_ERR', 'EPIPE', 'ECONNRESET', 'ETIMEDOUT'].includes(originalFailure.code)
+            ? originalFailure.code : null,
         hosts: hosts.map(({ exitCode, signalCode, stdoutValid }) => ({ exitCode, signalCode, stdoutValid })),
         modelOrigin: 'localhost-scripted', modelRequests: model?.observations.length ?? 0,
         modelFailures: model?.failures ?? [], vendorAuthQualified: false,
