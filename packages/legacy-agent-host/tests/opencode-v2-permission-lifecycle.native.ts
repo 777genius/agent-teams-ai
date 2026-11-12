@@ -428,13 +428,9 @@ test(
         undefined
       );
       assert.equal(model.counts.get('ACTIVE'), 1);
-      assert.equal((await state('deny')).inputs instanceof Array, true);
-      const activeTerminal = (await terminal('deny', activeInput)).terminal;
-      assert.equal(
-        activeTerminal,
-        'unknown',
-        'physical Stop does not invent an unseen terminal ACK'
-      );
+      const activeOutcome = (await inputState('deny')).find((row) => row.inputId === activeInput);
+      assert.equal(activeOutcome?.phase, 'unknown');
+      assert.equal(activeOutcome?.terminal, undefined, 'physical Stop invents no terminal ACK');
       assert.equal(await fileHash('/proc/' + nativePids.get('sibling') + '/exe'), digests.bun);
       const siblingInput = await send('sibling', 'SIBLING');
       assert.equal((await terminal('sibling', siblingInput)).terminal, 'succeeded');
@@ -478,9 +474,14 @@ test(
       }
       const cold = await state('deny');
       assert.equal(cold.attached, false);
+      const coldActive = (cold.inputs as unknown[])
+        .map(record)
+        .find((row) => row.inputId === activeInput);
+      assert.equal(coldActive?.phase, 'unknown');
       assert.equal(
-        (cold.inputs as unknown[]).map(record).find((row) => row.inputId === activeInput)?.terminal,
-        'unknown'
+        coldActive?.terminal,
+        undefined,
+        'cold readback retains the absence of a terminal ACK'
       );
       const restored = value(
         await control('restore', {
