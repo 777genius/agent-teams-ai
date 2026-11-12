@@ -8,7 +8,7 @@ import { fileDigest } from './desktop-backend-fixture.ts';
 import { captureReadiness } from './desktop-launch-ui-smoke.ts';
 import { readNativeReviewSeed } from './desktop-native-review-fixture.ts';
 import { readDesktopNativeHostProcesses, readDesktopNativeStopSessions, separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fixture.ts';
-import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import { createDesktopReviewHunkControls, readDesktopReviewDecisions } from './desktop-review-hunk-controls.ts';
 import { V2_REVIEW_BOOTSTRAP, V2_REVIEW_SUBJECT, V2_REVIEW_TOOL_PREFIX } from './desktop-opencode-v2-review-model.ts';
 import type { startOpenCodeV2ReviewModel } from './desktop-opencode-v2-review-model.ts';
@@ -64,7 +64,7 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
     return buttons.length===1?{id:buttons[0].getAttribute('aria-controls'),expanded:buttons[0].getAttribute('aria-expanded')}:null;
   })()`, 'original optional launch settings'));
   if (optional.expanded !== 'true') {
-    const selector = `[role="dialog"] button[aria-controls=${JSON.stringify(optional.id)}]`;
+    const selector = `[role="dialog"] button[aria-controls=${desktopJsLiteral(optional.id)}]`;
     await ui.scrollTo(selector, 'original optional launch settings');
     await ui.click(selector, 'expand original optional launch settings');
   }
@@ -77,7 +77,7 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
   await ui.scrollTo('[role="dialog"] #dialog-prompt', 'original V2 review prompt');
   await ui.click('[role="dialog"] #dialog-prompt', 'focus original V2 review bootstrap');
   await cdp.send('Input.insertText', { text: V2_REVIEW_BOOTSTRAP });
-  await ui.waitRead(`document.querySelector('[role="dialog"] #dialog-prompt')?.value===${JSON.stringify(V2_REVIEW_BOOTSTRAP)}`,
+  await ui.waitRead(`document.querySelector('[role="dialog"] #dialog-prompt')?.value===${desktopJsLiteral(V2_REVIEW_BOOTSTRAP)}`,
     'one deliberate original bootstrap');
   await ui.waitRead(`[...document.querySelectorAll('[role="dialog"] button')].some(node=>node.textContent.trim()==='Launch team'&&!node.disabled)`,
     'original captured V2 readiness permits Launch', 120_000);
@@ -93,6 +93,7 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
   assert.equal(record(initial.savedSettings).model, 'TEST-local/TEST-model');
   assert.equal(record(initial.savedSettings).skipPermissions, true);
   const taskId = await poll(async () => model.taskId(), id => id.length > 0, 'actual native MCP Task');
+  assert.match(taskId, /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/, 'canonical Host task UUID');
   const sessions = () => readDesktopNativeStopSessions(fixture.root).then(values => values.filter(row => record(row.binding).runId === capture.launchId));
   const boot = await poll(sessions, values => values.length === 1 && (values[0]!.inputs as unknown[]).map(record).some(input => input.phase === 'terminal'), 'bootstrap terminal');
   const originalRuntimeInput = (boot[0]!.inputs as unknown[]).map(record)[0]!;
@@ -101,7 +102,7 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
   assert.deepEqual(await rows(eventPath), []); assert.equal(await readFile(seed.filePath, 'utf8'), seed.before);
   const selector = `.kanban-task-card[data-task-id="${taskId}"]`;
   await ui.scrollTo(selector, 'actual native Task card');
-  const point = record(await ui.waitRead(`(() => {const e=document.querySelector(${JSON.stringify(selector)});if(!e)return null;const r=e.getBoundingClientRect();return r.width&&r.height?{x:r.x+r.width/2,y:r.y+r.height/2}:null;})()`, 'native Task geometry'));
+  const point = record(await ui.waitRead(`(() => {const e=document.querySelector(${desktopJsLiteral(selector)});if(!e)return null;const r=e.getBoundingClientRect();return r.width&&r.height?{x:r.x+r.width/2,y:r.y+r.height/2}:null;})()`, 'native Task geometry'));
   await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
   await ui.click('.kanban-task-card-toolbar button[aria-label="Start"]', 'original user Task Start once');
   await poll(async () => model.observations, values => values.some(row => row.turn === 'work' && row.step === 3), 'actual two native edits and terminal response', 180_000);
@@ -165,7 +166,7 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
   await ui.click('button[aria-label="Close Changes"]', 'close and flush V2 Review');
   await ui.waitRead(`!document.querySelector('button[aria-label="Close Changes"]')`, 'Changes closed');
   const timeOrigin = await cdp.evaluate('performance.timeOrigin'); await cdp.send('Page.reload', { ignoreCache: false });
-  await ui.waitRead(`performance.timeOrigin!==${JSON.stringify(timeOrigin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`, 'new renderer document');
+  await ui.waitRead(`performance.timeOrigin!==${desktopJsLiteral(timeOrigin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`, 'new renderer document');
   await ui.observeInput(); await review.openChanges(); await review.waitHistory(2, 0);
   assert.equal(await readFile(seed.filePath, 'utf8'), seed.mixed); assert.deepEqual(await rows(eventPath), events);
   assert.equal(await fileDigest(join(fixture.root, 'workspace/.git/index')), seed.gitIndexSha256);
