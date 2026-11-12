@@ -1,5 +1,9 @@
 /** Finite source closure of the integrated lifecycle, WorkSync and member-action checkpoint. */
 export const desktopProofIntegratedSources = [
+  'scripts/legacy-agent-host/desktop-opencode-v2-lifecycle.test.ts',
+  'scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts',
+  'scripts/legacy-agent-host/run-packaged-opencode-v2.ts',
+  'scripts/legacy-agent-host/stage-opencode-v2-packaged.ts',
   'scripts/legacy-agent-host/desktop-task-trash-ui-smoke.ts',
   'src/shared/utils/taskIdentity.ts',
   'src/renderer/components/team/kanban/TrashDialog.tsx',

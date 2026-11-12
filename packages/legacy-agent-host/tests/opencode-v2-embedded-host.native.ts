@@ -6,6 +6,7 @@ import { mkdir, mkdtemp, readFile, realpath, stat, writeFile } from 'node:fs/pro
 import { tmpdir } from 'node:os';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 import { test } from 'node:test';
+import { pathToFileURL } from 'node:url';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import { record } from './fixtures/native-claude-team/model.ts';
 import { fileHash, nativeHostEnvironment, startHost, tick, treeHash } from './fixtures/native-host.ts';
@@ -20,26 +21,48 @@ async function endpoint(): Promise<string> {
   return `http://127.0.0.1:${address.port}`;
 }
 
-test('embedded 2.1.4 performs native tools, MCP, once approval and cold Host Resume without replay', {
-  timeout: 300_000, skip: process.env.OPENCODE_V2_EMBEDDED_HOST_GO !== '1',
-}, async () => {
+export interface PackagedNativeHostInputs {
+  sourceHead: string;
+  node: string;
+  entry: string;
+  hostPackage: string;
+  bun: string;
+  engine: string;
+  manifestSha256: string;
+  hostSourceDigest: string;
+  providerDigest: string;
+  processCustody?: { directory: string; manifestSha256: string };
+  evidence: Readonly<Record<string, unknown>>;
+  /** Original packaged reader rechecks every selected file, source absence and actual Node. */
+  verify(): Promise<void>;
+}
+
+/** Same native scenario for source qualification and the separately captured packaged candidate. */
+export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeHostInputs) {
   assert.ok(process.platform === 'linux' && process.arch === 'x64' ||
     (process.platform === 'darwin' || process.platform === 'win32') &&
       (process.arch === 'arm64' || process.arch === 'x64'));
   assert.equal(process.version, 'v24.21.0');
-  const bun = await realpath(process.env.OPENCODE_V2_EMBEDDED_BUN!);
-  const engine = await realpath(process.env.OPENCODE_V2_EMBEDDED_GRAPH!);
-  const manifestSha256 = process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256!;
+  await packaged?.verify();
+  const bun = packaged ? packaged.bun : await realpath(process.env.OPENCODE_V2_EMBEDDED_BUN!);
+  const engine = packaged ? packaged.engine : await realpath(process.env.OPENCODE_V2_EMBEDDED_GRAPH!);
+  const manifestSha256 = packaged ? packaged.manifestSha256 : process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256!;
   const receiptPath = process.env.OPENCODE_V2_EMBEDDED_HOST_RECEIPT!;
   const approvalMode = process.env.OPENCODE_V2_EMBEDDED_APPROVAL_MODE ?? 'manual';
   assert.ok(approvalMode === 'manual' || approvalMode === 'auto');
   assert.match(manifestSha256, /^[a-f0-9]{64}$/);
   assert.ok(receiptPath && isAbsolute(receiptPath));
-  const repo = resolve(import.meta.dirname, '../../..'), pkg = join(repo, 'packages/legacy-agent-host');
+  const repo = resolve(import.meta.dirname, '../../..');
+  const pkg = packaged ? packaged.hostPackage : join(repo, 'packages/legacy-agent-host');
   const sourceHead = process.env.OPENCODE_V2_TEST_SOURCE_HEAD!;
-  await buildNativeV1Host(repo, sourceHead);
-  const { applyLaunchConfiguration } = await import('../dist/composition/launchConfiguration.js');
-  const node = await realpath(process.execPath), entry = join(pkg, 'dist/cli.js');
+  if (packaged) assert.equal(packaged.sourceHead, sourceHead);
+  else await buildNativeV1Host(repo, sourceHead);
+  if (packaged && process.platform === 'darwin') assert.ok(packaged.processCustody);
+  const { applyLaunchConfiguration } = await import(pathToFileURL(join(pkg, 'dist/composition/launchConfiguration.js')).href) as
+    typeof import('../dist/composition/launchConfiguration.js');
+  const node = packaged ? packaged.node : await realpath(process.execPath);
+  const entry = packaged ? packaged.entry : join(pkg, 'dist/cli.js');
+  assert.equal(await realpath(process.execPath), node, 'scenario and Host must use the selected original Node');
   const steps: string[] = [], hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
   let host: ReturnType<typeof startHost> | undefined;
   let model: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
@@ -49,9 +72,9 @@ test('embedded 2.1.4 performs native tools, MCP, once approval and cold Host Res
   const cleanupErrors: unknown[] = [];
   const digests = {
     bun: await fileHash(bun), manifest: await fileHash(join(engine, 'opencode-v2-engine-manifest.json')),
-    node: await fileHash(node), hostSource: await treeHash(join(pkg, 'src'), '.ts'),
+    node: await fileHash(node), hostSource: packaged ? packaged.hostSourceDigest : await treeHash(join(pkg, 'src'), '.ts'),
     hostDist: await treeHash(join(pkg, 'dist'), '.js'),
-    provider: await fileHash(resolve(pkg, JSON.parse(await readFile(join(pkg, 'package.json'), 'utf8'))
+    provider: packaged ? packaged.providerDigest : await fileHash(resolve(pkg, JSON.parse(await readFile(join(pkg, 'package.json'), 'utf8'))
       .dependencies['@agent-teams/provider-implementations'].slice(5))),
   };
   assert.equal(digests.manifest, manifestSha256);
@@ -79,7 +102,7 @@ test('embedded 2.1.4 performs native tools, MCP, once approval and cold Host Res
     const teamBinding = { backendId: owner.ownerId, teamId: scope.teamId, teamName: 'test-native-team' };
     const profile: TeamHostProfile = {
       schemaVersion: 1, owner, principalId: 'human',
-      ...(process.platform === 'darwin' ? { processCustody: {
+      ...(process.platform === 'darwin' ? { processCustody: packaged ? packaged.processCustody! : {
         directory: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY!,
         manifestSha256: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256!,
       } } : {}),
@@ -216,9 +239,12 @@ test('embedded 2.1.4 performs native tools, MCP, once approval and cold Host Res
     await host.close(); hosts.push(host.facts()); host = undefined;
     steps.push('cold_host_restored_native_history_without_model_or_tool_replay');
     assert.equal(failedShellObserved, true, 'native shell exit 7 is reported as a failed tool');
-    assert.equal(await treeHash(join(pkg, 'src'), '.ts'), digests.hostSource);
+    if (packaged) await packaged.verify();
+    else {
+      assert.equal(await treeHash(join(pkg, 'src'), '.ts'), digests.hostSource);
+      assertNativeV1Source(repo, sourceHead);
+    }
     assert.equal(await treeHash(join(pkg, 'dist'), '.js'), digests.hostDist);
-    assertNativeV1Source(repo, sourceHead);
     passed = true;
   } catch (error) { originalFailure = error; }
   finally {
@@ -229,7 +255,9 @@ test('embedded 2.1.4 performs native tools, MCP, once approval and cold Host Res
     cleanup = cleanupErrors.length === 0;
     try {
       await writeFile(receiptPath, JSON.stringify({
-        kind: 'TEST_NATIVE_V2_EMBEDDED_HOST', status: passed && cleanup ? 'PASS' : 'INCOMPLETE',
+        kind: packaged ? 'TEST_PACKAGED_NATIVE_V2_HOST' : 'TEST_NATIVE_V2_EMBEDDED_HOST',
+        status: passed && cleanup ? 'PASS' : 'INCOMPLETE',
+        ...(packaged ? { packaged: packaged.evidence } : {}),
         sourceHead, platform: `${process.platform}-${process.arch}`,
         version: '2.1.4', approvalMode, nodeVersion: process.version,
         digests: { ...digests, ...(windowsShellSha256 ? { windowsShell: windowsShellSha256 } : {}) },
@@ -244,4 +272,9 @@ test('embedded 2.1.4 performs native tools, MCP, once approval and cold Host Res
   if (originalFailure !== undefined) throw originalFailure;
   if (cleanupErrors.length) throw new AggregateError(cleanupErrors, 'TEST native Host cleanup or receipt failed');
   assert.equal(passed, true);
-});
+}
+
+if (process.env.OPENCODE_V2_PACKAGED_GO !== '1')
+  test('embedded 2.1.4 performs native tools, MCP, once approval and cold Host Resume without replay', {
+    timeout: 300_000, skip: process.env.OPENCODE_V2_EMBEDDED_HOST_GO !== '1',
+  }, () => runOpenCodeV2EmbeddedHostNative());

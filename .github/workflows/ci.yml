@@ -577,12 +577,28 @@ jobs:
             label: pending open Quit and cold readback
             quit_scenario: pending-open
             readback: native-quit-readback-ui
+          - mode: native-quit-ui
+            variant: native-v2-quit-active-readback
+            label: OpenCode V2 active input Quit and cold readback
+            opencode_generation: v2
+            readback: native-quit-readback-ui
+          - mode: native-quit-ui
+            variant: native-v2-quit-pending-open-readback
+            label: OpenCode V2 pending open Quit and cold readback
+            opencode_generation: v2
+            quit_scenario: pending-open
+            readback: native-quit-readback-ui
           - mode: native-resume-ui
             label: cold selected Resume
           - mode: native-resume-ui
             variant: native-codex-resume-ui
             label: cold selected Codex Resume
             resume_provider: codex
+          - mode: native-resume-ui
+            variant: native-v2-resume-ui
+            label: cold selected OpenCode V2 Resume
+            resume_provider: opencode
+            opencode_generation: v2
           - mode: native-review-ui
             label: native review and cold readback
             readback: native-review-readback-ui
@@ -812,6 +828,14 @@ jobs:
               assert.match(resumed.runtimeMcpEndpoints.originalSha256, /^[a-f0-9]{64}$/);
               assert.match(resumed.runtimeMcpEndpoints.resumedSha256, /^[a-f0-9]{64}$/);
               assert.notEqual(resumed.runtimeMcpEndpoints.originalSha256, resumed.runtimeMcpEndpoints.resumedSha256);
+            }
+            if (provider === 'opencode') {
+              assert.equal(receipt.nativeGeneration, 'v2');
+              assert.equal(receipt.resumeNativeProfile.version, '2.1.4');
+              assert.match(receipt.resumeNativeProfile.engineManifestSha256, /^[a-f0-9]{64}$/);
+              assert.equal(receipt.resumeDialogProof.status, 'PASS');
+              assert.equal(receipt.resumeDialogProof.source.nativeSession,
+                receipt.resumeDialogProof.secondStop.nativeSession);
             }
           }
           if (phase === 'desktop' && process.env.LEGACY_DESKTOP_NATIVE_MEMBER_CREATE === '1') {

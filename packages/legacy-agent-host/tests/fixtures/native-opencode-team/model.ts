@@ -51,6 +51,10 @@ export async function startOpenCodeModel(
     peerMessaging?: boolean;
     captureFileUpdate?: CaptureFileUpdateScenario;
     allowModelProbes?: boolean;
+    memberName?: 'alice' | 'carol';
+    uiGeneratedMessageIds?: boolean;
+    captureHistoryMarkers?: boolean;
+    holdInitialTurnResponse?: boolean;
     principalId?: () => string;
   } = {}
 ) {
@@ -76,12 +80,17 @@ export async function startOpenCodeModel(
     step: number;
     contextEffective: boolean;
     priorTurn: boolean;
+    requestedModel?: string;
+    priorNativeToolIds?: string[];
+    visibleReplyContract?: boolean;
+    incomingMessageId?: string;
     tools: string[];
   }[] = [];
   const notificationObservations: ((typeof observations)[number] & {
     notice: ObservedMixedTaskNotice;
   })[] = [];
   const failures: string[] = [];
+  const heldInitialRequests: { turn: string; step: number; disconnected: boolean }[] = [];
   const counts = new Map<string, number>();
   let taskId: string | undefined;
   const server = createServer((request, response) => {
@@ -196,7 +205,7 @@ export async function startOpenCodeModel(
           observations.length + notificationObservations.length < (options.peerMessaging ? 48 : 16),
           'finite mixed inference budget'
         );
-      let turn = '';
+      let turn = '', turnText = '';
       let notice: ObservedMixedTaskNotice | undefined;
       let mixedGroup: MixedGroupTurn | undefined;
       for (const message of messages.toReversed()) {
@@ -224,6 +233,7 @@ export async function startOpenCodeModel(
           );
         }
         if (group || capture || peer || match) {
+          turnText = mixedNativeText(message.content);
           mixedGroup = group;
           turn =
             group?.turn ??
@@ -320,10 +330,39 @@ export async function startOpenCodeModel(
         step,
         contextEffective,
         priorTurn: JSON.stringify(messages).includes('OPENCODE_TEAM_ONE'),
+        ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+        ...(options.captureHistoryMarkers ? { priorNativeToolIds: messages.flatMap(message =>
+          Array.isArray(message.tool_calls) ? message.tool_calls.map(record)
+            .filter(call => typeof call.id === 'string' && /^TEST_OPENCODE_TEAM_ONE_[0-6]$/.test(call.id))
+            .map(call => String(call.id)) : []) } : {}),
+        ...(options.uiGeneratedMessageIds ? (() => {
+          const incomingMessageId = /"messageId":"([^"\n]+)"/.exec(turnText)?.[1];
+          return { ...(incomingMessageId !== undefined ? { incomingMessageId } : {}), visibleReplyContract:
+            turnText.includes('message_send tool to="user", including commandId and text') &&
+            turnText.includes('Do not reuse the incoming messageId as a reply commandId') &&
+            typeof incomingMessageId === 'string' &&
+            /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(incomingMessageId) };
+        })() : {}),
         tools,
       };
       if (notice) notificationObservations.push({ ...observation, notice });
       else observations.push(observation);
+      if (options.holdInitialTurnResponse) {
+        assert.equal(options.nativeGeneration, 'v2');
+        assert.equal(turn, 'OPENCODE_TEAM_ONE', 'queued input must never reach native inference');
+        assert.equal(step, 0); assert.equal(heldInitialRequests.length, 0, 'one original request, no retry');
+        assert.equal(observation.visibleReplyContract, true);
+        for (const tool of REQUIRED_TOOLS)
+          assert.ok(tools.includes(`agent-teams_${tool}`) || tools.includes(`mcp__agent-teams__${tool}`));
+        assert.ok(tools.includes('shell'));
+        const held = { turn, step, disconnected: false };
+        heldInitialRequests.push(held);
+        await new Promise<void>(resolve => {
+          response.once('close', () => { held.disconnected = true; resolve(); });
+          if (response.destroyed) { held.disconnected = true; resolve(); }
+        });
+        return;
+      }
       const windowsV2 = options.nativeGeneration === 'v2' && process.platform === 'win32';
       const first = [
         {
@@ -332,7 +371,7 @@ export async function startOpenCodeModel(
         },
         {
           name: 'task_set_owner',
-          input: { commandId: 'opencode-task-assign', taskId, owner: 'carol' },
+          input: { commandId: 'opencode-task-assign', taskId, owner: options.memberName ?? 'carol' },
         },
         { name: 'task_start', input: { commandId: 'opencode-task-start', taskId } },
         {
@@ -463,6 +502,7 @@ export async function startOpenCodeModel(
     ...(options.mixedTaskNotifications ? { notificationObservations } : {}),
     probes,
     failures,
+    ...(options.holdInitialTurnResponse ? { heldInitialRequests } : {}),
     close: () =>
       new Promise<void>((resolve) => {
         server.closeAllConnections();

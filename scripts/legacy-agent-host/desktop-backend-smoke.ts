@@ -78,6 +78,7 @@ let questionModel: Awaited<ReturnType<typeof startDesktopCodexQuestionModel>> | 
 let mixedModels: DesktopMixedModels | undefined;
 let conversationModel: Awaited<ReturnType<typeof startNativeTeamModel>> | undefined;
 let codexResumeModel: Awaited<ReturnType<typeof startCodexModel>> | undefined;
+let openCodeLifecycleModel: Awaited<ReturnType<typeof prepareDesktopProofMode>>['openCodeLifecycleModel'];
 let controlledProcess: Awaited<ReturnType<typeof prepareControlledProcessFixture>>['controlledProcess'] | undefined;
 const object = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
@@ -116,10 +117,11 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const permittedSentinelObservation = (row: Record<string, unknown>) => (mode === 'skills-ui' && isSkillsMetadataRefusal(row)) || (!packed ? row.allowed === true : row.executable === 'shell-env' ? row.allowed === true : row.allowed === false && row.argc === 1 && Array.isArray(row.flags) && row.flags.length === 1 && row.flags[0] === '--version');
   if (packed) assert.equal(mode, 'native-launch-ui', 'one bounded packed workflow reuses the original native Launch proof');
   if (packedRelaunchMode) assert.ok(packed, 'automatic app relaunch is an explicit captured packed scope');
-  const { mixedMode, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel } =
+  const { mixedMode, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel, openCodeLifecycleMode, openCodeLifecycleModel: selectedOpenCodeModel } =
     await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
   conversationModel = model; mixedModels = selectedMixedModels;
   codexResumeModel = selectedCodexResumeModel;
+  openCodeLifecycleModel = selectedOpenCodeModel;
   const nativeInputs = mixedMode || codexResumeMode ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
   const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = questionUiMode ? await prepareDesktopBackendFixture(repo, {
@@ -127,7 +129,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       sha256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f', modelUrl: questionModel!.url },
   }) : await prepareDesktopProofFixture(repo, mode, pnpm, {
     processUiMode, controlledProcessMode, processReadbackMode, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewReadbackMode, reviewUiMode, legacyImportMode, uiMode,
-    launchDialogMode, createConfigMode, nativeStopMode, approvalUiMode, codexResumeMode, ...(packed ? { candidateRuntime: packed.runtime } : {}), modelUrl: codexResumeModel?.url ?? conversationModel?.url ?? mixedModels?.claude.url,
+    launchDialogMode, createConfigMode, nativeStopMode, approvalUiMode, codexResumeMode, openCodeLifecycleMode, ...(packed ? { candidateRuntime: packed.runtime } : {}), modelUrl: openCodeLifecycleModel?.url ?? codexResumeModel?.url ?? conversationModel?.url ?? mixedModels?.claude.url,
   });
   controlledProcess = baseFixture.controlledProcess;
   const processReadbackSource = processReadbackMode ? await verifyNativeProcessReadbackSource(baseFixture.root, object(JSON.parse(await readFile(join(baseFixture.root, 'desktop-backend-receipt.json'), 'utf8')))) : undefined;
@@ -192,6 +194,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     uiMode,
     conversationModel,
     codexResumeModel,
+    openCodeLifecycleModel,
   });
   if (quitScenario === 'pending-open') {
     evidence.scope = 'Actual native provider open pending, zero inputs, guarded existing Quit API and physical cleanup; explicit TEST setup';
@@ -323,7 +326,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         fixture,
         group,
         evidence,
-        executable: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
+        executable: openCodeLifecycleMode ? process.env.OPENCODE_V2_EMBEDDED_BUN! : process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
+        ...(openCodeLifecycleMode ? { provider: 'opencode' as const } : {}),
         manualPermissions: approvalUiMode,
         ...(quitScenario === 'pending-open' ? { returnAt: 'opening' as const } : {}),
       });
@@ -341,7 +345,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     } else if (processUiMode || controlledProcessMode) {
       hostPid = await qualifyColdProcessUi(cdp, { fixture, evidence, group, processReadbackMode, processReadbackSource,
         controlledSource: controlledProcess?.source, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
-    } else if (await runDesktopNativeQuitMode(cdp, {mode, root: fixture.root, seed: fixture.uiSeed, evidence, model: conversationModel, assertOwnedRenderer: () => assertOwnedCdpListener(group)})) {
+    } else if (await runDesktopNativeQuitMode(cdp, {mode, root: fixture.root, seed: fixture.uiSeed, evidence, model: openCodeLifecycleModel ?? conversationModel, assertOwnedRenderer: () => assertOwnedCdpListener(group)})) {
       // Exact Quit/readback witnesses are finalized below before fallback cleanup.
     } else if (nativeReviewMode) {
       await runDesktopNativeReview(cdp, { fixture, evidence, model: conversationModel,
@@ -390,15 +394,16 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     } else if (createConfigMode) {
       await runDesktopCreateUiSmoke(cdp, { fixture, evidence, model: conversationModel, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (launchDialogMode) {
-      assert.ok(fixture.uiSeed && (conversationModel || codexResumeModel));
+      assert.ok(fixture.uiSeed && (conversationModel || codexResumeModel || openCodeLifecycleModel));
       await runDesktopLaunchUiSmoke(cdp, {
         fixture, seed: fixture.uiSeed, evidence, ...(conversationModel ? { model: conversationModel } : {}),
         ...(codexResumeModel ? { codexResumeModel } : {}),
+        ...(openCodeLifecycleModel ? { openCodeModel: openCodeLifecycleModel } : {}),
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
         ...(mode === 'native-resume-ui' ? { restartAfterStop: async () => {
-          assert.ok(cdp && !packed && (conversationModel || codexResumeModel));
-          const resumeModel = codexResumeModel ?? conversationModel!;
-          const resumeProvider = codexResumeMode ? 'codex' : 'claude';
+          assert.ok(cdp && !packed && (conversationModel || codexResumeModel || openCodeLifecycleModel));
+          const resumeModel = openCodeLifecycleModel ?? codexResumeModel ?? conversationModel!;
+          const resumeProvider = openCodeLifecycleMode ? 'opencode' : codexResumeMode ? 'codex' : 'claude';
           const originalApp = app, originalGroup = group;
           const hosts = groupMembers(group).filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
           assert.equal(hosts.length, 1, 'capture original Host before guarded cold Resume Quit');
@@ -585,7 +590,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     );
     evidence.sentinel = sentinel;
     evidence.preQuitSentinelCount = sentinel.length;
-    await capturePendingDesktopNativeQuit(fixture.root, evidence, conversationModel);
+    await capturePendingDesktopNativeQuit(fixture.root, evidence, openCodeLifecycleModel ?? conversationModel);
     quitRequested = true;
     // API diagnostic shutdown, explicitly not a human UI control interaction.
     if (packedRelaunchMode) {
@@ -603,7 +608,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       false,
       'captured standalone Host retired during guarded app Quit'
     );
-    await verifyDesktopNativeQuitAfterShutdown(mode, fixture.root, evidence, nativeChildren, conversationModel, group);
+    await verifyDesktopNativeQuitAfterShutdown(mode, fixture.root, evidence, nativeChildren, openCodeLifecycleModel ?? conversationModel, group);
     if (activitySource) await finalizeDesktopActivityReadback(evidence, activitySource, () => assert.equal(processTable().some(row => row.pid === hostPid), false));
     evidence.status = 'PASS';
   } catch (error) {
@@ -779,6 +784,6 @@ try {
 } finally {
   try { await controlledProcess?.cleanup(); } catch (error) { if (!originalFailure) throw error; }
   await questionModel?.close();
-  await (codexResumeModel ?? conversationModel)?.close();
+  await (openCodeLifecycleModel ?? codexResumeModel ?? conversationModel)?.close();
   await mixedModels?.close();
 }

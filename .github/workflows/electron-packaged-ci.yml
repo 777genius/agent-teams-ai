@@ -80,9 +80,16 @@ jobs:
             pack: pack:linux
             bundle: release/linux-unpacked
 
+    env:
+      OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+      OPENCODE_V2_TEST_PLATFORM: ${{ matrix.platform }}
+      OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ runner.temp }}/opencode-v2-packaged-inputs.json
+      OPENCODE_V2_PACKAGED_RECEIPT: ${{ runner.temp }}/opencode-v2-packaged.json
+
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
@@ -138,6 +145,24 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=8192
         run: pnpm build
+      - name: Select exact Host Node for candidate staging
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+      - name: Prepare actual pinned V2 Bun, engine and admitted process custody
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+        run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
+      - name: Prefill pinned macOS arm64 Host Node archive
+        if: matrix.platform == 'darwin-arm64'
+        run: node scripts/ci/prefill-legacy-host-macos-node.mts
+      - name: Stage V2 Host closure in existing candidate extraResources
+        run: node scripts/legacy-agent-host/stage-opencode-v2-packaged.ts
+      - name: Typecheck and test packaged Host capture boundaries
+        shell: bash
+        run: |
+          node node_modules/@typescript/native/bin/tsc -p tsconfig.legacy-agent-host-scripts.json
+          node --test scripts/legacy-agent-host/candidate-closure.test.ts scripts/legacy-agent-host/packaged-opencode-v2-inputs.test.ts
       - name: Package unsigned test bundle
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -167,6 +192,24 @@ jobs:
       - name: Smoke packaged app under Xvfb
         if: matrix.os == 'linux'
         run: xvfb-run -a node ./scripts/electron-builder/smokePackagedApp.cjs "${{ matrix.bundle }}" linux
+      - name: Qualify actual packaged V2 Host tools, MCP, Stop and cold Resume
+        # The runner restores its disposable checkout and the intact legacy payload
+        # in finally. No parent shell may keep the Windows checkout as its cwd.
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: node "${{ github.workspace }}/scripts/legacy-agent-host/run-packaged-opencode-v2.ts" "${{ matrix.bundle }}" "${{ matrix.platform }}"
+      - name: Preserve exact packaged Host evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: packaged-v2-host-${{ matrix.platform }}-${{ github.event.pull_request.head.sha }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/opencode-v2-packaged-inputs.json
+            ${{ runner.temp }}/opencode-v2-packaged.json
+            ${{ runner.temp }}/opencode-v2-packaged-native.json
+            ${{ github.workspace }}/resources/legacy-agent-host/opencode-v2-candidate.json
 
   packaged-full-gate:
     needs: [packaged-scope, packaged-smoke]

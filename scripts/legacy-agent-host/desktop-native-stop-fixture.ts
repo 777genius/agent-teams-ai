@@ -4,6 +4,8 @@ import { readFile, readdir, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { assertOwnedCdpListener, command, processTable } from './desktop-backend-observations.ts';
+import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
+import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import type { UiCdpPort } from './desktop-team-ui-smoke.ts';
 const object = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
@@ -43,6 +45,7 @@ export async function prepareDesktopNativeStop(options: {
   group: number;
   evidence: Record<string, unknown>;
   executable: string;
+  provider?: 'opencode';
   manualPermissions?: boolean;
   returnAt?: 'opening';
 }) {
@@ -83,11 +86,9 @@ export async function prepareDesktopNativeStop(options: {
   const configuration = {
     members: memberIds.map((memberId) => ({
       memberId,
-      model: 'claude-opus-4-6',
-      effort: 'medium',
-      fastMode: false,
+      model: options.provider === 'opencode' ? 'TEST-local/TEST-model' : 'claude-opus-4-6',
+      ...(options.provider === 'opencode' ? {} : { effort: 'medium', fastMode: false, context: 'model-default' }),
       permissions: options.manualPermissions ? 'manual' : 'bypass',
-      context: 'model-default',
     })),
   };
   const start = await invokeSetup('team.launch.start', 'TEST-explicit-sandbox-setup-launch', {
@@ -166,7 +167,7 @@ export async function prepareDesktopNativeStop(options: {
   assert.equal(
     nativeChildren.length,
     expectedMembers,
-    'exact captured actual Claude SDK actors before ordinary Stop'
+    'exact captured actual native actors before ordinary Stop'
   );
   evidence.nativeSetup = {
     scope:
@@ -214,6 +215,34 @@ export async function readDesktopNativeStopSessions(
       sessions.push(object(JSON.parse(await readFile(join(selected, file.name), 'utf8'))));
   }
   return sessions;
+}
+
+/** Read-only observations; original Host custody remains the only process owner. */
+export function readDesktopNativeHostProcesses(fixture: { node: string; hostEntry: string }): {
+  host: ProcessFact;
+  children: ProcessFact[];
+} {
+  const table = processFacts();
+  const hosts = table.filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
+  assert.equal(hosts.length, 1, 'one exact TEST Host executable');
+  const host = hosts[0]!;
+  return { host, children: table.filter(row => row.parentPid === host.pid) };
+}
+
+export function separateDesktopOpenCodeRuntimeChildren(
+  original: ReturnType<typeof readDesktopNativeHostProcesses>,
+  current: ReturnType<typeof readDesktopNativeHostProcesses>,
+  expectedRuntimeCount: 0 | 1
+): ProcessFact[] {
+  assert.equal(original.children.length, 1, 'metadata identity was captured before Runtime allocation');
+  assert.deepEqual(current.host, original.host, 'same original Host birth identity');
+  const metadata = original.children[0]!;
+  assert.deepEqual(current.children.find(row => row.pid === metadata.pid), metadata,
+    'same original metadata child, without PID reuse or replacement');
+  const runtimes = current.children.filter(row => row.pid !== metadata.pid);
+  assert.equal(runtimes.length, expectedRuntimeCount, 'only the expected original Runtime children');
+  for (const child of runtimes) assert.equal(child.command, metadata.command, 'same selected Bun executable');
+  return runtimes;
 }
 
 /** Capture before failure cleanup, so a later Quit cannot be mistaken for UI Stop. */

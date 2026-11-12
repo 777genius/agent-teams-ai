@@ -11,6 +11,7 @@ import { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import { readSavedDesktopFixture } from './desktop-readback-fixture.ts';
 import { prepareDesktopCodexResumeFixture } from './desktop-codex-resume-fixture.ts';
 import { prepareControlledProcessFixture } from './desktop-controlled-process-fixture.ts';
+import { reserveMixedOpenCodeEndpoint } from './desktop-mixed-native-fixture.ts';
 
 /** TEST fixture composition; no app or provider process starts here. */
 export async function prepareDesktopProofFixture(
@@ -36,11 +37,13 @@ export async function prepareDesktopProofFixture(
     nativeStopMode: boolean;
     modelUrl?: string;
     codexResumeMode?: boolean;
+    openCodeLifecycleMode?: boolean;
   }
 ): Promise<
   Awaited<ReturnType<typeof prepareDesktopBackendFixture>> & {
     activitySource?: CapturedActivitySource;
     codexResume?: Awaited<ReturnType<typeof prepareDesktopCodexResumeFixture>>['codexResume'];
+    openCodeV2?: { model: string; modelId: string; displayName: string };
     controlledProcess?: Awaited<ReturnType<typeof prepareControlledProcessFixture>>['controlledProcess'];
   }
 > {
@@ -83,7 +86,15 @@ export async function prepareDesktopProofFixture(
         nativeReviewContinuation: options.nativeReviewContinuationMode,
       }
     );
+  const selectedV2 = options.openCodeLifecycleMode ? {
+    bunPath: process.env.OPENCODE_V2_EMBEDDED_BUN!, bunSha256: process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256!,
+    engineDirectory: process.env.OPENCODE_V2_EMBEDDED_GRAPH!, modelUrl: options.modelUrl!,
+    endpoint: await reserveMixedOpenCodeEndpoint(), managementEndpoint: await reserveMixedOpenCodeEndpoint(),
+    processCustody: { directory: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY!,
+      manifestSha256: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256! },
+  } : undefined;
   const fixture = await prepareDesktopBackendFixture(repo, {
+    ...(selectedV2 ? { nativeOpenCodeV2: selectedV2 } : {}),
     ...(options.candidateRuntime ? { candidateRuntime: options.candidateRuntime } : {}),
     ...(process.env.LEGACY_DESKTOP_DIAGNOSTIC_HOST_ENTRY
       ? {
@@ -111,7 +122,7 @@ export async function prepareDesktopProofFixture(
     creation: options.createConfigMode || options.legacyImportMode,
     pnpmEntry: pnpm,
     seedCodexApiKey: mode === 'codex-account-auth',
-    ...(!options.candidateRuntime &&
+    ...(!selectedV2 && !options.candidateRuntime &&
     process.env.LEGACY_DESKTOP_CODEX_PATH &&
     mode !== 'native-mixed-create-launch-ui'
       ? {
@@ -121,10 +132,10 @@ export async function prepareDesktopProofFixture(
           },
         }
       : {}),
-    ...(options.nativeStopMode ||
+    ...(!selectedV2 && (options.nativeStopMode ||
     options.launchDialogMode ||
     options.createConfigMode ||
-    options.legacyImportMode
+    options.legacyImportMode)
       ? {
           nativeClaude: {
             path:
@@ -135,6 +146,8 @@ export async function prepareDesktopProofFixture(
         }
       : {}),
   });
+  if (selectedV2) return { ...fixture,
+    openCodeV2: { model: 'TEST-local/TEST-model', modelId: 'TEST-model', displayName: 'TEST-model' } };
   if (options.codexResumeMode) {
     assert.equal(mode, 'native-resume-ui');
     assert.ok(options.modelUrl && process.env.LEGACY_DESKTOP_CODEX_PATH);

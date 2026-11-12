@@ -449,6 +449,36 @@ jobs:
           OPENCODE_V2_EMBEDDED_APPROVAL_MODE: auto
           OPENCODE_V2_EMBEDDED_HOST_RECEIPT: ${{ github.workspace }}/opencode-v2-embedded-host-auto.json
         run: node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts
+      - name: Exercise native catalog and model probe without tool allocation
+        if: runner.os == 'Linux' && env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED == '1'
+        env:
+          OPENCODE_V2_MODEL_PROBE_GO: '1'
+          OPENCODE_V2_MODEL_PROBE_RECEIPT: ${{ github.workspace }}/opencode-v2-model-probe.json
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-model-probe.native.ts
+      - name: Exercise effective permissions and active Stop with a surviving sibling
+        if: runner.os == 'Linux' && env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED == '1'
+        env:
+          OPENCODE_V2_PERMISSION_LIFECYCLE_GO: '1'
+          OPENCODE_V2_PERMISSION_LIFECYCLE_RECEIPT: ${{ github.workspace }}/opencode-v2-permission-lifecycle.json
+        run: node --test packages/legacy-agent-host/tests/opencode-v2-permission-lifecycle.native.ts
+      - name: Require complete native management and permission evidence
+        if: runner.os == 'Linux' && env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED == '1'
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          for (const [path, kind] of [
+            ['opencode-v2-model-probe.json', 'TEST_NATIVE_V2_MODEL_PROBE'],
+            ['opencode-v2-permission-lifecycle.json', 'TEST_NATIVE_V2_PERMISSION_LIFECYCLE'],
+          ]) {
+            const receipt = JSON.parse(readFileSync(path, 'utf8'));
+            assert.equal(receipt.kind, kind);
+            assert.equal(receipt.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+            assert.equal(receipt.status, 'PASS'); assert.equal(receipt.cleanup, true);
+            assert.equal(receipt.digests.bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
+            assert.equal(receipt.digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);
+          }
+          NODE
       - name: Require product-path Host proof after exact candidate qualification
         run: |
           node --input-type=module -e "
@@ -493,3 +523,5 @@ jobs:
             opencode-v2-windows-custody.json
             opencode-v2-embedded-host.json
             opencode-v2-embedded-host-auto.json
+            opencode-v2-model-probe.json
+            opencode-v2-permission-lifecycle.json

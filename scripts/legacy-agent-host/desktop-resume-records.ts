@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { lstat, readFile, readdir, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 export const record = (raw: unknown): Record<string, unknown> => {
   assert.ok(raw && typeof raw === 'object' && !Array.isArray(raw));
@@ -21,7 +22,7 @@ export async function rows(path: string): Promise<Record<string, unknown>[]> {
 }
 
 /** Private TEST evidence only. Reads the exact published payload, never creates a checkpoint. */
-export async function checkpoint(root: string, session: Record<string, unknown>, provider: 'claude' | 'codex' = 'claude') {
+export async function checkpoint(root: string, session: Record<string, unknown>, provider: 'claude' | 'codex' | 'opencode' = 'claude') {
   const published = (session.checkpoints as unknown[]).map(record).filter(row => row.status === 'published');
   assert.equal(published.length, 1, 'one explicit original Stop checkpoint');
   const attempt = published[0]!;
@@ -43,6 +44,16 @@ export async function checkpoint(root: string, session: Record<string, unknown>,
   assert.equal(payload.historyDigest, jsonDigest({ baseline: record(session.config).checkpointRef ?? null, operations }));
   assert.equal(payload.reference, `cp1-${jsonDigest({ binding: session.binding, checkpointId: payload.checkpointId })}`);
   const opaque = record(payload.opaque);
+  if (provider === 'opencode') {
+    assert.deepEqual(Object.keys(opaque).sort(), ['compatibility', 'engine', 'nativeSessionId', 'version']);
+    assert.equal(opaque.engine, 'opencode-v2'); assert.equal(opaque.version, 1);
+    assert.match(String(opaque.compatibility), /^[a-f0-9]{64}$/);
+    const nativeSession = String(opaque.nativeSessionId);
+    assert.match(nativeSession, /^ses_[a-f0-9]{40}$/);
+    const { historyPath, history } = await openCodeHistory(root, session, nativeSession);
+    return { attempt, payload, path, nativeSession, historyPath, history,
+      historySha256: digest(history), payloadFileSha256: digest(await readFile(path)) };
+  }
   const nativeSession = provider === 'codex' ? opaque.nativeThreadId : opaque.nativeSession;
   assert.match(String(nativeSession), /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/);
   if (provider === 'codex') {
@@ -74,9 +85,54 @@ export async function checkpoint(root: string, session: Record<string, unknown>,
     historySha256: digest(history), payloadFileSha256: digest(await readFile(path)) };
 }
 
-export function originalHistoryMarker(toolIds: readonly string[], provider: 'claude' | 'codex' = 'claude'): string {
-  assert.deepEqual(toolIds, Array.from({ length: 7 }, (_, index) => `native_${provider === 'codex' ? 'CODEX' : 'NATIVE'}_TEAM_ONE_${index}`));
+export function originalHistoryMarker(toolIds: readonly string[], provider: 'claude' | 'codex' | 'opencode' = 'claude'): string {
+  const prefix = provider === 'opencode' ? 'TEST_OPENCODE' : `native_${provider === 'codex' ? 'CODEX' : 'NATIVE'}`;
+  assert.deepEqual(toolIds, Array.from({ length: 7 }, (_, index) => `${prefix}_TEAM_ONE_${index}`));
   return jsonDigest(toolIds);
+}
+
+/** Exact captured V2 SQLite log, opened read-only only after the original Runtime released it. */
+async function openCodeHistory(root: string, session: Record<string, unknown>, nativeSession: string) {
+  assert.match(root, /\/TEST-desktop-backend-[^/]+$/); assert.equal(await realpath(root), root);
+  assert.equal(session.phase, 'closed'); assert.equal(session.custody, 'released');
+  const profile = await json(join(root, 'host-profile.json')), binding = record(session.binding);
+  const members = (record(profile.runtime).members as unknown[]).map(record).filter(member =>
+    member.provider === 'opencode' && member.teamId === binding.teamId && member.memberId === binding.memberId);
+  assert.equal(members.length, 1);
+  const member = members[0]!, config = record(session.config), cwd = join(root, 'workspace');
+  assert.equal(member.nativeGeneration, 'v2'); assert.equal(member.protocolRevision, '2.1.4');
+  assert.equal(member.cwd, cwd); assert.equal(await realpath(cwd), cwd);
+  assert.equal(typeof config.sessionId, 'string');
+  assert.equal(nativeSession, 'ses_' + jsonDigest({ sessionId: config.sessionId,
+    memberId: member.memberId, accountBinding: member.accountBinding }).slice(0, 40));
+  const data = String(record(member.environment).XDG_DATA_HOME);
+  assert.equal(data, join(root, 'providers/opencode-v2/data'));
+  assert.equal(await realpath(data), data);
+  const namespace = 'agent-teams-v2-' + jsonDigest({
+    teamId: member.teamId, memberId: member.memberId, sessionId: config.sessionId,
+  }).slice(0, 32);
+  const directory = join(data, namespace), historyPath = join(directory, 'opencode.sqlite');
+  assert.equal(await realpath(directory), directory); assert.equal(await realpath(historyPath), historyPath);
+  const before = await lstat(historyPath);
+  assert.ok(before.isFile() && !before.isSymbolicLink() && before.nlink === 1 && before.size <= 64 * 1024 * 1024);
+  const database = new DatabaseSync(historyPath, { readOnly: true });
+  let history: Buffer;
+  try {
+    const selected = database.prepare('SELECT id, directory, version FROM session_v2 WHERE id = ?').all(nativeSession);
+    assert.equal(selected.length, 1); assert.equal(selected[0]!.directory, cwd); assert.equal(selected[0]!.version, '2.1.4');
+    const events = database.prepare('SELECT id, aggregate_id, seq, type, data FROM event WHERE aggregate_id = ? ORDER BY seq LIMIT 4097').all(nativeSession);
+    assert.ok(events.length > 0 && events.length <= 4096);
+    let prior = -1;
+    for (const event of events) {
+      assert.equal(event.aggregate_id, nativeSession); assert.ok(Number.isSafeInteger(event.seq) && Number(event.seq) > prior);
+      prior = Number(event.seq); assert.equal(typeof event.data, 'string');
+    }
+    history = Buffer.from(events.map(event => JSON.stringify(event) + '\n').join(''));
+    assert.ok(history.length <= 16 * 1024 * 1024);
+  } finally { database.close(); }
+  const after = await lstat(historyPath);
+  for (const key of ['dev', 'ino', 'size', 'mtimeMs', 'ctimeMs'] as const) assert.equal(after[key], before[key]);
+  return { historyPath, history };
 }
 
 /** Exact private captured namespace and native metadata identity; never a filename-only fallback. */
