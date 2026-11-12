@@ -24,7 +24,7 @@ static PROCESS_INFORMATION child(const std::wstring& executable,const std::wstri
 int wmain(int argc,wchar_t** argv) {
   if(argc<2) return 22;
   std::wstring mode=argv[1];
-  if(mode==L"tree"||mode==L"root-first"||mode==L"flood"||mode==L"breakaway"||mode==L"stdio"||mode==L"selection") {
+  if(mode==L"tree"||mode==L"root-first"||mode==L"root-first-gated"||mode==L"service-pair"||mode==L"service-first"||mode==L"flood"||mode==L"breakaway"||mode==L"stdio"||mode==L"selection") {
     // The target-only first observable effect precedes child creation/output/scenario work.
     if((mode==L"selection"?argc!=7:argc!=4)||wcslen(argv[3])!=36) return 31;
     HANDLE marker=CreateFileW(argv[2],GENERIC_WRITE,0,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);
@@ -34,13 +34,17 @@ int wmain(int argc,wchar_t** argv) {
     DWORD count=0; auto written=WriteFile(marker,nonce,sizeof(nonce),&count,nullptr);
     CloseHandle(marker); if(!written||count!=sizeof(nonce)) return 34;
   }
-  if(mode==L"wait") {
+  if(mode==L"wait"||mode==L"wait-gated") {
     if(argc!=4) return 23;
     DWORD pid=static_cast<DWORD>(wcstoul(argv[2],nullptr,10));
     uint64_t expected=_wcstoui64(argv[3],nullptr,16);
     HANDLE process=OpenProcess(SYNCHRONIZE|PROCESS_QUERY_LIMITED_INFORMATION,FALSE,pid);
     if(!process||birth(process)!=expected) return 24;
     std::puts("captured"); std::fflush(stdout);
+    if(mode==L"wait-gated") {
+      char ack; DWORD count=0;
+      if(!ReadFile(GetStdHandle(STD_INPUT_HANDLE),&ack,1,&count,nullptr)||count!=1||ack!='1') return 47;
+    }
     auto result=WaitForSingleObject(process,15000); CloseHandle(process);
     return result==WAIT_OBJECT_0?0:25;
   }
@@ -108,17 +112,30 @@ int wmain(int argc,wchar_t** argv) {
     TerminateProcess(process.hProcess,27); WaitForSingleObject(process.hProcess,5000);
     CloseHandle(process.hProcess); CloseHandle(process.hThread); return 27;
   }
-  if(mode!=L"tree"&&mode!=L"root-first"&&mode!=L"branch") return 28;
+  if(mode!=L"tree"&&mode!=L"root-first"&&mode!=L"root-first-gated"&&mode!=L"branch"&&mode!=L"branch-first"&&mode!=L"service-pair"&&mode!=L"service-first") return 28;
   BOOL inJob=FALSE;
   if(!IsProcessInJob(GetCurrentProcess(),nullptr,&inJob)||!inJob) return 29;
-  if(mode!=L"branch") std::printf("{\"root\":{\"pid\":%lu,\"birth\":\"%016llx\"}}\n",
+  const bool branch=mode==L"branch"||mode==L"branch-first";
+  if(!branch) std::printf("{\"root\":{\"pid\":%lu,\"birth\":\"%016llx\"}}\n",
     GetCurrentProcessId(),static_cast<unsigned long long>(birth(GetCurrentProcess())));
-  auto a=child(executable,mode==L"branch"?L"leaf":L"branch"), b=child(executable,L"leaf");
-  std::printf("{\"children\":[{\"pid\":%lu,\"birth\":\"%016llx\"},{\"pid\":%lu,\"birth\":\"%016llx\"}]}\n",
+  auto a=child(executable,branch?L"leaf":mode==L"service-first"?L"branch-first":L"branch"), b=child(executable,L"leaf");
+  std::printf("{\"children\":[{\"pid\":%lu,\"birth\":\"%016llx\"},{\"pid\":%lu,\"birth\":\"%016llx\"}],\"parent\":%lu}\n",
     a.dwProcessId,static_cast<unsigned long long>(birth(a.hProcess)),
-    b.dwProcessId,static_cast<unsigned long long>(birth(b.hProcess)));
+    b.dwProcessId,static_cast<unsigned long long>(birth(b.hProcess)),GetCurrentProcessId());
   CloseHandle(a.hProcess); CloseHandle(b.hProcess);
   std::printf("{\"final\":true}\n"); std::fflush(stdout);
-  if(mode==L"root-first") return 0;
+  if(mode==L"root-first-gated") {
+    char ack; DWORD count=0;
+    if(!ReadFile(GetStdHandle(STD_INPUT_HANDLE),&ack,1,&count,nullptr)||count!=1||ack!='1') return 48;
+    return 0;
+  }
+  if(mode==L"root-first"||mode==L"branch-first") return 0;
+  if(mode==L"service-pair"||mode==L"service-first") {
+    char input[64]; DWORD count=0;
+    while(ReadFile(GetStdHandle(STD_INPUT_HANDLE),input,sizeof(input),&count,nullptr)&&count) {
+      std::puts("{\"providerAlive\":true}"); std::fflush(stdout);
+    }
+    return 46;
+  }
   Sleep(60000); return 0;
 }

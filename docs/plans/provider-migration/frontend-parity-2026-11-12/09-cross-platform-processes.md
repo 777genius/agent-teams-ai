@@ -87,29 +87,43 @@ controller storage, Main/Host transport и существующий `ProcessesSe
 - Его protocol имеет Launch/Resume/Stop/Release/RootExit: нет adopt existing PID, descendant-handle inventory,
   arbitrary subtree selection, read-only Job observation или cold reconnection к unnamed Job. Stop не заменяет чтение.
 - [S-wire: actual finite opcodes](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/tools/owned-process-broker/protocol.h).
-- Это unactivated slice: текущие product launch factories его не импортируют; native gate не является product integration.
+- На исходном S это был unactivated slice. P08 wiring в
+  [`a6839b7`](https://github.com/777genius/agent-teams-ai/commit/a6839b77455f32fe701ca944bdc11a9c7a39f5a8)
+  уже подключает broker к `CapturedProcess` при captured Windows profile; реальные Windows vendor/packaged проверки ещё обязательны.
 - Main/Host `process_register` получает PID **после запуска**. Existing actual SDK fixture сначала создаёт два Bash background services,
   затем регистрирует primary: один provider Job содержит и выбранный service, и живого соседа.
 - [S-journey: actual birth-before-register](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/scripts/legacy-agent-host/desktop-native-process-model.ts).
 - Поздний `AssignProcessToJobObject(target)` не помещает прежних children в новый Job. Snapshot/PPID scans и повторные обходы
   не закрывают новые births; уничтожение provider Job нарушает targeted Stop. Подтверждённого handoff primitive в source нет.
 
-**Минимальный безопасный кандидат:** переиспользовать одну existing allocation **на service до его первого выполнения**,
-не создавать новый broker/daemon. Private binding связывает service allocation с registrar generation и её original root/birth;
-`process_register` выбирает только уже доказанный launch scope. Stop использует сохранённую capability этой allocation,
-не реконструирует scope из PID. Отдельный provider allocation и соседний service остаются живы.
-Это кандидат, а не реализованный общий SDK hook: P08 gated bootstrap охватывает provider, а не будущие внутренние tool spawns.
-Claude `PreToolUse` даёт только `updatedInput`, не OS creation handle; D Codex app-server client вообще не launcher.
-Подмена shell-команды wrapper-строкой без доказанных quoting/stdio/background/cancellation semantics gate не закрывает.
+**Проверяемый минимальный кандидат:** тот же broker запускает provider с `DEBUG_PROCESS`; его existing admission thread
+принимает kernel `CREATE_PROCESS_DEBUG_EVENT` до первого user-mode исполнения каждого наблюдаемого потомка.
+Original event HANDLE дублируется, проверяется членство в outer Job; процесс получает собственный private nested Job до `ContinueDebugEvent`.
+Будущие children наследуют цепочку Jobs, поэтому поздний `process_register` выбирает уже удерживаемую service scope.
+PID/birth только сопоставляют запись с kernel-captured original; `OpenProcess(pid)` не создаёт authority.
+Stop выбранного nested Job сохраняет provider и соседний service; duplicate request не создаёт второй native attempt.
+Это отдельная TEST build variant существующего broker, пока **не production режим и не доказанная SDK совместимость**.
+
+[Debugging Events](https://learn.microsoft.com/en-us/windows/win32/debug/debugging-events),
+[WaitForDebugEvent](https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-waitfordebugevent) и
+[Nested Jobs](https://learn.microsoft.com/en-us/windows/win32/procthread/nested-jobs) описывают нужные primitives.
+Job `NEW_PROCESS` notification не заменяет этот путь: доставка не гарантирована, PID может уже относиться к другой incarnation
+([completion port contract](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_associate_completion_port)).
+Debug chain может прерваться, если потомок сам запускает новый `DEBUG_PROCESS`; такой service без original retained record остаётся unknown.
+Существующая scope наблюдаемого предка продолжает охватывать унаследованные Jobs; это не доказательство полного census всех service roots.
+Late `DebugActiveProcess`/snapshot не являются fallback. Если debug режим несовместим с native SDK, нужен реальный pre-birth launch seam:
+Claude `PreToolUse.updatedInput` и D Codex app-server client сами по себе его не предоставляют.
 
 **09-WG — ограниченный feasibility gate до registry/UI wiring:**
 
-1. В existing native gate подготовить две service allocations внутри живого outer fixture; дети до/после register,
+1. В existing native gate подготовить две private service scopes внутри живого outer fixture; дети до/после register,
    root-first exit и Stop первой. Original handles/health второй и outer process должны доказать сохранение соседей.
-2. Назвать и проверить **actual** pre-birth seam каждого current provider/tool path, включая два services из одного native shell task.
+2. Сначала выполнить TEST debug-service native gate, затем проверить **actual** current provider/tool paths с тем же debug admission,
+   включая два services из одного native shell task. Проверить loader breakpoint/exception semantics, native SDK handshake, stdio,
+   provider root-first exit, bounded handle retirement и ненаблюдаемую debug chain; fixture не квалифицирует эти vendor случаи.
    Сохраняются прежний Bash/exec/background результат, registration PID, stream/notification semantics; одна allocation на весь shell
    недопустима, если Stop выбранного service убивает второй service из того же task.
-3. Если native provider не предоставляет этот seam, описать точное минимальное source изменение и пересчитать работу;
+3. Если native provider несовместим с выбранным debug seam, описать точное минимальное source изменение и пересчитать работу;
    обычные уже запущенные services нельзя объявить metadata-only и считать весь M19 выполненным. Без seam Windows baseline открыт.
 4. Для выбранного service-scoped пути согласовать async broker boundary: `RegisteredProcessNative.signal` сейчас synchronous,
    тогда как broker Stop async. Requested сохраняется **до** await; read остаётся без signal, duplicate не создаёт второй attempt.
@@ -117,7 +131,7 @@ Claude `PreToolUse` даёт только `updatedInput`, не OS creation handl
    или доказать иной existing путь; **сейчас такого opcode нет**. RootExit/PID gone не является tree cleanup.
 6. Прогнать actual SDK M19-01/02 на Windows x64/ARM64; controlled native gate отдельно квалифицирует primitive, не заменяет Desktop.
 
-P08 bootstrap и service-broker путь не смешиваются в authority: provider Job никогда не получает service Stop.
+P08 provider Job и service nested Job не смешиваются в authority: provider Job никогда не получает service Stop.
 При control/Host loss kill-on-close может остановить service; cold lookup наблюдает original outcome, не открывает новый Job по PID.
 Existing broker сохраняет unknown attempt и genuine private receipt; не создавать второй durable journal поверх `TeamProcessCommands`.
 
@@ -165,7 +179,7 @@ Existing broker сохраняет unknown attempt и genuine private receipt; �
 3. **Windows adapter — после 09-WG.** Добавить `process/WindowsRegisteredProcess.ts`, связывающий original service scope с registry.
    При выборе existing broker переиспользовать `ownedProcess/contract.ts`, `windowsBroker.ts` и `tools/owned-process-broker`;
    только подтверждённый seam/async observation адаптировать, без копирования kernel, протокола или WindowsJobCustody.
-   Provider-level gated bootstrap из P08 не доказывает service-level closure; exact SDK/tool seam фиксируется до implementation.
+   Provider-level Job из P08 не доказывает service-level closure; exact native debug/SDK proof обязателен до product wiring.
 4. **Linux adapter.** Добавить `process/LinuxRegisteredProcess.ts` и `native/registered-process-linux.c`.
    Реализовать capture/observe/signal через fixed native API; pidfd и identity никогда не приходят из renderer.
 5. **Composition.** Изменить `composition/processCustody.ts`, `createMemberProcessMcpPort.ts`,
@@ -226,7 +240,7 @@ Typecheck, native build qualification, focused Desktop/packaged сценарии
 С reuse existing commands/UI/harness: **1 000–1 900 production LOC**, **1 000–1 800 test/E2E LOC**.
 Общий Windows loader/Job kernel, посчитанный в P08, здесь повторно не считается; только registry-specific добавления.
 Новый Linux adapter/нативный source/packaging входят в эту оценку; vendor/generated и переносы исключены.
-Диапазон условен до 09-WG: reuse самого broker уменьшает native работу, но pre-birth SDK/tool seam пока не найден.
+Диапазон условен до 09-WG: TEST debug-service candidate переиспользует broker, но native/vendor admission ещё не квалифицирован.
 Неизвестный объём provider-source integration не маскируется в оценке «готового Windows adapter»; после gate обновить LOC/CI tuples.
 Если доказательство Windows service-tree ownership требует большого отдельного supervisor, сначала пересмотреть подход;
 такой supervisor не является принятой архитектурой или скрытым условием малого LOC.
@@ -280,3 +294,23 @@ actual SDK process fixture и `.github/workflows/sentry-owned-process-native.yml
   Reuse build/gate paths сохранён, actual packaged/Desktop proof обязателен; Windows service-launch gate остаётся открытым.
 
 Focused R3 не закрывает 09-WG: до реализации требуется конкретный provider/tool seam, а не согласие с абстрактной схемой.
+
+## 12. R3 addendum и bounded native feasibility slice, 2026-11-12
+
+- **R3-09-06:** ненадёжные Job notifications не дают complete ownership. Выбран проверяемый TEST путь через pre-execution
+  debug events и nested Jobs; отдельный supervisor, PPID census, PID fallback и второй durable journal не добавляются.
+- **R3-09-07:** debugger обязан продолжать EXIT events до ожидания фактического native exit. Loop остаётся на existing creating
+  thread; command reader/Stop независимы. Root/outer HANDLE дублируются под existing state lock до освобождения этого lock:
+  обычный watcher может закрыть собственный root HANDLE, поэтому заимствование его после unlock было ошибкой.
+- **R3-09-08:** fixture first breakpoint handling не доказывает поведение реальных SDK при exceptions/debug detection.
+  `debugServiceTest.h` компилируется только с `OWNED_PROCESS_TEST_DEBUG_SERVICE`; staging по-прежнему содержит лишь product broker/manifest.
+  Private TEST Stop payload не создаёт product receipt и не является новым public protocol/capability.
+- **Native scenarios:** pre-resume cancel без первого эффекта; две service branches с children до registration;
+  service-root-first exit; wrong birth без эффекта; lost-ACK duplicate; targeted Stop с original HANDLE witnesses и native
+  provider stdin reply после Stop; затем отдельный genuine whole-provider cleanup. Foreign sentinel сохраняется.
+  Root-first fixture имеет явный readiness barrier, independent witnesses подтверждают capture до exit; timing sleep не служит доказательством.
+- **Локальная проверка:** exact frontend Node 24.21.0, native-tooling TypeScript PASS, existing protocol/event suites **45/45 PASS**.
+  Это Linux structural evidence, не Windows qualification. CMake/MSVC и настоящие x64/ARM64 Node/Electron runs выполняются existing native CI.
+- **Остаётся:** native gate outcome; actual provider debug compatibility и два services в одном tool task; bounded production record
+  retirement/identity binding; read-only scope observation; registry async Stop и единственный recovery owner; packaged Desktop proof.
+  До этих результатов P09 остаётся частично реализованным; 09-WG и M19 не закрыты.

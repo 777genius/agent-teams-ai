@@ -34,7 +34,7 @@ export async function nativeCapturedScenario(context: GateContext,
   try {
     phase('prepare');
     const child = custody.launch({ command: profile.executable.path, cwd,
-      args: [rootFirst ? 'root-first' : 'selection', start.path, start.nonce,
+      args: [rootFirst ? 'root-first-gated' : 'selection', start.path, start.nonce,
         ...(rootFirst ? [] : ['', 'space quote " slash\\ end\\', 'Я日'])] });
     const closed = new Promise<number | null>((resolve, reject) => {
       child.once('close', resolve); child.once('error', reject);
@@ -51,6 +51,7 @@ export async function nativeCapturedScenario(context: GateContext,
       phase('capture-descendants');
       const witnesses = await events.wait(Promise.all([output.root!, ...output.children].map(value =>
         capturedWitness(fixture, value.pid, value.birth, track, events))));
+      child.stdin.write('1'); // Release fixture root only after its original HANDLE witness exists.
       phase('root-exit');
       assert.equal(await timeout(events.wait(exited)), 0);
       assert.equal(custody.observeStopped(), false, 'Exited root leaves its descendant Job owned');

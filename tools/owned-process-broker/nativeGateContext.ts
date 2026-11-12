@@ -47,11 +47,12 @@ export async function capturedWitness(
 ): Promise<{ process: ChildProcess; exit: Promise<number | null> }> {
   const guardedTimeout = <T>(operation: Promise<T>, ms?: number): Promise<T> =>
     timeout(events.wait(operation), ms);
-  const process = spawn(fixture, ['wait', String(pid), birth], {
-    stdio: ['ignore', 'pipe', 'pipe'],
+  const process = spawn(fixture, ['wait-gated', String(pid), birth], {
+    stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true,
   });
   track(process);
+  process.stdin.on('error', events.guard(() => { throw new Error('Witness acknowledgement failed'); }));
   const exit = new Promise<number | null>((resolveExit, reject) => {
     process.on('exit', resolveExit);
     process.on('error', reject);
@@ -71,6 +72,11 @@ export async function capturedWitness(
       process.once('error', reject);
     })
   );
+  // Keep the witness alive until its HANDLE capture is observed, even when the
+  // original target has already exited and the first native wait returns at once.
+  await guardedTimeout(new Promise<void>((resolveAck, reject) => {
+    process.stdin.end('1', (error?: Error | null) => error ? reject(error) : resolveAck());
+  }));
   return { process, exit };
 }
 export function preparationError(failure: Extract<Preparation, { kind: 'failed' }>): Error {
