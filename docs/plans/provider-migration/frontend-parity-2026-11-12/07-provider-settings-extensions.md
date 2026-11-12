@@ -324,6 +324,54 @@ P07 native config опубликован `6a2bb4b88bffbe001e16ff7fd27430f330b435
 оно теряло non-default choice или раздувало private config. Выбран snapshot + selected-only application.
 Ни работающий receipt, ни mocked preferences test не закрывают native/Desktop acceptance сами по себе.
 
+
+## R9 — external MCP: закрыть выявленное UI/native несоответствие
+
+**Source review до изменений.** [M1]/[M2] предлагают `inheritLead`, `inheritScopes`, `strictAllowlist`, `appOnly`.
+[R2] действительно формирует только controller server. В exact `@opencode/schema@2.1.4`,
+`dist/mcp.js`, native поддерживает local command/environment и remote URL/headers; `codemode: false`
+выставляет прямые tools. Exact `@opencode/core@2.1.4` `dist/tool/mcp.js` →
+`dist/chunks/location-xyswfhq2.js` формирует namespace заменой символов вне `[a-zA-Z0-9_-]` на `_`
+и проверяет permission action `<namespace>_<tool>`. Это новый bounded adapter для уже доступной политики UI,
+а не утверждение, что старый V2 запуск её применял.
+
+1. **Переиспользовать capture.** `captureRuntimeMcp.ts` остаётся единственным выбором user/project/local
+   catalog, precedence и allowlist. Для embedded 2.1.4 сохранить выбранные `capturedMcpServers` и original
+   `capturedMcpSource` тем же immutable launch artifact. Не подключать `OpenCodeMcpPolicyPlugin` V1,
+   не читать ambient config второй раз в engine и не менять controller endpoint/bearer.
+2. **Сохранить старые identities.** `capturedRuntimeMcpRecipes.ts` реконструирует новые non-empty captures
+   существующим overlay. Прежний empty V2 capture без новых полей должен давать прежний recipe bytes/digest.
+   `inheritNativeMemberMcp.ts` переносит только original authenticated lead selection; account/model/provider
+   сохраняются у нового member. Published 2.0.0/2.0.21 path не получает embedded-only capability автоматически.
+3. **Добавить маленькую V2 translation.** Один helper преобразует captured stdio в native local
+   `{ command: [executable, ...args], environment }`, http/sse — в native remote с исходным URL/headers.
+   V2 сам выбирает совместимый HTTP transport. Все внешние servers имеют `codemode: false`; remote также
+   `oauth: false`, соответствуя текущему captured transport contract без нового login owner.
+   Mapping не меняет сохранённые пользовательские config-файлы и не запускает команды при metadata read.
+4. **Сохранить permission boundary.** Для выбранных внешних namespaces добавить только native rule
+   `<namespace>_*`: manual → ask, auto → allow. Builtin tools и Team MCP сохраняют нынешние rules.
+   До allocation отклонить collisions уже нормализованных namespaces и все четыре privileged Team action
+   prefixes, включая `agent-teams_extra` и `mcp__agent_teams__x`, а не только exact raw `team`/`agent-teams`;
+   иначе выбранный внешний сервер мог бы получить автоматическое разрешение Team tool в manual режиме.
+   `appOnly` даёт ровно controller без внешних конфигураций и разрешений.
+5. **Проверять настоящий native inventory.** `OpenCodeV2EmbeddedMemberProvider` сверяет точный набор имён
+   всех ожидаемых connected servers и прежний original Team catalog receipt. Тот же source-current guard
+   применяется до allocation/dispatch; изменение источника не заменяет конфигурацию running session.
+   Лишние ambient servers не принимаются; retry не пересобирает selection из current catalog.
+   Cleanup остаётся у существующего native Session/custody; отдельный manager внешних процессов не добавляется.
+6. **Приёмка без размножения тестов.** Existing MCP/source/overlay suites расширить лишь critical cases:
+   namespace authority collision, прежний empty digest, selected-source drift и original retry после изменения файла.
+   Native gate использует один sentinel MCP с real tool effect и original readback: strictAllowlist допускает только
+   выбранный server, appOnly не обнаруживает и не вызывает его, Team tools работают в обоих случаях.
+   Реальный native lifecycle подтверждает cleanup. Existing Desktop member-policy controls затем сохраняют
+   выбранную policy и выполняют тот же один native tool; API setup не выдаётся за UI acceptance.
+
+**R9 проверка упрощения.** Остаются прежние catalog, launch artifact, member creation и permissions owners.
+Нет нового MCP registry, protocol version, plugin injection, middleware, renderer API или provider daemon.
+Control не удаляется для скрытия mismatch. До native и Desktop receipts пункт 07-G3 остаётся открытым.
+Независимый повторный review подтвердил reuse owners и empty-capture compatibility; уточнения по normalized
+prefixes, exact inventory и original retry внесены до implementation.
+
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts
 [M3]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/extensions/ExtensionStoreView.tsx
