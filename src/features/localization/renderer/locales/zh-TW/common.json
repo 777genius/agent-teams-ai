@@ -672,7 +672,7 @@
     "restoreTask": "還原任務",
     "markUnread": "標記為未讀",
     "unarchive": "取消封存",
-    "archive": "檔案",
+    "archive": "封存",
     "deleteTask": "刪除任務"
   },
   "updateDialog": {

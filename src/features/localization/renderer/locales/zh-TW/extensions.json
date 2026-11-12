@@ -139,11 +139,11 @@
       "stdio": "Stdio (npm)"
     },
     "placeholders": {
-      "headerName": "標頭名稱",
+      "headerName": "Header-Name",
       "envVarName": "ENV_VAR_NAME",
-      "serverName": "我的伺服器",
-      "latest": "最新的",
-      "value": "價值",
+      "serverName": "my-server",
+      "latest": "latest",
+      "value": "值",
       "serverUrl": "https://api.example.com/mcp"
     }
   },
@@ -198,7 +198,7 @@
       "title_other": "工具（{{count}}）"
     },
     "placeholders": {
-      "serverName": "我的伺服器"
+      "serverName": "my-server"
     }
   },
   "skillEditor": {
@@ -270,8 +270,8 @@
       "notes": "範例：指出缺失的測試、迴歸和風險假設。",
       "steps": "1.檢查相關檔案。2、先說明主要風險。3.提出最安全的修復建議。",
       "whenToUse": "範例：當任務是程式碼審查或錯誤分類請求時使用此選項。",
-      "license": "麻省理工學院",
-      "compatibility": "Claude Code，游標"
+      "license": "MIT",
+      "compatibility": "claude-code, cursor"
     },
     "review": {
       "creating": "建立技能",
@@ -300,7 +300,7 @@
       "deleting": "正在刪除…",
       "editSkill": "編輯技能",
       "openFolder": "開啟資料夾",
-      "openSkillFile": "開啟技能.md",
+      "openSkillFile": "開啟 SKILL.md",
       "retry": "重試"
     },
     "badges": {
@@ -481,8 +481,8 @@
       "contact": "接觸"
     },
     "readme": {
-      "loading": "正在載入自述檔案…",
-      "empty": "沒有可用的自述檔案。"
+      "loading": "正在載入 README…",
+      "empty": "沒有可用的 README。"
     }
   },
   "skillImport": {

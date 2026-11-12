@@ -445,7 +445,7 @@
       "editorLink": "在「用量 / 預算」中設定門檻"
     },
     "taskCompletion": {
-      "description": "🔔 適用於 Claude/Codex/OpenCode/Gemini 的跨平台智慧通知。支援桌面警示、音效、點選聚焦和 Webhook，適用 macOS、Linux 和 Windows。",
+      "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
       "installPlugin": "Agent Notifications",
       "title": "Agent Notifications"
     },
