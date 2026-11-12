@@ -12,6 +12,7 @@ import type {
 import type { CaptureCodexMetadata } from './capturedCodexMetadata';
 import type { CapturedProviderManagement } from '@features/agent-backend/main';
 
+type CredentialKind = Extract<CodexAuthIntent['kind'], `credential.${string}`>;
 const held = () =>
   new Error(
     'Unable to confirm the original Codex account change. Its intent was retained; no new auth command was started.'
@@ -55,14 +56,14 @@ function completed(
 export class CapturedCodexAuthCommands {
   private readonly active = new Map<
     string,
-    { kind: CodexAuthIntent['kind']; promise: Promise<CapturedProviderManagement> }
+    { kind: CredentialKind; promise: Promise<CapturedProviderManagement> }
   >();
   constructor(
     private readonly capture: CaptureCodexMetadata,
     private readonly intents: CodexAuthIntentStore
   ) {}
 
-  async execute(kind: CodexAuthIntent['kind']): Promise<CapturedProviderManagement> {
+  async execute(kind: CredentialKind): Promise<CapturedProviderManagement> {
     const target = await this.capture(null);
     const running = this.active.get(target.targetId);
     if (running) {
@@ -82,13 +83,14 @@ export class CapturedCodexAuthCommands {
 
   private async perform(
     target: CapturedProviderManagement,
-    kind: CodexAuthIntent['kind']
+    kind: CredentialKind
   ): Promise<CapturedProviderManagement> {
     let rejectedBeforeAdmission = false;
     try {
       const previous = await this.intents.read(target.targetId);
       if (previous) {
-        if (previous.targetId !== target.targetId) throw held();
+        if (previous.targetId !== target.targetId || previous.kind.startsWith('login.'))
+          throw held();
         const result = await target.request('credential.lookup', { commandId: previous.commandId });
         if (!completed(result, target, previous)) throw held();
         await this.intents.retire(previous);

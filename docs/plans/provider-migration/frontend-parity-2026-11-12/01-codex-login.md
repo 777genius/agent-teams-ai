@@ -1,10 +1,24 @@
 # 01. Codex: вход через браузер и device code в Host
 
-Статус: план реализации; production-код этим документом не меняется.
+Статус: реализация P01; полная native/Desktop приёмка остаётся открытой.
 Первый source slice опубликован: [provider PR #8](https://github.com/agent-teams-ai/old-provider-implementations/pull/8),
 commit `09c2859f932be6eeb6fe26289bb997d8e0a81289`. Typed start/cancel/private completion готовы;
 `pnpm check` PASS на Node 24.21.0 и 26.11.1 / pnpm 11.18.0 (509 source tests + два packed consumers на каждом).
 Frontend получает retained verified archive `691a7a62…`; Session SPI pin не меняется. Host/UI/native login acceptance ещё открыта.
+Host core опубликован в `0d1b2ccb50bfdcf3d4c5d6804cba0dc0ab388958`: bounded early-ID correlation,
+browser/device completion, exact cancel, ChatGPT readback и confirmed original custody.
+Контролируемые Host/D/child проверки: **23/23 PASS** (`codex-login`, `codex-metadata`, `management-oauth`).
+Следующий Main slice сохраняет существующий account IPC/DTO/presenter и поддерживает subscribe/copy/reopen/cancel.
+Login intent хранит только operation ID, target ID, mode и **original context ID**; credential rows остаются совместимыми.
+Cold recovery использует прежний context grant; запись login без context остаётся held и не заимствует текущий контекст.
+Перед публикацией account/URL Main сравнивает свежий foreground target ID; исходные read/cancel остаются у старого owner.
+Auth readiness переиспользует `evaluateCodexLaunchReadiness`, включая независимую доступность ключа из captured env.
+Это baseline account/runtime gate; успешный account read не заменяет ModelProbeOwner перед запуском из плана 05.
+Main controlled acceptance: **12/12 PASS**, из них три existing account IPC → Main → real Host/D → TEST child E2E;
+browser, device code, потерянный ответ с повторным Main и сменой контекста, refresh/logout, секреты вне intent/progress.
+Дополнительные Host metadata проверки: **3/3 PASS**, включая ChatGPT account вместе с captured API key без выдачи key bytes.
+Эти результаты не являются actual Electron button proof и не доказывают вход в vendor account.
+Native browser/device completion, реальный Electron Login UI и финальные exact-SHA CI receipts пока открыты.
 Основание: сохранить возможности текущего Desktop frontend при включённом Host.
 Baseline frontend: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
@@ -103,7 +117,8 @@ Baseline Stage 1: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 - Переиспользовать intent/restore подход `CapturedProviderOAuth`; Codex presentation не проталкивать в общий provider DTO.
 - Account read после completion выполняется на исходном target, затем UI принимает его только для текущего выбора.
 - `setMainWindow` и dispose должны подключать/снимать нужные подписки, без скрытого повторного открытия браузера.
-- `getLaunchReadiness` получает фактическую доступность из общей profile readiness, а не из наличия email.
+- `getLaunchReadiness` переиспользует baseline `evaluateCodexLaunchReadiness` с native account и captured API-key availability;
+  выбранная модель отдельно проверяется существующим ModelProbeOwner в плане 05, без нового общего readiness store.
 - Binary path override продолжает отклоняться captured boundary; выбор executable выполняет план 06.
 
 ### Шаг D — end-to-end доказательства

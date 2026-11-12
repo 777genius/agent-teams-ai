@@ -2,9 +2,10 @@ import type { CodexMetadataSnapshot } from '@agent-teams/legacy-agent-host/manag
 import type { CapturedProviderManagement } from '@features/agent-backend/main';
 
 export type CapturedCodexMetadata = CodexMetadataSnapshot;
-export type CaptureCodexMetadata = (
-  projectPath: string | null
-) => Promise<CapturedProviderManagement>;
+export type CapturedCodexTarget = CapturedProviderManagement & {
+  readonly originalContextId?: string;
+};
+export type CaptureCodexMetadata = (projectPath: string | null) => Promise<CapturedCodexTarget>;
 const invalid = (): never => {
   throw new Error('Captured Codex metadata is unavailable.');
 };
@@ -64,6 +65,7 @@ function decode(raw: unknown): CapturedCodexMetadata {
     'profileId',
     'configRevision',
     'account',
+    'apiKey',
     'requiresOpenaiAuth',
     'configuration',
     'models',
@@ -83,6 +85,19 @@ function decode(raw: unknown): CapturedCodexMetadata {
       account.type !== 'chatgpt' ||
       !text(account.email, 1024) ||
       !text(account.planType, 128)
+    )
+      return invalid();
+  }
+  if (value.apiKey !== undefined) {
+    const key = object(value.apiKey, ['available', 'source', 'sourceLabel']);
+    if (
+      typeof key.available !== 'boolean' ||
+      ![null, 'environment'].includes(key.source as string | null) ||
+      ![null, 'Detected from CODEX_API_KEY', 'Detected from OPENAI_API_KEY'].includes(
+        key.sourceLabel as string | null
+      ) ||
+      (key.available === false && (key.source !== null || key.sourceLabel !== null)) ||
+      (key.source === null) !== (key.sourceLabel === null)
     )
       return invalid();
   }

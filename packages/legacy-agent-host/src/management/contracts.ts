@@ -143,6 +143,11 @@ export interface CodexMetadataSnapshot {
   profileId: string;
   configRevision: string;
   account: { type: 'apiKey' } | { type: 'chatgpt'; email: string; planType: string } | null;
+  apiKey?: {
+    available: boolean;
+    source: 'environment' | null;
+    sourceLabel: 'Detected from CODEX_API_KEY' | 'Detected from OPENAI_API_KEY' | null;
+  };
   requiresOpenaiAuth: boolean;
   configuration: {
     model: string | null;

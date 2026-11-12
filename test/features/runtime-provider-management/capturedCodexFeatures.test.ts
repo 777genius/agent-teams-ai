@@ -107,7 +107,7 @@ it('Codex status uses its explicit captured runtime and cannot fall through to a
     providerId: 'codex',
     supported: true,
     authenticated: false,
-    canLoginFromUi: false,
+    canLoginFromUi: true,
     statusCheckOutcome: 'model_only',
     capabilities: { teamLaunch: false, oneShot: false },
     modelCatalog: { defaultModelId: 'TEST-model' },

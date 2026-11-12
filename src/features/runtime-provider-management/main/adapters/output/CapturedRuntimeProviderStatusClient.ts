@@ -201,7 +201,7 @@ export function createCapturedRuntimeProviderStatusClient(
           const catalog = projectCapturedCodexCatalog(value, false);
           return {
             ...createDefaultProviderStatus('codex'),
-            canLoginFromUi: false,
+            canLoginFromUi: true,
             capabilities: {
               teamLaunch: false,
               oneShot: false,

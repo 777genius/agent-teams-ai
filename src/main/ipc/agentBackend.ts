@@ -519,10 +519,10 @@ export function getDesktopCodexFeatures(preferredAuthMode?: () => CodexAccountAu
   const original = active;
   if (!original?.selected) return undefined;
   return createCapturedCodexFeatures(
-    (projectPath) => {
+    async (projectPath) => {
       const contextSelection = original.captureSelection();
       const contextId = contextSelection.contextId;
-      return original.feature.captureProviderManagement(
+      const target = await original.feature.captureProviderManagement(
         contextId,
         projectPath,
         {
@@ -530,11 +530,18 @@ export function getDesktopCodexFeatures(preferredAuthMode?: () => CodexAccountAu
         },
         'codex'
       );
+      return Object.freeze({ ...target, originalContextId: contextId });
     },
     new FileCodexAuthIntentStore(
       join(original.userDataPath, 'agent-backend', 'codex-auth-intents')
     ),
-    preferredAuthMode
+    preferredAuthMode,
+    (targetId, originalContextId) => {
+      const contextSelection = original.captureSelection();
+      return original.feature.restoreProviderManagement(originalContextId, targetId, {
+        isCurrent: () => active === original && contextSelection.contextId === originalContextId && contextSelection.isCurrent(),
+      });
+    }
   );
 }
 

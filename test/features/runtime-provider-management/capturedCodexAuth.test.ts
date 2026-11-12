@@ -7,6 +7,7 @@ import { expect, it } from 'vitest';
 
 import { BackendRoutingError } from '../../../src/features/agent-backend/main';
 import { CapturedCodexAuthCommands } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedCodexAuthCommands';
+import { CapturedCodexLogin } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedCodexLogin';
 import { FileCodexAuthIntentStore } from '../../../src/features/runtime-provider-management/main/infrastructure/FileCodexAuthIntentStore';
 
 import type {
@@ -148,9 +149,8 @@ it('a proven pre-admission rejection retires only the unsent intent and permits 
     let busy = true;
     const target: CapturedProviderManagement = {
       ...f.target,
-      request: (operation, payload) => busy
-        ? Promise.resolve({ ok: false, code: 'busy' })
-        : f.target.request(operation, payload),
+      request: (operation, payload) =>
+        busy ? Promise.resolve({ ok: false, code: 'busy' }) : f.target.request(operation, payload),
     };
     const auth = new CapturedCodexAuthCommands(async () => target, f.store);
     await expect(auth.execute('credential.refresh')).rejects.toThrow('rejected before it started');
@@ -162,5 +162,59 @@ it('a proven pre-admission rejection retires only the unsent intent and permits 
     expect(await f.store.read(f.targetId)).toBeNull();
   } finally {
     await f.cleanup();
+  }
+});
+
+it('login recovery requires its original context and exact receipt, and a completed recovery cannot start a second login', async () => {
+  for (const scenario of ['missing-context', 'foreign-receipt', 'completed']) {
+    const f = await fixture();
+    try {
+      const intent: CodexAuthIntent = {
+        schemaVersion: 1,
+        targetId: f.targetId,
+        kind: 'login.browser',
+        commandId: 'codex-auth-11111111-1111-4111-8111-111111111111',
+        ...(scenario === 'missing-context' ? {} : { contextId: 'TEST-context' }),
+      };
+      await f.store.create(intent);
+      const requests: string[] = [];
+      const target = {
+        ...f.target,
+        originalContextId: 'TEST-context',
+        request: async (operation: ProviderManagementOperation) => {
+          requests.push(operation);
+          return {
+            ok: true,
+            value: {
+              operationId: intent.commandId,
+              providerId: 'codex',
+              profileId: scenario === 'foreign-receipt' ? 'foreign' : f.target.profileId,
+              configRevision: f.target.configRevision,
+              methodIndex: 0,
+              completionMethod: 'auto',
+              phase: 'completed',
+              sequence: 3,
+              expiresAt: Date.now() + 60_000,
+            },
+          };
+        },
+      };
+      const login = new CapturedCodexLogin(
+        f.store,
+        async (targetId, contextId) => {
+          expect([targetId, contextId]).toEqual([f.targetId, 'TEST-context']);
+          return target;
+        },
+        () => {}
+      );
+      if (scenario === 'missing-context')
+        await expect(login.start(target, 'browser')).rejects.toThrow('context is unavailable');
+      else await login.start(target, 'browser');
+      expect(requests).toEqual(scenario === 'missing-context' ? [] : ['oauth.read']);
+      expect(await f.store.pendingLogin()).toEqual(scenario === 'completed' ? null : intent);
+      if (scenario === 'foreign-receipt') expect(login.state(target).status).toBe('failed');
+    } finally {
+      await f.cleanup();
+    }
   }
 });
