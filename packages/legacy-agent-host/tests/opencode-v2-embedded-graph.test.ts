@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { link, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { link, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -18,7 +18,7 @@ const nativeTuple =
 const tupleOptions = { skip: !nativeTuple };
 
 async function fixture(t: TestContext) {
-  const directory = await mkdtemp(path.join(tmpdir(), 'TEST-embedded-delivery-'));
+  const directory = await realpath(await mkdtemp(path.join(tmpdir(), 'TEST-embedded-delivery-')));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const files = {
     [`${server}/package.json`]: JSON.stringify({
