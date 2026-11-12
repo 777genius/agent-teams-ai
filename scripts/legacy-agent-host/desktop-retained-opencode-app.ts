@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createWriteStream, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { readFile, readdir, readlink, realpath } from 'node:fs/promises';
+import { lstat, readFile, readdir, readlink, realpath, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileHash } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
 import { Cdp, waitFor } from '../e2e/release-updater/cdp.mts';
@@ -25,6 +25,27 @@ export async function selectedLinuxProcesses(executable: string) {
         linuxProcessIdentity(Number(name)).birth === identity.birth) values.push(identity);
     } catch (error) {
       if (!['ENOENT', 'ESRCH', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error;
+    }
+  }
+  return values;
+}
+
+/** Absence evidence only. A namespace match never authorizes signaling a process. */
+export async function testNamespaceLinuxProcesses(namespace: string) {
+  const values: ReturnType<typeof linuxProcessIdentity>[] = [];
+  assert.equal(await realpath(namespace), namespace);
+  for (const name of await readdir('/proc')) {
+    if (!/^[0-9]+$/.test(name)) continue;
+    try {
+      if ((await lstat(`/proc/${name}`)).uid !== process.getuid!()) continue;
+      const identity = linuxProcessIdentity(Number(name));
+      if (identity.state === 'Z') continue;
+      const executable = await readlink(`/proc/${name}/exe`);
+      const environment = await readFile(`/proc/${name}/environ`, 'utf8');
+      if ((executable.startsWith(namespace + '/') || environment.includes(namespace)) &&
+        linuxProcessIdentity(Number(name)).birth === identity.birth) values.push(identity);
+    } catch (error) {
+      if (!['ENOENT', 'ESRCH'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error;
     }
   }
   return values;
@@ -157,6 +178,34 @@ export async function startRetainedOpenCodeApp(input: {
       async nativeChildren(executable: string) {
         assertCurrent(); observeDescendants();
         return (await selectedLinuxProcesses(executable)).filter(value => descendants.has(key(value)));
+      },
+      async nativeImageChildren(sha256: string, namespace: string) {
+        assertCurrent(); observeDescendants();
+        assert.match(sha256, /^[a-f0-9]{64}$/);
+        assert.equal(await realpath(namespace), namespace);
+        const values = [];
+        for (const originalChild of descendants.values()) {
+          if (!originalLinuxProcessPresent(originalChild)) continue;
+          try {
+            const executable = await readlink(`/proc/${originalChild.pid}/exe`);
+            if (!executable.startsWith(namespace + '/') ||
+              !/\/host-authority\/[a-f0-9]{64}\/images\/[a-f0-9]{64}\/(opencode|custodian)$/.test(executable)) continue;
+            assert.equal(await realpath(executable), executable);
+            const named = await lstat(executable, { bigint: true });
+            const loaded = await stat(`/proc/${originalChild.pid}/exe`, { bigint: true });
+            assert.ok(named.isFile() && !named.isSymbolicLink() && named.uid === BigInt(process.getuid!()) &&
+              named.nlink === 1n && (named.mode & 0o777n) === 0o500n && named.dev === loaded.dev && named.ino === loaded.ino);
+            if (await fileHash(`/proc/${originalChild.pid}/exe`) !== sha256) continue;
+            const after = await lstat(executable, { bigint: true });
+            assert.ok(named.dev === after.dev && named.ino === after.ino && named.size === after.size &&
+              named.mtimeNs === after.mtimeNs && named.ctimeNs === after.ctimeNs);
+            assert.equal(linuxProcessIdentity(originalChild.pid).birth, originalChild.birth);
+            values.push({ ...originalChild, executable, sha256, dev: String(named.dev), ino: String(named.ino) });
+          } catch (error) {
+            if (!['ENOENT', 'ESRCH'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error;
+          }
+        }
+        assertCurrent(); return values;
       },
       async close() {
         assertCurrent();

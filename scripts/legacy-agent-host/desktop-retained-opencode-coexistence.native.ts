@@ -4,14 +4,14 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:net';
 import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
-import { isAbsolute, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { assertNativeV1Source, buildNativeV1Host } from '../../packages/legacy-agent-host/tests/opencode-v1-version-source.ts';
 import { fileHash as fileDigest } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
 import { waitFor } from '../e2e/release-updater/cdp.mts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { startRetainedOpenCodeModel } from './desktop-retained-opencode-model.ts';
-import { originalLinuxProcessPresent, selectedLinuxProcesses, startRetainedOpenCodeApp } from './desktop-retained-opencode-app.ts';
+import { originalLinuxProcessPresent, selectedLinuxProcesses, startRetainedOpenCodeApp, testNamespaceLinuxProcesses } from './desktop-retained-opencode-app.ts';
 
 const record = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Record<string, unknown>;
@@ -36,12 +36,14 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
   const head = process.env.OPENCODE_V2_TEST_SOURCE_HEAD!;
   const receiptPath = process.env.OPENCODE_V1_V2_COEXISTENCE_RECEIPT!;
   assert.ok(receiptPath && isAbsolute(receiptPath));
+  const retainedSourceGuard: { verify?: () => void } = {};
   const source = () => {
     assertNativeV1Source(repo, head);
     for (const command of [['diff', '--name-only', 'HEAD'], ['ls-files', '--others', '--exclude-standard']])
       assert.equal(execFileSync('git', [...command, '--', 'src', 'electron.vite.config.ts',
         'agent-teams-controller/src', 'mcp-server/src', 'scripts/e2e/release-updater/cdp.mts'],
       { cwd: repo, encoding: 'utf8', timeout: 5000 }).trim(), '', 'original app inputs must be clean');
+    retainedSourceGuard.verify?.();
   };
   source();
   const build = await buildNativeV1Host(repo, head);
@@ -53,10 +55,43 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
   const v1 = await realpath(process.env.OPENCODE_V1_V2_RETAINED_BINARY!);
   const fork = await realpath(process.env.OPENCODE_V1_V2_RETAINED_RUNTIME!);
   const bun = await realpath(process.env.OPENCODE_V2_EMBEDDED_BUN!);
+  const lock = await json(join(repo, 'runtime.lock.json'));
   for (const [path, expected] of [[v1, process.env.OPENCODE_V1_V2_RETAINED_BINARY_SHA256],
     [fork, process.env.OPENCODE_V1_V2_RETAINED_RUNTIME_SHA256], [bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256]]) {
     assert.match(expected ?? '', /^[a-f0-9]{64}$/); assert.equal(await fileDigest(path!), expected);
   }
+  // The published 0.0.158 Linux payload omitted this stock helper. Qualify the
+  // exact release source's unchanged build separately; never label it a release asset.
+  const retainedCommit = (await readFile(join(dirname(fork), 'COMMIT_SHA'), 'utf8')).trim();
+  assert.match(retainedCommit, /^[a-f0-9]{40}$/);
+  assert.equal(retainedCommit, record(record(lock.opencodeV2Delivery)['linux-x64']).sourceCommit);
+  assert.equal(lock.version, '0.0.158');
+  const helperSource = await realpath(process.env.OPENCODE_V1_V2_RETAINED_CUSTODY_SOURCE!);
+  const helperGit = (args: string[]) => execFileSync('git', args,
+    { cwd: helperSource, encoding: 'utf8', timeout: 5000 }).trim();
+  const verifyRetainedSource = () => {
+    assert.equal(helperGit(['rev-parse', 'HEAD']), retainedCommit);
+    assert.equal(helperGit(['diff', '--name-only', 'HEAD']), '');
+    assert.equal(helperGit(['ls-files', '--others', '--exclude-standard']), '');
+  };
+  retainedSourceGuard.verify = verifyRetainedSource;
+  verifyRetainedSource();
+  execFileSync(bun, ['--no-env-file', '--no-install', 'scripts/stage-opencode-custody.mts'],
+    { cwd: helperSource, env: { PATH: '/usr/bin:/bin' }, timeout: 60_000 });
+  const helperManifest = record(JSON.parse(execFileSync(bun, ['--no-env-file', '--no-install', '-e',
+    "import { verifyLinuxCustodyArtifact } from './scripts/lib/opencode-custody-artifact.js'; console.log(JSON.stringify(verifyLinuxCustodyArtifact('./dist/native','linux-x64','./native/opencode-custody/linux.c')))"],
+  { cwd: helperSource, env: { PATH: '/usr/bin:/bin' }, encoding: 'utf8', timeout: 5000 })));
+  const helper = await realpath(join(helperSource, 'dist/native/opencode-custody/linux-x64/custodian'));
+  const helperSha256 = await fileDigest(helper);
+  assert.equal(helperManifest.sha256, helperSha256); verifyRetainedSource();
+  const sourceBuiltRetainedHelper = { kind: 'EXACT_RELEASE_SOURCE_BUILD', sourceCommit: retainedCommit,
+    sourceRepository: lock.sourceRepository,
+    sourceTree: helperGit(['rev-parse', 'HEAD^{tree}']), manifest: helperManifest,
+    manifestSha256: await fileDigest(helper + '.json'),
+    buildScriptSha256: await fileDigest(join(helperSource, 'scripts/stage-opencode-custody.mts')),
+    validatorSha256: await fileDigest(join(helperSource, 'scripts/lib/opencode-custody-artifact.ts')),
+    compiler: execFileSync('/usr/bin/cc', ['--version'], { encoding: 'utf8', timeout: 5000 }).split('\n')[0],
+    publishedRuntimeComplete: false };
   const model = await startRetainedOpenCodeModel();
   let fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>> | undefined;
   let app: Awaited<ReturnType<typeof startRetainedOpenCodeApp>> | undefined;
@@ -107,6 +142,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const environment = { ...fixture.appEnvironment,
       AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256: digest(descriptorBytes),
       CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: fork,
+      CLAUDE_MULTIMODEL_OPENCODE_CUSTODY_HELPER: helper,
       OPENCODE_CLI_PATH: v1, OPENCODE_BIN_PATH: v1, CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: v1,
       CLAUDE_MULTIMODEL_DATA_HOME: join(root, 'legacy-runtime-data'),
       CLAUDE_MULTIMODEL_CACHE_HOME: join(root, 'legacy-runtime-cache'),
@@ -120,10 +156,10 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     };
     assert.equal(execFileSync(v1, ['--version'], { cwd: legacyProject, env: environment, encoding: 'utf8', timeout: 15000 }).trim(), '1.19.4');
     const version = execFileSync(fork, ['--version'], { cwd: legacyProject, env: environment, encoding: 'utf8', timeout: 15000 }).trim();
-    const lock = await json(join(repo, 'runtime.lock.json'));
     assert.ok(version.includes(String(lock.cliVersion)), 'retained runtime release matches existing lock');
     proof.inputs = { v1: { version: '1.19.4', sha256: await fileDigest(v1) },
-      retainedRuntime: { version: lock.version, cliVersion: version, sha256: await fileDigest(fork) },
+      retainedRuntime: { version: lock.version, cliVersion: version, sourceCommit: retainedCommit,
+        sha256: await fileDigest(fork), sourceBuiltRetainedHelper },
       v2: { version: '2.1.4', bunSha256: await fileDigest(bun) }, profileSha256: digest(profileBytes),
       descriptorSha256: digest(descriptorBytes), nodeSha256: await fileDigest(node) };
     await save(); source();
@@ -153,7 +189,25 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const recordAppChildren = async () => {
       for (const executable of [node, await realpath(join(repo, 'node_modules/electron/dist/electron'))])
         natives.push(...await app!.nativeChildren(executable));
+      natives.push(...await app!.nativeImageChildren(helperSha256, root));
     };
+    const legacyChildren = () => app!.nativeImageChildren(process.env.OPENCODE_V1_V2_RETAINED_BINARY_SHA256!, root);
+    const waitLegacyRuntime = (runId: unknown) => waitFor(async () => {
+      const state = await callTeams('getTeamAgentRuntime', [legacyTeam]);
+      const spawn = await callTeams('getMemberSpawnStatuses', [legacyTeam]);
+      const member = record(record(state.members).bob ?? {});
+      const status = record(record(spawn.statuses).bob ?? {});
+      proof.legacyReadiness = { runId: state.runId, alive: member.alive,
+        bootstrapConfirmed: status.bootstrapConfirmed, historicalBootstrapConfirmed: member.historicalBootstrapConfirmed,
+        nativeSessionPresent: typeof member.runtimeSessionId === 'string',
+        status: status.status, hardFailureReason: status.hardFailureReason };
+      if (state.runId !== runId || spawn.runId !== runId) return null;
+      assert.notEqual(status.hardFailure, true, String(status.hardFailureReason ?? status.error));
+      assert.notEqual(status.status, 'error', String(status.error));
+      return member.alive === true && status.bootstrapConfirmed === true &&
+        member.historicalBootstrapConfirmed === true && member.runtimeModel === 'TEST-legacy/TEST-model' &&
+        typeof member.runtimeSessionId === 'string' && member.runtimeSessionId.length > 0 ? state : null;
+    }, 'actual retained V1 native session and original bootstrap ready', 180_000);
     const send = async (key: string, to: string, marker: string) => {
       await callTeams('sendMessage', [key, { to, text: marker }]);
       await waitFor(async () => { assert.deepEqual(model.failures, []); return model.markers.has(marker) || null; }, 'original owner receives ' + marker, 90_000);
@@ -165,10 +219,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
       providerId: 'opencode', model: 'TEST-legacy/TEST-model', skipPermissions: true,
       runtimeSelectionVersion: 1, members: [{ name: 'bob', role: 'Developer', providerId: 'opencode', model: 'TEST-legacy/TEST-model', mcpPolicy: { mode: 'appOnly' } }] }], 240_000);
     assert.equal(typeof created.runId, 'string');
-    const originalLegacyRuntime = await waitFor(async () => {
-      const state = await callTeams('getTeamAgentRuntime', [legacyTeam]);
-      return record(state.members).bob && record(record(state.members).bob).alive === true ? state : null;
-    }, 'actual retained V1 app runtime ready', 180_000);
+    const originalLegacyRuntime = await waitLegacyRuntime(created.runId);
     const legacyTask = await callTeams('createTask', [legacyTeam, { subject: 'TEST retained V1 sidebar record' }]);
     assert.equal(typeof legacyTask.id, 'string');
     const originalNativeSession = record(record(originalLegacyRuntime.members).bob).runtimeSessionId;
@@ -184,7 +235,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const historicalDetail = () => app!.call(`window.__TEST_retainedApi.getSessionDetail(
       ${literal(historicalLog.projectId)},${literal(historicalLog.sessionId)},{bypassCache:true})`);
     assert.ok(JSON.stringify(await historicalDetail()).includes('REPLY_TEST_RETAINED_V1_HISTORY'));
-    const seedProcesses = await app.nativeChildren(v1);
+    const seedProcesses = await legacyChildren();
     assert.ok(seedProcesses.length > 0, 'real old-owner V1 native process'); natives.push(...seedProcesses);
     await callTeams('stop', [legacyTeam]); legacyStopped = true;
     const savedLegacy = await callTeams('getData', [legacyTeam]);
@@ -207,11 +258,8 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const retainedLaunch = await callTeams('launchTeam', [{ teamName: legacyTeam, cwd: legacyProject,
       providerId: 'opencode', model: 'TEST-legacy/TEST-model', skipPermissions: true, runtimeSelectionVersion: 1 }], 240_000);
     assert.equal(typeof retainedLaunch.runId, 'string'); assert.notEqual(retainedLaunch.runId, created.runId);
-    await waitFor(async () => {
-      const state = await callTeams('getTeamAgentRuntime', [legacyTeam]);
-      return record(state.members).bob && record(record(state.members).bob).alive === true ? state : null;
-    }, 'retained legacy owner launches under same TEST profile with Host selected', 180_000);
-    const legacyProcesses = await app.nativeChildren(v1);
+    await waitLegacyRuntime(retainedLaunch.runId);
+    const legacyProcesses = await legacyChildren();
     assert.ok(legacyProcesses.length > 0); natives.push(...legacyProcesses);
     steps.push({ observed: 'retained_legacy_fork_owner_before_new_Host_runtime', runId: retainedLaunch.runId, legacyProcesses });
     const selection = await host('team.launch.read', 'TEST-coexist-launch-read', {}); assert.equal(selection.ok, true);
@@ -244,8 +292,8 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const relaunched = await callTeams('launchTeam', [{ teamName: legacyTeam, cwd: legacyProject,
       providerId: 'opencode', model: 'TEST-legacy/TEST-model', skipPermissions: true, runtimeSelectionVersion: 1 }], 240_000);
     assert.equal(typeof relaunched.runId, 'string'); assert.notEqual(relaunched.runId, retainedLaunch.runId);
-    await waitFor(async () => await callTeams<boolean>('processAlive', [legacyTeam]) || null, 'explicit retained V1 relaunch ready', 180_000);
-    const retainedAfterRelaunch = await app.nativeChildren(v1); assert.ok(retainedAfterRelaunch.length > 0); natives.push(...retainedAfterRelaunch);
+    await waitLegacyRuntime(relaunched.runId);
+    const retainedAfterRelaunch = await legacyChildren(); assert.ok(retainedAfterRelaunch.length > 0); natives.push(...retainedAfterRelaunch);
     await ui.clickSidebar(fixture.uiSeed!.subject);
     await ui.click('button[aria-label="Stop"]', 'ordinary Host V2 Stop', 'Stop');
     await waitFor(async () => { const state = await host('runtime.read', 'TEST-coexist-stopped', { memberId: 'alice-id' });
@@ -299,13 +347,8 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     if (fixture) {
       try {
         // Absence check only: an early detached child never becomes a new signal target.
-        for (const executable of [v1, bun, node,
-          await realpath(join(repo, 'node_modules/electron/dist/electron'))]) for (const process of await selectedLinuxProcesses(executable)) {
-          try {
-            const environment = await readFile(`/proc/${process.pid}/environ`, 'utf8');
-            assert.equal(environment.includes(fixture.root), false, 'unreconciled TEST native namespace survives cleanup');
-          } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') cleanupErrors.push(error); }
-        }
+        assert.deepEqual(await testNamespaceLinuxProcesses(fixture.root), [],
+          'unreconciled TEST native namespace survives cleanup');
       } catch (error) { cleanupErrors.push(error); }
     }
     cleanup = cleanupErrors.length === 0;
