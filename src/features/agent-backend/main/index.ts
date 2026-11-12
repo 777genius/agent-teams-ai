@@ -11,6 +11,7 @@ export {
 } from './adapters/input/registerBackendConnections';
 export { registerCapturedReviewWatchHttp } from './adapters/input/registerCapturedReviewWatchHttp';
 export { registerCapturedReviewWatchIpc } from './adapters/input/registerCapturedReviewWatchIpc';
+export { HostSmartScheduleRuntimeAdapter } from './adapters/output/HostSmartScheduleRuntimeAdapter';
 export {
   type BackendOwnerBinding,
   type BackendOwnerRef,
@@ -25,6 +26,7 @@ export {
   type BoundBackendCommand,
   type CapturedBackendOwner,
 } from './application/BackendOwnerRouter';
+export { captureHostScheduleTarget, restoreHostScheduleTarget } from './application/captureHostScheduleTarget';
 export { createConfiguredHostTeam } from './application/createConfiguredHostTeam';
 export { createLaunchedHostTeam, prepareCreatedHostTeam } from './application/createdHostTeam';
 export { ForegroundModelChecks } from './application/ForegroundModelChecks';

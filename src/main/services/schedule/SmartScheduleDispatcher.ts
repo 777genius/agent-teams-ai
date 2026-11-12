@@ -24,9 +24,14 @@ import type {
 export type SmartScheduleOutcome =
   | { kind: 'one_shot'; result: ScheduledTaskResult }
   | { kind: 'dispatched'; summary: string; taskId?: string }
-  | { kind: 'skipped'; summary: string; taskId?: string };
+  | { kind: 'skipped'; summary: string; taskId?: string; pendingTaskCommandId?: string };
+
+export class ScheduledTaskCreationPending extends Error {
+  constructor(readonly commandId: string) { super('Original scheduled task creation awaits confirmation'); }
+}
 
 export interface SmartScheduleRuntimePort {
+  targetKind?: 'host';
   isTeamAlive(teamName: string): boolean | Promise<boolean>;
   isTeamLaunching(teamName: string): boolean | Promise<boolean>;
   isTeamBusy(teamName: string): boolean | Promise<boolean>;
@@ -40,13 +45,15 @@ export interface SmartScheduleRuntimePort {
   hasActiveOwnedTask?(teamName: string, owner: string): boolean | Promise<boolean>;
   getPreviousRuns?(scheduleId: string, runId: string): Promise<ScheduleRun[]>;
   getTask?(teamName: string, taskId: string): Promise<TeamTask | null>;
+  resolvePreviousTask?(teamName: string, run: ScheduleRun): Promise<TeamTask | null>;
   startTaskByUser?(
     teamName: string,
     taskId: string,
-    admission?: { expectedOwner: string; canStart: () => Promise<boolean> }
+    admission?: { expectedOwner: string; expectedGeneration?: string; canStart: () => Promise<boolean> }
   ): Promise<{ notifiedOwner: boolean }>;
   attachMember(teamName: string, memberName: string): Promise<void>;
-  createTask(teamName: string, request: CreateTaskRequest): Promise<TeamTask>;
+  createTask(teamName: string, request: CreateTaskRequest,
+    recipient?: { runId: string; generation?: string }): Promise<TeamTask>;
   launchTeam(request: TeamLaunchRequest): Promise<TeamLaunchResponse>;
   runOneShot(request: ExecutionRequest): Promise<ScheduledTaskResult>;
 }
@@ -65,6 +72,10 @@ function readyMember(entry: TeamAgentRuntimeEntry | undefined): boolean {
     return entry.pidSource === 'lead_process' && Number.isSafeInteger(entry.pid) && (entry.pid ?? 0) > 0;
   }
   return Boolean(entry.livenessKind && READY_KINDS.has(entry.livenessKind));
+}
+
+function sameGeneration(before: TeamAgentRuntimeEntry | undefined, after: TeamAgentRuntimeEntry | undefined): boolean {
+  return before?.runtimeGeneration === after?.runtimeGeneration;
 }
 
 function skipped(reason: string, taskId?: string): SmartScheduleOutcome {
@@ -99,9 +110,8 @@ function teamLaunchRequest(saved: TeamCreateRequest, prompt: string): TeamLaunch
 
 export class SmartScheduleDispatcher {
   /** Prevent concurrent automatic mutations of the same team's runtime/task board. */
-  private readonly dispatchingTeams = new Set<string>();
-
-  constructor(private readonly runtime: SmartScheduleRuntimePort) {}
+  constructor(private readonly runtime: SmartScheduleRuntimePort,
+    private readonly dispatchingTeams = new Set<string>()) {}
 
   /** Reject new team schedules for metadata-only drafts; desktop Launch must finish their setup. */
   async assertCanSchedule(schedule: Pick<Schedule, 'teamName' | 'executionMode'>): Promise<void> {
@@ -123,14 +133,19 @@ export class SmartScheduleDispatcher {
     if (schedule.executionMode !== 'agent' && schedule.executionMode !== 'team') {
       throw new Error('Unsupported schedule execution mode');
     }
-    if (isHostTeamSelectionKey(schedule.teamName)) {
+    if (isHostTeamSelectionKey(schedule.teamName) && this.runtime.targetKind !== 'host') {
       return skipped('Host-owned team scheduling requires an owner-aware runtime');
     }
     // Check outstanding task-first work before any early skip. That carries
     // its task ID through arbitrarily many skipped runs, despite 50-run
     // history retention, without a second database or queue.
     if (schedule.taskFirst) {
-      const outstanding = await this.findOutstandingTask(schedule, runId);
+      let outstanding: TeamTask | null;
+      try { outstanding = await this.findOutstandingTask(schedule, runId); }
+      catch (error) {
+        if (!(error instanceof ScheduledTaskCreationPending)) throw error;
+        return { kind: 'skipped', summary: error.message, pendingTaskCommandId: error.commandId };
+      }
       if (outstanding) {
         return skipped(
           `Previous task #${outstanding.displayId || outstanding.id} is still active`,
@@ -230,6 +245,9 @@ export class SmartScheduleDispatcher {
         };
       }
       return await this.dispatchToLiveTeam(schedule, runId, isCancelled);
+    } catch (error) {
+      if (!(error instanceof ScheduledTaskCreationPending)) throw error;
+      return { kind: 'skipped', summary: error.message, pendingTaskCommandId: error.commandId };
     } finally {
       this.dispatchingTeams.delete(team);
     }
@@ -238,14 +256,16 @@ export class SmartScheduleDispatcher {
   private async findOutstandingTask(schedule: Schedule, runId: string): Promise<TeamTask | null> {
     const { getPreviousRuns, getTask } = this.runtime;
     if (!getPreviousRuns || !getTask) return null;
-    const priorRuns = await getPreviousRuns(schedule.id, runId);
+    const priorRuns = await this.runtime.getPreviousRuns!(schedule.id, runId);
     const seenTasks = new Set<string>();
     for (const previous of priorRuns) {
-      const taskId = previous.linkedTaskId ?? previous.id;
+      const taskId = previous.linkedTaskId ?? previous.pendingTaskCommandId ?? previous.id;
       if (seenTasks.has(taskId)) continue;
       seenTasks.add(taskId);
       // Run IDs double as task command UUIDs after an interrupted write.
-      const task = await getTask(schedule.teamName, taskId);
+      const task = this.runtime.resolvePreviousTask
+        ? await this.runtime.resolvePreviousTask(schedule.teamName, previous)
+        : await this.runtime.getTask!(schedule.teamName, taskId);
       if (task && !isTeamTaskDeleted(task) && !isTeamTaskFinishedForDependency(task)) return task;
     }
     return null;
@@ -270,7 +290,7 @@ export class SmartScheduleDispatcher {
       return this.dispatchToLiveTeam(schedule, runId, isCancelled);
     }
     const saved = await this.runtime.getSavedRequest(schedule.teamName);
-    if (!saved?.cwd || !saved.providerId || !(await hasRunnableConfig(schedule.teamName))) {
+    if (!saved?.cwd || !saved.providerId || !(await this.runtime.hasRunnableConfig!(schedule.teamName))) {
       return skipped('Finish team setup before assigning scheduled work');
     }
     if (saved.prompt?.trim() && !schedule.reviewedSavedPrompt) {
@@ -353,7 +373,8 @@ export class SmartScheduleDispatcher {
     }
     try {
       const notified = await this.startScheduledTask(
-        schedule.teamName, task.id, owner, launched.runId, isCancelled
+        schedule.teamName, task.id, owner, launched.runId, isCancelled,
+        fresh.members[owner]?.runtimeGeneration
       );
       if (!notified) {
         return skipped('Task saved; start did not confirm a task owner. Inspect the task', task.id);
@@ -440,13 +461,14 @@ export class SmartScheduleDispatcher {
       (await this.runtime.isTeamBusy(team)) ||
       !(await this.runtime.isTeamAlive(team)) ||
       fresh.runId !== runtime.runId ||
+      !sameGeneration(entry, fresh.members[memberName]) ||
       !readyMember(fresh.members[memberName])
     ) {
       return skipped('Runtime changed before task creation');
     }
     if (isCancelled()) return skipped('Schedule was cancelled before task creation');
     const prompt = schedule.launchConfig.prompt.trim();
-    const task = await this.runtime.createTask(team, {
+    const request: CreateTaskRequest = {
       command: {
         // The existing command ledger requires a UUID; runId is generated with randomUUID().
         commandId: runId,
@@ -457,7 +479,11 @@ export class SmartScheduleDispatcher {
       owner: memberName,
       startImmediately: !schedule.taskFirst,
       ...(schedule.taskFirst ? { notifyOwner: false as const } : {}),
-    });
+    };
+    const generation = fresh.members[memberName]?.runtimeGeneration;
+    const task = generation === undefined
+      ? await this.runtime.createTask(team, request)
+      : await this.runtime.createTask(team, request, { runId: runtime.runId, generation });
     if (schedule.taskFirst) {
       const afterWrite = await this.runtime.getRuntime(team);
       if (
@@ -465,13 +491,15 @@ export class SmartScheduleDispatcher {
         (await this.runtime.isTeamBusy(team)) ||
         !(await this.runtime.isTeamAlive(team)) ||
         afterWrite.runId !== runtime.runId ||
+        !sameGeneration(fresh.members[memberName], afterWrite.members[memberName]) ||
         !readyMember(afterWrite.members[memberName])
       ) {
         return skipped('Task saved; runtime changed before start', task.id);
       }
       try {
         const notified = await this.startScheduledTask(
-          team, task.id, memberName, runtime.runId, isCancelled
+          team, task.id, memberName, runtime.runId, isCancelled,
+          fresh.members[memberName]?.runtimeGeneration
         );
         if (!notified) {
           return skipped('Task saved; start did not confirm a task owner. Inspect the task', task.id);
@@ -493,11 +521,13 @@ export class SmartScheduleDispatcher {
     taskId: string,
     memberName: string,
     expectedRunId: string,
-    isCancelled: () => boolean
+    isCancelled: () => boolean,
+    expectedGeneration?: string
   ): Promise<boolean> {
     if (!this.runtime.startTaskByUser) return false;
     const result = await this.runtime.startTaskByUser(teamName, taskId, {
       expectedOwner: memberName,
+      ...(expectedGeneration === undefined ? {} : { expectedGeneration }),
       canStart: async () => {
         if (isCancelled() || (await this.runtime.isTeamBusy(teamName)) || !(await this.runtime.isTeamAlive(teamName))) {
           return false;
@@ -508,6 +538,7 @@ export class SmartScheduleDispatcher {
           !(await this.runtime.isTeamBusy(teamName)) &&
           (await this.runtime.isTeamAlive(teamName)) &&
           current.runId === expectedRunId &&
+          current.members[memberName]?.runtimeGeneration === expectedGeneration &&
           readyMember(current.members[memberName]) &&
           !isCancelled()
         );

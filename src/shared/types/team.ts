@@ -1147,6 +1147,8 @@ export interface TeamAgentRuntimeEntry {
   memberName: string;
   alive: boolean;
   restartable: boolean;
+  /** Host logical generation used for original-recipient preconditions; never a native PID. */
+  runtimeGeneration?: string;
   backendType?: TeamAgentRuntimeBackendType;
   providerId?: TeamProviderId;
   providerBackendId?: TeamProviderBackendId;

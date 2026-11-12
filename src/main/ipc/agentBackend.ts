@@ -34,6 +34,7 @@ import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
 import { createLogger } from '@shared/utils/logger';
 import { shell } from 'electron';
 
+import { createDesktopHostSchedules } from '../composition/createDesktopHostSchedules';
 import { createLegacySourceWriteAdmissionPolicy } from '../composition/legacySourceWriteAdmission';
 import { configureCapturedExtensionCommandRunner } from '../services/extensions/runtime/CapturedExtensionCommandLedger';
 import { CapturedNativeExtensions } from '../services/extensions/runtime/CapturedNativeExtensions';
@@ -240,6 +241,10 @@ export function configureDesktopBackendPersistence(
 export function isDesktopAgentBackendSelected(): boolean {
   return active?.selected ?? false;
 }
+
+const desktopHostSchedules = createDesktopHostSchedules(() => active);
+export const captureDesktopHostSchedule = desktopHostSchedules.capture;
+export const createDesktopHostScheduleRuntime = desktopHostSchedules.create;
 
 /** Existing notification IPC retains the authenticated foreground and original Host handle. */
 export async function captureDesktopHostNotification(event: IpcMainInvokeEvent, data: unknown) {

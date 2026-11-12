@@ -5,6 +5,7 @@
  *          → removeScheduleHandlers(ipcMain)
  */
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import {
   SCHEDULE_CREATE,
   SCHEDULE_DELETE,
@@ -20,6 +21,8 @@ import {
 } from '@preload/constants/ipcChannels';
 import { createLogger } from '@shared/utils/logger';
 import { validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
+
+import { captureDesktopHostSchedule } from './agentBackend';
 
 import type { SchedulerService } from '../services/schedule/SchedulerService';
 import type {
@@ -102,7 +105,7 @@ async function handleGet(
 }
 
 async function handleCreate(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   input: unknown
 ): Promise<IpcResult<Schedule>> {
   if (!input || typeof input !== 'object') {
@@ -121,11 +124,12 @@ async function handleCreate(
   const validationError = validateSmartFields(inp);
   if (validationError) return { success: false, error: validationError };
   if (inp.reviewedSavedPrompt && !inp.taskFirst) return { success: false, error: 'Saved prompt review requires task-first schedule' };
-  return wrapScheduleHandler('create', () => getService().createSchedule(inp));
+  return wrapScheduleHandler('create', async () => getService().createSchedule(inp,
+    isHostTeamSelectionKey(inp.teamName) ? await captureDesktopHostSchedule(event, inp.teamName) : undefined));
 }
 
 async function handleUpdate(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   id: unknown,
   patch: unknown
 ): Promise<IpcResult<Schedule>> {
@@ -140,9 +144,12 @@ async function handleUpdate(
   if (Object.hasOwn(patch, 'taskFirst')) {
     return { success: false, error: 'taskFirst is create-only; existing schedules are unchanged' };
   }
-  return wrapScheduleHandler('update', () =>
-    getService().updateSchedule(id, patch as UpdateSchedulePatch)
-  );
+  return wrapScheduleHandler('update', async () => {
+    const existing = await getService().getSchedule(id);
+    const admission = existing && isHostTeamSelectionKey(existing.teamName)
+      ? await captureDesktopHostSchedule(event, existing.teamName) : undefined;
+    return getService().updateSchedule(id, patch as UpdateSchedulePatch, admission);
+  });
 }
 
 async function handleDelete(_event: IpcMainInvokeEvent, id: unknown): Promise<IpcResult<void>> {

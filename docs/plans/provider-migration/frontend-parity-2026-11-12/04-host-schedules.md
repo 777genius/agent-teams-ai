@@ -1,9 +1,9 @@
 # 04. Расписания для команд, обслуживаемых Host
 
-Статус: R1–R3 пройдены; реализация начата, one-shot/native-limits gate ещё не закрыт.
-Первый срез делает existing runtime predicates awaitable и повторно проверяет cancel после await.
-Dispatcher + filesystem integration: **66 PASS**, 0 FAIL; targeted lint PASS. Это ещё не Desktop→Host/native acceptance:
-durable target/adapter, finite one-shot и CI wiring продолжаются.
+Статус: R1–R3 пройдены; durable target и smart Host adapter подключены в Main.
+Scheduler regression: **110 PASS**, включая три real child Host/JSON/Croner сценария.
+Native model execution, Desktop acceptance, finite one-shot и limits gate ещё открыты;
+UI пока сохраняет ограничение до проверки полного execution path.
 Frontend baseline: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Stage 1 baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 Цель: сохранить нынешние schedule controls и режимы выполнения при выбранном Host.
@@ -222,3 +222,10 @@ Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b
 - Это проверка owner/integration seam. Desktop schedule E2E, finite one-shot и native limit gates остаются открытыми.
 - Task admission: `task.create`/`task.start` теперь принимают optional original recipient (member/run/generation), проверяемый под existing Team fence перед первым receipt. Task-first может сохранить task без уведомления; повтор original command использует прежний receipt. Для busy policy переиспользуется existing task-state predicate.
 - Node 24.21 Host build PASS; 8 task/start и command-validation cases PASS, включая quiet task, stale-generation refusal до записи, один notification и повтор original receipt. Это узкая critical-invariant проверка, а не замена Desktop E2E.
+- Durable schedule target захватывается только из authenticated Main context. Occurrence сохраняет original owner/team refs до effects; background dispatch восстанавливает их через existing binding store независимо от активной вкладки.
+- HostSmartScheduleRuntimeAdapter использует existing roster/snapshot/runtime/task/launch API. Roster revision и member generation перепроверяются перед mutation; saved prompt сохраняется. Отдельных scheduler journal/runtime cache нет.
+- Lost task-create ACK переносит original command reference в run history; cold lookup связывает реальную task, а последующие skips сохраняют её после pruning. Unknown не разрешает новую task.
+- Run reservation теперь предшествует async persistence. Existing stop barrier дожидается initial write; после Quit native dispatch не начинается. Delete не позволяет позднему ответу восстановить удалённую историю.
+- Node 24.21: **110/110 PASS** в четырёх scheduler suites. Новые три сценария используют real Croner, real JSON repository, production Main facade и child Team Host: foreground A→B, lost ACK/cold readback/pruning, actual cron/pause/resume/delete, concurrent Run now/slow persistence/Quit.
+- Fixture намеренно без native provider: unavailable launch оставляет одну quiet pending task. Этот PASS не означает model/whole-team launch readiness. Полноценные launch/start/one-shot и Desktop остаются обязательными следующими проверками.
+- Canonical TS7 focused typecheck и fast lint PASS (два прежних no-unsafe-finally warning). Full-workspace typed lint в локальной среде завершён системой с 137 без diagnostics; полный gate остаётся на CI.
