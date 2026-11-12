@@ -35,7 +35,7 @@ peerDependencyRules:
     '@nuxt/schema': '3.21.11'
 
 overrides:
-  '@agent-teams/provider-session-contracts': 'file:vendor/provider-migration/opencode-v2-host-c8e81cce/agent-teams-provider-session-contracts-0.0.0.tgz'
+  '@agent-teams/provider-session-contracts': 'file:vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz'
   # Fixed Zod collections; retain the headless consumer's unchanged EventType wire API.
   '@openuidev/react-headless>@ag-ui/core': '1.0.3'
   'zod@4': '4.6.7'

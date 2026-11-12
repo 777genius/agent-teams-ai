@@ -70,6 +70,7 @@ export function createOpenCodeV2MemberProvider(
   const originalProfile = runtimeDigest(context.profile);
   const capturedInstructions = context.instructions;
   const capturedEvidence = context.opencodeEvidence;
+  const capturedAttachments = context.attachments;
   // Retain original Host authority before a native owner getter can swap
   // these callbacks. Binding via Function.prototype.bind itself invokes
   // attacker-controlled .name/.length getters during capture.
@@ -267,7 +268,7 @@ export function createOpenCodeV2MemberProvider(
   };
 
   const factory = createOpenCodeV2DriverFactory({
-    capabilities: ['text', 'tools', 'permission', 'interrupt', 'checkpoint'],
+    capabilities: ['text', 'tools', 'permission', 'interrupt', 'checkpoint', ...(embedded && capturedAttachments ? ['attachments'] : [])],
     // Checkpoint recovery is a Host storage read. A lease can be revoked in
     // the microtask between V2 config selection and the private D checkpoint
     // lookup; do not disclose even an incompatible checkpoint after revocation.
@@ -299,6 +300,7 @@ export function createOpenCodeV2MemberProvider(
         },
         limits: profile.limits,
         ...(embedded && capturedEvidence ? { capture: capturedEvidence } : {}),
+        ...(embedded && capturedAttachments ? { attachments: capturedAttachments } : {}),
         beforeRequest: requests.beforeRequest,
         readPassword: () => {
           // Native transports may request credentials after a submit started

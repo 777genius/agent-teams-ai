@@ -11,7 +11,8 @@ import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import { record } from './fixtures/native-claude-team/model.ts';
 import { fileHash, nativeHostEnvironment, startHost, tick, treeHash } from './fixtures/native-host.ts';
 import { CONTEXT_MARKER, startOpenCodeModel } from './fixtures/native-opencode-team/model.ts';
-import { assertNativeV1Source, buildNativeV1Host } from './opencode-v1-version-source.ts';
+import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
+import { readNativeMessageImage, uploadNativeMessageImage } from './fixtures/native-message-image.ts';
 
 async function endpoint(): Promise<string> {
   const server = createServer();
@@ -62,7 +63,8 @@ export interface PackagedNativeHostInputs {
 }
 
 /** Same native scenario for source qualification and the separately captured packaged candidate. */
-export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeHostInputs) {
+export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeHostInputs, signal?: AbortSignal) {
+  signal?.throwIfAborted();
   assert.ok(process.platform === 'linux' && process.arch === 'x64' ||
     (process.platform === 'darwin' || process.platform === 'win32') &&
       (process.arch === 'arm64' || process.arch === 'x64'));
@@ -80,7 +82,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   const pkg = packaged ? packaged.hostPackage : join(repo, 'packages/legacy-agent-host');
   const sourceHead = process.env.OPENCODE_V2_TEST_SOURCE_HEAD!;
   if (packaged) assert.equal(packaged.sourceHead, sourceHead);
-  else await buildNativeV1Host(repo, sourceHead);
+  const sourceBuild = packaged ? undefined : await buildNativeV1Host(repo, sourceHead);
   if (packaged && process.platform === 'darwin') assert.ok(packaged.processCustody);
   const { applyLaunchConfiguration } = await import(pathToFileURL(join(pkg, 'dist/composition/launchConfiguration.js')).href) as
     typeof import('../dist/composition/launchConfiguration.js');
@@ -89,6 +91,9 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   assert.equal(await realpath(process.execPath), node, 'scenario and Host must use the selected original Node');
   const steps: string[] = [], hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
   let host: ReturnType<typeof startHost> | undefined;
+  // Packaged TEST cancellation retains the original Host's existing cleanup owner.
+  const cancelOriginalHost = () => { host?.child.stdin.end(); };
+  signal?.addEventListener('abort', cancelOriginalHost, { once: true });
   let model: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
   let passed = false, cleanup = false;
   let originalFailure: unknown;
@@ -120,7 +125,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       assert.ok((await stat(shell)).isFile(), 'actual Windows PowerShell is required for the native shell turn');
       windowsShellSha256 = await fileHash(shell);
     }
-    model = await startOpenCodeModel({ nativeGeneration: 'v2' });
+    model = await startOpenCodeModel({ nativeGeneration: 'v2', nativeMessageImage: true });
     const namespace = basename(root);
     const owner = {
       ownerId: `TEST-owner-${namespace}`, revision: 'TEST-revision', storageRoot: join(root, 'store'),
@@ -161,7 +166,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
             package: 'aisdk:@ai-sdk/openai-compatible',
             settings: { baseURL: `${model.url}/v1`, apiKey: 'TEST-LOCALHOST-ONLY' },
             models: { 'TEST-model': { name: 'TEST-model', limit: { context: 200000, output: 2000 },
-              capabilities: { tools: true, input: ['text'], output: ['text'] } } },
+              capabilities: { tools: true, input: ['text', 'image'], output: ['text'] } } },
           } },
         nativeOptions: { providerId: 'TEST-local', agent: 'TEST-member', toolApprovalMode: 'manual',
           instructions: `${CONTEXT_MARKER}. You are carol of test-native-team working only in ${join(root, 'workspace')}.` },
@@ -176,6 +181,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     const bytes = JSON.stringify(profile);
     await writeFile(profilePath, bytes, { mode: 0o600 });
     const start = () => {
+      signal?.throwIfAborted();
       const epoch = ++hostEpoch;
       return startHost({ node, entry, root, profile: profilePath,
         profileHash: createHash('sha256').update(bytes).digest('hex'),
@@ -192,14 +198,18 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     lastInputProgress = nativeInputProgress(record(opened.value));
     assert.equal(record(opened.value).nativeReady, true, JSON.stringify(opened));
     steps.push('original_host_embedded_native_and_mcp_ready');
-    const command = envelope('TEST-original-message', {
-      operation: 'message.send', payload: { to: 'carol', text: 'OPENCODE_TEAM_ONE' },
-    });
-    const original = await host.rpc('team.execute', command);
+    const imageReference = await uploadNativeMessageImage(host, envelope, 'carol');
+    const commands = ['ONE', 'TWO'].map(label => envelope(`TEST-original-message-${label}`, {
+      operation: 'message.send', payload: { to: 'carol', text: `OPENCODE_TEAM_${label}`,
+        ...(label === 'TWO' ? { attachments: [imageReference] } : {}) },
+    }));
+    const originals: Record<string, unknown>[] = [], inputIds: string[] = [];
+    const replies = new Set<string>();
+    for (const command of commands) {
+    const original = await host.rpc('team.execute', command); originals.push(original);
     assert.equal(original.ok, true); assert.equal(record(original.value).phase, 'completed');
     const inputId = record(record(original.value).effects).deliveryId;
-    assert.equal(typeof inputId, 'string');
-    const replies = new Set<string>();
+    assert.equal(typeof inputId, 'string'); inputIds.push(inputId as string);
     let terminal = false;
     const deadline = Date.now() + 90_000;
     while (Date.now() < deadline) {
@@ -226,23 +236,31 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       }
       await tick();
     }
-    assert.equal(terminal, true); assert.equal(replies.size, approvalMode === 'manual' ? 1 : 0);
-    assert.deepEqual(model.failures, []); assert.equal(model.observations.length, 8);
+    assert.equal(terminal, true);
+    assert.deepEqual(await host.rpc('team.execute', command), original);
+    }
+    assert.equal(replies.size, approvalMode === 'manual' ? 2 : 0);
+    assert.deepEqual(model.failures, []); assert.equal(model.observations.length, 11);
     assert.ok(model.observations.every(row => row.contextEffective));
-    assert.equal(await readFile(join(root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\n');
+    const imageObservations = model.observations.filter(row => row.turn === 'OPENCODE_TEAM_TWO');
+    assert.equal(imageObservations.length, 3);
+    assert.ok(imageObservations.every(row => row.priorTurn && row.nativeImage?.exactCanonicalBytes));
+    const imageRead = await readNativeMessageImage(host, envelope, originals[1]!);
+    assert.equal(await readFile(join(root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\nTWO\n');
     const listed = await host.rpc('team.tasks.list', envelope('TEST-tasks', null));
     assert.equal(listed.ok, true); const tasks = listed.value as unknown[];
     assert.equal(tasks.length, 1); assert.equal(record(tasks[0]).status, 'completed');
     assert.equal(record(tasks[0]).owner, 'carol');
     assert.equal((record(tasks[0]).comments as unknown[]).length, 1);
     const inbox = JSON.parse(await readFile(join(root, 'store/teams/test-native-team/inboxes/user.json'), 'utf8')) as unknown[];
-    assert.deepEqual(inbox.map(record).map(row => [row.from, row.text]), [['carol', 'REPLY_OPENCODE_ONE']]);
-    assert.deepEqual(await host.rpc('team.execute', command), original);
+    assert.deepEqual(inbox.map(record).map(row => [row.from, row.text]),
+      [['carol', 'REPLY_OPENCODE_ONE'], ['carol', 'REPLY_OPENCODE_TWO']]);
     const activity = await host.rpc('runtime.activity.snapshot', envelope('TEST-activity', { memberId: 'carol-id' }));
     assert.equal(activity.ok, true);
     const failedShellObserved = (record(record(activity.value).latest).tools as unknown[]).map(record).some(row =>
       record(row.data).kind === 'tool-result' && record(row.data).isError === true);
     steps.push('native_model_tool_effect_permission_mcp_task_and_reply_completed_once');
+    steps.push('original_uploaded_PNG_native_image_inference_and_public_readback');
     const checkpoint = await host.rpc('runtime.checkpoint', envelope('TEST-checkpoint', {
       memberId: 'carol-id', checkpointId: 'TEST-before-cold',
     }));
@@ -254,13 +272,17 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     steps.push('checkpoint_and_original_host_native_cleanup_confirmed');
     const callsBefore = model.observations.length;
     host = start(); await host.rpc('host.handshake', { protocolVersion: 1 });
-    assert.deepEqual(await host.rpc('team.lookup', command), original);
-    assert.deepEqual(await host.rpc('team.execute', command), original);
+    for (const [index, command] of commands.entries()) {
+      assert.deepEqual(await host.rpc('team.lookup', command), originals[index]);
+      assert.deepEqual(await host.rpc('team.execute', command), originals[index]);
+    }
+    assert.deepEqual(await readNativeMessageImage(host, envelope, originals[1]!), imageRead);
     const recovered = await host.rpc('runtime.read', envelope('TEST-recovered', { memberId: 'carol-id' }));
     assert.equal(recovered.ok, true); assert.equal(record(recovered.value).attached, false);
     const inputs = (record(recovered.value).inputs as unknown[]).map(record);
-    assert.equal(inputs.length, 1); assert.equal(inputs[0]?.inputId, inputId);
-    assert.equal(inputs[0]?.phase, 'terminal'); assert.equal(inputs[0]?.terminal, 'succeeded');
+    assert.equal(inputs.length, 2);
+    assert.deepEqual(inputs.map(input => input.inputId), inputIds);
+    assert.ok(inputs.every(input => input.phase === 'terminal' && input.terminal === 'succeeded'));
     const restored = await host.rpc('runtime.restore', envelope('TEST-restore', {
       memberId: 'carol-id', reference: record(checkpoint.value).reference,
       expectedGeneration: record(opened.value).generation,
@@ -270,7 +292,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     assert.notEqual(record(restored.value).generation, record(opened.value).generation);
     await new Promise<void>(done => setTimeout(done, 250));
     assert.deepEqual(model.failures, []); assert.equal(model.observations.length, callsBefore);
-    assert.equal(await readFile(join(root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\n');
+    assert.equal(await readFile(join(root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\nTWO\n');
     const resumedStop = await host.rpc('runtime.stop', envelope('TEST-resumed-stop', {
       memberId: 'carol-id', expectedGeneration: record(restored.value).generation,
     }));
@@ -279,11 +301,9 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     steps.push('cold_host_restored_native_history_without_model_or_tool_replay');
     assert.equal(failedShellObserved, true, 'native shell exit 7 is reported as a failed tool');
     if (packaged) await packaged.verify();
-    else {
-      assert.equal(await treeHash(join(pkg, 'src'), '.ts'), digests.hostSource);
-      assertNativeV1Source(repo, sourceHead);
-    }
+    else await assertNativeV1Build(repo, sourceHead, sourceBuild!);
     assert.equal(await treeHash(join(pkg, 'dist'), '.js'), digests.hostDist);
+    signal?.throwIfAborted();
     passed = true;
   } catch (error) { originalFailure = error; }
   finally {
@@ -291,6 +311,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       if (host) { try { await host.close(); } finally { hosts.push(host.facts()); } }
     } catch (error) { cleanupErrors.push(error); }
     try { await model?.close(); } catch (error) { cleanupErrors.push(error); }
+    signal?.removeEventListener('abort', cancelOriginalHost);
     cleanup = cleanupErrors.length === 0;
     try {
       await writeFile(receiptPath, JSON.stringify({

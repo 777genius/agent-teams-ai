@@ -16,6 +16,7 @@ export interface DesktopOpenCodeV2Selection {
   readonly bunSha256: string;
   readonly engineDirectory: string;
   readonly modelUrl: string;
+  readonly imageInput?: boolean;
   readonly endpoint: string;
   readonly managementEndpoint: string;
   readonly processCustody?: TeamHostProfile['processCustody'];
@@ -86,7 +87,7 @@ export async function prepareDesktopOpenCodeV2Recipe(options: {
         'TEST-model': {
           name: 'TEST-model',
           limit: { context: 200000, output: 2000 },
-          capabilities: { tools: true, input: ['text'], output: ['text'] },
+          capabilities: { tools: true, input: selection.imageInput ? ['text', 'image'] : ['text'], output: ['text'] },
         },
       },
     },

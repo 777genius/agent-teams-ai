@@ -180,9 +180,11 @@ export async function prepareDesktopProofMode(
   assert.ok(openCodeGeneration === undefined || openCodeGeneration === '' || openCodeGeneration === 'v2',
     'explicit known Desktop OpenCode generation');
   const openCodeLifecycleMode = openCodeGeneration === 'v2' &&
-    ['native-resume-ui', 'native-stop-ui', 'native-quit-ui', 'native-quit-readback-ui', 'native-review-ui', 'native-review-readback-ui'].includes(mode);
+    ['native-resume-ui', 'native-stop-ui', 'native-quit-ui', 'native-quit-readback-ui', 'native-review-ui', 'native-review-readback-ui', 'native-conversation-ui', 'native-readback-ui'].includes(mode);
   const openCodeReviewMode = openCodeGeneration === 'v2' && nativeReviewMode;
   if (openCodeReviewMode) assert.equal(nativeReviewContinuationMode, false);
+  if (openCodeLifecycleMode && conversationMode) assert.ok(chatAttachments && !groupChats,
+    'the V2 conversation variant proves the original PNG Composer only');
   if (resumeProvider === 'opencode') assert.ok(resumeMode && openCodeLifecycleMode);
   if (openCodeLifecycleMode && resumeMode) assert.equal(resumeProvider, 'opencode');
   const mixedModels = mixedMode ? await startDesktopMixedModels(fixtureRoot,
@@ -262,6 +264,7 @@ export async function prepareDesktopProofMode(
   }) : undefined;
   const openCodeLifecycleModel = openCodeLifecycleMode && !openCodeReviewMode && !readbackMode ? await startOpenCodeModel({
     nativeGeneration: 'v2', memberName: 'alice', uiGeneratedMessageIds: true,
+    nativeMessageImage: conversationMode && chatAttachments,
     captureHistoryMarkers: resumeMode, allowModelProbes: resumeMode,
     holdInitialTurnResponse: mode === 'native-quit-ui',
     principalId: () => {

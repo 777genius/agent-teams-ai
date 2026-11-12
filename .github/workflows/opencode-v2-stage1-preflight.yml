@@ -499,13 +499,14 @@ jobs:
             assert.equal(r.platform, process.env.OPENCODE_V2_TEST_PLATFORM);
             assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);
             assert.equal(r.nodeVersion, 'v24.21.0'); assert.equal(r.version, '2.1.4');
-            assert.equal(r.approvalMode, mode); assert.equal(r.modelRequests, 8);
+            assert.equal(r.approvalMode, mode); assert.equal(r.modelRequests, 11);
             assert.deepEqual(r.modelFailures, []);
             assert.equal(r.digests.bun, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
             assert.equal(r.digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);
             assert.deepEqual(r.steps, [
               'original_host_embedded_native_and_mcp_ready',
               'native_model_tool_effect_permission_mcp_task_and_reply_completed_once',
+              'original_uploaded_PNG_native_image_inference_and_public_readback',
               'checkpoint_and_original_host_native_cleanup_confirmed',
               'cold_host_restored_native_history_without_model_or_tool_replay',
             ]);

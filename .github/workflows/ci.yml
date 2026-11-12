@@ -742,6 +742,12 @@ jobs:
             label: OpenCode V2 native Review and cold readback
             opencode_generation: v2
             readback: native-review-readback-ui
+          - mode: native-conversation-ui
+            variant: opencode-v2-chat-attachments
+            label: OpenCode V2 original PNG Composer and cold readback
+            opencode_generation: v2
+            chat_attachments: '1'
+            readback: native-readback-ui
           - mode: task-board-cross-team-ui
             label: existing Task board and cross-Team controls
     env:
@@ -754,6 +760,7 @@ jobs:
       LEGACY_DESKTOP_NATIVE_MEMBER_CREATE: ${{ matrix.native_member_create || '' }}
       LEGACY_DESKTOP_RESUME_PROVIDER: ${{ matrix.resume_provider || '' }}
       LEGACY_DESKTOP_OPENCODE_GENERATION: ${{ matrix.opencode_generation || '' }}
+      LEGACY_DESKTOP_CHAT_ATTACHMENTS: ${{ matrix.chat_attachments || '' }}
       OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
       OPENCODE_V2_TEST_PLATFORM: darwin-arm64
       OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ github.workspace }}/opencode-v2-desktop-inputs.json
@@ -927,7 +934,7 @@ jobs:
         run: |
           set -euo pipefail
           selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
-          LEGACY_DESKTOP_PROOF_MODE="$STAGE1_READBACK_MODE" "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-readback-$STAGE1_VARIANT.log"
+          LEGACY_DESKTOP_CHAT_ATTACHMENTS= LEGACY_DESKTOP_PROOF_MODE="$STAGE1_READBACK_MODE" "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-readback-$STAGE1_VARIANT.log"
       - name: Require the original retained receipt to report PASS
         if: always()
         run: |
@@ -948,6 +955,26 @@ jobs:
           const receipt = JSON.parse(readFileSync(path, 'utf8'));
           assert.equal(receipt.mode, expectedMode);
           assert.equal(receipt.status, 'PASS', 'INCOMPLETE remains an acceptance failure');
+          if (process.env.STAGE1_VARIANT === 'opencode-v2-chat-attachments') {
+            assert.equal(receipt.nativeChatAttachments?.status, 'PASS');
+            assert.equal(receipt.nativeChatAttachments?.preparedImage?.mimeType, 'image/png');
+            assert.equal(receipt.nativeChatAttachments?.files?.length, 1);
+            assert.match(receipt.nativeChatAttachments?.nativeHistory?.sha256 ?? '', /^[a-f0-9]{64}$/);
+            if (phase === 'desktop') {
+              assert.equal(receipt.nativeProvider, 'opencode');
+              assert.equal(receipt.nativeGeneration, 'v2');
+              assert.equal(receipt.conversationUiProof?.status, 'PASS');
+              assert.equal(receipt.conversationUiProof?.nativeGeneration, 'v2');
+              assert.equal(receipt.conversationUiProof?.nativeInputs, 2);
+              assert.equal(receipt.conversationUiProof?.nativeChildAbsentBeforeQuit, true);
+              assert.equal(receipt.conversationUiProof?.custody, 'released');
+            } else {
+              assert.equal(receipt.savedNativeReadback?.status, 'PASS');
+              assert.equal(receipt.savedNativeReadback?.nativeInputsReplayed, 0);
+              assert.equal(receipt.savedNativeReadback?.nativeAllocations, 0);
+              assert.equal(receipt.savedNativeReadback?.runtimeRecordUnchanged, true);
+            }
+          }
           if (phase === 'desktop' && expectedMode === 'native-review-ui' && process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2') {
             assert.equal(receipt.nativeReviewUiProof?.provider, 'opencode-v2');
             assert.equal(receipt.nativeReviewUiProof?.status, 'PASS');
@@ -1014,8 +1041,8 @@ jobs:
         env:
           LEGACY_NATIVE_MIXED_HOST_GO: '1'
           LEGACY_NATIVE_MIXED_RESTORE_GO: '1'
-          LEGACY_NATIVE_PROVIDER_ARTIFACT: vendor/provider-migration/opencode-v2-host-c8e81cce/agent-teams-provider-implementations-0.0.0.tgz
-          LEGACY_NATIVE_PROVIDER_SHA256: 0101298ac680448a4dec6b60c40e297a13caa484d453c47cb4a9c957e4ebbba8
+          LEGACY_NATIVE_PROVIDER_ARTIFACT: vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-implementations-0.0.0.tgz
+          LEGACY_NATIVE_PROVIDER_SHA256: fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89
         run: |
           set -euo pipefail
           unset LEGACY_NATIVE_MIXED_PEERS_GO LEGACY_NATIVE_MIXED_CROSS_TEAM_GO

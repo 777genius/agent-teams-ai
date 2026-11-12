@@ -543,6 +543,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         },
         evidence,
         ...(conversationModel ? { model: conversationModel } : {}),
+        ...(conversationMode && openCodeLifecycleModel ? { openCodeModel: openCodeLifecycleModel } : {}),
         ...(nativeStopMode
           ? {
               nativeStop: {

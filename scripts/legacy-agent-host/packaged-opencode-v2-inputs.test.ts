@@ -189,8 +189,9 @@ test('packaged scenario rejects an available source checkout and an ambient Node
     /system Node cannot qualify the candidate/);
 });
 
-test('a failed external harness restores the disposable source, candidate and legacy payload independently',
-  { skip: process.version !== 'v24.21.0', timeout: 30_000 }, async t => {
+test('packaged cancellation restores inputs only after original native cleanup is attested',
+  { skip: process.version !== 'v24.21.0', timeout: 60_000 }, async t => {
+  for (const disposition of ['clean-error', 'timeout-clean', 'unknown'] as const) await t.test(disposition, async t => {
     const f = await fixture(t), repo = join(f.root, 'TEST-checkout');
     await mkdir(repo);
     // This tiny tracked TEST checkout contains only the runner's immutable inputs.
@@ -201,6 +202,12 @@ test('a failed external harness restores the disposable source, candidate and le
       'packages/legacy-agent-host/tests/opencode-v1-version-source.ts', 'packages/legacy-agent-host/src/contracts.ts']) {
       await mkdir(dirname(join(repo, name)), { recursive: true });
       await copyFile(new URL(`../../${name}`, import.meta.url), join(repo, name));
+    }
+    if (disposition === 'timeout-clean') {
+      const runner = join(repo, 'scripts/legacy-agent-host/run-packaged-opencode-v2.ts');
+      // Only this disposable, tracked TEST source shortens its deadline. The
+      // shipped runner has no environment or CLI override for its finite bound.
+      await writeFile(runner, (await readFile(runner, 'utf8')).replace('waitExit(480_000)', 'waitExit(100)'));
     }
     await writeFile(join(repo, 'package.json'), '{"type":"module"}');
     const git = (args: string[]) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', timeout: 5000, stdio: 'pipe' }).trim();
@@ -213,9 +220,20 @@ test('a failed external harness restores the disposable source, candidate and le
     await f.put(`node/v24.21.0/${f.manifest.platform}/manifest.json`, JSON.stringify(f.manifest.node));
     const harness = join(f.root, 'TEST-packaged-v2-host-failure.mjs');
     await writeFile(harness, `import assert from 'node:assert/strict';
-import { lstat, writeFile } from 'node:fs/promises';
+import { lstat, readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 await assert.rejects(lstat(process.env.OPENCODE_V2_PACKAGED_SOURCE_ROOT), {code:'ENOENT'});
 await writeFile(new URL('./TEST-observed-source-absence', import.meta.url), 'TEST');
+${disposition === 'timeout-clean' ? `await new Promise(done => { process.stdin.once('end', done); process.stdin.resume(); });
+await writeFile(new URL('./TEST-observed-cancellation', import.meta.url), 'EOF');` : ''}
+${disposition !== 'unknown' ? `const capture = JSON.parse(process.env.OPENCODE_V2_PACKAGED_CAPTURE);
+const manifest = JSON.parse(await readFile(join(capture.resourcesRoot, 'opencode-v2-candidate.json'), 'utf8'));
+await writeFile(process.env.OPENCODE_V2_EMBEDDED_HOST_RECEIPT, JSON.stringify({
+  kind: 'TEST_PACKAGED_NATIVE_V2_HOST', status: 'INCOMPLETE', cleanup: true,
+  sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD, platform: process.platform + '-' + process.arch,
+  hosts: [], packaged: { appAsarSha256: capture.appAsarSha256,
+    candidateManifestSha256: capture.manifestSha256, harnessSha256: manifest.harnessSha256 }
+}));` : ''}
 throw new Error('TEST-injected-harness-failure');`);
     f.manifest.harnessSha256 = await candidateDigest(harness); await f.save();
     const originalBundle = join(repo, 'release/TEST-App');
@@ -239,10 +257,26 @@ throw new Error('TEST-injected-harness-failure');`);
     assert.equal(result.error, undefined); assert.equal(result.status, 1, result.stderr);
     assert.match(result.stderr, /TEST-injected-harness-failure/);
     assert.equal(await readFile(join(f.root, 'TEST-observed-source-absence'), 'utf8'), 'TEST');
-    assert.equal(git(['rev-parse', 'HEAD']), f.manifest.sourceHead);
-    assert.equal(await readFile(join(resources, 'runtime/TEST-retained'), 'utf8'), 'TEST-legacy-preserved');
     const receipt = JSON.parse(await readFile(receiptPath, 'utf8'));
-    assert.equal(receipt.status, 'INCOMPLETE'); assert.equal(receipt.cleanup, false);
-    assert.equal(receipt.sourceRestored, true); assert.equal(receipt.bundleRestored, true);
-    assert.equal(receipt.legacyRuntimeRestored, true);
+    assert.equal(receipt.status, 'INCOMPLETE');
+    if (disposition === 'unknown') {
+      assert.equal(receipt.cleanup, false);
+      assert.equal(receipt.sourceRestored, false); assert.equal(receipt.bundleRestored, false);
+      assert.equal(receipt.legacyRuntimeRestored, false);
+      await assert.rejects(realpath(repo), { code: 'ENOENT' });
+      await assert.rejects(realpath(originalBundle), { code: 'ENOENT' });
+      assert.equal(await readFile(join(receipt.retainedInputs.root, 'TEST-retained-legacy-runtime/TEST-retained'), 'utf8'), 'TEST-legacy-preserved');
+      assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { cwd: receipt.retainedInputs.hiddenSource, encoding: 'utf8' }).trim(), f.manifest.sourceHead);
+    } else {
+      assert.equal(receipt.cleanup, true);
+      assert.equal(receipt.sourceRestored, true); assert.equal(receipt.bundleRestored, true);
+      assert.equal(receipt.legacyRuntimeRestored, true);
+      assert.equal(git(['rev-parse', 'HEAD']), f.manifest.sourceHead);
+      assert.equal(await readFile(join(resources, 'runtime/TEST-retained'), 'utf8'), 'TEST-legacy-preserved');
+      if (disposition === 'timeout-clean') {
+        assert.equal(receipt.timedOut, true);
+        assert.equal(await readFile(join(f.root, 'TEST-observed-cancellation'), 'utf8'), 'EOF');
+      }
+    }
+  });
   });

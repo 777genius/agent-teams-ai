@@ -55,6 +55,7 @@ try {
   receipt.candidateManifestSha256 = capture.manifestSha256;
   receipt.hostEntrySha256 = captured.manifest.hostEntrySha256;
   receipt.nodeSha256 = captured.manifest.node.binarySha256;
+  await assert.rejects(lstat(nativeReceiptPath), { code: 'ENOENT' }, 'a previous receipt cannot attest this original child');
   // Keep the legacy payload intact outside the tested bundle. Any dependency on
   // its front door, Node or Bun must fail while this selected Host path is tested.
   await rename(join(resources, 'runtime'), retainedLegacy); legacyMoved = true;
@@ -69,44 +70,75 @@ try {
     OPENCODE_V2_EMBEDDED_HOST_RECEIPT: nativeReceiptPath,
     OPENCODE_V2_EMBEDDED_APPROVAL_MODE: 'manual' };
   receipt.phase = 'native-host';
-  const outcome = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((done, reject) => {
-    const child = spawn(captured.node, [harness], { cwd: root, env: environment,
-      stdio: ['ignore', 'inherit', 'inherit'], timeout: 480_000, killSignal: 'SIGTERM' });
-    nativeStarted = true;
+  const child = spawn(captured.node, [harness], { cwd: root, env: environment,
+    stdio: ['pipe', 'inherit', 'inherit'] });
+  nativeStarted = child.pid !== undefined;
+  child.once('spawn', () => { nativeStarted = true; });
+  child.stdin.on('error', () => { /* The original exit and receipt remain decisive. */ });
+  const exited = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((done, reject) => {
     child.once('error', reject);
     child.once('exit', (code, signal) => done({ code, signal }));
   });
+  const waitExit = async (timeoutMs: number) => {
+    let timer: NodeJS.Timeout | undefined;
+    try { return await Promise.race([exited, new Promise<undefined>(done => {
+      timer = setTimeout(() => done(undefined), timeoutMs);
+    })]); } finally { clearTimeout(timer); }
+  };
+  let outcome = await waitExit(480_000);
+  const timedOut = outcome === undefined;
+  if (timedOut) {
+    receipt.timedOut = true;
+    // EOF asks the captured TEST harness to close its retained original Host.
+    // Killing only this root cannot prove absence of Host's detached native Bun.
+    child.stdin.end();
+    outcome = await waitExit(90_000);
+  }
+  if (!outcome) {
+    child.unref();
+    throw new Error('TEST packaged original Host cleanup remains unknown after cancellation');
+  }
   receipt.nativeExit = outcome;
-  assert.deepEqual(outcome, { code: 0, signal: null });
   const native = JSON.parse(await readFile(nativeReceiptPath, 'utf8'));
   assert.equal(native.kind, 'TEST_PACKAGED_NATIVE_V2_HOST');
-  assert.equal(native.status, 'PASS'); assert.equal(native.cleanup, true);
-  nativeCleanupConfirmed = true;
   assert.equal(native.sourceHead, sourceHead); assert.equal(native.platform, requestedPlatform);
-  assert.equal(native.approvalMode, 'manual'); assert.equal(native.modelRequests, 8);
+  assert.equal(native.packaged.appAsarSha256, capture.appAsarSha256);
+  assert.equal(native.packaged.candidateManifestSha256, capture.manifestSha256);
+  assert.equal(native.packaged.harnessSha256, captured.manifest.harnessSha256);
+  assert.equal(native.cleanup, true);
+  assert.ok(Array.isArray(native.hosts) && native.hosts.every((host: Record<string, unknown>) =>
+    host.exitCode === 0 && host.signalCode === null && host.stdoutValid === true));
+  nativeCleanupConfirmed = true;
+  receipt.nativeReceiptSha256 = await candidateDigest(nativeReceiptPath);
+  assert.equal(timedOut, false, 'a cancelled scenario cannot qualify the candidate');
+  assert.deepEqual(outcome, { code: 0, signal: null });
+  assert.equal(native.status, 'PASS');
+  assert.equal(native.approvalMode, 'manual'); assert.equal(native.modelRequests, 11);
   assert.deepEqual(native.modelFailures, []);
   assert.equal(native.packaged.sourceCheckoutUnavailable, true);
   assert.equal(native.packaged.legacyRuntimeUnavailable, true);
-  assert.equal(native.packaged.appAsarSha256, capture.appAsarSha256);
-  assert.equal(native.packaged.candidateManifestSha256, capture.manifestSha256);
-  receipt.nativeReceiptSha256 = await candidateDigest(nativeReceiptPath);
   receipt.sourceCheckoutUnavailable = true;
   receipt.legacyRuntimeUnavailable = true;
   passed = true;
 } catch (error) { originalFailure = error; }
 finally {
-  // Restoration is independent of provider/scenario failure. Never leave the
-  // disposable job checkout hidden, or claim complete packaging after a failed restore.
+  // Scenario failure may restore only after the retained original Host attests
+  // cleanup. UNKNOWN leaves these isolated TEST inputs in place for diagnosis.
   process.chdir(runnerTemp);
-  if (sourceMoved) {
+  const canRestore = !nativeStarted || nativeCleanupConfirmed;
+  if (!canRestore) {
+    cleanupErrors.push(new Error('TEST packaged inputs retained because original native cleanup is unconfirmed'));
+    receipt.retainedInputs = { root, hiddenSource };
+  }
+  if (canRestore && sourceMoved) {
     try { await rename(hiddenSource, repo); sourceMoved = false; }
     catch (error) { cleanupErrors.push(error); }
   }
-  if (legacyMoved) {
+  if (canRestore && legacyMoved) {
     try { await rename(retainedLegacy, join(resources, 'runtime')); legacyMoved = false; }
     catch (error) { cleanupErrors.push(error); }
   }
-  if (bundleMoved && !sourceMoved) {
+  if (canRestore && bundleMoved && !sourceMoved) {
     try { await rename(relocatedBundle, originalBundle); bundleMoved = false; }
     catch (error) { cleanupErrors.push(error); }
   }
@@ -128,7 +160,11 @@ finally {
   try { await writeFile(receiptPath, JSON.stringify(receipt, null, 2) + '\n', { mode: 0o600 }); }
   catch (error) { cleanupErrors.push(error); }
 }
-if (originalFailure !== undefined) throw originalFailure;
+if (originalFailure !== undefined) {
+  if (cleanupErrors.length) throw new AggregateError([originalFailure, ...cleanupErrors],
+    'TEST packaged scenario failed with unconfirmed cleanup or restoration');
+  throw originalFailure;
+}
 if (cleanupErrors.length) throw new AggregateError(cleanupErrors, 'TEST packaged input restoration failed');
 assert.equal(passed, true);
 process.stdout.write(JSON.stringify(receipt) + '\n');

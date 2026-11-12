@@ -26,6 +26,7 @@ export async function prepareNativeChatAttachments(
     evidence: Record<string, unknown>;
     assertOwnedRenderer(): void;
     step(value: Record<string, unknown>): void;
+    openCodeV2?: boolean;
   }
 ) {
   const ui = createDesktopUiControls(cdp, options);
@@ -34,17 +35,19 @@ export async function prepareNativeChatAttachments(
   assert.equal(await realpath(directory), directory);
   const png = Buffer.from(CHAT_PNG, 'base64'),
     text = Buffer.from(CHAT_TEXT);
-  for (const [name, bytes] of [
+  const inputFiles = [
     [CHAT_IMAGE_NAME, png],
-    [CHAT_FILE_NAME, text],
-  ] as const)
+    ...(!options.openCodeV2 ? [[CHAT_FILE_NAME, text] as const] : []),
+  ] as const;
+  const turn = options.openCodeV2 ? 'OPENCODE_TEAM_TWO' : 'NATIVE_TEAM_TWO';
+  for (const [name, bytes] of inputFiles)
     await writeFile(join(directory, name), bytes, { flag: 'wx', mode: 0o600 });
   options.assertOwnedRenderer();
   const control = row(
     await ui.waitRead(
       `(() => {
     const area=document.activeElement;
-    if(!(area instanceof HTMLTextAreaElement)||area.value!=='NATIVE_TEAM_TWO')return null;
+    if(!(area instanceof HTMLTextAreaElement)||area.value!==${desktopJsLiteral(turn)})return null;
     const composer=area.closest('.message-composer-flat-layout');
     const inputs=composer?.querySelectorAll('input[type="file"]');
     if(!inputs||inputs.length!==1)return null;
@@ -67,17 +70,17 @@ export async function prepareNativeChatAttachments(
   assert.ok(Array.isArray(found.nodeIds) && found.nodeIds.length === 1);
   options.step({
     action: 'DOM.setFileInputFiles',
-    filenames: [CHAT_IMAGE_NAME, CHAT_FILE_NAME],
+    filenames: inputFiles.map(([name]) => name),
     nativePicker: false,
     state: 'attempted',
   });
   await cdp.send('DOM.setFileInputFiles', {
     nodeId: found.nodeIds[0],
-    files: [join(directory, CHAT_IMAGE_NAME), join(directory, CHAT_FILE_NAME)],
+    files: inputFiles.map(([name]) => join(directory, name)),
   });
   await ui.waitRead(
-    `(() => {const e=document.querySelector(${desktopJsLiteral(composerSelector)});return Boolean(e)&&e.textContent.includes(${desktopJsLiteral(CHAT_FILE_NAME)})&&Boolean(e.querySelector('img'));})()`,
-    'both original pending chat attachment controls'
+    `(() => {const e=document.querySelector(${desktopJsLiteral(composerSelector)});return Boolean(e)&&${options.openCodeV2 ? 'true' : `e.textContent.includes(${desktopJsLiteral(CHAT_FILE_NAME)})`}&&Boolean(e.querySelector('img'));})()`,
+    'original pending chat attachment controls'
   );
   const pendingSelector = `${composerSelector} img[alt=${JSON.stringify(CHAT_IMAGE_NAME)}]`;
   const pending = row(
@@ -99,7 +102,16 @@ export async function prepareNativeChatAttachments(
     status: 'INCOMPLETE',
     files: [
       { filename: CHAT_IMAGE_NAME, mimeType: 'image/png', size: png.length, sha256: sha(png) },
-      { filename: CHAT_FILE_NAME, mimeType: 'text/plain', size: text.length, sha256: sha(text) },
+      ...(!options.openCodeV2
+        ? [
+            {
+              filename: CHAT_FILE_NAME,
+              mimeType: 'text/plain',
+              size: text.length,
+              sha256: sha(text),
+            },
+          ]
+        : []),
     ],
     preparedImage: {
       filename: CHAT_PREPARED_IMAGE_NAME,
@@ -114,82 +126,109 @@ export async function prepareNativeChatAttachments(
     nativeInference: 'Actual SDK/CLI to localhost; vendor authentication not qualified',
   };
   options.evidence.nativeChatAttachments = proof;
-  return async (messageId: string) => {
-    assert.match(messageId, /^[a-f0-9-]{36}$/);
-    const descriptor = row(
-      JSON.parse(await readFile(join(options.root, 'desktop-descriptor.json'), 'utf8'))
-    );
-    assert.ok(Array.isArray(descriptor.handles) && descriptor.handles.length === 1);
-    const handle = row(descriptor.handles[0]);
-    assert.equal(typeof handle.handleId, 'string');
-    const teamName = hostTeamSelectionKey(String(handle.handleId));
-    const messageRow = `[data-timeline-row-key=${JSON.stringify(messageId)}]`;
-    const article = `${messageRow} article.activity-timeline-card`;
-    const sentExpression = `(() => {
+  return (messageId: string) => verifyNativeChatAttachmentMessage(cdp, { ...options, messageId });
+}
+
+/** Read the original saved message and preview; a cold V2 call performs no upload or Send. */
+export async function verifyNativeChatAttachmentMessage(
+  cdp: UiCdpPort,
+  options: {
+    root: string;
+    evidence: Record<string, unknown>;
+    assertOwnedRenderer(): void;
+    step(value: Record<string, unknown>): void;
+    messageId: string;
+    openCodeV2?: boolean;
+  }
+) {
+  const ui = createDesktopUiControls(cdp, options),
+    messageId = options.messageId;
+  const proof = row(options.evidence.nativeChatAttachments);
+  const preparedPng = await readFile(
+    join(options.root, 'native-chat-attachment-inputs', CHAT_PREPARED_IMAGE_NAME)
+  );
+  assertChatImagePixels(preparedPng.toString('base64'));
+  assert.equal(row(proof.preparedImage).sha256, sha(preparedPng));
+  const text = Buffer.from(CHAT_TEXT),
+    turn = options.openCodeV2 ? 'OPENCODE_TEAM_TWO' : 'NATIVE_TEAM_TWO';
+  assert.match(messageId, /^[a-f0-9-]{36}$/);
+  const descriptor = row(
+    JSON.parse(await readFile(join(options.root, 'desktop-descriptor.json'), 'utf8'))
+  );
+  assert.ok(Array.isArray(descriptor.handles) && descriptor.handles.length === 1);
+  const handle = row(descriptor.handles[0]);
+  assert.equal(typeof handle.handleId, 'string');
+  const teamName = hostTeamSelectionKey(String(handle.handleId));
+  const messageRow = `[data-timeline-row-key=${JSON.stringify(messageId)}]`;
+  const article = `${messageRow} article.activity-timeline-card`;
+  const sentExpression = `(() => {
       const rows=[...document.querySelectorAll(${desktopJsLiteral(article)})];if(rows.length!==1)return null;
       const e=rows[0],key=Object.keys(e).find(k=>k.startsWith('__reactFiber$')),attached=key?e[key]:null;let current=null;
       for(const candidate of [attached,attached?.alternate]){if(!candidate)continue;let r=candidate,n=0;while(r.return&&n++<256)r=r.return;if(!r.return&&r.stateNode?.current===r){current=candidate;break;}}
       for(let f=current,n=0;f&&n++<128;f=f.return){const p=f.memoizedProps,m=p?.message;
-        if(p?.teamName!==${desktopJsLiteral(teamName)}||m?.messageId!==${desktopJsLiteral(messageId)}||m.from!=='user'||m.to!=='alice'||m.text!=='NATIVE_TEAM_TWO')continue;
-        const a=m.attachments;if(!Array.isArray(a)||a.length!==2||a[0].filename!==${desktopJsLiteral(CHAT_IMAGE_NAME)}||a[0].mimeType!=='image/png'||a[0].size!==${preparedPng.length}||a[1].filename!==${desktopJsLiteral(CHAT_FILE_NAME)}||a[1].mimeType!=='text/plain'||a[1].size!==${text.length})return null;
+        if(p?.teamName!==${desktopJsLiteral(teamName)}||m?.messageId!==${desktopJsLiteral(messageId)}||m.from!=='user'||m.to!=='alice'||m.text!==${desktopJsLiteral(turn)})continue;
+        const a=m.attachments;if(!Array.isArray(a)||a.length!==${options.openCodeV2 ? 1 : 2}||a[0].filename!==${desktopJsLiteral(CHAT_IMAGE_NAME)}||a[0].mimeType!=='image/png'||a[0].size!==${preparedPng.length}${options.openCodeV2 ? '' : `||a[1].filename!==${desktopJsLiteral(CHAT_FILE_NAME)}||a[1].mimeType!=='text/plain'||a[1].size!==${text.length}`})return null;
         return {teamName:p.teamName,messageId:m.messageId,from:m.from,to:m.to,text:m.text,expanded:e.dataset.expanded==='true',attachments:a.map(x=>({id:x.id,filename:x.filename,mimeType:x.mimeType,size:x.size}))};
       }return null;
     })()`;
-    const sent = row(
-      await ui.waitRead(
-        sentExpression,
-        'exact original sent message with both public attachment metadata entries'
-      )
-    );
-    if (sent.expanded !== true) {
-      const header = `${article} > div[role="button"]`;
-      await ui.scrollTo(header, 'original sent attachment message header');
-      await ui.click(header, 'expand original sent attachment message once');
-    }
-    proof.sentMessage = row(
-      await ui.waitRead(
-        `(() => {const m=${sentExpression};return m?.expanded===true?m:null;})()`,
-        'original sent message expanded through its existing header'
-      )
-    );
-    const image = `${article} img[alt=${JSON.stringify(CHAT_IMAGE_NAME)}]`;
-    await ui.scrollTo(image, 'original sent message image preview');
-    const loaded = row(
-      await ui.waitRead(
-        `(() => {const e=[...document.querySelectorAll(${desktopJsLiteral(image)})].filter(i=>!i.closest('.message-composer-flat-layout'));return e.length===1&&e[0].complete&&e[0].naturalWidth===2&&e[0].naturalHeight===1?{src:e[0].currentSrc||e[0].src}:null;})()`,
-        'original sent message image preview'
-      )
-    );
-    assert.match(String(loaded.src), /^data:image\/png;base64,/);
-    assert.deepEqual(Buffer.from(String(loaded.src).split(',')[1]!, 'base64'), preparedPng);
-    proof.preview = { sha256: sha(preparedPng), width: 2, height: 1 };
-    const downloads = join(options.root, 'home/Downloads');
-    await mkdir(downloads, { recursive: true, mode: 0o700 });
-    assert.equal(await realpath(downloads), downloads);
-    const path = join(downloads, CHAT_FILE_NAME);
-    await assert.rejects(stat(path), { code: 'ENOENT' });
-    options.assertOwnedRenderer();
-    await cdp.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads });
-    const control = `${article} button[aria-label=${JSON.stringify('Download ' + CHAT_FILE_NAME)}]`;
-    await ui.scrollTo(control, 'sent file original Download');
-    await ui.click(control, 'download original sent file once');
-    const deadline = Date.now() + 45_000;
-    let downloaded: Buffer | undefined;
-    while (Date.now() < deadline) {
-      options.assertOwnedRenderer();
-      try {
-        if ((await stat(path)).size === text.length) {
-          downloaded = await readFile(path);
-          break;
-        }
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      }
-      await new Promise<void>((done) => setTimeout(done, 100));
-    }
-    assert.ok(downloaded, 'one original download completes without click replay');
-    assert.deepEqual(downloaded, text);
-    proof.download = { filename: CHAT_FILE_NAME, sha256: sha(downloaded), size: downloaded.length };
+  const sent = row(
+    await ui.waitRead(
+      sentExpression,
+      'exact original sent message with its public attachment metadata'
+    )
+  );
+  if (sent.expanded !== true) {
+    const header = `${article} > div[role="button"]`;
+    await ui.scrollTo(header, 'original sent attachment message header');
+    await ui.click(header, 'expand original sent attachment message once');
+  }
+  proof.sentMessage = row(
+    await ui.waitRead(
+      `(() => {const m=${sentExpression};return m?.expanded===true?m:null;})()`,
+      'original sent message expanded through its existing header'
+    )
+  );
+  const image = `${article} img[alt=${JSON.stringify(CHAT_IMAGE_NAME)}]`;
+  await ui.scrollTo(image, 'original sent message image preview');
+  const loaded = row(
+    await ui.waitRead(
+      `(() => {const e=[...document.querySelectorAll(${desktopJsLiteral(image)})].filter(i=>!i.closest('.message-composer-flat-layout'));return e.length===1&&e[0].complete&&e[0].naturalWidth===2&&e[0].naturalHeight===1?{src:e[0].currentSrc||e[0].src}:null;})()`,
+      'original sent message image preview'
+    )
+  );
+  assert.match(String(loaded.src), /^data:image\/png;base64,/);
+  assert.deepEqual(Buffer.from(String(loaded.src).split(',')[1]!, 'base64'), preparedPng);
+  proof.preview = { sha256: sha(preparedPng), width: 2, height: 1 };
+  if (options.openCodeV2) {
     proof.status = 'PASS';
-  };
+    return;
+  }
+  const downloads = join(options.root, 'home/Downloads');
+  await mkdir(downloads, { recursive: true, mode: 0o700 });
+  assert.equal(await realpath(downloads), downloads);
+  const path = join(downloads, CHAT_FILE_NAME);
+  await assert.rejects(stat(path), { code: 'ENOENT' });
+  options.assertOwnedRenderer();
+  await cdp.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads });
+  const control = `${article} button[aria-label=${JSON.stringify('Download ' + CHAT_FILE_NAME)}]`;
+  await ui.scrollTo(control, 'sent file original Download');
+  await ui.click(control, 'download original sent file once');
+  const deadline = Date.now() + 45_000;
+  let downloaded: Buffer | undefined;
+  while (Date.now() < deadline) {
+    options.assertOwnedRenderer();
+    try {
+      if ((await stat(path)).size === text.length) {
+        downloaded = await readFile(path);
+        break;
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+    await new Promise<void>((done) => setTimeout(done, 100));
+  }
+  assert.ok(downloaded, 'one original download completes without click replay');
+  assert.deepEqual(downloaded, text);
+  proof.download = { filename: CHAT_FILE_NAME, sha256: sha(downloaded), size: downloaded.length };
+  proof.status = 'PASS';
 }

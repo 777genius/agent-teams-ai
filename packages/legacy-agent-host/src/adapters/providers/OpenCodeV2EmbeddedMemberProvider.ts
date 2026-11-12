@@ -33,14 +33,14 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
   const capturedEndpoint = runtimeDigest(context.endpoint.binding), instructions = context.instructions;
   const { config, selection, requiredToolNames } = openCodeV2EmbeddedConfig(context);
   const abort = new AbortController();
-  let sealed = false, opened = false;
+  let sealed = false, opened = false, cleanupUnknown = false, nativeImages = false;
   let delegate: MemberProvider | undefined;
   let server: ReturnType<typeof createOpenCodeV2EmbeddedServer> | undefined;
   let nativePin: Readonly<{ pid: number; startIdentity: string }> | undefined;
   let nativeSessionId: string | undefined;
   let startup: Promise<void> | undefined;
   let initialAttempt: Promise<Awaited<ReturnType<OpenCodeV2OwnedSession['installAndAttestInitialContext']>>> | undefined;
-  const current = () => !sealed && !abort.signal.aborted && context.isCurrent() &&
+  const current = () => !sealed && !cleanupUnknown && !abort.signal.aborted && context.isCurrent() &&
     runtimeDigest(context.request) === capturedRequest && runtimeDigest(context.profile) === capturedProfile &&
     runtimeDigest(context.endpoint.binding) === capturedEndpoint && context.instructions === instructions &&
     !hasUntrustedOpenCodeBinaryOverride(process.env);
@@ -62,11 +62,31 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
       },
       signal: AbortSignal.any([signal, abort.signal]), deadline: Date.now() + profile.limits.timeoutMs,
     });
-    let failure: unknown;
-    try { const result = await callback(client); assertCurrent(); return result; }
-    catch (error) { failure = error; throw error; }
-    finally { try { await client.dispose(); } catch (error) { if (failure === undefined) throw error; } }
+    let failed = false, failure: unknown, result!: T;
+    try { result = await callback(client); assertCurrent(); }
+    catch (error) { failed = true; failure = error; }
+    try { await client.dispose(); }
+    catch (error) { cleanupUnknown = true; if (!failed) { failed = true; failure = error; } }
+    if (failed) throw failure;
+    assertCurrent(); signal.throwIfAborted(); return result;
   }
+  const attachmentSource = context.attachments, attachmentResolve = attachmentSource?.resolve,
+    attachmentModel = attachmentSource?.model, attachmentRevision = attachmentSource?.revision,
+    attachmentMimes = attachmentSource?.mimeTypes;
+  const attachments = attachmentMimes?.includes('image/png') && attachmentResolve &&
+    attachmentModel === `${profile.nativeOptions.providerId}/${profile.model}` && attachmentRevision ? {
+      model: attachmentModel, revision: attachmentRevision, mimeTypes: ['image/png'],
+      async resolve(binding: Parameters<NonNullable<MemberProviderContext['attachments']>['resolve']>[0], signal: AbortSignal) {
+        assertCurrent(); signal.throwIfAborted();
+        const catalog = await withClient(signal, client => client.readCatalog(profile.nativeOptions.providerId));
+        const model = catalog.models.find(row => row.id === profile.model);
+        if (!model?.enabled || !model.inputModalities.includes('image')) return undefined;
+        assertCurrent(); signal.throwIfAborted();
+        const value = await Reflect.apply(attachmentResolve, attachmentSource, [binding, signal]);
+        assertCurrent(); signal.throwIfAborted(); return value;
+      },
+    } : undefined;
+  if (attachmentSource && !attachments) return unavailable();
   async function namespace(root: string | undefined, name: string): Promise<string> {
     if (!root || await realpath(root) !== root || !(await lstat(root)).isDirectory()) return unavailable();
     const directory = join(root, name);
@@ -149,7 +169,14 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
             runtimeDigest(receipt.binding) === capturedEndpoint &&
             runtimeDigest([...receipt.toolNames].sort()) === runtimeDigest(requiredToolNames);
         });
-        if (accepted) return true;
+        if (accepted) {
+          if (attachments) {
+            const catalog = await withClient(signal, client => client.readCatalog(profile.nativeOptions.providerId));
+            assertCurrent(); signal.throwIfAborted();
+            nativeImages = catalog.models.some(model => model.id === profile.model && model.enabled && model.inputModalities.includes('image'));
+          }
+          return true;
+        }
         if (signal.aborted || !current() || Date.now() >= deadline) return false;
         await delay(50, undefined, { signal });
       }
@@ -179,10 +206,13 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
       })();
     },
     readAndAttestInitialContext: readContext,
-    stopOwned: () => server?.stopOwned() ?? Promise.resolve(true),
-    confirmStopped: () => server?.confirmStopped() ?? Promise.resolve(true),
+    async stopOwned() { const stopped = await (server?.stopOwned() ?? Promise.resolve(true)); return stopped && !cleanupUnknown; },
+    async confirmStopped() { const stopped = await (server?.confirmStopped() ?? Promise.resolve(true)); return stopped && !cleanupUnknown; },
   };
   return {
+    get attachmentCapabilities() {
+      return { images: !!attachments && current() && nativeImages, documents: false, textFiles: false };
+    },
     factory: { async open(request) {
       if (opened || runtimeDigest(request) !== capturedRequest || !context.canAllocate()) return unavailable();
       opened = true;
@@ -196,14 +226,16 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
           return unavailable();
         assertCurrent();
         delegate = createOpenCodeV2MemberProvider({ ...context,
+          ...(attachments ? { attachments } : {}),
           isCurrent: current, canAllocate: () => current() && context.canAllocate(),
           profile: { ...profile, nativeSessionId } }, owned);
         // The SPI validates the complete checkpoint before invoking lazy probe/start.
         return await delegate.factory.open(request);
       } catch (error) {
         sealed = true; abort.abort();
-        const stopped = await (delegate?.cleanup() ?? owned.stopOwned());
-        if (!stopped) throw new Error('OpenCode V2 embedded cleanup unknown', { cause: error });
+        let stopped = false;
+        try { stopped = await (delegate?.cleanup() ?? owned.stopOwned()); } catch { cleanupUnknown = true; }
+        if (!stopped || cleanupUnknown) throw new Error('OpenCode V2 embedded cleanup unknown', { cause: error });
         throw error;
       }
     } },
@@ -218,7 +250,8 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
     seal() { delegate?.seal(); sealed = true; abort.abort(); },
     async cleanup() {
       delegate?.seal(); sealed = true; abort.abort();
-      return delegate?.cleanup() ?? owned.stopOwned();
+      const stopped = await (delegate?.cleanup() ?? owned.stopOwned());
+      return stopped && !cleanupUnknown;
     },
   };
 }

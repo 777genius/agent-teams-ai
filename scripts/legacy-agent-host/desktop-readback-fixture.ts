@@ -13,6 +13,8 @@ import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts'
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
+import { verifyNativeChatAttachmentMessage } from './desktop-native-chat-attachments-ui.ts';
+import { checkpoint } from './desktop-resume-records.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 const record = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
@@ -86,6 +88,7 @@ export async function readSavedDesktopFixture(
     nativeReview?: boolean;
     nativeReviewContinuation?: boolean;
     nativeProcess?: boolean;
+    openCodeGeneration?: 'v2';
   } = {}
 ): Promise<Fixture> {
   assert.equal(await realpath(root), root);
@@ -95,6 +98,12 @@ export async function readSavedDesktopFixture(
   assert.equal(await fileDigest(receipt), receiptSha256);
   const saved = record(JSON.parse(await readFile(receipt, 'utf8')));
   assert.equal(saved.root, root);
+  if (options.openCodeGeneration === 'v2') {
+    assert.equal(saved.nativeProvider, 'opencode', 'V2 readback must retain its original native provider');
+    assert.equal(saved.nativeGeneration, 'v2');
+    if (options.nativeReview) assert.equal(record(saved.nativeReviewUiProof).provider, 'opencode-v2',
+      'V2 Review readback cannot accept a Claude proof');
+  }
   const paths = record(saved.paths);
   const pins = record(saved.pins) as Fixture['pins'];
   const node = String(paths.node),
@@ -198,6 +207,10 @@ export async function runDesktopNativeReadback(
       'Ordinary UI readback of original saved native effect, no launch/restore/message/tool command',
   };
   const before = await readDesktopNativeStopSessions(options.root);
+  const source = record(JSON.parse(await readFile(join(options.root, 'desktop-backend-receipt.json'), 'utf8')));
+  const openCode = source.nativeProvider === 'opencode' && source.nativeGeneration === 'v2';
+  if (process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2') assert.equal(openCode, true);
+  const reply = openCode ? 'REPLY_OPENCODE_ONE' : 'REPLY_NATIVE_ONE';
   const ui = createDesktopUiControls(cdp, {
     assertOwnedRenderer: options.assertOwnedRenderer,
     step: (value) => {
@@ -213,10 +226,10 @@ export async function runDesktopNativeReadback(
   )
     await ui.click('button[aria-label^="alice,"]', 'open saved ordinary direct chat');
   await ui.waitRead(
-    `document.body.innerText.includes('REPLY_NATIVE_ONE')`,
+    `document.body.innerText.includes(${JSON.stringify(reply)})`,
     'saved native reply rendered'
   );
-  const geometry = await revealDesktopReply(cdp, 'REPLY_NATIVE_ONE', {
+  const geometry = await revealDesktopReply(cdp, reply, {
     assertOwnedRenderer: options.assertOwnedRenderer,
     step: (value) => {
       steps.push(value);
@@ -227,6 +240,21 @@ export async function runDesktopNativeReadback(
     `document.querySelectorAll('.kanban-task-card[data-task-id]').length===2`,
     'saved seed plus native Task in ordinary Kanban'
   );
+  if (openCode) {
+    assert.equal(source.mode, 'native-conversation-ui');
+    assert.equal(record(source.nativeChatAttachments).status, 'PASS');
+    const conversation = record(source.conversationUiProof);
+    assert.equal(conversation.status, 'PASS');
+    assert.ok(Array.isArray(conversation.incomingIds) && conversation.incomingIds.length === 2);
+    const savedAttachments = structuredClone(record(source.nativeChatAttachments));
+    options.evidence.nativeChatAttachments = savedAttachments;
+    await verifyNativeChatAttachmentMessage(cdp, { ...options, messageId: String(conversation.incomingIds[1]),
+      openCodeV2: true, step: value => { steps.push(value); } });
+    const history = await checkpoint(options.root, before[0]!, 'opencode');
+    assert.deepEqual({ nativeSessionId: history.nativeSession, sha256: history.historySha256,
+      byteLength: history.history.length }, savedAttachments.nativeHistory,
+    'cold readback retains the exact original native PNG history without allocating a new child');
+  }
   const image = record(
     await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true })
   );

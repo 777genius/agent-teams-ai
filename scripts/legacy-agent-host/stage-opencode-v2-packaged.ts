@@ -92,8 +92,12 @@ await esbuild.build({ stdin: {
   contents: `import { runOpenCodeV2EmbeddedHostNative } from './packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts';
 import { packagedOpenCodeV2Scenario } from './scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts';
 const selected = JSON.parse(process.env.OPENCODE_V2_PACKAGED_CAPTURE);
+const cancellation = new AbortController();
+process.stdin.once('end', () => cancellation.abort(new Error('TEST packaged deadline')));
+process.stdin.resume();
 const scenario = await packagedOpenCodeV2Scenario(selected, process.env.OPENCODE_V2_PACKAGED_SOURCE_ROOT, import.meta.filename);
-await runOpenCodeV2EmbeddedHostNative(scenario);`,
+try { await runOpenCodeV2EmbeddedHostNative(scenario, cancellation.signal); }
+finally { process.stdin.pause(); }`,
   resolveDir: repo, sourcefile: 'TEST-packaged-v2-host-entry.ts', loader: 'ts',
 }, bundle: true, platform: 'node', format: 'esm', target: 'node24', outfile: harness,
   sourcemap: false, logLevel: 'warning' });

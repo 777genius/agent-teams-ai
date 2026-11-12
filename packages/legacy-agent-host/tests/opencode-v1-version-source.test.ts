@@ -1,19 +1,31 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 
-import { assertNativeV1Build, assertNativeV1Source, buildNativeV1Host } from './opencode-v1-version-source.ts';
+import { assertNativeV1Build, assertNativeV1Source, buildNativeV1Host, measureNativeV1Host } from './opencode-v1-version-source.ts';
 
 async function fixture() {
   const repo=await mkdtemp(join(tmpdir(),'TEST-v1-source-build-'));
   const git=(...args:string[])=>execFileSync('git',args,{cwd:repo,encoding:'utf8',timeout:5000}).trim();
   await writeFile(join(repo,'.gitignore'),'**/dist/\n**/node_modules/\n');
-  const archive='vendor/provider-migration/TEST-provider/provider.tgz';
   await mkdir(join(repo,'vendor/provider-migration/TEST-provider'),{recursive:true});
-  await writeFile(join(repo,archive),'TEST-pinned-provider');
+  const dependencies: Record<string, string> = {};
+  for (const name of ['provider-implementations', 'provider-session-contracts']) {
+    const packed = join(repo, 'TEST-pack', name), payload = join(packed, 'package');
+    await mkdir(join(payload, 'dist'), { recursive: true });
+    await writeFile(join(payload, 'package.json'), JSON.stringify({ name: `@agent-teams/${name}`, version: 'TEST', type: 'module' }));
+    await writeFile(join(payload, 'dist/index.js'), 'export const TEST = true;\n');
+    const archive = `vendor/provider-migration/TEST-provider/${name}.tgz`;
+    execFileSync('tar', ['-czf', join(repo, archive), '-C', packed, 'package'], { timeout: 5000 });
+    const installed = join(repo, 'packages/legacy-agent-host/node_modules/@agent-teams', name);
+    await mkdir(join(installed, '..'), { recursive: true });
+    await cp(payload, installed, { recursive: true });
+    dependencies[`@agent-teams/${name}`] = 'file:../../' + archive;
+  }
+  await rm(join(repo, 'TEST-pack'), { recursive: true });
   const compiler=await realpath(resolve(import.meta.dirname,'../node_modules/@typescript/native'));
   for(const name of ['task-change-ledger','legacy-agent-host']) {
     const pkg=join(repo,'packages',name);
@@ -22,9 +34,7 @@ async function fixture() {
     await symlink(compiler,join(pkg,'node_modules/@typescript/native'),
       process.platform === 'win32' ? 'junction' : 'dir');
     await writeFile(join(pkg,'src/index.ts'),'export const value = 1;\n');
-    await writeFile(join(pkg,'package.json'),JSON.stringify({type:'module',dependencies:{
-      '@agent-teams/provider-implementations':'file:../../'+archive,
-    }}));
+    await writeFile(join(pkg,'package.json'),JSON.stringify({type:'module',dependencies}));
     await writeFile(join(pkg,'tsconfig.json'),JSON.stringify({compilerOptions:{
       target:'ES2024',module:'NodeNext',outDir:'dist',rootDir:'src',skipLibCheck:true,
     },include:['src/**/*.ts']}));
@@ -67,6 +77,27 @@ test('native V1 source admission rejects changed, staged and untracked relevant 
     await writeFile(join(repo,'TEST-unrelated-notes.txt'),'unrelated');
     assert.doesNotThrow(()=>assertNativeV1Source(repo,head));
   } finally {await rm(repo,{recursive:true,force:true});}
+});
+
+test('native source admission binds ignored installed provider and contracts bytes before and after execution', async () => {
+  const { repo, head } = await fixture();
+  try {
+    const built = await buildNativeV1Host(repo, head);
+    for (const name of ['provider-implementations', 'provider-session-contracts']) {
+      const root = join(repo, 'packages/legacy-agent-host/node_modules/@agent-teams', name);
+      const file = join(root, 'dist/index.js'), original = await readFile(file);
+      await writeFile(file, 'export const TEST = "tampered ignored bytes";\n');
+      assert.doesNotThrow(() => assertNativeV1Source(repo, head));
+      await assert.rejects(measureNativeV1Host(repo), /installed provider bytes/);
+      await assert.rejects(assertNativeV1Build(repo, head, built), /installed provider bytes/);
+      await writeFile(file, original);
+      const extra = join(root, 'dist/foreign.js');
+      await writeFile(extra, 'export const TEST = "unlisted";\n');
+      await assert.rejects(measureNativeV1Host(repo), /file census/);
+      await rm(extra);
+    }
+    await assertNativeV1Build(repo, head, built);
+  } finally { await rm(repo, { recursive: true, force: true }); }
 });
 
 test('native V1 rebuild removes stale outputs and binds later execution to the emitted bytes',async()=>{

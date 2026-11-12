@@ -83,12 +83,14 @@ export async function prepareDesktopProofFixture(
         review: options.reviewReadbackMode,
         nativeQuit: mode === 'native-quit-readback-ui',
         nativeReview: options.nativeReviewReadbackMode,
+        ...(options.openCodeLifecycleMode ? { openCodeGeneration: 'v2' as const } : {}),
         nativeReviewContinuation: options.nativeReviewContinuationMode,
       }
     );
   const selectedV2 = options.openCodeLifecycleMode ? {
     bunPath: process.env.OPENCODE_V2_EMBEDDED_BUN!, bunSha256: process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256!,
     engineDirectory: process.env.OPENCODE_V2_EMBEDDED_GRAPH!, modelUrl: options.modelUrl!,
+    imageInput: mode === 'native-conversation-ui' && process.env.LEGACY_DESKTOP_CHAT_ATTACHMENTS === '1',
     endpoint: await reserveMixedOpenCodeEndpoint(), managementEndpoint: await reserveMixedOpenCodeEndpoint(),
     processCustody: { directory: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY!,
       manifestSha256: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256! },

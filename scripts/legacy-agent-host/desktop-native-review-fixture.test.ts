@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, readdir, realpath, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -16,6 +17,7 @@ import {
   REVIEW_WORK_TERMINAL_STEP,
 } from './desktop-native-review-model.ts';
 import { prepareDesktopProofMode } from './desktop-proof-mode.ts';
+import { readSavedDesktopFixture } from './desktop-readback-fixture.ts';
 import { CONTEXT_MARKER } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
 
 function notification(task: string, tool: string): string {
@@ -227,6 +229,22 @@ test('native review cold mode opens no model server and never uses the synthetic
   assert.equal(mode.launchDialogMode, false);
   assert.equal(mode.model, undefined);
   assert.equal(mode.uiMode, true);
+});
+
+test('explicit V2 Review readback rejects a Claude or mismatched retained proof before reopening its descriptor', async (t) => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-desktop-backend-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  for (const source of [
+    { nativeProvider: 'claude', nativeReviewUiProof: { provider: 'claude' } },
+    { nativeProvider: 'opencode', nativeGeneration: 'v1', nativeReviewUiProof: { provider: 'opencode-v2' } },
+    { nativeProvider: 'opencode', nativeGeneration: 'v2', nativeReviewUiProof: { provider: 'claude' } },
+  ]) {
+    const bytes = JSON.stringify({ root, mode: 'native-review-ui', status: 'PASS', ...source });
+    await writeFile(join(root, 'desktop-backend-receipt.json'), bytes);
+    await assert.rejects(readSavedDesktopFixture(root, createHash('sha256').update(bytes).digest('hex'), {
+      nativeReview: true, openCodeGeneration: 'v2',
+    }), { code: 'ERR_ASSERTION' });
+  }
 });
 
 test('positive native review background oracle rejects a gap, wrong execution and duplicate completion', () => {
