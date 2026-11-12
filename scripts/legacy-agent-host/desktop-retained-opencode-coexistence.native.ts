@@ -293,7 +293,8 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const retainedData = await callTeams('getData', [legacyTeam]);
     assert.deepEqual(retainedData.tasks, savedLegacy.tasks);
     assert.deepEqual(retainedData.messages, savedLegacy.messages);
-    assert.deepEqual(await readLegacyReply(originalLegacyMember, 'REPLY_TEST_RETAINED_V1_HISTORY'), historicalReply);
+    assert.deepEqual(await readLegacyReply(originalLegacyMember, 'REPLY_TEST_RETAINED_V1_HISTORY'), historicalReply,
+      JSON.stringify({ legacyHistoryRead: proof.legacyHistoryRead }).slice(0, 8000));
     assert.equal(await callTeams<boolean>('processAlive', [legacyTeam]), false);
     assert.equal(model.observations.length, callsBeforeUpgrade, 'Host selection never replays retained V1 input');
     legacyStopped = false;
@@ -365,7 +366,8 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     assert.deepEqual(record(after.host).messages, record(before.host).messages);
     assert.equal(await callTeams<boolean>('processAlive', [legacyTeam]), false);
     assert.equal(await callTeams<boolean>('processAlive', [hostKey]), false);
-    assert.deepEqual(await readLegacyReply(relaunchedMember, 'REPLY_TEST_RETAINED_V1_AFTER_STOP'), finalLegacyReply);
+    assert.deepEqual(await readLegacyReply(relaunchedMember, 'REPLY_TEST_RETAINED_V1_AFTER_STOP'), finalLegacyReply,
+      JSON.stringify({ legacyHistoryRead: proof.legacyHistoryRead }).slice(0, 8000));
     await new Promise<void>(resolve => setTimeout(resolve, 500));
     assert.equal(model.observations.length, callsBeforeCold, 'cold startup never replays either owner business input');
     assert.deepEqual(model.failures, []);
