@@ -219,6 +219,19 @@ Unit список сокращён до новых опасных mapping/source
 - Live slash и prelaunch config не дублируют state machine; файлы общего recipe меняет P06, model probe — P05.
 - План принят для bounded G1–G4 и последующей реализации. Ни неподтверждённый V2 editor, ни external MCP не записаны как готовые capabilities.
 
+## 11. Уточнение implementation boundary после P05/P06
+
+**R4 — повторное source/ownership review, 2026-11-12; согласовано с root до расширения source owner.**
+
+- В [R1] `getOpenCodeConfigImportPaths`/`readSafeOpenCodeRuntimeConfigImport`/`readProjectOpenCodeRuntimeConfig` подтверждён порядок: canonical HOME → XDG → explicit `OPENCODE_CONFIG` → inline `OPENCODE_CONFIG_CONTENT` → project root `opencode.json`/`opencode.jsonc`. Выбранный provider merge сохраняет project precedence; ambient executable plugins в новый V2 graph не импортируются.
+- Начать с маленького read-only selected-config adapter: strict selected model mapping по [R2], bounded JSONC read и source fingerprint. Host выводит пути из **исходного private profile** (`HOME`, XDG, explicit config, cwd); Main/renderer не передают произвольный файл. Не переносить whole donor profile manager.
+- Existing P06 source record хранит только выбранные file references/digests и inline digest. Raw config, API key, headers и environment values не идут в source index, receipt или renderer DTO. При материализации selected declaration Host проверяет исходные paths/digests до и после bounded read; changed/malformed source даёт scoped отказ.
+- Existing Save/Refresh захватывает новый source reference через того же P06 owner. Новый pointer применяется только к новым captures. Already captured run/receipt сохраняет original reference; повторный probe/launch не перечитывает иной источник под старой revision.
+- P02 остаётся owner credential source. Config `options.apiKey` и env/file substitutions получают private captured port с `digest/isCurrent/readKey`; один native import выбирается по подтверждённому donor precedence. Custom provider без native integration использует только private selected config и source fence; native credential ID для него не выдумывается.
+- Проверено: existing `CapturedRuntimeProviderManagementClient.view(previous)` уже сохраняет успешную запись preferences при failed refresh, поэтому второй default store/новый recovery flow не нужен. Проверка **default → actual new launch** и применение persisted V1 limits остаются обязательными отдельными пунктами.
+- P05 native fixtures подготовлены для model B/declared `high`, но ещё не исполнялись. P07 расширит тот же observable request для global/project override; G1…G4 не считаются закрытыми от наличия fixtures или source trace.
+- Root владеет `DesktopBackendFeature`: config integration передаёт ему только узкий capture/refresh hook. Production/test file cap 800 и текущие protocol budgets не увеличиваются; проверки ограничены strict alias/variant mapping, changed original source и общим native journey.
+
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts
 [M3]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/extensions/ExtensionStoreView.tsx
