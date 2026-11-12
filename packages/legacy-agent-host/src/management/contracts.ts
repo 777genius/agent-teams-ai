@@ -83,6 +83,8 @@ export interface ProviderOAuthSnapshot {
 export interface ProviderManagementCatalog {
   profileId: string;
   configRevision: string;
+  /** V1 retains its separate installer status. V2 reports the attested engine, never Bun. */
+  runtime?: { generation: 'v1' } | { generation: 'v2'; version: '2.1.4' };
   /** Effective native config only, before Desktop project/global product preferences. */
   configuredDefaultModelId?: string | null;
   providers: {

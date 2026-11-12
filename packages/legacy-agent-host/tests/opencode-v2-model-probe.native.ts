@@ -295,6 +295,7 @@ test(
       const catalogInput = { profileId: base.profileId, configRevision: base.configRevision,
         providerId: base.providerId };
       const catalog = value<ProviderManagementCatalog>(await host.rpc('management.catalog', catalogInput));
+      assert.deepEqual(catalog.runtime, { generation: 'v2', version: '2.1.4' });
       assert.equal(catalog.configuredDefaultModelId, 'TEST-local/TEST-model');
       assert.equal(catalog.providers.length, 1);
       assert.deepEqual(catalog.providers[0]!.models, [{ modelId: 'TEST-model', displayName: 'TEST-model',

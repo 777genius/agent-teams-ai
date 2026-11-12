@@ -86,6 +86,20 @@ export function managementValue(value: unknown): unknown {
   return result.value;
 }
 
+/** Missing or malformed native identity can never authorize legacy installer fallback. */
+export function parseManagementRuntime(
+  value: unknown,
+  target: { profileId: string; configRevision: string }
+): NonNullable<ProviderManagementCatalog['runtime']> {
+  parseManagementCatalog(value, target);
+  const runtime = object(object(managementValue(value)).runtime);
+  const keys = Object.keys(runtime);
+  if (runtime.generation === 'v1' && keys.length === 1) return { generation: 'v1' };
+  if (runtime.generation === 'v2' && runtime.version === '2.1.4' && keys.length === 2)
+    return { generation: 'v2', version: '2.1.4' };
+  throw new Error('Native runtime identity is unavailable');
+}
+
 /** Validate and allowlist the wire response; no backend/account/config metadata enters DTOs. */
 export function parseManagementCatalog(
   value: unknown,

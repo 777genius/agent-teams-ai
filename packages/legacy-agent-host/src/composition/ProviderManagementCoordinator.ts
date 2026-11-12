@@ -433,7 +433,7 @@ export class ProviderManagementCoordinator {
     );
     this.assertWriter();
     if (this.sealed) throw new OpenCodeManagementError('unavailable');
-    return result;
+    return { ...result, runtime: { generation: 'v1' } };
   }
 
   seal(): void {

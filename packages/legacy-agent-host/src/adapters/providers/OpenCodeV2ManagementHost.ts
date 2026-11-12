@@ -126,7 +126,8 @@ export class OpenCodeV2ManagementHost {
     });
     let result: ProviderManagementCatalog | undefined, failure: unknown, failed = false;
     try {
-      if ((await client.identity()).pid !== ready.pid || !(await client.builtinPluginsOnly()) ||
+      const identity = await client.identity();
+      if (identity.pid !== ready.pid || identity.version !== '2.1.4' || !(await client.builtinPluginsOnly()) ||
           !(await client.savedPermissionsEmpty()) || (await client.readMcp()).length !== 0) held();
       // The native model list is a startup snapshot; wait within this same finite
       // request for plugin activation, without creating a conversation to warm it.
@@ -152,6 +153,7 @@ export class OpenCodeV2ManagementHost {
       });
       result = {
         profileId: this.profile.profileId, configRevision: this.profile.configRevision,
+        runtime: { generation: 'v2', version: identity.version },
         configuredDefaultModelId: selected.providerId + '/' + selected.modelId,
         providers: !requested ? [] : [{
           providerId: selected.providerId, displayName: catalog.provider.name,

@@ -8,6 +8,8 @@ import {
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
+import { captureDesktopStatusRequest, getDesktopProviderStatusPort } from './agentBackend';
+
 import type { OpenCodeRuntimeInstallerService } from '../services';
 import type { IpcResult, OpenCodeRuntimeStatus } from '@shared/types';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
@@ -47,7 +49,17 @@ async function handleGetStatus(
   _event: IpcMainInvokeEvent
 ): Promise<IpcResult<OpenCodeRuntimeStatus>> {
   try {
-    return { success: true, data: await requireService().getStatus() };
+    const native = getDesktopProviderStatusPort();
+    if (!native) return { success: true, data: await requireService().getStatus() };
+    const current = captureDesktopStatusRequest(_event);
+    if (!current?.() || !native.readOpenCodeRuntimeStatus)
+      return { success: false, error: 'Native runtime status request is not authorized' };
+    const captured = await native.readOpenCodeRuntimeStatus();
+    if (!current()) return { success: false, error: 'Native runtime status context changed' };
+    // Only the explicit native V1 tag retains this existing CLI status source.
+    const status = captured === null ? await requireService().getStatus() : captured;
+    if (!current()) return { success: false, error: 'Native runtime status context changed' };
+    return { success: true, data: status };
   } catch (error) {
     const message = getErrorMessage(error);
     logger.error('Error in openCodeRuntime:getStatus:', message);

@@ -75,6 +75,16 @@ function reconstruct(
     (base.provider !== 'opencode' && overlay.mcpPolicyPlugin !== undefined)
   )
     return held();
+  if (base.provider === 'opencode' && base.nativeGeneration === 'v2') {
+    // Retain the existing digest-bound artifact format for the empty external
+    // policy, without turning it into a V1 overlay on the native V2 profile.
+    if (Object.keys(overlay.capturedMcpServers).length || overlay.capturedMcpSource !== undefined ||
+        overlay.mcpPolicyPlugin !== undefined || base.capturedMcpServers !== undefined ||
+        base.capturedMcpSource !== undefined || base.mcpPolicyPlugin !== undefined ||
+        base.mcpCatalogSource !== undefined)
+      return held();
+    return runtimeMemberProfileSchema.parse(base);
+  }
   const result = runtimeMemberProfileSchema.parse({ ...withoutOverlay(base), ...overlay });
   if (result.provider === 'codex') {
     if (!result.capturedMcpCatalog) return held();
@@ -157,10 +167,15 @@ export async function prepareCapturedRuntimeMcpRecipes(options: {
   const references: CapturedRuntimeMcpReference[] = [];
   for (const [index, base] of options.baseRecipes.entries()) {
     const selected = options.selectedRecipes[index];
+    const nativeV2 = base.provider === 'opencode' && base.nativeGeneration === 'v2';
     if (
       !selected ||
       runtimeDigest(withoutOverlay(base)) !== runtimeDigest(withoutOverlay(selected)) ||
-      !selected.capturedMcpServers
+      (nativeV2
+        ? selected.capturedMcpServers !== undefined || selected.capturedMcpSource !== undefined ||
+          (selected.provider === 'opencode' && selected.mcpPolicyPlugin !== undefined) ||
+          ('capturedMcpCatalog' in selected && selected.capturedMcpCatalog !== undefined)
+        : !selected.capturedMcpServers)
     )
       return held();
     options.assertCurrent();
@@ -170,7 +185,7 @@ export async function prepareCapturedRuntimeMcpRecipes(options: {
       continue;
     }
     const overlay: z.infer<typeof overlaySchema> = {
-      capturedMcpServers: structuredClone(selected.capturedMcpServers),
+      capturedMcpServers: structuredClone(selected.capturedMcpServers ?? {}),
       ...(selected.capturedMcpSource
         ? { capturedMcpSource: structuredClone(selected.capturedMcpSource) }
         : {}),

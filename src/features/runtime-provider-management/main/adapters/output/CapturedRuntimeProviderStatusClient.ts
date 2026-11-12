@@ -9,7 +9,11 @@ import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller
 import { readCapturedClaudeStatus } from './capturedClaudeMetadata';
 import { projectCapturedCodexCatalog } from './capturedCodexCatalog';
 import { readCapturedCodexMetadata } from './capturedCodexMetadata';
-import { models, parseManagementCatalog } from './capturedManagementCatalog';
+import {
+  models,
+  parseManagementCatalog,
+  parseManagementRuntime,
+} from './capturedManagementCatalog';
 import { nativeDefaultModel, selectedPreferences } from './capturedManagementPreferences';
 import { createCapturedRuntimeProviderManagementClient } from './CapturedRuntimeProviderManagementClient';
 
@@ -157,6 +161,20 @@ export function createCapturedRuntimeProviderStatusClient(
     };
   };
   const port: RuntimeProviderStatusPort = {
+    async readOpenCodeRuntimeStatus() {
+      const current = deps.captureGuard?.() ?? (() => true);
+      const target = await deps.capture(null);
+      const runtime = parseManagementRuntime(await target.request('catalog', {}), target);
+      if (!target.isCurrent() || !current()) throw new Error('Native status context changed');
+      if (runtime.generation === 'v1') return null;
+      return {
+        installed: true,
+        source: 'captured-host',
+        state: 'ready',
+        version: runtime.version,
+        v2Support: 'ready',
+      };
+    },
     async getProviderStatus(providerId, options = {}) {
       const current = deps.captureGuard?.() ?? (() => true);
       if (providerId === 'anthropic' && deps.captureClaude) {

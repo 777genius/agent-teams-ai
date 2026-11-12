@@ -453,8 +453,13 @@ export interface CliInstallerAPI {
 // OpenCode Runtime Installer
 // =============================================================================
 
-/** `override` is a binary selected through the OpenCode binary path environment variable. */
-export type OpenCodeRuntimeSource = 'app-managed' | 'override' | 'path' | 'missing';
+/** `captured-host` is an attested Host engine, independent of the installable CLI. */
+export type OpenCodeRuntimeSource =
+  | 'app-managed'
+  | 'override'
+  | 'path'
+  | 'missing'
+  | 'captured-host';
 
 /** A binary override the app does not launch, and the reason it falls back. */
 export interface OpenCodeRuntimeIgnoredOverride {
