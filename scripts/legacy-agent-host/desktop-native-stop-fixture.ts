@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { assertOwnedCdpListener, command, processTable } from './desktop-backend-observations.ts';
 import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
+import { desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import type { UiCdpPort } from './desktop-team-ui-smoke.ts';
 const object = (value: unknown): Record<string, unknown> => {
@@ -92,16 +93,18 @@ export async function prepareDesktopNativeStop(options: {
     })),
   };
   if (options.provider === 'opencode') {
+    assert.ok(fixture.root, 'the original Composer has an exact TEST workspace');
     assertOwnedCdpListener(group);
     const response = object(await cdp.evaluate(
-      `window.electronAPI.runtimeProviderManagement.loadModels(${JSON.stringify({
-        runtimeId: 'opencode', providerId: 'test-local', projectPath: null,
+      `window.electronAPI.runtimeProviderManagement.loadModels(${desktopJsLiteral({
+        runtimeId: 'opencode', providerId: 'test-local', projectPath: join(fixture.root, 'workspace'),
       })})`
     ));
     assert.equal(response.error, undefined, 'actual native catalog is ready before Runtime allocation');
     assert.equal(response.runtimeId, 'opencode');
     const catalog = object(response.models);
     assert.equal(catalog.providerId, 'test-local');
+    assert.equal(catalog.catalogState, 'fresh', 'the original Composer project catalog is fresh');
     assert.ok(Array.isArray(catalog.models));
     const model = catalog.models.find(value =>
       object(value).modelId === 'test-local/TEST-model' && object(value).providerId === 'test-local');

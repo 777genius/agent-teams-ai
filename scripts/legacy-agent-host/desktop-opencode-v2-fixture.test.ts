@@ -104,10 +104,17 @@ test(
       'the original Composer catalog scope selects the exact native provider');
     assert.equal(profile.teams[0]!.members[0]!.role, 'lead');
     const descriptor = JSON.parse(await readFile(fixture.descriptorPath, 'utf8'));
-    assert.equal(descriptor.management.length, 1);
-    assert.equal(descriptor.management[0].runtimeId, 'opencode');
-    assert.equal(descriptor.management[0].profileId, management.profileId);
-    assert.equal(descriptor.management[0].configRevision, management.configRevision);
+    assert.deepEqual(
+      descriptor.management.map((entry: { projectPath: string | null }) => entry.projectPath),
+      [null, join(fixture.root, 'workspace')],
+      'global and original Composer project reads are captured explicitly'
+    );
+    for (const entry of descriptor.management) {
+      assert.equal(entry.runtimeId, 'opencode');
+      assert.equal(entry.profileId, management.profileId);
+      assert.equal(entry.configRevision, management.configRevision);
+      assert.deepEqual(entry.owner, descriptor.defaultOwner);
+    }
     assert.equal(
       descriptor.owners[0].profile.env.LEGACY_AGENT_HOST_PROFILE_SHA256,
       fixture.pins.profileSha256

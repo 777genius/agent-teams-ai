@@ -636,19 +636,19 @@ export async function prepareDesktopBackendFixture(
     ],
     ...(options.nativeCodex || options.launchDialog || options.nativeOpenCodeV2
       ? {
-          management: [
-            {
+          management: (options.nativeOpenCodeV2 ? [null, join(root, 'workspace')] : [null]).map(
+            (projectPath) => ({
               runtimeId: options.nativeOpenCodeV2 ? 'opencode' : options.launchDialog ? 'claude' : 'codex',
               owner: ownerRef,
               contextId: 'local',
-              projectPath: null,
+              projectPath,
               profileId: options.nativeOpenCodeV2 ? 'TEST-opencode-v2-management' :
                 options.launchDialog ? 'TEST-claude-management' : 'TEST-codex-metadata',
               configRevision: options.nativeOpenCodeV2 ? 'TEST-opencode-management' : options.launchDialog
                 ? 'TEST-claude-management-config'
                 : 'TEST-codex-config',
-            },
-          ],
+            })
+          ),
         }
       : {}),
     handles: [

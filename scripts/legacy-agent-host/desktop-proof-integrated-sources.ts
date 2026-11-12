@@ -25,6 +25,8 @@ export const desktopProofIntegratedSources = [
   'scripts/legacy-agent-host/desktop-opencode-v2-review-model.ts',
   'scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-opencode-v2-lifecycle.test.ts',
+  'scripts/legacy-agent-host/desktop-opencode-v2-fixture.test.ts',
+  'test/features/agent-backend/desktopBackendFeature.test.ts',
   'scripts/legacy-agent-host/desktop-opencode-v2-cold-metadata.ts',
   'scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts',
   'scripts/legacy-agent-host/run-packaged-opencode-v2.ts',
