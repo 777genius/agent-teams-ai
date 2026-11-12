@@ -52,6 +52,10 @@
       "types": "./dist/runtime/contracts.d.ts",
       "import": "./dist/runtime/contracts.js"
     },
+    "./runtime-sources": {
+      "types": "./dist/composition/runtimeSourceContracts.d.ts",
+      "import": "./dist/composition/runtimeSourceContracts.js"
+    },
     "./runtime/filesystem": {
       "types": "./dist/adapters/runtime/FileRuntimeStore.d.ts",
       "import": "./dist/adapters/runtime/FileRuntimeStore.js"

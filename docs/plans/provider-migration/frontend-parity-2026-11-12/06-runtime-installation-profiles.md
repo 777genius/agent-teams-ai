@@ -1,6 +1,6 @@
 # 06. Установка runtime и профиль следующего запуска
 
-Статус: план реализации; production не изменён, сценарии ещё не выполнены.
+Статус: первый ограниченный срез реализован и проверен; installer/new-version consumers и полные Desktop/native journeys ещё не завершены.
 Цель: сохранить существующие обнаружение, установку, выбор и обновление runtime в новой архитектуре.
 Этот документ — единственный owner общего lifecycle профиля для планов 01–07.
 Модели используют его в [05](05-model-selection.md), config/расширения — в [07](07-provider-settings-extensions.md).
@@ -211,6 +211,19 @@ Hash/platform/malformed receipt suites переиспользовать; same-ve
 - Найдена неоднозначность «immutable account»: сохранён source binding, не копия secret bytes. Explicit credential mutation и внешняя замена не маскируются новой revision.
 - Один writer P06 владеет `DesktopBackendFeature`, `runtimeRecipe`, `runtimeCaptureSource`, `RuntimeTeamCaptures` и новым source index; P01/P02/P05/P07 передают небольшие mapping patches последовательно.
 - Минимальный contract и recovery seed требуют peer review перед подключением consumers. План принят для этого первого среза; installer/native/active-old E2E ещё не выполнены.
+
+## 10. Реализация первого среза — 2026-11-12
+
+- Реализованы private Main→Host `runtime.source.current/retained/publish/lookup`, immutable source index под existing `ProfileWriterLease`, CAS и receipts в existing `FileManagementCommandStore`.
+- Grant выводится из исходного descriptor и фиксирует provider/context/project/seed profile и original static Team scopes. Candidate не принимает account/environment/provider configuration; generic renderer management invoke этих методов не допускает.
+- `RuntimeTeamCaptures` фиксирует revision до async preparation. Старый capture без ссылки читает seed; сохранённая ссылка восстанавливает original revision, независимо от current pointer.
+- Сохранён побайтовый расчёт seed management targetId. Main восстанавливает retained target через исходный descriptor; новые immutable profile IDs допускаются existing account/probe/Skills/extensions owners.
+- Первый admission разрешает только relocation/repair exact seed executable SHA и того же qualified embedded manifest/version. Это ещё не admission новой CLI version или перехода V1/V2.
+- Проверки: Host production build и test types — PASS; source/templates/worktree/runtime-host — **50/50 PASS**; Main/real child Host и existing desktop/management — **17/17 PASS**; targeted fast lint и source-size guard — PASS.
+- Проверены два последовательных publication, stale CAS, dedupe, old/retained replay после cold restart, ACK loss после pointer write, отказ при scope/bytes/config injection и missing published index. Native provider inference и Desktop installer UI этими тестами не подтверждаются.
+- Изменение lazy semantics ограничено management capture: чтение current revision запускает выбранный Host; native provider operation начинается только по явному запросу. Connection discovery остаётся lazy.
+- Root рассмотрел ограниченный срез и разрешил publication. Общий root typecheck переносится на combined gate: первый local запуск завершён exit 137 без TS diagnostics во время параллельных сборок; Host checks выше завершены успешно.
+- Осталось: installer/discovery→native qualification→publication, поддержка нового version/generation и artifact retention, source consumers Create/Edit/Relaunch и P05/P07, реальные native/Desktop journeys раздела 7. Main merge/activation не выполнялись.
 
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/runtime/openCodeRuntimeBinaryEnv.ts

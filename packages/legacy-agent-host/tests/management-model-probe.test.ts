@@ -277,6 +277,7 @@ test('cancelled probe receipts cannot claim confirmed cancellation while retaini
   f.owner.start(start);
   await f.owner.cancel(lookup);
   const saved = f.base.read(start.commandId)!;
+  assert.ok(saved.kind === 'model.probe');
   assert.throws(() => f.base.write({ ...saved, resourceHeld: true }));
   assert.equal(f.owner.read(lookup)?.phase, 'cancelled');
 });

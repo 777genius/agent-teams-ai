@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { ClaudeAuthConversation } from '../adapters/providers/ClaudeAuthConversation.js';
 import { assertManagementTarget, ManagementCommandError } from '../management/commandRecords.js';
+import { managementDigest } from '../management/identity.js';
 
 import type { ManagementTarget } from '../management/commandRecords.js';
 import type { OAuthNativeConversation } from '../management/OAuthOperationOwner.js';
@@ -43,6 +44,14 @@ export class ClaudeAuthenticationCoordinator {
     if (this.sealed || !profile || profile.configRevision !== configRevision)
       throw new ManagementCommandError('invalid');
     return profile;
+  }
+
+  admitProfile(profile: ClaudeManagementProfile): void {
+    this.assertWriter();
+    if (this.sealed) throw new ManagementCommandError('held');
+    const original = this.profiles.get(profile.profileId);
+    if (original && managementDigest(original) !== managementDigest(profile)) throw new ManagementCommandError('conflict');
+    if (!original) this.profiles.set(profile.profileId, structuredClone(profile));
   }
 
   private assertNamespace(profile: ClaudeManagementProfile): void {

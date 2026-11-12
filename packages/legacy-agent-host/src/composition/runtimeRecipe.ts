@@ -4,9 +4,18 @@ import { TeamLaunchError } from '../team-launch/contracts.js';
 import { runtimeMemberProfileSchema } from './runtimeProfile.js';
 import type { RuntimeMemberProfile, RuntimeProfile } from './runtimeProfile.js';
 import type { TeamMemberSettings } from '../team/rosterContracts.js';
+import type { RuntimeRecipeSources, RuntimeSourceReference, RuntimeSourceTeamScope } from './runtimeSourceContracts.js';
 
 export const runtimeProviderId = (profile: RuntimeMemberProfile) =>
   profile.provider === 'claude' ? 'anthropic' : profile.provider;
+
+/** A missing reference is the original seed, including after the current selection changes. */
+export function resolveCapturedRuntimeRecipe(recipe: RuntimeMemberProfile, reference: RuntimeSourceReference | undefined,
+  scope: RuntimeSourceTeamScope | undefined, projectPath: string, sources?: RuntimeRecipeSources): RuntimeMemberProfile {
+  if (!reference) return recipe;
+  if (!sources || !scope) throw new TeamLaunchError('hold', 'runtime-source-unavailable');
+  return sources.resolveRecipe(reference, scope, projectPath, recipe);
+}
 
 /** Host-only recipe selection. A member's account never becomes another member's default. */
 export function resolveRuntimeRecipe(

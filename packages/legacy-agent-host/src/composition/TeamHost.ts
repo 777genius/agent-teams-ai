@@ -2,6 +2,8 @@ import { createTeamCreationMethods, createTeamRegistryMethods } from './createTe
 import { createHostGroupComposition } from './createHostGroupComposition.js';
 import { preflightNativeMemberModel } from './preflightNativeMemberModel.js';
 import { createProviderManagementMethods } from './createProviderManagementMethods.js';
+import { createHostProviderManagementComposition } from './createHostProviderManagementComposition.js';
+import { createRuntimeSourceMethods } from './createRuntimeSourceMethods.js';
 import { join } from 'node:path';
 import { createHostTeamLifecycleComposition } from './createHostTeamLifecycleComposition.js';
 import { createHostWorkSyncComposition } from './createHostWorkSyncComposition.js';
@@ -32,10 +34,10 @@ import { TeamLaunchError } from '../team-launch/contracts.js';
 import { runtimeProfileSchema } from './runtimeProfile.js';
 import { RuntimeTeamCoordinator } from './RuntimeTeamCoordinator.js';
 import { providerManagementProfileSchema } from '../management/profile.js';
-import { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
+import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { assertAccountNamespaces } from './assertAccountNamespaces.js';
 import { ManagementCommandError } from '../management/commandRecords.js';
-import { executeTeamModelProbe, teamModelProbeProfile } from './teamLaunchModelProbe.js';
+import { executeTeamModelProbe } from './teamLaunchModelProbe.js';
 import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
 import { CreateTeamLaunchCoordinator } from './CreateTeamLaunchCoordinator.js';
 
@@ -123,28 +125,12 @@ export function createTeamHost(
   let emitOAuthProgress: ((snapshot: ProviderOAuthSnapshot) => void) | undefined;
   try {
     const processCustody = createProcessCustody(profile.processCustody);
-    const managementProfiles = [
-      ...(profile.management ?? []),
-      ...(profile.runtime?.members.flatMap((member) => {
-        if (member.provider === 'opencode' && member.nativeGeneration === 'v2' &&
-          !(member.protocolRevision === '2.1.4' && member.embedded)) return [];
-        return [teamModelProbeProfile(member)];
-      }) ?? []),
-    ];
-    if (
-      managementProfiles.length ||
-      (profile.creation &&
-        profile.runtime?.providerTemplates?.some((row) => row.provider === 'claude' ||
-          row.provider === 'opencode' && row.nativeGeneration === 'v2' &&
-          row.protocolRevision === '2.1.4' && row.embedded !== undefined))
-    )
-      management = new ProviderManagementCoordinator(
-        managementProfiles,
-        () => lease.assertCurrent(),
-        profile.owner.storageRoot,
-        { onOAuthProgress: (snapshot) => emitOAuthProgress?.(snapshot),
-          ...(processCustody ? { processCustody } : {}) }
-      );
+    const providerManagement = createHostProviderManagementComposition(profile, () => {
+      if (sealed) throw new ManagementCommandError('held');
+      lease.assertCurrent();
+    }, snapshot => emitOAuthProgress?.(snapshot), processCustody);
+    management = providerManagement.management;
+    const sources = providerManagement.sources;
     const teams = new Map<string, HostedTeam>();
     const assertCurrent = () => {
       if (sealed) throw new TeamOwnerError('hold');
@@ -301,6 +287,7 @@ export function createTeamHost(
           },
         },
         teams: runtimeTeams,
+        ...(sources ? { sources } : {}),
         workSync,
         ...(management
           ? {
@@ -705,6 +692,7 @@ export function createTeamHost(
         'team.attachments',
         ...(profile.reviewTransport ? ['team.review'] : []),
         ...(creationLaunch ? ['team.creation'] : []),
+        ...(sources ? ['runtime.sources'] : []),
         ...(profile.management?.length
           ? [
               'management.catalog',
@@ -757,6 +745,7 @@ export function createTeamHost(
         ...attachments.methods,
         ...creationMethods,
         ...managementMethods,
+        ...createRuntimeSourceMethods(sources, management, assertCurrent),
         ...runtimeMethods,
         ...launchMethods,
         ...review.methods,

@@ -250,10 +250,10 @@ it('captures global and exact project provider scopes without Team handles or de
   await expect(
     replacement.restoreProviderManagement('auth-context', captured.targetId)
   ).rejects.toMatchObject({ code: 'unavailable' });
-  for (const owner of setup.descriptor.owners)
-    await expect(access(join(owner.storageRoot, 'started'))).rejects.toMatchObject({
-      code: 'ENOENT',
-    });
+  // Resolving the current source starts only the granted Host; native management remains lazy.
+  await expect(access(join(setup.descriptor.owners[0].storageRoot, 'started'))).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(access(join(setup.descriptor.owners[1].storageRoot, 'started'))).resolves.toBeUndefined();
+  await expect(access(join(setup.descriptor.owners[1].storageRoot, 'management-effects'))).rejects.toMatchObject({ code: 'ENOENT' });
   expect(await captured.request('catalog', {})).toEqual({
     ok: true,
     value: { profileId: binding.profileId, configRevision: binding.configRevision, providers: [] },

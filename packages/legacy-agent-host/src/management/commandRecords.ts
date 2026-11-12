@@ -92,12 +92,25 @@ export const storedModelProbeSchema = z
   );
 export type StoredModelProbe = z.infer<typeof storedModelProbeSchema>;
 
+/** Publication reuses the management journal; it does not acquire an auth-resource fence. */
+export const storedRuntimeSourceCommandSchema = z.object({
+  ...common,
+  kind: z.literal('runtime.source'),
+  phase: z.enum(['prepared', 'published']),
+  sourceId: hash,
+  revision: hash,
+  expectedRevision: hash,
+  resourceHeld: z.literal(false),
+}).strict();
+export type StoredRuntimeSourceCommand = z.infer<typeof storedRuntimeSourceCommandSchema>;
+
 export const storedManagementCommandSchema = z.union([
   storedSkillCommandSchema,
   storedCredentialCommandSchema,
   storedOAuthCommandSchema,
   storedModelProbeSchema,
   storedExtensionCommandSchema,
+  storedRuntimeSourceCommandSchema,
 ]);
 export type StoredManagementCommand = z.infer<typeof storedManagementCommandSchema>;
 export interface ManagementCommandStore {

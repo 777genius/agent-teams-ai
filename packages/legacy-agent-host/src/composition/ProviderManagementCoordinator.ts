@@ -290,6 +290,17 @@ export class ProviderManagementCoordinator {
     }
   }
 
+  /** A newly published base source serves all existing management owners, without replacing old targets. */
+  admitRuntimeSourceProfile(raw: ProviderManagementProfile): void {
+    const profile = providerManagementProfileSchema.parse(raw);
+    this.admitTeamProbeProfile(profile);
+    this.skills.admitProfile(profile);
+    if (profile.provider === 'claude') {
+      this.claudeAuth.admitProfile(profile);
+      this.extensions.admitProfile(profile);
+    }
+  }
+
   private select(profileId: string, configRevision: string): OpenCodeManagementProfile {
     this.assertCurrent();
     const profile = this.profiles.get(profileId);

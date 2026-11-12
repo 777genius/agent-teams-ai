@@ -33,6 +33,7 @@ import { createMemberEntry, createPreparedMemberEntry } from './createMemberEntr
 import { projectRuntimeActivity } from './runtimeActivityProjection.js';
 import { createRuntimeTeamLaunch } from './createRuntimeTeamLaunch.js';
 import { RuntimeTeamCaptures } from './RuntimeTeamCaptures.js';
+import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import { ToolEvidenceWindows } from '../evidence/ToolEvidenceWindows.js';
 import { captureTeamModelProbeSelection, isCurrentCapturedTeam } from './savedTeamModelProbe.js';
 import { assertCapturedRosterCurrent, assertRosterEditable } from './teamRoster.js';
@@ -82,6 +83,7 @@ export class RuntimeTeamCoordinator {
   constructor(
     private readonly options: {
       profile: TeamHostProfile;
+      sources?: RuntimeRecipeSources;
       teams: ReadonlyMap<string, HostedTeam>;
       assertWriter(): void;
       processCustody?: ProcessCustody;
@@ -262,6 +264,7 @@ export class RuntimeTeamCoordinator {
     }
     this.captures = new RuntimeTeamCaptures({
       profile: options.profile,
+      ...(options.sources ? { sources: options.sources } : {}),
       teams: options.teams,
       assertCurrent: () => {
         options.assertWriter();

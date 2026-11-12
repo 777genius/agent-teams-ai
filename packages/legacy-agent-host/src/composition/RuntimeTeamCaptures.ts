@@ -21,10 +21,12 @@ import {
   runtimeCaptureRegistration,
   runtimeCaptureBaseRecipes,
   runtimeCaptureRecipeCandidates,
+  captureRuntimeRecipeSources,
 } from './runtimeCaptureSource.js';
 import type { HostedTeam } from './MemberEntry.js';
 import type { TeamHostProfile } from './TeamHost.js';
 import type { RuntimeMemberProfile } from './runtimeProfile.js';
+import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import type { TeamLaunchRecord } from '../team-launch/contracts.js';
 import type { TeamRuntimeCapture } from '../team/runtimeRegistrationContracts.js';
 
@@ -40,6 +42,7 @@ export class RuntimeTeamCaptures {
   constructor(
     private readonly options: {
       profile: TeamHostProfile;
+      sources?: RuntimeRecipeSources;
       teams: ReadonlyMap<string, HostedTeam>;
       assertCurrent(): void;
       install(
@@ -72,7 +75,7 @@ export class RuntimeTeamCaptures {
       if (source.rosterCommandId !== input.rosterCommandId)
         throw new TeamLaunchError('conflict', 'capture-command');
       // Registration replay rechecks current admin authority and the exact original payload.
-      const compiled = compileRuntimeCapture(this.options.profile, team, source);
+      const compiled = compileRuntimeCapture(this.options.profile, team, source, 'launch', this.options.sources);
       team.owner.registerRuntime(operator, compiled.registration);
       this.restoreCapture(
         team,
@@ -94,6 +97,7 @@ export class RuntimeTeamCaptures {
         )
       : captureRuntimeSource(this.options.profile, team, commandId, input.rosterCommandId, roster, {
           deferMcp: true,
+          ...(this.options.sources ? { sources: this.options.sources } : {}),
         });
     if (
       intent.commandId !== commandId ||
@@ -106,6 +110,9 @@ export class RuntimeTeamCaptures {
       team.owner.assertRuntimeRegistration(operator, runtimeCaptureRegistration(team, intent));
     const assertCurrent = () => {
       this.options.assertCurrent();
+      if (!original && runtimeDigest(intent.recipeSources ?? []) !== runtimeDigest(
+        captureRuntimeRecipeSources(this.options.profile, team, roster, this.options.sources)))
+        throw new TeamLaunchError('hold', 'capture-source-selection-changed');
       if (
         team.connection.readRoster().revision !== intent.configurationRevision ||
         team.owner.assertRuntimeRegistration(operator, runtimeCaptureRegistration(team, intent)) !==
@@ -113,18 +120,19 @@ export class RuntimeTeamCaptures {
       )
         throw new TeamLaunchError('hold', 'capture-authority-changed');
       // Initial intent binds original templates/accounts/options; final MCP reads wait for the actual cwd.
-      compileRuntimeCapture(this.options.profile, team, intent, 'model-preflight');
+      compileRuntimeCapture(this.options.profile, team, intent, 'model-preflight', this.options.sources);
     };
     assertCurrent();
     const finalizeSource = async (
       context: NonNullable<Parameters<typeof captureRuntimeSource>[5]> = {}
     ) => {
       const prepared = { ...intent, ...context };
-      const baseRecipes = runtimeCaptureBaseRecipes(this.options.profile, teamId, prepared);
+      const selection = this.options.sources ? { sources: this.options.sources, scope: team.definition.scope } : undefined;
+      const baseRecipes = runtimeCaptureBaseRecipes(this.options.profile, teamId, prepared, selection);
       const selectedRecipes = runtimeCaptureRecipeCandidates(this.options.profile, teamId, {
         ...prepared,
         mcpCaptureVersion: 1,
-      });
+      }, selection);
       const mcpRecipeReferences = await prepareCapturedRuntimeMcpRecipes({
         store,
         commandId,
@@ -144,7 +152,8 @@ export class RuntimeTeamCaptures {
         commandId,
         input.rosterCommandId,
         roster,
-        { ...context, mcpRecipeReferences }
+        { ...context, mcpRecipeReferences, sourceReferences: intent.recipeSources ?? [],
+          ...(this.options.sources ? { sources: this.options.sources } : {}) }
       );
     };
     let source;
@@ -176,7 +185,8 @@ export class RuntimeTeamCaptures {
           commandId,
           input.rosterCommandId,
           roster,
-          { worktrees, deferMcp: true }
+          { worktrees, deferMcp: true, sourceReferences: intent.recipeSources ?? [],
+            ...(this.options.sources ? { sources: this.options.sources } : {}) }
         );
         team.owner.withLaunchAuthority(operator, 'control', () => {
           assertCurrent();
@@ -222,7 +232,7 @@ export class RuntimeTeamCaptures {
         ? runtimeCaptureSourceSchema.parse(original.definition.capture)
         : await finalizeSource();
     }
-    const compiled = compileRuntimeCapture(this.options.profile, team, source);
+    const compiled = compileRuntimeCapture(this.options.profile, team, source, 'launch', this.options.sources);
     assertCurrent();
     const registration: TeamRuntimeCapture = {
       commandId,
@@ -305,7 +315,7 @@ export class RuntimeTeamCaptures {
     activate: boolean
   ): void {
     const source = this.source(team, registration),
-      compiled = compileRuntimeCapture(this.options.profile, team, source);
+      compiled = compileRuntimeCapture(this.options.profile, team, source, 'launch', this.options.sources);
     if (
       compiled.registration.launchId !== registration.launchId ||
       runtimeDigest(compiled.registration.members) !== runtimeDigest(registration.members)

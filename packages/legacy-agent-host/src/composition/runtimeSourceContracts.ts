@@ -1,0 +1,110 @@
+import { isAbsolute, resolve } from 'node:path';
+import { z } from 'zod';
+import { openCodeV2EmbeddedProfileSchema } from './openCodeV2EmbeddedProfile.js';
+import type { RuntimeMemberProfile } from './runtimeProfile.js';
+
+const id = z
+  .string()
+  .min(1)
+  .max(256)
+  .refine((value) => !value.includes('\0'));
+const hash = z.string().regex(/^[a-f0-9]{64}$/);
+const path = z
+  .string()
+  .min(1)
+  .max(8192)
+  .refine((value) => !value.includes('\0') && isAbsolute(value) && resolve(value) === value);
+const executable = z.object({ path, sha256: hash }).strict();
+const teamScope = z.object({ teamId: id, projectId: id, workspaceId: id }).strict();
+export type RuntimeSourceTeamScope = z.infer<typeof teamScope>;
+const embeddedDelivery = z
+  .object({
+    version: openCodeV2EmbeddedProfileSchema.shape.version,
+    directory: path,
+    manifestSha256: hash,
+    platform: openCodeV2EmbeddedProfileSchema.shape.platform,
+    arch: openCodeV2EmbeddedProfileSchema.shape.arch,
+  })
+  .strict();
+
+/** Main derives this from one original private descriptor entry, never a renderer payload. */
+export const runtimeSourceGrantSchema = z
+  .object({
+    targetId: hash,
+    ownerId: id,
+    ownerRevision: id,
+    contextId: id,
+    projectPath: path.nullable(),
+    runtimeId: z.enum(['claude', 'codex', 'opencode']),
+    profileId: id,
+    configRevision: id,
+    teamScopes: z.array(teamScope).max(256),
+  })
+  .strict();
+export type RuntimeSourceGrant = z.infer<typeof runtimeSourceGrantSchema>;
+
+/** A source reference only: accounts, credentials, environment and native session IDs stay in the seed. */
+export const runtimeSourceCandidateSchema = z
+  .object({
+    sourceKind: z.enum(['bundled', 'app-managed', 'path', 'override']),
+    executable,
+    embedded: embeddedDelivery.optional(),
+  })
+  .strict();
+export type RuntimeSourceCandidate = z.infer<typeof runtimeSourceCandidateSchema>;
+
+export const runtimeSourceReferenceSchema = z.object({ sourceId: hash, revision: hash }).strict();
+export type RuntimeSourceReference = z.infer<typeof runtimeSourceReferenceSchema>;
+export const runtimeSourceSummarySchema = z
+  .object({
+    ...runtimeSourceReferenceSchema.shape,
+    profileId: id,
+    configRevision: id,
+    sourceKind: z.enum(['captured', 'bundled', 'app-managed', 'path', 'override']),
+    nativeGeneration: z.enum(['v1', 'v2']).optional(),
+    cliVersion: id.optional(),
+    engineVersion: id.optional(),
+  })
+  .strict();
+export type RuntimeSourceSummary = z.infer<typeof runtimeSourceSummarySchema>;
+export const runtimeSourcePublicationSchema = z
+  .object({
+    commandId: id,
+    phase: z.enum(['prepared', 'published']),
+    selection: runtimeSourceSummarySchema.optional(),
+  })
+  .strict()
+  .refine((value) => (value.phase === 'published') === (value.selection !== undefined));
+export type RuntimeSourcePublication = z.infer<typeof runtimeSourcePublicationSchema>;
+
+export const publishRuntimeSourceSchema = z
+  .object({
+    grant: runtimeSourceGrantSchema,
+    commandId: id,
+    expectedRevision: hash,
+    candidate: runtimeSourceCandidateSchema,
+  })
+  .strict();
+export type PublishRuntimeSource = z.infer<typeof publishRuntimeSourceSchema>;
+export const runtimeSourceReadSchema = z.object({ grant: runtimeSourceGrantSchema }).strict();
+export const runtimeSourceLookupSchema = z
+  .object({
+    grant: runtimeSourceGrantSchema,
+    commandId: id,
+  })
+  .strict();
+
+/** Selection is captured before asynchronous launch preparation; replay resolves only this reference. */
+export interface RuntimeRecipeSources {
+  currentForRecipe(
+    scope: RuntimeSourceTeamScope,
+    projectPath: string,
+    recipe: RuntimeMemberProfile
+  ): RuntimeSourceReference | undefined;
+  resolveRecipe(
+    reference: RuntimeSourceReference,
+    scope: RuntimeSourceTeamScope,
+    projectPath: string,
+    recipe: RuntimeMemberProfile
+  ): RuntimeMemberProfile;
+}
