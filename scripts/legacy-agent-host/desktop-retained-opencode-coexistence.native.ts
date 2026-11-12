@@ -61,6 +61,8 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
   let fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>> | undefined;
   let app: Awaited<ReturnType<typeof startRetainedOpenCodeApp>> | undefined;
   let passed = false, cleanup = false, failure: unknown;
+  const legacyTeam = 'test-retained-opencode-v1';
+  let legacySubmitted = false, legacyStopped = false;
   const cleanupErrors: unknown[] = [], steps: Record<string, unknown>[] = [];
   const natives: Awaited<ReturnType<typeof selectedLinuxProcesses>> = [];
   const proof: Record<string, unknown> = { kind: 'TEST_NATIVE_RETAINED_V1_HOST_V2_DESKTOP', sourceHead: head,
@@ -123,7 +125,6 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     await new Promise<void>((resolve, reject) => { checkPort.once('error', reject); checkPort.listen(9222, '127.0.0.1', resolve); });
     await new Promise<void>((resolve, reject) => checkPort.close(error => error ? reject(error) : resolve()));
     app = await start(1);
-    const legacyTeam = 'test-retained-opencode-v1';
     const hostKey = 'host-team:' + encodeURIComponent(fixture.handleId);
     const api = 'window.__TEST_retainedApi.teams';
     const callTeams = <T = Record<string, unknown>>(method: string, args: unknown[], timeout?: number) =>
@@ -131,6 +132,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const host = (operation: string, commandId: string, payload: unknown) => app!.call(
       `window.__TEST_retainedApi.agentBackend.invoke(${literal({ handle: { handleId: fixture!.handleId }, operation, commandId, payload })})`);
     await app.call(`window.electronAPI.config.addCustomProjectPath(${literal(legacyProject)})`);
+    legacySubmitted = true;
     const created = await callTeams('createTeam', [{ teamName: legacyTeam, cwd: legacyProject,
       providerId: 'opencode', model: 'TEST-legacy/TEST-model', skipPermissions: true,
       runtimeSelectionVersion: 1, members: [{ name: 'bob', role: 'Developer', providerId: 'opencode', model: 'TEST-legacy/TEST-model', mcpPolicy: { mode: 'appOnly' } }] }], 240_000);
@@ -141,7 +143,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     }, 'actual retained V1 app runtime ready', 180_000);
     const legacyTask = await callTeams('createTask', [legacyTeam, { subject: 'TEST retained V1 sidebar record' }]);
     assert.equal(typeof legacyTask.id, 'string');
-    const legacyProcesses = await selectedLinuxProcesses(v1);
+    const legacyProcesses = await app.nativeChildren(v1);
     assert.ok(legacyProcesses.length > 0, 'real selected V1 native process'); natives.push(...legacyProcesses);
     steps.push({ observed: 'actual_legacy_fork_V1_team_before_new_Host_runtime', runId: created.runId, legacyProcesses });
     const selection = await host('team.launch.read', 'TEST-coexist-launch-read', {}); assert.equal(selection.ok, true);
@@ -153,7 +155,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     await waitFor(async () => { const value = await host('runtime.read', 'TEST-coexist-native-read', { memberId: 'alice-id' });
       assert.equal(value.ok, true); return record(value.value).nativeReady === true ? value : null;
     }, 'new actual Host V2 runtime ready', 90_000);
-    const hostProcesses = await selectedLinuxProcesses(bun); assert.ok(hostProcesses.length > 0); natives.push(...hostProcesses);
+    const hostProcesses = await app.nativeChildren(bun); assert.ok(hostProcesses.length > 0); natives.push(...hostProcesses);
     assert.ok(legacyProcesses.every(originalLinuxProcessPresent));
     const both = await callTeams<unknown[]>('list', []);
     assert.ok(both.some(value => record(value).teamName === legacyTeam));
@@ -179,7 +181,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
       providerId: 'opencode', model: 'TEST-legacy/TEST-model', skipPermissions: true, runtimeSelectionVersion: 1 }], 240_000);
     assert.equal(typeof relaunched.runId, 'string'); assert.notEqual(relaunched.runId, created.runId);
     await waitFor(async () => await callTeams<boolean>('processAlive', [legacyTeam]) || null, 'explicit retained V1 relaunch ready', 180_000);
-    const retainedAfterRelaunch = await selectedLinuxProcesses(v1); assert.ok(retainedAfterRelaunch.length > 0); natives.push(...retainedAfterRelaunch);
+    const retainedAfterRelaunch = await app.nativeChildren(v1); assert.ok(retainedAfterRelaunch.length > 0); natives.push(...retainedAfterRelaunch);
     await ui.clickSidebar(fixture.uiSeed!.subject);
     await ui.click('button[aria-label="Stop"]', 'ordinary Host V2 Stop', 'Stop');
     await waitFor(async () => { const state = await host('runtime.read', 'TEST-coexist-stopped', { memberId: 'alice-id' });
@@ -192,6 +194,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     const screenshot = await app.cdp.send<{ data: string }>('Page.captureScreenshot', { format: 'png' });
     await writeFile(join(root, 'coexistence-original-ui.png'), Buffer.from(screenshot.data, 'base64'), { mode: 0o600 });
     await callTeams('stop', [legacyTeam]);
+    legacyStopped = true;
     const callsBeforeCold = model.observations.length;
     await app.close(); app = undefined; source();
     app = await start(2);
@@ -213,10 +216,25 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     passed = true;
   } catch (error) { failure = error; }
   finally {
+    if (app && legacySubmitted && !legacyStopped) {
+      try { await app.call(`window.__TEST_retainedApi.teams.stop(${literal(legacyTeam)})`); }
+      catch (error) { cleanupErrors.push(error); }
+    }
     if (app) { try { assert.equal(await app.cleanup(), true); } catch (error) { cleanupErrors.push(error); } }
     try { await model.close(); } catch (error) { cleanupErrors.push(error); }
     try { assert.equal(natives.some(originalLinuxProcessPresent), false, 'no surviving original native process'); }
     catch (error) { cleanupErrors.push(error); }
+    if (fixture) {
+      try {
+        // Absence check only: an early detached child never becomes a new signal target.
+        for (const executable of [v1, bun]) for (const process of await selectedLinuxProcesses(executable)) {
+          try {
+            const environment = await readFile(`/proc/${process.pid}/environ`, 'utf8');
+            assert.equal(environment.includes(fixture.root), false, 'unreconciled TEST native namespace survives cleanup');
+          } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+        }
+      } catch (error) { cleanupErrors.push(error); }
+    }
     cleanup = cleanupErrors.length === 0;
     proof.status = passed && cleanup ? 'PASS' : 'FAIL';
     if (failure) proof.failure = failure instanceof Error ? failure.message : String(failure);

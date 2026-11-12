@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createWriteStream, readFileSync } from 'node:fs';
+import { createWriteStream, readFileSync, readdirSync } from 'node:fs';
 import { readFile, readdir, readlink, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileHash } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
@@ -52,12 +52,37 @@ export async function startRetainedOpenCodeApp(input: {
   // Birth/group captured synchronously before any yield or cleanup signal.
   const original = linuxProcessIdentity(child.pid);
   assert.equal(original.group, child.pid);
+  const descendants = new Map<string, ReturnType<typeof linuxProcessIdentity>>();
+  const key = (value: ReturnType<typeof linuxProcessIdentity>) => `${value.pid}:${value.birth}`;
+  descendants.set(key(original), original);
+  const observeDescendants = () => {
+    const live = new Map<number, ReturnType<typeof linuxProcessIdentity>>();
+    for (const name of readdirSync('/proc')) {
+      if (!/^[0-9]+$/.test(name)) continue;
+      try { const value = linuxProcessIdentity(Number(name)); live.set(value.pid, value); }
+      catch (error) { if (!['ENOENT', 'ESRCH'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error; }
+    }
+    for (let depth = 0; depth < 16; depth++) {
+      let added = false;
+      for (const value of live.values()) {
+        const parent = live.get(value.ppid);
+        if (parent && descendants.has(key(parent)) && !descendants.has(key(value))) {
+          descendants.set(key(value), value); added = true;
+        }
+      }
+      if (!added) break;
+    }
+  };
+  observeDescendants();
+  let ancestryFailure: unknown;
+  const ancestryTimer = setInterval(() => { try { observeDescendants(); } catch (error) { ancestryFailure ??= error; } }, 25);
   const log = createWriteStream(join(input.root, `coexistence-app-${input.epoch}.log`), { mode: 0o600 });
   child.stdout.pipe(log, { end: false }); child.stderr.pipe(log, { end: false });
   let cdp: Cdp | undefined;
   let electron: ReturnType<typeof linuxProcessIdentity> | undefined;
   let failure: unknown;
   const assertCurrent = () => {
+    if (ancestryFailure) throw ancestryFailure;
     assert.equal(originalLinuxProcessPresent(original), true, 'original dev launcher remains current');
     if (electron) assert.equal(originalLinuxProcessPresent(electron), true, 'original Electron remains current');
   };
@@ -103,6 +128,10 @@ export async function startRetainedOpenCodeApp(input: {
     };
     await call("import('/api/index.ts').then(module => {window.__TEST_retainedApi=module.api;return true})");
     return { cdp, call, assertCurrent, original, electron: electron!,
+      async nativeChildren(executable: string) {
+        assertCurrent(); observeDescendants();
+        return (await selectedLinuxProcesses(executable)).filter(value => descendants.has(key(value)));
+      },
       async close() {
         assertCurrent();
         await cdp!.evaluate('void window.electronAPI.windowControls.close(); true');
@@ -112,16 +141,18 @@ export async function startRetainedOpenCodeApp(input: {
         assert.equal(originalLinuxProcessPresent(original), false, 'ordinary Quit reaps original launcher');
         assert.equal(child.exitCode, 0, 'normal app exit');
         cdp!.close(); assert.equal(await capture.confirmStopped(), true, 'original app process group released');
+        clearInterval(ancestryTimer);
         await new Promise<void>(resolve => log.end(resolve));
       },
       async cleanup() {
-        cdp?.close(); const stopped = await capture.confirmStopped();
+        cdp?.close(); const stopped = await capture.confirmStopped(); clearInterval(ancestryTimer);
         await new Promise<void>(resolve => log.end(resolve)); return stopped;
       },
     };
   } catch (error) { failure = error; }
   cdp?.close();
   const stopped = await capture.confirmStopped();
+  clearInterval(ancestryTimer);
   await new Promise<void>(resolve => log.end(resolve));
   if (!stopped) throw new AggregateError([failure, new Error('original app cleanup unknown')]);
   throw failure;
