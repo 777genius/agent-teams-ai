@@ -15,6 +15,8 @@
 - [M1] `MemberMcpPolicyPanel`: inheritLead/inheritScopes/strictAllowlist/appOnly — существующие choices UI.
 - [M2] `TeamProvisioningOpenCodeTeamConfigWriter`: сохраняет per-member MCP policy вместе с model/effort.
 - [M3] `ExtensionStoreView`: существующие вкладки skills, MCP, plugins и provider capability projection.
+- [M4] `openCodeLocalModelLimits`: limits card появляется только для существующей `configured_local` local-model projection.
+- [M5] `MembersEditorSection`: MCP lock — пользовательский общий toggle, не V2 capability gate.
 - [S1] `CapturedRuntimeProviderManagementClient`: default/limits API уже есть; используется existing preference store.
 - [S2] `managedProviderPreferences`: project/global precedence и сохранение посторонних полей.
 - [S3] `NativeExtensionCoordinator`: native Claude MCP/plugin read/mutate/diagnose и original-target journal.
@@ -34,11 +36,11 @@
 | Project/global defaults | Работают отдельные preference owners | Store/API реализованы | Довести выбор в 05, здесь не писать второй store |
 | Configured local model limits V1 | Existing editor проверяет и сохраняет override | `configureModelLimits` и file store есть | Проверить фактическое применение нового launch |
 | Declared V2 custom model limits | R1→R2 переносит native model `limit` | Есть `providerConfiguration`, нет полного config input path | Перенести selected declaration без потери полей |
-| V2 limits editor | R3 route отвергает non-V1 generation | V2 probe также отвергает limits | Bounded gate: определить обещание existing UI и устранить mismatch |
+| V2 limits editor | R3 отвергает non-V1; M4 может вообще не показать card для V2 catalog_provider | V2 probe отвергает limits | Сначала actual UI gate; скрытый/disabled control не считать working V2 editor |
 | Claude native MCP/plugins | Existing registry/install UI | S3 владеет native файлами и командами | Reuse, original-target checks, capability/UI parity |
 | Skills пользователя/проекта | Existing Skills UI и root scopes | S4/collection уже выделены | Проверить save/read/launch consumption, без второго skill scanner |
 | V1/Codex selected MCP | Политики per-member уже сохраняются | Есть captured catalog/recipes | Проверить scopes/allowlist и actual native tool availability |
-| V2 external MCP | M1/M2 сохраняют choice; R2 формирует только controller | S5 запрещает external choice | Gate 07-G3; UI promise не закрывать молча как out-of-scope |
+| V2 external MCP | M1/M2/M5 предлагают policy, R2 формирует только controller | S5 запрещает external choice | Existing UI/native mismatch; исправление квалифицировать отдельно от старого working native parity |
 | Произвольные OpenCode plugins | V2 R2 допускает только builtin configuration | Ambient import запрещён | Проверить конкретные advertised routes; не обещать весь plugin ecosystem |
 
 Read-only source проверен на pinned runtime, а не только по fixture с `supportedReasoningEfforts: []`.
@@ -48,6 +50,7 @@ R2 валидирует model aliases, capabilities, limits, variants и отв�
 R3 `configureModelLimits` вызывает `withManagedOpenCodeClient`, который отказывает generation != V1.
 Поэтому editor и declared native limit — разные сценарии; нельзя записать их одной строкой «V2 limits поддержаны».
 Для external MCP source уже показывает controller-only config, но frontend policy affordance требует отдельной проверки.
+V2 declared model limits/variant, V1 limits editor и возможный V2 editor — три разные capability rows, не общий флаг settings supported.
 
 ## 3. Ограниченная проверка baseline до реализации
 
@@ -59,7 +62,7 @@ Fixture фиксирует полученный model/variant/body/tool call; mo
 - **07-G1 — V2 default/variant:** один declared custom model, default и один native variant из его schema.
   Пройти существующий saved/launch путь и записать native selection/request; передать результат владельцу 05.
 - **07-G2 — Config/limits:** global model A и project override B с различимыми native limits/settings.
-  Проверить declared launch; отдельно нажать доступный в UI limits editor и записать его фактический результат.
+  Проверить declared launch; отдельно записать card visible/hidden и routeKind, нажать только реально доступный existing limits editor.
 - **07-G3 — External MCP:** test server с одним безопасным sentinel tool; existing UI strictAllowlist и appOnly.
   Проверить, предлагает ли V2 UI policy, попадает ли tool в native inventory и может ли выполняться.
 - **07-G4 — Extensions:** один существующий Claude plugin и skill; проверить UI mutation и native consumption.
@@ -68,7 +71,7 @@ Fixture фиксирует полученный model/variant/body/tool call; mo
 На один positive case достаточно одного короткого native input и readback; после него штатно закрыть owned runtime.
 Фиксировать commit/artifact digest, source scopes, effective fields и receipt без токенов/credential bodies.
 Если операция доступна в UI, но old runtime её игнорирует, это выявленный product mismatch, а не разрешение удалить её.
-Для такого mismatch реализовать узкий native adapter/config mapping в этом плане и добавить acceptance case.
+Для exposed mismatch оформить отдельную строку «исправление existing UI/native несоответствия» и bounded adapter, не назвать её старой рабочей V2 возможностью.
 Если control уже недоступен с конкретной provider reason, сохранить точную границу; новую возможность не обещать.
 Любая открытая G-проверка остаётся незакрытым пунктом acceptance, а не формальным PASS/skip.
 
@@ -76,11 +79,11 @@ Fixture фиксирует полученный model/variant/body/tool call; mo
 
 - 07-A1: declared settings выбранного provider/model сохраняют прежний precedence и значения в native launch.
 - 07-A2: посторонние providers, поля preferences и пользовательские файлы не перезаписываются заодно.
-- 07-A3: app-owned local limits после успешного Test реально применяются к следующему launch выбранной модели.
+- 07-A3: limits из existing доступного local editor после успешного Test применяются к launch; declared V2 limits проверяются отдельно без нового editor.
 - 07-A4: invalid/неподтверждённые limits не сохраняются как verified; прежняя конфигурация продолжает работать.
 - 07-A5: model probe и launch используют один config snapshot/revision, а не повторно читают разные live файлы.
 - 07-A6: skills/plugin/MCP mutations сохраняют original project/account scope при foreground switch.
-- 07-A7: existing MCP scopes и allowlist дают тот же native inventory; appOnly исключает external tools.
+- 07-A7: proven MCP scopes сохраняют native inventory; exposed V2 mismatch получает отдельный qualified adapter, appOnly исключает external tools.
 - 07-A8: изменение MCP policy не отключает unrelated native instructions/skills/hooks у Claude.
 - 07-A9: UI capability означает реализованный и проверенный маршрут, а не просто наличие native API.
 - 07-A10: нет доступного existing control, который новый Host безусловно отправляет в unsupported без завершённого G-case.
@@ -98,6 +101,7 @@ Fixture фиксирует полученный model/variant/body/tool call; mo
 `captureClaudeSettingSources` сохраняет native setting sources независимо от MCP appOnly.
 Нужен небольшой selected-provider config adapter: JSONC read/precedence/declared model translation по R1/R2.
 Он отдаёт private prepared configuration в publication use case 06; renderer получает только existing summary/diagnostics.
+Auth-bearing headers/settings materialize через existing bound credential/source owner; selection index 06 не становится второй plaintext копией секрета.
 Не импортировать whole user config/ambient executable plugins в V2 ради обхода captured-profile ограничения.
 Предыдущий working plugin route сохраняется отдельным квалифицированным adapter, если G4 подтвердит требование.
 Не переносить 4 000 строк legacy `OpenCodeProfileManager`: извлечь только выбранную data transformation и explicit IO port.
@@ -108,7 +112,7 @@ Fixture фиксирует полученный model/variant/body/tool call; mo
 ### 07.1. Закрыть baseline вопросы
 
 1. Выполнить 07-G1…G4 и записать source→UI→native table для четырёх provider routes.
-2. Сверить selected-provider fields с R1/R2: package/baseURL/model aliases, settings/body, capabilities, limits, variants.
+2. Сверить selected fields с R1/R2: package/baseURL/aliases/settings/body/capabilities/limits/variants и qualified package availability в выбранном graph.
 3. Передать variant qualification в 05, auth materialization contract в 02 и publication inputs в 06.
 4. Назначить каждому mismatch либо конкретный existing owner fix, либо небольшой отдельный provider adapter.
 
@@ -117,7 +121,7 @@ Fixture фиксирует полученный model/variant/body/tool call; mo
 1. В `runtime-provider-management/main/adapters/output/` добавить только недостающий capture selected config.
 2. Использовать существующие file/JSONC utilities и explicit captured source identities; не принимать raw config из renderer.
 3. Сопоставить schema selected config с `openCodeV2EmbeddedProfile.ts` и `OpenCodeV2EmbeddedConfig.ts`.
-4. Переносить declared model fields через validated native schema; unknown conflicting field не терять молча.
+4. `providerConfiguration` сейчас лишь bounded JSON; использовать strict selected-model codec R2, alias conflict/partial variants не нормализовать потерь ради.
 5. `CapturedRuntimeProviderManagementClient.configureModelLimits` продолжает использовать existing store/probe flow.
 6. `OpenCodeV2ModelProbe.ts` получает limits/config только по qualified G2 route, согласованному с 05.
 7. Publication нового config/limits snapshot выполняет 06; 07 не меняет available pointer напрямую.
@@ -130,7 +134,7 @@ Fixture фиксирует полученный model/variant/body/tool call; mo
 3. Native mutations проходят существующий `CapturedExtensionCommandLedger` и Host owner, без второго transaction log.
 4. Skills используют existing capture/cache/collection; исправить только доказанные missing bindings/projection.
 5. `captureRuntimeMcp.ts`, `inheritNativeMemberMcp.ts`, `capturedRuntimeMcpRecipes.ts` сохраняют per-member selection.
-6. Если G3 выявит доступный V2 policy route, добавить bounded V2 server translation + native inventory/custody readback.
+6. Если G3 подтверждает exposed V2 policy, добавить bounded server translation + native readiness/inventory/custody; отдельно отметить новый native adapter.
 7. Для V2 разрешать только захваченные configured servers; встроенный Team controller не заменяется внешним сервером.
 8. Preserve allowlist/scope и transport/env semantics; не открывать доступ всем ambient MCP ради одного tool.
 9. Cleanup затрагивает только owned test/runtime resources; native shared server не объявлять owned по одному имени.
@@ -160,8 +164,8 @@ Fixture фиксирует полученный model/variant/body/tool call; mo
 
 1. **07-E1 — Global/project config.** UI выбирает custom model из global config, project override изменяет его settings.
    Новый launch использует project поля; другой test project использует global; чужие config bytes не меняются.
-2. **07-E2 — Limits.** Через existing local-provider UI выставить пределы, Test, save, app restart, launch.
-   Проверить native effective values; invalid values/failed probe сохраняют прежний рабочий config.
+2. **07-E2 — Limits.** Для реально показанного local editor выставить пределы, Test/save, restart, launch; для V2 declared limits использовать config путь.
+   Native effective values совпадают; отсутствие V2 card фиксирует existing limit, без создания новой UI feature ради теста.
 3. **07-E3 — MCP policies.** В смешанной Team задать allowlist и appOnly, выполнить безопасный external sentinel tool.
    Проверить native inventory каждого применимого provider, отсутствие forbidden tool и обычную работу Team MCP.
 4. **07-E4 — Claude plugin.** Existing UI устанавливает test-only plugin, native session видит его capability.
@@ -173,17 +177,17 @@ Fixture фиксирует полученный model/variant/body/tool call; mo
 7. **07-E7 — V2 UI mismatch gate.** Для доступных после G2/G3 controls пройти полный UI→Host→native route.
    Нельзя зачесть лишь disabled button; previously offered functionality требует исполнимого результата и readback.
 
-Focused tests: config precedence/aliases; unknown/conflicting field; scope selection; foreign path/changed identity.
-Дополнительно проверить сохранение unrelated preference fields и original-target mutation lookup.
+Новые focused tests: strict selected-model alias/variant conflict и source-identity mutation между Test/publication.
+Existing precedence, foreign path, unrelated preferences и original-target lookup suites расширять только при изменении их boundary.
 Повторно не тестировать все filesystem primitives/skill parsers: existing suites остаются достаточным основанием reuse.
 Для новых native mappings нужен один schema/contract case и негативный случай, а не mock каждой строки transformation.
 
 ## 9. Оценка и закрытие
 
 - Основной production budget: **500–900** строк для selected config/limits integration и точечных owner fixes.
-- Основные tests/E2E: **700–1 200** строк сверх переиспользуемых 05/06 fixtures и existing native extension suites.
+- Основные tests/E2E: **600–1 050** строк (450–850 E2E, 150–200 критичных tests) сверх переиспользуемых suites.
 - Bounded резерв для подтверждённого UI mismatch V2 external MCP/limits: **650–1 100 production**, **800–1 300 tests/E2E**.
-- Полный диапазон при требуемом adapter: **1 150–2 000 production**, **1 500–2 500 tests/E2E**; это не новый framework.
+- Полный диапазон при требуемом adapter: **1 150–2 000 production**, **1 400–2 350 tests/E2E**; это не новый framework.
 - G2/G3 решают конкретную реализацию резерва; они не разрешают автоматически вычеркнуть frontend обещание.
 - V2 effort mapping/qualification посчитаны в 05; source publication в 06; auth в 02 — здесь не суммируются повторно.
 - Сложность: **7/10**; ожидаемая надёжность после acceptance: **8/10**; уверенность baseline budget: **7/10**, резерва: **6/10**.
@@ -199,12 +203,19 @@ Focused tests: config precedence/aliases; unknown/conflicting field; scope selec
 Исправлено: S1–S4 явно переиспользуются; бюджет включает только конкретный mapping/consumption boundary.
 Найдено: условный резерв позволял бы незаметно закрыть обещанную UI возможность как неподдерживаемую.
 Исправлено: G2/G3/G4 и 07-A10/A14 требуют проверяемого решения, а 07-E7 запрещает fake completion disabled кнопкой.
-**R2 — независимое provider/config review: pending; обязательно проверить native schema и реальные UI affordances.**
+**R2 — source review выполнено 2026-11-12; reviewer `estimate_account_commands`, reviewed commit `783422b9`.**
+Проверены pinned runtime R2/R3 и actual frontend M4/M5: V2 declared limits ≠ V1-only editor; MCP lock не является V2 gate.
+Исправлено: G2/E2 не создают несуществовавшую limits card; exposed V2 MCP mismatch отделён от уже working native parity.
+Найдено: Host providerConfiguration — generic JSON, тогда как donor строго валидирует aliases/partial variants; config может содержать auth material.
+Исправлено: strict native codec/package availability и bound-secret materialization обязательны; source index не хранит второй auth store.
+Unit список сокращён до новых опасных mapping/source-mutation cases; existing extension/fencing suites переиспользуются.
 **R3 — интеграционное ревью с 02/03/05/06: pending; проверить secret ownership, exact profile reuse и двойной счёт tests.**
 
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts
 [M3]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/extensions/ExtensionStoreView.tsx
+[M4]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/features/runtime-provider-management/renderer/openCodeLocalModelLimits.ts
+[M5]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MembersEditorSection.tsx
 [S1]: https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts
 [S2]: https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/src/features/runtime-provider-management/core/domain/managedProviderPreferences.ts
 [S3]: https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/packages/legacy-agent-host/src/extensions/NativeExtensionCoordinator.ts

@@ -34,7 +34,7 @@ Stage 1 полной совместимостью существующего UI 
 | ID | Отдельный план | Ответственность | Основные зависимости |
 | --- | --- | --- | --- |
 | P01 | [Codex login](01-codex-login.md) | Вход/отмена/состояние аккаунта в существующем UI | Нативный Codex client и существующий OAuth owner |
-| P02 | [OpenCode V2 credentials](02-opencode-v2-credentials.md) | Существующие key-connect/reconnect/disconnect | P06 для следующей конфигурации |
+| P02 | [OpenCode V2 credentials](02-opencode-v2-credentials.md) | Подключение по ключу и состояние в существующем UI | P06 для следующей конфигурации |
 | P03 | [Session commands](03-session-commands.md) | Slash-команды, skills и настройки действующей сессии | Нативные capabilities; P05 не дублирует live controls |
 | P04 | [Host schedules](04-host-schedules.md) | Старые сценарии расписаний с Host owner | Существующие Team/Runtime use cases |
 | P05 | [Model selection](05-model-selection.md) | Каталог/default/probe/выбор до запуска | P06 |
@@ -64,10 +64,14 @@ Stage 1 полной совместимостью существующего UI 
    зависимости, пересечения файлов, одна ответственность за общий механизм,
    реальные provider APIs, доступность native OS и смысл каждого теста. После
    исправления существенных замечаний план допускается к реализации.
+   R2/R3 записывают reviewer, исходный published SHA, конкретный дефект и внесённую
+   поправку. Проверка плана не означает PASS реализации или native приёмки.
 5. **Реализация вертикальными срезами.** Сначала минимальные общие контракты
    P06/P08 и необходимые native controls. Параллельно независимые P01/P04 и
    provider adapters; после стабилизации контрактов — P02/P05/P07/P09.
    Изменения общего файла интегрирует один назначенный владелец.
+   Входные gates: P08 admission до исполнения root; P09 отдельный service scope
+   до Stop wiring; P07 bounded source/native probes неизвестных V2 capabilities.
 6. **Приёмка по ходу работы.** Проверять затронутый путь сразу. Полные дорогие
    матрицы запускать на объединённом интеграционном SHA и повторять только
    затронутые матрицы после исправлений. Каждый commit немедленно публиковать.
@@ -89,8 +93,19 @@ SHA. Отсутствие авторизации CLI не является по�
 - В P06 одна реализация перехода к следующей конфигурации; остальные пункты
   добавляют только свои входные данные и проверки. Активная или UNKNOWN-сессия
   сохраняет прежние runtime/account/model bindings и владельца восстановления.
+- Credential verification P02 выполняется native probe внутри одного credential
+  intent. Вложенный public `ModelProbeOwner.start` под тем же resource fence не
+  используется; P05 владеет отдельным пользовательским probe/prelaunch сценарием.
 - В P08 одна общая Windows primitive для запуска/владения процессами; P09
   добавляет зарегистрированную identity, наблюдение и stop, не второй process manager.
+- Job admission P08 предшествует исполнению root; успешный spawn-then-assign smoke
+  не исключает раннего child. P09 service Stop сохраняет provider Job и соседа,
+  позднее assignment root или PID snapshot не доказывает service-tree closure.
+- Requested-before-native recovery P09 использует явный linked retry в прежнем
+  journal. Lookup не посылает signal; UNKNOWN не превращается в known-not-sent;
+  same-live original не остаётся навсегда без доступного действия Stop.
+- Старые Darwin v1/v2 captures читаются прежним decoder без изменения bytes,
+  digests и processRef; новая schema не является поводом мигрировать active records.
 - Соблюдать [архитектурный стандарт](../../../FEATURE_ARCHITECTURE_STANDARD.md)
   и [guardrails](../../../../AGENT_CRITICAL_GUARDRAILS.md): TypeScript 7,
   новые production-файлы не больше 800 строк, без повышения frozen caps,
@@ -107,6 +122,12 @@ Host → настоящий SDK/CLI → проверяемый результа�
 Один параметризованный сценарий может закрывать нескольких провайдеров, если
 проверяется реальный отдельный adapter и результат каждого запуска.
 
+P10 фиксирует отдельно native, Desktop UI и packaged UI evidence. Headless PASS
+не закрывает исходный control; UI screenshot без native effect/readback тоже
+недостаточен. Supported tuples ограничены фактическим provider/launcher baseline:
+Darwin x64/ARM64, Windows x64/ARM64 и Linux x64, без автоматического Linux ARM64.
+Каждая заявленная строка имеет свой обязательный результат; её FAIL не сужает scope.
+
 Unit-тест добавляется только когда он защищает конкретный опасный инвариант,
 который трудно надёжно воспроизвести E2E: stale revision, ambiguous command,
 дедупликация после lost ACK, PID reuse, граница Windows path. Не писать тест
@@ -120,13 +141,18 @@ Unit-тест добавляется только когда он защищае
 
 - Все ранее работающие возможности из P01–P09 выполняются через прежний UI;
   новое ограничение не скрыто удалением control или подменой результата.
-- Непроверенные V2 effort/MCP проверены по старому production пути. Если функция
-  работала, она включена в обязательную реализацию; если не работала, сохранена
-  правдивая прежняя граница, без объявления новой поддержки.
+- V2 effort/config/limits/MCP/extensions проходят gates P07 по pinned production
+  source и native effect. Работающий путь сохраняется; offered-but-broken UI
+  остаётся явным пунктом исправления в предусмотренном резерве, без тихого удаления
+  control. Прежняя действительно отсутствовавшая возможность не объявляется
+  существующей: например, V2 forget не доказан baseline, V1 forget сохраняется.
 - E2E P10 завершены на затронутых native платформах; queued/running/skipped
   не записаны как PASS. Ошибки исправлены, повторены соответствующие проверки.
 - Независимое ревью относится к текущему diff; receipts — к точному source,
   package/runtime и OS. Ограничения vendor auth обозначены явно и не выданы за PASS.
+- Upgrade проверяет byte-preserving старые identities; recovery — границы до native
+  effect и после lost ACK. Общий Windows runtime cleanup и Stop одного service
+  принимаются раздельно; случайно убитый сосед не может дать зелёную приёмку.
 - Draft PR и коммиты опубликованы. Основная ветка не смёрджена и default path
   не переключён. Готовность планов и готовность реализации учитываются отдельно.
 
@@ -135,5 +161,12 @@ Unit-тест добавляется только когда он защищае
 | Круг | Состояние | Результат |
 | --- | --- | --- |
 | R1 | Выполнен при создании | Убрана прежняя цель по объёму unit-тестов; отделены live controls от prelaunch, общий profile lifecycle от provider-specific настроек, Windows launch от Processes |
-| R2 | Ожидает независимого чтения | Проверить все десять документов и ссылки |
+| R2 | Общая страница проверена `/root/estimate_profiles_models` | Исправлены P02 scope, native/Desktop evidence, platform census, shared custody/retry boundaries и V2 uncertainty gates; R2 каждого P01–P10 указан в его документе |
 | R3 | Ожидает интеграционного ревью | Проверить очередь реализации и границы общей ответственности |
+
+Исходная published ревизия этой страницы для R2:
+[`92d88845657e845f9b5080c1617245342c7061ab`](https://github.com/777genius/agent-teams-ai/blob/92d88845657e845f9b5080c1617245342c7061ab/docs/plans/provider-migration/frontend-parity-2026-11-12/README.md).
+Независимо прочитаны README/P08/P09/P10 и сопоставлены P05–P07, Stage 1
+`CapturedProcess`, `WindowsJobCustody`, `TeamProcessCommands`, original Processes UI.
+Уточнение V2 forget сверено с R2 владельца P02; этот review не выдаётся за новое
+независимое ревью собственных P05–P07 или за завершённый R3 всей серии.

@@ -1,6 +1,6 @@
 # P10. Приёмка существующего frontend, обновление и восстановление
 
-Статус: план; R1 выполнен, R2/R3 ожидаются. Реализация и новая приёмка не объявлены.
+Статус: план; R1/R2 выполнены, R3 ожидается. Реализация и новая приёмка не объявлены.
 
 ## 1. Что сохраняем и на что опираемся
 
@@ -39,6 +39,12 @@ Review/Processes → Stop/Quit → повторный запуск прилож�
    тоже не предоставлял проверяемого такого поведения.
 6. Localhost model fixture подтверждает связку с реальным runtime, но не вход
    в аккаунт vendor. Симуляцию OAuth нельзя назвать успешным vendor login.
+7. Новый decoder может сохранить значения и при этом изменить bytes/hash прежнего
+   capture. Upgrade proof включает неизменность original Darwin identities/receipts.
+8. Непроверенные V2 effort/MCP/config возможности разрешаются gates P07 по actual
+   runtime source и native запуску. Offered-but-broken control остаётся открытым
+   несоответствием; убрать control и объявить parity нельзя. Ранее отсутствовавший
+   V2 forget не добавляется как якобы подтверждённая функция; V1 forget сохраняется.
 
 ## 3. Минимальный состав изменений
 
@@ -61,10 +67,17 @@ Review/Processes → Stop/Quit → повторный запуск прилож�
 1. Собрать E2E IDs из P01–P09; убрать дубли одинаковых setup/recovery цепочек.
 2. Для каждого ID записать существующий UI control, ожидаемый внешний эффект,
    provider/OS и место сохранения доказательства. Отдельно отметить native и UI.
+   Обязательные колонки: provider/launcher/OS/arch, source/runtime/artifact SHA,
+   evidence kind (`native`, `Desktop UI`, `packaged UI`), scenario ID и job/result.
+   Это обычная таблица, без новой schema, сервиса или генератора.
 3. Сохранить список в обычной Markdown таблице в этом плане или существующем
    evidence README; не вводить schema/генератор ради маленького статичного списка.
 4. Выбрать по одному репрезентативному позитивному и критичному failure/recovery
    сценарию каждого изменяемого контракта. Расширять только по найденному риску.
+5. Зафиксировать supported tuple census из P08/P09: Darwin x64/ARM64, Windows
+   x64/ARM64 и Linux x64 в пределах существующей provider delivery. Linux ARM64
+   не возникает автоматически; отсутствующий baseline tuple не объявляется новым
+   обещанием, заявленный tuple нельзя исключить из обязательной строки из-за FAIL.
 
 ### B. Подготовить данные старого приложения
 
@@ -76,6 +89,9 @@ Review/Processes → Stop/Quit → повторный запуск прилож�
 4. Отдельно получить interrupted/UNKNOWN case в управляемом sandbox, если он
    затрагивается новой реализацией. Не редактировать JSON так, чтобы выдать
    синтетическую запись за фактически созданное старым приложением состояние.
+5. Сохранить отдельный Stage 1 Darwin v1/v2 capture corpus: raw bytes/checksums,
+   processRef и producer SHA. Cold read новым decoder не перезаписывает его;
+   новые platform fields применяются только к новым captures.
 
 ### C. Выполнить upgrade/recovery journeys
 
@@ -87,30 +103,40 @@ Review/Processes → Stop/Quit → повторный запуск прилож�
    задач, сообщений, login operations и scheduled side effects.
 6. В отдельном запуске оборвать подтверждение одной принятой операции, перезапустить
    процесс и проверить readback/reconcile. Не отправлять её повторно автоматически.
+7. Для M19-04 разорвать границу после durable requested, но до native signal.
+   Lookup оставляет живой original и ноль новых attempts; явный Stop retry создаёт
+   связанный intent P09 и один attempt. Повтор этого commandId не сигналит снова.
+   Проверить same-live, absent/stale replacement и unregister без подмены этой
+   истории Windows crash, который уже уничтожил весь kill-on-close provider Job.
 
 ### D. Проверить собранное приложение на затронутых OS
 
 1. Использовать существующие native jobs и сборку приложения с точными dependencies.
-2. Для каждой поддерживаемой платформы выполнить короткую сквозную цепочку:
+2. Для каждой обязательной provider/platform строки выполнить короткую сквозную цепочку:
    обнаружение runtime → Launch → native tool → Stop → холодное чтение истории.
 3. На Windows отдельно выполнить Claude/Codex/V1 из P08, а не только V2.
 4. На Windows/Linux выполнить Process registry/health/Stop из P09, включая
    выживание чужого процесса и доказанное завершение принадлежащих потомков.
+   Windows service Stop сохраняет provider session и соседний service; остановка
+   всего provider Job не принимается вместо результата одной строки Processes.
 5. В полном macOS UI journey проверить новые controls P01–P07; на других OS
    повторить платформенно зависимые controls, OAuth callback/device flow,
    installer и сохранение путей. Не умножать все pure UI cases на все tuples.
 6. Визуально просмотреть screenshots новых состояний: прогресс, cancel, ошибка,
    повторная попытка, отключённое действительно неподдержанное действие.
+7. Для каждого исходного UI control нужна соответствующая Desktop evidence строка.
+   Headless native/package PASS может закрыть kernel/adapter gate, но не UI gate;
+   скриншот без native effect/readback не подтверждает сохранённую функциональность.
 
 ## 5. Обязательные E2E истории
 
 | ID | Сценарий | Что является успехом |
 | --- | --- | --- |
-| A10-01 | Старый frontend создал stopped team → новый импорт/Launch | Сохранённые параметры/история доступны; новый run имеет нового явного owner |
+| A10-01 | Старый frontend создал stopped team → новый импорт/Launch; отдельный Stage 1 capture corpus | Параметры/история доступны; новый owner явный; чтение прежних Darwin captures не меняет bytes/hash/ref |
 | A10-02 | Изменение runtime/model/account → active run + следующий launch | Активный run сохраняет binding; новый получает выбранную конфигурацию |
 | A10-03 | Task + DM + attachment → tool result → Quit → cold history | Исходные IDs/bytes и результат читаются без повторного inference |
 | A10-04 | Read/Edit → Keep/Reject → Undo/Redo → restart | Файлы и Review UI согласованы; чужие изменения не присвоены задаче |
-| A10-05 | Lost acknowledgement у принятого действия → restart | Reconcile показывает фактический результат; второй side effect не создан |
+| A10-05 | Lost acknowledgement у принятого действия → restart; ссылка на M19-04 для not-yet-sent boundary | Reconcile не повторяет effect; same-live recovery выполняется только явным linked intent и не запирается навсегда |
 | A10-06 | Packaged native launch/tool/Stop на затронутых tuples | Настоящий adapter/процесс; все принадлежащие потомки остановлены |
 | A10-07 | Existing HTTP adapter для изменённого недесктопного use case | Те же правила и ошибки, что у IPC; отсутствует обход владельца |
 | A10-08 | Старый retained run рядом с новой Host-командой | Старый владелец сохранён; targeted stop не затрагивает соседа |
@@ -137,6 +163,8 @@ identity/dedupe или правила восстановления, добави
 Эти числа — ориентир планирования, не цель по строкам и не вероятность отсутствия
 багов. Повторные матрицы оправданы изменённым native контрактом или конкретной
 оставшейся регрессией; ожидание runner само по себе не повод для перезапуска.
+Исправления linked retry и Windows admission уже учтены в P08/P09; этот резерв
+не начисляется повторно за их реализацию, а покрывает ещё не найденные regressions.
 
 ## 7. Зависимости, review и критерии завершения
 
@@ -147,6 +175,11 @@ CI-композицию и acceptance manifest изменяет координа
 
 Финальная запись содержит exact SHA, package/runtime versions, OS, scenario IDs,
 результат каждого обязательного job, original receipt/screenshots и cleanup.
+Матрица фиксирует фактические native/desktop qualification отдельно и границы
+vendor inference/auth. Early vertical receipts сохраняются как диагностика;
+финальная обязательная строка относится к проверяемому integration SHA/artifact.
+Для identity/recovery нужны original captures, before/after OS observations и число
+native attempts; зелёный UI/агрегатор или отсутствие строки не заменяют эти данные.
 Не считать queued/running/skipped успехом. Vendor login без test account остаётся
 отдельным непроверенным свойством; сначала проверить доступные штатные test routes
 и выполнить остальную работу, а не останавливать весь план заранее.
@@ -159,5 +192,13 @@ existing controls сохранены, независимое ревью теку
 | --- | --- | --- |
 | R1 | Предыдущая оценка смешивала новые features и резерв дефектов, а также native package proof и полный UI | Резерв выделен; сценарии разделены; existing harness переиспользуется; unit-бюджет сокращён до конкретных регрессий |
 | R1 | Полная матрица каждого control на каждой OS избыточна | Полный representative UI + native platform-sensitive subset; матрица расширяется по конкретному риску |
-| R2 | Независимое ревью | Ожидает |
+| R2 | Native/package receipt мог быть использован вместо Desktop UI evidence | В обязательной таблице разделены evidence kind и provider/launcher tuple; обе стороны UI → native → persistence доказаны |
+| R2 | Same-live requested-before-native оставался за общей фразой recovery | P09 M19-04 включён как обязательный linked-intent gate; lookup/duplicate retry не дают дополнительных attempts |
+| R2 | Upgrade проверял значения, но не старые serialized identities | Добавлен отдельный Stage 1 Darwin corpus с неизменными bytes/hash/processRef, без переписывания старых records |
+| R2 | Непроверенная V2 capability или отсутствующая платформа могли незаметно выйти из scope | Gates P07 и baseline tuple census обязательны; offered UI gap не закрывается удалением control |
 | R3 | Интеграция с P01–P09 и реальными CI jobs | Ожидает |
+
+R2 reviewer: `/root/estimate_profiles_models`; исходная опубликованная ревизия
+[`92d88845657e845f9b5080c1617245342c7061ab`](https://github.com/777genius/agent-teams-ai/blob/92d88845657e845f9b5080c1617245342c7061ab/docs/plans/provider-migration/frontend-parity-2026-11-12/10-acceptance-recovery.md).
+Сопоставлены P06–P09 и Stage 1 `TeamProcessCommands.view/terminate/lookup`,
+Windows custody и original Processes UI. Это review плана, не новая runtime-приёмка.
