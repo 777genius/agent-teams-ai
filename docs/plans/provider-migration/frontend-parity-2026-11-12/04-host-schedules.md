@@ -305,3 +305,17 @@ Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b
 - Снятие blanket `ScheduleSection` restriction публикуется после actual finite Host gate; Desktop proof остаётся
   обязательным до завершения P04. Existing Croner/JSON/child-Host integration уже покрывает настоящий tick и
   stop barrier; второй набор аналогичных unit tests не добавляется.
+
+## R7 — запуск native gate без нового CI контура
+
+- `scheduled-run-host.native.ts` запускается в существующем Linux x64 job P01: он уже устанавливает
+  Node 24.21.0, собирает Host и получает exact Codex 0.162.0. Claude 0.3.305 берётся из frozen dependency graph;
+  проверяются оба binary SHA и действующий D archive, а не отдельная устаревающая proof-only зависимость.
+- Один новый шаг перед Desktop login выполняет обе finite provider проверки и требует два оригинальных
+  PASS receipt с cleanup и неизменными исходниками/артефактами. Logs/receipts сохраняются существующим upload.
+  Время job увеличивается только на максимальный бюджет этого добавленного сценария; новый runner/job не нужен.
+- Перед следующим прогоном child PR синхронизируется с опубликованной parity base. GitHub workflow из merge ref
+  и checkout исходников из PR HEAD должны проверять одинаковую версию контрактов; удаление новых assertions
+  или заполнение отсутствующих receipt полей без выполнения исходного сценария не допускается.
+- После actual finite gate отдельный commit включает доступность прежних Schedule controls, затем тот же
+  Desktop runner выполняет R6. До обоих результатов P04 не считается принятым end-to-end.

@@ -248,3 +248,50 @@ SDK source references ниже относятся к файлу `@anthropic-ai/c
 Review decisions: не расширять frozen 800-line `RuntimeOwner`, не вводить control framework,
 не переносить hooks/secrets в renderer, не объявлять полный `supportedCommands` список поддержкой
 всех TUI действий. Source gate определяет реализацию; статус PASS требует actual native/Desktop receipts.
+
+### R5 — реализация и оставшаяся приёмка, 2026-11-12
+
+Опубликованы D `04e40ea05f93ca6fd1b73010d680f579ff14a9d0`, checked frontend pin
+`501478457ac8e2a0b724294108041c4107d7dc1d` и Host/Main/Composer
+`d88a37d0d1348494d800e2cb83b49976c83313c9`.
+
+- Same-Query catalog и `commands_changed` передают bounded имена/aliases; Host допускает только
+  captured Claude lead и квалифицированные builtin families. Metadata не создаёт новый native input.
+- Explicit `nativeCommand: true` сохраняет raw slash bytes через существующий message/outbox ledger.
+  Старые rich slash receipts без marker продолжают иметь прежний wrapper. Actor, generation,
+  live capability и original receipt проверяются в Host, а не доверяются renderer.
+- Pending compact reminder не вставляется перед slash и сохраняется следующему обычному input.
+  Captured system/MCP configuration остаётся у той же native Query.
+- Только terminal local result с exact native input UUID/operation становится обычным lead reply.
+  Его deterministic ID живёт в существующем Team message ledger; lost reply ACK/cold lookup
+  восстанавливают исходный reply без native replay. Нет нового журнала и «следующего thought».
+- Local gates: D full checks на Node 24/26 PASS; Host build и TEST types PASS; critical Team
+  integration 11/11, Main suites 52/52, прежний pure compact oracle 2/2 PASS; focused Main/renderer
+  types, fast lint и source-size guard PASS. Это не actual native/Desktop acceptance.
+- Existing `native-claude-compaction.native.ts` расширен marked `/compact`, `/cost` без model spend,
+  project/user commands с args и actual Team MCP, original receipts после cold Host restart.
+  Одна step добавлена в существующий macOS Stage1 Desktop job; exact archive/installed bytes,
+  fixture/source hashes, actual returned output и cleanup входят в proof. Receipt пока ожидается.
+
+Следующий узкий UI-срез использует существующий `native-launch-ui`, его Launch/Stop/cleanup и
+тот же native Team model server. Вариант `LEGACY_DESKTOP_COMMANDS_UI=1` добавляет три TEST helpers:
+подготовку private captured command sources, finite model response oracle и actual Composer journey.
+Новый proof mode, отдельный runner, production test API и второй model server не нужны.
+
+1. До запуска приложения записать project/user command fixtures; включить их captured setting sources,
+   пересчитать private Host profile/descriptor pins штатным TEST fixture способом.
+2. После обычного Launch и его native reply выбрать `/cost` из видимых suggestions и нажать Send один
+   раз. Проверить original rich command marker, raw native input, exact output в переписке и отсутствие
+   нового model request. Никакого вызова send через CDP `evaluate` вместо пользовательского действия.
+3. Через тот же Composer выполнить `/compact` с args, увидеть physical boundary; следующий `/cost`
+   не должен потреблять pending reminder. Выбрать project command, передать args и получить actual
+   native Team MCP reply при сохранённых system instructions.
+4. Перезагрузить renderer, открыть исходную переписку и проверить неизменные command/input/reply IDs
+   и model request count. Existing Launch journey затем проверяет Stop/cleanup; cold Host recovery
+   остаётся в native fixture, без дублирования полного Desktop cold suite.
+
+Открытые gates: actual native и Desktop receipts этого среза; source-supported builtin `/review`;
+captured plugin command вместе с P07; спорные Codex/OpenCode command groups из inventory. Ни
+source checks, ни removal неподходящей suggestion не закрывают эти gates. Если SDK local result
+не возвращает доказуемый original UUID/output, требуется штатный supported boundary, а не
+ослабление correlation или присвоение несвязанного `system/local_command_output`.
