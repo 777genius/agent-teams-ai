@@ -1,6 +1,6 @@
 # 03. Slash-команды и настройки действующей сессии
 
-Статус: R5 Host/Main/Composer и native fixture опубликованы; Desktop command journey реализован для штатного CI. Actual native/Desktop acceptance ещё открыт.
+Статус: R5 Host/Main/Composer и Desktop command journey опубликованы; R6 уточняет builtin review и remaining provider inventory. Actual native/Desktop acceptance ещё открыт.
 Frontend baseline: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Stage 1 baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 Old runtime source: `777genius/agent_teams_orchestrator@e13edcd3d4ffbecc0272ae30195cc6b15b710ee7`.
@@ -303,3 +303,77 @@ CI запускает followup `native-launch-ui` только в существ
 original sends, два native local outputs, три inference requests, неизменные IDs после reload,
 обычный Stop, physical cleanup и source freeze. Focused scripts types, fast lint, YAML и
 source-size guard PASS; фактический native/Desktop результат ожидается от remote CI.
+
+### R6 — builtin review и проверка provider-specific границ, 2026-11-12
+
+Входной Desktop source cut: `2b73113b210ba742238822ca8a9cc8e125f8da48`.
+Следующий срез не меняет production command contract: Claude `review` уже входит в bounded
+same-Query allowlist. Требуется подтвердить native parser, исходные args, Team tool и UI reply.
+
+#### Подтверждённые source references
+
+- Old [`commands/review.ts`](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/commands/review.ts):
+  `/review` имеет `type: prompt`, `source: builtin`, без `disableNonInteractive`; args передаются
+  в `LOCAL_REVIEW_PROMPT` как PR number. `/ultrareview` — отдельный `local-jsx` remote route;
+  он не входит в этот срез и не подменяет `/review`.
+- Old [`main.tsx`](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/main.tsx),
+  `commandsHeadless`: prompt commands без запрета доступны в исходном print/stream-json запуске.
+- Old [`QueryEngine.ts`](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/QueryEngine.ts):
+  `processUserInput` вызывается до provider branch; local commands возвращают output до native
+  Codex turn. Однако `executeCodexNativeTurn` получает исходный `prompt`, а не expanded
+  `messagesFromUserInput`. Само наличие prompt handler не доказывает native Codex slash semantics.
+- Old [`services/compact/compact.ts`](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/compact/compact.ts)
+  вызывает `queryModelWithStreaming`; [`services/api/client.ts`](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/api/client.ts)
+  явно отвергает Anthropic fetch adapter при `codex-native`. Это ограничение исходного direct
+  compact path; native thread compaction для Codex нельзя объявлять работающей по UI suggestion.
+- Old [`commands/cost/cost.ts`](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/commands/cost/cost.ts)
+  читает process cost tracker либо subscription state.
+  [`codexNative/transcriptProjector.ts`](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/codexNative/transcriptProjector.ts)
+  отдельно накапливает actual Codex usage; это не подтверждает заполнение общего USD/model-cost
+  tracker. Новая UI не должна синтезировать нулевую цену как verified native cost.
+- Frontend [`teams.ts`](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/ipc/teams.ts),
+  raw slash branch `isLeadRecipient && isAlive && !isOpenCodeRecipient`: V1/V2 OpenCode исключены
+  из этого parser handoff. Их обычная message delivery и declarative settings остаются отдельными
+  возможностями; одинаковый текст подсказки не создаёт им Claude command API.
+
+| Группа | Что доказано исходным маршрутом | Следующий результат |
+| --- | --- | --- |
+| Claude `/review` | Headless prompt handler и captured Host allowlist существуют | Native + Desktop parser/args/tool/reply/recovery в текущем journey |
+| Codex `/compact` | Общий compact handler вызывает несовместимый с codex-native API client | Не считать рабочим старым native effect; actual provider inventory остаётся отдельным gate |
+| Codex `/review`, named skills | Shared preprocessing существует, native branch получает original prompt | Не переносить Claude expansion в Codex без доказанного provider boundary |
+| Codex manually typed `/cost` | Old wrapper local output существовал, но его USD authority не подтверждена | Сохранить вопрос отображения actual usage открытым; сверить existing captured Stats/output, не подставлять нули |
+| OpenCode V1/V2 raw slash | Frontend исключал native stdin branch для обоих поколений | Проверять их поддержанные configuration/conversation features; не объявлять чужой parser native parity |
+| TUI-only names из таблицы 25 имён | Headless filter исключает соответствующие handlers | Сохранять понятное ограничение; исправления Launch settings выполняет P05 |
+
+#### Минимальная реализация review
+
+1. В existing `native-claude-compaction.native.ts` потребовать builtin `review` в actual live catalog;
+   добавить один marked `message.send` с distinct TEST args после user/project commands. Проверить
+   исходные commandId/inputId/raw bytes, отсутствие prefix и ровно один actual Team MCP reply.
+2. В existing `fixtures/native-claude-compaction/model.ts` добавить finite `review` phase:
+   actual native request содержит builtin review instruction и exact args; captured system/MCP
+   сохраняется. Oracle возвращает один Team `message_send` tool и один завершённый ответ после
+   настоящего tool result. Не выполнять `gh`, внешний PR fetch или vendor inference ради fixture.
+   Это проверка маршрута команды; качество code review и внешний GitHub workflow не заявляются.
+3. В existing Desktop command helpers добавить выбор `/review` из того же меню после project skill,
+   исходные args и видимый native Team reply. После reload сохраняются все пять original sends.
+   Использовать тот же server/Launch/Stop; не добавлять mode, runner, API или вторую полную suite.
+4. Обновить strict retained-receipt checks: native journey — 8 original receipts и 10 model requests;
+   Desktop commands — 5 sends и 5 requests. Native cold lookup и renderer reload не добавляют
+   submit, native allocation или output. Сохранить timeout/cleanup/source-freeze guards.
+
+Локальные проверки: existing pure compact oracle regression, Host TEST types и focused scripts
+types/lint. Новые unit cases не требуются: важные assertions находятся в actual native/Desktop
+journeys. Старые CI запуски не отменять; новый опубликованный source проходит обычные проверки.
+
+#### Review плана и дальнейший scope
+
+- Авторский круг: отдельная review command implementation не нужна — qualified raw submit уже
+  существует. Убраны новый command coordinator, generic Session.control и отдельная suite.
+- Повторный source круг: Codex fallback нельзя объявлять равным Claude, OpenCode raw stdin branch
+  исходно исключён. Эти выводы уточняют baseline, не заменяют remaining actual acceptance.
+- P07 extension/skill consumption остаётся отдельным gate: текущие Desktop mutation fixtures
+  доказывают scoped file/native CLI changes, но используют другой management namespace либо
+  refusal-only metadata binaries. Для следующего шага нужен тот же captured configuration у UI
+  mutation и настоящего нового native launch. `NativeExtensionCoordinator`/`SkillCoordinator`
+  остаются владельцами; новый scanner и прямое редактирование native installation metadata запрещены.
