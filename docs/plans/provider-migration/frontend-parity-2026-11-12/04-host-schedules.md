@@ -7,6 +7,8 @@ Host build, focused Main/renderer TypeScript, changed production fast lint (0 er
 source-size и diff-check прошли. Это не native/Desktop acceptance.
 Нативные Claude/Codex, фактический limit gate и Desktop journey ещё открыты;
 UI пока сохраняет ограничение до проверки полного execution path.
+R5: подготовлен bounded native Host fixture для actual Claude/Codex; static TypeScript и lint проверены,
+но запуск native/GUI остаётся отдельным CI gate и не считается пройденным.
 Frontend baseline: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Stage 1 baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 Цель: сохранить нынешние schedule controls и режимы выполнения при выбранном Host.
@@ -269,3 +271,19 @@ Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b
   Это controlled Session проверки, не native acceptance. Дополнять их широким
   набором однотипных units не требуется; далее native Claude/Codex и Desktop journey
   через существующие TEST fixtures, затем снятие blanket Host UI restriction.
+
+## R5 — нативный one-shot без дополнительной unit-матрицы
+
+- `scheduled-run-host.native.ts` использует настоящий child Host, Claude SDK 0.3.305 и Codex 0.162.0;
+  локальный model oracle задаёт только ответы модели. Настоящий Bash/exec создаёт файл, а следующий запрос
+  обязан содержать результат исходного tool call. Проверяются выбранные model/effort, terminal и cleanup.
+- В том же конечном сценарии проверяются native Claude max-turns/low-budget, отказ неподдерживаемого Codex
+  limit до model request, active cancellation, отсутствие скрытых Team tasks и transcript persistence,
+  повтор original intent и cold read того же результата без нового native input.
+- Перед запуском проверяются clean immutable source HEAD, точный установленный provider archive/dist,
+  Host source/dist, native binary и private captured profile. Receipt связывает эти hashes и результат;
+  PASS требует и выполнения сценария, и cleanup, и неизменности исходных artifacts.
+- Общий archive verifier перенесён в существующие Host TEST fixtures, чтобы native test не импортировал
+  Desktop orchestration за пределами package root. Desktop использует тот же verifier через прежний API.
+- TypeScript и fast lint проверяют fixture локально. Actual native run выполняется штатным Linux CI;
+  Desktop Add/Edit/Pause/Resume/Run now/history и smart dispatch остаются следующей отдельной приёмкой.

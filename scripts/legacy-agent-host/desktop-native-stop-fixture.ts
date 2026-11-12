@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { readFile, readdir, realpath } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { assertOwnedCdpListener, command, processTable } from './desktop-backend-observations.ts';
@@ -8,37 +7,15 @@ import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/na
 import { desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import type { UiCdpPort } from './desktop-team-ui-smoke.ts';
+export {
+  readNativeProviderArtifact as readDesktopNativeProviderArtifact,
+  verifyNativeProviderArtifact as verifyDesktopNativeStopArtifact,
+} from '../../packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
 const object = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value as Record<string, unknown>;
 };
 const tick = () => new Promise<void>((done) => setTimeout(done, 100));
-export const desktopNativeProviderArtifact = Object.freeze({
-  path: 'vendor/provider-migration/codex-account-login-09c2859/agent-teams-provider-implementations-0.0.0.tgz',
-  sha256: '691a7a62cdd5a92e2edb120f2c409790c9ca16215495cdf9daa099b3b8748bd9',
-});
-export async function verifyDesktopNativeStopArtifact(
-  repo: string,
-  selected = desktopNativeProviderArtifact
-): Promise<void> {
-  const archive = join(repo, selected.path);
-  assert.equal(await fileDigest(archive), selected.sha256);
-  const providerRoot = await realpath(
-    join(repo, 'packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations')
-  );
-  const entries = execFileSync('/usr/bin/tar', ['-tf', archive], { encoding: 'utf8' })
-    .trim()
-    .split('\n')
-    .filter((path) => /^package\/dist\/.+\.js$/.test(path));
-  assert.ok(entries.length > 0);
-  for (const path of entries) {
-    assert.ok(!path.includes('..'));
-    assert.deepEqual(
-      await readFile(join(providerRoot, path.slice('package/'.length))),
-      execFileSync('/usr/bin/tar', ['-xOf', archive, path])
-    );
-  }
-}
 
 export async function prepareDesktopNativeStop(options: {
   cdp: UiCdpPort;
