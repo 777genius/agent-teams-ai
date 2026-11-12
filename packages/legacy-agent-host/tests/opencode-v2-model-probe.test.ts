@@ -16,7 +16,7 @@ const supported =
   ['linux', 'darwin', 'win32'].includes(process.platform) &&
   ['x64', 'arm64'].includes(process.arch) &&
   !(process.platform === 'linux' && process.arch === 'arm64');
-function fixture() {
+function fixture(model = 'TEST-model') {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-model-probe-')));
   const profile = runtimeMemberProfileSchema.parse({
     provider: 'opencode',
@@ -30,7 +30,7 @@ function fixture() {
     configRevision: 'TEST-revision',
     cwd: root,
     accountBinding: 'TEST-account',
-    model: 'TEST-model',
+    model,
     executable: { path: join(root, 'TEST-bun'), sha256: 'a'.repeat(64) },
     endpoint: 'http://127.0.0.1:19332',
     environment: Object.fromEntries(
@@ -67,7 +67,7 @@ function fixture() {
     profileId: management.profileId,
     configRevision: management.configRevision,
     providerId: 'TEST-provider',
-    modelId: 'TEST-model',
+    modelId: model,
   };
   return {
     root,
@@ -226,30 +226,49 @@ test(
 );
 
 test(
-  'saved V2 Default preserves the captured model and variant for the finite probe',
+  'saved V2 Default preserves simple and provider-prefixed native model IDs for the finite probe',
   { skip: !supported },
-  (t) => {
-    const f = fixture();
-    t.after(f.cleanup);
-    const input = {
-      launchId: 'TEST-launch',
-      rosterRevision: 'TEST-roster',
-      memberId: 'TEST-member',
-      model: '__provider_default__',
-      effort: 'high' as const,
-    };
-    const selected = applyTeamModelProbeSelection(f.profile, input);
-    assert.equal(selected.model, 'TEST-model');
-    const management = teamModelProbeProfile(selected);
-    assert.equal(management.provider, 'opencode');
-    if (management.provider !== 'opencode') throw Error('TEST expected OpenCode');
-    assert.equal(management.variant, 'high');
-    assert.deepEqual(management.nativeModel, {
-      providerId: 'TEST-provider',
-      modelId: 'TEST-model',
-    });
-    assert.throws(() => applyTeamModelProbeSelection(f.profile, { ...input, effort: 'low' }), {
-      reason: 'launch-option-unsupported',
-    });
+  async (t) => {
+    for (const model of ['TEST-model', 'TEST-provider/auto']) {
+      const f = fixture(model);
+      t.after(f.cleanup);
+      const input = {
+        launchId: 'TEST-launch',
+        rosterRevision: 'TEST-roster',
+        memberId: 'TEST-member',
+        model: '__provider_default__',
+        effort: 'high' as const,
+      };
+      const selected = applyTeamModelProbeSelection(f.profile, input);
+      const selectedModel = selected.model;
+      assert.equal(selectedModel, model);
+      if (typeof selectedModel !== 'string') throw Error('TEST expected captured model');
+      const management = teamModelProbeProfile(selected);
+      assert.equal(management.provider, 'opencode');
+      if (management.provider !== 'opencode') throw Error('TEST expected OpenCode');
+      assert.equal(management.variant, 'high');
+      assert.deepEqual(management.nativeModel, { providerId: 'TEST-provider', modelId: model });
+      for (const modelId of [selectedModel, 'TEST-provider/' + selectedModel]) {
+        const probe = createOpenCodeV2ModelProbe(management, { ...f.input, modelId }, () => true);
+        assert.deepEqual(readdirSync(f.root), [], 'Default probe preparation allocates no child or namespace');
+        assert.equal(await probe.close(), true);
+      }
+      for (const modelId of [
+        'auto',
+        'TEST-provider/foreign',
+        'foreign/' + selectedModel,
+        'TEST-provider/TEST-provider/' + selectedModel,
+      ])
+        assert.throws(
+          () => createOpenCodeV2ModelProbe(management, { ...f.input, modelId }, () => true),
+          { code: 'invalid' }
+        );
+      assert.equal(selected.model, model, 'native model identity remains unchanged');
+      assert.deepEqual(management.nativeModel, { providerId: 'TEST-provider', modelId: model });
+      assert.deepEqual(readdirSync(f.root), [], 'accepted and rejected preparation leave no effects');
+      assert.throws(() => applyTeamModelProbeSelection(f.profile, { ...input, effort: 'low' }), {
+        reason: 'launch-option-unsupported',
+      });
+    }
   }
 );

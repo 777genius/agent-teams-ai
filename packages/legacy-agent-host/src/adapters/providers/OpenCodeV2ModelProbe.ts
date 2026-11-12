@@ -48,10 +48,11 @@ export function createOpenCodeV2ModelProbe(
   )
     throw new ManagementCommandError('invalid');
   const { embedded, nativeModel } = profile;
-  const modelId = input.modelId.startsWith(nativeModel.providerId + '/')
-    ? input.modelId.slice(nativeModel.providerId.length + 1)
-    : input.modelId;
-  if (modelId !== nativeModel.modelId) throw new ManagementCommandError('invalid');
+  if (
+    input.modelId !== nativeModel.modelId &&
+    input.modelId !== `${nativeModel.providerId}/${nativeModel.modelId}`
+  )
+    throw new ManagementCommandError('invalid');
   const captured = managementDigest({ profile, commandId: input.commandId });
   const timeoutMs = profile.modelProbeTimeoutMs ?? 90000;
   const directories = new Map<string, { dev: bigint; ino: bigint }>();
