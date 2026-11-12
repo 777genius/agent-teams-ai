@@ -109,7 +109,11 @@ jobs:
         timeout-minutes: 20
         env:
           OPENCODE_V1_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: node packages/legacy-agent-host/tests/opencode-v1-version-runner.ts
+          AGENT_TEAMS_INSTALL_PROFILE: desktop
+          ELECTRON_SKIP_BINARY_DOWNLOAD: ''
+        run: |
+          node scripts/postinstall-electron.cjs
+          node packages/legacy-agent-host/tests/opencode-v1-version-runner.ts
       - name: Preserve native V1 version evidence
         if: always() && matrix.os == 'ubuntu-24.04'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

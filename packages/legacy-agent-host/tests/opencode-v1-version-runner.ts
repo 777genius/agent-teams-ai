@@ -3,8 +3,12 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { createRequire } from 'node:module';
 
+import { fileHash } from './fixtures/native-host.ts';
+import { loadNativeV1InstallSelector } from './fixtures/native-opencode-install-selection.ts';
+import type { NativeInstallMetadata } from './fixtures/native-opencode-install-selection.ts';
 import { verifyNativeV1VersionReceipt } from './opencode-v1-version-receipt.ts';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
 
@@ -25,11 +29,15 @@ await mkdir(evidence, { recursive: true });
 await Promise.all(['1.19.4', '1.19.5', 'latest'].map(selector =>
   rm(join(evidence, `native-v1-${selector}.json`), { force: true })));
 const build = await buildNativeV1Host(repo, sourceHead);
+const installSelection = await loadNativeV1InstallSelector(repo, sourceHead);
+const avx2 = /(^|\s)avx2(\s|$)/.test(await readFile('/proc/cpuinfo', 'utf8'));
+const nativePackage = avx2 ? 'opencode-linux-x64' : 'opencode-linux-x64-baseline';
 
 /** Bound trusted-registry metadata before parsing; resolve each tag exactly once. */
-async function metadata(name: string, selector: string): Promise<Record<string, unknown>> {
-  const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}/${selector}`, {
+async function metadata(name: string, selector: string | null = 'latest'): Promise<NativeInstallMetadata> {
+  const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}${selector === null ? '' : '/' + encodeURIComponent(selector)}`, {
     redirect: 'error', signal: AbortSignal.timeout(20_000),
+    ...(selector === null ? { headers: { Accept: 'application/vnd.npm.install-v1+json' } } : {}),
   });
   assert.equal(response.status, 200, 'official npm metadata must be available');
   assert.ok(response.body);
@@ -41,17 +49,20 @@ async function metadata(name: string, selector: string): Promise<Record<string, 
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      assert.ok(size <= 2 * 1024 * 1024, 'finite metadata budget');
+      assert.ok(size <= (selector === null ? 32 : 2) * 1024 * 1024, 'finite metadata budget');
       chunks.push(value);
     }
   } finally { await reader.cancel(); }
   const value: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'));
   assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value));
-  return value as Record<string, unknown>;
+  return value as NativeInstallMetadata;
 }
 
 for (const selector of ['1.19.4', '1.19.5', 'latest']) {
-  const selected = await metadata('opencode-ai', selector);
+  const nativeSelected = await installSelection.select('v1', null, [{ packageName: nativePackage }], metadata, selector);
+  assert.equal(nativeSelected.generation, 'v1');
+  assert.equal(nativeSelected.packageName, nativePackage);
+  const selected = await metadata('opencode-ai', nativeSelected.metadata.version);
   assert.equal(selected.name, 'opencode-ai');
   assert.equal(typeof selected.version, 'string');
   const version = selected.version as string;
@@ -82,20 +93,30 @@ for (const selector of ['1.19.4', '1.19.5', 'latest']) {
   assert.equal(lock.packages['node_modules/opencode-ai'].version, version);
   assert.equal(lock.packages['node_modules/opencode-ai'].integrity, dist.integrity,
     'moving registry metadata must not replace the exact selected root bytes');
+  assert.equal(lock.packages[`node_modules/${nativePackage}`].integrity, nativeSelected.metadata.dist?.integrity,
+    'the exact native package matches the original generation/platform install selection');
   const receiptPath = join(evidence, `native-v1-${selector}.json`);
+  const activeUpdate = selector === '1.19.4';
+  const electronPackagePath = activeUpdate ? createRequire(import.meta.url).resolve('electron/package.json') : undefined;
+  const expectedUpdate = electronPackagePath ? {
+    electronVersion: String(JSON.parse(await readFile(electronPackagePath, 'utf8')).version),
+    electronSha256: await fileHash(await realpath(join(dirname(electronPackagePath), 'dist/electron'))),
+  } : undefined;
   await assertNativeV1Build(repo, sourceHead, build);
+  await installSelection.assertUnchanged();
   execFileSync(process.execPath, ['--test', join(import.meta.dirname, 'opencode-v1-version-host.native.ts')], {
-    cwd: repo, timeout: 240_000, stdio: 'inherit', env: {
+    cwd: repo, timeout: activeUpdate ? 480_000 : 240_000, stdio: 'inherit', env: {
       ...environment, OPENCODE_V1_VERSION_HOST_GO: '1', OPENCODE_V1_TEST_SOURCE_HEAD: sourceHead,
       OPENCODE_V1_TEST_EXPECTED_VERSION: version, OPENCODE_V1_TEST_PACKAGE_PREFIX: prefix,
       OPENCODE_V1_TEST_RECEIPT: receiptPath,
       OPENCODE_V1_TEST_HOST_SOURCE_DIGEST: build.hostSourceDigest,
       OPENCODE_V1_TEST_HOST_DIST_DIGEST: build.hostDistDigest,
       OPENCODE_V1_TEST_PROVIDER_DIGEST: build.providerDigest,
+      ...(activeUpdate ? { OPENCODE_V1_TEST_ACTIVE_UPDATE: '1' } : {}),
     },
   });
   await assertNativeV1Build(repo, sourceHead, build);
-  verifyNativeV1VersionReceipt(JSON.parse(await readFile(receiptPath, 'utf8')), sourceHead, version, build);
+  verifyNativeV1VersionReceipt(JSON.parse(await readFile(receiptPath, 'utf8')), sourceHead, version, build, expectedUpdate);
   await rm(prefix, { recursive: true, force: true });
   console.log(`TEST V1 ${selector} resolved once to ${version}: native Host receipt verified`);
 }

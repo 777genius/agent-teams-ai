@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
-import { mkdir, mkdtemp, readFile, realpath, stat, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, mkdtemp, readFile, readdir, readlink, realpath, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { test } from 'node:test';
@@ -12,18 +12,63 @@ import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import { record } from './fixtures/native-claude-team/model.ts';
 import { fileHash, startHost, tick, treeHash } from './fixtures/native-host.ts';
 import { CONTEXT_MARKER, startOpenCodeModel } from './fixtures/native-opencode-team/model.ts';
+import { prepareNativeOpenCodeInstaller } from './fixtures/native-opencode-installer.ts';
 import { assertNativeV1Build } from './opencode-v1-version-source.ts';
 
 const enabled = process.env.OPENCODE_V1_VERSION_HOST_GO === '1';
+const activeUpdate = process.env.OPENCODE_V1_TEST_ACTIVE_UPDATE === '1';
+const jsonHash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+
+async function processBirth(pid: number) {
+  const text = await readFile(`/proc/${pid}/stat`, 'utf8');
+  const fields = text.slice(text.lastIndexOf(') ') + 2).trim().split(/\s+/);
+  assert.match(fields[19]!, /^\d+$/);
+  assert.notEqual(fields[0], 'Z');
+  return { pid, parent: Number(fields[1]), birth: fields[19]! };
+}
+async function originalNativeIdentity(pid: number, parent: number, binary: string, sha256: string) {
+  const before = await processBirth(pid);
+  assert.equal(before.parent, parent);
+  assert.equal(await readlink(`/proc/${pid}/exe`), binary);
+  const [named, loaded] = await Promise.all([stat(binary, { bigint: true }), stat(`/proc/${pid}/exe`, { bigint: true })]);
+  assert.equal(named.dev, loaded.dev); assert.equal(named.ino, loaded.ino);
+  assert.equal(await fileHash(`/proc/${pid}/exe`), sha256);
+  assert.equal(await fileHash(binary), sha256);
+  assert.deepEqual(await processBirth(pid), before, 'original native birth remains current across observation');
+  return { ...before, device: named.dev.toString(), inode: named.ino.toString(), executableSha256: sha256 };
+}
+async function originalNativeChild(parent: number, binary: string, sha256: string) {
+  const matches: number[] = [];
+  for (const name of await readdir('/proc')) {
+    if (!/^\d+$/.test(name)) continue;
+    try {
+      const current = await processBirth(Number(name));
+      if (current.parent === parent && await readlink(`/proc/${name}/exe`) === binary) matches.push(current.pid);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT' && !(error instanceof assert.AssertionError)) throw error;
+    }
+  }
+  assert.equal(matches.length, 1, 'only the original Host child may supply the native observation');
+  return originalNativeIdentity(matches[0]!, parent, binary, sha256);
+}
+async function runtimeStatePath(root: string): Promise<string> {
+  const directory = join(root, 'store/runtime-sessions');
+  const members = await readdir(directory, { withFileTypes: true });
+  assert.equal(members.length, 1); assert.equal(members[0]!.isDirectory(), true);
+  const files = (await readdir(join(directory, members[0]!.name))).filter(name => /^[a-f0-9]{64}\.json$/.test(name));
+  assert.equal(files.length, 1); assert.match(files[0]!, /^[a-f0-9]{64}\.json$/);
+  return join(directory, members[0]!.name, files[0]!);
+}
 
 test('selected stable V1 executes native tools through Host and retains cold receipts', {
-  timeout: 180_000, skip: !enabled,
+  timeout: activeUpdate ? 420_000 : 180_000, skip: !enabled,
 }, async () => {
   assert.equal(process.platform, 'linux');
   assert.equal(process.arch, 'x64');
   assert.equal(process.version, 'v24.21.0', 'use the pinned TEST Node, not ambient developer Node');
   const sourceHead = process.env.OPENCODE_V1_TEST_SOURCE_HEAD ?? '';
   const version = process.env.OPENCODE_V1_TEST_EXPECTED_VERSION ?? '';
+  if (activeUpdate) assert.equal(version, '1.19.4');
   assert.match(sourceHead, /^[a-f0-9]{40}$/);
   assert.match(version, /^1\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/);
   assert.ok(Number.isSafeInteger(Number(version.split('.')[1])) && Number(version.split('.')[1]) >= 16);
@@ -56,6 +101,8 @@ test('selected stable V1 executes native tools through Host and retains cold rec
   const steps: string[] = [];
   let host: ReturnType<typeof startHost> | undefined;
   let model: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
+  let installer: Awaited<ReturnType<typeof prepareNativeOpenCodeInstaller>> | undefined;
+  let managedUpdate: Record<string, unknown> | undefined;
   const hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
   let passed = false;
   let cleanup = false;
@@ -87,7 +134,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     assert.equal(locked.version, version);
     assert.match(locked.integrity, /^sha512-[A-Za-z0-9+/]+={0,2}$/);
     nativeIntegrity = locked.integrity;
-    const binary = await realpath(join(nativeRoot, 'bin/opencode'));
+    let binary = await realpath(join(nativeRoot, 'bin/opencode'));
     assert.ok(binary.startsWith(nativeRoot + sep));
     const nativeStat = await stat(binary);
     assert.ok(nativeStat.isFile() && nativeStat.size > 0 && nativeStat.size <= 512 * 1024 * 1024,
@@ -100,6 +147,24 @@ test('selected stable V1 executes native tools through Host and retains cold rec
       maxBuffer: 1024, encoding: 'utf8',
     }).trim();
     assert.equal(nativeVersion, version, 'actual native executable reports the selected stable release');
+    if (activeUpdate) {
+      const runtimeRoot = join(root, 'userData/data/runtimes/opencode');
+      const selectedBinary = join(runtimeRoot, 'versions', version, nativePackage, 'opencode');
+      await mkdir(dirname(selectedBinary), { recursive: true, mode: 0o700 });
+      await copyFile(binary, selectedBinary); await chmod(selectedBinary, 0o755);
+      binary = await realpath(selectedBinary);
+      assert.equal(await fileHash(binary), nativeDigest);
+      await writeFile(join(runtimeRoot, 'current.json'), JSON.stringify({ schemaVersion: 1,
+        version, platformPackage: nativePackage, binaryPath: binary, integrity: nativeIntegrity,
+        installedAt: new Date(0).toISOString(),
+      }) + '\n', { mode: 0o600, flag: 'wx' });
+      installer = await prepareNativeOpenCodeInstaller({ repo, sourceHead, root, node, environment,
+        oldBinary: binary, oldVersion: version });
+      const selected = await installer.run('probe');
+      assert.equal(record(selected.before).source, 'app-managed');
+      assert.equal(record(selected.before).binaryPath, binary);
+      assert.deepEqual(selected.manifestAfter, selected.manifestBefore);
+    }
     nodeDigest = await fileHash(node);
     hostSourceDigest = await treeHash(join(pkg, 'src'), '.ts');
     hostDistDigest = await treeHash(join(pkg, 'dist'), '.js');
@@ -158,7 +223,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
         nativeOptions: { providerId: 'TEST-local', agent: 'TEST-member',
           instructions: `${CONTEXT_MARKER}. You are carol of test-native-team working only in ${join(root, 'workspace')}.` },
         limits: { queuedInputs: 2, inputBytes: 8192, outputBytes: 1_000_000,
-          outputEvents: 1500, pendingInteractions: 4, timeoutMs: 45_000 },
+          outputEvents: 1500, pendingInteractions: 4, timeoutMs: activeUpdate ? 180_000 : 45_000 },
       }] },
     };
     const profilePath = join(root, 'profile.json');
@@ -174,6 +239,18 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     assert.equal(opened.ok, true);
     assert.equal(record(opened.value).nativeReady, true);
     steps.push('original_host_native_runtime_and_mcp_ready');
+    let checkpoint: Record<string, unknown> | undefined;
+    let native: Awaited<ReturnType<typeof originalNativeChild>> | undefined;
+    if (installer) {
+      assert.ok(host.child.pid);
+      native = await originalNativeChild(host.child.pid, binary, nativeDigest);
+      const result = await host.rpc('runtime.checkpoint', envelope('TEST-before-update-checkpoint', {
+        memberId: 'carol-id', checkpointId: 'TEST-before-update',
+      }));
+      assert.equal(result.ok, true); checkpoint = record(result.value);
+      assert.equal(checkpoint.status, 'published');
+      assert.match(String(checkpoint.reference), /^cp1-[a-f0-9]{64}$/);
+    }
     const command = envelope('TEST-original-message', {
       operation: 'message.send', payload: { to: 'carol', text: 'OPENCODE_TEAM_ONE' },
     });
@@ -184,7 +261,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     assert.equal(typeof inputId, 'string');
     const replies = new Set<string>();
     let terminal = false;
-    const deadline = Date.now() + 75_000;
+    const deadline = Date.now() + (activeUpdate ? 240_000 : 75_000);
     while (Date.now() < deadline) {
       assert.deepEqual(model.failures, []);
       const result: Record<string, unknown> = await host.rpc('runtime.read', envelope('TEST-read', { memberId: 'carol-id' }));
@@ -198,6 +275,54 @@ test('selected stable V1 executes native tools through Host and retains cold rec
         assert.equal(typeof interaction.interactionRef, 'string');
         const ref = interaction.interactionRef as string;
         assert.ok(!replies.has(ref), 'never retry an uncertain permission reply');
+        if (installer && !managedUpdate) {
+          assert.ok(native && checkpoint && host.child.pid);
+          assert.equal(replies.size, 0);
+          const statePath = await runtimeStatePath(root);
+          const checkpointPath = join(root, 'store/runtime-checkpoints', String(checkpoint.reference) + '.json');
+          const snapshot = async (state: Record<string, unknown>) => {
+            const durable = record(JSON.parse(await readFile(statePath, 'utf8')));
+            assert.equal(typeof durable.sessionRef, 'string');
+            assert.equal(durable.phase, 'allocated'); assert.equal(durable.custody, 'owned');
+            assert.equal(record(durable.config).sessionId, `TEST-session-${namespace}`);
+            return { native: await originalNativeIdentity(native!.pid, host!.child.pid!, binary, nativeDigest!),
+              binarySha256: await fileHash(binary), profileSha256: await fileHash(profilePath),
+              sessionSha256: jsonHash(durable.sessionRef), runtimeStateSha256: await fileHash(statePath),
+              projectionSha256: jsonHash(state), checkpointSha256: await fileHash(checkpointPath) };
+          };
+          const before = await snapshot(state);
+          assert.deepEqual(before.native, native);
+          const updated = await installer.run('install');
+          const afterRead: Record<string, unknown> = await host.rpc('runtime.read', envelope('TEST-after-update-read', { memberId: 'carol-id' }));
+          assert.equal(afterRead.ok, true);
+          const after = await snapshot(record(afterRead.value));
+          assert.deepEqual(after, before, 'explicit managed update cannot replace the admitted native session or pending input');
+          const kept: Record<string, unknown> = await host.rpc('runtime.checkpoint', envelope('TEST-before-update-checkpoint', {
+            memberId: 'carol-id', checkpointId: 'TEST-before-update',
+          }));
+          assert.equal(kept.ok, true); assert.deepEqual(kept.value, checkpoint);
+          const selected = record(updated.after), manifest = record(updated.manifestAfter);
+          assert.equal(selected.source, 'app-managed'); assert.equal(manifest.version, selected.version);
+          assert.notEqual(selected.version, version);
+          assert.equal(manifest.platformPackage, nativePackage);
+          assert.equal(manifest.binaryPath, selected.binaryPath);
+          const updatedBinary = await realpath(String(selected.binaryPath));
+          assert.ok(updatedBinary.startsWith(join(installer.userData, 'data/runtimes/opencode/versions') + sep));
+          assert.notEqual(updatedBinary, binary);
+          assert.equal(execFileSync(updatedBinary, ['--version'], {
+            cwd: join(root, 'workspace'), env: environment, timeout: 15_000, maxBuffer: 1024, encoding: 'utf8',
+          }).trim(), selected.version);
+          assert.deepEqual(model.failures, []);
+          managedUpdate = { before, after, fromVersion: version, toVersion: selected.version,
+            source: selected.source, updatedBinarySha256: await fileHash(updatedBinary),
+            updatedIntegrity: manifest.integrity,
+            oldManifestSha256: jsonHash(updated.manifestBefore), newManifestSha256: jsonHash(updated.manifestAfter),
+            installerBundleSha256: installer.bundleSha256, installerSourceSha256: installer.sourceSha256,
+            electronVersion: installer.electronVersion, electronSha256: installer.electronSha256,
+            installerProcesses: installer.processes,
+          };
+          steps.push('managed_update_preserved_pending_native_session');
+        }
         replies.add(ref);
         const granted: Record<string, unknown> = await host.rpc('runtime.interaction', envelope('TEST-once', {
           memberId: 'carol-id', expectedGeneration: '1', inputId, interactionRef: ref,
@@ -212,6 +337,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
       await tick();
     }
     assert.equal(terminal, true);
+    if (activeUpdate) assert.ok(managedUpdate, 'the baseline must execute the actual managed update while input is pending');
     assert.equal(replies.size, 1);
     assert.deepEqual(model.failures, []);
     assert.equal(model.observations.length, 8, 'seven actual tools followed by one terminal model response');
@@ -260,6 +386,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     assert.equal(await treeHash(join(pkg, 'src'), '.ts'), hostSourceDigest);
     assert.equal(await treeHash(join(pkg, 'dist'), '.js'), hostDistDigest);
     await assertNativeV1Build(repo, sourceHead, expectedBuild);
+    await installer?.assertUnchanged();
     steps.push('cold_receipt_readback_without_native_replay_or_source_mutation');
     passed = true;
   } catch (error) { failure = true; primaryError = error; }
@@ -268,6 +395,8 @@ test('selected stable V1 executes native tools through Host and retains cold rec
       if (host) { await host.close(); hosts.push(host.facts()); host = undefined; }
     } catch (error) { cleanupErrors.push(error); }
     try { await model?.close(); }
+    catch (error) { cleanupErrors.push(error); }
+    try { await installer?.close(); }
     catch (error) { cleanupErrors.push(error); }
     cleanup = cleanupErrors.length === 0;
     try {
@@ -280,6 +409,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
         hosts: hosts.map(({ exitCode, signalCode, stdoutValid }) => ({ exitCode, signalCode, stdoutValid })),
         modelOrigin: 'localhost-scripted', modelRequests: model?.observations.length ?? 0,
         vendorAuthQualified: false, desktopQualified: false, releaseQualified: false,
+        ...(managedUpdate ? { managedUpdate } : {}),
       }, null, 2) + '\n', { mode: 0o600 });
     } catch (error) { cleanupErrors.push(error); }
   }
