@@ -290,7 +290,7 @@ Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b
 
 ## R6 — Desktop controls через существующий native harness
 
-- Новый finite `native-schedule-ui` mode переиспользует `desktop-backend-smoke`, existing private Host fixture,
+- Узкий `LEGACY_DESKTOP_SCHEDULE_UI=1` variant существующего `native-launch-ui` переиспользует `desktop-backend-smoke`, existing private Host fixture,
   CDP Input controls и `native-claude-team/model.ts`. Один optional TEST script отвечает за schedule prompts;
   второй app runner, обёртка над production Scheduler или подмена renderer store не нужны.
 - Fixture заранее сохраняет один прежний one-shot record без Host target. Пользовательский Edit/Save в реальном
