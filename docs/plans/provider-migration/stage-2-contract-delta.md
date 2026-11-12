@@ -1,0 +1,580 @@
+# Stage 2 — S2.0 consumer contract delta (4 November 2026)
+
+Status: **source/readiness audit, not integration or E2E acceptance**. This records only
+the existing app operations which new Orchestrator and Agent Runtime implementations
+must satisfy; it does not prescribe their internal storage or transport design.
+
+Exact reviewed sources:
+
+- Stage 1 Desktop contract: [`operations.ts`](https://github.com/777genius/agent-teams-ai/blob/999c468e3f4f09a5e5eb1655f6b97a64e046c55e/src/features/agent-backend/contracts/operations.ts);
+  [`BackendOwnerRouter`](https://github.com/777genius/agent-teams-ai/blob/999c468e3f4f09a5e5eb1655f6b97a64e046c55e/src/features/agent-backend/main/application/BackendOwnerRouter.ts).
+- Orchestrator main `981dd836ca3d35b764561bdc11dc2e0544d83416`:
+  [README/status](https://github.com/agent-teams-ai/agent-teams-orchestrator/blob/981dd836ca3d35b764561bdc11dc2e0544d83416/README.md)
+  explicitly identifies architecture definition, not a qualified Team/Task/Message production service.
+  **Upstream correction (5 Nov 2026):** Orchestrator `main` advanced to
+  [`b33005a53792`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/b33005a537928eb28a8d2c66944f1ff2aacc4161)
+  through merged [PR #95](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/95).
+  This corrects only existing sandbox-manifest PostgreSQL checked-out client
+  release custody; six typed deterministic regression cases and the actual
+  PostgreSQL restart/disconnect fixture passed on PR HEAD `9c5bb87a4295` in
+  [Architecture CI](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/41940145482)
+  with Node 24, macOS and Windows checks. Separate `main` push
+  [Architecture](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/41941309167)
+  and [Docs](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/41941309660)
+  must be judged on their own results. Later ReviewRouter attempts on the final
+  PR revision were incomplete, not an independent final-head approval.
+  Neither this sandbox fix nor its CI qualifies a production Team/Task/Message
+  writer, OD-035/OD-040, or any M01–M19 target-core replacement.
+  **Authoritative gate refresh (6 Nov 2026):** Orchestrator
+  [`main=a34587b313e6`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/a34587b313e656eeb43d755b4a4f08c40dff2116)
+  now has owner-accepted [ADR-0116](https://github.com/agent-teams-ai/agent-teams-orchestrator/blob/a34587b313e656eeb43d755b4a4f08c40dff2116/docs/decisions/0116-native-temporal-for-fully-local-durable-workflows.md):
+  **OD-035 is resolved** (full native Temporal with PostgreSQL), not an open
+  engine-selection fork. [OD-021](https://github.com/agent-teams-ai/agent-teams-orchestrator/blob/a34587b313e656eeb43d755b4a4f08c40dff2116/docs/open-decisions/OD-021-local-supervisor-lifecycle-and-distribution.md)
+  and [OD-040](https://github.com/agent-teams-ai/agent-teams-orchestrator/blob/a34587b313e656eeb43d755b4a4f08c40dff2116/docs/open-decisions/OD-040-fully-local-package-materialization.md)
+  remain open, and all five broad production implementation gates remain
+  `In review`. Accepted engine choice is **not** implemented/qualified Host,
+  native packaging, owner-approved materialization or Desktop M01–M19 parity;
+  see the factual [Issue #96 gate correction](https://github.com/agent-teams-ai/agent-teams-orchestrator/issues/96#issuecomment-6684998577).
+
+  **Follow-up (5 Nov 2026):** [Orchestrator PR #97](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/97)
+  was squash-merged to `main` as [`5a8496ce7119`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/5a8496ce711909e381c5bc817fff5500be9a1761).
+  Its one-file ADR-0103 *synthetic* conformance fixture checks Project-isolated
+  same-request receipts, foreign Task access, and strict CreateTask payload shape.
+  Exact PR HEAD `d575e16158d7` passed
+  [Architecture](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42043160740),
+  [Docs](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42043161267),
+  and [Dependency Review](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42043160684).
+  This fixture does **not** create or qualify a production Team/Task/Message API.
+  **M11 sandbox Activity validation (9 Nov 2026, not production):**
+  [Orchestrator Draft #100](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/100)
+  at exact HEAD [`ca0333f30e8f`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/ca0333f30e8f7a44422068c1aea066c3e2686be1)
+  keeps the existing Activity read/ingress API fail-closed for uncloneable
+  authority contexts and request payloads (throwing accessors, revoked
+  proxies, functions and symbols), and rejects lone UTF-16 surrogates in
+  Activity evidence before authorization/storage while preserving valid astral
+  pairs. The [native PostgreSQL 16 run](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42745994896)
+  passed all 4 jobs (Node 24/26 direct HEAD and merge-tree), including the new
+  negative/positive Unicode test (11 PASS / 0 FAIL on both direct HEAD jobs).
+  [Architecture](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42745994806)
+  passed 4/4 across Linux, Node 24, macOS and Windows; Dependency Review
+  passed. One Codex review on this exact SHA reported no major findings;
+  two prior independent invocations covered the older `300ccf92` revision,
+  not this commit or full security certification.
+  Mandatory [trusted Docs](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42745995479)
+  remains **FAILURE** because the EF 2.1.0 dependency
+  graph has no exact qualified five-package cohort
+  ([owning issue #415](https://github.com/agent-teams-ai/.github/issues/415));
+  parent Activity [#85](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/85)
+  is not mergeable with current main. This narrow sandbox proof does **not**
+  establish a production Activity/Team API or M11 parity.
+- Agent Runtime main `4e12b68b751d0b6fbb1e629235f789d01aa910b2`:
+  [readiness register](https://github.com/agent-teams-ai/agent-runtime/blob/4e12b68b751d0b6fbb1e629235f789d01aa910b2/docs/architecture/readiness.md)
+  accepts an interactive contract but **not** a production Host or the required end-to-end interactive adapter.
+  **Update (5 Nov 2026):** upstream `main` advanced to
+  [`92934d718a15`](https://github.com/agent-teams-ai/agent-runtime/commit/92934d718a159dacfa2ef9ca6efbd6d70ce60f9a)
+  through [PR #253](https://github.com/agent-teams-ai/agent-runtime/pull/253), qualifying
+  fail-closed PostgreSQL interactive-session `CHECK` validation (exact-head CI and
+  independent review). The prior public Host readiness classification does
+  **not** change; this is not a new-core runtime adapter or V2 E2E pass.
+  **Further durability follow-up (5 Nov 2026):** [Runtime PR #254](https://github.com/agent-teams-ai/agent-runtime/pull/254)
+  was squash-merged to `main` as [`ab0387c02fe7`](https://github.com/agent-teams-ai/agent-runtime/commit/ab0387c02fe75ed0c9bb456caaad9a6d2723795b).
+  It holds PostgreSQL checked-out client custody through release and preserves
+  operation `UNKNOWN` without replay after a lost COMMIT acknowledgment;
+  a disposable PostgreSQL 18 fixture read back the original committed record.
+  Exact PR HEAD `413f601b4692` passed
+  [full CI](https://github.com/agent-teams-ai/agent-runtime/actions/runs/41972656175),
+  [Node 24/26](https://github.com/agent-teams-ai/agent-runtime/actions/runs/41972656038),
+  and [Docs](https://github.com/agent-teams-ai/agent-runtime/actions/runs/41972656582).
+  This **does not** qualify an interactive production Host or any M01–M19 new-core parity.
+  **Admitted-boundary follow-up (7 Nov 2026):** [Runtime Draft #258](https://github.com/agent-teams-ai/agent-runtime/pull/258)
+  at exact HEAD [`c70f90bd04fc`](https://github.com/agent-teams-ai/agent-runtime/commit/c70f90bd04fc2e14219ecb80463604812fa8e315)
+  rejects missing, accessor/proxy and replaced HTTP broker-session methods
+  before native ingress; it captures tested callables but **does not**
+  authenticate the owners or attach a production route, resolver, evidence
+  store or credentialed interactive Host. [Full CI #42372257164](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42372257164)
+  completed SUCCESS after **one targeted AE3 retry** (1,566 PASS / 0 FAIL /
+  13 SKIP on the retried job); [Node 24/26](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42372257106)
+  and [trusted Docs](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42372257410)
+  completed SUCCESS on that HEAD. The original AE3 25-ms deadline failure
+  remains unrooted; independent review is INCOMPLETE 0/2 and CodeQL has no
+  confirmed receipt. #258 stays Draft; the selected Docker/Linux Codex route
+  registry tuple is **not** production broker-session composition or Desktop
+  S2.1/M01–M19 parity.
+  **Real Host adapter receiver conformance (7 Nov 2026, subsequent Runtime Draft #258 HEAD):**
+  [`5c501608cbe9`](https://github.com/agent-teams-ai/agent-runtime/commit/5c501608cbe93daf07a1dff692d89b22f50d9adb)
+  exercised the actual private-state `NodeHttpEgressBoundaryIds` owner through the
+  retained authenticated HTTP broker session and completed one disposable request.
+  Exact-head [Agent Execution AE1](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42398641144/job/128481709781)
+  recorded the added test `passed` (1,457 PASS / 0 FAIL / 21 SKIP).
+  [Full CI](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42398641144)
+  completed SUCCESS (19 executed jobs, one policy SKIP);
+  [Node 24/26](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42398641049)
+  and [trusted Docs](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42398641319)
+  also completed SUCCESS. This is a real **adapter receiver** exercised inside
+  disposable broker fixtures, **not** a production owner-bound Host,
+  credentialed native turn, independent review, CodeQL, or Desktop S2.1 parity.
+  [Exact-head PR evidence](https://github.com/agent-teams-ai/agent-runtime/pull/258#issuecomment-6711079632).
+
+  **Native PostgreSQL Host A/B evidence (8 Nov 2026):**
+  [Runtime Draft #259](https://github.com/agent-teams-ai/agent-runtime/pull/259)
+  exact HEAD [`0f2c9a298154`](https://github.com/agent-teams-ai/agent-runtime/commit/0f2c9a298154d7400183761014417a62b3693926)
+  composed the actual private authenticated Host session, Node boundary IDs,
+  trusted resolver and PostgreSQL HTTP evidence owner on a disposable PostgreSQL
+  18 database. [Native E2E #42458658192](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42458658192)
+  passed **34/34 on each of Node 24/26, zero failures/skips**, with an
+  exact-HEAD checkout. [Full CI #42458658246](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42458658246),
+  [Node matrix #42458658174](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42458658174)
+  and [trusted Docs #42458658383](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42458658383)
+  completed SUCCESS. It tests SQL receipt retention across a new pool,
+  lost-COMMIT-ACK / operation UNKNOWN, automatic bearer revocation, foreign
+  Host bearer rejection and an independently minted bearer with a **different**
+  captured operation ID. DNS and provider transport are deterministic TEST
+  fixtures; the fixture's journal always returns `consumed`, and it installs
+  no production `routeFirstWrite` owner. Thus a second Host using the
+  **same** captured durable identity and a fresh valid bearer is **NOT
+  qualified as replay-safe**. A storage receipt written after provider effects
+  is not pre-dispatch idempotency authority. This missing guarantee is now
+  **reproduced**, not only inferred: isolated [Runtime RED Draft #260](https://github.com/agent-teams-ai/agent-runtime/pull/260)
+  at [`65dd4d38`](https://github.com/agent-teams-ai/agent-runtime/commit/65dd4d3880ca169ca9f9700e8310a9c30de503ef)
+  launches Host B as a **separate Node OS process** (not merely another
+  JS session), with its own PostgreSQL 18 pool and valid bearer, after Host
+  A's lost-COMMIT-ACK. [Exact-head Node 24/26 native E2E](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42506721779)
+  each report **33 PASS, 1 deliberate RED FAIL, 0 skipped**; both logs verify
+  checkout of `65dd4d38`. The test asserts immutable original SQL receipt
+  **before** its aggregate negative verdict, which reports all three observed
+  provider-fixture violations: **duplicate dispatch 1 (required 0)**,
+  **extra provider materialization 1 (required 0)** and **second completed
+  outcome true (required false)**. The negative deliberately stays RED;
+  deterministic upstreams do not demonstrate a production exploit. [Owning gap #257](https://github.com/agent-teams-ai/agent-runtime/issues/257)
+  still requires real interprocess intent/route admission and reconciliation
+  before claiming M08 or S2.1. ReviewRouter reported **INCOMPLETE 0/2**;
+  the recorded scoped author review is not an independent approval and CodeQL
+  has no confirmed exact-HEAD receipt. #259 remains Draft; no production Host,
+  owner replacement, M01–M19 parity, or Desktop cutover is authorized.
+  **Additional bounded M08 SQL feasibility (8 Nov 2026):** Runtime
+  [stacked Draft #260](https://github.com/agent-teams-ai/agent-runtime/pull/260)
+  [`6e48a1f81ee7`](https://github.com/agent-teams-ai/agent-runtime/commit/6e48a1f81ee7163342c6f1f7dc8dd034f132dcee)
+  tests a disposable pre-effect PostgreSQL unique-claim spike: two distinct
+  SQL backends admit exactly one winner, and a second claim after COMMIT with
+  intentionally lost application ACK remains blocked. [Native PG18 Node
+  24/26](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42523220834)
+  reached the final unchanged M08 RED oracle on each job (33 PASS, 1 deliberate
+  FAIL, 0 skipped). This is **only SQL feasibility**, not a production
+  admission/route/generation owner; the independent Host B still redispatches.
+  [Exact-head limitations](https://github.com/agent-teams-ai/agent-runtime/pull/260#issuecomment-6727117034).
+  **Pre-effect abort proof (8 Nov 2026):** A later Runtime #260 TEST-only
+  [commit `2c1e5a7d`](https://github.com/agent-teams-ai/agent-runtime/commit/2c1e5a7db5c7e737c4ff3d7111f3113bb663197b)
+  terminates an actual PostgreSQL backend holding an **uncommitted** unique claim,
+  then proves that a second backend can reserve the now-aborted intent once,
+  with further reservations denied. The [native PG18 E2E
+  #42527429133](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42527429133)
+  checked out that exact source on Node 24 and 26: each completed the new
+  SQL-only crash exercise and reached the unchanged cross-process Host M08
+  security oracle (**33 PASS, 1 deliberate RED FAIL, zero skips**). Neither
+  provider dispatch nor credential materialization occurs in this SQL-only
+  rollback case; it cannot authorize retries for uncertain external effects.
+  **Post-COMMIT backend crash qualification (8 Nov 2026 UTC):**
+  Runtime [TEST-only #260 HEAD `e865666`](https://github.com/agent-teams-ai/agent-runtime/commit/e865666d2a5e85abb827993cc5105c7cfa9cedd6)
+  separately commits a claim, terminates that actual PostgreSQL backend, then
+  confirms from a different connection that the original owner remains intact
+  and a new claim is refused. [Exact-head PG18 Node 24/26
+  #42530733914](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42530733914)
+  each reached the unchanged Host M08 failure (**33 PASS, 1 deliberately RED
+  FAIL, zero skips**), proving only this SQL fixture executed before that failure.
+  **Operation identity regression (9 Nov 2026):** The initial disposable SQL
+  spike incorrectly included attempt and request in its unique claim key,
+  permitting a fresh attempt or changed payload to reserve the same UNKNOWN
+  operation again. Runtime #260 [TEST-only `c693c066`](https://github.com/agent-teams-ai/agent-runtime/commit/c693c06613ace4950b9929c6b7480f734b0a7005)
+  now keys this isolated claim by captured scope plus stable operation, and
+  retains original attempt and request fingerprint as immutable readback evidence.
+  [Exact-head real PostgreSQL 18 #42536846605](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42536846605)
+  on Node 24 and 26 completed the SQL assertions before the unchanged cross-process
+  Host-B **RED** oracle (each 33 PASS, 1 deliberate FAIL, 0 skipped):
+  new attempt and drifted request cannot reclaim UNKNOWN, while a distinct
+  operation and foreign scope remain independently admissible. These are
+  disposable SQL semantics only; operation-level effect identity, generation,
+  credential/route authority and production Host admission remain unqualified.
+  **Separate credential-render proof (9 Nov 2026 UTC):** Runtime
+  [TEST-only commit `b68c7ae`](https://github.com/agent-teams-ai/agent-runtime/commit/b68c7ae6b54ab66f7081e331287a829061f015bb)
+  extends the existing independent-OS-process Host-B RED oracle to measure
+  actual credential rendering separately from Provider Access materialization.
+  [Direct-HEAD PG18 Node 24/26 #42547632942](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42547632942)
+  checked out `b68c7ae` explicitly and each reported 33 PASS, 1 deliberate
+  RED FAIL, zero skips: duplicate dispatch=1, materialization request=1,
+  credential render=1 and second completed outcome=true, where all four must
+  be zero/false. Original PostgreSQL receipt remained immutable. This is a
+  deterministic TEST transport with actual PostgreSQL and a separate Host OS
+  process, not proof of a production-provider exploit or a qualified fix.
+  There is still no installed Runtime pre-effect admission owner.
+  The existing synchronous `HostHttpConsumptionJournal.consume()` and
+  `routeFirstWrite` first-byte lease must not be quietly replaced with an
+  asynchronous SQL call. Production authority and reconciliation stay HOLD.
+  **Pending-claim contention (9 Nov 2026):** Runtime #260 [direct-HEAD
+  `e988aaf7`](https://github.com/agent-teams-ai/agent-runtime/commit/e988aaf7fdab00c8481c802bb9b551ba88920794)
+  proves on actual PG18 that a rival SQL backend receives lock-timeout
+  SQLSTATE `55P03` while the first admission transaction is uncommitted;
+  after COMMIT its attempt/request drift cannot reclaim the intent, while
+  original owner readback remains stable. [Node 24/26 native E2E
+  #42551873097](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42551873097)
+  each reports 33 PASS and the unchanged intentional M08 RED failure;
+  [full CI](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42551873228)
+  and [Node compatibility](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42551873136)
+  completed SUCCESS. This qualifies TEST-only SQL contention, **not** a Host pre-effect fence.
+  **Cross-boot no-replay negative (10 Nov 2026, direct tested HEAD):**
+  Runtime [Draft #260 `109d1b92`](https://github.com/agent-teams-ai/agent-runtime/commit/109d1b92f1bd5de6f18b6b5a21833005164e34c3)
+  launches three additional independent Host OS processes with distinct PIDs,
+  boot identities, PostgreSQL Pools and new authenticated bearers after an
+  operation-level UNKNOWN: same request, changed `requestId`, and changed
+  `attemptId`. The original SQL receipt remains unchanged, yet **each** retry
+  makes one extra deterministic TEST provider dispatch, materialization and
+  credential render, and completes again (required: zero/false).
+  [Direct-head PostgreSQL 18 Node 24/26 #42730538274](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42730538274)
+  each report **33 PASS, one intentional M08 RED FAIL, zero skips**.
+  [Full CI #42730538201](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42730538201)
+  and [Node matrix #42730538062](https://github.com/agent-teams-ai/agent-runtime/actions/runs/42730538062)
+  were SUCCESS on the same HEAD; neither qualifies the separate RED oracle.
+  Required next: Runtime-owned pre-effect admission, fenced by captured operation
+  rather than request/attempt, must prevent *all* duplicate provider/credential
+  effects before the Desktop S2.1 adapter; no public Host or cutover is qualified.
+- Provider implementation Draft PR #1 `7573a50842c3eeacb473f9d97d40f3ddf6ac0cf9`
+  is a separate provider Session SPI source, **not** proof that OpenCode V2 works in the Host.
+  [V2's separate qualification plan](opencode-v2-host-integration.md) governs V01–V08.
+
+**Implementation-route precision (6 Nov 2026, current Runtime main):**
+[Runtime `f990acc26e1b`](https://github.com/agent-teams-ai/agent-runtime/commit/f990acc26e1b8071ae22d0b87a2ddd3672be8e2e)
+[readiness](https://github.com/agent-teams-ai/agent-runtime/blob/f990acc26e1b8071ae22d0b87a2ddd3672be8e2e/docs/architecture/readiness.md)
+registers one narrowly **implementation-qualified** Docker/Linux Codex enforced-network-route
+tuple (`@openai/codex@0.153.4`, Linux x64) for *Contained Agent Turn V1*.
+That registration is not a runnable or deployment-qualified interactive Host:
+no kernel route is installed by the registry row, no live credentialed turn is
+proved, and the `ids`, `resolver` and `evidence` broker-session ports still
+lack production owners, so the composition root cannot mint the required
+route-enforcement capability. Every unqualified tuple fails closed; Claude
+explicitly refuses while its broker seam is absent. The one registered tuple
+must **not** change S2.1/M02/M04/M06–M09/M15/M17–M19 from
+`requires new capability` or authorize an adapter or owner cutover.
+
+Classification vocabulary: **exact-compatible** means actual unchanged behavior at the
+specified Stage 1 boundary, **translated** means a proven semantic adapter could
+preserve it without new product rules, **requires new capability** means no currently
+qualified owning API, and **incompatible** means the proposed mapping must refuse
+until an explicit protocol/semantic migration is qualified. The two target columns
+refer to target **production** capability, not to accepted ADRs, schemas, synthetic
+fixtures or implementation intent. An em dash means that particular target does not
+own the behavior.
+
+## Operation-level delta against M01–M19
+
+| ID  | Consumer operation (Stage 1 oracle) | Orchestrator main       | Agent Runtime main      | Required boundary-level negative or positive proof                          |
+| --- | ----------------------------------- | ----------------------- | ----------------------- | --------------------------------------------------------------------------- |
+| M01 | Team roster, lifecycle, purge       | requires new capability | —                       | Preserve original handle, identity-fenced purge and unresolved cleanup debt |
+| M02 | Launch and individual readiness     | requires new capability | requires new capability | Partial bootstrap must not create duplicate sessions after lost handoff     |
+| M03 | Task CRUD, review, dependencies     | requires new capability | —                       | Single Team writer; CAS/grant and idempotency at mutation commit            |
+| M04 | Inbox, DM and native delivery       | requires new capability | requires new capability | Commit and admission distinct; lost ACK does not deliver twice              |
+| M05 | Group and cross-Team messages       | requires new capability | —                       | Same-owner recipients only; no implicit cross-owner bridge                  |
+| M06 | Approvals, questions, replies       | requires new capability | requires new capability | Team review authority distinct from runtime permission; stale reply denies  |
+| M07 | Interrupt, stop and close           | requires new capability | requires new capability | Targeted generation/control; never kill shared or foreign child             |
+| M08 | Inputs, UNKNOWN and reconcile       | requires new capability | requires new capability | Durable intent before handoff; no replay or false rejection                 |
+| M09 | Selected-session cold resume        | —                       | requires new capability | Exact checkpoint/engine/account/custody; V1→V2 is incompatible              |
+| M10 | Instructions, compaction, skills    | requires new capability | requires new capability | One reminder owner; settings and MCP policy must not disappear              |
+| M11 | Activity, gaps and subagents        | requires new capability | requires new capability | Authorized Activity/gap projection and provider subagent provenance         |
+| M12 | Structured TaskRef / navigation     | requires new capability | —                       | Desktop projection retained; imported external ref keeps old owner          |
+| M13 | Git change capture and review       | requires new capability | requires new capability | Real before/final/failed attribution; no synthetic changes ledger           |
+| M14 | Usage, context and quick actions    | requires new capability | requires new capability | Unknown usage stays unknown; action keeps original owner                    |
+| M15 | Provider management and auth        | —                       | requires new capability | Private credentials, selected native profile and supported versions         |
+| M16 | Archive, import and relaunch        | requires new capability | requires new capability | Old obligations retained; archive read-only and new run only on relaunch    |
+| M17 | Packed native delivery and OS       | requires new capability | requires new capability | Exact candidate tuple, owned process exit and scoped cleanup                |
+| M18 | IPC/HTTP, feeds and Quit            | requires new capability | requires new capability | Keep existing public Desktop API; immutable routing and no rollback replay  |
+| M19 | Background registry/process stop    | requires new capability | requires new capability | Captured TEST child only; stale binding cannot cause OS kill                |
+
+
+**Stage 1 M03 product-shape refresh (8 Nov 2026, source `7eb74a4e`):**
+The [actual task snapshot projector](https://github.com/777genius/agent-teams-ai/blob/7eb74a4e2d052707bca6eaa6748d9116e2c36e09/src/features/agent-backend/main/adapters/output/projectTeamSnapshot.ts)
+now retains recorded `historyEvents` (eight canonical workflow transitions),
+`workIntervals` and `reviewIntervals`, while dropping private native fields.
+The [Stage 1 negative/positive tests](https://github.com/777genius/agent-teams-ai/blob/7eb74a4e2d052707bca6eaa6748d9116e2c36e09/test/features/agent-backend/hostTaskWorkflowHistoryProjection.test.ts)
+require invalid transitions/intervals to fail closed and absent history not to
+be invented. **M03 target parity therefore includes these observed, ordered
+product history fields**, not merely Task CRUD or final status; no new
+Orchestrator producer, public API or target E2E is inferred from this Desktop
+projection. Reuse the Stage 1 oracle; do not duplicate its tests.
+
+**Stage 1 oversized-history gate (9 Nov 2026, Owner source
+[`e48f383c`](https://github.com/777genius/agent-teams-ai/commit/e48f383c00c7fe6582367ad1a7b4156c0b0dcc71);
+latest consumer/test follow-through
+[`c6d33782`](https://github.com/777genius/agent-teams-ai/commit/c6d3378200cee8d5b08f3636b591cd1b522110cf)):**
+`readChanges` derives its bounded revision from authorized product state
+without serializing history; the 512 KiB full-snapshot guard remains.
+The real Owner's
+[`readMessagesPage`](https://github.com/777genius/agent-teams-ai/blob/e48f383c00c7fe6582367ad1a7b4156c0b0dcc71/packages/legacy-agent-host/src/team/pageOwnerMessages.ts)
+enforces captured principal/grant, limits 1–100 messages and 384 KiB,
+revision-bound continuation and foreign/revoked cursor refusal. Its
+[filesystem regression](https://github.com/777genius/agent-teams-ai/blob/e48f383c00c7fe6582367ad1a7b4156c0b0dcc71/packages/legacy-agent-host/tests/team-snapshot.test.ts)
+recovers all 120 messages from an over-512-KiB history without omissions.
+
+**New Stage 1 Main/renderer source boundary:** `team.messages.page` now goes
+through the actual
+[Main allowlist projector](https://github.com/777genius/agent-teams-ai/blob/c6d3378200cee8d5b08f3636b591cd1b522110cf/src/features/agent-backend/main/adapters/output/projectTeamMessagesPage.ts)
+and the captured
+[renderer Team API](https://github.com/777genius/agent-teams-ai/blob/c6d3378200cee8d5b08f3636b591cd1b522110cf/src/features/agent-backend/renderer/createHostTeamsApi.ts),
+not an invented replacement owner. The
+[transport regression](https://github.com/777genius/agent-teams-ai/blob/c6d3378200cee8d5b08f3636b591cd1b522110cf/test/features/agent-backend/hostMessagesPageTransport.test.ts)
+checks correct captured-handle routing, secret-field elision,
+invalid requested authority/limit/cursor refusal and bounded reply projection.
+The original cross-Team target API now serializes >32 same-owner snapshot
+reads and has a
+[41-target regression](https://github.com/777genius/agent-teams-ai/blob/c6d3378200cee8d5b08f3636b591cd1b522110cf/test/features/agent-backend/hostCrossTeamTransport.test.ts)
+for the real Host transport pending cap. These qualify source/test
+increments only, **not** production target-core M04/M05/M11 parity.
+
+**Stage 1 trashed-destination picker boundary (9 Nov 2026, source
+[`32e33e71`](https://github.com/777genius/agent-teams-ai/commit/32e33e71fa94719a2802812c1a181504a95a9ed9)):**
+The captured same-Owner cross-Team destination list excludes Team snapshots
+whose lifecycle has a non-null `deletedAt`, while retaining ordinary
+read-only archived access; recovery may make that destination visible again.
+The [focused renderer regression](https://github.com/777genius/agent-teams-ai/blob/32e33e71fa94719a2802812c1a181504a95a9ed9/test/features/agent-backend/hostCrossTeamTransport.test.ts)
+checks hidden-while-trashed and visible-after-recovery without legacy routing.
+This **picker-only source test** does not establish that a crafted direct
+`crossTeam.send` to a trashed destination is rejected by the original Owner.
+M05/M16 target-core qualification therefore requires a **command-boundary**
+negative for a retained/trashed recipient, plus correct original-owner receipt
+reconciliation and non-replay of UNKNOWN; never infer write authority from
+historical readability or target-list filtering. No target-core public API,
+packed native test or production writer is qualified by this change.
+
+**Stage 1 scoped group-pagination correction (9 Nov 2026,
+[source `4ac2dc70`](https://github.com/777genius/agent-teams-ai/commit/4ac2dc70af4d70d2835899ee5c3f2b2dfb339ecb)):**
+`useGroupChatHistory` now observes the Owner `feedRevision` on head
+refresh and replaces an older-page cursor when the authorized message
+revision changes. Its focused renderer fixture checks an append between
+pages and retention of 103 uniquely identified messages. The Owner cursor
+negative test now mutates accepted messages rather than an unrelated Team
+snapshot revision. These are **source/test changes**, not a completed
+native Host+Electron proof or target-core M04/M05/M11 qualification.
+
+**Stage 1 retained removed-member inbox (9 Nov 2026, source
+[`826227a6`](https://github.com/777genius/agent-teams-ai/commit/826227a6d484bf2bb6a3888b3820e1e60b1b1917),
+test correction
+[`b95d266d`](https://github.com/777genius/agent-teams-ai/commit/b95d266dc553b38dbd9943224341468a4d024349)):**
+The existing Owner snapshot and `readMessagesPage` now include persisted
+`removedMembers` **only for authorized historical inbox projection**, not
+the active roster or delivery authority. The original filesystem regression
+checks that an admin can read the removed member's inbox after reopening,
+an active member sees only their own inbox, and the removed principal without
+a grant is denied. Its corrected bootstrap fixture does **not** independently
+prove every revoke transition. M04/M16 new-core parity must preserve that
+read-only history and per-principal denial without resurrecting a removed
+member, granting delivery, or migrating an active session. Native Host+UI
+and target-core E2E remain unqualified; reuse the Stage 1 test oracle.
+
+**Stage 1 retained deleted-task details (9 Nov 2026, source
+[`af4b7365`](https://github.com/777genius/agent-teams-ai/commit/af4b7365a4a6317a0bed9348d9202963c84d1d53)):**
+The existing Desktop `getTask` now attempts a captured-handle Owner
+`task.get` **only when the selected active snapshot has no matching task**.
+It accepts an exact-ID, `status=deleted` retained result, restores the
+allowlisted task details/comments/references, remaps product references and
+rejects invalid identity, status or denied reads rather than falling back to
+legacy ownership. Its original
+[positive/negative source tests](https://github.com/777genius/agent-teams-ai/blob/af4b7365a4a6317a0bed9348d9202963c84d1d53/test/features/agent-backend/hostTeamsRead.test.ts)
+verify the captured handle, details without private Host fields and refusal
+on mismatched/forbidden results. M03/M16 parity must preserve **read-only
+deleted-task detail** without reviving a task or changing its original owner.
+This is Stage 1 source-test evidence, **not** a new-core API or native
+Host+Electron qualification.
+
+**Stage 1 bounded full-Team snapshot pages (9 Nov 2026, current
+[source `2ad146ef`](https://github.com/777genius/agent-teams-ai/commit/2ad146ef410a8acc916d30290ffc827c5d005e17)):**
+The original Owner now provides signed, revision-bound `team.snapshot`
+continuation of tasks, messages, Kanban task entries, reviewers and column
+ordering, with a 384-KiB page ceiling. Desktop
+[`readHostPagedSnapshot`](https://github.com/777genius/agent-teams-ai/blob/2ad146ef410a8acc916d30290ffc827c5d005e17/src/features/agent-backend/renderer/readHostPagedSnapshot.ts)
+assembles up to 128 Owner pages under the **captured Host handle** and
+current-scope/read-order fences, rejects repeated cursors and changes to
+the Team revision or feed identity, and publishes the complete snapshot
+only after all fragments validate. The ordinary
+`list/getData/getAllTasks/getTask` Host reader now calls this path rather
+than requiring a single over-512-KiB product snapshot. The existing
+[`hostKanbanPagination.test.ts`](https://github.com/777genius/agent-teams-ai/blob/2ad146ef410a8acc916d30290ffc827c5d005e17/test/features/agent-backend/hostKanbanPagination.test.ts)
+and Owner [snapshot fixtures](https://github.com/777genius/agent-teams-ai/blob/2ad146ef410a8acc916d30290ffc827c5d005e17/packages/legacy-agent-host/tests/team-snapshot.test.ts)
+cover the bounded multi-page source behavior; do **not** count them as
+new-core or packaged native/Electron E2E.
+
+**Still open for M03/M04/M11/M16:** a single record exceeding the page
+budget fails closed; the finite 128-page reader budget, nested
+comment/history/work/review paging, and original packaged >512-KiB
+Host+UI receipts require separate qualification. The retained deleted-task
+`task.get` fallback still must preserve old owner and never revive a
+deleted task. New Team owners must prove paged completion, Kanban
+reconstruction, single-writer identity, cursor/revision invalidation and
+**no partially published product snapshot** when an intermediate page
+fails. This source improvement does **not** provide an Orchestrator
+writer, Runtime Host, stage-2 adapter or M01–M19 parity. Preserve
+captured owner, no-UNKNOWN-replay and read-only archive.
+
+M11 owner split: accepted ADR-0103 assigns normalized, authorized Activity,
+cursor/gap projection and protected diagnostics to Orchestrator **Execution
+Observation**. Agent Runtime separately owns provider output, technical event
+origin and parent/child subagent provenance. Neither owner's partial feed
+satisfies both contracts or qualifies the Stage 2 Desktop Activity E2E.
+
+**Upstream sandbox implementation (not production target qualification):**
+[Orchestrator PR #85](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/85)
+HEAD [`07c13f00`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/07c13f00cc9f9a9ba554fb2d30ccf50a525ecd0e)
+contains a real Execution Observation PostgreSQL Activity writer, scoped runtime
+binding, read cursors, and native PostgreSQL restart/RLS/disconnect tests.
+Its stacked [Draft PR #98](https://github.com/agent-teams-ai/agent-teams-orchestrator/pull/98)
+HEAD [`7e82c79d`](https://github.com/agent-teams-ai/agent-teams-orchestrator/commit/7e82c79dbc0584367b963389d7bfcd6c3cba9459)
+preserves release-time UNKNOWN and same-source reconciliation.
+Its [later dual-source native PostgreSQL 16 run #42270503091](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42270503091)
+completed **56/56 PASS**: Node 24 and 26 each checked the direct PR HEAD
+(`7e82c79d`) and the separately verified two-parent synthetic merge
+(`605b4bd2`), 14 tests per matrix job with zero failures/skips.
+[Architecture #42270503012](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42270503012)
+completed 4/4 SUCCESS on the same branch revision.
+These are **sandbox-only**, not real Team/Runtime/Desktop production qualifications;
+trusted Docs failed on the incompatible physical package closure, and the
+required independent exact-head reviews remain incomplete. The earlier
+[PostgreSQL 16 run](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42209266274)
+(14/14 on Node 24 and 26) tested a **synthetic merge tree** `19ab5e20`,
+not direct HEAD `fde0a320`; do not relabel it exact-head evidence.
+The later [native PostgreSQL 16 run](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42235338210)
+checked out the **actual PR head** `c2099ff572cb29af07fc0993751aea9dcafb63d8`
+and independently passed 14/14 on each of Node 24/26 with zero failures/skips.
+All four [Architecture jobs](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42235338328)
+also passed on that revision. These prove **bounded sandbox regression**
+only, not an integrated #85/main merge, production Team/Runtime owner API
+or Desktop M01–M19 parity. The [mandatory trusted Docs Protocol](https://github.com/agent-teams-ai/agent-teams-orchestrator/actions/runs/42235338999)
+still **failed** because the lock includes two physical
+`@agent-teams/repository-mutation` resolutions (`0.2.2` / `0.4.0`).
+The central [Docs Cohort qualification issue #415](https://github.com/agent-teams-ai/.github/issues/415)
+tracks a compatible five-package closure; published package-version candidates
+are not themselves a qualified Cohort. Reverting the EF `2.1.0` pin alone
+is not proven compatible with the PR's schema-v3 protobuf source-coverage gate.
+The stacked-base commit-identity check also fails until integration against
+the live default branch. The parent #85 is nonmergeable against current
+Orchestrator `main=a34587b3`; 19 files were touched by both branches since
+the parent's recorded base (not a claim of 19 textual conflict hunks). A
+fresh `main...#85` ancestry comparison on 7 Nov 2026 was **40 commits ahead /
+7 behind**, while GitHub still reported `mergeable=false`; neither a
+previous 0-behind comparison against the stale PR base nor a green stacked
+native PostgreSQL receipt qualifies the parent for merge.
+Independent final-head review and CodeQL are not confirmed.
+Preserve the single intended M11 Activity writer, reconcile the **whole**
+qualified Docs cohort and current-main source first, then prove complete
+Runtime provider/subagent provenance, authority and Desktop native/packed
+E2E before changing M11 from `requires new capability`.
+
+**Consumer classification:** the existing Desktop `AgentBackendApi`, selected
+`BackendHandle`, and retained-handle routing are **exact-compatible at the
+Stage 1 source boundary**, not yet proven with the new cores. A future Orchestrator
+Team adapter and Agent Runtime session adapter are **translated** candidates only
+after their owners publish implementations and pass semantic conformance. No row
+above is qualified as an end-to-end target-core replacement. In M09, silently
+treating a V1 checkpoint as a V2 native resume is **incompatible**.
+
+## Critical S2.0 boundary: bound Host transport is not a generic owner port
+
+**Confirmed in Stage 1 source** (`999c468`):
+
+- [`backendBinding.ts`](https://github.com/777genius/agent-teams-ai/blob/999c468e3f4f09a5e5eb1655f6b97a64e046c55e/src/features/agent-backend/main/application/backendBinding.ts)
+  permits only `StoredBackendBinding.schemaVersion = 1`, which requires
+  `profileId`, `buildId`, `protocolVersion = 1`, `nodeSha256`,
+  `hostEntrySha256` and absolute `storageRoot`.
+- [`BackendOwnerRouter.ts`](https://github.com/777genius/agent-teams-ai/blob/999c468e3f4f09a5e5eb1655f6b97a64e046c55e/src/features/agent-backend/main/application/BackendOwnerRouter.ts)
+  registers `CapturedBackendOwner` with a concrete `CapturedHostClient`; its
+  `request`, `requestPair`, `lookup`, `startOwner` and `shutdownOwner`
+  speak Host JSON-RPC and use Host-specific lifecycle/error taxonomy.
+- [`loadDesktopBackendDescriptor.ts`](https://github.com/777genius/agent-teams-ai/blob/999c468e3f4f09a5e5eb1655f6b97a64e046c55e/src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor.ts)
+  accepts only `schemaVersion = 1` and the local Node executable/profile,
+  while [`DesktopBackendFeature.ts`](https://github.com/777genius/agent-teams-ai/blob/999c468e3f4f09a5e5eb1655f6b97a64e046c55e/src/features/agent-backend/main/composition/DesktopBackendFeature.ts)
+  directly composes legacy Team registry, stopped import and management.
+
+**Classification:** public `BackendHandle` and finite `AgentBackendApi` stay
+exact-compatible as consumer surfaces. **Transport ownership and private persisted
+owner binding are incompatible with direct use by a remote/new-core client.**
+An adapter cannot simply satisfy TypeScript structurally or manufacture Host
+`nodeSha256`, `hostEntrySha256` or `storageRoot` to pass validation.
+
+**Required minimal handoff after an actual new-core API exists:**
+
+1. Introduce only the target-owned transport and narrowly versioned persisted
+   owner record needed by that API; distinguish local legacy Host from the
+   explicitly selected new target, without weakening the existing v1 decoder.
+   Reuse an existing standardized identity/custody contract if the core publishes
+   one. Do **not** add a generic transport registry or new network protocol.
+2. Old v1 records remain immutable and readable by their original Host adapter;
+   new records use durable no-clobber publication and an exact target revision.
+   Unknown/new schema, altered target identity or revoked authority results
+   in HOLD, never a rebind to the current default.
+3. Prove a mixed-target test with retained v1 A and newly created target B,
+   then default switch, rollback, two new intents, lookup, restart, corrupt/foreign
+   binding, lost ACK and concurrent creation. Verify effects only at their own
+   owner, not merely successful return values. Keep old Host lifecycle closed
+   around its own captured process without killing target B.
+4. Only then translate specific Team and Runtime operations at their owning
+   adapter; preserve existing public UI contracts and separately qualify
+   `DesktopBackendFeature` registry/creation/management paths. Core adoption
+   must not rely on a fabricated Host JSON-RPC server.
+
+This is a **newly identified interface gap**, not a new implementation or
+proof that the above tests passed.
+
+## Current regression oracle versus missing new-core proof
+
+| Gate | Existing Stage 1 source evidence | Additional target proof still needed |
+| --- | --- | --- |
+| Stable owner after new default/rollback | `test/features/agent-backend/backendOwnerRouter.test.ts` | Run unchanged tests against actual two-owner adapters with retained A and fresh B, then rollback |
+| Concurrent bind / missing or corrupt record | Same owner-router tests | Native recovery with real new owner store; never select default for missing or UNKNOWN |
+| Lost response and stale authorization | Owner-router tests plus `hostProductLifecycle.test.ts` | Real accepted/UNKNOWN receipts; zero additional side effects after the original admitted attempt, no stale grants or replay |
+| Cross-owner recipient / TaskRef | `hostTeamRouting.test.ts` and existing TaskRef tests | Explicit incompatible cross-owner DM/TaskRef refusals, no legacy relay or second writer |
+| Cold resume / history continuity | `checkpointAvailability.test.ts`, `restoreIntents.test.ts` and prior Stage 1 native receipts | Exact new-runtime native session, history prefix, storage/custody and failed-version negatives |
+| Background process / physical stop | Existing Stage 1 M19 native and UI receipts | Captured target-core process identity, real stop/readback and foreign/shared-child survival |
+| Desktop/packaged product journey | Stage 1 M01–M19 candidate-synthetic acceptance | Re-run normal Create/Launch/Resume/Tasks/DM/review/Quit/packed UI against **new** composition on selected tuples |
+
+The listed tests are **existing oracles**, not new executions or evidence that the
+new cores pass. No new test names are invented, and no duplicate test harness is
+required before an implementation exists.
+
+**Current-main drift gate (7 Nov 2026; Stage 1 untouched):**
+[Current Desktop `main=2dd3eec`](https://github.com/777genius/agent-teams-ai/commit/2dd3eecce698a7a11d64be213eef424992d0ad81)
+versus Stage 1 #982 `999c468e` is [diverged](https://github.com/777genius/agent-teams-ai/compare/2dd3eecce698a7a11d64be213eef424992d0ad81...999c468e3f4f09a5e5eb1655f6b97a64e046c55e):
+171 commits ahead / 17 behind, merge base `62709419e1c1`.
+The [17-commit `main` delta](https://github.com/777genius/agent-teams-ai/compare/62709419e1c18be406e14e4cb644cf61d14a5a5c...2dd3eecce698a7a11d64be213eef424992d0ad81)
+touches 16 filenames also changed by Stage 1 #982, including `src/main/ipc/teams.ts`,
+`CreateTeamDialog.tsx`, `LaunchTeamDialog.tsx`, `TeamModelSelector.tsx`,
+`TeamListView.tsx`, and `test/main/ipc/teams.test.ts`. This is a **file-path
+intersection, not 16 proven textual conflicts**. Existing Stage 1 CI/packed
+receipts prove only their pinned candidate, not integration with the newer
+`main`. Stage 1 ownership must reconcile these UI/IPC paths separately before
+new-core M01–M19 release qualification; this S2.0 lane must not rebase or edit
+#982 or claim the old candidate's parity on a new merge tree.
+
+## Minimum adapter qualification order
+
+1. **Owning upstream code:** Orchestrator must expose a real versioned Team/Task/
+   Message/Review mutation and read contract; Agent Runtime must expose its real
+   interactive session/input/control/checkpoint/custody contract. Qualify each in
+   its owning repository with disposable TEST fixtures, negative authority/
+   concurrency/restart cases and exact artifact revisions.
+2. **Consumer adapter:** implement only an actual available public operation
+   behind the existing ports. Bind owner, generation, command/input identity and
+   required capabilities before the first effect. A missing capability causes
+   explicit HOLD, not an adapter stub, V1 fallback or a second writer.
+3. **New composition proof:** first prove one selected TEST session's
+   open/submit/observe/stop/readback and one single-owner Team mutation. Then
+   expand to all M01–M19, V01–V08 for V2, native processes, multiple OS tuples
+   and packaged Electron. Record genuine refs, logs and artifact receipts.
+4. **Retained data:** a retained handle, including a handle with an operation
+   whose outcome is UNKNOWN, remains bound to its recorded owner for lookup,
+   reconciliation, stop and subsequent authorized intents. UNKNOWN is the
+   *operation outcome*, not a distinct kind of handle. If that owner is
+   unavailable, return unavailable/HOLD; never switch to the current default,
+   replay the uncertain intent or move work to another owner. Archive import
+   is a separate read-only/dry-run exercise; active session adoption,
+   model-based cross-version resume and destructive migration are prohibited.
+
+**Stop-ship:** any UNKNOWN input replay; cross-owner mutation or fallback;
+unverified V1/V2 plugin/API reuse; credential leakage; stale permission grant;
+shared process kill; missing TaskRef/review/backup ownership; unproven native
+restore; or misleading E2E PASS. Keep Stage 1 Draft and default activation off
+until real target-core qualification, independent review and release decision.
