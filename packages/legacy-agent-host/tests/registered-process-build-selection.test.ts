@@ -4,12 +4,13 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire, syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join, sep } from 'node:path';
+import { join, sep, toNamespacedPath } from 'node:path';
 import { test } from 'node:test';
 import { buildProcessNativeArtifact } from '../scripts/buildProcessNativeArtifact.ts';
 import { createQualifiedDarwinProcessApi } from '../dist/process/DarwinRegisteredProcess.js';
 import { readPackagedProcessArtifact } from '../dist/process/readPackagedProcessArtifact.js';
 import { validateProcessCapture } from '../dist/process/validateProcessRecords.js';
+import { isQualifiedDarwinBuild } from '../dist/process/qualifiedDarwinBuild.js';
 import type { TestContext } from 'node:test';
 import type { QualifiedDarwinBuild } from '../dist/process/qualifiedDarwinBuild.js';
 
@@ -65,7 +66,7 @@ function bridge(t: TestContext, osBuild: QualifiedDarwinBuild = '24G624') {
   };
   t.mock.method(process, 'dlopen', (module: object, path: string) => {
     // Windows dlopen uses the namespaced spelling of the same canonical TEST file.
-    assert.equal(realpathSync(path), artifact.path);
+    assert.equal(toNamespacedPath(realpathSync(path)), toNamespacedPath(artifact.path));
     Object.assign(module, { exports: native });
   });
   t.after(() => {
@@ -73,6 +74,17 @@ function bridge(t: TestContext, osBuild: QualifiedDarwinBuild = '24G624') {
   });
   return { artifact, state };
 }
+
+test('new native-qualified OS builds admit only the architecture with measured custody evidence', t => {
+  assert.equal(isQualifiedDarwinBuild('24H232', 'arm64'), true);
+  assert.equal(isQualifiedDarwinBuild('24G830', 'x64'), true);
+  for (const [build, architecture] of [['24H232', 'x64'], ['24G830', 'arm64'],
+    ['24H232', 'arm'], ['24G830', 'ia32'], ['24H233', 'arm64'], ['24G831', 'x64']])
+    assert.equal(isQualifiedDarwinBuild(build, architecture), false);
+  darwin(t, 'arm64');
+  assert.equal(readPackagedProcessArtifact(selected(t, '24H232')).osBuild, '24H232');
+  assert.throws(() => readPackagedProcessArtifact(selected(t, '24G830')), /unavailable/);
+});
 
 test('manifest selects one exact known build; unknown tuples and a mismatched loaded build fail closed', t => {
   darwin(t);
