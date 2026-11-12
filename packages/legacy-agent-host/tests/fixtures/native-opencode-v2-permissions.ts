@@ -4,9 +4,9 @@ import { createServer } from 'node:http';
 
 import { record } from './native-claude-team/model.ts';
 
-export const permissionTurns = ['DENY', 'ONCE', 'REJECT', 'REVOKE', 'ACTIVE', 'SIBLING'] as const;
-export type PermissionTurn = (typeof permissionTurns)[number];
-export const outsideSecret = 'TEST_NATIVE_EXTERNAL_CONTENT_ONLY_AFTER_ONCE';
+export const PERMISSION_TURNS = ['DENY', 'ONCE', 'REJECT', 'REVOKE', 'ACTIVE', 'SIBLING'] as const;
+export type PermissionTurn = (typeof PERMISSION_TURNS)[number];
+export const OUTSIDE_SECRET = 'TEST_NATIVE_EXTERNAL_CONTENT_ONLY_AFTER_ONCE';
 export const turnText = (turn: PermissionTurn) => 'TEST_V2_PERMISSION_' + turn;
 
 export async function startPermissionModel(options: { outsideFile: string }) {
@@ -69,7 +69,7 @@ export async function startPermissionModel(options: { outsideFile: string }) {
         const output = JSON.stringify(
           messages.filter((message) => message.role === 'tool').at(-1)?.content
         );
-        externalContent = output.includes(outsideSecret);
+        externalContent = output.includes(OUTSIDE_SECRET);
         assert.equal(
           externalContent,
           turn === 'ONCE',

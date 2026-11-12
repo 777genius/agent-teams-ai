@@ -48,7 +48,16 @@ export function qualifyOpenCodeV2FileChange(
       if (!input || typeof input.path !== 'string') throw new Error('unsupported-v2-tool-input');
       const path = resolve(workspace, input.path), rel = relative(workspace, path);
       if (!rel || rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) throw new Error('foreign-v2-native-path');
-      if (item.tool === 'read') continue;
+      if (item.tool === 'read') {
+        // The existing snapshot images reject symlinks in every path component.
+        // An ignored/uncaptured read has no such evidence and cannot qualify.
+        for (const snapshot of [before, after]) {
+          const image = snapshot.files.get(path);
+          if (image?.exists !== true || image.reason || !image.content || !image.sha256)
+            throw new Error('unqualified-v2-native-read-path');
+        }
+        continue;
+      }
       if (item.tool !== 'edit') throw new Error('unsupported-v2-tool-profile');
       const metadata = record(item.metadata), files = metadata?.files;
       const diff = Array.isArray(files) && files.length === 1 ? record(files[0]) : undefined;

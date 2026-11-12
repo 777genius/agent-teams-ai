@@ -145,10 +145,11 @@ it('only the explicit successful native V1 catalog retains the separate installe
   expect(f.request).toHaveBeenCalledExactlyOnceWith('catalog', {});
 });
 
-it.each([
+const INVALID_RUNTIME_EVIDENCE: (JsonValue | undefined)[] = [
   undefined, null, {}, { generation: 'v2' }, { generation: 'v2', version: '2.1.5' },
   { generation: 'v1', version: '2.1.4' }, { generation: 'v3', version: '3.0.0' },
-])('missing or invalid native runtime evidence cannot select the legacy status source: %j', async runtime => {
+];
+it.each(INVALID_RUNTIME_EVIDENCE)('missing or invalid native runtime evidence cannot select the legacy status source: %j', async runtime => {
   const f = fixture(runtime);
   await expect(f.port.readOpenCodeRuntimeStatus!()).rejects.toThrow();
 });

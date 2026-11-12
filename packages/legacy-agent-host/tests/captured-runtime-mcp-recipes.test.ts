@@ -31,6 +31,10 @@ import type { CodexMemberProfile } from '../dist/composition/runtimeProfile.js';
 import type { OpenCodeMemberProfile } from '../dist/composition/runtimeProfile.js';
 import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
 
+const V2_SUPPORTED = ['linux', 'darwin', 'win32'].includes(process.platform) &&
+  ['x64', 'arm64'].includes(process.arch) &&
+  !(process.platform === 'linux' && process.arch === 'arm64');
+
 const isHeld = (error: unknown) =>
   error instanceof TeamLaunchError &&
   error.code === 'hold' &&
@@ -110,7 +114,7 @@ function nativeV2(f: ReturnType<typeof fixture>): OpenCodeMemberProfile {
   return profile;
 }
 
-test('V2 empty external MCP capture and cold private artifact retain the native recipe without V1 overlays', async (t) => {
+test('V2 empty external MCP capture and cold private artifact retain the native recipe without V1 overlays', { skip: !V2_SUPPORTED }, async (t) => {
   const f = fixture();
   t.after(() => rmSync(f.root, { recursive: true, force: true }));
   const v2 = nativeV2(f);
@@ -160,7 +164,7 @@ test('V2 empty external MCP capture and cold private artifact retain the native 
   }
 });
 
-test('V2 capture refuses external MCP selections and V1 overlays before an empty artifact can hide them', async (t) => {
+test('V2 capture refuses external MCP selections and V1 overlays before an empty artifact can hide them', { skip: !V2_SUPPORTED }, async (t) => {
   const f = fixture();
   t.after(() => rmSync(f.root, { recursive: true, force: true }));
   const v2 = nativeV2(f), servers = { TEST_external: { type: 'stdio' as const, command: '/TEST/external' } };
@@ -192,7 +196,26 @@ test('V2 capture refuses external MCP selections and V1 overlays before an empty
   assert(!readdirSync(f.store.directory).includes('launches'));
 });
 
-test('native member inheritance accepts only absent V2 or captured empty external policy; unconfigured V1 stays held', (t) => {
+test('V2 lead refuses explicit external MCP policy even with no catalog or selected server', { skip: !V2_SUPPORTED }, (t) => {
+  const f = fixture();
+  t.after(() => rmSync(f.root, { recursive: true, force: true }));
+  const v2 = nativeV2(f);
+  for (const mode of ['strictAllowlist', 'inheritScopes'] as const) {
+    assert.throws(() => captureRuntimeMcp({
+      recipes: [v2], savedCwd: f.profile.cwd,
+      members: [{ role: 'lead', settings: { mcpPolicy: { mode } } }],
+    }), { code: 'invalid', reason: 'member-mcp-configuration' });
+  }
+  for (const mode of ['inheritLead', 'appOnly'] as const) {
+    assert.deepEqual(captureRuntimeMcp({
+      recipes: [v2], savedCwd: f.profile.cwd,
+      members: [{ role: 'lead', settings: { mcpPolicy: { mode } } }],
+    }), [v2]);
+  }
+  assert(!readdirSync(f.store.directory).includes('launches'));
+});
+
+test('native member inheritance accepts only absent V2 or captured empty external policy; unconfigured V1 stays held', { skip: !V2_SUPPORTED }, (t) => {
   const f = fixture();
   t.after(() => rmSync(f.root, { recursive: true, force: true }));
   const v2 = nativeV2(f), empty = { ...f.profile, capturedMcpServers: {} };

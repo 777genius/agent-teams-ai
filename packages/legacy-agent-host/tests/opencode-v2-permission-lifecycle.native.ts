@@ -10,7 +10,7 @@ import { test } from 'node:test';
 import { record } from './fixtures/native-claude-team/model.ts';
 import { fileHash, startHost, tick } from './fixtures/native-host.ts';
 import {
-  outsideSecret,
+  OUTSIDE_SECRET,
   startPermissionModel,
   turnText,
 } from './fixtures/native-opencode-v2-permissions.ts';
@@ -113,7 +113,7 @@ test(
       ])
         await mkdir(join(root, name), { mode: 0o700 });
       const outsideFile = join(root, 'outside/external.txt');
-      await writeFile(outsideFile, outsideSecret + '\n', { mode: 0o600 });
+      await writeFile(outsideFile, OUTSIDE_SECRET + '\n', { mode: 0o600 });
       model = await startPermissionModel({ outsideFile });
       const owner = {
         ownerId: 'TEST-policy-owner',

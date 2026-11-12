@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { qualifyOpenCodeV2FileChange } from '../dist/evidence/qualifyOpenCodeV2FileChange.js';
+import { snapshotWorkspace } from '../dist/evidence/WorkspaceSnapshot.js';
+import { digest } from '../dist/team/identity.js';
+import type { FileImage } from '../dist/evidence/captureContracts.js';
 import type { OpenCodeV2AfterRequest } from '../dist/evidence/opencodeCaptureContracts.js';
 
 /** Shape from actual 2.1.4 native edit capture; controlled checks are not native execution evidence. */
@@ -35,6 +41,64 @@ test('native V2 relative file metadata and original event anchors qualify exact 
     calledEventId: 'evt_TEST_called', calledSeq: 37, completedEventId: 'evt_TEST_success', completedSeq: 39 }]);
   assert.equal(result.proof.beforeSha256, f.before.files.get(f.file)!.sha256);
   assert.equal(result.proof.afterSha256, f.after.files.get(f.file)!.sha256);
+});
+test('V2 reads require a real selected file image at both original window boundaries', () => {
+  const f = fixture();
+  const read: OpenCodeV2AfterRequest['items'][number] = {
+    ...f.request.items[0]!, tool: 'read', callId: 'call_TEST_read', input: { path: f.file }, metadata: {},
+    calledEvent: { id: 'evt_TEST_read_called', seq: 1 },
+    completedEvent: { id: 'evt_TEST_read_success', seq: 2, type: 'session.tool.success' },
+  };
+  const request = { ...f.request, items: [read, ...f.request.items] };
+  assert.equal(qualifyOpenCodeV2FileChange(request, f.workspace, f.before, f.after).kind, 'qualified');
+  for (const badImage of [undefined, { exists: false }, { exists: true, reason: 'symlink' },
+    { exists: true, reason: 'outside-workspace' }] satisfies (FileImage | undefined)[]) {
+    for (const boundary of ['before', 'after'] as const) {
+      const files = new Map<string, FileImage>(f[boundary].files);
+      if (badImage) files.set(f.file, badImage); else files.delete(f.file);
+      const changed = { ...f[boundary], files };
+      assert.deepEqual(qualifyOpenCodeV2FileChange(request, f.workspace,
+        boundary === 'before' ? changed : f.before, boundary === 'after' ? changed : f.after),
+      { kind: 'gap', reason: 'unqualified-v2-native-read-path' });
+    }
+  }
+});
+test('an ignored workspace symlink to an external read cannot qualify a genuine local edit snapshot', async t => {
+  const f = fixture(), root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-read-path-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const workspace = join(root, 'workspace'), outside = join(root, 'outside');
+  mkdirSync(workspace); mkdirSync(outside);
+  const file = join(workspace, 'dirty.txt'), external = join(outside, 'private.txt');
+  writeFileSync(file, f.before.files.get(f.file)!.content);
+  writeFileSync(external, 'TEST external content');
+  writeFileSync(join(workspace, '.gitignore'), 'ignored\n');
+  symlinkSync(outside, join(workspace, 'ignored'), process.platform === 'win32' ? 'junction' : 'dir');
+  const readPath = join(workspace, 'ignored', 'private.txt');
+  assert.equal(realpathSync(readPath), external);
+  for (const args of [['init', '-q'], ['add', 'dirty.txt', '.gitignore']]) {
+    execFileSync('git', ['-c', 'core.fsmonitor=false', ...args], {
+      cwd: workspace, stdio: 'ignore',
+      env: { ...process.env, GIT_CONFIG_GLOBAL: join(root, 'TEST-absent-git-config'), GIT_CONFIG_NOSYSTEM: '1' },
+    });
+  }
+  const info = statSync(workspace);
+  const options = { workspace: { path: workspace, identity: digest({ dev: info.dev, ino: info.ino }) },
+    toolName: 'opencode.fileChange', input: null, guard() {} };
+  const before = await snapshotWorkspace(options);
+  writeFileSync(file, f.after.files.get(f.file)!.content);
+  const after = await snapshotWorkspace({ ...options, prior: before });
+  assert.equal(before.complete, true); assert.equal(after.complete, true);
+  assert.equal(before.files.has(readPath), false);
+  const edit = { ...f.request.items[0]!, input: { path: file,
+    oldString: 'TEST existing dirty', newString: 'TEST native authored' } };
+  const read: OpenCodeV2AfterRequest['items'][number] = { ...edit,
+    tool: 'read', callId: 'call_TEST_external', input: { path: readPath }, metadata: {},
+    calledEvent: { id: 'evt_TEST_read_called', seq: 1 },
+    completedEvent: { id: 'evt_TEST_read_success', seq: 2, type: 'session.tool.success' },
+  };
+  assert.equal(qualifyOpenCodeV2FileChange({ ...f.request, items: [edit] }, workspace, before, after).kind, 'qualified');
+  assert.deepEqual(qualifyOpenCodeV2FileChange({ ...f.request, items: [read, edit] }, workspace, before, after),
+    { kind: 'gap', reason: 'unqualified-v2-native-read-path' });
 });
 test('V2 proof refuses foreign dialect, hosted execution, truncation and fabricated lineage', () => {
   const mutations: ((item: Record<string, unknown>) => void)[] = [
