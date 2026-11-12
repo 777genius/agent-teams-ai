@@ -1,6 +1,9 @@
 # 04. Расписания для команд, обслуживаемых Host
 
-Статус: план после R2; production не менялся, one-shot/native-limits gate ещё не закрыт.
+Статус: R1–R3 пройдены; реализация начата, one-shot/native-limits gate ещё не закрыт.
+Первый срез делает existing runtime predicates awaitable и повторно проверяет cancel после await.
+Dispatcher + filesystem integration: **66 PASS**, 0 FAIL; targeted lint PASS. Это ещё не Desktop→Host/native acceptance:
+durable target/adapter, finite one-shot и CI wiring продолжаются.
 Frontend baseline: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Stage 1 baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 Цель: сохранить нынешние schedule controls и режимы выполнения при выбранном Host.

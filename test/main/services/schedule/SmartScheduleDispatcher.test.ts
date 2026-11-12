@@ -105,6 +105,54 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     dispatch = new SmartScheduleDispatcher(port);
   });
 
+  it('awaits owner-backed liveness and busy checks before creating scheduled work', async () => {
+    port.isTeamAlive = vi.fn(async () => true);
+    port.isTeamLaunching = vi.fn(async () => false);
+    port.isTeamBusy = vi.fn(async () => false);
+    const result = await dispatch.dispatch(makeSchedule('agent'), 'async-owner-run', active);
+    expect(result.kind).toBe('dispatched');
+    expect(port.createTask).toHaveBeenCalledTimes(1);
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
+  it('awaits the final owner check after task creation before starting a task', async () => {
+    enableTaskFirstPorts();
+    let busy = false;
+    port.isTeamAlive = vi.fn(async () => true);
+    port.isTeamLaunching = vi.fn(async () => false);
+    port.isTeamBusy = vi.fn(async () => busy);
+    port.hasActiveOwnedTask = vi.fn(async () => false);
+    port.startTaskByUser = vi.fn(async (
+      _team: string,
+      _task: string,
+      admission?: { expectedOwner: string; canStart: () => Promise<boolean> }
+    ) => {
+      busy = true;
+      return { notifiedOwner: await admission!.canStart() };
+    });
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), taskFirst: true }, 'async-owner-start', active
+    );
+    expect(port.createTask).toHaveBeenCalledTimes(1);
+    expect(port.startTaskByUser).toHaveBeenCalledTimes(1);
+    expect(result.kind).toBe('skipped');
+  });
+
+  it('observes cancellation that arrives during the last asynchronous liveness read', async () => {
+    let cancelled = false;
+    let reads = 0;
+    port.isTeamAlive = vi.fn(async () => {
+      if (++reads === 3) cancelled = true;
+      return true;
+    });
+    const result = await dispatch.dispatch(makeSchedule('agent'), 'cancel-at-read', () => cancelled);
+    expect(reads).toBe(3);
+    expect(result.kind).toBe('skipped');
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
   it('refuses Host-owned schedules before reading or mutating the legacy runtime', async () => {
     for (const mode of ['agent', 'team'] as const) {
       const result = await dispatch.dispatch(
