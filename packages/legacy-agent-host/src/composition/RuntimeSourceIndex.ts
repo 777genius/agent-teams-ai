@@ -10,6 +10,7 @@ import { runtimeDigest } from '../runtime/identity.js';
 import { runtimeMemberProfileSchema } from './runtimeProfile.js';
 import {
   publishRuntimeSourceSchema,
+  publishRuntimeSourceRequestSchema,
   runtimeSourceGrantSchema,
   runtimeSourceLookupSchema,
   runtimeSourceReadSchema,
@@ -142,7 +143,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
   ): Promise<RuntimeSourcePublication> {
     this.assertWriter();
     if (this.sealed) fail('held');
-    const input = publishRuntimeSourceSchema.parse(structuredClone(raw));
+    const input = this.capturePublication(raw);
     const fingerprint = runtimeDigest(input),
       pending = this.pending.get(input.commandId);
     if (pending) {
@@ -157,6 +158,42 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       if (this.pending.get(input.commandId)?.result === result)
         this.pending.delete(input.commandId);
     }
+  }
+
+  private capturePublication(raw: unknown): PublishRuntimeSource {
+    const input = publishRuntimeSourceRequestSchema.parse(structuredClone(raw));
+    if ('candidate' in input) return input;
+    const seed = this.seed(input.grant),
+      seedRevision = this.seedRevision(input.grant, seed);
+    const previous =
+      input.expectedRevision === seedRevision
+        ? undefined
+        : this.read().records.find(
+            (row) =>
+              row.grant.targetId === input.grant.targetId && row.revision === input.expectedRevision
+          );
+    if (
+      (!previous && input.expectedRevision !== seedRevision) ||
+      (previous && runtimeDigest(previous.grant) !== runtimeDigest(input.grant))
+    )
+      fail('conflict');
+    const selection = input.nativeSelection;
+    const embedded = selection.embedded ?? previous?.candidate.embedded;
+    // Replay inherits only the original expected revision; current is never a repair/default source.
+    return publishRuntimeSourceSchema.parse({
+      grant: input.grant,
+      commandId: input.commandId,
+      expectedRevision: input.expectedRevision,
+      candidate: {
+        sourceKind: selection.sourceKind,
+        executable:
+          seed.provider === 'opencode' && seed.nativeGeneration === 'v2'
+            ? (previous?.candidate.executable ?? seed.executable)
+            : selection.nativeCli.executable,
+        ...(embedded ? { embedded } : {}),
+        nativeCli: selection.nativeCli,
+      },
+    });
   }
 
   private async publishCandidate(

@@ -1,6 +1,7 @@
 import {
   runtimeSourceCandidateSchema,
   runtimeSourceGrantSchema,
+  runtimeSourceNativeSelectionSchema,
   runtimeSourcePublicationSchema,
   runtimeSourceRefusalSchema,
   runtimeSourceSummarySchema,
@@ -11,9 +12,9 @@ import { BackendRoutingError } from '../application/backendBinding';
 import type { CapturedHostClient } from './CapturedHostClient';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 import type {
-  RuntimeSourceCandidate,
   RuntimeSourceGrant,
   RuntimeSourcePublication,
+  RuntimeSourcePublishIntent,
   RuntimeSourceRefusal,
   RuntimeSourceSummary,
 } from '@agent-teams/legacy-agent-host/runtime-sources';
@@ -29,11 +30,7 @@ export class CapturedRuntimeSourceError extends BackendRoutingError {
 export interface CapturedRuntimeSources {
   current(): Promise<RuntimeSourceSummary>;
   retained(): Promise<RuntimeSourceSummary[]>;
-  publish(input: {
-    commandId: string;
-    expectedRevision: string;
-    candidate: RuntimeSourceCandidate;
-  }): Promise<RuntimeSourcePublication>;
+  publish(input: RuntimeSourcePublishIntent): Promise<RuntimeSourcePublication>;
   lookup(commandId: string): Promise<RuntimeSourcePublication | null>;
 }
 
@@ -108,15 +105,17 @@ export function captureRuntimeSources(options: {
         .max(1025)
         .parse(await request('retained'))
         .map(summary),
-    publish: async (input: {
-      commandId: string;
-      expectedRevision: string;
-      candidate: RuntimeSourceCandidate;
-    }) => {
+    publish: async (input: RuntimeSourcePublishIntent) => {
       const captured = {
         commandId: input.commandId,
         expectedRevision: input.expectedRevision,
-        candidate: runtimeSourceCandidateSchema.parse(structuredClone(input.candidate)),
+        ...(input.nativeSelection !== undefined
+          ? {
+              nativeSelection: runtimeSourceNativeSelectionSchema.parse(
+                structuredClone(input.nativeSelection)
+              ),
+            }
+          : { candidate: runtimeSourceCandidateSchema.parse(structuredClone(input.candidate)) }),
       };
       const result = runtimeSourcePublicationSchema.parse(await request('publish', captured));
       if (result.selection) summary(result.selection);

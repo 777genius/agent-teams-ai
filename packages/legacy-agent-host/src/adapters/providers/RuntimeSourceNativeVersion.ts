@@ -1,3 +1,4 @@
+import { performance } from 'node:perf_hooks';
 import { CapturedProcess } from './CapturedProcess.js';
 import { RuntimeSourceAdmissionError } from '../../composition/runtimeSourceQualification.js';
 import type { CapturedProcessPort, CapturedProcessProfile } from './CapturedProcess.js';
@@ -57,6 +58,7 @@ export class RuntimeSourceNativeVersion implements RuntimeSourceNativeCheck {
   private readonly processes = new Set<CapturedProcessPort>();
   private readonly abort = new AbortController();
   private used = false;
+  private deadline = 0;
   private closing: Promise<boolean> | undefined;
 
   constructor(
@@ -76,6 +78,8 @@ export class RuntimeSourceNativeVersion implements RuntimeSourceNativeCheck {
     if (this.used || this.abort.signal.aborted || !cli || !this.isCurrent())
       throw new RuntimeSourceAdmissionError('native-outcome-unknown');
     this.used = true;
+    // Match the existing installer native acquisition budget; both Claude reads share this deadline.
+    this.deadline = performance.now() + (process.platform === 'darwin' ? 60_000 : 30_000);
     const identity: RuntimeSourceNativeIdentity = { nativeVersion: cli.version };
     if (this.seed.provider === 'claude' && cli.executable.sha256 !== this.seed.executable.sha256) {
       identity.seedNativeVersion = await this.read(this.seed.executable);
@@ -90,6 +94,8 @@ export class RuntimeSourceNativeVersion implements RuntimeSourceNativeCheck {
   private async read(executable: { path: string; sha256: string }): Promise<string> {
     if (this.abort.signal.aborted || !this.isCurrent())
       throw new RuntimeSourceAdmissionError('native-outcome-unknown');
+    const remaining = this.deadline - performance.now();
+    if (remaining <= 0) throw new RuntimeSourceAdmissionError('native-outcome-unknown');
     const process = this.createProcess(
       {
         provider: this.seed.provider,
@@ -102,7 +108,7 @@ export class RuntimeSourceNativeVersion implements RuntimeSourceNativeCheck {
       this.processCustody
     );
     this.processes.add(process);
-    const timer = setTimeout(() => this.abort.abort(), Math.min(this.seed.timeoutMs, 10_000));
+    const timer = setTimeout(() => this.abort.abort(), remaining);
     try {
       const child = process.launch({
         command: executable.path,

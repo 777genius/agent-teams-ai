@@ -5,10 +5,13 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promi
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+
 import { afterEach, expect, it } from 'vitest';
+
 import { DesktopBackendFeature } from '../../../src/features/agent-backend/main/composition/DesktopBackendFeature';
-import type { DesktopBackendDescriptor } from '../../../src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor';
+
 import type { ProviderManagementOperation } from '../../../src/features/agent-backend/main/infrastructure/CapturedProviderManagement';
+import type { DesktopBackendDescriptor } from '../../../src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor';
 import type { TeamHostProfile } from '@agent-teams/legacy-agent-host/team-host';
 
 const roots: string[] = [],
@@ -35,7 +38,7 @@ import { createTeamHost } from ${JSON.stringify(hostUrl)};
 const server = createTeamHost(JSON.parse(readFileSync(${JSON.stringify(profileFile)}, 'utf8')), { input: process.stdin, output: process.stdout });
 void server.closed.then(() => process.exit(0));`;
   await writeFile(hostEntry, source, { mode: 0o600 });
-  const bytes = '#!/bin/sh\nprintf TEST-runtime-selection\n';
+  const bytes = '#!/bin/sh\nprintf "2.1.34 (Claude Code)\\n"\n';
   const original = { path: join(root, 'TEST-cli-seed'), sha256: digest(bytes) };
   const replacement = { path: join(root, 'TEST-cli-repaired'), sha256: digest(bytes) };
   for (const executable of [original, replacement])
@@ -153,15 +156,25 @@ it('real Main/Host publication preserves legacy target bytes and restores every 
   await expect(
     selected.request('runtime.source.publish' as ProviderManagementOperation, {})
   ).rejects.toMatchObject({ code: 'invalid-binding' });
-  await sources.publish({
+  const nativeSelection = {
     commandId: 'TEST-publish-2',
     expectedRevision: first.selection!.revision,
-    candidate: { sourceKind: 'override', executable: f.original },
-  });
+    nativeSelection: {
+      sourceKind: 'override' as const,
+      nativeCli: { executable: f.original, version: '2.1.34' },
+    },
+  };
+  const second = await sources.publish(nativeSelection);
+  expect(second.selection?.cliVersion).toBe('2.1.34');
   expect(await sources.lookup('TEST-publish-1')).toEqual(first);
   expect(JSON.stringify(await sources.current())).not.toContain(f.root);
   await desktop.shutdown();
   const restarted = f.open();
+  expect(
+    await (await restarted.captureRuntimeSources('TEST-context', f.root, 'claude')).publish(
+      nativeSelection
+    )
+  ).toEqual(second);
   const restored = await restarted.restoreProviderManagement('TEST-context', selected.targetId);
   expect(restored.profileId).toBe(selected.profileId);
   expect(restored.targetId).toBe(selected.targetId);

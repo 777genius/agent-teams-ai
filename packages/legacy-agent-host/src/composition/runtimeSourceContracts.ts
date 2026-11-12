@@ -65,6 +65,19 @@ export const runtimeSourceCandidateSchema = z
   })
   .strict();
 export type RuntimeSourceCandidate = z.infer<typeof runtimeSourceCandidateSchema>;
+/** Installer selection without access to the Host's private execution paths. */
+export const runtimeSourceNativeSelectionSchema = z
+  .object({
+    sourceKind: runtimeSourceCandidateSchema.shape.sourceKind,
+    nativeCli,
+    embedded: embeddedDelivery.optional(),
+  })
+  .strict();
+export type RuntimeSourceNativeSelection = z.infer<typeof runtimeSourceNativeSelectionSchema>;
+export type RuntimeSourcePublishIntent = { commandId: string; expectedRevision: string } & (
+  | { candidate: RuntimeSourceCandidate; nativeSelection?: never }
+  | { nativeSelection: RuntimeSourceNativeSelection; candidate?: never }
+);
 
 export const runtimeSourceReferenceSchema = z.object({ sourceId: hash, revision: hash }).strict();
 export type RuntimeSourceReference = z.infer<typeof runtimeSourceReferenceSchema>;
@@ -104,6 +117,17 @@ export const publishRuntimeSourceSchema = z
   })
   .strict();
 export type PublishRuntimeSource = z.infer<typeof publishRuntimeSourceSchema>;
+export const publishRuntimeSourceRequestSchema = z.union([
+  publishRuntimeSourceSchema,
+  z
+    .object({
+      grant: runtimeSourceGrantSchema,
+      commandId: id,
+      expectedRevision: hash,
+      nativeSelection: runtimeSourceNativeSelectionSchema,
+    })
+    .strict(),
+]);
 export const runtimeSourceReadSchema = z.object({ grant: runtimeSourceGrantSchema }).strict();
 export const runtimeSourceLookupSchema = z
   .object({

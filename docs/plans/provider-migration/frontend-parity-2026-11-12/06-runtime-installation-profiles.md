@@ -239,7 +239,7 @@ Hash/platform/malformed receipt suites переиспользовать; same-ve
 ## 12. Native identity admission — 2026-11-12
 
 - Private candidate различает `nativeCli` (path/hash/version/generation) и execution executable. Для V2 CLI выбирает generation, original qualified Bun/embedded 2.1.4 остаётся исполнителем; SDK revision Claude не выдаётся за CLI version.
-- Новый SHA требует owned finite `--version`, точного ожидаемого ответа и проверки bytes до/после. Child получает только captured platform/home/config paths, без credential env, loader options или ambient `process.env`; output ограничен 4 KiB, время — 10 секунд максимум.
+- Новый SHA требует owned finite `--version`, точного ожидаемого ответа и проверки bytes до/после. Child получает только captured platform/home/config paths, без credential env, loader options или ambient `process.env`; output ограничен 4 KiB. Исходный 10s cap исправлен в срезе 13 под существующий installer budget.
 - Current qualification намеренно конечная: Codex — existing 0.162.0 protocol pin; V1 — existing stable 1.x minimum 1.16.0; V2 — stable 2.x selector поверх captured qualified 2.1.4 engine. Для Claude новый SHA должен подтвердить ту же CLI version, что original seed. Более новая Claude/Codex version и V1↔V2 transition пока получают конкретный отказ.
 - `runtime.source` использует existing command journal: prepared → verifying → verified → published, либо held с redacted reason. Receipt записывается до child; verified recovery не повторяет native execution, а published ACK recovery читает исходный outcome.
 - Unknown cleanup удерживает original check/handle в живом owner. Повтор того же intent может подтвердить cleanup именно этого handle; cold verifying/held не создаёт child, не принимает PID и не становится current. Host shutdown отдельно сохраняет cleanup под исходным lease после seal admission.
@@ -248,6 +248,17 @@ Hash/platform/malformed receipt suites переиспользовать; same-ve
 - Восемь новых сценариев используют disposable shell fixtures для actual process ownership/`--version` и fault injection cleanup. Это не утверждение о выполненном inference настоящих Claude/Codex/OpenCode. V2 CLI/engine policy проверена структурно; native engine/Desktop journeys остаются required gates.
 - На момент этой проверки общий `typecheck:test` имел только две параллельные Darwin/Linux fixture ошибки у platform owner, а size guard — три Desktop harness файла другого среза. Наши production files ≤800; combined gates повторяет root после интеграции.
 - Осталось: installer/discovery publication consumer, отдельная квалификация последующих Claude/Codex versions и generation transition, full artifact acquisition/retention wiring, 05/07 и native/Desktop journeys. Main merge/activation не выполнялись.
+
+## 13. Private native selection из installer — 2026-11-12
+
+- В прежний private `publish` добавлен `nativeSelection`: Main передаёт фактически выбранный native CLI и, при наличии, verified engine delivery, не получает Host-private Bun path.
+- Host нормализует selection в прежний полный candidate строго по `expectedRevision`. Наследование executor/delivery использует исходную retained revision, а не current pointer; fingerprint и existing journal остаются прежними.
+- Повтор native-only и эквивалентного full-candidate запроса имеет один outcome, даже после следующего publication и cold restart. Неизвестная expected revision отвергается до запуска child.
+- Исправлен native version budget: одна общая deadline 30 секунд, на Darwin 60 секунд, по существующему `openCodeVersionDiagnostics`; оба Claude reads делят этот бюджет. Этот срок не делает unqualified version совместимой.
+- Host production build и test types — PASS; source identity/selection **14/14 PASS**. Real Main→child Host native publication и restart — **1/1 PASS**. Новые fixtures подтверждают replay/executor ownership; настоящий provider inference ими не заявляется.
+- R1 проверил byte-order прежнего `publishRuntimeSourceSchema`, exact parent inheritance и недоступность операции generic renderer management. Для V2 отдельный тест меняет current graph/executor, затем восстанавливает original native-only receipt с прежней парой.
+- `OpenCodeV2SupportInstaller.captureInstalled` использует existing installed receipt и полную проверку immutable delivery, выдаёт только original directory/manifest/platform для Host admission. Existing support suite **18/18 PASS**, targeted lint — PASS; lifecycle journey проверяет same-size corruption, repair в новый instance и сохранение исходной captured ссылки.
+- Срез предоставляет private consumer seam; wiring установки/обнаружения в Desktop, квалификация новых Claude/Codex и V1↔V2, P05/P07 и native/Desktop acceptance остаются открытыми.
 
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/runtime/openCodeRuntimeBinaryEnv.ts
