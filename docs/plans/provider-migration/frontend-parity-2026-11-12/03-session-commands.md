@@ -1,179 +1,185 @@
 # 03. Slash-команды и настройки действующей сессии
 
-Статус: план; production, provider contracts и artifacts пока не изменяются.
+Статус: план после R2; базовый маршрут определён, спорные native действия ещё не implementation-ready.
 Frontend baseline: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Stage 1 baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
-Срез включает live-session model/effort/fast для Claude, Codex и поддерживаемых OpenCode routes.
-Выбор параметров до запуска принадлежит плану 05; общий profile lifecycle — плану 06.
+Old runtime source: `777genius/agent_teams_orchestrator@e13edcd3d4ffbecc0272ae30195cc6b15b710ee7`.
+Provider source D: `agent-teams-ai/old-provider-implementations@d58500bc983e897506e23d7b0bc8da1209864edd`.
+Сохраняем работающие frontend команды; live model/effort/fast входят сюда только после проверки actual старого маршрута.
+Prelaunch параметры принадлежат плану 05, profile lifecycle — 06; отдельную панель управления не создаём.
 
-## 1. Существующий frontend и подтверждённый gap
+## 1. Actual frontend baseline и подтверждённый gap
 
-- `MessageComposer` разрешает standalone slash только живому lead, без attachments и без cross-team адресации.
+- `MessageComposer` разрешает standalone slash только живому lead, без attachments и cross-team адресации.
 - [Main: `MessageComposer`](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/messages/MessageComposer.tsx).
-- `teams.ts` сохраняет raw slash без обычной message wrapper и передаёт его live non-OpenCode lead через stdin.
-- [Main: `handleSendMessage` raw slash branch](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/ipc/teams.ts).
-- Tests подтверждают raw routing и для известной `/compact`, и для неизвестной standalone команды.
-- [Main: routing regression tests](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/test/main/ipc/teams.test.ts).
-- Этот тест доказывает доставку в stdin; он не доказывает исполнение всех команд каждым native provider.
-- Shared suggestions содержат 10 команд, Codex-specific список — 21; project/user skills добавляются отдельно.
-- [Main: `getSuggestedSlashCommandsForProvider`](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/utils/providerSlashCommands.ts).
-- [Main: `buildSlashCommandSuggestions`](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/utils/skillCommandSuggestions.ts).
-- `annotateSlashCommandResponses` сохраняет вид команд и их результатов в существующей истории сообщений.
-- [Main: `annotateSlashCommandResponses`](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/teamMessageSlashResults.ts).
-- Host `processSend` и `sendMessage` отвергают любой `parseStandaloneSlashCommand`, включая skills.
-- [Stage 1: `createHostTeamMutations`](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/src/features/agent-backend/renderer/createHostTeamMutations.ts).
-- Текущий Session SPI имеет submit/observe/interrupt/checkpoint/close, но не публичный control для compact/reset/model.
-- Stage 1 наблюдает compaction и context epochs; ручная команда compaction от этого автоматически не появляется.
-- [Stage 1: `RuntimeOwner`](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/packages/legacy-agent-host/src/runtime/RuntimeOwner.ts).
+- `teams.ts` передаёт raw slash без message wrapper в stdin живого non-OpenCode lead; tests проверяют доставку, не native semantics.
+- [Main: raw slash branch](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/ipc/teams.ts).
+- Lead запускается с `--print --input-format stream-json --output-format stream-json`, включая create/launch.
+- [Main: exact launch args](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningLaunchTeamFlow.ts).
+- [Main: exact create args](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningCreateTeamFlow.ts).
+- В этом режиме old runtime оставляет только `prompt && !disableNonInteractive` либо `local && supportsNonInteractive`.
+- [Old runtime: `commandsHeadless`](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/main.tsx).
+- Следовательно наличие команды в TUI/подсказке не доказывает её доступность в Desktop lead: `local-jsx` отфильтровывается.
+- Shared suggestions — 10 имён, Codex — 21; объединение содержит **25 уникальных имён**, а не 31 реализованную операцию.
+- [Main: shared names](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/shared/utils/slashCommands.ts).
+- [Main: Codex names](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/utils/providerSlashCommands.ts).
+- Project/user skills берутся из `skillCommandSuggestions.ts`; список ограничивается реально captured catalog выбранного профиля.
+- Host renderer сейчас отвергает любой standalone slash, включая команды с уже существующим native маршрутом и skills.
+- [Stage 1: blanket guard](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/src/features/agent-backend/renderer/createHostTeamMutations.ts).
+- **Claude manual compact уже идёт через `team.execute → message.send → Session.submit`**, без нового `Session.control`.
+- Native regression проверяет physical `compact_boundary` с trigger `manual`, новый context epoch и последующий team/MCP turn.
+- [Stage 1: existing native compact proof](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/packages/legacy-agent-host/tests/native-claude-compaction.native.ts).
+- Это не означает, что любая slash-строка допустима как prompt: разрешаем только подтверждённый native-command маршрут.
 
-## 2. Закрываемая поверхность команд
+## 2. Ограниченный inventory actual handlers
 
-До реализации заполнить компактную provider × command матрицу: old native result, новый native API, способ проверки.
-У каждой клетки должен быть статус `proven`, `existing-ui-unverified` или `not-offered`; suggestion не меняет статус на `proven`.
+Статусы различаются: native proof; source-supported, требующий journey; explicit old unsupported; UI/native mismatch; not-offered.
+Строки ниже покрывают все 25 имён. Перечень skills добавляется из одного test profile, а не из всего возможного plugin ecosystem.
 
-| Семейство | Existing controls/commands | Владение и ожидаемый механизм |
+| Имена из frontend | Old handler в exact headless launch | Вывод для parity / Stage 1 |
 | --- | --- | --- |
-| Контекст | `/compact`, `/clear`, `/reset`, `/new` | Native control и корректный context boundary; aliases сверяются с провайдером |
-| Live настройки | `/model`, `/effort`, `/fast`, `/plan`, `/permissions`, `/personality` | Управление исходной сессией, safe-point/readback, её сохранённые настройки |
-| Read-only вывод | `/cost`, `/usage`, `/status`, `/mcp`, `/diff`, `/copy` | Существующие authoritative reads/clipboard, без фиктивного inference |
-| Conversation actions | `/review`, `/fork`, `/resume`, `/agent`, `/quit`, `/exit` | Existing provider semantics и existing lifecycle ports, без чужой session selection |
-| UI/native integrations | `/mention`, `/apps`, `/plugins` | Существующий UI/native operation; проверить, что был рабочий маршрут, а не только строка подсказки |
-| Skills/custom commands | Project/user skill slash, известные native plugin commands | Выбранный captured skill/extension; command identity и допустимость args |
+| `/compact` | `commands/compact/index.ts`: local, noninteractive=true; `compact.ts` вызывает native compaction | Claude reuse существующего `submit` и boundary proof; Codex отдельно проверяет, что старый эффект относится к его native context |
+| `/cost` | `commands/cost/index.ts`: local, noninteractive=true; `cost.ts` возвращает cost либо subscription/overage состояние | Сохранить реальный вывод; проверить normalization локального результата, не подставлять нулевые usage |
+| `/clear`, `/reset`, `/new` | `commands/clear/index.ts`: aliases; **noninteractive=false** | Source явно исключает их из этого режима; проверить видимый отказ/молчаливый UX, не проектировать reset по одной подсказке |
+| `/model`, `/effort`, `/fast`, `/plan`, `/usage` | Соответствующие `commands/*/index.ts`: **local-jsx** | Exact headless filter исключает; live controls не считаются proven, prelaunch working settings остаются в 05 |
+| `/permissions`, `/status`, `/mcp`, `/diff`, `/copy`, `/resume`, `/quit`, `/exit`, `/plugins` | `commands/*/index.ts`: local-jsx; exit alias quit, plugin alias plugins | В old runtime это TUI UI, не готовый headless API; Codex suggestion не меняет это свойство |
+| `/review` | `commands/review.ts`: **prompt**, builtin handler создаёт review prompt | Проверить old headless journey и сохранить handler/args; наличие Codex TUI review API здесь не требуется автоматически |
+| `/fork` | `commands.ts`: условная регистрация `FORK_SUBAGENT`; не unconditional Desktop capability | Проверить exact bundled feature/version; нет доказанного working baseline из одного suggestion |
+| `/mention`, `/apps`, `/agent`, `/personality` | Нет одноимённой builtin регистрации в просмотренном old `commands.ts`; `agents` — другое имя | Codex-specific UI/native mismatch до проверки; не объявлять старой рабочей операцией native Codex TUI |
+| Project/user/plugin skill commands | `commands.ts` + prompt handler; user-invocable/noninteractive фильтры, hooks и args | Сохранить captured identity и фактический native execution; не заменять plugin command произвольным path |
 
-Для OpenCode raw-stdin ветка baseline явно отличается: не обещать паритет с Claude только из общей подсказки.
-Если старая команда действительно работала, её нельзя убрать или оставить unsupported ради зелёного теста.
-Если была только подсказка без рабочего native handler, явно зафиксировать неопределённость и проверить её до изменения UX.
-Новая реализация не обязана придумывать provider capability, которой не было в старом приложении.
+- [Old: command registry/aliases](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/commands.ts).
+- [Old: compact metadata](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/commands/compact/index.ts), [clear metadata](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/commands/clear/index.ts), [model metadata](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/commands/model/index.ts).
+- [Old: local/prompt/skill execution](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/processUserInput/processSlashCommand.tsx).
+- Для Codex это inventory внешнего old orchestrator, **не** доказательство исполнения native Codex TUI команд.
+- Old Codex bridge использует `thread/start|thread/resume` и `turn/start` с model/effort; отдельный slash handler этим не доказывается.
+- [Old: Codex native bridge](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/codexNative/appServerRunner.ts).
+- OpenCode raw-stdin ветка baseline исключена: V1/V2 получают отдельную проверку actual offered/accepted поведения; Claude матрица на них не переносится.
 
-## 3. User stories и acceptance
+## 3. Короткий discovery gate до нового control contract
 
-1. Пользователь вводит поддерживаемую команду в прежний Composer, видит отправленную команду и её реальный результат.
-2. `/compact` меняет native context и сохраняет обязательные team/MCP instructions в последующих turns.
-3. `/clear` и aliases следуют подтверждённой native семантике; не удаляют задачи/файлы/команду продукта.
-4. Live model/effort/fast применяется к нужной сессии и подтверждается следующим turn/native readback.
-5. Текущий turn не уничтожается ради изменения настройки; время применения соответствует проверенной provider семантике.
-6. После reconnect/resume видно подтверждённое актуальное значение; launch defaults меняются только если прежний UI это явно просил.
-7. Skills продолжают вызываться из текущих подсказок и не теряются из-за общей slash-проверки.
-8. Неизвестный результат команды не даёт второго compact/reset/model update при повторном открытии панели.
-9. Late reply от старого run/member generation не меняет настройки или историю нового run.
-10. При недоступном native действии UI показывает конкретную причину, а обычный slash не отправляется модели как просьба «сымитировать команду».
+1. На disposable old Desktop profile повторить exact launch и по одному случаю каждой спорной группы: с args/без args, следующий turn.
+2. Записать handler/version, UI результат, native effect/readback; для Codex сверить target thread, для OpenCode — version и реально доступный маршрут.
+3. `working` требует сохранения; `explicit unsupported` не требует изобретать новую функцию; enabled-but-silently-ignored остаётся явным UX gap.
+4. Для последнего выбрать конкретное исправление текущего UI или доказанный native adapter, отразить решение в матрице до coding.
+5. Для каждого добавляемого live operation назвать actual API pinned artifact; ACK, application point и безопасное восстановление проверить отдельно.
+6. Проверить captured project/user skill и один разрешённый plugin command; userInvocable=false не превращать в доступную команду.
 
-## 4. Минимальная архитектура
+Уже известные API, которые ограничивают выбор:
 
-- Сохранить существующий Composer, parser, metadata и оформление command/result в activity.
-- В Host mutation boundary различать обычное сообщение, typed session command и captured skill invocation.
-- Native codecs и provider-specific controls находятся в source repo provider library, не в renderer/Host transport.
-- Предлагаемый optional Session control port типизирован по ограниченному набору реально поддерживаемых операций.
-- Capability declarations описывают operation/arguments; не создавать generic raw RPC или shell passthrough.
-- RuntimeOwner сохраняет исходный `RuntimeBinding`, commandId, phase и native outcome под уже существующим member fence.
-- Существующие Runtime store/command receipt используются повторно; отдельный event bus/journal не нужен.
-- Для live settings достаточно небольшого подтверждённого session-settings snapshot с revision и application point.
-- Snapshot принадлежит действующей сессии; общей publish/revision механикой управляет план 06.
-- Восстановление использует существующие checkpoint/restore ports; неизвестный control outcome не replay автоматически.
-- Read-only commands используют существующие captured projections и не стартуют новую conversation ради ответа.
-- Skill invocation берёт существующий captured catalog и исходную skill identity; arbitrary filesystem path из slash args не становится authority.
-- Не добавлять fallback к ambient CLI/stdin другого профиля, чтобы обойти отсутствующий D метод.
+- Claude compact: существующий `Session.submit` с original raw command; нативное событие compaction является readback.
+- Old SDK stream protocol имеет `set_model`, `set_permission_mode`, `set_max_thinking_tokens`, `apply_flag_settings`, `get_settings`.
+- [Old: exact control handlers](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/cli/print.ts).
+- Они **не** доказывают одинаковый public API pinned SDK или использование live settings frontend; не изобретать `Query.compact()`/`setEffort()`.
+- D Claude `QueryHandle` сегодня открывает interrupt/close/mcpServerStatus/optional stopTask; новое расширение требует source + pinned SDK проверки.
+- [D: Claude session](https://github.com/agent-teams-ai/old-provider-implementations/blob/d58500bc983e897506e23d7b0bc8da1209864edd/packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/session.ts).
+- D Codex использует `thread/start`, `thread/resume`, `turn/start`; mutable settings/compact/review adapter сейчас не подтверждён.
+- [D: Codex client](https://github.com/agent-teams-ai/old-provider-implementations/blob/d58500bc983e897506e23d7b0bc8da1209864edd/packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/app-server.ts).
+- Нет разрешения на generic raw RPC, ambient CLI или новый prompt «сделай вид, что сменил настройки» при отсутствии native метода.
 
-## 5. Порядок реализации и точные места
+## 4. Acceptance и минимальная архитектура
 
-### Шаг A — native inventory перед универсальным интерфейсом
+1. Пользователь вызывает proven command/skill из прежнего Composer и видит её результат в исходной conversation.
+2. Compact меняет native context; следующий turn сохраняет обязательные team/MCP инструкции и наблюдаемый context epoch.
+3. Локальный результат `/cost` и command errors отображаются как native command output, а не как случайный следующий assistant turn.
+4. Captured skill исполняется с исходными args и scope; stale generation не переключает выполнение на другой profile/run.
+5. Потерянный ACK не создаёт повтор compact/skill effect; read/reattach не вызывает команду снова.
+6. Если discovery докажет working live setting/reset, сохранить его actual semantics и проверить следующий turn/resume; launch default не менять скрыто.
+7. Explicit old unsupported остаётся понятным отказом; enabled-but-ignored UI закрывается явным проверенным решением, не записывается в PASS.
+8. Attachments/cross-team/offline restrictions и обычные сообщения не регрессируют.
 
-- Сопоставить строки `providerSlashCommands.ts`, `slashCommands.ts`, `skillCommandSuggestions.ts` с actual old native handler.
-- Для спорных Codex `/apps`, `/plugins`, `/agent`, `/fork`, `/resume` проверить old workflow и публичный native API отдельно.
-- Для Claude/Codex model/effort/fast проверить SDK/app-server параметры, current-turn policy и сохранение после resume.
-- Для OpenCode V1/V2 проверить лишь фактически предлагаемые команды и variant semantics; не копировать чужие enums.
-- Записать native source/version и минимальную E2E проверку каждой proven группы в capability matrix.
-- Если native метод отсутствует, сначала source extension D/SDK adapter; простой перевод строки в `submit` не считается реализацией.
+- Сохранить Composer/parser и `teamMessageSlashResults.ts`, но асинхронные результаты связывать с original inputId/commandId.
+- Для доказанного native slash достаточно bounded classification/allowed args на существующем `message.send`, original binding и input ledger.
+- Claude compact не требует нового Session SPI, нового receipt journal или отдельного event bus.
+- Native local result normalization и captured skills принадлежат D adapter; Host хранит authority и историю, не native protocol.
+- Только если working old действие нельзя выразить существующим API, добавить узкий optional Session operation именно для него.
+- Не создавать заранее union compact/reset/model/effort/fast/permissions и session-settings revision framework.
+- Для доказанного live setting достаточно existing session metadata/readback; дополнительный snapshot нужен лишь при реальном recovery gap.
 
-### Шаг B — provider source и Session contract
+## 5. Порядок реализации и конкретные места
 
-- В `agent-teams-ai/old-provider-implementations` расширить source Session contract и provider adapters узким control union.
-- Предложенные payload: compact с optional focus; reset; live settings с проверяемыми model/effort/fast/permission fields.
-- Conversation fork/resume и закрытие переиспользуют существующие lifecycle/checkpoint методы там, где совпадает семантика.
-- Разделить requested/accepted/applied/unknown; native ACK не подменяет readback применения.
-- Для provider, который применяет параметр только на next turn, сохранять этот application point в результате.
-- Собрать source/contract artifacts штатно, привязать immutable commits и hashes; vendored dist не редактировать.
-- Согласовать единый artifact pin с планом 01, чтобы login и Session controls не перетёрли друг друга.
+### A — закончить bounded evidence matrix
 
-### Шаг C — Host control и persist/readback
+- Дополнить таблицу выше old Desktop receipts для спорных групп, exact artifact/version и selected provider.
+- Проверить `skillCommandSuggestions.ts`, registry/userInvocable и one selected plugin, не весь возможный каталог.
+- Зафиксировать причины `not-offered`/`unsupported`/`UI mismatch`; review gate не разрешает молча удалить working возможности.
 
-- Дополнить `packages/legacy-agent-host/src/runtime/contracts.ts` минимальными command/settings records.
-- Вынести control helper рядом с `RuntimeOwner.ts`, если добавление нарушает source-size guard; owner не переписывать.
-- Подключить helper к `RuntimeOwner` authorization `control`, current binding, busy/checkpoint guards и shutdown.
-- Добавить typed operation в `src/features/agent-backend/contracts/operations.ts` и Host route composition `TeamHost.ts`.
-- Если используется existing Team command receipt, расширить `team/contracts.ts` и `validateTeamCommand.ts` согласованно.
-- Захватывать profile/run/member generation до native эффекта; validation отказ должен быть явно `known-not-sent`.
-- После успешного control сохранить подтверждённые session settings и context boundary; после unknown — только исходный pending record.
-- Не изменять активную сессию чужим model default update из плана 05.
+### B — существующий Host input path
 
-### Шаг D — existing frontend adapter
+- В `src/features/agent-backend/renderer/createHostTeamMutations.ts` заменить blanket guard на выбранный command/skill dispatch.
+- Разрешение должно повторно проверяться в Host boundary по captured capability/identity; renderer string не даёт authority.
+- Переиспользовать `team/contracts.ts`, `validateTeamCommand.ts`, `RuntimeOwner` input identity/no-replay; новые поля добавлять лишь для отсутствующей correlation.
+- Raw native command не оборачивать обычными agent/inbox instruction blocks; использовать уже проверенную compact preparation ветку.
+- В projection сохранить command/result metadata и привязку к original input; ограничить поздний ответ старой generation.
+- Не увеличивать frozen `RuntimeOwner.ts`: узкую helper-функцию вынести рядом при необходимости, owner не переписывать.
 
-- В `createHostTeamMutations.ts` заменить общий unsupported dispatch на typed command/captured skill route.
-- Сохранить existing lead/attachments/cross-team restrictions и pending-send ownership при context switch.
-- Связать результат с исходным commandId в message/activity projection; не приписывать следующий случайный assistant turn команде.
-- `/model` без аргумента должен сохранить существующий пользовательский выбор, а не молча выбирать default.
-- Read-only command output и user-facing errors используют прежние components; новая команда-панель не нужна.
-- Проверить, что live setting readback обновляет visible controls и переживает reload; scope application не скрывать.
+### C — только доказанные отсутствующие native операции
 
-### Шаг E — E2E и native evidence
+- Если gate выявляет working capability без D route, менять исходники `old-provider-implementations`, не vendored dist.
+- Расширить `provider-session-contracts/contracts/session.ts` и конкретный adapter минимальным методом после проверки pinned native API.
+- Для next-turn settings записать application point; native acceptance и фактически применённое значение различать.
+- Если нужен Host operation, согласованно добавить его в `contracts/operations.ts`, `TeamHost.ts` и original receipt owner.
+- Собирать artifacts штатно, pin immutable commits/hashes; согласовать общий D pin с 01, 05 и 07.
+- Исходный неизвестный effect остаётся pending/unknown; close/restart не означает разрешение повторного native control.
 
-- Расширить Composer/skills/resume smoke на actual Host и pinned native engines с localhost model fixtures.
-- В тестовой модели проверить фактический model/effort/fast payload, а не только текст «настройка сохранена».
-- Для compact/reset проверить следующий turn, context epochs и MCP/task continuity, не только control receipt.
-- К каждому native provider прикладывать собственный результат; успешный Claude сценарий не квалифицирует Codex/OpenCode.
+### D — существующий UI и E2E
 
-## 6. Основные E2E сценарии
+- Сохранить ограничения Composer, pending-send ownership и оформление сообщений; новая session-control панель не требуется.
+- Для `/model` без args сначала проверить old UX; не обещать восстановление TUI picker, которого Desktop не показывал.
+- Prelaunch model/effort/fast controls проверяет 05; здесь проверяются только доказанные live команды и исправления mismatch.
+- Расширить имеющиеся native/desktop fixtures; проверки provider-specific, Claude PASS не квалифицирует Codex/V1/V2.
+
+## 6. E2E-first и точечные unit
 
 Harness: `desktop-composer-ui-smoke.ts`, `desktop-skills-ui-smoke.ts`, `desktop-resume-ui-smoke.ts`.
-Native база: `native-claude-compaction.native.ts`, существующие Codex resume и OpenCode V2 fixtures.
+Native reuse: `native-claude-compaction.native.ts`, Codex resume и OpenCode fixtures; localhost model server не подменяет native engine.
 
-| Сценарий | Что делаем | Что обязано быть доказано |
+| Сценарий | Действие в actual UI / native fixture | Обязательный результат |
 | --- | --- | --- |
-| Compact continuation | Composer → compact → следующий task/MCP turn | Native compaction и новый context epoch; сохранены team инструкции/история результата |
-| Reset/aliases | Создать контекст, вызвать proven reset/new/clear, отправить новый turn | Подтверждённая native семантика; нет удаления задач, подмены run или stale context |
-| Live settings | Во время/между turns выбрать model/effort/fast, затем новый turn | Provider получает новые значения в нужной точке; старый turn завершён по policy |
-| Reconnect/resume | Применить настройки, перезапустить UI/Host по допустимому пути, resume | Settings/readback восстановлены; defaults другого профиля не подменяют сессию |
-| Lost ACK + old generation | Прервать ответ после effect, сменить run, открыть панель | Нет replay; late result привязан к старой операции и не меняет новый run |
-| Skills/custom | Вызвать selected project и user skill из suggestions | Captured identity/args доходят до native route; обычный message wrapper не ломает команду |
-| Informational/special | Выполнить proven cost/status/mcp и provider-specific conversation action | Данные соответствуют текущей session authority; реальные native outputs, без фиктивного prompt |
-| UI restrictions | Slash с attachments, неверным recipient, offline lead; обычный текст затем | Сохранены понятные ограничения; обычные сообщения/attachments не регрессировали |
+| Claude compact continuation | Composer → `/compact focus` → task/MCP turn | Physical manual boundary, один epoch/effect, исходные instructions и история результата |
+| Local command output | `/cost` после turn; один native отказ | Реальный cost/subscription/error output принадлежит исходной команде; не ложное model reply |
+| Captured skills | Project/user skill и разрешённый plugin command из suggestions | Native handler, args/hooks и selected scope; userInvocable=false не вызывается |
+| Lost ACK + reconnect | Прервать reply после compact/skill effect, открыть исходную conversation | Original lookup, нет повторной отправки; retained unknown не превращается в completed |
+| Generation race | Сменить run/profile после admission, получить поздний result | Effect/result остаётся у исходного target; новый run не получает старые настройки/сообщение |
+| Native inventory gaps | Old/new exact launch для спорной группы Codex и OpenCode | Зафиксирован working/unsupported/mismatch; enabled-but-ignored не считается parity |
+| Conditional live/reset | Только для capability, доказанной gate: применить → следующий turn → resume | Actual model/effort/context effect, безопасный application point и readback, без скрытого изменения defaults |
+| Restrictions + обычный текст | Attachments, другой recipient, offline lead; затем обычное сообщение | Понятный отказ и отсутствие регрессии обычных сообщений/attachments |
 
-Для live settings один parameterized сценарий покрывает поддерживаемые provider tuples; не копировать harness на каждого.
-Матрица показывает omitted/unverified cases отдельно; один общий PASS без списка команд не достаточен.
+- Unit добавлять только для опасных pure rules: bounded command/alias classification и captured skill scope.
+- Duplicate/lost ACK/generation проверять расширением existing input-ledger test, не новым зеркальным suite.
+- Atomic control против close/checkpoint тестировать отдельно только если после gate действительно добавлен native control.
+- Не писать unit на каждый forwarded mapper, UI branch или каждое из 25 имён.
 
-## 7. Ограниченные unit и оценка
+## 7. Оценка после source review
 
-- Unit: normalization/aliases и запрет восприятия обычного текста как управляющей команды.
-- Unit: commandId/fingerprint + run generation mismatch, duplicate/lost-ACK receipt без повторного effect.
-- Unit: atomic control против close/interrupt/checkpoint и недопустимое применение старого settings result.
-- Unit: authoritative capabilities/argument validation; arbitrary raw RPC/secret fields не проходят boundary.
-- Остальные UI и native transitions проверять E2E; не тестировать зеркально каждую ветку provider adapter.
-- Production: **1 600–3 200** строк, включая live-session model/effort/fast Claude/Codex и новые D controls.
-- E2E/fixture: **1 200–2 300** строк; критичные unit: **200–400** строк; общее количество не является целью.
-- Prelaunch catalogs/defaults/model selection из плана 05 и общий profile lifecycle из 06 повторно не считаются.
-- Сложность **8/10**; ожидаемая надёжность после приёмки **7/10**; уверенность оценки **5/10**.
-- Главная неопределённость — old native semantics специальных команд; inventory может сузить или расширить подтверждённый объём.
-- Закрытие среза требует сохранения всех proven old workflows; неподдержанная подсказка учитывается отдельно, а не скрывается.
+- Подтверждённый базовый маршрут с reuse: production **600–1 100**, E2E/fixture **650–1 100**, unit **80–160** строк.
+- Отдельный условный резерв после native gate: **400–900** production и **350–650** E2E строк для реально требуемых дополнительных controls.
+- Резерв не объявляется обязательной работой по всему Codex TUI; gate может убрать его либо выявить конкретную более дорогую capability.
+- Prelaunch catalogs/settings из 05, profile publication из 06, config/extensions из 07 здесь повторно не считаются.
+- Сложность базового пути **6/10**; с новым live native control **8/10**; ожидаемая надёжность после приёмки **8/10**.
+- Уверенность базовой оценки **7/10**, условного резерва **4/10**; цель — сохранённые capabilities, не написание исходных 3 200 строк.
+- Implementation-ready: native gate закрыт по всем offered группам, remaining UI mismatches имеют конкретное решение и E2E.
 
 ## 8. Review
 
 ### R1 — авторская критика, выполнена 2026-11-12
 
-- Найдено: расчёт по 10 shared commands игнорировал 21 Codex suggestion и dynamic skills.
-- Исправлено: добавлена полная группировка и отдельный native inventory gate; suggestion не объявляется capability.
-- Найдено: live Claude/Codex settings могли потеряться между планами 03 и 05.
-- Исправлено: live control/readback/persistence и дополнительные 400–800 production строк явно включены здесь.
-- Найдено: удаление общего slash guard отправило бы `/compact` обычным prompt, без требуемого native эффекта.
-- Исправлено: typed control contract, applied readback и следующий actual turn включены в acceptance.
-- Найдено: существующая эвристика «следующий reply — результат slash» опасна при асинхронном Host control.
-- Исправлено: результат связывается с original commandId; late-generation E2E обязателен.
+- Найдено: 10 shared commands не покрывали Codex suggestions и skills; добавлен inventory и граница с 05/06.
+- Найдено: result нельзя привязать к следующему случайному reply; добавлена original command/input correlation.
+- Первоначальный R1 предполагал новый typed control для compact и live settings; R2 ниже исправил это по source evidence.
 
-### R2 — независимое cross-review, pending
+### R2 — независимое review, выполнено 2026-11-12
 
-- Проверить completeness capability inventory, границу 05/06 и минимальность расширения Session SPI.
-- Зафиксировать reviewer/docs commit и исправления; native unknowns не закрывать текстовым согласием.
+- Reviewer: `estimate_platform_acceptance`; просмотренная версия документа `bedaf5aae9d81033704636b5362472ddab5818d3`.
+- Проверены frontend main/Stage 1, old runtime `e13edcd3d4ffbecc0272ae30195cc6b15b710ee7`, D `d58500bc983e897506e23d7b0bc8da1209864edd`.
+- Найдено: suggestions принимались за live frontend capabilities; exact launch headless исключает clear и local-jsx handlers.
+- Исправлено: source-linked bounded inventory 25 имён; working, unsupported и enabled-but-ignored различаются до реализации.
+- Найдено: новый `Session.control` для Claude compact дублировал уже native-tested `message.send → submit`.
+- Исправлено: existing manual boundary proof переиспользуется; новый contract допускается лишь после доказанного gap и actual API.
+- Найдено: generic 21-command/TUI promise завышал объём и требовал несуществующих methods.
+- Исправлено: указаны имеющиеся APIs, discovery gate, сниженная базовая оценка и отдельно неопределённый резерв; нет обещания готовности спорных групп.
 
 ### R3 — повторное review после R2, pending
 
-- Проверить устранение замечаний, сохранение provider-specific семантики и достаточность native E2E.
-- Implementation-ready версия должна назвать оставшиеся неизвестные native methods и способ их проверки до кодирования.
+- Проверить evidence matrix, согласованность с 05/07 и решения visible UI mismatches; не скрыть работающие функции.
+- Проверить minimal reuse и готовность native gates; этот review не заменяет actual Desktop/native исполнения при реализации.
