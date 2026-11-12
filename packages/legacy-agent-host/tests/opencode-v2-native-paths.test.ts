@@ -32,13 +32,19 @@ test('captured V2 runtime and its derived management probe accept only the curre
   }
 });
 
-test('the ordinary OpenCode model-probe draft admits a Windows drive path only on Windows', () => {
+test('the ordinary probe preserves V1 POSIX paths and admits a Windows drive path only for native OpenCode', () => {
   const base = { launchId: 'TEST-launch', rosterRevision: 'TEST-roster', memberId: 'TEST-member', model: 'TEST-model',
     draft: { providerId: 'opencode', target: { kind: 'lead' }, workspace: nativePath('workspace') } };
   assert.equal(teamModelProbeSelectionSchema.safeParse(base).success, true);
-  for (const bad of ['C:relative', '\\\\server\\share\\workspace', '//server/share/workspace',
-    'C:\\TEST\\..\\outside', process.platform === 'win32' ? '/foreign/workspace' : 'C:\\foreign\\workspace']) {
+  for (const bad of ['C:relative', '\\\\server\\share\\workspace',
+    'C:\\TEST\\..\\outside', ...(process.platform === 'win32' ? [] : ['C:\\foreign\\workspace'])]) {
     assert.equal(teamModelProbeSelectionSchema.safeParse({ ...base, draft: { ...base.draft, workspace: bad } }).success, false);
+  }
+  for (const workspace of ['/repo/', '//server/share/workspace']) {
+    assert.equal(teamModelProbeSelectionSchema.safeParse({ ...base, draft: { ...base.draft, workspace } }).success, true,
+      'an unselected draft retains the original V1 POSIX path rule');
+    assert.equal(runtimeProfileSchema.safeParse({ members: [{ ...member(), cwd: workspace }] }).success, false,
+      'a selected V2 runtime still refuses a noncanonical or foreign path before allocation');
   }
   for (const providerId of ['anthropic', 'codex']) {
     assert.equal(teamModelProbeSelectionSchema.safeParse({ ...base,

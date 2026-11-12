@@ -16,6 +16,7 @@ export interface VerifiedOpenCodeV2EmbeddedGraph {
   modulePath: string;
   effectPath: string;
   requiredBunVersion: string;
+  windowsJobBinding?: Readonly<{ path: string; sha256: string }>;
 }
 
 const manifestName = 'opencode-v2-engine-manifest.json';
@@ -31,22 +32,22 @@ const record = (value: unknown): Record<string, unknown> => {
 
 /** Read only the regular file measured before and after the read, never a symlink. */
 async function pinnedFile(file: string, expected: string, limit: number): Promise<Buffer> {
-  const before = await lstat(file);
-  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 || before.size > limit)
+  const before = await lstat(file, { bigint: true });
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > BigInt(limit))
     return hold();
   const handle = await open(file, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
-    const opened = await handle.stat();
+    const opened = await handle.stat({ bigint: true });
     if (opened.dev !== before.dev || opened.ino !== before.ino || !opened.isFile()) return hold();
     const bytes = await handle.readFile();
-    const after = await lstat(file);
+    const after = await lstat(file, { bigint: true });
     if (
       before.dev !== after.dev ||
       before.ino !== after.ino ||
       before.size !== after.size ||
-      before.mtimeMs !== after.mtimeMs ||
-      before.ctimeMs !== after.ctimeMs ||
-      bytes.length !== before.size ||
+      before.mtimeNs !== after.mtimeNs ||
+      before.ctimeNs !== after.ctimeNs ||
+      BigInt(bytes.length) !== before.size ||
       createHash('sha256').update(bytes).digest('hex') !== expected
     )
       return hold();
@@ -265,7 +266,17 @@ export async function verifyOpenCodeV2EmbeddedGraph(
     await verifyDependency(modulePath, '@effect/platform-node', 'NodeHttpServer', effectVersion);
     await verifyDependency(modulePath, '@effect/platform-node-shared', 'NodeStream', effectVersion);
   }
+  let windowsJobBinding: VerifiedOpenCodeV2EmbeddedGraph['windowsJobBinding'];
+  if (selection.platform === 'win32') {
+    const packageName = `@yuuang/ffi-rs-win32-${selection.arch}-msvc`;
+    const relative = `local-cli/node_modules/${packageName}/ffi-rs.win32-${selection.arch}-msvc.node`;
+    const selected = entries.get(relative);
+    if (!selected) return hold();
+    const bindingPath = await checkedEntry(path.join(selection.directory, relative));
+    await packageAt(bindingPath, packageName, '1.3.7');
+    windowsJobBinding = Object.freeze({ path: bindingPath, sha256: selected.sha256 });
+  }
   await verifyOpenCodeV2EmbeddedManifest(selection);
   signal?.throwIfAborted();
-  return { modulePath, effectPath, requiredBunVersion };
+  return { modulePath, effectPath, requiredBunVersion, ...(windowsJobBinding ? { windowsJobBinding } : {}) };
 }

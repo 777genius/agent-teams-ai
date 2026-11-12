@@ -1,7 +1,7 @@
 import { createTeamBackupComposition } from '../dist/composition/createTeamBackupComposition.js';
 import { pruneDeletedTeamBackups } from '../dist/adapters/lifecycle/pruneDeletedTeamBackups.js';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -10,10 +10,25 @@ import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesyste
 import { TeamPermanentDeletionCoordinator } from '../dist/adapters/lifecycle/TeamPermanentDeletionCoordinator.js';
 import { createOwnerLifecycleIdentity } from '../dist/adapters/lifecycle/createOwnerLifecycleIdentity.js';
 import { createOwnerScopedTeamPurge } from '../dist/adapters/lifecycle/OwnerScopedTeamPurge.js';
-import { OwnerScopedTeamBackup } from '../dist/adapters/lifecycle/OwnerScopedTeamBackup.js';
+import { ensureOwnerBackupDirectories, OwnerScopedTeamBackup } from '../dist/adapters/lifecycle/OwnerScopedTeamBackup.js';
 import { readBackupManifestStrictSync, getBackupManifestPath, writeBackupManifest } from '../dist/adapters/lifecycle/teamBackupManifest.js';
 import { createOwnerBackupRegistry } from '../dist/adapters/lifecycle/createOwnerBackupRegistry.js';
 import { createOwnerPurgeRequest } from '../dist/adapters/lifecycle/ownerPurgeRequest.js';
+test('backup directory walk creates nested native paths and refuses an intermediate junction', t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-owner-backup-path-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const nested = join(root, 'backups', 'teams', 'TEST-team', 'tasks');
+  ensureOwnerBackupDirectories(nested, true);
+  assert.equal(realpathSync(nested), nested);
+  assert.doesNotThrow(() => ensureOwnerBackupDirectories(nested, false));
+  const link = join(root, 'TEST-linked-backups');
+  symlinkSync(join(root, 'backups'), link, 'junction');
+  // Even an existing leaf cannot conceal a replacement ancestor from custody checks.
+  assert.throws(() => ensureOwnerBackupDirectories(join(link, 'teams', 'TEST-team', 'tasks'), false));
+  assert.throws(() => ensureOwnerBackupDirectories(join(link, 'TEST-unowned-leaf'), true));
+  assert.equal(existsSync(join(root, 'backups', 'TEST-unowned-leaf')), false);
+});
+
 async function fixture(t: import('node:test').TestContext) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-owner-scoped-backup-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));

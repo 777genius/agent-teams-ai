@@ -19,7 +19,8 @@ async function fixture() {
     const pkg=join(repo,'packages',name);
     await mkdir(join(pkg,'src'),{recursive:true});
     await mkdir(join(pkg,'node_modules/@typescript'),{recursive:true});
-    await symlink(compiler,join(pkg,'node_modules/@typescript/native'),'dir');
+    await symlink(compiler,join(pkg,'node_modules/@typescript/native'),
+      process.platform === 'win32' ? 'junction' : 'dir');
     await writeFile(join(pkg,'src/index.ts'),'export const value = 1;\n');
     await writeFile(join(pkg,'package.json'),JSON.stringify({type:'module',dependencies:{
       '@agent-teams/provider-implementations':'file:../../'+archive,

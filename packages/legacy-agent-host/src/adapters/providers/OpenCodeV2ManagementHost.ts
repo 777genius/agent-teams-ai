@@ -18,7 +18,7 @@ import type { OpenCodeManagementProfile } from '../../management/profile.js';
 import type { RegisteredProcessRootSource } from '../../process/registeredProcessContracts.js';
 
 const held = (): never => { throw new OpenCodeManagementError('held'); };
-type Identity = { dev: number; ino: number };
+type Identity = { dev: bigint; ino: bigint };
 
 /** One captured, read-only metadata child. Catalog reads never create a session or submit a prompt. */
 export class OpenCodeV2ManagementHost {
@@ -49,7 +49,7 @@ export class OpenCodeV2ManagementHost {
       for (const directory of [this.profile.cwd, ...['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
         .map(key => this.profile.environment[key])]) {
         if (!directory) return held();
-        const stat = lstatSync(directory);
+        const stat = lstatSync(directory, { bigint: true });
         if (!stat.isDirectory() || stat.isSymbolicLink() || realpathSync(directory) !== directory) return held();
         this.directories.set(directory, { dev: stat.dev, ino: stat.ino });
       }
@@ -61,7 +61,7 @@ export class OpenCodeV2ManagementHost {
     try {
       if (!this.isCurrent()) return false;
       for (const [directory, identity] of this.directories) {
-        const stat = lstatSync(directory);
+        const stat = lstatSync(directory, { bigint: true });
         if (!stat.isDirectory() || stat.isSymbolicLink() || realpathSync(directory) !== directory ||
             stat.dev !== identity.dev || stat.ino !== identity.ino) return false;
       }
@@ -76,7 +76,7 @@ export class OpenCodeV2ManagementHost {
 
   private async namespace(root: string): Promise<string> {
     const directory = await mkdtemp(join(root, 'agent-teams-v2-catalog-'));
-    const stat = lstatSync(directory);
+    const stat = lstatSync(directory, { bigint: true });
     this.namespaces.set(directory, { dev: stat.dev, ino: stat.ino });
     return directory;
   }
@@ -213,7 +213,7 @@ export class OpenCodeV2ManagementHost {
       if (!clean) return false;
       try {
         for (const [directory, identity] of this.namespaces) {
-          const stat = lstatSync(directory);
+          const stat = lstatSync(directory, { bigint: true });
           if (!stat.isDirectory() || stat.isSymbolicLink() || realpathSync(directory) !== directory ||
               stat.dev !== identity.dev || stat.ino !== identity.ino) return false;
           await rm(directory, { recursive: true, force: true });

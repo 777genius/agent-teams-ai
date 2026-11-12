@@ -1134,6 +1134,38 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     });
   });
 
+  it('offers the highest installable V1 update when latest lacks the native platform release', async () => {
+    const binaryPath = path.join(tempRoot!, 'homebrew', 'bin', getTestNativeOpenCodeBinaryName());
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({ PATH: path.dirname(binaryPath) });
+    getShellPreferredHomeMock.mockReturnValue(tempRoot!);
+    execCliMock.mockResolvedValue({ stdout: '1.17.18\n', stderr: '' });
+    const packageName = getOpenCodeRuntimePlatformCandidates()[0]!.packageName;
+    const rootUrl = 'https://registry.npmjs.org/opencode-ai';
+    const nativeUrl = `https://registry.npmjs.org/${encodeURIComponent(packageName)}`;
+    const dist = { tarball: 'https://example.test/native.tgz', integrity: 'sha512-test' };
+    const fetchMetadata = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url === `${rootUrl}/latest`) return Response.json({ name: 'opencode-ai', version: '1.20.10', dist });
+      if (url === rootUrl) return Response.json({ name: 'opencode-ai', versions: {
+        '1.20.10': { name: 'opencode-ai', version: '1.20.10', optionalDependencies: { [packageName]: '1.20.10' } },
+        '1.20.2': { name: 'opencode-ai', version: '1.20.2', optionalDependencies: { [packageName]: '1.20.2' } },
+      } });
+      if (url === nativeUrl) return Response.json({ name: packageName, versions: {
+        '1.20.2': { name: packageName, version: '1.20.2', dist },
+      } });
+      throw new Error(`Unexpected metadata request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMetadata);
+    await expect(createNativeOnlyInstaller().getStatus()).resolves.toMatchObject({
+      version: '1.17.18', latestVersion: '1.20.2', updateAvailable: true,
+    });
+    expect(fetchMetadata.mock.calls.map(([url]) => String(url))).toEqual([
+      `${rootUrl}/latest`, rootUrl, nativeUrl,
+    ]);
+  });
+
   it('keeps a known update available when a later registry refresh fails', async () => {
     const binaryPath = path.join(tempRoot!, 'homebrew', 'bin', getTestNativeOpenCodeBinaryName());
     await mkdir(path.dirname(binaryPath), { recursive: true });
@@ -2531,7 +2563,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       expect(status).toMatchObject({ installed: true, state: 'ready', version });
       expect(status.latestVersion).toBeUndefined();
       expect(status.updateAvailable).not.toBe(true);
-      expect(fetchMetadata).toHaveBeenCalledOnce();
+      expect(fetchMetadata).toHaveBeenCalledTimes(2);
     }
   );
 

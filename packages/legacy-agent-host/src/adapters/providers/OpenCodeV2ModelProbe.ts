@@ -54,7 +54,7 @@ export function createOpenCodeV2ModelProbe(
   if (modelId !== nativeModel.modelId) throw new ManagementCommandError('invalid');
   const captured = managementDigest({ profile, commandId: input.commandId });
   const timeoutMs = profile.modelProbeTimeoutMs ?? 90000;
-  const directories = new Map<string, { dev: number; ino: number }>();
+  const directories = new Map<string, { dev: bigint; ino: bigint }>();
   try {
     for (const directory of [
       profile.cwd,
@@ -63,14 +63,14 @@ export function createOpenCodeV2ModelProbe(
       ),
     ]) {
       if (!directory || realpathSync(directory) !== directory) return unavailable();
-      const stat = lstatSync(directory);
+      const stat = lstatSync(directory, { bigint: true });
       if (!stat.isDirectory() || stat.isSymbolicLink()) return unavailable();
       directories.set(directory, { dev: stat.dev, ino: stat.ino });
     }
   } catch {
     return unavailable();
   }
-  const namespaceRoots = new Map<string, { dev: number; ino: number }>();
+  const namespaceRoots = new Map<string, { dev: bigint; ino: bigint }>();
   const abort = new AbortController();
   let closed = false;
   let starting: Promise<void> | undefined;
@@ -96,7 +96,7 @@ export function createOpenCodeV2ModelProbe(
     try {
       if (!isCurrent()) return false;
       for (const [directory, identity] of directories) {
-        const stat = lstatSync(directory);
+        const stat = lstatSync(directory, { bigint: true });
         if (
           !stat.isDirectory() ||
           stat.isSymbolicLink() ||
@@ -188,7 +188,7 @@ export function createOpenCodeV2ModelProbe(
     const directory = await mkdtemp(
       join(root, 'agent-teams-v2-probe-' + captured.slice(0, 16) + '-')
     );
-    const stat = lstatSync(directory);
+    const stat = lstatSync(directory, { bigint: true });
     namespaceRoots.set(directory, { dev: stat.dev, ino: stat.ino });
     return directory;
   }
@@ -336,7 +336,7 @@ export function createOpenCodeV2ModelProbe(
         if (!clean) return false;
         try {
           for (const [directory, identity] of namespaceRoots) {
-            const stat = lstatSync(directory);
+            const stat = lstatSync(directory, { bigint: true });
             if (
               !stat.isDirectory() ||
               stat.isSymbolicLink() ||

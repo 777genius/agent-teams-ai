@@ -22,7 +22,9 @@ const requiredBunVersion =
 async function fixture(t: TestContext) {
   const directory = await realpath(await mkdtemp(path.join(tmpdir(), 'TEST-embedded-delivery-')));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const files = {
+  const bindingPackage = `@yuuang/ffi-rs-win32-${process.arch}-msvc`;
+  const bindingFile = `local-cli/node_modules/${bindingPackage}/ffi-rs.win32-${process.arch}-msvc.node`;
+  const files: Record<string, string> = {
     [`${server}/package.json`]: JSON.stringify({
       name: '@opencode/server',
       version: '2.1.4',
@@ -35,6 +37,10 @@ async function fixture(t: TestContext) {
       exports: './dist/index.js',
     }),
     [`${effect}/dist/index.js`]: 'export const TEST = true;\n',
+    ...(process.platform === 'win32' ? {
+      [`local-cli/node_modules/${bindingPackage}/package.json`]: JSON.stringify({ name: bindingPackage, version: '1.3.7' }),
+      [bindingFile]: 'TEST native binding bytes; never execute',
+    } : {}),
   };
   for (const [name, bytes] of Object.entries(files)) {
     await mkdir(path.dirname(path.join(directory, name)), { recursive: true });
@@ -61,18 +67,20 @@ async function fixture(t: TestContext) {
     platform: process.platform,
     arch: process.arch,
   };
-  return { directory, selection, files };
+  return { directory, selection, files, bindingFile };
 }
 
 test(
   'delivery byte validation resolves the server and its own Effect within the verified graph',
   tupleOptions,
   async (t) => {
-    const { directory, selection } = await fixture(t);
+    const { directory, selection, files, bindingFile } = await fixture(t);
     const graph = await verifyOpenCodeV2EmbeddedGraph(selection);
     assert.equal(graph.modulePath, path.join(directory, server, 'dist/process.js'));
     assert.equal(graph.effectPath, path.join(directory, effect, 'dist/index.js'));
     assert.equal(graph.requiredBunVersion, requiredBunVersion);
+    assert.deepEqual(graph.windowsJobBinding, process.platform === 'win32'
+      ? { path: path.join(directory, bindingFile), sha256: hash(files[bindingFile]!) } : undefined);
   }
 );
 

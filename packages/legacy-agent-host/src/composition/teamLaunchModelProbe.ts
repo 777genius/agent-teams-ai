@@ -46,10 +46,13 @@ export const teamModelProbeSelectionSchema = z
       })
       .strict()
       .superRefine((value, context) => {
+        // Generation is selected later from the captured recipe. Keep V1's
+        // existing POSIX shape here; the resolved V2 profile enforces canonical
+        // paths again before any native allocation.
         if (value.workspace !== undefined &&
-          !(value.providerId === 'opencode'
-            ? isCanonicalOpenCodeV2Directory(`${process.platform}-${process.arch}`, value.workspace)
-            : value.workspace.startsWith('/'))) {
+          !(value.workspace.startsWith('/') ||
+            (value.providerId === 'opencode' &&
+             isCanonicalOpenCodeV2Directory(`${process.platform}-${process.arch}`, value.workspace)))) {
           context.addIssue({ code: 'custom', path: ['workspace'],
             message: 'Model probe workspace must match the selected native platform' });
         }

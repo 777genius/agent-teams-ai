@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import { ChildProcess } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
-import { access, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
+import { access, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { createWindowsJobCustodyForKernel } from '../dist/adapters/providers/WindowsJobCustody.js';
+import { createWindowsJobCustody, createWindowsJobCustodyForKernel } from '../dist/adapters/providers/WindowsJobCustody.js';
 import { createWindowsJobKernel } from '../dist/adapters/providers/WindowsJobKernel.js';
 import { CapturedProcess } from '../dist/adapters/providers/CapturedProcess.js';
 import type { WindowsHandle, WindowsJobKernel } from '../dist/adapters/providers/WindowsJobKernel.js';
@@ -248,3 +250,100 @@ test('fresh observations of a retained original tree use owned lifetime, not the
       await rm(root, { recursive: true, force: true });
     }
   });
+
+
+test('retained Windows executable checks distinguish file IDs above the safe integer range', async t => {
+  const f = await fixture();
+  const originalLstat = fs.lstatSync;
+  const first = 9_007_199_254_740_992n, replacement = first + 1n;
+  assert.equal(Number(first), Number(replacement), 'numeric Stats would lose this replacement');
+  let observations = 0;
+  try {
+    const tree = f.source.capture(f.child, f.executable);
+    t.mock.method(fs, 'lstatSync', ((file, options) => {
+      const stat = originalLstat(file, options);
+      if (stat && file === f.executable.path) {
+        const inode = ++observations === 1 ? first : replacement;
+        Object.defineProperty(stat, 'ino', { value: typeof stat.ino === 'bigint' ? inode : Number(inode) });
+      }
+      return stat;
+    }) as typeof fs.lstatSync);
+    syncBuiltinESMExports();
+    assert.throws(() => tree.readExecutable(), /custody unavailable/);
+    assert.equal(observations, 2);
+  } finally {
+    t.mock.restoreAll(); syncBuiltinESMExports();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+/** Controlled load boundary only: no synthetic .node bytes are ever executed. */
+async function bindingFixture(t: import('node:test').TestContext) {
+  const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+  Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'win32' });
+  t.after(() => Object.defineProperty(process, 'platform', originalPlatform));
+  const directory = await realpath(await mkdtemp(path.join(tmpdir(), 'TEST-windows-binding-')));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const packageName = `@yuuang/ffi-rs-win32-${process.arch}-msvc`;
+  const native = `local-cli/node_modules/${packageName}/ffi-rs.win32-${process.arch}-msvc.node`;
+  const files = {
+    'local-cli/node_modules/@opencode/server-v2.1.4/package.json': JSON.stringify({
+      name: '@opencode/server', version: '2.1.4', dependencies: { effect: '4.0.1' } }),
+    'local-cli/node_modules/@opencode/server-v2.1.4/dist/process.js': 'TEST server; never execute',
+    'local-cli/node_modules/effect/package.json': JSON.stringify({
+      name: 'effect', version: '4.0.1', exports: './index.js' }),
+    'local-cli/node_modules/effect/index.js': 'TEST Effect; never execute',
+    [`local-cli/node_modules/${packageName}/package.json`]: JSON.stringify({ name: packageName, version: '1.3.7' }),
+    [native]: 'TEST selected manifest binding; never execute',
+  };
+  const hash = (bytes: string) => createHash('sha256').update(bytes).digest('hex');
+  for (const [relative, bytes] of Object.entries(files)) {
+    await mkdir(path.dirname(path.join(directory, relative)), { recursive: true });
+    await writeFile(path.join(directory, relative), bytes);
+  }
+  const manifest = JSON.stringify({ schemaVersion: 1, platform: 'win32', arch: process.arch,
+    requiredBunVersion: '1.4.3', engineVersions: ['2.1.4'], files: Object.entries(files).map(([name, bytes]) => ({
+      path: name, bytes: Buffer.byteLength(bytes), sha256: hash(bytes), executable: false })) });
+  await writeFile(path.join(directory, 'opencode-v2-engine-manifest.json'), manifest);
+  return { native: path.join(directory, native), selection: { directory, manifestSha256: hash(manifest),
+    version: '2.1.4' as const, platform: 'win32', arch: process.arch } };
+}
+
+for (const mutation of ['unattested-bytes-before-load', 'lossy-file-id-after-load'] as const) {
+  test(`native binding rejects ${mutation} without admitting a kernel`, async t => {
+    const f = await bindingFixture(t);
+    const originalRead = fs.readFileSync, originalLstat = fs.lstatSync;
+    let loads = 0, kernelOpens = 0, observations = 0;
+    t.mock.method(process, 'dlopen', ((module: { exports: unknown }) => {
+      loads++;
+      module.exports = { open() { kernelOpens++; }, load() { throw new Error('TEST native code forbidden'); },
+        isNullPointer() { return false; } };
+    }) as typeof process.dlopen);
+    if (mutation === 'unattested-bytes-before-load') {
+      t.mock.method(fs, 'readFileSync', ((file, options) => {
+        // The verifier uses async handles; this mutation occurs only after its
+        // promise resolves, immediately before the loader's own baseline read.
+        if (file === f.native) fs.writeFileSync(file, 'TEST replacement unlisted in selected manifest');
+        return originalRead(file, options);
+      }) as typeof fs.readFileSync);
+    } else {
+      const first = 9_007_199_254_740_992n, replacement = first + 1n;
+      assert.equal(Number(first), Number(replacement));
+      t.mock.method(fs, 'lstatSync', ((file, options) => {
+        const stat = originalLstat(file, options);
+        if (stat && file === f.native) {
+          const inode = ++observations === 1 ? first : replacement;
+          Object.defineProperty(stat, 'ino', { value: typeof stat.ino === 'bigint' ? inode : Number(inode) });
+        }
+        return stat;
+      }) as typeof fs.lstatSync);
+    }
+    syncBuiltinESMExports();
+    try {
+      await assert.rejects(createWindowsJobCustody(f.selection), /custody unavailable/);
+      assert.equal(loads, mutation === 'unattested-bytes-before-load' ? 0 : 1);
+      assert.equal(kernelOpens, 0, 'rejected bytes or replacement cannot acquire kernel authority');
+      if (mutation === 'lossy-file-id-after-load') assert.equal(observations, 2);
+    } finally { t.mock.restoreAll(); syncBuiltinESMExports(); }
+  });
+}

@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import path from 'node:path';
 import { verifyOpenCodeV2EmbeddedGraph } from './OpenCodeV2EmbeddedGraph.js';
 import { createWindowsJobKernel } from './WindowsJobKernel.js';
 
@@ -38,13 +37,13 @@ export function createWindowsJobCustodyForKernel(kernel: WindowsJobKernel): Capt
           const before = kernel.readProcess(processHandle);
           if (before.pid !== pid || before.startIdentity !== original.startIdentity
             || realpathSync(before.executablePath) !== expected.path) return unavailable();
-          const file = lstatSync(expected.path);
-          if (!file.isFile() || file.isSymbolicLink() || file.nlink !== 1
+          const file = lstatSync(expected.path, { bigint: true });
+          if (!file.isFile() || file.isSymbolicLink() || file.nlink !== 1n
             || realpathSync(expected.path) !== expected.path) return unavailable();
           const sha256 = digest(readFileSync(expected.path));
-          const after = lstatSync(expected.path), nativeAfter = kernel.readProcess(processHandle);
+          const after = lstatSync(expected.path, { bigint: true }), nativeAfter = kernel.readProcess(processHandle);
           if (sha256 !== expected.sha256 || file.dev !== after.dev || file.ino !== after.ino
-            || file.size !== after.size || file.mtimeMs !== after.mtimeMs || file.ctimeMs !== after.ctimeMs
+            || file.size !== after.size || file.mtimeNs !== after.mtimeNs || file.ctimeNs !== after.ctimeNs
             || nativeAfter.pid !== pid || nativeAfter.startIdentity !== original.startIdentity
             || nativeAfter.executablePath !== before.executablePath || !kernel.alive(processHandle))
             return unavailable();
@@ -105,25 +104,26 @@ export async function createWindowsJobCustody(
   signal?: AbortSignal
 ): Promise<CapturedProcessTreeSource> {
   if (process.platform !== 'win32' || !['x64', 'arm64'].includes(process.arch)) return unavailable();
-  await verifyOpenCodeV2EmbeddedGraph(selection, signal);
-  const packageName = `@yuuang/ffi-rs-win32-${process.arch}-msvc`;
-  const packageDirectory = path.join(selection.directory, 'local-cli/node_modules', packageName);
-  const entry = path.join(packageDirectory, `ffi-rs.win32-${process.arch}-msvc.node`);
-  if (realpathSync(entry) !== entry) return unavailable();
-  const info = JSON.parse(readFileSync(path.join(packageDirectory, 'package.json'), 'utf8')) as Record<string, unknown>;
-  if (info.name !== packageName || info.version !== '1.3.7') return unavailable();
-  const before = lstatSync(entry), sha256 = digest(readFileSync(entry));
-  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1) return unavailable();
+  const graph = await verifyOpenCodeV2EmbeddedGraph(selection, signal);
+  const binding = graph.windowsJobBinding;
+  if (!binding || realpathSync(binding.path) !== binding.path) return unavailable();
+  const entry = binding.path;
+  const before = lstatSync(entry, { bigint: true });
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n) return unavailable();
+  // Verification may yield before this load. Compare to the original selected
+  // manifest, never promote the newly observed bytes into an authorized digest.
+  const sha256 = digest(readFileSync(entry));
+  if (sha256 !== binding.sha256) return unavailable();
   signal?.throwIfAborted();
   let selected = kernels.get(entry);
   if (selected && selected.sha256 !== sha256) return unavailable();
   if (!selected) {
-    const binding: unknown = createRequire(import.meta.url)(entry);
-    const after = lstatSync(entry);
+    const loaded: unknown = createRequire(import.meta.url)(entry);
+    const after = lstatSync(entry, { bigint: true });
     if (before.dev !== after.dev || before.ino !== after.ino || before.size !== after.size
-      || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs
+      || before.mtimeNs !== after.mtimeNs || before.ctimeNs !== after.ctimeNs
       || digest(readFileSync(entry)) !== sha256 || realpathSync(entry) !== entry) return unavailable();
-    selected = { sha256, kernel: createWindowsJobKernel(binding, `agent-teams-windows-job-${digest(Buffer.from(entry))}`) };
+    selected = { sha256, kernel: createWindowsJobKernel(loaded, `agent-teams-windows-job-${digest(Buffer.from(entry))}`) };
     kernels.set(entry, selected);
   }
   return createWindowsJobCustodyForKernel(selected.kernel);

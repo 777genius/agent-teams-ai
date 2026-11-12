@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync, readFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, parse, resolve } from 'node:path';
+import { dirname, isAbsolute, join, parse, resolve, sep } from 'node:path';
 import { TeamOwnerError } from '../../team/contracts.js';
 import { digest } from '../../team/identity.js';
 import { teamBackupResourceVersion } from '../../team/teamBackupResourceVersion.js';
@@ -23,7 +23,7 @@ const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex')
 export function ensureOwnerBackupDirectories(path: string, create: boolean): void {
   if (!isAbsolute(path) || resolve(path) !== path) throw new TeamOwnerError('hold');
   let current = parse(path).root;
-  for (const segment of path.slice(current.length).split('/').filter(Boolean)) {
+  for (const segment of path.slice(current.length).split(sep).filter(Boolean)) {
     current = join(current, segment);
     try { const stat = lstatSync(current); if (!stat.isDirectory() || stat.isSymbolicLink()) throw new TeamOwnerError('hold'); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT' || !create) throw error; mkdirSync(current, { mode: 0o700 }); }

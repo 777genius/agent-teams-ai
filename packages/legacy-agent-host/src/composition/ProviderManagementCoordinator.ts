@@ -406,9 +406,18 @@ export class ProviderManagementCoordinator {
         }, this.processCustody);
         this.v2Hosts.set(profile.profileId, host);
       }
-      const result = await host.catalog(input.providerId, input.includeModels);
-      this.assertCurrent();
-      return result;
+      try {
+        const result = await host.catalog(input.providerId, input.includeModels);
+        this.assertCurrent();
+        return result;
+      } catch (error) {
+        // Failed catalog reads seal their original child. Retire that exact
+        // owner only after cleanup; an unknown child keeps the profile held.
+        const clean = await host.close().catch(() => false);
+        if (clean && this.v2Hosts.get(profile.profileId) === host)
+          this.v2Hosts.delete(profile.profileId);
+        throw error;
+      }
     }
     const host = this.getHost(profile);
     const result = await host.run((client) =>

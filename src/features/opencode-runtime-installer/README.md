@@ -11,8 +11,9 @@ Focused tests cover package identity, archive safety and managed activation.
 Fresh installs select V1 by default, including platforms with qualified V2 support.
 A first-time implicit install and explicit updates resolve the latest supported
 stable release within the selected generation. If the global npm `latest` tag
-moves outside that range, one registry versions snapshot selects the compatible
-release. The selected exact version is retained through native package lookup and
+moves outside that range or its native platform package is unavailable, a root
+registry snapshot and at most one snapshot per platform package select the highest
+compatible, installable release. The selected exact version is retained through native package lookup and
 download; update discovery verifies the same platform package availability.
 Package identity and sha512 transport integrity are verified before activation.
 Existing V1/V2 installs remain in their selected generation on update; explicit

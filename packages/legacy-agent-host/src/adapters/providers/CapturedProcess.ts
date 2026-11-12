@@ -172,6 +172,11 @@ export class CapturedProcess implements CapturedProcessPort {
     return [...this.children].some((child) => child.pid !== undefined && !this.exited(child));
   }
 
+  /** Read only the retained original tree; never issue another termination. */
+  observeStopped(): boolean {
+    return [...this.children].every((child) => this.exited(child) && !this.groupPresent(child));
+  }
+
   async confirmStopped(): Promise<boolean> {
     this.seal();
     if (await this.wait(1500)) return true;
@@ -207,11 +212,10 @@ export class CapturedProcess implements CapturedProcessPort {
   private async wait(timeout: number): Promise<boolean> {
     const deadline = Date.now() + timeout;
     do {
-      if ([...this.children].every((child) => this.exited(child) && !this.groupPresent(child)))
-        return true;
+      if (this.observeStopped()) return true;
       await tick();
     } while (Date.now() < deadline);
-    return [...this.children].every((child) => this.exited(child) && !this.groupPresent(child));
+    return this.observeStopped();
   }
   private groupPresent(child: ChildProcess): boolean {
     if (this.retired.has(child)) return false;

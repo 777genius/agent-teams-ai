@@ -384,7 +384,13 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
       }
     },
     stopOwned,
-    confirmStopped: stopOwned,
+    confirmStopped: async () => {
+      if (!stopping) return false;
+      await stopping.catch(() => false);
+      // An earlier unknown stop may become provable once its original tree
+      // exits. Refresh custody without resending signals or adopting any PID.
+      return custody.observeStopped();
+    },
     captureRegisteredProcess: (pid: number, registrar: RegistrarBinding) =>
       custody.captureRegisteredProcess(pid, registrar),
   };
