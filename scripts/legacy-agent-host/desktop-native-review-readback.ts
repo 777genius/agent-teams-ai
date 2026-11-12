@@ -9,6 +9,7 @@ import { assertNativeReviewPersistence } from './desktop-native-review-continuat
 import { readNativeReviewRuntimeRecords } from './desktop-native-review-runtime.ts';
 import { readNativeReviewSeed } from './desktop-native-review-fixture.ts';
 import { REVIEW_TASK_SUBJECT } from './desktop-native-review-model.ts';
+import { V2_REVIEW_SUBJECT } from './desktop-opencode-v2-review-model.ts';
 import {
   createDesktopReviewHunkControls,
   readDesktopReviewDecisions,
@@ -25,7 +26,8 @@ export async function runDesktopNativeReviewReadback(
     root: string;
     evidence: Record<string, unknown>;
     assertOwnedRenderer(): void;
-    assertNoNativeChildren(): void;
+    assertNoNativeChildren(): void | Promise<void>;
+    metadataProcessCount?: number;
   }
 ): Promise<void> {
   const raw = record(
@@ -43,7 +45,7 @@ export async function runDesktopNativeReviewReadback(
     status: 'INCOMPLETE',
     steps,
     scope:
-      'Separate app/Host restart reads original native Task Changes, exact mixed bytes and durable hunk history; no native allocations or inputs',
+      'Separate app/Host restart reads original native Task Changes, exact mixed bytes and durable hunk history; no Runtime allocations or inputs; only an attested metadata child may remain',
     originalReceiptSha256: await fileDigest(join(options.root, 'desktop-backend-receipt.json')),
     taskId,
     sourceSha256: await fileDigest(import.meta.filename),
@@ -71,7 +73,7 @@ export async function runDesktopNativeReviewReadback(
   );
   const review = createDesktopReviewHunkControls(cdp, {
     taskId,
-    subject: REVIEW_TASK_SUBJECT,
+    subject: original.provider === 'opencode-v2' ? V2_REVIEW_SUBJECT : REVIEW_TASK_SUBJECT,
     fileLabel: 'native-review.ts',
     assertOwnedRenderer: options.assertOwnedRenderer,
     step: (value) => {
@@ -80,7 +82,7 @@ export async function runDesktopNativeReviewReadback(
   });
   await review.ui.observeInput();
   await review.openChanges();
-  options.assertNoNativeChildren();
+  await options.assertNoNativeChildren();
   if (seed.partialCoverage) {
     const partial = seed.partialCoverage,
       saved = record(original.partialCapture);
@@ -239,11 +241,13 @@ export async function runDesktopNativeReviewReadback(
       pin.sha256,
       'cold readback leaves partial files unchanged'
     );
-  options.assertNoNativeChildren();
+  await options.assertNoNativeChildren();
   Object.assign(proof, {
     status: 'PASS',
     nativeInputsReplayed: 0,
     nativeAllocations: 0,
+    nativeAllocationScope: 'Runtime sessions',
+    metadataProcessCount: options.metadataProcessCount ?? 0,
     runtimeRecordUnchanged: true,
     nativeEventsUnchanged: true,
     reviewDecisionsUnchanged: true,

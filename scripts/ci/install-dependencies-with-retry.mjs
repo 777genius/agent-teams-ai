@@ -6,10 +6,65 @@ const RETRY_DELAYS_MS = [10_000, 20_000];
 const RETRYABLE_NETWORK_ERROR =
   /(?:response code|status(?: code)?)[=: ]+5\d\d|\bERR_PNPM_FETCH_5\d\d\b|\b(?:EAI_AGAIN|ECONNRESET|ECONNREFUSED|ENETUNREACH|ETIMEDOUT|ERR_SOCKET_TIMEOUT|UND_ERR_[A-Z_]*TIMEOUT)\b|socket (?:hang up|timeout)|network timeout|the operation was aborted due to timeout|TypeError: terminated|\. postinstall: TypeError: fetch failed|other side closed/i;
 const TERMINAL_INSTALL_ERROR =
-  /\bERR_PNPM_(?:OUTDATED_LOCKFILE|UNSUPPORTED_ENGINE)\b|(?:response code|status(?: code)?)[=: ]+4\d\d/i;
+  /\bERR_PNPM_(?:OUTDATED_LOCKFILE|UNSUPPORTED_ENGINE|FETCH_404)\b|(?:response code|status(?: code)?)[=: ]+4\d\d/i;
+const ENGINE_FAILURE = /\bUnsupported engine\b/i;
+const ENGINE_WARNING = /(?:\[\s*WARN(?:ING)?\s*\]|\bWARN(?:ING)?)\s*Unsupported engine\b/i;
+const ENGINE_WARNING_PREFIX = /^\s*(?:\[\s*WARN(?:ING)?\s*\]|WARN(?:ING)?\b)/i;
+
+// pnpm colors warnings and HTTP diagnostics when a terminal is detected.
+const ANSI_COLORS = /\x1b\[[0-9;]*m/g;
+
+function stripColorCodes(output) {
+  return output.replace(ANSI_COLORS, '');
+}
+
+function hasTerminalInstallFailure(output) {
+  // pnpm may warn about an unrelated workspace's Node engine before a
+  // transient Electron download 5xx. A warning must not suppress retries.
+  return TERMINAL_INSTALL_ERROR.test(output) || output.split(/\r?\n/).some((line) =>
+    ENGINE_FAILURE.test(line) && !ENGINE_WARNING.test(line) && !ENGINE_WARNING_PREFIX.test(line));
+}
 
 export function isRetryableInstallFailure(output) {
-  return RETRYABLE_NETWORK_ERROR.test(output) && !TERMINAL_INSTALL_ERROR.test(output);
+  const normalized = stripColorCodes(output);
+  return RETRYABLE_NETWORK_ERROR.test(normalized) && !hasTerminalInstallFailure(normalized);
+}
+
+// Keep stream boundaries distinct: stdout and stderr may interleave between
+// arbitrary chunks, including the two halves of a fatal pnpm error code.
+// A shared tail would lose that code and could wrongly retry an HTTP 404.
+export function createInstallFailureTracker() {
+  const tails = { stdout: '', stderr: '' };
+  // An unfinished warning can exceed the retained suffix; keep its prefix
+  // classification independently to avoid treating its engine text as fatal.
+  const warningLines = { stdout: false, stderr: false };
+  let retryableFailureSeen = false;
+  let terminalFailureSeen = false;
+
+  return {
+    observe(source, chunk) {
+      if (source !== 'stdout' && source !== 'stderr') {
+        throw new TypeError('Unknown pnpm output stream');
+      }
+      const combined = tails[source] + chunk.toString('utf8');
+      const normalized = stripColorCodes(combined);
+      retryableFailureSeen ||= RETRYABLE_NETWORK_ERROR.test(normalized);
+      terminalFailureSeen ||= TERMINAL_INSTALL_ERROR.test(normalized);
+      const lines = normalized.split(/\r?\n/);
+      lines.forEach((line, index) => {
+        const warning =
+          (index === 0 && warningLines[source]) ||
+          ENGINE_WARNING_PREFIX.test(line) || ENGINE_WARNING.test(line);
+        if (ENGINE_FAILURE.test(line) && !warning) terminalFailureSeen = true;
+        if (index === lines.length - 1) warningLines[source] = warning;
+      });
+      // Only retain the current line for markers split across chunks.
+      tails[source] = lines[lines.length - 1].slice(-256);
+    },
+    snapshot() {
+      return { retryableFailureSeen, terminalFailureSeen };
+    },
+  };
 }
 
 function runInstall() {
@@ -23,18 +78,11 @@ function runInstall() {
         stdio: ['inherit', 'pipe', 'pipe'],
       }
     );
-    let retryableFailureSeen = false;
-    let terminalFailureSeen = false;
-    let outputTail = '';
-
-    for (const stream of [child.stdout, child.stderr]) {
+    const tracker = createInstallFailureTracker();
+    for (const [source, stream] of [['stdout', child.stdout], ['stderr', child.stderr]]) {
       stream.on('data', (chunk) => {
-        const text = chunk.toString('utf8');
-        const combinedOutput = outputTail + text;
-        retryableFailureSeen ||= RETRYABLE_NETWORK_ERROR.test(combinedOutput);
-        terminalFailureSeen ||= TERMINAL_INSTALL_ERROR.test(combinedOutput);
-        outputTail = (outputTail + text).slice(-256);
-        const destination = stream === child.stdout ? process.stdout : process.stderr;
+        tracker.observe(source, chunk);
+        const destination = source === 'stdout' ? process.stdout : process.stderr;
         destination.write(chunk);
       });
     }
@@ -43,8 +91,7 @@ function runInstall() {
     child.once('close', (code, signal) => {
       resolve({
         code: code ?? 1,
-        retryableFailureSeen,
-        terminalFailureSeen,
+        ...tracker.snapshot(),
         signal,
       });
     });

@@ -10,10 +10,10 @@ import { TaskEvidenceJournal } from './TaskEvidenceJournal.js';
 import { NATIVE_INTERVAL_WARNING } from './captureContracts.js';
 import { snapshotWarningCodes } from './snapshotWarningCodes.js';
 import { qualifyOpenCodeFileChange } from './qualifyOpenCodeFileChange.js';
+import { qualifyOpenCodeV2FileChange } from './qualifyOpenCodeV2FileChange.js';
 import type { RuntimeInputEvidenceBinding } from './bindRuntimeInputEvidence.js';
 import type { TaskToolEvidenceBinding } from './bindTaskToolEvidence.js';
 import type {
-  OpenCodeAfterRequest,
   OpenCodeCaptureRequest,
   OpenCodeEvidenceCapture,
   OpenCodeEvidenceCaptureOptions,
@@ -76,6 +76,7 @@ export function createOpenCodeInputEvidenceCapture(
       request.operationRef !== window.request.operationRef ||
       request.windowRef !== window.request.windowRef ||
       request.nativeSessionId !== window.request.nativeSessionId
+      || request.dialect !== window.request.dialect
     )
       throw new Error('window-mismatch');
     const current = attribution(request);
@@ -120,7 +121,7 @@ export function createOpenCodeInputEvidenceCapture(
     }
   };
   const settle = async (
-    request: OpenCodeAfterRequest,
+    request: Extract<OpenCodeCaptureRequest, { phase: 'after' }>,
     key: string,
     window: OpenCodeEvidenceWindow
   ) => {
@@ -134,7 +135,8 @@ export function createOpenCodeInputEvidenceCapture(
       gap(request, key, window, request.gapReason ?? 'unqualified-input-outcome');
       return;
     }
-    const nativeFailure = selectOpenCodeFailedTool(request, options.captured.workspace.path);
+    const nativeFailure = request.dialect === 'v2' ? { kind: 'none' as const } :
+      selectOpenCodeFailedTool(request, options.captured.workspace.path);
     if (nativeFailure.kind === 'gap') {
       gap(request, key, window, nativeFailure.reason);
       return;
@@ -175,12 +177,9 @@ export function createOpenCodeInputEvidenceCapture(
       release(key, window);
       return;
     }
-    const qualified = qualifyOpenCodeFileChange(
-      request,
-      options.captured.workspace.path,
-      window.before,
-      final
-    );
+    const qualified = request.dialect === 'v2'
+      ? qualifyOpenCodeV2FileChange(request, options.captured.workspace.path, window.before, final)
+      : qualifyOpenCodeFileChange(request, options.captured.workspace.path, window.before, final);
     if (qualified.kind === 'gap') {
       gap(request, key, window, qualified.reason);
       return;
@@ -193,6 +192,7 @@ export function createOpenCodeInputEvidenceCapture(
         toolName: 'opencode.fileChange',
         native: Object.freeze({
           provider: 'opencode',
+          ...(request.dialect === 'v2' ? { nativeGeneration: 'v2', protocolRevision: '2.1.4' } : {}),
           nativeSessionId: request.nativeSessionId,
           nativeInputId: request.nativeInputId,
           windowRef: request.windowRef,
@@ -248,6 +248,7 @@ export function createOpenCodeInputEvidenceCapture(
           return;
         }
         options.assertCurrent();
+        if (request.dialect !== options.nativeGeneration) throw new Error('capture-dialect-changed');
         if (request.phase === 'gap') {
           state = {
             phase: 'gap',
@@ -283,6 +284,9 @@ export function createOpenCodeInputEvidenceCapture(
               NATIVE_INTERVAL_WARNING,
               'Execution sequence is unqualified; zero denotes unknown.',
               'Only an exact existing-text edit patch chain is qualified; selected workspace coverage remains partial.',
+              ...(request.dialect === 'v2'
+                ? ['Native V2 read resolution at execution is unqualified; file images attest only the original input window boundaries.']
+                : []),
             ]),
           };
           if (!options.windows.add(key, window)) {

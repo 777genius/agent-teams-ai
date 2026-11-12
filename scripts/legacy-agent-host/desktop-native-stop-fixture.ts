@@ -4,6 +4,9 @@ import { readFile, readdir, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { assertOwnedCdpListener, command, processTable } from './desktop-backend-observations.ts';
+import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
+import { desktopJsLiteral } from './desktop-ui-controls.ts';
+import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import type { UiCdpPort } from './desktop-team-ui-smoke.ts';
 const object = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
@@ -11,8 +14,8 @@ const object = (value: unknown): Record<string, unknown> => {
 };
 const tick = () => new Promise<void>((done) => setTimeout(done, 100));
 export const desktopNativeProviderArtifact = Object.freeze({
-  path: 'vendor/provider-migration/codex-runtime-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz',
-  sha256: 'e3a45cde75062840a74ac0b036b0ccc074654adfd5b46bf19e384eb62c34f3f3',
+  path: 'vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-implementations-0.0.0.tgz',
+  sha256: 'fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89',
 });
 export async function verifyDesktopNativeStopArtifact(
   repo: string,
@@ -43,6 +46,7 @@ export async function prepareDesktopNativeStop(options: {
   group: number;
   evidence: Record<string, unknown>;
   executable: string;
+  provider?: 'opencode';
   manualPermissions?: boolean;
   returnAt?: 'opening';
 }) {
@@ -83,13 +87,58 @@ export async function prepareDesktopNativeStop(options: {
   const configuration = {
     members: memberIds.map((memberId) => ({
       memberId,
-      model: 'claude-opus-4-6',
-      effort: 'medium',
-      fastMode: false,
+      model: options.provider === 'opencode' ? 'test-local/TEST-model' : 'claude-opus-4-6',
+      ...(options.provider === 'opencode' ? {} : { effort: 'medium', fastMode: false, context: 'model-default' }),
       permissions: options.manualPermissions ? 'manual' : 'bypass',
-      context: 'model-default',
     })),
   };
+  if (options.provider === 'opencode') {
+    assert.ok(fixture.root, 'the original Composer has an exact TEST workspace');
+    assertOwnedCdpListener(group);
+    const response = object(await cdp.evaluate(
+      `window.electronAPI.runtimeProviderManagement.loadModels(${desktopJsLiteral({
+        runtimeId: 'opencode', providerId: 'test-local', projectPath: join(fixture.root, 'workspace'),
+      })})`
+    ));
+    assert.equal(response.error, undefined, 'actual native catalog is ready before Runtime allocation');
+    assert.equal(response.runtimeId, 'opencode');
+    const catalog = object(response.models);
+    assert.equal(catalog.providerId, 'test-local');
+    assert.equal(catalog.catalogState, 'fresh', 'the original Composer project catalog is fresh');
+    assert.ok(Array.isArray(catalog.models));
+    const model = catalog.models.find(value =>
+      object(value).modelId === 'test-local/TEST-model' && object(value).providerId === 'test-local');
+    assert.ok(model);
+    if (process.env.LEGACY_DESKTOP_CHAT_ATTACHMENTS === '1') {
+      const inputs = object(model).declaredInputModalities;
+      assert.ok(Array.isArray(inputs) && inputs.includes('image'),
+        'the actual native catalog declares image input before the original Composer is used');
+    }
+  }
+  const metadata = options.provider === 'opencode' ? readDesktopNativeHostProcesses(fixture, group) : undefined;
+  if (metadata) {
+    assert.equal(metadata.host.groupId, group, 'metadata belongs to the captured TEST Host');
+    assert.equal(metadata.children.length, 1, 'capture metadata before Runtime allocation');
+    assert.ok(command(metadata.children[0]!.pid).startsWith(executable));
+  }
+  const observeNative = () => {
+    if (metadata) {
+      const current = readDesktopNativeHostProcesses(fixture, group);
+      const runtime = separateDesktopOpenCodeRuntimeChildren(metadata, current,
+        current.children.length === 1 ? 0 : 1);
+      return { hostPid: current.host.pid, nativeChildren: runtime.map(child => ({
+        pid: child.pid, ppid: child.parentPid, pgid: child.groupId,
+      })) };
+    }
+    const table = processTable();
+    const hosts = table.filter(row => row.pgid === group &&
+      command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
+    assert.equal(hosts.length, 1);
+    const hostPid = hosts[0]!.pid;
+    return { hostPid, nativeChildren: table.filter(row =>
+      row.ppid === hostPid && command(row.pid).startsWith(executable)) };
+  };
+  const readinessMs = options.provider === 'opencode' ? 180_000 : 45_000;
   const start = await invokeSetup('team.launch.start', 'TEST-explicit-sandbox-setup-launch', {
     launchId: selection.launchId,
     rosterRevision: selection.rosterRevision,
@@ -99,7 +148,7 @@ export async function prepareDesktopNativeStop(options: {
   assert.equal(start.ok, true, `TEST configured launch response: ${JSON.stringify(start)}`);
   if (options.returnAt === 'opening') {
     assert.ok(fixture.root, 'exact TEST Runtime store for pending-open observation');
-    const deadline = Date.now() + 45_000;
+    const deadline = Date.now() + readinessMs;
     do {
       const sessions: Record<string, unknown>[] = await readDesktopNativeStopSessions(
         fixture.root
@@ -116,15 +165,7 @@ export async function prepareDesktopNativeStop(options: {
         assert.equal(session.nativeReady, false);
         assert.equal(session.sealed, false);
         assert.deepEqual(session.inputs, []);
-        const table = processTable();
-        const hosts = table.filter(
-          (row) => row.pgid === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`
-        );
-        assert.equal(hosts.length, 1);
-        const hostPid = hosts[0]!.pid;
-        const nativeChildren = table.filter(
-          (row) => row.ppid === hostPid && command(row.pid).startsWith(executable)
-        );
+        const { hostPid, nativeChildren } = observeNative();
         if (nativeChildren.length) {
           assert.equal(nativeChildren.length, 1);
           evidence.nativeSetup = {
@@ -134,6 +175,7 @@ export async function prepareDesktopNativeStop(options: {
             launch: selection,
             session,
             nativeChildren,
+            ...(metadata ? { metadataBeforeLaunch: metadata } : {}),
             nativeExecutableSha256: await fileDigest(executable),
           };
           return { hostPid, nativeChildren };
@@ -143,7 +185,7 @@ export async function prepareDesktopNativeStop(options: {
     } while (Date.now() < deadline);
     throw new Error('No actual pending native open observed; no launch or Quit retry');
   }
-  const readyDeadline = Date.now() + 45_000;
+  const readyDeadline = Date.now() + readinessMs;
   let ready = object(start.value);
   while (ready.status !== 'ready' && Date.now() < readyDeadline) {
     await tick();
@@ -154,19 +196,11 @@ export async function prepareDesktopNativeStop(options: {
   }
   assert.equal(ready.status, 'ready');
   assert.equal(ready.ready, expectedMembers);
-  const table = processTable();
-  const hosts = table.filter(
-    (row) => row.pgid === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`
-  );
-  assert.equal(hosts.length, 1);
-  const hostPid = hosts[0]!.pid;
-  const nativeChildren = table.filter(
-    (row) => row.ppid === hostPid && command(row.pid).startsWith(executable)
-  );
+  const { hostPid, nativeChildren } = observeNative();
   assert.equal(
     nativeChildren.length,
     expectedMembers,
-    'exact captured actual Claude SDK actors before ordinary Stop'
+    'exact captured actual native actors before ordinary Stop'
   );
   evidence.nativeSetup = {
     scope:
@@ -175,6 +209,7 @@ export async function prepareDesktopNativeStop(options: {
     status: 'ready',
     launch: ready,
     nativeChildren,
+    ...(metadata ? { metadataBeforeLaunch: metadata } : {}),
     nativeExecutableSha256: await fileDigest(executable),
   };
   return { hostPid, nativeChildren };
@@ -214,6 +249,35 @@ export async function readDesktopNativeStopSessions(
       sessions.push(object(JSON.parse(await readFile(join(selected, file.name), 'utf8'))));
   }
   return sessions;
+}
+
+/** Read-only observations; original Host custody remains the only process owner. */
+export function readDesktopNativeHostProcesses(fixture: { node: string; hostEntry: string }, group: number): {
+  host: ProcessFact;
+  children: ProcessFact[];
+} {
+  assert.ok(Number.isSafeInteger(group) && group > 0, 'original captured Desktop group');
+  const table = processFacts();
+  const hosts = table.filter(row => row.groupId === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
+  assert.equal(hosts.length, 1, 'one exact TEST Host in the original captured Desktop group');
+  const host = hosts[0]!;
+  return { host, children: table.filter(row => row.parentPid === host.pid) };
+}
+
+export function separateDesktopOpenCodeRuntimeChildren(
+  original: ReturnType<typeof readDesktopNativeHostProcesses>,
+  current: ReturnType<typeof readDesktopNativeHostProcesses>,
+  expectedRuntimeCount: 0 | 1
+): ProcessFact[] {
+  assert.equal(original.children.length, 1, 'metadata identity was captured before Runtime allocation');
+  assert.deepEqual(current.host, original.host, 'same original Host birth identity');
+  const metadata = original.children[0]!;
+  assert.deepEqual(current.children.find(row => row.pid === metadata.pid), metadata,
+    'same original metadata child, without PID reuse or replacement');
+  const runtimes = current.children.filter(row => row.pid !== metadata.pid);
+  assert.equal(runtimes.length, expectedRuntimeCount, 'only the expected original Runtime children');
+  for (const child of runtimes) assert.equal(child.command, metadata.command, 'same selected Bun executable');
+  return runtimes;
 }
 
 /** Capture before failure cleanup, so a later Quit cannot be mistaken for UI Stop. */

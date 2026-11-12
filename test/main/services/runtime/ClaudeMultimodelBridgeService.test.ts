@@ -3692,7 +3692,27 @@ describe('ClaudeMultimodelBridgeService', () => {
     );
   });
 
-  it('passes exact OpenCode session id to the runtime transcript command', async () => {
+  it('reads the exact retained OpenCode session without unrelated launch preparation', async () => {
+    const retainedEnv = Object.freeze({
+      HOME: '/TEST/profile',
+      CLAUDE_MULTIMODEL_DATA_HOME: '/TEST/retained-data',
+      CLAUDE_MULTIMODEL_CACHE_HOME: '/TEST/retained-cache',
+      OPENCODE_CLI_PATH: '/TEST/opencode-v1',
+      OPENCODE_BIN_PATH: '/TEST/opencode-v1',
+      CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: '/TEST/opencode-v1',
+      CLAUDE_CODE_ENTRY_PROVIDER: 'opencode',
+    });
+    buildProviderAwareCliEnvMock.mockRejectedValue(
+      Object.assign(new Error('Unrelated captured provider management is unavailable'), {
+        name: 'BackendRoutingError',
+        code: 'unavailable',
+      })
+    );
+    buildPassiveProviderStatusCliEnvMock.mockReturnValue({
+      env: retainedEnv,
+      connectionIssues: {},
+      providerArgs: [],
+    });
     execCliMock.mockImplementation(async (_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
 
@@ -3746,6 +3766,13 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
 
     expect(transcript?.sessionId).toBe('session-exact');
+    expect(buildProviderAwareCliEnvMock).not.toHaveBeenCalled();
+    expect(buildPassiveProviderStatusCliEnvMock).toHaveBeenCalledTimes(1);
+    expect(buildPassiveProviderStatusCliEnvMock).toHaveBeenCalledWith({
+      binaryPath: '/mock/agent_teams_orchestrator',
+      providerId: 'opencode',
+    });
+    expect(execCliMock).toHaveBeenCalledTimes(1);
     expect(execCliMock).toHaveBeenCalledWith(
       '/mock/agent_teams_orchestrator',
       expect.arrayContaining([
@@ -3756,7 +3783,7 @@ describe('ClaudeMultimodelBridgeService', () => {
         '--run-id',
         'run-original',
       ]),
-      expect.any(Object)
+      expect.objectContaining({ env: retainedEnv })
     );
   });
 

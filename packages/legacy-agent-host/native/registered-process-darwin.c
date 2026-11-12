@@ -1,4 +1,8 @@
 #include <errno.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <Security/SecCode.h>
+#include <Security/SecBase.h>
+#include <inttypes.h>
 #include <libproc.h>
 #include <mach/mach.h>
 #include <math.h>
@@ -122,6 +126,64 @@ static int read_vertex(pid_t pid, struct live_vertex *out) {
   if (out->sid <= 1 || token_of(pid, &after) || !equal_token(&out->token, &after)) return ESRCH;
   return 0;
 }
+/* Kernel-selected executable, bound to the original audit token. Dynamic code
+ * validation connects its in-kernel signature to the file at the reported path;
+ * the Host separately verifies that file's complete pinned SHA256. A path alone
+ * would not prove the running image after a rename/replacement. */
+static napi_value read_root_executable(napi_env env, napi_callback_info info) {
+  napi_value args[3]; size_t count = 3; pid_t sid;
+  audit_token_t original;
+  TRY(napi_get_cb_info(env, info, &count, args, NULL, NULL));
+  if (count != 3 || !matches_boot(env, args[0]) || parse_token(env, args[1], &original) ||
+      parse_pid(env, args[2], &sid) || original.val[5] != (uint32_t)sid)
+    return fail(env, "arguments", EINVAL);
+  pid_t pid = (pid_t)original.val[5];
+  struct live_vertex before, after;
+  if (read_vertex(pid, &before) || !equal_token(&original, &before.token) ||
+      before.sid != sid || before.ppid != getpid() || getpgid(pid) != sid)
+    return fail(env, "original-root-unavailable", ESRCH);
+  char kernel_path[PROC_PIDPATHINFO_MAXSIZE] = {0};
+  char signed_path[PROC_PIDPATHINFO_MAXSIZE] = {0};
+  if (proc_pidpath_audittoken(&original, kernel_path, sizeof(kernel_path)) <= 0 || kernel_path[0] != '/' ||
+      memchr(kernel_path, '\0', sizeof(kernel_path)) == NULL)
+    return fail(env, "root-executable-path", EACCES);
+  int code = EPERM;
+  CFDataRef token = CFDataCreate(kCFAllocatorDefault, (const UInt8 *)&original, sizeof(original));
+  CFDictionaryRef attributes = NULL;
+  SecCodeRef guest = NULL;
+  CFURLRef executable = NULL;
+  if (!token) goto release;
+  const void *keys[] = {kSecGuestAttributeAudit};
+  const void *values[] = {token};
+  attributes = CFDictionaryCreate(kCFAllocatorDefault, keys, values, 1,
+    &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+  if (!attributes ||
+      SecCodeCopyGuestWithAttributes(NULL, attributes, kSecCSDefaultFlags, &guest) != errSecSuccess ||
+      SecCodeCheckValidity(guest, kSecCSNoNetworkAccess, NULL) != errSecSuccess ||
+      SecCodeCopyPath((SecStaticCodeRef)guest, kSecCSDefaultFlags, &executable) != errSecSuccess ||
+      !CFURLGetFileSystemRepresentation(executable, 1, (UInt8 *)signed_path, sizeof(signed_path)) ||
+      strcmp(kernel_path, signed_path) != 0) goto release;
+  code = 0;
+release:
+  if (executable) CFRelease(executable);
+  if (guest) CFRelease(guest);
+  if (attributes) CFRelease(attributes);
+  if (token) CFRelease(token);
+  if (code) return fail(env, "root-executable-signature", code);
+  if (read_vertex(pid, &after) || !equal_token(&original, &after.token) ||
+      after.birth != before.birth || after.sid != sid || after.ppid != before.ppid ||
+      getpgid(pid) != sid || !matches_boot(env, args[0]))
+    return fail(env, "original-root-changed", ESRCH);
+  napi_value result = snapshot(env, &after.token, sid), value;
+  if (result == NULL) return NULL;
+  char birth[24];
+  snprintf(birth, sizeof(birth), "%" PRIu64, after.birth);
+  TRY(napi_create_string_utf8(env, kernel_path, NAPI_AUTO_LENGTH, &value));
+  TRY(napi_set_named_property(env, result, "executablePath", value));
+  TRY(napi_create_string_utf8(env, birth, NAPI_AUTO_LENGTH, &value));
+  TRY(napi_set_named_property(env, result, "birth", value));
+  return result;
+}
 static int live_ancestry(const audit_token_t *root, const audit_token_t *target, pid_t sid) {
   struct live_vertex path[MAX_LIVE_ANCESTRY], check;
   size_t length = 0;
@@ -235,12 +297,13 @@ static napi_value os_build(napi_env env, napi_callback_info info) {
 static napi_value initialize(napi_env env, napi_value exports) {
   const napi_property_descriptor methods[] = {
     {"captureRoot", NULL, capture_root, NULL, NULL, NULL, napi_default, NULL},
+    {"readRootExecutable", NULL, read_root_executable, NULL, NULL, NULL, napi_default, NULL},
     {"captureDescendant", NULL, capture_descendant, NULL, NULL, NULL, napi_default, NULL},
     {"signalOriginal", NULL, signal_original, NULL, NULL, NULL, napi_default, NULL},
     {"observeOriginal", NULL, observe_original, NULL, NULL, NULL, napi_default, NULL},
     {"osBuild", NULL, os_build, NULL, NULL, NULL, napi_default, NULL},
   };
-  TRY(napi_define_properties(env, exports, 5, methods));
+  TRY(napi_define_properties(env, exports, sizeof(methods) / sizeof(methods[0]), methods));
   return exports;
 }
 NAPI_MODULE(NODE_GYP_MODULE_NAME, initialize)

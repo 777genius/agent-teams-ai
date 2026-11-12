@@ -17,7 +17,7 @@ export const mixedConfiguredMembers = [
   {
     name: 'carol',
     providerId: 'opencode',
-    model: 'TEST-local/TEST-model',
+    model: 'test-local/TEST-model',
     role: 'reviewer',
     workflow: 'TEST mixed opencode workflow: use only the supplied business input.',
   },

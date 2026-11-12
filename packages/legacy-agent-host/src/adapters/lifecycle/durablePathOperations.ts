@@ -96,6 +96,27 @@ async function syncDirectory(dirPath: string, strict: boolean): Promise<void> {
   }
 }
 
+/** Same unsupported-directory policy for synchronous owner publications.
+ * The caller flushes the file first; storage and descriptor-close failures still reject. */
+export function syncDirectorySync(dirPath: string): void {
+  let directory: number | undefined, failure: unknown, closeFailure: unknown;
+  try { directory = fs.openSync(dirPath, fs.constants.O_RDONLY); fs.fsyncSync(directory); }
+  catch (error) { failure = error; }
+  finally {
+    if (directory !== undefined) {
+      try { fs.closeSync(directory); } catch (error) { closeFailure = error; }
+    }
+  }
+  if (failure !== undefined) {
+    const code = (failure as NodeJS.ErrnoException).code;
+    const unsupported = code === 'EINVAL' || code === 'ENOSYS' || code === 'ENOTSUP' ||
+      code === 'EOPNOTSUPP' || (process.platform === 'win32' &&
+        (code === 'EACCES' || code === 'EPERM' || code === 'EISDIR' || code === 'EBADF'));
+    if (!unsupported) throw failure;
+  }
+  if (closeFailure !== undefined) throw closeFailure;
+}
+
 /**
  * Replace an existing regular file only if the inode and contents that were
  * observed by the caller are still current. The observed pathname is detached

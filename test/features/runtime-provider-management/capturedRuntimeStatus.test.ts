@@ -1,15 +1,19 @@
 // @vitest-environment node
 import { expect, it, vi } from 'vitest';
-import { createCapturedRuntimeProviderStatusClient } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient';
-import type { CapturedProviderManagement } from '../../../src/features/agent-backend/main';
 
-function fixture() {
+import { createCapturedRuntimeProviderStatusClient } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient';
+
+import type { CapturedProviderManagement } from '../../../src/features/agent-backend/main';
+import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
+
+function fixture(runtime?: JsonValue) {
   let current = true;
   const request = vi.fn(async () => ({
     ok: true,
     value: {
       profileId: 'TEST-profile',
       configRevision: 'TEST-config',
+      ...(runtime === undefined ? {} : { runtime }),
       configuredDefaultModelId: 'TEST-local/TEST-model',
       providers: [
         {
@@ -121,4 +125,39 @@ it('a failed native handshake prevents provider allocation rather than resolving
   expect(status.installed).toBe(false);
   expect(f.capture).not.toHaveBeenCalled();
   expect(JSON.stringify(status)).not.toContain('TEST-private-launch-error');
+});
+
+it('the original V2 catalog supplies engine availability without a CLI path or model authority', async () => {
+  const f = fixture({ generation: 'v2', version: '2.1.4' });
+  expect(await f.port.readOpenCodeRuntimeStatus!()).toEqual({
+    installed: true, source: 'captured-host', state: 'ready', version: '2.1.4', v2Support: 'ready',
+  });
+  expect(f.capture).toHaveBeenCalledWith(null);
+  expect(f.request).toHaveBeenCalledExactlyOnceWith('catalog', {});
+  const provider = await f.port.getProviderStatus('opencode');
+  expect(provider.authenticated).toBe(false);
+  expect(provider.capabilities.teamLaunch).toBe(false);
+});
+
+it('only the explicit successful native V1 catalog retains the separate installer status', async () => {
+  const f = fixture({ generation: 'v1' });
+  expect(await f.port.readOpenCodeRuntimeStatus!()).toBeNull();
+  expect(f.request).toHaveBeenCalledExactlyOnceWith('catalog', {});
+});
+
+const INVALID_RUNTIME_EVIDENCE: (JsonValue | undefined)[] = [
+  undefined, null, {}, { generation: 'v2' }, { generation: 'v2', version: '2.1.5' },
+  { generation: 'v1', version: '2.1.4' }, { generation: 'v3', version: '3.0.0' },
+];
+it.each(INVALID_RUNTIME_EVIDENCE)('missing or invalid native runtime evidence cannot select the legacy status source: %j', async runtime => {
+  const f = fixture(runtime);
+  await expect(f.port.readOpenCodeRuntimeStatus!()).rejects.toThrow();
+});
+
+it('a changed captured target or failed native read cannot publish engine readiness', async () => {
+  const f = fixture({ generation: 'v2', version: '2.1.4' });
+  f.request.mockRejectedValueOnce(new Error('TEST unavailable original child'));
+  await expect(f.port.readOpenCodeRuntimeStatus!()).rejects.toThrow('TEST unavailable original child');
+  f.stale();
+  await expect(f.port.readOpenCodeRuntimeStatus!()).rejects.toThrow('Native status context changed');
 });

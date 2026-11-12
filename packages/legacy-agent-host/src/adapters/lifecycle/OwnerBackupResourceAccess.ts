@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { closeSync, constants, fstatSync, fsyncSync, linkSync, lstatSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { closeSync, constants, fstatSync, linkSync, lstatSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { syncDirectorySync } from './durablePathOperations.js';
 import { TeamOwnerError } from '../../team/contracts.js';
 import { teamBackupResourceVersion } from '../../team/teamBackupResourceVersion.js';
 import type { TeamBinding } from '../../team/contracts.js';
@@ -54,8 +55,7 @@ export class OwnerBackupResourceAccess {
         writeFileSync(staged, bytes, { flag: 'wx', mode: 0o600, flush: true });
         if (!same(identity, lstatSync(parent)) || this.version(path) !== proof.ownerVersion) throw new TeamOwnerError('hold');
         try { linkSync(staged, target); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'EEXIST') return 'current'; throw error; }
-        const directory = openSync(parent, constants.O_RDONLY);
-        try { fsyncSync(directory); } finally { closeSync(directory); }
+        syncDirectorySync(parent);
         return 'restored';
       });
     } catch { return 'held'; }

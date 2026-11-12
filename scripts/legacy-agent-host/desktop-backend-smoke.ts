@@ -23,6 +23,7 @@ import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { desktopProofEvidence } from './desktop-proof-evidence.ts';
 import { runDesktopNativeReview } from './desktop-native-review-compose.ts';
 import { desktopReadbackArtifacts, runDesktopNativeReadback } from './desktop-readback-fixture.ts';
+import { assertCapturedDesktopMetadataAbsent, assertFirstResumeMetadataAbsent, captureDesktopOpenCodeV2ColdMetadata } from './desktop-opencode-v2-cold-metadata.ts';
 import { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
 import { captureDesktopCodexNativeInputs, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
@@ -78,6 +79,8 @@ let questionModel: Awaited<ReturnType<typeof startDesktopCodexQuestionModel>> | 
 let mixedModels: DesktopMixedModels | undefined;
 let conversationModel: Awaited<ReturnType<typeof startNativeTeamModel>> | undefined;
 let codexResumeModel: Awaited<ReturnType<typeof startCodexModel>> | undefined;
+let openCodeLifecycleModel: Awaited<ReturnType<typeof prepareDesktopProofMode>>['openCodeLifecycleModel'];
+let openCodeReviewModel: Awaited<ReturnType<typeof prepareDesktopProofMode>>['openCodeReviewModel'];
 let controlledProcess: Awaited<ReturnType<typeof prepareControlledProcessFixture>>['controlledProcess'] | undefined;
 const object = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
@@ -116,10 +119,11 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const permittedSentinelObservation = (row: Record<string, unknown>) => (mode === 'skills-ui' && isSkillsMetadataRefusal(row)) || (!packed ? row.allowed === true : row.executable === 'shell-env' ? row.allowed === true : row.allowed === false && row.argc === 1 && Array.isArray(row.flags) && row.flags.length === 1 && row.flags[0] === '--version');
   if (packed) assert.equal(mode, 'native-launch-ui', 'one bounded packed workflow reuses the original native Launch proof');
   if (packedRelaunchMode) assert.ok(packed, 'automatic app relaunch is an explicit captured packed scope');
-  const { mixedMode, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel } =
+  const { mixedMode, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel, openCodeLifecycleMode, openCodeLifecycleModel: selectedOpenCodeModel, openCodeReviewModel: selectedOpenCodeReviewModel } =
     await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
   conversationModel = model; mixedModels = selectedMixedModels;
   codexResumeModel = selectedCodexResumeModel;
+  openCodeLifecycleModel = selectedOpenCodeModel; openCodeReviewModel = selectedOpenCodeReviewModel;
   const nativeInputs = mixedMode || codexResumeMode ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
   const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = questionUiMode ? await prepareDesktopBackendFixture(repo, {
@@ -127,13 +131,22 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       sha256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f', modelUrl: questionModel!.url },
   }) : await prepareDesktopProofFixture(repo, mode, pnpm, {
     processUiMode, controlledProcessMode, processReadbackMode, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewReadbackMode, reviewUiMode, legacyImportMode, uiMode,
-    launchDialogMode, createConfigMode, nativeStopMode, approvalUiMode, codexResumeMode, ...(packed ? { candidateRuntime: packed.runtime } : {}), modelUrl: codexResumeModel?.url ?? conversationModel?.url ?? mixedModels?.claude.url,
+    launchDialogMode, createConfigMode, nativeStopMode, approvalUiMode, codexResumeMode, openCodeLifecycleMode, ...(packed ? { candidateRuntime: packed.runtime } : {}), modelUrl: openCodeReviewModel?.url ?? openCodeLifecycleModel?.url ?? codexResumeModel?.url ?? conversationModel?.url ?? mixedModels?.claude.url,
   });
   controlledProcess = baseFixture.controlledProcess;
   const processReadbackSource = processReadbackMode ? await verifyNativeProcessReadbackSource(baseFixture.root, object(JSON.parse(await readFile(join(baseFixture.root, 'desktop-backend-receipt.json'), 'utf8')))) : undefined;
   if (mixedModels) await mixedModels.retainEvidenceAt(baseFixture.root);
   const fixture = questionUiMode ? await prepareDesktopCodexQuestionFixture(baseFixture, { executable: process.env.LEGACY_DESKTOP_CODEX_PATH!, model: questionModel! }) : mixedMode ? await prepareDesktopMixedNativeFixture(baseFixture, {
     models: selectedMixedModels!, codexPath: process.env.LEGACY_DESKTOP_CODEX_PATH!, openCodePath: process.env.LEGACY_DESKTOP_OPENCODE_PATH!,
+    ...(process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2' ? {
+      openCodeV2: { bunPath: process.env.OPENCODE_V2_EMBEDDED_BUN!,
+        bunSha256: process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256!,
+        engineDirectory: process.env.OPENCODE_V2_EMBEDDED_GRAPH!,
+        processCustody: {
+          directory: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY!,
+          manifestSha256: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256!,
+        } },
+    } : {}),
     openCodeEndpoint: await reserveMixedOpenCodeEndpoint(),
     openCodeManagementEndpoint: await reserveMixedOpenCodeEndpoint(),
   }) : baseFixture;
@@ -183,6 +196,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     uiMode,
     conversationModel,
     codexResumeModel,
+    openCodeLifecycleModel, openCodeReviewModel,
   });
   if (quitScenario === 'pending-open') {
     evidence.scope = 'Actual native provider open pending, zero inputs, guarded existing Quit API and physical cleanup; explicit TEST setup';
@@ -272,6 +286,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         assertOwnedRenderer: () => assertOwnedCdpListener(group), evidence });
     await verifyCapturedDesktopBinding({ cdp, group, mode, fixture, evidence, repo, packed,
       remainingStartupMs: startupBudgetMs - (performance.now() - startupStarted) });
+    const coldMetadata = ['native-readback-ui', 'native-quit-readback-ui'].includes(mode)
+      ? await captureDesktopOpenCodeV2ColdMetadata(cdp, { root: fixture.root, node: fixture.node, hostEntry: fixture.hostEntry,
+        group, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) }) : undefined;
+    if (coldMetadata) hostPid = coldMetadata.hostPid;
     if (['codex-account-read', 'codex-account-auth'].includes(mode)) {
       const readyUntil = Date.now() + 60000;
       let initial: Record<string, unknown> | undefined;
@@ -314,7 +332,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         fixture,
         group,
         evidence,
-        executable: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
+        executable: openCodeLifecycleMode ? process.env.OPENCODE_V2_EMBEDDED_BUN! : process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
+        ...(openCodeLifecycleMode ? { provider: 'opencode' as const } : {}),
         manualPermissions: approvalUiMode,
         ...(quitScenario === 'pending-open' ? { returnAt: 'opening' as const } : {}),
       });
@@ -332,10 +351,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     } else if (processUiMode || controlledProcessMode) {
       hostPid = await qualifyColdProcessUi(cdp, { fixture, evidence, group, processReadbackMode, processReadbackSource,
         controlledSource: controlledProcess?.source, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
-    } else if (await runDesktopNativeQuitMode(cdp, {mode, root: fixture.root, seed: fixture.uiSeed, evidence, model: conversationModel, assertOwnedRenderer: () => assertOwnedCdpListener(group)})) {
+    } else if (await runDesktopNativeQuitMode(cdp, {mode, root: fixture.root, seed: fixture.uiSeed, evidence, model: openCodeLifecycleModel ?? conversationModel, coldMetadata, assertOwnedRenderer: () => assertOwnedCdpListener(group)})) {
       // Exact Quit/readback witnesses are finalized below before fallback cleanup.
     } else if (nativeReviewMode) {
-      await runDesktopNativeReview(cdp, { fixture, evidence, model: conversationModel,
+      await runDesktopNativeReview(cdp, { fixture, evidence, model: conversationModel, openCodeReviewModel,
         readback: nativeReviewReadbackMode, continuation: nativeReviewContinuationMode, group, onHostObserved: pid => { hostPid = pid; }, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (legacyImportMode) {
       assert.ok(conversationModel);
@@ -381,15 +400,17 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     } else if (createConfigMode) {
       await runDesktopCreateUiSmoke(cdp, { fixture, evidence, model: conversationModel, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (launchDialogMode) {
-      assert.ok(fixture.uiSeed && (conversationModel || codexResumeModel));
+      assert.ok(fixture.uiSeed && (conversationModel || codexResumeModel || openCodeLifecycleModel));
       await runDesktopLaunchUiSmoke(cdp, {
         fixture, seed: fixture.uiSeed, evidence, ...(conversationModel ? { model: conversationModel } : {}),
         ...(codexResumeModel ? { codexResumeModel } : {}),
+        ...(openCodeLifecycleModel ? { openCodeModel: openCodeLifecycleModel } : {}),
+        capturedGroup: () => group,
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
         ...(mode === 'native-resume-ui' ? { restartAfterStop: async () => {
-          assert.ok(cdp && !packed && (conversationModel || codexResumeModel));
-          const resumeModel = codexResumeModel ?? conversationModel!;
-          const resumeProvider = codexResumeMode ? 'codex' : 'claude';
+          assert.ok(cdp && !packed && (conversationModel || codexResumeModel || openCodeLifecycleModel));
+          const resumeModel = openCodeLifecycleModel ?? codexResumeModel ?? conversationModel!;
+          const resumeProvider = openCodeLifecycleMode ? 'opencode' : codexResumeMode ? 'codex' : 'claude';
           const originalApp = app, originalGroup = group;
           const hosts = groupMembers(group).filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
           assert.equal(hosts.length, 1, 'capture original Host before guarded cold Resume Quit');
@@ -444,7 +465,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
           assert.equal(originalApp.exitCode, 0, 'original captured app exits normally before second spawn');
           assert.equal(originalApp.signalCode, null);
           assert.deepEqual(remaining, [], 'no group cleanup fallback before cold Resume');
-          assert.equal(hostAbsent, true); assert.equal(writerReleased, true);
+          assert.equal(hostAbsent, true); assert.equal(writerReleased, true); assertFirstResumeMetadataAbsent(evidence);
           const postQuit = await readDesktopNativeStopSessions(fixture.root);
           const definition = object((object(JSON.parse(await readFile(fixture.profilePath, 'utf8'))).teams as unknown[])[0]);
           const descriptorMember = object((definition.members as unknown[]).find(value => object(value).memberId === object(sourceSessions[0]!.binding).memberId));
@@ -502,7 +523,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         seed: fixture.uiSeed,
         evidence,
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
+        metadataProcessCount: coldMetadata?.metadataProcessCount ?? 0,
         assertNoNativeChildren: () => {
+          if (coldMetadata) return coldMetadata.assertNoRuntimeChildren();
           const table = processTable();
           const hosts = table.filter(
             (row) =>
@@ -527,6 +550,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         },
         evidence,
         ...(conversationModel ? { model: conversationModel } : {}),
+        ...(conversationMode && openCodeLifecycleModel ? { openCodeModel: openCodeLifecycleModel } : {}),
         ...(nativeStopMode
           ? {
               nativeStop: {
@@ -576,7 +600,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     );
     evidence.sentinel = sentinel;
     evidence.preQuitSentinelCount = sentinel.length;
-    await capturePendingDesktopNativeQuit(fixture.root, evidence, conversationModel);
+    await capturePendingDesktopNativeQuit(fixture.root, evidence, openCodeLifecycleModel ?? conversationModel);
     quitRequested = true;
     // API diagnostic shutdown, explicitly not a human UI control interaction.
     if (packedRelaunchMode) {
@@ -594,7 +618,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       false,
       'captured standalone Host retired during guarded app Quit'
     );
-    await verifyDesktopNativeQuitAfterShutdown(mode, fixture.root, evidence, nativeChildren, conversationModel, group);
+    assertCapturedDesktopMetadataAbsent(evidence);
+    await verifyDesktopNativeQuitAfterShutdown(mode, fixture.root, evidence, nativeChildren, openCodeLifecycleModel ?? conversationModel, group);
     if (activitySource) await finalizeDesktopActivityReadback(evidence, activitySource, () => assert.equal(processTable().some(row => row.pid === hostPid), false));
     evidence.status = 'PASS';
   } catch (error) {
@@ -770,6 +795,6 @@ try {
 } finally {
   try { await controlledProcess?.cleanup(); } catch (error) { if (!originalFailure) throw error; }
   await questionModel?.close();
-  await (codexResumeModel ?? conversationModel)?.close();
+  await (openCodeReviewModel ?? openCodeLifecycleModel ?? codexResumeModel ?? conversationModel)?.close();
   await mixedModels?.close();
 }

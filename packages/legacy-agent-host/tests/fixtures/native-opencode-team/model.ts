@@ -17,6 +17,7 @@ import { createServer } from 'node:http';
 import { nativePeerTurn, nativePeerActions } from '../native-peers.ts';
 
 import { nativeToolReceipt, record } from '../native-claude-team/model.ts';
+import { isOpenCodeModelProbe } from './model-probe.ts';
 
 export const CONTEXT_MARKER = 'TEST_OPENCODE_CAPTURED_MEMBER_CONTEXT_V1';
 export const REQUIRED_TOOLS = [
@@ -43,6 +44,7 @@ export interface CaptureFileUpdateScenario {
 }
 export async function startOpenCodeModel(
   options: {
+    nativeGeneration?: 'v2';
     sharedSessionProbe?: boolean;
     nativeMessageImage?: boolean;
     mixedGroups?: boolean;
@@ -50,6 +52,10 @@ export async function startOpenCodeModel(
     peerMessaging?: boolean;
     captureFileUpdate?: CaptureFileUpdateScenario;
     allowModelProbes?: boolean;
+    memberName?: 'alice' | 'carol';
+    uiGeneratedMessageIds?: boolean;
+    captureHistoryMarkers?: boolean;
+    holdInitialTurnResponse?: boolean;
     principalId?: () => string;
   } = {}
 ) {
@@ -75,12 +81,17 @@ export async function startOpenCodeModel(
     step: number;
     contextEffective: boolean;
     priorTurn: boolean;
+    requestedModel?: string;
+    priorNativeToolIds?: string[];
+    visibleReplyContract?: boolean;
+    incomingMessageId?: string;
     tools: string[];
   }[] = [];
   const notificationObservations: ((typeof observations)[number] & {
     notice: ObservedMixedTaskNotice;
   })[] = [];
   const failures: string[] = [];
+  const heldInitialRequests: { turn: string; step: number; disconnected: boolean }[] = [];
   const counts = new Map<string, number>();
   let taskId: string | undefined;
   const server = createServer((request, response) => {
@@ -104,22 +115,9 @@ export async function startOpenCodeModel(
       const body = record(JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown);
       const messages = (Array.isArray(body.messages) ? body.messages : []).map(record);
       const user = messages.filter((item) => item.role === 'user');
-      const probeText =
-        user.length === 1 &&
-        messages.every((item) => item.role === 'user' || item.role === 'system')
-          ? typeof user[0]?.content === 'string'
-            ? user[0].content
-            : Array.isArray(user[0]?.content) &&
-                user[0].content.every(
-                  (raw) => record(raw).type === 'text' && typeof record(raw).text === 'string'
-                )
-              ? user[0].content.map((raw) => String(record(raw).text)).join('\n')
-              : undefined
-          : undefined;
       if (
         options.allowModelProbes &&
-        probeText === 'Reply only OK. Do not use tools, access files or run commands.' &&
-        (!Array.isArray(body.tools) || body.tools.length === 0)
+        isOpenCodeModelProbe(body, options.nativeGeneration ?? 'v1')
       ) {
         assert.ok(probes.length < 8, 'bounded original-dialog model probes');
         probes.push({
@@ -195,7 +193,7 @@ export async function startOpenCodeModel(
           observations.length + notificationObservations.length < (options.peerMessaging ? 48 : 16),
           'finite mixed inference budget'
         );
-      let turn = '';
+      let turn = '', turnText = '';
       let notice: ObservedMixedTaskNotice | undefined;
       let mixedGroup: MixedGroupTurn | undefined;
       for (const message of messages.toReversed()) {
@@ -223,6 +221,7 @@ export async function startOpenCodeModel(
           );
         }
         if (group || capture || peer || match) {
+          turnText = mixedNativeText(message.content);
           mixedGroup = group;
           turn =
             group?.turn ??
@@ -278,7 +277,9 @@ export async function startOpenCodeModel(
         }
       }
       const contextEffective = JSON.stringify(
-        messages.filter((item) => item.role === 'system')
+        // V2 renders durable instruction entries as context messages. The
+        // original TEST business input contains no marker in either dialect.
+        options.nativeGeneration === 'v2' ? messages : messages.filter((item) => item.role === 'system')
       ).includes(CONTEXT_MARKER);
       assert.ok(contextEffective, 'native model request contains selected member instructions');
       const tools = (Array.isArray(body.tools) ? body.tools : [])
@@ -317,10 +318,40 @@ export async function startOpenCodeModel(
         step,
         contextEffective,
         priorTurn: JSON.stringify(messages).includes('OPENCODE_TEAM_ONE'),
+        ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+        ...(options.captureHistoryMarkers ? { priorNativeToolIds: messages.flatMap(message =>
+          Array.isArray(message.tool_calls) ? message.tool_calls.map(record)
+            .filter(call => typeof call.id === 'string' && /^TEST_OPENCODE_TEAM_ONE_[0-6]$/.test(call.id))
+            .map(call => String(call.id)) : []) } : {}),
+        ...(options.uiGeneratedMessageIds ? (() => {
+          const incomingMessageId = /"messageId":"([^"\n]+)"/.exec(turnText)?.[1];
+          return { ...(incomingMessageId !== undefined ? { incomingMessageId } : {}), visibleReplyContract:
+            turnText.includes('message_send tool to="user", including commandId and text') &&
+            turnText.includes('Do not reuse the incoming messageId as a reply commandId') &&
+            typeof incomingMessageId === 'string' &&
+            /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(incomingMessageId) };
+        })() : {}),
         tools,
       };
       if (notice) notificationObservations.push({ ...observation, notice });
       else observations.push(observation);
+      if (options.holdInitialTurnResponse) {
+        assert.equal(options.nativeGeneration, 'v2');
+        assert.equal(turn, 'OPENCODE_TEAM_ONE', 'queued input must never reach native inference');
+        assert.equal(step, 0); assert.equal(heldInitialRequests.length, 0, 'one original request, no retry');
+        assert.equal(observation.visibleReplyContract, true);
+        for (const tool of REQUIRED_TOOLS)
+          assert.ok(tools.includes(`agent-teams_${tool}`) || tools.includes(`mcp__agent-teams__${tool}`));
+        assert.ok(tools.includes('shell'));
+        const held = { turn, step, disconnected: false };
+        heldInitialRequests.push(held);
+        await new Promise<void>(resolve => {
+          response.once('close', () => { held.disconnected = true; resolve(); });
+          if (response.destroyed) { held.disconnected = true; resolve(); }
+        });
+        return;
+      }
+      const windowsV2 = options.nativeGeneration === 'v2' && process.platform === 'win32';
       const first = [
         {
           name: 'task_create',
@@ -328,13 +359,15 @@ export async function startOpenCodeModel(
         },
         {
           name: 'task_set_owner',
-          input: { commandId: 'opencode-task-assign', taskId, owner: 'carol' },
+          input: { commandId: 'opencode-task-assign', taskId, owner: options.memberName ?? 'carol' },
         },
         { name: 'task_start', input: { commandId: 'opencode-task-start', taskId } },
         {
           name: 'bash',
           input: {
-            command: "printf 'ONE\\n' >> native-effect.txt; exit 7",
+            command: windowsV2
+              ? "[System.IO.File]::AppendAllText((Join-Path (Get-Location) 'native-effect.txt'), \"ONE`n\"); exit 7"
+              : "printf 'ONE\\n' >> native-effect.txt; exit 7",
             description: 'TEST partial effect and failed shell exit',
           },
         },
@@ -343,7 +376,7 @@ export async function startOpenCodeModel(
           input: {
             commandId: 'opencode-task-comment',
             taskId,
-            text: 'OpenCode native Bash wrote TEST bytes and exited seven.',
+            text: 'OpenCode native shell wrote TEST bytes and exited seven.',
           },
         },
         { name: 'task_complete', input: { commandId: 'opencode-task-complete', taskId } },
@@ -356,7 +389,9 @@ export async function startOpenCodeModel(
         {
           name: 'bash',
           input: {
-            command: "printf 'TWO\\n' >> native-effect.txt",
+            command: windowsV2
+              ? "[System.IO.File]::AppendAllText((Join-Path (Get-Location) 'native-effect.txt'), \"TWO`n\")"
+              : "printf 'TWO\\n' >> native-effect.txt",
             description: 'TEST second sequential input',
           },
         },
@@ -399,12 +434,22 @@ export async function startOpenCodeModel(
             (turn === 'OPENCODE_TEAM_ONE' ? first : second))[step];
       let delta: Record<string, unknown>;
       if (action) {
+        const nativeAction = options.nativeGeneration === 'v2' && action.name === 'bash'
+          ? 'shell' : action.name;
         const chosen = tools.find((name) =>
           ['bash', 'read', 'edit'].includes(action.name)
-            ? name === action.name
-            : name === `team_${action.name}`
+            ? name === nativeAction
+            : options.nativeGeneration === 'v2'
+              ? [`agent-teams_${action.name}`, `mcp__agent-teams__${action.name}`].includes(name)
+              : name === `team_${action.name}`
         );
         assert.ok(chosen, `actual OpenCode catalog contains ${action.name}`);
+        if (windowsV2 && action.name === 'bash') {
+          const offered = (body.tools as unknown[]).map(record)
+            .map(tool => record(tool.function)).find(tool => tool.name === chosen);
+          assert.match(String(offered?.description), /Commands run on Windows using powershell\./,
+            'Windows shell syntax requires the actual native PowerShell tool selection');
+        }
         delta = {
           role: 'assistant',
           tool_calls: [
@@ -445,6 +490,7 @@ export async function startOpenCodeModel(
     ...(options.mixedTaskNotifications ? { notificationObservations } : {}),
     probes,
     failures,
+    ...(options.holdInitialTurnResponse ? { heldInitialRequests } : {}),
     close: () =>
       new Promise<void>((resolve) => {
         server.closeAllConnections();

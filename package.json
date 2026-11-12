@@ -409,6 +409,14 @@
       {
         "from": "resources/legacy-agent-host",
         "to": "legacy-agent-host"
+      },
+      {
+        "from": "resources/legacy-agent-host/native/opencode-v2/engine/local-cli/node_modules/node-gyp/node_modules/undici/lib/llhttp/.gitkeep",
+        "to": "legacy-agent-host/native/opencode-v2/engine/local-cli/node_modules/node-gyp/node_modules/undici/lib/llhttp/.gitkeep"
+      },
+      {
+        "from": "resources/legacy-agent-host/native/opencode-v2/engine/local-cli/node_modules/tr46/lib/.gitkeep",
+        "to": "legacy-agent-host/native/opencode-v2/engine/local-cli/node_modules/tr46/lib/.gitkeep"
       }
     ],
     "npmRebuild": false,

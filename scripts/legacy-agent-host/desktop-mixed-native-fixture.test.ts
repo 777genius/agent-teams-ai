@@ -257,6 +257,87 @@ test('Claude cold Launch phase permits one fresh preflight, never a same-phase r
   assert.equal(model.observations.length, 0, 'preflight never becomes a business turn');
 });
 
+test('Claude mixed opt-in allows nine native probes and refuses the tenth without a business grant', async (t) => {
+  let principalReads = 0;
+  const model = await startNativeTeamModel({
+    allowModelProbes: true,
+    nativeModelProbeLimit: 9,
+    principalId: () => { principalReads++; throw new Error('no captured business grant'); },
+  });
+  t.after(() => model.close());
+  const send = () => fetch(model.url + '/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-opus-4-6', output_config: { effort: 'medium' },
+      messages: [{ role: 'user', content: prompt }], tools: [],
+    }),
+  });
+  for (let i = 0; i < 9; i++) {
+    const response = await send();
+    assert.equal(response.status, 200);
+    const wire = await response.text();
+    assert.match(wire, /OK/);
+    assert.doesNotMatch(wire, /tool_use/);
+  }
+  assert.equal(model.probes.length, 9);
+  assert.deepEqual(model.failures, []);
+  assert.equal(model.observations.length, 0);
+  assert.equal(principalReads, 0);
+  const tenth = await send();
+  assert.equal(tenth.status, 400);
+  await tenth.text();
+  assert.equal(model.probes.length, 9);
+  assert.equal(model.failures.length, 1);
+  assert.match(model.failures[0]!, /finite native model probe request budget/);
+  assert.equal(model.observations.length, 0, 'rejected preflight cannot consume a business turn');
+  assert.equal(principalReads, 0, 'preflight budget never resolves a business principal');
+});
+
+for (const hotCount of [8, 9] as const) {
+  test(`Claude mixed ${hotCount} native probes permit exactly one cold preflight, then refuse replay`, async (t) => {
+    let phase: 'native' | 'cold-readback' = 'native';
+    let principalReads = 0;
+    const model = await startNativeTeamModel({
+      allowModelProbes: true,
+      nativeModelProbeLimit: 9,
+      modelProbePhase: () => phase,
+      principalId: () => { principalReads++; throw new Error('no captured business grant'); },
+    });
+    t.after(() => model.close());
+    const send = () => fetch(model.url + '/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-opus-4-6', output_config: { effort: 'medium' },
+        messages: [{ role: 'user', content: prompt }], tools: [],
+      }),
+    });
+    for (let i = 0; i < hotCount; i++) {
+      const response = await send();
+      assert.equal(response.status, 200);
+      await response.text();
+    }
+    const hot = structuredClone(model.probes);
+    assert.equal(hot.length, hotCount);
+    phase = 'cold-readback';
+    const cold = await send();
+    assert.equal(cold.status, 200);
+    assert.match(await cold.text(), /OK/);
+    assert.deepEqual(model.probes, [...hot, {
+      phase: 'cold-readback', requestedModel: 'claude-opus-4-6', requestedEffort: 'medium',
+    }]);
+    const replay = await send();
+    assert.equal(replay.status, 400);
+    await replay.text();
+    assert.equal(model.probes.length, hotCount + 1);
+    assert.equal(model.failures.length, 1);
+    assert.match(model.failures[0]!, /finite native cold-readback model probe budget/);
+    assert.equal(model.observations.length, 0);
+    assert.equal(principalReads, 0);
+  });
+}
+
 test('mixed principal callback requires exact canonical capture delivery and live registered grant', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'TEST-desktop-backend-'));
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -1079,6 +1160,19 @@ test('Mixed Restart conserves the management and both runtime peers while replac
   assert.deepEqual(proof.peers, [management, claude, opencode]);
   assert.deepEqual(proof.newBobChild, newCodex);
   assert.deepEqual(proof.currentHost, host);
+});
+
+test('V2 Mixed separates metadata by its original pre-Launch identity even when both Bun arguments match', () => {
+  const equalCommands = new Map(commands);
+  equalCommands.set(11, '/TEST/opencode --no-env-file --no-install embedded-child.js');
+  equalCommands.set(14, equalCommands.get(11)!);
+  const selected = selectMixedProcessChildren(before, paths, management, equalCommands);
+  assert.deepEqual(selected.managementChild, management);
+  assert.deepEqual(selected.runtimeChildren, [claude, codex, opencode]);
+  for (const stale of [{ ...management, birth: 'TEST-reused-PID' },
+    { ...management, parentPid: 99 }, { ...management, groupId: 99 }])
+    assert.throws(() => selectMixedProcessChildren(before, paths, stale, equalCommands));
+  assert.throws(() => selectMixedProcessChildren([...before, processFact(16, '/TEST/opencode')], paths, management, equalCommands));
 });
 
 test('Mixed Restart refuses old Bob, peer PID reuse, Host replacement and unexplained child changes', () => {

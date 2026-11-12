@@ -6,6 +6,8 @@ import { join } from 'node:path';
 import type { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
 import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
+import type { startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
+import type { startOpenCodeV2ReviewModel } from './desktop-opencode-v2-review-model.ts';
 export async function desktopProofEvidence(options: {
   mode: string;
   fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>;
@@ -18,6 +20,8 @@ export async function desktopProofEvidence(options: {
   uiMode: boolean;
   conversationModel?: Awaited<ReturnType<typeof startNativeTeamModel>> | undefined;
   codexResumeModel?: Awaited<ReturnType<typeof startCodexModel>> | undefined;
+  openCodeLifecycleModel?: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
+  openCodeReviewModel?: Awaited<ReturnType<typeof startOpenCodeV2ReviewModel>> | undefined;
 }): Promise<Record<string, unknown>> {
   const {
     mode,
@@ -30,15 +34,21 @@ export async function desktopProofEvidence(options: {
     uiMode,
     conversationModel,
     codexResumeModel,
+    openCodeLifecycleModel,
+    openCodeReviewModel,
   } = options;
   const resumeEvidence: Record<string, unknown> = {};
   if (mode === 'native-resume-ui') {
-    const provider = codexResumeModel ? 'codex' : 'claude';
+    const provider = openCodeLifecycleModel ? 'opencode' : codexResumeModel ? 'codex' : 'claude';
     const profile = JSON.parse(await readFile(fixture.profilePath, 'utf8'));
     const members = profile.runtime?.members;
     assert.ok(Array.isArray(members) && members.length === 1);
     const member = members[0];
     assert.equal(member.memberId, 'alice-id'); assert.equal(member.provider, provider);
+    if (openCodeLifecycleModel) {
+      assert.equal(member.nativeGeneration, 'v2'); assert.equal(member.protocolRevision, '2.1.4');
+      assert.equal(member.model, fixture.openCodeV2?.modelId);
+    }
     if (codexResumeModel) {
       assert.ok(fixture.codexResume);
       assert.deepEqual(member.capturedMcpServers, {});
@@ -49,12 +59,24 @@ export async function desktopProofEvidence(options: {
     resumeEvidence.resumeProvider = provider;
     resumeEvidence.resumeNativeProfile = { provider, memberId: member.memberId, model: member.model,
       executableSha256: member.executable?.sha256,
+      ...(openCodeLifecycleModel ? { nativeGeneration: 'v2', version: '2.1.4',
+        engineManifestSha256: member.embedded?.manifestSha256 } : {}),
       ...(codexResumeModel ? { managedMcp: true, catalogDigest: member.capturedMcpCatalog.digest } : {}) };
   }
   return {
     status: 'INCOMPLETE',
     mode,
+    ...(openCodeReviewModel ? { nativeProvider: 'opencode', nativeGeneration: 'v2', model: {
+      observations: openCodeReviewModel.observations, probes: openCodeReviewModel.probes,
+      failures: openCodeReviewModel.failures,
+      inference: 'Local scripted model; original V2 tools and Host own every file and Task effect',
+    } } : {}),
     ...resumeEvidence,
+    ...(openCodeLifecycleModel ? { nativeProvider: 'opencode', nativeGeneration: 'v2', model: {
+      observations: openCodeLifecycleModel.observations, probes: openCodeLifecycleModel.probes,
+      failures: openCodeLifecycleModel.failures,
+      inference: 'Local scripted model only; actual embedded OpenCode V2 executes all tools',
+    } } : {}),
     ...(codexResumeModel ? { model: {
       observations: codexResumeModel.observations, probes: codexResumeModel.probes,
       failures: codexResumeModel.failures,

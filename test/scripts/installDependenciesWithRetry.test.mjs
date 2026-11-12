@@ -1,59 +1,51 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import test from 'node:test';
+import {
+  createInstallFailureTracker,
+  isRetryableInstallFailure,
+} from '../../scripts/ci/install-dependencies-with-retry.mjs';
 
-import { isRetryableInstallFailure } from '../../scripts/ci/install-dependencies-with-retry.mjs';
-
-describe('install-dependencies-with-retry', () => {
-  for (const output of [
-    'HTTPError: Response code 504 (Gateway Time-out)',
-    'request failed with status code 502',
-    'ERR_PNPM_FETCH_503 GET https://registry.npmjs.org/package',
-    'ERR_PNPM_META_FETCH_FAIL ECONNRESET',
-    'getaddrinfo EAI_AGAIN registry.npmjs.org',
-    'socket hang up while downloading Electron',
-    'ERR_SOCKET_TIMEOUT while downloading Electron',
-    'UND_ERR_CONNECT_TIMEOUT while downloading Electron',
-    'Socket timeout while downloading Electron',
-    'HTTPError: Response code 504\nELIFECYCLE Command failed with exit code 1',
-    'gyp ERR! stack TypeError: terminated',
-    'SocketError: other side closed',
-    '. postinstall: TypeError: fetch failed\n. postinstall: Electron installer failed with exit code 1',
-    '[23] The operation was aborted due to timeout\nTimeoutError: The operation was aborted due to timeout',
-  ]) {
-    it(`retries transient network failure: ${output}`, () => {
-      assert.equal(isRetryableInstallFailure(output), true);
-    });
-  }
-
-  for (const output of [
-    'ERR_PNPM_OUTDATED_LOCKFILE Cannot install with frozen-lockfile',
-    'Unsupported engine: wanted node >=99',
-    'Lifecycle script failed with exit code 1',
-    'TypeError: fetch failed without pnpm postinstall context',
-    'HTTPError: Response code 404 (Not Found)',
-  ]) {
-    it(`does not retry deterministic failure: ${output}`, () => {
-      assert.equal(isRetryableInstallFailure(output), false);
-    });
-  }
-
-  it('lets a later deterministic error override an earlier transient marker', () => {
-    const output =
-      'HTTPError: Response code 503\nERR_PNPM_OUTDATED_LOCKFILE Cannot install with frozen-lockfile';
-    assert.equal(isRetryableInstallFailure(output), false);
+test('long unfinished engine warning does not turn a transient 503 into a terminal failure', () => {
+  const tracker = createInstallFailureTracker();
+  tracker.observe('stderr', '[WARN] ' + 'x'.repeat(600));
+  tracker.observe('stderr', ' Unsupported engine\nERR_PNPM_FETCH_503\n');
+  assert.deepEqual(tracker.snapshot(), {
+    retryableFailureSeen: true, terminalFailureSeen: false,
   });
+});
 
-  it('does not treat a non-fatal engine warning as a reason to suppress a 5xx retry', () => {
-    const output = [
-      'packages/legacy-agent-host | WARN Unsupported engine: wanted Node >=24 <25',
-      '. postinstall: HTTPError: Response code 503 while downloading Electron',
-    ].join('\n');
-    assert.equal(isRetryableInstallFailure(output), true);
+test('next fatal engine line is not masked by a prior long warning', () => {
+  const tracker = createInstallFailureTracker();
+  tracker.observe('stderr', '[WARN] ' + 'x'.repeat(600) + ' Unsupported engine\n');
+  tracker.observe('stderr', 'Unsupported ');
+  tracker.observe('stderr', 'engine\nERR_PNPM_FETCH_503');
+  assert.deepEqual(tracker.snapshot(), {
+    retryableFailureSeen: true, terminalFailureSeen: true,
   });
+});
 
-  it('still refuses retries after a fatal pnpm engine error', () => {
-    const output =
-      'HTTPError: Response code 503\nERR_PNPM_UNSUPPORTED_ENGINE Cannot install this package';
-    assert.equal(isRetryableInstallFailure(output), false);
+test('404 marker fragmented across chunks within one stream is terminal', () => {
+  const tracker = createInstallFailureTracker();
+  tracker.observe('stderr', 'ERR_PNPM_FETCH_4');
+  tracker.observe('stderr', '04\nERR_PNPM_FETCH_503');
+  assert.deepEqual(tracker.snapshot(), {
+    retryableFailureSeen: true, terminalFailureSeen: true,
   });
+});
+
+test('separate output streams cannot fabricate a 404 marker', () => {
+  const tracker = createInstallFailureTracker();
+  tracker.observe('stdout', 'ERR_PNPM_FETCH_4');
+  tracker.observe('stderr', '04\n');
+  tracker.observe('stdout', '\nERR_PNPM_FETCH_503');
+  assert.deepEqual(tracker.snapshot(), {
+    retryableFailureSeen: true, terminalFailureSeen: false,
+  });
+});
+
+test('whole-output classifier distinguishes long warning from fatal engine', () => {
+  assert.equal(isRetryableInstallFailure(
+    '[WARN] ' + 'x'.repeat(600) + ' Unsupported engine\nERR_PNPM_FETCH_503'
+  ), true);
+  assert.equal(isRetryableInstallFailure('Unsupported engine\nERR_PNPM_FETCH_503'), false);
 });

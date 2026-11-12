@@ -5,15 +5,18 @@ import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixture
 export function selectMixedProcessChildren(
   children: ProcessFact[],
   executablePaths: { claude: string; codex: string; opencode: string },
-  managementCommand: string,
+  managementSelection: string | ProcessFact,
   commands: ReadonlyMap<number, string>
 ) {
   const management = children.filter(
     (child) =>
-      child.command === executablePaths.opencode && commands.get(child.pid) === managementCommand
+      child.command === executablePaths.opencode && (typeof managementSelection === 'string'
+        ? commands.get(child.pid) === managementSelection : child.pid === managementSelection.pid)
   );
   assert.equal(management.length, 1, 'one exact profile-bound OpenCode management child');
   const managementChild = management[0]!;
+  if (typeof managementSelection !== 'string')
+    assert.deepEqual(managementChild, managementSelection, 'same metadata child captured before any runtime allocation');
   const runtimeChildren = children.filter((child) => child.pid !== managementChild.pid);
   assert.equal(
     runtimeChildren.length,

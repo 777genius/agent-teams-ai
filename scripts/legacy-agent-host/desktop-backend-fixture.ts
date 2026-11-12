@@ -15,6 +15,8 @@ import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/comp
 import { prepareNativeReviewWorkspace } from './desktop-native-review-fixture.ts';
 import { prepareDesktopReviewLedger } from './desktop-review-fixture.ts';
 import { prepareDesktopStoppedImport } from './desktop-stopped-import-fixture.ts';
+import { desktopOpenCodeV2ManagementProfile, prepareDesktopOpenCodeV2Recipe } from './desktop-opencode-v2-fixture.ts';
+import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
 
 export const digest = (bytes: Uint8Array | string): string =>
   createHash('sha256').update(bytes).digest('hex');
@@ -65,11 +67,15 @@ export async function prepareDesktopBackendFixture(
     pnpmEntry: string;
     nativeCodex?: { path: string; sha256: string };
     nativeClaude?: { path: string; sha256: string; modelUrl?: string };
+    nativeOpenCodeV2?: DesktopOpenCodeV2Selection;
   }
 ) {
+  if (options.nativeOpenCodeV2 && (options.nativeClaude || options.nativeCodex || options.candidateRuntime || options.nativeGroupChats))
+    throw new Error('Embedded V2 requires its explicit captured TEST fixture');
   const node =
     options.candidateRuntime?.nodeExecutable ??
-    (await realpath(join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')));
+    (await realpath(options.nativeOpenCodeV2 ? process.execPath :
+      join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')));
   const hostEntry =
     options.candidateRuntime?.hostEntry ??
     (await realpath(
@@ -174,8 +180,8 @@ export async function prepareDesktopBackendFixture(
   };
   const profile: TeamHostProfile = {
     schemaVersion: 1,
-    ...(options.candidateRuntime
-      ? { processCustody: options.candidateRuntime.processCustody }
+    ...(options.candidateRuntime?.processCustody || options.nativeOpenCodeV2?.processCustody
+      ? { processCustody: options.candidateRuntime?.processCustody ?? options.nativeOpenCodeV2?.processCustody }
       : {}),
     owner,
     principalId: 'TEST-human',
@@ -455,6 +461,25 @@ export async function prepareDesktopBackendFixture(
       },
     ];
   }
+  if (options.nativeOpenCodeV2) {
+    const member = await prepareDesktopOpenCodeV2Recipe({ repo, root, node,
+      selection: options.nativeOpenCodeV2,
+      identity: { teamId: scope.teamId, memberId: 'alice-id', principalId: 'alice-session',
+        sessionId: 'TEST-native-opencode-v2', generation: 1, configRevision: 'TEST-opencode-v2-config' },
+    });
+    const team = profile.teams[0]!;
+    team.members[0]!.delivery = { ...team.binding, runId: scope.runId,
+      memberId: member.memberId, generation: String(member.generation) };
+    team.grants.push({ principalId: member.principalId, memberName: 'alice',
+      permissions: ['read', 'task.write', 'message.write'] });
+    team.savedSettings = { cwd: member.cwd, providerId: 'opencode',
+      model: `${member.nativeOptions.providerId}/${member.model}`, skipPermissions: options.nativeReviewUi === true };
+    if (options.launchDialog) team.members[0]!.role = 'lead';
+    profile.runtime = { members: [member],
+      ...(options.creation ? { providerTemplates: [structuredClone(member)] } : {}) };
+    profile.management = [desktopOpenCodeV2ManagementProfile(member,
+      options.nativeOpenCodeV2.managementEndpoint, 'TEST-opencode-v2-management')];
+  }
   let uiSeed:
     | {
         taskId: string;
@@ -550,7 +575,7 @@ export async function prepareDesktopBackendFixture(
     if (!uiSeed) throw new Error('Review UI needs its canonical captured Task seed');
     await prepareDesktopReviewLedger(root, uiSeed.taskId);
   }
-  if (options.nativeReviewUi) await prepareNativeReviewWorkspace(root);
+  if (options.nativeReviewUi) await prepareNativeReviewWorkspace(root, options.nativeOpenCodeV2 ? 'opencode-v2' : 'claude');
   if (options.stoppedImportUi)
     await prepareDesktopStoppedImport(root, {
       priorRun: process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1',
@@ -584,7 +609,8 @@ export async function prepareDesktopBackendFixture(
           profileId: owner.profileId,
           ...(options.reviewUi || options.nativeReviewUi ? { reviewTransport: 'review-v1' } : {}),
           nodeExecutable: node,
-          nodeVersion: options.candidateRuntime?.nodeVersion ?? 'v24.21.0',
+          nodeVersion: options.candidateRuntime?.nodeVersion ??
+            (options.nativeOpenCodeV2 ? process.version : 'v24.21.0'),
           nodeSha256,
           hostEntry,
           hostEntrySha256,
@@ -600,26 +626,29 @@ export async function prepareDesktopBackendFixture(
           // This TEST profile verifies workflows, not startup latency. Cold source
           // startup competes with Electron builds; timeout semantics have focused tests.
           startupTimeoutMs: 60_000,
-          requestTimeoutMs: 60_000,
+          // The embedded V2 startup has its own 120s bound, including graph
+          // verification. Its TEST caller must let that original bound settle.
+          requestTimeoutMs: options.nativeOpenCodeV2 ? 180_000 : 60_000,
           writeTimeoutMs: 5000,
           shutdownTimeoutMs: 10_000,
         },
       },
     ],
-    ...(options.nativeCodex || options.launchDialog
+    ...(options.nativeCodex || options.launchDialog || options.nativeOpenCodeV2
       ? {
-          management: [
-            {
-              runtimeId: options.launchDialog ? 'claude' : 'codex',
+          management: (options.nativeOpenCodeV2 ? [null, join(root, 'workspace')] : [null]).map(
+            (projectPath) => ({
+              runtimeId: options.nativeOpenCodeV2 ? 'opencode' : options.launchDialog ? 'claude' : 'codex',
               owner: ownerRef,
               contextId: 'local',
-              projectPath: null,
-              profileId: options.launchDialog ? 'TEST-claude-management' : 'TEST-codex-metadata',
-              configRevision: options.launchDialog
+              projectPath,
+              profileId: options.nativeOpenCodeV2 ? 'TEST-opencode-v2-management' :
+                options.launchDialog ? 'TEST-claude-management' : 'TEST-codex-metadata',
+              configRevision: options.nativeOpenCodeV2 ? 'TEST-opencode-management' : options.launchDialog
                 ? 'TEST-claude-management-config'
                 : 'TEST-codex-config',
-            },
-          ],
+            })
+          ),
         }
       : {}),
     handles: [

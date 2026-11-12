@@ -1792,7 +1792,8 @@ export class ClaudeMultimodelBridgeService {
       timeoutMs?: number;
     }
   ): Promise<OpenCodeRuntimeTranscriptResponse['transcript'] | null> {
-    const { env } = await this.buildCliEnv(binaryPath);
+    // History reads retain their original owner and must not prepare unrelated provider launches.
+    const { env } = buildPassiveProviderStatusCliEnv({ binaryPath, providerId: 'opencode' });
     const args = [
       'runtime',
       'transcript',

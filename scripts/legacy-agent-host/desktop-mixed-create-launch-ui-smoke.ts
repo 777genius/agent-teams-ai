@@ -21,6 +21,8 @@ import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
+import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
+import { command } from './desktop-backend-observations.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { openOriginalCreateForm } from './desktop-create-config-ui-smoke.ts';
 import {
@@ -55,6 +57,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   const steps: Record<string, unknown>[] = [];
   const proof: Record<string, unknown> = {
     status: 'INCOMPLETE',
+    openCodeGeneration: models.openCodeGeneration,
     steps,
     scope:
       'Original configured Create save-only3 members → original Edit description/Save/reload/reopen → original Launch hydration/close/reopen/preflights → one fresh3-member native capture → one original Launch lead prompt and2 Composer inputs/MCP/effects/replies → original mixed group/directed Bob input/three-provider ACK → original isolated Bob Restart/three-provider continuation → Stop/reload/Launch readback',
@@ -277,7 +280,8 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
         }
         return counts;
       },
-      (counts) => counts.every((count, index) => count > probesBeforeLaunch[index]! && count <= 8),
+      (counts) => counts.every((count, index) =>
+        count > probesBeforeLaunch[index]! && count <= (index === 0 ? 9 : 8)),
       'all3 selected namespaces have actual bounded model preflights'
     );
   } finally {
@@ -290,6 +294,25 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     'all3 scoped model preflights finish before the one runtime capture'
   );
   await ui.scrollTo('[role="dialog"] button', 'original mixed Launch team control', 'Launch team');
+  let capturedMetadataChild: ProcessFact | undefined;
+  if (process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2') {
+    await ui.waitRead(
+      `[...document.querySelectorAll('[role="dialog"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)`,
+      'all native preflights finish and enable original Launch'
+    );
+    capturedMetadataChild = await poll(async () => {
+      const table = processFacts();
+      const hosts = table.filter(value => value.groupId === options.appGroup &&
+        command(value.pid) === `${fixture.node} ${fixture.hostEntry}`);
+      assert.equal(hosts.length, 1);
+      const children = table.filter(value => value.parentPid === hosts[0]!.pid);
+      return children.length === 1 && children[0]!.command === process.env.OPENCODE_V2_EMBEDDED_BUN
+        ? children[0] : undefined;
+    }, value => value !== undefined, 'one original metadata child before any runtime allocation');
+    assert.ok(capturedMetadataChild);
+    assert.equal(((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0, 0);
+    proof.originalMetadataChildBeforeLaunch = capturedMetadataChild;
+  }
   await startMixedProgressObservation(cdp);
   await ui.click(
     '[role="dialog"] button',
@@ -433,6 +456,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     appGroup: options.appGroup,
     node: fixture.node,
     hostEntry: fixture.hostEntry,
+    ...(capturedMetadataChild ? { capturedMetadataChild } : {}),
     assertOwnedRenderer: assertCurrent,
     step: (value) => steps.push(value),
   });
@@ -542,18 +566,28 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   assert.deepEqual(configuredAfterStop, configuredAfterLaunch);
   // Permit a single new TEST probe only after observing the original cold UI boundary.
   // This grants neither a new native business input nor a repeated Launch submission.
-  models.beginColdReadbackProbes();
+  const nativeClaudeProbeCount = models.beginColdReadbackProbes();
+  proof.nativeClaudeProbeCount = nativeClaudeProbeCount;
   await ui.click('button', 'reopen original mixed Launch after Stop/reload', 'Launch');
-  proof.stoppedReloadLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
   await poll(
     async () => models.claude.probes.length,
-    (count) => count === 9,
+    (count) => count === nativeClaudeProbeCount + 1,
     'one fresh original cold Launch model preflight'
   );
-  assert.deepEqual(models.claude.probes.slice(8), [
+  assert.deepEqual(models.claude.probes.slice(nativeClaudeProbeCount), [
     { phase: 'cold-readback', requestedModel: 'claude-opus-4-6', requestedEffort: 'medium' },
   ]);
   assert.deepEqual(models.claude.failures, []);
+  // The cold preflight replaces its status panel and moves the optional header.
+  // Observe its original completed UI before the one settings click; never retry
+  // a click that may already have reached a different control during hydration.
+  await ui.waitRead(`(() => {
+    const dialog=document.querySelector('[role="dialog"]');
+    return dialog?.textContent.includes('All selected providers are ready.') &&
+      [...dialog.querySelectorAll('button')].some(button=>
+        button.textContent.trim()==='Launch team'&&!button.disabled);
+  })()`, 'original cold Launch preflights settled before reading saved settings');
+  proof.stoppedReloadLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
   assert.deepEqual(
     assertMixedSavedSettings(await ownerState(), workspace, mixedEditedDescription),
     configuredAfterStop

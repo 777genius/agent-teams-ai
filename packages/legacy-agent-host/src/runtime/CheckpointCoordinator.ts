@@ -332,7 +332,9 @@ export class CheckpointCoordinator {
       tx.put(record, 'growth'); // No native checkpoint call without the durable stable intent.
       try {
         assertAuthority?.();
-        const captured = driver.checkpoint();
+        const captured = (stopping
+          ? this.options.checkpointBeforeClose?.(binding, driver.sessionRef)
+          : undefined) ?? driver.checkpoint();
         if (!captured.ok) {
           attempt.status = captured.code === 'unsupported' ? 'unsupported' : 'held';
           tx.put(record);

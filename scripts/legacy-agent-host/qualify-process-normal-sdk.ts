@@ -65,7 +65,7 @@ export async function qualifyProcessNormalSdk(capturePath: string, captureSha256
   const manifestJson = row(JSON.parse(await readFile(manifest.path, 'utf8')));
   const source = await pinned({ path: join(selection.directory, 'registered-process-darwin.c'),
     sha256: manifestJson.sourceSha256 });
-  assert.equal(source.sha256, '310161c5d404d45e4f149b15b88c3805bfeddc4cc4c424460cddee3e845a284b');
+  assert.equal(source.sha256, 'a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5');
   assert.equal(await fileDigest(join(repository, 'packages/legacy-agent-host/native/registered-process-darwin.c')), source.sha256);
   const scripts = await Promise.all(['qualify-process-normal-sdk.ts', 'desktop-native-process-host.ts',
     'desktop-native-process-fixture.ts', 'desktop-native-process-model.ts', 'fixtures/process-foreground-service.ts']

@@ -1,8 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
+import { closeSync, createReadStream, createWriteStream, openSync } from 'node:fs';
 import { chmod, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve, win32 } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
@@ -86,6 +86,28 @@ async function acquire(url: string, destination: string, expectedDigest: string)
   }
 }
 
+/** Extract one exact member after the caller verifies the selected archive digest. */
+export function extractNodeArchiveMember(archivePath: string, destination: string, member: string): void {
+  const archive = resolve(archivePath), name = basename(archive);
+  if (!name || name.startsWith('-') || name.includes(':')) throw new Error('Invalid local Node archive name');
+  let tar = 'tar';
+  if (process.platform === 'win32') {
+    const systemRoot = process.env.SystemRoot;
+    if (typeof systemRoot !== 'string' || !/^[A-Za-z]:[\\/]/u.test(systemRoot))
+      throw new Error('Windows Node extraction requires an absolute SystemRoot');
+    // The inbox BSD tar reads the pinned ZIP. Git's GNU tar on PATH does not.
+    tar = win32.join(systemRoot, 'System32', 'tar.exe');
+  }
+  // Node opens Unicode paths with the native Windows API; inbox tar can lose
+  // those characters in -f/-C arguments. Keep the selected archive as stdin.
+  const archiveFd = openSync(archive, 'r');
+  try {
+    execFileSync(tar, [name.endsWith('.tar.gz') ? '-xzf' : '-xf', '-', member], {
+      cwd: resolve(destination), timeout: 30_000, stdio: [archiveFd, 'pipe', 'pipe'],
+    });
+  } finally { closeSync(archiveFd); }
+}
+
 /** Build-time acquisition only. The installed app never downloads or resolves Node from PATH. */
 export async function stageNode(
   platform = `${process.platform}-${process.arch}`,
@@ -129,10 +151,7 @@ export async function stageNode(
     const prefix = artifact.archive.replace(/\.(tar\.gz|zip)$/, '');
     const member = `${prefix}/${executable === 'node.exe' ? 'node.exe' : 'bin/node'}`;
     // Extract only the selected file from the pinned archive, never an arbitrary archive tree.
-    execFileSync('tar', ['-xf', archivePath, '-C', staging, member], {
-      timeout: 30_000,
-      stdio: 'pipe',
-    });
+    extractNodeArchiveMember(archivePath, staging, member);
     const binary = join(staging, executable);
     await rename(join(staging, member), binary);
     await rm(join(staging, prefix), { recursive: true });

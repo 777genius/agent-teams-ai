@@ -9,7 +9,7 @@ import { assertV2SupportWarmReuse, prepareV2SupportRepair, v2SupportSnapshot, ve
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const helper = 'local-cli/opencodeV2RunOwner.js';
 
-async function fixture() {
+async function fixture(cliVersion = '2.1.4') {
   // Windows TEMP may use an 8.3 alias; establish the physical root before any child path.
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-repair-')));
   const userData = path.join(root, 'user-data'), base = path.join(root, 'app/resources/runtime');
@@ -35,7 +35,7 @@ async function fixture() {
   await writeFile(path.join(base, 'COMMIT_SHA'), sourceCommit);
   await writeFile(path.join(base, 'opencode-delivery.json'), JSON.stringify({ bunVersion: identity.requiredBunVersion }));
   const packageName = `@opencode/cli-${process.platform === 'win32' ? 'windows' : process.platform}-${process.arch}`;
-  const nativeRoot = path.join(userData, 'data/runtimes/opencode/versions/2.1.4', packageName, randomUUID());
+  const nativeRoot = path.join(userData, 'data/runtimes/opencode/versions', cliVersion, packageName, randomUUID());
   await mkdir(path.join(nativeRoot, 'bin'), { recursive: true });
   let native = Buffer.from('TEST native binary');
   if (process.platform === 'win32') {
@@ -44,9 +44,9 @@ async function fixture() {
   }
   const nativeFile = path.join(nativeRoot, 'bin/opencode.exe');
   await writeFile(nativeFile, native);
-  await writeFile(path.join(nativeRoot, 'package.json'), JSON.stringify({ name: packageName, version: '2.1.4' }));
+  await writeFile(path.join(nativeRoot, 'package.json'), JSON.stringify({ name: packageName, version: cliVersion }));
   await writeFile(path.join(userData, 'data/runtimes/opencode/current.json'), JSON.stringify({
-    schemaVersion: 1, version: '2.1.4', binaryPath: nativeFile, platformPackage: packageName,
+    schemaVersion: 1, version: cliVersion, binaryPath: nativeFile, platformPackage: packageName,
     integrity: 'sha512-dGVzdA==', installedAt: new Date().toISOString(),
   }));
   const directory = path.join(userData, 'data/runtimes/opencode-v2', version,
@@ -85,21 +85,50 @@ test('warm starts require the exact cold native, descriptor and support receipt'
       observed[field][key] = changed;
       assert.throws(() => assertV2SupportWarmReuse(baseline, observed), reason);
     }
+    assert.throws(() => assertV2SupportWarmReuse(baseline,
+      { ...structuredClone(baseline), engineVersion: '2.9.0' }), /changed qualified engine/);
     assert.throws(() => assertV2SupportWarmReuse(undefined, baseline), /cold support baseline/);
     await f.publish();
     await assert.rejects(prepareV2SupportRepair(f.data), /support selection/);
   } finally { await rm(f.root, { recursive: true, force: true }); }
 });
 
-test('support proof rejects an otherwise valid native V2 package outside the bundled qualification', async () => {
-  const f = await fixture();
+test('stable V2 CLI retains the exact qualified engine through cold, warm, repair and restart', async () => {
+  const f = await fixture('2.2.7');
+  try {
+    const cold = f.data.v2SupportCold;
+    assert.equal(cold.native.version, '2.2.7');
+    assert.equal(cold.engineVersion, '2.1.4');
+    assert.deepEqual(cold.descriptor.engineVersions, ['2.1.4']);
+    assert.equal(cold.filesVerified, Object.keys(f.files).length);
+    assertV2SupportWarmReuse(cold, await v2SupportSnapshot(f.data));
+    f.data.supportRepair = await prepareV2SupportRepair(f.data);
+    await f.publish();
+    const repaired = await verifyV2SupportRepair(f.data);
+    assert.deepEqual(repaired.native, cold.native);
+    assert.equal(repaired.engineVersion, cold.engineVersion);
+    f.data.supportRepair.after = repaired;
+    assert.equal((await verifyV2SupportRepair(f.data, true)).engineVersion, '2.1.4');
+  } finally { await rm(f.root, { recursive: true, force: true }); }
+});
+
+test('support proof rejects unsupported CLI generations and changed engine qualification', async () => {
+  const f = await fixture('2.2.7');
   try {
     const currentFile = path.join(f.data.userData, 'data/runtimes/opencode/current.json');
     const current = JSON.parse(await readFile(currentFile));
-    await writeFile(currentFile, JSON.stringify({ ...current, version: '2.9.0' }));
-    await writeFile(path.join(path.dirname(path.dirname(f.nativeFile)), 'package.json'),
-      JSON.stringify({ name: current.platformPackage, version: '2.9.0' }));
-    await assert.rejects(v2SupportSnapshot(f.data), /absent from the bundled qualification/);
+    for (const version of ['1.19.4', '3.0.0', '2.2.7-beta.1', '2.02.7']) {
+      await writeFile(currentFile, JSON.stringify({ ...current, version }));
+      await assert.rejects(v2SupportSnapshot(f.data),
+        /Verified managed native V2 identity required|no qualified bundled engine/);
+    }
+    await writeFile(currentFile, JSON.stringify(current));
+    const descriptorFile = path.join(path.dirname(f.data.artifact.orchestrator.path), 'opencode-v2-delivery.json');
+    const descriptor = JSON.parse(await readFile(descriptorFile));
+    for (const engineVersions of [['2.9.0'], ['2.1.4', '2.9.0']]) {
+      await writeFile(descriptorFile, JSON.stringify({ ...descriptor, engineVersions }));
+      await assert.rejects(v2SupportSnapshot(f.data), /differs from the pinned runtime contract/);
+    }
   } finally { await rm(f.root, { recursive: true, force: true }); }
 });
 

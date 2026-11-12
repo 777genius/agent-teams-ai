@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  canManagedInstallChangeOpenCodeRuntime,
   isOpenCodeProviderOAuthBridgeOutdated,
   resolveOpenCodeQuickConnectGate,
   resolveOpenCodeQuickConnectRuntimeRevision,
@@ -155,6 +156,16 @@ const openCodeProvider = {
   canLoginFromUi: false,
   capabilities: { teamLaunch: true, oneShot: true, extensions: {} },
 } as unknown as CliProviderStatus;
+
+it('a captured Host engine is read-only to the CLI installer and retains exact V2 availability', () => {
+  const status: OpenCodeRuntimeStatus = {
+    installed: true, source: 'captured-host', state: 'ready', version: '2.1.4', v2Support: 'ready',
+  };
+  expect(canManagedInstallChangeOpenCodeRuntime(status)).toBe(false);
+  expect(resolveOpenCodeQuickConnectGate({ runtimeStatus: status, runtimeStatusLoading: false,
+    provider: null, cliStatusLoading: false })).toBe('ready');
+  expect(canManagedInstallChangeOpenCodeRuntime({ ...status, source: 'path' })).toBe(true);
+});
 
 describe('RuntimeProviderQuickConnect', () => {
   let host: HTMLDivElement;

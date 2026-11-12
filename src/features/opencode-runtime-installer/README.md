@@ -2,15 +2,20 @@
 
 This process-limited slice owns generation selection and the native npm package
 boundary. The legacy installer coordinates download, atomic activation, status and
-resolver invalidation through the public main entrypoint. V2 versions come only
-from the pinned runtime qualification contract; native metadata stays beside bin/.
+resolver invalidation through the public main entrypoint. V2 CLI releases stay in
+the supported stable range; their execution engine comes from the pinned runtime
+qualification contract. Native metadata stays beside bin/.
 The existing IPC/preload/store transports accept an optional generation choice.
 Focused tests cover package identity, archive safety and managed activation.
 
 Fresh installs select V1 by default, including platforms with qualified V2 support.
-A first-time implicit install requests the fixed V1 baseline `1.19.5`, not the mutable
-npm `latest` tag; explicit V1 updates still choose stable V1 `latest`. Platform
-package identity and sha512 transport integrity are verified before activation.
+A first-time implicit install and explicit updates resolve the latest supported
+stable release within the selected generation. If the global npm `latest` tag
+moves outside that range or its native platform package is unavailable, a root
+registry snapshot and at most one snapshot per platform package select the highest
+compatible, installable release. The selected exact version is retained through native package lookup and
+download; update discovery verifies the same platform package availability.
+Package identity and sha512 transport integrity are verified before activation.
 Existing V1/V2 installs remain in their selected generation on update; explicit
 V2 requests and support-only repair are preserved. The dashboard does not promote
 V2 during first-time installation.

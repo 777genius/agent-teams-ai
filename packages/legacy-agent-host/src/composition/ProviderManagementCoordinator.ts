@@ -15,10 +15,12 @@ import { withOpenCodeModelLimits } from '../adapters/providers/withOpenCodeModel
 import { readOpenCodeCatalog } from '../adapters/providers/readOpenCodeCatalog.js';
 import { FileManagementCommandStore } from '../adapters/providers/FileManagementCommandStore.js';
 import { CredentialCommandOwner } from '../management/CredentialCommandOwner.js';
-import { ManagementCommandError } from '../management/commandRecords.js';
+import { assertManagementTarget, ManagementCommandError } from '../management/commandRecords.js';
 import { ManagementResourceFence } from '../management/ManagementResourceFence.js';
 import { OAuthOperationOwner } from '../management/OAuthOperationOwner.js';
 import { ModelProbeOwner } from '../management/ModelProbeOwner.js';
+import { createOpenCodeV2ModelProbe } from '../adapters/providers/OpenCodeV2ModelProbe.js';
+import { OpenCodeV2ManagementHost } from '../adapters/providers/OpenCodeV2ManagementHost.js';
 
 import type { ProviderManagementCatalog, ProviderOAuthSnapshot } from '../management/contracts.js';
 import type {
@@ -27,11 +29,14 @@ import type {
 } from '../management/profile.js';
 import { providerManagementProfileSchema } from '../management/profile.js';
 import type { CredentialCommand, CredentialTarget } from '../management/CredentialCommandOwner.js';
+import type { RegisteredProcessRootSource } from '../process/registeredProcessContracts.js';
 
 /** The captured Host owns management process custody; Team policy and Session SPI stay separate. */
 export class ProviderManagementCoordinator {
   private readonly profiles = new Map<string, OpenCodeManagementProfile>();
   private readonly hosts = new Map<string, OpenCodeManagementHost>();
+  private readonly v2Hosts = new Map<string, OpenCodeV2ManagementHost>();
+  private readonly processCustody: RegisteredProcessRootSource | undefined;
   private sealed = false;
   readonly codex: CodexManagementCoordinator;
   readonly claude: ClaudeManagementCoordinator;
@@ -47,8 +52,12 @@ export class ProviderManagementCoordinator {
     profiles: ProviderManagementProfile[],
     private readonly assertWriter: () => void,
     storageRoot: string,
-    options: { onOAuthProgress?(snapshot: ProviderOAuthSnapshot): void } = {}
+    options: {
+      onOAuthProgress?(snapshot: ProviderOAuthSnapshot): void;
+      processCustody?: RegisteredProcessRootSource;
+    } = {}
   ) {
+    this.processCustody = options.processCustody;
     if (new Set(profiles.map((profile) => profile.profileId)).size !== profiles.length)
       throw new ManagementCommandError('invalid');
     this.codex = new CodexManagementCoordinator(
@@ -103,7 +112,9 @@ export class ProviderManagementCoordinator {
           if (command.providerId !== 'anthropic' || command.kind !== 'credential.forget')
             throw new ManagementCommandError('invalid');
         } else if (this.profiles.has(command.profileId)) {
-          if (command.kind === 'credential.refresh') throw new ManagementCommandError('invalid');
+          if (command.kind === 'credential.refresh' ||
+              this.select(command.profileId, command.configRevision).nativeGeneration === 'v2')
+            throw new ManagementCommandError('invalid');
         } else if (command.providerId !== 'codex' || command.kind === 'credential.set')
           throw new ManagementCommandError('invalid');
       },
@@ -120,6 +131,7 @@ export class ProviderManagementCoordinator {
       prepare: (input) => {
         if (this.claude.has(input.profileId)) return this.claudeAuth.prepare(input);
         const profile = this.select(input.profileId, input.configRevision);
+        if (profile.nativeGeneration === 'v2') throw new ManagementCommandError('invalid');
         const host = this.getHost(profile);
         const timeoutMs = profile.oauthTimeoutMs ?? 17 * 60_000;
         return {
@@ -175,6 +187,18 @@ export class ProviderManagementCoordinator {
           (input.effort !== undefined && input.effort !== profile.variant)
         )
           throw new ManagementCommandError('invalid');
+        if (profile.nativeGeneration === 'v2') {
+          const target = this.credentialTarget(profile);
+          return createOpenCodeV2ModelProbe(profile, input, () => {
+            try {
+              this.assertCurrent();
+              assertManagementTarget(target, this.credentialTarget(
+                this.select(input.profileId, input.configRevision)
+              ));
+              return isCurrent();
+            } catch { return false; }
+          }, options.processCustody ? { processCustody: options.processCustody } : {});
+        }
         const host = this.getHost(profile);
         const timeoutMs = profile.modelProbeTimeoutMs ?? 90000;
         if (!input.limits)
@@ -369,6 +393,32 @@ export class ProviderManagementCoordinator {
       .strict()
       .parse(raw);
     const profile = this.select(input.profileId, input.configRevision);
+    if (profile.nativeGeneration === 'v2') {
+      let host = this.v2Hosts.get(profile.profileId);
+      if (!host) {
+        const target = this.credentialTarget(profile);
+        host = new OpenCodeV2ManagementHost(profile, () => {
+          try {
+            this.assertCurrent();
+            assertManagementTarget(target, this.credentialTarget(this.select(input.profileId, input.configRevision)));
+            return true;
+          } catch { return false; }
+        }, this.processCustody);
+        this.v2Hosts.set(profile.profileId, host);
+      }
+      try {
+        const result = await host.catalog(input.providerId, input.includeModels);
+        this.assertCurrent();
+        return result;
+      } catch (error) {
+        // Failed catalog reads seal their original child. Retire that exact
+        // owner only after cleanup; an unknown child keeps the profile held.
+        const clean = await host.close().catch(() => false);
+        if (clean && this.v2Hosts.get(profile.profileId) === host)
+          this.v2Hosts.delete(profile.profileId);
+        throw error;
+      }
+    }
     const host = this.getHost(profile);
     const result = await host.run((client) =>
       readOpenCodeCatalog(
@@ -383,7 +433,7 @@ export class ProviderManagementCoordinator {
     );
     this.assertWriter();
     if (this.sealed) throw new OpenCodeManagementError('unavailable');
-    return result;
+    return { ...result, runtime: { generation: 'v1' } };
   }
 
   seal(): void {
@@ -395,6 +445,7 @@ export class ProviderManagementCoordinator {
     this.extensions.seal();
     this.probes.seal();
     for (const host of this.hosts.values()) void host.close().catch(() => {});
+    for (const host of this.v2Hosts.values()) void host.close().catch(() => {});
   }
 
   async close(): Promise<void> {
@@ -407,6 +458,7 @@ export class ProviderManagementCoordinator {
       this.extensions.close().then(() => true),
       this.probes.close().then(() => true),
       ...[...this.hosts.values()].map((host) => host.close()),
+      ...[...this.v2Hosts.values()].map((host) => host.close()),
     ]);
     if (results.some((result) => result.status === 'rejected' || result.value !== true))
       throw new OpenCodeManagementError('held');

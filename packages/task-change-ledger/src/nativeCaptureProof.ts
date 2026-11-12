@@ -1,6 +1,38 @@
 import type { EvidenceEvent } from './ledgerTypes.js';
 import type { SnippetDiff } from './contracts.js';
 
+function qualifiedOpenCodeV2Update(proof: Record<string, unknown>, cause: Record<string, unknown>, event: EvidenceEvent): boolean {
+  const raw = cause.native;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
+  const native = raw as Record<string, unknown>, tools = proof.tools;
+  const valid = (value: unknown, prefix = ''): value is string => typeof value === 'string' &&
+    value.startsWith(prefix) && value.length > prefix.length && value.length <= 1024 && !/[\0\r\n]/u.test(value);
+  if (proof.kind !== 'opencode-update-patch-v2' || proof.protocolRevision !== '2.1.4' ||
+    native.provider !== 'opencode' || native.nativeGeneration !== 'v2' || native.protocolRevision !== '2.1.4' ||
+    cause.toolName !== 'opencode.fileChange' || event.source !== 'file_edit' || event.operation !== 'modify' ||
+    event.beforeState?.exists !== true || event.afterState?.exists !== true ||
+    !valid(proof.nativeSessionId, 'ses_') || !valid(proof.nativeInputId, 'msg_') || !valid(proof.windowRef) ||
+    native.nativeSessionId !== proof.nativeSessionId || native.nativeInputId !== proof.nativeInputId ||
+    native.windowRef !== proof.windowRef || !Array.isArray(tools) || !tools.length || tools.length > 32 ||
+    !Array.isArray(native.tools) || tools.length !== native.tools.length) return false;
+  const calls = new Set<string>(), events = new Set<string>(); let previous = -1;
+  return tools.every((value, index) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const tool = value as Record<string, unknown>, peer = (native.tools as unknown[])[index];
+    if (!peer || typeof peer !== 'object' || Array.isArray(peer)) return false;
+    const anchor = peer as Record<string, unknown>;
+    if (!valid(tool.messageId, 'msg_') || tool.messageId === proof.nativeInputId || !valid(tool.callId) ||
+      !valid(tool.calledEventId) || !valid(tool.completedEventId) || tool.calledEventId === tool.completedEventId ||
+      calls.has(tool.callId) || events.has(tool.calledEventId) || events.has(tool.completedEventId) ||
+      !Number.isSafeInteger(tool.calledSeq) || !Number.isSafeInteger(tool.completedSeq) ||
+      Number(tool.calledSeq) <= previous || Number(tool.completedSeq) <= Number(tool.calledSeq) ||
+      ['messageId', 'callId', 'calledEventId', 'calledSeq', 'completedEventId', 'completedSeq'].some(key => anchor[key] !== tool[key])) return false;
+    calls.add(tool.callId); events.add(tool.calledEventId); events.add(tool.completedEventId);
+    previous = Number(tool.completedSeq);
+    return index < tools.length - 1 || tool.callId === event.toolUseId;
+  });
+}
+
 function qualifiedOpenCodeUpdate(proof: Record<string, unknown>, cause: Record<string, unknown>, event: EvidenceEvent): boolean {
   const raw = cause.native;
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
@@ -80,6 +112,7 @@ export function nativeCaptureQualification(
       cause.toolName === 'Write' &&
       event.source === 'file_write') ||
     qualifiedCodexUpdate(proof, cause, event) ||
+    qualifiedOpenCodeV2Update(proof, cause, event) ||
     qualifiedOpenCodeUpdate(proof, cause, event);
   return kindMatches &&
     cause.toolUseId === event.toolUseId &&

@@ -138,7 +138,7 @@ export async function runProcessQualification(inputsDirectory: string) {
     const sdk = await realpath(execFileSync('/usr/bin/xcrun', ['--show-sdk-path'], { encoding: 'utf8' }).trim());
     const compiler = await pin(compilerPath), sdkSettings = await pin(join(sdk, 'SDKSettings.json'));
     const source = await pin(join(repository, 'packages/legacy-agent-host/native/registered-process-darwin.c'));
-    assert.equal(source.sha256, '310161c5d404d45e4f149b15b88c3805bfeddc4cc4c424460cddee3e845a284b');
+    assert.equal(source.sha256, 'a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5');
     const headers = await Promise.all(headerNames.map(async file => ({ file, sha256: await digest(join(headersRoot, file)) })));
     proof.toolchain = { compiler, sdkSettings, headersRoot, headers, source,
       xcode: execFileSync('/usr/bin/xcodebuild', ['-version'], { encoding: 'utf8' }).trim(),

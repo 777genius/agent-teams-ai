@@ -108,7 +108,7 @@ export function desktopF08ReadFaultExpression(handleId: string, selection: strin
       const stack=String(new Error('F08 original read provenance').stack), before=selected();
       const same=request?.handle?.handleId===f.handleId, shared=stack.includes('createHostTeamChanges')||/poll/.test(stack);
       let kind=null;
-      if(same&&request.operation==='team.snapshot'&&f.holdArmed){
+      if(same&&request.operation==='team.snapshot'&&request.payload?.cursor===undefined&&f.holdArmed){
         const provenance=/getData/.test(stack)&&before.team===f.selection&&before.loading===true&&before.nonce>f.priorNonce;
         if(provenance){kind='selected-snapshot-hold';f.holdArmed=false;}
         else if(f.ignored.length<8)f.ignored.push({request:structuredClone(request),stack,selected:before});
@@ -637,6 +637,7 @@ export async function runDesktopF08ReadTimingProof(
       )
     );
     assert.equal(held.physicalCalls, 1);
+    assert.equal(row(row(held.request).payload).cursor, undefined, 'held selected read is the first physical page');
     assert.match(String(held.stack), /getData/);
     assert.equal(row(held.selected).team, selection);
     assert.equal(row(held.selected).loading, true);

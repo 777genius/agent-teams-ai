@@ -71,6 +71,18 @@ export function captureRuntimeMcp(options: {
                   ? { policy: normalizeTeamMemberMcpPolicy(policy)! }
                   : {}),
               };
+      if (recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2') {
+        // V2's native configuration owns its Team MCP binding. An empty external
+        // policy needs no V1 plugin or overlay; a requested external policy must
+        // remain refused until that separate V2 capability is qualified.
+        if (policy?.mode === 'strictAllowlist' || policy?.mode === 'inheritScopes' ||
+            Object.keys(servers).length || source !== undefined ||
+            recipe.mcpPolicyPlugin !== undefined || recipe.capturedMcpServers !== undefined ||
+            recipe.capturedMcpSource !== undefined || recipe.mcpCatalogSource !== undefined ||
+            ('capturedMcpCatalog' in recipe && recipe.capturedMcpCatalog !== undefined))
+          throw new TeamLaunchError('invalid', 'member-mcp-configuration');
+        return structuredClone(recipe);
+      }
       const selected =
         recipe.provider === 'opencode' ? captureOpenCodeMcpPolicyPlugin(recipe) : recipe;
       const { capturedMcpSource: _oldSource, ...base } = structuredClone(selected);

@@ -10,6 +10,8 @@ import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts'
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
+import type { startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
+import { checkpoint } from './desktop-resume-records.ts';
 const record = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value as Record<string, unknown>;
@@ -33,10 +35,12 @@ export async function runDesktopComposerUiSmoke(
     evidence: Record<string, unknown>;
     nativeStop?: { assertNativeAbsent(): void };
     model?: Awaited<ReturnType<typeof startNativeTeamModel>>;
+    openCodeModel?: Awaited<ReturnType<typeof startOpenCodeModel>>;
   }
 ): Promise<void> {
-  assert.ok(options.nativeStop && options.model);
+  assert.ok(options.nativeStop && (options.model || options.openCodeModel));
   if (process.env.LEGACY_DESKTOP_GROUP_CHATS === '1') {
+    assert.ok(options.model && !options.openCodeModel);
     await runDesktopNativeGroupUiSmoke(cdp, {
       ...options,
       nativeStop: options.nativeStop,
@@ -44,7 +48,8 @@ export async function runDesktopComposerUiSmoke(
     });
     return;
   }
-  const model = options.model;
+  const openCode = options.openCodeModel !== undefined;
+  const model = options.openCodeModel ?? options.model!;
   const steps: Record<string, unknown>[] = [];
   const step = (value: Record<string, unknown>) => {
     steps.push({ monotonicMs: Math.round(performance.now()), ...value });
@@ -53,7 +58,7 @@ export async function runDesktopComposerUiSmoke(
     status: 'INCOMPLETE',
     steps,
     scope:
-      'Ordinary Composer/recipient/Send, two actual native Claude turns/MCP/Bash, canonical replies and ordinary Stop before Quit',
+      `Ordinary Composer/recipient/Send, two actual native ${openCode ? 'OpenCode V2' : 'Claude'} turns/MCP/shell, canonical replies and ordinary Stop before Quit`,
     excluded: [
       'ordinary Launch UI',
       'vendor inference/authentication',
@@ -76,10 +81,14 @@ export async function runDesktopComposerUiSmoke(
   const commands = join(team, '.host-owner/commands');
   const incomingIds: string[] = [];
   const nativeInputIds: string[] = [];
-  for (const [turn, reply] of [
+  const turns = openCode ? [
+    ['OPENCODE_TEAM_ONE', 'REPLY_OPENCODE_ONE'],
+    ['OPENCODE_TEAM_TWO', 'REPLY_OPENCODE_TWO'],
+  ] as const : [
     ['NATIVE_TEAM_ONE', 'REPLY_NATIVE_ONE'],
     ['NATIVE_TEAM_TWO', 'REPLY_NATIVE_TWO'],
-  ] as const) {
+  ] as const;
+  for (const [turn, reply] of turns) {
     await ui.click('.message-composer-flat-layout textarea', 'focus ordinary Composer');
     await cdp.send('Input.insertText', { text: turn });
     await ui.waitRead(
@@ -88,8 +97,8 @@ export async function runDesktopComposerUiSmoke(
     );
     step({ action: 'Input.insertText', turn });
     const verifyAttachments =
-      turn === 'NATIVE_TEAM_TWO' && process.env.LEGACY_DESKTOP_CHAT_ATTACHMENTS === '1'
-        ? await prepareNativeChatAttachments(cdp, { ...options, step })
+      turn.endsWith('_TEAM_TWO') && process.env.LEGACY_DESKTOP_CHAT_ATTACHMENTS === '1'
+        ? await prepareNativeChatAttachments(cdp, { ...options, step, openCodeV2: openCode })
         : undefined;
     await ui.click('button.message-composer-send-button', 'ordinary Send once', 'Send');
     await ui.waitRead(
@@ -142,23 +151,23 @@ export async function runDesktopComposerUiSmoke(
           row.incomingMessageId === id &&
           row.visibleReplyContract &&
           row.contextEffective &&
-          (!row.toolResultError || (row.turn === 'NATIVE_TEAM_ONE' && row.step === 4))
+          (!('toolResultError' in row) || !row.toolResultError || (row.turn === 'NATIVE_TEAM_ONE' && row.step === 4))
       )
     );
-    if (turn === 'NATIVE_TEAM_TWO') assert.ok(observations.every((row) => row.priorTurn));
+    if (turn.endsWith('_TEAM_TWO')) assert.ok(observations.every((row) => row.priorTurn));
     if (verifyAttachments) {
       const refs = record(record(receipt.command).payload).attachments;
       assert.ok(
-        Array.isArray(refs) && refs.length === 2,
-        'same original message receipt retains both canonical references'
+        Array.isArray(refs) && refs.length === (openCode ? 1 : 2),
+        'same original message receipt retains every canonical reference'
       );
       assert.deepEqual(outbox.attachments, refs);
       const attachmentsProof = record(options.evidence.nativeChatAttachments);
       const sources = attachmentsProof.files;
-      assert.ok(Array.isArray(sources) && sources.length === 2);
+      assert.ok(Array.isArray(sources) && sources.length === (openCode ? 1 : 2));
       const prepared = record(attachmentsProof.preparedImage);
       assert.equal(prepared.originalFilename, record(sources[0]).filename);
-      const expected = [prepared, sources[1]];
+      const expected = openCode ? [prepared] : [prepared, sources[1]];
       refs.forEach((value, index) => {
         const ref = record(value),
           file = record(expected[index]);
@@ -169,6 +178,12 @@ export async function runDesktopComposerUiSmoke(
         assert.equal(ref.filePath, undefined);
         assert.equal(ref.base64Data, undefined);
       });
+      if (options.openCodeModel) {
+        const images = options.openCodeModel.observations.filter(row => row.turn === turn);
+        assert.equal(images.length, 3);
+        assert.ok(images.every(row => row.nativeImage?.nativeSha256 === prepared.sha256),
+          'actual native inference receives exactly the original Composer prepared PNG');
+      }
       await verifyAttachments(id);
     }
     const inbox = await json(join(team, 'inboxes/user.json'));
@@ -242,10 +257,19 @@ export async function runDesktopComposerUiSmoke(
   assert.equal(sessions[0]!.phase, 'closed');
   assert.equal(sessions[0]!.custody, 'released');
   options.nativeStop.assertNativeAbsent();
+  if (openCode) {
+    const history = await checkpoint(options.root, sessions[0]!, 'opencode');
+    const attachments = record(options.evidence.nativeChatAttachments);
+    const imageBytes = await readFile(join(options.root, 'native-chat-attachment-inputs', String(record(attachments.preparedImage).filename)));
+    assert.ok(history.history.toString('utf8').includes(imageBytes.toString('base64')),
+      'original native durable history retains the exact prepared PNG before cold readback');
+    attachments.nativeHistory = { nativeSessionId: history.nativeSession,
+      sha256: history.historySha256, byteLength: history.history.length };
+  }
   step({ assertion: 'exact Native PID absent and Runtime closed/released before any app Quit' });
   assert.deepEqual(model.failures, []);
-  assert.ok(model.observations.every((item) => item.requestedModel === 'claude-opus-4-6'));
-  assert.ok(model.observations.every((item) => item.requestedEffort === 'medium'));
+  assert.ok(model.observations.every((item) => item.requestedModel === (openCode ? 'TEST-model' : 'claude-opus-4-6')));
+  if (options.model) assert.ok(options.model.observations.every((item) => item.requestedEffort === 'medium'));
   options.evidence.conversationUiProof = {
     ...record(options.evidence.conversationUiProof),
     status: 'PASS',
@@ -254,7 +278,7 @@ export async function runDesktopComposerUiSmoke(
     nativeInputs: inputIds.length,
     nativeChildAbsentBeforeQuit: true,
     custody: 'released',
-    effectiveModel: 'claude-opus-4-6',
-    effectiveEffort: 'medium',
+    effectiveModel: openCode ? 'test-local/TEST-model' : 'claude-opus-4-6',
+    ...(openCode ? { nativeGeneration: 'v2' } : { effectiveEffort: 'medium' }),
   };
 }

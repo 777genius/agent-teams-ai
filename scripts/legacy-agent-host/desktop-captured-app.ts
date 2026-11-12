@@ -9,7 +9,7 @@ import { performance } from 'node:perf_hooks';
 import { bounded } from './desktop-proof-bounds.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { assertOwnedCdpListener, command, processTable, selectedCdpPort, compiledBundleHashes, getTargets, portOccupied,
-  readRendererBackendConnections, safeGroupSnapshot, settledGroupMembers, observeOriginalAppReap, isCapturedOriginalNodeZombie, groupMembers } from './desktop-backend-observations.ts';
+  readRendererBackendConnections, safeGroupSnapshot, settledGroupMembers, observeExitedAppGroup, observeOriginalAppReap, isCapturedOriginalNodeZombie, groupMembers } from './desktop-backend-observations.ts';
 import type { ProcessIdentity } from './desktop-backend-observations.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { readCapturedCandidateElectron } from './candidate-electron.ts';
@@ -315,6 +315,13 @@ export async function cleanupCapturedDesktopApp(options: {
           observedBeforeHarnessCleanup: true,
         };
       }
+    }
+    if (!packedRelaunchMode && appIdentity && hostPid !== undefined && remaining.length &&
+        !remaining.some((row) => row.pid === group)) {
+      const observed = await observeExitedAppGroup({ child: app, group, hostPid,
+        initialMembers: remaining, deadline: observationDeadline });
+      evidence.originalExitedGroup = observed;
+      if (observed.settled) remaining = observed.remaining!;
     }
     if (remaining.length) {
       assert.ok(!packedRelaunchMode, 'observer-only app relaunch keeps UNKNOWN debt; no old-group signal or retry');

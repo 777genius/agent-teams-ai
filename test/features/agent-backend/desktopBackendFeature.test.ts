@@ -199,8 +199,9 @@ it('leaves unconfigured mode empty and initializes configured handles without st
   expect(snapshot).not.toContain('nodeExecutable');
 });
 
-it('captures a global provider owner without Team handles and never routes it through the default owner', async () => {
+it('captures global and exact project provider scopes without Team handles or default-owner fallback', async () => {
   const setup = await fixture();
+  const projectPath = await root();
   const binding = {
     runtimeId: 'opencode' as const,
     owner: { ownerId: 'B', revision: 'v1' },
@@ -209,7 +210,11 @@ it('captures a global provider owner without Team handles and never routes it th
     profileId: 'TEST-management-B',
     configRevision: 'TEST-config-B',
   };
-  const descriptor = { ...setup.descriptor, handles: [], management: [binding] };
+  const descriptor = {
+    ...setup.descriptor,
+    handles: [],
+    management: [binding, { ...binding, projectPath }],
+  };
   const desktop = feature({
     descriptor: await selected(descriptor),
     bindingDirectory: setup.bindingDirectory,
@@ -223,6 +228,11 @@ it('captures a global provider owner without Team handles and never routes it th
     desktop.captureProviderManagement('auth-context', await root())
   ).rejects.toMatchObject({ code: 'unavailable' });
   const captured = await desktop.captureProviderManagement('auth-context', null);
+  const scoped = await desktop.captureProviderManagement('auth-context', projectPath);
+  expect(scoped.profileId).toBe(captured.profileId);
+  expect(scoped.configRevision).toBe(captured.configRevision);
+  expect(scoped.targetId).not.toBe(captured.targetId);
+  expect(scoped.isCurrent()).toBe(true);
   expect(captured.targetId).toMatch(/^[a-f0-9]{64}$/);
   const recovered = await desktop.restoreProviderManagement('auth-context', captured.targetId);
   expect(recovered.targetId).toBe(captured.targetId);

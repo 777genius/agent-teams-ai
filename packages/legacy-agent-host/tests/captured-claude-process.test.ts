@@ -161,7 +161,7 @@ test('an exited original cannot signal a positively probed replacement group',
       assert.ok(calls.length > 0, 'the replacement group was observed');
       assert.deepEqual(calls.filter(signal => signal !== 0), [], 'no TERM/KILL for a reaped root');
       kill.mock.restore();
-      assert.equal(await custody.confirmStopped(), true, 'actual original absence can still settle');
+      assert.equal(custody.observeStopped(), true, 'fresh read-only original absence settles an unknown stop');
     } finally {
       kill.mock.restore();
       await rm(root, { recursive: true, force: true });

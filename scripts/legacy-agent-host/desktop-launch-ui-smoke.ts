@@ -3,7 +3,7 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileDigest } from './desktop-backend-fixture.ts';
-import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
+import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
@@ -13,6 +13,7 @@ import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
 import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
+import type { startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 
 const record = (raw: unknown): Record<string, unknown> => {
   assert.ok(raw && typeof raw === 'object' && !Array.isArray(raw));
@@ -123,20 +124,24 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   evidence: Record<string, unknown>;
   model?: Awaited<ReturnType<typeof startNativeTeamModel>>;
   codexResumeModel?: Awaited<ReturnType<typeof startCodexModel>>;
+  openCodeModel?: Awaited<ReturnType<typeof startOpenCodeModel>>;
   assertOwnedRenderer(): void;
+  capturedGroup(): number;
   restartAfterStop?(): Promise<UiCdpPort>;
 }): Promise<void> {
   const { fixture, evidence } = options;
-  const model = options.codexResumeModel ?? options.model;
+  const model = options.openCodeModel ?? options.codexResumeModel ?? options.model;
   assert.ok(model);
   const codex = fixture.codexResume;
+  const opencode = fixture.openCodeV2;
   assert.equal(Boolean(codex), Boolean(options.codexResumeModel));
+  assert.equal(Boolean(opencode), Boolean(options.openCodeModel));
   if (codex) assert.equal(evidence.mode, 'native-resume-ui');
-  const provider = codex ? 'codex' : 'claude';
-  const firstPrompt = codex ? 'CODEX_TEAM_ONE' : 'NATIVE_TEAM_ONE';
-  const firstReply = codex ? 'REPLY_CODEX_ONE' : 'REPLY_NATIVE_ONE';
-  const selectedModel = codex?.model ?? 'claude-opus-4-6';
-  const modelLabel = codex ? codex.displayName.replace(/^GPT-/i, '') : 'Opus 4.6';
+  const provider = opencode ? 'opencode' : codex ? 'codex' : 'claude';
+  const firstPrompt = opencode ? 'OPENCODE_TEAM_ONE' : codex ? 'CODEX_TEAM_ONE' : 'NATIVE_TEAM_ONE';
+  const firstReply = opencode ? 'REPLY_OPENCODE_ONE' : codex ? 'REPLY_CODEX_ONE' : 'REPLY_NATIVE_ONE';
+  const selectedModel = opencode?.model ?? codex?.model ?? 'claude-opus-4-6';
+  const modelLabel = opencode?.displayName ?? (codex ? codex.displayName.replace(/^GPT-/i, '') : 'Opus 4.6');
   const steps: Record<string, unknown>[] = [];
   const proof: Record<string, unknown> = {
     status: 'INCOMPLETE', provider, steps,
@@ -180,35 +185,48 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
       .filter(e=>e.textContent.includes('Optional launch settings'));
     if(rows.length!==1||rows[0].getAttribute('aria-expanded')!=='false')return null;
     const chips=[...rows[0].querySelectorAll('span')].map(e=>e.textContent.trim());
-    return chips.includes('low')&&(${Boolean(codex)}||chips.includes('Sonnet 4.6'))
+    return ${Boolean(opencode)} ? (chips.some(value=>value.includes('TEST-model')) ? {id:rows[0].getAttribute('aria-controls'),chips} : null) : chips.includes('low')&&(${Boolean(codex)}||chips.includes('Sonnet 4.6'))
       ? {id:rows[0].getAttribute('aria-controls'),chips,effort:'low'} : null;
   })()`, 'original saved launch summary hydrates before expansion');
   step({ observation: 'original saved launch summary before expansion', value: hydratedSummary });
   await expandSettings();
   await ui.waitRead(`(() => {
     const row=document.querySelector('[role="dialog"] button[aria-label*=" provider,"]');
-    return ${Boolean(codex)} ? /^Codex provider,/i.test(row?.getAttribute('aria-label')??'') : row?.textContent.trim()==='Sonnet 4.6';
+    return ${Boolean(opencode)} ? /^OpenCode provider,/i.test(row?.getAttribute('aria-label')??'') : ${Boolean(codex)} ? /^Codex provider,/i.test(row?.getAttribute('aria-label')??'') : row?.textContent.trim()==='Sonnet 4.6';
   })()`, 'original saved lead settings hydrate before editing');
   // Opening the real lead model row is a normal user action, not form setup.
   if (!(await cdp.evaluate(`Boolean(document.querySelector('[role="dialog"] [data-testid="team-model-selector-model-option"]'))`))) {
     await ui.scrollTo('[role="dialog"] button[aria-label*=" provider,"]', 'visible original lead row');
     await ui.click('[role="dialog"] button[aria-label*=" provider,"]', 'expand original lead model row');
   }
-  const modelOption = codex
+  const modelOption = codex || opencode
     ? `[role="dialog"] [data-testid="team-model-selector-model-option"]:is([aria-label=${JSON.stringify(modelLabel)}],[aria-label^=${JSON.stringify(modelLabel + '. ')}])`
     : '[role="dialog"] [data-testid="team-model-selector-model-option"][aria-label^="Opus 4.6"]';
   await ui.scrollTo(modelOption, `visible ${modelLabel} option from actual provider catalog`);
   await ui.click(modelOption, `select ${modelLabel} in original model selector`);
-  await ui.scrollTo('[role="dialog"] button', 'visible original Medium effort', 'Medium');
-  await ui.click('[role="dialog"] button', 'choose original Medium effort', 'Medium');
-  await ui.waitRead(`document.querySelector('[role="dialog"] #lead-effort')?.textContent.trim()==='Medium'`, 'selected medium effort');
+  if (!opencode) {
+    await ui.scrollTo('[role="dialog"] button', 'visible original Medium effort', 'Medium');
+    await ui.click('[role="dialog"] button', 'choose original Medium effort', 'Medium');
+    await ui.waitRead(`document.querySelector('[role="dialog"] #lead-effort')?.textContent.trim()==='Medium'`, 'selected medium effort');
+  }
   await ui.scrollTo('[role="dialog"] #dialog-prompt', 'visible original launch prompt');
   await ui.click('[role="dialog"] #dialog-prompt', 'focus original launch prompt');
   await cdp.send('Input.insertText', { text: firstPrompt });
   await ui.waitRead(`document.querySelector('[role="dialog"] #dialog-prompt')?.value===${JSON.stringify(firstPrompt)}`, 'typed original prompt');
+  if (opencode && await cdp.evaluate(`document.querySelector('[role="dialog"] #dialog-skip-permissions')?.getAttribute('data-state')`) !== 'checked')
+    await ui.click('[role="dialog"] #dialog-skip-permissions', 'select original automatic tool permission mode');
   assert.equal(await cdp.evaluate(`document.querySelector('[role="dialog"] #dialog-skip-permissions')?.getAttribute('data-state')`), 'checked');
   // Do not click the optional preflight bypass: readiness must settle first.
   await ui.scrollTo('[role="dialog"] button', 'visible original Launch team control', 'Launch team');
+  let originalMetadata: ReturnType<typeof readDesktopNativeHostProcesses> | undefined;
+  if (opencode) {
+    await ui.waitRead(`[...document.querySelectorAll('[role="dialog"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)`, 'original preflight completes before any runtime allocation');
+    originalMetadata = await poll(async () => readDesktopNativeHostProcesses(fixture, options.capturedGroup()),
+      row => row.children.length === 1, 'one original metadata child before Launch');
+    assert.equal(originalMetadata.children[0]!.command, process.env.OPENCODE_V2_EMBEDDED_BUN);
+    assert.equal(((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0, 0);
+    proof.originalMetadataBeforeLaunch = originalMetadata;
+  }
   await captureReadiness(
     cdp,
     fixture.handleId,
@@ -242,10 +260,11 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   assert.equal(saved.cwd, join(fixture.root, 'workspace'));
   assert.equal(saved.model, selectedModel);
   if (codex) assert.equal(saved.providerId, 'codex');
-  assert.equal(saved.effort, 'medium');
-  assert.equal(saved.fastMode, 'off');
+  if (opencode) assert.equal(saved.providerId, 'opencode');
+  assert.equal(saved.effort, opencode ? undefined : 'medium');
+  assert.equal(saved.fastMode, opencode ? undefined : 'off');
   assert.equal(saved.skipPermissions, true);
-  if (!codex) assert.equal(saved.limitContext, true);
+  if (!codex && !opencode) assert.equal(saved.limitContext, true);
   proof.savedSettings = saved;
   proof.capture = capture;
   const capturedSessions = async () => (await readDesktopNativeStopSessions(fixture.root))
@@ -260,8 +279,18 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   proof.nativeSessionBeforeStop = sessions[0];
   assert.equal(model.observations.length, 8);
   assert.ok(model.probes.length >= 1 && model.probes.length <= 8);
-  assert.ok(model.observations.every(row => row.requestedModel === selectedModel && row.requestedEffort === 'medium' && row.contextEffective));
-  assert.ok(model.observations.some(row => row.toolResultError), 'actual Bash exit7 observed');
+  assert.ok(model.observations.every(row => row.requestedModel === (opencode?.modelId ?? selectedModel) &&
+    (opencode || 'requestedEffort' in row && row.requestedEffort === 'medium') && row.contextEffective));
+  if (opencode) {
+    const activity = record(await cdp.evaluate(`window.electronAPI.agentBackend.invoke(${JSON.stringify({
+      handle: { handleId: fixture.handleId }, commandId: 'TEST-v2-launch-tool-result-read',
+      operation: 'runtime.activity.snapshot', payload: { memberId: 'alice-id' },
+    })})`));
+    assert.equal(activity.ok, true);
+    assert.ok((record(record(activity.value).latest).tools as unknown[]).map(record)
+      .some(row => record(row.data).kind === 'tool-result' && record(row.data).isError === true));
+    proof.failedNativeShellObserved = true;
+  } else assert.ok(model.observations.some(row => 'toolResultError' in row && row.toolResultError), 'actual Bash exit7 observed');
   assert.equal(await readFile(join(fixture.root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\n');
   const tasksDirectory = join(fixture.root, 'hoststore/tasks/test-desktop-backend');
   const tasks = await Promise.all((await readdir(tasksDirectory)).filter(name => /^[A-Za-z0-9_-]+\.json$/.test(name))
@@ -279,15 +308,17 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   const screenshotPath = join(fixture.root, 'ui-original-launch-native.png');
   await writeFile(screenshotPath, Buffer.from(screenshot.data, 'base64'), { mode: 0o600 });
   proof.screenshot = { path: screenshotPath, sha256: await fileDigest(screenshotPath) };
-  const hostRows = processTable().filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
+  const hostRows = processTable().filter(row => row.pgid === options.capturedGroup() && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
   assert.equal(hostRows.length, 1, 'only this TEST Host executable may be selected');
   const hostPid = hostRows[0]!.pid;
-  const children = processTable().filter(row => row.ppid === hostPid);
+  const children = originalMetadata
+    ? separateDesktopOpenCodeRuntimeChildren(originalMetadata, readDesktopNativeHostProcesses(fixture, options.capturedGroup()), 1)
+    : processTable().filter(row => row.ppid === hostPid);
   assert.ok(children.length >= 1, 'actual native child present before Stop');
   if (codex) proof.codeModeHost = { status: 'capture-attempted' };
   const helper = codex ? await captureCodexCodeModeProcess(hostPid, codex.nativeInputs) : undefined;
   if (helper) proof.codeModeHost = helper;
-  if (codex) proof.runtimeMcpEndpointSha256 = await codexRuntimeEndpointHash(fixture);
+  if (codex) proof.runtimeMcpEndpointSha256 = await codexRuntimeEndpointHash(fixture, options.capturedGroup());
   await ui.scrollTo('button[aria-label="Stop"]', 'visible original Stop control');
   await ui.click('button[aria-label="Stop"]', 'original Stop once', 'Stop');
   await poll(async () => { const rows = await capturedSessions(); if (helper) observeCodexCodeModeProcess(helper); return rows; }, rows => rows.length === 1 && rows[0]!.phase === 'closed' && rows[0]!.custody === 'released', 'native cleanup released');
@@ -295,6 +326,11 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     const rows = processTable(), observed = helper && observeCodexCodeModeProcess(helper);
     return { rows, helperAbsent: !observed || observed.state === 'absent' };
   }, value => value.helperAbsent && children.every(child => !value.rows.some(row => row.pid === child.pid)), 'captured native children and original helper physically absent');
+  if (originalMetadata) {
+    const remaining = readDesktopNativeHostProcesses(fixture, options.capturedGroup());
+    separateDesktopOpenCodeRuntimeChildren(originalMetadata, remaining, 0);
+    proof.metadataAfterStop = remaining;
+  }
   proof.stop = { nativeChildren: children, releasedBeforeQuit: true };
   if (options.restartAfterStop) {
     assert.equal(evidence.mode, 'native-resume-ui', 'cold boundary belongs only to explicit Resume proof');

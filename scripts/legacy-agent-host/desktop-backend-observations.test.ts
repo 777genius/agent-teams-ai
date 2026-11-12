@@ -5,6 +5,7 @@ import { createRequire, syncBuiltinESMExports } from 'node:module';
 import childProcess from 'node:child_process';
 import {
   isCapturedOriginalNodeZombie,
+  observeExitedAppGroup,
   observeOriginalAppReap,
   readRendererBackendConnections,
   settledGroupMembers,
@@ -391,4 +392,90 @@ test('a process-table read that crosses the original deadline cannot qualify nat
   });
   assert.equal(result.settled, false);
   assert.equal(result.reason, 'original-observation-deadline');
+});
+
+const exitedGroupInput = () => ({
+  child: { pid: 4096, exitCode: 0 as number | null, signalCode: null as NodeJS.Signals | null },
+  group: 4096,
+  hostPid: 4196,
+  initialMembers: [{ pid: 5000, ppid: 1, pgid: 4096 }],
+  deadline: 3000,
+});
+
+test('an already reaped original child waits for actual descendant and original Host absence', async (t) => {
+  let now = 2700;
+  t.mock.method(Date, 'now', () => now);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  t.mock.method(process, 'kill', () => assert.fail('absence observation never signals'));
+  let table = [{ pid: 5000, ppid: 1, pgid: 4096 }];
+  const pending = observeExitedAppGroup(exitedGroupInput(), () => table);
+  table = [{ pid: 4196, ppid: 1, pgid: 7777 }];
+  now = 2800;
+  t.mock.timers.tick(100);
+  await Promise.resolve();
+  table = [];
+  now = 2900;
+  t.mock.timers.tick(100);
+  const result = await pending;
+  assert.equal(result.settled, true);
+  assert.equal(result.reason, 'original-natural-exit-and-fresh-absence');
+  assert.deepEqual(result.remaining, []);
+  assert.equal(result.capturedHostAbsent, true);
+  assert.deepEqual(result.initialMembers, exitedGroupInput().initialMembers);
+  assert.equal(result.capturedDescendantsAbsent, true);
+});
+
+test('an orphan descendant, moved captured descendant or original Host cannot be cleared by an expired budget', async (t) => {
+  let now = 2900;
+  t.mock.method(Date, 'now', () => now);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const orphan = observeExitedAppGroup(exitedGroupInput(), () => exitedGroupInput().initialMembers);
+  const moved = observeExitedAppGroup(exitedGroupInput(), () => [{ pid: 5000, ppid: 1, pgid: 5000 }]);
+  const host = observeExitedAppGroup(exitedGroupInput(), () => [{ pid: 4196, ppid: 1, pgid: 7777 }]);
+  now = 3000;
+  t.mock.timers.tick(100);
+  for (const result of await Promise.all([orphan, moved, host])) {
+    assert.equal(result.settled, false);
+    assert.equal(result.reason, 'original-observation-deadline');
+  }
+  assert.equal((await moved).capturedDescendantsAbsent, false);
+});
+
+test('absent leader observation rejects wrong child, live/crashed/signaled child and invalid captured identities', async () => {
+  for (const variant of [
+    { child: { pid: 5000, exitCode: 0, signalCode: null } },
+    { child: { pid: 4096, exitCode: null, signalCode: null } },
+    { child: { pid: 4096, exitCode: 1, signalCode: null } },
+    { child: { pid: 4096, exitCode: null, signalCode: 'SIGTERM' as const } },
+    { hostPid: 0 }, { hostPid: 4096 }, { group: -1 }, { deadline: NaN },
+    { initialMembers: [{ pid: 4096, ppid: 3990, pgid: 4096 }] },
+    { initialMembers: [{ pid: 5000, ppid: 1, pgid: 7777 }] },
+  ]) {
+    const result = await observeExitedAppGroup({ ...exitedGroupInput(), ...variant }, () =>
+      assert.fail('ineligible captured child cannot observe again'));
+    assert.equal(result.settled, false);
+    assert.equal(result.reason, 'ineligible-original-natural-exit-observation');
+  }
+});
+
+test('a reused leader PID and unavailable full process census retain debt without signaling', async (t) => {
+  t.mock.method(Date, 'now', () => 2900);
+  t.mock.method(process, 'kill', () => assert.fail('absence observation never signals'));
+  const reused = await observeExitedAppGroup(exitedGroupInput(), () => [{ pid: 4096, ppid: 1, pgid: 7777 }]);
+  assert.equal(reused.settled, false);
+  assert.equal(reused.reason, 'captured-leader-pid-reappeared');
+  const unavailable = await observeExitedAppGroup(exitedGroupInput(), () => { throw new Error('ps unavailable'); });
+  assert.equal(unavailable.settled, false);
+  assert.equal(unavailable.reason, 'process-table-unavailable');
+});
+
+test('absent leader observation never renews the original deadline or accepts a late census', async (t) => {
+  let now = 3000;
+  t.mock.method(Date, 'now', () => now);
+  const expired = await observeExitedAppGroup(exitedGroupInput(), () => assert.fail('expired budget'));
+  assert.equal(expired.settled, false);
+  now = 2999;
+  const late = await observeExitedAppGroup(exitedGroupInput(), () => { now = 3000; return []; });
+  assert.equal(late.settled, false);
+  assert.equal(late.reason, 'original-observation-deadline');
 });

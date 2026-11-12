@@ -8,6 +8,8 @@ import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { ProcessIdentity } from './desktop-backend-observations.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
+import type { startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
+type QuitModel = Awaited<ReturnType<typeof startNativeTeamModel>> | Awaited<ReturnType<typeof startOpenCodeModel>>;
 
 const record = (raw: unknown): Record<string, unknown> => {
   assert.ok(raw && typeof raw === 'object' && !Array.isArray(raw));
@@ -125,11 +127,18 @@ export async function runDesktopNativeQuitMode(
     root: string;
     seed?: { subject: string };
     evidence: Record<string, unknown>;
-    model?: Awaited<ReturnType<typeof startNativeTeamModel>>;
+    model?: QuitModel;
+    coldMetadata?: { metadataProcessCount: 1; assertNoRuntimeChildren(): Promise<void> };
     assertOwnedRenderer(): void;
   }
 ): Promise<boolean> {
   if (!['native-quit-ui', 'native-quit-readback-ui'].includes(options.mode)) return false;
+  const openCode = options.evidence.nativeProvider === 'opencode' ||
+    options.mode === 'native-quit-readback-ui' && process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2';
+  const firstPrompt = openCode ? 'OPENCODE_TEAM_ONE' : 'NATIVE_TEAM_ONE';
+  const secondPrompt = openCode ? 'OPENCODE_TEAM_TWO' : 'NATIVE_TEAM_TWO';
+  if (openCode && options.mode === 'native-quit-readback-ui')
+    assert.ok(options.coldMetadata, 'the exact original cold metadata child is captured before UI reads');
   assert.ok(options.seed);
   const steps: Record<string, unknown>[] = [];
   const ui = createDesktopUiControls(cdp, {
@@ -164,7 +173,7 @@ export async function runDesktopNativeQuitMode(
     );
     if (prior.scenario === 'pending-open') assert.deepEqual(inputs(await originalSession(options.root)), []);
     else await ui.waitRead(
-      "document.body.innerText.includes('NATIVE_TEAM_ONE')&&document.body.innerText.includes('NATIVE_TEAM_TWO')",
+      `document.body.innerText.includes(${JSON.stringify(firstPrompt)})&&document.body.innerText.includes(${JSON.stringify(secondPrompt)})`,
       'both original human messages visible after same-profile startup'
     );
     assert.deepEqual(
@@ -172,24 +181,24 @@ export async function runDesktopNativeQuitMode(
       after.product,
       'cold UI reads never replay original commands or delivery'
     );
-    const table = processTable(),
-      paths = record(options.evidence.paths);
-    const hosts = table.filter(
-      (row) =>
+    if (options.coldMetadata) await options.coldMetadata.assertNoRuntimeChildren();
+    else {
+      const table = processTable(), paths = record(options.evidence.paths);
+      const hosts = table.filter(row =>
         row.pgid === Number(record(options.evidence.app).processGroup) &&
-        command(row.pid) === `${String(paths.node)} ${String(paths.hostEntry)}`
-    );
-    assert.equal(hosts.length, 1, 'same-profile original Host transport present');
-    assert.equal(
-      table.filter((row) => row.ppid === hosts[0]!.pid).length,
-      0,
-      'no native child allocated during cold readback'
-    );
+        command(row.pid) === `${String(paths.node)} ${String(paths.hostEntry)}`);
+      assert.equal(hosts.length, 1, 'same-profile original Host transport present');
+      assert.equal(table.filter(row => row.ppid === hosts[0]!.pid).length, 0,
+        'no native child allocated during cold readback');
+    }
     options.evidence.nativeQuitReadback = {
       status: 'INCOMPLETE',
       steps,
       sessionUnchanged: true,
       productUnchanged: true,
+      nativeAllocations: 0,
+      metadataProcessCount: options.coldMetadata?.metadataProcessCount ?? 0,
+      runtimeAllocationScope: 'Runtime session children; the original read-only metadata child is counted separately',
       screenshot: await screenshot(cdp, options.root, 'ui-native-quit-readback.png'),
       qualification: prior.scenario === 'pending-open'
         ? 'Pending-open Quit + same-profile next startup; automatic app.relaunch unqualified'
@@ -213,7 +222,7 @@ export async function runDesktopNativeQuitMode(
     ],
   };
   const ids: string[] = [];
-  for (const turn of ['NATIVE_TEAM_ONE', 'NATIVE_TEAM_TWO']) {
+  for (const turn of [firstPrompt, secondPrompt]) {
     await ui.click('.message-composer-flat-layout textarea', 'focus original Composer');
     await cdp.send('Input.insertText', { text: turn });
     await ui.waitRead(
@@ -262,12 +271,12 @@ export async function runDesktopNativeQuitMode(
       if (!input) return false;
       assert.equal(record(input.intent).messageId, id);
       assert.deepEqual(record(input.intent).binding, session.binding);
-      return turn === 'NATIVE_TEAM_ONE'
+      return turn === firstPrompt
         ? ['claimed', 'consumed'].includes(String(input.phase))
         : input.phase === 'admitted';
     }, `exact original ${turn} command/outbox/input persisted`);
     ids.push(id);
-    if (turn === 'NATIVE_TEAM_ONE')
+    if (turn === firstPrompt)
       await until(
         async () => heldRequests.length === 1,
         'actual first native request held before response'
@@ -293,7 +302,7 @@ export async function runDesktopNativeQuitMode(
   return true;
 }
 /** Last read immediately before the original common Quit, after screenshot and sentinel census. */
-export async function capturePendingDesktopNativeQuit(root: string, evidence: Record<string, unknown>, model: Awaited<ReturnType<typeof startNativeTeamModel>> | undefined): Promise<void> {
+export async function capturePendingDesktopNativeQuit(root: string, evidence: Record<string, unknown>, model: QuitModel | undefined): Promise<void> {
   const proof = evidence.nativeQuitUiProof;
   if (!proof || record(proof).scenario !== 'pending-open') return;
   assert.ok(model);
@@ -318,7 +327,7 @@ export async function verifyDesktopNativeQuitAfterShutdown(
   root: string,
   evidence: Record<string, unknown>,
   nativeChildren: ProcessIdentity[],
-  model: Awaited<ReturnType<typeof startNativeTeamModel>> | undefined,
+  model: QuitModel | undefined,
   originalGroup: number
 ): Promise<void> {
   if (mode === 'native-quit-readback-ui') {

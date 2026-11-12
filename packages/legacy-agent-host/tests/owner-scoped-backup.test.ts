@@ -1,19 +1,36 @@
 import { createTeamBackupComposition } from '../dist/composition/createTeamBackupComposition.js';
 import { pruneDeletedTeamBackups } from '../dist/adapters/lifecycle/pruneDeletedTeamBackups.js';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import fs from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { TeamPermanentDeletionCoordinator } from '../dist/adapters/lifecycle/TeamPermanentDeletionCoordinator.js';
 import { createOwnerLifecycleIdentity } from '../dist/adapters/lifecycle/createOwnerLifecycleIdentity.js';
 import { createOwnerScopedTeamPurge } from '../dist/adapters/lifecycle/OwnerScopedTeamPurge.js';
-import { OwnerScopedTeamBackup } from '../dist/adapters/lifecycle/OwnerScopedTeamBackup.js';
+import { ensureOwnerBackupDirectories, OwnerScopedTeamBackup } from '../dist/adapters/lifecycle/OwnerScopedTeamBackup.js';
 import { readBackupManifestStrictSync, getBackupManifestPath, writeBackupManifest } from '../dist/adapters/lifecycle/teamBackupManifest.js';
 import { createOwnerBackupRegistry } from '../dist/adapters/lifecycle/createOwnerBackupRegistry.js';
 import { createOwnerPurgeRequest } from '../dist/adapters/lifecycle/ownerPurgeRequest.js';
+test('backup directory walk creates nested native paths and refuses an intermediate junction', t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-owner-backup-path-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const nested = join(root, 'backups', 'teams', 'TEST-team', 'tasks');
+  ensureOwnerBackupDirectories(nested, true);
+  assert.equal(realpathSync(nested), nested);
+  assert.doesNotThrow(() => ensureOwnerBackupDirectories(nested, false));
+  const link = join(root, 'TEST-linked-backups');
+  symlinkSync(join(root, 'backups'), link, 'junction');
+  // Even an existing leaf cannot conceal a replacement ancestor from custody checks.
+  assert.throws(() => ensureOwnerBackupDirectories(join(link, 'teams', 'TEST-team', 'tasks'), false));
+  assert.throws(() => ensureOwnerBackupDirectories(join(link, 'TEST-unowned-leaf'), true));
+  assert.equal(existsSync(join(root, 'backups', 'TEST-unowned-leaf')), false);
+});
+
 async function fixture(t: import('node:test').TestContext) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-owner-scoped-backup-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -50,6 +67,71 @@ test('existing backup manifest and canonical resource proof restore missing prod
   assert.deepEqual(result.held, []);
   assert.deepEqual(f.store.read('state.json'), controls);
   assert.deepEqual(f.store.list('commands'), commands);
+});
+for (const code of ['EINVAL', 'EPERM', 'EIO', 'ENOSPC'] as const) {
+  test(`backup restore distinguishes unsupported directory sync from ${code} storage refusal`, async t => {
+    const f = await fixture(t), before = readFileSync(f.taskPath), controls = f.store.read('state.json');
+    await f.backup.snapshot();
+    unlinkSync(f.taskPath);
+    const original = fs.openSync;
+    let attempts = 0;
+    t.mock.method(fs, 'openSync', ((path, flags, mode) => {
+      if (path === dirname(f.taskPath) && flags === fs.constants.O_RDONLY) {
+        attempts++;
+        throw Object.assign(new Error(`TEST directory sync ${code}`), { code });
+      }
+      return original(path, flags, mode);
+    }) as typeof fs.openSync);
+    syncBuiltinESMExports();
+    let result: Awaited<ReturnType<OwnerScopedTeamBackup['restoreMissing']>>;
+    try { result = await f.backup.restoreMissing(); }
+    finally { t.mock.restoreAll(); syncBuiltinESMExports(); }
+    assert.equal(attempts, 1);
+    const unsupported = code === 'EINVAL' || (process.platform === 'win32' && code === 'EPERM');
+    assert.deepEqual(result, unsupported
+      ? { restored: 1, held: [] }
+      : { restored: 0, held: [`tasks/${f.taskId}.json`] });
+    assert.deepEqual(readFileSync(f.taskPath), before, 'only the original no-clobber bytes were published');
+    assert.deepEqual(f.store.read('state.json'), controls);
+    assert.equal(fs.readdirSync(dirname(f.taskPath)).some(name => name.startsWith('.tmp.host-backup-')), false);
+  });
+}
+test('unsupported directory sync cannot hide a real close failure or claim restored bytes', async t => {
+  const f = await fixture(t), before = readFileSync(f.taskPath);
+  await f.backup.snapshot();
+  unlinkSync(f.taskPath);
+  const open = fs.openSync, sync = fs.fsyncSync, close = fs.closeSync;
+  let directory: number | undefined, syncFailures = 0, closeFailures = 0;
+  t.mock.method(fs, 'openSync', ((path, flags, mode) => {
+    if (path === dirname(f.taskPath) && flags === fs.constants.O_RDONLY) {
+      // A controlled descriptor permits the same fault sequence on Windows,
+      // where opening the real directory may already be unsupported.
+      return directory = open(f.taskPath, fs.constants.O_RDONLY);
+    }
+    return open(path, flags, mode);
+  }) as typeof fs.openSync);
+  t.mock.method(fs, 'fsyncSync', ((fd: number) => {
+    if (fd === directory) {
+      syncFailures++;
+      throw Object.assign(new Error('TEST unsupported directory sync'), { code: 'EINVAL' });
+    }
+    return sync(fd);
+  }) as typeof fs.fsyncSync);
+  t.mock.method(fs, 'closeSync', ((fd: number) => {
+    close(fd);
+    if (fd === directory) {
+      closeFailures++;
+      directory = undefined;
+      throw Object.assign(new Error('TEST real close failure'), { code: 'EIO' });
+    }
+  }) as typeof fs.closeSync);
+  syncBuiltinESMExports();
+  let result: Awaited<ReturnType<OwnerScopedTeamBackup['restoreMissing']>>;
+  try { result = await f.backup.restoreMissing(); }
+  finally { t.mock.restoreAll(); syncBuiltinESMExports(); }
+  assert.equal(syncFailures, 1); assert.equal(closeFailures, 1);
+  assert.deepEqual(result, { restored: 0, held: [`tasks/${f.taskId}.json`] });
+  assert.deepEqual(readFileSync(f.taskPath), before);
 });
 test('actual completed delete/update defeat old backup per resource and deletion boundary fences further backup publication', async t => {
   const f = await fixture(t);

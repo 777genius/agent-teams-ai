@@ -3,6 +3,7 @@
 // saved-model inference. No team is launched; every provider request is localhost.
 import assert from 'node:assert/strict';
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -158,7 +159,8 @@ async function waitSettled(
   let quietSince = 0;
   let previousEventCount = -1;
   while (Date.now() < deadline) {
-    const events = (await preflightEvents()).filter(
+    const allEvents = await preflightEvents();
+    const events = allEvents.filter(
       (e) => e.providerId === 'anthropic' && e.cwd === data.project
     );
     const progress = nativeDiagnosticProgress(events, priorCount, requirement);
@@ -172,19 +174,21 @@ async function waitSettled(
         && !/Checking selected providers|Checking provider readiness/.test(d.innerText);
     })()`));
     const children = await ledger.runtimeQuiet(data.artifact.app.path);
-    if (ready && progress.ready && gateway.inFlight() === 0 && children.length === 0) {
+    const httpInFlight = gateway.inFlight();
+    if (ready && progress.ready && httpInFlight === 0 && children.length === 0) {
       if (!quietSince) quietSince = Date.now();
       if (Date.now() - quietSince >= 1000) {
-        record(label, {
+        const observation = {
           requirement,
           ...progress,
           noNewNativeEvents: events.length === priorCount,
           requireReadyUi,
           quietDurationMs: Date.now() - quietSince,
           activeNativeChildren: children,
-          httpInFlight: gateway.inFlight(),
-        });
-        return;
+          httpInFlight,
+        };
+        record(label, observation);
+        return { events: allEvents, ...observation };
       }
     } else quietSince = 0;
     await pause(300);
@@ -591,14 +595,14 @@ try {
       'native saved model -> exact bundled released executable -> local Messages PONG; fixture launch endpoint credentials supplied directly',
   };
   // The direct command's close event does not settle app-owned native children.
-  // Await their natural completion before the final success snapshots.
-  await waitSettled(
+  // Use one natural-drain observation for every final synchronous assertion.
+  const finalObservation = await waitSettled(
     'after-saved-model-inference-native-work-drained',
     await scopedPreflightCount(),
     'quiet-drain',
     false
   );
-  const finalEvents = await preflightEvents();
+  const finalEvents = finalObservation.events;
   const starts = finalEvents.filter(
     (e) => e.event === 'provider_one_shot_diagnostic_start' && e.cwd === data.project
   );
@@ -616,13 +620,13 @@ try {
     )
   );
   assert(gateway.requests.every((r) => r.allowed && r.completed));
-  assert.equal(gateway.inFlight(), 0);
+  assert.equal(finalObservation.httpInFlight, 0);
   assert.deepEqual(
-    await ledger.runtimeQuiet(data.artifact.app.path),
+    finalObservation.activeNativeChildren,
     [],
     'No unfinished native runtime child is permitted at success'
   );
-  assert.equal(await readFile(sentinel, 'utf8'), 'preserve-existing-project\n');
+  assert.equal(readFileSync(sentinel, 'utf8'), 'preserve-existing-project\n');
   record('saved-model-inference-and-native-children-complete', {
     diagnosticCount: complete.length,
   });

@@ -257,8 +257,8 @@ export function compileRuntimeMemberProfile(
     refuse('runtime-recipe-backend-unconfigured');
   const inherits = saved.syncModelsWithLead !== false && provider === leadProvider;
   const ownModel = isLead ? explicit(saved.model) : explicit(settings.model);
-  const model =
-    ownModel ?? (!isLead && inherits ? explicit(saved.model) : undefined) ?? base.model;
+  const selectedModel = ownModel ?? (!isLead && inherits ? explicit(saved.model) : undefined);
+  const model = selectedModel ?? base.model;
   const effort = isLead
     ? saved.effort
     : (settings.effort ?? (inherits && !ownModel ? saved.effort : undefined));
@@ -270,8 +270,16 @@ export function compileRuntimeMemberProfile(
         ? saved.fastMode
         : undefined;
   let compiled = applyLaunchConfiguration(base, {
-    model,
-    ...(effort === undefined ? {} : { effort }),
+    // A V2 recipe already captures its native model. The fallback to base.model
+    // is not an explicit catalog selection and must not be passed as a bare ID.
+    ...(base.provider === 'opencode' && base.nativeGeneration === 'v2' &&
+        selectedModel === undefined ? {} : { model }),
+    // A saved V2 variant is already bound to its native session. Repeated
+    // inherited effort does not select a new variant; let native admission
+    // attest it. Any differing effort remains an unsupported V2 override.
+    ...(effort === undefined ||
+      (base.provider === 'opencode' && base.nativeGeneration === 'v2' &&
+       effort === base.nativeOptions.variant) ? {} : { effort }),
     ...(base.provider === 'opencode' || fast === undefined || fast === 'inherit'
       ? {}
       : { fastMode: fast === 'on' }),

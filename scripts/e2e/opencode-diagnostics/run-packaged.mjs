@@ -105,6 +105,8 @@ for (const run of runs) {
         const leaf = await lstat(evidencePath);
         assert(leaf.isFile() && !leaf.isSymbolicLink() && leaf.size <= 4 * 1024 * 1024);
         const evidence = JSON.parse(await readFile(evidencePath, 'utf8'));
+        if (typeof evidence.error === 'string')
+          result.verificationError = evidence.error.slice(0, 2000);
         const failure = settingsRefreshFailureSummary(evidence.settingsRefreshFailure);
         if (failure) {
           result.settingsRefreshFailure = failure;
@@ -570,5 +572,15 @@ $ids = @($errors | ForEach-Object { $_.integratorReportId } | Where-Object { $_ 
     await saveResults();
   }
   if (cleanupFailed) break;
+}
+for (const result of results) {
+  console.log('[opencode-packaged] result ' + JSON.stringify({
+    run: result.run, passed: result.passed, cleanup: result.cleanup,
+    qualification: result.qualification, providerQualified: result.providerQualified,
+    verificationError: result.verificationError,
+    error: typeof result.error === 'string' ? result.error.slice(0, 2000) : undefined,
+    cleanupError: typeof result.cleanupError === 'string' ? result.cleanupError.slice(0, 2000) : undefined,
+    launchError: typeof result.launchError === 'string' ? result.launchError.slice(0, 2000) : undefined,
+  }));
 }
 process.exitCode = passed() ? 0 : 1;

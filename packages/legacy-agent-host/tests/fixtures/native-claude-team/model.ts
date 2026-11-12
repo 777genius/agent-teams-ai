@@ -159,6 +159,8 @@ export async function startNativeTeamModel(
     /** TEST-only original native tool-use IDs observed in actual model request history. */
     captureHistoryMarkers?: boolean;
     allowModelProbes?: boolean;
+    /** Original mixed Launch may renew one cancelled check after its explicit close/reopen. */
+    nativeModelProbeLimit?: 8 | 9;
     /** TEST-only boundary advanced after verified Stop/reload by the owning UI test. */
     modelProbePhase?: () => 'native' | 'cold-readback';
     principalId?: () => string;
@@ -168,6 +170,8 @@ export async function startNativeTeamModel(
   const nativeMember = options.nativeMemberCreation
     ? nativeMemberCreationScript(options.nativeMemberCreation, nativeToolReceipt)
     : undefined;
+  const nativeModelProbeLimit = nativeMember ? 9 : (options.nativeModelProbeLimit ?? 8);
+  assert.ok(nativeModelProbeLimit === 8 || nativeModelProbeLimit === 9);
   const crossTeam = options.crossTeam ? nativeCrossTeamScript(options.crossTeam) : undefined;
   const groupChats = options.groupChats ? nativeGroupChatScript(nativeToolReceipt) : undefined;
   const compaction = options.contextCompaction
@@ -305,13 +309,13 @@ export async function startNativeTeamModel(
           // One actual new preparation after original Stop/reload, never another
           // allowance for a retry in that same cold UI phase.
           assert.ok(
-            !nativeMember && probes.length === 8 &&
+            !nativeMember && probes.length >= 8 && probes.length <= nativeModelProbeLimit &&
               !probes.some((probe) => probe.phase === 'cold-readback'),
             'finite native cold-readback model probe budget'
           );
         } else {
           assert.ok(
-            probes.length < (nativeMember ? 9 : 8),
+            probes.length < nativeModelProbeLimit,
             'finite native model probe request budget'
           );
         }

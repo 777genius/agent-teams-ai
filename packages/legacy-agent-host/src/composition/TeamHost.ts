@@ -1,7 +1,4 @@
-import {
-  createTeamCreationMethods,
-  createTeamRegistryMethods,
-} from './createTeamCreationMethods.js';
+import { createTeamCreationMethods, createTeamRegistryMethods } from './createTeamCreationMethods.js';
 import { createHostGroupComposition } from './createHostGroupComposition.js';
 import { preflightNativeMemberModel } from './preflightNativeMemberModel.js';
 import { createProviderManagementMethods } from './createProviderManagementMethods.js';
@@ -47,10 +44,7 @@ import type { JsonValue } from '../contracts.js';
 import type { ProviderOAuthSnapshot } from '../management/contracts.js';
 import type { TeamCommand } from '../team/contracts.js';
 import type { HostedTeam } from './RuntimeTeamCoordinator.js';
-import type {
-  MemberProvider,
-  MemberProviderContext,
-} from '../adapters/providers/MemberProvider.js';
+import type { MemberProvider, MemberProviderContext } from '../adapters/providers/MemberProvider.js';
 
 const id = z.string().min(1).max(256);
 const segment = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
@@ -128,30 +122,34 @@ export function createTeamHost(
   let management: ProviderManagementCoordinator | undefined;
   let emitOAuthProgress: ((snapshot: ProviderOAuthSnapshot) => void) | undefined;
   try {
+    const processCustody = createProcessCustody(profile.processCustody);
     const managementProfiles = [
       ...(profile.management ?? []),
       ...(profile.runtime?.members.flatMap((member) => {
-        const selected = teamModelProbeProfile(member);
-        return selected ? [selected] : [];
+        if (member.provider === 'opencode' && member.nativeGeneration === 'v2' &&
+          !(member.protocolRevision === '2.1.4' && member.embedded)) return [];
+        return [teamModelProbeProfile(member)];
       }) ?? []),
     ];
     if (
       managementProfiles.length ||
       (profile.creation &&
-        profile.runtime?.providerTemplates?.some((row) => row.provider === 'claude'))
+        profile.runtime?.providerTemplates?.some((row) => row.provider === 'claude' ||
+          row.provider === 'opencode' && row.nativeGeneration === 'v2' &&
+          row.protocolRevision === '2.1.4' && row.embedded !== undefined))
     )
       management = new ProviderManagementCoordinator(
         managementProfiles,
         () => lease.assertCurrent(),
         profile.owner.storageRoot,
-        { onOAuthProgress: (snapshot) => emitOAuthProgress?.(snapshot) }
+        { onOAuthProgress: (snapshot) => emitOAuthProgress?.(snapshot),
+          ...(processCustody ? { processCustody } : {}) }
       );
     const teams = new Map<string, HostedTeam>();
     const assertCurrent = () => {
       if (sealed) throw new TeamOwnerError('hold');
       lease.assertCurrent();
     };
-    const processCustody = createProcessCustody(profile.processCustody);
     const crossTeam = createHostCrossTeamComposition({
       profile,
       teams,

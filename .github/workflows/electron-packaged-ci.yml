@@ -3,42 +3,8 @@ name: Electron packaged CI
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled, edited]
-    paths:
-      - '.github/workflows/electron-packaged-ci.yml'
-      - 'scripts/ci/packaged-ci-*.mts'
-      - 'scripts/ci/verify-bundled-undici.cjs'
-      - 'test/scripts/verify-bundled-undici.test.cjs'
-      - '.node-version'
-      - 'scripts/ci/ci-change-scope.mts'
-      - 'scripts/ci/verify-dmg-artwork.mts'
-      - 'resources/dmg/**'
-      - 'scripts/tsconfig/tsconfig.packaged-ci.json'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'scripts/electron-builder/**'
-      - 'runtime.lock.json'
-      - 'scripts/e2e/opencode-project-path-packaged.mjs'
-      - 'src/main/services/runtime/ClaudeMultimodelBridgeService.ts'
-      - 'src/main/services/runtime/runtimeStatusExecutionContext.ts'
-      - 'src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts'
-      - 'managed-git.lock.json'
-      - 'scripts/stage-managed-git.mjs'
-      - 'src/main/utils/managedGit.ts'
-      - 'scripts/stage-runtime.mjs'
-      - 'scripts/lib/github-release-download-error.mjs'
-      - 'scripts/lib/runtime-archive-checksum.mjs'
-      - 'scripts/lib/runtime-payload-cache.mjs'
-      - 'scripts/lib/runtime-payload-inventory.mts'
-      - 'scripts/lib/runtime-windows-zip-extraction.mts'
-      - 'scripts/lib/runtime-windows-zip-extraction.test.mts'
-      - 'scripts/lib/runtime-archive-extraction.mts'
-      - 'scripts/ensure-electron-install.cjs'
-      - 'scripts/prepare-cpu-features-rebuild.cjs'
-      - 'scripts/postinstall-electron.cjs'
-      - 'src/main/ipc/window.ts'
-      - 'src/main/utils/electronDevPathOverrides.ts'
-      - 'src/main/bootstrapUserDataMigration.ts'
+    # No GitHub paths filter: its 3,000-file cap can silently skip Host/provider changes.
+    # The checked-out exact local git diff is classified by packaged-ci-cli.mts.
 
 permissions:
   contents: read
@@ -67,6 +33,8 @@ jobs:
           node-version-file: .node-version
       - name: Verify packaged CI policy contracts
         run: node --test scripts/ci/packaged-ci-policy.test.mts
+      - name: Test provider archive integrity gate
+        run: node --test scripts/ci/packaged-ci-provider-integrity.test.ts
       - name: Classify exact local PR diff
         id: scope
         run: node scripts/ci/packaged-ci-cli.mts classify
@@ -112,9 +80,14 @@ jobs:
             pack: pack:linux
             bundle: release/linux-unpacked
 
+    env:
+      OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+      OPENCODE_V2_TEST_PLATFORM: ${{ matrix.platform }}
+
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
@@ -136,6 +109,8 @@ jobs:
               find "$root" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
             fi
           done
+      - name: Verify selected provider archives against frozen lock before install
+        run: node scripts/ci/packaged-ci-provider-integrity.ts
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify managed Git pins and archive path safety
@@ -168,6 +143,25 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=8192
         run: pnpm build
+      - name: Select exact Host Node for candidate staging
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+      - name: Prepare actual pinned V2 Bun, engine and admitted process custody
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+          OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ runner.temp }}/opencode-v2-packaged-inputs.json
+        run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
+      - name: Prefill pinned macOS arm64 Host Node archive
+        if: matrix.platform == 'darwin-arm64'
+        run: node scripts/ci/prefill-legacy-host-macos-node.mts
+      - name: Stage V2 Host closure in existing candidate extraResources
+        run: node scripts/legacy-agent-host/stage-opencode-v2-packaged.ts
+      - name: Typecheck and test packaged Host capture boundaries
+        shell: bash
+        run: |
+          node node_modules/@typescript/native/bin/tsc -p tsconfig.legacy-agent-host-scripts.json
+          node --test scripts/legacy-agent-host/candidate-closure.test.ts scripts/legacy-agent-host/packaged-opencode-v2-inputs.test.ts scripts/legacy-agent-host/stage-node.test.ts
       - name: Package unsigned test bundle
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -197,6 +191,26 @@ jobs:
       - name: Smoke packaged app under Xvfb
         if: matrix.os == 'linux'
         run: xvfb-run -a node ./scripts/electron-builder/smokePackagedApp.cjs "${{ matrix.bundle }}" linux
+      - name: Qualify actual packaged V2 Host tools, MCP, Stop and cold Resume
+        # The runner restores its disposable checkout and the intact legacy payload
+        # in finally. No parent shell may keep the Windows checkout as its cwd.
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        env:
+          OPENCODE_V2_PACKAGED_RECEIPT: ${{ runner.temp }}/opencode-v2-packaged.json
+        run: node "${{ github.workspace }}/scripts/legacy-agent-host/run-packaged-opencode-v2.ts" "${{ matrix.bundle }}" "${{ matrix.platform }}"
+      - name: Preserve exact packaged Host evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: packaged-v2-host-${{ matrix.platform }}-${{ github.event.pull_request.head.sha }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/opencode-v2-packaged-inputs.json
+            ${{ runner.temp }}/opencode-v2-packaged.json
+            ${{ runner.temp }}/opencode-v2-packaged-native.json
+            ${{ github.workspace }}/resources/legacy-agent-host/opencode-v2-candidate.json
 
   packaged-full-gate:
     needs: [packaged-scope, packaged-smoke]

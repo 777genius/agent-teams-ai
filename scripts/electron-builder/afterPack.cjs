@@ -677,20 +677,19 @@ async function validateNativeBinaries(appOutDir, targetPlatform, targetArch) {
   for (const filePath of files) {
     const relativePath = path.relative(appOutDir, filePath);
     const metadata = await detectBinaryMetadata(filePath);
-    if (!metadata) {
-      continue;
-    }
+    if (!metadata) continue;
+    if (isBinaryCompatible(metadata.format, metadata.archs, targetPlatform, targetArch)) continue;
 
-    if (isBinaryCompatible(metadata.format, metadata.archs, targetPlatform, targetArch)) {
-      continue;
-    }
-
-    if (
-      isKnownAllowedNativeMismatch(
-        relativePath, metadata.format, metadata.archs, targetPlatform, metadata.clrManaged, targetArch
-      )
-    ) {
-      continue;
+    if (isKnownAllowedNativeMismatch(relativePath, metadata.format, metadata.archs,
+      targetPlatform, metadata.clrManaged, targetArch)) continue;
+    if (targetPlatform === 'win32' && targetArch === 'x64' && metadata.format === 'pe' &&
+      metadata.archs.size === 1 && metadata.archs.has('ia32') && relativePath.split(path.sep).join('/') ===
+      'resources/legacy-agent-host/native/opencode-v2/engine/local-cli/node_modules/@yuuang/ffi-rs-win32-ia32-msvc/ffi-rs.win32-ia32-msvc.node') {
+      const target = await (await import('../legacy-agent-host/packaged-opencode-v2-inputs.ts'))
+        .readPackagedOpenCodeV2UnusedWindowsFfi(await fs.promises.realpath(path.join(appOutDir, 'resources/legacy-agent-host')),
+          { manifestSha256: process.env.OPENCODE_V2_PACKAGED_MANIFEST_SHA256, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD });
+      const actual = await detectBinaryMetadata(target);
+      if (actual?.format === 'pe' && actual.archs.size === 1 && actual.archs.has('x64')) continue;
     }
 
     mismatches.push({
@@ -760,6 +759,10 @@ async function afterPack(context) {
     );
   }
 
+  if (targetPlatform === 'win32' && await fileExists(path.join(context.appOutDir, 'resources/legacy-agent-host/opencode-v2-candidate.json')))
+    await (await import('../legacy-agent-host/packaged-opencode-v2-inputs.ts'))
+      .preservePackagedOpenCodeV2DependencyLinks(await fs.promises.realpath(path.join(context.appOutDir, 'resources/legacy-agent-host')),
+        { manifestSha256: process.env.OPENCODE_V2_PACKAGED_MANIFEST_SHA256, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD });
   await signManagedGitBinaries(context);
 
   if (removedPaths.length > 0) {

@@ -10,6 +10,8 @@ import {
   renameSync,
   rmSync,
   statSync,
+  symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -26,6 +28,7 @@ import { deliveryFingerprint, normalizeBinding, runtimeDigest } from '../dist/ru
 import type {
   OpenCodeCaptureRequest,
   OpenCodeAfterRequest,
+  OpenCodeV2AfterRequest,
 } from '../dist/evidence/opencodeCaptureContracts.js';
 import { ReviewApplier } from '@agent-teams/task-change-ledger/review-apply';
 import type { RuntimeSessionRecord } from '../dist/runtime/contracts.js';
@@ -135,9 +138,10 @@ function fixture(t: TestContext) {
   const windows = new ToolEvidenceWindows();
   let current = true,
     refuseFence = false;
-  const make = () =>
+  const make = (nativeGeneration?: 'v2') =>
     createOpenCodeInputEvidenceCapture({
       captured,
+      ...(nativeGeneration ? { nativeGeneration } : {}),
       ledgerProjectDir: projectDir,
       windows,
       readRuntime: () => ({ record, attached: true }),
@@ -307,6 +311,69 @@ test('ordered same-path native patch chain records one actual endpoint event wit
   );
   assert.equal(row.toolUseId, 'TEST-native-1');
   assert.equal(readFileSync(f.events, 'utf8').trim().split('\n').length, 1);
+});
+test('a transient external read leaves only selected V2 edit proof with explicit read-resolution uncertainty', async (t) => {
+  const f = fixture(t), capture = f.make('v2');
+  const readDir = join(f.workspace, 'read-target'), outside = join(f.root, 'outside');
+  const retained = join(f.root, 'retained-read-target'), readPath = join(readDir, 'read.txt');
+  mkdirSync(readDir); mkdirSync(outside);
+  writeFileSync(readPath, 'TEST local boundary bytes\n');
+  writeFileSync(join(outside, 'read.txt'), 'TEST external transient bytes\n');
+  const request = { ...f.request, dialect: 'v2' as const };
+  await capture.observe(request);
+  assert.equal(capture.readStatus().baseline, 'ready');
+  renameSync(readDir, retained);
+  try {
+    symlinkSync(outside, readDir, process.platform === 'win32' ? 'junction' : 'dir');
+    assert.equal(realpathSync(readPath), join(outside, 'read.txt'));
+    assert.equal(readFileSync(readPath, 'utf8'), 'TEST external transient bytes\n');
+  } finally {
+    if (existsSync(readDir)) unlinkSync(readDir);
+    renameSync(retained, readDir);
+  }
+  assert.equal(realpathSync(readPath), readPath);
+  assert.equal(readFileSync(readPath, 'utf8'), 'TEST local boundary bytes\n');
+  writeFileSync(f.file, 'TEST final observed\n');
+  // Controlled filesystem evidence: no claim that this test ran a native engine.
+  const edit: OpenCodeV2AfterRequest['items'][number] = {
+    dialect: 'v2', protocolRevision: '2.1.4', messageId: 'msg_ASSISTANT',
+    callId: 'TEST-edit', tool: 'edit', status: 'completed', providerExecuted: false,
+    input: { path: f.file, oldString: 'TEST initially dirty', newString: 'TEST final observed' },
+    metadata: { truncated: false, files: [{ file: 'dirty.txt', status: 'modified',
+      patch: `Index: dirty.txt\n===================================================================\n--- dirty.txt\n+++ dirty.txt\n${patch('TEST initially dirty', 'TEST final observed')}`,
+      additions: 1, deletions: 1 }] },
+    calledEvent: { id: 'evt_edit_called', seq: 3 },
+    completedEvent: { id: 'evt_edit_success', seq: 4, type: 'session.tool.success' },
+  };
+  await capture.observe({
+    ...request, phase: 'after', nativeInputId: 'msg_INPUT', beforeObserved: true,
+    outcome: 'succeeded', items: [{
+      ...edit, callId: 'TEST-read', tool: 'read', input: { path: readPath },
+      metadata: { truncated: false }, calledEvent: { id: 'evt_read_called', seq: 1 },
+      completedEvent: { id: 'evt_read_success', seq: 2, type: 'session.tool.success' as const },
+    }, edit],
+  });
+  const row = JSON.parse(readFileSync(f.events, 'utf8').trim()) as {
+    nativeCaptureProof: { kind: string; tools: { callId: string; calledSeq: number; completedSeq: number }[] };
+    confidence: string; warnings: string[];
+  };
+  assert.equal(row.nativeCaptureProof.kind, 'opencode-update-patch-v2');
+  assert.deepEqual(row.nativeCaptureProof.tools.map(({ callId, calledSeq, completedSeq }) =>
+    ({ callId, calledSeq, completedSeq })), [{ callId: 'TEST-edit', calledSeq: 3, completedSeq: 4 }]);
+  assert.ok(row.warnings.includes('Native V2 read resolution at execution is unqualified; file images attest only the original input window boundaries.'));
+  assert.ok(row.warnings.some(warning => warning.startsWith('Native capture interval is partial:')));
+  assert.equal(row.confidence, 'low');
+  assert.deepEqual(capture.readStatus(), {
+    phase: 'gap', baseline: 'ready', reason: 'selected-update-only-partial-coverage',
+  });
+  const changes = await f.read();
+  assert.ok(changes);
+  const content = await new FileContentResolver({ mode: 'ledger-only' }).getFileContent(
+    'test-writer', 'worker', f.file, changes.files[0]!.snippets
+  );
+  assert.equal(content.originalFullContent, 'TEST initially dirty\n');
+  assert.equal(content.modifiedFullContent, 'TEST final observed\n');
+  assert.equal(changes.files[0]!.snippets[0]!.ledger!.nativeCapture, 'qualified');
 });
 for (const mode of [
   'missed',

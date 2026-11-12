@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -27,6 +27,92 @@ function event(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+
+test('unfiltered PR trigger reaches the local classifier beyond GitHub’s 3000-file limit', () => {
+  const workflow = readFileSync(
+    new URL('../../.github/workflows/electron-packaged-ci.yml', import.meta.url),
+    'utf8'
+  );
+  const trigger = workflow.split('\npermissions:')[0] ?? '';
+  assert.match(trigger, /^  pull_request:\s*$/m);
+  assert.doesNotMatch(
+    trigger,
+    /^    paths(?:-ignore)?:/m,
+    'GitHub paths filter can omit the later-than-3000th change'
+  );
+  const firstThreeThousand = Array.from({ length: 3000 }, (_, i) =>
+    raw('A', [`src/main/ordinary-${i}.ts`])
+  ).join('');
+  assert.equal(classifyPackagedPr('pull_request', event(), firstThreeThousand).scope, 'app');
+  const hostChange = raw('M', [
+    'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2MemberProvider.ts',
+  ]);
+  assert.equal(classifyPackagedPr('pull_request', event(), firstThreeThousand + hostChange).scope, 'full');
+});
+
+// A real Git fixture catches truncation in collection before classification.
+test('Git collection sees a packaging-sensitive change after more than 3000 ordinary files', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'packaged-ci-large-diff-'));
+  const env = {
+    ...process.env,
+    GIT_AUTHOR_NAME: 'TEST',
+    GIT_AUTHOR_EMAIL: 'test@example.invalid',
+    GIT_COMMITTER_NAME: 'TEST',
+    GIT_COMMITTER_EMAIL: 'test@example.invalid',
+    GITHUB_EVENT_NAME: 'pull_request',
+    GITHUB_EVENT_PATH: join(cwd, 'event.json'),
+  };
+  function git(args: string[]): string {
+    const result = spawnSync('git', args, {
+      cwd, env, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
+    });
+    assert.equal(result.status, 0, result.stderr || result.error?.message);
+    return result.stdout.trim();
+  }
+  try {
+    git(['init', '--quiet']);
+    mkdirSync(join(cwd, 'src/main'), { recursive: true });
+    writeFileSync(join(cwd, 'src/main/baseline.ts'), 'export const baseline = 1;\\n');
+    git(['add', 'src']);
+    git(['commit', '-m', 'TEST baseline']);
+    const base = git(['rev-parse', 'HEAD']);
+
+    for (let index = 0; index < 3001; index++) {
+      const name = String(index).padStart(4, '0');
+      writeFileSync(join(cwd, 'src/main/ordinary-' + name + '.ts'),
+        'export const ordinary = ' + index + ';\\n');
+    }
+    git(['add', 'src']);
+    git(['commit', '-m', 'TEST ordinary changes']);
+    const payload = event({
+      pull_request: {
+        ...event().pull_request,
+        base: { sha: base },
+        head: { sha: git(['rev-parse', 'HEAD']) },
+      },
+    });
+    writeFileSync(env.GITHUB_EVENT_PATH, JSON.stringify(payload));
+    const ordinary = collectPackagedDecision(env, cwd);
+    assert.equal(ordinary.scope, 'app', ordinary.reason);
+
+    // This path sorts after src/ and must remain visible to raw Git collection.
+    mkdirSync(join(cwd, 'vendor/provider-migration'), { recursive: true });
+    writeFileSync(join(cwd, 'vendor/provider-migration/zzz-package.tgz'), 'TEST package');
+    git(['add', 'vendor']);
+    git(['commit', '-m', 'TEST sensitive package change']);
+    payload.pull_request.head.sha = git(['rev-parse', 'HEAD']);
+    writeFileSync(env.GITHUB_EVENT_PATH, JSON.stringify(payload));
+    const sensitive = collectPackagedDecision(env, cwd);
+    assert.equal(sensitive.scope, 'full');
+    assert.equal(sensitive.reason, 'change outside app-only allowlist');
+  } finally {
+    // The >3,000-file Git fixture runs on remote CI filesystems where recursive
+    // unlink can briefly report ENOTEMPTY. Bounded retries only affect TEST
+    // teardown; the classifier and its strict gate remain unchanged.
+    rmSync(cwd, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});
 
 // This contract turns red if ordinary source/test work loses APP or packaging inputs gain it.
 test('draft regular source/test changes may accompany the existing window trigger', () => {

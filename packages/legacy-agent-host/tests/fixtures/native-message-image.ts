@@ -34,7 +34,7 @@ export async function uploadNativeMessageImage(
       base64: NATIVE_MESSAGE_PNG.toString('base64'),
     })
   );
-  assert.equal(reply.ok, true);
+  assert.equal(reply.ok, true, `original Team attachment upload reply: ${JSON.stringify(reply).slice(0, 2000)}`);
   const value = row(reply.value),
     ref = row(value.reference);
   assert.equal(value.nextOffset, null);

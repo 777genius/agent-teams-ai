@@ -79,7 +79,7 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
   const binary = await pinned(bridge);
   const artifactSource = await pinned({ path: join(artifact.directory, 'registered-process-darwin.c'),
     sha256: row(JSON.parse(await readFile(manifest.path, 'utf8'))).sourceSha256 });
-  assert.equal(artifactSource.sha256, '310161c5d404d45e4f149b15b88c3805bfeddc4cc4c424460cddee3e845a284b');
+  assert.equal(artifactSource.sha256, 'a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5');
   assert.equal(await fileDigest(join(repo, 'packages/legacy-agent-host/native/registered-process-darwin.c')), artifactSource.sha256);
   const fixture = await prepareProcessFixture(repo, { pnpmEntry: pnpm, processArtifact: artifact,
     nativeClaude: { ...claude, modelUrl: 'http://127.0.0.1:9' } });

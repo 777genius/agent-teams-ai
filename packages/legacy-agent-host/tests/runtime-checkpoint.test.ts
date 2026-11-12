@@ -572,6 +572,63 @@ test('failed private payload publication during stop does not skip captured driv
   assert.equal(f.sessions[0]?.captures, 1);
 });
 
+test('trusted final checkpoint is isolated from public capture and published once before close', async (t) => {
+  const f = await setup(t);
+  let closingReads = 0;
+  let originalCapture: Session['checkpoint'] | undefined;
+  const owner = f.make('host-1', {
+    checkpointBeforeClose: (target, sessionRef) => {
+      closingReads++;
+      assert.deepEqual(target, binding());
+      assert.equal(sessionRef, f.sessions[0]!.sessionRef);
+      return originalCapture!();
+    },
+  });
+  await owner.openSession({ binding: binding(), config: config() });
+  const session = f.sessions[0]!;
+  await complete(owner, session);
+  originalCapture = session.checkpoint;
+  session.checkpoint = () => ({ ok: false, code: 'unavailable' });
+  assert.equal((await owner.captureCheckpoint({ binding: binding(), checkpointId: 'sealed-public' })).status, 'held');
+  assert.equal(closingReads, 0, 'public capture never obtains the private teardown capability');
+  const stopped = await owner.stopSession(binding());
+  assert.equal(stopped.custody, 'released');
+  const final = stopped.checkpoints?.find(value => value.status === 'published');
+  assert.ok(final?.reference, 'idle original close publishes its final private evidence');
+  assert.equal(closingReads, 1);
+  assert.equal(session.captures, 1);
+  await owner.stopSession(binding());
+  assert.equal(closingReads, 1, 'repeated close cannot replay capture');
+  await f.make('host-2').restoreSession(restoreRequest(final.reference));
+  assert.deepEqual(f.sessions[1]!.history, ['TEST A']);
+  assert.equal(f.sessions[1]!.submits.length, 0, 'cold restore does not replay prior work');
+});
+
+test('active or failed final checkpoint cannot fabricate a restorable closing session', async (t) => {
+  for (const active of [true, false]) {
+    const f = await setup(t);
+    let closingReads = 0;
+    const owner = f.make('host-1', {
+      checkpointBeforeClose: () => {
+        closingReads++;
+        throw new Error('TEST private final checkpoint unavailable');
+      },
+    });
+    await owner.openSession({ binding: binding(), config: config() });
+    if (active) {
+      await owner.admitDelivery(delivery('still-active'));
+      await owner.dispatchNext(binding());
+    }
+    const stopped = await owner.stopSession(binding());
+    assert.equal(stopped.custody, 'released', 'missing evidence never skips original process cleanup');
+    assert.equal(closingReads, active ? 0 : 1, 'closing capability is used only after Runtime establishes idle');
+    assert.equal(f.sessions[0]!.captures, 0, 'no fallback through the sealed public driver');
+    assert.equal(stopped.checkpoints?.some(value => value.status === 'published') ?? false, false);
+    await owner.stopSession(binding());
+    assert.equal(closingReads, active ? 0 : 1, 'failed final capture is never retried');
+  }
+});
+
 test(
   'idle capture deadline returns held without capturing or changing the active input',
   { timeout: 10_000 },

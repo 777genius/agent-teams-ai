@@ -83,4 +83,14 @@ export interface RegisteredProcessRootSource {
   ): {
     capture(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture;
   };
+  /** Fresh native executable evidence for a previously captured original child only. */
+  readRootExecutable?(
+    child: ChildProcess,
+    executable: { path: string; sha256: string }
+  ): {
+    executablePath: string;
+    executableSha256: string;
+    pid: number;
+    startIdentity: string;
+  };
 }
