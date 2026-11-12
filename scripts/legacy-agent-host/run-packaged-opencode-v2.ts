@@ -1,7 +1,7 @@
 /** Run the existing Host scenario using only the actual unsigned candidate's resources. */
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { cp, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { candidateDigest } from './candidate-closure.ts';
@@ -171,7 +171,16 @@ finally {
   receipt.legacyRuntimeRestored = !legacyMoved;
   receipt.status = passed && receipt.cleanup ? 'PASS' : 'INCOMPLETE';
   receipt.phase = 'finished';
-  try { await writeFile(receiptPath, JSON.stringify(receipt, null, 2) + '\n', { mode: 0o600 }); }
+  try {
+    const serialized = JSON.stringify(receipt, null, 2) + '\n';
+    await writeFile(receiptPath, serialized, { mode: 0o600 });
+    if (receipt.status !== 'PASS') process.stdout.write(JSON.stringify({
+      kind: 'TEST_PACKAGED_V2_FAILURE_RECEIPT', sourceHead, platform: requestedPlatform,
+      receiptBytes: Buffer.byteLength(serialized),
+      receiptSha256: createHash('sha256').update(serialized).digest('hex'),
+      receipt: Buffer.byteLength(serialized) <= 256 * 1024 ? receipt : null,
+    }) + '\n');
+  }
   catch (error) { cleanupErrors.push(error); }
 }
 if (originalFailure !== undefined) {

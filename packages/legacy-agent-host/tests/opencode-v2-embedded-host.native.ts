@@ -316,7 +316,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     signal?.removeEventListener('abort', cancelOriginalHost);
     cleanup = cleanupErrors.length === 0;
     try {
-      await writeFile(receiptPath, JSON.stringify({
+      const receipt = {
         kind: packaged ? 'TEST_PACKAGED_NATIVE_V2_HOST' : 'TEST_NATIVE_V2_EMBEDDED_HOST',
         status: passed && cleanup ? 'PASS' : 'INCOMPLETE',
         ...(packaged ? { packaged: packaged.evidence } : {}),
@@ -334,7 +334,16 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         modelOrigin: 'localhost-scripted', modelRequests: model?.observations.length ?? 0,
         modelFailures: model?.failures ?? [], vendorAuthQualified: false,
         desktopQualified: false, releaseQualified: false,
-      }, null, 2) + '\n', { mode: 0o600 });
+      };
+      const serialized = JSON.stringify(receipt, null, 2) + '\n';
+      await writeFile(receiptPath, serialized, { mode: 0o600 });
+      if (!passed || !cleanup) process.stdout.write(JSON.stringify({
+        kind: 'TEST_NATIVE_V2_FAILURE_RECEIPT', sourceHead, platform: `${process.platform}-${process.arch}`,
+        receiptBytes: Buffer.byteLength(serialized),
+        receiptSha256: createHash('sha256').update(serialized).digest('hex'),
+        receipt: Buffer.byteLength(serialized) <= 256 * 1024 ? receipt : null,
+        hostDiagnostics: hosts.map(({ diagnosticBytes, frames }) => ({ diagnosticBytes, frames: frames.slice(-16) })),
+      }) + '\n');
     } catch (error) { cleanupErrors.push(error); }
   }
   if (originalFailure !== undefined) throw originalFailure;
