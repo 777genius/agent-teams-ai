@@ -94,6 +94,10 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   let originalFailure: unknown;
   let lastInputProgress: ReturnType<typeof nativeInputProgress> | undefined;
   let inputReadCount = 0;
+  const passive = !packaged && process.platform === 'darwin' && process.arch === 'x64'
+    ? (await import('./fixtures/native-opencode-team/passive-diagnostics.ts')).createPassiveNativeDiagnosticCapture()
+    : undefined;
+  let hostEpoch = 0;
   let windowsShellSha256: string | undefined;
   const cleanupErrors: unknown[] = [];
   const digests = {
@@ -171,8 +175,13 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     const profilePath = join(root, 'profile.json');
     const bytes = JSON.stringify(profile);
     await writeFile(profilePath, bytes, { mode: 0o600 });
-    const start = () => startHost({ node, entry, root, profile: profilePath,
-      profileHash: createHash('sha256').update(bytes).digest('hex') });
+    const start = () => {
+      const epoch = ++hostEpoch;
+      return startHost({ node, entry, root, profile: profilePath,
+        profileHash: createHash('sha256').update(bytes).digest('hex'),
+        ...(passive ? { testImports: [new URL('./fixtures/native-opencode-team/passive-diagnostics.ts', import.meta.url).href],
+          onDiagnostic: (chunk: Buffer) => passive.accept(chunk, epoch) } : {}) });
+    };
     const binding = { schemaVersion: 1, handleId: `TEST-handle-${namespace}`, owner, scope };
     const envelope = (commandId: string, payload: unknown) => ({ commandId, binding, payload });
     host = start();
@@ -279,7 +288,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   } catch (error) { originalFailure = error; }
   finally {
     try {
-      if (host) { await host.close(); hosts.push(host.facts()); }
+      if (host) { try { await host.close(); } finally { hosts.push(host.facts()); } }
     } catch (error) { cleanupErrors.push(error); }
     try { await model?.close(); } catch (error) { cleanupErrors.push(error); }
     cleanup = cleanupErrors.length === 0;
@@ -293,6 +302,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         digests: { ...digests, ...(windowsShellSha256 ? { windowsShell: windowsShellSha256 } : {}) },
         steps, cleanup,
         inputObservation: { reads: inputReadCount, last: lastInputProgress ?? null },
+        ...(passive ? { passiveNativeDiagnostics: passive.entries } : {}),
         failureCode: originalFailure instanceof Error && 'code' in originalFailure &&
           typeof originalFailure.code === 'string' &&
           ['ERR_ASSERTION', 'ABORT_ERR', 'EPIPE', 'ECONNRESET', 'ETIMEDOUT'].includes(originalFailure.code)
