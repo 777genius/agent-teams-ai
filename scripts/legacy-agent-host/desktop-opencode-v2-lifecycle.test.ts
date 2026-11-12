@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import { CONTEXT_MARKER, REQUIRED_TOOLS, startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import { checkpoint, jsonDigest, originalHistoryMarker } from './desktop-resume-records.ts';
 import { separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fixture.ts';
+import { assertCapturedColdMetadataAbsent, assertColdOpenCodeRuntimeRecords } from './desktop-opencode-v2-cold-metadata.ts';
 
 const messageId = '11111111-2222-4333-8444-555555555555';
 const tools = ['shell', ...REQUIRED_TOOLS.map(name => 'agent-teams_' + name)]
@@ -32,6 +33,110 @@ test('V2 lifecycle retains the pre-Launch metadata birth identity and refuses re
     { host: { ...host, birth: 'TEST-replaced-host' }, children: [metadata, runtime] }, 1));
   assert.throws(() => separateDesktopOpenCodeRuntimeChildren(original,
     { host, children: [metadata, runtime, { ...runtime, pid: 13 }] }, 1));
+});
+
+test('cold metadata reads accept only original completed PNG inputs and no extra Runtime', () => {
+  const source = {
+    mode: 'native-conversation-ui',
+    conversationUiProof: {
+      status: 'PASS',
+      custody: 'released',
+      nativeChildAbsentBeforeQuit: true,
+      nativeInputs: 2,
+    },
+  };
+  const session = {
+    phase: 'closed',
+    custody: 'released',
+    inputs: [
+      { phase: 'terminal', terminal: 'succeeded' },
+      { phase: 'terminal', terminal: 'succeeded' },
+    ],
+  };
+  assert.doesNotThrow(() => assertColdOpenCodeRuntimeRecords(source, {}, [session]));
+  for (const changed of [
+    { ...session, phase: 'allocated' },
+    { ...session, custody: 'unknown' },
+    { ...session, inputs: [] },
+    { ...session, inputs: [{ phase: 'unknown' }, session.inputs[1]] },
+  ])
+    assert.throws(() => assertColdOpenCodeRuntimeRecords(source, {}, [changed]));
+  assert.throws(() => assertColdOpenCodeRuntimeRecords(source, {}, [session, session]));
+});
+
+test('cold cleanup proves the captured detached metadata child absent before recording success', () => {
+  const original = { metadataProcessCount: 1, captured: {
+    host: { pid: 10, parentPid: 1, groupId: 10, birth: 'TEST-host-birth', command: '/TEST/node' },
+    children: [{ pid: 11, parentPid: 10, groupId: 11, birth: 'TEST-metadata-birth', command: '/TEST/bun' }],
+  } };
+  const proof: Record<string, unknown> = structuredClone(original);
+  const evidence = { coldOpenCodeMetadata: proof };
+  assert.throws(() => assertCapturedColdMetadataAbsent(evidence, [{ pid: 11, ppid: 10, pgid: 11 }]));
+  assert.equal(proof.metadataAbsentBeforeHarnessCleanup, undefined);
+  assert.throws(() => assertCapturedColdMetadataAbsent(evidence, [{ pid: 11, ppid: 1, pgid: 11 }]));
+  assert.equal(proof.metadataAbsentBeforeHarnessCleanup, undefined, 'orphaning is not physical termination');
+  // A reused numeric PID is deliberately uncertain, never adopted or signalled.
+  assert.throws(() => assertCapturedColdMetadataAbsent(evidence, [{ pid: 11, ppid: 99, pgid: 99 }]));
+  assert.equal(proof.metadataAbsentBeforeHarnessCleanup, undefined);
+  assertCapturedColdMetadataAbsent(evidence, [{ pid: 42, ppid: 1, pgid: 42 }]);
+  assert.equal(proof.metadataAbsentBeforeHarnessCleanup, true);
+  assert.deepEqual(proof.captured, original.captured);
+  const absent: Record<string, unknown> = {};
+  assertCapturedColdMetadataAbsent(absent, []);
+  assert.deepEqual(absent, {});
+});
+
+test('cold metadata preserves only the exact pending-open UNKNOWN witnessed by original Quit', () => {
+  const session = {
+    phase: 'held',
+    custody: 'unknown',
+    diagnostic: 'open-unknown',
+    sealed: true,
+    nativeReady: false,
+    inputs: [],
+    interactions: [],
+  };
+  const proof = {
+    status: 'PASS',
+    scenario: 'pending-open',
+    afterQuit: {
+      session: structuredClone(session),
+      runtimeOutcome: 'held-unknown',
+      debtRetained: true,
+      originalGroupAbsentBeforeHarnessCleanup: true,
+      nativeChildrenAbsent: true,
+    },
+  };
+  const source = { mode: 'native-quit-ui', nativeQuitUiProof: proof };
+  assert.doesNotThrow(() => assertColdOpenCodeRuntimeRecords(source, {}, [session]));
+  assert.throws(() =>
+    assertColdOpenCodeRuntimeRecords(source, {}, [
+      { ...session, phase: 'closed', custody: 'released' },
+    ])
+  );
+  for (const changed of [
+    { ...proof, scenario: 'active' },
+    { ...proof, afterQuit: { ...proof.afterQuit, debtRetained: false } },
+    { ...proof, afterQuit: { ...proof.afterQuit, nativeChildrenAbsent: false } },
+    { ...proof, afterQuit: { ...proof.afterQuit, originalGroupAbsentBeforeHarnessCleanup: false } },
+  ])
+    assert.throws(() =>
+      assertColdOpenCodeRuntimeRecords({ ...source, nativeQuitUiProof: changed }, {}, [session])
+    );
+  const foreign = { ...session, inputs: [{ phase: 'claimed' }] };
+  assert.throws(() =>
+    assertColdOpenCodeRuntimeRecords(
+      {
+        ...source,
+        nativeQuitUiProof: {
+          ...proof,
+          afterQuit: { ...proof.afterQuit, session: foreign },
+        },
+      },
+      {},
+      [foreign]
+    )
+  );
 });
 
 test('V2 Quit oracle holds one actual HTTP request and records its original disconnect', async () => {

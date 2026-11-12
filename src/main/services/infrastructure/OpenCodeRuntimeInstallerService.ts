@@ -836,7 +836,7 @@ export class OpenCodeRuntimeInstallerService {
         tarball,
         getExecutableName(),
         generation === 'v2'
-          ? { packageName: selected.packageName, version: platformMetadata.version! }
+          ? { packageName: selected.packageName, version: platformMetadata.version }
           : undefined
       );
       const binary = extracted.binary;
@@ -845,7 +845,7 @@ export class OpenCodeRuntimeInstallerService {
       const versionDir = path.join(
         runtimeRoot,
         'versions',
-        platformMetadata.version!,
+        platformMetadata.version,
         selected.packageName,
         ...(generation === 'v2' ? [randomUUID()] : [])
       );

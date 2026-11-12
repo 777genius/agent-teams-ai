@@ -23,6 +23,7 @@ import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { desktopProofEvidence } from './desktop-proof-evidence.ts';
 import { runDesktopNativeReview } from './desktop-native-review-compose.ts';
 import { desktopReadbackArtifacts, runDesktopNativeReadback } from './desktop-readback-fixture.ts';
+import { assertCapturedColdMetadataAbsent, captureDesktopOpenCodeV2ColdMetadata } from './desktop-opencode-v2-cold-metadata.ts';
 import { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
 import { captureDesktopCodexNativeInputs, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
@@ -285,6 +286,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         assertOwnedRenderer: () => assertOwnedCdpListener(group), evidence });
     await verifyCapturedDesktopBinding({ cdp, group, mode, fixture, evidence, repo, packed,
       remainingStartupMs: startupBudgetMs - (performance.now() - startupStarted) });
+    const coldMetadata = ['native-readback-ui', 'native-quit-readback-ui'].includes(mode)
+      ? await captureDesktopOpenCodeV2ColdMetadata(cdp, { root: fixture.root, node: fixture.node, hostEntry: fixture.hostEntry,
+        group, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) }) : undefined;
+    if (coldMetadata) hostPid = coldMetadata.hostPid;
     if (['codex-account-read', 'codex-account-auth'].includes(mode)) {
       const readyUntil = Date.now() + 60000;
       let initial: Record<string, unknown> | undefined;
@@ -346,7 +351,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     } else if (processUiMode || controlledProcessMode) {
       hostPid = await qualifyColdProcessUi(cdp, { fixture, evidence, group, processReadbackMode, processReadbackSource,
         controlledSource: controlledProcess?.source, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
-    } else if (await runDesktopNativeQuitMode(cdp, {mode, root: fixture.root, seed: fixture.uiSeed, evidence, model: openCodeLifecycleModel ?? conversationModel, assertOwnedRenderer: () => assertOwnedCdpListener(group)})) {
+    } else if (await runDesktopNativeQuitMode(cdp, {mode, root: fixture.root, seed: fixture.uiSeed, evidence, model: openCodeLifecycleModel ?? conversationModel, coldMetadata, assertOwnedRenderer: () => assertOwnedCdpListener(group)})) {
       // Exact Quit/readback witnesses are finalized below before fallback cleanup.
     } else if (nativeReviewMode) {
       await runDesktopNativeReview(cdp, { fixture, evidence, model: conversationModel, openCodeReviewModel,
@@ -518,7 +523,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         seed: fixture.uiSeed,
         evidence,
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
+        metadataProcessCount: coldMetadata?.metadataProcessCount ?? 0,
         assertNoNativeChildren: () => {
+          if (coldMetadata) return coldMetadata.assertNoRuntimeChildren();
           const table = processTable();
           const hosts = table.filter(
             (row) =>
@@ -611,6 +618,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       false,
       'captured standalone Host retired during guarded app Quit'
     );
+    assertCapturedColdMetadataAbsent(evidence);
     await verifyDesktopNativeQuitAfterShutdown(mode, fixture.root, evidence, nativeChildren, openCodeLifecycleModel ?? conversationModel, group);
     if (activitySource) await finalizeDesktopActivityReadback(evidence, activitySource, () => assert.equal(processTable().some(row => row.pid === hostPid), false));
     evidence.status = 'PASS';

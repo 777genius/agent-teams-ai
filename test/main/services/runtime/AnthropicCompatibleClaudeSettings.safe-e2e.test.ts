@@ -5,6 +5,17 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const getDoctorInvokedCandidatesMock = vi.hoisted(() =>
+  vi.fn(() => {
+    throw new Error('Claude settings environment tests must not run native doctor probes');
+  })
+);
+
+// These scenarios read settings and build an environment; native CLI discovery is a separate port.
+vi.mock('@main/services/team/ClaudeDoctorProbe', () => ({
+  getDoctorInvokedCandidates: getDoctorInvokedCandidatesMock,
+}));
+
 describe('Anthropic-compatible Claude settings safe e2e', () => {
   let tempHome: string;
   let claudeRoot: string;
@@ -15,6 +26,7 @@ describe('Anthropic-compatible Claude settings safe e2e', () => {
 
   beforeEach(async () => {
     vi.resetModules();
+    getDoctorInvokedCandidatesMock.mockClear();
     tempHome = await mkdtemp(path.join(os.tmpdir(), 'anthropic-compatible-settings-e2e-'));
     claudeRoot = path.join(tempHome, '.claude');
     await mkdir(claudeRoot, { recursive: true });
@@ -61,6 +73,7 @@ describe('Anthropic-compatible Claude settings safe e2e', () => {
       process.env.ANTHROPIC_BASE_URL = originalAnthropicBaseUrl;
     }
     await rm(tempHome, { recursive: true, force: true });
+    expect(getDoctorInvokedCandidatesMock).not.toHaveBeenCalled();
   });
 
   it('builds provider-managed Anthropic runtime env from user Claude settings', async () => {

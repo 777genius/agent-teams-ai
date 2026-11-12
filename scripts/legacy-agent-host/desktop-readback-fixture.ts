@@ -195,7 +195,8 @@ export async function runDesktopNativeReadback(
     root: string;
     seed: { taskId: string; subject: string };
     assertOwnedRenderer(): void;
-    assertNoNativeChildren(): void;
+    assertNoNativeChildren(): void | Promise<void>;
+    metadataProcessCount?: 0 | 1;
     evidence: Record<string, unknown>;
   }
 ) {
@@ -210,6 +211,7 @@ export async function runDesktopNativeReadback(
   const source = record(JSON.parse(await readFile(join(options.root, 'desktop-backend-receipt.json'), 'utf8')));
   const openCode = source.nativeProvider === 'opencode' && source.nativeGeneration === 'v2';
   if (process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2') assert.equal(openCode, true);
+  if (openCode) assert.equal(options.metadataProcessCount, 1, 'the exact original cold metadata child is captured before UI reads');
   const reply = openCode ? 'REPLY_OPENCODE_ONE' : 'REPLY_NATIVE_ONE';
   const ui = createDesktopUiControls(cdp, {
     assertOwnedRenderer: options.assertOwnedRenderer,
@@ -235,7 +237,7 @@ export async function runDesktopNativeReadback(
       steps.push(value);
     },
   });
-  options.assertNoNativeChildren();
+  await options.assertNoNativeChildren();
   await ui.waitRead(
     `document.querySelectorAll('.kanban-task-card[data-task-id]').length===2`,
     'saved seed plus native Task in ordinary Kanban'
@@ -253,7 +255,7 @@ export async function runDesktopNativeReadback(
     const history = await checkpoint(options.root, before[0]!, 'opencode');
     assert.deepEqual({ nativeSessionId: history.nativeSession, sha256: history.historySha256,
       byteLength: history.history.length }, savedAttachments.nativeHistory,
-    'cold readback retains the exact original native PNG history without allocating a new child');
+    'cold readback retains the exact original native PNG history without allocating a Runtime session child');
   }
   const image = record(
     await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true })
@@ -267,13 +269,15 @@ export async function runDesktopNativeReadback(
     before,
     'UI readback never opens/restores or submits to the original Native session'
   );
-  options.assertNoNativeChildren();
+  await options.assertNoNativeChildren();
   options.evidence.savedNativeReadback = {
     ...record(options.evidence.savedNativeReadback),
     status: 'PASS',
     geometry,
     nativeInputsReplayed: 0,
     nativeAllocations: 0,
+    metadataProcessCount: options.metadataProcessCount ?? 0,
+    runtimeAllocationScope: 'Runtime session children; the original read-only metadata child is counted separately',
     runtimeRecordUnchanged: true,
     screenshot: { path, sha256: await fileDigest(path) },
   };

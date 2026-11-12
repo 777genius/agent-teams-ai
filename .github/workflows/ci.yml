@@ -580,15 +580,8 @@ jobs:
       - name: Rebuild original SQLite for the pinned Electron ABI
         timeout-minutes: 10
         run: |
-          node --input-type=module <<'NODE'
-          import assert from 'node:assert/strict';
-          import { createRequire } from 'node:module';
-          import { rebuild } from '@electron/rebuild';
-          const require = createRequire(import.meta.url);
-          const electronVersion = require('electron/package.json').version;
-          assert.equal(electronVersion, '44.10.1');
-          await rebuild({ buildPath: process.cwd(), electronVersion, force: true, onlyModules: ['better-sqlite3'] });
-          NODE
+          node -e "require('node:assert/strict').equal(require('electron/package.json').version, '44.10.1')"
+          pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1
       - name: Build existing Host and stage checksum-pinned retained release
         env:
           GH_TOKEN: ${{ github.token }}

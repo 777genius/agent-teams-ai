@@ -12,6 +12,13 @@ const fixture = vi.hoisted(() => ({
   authMode: 'auto' as 'auto' | 'oauth' | 'api_key',
   compatibleEndpoint: { enabled: false, baseUrl: '' },
   lookupPreferred: vi.fn(),
+  doctorProbe: vi.fn(() => {
+    throw new Error('Captured shell status tests must not run native doctor discovery');
+  }),
+}));
+
+vi.mock('@main/services/team/ClaudeDoctorProbe', () => ({
+  getDoctorInvokedCandidates: fixture.doctorProbe,
 }));
 
 vi.mock('@main/services/infrastructure/ConfigManager', () => {
@@ -125,6 +132,7 @@ describe.skipIf(process.platform === 'win32')('Anthropic Auto GUI shell safe e2e
 
   beforeEach(async () => {
     vi.resetModules();
+    fixture.doctorProbe.mockClear();
     fixture.authMode = 'auto';
     fixture.compatibleEndpoint = { enabled: false, baseUrl: '' };
     fixture.lookupPreferred.mockReset();
@@ -196,6 +204,7 @@ describe.skipIf(process.platform === 'win32')('Anthropic Auto GUI shell safe e2e
     }
     vi.unstubAllEnvs();
     await rm(sandbox, { recursive: true, force: true });
+    expect(fixture.doctorProbe).not.toHaveBeenCalled();
   });
 
   async function installLoginShell(env: NodeJS.ProcessEnv, delayMs = 100): Promise<void> {

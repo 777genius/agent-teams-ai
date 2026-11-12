@@ -115,4 +115,9 @@ test('selected retained V1/Host V2 acceptance is required by the existing Full q
   assert.match(job, /assert\.equal\(commit, lock\.opencodeV2Delivery\['linux-x64'\]\.sourceCommit\)/);
   assert.doesNotMatch(job, /steps\.retained-source\.outputs\./,
     'the stock helper checkout must never accept a source-derived repository or ref');
+  const sqlite = job.split('      - name: Rebuild original SQLite for the pinned Electron ABI\n')[1]?.split('\n      - name:')[0];
+  assert.ok(sqlite);
+  assert.match(sqlite, /require\('electron\/package\.json'\)\.version, '44\.10\.1'/);
+  assert.match(sqlite, /pnpm exec electron-rebuild --module-dir \. --force --only better-sqlite3 --version 44\.10\.1/);
+  assert.doesNotMatch(sqlite, /--input-type/, 'node-gyp file children cannot inherit a stdin-only Node input type');
 });

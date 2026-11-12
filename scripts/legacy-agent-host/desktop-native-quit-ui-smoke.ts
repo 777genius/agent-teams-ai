@@ -128,6 +128,7 @@ export async function runDesktopNativeQuitMode(
     seed?: { subject: string };
     evidence: Record<string, unknown>;
     model?: QuitModel;
+    coldMetadata?: { metadataProcessCount: 1; assertNoRuntimeChildren(): Promise<void> };
     assertOwnedRenderer(): void;
   }
 ): Promise<boolean> {
@@ -136,6 +137,8 @@ export async function runDesktopNativeQuitMode(
     options.mode === 'native-quit-readback-ui' && process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2';
   const firstPrompt = openCode ? 'OPENCODE_TEAM_ONE' : 'NATIVE_TEAM_ONE';
   const secondPrompt = openCode ? 'OPENCODE_TEAM_TWO' : 'NATIVE_TEAM_TWO';
+  if (openCode && options.mode === 'native-quit-readback-ui')
+    assert.ok(options.coldMetadata, 'the exact original cold metadata child is captured before UI reads');
   assert.ok(options.seed);
   const steps: Record<string, unknown>[] = [];
   const ui = createDesktopUiControls(cdp, {
@@ -178,24 +181,24 @@ export async function runDesktopNativeQuitMode(
       after.product,
       'cold UI reads never replay original commands or delivery'
     );
-    const table = processTable(),
-      paths = record(options.evidence.paths);
-    const hosts = table.filter(
-      (row) =>
+    if (options.coldMetadata) await options.coldMetadata.assertNoRuntimeChildren();
+    else {
+      const table = processTable(), paths = record(options.evidence.paths);
+      const hosts = table.filter(row =>
         row.pgid === Number(record(options.evidence.app).processGroup) &&
-        command(row.pid) === `${String(paths.node)} ${String(paths.hostEntry)}`
-    );
-    assert.equal(hosts.length, 1, 'same-profile original Host transport present');
-    assert.equal(
-      table.filter((row) => row.ppid === hosts[0]!.pid).length,
-      0,
-      'no native child allocated during cold readback'
-    );
+        command(row.pid) === `${String(paths.node)} ${String(paths.hostEntry)}`);
+      assert.equal(hosts.length, 1, 'same-profile original Host transport present');
+      assert.equal(table.filter(row => row.ppid === hosts[0]!.pid).length, 0,
+        'no native child allocated during cold readback');
+    }
     options.evidence.nativeQuitReadback = {
       status: 'INCOMPLETE',
       steps,
       sessionUnchanged: true,
       productUnchanged: true,
+      nativeAllocations: 0,
+      metadataProcessCount: options.coldMetadata?.metadataProcessCount ?? 0,
+      runtimeAllocationScope: 'Runtime session children; the original read-only metadata child is counted separately',
       screenshot: await screenshot(cdp, options.root, 'ui-native-quit-readback.png'),
       qualification: prior.scenario === 'pending-open'
         ? 'Pending-open Quit + same-profile next startup; automatic app.relaunch unqualified'

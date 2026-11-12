@@ -202,6 +202,31 @@ export async function preservePackagedOpenCodeV2DependencyLinks(
   assert.deepEqual(after.manifest, before.manifest);
 }
 
+/** The pinned Windows x64 graph retains ffi-rs's unused ia32 optional payload.
+ * Preserve its manifest bytes; only the original x64 loader branch can execute. */
+export async function readPackagedOpenCodeV2UnusedWindowsFfi(
+  resourcesRoot: string, expected: { manifestSha256: string; sourceHead: string }
+): Promise<string> {
+  assert.equal(process.platform, 'win32'); assert.equal(process.arch, 'x64');
+  const appAsar = join(dirname(resourcesRoot), 'app.asar');
+  const selected = await readPackagedOpenCodeV2({ resourcesRoot,
+    manifestSha256: expected.manifestSha256, appAsar, appAsarSha256: await candidateDigest(appAsar) });
+  assert.equal(selected.manifest.sourceHead, expected.sourceHead);
+  const modules = join(selected.engine, 'local-cli/node_modules');
+  const ffi = JSON.parse(await readFile(join(modules, 'ffi-rs/package.json'), 'utf8'));
+  assert.equal(ffi.name, 'ffi-rs'); assert.equal(ffi.version, '1.3.7');
+  for (const arch of ['ia32', 'x64']) {
+    const name = `@yuuang/ffi-rs-win32-${arch}-msvc`;
+    assert.equal(ffi.optionalDependencies?.[name], '1.3.7');
+    const pkg = JSON.parse(await readFile(join(modules, name, 'package.json'), 'utf8'));
+    assert.equal(pkg.name, name); assert.equal(pkg.version, '1.3.7');
+    assert.equal(pkg.main, `ffi-rs.win32-${arch}-msvc.node`);
+    assert.deepEqual(pkg.os, ['win32']);
+    assert.deepEqual(pkg.cpu, arch === 'ia32' ? ['x64', 'ia32'] : ['x64']);
+  }
+  return join(modules, '@yuuang/ffi-rs-win32-x64-msvc/ffi-rs.win32-x64-msvc.node');
+}
+
 /** Only the actual relocated application and its bundled Node can run this scenario. */
 export async function packagedOpenCodeV2Scenario(
   capture: PackagedOpenCodeV2Capture, sourceRoot: string, harnessPath: string

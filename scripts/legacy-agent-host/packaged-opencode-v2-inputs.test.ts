@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { chmod, copyFile, mkdir, mkdtemp, readFile, readlink, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, isAbsolute, join } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { candidateDigest } from './candidate-closure.ts';
 import { packagedOpenCodeV2Scenario, preservePackagedOpenCodeV2DependencyLinks, readPackagedOpenCodeV2 } from './packaged-opencode-v2-inputs.ts';
@@ -11,6 +12,15 @@ import type { PackagedOpenCodeV2Manifest } from './packaged-opencode-v2-inputs.t
 import type { TestContext } from 'node:test';
 
 const hash = (bytes: string | Buffer) => createHash('sha256').update(bytes).digest('hex');
+const { validateNativeBinaries } = createRequire(import.meta.url)('../electron-builder/afterPack.cjs')._internal;
+
+// Header-only controlled payloads are never loadable native evidence.
+function peHeader(arch: 'ia32' | 'x64' | 'arm64'): Buffer {
+  const bytes = Buffer.alloc(128);
+  bytes.write('MZ'); bytes.writeUInt32LE(64, 0x3c); bytes.write('PE\0\0', 64);
+  bytes.writeUInt16LE(arch === 'ia32' ? 0x14c : arch === 'x64' ? 0x8664 : 0xaa64, 68);
+  return bytes;
+}
 
 /** Unrunnable TEST Node/Bun/CLI; only the real captured graph validator is imported. */
 async function fixture(t: TestContext) {
@@ -54,6 +64,8 @@ async function fixture(t: TestContext) {
     [`${server}/dist/process.js`, 'throw new Error("TEST-only graph, never executed");'],
     [`${effect}/package.json`, JSON.stringify({ name: 'effect', version: '4.0.1', exports: './dist/index.js' })],
     [`${effect}/dist/index.js`, 'export const TEST = true;'],
+    ['local-cli/node_modules/node-gyp/node_modules/undici/lib/llhttp/.gitkeep', ''],
+    ['local-cli/node_modules/tr46/lib/.gitkeep', ''],
   ]) {
     const file = await put(`${engineDirectory}/${path}`, bytes!);
     engineFiles.push({ ...file, path, bytes: Buffer.byteLength(bytes!) });
@@ -61,11 +73,20 @@ async function fixture(t: TestContext) {
   if (process.platform === 'win32') {
     const name = `@yuuang/ffi-rs-win32-${process.arch}-msvc`;
     for (const [path, bytes] of [
-      [`local-cli/node_modules/${name}/package.json`, JSON.stringify({ name, version: '1.3.7' })],
-      [`local-cli/node_modules/${name}/ffi-rs.win32-${process.arch}-msvc.node`, 'TEST-binding-never-loaded'],
-    ]) {
-      const file = await put(`${engineDirectory}/${path}`, bytes!);
-      engineFiles.push({ ...file, path, bytes: Buffer.byteLength(bytes!) });
+      [`local-cli/node_modules/${name}/package.json`, JSON.stringify({ name, version: '1.3.7',
+        main: `ffi-rs.win32-${process.arch}-msvc.node`, os: ['win32'], cpu: [process.arch] })],
+      [`local-cli/node_modules/${name}/ffi-rs.win32-${process.arch}-msvc.node`, peHeader(process.arch as 'x64' | 'arm64')],
+      ...(process.arch === 'x64' ? [
+        ['local-cli/node_modules/ffi-rs/package.json', JSON.stringify({ name: 'ffi-rs', version: '1.3.7',
+          optionalDependencies: { [name]: '1.3.7', '@yuuang/ffi-rs-win32-ia32-msvc': '1.3.7' } })],
+        ['local-cli/node_modules/@yuuang/ffi-rs-win32-ia32-msvc/package.json', JSON.stringify({
+          name: '@yuuang/ffi-rs-win32-ia32-msvc', version: '1.3.7', main: 'ffi-rs.win32-ia32-msvc.node',
+          os: ['win32'], cpu: ['x64', 'ia32'] })],
+        ['local-cli/node_modules/@yuuang/ffi-rs-win32-ia32-msvc/ffi-rs.win32-ia32-msvc.node', peHeader('ia32')],
+      ] as const : []),
+    ] as const) {
+      const file = await put(`${engineDirectory}/${path}`, bytes);
+      engineFiles.push({ ...file, path, bytes: Buffer.byteLength(bytes) });
     }
   }
   const engine = await put(`${engineDirectory}/opencode-v2-engine-manifest.json`, JSON.stringify({
@@ -113,6 +134,69 @@ test('packaged capture measures actual Host files, its real graph validator and 
   assert.equal(selected.node, join(f.capture.resourcesRoot, f.manifest.nodeExecutable));
   assert.equal(selected.manifest.sourceHead, f.manifest.sourceHead);
 });
+
+test('original builder file mappings preserve the two graph entries skipped by its directory walker', async t => {
+  const f = await fixture(t), project = dirname(dirname(f.capture.resourcesRoot));
+  const destination = join(f.root, 'Actual builder copy', 'resources');
+  const config = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8'));
+  const mappings = config.build.extraResources.filter((row: { from: string }) =>
+    row.from === 'resources/legacy-agent-host' ||
+    row.from.startsWith('resources/legacy-agent-host/') && row.from.endsWith('/.gitkeep')) as { from: string; to: string }[];
+  assert.equal(mappings.length, 3);
+  const builderRequire = createRequire(createRequire(import.meta.url).resolve('electron-builder/package.json'));
+  const { FileMatcher, copyFiles } = builderRequire('app-builder-lib/out/fileMatcher.js');
+  const matchers = mappings.map(row => new FileMatcher(resolve(project, row.from),
+    resolve(destination, row.to), (value: string) => value));
+  await copyFiles(matchers.slice(0, 1), undefined, false);
+  const capture = { ...f.capture, resourcesRoot: join(destination, 'legacy-agent-host'), appAsar: join(destination, 'app.asar') };
+  await copyFile(f.capture.appAsar, capture.appAsar);
+  await assert.rejects(readPackagedOpenCodeV2(capture), /embedded graph unavailable/);
+  await copyFiles(matchers.slice(1), undefined, false);
+  assert.deepEqual((await readPackagedOpenCodeV2(capture)).manifest, f.manifest);
+  for (const mapping of mappings.slice(1)) {
+    assert.deepEqual(await readFile(resolve(destination, mapping.to)), await readFile(resolve(project, mapping.from)));
+    assert.equal((await readFile(resolve(destination, mapping.to))).length, 0);
+  }
+});
+
+test('embedded ia32 optional FFI cannot be admitted by its pathname alone', async t => {
+  const f = await fixture(t);
+  await f.put('native/opencode-v2/engine/local-cli/node_modules/@yuuang/ffi-rs-win32-ia32-msvc/ffi-rs.win32-ia32-msvc.node', peHeader('ia32'));
+  await assert.rejects(validateNativeBinaries(dirname(dirname(f.capture.resourcesRoot)), 'win32', 'x64'));
+});
+
+test('Windows builder preserves only the fully attested unused ia32 FFI with its real x64 target',
+  { skip: process.platform !== 'win32' || process.arch !== 'x64' }, async t => {
+    const f = await fixture(t), app = dirname(dirname(f.capture.resourcesRoot));
+    for (const [key, value] of Object.entries({ OPENCODE_V2_PACKAGED_MANIFEST_SHA256: f.capture.manifestSha256,
+      OPENCODE_V2_TEST_SOURCE_HEAD: f.manifest.sourceHead })) {
+      const prior = process.env[key]; process.env[key] = value;
+      t.after(() => { if (prior === undefined) delete process.env[key]; else process.env[key] = prior; });
+    }
+    const graph = f.manifest.engine.directory;
+    const foreign = `${graph}/local-cli/node_modules/@yuuang/ffi-rs-win32-ia32-msvc/ffi-rs.win32-ia32-msvc.node`;
+    const original = await readFile(join(f.capture.resourcesRoot, foreign));
+    await assert.doesNotReject(readPackagedOpenCodeV2(f.capture));
+    assert.deepEqual(await validateNativeBinaries(app, 'win32', 'x64'), []);
+    assert.deepEqual(await readFile(join(f.capture.resourcesRoot, foreign)), original);
+    assert.deepEqual((await readPackagedOpenCodeV2(f.capture)).manifest, f.manifest);
+    await f.put(foreign, Buffer.concat([original, Buffer.from('changed')]));
+    await assert.rejects(validateNativeBinaries(app, 'win32', 'x64'));
+    await f.put(foreign, original);
+    process.env.OPENCODE_V2_TEST_SOURCE_HEAD = '2'.repeat(40);
+    await assert.rejects(validateNativeBinaries(app, 'win32', 'x64'));
+    process.env.OPENCODE_V2_TEST_SOURCE_HEAD = f.manifest.sourceHead;
+    // Even a newly declared TEST manifest cannot make a wrong target header valid.
+    const enginePath = `${graph}/opencode-v2-engine-manifest.json`;
+    const engine = JSON.parse(await readFile(join(f.capture.resourcesRoot, enginePath), 'utf8'));
+    const target = 'local-cli/node_modules/@yuuang/ffi-rs-win32-x64-msvc/ffi-rs.win32-x64-msvc.node';
+    const replacement = peHeader('ia32'); await f.put(`${graph}/${target}`, replacement);
+    const row = engine.files.find((file: { path: string }) => file.path === target);
+    assert.ok(row); row.sha256 = hash(replacement); row.bytes = replacement.length;
+    f.manifest.engine.manifestSha256 = (await f.put(enginePath, JSON.stringify(engine))).sha256;
+    await f.save(); process.env.OPENCODE_V2_PACKAGED_MANIFEST_SHA256 = f.capture.manifestSha256;
+    assert.equal((await validateNativeBinaries(app, 'win32', 'x64')).length, 2);
+  });
 
 async function absoluteDependency(f: Awaited<ReturnType<typeof fixture>>, foreign = false) {
   const name = 'TEST-dependency', payload = JSON.stringify({ name, version: 'TEST' });
