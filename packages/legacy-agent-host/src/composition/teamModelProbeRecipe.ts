@@ -62,10 +62,18 @@ export function resolveTeamModelProbeRecipe(options: {
                 ? {
                     nativeGeneration: profile.nativeGeneration,
                     protocolRevision: profile.protocolRevision,
-                    nativeProviderId: profile.nativeOptions.providerId,
-                    model: profile.model,
-                    nativeVariant: profile.nativeOptions.variant,
-                    ...(profile.embedded ? { embedded: profile.embedded } : {}),
+                    ...(profile.embedded ? { embedded: {
+                      version: profile.embedded.version,
+                      directory: profile.embedded.directory,
+                      manifestSha256: profile.embedded.manifestSha256,
+                      platform: profile.embedded.platform,
+                      arch: profile.embedded.arch,
+                      externalDirectory: profile.embedded.externalDirectory,
+                    } } : {
+                      nativeProviderId: profile.nativeOptions.providerId,
+                      model: profile.model,
+                      nativeVariant: profile.nativeOptions.variant,
+                    }),
                   }
                 : {}),
             }
@@ -73,11 +81,19 @@ export function resolveTeamModelProbeRecipe(options: {
       });
     if (identity(defaults) !== identity(saved))
       throw new TeamLaunchError('conflict', 'probe-default-recipe');
-    // A V2 native session has already bound its model; a draft Default
-    // must not replace it with a template's separate model identity.
+    // An externally owned old V2 session cannot change its pair. A fresh embedded
+    // probe uses the original private default without rebinding the account/engine.
     if (input.model === '__provider_default__' &&
-        !(recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2'))
+        !(recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2' && !recipe.embedded))
       recipe.model = defaults.model;
+    if (input.model === '__provider_default__' && recipe.provider === 'opencode' &&
+        defaults.provider === 'opencode' && recipe.embedded && defaults.embedded) {
+      recipe.nativeOptions.providerId = defaults.nativeOptions.providerId;
+      recipe.embedded = structuredClone(defaults.embedded);
+      delete recipe.nativeOptions.variant;
+      if (defaults.nativeOptions.variant !== undefined)
+        recipe.nativeOptions.variant = defaults.nativeOptions.variant;
+    }
     // Default resets only the requested application override. Other selected
     // native settings and the captured account/namespace remain unchanged.
     if (input.effort === undefined) {
@@ -132,9 +148,8 @@ export function applyTeamModelProbeSelection(
     recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2'
       ? {}
       : { model: input.model === '__provider_default__' ? recipe.model : input.model }),
-    // A saved V2 variant is an immutable selection, not a launch-time effort
-    // override. Preserve an unchanged selection for native attestation, but
-    // send any changed effort through the existing fail-closed V2 gate.
+    // Preserve unchanged historical options; fresh embedded choices additionally
+    // attest their named variant from the native catalog before creating a session.
     ...(input.effort === undefined ||
       (recipe.provider === 'opencode' && recipe.nativeGeneration === 'v2' &&
        input.effort === recipe.nativeOptions.variant) ? {} : { effort: input.effort }),

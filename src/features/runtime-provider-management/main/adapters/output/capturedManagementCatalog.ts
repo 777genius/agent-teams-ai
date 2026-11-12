@@ -4,7 +4,10 @@ import type {
   ProviderManagementCatalog,
 } from '@agent-teams/legacy-agent-host/management/contracts';
 
-export type CatalogProvider = ProviderManagementCatalog['providers'][number];
+export type CatalogProvider = ProviderManagementCatalog['providers'][number] & {
+  /** Derived from the validated catalog envelope, never a renderer-selected capability. */
+  runtimeGeneration?: 'v1' | 'v2';
+};
 
 const object = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -130,6 +133,10 @@ export function parseManagementCatalog(
     )
       throw new Error('Invalid management response');
     return {
+      ...(catalog.runtime && typeof catalog.runtime === 'object' && !Array.isArray(catalog.runtime) &&
+        'generation' in catalog.runtime && catalog.runtime.generation === 'v2' &&
+        'version' in catalog.runtime && catalog.runtime.version === '2.1.4'
+        ? { runtimeGeneration: 'v2' as const } : {}),
       providerId: text(provider.providerId),
       displayName: text(provider.displayName),
       connected: provider.connected,
@@ -172,7 +179,7 @@ export function connection(provider: CatalogProvider): Dto.RuntimeProviderConnec
       ? ['env']
       : provider.source === 'config' || provider.source === 'custom'
         ? ['project']
-        : provider.connected
+        : provider.connected || provider.source === 'api'
           ? ['local']
           : [];
   return {
@@ -193,18 +200,22 @@ export function connection(provider: CatalogProvider): Dto.RuntimeProviderConnec
         requiresSecret: false,
         ownershipScope: 'runtime',
       },
-      {
+      ...(provider.runtimeGeneration === 'v2' ? [] : [{
         id: 'forget',
         label: 'Forget credential',
         enabled: provider.connected,
         disabledReason: provider.connected ? null : 'No connected credential reported',
         requiresSecret: false,
         ownershipScope: 'local',
-      },
+      } as const]),
     ],
     detail: provider.connected
-      ? 'Native provider is connected; model execution has not been verified.'
-      : null,
+      ? provider.runtimeGeneration === 'v2'
+        ? 'Connected. One model check succeeded for this saved key.'
+        : 'Native provider is connected; model execution has not been verified.'
+      : provider.source === 'api'
+        ? 'An API key is saved in this scope. Test a model to verify access.'
+        : null,
   };
 }
 

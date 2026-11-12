@@ -11,7 +11,7 @@ import type {
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
 const binding = { profileId: 'TEST-original', configRevision: 'TEST-v1' };
-function fixture(declaredInputModalities?: JsonValue) {
+function fixture(declaredInputModalities?: JsonValue, generation: 'v1' | 'v2' = 'v1') {
   const calls: { operation: string; payload: Record<string, JsonValue> }[] = [];
   let connected = false;
   let fail = false;
@@ -26,6 +26,7 @@ function fixture(declaredInputModalities?: JsonValue) {
     ): Promise<JsonValue> {
       calls.push({ operation, payload });
       await barrier;
+      if (operation === 'credential.pending') return { ok: true, value: { generation, receipt: null } };
       if (fail) throw new Error('TEST-api-key-raw-should-never-escape');
       if (operation === 'credential') {
         connected = payload.kind === 'credential.set';
@@ -45,6 +46,7 @@ function fixture(declaredInputModalities?: JsonValue) {
         ok: true,
         value: {
           ...binding,
+          runtime: generation === 'v2' ? { generation, version: '2.1.4' } : { generation },
           secretExtension: 'TEST-secret',
           providers: [
             {
@@ -163,7 +165,8 @@ it('captures credential intent before awaits, then refreshes the same original o
   metadata.plan = 'TEST-changed';
   release();
   expect((await pending).provider?.state).toBe('connected');
-  expect(f.calls[0]).toEqual({
+  expect(f.calls[0]).toEqual({ operation: 'credential.pending', payload: { providerId: 'TEST-provider' } });
+  expect(f.calls[1]).toEqual({
     operation: 'credential',
     payload: {
       commandId: expect.any(String),
@@ -174,12 +177,12 @@ it('captures credential intent before awaits, then refreshes the same original o
     },
   });
   expect(f.capture).toHaveBeenCalledTimes(1);
-  expect(f.calls[1]).toEqual({ operation: 'catalog', payload: { providerId: 'TEST-provider' } });
+  expect(f.calls[2]).toEqual({ operation: 'catalog', payload: { providerId: 'TEST-provider' } });
   expect(
     (await f.port.forgetCredential({ runtimeId: 'opencode', providerId: 'TEST-provider' })).provider
       ?.state
   ).toBe('not-connected');
-  expect(f.calls[2]?.payload.commandId).not.toBe(f.calls[0]?.payload.commandId);
+  expect(f.calls[4]?.payload.commandId).not.toBe(f.calls[1]?.payload.commandId);
 });
 
 it('contains raw failures and does not dispatch another owner or legacy CLI after an unknown mutation', async () => {
@@ -192,8 +195,35 @@ it('contains raw failures and does not dispatch another owner or legacy CLI afte
   });
   expect(result.error?.code).toBe('runtime-unhealthy');
   expect(JSON.stringify(result)).not.toContain('TEST-api-key-raw');
-  expect(f.calls.map((call) => call.operation)).toEqual(['credential']);
+  expect(f.calls.map((call) => call.operation)).toEqual(['credential.pending', 'credential', 'credential.resume']);
   expect(f.capture).toHaveBeenCalledTimes(1);
+});
+
+it('V2 preserves native plain-key setup and its announced model verification without offering V1 forget', async () => {
+  const f = fixture(undefined, 'v2');
+  const form = await f.port.loadSetupForm({ runtimeId: 'opencode', providerId: 'TEST-provider' });
+  expect(form.setupForm).toMatchObject({ method: 'api', supported: true,
+    verification: { kind: 'model-request', freeModelPreferred: false, mayUseQuotaOrBalance: true } });
+  expect(f.calls.every(call => call.operation === 'catalog')).toBe(true);
+  const connected = await f.port.connectWithApiKey({ runtimeId: 'opencode', providerId: 'TEST-provider', apiKey: 'TEST-key' });
+  expect(connected.provider?.state).toBe('connected');
+  expect(connected.provider?.actions.some(action => action.id === 'forget')).toBe(false);
+  expect(f.calls.filter(call => call.operation === 'credential')).toHaveLength(1);
+  const forgotten = await f.port.forgetCredential({ runtimeId: 'opencode', providerId: 'TEST-provider' });
+  expect(forgotten.error).toBeDefined();
+  expect(f.calls.filter(call => call.operation === 'credential')).toHaveLength(1);
+  const nativeRequest = f.target.request.bind(f.target);
+  f.target.request = async (operation, payload): Promise<JsonValue> => {
+    const reply = await nativeRequest(operation, payload);
+    return operation === 'credential' ? { ok: true, value: { ...binding,
+      commandId: payload.commandId!, providerId: payload.providerId!, kind: payload.kind!,
+      phase: 'held', reason: 'verification-rejected' } } : reply;
+  };
+  const rejected = await f.port.connectWithApiKey({ runtimeId: 'opencode', providerId: 'TEST-provider', apiKey: 'TEST-wrong-key' });
+  expect(rejected.error).toMatchObject({ code: 'auth-failed', recoverable: true });
+  expect(rejected.error?.message).toContain('Check the key and connect again');
+  expect(rejected.provider).toBeUndefined();
+  expect(f.calls.filter(call => call.operation === 'credential')).toHaveLength(2);
 });
 
 it('cancels only the original model-load subscribers and hides their late catalog result', async () => {

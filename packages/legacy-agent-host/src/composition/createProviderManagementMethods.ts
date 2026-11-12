@@ -32,6 +32,8 @@ export function createProviderManagementMethods(
       catalog: (raw) => management!.catalog(raw),
       credential: (raw) => management!.credentials.execute(raw),
       'credential.lookup': (raw) => management!.credentials.lookup(raw),
+      'credential.pending': (raw) => management!.pendingCredential(raw),
+      'credential.resume': (raw) => management!.credentials.resume(raw),
       'oauth.start': (raw) => management!.oauth.start(raw),
       'oauth.read': (raw) => management!.oauth.read(raw),
       'oauth.authorization': (raw) => management!.oauth.authorization(raw),
@@ -50,6 +52,8 @@ export function createProviderManagementMethods(
           operation === 'extension.lookup' ||
           operation === 'extension.pending' ||
           operation === 'credential.lookup' ||
+          operation === 'credential.pending' ||
+          operation === 'credential.resume' ||
           operation === 'probe.read' ||
           operation === 'probe.cancel' ||
           (operation.startsWith('oauth.') && operation !== 'oauth.start')

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { runtimeMemberProfileSchema } from './runtimeProfile.js';
+import { selectOpenCodeV2LaunchModel } from './openCodeV2ModelSelection.js';
 import type { RuntimeMemberProfile } from './runtimeProfile.js';
 
 const id = z
@@ -10,7 +11,7 @@ const id = z
   .max(256)
   .refine((value) => !value.includes('\0'));
 // A V2 catalog alias can contain two independently captured 256-character IDs
-// plus a separator. Wider values are admitted only for that exact alias below.
+// plus a separator. Native components are validated separately below.
 const launchModelId = z.string().min(1).max(513).refine((value) => !value.includes('\0'));
 const options = z
   .object({
@@ -43,9 +44,8 @@ export function applyLaunchConfiguration(
   raw: unknown
 ): RuntimeMemberProfile {
   const selected = options.parse(raw);
-  // The native V2 session already owns its model/variant. Host launch options
-  // cannot change it. Reject explicit effort until a separate native variant
-  // attestation exists; a matching captured string alone proves nothing.
+  // Externally supplied old V2 sessions keep their captured pair. A new owned
+  // embedded session may select a model; native catalog attestation precedes create.
   const v2 = base.provider === 'opencode' && base.nativeGeneration === 'v2';
   const embeddedV2 = v2 && base.protocolRevision === '2.1.4' && base.embedded !== undefined;
   // A slash inside a custom provider ID makes the flattened catalog alias
@@ -55,20 +55,22 @@ export function applyLaunchConfiguration(
     ? `${base.nativeOptions.providerId}/${base.model}`
     : undefined;
   if (selected.model !== undefined && selected.model.length > 256 &&
-      (!v2 || selected.model !== qualifiedCapturedModel))
+      (!embeddedV2 && (!v2 || selected.model !== qualifiedCapturedModel)))
     throw new TeamLaunchError('invalid', 'launch-option-unsupported');
-  if (v2) {
+  if (v2 && !embeddedV2) {
     // Only an exact provider-qualified catalog alias identifies the captured
     // model. A bare model ID, even when its spelling matches, has no provider
     // provenance and must not select another native session by accident.
     const modelMatches = selected.model === undefined ||
       selected.model === qualifiedCapturedModel;
-    if ((!embeddedV2 && selected.permissions !== undefined) || selected.effort !== undefined || !modelMatches)
+    if (selected.permissions !== undefined || selected.effort !== undefined || !modelMatches)
       throw new TeamLaunchError('invalid', 'launch-option-unsupported');
   }
-  const profile = structuredClone(base);
-  // For V2, the selected native session has already fixed its model. Keep the
-  // captured identity exactly; a UI-qualified alias must not rewrite it.
+  const profile = embeddedV2
+    ? selectOpenCodeV2LaunchModel(base, selected)
+    : structuredClone(base);
+  // V2 is already a structured native pair: either the captured external pair
+  // or the fresh embedded candidate above. Never flatten it again here.
   if (selected.model !== undefined &&
       !(profile.provider === 'opencode' && profile.nativeGeneration === 'v2')) {
     const prefix = profile.provider === 'opencode' ? `${profile.nativeOptions.providerId}/` : null;

@@ -4,6 +4,7 @@ import { managementCommandIdentityShape as common } from './commandIdentity.js';
 import { storedExtensionCommandSchema } from '../extensions/extensionRecords.js';
 import { modelProbeLimitsSchema } from './modelLimits.js';
 import { runtimeSourceRefusalSchema } from './runtimeSourceVerification.js';
+import { openCodeV2CredentialProgressSchema } from './openCodeV2CredentialRecord.js';
 
 const id = z.string().min(1).max(256);
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
@@ -15,6 +16,8 @@ export const storedCredentialCommandSchema = z
     phase: z.enum(['claimed', 'completed', 'held']),
     finishedAtMs: z.number().int().positive().safe().optional(),
     refreshCompletedAtMs: z.number().int().positive().safe().optional(),
+    openCodeV2: openCodeV2CredentialProgressSchema.optional(),
+    terminalRejection: z.literal(true).optional(),
   })
   .strict()
   .refine(
@@ -22,6 +25,11 @@ export const storedCredentialCommandSchema = z
       (value.phase === 'claimed'
         ? value.resourceHeld && value.finishedAtMs === undefined
         : value.phase !== 'completed' || !value.resourceHeld) &&
+      (value.openCodeV2 === undefined || value.kind === 'credential.set' &&
+        (value.phase !== 'completed' || value.openCodeV2.phase === 'probe-completed' &&
+          value.openCodeV2.verification?.ok === true)) &&
+      (value.terminalRejection === undefined || value.kind === 'credential.set' &&
+        value.phase === 'held' && !value.resourceHeld && value.finishedAtMs !== undefined) &&
       (value.refreshCompletedAtMs === undefined ||
         (value.kind === 'credential.refresh' &&
           value.phase === 'completed' &&

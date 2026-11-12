@@ -125,7 +125,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       assert.ok((await stat(shell)).isFile(), 'actual Windows PowerShell is required for the native shell turn');
       windowsShellSha256 = await fileHash(shell);
     }
-    model = await startOpenCodeModel({ nativeGeneration: 'v2', nativeMessageImage: true });
+    model = await startOpenCodeModel({ nativeGeneration: 'v2', nativeMessageImage: true,
+      selectedModel: { id: 'TEST-model-B', effort: 'high' } });
     const namespace = basename(root);
     const owner = {
       ownerId: `TEST-owner-${namespace}`, revision: 'TEST-revision', storageRoot: join(root, 'store'),
@@ -165,8 +166,13 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
           externalDirectory: 'deny', providerConfiguration: {
             package: 'aisdk:@ai-sdk/openai-compatible',
             settings: { baseURL: `${model.url}/v1`, apiKey: 'TEST-LOCALHOST-ONLY' },
-            models: { 'TEST-model': { name: 'TEST-model', limit: { context: 200000, output: 2000 },
-              capabilities: { tools: true, input: ['text', 'image'], output: ['text'] } } },
+            models: {
+              'TEST-model': { name: 'TEST-model', limit: { context: 200000, output: 2000 },
+                capabilities: { tools: true, input: ['text', 'image'], output: ['text'] } },
+              'TEST-model-B': { name: 'TEST-model-B', limit: { context: 200000, output: 2000 },
+                capabilities: { tools: true, input: ['text', 'image'], output: ['text'] },
+                variants: [{ id: 'high', body: { reasoning_effort: 'high' } }] },
+            },
           } },
         nativeOptions: { providerId: 'TEST-local', agent: 'TEST-member', toolApprovalMode: 'manual',
           instructions: `${CONTEXT_MARKER}. You are carol of test-native-team working only in ${join(root, 'workspace')}.` },
@@ -177,6 +183,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       }] },
     };
     profile.runtime!.members[0] = applyLaunchConfiguration(profile.runtime!.members[0]!, {
+      model: 'TEST-local/TEST-model-B', effort: 'high',
       permissions: approvalMode === 'auto' ? 'bypass' : 'manual',
     });
     const profilePath = join(root, 'profile.json');
@@ -243,6 +250,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     }
     assert.equal(replies.size, approvalMode === 'manual' ? 2 : 0);
     assert.deepEqual(model.failures, []); assert.equal(model.observations.length, 11);
+    assert.ok(model.observations.every(row => row.requestedModel === 'TEST-model-B' &&
+      row.requestedEffort === 'high'), 'every native tool turn keeps the explicitly selected model/variant');
     assert.ok(model.observations.every(row => row.contextEffective));
     const imageObservations = model.observations.filter(row => row.turn === 'OPENCODE_TEAM_TWO');
     assert.equal(imageObservations.length, 3);
@@ -324,6 +333,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         ...(packaged ? { packaged: packaged.evidence } : {}),
         sourceHead, platform: `${process.platform}-${process.arch}`,
         version: '2.1.4', approvalMode, nodeVersion: process.version,
+        modelSelection: { providerId: 'TEST-local', modelId: 'TEST-model-B', variant: 'high' },
         digests: { ...digests, ...(windowsShellSha256 ? { windowsShell: windowsShellSha256 } : {}) },
         steps, cleanup,
         inputObservation: { reads: inputReadCount, last: lastInputProgress ?? null },

@@ -119,6 +119,10 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   profile.environment = Object.fromEntries(
     Object.entries(profile.environment).filter(([key]) => environmentKeys.has(key))
   );
+  // Native 2.1.4 migrates every Global.data/auth.json entry when creating a DB.
+  // Keep that source inside this owned DB namespace. Host imports only its
+  // captured selected key through the finite native credential mechanism.
+  profile.environment.XDG_DATA_HOME = path.dirname(databasePath);
   if (!profile.environment.HOME) return fail();
   let windowsCustody: CapturedProcessTreeSource | undefined;
   const custody = new CapturedProcess(

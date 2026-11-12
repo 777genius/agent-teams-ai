@@ -47,7 +47,7 @@ test(
     };
     assert.equal(digests.manifest, process.env.OPENCODE_V2_EMBEDDED_MANIFEST_SHA256);
     const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-native-v2-model-probe-')));
-    const requests: { tools: number; promptMatched: boolean; model: string }[] = [];
+    const requests: { tools: number; promptMatched: boolean; model: string; effort?: string }[] = [];
     const gates: (() => void)[] = [];
     const failures: string[] = [];
     const nativePids: number[] = [];
@@ -75,7 +75,10 @@ test(
           chunks.push(data);
         }
         const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string, unknown>;
-        assert.equal(body.model, 'TEST-model');
+        const expectedModel = requests.length === 0 ? 'TEST-model' : 'TEST-model-B';
+        const expectedEffort = requests.length === 0 ? undefined : 'high';
+        assert.equal(body.model, expectedModel);
+        assert.equal(body.reasoning_effort, expectedEffort);
         assert.ok(
           body.tools === undefined || (Array.isArray(body.tools) && body.tools.length === 0),
           'the actual native inference request must advertise zero tools'
@@ -84,21 +87,22 @@ test(
           'Reply only OK. Do not use tools, access files or run commands.'
         );
         assert.equal(promptMatched, true);
-        assert.ok(requests.length < 2, 'no native inference replay');
+        assert.ok(requests.length < 3, 'no native inference replay');
         let release!: () => void;
         const gate = new Promise<void>((done) => {
           release = done;
         });
         gates.push(release);
         response.once('close', release);
-        requests.push({ tools: 0, promptMatched, model: 'TEST-model' });
+        requests.push({ tools: 0, promptMatched, model: expectedModel,
+          ...(expectedEffort ? { effort: expectedEffort } : {}) });
         await gate;
         if (response.destroyed) return;
         const event = (delta: Record<string, unknown>, finish: string | null) => ({
           id: 'TEST-native-v2-probe-reply',
           object: 'chat.completion.chunk',
           created: 1700000000,
-          model: 'TEST-model',
+          model: expectedModel,
           choices: [{ index: 0, delta, finish_reason: finish }],
         });
         response.writeHead(200, { 'content-type': 'text/event-stream' });
@@ -178,6 +182,12 @@ test(
                     limit: { context: 200000, output: 128 },
                     capabilities: { tools: true, input: ['text'], output: ['text'] },
                   },
+                  'TEST-model-B': {
+                    name: 'TEST-model-B',
+                    limit: { context: 200000, output: 128 },
+                    capabilities: { tools: true, input: ['text'], output: ['text'] },
+                    variants: [{ id: 'high', body: { reasoning_effort: 'high' } }],
+                  },
                 },
               },
             },
@@ -205,17 +215,21 @@ test(
         } while (Date.now() < deadline);
         throw Error('TEST native model probe did not settle');
       };
-      for (const [commandId, cancel] of [
-        ['TEST-original', false],
-        ['TEST-cancelled', true],
-      ] as const) {
-        const request = { ...base, commandId };
+      const cases = [
+        { commandId: 'TEST-original', cancel: false, modelId: base.modelId },
+        { commandId: 'TEST-selected-B', cancel: false, modelId: 'TEST-local/TEST-model-B', effort: 'high' as const },
+        { commandId: 'TEST-cancelled', cancel: true, modelId: 'TEST-local/TEST-model-B', effort: 'high' as const },
+      ];
+      let expectedRequests = 0;
+      for (const { cancel, ...choice } of cases) {
+        const { commandId } = choice;
+        const request = { ...base, ...choice };
         const lookup = {
           commandId,
           profileId: base.profileId,
           configRevision: base.configRevision,
         };
-        const expectedRequests = cancel ? 2 : 1;
+        expectedRequests++;
         assert.equal(
           value<ProviderModelProbeSnapshot>(await host.rpc('management.probe.start', request))
             .phase,
@@ -258,7 +272,7 @@ test(
           assert.equal(cancelled.phase, 'cancelled');
           assert.equal(cancelled.ok, false);
         } else {
-          gates[0]!();
+          gates[expectedRequests - 1]!();
           await wait(
             async () =>
               value<ProviderModelProbeSnapshot>(await host!.rpc('management.probe.read', lookup))
@@ -289,23 +303,37 @@ test(
         steps.push(
           cancel
             ? 'original_probe_cancelled_and_owned_child_gone_no_replay'
-            : 'actual_native_no_tool_request_completed_once_and_owned_child_gone'
+            : commandId === 'TEST-original'
+              ? 'actual_native_no_tool_request_completed_once_and_owned_child_gone'
+              : 'selected_model_B_declared_high_variant_observed_in_native_request'
         );
       }
+      const refused = { ...base, commandId: 'TEST-unknown-variant',
+        modelId: 'TEST-local/TEST-model-B', effort: 'max' as const };
+      const refusedLookup = { commandId: refused.commandId,
+        profileId: base.profileId, configRevision: base.configRevision };
+      assert.equal(value<ProviderModelProbeSnapshot>(await host.rpc('management.probe.start', refused)).phase, 'running');
+      await wait(async () => value<ProviderModelProbeSnapshot>(await host!.rpc('management.probe.read', refusedLookup)).phase !== 'running');
+      assert.equal(value<ProviderModelProbeSnapshot>(await host.rpc('management.probe.read', refusedLookup)).ok, false);
+      assert.equal(requests.length, 3, 'unlisted native variant is refused before session input');
+      assert.equal(value<ProviderModelProbeSnapshot>(await host.rpc('management.probe.cancel', refusedLookup)).phase, 'cancelled');
+      steps.push('unlisted_variant_refused_without_model_request_and_owned_cleanup_confirmed');
       const catalogInput = { profileId: base.profileId, configRevision: base.configRevision,
         providerId: base.providerId };
       const catalog = value<ProviderManagementCatalog>(await host.rpc('management.catalog', catalogInput));
       assert.deepEqual(catalog.runtime, { generation: 'v2', version: '2.1.4' });
       assert.equal(catalog.configuredDefaultModelId, 'TEST-local/TEST-model');
       assert.equal(catalog.providers.length, 1);
-      assert.deepEqual(catalog.providers[0]!.models, [{ modelId: 'TEST-model', displayName: 'TEST-model',
-        contextTokens: 200000, outputTokens: 128, free: null, declaredInputModalities: ['text'] }]);
+      assert.deepEqual(catalog.providers[0]!.models, ['TEST-model', 'TEST-model-B'].map(modelId => ({
+        modelId, displayName: modelId, contextTokens: 200000, outputTokens: 128,
+        free: null, declaredInputModalities: ['text'],
+      })));
       assert.equal(catalog.providers[0]!.connected, false, 'read-only inventory does not certify credentials');
       assert.equal(catalog.providers[0]!.configuredAuthless, true, 'captured loopback route requires a separate model probe');
-      assert.deepEqual(catalog.providers[0]!.authMethods, []);
+      assert.deepEqual(catalog.providers[0]!.authMethods, ['api']);
       assert.ok(!JSON.stringify(catalog).includes('TEST-LOCALHOST-ONLY'));
       assert.deepEqual(value(await host.rpc('management.catalog', catalogInput)), catalog);
-      assert.equal(requests.length, 2, 'metadata reads do not execute a model request');
+      assert.equal(requests.length, 3, 'metadata reads do not execute a model request');
       const metadataChildren: number[] = [];
       for (const candidate of (await readdir('/proc')).filter(name => /^\d+$/.test(name))) {
         const stat = await readFile(`/proc/${candidate}/stat`, 'utf8').catch(() => undefined);
@@ -325,17 +353,15 @@ test(
       await assertNativeV1Build(repo, sourceHead, build);
       host = start();
       await host.rpc('host.handshake', { protocolVersion: 1 });
-      for (const [commandId, phase, ok] of [
-        ['TEST-original', 'completed', true],
-        ['TEST-cancelled', 'cancelled', false],
-      ] as const) {
+      for (const { cancel, ...choice } of cases) {
         const result: ProviderModelProbeSnapshot = value(
-          await host.rpc('management.probe.start', { ...base, commandId })
+          await host.rpc('management.probe.start', { ...base, ...choice })
         );
-        assert.equal(result.phase, phase);
-        assert.equal(result.ok, ok);
+        assert.equal(result.phase, cancel ? 'cancelled' : 'completed');
+        assert.equal(result.ok, !cancel);
       }
-      assert.equal(requests.length, 2);
+      assert.equal(value<ProviderModelProbeSnapshot>(await host.rpc('management.probe.start', refused)).phase, 'cancelled');
+      assert.equal(requests.length, 3);
       assert.deepEqual(failures, []);
       await host.close();
       hosts.push(host.facts());

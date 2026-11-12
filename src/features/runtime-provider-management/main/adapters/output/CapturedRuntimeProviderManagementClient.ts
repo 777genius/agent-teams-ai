@@ -1,11 +1,8 @@
-import { randomUUID } from 'node:crypto';
-
 import { validManagedModelLimits } from '../../../core/domain/managedProviderPreferences';
 
 import {
   connection,
   directoryEntry,
-  managementValue,
   models,
   parseManagementCatalog,
 } from './capturedManagementCatalog';
@@ -15,6 +12,7 @@ import {
   selectedPreferences,
 } from './capturedManagementPreferences';
 import { CapturedModelProbe } from './CapturedModelProbe';
+import { CapturedCredentialVerificationRejected, CapturedProviderCredentials } from './CapturedProviderCredentials';
 import { CapturedProviderOAuth } from './CapturedProviderOAuth';
 import { withCapturedClaudeAuthentication } from './withCapturedClaudeAuthentication';
 
@@ -85,6 +83,7 @@ export function createCapturedRuntimeProviderManagementClient(
   deps: CapturedRuntimeProviderManagementDependencies
 ): RuntimeProviderManagementPort {
   const oauth = deps.oauth ? new CapturedProviderOAuth(deps.oauth) : undefined;
+  const credentials = new CapturedProviderCredentials();
   const createProbe = (selectedCapture: CapturedRuntimeProviderManagementDependencies['capture']) =>
     new CapturedModelProbe(
       selectedCapture,
@@ -179,12 +178,13 @@ export function createCapturedRuntimeProviderManagementClient(
   const credential = async (
     input: Dto.RuntimeProviderManagementForgetInput,
     key?: string,
-    metadata?: Record<string, string> | null
+    metadata?: Record<string, string> | null,
+    selection: Pick<Dto.RuntimeProviderManagementConnectInput, 'authMethodIndex' | 'authOptionId'> = {}
   ): Promise<Dto.RuntimeProviderManagementProviderResponse> => {
     // Copy before any await: caller mutation must not change an already captured intent.
-    const captured = { ...input },
-      commandId = randomUUID();
+    const captured = { ...input };
     const capturedMetadata = metadata ? { ...metadata } : undefined;
+    const capturedSelection = { ...selection };
     try {
       if (
         !captured.providerId ||
@@ -193,33 +193,12 @@ export function createCapturedRuntimeProviderManagementClient(
       )
         throw new Error('Invalid credential');
       const target = await capture(captured);
-      const result = managementValue(
-        await target.request('credential', {
-          commandId,
-          kind: key === undefined ? 'credential.forget' : 'credential.set',
-          providerId: captured.providerId,
-          ...(key === undefined ? {} : { key }),
-          ...(capturedMetadata ? { metadata: capturedMetadata } : {}),
-        })
-      );
-      if (
-        !result ||
-        typeof result !== 'object' ||
-        Array.isArray(result) ||
-        !('phase' in result) ||
-        result.phase !== 'completed' ||
-        !('commandId' in result) ||
-        result.commandId !== commandId ||
-        !('providerId' in result) ||
-        result.providerId !== captured.providerId ||
-        !('profileId' in result) ||
-        result.profileId !== target.profileId ||
-        !('configRevision' in result) ||
-        result.configRevision !== target.configRevision ||
-        !('kind' in result) ||
-        result.kind !== (key === undefined ? 'credential.forget' : 'credential.set')
-      )
-        throw new Error('Credential outcome unknown');
+      await credentials.execute(target, {
+        kind: key === undefined ? 'credential.forget' : 'credential.set',
+        providerId: captured.providerId,
+        ...(key === undefined ? {} : { key }),
+        ...(capturedMetadata ? { metadata: capturedMetadata } : {}),
+      }, capturedSelection);
       // Refresh against the same capture, never a new default/current context.
       return {
         schemaVersion: 1,
@@ -228,7 +207,12 @@ export function createCapturedRuntimeProviderManagementClient(
           selected(await catalog(target, captured.providerId), captured.providerId)
         ),
       };
-    } catch {
+    } catch (error) {
+      if (error instanceof CapturedCredentialVerificationRejected) return {
+        schemaVersion: 1, runtimeId: 'opencode', error: { code: 'auth-failed',
+          message: 'The key was saved, but the model check failed. Check the key and connect again.',
+          recoverable: true },
+      };
       return unavailable();
     }
   };
@@ -345,7 +329,10 @@ export function createCapturedRuntimeProviderManagementClient(
         metadata: input.metadata ? { ...input.metadata } : input.metadata,
       };
       if (captured.method === 'api' && typeof captured.apiKey === 'string')
-        return credential(captured, captured.apiKey, captured.metadata);
+        return credential(captured, captured.apiKey, captured.metadata, {
+          ...(captured.authMethodIndex === undefined ? {} : { authMethodIndex: captured.authMethodIndex }),
+          ...(captured.authOptionId === undefined ? {} : { authOptionId: captured.authOptionId }),
+        });
       if (captured.method !== 'oauth' || !oauth || !captured.oauthOperationId) return unsupported();
       try {
         const target = await capture(captured);
@@ -418,8 +405,10 @@ export function createCapturedRuntimeProviderManagementClient(
             method: first?.method ?? (api ? 'api' : 'manual'),
             supported: !!first || api,
             title: `Connect ${provider.displayName}`,
-            description: null,
-            submitLabel: first?.method === 'oauth' ? 'Sign in with browser' : 'Save API key',
+            description: provider.runtimeGeneration === 'v2' && api
+              ? 'Connect this key and verify the selected provider with one model request.' : null,
+            submitLabel: first?.method === 'oauth' ? 'Sign in with browser'
+              : provider.runtimeGeneration === 'v2' && api ? 'Connect' : 'Save API key',
             disabledReason: first || api ? null : 'Browser sign-in is currently unavailable.',
             source: 'opencode-auth',
             secret: api
@@ -428,7 +417,8 @@ export function createCapturedRuntimeProviderManagementClient(
             prompts: first?.prompts ?? [],
             authOptions: options,
             defaultAuthOptionId: first?.id ?? null,
-            verification: null,
+            verification: provider.runtimeGeneration === 'v2' && api
+              ? { kind: 'model-request', freeModelPreferred: false, mayUseQuotaOrBalance: true } : null,
           },
         };
       } catch {

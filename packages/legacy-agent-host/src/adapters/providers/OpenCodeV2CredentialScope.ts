@@ -143,18 +143,27 @@ export class OpenCodeV2CredentialScope {
     });
   }
 
-  /** Empty or exactly equal existing entry only: V2 never replaces a different V1/shared credential. */
-  prepare(key: string): { before: CapturedOpenCodeV2Key; publish(): CapturedOpenCodeV2Key } {
+  /** Inventory of existing plain-key sources only; neither key bytes nor connection evidence. */
+  providerIds(): readonly string[] {
+    return Object.entries(this.read(this.dataRoot, ['opencode', 'auth.json']).store)
+      .filter(([id, value]) => /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u.test(id) &&
+        record(value) && value.type === 'api' && keyValue(value.key) &&
+        Object.keys(value).every(key => key === 'type' || key === 'key'))
+      .map(([id]) => id);
+  }
+
+  /** A different key requires the Host's own confirmed rejected publication digest. */
+  prepare(key: string, replaceAuthDigest?: string): { before: CapturedOpenCodeV2Key; publish(): CapturedOpenCodeV2Key } {
     if (!keyValue(key)) throw new ManagementCommandError('invalid');
     const before = this.capture(), previous = before.readKey();
-    if (previous !== undefined && previous !== key) held();
+    if (previous !== undefined && previous !== key && before.digest !== replaceAuthDigest) held();
     let attempted = false;
     return {
       before,
       publish: () => {
         if (attempted || !before.isCurrent()) held();
         attempted = true;
-        if (previous === undefined) this.write(key, before.digest);
+        if (previous !== key) this.write(key, before.digest);
         const after = this.capture();
         if (after.readKey() !== key) held();
         return after;

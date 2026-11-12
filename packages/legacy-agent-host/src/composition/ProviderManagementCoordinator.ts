@@ -21,6 +21,8 @@ import { OAuthOperationOwner } from '../management/OAuthOperationOwner.js';
 import { ModelProbeOwner } from '../management/ModelProbeOwner.js';
 import { createOpenCodeV2ModelProbe } from '../adapters/providers/OpenCodeV2ModelProbe.js';
 import { OpenCodeV2ManagementHost } from '../adapters/providers/OpenCodeV2ManagementHost.js';
+import { createOpenCodeV2CredentialOperation } from '../adapters/providers/OpenCodeV2CredentialOperation.js';
+import { OpenCodeV2CredentialScope } from '../adapters/providers/OpenCodeV2CredentialScope.js';
 
 import type { ProviderManagementCatalog, ProviderOAuthSnapshot } from '../management/contracts.js';
 import type {
@@ -28,15 +30,18 @@ import type {
   ProviderManagementProfile,
 } from '../management/profile.js';
 import { providerManagementProfileSchema } from '../management/profile.js';
-import type { CredentialCommand, CredentialTarget } from '../management/CredentialCommandOwner.js';
+import type { CredentialCommand, CredentialTarget, CredentialProgressWriter } from '../management/CredentialCommandOwner.js';
 import type { RegisteredProcessRootSource } from '../process/registeredProcessContracts.js';
+import type { StoredCredentialCommand } from '../management/commandRecords.js';
 
 /** The captured Host owns management process custody; Team policy and Session SPI stay separate. */
 export class ProviderManagementCoordinator {
   private readonly profiles = new Map<string, OpenCodeManagementProfile>();
   private readonly hosts = new Map<string, OpenCodeManagementHost>();
   private readonly v2Hosts = new Map<string, OpenCodeV2ManagementHost>();
+  private readonly v2Keys = new Map<string, ReturnType<typeof createOpenCodeV2CredentialOperation>>();
   private readonly processCustody: RegisteredProcessRootSource | undefined;
+  private readonly store: FileManagementCommandStore;
   private sealed = false;
   readonly codex: CodexManagementCoordinator;
   readonly claude: ClaudeManagementCoordinator;
@@ -79,7 +84,7 @@ export class ProviderManagementCoordinator {
         throw new OpenCodeManagementError('invalid-profile');
       this.profiles.set(profile.profileId, profile);
     }
-    const store = new FileManagementCommandStore(storageRoot);
+    const store = this.store = new FileManagementCommandStore(storageRoot);
     const fence = new ManagementResourceFence(store.list());
     this.skills = new SkillCoordinator(profiles, {
       store, fence, assertCurrent: () => this.assertCurrent(),
@@ -112,13 +117,23 @@ export class ProviderManagementCoordinator {
           if (command.providerId !== 'anthropic' || command.kind !== 'credential.forget')
             throw new ManagementCommandError('invalid');
         } else if (this.profiles.has(command.profileId)) {
-          if (command.kind === 'credential.refresh' ||
-              this.select(command.profileId, command.configRevision).nativeGeneration === 'v2')
+          const selected = this.select(command.profileId, command.configRevision);
+          if (command.kind === 'credential.refresh' || selected.nativeGeneration === 'v2' &&
+              (command.kind !== 'credential.set' || command.metadata && Object.keys(command.metadata).length))
             throw new ManagementCommandError('invalid');
+          if (selected.nativeGeneration === 'v2' && command.kind === 'credential.set') {
+            const pending = this.credentials.pending({ profileId: command.profileId,
+              configRevision: command.configRevision, providerId: command.providerId });
+            if (pending && pending.commandId !== command.commandId)
+              throw new ManagementCommandError('conflict');
+            new OpenCodeV2CredentialScope(selected, command.providerId, () => {
+              try { this.assertCurrent(); return true; } catch { return false; }
+            }).prepare(command.key, this.replaceableV2Auth(selected, command.providerId));
+          }
         } else if (command.providerId !== 'codex' || command.kind === 'credential.set')
           throw new ManagementCommandError('invalid');
       },
-      perform: (command, target) => this.performCredential(command, target),
+      perform: (command, target, progress) => this.performCredential(command, target, progress),
     });
     this.oauth = new OAuthOperationOwner({
       store,
@@ -187,7 +202,7 @@ export class ProviderManagementCoordinator {
         const profile = this.select(input.profileId, input.configRevision);
         if (
           input.modelContext !== undefined ||
-          (input.effort !== undefined && input.effort !== profile.variant)
+          (profile.nativeGeneration !== 'v2' && input.effort !== undefined && input.effort !== profile.variant)
         )
           throw new ManagementCommandError('invalid');
         if (profile.nativeGeneration === 'v2') {
@@ -330,8 +345,9 @@ export class ProviderManagementCoordinator {
 
   private async performCredential(
     command: CredentialCommand,
-    target: CredentialTarget
-  ): Promise<{ ok: boolean; settled: boolean }> {
+    target: CredentialTarget,
+    progress: CredentialProgressWriter
+  ): Promise<{ ok: boolean; settled: boolean; rejected?: boolean }> {
     if (this.claude.has(command.profileId)) return this.claudeAuth.forget(command, target);
     if (!this.profiles.has(command.profileId)) {
       if (command.providerId !== 'codex' || command.kind === 'credential.set')
@@ -340,6 +356,31 @@ export class ProviderManagementCoordinator {
     }
     if (command.kind === 'credential.refresh') throw new ManagementCommandError('invalid');
     const profile = this.select(command.profileId, command.configRevision);
+    if (profile.nativeGeneration === 'v2') {
+      if (command.kind !== 'credential.set') throw new ManagementCommandError('invalid');
+      const catalog = this.v2Hosts.get(profile.profileId);
+      if (catalog) {
+        if (!await catalog.close()) return { ok: false, settled: false };
+        if (this.v2Hosts.get(profile.profileId) === catalog) this.v2Hosts.delete(profile.profileId);
+      }
+      const current = () => {
+        try {
+          this.assertCurrent();
+          assertManagementTarget(target, this.credentialTarget(this.select(command.profileId, command.configRevision)));
+          return true;
+        } catch { return false; }
+      };
+      const replaceAuthDigest = this.replaceableV2Auth(profile, command.providerId, command.commandId);
+      const operation = createOpenCodeV2CredentialOperation(profile, command, progress, current, {
+        ...(this.processCustody ? { processCustody: this.processCustody } : {}),
+        ...(replaceAuthDigest ? { replaceAuthDigest } : {}),
+      });
+      this.v2Keys.set(command.commandId, operation);
+      const result = await operation.run();
+      if (result.settled && this.v2Keys.get(command.commandId) === operation)
+        this.v2Keys.delete(command.commandId);
+      return result;
+    }
     const host = this.getHost(profile);
     try {
       const ok = await host.run((client) =>
@@ -356,6 +397,42 @@ export class ProviderManagementCoordinator {
       const settled = await this.retireHost(profile.profileId, host);
       return { ok: false, settled };
     }
+  }
+
+  pendingCredential(raw: unknown) {
+    const input = z.object({ profileId: z.string(), configRevision: z.string(), providerId: z.string() }).strict().parse(raw);
+    const generation = this.select(input.profileId, input.configRevision).nativeGeneration ?? 'v1';
+    return { generation, receipt: generation === 'v2' ? this.credentials.pending(input) : null };
+  }
+
+  private v2CredentialState(profile: OpenCodeManagementProfile, providerId: string, currentCommandId?: string) {
+    this.assertCurrent();
+    const target = this.credentialTarget(profile);
+    let latest: StoredCredentialCommand | undefined, pending = false;
+    for (const row of this.store.list()) {
+      if (row.kind !== 'credential.set' || row.providerId !== providerId ||
+          row.profileId !== target.profileId || row.configRevision !== target.configRevision ||
+          row.commandId === currentCommandId) continue;
+      assertManagementTarget(row, target);
+      pending ||= row.phase !== 'completed' && row.terminalRejection !== true;
+      if (row.openCodeV2?.authDigest && row.finishedAtMs !== undefined &&
+          (!latest || row.finishedAtMs > latest.finishedAtMs!)) latest = row;
+    }
+    return { latest, pending };
+  }
+
+  /** Private authorization from this owner's rejected publication, never a caller-supplied overwrite flag. */
+  private replaceableV2Auth(profile: OpenCodeManagementProfile, providerId: string, currentCommandId?: string): string | undefined {
+    const { latest, pending } = this.v2CredentialState(profile, providerId, currentCommandId);
+    return !pending && latest?.terminalRejection === true && !latest.resourceHeld &&
+      latest.openCodeV2?.phase === 'probe-completed' && latest.openCodeV2.verification?.ok === false
+      ? latest.openCodeV2.authDigest : undefined;
+  }
+
+  private connectedV2(profile: OpenCodeManagementProfile, providerId: string, authDigest: string): boolean {
+    const { latest, pending } = this.v2CredentialState(profile, providerId);
+    return !pending && latest?.phase === 'completed' && latest.openCodeV2?.phase === 'probe-completed' &&
+      latest.openCodeV2.verification?.ok === true && latest.openCodeV2.authDigest === authDigest;
   }
 
   private async retireHost(profileId: string, host: OpenCodeManagementHost): Promise<boolean> {
@@ -408,7 +485,17 @@ export class ProviderManagementCoordinator {
       .parse(raw);
     const profile = this.select(input.profileId, input.configRevision);
     if (profile.nativeGeneration === 'v2') {
+      if (this.replacing.has(profile.profileId)) throw new OpenCodeManagementError('held');
+      const selectedProvider = input.providerId ?? (input.includeModels ? profile.nativeModel?.providerId : undefined);
       let host = this.v2Hosts.get(profile.profileId);
+      if (host && !host.matchesCatalog(selectedProvider)) {
+        this.replacing.add(profile.profileId);
+        const clean = await host.close().catch(() => false);
+        if (!clean) throw new OpenCodeManagementError('held');
+        if (this.v2Hosts.get(profile.profileId) === host) this.v2Hosts.delete(profile.profileId);
+        this.replacing.delete(profile.profileId);
+        host = undefined;
+      }
       if (!host) {
         const target = this.credentialTarget(profile);
         host = new OpenCodeV2ManagementHost(profile, () => {
@@ -417,7 +504,10 @@ export class ProviderManagementCoordinator {
             assertManagementTarget(target, this.credentialTarget(this.select(input.profileId, input.configRevision)));
             return true;
           } catch { return false; }
-        }, this.processCustody);
+        }, this.processCustody, {
+          ...(selectedProvider ? { catalogProviderId: selectedProvider } : {}),
+          connected: (providerId, authDigest) => this.connectedV2(profile, providerId, authDigest),
+        });
         this.v2Hosts.set(profile.profileId, host);
       }
       try {
@@ -460,6 +550,7 @@ export class ProviderManagementCoordinator {
     this.probes.seal();
     for (const host of this.hosts.values()) void host.close().catch(() => {});
     for (const host of this.v2Hosts.values()) void host.close().catch(() => {});
+    for (const operation of this.v2Keys.values()) void operation.close().catch(() => {});
   }
 
   async close(): Promise<void> {
@@ -473,6 +564,7 @@ export class ProviderManagementCoordinator {
       this.probes.close().then(() => true),
       ...[...this.hosts.values()].map((host) => host.close()),
       ...[...this.v2Hosts.values()].map((host) => host.close()),
+      ...[...this.v2Keys.values()].map((operation) => operation.close()),
     ]);
     if (results.some((result) => result.status === 'rejected' || result.value !== true))
       throw new OpenCodeManagementError('held');

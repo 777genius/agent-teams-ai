@@ -8,16 +8,20 @@ import {
 } from '@agent-teams/provider-implementations/opencode';
 
 import { hasUntrustedOpenCodeBinaryOverride } from '../../composition/openCodeV2Environment.js';
+import { selectOpenCodeV2ManagementModel } from '../../composition/openCodeV2ModelSelection.js';
 import { ManagementCommandError } from '../../management/commandRecords.js';
 import { managementDigest } from '../../management/identity.js';
 import { openCodeManagementProfileSchema } from '../../management/profile.js';
 import { createOpenCodeV2EmbeddedServer } from './OpenCodeV2EmbeddedServer.js';
 import { openCodeV2NoToolConfig } from './OpenCodeV2EmbeddedConfig.js';
+import { attestOpenCodeV2ModelSelection } from './OpenCodeV2ModelSelection.js';
+import { captureOpenCodeV2SessionCredential } from './OpenCodeV2SessionCredential.js';
 
 import type { Session } from '@agent-teams/provider-session-contracts';
 import type { ModelProbeInput, NativeModelProbe } from '../../management/ModelProbeOwner.js';
 import type { OpenCodeManagementProfile } from '../../management/profile.js';
 import type { RegisteredProcessRootSource } from '../../process/registeredProcessContracts.js';
+import type { OpenCodeV2OwnedSessionSelection, OpenCodeV2TransportConfig } from '@agent-teams/provider-implementations/opencode';
 
 const unavailable = (): never => {
   throw new ManagementCommandError('held');
@@ -33,8 +37,8 @@ export function createOpenCodeV2ModelProbe(
   input: ModelProbeInput,
   isCurrent: () => boolean,
   options: { processCustody?: RegisteredProcessRootSource } = {}
-): NativeModelProbe {
-  const profile = structuredClone(openCodeManagementProfileSchema.parse(raw));
+): NativeModelProbe & { wasRejected(): boolean } {
+  const profile = selectOpenCodeV2ManagementModel(openCodeManagementProfileSchema.parse(raw), input);
   if (
     profile.nativeGeneration !== 'v2' ||
     profile.protocolRevision !== '2.1.4' ||
@@ -42,17 +46,10 @@ export function createOpenCodeV2ModelProbe(
     !profile.nativeModel ||
     input.limits ||
     input.modelContext !== undefined ||
-    input.providerId !== profile.nativeModel.providerId ||
-    (input.effort !== undefined && input.effort !== profile.variant) ||
     hasUntrustedOpenCodeBinaryOverride(profile.environment)
   )
     throw new ManagementCommandError('invalid');
-  const { embedded, nativeModel } = profile;
-  if (
-    input.modelId !== nativeModel.modelId &&
-    input.modelId !== `${nativeModel.providerId}/${nativeModel.modelId}`
-  )
-    throw new ManagementCommandError('invalid');
+  const { embedded } = profile;
   const captured = managementDigest({ profile, commandId: input.commandId });
   const timeoutMs = profile.modelProbeTimeoutMs ?? 90000;
   const directories = new Map<string, { dev: bigint; ino: bigint }>();
@@ -79,6 +76,7 @@ export function createOpenCodeV2ModelProbe(
   let closing: Promise<boolean> | undefined;
   let activeSignal: AbortSignal | undefined;
   let ownerCleanupUnknown = false;
+  let rejected = false;
   const requests = new Set<Promise<void>>();
   let driver: Session | undefined;
   let server: ReturnType<typeof createOpenCodeV2EmbeddedServer> | undefined;
@@ -86,7 +84,7 @@ export function createOpenCodeV2ModelProbe(
   let deadline = 0;
   const nativeSessionId = 'ses_' + captured.slice(0, 40);
   const { config, selection } = openCodeV2NoToolConfig(profile);
-  const current = () => {
+  const contextCurrent = () => {
     if (
       closed ||
       abort.signal.aborted ||
@@ -112,6 +110,9 @@ export function createOpenCodeV2ModelProbe(
       return false;
     }
   };
+  const credential = captureOpenCodeV2SessionCredential(profile, input.providerId, contextCurrent);
+  const current = () => contextCurrent() && credential.isCurrent();
+  let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];
   const assertCurrent = (signal?: AbortSignal) => {
     signal?.throwIfAborted();
     if (!current() || Date.now() >= deadline) unavailable();
@@ -149,11 +150,11 @@ export function createOpenCodeV2ModelProbe(
   };
   async function withClient<T>(
     signal: AbortSignal,
-    action: (client: ReturnType<typeof createOpenCodeV2OwnedSessionClient>) => Promise<T>
+    action: (client: ReturnType<typeof createOpenCodeV2OwnedSessionClient>, config: OpenCodeV2TransportConfig) => Promise<T>
   ): Promise<T> {
     assertCurrent(signal);
     if (!ready) return unavailable();
-    const client = createOpenCodeV2OwnedSessionClient({
+    const config: OpenCodeV2TransportConfig = {
       endpoint: ready.endpoint,
       directory: profile.cwd,
       nativeSessionId,
@@ -162,12 +163,13 @@ export function createOpenCodeV2ModelProbe(
       readPassword,
       signal: AbortSignal.any([signal, abort.signal]),
       deadline,
-    });
+    };
+    const client = createOpenCodeV2OwnedSessionClient(config);
     let failed = false;
     let originalFailure: unknown;
     let result!: T;
     try {
-      result = await action(client);
+      result = await action(client, config);
       assertCurrent(signal);
     } catch (error) {
       failed = true;
@@ -211,10 +213,13 @@ export function createOpenCodeV2ModelProbe(
     });
     ready = await server.start(signal);
     assertCurrent(signal);
-    await withClient(signal, async (client) => {
+    await withClient(signal, async (client, wire) => {
       const identity = await client.identity();
       if (identity.pid !== ready!.pid || identity.version !== '2.1.4') return unavailable();
-      await client.createSession(selection);
+      nativeCredential = await credential.prepare(wire, client);
+      await attestOpenCodeV2ModelSelection(client, selection.model,
+        { signal, deadline, isCurrent: current });
+      await client.createSession({ ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) });
     });
     const binding = {
       tenantId: 'provider-management',
@@ -255,7 +260,8 @@ export function createOpenCodeV2ModelProbe(
                   agent: observed.agent,
                   model: observed.model,
                   permissions: observed.permissions,
-                }) === managementDigest(selection) &&
+                  ...(observed.credential ? { credential: observed.credential } : {}),
+                }) === managementDigest({ ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) }) &&
                 (await client.savedPermissionsEmpty()) &&
                 (await client.builtinPluginsOnly()) &&
                 (await client.readMcp()).length === 0
@@ -295,13 +301,19 @@ export function createOpenCodeV2ModelProbe(
       )
         return false;
       if (event.kind === 'text') hasText ||= event.text.trim().length > 0;
-      else if (event.kind === 'result') return event.outcome === 'succeeded' && hasText;
+      else if (event.kind === 'result') {
+        // V2 emits failed only for the original qualified execution.failed + idle
+        // cut. Transport/cancellation/output failures are not a rejection proof.
+        rejected = event.outcome === 'failed' && event.code === undefined;
+        return event.outcome === 'succeeded' && hasText;
+      }
       else if (event.kind !== 'usage') return false;
     }
     return false;
   }
   return {
     timeoutMs,
+    wasRejected: () => rejected,
     run: (signal) => (running ??= run(signal)),
     close: () => {
       closed = true;

@@ -38,6 +38,15 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
   scope.rollbackPublished('TEST-private-key', after, pending.before);
   assert.deepEqual(JSON.parse(readFileSync(f.file, 'utf8')), { 'TEST-other': foreign });
   assert.equal(f.scope().capture().present, false);
+  const rejected = scope.prepare('TEST-rejected-key').publish();
+  assert.throws(() => scope.prepare('TEST-corrected-key'), { code: 'held' });
+  assert.throws(() => scope.prepare('TEST-corrected-key', after.digest), { code: 'held' });
+  const corrected = scope.prepare('TEST-corrected-key', rejected.digest).publish();
+  assert.equal(corrected.readKey(), 'TEST-corrected-key');
+  assert.equal(rejected.isCurrent(), false);
+  assert.deepEqual(JSON.parse(readFileSync(f.file, 'utf8')), {
+    'TEST-other': foreign, 'TEST-provider': { type: 'api', key: 'TEST-corrected-key' },
+  });
 });
 
 test('V2 refuses existing V1/auth changes and never overwrites a replacement during rollback', t => {

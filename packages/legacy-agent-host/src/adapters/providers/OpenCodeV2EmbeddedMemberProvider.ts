@@ -7,11 +7,14 @@ import { createOpenCodeV2OwnedSessionClient,
 import { createOpenCodeV2MemberProvider } from './OpenCodeV2MemberProvider.js';
 import { createOpenCodeV2EmbeddedServer } from './OpenCodeV2EmbeddedServer.js';
 import { openCodeV2EmbeddedConfig } from './OpenCodeV2EmbeddedConfig.js';
+import { attestOpenCodeV2ModelSelection } from './OpenCodeV2ModelSelection.js';
+import { captureOpenCodeV2SessionCredential } from './OpenCodeV2SessionCredential.js';
 import { runtimeDigest } from '../../runtime/identity.js';
 import { hasUntrustedOpenCodeBinaryOverride } from '../../composition/openCodeV2Environment.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 import type { OpenCodeV2OwnedSession } from './OpenCodeV2OwnedSession.js';
 import type { NativeInitialContextCapture } from './OpenCodeV2InitialContextReadback.js';
+import type { OpenCodeV2OwnedSessionSelection, OpenCodeV2TransportConfig } from '@agent-teams/provider-implementations/opencode';
 
 const unavailable = (): never => { throw new Error('OpenCode V2 embedded session unavailable'); };
 type OwnedClient = ReturnType<typeof createOpenCodeV2OwnedSessionClient>;
@@ -40,15 +43,22 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
   let nativeSessionId: string | undefined;
   let startup: Promise<void> | undefined;
   let initialAttempt: Promise<Awaited<ReturnType<OpenCodeV2OwnedSession['installAndAttestInitialContext']>>> | undefined;
-  const current = () => !sealed && !cleanupUnknown && !abort.signal.aborted && context.isCurrent() &&
+  const contextCurrent = () => !sealed && !cleanupUnknown && !abort.signal.aborted && context.isCurrent() &&
     runtimeDigest(context.request) === capturedRequest && runtimeDigest(context.profile) === capturedProfile &&
     runtimeDigest(context.endpoint.binding) === capturedEndpoint && context.instructions === instructions &&
     !hasUntrustedOpenCodeBinaryOverride(process.env);
+  const credential = captureOpenCodeV2SessionCredential(profile, profile.nativeOptions.providerId, contextCurrent);
+  const current = () => contextCurrent() && credential.isCurrent();
+  let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];
+  const matchesSelection = (observed: Awaited<ReturnType<OwnedClient['readSession']>>) =>
+    runtimeDigest({ agent: observed.agent, model: observed.model, permissions: observed.permissions,
+      ...(observed.credential ? { credential: observed.credential } : {}) }) ===
+    runtimeDigest({ ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) });
   const assertCurrent = () => { if (!current()) unavailable(); };
-  async function withClient<T>(signal: AbortSignal, callback: (client: OwnedClient) => Promise<T>): Promise<T> {
+  async function withClient<T>(signal: AbortSignal, callback: (client: OwnedClient, config: OpenCodeV2TransportConfig) => Promise<T>): Promise<T> {
     assertCurrent();
     if (!nativeSessionId || !server || !nativePin) return unavailable();
-    const client = createOpenCodeV2OwnedSessionClient({
+    const config: OpenCodeV2TransportConfig = {
       endpoint: profile.endpoint, directory: profile.cwd, version: '2.1.4', nativeSessionId,
       readPassword: () => { assertCurrent(); return server!.readPassword(); },
       beforeRequest: async requestSignal => {
@@ -61,9 +71,10 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
             custody.executableSha256 !== profile.executable.sha256) return unavailable();
       },
       signal: AbortSignal.any([signal, abort.signal]), deadline: Date.now() + profile.limits.timeoutMs,
-    });
+    };
+    const client = createOpenCodeV2OwnedSessionClient(config);
     let failed = false, failure: unknown, result!: T;
-    try { result = await callback(client); assertCurrent(); }
+    try { result = await callback(client, config); assertCurrent(); }
     catch (error) { failed = true; failure = error; }
     try { await client.dispose(); }
     catch (error) { cleanupUnknown = true; if (!failed) { failed = true; failure = error; } }
@@ -123,13 +134,16 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
       const ready = await server.start(AbortSignal.any([signal, abort.signal]));
       assertCurrent();
       nativePin = Object.freeze({ pid: ready.pid, startIdentity: ready.startIdentity });
-      await withClient(signal, async client => {
+      await withClient(signal, async (client, wire) => {
         const identity = await client.identity();
         if (identity.pid !== ready.pid || identity.version !== embedded.version) return unavailable();
-        const selected = context.request.checkpointRef
-          ? await client.readSession() : await client.createSession(selection);
-        if (runtimeDigest({ agent: selected.agent, model: selected.model, permissions: selected.permissions }) !==
-            runtimeDigest(selection)) return unavailable();
+        const restored = context.request.checkpointRef ? await client.readSession() : undefined;
+        nativeCredential = await credential.prepare(wire, client, restored);
+        await attestOpenCodeV2ModelSelection(client, selection.model,
+          { signal, deadline: wire.deadline, isCurrent: current, requireTools: true });
+        const selected = restored ?? await client.createSession({ ...selection,
+          ...(nativeCredential ? { credential: nativeCredential } : {}) });
+        if (!matchesSelection(selected)) return unavailable();
       });
     })();
   }
@@ -159,8 +173,7 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
           const custody = await server!.readNativeCustody(signal);
           if (!custody || identity.pid !== custody.pid || identity.version !== custody.version) return false;
           const session = await client.readSession();
-          if (runtimeDigest({ agent: session.agent, model: session.model, permissions: session.permissions }) !==
-              runtimeDigest(selection) || !await client.savedPermissionsEmpty() ||
+          if (!matchesSelection(session) || !await client.savedPermissionsEmpty() ||
               !await client.builtinPluginsOnly()) return false;
           const mcp = await client.readMcp();
           const receipt = context.endpoint.getCatalogReceipt?.();
@@ -186,7 +199,7 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
       return withClient(signal, async client => {
         const session = await client.readSession();
         const custody = await server!.readNativeCustody(signal);
-        if (!custody || !await client.savedPermissionsEmpty() ||
+        if (!custody || !matchesSelection(session) || !await client.savedPermissionsEmpty() ||
             !await client.builtinPluginsOnly()) return undefined;
         return { nativeSessionId: session.id, directory: session.directory,
           modelProviderId: session.model.providerID, modelId: session.model.id,
