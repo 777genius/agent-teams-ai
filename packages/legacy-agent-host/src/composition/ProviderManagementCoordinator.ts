@@ -127,9 +127,12 @@ export class ProviderManagementCoordinator {
       select: (profileId, configRevision) =>
         this.claude.has(profileId)
           ? this.claude.target(profileId, configRevision)
-          : this.credentialTarget(this.select(profileId, configRevision)),
+          : this.codex.has(profileId)
+            ? this.codex.target(profileId, configRevision)
+            : this.credentialTarget(this.select(profileId, configRevision)),
       prepare: (input) => {
         if (this.claude.has(input.profileId)) return this.claudeAuth.prepare(input);
+        if (this.codex.has(input.profileId)) return this.codex.prepareLogin(input);
         const profile = this.select(input.profileId, input.configRevision);
         if (profile.nativeGeneration === 'v2') throw new ManagementCommandError('invalid');
         const host = this.getHost(profile);

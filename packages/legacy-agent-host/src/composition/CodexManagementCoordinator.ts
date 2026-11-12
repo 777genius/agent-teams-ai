@@ -2,6 +2,7 @@ import { realpathSync, statSync } from 'node:fs';
 import { z } from 'zod';
 
 import { CodexManagementHost } from '../adapters/providers/CodexManagementHost.js';
+import { CodexLoginConversation } from '../adapters/providers/CodexLoginConversation.js';
 import { assertManagementTarget, ManagementCommandError } from '../management/commandRecords.js';
 import { managementDigest } from '../management/identity.js';
 import { codexManagementProfileSchema } from '../management/profile.js';
@@ -10,11 +11,12 @@ import type { CodexManagementProfile } from '../management/profile.js';
 import type { CodexMetadataSnapshot } from '../management/contracts.js';
 import type { ManagementTarget } from '../management/commandRecords.js';
 import type { ModelProbeInput, NativeModelProbe } from '../management/ModelProbeOwner.js';
+import type { OAuthNativeConversation } from '../management/OAuthOperationOwner.js';
 
 /** Selected finite Codex account operations, separate from OAuth and conversation owners. */
 export class CodexManagementCoordinator {
   private readonly profiles: Map<string, CodexManagementProfile>;
-  private readonly live = new Set<CodexManagementHost>();
+  private readonly live = new Set<CodexManagementHost | CodexLoginConversation>();
   private readonly running = new Map<string, Promise<unknown>>();
   private sealed = false;
   private readonly held = new Set<string>();
@@ -31,6 +33,45 @@ export class CodexManagementCoordinator {
 
   has(profileId: string): boolean {
     return this.profiles.has(profileId);
+  }
+
+  prepareLogin(input: {
+    profileId: string;
+    configRevision: string;
+    providerId: string;
+    methodIndex: number;
+  }): OAuthNativeConversation {
+    const profile = this.select(input.profileId, input.configRevision);
+    if (input.providerId !== 'codex' || ![0, 1].includes(input.methodIndex))
+      throw new ManagementCommandError('invalid');
+    const target = this.target(input.profileId, input.configRevision);
+    if (this.held.has(target.resourceId)) throw new ManagementCommandError('held');
+    const conversation = new CodexLoginConversation(
+      profile,
+      input.methodIndex === 0 ? 'chatgpt' : 'chatgptDeviceCode',
+      () => {
+        try {
+          assertManagementTarget(target, this.target(input.profileId, input.configRevision));
+          return !this.held.has(target.resourceId);
+        } catch {
+          return false;
+        }
+      }
+    );
+    this.live.add(conversation);
+    const close = async () => {
+      const clean = await conversation.close().catch(() => false);
+      if (clean) this.live.delete(conversation);
+      else this.held.add(target.resourceId);
+      return clean;
+    };
+    return {
+      timeoutMs: conversation.timeoutMs,
+      nativeCompletion: conversation.nativeCompletion,
+      authorize: (fields, signal) => conversation.authorize(fields, signal),
+      complete: async (code, signal) => (await conversation.complete(code, signal)) && close(),
+      close,
+    };
   }
 
   /** Trusted immutable selections only; no caller-supplied executable/account RPC. */

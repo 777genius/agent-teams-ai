@@ -58,6 +58,14 @@ export interface ProviderModelProbeSnapshot {
   expiresAt: number;
 }
 
+/** Private Host→Main authorization only. Never journal or emit as OAuth progress. */
+export interface ProviderOAuthAuthorization {
+  authorizationUrl: string;
+  instructions: string;
+  browserOwner?: 'native';
+  userCode?: string;
+}
+
 /** Safe progress only. Authorization URLs/codes and native instructions are Main-only. */
 export interface ProviderOAuthSnapshot {
   operationId: string;

@@ -1,4 +1,4 @@
-import { appendFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 
@@ -13,6 +13,31 @@ if (process.env.TEST_PROBE)
     mode: 0o600,
   });
 const lines = createInterface({ input: process.stdin });
+const loginCase = process.env.TEST_LOGIN;
+const loginAccount = join(process.env.CODEX_HOME!, 'TEST-login-account.json');
+let loginId: string | undefined;
+const notifyLogin = (id: string | null, success = true) =>
+  process.stdout.write(
+    JSON.stringify({
+      jsonrpc: '2.0',
+      method: 'account/login/completed',
+      params: { loginId: id, success, error: null },
+    }) + '\n'
+  );
+const saveLogin = () => writeFileSync(loginAccount, 'true', { mode: 0o600 });
+if (loginCase) {
+  appendFileSync(
+    join(process.env.HOME!, 'TEST-login-processes.ndjson'),
+    JSON.stringify({ pid: process.pid }) + '\n',
+    { mode: 0o600 }
+  );
+  setInterval(() => {
+    if (!loginId || !existsSync(join(process.env.HOME!, 'TEST-complete-login'))) return;
+    saveLogin();
+    notifyLogin(loginId);
+    loginId = undefined;
+  }, 20).unref();
+}
 lines.on('line', (line) => {
   const message = JSON.parse(line) as {
     id?: string;
@@ -25,6 +50,7 @@ lines.on('line', (line) => {
     { mode: 0o600 }
   );
   let result: unknown;
+  if (message.method === 'initialize' && loginCase === 'cancel-before-login') return;
   if (message.method === 'initialize')
     result = {
       codexHome: process.env.TEST_WRONG_NAMESPACE ? '/TEST-foreign' : process.env.CODEX_HOME,
@@ -32,7 +58,41 @@ lines.on('line', (line) => {
       platformOs: process.platform,
     };
   else if (message.method === 'initialized') return;
-  else if (process.env.TEST_PROBE && message.method === 'thread/start')
+  else if (loginCase && message.method === 'account/login/start') {
+    loginId = 'TEST-native-login-' + process.pid;
+    if (loginCase === 'overflow') {
+      for (let index = 0; index < 9; index++) notifyLogin('TEST-foreign-' + index);
+    } else {
+      notifyLogin('TEST-foreign');
+      notifyLogin(null);
+      if (['early', 'wrong-account', 'reply-lost'].includes(loginCase)) {
+        if (loginCase !== 'wrong-account') saveLogin();
+        notifyLogin(loginId);
+      }
+    }
+    if (loginCase === 'reply-lost') return;
+    result =
+      message.params?.type === 'chatgptDeviceCode'
+        ? {
+            type: 'chatgptDeviceCode',
+            loginId,
+            verificationUrl: 'https://example.invalid/device',
+            userCode: 'TEST-PRIVATE-CODE',
+          }
+        : {
+            type: 'chatgpt',
+            loginId,
+            authUrl: 'https://example.invalid/login?state=TEST-private-state',
+          };
+  } else if (loginCase && message.method === 'account/login/cancel') {
+    if (message.params?.loginId !== loginId)
+      throw new Error('Fixture cancel must keep original loginId');
+    loginId = undefined;
+    result = { status: 'canceled' };
+  } else if (loginCase && message.method === 'account/logout') {
+    writeFileSync(loginAccount, 'false', { mode: 0o600 });
+    result = {};
+  } else if (process.env.TEST_PROBE && message.method === 'thread/start')
     result = {
       thread: { id: 'TEST-thread' },
       model:
@@ -77,9 +137,11 @@ lines.on('line', (line) => {
     return;
   } else if (message.method === 'account/read')
     result = {
-      account: process.env.TEST_CHATGPT
-        ? { type: 'chatgpt', email: 'test@example.invalid', planType: 'plus' }
-        : null,
+      account:
+        process.env.TEST_CHATGPT ||
+        (existsSync(loginAccount) && readFileSync(loginAccount, 'utf8') === 'true')
+          ? { type: 'chatgpt', email: 'test@example.invalid', planType: 'plus' }
+          : null,
       requiresOpenaiAuth: true,
     };
   else if (message.method === 'account/rateLimits/read')
