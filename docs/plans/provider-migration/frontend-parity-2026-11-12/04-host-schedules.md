@@ -287,3 +287,21 @@ Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b
   Desktop orchestration за пределами package root. Desktop использует тот же verifier через прежний API.
 - TypeScript и fast lint проверяют fixture локально. Actual native run выполняется штатным Linux CI;
   Desktop Add/Edit/Pause/Resume/Run now/history и smart dispatch остаются следующей отдельной приёмкой.
+
+## R6 — Desktop controls через существующий native harness
+
+- Новый finite `native-schedule-ui` mode переиспользует `desktop-backend-smoke`, existing private Host fixture,
+  CDP Input controls и `native-claude-team/model.ts`. Один optional TEST script отвечает за schedule prompts;
+  второй app runner, обёртка над production Scheduler или подмена renderer store не нужны.
+- Fixture заранее сохраняет один прежний one-shot record без Host target. Пользовательский Edit/Save в реальном
+  `LaunchTeamDialog` должен выполнить явный rebind. Затем Pause/Resume/Run now дают один actual Claude run,
+  native Bash файл, completed history и текст в прежнем `ScheduleRunLogDialog`.
+- Add создаёт обычный task-first schedule из прежних полей cron/timezone/prompt. Run now запускает сохранённую
+  остановленную Host-команду и одну связанную board task; actual SDK через Team MCP завершает эту task и отвечает
+  пользователю. Повторные UI read/reload не создают новый occurrence и не повторяют original work.
+- Скрипт модели выбирает task из original Host ledger и требует её ID в native input. Он не выполняет app mutations:
+  Bash, task_complete и message_send выполняются самим native SDK. Inference receipts и счётчики разделяют one-shot
+  от task-first; отсутствие reply/cleanup не даёт PASS.
+- Снятие blanket `ScheduleSection` restriction публикуется после actual finite Host gate; Desktop proof остаётся
+  обязательным до завершения P04. Existing Croner/JSON/child-Host integration уже покрывает настоящий tick и
+  stop barrier; второй набор аналогичных unit tests не добавляется.
