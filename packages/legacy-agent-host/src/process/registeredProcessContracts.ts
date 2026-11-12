@@ -5,6 +5,14 @@ export interface DarwinProcessIdentity {
   bootId: string;
   osBuild: string;
 }
+export interface LinuxProcessIdentity {
+  pid: number;
+  sessionId: number;
+  /** Kernel pidfs inode: stable per boot; never /proc start ticks or a reusable PID. */
+  pidfdId: string;
+  pidNamespaceId: string;
+  bootId: string;
+}
 export interface RegistrarBinding {
   backendId: string;
   teamId: string;
@@ -13,11 +21,19 @@ export interface RegistrarBinding {
   generation: string;
 }
 /** Private original registration evidence; never an IPC/MCP-supplied token. */
-export type RegisteredProcessCapture = {
+export type DarwinRegisteredProcessCapture = {
   registrar: RegistrarBinding;
   target: DarwinProcessIdentity;
   root: DarwinProcessIdentity;
 } & ({ version: 1 } | { version: 2; admission: 'live-ancestry-v1' });
+export interface LinuxRegisteredProcessCapture {
+  version: 3;
+  platform: 'linux';
+  registrar: RegistrarBinding;
+  root: LinuxProcessIdentity;
+  target: LinuxProcessIdentity;
+}
+export type RegisteredProcessCapture = DarwinRegisteredProcessCapture | LinuxRegisteredProcessCapture;
 export type ProcessObservation = 'same-live' | 'absent' | 'stale' | 'unknown';
 export interface RegisteredProcessNative {
   capture(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture;

@@ -11,6 +11,8 @@
   },
   "include": [
     "scripts/legacy-agent-host/**/*.ts",
-    "scripts/ci/prefill-legacy-host-macos-node.mts"
+    "scripts/ci/prefill-legacy-host-macos-node.mts",
+    "packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts",
+    "packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts"
   ]
 }

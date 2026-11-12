@@ -236,6 +236,7 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
       } finally { lease.release(); }
       const canonical = createControllerProcessPolicy(registry).readStrict(); assert.equal(canonical.length, 1);
       primaryCapture = canonical[0]!.capturedNative; assert.ok(primaryCapture);
+      assert.ok(primaryCapture.version === 1 || primaryCapture.version === 2, 'Existing controlled fixture selects Darwin custody');
       rootCapture = { ...structuredClone(primaryCapture), target: structuredClone(primaryCapture.root) };
       registrySha256 = await fileDigest(registry);
       Object.assign(proof, { registration, original, originalProcessRef: original!.processRef, canonicalPrimary: canonical[0], rootCapture, neighborCapture, services });

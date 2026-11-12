@@ -67,7 +67,8 @@ controller storage, Main/Host transport и существующий `ProcessesSe
   `backendId/teamId/runId/memberId/generation`, original root и target identity.
 - Darwin v1/v2 читаются прежним decoder; их persisted bytes/hash/processRef не переписываются для удобства новой схемы.
 - Windows identity основана на original process handle, PID, creation FILETIME и проверенном executable identity.
-- Linux identity включает boot/start identity и original process handle; signal выполняется через pidfd.
+- Linux identity включает boot UUID, PID namespace и стабильный 64-bit pidfs inode; signal выполняется через pidfd.
+  PID и `/proc` start ticks отдельно не являются durable identity.
 - Handle существует только внутри adapter; durable capture содержит проверенные identity fields, не числовой handle/address.
 - Captured identity не образуется из одного PID, команды, label, port, имени файла или текущего UI selection.
 - При регистрации native backend доказывает принадлежность живому original root, включая требуемую ancestry/membership.
@@ -138,6 +139,7 @@ Existing broker сохраняет unknown attempt и genuine private receipt; �
 ### 4.3. Linux
 
 - Небольшой N-API adapter открывает pidfd для exact original target и удерживает его на observation/signal boundary.
+  Проверка `fstatfs(PID_FS_MAGIC)` обязательна: старый anonymous-inode pidfd не даёт пригодной durable inode identity.
 - Original identity и ownership проверяются до действия; проверка по `/proc` без удержанного kernel handle недостаточна.
 - Reopen после restart допустим только из durable captured identity с проверкой incarnation, а не из UI PID.
 - PID сменился до/между проверками: `stale`/`absent`, без signal новому процессу.
@@ -314,3 +316,30 @@ Focused R3 не закрывает 09-WG: до реализации требуе
 - **Остаётся:** native gate outcome; actual provider debug compatibility и два services в одном tool task; bounded production record
   retirement/identity binding; read-only scope observation; registry async Stop и единственный recovery owner; packaged Desktop proof.
   До этих результатов P09 остаётся частично реализованным; 09-WG и M19 не закрыты.
+
+## 13. Linux native/Host срез, 2026-11-12
+
+- `native/registered-process-linux.c` использует original pidfd на каждом boundary; `captureRoot` вызывается синхронно
+  после реального isolated spawn. Same-session admission и bounded live ancestry удерживают оригинальные descriptors;
+  чужой root, сменившаяся цепочка, namespace или incarnation не создают право сигнала.
+- `LinuxRegisteredProcess.ts` подключён через существующий `processCustody.ts`. Capture v3 имеет `platform: linux`;
+  Darwin v1/v2 читаются без переписывания bytes/hash. Shared `loadProcessNativeArtifact.ts` сохраняет прежние проверки
+  digest/canonical file/cache; второй процесс, daemon или command journal не появился.
+- Cold read/signal открывает pidfd и сначала проверяет сохранённый per-boot inode; final `pidfd_send_signal(SIGTERM)`
+  получает этот descriptor. Это сохраняет Unix baseline одного SIGTERM выбранному service, не обещает Windows tree Stop на Linux.
+  PID/start-time эвристика и `kill(pid)` fallback отсутствуют. `accepted` по-прежнему не означает observed exit.
+- Native executable evidence связывает original root с kernel `/proc/PID/exe`, device/inode и полным pinned SHA256 файла.
+  Packaging actor строит N-API 8 artifact и записывает фактически требуемую ELF/glibc версию; Host не запускает compiler.
+- Фактическая приёмка: **Node 24.21.0** и **Electron 44.10.1 / Node 24.22.1**, Linux **6.18.57 x64**,
+  same-/cross-session, foreign lineage, wrong inode/namespace, provider/bridge exit, новый cold worker, original SIGTERM,
+  neighbor survival, SID drift и finite natural cleanup. Проверялись настоящий checked manifest и Host composition.
+  Оба runtime использовали одинаковый binary SHA; измеренный glibc минимум — **2.33**. Existing process regression suites — **18/18**.
+- Existing guarded native workflow дополнен Linux x64 lane с matching source paths; draft/repository guard сохранён.
+  Node repository runtime, Host Node и pinned Electron имеют отдельные native receipts; отсутствие pidfs не является skip/PASS.
+- **Открыто:** kernels без stable pidfs identity (upstream до 6.9), более старые libc/artifact tuples, actual SDK/Desktop/packaged
+  Linux M19 и общий explicit recovery retry. Успех этого среза не разрешает молча убрать работавший Unix Stop на старых kernels.
+  Windows service debug candidate остаётся отдельным незакрытым gate.
+
+Основание durable identity: [systemd pidfd inode contract](https://www.freedesktop.org/software/systemd/man/latest/sd_pidfd_get_inode_id.html);
+original-process signal/exit: [pidfd_open](https://man7.org/linux/man-pages/man2/pidfd_open.2.html) и
+[pidfd_send_signal](https://man7.org/linux/man-pages/man2/pidfd_send_signal.2.html).

@@ -178,4 +178,7 @@ export const desktopProofManagementSources = [
   'packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts',
   'src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts',
   'test/features/agent-backend/claudeCloseDiagnostics.test.ts',
+  'packages/legacy-agent-host/src/process/LinuxRegisteredProcess.ts',
+  'packages/legacy-agent-host/src/process/loadProcessNativeArtifact.ts',
+  'packages/legacy-agent-host/native/registered-process-linux.c',
 ] as const;

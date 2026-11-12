@@ -11,6 +11,14 @@ on:
       - 'packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts'
       - 'packages/legacy-agent-host/src/adapters/providers/WindowsCapturedProcess.ts'
       - 'packages/legacy-agent-host/src/composition/nativeProcessProfile.ts'
+      - 'packages/legacy-agent-host/src/composition/processCustody.ts'
+      - 'packages/legacy-agent-host/src/process/**'
+      - 'packages/legacy-agent-host/native/registered-process-linux.c'
+      - 'packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts'
+      - 'packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts'
+      - 'packages/legacy-agent-host/tests/registered-process-linux.native.mjs'
+      - 'packages/legacy-agent-host/tests/fixtures/registered-process-actor.c'
+      - 'packages/legacy-agent-host/tests/fixtures/registered-process-parent.ts'
       - 'packages/legacy-agent-host/package.json'
       - 'scripts/build/buildOwnedProcessBroker.ts'
       - 'eslint.config.js'
@@ -25,6 +33,68 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
 
 jobs:
+  linux-registered:
+    if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
+    name: registered native (linux x64 pidfs)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: pnpm/action-setup@v6.1.0
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Bind exact source and install frozen dependencies
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          node ./scripts/ci/install-dependencies-with-retry.mjs
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm typecheck:legacy-host-scripts
+          node --test packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts
+          mkdir -p native-evidence
+          git rev-parse HEAD > native-evidence/source-sha.txt
+      - name: Genuine repository Node pidfs and cold-original gates
+        env:
+          LEGACY_REGISTERED_PROCESS_NATIVE_GO: '1'
+        run: |
+          set -euo pipefail
+          headers=$(node -p "require('path').resolve(require('path').dirname(process.execPath),'../include/node')")
+          node packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts "$RUNNER_TEMP/TEST-linux-node26-$GITHUB_RUN_ID" "$(command -v cc)" "$(command -v readelf)" "$headers" | tee native-evidence/linux-node26.log
+          cp -R "$RUNNER_TEMP/TEST-linux-node26-$GITHUB_RUN_ID" native-evidence/node26
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24.21.0
+      - name: Genuine Host Node pidfs and cold-original gates
+        env:
+          LEGACY_REGISTERED_PROCESS_NATIVE_GO: '1'
+        run: |
+          set -euo pipefail
+          headers=$(node -p "require('path').resolve(require('path').dirname(process.execPath),'../include/node')")
+          node packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts "$RUNNER_TEMP/TEST-linux-node24-$GITHUB_RUN_ID" "$(command -v cc)" "$(command -v readelf)" "$headers" | tee native-evidence/linux-node24.log
+          cp -R "$RUNNER_TEMP/TEST-linux-node24-$GITHUB_RUN_ID" native-evidence/node24
+      - name: Genuine pinned Electron N-API and original-identity gates
+        env:
+          LEGACY_REGISTERED_PROCESS_NATIVE_GO: '1'
+          ELECTRON_RUN_AS_NODE: '1'
+        run: |
+          set -euo pipefail
+          headers=$(node -p "require('path').resolve(require('path').dirname(process.execPath),'../include/node')")
+          node_modules/electron/dist/electron packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts "$RUNNER_TEMP/TEST-linux-electron-$GITHUB_RUN_ID" "$(command -v cc)" "$(command -v readelf)" "$headers" | tee native-evidence/linux-electron.log
+          cp -R "$RUNNER_TEMP/TEST-linux-electron-$GITHUB_RUN_ID" native-evidence/electron
+      - name: Retain exact Linux source, artifact and native receipts
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: registered-linux-x64-${{ github.event.pull_request.head.sha || github.sha }}
+          path: native-evidence
+          if-no-files-found: error
+          retention-days: 14
   native:
     if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
     name: owned native (${{ matrix.arch }})

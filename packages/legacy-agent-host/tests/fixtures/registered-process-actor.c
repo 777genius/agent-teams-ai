@@ -12,7 +12,7 @@ static void stop(int signal) { (void)signal; stopped = 1; }
 static double now(void) { struct timespec t; if (clock_gettime(CLOCK_MONOTONIC, &t)) exit(2); return t.tv_sec + t.tv_nsec / 1e9; }
 int main(int argc, char **argv) {
   char release[PATH_MAX], changed[PATH_MAX], closed[PATH_MAX];
-  if (argc != 3 || strncmp(argv[1], "/private/tmp/TEST-", 18) != 0 ||
+  if (argc != 3 || (strncmp(argv[1], "/private/tmp/TEST-", 18) != 0 && strncmp(argv[1], "/tmp/TEST-", 10) != 0) ||
       strspn(argv[2], "abcdefghijklmnopqrstuvwxyz") != strlen(argv[2])) return 2;
   if (snprintf(release, sizeof(release), "%s/%s.drift", argv[1], argv[2]) >= (int)sizeof(release) ||
       snprintf(changed, sizeof(changed), "%s/%s.did-drift", argv[1], argv[2]) >= (int)sizeof(changed) ||

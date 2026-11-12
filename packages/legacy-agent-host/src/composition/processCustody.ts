@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { createQualifiedDarwinProcessApi } from '../process/DarwinRegisteredProcess.js';
-import { readPackagedProcessArtifact } from '../process/readPackagedProcessArtifact.js';
+import { createQualifiedLinuxProcessApi } from '../process/LinuxRegisteredProcess.js';
+import { readPackagedLinuxProcessArtifact, readPackagedProcessArtifact } from '../process/readPackagedProcessArtifact.js';
+import type { RegisteredProcessNative, RegisteredProcessRootSource } from '../process/registeredProcessContracts.js';
 
 /** Private captured packaging selection only. No renderer/IPC/env/argv selection. */
 export const processCustodyProfileSchema = z
@@ -13,12 +15,12 @@ export const processCustodyProfileSchema = z
     manifestSha256: z.string().regex(/^[a-f0-9]{64}$/),
   })
   .strict();
-export type ProcessCustody = ReturnType<typeof createQualifiedDarwinProcessApi>;
+export type ProcessCustody = Required<RegisteredProcessRootSource> & Pick<RegisteredProcessNative, 'observe' | 'signal'>;
 /** Loads the exact prebuilt tuple once. Absence never upgrades an unqualified PID. */
 export function createProcessCustody(
   selection: z.infer<typeof processCustodyProfileSchema> | undefined
 ): ProcessCustody | undefined {
-  return selection
-    ? createQualifiedDarwinProcessApi(readPackagedProcessArtifact(selection))
-    : undefined;
+  if (!selection) return undefined;
+  if (process.platform === 'linux') return createQualifiedLinuxProcessApi(readPackagedLinuxProcessArtifact(selection));
+  return createQualifiedDarwinProcessApi(readPackagedProcessArtifact(selection));
 }

@@ -1,5 +1,6 @@
 import type {
   DarwinProcessIdentity,
+  LinuxProcessIdentity,
   ProcessCommandReceipt,
   RegisteredProcessCapture,
   TeamProcessRow,
@@ -26,16 +27,32 @@ function identity(value: DarwinProcessIdentity) {
   )
     hold();
 }
+function linuxIdentity(value: LinuxProcessIdentity) {
+  const decimal = (part: unknown) => typeof part === 'string' && /^[1-9]\d{0,19}$/.test(part) &&
+    BigInt(part) <= 0xffffffffffffffffn;
+  if (!value || !Number.isSafeInteger(value.pid) || value.pid <= 1 || value.pid > 0x7fffffff ||
+      !Number.isSafeInteger(value.sessionId) || value.sessionId <= 1 || value.sessionId > 0x7fffffff ||
+      !decimal(value.pidfdId) || !decimal(value.pidNamespaceId) ||
+      !text(value.bootId) || !/^[a-f0-9-]{36}$/i.test(value.bootId)) hold();
+}
 export function validateProcessCapture(capture: RegisteredProcessCapture): void {
   if (
     !capture ||
-    (capture.version !== 1 && capture.version !== 2) ||
+    (capture.version !== 1 && capture.version !== 2 && capture.version !== 3) ||
     !capture.registrar ||
     !['backendId', 'teamId', 'runId', 'memberId', 'generation'].every((key) =>
       text(capture.registrar[key as keyof typeof capture.registrar])
     )
   )
     hold();
+  if (capture.version === 3) {
+    if (capture.platform !== 'linux') hold();
+    linuxIdentity(capture.root); linuxIdentity(capture.target);
+    if (capture.root.sessionId !== capture.root.pid || capture.root.pid === capture.target.pid ||
+        capture.root.pidfdId === capture.target.pidfdId || capture.root.bootId !== capture.target.bootId ||
+        capture.root.pidNamespaceId !== capture.target.pidNamespaceId) hold();
+    return;
+  }
   identity(capture.root);
   identity(capture.target);
   if (
@@ -75,7 +92,7 @@ export function validateProcessRow(row: TeamProcessRow): TeamProcessRow {
     const capture = row.capturedNative;
     if (!capture || !text(row.capturedByCommand)) return hold();
     validateProcessCapture(capture);
-    if (capture.target.auditToken[5] !== row.pid) hold();
+    if ((capture.version === 3 ? capture.target.pid : capture.target.auditToken[5]) !== row.pid) hold();
   }
   return row;
 }

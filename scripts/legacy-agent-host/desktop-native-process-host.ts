@@ -149,6 +149,8 @@ async function qualifyOriginalNativeRegistration(
   assert.equal(primary.label, PROCESS_LABEL);
   assert.equal(primary.capturedByCommand, PROCESS_REGISTER_ID);
   assert.ok(primary.capturedNative, 'canonical original registration supplies root identity');
+  assert.ok(primary.capturedNative.version === 1 || primary.capturedNative.version === 2,
+    'Existing actual SDK fixture selects Darwin custody');
   // Only the original immutable root is projected into the observation target slot.
   // No captureRoot/capture/signal call, PID selection, or replacement-root adoption.
   const rootCapture: RegisteredProcessCapture = {

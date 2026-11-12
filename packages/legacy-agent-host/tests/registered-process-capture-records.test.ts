@@ -1,11 +1,29 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { validateProcessCapture } from '../dist/process/validateProcessRecords.js';
-import type { RegisteredProcessCapture } from '../dist/process/registeredProcessContracts.js';
-const legacy = (): RegisteredProcessCapture => ({
+import type { DarwinRegisteredProcessCapture, LinuxRegisteredProcessCapture, RegisteredProcessCapture } from '../dist/process/registeredProcessContracts.js';
+const legacy = (): DarwinRegisteredProcessCapture => ({
   version: 1, registrar: { backendId: 'TEST-backend', teamId: 'TEST-team', runId: 'TEST-run', memberId: 'TEST-member', generation: '1' },
   root: { auditToken: [501,501,20,501,20,1000,100,2], sessionId: 1000, bootId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', osBuild: '24G90' },
   target: { auditToken: [501,501,20,501,20,1001,100,3], sessionId: 1000, bootId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', osBuild: '24G90' },
+});
+test('Linux pidfs records preserve original identity; reading Darwin v1/v2 never rewrites their bytes', () => {
+  const before = legacy();
+  const bytes = JSON.stringify(before);
+  const v2: DarwinRegisteredProcessCapture = { ...legacy(), version: 2, admission: 'live-ancestry-v1',
+    target: { ...legacy().target, sessionId: 2000 } };
+  const v2Bytes = JSON.stringify(v2);
+  const linux: LinuxRegisteredProcessCapture = { version: 3, platform: 'linux', registrar: before.registrar,
+    root: { pid: 1000, sessionId: 1000, pidfdId: '18446744073709551613', pidNamespaceId: '4026531836', bootId: before.root.bootId },
+    target: { pid: 1001, sessionId: 2000, pidfdId: '18446744073709551614', pidNamespaceId: '4026531836', bootId: before.root.bootId } };
+  validateProcessCapture(linux); validateProcessCapture(before); validateProcessCapture(v2);
+  assert.equal(JSON.stringify(before), bytes); assert.equal(JSON.stringify(v2), v2Bytes);
+  for (const target of [
+    { ...linux.target, pidfdId: linux.root.pidfdId },
+    { ...linux.target, pidfdId: '18446744073709551616' },
+    { ...linux.target, pidNamespaceId: '4026531837' },
+    { ...linux.target, bootId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
+  ]) assert.throws(() => validateProcessCapture({ ...linux, target }), /hold/);
 });
 test('v1 same-session remains compatible; cross-session needs an explicit private v2 admission', () => {
   validateProcessCapture(legacy());
