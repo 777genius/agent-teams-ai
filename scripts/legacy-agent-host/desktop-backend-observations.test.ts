@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import { createDesktopProcessRootOracle } from './desktop-process-root-oracle.ts';
 import {
   assertDesktopProofEnvironment,
+  assertNoNativeHostChildren,
   assertOwnedCdpListener,
   groupMembers,
   isCapturedOriginalNodeZombie,
@@ -28,7 +29,7 @@ test('offline Desktop admission refuses inherited native selections before prepa
   });
   Object.assign(process.env, { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
     LEGACY_DESKTOP_TEST_DISPLAY: ':97', LEGACY_DESKTOP_TEST_XAUTHORITY: '/TEST/Xauthority' });
-  for (const mode of ['team-ui', 'task-board-ui']) {
+  for (const mode of ['team-ui', 'task-board-ui', 'emulated-management-ui']) {
     process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
     if (process.platform === 'darwin' || process.platform === 'linux' && process.arch === 'x64')
       assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
@@ -48,6 +49,31 @@ test('offline Desktop admission refuses inherited native selections before prepa
   }
   process.env.LEGACY_DESKTOP_EMULATED_ONLY = 'false';
   assert.throws(() => assertDesktopProofEnvironment(true), /explicit provider-emulation admission/);
+});
+
+test('TEST management admission retains only the exact direct detached Host peer without signaling', (t) => {
+  const fixture = { node: '/TEST/node', hostEntry: '/TEST/host.js' };
+  const peer = { command: '/TEST/node /TEST/peer.ts serve --hostname 127.0.0.1 --port 12345', observedPeerPids: [] as number[] };
+  let peerCommand = peer.command, peerGroup = 4200;
+  t.mock.method(childProcess, 'execFileSync', (file: string, args: readonly string[]) => {
+    if (file === '/usr/bin/lsof') return process.platform === 'linux'
+      ? 'p4100\nf61\ntIPv4\nD0xabcd\ni12345\nPTCP\nTST=LISTEN\nn127.0.0.1:9222\n' : '4100\n';
+    assert.equal(file, '/bin/ps');
+    if (args[0] === '-ax') return `4100 4000 4100\n4101 4100 4100\n4200 4101 ${peerGroup}\n`;
+    assert.equal(args[0], '-p');
+    return args[1] === '4101' ? `${fixture.node} ${fixture.hostEntry}` : args[1] === '4200' ? peerCommand : '/TEST/electron';
+  });
+  t.mock.method(process, 'kill', () => assert.fail('observation never signals or adopts a PID'));
+  syncBuiltinESMExports();
+  t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+  assert.doesNotThrow(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read', peer));
+  assert.deepEqual(peer.observedPeerPids, [4200]);
+  assert.throws(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read'), /never allocates/);
+  peerGroup = 4100;
+  assert.throws(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read', peer), /own POSIX process group/);
+  peerGroup = 4200; peerCommand += ' --unselected';
+  assert.throws(() => assertNoNativeHostChildren(4100, fixture, 'after-team-read', peer), /pinned direct Node/);
+  assert.deepEqual(peer.observedPeerPids, [4200]);
 });
 
 test('Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder', { skip: process.platform !== 'linux' }, (t) => {

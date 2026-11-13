@@ -333,7 +333,7 @@ export async function runDesktopNativeCommandsUiProof(
       mode: 0o600,
     });
     const original = await send(selected.name, selected.args);
-    const replies = (await inbox()).filter(
+    const replies: Row[] = (await inbox()).filter(
       (row) => row.messageId === effectId('message', backendId, teamId, selected.replyId)
     );
     assert.equal(replies.length, 1);

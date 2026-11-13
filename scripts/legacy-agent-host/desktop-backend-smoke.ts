@@ -1,4 +1,6 @@
 import { runDesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
+import { prepareDesktopEmulatedManagementFixture, verifyDesktopEmulatedManagementFixture, observeDesktopEmulatedManagementCleanup } from './desktop-emulated-management-fixture.ts';
+import { runDesktopEmulatedManagementUi } from './desktop-emulated-management-ui.ts';
 import { runDesktopScheduleUiProof } from './desktop-schedule-ui-proof.ts';
 import type { DesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
 import { verifyNativeProcessReadbackSource } from './desktop-native-process-readback.ts';
@@ -65,6 +67,7 @@ import {
 import { fileDigest } from './desktop-backend-fixture.ts';
 import {
   assertDesktopProofEnvironment,
+  assertNoNativeHostChildren,
   assertOwnedCdpListener,
   command,
   groupMembers,
@@ -95,13 +98,6 @@ const object = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 const tick = () => new Promise<void>((done) => setTimeout(done, 100));
-function assertNoNativeHostChildren(group: number, fixture: {node: string; hostEntry: string}, phase: 'before-first-team-read' | 'after-team-read'): void {
-  assertOwnedCdpListener(group);
-  const table=processTable(),hosts=table.filter(row=>row.pgid===group&&command(row.pid)===`${fixture.node} ${fixture.hostEntry}`);
-  if (phase === 'before-first-team-read') assert.ok(hosts.length === 0 || hosts.length === 1, 'Host may remain lazy only before the first canonical Team read');
-  else assert.equal(hosts.length,1,'one original captured Host after canonical Team read');
-  for (const host of hosts) assert.equal(table.filter(row=>row.ppid===host.pid).length,0,'readback never allocates a native child');
-}
 async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const repo = resolve(import.meta.dirname, '../..');
   const packedRelaunchMode = process.env.LEGACY_DESKTOP_PROOF_MODE === 'packed-app-relaunch-ui';
@@ -109,6 +105,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const codexAccountMode = ['codex-account-read', 'codex-account-auth', 'codex-login-ui'].includes(mode);
   assertDesktopProofEnvironment(mode === 'process-cold-ui' || codexAccountMode);
   const emulatedOnly = process.env.LEGACY_DESKTOP_EMULATED_ONLY === '1';
+  const emulatedManagementMode = mode === 'emulated-management-ui';
+  if (emulatedManagementMode) assert.equal(emulatedOnly, true, 'TEST management requires provider-emulation admission');
   assert.equal(
     await portOccupied(),
     false,
@@ -130,7 +128,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   if (donorSavedOnly) assert.ok(mode === 'stopped-import-ui' && !packed && !process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH, 'one actual donor saved-only scope');
   if (process.env.LEGACY_DESKTOP_OPENCODE_MCP_UI === '1') assert.ok(!packed && !packedRelaunchMode, 'captured MCP uses the existing source Launch scope');
   const { mixedMode, extensionsUiMode, capturedMcpUiMode, capturedMcpModel: selectedCapturedMcpModel, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel, openCodeLifecycleMode, openCodeLifecycleModel: selectedOpenCodeModel, openCodeReviewModel: selectedOpenCodeReviewModel } =
-    await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
+    await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode || emulatedManagementMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
   conversationModel = model; mixedModels = selectedMixedModels;
   codexResumeModel = selectedCodexResumeModel;
   openCodeLifecycleModel = selectedOpenCodeModel; openCodeReviewModel = selectedOpenCodeReviewModel;
@@ -138,13 +136,14 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const nativeInputs = codexAccountMode ? await captureDesktopCodexAccountInput(process.env.LEGACY_DESKTOP_CODEX_PATH!)
     : mixedMode || codexResumeMode ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
-  const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = questionUiMode ? await prepareDesktopBackendFixture(repo, {
+  const emulatedManagementFixture = emulatedManagementMode ? await prepareDesktopEmulatedManagementFixture(repo, pnpm) : undefined;
+  const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = emulatedManagementFixture ?? (questionUiMode ? await prepareDesktopBackendFixture(repo, {
     seedUiTask: true, pnpmEntry: pnpm, nativeClaude: { path: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
       sha256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f', modelUrl: questionModel!.url },
   }) : await prepareDesktopProofFixture(repo, mode, pnpm, {
     processUiMode, controlledProcessMode, processReadbackMode, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewReadbackMode, reviewUiMode, legacyImportMode, uiMode,
     launchDialogMode, createConfigMode, nativeStopMode, approvalUiMode, codexResumeMode, openCodeLifecycleMode, ...(capturedMcpModel ? { capturedMcpNonce: capturedMcpModel.nonce } : {}), ...(packed ? { candidateRuntime: packed.runtime } : {}), modelUrl: capturedMcpModel?.url ?? openCodeReviewModel?.url ?? openCodeLifecycleModel?.url ?? codexResumeModel?.url ?? conversationModel?.url ?? mixedModels?.claude.url,
-  });
+  }));
   controlledProcess = baseFixture.controlledProcess;
   const processReadbackSource = processReadbackMode ? await verifyNativeProcessReadbackSource(baseFixture.root, object(JSON.parse(await readFile(join(baseFixture.root, 'desktop-backend-receipt.json'), 'utf8')))) : undefined;
   if (mixedModels) await mixedModels.retainEvidenceAt(baseFixture.root);
@@ -166,8 +165,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     const profile = object(JSON.parse(await readFile(fixture.profilePath, 'utf8')));
     const descriptor = object(JSON.parse(await readFile(fixture.descriptorPath, 'utf8')));
     assert.equal(profile.runtime, undefined, 'offline UI cannot configure provider sessions');
-    assert.equal(profile.management, undefined, 'offline UI cannot configure provider management');
-    assert.equal(descriptor.management, undefined, 'offline Desktop cannot select provider management');
+    if (emulatedManagementFixture) await verifyDesktopEmulatedManagementFixture(emulatedManagementFixture);
+    else { assert.equal(profile.management, undefined, 'offline UI cannot configure provider management');
+      assert.equal(descriptor.management, undefined, 'offline Desktop cannot select provider management'); }
   }
   const oversizedCommentSeed = mode === 'task-board-cross-team-ui'
     ? await prepareDesktopOversizedCommentUiFixture(fixture.root, fixture.uiSeed!)
@@ -226,8 +226,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     };
   }
   if (emulatedOnly) {
-    evidence.emulation = { only: true, runtimeConfigured: false, managementConfigured: false };
-    evidence.scope = 'Original Electron Team and Taskboard controls, standalone Host persistence and renderer reload; native provider execution forbidden';
+    evidence.emulation = { only: true, runtimeConfigured: false, managementConfigured: emulatedManagementMode };
+    evidence.scope = 'Original Electron controls, standalone Host persistence and renderer reload; only separately pinned TEST provider peers permitted';
     evidence.excluded = ['provider sessions', 'vendor authentication', 'native model execution', 'full Stage1/release/default activation'];
   }
   if (mode === 'codex-login-ui') {
@@ -344,7 +344,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     const { cdp: connected, target, startupStarted, startupBudgetMs } = await connectCapturedDesktopApp({ app, group, spawnError: () => spawnError, packed, cdpLibrary, evidence });
     cdp = connected;
     if (emulatedOnly) {
-      assertNoNativeHostChildren(group, fixture, 'before-first-team-read');
+      assertNoNativeHostChildren(group, fixture, 'before-first-team-read', emulatedManagementFixture?.emulatedManagement);
       object(evidence.emulation).noNativeHostChildrenBeforeUi = true;
     }
     if (startupDiagnosticMode) {
@@ -390,7 +390,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       nativeChildren = setup.nativeChildren;
       hostPid = setup.hostPid;
     }
-    if (questionUiMode) {
+    if (emulatedManagementFixture) {
+      await runDesktopEmulatedManagementUi(cdp, { fixture: emulatedManagementFixture, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+    } else if (questionUiMode) {
       assert.ok(fixture.uiSeed && questionModel);
       await runDesktopCodexQuestionUiSmoke(cdp, { root: fixture.root, seed: fixture.uiSeed, evidence, model: questionModel,
         assertOwnedRenderer: () => assertOwnedCdpListener(group), assertNativeAbsent: () => {
@@ -543,7 +545,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     }
     const children = groupMembers(group);
     if (emulatedOnly) {
-      assertNoNativeHostChildren(group, fixture, 'after-team-read');
+      assertNoNativeHostChildren(group, fixture, 'after-team-read', emulatedManagementFixture?.emulatedManagement);
       object(evidence.emulation).noNativeHostChildren = true;
     }
     const hosts = children.filter(
@@ -698,6 +700,11 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
           : 'not exposed by main-owned transport; no separate Host exit code recorded',
     };
     if (cleanupFailure || remaining === null || remaining.length) evidence.status = 'INCOMPLETE';
+    if (emulatedManagementFixture) {
+      try { const cleanup = await observeDesktopEmulatedManagementCleanup(emulatedManagementFixture);
+        evidence.emulatedManagementCleanup = cleanup; if (!cleanup.absent) evidence.status = 'INCOMPLETE';
+      } catch { evidence.emulatedManagementCleanup = { absent: false, observationFailed: true }; evidence.status = 'INCOMPLETE'; }
+    }
     try {
       const census = (await readFile(fixture.sentinelLog, 'utf8').catch(error => { if (packed && error?.code === 'ENOENT') return ''; throw error; }))
         .trim()

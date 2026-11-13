@@ -1,5 +1,11 @@
 /** Finite source closure for captured management, lifecycle, WorkSync and native roster. */
 export const desktopProofManagementSources = [
+  'scripts/legacy-agent-host/desktop-emulated-management-fixture.ts',
+  'scripts/legacy-agent-host/desktop-emulated-management-ui.ts',
+  'packages/legacy-agent-host/tests/fixtures/management-opencode-process.ts',
+  'src/renderer/components/team/dialogs/EffortLevelSelector.tsx',
+  'src/renderer/utils/teamEffortOptions.ts',
+  'src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx',
   'scripts/legacy-agent-host/desktop-codex-login-fixture.ts',
   'scripts/legacy-agent-host/desktop-codex-login-ui-proof.ts',
   'src/renderer/components/runtime/CodexLoginLinkCopyButton.tsx',

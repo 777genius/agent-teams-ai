@@ -19,8 +19,8 @@ export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
   const emulatedOnly = process.env.LEGACY_DESKTOP_EMULATED_ONLY;
   assert.ok(emulatedOnly === undefined || emulatedOnly === '1', 'explicit provider-emulation admission');
   if (emulatedOnly === '1') {
-    assert.ok(['team-ui', 'task-board-ui'].includes(process.env.LEGACY_DESKTOP_PROOF_MODE ?? ''),
-      'provider-emulation admits only the original offline Team and Taskboard controls');
+    assert.ok(['team-ui', 'task-board-ui', 'emulated-management-ui'].includes(process.env.LEGACY_DESKTOP_PROOF_MODE ?? ''),
+      'provider-emulation admits only the original offline Team, Taskboard and TEST management controls');
     // Reject inherited native/scenario selectors before any fixture or model starts.
     const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|EMULATED_ONLY|PROOF_MODE|CDP_PORT|TEST_DISPLAY|TEST_XAUTHORITY|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
     for (const key of Object.keys(process.env))
@@ -32,6 +32,24 @@ export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
   if (process.platform === 'linux') {
     assert.match(process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '', /^:\d+$/u, 'explicit isolated TEST X display');
     assert.ok(process.env.LEGACY_DESKTOP_TEST_XAUTHORITY, 'explicit TEST display authorization file');
+  }
+}
+
+/** Optional peer admission comes only from the separately pinned TEST management fixture. */
+export function assertNoNativeHostChildren(group: number, fixture: { node: string; hostEntry: string },
+  phase: 'before-first-team-read' | 'after-team-read', allowedTestPeer?: { command: string; observedPeerPids: number[] }): void {
+  assertOwnedCdpListener(group);
+  const table = processTable(), hosts = table.filter(row => row.pgid === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
+  if (phase === 'before-first-team-read') assert.ok(hosts.length === 0 || hosts.length === 1, 'Host may remain lazy only before the first canonical Team read');
+  else assert.equal(hosts.length, 1, 'one original captured Host after canonical Team read');
+  for (const host of hosts) {
+    const children = table.filter(row => row.ppid === host.pid);
+    if (allowedTestPeer) {
+      for (const child of children) {
+        assert.ok(child.pgid === child.pid && command(child.pid) === allowedTestPeer.command, 'only the pinned direct Node management peer with its own POSIX process group may run under this Host');
+        if (!allowedTestPeer.observedPeerPids.includes(child.pid)) allowedTestPeer.observedPeerPids.push(child.pid);
+      }
+    } else assert.equal(children.length, 0, 'readback never allocates a native child');
   }
 }
 
