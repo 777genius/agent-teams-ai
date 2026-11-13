@@ -1354,6 +1354,10 @@ Source baseline — `dde51b477db6a41fc4d69ab6fbe1e10f6db3e5e2`; перед из�
 `src/adapters/providers/WindowsCapturedProcess.ts` относительно того же Host package,
 `src/owned-process/windowsBroker.ts`, `packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts`
 и `.github/workflows/sentry-owned-process-native.yml`. Main reexports используют canonical Host core автоматически.
+`windowsBroker.ts` на этом baseline содержит786 строк. Чтобы не обходить800-line cap сжатием lifecycle-кода,
+механически вынести существующие `boundedFile`/`verifyStagedBroker` в соседний `brokerArtifact.ts`;
+исходный module импортирует и reexport-ит ту же функцию с прежней сигнатурой. Все PE/hash/manifest/input bounds
+сохраняются; это перенос существующей проверки, не новый owner, protocol или admission policy.
 Нативный broker/Job owner и прежние 4 wire waiters/64 attempt receipts остаются; native `stopBusy`/confirmed accounting
 не заменяются предположением, что deadline означает неотправленный effect. Один старый attempt не replay-ится новым ID.
 Если исходный wire не завершился до deadline следующего attempt, следующий тоже остаётся unknown без второго Stop frame;
@@ -1372,3 +1376,30 @@ immutable original unknown, отсутствие второго Stop frame до 
 собственный допустимый бюджет. Перед его правкой нужен узкий phase-boundary вариант с тем же original capture,
 одним initial read и bounded cleanup window, без увеличения времени/числа native queries. Этот finding не скрывается
 ни source PASS transport §34, ни успешными SDK runs; он не расширяет текущий четырёхпунктный cut.
+
+## 37. Original-root oracle: deadline именно выполняемой фазы
+
+`PRRT_kwDORVTEtM623zRW` подтверждён текущим source, но не объявляется причиной любого CI failure:
+`desktop-process-root-oracle.ts` создаёт `Date.now()+180000` при регистрации, а
+`desktop-native-process-host.ts` сначала доказывает root live, затем выполняет реальные provider/RPC/service
+фазы и обращается к тому же oracle только после owner Stop/close. Его cleanup loop уже имеет собственный
+30s deadline и3s interval. Валидные предыдущие фазы могут израсходовать старые180s до первого cleanup read.
+
+Минимальный срез — три existing helper/caller и один critical case в existing observations test:
+
+1. `createDesktopProcessRootOracle` сохраняет тот же validated original capture, exact artifact selection и
+   суммарный max12 запросов; ни новый oracle/capture, ни новый native owner между фазами не создаются.
+   `observe(deadlineMs)` принимает absolute deadline исходного caller; перед каждым read требует остаток,
+   ограничивает native actor timeout значением `min(5000, remaining)` и отвергает поздний ответ.
+2. `desktop-native-process-host.ts`: initial `same-live` read получает прежний max5s; cleanup передаёт
+   original deadline уже существующего30s `wait` в callback, а не создаёт новый срок при каждой итерации.
+   Остальные callback этого helper сохраняют прежнее поведение; interval3s и total query cap не растут.
+3. `desktop-controlled-process-fixture.ts`: единственный read после original EOF/child cleanup использует
+   тот же max5s. Existing15s ожидание root exit и3s ожидание детей не меняются.
+4. Один bounded test: время между initial и cleanup переводится за180s; original capture/selection/argv
+   не меняются, cleanup использует свой исходный30s и обрезает каждое чтение до остатка. Просроченный caller,
+   поздний ответ и13-й запрос отвергаются без signal/replay. Это проверка бюджета TEST actor, не native proof.
+
+Общая длительность native/provider/UI сценария не увеличивается и внешний CI timeout остаётся прежним.
+Меняется ошибочная привязка read deadline к неактивной прошлой фазе; Windows/Linux product custody,
+opaque captures, decoder и root-only запрет production signal не затрагиваются. До source нужен root review.
