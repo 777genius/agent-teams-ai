@@ -673,3 +673,46 @@ PR1186 `PRRT_kwDORVTEtM622S1B`: NUL отвергается поздним Team t
 Круг source: поздняя ошибка сопоставлена с точкой publication.
 Круг architecture: локальные проверки на существующих границах; новые DTO/ledger не нужны.
 После независимого review — targeted existing Launch integration и exact-head CI.
+
+## 14. Actual import producers: однозначный Create и единственный CDP аргумент
+
+Evidence на head `522c80d168d698fc6842ee649cc4822406cd2632`, run `43373956602`:
+
+- Job `131717484585`, artifact `14014741097` (ZIP SHA256
+  `a9a7c9cbda946b9a4a155139bc4ec3a19a32cd9729e36fb41b0503e742bb3046`):
+  current native source не дошёл до Create: lookup нашёл две видимые `Create Team`.
+  Actual current `TeamListView` одновременно рисует header action и `TeamEmptyState`.
+  Existing TEST helper верно отказал неоднозначному target.
+- Job `131717484767`, artifact `14014198411` (ZIP SHA256
+  `d99bdf92f73a68d2c4811d6d84227bbb8066e4eda82b897765e7a1e9a9d01348`):
+  synthetic stopped-import фаза PASS, отдельный genuine donor producer INCOMPLETE.
+  Его invocation передал `--remoteDebuggingPort 9222` дважды; immutable donor package
+  уже включает этот аргумент в `dev:mcp`. Log сообщает listener49626, harness ожидает9222.
+  Это подтверждённое несоответствие запуска; новый actual run нужен для полного причинного proof.
+
+### Source cut
+
+1. В existing `desktop-create-config-ui-smoke.ts` выбрать original header Create по
+   `div.mb-4 > div > div > button.gap-2` и точному тексту. Эта структура сверена с
+   [current header](https://github.com/777genius/agent-teams-ai/blob/f0c769140bc7f6e4154ddad11a03e84b67bd1e94/src/renderer/components/team/TeamListView.tsx)
+   и [donor header](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/TeamListHeader.tsx).
+   Экспортировать только одну константу selector и переиспользовать её в
+   `desktop-donor-saved-producer.ts`. Не выбирать first-match и не ослаблять
+   exact-one/visible/hit-target проверки existing controls; пользовательский click остаётся один.
+2. `captureDonorSavedInputs` сверяет exact `package.json::scripts.dev:mcp` с
+   выбранным TEST CDP port. Producer вызывает этот оригинальный script без повторного
+   добавления того же аргумента. Source/lock старого приложения не меняются.
+   Сохраняются occupied-port refusal, exact original listener/process-group/birth,
+   renderer ownership и cleanup guard. Не искать произвольный доступный listener
+   и не прикрепляться к чужому экземпляру.
+3. Перенос ограничен четырьмя существующими TEST files. Проверить scripts types,
+   lint/diff и existing UI controls tests. Для смены selector/argv не создавать
+   отдельные unit suites, зеркалящие строковые литералы.
+4. Следующий обычный actual macOS job должен пройти current Create→native turn→Stop→Task→Quit
+   и отдельно old donor Save→Quit→immutable corpus→current Import. Пока одна из этих
+   цепочек или native absence не завершена, acceptance остаётся INCOMPLETE.
+
+Круг1: artifacts сопоставлены с точными current/donor источниками, два симптома не объединены
+с ошибкой native Claude `/review` из другого job. Круг2: существующие controls/producer
+и исходные бюджеты сохраняются, production UI не меняется. Круг3: independent source
+review и exact-head CI обязательны; green локальный helper не заменяет настоящий Desktop.
