@@ -1,6 +1,6 @@
 # 07. Настройки провайдера, лимиты, skills, MCP и plugins
 
-Статус: source capture/publication и selected native config реализованы; app default/V1 saved limits и actual acceptance G1–G4 ещё открыты.
+Статус: source capture/publication, selected native config, app default и V1 saved limits реализованы; actual acceptance G1–G4 и extension/skill consumption ещё открыты.
 Цель: сохранить применимые возможности существующего frontend, используя уже выделенных владельцев.
 Новая архитектура не даёт основания игнорировать сохранённую настройку или объявить рабочий control unsupported.
 Публикация source/profile revisions целиком принадлежит [06](06-runtime-installation-profiles.md).
@@ -371,6 +371,79 @@ P07 native config опубликован `6a2bb4b88bffbe001e16ff7fd27430f330b435
 Control не удаляется для скрытия mismatch. До native и Desktop receipts пункт 07-G3 остаётся открытым.
 Независимый повторный review подтвердил reuse owners и empty-capture compatibility; уточнения по normalized
 prefixes, exact inventory и original retry внесены до implementation.
+
+## R10 — подтвердить consumption plugins/skills в том же native namespace
+
+**Найденный acceptance gap.** В `scripts/legacy-agent-host/desktop-native-extensions-fixture.ts`
+`prepareDesktopNativeExtensionsFixture` заменяет только `hostProfile.management` на отдельный
+`native-extensions/{home,config,tmp}`. Existing UI smoke действительно выполняет Install/Uninstall,
+проверяет `settings.json` и native `plugin list`, но runtime member не использует этот namespace.
+`desktop-skills-fixture.ts` намеренно требует `profile.runtime === undefined` и refusal-only CLI:
+он доказывает Create/Edit/Import/Trash/original-target safety, но не native consumption.
+Эти результаты сохраняются; 07-E4/E5 требуют отдельного короткого same-profile продолжения.
+
+**Existing seams для reuse.** Production `composition/claudeSettingSources.ts` сохраняет
+`user/project/local`, `runtimeCaptureSource.ts` переносит их независимо от MCP policy,
+`adapters/providers/ClaudeMemberProvider.ts` передаёт их в native Query. [S3]/[S4] уже владеют
+mutations и original target. P03 `desktop-native-commands-ui-proof.ts` и
+`tests/fixtures/native-claude-commands/model.ts` проверяют actual native command inventory,
+marked Composer Send и реальный Team MCP reply. Нужен acceptance wiring через эти границы;
+production reader/registry/API заранее не добавляется.
+
+1. **Один captured namespace.** Вариант existing `native-launch-ui` готовит настоящий pinned Claude
+   через `prepareDesktopBackendFixture`, затем получает management profile из этого же runtime member:
+   executable SHA, `cwd`, `HOME`, `CLAUDE_CONFIG_DIR`, account binding и setting sources совпадают.
+   Descriptor по-прежнему явно выбирает original project/user scope. Сравнить эти private identities
+   до старта приложения; в receipt сохранить только их digest и выбранный scope. Не заменять runtime
+   чужим profile после запуска. Neighbor TEST namespace остаётся неизменным.
+   Этот digest не включает runtime generation/capture identity: новый запуск обязан получить новые IDs.
+2. **Один native setup, реальные UI mutations.** Marketplace setup использует прежнюю exact CLI action
+   из `desktop-native-extensions-fixture.ts`. Existing Plugins panel устанавливает
+   `frontend-design@claude-plugins-official`; дождаться original completed operation, затем прочитать
+   native installed inventory и source digest. Не писать `enabledPlugins`, installed metadata или
+   plugin-directory flags вручную. Вынести только повторно используемый plugin UI phase либо добавить
+   узкие lifecycle hooks existing helper; не дублировать полный MCP/negative extension journey.
+3. **Skills через имеющиеся controls.** В том же captured profile existing Create/Review/Apply создаёт
+   небольшой user skill и project skill с различимыми TEST body markers; existing Edit меняет project
+   marker A→B. Сохранить scoped bytes/digests после completed original journals. Использовать текущие
+   `SkillsPanel` scope/root choices, без fixture записи вместо UI mutation. Прежние import/source-drift,
+   Trash и held Codex случаи не повторять в новом inference journey.
+4. **Настоящий новый launch и invocation.** Закрыть extension panel и штатно перезапустить приложение
+   на тех же descriptor/profile pins, затем использовать existing Launch controls. Actual native Query
+   inventory должен содержать installed plugin command и оба user/project skills. Выбирать command
+   из существующей подсказки Composer; P03 marked dispatch проверяет original inventory и отправляет
+   raw command один раз. Native request должен содержать тело выбранного plugin/skill, а не только
+   введённое имя/arguments: для TEST skills проверять markers, для установленного plugin — bounded
+   body witness из фактически установленного `SKILL.md`, с отдельным source digest.
+   Witness читается по native installed inventory именно выбранного namespace; package/version закреплены.
+   Не подставлять содержимое файла в product send. Finite model oracle возвращает один безопасный Team MCP reply;
+   проверить exact journal/input receipt и видимый ответ.
+5. **Следующий launch после удаления.** Штатно Stop/дождаться released custody, затем existing UI
+   Uninstall. После completed mutation открыть новый runtime через existing Launch control с новым capture и проверить actual new Query inventory: plugin отсутствует, user/project skills остаются.
+   Старый command receipt и terminal input не воспроизводятся, прежний plugin name нельзя отправить
+   через stale suggestion. Новый runtime identity обязателен; reload renderer и `plugin list` поодиночке
+   не заменяют эту проверку. Изменения не переадресуют уже captured request на другой project/account.
+6. **Ограничить harness.** Один TEST variant flag existing Launch mode, несовместимый с schedule/command
+   variants; отдельный небольшой helper содержит только plugin/skill lifecycle и его finite oracle phases.
+   Existing cost/compact/review checks P03 не переписывать. Если второй fresh launch требует другого
+   initial prompt, изменить его через тот же Launch dialog; не вызывать runtime/product mutation через
+   CDP evaluate. Существующие request/protocol limits не увеличивать автоматически; exact phase counts
+   и cleanup должны быть видны в receipt. Нет новой provider×extension матрицы или production scanner.
+7. **Проверка и закрытие.** Сначала focused scripts TS/Host contracts и existing guard regressions только
+   для реально изменившихся boundaries. Actual Desktop запускается обычным remote CI на exact HEAD;
+   сохраняет install/skill journals, native inventory before/after, body witnesses, visible replies,
+   same-namespace digest и cleanup. Required CI verifier не принимает отсутствующий consumption блок.
+   07-E4/E5 закрываются только после native result; file mutation, успешный CLI exit и mocked catalog
+   отдельно для этого недостаточны. Codex/V1 MCP inventory остаётся 07-E3, OpenCode V2 MCP — R9.
+
+**R10 review 1 — parity.** Выбран actual native Launch profile вместо второго management-only namespace;
+проверяются UI mutations, native body и следующий launch после uninstall, а не только installed list.
+**R10 review 2 — упрощение и scope.** Сохранены NativeExtensionCoordinator/SkillCoordinator/P03 command
+owners. Existing isolated negative suites остаются на месте; новый scenario добавляет только недостающую
+связь mutation→new native Query. Любой найденный production mismatch сначала фиксируется точным source
+ref и исправляется в существующем owner, а не обходится TEST profile или ручной metadata подстановкой.
+**Независимый review:** уточнено различие same-namespace и нового runtime capture, а также происхождение
+plugin body witness из original installed inventory. Эти уточнения внесены до implementation.
 
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts
