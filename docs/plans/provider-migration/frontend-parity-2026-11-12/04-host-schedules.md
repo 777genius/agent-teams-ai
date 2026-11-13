@@ -549,7 +549,7 @@ activeRun не закрывает оба случая.
 3. Existing `SchedulerStopBarrier` получает краткоживущие admission markers:
    `withAdmission(scheduleId, action(isCurrent))`, invalidation по scheduleId
    и удаление marker в finally. Маркеры существуют только пока выполняется
-   исходное действие; постоянный deleted-ID set, новый owner/queue/journal не нужны.
+   исходное действие; постоянный deleted-ID set, новый scheduler owner/journal не нужны.
    Охватить trigger/cron от чтения до dispatch, legacy retry fresh-read→dispatch
    и ожидающий warm-up, чтобы он не запланировал retry после удаления.
 4. `startOccurrence` проверяет marker и lifecycle epoch до allocation и после
@@ -576,3 +576,27 @@ activeRun не закрывает оба случая.
 - Существующие schedule integration, focused strict Main types, lint и source cap
   обязательны; новый suite, fake native PASS или изменение CI timers не нужны.
   Независимый plan/diff review и exact-head Desktop gate остаются следующими шагами.
+
+### R12, независимый круг: serialization исходного metadata файла
+
+Source review нашло два дополнительных окна; исходный запрет новой scheduler queue
+не запрещает необходимую атомарность существующего JSON repository.
+
+- Legacy retry повторяет existing lockConflict после awaited getSchedule, перед
+  dispatch: за время чтения другой occurrence мог занять schedule/cwd.
+- Finalizer мог прочитать запись до delete и поздним saveSchedule вставить её снова.
+  Поэтому JsonScheduleRepository последовательно выполняет **только** metadata
+  read-modify-write (save/delete) через короткий private promise tail. Это один
+  существующий файл/owner; native execution, reads, run/log I/O и ожидание cleanup
+  в эту секцию не включаются.
+- saveSchedule получает optional mustExist. Все Scheduler изменения уже созданной
+  записи используют этот режим; create сохраняет прежнее создание. Внутри той же
+  metadata секции отсутствующая запись отклоняется до write. Запись, начавшаяся
+  раньше delete, заканчивается до него; поздний update не воскрешает metadata.
+- Delete вызывает синхронную часть onCommitted в секции после durable write,
+  возвращает объект с original cleanup promise, затем await cleanup выполняется
+  **снаружи** секции. Rejected write не отравляет очередь следующих metadata intents;
+  исходный caller всё равно получает ошибку. Ошибка cleanup не откатывает delete.
+- Дополнить existing real Json delete case delayed write/read ordering и отказом
+  stale mustExist update; сохранить failed-persistence test. Original token guards
+  остаются нужны для provider admission, serialization их не заменяет.
