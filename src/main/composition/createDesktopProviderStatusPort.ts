@@ -1,4 +1,7 @@
+import { getLatestQualifiedOpenCodeV2Version } from '@features/opencode-compatibility';
 import { createCapturedRuntimeProviderStatusClient } from '@features/runtime-provider-management/main';
+import { getOpenCodeRuntimePlatformCandidates } from '@main/services/infrastructure/OpenCodeRuntimeInstallerService';
+import { resolveLatestOpenCodeVersion } from '@main/services/infrastructure/openCodeRuntimeLatestVersion';
 
 import type { DesktopBackendFeature } from '@features/agent-backend/main';
 
@@ -25,6 +28,9 @@ export function createDesktopProviderStatusPort(options: {
     capture: capture(),
     captureClaude: capture('claude'),
     captureCodex: capture('codex'),
+    resolveLatestOpenCodeVersion: (version) =>
+      resolveLatestOpenCodeVersion(version, getOpenCodeRuntimePlatformCandidates()),
+    qualifiedOpenCodeV2Version: getLatestQualifiedOpenCodeV2Version(process.platform, process.arch),
     captureSources: () => {
       const context = options.captureSelection();
       return options.feature.captureRuntimeSources(context.contextId, null, 'opencode', {

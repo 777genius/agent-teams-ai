@@ -1,5 +1,6 @@
 import { createHmac, randomBytes } from 'node:crypto';
 
+import { withLatestOpenCodeVersion } from '@main/services/infrastructure/openCodeRuntimeLatestVersion';
 import {
   createDefaultProviderStatus,
   createRuntimeStatusErrorProviderStatus,
@@ -25,7 +26,12 @@ import type {
   CapturedProviderManagement,
   CapturedRuntimeSources,
 } from '@features/agent-backend/main';
-import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
+import type {
+  CliInstallationStatus,
+  CliProviderId,
+  CliProviderStatus,
+  OpenCodeRuntimeStatus,
+} from '@shared/types';
 
 const providers: CliProviderId[] = ['anthropic', 'codex', 'opencode'];
 const failure = (
@@ -45,6 +51,8 @@ export interface CapturedRuntimeProviderStatusDependencies {
   captureCodex?: CaptureCodexMetadata;
   captureClaude?: CaptureClaudeMetadata;
   captureSources?(): Promise<Pick<CapturedRuntimeSources, 'current'>>;
+  readonly resolveLatestOpenCodeVersion?: (cliVersion: string) => Promise<string>;
+  readonly qualifiedOpenCodeV2Version?: string | null;
   now?(): number;
   captureGuard?(): () => boolean;
 }
@@ -177,12 +185,10 @@ export function createCapturedRuntimeProviderStatusClient(
         selection &&
         (selection.profileId !== target.profileId ||
           selection.configRevision !== target.configRevision ||
-          selection.nativeGeneration !== runtime.generation ||
-          (await sources!.current()).revision !== selection.revision)
+          selection.nativeGeneration !== runtime.generation)
       )
         throw new Error('Native runtime selection changed');
-      if (runtime.generation === 'v1' && !selection?.cliVersion) return null;
-      return {
+      const status: OpenCodeRuntimeStatus = {
         installed: true,
         source:
           selection && selection.sourceKind !== 'captured' && selection.sourceKind !== 'bundled'
@@ -198,10 +204,24 @@ export function createCapturedRuntimeProviderStatusClient(
           ? {
               v2Support: 'ready' as const,
               ...(selection ? { engineVersion: runtime.version } : {}),
+              ...(selection?.cliVersion && deps.qualifiedOpenCodeV2Version
+                ? { compatibleV2Version: deps.qualifiedOpenCodeV2Version }
+                : {}),
             }
           : {}),
         ...(selection ? { sourceRevision: selection.revision } : {}),
       };
+      const cliVersion = selection?.cliVersion;
+      const resolveLatest = deps.resolveLatestOpenCodeVersion;
+      const result =
+        cliVersion && selection?.sourceKind !== 'override' && resolveLatest
+          ? await withLatestOpenCodeVersion(status, () => resolveLatest(cliVersion))
+          : status;
+      // Registry metadata is optional; it cannot make a replaced source current again.
+      if (selection && (await sources!.current()).revision !== selection.revision)
+        throw new Error('Native runtime selection changed');
+      if (!target.isCurrent() || !current()) throw new Error('Native status context changed');
+      return runtime.generation === 'v1' && !cliVersion ? null : result;
     },
     async getProviderStatus(providerId, options = {}) {
       const current = deps.captureGuard?.() ?? (() => true);
