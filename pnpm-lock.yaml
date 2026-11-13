@@ -837,8 +837,8 @@ importers:
   packages/legacy-agent-host:
     dependencies:
       '@agent-teams/provider-implementations':
-        specifier: file:../../vendor/provider-migration/frontend-parity-ce03c60d/agent-teams-provider-implementations-0.0.0.tgz
-        version: file:vendor/provider-migration/frontend-parity-ce03c60d/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)
+        specifier: file:../../vendor/provider-migration/frontend-parity-68dca527/agent-teams-provider-implementations-0.0.0.tgz
+        version: file:vendor/provider-migration/frontend-parity-68dca527/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)
       '@agent-teams/provider-session-contracts':
         specifier: file:../../vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz
         version: file:vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz
@@ -897,8 +897,8 @@ packages:
       zod:
         optional: true
 
-  '@agent-teams/provider-implementations@file:vendor/provider-migration/frontend-parity-ce03c60d/agent-teams-provider-implementations-0.0.0.tgz':
-    resolution: {integrity: sha512-YRn1zVgc9qlTJSXXNoKmSe92Oqp1aGuvU6llOk8kU+I/eOQVVmZOmWdfqMk5ED2aJ8GjjDQ3RxOPX5AOADujjw==, tarball: file:vendor/provider-migration/frontend-parity-ce03c60d/agent-teams-provider-implementations-0.0.0.tgz}
+  '@agent-teams/provider-implementations@file:vendor/provider-migration/frontend-parity-68dca527/agent-teams-provider-implementations-0.0.0.tgz':
+    resolution: {integrity: sha512-RdXbo97Amr2CMjqfe8HxzrB02WwwZqzGEWhixzgHqCEqTOdQ11CZ/vTW77SRCJGhbwXTZ5SuQzBnpJVEMX4baA==, tarball: file:vendor/provider-migration/frontend-parity-68dca527/agent-teams-provider-implementations-0.0.0.tgz}
     version: 0.0.0
     engines: {node: '>=24.21.0 <25 || >=26.11.1 <27'}
 
@@ -12788,7 +12788,7 @@ snapshots:
     optionalDependencies:
       zod: 4.6.7
 
-  '@agent-teams/provider-implementations@file:vendor/provider-migration/frontend-parity-ce03c60d/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)':
+  '@agent-teams/provider-implementations@file:vendor/provider-migration/frontend-parity-68dca527/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)':
     dependencies:
       '@agent-teams/provider-session-contracts': file:vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz
       '@anthropic-ai/claude-agent-sdk': 0.3.305(@anthropic-ai/sdk@0.122.0(zod@4.6.7))(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7))(zod@4.6.7)
