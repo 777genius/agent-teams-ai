@@ -1850,3 +1850,98 @@ PASS: queue pressure не является completed/absent proof, original dead
 refusal до dispatch и физический cleanup различаются; bounded explicit subsequent
 close не должен переиспользовать навсегда ошибочно закешированный no-dispatch
 unknown. Existing control reserve и wire byte limits не повышаются.
+
+
+## 43. Linux CDP: exact fe6 результат и ограниченная корреляция original child
+
+Run [43377890875](https://github.com/777genius/agent-teams-ai/actions/runs/43377890875)
+на `fe6eece10344cf1cd6f7dbc216c7eb19070c7c9e` завершён: Windows x64/ARM64 actual
+vendor gates и Linux ABI — PASS. Linux Node26/Host24/Electron primitives и
+actual SDK прошли; cold UI job `131728577364` отказал, packed не запускался.
+Original artifact `14017750996` содержит Electron Main PID4903/startTicks28365
+и Node PID5003/PPID4903/startTicks28478: после исходного census у обоих FD60,
+socket inode22546 и неизменный process birth до/после supplemental read.
+Это совместимо с inherited socket, но не доказывает непрерывность FD между
+чтениями. Старые app.log/census не связывают PID5003 с captured Host: он появился
+после startup census; raw argv намеренно не сохранялся. Называть его Host рано.
+
+### Круг1 — что подтвердили primary sources, и чего это не доказывает
+
+- Exact [Electron44.10.1 DEPS](https://github.com/electron/electron/blob/v44.10.1/DEPS)
+  фиксирует Chromium152.0.7977.169 и Node24.22.1.
+  [TCPServerSocketFactory](https://github.com/electron/electron/blob/v44.10.1/shell/browser/ui/devtools_manager_delegate.cc)
+  использует обычный Chromium TCP server. Exact
+  [SocketPosix::Open](https://github.com/chromium/chromium/blob/152.0.7977.169/net/socket/socket_posix.cc)
+  передаёт SOCK_STREAM в
+  [CreatePlatformSocket](https://github.com/chromium/chromium/blob/152.0.7977.169/net/socket/socket_descriptor.cc):
+  POSIX socket создаётся без SOCK_CLOEXEC, затем задаётся nonblocking.
+- Exact [Node24.22.1 libuv child setup](https://github.com/nodejs/node/blob/v24.22.1/deps/uv/src/unix/process.c)
+  на Linux не закрывает произвольные inherited descriptors. Три stdio pipes не
+  означают close-all. Дополнительные stdio `ignore` при fd>=3 также пропускаются;
+  это не корректное исправление. Darwin использует другой spawn путь с
+  POSIX_SPAWN_CLOEXEC_DEFAULT; его PASS не переносится на Linux.
+- [Electron main parts](https://github.com/electron/electron/blob/v44.10.1/shell/browser/electron_browser_main_parts.cc)
+  действительно поддерживает remote-debugging-pipe. Но exact Chromium
+  [pipe setup](https://github.com/chromium/chromium/blob/152.0.7977.169/content/browser/devtools/devtools_agent_host_impl.cc)
+  и [handler](https://github.com/chromium/chromium/blob/152.0.7977.169/content/browser/devtools/devtools_pipe_handler.cc)
+  сами по себе не доказывают закрытие fd3/4 при Node spawn. Менять TCP на pipe,
+  не доказав endpoint isolation, недостаточно. UtilityProcess также не является
+  drop-in: иной Node и отсутствие stdin в official API меняют qualified Host.
+- Это source-level объяснение возможной inheritance, не actual reproduced fix
+  и не доказательство того, какой именно Node child держит socket в CI.
+  Не добавлять shell/native launcher, descriptor mutation либо alternate CDP
+  admission на основании одной этой гипотезы.
+
+### Круг2 — закрыть единственную оставшуюся неопределённость
+
+В existing TEST failure projection `desktop-backend-observations.ts` добавить
+опциональную **однократную** корреляцию с уже captured fixture Node/Host entry.
+Её вызывает только existing `desktop-backend-smoke.ts` catch с исходным
+AssertionError и своими неизменными fixture paths. Сохраняются original WeakMap
+facts; никакого нового lsof/ps census, запуска команды, RPC, signal или recovery.
+
+1. Только для max16 исходных retained PID/FD с проверенным original process
+   birth прочитать bounded proc facts. Сопоставить startTicks/PGID/parent до и
+   после с прежней supplemental observation. Socket symlink до/после должен
+   совпасть с уже наблюдённым socket inode; иначе всё новое — unknown.
+   Совпадение остаётся **неатомарной диагностикой**, а не полномочием.
+2. Внутри этого же bounded read сравнить полный NUL argv с ровно двумя captured
+   строками `fixture.node`, `fixture.hostEntry` и отдельно `/proc/pid/exe`
+   с captured Node path. В receipt выводятся только boolean/null, никогда сами
+   argv, executable path, env или raw ошибки. Это сопоставление объявленных
+   путей, не криптографическая проверка actual executable bytes.
+3. Прочитать до4KiB `/proc/pid/fdinfo/fd`; принимать единственную корректную
+   octal flags строку и выдавать только `closeOnExec: boolean | null`.
+   [Linux proc fdinfo](https://github.com/torvalds/linux/blob/v6.14/fs/proc/fd.c)
+   включает O_CLOEXEC в flags из actual descriptor table. Missing/oversize/
+   malformed/reused descriptor остаётся unknown. Номер FD никогда не используется
+   для закрытия или изменения flags.
+4. Original `holderCount=2` и AssertionError сохраняются. Не принимать второй
+   PID даже при совпадении inode, Host argv или child lineage. Новая projection
+   помечается `after-failed-census`, `atomic:false`; она не изменяет original
+   census или уже сохранённые facts. Проекция не перечитывается в polling loop.
+5. Расширить только existing critical observations case: exact fixture match,
+   иной argv, missing flags и reused birth дают ожидаемые закрытые поля;
+   private markers отсутствуют. Прежние no-signal, max16 и strict two-holder
+   assertions остаются. Нового unit suite и новых TEST process launches нет.
+
+### Круг3 — доставка и решение по факту
+
+После независимого source review включить этот TEST срез в следующий уже нужный
+native commit вместе с §38/40/42. Existing Linux job сам сохранит original failed
+receipt; workflow, matrix, retries, runner и budgets не меняются. Локальный
+executor сейчас недоступен: новые sources не объявляются typechecked/executed;
+обязательны checks опубликованного exact head.
+
+Если actual argv/executable comparison связывает inherited non-CLOEXEC socket
+с original Host, следующий product план должен закрыть descriptor inheritance
+на реальном original launch boundary без numeric-PID adoption и без нарушения
+selected Node/entry/profile identity. Если это другой child, исправляется его
+фактический launch path. До такого результата не выбирать глобальное закрытие
+FD, hidden flag mutation или обход strict guard. Полное Linux cold UI/packed
+подтверждается только последующим реальным successful journey с прежними
+UI/input/Stop/cleanup assertions.
+
+Self-review: §33/35 факты не переименованы в PASS; raw paths и proc данные
+не становятся public authority; нет дополнительного runner/retry. Это
+ограниченная diagnostic delta к уже необходимому запуску, не завершение Linux.
