@@ -179,7 +179,7 @@ export const ProvisioningProviderRuntimeSettingsDialog = ({
         projectPath={projectPath}
         initialProviderId={selectedProviderId}
         providerStatusLoading={cliProviderStatusLoading}
-        disabled={disabled || cliStatusLoading || !cliStatus?.binaryPath}
+        disabled={disabled || cliStatusLoading || !cliStatus?.installed}
         codexRuntimeStatus={codexRuntimeStatus}
         codexRuntimeStatusLoading={codexRuntimeStatusLoading}
         onInstallCodexRuntime={() => installCodexRuntime()}
