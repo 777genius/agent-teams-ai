@@ -864,3 +864,13 @@ recipe или несовпадение сохранённого recipeDigest п�
 malformed/ambiguous capture, receipt/registration/I/O ошибки остаются global hold.
 Fresh native member capture не меняется. Никакого второго registry, исправления
 старых digest или нового launch owner для недоступной Team не создаётся.
+
+### §19 отсутствие current runtime в composition
+
+`TeamHost.ts:256–266` раньше создавал Coordinator только при profile.runtime.
+Existing RuntimeTeamCaptures получает узкий readonly predicate original capture
+registration или original seed launch file по известной Team/run identity.
+Только наличие такой истории включает обычный restore/debt pass при отсутствии
+current runtime; malformed/unsafe file и I/O не скрываются как «истории нет».
+Host без runtime и без retained истории сохраняет прежний путь. Seed/recipe не
+подставляется; original Runtime/custody и Main-held cleanup остаются прежними.
