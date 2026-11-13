@@ -58,6 +58,7 @@ export async function startOpenCodeModel(
   options: {
     nativeGeneration?: 'v2';
     coordinationProof?: true;
+    localReadinessProof?: true;
     sharedSessionProbe?: boolean;
     nativeMessageImage?: boolean;
     mixedGroups?: boolean;
@@ -91,12 +92,16 @@ export async function startOpenCodeModel(
       /\/TEST-native-opencode-capture-[^/]+\/workspace$/
     );
 
+  if (options.localReadinessProof) assert.equal(options.coordinationProof, true);
   if (options.coordinationProof)
     assert.ok(!options.sharedSessionProbe && !options.mixedGroups && !options.peerMessaging &&
       !options.captureFileUpdate && !options.allowModelProbes && !options.settingsProbe &&
       !options.mixedTaskNotifications, 'one explicitly selected native coordination scenario');
   const coordinationObservations: { step: number; nativeToolRefs: string[];
     requestedModel?: string; requestedEffort?: string; requestedOutputTokens?: number }[] = [];
+  const ordinaryReadinessObservations: { requestedModel?: string; requestedEffort?: string; requestedOutputTokens?: number }[] = [];
+  let inventoryReads = 0;
+  const localReadiness = { ordinary: ordinaryReadinessObservations, get inventoryReads() { return inventoryReads; } };
   let coordinationArmed = false, coordinationFinished = false, coordinationNonce: string | undefined;
   const coordination = {
     observations: coordinationObservations,
@@ -108,6 +113,9 @@ export async function startOpenCodeModel(
     finish() {
       assert.ok(coordinationArmed && !coordinationFinished);
       assert.equal(coordinationObservations.length, 3); assert.equal(failures.length, 0);
+      if (options.localReadinessProof) {
+        assert.equal(ordinaryReadinessObservations.length, 1); assert.equal(inventoryReads, 1);
+      }
       coordinationArmed = false; coordinationFinished = true;
     },
   };
@@ -143,11 +151,26 @@ export async function startOpenCodeModel(
   const server = createServer((request, response) => {
     void (async () => {
       assert.equal(failures.length, 0, 'oracle seals after its first protocol failure');
+      if (options.localReadinessProof && request.method === 'GET') {
+        assert.equal(request.url, '/v1/models');
+        assert.ok(coordinationArmed && !coordinationFinished);
+        assert.equal(ordinaryReadinessObservations.length, 1);
+        assert.equal(coordinationObservations.length, 0); assert.equal(inventoryReads, 0);
+        assert.equal(request.headers.authorization, undefined);
+        for await (const chunk of request) assert.equal(Buffer.byteLength(chunk), 0, 'bodyless original metadata read');
+        inventoryReads++;
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end(JSON.stringify({ data: [...new Set(['TEST-model', options.selectedModel?.id ?? 'TEST-model'])]
+          .map(id => ({ id })) }));
+        return;
+      }
       assert.equal(request.method, 'POST');
+      if (options.localReadinessProof) assert.equal(request.headers.authorization, undefined,
+        'the original authless source remains authless through business continuation');
       assert.match(request.url ?? '', /\/v1\/chat\/completions$/);
       if (!options.mixedTaskNotifications)
         assert.ok(
-          observations.length + coordinationObservations.length < (options.peerMessaging ? 48 : 16),
+          observations.length + coordinationObservations.length + ordinaryReadinessObservations.length < (options.peerMessaging ? 48 : 16),
           'finite model request budget'
         );
       let bytes = 0;
@@ -173,11 +196,34 @@ export async function startOpenCodeModel(
           'actual native request retains its original private model body');
         assert.equal(request.headers['x-test-config-scope'], options.selectedConfiguration.scope,
           'actual native request retains its original private model headers');
-        assert.equal(request.headers.authorization, 'Bearer TEST-LOCALHOST-ONLY');
+        assert.equal(request.headers.authorization, options.localReadinessProof ? undefined : 'Bearer TEST-LOCALHOST-ONLY');
       }
       const messages = (Array.isArray(body.messages) ? body.messages : []).map(record);
       const user = messages.filter((item) => item.role === 'user');
+      if (options.localReadinessProof && coordinationArmed && ordinaryReadinessObservations.length === 0) {
+        assert.equal(inventoryReads, 0); assert.equal(coordinationObservations.length, 0);
+        assert.equal(isOpenCodeModelProbe(body, options.nativeGeneration ?? 'v1'), true,
+          'the first native input is the original ordinary no-tool probe');
+        ordinaryReadinessObservations.push({
+          ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+          ...(typeof body.reasoning_effort === 'string' ? { requestedEffort: body.reasoning_effort } : {}),
+          ...(typeof body.max_tokens === 'number' ? { requestedOutputTokens: body.max_tokens } : {}),
+        });
+        const event = (delta: Record<string, unknown>, finish: string | null) => ({
+          id: 'TEST-native-readiness-ordinary', object: 'chat.completion.chunk', created: 1700000000,
+          model: typeof body.model === 'string' ? body.model : 'TEST-model',
+          choices: [{ index: 0, delta, finish_reason: finish }],
+        });
+        response.writeHead(200, { 'content-type': 'text/event-stream' });
+        response.write('data: ' + JSON.stringify(event({ role: 'assistant', content: 'OK' }, null)) + '\n\n');
+        response.write('data: ' + JSON.stringify(event({}, 'stop')) + '\n\n');
+        response.end('data: [DONE]\n\n');
+        return;
+      }
       if (coordinationArmed) {
+        if (options.localReadinessProof) {
+          assert.equal(ordinaryReadinessObservations.length, 1); assert.equal(inventoryReads, 1);
+        }
         const step = coordinationObservations.length;
         assert.ok(step < 3, 'one original two-tool challenge and terminal');
         assert.equal(user.length, 1); assert.equal(mixedNativeText(user[0]!.content), COORDINATION_PROMPT);
@@ -637,6 +683,7 @@ export async function startOpenCodeModel(
     ...(options.mixedTaskNotifications ? { notificationObservations } : {}),
     probes,
     ...(options.coordinationProof ? { coordination } : {}),
+    ...(options.localReadinessProof ? { localReadiness } : {}),
     failures,
     ...(options.holdInitialTurnResponse ? { heldInitialRequests } : {}),
     close: () =>

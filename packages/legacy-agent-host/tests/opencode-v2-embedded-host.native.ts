@@ -168,7 +168,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       windowsShellSha256 = await fileHash(shell);
     }
     model = await startOpenCodeModel({ nativeGeneration: 'v2', nativeMessageImage: true,
-      ...(qualifyCoordination ? { coordinationProof: true as const } : {}),
+      ...(qualifyCoordination ? { coordinationProof: true as const, localReadinessProof: true as const } : {}),
       selectedModel: { id: 'TEST-model-B', effort: 'high' },
       selectedConfiguration: { scope: 'project-A' } });
     const namespace = basename(root);
@@ -221,7 +221,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     await writeFile(join(globalDirectory, 'opencode.json'), JSON.stringify({
       model: 'TEST-local/TEST-model', provider: { 'TEST-local': {
         npm: '@ai-sdk/openai-compatible',
-        options: { baseURL: `${model.url}/v1`, apiKey: 'TEST-LOCALHOST-ONLY' },
+        options: { baseURL: `${model.url}/v1`, ...(qualifyCoordination ? {} : { apiKey: 'TEST-LOCALHOST-ONLY' }) },
         models: Object.fromEntries(['TEST-model', 'TEST-model-B'].map(id => [id, {
           name: id, limit: { context: 200000, output: 2000 },
           capabilities: { tools: true, input: ['text', 'image'], output: ['text'] },
@@ -239,7 +239,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     const originalProjectConfig = projectConfig('project-A');
     await writeFile(projectPath, originalProjectConfig, { mode: 0o600 });
     await mkdir(join(root, 'data/opencode'), { mode: 0o700 });
-    await writeFile(join(root, 'data/opencode/auth.json'), JSON.stringify({
+    await writeFile(join(root, 'data/opencode/auth.json'), JSON.stringify(qualifyCoordination ? {} : {
       'TEST-local': { type: 'api', key: 'TEST-LOCALHOST-ONLY' },
     }), { mode: 0o600 });
     const member = profile.runtime!.members[0]!;
@@ -338,7 +338,10 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     assert.equal(replies.size, approvalMode === 'manual' ? 2 : 0);
     assert.deepEqual(model.failures, []); assert.equal(model.observations.length, 11);
     assert.equal(model.coordination?.observations.length ?? 0, qualifyCoordination ? 3 : 0);
-    assert.ok(model.observations.length + (model.coordination?.observations.length ?? 0) <= 16);
+    assert.equal(model.localReadiness?.ordinary.length ?? 0, qualifyCoordination ? 1 : 0);
+    assert.equal(model.localReadiness?.inventoryReads ?? 0, qualifyCoordination ? 1 : 0);
+    assert.ok(model.observations.length + (model.coordination?.observations.length ?? 0) +
+      (model.localReadiness?.ordinary.length ?? 0) <= 16);
     assert.ok(model.observations.every(row => row.requestedModel === 'TEST-model-B' &&
       row.requestedEffort === 'high'), 'every native tool turn keeps the explicitly selected model/variant');
     assert.ok(model.observations.every(row => row.contextEffective));
