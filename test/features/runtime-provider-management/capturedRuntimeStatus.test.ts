@@ -5,12 +5,21 @@ import {
   canManagedInstallChangeOpenCodeRuntime,
   resolveOpenCodeQuickConnectRuntimeRevision,
 } from '../../../src/features/runtime-provider-management/core/domain/runtimeProviderQuickConnect';
-import { createCapturedRuntimeProviderStatusClient } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient';
+import {
+  createCapturedRuntimeProviderStatusClient,
+  type CapturedRuntimeProviderStatusDependencies,
+} from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient';
 
 import type { CapturedProviderManagement } from '../../../src/features/agent-backend/main';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
-function fixture(runtime?: JsonValue) {
+function fixture(
+  runtime?: JsonValue,
+  maintenance: Pick<
+    CapturedRuntimeProviderStatusDependencies,
+    'resolveLatestOpenCodeVersion' | 'qualifiedOpenCodeV2Version'
+  > = {}
+) {
   let current = true;
   const request = vi.fn(async () => ({
     ok: true,
@@ -57,6 +66,7 @@ function fixture(runtime?: JsonValue) {
     readHealth,
     captureGuard: () => () => current,
     now: () => 1700000000000,
+    ...maintenance,
   });
   return {
     port,
@@ -132,7 +142,9 @@ it('a failed native handshake prevents provider allocation rather than resolving
 });
 
 it('the original V2 catalog supplies engine availability without a CLI path or model authority', async () => {
-  const f = fixture({ generation: 'v2', version: '2.1.4' });
+  const resolveLatestOpenCodeVersion = vi.fn(async () => '2.3.0');
+  const maintenance = { resolveLatestOpenCodeVersion, qualifiedOpenCodeV2Version: '2.1.4' };
+  const f = fixture({ generation: 'v2', version: '2.1.4' }, maintenance);
   expect(await f.port.readOpenCodeRuntimeStatus!()).toEqual({
     installed: true,
     source: 'captured-host',
@@ -142,15 +154,43 @@ it('the original V2 catalog supplies engine availability without a CLI path or m
   });
   expect(f.capture).toHaveBeenCalledWith(null);
   expect(f.request).toHaveBeenCalledExactlyOnceWith('catalog', {});
+  const seed = createCapturedRuntimeProviderStatusClient({
+    capture: f.capture,
+    readHealth: f.readHealth,
+    ...maintenance,
+    captureSources: async () => ({
+      current: async () => ({
+        sourceId: 'a'.repeat(64),
+        revision: 'b'.repeat(64),
+        profileId: 'TEST-profile',
+        configRevision: 'TEST-config',
+        sourceKind: 'bundled' as const,
+        nativeGeneration: 'v2' as const,
+        engineVersion: '2.1.4',
+      }),
+    }),
+  });
+  expect(await seed.readOpenCodeRuntimeStatus!()).toEqual({
+    installed: true,
+    source: 'captured-host',
+    state: 'ready',
+    version: '2.1.4',
+    engineVersion: '2.1.4',
+    v2Support: 'ready',
+    sourceRevision: 'b'.repeat(64),
+  });
+  expect(resolveLatestOpenCodeVersion).not.toHaveBeenCalled();
   const provider = await f.port.getProviderStatus('opencode');
   expect(provider.authenticated).toBe(false);
   expect(provider.capabilities.teamLaunch).toBe(false);
 });
 
 it('only the explicit successful native V1 catalog retains the separate installer status', async () => {
-  const f = fixture({ generation: 'v1' });
+  const resolveLatestOpenCodeVersion = vi.fn(async () => '1.19.5');
+  const f = fixture({ generation: 'v1' }, { resolveLatestOpenCodeVersion });
   expect(await f.port.readOpenCodeRuntimeStatus!()).toBeNull();
   expect(f.request).toHaveBeenCalledExactlyOnceWith('catalog', {});
+  expect(resolveLatestOpenCodeVersion).not.toHaveBeenCalled();
 });
 
 it('current source status accepts its first captured configuration and fences a concurrent source replacement', async () => {
@@ -162,7 +202,7 @@ it('current source status accepts its first captured configuration and fences a 
     configRevision: 'TEST-config',
     sourceKind: 'app-managed' as const,
     nativeGeneration: 'v2' as const,
-    cliVersion: '2.9.0',
+    cliVersion: '2.0.21',
     engineVersion: '2.1.4',
   };
   let selected = { ...selection, revision: '0'.repeat(64),
@@ -174,24 +214,31 @@ it('current source status accepts its first captured configuration and fences a 
     return target;
   });
   const current = vi.fn(async () => selected);
+  const resolveLatestOpenCodeVersion = vi.fn(async () => '2.3.0');
   const port = createCapturedRuntimeProviderStatusClient({
     capture: f.capture,
     readHealth: f.readHealth,
     captureSources: async () => ({ current }),
+    resolveLatestOpenCodeVersion,
+    qualifiedOpenCodeV2Version: '2.1.4',
   });
   const status = await port.readOpenCodeRuntimeStatus!();
   expect(status).toEqual({
     installed: true,
     state: 'ready',
     source: 'app-managed',
-    version: '2.9.0',
+    version: '2.0.21',
+    latestVersion: '2.3.0',
+    updateAvailable: true,
     engineVersion: '2.1.4',
+    compatibleV2Version: '2.1.4',
     sourceRevision: selection.revision,
     v2Support: 'ready',
   });
   expect(f.capture).toHaveBeenCalledExactlyOnceWith(null);
   expect(f.request).toHaveBeenCalledExactlyOnceWith('catalog', {});
   expect(current).toHaveBeenCalledTimes(2);
+  expect(resolveLatestOpenCodeVersion).toHaveBeenCalledExactlyOnceWith('2.0.21');
   expect(canManagedInstallChangeOpenCodeRuntime({ ...status!, source: 'captured-host' })).toBe(
     true
   );
@@ -209,32 +256,83 @@ it('current source status accepts its first captured configuration and fences a 
   await expect(port.readOpenCodeRuntimeStatus!()).rejects.toThrow(
     'Native runtime selection changed'
   );
+  resolveLatestOpenCodeVersion.mockRejectedValueOnce(new Error('TEST registry unavailable'));
+  const offline = await port.readOpenCodeRuntimeStatus!();
+  expect(offline).toMatchObject({
+    installed: true,
+    state: 'ready',
+    version: '2.0.21',
+    engineVersion: '2.1.4',
+    compatibleV2Version: '2.1.4',
+    sourceRevision: selection.revision,
+  });
+  expect(offline).not.toHaveProperty('latestVersion');
+  expect(offline).not.toHaveProperty('updateAvailable');
 });
 
 it('a published V1 selection supplies its original CLI version without an ambient installer fallback', async () => {
   const f = fixture({ generation: 'v1' });
+  const selection = {
+    sourceId: 'a'.repeat(64),
+    revision: 'b'.repeat(64),
+    profileId: 'TEST-profile',
+    configRevision: 'TEST-config',
+    sourceKind: 'path' as const,
+    nativeGeneration: 'v1' as const,
+    cliVersion: '1.19.4',
+  };
+  let revision = selection.revision;
+  const resolveLatestOpenCodeVersion = vi.fn(async () => '1.19.5');
   const port = createCapturedRuntimeProviderStatusClient({
     capture: f.capture,
     readHealth: f.readHealth,
     captureSources: async () => ({
-      current: async () => ({
-        sourceId: 'a'.repeat(64),
-        revision: 'b'.repeat(64),
-        profileId: 'TEST-profile',
-        configRevision: 'TEST-config',
-        sourceKind: 'path' as const,
-        nativeGeneration: 'v1' as const,
-        cliVersion: '1.19.5',
-      }),
+      current: async () => ({ ...selection, revision }),
     }),
+    resolveLatestOpenCodeVersion,
+    qualifiedOpenCodeV2Version: '2.1.4',
   });
-  expect(await port.readOpenCodeRuntimeStatus!()).toEqual({
+  const ready = {
     installed: true,
     state: 'ready',
     source: 'path',
-    version: '1.19.5',
-    sourceRevision: 'b'.repeat(64),
+    version: '1.19.4',
+    sourceRevision: selection.revision,
+  };
+  expect(await port.readOpenCodeRuntimeStatus!()).toEqual({
+    ...ready,
+    latestVersion: '1.19.5',
+    updateAvailable: true,
   });
+  expect(resolveLatestOpenCodeVersion).toHaveBeenCalledExactlyOnceWith('1.19.4');
+  resolveLatestOpenCodeVersion.mockRejectedValueOnce(new Error('TEST registry unavailable'));
+  expect(await port.readOpenCodeRuntimeStatus!()).toEqual(ready);
+  expect(f.request).toHaveBeenCalledTimes(2);
+
+  const override = createCapturedRuntimeProviderStatusClient({
+    capture: f.capture,
+    readHealth: f.readHealth,
+    captureSources: async () => ({
+      current: async () => ({ ...selection, sourceKind: 'override' as const }),
+    }),
+    resolveLatestOpenCodeVersion,
+  });
+  expect(await override.readOpenCodeRuntimeStatus!()).toEqual({ ...ready, source: 'override' });
+  expect(resolveLatestOpenCodeVersion).toHaveBeenCalledTimes(2);
+
+  resolveLatestOpenCodeVersion.mockImplementationOnce(async () => {
+    revision = 'c'.repeat(64);
+    return '1.19.5';
+  });
+  await expect(port.readOpenCodeRuntimeStatus!()).rejects.toThrow(
+    'Native runtime selection changed'
+  );
+  revision = selection.revision;
+  resolveLatestOpenCodeVersion.mockImplementationOnce(async () => {
+    f.stale();
+    throw new Error('TEST registry unavailable after target revocation');
+  });
+  await expect(port.readOpenCodeRuntimeStatus!()).rejects.toThrow('Native status context changed');
 });
 
 const INVALID_RUNTIME_EVIDENCE: (JsonValue | undefined)[] = [
