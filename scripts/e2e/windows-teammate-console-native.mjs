@@ -17,7 +17,7 @@ const RUN_TIMEOUT_MS = 90_000;
 const expected = ['cmd', 'git', 'powershell'];
 
 function terminateOwnedTree(child) {
-  if (!child?.pid || child.exitCode !== null) return;
+  if (!child?.pid || child.exitCode !== null || child.signalCode !== null) return;
   // Only the still-live child created by this fixture. Never scan for or kill unrelated PIDs.
   const result = spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], {
     windowsHide: true,
