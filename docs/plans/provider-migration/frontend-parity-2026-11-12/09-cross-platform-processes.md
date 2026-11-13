@@ -769,7 +769,8 @@ terminal outcome в существующем owner/lifetime, без второг
   Main удерживает исходный ChildProcess, но shutdown всегда возвращает `providerCustody:'unresolved'`.
   [BackendOwnerRouter](https://github.com/777genius/agent-teams-ai/blob/a920ceca8a199ee21f8d7780e003bd23a387b590/src/features/agent-backend/main/application/BackendOwnerRouter.ts)
   запрещает duplicate owner/storageRoot, seals закрытого owner и не умеет автоматически заменить его client.
-  Новый router restart, второй supervisor или тестовый обход sealed owner ради cold PASS не добавляются.
+  Автоматический повтор effect, второй supervisor и тестовый обход sealed owner не добавляются. Узкий product
+  rebind исходного Main owner после доказанного конца старого Host теперь планируется отдельно в §30.
 
 **Отклонённое доказательство:** named Job + `OpenJobObject/ERROR_FILE_NOT_FOUND` после смерти broker.
 [Microsoft object lifetime](https://learn.microsoft.com/en-us/windows-hardware/drivers/kernel/life-cycle-of-an-object)
@@ -953,3 +954,106 @@ Registered terminal scope пока удерживает HANDLE до releaseRegis
 HANDLE относится к будущему §24.3–4, а не к уже подготовленному §26 helper.
 Production scoped Windows capability не включена. После actual vendor PASS остаются typed wire, async Team fence,
 V2 custody, original Processes UI, packaged evidence и отдельный положительный cold-owner gate §24.
+
+## 30. Windows cold Host: необходимый lifetime исходного Main owner (план до source)
+
+**R12 research, без product activation.** Сохранить live original service через Host restart и одновременно
+оставить нынешний broker привязанным к EOF этого Host нельзя: `broker.cpp::abandon` завершает процесс с sole Job handles,
+а выход debug thread по умолчанию также завершает debuggees
+([Microsoft DebugSetProcessKillOnExit](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-debugsetprocesskillonexit)).
+[Job semantics](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects) распространяют kill-on-last-close
+на вложенные Jobs. Это несовместимость выбранного lifetime с положительным cold сценарием, не основание убрать сценарий.
+
+### Проверенные альтернативы и выбранная граница
+
+| Вариант | Проверенный контракт / граница |
+| --- | --- |
+| `NtQueryInformationProcess(ProcessTelemetryIdInformation=64)` | [Microsoft](https://learn.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntqueryinformationprocess) документирует query; [структура](https://learn.microsoft.com/en-us/windows/win32/devnotes/process_telemetry_id_information_type) содержит ProcessStartKey/ProcessSequenceNumber/BootId, min client Windows10. Это кандидат для process-incarnation observation, но не original Job/subtree custody; Server2022/ARM native qualification не выполнена. |
+| `SystemBasicProcessInformation.SequenceNumber` | [Microsoft](https://learn.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntquerysysteminformation) гарантирует обнаружение PID reuse, но API доступен с Windows11 build26100.4770; не общий Server2022 baseline. |
+| ETW process key / kernel helper | [ETW](https://learn.microsoft.com/en-us/windows/win32/api/evntrace/ns-evntrace-enable_trace_parameters) определяет unique-in-boot Process Start Key. Это не восстанавливает потерянный Job; новый tracing owner/driver не нужен выбранному пути. |
+| Исходный broker остаётся у существующего Main | Сохраняет те же original HANDLEs, debug thread, scope keys и control stream. Не нужны PID reopen, job-name adoption, extra daemon или новый command journal. Это выбранный путь для **Host restart в том же Main epoch**. |
+
+Process key не объявляется доказанным portable subtree token. [IsProcessInJob](https://learn.microsoft.com/en-us/windows/win32/api/jobapi/nf-jobapi-isprocessinjob)
+не предоставляет original Job HANDLE по чужому process HANDLE; named-Job absence по-прежнему не proof.
+Полный Main crash — отдельный cleanup исход; этот cut не обещает сохранение живых services через исчезновение Main.
+
+### Минимальная реализация с явными transport constraints
+
+1. **Физический owner с момента launch.** Один прежний broker на provider allocation создаётся существующим Main
+   composition и живёт ровно его captured owner epoch. Main удерживает pending capability **до первого await**;
+   исходный prepared root/scope устанавливается до resume/stdin. Host сохраняет logical Runtime/Team ownership
+   и единственный существующий журнал commands. Main native adapter не пишет его файлы и не решает provider policy.
+   Broker/Job handles не дублируются второму владельцу; simple duplication не решает lifetime debug thread.
+   Изменение kill-on-loss явно: provider broker зависит от Main control EOF, а не от транспорта временного Host.
+2. **Existing private transport требуется расширить, не выдавать его за готовый duplex port.**
+   В `packages/legacy-agent-host/src/{contracts,index,framing,output}.ts` и
+   `src/features/agent-backend/main/infrastructure/CapturedHostClient.ts` текущие readers принимают
+   Main→Host requests и Host→Main responses/notifications. Они ещё не поддерживают reverse custody requests.
+   Добавить одну закрытую Windows-native request/response family в этом же канале, с согласованной captured capability,
+   раздельными original request IDs/Host epochs, finite schema, deadlines и bounded pending count.
+   Каждый запрос связан с exact original Host child/epoch и captured launch/profile/spec; после seal старые
+   allocation/write/control requests отвергаются. Уже начатый effect только reconciles исходный receipt без replay.
+   Не использовать lossy `notifyData`/`host.gap` для SDK stdio: `HostOutput.sendData` может выбрасывать сообщения.
+   Control reserve для Stop/release/close сохраняется независимо от data backpressure; новый socket/daemon не требуется.
+3. **Stdio/backpressure — обязательный контракт, не telemetry.** Host SDK получает малый structural facade через
+   существующий `OwnedProcessFacade`/Windows adapter; Main владеет настоящими stdin/stdout/stderr original broker.
+   Использовать bounded pull/read-credit или equivalent lossless bounded frames через тот же private channel;
+   chunk/queue bounds укладываются в прежние frame/priority budgets, binary bytes не преобразуются через lossy text.
+   Writable callback подтверждает завершение исходной native write, не enqueue RPC. Readable pause/_read сохраняют
+   backpressure, EOF/exit/error и final drain независимы; stdio completion никогда не является tree proof.
+   Не расширять общие quotas ради этого порта и не отправлять bytes в logs/renderer notifications.
+4. **Host loss не делает implicit native close.** Seal старый Host input epoch, сохранить Main capability,
+   original pending outcomes и bounded stream state; late stdin ACK не даёт разрешение на replay.
+   Неподтверждённый Runtime input остаётся unknown; новый Host не начинает заново SDK turn и не присваивает старый
+   conversation iterator. Process read/Stop может работать с original scope независимо от этого Runtime hold.
+   Во время отсутствия consumer stdout/stderr остаются bounded/paused; private control Stop не зависит от их drain.
+   После настоящего physical Stop выполняется прежний bounded drain. Если existing facade не разделяет
+   transport disposal и physical Stop, добавить один явный owner operation; не использовать fake `closed=true`.
+5. **Guarded rebind вместо снятия sealed guards.** `BackendOwnerRouter.ts` и
+   `main/composition/{createCapturedHostClient,DesktopBackendFeature}.ts` получают только узкий
+   original-owner rebind: тот же живой Main epoch, exact profile/build/source/storage binding, подтверждённый exit
+   исходного ChildProcess Host и успешный захват прежнего `ProfileWriterLease` новым Host.
+   Старый client навсегда sealed; новый client не делит writer с ним. Existing lock recovery не обходится, файлы
+   lock не удаляются по возрасту/PID из renderer. Новый Main epoch/чужой owner/изменённый source не rebind-ится
+   к старому scope. Это отдельный product recovery путь; автоматический повтор effect или цикл restart не добавляется.
+6. **Связь с §24.3–4 без второго owner map авторизации.** Main хранит свои physical capability objects,
+   Host `WindowsRegisteredProcess` связывает их с полным private capture и текущей Team authority.
+   Scope access идёт через исходный Main native owner, а command admission/settlement — через прежний Host journal/fence.
+   Renderer получает только existing processRef/rows. Нельзя передать raw HANDLE, PID+birthday, executable/env или
+   новый произвольный scope selector через публичный IPC вместо captured native source.
+   Все process lease/rebind refs остаются private. Host async checks и physical Main epoch проверяются на каждом await.
+   V2 sealed graph и selected executable сохраняют полную свежую original attestation через закрытую
+   Host→Main capability operation. Прошлая проверка Main или измерение PID после rebind её не заменяют.
+7. **Main quit/crash отдельно.** Changed-source refusal не отбрасывает исходные cleanup capabilities:
+   Main Quit/cleanup использует уже удержанные handles, без rebind или новой allocation.
+   Quit сначала seals admission, затем original provider scopes/Jobs stop→drain→release
+   по существующему порядку. Main loss закрывает control ownership и включает прежнее containment broker/debugger.
+   Это не live cold recovery и не автоматический durable `observed-absent`: такой результат допустим только по
+   genuine terminal proof, сохранённому существующим command owner. Без него состояние unknown; PID/name отсутствие
+   не создаёт cleanup receipt. Independent TEST controller может подтвердить фактическую Main-loss очистку отдельно.
+
+**Необходимое изменение прежнего решения §24:** blanket запрет router restart заменяется только пунктом5 —
+доказанный rebind того же Main physical owner после конца старого Host. Общий auto-restart, duplicate owner/storage,
+новый supervisor, переназначение чужих handles и полный Main-cold survival по-прежнему не разрешены этим планом.
+
+**Linux warm lifetime — отдельная последующая проверка.** Тот же Main physical owner и private transport могут
+удерживать исходную Linux pidfd capability через Host replacement; второй owner/daemon для этого не нужен.
+Текущий Host-local warm v4 этого не доказывает. Для такого переноса исходный spawn/capture должен изначально
+принадлежать Main с тем же capture-before-yield; отдельно проверить native loader/ABI в Main и сохранение
+original-fd poll/lineage guards. Передача числа fd,
+PID reopen или Host-local receipt без живого исходного fd не является retention. Этот Windows cut не активирует
+Linux перенос и не квалифицирует его cold сценарий.
+
+### Приёмка до product activation
+
+Расширить существующие native/controlled-cold/Desktop fixtures, не создавать общий recovery framework:
+actual Host A register/list → явный same-Main detach/rebind с завершением Host A → Host B → тот же processRef → scoped Stop;
+это отдельный recovery путь: прежний `host.shutdown`/Quit по-прежнему выполняет stop→drain→release,
+а не сохраняет процессы при любом graceful exit. После scoped Stop original service descendants исчезают,
+provider/neighbor/foreign witness остаются живыми. Отдельно проверить
+Host crash при capture/Stop/stdio write, late old-epoch reply и read-only lookup без replay; pressure stdout/stderr
+не мешает control Stop; changed Main epoch/profile/writer отказывается; Quit и Main death имеют собственный
+original-root/Job/witness cleanup proof. Затем тот же current Processes UI и packaged artifact на x64/ARM64.
+Actual SDK/Bun compatibility, writer handoff и lossless reverse transport остаются реальными gates;
+fixture-only broker retention не заменяет ни один из них. Review root + независимый peer обязателен до source;
+vendor PASS обязателен до product activation. Warm helper/wire из §26/§24.3 можно готовить независимо.
