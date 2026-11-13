@@ -90,7 +90,8 @@ export class HostWindowsLaunch {
     return reply.value;
   }
 
-  port(profile: NativeProcessProfile, current: () => boolean): RetainedWindowsLaunchPort {
+  port(profile: NativeProcessProfile, current: () => boolean,
+    captureCurrent?: () => boolean): RetainedWindowsLaunchPort {
     const selected = structuredClone(profile);
     if (!selected.windowsBroker) unavailable();
     const originals = new WeakSet<RemotePending>();
@@ -98,7 +99,7 @@ export class HostWindowsLaunch {
       registeredProcesses: this.registeredProcesses,
       allocate: (owner) => {
         if (this.allocations.size >= 256) unavailable();
-        const pending = new RemotePending(this, selected, Object.freeze({ ...owner }), current);
+        const pending = new RemotePending(this, selected, Object.freeze({ ...owner }), current, captureCurrent);
         this.allocations.set(pending.key, pending);
         originals.add(pending);
         return pending;
@@ -207,7 +208,8 @@ class RemotePending implements PreparedOwnedProcess {
     private readonly source: HostWindowsLaunch,
     private readonly profile: NativeProcessProfile,
     readonly owner: ProcessOwner,
-    private readonly current: () => boolean
+    private readonly current: () => boolean,
+    private readonly captureCurrent?: () => boolean
   ) {
     const read = (stream: 'stdout' | 'stderr') => async () => {
       const value = await source.request('read', () => ({ operation: 'read', capability: this.key, stream }));
@@ -238,8 +240,9 @@ class RemotePending implements PreparedOwnedProcess {
   }
 
   registrationSource(mainEpoch: string): WindowsServiceSource {
-    this.assertInput();
-    if (!this.resumed || this.exit || this.profile.windowsBroker?.capability !== 'service-scopes-v1')
+    // Pure Team-fenced intent must not call the launch guard, which may enter Runtime.
+    if (this.sealed || !this.captureCurrent?.() || !this.resumed || this.exit ||
+        this.profile.windowsBroker?.capability !== 'service-scopes-v1')
       unavailable();
     return { mainEpoch, providerCapability: this.key, providerGeneration: this.owner.processGeneration,
       root: { ...this.root } };

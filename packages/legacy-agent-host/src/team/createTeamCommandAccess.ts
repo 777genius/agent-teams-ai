@@ -23,12 +23,15 @@ import type { TeamStore, TeamPolicyPort } from './ports.js';
 import type {
   RegisteredProcessNative,
   RegistrarBinding,
+  WindowsProcessNative,
 } from '../process/registeredProcessContracts.js';
 
 export interface TeamProcessRuntimeAccess {
   native?: RegisteredProcessNative;
+  windows?: WindowsProcessNative;
   registrar?(): RegistrarBinding;
   assertCurrent?(): void;
+  assertAsyncCurrent?(): void;
 }
 /** Existing Team command families share the same original namespace/grant fence. */
 export function createTeamCommandAccess(options: {
@@ -157,6 +160,8 @@ export function createTeamCommandAccess(options: {
           runtime.assertCurrent?.();
         },
         ...(runtime.native ? { native: runtime.native } : {}),
+        ...(runtime.windows ? { windows: runtime.windows } : {}),
+        ...(runtime.assertAsyncCurrent ? { assertAsyncCurrent: runtime.assertAsyncCurrent } : {}),
       });
     },
   };

@@ -151,6 +151,8 @@ export function createRuntimeMemberProviderFactory(options: {
         process: createMemberProcessMcpPort({
           entry,
           ...(options.processCustody ? { native: options.processCustody } : {}),
+          ...(entry.profile.provider === 'claude' && entry.profile.windowsBroker?.capability === 'service-scopes-v1' && options.retainedWindowsLaunch
+            ? { windows: options.retainedWindowsLaunch.registeredProcesses } : {}),
           assertCurrent: authority.assertCurrent,
           assertAllocatedCurrent: authority.assertAllocatedCurrent,
           captureSource,

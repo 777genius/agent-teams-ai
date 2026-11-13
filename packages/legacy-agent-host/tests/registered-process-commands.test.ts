@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { test } from 'node:test';
+import { performance } from 'node:perf_hooks';
+import { createProcessMcpTools } from '../dist/mcp/processTools.js';
+import type { WindowsServiceCapture, WindowsServiceIntent, WindowsServiceOutcome } from '../dist/owned-process/retainedServiceContracts.js';
 import { createTeamProcessCommands } from '../dist/process/TeamProcessCommands.js';
 import { createTeamProcessMethods } from '../dist/process/createTeamProcessMethods.js';
 import { processReceiptFingerprint } from '../dist/process/validateProcessRecords.js';
 import type {
   ProcessCommandReceipt,
+  ProcessRegisterInput,
+  WindowsProcessNative,
   RegisteredProcessCapture,
   TeamProcessRow,
 } from '../dist/process/registeredProcessContracts.js';
@@ -26,7 +31,11 @@ function fixture(ancestry: boolean | 'linux-warm' = false) {
     absent = false,
     unknown = false,
     captures = 0,
-    corrupt = false;
+    corrupt = false,
+    sourceCurrent = true,
+    fenceDepth = 0,
+    policyRegistrations = 0,
+    interruptPolicy: 'register' | 'attach' | undefined;
   const registrar = {
     backendId: 'TEST-backend',
     teamId: 'TEST-team',
@@ -65,7 +74,12 @@ function fixture(ancestry: boolean | 'linux-warm' = false) {
     digest,
     store: {
       fenced<T>(action: () => T) {
-        return action();
+        fenceDepth++;
+        try {
+          const result = action();
+          assert.ok(!(result instanceof Promise), 'TEST Team fence is synchronous');
+          return result;
+        } finally { fenceDepth--; }
       },
       read<T>(name: string) {
         return structuredClone(files.get(name)) as T | undefined;
@@ -113,21 +127,29 @@ function fixture(ancestry: boolean | 'linux-warm' = false) {
         if (corrupt) throw new Error('process:hold');
         return structuredClone(rows);
       },
-      register(input: { pid: number; label: string; from: string }) {
+      register(input: ProcessRegisterInput & { from: string }) {
+        policyRegistrations++;
+        const active = rows.find(row => row.pid === input.pid && !row.stoppedAt);
         const row = {
-          id: 'TEST-process',
+          id: active?.id ?? (policyRegistrations === 1 ? 'TEST-process' : 'TEST-process-' + policyRegistrations),
           pid: input.pid,
-          label: input.label,
-          registeredBy: input.from,
+          label: input.label.trim(),
+          registeredBy: input.from.trim(),
+          ...(input.port === undefined ? {} : { port: input.port }),
+          ...(input.url?.trim() ? { url: input.url.trim() } : {}),
+          ...(input.command?.trim() ? { command: input.command.trim() } : {}),
           registeredAt: '2026-10-23T00:00:00.000Z',
         };
-        rows.push(row);
+        if (active) rows = rows.map(value => value.id === active.id ? row : value);
+        else rows.push(row);
+        if (interruptPolicy === 'register') throw new Error('TEST interrupted original registry write');
         return structuredClone(row);
       },
       attachOriginal(id: string, commandId: string, capture: RegisteredProcessCapture) {
         rows = rows.map((row) =>
           row.id === id ? { ...row, capturedNative: capture, capturedByCommand: commandId } : row
         );
+        if (interruptPolicy === 'attach') throw new Error('TEST interrupted original attachment write');
         return structuredClone(rows.find((row) => row.id === id)!);
       },
       stopMetadata(selector: { id: string } | { pid: number }) {
@@ -152,6 +174,20 @@ function fixture(ancestry: boolean | 'linux-warm' = false) {
   return {
     commands,
     cold: () => createTeamProcessCommands(options),
+    windows: (windows: WindowsProcessNative) => {
+      const { native: _native, ...withoutPosix } = options;
+      return createTeamProcessCommands({ ...withoutPosix, windows,
+        assertAsyncCurrent() {
+          assert.equal(fenceDepth, 0, 'Full Runtime/source guard must stay outside Team fence');
+          if (!sourceCurrent) throw new Error('process:forbidden');
+        },
+      });
+    },
+    fenceDepth: () => fenceDepth,
+    policyRegistrations: () => policyRegistrations,
+    interruptPolicy: (phase?: 'register' | 'attach') => { interruptPolicy = phase; },
+    sourceChanged: () => { sourceCurrent = false; },
+    restoreSource: () => { sourceCurrent = true; },
     coldUnavailable: () => {
       const { native: _native, ...coldOptions } = options;
       return createTeamProcessCommands(coldOptions);
@@ -289,8 +325,8 @@ test('same existing command namespace validates original fingerprints and generi
 test('explicit live-ancestry receipt cold-reads original target; same-token SID uncertainty holds custody without recapture or signal', () => {
   const f = fixture(true);
   const receipt = f.commands.register('TEST-live-ancestry-register', { pid: 1001, label: 'TEST foreground service' });
-  assert.equal(receipt.capture?.version, 2);
-  assert.equal(receipt.capture?.target.sessionId, 2000);
+  assert.ok(receipt.capture?.version === 2);
+  assert.equal(receipt.capture.target.sessionId, 2000);
   const cold = f.cold(), row = cold.list()[0]!;
   assert.equal(row.canTerminate, true);
   assert.ok(!JSON.stringify(row).includes('auditToken'));
@@ -299,7 +335,9 @@ test('explicit live-ancestry receipt cold-reads original target; same-token SID 
   assert.equal(cold.list()[0]!.canTerminate, false);
   assert.throws(() => cold.terminate('TEST-no-SID-drift-stop', row.processRef), /hold/);
   assert.throws(() => cold.assertReleased(), /hold/);
-  assert.equal(cold.lookup('TEST-live-ancestry-register')?.capture?.target.sessionId, 2000);
+  const original = cold.lookup('TEST-live-ancestry-register');
+  assert.ok(original?.capture?.version === 2);
+  assert.equal(original.capture.target.sessionId, 2000);
   assert.equal(f.captures(), 1, 'Cold lookup cannot expand admission using a fresh lineage walk');
   assert.equal(f.signals(), 0);
   f.absent(); cold.assertReleased();
@@ -332,4 +370,175 @@ test('cold warm history requires completed absence of the full original capture,
   assert.equal(cold.list()[0]!.observation, 'unknown', 'Same PID and metadata cannot borrow another owner exit');
   assert.throws(() => cold.assertReleased(), /hold/);
   assert.equal(f.captures(), 1); assert.equal(f.signals(), 1);
+});
+
+
+/** Synthetic native port over the existing command store; this is not an OS qualification. */
+function windowsFixture() {
+  const f = fixture();
+  const capture: WindowsServiceCapture = {
+    version: 5, platform: 'win32', admission: 'main-owned-job-scope-v1',
+    mainEpoch: 'TEST-main', providerCapability: 'TEST-provider',
+    providerGeneration: '11111111-1111-4111-8111-111111111111',
+    root: { pid: 1000, birth: '0000000000000010' },
+    target: { pid: 1001, key: '0000000000000001', birth: '0000000000000011' },
+    registrar: { backendId: 'TEST-backend', teamId: 'TEST-team', runId: 'TEST-run',
+      memberId: 'TEST-member', generation: '1' },
+  };
+  const source = () => ({ mainEpoch: capture.mainEpoch, providerCapability: capture.providerCapability,
+    providerGeneration: capture.providerGeneration, root: structuredClone(capture.root) });
+  const replies = new Map<string, WindowsServiceOutcome>();
+  let sequence = 0, captures = 0, stops = 0, settlements = 0, absent = false, loseCapture = false;
+  let pause: 'run' | 'lookup' | undefined;
+  let pending: { finish(value?: WindowsServiceOutcome): void } | undefined;
+  const holdReply = (kind: 'run' | 'lookup', value: WindowsServiceOutcome) => {
+    if (pause !== kind) return Promise.resolve(structuredClone(value));
+    pause = undefined;
+    return new Promise<WindowsServiceOutcome>(resolve => {
+      pending = { finish: replacement => { pending = undefined; resolve(structuredClone(replacement ?? value)); } };
+    });
+  };
+  const port: WindowsProcessNative = {
+    prepareCapture(pid, registrar) {
+      assert.ok(f.fenceDepth() > 0, 'Pure intent is minted under original Team admission');
+      assert.equal(pid, capture.target.pid); assert.deepEqual(registrar, capture.registrar);
+      return { ...source(), operationRef: 'TEST-service-' + ++sequence,
+        command: { operation: 'capture', pid, registrar: structuredClone(registrar) } };
+    },
+    prepareControl(selected, operation) {
+      assert.ok(f.fenceDepth() > 0);
+      assert.deepEqual(selected, capture);
+      return { ...source(), operationRef: 'TEST-service-' + ++sequence,
+        command: { operation, capture: structuredClone(selected) } };
+    },
+    async run(intent, _deadline) {
+      assert.equal(f.fenceDepth(), 0, 'Native dispatch/await never holds the Team fence');
+      const receipt = [...f.files.values()].find(value => {
+        const row = value as ProcessCommandReceipt;
+        return row.nativeIntent?.operationRef === intent.operationRef ||
+          row.nativeSettlement?.operationRef === intent.operationRef;
+      }) as ProcessCommandReceipt | undefined;
+      assert.ok(receipt, 'Original intent is durable before first native dispatch');
+      assert.equal(replies.has(intent.operationRef), false, 'No native operation replay');
+      let value: WindowsServiceOutcome;
+      if (intent.command.operation === 'capture') {
+        captures++;
+        assert.equal(receipt.originalRegistration?.policyRequested, false);
+        value = { state: 'captured', capture: structuredClone(capture) };
+      } else if (intent.command.operation === 'stop') {
+        stops++; value = { state: 'unknown' };
+      } else {
+        settlements++; assert.equal(receipt.state.native, 'observed-absent');
+        value = { state: 'settled', capture: structuredClone(capture) };
+      }
+      replies.set(intent.operationRef, structuredClone(value));
+      return holdReply('run', loseCapture && intent.command.operation === 'capture' ? { state: 'unknown' } : value);
+    },
+    async lookup(intent, _deadline) {
+      assert.equal(f.fenceDepth(), 0);
+      return holdReply('lookup', replies.get(intent.operationRef) ?? { state: 'unknown' });
+    },
+    async query(selected, _deadline) {
+      assert.equal(f.fenceDepth(), 0);
+      assert.deepEqual(selected, capture);
+      return { state: 'observed', capture: structuredClone(capture),
+        observation: absent ? 'absent' : 'same-live', evidence: 'native-scope' };
+    },
+  };
+  return { ...f, capture, commands: f.windows(port), cold: () => f.windows(port),
+    deadline: () => performance.now() + 10000,
+    captures: () => captures, stops: () => stops, settlements: () => settlements,
+    loseCapture: () => { loseCapture = true; },
+    pause: (kind: 'run' | 'lookup') => { pause = kind; },
+    release: (value?: WindowsServiceOutcome) => { assert.ok(pending); pending.finish(value); },
+    absent: () => { absent = true; },
+  };
+}
+
+test('Windows lost capture ACK uses original receipt on cold lookup and async MCP strips private capability', async () => {
+  const f = windowsFixture(); f.loseCapture();
+  const tools = createProcessMcpTools({
+    register: (commandId, input) => f.commands.windows!.register(commandId, input, f.deadline()),
+    metadata: f.commands.metadata,
+    list: () => f.commands.windows!.list(f.deadline()),
+    lookup: commandId => f.cold().windows!.lookup(commandId, f.deadline()),
+  });
+  assert.ok(tools.every(tool => tool.asynchronous === true));
+  const call = (name: string, input: unknown) => tools.find(tool => tool.definition.name === name)!.invoke(input);
+  const held = await call('process_register', { commandId: 'TEST-window-register', pid: 1001, label: ' TEST service ' }) as { phase: string };
+  assert.equal(held.phase, 'held'); assert.equal(f.rows().length, 0); assert.equal(f.captures(), 1);
+  const completed = await call('process_lookup', { commandId: 'TEST-window-register' }) as { phase: string };
+  assert.equal(completed.phase, 'completed'); assert.equal(f.policyRegistrations(), 1);
+  const replay = await call('process_register', { commandId: 'TEST-window-register', pid: 1001, label: ' TEST service ' });
+  assert.deepEqual(replay, completed); assert.equal(f.captures(), 1); assert.equal(f.policyRegistrations(), 1);
+  assert.equal(f.commands.list()[0]!.observation, 'unknown', 'Sync Team snapshot cannot fabricate a native query');
+  const listed = await call('process_list', {}) as { observation: string; canTerminate: boolean }[];
+  assert.equal(listed[0]!.observation, 'same-live'); assert.equal(listed[0]!.canTerminate, true);
+  for (const privateField of ['mainEpoch', 'providerCapability', 'nativeIntent', 'operationRef', 'capturedNative'])
+    assert.equal(JSON.stringify({ completed, listed }).includes(privateField), false);
+});
+
+test('Windows original input is checked outside Team fence after capture await and before any policy effect', async () => {
+  const f = windowsFixture(); f.pause('run');
+  const pending = f.commands.windows!.register('TEST-source-change', { pid: 1001, label: 'TEST service' }, f.deadline());
+  assert.equal(f.captures(), 1); f.sourceChanged(); f.release();
+  await assert.rejects(pending, /forbidden/);
+  assert.equal(f.rows().length, 0); assert.equal(f.policyRegistrations(), 0);
+  f.restoreSource();
+  assert.equal((await f.cold().windows!.lookup('TEST-source-change', f.deadline()))!.phase, 'completed');
+  assert.equal(f.captures(), 1); assert.equal(f.policyRegistrations(), 1);
+});
+
+test('Windows expired capture retains evidence without policy; a later saved-capture lookup still checks original source', async () => {
+  const f = windowsFixture(); f.pause('run');
+  const deadline = performance.now() + 20;
+  const pending = f.commands.windows!.register('TEST-expired-policy', { pid: 1001, label: 'TEST service' }, deadline);
+  await new Promise<void>(resolve => setTimeout(resolve, Math.max(1, Math.ceil(deadline - performance.now()) + 1)));
+  f.release(); // Deliberately late synthetic result exercises the application deadline, independently of native filtering.
+  const held = await pending;
+  assert.equal(held.phase, 'held'); assert.equal(held.capture?.version, 5);
+  assert.equal(held.originalRegistration?.policyRequested, false);
+  assert.equal(f.policyRegistrations(), 0);
+  f.pause('lookup');
+  const later = f.cold().windows!.lookup('TEST-expired-policy', f.deadline());
+  f.sourceChanged(); f.release({ state: 'unknown' });
+  await assert.rejects(later, /forbidden/);
+  assert.equal(f.policyRegistrations(), 0);
+  f.restoreSource();
+  assert.equal((await f.cold().windows!.lookup('TEST-expired-policy', f.deadline()))!.phase, 'completed');
+  assert.equal(f.captures(), 1); assert.equal(f.policyRegistrations(), 1);
+});
+
+test('Windows uncertain original policy writes never register twice and only exact attached row can complete', async () => {
+  for (const interruption of ['register', 'attach'] as const) {
+    const f = windowsFixture(); f.interruptPolicy(interruption);
+    await assert.rejects(f.commands.windows!.register('TEST-policy-write', { pid: 1001, label: 'TEST service' }, f.deadline()), /TEST interrupted/);
+    f.interruptPolicy();
+    const receipt = await f.cold().windows!.lookup('TEST-policy-write', f.deadline());
+    assert.equal(receipt!.phase, interruption === 'attach' ? 'completed' : 'held');
+    assert.equal(f.policyRegistrations(), 1); assert.equal(f.captures(), 1);
+    assert.equal(receipt!.originalRegistration?.policyRequested, true);
+  }
+});
+
+test('Windows Stop uncertainty survives metadata removal and replacement; cold absence belongs to full original scope', async () => {
+  const f = windowsFixture();
+  await f.commands.windows!.register('TEST-native-register', { pid: 1001, label: 'TEST original' }, f.deadline());
+  const row = (await f.commands.windows!.list(f.deadline()))[0]!;
+  const stopped = await f.commands.windows!.terminate('TEST-native-stop', row.processRef, f.deadline());
+  assert.deepEqual(stopped.state, { phase: 'requested', native: 'unknown' }); assert.equal(f.stops(), 1);
+  await assert.rejects(f.cold().windows!.terminate('TEST-second-stop', row.processRef, f.deadline()), /hold/);
+  f.commands.metadata('TEST-unregister', 'unregister', { processRef: row.processRef });
+  const replacement: TeamProcessRow = { id: 'TEST-replacement', pid: row.pid, label: 'TEST untouched',
+    registeredAt: '2026-11-13T00:00:00.000Z' };
+  f.replace([replacement]);
+  assert.equal(f.cold().list().length, 2, 'Original requested receipt remains visible after unregister');
+  f.absent();
+  const completed = await f.cold().windows!.lookup('TEST-native-stop', f.deadline());
+  assert.deepEqual(completed!.state, { phase: 'completed', native: 'observed-absent', signalAccepted: 'unknown' });
+  assert.deepEqual(f.rows(), [replacement]); assert.equal(f.stops(), 1); assert.equal(f.settlements(), 1);
+  assert.equal((await f.cold().windows!.lookup('TEST-native-stop', f.deadline()))!.state.native, 'observed-absent');
+  assert.equal(f.settlements(), 1, 'Settle replay reads the same original pending result');
+  assert.equal(f.coldUnavailable().lookup('TEST-native-stop')!.state.native, 'observed-absent');
+  assert.equal(f.captures(), 1, 'Neither Stop lookup nor a replacement PID can recapture');
 });

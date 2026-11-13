@@ -1,4 +1,5 @@
 import type { ChildProcess } from 'node:child_process';
+import type { WindowsRegisteredProcessPort, WindowsServiceCapture, WindowsServiceIntent } from '../owned-process/retainedServiceContracts.js';
 export interface DarwinProcessIdentity {
   auditToken: readonly number[];
   sessionId: number;
@@ -46,13 +47,31 @@ export interface LinuxWarmRegisteredProcessCapture {
   target: LinuxWarmProcessIdentity;
 }
 export type RegisteredProcessCapture =
-  | DarwinRegisteredProcessCapture | LinuxRegisteredProcessCapture | LinuxWarmRegisteredProcessCapture;
+  | DarwinRegisteredProcessCapture | LinuxRegisteredProcessCapture | LinuxWarmRegisteredProcessCapture
+  | WindowsServiceCapture;
 export type ProcessObservation = 'same-live' | 'absent' | 'stale' | 'unknown';
 export interface RegisteredProcessNative {
   capture(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture;
   observe(capture: RegisteredProcessCapture): ProcessObservation;
   /** Synchronous; caller must persist requested before entry. Throw means requested-unknown. */
   signal(capture: RegisteredProcessCapture): 'accepted' | 'refused';
+}
+/** Private asynchronous Windows facet; captures select only this member's original provider root. */
+export type WindowsProcessNative = Pick<WindowsRegisteredProcessPort, 'prepareControl' | 'run' | 'lookup' | 'query'> & {
+  prepareCapture?(pid: number, registrar: RegistrarBinding): WindowsServiceIntent;
+};
+export interface ProcessRegisterInput {
+  pid: number;
+  label: string;
+  port?: number;
+  url?: string;
+  command?: string;
+}
+export interface OriginalProcessRegistration {
+  input: ProcessRegisterInput;
+  memberName: string;
+  /** Durable before the first policy write; unknown policy effects are never replayed. */
+  policyRequested: boolean;
 }
 export type ProcessMetadataSelector = { processRef: string } | { id: string } | { pid: number };
 export interface TeamProcessRow {
@@ -98,6 +117,11 @@ export interface ProcessCommandReceipt {
   /** Immutable original row/target; lookup never selects a newer PID or generation. */
   original?: TeamProcessRow;
   capture?: RegisteredProcessCapture;
+  /** Private original Main intent; its operationRef never becomes canonical physical identity. */
+  nativeIntent?: WindowsServiceIntent;
+  originalRegistration?: OriginalProcessRegistration;
+  /** Only after a durable original terminate absence; lookup never creates a replacement intent. */
+  nativeSettlement?: WindowsServiceIntent;
   phase: 'prepared' | 'held' | 'completed' | 'rejected';
   state: ProcessStopState;
   /** Exact metadata-selected rows retained before policy write; never OS signal authority. */

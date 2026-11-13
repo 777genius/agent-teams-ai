@@ -135,6 +135,7 @@ export function createTeamHost(
       teams,
       assertCurrent,
       ...(processCustody ? { native: processCustody } : {}),
+      ...(retainedWindowsLaunch ? { windows: retainedWindowsLaunch.registeredProcesses } : {}),
     });
     const lifecycle = createHostTeamLifecycleComposition({
       profile,

@@ -441,12 +441,16 @@ export function retainedServiceHostSource(serverUrl: string): string {
     import { randomUUID } from 'node:crypto';
     import { createHostServer } from ${JSON.stringify(serverUrl)};
     import { HostWindowsLaunch } from ${JSON.stringify(launch)};
-    let sealed = false, pending, firstIntent, firstDeadline;
+    let sealed = false, pending, firstIntent, firstDeadline, pureCapture = false, captureCurrent = true;
+    let fullChecks = 0;
     const bridge = new HostWindowsLaunch(() => server.nativeCustody);
     const profile = { cwd:'C:\\\\TEST', executable:{path:'C:\\\\TEST\\\\claude.exe',sha256:'1'.repeat(64)},
       environment:{}, windowsBroker:{path:'C:\\\\TEST\\\\owned-process-broker.exe',
         sha256:'2'.repeat(64),arch:'x64',protocol:1,capability:'service-scopes-v1'} };
-    const port = bridge.port(profile, () => !sealed);
+    const port = bridge.port(profile, () => {
+      fullChecks++; assert.equal(pureCapture, false, 'Pure capture cannot enter the Runtime input guard');
+      return !sealed;
+    }, () => !sealed && captureCurrent);
     const registrar = {backendId:'TEST-backend',teamId:'TEST-team',runId:'TEST-run',
       memberId:'TEST-member',generation:'TEST-generation'};
     const services = bridge.registeredProcesses;
@@ -466,7 +470,14 @@ export function retainedServiceHostSource(serverUrl: string): string {
           return true;
         }},
         capture:{lane:'work',async handle(){
-          firstIntent=services.prepareCapture(pending,7777,registrar);
+          const before=fullChecks; pureCapture=true;
+          try {
+            captureCurrent=false;
+            assert.throws(()=>services.prepareCapture(pending,7777,registrar));
+            captureCurrent=true;
+            firstIntent=services.prepareCapture(pending,7777,registrar);
+            assert.equal(fullChecks,before);
+          } finally { pureCapture=false; }
           firstDeadline=performance.now()+60;
           return {intent:firstIntent,initial:await services.run(firstIntent,firstDeadline)};
         }},

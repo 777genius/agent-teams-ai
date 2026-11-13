@@ -1379,3 +1379,73 @@ renderer tests, scripts types при diagnostic delta, lint/source caps и
 недоступна: source review не является RED/PASS execution. R17/R18 Claude
 proof и current native failure остаются отдельными; full parity не объявлять
 по одному comparator test или одной диагностике.
+
+
+### R18 follow-up — readonly audit установленных SDK bytes в уже нужном CI
+
+**Круг 1 — штатный доступ к prerequisite, без нового native input.**
+Executor снова недоступен; исходный Read experiment остаётся INCOMPLETE.
+Нельзя заменить exact SDK0.3.305 source audit текущей документацией или
+отсутствующим локальным файлом. При этом существующий native Claude command
+gate уже устанавливает и фиксирует нужные bytes:
+`native-claude-compaction.native.ts` (blob
+`f38f9734c91e7918fd73d015e14da7c56368a6bb`) разрешает SDK от exact providerEntry,
+проверяет SDK version/hash, pinned Darwin arm64 executable, Node и D artifact;
+existing workflow сохраняет его log и receipt даже при отказе самого /review.
+Это доступный read-only источник в следующем уже необходимом CI. Linux audit
+`0d954f797132d7af41a064673141fa8b6df96842` остаётся отдельным: Darwin source
+нужно связать с его собственным actual hash, не выдать за те же native bytes.
+
+**Круг 2 — два существующих TEST файла и закрытый результат.**
+
+1. В `tests/fixtures/native-provider-artifact.ts` добавить один узкий readonly
+   helper для именно переданных already-pinned SDK/native paths и public type
+   declaration того же resolved SDK package. Не искать другой SDK, не скачивать
+   пакет, не выполнять import/query/native --version, не менять dependency или
+   executable. Для declarations принять только фиксированный файл внутри
+   exact SDK package; его observed hash и version записать отдельно.
+2. Читать каждый original file через один retained readonly FD, no-follow после
+   existing canonical resolution, с before/after fd + path identity/size/time
+   checks и SHA256 того же byte stream. SDK/declaration cap16MiB, native cap1GiB
+   соответствует существующему captured executable limit; chunks≤64KiB,
+   carry≤1024bytes плюс максимальная длина фиксированного anchor, чтобы окно
+   могло включать ограниченный preceding source. Проверять original node:test
+   abort signal между reads. Нет нового timeout или продления test/job budget.
+   Excerpts выдавать только после совпадения pinned SDK/native hash; mismatch,
+   unreadable/oversized/changed source дают finite unavailable classification,
+   не permission support и не новый путь запуска.
+3. Фиксированный небольшой anchor set: SDK `permissionPrompts` и
+   `hook_callback`; public declarations `permissionPrompts`,
+   `PermissionRequestHookInput`, `HookCallback`; native
+   `permissionPrompts`, `permission-prompts`, `shouldAvoidPermissionPrompts`,
+   `PermissionRequest`, `hook_callback`. Это search keys, не предположение о
+   точном CLI option или обещание их наличия. Для каждого — bounded occurrence
+   count с overflow flag, максимум два первых source windows≤1024bytes,
+   byte offset и window hash. Не логировать весь файл, произвольные соседние
+   файлы, paths/env/config, native input/transcript или secret-bearing data.
+   Только SDK/native package source. Непечатные bytes экранировать; итоговый
+   serialized audit≤32KiB, исключённые windows отметить явно.
+4. В existing native fixture вызвать helper ровно один раз после original
+   source pins, до model/native effects. Один bounded diagnostic в существующий
+   test log; тот же object в existing receipt под отдельным `sdkSourceAudit`.
+   Helper уже входит в sourcePaths, поэтому новых source inventories, workflow
+   steps/jobs/artifact globs и runner нет. Diagnostic не добавляет запрос модели,
+   tool, MCP, hook callback или native process. Existing assertion failures,
+   model counts, /review marker guard и original cleanup остаются прежними.
+
+**Круг 3 — что этот audit может и чего не доказывает.**
+Он даёт actual installed bytes/hash/offset excerpts для independent source
+review. Token occurrence сам по себе не превращать в boolean «SDK supports».
+По excerpts нужно восстановить public option serialization → native context →
+slash-fork inheritance → PermissionRequest decision и отдельно
+original tool-use ID в SDK callback/envelope. Truncated/ambiguous/missing
+фрагмент оставляет конкретное звено unqualified; не угадывать minified names,
+не связывать запросы по имени/input/time, не запускать новый proof автоматически.
+Readonly audit не закрывает ask/deny execution и не разрешает D rollout.
+Следующий fresh bounded ask/deny proof по уже опубликованному R18 follow-up
+допустим только после достаточного actual source evidence и peer review.
+
+Root commit/push этого append предшествует TEST edits. Проверки — bounded
+source peer, Host test types/lint/source caps при штатной доступности и тот же
+уже нужный CI native gate. Новой unit suite, UI oracle fallback, permissionMode
+переключения, удаления native settings/rules, opaque patch или replay нет.
