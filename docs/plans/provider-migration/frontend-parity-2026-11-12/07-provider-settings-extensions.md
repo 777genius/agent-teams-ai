@@ -975,3 +975,70 @@ source-size cap — PASS. Новая unit suite не добавлялась.
 Actual first-status/Desktop acceptance и отдельная причина Review expected2/actual1
 остаются pending штатного exact-head CI; diagnostic projection не означает fix
 неустановленной metadata причины.
+
+
+## R17 — actual profile-over-limit: достаточная CPU детализация в прежнем размере
+
+Exact parity `3db75ad8b323bede28d92c99c6d8eb1defb50f1b`, run
+[43386942824](https://github.com/777genius/agent-teams-ai/actions/runs/43386942824):
+Darwin x64 job131757593612 и Windows ARM64 job131757593845 завершают original open
+за125133/131063ms при unchanged120000ms budget, без model requests и с unresolved
+cleanup. Darwin ARM64 job131757593960 доходит до allocated/nativeReady, но bootstrap
+занимает159746ms, затем первый input не достигает модели; ordinary cleanup там
+подтверждён. Все три actual receipts дают `originalHostCpu.reason=profile-over-limit`,
+bounded lower size16777217 и `rawDiscarded=true`. Теперь конкретная причина
+недоступности профиля установлена; CPU attribution всё ещё отсутствует.
+
+### Круг1 — минимальная корректировка именно измерения
+
+R14 follow-up запрещал менять sampling до выяснения причины чтения. После этих
+actual facts следующий срез явно заменяет **только** его default1000us sampling
+на фиксированный10000us (10ms) в исходном TEST Host. Официальный
+[Node24.21.0 CLI](https://github.com/nodejs/node/blob/v24.21.0/doc/api/cli.md)
+поддерживает `--cpu-prof-interval` в microseconds. Наш вопрос — стоимость
+многосекундных фаз и повторных source checks; субмиллисекундная детализация для
+этого не требуется. Меньшая частота уменьшает ожидаемое число samples/stack nodes,
+но успешное размещение профиля в лимит заранее не гарантируется.
+
+- В existing `tests/fixtures/native-host.ts` explicit first-Host CPU option
+  добавляет ровно `--cpu-prof-interval=10000`; вернуть configured interval рядом
+  с original profile path. Default product Host и native child не получают flag.
+- Existing `readOriginalHostCpuProfile` принимает captured configured interval;
+  closed receipt называет его `samplingIntervalUs`, а не ложно оставляет
+  `defaultIntervalUs:1000`. Existing legacy caller может явно сохранить1000;
+  exact new native caller передаёт interval исходного ChildProcess fixture.
+  Фактические sampled durations по-прежнему берутся из original V8 timeDeltas,
+  не умножаются на configured interval и не получают выдуманной точности.
+- Maximum16MiB, nofollow/regular/nlink, fd/path identity, original-exited check,
+  exact path, raw discard и unavailable outcomes остаются прежними. Никаких
+  чтений слишком большого файла, raw uploads или расширения maximum nodes/samples.
+
+### Круг2 — смысл native сценария сохраняется
+
+Original request sequence, provider source/config/image checks, native120s и
+обычный cleanup не меняются. Не добавлять кэш, искусственное serial wait,
+новый runner, повтор промпта либо повтор failed run. Это менее тяжёлая
+диагностика в следующем необходимом exact-head preflight, а не performance fix.
+На Windows/Darwin/Linux сохраняются отдельные actual receipts. Старые timings
+с1000us sampler не объявляются равными timings нового10000us sampler.
+
+### Круг3 — приёмка и следующий вывод
+
+Расширить существующий finite exit1 sampler case в `native-host-close.test.ts`:
+original Node получает explicit interval10000, generated profile читается,
+closed projection указывает именно его, исходный exit1 не превращается в success,
+raw удаляется. Existing missing/empty/over-limit и privacy assertions сохраняются;
+новая unit suite не нужна. Source review и focused Host test types обязательны;
+executor сейчас недоступен, поэтому ни source review, ни immutable blob readback
+не выдаются за executed test.
+
+После actual native результата использовать категории R14 с оговоркой про
+sampling/перекрывающиеся inclusive stacks. Если профиль снова unavailable,
+не выводить причину задержки по одним HTTP headers. При usable profile выбрать
+минимальный product read-composition fix с сохранением проверок свежести и
+физического owner, затем повторно пройти original native tools/MCP/approval/
+Stop/cold Resume. До этого startup parity остаётся открыта.
+
+Self-review: повышается только шаг диагностического sampling, не admission limit,
+timeout или допустимый размер. Native failures и отсутствие attribution показаны
+явно; source ещё не менялся.
