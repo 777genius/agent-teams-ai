@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { constants } from 'node:fs';
+import { constants, lstatSync } from 'node:fs';
 import { lstat, mkdir, open, realpath, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
@@ -177,9 +177,9 @@ export async function prepareDesktopClaudeCheckpointUpgrade(repo: string, pnpm: 
   assert.equal(oldProfile.owner.hostEntrySha256, oldEntry.sha256);
   assert.equal(currentProfile.owner.hostEntrySha256, currentEntry.sha256);
   assert.equal(currentProfile.runtime?.members.length, 1);
-  const base = currentProfile.runtime!.members[0]!;
-  assert.equal(base.provider, 'claude');
-  assertSame(base.executable, { path: nativePath, sha256: native.sha256 });
+  const seed = oldProfile.runtime!.members[0]!;
+  assert.equal(seed.provider, 'claude');
+  assertSame(seed.executable, { path: nativePath, sha256: native.sha256 });
   const descriptorFile = await jsonFile(original.descriptorPath, 256 * 1024);
   assert.equal(descriptorFile.sha256, original.pins.descriptorSha256);
   const descriptor = descriptorFile.value;
@@ -266,7 +266,7 @@ export async function prepareDesktopClaudeCheckpointUpgrade(repo: string, pnpm: 
       const sourceBinding = normalizeBinding(source.binding as RuntimeBinding);
       assert.equal(sourceBinding.backendId, oldProfile.owner.ownerId);
       assert.equal(sourceBinding.teamId, oldProfile.teams[0]!.binding.teamId);
-      assert.equal(sourceBinding.memberId, base.memberId);
+      assert.equal(sourceBinding.memberId, seed.memberId);
       const launchPath = join(original.root, 'hoststore/teams', oldProfile.teams[0]!.binding.teamName,
         '.host-owner/launches', runtimeDigest(sourceBinding.runId) + '.json');
       const launch = await jsonFile(launchPath, 1024 * 1024);
@@ -274,6 +274,44 @@ export async function prepareDesktopClaudeCheckpointUpgrade(repo: string, pnpm: 
       const { validateLaunchRecord } = await import(pathToFileURL(join(oldHost, 'dist/team-launch/validateLaunchRecord.js')).href) as
         typeof import('../../packages/legacy-agent-host/dist/team-launch/validateLaunchRecord.js');
       validateLaunchRecord(journal, journal.fingerprint, journal.definition.members.length);
+      assert.equal(journal.definition.members.length, 1);
+      assertSame(journal.definition.rosterScope, oldProfile.teams[0]!.scope);
+      let base = seed;
+      if (journal.definition.capture !== undefined) {
+        const { runtimeCaptureSourceSchema, compileRuntimeCapture } = await import(
+          pathToFileURL(join(oldHost, 'dist/composition/runtimeCaptureSource.js')).href
+        ) as typeof import('../../packages/legacy-agent-host/dist/composition/runtimeCaptureSource.js');
+        const originalCapture = runtimeCaptureSourceSchema.parse(journal.definition.capture);
+        assert.equal(originalCapture.members.length, 1);
+        assert.equal(originalCapture.members[0]!.memberId, seed.memberId);
+        assert.equal(originalCapture.members[0]!.role, 'lead');
+        assert.ok(originalCapture.mcpRecipeReferences);
+        assert.equal(originalCapture.mcpRecipeReferences.length, 1);
+        assert.equal(originalCapture.mcpRecipeReferences[0]!.memberId, seed.memberId);
+        assert.equal(dirname(dirname(launchPath)), join(oldProfile.owner.storageRoot, 'teams',
+          oldProfile.teams[0]!.binding.teamName, '.host-owner'));
+        // The old store constructor can create absent parents. Require the complete
+        // original namespace synchronously before its metadata-only reconstruction.
+        for (let path = join(dirname(launchPath), 'mcp-recipes'); ; path = dirname(path)) {
+          const stat = lstatSync(path);
+          assert.ok(stat.isDirectory() && !stat.isSymbolicLink());
+          if (path === dirname(path)) break;
+        }
+        const compiled = compileRuntimeCapture(oldProfile,
+          { definition: oldProfile.teams[0]! }, originalCapture);
+        assert.equal(compiled.registration.launchId, journal.definition.launchId);
+        assert.equal(compiled.registration.launchId, sourceBinding.runId);
+        assert.equal(compiled.registration.commandId, originalCapture.commandId);
+        assert.equal(compiled.registration.expectedRevision, originalCapture.configurationRevision);
+        assert.equal(compiled.registration.members.length, 1);
+        assertSame(normalizeBinding(compiled.registration.members[0]!.delivery), sourceBinding);
+        assert.equal(compiled.profiles.length, 1);
+        base = compiled.profiles[0]!;
+        assert.equal(base.memberId, seed.memberId);
+        assert.equal(base.teamId, seed.teamId);
+        assert.equal(base.provider, seed.provider);
+        assertSame(base.executable, seed.executable);
+      }
       const selected = journal.definition.members.filter(row => row.memberId === base.memberId);
       const attempts = journal.members.filter(row => row.memberId === base.memberId);
       assert.equal(selected.length, 1); assert.equal(attempts.length, 1);
@@ -327,7 +365,7 @@ export async function prepareDesktopClaudeCheckpointUpgrade(repo: string, pnpm: 
       await sourceUnchanged(false);
       const launch = await jsonFile(captured.launchPath, 1024 * 1024);
       const journal = launch.value as unknown as TeamLaunchRecord;
-      const selected = journal.definition.members.filter(row => row.memberId === base.memberId);
+      const selected = journal.definition.members.filter(row => row.memberId === seed.memberId);
       assert.equal(selected.length, 1);
       const target = selected[0]!;
       assert.ok(target.restore && target.binding);
