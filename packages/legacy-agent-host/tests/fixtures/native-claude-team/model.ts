@@ -243,6 +243,7 @@ export async function startNativeTeamModel(
   let currentLegacyCatalogRequests = 0;
   let currentLegacyPreconnectRequests = 0;
   let donorSavedCatalogRequests = 0;
+  let donorSavedPreconnectRequests = 0;
   const unexpectedNoToolsRequests: {
     model?: string;
     roles: unknown[];
@@ -262,7 +263,7 @@ export async function startNativeTeamModel(
     void (async () => {
       if (request.method === 'HEAD') {
         assert.equal(failures.length, 0, 'oracle is sealed after its first protocol failure');
-        assert.ok(originalLegacyRead, 'preconnect belongs to the original current producer epoch');
+        assert.ok(originalDonorRead || originalLegacyRead, 'preconnect belongs to the original producer epoch');
         assert.equal(request.url, '/');
         assert.equal(request.headers.authorization, undefined);
         assert.equal(request.headers['x-api-key'], undefined);
@@ -270,7 +271,9 @@ export async function startNativeTeamModel(
         assert.ok(request.headers['content-length'] === undefined || request.headers['content-length'] === '0');
         for await (const chunk of request)
           assert.equal(Buffer.from(chunk as Uint8Array).length, 0, 'bodyless original preconnect');
-        assert.ok(++currentLegacyPreconnectRequests <= 32, 'bounded original runtime preconnects');
+        const preconnectRequests = originalDonorRead
+          ? ++donorSavedPreconnectRequests : ++currentLegacyPreconnectRequests;
+        assert.ok(preconnectRequests <= 32, 'bounded original runtime preconnects');
         response.writeHead(204); response.end();
         return;
       }
