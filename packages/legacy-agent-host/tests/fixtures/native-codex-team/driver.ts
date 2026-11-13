@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { createCodexDriverFactory } from '@agent-teams/provider-implementations/codex';
+import { CodexAppServerClient, createCodexDriverFactory } from '@agent-teams/provider-implementations/codex';
 import { CONTEXT_MARKER, REQUIRED_TOOLS, record } from './model.ts';
 import type { CodexAppServerTransport, CodexDriverConfig } from '@agent-teams/provider-implementations/codex';
-import type { DriverFactory, Event, Input, Session } from '@agent-teams/provider-session-contracts';
+import type { DriverFactory, Event, Input, OpenConfig, Session } from '@agent-teams/provider-session-contracts';
 import type { TeamMcpEndpoint } from '../../../dist/mcp/index.js';
 import type { ChildProcess } from 'node:child_process';
 
@@ -23,17 +24,34 @@ export async function cleanupCapturedCodexChild(child: ChildProcess): Promise<vo
   assert.equal(alive(), false, 'captured Codex child exit confirmed');
 }
 
+type Candidate = { version: '0.169.0'; deadline: number } & (
+  | { phase: 'catalog' }
+  | { phase: 'start'; model: string; previousConfigSha256: string }
+  | { phase: 'resume'; model: string; previousConfigSha256: string;
+      readCheckpoint(reference: string, request: OpenConfig): Promise<unknown> }
+);
+const digest = (value: string) => createHash('sha256').update(value, 'utf8').digest('hex');
+
 /** Only process IO/custody and read-only wire observations live here; D owns RPC. */
 export async function nativeCodexDriver(options: {
   root: string; binary: string; modelUrl: string; endpoint: TeamMcpEndpoint;
+  candidate?: Candidate;
   currentBinding(): boolean;
   onCapturedChild(child: ChildProcess): void;
 }) {
   // Factory construction validates the actual public Codex capability vocabulary
   // before allocating a native process. The configuration callback is lazy.
-  const native = createCodexDriverFactory({ capabilities: ['text', 'tools'],
+  const candidate = options.candidate;
+  if (candidate) assert.equal(candidate.version, '0.169.0');
+  const remaining = () => {
+    const value = candidate ? Math.ceil(candidate.deadline - performance.now()) : 30_000;
+    assert.ok(value > 0, 'original candidate deadline remains');
+    return Math.min(30_000, value);
+  };
+  const capabilities = candidate ? ['text', 'tools', 'permission', 'interrupt', 'checkpoint'] : ['text', 'tools'];
+  const native = createCodexDriverFactory({ capabilities,
     resolveConfiguration: async request => request.sessionId === config.binding.sessionId ? config : undefined,
-    readCheckpoint: async () => undefined });
+    readCheckpoint: candidate?.phase === 'resume' ? candidate.readCheckpoint : async () => undefined });
   const root = options.root;
   const workspace = join(root, 'workspace');
   const environment = { HOME: join(root, 'home'), CODEX_HOME: join(root, 'codex-home'),
@@ -43,9 +61,12 @@ export async function nativeCodexDriver(options: {
     TEST_TEAM_MCP_TOKEN: options.endpoint.bearerToken };
   // Native provider and shell configuration from the retained 0.162.0 P1 oracle.
   // The private endpoint bearer is environment-only, not serialized to this file.
-  await writeFile(join(root, 'codex-home/config.toml'), `model = "mock-model"
-model_provider = "TEST_fixture"
-approval_policy = "never"
+  const model = candidate && candidate.phase !== 'catalog' ? candidate.model : 'mock-model';
+  if (candidate && candidate.phase !== 'catalog')
+    assert.ok(model.length > 0 && model.length <= 2048 && !/[\0\r\n]/.test(model));
+  const configPath = join(root, 'codex-home/config.toml');
+  const configText = `${candidate?.phase === 'catalog' ? '' : 'model = ' + JSON.stringify(model) + '\n'}model_provider = "TEST_fixture"
+approval_policy = "${candidate ? 'on-request' : 'never'}"
 sandbox_mode = "workspace-write"
 web_search = "disabled"
 check_for_update_on_startup = false
@@ -84,7 +105,13 @@ startup_timeout_sec = 15
 tool_timeout_sec = 15
 enabled_tools = ${JSON.stringify(REQUIRED_TOOLS)}
 ${REQUIRED_TOOLS.map(name => `[mcp_servers.team.tools.${name}]\napproval_mode = "approve"`).join('\n')}
-`, { mode: 0o600 });
+`;
+  if (candidate && candidate.phase !== 'catalog')
+    assert.equal(digest(await readFile(configPath, 'utf8')), candidate.previousConfigSha256);
+  if (candidate?.phase === 'resume')
+    assert.equal(digest(configText), candidate.previousConfigSha256, 'cold C2 retains original config bytes');
+  else await writeFile(configPath, configText, { mode: 0o600, ...(candidate?.phase === 'catalog' ? { flag: 'wx' } : {}) });
+  remaining();
   const child = spawn(options.binary, ['app-server', '--listen', 'stdio://'], {
     cwd: workspace, env: environment, stdio: ['pipe', 'pipe', 'pipe'] });
   options.onCapturedChild(child);
@@ -95,19 +122,44 @@ ${REQUIRED_TOOLS.map(name => `[mcp_servers.team.tools.${name}]\napproval_mode = 
   const facts = { contextSent: false, threadAccepted: false, threadId: '', mcpReady: false,
     mcpTools: [] as string[], errors: [] as { method: string; code: unknown }[],
     sentMethods: [] as string[], openFailure: '' };
+  const candidateWire = { turns: [] as string[], approvals: [] as {
+    kind: 'command' | 'other'; providerRequestId: string; threadId: string; turnId: string;
+    itemId: string; command: string; cwd: string;
+  }[] };
   const pendingFacts = new Map<string, { method: string; threadId?: string }>();
   let pendingBytes = '';
   const inspect = (frame: Record<string, unknown>) => {
+    if (candidate && typeof frame.method === 'string' && frame.id !== undefined) {
+      assert.ok(candidateWire.approvals.length < 4, 'bounded original server requests');
+      const params = record(frame.params);
+      const field = (name: string) => {
+        const value = params[name];
+        assert.ok(value === undefined || value === null || (typeof value === 'string' && value.length <= 8192));
+        return typeof value === 'string' ? value : '';
+      };
+      const command = frame.method === 'item/commandExecution/requestApproval';
+      candidateWire.approvals.push({ kind: command ? 'command' : 'other',
+        providerRequestId: command ? 'codex:' + frame.method + ':' +
+          (field('approvalId') || field('callId') || field('itemId') || String(frame.id)) : '',
+        threadId: field('threadId'), turnId: field('turnId'), itemId: field('itemId'),
+        command: field('command'), cwd: field('cwd') });
+    }
     if (frame.method || frame.id === undefined) return;
     const request = pendingFacts.get(String(frame.id));
     if (!request) return;
     pendingFacts.delete(String(frame.id));
     if (frame.error) { facts.errors.push({ method: request.method, code: record(frame.error).code }); return; }
     const result = record(frame.result);
-    if (request.method === 'thread/start') {
+    if (request.method === 'thread/start' || (candidate && request.method === 'thread/resume')) {
       const thread = record(result.thread);
       facts.threadAccepted = typeof thread.id === 'string' && result.cwd === workspace;
       facts.threadId = typeof thread.id === 'string' ? thread.id : '';
+    }
+    if (candidate && request.method === 'turn/start') {
+      const turnId = record(result.turn).id;
+      assert.ok(typeof turnId === 'string' && turnId.length > 0 && turnId.length <= 4096);
+      assert.ok(candidateWire.turns.length < 2);
+      candidateWire.turns.push(turnId);
     }
     if (request.method === 'mcpServerStatus/list' && request.threadId === facts.threadId) {
       const servers = Array.isArray(result.data) ? result.data.map(record) : [];
@@ -145,7 +197,7 @@ ${REQUIRED_TOOLS.map(name => `[mcp_servers.team.tools.${name}]\napproval_mode = 
         assert.ok(facts.sentMethods.length < 128, 'finite native method observation budget');
         facts.sentMethods.push(value.method);
       }
-      if (value.method === 'thread/start') {
+      if (value.method === 'thread/start' || (candidate && value.method === 'thread/resume')) {
         facts.contextSent = record(value.params).developerInstructions ===
           `${CONTEXT_MARKER}. You are bob in test-codex-team; work only in ${workspace}.`;
       }
@@ -160,28 +212,64 @@ ${REQUIRED_TOOLS.map(name => `[mcp_servers.team.tools.${name}]\napproval_mode = 
       });
     },
   };
+  const confirmStopped = async () => {
+    child.stdin.end();
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline && alive()) await tick();
+    return !alive();
+  };
+  let rpcOwner: 'none' | 'metadata' | 'session' = 'none';
+  const readCandidateCatalog = async () => {
+    assert.equal(candidate?.phase, 'catalog');
+    assert.equal(rpcOwner, 'none', 'one original stdio RPC owner');
+    rpcOwner = 'metadata';
+    let unexpected = 0, failed = false;
+    const client = new CodexAppServerClient({ transport,
+      limits: { requestTimeoutMs: remaining() }, maxThreads: 1, maxQueuedTurns: 1,
+      onEvent: () => { unexpected += 1; },
+      requestApproval: async () => { throw new Error('TEST metadata must not request permission'); } });
+    try {
+      await client.initialize(config.initialize);
+      const page = await client.listModels({ limit: 100, includeHidden: false }, AbortSignal.timeout(remaining()));
+      const selection = await client.readModelConfiguration({ cwd: workspace }, AbortSignal.timeout(remaining()));
+      remaining();
+      assert.equal(unexpected, 0);
+      assert.equal(candidateWire.approvals.length, 0);
+      assert.deepEqual(facts.sentMethods, ['initialize', 'initialized', 'model/list', 'config/read']);
+      assert.equal(selection.modelProvider, 'TEST_fixture');
+      return { page, selection };
+    } catch (error) {
+      failed = true;
+      throw error;
+    } finally {
+      client.close();
+      const stopped = await confirmStopped();
+      if (!failed) assert.equal(stopped, true, 'original metadata child exit before C1');
+    }
+  };
   const config: CodexDriverConfig = {
     binding: { tenantId: 'TEST-tenant', projectId: 'TEST-project',
-      sessionId: `TEST-codex-${basename(root)}`, generation: 1 },
-    configRevision: 'TEST-codex-config-1', protocolRevision: '0.162.0',
+      sessionId: `TEST-codex-${basename(root)}`, generation: candidate?.phase === 'resume' ? 2 : 1 },
+    configRevision: candidate ? 'TEST-codex-0.169.0-config' : 'TEST-codex-config-1', protocolRevision: candidate?.version ?? '0.162.0',
     trustedBinding: `TEST-bob-${basename(root)}`, accountBinding: 'TEST-dummy-codex-account',
     transport, initialize: { clientInfo: { name: 'TEST-native-team', version: '1' }, capabilities: { experimentalApi: true } },
-    threadParams: { cwd: workspace, model: 'mock-model', approvalPolicy: 'never', sandbox: 'workspace-write',
+    threadParams: { cwd: workspace, model, approvalPolicy: candidate ? 'on-request' : 'never', sandbox: 'workspace-write',
       developerInstructions: `${CONTEXT_MARKER}. You are bob in test-codex-team; work only in ${workspace}.` },
     requiredMcpTools: { team: REQUIRED_TOOLS },
     limits: { queuedInputs: 2, inputBytes: 8192, outputEvents: 1500,
-      outputBytes: 1_000_000, pendingInteractions: 4, timeoutMs: 30_000 },
+      outputBytes: 1_000_000, pendingInteractions: 4, timeoutMs: remaining() },
     probe: async () => alive() && options.currentBinding() && facts.contextSent && facts.threadAccepted,
-    async confirmStopped() {
-      child.stdin.end();
-      const deadline = Date.now() + 5000;
-      while (Date.now() < deadline && alive()) await tick();
-      return !alive();
-    },
+    confirmStopped,
   };
   const events: Event[] = []; const submitted: Input[] = [];
   let ready = false;
   const factory: DriverFactory = { async open(request) {
+    if (candidate) {
+      assert.notEqual(candidate.phase, 'catalog');
+      assert.equal(rpcOwner, 'none', 'one original stdio RPC owner');
+      rpcOwner = 'session';
+      remaining();
+    }
     const opened = await native.open(request).catch((error: unknown) => {
       const code = record(error).code;
       const message = error instanceof Error ? error.message : '';
@@ -204,7 +292,8 @@ ${REQUIRED_TOOLS.map(name => `[mcp_servers.team.tools.${name}]\napproval_mode = 
     };
     return { driver, capabilities: opened.capabilities };
   } };
-  return { factory, config, facts, events, submitted,
+  return { factory, config, facts, events, submitted, candidateWire, readCandidateCatalog,
+    configSha256: digest(configText),
     canDispatch: () => ready && alive() && options.currentBinding(),
     childFacts: () => [{ pid: child.pid, exitCode: child.exitCode, signalCode: child.signalCode }],
     safeDiagnostic: () => diagnostic.replaceAll(options.endpoint.bearerToken, '[TEST capability redacted]')
