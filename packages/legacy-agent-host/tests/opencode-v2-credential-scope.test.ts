@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
+import { createOpenCodeV2OwnedSessionClient } from '@agent-teams/provider-implementations/opencode';
+
+import { captureOpenCodeV2SessionCredential } from '../dist/adapters/providers/OpenCodeV2SessionCredential.js';
 import { OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
 
 function fixture() {
@@ -14,7 +18,7 @@ function fixture() {
   const selected = { environment: { HOME: home, XDG_DATA_HOME: data }, accountBinding: 'TEST-account' };
   let current = true;
   return {
-    root, home, data, store, file,
+    root, home, data, store, file, profile: selected,
     scope: () => new OpenCodeV2CredentialScope(selected, 'TEST-provider', () => current),
     write: (value: unknown) => writeFileSync(file, JSON.stringify(value), { mode: 0o600 }),
     revoke: () => { current = false; },
@@ -22,7 +26,7 @@ function fixture() {
   };
 }
 
-test('V2 key publication survives a fresh scope, preserves foreign credentials and only rolls back its own entry', t => {
+test('V2 key publication survives a fresh scope, preserves foreign credentials and only rolls back its own entry', async t => {
   const f = fixture(); t.after(f.cleanup);
   const foreign = { type: 'oauth', access: 'TEST-foreign-token', refresh: 'TEST-foreign-refresh', expires: 123 };
   f.write({ 'TEST-other': foreign });
@@ -47,6 +51,116 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
   assert.deepEqual(JSON.parse(readFileSync(f.file, 'utf8')), {
     'TEST-other': foreign, 'TEST-provider': { type: 'api', key: 'TEST-corrected-key' },
   });
+
+  const originalAuth = readFileSync(f.file);
+  // Real pinned protocol clients against a finite TEST peer; no native engine is claimed.
+  for (const mode of ['configured', 'absent', 'explicit', 'missing', 'foreign',
+    'foreign-scope', 'explicit-foreign', 'explicit-scope'] as const) {
+    const explicit = mode.startsWith('explicit');
+    const integrationId = explicit ? 'TEST-explicit' : 'TEST-provider';
+    const accepted = mode === 'configured' || mode === 'absent' || mode === 'explicit';
+    const requests: string[] = [], failures: unknown[] = [];
+    let connected = false;
+    const server = createServer((request, response) => {
+      void (async () => {
+        assert.ok(requests.length < 10, 'one finite preparation, with no replay');
+        const url = new URL(request.url!, 'http://127.0.0.1');
+        requests.push(request.method + ' ' + url.pathname);
+        assert.deepEqual([...url.searchParams], [['location[directory]', f.root]]);
+        assert.equal(request.headers.authorization,
+          'Basic ' + Buffer.from('opencode:TEST-server-password').toString('base64'));
+        const chunks: Buffer[] = [];
+        let bytes = 0;
+        for await (const chunk of request) {
+          const value = Buffer.from(chunk);
+          bytes += value.length;
+          assert.ok(bytes <= 1024, 'TEST request body is bounded');
+          chunks.push(value);
+        }
+        const body = Buffer.concat(chunks).toString('utf8');
+        if (request.method === 'POST') {
+          assert.equal(url.pathname, '/api/integration/' + integrationId + '/connect/key');
+          assert.equal(accepted, true, 'refused integration cannot receive a key');
+          assert.equal(connected, false, 'only one original key connect');
+          assert.deepEqual(JSON.parse(body), { key: 'TEST-corrected-key' });
+          connected = true;
+          response.writeHead(204); response.end(); return;
+        }
+        assert.equal(request.method, 'GET');
+        assert.equal(body, '');
+        let data: unknown;
+        let directory = f.root;
+        if (url.pathname === '/api/provider') data = mode === 'absent' ? [] : [{
+          id: 'TEST-provider', name: 'TEST provider', activation: 'enabled',
+          ...(explicit ? { integrationID: integrationId } : {}),
+        }];
+        else if (url.pathname === '/api/model') data = [];
+        else if (url.pathname === '/api/model/default') data = null;
+        else if (url.pathname === '/api/integration') {
+          assert.equal(explicit, false, 'an explicit native reference never falls back');
+          data = mode === 'missing' ? [] : [{
+            id: mode === 'foreign' ? 'TEST-other' : 'TEST-provider',
+            name: 'TEST integration', methods: [{ type: 'key' }],
+          }];
+          if (mode === 'foreign-scope') directory = join(f.root, 'TEST-foreign');
+        } else {
+          assert.equal(url.pathname, '/api/integration/' + integrationId);
+          data = {
+            id: mode === 'explicit-foreign' ? 'TEST-other' : integrationId,
+            name: 'TEST integration', methods: [{ type: 'key' }],
+            connections: connected ? [{ type: 'credential', id: 'cred_TEST', method: 'key' }] : [],
+          };
+          if (mode === 'explicit-scope') directory = join(f.root, 'TEST-foreign');
+        }
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end(JSON.stringify({ location: { directory }, data }));
+      })().catch(error => {
+        failures.push(error);
+        if (!response.headersSent) response.writeHead(500);
+        response.end();
+      });
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', () => { server.off('error', reject); resolve(); });
+    });
+    let owner: ReturnType<typeof createOpenCodeV2OwnedSessionClient> | undefined;
+    try {
+      const address = server.address();
+      assert.ok(address && typeof address !== 'string');
+      const config = { endpoint: 'http://127.0.0.1:' + address.port, directory: f.root,
+        version: '2.1.4' as const, signal: t.signal, deadline: Date.now() + 5000,
+        readPassword: () => 'TEST-server-password' };
+      owner = createOpenCodeV2OwnedSessionClient({ ...config, nativeSessionId: 'ses_TEST' });
+      const prepared = captureOpenCodeV2SessionCredential(f.profile, 'TEST-provider', () => true);
+      const original = prepared.prepare(config, owner);
+      assert.equal(prepared.prepare(config, owner), original, 'same original pending Promise');
+      if (accepted) {
+        assert.deepEqual(await original, { scopeDigest: f.scope().capture().digest, credentialId: 'cred_TEST' });
+        assert.equal(await prepared.prepare(config, owner), await original);
+      } else {
+        const code = mode === 'foreign-scope' ? 'native_catalog_binding_mismatch'
+          : explicit ? 'invalid_native_integration' : 'held';
+        await assert.rejects(original, { code });
+        assert.equal(prepared.prepare(config, owner), original, 'refusal cannot retry native preparation');
+      }
+      const catalog = ['GET /api/provider', 'GET /api/model', 'GET /api/model/default'];
+      const selection = explicit ? catalog : [...catalog, ...catalog, 'GET /api/integration'];
+      const keyRead = 'GET /api/integration/' + integrationId;
+      assert.deepEqual(requests, [...selection,
+        ...(accepted ? [keyRead, 'POST /api/integration/' + integrationId + '/connect/key', keyRead]
+          : explicit ? [keyRead] : [])], mode);
+      assert.equal(connected, accepted);
+      assert.deepEqual(failures, [], 'TEST peer accepted only the original finite protocol');
+      assert.deepEqual(readFileSync(f.file), originalAuth, 'native preparation never rewrites source auth');
+    } finally {
+      try { await owner?.dispose(); }
+      finally {
+        server.closeAllConnections();
+        await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+      }
+    }
+  }
 });
 
 test('V2 refuses existing V1/auth changes and never overwrites a replacement during rollback', t => {
