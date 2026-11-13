@@ -44,6 +44,20 @@ describe('HTTP team route parsers', () => {
     );
     // A genuinely user-safe flag (not app-managed) passes through untouched.
     expect(assertOptionalExtraCliArgs('--max-turns=5')).toBe('--max-turns=5');
+    expect(assertOptionalExtraCliArgs('--max-turns=5 --teammate-mode tmux')).toBe(
+      '--max-turns=5 --teammate-mode tmux'
+    );
+    expect(assertOptionalExtraCliArgs('--teammate-mode=in-process')).toBe(
+      '--teammate-mode=in-process'
+    );
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs('--teammate-mode unsupported'),
+      'app-managed flags'
+    );
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs('--teammate-mode tmux --teammate-mode auto'),
+      'app-managed flags'
+    );
   });
 
   it('validates common string and cwd fields with the route error messages', () => {

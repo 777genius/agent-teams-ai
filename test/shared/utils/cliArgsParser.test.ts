@@ -5,6 +5,7 @@ import {
   extractUserFlags,
   findInvalidUserFlags,
   findOptionMissingValue,
+  findProtectedUserFlags,
   parseCliArgs,
   PROTECTED_CLI_FLAGS,
 } from '@shared/utils/cliArgsParser';
@@ -261,6 +262,39 @@ describe('findInvalidUserFlags', () => {
       missingValueFlag: undefined,
     });
     expect(findInvalidUserFlags('', known).valid).toBe(true);
+  });
+});
+
+describe('documented teammate mode override', () => {
+  const known = new Set(['--teammate-mode', '--max-turns', '--append-system-prompt', '-p']);
+
+  it.each([
+    '--teammate-mode tmux',
+    '--teammate-mode=tmux',
+    '--teammate-mode auto --max-turns 5',
+    '--max-turns=5 --teammate-mode=in-process',
+  ])('accepts one supported per-launch mode: %s', (args) => {
+    expect(findProtectedUserFlags(args)).toEqual([]);
+    expect(findInvalidUserFlags(args, known).valid).toBe(true);
+  });
+
+  it.each([
+    '--teammate-mode',
+    '--teammate-mode other',
+    '--teammate-mode=',
+    '--teammate-mode tmux --teammate-mode auto',
+    '--append-system-prompt --teammate-mode tmux',
+    '-p-teammate-mode=tmux',
+  ])('rejects ambiguous or unsupported override: %s', (args) => {
+    expect(findProtectedUserFlags(args)).toContain('--teammate-mode');
+    expect(findInvalidUserFlags(args, known).valid).toBe(false);
+  });
+
+  it('keeps all other app-managed flags blocked beside a supported mode', () => {
+    expect(findProtectedUserFlags('--teammate-mode tmux -rabc --mcp-config=bad')).toEqual([
+      '-r',
+      '--mcp-config',
+    ]);
   });
 });
 

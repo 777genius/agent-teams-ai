@@ -3,9 +3,8 @@ import {
   validateTeamName,
 } from '@main/services/team/TeamIdentifierValidation';
 import {
-  extractUserFlags,
   findOptionMissingValue,
-  PROTECTED_CLI_FLAGS,
+  findProtectedUserFlags,
 } from '@shared/utils/cliArgsParser';
 import {
   formatEffortLevelListForProvider,
@@ -124,9 +123,7 @@ export function assertOptionalExtraCliArgs(value: unknown): string | undefined {
     throw new TeamRequestValidationError('extraCliArgs too long (max 1024)');
   }
 
-  const protectedFlags = extractUserFlags(extraCliArgs).filter((flag) =>
-    PROTECTED_CLI_FLAGS.has(flag)
-  );
+  const protectedFlags = findProtectedUserFlags(extraCliArgs);
   if (protectedFlags.length > 0) {
     throw new TeamRequestValidationError(
       `extraCliArgs contains app-managed flags: ${[...new Set(protectedFlags)].join(', ')}`

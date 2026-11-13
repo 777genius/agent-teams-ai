@@ -144,13 +144,35 @@ export function findOptionMissingValue(raw: string): string | undefined {
  * Validate result for user args: flags the CLI does not know and protected flags
  * in `invalidFlags`, and an option left without its value in `missingValueFlag`.
  */
+/**
+ * Allow the documented per-launch teammate backend override, but only one
+ * unambiguous flag with one of the three modes consumed by runtimeTeammateMode.
+ * A protected flag swallowed as a value or synthesized by a short cluster
+ * remains protected, as do duplicates and unknown modes.
+ */
+function protectedFlagsFromScan(scan: ReturnType<typeof scanUserFlags>): string[] {
+  const mode = scan.teammateModes[0];
+  const allowedMode =
+    scan.teammateModes.length === 1 &&
+    (mode === 'tmux' || mode === 'auto' || mode === 'in-process') &&
+    scan.flags.filter((flag) => flag === '--teammate-mode').length === 1;
+  return scan.flags.filter(
+    (flag) => PROTECTED_CLI_FLAGS.has(flag) && !(flag === '--teammate-mode' && allowedMode)
+  );
+}
+
+export function findProtectedUserFlags(raw: string): string[] {
+  return protectedFlagsFromScan(scanUserFlags(raw));
+}
+
 export function findInvalidUserFlags(
   raw: string,
   knownFlags: Set<string>
 ): CliArgsValidationResult {
-  const { flags, missingValue } = scanUserFlags(raw);
+  const scan = scanUserFlags(raw);
+  const { flags, missingValue } = scan;
   const invalid = flags.filter((flag) => !knownFlags.has(flag));
-  const protectedFlags = flags.filter((flag) => PROTECTED_CLI_FLAGS.has(flag));
+  const protectedFlags = protectedFlagsFromScan(scan);
   const invalidFlags = [...new Set([...invalid, ...protectedFlags])];
   return {
     valid: invalidFlags.length === 0 && !missingValue,
@@ -159,9 +181,14 @@ export function findInvalidUserFlags(
   };
 }
 
-function scanUserFlags(raw: string): { flags: string[]; missingValue?: string } {
+function scanUserFlags(raw: string): {
+  flags: string[];
+  missingValue?: string;
+  teammateModes: string[];
+} {
   const tokens = parseCliArgs(raw);
   const flags: string[] = [];
+  const teammateModes: string[] = [];
   let missingValue: string | undefined;
   let i = 0;
   while (i < tokens.length) {
@@ -180,6 +207,16 @@ function scanUserFlags(raw: string): { flags: string[]; missingValue?: string } 
       }
       continue;
     }
+    if (token === '--teammate-mode' || token.startsWith('--teammate-mode=')) {
+      flags.push('--teammate-mode');
+      if (token === '--teammate-mode') {
+        if (i === tokens.length) missingValue = token;
+        teammateModes.push(tokens[i++] ?? '');
+      } else {
+        teammateModes.push(token.slice('--teammate-mode='.length));
+      }
+      continue;
+    }
     // Normalize the `--flag=value` form to the bare flag name so protected-flag
     // checks (PROTECTED_CLI_FLAGS.has(...)) cannot be bypassed by appending
     // `=value` (e.g. `--mcp-config=/evil`, `--dangerously-skip-permissions=1`).
@@ -194,7 +231,7 @@ function scanUserFlags(raw: string): { flags: string[]; missingValue?: string } 
       flags.push(...protectedLongFlagIn(tokens[i++]));
     }
   }
-  return { flags, missingValue };
+  return { flags, missingValue, teammateModes };
 }
 
 /**
@@ -251,6 +288,7 @@ const OPTIONS_WITH_REQUIRED_VALUE = new Set([
   '--settings',
   '--system-prompt',
   '--system-prompt-snapshot',
+  '--teammate-mode',
   '--tools',
 ]);
 

@@ -7325,19 +7325,21 @@ describe('ipc teams handlers', () => {
         teamName: 'test-team',
         members: [{ name: 'alice' }],
         cwd: os.tmpdir(),
-        extraCliArgs: ' --max-turns 5 ',
+        extraCliArgs: ' --max-turns 5 --teammate-mode tmux ',
       })) as { success: boolean };
       const launched = (await handlers.get(TEAM_LAUNCH)!(event, {
         teamName: 'my-team',
         cwd: os.tmpdir(),
-        extraCliArgs: '--max-turns 5',
+        extraCliArgs: '--max-turns 5 --teammate-mode tmux',
       })) as { success: boolean };
 
       expect(created.success).toBe(true);
-      expect(teamHandlerMocks.createTeam.mock.calls[0][0].extraCliArgs).toBe('--max-turns 5');
+      expect(teamHandlerMocks.createTeam.mock.calls[0][0].extraCliArgs).toBe(
+        '--max-turns 5 --teammate-mode tmux'
+      );
       expect(launched.success).toBe(true);
       expect(teamHandlerMocks.launchTeam).toHaveBeenCalledWith(
-        expect.objectContaining({ extraCliArgs: '--max-turns 5' }),
+        expect.objectContaining({ extraCliArgs: '--max-turns 5 --teammate-mode tmux' }),
         expect.any(Function)
       );
     });
