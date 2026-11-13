@@ -605,11 +605,11 @@
       "addDescription": "儲存 API 金鑰以便在 MCP 伺服器安裝中自動填充。",
       "editDescription": "更新金鑰詳細資料。您必須重新輸入金鑰值。",
       "keychainUnavailable": "無法使用作業系統鑰匙圈：金鑰會在本機以 AES-256 加密。安裝 gnome-keyring 可取得作業系統層級的保護。",
-      "name": "姓名",
+      "name": "名稱",
       "namePlaceholder": "例如 OpenAI 製作",
       "environmentVariableName": "環境變數名稱",
       "envVarPlaceholder": "例如 OPENAI_API_KEY",
-      "value": "價值",
+      "value": "金鑰值",
       "reenterValue": "重新輸入鍵值",
       "valuePlaceholder": "sk-…",
       "scope": "範圍",
@@ -623,7 +623,7 @@
       "save": "儲存",
       "errors": {
         "invalidEnvVarFormat": "請使用字母、數字和底線，且必須以字母或底線開頭。",
-        "nameRequired": "姓名為必填項",
+        "nameRequired": "名稱為必填項",
         "envVarRequired": "環境變數名稱為必填項",
         "invalidEnvVar": "環境變數名稱無效",
         "valueRequired": "鍵值必填",
@@ -663,7 +663,7 @@
     "auth": "授權",
     "byAuthor": "作者：{{author}}",
     "hosting": {
-      "remote": "偏僻的",
+      "remote": "遠端",
       "local": "本機",
       "both": "兩個都"
     },

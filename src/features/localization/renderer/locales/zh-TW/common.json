@@ -832,7 +832,7 @@
       "noMatching": "沒有符合的通知",
       "noNotifications": "無通知",
       "tryDifferentFilter": "嘗試不同的篩選條件",
-      "allCaughtUp": "你們都被抓住了！"
+      "allCaughtUp": "所有通知皆已讀"
     }
   },
   "updates": {
@@ -847,7 +847,7 @@
   },
   "layout": {
     "github": "GitHub",
-    "discord": "不和諧",
+    "discord": "Discord",
     "expandSidebar": "展開側邊欄",
     "collapseSidebarShortcut": "摺疊側邊欄（{{shortcut}}）",
     "sidebarView": "側邊欄檢視",
@@ -901,7 +901,7 @@
   "editorFormatting": {
     "bold": "粗體",
     "italic": "斜體",
-    "strike": "罷工",
+    "strike": "刪除線",
     "code": "程式碼"
   },
   "diff": {
