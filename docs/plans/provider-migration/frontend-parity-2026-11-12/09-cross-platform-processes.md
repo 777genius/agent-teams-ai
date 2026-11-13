@@ -2263,3 +2263,71 @@ checkpoint/Stop and the second old Host restore succeeded; the failure is the se
 
 The subsequent §39 compatibility correction and current-Main route qualification remain open.
 A qualified old corpus alone cannot close the compatibility review thread.
+
+## 49. §45 B2/C: original service operation through the existing broker
+
+**Source refinement before the next implementation.** B1 delivery and the bounded native
+current-child selector remain inactive candidates; their source reviews do not qualify staged
+Windows behavior. Current A gate still needs the §46 TEST capture correction. Main cold rebind,
+other providers and packaged Processes UI remain separate acceptance work.
+
+### Concrete missing seams
+
+- `WindowsCapability.request` retains an expired wire waiter, but its `received(): void` callback
+  cannot retain the late decoded reply for original capture/Stop lookup. Preserve the original
+  frame at this same waiter; do not resolve the timed-out caller again or allocate another wire ID.
+- `windowsBrokerReference` currently hashes an explicit schema1 projection. An optional private
+  `service-scopes-v1` selection must participate in that projection, schema validation and all
+  Host/Main/broker verification calls. An absent field preserves the original schema1 reference;
+  no consumer infers the capability from a filename or successful opcode.
+- Whole-provider release ends the original broker's service handles too. Missing scope/closed
+  transport is never absence. Retain an actual terminal scope fact, or derive owner-local absence
+  only from the same capability's genuine `job-membership` whole-Job receipt and the scope's
+  previously proven membership. Root exit, EOF, metadata stop and `no-local-dispatch` are insufficient.
+
+### Small typed API and one physical owner
+
+1. Add an optional closed service port to the prepared original process. It allocates a pure
+   pending capture/Stop/settle operation before dispatch; read-only query does not create durable
+   operation history. Main stores this pending object under the original journal operation reference
+   before running it. The operation retains its exact request, first deadline, wire ID when assigned,
+   immutable initial outcome and the latest original validated reply. Lookup reads that object;
+   it never resends capture/Stop or calls the current-child selector under a fresh ID.
+2. A narrow `owned-process/WindowsServiceOperations.ts` helper may hold this typed queue/state,
+   using the existing `WindowsCapability` transport and decoder. It is not another broker or RPC
+   family. At most three service requests hold the existing four wire slots; whole-provider
+   Stop/release retains the fourth. Queue admission and native Stop payload consume the original
+   absolute deadline. Late ACK retires only its own wire debt. Service replies cannot enter
+   `publishRoot`, manufacture a whole-Job `TreeReceipt`, or rewrite another operation.
+3. Keep original service operation references at the existing Main allocation. The explicit ceiling
+   is 10000 per allocation, matching the existing Team command-entry ceiling; no unresolved record
+   is evicted. Read-only queries do not consume it. Scope facts remain bounded by the selected
+   product's 4096-scope ceiling. Capacity refusal precedes dispatch and preserves whole-provider
+   cleanup. Neither the native64 settled-frame cache nor Host32 slots becomes application history.
+4. Ordinary Claude first uses its exact installed original root capability; PID does not select a
+   provider, member or new root. Any nonunique/unavailable root selection stays held until its
+   explicitly qualified route exists. Canonical capture uses original Main epoch, provider capability/
+   generation/root, native scope key/birth, target PID and registrar. A new command or replacement
+   Host does not change that physical identity. Same scope with conflicting registrar/physical
+   metadata refuses instead of overwriting the original result.
+5. Extend only the existing private Host custody family with typed service capture/query/Stop/
+   settle/lookup. Same binding, lane, remaining budget, quiescing and late-ACK rules apply.
+   New captures require current input/source admission; query, original Stop, settlement and lookup
+   remain cleanup operations on already retained capabilities. Source refusal cannot discard cleanup.
+6. The existing Team journal stores the original native intent before the first await, exactly as
+   §45 specifies. Native work remains outside the synchronous Team fence; after-await settlement
+   rechecks the same receipt, grant, registrar/source and active rows. Async list/lookup/terminate
+   use exact original capture, while synchronous Team snapshots project metadata only. POSIX
+   capture and genuine old receipt decoding remain unchanged.
+
+### Verification scope
+
+Extend existing broker protocol and retained-owner/Host process-command tests for the one genuine
+late service reply, bounded queue plus whole-provider cleanup reserve, prepared-intent-before-await
+and no duplicate effect on lookup. Use the existing Windows staged-product/ordinary Claude gate
+for registration, original subtree Stop, neighbor/provider survival and original Session continuation;
+an unstaged TEST helper does not replace that proof. No new test framework, runner or time budget.
+
+**R1:** the late-frame loss, explicit capability hash projection and whole-release boundary are
+confirmed in exact `dfcea017` source. This is a design refinement only; source/compile/native
+acceptance of this next layer is pending. B1/native-selector source reviews remain separate.
