@@ -158,12 +158,16 @@ async function runParent() {
 }
 
 // A separate fixture mimics forced termination of the owning app process.
- // The test is never described as an Electron GUI / real provider proof.
+// The test is never described as an Electron GUI / real provider proof.
 function originalProcessAlive(pid, marker) {
   assert.ok(Number.isSafeInteger(pid) && pid > 0);
   assert.match(marker, /^native-custody-[0-9a-f-]{36}$/);
-  const script = "$p = Get-CimInstance Win32_Process -Filter 'ProcessId = " + pid +
-    "'; if ($p -and $p.CommandLine -like '*" + marker + "*') { 'alive' } else { 'gone' }";
+  // CIM errors must fail closed, never be mistaken for confirmed process absence.
+  const script = "$ErrorActionPreference = 'Stop'; try { " +
+    "$p = Get-CimInstance Win32_Process -Filter 'ProcessId = " + pid +
+    "' -ErrorAction Stop; if ($p -and $p.CommandLine -like '*" + marker +
+    "*') { 'alive' } else { 'gone' } " +
+    "} catch { [Console]::Error.WriteLine('CIM lookup failed'); exit 1 }";
   const found = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
     windowsHide: true,
     encoding: 'utf8',
@@ -274,8 +278,19 @@ async function runCustodyProbe() {
     // A surviving *tool descendant* is explicitly recorded, not misrepresented as a pass.
   } finally {
     terminateOwnedTree(app);
-    if (matePid) killVerifiedOriginal(matePid, marker);
-    if (toolPid) killVerifiedOriginal(toolPid, marker);
+    // Cleanup must attempt *both* original PIDs even if the first lookup/kill fails.
+    const cleanupErrors = [];
+    for (const pid of [matePid, toolPid]) {
+      if (!pid) continue;
+      try {
+        killVerifiedOriginal(pid, marker);
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (cleanupErrors.length) {
+      throw new AggregateError(cleanupErrors, 'Original Windows fixture process cleanup failed');
+    }
   }
 }
 
