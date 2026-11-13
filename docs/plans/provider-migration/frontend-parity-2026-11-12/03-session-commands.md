@@ -1672,3 +1672,15 @@ full frozen-lockfile install with supply-chain/integrity checks preserved, follo
 by the coherent Host build/types and focused existing checks. No trust-policy,
 integrity, dependency, native runtime or CI limit is relaxed. This is a source
 and packed-consumer pin; native Host/Desktop results remain separate.
+
+### R20 coherent candidate validation — 2026-11-13
+
+Provider source [3b39a50b](https://github.com/agent-teams-ai/old-provider-implementations/commit/3b39a50b28319a3e91e0779493f0d64acb98d2e5) passed the original [CI43434455869](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43434455869), both pinned Node24.21 and26.11.1 source/packed-consumer jobs. The checked artifact14043230900 is the original CI archive, not a local repack: provider tgz SHA256 `f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2`. The new vendored source receipt retains nativeHostQualified=false and packagedElectronQualified=false. Native V2 qualification on that provider head remains queued; these passing source checks do not relabel it.
+
+The Host candidate pins that archive, retains the unchanged SPI pin and forwards only the command description selected by the existing resolver. Existing original native and Desktop command receipts require the explicit legacy-inline-review-v1 marker; native additionally requires the original Read permission/input/binding/operation/session IDs, actual allow-once response, read-result event and main/MCP completion. No tool bypass or replacement conversation is admitted.
+
+The ordinary frozen frontend installation passed, including the2533-entry supply-chain check and all normal hooks. Both archive package manifests are byte-identical. Independent peer verified the lockfile delta consists only of five old/new archive path references plus its SHA512; dependency graph and snapshots' children are unchanged.
+
+Coherent Host build passed. Exact captured Node24.21 ran the two existing projection/compaction model files:15/15 PASS. Existing legacy-host script types passed. Full existing Host test types exited137 without TypeScript diagnostics on the normal invocation and one lower-resource same-project invocation; this is **NOT PASS**, no third retry was made, and the required CI type gate remains unchanged. Immutable source/check handoff `496649205d22e026f2e52b32b2385256241f0275` retains all six exact source blobs and log digests. Root and independent Profiles source reviews passed; Platform independently reviewed workflow assertions, checked artifact and lockfile.
+
+Actual new native Read/permission/command execution and complete Desktop/UI qualification are still pending on the coherent candidate. Earlier fork, catalogue and platform failures remain visible; no release or default activation is qualified by this paragraph.
