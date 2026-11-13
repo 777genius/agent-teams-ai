@@ -1653,3 +1653,22 @@ review request rows must carry the same explicit compatibility execution marker.
 It does not claim the newer SDK fork or the native Read permission scenario as a
 Desktop proof. Root makes these narrow workflow assertion changes with the
 coherent reviewed D archive/pin; every other gate and budget remains unchanged.
+
+
+**R20 checked archive pin — retain the identical dependency graph.**
+
+Official CI `43434455869` passed both exact Node jobs (`131915856553`,
+`131915855999`); checked artifact `14043230900` was downloaded with its
+original ZIP SHA256 `16448ae2767af90e3738cf23806347f8ae7364499e4c9da7923b831b18d8b92e`.
+Its provider bytes match the independent local packed-consumer output.
+Old f4 and new 3b39 package/package.json bytes are identical, SHA256
+`ea236ac5ff4c43d5fa7628ee7615022c23b0fcd9a4fe3594e63f137971245e50`;
+the SPI archive is also unchanged. No dependency version or resolution graph changed.
+Two local resolver invocations ended with exit137 before writing the lockfile,
+including a scoped, cached attempt with lower heap and network concurrency.
+Update only the five occurrences of this local tarball path and its one
+verified SHA512 integrity value in the existing lockfile. Then require a normal
+full frozen-lockfile install with supply-chain/integrity checks preserved, followed
+by the coherent Host build/types and focused existing checks. No trust-policy,
+integrity, dependency, native runtime or CI limit is relaxed. This is a source
+and packed-consumer pin; native Host/Desktop results remain separate.
