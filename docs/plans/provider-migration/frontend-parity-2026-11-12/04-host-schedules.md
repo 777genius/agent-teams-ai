@@ -466,6 +466,10 @@ safe unopened runtime сейчас проецируется в registered_only/e
 - `attachMember` повторно читает exact member/generation и применяет тот же
   predicate перед existing runtime.open. Unknown custody, held/sealed/attached
   и начавшийся runtime не принимаются как безопасный unopened.
+- Dispatcher передаёт в existing `attachMember` optional expected `{runId, generation}`
+  исходного runtime. Host recipient сверяет оба значения перед open; legacy composition
+  синхронно проверяет тот же run, liveness и отсутствие team operation непосредственно
+  перед existing attach call. Это не даёт replacement run принять старую attach попытку.
 - Existing run/generation recipient fencing, original owner guards и readiness
   перед task creation сохраняются. Не добавлять Restart или переоткрытие старого
   session. Старые ограничения auto-attach для potentially shared OpenCode lanes
@@ -482,7 +486,7 @@ safe unopened runtime сейчас проецируется в registered_only/e
 - В existing schedule test файле добавить один bounded Host adapter case:
   unopened/owned/unattached/unsealed → offline → один original runtime.open;
   uncertain/sealed/attached states не открываются. Проверить, что foreign run
-  при сохранённой generation не создаёт task.start. Это controlled boundary proof,
+  при сохранённой generation не создаёт task.start или runtime.open. Это controlled boundary proof,
   не actual native или Desktop PASS.
 - Existing filesystem/Host schedule E2E, focused strict Main types, fast lint и
   source cap проходят на итоговом cut. Whole-project CI и actual Desktop schedule

@@ -1337,3 +1337,38 @@ Artifact `14012602104`, ZIP SHA256 `d7f18526518ca796ebb0ebdbbd2fdd53b302182d7b98
 
 Это discovery gate перед исправлением actual harness cause. Пока нет новых exact-source artifacts,
 shared-socket inheritance, безопасный alternate admission и успешный Linux cold UI/packaged не заявляются.
+
+## 36. Следующий review-driven cut: четыре ограниченных lifecycle/build исправления
+
+Source baseline — `dde51b477db6a41fc4d69ab6fbe1e10f6db3e5e2`; перед изменениями root/peer review.
+Никаких новых владельцев, журналов, native fallback, увеличения timeout или изменения product activation.
+
+| Подтверждённый thread | Причина в текущем source | Минимальная правка и доказательство |
+| --- | --- | --- |
+| `PRRT_kwDORVTEtM622S05`, failed prepare cleanup | `WindowsCapability.prepare` после sealed race возвращает retained `cleanup`, но `WindowsCapturedProcess.stop` вызывает drain только при `allocation.prepared`; release затем отказывает из-за `drainSettled=false`. | Перенести уже существующий typed `drain(deadline)` в `PendingOwnedProcess`; wrapper дренирует ту же pending capability и лишь затем передаёт её genuine receipt в release. 3s drain и native Stop/release proof сохраняются; incomplete drain отдельно от tree absence. |
+| `PRRT_kwDORVTEtM622S1t`, expired Stop cache | Таймер разрешает shared `stopOperation.promise` как unknown, но pointer остаётся до wire ACK/60s; новые explicit close attempts используют уже завершённый unknown и исчерпывают wrapper limit4. Немедленная повторная отправка тоже неверна: native `stopBusy.exchange(true)` при ещё активном Stop вызывает `abandon()`. | Удалять только истёкшую shared operation при её deadline, сохраняя original wire waiter/ID и immutable result прежнего attempt. Проверять expiry также при новом admission, если timer callback задержан. Новый explicit attempt ждёт settlement прежнего wire Stop в своём прежнем deadline; только после него допускается fresh wire dispatch/accounting того же original Job. Late old ACK может снять ожидание, но не завершает и не удаляет новый attempt. |
+| `PRRT_kwDORVTEtM622VsE`, native failure artifacts | Node26/24/Electron qualifier выполняется до `cp`, поэтому при его failure исходная artifact/manifest directory не попадает в always-upload. | Existing always artifact step включает три exact `$RUNNER_TEMP/TEST-linux-{node26,node24,electron}-$GITHUB_RUN_ID` directories независимо от exit qualifier. Failure остаётся failure; нет broad filesystem glob/new job. |
+| `PRRT_kwDORVTEtM622VsM`, private build directory | Recursive mkdir разрешает существующую empty directory, не обеспечивая заявленный контракт new/private. | Exclusive leaf mkdir, canonical parent и проверка созданной leaf identity/type/owner/private mode перед compiler. Existing directory/symlink отказывается; существующие permissions не исправляются chmod. Native/ABI callers уже создают private parent и передают несуществующую leaf `artifact`. |
+
+Конкретные source paths: `packages/legacy-agent-host/src/owned-process/contract.ts`,
+`src/adapters/providers/WindowsCapturedProcess.ts` относительно того же Host package,
+`src/owned-process/windowsBroker.ts`, `packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts`
+и `.github/workflows/sentry-owned-process-native.yml`. Main reexports используют canonical Host core автоматически.
+Нативный broker/Job owner и прежние 4 wire waiters/64 attempt receipts остаются; native `stopBusy`/confirmed accounting
+не заменяются предположением, что deadline означает неотправленный effect. Один старый attempt не replay-ится новым ID.
+Если исходный wire не завершился до deadline следующего attempt, следующий тоже остаётся unknown без второго Stop frame;
+завершение transport ожидания без ACK не доказывает, что native `stopBusy` освобождён: fresh dispatch допускается лишь
+после actual original wire reply, либо original broker terminal state исключает любые новые отправки.
+
+Расширить существующий `tools/owned-process-broker/protocol.test.ts` двумя critical cases:
+Stop во время held prepare → failed preparation, original bounded drain, receipt/release; expired shared Stop →
+immutable original unknown, отсутствие второго Stop frame до original ACK, затем fresh explicit attempt/ACK и
+невозможность завершить его старым ACK. Это synthetic wire policy, не native cleanup proof.
+В `registered-process-build-selection.test.ts` добавить только refusal существующей непригодной directory без compiler call;
+положительный build/load остаётся реальным existing Linux/ABI CI. Native Windows facade/prepare cancellation сценарий
+проверяется existing harness при следующем штатном native cut; guard/timer не ослабляются ради теста.
+
+Отдельно остаётся `PRRT_kwDORVTEtM623zRW`: root-oracle deadline привязан к регистрации, а поздняя cleanup фаза имеет
+собственный допустимый бюджет. Перед его правкой нужен узкий phase-boundary вариант с тем же original capture,
+одним initial read и bounded cleanup window, без увеличения времени/числа native queries. Этот finding не скрывается
+ни source PASS transport §34, ни успешными SDK runs; он не расширяет текущий четырёхпунктный cut.
