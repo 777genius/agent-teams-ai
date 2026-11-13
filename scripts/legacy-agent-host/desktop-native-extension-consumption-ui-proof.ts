@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
+import { effectId } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import { readNativePlugins } from '../../packages/legacy-agent-host/dist/extensions/readNativeExtensionState.js';
 import {
   EXTENSION_USER_SKILL, EXTENSION_PROJECT_SKILL, extensionReply, extensionReplyId,
@@ -37,6 +38,9 @@ export async function runDesktopNativeExtensionCommandsUi(cdp: UiCdpPort, option
   const sources = await json(nativeExtensionUiSources(root)) as NativeExtensionSources;
   const binding = record(options.session.binding), bindingKey = runtimeDigest(binding);
   assert.equal(binding.memberId, 'alice-id');
+  const { backendId, teamId } = binding;
+  assert.ok(typeof backendId === 'string' && backendId.length > 0);
+  assert.ok(typeof teamId === 'string' && teamId.length > 0);
   const steps: Row[] = [];
   const proof: Row = { status: 'INCOMPLETE', steps, namespaceSha256: sources.namespaceSha256,
     firstBinding: binding, installedPlugin: sources.plugin };
@@ -106,7 +110,7 @@ export async function runDesktopNativeExtensionCommandsUi(cdp: UiCdpPort, option
     assert.equal(outbox.content, raw);
     assert.equal(outbox.messageId, receipt.commandId);
     const replies = rows(await json(join(team, 'inboxes/user.json')))
-      .filter(row => row.messageId === extensionReplyId(phase));
+      .filter(row => row.messageId === effectId('message', backendId, teamId, extensionReplyId(phase)));
     assert.equal(replies.length, 1);
     assert.equal(replies[0]!.from, 'alice');
     assert.equal(replies[0]!.text, extensionReply(phase));
