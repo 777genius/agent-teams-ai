@@ -92,7 +92,7 @@ async function nativeBoundaries(config: string) {
 }
 
 test(
-  'actual marked Claude commands, local cost output, builtin review, captured skills and compact context recover their original receipts',
+  'actual marked Claude commands, local cost output, legacy inline review, captured skills and compact context recover their original receipts',
   { timeout: 300_000 },
   async (t) => {
     assert.equal(
@@ -167,7 +167,8 @@ test(
     for (const name of ['home', 'config', 'workspace', 'tmp', 'store'])
       await mkdir(join(root, name), { mode: 0o700 });
     const untouchedPath = join(root, 'workspace/TEST-unrelated.txt');
-    await writeFile(untouchedPath, 'TEST unrelated native compact fixture bytes\n');
+    const reviewReadContent = 'TEST unrelated native compact fixture bytes\n';
+    await writeFile(untouchedPath, reviewReadContent);
     const untouchedSha256 = await fileHash(untouchedPath);
     const owner = {
       ownerId: `TEST-owner-${namespace}`,
@@ -230,6 +231,7 @@ test(
           assert.ok(input.preparation);
           return { prefix: input.preparation.prefix, originalContent: input.intent.content };
         },
+        reviewRead: { path: untouchedPath, content: reviewReadContent },
       },
     });
     let modelClosed = false;
@@ -268,13 +270,13 @@ test(
       accountBinding: 'TEST-dummy-account',
       executable: native,
       environment,
-      nativeTools: [],
+      nativeTools: ['Read'],
       autoAllowedTools: [],
       nativeOptions: {
         settingSources: ['user', 'project'],
         context: 'model-default',
         projectInstructions: {
-          append: `${CONTEXT_MARKER} TEST-only native compact and command qualification. Only explicitly requested Team MCP messages are permitted.`,
+          append: `${CONTEXT_MARKER} TEST-only native compact and command qualification. Only explicitly requested Team MCP messages and one Read of ${untouchedPath} after original allow-once approval are permitted.`,
         },
       },
       limits: {
@@ -288,6 +290,7 @@ test(
     };
     const commandSources = [] as { path: string; sha256: string }[];
     for (const [path, contents] of [
+      [join(member.cwd, '.claude/settings.json'), JSON.stringify({ permissions: { ask: ['Read'] } }) + '\n'],
       [
         join(member.cwd, '.claude/commands/test-project-command.md'),
         `---\ndescription: TEST captured project command\n---\n${PROJECT_COMMAND_BODY}\nArguments: $ARGUMENTS\nSend the requested TEST reply using the captured Team message_send tool.\n`,
@@ -431,11 +434,51 @@ test(
       }
       throw new Error('Actual native member did not reach captured MCP readiness');
     };
+    let reviewApproval: { inputId: string; operationRef: string; interactionRef: string;
+      sessionRef: string; binding: RuntimeBinding; toolUseId: string } | undefined;
     const terminal = async (originalId: string, memberId = 'lead-id') => {
       const deadline = Date.now() + 60_000;
       while (Date.now() < deadline) {
         assert.deepEqual(model.failures, []);
         const result = await rpc('runtime.read', 'TEST-m10-observe', { memberId });
+        if (phase === 'review' && originalId === inputId('TEST-p03-review')) {
+          const captured = store.fenced(selectedBinding, (tx) => ({
+            current: tx.get(), activity: events.readActivity(selectedBinding),
+          }));
+          const current = captured.current; assert.ok(current);
+          assert.deepEqual(current.binding, selectedBinding);
+          const pending = current.interactions.filter((row) => row.phase === 'pending');
+          assert.ok(pending.length <= 1, 'at most the one original review Read may request approval');
+          if (pending.length) {
+            assert.equal(reviewApproval, undefined, 'one allow-once attempt, never replay uncertain permission');
+            const interaction = pending[0]!;
+            const original = current.inputs.find((row) => row.intent.inputId === originalId);
+            assert.ok(original && current.sessionRef);
+            assert.equal(original.phase, 'consumed');
+            assert.deepEqual(original.intent.binding, selectedBinding);
+            assert.equal(interaction.inputId, originalId);
+            assert.equal(interaction.operationRef, original.operationRef);
+            assert.equal(interaction.kind, 'permission');
+            const feed = captured.activity?.events.filter((row) => row.inputId === originalId &&
+              row.operationRef === original.operationRef) ?? [];
+            const requests = feed.filter((row) => row.data.kind === 'interaction' &&
+              row.data.interactionRef === interaction.interactionRef);
+            const tools = feed.filter((row) => row.data.kind === 'tool' && row.data.toolRef === 'TEST-p03-review-read');
+            // The SDK's output iterator and permission callback may arrive in either order.
+            if (!requests.length || !tools.length) { await tick(); continue; }
+            assert.equal(requests.length, 1); assert.equal(tools.length, 1);
+            assert.deepEqual(requests[0]!.data.request, { kind: 'permission', tool: 'Read', input: { file_path: untouchedPath } });
+            assert.equal(tools[0]!.data.name, 'Read');
+            assert.deepEqual(tools[0]!.data.input, { file_path: untouchedPath });
+            reviewApproval = { inputId: originalId, operationRef: original.operationRef,
+              interactionRef: interaction.interactionRef, sessionRef: current.sessionRef,
+              binding: { ...selectedBinding }, toolUseId: 'TEST-p03-review-read' };
+            await rpc('runtime.interaction', 'TEST-p03-review-allow-once', {
+              memberId, expectedGeneration: selectedBinding.generation, inputId: originalId,
+              interactionRef: interaction.interactionRef, reply: { kind: 'permission', decision: 'allow' },
+            });
+          }
+        }
         const found = (record(result.value).inputs as unknown[])
           .map(record)
           .find((row) => row.inputId === originalId);
@@ -490,6 +533,8 @@ test(
           false,
           `unqualified ${name} is not offered`
         );
+      assert.equal(commands.find((command) => command.name === 'review')?.description,
+        'Review a pull request in the current conversation.');
       proofs.commandCatalog = { commands, commandSources };
       captureChildren(1);
       await send('TEST-m10-seed', COMPACT_SEED);
@@ -777,12 +822,23 @@ test(
       );
       assert.equal(reviewReplies.length, 1);
       assert.equal(reviewReplies[0]!.text, 'TEST_P03_review_VISIBLE_REPLY');
-      proofs.builtinReview = {
+      assert.ok(reviewApproval);
+      assert.equal(runtime().interactions.find((row) => row.interactionRef === reviewApproval!.interactionRef)?.phase, 'resolved');
+      const reviewResults = store.fenced(selectedBinding, () => events.readActivity(selectedBinding))?.events
+        .filter((row) => row.inputId === reviewInputId && row.operationRef === reviewInput?.operationRef &&
+          row.data.kind === 'tool-result' && row.data.toolRef === reviewApproval!.toolUseId) ?? [];
+      assert.equal(reviewResults.length, 1);
+      assert.equal(reviewResults[0]!.data.isError, false);
+      assert.ok(JSON.stringify(reviewResults[0]!.data.content).includes(reviewReadContent.trim()));
+      proofs.legacyInlineReview = {
         command: '/review',
+        execution: 'legacy-inline-review-v1',
         exactArguments: REVIEW_ARGS,
         inputId: reviewInputId,
+        originalPermission: reviewApproval,
+        readResultEventId: reviewResults[0]!.eventId,
         nativeTeamReplies: 1,
-        nativeRequests: 2,
+        nativeRequests: 3,
       };
       for (const member of currentMembers) {
         const result = await rpc('runtime.stop', 'TEST-m10-stop-current', {
@@ -814,7 +870,7 @@ test(
         preparedInputProof(preparationBeforeCold)
       );
       assert.equal(model.compactionRequests.length, requestsBeforeCold);
-      assert.equal(requestsBeforeCold, 10);
+      assert.equal(requestsBeforeCold, 11);
       assert.equal(
         (await userInbox()).filter((row) => row.summary === '/cost').length,
         1,
@@ -845,6 +901,7 @@ test(
           'project-command',
           'user-command',
           'user-command',
+          'review',
           'review',
           'review',
         ]

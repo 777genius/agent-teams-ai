@@ -1054,14 +1054,24 @@ jobs:
           assert.equal(receipt.proofs.namedCommands.project, true);
           assert.equal(receipt.proofs.namedCommands.user, true);
           assert.equal(receipt.proofs.namedCommands.nativeTeamReplies, 2);
-          assert.equal(receipt.proofs.builtinReview.command, '/review');
-          assert.equal(receipt.proofs.builtinReview.exactArguments, 'TEST_NATIVE_P03_EXACT_REVIEW_ARGUMENTS');
-          assert.equal(receipt.proofs.builtinReview.nativeTeamReplies, 1);
-          assert.equal(receipt.proofs.builtinReview.nativeRequests, 2);
+          const review = receipt.proofs.legacyInlineReview;
+          assert.equal(review.command, '/review');
+          assert.equal(review.execution, 'legacy-inline-review-v1');
+          assert.equal(review.exactArguments, 'TEST_NATIVE_P03_EXACT_REVIEW_ARGUMENTS');
+          assert.equal(review.nativeTeamReplies, 1);
+          assert.equal(review.nativeRequests, 3);
+          assert.equal(review.originalPermission.inputId, review.inputId);
+          assert.deepEqual(review.originalPermission.binding, receipt.proofs.currentContext.binding);
+          assert.equal(review.originalPermission.toolUseId, 'TEST-p03-review-read');
+          for (const field of ['interactionRef', 'operationRef', 'sessionRef'])
+            assert.ok(typeof review.originalPermission[field] === 'string' && review.originalPermission[field].length > 0);
+          assert.match(review.readResultEventId, /^[a-f0-9]{64}:\d+$/u);
+          assert.deepEqual(receipt.modelRequests.filter(row => row.phase === 'review').map(row => row.commandExecution),
+            ['legacy-inline-review-v1', 'legacy-inline-review-v1', 'legacy-inline-review-v1']);
           assert.equal(receipt.proofs.coldRecovery.exactOriginalReceipts, 8);
           assert.equal(receipt.proofs.coldRecovery.noNativeAllocation, true);
           assert.equal(receipt.proofs.coldRecovery.modelRequestsUnchanged, true);
-          assert.equal(receipt.modelRequests.length, 10);
+          assert.equal(receipt.modelRequests.length, 11);
           NODE
       - name: Stage exact OpenCode V2 base for original Desktop acceptance
         if: matrix.opencode_generation == 'v2'
@@ -1371,6 +1381,8 @@ jobs:
           assert.equal(proof.localReplies.length, 2);
           for (const reply of proof.localReplies) assert.match(reply.nativeMessageRef, /^local-command:.+/);
           assert.deepEqual(proof.commandRequests.map(row => row.phase), ['compact', 'project-command', 'project-command', 'review', 'review']);
+          assert.deepEqual(proof.commandRequests.filter(row => row.phase === 'review').map(row => row.commandExecution),
+            ['legacy-inline-review-v1', 'legacy-inline-review-v1']);
           assert.equal(proof.builtinReview.name, 'review');
           assert.equal(proof.builtinReview.exactArguments, 'TEST_NATIVE_P03_EXACT_REVIEW_ARGUMENTS');
           assert.equal(proof.builtinReview.replyId, 'TEST-p03-ui-review-native-reply');

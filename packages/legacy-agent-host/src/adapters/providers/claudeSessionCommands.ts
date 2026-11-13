@@ -19,7 +19,10 @@ export function claudeSessionCommands(
       exact[0] ??
       (aliases.length === 1 ? aliases[0] : undefined);
     if (!selected || (selected.builtin && !['compact', 'cost', 'review'].includes(name))) continue;
-    result.push({ name, description: selected.description });
+    const compatibility = selected.compatibility;
+    result.push({ name, description: compatibility?.invocation === name &&
+      compatibility.execution === 'legacy-inline-review-v1'
+      ? compatibility.description : selected.description });
   }
   return Object.freeze(result.map((command) => Object.freeze(command)));
 }
