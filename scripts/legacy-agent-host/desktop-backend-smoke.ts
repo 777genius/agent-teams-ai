@@ -280,6 +280,28 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   let cdp: CdpPort | undefined;
   let hostPid: number | undefined;
   let quitRequested = false;
+  let finishMixedSettings: (() => Promise<void>) | undefined;
+  const restartSameProfile = async (selection: Pick<Parameters<typeof restartCapturedDesktopApp>[0],
+    'model' | 'provider' | 'boundary' | 'createdHandleId' | 'afterOriginalSettingsQuit'>) => {
+    assert.ok(cdp && !packed && selection.model);
+    return restartCapturedDesktopApp({
+      app, cdp, group, fixture, repo, mode, evidence, cdpLibrary, ...selection,
+      markQuitRequested: () => { quitRequested = true; },
+      adoptRenderer: (next, nextHostPid) => { cdp = next; if (nextHostPid !== undefined) hostPid = nextHostPid; },
+      spawnNext: () => {
+        app = spawn(invocation[0]!, invocation.slice(1), { cwd: repo, env: fixture.appEnvironment,
+          stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+        appEpochHandles.push(app); group = app.pid ?? 0; spawnError = false; appIdentity = '';
+        hostPid = undefined; quitRequested = false;
+        app.once('error', () => { spawnError = true; });
+        app.stdout.pipe(log, { end: false }); app.stderr.pipe(log, { end: false });
+        assert.ok(group > 0);
+        appIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='],
+          { encoding: 'utf8', timeout: 3000 }).trim();
+        return { app, group, identity: appIdentity, invocation, spawnError: () => spawnError };
+      },
+    });
+  };
   try {
     assert.ok(group > 0, 'captured invocation has a process identity');
     appIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='], {
@@ -424,7 +446,15 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       });
     } else if (mixedMode) {
       assert.ok(mixedModels);
-      await runDesktopMixedCreateLaunchUiSmoke(cdp, { fixture, models: mixedModels, appGroup: group, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+      const mixed = await runDesktopMixedCreateLaunchUiSmoke(cdp, {
+        fixture, models: mixedModels, capturedGroup: () => group, evidence,
+        assertOwnedRenderer: () => assertOwnedCdpListener(group),
+        restartSameProfile: (createdHandleId, afterOriginalSettingsQuit) => restartSameProfile({
+          model: mixedModels!.claude, provider: 'claude', boundary: 'settings-saved-before-launch',
+          createdHandleId, afterOriginalSettingsQuit,
+        }),
+      });
+      finishMixedSettings = mixed.finishSettings;
     } else if (createConfigMode) {
       await runDesktopCreateUiSmoke(cdp, { fixture, evidence, model: conversationModel, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (scheduleUiMode) {
@@ -443,29 +473,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         ...(openCodeLifecycleModel ? { openCodeModel: openCodeLifecycleModel } : {}),
         capturedGroup: () => group,
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
-        ...(mode === 'native-resume-ui' || extensionsUiMode ? { restartSameProfile: async () => {
-          assert.ok(cdp && !packed && (conversationModel || codexResumeModel || openCodeLifecycleModel));
-          return restartCapturedDesktopApp({
-            app, cdp, group, fixture, repo, mode, evidence, cdpLibrary,
-            model: openCodeLifecycleModel ?? codexResumeModel ?? conversationModel!,
+        ...(mode === 'native-resume-ui' || extensionsUiMode ? { restartSameProfile: () =>
+          restartSameProfile({ model: openCodeLifecycleModel ?? codexResumeModel ?? conversationModel!,
             provider: openCodeLifecycleMode ? 'opencode' : codexResumeMode ? 'codex' : 'claude',
-            boundary: extensionsUiMode ? 'extensions-before-launch' : 'resume-after-stop',
-            markQuitRequested: () => { quitRequested = true; },
-            adoptRenderer: (next, nextHostPid) => { cdp = next; if (nextHostPid !== undefined) hostPid = nextHostPid; },
-            spawnNext: () => {
-              app = spawn(invocation[0]!, invocation.slice(1), { cwd: repo, env: fixture.appEnvironment,
-                stdio: ['ignore', 'pipe', 'pipe'], detached: true });
-              appEpochHandles.push(app); group = app.pid ?? 0; spawnError = false; appIdentity = '';
-              hostPid = undefined; quitRequested = false;
-              app.once('error', () => { spawnError = true; });
-              app.stdout.pipe(log, { end: false }); app.stderr.pipe(log, { end: false });
-              assert.ok(group > 0);
-              appIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='],
-                { encoding: 'utf8', timeout: 3000 }).trim();
-              return { app, group, identity: appIdentity, invocation, spawnError: () => spawnError };
-            },
-          });
-        } } : {}),
+            boundary: extensionsUiMode ? 'extensions-before-launch' : 'resume-after-stop' }) } : {}),
       });
     } else if (readbackMode) {
       assert.ok(fixture.uiSeed);
@@ -573,6 +584,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     assertCapturedDesktopMetadataAbsent(evidence);
     await verifyDesktopNativeQuitAfterShutdown(mode, fixture.root, evidence, nativeChildren, openCodeLifecycleModel ?? conversationModel, group);
     if (activitySource) await finalizeDesktopActivityReadback(evidence, activitySource, () => assert.equal(processTable().some(row => row.pid === hostPid), false));
+    if (finishMixedSettings) await finishMixedSettings();
     evidence.status = 'PASS';
   } catch (error) {
     evidence.failure =
@@ -643,7 +655,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     const { remaining, cleanupFailure, capturedHostAbsent, hostPid: cleanedHostPid } =
       await cleanupCapturedDesktopApp({ app, group, fixture, evidence, appIdentity, hostPid, packedRelaunchMode });
     hostPid = cleanedHostPid;
-    const coldBoundary = evidence.coldResumeBoundary ?? evidence.coldExtensionBoundary;
+    const coldBoundary = evidence.coldResumeBoundary ?? evidence.coldExtensionBoundary ?? evidence.coldSettingsBoundary;
     if (coldBoundary && object(coldBoundary).secondEpoch) object(coldBoundary).secondCleanup = {
       processGroup: group, remaining, appExitCode: app.exitCode, appSignalCode: app.signalCode, capturedHostAbsent,
       ...(cleanupFailure ? { cleanupFailure } : {}),

@@ -28,6 +28,7 @@ import {
 import {
   startOpenCodeModel,
   CONTEXT_MARKER as openCodeContext,
+  type SettingsModelProbe,
 } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import {
   mixedDesktopTeamName,
@@ -160,8 +161,16 @@ const providers = [
 for (const selected of providers) {
   test(`${selected.provider} opt-in finite probes never consume business turns or resolve a principal`, async (t) => {
     let principalReads = 0;
+    let settingsProbe: SettingsModelProbe | 'idle' | undefined;
+    const settings: SettingsModelProbe[] = selected.provider === 'opencode' ? [
+      { step: 'global-default', model: 'TEST-model' },
+      { step: 'project-default', model: 'TEST-project-model' },
+      { step: 'project-test', model: 'TEST-project-model' },
+      { step: 'local-limits', model: 'TEST-model', outputTokens: 1536 },
+    ] : [];
     const model = await selected.start({
       allowModelProbes: true,
+      ...(selected.provider === 'opencode' ? { settingsProbe: () => settingsProbe } : {}),
       principalId: () => {
         principalReads++;
         throw new Error('no captured grant before launch');
@@ -174,6 +183,18 @@ for (const selected of providers) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
       });
+    for (const expected of settings) {
+      settingsProbe = expected;
+      const response = await send({
+        ...selected.probe, model: expected.model,
+        ...(expected.outputTokens === undefined ? {} : { max_tokens: expected.outputTokens }),
+      });
+      assert.equal(response.status, 200);
+      const wire = await response.text();
+      assert.match(wire, /OK/);
+      assert.doesNotMatch(wire, /function_call|tool_calls/);
+    }
+    settingsProbe = undefined;
     for (let i = 0; i < 8; i++) {
       const response = await send(selected.probe);
       assert.equal(response.status, 200);
@@ -181,7 +202,12 @@ for (const selected of providers) {
       assert.match(wire, /OK/);
       assert.doesNotMatch(wire, /function_call|tool_calls/);
     }
-    assert.equal(model.probes.length, 8);
+    assert.equal(model.probes.length, 8 + settings.length);
+    assert.deepEqual(model.probes.slice(0, settings.length), settings.map(expected => ({
+      requestedModel: expected.model,
+      settingsStep: expected.step,
+      ...(expected.outputTokens === undefined ? {} : { requestedOutputTokens: expected.outputTokens }),
+    })));
     assert.equal(principalReads, 0);
     assert.equal(model.observations.length, 0);
     const business = await send(selected.business);
@@ -191,7 +217,7 @@ for (const selected of providers) {
     const ninth = await send(selected.probe);
     assert.equal(ninth.status, 400);
     await ninth.text();
-    assert.equal(model.probes.length, 8);
+    assert.equal(model.probes.length, 8 + settings.length);
     assert.equal(model.failures.length, 1);
   });
 
