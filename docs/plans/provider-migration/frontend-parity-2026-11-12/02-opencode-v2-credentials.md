@@ -576,3 +576,22 @@ INCOMPLETE. Preserve the original Host exit code, signal and diagnostic byte
 count in its receipt even when cleanup throws, so a subsequent exact-source
 run can diagnose that failure. No timeout, production behavior or success
 assertion is relaxed.
+
+On exact source `b4641f456271b6c9d254bbdebc9bbc9143c0b469`, the native model
+probe completed all seven required steps, including both selected models,
+unknown-variant refusal, cancellation, passive catalog and cold no-replay.
+Both original Hosts exited zero and cleanup was confirmed. The credential
+journey remains INCOMPLETE: the original native database contains the expected
+401, `session.execution.failed` and failed idle message, but the Host retained
+`probe-intent` with unknown cleanup. Its original Host exited 1 without a signal;
+the kernel OOM counter did not increase during that run.
+
+For the next diagnosis, reuse the existing passive diagnostic import and
+allowlisted receipt projection from the model-probe fixture in the credential
+fixture. Preserve each original Host's exit/signal/diagnostic-byte facts even
+when close throws. This adds no native request, owner, retry, deadline or new
+diagnostic framework. Provider-owner independent review approved the bounded
+reuse and original-handle cleanup. A verified copy of the same engine may use
+the original temporary-memory location to distinguish filesystem contention;
+the manifest and installed provider digests remain mandatory. Native rejection,
+exact request counts and physical cleanup assertions remain unchanged.

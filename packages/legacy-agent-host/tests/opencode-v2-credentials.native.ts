@@ -8,6 +8,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 
 import { fileHash, startHost, tick } from './fixtures/native-host.ts';
+import { createPassiveNativeDiagnosticCapture } from './fixtures/native-opencode-team/passive-diagnostics.ts';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { RuntimeSourceGrant, RuntimeSourcePublication, RuntimeSourceSummary } from '../dist/composition/runtimeSourceContracts.js';
@@ -45,6 +46,8 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
   const steps: string[] = [], failures: string[] = [];
   const requests: { authorizationMatched: boolean; tools: number; promptMatched: boolean; outcome: string }[] = [];
   const hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
+  const passive = createPassiveNativeDiagnosticCapture();
+  let hostEpoch = 0;
   const nativePids = new Set<number>();
   let host: ReturnType<typeof startHost> | undefined, originalFailure: unknown;
   let passed = false, cleanup = false, nativeCredentialCount = 0;
@@ -162,7 +165,10 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
     const profileHash = await fileHash(profilePath);
     const start = async () => {
       await assertNativeV1Build(repo, sourceHead, build);
-      host = startHost({ node, entry, root, profile: profilePath, profileHash });
+      const epoch = ++hostEpoch;
+      host = startHost({ node, entry, root, profile: profilePath, profileHash,
+        testImports: [new URL('./fixtures/native-opencode-team/passive-diagnostics.ts', import.meta.url).href],
+        onDiagnostic: (chunk: Buffer) => passive.accept(chunk, epoch) });
       await host.rpc('host.handshake', { protocolVersion: 1 });
     };
     const stop = async () => {
@@ -319,7 +325,13 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
     passed = true;
   } catch (error) { originalFailure = error; }
   finally {
-    if (host) try { await host.close(); hosts.push(host.facts()); } catch (error) { cleanupErrors.push(error); }
+    if (host) try { await host.close(); }
+    catch (error) { cleanupErrors.push(error); }
+    finally {
+      // Keep the original failure evidence even when its cleanup cannot qualify.
+      hosts.push(host.facts());
+      host = undefined;
+    }
     model.closeAllConnections();
     await new Promise<void>(done => model.close(() => done()));
     for (const pid of nativePids) try {
@@ -333,7 +345,9 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
       await writeFile(receiptPath, JSON.stringify({ kind: 'TEST_NATIVE_V2_CREDENTIAL', sourceHead,
         status: passed && cleanup && !originalFailure ? 'PASS' : 'INCOMPLETE', cleanup, version: '2.1.4',
         digests, steps, requests, nativeCredentialCount, nativeProcessCount: nativePids.size,
-        hosts: hosts.map(({ exitCode, signalCode, stdoutValid }) => ({ exitCode, signalCode, stdoutValid })),
+        hosts: hosts.map(({ exitCode, signalCode, stdoutValid, diagnosticBytes }) =>
+          ({ exitCode, signalCode, stdoutValid, diagnosticBytes })),
+        passiveNativeDiagnostics: passive.entries,
         vendorAuthQualified: false, desktopQualified: false, releaseQualified: false }, null, 2) + '\n', { mode: 0o600 });
     } catch (error) { cleanupErrors.push(error); }
   }
