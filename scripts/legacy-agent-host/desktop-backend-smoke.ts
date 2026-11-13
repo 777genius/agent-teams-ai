@@ -70,6 +70,7 @@ import {
   portOccupied,
   processTable,
   projectDesktopHarnessFailure,
+  projectDesktopMixedSettingsFailure,
   readOwnedCdpListenerFailure,
   selectedCdpPort,
 } from './desktop-backend-observations.ts';
@@ -733,6 +734,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     console.log(JSON.stringify({ status: evidence.status, receipt: receiptPath,
       ...(evidence.status !== 'PASS' && evidence.failureSource
         ? { failureSource: evidence.failureSource } : {}),
+      ...(mixedMode && evidence.status !== 'PASS'
+        ? { mixedSettingsFailure: projectDesktopMixedSettingsFailure(evidence) } : {}),
       ...(mode === 'codex-login-ui' && evidence.status !== 'PASS'
         ? { loginFailure: projectDesktopCodexLoginFailure(evidence) } : {}),
     }));
