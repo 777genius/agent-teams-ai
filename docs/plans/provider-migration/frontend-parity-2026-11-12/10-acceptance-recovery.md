@@ -337,6 +337,17 @@ donor frontend — [`4a0e06277fe216d9f82dbbede362668fe46622ee`](https://github.c
    UI screenshots и неизменный минимальный corpus. Допустима настройка пустого TEST
    HOME, model endpoint и project files; это не основание создавать product records.
    Saved-only case требует ноль native business inputs и отсутствие native identity.
+   Уточнение review: donor [`providerModelProbe.ts`](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/runtime/providerModelProbe.ts)
+   использует exact `Output only the single word PONG.`, `--max-turns 1` и
+   `--no-session-persistence`. Выбор cwd может успеть начать эту проверку до снятия
+   Launch. В existing finite model actor разрешить этот exact single-user prompt
+   только в отдельном opt-in donor epoch, максимум 8 checks; native advertised
+   tool catalog допустим, ответ только text PONG, tool effects/business inputs — 0.
+   После ordinary Quit и original absence закрыть приём этого epoch одноразово,
+   дождаться уже принятых HTTP reads в прежнем 15s request budget и сохранить
+   immutable отдельный counter. Поздний PONG отвергается. Нынешний Host OK/no-tools
+   path и его отдельный максимум 8 не меняются; donor checks не выдаются за Host
+   management receipts или native history.
 5. Включить уже подготовленный Host descriptor и продолжить existing import UI:
    original Team Detail → Launch → Main import → captured Host dialog → close,
    renderer reload и lookup original import. Проверять actual saved settings/roster,

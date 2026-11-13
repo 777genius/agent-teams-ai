@@ -216,3 +216,25 @@ Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b
 - Найдено: existing Desktop account harness не нажимает Login и не доказывает UI flow. Добавлены реальные control actions; общий setup с P02/P10 переиспользуется.
 - Подтверждены границы: D только typed native codec, Host — process/auth lifecycle, P06 — source revision, Main — прежняя account projection. Второго OAuth engine/store нет.
 - План принят для реализации. Native vendor completion остаётся отдельной незакрытой квалификацией; R3 не является её PASS.
+
+### R4 — actual Linux Desktop outcome и перенос готового census correction, 2026-11-13
+
+Qualification head `b54390e9844a4f868c6f460905c4d9664e1340e8`,
+[run 43335609196 / job 131606204672](https://github.com/777genius/agent-teams-ai/actions/runs/43335609196/job/131606204672)
+прошёл предшествующие actual Claude/Codex finite schedule cases, затем завершил
+Codex login Desktop со статусом INCOMPLETE. Извлечённый официальный artifact
+`14006993377` (ZIP159818 bytes, SHA256
+`3a86be2577ece34ad6ca92a48bbb8aeaaf9cc00e85cd6fb64126a8983a98e9d0`)
+сохранил точную причину: `assert.ok(pid && ppid !== undefined && pgid)`.
+Падение произошло в общем process census до действий на экране входа;
+оно не доказывает ошибку Codex login protocol и не даёт UI PASS.
+
+В native child уже опубликован correction
+[c5ae9b03](https://github.com/777genius/agent-teams-ai/commit/c5ae9b03a84965f9e497d60d4ff6beac1c5640b8):
+наблюдение допускает корректный Linux PGID0, но captured app group по-прежнему
+должен быть положительным. Malformed/non-integer rows отклоняются, сигналов
+из census нет. Перенести ровно existing parser hunk и один уже написанный
+regression в parity, затем штатно синхронизировать qualification branch.
+Не менять login UI/protocol, native identities, deadlines или критерии cleanup.
+Actual login Desktop и завершение vendor authentication остаются отдельными
+незакрытыми проверками; source correction не считается их выполнением.
