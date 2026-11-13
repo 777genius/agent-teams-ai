@@ -1,5 +1,44 @@
 # Завершение frontend parity: 13 ноября 2026
 
+## Фактический E2E на `d894df69` и исправление Windows TEST wrapper
+
+[Исходные результаты](../evidence/frontend-parity-d894-observed-checks.json)
+привязаны к `d894df69792fc46cf4a215d3e34d22f462bbe5b5`; полные receipts
+сохранены без изменения bytes. Они не объявляются результатом следующего SHA.
+
+| Сценарий | Фактический результат | Граница результата |
+| --- | --- | --- |
+| Windows x64, OpenCode 2.1.4, ручное разрешение | PASS, 262,600 с, cleanup true | Все шесть исходных шагов: Team/MCP/effect/permission, сохранённая конфигурация, PNG, checkpoint, новый Host и cold restore без повторного model/tool input |
+| Windows x64, автоматическое разрешение | PASS, 224,401 с, cleanup true | Те же шесть исходных шагов; оба исходных Host завершились с кодом 0 |
+| Windows ARM64, ручное разрешение | INCOMPLETE, 157,855 с, cleanup true | Вход consumed и permission resolved; terminal assertion false. Автоматический сценарий не выполнялся |
+| macOS x64, OpenCode 2.1.4 | Business PASS, 239,322 с, cleanup true | Последующий отдельный POSIX image/mutation gate остался INCOMPLETE; весь job не считается PASS |
+
+Во всех успешных business receipts — 11 запросов к localhost model peer,
+ноль model failures. Vendor authentication, Desktop и release qualification
+по-прежнему false. На Windows x64 весь исходный V2 job и финальный verifier
+прошли; budget и oracle native fixture побайтно совпадают с предыдущим
+`28bc9ef4`. Это не отдельный benchmark и не доказательство причины прежнего
+ARM64/Windows сбоя: продолжительность sampled CPU включает idle, а passive
+trace достигает исходного лимита до завершения успешных сценариев.
+
+Отдельный process workflow на обеих Windows-архитектурах установил точную
+ошибку TEST wrapper: UTF8 кириллица в literal batch path прочитана `cmd` как
+другой путь. Исправлен ровно один token на `%~dp0TEST argv.mjs`. Unicode
+каталог, исходный launcher, adversarial argv, stdin/output, codepage, timers
+и обе проверки остановки сохранены. Независимое review, обратное побайтное
+сравнение, Node syntax и классификация исходным resolver прошли. **Нативное
+выполнение пяти wrapper modes и трёх A/B journeys на новом SHA ещё требуется.**
+
+Чистая установка исходного frozen lockfile прошла локально. На собственном
+полном dependency graph прошли оригинальные Electron 44.10.1/sqlite rebuild,
+Host/ledger/controller/MCP builds и 44 проверки harness без skips. Исходный
+Xvfb не смог открыть local/unix listening sockets; Electron приложение
+не запускалось, UI PASS не заявляется. Полный `pnpm typecheck:workspace`
+снова завершился exit 137 на первом frontend проекте после успешных
+Host/ledger builds, без TS diagnostic; следующие проекты не выполнялись.
+Семь исходных UI lanes и полный canonical type CI остаются необходимыми.
+
+
 ## Windows A/B: отдельный E2E на каждый provider
 
 Поверх опубликованного `b37bfb9d9ce0112758eab1365332468bd84eaeb9` добавлены

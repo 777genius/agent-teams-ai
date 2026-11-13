@@ -1,0 +1,281 @@
+{
+  "kind": "TEST_FRONTEND_PARITY_D894_OBSERVED_EVIDENCE",
+  "sourceHead": "d894df69792fc46cf4a215d3e34d22f462bbe5b5",
+  "recordedAt": "2026-11-13T23:21:21Z",
+  "originalReceipts": [
+    {
+      "path": "docs/plans/provider-migration/evidence/frontend-parity-d894-v2-win32-x64-manual.json",
+      "sourceHead": "d894df69792fc46cf4a215d3e34d22f462bbe5b5",
+      "sourceJob": "https://github.com/777genius/agent-teams-ai/actions/runs/43522612883/job/132220393061",
+      "artifactId": 14084962991,
+      "artifactZipSha256": "6d37e4c6e03b55f1ae9364b66918b20d34418954ccbc99177cdf6463c340e6dd",
+      "originalReceiptSha256": "fee8cd45ba9e6360d53671811ca3e819f0f00cb88fb895cd85d473fe5b35b393",
+      "status": "PASS",
+      "cleanup": true,
+      "elapsedMs": 262600,
+      "modelRequests": 11,
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false,
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "modelFailures": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/evidence/frontend-parity-d894-v2-win32-x64-auto.json",
+      "sourceHead": "d894df69792fc46cf4a215d3e34d22f462bbe5b5",
+      "sourceJob": "https://github.com/777genius/agent-teams-ai/actions/runs/43522612883/job/132220393061",
+      "artifactId": 14084962991,
+      "artifactZipSha256": "6d37e4c6e03b55f1ae9364b66918b20d34418954ccbc99177cdf6463c340e6dd",
+      "originalReceiptSha256": "3b403ef2a5f47c1a3076cdfa4a285643d0a0eb32e6b9510f0090eaea630804a3",
+      "status": "PASS",
+      "cleanup": true,
+      "elapsedMs": 224401,
+      "modelRequests": 11,
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false,
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "modelFailures": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/evidence/frontend-parity-d894-v2-win32-arm64-manual.json",
+      "sourceHead": "d894df69792fc46cf4a215d3e34d22f462bbe5b5",
+      "sourceJob": "https://github.com/777genius/agent-teams-ai/actions/runs/43522612883/job/132220393112",
+      "artifactId": 14084733714,
+      "artifactZipSha256": "6476fc675197be44d40702e5b2d989695775337bbb1b6ac05eb5aa62b6e745d6",
+      "originalReceiptSha256": "401c207844a1c04d6c8fd4cc61252d5aba28426768c2b705c72be788dd74d03a",
+      "status": "INCOMPLETE",
+      "cleanup": true,
+      "elapsedMs": 157855,
+      "modelRequests": 8,
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false,
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready"
+      ],
+      "modelFailures": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/evidence/frontend-parity-d894-v2-darwin-x64-manual.json",
+      "sourceHead": "d894df69792fc46cf4a215d3e34d22f462bbe5b5",
+      "sourceJob": "https://github.com/777genius/agent-teams-ai/actions/runs/43522612883/job/132220393001",
+      "artifactId": 14084708119,
+      "artifactZipSha256": "19d91bcfdcaecc74fa51e6758a430816d24a47fd97ad852c9ba8e49ddf0a5259",
+      "originalReceiptSha256": "c8d9da87695982491833954de8485fde2ebd9cb82da5c3621720a973902a6e9a",
+      "status": "PASS",
+      "cleanup": true,
+      "elapsedMs": 239322,
+      "modelRequests": 11,
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false,
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "modelFailures": 0
+    },
+    {
+      "path": "docs/plans/provider-migration/evidence/frontend-parity-d894-v2-darwin-x64-posix-exec.json",
+      "sourceHead": "d894df69792fc46cf4a215d3e34d22f462bbe5b5",
+      "sourceJob": "https://github.com/777genius/agent-teams-ai/actions/runs/43522612883/job/132220393001",
+      "artifactId": 14084708119,
+      "artifactZipSha256": "19d91bcfdcaecc74fa51e6758a430816d24a47fd97ad852c9ba8e49ddf0a5259",
+      "originalReceiptSha256": "f89cc9c2b1d30b50081481e62a4c66b35e8ef0eeab056fc73136cdad7c858140",
+      "status": "INCOMPLETE",
+      "cleanup": true,
+      "productQualified": false,
+      "installedRuntimeQualified": false,
+      "customExecutableQualified": false,
+      "scriptQualified": false,
+      "nativeFixtureQualified": false
+    }
+  ],
+  "windowsFixtureCorrection": {
+    "base": "d894df69792fc46cf4a215d3e34d22f462bbe5b5",
+    "plan": "P09 section76 before edit",
+    "independentReview": "provider_parity exact diff approved; reverse equality and original parser classification reviewed",
+    "validation": {
+      "node24Syntax": "PASS",
+      "diffCheck": "PASS",
+      "reverseEquality": "PASS; exactly one token",
+      "classification": "PASS; original resolver, controlled win32 platform projection restored, no native execution",
+      "typescript": "not rerun; no type surface change",
+      "windows": "PENDING; original d894 failures preserved; no native acceptance claimed"
+    },
+    "originalArtifacts": [
+      {
+        "id": 14084767327,
+        "platform": "win32-x64",
+        "sha256": "7e5e6a4079b66f09c8b45b2a72bbc9561d1768c40d822f51a63ebe5af5bc7b89"
+      },
+      {
+        "id": 14083674992,
+        "platform": "win32-arm64",
+        "sha256": "bc3b540dfe63d9637dc04ce984d50ebee726f1491793b98e2f14cdfad46e0315"
+      }
+    ]
+  },
+  "windowsFixtureSource": {
+    "path": "tools/owned-process-broker/nativeLauncherScenario.ts",
+    "sha256": "b03a739e4c8a921c3de6a6cc42cfacf299b48875665105e1f4e753e44a856a4b",
+    "blob": "ff8114fb2b3bffc5f8e49f2a399ee69b6acff585"
+  },
+  "localChecks": {
+    "frozenInstall": {
+      "receiptSha256": "8bff728c4463ecefac86565bc8fced7d557b4edaa019a0b750c2f04841b19742",
+      "receipt": {
+        "head": "d894df69792fc46cf4a215d3e34d22f462bbe5b5",
+        "node": "24.21.0",
+        "corepack": "0.36.0",
+        "pnpm": "11.22.0",
+        "command": [
+          "/workspace/scratch/391e21b06e24/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+          "/workspace/scratch/391e21b06e24/TEST-corepack036-stopped-import-r6080l74/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+          "install",
+          "--frozen-lockfile",
+          "--child-concurrency=1",
+          "--network-concurrency=1",
+          "--package-import-method=copy",
+          "--store-dir=/workspace/.pnpm-store"
+        ],
+        "profile": "node-ci",
+        "noSharedNodeModules": true,
+        "packageImportMethod": "copy",
+        "exitCode": 0,
+        "seconds": 28.116,
+        "status": "PASS",
+        "reasonForOnline": "Original offline install required uncached @babel/compat-data metadata; no lock or dependency policy changed.",
+        "logSha256": "9714446d624ef3115af19f01fe1e99ceef276770b69362b4eeff9832bdffebbd"
+      }
+    },
+    "electronPrerequisites": {
+      "receiptSha256": "e9ee14d5910dab62d9a08b1fa717162232f410383f71e27c52702525d7a38ad4",
+      "receipt": {
+        "head": "d894df69792fc46cf4a215d3e34d22f462bbe5b5",
+        "profile": "node-ci with original Electron sqlite rebuild",
+        "status": "PASS",
+        "steps": [
+          {
+            "name": "ensure-electron",
+            "exitCode": 0,
+            "seconds": 2.262
+          },
+          {
+            "name": "electron-sqlite-rebuild",
+            "exitCode": 0,
+            "seconds": 145.701
+          },
+          {
+            "name": "linux-exec-stage",
+            "exitCode": 0,
+            "seconds": 0.195
+          },
+          {
+            "name": "host-ledger-build",
+            "exitCode": 0,
+            "seconds": 10.235
+          },
+          {
+            "name": "controller-build",
+            "exitCode": 0,
+            "seconds": 0.639
+          },
+          {
+            "name": "mcp-build",
+            "exitCode": 0,
+            "seconds": 2.325
+          },
+          {
+            "name": "original-harness-prerequisites",
+            "exitCode": 0,
+            "seconds": 5.483
+          }
+        ],
+        "seconds": 166.844,
+        "logSha256": "45e71d1fa2ba80fba5035fbb5bf4c811a38278a693d071f3ebe6eb1c31e6ff69",
+        "realVendorExecuted": false
+      }
+    },
+    "displayAdmission": {
+      "receiptSha256": "1f53f90fc17121ebdd83a2c612600f0db904073bbd087ac87a9ca2f451e4615e",
+      "receipt": {
+        "command": [
+          "/workspace/scratch/391e21b06e24/TEST-xvfb-d894/root/usr/bin/xvfb-run",
+          "--auto-servernum",
+          "--server-args=-screen 0 1600x1000x24 -nolisten tcp",
+          "/usr/bin/xdpyinfo"
+        ],
+        "status": "FAIL",
+        "exitCode": 1,
+        "seconds": 0.117,
+        "scope": "Private X display startup/xdpyinfo only, no Electron/provider execution",
+        "logSha256": "24ca11fa7d570b942e2601927de70a3c70fd0cac4f7a077cad1aba602f6213e7"
+      }
+    },
+    "displayDiagnostic": {
+      "receiptSha256": "1f6679500b003ee47e353c69a52f1a2f10e12414b1fa17d3472622fc7a164a1e",
+      "receipt": {
+        "status": "FAIL",
+        "exitCode": 1,
+        "seconds": 0.115,
+        "scope": "Same private X display admission with original server stderr retained; no Electron/provider execution",
+        "logSha256": "24ca11fa7d570b942e2601927de70a3c70fd0cac4f7a077cad1aba602f6213e7",
+        "serverLogSha256": "a93e08710d4018a247f86d24fb1dc9a2c99f9b2c9e787819b9fe16b6c93c12cf"
+      }
+    },
+    "canonicalWorkspaceTypes": {
+      "receiptSha256": "83e721528b82cab2f4cdf39b8b9b54ebc6d7bdf8a48e4afffb7c122b7692e917",
+      "receipt": {
+        "head": "d894df69792fc46cf4a215d3e34d22f462bbe5b5",
+        "command": [
+          "/workspace/scratch/391e21b06e24/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+          "/workspace/scratch/391e21b06e24/TEST-corepack036-stopped-import-r6080l74/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+          "typecheck:workspace"
+        ],
+        "compiler": "pinned native TypeScript7.0.2",
+        "dependencyGraph": "own successful canonical frozen install; no shared overlay aliases",
+        "scope": "12 canonical workspace type projects and Host/ledger prebuilds, original script unchanged",
+        "environment": {
+          "NODE_OPTIONS": "--max-old-space-size=1024",
+          "GOMAXPROCS": "1",
+          "GOMEMLIMIT": "1GiB",
+          "GOGC": "75"
+        },
+        "status": "FAIL",
+        "exitCode": 137,
+        "seconds": 42.026,
+        "logSha256": "30c31d7a2b5c85e85ea9ef1deeeff39ce2ca5017aef49f2d759902b30a2e44bd",
+        "resourceSha256": "910424cb855b03059e4d2c7cc70f52848f44b95e604876a8e5cb401cd3c30f9d",
+        "realVendorExecuted": false
+      }
+    }
+  },
+  "qualification": {
+    "allE2EPassed": false,
+    "windowsSourceJourneys": "not reached on d894 after opaque-cmd fixture failure; next-head execution required",
+    "ui": "d894 original CI pending; local original Xvfb admission failed before Electron launch; no UI business pass",
+    "frontendTypes": "original full12-project workspace command exit137 on root frontend project after successful Host/ledger prebuild; remaining projects not executed",
+    "paidVendorsExecuted": false,
+    "draftPreserved": true
+  }
+}

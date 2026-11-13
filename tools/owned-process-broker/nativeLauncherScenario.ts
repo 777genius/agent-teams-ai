@@ -29,7 +29,7 @@ export async function nativeLauncherScenarios(sandbox: string, broker: string, a
     const content = mode === 'npm-node' ? `@echo off\r\nset "_prog=node"\r\n"%_prog%" "${script}" %*\r\n`
       : mode === 'generated-bun' ? `@echo off\r\nset "TARGET=${script}"\r\nbun "%TARGET%" %*\r\n`
         : mode === 'npm-native' ? `@echo off\r\n"${actor}" %*\r\n`
-          : `@echo off\r\n"${node}" "${script}" ${mode === 'positional-bat' ? '"%~1" "%~2" "%~3"' : '%*'}\r\n`;
+          : `@echo off\r\n"${node}" "%~dp0TEST argv.mjs" ${mode === 'positional-bat' ? '"%~1" "%~2" "%~3"' : '%*'}\r\n`;
     writeFileSync(wrapper, content, { flag: 'wx' });
     const profile = { provider: 'codex' as const, cwd: root,
       executable: { path: realpathSync(wrapper), sha256: fileHash(wrapper) },
