@@ -12,6 +12,36 @@ export interface ProcessIdentity {
 }
 export const selectedCdpPort = Number(process.env.LEGACY_DESKTOP_CDP_PORT ?? 9222);
 assert.ok(Number.isInteger(selectedCdpPort) && selectedCdpPort >= 1024 && selectedCdpPort <= 65535);
+/** Diagnostics only: no raw message, values, environment, causes or outside-source stack. */
+export function projectDesktopHarnessFailure(value: unknown, repository: string, sources: readonly string[]): {
+  kind: 'assertion' | 'error' | 'unclassified'; frames: string[];
+} {
+  try {
+    if (!(value instanceof Error)) return { kind: 'unclassified', frames: [] };
+    const prefix = repository.replaceAll('\\', '/').replace(/\/+$/u, '') + '/';
+    const allowed = new Set(sources.filter(path =>
+      /^(?:scripts\/legacy-agent-host\/|packages\/legacy-agent-host\/(?:src|dist|tests)\/)[A-Za-z0-9._/-]+\.(?:[cm]?[jt]s)$/u.test(path) &&
+      !path.split('/').some(part => part === '.' || part === '..')));
+    const frames: string[] = [];
+    for (const line of (typeof value.stack === 'string' ? value.stack.slice(0, 16 * 1024) : '').split('\n').slice(1, 40)) {
+      if (!/^\s+at /u.test(line)) continue;
+      const frameText = line.trimStart().slice(3).replaceAll('\\', '/');
+      const boundary = frameText.lastIndexOf(' (');
+      let location = boundary >= 0 && frameText.endsWith(')')
+        ? frameText.slice(boundary + 2, -1) : frameText.replace(/^async /u, '');
+      location = location.replace(/^file:\/\//u, '');
+      if (/^[A-Za-z]:\//u.test(prefix) && /^\/[A-Za-z]:\//u.test(location)) location = location.slice(1);
+      if (!location.startsWith(prefix)) continue;
+      const match = /^(.+):([1-9]\d{0,5}):([1-9]\d{0,5})$/u.exec(location.slice(prefix.length));
+      if (!match || !allowed.has(match[1]!)) continue;
+      const frame = match[1] + ':' + match[2] + ':' + match[3];
+      if (!frames.includes(frame)) frames.push(frame);
+      if (frames.length === 6) break;
+    }
+    return { kind: value.name === 'AssertionError' ? 'assertion' : 'error', frames };
+  } catch { return { kind: 'unclassified', frames: [] }; }
+}
+
 export async function portOccupied(port = selectedCdpPort): Promise<boolean> {
   return new Promise<boolean>((done) => {
     const socket = createConnection({ host: '127.0.0.1', port });

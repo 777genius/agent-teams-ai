@@ -818,7 +818,7 @@ test(
       assert.equal(reviewInput?.intent.content, `/review ${REVIEW_ARGS}`);
       assert.equal(reviewInput?.preparation, undefined);
       const reviewReplies = (await userInbox()).filter(
-        (row) => row.messageId === 'TEST-p03-review-reply'
+        (row) => row.messageId === effectId('message', binding.backendId, binding.teamId, 'TEST-p03-review-reply')
       );
       assert.equal(reviewReplies.length, 1);
       assert.equal(reviewReplies[0]!.text, 'TEST_P03_review_VISIBLE_REPLY');

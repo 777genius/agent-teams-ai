@@ -3013,3 +3013,72 @@ updated head remain required. The previous 9ea success does not qualify 3b39.
 The §39 compatibility rule and ordinary current-Main transition remain open;
 no boolean legacy-hash escape, checkpoint rewrite or automatic migration is
 authorized by this evidence. Publish this amendment before either source edit.
+
+
+## 59. Original Desktop failure: make the existing safe source projection visible
+
+### R1 — observed failure and the missing distinction
+
+At original parity head 7ce224d148205867d46fd2ca980a48e1b9e8c48b,
+Main run 43440481656, job 131936501910 finishes the ordinary mixed V2
+journey and fails its separate step29 captured-MCP Desktop journey.
+The latter writes INCOMPLETE at 15:07:31Z, then the final guard throws.
+Its original log blob is f72e915df8ec7aa2ce2f3e0d7f65295ce0bc6f01.
+The log exposes the retained receipt path, but the guard's stack identifies
+only the final acceptance assertion, not the original caught failure.
+
+Original artifact 14048513679 is retained, 1395462 bytes, ZIP SHA256
+e53c7bc0882453d5f867402ea0f717fc989ac5071dd7788afaa9ee3411693f4f.
+The official download has succeeded; its inner receipt has not been read
+while the executor is unavailable. No original failure phase, native cause,
+cleanup outcome or similarity to the standalone V2 failures is inferred.
+
+The native child already contains projectDesktopHarnessFailure in
+desktop-backend-observations.ts (e5625eb9a2ad06ac0c3e5798a07381dbd25e44ca).
+It projects the original caught Error to a fixed kind and at most six
+relative frames from the already frozen desktopProofSources allowlist.
+It never includes the raw message, assertion values, cause, environment,
+absolute workspace root or outside-source stack. That existing projection
+is currently saved in the private receipt but omitted from the final log.
+
+### R2 — smallest source change, with each branch preserved
+
+Reuse that exact function; do not add a second diagnostic implementation.
+
+| Path | Parent preimage | Native preimage | Qualification preimage |
+| --- | --- | --- | --- |
+| scripts/legacy-agent-host/desktop-backend-observations.ts | 15d28a939caa103774b972ecc82a7a95af24a685 | e5625eb9a2ad06ac0c3e5798a07381dbd25e44ca | da5b24520e4036a806cd23676fa07f6ab2ae99d6 |
+| scripts/legacy-agent-host/desktop-backend-smoke.ts | cf78c2fc64b108560be1a5d8e63ac8c748a38036 | dcbe0a47a2f67c054762ac106febd39241f92e3c | 2aa3691c77f2621026f991e5dc3284dc5f1f8a9c |
+
+1. Copy only the unchanged existing projection function to parent and
+   qualification observations modules. The native copy stays byte-identical.
+   Keep every platform listener/custody function and its imports unchanged.
+2. Parent and qualification catch blocks call that same projection once for
+   the original caught error, repository root and frozen source allowlist;
+   the native catch already does so. Preserve the original error, INCOMPLETE,
+   cleanup, debt, retained receipt and final failing assertion.
+3. In the existing final summary line, include this fixed failureSource only
+   when status is not PASS and the original catch supplied it. Keep all
+   existing summary fields, including qualification's Codex login projection.
+   Do not print the private receipt, raw errors, screenshots, child output,
+   native IDs, URLs, commands or artifact/archive bytes.
+4. Keep original 16 KiB inspected-stack bound, 40-line scan and six-frame
+   cap, filename allowlist/containment, source freeze and all test budgets.
+   This observation cannot authorize retry, another UI action, native input,
+   permission, cleanup signal, source selection or successful acceptance.
+
+### R3 — review and actual acceptance
+
+Root and an independent peer compare the copied function byte-for-byte
+with e5625eb9, inspect each exact two-file branch delta, and confirm that the
+summary cannot acquire a raw Error or a raw receipt field. This small
+observation change adds no test suite, helper framework, job, matrix row or
+native invocation. Existing script checks, source cap/type/lint and ordinary
+Desktop gates remain required; source-only publication is not execution.
+
+The next ordinary coherent-head CI, triggered by reviewed source changes
+after the previous run is terminal, supplies the actual original failure
+location if the journey fails again. A failed journey stays failed. A green
+journey must still satisfy all original native MCP/permission/effect/Stop
+and retained-settings assertions. This section closes only missing safe
+failure visibility, not the unobserved underlying MCP failure.

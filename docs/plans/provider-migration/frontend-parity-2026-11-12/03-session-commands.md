@@ -1684,3 +1684,81 @@ The ordinary frozen frontend installation passed, including the2533-entry supply
 Coherent Host build passed. Exact captured Node24.21 ran the two existing projection/compaction model files:15/15 PASS. Existing legacy-host script types passed. Full existing Host test types exited137 without TypeScript diagnostics on the normal invocation and one lower-resource same-project invocation; this is **NOT PASS**, no third retry was made, and the required CI type gate remains unchanged. Immutable source/check handoff `496649205d22e026f2e52b32b2385256241f0275` retains all six exact source blobs and log digests. Root and independent Profiles source reviews passed; Platform independently reviewed workflow assertions, checked artifact and lockfile.
 
 Actual new native Read/permission/command execution and complete Desktop/UI qualification are still pending on the coherent candidate. Earlier fork, catalogue and platform failures remain visible; no release or default activation is qualified by this paragraph.
+
+### R21 — actual R20: original MCP command and message effect identities
+
+Plan before the single TEST oracle edit. On original main `7ce224d148205867d46fd2ca980a48e1b9e8c48b`,
+[CI job131936501727](https://github.com/777genius/agent-teams-ai/actions/runs/43440481656/job/131936501727)
+failed at `native-claude-compaction.native.ts:823`: the review inbox filter returned zero
+rows instead of one. The original input had reached the fixture's succeeded terminal;
+the later Read/permission and complete request-count assertions had not yet run.
+The immutable original log is `60ff8ff70f8dbc42459d93807bc1bb9bdce36419`.
+Artifact14046188899 has ZIP SHA256
+`b4c913bdba1d01fc7f340184e1e5b2d666478f53e3d68c0f415b32ed3eb92e44`;
+its private receipt has not been read in the unavailable executor. This evidence
+does not establish a completed native review or permit changing its result.
+
+The exact source chain identifies a deterministic assertion mismatch:
+
+- `mcp/tools.ts` blob `325c8a7474641840604aa58d55380ee6e8217dea`,
+  lines250–254: the closed `message_send` schema accepts `commandId`, `to`,
+  `text` and optional task references. The callback separates commandId from the
+  message payload; there is no supplied messageId.
+- `team/executeTeamCommand.ts` blob `947c10f33d1b8e62f1e5612150123243a67afdf8`,
+  lines162–183: the original command's message effect is
+  `effectId('message', binding.backendId, binding.teamId, commandId)`.
+  The existing helper in `team/identity.ts` blob
+  `a86e937f6874b0f2bb51fb727e4d526784846486` derives the stable UUID.
+- `team/commitTeamMessage.ts` blob `5a9a9dc00972d751c032070a166247aab363b41c`,
+  lines55/93: the inbox row and completed result preserve that exact effect ID.
+  The scripted native model supplies commandId `TEST-p03-review-reply`;
+  the new fixture filter incorrectly treats that literal as the inbox messageId.
+
+Change only the expected identity in the existing filter in
+`packages/legacy-agent-host/tests/native-claude-compaction.native.ts`
+(preimage `055f741e7f4352ce847b1e1fb45a003c4cfbc2f6`): use the already imported
+`effectId` with the original captured Team binding and that same original
+commandId. Retain the strict one-row assertion and exact reply text. Do not
+add a text fallback, a second ID choice, a new read, an input or a retry.
+
+Keep all existing original raw slash-input, compatibility recipe, system-context,
+MCP receipt, exact permission/input/operation/session/binding, one allow-once,
+Read tool-use/result, terminal, three review/eleven total model requests,
+source pins and physical cleanup assertions. This correction changes no
+production code, SDK option, permission, timeout, workflow or dependency.
+The old failed receipt remains failed; later assertions must still qualify the
+complete native behavior in the next already-required original CI gate.
+
+Root and independent peer review the narrow source delta. Existing coherent
+Host test types and the original native command/Desktop gates remain required;
+the unavailable executor supplies no new execution claim. No new test suite or
+native rerun is introduced for this one expected-ID correction.
+
+**R21 follow-up — the same identity mismatch in the existing Desktop command proof.**
+
+The source audit also finds this exact predicate in
+`scripts/legacy-agent-host/desktop-native-commands-ui-proof.ts`
+(preimage `30d0eb3593afb9521c5332ced933a24c819a43b9`, lines314–334).
+Both scripted project-command and review rows use `selected.replyId` as the
+`message_send.commandId` in the existing model helper
+`02068faa82100f8ec765cfb5d192bc8e3e0f2d3b`, lines86–99; neither supplies
+a payload messageId. A successful native reply therefore has the same stable
+Team effect ID described above, not the command-ID literal. This is a proven
+source mismatch in the next Desktop gate, not an observed Desktop result from
+the failed job, which stopped in the earlier native prerequisite.
+
+In this one existing TEST file, import the existing canonical `effectId` helper
+beside its existing Runtime identity import. Read backendId/teamId only from
+the already captured `options.session.binding`, with explicit nonempty string
+assertions before use; do not substitute ambient, default or newly selected
+identities. The single existing loop filter must compare against
+`effectId('message', backendId, teamId, selected.replyId)`. The original
+selected.replyId/model commandId remains unchanged, including its original
+receipt annotation; it is not relabelled as a native message effect ID.
+
+Preserve exact one-row/text, original Composer input/command/receipt,
+main terminal, viewport/reveal, five model requests, reload byte equality,
+no-replay and source/cleanup guards. No extra input, RPC, filesystem read,
+poll, timeout, production file or model response is added. Require independent
+source review and the existing script type/native Desktop gates in normal CI.
+No local execution or native acceptance claim follows from this source edit.
