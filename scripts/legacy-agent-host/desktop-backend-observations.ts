@@ -229,9 +229,10 @@ interface CdpFixtureCorrelation {
   pid: number; fd: string; scope: 'after-failed-census'; atomic: false;
   birth: 'same' | 'unknown'; socket: 'same-as-supplemental' | 'unknown';
   fixtureHostArgv: boolean | null; fixtureNodeExecutable: boolean | null;
+  fixtureMcpBuilderEntry: boolean | null;
   closeOnExec: boolean | null;
 }
-type CdpFixtureSelection = { node: string; hostEntry: string };
+type CdpFixtureSelection = { node: string; hostEntry: string; mcpBuilderEntry?: string };
 const cdpListenerFailures = new WeakMap<Error, CdpListenerFacts>();
 const cdpFixtureFailures = new WeakMap<Error, CdpListenerFacts & {
   fixtureCorrelation: CdpFixtureCorrelation[];
@@ -241,7 +242,7 @@ const cdpFixtureFailures = new WeakMap<Error, CdpListenerFacts & {
 function correlateCdpFixture(file: CdpListenerFile, fixture: CdpFixtureSelection): CdpFixtureCorrelation {
   const unknown: CdpFixtureCorrelation = { pid: file.pid, fd: file.fd,
     scope: 'after-failed-census', atomic: false, birth: 'unknown', socket: 'unknown',
-    fixtureHostArgv: null, fixtureNodeExecutable: null, closeOnExec: null };
+    fixtureHostArgv: null, fixtureNodeExecutable: null, fixtureMcpBuilderEntry: null, closeOnExec: null };
   const original = file.afterCensus;
   if (original?.birth !== 'same' || !original.socketInode) return unknown;
   const sameBirth = (value: ProcBirth | undefined) => value !== undefined &&
@@ -261,9 +262,15 @@ function correlateCdpFixture(file: CdpListenerFile, fixture: CdpFixtureSelection
       ? null : (numeric & 0o2000000n) !== 0n;
     const fixtureHostArgv = argv?.endsWith('\0')
       ? argv === fixture.node + '\0' + fixture.hostEntry + '\0' : null;
+    const args = argv?.endsWith('\0') ? argv.slice(0, -1).split('\0') : undefined;
+    // Same captured entry/invocation shape only; output path and JS bytes are not attested.
+    const fixtureMcpBuilderEntry = !fixture.mcpBuilderEntry || !args ? null :
+      executable === fixture.node && args.length === 4 && args[0] === fixture.node &&
+      args[1] === fixture.mcpBuilderEntry && args[2] === '--out-dir' &&
+      Boolean(args[3]) && args[3] !== '--out-dir';
     if (readlinkSync(path) !== socket || !sameBirth(readProcBirth(file.pid))) return unknown;
     return { ...unknown, birth: 'same', socket: 'same-as-supplemental',
-      fixtureHostArgv, fixtureNodeExecutable: executable === fixture.node, closeOnExec };
+      fixtureHostArgv, fixtureNodeExecutable: executable === fixture.node, fixtureMcpBuilderEntry, closeOnExec };
   } catch { return unknown; }
 }
 

@@ -257,6 +257,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     join(fixture.root, artifacts.appLog),
     { mode: 0o600 }
   );
+  const mcpBuilderEntry = !packed && process.platform === 'linux'
+    ? await realpath(join(repo, 'mcp-server/node_modules/tsup/dist/cli-default.js')).catch(() => undefined)
+    : undefined;
   // Invoke the pinned pnpm JS entry through selected Node: no /usr/bin/env
   // shebang exec transition can invalidate the captured leader identity.
   const invocation = packed ? [packed.executable, `--remote-debugging-port=${selectedCdpPort}`, ...(process.platform === 'linux' ? ['--no-sandbox'] : [])] : [fixture.node, pnpm, 'dev:mcp', '--remoteDebuggingPort', String(selectedCdpPort), ...(process.platform === 'linux' ? ['--noSandbox'] : [])];
@@ -574,8 +577,17 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     evidence.status = 'PASS';
   } catch (error) {
     evidence.failureSource = projectDesktopHarnessFailure(error, repo, desktopProofSources);
-    const listenerFailure = readOwnedCdpListenerFailure(error, { node: fixture.node, hostEntry: fixture.hostEntry });
-    if (listenerFailure) evidence.cdpListenerFailure = listenerFailure;
+    const listenerFailure = readOwnedCdpListenerFailure(error, {
+      node: fixture.node, hostEntry: fixture.hostEntry, ...(mcpBuilderEntry ? { mcpBuilderEntry } : {}),
+    });
+    if (listenerFailure) {
+      evidence.cdpListenerFailure = listenerFailure;
+      try {
+        const line = 'TEST_CDP_LISTENER_FAILURE ' + JSON.stringify(listenerFailure);
+        console.log(Buffer.byteLength(line, 'utf8') <= 32 * 1024 ? line :
+          'TEST_CDP_LISTENER_FAILURE {"scope":"original-linux-lsof-test-cdp","unavailable":"over-limit"}');
+      } catch { /* Diagnostic failure never replaces the original listener assertion. */ }
+    }
     evidence.failure =
       error instanceof Error ? error.message.slice(0, 4000) : 'unclassified harness failure';
     const metadataFailure = readDesktopMetadataLineageFailure(error);
