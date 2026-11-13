@@ -112,6 +112,10 @@ async function seedFixture() {
       `  process.stdout.write(${JSON.stringify(`${runtimeLock.version}\n`)});\n` +
       `  process.exit(0);\n` +
       `}\n` +
+      `if (args.length === 1 && args[0] === '--help') {\n` +
+      `  process.stdout.write('Usage: fixture\\n  -p, --print\\n');\n` +
+      `  process.exit(0);\n` +
+      `}\n` +
       `fs.appendFileSync(${JSON.stringify(fixture.runtimeLedgerPath)}, JSON.stringify({ args, at: Date.now() }) + '\\n');\n` +
       `process.stderr.write('fixture runtime denies all lifecycle and provider commands\\n');\n` +
       `process.exit(77);\n`
@@ -1520,6 +1524,30 @@ async function main() {
       'documented teammate override in real Advanced CLI editor'
     );
     await captureScreenshot(cdp, fixture, 'teammate-mode-override');
+    // Press the real optional Validate control; the isolated runtime supplies
+    // --help only, never a paid provider or a lifecycle command.
+    const validateButton = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
+      .find(button => button.textContent?.trim() === 'Validate' &&
+        button.getClientRects().length > 0)`;
+    await cdp.click(validateButton);
+    await cdp.waitFor(
+      "document.querySelector('[data-testid=create-team-page] .text-emerald-400')?.textContent?.includes('All flags valid')",
+      'supported teammate override accepted by real Validate IPC'
+    );
+    await captureScreenshot(cdp, fixture, 'teammate-mode-validated');
+    await cdp.fill(customArgsSelector, '--max-turns=');
+    await cdp.click(validateButton);
+    await cdp.waitFor(
+      "Array.from(document.querySelectorAll('[data-testid=create-team-page] span'))" +
+        ".some(span => span.textContent?.trim() === 'Missing value: --max-turns' && span.getClientRects().length > 0)",
+      'required-value error returned through real Validate IPC'
+    );
+    await captureScreenshot(cdp, fixture, 'missing-cli-value-validated');
+    await cdp.fill(customArgsSelector, allowedTeammateArgs);
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === ${JSON.stringify(allowedTeammateArgs)}`,
+      'restore admitted extra args after real Validate error'
+    );
     // The fixture has no project-list entries. Choose the disposable path
     // through the real UI rather than relying on the app's config-only fallback.
     await cdp.click(createButtonExpression('Custom path'));
@@ -1848,6 +1876,8 @@ async function main() {
       retainedAcrossProcessRestart: true,
       advancedCliRetainedAcrossRename: true,
       teammateModeOverridePersistedThroughNativeUi: true,
+      teammateModeOverrideValidatedThroughNativeUi: true,
+      missingRequiredCliValueRejectedThroughNativeUi: true,
       advancedCliRetainedAcrossPaneSplit: true,
       advancedCliRetainedAcrossBackRemount: true,
       advancedCliRestoresUneditedDefaults: true,
