@@ -91,11 +91,17 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         cleanupConfirmed: false,
       };
       const progress: TeamProvisioningProgress[] = [];
+      // Keep a separate window for the owned-host Stop/force-cleanup path.
+      // Individual waits in the work phase are bounded by the harness.
+      const workStartedAt = performance.now();
       let phase = 'setup';
       let cleanupFailure = false;
       let pendingProofWrite = Promise.resolve();
       async function checkpoint(nextPhase: string) {
         phase = nextPhase;
+        if (proof.status === 'running' && performance.now() - workStartedAt >= 25 * 60_000) {
+          throw new Error('Full team work budget exceeded; reserve time for owned-host cleanup');
+        }
         proof.phase = phase;
         proof.updatedAt = new Date().toISOString();
         const json = `${JSON.stringify(proof, null, 2)}\n`;
@@ -694,7 +700,8 @@ liveDescribe('OpenCode full paid team collaboration', () => {
       if (cleanupFailure)
         throw new Error('Owned host cleanup not confirmed; failed state retained');
     },
-    25 * 60_000
+    // 25 minutes of work, with a separate 10-minute cleanup reserve.
+    35 * 60_000
   );
 });
 
