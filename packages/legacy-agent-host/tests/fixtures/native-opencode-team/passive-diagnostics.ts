@@ -67,7 +67,7 @@ type CpuFileSize = {
 type CpuTotals = { category: CpuCategory; exclusiveSamples: number; exclusiveSampledUs: number;
   inclusiveSamples: number; inclusiveSampledUs: number };
 export type OriginalHostCpuProfile = CpuFileSize & ({ status: 'unavailable'; reason: CpuUnavailable; rawDiscarded: boolean } | {
-  status: 'available'; rawDiscarded: boolean; defaultIntervalUs: 1000; profileDurationUs: number;
+  status: 'available'; rawDiscarded: boolean; samplingIntervalUs: 1000 | 10000; profileDurationUs: number;
   sampledUs: number; unsampledUs: number; nodeCount: number; sampleCount: number;
   attribution: 'nearest-allowlisted-stack-frame'; categories: CpuTotals[];
 });
@@ -89,7 +89,7 @@ function cpuCategory(frame: Record<string, unknown>): number | undefined {
   return undefined;
 }
 
-function projectCpuProfile(raw: unknown): OriginalHostCpuProfile {
+function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): OriginalHostCpuProfile {
   const invalid = (): never => { throw new Error('Invalid TEST CPU profile'); };
   const value = record(raw), start = integer(value.startTime, Number.MAX_SAFE_INTEGER),
     end = integer(value.endTime, Number.MAX_SAFE_INTEGER);
@@ -140,14 +140,16 @@ function projectCpuProfile(raw: unknown): OriginalHostCpuProfile {
       categories[category]!.inclusiveSamples++; categories[category]!.inclusiveSampledUs += delta;
     }
   }
-  return { status: 'available', rawDiscarded: false, defaultIntervalUs: 1000,
+  return { status: 'available', rawDiscarded: false, samplingIntervalUs,
     profileDurationUs: duration, sampledUs, unsampledUs: duration - sampledUs,
     nodeCount: nodes.size, sampleCount: value.samples.length,
     attribution: 'nearest-allowlisted-stack-frame', categories };
 }
 
 /** Read after the original process exits. This measures sampled Host stacks, not Bun CPU or request latency. */
-export async function readOriginalHostCpuProfile(path: string | undefined, originalExited: boolean): Promise<OriginalHostCpuProfile> {
+export async function readOriginalHostCpuProfile(
+  path: string | undefined, originalExited: boolean, samplingIntervalUs: 1000 | 10000 = 1000
+): Promise<OriginalHostCpuProfile> {
   if (!path) return { status: 'unavailable', reason: 'not-started', rawDiscarded: true };
   if (!originalExited) return { status: 'unavailable', reason: 'host-not-exited', rawDiscarded: false };
   let result: OriginalHostCpuProfile = { status: 'unavailable', reason: 'stat-failed', rawDiscarded: false };
@@ -189,7 +191,7 @@ export async function readOriginalHostCpuProfile(path: string | undefined, origi
     } finally { await handle.close().catch((error: unknown) => { closeFailure = { error }; }); }
     if (closeFailure) { reason = 'read-failed'; throw closeFailure.error; }
     reason = 'invalid-profile';
-    result = projectCpuProfile(JSON.parse(bytes.toString('utf8')) as unknown);
+    result = projectCpuProfile(JSON.parse(bytes.toString('utf8')) as unknown, samplingIntervalUs);
   } catch (error) {
     result = { status: 'unavailable', reason: reason === 'stat-failed' && record(error).code === 'ENOENT'
       ? 'missing' : reason, rawDiscarded: false };

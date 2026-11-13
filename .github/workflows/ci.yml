@@ -875,6 +875,115 @@ jobs:
             qualification: 'Source Desktop and localhost inference only; no installed/packed or vendor-auth claim',
           }, null, 2));
           NODE
+      - name: Check out the exact old Host for genuine checkpoint evidence
+        if: matrix.mode == 'native-resume-ui' && !matrix.variant
+        uses: actions/checkout@v6
+        with:
+          ref: 1d0f97f55de566036c970eab4f36b84620afdb3f
+          path: .stage1-checkpoint-donor
+          persist-credentials: false
+      - name: Build the unchanged old Host with its original frozen dependencies
+        if: matrix.mode == 'native-resume-ui' && !matrix.variant
+        run: |
+          set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/stage1-checkpoint-donor-setup.log") 2>&1
+          selected_node="$GITHUB_WORKSPACE/resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node"
+          selected_donor="$GITHUB_WORKSPACE/.stage1-checkpoint-donor"
+          test "$(git -C "$selected_donor" rev-parse HEAD)" = 1d0f97f55de566036c970eab4f36b84620afdb3f
+          test -z "$(git -C "$selected_donor" status --porcelain=v1 --untracked-files=no)"
+          "$selected_node" "$LEGACY_DESKTOP_PNPM_PATH" --dir "$selected_donor" install --frozen-lockfile --ignore-scripts --filter '@agent-teams/legacy-agent-host...'
+          "$selected_node" "$LEGACY_DESKTOP_PNPM_PATH" --dir "$selected_donor" --filter @agent-teams/legacy-agent-host build
+          test -z "$(git -C "$selected_donor" status --porcelain=v1 --untracked-files=no)"
+      - name: Qualify genuine old checkpoint and strict current D refusal before Desktop Resume
+        if: matrix.mode == 'native-resume-ui' && !matrix.variant
+        run: |
+          set -euo pipefail
+          resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync, spawnSync } from 'node:child_process';
+          import { closeSync, openSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          import { fileHash, treeHash } from './packages/legacy-agent-host/tests/fixtures/native-host.ts';
+          import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+          const repo = process.cwd(), donor = realpathSync(join(repo, '.stage1-checkpoint-donor'));
+          const commit = '1d0f97f55de566036c970eab4f36b84620afdb3f';
+          assert.equal(execFileSync('git', ['-C', donor, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), commit);
+          const oldProvider = {
+            path: 'vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-implementations-0.0.0.tgz',
+            sha256: 'fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89',
+          };
+          const currentProvider = await readNativeProviderArtifact(repo);
+          assert.equal(currentProvider.sha256, '73c7034aef1283ee694114d2a31d12383370286b45c18120958ca0edef789957');
+          await verifyNativeProviderArtifact(donor, oldProvider);
+          await verifyNativeProviderArtifact(repo, currentProvider);
+          const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');
+          const donorPackage = join(donor, 'packages/legacy-agent-host');
+          const pins = {
+            LEGACY_NATIVE_CLAUDE_HOST_GO: '1',
+            LEGACY_NATIVE_CLAUDE_CHECKPOINT_DONOR: donor,
+            LEGACY_NATIVE_PROVIDER_ARTIFACT: oldProvider.path,
+            LEGACY_NATIVE_PROVIDER_SHA256: oldProvider.sha256,
+            LEGACY_NATIVE_CLAUDE_SHA256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f',
+            LEGACY_NATIVE_HOST_SOURCE_SHA256: await treeHash(join(donorPackage, 'src'), '.ts'),
+            LEGACY_NATIVE_HOST_DIST_SHA256: await treeHash(join(donorPackage, 'dist'), '.js'),
+            LEGACY_NATIVE_PROVIDER_DIST_SHA256: await treeHash(realpathSync(join(donorPackage, 'node_modules/@agent-teams/provider-implementations/dist')), '.js'),
+            LEGACY_NATIVE_CURRENT_PROVIDER_ARTIFACT: currentProvider.path,
+            LEGACY_NATIVE_CURRENT_PROVIDER_DIST_SHA256: await treeHash(realpathSync('packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist'), '.js'),
+          };
+          const input = {
+            sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD, donorCommit: commit, oldProvider, currentProvider,
+            nodeSha256: await fileHash(node),
+            oldEntrySha256: await fileHash(join(donorPackage, 'dist/cli.js')),
+            currentEntrySha256: await fileHash('packages/legacy-agent-host/dist/cli.js'),
+            pins, originalLocalOutcome: 'unknown-separate-attempt',
+            scope: 'Independent genuine old corpus; current public-D negative only; ordinary Main migration unqualified',
+          };
+          writeFileSync(join(process.env.RUNNER_TEMP, 'stage1-checkpoint-donor-inputs.json'), JSON.stringify(input, null, 2), { mode: 0o600 });
+          const logPath = join(process.env.RUNNER_TEMP, 'stage1-checkpoint-donor.log'), fd = openSync(logPath, 'w', 0o600);
+          let run;
+          try {
+            run = spawnSync(node, ['--test', 'packages/legacy-agent-host/tests/native-claude-host.native.ts'], {
+              cwd: repo, env: { ...process.env, ...pins }, stdio: ['ignore', fd, fd],
+            });
+          } finally { closeSync(fd); }
+          assert.ok(statSync(logPath).size <= 8 * 1024 * 1024, 'Bounded original checkpoint proof log');
+          const log = readFileSync(logPath, 'utf8'); console.log(log);
+          assert.equal(run.error, undefined); assert.equal(run.status, 0);
+          const matches = [...log.matchAll(/TEST receipt: (\/private\/tmp\/TEST-native-claude-checkpoint-donor-[^/\s]+\/receipt\.json)/g)];
+          assert.equal(matches.length, 1, 'One new independent original donor attempt');
+          const path = realpathSync(matches[0][1]), r = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(r.sourceHead, input.sourceHead);
+          assert.equal(r.status, 'CORPUS_QUALIFIED_CURRENT_D_REFUSED');
+          assert.equal(r.cleanupConfirmed, true); assert.equal(r.oldRestoredHistory, true);
+          assert.equal(r.donorInputs.donorCommit, commit);
+          assert.equal(r.artifacts.provider.sha256, oldProvider.sha256);
+          assert.equal(r.artifacts.host.sourceSha256, pins.LEGACY_NATIVE_HOST_SOURCE_SHA256);
+          assert.equal(r.artifacts.host.distSha256, pins.LEGACY_NATIVE_HOST_DIST_SHA256);
+          assert.equal(r.donorInputs.providerDistSha256, pins.LEGACY_NATIVE_PROVIDER_DIST_SHA256);
+          assert.equal(r.donorInputs.currentProviderSha256, currentProvider.sha256);
+          assert.equal(r.donorInputs.currentProviderDistSha256, pins.LEGACY_NATIVE_CURRENT_PROVIDER_DIST_SHA256);
+          const proof = r.donorCheckpoint;
+          assert.deepEqual(proof.currentRefusal, { ok: false, code: 'checkpoint-incompatible' });
+          assert.ok(Object.values(proof.calls).every(value => value === 0));
+          assert.equal(proof.oldEntrySha256, input.oldEntrySha256);
+          assert.equal(proof.currentEntrySha256, input.currentEntrySha256);
+          assert.equal(proof.compiledEntryEqual, input.oldEntrySha256 === input.currentEntrySha256);
+          assert.equal(proof.originalNodeSha256, input.nodeSha256);
+          assert.equal(proof.currentNodeSha256, input.nodeSha256);
+          assert.equal(proof.ordinaryCurrentMainRouteQualified, false);
+          assert.equal(proof.currentHostHandshakeQualified, false);
+          assert.equal(proof.mainHandle, 'not-produced-by-standalone-fixture');
+          assert.equal(await fileHash(join(r.root, 'frozen/original-checkpoint.json')), proof.checkpointSha256);
+          assert.equal(await fileHash(join(r.root, 'frozen/original-native-prefix.jsonl')), proof.nativePrefixSha256);
+          assert.equal(await fileHash(join(r.root, 'frozen/original-profile.json')), proof.profileSha256);
+          assert.equal(await fileHash(join(r.root, 'frozen/original-launch.json')), proof.originalLaunchSha256);
+          assert.equal(r.modelObservations.length, 11); assert.deepEqual(r.modelFailures, []);
+          assert.equal(r.businessReceipts.length, 2);
+          assert.equal(execFileSync('git', ['-C', donor, 'status', '--porcelain=v1', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), input.sourceHead);
+          console.log(JSON.stringify({ status: r.status, receipt: path, oldEntryEqualsCurrent: proof.compiledEntryEqual,
+            scope: 'Old corpus and old-owner Resume proven; current D refused without native allocation; no Main migration claim' }));
+          NODE
       - name: Prepare current frontend runtime for its original Stop and import
         if: matrix.import_launch == '1'
         env:
@@ -1572,6 +1681,12 @@ jobs:
             ${{ runner.temp }}/stage1-native-commands-inputs.json
             ${{ runner.temp }}/stage1-desktop-native-commands.log
             ${{ runner.temp }}/stage1-desktop-native-schedules.log
+            ${{ runner.temp }}/stage1-checkpoint-donor-setup.log
+            ${{ runner.temp }}/stage1-checkpoint-donor-inputs.json
+            ${{ runner.temp }}/stage1-checkpoint-donor.log
+            /private/tmp/TEST-native-claude-checkpoint-donor-*/receipt.json
+            /private/tmp/TEST-native-claude-checkpoint-donor-*/host-stderr.log
+            /private/tmp/TEST-native-claude-checkpoint-donor-*/frozen/*
             ${{ runner.temp }}/stage1-donor-saved-setup.log
             ${{ runner.temp }}/stage1-desktop-donor-saved.log
             ${{ runner.temp }}/stage1-desktop-native-extension-consumption.log

@@ -21,8 +21,11 @@ test('a failed original Node child retains CPU evidence and bounded file refusal
     assert.equal(code, 1); assert.equal(signal, null);
     await assert.rejects(host.close(), /Host exit zero confirms/);
     const path = host.testCpuProfilePath!;
-    const result = await readOriginalHostCpuProfile(path, true);
+    assert.equal(host.testCpuProfileIntervalUs, 10000);
+    assert.ok(host.child.spawnargs.includes('--cpu-prof-interval=10000'));
+    const result = await readOriginalHostCpuProfile(path, true, host.testCpuProfileIntervalUs);
     assert.equal(result.status, 'available');
+    assert.equal(result.samplingIntervalUs, 10000);
     assert.equal(result.rawDiscarded, true);
     assert.equal(result.fileOverLimit, false);
     assert.ok(result.fileBytes !== undefined && result.fileBytes > 0 && result.fileBytes <= 16 * 1024 * 1024);

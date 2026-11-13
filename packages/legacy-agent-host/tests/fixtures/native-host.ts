@@ -153,11 +153,13 @@ export function startHost(options: {
 }) {
   const testCpuProfilePath = options.testCpuProfile
     ? join(options.root, 'TEST-original-host.cpuprofile') : undefined;
+  const testCpuProfileIntervalUs = testCpuProfilePath ? 10_000 as const : undefined;
   if (testCpuProfilePath) assert.equal(existsSync(testCpuProfilePath), false, 'fresh original TEST CPU profile');
   const child = spawn(
     options.node,
     [...(testCpuProfilePath ? ['--cpu-prof', `--cpu-prof-dir=${options.root}`,
-      '--cpu-prof-name=TEST-original-host.cpuprofile'] : []),
+      '--cpu-prof-name=TEST-original-host.cpuprofile',
+      `--cpu-prof-interval=${testCpuProfileIntervalUs}`] : []),
       ...(options.testImports ?? []).flatMap((path) => ['--import', path]), options.entry],
     {
       cwd: options.root,
@@ -237,6 +239,7 @@ export function startHost(options: {
   return {
     child,
     testCpuProfilePath,
+    testCpuProfileIntervalUs,
     async rpc(method: string, params: unknown, timeoutMs = 60_000): Promise<Record<string, unknown>> {
       assert.ok(!exited && stdoutValid);
       assert.ok(
