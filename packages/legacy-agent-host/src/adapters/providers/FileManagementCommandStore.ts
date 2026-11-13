@@ -95,23 +95,27 @@ export class FileManagementCommandStore implements ManagementCommandStore {
       }
       this.checkDirectory();
       renameSync(temporary, path);
-      const directoryFd = openSync(
-        this.directory,
-        constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
-      );
-      try {
-        const directoryStat = fstatSync(directoryFd);
-        if (
-          !directoryStat.isDirectory() ||
-          directoryStat.dev !== this.identity.dev ||
-          directoryStat.ino !== this.identity.ino
-        )
-          throw new ManagementCommandError('held');
-        fsyncSync(directoryFd);
-        this.checkDirectory();
-      } finally {
-        closeSync(directoryFd);
+      // Match the source index's platform policy: Windows cannot use a POSIX directory fsync.
+      // The file itself was flushed above, and the original directory is still rechecked.
+      if (process.platform !== 'win32') {
+        const directoryFd = openSync(
+          this.directory,
+          constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
+        );
+        try {
+          const directoryStat = fstatSync(directoryFd);
+          if (
+            !directoryStat.isDirectory() ||
+            directoryStat.dev !== this.identity.dev ||
+            directoryStat.ino !== this.identity.ino
+          )
+            throw new ManagementCommandError('held');
+          fsyncSync(directoryFd);
+        } finally {
+          closeSync(directoryFd);
+        }
       }
+      this.checkDirectory();
     } finally {
       try {
         unlinkSync(temporary);
@@ -147,7 +151,8 @@ export class FileManagementCommandStore implements ManagementCommandStore {
     try {
       fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
       const before = fstatSync(fd);
-      if (!before.isFile() || before.size > sourceReceiptBytes || (before.mode & 0o077) !== 0)
+      if (!before.isFile() || before.size > sourceReceiptBytes ||
+          (process.platform !== 'win32' && (before.mode & 0o077) !== 0))
         throw new ManagementCommandError('held');
       const buffer = Buffer.alloc(before.size + 1);
       let length = 0,

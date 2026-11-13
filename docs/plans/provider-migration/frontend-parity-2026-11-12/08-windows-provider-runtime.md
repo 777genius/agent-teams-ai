@@ -388,3 +388,37 @@ The same scoped Windows profile still reaches `CapturedProcess` without its orig
 5. Add focused controlled regressions for every missing factory route, exact candidate version admission, changed source/guard/argv refusal, publication/cold-read eligibility and failed/unknown cleanup. Extend the existing repository-peer Windows gate for metadata and version/source-selection journeys. Use only repository Node/C++ actors, the original Host/Runtime/D and real Windows Jobs. Keep independent source review, exact-source native receipts and all nonpassing results; no skipped case becomes qualification.
 
 Initial scope is the existing Host management/scheduled/MCP composition and process factory seams, Main captured custody/runtime-source composition, a bounded read-only reuse of the existing source journal validation, and their focused tests. No new native protocol, separate persistent source store, generic executor, production test flag, provider subscription or Stage2 work is introduced. All Git publication stays with the coordinator. This plan does not close the separate POSIX pathname-to-exec limitation or Darwin native qualification gap.
+
+## 16. Actual Windows source publication: platform-correct journal I/O
+
+### Evidence and reviewed plan — 2026-11-13
+
+At b4641f456271b6c9d254bbdebc9bbc9143c0b469, original process-fixture run
+43487488619 failed in Windows x64 job132099682194 and ARM64 job132099682510:
+64 PASS, one failure, two platform skips in each controlled contract group.
+The source-version case reached FileManagementCommandStore.parse through the
+original RuntimeSourceIndex and was held by the unconditional POSIX mode check.
+Node's Windows mode projection is not a POSIX privacy assertion. The adjacent
+FileRuntimeSourceIndex already applies its mode and directory-fsync policy only
+outside Windows.
+
+The bounded correction applies that same platform distinction to the existing
+management journal: retain file flush before atomic rename; retain original
+directory identity checks before and after publication; keep POSIX directory
+fsync and reject POSIX group/other-readable receipts. On Windows, do not treat
+mode bits or opening/fsyncing a directory as an ACL primitive. Digest, schema,
+size, no-follow, original-directory and retained-receipt refusal checks remain.
+No read-only reader or dynamic admission WIP is included in this slice.
+
+The existing critical-store regression reproduces a Windows-like 0666 stat
+projection, reads the original receipt through a cold store, writes the next
+phase, and rejects modified receipt bytes. Its paired POSIX case retains the
+0644 refusal. Add both to the existing controlled process-contract group,
+including the actual Windows x64/ARM64 jobs; no vendor executable is used.
+
+Root reviewed the exact production preimage2d6031ae7c0c0aad5d637581f5242714536ac215;
+the independent provider reviewer compared the correction with the existing
+source-index policy. Before correction, the controlled Windows-like test failed
+and the POSIX refusal passed. The local executor became unavailable before
+after-correction execution. Source review is not actual Windows qualification;
+the original matrix remains required, with no assertion/timeout/gate reduction.

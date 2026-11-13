@@ -3142,3 +3142,31 @@ The original model, catalog limit8, HEAD limit32, probe/input limits, response h
 The Taskboard catch saves and emits its one closed observation. Each producer retains the original catch observation, then uses its existing final failure boundary to save and emit at most one labelled JSON diagnostic row after the original cleanup/freeze observations. Without a prior caught error, report only cleanup-or-freeze/unclassified and the already available closed cleanup/freeze flags; do not assign a successful earlier stage as a cause. Every row is at most4KiB, constructed only from fixed enums, finite counts/booleans and the §59 projection. Serialization/reading/logging failures must be contained and leave the exact original caught error, existing finally/cleanup and failing acceptance unchanged. Never print an arbitrary receipt/error field. Missing diagnostic data is unavailable, never PASS, completed, no-dispatch or release.
 
 No new test suite, helper framework, job, matrix row, native invocation, input, permission, timer, polling loop, read retry or budget increase is introduced. No baseline raise or code compression is authorized; the three existing script files remain below800 physical lines. Independent review checks exact original-failure identity, read bounds/no-follow containment, closed output and all unchanged actions. Existing script types/lint/source cap and the next normal coherent-head original CI gates supply execution evidence. This plan and source-only review do not close any of the three acceptance failures.
+
+## 61. macOS Intel process gate: choose the pinned Node before pnpm bootstrap
+
+### Original evidence and narrow correction — 2026-11-13
+
+Original b464 process-fixture run43487488619, macOS Intel job132099682434,
+failed before install/tests with ERR_PNPM_PNPM_ENGINE_IDENTITY_UNVERIFIABLE:
+the bootstrap lock lacked @pnpm/exe.darwin-x64. This is not a Host test result.
+The same run's macOS ARM64 job132099682494 passed its process contracts and
+original POSIX lifecycle fixtures.
+
+Official pnpm/action-setup v6.1.0 src/install-pnpm/run.ts,
+blob22835e71b6f171949a9887cdc6e1e8ca7c4569b3, selects standalone bootstrap
+when PATH Node is older than22.13, before self-update to the repository's
+pinned pnpm11.22.0. Our previous workflow configured Node24.21.0 only after
+that decision. Selecting the intended Node first removes that unintended
+dependency on the runner's default Node.
+
+Add an initial actions/setup-node@v7.0.0 with exact24.21.0 and
+package-manager-cache:false before the existing pnpm/action-setup@v6.1.0.
+Retain the later setup-node step with cache:pnpm, so cache lookup still sees
+the installed selected package manager. Keep project pnpm pin, frozen install,
+integrity checks, all matrix rows and actual native fixtures unchanged.
+
+Root checked the official action source; an independent session reviewer
+approved this exact order and explicit early cache disable. The executor is
+unavailable, so this publication has source review only; the next unchanged
+macOS Intel process gate must supply the actual execution result.
