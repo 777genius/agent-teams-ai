@@ -1,5 +1,5 @@
 import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { TextDecoder } from 'node:util';
 
 import {
@@ -100,6 +100,15 @@ export class CapturedHostClient {
     },
     (observation) => {
       createLogger('Host:ClaudeManagement').diagnostic('Claude management stage', observation);
+    },
+    (observation) => {
+      if (this.child?.pid !== undefined)
+        createLogger('Host:OpenCodeMetadata').diagnostic('OpenCode metadata stage', {
+          profileHash: observation.profileHash, mode: observation.mode,
+          providerHash: observation.providerHash, pid: observation.pid,
+          startIdentityHash: createHash('sha256').update(observation.startIdentity, 'utf8').digest('hex'),
+          stage: observation.stage, hostPid: this.child.pid,
+        });
     }
   );
 

@@ -8,11 +8,15 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
+import { assertDesktopMetadataLineageReleased, desktopMetadataProfileHash,
+  readDesktopMetadataLineage } from '../../../scripts/legacy-agent-host/desktop-opencode-metadata-lineage';
 import {
   type CapturedHostClient,
   createCapturedHostClient,
   type SelectedHostProfile,
 } from '../../../src/features/agent-backend/main';
+import { formatPersistentLogMessage, installPersistentAppLog } from '../../../src/main/utils/persistentAppLog';
+import { addLogSink } from '../../../src/shared/utils/logger';
 
 let nodeExecutable: string;
 let nodeVersion: string;
@@ -132,19 +136,78 @@ describe('captured legacy host client over real subprocess stdio', () => {
   });
 
   it('handshakes with the packed host, serves two inputs, then confirms scoped close', async () => {
-    const transport = client(await fixture());
-    const handshake = await transport.start();
-    expect(handshake).toMatchObject({ protocolVersion: 1, buildId: 'TEST-host-v1' });
-    expect(await transport.request('echo', { input: 'A' })).toEqual({ input: 'A' });
-    expect(await transport.request('echo', { input: 'B' })).toEqual({ input: 'B' });
-    expect(await transport.shutdown()).toEqual({
-      childExit: 'confirmed',
-      providerCustody: 'unresolved',
+    const nativeIdentity = '01234567-89ab-4cde-8fab-0123456789ab:42:7:123456';
+    const originalHash = createHash('sha256').update(nativeIdentity, 'utf8').digest('hex');
+    const selected = { profileId: 'TEST-metadata-profile', configRevision: 'TEST-metadata-revision' };
+    const producerUrl = new URL('./adapters/providers/createClaudeCloseDiagnostic.js', serverUrl).href;
+    const profile = await fixture(`metadata: (() => {
+      let observe;
+      return { lane: 'work', handle: async (stage) => {
+        const { createOpenCodeMetadataDiagnostic } = await import(${JSON.stringify(producerUrl)});
+        observe ??= createOpenCodeMetadataDiagnostic(${JSON.stringify(selected)});
+        if (stage === 'ready') observe.ready({ pid: 42, startIdentity: ${JSON.stringify(nativeIdentity)} });
+        else if (stage === 'released') observe.closed(true);
+        return process.pid;
+      } };
+    })(),`);
+    const transport = client(profile);
+    const log = installPersistentAppLog({ directory: join(profile.cwd, 'userData/logs'), appVersion: 'TEST' });
+    let onReady = () => {}, onReleased = () => {};
+    const ready = new Promise<void>(resolve => { onReady = resolve; });
+    const released = new Promise<void>(resolve => { onReleased = resolve; });
+    const removeSink = addLogSink(entry => {
+      if (entry.namespace !== 'Host:OpenCodeMetadata') return;
+      const observation = entry.args[1] as { stage?: string };
+      if (observation.stage === 'ready') onReady();
+      if (observation.stage === 'released') onReleased();
     });
-    await expect(transport.request('echo', {})).rejects.toMatchObject({
-      code: 'shutting-down',
-      outcome: 'not-dispatched',
-    });
+    const oldExecutable = process.env.OPENCODE_V2_EMBEDDED_BUN;
+    process.env.OPENCODE_V2_EMBEDDED_BUN = '/TEST/bun';
+    try {
+      const handshake = await transport.start();
+      expect(handshake).toMatchObject({ protocolVersion: 1, buildId: 'TEST-host-v1' });
+      const [hostPid] = await Promise.all([transport.request('metadata', 'ready'), ready]);
+      if (typeof hostPid !== 'number') throw new Error('TEST original Host PID missing');
+      await log.flush();
+      // Constructed native facts exercise observation parsing, not native process qualification.
+      const host = { pid: hostPid, parentPid: 1, groupId: hostPid, birth: 'TEST-host', command: nodeExecutable };
+      const metadata = { pid: 42, parentPid: hostPid, groupId: 42, birth: 'TEST-physical-birth', command: '/TEST/bun' };
+      const captured = { host, children: [metadata] };
+      const lineage = readDesktopMetadataLineage(profile.cwd, captured, [desktopMetadataProfileHash(selected)], [metadata]);
+      expect(lineage.events[0]?.startIdentityHash).toBe(originalHash);
+      expect(await readFile(log.filePath, 'utf8')).not.toContain(nativeIdentity);
+      expect(JSON.parse(formatPersistentLogMessage([{ startIdentity: nativeIdentity }])).startIdentity,
+        'ordinary UUID redaction remains enabled').toBe('[redacted]:42:7:123456');
+      expect(await transport.request('echo', { input: 'A' })).toEqual({ input: 'A' });
+      expect(await transport.request('echo', { input: 'B' })).toEqual({ input: 'B' });
+      await Promise.all([transport.request('metadata', 'released'), released]);
+      await log.flush();
+      const original = { ...captured, metadataLineage: lineage };
+      const closed = assertDesktopMetadataLineageReleased(profile.cwd, original, []);
+      expect(closed.events.map(value => value.startIdentityHash)).toEqual([originalHash, originalHash]);
+      const persisted = await readFile(log.filePath, 'utf8');
+      const records = persisted.trim().split('\n').map(line => JSON.parse(line) as { message: string });
+      const prefix = 'OpenCode metadata stage ';
+      const closeRecord = records.at(-1)!;
+      const closeValue = JSON.parse(closeRecord.message.slice(prefix.length)) as Record<string, unknown>;
+      for (const invalid of [
+        { ...closeValue, startIdentityHash: undefined, startIdentity: nativeIdentity },
+        { ...closeValue, startIdentityHash: '[redacted]' },
+        { ...closeValue, startIdentityHash: 'f'.repeat(64) },
+        { ...closeValue, profileHash: 'f'.repeat(64) },
+      ]) {
+        const changed = [...records.slice(0, -1), { ...closeRecord, message: prefix + JSON.stringify(invalid) }];
+        await writeFile(log.filePath, changed.map(value => JSON.stringify(value)).join('\n') + '\n');
+        expect(() => assertDesktopMetadataLineageReleased(profile.cwd, original, [])).toThrow();
+      }
+      await writeFile(log.filePath, persisted);
+      expect(await transport.shutdown()).toEqual({ childExit: 'confirmed', providerCustody: 'unresolved' });
+      await expect(transport.request('echo', {})).rejects.toMatchObject({ code: 'shutting-down', outcome: 'not-dispatched' });
+    } finally {
+      removeSink(); log.dispose();
+      if (oldExecutable === undefined) delete process.env.OPENCODE_V2_EMBEDDED_BUN;
+      else process.env.OPENCODE_V2_EMBEDDED_BUN = oldExecutable;
+    }
   });
 
   it('keeps a committed effect unknown after response loss and never replays it', async () => {

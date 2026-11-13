@@ -17,6 +17,13 @@ export class ManagementResourceFence {
     this.active.set(resourceId, commandId);
   }
 
+  /** Only an idle namespace or its original command may retire its captured native host. */
+  assertAvailable(resourceId: string, commandId?: string): void {
+    if (this.held.has(resourceId)) throw new ManagementCommandError('held');
+    const active = this.active.get(resourceId);
+    if (active !== undefined && active !== commandId) throw new ManagementCommandError('busy');
+  }
+
   release(resourceId: string, commandId: string, settled: boolean): void {
     // A late response from a retired flow cannot release or poison its replacement.
     if (this.active.get(resourceId) !== commandId) return;

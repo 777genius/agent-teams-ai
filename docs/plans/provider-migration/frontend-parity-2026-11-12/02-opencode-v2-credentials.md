@@ -359,3 +359,90 @@ critical tests и3 identity assertions в existing native server fixture.
 contracts с сохранением его3 cleanup/attachment scenarios. Новый helper и critical
 test включены в explicit Desktop source freeze inventory. Compiler, native matrix
 и Desktop acceptance этого source cut ещё pending; source review не заменяет их.
+
+### R6 — отдельное HTTP-соединение для конечной V2 operation
+
+#### Наблюдение после R5 и проверка штатного поведения
+
+На frontend `1628b70e50533a80d2f9d5bc8ea6edcb08a19dda`, preflight run
+`43356141497`, Windows x64 job `131658678680`, R5 прошёл original identity
+read и сохранил credential preparation. После response #11 integration-read
+на 52067ms следующий provider-catalog GET #12 начался на 61398ms и получил
+ECONNRESET на 61441ms. Original child stdin закрыт позже, на 61447ms.
+Open завершился за 60614ms, modelRequests=0, custody-unresolved, cleanup=false.
+Это ошибка до inference, а не превышение 120000ms bootstrap budget.
+Прежние Darwin/Windows receipts также показывают reset после idle около 6000ms.
+Сами эти timings не доказывают получение FIN: причина reuse проверяется
+стандартным HTTP поведением и последующим actual native gate.
+
+Проверенные первичные источники:
+
+- [Node 24.21.0 request.js](https://github.com/nodejs/node/blob/v24.21.0/deps/undici/src/lib/core/request.js),
+  blob `8c9675d60b35e76bbd37ecd88046f911d4385284`: fixed `Connection: close`
+  разрешён и выставляет `request.reset=true`.
+- [Node 24.21.0 client-h1.js](https://github.com/nodejs/node/blob/v24.21.0/deps/undici/src/lib/dispatcher/client-h1.js),
+  blob `ed119b7156bcdbad3e1eda88295a7fd1f23bf292`: reset отправляет close,
+  исключает дальнейший reuse и закрывает socket после полного response body.
+  Встроенный idle validation уже использует setImmediate; ещё один yield
+  сам по себе не является доказанным исправлением.
+- [Bun 1.4.3 HTTP server](https://github.com/oven-sh/bun/blob/bun-v1.4.3/src/js/node/_http_server.ts)
+  (`fae709e723b65c86b76ba84cd954e51b5d341b17`) и
+  [Bun 1.4.4](https://github.com/oven-sh/bun/blob/bun-v1.4.4/src/js/node/_http_server.ts)
+  (`958ba989a17d6954996f46ff3797d059b4312375`) учитывают request close;
+  default idle timeout — 5000ms + buffer1000ms.
+
+#### Минимальный срез
+
+1. **D — единственное место изменения HTTP policy.** В existing trusted header
+   projection добавить фиксированный `connection: close`. Все три builders
+   ограничены canonical `http://127.0.0.1:<port>`; внешний inference transport,
+   V1, MCP actors, server settings и global fetch/dispatcher не меняются.
+   Не вводить Host wrapper, second Agent, dependency, option или helper framework.
+   `fetch keepalive:false` не использовать как настройку socket pooling.
+
+   | D source в adapters/opencode-protocol | Покрываемые конечные operations |
+   | --- | --- |
+   | `v2-execution-transport.ts` | Owned identity/catalog/directory/session create/read, prompt, message pages, finite SSE log; тот же builder для PNG |
+   | `v2-control-transport.ts` | Permissions, interrupt/inbox cancel, instructions read/PUT |
+   | `v2-credential-wire.ts` | Integration read, единственный connect POST и owned rollback |
+
+   `OpenCodeV2EmbeddedMemberProvider` / R5 snapshot,
+   `OpenCodeV2ManagementHost`, `OpenCodeV2ModelProbe` и
+   `createOpenCodeV2DriverFactory` используют эти existing builders.
+   Active-session poll/readlog не должен остаться на отдельном keep-alive path.
+   Исходная D база — `f5b2f3ba84afb0e90236728c951ba9e4a375e29f`;
+   исправление Claude catalog из этого SHA входит в тот же будущий archive/pin.
+2. **Сохранить все смысловые границы.** Fixed header не берётся из caller input;
+   arbitrary headers по-прежнему удаляются. NativeRequest и fetch init содержат
+   одинаковую trusted projection. Endpoint/password, method/body, session binding,
+   beforeRequest admission, full native custody, request/owner deadlines,
+   body/chunk limits, complete SSE codec и dispose/abort остаются прежними.
+   Закрывать соединение только после полного ответа/штатного abort; не обрывать body.
+   Каждый mutation по-прежнему dispatch один раз. Lost ACK остаётся unknown:
+   никаких automatic retry, reconnect-and-replay или повышения budgets.
+   Accept-Encoding и polling interval не меняются.
+3. **Проверить существующие границы без новой suite.** Дополнить имеющиеся
+   header-projection tests execution/control проверкой fixed close и отказом
+   наследовать caller `Connection: keep-alive`; credential fixture проверяет
+   тот же header для read/connect/rollback. В existing actual Node HTTP fixture
+   проверить request close и разные original sockets для последовательных calls.
+   Сохранить прежние lost-response/no-replay assertions и exact effect counts.
+   Обновить короткие comments/README, описывающие trusted native headers.
+4. **Обычная квалификация и immutable pin.** D full checks на exact Node24.21.0
+   и Node26.11.1, существующие checked-pack и native jobs; source review не
+   заменяет их. Использовать официальный checked archive с реальными bytes,
+   SHA256/SHA512 и source receipt, затем обновить frontend package/lock pin.
+   Intentional retained-old corpus не переписывать и архив не пересобирать
+   вместо уже квалифицированного. При unavailable executor local PASS не заявлять.
+5. **Actual acceptance на новом source.** Дождаться existing V2 native matrix
+   Windows/Darwin/Linux и regression pinned V2.0.21; проверить readiness,
+   credential/model/tool/approval, Stop и cold Resume с original cleanup.
+   После нового frontend pin проверить связанные Main/Desktop lanes, включая
+   actual Claude catalog/commands. Linux finite-SSE delay остаётся отдельным
+   вопросом до response-end/contentEncoding evidence и успешного turn;
+   устранение startup reset не считается автоматически его исправлением.
+   Не создавать manual rerun, не merge main, не активировать feature/release.
+
+R6 до implementation проходит независимый peer review и root publication.
+План сохраняется на отдельной docs branch, чтобы текущий R5 native run завершился
+штатно; публикация плана не является compiler, native или Desktop PASS.

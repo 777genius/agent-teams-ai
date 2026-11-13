@@ -6,6 +6,9 @@ import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/ide
 import { assertOwnedCdpListener, command, processTable } from './desktop-backend-observations.ts';
 import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import { desktopJsLiteral } from './desktop-ui-controls.ts';
+import { desktopActiveMetadata, desktopMetadataProcess, desktopMetadataProfileHash,
+  readDesktopMetadataLineage, assertDesktopMetadataLineageRetained } from './desktop-opencode-metadata-lineage.ts';
+import type { DesktopNativeHostSnapshot } from './desktop-opencode-metadata-lineage.ts';
 import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import type { UiCdpPort } from './desktop-team-ui-smoke.ts';
 export {
@@ -101,11 +104,12 @@ export async function prepareDesktopNativeStop(options: {
     { ...fixture, root: fixture.root! }, group, globalMetadata) : undefined;
   const metadata = selectedMetadata?.captured, metadataSources = selectedMetadata?.metadataSources;
   if (metadata) assert.equal(metadata.host.groupId, group, 'metadata belongs to the captured TEST Host');
-  const observeNative = () => {
+  let observedMetadata = metadata;
+  const observeNative = async () => {
     if (metadata) {
-      const current = readDesktopNativeHostProcesses(fixture, group);
-      const runtime = separateDesktopOpenCodeRuntimeChildren(metadata, current,
-        current.children.length === metadata.children.length ? 0 : 1);
+      const { captured: current, runtime } = await observeDesktopOpenCodeMetadata(
+        { ...fixture, root: fixture.root! }, group, observedMetadata!);
+      observedMetadata = current;
       return { hostPid: current.host.pid, nativeChildren: runtime.map(child => ({
         pid: child.pid, ppid: child.parentPid, pgid: child.groupId,
       })) };
@@ -145,7 +149,7 @@ export async function prepareDesktopNativeStop(options: {
         assert.equal(session.nativeReady, false);
         assert.equal(session.sealed, false);
         assert.deepEqual(session.inputs, []);
-        const { hostPid, nativeChildren } = observeNative();
+        const { hostPid, nativeChildren } = await observeNative();
         if (nativeChildren.length) {
           assert.equal(nativeChildren.length, 1);
           evidence.nativeSetup = {
@@ -155,7 +159,7 @@ export async function prepareDesktopNativeStop(options: {
             launch: selection,
             session,
             nativeChildren,
-            ...(metadata ? { metadataBeforeLaunch: metadata, metadataSources } : {}),
+            ...(metadata ? { metadataBeforeLaunch: metadata, metadataSources, metadataAtRuntimeObservation: observedMetadata } : {}),
             nativeExecutableSha256: await fileDigest(executable),
           };
           return { hostPid, nativeChildren };
@@ -176,7 +180,7 @@ export async function prepareDesktopNativeStop(options: {
   }
   assert.equal(ready.status, 'ready');
   assert.equal(ready.ready, expectedMembers);
-  const { hostPid, nativeChildren } = observeNative();
+  const { hostPid, nativeChildren } = await observeNative();
   assert.equal(
     nativeChildren.length,
     expectedMembers,
@@ -189,7 +193,7 @@ export async function prepareDesktopNativeStop(options: {
     status: 'ready',
     launch: ready,
     nativeChildren,
-    ...(metadata ? { metadataBeforeLaunch: metadata, metadataSources } : {}),
+    ...(metadata ? { metadataBeforeLaunch: metadata, metadataSources, metadataAtRuntimeObservation: observedMetadata } : {}),
     nativeExecutableSha256: await fileDigest(executable),
   };
   return { hostPid, nativeChildren };
@@ -232,10 +236,7 @@ export async function readDesktopNativeStopSessions(
 }
 
 /** Read-only observations; original Host custody remains the only process owner. */
-export function readDesktopNativeHostProcesses(fixture: { node: string; hostEntry: string }, group: number): {
-  host: ProcessFact;
-  children: ProcessFact[];
-} {
+export function readDesktopNativeHostProcesses(fixture: { node: string; hostEntry: string }, group: number): DesktopNativeHostSnapshot {
   assert.ok(Number.isSafeInteger(group) && group > 0, 'original captured Desktop group');
   const table = processFacts();
   const hosts = table.filter(row => row.groupId === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
@@ -247,10 +248,21 @@ export function readDesktopNativeHostProcesses(fixture: { node: string; hostEntr
 export function separateDesktopOpenCodeRuntimeChildren(
   original: ReturnType<typeof readDesktopNativeHostProcesses>,
   current: ReturnType<typeof readDesktopNativeHostProcesses>,
-  expectedRuntimeCount: 0 | 1
+  expectedRuntimeCount: 0 | 1 | 3
 ): ProcessFact[] {
-  assert.ok(original.children.length === 1 || original.children.length === 2,
-    'only original global or global/project metadata captures are qualified');
+  if (original.metadataLineage || current.metadataLineage) {
+    assert.ok(original.metadataLineage && current.metadataLineage);
+    assert.deepEqual(current.host, original.host, 'same original Host birth identity');
+    assert.deepEqual(current.metadataLineage.profileHashes, original.metadataLineage.profileHashes);
+    assertDesktopMetadataLineageRetained(original.metadataLineage, current.metadataLineage);
+    const metadata = desktopActiveMetadata(current);
+    const runtimes = current.children.filter(row => !metadata.some(child => child.pid === row.pid));
+    assert.equal(runtimes.length, expectedRuntimeCount, 'only the expected original Runtime children');
+    for (const child of runtimes) assert.equal(child.command, metadata[0]!.command);
+    return runtimes;
+  }
+  assert.equal(original.children.length, 1,
+    'the legacy passive path retains exactly one original metadata child');
   assert.deepEqual(current.host, original.host, 'same original Host birth identity');
   assert.equal(new Set(original.children.map(child => child.pid)).size, original.children.length);
   for (const metadata of original.children)
@@ -260,6 +272,36 @@ export function separateDesktopOpenCodeRuntimeChildren(
   assert.equal(runtimes.length, expectedRuntimeCount, 'only the expected original Runtime children');
   for (const child of runtimes) assert.equal(child.command, original.children[0]!.command, 'same selected Bun executable');
   return runtimes;
+}
+
+/** Observe only the existing stderr/file and OS census; never repeat a catalog/native operation. */
+async function captureMetadataObservation(fixture: MetadataFixture, group: number,
+  profileHashes: readonly string[], original?: DesktopNativeHostSnapshot, expectedRuntimeCount?: 0 | 1 | 3) {
+  const deadline = Date.now() + 5000; let last: unknown;
+  do {
+    try {
+      const captured = readDesktopNativeHostProcesses(fixture, group), table = processFacts();
+      assert.deepEqual(table.find(row => row.pid === captured.host.pid), captured.host);
+      if (original) assert.deepEqual(captured.host, original.host);
+      captured.metadataLineage = readDesktopMetadataLineage(fixture.root, captured, profileHashes, table,
+        original?.metadataLineage);
+      const metadata = desktopActiveMetadata(captured);
+      const runtime = captured.children.filter(row => !metadata.some(child => child.pid === row.pid));
+      const expected = expectedRuntimeCount ?? runtime.length;
+      assert.ok(expected === 0 || expected === 1 || expectedRuntimeCount === 3 && expected === 3);
+      assert.equal(runtime.length, expected);
+      for (const child of runtime) assert.equal(child.command, metadata[0]!.command);
+      return { captured, runtime };
+    } catch (error) { last = error; }
+    await tick();
+  } while (Date.now() < deadline);
+  throw last;
+}
+
+export function observeDesktopOpenCodeMetadata(fixture: MetadataFixture, group: number,
+  original: DesktopNativeHostSnapshot, expectedRuntimeCount?: 0 | 1 | 3) {
+  assert.ok(original.metadataLineage);
+  return captureMetadataObservation(fixture, group, original.metadataLineage.profileHashes, original, expectedRuntimeCount);
 }
 
 type MetadataSource = { sourceId: string; revision: string; profileId: string; configRevision: string;
@@ -337,14 +379,13 @@ export async function captureDesktopOpenCodeGlobalMetadata(cdp: UiCdpPort, fixtu
   assert.ok(Array.isArray(catalog.models) &&
     catalog.models.map(object).some(model => model.modelId === 'test-local/TEST-model'));
   const source = await readDesktopOpenCodeMetadataSource(fixture.root, null);
-  const captured = readDesktopNativeHostProcesses(fixture, group);
+  const { captured } = await captureMetadataObservation(fixture, group, [desktopMetadataProfileHash(source)], undefined, 0);
   assert.equal(captured.children.length, 1,
-    'capture one global child before the first project catalog; early extra allocation is not adopted');
-  assert.equal(captured.children[0]!.command, process.env.OPENCODE_V2_EMBEDDED_BUN);
+    'capture one global owner before project selection; every earlier retired owner remains in the lineage');
   return { captured, source, runtimeDigest: await metadataOnlyRuntimeDigest(fixture.root) };
 }
 
-/** Preserve global birth and correlate the sole new child with the successful project-scoped read. */
+/** Preserve the full original lineage and correlate both captured scopes with their actual native owners. */
 export async function captureDesktopOpenCodeProjectMetadata(fixture: MetadataFixture, group: number,
   global: GlobalMetadata) {
   const sources = [await readDesktopOpenCodeMetadataSource(fixture.root, null),
@@ -352,15 +393,10 @@ export async function captureDesktopOpenCodeProjectMetadata(fixture: MetadataFix
   assert.deepEqual(sources[0], global.source, 'global selection did not change while project metadata loaded');
   assert.equal(await metadataOnlyRuntimeDigest(fixture.root), global.runtimeDigest,
     'catalog/preflight did not create or alter a Runtime');
-  const captured = readDesktopNativeHostProcesses(fixture, group);
-  assert.deepEqual(captured.host, global.captured.host);
-  assert.equal(captured.children.length, 2, 'one retained global and one new project metadata child');
-  const original = global.captured.children[0]!;
-  assert.deepEqual(captured.children.find(row => row.pid === original.pid), original);
-  const added = captured.children.filter(row => row.pid !== original.pid);
-  assert.equal(added.length, 1); assert.equal(added[0]!.command, original.command);
-  const metadataSources = sources.map((source, index) => ({
-    ...source, process: index === 0 ? original : added[0]!,
+  const { captured } = await captureMetadataObservation(fixture, group, sources.map(desktopMetadataProfileHash), global.captured, 0);
+  assert.equal(captured.children.length, 2, 'one observed native owner for each exact captured scope');
+  const metadataSources = sources.map(source => ({
+    ...source, process: desktopMetadataProcess(captured, desktopMetadataProfileHash(source)),
   }));
   assertDesktopOpenCodeMetadataSources(metadataSources, captured);
   return { captured, metadataSources };
@@ -384,6 +420,13 @@ export function assertDesktopOpenCodeMetadataSources(value: unknown, captured: u
   }
   const physical = object(captured);
   assert.ok(Array.isArray(physical.children));
+  const native = captured as DesktopNativeHostSnapshot;
+  assert.ok(native.metadataLineage, 'source correlation includes exact original owner observations');
+  assert.deepEqual(native.metadataLineage.profileHashes, rows.map(row => desktopMetadataProfileHash({
+    profileId: String(row.profileId), configRevision: String(row.configRevision),
+  })));
+  for (const row of rows) assert.deepEqual(row.process, desktopMetadataProcess(native,
+    desktopMetadataProfileHash({ profileId: String(row.profileId), configRevision: String(row.configRevision) })));
   assert.deepEqual(rows.map(row => row.process).sort((a, b) => Number(object(a).pid) - Number(object(b).pid)),
     [...physical.children].sort((a, b) => Number(object(a).pid) - Number(object(b).pid)),
     'source owner witnesses retain exactly the captured physical children');

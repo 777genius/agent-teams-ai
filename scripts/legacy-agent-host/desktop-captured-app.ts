@@ -9,7 +9,7 @@ import { performance } from 'node:perf_hooks';
 import { isDeepStrictEqual } from 'node:util';
 import { checkpoint } from './desktop-resume-records.ts';
 import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
-import { assertFirstResumeMetadataAbsent } from './desktop-opencode-v2-cold-metadata.ts';
+import { assertFirstResumeMetadataAbsent, observeDesktopMetadataClose } from './desktop-opencode-v2-cold-metadata.ts';
 import { bounded } from './desktop-proof-bounds.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { assertOwnedCdpListener, command, processTable, selectedCdpPort, compiledBundleHashes, getTargets, portOccupied,
@@ -32,6 +32,59 @@ const object = (value: unknown): Evidence => {
   return value as Evidence;
 };
 const tick = () => new Promise<void>(done => setTimeout(done, 100));
+
+/** Read-only census of one explicitly selected TEST executable; paths confer no signal authority. */
+export function selectedDesktopRuntime(executable: string): ProcessIdentity[] {
+  return execFileSync('/bin/ps', ['-ax', '-o', 'pid=,ppid=,pgid=,comm='], {
+    encoding: 'utf8', timeout: 3000,
+  }).trim().split('\n').flatMap((line) => {
+    const found = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(.+)$/.exec(line);
+    return found?.[4] === executable
+      ? [{ pid: Number(found[1]), ppid: Number(found[2]), pgid: Number(found[3]) }] : [];
+  });
+}
+
+/** Existing producer witness, shared by saved-only and original-Stop source epochs. */
+export function captureDesktopNativeExecutable(executable: string, group: number) {
+  const originals = new Map<string, ProcessIdentity & { birth: string; ancestry: number[] }>();
+  const birth = (pid: number): string | undefined => {
+    try {
+      return execFileSync('/bin/ps', ['-p', String(pid), '-o', 'lstart='], {
+        encoding: 'utf8', timeout: 3000,
+      }).trim() || undefined;
+    } catch (error) {
+      if (!processTable().some((entry) => entry.pid === pid)) return undefined;
+      throw error;
+    }
+  };
+  return {
+    observe() {
+      const table = processTable(), roots = new Set(table.filter((entry) => entry.pgid === group).map((entry) => entry.pid));
+      for (const child of selectedDesktopRuntime(executable)) {
+        const started = birth(child.pid);
+        if (!started) continue;
+        const key = String(child.pid) + ':' + started;
+        if (originals.has(key)) continue;
+        let parent = child.ppid;
+        const ancestry: number[] = [];
+        while (parent && !roots.has(parent) && ancestry.length < 64) {
+          ancestry.push(parent);
+          parent = table.find((entry) => entry.pid === parent)?.ppid ?? 0;
+        }
+        assert.ok(roots.has(parent), 'new TEST runtime child descends from the original app, never path-only adoption');
+        ancestry.push(parent);
+        assert.equal(birth(child.pid), started, 'same original child before and after ancestry read');
+        originals.set(key, { ...child, birth: started, ancestry });
+        assert.ok(originals.size <= 32, 'finite original runtime child census');
+      }
+    },
+    captured: () => [...originals.values()],
+    remaining() {
+      const present = new Set(processTable().map((entry) => entry.pid));
+      return [...originals.values()].filter((child) => present.has(child.pid) && birth(child.pid) === child.birth);
+    },
+  };
+}
 /** Existing bounded startup and CDP ownership checks shared by two captured TEST epochs. */
 export async function connectCapturedDesktopApp(options: {
   app: ChildProcess; group: number; spawnError(): boolean; packed: Packed;
@@ -512,7 +565,10 @@ export async function restartCapturedDesktopApp(options: {
   assert.equal(app.signalCode, null);
   assert.deepEqual(remaining, [], 'no group cleanup fallback before cold startup');
   assert.equal(hostAbsent, true); assert.equal(writerReleased, true);
-  if (!initial) assertFirstResumeMetadataAbsent(evidence);
+  if (!initial) {
+    await observeDesktopMetadataClose(fixture.root, evidence, true);
+    assertFirstResumeMetadataAbsent(evidence);
+  }
   const postQuit = await readSessions();
   if (!initial) for (const original of before) {
     const matches = postQuit.filter(row => isDeepStrictEqual(row.binding, original.binding));

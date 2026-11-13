@@ -4,6 +4,7 @@ import { nativeCommandMessage, parseNativeSessionCommand } from '../team/nativeS
 import { captureHostCostCommand } from '../team/hostCostCommand.js';
 import type { PrepareHostCost } from '../team/hostCostCommand.js';
 import { readTeamActivity, summarizeTeamActivity } from './readTeamActivity.js';
+import type { RuntimeActivitySource } from './runtimeActivitySources.js';
 import type { TeamCommand } from '../team/contracts.js';
 import type { RuntimeDelivery } from '../runtime/contracts.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
@@ -65,6 +66,7 @@ export function prepareNativeSessionCommand(
     principalId: string;
     runtime: Pick<RuntimeOwner, 'readCapturedSession' | 'readActivitySnapshot' | 'readActivityFeed'>;
     launch(): { launchId: string; startedAtMs: number | null } | undefined;
+    activityEntries?(entry: MemberEntry): readonly RuntimeActivitySource[];
     assertCurrent(): void;
   },
   command: TeamCommand
@@ -79,12 +81,13 @@ export function prepareNativeSessionCommand(
         throw new TeamOwnerError('hold');
     };
     assertCurrent();
+    const activityEntries = options.activityEntries?.(entry) ?? [entry];
     const logs = readTeamActivity({
-      team: options.team, principalId: options.principalId, entries: [entry],
+      team: options.team, principalId: options.principalId, entries: activityEntries,
       runtime: options.runtime, taskCause: () => null, assertCurrent,
     }, { memberName: command.payload.to });
     return captureHostCostCommand({
-      binding: entry.binding, stats: summarizeTeamActivity(command.payload.to, logs),
+      binding: entry.binding, stats: summarizeTeamActivity(command.payload.to, logs, activityEntries),
       launch: options.launch(), now: Date.now(),
     });
   };

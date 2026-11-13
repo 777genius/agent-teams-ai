@@ -69,3 +69,34 @@ export function createClaudeManagementDiagnostic(
     } catch { /* Observations never change admission, model results or physical cleanup. */ }
   };
 }
+
+/** Catalog observation only; these captured facts never grant process or cleanup authority. */
+export function createOpenCodeMetadataDiagnostic(
+  selected: { profileId: string; configRevision: string },
+  providerId?: string,
+  write: (line: string) => void = writeDiagnostic
+) {
+  const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+  const identity = Object.freeze({ profileHash: hash([selected.profileId, selected.configRevision]),
+    mode: providerId === undefined ? 'directory' : 'provider',
+    providerHash: providerId === undefined ? null : hash(providerId) });
+  let original: Readonly<{ pid: number; startIdentity: string }> | undefined;
+  let closed = false;
+  const emit = (stage: 'ready' | 'released' | 'cleanup-unknown') => {
+    try {
+      if (original) write(`legacy-agent-host: opencode-metadata ${JSON.stringify({ ...identity, ...original, stage })}\n`);
+    } catch { /* Missing diagnostics cannot confirm custody or change the catalog result. */ }
+  };
+  return Object.freeze({
+    ready(value: { pid: number; startIdentity: string }): void {
+      if (original || closed || !Number.isSafeInteger(value.pid) || value.pid <= 1 || !safeId(value.startIdentity)) return;
+      original = Object.freeze({ pid: value.pid, startIdentity: value.startIdentity });
+      emit('ready');
+    },
+    closed(confirmed: boolean): void {
+      if (closed) return;
+      closed = true;
+      emit(confirmed ? 'released' : 'cleanup-unknown');
+    },
+  });
+}

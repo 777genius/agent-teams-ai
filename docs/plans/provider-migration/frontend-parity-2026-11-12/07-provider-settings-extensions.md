@@ -555,6 +555,46 @@ cold Resume границы. Platform independently проверил source/child
 Эти TEST изменения прошли source review; fresh types, focused existing lifecycle checks и
 actual UI/native results для нового cut ещё необходимы. Expected count сам по себе не proof.
 
+**Review 5 — штатная смена metadata mode и точный lifecycle witness.** Actual a76 run
+`43354049572`, Active Quit job `131651721320`, падает на сохранении global PID 6350:
+после успешного project read присутствуют два children, но прежний global уже отсутствует.
+`CapturedRuntimeProviderStatusClient.readOpenCodeRuntimeStatus` запрашивает directory `catalog({})`,
+а `loadModels` — provider catalog; `ProviderManagementCoordinator.readV2Catalog` после завершения
+старого read штатно закрывает несовпавший mode и создаёт следующий owner. Review 4 ошибочно
+требовал бессменный PID. Production lifecycle ради этого TEST ожидания не меняем.
+
+1. **Привязать наблюдение к original owner.** Existing global/project source projections сохраняют
+   один seed cwd/environment; случайные catalog namespaces и private endpoint не входят в
+   RuntimeSourceIndex. Поэтому cwd, число children, время появления или PID сами по себе не
+   определяют owner. В existing `OpenCodeV2ManagementHost` наблюдать только catalog ready и итог
+   original close: captured profile/config hash, закрытый directory/provider mode, hash provider
+   selection, original nonce-checked ready PID/startIdentity. Ready не переснимается по PID;
+   released означает уже подтверждённые `server.stopOwned()` и cleanup исходных namespaces.
+   Credential command owners сюда не входят; ошибка диагностического sink не влияет на результат.
+2. **Переиспользовать private diagnostic path.** Передать эти фиксированные bounded записи через
+   существующие Host stderr framing, `decodeClaudeCloseDiagnostics`, `CapturedHostClient` и
+   `logger.diagnostic` в existing `app-errors.ndjson`. Не добавлять RPC/public DTO, journal,
+   owner, сигнализацию, произвольный error/config/auth payload или чтение secret stdin/proc args.
+   Не повышать лимиты; максимум ready + один released/unknown на исходный catalog owner.
+3. **TEST проверяет всю цепочку.** Связать profile hashes с exact derived global/project source
+   records, а original ready — с captured Host и наблюдаемыми native birth facts. Сохранить
+   прежние original identities: штатная замена допустима только после confirmed original release
+   и физического отсутствия прежнего child; новый child обязан иметь собственный owner-ready
+   witness того же captured scope/mode. Ни текущий selector, ни новый count не заменяют эту связь.
+   На поздних UI/readback границах повторно проверять ту же накопленную цепочку; не создавать
+   replacement baseline и не считать metadata child Runtime. Все unaccounted children, duplicate
+   live owners, unknown close, source drift или missing evidence остаются failure.
+4. **Сохранить существующие границы.** Passive/mixed one-owner сценарии сохраняют exact original
+   birth/absence; ordinary renderer reload не создаёт новый Host baseline. Новый baseline разрешён
+   только после actual cold Host boundary. Existing closed Runtime digest, no held model probe,
+   zero metadata inference и original Runtime Stop/Quit cleanup остаются обязательными.
+5. **Проверка без расширения suite.** Дополнить existing bounded diagnostic decoder regression
+   проверкой original identity, finite stages, malformed/secret rejection и broken sink; existing
+   Desktop lifecycle test — законной released→ready сменой и отказом при missing release/лишнем
+   child. Затем actual прежние Active Quit, cold Resume и R11 UI gates на одном новом SHA.
+   Таймеры, assertions готовности и production admission не ослаблять. До исполнения это source
+   correction, а прежние Review 4 source checks не считать actual PASS.
+
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts
 [M3]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/extensions/ExtensionStoreView.tsx
@@ -607,3 +647,90 @@ Root review нашёл гонку повторного preflight при readback
 с resourceHeld=false и неизменность всех закрытых Runtime, прежде чем фиксировать count/PASS.
 Account independently reviewed final UI/oracle/cleanup. Types и actual native/Desktop run для этого
 cut ещё не выполнены: unavailable local executor, CI remains required. Новых unit suites нет.
+
+### R13 — V1 metadata endpoint после Save/Refresh: фактический регрессионный разбор
+
+Actual `capturedManagement.safe-e2e.test.ts` на `1628b70e` завершает сохранение all-projects
+default с `runtime-unhealthy`. Диагностика separate TEST native process подтвердила
+`EADDRINUSE`: `RuntimeSourceIndex.managementProfile` создаёт отдельные profile/revision для
+project/global и новой конфигурации, сохраняя seed endpoint; прежний metadata child ещё владеет
+этим портом. Ошибка возникает в первом `readCatalog` до нового `model.probe`, а не в model
+limit validation. Не менять ожидаемый saved view и не повышать таймауты.
+
+Минимальный порядок исправления в существующем V1 owner:
+
+1. В `ProviderManagementCoordinator` последовательно выполнять полную original V1 операцию
+   на одном captured endpoint, включая завершение предыдущего read. Использовать тот же
+   bounded promise-chain приём, что в existing V2 catalog read; V2 branch не менять.
+2. Перед работой нового derived profile проверить исходные target/current/deadline заново,
+   закрыть только прежний V1 host из existing owner map на этом endpoint и потребовать его
+   confirmed cleanup. Никакого поиска процесса по порту/PID, shared-process kill, port guess,
+   fallback/adoption или изменения captured account/config.
+3. Existing `ManagementResourceFence` сохраняет запрет закрывать чужой active OAuth/probe
+   между authorize и callback. Проверка допускается только для исходного command, которому
+   принадлежит reservation; metadata read не получает право прервать его. Unknown cleanup
+   оставляет исходный owner и блокирует замену. Cancel использует только свой captured host.
+4. Ожидание очереди входит в прежний deadline; отмена/revocation до allocation не создаёт child.
+   Ошибка предыдущей операции не отравляет всю очередь, но cleanup debt не теряется. Конструктор
+   и captured profile сами по себе процесса не создают; новые store/owner/scheduler не нужны.
+5. Переиспользовать actual IPC→Host→TEST process preferences scenario: global/project Save,
+   наследование/default, V1 limits, cancel и shutdown должны пройти с теми же утверждениями.
+   Добавить только узкую проверку overlapping metadata и чужой pending OAuth в existing
+   management integration suite, если этот boundary не покрыт текущим case.
+6. Отдельная stale oracle в `team-create-launch.test.ts`: после P05/P07 `foreign/TEST-open`
+   — это structured `providerId=foreign` и `model=TEST-open` по
+   `launchConfiguration.applyLaunchConfiguration` / `captureCreateTeamDraft`. Проверить обе
+   части, тот же private account и нулевые Team/native effects; production mapping не менять.
+
+Review 1: one-shot metadata close после каждого GET отклонён — он обрывает штатный shared
+OAuth owner и создаёт лишние процессы. Выбран переход только между original owners на одном
+endpoint с прежней authority/fence. Source fix, focused checks и actual результат ещё не выполнены.
+
+
+### R12, review 6 — исходная native identity и durable redaction
+
+Actual Desktop V2 на `f2050de7`, run `43367646201`, job `131695834199`
+останавливается в `readEvents` на проверке `startIdentity`. Скачан официальный
+active-Quit artifact `14012120872`, ZIP SHA256
+`4f3ff4b6e4e1ce9e0d08f2e8ac243074c3d51f7fe9e81bfee1c019d1fb322848`.
+Этот ZIP сохраняет failure/receipt, но не `userData/logs`; конкретные исходные байты
+native identity из него не установлены.
+
+Source diagnosis отдельно подтверждён детерминированным проходом настоящих producer,
+Main decoder и persistent formatter: допустимый Darwin
+`bootUUID:pid:pidVersion:birth` превращается в `[redacted]:pid:pidVersion:birth`.
+`DarwinRegisteredProcess.readRootExecutable` создаёт исходную строку;
+`createOpenCodeMetadataDiagnostic` и `decodeClaudeCloseDiagnostics` принимают её
+без изменения. Далее `persistentAppLog.formatPersistentLogMessage` вызывает
+`sentryConfig.redactSentryEvent`, который штатно скрывает UUID. Прежние constructed
+`TEST-boot` cases не проходили через этот formatter и не проверяли данный boundary.
+Ссылки относятся к точному [source f2050de7](https://github.com/777genius/agent-teams-ai/tree/f2050de7e2bf52feb695393cb4dc07d1c0ee8d9a).
+
+Минимальное исправление:
+
+1. Только в существующем `CapturedHostClient` metadata diagnostic callback построить
+   закрытую durable projection: прежние owner/mode/provider/PID/stage/Host PID плюс
+   `startIdentityHash = SHA256(UTF-8 exact decoded original startIdentity)`.
+   Raw identity не передавать в общий logger. Host custody, stderr decoder и native
+   equality не менять; не отключать redaction и не допускать `[redacted]` как identity.
+2. В `desktop-opencode-metadata-lineage.ts` принимать ровно прежние поля с заменой
+   `startIdentity` на обязательный hex64 `startIdentityHash`. Ready/close/successor
+   по-прежнему связаны полным owner tuple; immutable prefix и запрет reused PID остаются.
+   Hash всегда получается из captured original ready, а не из текущего UI/PID.
+   Независимый OS census с parent/group/executable и неизменным `ps` birth сохраняется:
+   native identity hash и physical birth — разные доказательства, одно не подменяет другое.
+3. Расширить существующий critical subprocess/diagnostic case реальным проходом
+   producer → Host stderr → Main decoder/callback → persistent formatter → proof reader.
+   Проверить исходный UUID-format, одинаковый hash ready/confirmed-close, отказ при
+   иной native identity/owner и при raw/redacted поле. Existing lifecycle case продолжает
+   проверять original physical birth и retired absence. Новая suite/таймауты не нужны.
+4. Выполнить focused tests/types/lint; exact-head existing Desktop V2 lanes остаются
+   обязательной native приёмкой. Никакого вывода о product startup/Resume из исправления
+   test-observation boundary.
+
+Review 1: причина разделена на observed CI failure и воспроизводимый source-backed
+redaction path; отсутствие raw artifact bytes явно сохранено. Review 2 (Account):
+hash делать до logger из уже проверенного original observation, explicit fields,
+без spread неизвестных полей; custody и redaction остаются прежними. Review 3 (Root):
+полный native owner tuple и независимое physical birth evidence обязательны;
+hash не даёт process authority и не допускает PID adoption. Source fix ещё не выполнен.

@@ -30,6 +30,7 @@ import { projectRuntimeMember } from './projectRuntimeMember.js';
 import type { ProcessCustody } from './processCustody.js';
 import type { TeamMcpCrossTeamPort } from '../mcp/nativeCrossTeamContracts.js';
 import { readHostTeamActivity } from './readHostTeamActivity.js';
+import { readRuntimeActivitySources, readEntryActivitySources, isRetainedActivityBinding } from './runtimeActivitySources.js';
 import { HostInteractionControls } from './HostInteractionControls.js';
 import { createMemberEntry, createPreparedMemberEntry } from './createMemberEntry.js';
 import { projectRuntimeActivity } from './runtimeActivityProjection.js';
@@ -219,6 +220,7 @@ export class RuntimeTeamCoordinator {
             ? [...this.entries.values()].find(
                 (candidate) =>
                   candidate.binding.teamId === binding.teamId &&
+                  candidate.binding.runId === binding.runId &&
                   candidate.binding.memberId === binding.memberId
               )
             : undefined);
@@ -228,7 +230,7 @@ export class RuntimeTeamCoordinator {
         return (
           entry.team.owner.authorizeMemberBinding(binding, action) ||
           (action === 'read' &&
-            this.entries.has(this.key(binding)) &&
+            isRetainedActivityBinding(binding, entry, this.retainedLaunches) &&
             entry.team.owner.withLaunchAuthority(
               options.profile.principalId,
               'read',
@@ -604,11 +606,13 @@ export class RuntimeTeamCoordinator {
   }
 
   readTeamActivity(teamId: string, kind: 'logs' | 'stats', raw: unknown): JsonValue {
+    this.options.assertWriter();
+    if (this.sealed) throw new RuntimeOwnerError('hold');
     return readHostTeamActivity(
       {
         team: this.options.teams.get(teamId),
         principalId: this.options.profile.principalId,
-        entries: [...this.entries.values()],
+        entries: readRuntimeActivitySources([...this.entries.values()], this.retainedLaunches, teamId),
         runtime: this.runtime,
         assertCurrent: () => {
           this.options.assertWriter();
@@ -656,6 +660,7 @@ export class RuntimeTeamCoordinator {
     if (!team || this.sealed) throw new RuntimeOwnerError('hold');
     return prepareNativeSessionCommand({
       team, entries: this.entries.values(), runtime: this.runtime,
+      activityEntries: entry => readEntryActivitySources(entry, this.retainedLaunches, true),
       principalId: this.options.profile.principalId,
       launch: () => this.launches.get(teamId)?.read(),
       isCurrent: entry => this.isCurrent(entry),

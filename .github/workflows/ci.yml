@@ -875,6 +875,16 @@ jobs:
             qualification: 'Source Desktop and localhost inference only; no installed/packed or vendor-auth claim',
           }, null, 2));
           NODE
+      - name: Prepare current frontend runtime for its original Stop and import
+        if: matrix.import_launch == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          selected_node="$GITHUB_WORKSPACE/resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node"
+          mkdir "$STAGE1_INPUTS/current-runtime"
+          CLAUDE_DEV_RUNTIME_CACHE_ROOT="$STAGE1_INPUTS/current-runtime" "$selected_node" scripts/dev-with-runtime.mjs --print-runtime-path
+          printf 'LEGACY_DESKTOP_CURRENT_RUNTIME_CACHE=%s\n' "$STAGE1_INPUTS/current-runtime" >> "$GITHUB_ENV"
       - name: Verify captured Claude commands and original native receipt recovery
         if: matrix.mode == 'native-create-ui' && !matrix.variant
         run: |
@@ -1084,17 +1094,133 @@ jobs:
             assert.equal(imported?.status, 'PASS');
             assert.equal(imported.noLaunchSubmit, false, 'import-only is not native Launch acceptance');
             assert.equal(imported.nativeLaunch?.status, 'PASS');
-            assert.equal(imported.nativeLaunch.sourcePreparation?.sourceNativeInputs, 0,
-              'source preparation never claims old provider inference');
+            const source = imported.nativeLaunch.sourcePreparation;
+            assert.equal(source?.sourceNativeInputs, 1, 'actual current frontend source input required');
+            assert.equal(source.status, 'PASS'); assert.equal(source.sourceKind, 'actual-current-native-solo');
+            assert.deepEqual(source, receipt.currentStoppedProducer);
+            assert.equal(source.producer.commit, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+            assert.equal(source.producer.runtime.version, '0.0.158');
+            assert.equal(source.producer.runtime.cacheValidated, true);
+            assert.equal(source.hostDescriptorPresent, false); assert.equal(source.sourceFrozen, true);
+            assert.deepEqual(source.ordinaryQuit, { requestedOnce: true, exitCode: 0, signalCode: null,
+              originalGroupAbsent: true, remaining: [], listenerAbsent: true });
+            assert.deepEqual(source.cleanup.remaining, []); assert.equal(source.cleanup.cleanupFailure, undefined);
+            for (const census of [source.nativeChildren, source.nativeChildrenAfterCleanup]) {
+              assert.ok(census.captured.length >= 1 && census.captured.length <= 32);
+              assert.deepEqual(census.remaining, []); assert.deepEqual(census.unmatched, []);
+            }
+            assert.equal(source.originalStopDiagnostics.canonicalNodeRead.canonicalReleaseCurrent, true);
+            assert.equal(source.originalStopDiagnostics.canonicalNodeRead.proofParseable, true);
+            assert.equal(source.proof.target.runId, source.sourceRunId);
+            assert.equal(source.proof.target.sessionId, source.sourceSessionId);
+            assert.equal(source.model.turns.length, 1);
+            assert.deepEqual(imported.importedTask, source.sourceTask);
             const seedBytes = readFileSync(join(dirname(path), 'stopped-import-ui-seed.json'));
             assert.equal(createHash('sha256').update(seedBytes).digest('hex'), imported.seedSha256);
-            assert.equal(JSON.parse(seedBytes.toString('utf8')).sourceKind, 'captured-stopped-solo');
+            assert.equal(JSON.parse(seedBytes.toString('utf8')).sourceKind, 'actual-current-native-solo');
           }
           console.log(JSON.stringify({ status: receipt.status, mode: receipt.mode,
             variant: process.env.STAGE1_VARIANT, receipt: path }));
           }
           verify('desktop', process.env.STAGE1_MODE);
           if (process.env.STAGE1_READBACK_MODE) verify('readback', process.env.STAGE1_READBACK_MODE);
+          NODE
+      - name: Check out the exact old frontend for genuine saved-only records
+        if: matrix.mode == 'stopped-import-ui' && !matrix.variant
+        uses: actions/checkout@v6
+        with:
+          ref: 4a0e06277fe216d9f82dbbede362668fe46622ee
+          path: .stage1-donor-saved
+          persist-credentials: false
+      - name: Prepare the frozen donor toolchain and its ordinary runtime payload
+        if: matrix.mode == 'stopped-import-ui' && !matrix.variant
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/stage1-donor-saved-setup.log") 2>&1
+          selected_node="$GITHUB_WORKSPACE/resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node"
+          selected_donor="$GITHUB_WORKSPACE/.stage1-donor-saved"
+          test "$(git -C "$selected_donor" rev-parse HEAD)" = 4a0e06277fe216d9f82dbbede362668fe46622ee
+          test -z "$(git -C "$selected_donor" status --porcelain=v1 --untracked-files=no)"
+          "$selected_node" "$LEGACY_DESKTOP_PNPM_PATH" --dir "$selected_donor" install --frozen-lockfile
+          "$selected_node" "$LEGACY_DESKTOP_PNPM_PATH" --dir "$selected_donor" --filter agent-teams-controller build
+          "$selected_node" "$LEGACY_DESKTOP_PNPM_PATH" --dir "$selected_donor" --filter agent-teams-mcp build
+          CLAUDE_DEV_RUNTIME_CACHE_ROOT="$STAGE1_INPUTS/donor-runtime" "$selected_node" "$selected_donor/scripts/dev-with-runtime.mjs" --print-runtime-path
+          "$selected_node" "$selected_donor/scripts/ensure-terminal-platform-runtime.mjs"
+          test -z "$(git -C "$selected_donor" status --porcelain=v1 --untracked-files=no)"
+          printf 'LEGACY_DESKTOP_DONOR_PATH=%s\n' "$selected_donor" >> "$GITHUB_ENV"
+          printf 'LEGACY_DESKTOP_DONOR_RUNTIME_CACHE=%s\n' "$STAGE1_INPUTS/donor-runtime" >> "$GITHUB_ENV"
+      - name: Import actual donor UI output after original Quit and absence
+        if: matrix.mode == 'stopped-import-ui' && !matrix.variant
+        env:
+          LEGACY_DESKTOP_DONOR_SAVED_ONLY: '1'
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-donor-saved.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { createHash } from 'node:crypto';
+          import { readFileSync, realpathSync, lstatSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          const digest = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-desktop-donor-saved.log'), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'one original donor/consumer attempt');
+          const path = realpathSync(prepared[0].receipt), root = dirname(path);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
+          assert.equal(receipt.mode, 'stopped-import-ui'); assert.equal(receipt.status, 'PASS');
+          assert.equal(receipt.cleanup.capturedHostAbsent, true); assert.deepEqual(receipt.cleanup.remaining, []);
+          assert.equal(receipt.sourceFreezeFailure, undefined);
+          assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
+          const producer = receipt.donorSavedProducer, proof = receipt.donorSavedImportUiProof;
+          assert.equal(producer.status, 'PASS'); assert.equal(proof.status, 'PASS');
+          assert.equal(producer.producer.commit, '4a0e06277fe216d9f82dbbede362668fe46622ee');
+          assert.equal(proof.producerCommit, producer.producer.commit);
+          assert.equal(producer.producer.node.version, 'v24.21.0');
+          assert.equal(producer.producer.runtime.version, '0.0.160');
+          assert.equal(producer.producer.runtime.cacheValidated, true);
+          assert.equal(producer.hostDescriptorPresent, false); assert.equal(producer.sourceFrozen, true);
+          assert.deepEqual(producer.ordinaryQuit, { requestedOnce: true, exitCode: 0, signalCode: null,
+            originalGroupAbsent: true, remaining: [], listenerAbsent: true });
+          assert.deepEqual(producer.cleanup.remaining, []); assert.equal(producer.cleanup.cleanupFailure, undefined);
+          for (const census of [producer.nativeChildren, producer.nativeChildrenAfterCleanup]) {
+            assert.deepEqual(census.remaining, []); assert.deepEqual(census.unmatched, []);
+            assert.ok(census.captured.length <= 32);
+            for (const child of census.captured) {
+              assert.ok(Number.isInteger(child.pid) && child.pid > 0);
+              assert.ok(typeof child.birth === 'string' && child.birth.length > 0);
+              assert.ok(child.ancestry.length >= 1 && child.ancestry.length <= 65);
+            }
+          }
+          assert.deepEqual(producer.nativeChildrenAfterCleanup.captured, producer.nativeChildren.captured);
+          assert.equal(producer.nativeBusinessInputs, 0); assert.equal(producer.nativeIdentity, 'empty');
+          assert.equal(proof.nativeBusinessInputs, 0); assert.equal(proof.noLaunchSubmit, true);
+          assert.equal(proof.originalImportAfterReload, true);
+          assert.equal(proof.producerReceiptSha256, digest(join(root, 'desktop-donor-saved-producer.json')));
+          assert.equal(proof.seedSha256, digest(join(root, 'desktop-donor-saved-seed.json')));
+          assert.equal(proof.seedSha256, producer.seedSha256);
+          assert.deepEqual(proof.sourceBefore, producer.source);
+          assert.deepEqual(proof.sourceAfter, producer.source);
+          assert.ok(proof.sourceAfter.files.length >= 2);
+          for (const file of proof.sourceAfter.files) {
+            assert.ok(file.path.startsWith(root + '/') && !file.path.includes('/../'));
+            assert.equal(realpathSync(file.path), file.path);
+            assert.equal(digest(file.path), file.sha256, 'unchanged actual corpus after consumer Quit');
+          }
+          for (const absent of proof.sourceAfter.absent) assert.throws(() => lstatSync(absent), { code: 'ENOENT' });
+          assert.ok(proof.consumerProbeCount >= 1 && proof.consumerProbeCount <= 8);
+          assert.equal(producer.modelProbes.length, proof.producerProbeCount);
+          console.log(JSON.stringify({ status: 'PASS', receipt: path, producer: producer.producer.commit,
+            scope: 'Genuine donor saved-only settings and roster; native history/Review and attachments remain separate' }));
           NODE
       - name: Verify native commands through original Desktop Launch and Composer
         if: matrix.mode == 'native-create-ui' && !matrix.variant
@@ -1221,6 +1347,51 @@ jobs:
           console.log(JSON.stringify({ status: r.status, receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
             scope: 'Same native namespace: original UI Install/Create/Edit, cold startup, expanded native commands, Uninstall and new Query' }));
           NODE
+      - name: Verify original Schedule controls with finite native and task-first Host execution
+        if: matrix.mode == 'native-create-ui' && !matrix.variant
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: native-launch-ui
+          LEGACY_DESKTOP_SCHEDULE_UI: '1'
+          LEGACY_DESKTOP_COMMANDS_UI: ''
+          LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI: ''
+          LEGACY_DESKTOP_OPENCODE_MCP_UI: ''
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-native-schedules.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-desktop-native-schedules.log'), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const value = JSON.parse(line); return value.phase === 'prepared' && typeof value.receipt === 'string' ? [value] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1);
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const r = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
+          assert.equal(r.mode, 'native-launch-ui'); assert.equal(r.status, 'PASS');
+          assert.equal(r.sourceFreezeFailure, undefined);
+          assert.deepEqual(r.selectedSourceHashesAfterFlow, r.selectedSourceHashesBeforeApp);
+          assert.equal(r.cleanup.capturedHostAbsent, true); assert.deepEqual(r.cleanup.remaining, []);
+          const p = r.scheduleUi;
+          assert.equal(p.status, 'PASS'); assert.equal(p.finite.actualTool, true); assert.equal(p.finite.logVisible, true);
+          assert.deepEqual(p.finite.limits, { maxTurns: 6, maxBudgetUsd: 0.25 });
+          assert.equal(p.smart.actualTool, true); assert.equal(p.smart.nativeReplyVisible, true);
+          assert.equal(p.smart.cleanup, 'confirmed'); assert.equal(p.reloadWithoutReplay, true);
+          assert.equal(typeof p.finite.runId, 'string');
+          assert.equal(typeof p.smart.runId, 'string'); assert.notEqual(p.finite.runId, p.smart.runId);
+          assert.equal(typeof p.smart.taskId, 'string'); assert.ok(p.smart.taskId.length > 0);
+          assert.deepEqual(p.nativeRequests.map(row => row.mode), ['finite', 'finite', 'smart', 'smart', 'smart', 'smart']);
+          assert.deepEqual(r.model.failures, []);
+          console.log(JSON.stringify({ status: r.status, receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
+            scope: 'Original Schedule controls, actual native Bash and Team MCP, Stop, history and reload without replay' }));
+          NODE
       - name: Verify captured member MCP policies through original V2 Desktop controls
         if: matrix.variant == 'native-mixed-v2-create-launch-ui'
         env:
@@ -1235,6 +1406,7 @@ jobs:
           "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-native-captured-mcp.log"
           "$selected_node" --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
+          import { assertDesktopMetadataLineageRetained, assertDesktopMetadataReleasedEvidence } from './scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts';
           import { execFileSync } from 'node:child_process';
           import { readFileSync, realpathSync } from 'node:fs';
           import { dirname, join } from 'node:path';
@@ -1260,7 +1432,15 @@ jobs:
           assert.deepEqual(p.metadataSources.map(row => row.scope), ['global', 'project']);
           assert.equal(new Set(p.metadataSources.map(row => row.profileId)).size, 2);
           assert.equal(p.originalMetadataBeforeLaunch.children.length, 2);
-          assert.deepEqual(p.metadataAfterStop, p.originalMetadataBeforeLaunch);
+          const metadata = [p.originalMetadataBeforeLaunch, p.metadataAtRuntimeObservation, p.metadataAfterStop, p.metadataAfterReadback];
+          for (let i = 1; i < metadata.length; i++) {
+            assert.deepEqual(metadata[i].host, metadata[0].host);
+            assert.deepEqual(metadata[i].metadataLineage.profileHashes, metadata[0].metadataLineage.profileHashes);
+            assertDesktopMetadataLineageRetained(metadata[i - 1].metadataLineage, metadata[i].metadataLineage);
+          }
+          const present = execFileSync('/bin/ps', ['-ax', '-o', 'pid='], { encoding: 'utf8', timeout: 3000, maxBuffer: 2 * 1024 * 1024 })
+            .trim().split(/\s+/).map(value => ({ pid: Number(value) }));
+          assertDesktopMetadataReleasedEvidence(p.metadataAfterReadback, p.metadataAtHostClose, present);
           assert.deepEqual(p.savedPolicies, [
             { mode: 'strictAllowlist', scopes: { user: true, project: false, local: false }, serverNames: ['TEST.selected'] },
             { mode: 'appOnly' },
@@ -1391,6 +1571,9 @@ jobs:
             ${{ runner.temp }}/stage1-native-commands.log
             ${{ runner.temp }}/stage1-native-commands-inputs.json
             ${{ runner.temp }}/stage1-desktop-native-commands.log
+            ${{ runner.temp }}/stage1-desktop-native-schedules.log
+            ${{ runner.temp }}/stage1-donor-saved-setup.log
+            ${{ runner.temp }}/stage1-desktop-donor-saved.log
             ${{ runner.temp }}/stage1-desktop-native-extension-consumption.log
             ${{ runner.temp }}/stage1-desktop-native-captured-mcp.log
             /private/tmp/TEST-native-claude-compaction-*/receipt.json
@@ -1405,6 +1588,8 @@ jobs:
             /private/tmp/TEST-desktop-backend-*/owner-routing/**
             /private/tmp/TEST-desktop-backend-*/userData/agent-backend/bindings/**
             /private/tmp/TEST-desktop-backend-*/claude/teams/test-stopped-legacy/**
+            /private/tmp/TEST-desktop-backend-*/claude/teams/test-donor-saved-*/**
+            /private/tmp/TEST-desktop-backend-*/claude/tasks/test-donor-saved-*/**
             /private/tmp/TEST-desktop-backend-*/claude/tasks/test-stopped-legacy/**
             /private/tmp/TEST-desktop-backend-*/workspace/**
             /private/tmp/TEST-desktop-backend-*/home/TEST-mcp-catalog.json

@@ -668,9 +668,10 @@ test('Create compiles the same mixed-provider form into private member model che
     f.profile.runtime!.providerTemplates![1]!.accountBinding = 'TEST-new-account';
     assert.notEqual(captureCreateTeamDraft(f.profile, f.input).draftDigest, first.draftDigest);
     f.input.draft.members[1]!.memberSettings.model = 'foreign/TEST-open';
-    assert.equal(
-      captureCreateTeamDraft(f.profile, f.input).selections[2]!.selection.model,
-      'foreign/TEST-open'
+    const foreign = captureCreateTeamDraft(f.profile, f.input).selections[2]!.selection;
+    assert.deepEqual(
+      [foreign.providerId, foreign.model, foreign.profile.accountBinding],
+      ['foreign', 'TEST-open', 'TEST-opencode-account']
     );
     assert.equal(f.teams.size, 0);
     assert.equal(f.opens(), 0);
