@@ -2615,6 +2615,11 @@ service capability по-прежнему не включаем для остал
 - `createMemberProcessMcpPort.ts`, `createTeamProcessComposition.ts` и существующий Host wiring —
   same-member capture facet и global original-Main cleanup facet для read/Stop/lookup после
   Host replacement. Никакой implicit activation Codex/OpenCode V1/V2.
+- [`mcp/contracts.ts`@689](https://github.com/777genius/agent-teams-ai/blob/689dddb61cedf0649379975735bac162c87c2836/packages/legacy-agent-host/src/mcp/contracts.ts)
+  расширяет только существующий process port до sync/Promise результатов;
+  [`mcp/processTools.ts`@689](https://github.com/777genius/agent-teams-ai/blob/689dddb61cedf0649379975735bac162c87c2836/packages/legacy-agent-host/src/mcp/processTools.ts)
+  await register/list/metadata/lookup до прежней explicit projection. Имена и schemas tools,
+  metadata-only Stop/unregister, public результат и authority checks не меняются.
 - Продолжить existing command/registered-process fixtures: (a) lost capture ACK → cold lookup
   finishes once, (b) grant/source change после await не публикует row, (c) interrupted policy
   phase не регистрирует повторно, (d) pending Stop + metadata removal + replacement PID
@@ -2630,4 +2635,5 @@ service capability по-прежнему не включаем для остал
 Обнаружено отсутствие original policy input и границы before-policy-write; добавлен один закрытый
 receipt field с `policyRequested`, чтобы recovery не повторял неизвестный metadata effect.
 Natural registered-scope retirement и full Main cold lifetime явно не повышены до готовых.
-**R2/R3:** независимое чтение плана и последующего source/native proof pending.
+**R2:** Root и Account — bounded plan PASS; MCP sync projection gap закрыт явной source closure выше.
+**R3:** review новой реализации и actual native/old-format proof pending.
