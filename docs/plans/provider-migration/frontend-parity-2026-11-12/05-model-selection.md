@@ -444,3 +444,45 @@ For this inspected baseline production graph, failed native-tool verification th
 The already-reviewed successful Settings/defaults/limits journey correctly retains the option absent or false. Its four V1/three V2 Settings requests, one cold boundary, native consumption assertions and physical cleanup remain unchanged. No TEST source or product edit is needed for this documentation correction.
 
 This does not qualify current Host local-model safety or functional readiness. Whether its captured model proof preserves the original failed-tool/context refusal policy is a separate source and acceptance question; a successful no-tool model request or the absence of the old checkbox is not proof of that equivalence. Keep that question explicit without inventing an override feature or transferring a synthetic test result to native acceptance. No new job, matrix, suite, provider run, permission, input or budget change is authorized here. Root publishes this reviewed clarification; execution evidence still comes from the original relevant coherent-head CI.
+
+
+## 2026-11-13: сохранить OpenCode effort в существующем selector
+
+Исходный frontend/Host HEAD: `1160b575c4e43db045ab8726fd16d27bd611196a`.
+Provider source: `be99aa252454feb7730fe64787a4ecd8c9bdbd6b`.
+
+**Подтверждённая потеря:** `v2-owned-directory` удаляет уже проверенные variant IDs;
+V1 `readOpenCodeCatalog` также их не переносит. Management contract не содержит
+variants, а `CapturedRuntimeProviderStatusClient` безусловно возвращает пустой
+`supportedReasoningEfforts`. Existing `getTeamEffortSelectorPresentation` считает
+такой exact model authoritative и выключает прежний selector как Not supported.
+Baseline `ClaudeMultimodelBridgeService` сохраняет reported efforts.
+
+### Минимальный срез
+
+1. D directory сохраняет только валидированные IDs из существующей model
+   projection. Settings, headers, credentials и private variant data не выдаются;
+   прежние четыре metadata GET сохраняются.
+2. Host добавляет optional `variants` к model metadata. V1 берёт IDs из native
+   variant map, V2 переносит уже проверенный список. Main проверяет bounded
+   строки и дубликаты. Отсутствующее поле в старом snapshot остаётся допустимым.
+3. Status переносит только существующие значения `EffortLevel` в существующий
+   catalog. Явно пустой список сохраняет прежний Not supported; неизвестное имя
+   не создаёт новый UI capability. Catalog не становится proof авторизации или
+   model execution. Native selection и session admission не меняются.
+4. Расширить существующие D protocol, Host management и Main/status tests.
+   Existing renderer selector должен разрешать только reported choices.
+   Реальные Codex/Claude не запускаются; controlled Host/TEST process acceptance
+   остаётся отдельно от native engine acceptance.
+
+### Критика до реализации
+
+- R1: прослежен исходный путь native inventory → Host → Main → existing effort
+  selector; потеря подтверждена кодом, а не отсутствием поля в mock.
+- R2: исключены повторные per-provider reads, новый capability registry, перенос
+  private settings и произвольных variant labels в closed UI enum.
+- R3: root проверил границу и назначил отдельные source files; сохраняются stale
+  scope rejection, malformed metadata refusal и совместимость старых snapshots.
+
+Оценка: 65–100 production LOC, 45–75 test LOC; сложность 3/10, ожидаемая
+надёжность 8/10, уверенность в причине 9/10. Это план исправления, не PASS.
