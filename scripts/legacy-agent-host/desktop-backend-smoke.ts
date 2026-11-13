@@ -70,6 +70,7 @@ import {
   portOccupied,
   processTable,
   projectDesktopHarnessFailure,
+  projectDesktopMixedSettingsFailure,
   readOwnedCdpListenerFailure,
   selectedCdpPort,
 } from './desktop-backend-observations.ts';
@@ -746,6 +747,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     console.log(JSON.stringify({ status: evidence.status, receipt: receiptPath,
       ...(evidence.status !== 'PASS' && evidence.failureSource
         ? { failureSource: evidence.failureSource } : {}),
+      ...(mixedMode && evidence.status !== 'PASS'
+        ? { mixedSettingsFailure: projectDesktopMixedSettingsFailure(evidence) } : {}),
     }));
     if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
     if (controlledProcessMode) assert.equal(evidence.status, 'PASS', 'controlled process cold UI proof incomplete; original evidence retained');
