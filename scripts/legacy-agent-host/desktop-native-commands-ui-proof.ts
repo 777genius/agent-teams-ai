@@ -273,13 +273,15 @@ export async function runDesktopNativeCommandsUiProof(
     assert.equal(model.commandRequests.length, modelCount, '/cost makes no model request');
     const display = sanitizeDisplayContent(reply.text);
     assert.ok(display.length > 0, 'actual output is available for display');
-    const visible = `document.body.innerText.replace(/\\s+/g,' ').includes(${desktopJsLiteral(display.replace(/\s+/g, ' '))})`;
+    const originalRows = `[...document.querySelectorAll('[data-timeline-row-key]')].filter(e=>e.getAttribute('data-timeline-row-key')===${desktopJsLiteral(commandId)})`;
+    const visible = `(() => {const rows=${originalRows};return rows.length===1&&rows[0].innerText.replace(/\\s+/g,' ').trim().includes(${desktopJsLiteral(display.replace(/\s+/g, ' ').trim())});})()`;
     if (!(await cdp.evaluate(visible))) {
-      const header = `(() => {const cards=[...document.querySelectorAll('article.activity-timeline-card[data-expanded="false"]')].filter(e=>e.textContent.includes('/cost')&&e.firstElementChild?.getAttribute('role')==='button');if(cards.length!==1)return null;const e=cards[0].firstElementChild,r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))?{x,y,tag:e.tagName}:null;})()`;
+      const header = `(() => {const rows=${originalRows};if(rows.length!==1)return null;const cards=[...rows[0].querySelectorAll('article.activity-timeline-card[data-expanded="false"]')].filter(e=>e.textContent.includes('/cost')&&e.firstElementChild?.getAttribute('role')==='button');if(cards.length!==1)return null;const e=cards[0].firstElementChild,r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))?{x,y,tag:e.tagName}:null;})()`;
       await ui.clickExpression(header, 'expand actual native cost reply');
     }
     await ui.waitRead(visible, 'actual local command output appears in the conversation');
     await revealDesktopReply(cdp, display, {
+      messageId: commandId,
       assertOwnedRenderer: options.assertOwnedRenderer,
       step,
     });

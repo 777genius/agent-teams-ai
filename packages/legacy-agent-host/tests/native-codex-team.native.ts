@@ -14,7 +14,7 @@ import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
 import { deliveryFingerprint } from '../dist/runtime/identity.js';
 import { startTeamMcpEndpoint } from '../dist/mcp/index.js';
-import { cleanupCapturedCodexChild, nativeCodexDriver } from './fixtures/native-codex-team/driver.ts';
+import { cleanupCapturedCodexChild, nativeCodexDriver, projectCodexMetadataObservation } from './fixtures/native-codex-team/driver.ts';
 import { record, startCodexModel } from './fixtures/native-codex-team/model.ts';
 import type { CommandReceipt, DeliveryBinding, TeamCommand } from '../dist/team/contracts.js';
 import type { RuntimeBinding, RuntimeSessionRecord } from '../dist/runtime/contracts.js';
@@ -756,12 +756,14 @@ async function runCodexCandidate(options: {
   options.onDisposed();
   try { if (pins) await pins.verify(); } catch (error) { cleanupFailures.push(error); }
   passed = passed && cleanupFailures.length === 0;
+  const metadataObservation = projectCodexMetadataObservation(drivers[0]?.metadataObservation());
   const receiptPath = join(root, 'receipt.json');
   await writeFile(receiptPath, JSON.stringify({
     status: passed ? 'PASS' : 'INCOMPLETE', scope: 'public-D Codex 0.169.0 candidate Darwin ARM64',
     artifacts: { inputs: pins?.evidence, node: { version: process.version, sha256: await hash(options.selectedNode) },
       provider: { sha256: await hash(options.providerArtifact), entry: import.meta.resolve('@agent-teams/provider-implementations/codex') } },
-    nativeVersion, originalShell, selectedModel: chosen, catalog, permission, checkpoint: checkpointEvidence, checkpointReads,
+    nativeVersion, originalShell, selectedModel: chosen, catalog, metadataObservation,
+    permission, checkpoint: checkpointEvidence, checkpointReads,
     businessReceipts: business, interruption, closes, native: drivers.map((driver, index) => ({
       role: ['metadata', 'C1', 'C2'][index], facts: { ...driver.facts, errors: driver.facts.errors.map(row =>
         ({ method: row.method, code: typeof row.code === 'number' && Number.isFinite(row.code) ? row.code : 'unknown' })) }, wire: driver.candidateWire,
@@ -774,6 +776,15 @@ async function runCodexCandidate(options: {
     excluded: ['Host/source eligibility', 'Desktop/installer', 'cross-version restore', 'descendant custody', 'durable Runtime dispatch'],
   }, null, 2), { mode: 0o600 });
   console.log(JSON.stringify({ status: passed ? 'PASS' : 'INCOMPLETE', scope: 'codex-0.169.0-candidate', receipt: receiptPath }));
+  if (!passed) {
+    try {
+      const observation = projectCodexMetadataObservation(metadataObservation);
+      if (observation) {
+        const line = JSON.stringify({ kind: 'TEST_CODEX_METADATA_CALLBACKS', observation });
+        if (Buffer.byteLength(line + '\n', 'utf8') <= 2048) console.log(line);
+      }
+    } catch { /* Passive diagnostics cannot replace the original failure or cleanup evidence. */ }
+  }
   if (!passed)
     throw new AggregateError([...(firstFailure === undefined ? [] : [firstFailure]), ...cleanupFailures], 'TEST candidate original failure/cleanup');
 }
