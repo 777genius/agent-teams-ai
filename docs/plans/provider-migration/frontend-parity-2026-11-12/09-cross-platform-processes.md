@@ -1678,3 +1678,175 @@ Independent plan reviews (Profiles и root) — PASS. Reused TEST helpers дол
 - Узкие файлы: `tools/owned-process-broker/nativeFixture.cpp`, existing `nativeGateContext.ts` (типизированный TEST helper для двух закрытых ответов), новый `nativeRetainedHostGate.ts`. Остальные fixture modes и production broker неизменны. Native gate требует `alive` после обычного SDK input, `alive` после доказанного exit Host в crash-case и `absent` после Main cleanup через тот же исходный HANDLE; затем original witness exit0 и controller Job0. Соседний sentinel остаётся жив до собственного cleanup.
 - Это исправление TEST oracle. Оно не активирует private product mode, не подтверждает rebind/Registry/SDK cold conversation и не заменяет реальное исполнение на Windows x64/ARM. Пока новый сценарий не прошёл, §38 A остаётся source candidate.
 - Основание: [Microsoft WaitForSingleObject](https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject); исходный HANDLE, а не Node event delivery, задаёт объект наблюдения.
+
+
+## 41. §39: genuine old checkpoint в существующем native Resume CI
+
+План до TEST source. Локальный isolated exact1d0 checkout, frozen install и build
+были выполнены; producer был запущен, но его результат не был прочитан до потери
+исполняемой среды. Этот запуск остаётся **INCOMPLETE / outcome unknown**: checkpoint,
+успех или ошибка native не заявляются. CI использует новый private TEST root и
+новые original operation IDs; прежний root не подхватывается и ONE в нём не
+повторяется. Это новый независимый corpus, не replay незавершённого опыта.
+
+### Круг 1 — штатный CI seam и минимальные файлы
+
+- Использовать существующую строку `stage1-desktop` с
+  `matrix.mode == 'native-resume-ui' && !matrix.variant` в
+  [ci.yml](https://github.com/777genius/agent-teams-ai/blob/cd2406a1cd040cf451a504857ebd5c985579c3da/.github/workflows/ci.yml).
+  Runner, Node24.21.0 darwin-arm64, root GO, current source/native freeze,
+  45-minute job budget и обычный current Desktop cold Resume сохраняются.
+  Новый runner, matrix row, scheduled job или увеличение native timeout не нужны.
+- Перед обычным UI journey добавить `actions/checkout@v6` exact
+  `1d0f97f55de566036c970eab4f36b84620afdb3f` в отдельный
+  `.stage1-checkpoint-donor`, `persist-credentials: false`. Это тот же штатный
+  checkout seam, который уже применён к P10 donor4a; оба checkout независимы.
+  Проверить HEAD и чистоту tracked source до/после frozen install/build.
+- Donor собирается original `pnpm-lock.yaml` и packageManager
+  `pnpm@11.22.0`, без подмены provider archive, SDK или старых source files.
+  Использовать существующий pinned Node/pnpm и обычный Host build с его
+  task-change-ledger prebuild. Before execution сохранить original source/dist,
+  original provider/contracts archive и installed D bytes, SDK/native path+SHA.
+  Для producer действуют original9ede pins §39; current D f4 archive проверяется
+  отдельно: SHA256 `73c7034aef1283ee694114d2a31d12383370286b45c18120958ca0edef789957`.
+  Actual compiled `dist/cli.js` old/current SHA, Node SHA и original persisted
+  owner/build/profile fields сравниваются отдельно, без изменения ожидаемых
+  значений. Source `cli.ts` у old1d/current cd2406 имеет один blob
+  `255c0952a3a58e511c7bd790b1b34dd0d1330393`, но это ещё не compiled equality.
+  Полный source/dist/D provenance обоих исполнителей сохраняется даже при
+  равенстве entry SHA; одинаковая entry не означает одинаковый implementation.
+- Единственный native TEST entry — существующий
+  [native-claude-host.native.ts](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/packages/legacy-agent-host/tests/native-claude-host.native.ts).
+  Добавить explicit opt-in donor mode, сохранив default path. Reuse original
+  `native-host.ts:startHost` и finite `native-claude-team/model.ts` из frozen
+  donor, с записанными source hashes; current orchestration hash хранить отдельно.
+  Не запускать старую Darwin suite на другой OS и не ослаблять её guard.
+  Existing 180-second test deadline, readiness/input/cleanup budgets сохраняются.
+  Если небольшой TEST projection нужен для читаемости, поместить его в существующий
+  fixture module; отдельный harness, suite или compatibility framework не создавать.
+
+### Круг 2 — producer, неизменённые bytes и отрицательный current consumer
+
+1. Original donor Host и его original D создают application records обычными
+   Team/Runtime RPC в новом TEST HOME/config/workspace/store. Существующий selected
+   model `claude-opus-4-6`, effort `medium`, MCP/tool effects и ONE/TWO scenario
+   сохраняются. Native executable определяется именно original SDK resolver,
+   проверяется по selected Darwin pin; PATH fallback и другой установленный CLI
+   не допускаются.
+2. После одного terminal ONE и settled original notifications вызвать обычный
+   `runtime.checkpoint` с source generation, затем original `runtime.stop`.
+   Использовать exact RPC contract из
+   [old native-mixed-host.native.ts](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/packages/legacy-agent-host/tests/native-mixed-host.native.ts):
+   `memberId, checkpointId, expectedGeneration`, а Restore —
+   `memberId, reference, expectedGeneration`. Не создавать checkpoint/restore
+   records напрямую и не синтезировать release.
+3. До любого consumer заморозить исходные checkpoint bytes и SHA, original
+   sourceBinding/profileId/sourceConfig, selected member/base/config digests,
+   source owner/build/Node/entry identities и native transcript prefix+SHA.
+   Проверять bytes вновь после каждого этапа. Native backing остаётся в том же
+   private namespace; его session ID, cwd, profile, model endpoint и config
+   не переписываются.
+4. Выполнить только driver-level negative inspection через **current public D**
+   `openClaudeSession` из checked f4 archive на actual original opaque payload.
+   Все compatibility fields выводятся из original saved selection и exact old
+   adapter/D projection, включая required-tool order, generated instructions,
+   attachment metadata и optional fields. Before invocation original D's pure
+   compatibility computation обязана совпасть с genuine checkpoint hash.
+   При несоответствии projection test отказывает: запрещены подбор hash, удаление
+   полей, подмена opaque bytes или ослабление equality.
+5. Current projection отличается только explicit canonical original executablePath;
+   его selected bytes и namespace остаются теми же. Non-hash callback ports в
+   этой отрицательной inspection — TEST tripwires: sessionExists, probe, native
+   launch и attachment resolution не должны вызываться. Требовать exact
+   `checkpoint-incompatible`, ноль native allocations/model requests и полную
+   неизменность corpus. Не использовать test SDK query, чтобы выдавать fake native
+   успех. Это доказательство actual old payload + current public-D refusal,
+   не Main migration и не положительный Resume.
+6. После negative inspection original **old owner** штатно cold-starts со своим
+   прежним profile/build/entry, выполняет original selected Restore и один TWO.
+   Resume не отправляет ONE повторно; его own new generation обязательна.
+   Existing native history/tool marker, один эффект ONE и один TWO, canonical
+   replies, model/effort и terminal cleanup доказывают пригодность самого corpus.
+   Этот old→old baseline не переименовывается в old→current. Общий native input
+   count — прежние два; current-D negative check не добавляет input.
+
+### Круг 3 — reviewable receipts и граница следующего исправления
+
+- Existing CI step обязан прочитать единственный receipt данного нового запуска,
+  проверить donor commit/archive/source/dist/native hashes, immutable original
+  checkpoint, old baseline restored history, no-allocation current refusal и
+  confirmed original cleanup. Closed status явно называется
+  `CORPUS_QUALIFIED_CURRENT_D_REFUSED`; его нельзя считать provider parity PASS.
+  Любая непроверенная projection, missing history, cleanup unknown или лишний
+  model request оставляют этап неуспешным и original diagnostic evidence доступным.
+- Расширить existing `always()` artifact whitelist только этим TEST receipt,
+  bounded original Host diagnostics, frozen checkpoint/native TEST transcript
+  prefix и source identity manifest. Не загружать личный HOME, общий cache,
+  неотфильтрованные environment dumps или файлы соседних TEST roots.
+- Прежний current Desktop cold selected Resume выполняется как раньше и имеет
+  свой receipt. Для ordinary current Main route сначала сравнить actual old
+  persisted owner/handle с independently captured current client identity:
+  ownerId/revision/storageRoot/profileId/protocolVersion/buildId/Node SHA/entry SHA
+  должны действительно совпасть; original private profile bytes и executable
+  остаются неизменными. При genuine compiled equality существующий router может
+  законно выбрать current entry под той же retained identity — отдельный migration
+  API заранее не требуется и его отсутствие само по себе не объявляется gap.
+  Нужна actual ordinary route через existing Main, а не вывод из одинакового
+  source blob. Standalone producer сам по себе не создаёт Main handle: его
+  отсутствие нельзя восполнить ручной записью; такой route остаётся отдельной
+  проверкой existing Desktop journey с genuine initial persisted handle.
+  Если actual entry/Node/build/profile/owner расходятся, current route обязан
+  отказать; нельзя подставлять old hash, менять binding или bootstrap. Только
+  такое подтверждённое расхождение требует отдельного reviewed transition.
+- Только после genuine corpus/strict refusal и authority audit выбрать D-owned
+  compatibility correction по §39, отдельно опубликовать exact eligibility plan
+  и доставить через owning source repo/immutable package. Затем тот же native
+  journey должен действительно выполнить TWO через authorized current consumer
+  с original history, без дополнительных prompt retries. Current→current UI
+  PASS, pure hash equality и old→old baseline не закрывают thread
+  `PRRT_kwDORVTEtM623zRO`.
+
+Самопроверка: defaults и existing UI не заменены; donor source не модифицируется;
+новой production API/registry нет; чужая executable identity не ослабляется;
+неизвестный первый local outcome сохранён отдельно. Source ещё не изменён.
+
+Независимый cold-owner source audit (Profiles, exact cd2406): BackendOwnerRouter
+`registerOwner` фиксирует profile/build/Node/entry identity и не принимает повторный
+ownerKey/storageRoot; `resolveOwner` требует whole original owner equality;
+`createHandle/retain` сохраняют original owner и scope, default change не переносит
+handle. FileHandleBindingStore использует immutable `atomicCreateAsync`, метода
+update/rebind нет. Эти seams подтверждают retained-original-owner routing и запрещают подмену
+identity. Они не запрещают current implementation, если actual compiled entry,
+Node, build/profile и все persisted owner fields действительно остаются прежними.
+Равенство и ordinary current Main route ещё не исполнены; source audit не
+зачитывается вместо них.
+
+## 42. §38 A: admission при одновременных Launch и Close
+
+**Доказанный source gap A30.** `HostedTeamDefinition.members.max(256)` допускает более 32 участников; `TeamLaunchOwner.start` вызывает `startMember` для каждого без общего serial wait. `RuntimeTeamCoordinator.close` также начинает закрытие всех entry и pending opens параллельно. Текущий `HostCustodyClient.request` немедленно возвращает refusal при 24 work / 32 total pending. Поэтому медленные prepare могут сорвать следующий allocate/stdio, а одновременные Stop — закрепить unknown в original attempt cache до освобождения capacity. Это не native failure из CI; это достижимая ошибка admission в новом source candidate. A30 не активировать и не публиковать как готовый bridge.
+
+### Узкая коррекция в существующем transport
+
+1. Единственная bounded admission queue остаётся внутри existing `HostCustodyClient`, только для закрытого native family. `HostWindowsLaunch` вызывает её с operation discriminator и отложенным builder исходного call. Work и control сохраняют FIFO внутри каждой lane; control выбирается раньше work. Идентификатор wire request присваивается **один раз, только при первом dispatch**. Из очереди не делается повторный dispatch или automatic retry.
+2. У очереди ограничены continuation references (не более 1536, то есть 6 на уже ограниченные 256 allocations); один stream pull / serialized stdin write и coalesced original Stop сохраняют собственные bounds. Frame/base64 материализуется лишь при admission. Data остаётся в исходных bounded SDK/native streams и captured launch spec; отдельная копия queued wire payload не создаётся. Сам serialized launch buffer по-прежнему максимум 1 MiB и один во время staging.
+3. Existing `HostOutput` предоставляет узкую проверку private capacity и callback после освобождения исходной write capacity. Это позволяет ждать одновременно request slots **и** общий priority byte budget; нет polling, таймерных retries, нового scheduler class или отдельного RPC. Existing 32/8 pending limits, 32 KiB frames, 16 KiB chunks, priority/data budgets и write timeout не увеличиваются. Work не забирает восемь control slots или reserved control bytes.
+4. Original absolute deadline фиксируется до попадания в очередь. Allocate/chunks/commit/prepare/resume используют единый прежний launch deadline; Stop/drain — срок исходного caller. Queued request на deadline или seal завершается как **known-not-dispatched operation**, что не является process absence/cleanup proof. После dispatch timeout/EOF остаётся unknown; старый outcome, attemptRef и original Main custody не переписываются.
+5. Кратковременная capacity pressure сама по себе не завершает original Stop неизвестным: та же original invocation ждёт slot и получает только свой ACK. Исчерпанный original deadline не продлевается; новый explicit close использует существующий bounded attempt contract, без автоматического нового ID и без повторения ранее dispatched effect.
+6. Host loss запечатывает очередь исходной binding/epoch, не переводит её successor. Graceful input seal отклоняет queued allocate/resume/write/end, но оставляет original read/observe/Stop/drain/release до прежнего disposal deadline. Физический owner Main и original cleanup сохраняются независимо от queued replies.
+7. Existing launch staging tail допускает ожидание одного исходного spec на retained allocation (до 256), вместо отказа на 33-м члене. Копируется/фиксируется исходный immutable spec до ожидания; бинарный buffer кодируется только при начале serial staging, после commit начинается следующая staging. **Длительный native prepare не сериализует остальные SDK.** FIFO внутри work/control и original hint marker правила §34 сохраняются.
+
+### Файлы и приёмка
+
+- Production: `owned-process/hostCustody.ts` (closed admission), `owned-process/HostWindowsLaunch.ts` (lazy builders / original bounds), existing Host `output.ts` + `index.ts` (capacity callback). Main physical owner, broker protocol и receipt semantics не меняются.
+- Расширить existing `transport.test.ts` и/или actual subprocess case в `capturedHostClient.test.ts` с existing `retainedNativeCustody.ts`; не создавать mapper unit suite. Барьеры явные, без timer inflation.
+- При удержанных work requests более 24 original launch/stdio calls ожидают admission; после освобождения slot исходные bytes проходят ровно один раз. Более 32 одновременных original cleanup calls также ждут свои слоты, не становятся cached unknown только из-за заполненности. Пока work и byte budget заняты, control сохраняет резерв.
+- Проверить deadline-before-dispatch (zero native effect), EOF/seal queued (no successor delivery), original dispatched lost ACK (unknown без replay), сохранение lower-sequence work после control overtaking и нового readiness edge после старого read. Использовать существующие две regression boundaries §34 вместо дублирования suite.
+- Полный A source снова проходит build/type/subprocess review после коррекции. Предыдущие 21 PASS относятся к A30 и не выдаются за тестирование новой очереди. Native §38/40 остаётся обязательным на Windows x64/ARM; никакой default activation до actual result.
+
+Independent plan review: §41 Profiles + root — PASS; exact compiled identity
+equality остаётся проверкой, source cli equality её не заменяет. §42 root —
+PASS: queue pressure не является completed/absent proof, original deadline
+действует до первого dispatch, dispatched unknown никогда не replays. Временный
+refusal до dispatch и физический cleanup различаются; bounded explicit subsequent
+close не должен переиспользовать навсегда ошибочно закешированный no-dispatch
+unknown. Existing control reserve и wire byte limits не повышаются.
