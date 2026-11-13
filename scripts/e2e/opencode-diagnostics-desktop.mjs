@@ -634,6 +634,46 @@ if (mode === 'seed-packaged') {
       try {
         await enterProviderSettings(evaluate, send);
       } catch (navigationError) {
+        // Preserve failure-only renderer bootstrap evidence. Main's startup
+        // ready=true does not prove that Vite loaded the renderer entry module.
+        // Retain only pathnames and timings, never raw URL queries or credentials.
+        try {
+          const rendererBootstrap = await evaluate(`(() => {
+            const pathOf = (value) => { try { return new URL(value).pathname; } catch { return null; } };
+            return {
+              readyState: document.readyState,
+              rootChildCount: document.getElementById('root')?.childElementCount ?? null,
+              splashPresent: Boolean(document.getElementById('splash')),
+              staticSplashTimerActive: window.__claudeTeamsSplashStaticTimer !== undefined,
+              rendererUiDidInit: window.__claudeTeamsUiDidInit === true,
+              vitePreambleInstalled: window.__vite_plugin_react_preamble_installed__ === true,
+              scripts: [...document.scripts].map(script => pathOf(script.src)).filter(Boolean).slice(0, 20),
+              rendererResources: performance.getEntriesByType('resource')
+                .filter(entry => {
+                  const path = pathOf(entry.name) ?? '';
+                  return path.includes('/src/renderer/main.tsx') || path.includes('/@vite/client');
+                })
+                .slice(-12)
+                .map(entry => ({
+                  path: pathOf(entry.name),
+                  initiatorType: entry.initiatorType,
+                  durationMs: Math.round(entry.duration),
+                  responseStatus: entry.responseStatus ?? null,
+                  transferSize: entry.transferSize,
+                })),
+              navigationDomContentLoadedMs: performance.getEntriesByType('navigation')[0]?.domContentLoadedEventEnd ?? null,
+            };
+          })()`);
+          await writeFile(
+            path.join(root, `navigation-failure-${scenario}.json`),
+            JSON.stringify(rendererBootstrap, null, 2) + '\n'
+          );
+        } catch (bootstrapDiagnosticError) {
+          await writeFile(
+            path.join(root, `navigation-failure-${scenario}-diagnostic-error.txt`),
+            String(bootstrapDiagnosticError).slice(0, 500)
+          );
+        }
         // Preserve an actual screenshot if navigation cannot become visible.
         try {
           const screenshot = await send('Page.captureScreenshot');
