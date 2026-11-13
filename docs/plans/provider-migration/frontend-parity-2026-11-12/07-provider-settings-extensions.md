@@ -957,3 +957,21 @@ cases (включая11 cold lineage) и4 finite Node24 sampler/close cases — 
 scripts/Host test types, fast lint и source cap — PASS. Native failure reason,
 all cold Desktop flows и отдельный Review2-owner результат ещё требуют actual CI.
 R16 A/B root design review — PASS: exact original handles/guards и прежние budgets сохранены.
+
+### R16 A/B implementation evidence
+
+Five-file cut основан на parity `a2f327c8b07142a2ec857a5be6e0924c84f0fcef`.
+A переносит единственный selection read после original target capture; final
+profile/revision/generation/foreground guards и counts остаются прежними.
+B связывает immutable closed metadata projection только с original validation Error
+после того же parsed log read; malformed/unvalidated logs projection не получают.
+Ожидаемые два metadata owner, original exception и native calls не изменены.
+
+Existing first-publication case сначала воспроизвёл отказ (15 PASS / 1 FAIL),
+после correction весь existing file16/16 PASS. Existing lifecycle file11/11 PASS.
+Profiles и root source review — PASS; root повторил эти27 cases на coherent a2 base.
+Focused Main types, scripts types, fast lint (0 errors, 2 прежних warnings) и
+source-size cap — PASS. Новая unit suite не добавлялась.
+Actual first-status/Desktop acceptance и отдельная причина Review expected2/actual1
+остаются pending штатного exact-head CI; diagnostic projection не означает fix
+неустановленной metadata причины.
