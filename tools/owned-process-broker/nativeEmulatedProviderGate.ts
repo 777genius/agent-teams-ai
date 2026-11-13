@@ -13,11 +13,13 @@ import { captureMainWindowsCustody } from '../../src/features/agent-backend/main
 import { capturedWitness, timeout } from './nativeGateContext';
 import { createNativeGateEvents } from './nativeGateEvents';
 import { fileHash, prepareEmulatedProfile } from './nativeEmulatedProfile';
+import { nativeEmulatedSourceScenario } from './nativeEmulatedSourceScenario';
 import { nativeLauncherScenarios } from './nativeLauncherScenario';
 
 import type { HostCustodyOwner } from '@agent-teams/legacy-agent-host/owned-process';
 import type { JsonValue } from '../../packages/legacy-agent-host/dist/contracts.js';
 import type { WindowsServiceCapture } from '../../packages/legacy-agent-host/dist/owned-process/retainedServiceContracts.js';
+import type { EmulatedSourceProvider } from './nativeEmulatedSourceProfile';
 
 const object = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Record<string, unknown>;
@@ -162,7 +164,14 @@ async function providerScenario(sandbox: string, broker: string, actor: string,
 }
 
 async function main() {
-  const [wholeBroker, actor, _birthFault, _accountingFault, _releaseFault, scopedBroker, receiptPath, flag, sandbox] = process.argv.slice(2);
+  const [wholeBroker, actor, _birthFault, _accountingFault, _releaseFault, scopedBroker, receiptPath, ...tail] = process.argv.slice(2);
+  let sourceProvider: EmulatedSourceProvider | undefined;
+  if (tail.length === 4) {
+    assert.equal(tail[0], '--test-source-provider');
+    const selected = tail[1]; assert.ok(selected === 'codex' || selected === 'claude' || selected === 'opencode');
+    sourceProvider = selected;
+  } else assert.equal(tail.length, 2, 'Exact original or one explicit source invocation');
+  const [flag, sandbox] = tail.slice(sourceProvider === undefined ? 0 : 2);
   assert.equal(process.platform, 'win32'); assert.equal(process.version, 'v24.21.0');
   assert.match(process.env.HOST_PROCESS_SOURCE_HEAD ?? '', /^[a-f0-9]{40}$/);
   assert.ok(wholeBroker && actor && scopedBroker && receiptPath && sandbox); assert.equal(flag, '--controller-sandbox');
@@ -173,13 +182,21 @@ async function main() {
   const sentinel = spawn(paths[1]!, ['sentinel'], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
   const exited = new Promise<number | null>((resolveExit, reject) => { sentinel.once('exit', resolveExit); sentinel.once('error', reject); });
   void exited.catch(() => undefined);
-  const providers: unknown[] = [], wrappers: string[] = [];
+  const providers: unknown[] = [], wrappers: string[] = [], sourceScenarios: Record<string, unknown>[] = [];
   let complete = false, cleanup = false, failure: unknown;
   try {
     await timeout(new Promise<void>((resolveReady, reject) => { sentinel.stdout!.once('data', () => resolveReady()); sentinel.once('error', reject); }));
-    wrappers.push(...await nativeLauncherScenarios(realpathSync(sandbox), paths[0]!, paths[1]!));
-    for (const provider of ['codex', 'opencode'] as const)
-      providers.push(await providerScenario(realpathSync(sandbox), paths[2]!, paths[1]!, provider, sentinel));
+    if (sourceProvider === undefined) {
+      wrappers.push(...await nativeLauncherScenarios(realpathSync(sandbox), paths[0]!, paths[1]!));
+      for (const provider of ['codex', 'opencode'] as const)
+        providers.push(await providerScenario(realpathSync(sandbox), paths[2]!, paths[1]!, provider, sentinel));
+    } else {
+      const evidence: Record<string, unknown> = {};
+      sourceScenarios.push(evidence);
+      await nativeEmulatedSourceScenario(realpathSync(sandbox), paths[2]!, paths[1]!, sourceProvider, sentinel, evidence);
+      assert.deepEqual(sourceScenarios.map(value => [value.provider, value.status, value.cleanup]),
+        [[sourceProvider, 'PASS', true]]);
+    }
     assert.equal(sentinel.exitCode, null);
     for (const pin of pins) assert.equal(fileHash(pin.path), pin.sha256);
     complete = true;
@@ -187,10 +204,12 @@ async function main() {
   finally {
     if (sentinel.exitCode === null && sentinel.signalCode === null) sentinel.kill();
     try { await timeout(exited); cleanup = true; } catch (error) { failure ??= error; }
-    writeFileSync(receiptPath, JSON.stringify({ kind: 'TEST_WINDOWS_EMULATED_PROVIDER_PARITY',
+    writeFileSync(receiptPath, JSON.stringify({ kind: sourceProvider === undefined
+      ? 'TEST_WINDOWS_EMULATED_PROVIDER_PARITY' : 'TEST_WINDOWS_EMULATED_SOURCE_PARITY',
       sourceHead: process.env.HOST_PROCESS_SOURCE_HEAD, platform: `${process.platform}-${process.arch}`,
       nodeVersion: process.version, status: complete && cleanup && !failure ? 'PASS' : 'INCOMPLETE',
-      pins, wrappers, providers, cleanup, realProviderExecuted: false, desktopQualified: false,
+      pins, ...(sourceProvider === undefined ? { wrappers, providers } : { provider: sourceProvider, sourceScenarios }),
+      cleanup, realProviderExecuted: false, desktopQualified: false,
       releaseQualified: false }, null, 2) + '\n', { flag: 'wx' });
   }
   if (failure) throw failure;

@@ -217,6 +217,45 @@ jobs:
           $receipt = Join-Path $PWD 'process-acceptance-evidence\windows-emulated-provider-receipt.json'
           & $controller $node $runner --tsconfig $tsconfig $gate "$env:HOST_PROCESS_NATIVE_STAGE\owned-process-broker.exe" "$build\Release\owned-process-fixture.exe" "$build\Release\owned-process-broker-birth-failure.exe" "$build\Release\owned-process-broker-accounting-failure.exe" "$build\Release\owned-process-broker-release-delay.exe" "$env:HOST_PROCESS_SCOPED_STAGE\owned-process-broker.exe" $receipt 2>&1 | Tee-Object process-acceptance-evidence/windows-emulated-provider.log
           if ($LASTEXITCODE -ne 0) { throw 'Original emulated-provider controller did not confirm cleanup' }
+      - name: Qualify original codex source A B with TEST peer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $build = $env:HOST_PROCESS_NATIVE_BUILD
+          $controller = "$build\Release\owned-process-gate-controller.exe"
+          $node = (Get-Command node.exe -ErrorAction Stop).Source
+          $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
+          $tsconfig = Join-Path $PWD 'tsconfig.json'
+          $gate = Join-Path $PWD 'tools\owned-process-broker\nativeEmulatedProviderGate.ts'
+          $receipt = Join-Path $PWD 'process-acceptance-evidence\windows-source-codex-receipt.json'
+          & $controller $node $runner --tsconfig $tsconfig $gate "$env:HOST_PROCESS_NATIVE_STAGE\owned-process-broker.exe" "$build\Release\owned-process-fixture.exe" "$build\Release\owned-process-broker-birth-failure.exe" "$build\Release\owned-process-broker-accounting-failure.exe" "$build\Release\owned-process-broker-release-delay.exe" "$env:HOST_PROCESS_SCOPED_STAGE\owned-process-broker.exe" $receipt --test-source-provider codex 2>&1 | Tee-Object process-acceptance-evidence/windows-source-codex.log
+          if ($LASTEXITCODE -ne 0) { throw 'Original codex source controller did not confirm cleanup' }
+      - name: Qualify original claude source A B with TEST peer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $build = $env:HOST_PROCESS_NATIVE_BUILD
+          $controller = "$build\Release\owned-process-gate-controller.exe"
+          $node = (Get-Command node.exe -ErrorAction Stop).Source
+          $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
+          $tsconfig = Join-Path $PWD 'tsconfig.json'
+          $gate = Join-Path $PWD 'tools\owned-process-broker\nativeEmulatedProviderGate.ts'
+          $receipt = Join-Path $PWD 'process-acceptance-evidence\windows-source-claude-receipt.json'
+          & $controller $node $runner --tsconfig $tsconfig $gate "$env:HOST_PROCESS_NATIVE_STAGE\owned-process-broker.exe" "$build\Release\owned-process-fixture.exe" "$build\Release\owned-process-broker-birth-failure.exe" "$build\Release\owned-process-broker-accounting-failure.exe" "$build\Release\owned-process-broker-release-delay.exe" "$env:HOST_PROCESS_SCOPED_STAGE\owned-process-broker.exe" $receipt --test-source-provider claude 2>&1 | Tee-Object process-acceptance-evidence/windows-source-claude.log
+          if ($LASTEXITCODE -ne 0) { throw 'Original claude source controller did not confirm cleanup' }
+      - name: Qualify original opencode source A B with TEST peer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $build = $env:HOST_PROCESS_NATIVE_BUILD
+          $controller = "$build\Release\owned-process-gate-controller.exe"
+          $node = (Get-Command node.exe -ErrorAction Stop).Source
+          $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
+          $tsconfig = Join-Path $PWD 'tsconfig.json'
+          $gate = Join-Path $PWD 'tools\owned-process-broker\nativeEmulatedProviderGate.ts'
+          $receipt = Join-Path $PWD 'process-acceptance-evidence\windows-source-opencode-receipt.json'
+          & $controller $node $runner --tsconfig $tsconfig $gate "$env:HOST_PROCESS_NATIVE_STAGE\owned-process-broker.exe" "$build\Release\owned-process-fixture.exe" "$build\Release\owned-process-broker-birth-failure.exe" "$build\Release\owned-process-broker-accounting-failure.exe" "$build\Release\owned-process-broker-release-delay.exe" "$env:HOST_PROCESS_SCOPED_STAGE\owned-process-broker.exe" $receipt --test-source-provider opencode 2>&1 | Tee-Object process-acceptance-evidence/windows-source-opencode.log
+          if ($LASTEXITCODE -ne 0) { throw 'Original opencode source controller did not confirm cleanup' }
       - name: Require completed original platform receipts and unchanged source
         run: |
           set -euo pipefail
@@ -272,6 +311,52 @@ jobs:
             const controllers = rows('windows-emulated-provider.log').filter(row => row.gateController);
             assert.deepEqual(controllers, [{ gateController: 'drained', rootExitCode: 0, activeProcesses: 0 }]);
             native.push({ log: 'windows-emulated-provider.log', scope: 'captured Windows wrappers and Main Host Codex/V1 adapters with Node peers', receipt: emulated });
+            const sourceReceipts = [
+              ['codex', 'windows-source-codex-receipt.json', 'windows-source-codex.log'],
+              ['claude', 'windows-source-claude-receipt.json', 'windows-source-claude.log'],
+              ['opencode', 'windows-source-opencode-receipt.json', 'windows-source-opencode.log'],
+            ];
+            for (const [provider, receiptFile, log] of sourceReceipts) {
+              const proof = JSON.parse(readFileSync(join(directory, receiptFile), 'utf8'));
+              assert.equal(proof.kind, 'TEST_WINDOWS_EMULATED_SOURCE_PARITY'); assert.equal(proof.provider, provider);
+              assert.equal(proof.sourceHead, process.env.HOST_PROCESS_SOURCE_HEAD);
+              assert.equal(proof.platform, 'win32-' + process.arch); assert.equal(proof.nodeVersion, 'v24.21.0');
+              assert.equal(proof.status, 'PASS'); assert.equal(proof.cleanup, true);
+              assert.equal(proof.realProviderExecuted, false); assert.equal(proof.desktopQualified, false); assert.equal(proof.releaseQualified, false);
+              assert.equal(Object.hasOwn(proof, 'providers'), false); assert.equal(Object.hasOwn(proof, 'wrappers'), false);
+              assert.equal(proof.sourceScenarios.length, 1);
+              const row = proof.sourceScenarios[0]; assert.equal(row.provider, provider);
+              assert.equal(row.status, 'PASS'); assert.equal(row.stage, 'complete'); assert.equal(row.cleanup, true);
+              assert.equal(row.realProviderExecuted, false); assert.equal(row.desktopQualified, false); assert.equal(row.releaseQualified, false);
+              assert.equal(row.foreignScopeGrantRefusedBeforeAllocation, true);
+              assert.notEqual(row.selections.A.revision, row.selections.B.revision);
+              assert.equal(row.management.metadataRead, true); assert.equal(row.management.modelProbeCompleted, true);
+              assert.equal(row.management.modelProbeInputs, 1); assert.equal(row.management.modelProbeReplayAllocated, false);
+              assert.equal(row.management.metadataHostRetained, row.provider === 'opencode');
+              assert.equal(row.teams.length, 2);
+              assert.deepEqual(row.teams.map(team => team.source.revision), [row.selections.A.revision, row.selections.B.revision]);
+              for (const field of ['currentB', 'retainedA', 'lookup']) assert.equal(row.cold[field], true);
+              assert.equal(row.cold.physicalReplayAllocations, 0); assert.equal(row.cold.originalInputsReplayed, false);
+              assert.deepEqual(row.cold.sourcePublishPendingAdmission, { admitted: 1, revoked: 1 });
+              assert.equal(row.cold.sdkPeerCheckpointRestored, row.provider === 'claude');
+              if (row.provider === 'claude') {
+                assert.equal(row.cold.originalNativeSessionRetained, true);
+                assert.equal(row.cold.source.revision, row.selections.A.revision);
+              }
+              if (row.provider === 'opencode') assert.equal(row.standalone.supported, false);
+              else {
+                assert.equal(row.standalone.phase, 'completed'); assert.equal(row.standalone.ephemeral, true);
+                assert.equal(row.standalone.replayAllocated, false); assert.equal(row.standalone.source.revision, row.selections.B.revision);
+              }
+              assert.equal(row.epochs.length, 2); assert.ok(row.epochs[0].jobs.length > 0);
+              for (const epoch of row.epochs) {
+                assert.equal(epoch.serviceOperations, 0);
+                for (const job of epoch.jobs) for (const field of ['resumed', 'stopped', 'drained', 'released', 'originalHandleAbsent']) assert.equal(job[field], true);
+              }
+              const originalController = rows(log).filter(value => value.gateController);
+              assert.deepEqual(originalController, [{ gateController: 'drained', rootExitCode: 0, activeProcesses: 0 }]);
+              native.push({ log, scope: 'captured Main Host source A/B with finite ' + provider + ' peer', receipt: proof });
+            }
           } else assert.equal(process.platform, 'darwin');
           writeFileSync(join(directory, 'scope.json'), JSON.stringify({
             kind: 'TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE', status: 'PASS',

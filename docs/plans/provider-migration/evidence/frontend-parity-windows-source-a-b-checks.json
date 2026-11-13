@@ -1,0 +1,83 @@
+{
+  "base": "28bc9ef4705c68649256ca236985c5b222e3e1e5",
+  "sourceReview": "pr_chain+provider exact source review; provider final refinement confirmation pending",
+  "typecheck": {
+    "command": "GOMAXPROCS=2 GOMEMLIMIT=384MiB pinnedNode24.21 node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json",
+    "exitCode": 0,
+    "distSource": "read-only phase2-e7c6:28bc/D68",
+    "compilerVersion": "7.0.2",
+    "log": "TEST-windows-source-28bc-refined-types.log"
+  },
+  "workflowStructure": "original steps and verifier byte-identical after removing3 new steps/new exhaustive proof block",
+  "nativeWindowsExecuted": false,
+  "desktopExecuted": false,
+  "plan": "P09 section75: one source provider per original controller",
+  "validation": {
+    "yaml": true,
+    "bashSyntaxBlocks": 11,
+    "nodeVerifierParse": true,
+    "powershellParserAvailable": false,
+    "powershellCommandsMatchOriginalWithOnlyFixedProviderAndReceipt": true,
+    "originalController120sUnchanged": true,
+    "originalSentinel60sUnchanged": true
+  },
+  "sourceFiles": [
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "sha256": "d27e796ce7a6121c17dabc689009363771cb1c97b4316395bfd7240dd7792625",
+      "lines": 170
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "sha256": "1f98e2299bf56f30926cfba88d79d76aef3b4a4dbed35eb48b77871dd115f8af",
+      "lines": 439
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "sha256": "2901c61e51a25ee91d8a647228a2d0ba1c33511a4689f8028ba53aae82631303",
+      "lines": 219
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "sha256": "c126d647bcd15ad387de70ac044826f9d668d6e055ad19f7a78d04ec96797217",
+      "lines": 6
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "sha256": "29c6cd894e84ff4cc507021d4aefb8115a3cbfeaaaabd89d5107d904e36b893c",
+      "lines": 386
+    }
+  ],
+  "combinedChecks": {
+    "frontendBase": "b37bfb9d9ce0112758eab1365332468bd84eaeb9",
+    "providerSource": "976905403b40078c3c2cfae3c442d5ec91056fc2",
+    "sourceFreezeSha256": "108ed06809c83e3ef3f8c91b4507a685c55e549fb9d17377bbff8397cbe155c2",
+    "status": "PASS",
+    "steps": [
+      {
+        "name": "retained-host-types",
+        "exitCode": 0,
+        "seconds": 1.984
+      },
+      {
+        "name": "broker-types",
+        "exitCode": 0,
+        "seconds": 0.812
+      },
+      {
+        "name": "diff-check",
+        "exitCode": 0,
+        "seconds": 0.01
+      }
+    ],
+    "logSha256": "7eb991f67ef208b209c3f58dc106a13df1f3fa072d4ff60983bb8f4f7035cac7",
+    "actualWindowsExecuted": false,
+    "vendorsExecuted": false
+  },
+  "independentReviews": [
+    "provider_parity exact5",
+    "pr_chain exact5",
+    "root original grants, HANDLE, source retention and controller composition"
+  ],
+  "qualification": "Source/types only. Actual Windows controller, provider and physical cleanup receipts must pass on the resulting commit; no native Windows or vendor runtime success is claimed."
+}

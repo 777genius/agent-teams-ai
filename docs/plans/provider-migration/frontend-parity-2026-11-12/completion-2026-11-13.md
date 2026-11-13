@@ -1,6 +1,32 @@
 # Завершение frontend parity: 13 ноября 2026
 
-## Следующий проверенный срез поверх `28bc9ef4`
+## Windows A/B: отдельный E2E на каждый provider
+
+Поверх опубликованного `b37bfb9d9ce0112758eab1365332468bd84eaeb9` добавлены
+три самостоятельных исходных Windows controller invocation: Codex, Claude SDK
+и OpenCode V1 с конечными TEST peers. Каждый получает собственные Job, sandbox,
+sentinel и receipt при прежних лимитах 120 / 60 секунд. Исходный wrapper/service
+сценарий и его verifier сохранены побайтно. Неуспех прекращает следующие шаги.
+
+Каждый journey проверяет публикацию B при живом A, источник B в management,
+model probe и Team launch, доступную исходному provider standalone-возможность,
+холодные чтения и повторы без новой allocation. Claude дополнительно проходит
+реальное сохранение SDK checkpoint и restore A в новом Host при текущем B.
+V1 не объявляется поддерживающим standalone или native Resume. Все настоящие
+процессы в этих трёх сценариях — закреплённый Node и исходные TEST helpers;
+настоящий Codex/Claude Code не запускается даже для `--version`.
+
+Два независимых reviewer одобрили точные пять файлов. На объединённых bytes
+`b37bfb9d` + provider `97690540` прошли оба исходных TS7 проекта: retained-host
+и broker-only. YAML, 11 Bash blocks и извлечённый JavaScript verifier проверены;
+PowerShell здесь не исполнялся. Новая обязательная проверка требует все три
+фиксированных receipt и оригинальный drain каждого controller. **Это пока
+готовый и проверенный E2E-код, а не успешное выполнение Windows-сценариев.**
+
+Предыдущая попытка объединить три journey под одним controller сохранена как
+HOLD и не публиковалась. Полный CI и Electron UI на новом SHA остаются открытыми.
+
+## Проверенный срез `b37bfb9d` поверх `28bc9ef4`
 
 Полная P08 phase 2 опубликована в `28bc9ef4705c68649256ca236985c5b222e3e1e5`
 (tree `45f7550986499a612371a9e2eea4fadc4515bcb4`). Приватная исходная
