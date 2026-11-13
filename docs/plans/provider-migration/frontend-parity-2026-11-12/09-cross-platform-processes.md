@@ -2692,3 +2692,71 @@ Peer сверяет unchanged runtime semantics и actual relevant tsconfigs.
 qualification job `131794213135` падает на SchedulerStopBarrier nested
 assignment: это уже исправлено в parent d35 и переносится штатным parent
 sync, без второго source edit.
+
+
+## 53. Linux CDP: уточнить конкретный original Node child перед product fix
+
+### Круг 1 — уже наблюдённое и оставшаяся неопределённость
+
+Actual native `79847dee72c5ed1c08914a44409f76c0dd25d168` artifact
+`14026961740` (ZIP SHA256
+`3c200d9f7e9fd34bc8e73912d751c6fc5e91e13c1171b52e0f82c5d52616721e`)
+связывает исходный Electron Main5154 и direct Node5245 с одним socket
+inode22591/FD60, non-CLOEXEC, при стабильном process birth до/после.
+Node executable совпал с fixture, полный Host argv **не** совпал.
+Поэтому считать этот PID captured Host нельзя. App.log сообщает о dev MCP
+build, но сам по себе не связывает build с PID5245. Более новый689 artifact
+`14028911546` пока не разобран: нельзя переименовать его failure в ту же причину.
+
+Exact [WorkspaceMcpBundle](https://github.com/777genius/agent-teams-ai/blob/689dddb61cedf0649379975735bac162c87c2836/src/main/services/team/WorkspaceMcpBundle.ts)
+(blob `37b559838b774022fb5bd94400a55ee590b5a67d`) действительно запускает
+selected Node с canonical `mcp-server/node_modules/tsup/dist/cli-default.js`,
+`--out-dir` и новой output directory. Пока это только проверяемый кандидат.
+Public libuv uv_disable_stdio_inheritance является best-effort: exact Node
+24.22.1 implementation останавливает scan при первой дыре FD>15; это не
+гарантия для observed FD60. CDP pipe также не доказывает isolation, поэтому
+ни один такой вариант сейчас не выбран исправлением.
+
+### Круг 2 — минимальная diagnostic delta в существующей попытке
+
+1. Только source/Linux harness до original Electron launch один раз сохранить
+   canonical path фиксированного tsup entry из того же repository. При
+   недоступном path diagnostic остаётся unavailable; production launch и
+   initial assertions не меняются. Packed scope не получает этого expectation.
+2. В существующую однократную after-failed-census correlation добавить
+   `fixtureMcpBuilderEntry: boolean | null`. Использовать уже прочитанный
+   bounded NUL argv: exact selected Node + exact captured builder entry,
+   единственный --out-dir и один непустой output argument, без вывода strings.
+   Это совпадение declared entry/invocation shape, не attestation output path,
+   JS bytes или execution purpose. Все original birth/socket checks, max16,
+   fdinfo bounds и immutable failed census остаются прежними.
+3. В existing smoke catch вывести ту же закрытую cdpListenerFailure projection
+   один раз в existing CI log с fixed TEST prefix и cap32KiB. Receipt остаётся
+   исходным носителем тех же facts. Никакого нового census/RPC/input/signal,
+   чтения дополнительных process paths или workflow/artifact/job/runner.
+4. В одном existing critical observation case добавить builder и иной argv
+   рядом с прежними Host/executable/reused-birth/changed-socket assertions.
+   Retained holderCount2 по-прежнему является failure; raw path/argv markers
+   по-прежнему отсутствуют, lookup не повторяет read. Новой suite нет.
+
+Declared paths: desktop-backend-observations.ts, desktop-backend-smoke.ts и
+desktop-backend-observations.test.ts. Root публикует plan до этих TEST edits;
+peer проверяет bounded source и неизменный original strict admission.
+
+### Круг 3 — решение по exact evidence
+
+Следующий уже необходимый native Linux gate даст факт builder match, другой
+child либо unknown в доступном original log. После actual exact match
+исправлять его настоящий launch boundary, с сохранением selected Node/entry,
+stdio/control/custody; заранее не добавлять глобальное закрытие descriptors,
+native/shell wrapper или hidden mutation. Даже если builder подтвердится,
+поздний captured Host launch проверяется отдельно: prebuild сам по себе
+не устраняет общую наследуемость descriptor. Final Linux acceptance требует
+полного cold UI и packed journey с исходным strict listener guard,
+native inputs, Stop/Quit и cleanup. Эта диагностическая правка не PASS и не
+закрытие Linux. Новые source bytes не исполнялись в недоступной local среде.
+
+### Уточнение §44: единая типизация пустой очереди HostOutput — actual CI 689 (2026-11-13)
+
+- Actual [Main CI 689, validate step14](https://github.com/777genius/agent-teams-ai/actions/runs/43407471337/job/131841866561) завершился с двумя TS2322 в `packages/legacy-agent-host/src/output.ts:124,131`: исходный `frame` выведен как `Buffer`, тогда как существующие `encode()` и `data.shift()` возвращают также `undefined`. Отдельные Host build/test types этой межпроектной типовой проверки не заменяют.
+- Минимальный source cut — одна явная аннотация `let frame: Buffer | undefined` на исходном извлечении priority entry ([точный source dd1ee0ca](https://github.com/777genius/agent-teams-ai/blob/689dddb61cedf0649379975735bac162c87c2836/packages/legacy-agent-host/src/output.ts#L118-L134)). Порядок control/work/data, byte accounting, callback, budget, существующая проверка `if (!frame) return` и все runtime ветки сохраняются. Новая suite не нужна; проверка — исходный root TypeScript closure при следующем необходимом coherent head. Этот type-only fix не означает PASS нового native gate.
