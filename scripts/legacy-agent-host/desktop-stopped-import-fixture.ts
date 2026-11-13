@@ -10,6 +10,16 @@ export const LEGACY_IMPORT_TEAM = 'test-stopped-legacy';
 export const LEGACY_IMPORT_LABEL = 'TEST never-launched legacy saved Team';
 export const CURRENT_LEGACY_SOURCE_PROMPT = 'TEST_CURRENT_LEGACY_SOLO_ONE';
 export const CURRENT_LEGACY_SOURCE_REPLY = 'REPLY_TEST_CURRENT_LEGACY_SOLO_ONE';
+
+/** Expected wire value for the existing pinned SDK0.3.305 fixture, never a saved-setting default. */
+export function expectedStoppedImportNativeEffort(
+  selected: { model: unknown; effort?: unknown }
+): unknown {
+  if (selected.effort !== undefined) return selected.effort;
+  assert.equal(selected.model, 'claude-sonnet-4-6', 'Only the pinned Sonnet default is qualified');
+  return 'high';
+}
+
 export interface StoppedImportUiSeed {
   sourceKind?: 'captured-stopped-solo';
   priorRun?: { path: string; sha256: string };

@@ -10,7 +10,10 @@ import {
 } from './desktop-mixed-dialog-settings.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
-import { stoppedImportSourceBytes } from './desktop-stopped-import-fixture.ts';
+import {
+  expectedStoppedImportNativeEffort,
+  stoppedImportSourceBytes,
+} from './desktop-stopped-import-fixture.ts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { DesktopStoppedImportSeed } from './desktop-stopped-import-fixture.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
@@ -173,7 +176,7 @@ export async function runStoppedImportLaunchUi(
       (row) =>
         row.contextEffective &&
         row.requestedModel === seed.savedSettings.model &&
-        row.requestedEffort === seed.savedSettings.effort
+        row.requestedEffort === expectedStoppedImportNativeEffort(seed.savedSettings)
     )
   );
   assert.ok(model.observations.some((row) => row.toolResultError));
