@@ -12,6 +12,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { projectIpcCausalFailure, safeIpcFailureDetail } from '../../scripts/e2e/opencode-native-desktop-host';
 import { electronTeamPort, nativeCommandMatch } from '../../scripts/e2e/opencode-native-team-port';
 import { serializedFunction } from '../../scripts/e2e/release-updater/serialized-function.mts';
+import { readReadinessProbeReceipts } from '../../scripts/e2e/opencode-diagnostics/readiness-probe-receipt';
 import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { createOpenCodeBridgeClientIdentity, createOpenCodeBridgeHandshakeFailure, OPEN_CODE_HANDSHAKE_MESSAGE_FAMILIES } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { formatOpenCodeStopCausalSuffix, projectOpenCodeStateChangingFailure, rememberOpenCodeHandshakeFailure } from '../../src/main/services/team/opencode/bridge/OpenCodeStateChangingCausalFailure';
@@ -567,9 +568,9 @@ it.each([
   ].join('\n');
   const compiled = ts.transpileModule(declarations, { compilerOptions }).outputText;
   const snapshot = compileFunction(`${compiled}\nreturn ${functionName};`,
-    ['process', 'path', 'realpath', 'lstat', 'open', 'opendir', 'Buffer', 'assert'], {
+    ['process', 'path', 'realpath', 'lstat', 'open', 'opendir', 'Buffer', 'assert', 'readReadinessProbeReceipts'], {
       importModuleDynamically: constants.USE_MAIN_CONTEXT_DEFAULT_LOADER,
-    })(process, path, realpath, lstat, fs.open, fs.opendir, Buffer, assert) as (...args: unknown[]) => Promise<{ diagnostics: { catalog: unknown }[] }>;
+    })(process, path, realpath, lstat, fs.open, fs.opendir, Buffer, assert, readReadinessProbeReceipts) as (...args: unknown[]) => Promise<{ diagnostics: { catalog: unknown }[] }>;
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-oc-catalog-')));
   const dataRoot = path.join(root, 'runtime-data');
   const previousRoot = process.env.CLAUDE_MULTIMODEL_DATA_HOME;
