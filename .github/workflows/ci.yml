@@ -626,6 +626,64 @@ jobs:
           set -euo pipefail
           node --test scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts
           node --test scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts 2>&1 | tee "$RUNNER_TEMP/retained-opencode-coexistence.log"
+      - name: Exercise original OpenCode Install Refresh and Update controls once
+        env:
+          OPENCODE_V1_V2_COEXISTENCE_GO: '1'
+          OPENCODE_V1_UI_SOURCE_SELECTION_GO: '1'
+          OPENCODE_V1_V2_INPUTS_RECEIPT: ${{ runner.temp }}/retained-opencode-source-inputs.json
+          OPENCODE_V1_UI_SOURCE_INPUTS_RECEIPT: ${{ runner.temp }}/retained-opencode-source-inputs.json
+          OPENCODE_V1_V2_COEXISTENCE_RECEIPT: ${{ runner.temp }}/retained-opencode-source-selection.json
+        run: |
+          set -euo pipefail
+          node scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts
+          node --test scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts 2>&1 | tee "$RUNNER_TEMP/retained-opencode-source-selection.log"
+      - name: Require original source publication active-session isolation and cold readback
+        if: always()
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const r = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'retained-opencode-source-selection.json'), 'utf8'));
+          assert.equal(r.kind, 'TEST_NATIVE_OPENCODE_SOURCE_SELECTION_DESKTOP');
+          assert.equal(r.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(r.platform, 'linux-x64');
+          assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);
+          assert.deepEqual(r.cleanupErrors, []); assert.deepEqual(r.modelFailures, []);
+          assert.equal(r.releaseQualified, false); assert.equal(r.vendorAuthQualified, false);
+          assert.equal(r.build.providerDigest, 'f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2');
+          assert.equal(r.inputs.kind, 'TEST_DESKTOP_V1_SOURCE_INPUTS'); assert.equal(r.inputs.status, 'READY');
+          assert.equal(r.inputs.v1.version, '1.19.4');
+          assert.equal(r.inputs.v1.sha256, '538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7');
+          assert.equal(r.inputs.next.version, '1.19.5');
+          assert.equal(r.inputs.next.executableSha256, '7df4e4136301f16589b0f30bf91a61380fca5f8ef22dd36570f5ebe1d4ec802c');
+          const markers = ['TEST_SOURCE_INSTALL_B', 'TEST_SOURCE_PATH_A', 'TEST_SOURCE_LIVE_A', 'TEST_SOURCE_UPDATE_B'];
+          assert.deepEqual(r.businessInputs, markers);
+          assert.deepEqual(r.modelObservations.filter(row => row.marker).map(row => row.marker), markers);
+          assert.ok(r.modelObservations.length <= 32);
+          assert.ok(r.modelObservations.every(row => row.owner === 'host' && (row.marker || row.sourcePreflight === true)));
+          assert.deepEqual(r.namespaces.map(row => row.initial), ['missing', 'path']);
+          assert.ok(r.namespaces.every(row => row.status === 'PASS' && row.cleanup.every(command => !command.resourceHeld)));
+          const [install, update] = r.namespaces;
+          assert.equal(install.before.installed, false); assert.equal(install.before.source, 'missing');
+          assert.equal(install.publication.selected.candidate.nativeCli.version, '1.19.5');
+          assert.equal(install.publication.selected.candidate.sourceKind, 'app-managed');
+          assert.equal(install.teams.length, 1); assert.equal(install.appEpochs.length, 1);
+          assert.equal(update.before.source, 'path'); assert.equal(update.before.version, '1.19.4');
+          assert.equal(update.publicationA.selected.candidate.sourceKind, 'path');
+          assert.equal(update.publicationA.selected.candidate.nativeCli.version, '1.19.4');
+          assert.equal(update.publicationB.selected.candidate.sourceKind, 'app-managed');
+          assert.equal(update.publicationB.selected.candidate.nativeCli.version, '1.19.5');
+          assert.equal(update.publicationB.selected.previousRevision, update.publicationA.selected.revision);
+          assert.equal(update.teams.length, 2); assert.equal(update.appEpochs.length, 2);
+          assert.equal(update.retainedAAfterUpdate.runtime.inputs.length, 2);
+          assert.deepEqual(update.retainedAAfterUpdate.native, update.teams[0].native);
+          assert.equal(update.cold.originalProfile, true); assert.equal(update.cold.historyEqual, true);
+          assert.equal(update.cold.callsAfter, update.cold.callsBefore);
+          assert.equal(update.cold.sourceIndex.records.length, 2);
+          assert.equal(update.cold.sourceIndex.current[0].revision, update.publicationB.selected.revision);
+          assert.ok(r.originalNativeBirths.length > 0 && r.originalNativeBirths.length <= 64);
+          NODE
       - name: Require complete same-source business, Stop, cold and cleanup evidence
         if: always()
         run: |

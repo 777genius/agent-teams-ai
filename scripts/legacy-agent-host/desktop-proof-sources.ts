@@ -628,6 +628,7 @@ const desktopProofBaseSources = [
   'scripts/legacy-agent-host/desktop-codex-question-fixture.ts',
   'scripts/legacy-agent-host/desktop-approval-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-backend-fixture.ts',
+  'scripts/legacy-agent-host/desktop-runtime-source-fixture.ts',
   'scripts/legacy-agent-host/desktop-backend-smoke.ts',
   'scripts/legacy-agent-host/desktop-captured-app.ts',
   'scripts/legacy-agent-host/desktop-cross-team-ui-smoke.ts',

@@ -53,6 +53,12 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
   execFileSync(process.execPath, ['agent-teams-controller/scripts/build.mjs'], { cwd: repo, timeout: 30_000 });
   execFileSync(process.execPath, ['node_modules/tsup/dist/cli-default.js'], { cwd: join(repo, 'mcp-server'), timeout: 60_000 });
   const node = await realpath(process.execPath);
+  if (process.env.OPENCODE_V1_UI_SOURCE_SELECTION_GO === '1') {
+    const { runDesktopRuntimeSourceSelection } = await import('./desktop-runtime-source-selection.ts');
+    await runDesktopRuntimeSourceSelection({ repo, sourceHead: head, build, node, receiptPath,
+      processBaseline, assertSource: source });
+    return;
+  }
   const v1 = await realpath(process.env.OPENCODE_V1_V2_RETAINED_BINARY!);
   const fork = await realpath(process.env.OPENCODE_V1_V2_RETAINED_RUNTIME!);
   const bun = await realpath(process.env.OPENCODE_V2_EMBEDDED_BUN!);
