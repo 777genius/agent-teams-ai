@@ -404,3 +404,121 @@ Runtime и persistence barrier; новая очередь и unit-матрица
 safe unopened Host member и task-first history после explicit rebind. Для них сначала
 сверить original atomic mutation/admission seams и сохранённые target receipts;
 нельзя игнорировать старую незавершённую task ради зелёной проверки.
+
+## R10 — original run при старте task и безопасный unopened Host member
+
+Source audit: parity `1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0`, после review
+R9 выше. Подтверждены PR1186 threads `PRRT_kwDORVTEtM622S2N` (idx20)
+и `PRRT_kwDORVTEtM622qox` (idx26). Source edits выполняются на свежем
+опубликованном root cut с сохранением R9; этот план не меняет delete-admission
+или previous-task history после explicit rebind, у которых отдельные владельцы.
+
+### 1. Сохранить существующий frontend workflow
+
+- Old frontend [SmartScheduleDispatcher](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/schedule/SmartScheduleDispatcher.ts)
+  сохраняет task-first задачу, затем запускает её через прежний task service;
+  non-lead member подключается только после подтверждения offline и readiness.
+- [createSchedulerService](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/src/main/services/schedule/createSchedulerService.ts)
+  уже связывает runtime, provisioning и task API. В
+  [TeamDataService.startTaskByUser](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/src/main/services/team/TeamDataService.ts)
+  последняя board mutation синхронная. Эти две точки достаточны для final guard.
+- Host [recipient admission](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/packages/legacy-agent-host/src/team/expectedTaskRecipient.ts)
+  уже проверяет exact member/run/generation, owner и requireIdle в существующем
+  Team command. Новый RPC, runtime owner, board store или очередь не нужны.
+
+### 2. Закрыть async window перед legacy board.startTask
+
+Сейчас `canStart` читает runtime snapshot, затем ждёт busy/alive predicates.
+Во время ожидания run может смениться; task service сверяет owner/status,
+но не проверяет original run непосредственно перед write.
+
+1. Existing private admission получает `expectedRunId` и синхронный
+   `isCurrent(): boolean`; SmartScheduleDispatcher связывает последний с
+   исходной cancellation closure. Optional admission для ordinary manual Start
+   сохраняется, renderer contract не меняется.
+2. Async preflight проверяет busy/alive, затем свежий runtime snapshot и исходные
+   run/member generation/readiness. Это полезная проверка, но сама по себе не
+   считается atomic admission.
+3. В `createSchedulerService` обернуть тот же admission final guard:
+   исходная cancellation ещё не сработала, existing
+   `apis.runtime.getCurrentRunId(team)` равен `expectedRunId`,
+   `apis.runtime.isTeamAlive(team)` истинен и
+   `provisioning.hasTeamOperationInProgress(team)` ложен.
+   Все эти getters синхронные и принадлежат существующим Main owners.
+4. В `TeamDataService` после последнего await и existing latest task
+   owner/status/active-work checks вызвать этот guard непосредственно перед
+   `board.startTask`. Между ним и write не добавлять await. При изменении run
+   оставить исходную task pending, без Start notification и без новой task.
+5. Host adapter получает тот же `expectedRunId` в existing `recipient` вместе
+   с expectedGeneration. Последующие async reads не дают ему выбрать новый run;
+   final Host command всё равно проверяет исходный recipient атомарно.
+   Cancellation guard проверяется после await, непосредственно перед dispatch.
+
+### 3. Разрешить только действительно attachable unopened member
+
+В [HostSmartScheduleRuntimeAdapter](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/src/features/agent-backend/main/adapters/output/HostSmartScheduleRuntimeAdapter.ts)
+safe unopened runtime сейчас проецируется в registered_only/error. Dispatcher
+поэтому не достигает уже существующего `runtime.open`.
+
+- Использовать один короткий predicate для projection и attach admission:
+  `phase === unopened && custody === owned && !attached && !sealed`.
+  Только этот дополнительный state проецируется как confirmed offline.
+- `attachMember` повторно читает exact member/generation и применяет тот же
+  predicate перед existing runtime.open. Unknown custody, held/sealed/attached
+  и начавшийся runtime не принимаются как безопасный unopened.
+- Existing run/generation recipient fencing, original owner guards и readiness
+  перед task creation сохраняются. Не добавлять Restart или переоткрытие старого
+  session. Старые ограничения auto-attach для potentially shared OpenCode lanes
+  и deliberately skipped teammates сохраняются.
+
+### 4. Узкие existing проверки
+
+- Расширить existing TeamDataService scheduled admission case: async preflight
+  возвращает true, но original run/cancel guard меняется перед final board write;
+  task остаётся pending, board.startTask и notification отсутствуют.
+- Existing SmartScheduleDispatcher race case проверяет захваченный expectedRunId,
+  cancellation guard и fresh runtime read после awaited predicates. Не писать
+  отдельные тесты на каждую строку composition.
+- В existing schedule test файле добавить один bounded Host adapter case:
+  unopened/owned/unattached/unsealed → offline → один original runtime.open;
+  uncertain/sealed/attached states не открываются. Проверить, что foreign run
+  при сохранённой generation не создаёт task.start. Это controlled boundary proof,
+  не actual native или Desktop PASS.
+- Existing filesystem/Host schedule E2E, focused strict Main types, fast lint и
+  source cap проходят на итоговом cut. Whole-project CI и actual Desktop schedule
+  journey из R8 остаются обязательными. Не увеличивать frozen file caps и не
+  создавать новый runner, suite или provider fixture ради этих двух замечаний.
+
+Круг 1, source: подтверждены synchronous run/liveness/operation-lock getters,
+последняя синхронная board mutation и existing Host expectedRecipient guard.
+Круг 2, failure semantics: простой перенос async snapshot не закрывал write window;
+добавлена final synchronous проверка. Safe unopened отделён от unknown/held и от
+runtime, который потребует Restart. Scope ограничен existing admission/projection.
+Следующий круг — независимое plan/diff review, затем existing critical execution.
+
+## R11 — task-first history при обновлении context того же captured resource
+
+PR1186 `PRRT_kwDORVTEtM622qpD`: `resolvePreviousTask` сравнивает весь hostTarget
+и отказывает после смены contextId ещё до чтения исходной task/receipt.
+Source-круг Profiles: `DesktopBackendFeature.initialize` и
+`BackendOwnerRouter.retain/resolveOwner` сохраняют immutable handle→owner/profile/build/scope;
+`updateSchedule` не меняет teamName. Ordinary explicit Edit/Save может обновить
+context при тех же exact resource refs. Это не перенос в другой physical owner.
+
+1. Для previous task требовать exact `kind, handleId, ownerResourceRef, teamResourceRef`.
+   Разница только в contextId допускается, а read выполняется через **текущий**
+   captured target и его original current-authority guard. Старый context не даёт
+   нового разрешения; lookup не dispatch-ит прежний command.
+2. Не фильтровать историю по ScheduleRun.status и не пропускать foreign targets:
+   dispatched/completed/failed сами по себе не доказывают завершённость board task.
+   Missing target или разные owner/team resource refs остаются held. Existing API
+   не доказывает логическую тождественность storage после такой owner migration.
+3. Расширить existing HostSchedules.safe-e2e: cold reopen с context A→A2, прежними
+   binding directory/owner/handle/resources и явным Edit/Save rebind. Pending task
+   и lost task-create ACK продолжают блокировать повторную работу; prune-to-1
+   сохраняет ссылку на исходную task. После её настоящего completion разрешается
+   следующий occurrence. Foreign resource refs по-прежнему отказываются.
+4. Новый run field, owner resolver, task copy и общий history migration не нужны.
+   Source-круг подтвердил immutable namespace; architecture-круг исключил
+   молчаливое отбрасывание unfinished tasks и чтение через чужой новый owner.
+   Дальше независимый diff review, existing Host integration и actual Desktop gate.
