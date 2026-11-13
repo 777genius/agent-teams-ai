@@ -1091,3 +1091,291 @@ alias scope. Existing staging types и все пять actual packaged gates д�
 manual approval, MCP/tools, Stop/cold Resume и original cleanup. Один import
 fix или source review не объявляются packaged PASS. Новой unit suite, runner,
 workflow, native invocation или увеличенного budget нет; source пока unexecuted.
+
+## 23. P7 controlled Processes: честная fixture без teammate Runtime (план, 2026-11-13)
+
+### Круг 1 — исходное падение и причина
+
+На exact parity [9ea802cc](https://github.com/777genius/agent-teams-ai/tree/9ea802cc0f8c873c8349512cb010fe54e34fdd70) job131868952619 сначала завершил исходный P7 и его три проверки, затем controlled cold UI остановился **до Electron UI**. Original small artifact14033996423, ZIP SHA256 `78ace845f45d0774a6f3e84c97b926dee8c2c80877ac96a418b26a7714e9728f`, извлечён и проверен. В original root `TEST-desktop-backend-UuN7E0` Host A handshake/process.list и EOF exit0 прошли; failure — `no Runtime session store was allocated`. Original process cleanup PASS, все три original captures absent; это не PASS для cold UI.
+
+[desktop-controlled-process-fixture.ts](https://github.com/777genius/agent-teams-ai/blob/9ea802cc0f8c873c8349512cb010fe54e34fdd70/scripts/legacy-agent-host/desktop-controlled-process-fixture.ts) удалял только `profile.runtime` **после** [prepareProcessFixture](https://github.com/777genius/agent-teams-ai/blob/9ea802cc0f8c873c8349512cb010fe54e34fdd70/scripts/legacy-agent-host/desktop-native-process-fixture.ts) и первого canonical Team seed. При этом persisted Alice по-прежнему имела complete `delivery`. Исправленная P06 presence в `TeamRuntimeRegistration.hasRetained` обязана считать такую binding native history и сохранять Runtime owner. Удалять этот product guard или принимать выделенный Runtime за отсутствие нельзя.
+
+### Круг 2 — минимальная коррекция двух TEST файлов
+
+1. В existing `prepareProcessFixture` добавить один explicit TEST-only option `controlledServicesOnly: true`. Default native SDK mode не менять. Для этого режима, **до первого createFilesystemTeamOwner/Task seed**, проверить отсутствие owner namespace новой TEST team, убрать `profile.runtime` и delivery bindings у её начальных saved members. Это подготовка нового controlled service sandbox; retained product records и чужие scopes не редактируются.
+2. Existing controlled caller выбирает этот option при исходном prepare. Удалить его позднее повторное переписывание profile/descriptor/pins; вместо него подтвердить уже подготовленный profile без runtime/delivery. Общая fixture один раз публикует окончательные profile/descriptor hashes до первого Host.
+3. Оставить исходный `noRuntime` assertion именно на отсутствии runtime-sessions, все source/artifact hashes, original root/registrar captures, Host A→B restart, processRef Stop, neighbor alive, original911 freeze и cleanup. Никакого SDK/model input, нового native target, timeout, retry, fake Stop или ослабленного oracle.
+4. Изменения только `scripts/legacy-agent-host/desktop-native-process-fixture.ts` и `desktop-controlled-process-fixture.ts`. Native child §52 changes в последнем файле сохранить при parent sync; не заменить child blob целиком старой родительской версией.
+
+### Круг 3 — проверка
+
+Независимо проверить порядок: base fixture с `seedUiTask:false` ещё не создаёт Team owner; controlled narrowing precedes seed/persistence; обычный native mode сохраняет delivery и runtime. Выполнить pinned Host build, existing relevant presence tests и scripts typecheck; исходный Darwin ARM controlled cold UI должен пройти на новом normal CI. Linux checks не подменяют native Darwin proof. Новая unit suite для fixture не нужна; ключевой behavioral oracle уже находится в исходном e2e.
+
+
+## 24. Genuine saved donor: preserve the compatible catalogue's omitted effort
+
+### Round 1 — actual failure and original feature contract
+
+The verified 9ea donor artifact 14032984581 (original TEST scope 2Y4MTI)
+remains INCOMPLETE: after selecting the Sonnet 4.6 option the existing
+producer timed out waiting for `donor Low effort`. Original cleanup and
+source-freeze observations are retained. This is not evidence that a Low
+choice was supported or that any saved Team was produced.
+
+The pinned producer deliberately uses its captured localhost
+`ANTHROPIC_BASE_URL`. In runtime0.0.160 source
+[`anthropicCatalog.ts`](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/runtimeBackends/anthropicCatalog.ts),
+`buildAnthropicCompatibleRuntimeModelCatalogFromApiModels` unconditionally
+returns `supportedReasoningEfforts:[]`, `defaultReasoningEffort:null`
+and `supportsFastMode:false` for those API models. Adding invented
+capabilities to the existing GET response would not enable Low.
+
+Exact donor4a
+[`teamEffortOptions.ts`](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/utils/teamEffortOptions.ts)
+honours that selected catalogue entry; `LeadModelRow` gives the original
+control id `lead-effort`, and `EffortLevelSelector` renders one disabled
+`Not supported` button. `CreateTeamDialog` maps the empty supported
+selection to undefined. `TeamMetaStore.serializeMeta` and the existing
+JSON serializer omit undefined effort. No production default or native
+model capability is inferred from the TEST server's model name.
+
+### Round 2 — the existing genuine journey follows that contract
+
+1. In `desktop-donor-saved-producer.ts`, replace only the two impossible
+   Low UI operations with the existing bounded read-only `waitRead`:
+   the exact original Create page's `#lead-effort` must be an actual
+   disabled button with text `Not supported`. Keep the same Sonnet
+   selection and subsequent ordinary Add member/Save actions. Do not
+   click another effort, synthesize state, alter the donor checkout,
+   catalogue, settings, CLI or saved source. No new request/input, retry
+   or timer is introduced.
+2. In `desktop-donor-saved-fixture.ts`, require
+   `Object.hasOwn(meta,'effort') === false` instead of Low. All other
+   expected original settings/roster, saved-only classification, exact
+   file hashes, no-native-history and original cleanup checks remain.
+   The corpus is captured from genuine saved bytes without rewriting.
+3. In `desktop-donor-saved-import-ui.ts`, explicitly require the same
+   omitted effort in imported `owner.savedSettings`, in addition to
+   existing exact saved-field/member comparisons. The current captured
+   Claude recipe has no explicit effort; existing saved-model compilation
+   and `assertStoppedImportModelChecks` therefore continue to require the
+   original undefined effort in both durable probe receipts and actual
+   request observations. Do not accept Low/default aliases or silently
+   normalize a later unexpected request.
+4. Extend only the existing stopped-import model-check case to exercise
+   this undefined selection and reject an unexpected explicit effort.
+   Preserve its current Low coverage and the separate synthetic rich
+   saved-settings corpus. This genuine compatible-catalogue case does
+   not qualify a nondefault effort on an old native catalogue that
+   advertises it; those are distinct acceptance claims.
+
+### Round 3 — review, essential verification and actual acceptance
+
+Review the exact original catalogue/UI/serialization chain and the narrow
+three TEST-source changes independently. Run the existing script type
+gate and stopped-import fixture case, then use the next already required
+saved-donor Desktop gate with its original source pins, finite probe
+counts, no-tools model checks and cleanup budgets. A source-derived
+correction or controlled case is not genuine donor PASS. Successful
+acceptance still requires ordinary old Save, immutable actual files,
+ordinary current import/preflight, close/reload and original lookup.
+No production change, new suite, runner, dependency, capability or
+timeout is planned.
+
+## 25. Packaged cancellation: defer unused canonical source schemas
+
+### Круг 1 — exact failure
+
+На parity9ea packaged Linux job131881379726, Windows x64 job131881379799
+и Darwin ARM job131881380047 падают в трёх existing cancellation cases
+до TEST-injected-harness-failure. Tiny tracked TEST checkout импортирует
+native-host.ts только ради runner helpers. R20 добавил его eager import
+compiled composition/runtimeSourceContracts.js; этот намеренно маленький
+checkout не содержит Host dist и не запускает Host. Это import closure
+ошибка тестовой инфраструктуры, не результат packaged native journey.
+
+### Круг 2 — один TEST helper, прежняя строгая проверка
+
+В packages/legacy-agent-host/tests/fixtures/native-host.ts переместить
+тот же canonical schema import в существующую async rpc ветку успешного
+runtime.source ответа. Использовать awaited dynamic import с прежним
+literal path; те же summary/publication schemas и switch по всем method
+остаются обязательными до возврата ответа. Ошибка import/parse должна
+отклонить исходный rpc. Не копировать schemas, не подменять модуль,
+не ослаблять DTO или allowlist, не добавлять dependencies в tiny checkout.
+Существующий esbuild bundle включает literal dynamic import; отсутствие
+Host dist у runner-only клиента перестаёт мешать неиспользуемому пути.
+
+### Круг 3 — минимальная проверка
+
+Независимый peer проверяет async границу и все canonical parses. Затем
+original packaged-opencode-v2-inputs.test.ts под pinned Node24.21 должен
+дойти до своих исходных clean-error/timeout-clean/unknown assertions:
+source hidden, exact original cleanup and restoration/retention. Scripts
+types и существующий runtime source RPC case проверяют оставшийся путь.
+Никакого нового запуска provider, retry, timeout, source-isolation exception
+или дополнительной suite. Полный packaged matrix всё ещё обязателен.
+
+## 26. Skills composition: unresolved Trash must retain shutdown debt
+
+### Круг 1 — воспроизведённое несоответствие ожидания
+
+Actual parity9ea test shard1 job131875733988 имеет единственное падение
+в test/capturedSkills.test.ts:1054. Тот же existing composition case
+локально воспроизведён на Node26.12.1. Case намеренно только stage-ит
+оригинальный Trash, подтверждает held receipt, busy credentials и lookup
+без nativeTrash dispatch; OS callback и finishTrash никогда не выполняются.
+ProviderManagementCoordinator.close теперь правильно отказывает held,
+пока durable original row.resourceHeld=true. Успешный close здесь означал
+бы потерю неразрешённого долга. Не менять этот production guard.
+
+### Круг 2 — тот же existing case, явная исходная неопределённость
+
+Перед seal/close сохранить точные original journal row/bytes и проверить
+его skill.mutation/trash identity, original commandId, held public receipt
+и resourceHeld=true. В finally ожидать именно OpenCodeManagementError
+с code=held, затем сравнить исходный durable row/bytes без изменений.
+Не вызывать shell Trash/finishTrash, не выдавать fake nativeCompleted,
+не освобождать резерв и не поглощать произвольную ошибку. Остальные
+существующие assertions и finally cleanup тестового sandbox сохраняются.
+
+### Круг 3 — essential verification
+
+Peer сверяет отсутствие product изменений и маскировки прежних отказов.
+Прогнать весь существующий capturedSkills.test.ts, чтобы ordinary success,
+unknown callback, retained identity и no-repeat поведения остались.
+Targeted types/fast lint плюс штатный shard1 нужны отдельно; локальный
+контролируемый case не объявляет actual OS Trash или полный E2E PASS.
+
+## 27. Genuine current stopped source: exact original HEAD preconnect
+
+### Круг 1 — actual failure и точная исходная цепочка
+
+Parity 9ea802cc0f8c873c8349512cb010fe54e34fdd70, Main job131868952839:
+current stopped-import producer останавливается ещё при выборе Sonnet4.6,
+до actual source Create/Launch. Его original oracle запечатан ошибкой
+'HEAD' !== 'POST'. Artifact14037016852 проверен до разбора:
+ZIP SHA256 cd75a3609590e3a69fcb2bb5cccaa92683d228534e98638278cdb1dcc4630c85.
+Source frozen=true, original cleanup/captured/unmatched remaining=0
+не означают, что source turn/Stop/import были выполнены.
+
+Producer в desktop-stopped-import-prior-run.ts передаёт ровно model.url
+как ANTHROPIC_BASE_URL в закрытом TEST env; proxy/cloud/mTLS vars туда не
+попадают. runtime.lock.json фиксирует runtime0.0.158, sourceRef v0.0.158,
+source tree f5c69c2e9024ffc36a5db5eafe30f53539b52f62 и проверенный архив
+6fe171490df4a8888093bf4ecdd2c4a4cd2faa510152af870c4cf37e36443311.
+
+В exact runtime repo777genius/agent_teams_orchestrator:
+src/utils/apiPreconnect.ts blob6a8de649b3ff3918dd27b31a90a7678f8c92161a
+имеет module-local fired, установленный до запроса: максимум один fetch
+за процесс, method HEAD, base URL без добавленного пути, без auth/body,
+с собственным исходным 10s AbortSignal. src/entrypoints/init.ts
+e03a6a5b1d2792bb886030a4c6a5825dde069a48 вызывает его после настройки
+transport. src/main.tsx 1d5898a83dc2d9c59b9b1cbcad3c4b1c6a71a408,
+preAction вызывает init и для обычного -p. entrypoints/cli.tsx
+ce5308b112e1a0b36c73a139c0feb49ef8fc2561 отправляет --version,
+runtime status/model list/providers fast paths до полного main/init.
+Frontend CliProviderModelAvailabilityService запускает исходный CLI
+с PONG/-p/--max-turns1/--no-session-persistence; actual source запускается
+отдельно. Это объясняет запрос без нового business input. В artifact
+сохранён метод, но не URL: '/' здесь source-derived, не observed fact.
+
+### Круг 2 — только закрытый TEST oracle producer-этапа
+
+Изменить только packages/legacy-agent-host/tests/fixtures/
+native-claude-team/model.ts и его существующий model.test.ts.
+
+В existing handler обработать HEAD отдельной закрытой веткой до
+count_tokens/POST routing: originalLegacyRead=true из capture на входе,
+не saved donor/обычный Host; failures ещё пуст; request.url строго '/'.
+Отказать query/другим путям, auth header, transfer-encoding, ненулевому
+content-length или actual body. Ответ bodyless 204 только после
+завершения исходного пустого request; остальные методы/routes сохраняют
+прежний строгий контракт. Это не общий method whitelist/health endpoint.
+
+Отдельный currentLegacyPreconnectRequests <=32. Это консервативный
+верхний предел, согласованный с уже существующим максимумом32 original
+runtime births в captureDesktopNativeExecutable: exact runtime допускает
+один preconnect на процесс; cancelled preflights могут прогреть соединение,
+не дойдя до PONG. Это НЕ утверждение о фактически наблюдённом числе HEAD,
+не HTTP→PID authority и не разрешение32 native starts. Существующие <=8
+PONG, ровно1 source turn, <=8 catalog/token checks, runtime census,
+original deadlines и native inputs не изменять.
+
+Вернуть отдельный счётчик в frozen finishCurrentLegacySource receipt,
+который существующий producer уже сохраняет после genuine Quit/absence.
+Не смешивать его с model.probes/observations/sourceNativeInputs.
+Ветка использует тот же pendingLegacyReads и original captured epoch;
+finish закрывает admission один раз и ждёт исходные pending requests.
+Поздний HEAD после границы consumer запрещён.
+
+### Круг 3 — критические проверки и честный предел
+
+В существующем current-legacy model case проверить bodyless HEAD,
+его отдельный frozen count и неизменные PONG/turn/Host-probe counts.
+Негативные подслучаи на fresh local oracle проверяют wrong path/body,
+33-й HEAD и закрытый/non-producer epoch; отказ нельзя доказывать только
+после уже запечатавшей oracle другой ошибки. Без нового test framework
+или native process/input. Запустить этот existing model case/файл,
+Host script/test types и targeted lint. Actual Darwin source UI →
+original Stop/Quit/absence → import остаётся отдельным existing CI gate.
+Не менять runtime bytes, source pins, env traffic flags или timers,
+не объявлять прежний source failure исправленным до native gate.
+
+## 28. Codex /cost: reveal the exact collapsed original reply once
+
+### Круг 1 — actual completed intent, затем UI presentation failure
+
+Parity9ea job131868953433, artifact14037097532:
+ZIP SHA256 e3714ed9c7ce041c723c6fba53e68f6b7752f4e5396a8b6ad8d59acd569658ef.
+Original command323f6e74-4be8-451d-a8ea-66cde4c1b2f9 completed;
+canonical reply373edb3e-9f51-5c6b-a28d-da6f841467d1 сохранён в original
+ledger, public command.lookup completed, actual Stats10input/10output.
+Model requests8→8, probes2→2. Это initial /cost до cold Resume, а не
+failure resumed generation. Phase остаётся sent-once из-за viewport
+проверки showReply/revealDesktopReply, production effect не повторяется.
+
+Проверенный ui-failure.png показывает original report в двухстрочной
+collapsed card. ActivityItem.tsx выставляет data-expanded=false,
+render-ит CompactMarkdownPreview с line-clamp-2 и оставляет полный
+textContent; его первый child role=button вызывает существующий
+onToggleCollapse. Поэтому наличие полного document.body.innerText
+не доказывает полную геометрию. revealDesktopReply умеет только wheel
+или bounded wait; clipping самой карточки этим не снимается.
+Existing desktop-native-commands-ui-proof.ts уже использует штатный
+header click для native /cost, но его text-presence condition здесь
+не подходит: полный clipped text уже присутствует.
+
+### Круг 2 — один существующий UI-контрол точной карточки
+
+Изменить только scripts/legacy-agent-host/desktop-codex-cost-ui-proof.ts
+в showReply; shared revealDesktopReply и production renderer не менять.
+После existing exact normalized text wait читать original article по
+полному normalized reply text из проверенного receipt, а не по одному
+'/cost'/имени участника. Требовать ровно одну подходящую карточку и
+закрытое data-expanded=true|false; ambiguity/missing остаются refusal.
+При false использовать existing createDesktopUiControls.clickExpression
+на её firstElementChild с role=button: visible geometry, hit test,
+original captured renderer и stable target checks перед одним обычным
+mouse click. Затем existing passive wait подтверждает data-expanded=true
+для той же exact reply, и прежний revealDesktopReply проверяет полный
+текст внутри всех clipped ancestors. При true не кликать.
+
+Не использовать DOM.click/React setters, прямое изменение CSS/state,
+запись сообщения, command retry или повтор Send. Existing click/read
+budgets, original binding/receipt/input equality, counts, cold lookup
+и screenshot после успешной геометрии сохраняются. Тот же showReply
+применяется к retained original/cold и subsequent actual resumed report;
+не подменять identity/counters между ними.
+
+### Круг 3 — минимальная verification
+
+Проверить настоящий ActivityItem в существующем renderer case
+'uses a two-line clamped preview in compact mode': полный текст уже
+есть при collapsed, original header callback раскрывает его при
+обычном click, collapse override относится к тому же item.
+Допустимо узко дополнить этот existing case без новой suite/снимков
+и без подмены геометрии результатом headless DOM.
+Scripts types/targeted lint и existing ActivityItem tests проверяют
+контракт; физическая CDP geometry, original report screenshot и весь
+Codex cold Resume остаются pending existing Desktop CI.

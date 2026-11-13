@@ -91,7 +91,7 @@ export class OpenCodeV2ManagementHost {
       { providerId: this.configuredProviderId, modelId: this.profile.nativeModel!.modelId },
       () => this.selectionCurrent(), 'catalog');
     if (this.options.catalogProviderId) this.catalogCredential = captureOpenCodeV2SessionCredential(
-      this.profile, this.options.catalogProviderId, () => this.selectionCurrent() && this.configuration.isCurrent());
+      this.profile, this.options.catalogProviderId, this.configuration.isCurrent);
   }
 
   private selectionCurrent(): boolean {
@@ -108,7 +108,7 @@ export class OpenCodeV2ManagementHost {
   }
 
   private current(): boolean {
-    return this.selectionCurrent() && this.configuration.isCurrent() && (this.catalogCredential?.isCurrent() ?? true);
+    return this.catalogCredential?.isCurrent() ?? this.configuration.isCurrent();
   }
 
   matchesCatalog(providerId: string | undefined): boolean {

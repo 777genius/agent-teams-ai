@@ -145,7 +145,7 @@ export async function captureDonorSavedCorpus(root: string, teamName: string) {
   assert.equal(meta.cwd, join(root, 'workspace'));
   assert.equal(meta.description, DONOR_SAVED_DESCRIPTION);
   assert.equal(meta.model, 'claude-sonnet-4-6');
-  assert.equal(meta.effort, 'low');
+  assert.equal(Object.hasOwn(meta, 'effort'), false, 'compatible donor catalogue omits unsupported effort');
   assert.ok(Array.isArray(roster.members));
   assert.deepEqual(
     roster.members.map((value) => donorRow(value).name),

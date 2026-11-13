@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { request } from 'node:http';
 import { test } from 'node:test';
 import { nativeToolReceipt } from './model.ts';
 
@@ -91,6 +92,7 @@ test('current legacy source has one text turn and closes before ordinary Host pr
     reply: 'TEST_SOURCE_REPLY',
   };
   const model = await startNativeTeamModel({ allowModelProbes: true, currentLegacySource: source });
+  const preconnect = () => fetch(model.url, { method: 'HEAD' });
   const catalog = (query = '') => fetch(model.url + '/v1/models' + query, {
     headers: { 'x-api-key': 'TEST-current-legacy-only-key' },
   });
@@ -108,6 +110,9 @@ test('current legacy source has one text turn and closes before ordinary Host pr
     'You are "team-lead", the team lead.\n- Your team is "test-legacy".\n\nUser instructions:\n' +
     source.prompt;
   try {
+    const warmed = await preconnect();
+    assert.equal(warmed.status, 204);
+    assert.equal(await warmed.text(), '');
     const listed = await catalog();
     assert.equal(listed.status, 200);
     const listing = await listed.json() as { data: { id: string }[]; has_more: boolean };
@@ -126,6 +131,7 @@ test('current legacy source has one text turn and closes before ordinary Host pr
     assert.equal(frozen.turns.length, 1);
     assert.equal(frozen.probes.length, 1);
     assert.equal(frozen.catalogRequests, 2);
+    assert.equal(frozen.preconnectRequests, 1);
     assert.equal(
       (await post('Reply only OK. Do not use tools, access files or run commands.')).status,
       200
@@ -141,6 +147,36 @@ test('current legacy source has one text turn and closes before ordinary Host pr
     assert.deepEqual(model.currentLegacyTurns, frozen.turns);
   } finally {
     await model.close();
+  }
+  for (const mode of ['path', 'body', 'auth', 'overflow', 'ordinary', 'donor', 'closed'] as const) {
+    const refused = await startNativeTeamModel(mode === 'ordinary' ? {}
+      : mode === 'donor' ? { donorSavedProbes: true } : { currentLegacySource: source });
+    try {
+      if (mode === 'closed') {
+        const original = await fetch(refused.url + '/v1/messages', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ model: 'claude-sonnet-4-6', messages: [{ role: 'user', content: prompt }], tools: [] }),
+        });
+        assert.equal(original.status, 200); assert.ok((await original.text()).includes(source.reply));
+        const finished = await refused.finishCurrentLegacySource!();
+        assert.equal(finished.turns.length, 1); assert.equal(finished.preconnectRequests, 0);
+      }
+      if (mode === 'overflow')
+        for (let count = 0; count < 32; count++)
+          assert.equal((await fetch(refused.url, { method: 'HEAD' })).status, 204);
+      const status = mode === 'body' ? await new Promise<number | undefined>((resolve, reject) => {
+        const outgoing = request(refused.url, { method: 'HEAD', headers: { 'content-length': '1' } }, response => {
+          response.resume(); response.once('end', () => resolve(response.statusCode));
+        });
+        outgoing.once('error', reject); outgoing.end('x');
+      }) : (await fetch(refused.url + (mode === 'path' ? '/v1/models' : ''), {
+        method: 'HEAD', ...(mode === 'auth' ? { headers: { 'x-api-key': 'TEST-current-legacy-only-key' } } : {}),
+      })).status;
+      assert.equal(status, 400, mode + ' HEAD is refused without consumer input');
+      assert.equal(refused.failures.length, 1);
+      assert.deepEqual(refused.observations, []); assert.deepEqual(refused.probes, []);
+      assert.equal(refused.currentLegacyTurns?.length ?? 0, mode === 'closed' ? 1 : 0);
+    } finally { await refused.close(); }
   }
 });
 
