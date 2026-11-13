@@ -961,6 +961,13 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
   await cdp.evaluate('window.__agentTeamsDevStore.getState().openTeamsCreationPage()');
   await cdp.waitFor("document.querySelector('[data-testid=create-team-page] #team-name')",
     'native zh-TW create-team page', 45_000);
+  // The name input appears before asynchronous draft state is fully restored.
+  // Match the same enabled template-selector hydration gate as the original
+  // English E2E, using its actual Traditional Chinese accessible label.
+  await cdp.waitFor(
+    `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="團隊範本"]'); return button && !button.disabled; })()`,
+    'hydrated native zh-TW create-team form', 45_000
+  );
   // A previous config-only draft may persist Solo team; use the real toggle to
   // make the member roster visible instead of mutating component state directly.
   const solo = "document.querySelector('[data-testid=create-team-page] #solo-team')";
