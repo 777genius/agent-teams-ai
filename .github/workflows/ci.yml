@@ -651,7 +651,7 @@ jobs:
           assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);
           assert.deepEqual(r.cleanupErrors, []); assert.deepEqual(r.modelFailures, []);
           assert.equal(r.releaseQualified, false); assert.equal(r.vendorAuthQualified, false);
-          assert.equal(r.build.providerDigest, 'f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2');
+          assert.equal(r.build.providerDigest, '74ed00226ada87b85d181464545421b2b4572f38a4cc98b1db63611f034dfdae');
           assert.equal(r.inputs.kind, 'TEST_DESKTOP_V1_SOURCE_INPUTS'); assert.equal(r.inputs.status, 'READY');
           assert.equal(r.inputs.v1.version, '1.19.4');
           assert.equal(r.inputs.v1.sha256, '538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7');
@@ -1134,7 +1134,7 @@ jobs:
             sha256: 'fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89',
           };
           const currentProvider = await readNativeProviderArtifact(repo);
-          assert.equal(currentProvider.sha256, 'f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2');
+          assert.equal(currentProvider.sha256, '74ed00226ada87b85d181464545421b2b4572f38a4cc98b1db63611f034dfdae');
           await verifyNativeProviderArtifact(donor, oldProvider);
           await verifyNativeProviderArtifact(repo, currentProvider);
           const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');
@@ -1329,8 +1329,8 @@ jobs:
           import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
           const provider = await readNativeProviderArtifact(process.cwd());
           assert.deepEqual(provider, {
-            path: 'vendor/provider-migration/claude-review-3b39a50b/agent-teams-provider-implementations-0.0.0.tgz',
-            sha256: 'f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2',
+            path: 'vendor/provider-migration/frontend-parity-ce03c60d/agent-teams-provider-implementations-0.0.0.tgz',
+            sha256: '74ed00226ada87b85d181464545421b2b4572f38a4cc98b1db63611f034dfdae',
           });
           await verifyNativeProviderArtifact(process.cwd(), provider);
           const stage = process.env.CODEX_CANDIDATE_STAGE;
@@ -1363,8 +1363,8 @@ jobs:
           LEGACY_CODEX_TEAM_GO=1 \
           LEGACY_CODEX_CANDIDATE_VERSION=0.169.0 \
           LEGACY_CODEX_CANDIDATE_INPUTS="$candidate_stage/input-pins.json" \
-          LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/claude-review-3b39a50b/agent-teams-provider-implementations-0.0.0.tgz \
-          LEGACY_NATIVE_PROVIDER_SHA256=f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2 \
+          LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/frontend-parity-ce03c60d/agent-teams-provider-implementations-0.0.0.tgz \
+          LEGACY_NATIVE_PROVIDER_SHA256=74ed00226ada87b85d181464545421b2b4572f38a4cc98b1db63611f034dfdae \
           "$selected_node" --test packages/legacy-agent-host/tests/native-codex-team.native.ts 2>&1 | tee "$RUNNER_TEMP/stage1-codex-0169-candidate.log"
           "$selected_node" --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
@@ -1378,7 +1378,7 @@ jobs:
           assert.equal(receipt.status, 'PASS'); assert.equal(receipt.cleanup, true);
           assert.equal(receipt.nativeVersion, 'codex-cli 0.169.0');
           assert.equal(receipt.scope, 'public-D Codex 0.169.0 candidate Darwin ARM64');
-          assert.equal(receipt.artifacts.provider.sha256, 'f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2');
+          assert.equal(receipt.artifacts.provider.sha256, '74ed00226ada87b85d181464545421b2b4572f38a4cc98b1db63611f034dfdae');
           assert.equal(receipt.artifacts.node.version, 'v24.21.0');
           assert.equal(receipt.artifacts.inputs.archive.sha256, 'd67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d');
           assert.equal(receipt.catalog.originalChildExited, true);

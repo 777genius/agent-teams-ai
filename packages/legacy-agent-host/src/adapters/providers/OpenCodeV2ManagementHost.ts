@@ -232,6 +232,7 @@ export class OpenCodeV2ManagementHost {
             models: providerId === undefined && !includeModels ? [] : models.map(model => ({
               modelId: model.id, displayName: model.name, contextTokens: model.contextTokens,
               outputTokens: model.outputTokens, free: null, declaredInputModalities: model.inputModalities,
+              variants: model.variants,
             })),
             authMethods: integration?.plainKey ? ['api' as const] : [],
           };

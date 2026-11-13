@@ -6,6 +6,7 @@ import childProcess from 'node:child_process';
 import fs from 'node:fs';
 import { createDesktopProcessRootOracle } from './desktop-process-root-oracle.ts';
 import {
+  assertDesktopProofEnvironment,
   assertOwnedCdpListener,
   groupMembers,
   isCapturedOriginalNodeZombie,
@@ -17,6 +18,37 @@ import {
   readOwnedCdpListenerFailure,
   settledGroupMembers,
 } from './desktop-backend-observations.ts';
+
+test('offline Desktop admission refuses inherited native selections before preparing a fixture', (t) => {
+  const original = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.startsWith('LEGACY_DESKTOP_')));
+  for (const key of Object.keys(original)) delete process.env[key];
+  t.after(() => {
+    for (const key of Object.keys(process.env)) if (key.startsWith('LEGACY_DESKTOP_')) delete process.env[key];
+    Object.assign(process.env, original);
+  });
+  Object.assign(process.env, { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+    LEGACY_DESKTOP_TEST_DISPLAY: ':97', LEGACY_DESKTOP_TEST_XAUTHORITY: '/TEST/Xauthority' });
+  for (const mode of ['team-ui', 'task-board-ui']) {
+    process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
+    if (process.platform === 'darwin' || process.platform === 'linux' && process.arch === 'x64')
+      assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
+    else assert.throws(() => assertDesktopProofEnvironment(false), /Linux Desktop portability/);
+  }
+  for (const mode of ['native-launch-ui', 'codex-login-ui', 'process-cold-ui', 'bridge-diagnostics']) {
+    process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
+    assert.throws(() => assertDesktopProofEnvironment(true), /only the original offline/);
+  }
+  process.env.LEGACY_DESKTOP_PROOF_MODE = 'team-ui';
+  for (const key of ['LEGACY_DESKTOP_CLAUDE_PATH', 'LEGACY_DESKTOP_CODEX_PATH',
+    'LEGACY_DESKTOP_OPENCODE_PATH', 'LEGACY_DESKTOP_OPENCODE_GENERATION',
+    'LEGACY_DESKTOP_DIAGNOSTIC_HOST_ENTRY', 'LEGACY_DESKTOP_SCHEDULE_UI']) {
+    process.env[key] = 'TEST-refused';
+    assert.throws(() => assertDesktopProofEnvironment(true), new RegExp(`provider-emulation refuses ${key}`));
+    delete process.env[key];
+  }
+  process.env.LEGACY_DESKTOP_EMULATED_ONLY = 'false';
+  assert.throws(() => assertDesktopProofEnvironment(true), /explicit provider-emulation admission/);
+});
 
 test('Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder', { skip: process.platform !== 'linux' }, (t) => {
   const fields = (fd: number) => `f${fd}\ntIPv4\nD0xabcd\ni12345\nPTCP\nTST=LISTEN\nnPRIVATE_PATH_MUST_NOT_LEAK\n`;

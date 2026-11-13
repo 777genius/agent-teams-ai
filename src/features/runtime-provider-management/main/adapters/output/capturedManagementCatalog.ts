@@ -38,6 +38,13 @@ function declaredInputs(value: unknown): readonly string[] | null {
     ? [...value]
     : null;
 }
+function variants(value: unknown): readonly string[] {
+  if (!Array.isArray(value) || value.length > 256 ||
+      value.some((item) => typeof item !== 'string' || !item || item.length > 256 ||
+        item.trim() !== item || item.includes('\0')) || new Set(value).size !== value.length)
+    throw new Error('Invalid management response');
+  return [...value];
+}
 function authOptions(value: unknown): ProviderAuthenticationMethod[] | undefined {
   if (value === undefined) return undefined;
   if (!Array.isArray(value) || value.length > 128) throw new Error('Invalid management response');
@@ -165,6 +172,7 @@ export function parseManagementCatalog(
           contextTokens: positive(model.contextTokens),
           outputTokens: positive(model.outputTokens),
           free: model.free,
+          ...(model.variants === undefined ? {} : { variants: variants(model.variants) }),
           ...(model.declaredInputModalities === undefined
             ? {}
             : {

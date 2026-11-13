@@ -1,16 +1,84 @@
 import { createTeamProcessComposition } from '../dist/composition/createTeamProcessComposition.js';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
+import { ChildProcess } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import fs, { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire, syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, test } from 'node:test';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { createTeamMcpTools } from '../dist/mcp/tools.js';
+import { createQualifiedLinuxProcessApi } from '../dist/process/LinuxRegisteredProcess.js';
 import type { RegisteredProcessCapture } from '../dist/process/registeredProcessContracts.js';
 const roots: string[] = [];
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
+
+test('Linux original executable compares signed Node and unsigned native inode bits exactly',
+  { skip: process.platform !== 'linux' || process.arch !== 'x64' }, t => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-linux-image-identity-')));
+    roots.push(root);
+    const artifactPath = join(root, 'registered-process.node'), executablePath = join(root, 'TEST-image');
+    writeFileSync(artifactPath, 'TEST mocked native bridge; never execute');
+    writeFileSync(executablePath, 'TEST original executable; never execute');
+    const hash = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
+    const originalStat = fs.lstatSync(executablePath, { bigint: true });
+    const originalLstat = fs.lstatSync, originalFstat = fs.fstatSync;
+    const nativeInode = 0x8000000000000000n;
+    let statInode = -nativeInode;
+    const identity = { pid: 4100, sessionId: 4100, pidfdId: '1234', pidNamespaceId: '5678',
+      bootId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' };
+    const native = {
+      kernelIdentity: () => ({ kernelRelease: '6.18.57', machine: 'x86_64', glibcVersion: '2.39',
+        pidfd: true, pidfs: true }),
+      captureRoot: () => identity,
+      readRootExecutable: () => ({ ...identity, executablePath,
+        executableDevice: originalStat.dev.toString(), executableInode: nativeInode.toString() }),
+    };
+    t.mock.method(process, 'dlopen', (module: { exports: unknown }, path: string) => {
+      assert.equal(path, artifactPath);
+      module.exports = native;
+    });
+    t.mock.method(fs, 'lstatSync', ((file, options) => {
+      const stat = originalLstat(file, options);
+      if (stat && file === executablePath)
+        Object.defineProperty(stat, 'ino', { value: typeof stat.ino === 'bigint' ? statInode : Number(statInode) });
+      return stat;
+    }) as typeof fs.lstatSync);
+    t.mock.method(fs, 'fstatSync', ((fd, options) => {
+      const stat = originalFstat(fd, options);
+      if (stat.dev === originalStat.dev && stat.ino === originalStat.ino)
+        Object.defineProperty(stat, 'ino', { value: statInode });
+      return stat;
+    }) as typeof fs.fstatSync);
+    syncBuiltinESMExports();
+    try {
+      const api = createQualifiedLinuxProcessApi({ path: artifactPath, sha256: hash(artifactPath),
+        kernelCapability: 'pidfd-live-v1', libc: { family: 'glibc', minimumVersion: '2.17' } });
+      assert.ok(api);
+      const child = new ChildProcess();
+      Object.defineProperty(child, 'pid', { value: identity.pid });
+      api.captureRoot(child, () => true);
+      const executable = { path: executablePath, sha256: hash(executablePath) };
+      const original = api.readRootExecutable(child, executable);
+      assert.equal(original.executableSha256, executable.sha256);
+      statInode = nativeInode;
+      assert.deepEqual(api.readRootExecutable(child, executable), original, 'the same unsigned representation remains exact');
+      for (const replacement of [-nativeInode + 1n, nativeInode + 1n,
+        nativeInode + 0x10000000000000000n, -nativeInode - 0x10000000000000000n]) {
+        statInode = replacement;
+        assert.throws(() => api.readRootExecutable(child, executable), /custody unavailable/,
+          'a distinct inode or wider value must not alias the original 64-bit identity');
+      }
+    } finally {
+      t.mock.restoreAll(); syncBuiltinESMExports();
+      delete createRequire(import.meta.url).cache[artifactPath];
+    }
+  }
+);
+
 function fixture() {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-m19-owner-stage-')));
   roots.push(root);

@@ -42,6 +42,8 @@ import {
   CLI_INSTALLER_GET_STATUS,
   CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
 } from '../../../src/preload/constants/ipcChannels';
+import { getTeamEffortSelectorPresentation } from '../../../src/renderer/utils/teamEffortOptions';
+import { isTeamEffortLevelForProvider } from '../../../src/shared/utils/effortLevels';
 
 import type { TeamHostProfile } from '../../../packages/legacy-agent-host/dist/composition/TeamHost';
 import type { DesktopBackendDescriptor } from '../../../src/features/agent-backend/main';
@@ -79,6 +81,8 @@ const sourcePaths = [
   'src/features/runtime-provider-management/core/application/RuntimeProviderStatusPort.ts',
   'src/shared/utils/providerStatusAuthority.ts',
   'src/renderer/store/slices/cliInstallerStatusReconciliation.ts',
+  'src/renderer/utils/teamEffortOptions.ts',
+  'src/shared/utils/effortLevels.ts',
   'test/features/runtime-provider-management/capturedManagement.safe-e2e.test.ts',
 ];
 
@@ -317,6 +321,17 @@ it('actual IPC facade → captured Desktop owner → standalone Host → separat
       statusCheckOutcome: 'model_only',
       models: expect.arrayContaining(['TEST-api/TEST-model']),
     });
+    const providerStatus = status.data.providers.find((p) => p.providerId === 'opencode');
+    const effort = getTeamEffortSelectorPresentation({
+      providerId: 'opencode', model: 'TEST-api/TEST-model', providerStatus,
+    });
+    expect(effort).toMatchObject({
+      disabled: false,
+      options: [{ value: '', label: 'Default' }, { value: 'low', label: 'Low' }, { value: 'high', label: 'High' }],
+    });
+    for (const option of effort.options.filter((option) => option.value))
+      expect(isTeamEffortLevelForProvider(option.value, 'opencode')).toBe(true);
+    expect(JSON.stringify(providerStatus)).not.toContain('TEST-private-variant-setting');
     expect(
       (await readFile(join(root, 'native-effects.ndjson'), 'utf8')).includes(
         'probe-session-created'

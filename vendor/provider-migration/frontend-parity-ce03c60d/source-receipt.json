@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "agent-teams-ai/old-provider-implementations",
+  "sourceCommit": "ce03c60d620bfc6152623597637971ca8c529469",
+  "sourceTree": "52d874b5e843b48fbd53d02c0d91cd2c39749eef",
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "fullChecks": [
+    {
+      "node": "24.21.0",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "runId": 43473901596,
+      "jobId": 132052606469,
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43473901596/job/132052606469"
+    },
+    {
+      "node": "26.11.1",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "runId": 43473901596,
+      "jobId": 132052606859,
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43473901596/job/132052606859"
+    }
+  ],
+  "checkedArtifact": {
+    "id": 14061769125,
+    "name": "opencode-v2-spi-consumer-checked-ce03c60d620bfc6152623597637971ca8c529469",
+    "bytes": 184103,
+    "sha256": "729758c0cb4cdb7717b1b1743e386c379648ba7478f5780d9c4d1606ea5a6e7d",
+    "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43473901596/artifacts/14061769125"
+  },
+  "packages": {
+    "provider-implementations": {
+      "file": "agent-teams-provider-implementations-0.0.0.tgz",
+      "oldSha256": "f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2",
+      "newSha256": "74ed00226ada87b85d181464545421b2b4572f38a4cc98b1db63611f034dfdae",
+      "bytes": 176967,
+      "integrity": "sha512-YRn1zVgc9qlTJSXXNoKmSe92Oqp1aGuvU6llOk8kU+I/eOQVVmZOmWdfqMk5ED2aJ8GjjDQ3RxOPX5AOADujjw=="
+    },
+    "provider-session-contracts": {
+      "existingPath": "../opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "sha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "unchanged": true
+    }
+  }
+}

@@ -115,6 +115,8 @@ export interface ProviderManagementCatalog {
       outputTokens: number | null;
       free: boolean | null;
       declaredInputModalities?: readonly string[] | null;
+      /** Native variant IDs only; settings and credentials stay inside the provider. */
+      variants?: readonly string[];
     }[];
     authMethods: ('api' | 'oauth')[];
     /** Explicit provider reads only; native indices remain stable across omitted unknown methods. */

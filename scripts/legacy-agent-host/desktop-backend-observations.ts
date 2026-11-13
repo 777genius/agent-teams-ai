@@ -16,8 +16,18 @@ assert.ok(Number.isInteger(selectedCdpPort) && selectedCdpPort >= 1024 && select
 /** Preserve explicit TEST admission before even probing the selected renderer port. */
 export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
   assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1', 'root must authorize actual pnpm dev:mcp launch');
+  const emulatedOnly = process.env.LEGACY_DESKTOP_EMULATED_ONLY;
+  assert.ok(emulatedOnly === undefined || emulatedOnly === '1', 'explicit provider-emulation admission');
+  if (emulatedOnly === '1') {
+    assert.ok(['team-ui', 'task-board-ui'].includes(process.env.LEGACY_DESKTOP_PROOF_MODE ?? ''),
+      'provider-emulation admits only the original offline Team and Taskboard controls');
+    // Reject inherited native/scenario selectors before any fixture or model starts.
+    const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|EMULATED_ONLY|PROOF_MODE|CDP_PORT|TEST_DISPLAY|TEST_XAUTHORITY|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
+    for (const key of Object.keys(process.env))
+      if (key.startsWith('LEGACY_DESKTOP_')) assert.ok(allowed.test(key), `provider-emulation refuses ${key}`);
+  }
   assert.ok(process.platform === 'darwin' ||
-    (process.platform === 'linux' && process.arch === 'x64' && linuxModeAllowed),
+    (process.platform === 'linux' && process.arch === 'x64' && (linuxModeAllowed || emulatedOnly === '1')),
     'Linux Desktop portability requires an explicitly bounded proof mode');
   if (process.platform === 'linux') {
     assert.match(process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '', /^:\d+$/u, 'explicit isolated TEST X display');

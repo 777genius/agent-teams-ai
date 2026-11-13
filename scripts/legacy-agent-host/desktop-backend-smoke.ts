@@ -108,6 +108,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const mode = packedRelaunchMode ? 'native-launch-ui' : process.env.LEGACY_DESKTOP_PROOF_MODE ?? 'bridge-diagnostics';
   const codexAccountMode = ['codex-account-read', 'codex-account-auth', 'codex-login-ui'].includes(mode);
   assertDesktopProofEnvironment(mode === 'process-cold-ui' || codexAccountMode);
+  const emulatedOnly = process.env.LEGACY_DESKTOP_EMULATED_ONLY === '1';
   assert.equal(
     await portOccupied(),
     false,
@@ -161,6 +162,13 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     openCodeEndpoint: await reserveMixedOpenCodeEndpoint(),
     openCodeManagementEndpoint: await reserveMixedOpenCodeEndpoint(),
   }) : baseFixture;
+  if (emulatedOnly) {
+    const profile = object(JSON.parse(await readFile(fixture.profilePath, 'utf8')));
+    const descriptor = object(JSON.parse(await readFile(fixture.descriptorPath, 'utf8')));
+    assert.equal(profile.runtime, undefined, 'offline UI cannot configure provider sessions');
+    assert.equal(profile.management, undefined, 'offline UI cannot configure provider management');
+    assert.equal(descriptor.management, undefined, 'offline Desktop cannot select provider management');
+  }
   const oversizedCommentSeed = mode === 'task-board-cross-team-ui'
     ? await prepareDesktopOversizedCommentUiFixture(fixture.root, fixture.uiSeed!)
     : undefined;
@@ -211,11 +219,18 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   });
   if (capturedMcpUiMode) evidence.scope = 'Original Launch member MCP policies, selected external server and app-only isolation, actual native permission and tool effect, all-member Stop and saved UI readback; finite localhost inference only';
   if (scheduleUiMode) evidence.scope = 'Original Schedule controls, actual finite Claude and task-first native Bash/MCP, Stop, history and reload; localhost inference only';
-  if (mode === 'codex-login-ui') {
+  if (mode === 'codex-login-ui' || emulatedOnly) {
     evidence.source = {
       head: execFileSync('/usr/bin/git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
       dirty: execFileSync('/usr/bin/git', ['status', '--porcelain', '--untracked-files=no'], { cwd: repo, encoding: 'utf8' }).trim().length > 0,
     };
+  }
+  if (emulatedOnly) {
+    evidence.emulation = { only: true, runtimeConfigured: false, managementConfigured: false };
+    evidence.scope = 'Original Electron Team and Taskboard controls, standalone Host persistence and renderer reload; native provider execution forbidden';
+    evidence.excluded = ['provider sessions', 'vendor authentication', 'native model execution', 'full Stage1/release/default activation'];
+  }
+  if (mode === 'codex-login-ui') {
     evidence.scope = 'Existing Electron Codex Settings controls through preload/Main/Host/D and pinned native app-server: fresh browser/device login start, private link/code, copy and cancel. No authenticated account completion.';
     evidence.excluded = ['authenticated vendor login completion', 'vendor inference', 'personal browser navigation', 'other OS tuples', 'Desktop team launch', 'full Stage1/release/default activation'];
   }
@@ -328,6 +343,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     };
     const { cdp: connected, target, startupStarted, startupBudgetMs } = await connectCapturedDesktopApp({ app, group, spawnError: () => spawnError, packed, cdpLibrary, evidence });
     cdp = connected;
+    if (emulatedOnly) {
+      assertNoNativeHostChildren(group, fixture, 'before-first-team-read');
+      object(evidence.emulation).noNativeHostChildrenBeforeUi = true;
+    }
     if (startupDiagnosticMode) {
       await observeDesktopStartup(cdp, { root: fixture.root, url: String(target.url), remainingStartupMs: startupBudgetMs - (performance.now() - startupStarted), assertOwnedRenderer: () => assertOwnedCdpListener(group), evidence });
       await requestObservedDesktopClose(cdp, { assertOwnedRenderer: () => assertOwnedCdpListener(group),
@@ -523,6 +542,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       });
     }
     const children = groupMembers(group);
+    if (emulatedOnly) {
+      assertNoNativeHostChildren(group, fixture, 'after-team-read');
+      object(evidence.emulation).noNativeHostChildren = true;
+    }
     const hosts = children.filter(
       (row) => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`
     );
@@ -683,13 +706,14 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         .map((line) => object(JSON.parse(line) as unknown));
       const preQuitCount =
         typeof evidence.preQuitSentinelCount === 'number' ? evidence.preQuitSentinelCount : null;
-      if (packed && census.some(row => !permittedSentinelObservation(row))) evidence.status = 'INCOMPLETE';
+      if ((packed || emulatedOnly) && census.some(row => !permittedSentinelObservation(row))) evidence.status = 'INCOMPLETE';
       evidence.finalSentinelCensus = {
         invocations: census,
         preQuitCount,
         postQuitOrCleanupInvocations: preQuitCount === null ? null : census.slice(preQuitCount),
         refusedInvocations: census.filter((row) => row.allowed !== true),
         qualification: packed ? 'All legacy executable calls refuse, including version discovery. Only nonessential version attempts and the isolated shell-environment fixture are admitted observations; any agent/control fallback before or after Quit makes this packed proof incomplete.' :
+          emulatedOnly ? 'Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete.' :
           'Sentinels refuse nonversion commands without launching providers. Post-Quit/cleanup refusals are retained legacy maintenance gaps; they do not prove native execution or full fork-free/P5 qualification.',
       };
     } catch (error) {
@@ -732,6 +756,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         ? { loginFailure: projectDesktopCodexLoginFailure(evidence) } : {}),
     }));
     if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
+    if (emulatedOnly) assert.equal(evidence.status, 'PASS', 'provider-emulation UI proof incomplete; original receipt retained');
     if (controlledProcessMode) assert.equal(evidence.status, 'PASS', 'controlled process cold UI proof incomplete; original evidence retained');
     if (mode === 'codex-login-ui') assert.equal(evidence.status, 'PASS', 'Codex login UI proof incomplete; inspect its retained finite receipt');
     if (scheduleUiMode) assert.equal(evidence.status, 'PASS', 'original schedule UI proof incomplete; inspect its retained receipt');

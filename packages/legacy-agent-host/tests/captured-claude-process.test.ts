@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { ChildProcess, spawn } from 'node:child_process';
+import childProcess, { ChildProcess, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
+import fs from 'node:fs';
 import {
   chmod,
   mkdir,
@@ -13,6 +14,7 @@ import {
   symlink,
   writeFile,
 } from 'node:fs/promises';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -78,6 +80,48 @@ test('captured native executable is pinned again at launch and sealing forbids l
     await rm(root, { recursive: true, force: true });
   }
 });
+
+for (const changed of ['inode', 'mtime', 'ctime'] as const) test(
+  `captured launch rejects exact ${changed} changes hidden by numeric file metadata before spawning`,
+  async (t) => {
+    const { root, profile, request } = await setup('#!/bin/sh\nexit 0\n');
+    const custody = new CapturedProcess(profile);
+    const originalLstat = fs.lstatSync;
+    const original = changed === 'inode' ? 9_007_199_254_740_992n : 1_800_000_000_000_000_000n;
+    const replacement = original + 1n;
+    assert.equal(Number(original), Number(replacement), 'numeric Stats conceal the exact change');
+    let observations = 0, allocations = 0;
+    t.mock.method(fs, 'lstatSync', ((file, options) => {
+      const stat = originalLstat(file, options);
+      if (stat && file === profile.executable.path) {
+        const value = ++observations === 1 ? original : replacement;
+        if (changed === 'inode')
+          Object.defineProperty(stat, 'ino', { value: typeof stat.ino === 'bigint' ? value : Number(value) });
+        else {
+          Object.defineProperty(stat, `${changed}Ms`, {
+            value: typeof stat.ino === 'bigint' ? value / 1_000_000n : Number(value) / 1_000_000,
+          });
+          if (typeof stat.ino === 'bigint') Object.defineProperty(stat, `${changed}Ns`, { value });
+        }
+      }
+      return stat;
+    }) as typeof fs.lstatSync);
+    t.mock.method(childProcess, 'spawn', (() => {
+      allocations++;
+      throw new Error('TEST process allocation must remain unreachable');
+    }) as typeof childProcess.spawn);
+    syncBuiltinESMExports();
+    try {
+      assert.throws(() => custody.launch(request), /Native executable changed/);
+      assert.equal(observations, 2);
+      assert.equal(allocations, 0);
+      assert.equal(await custody.confirmStopped(), true);
+    } finally {
+      t.mock.restoreAll(); syncBuiltinESMExports();
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+);
 
 for (const parentExited of [false, true]) test(
   parentExited

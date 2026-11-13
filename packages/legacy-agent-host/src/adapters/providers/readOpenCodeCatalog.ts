@@ -18,6 +18,15 @@ const text = (value: unknown): string => {
 };
 const positive = (value: unknown): number | null =>
   typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : null;
+const variants = (value: unknown): readonly string[] => {
+  const entries = Object.entries(row(value));
+  if (entries.length > 256) throw new OpenCodeManagementError('unavailable');
+  return entries.flatMap(([id, settings]) => {
+    if (id.length > 256 || id.trim() !== id) throw new OpenCodeManagementError('unavailable');
+    const selected = text(id);
+    return row(settings).disabled === true ? [] : [selected];
+  });
+};
 
 /** Drop provider options, credential values and unknown extensions before leaving Host. */
 export async function readOpenCodeCatalog(
@@ -69,6 +78,7 @@ export async function readOpenCodeCatalog(
           outputTokens: positive(limit.output),
           free: costsKnown ? cost.input === 0 && cost.output === 0 : null,
           declaredInputModalities: readOpenCodeInputModalities(model),
+          ...(model.variants === undefined ? {} : { variants: variants(model.variants) }),
         };
       }
     );

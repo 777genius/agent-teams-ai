@@ -466,8 +466,8 @@ Baseline `ClaudeMultimodelBridgeService` сохраняет reported efforts.
 2. Host добавляет optional `variants` к model metadata. V1 берёт IDs из native
    variant map, V2 переносит уже проверенный список. Main проверяет bounded
    строки и дубликаты. Отсутствующее поле в старом snapshot остаётся допустимым.
-3. Status переносит только существующие значения `EffortLevel` в существующий
-   catalog. Явно пустой список сохраняет прежний Not supported; неизвестное имя
+3. Status переносит только provider-valid `low`/`medium`/`high` в существующий
+   catalog; используется тот же `isTeamEffortLevelForProvider`, что у Team IPC. Явно пустой список сохраняет прежний Not supported; неизвестное имя
    не создаёт новый UI capability. Catalog не становится proof авторизации или
    model execution. Native selection и session admission не меняются.
 4. Расширить существующие D protocol, Host management и Main/status tests.
@@ -486,3 +486,10 @@ Baseline `ClaudeMultimodelBridgeService` сохраняет reported efforts.
 
 Оценка: 65–100 production LOC, 45–75 test LOC; сложность 3/10, ожидаемая
 надёжность 8/10, уверенность в причине 9/10. Это план исправления, не PASS.
+
+Независимое R4 (`/root/session_schedules`): исходный общий `EffortLevel` filter
+мог предложить `xhigh`/`max`/`ultra`, которые прежний OpenCode Team IPC отвергает.
+Исправлено до публикации: filter переиспользует provider-specific predicate;
+existing regression включает `max`/`ultra` и требует только low/high, а controlled
+IPC→Host→TEST process проверка сопоставляет все предложенные options с тем же
+public request validator. Новая произвольная variant capability не добавляется.

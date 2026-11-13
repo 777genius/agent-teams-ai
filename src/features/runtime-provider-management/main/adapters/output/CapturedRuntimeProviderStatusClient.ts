@@ -6,6 +6,7 @@ import {
   createRuntimeStatusErrorProviderStatus,
 } from '@main/services/runtime/providerStatusCheckContract';
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
+import { isTeamEffortLevelForProvider } from '@shared/utils/effortLevels';
 
 import { readCapturedClaudeStatus } from './capturedClaudeMetadata';
 import { projectCapturedCodexCatalog } from './capturedCodexCatalog';
@@ -69,12 +70,14 @@ function projectOpenCodeCatalog(
   now: number
 ): CliProviderStatus {
   const items = rows.flatMap((provider) =>
-    models(provider).map((model) => ({
+    models(provider).map((model, index) => ({
       id: model.modelId,
       launchModel: model.modelId,
       displayName: model.displayName,
       hidden: false,
-      supportedReasoningEfforts: [],
+      supportedReasoningEfforts: (provider.models[index]?.variants ?? []).filter((effort) =>
+        isTeamEffortLevelForProvider(effort, 'opencode')
+      ),
       defaultReasoningEffort: null,
       inputModalities: ['text'],
       supportsPersonality: false,

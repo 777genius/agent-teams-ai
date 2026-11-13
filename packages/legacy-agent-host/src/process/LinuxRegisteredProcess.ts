@@ -20,6 +20,11 @@ interface NativeApi extends LinuxWarmNativeApi {
   signalOriginal(target: LinuxProcessIdentity): number;
 }
 const hold = (): never => { throw new Error('Registered process custody unavailable'); };
+/** Node Stats may expose a signed 64-bit view of the native bridge's uint64 identity. */
+function unsignedStatIdentity(value: bigint): string {
+  if (value < -0x8000000000000000n || value > 0xffffffffffffffffn) return hold();
+  return BigInt.asUintN(64, value).toString();
+}
 function identity(value: unknown): LinuxProcessIdentity {
   if (!value || typeof value !== 'object') return hold();
   const row = value as LinuxProcessIdentity;
@@ -127,7 +132,8 @@ export function createQualifiedLinuxProcessApi(artifact: {
       const before = lstatSync(executable.path, { bigint: true });
       if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n ||
           before.size > 512n * 1024n * 1024n || realpathSync(executable.path) !== executable.path ||
-          before.dev.toString() !== nativeImage.device || before.ino.toString() !== nativeImage.inode) return hold();
+          unsignedStatIdentity(before.dev) !== nativeImage.device ||
+          unsignedStatIdentity(before.ino) !== nativeImage.inode) return hold();
       const file = openSync(executable.path, constants.O_RDONLY | constants.O_NOFOLLOW);
       let digest: string;
       try {

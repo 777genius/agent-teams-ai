@@ -73,3 +73,48 @@ platform проверки оцениваются отдельно после ч�
 - Остаточные незавершённые native/platform пункты названы прямо. До их фактической
   проверки общий перенос не помечается полностью квалифицированным.
 - #982 остаётся вне main; ни release, ни default-path switch не выполняются.
+
+## Проверенные исправления и текущая приёмка
+
+- **P04:** повреждённая или нечитаемая история runs больше не считается пустой.
+  До исправления существующий safe E2E принимал повторный trigger после lost ACK;
+  после исправления он отклонён до записи/dispatch, исходные bytes и Task сохранены.
+  Отсутствующий файл по-прежнему означает первый запуск. Срез опубликован в
+  `0805eff6914564f4541b1da3c2cab16197c8ba1f`; 193 затронутые проверки прошли без skips.
+- **P05:** безопасные OpenCode variant IDs проходят D → Host → Main. Existing
+  selector получает только `low/medium/high`, допустимые прежним OpenCode IPC
+  контрактом; неизвестные/disabled значения и private configuration не предлагаются.
+  Provider source `ce03c60d620bfc6152623597637971ca8c529469` проверен `pnpm check`
+  на Node 24.21.0 и 26.11.1 в [CI 43473901596](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43473901596).
+  Frontend использует исходный checked artifact; ZIP и оба package digests
+  перепроверены. Пакет contracts остался byte-identical.
+- **P08/P09:** CapturedProcess сохраняет точность inode и nanosecond timestamps.
+  Linux custody сравнивает signed Node Stats и unsigned C identity по тем же
+  64 битам с явной проверкой диапазона. Исходный Linux native fixture отказал на
+  high-bit inode до исправления; после него original Stop, cold lookup, соседний
+  процесс, namespace/session negatives и cleanup прошли на собственных C/Node
+  процессах. Это не закрывает отдельное окно между path verification и exec.
+
+После установки нового checked D объединённый Host собран TypeScript 7.0.2.
+Account/config acceptance прошла в текущем integration checkout на Node 24.21.0:
+6 существующих файлов, 44 PASS, 0 FAIL, 0 SKIP; отдельно OpenCode management —
+10 PASS, 0 FAIL, 0 SKIP. Это actual Main IPC → отдельный Host → TEST protocol/HTTP
+peer с shutdown/readback и подтверждённым отсутствием 18 дочерних TEST процессов.
+Видимый renderer control этой группой не заявляется. Независимое source review
+проверило effort predicate и точное сравнение process identity.
+
+Новая отдельная `Host Emulated Acceptance` workflow разрешает Draft PR и только
+исходные offline Team/Taskboard modes. До fixture preparation она отклоняет
+любые inherited native/scenario selectors, проверяет отсутствие runtime и
+management profiles, сохраняет source hashes, исходные screenshots и receipts.
+Неожиданный sentinel вызов или незавершённая очистка делает проверку INCOMPLETE.
+38 проверок admission/CDP/startup прошли локально; actual Desktop результат
+остаётся открытым до выполнения CI и просмотра исходных screenshots.
+Existing native/required workflows и production admission не ослаблены.
+
+Текущая инструкция допускает эмуляторы как проверку frontend-функциональности
+платных агентов. Такие результаты учитываются как emulated functional acceptance;
+они не переименовываются в vendor authentication/native compatibility. Историческое
+требование native runtime в старых разделах планов не запрещает эту разрешённую
+проверку. Любой оставшийся product defect рассматривается отдельно от отсутствия
+разрешения на native vendor run.

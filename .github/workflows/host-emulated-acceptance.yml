@@ -1,0 +1,187 @@
+name: Host Emulated Acceptance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    paths:
+      - '.github/workflows/host-emulated-acceptance.yml'
+      - 'packages/legacy-agent-host/**'
+      - 'packages/task-change-ledger/**'
+      - 'scripts/legacy-agent-host/**'
+      - 'src/features/agent-backend/**'
+      - 'src/features/runtime-provider-management/**'
+      - 'src/main/**'
+      - 'src/preload/**'
+      - 'src/renderer/**'
+      - 'src/shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+
+permissions:
+  contents: read
+
+# Draft PRs run this separate offline lane; existing native gates keep their scope.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
+
+jobs:
+  offline-desktop:
+    name: Offline Host Desktop (Linux x64)
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      HOST_EMULATED_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Prepare private Linux display
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = x86_64
+          test "$(git rev-parse HEAD)" = "$HOST_EMULATED_SOURCE_HEAD"
+          printf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth lsof
+      - name: Install frozen workspace and Electron
+        run: |
+          set -euo pipefail
+          node scripts/ci/install-dependencies-with-retry.mjs
+          node scripts/ensure-electron-install.cjs --strict
+          node -e "require('node:assert/strict').equal(require('electron/package.json').version, '44.10.1')"
+          pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1
+      - name: Build existing Desktop prerequisites and verify admission
+        run: |
+          set -euo pipefail
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm --filter agent-teams-controller build
+          pnpm --filter agent-teams-mcp build
+          node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+      - name: Capture package-manager and Host inputs without vendor executables
+        run: |
+          set -euo pipefail
+          selected_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-emulated-ui-inputs-XXXXXX")"
+          mkdir "$selected_inputs/corepack" "$selected_inputs/cache"
+          printf '{"private":true}\n' > "$selected_inputs/corepack/package.json"
+          pnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
+          COREPACK_HOME="$selected_inputs/cache" node "$selected_inputs/corepack/node_modules/corepack/dist/pnpm.js" --version
+          HOST_EMULATED_INPUTS="$selected_inputs" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          const selected = process.env.HOST_EMULATED_INPUTS;
+          const corepack = realpathSync(join(selected, 'corepack/node_modules/corepack'));
+          assert.equal(JSON.parse(readFileSync(join(corepack, 'package.json'), 'utf8')).version, '0.36.0');
+          const pnpm = join(corepack, 'dist/pnpm.js');
+          const values = {
+            LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+            LEGACY_DESKTOP_COREPACK_HOME: join(selected, 'cache'),
+            LEGACY_DESKTOP_NODE_SHA256: sha(realpathSync(process.execPath)),
+            LEGACY_DESKTOP_HOST_ENTRY_SHA256: sha('packages/legacy-agent-host/dist/cli.js'),
+            LEGACY_DESKTOP_PNPM_PATH: pnpm, LEGACY_DESKTOP_PNPM_SHA256: sha(pnpm),
+            LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: sha(join(corepack, 'package.json')),
+            LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: sha(join(corepack, 'dist/lib/corepack.cjs')),
+          };
+          for (const [key, value] of Object.entries(values)) appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
+          writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), JSON.stringify({
+            sourceHead: process.env.HOST_EMULATED_SOURCE_HEAD, platform: process.platform,
+            architecture: process.arch, nativeProviders: 'forbidden', values,
+          }, null, 2), { mode: 0o600 });
+          NODE
+      - name: Exercise ordinary Team controls and renderer reload
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: team-ui
+        run: |
+          set -euo pipefail
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-team-ui.log"
+      - name: Exercise ordinary Taskboard controls and persistence
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: task-board-ui
+        run: |
+          set -euo pipefail
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-task-board-ui.log"
+      - name: Verify exact source, original screenshots, receipts and cleanup
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { basename, dirname, join } from 'node:path';
+          const completed = [];
+          for (const mode of ['team-ui', 'task-board-ui']) {
+            const rows = readFileSync(join(process.env.RUNNER_TEMP, `host-emulated-${mode}.log`), 'utf8')
+              .split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));
+            const last = rows.findLast(row => row.receipt && row.status);
+            assert.ok(last && last.status === 'PASS', 'original UI flow and cleanup must pass');
+            const receipt = JSON.parse(readFileSync(last.receipt, 'utf8'));
+            const root = realpathSync(dirname(last.receipt));
+            assert.match(basename(root), /^TEST-desktop-backend-/);
+            assert.equal(receipt.status, 'PASS'); assert.equal(receipt.mode, mode);
+            assert.equal(receipt.source.head, process.env.HOST_EMULATED_SOURCE_HEAD);
+            assert.equal(receipt.source.dirty, false);
+            assert.deepEqual(receipt.emulation, { only: true, runtimeConfigured: false,
+              managementConfigured: false, noNativeHostChildrenBeforeUi: true, noNativeHostChildren: true });
+            assert.equal(receipt.hostChild.observedBeforeShutdown, true);
+            assert.equal(receipt.cleanup.capturedHostAbsent, true);
+            assert.deepEqual(receipt.cleanup.remaining, []);
+            assert.equal(receipt.cleanup.cleanupFailure, undefined);
+            assert.equal(receipt.sourceFreezeFailure, undefined);
+            assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
+            assert.deepEqual(receipt.finalSentinelCensus.refusedInvocations, []);
+            assert.ok(receipt.finalSentinelCensus.invocations.length > 0);
+            const proof = mode === 'team-ui' ? receipt.userControlProof : receipt.taskBoardUiProof;
+            assert.equal(proof.status, 'PASS'); assert.ok(proof.steps.length > 0);
+            const screenshots = mode === 'team-ui' ? [receipt.uiScreenshot] :
+              ['initialScreenshot', 'dependencyScreenshot', 'reorderedScreenshot', 'blockedStartScreenshot', 'reloadedScreenshot']
+                .map(key => proof[key]);
+            for (const screenshot of screenshots) {
+              assert.equal(dirname(realpathSync(screenshot.path)), root);
+              const bytes = readFileSync(screenshot.path);
+              assert.equal(bytes.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+              assert.ok(bytes.readUInt32BE(16) >= 640 && bytes.readUInt32BE(20) >= 480, 'actual rendered viewport');
+              assert.equal(createHash('sha256').update(bytes).digest('hex'), screenshot.sha256);
+            }
+            completed.push({ mode, receipt: last.receipt, screenshots: screenshots.map(row => row.sha256) });
+          }
+          writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-summary.json'), JSON.stringify({
+            status: 'PASS', sourceHead: process.env.HOST_EMULATED_SOURCE_HEAD, completed,
+            nativeProviders: 'not executed', vendorAuthQualified: false, releaseQualified: false,
+            visualReview: 'original screenshots retained for independent inspection',
+          }, null, 2));
+          NODE
+      - name: Preserve original Desktop evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: host-emulated-linux-x64-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/host-emulated-*.json
+            ${{ runner.temp }}/host-emulated-*.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/desktop-backend-receipt.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/desktop-app.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/sentinel-invocations.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/ui-*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/ui-*.png

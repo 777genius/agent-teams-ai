@@ -269,7 +269,7 @@ export class CapturedProcess implements CapturedProcessPort {
   }
   private verifyExecutable(): void {
     const { path, sha256 } = this.profile.executable;
-    const before = lstatSync(path);
+    const before = lstatSync(path, { bigint: true });
     if (
       !before.isFile() ||
       before.isSymbolicLink() ||
@@ -277,12 +277,13 @@ export class CapturedProcess implements CapturedProcessPort {
       createHash('sha256').update(readFileSync(path)).digest('hex') !== sha256
     )
       throw new Error('Native executable unavailable');
-    const after = lstatSync(path);
+    const after = lstatSync(path, { bigint: true });
     if (
       before.dev !== after.dev ||
       before.ino !== after.ino ||
       before.size !== after.size ||
-      before.mtimeMs !== after.mtimeMs
+      before.mtimeNs !== after.mtimeNs ||
+      before.ctimeNs !== after.ctimeNs
     )
       throw new Error('Native executable changed');
   }
