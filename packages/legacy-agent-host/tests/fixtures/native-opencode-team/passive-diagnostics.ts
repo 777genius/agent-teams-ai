@@ -127,6 +127,11 @@ const cpuCategories = ['configuration-read', 'credential-read', 'team-writer-aut
 type CpuCategory = typeof cpuCategories[number];
 const cpuWriterFamilies = ['namespace-fence', 'team-state', 'team-state-validation',
   'launch-binding-read', 'launch-binding-current', 'launch-binding-clone', 'other-writer'] as const;
+const cpuNamespaceFamilies = ['directoryPath', 'tree', 'controller-lock', 'residual'] as const;
+const cpuControllerLockFunctions = ['codeOf', 'statOrMissing', 'readOrMissing', 'unlinkOrMissing',
+  'removeEmptyGate', 'isProcessAlive', 'parsePid', 'writeComplete', 'recoverGate', 'acquireGate',
+  'readLockInfo', 'sameLock', 'recoverDataLock', 'releaseLock', 'tryAcquire', 'sleepSync',
+  'resolveLockOptions', 'acquireFileLockSync'];
 type CpuUnavailable = 'not-started' | 'host-not-exited' | 'missing' | 'stat-failed' | 'file-shape' |
   'empty-profile' | 'profile-over-limit' | 'open-failed' | 'read-failed' | 'incomplete-read' |
   'changed-file' | 'invalid-profile' | 'discard-failed';
@@ -140,12 +145,16 @@ type CpuTotals = { category: CpuCategory; exclusiveSamples: number; exclusiveSam
   inclusiveSamples: number; inclusiveSampledUs: number };
 type CpuWriterTotals = { family: typeof cpuWriterFamilies[number]; exclusiveSamples: number;
   exclusiveSampledUs: number };
+type CpuNamespaceTotals = { family: typeof cpuNamespaceFamilies[number]; exclusiveSamples: number;
+  exclusiveSampledUs: number };
 export type OriginalHostCpuProfile = CpuFileSize & ({ status: 'unavailable'; reason: CpuUnavailable; rawDiscarded: boolean } | {
   status: 'available'; rawDiscarded: boolean; samplingIntervalUs: 1000 | 10000; profileDurationUs: number;
   sampledUs: number; unsampledUs: number; nodeCount: number; sampleCount: number;
   attribution: 'nearest-allowlisted-stack-frame'; categories: CpuTotals[];
   /** Partition of the unchanged exclusive team-writer-authority totals, not additional sampled time. */
   teamWriterDetails: CpuWriterTotals[];
+  /** Partition of namespace-fence only; descendant attribution, not isolated function self-time. */
+  namespaceFenceDetails: CpuNamespaceTotals[];
 });
 
 /** Closed source families only. No frame name, source URL, path or stack leaves this projection. */
@@ -183,6 +192,22 @@ function cpuWriterFamily(frame: Record<string, unknown>): number | undefined {
   return undefined;
 }
 
+/** Named controller paths only: staged numeric package identities remain residual. */
+function cpuNamespaceFamily(frame: Record<string, unknown>): number | undefined {
+  if (typeof frame.url !== 'string' || typeof frame.functionName !== 'string') return undefined;
+  const path = frame.url.replaceAll('\\', '/'), name = frame.functionName;
+  if (/\/adapters\/team\/TeamOwnerStore\.[jt]s$/.test(path)) {
+    if (name === 'directoryPath') return 0;
+    if (name === 'tree') return 1;
+  }
+  if (/\/agent-teams-controller\/(?:src|dist)\/internal\/fileLock\.js$/.test(path)) {
+    // A protected callback is not lock work merely because this wrapper is its ancestor.
+    if (name === 'withFileLockSync' || name === 'withFileLock') return 3;
+    if (cpuControllerLockFunctions.includes(name)) return 2;
+  }
+  return undefined;
+}
+
 function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): OriginalHostCpuProfile {
   const invalid = (): never => { throw new Error('Invalid TEST CPU profile'); };
   const value = record(raw), start = integer(value.startTime, Number.MAX_SAFE_INTEGER),
@@ -193,7 +218,8 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
       value.samples.length < 1 || value.samples.length > 1_000_000 ||
       value.samples.length !== value.timeDeltas.length) return invalid();
   const duration = end - start;
-  const nodes = new Map<number, { category: number | undefined; writerFamily: number | undefined; children: number[] }>();
+  const nodes = new Map<number, { category: number | undefined; writerFamily: number | undefined;
+    namespaceFamily: number | undefined; children: number[] }>();
   for (const rawNode of value.nodes) {
     const node = record(rawNode), id = integer(node.id, 1_000_000);
     if (id === null || id < 1 || nodes.has(id) ||
@@ -205,11 +231,12 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
       children.push(selected);
     }
     const callFrame = record(node.callFrame);
-    nodes.set(id, { category: cpuCategory(callFrame), writerFamily: cpuWriterFamily(callFrame), children });
+    nodes.set(id, { category: cpuCategory(callFrame), writerFamily: cpuWriterFamily(callFrame),
+      namespaceFamily: cpuNamespaceFamily(callFrame), children });
   }
   const first = integer(record(value.nodes[0]).id, 1_000_000)!;
-  const frames = new Map<number, { exclusive: number; inclusive: number; writerFamily: number }>();
-  const pending = [{ id: first, exclusive: 5, inclusive: 0, writerFamily: 6 }];
+  const frames = new Map<number, { exclusive: number; inclusive: number; writerFamily: number; namespaceFamily: number }>();
+  const pending = [{ id: first, exclusive: 5, inclusive: 0, writerFamily: 6, namespaceFamily: 3 }];
   while (pending.length) {
     const current = pending.pop()!, node = nodes.get(current.id);
     if (!node || frames.has(current.id)) return invalid(); // One connected, acyclic original stack tree.
@@ -218,13 +245,19 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
     const writerFamily = node.writerFamily === 5
       ? (current.writerFamily === 4 ? 5 : current.writerFamily)
       : node.writerFamily ?? current.writerFamily;
-    frames.set(current.id, { exclusive, inclusive, writerFamily });
-    for (const id of node.children) pending.push({ id, exclusive, inclusive, writerFamily });
+    const namespaceFamily = exclusive === 2 && writerFamily === 0
+      ? node.writerFamily === 0 ? 3 : node.namespaceFamily ??
+        (current.exclusive === 2 && current.writerFamily === 0 ? current.namespaceFamily : 3)
+      : 3;
+    frames.set(current.id, { exclusive, inclusive, writerFamily, namespaceFamily });
+    for (const id of node.children) pending.push({ id, exclusive, inclusive, writerFamily, namespaceFamily });
   }
   if (frames.size !== nodes.size) return invalid();
   const categories: CpuTotals[] = cpuCategories.map(category => ({ category,
     exclusiveSamples: 0, exclusiveSampledUs: 0, inclusiveSamples: 0, inclusiveSampledUs: 0 }));
   const teamWriterDetails: CpuWriterTotals[] = cpuWriterFamilies.map(family => ({ family,
+    exclusiveSamples: 0, exclusiveSampledUs: 0 }));
+  const namespaceFenceDetails: CpuNamespaceTotals[] = cpuNamespaceFamilies.map(family => ({ family,
     exclusiveSamples: 0, exclusiveSampledUs: 0 }));
   let sampledUs = 0;
   for (let index = 0; index < value.samples.length; index++) {
@@ -237,6 +270,10 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
     if (frame.exclusive === 2) {
       const detail = teamWriterDetails[frame.writerFamily]!;
       detail.exclusiveSamples++; detail.exclusiveSampledUs += delta;
+      if (frame.writerFamily === 0) {
+        const namespace = namespaceFenceDetails[frame.namespaceFamily]!;
+        namespace.exclusiveSamples++; namespace.exclusiveSampledUs += delta;
+      }
     }
     // A category is counted at most once per stack. Inclusive columns overlap; never sum them.
     const inclusive = frame.inclusive | 1 << frame.exclusive;
@@ -247,7 +284,7 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
   return { status: 'available', rawDiscarded: false, samplingIntervalUs,
     profileDurationUs: duration, sampledUs, unsampledUs: duration - sampledUs,
     nodeCount: nodes.size, sampleCount: value.samples.length,
-    attribution: 'nearest-allowlisted-stack-frame', categories, teamWriterDetails };
+    attribution: 'nearest-allowlisted-stack-frame', categories, teamWriterDetails, namespaceFenceDetails };
 }
 
 /** Read after the original process exits. This measures sampled Host stacks, not Bun CPU or request latency. */
