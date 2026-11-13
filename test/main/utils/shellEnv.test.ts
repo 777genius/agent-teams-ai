@@ -6,12 +6,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const hoisted = vi.hoisted(() => ({
   spawn: vi.fn(),
   loggerWarn: vi.fn(),
+  linuxErrorName: undefined as ((errno: number) => string) | undefined,
 }));
 
 vi.mock('child_process', async (importOriginal) => ({
   ...await importOriginal<typeof import('child_process')>(),
   spawn: hoisted.spawn,
 }));
+
+// Synthetic selected Linux frames use Linux errno values even on Windows test runners.
+vi.mock('node:util', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:util')>();
+  return {
+    ...actual,
+    getSystemErrorName: (errno: number) => hoisted.linuxErrorName === undefined
+      ? actual.getSystemErrorName(errno) : hoisted.linuxErrorName(errno),
+  };
+});
 
 vi.mock('@main/utils/pathDecoder', () => ({
   getHomeDir: () => '/Users/tester',
@@ -185,8 +196,13 @@ describe('shellEnv', () => {
       Object.assign(refused, { pid: 902, stdio: [null, refused.stdout, null, refusalPipe] });
       hoisted.spawn.mockImplementation(() => refused);
       const callCount = hoisted.spawn.mock.calls.length;
+      const linuxErrorName = vi.fn((errno: number) => {
+        if (errno !== -2) throw new Error('Unexpected TEST Linux errno');
+        return 'ENOENT';
+      });
+      hoisted.linuxErrorName = linuxErrorName;
       const failed = shellEnv.resolveInteractiveShellEnv();
-      const rejected = expect(failed).rejects.toMatchObject({ code: 'ENOENT', allocated: true });
+      const rejected = expect(failed).rejects.toMatchObject({ code: 'ENOENT', errno: -2, allocated: true });
       let settled = false; void failed.then(() => { settled = true; }, () => { settled = true; });
       const frame = Buffer.alloc(12);
       frame.writeUInt32BE(0x41544c58, 0); frame[4] = 1; frame[5] = 3; frame.writeUInt32LE(2, 8);
@@ -195,9 +211,10 @@ describe('shellEnv', () => {
       expect(refused.kill).toHaveBeenCalledOnce();
       refused.emit('close', 111, null);
       await rejected;
+      expect(linuxErrorName).toHaveBeenCalledExactlyOnceWith(-2);
       expect(hoisted.spawn).toHaveBeenCalledTimes(callCount + 1); // No interactive replay after selected refusal.
       expect(shellEnv.getCachedShellEnv()).toBeNull();
-    } finally { selected.mockRestore(); }
+    } finally { hoisted.linuxErrorName = undefined; selected.mockRestore(); }
   });
 
   it('adds a sanitized source label to strict shell failure diagnostics', async () => {
