@@ -8,7 +8,8 @@ import type { ChildProcess } from 'node:child_process';
 const prefix = 'TEST_OPENCODE_V2_DIAGNOSTIC ';
 const maximum = 256;
 const events = ['child-spawn', 'child-ready', 'child-failed', 'child-exit', 'child-output-limit',
-  'child-input-ended', 'host-input-ended', 'request', 'response', 'response-end', 'request-error', 'trace-limit'] as const;
+  'child-input-ended', 'host-input-ended', 'request', 'request-send-headers', 'request-body-sent',
+  'response', 'response-end', 'request-error', 'trace-limit'] as const;
 const routes = ['info', 'session-create', 'session-read', 'instructions', 'permissions', 'plugins',
   'mcp', 'log', 'prompt', 'provider-catalog', 'model-catalog', 'model-default', 'integration-read',
   'integration-connect', 'credential-remove', 'other-api'] as const;
@@ -291,7 +292,8 @@ function observeOriginalHost(): void {
       child.once('close', () => { child.stdout?.off('data', observe); output = ''; });
     });
   });
-  const pending = new WeakMap<object, { request: number; route: string; method: string; started: number }>();
+  const pending = new WeakMap<object, { request: number; route: string; method: string; started: number;
+    sendHeadersObserved: boolean; bodySentObserved: boolean }>();
   channel('undici:request:create').subscribe(message => {
     const request = record(record(message).request);
     if (requests >= 4096 || typeof request.origin !== 'string' || !/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(request.origin) ||
@@ -309,8 +311,21 @@ function observeOriginalHost(): void {
       : /^\/api\/session\/[^/]+$/.test(path) ? 'session-read' : 'other-api';
     const method = choice(request.method, ['GET', 'POST', 'PUT', 'DELETE']);
     if (!method) return;
-    const value = { request: ++requests, route, method, started: performance.now() };
+    const value = { request: ++requests, route, method, started: performance.now(),
+      sendHeadersObserved: false, bodySentObserved: false };
     pending.set(request, value); emit({ event: 'request', request: value.request, route, method });
+  });
+  // Exact Node24.21 writer phases only; neither proves server ingress or native acceptance.
+  // Restrict extra events to the two metadata seams, retaining the original total trace budget.
+  for (const [name, event, marker] of [
+    ['undici:client:sendHeaders', 'request-send-headers', 'sendHeadersObserved'],
+    ['undici:request:bodySent', 'request-body-sent', 'bodySentObserved'],
+  ] as const) channel(name).subscribe(message => {
+    const value = pending.get(record(record(message).request));
+    if (!value || value.route !== 'plugins' && value.route !== 'model-catalog' || value[marker]) return;
+    value[marker] = true;
+    emit({ event, request: value.request, route: value.route, method: value.method,
+      durationMs: Math.max(0, Math.round(performance.now() - value.started)) });
   });
   // Headers alone do not show when a finite native log body finishes arriving.
   // Observe only log trailers: no native bytes, header values or new requests.

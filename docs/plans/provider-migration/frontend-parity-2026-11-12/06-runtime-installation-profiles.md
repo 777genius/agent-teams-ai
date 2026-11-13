@@ -1105,3 +1105,261 @@ then the full current Host gate on the corrected exact source. No new suite,
 native input, runner, budget or relaxed assertion. Source review is separate
 from execution; the original d35 failures remain failures until these checks
 succeed.
+
+
+## 21. Настоящий UI source selection/install/update и точные qualification границы
+
+### Круг 1 — прежняя функция, уже полученное доказательство и оставшийся разрыв
+
+Это дополнение сохраняет §17–20, исходные grants/receipts/captures и все
+unknown cleanup outcomes. Source не меняется этим документом. Основание:
+product main 4a0e06277fe216d9f82dbbede362668fe46622ee и current source
+52cfb512b54a52919ae6a3ab50ac7b7c1e1402a7; последнее добавило только R25
+diagnostics поверх проверяемых здесь production paths.
+
+[Immutable acceptance audit](https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/93c904871af47e8e51740c1481815d8120a4f225)
+содержит original9ea run43420487308/job131868949407, artifact14038305562,
+ZIP SHA256 e210824c6dfb1168f1b0e56d04762852370ca81c362e47cc96bede478d9fc806,
+три исходных receipt и отдельный readonly npm metadata snapshot.
+Архив проверен до parsing. Native V1 1.19.4, 1.19.5 и resolved latest=1.19.5
+прошли прежний Linux Host case: actual8 model requests, tools/permission/task,
+original Stop/cold readback, cleanup=true, Host exit0. Два executable SHA256:
+A=538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7,
+B=7df4e4136301f16589b0f30bf91a61380fca5f8ef22dd36570f5ebe1d4ec802c.
+Wire protocol revision в обоих receipts остаётся1.19.4, что не подменяет
+observed CLI version1.19.5.
+
+Тот же actual A receipt отдельно подтверждает stock Electron
+OpenCodeRuntimeInstallerService update1.19.4→1.19.5, пока исходный A input
+и permission были pending. Before/after совпали original PID/birth/device/
+inode/executable, profile/session/runtime-state/projection/checkpoint hashes;
+оба installer children завершились0, cleanup=true. Это уже выполненная
+qualification, её не нужно повторять новым набором version cases.
+Она не подтверждает renderer Update, runtime.source publication или новый
+B capture: receipt прямо оставляет desktopQualified=false.
+
+Old source anchors уточняют E1–E7 без выдуманных возможностей:
+- installPolicy old6d6bd1ef/currentd3f0c096: fresh default main был1.19.5;
+  current получает latest. Обновление сохраняет установленную generation.
+- OpenCodeV2InstallAction 77373e9c одинаков в old/current: обычный fresh
+  Install предлагает V1; supported1.x/2.x не получают кнопку major migration.
+  Existing V2 action обслуживает support install/repair. Поэтому E6 не
+  означает обязательный новый UI V1↔V2 switch.
+- Old/current generation.ts d62527b0 разрешает stable V1 от1.16.0;
+  pinnedOpenCodeV2Contract4338ae48 отдельно связывает qualified CLI selector,
+  engine и platform delivery. Для ближайшего proof берём именно V1
+  1.19.4→1.19.5, не произвольную будущую1.x.
+- OpenCodeRuntimeInstallerService old2c1c873c/current581a6578 сохраняет
+  override→app-managed→PATH discovery. Advanced override задаётся существующим
+  environment выбором до запуска приложения; обычного нового path picker нет.
+  UI не предлагает managed replacement выбранного override.
+- Main runtime0.0.160 baseline, current retained release0.0.158, Host build,
+  OpenCode CLI1.19.x, V2 engine2.1.4 и Bun version — разные identities.
+  Ни один TEST не переписывает runtime.lock ради совпадения provenance.
+
+Обнаружены два production consumer gap, независимо от native timeout R25:
+1. CapturedRuntimeProviderStatusClient947d5ede, readOpenCodeRuntimeStatus,
+   возвращает captured Ready/version/sourceRevision, но не latestVersion,
+   updateAvailable, compatibleV2Version. После V1 native publication
+   fallback на installer getStatus уже не вызывается. Existing
+   runtimeInstallActionUi1cc580a9 требует updateAvailable для healthy1.19.4,
+   а V2 repair control требует compatibleV2Version: эти действия могут
+   исчезнуть именно после успешного выбора. Нельзя обойти это прямым
+   installer IPC из TEST или добавить synthetic Ready в renderer store.
+2. CodexRuntimeInstallerService1efd89b6 и codexRuntime IPC116bd300 остались
+   старым stock installer/use-case путём. Успех install/invalidate не
+   вызывает captured runtime-source publication; provider metadata и
+   будущие launches продолжают читать прежний seed/source. Это отдельная
+   недостающая связка, не повод ослабить native qualification.
+
+Readonly official metadata от2026-11-13T13:55:10Z:
+opencode-ai/latest=1.19.5; @openai/codex/latest=0.169.0. Все URLs, payload
+hashes и package integrity сохранены в audit. Codex0.164.0 встречается как
+пример нового package layout, но не является обоснованной целью этого update.
+Metadata existence не доказывает protocol compatibility или native запуск.
+[Отдельный V2 metadata snapshot](https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b69eb6b4243809e4964758b0275c86de484ac03a)
+от14:13:42Z фиксирует @opencode/cli/latest=2.3.0 и exact2.0.21:
+это другой package, не opencode-ai/latest1.19.5. Current packageSelection
+и engineForNativeVersion по записанному stable-v2-qualified-engine policy
+выбирают для stable CLI2.3.0 прежний engine2.1.4. Это source eligibility,
+не actual installed/native/UI qualification. getLatestQualifiedOpenCodeV2Version
+возвращает engine version и не заменяет latest CLI metadata.
+Нет нового скачивания/исполнения provider в этом audit.
+
+### Круг 2 — минимальная последовательность implementation и настоящего Desktop proof
+
+Первым закрыть OpenCode maintenance projection, затем один explicit TEST
+mode в существующем retained-opencode-coexistence Linux job; P05 Settings
+prelude остаётся у mixed lane, P07 extension acceptance остаётся в своём
+existing native-launch case. Новый job/platform/version matrix не нужен.
+
+**Maintenance cut.** Reuse существующие pure latest-version selection и
+qualified V2 contract, вычисляя только maintenance presentation по исходной
+captured CLI version/generation. Не смешивать captured Ready с ambient
+getStatus другого executable/source. Один original target/selection
+захватывается до metadata await; прежние target/current/revision guards
+перепроверяются после него до возврата. Existing metadata failure сохраняет только ещё-current verified Ready без
+выдуманного latest/update; source replacement по-прежнему отказывает и
+не превращает stale result в Ready. Metadata read не создаёт source. Для override
+managed Update остаётся скрыт. CLI-less embedded seed не называется
+установленным CLI2.1.4: engine readiness и CLI maintenance различаются.
+Existing3-second metadata policy не заменяется retry/TTL/cache или native
+probe. Проверить в прежнем capturedRuntimeStatus case published V1 path,
+source replacement во время metadata read и original V2 CLI/engine split;
+existing UI action test подтверждает настоящий Update/Repair predicate.
+Точные production paths первого cut: src/main/composition/createDesktopProviderStatusPort.ts
+и src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts.
+Существующий dependency object получает flat readonly resolver function;
+composition связывает его с resolveLatestOpenCodeVersion(cliVersion,
+getOpenCodeRuntimePlatformCandidates()) из прежних
+src/main/services/infrastructure/openCodeRuntimeLatestVersion.ts и
+OpenCodeRuntimeInstallerService.ts. Existing
+getLatestQualifiedOpenCodeV2Version/process platform contract предоставляет
+только независимо известную engine qualification для actual CLI-backed V2;
+это не stock latest и не основание включать repair у CLI-less seed.
+Новый maintenance service/port/owner/store не создаётся; helpers и package
+selection policy остаются прежними. В output входят только известные
+latest/update/compatible-engine presentation fields. Unknown eligibility
+остаётся отсутствующей; network failure не стирает независимо проверенную
+readiness или independently known existing support contract.
+Catch покрывает только optional registry lookup, а target/source/revision
+проверки остаются снаружи и не превращаются в fallback. Existing cases:
+test/features/runtime-provider-management/capturedRuntimeStatus.test.ts,
+test/renderer/components/cli/CliStatusVisibility.test.ts и
+test/renderer/components/cli/OpenCodeV2InstallAction.test.ts. Перед source —
+exact небольшой manifest/preimages; никаких изменений source qualification/
+admission или повторного native catalog ради maintenance.
+
+**Desktop lane.** Добавить один явный source-selection mode к существующему
+desktop-retained-opencode-coexistence.native.ts и его current job. Default
+retained legacy V1/Host V2 test остаётся прежним. Reuse original
+startRetainedOpenCodeApp, desktop-ui-controls, guarded Quit, original child
+birth/custody/absence checks, pinned Node24.21/Electron44.10.1, finite model
+oracle и sourceFreeze. Текущий job30min/test900s и native budgets не растут.
+Недостаток времени остаётся INCOMPLETE, не повод повторить business action.
+
+В mode две последовательно закрываемые fresh TEST namespaces, потому что
+fresh Install и update существующего A имеют разные исходные состояния:
+1. **Missing installed choice→Install B.** Private delivered Host seed
+   сохраняет настоящий verified A executable, но ни PATH/override, ни
+   app-managed manifest не объявляет его установленным CLI. Это отсутствие
+   installed choice, не отсутствие доставленного Host provider. Existing
+   original UI Install скачивает stock B1.19.5, показывает реальный progress/
+   result и публикует selection через captured installer. Только после
+   published receipt обычные Create/model preflight/Launch получают B.
+   Один genuine text input/reply, original Stop и обычный Quit с physical
+   absence закрывают эту namespace до следующей. Не писать product
+   current.json/source records, историю или release facts из harness.
+2. **PATH A→Refresh→Update B при живом A.** В новой namespace полный
+   verified package A доступен в private PATH, explicit overrides отсутствуют.
+   Original UI Refresh выбирает A через selectInstalled/native version
+   receipt; затем обычный Create/Launch и один input/reply создают actual A.
+   Snapshot перед Update связывает exact source revision/capture/binding,
+   original executable bytes/path/package closure и child birth.
+   Existing visible Update запускается один раз, без direct IPC, devstore
+   mutation или selector, которого нет у продукта. Published B не меняет
+   original A capture/config/reference/native identity. После publication
+   послать второй ordinary input A и получить его reply через прежний owner,
+   затем original Stop A и подтвердить его absence.
+3. **Новый capture B и cold readback.** Только после original A Stop/absence
+   создать и запустить новую Team B; capture обязан ссылаться на published
+   B revision и actualB executable. Один input/reply, original Stop B.
+   Ordinary Quit, весь original app/Host/native/metadata cleanup и writer
+   release предшествуют cold successor того же profile. Истории A/B и
+   immutable source receipts сохраняются; cold startup не воспроизводит
+   inputs/installer/publication. Source Freeze/actual native hashes остаются
+   теми же до/после cold boundary.
+
+Итого четыре business inputs в новом mode: один fresh-install B, два A
+до/после publication B, один fresh B после A Stop. Отдельные original
+catalog/preflight observations расходуют прежний finite model cap32;
+их count/phase фиксируются, но не выдаются за business input. Unknown
+preflight/ACK не даёт повторять Create/Launch/Update. Если source wiring
+требует иных эффектов, сначала уточняется bounded flow, а не расширяется
+oracle во время прогона.
+
+Последовательность A Stop→B Launch намеренная: runtimeCaptureSource/
+runtimeRecipe сохраняют original V1 recipe.endpoint, а
+OpenCodeMemberProvider запускает serve на его exact port. Этот slice
+доказывает active A после publication B и новый B capture, но не заявляет
+одновременные два V1 servers на одном template endpoint и не переписывает
+порты/recipes из TEST. Existing actual legacy V1+Host V2 coexistence — другое
+доказательство и не заменяет этот same-provider source transition.
+
+Staging A использует полный genuine package с official integrity, actual
+--version и executable hash; никакой copy-only executable, wrapper rewrite,
+PATH search после capture или удаления old bytes. B скачивает original
+installer из official registry. До UI action проверяется, что stock
+selection всё ещё exact1.19.5; после него проверяется actual receipt/version/
+hash. Dist-tag drift или другой candidate оставляет этот proof INCOMPLETE;
+не подменять metadata registry и не запускать неквалифицированный новый B.
+Нет утверждения поддержки будущего latest по одному semver или hash.
+
+TEST source seam ограничен существующим native entry, его model/helper,
+prepare-retained-opencode-coexistence, desktop-backend-fixture и одним
+прямо используемым source-selection UI helper; workflow меняет root.
+Для Linux V1 нужен explicit source-fixture option, не использование
+packaged candidate только ради выбора Node. Native recipe/descriptor TEST
+preparation заканчивается до первого Owner bootstrap; после него
+profile/source/history/pins не переписываются. Fixture уже790 lines:
+cohesive preparation при необходимости переносится в directly consumed
+helper, без сжатия строк/поднятия baseline. Exact paths/hashes и source cap
+фиксируются перед implementation. Account mixed Settings paths не меняются.
+
+### Круг 3 — что этот slice не закрывает и следующий точный qualification шаг
+
+**Override и V2 support.** Existing E4 требует ordinary discovery/Refresh
+с исходным explicit override и honest refusal для unavailable/mismatch;
+managed Update не обязан менять override. После ordinary Quit/absence
+можно начать следующий app epoch с другим явным environment выбором,
+но нельзя менять environment исходного capture. Это отдельное небольшое
+дополнение к тому же source-selection mode после первого actual результата.
+Для V2 required next transition — genuine installed selector2.0.21→stock
+selector2.3.0 при прежнем pinned engine2.1.4/platform delivery, затем
+existing UI support repair той же selected CLI. Это не execution CLI2.3.0
+как engine и не qualification engine2.3.0. Native CLI --version/hash,
+source publication и actually executing2.1.4 graph/Bun проверяются отдельно.
+Repair создаёт новую immutable support instance, старая closure удерживается
+для A. Только настоящий current CLI допускает его maintenance projection;
+engine-only seed Ready не превращается в installed CLI/доступный repair.
+Stock tag drift остаётся INCOMPLETE для exact пары, не требует override
+registry. Нового Bun/engine2.1.5 или major switch этот шаг не обещает.
+До отдельного bounded source/acceptance amendment V2 update/repair остаются
+открытыми; metadata и нынешний engine-only native PASS их не заменяют.
+
+**Codex.** Exact seed protocol/native CLI0.162.0 и текущий stock updater
+candidate0.169.0 — необходимая проверяемая пара. runtimeProfile/management
+schemas и runtimeSourceQualification сейчас требуют exact0.162.0.
+Сначала один explicit candidate mode в существующем native Codex lane
+должен проверить genuine verified0.169.0 через public pinned D protocol:
+initialize/catalog, выбранный model, ordinary input/permission/Stop и
+cold Resume тех же original references в пределах уже имеющегося сценария.
+Нельзя назвать candidate0.162.0, переписать checkpoint/config hash или
+использовать mocked version output, чтобы пройти Host schema. Direct-D
+proof и штатный Main/Host proof обозначаются раздельно. Только после
+actual evidence и отдельного source amendment допускается exact finite
+eligibility policy и Codex installer→существующий captured-source consumer.
+Новая source registry, arbitrary version range и молчаливый downgrade
+не нужны. Если pinned D не совместим, required change/pin определяется
+по original failure, не заранее. Точный fixture/source manifest и deadline
+для этого next step публикуются отдельно; этот §21 не разрешает новый
+provider запуск или ослабление guard.
+
+**Claude/Host delivery.** Native Claude version читается по original seed,
+SDK0.3.305 не является CLI version; отдельный Claude UI updater source
+не найден. Whole runtime/Host release update не объявляется эквивалентом
+CLI selection и не переписывает0.0.158/0.0.160 provenance. Existing
+packaged/retained-owner gates остаются owner этого delivery evidence;
+не создавать отсутствовавший updater ради таблицы.
+
+**Review/acceptance order.** R1 выполнен: exact old/current source, original
+9ea artifact и official metadata. R2: root/independent peer проверяют
+maintenance/source distinction, same-provider A retention и реальность
+UI actions до source. После narrow source — existing relevant status/
+installer/source cases, types/lint/cap, затем current normal Linux Desktop
+job; no new generic unit suite/runner или CI rerun до root publication.
+R3 требует actual new Desktop receipt с четырьмя inputs, original A/B
+identities, published source receipts, cold history и full cleanup.
+Source-only PASS, прежние Linux receipts и будущий Darwin/Windows результат
+не переносятся друг на друга. §§17–20 stale/unknown/grant isolation и
+retained custody остаются обязательными во всех этих flows.

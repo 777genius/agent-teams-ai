@@ -278,19 +278,24 @@ function windowsExtractor() {
   });
 }
 
-for (const caller of ['bootstrap', 'stager']) {
+for (const [caller, stager] of [
+  ['bootstrap', null],
+  ['stager', '../stage-runtime.mjs'],
+  ['terminal-stager', '../stage-terminal-platform-runtime.mjs'],
+]) {
   test(`${caller}: Windows ZIP uses absolute inbox .NET reader, literal paths, and rejects symlinks`, () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-zip-contract-'));
     const archive = path.join(root, "archive [x] 'quote'.zip");
     const destination = path.join(root, "extracted [x] 'quote'");
     fs.writeFileSync(archive, zipFixture([{ name: 'runtime/file', data: 'fixture' }]));
     const shared = windowsExtractor();
+    const source = stager ? fs.readFileSync(new URL(stager, import.meta.url), 'utf8') : '';
     const extract =
       caller === 'bootstrap'
         ? shared
         : runInNewContext(
-            `${fs
-              .readFileSync(new URL('../stage-runtime.mjs', import.meta.url), 'utf8')
+            `function runOrThrow(${source.split('function runOrThrow(')[1].split('function read')[0]}
+            ${source
               .split('function extractArchive(')[1]
               .split('function findRuntimePayloadDir(')[0]
               .replace(/^/, 'function extractArchive(')}; extractArchive`,
@@ -299,7 +304,11 @@ for (const caller of ['bootstrap', 'stager']) {
               path,
               process: { platform: 'win32' },
               extractRuntimeArchive: shared,
-              runOrThrow: (...args) => runner(...args),
+              repoRoot: root,
+              spawnSync: (...args) => {
+                runner(...args);
+                return { status: 0 };
+              },
             }
           );
     let runner;

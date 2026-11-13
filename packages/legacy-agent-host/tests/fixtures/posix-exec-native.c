@@ -21,6 +21,7 @@
 #include <sys/ptrace.h>
 #elif defined(__APPLE__)
 #include <CoreFoundation/CoreFoundation.h>
+#include <Security/SecBase.h>
 #include <Security/SecCode.h>
 #include <libproc.h>
 #include <mach/mach.h>
@@ -254,6 +255,22 @@ static int rewrite(const char *path, const char *replacement) {
   (void)close(output);
   return error;
 }
+#ifdef __linux__
+static _Noreturn void report_exec_error(int fd, int code, int exit_code) {
+  ssize_t count = write(fd, &code, sizeof(code));
+  _exit(count == (ssize_t)sizeof(code) ? exit_code : 113);
+}
+/* Read only after the original child is reaped and the parent's write end is closed. */
+static int read_exec_error(int fd, int *captured) {
+  int code = 0;
+  *captured = 0;
+  ssize_t count = read(fd, &code, sizeof(code));
+  if (count < 0) return errno;
+  if (count != (ssize_t)sizeof(code) || code <= 0) return EIO;
+  *captured = code;
+  return code;
+}
+#endif
 int main(int argc, char **argv) {
   if (argc != 8) return 2;
   const char *mode = argv[1], *selected = argv[2], *replacement = argv[3], *expected = argv[4], *marker_path = argv[5], *output_path = argv[6], *cwd = argv[7];
@@ -304,10 +321,10 @@ int main(int argc, char **argv) {
   if(original_pid==0){
     (void)close(errors[0]);
     if(dup2(output,STDOUT_FILENO)<0 || dup2(output,STDERR_FILENO)<0 || setsid()<0 || chdir(cwd)) _exit(110);
-    if(strcmp(mode,"plain") && ptrace(PTRACE_TRACEME,0,NULL,NULL)<0){int code=errno;(void)write(errors[1],&code,sizeof(code));_exit(111);}
+    if(strcmp(mode,"plain") && ptrace(PTRACE_TRACEME,0,NULL,NULL)<0) report_exec_error(errors[1],errno,111);
     if(strcmp(mode,"plain")) (void)raise(SIGSTOP);
     execve(selected,args,environ);
-    int code=errno;(void)write(errors[1],&code,sizeof(code));_exit(112);
+    report_exec_error(errors[1],errno,112);
   }
   if(original_pid<0){error=errno;goto finish;}
   target_pid=original_pid; spawned=1;
@@ -315,13 +332,13 @@ int main(int argc, char **argv) {
   if(strcmp(mode,"plain")){
     stage="trace-initial";
     if((error=wait_original(&target_pid,&target_status,1))) goto finish;
-    if(!target_pid){target_reaped=1;(void)read(errors[0],&exec_error,sizeof(exec_error));error=exec_error?exec_error:EIO;goto finish;}
+    if(!target_pid){target_reaped=1;error=read_exec_error(errors[0],&exec_error);goto finish;}
     if(!WIFSTOPPED(target_status)||WSTOPSIG(target_status)!=SIGSTOP){error=EPROTO;goto finish;}
     if((error=identity_of(original_pid,&before))) goto finish;
     if(ptrace(PTRACE_SETOPTIONS,original_pid,NULL,(void *)(uintptr_t)(PTRACE_O_TRACEEXEC|PTRACE_O_EXITKILL))<0 || ptrace(PTRACE_CONT,original_pid,NULL,NULL)<0){error=errno;goto finish;}
     stage="trace-exec";
     if((error=wait_original(&target_pid,&target_status,1))) goto finish;
-    if(!target_pid){target_reaped=1;(void)read(errors[0],&exec_error,sizeof(exec_error));error=exec_error?exec_error:EIO;goto finish;}
+    if(!target_pid){target_reaped=1;error=read_exec_error(errors[0],&exec_error);goto finish;}
     if(!WIFSTOPPED(target_status)||WSTOPSIG(target_status)!=SIGTRAP||(unsigned)target_status>>16!=PTRACE_EVENT_EXEC){error=EPROTO;goto finish;}
     stopped=1;
   }

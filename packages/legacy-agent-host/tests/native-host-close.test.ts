@@ -12,14 +12,43 @@ test('a failed original Node child retains CPU evidence and bounded file refusal
 }, async () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-host-cpu-exit1-')));
   const entry = join(root, 'TEST-exit1.mjs');
-  // Finite sampler consumer only: no provider, native Runtime or claimed vendor failure is simulated.
-  writeFileSync(entry, 'const end = Date.now() + 50; while (Date.now() < end) Math.sqrt(Date.now()); process.exit(1);\n', { mode: 0o600 });
+  const originalTrace = createPassiveNativeDiagnosticCapture();
+  // Synthetic channel publications only; no HTTP/provider/Runtime is invoked by this sole finite child.
+  writeFileSync(entry, `import { channel } from 'node:diagnostics_channel';
+const secret = 'TEST-private-undici-token';
+const publish = (name, request) => channel(name).publish({ request, headers: secret,
+  socket: { privatePath: ${JSON.stringify(root)} }, chunk: Buffer.from(secret) });
+for (const path of ['/api/plugin', '/api/model', '/api/info']) {
+  const request = { origin: 'http://127.0.0.1:65530', path: path + '?private=' + secret, method: 'GET' };
+  publish('undici:request:create', request);
+  for (const name of ['undici:client:sendHeaders', 'undici:request:bodySent']) {
+    publish(name, { ...request });
+    publish(name, request);
+    publish(name, request);
+  }
+}
+const end = Date.now() + 50; while (Date.now() < end) Math.sqrt(Date.now()); process.exit(1);
+`, { mode: 0o600 });
   const host = startHost({ node: process.execPath, entry, root, profile: join(root, 'TEST-profile.json'),
-    profileHash: 'a'.repeat(64), testCpuProfile: true });
+    profileHash: 'a'.repeat(64), testCpuProfile: true,
+    testImports: [new URL('./fixtures/native-opencode-team/passive-diagnostics.ts', import.meta.url).href],
+    onDiagnostic: chunk => originalTrace.accept(chunk, 1) });
+  const originalClose = once(host.child, 'close');
   try {
     const [code, signal] = await once(host.child, 'exit');
     assert.equal(code, 1); assert.equal(signal, null);
     await assert.rejects(host.close(), /Host exit zero confirms/);
+    await originalClose;
+    assert.deepEqual(originalTrace.entries.map(row => [row.event, row.request, row.route]), [
+      ['request', 1, 'plugins'], ['request-send-headers', 1, 'plugins'], ['request-body-sent', 1, 'plugins'],
+      ['request', 2, 'model-catalog'], ['request-send-headers', 2, 'model-catalog'], ['request-body-sent', 2, 'model-catalog'],
+      ['request', 3, 'info'],
+    ], 'same-object targeted phases appear once; foreign objects and untargeted phases are ignored');
+    assert.ok(originalTrace.entries.every(row => row.epoch === 1 && row.method === 'GET' &&
+      typeof row.atMs === 'number' && (row.event === 'request' ? row.durationMs === null :
+        typeof row.durationMs === 'number' && row.durationMs >= 0)));
+    assert.equal(JSON.stringify(originalTrace.entries).includes('TEST-private-undici-token'), false);
+    assert.equal(JSON.stringify(originalTrace.entries).includes(root), false);
     const path = host.testCpuProfilePath!;
     assert.equal(host.testCpuProfileIntervalUs, 10000);
     assert.ok(host.child.spawnargs.includes('--cpu-prof-interval=10000'));

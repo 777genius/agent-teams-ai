@@ -1689,3 +1689,111 @@ platform/desktop qualification этим append не объявляются.
 **R2:** проверены post-spawn variant attestation и необходимый finite5
 observer bound; остальные budgets/authority не меняются. **R3:** peer/source
 review и новое исполнение ещё требуются; production и TEST source не изменены.
+
+## Review 26 — различить создание исходного HTTP request и попытку записи в его socket
+
+### Круг 1 — actual 52cf и точная граница доказательства
+
+Original clean-head `52cfb512b54a52919ae6a3ab50ac7b7c1e1402a7` с R25
+завершил первый model probe как INCOMPLETE: inference requests=0, cleanup=true.
+Receipt blob `4720a154e7935c4bcb636f2a01f37ba7899f07b8`, SHA256
+`f70f32817c0384cf1fbe35b9c1e4dc80735cf87493840f4968f1cbe45e1a2b63`.
+Original child ready — 19326 ms; первые 17 HTTP responses успешны.
+Request18 `GET plugins` создан в 25683 ms; response headers не наблюдались,
+request-error/unknown — 56439 ms, duration=30756 ms. Input ended — 56450 ms,
+original child exited0 — 56782 ms. Это иной фактический first-failure cut,
+чем e619 catalog: одинаковая внутренняя причина, CPU/OOM или сеть не доказаны.
+
+В exact installed 2.1.4 server `pairing-49c878v9.js:14–15` вызывает
+`response2(Plugin.Service.use(plugin => plugin.list()))`; core
+`location-hfkcnh3h.js:67–69` возвращает текущий inventory без await/lock/network.
+`pairing-gymtz25n.js:31–40` только формирует Location/data; объявленный рядом
+5s `awaitPlugins` в этом handler не используется. Provider/model/plugin
+разделяют location middleware, а original каталог уже получен с тем же
+directory. Это исключает утверждение «plugin.list обязательно ждёт network
+или activation», но не доказывает, что запрос вообще достиг этого handler.
+
+Проверены именно [Host/D selected-source boundaries на 52cf](https://github.com/777genius/agent-teams-ai/tree/52cfb512b54a52919ae6a3ab50ac7b7c1e1402a7/packages/legacy-agent-host):
+no-tool config сохраняет plugins=[], empty MCP и deny permissions;
+embedded start — project:false, models.fetch:false. Built-ins остаются
+частью engine, поэтому plugins=[] не объявляется отключением всех внутренних
+инициализаторов. Driver submit ещё не начат. Original D finite transport
+ставит прежний максимум30s до HTTP; observed duration сам по себе не
+устанавливает причину ожидания и не разрешает увеличение budget.
+
+Нынешнее событие `request` — подписка на `undici:request:create`.
+Exact [Node v24.21.0 request.js](https://github.com/nodejs/node/blob/v24.21.0/deps/undici/src/lib/core/request.js)
+публикует его в constructor (228), до отправки. Официальный
+[client-h1.js](https://github.com/nodejs/node/blob/v24.21.0/deps/undici/src/lib/dispatcher/client-h1.js)
+публикует `sendHeaders` в1282 перед writeBuffer, а GET без body вызывает
+socket.write в1456–1463 и затем `onRequestSent` в1476.
+Последний публикует `undici:request:bodySent` в request.js247.
+Те же места проверены в native bundled Undici исходного Node24.21 бинарника.
+Ни одно из двух событий не подтверждает kernel delivery, серверный ingress,
+handler completion или effect/ACK.
+
+### Круг 2 — ровно два passive события того же original request
+
+1. В existing observer добавить подписки только на уже существующие
+   `undici:client:sendHeaders` и `undici:request:bodySent`. Join — точный
+   request object из прежнего WeakMap, созданный original create subscriber;
+   чужой object с совпадающим URL/числом/полями не принимается. Не создавать
+   новый request ordinal, lookup по URL/socket или отдельный owner/cache.
+   Новые phases только для двух прежних closed routes: `plugins` и
+   `model-catalog`. Все original create/response/error для остальных routes
+   остаются прежними; их новые write phases намеренно не наблюдаются.
+2. Closed events — `request-send-headers` и `request-body-sent`.
+   Каждое выдаётся не более одного раза для этого original request; два
+   boolean markers живут в том же WeakMap value. В output только прежние
+   request ordinal, route/method, atMs и durationMs от original create.
+   `sendHeaders` означает начало original writer path; `bodySent` для
+   данного finite GET — возврат после original socket.write. Даже bodySent
+   без response не называется получением запроса Bun. Отсутствие события
+   при truncation/неподдерживаемом channel остаётся неизвестным.
+3. Не читать/сериализовать headers, body/chunks, origin/path/query,
+   credentials, Error.message/cause/stack, socket/FD/address или engine text.
+   Существующие epoch/platform/Node24.21 opt-in, exact child filter,
+   projection и counters сохраняются. Пределы прежние: 256 events плюс
+   один trace-limit,4096 requests,5 child ordinals,512-char line,64KiB pending
+   и child-output. Новые события расходуют тот же общий event budget;
+   насыщение означает частичный trace, не отсутствие позднего effect.
+   Фильтр двух routes ограничивает расход прежнего256-event cap, чтобы
+   не удвоить все события до позднего catalog failure; это сознательная
+   неполнота write-phase coverage, а не увеличение trace/deadline budget.
+4. Нет новых HTTP/RPC/connect/health reads, response/body consumers,
+   subprocesses, proc census, timers, polling, engine patches, native hooks
+   или изменения исходного failure/cleanup/status. Host/D product guards,
+   original30s/60s budgets, SDK/model counts и CI matrix/workflow неизменны.
+   CPU sampler/projection R24 и прочие passive events не меняются.
+
+Source base52cf, совпадающие preimages на working native b13f668:
+- `packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts`
+  — `016df1d5a9f04d797a283bb7a54bf36144fb6b7b`;
+- `packages/legacy-agent-host/tests/native-host-close.test.ts`
+  — `861f4f769b6d126b39c1156d46d25513e15520bf`.
+
+### Круг 3 — узкая identity/privacy проверка и предел результата
+
+В том же existing failed-original-child/diagnostic case сохранить единственный
+finite Node child,50ms sampler work, exit1, original cleanup и все CPU/file
+assertions. Через его explicit TEST import подать маленькую **synthetic**
+последовательность diagnostic-channel publications: original create, оба
+новых события, duplicate и foreign request object с теми же полями.
+Проверить same-original join, once-only markers, отсутствие foreign event,
+новых phases у другого original route и raw private fields, затем прежнюю
+receipt projection. Это не HTTP/native
+исполнение; реальный network request и новый child не нужны. Не добавлять
+suite или повышать10s test budget.
+
+Перед source — root publication и independent peer по semantics/write
+boundary/privacy. После source — exact diff/readback, прежние four cases,
+Host test types, targeted lint/source cap. Actual observed write phases
+получит только исходный native scenario на следующем согласованном coherent
+head. Текущие CI не отменяются/не повторяются; unknown original failure не
+меняется ради диагностики. Product fix требует новых фактических данных,
+и даже полный write trace не подменяет server-side proof.
+
+**R1:** original receipt и exact Node/engine/Host source сопоставлены.
+**R2:** выбран same-object passive join с прежними limits; native delivery
+не приписывается событию socket.write. **R3:** peer/source/execution pending;
+этот append не меняет source и не квалифицирует platform/SDK flow.
