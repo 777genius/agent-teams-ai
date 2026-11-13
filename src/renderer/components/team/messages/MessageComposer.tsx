@@ -482,16 +482,16 @@ const MemberMessageComposer = ({
 
   const slashCommandSuggestions = useMemo<MentionSuggestion[]>(
     () =>
-      slashCommandDataEnabled
-        ? commandLead?.runtimeOwner === 'captured-host'
-          ? buildCapturedSlashCommandSuggestions(commandLead.sessionCommands)
-          : buildSlashCommandSuggestions(
-            getSuggestedSlashCommandsForProvider(leadProviderId),
-            projectSkills,
-            userSkills,
-            leadProviderId
-          )
-        : EMPTY_MENTION_SUGGESTIONS,
+      commandLead?.runtimeOwner === 'captured-host'
+        ? buildCapturedSlashCommandSuggestions(commandLead.sessionCommands)
+        : slashCommandDataEnabled
+          ? buildSlashCommandSuggestions(
+              getSuggestedSlashCommandsForProvider(leadProviderId),
+              projectSkills,
+              userSkills,
+              leadProviderId
+            )
+          : EMPTY_MENTION_SUGGESTIONS,
     [leadProviderId, projectSkills, slashCommandDataEnabled, userSkills, commandLead]
   );
 

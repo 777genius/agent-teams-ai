@@ -1,7 +1,8 @@
 import { FileTeamRuntimeBindings } from '../adapters/team/FileTeamRuntimeBindings.js';
 import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
-import { runtimeDigest } from '../runtime/identity.js';
+import { normalizeBinding, runtimeDigest } from '../runtime/identity.js';
+import { RuntimeSourceUnavailable } from './runtimeSourceGrantAuthority.js';
 import { applyLaunchConfiguration } from './launchConfiguration.js';
 import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { RuntimeMemberProfile } from './runtimeProfile.js';
@@ -12,6 +13,8 @@ interface MemberEntryProjection {
   ownerId: string;
   team: HostedTeam;
   baseProfile: RuntimeMemberProfile;
+  /** Restore preflight only, after original records have passed structural validation. */
+  restoring?: boolean;
 }
 
 /** Rebuild the exact captured entry, including a launch-owned selected restore. No allocation. */
@@ -42,13 +45,17 @@ function projectMemberEntry(
   // still have to be reconstructed to inspect custody and preserve their history.
   const selection = select?.(selected.delivery);
   if (selection) {
-    if (selection.baseConfigurationDigest !== runtimeDigest(baseProfile))
+    if (selection.baseConfigurationDigest !== runtimeDigest(baseProfile)) {
+      if (options.restoring) throw new RuntimeSourceUnavailable();
       throw new RuntimeOwnerError('conflict');
+    }
     if (selection.configuration)
       profile = applyLaunchConfiguration(baseProfile, selection.configuration);
     profile.generation = selection.generation;
-    if (selection.configurationDigest !== runtimeDigest(profile))
+    if (selection.configurationDigest !== runtimeDigest(profile)) {
+      if (options.restoring) throw new RuntimeSourceUnavailable();
       throw new RuntimeOwnerError('conflict');
+    }
   }
   const delivery = selection ? { ...selected.delivery, ...selection.binding } : selected.delivery;
   selected.delivery = delivery;
@@ -78,4 +85,25 @@ function projectMemberEntry(
     },
     ...(selection ? { selection } : {}),
   };
+}
+
+/** Existing capture installation; preparation projections never become runnable registry entries. */
+export function installRuntimeCaptureEntries(options: {
+  root: string; ownerId: string; entries: Map<string, MemberEntry>;
+  install(team: HostedTeam, entries: MemberEntry[], active: boolean, prepare: boolean): void;
+}, team: HostedTeam, profiles: RuntimeMemberProfile[], mode: 'prepare' | 'retain' | 'activate'): void {
+  const entries = profiles.map(baseProfile => {
+    const project = mode === 'prepare' ? createPreparedMemberEntry : createMemberEntry;
+    const next = project({ root: options.root, ownerId: options.ownerId, team, baseProfile });
+    const key = runtimeDigest(normalizeBinding(next.binding)), prior = options.entries.get(key);
+    if (prior) {
+      if (runtimeDigest(prior.baseProfile) !== runtimeDigest(next.baseProfile) ||
+          runtimeDigest(prior.team.capture) !== runtimeDigest(next.team.capture))
+        throw new RuntimeOwnerError('conflict');
+      return prior;
+    }
+    if (mode !== 'prepare') options.entries.set(key, next);
+    return next;
+  });
+  options.install(entries[0]!.team, entries, mode === 'activate', mode === 'prepare');
 }

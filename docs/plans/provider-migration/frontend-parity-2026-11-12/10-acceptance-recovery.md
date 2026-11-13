@@ -774,3 +774,281 @@ bounded log projection лишь сохраняет причину в штатн�
 Круг3: root сверил оба места с exact3db; production changes0, weakened gates0.
 Следующий шаг — independent review малого diff и exact-head CI. Новые bytes пока
 не исполнялись.
+
+## 16. Actual235 stopped import: finite current-frontend model catalog route
+
+[Run43394002053/job131780548904](https://github.com/777genius/agent-teams-ai/actions/runs/43394002053/job/131780548904)
+сохранил первую причину: local model oracle получил GET при требовании POST.
+Original source frozen=true, cleanupFailed=false, remaining/nativeRemaining/unmatched=0.
+Это не PASS импорта: source producer по-прежнему INCOMPLETE, consumer не квалифицирован.
+
+Круг1 — source contract. `src/main/utils/anthropicApiKeyVerification.ts`
+(`2a4c10b94594c51b42ad1bbd6140b6248de7473d`) использует GET /v1/models;
+existing `scripts/e2e/anthropic-compatible-status/default-model-gateway.ts`
+также обслуживает этот read-only route. Current producer задаёт отдельный
+`TEST-current-legacy-only-key` и local origin. Actual log пока не содержит URL:
+маршрут /v1/models — source-backed объяснение, проверяемое следующим exact run.
+
+Круг2 — узкий TEST oracle. В existing native-claude-team/model.ts только при
+исходном открытом `currentLegacySource` обслужить exact GET /v1/models с исходным
+synthetic x-api-key. JSON содержит фиксированные TEST-supported Claude model IDs;
+никаких prompt/tool/native effect, редиректов или vendor authentication.
+Отдельный конечный счётчик не более8 catalog reads сохраняется в frozen source
+receipt рядом с существующими probe/token counts. Это не расходует и не расширяет
+один business turn, native model-probe8/9 или существующие request deadlines.
+После закрытия original source epoch, при другом path/key/method и превышении
+счётчика остаётся failure; закрытый oracle после protocol failure не открывается.
+Не обслуживать произвольный GET и не снимать прежний exact POST/messages contract.
+
+Круг3 — existing `native-claude-team/model.test.ts` case дополнить одним catalog
+read, проверкой frozen count и отказом позднего catalog read. Existing одна
+source turn, PONG/Host probe, closed source rejection и cleanup сохраняются.
+Independent source review + focused tests/types и следующий original Desktop
+source Stop → Task → Quit → import → native Launch обязательны. Source review
+не заменяет исполнение; никаких повторов старого head или расширения таймеров.
+
+## 17. Actual235 mixed Stop/reload: closed observation of original Launch refusal
+
+[Job131780548934](https://github.com/777genius/agent-teams-ai/actions/runs/43394002053/job/131780548934)
+дал baseline8/observed8/probes[]: новая model request не поступила.
+Причина находится до inference. Не заменять исходное требование count+1 нулём
+и не объявлять выбранную модель проверенной по прежнему запуску.
+
+Круг1: source `useHostTeamResume.ts` допускает fresh preflight после чтения
+original Resume/launch/checkpoint status; `LaunchTeamDialog.tsx` также ждёт saved
+hydration. Из одного model count нельзя отличить checkpoint-generation refusal,
+unresolved Resume, saved-source error и незавершённую hydration.
+
+Круг2: только в существующем failure catch mixed smoke добавить один read-only
+CDP snapshot исходного dialog. Закрытая проекция: dialog count, видимость known
+controls, disabled состояния, выбранный fresh/resume и список фиксированных
+reason IDs по exact known UI messages. Не выводить DOM/text, пользовательские
+данные, paths, arbitrary errors или новые API/RPC reads; не нажимать контролы.
+Использовать existing bounded CDP request; если чтение недоступно, записать только
+unavailable и бросить первоначальный poll error. Original90s poll, один Launch
+click, model count+1, model/effort, input counts и physical cleanup неизменны.
+
+Круг3: source/peer review закрытой проекции, existing scripts types и тот же
+native mixed Desktop job. Не писать отдельную unit suite для diagnostic strings.
+Следующий production/oracle fix выбирать по этому original evidence; не вводить
+retry, fallback на global model/новую Team или silent Fresh Launch.
+
+## 18. Actual235 draft Launch: preserve unconfirmed Create result
+
+[Validate job131783882257](https://github.com/777genius/agent-teams-ai/actions/runs/43394002053/job/131783882257)
+обнаружил TypeScript refusal в `src/main/ipc/teams.ts:2320`: draft Launch штатно
+вызывает `createTeam` и возвращает его результат без преобразования, но
+`TeamCreateResponse.launchStatus` после P06§17 включает `unconfirmed`, а
+`TeamLaunchResponse` в `src/shared/types/team.ts:945` ещё нет.
+
+### Круг1 — граница результата и потребители
+
+Сохранить точный additive status. Он сообщает, что Team сохранена, а исходный
+Launch не подтверждён; он не является ни `started`, ни доказательством отсутствия
+native allocation. Draft IPC уже возвращает полный response; HTTP draft route
+`src/main/http/teams.ts:383–418` делает то же. Не вводить cast, удаление status,
+переписывание runId или повторный create/launch.
+
+Текущий Host Create UI уже обрабатывает этот результат:
+`createHostTeamFromDialog.ts:35` не начинает polling, а
+`TeamListView.tsx:1040` открывает сохранённую canonical Team после пояснения.
+Обычный Host Launch в `createHostTeamLaunchSubmission.ts:43–51` возвращает
+started только после исходного capture/start, иначе отказывает; его native
+semantics не меняются. Legacy draft producer сейчас сам unconfirmed не создаёт,
+но общий публичный Launch contract должен честно принимать результат той Create
+операции, которую его handler вызывает.
+
+### Круг2 — минимальная связанная правка
+
+В shared `TeamLaunchResponse.launchStatus` добавить уже существующее значение
+unconfirmed. Сохранить все прежние значения, поля и canonical TeamCreate result.
+Не создавать отдельный status framework или новую transport DTO.
+
+В существующем `teamSlice.launchTeam` после API response и **до** регистрации
+response.runId, optimistic progress promotion и первого getProvisioningStatus
+обработать unconfirmed через существующий error/attempt cleanup: сохранить
+понятное сообщение «Team saved; launch not confirmed; check this team before
+launching again». Не утверждать завершение/отсутствие запуска, не регистрировать
+подтверждённый runtime, не запускать polling или автоматический retry. Текущая
+Team уже является адресатом Launch, поэтому новое Create/navigation действие
+не требуется. Существующие attempt/epoch guards в catch сохраняют более новый
+запуск; весь Host Create путь с canonical navigation остаётся прежним.
+
+### Круг3 — существующие critical cases
+
+В имеющемся draft IPC case в `test/main/ipc/teams.test.ts` проверить точную
+передачу исходного Create response с unconfirmed через TEAM_LAUNCH, сохранив все
+assertions saved metadata и однократного create вместо launch. В существующем
+`test/renderer/store/teamSlice.test.ts` дополнить ближайший failure/attempt case:
+response unconfirmed показывает честный refusal, снимает только свой optimistic
+pending, не публикует response run как running, не делает getStatus/poll/retry.
+Прежний started response и newer-attempt fence остаются покрыты существующими
+сценариями. Новых suites, harness, native inputs или CI jobs нет.
+
+Focused Main/renderer types и эти существующие cases, затем required validate
+того же source cut. Независимый source review обязателен. Этот compile/consumer
+fix не объясняет отдельный native /review marker loss и не закрывает его E2E.
+
+## 19. Saved donor Create: select the original field before inserting once
+
+Actual235 job `131780548921`, artifact `14023589292` (ZIP SHA256
+`b8d8dafd3926d56f21cebbb3e0b9c0969e1fb489e18c43c31e42867382ab07e7`),
+failed at `donor unique name retained`. Original donor source remained frozen;
+the generated TEST name is 29 valid characters. This failure happened before
+Create, ordinary Quit/corpus qualification or the consumer. The receipt does not
+retain the failed input value, so do not label a particular resulting value as observed.
+
+### R1 — existing editing protocol reference
+
+`desktop-donor-saved-producer.ts:186–206` sends the Meta+A key event without
+the explicit CDP `commands: ['selectAll']` used by the existing passed
+`desktop-create-config-ui-smoke.ts:222–229`,
+`desktop-stopped-import-launch-ui.ts:99–106` and mixed Create fill helper.
+The donor frontend supplies a suggested initial name in its controlled input;
+typing into that existing value requires selecting it first.
+
+### R2 — minimal TEST correction
+
+Add the same explicit editing command to the original single keyDown. Before
+the original single `Input.insertText`, read once that the exact original field
+is focused and its full value is selected (selectionStart zero and selectionEnd
+equal to its actual value length). Refuse before text mutation if that proof is
+absent. Retain the keyUp, the one text insertion and the existing exact retained
+value assertion. Do not set the DOM value, invoke React/store/IPC setters, retype,
+repeat clicks, replace the donor frontend or extend its existing deadline.
+The normal user-input route and original saved-team capture remain the acceptance proof.
+
+### R3 — verification
+
+Independent source review should compare the same CDP command in the existing
+working fill helpers, and ensure the extra evaluation is read-only and precedes
+the one insertion. Run existing Host-script types, then the original saved-only
+donor/consumer E2E on the new exact head. Keep the prior run INCOMPLETE; require
+ordinary original Quit/absence, frozen corpus and consumer cold readback before
+counting this route as passed. No new unit suite or synthetic donor is needed.
+
+### §18 source-cap refinement: существующий loader параметров Launch
+
+Локальный integrated Main/renderer прогон завершился 530/530 PASS, но обычный
+source-size guard обнаружил `teamSlice.ts`5024 при сохранённом baseline5020:
+четыре новые строки unconfirmed guard превысили лимит. Этот gate остаётся
+обязательным; предыдущий PASS тестов не заменяет source-size проверку.
+
+Круг1 — существующая граница: `teamSlice.ts:1723–1753` содержит цельный
+`loadAllLaunchParams`, использующий только localStorage, private
+`LAUNCH_PARAMS_PREFIX` и `TeamLaunchParams`. Уже существующий
+`store/team/teamLaunchParams.ts` владеет теми же параметрами и их сохранением.
+Перенести туда loader и его prefix, экспортировать функцию и импортировать
+её в прежний блок teamSlice. Новый helper-файл/owner или общий abstraction
+не нужен; тело loader переносится без изменения ветвей и порядка чтений.
+
+Круг2 — поведения: вызов остаётся в прежней инициализации
+`launchParamsByTeam: loadAllLaunchParams()`; import не читает localStorage.
+Сохраняются best-effort отдельные corrupt-entry/storage catches, original keys
+и прежние данные. Unconfirmed guard остаётся непосредственно после Launch IPC
+до responseRunId/analytics/promotion/poll; attempt-fenced catch и вся
+launch/create логика не перемещаются. Не сжимать код, не удалять пустые строки
+ради счётчика и не менять baseline.
+
+Круг3 — без новых тестов: existing teamSlice case уже проверяет восстановление
+valid saved params рядом с corrupt entry, а §18 cases проверяют unconfirmed,
+обычный Launch и newer-attempt cleanup. Повторить затронутый existing renderer
+file, types и прежний source-size guard после переноса. Исходный 530 PASS
+относится к pre-extraction bytes; отдельного native input или CI job не добавлять.
+
+
+## 20. Actual donor catalogue request keeps its original source epoch
+
+### Round1 — exact evidence and source
+
+On d35, saved-only job131818772468/artifact14027459003 now passed the single
+name insertion and failed waiting for Sonnet4.6. The unchanged donor source
+remained frozen. Its model receipt records GET rejected by the POST assertion,
+with zero inference requests; the original URL was not retained, so its exact
+bytes are not claimed as observed.
+
+Pinned donor runtime source
+[anthropicCatalog.ts](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/runtimeBackends/anthropicCatalog.ts)
+blob `adec3f0b3655f691c0efa87ae0910e7e7625a707` defines limit1000 and calls
+Axios GET `/v1/models` with that sole query parameter. Its configured localhost
+compatible branch returns an empty degraded catalogue on refusal. The shared
+frontend key verifier (same blob `2a4c10b94594c51b42ad1bbd6140b6248de7473d`
+in donor/current frontend) separately requests the exact no-query path.
+This source chain explains the missing catalogue without changing the donor UI.
+
+### Round2 — two finite request forms, original authority
+
+In existing native Claude TEST model, permit only GET `/v1/models` and
+GET `/v1/models?limit=1000` while exactly one original producer epoch is open.
+For donorSavedProbes require its existing `TEST-donor-saved-only-key`; for
+currentLegacySource require its existing `TEST-current-legacy-only-key`.
+Keep at most8 catalogue requests for that producer, the exact finite two-model
+response, no pagination, and the existing first-failure seal. Other methods,
+paths, queries and keys remain rejected. This adds the original donor catalogue
+read, never a model input, a native tool, or a successful account claim.
+
+The mutually exclusive epochs already have pending-read counters and close
+barriers. Keep them and all original POST/PONG/business-input limits unchanged;
+after ordinary producer Quit/absence and epoch close, neither catalogue route
+may reopen. Do not alter application provider selection, catalogues, permissions,
+UI selectors, time bounds or donor bytes.
+
+### Round3 — essential checks and real acceptance
+
+Extend the existing current-legacy oracle case with the query form, and add one
+small actual-HTTP donor-epoch case in the same existing test file: finite list,
+original PONG, close, then catalogue refusal with no native business turn.
+Run that existing file and Host-script types. Independent source review checks
+the two exact URLs and producer-specific keys before publishing the source cut.
+The existing saved-only Desktop donor/import/cold-readback gate remains required;
+the prior INCOMPLETE run is never relabelled as a success.
+
+## 21. Mixed cold Launch: finite evidence at the original failed boundary
+
+### Round1 — separate the observed failure from a proposed cause
+
+On d35 both original mixed Desktop jobs131818772113 (V1) and131818772401
+(V2) completed the native three-provider journey and Stop, then failed the
+same cold Launch assertion: Claude probe baseline8, observed8, no new probe.
+The V1 retained artifact shows one newly running OpenCode probe journal entry
+with held resources and no model-oracle rejection. This is not evidence that
+no work was admitted. It does not prove a queue deadlock or identify the native
+operation that stopped progressing. The V2 synchronous guard correction in
+P07 cannot by itself explain the same V1 result.
+
+Source review confirms Host work handlers run concurrently, model-probe start
+returns after journal admission, and Main routing has no per-Team serial queue.
+The existing cold check still requires one fresh Claude probe and all original
+UI/readback assertions. Neither its90s deadline nor the fixture input allowance
+is changed; a prior successful probe cannot be relabelled as cold acceptance.
+
+### Round2 — one failure-only TEST projection
+
+Extend only `desktop-mixed-create-launch-ui-smoke.ts` at its existing cold
+preflight catch. Keep the original error and cleanup. Read the original TEST
+`hoststore/management-commands` namespace once; this is a diagnostic snapshot,
+not an atomic observation, authorization, recovery, or an alternate journal.
+
+- Bound directory entries to256 and retained model-probe rows to64. Open
+  regular JSON files with no-follow and read at most64KiB plus one byte;
+  oversize, malformed, replaced or unreadable data yields a closed
+  `unavailable` diagnostic, never proof of absence.
+- Keep only existing Team-probe records and the three fixed TEST provider IDs.
+  Project the file's SHA-shaped opaque name, provider, finite phase, boolean
+  resourceHeld/ok and integer expiry relative to the original failure time.
+  Never serialize raw records, paths, environments, credentials, error text,
+  model content or arbitrary provider values.
+- Add the existing three model-oracle probe counts to the same original
+  failure log/receipt. No new RPC, process census, CDP input, signal, native
+  request, retry, selected profile change or attempt is introduced.
+- No reads occur on the success path or before the original failed assertion.
+  A diagnostic failure remains distinguishable from an empty original journal.
+
+### Round3 — review and delivery
+
+Review the bounded read and strict output projection independently, then run
+the existing script type gate and both original mixed Desktop jobs on the
+next required exact source cut. No extra unit suite or CI job is added for
+this read-only failure metadata. Keep d35 INCOMPLETE and use the next actual
+journal/native evidence to choose the production correction; do not adjust
+guards, accept cached checks, or increase deadlines on a timing hypothesis.

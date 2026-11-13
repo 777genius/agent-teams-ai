@@ -13,6 +13,10 @@ function areResolvedMembersEqual(
     const nextMember = next[i];
     if (
       prevMember.name !== nextMember.name ||
+      prevMember.runtimeOwner !== nextMember.runtimeOwner ||
+      prevMember.nativeInboxAttachmentsSupported !== nextMember.nativeInboxAttachmentsSupported ||
+      prevMember.nativeInboxTextAttachmentsSupported !== nextMember.nativeInboxTextAttachmentsSupported ||
+      !areSessionCommandsEqual(prevMember.sessionCommands, nextMember.sessionCommands) ||
       prevMember.agentId !== nextMember.agentId ||
       prevMember.joinedAt !== nextMember.joinedAt ||
       prevMember.status !== nextMember.status ||
@@ -51,6 +55,21 @@ function areResolvedMembersEqual(
     }
   }
   return true;
+}
+
+function areSessionCommandsEqual(
+  prev: ResolvedTeamMember['sessionCommands'],
+  next: ResolvedTeamMember['sessionCommands']
+): boolean {
+  if (prev === next) return true;
+  if (!prev || !next) return false;
+  return (
+    prev.length === next.length &&
+    prev.every(
+      (command, index) =>
+        command.name === next[index].name && command.description === next[index].description
+    )
+  );
 }
 
 function areMemberMcpPoliciesEqual(

@@ -227,21 +227,45 @@ test(
   'V2 model probe preparation is effect-free and revoked run cannot allocate or replay',
   { skip: !supported },
   async (t) => {
-    const f = fixture();
-    t.after(f.cleanup);
-    assert.throws(() => createOpenCodeV2ModelProbe(f.management, f.input, () => false),
-      { code: 'held' });
-    let current = true;
-    const probe = createOpenCodeV2ModelProbe(f.management, f.input, () => current);
-    current = false;
-    assert.deepEqual(readdirSync(f.root), []);
-    const signal = new AbortController().signal;
-    const original = probe.run(signal);
-    assert.equal(probe.run(signal), original, 'one private attempt, never retry a failed run');
-    await assert.rejects(original, { code: 'held' });
-    assert.equal(await probe.close(), true);
-    assert.equal(await probe.close(), true);
-    assert.deepEqual(readdirSync(f.root), []);
+    for (const change of ['owner', 'auth', 'configuration'] as const) {
+      const f = fixture();
+      t.after(f.cleanup);
+      if (change === 'configuration') {
+        writeFileSync(join(f.root, 'opencode.json'), JSON.stringify({
+          model: 'TEST-provider/TEST-model',
+        }), { mode: 0o600 });
+        f.management.embedded!.configurationSource =
+          captureOpenCodeConfigurationSource(f.management).reference;
+      }
+      if (change === 'owner')
+        assert.throws(() => createOpenCodeV2ModelProbe(f.management, f.input, () => false),
+          { code: 'held' });
+      const before = readdirSync(f.root);
+      let current = true;
+      const probe = createOpenCodeV2ModelProbe(f.management, f.input, () => current);
+      assert.deepEqual(readdirSync(f.root), before, 'preparation is allocation-free');
+      if (change === 'owner') current = false;
+      else if (change === 'auth') {
+        mkdirSync(join(f.root, 'opencode'));
+        writeFileSync(join(f.root, 'opencode/auth.json'), JSON.stringify({
+          'TEST-provider': { type: 'api', key: 'TEST-new-original-namespace-key' },
+        }), { mode: 0o600 });
+      } else {
+        writeFileSync(join(f.root, 'opencode.json'), JSON.stringify({
+          model: 'TEST-provider/TEST-replacement',
+        }), { mode: 0o600 });
+      }
+      const changed = readdirSync(f.root);
+      const signal = new AbortController().signal;
+      const original = probe.run(signal);
+      assert.equal(probe.run(signal), original, 'one private attempt, never retry a failed run');
+      await assert.rejects(original, { code: 'held' });
+      assert.deepEqual(readdirSync(f.root), changed,
+        change + ' must refuse before creating a native probe namespace, not hide it in cleanup');
+      assert.equal(await probe.close(), true);
+      assert.equal(await probe.close(), true);
+      assert.deepEqual(readdirSync(f.root), changed);
+    }
   }
 );
 

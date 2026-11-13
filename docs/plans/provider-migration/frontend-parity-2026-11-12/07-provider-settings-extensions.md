@@ -1072,3 +1072,338 @@ called и cleanup===true. Соседний original callback failure + rejected 
 прежний Main CI job на опубликованном source. Source review и GitHub blob equality
 не подменяют execution: executor сейчас недоступен. Это correction oracle, не
 новый product lifecycle fix и не закрытие pending V2 startup/native acceptance.
+
+
+## R19 — убрать транзитивно повторённые V2 current checks
+
+### Actual evidence и предел вывода
+
+Exact parity `235b01b489a4f428b72c7667b0c89061c82cab1b`: Windows x64 —
+`104540586 / 130556486 us` в nearest exclusive категории `team-writer` /
+всего sampled Host; Darwin x64 — `96.57 / 131.62 s`. Model requests0.
+Это sampled Host stacks с interval10ms из R17, не точная стоимость отдельной
+функции, Bun CPU или HTTP. Размер будущего ускорения пока неизвестен.
+
+Source цепь: `OpenCodeV2EmbeddedMemberProvider.ts:49–59` →
+`OpenCodeV2CapturedConfiguration.ts:88–89` →
+`OpenCodeV2SessionCredential.ts:24–27` →
+`OpenCodeV2CredentialScope.ts:61–71,117–142`.
+Исходный callback повторно проверяет captured member/Team writer и original
+grant/fences; `TeamOwnerStore.fenced` синхронно проверяет свой namespace.
+`RuntimeSourceIndex` в этой обычной цепи после capture не вызывается.
+Source index и сам Team writer/fence этот срез не меняет.
+
+### Круг1 — три замены в двух существующих файлах
+
+1. `OpenCodeV2EmbeddedMemberProvider:57–58`: передать credential capture
+   `configuration.isCurrent` вместо wrapper
+   `() => contextCurrent() && configuration.isCurrent()`.
+   Configuration уже проверяет именно исходный `contextCurrent`.
+2. Там же aggregate `current:59` взять из `credential.isCurrent`, убрав
+   дублирующие `contextCurrent() && configuration.isCurrent()`.
+   Credential захватывает original configuration callback до allocation.
+3. `OpenCodeV2SessionCredential:26`: использовать `captured.isCurrent`
+   вместо `() => isCurrent() && captured.isCurrent()`.
+   Его primary read всегда начинается с `check()` → original owner callback,
+   включая отсутствующий auth.json; after-read checks остаются прежними.
+
+Статический пример: unbound configuration source без explicit config key,
+существующий primary auth и отсутствующий alternate auth дают20→9 original
+owner вызовов внутри aggregate current. Это расчёт по коду, не measured counter;
+другие наборы файлов/ключей дают другие числа. Тест с assertion этого числа
+и обещание пропорционального ускорения не нужны.
+
+### Круг2 — original authority и ключи сохраняются
+
+Никакого сохранённого результата, TTL, microtask cache или переноса результата
+через await. Каждый current заново читает original auth/config и вызывает
+original authority; все существующие checks до/после await остаются на месте.
+Seal/abort/deadline/canAllocate, native nonce/PID/birth/image, read-only snapshot
+final proof и проверки native mutations не меняются.
+
+`OpenCodeV2CapturedConfiguration` не редактируется. Explicit config key
+по-прежнему захватывается original credential scope, обязан совпасть с original
+auth key и перепроверяется через `key.isCurrent()`, включая его owner callback.
+Config/native key conflict, alternate V1 auth, file/namespace identity и digest
+guards сохраняются. `bindRunningSession()` продолжает снимать только source
+freshness для running A; owner/key остаются current. Новый source относится
+к следующему capture. Cleanup-unknown не становится успехом.
+
+### Круг3 — critical cases и actual native gate
+
+Расширить existing cases без новой unit suite:
+
+- `hostOpenCodeV2EmbeddedMember.test.ts`: original pending read/dispose barrier,
+  затем owner revocation либо actual auth source mutation; after-await refusal,
+  attachment resolver не вызван, original cleanup сохранён. Existing seal
+  AbortError и callback failure + failed disposal остаются точными.
+- `opencode-v2-credential-scope.test.ts` / existing configuration-source case:
+  actual TEST files и transitive session/config current, включая absent→present
+  auth, explicit config key match/conflict и revocation. Original scope не
+  заменяется mock, всегда возвращающим true.
+
+Independent review прослеживает все три private closures и explicit-key ветку.
+Затем focused existing tests и Host/Main types. Executor сейчас недоступен:
+immutable readback/source review не являются execution.
+
+Следующий необходимый exact-head native preflight сохраняет original120000ms,
+внутренние deadlines, request/input limits, custody и cleanup. Сопоставить
+R14/R17 sampled evidence и actual model/tool/MCP/approval/Stop/cold Resume.
+До успешного native результата startup gap открыт; достаточность трёх замен
+для прохождения CI заранее не утверждается.
+
+### R19, дополнительный круг — тот же predicate в finite model probe
+
+Actual235 mixed Desktop job131780548934 после original Bob Restart → whole
+Stop → renderer reload принял новый OpenCode model check. В original
+management row3958a684… остаются `phase=running/resourceHeld=true`, model
+`TEST-model`; commandId `team-preflight-2bbd40ae…` точно воспроизводится из
+сохранённых handle + текущих launch/rosterRevision + Carol + qualified model.
+Claude/Codex/OpenCode probes перед cleanup равны8/1/1, failures пусты.
+Это исключает отказ Resume до model admission, но не устанавливает, где
+внутри native startup/cleanup остановился probe. CPU этого check не измерялся.
+
+**Круг1 — доказательство по исходным closures.**
+`OpenCodeV2ModelProbe.ts:112–116` захватывает configuration с original
+`contextCurrent`, затем передаёт в SessionCredential повторный
+`contextCurrent && configuration.isCurrent` и ещё раз повторяет оба в current.
+Configuration.isCurrent всегда начинает с того же owner callback; explicit
+config-key scope и source freshness проверяются далее. CredentialScope.selected
+всегда начинает primary read с check → сохранённый configuration callback,
+включая missing auth/parent directory. SessionCredential R19 использует этот
+captured.isCurrent. Поэтому credential current транзитивно содержит оба
+удаляемых условия, original directory identities и closed/abort guards.
+
+**Круг2 — две замены в одном существующем provider файле.**
+Передать `configuration.isCurrent` напрямую в SessionCredential и использовать
+`credential.isCurrent` как aggregate current. Других substitutions не делать.
+Model probe не вызывает bindRunningSession: source freshness остаётся
+обязательной весь finite check. Original config-key equality/conflict и
+alternate auth checks неизменны; никакого cache, TTL или переноса результата
+через await. Assert до/после каждого await, beforeRequest custody lease,
+readPassword, canAllocate, original90s model timeout и cleanup не меняются.
+Это устранение повторной композиции, не измеренный performance результат
+и не доказательство исправления observed mixed failure.
+
+**Круг3 — существующая критичная проверка.**
+В `opencode-v2-model-probe.test.ts` расширить existing effect-free/revoked-run
+case: owner revoke, actual absent→present auth и original configuration mutation
+между capture и run должны отказать до создания probe namespace; same run Promise,
+no replay и original idempotent close сохранить. Проверить отсутствие namespace
+до close, чтобы cleanup не скрыл попытку allocation. Existing configuration/
+credential tests R19 и sealed/dispose cases переиспользовать, без нового sampler
+или suite. Independent closure review, focused Node24 tests и types; следующий
+необходимый exact-head native/mixed gate с прежними budgets остаётся обязательным.
+
+
+## R20 — exact-head native results and the TEST source-response classifier
+
+### Observed d35 evidence
+
+The unchanged Linux `opencode-v2-embedded-host.native.ts` on parity
+`d35ef8256a9f24294b2fe50e8290ccb9841d9eb1` completed all six original
+phases with11 model requests, no model failures and original cleanup confirmed.
+Receipt SHA256 `cb38773c51b4e18f6ab26328d17c3f38d6770ef1b4cc400d6e1246ca5f786d20`.
+This is Linux source/native evidence, not a Windows/macOS or packaged acceptance.
+
+The separate original model-probe case failed before native allocation or
+inference: `native-host.ts:297` applied the Runtime session DTO allowlist to
+`runtime.source.current`. Its expected source-summary keys are deliberately
+different. The original failure remains INCOMPLETE; zero native processes,
+zero model requests, Host exit0 and cleanup confirmed. No timeout is involved.
+
+The d35 CI Windows ARM64 and Darwin ARM64 embedded cases are also INCOMPLETE:
+the former reached no model request; the latter reached four and then the
+original terminal deadline. Their nearest exclusive team-writer CPU samples
+remain98.328s and99.453s respectively. R19 alone therefore does not close the
+cross-platform startup/performance gap. No bound or cleanup requirement changes.
+
+### Round1 — distinguish the existing private source family
+
+In existing `tests/fixtures/native-host.ts`, handle the six registered
+`runtime.source.*` names before the existing session projection assertion.
+Use the existing strict `runtimeSourceSummarySchema` for current, its array
+for retained, and `runtimeSourcePublicationSchema` for publish and refreshConfiguration.
+Lookup and recover may return null; recover has no unfinished publication in
+that valid case. An unrecognised source
+method must fail. Keep the explicit no-Bearer response assertion.
+
+This is TEST response classification only. Do not expand the session DTO
+allowlist, change production RPCs, expose paths/credentials, or replace native
+model probing with a mock. The schemas come from the exact source contracts
+that the original Host registers in `createRuntimeSourceMethods.ts`.
+
+### Round2 — minimum source and independent review
+
+One existing fixture file, no new module or unit suite. Review all six action
+return types in `RuntimeSourceIndex`, including nullable lookup/recover and strict
+nested selection. Existing session/activity/checkpoint assertions remain
+unchanged. A peer verifies the finite classifier before source execution.
+
+### Round3 — original acceptance, unchanged budgets
+
+Run Host TEST types and existing member projection negative cases. Then run
+the same native model-probe case once on the corrected source using already
+verified pinned runtime/engine/Bun inputs. Preserve its request limits,
+configuration A-to-B checks, ordinary final cleanup and immutable input
+receipts. Any later native failure is recorded and investigated separately.
+The actual Windows/macOS writer-cost issue needs its own source-backed plan
+and exact native proof; it is not declared solved by this fixture correction.
+
+
+## R21 — bounded synchronous credential/configuration reads
+
+### Round1 — remaining cost and original ownership
+
+Actual d35 Windows/Darwin embedded receipts still spend most sampled Host time
+inside the original Team writer authority (R20); R19 is insufficient. Every
+credential-current check calls selected(), which reads the primary auth file
+and the alternate conflict source synchronously. Each private read currently
+re-enters the full owner callback before/after its own file. The callback then
+rechecks captured configuration, which independently repeats that same owner
+ahead of source/key predicates that already include it.
+
+No cache or retained proof is proposed. The owner and immutable config/auth
+sources must still be read afresh on every call, with all checks around awaits
+and native effects unchanged. TeamOwnerStore, Team grants/roster/launch readers,
+writer locks and current member binding semantics are outside this slice.
+
+### Round2 — two existing files, one synchronous operation boundary
+
+1. In `OpenCodeV2CredentialScope`, separate the existing root identity checks
+   from the original owner callback. Private read keeps root checks at its
+   existing before/after points plus every FD/type/path/digest check unchanged.
+   selected() checks owner and roots before its first source read and after
+   both primary/alternate reads and validation, before returning any key/digest.
+   There is no await, callback exposed to callers, mutation or native effect
+   between these boundary checks. An early missing-file return is still inside
+   the selected boundary. providerIds(), the only other read caller, gets the
+   same explicit owner+root checks before/after its one read. Constructor/write/
+   publication/rollback guards remain, and no private unguarded read is exported.
+2. In `OpenCodeV2CapturedConfiguration.isCurrent`, evaluate an existing key
+   predicate when present. For an unbound captured source use source.isCurrent,
+   which checks this exact original owner before/after its synchronous reads.
+   Otherwise a present key already includes that owner; if neither source nor
+   key supplies it, call ownerCurrent directly. Thus all key/source predicates
+   still run as required, without a separate duplicate leading owner callback.
+   A bound running session keeps key+owner checks; only its documented config
+   freshness exemption remains. Finite model probes never bind.
+
+Unlike a per-tick/TTL/microtask cache, the result is not reusable by another call.
+These checks delimit one synchronous read operation; its filesystem identity
+checks remain per file. Do not move/remove the after-read boundary, any await
+guard, explicit key conflict, alternate-auth conflict, signal/deadline,
+canAllocate, custody check, permission policy or cleanup-unknown handling.
+
+### Round3 — independent proof and minimum regression coverage
+
+Peer review follows every caller of the now identity-only private read and
+all four source/key/bound combinations. Reuse existing credential-scope,
+configuration-source, V2 model-probe and Main embedded-member cases for owner
+revocation, auth missing-to-present, root replacement, config-key conflict,
+bound running A versus next captured B, after-await revocation and failed cleanup.
+Extend only an existing critical case if providerIds after revocation lacks
+coverage; no call-count assertion, new suite or synthetic performance promise.
+
+After Host/Main targeted types and these existing cases, run the unchanged
+Linux full native and model-probe cases from a pushed clean source commit.
+Cross-platform exact-head CI keeps the original120s/native deadlines and all
+model/tool/MCP/approval/Stop/cold checks. Source simplification or local PASS
+alone does not close the Windows/macOS gap; preserve original failed receipts.
+
+
+## R22 — model selection guard без неиспользуемой Runtime projection
+
+### Круг 1 — исходный факт и граница причинного вывода
+
+Actual mixed V1 job `131818772113` сохраняет новый original OpenCode
+`team-preflight-d4bad0c185b279709abd8deea9035ae667fbe72d56c48de6eecd836813381a2d`
+как running/resourceHeld при отсутствии нового Claude model request.
+Закрытый TEST diagnostic в логе появился в `10:06:18.883971Z` с
+baseline8/observed8; original row expiresAt=`1794564380563`
+(`10:06:20.563Z`). Следовательно, запись ещё не просрочена в момент
+diagnostic; из running нельзя вывести сломанный timer или бесконечную работу.
+V2 job `131818772401` также не увидел нового Claude probe. Эти факты не
+устанавливают стоимость конкретного Host callback или native phase.
+
+Независимый source audit на `d35ef8256a9f24294b2fe50e8290ccb9841d9eb1`
+обнаружил более узкую, доказуемую лишнюю работу:
+
+- [captureTeamModelProbe](https://github.com/777genius/agent-teams-ai/blob/d35ef8256a9f24294b2fe50e8290ccb9841d9eb1/packages/legacy-agent-host/src/composition/teamLaunchModelProbe.ts)
+  в assertSelection читает `launch.read(action)`, затем использует только
+  launchId, rosterRevision и membership по memberId. Attempt status, readiness,
+  custody, timestamps, admission summary и native context этому guard не нужны.
+- [TeamLaunchOwner.read/project/summary](https://github.com/777genius/agent-teams-ai/blob/d35ef8256a9f24294b2fe50e8290ccb9841d9eb1/packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts)
+  сначала делает тот же authorized/load/validation, затем project читает Runtime
+  каждого claimed member. Project меняет только attempt observation fields;
+  эти три selection поля остаются исходными. Ошибка Runtime observation ловится
+  и превращается в attempt unknown, который model guard всё равно не читает.
+- [createRuntimeTeamLaunch](https://github.com/777genius/agent-teams-ai/blob/d35ef8256a9f24294b2fe50e8290ccb9841d9eb1/packages/legacy-agent-host/src/composition/createRuntimeTeamLaunch.ts)
+  связывает этот callback с readSession и текущими provider evidence getters.
+  [RuntimeOwner.readSession](https://github.com/777genius/agent-teams-ai/blob/d35ef8256a9f24294b2fe50e8290ccb9841d9eb1/packages/legacy-agent-host/src/runtime/RuntimeOwner.ts)
+  читает original transaction под Runtime fence; он не открывает, не останавливает,
+  не dispatch-ит и не восстанавливает native session. RuntimeActivityCoordinator
+  добавляет публикацию только в put, которого здесь нет.
+  Team authorization внутри read повторно валидирует Team state/retained bindings.
+  Ordinary roster recovery исходного Team уже сохраняется в неизменном
+  authorized callback нового selection read; отдельного native recovery effect
+  из project не теряем.
+
+После Stop попытки остаются claimed: projection продолжает обходить released
+Runtime records. Это source-backed amplification, не measured объяснение90s.
+Для уже admitted capture prospective saved-model branch не становится
+разрешённым: isUnstartedCaptureEditable проверяет original admission. Его
+полную history/custody проверку этим изменением не трогаем.
+
+### Круг 2 — минимальный внутренний read
+
+1. Добавить в существующий TeamLaunchOwner один явно названный composition-only
+   `readModelProbeSelection(action)`. Под **тем же** options.authorized(action)
+   вызвать **тот же** private load, сохраняющий full fingerprint, expected roster,
+   native additions, restore/resume/preparation/retry и current attempt validation.
+   Вернуть новый закрытый object только с launchId, rosterRevision и ordered
+   memberIds из тех же record fields, что использует public summary.
+   Никаких Runtime observations, cache, retained proof, нового журнала или RPC.
+2. Только assertSelection в captureTeamModelProbe использовать этот read;
+   прежние action start→control, read/cancel→read, cancellation branch,
+   original owner/lease/current capture, member Runtime control authority
+   для non-draft, source/recipe/config digest и operator/member revision comparisons
+   остаются на тех же местах. Все before/after-await и native-effect проверки
+   остаются. Новый read не отвечает на вопросы readiness, release или canWork.
+3. Полный public launch.read, readOriginalStart, refresh, DTO, UI status,
+   настоящие Runtime reads и все start/Stop/retry/Resume/cleanup пути неизменны.
+   Поиск existing equivalent завершён: readRestorations не содержит selection;
+   memberActions.read требует существующий member и только read authority,
+   поэтому не заменяет start/control и fresh-draft-member cases.
+   Не добавлять optional boolean, меняющий значение общего public read.
+
+### Круг 3 — независимый review и один существующий critical case
+
+До source — root publication этого append. Peer сверяет три project-invariant
+поля и все ошибки load/authorization, а также отсутствие нужного recovery/effect
+в удаляемом observation обходе. Source scope: TeamLaunchOwner.ts,
+teamLaunchModelProbe.ts и один existing Team launch case.
+
+Расширить существующий authorization/corrupt-roster case в
+`packages/legacy-agent-host/tests/team-launch.test.ts`: настоящий controlled
+Launch с claimed members, затем original observation unavailable; selection
+остаётся exact без обращения к Runtime observation, public read всё ещё
+показывает unknown. Использовать existing controlled read callback как
+tripwire/census, не подменять production guards. Revoked grant и corrupt
+original launch по-прежнему отказывают; original bytes и native open/input
+counts не меняются от selection inspection. Это один meaningful case,
+не новая suite и не timing/call-count benchmark производительности.
+
+Нужны Host build/test types, existing team-launch/model-probe/saved-probe
+cases, lint/source caps. После этого обычные mixed V1/V2 Desktop и native
+model-probe gates на exact coherent head проверяют результат с прежними
+90s/native deadlines, model request counts и cleanup obligations.
+До actual gates не объявлять timeout устранённым, не менять budgets,
+не ослаблять source/actor/custody и не нормализовать original failed receipts.
+
+**R1:** проверены actual expiry и неиспользуемые project fields; отсутствие
+sampled mixed CPU данных сохранено явно. **R2:** прочитаны authorized/load,
+full launch validator, Runtime read transaction и existing read alternatives;
+guard не зависел от project status даже при observation refusal.
+**R3:** независимый plan/source review и execution ещё требуются; среда
+недоступна, новые source bytes пока не созданы.

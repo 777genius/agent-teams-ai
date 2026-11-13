@@ -6,6 +6,8 @@ import {
 import { runDesktopMixedMemberRestartUiSmoke } from './desktop-mixed-member-restart-ui-smoke.ts';
 import { runMixedEditTeamUi, mixedEditedDescription } from './desktop-mixed-edit-team-ui.ts';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
+import { managementDigest } from '../../packages/legacy-agent-host/dist/management/identity.js';
+import { storedModelProbeSchema } from '../../packages/legacy-agent-host/dist/management/commandRecords.js';
 import { runDesktopMixedGroupUiSmoke } from './desktop-mixed-group-ui-smoke.ts';
 import assert from 'node:assert/strict';
 import {
@@ -16,7 +18,8 @@ import {
   startMixedProgressObservation,
   finishMixedProgressObservation,
 } from './desktop-mixed-dialog-settings.ts';
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { lstat, open, opendir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
@@ -41,6 +44,81 @@ const record = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 const read = async (path: string) => record(JSON.parse(await readFile(path, 'utf8')));
+
+
+/** One bounded TEST snapshot after the original failure; never authority or recovery. */
+async function failedColdProbeJournal(root: string, observedAt: number) {
+  const unavailable = { status: 'unavailable' as const, atomic: false as const };
+  try {
+    const directory = join(root, 'hoststore', 'management-commands');
+    const originalDirectory = await lstat(directory);
+    assert.ok(originalDirectory.isDirectory() && !originalDirectory.isSymbolicLink());
+    const rows: Array<{
+      receipt: string; provider: 'claude' | 'codex' | 'opencode';
+      phase: 'running' | 'completed' | 'cancelled' | 'held';
+      resourceHeld: boolean; ok: boolean; expiresInMs: number;
+    }> = [];
+    let entries = 0;
+    for await (const entry of await opendir(directory)) {
+      assert.ok(++entries <= 256, 'bounded original TEST journal');
+      assert.ok(entry.isFile(), 'only original regular TEST receipts');
+      if (/^\.tmp-[a-f0-9-]{36}$/.test(entry.name)) continue;
+      assert.match(entry.name, /^[a-f0-9]{64}\.json$/);
+      const path = join(directory, entry.name);
+      const linkedBefore = await lstat(path);
+      const file = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      try {
+        const before = await file.stat();
+        assert.ok(before.isFile() && linkedBefore.isFile() && !linkedBefore.isSymbolicLink());
+        assert.equal(before.dev, linkedBefore.dev);
+        assert.equal(before.ino, linkedBefore.ino);
+        assert.ok(before.size <= 64 * 1024);
+        const bytes = Buffer.alloc(64 * 1024 + 1);
+        let length = 0;
+        while (length < bytes.length) {
+          const read = await file.read(bytes, length, bytes.length - length, null);
+          if (!read.bytesRead) break;
+          length += read.bytesRead;
+        }
+        const after = await file.stat();
+        const linkedAfter = await lstat(path);
+        assert.ok(linkedAfter.isFile() && !linkedAfter.isSymbolicLink());
+        assert.equal(length, before.size);
+        for (const field of ['dev', 'ino', 'size', 'mtimeMs', 'ctimeMs'] as const) {
+          assert.equal(after[field], before[field]);
+          assert.equal(linkedAfter[field], before[field]);
+        }
+        const parsed = record(JSON.parse(
+          new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, length))
+        ));
+        const { digest, ...body } = parsed;
+        if (body.kind !== 'model.probe') continue;
+        const probe = storedModelProbeSchema.parse(body);
+        assert.equal(digest, managementDigest(body));
+        assert.equal(entry.name, managementDigest(probe.commandId) + '.json');
+        if (!/^team-probe-[a-f0-9]{64}$/.test(probe.profileId)) continue;
+        const provider = probe.providerId === 'anthropic' ? 'claude'
+          : probe.providerId === 'codex' ? 'codex'
+          : probe.providerId === 'test-local' ? 'opencode' : null;
+        if (!provider) continue;
+        assert.ok(rows.length < 64, 'bounded original TEST probe rows');
+        const expiresInMs = probe.expiresAt - observedAt;
+        assert.ok(Number.isSafeInteger(expiresInMs));
+        rows.push({ receipt: entry.name.slice(0, -5), provider, phase: probe.phase,
+          resourceHeld: probe.resourceHeld, ok: probe.ok, expiresInMs });
+      } finally {
+        await file.close();
+      }
+    }
+    const currentDirectory = await lstat(directory);
+    assert.ok(currentDirectory.isDirectory() && !currentDirectory.isSymbolicLink());
+    assert.equal(currentDirectory.dev, originalDirectory.dev);
+    assert.equal(currentDirectory.ino, originalDirectory.ino);
+    return { status: 'observed' as const, atomic: false as const, rows };
+  } catch {
+    return unavailable;
+  }
+}
 
 /** All application mutations use original dialog/composer/Stop controls through CDP Input. */
 export async function runDesktopMixedCreateLaunchUiSmoke(
@@ -578,6 +656,8 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   } catch (error) {
     const failure = {
       kind: 'TEST_MIXED_COLD_MODEL_PREFLIGHT',
+      journal: await failedColdProbeJournal(fixture.root, Date.now()),
+      providerProbeCounts: modelRows.map((model) => model.probes.length),
       baseline: nativeClaudeProbeCount,
       observed: models.claude.probes.length,
       probes: models.claude.probes

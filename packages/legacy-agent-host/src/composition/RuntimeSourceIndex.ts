@@ -26,7 +26,7 @@ import {
   verifyRuntimeSourceExecutable,
 } from './verifyRuntimeSourceCandidate.js';
 import { RuntimeSourceAdmissionError } from './runtimeSourceQualification.js';
-import { readOriginalRuntimeSourcePublication, sameRuntimeSourceGrantAuthority } from './runtimeSourceGrantAuthority.js';
+import { RuntimeSourceUnavailable, readOriginalRuntimeSourcePublication, sameRuntimeSourceGrantAuthority, validateRuntimeSourceHistory } from './runtimeSourceGrantAuthority.js';
 import type { RuntimeSourceRecord } from '../adapters/profile/FileRuntimeSourceIndex.js';
 import type { ProviderManagementProfile } from '../management/profile.js';
 import type {
@@ -105,6 +105,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       ? index.records.find((row) => row.revision === pointer.revision)!
       : undefined;
     if (record && runtimeDigest(record.grant) !== runtimeDigest(grant)) fail('conflict');
+    if (record) this.retainedSeed(record);
     const summary = this.summary(grant, seed, record);
     if (seed.provider === 'opencode' && seed.nativeGeneration === 'v2' && seed.embedded) {
       const reference = record?.candidate.openCodeConfiguration ?? seed.embedded.configurationSource;
@@ -123,6 +124,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       seed = this.seed(grant);
     const records = this.read().records.filter((row) => row.grant.targetId === grant.targetId);
     if (records.some((row) => runtimeDigest(row.grant) !== runtimeDigest(grant))) fail('conflict');
+    for (const record of records) this.retainedSeed(record);
     return [
       this.summary(grant, seed),
       ...records.map((record) => this.summary(grant, seed, record)),
@@ -150,6 +152,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     }
     if (record.revision !== saved.revision || runtimeDigest(record.grant) !== runtimeDigest(grant))
       fail('held');
+    this.retainedSeed(record);
     if (saved.phase !== 'published')
       this.commands.write({ ...saved, phase: 'published', resourceHeld: false });
     return { commandId, phase: 'published', selection: this.summary(grant, seed, record) };
@@ -345,7 +348,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     };
     const record: RuntimeSourceRecord = { ...selection, revision: runtimeDigest(selection) };
     // Reject an unrepresentable selected default before reserving its publication command.
-    const managementProfile = this.managementProfile(record);
+    const managementProfile = this.managementProfile(record, seed);
     let receipt: StoredRuntimeSourceCommand = storedRuntimeSourceCommandSchema.parse({
       schemaVersion: 1,
       kind: 'runtime.source',
@@ -560,7 +563,8 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
           })
         );
         await Promise.allSettled([...this.pending.values()].map((entry) => entry.result));
-        if (closed.some((value) => !value)) fail('held');
+        if (closed.some((value) => !value) || [...this.commands.list()].some(row =>
+          row.kind === 'runtime.source' && row.resourceHeld)) fail('held');
       })();
       this.closing = closing;
       void closing.catch(() => { if (this.closing === closing) this.closing = undefined; });
@@ -569,7 +573,22 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
   }
 
   retainedManagementProfiles(): ProviderManagementProfile[] {
-    return this.read().records.map((record) => this.managementProfile(record));
+    return this.retainedManagementState().profiles;
+  }
+
+  /** Ineligible profiles remain known refusals; their original commands and fences are not removed. */
+  retainedManagementState() {
+    const profiles: ProviderManagementProfile[] = [];
+    const unavailable: { profileId: string; configRevision: string }[] = [];
+    for (const record of this.read().records) {
+      try { profiles.push(this.managementProfile(record)); }
+      catch (error) {
+        if (!(error instanceof RuntimeSourceUnavailable)) throw error;
+        unavailable.push({ profileId: `runtime-source:${record.revision}`,
+          configRevision: `runtime-source:${record.revision}` });
+      }
+    }
+    return { profiles, unavailable, hasCommands: [...this.commands.list()].length !== 0 };
   }
 
   currentForRecipe(
@@ -580,13 +599,15 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     const index = this.read();
     const available = index.current
       .map((pointer) => index.records.find((row) => row.revision === pointer.revision)!)
-      .filter((record) => this.applies(record.grant, scope, projectPath, recipe));
+      .filter(record => record.grant.runtimeId === recipe.provider &&
+        this.matchesScope(record.grant, scope, projectPath));
     const project = available.filter((record) => record.grant.projectPath === projectPath);
     const selected = project.length
       ? project
       : available.filter((record) => record.grant.projectPath === null);
     if (selected.length > 1) fail('held');
     const record = selected[0];
+    if (record) this.assertReferenceAvailable({ sourceId: record.grant.targetId, revision: record.revision }, scope, projectPath);
     return record ? { sourceId: record.grant.targetId, revision: record.revision } : undefined;
   }
 
@@ -599,16 +620,18 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     const record = this.read().records.find(
       (row) => row.grant.targetId === reference.sourceId && row.revision === reference.revision
     );
-    if (!record || !this.applies(record.grant, scope, projectPath, recipe)) return fail('held');
-    const seed = this.seed(record.grant);
-    if (seed.executable.sha256 !== recipe.executable.sha256) fail('held');
+    if (!record || !this.matchesScope(record.grant, scope, projectPath)) return fail('held');
+    this.assertReferenceAvailable(reference, scope, projectPath);
+    const seed = this.retainedSeed(record);
+    if (seed.provider !== recipe.provider || seed.executable.sha256 !== recipe.executable.sha256)
+      throw new RuntimeSourceUnavailable();
     if (
       recipe.provider === 'opencode' &&
       seed.provider === 'opencode' &&
       ((recipe.nativeGeneration ?? 'v1') !== (seed.nativeGeneration ?? 'v1') ||
         recipe.embedded?.manifestSha256 !== seed.embedded?.manifestSha256)
     )
-      fail('held');
+      throw new RuntimeSourceUnavailable();
     return runtimeMemberProfileSchema.parse({
       ...(recipe.provider === 'opencode'
         ? applyOpenCodeRuntimeSource(recipe, record.candidate) : structuredClone(recipe)),
@@ -616,37 +639,44 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     });
   }
 
-  private applies(
-    grant: RuntimeSourceGrant,
-    scope: RuntimeSourceTeamScope,
-    projectPath: string,
-    recipe: RuntimeMemberProfile
-  ): boolean {
-    const authorized =
-      grant.teamScopes.some(
-        (row) =>
-          row.teamId === scope.teamId &&
-          row.projectId === scope.projectId &&
-          row.workspaceId === scope.workspaceId
-      ) ||
-      (this.profile.creation?.contextIds.includes(grant.contextId) &&
-        scope.projectId === grant.contextId &&
-        scope.workspaceId === grant.contextId);
-    return (
-      !!authorized &&
-      grant.runtimeId === recipe.provider &&
-      (grant.projectPath === null || grant.projectPath === projectPath)
-    );
+  assertReferenceAvailable(reference: RuntimeSourceReference, scope: RuntimeSourceTeamScope, projectPath: string): void {
+    const record = this.read().records.find(row =>
+      row.grant.targetId === reference.sourceId && row.revision === reference.revision);
+    if (!record || !this.matchesScope(record.grant, scope, projectPath)) fail('held');
+    this.retainedSeed(record);
+    const grant = record.grant;
+    if (!grant.teamScopes.some(row => row.teamId === scope.teamId &&
+        row.projectId === scope.projectId && row.workspaceId === scope.workspaceId) &&
+        !this.profile.creation?.contextIds.includes(grant.contextId))
+      throw new RuntimeSourceUnavailable();
   }
 
-  private seed(raw: RuntimeSourceGrant): ProviderManagementProfile {
+  private matchesScope(grant: RuntimeSourceGrant, scope: RuntimeSourceTeamScope, projectPath: string): boolean {
+    return (grant.projectPath === null || grant.projectPath === projectPath) &&
+      (grant.teamScopes.some(row => row.teamId === scope.teamId &&
+        row.projectId === scope.projectId && row.workspaceId === scope.workspaceId) ||
+       (scope.projectId === grant.contextId && scope.workspaceId === grant.contextId));
+  }
+
+  private retainedSeed(record: RuntimeSourceRecord): ProviderManagementProfile {
+    const seed = this.seed(record.grant, true), receipt = this.commands.read(record.commandId);
+    if (!receipt || receipt.kind !== 'runtime.source') return fail('held');
+    if (receipt.selectionDigest !== this.seedRevision(record.grant, seed))
+      throw new RuntimeSourceUnavailable();
+    assertRuntimeSourceQualification(seed, record.candidate);
+    if (record.candidate.nativeCli && !this.identityMatches(seed, record.candidate, receipt)) fail('held');
+    return seed;
+  }
+
+  private seed(raw: RuntimeSourceGrant, retained = false): ProviderManagementProfile {
     this.assertWriter();
+    const unavailable = (): never => { if (retained) throw new RuntimeSourceUnavailable(); return fail('conflict'); };
     const grant = runtimeSourceGrantSchema.parse(raw);
     if (
       grant.ownerId !== this.profile.owner.ownerId ||
       grant.ownerRevision !== this.profile.owner.revision
     )
-      return fail('conflict');
+      return unavailable();
     if (
       grant.teamScopes.some(
         (scope) =>
@@ -658,7 +688,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
           )
       )
     )
-      return fail('conflict');
+      return unavailable();
     const seeds =
       this.profile.management?.filter(
         (row) =>
@@ -667,12 +697,9 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
           row.provider === grant.runtimeId
       ) ?? [];
     const seed = seeds[0];
-    if (
-      seeds.length !== 1 ||
-      !seed ||
-      (grant.projectPath !== null && grant.projectPath !== seed.cwd)
-    )
-      return fail('conflict');
+    if (seeds.length > 1) return fail('conflict');
+    if (!seed || (grant.projectPath !== null && grant.projectPath !== seed.cwd))
+      return unavailable();
     return seed;
   }
 
@@ -704,9 +731,8 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     };
   }
 
-  private managementProfile(record: RuntimeSourceRecord): ProviderManagementProfile {
-    const seed = this.seed(record.grant),
-      selected = this.summary(record.grant, seed, record);
+  private managementProfile(record: RuntimeSourceRecord, seed = this.retainedSeed(record)): ProviderManagementProfile {
+    const selected = this.summary(record.grant, seed, record);
     return providerManagementProfileSchema.parse({
       ...(seed.provider === 'opencode'
         ? applyOpenCodeRuntimeSource(seed, record.candidate) : structuredClone(seed)),
@@ -717,58 +743,8 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
   }
 
   private read(): ReturnType<FileRuntimeSourceIndex['read']> {
-    const index = this.store.read(),
-      previous = new Map<string, string>(),
-      grants = new Map<string, string>();
-    for (const record of index.records) {
-      const seed = this.seed(record.grant),
-        sourceId = record.grant.targetId,
-        grantDigest = runtimeDigest(record.grant);
-      assertRuntimeSourceQualification(seed, record.candidate);
-      if (
-        (grants.has(sourceId) && grants.get(sourceId) !== grantDigest) ||
-        record.previousRevision !==
-          (previous.get(sourceId) ?? this.seedRevision(record.grant, seed))
-      )
-        fail('held');
-      const receipt = this.commands.read(record.commandId);
-      if (receipt?.kind === 'runtime.source' && receipt.publicationJson)
-        this.publicationSnapshot(receipt, record.grant);
-      if (
-        !receipt ||
-        receipt.kind !== 'runtime.source' ||
-        receipt.resourceHeld ||
-        receipt.phase === 'held' ||
-        receipt.phase === 'verifying' ||
-        (record.candidate.nativeCli &&
-          (!['verified', 'published'].includes(receipt.phase) ||
-            !this.identityMatches(seed, record.candidate, receipt))) ||
-        receipt.revision !== record.revision ||
-        receipt.sourceId !== sourceId ||
-        receipt.resourceId !== sourceId ||
-        receipt.profileId !== seed.profileId ||
-        receipt.configRevision !== seed.configRevision ||
-        receipt.providerId !== seed.provider ||
-        receipt.selectionDigest !== this.seedRevision(record.grant, seed) ||
-        receipt.expectedRevision !== record.previousRevision ||
-        receipt.fingerprint !==
-          runtimeDigest({
-            grant: record.grant,
-            commandId: record.commandId,
-            expectedRevision: record.previousRevision,
-            candidate: record.candidate,
-            ...(record.intent ? { intent: record.intent } : {}),
-          })
-      )
-        fail('held');
-      grants.set(sourceId, grantDigest);
-      previous.set(sourceId, record.revision);
-    }
-    if (
-      previous.size !== index.current.length ||
-      index.current.some((pointer) => previous.get(pointer.sourceId) !== pointer.revision)
-    )
-      fail('held');
+    const index = this.store.read();
+    validateRuntimeSourceHistory(index, this.commands);
     return index;
   }
 }

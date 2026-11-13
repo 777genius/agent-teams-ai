@@ -47,6 +47,7 @@ export class ProviderManagementCoordinator {
   private readonly store: FileManagementCommandStore;
   private readonly fence: ManagementResourceFence;
   private sealed = false;
+  private readonly unavailableTargets = new Set<string>();
   readonly codex: CodexManagementCoordinator;
   readonly claude: ClaudeManagementCoordinator;
   readonly claudeAuth: ClaudeAuthenticationCoordinator;
@@ -63,6 +64,7 @@ export class ProviderManagementCoordinator {
     storageRoot: string,
     options: {
       onOAuthProgress?(snapshot: ProviderOAuthSnapshot): void;
+      unavailableProfiles?: readonly { profileId: string; configRevision: string }[];
       processCustody?: RegisteredProcessRootSource;
     } = {}
   ) {
@@ -89,13 +91,15 @@ export class ProviderManagementCoordinator {
       this.profiles.set(profile.profileId, profile);
     }
     const store = this.store = new FileManagementCommandStore(storageRoot);
+    for (const target of options.unavailableProfiles ?? [])
+      this.unavailableTargets.add(managementDigest(target));
+    for (const row of store.list())
+      if (!profiles.some(profile => profile.profileId === row.profileId && profile.configRevision === row.configRevision))
+        this.unavailableTargets.add(managementDigest({ profileId: row.profileId, configRevision: row.configRevision }));
     const fence = this.fence = new ManagementResourceFence(store.list());
     this.skills = new SkillCoordinator(profiles, {
       store, fence, assertCurrent: () => this.assertCurrent(),
-      managementTarget: (id, revision) => this.claude.has(id)
-        ? this.claude.target(id, revision)
-        : this.codex.has(id) ? this.codex.target(id, revision)
-          : this.credentialTarget(this.select(id, revision)),
+      managementTarget: (id, revision) => this.target(id, revision),
     });
     this.extensions = new NativeExtensionCoordinator(
       profiles.filter((profile) => profile.provider === 'claude'),
@@ -103,19 +107,14 @@ export class ProviderManagementCoordinator {
         store,
         fence,
         assertCurrent: () => this.assertCurrent(),
-        managementTarget: (id, revision) => this.claude.target(id, revision),
+        managementTarget: (id, revision) => this.target(id, revision),
       }
     );
     this.credentials = new CredentialCommandOwner({
       store,
       fence,
       assertCurrent: () => this.assertCurrent(),
-      select: (profileId, configRevision) =>
-        this.claude.has(profileId)
-          ? this.claude.target(profileId, configRevision)
-          : this.profiles.has(profileId)
-            ? this.credentialTarget(this.select(profileId, configRevision))
-            : this.codex.target(profileId, configRevision),
+      select: (profileId, configRevision) => this.target(profileId, configRevision),
       validate: (command) => {
         if (this.claude.has(command.profileId)) {
           if (command.providerId !== 'anthropic' || command.kind !== 'credential.forget')
@@ -143,12 +142,7 @@ export class ProviderManagementCoordinator {
       store,
       fence,
       assertWriter: () => this.assertWriter(),
-      select: (profileId, configRevision) =>
-        this.claude.has(profileId)
-          ? this.claude.target(profileId, configRevision)
-          : this.codex.has(profileId)
-            ? this.codex.target(profileId, configRevision)
-            : this.credentialTarget(this.select(profileId, configRevision)),
+      select: (profileId, configRevision) => this.target(profileId, configRevision),
       prepare: (input) => {
         if (this.claude.has(input.profileId)) return this.claudeAuth.prepare(input);
         if (this.codex.has(input.profileId)) return this.codex.prepareLogin(input);
@@ -200,12 +194,7 @@ export class ProviderManagementCoordinator {
       store,
       fence,
       assertWriter: () => this.assertWriter(),
-      select: (profileId, configRevision) =>
-        this.claude.has(profileId)
-          ? this.claude.target(profileId, configRevision)
-          : this.codex.has(profileId)
-            ? this.codex.target(profileId, configRevision)
-            : this.credentialTarget(this.select(profileId, configRevision)),
+      select: (profileId, configRevision) => this.target(profileId, configRevision),
       prepare: (input, isCurrent) => {
         if (this.claude.has(input.profileId)) return this.claude.prepareProbe(input, isCurrent);
         if (this.codex.has(input.profileId)) return this.codex.prepareProbe(input, isCurrent);
@@ -322,6 +311,7 @@ export class ProviderManagementCoordinator {
         throw new ManagementCommandError('conflict');
       if (!previous) this.profiles.set(profile.profileId, structuredClone(profile));
     }
+    this.unavailableTargets.delete(managementDigest({ profileId: profile.profileId, configRevision: profile.configRevision }));
   }
 
   /** A newly published base source serves all existing management owners, without replacing old targets. */
@@ -335,8 +325,23 @@ export class ProviderManagementCoordinator {
     }
   }
 
+  /** A retained unavailable target is a held original intent, never an unknown new profile. */
+  assertTargetAvailable(raw: unknown): void {
+    const target = z.object({ profileId: z.string(), configRevision: z.string() }).safeParse(raw);
+    if (target.success && this.unavailableTargets.has(managementDigest(target.data)))
+      throw new ManagementCommandError('held');
+  }
+
+  private target(profileId: string, configRevision: string): CredentialTarget {
+    this.assertTargetAvailable({ profileId, configRevision });
+    return this.claude.has(profileId) ? this.claude.target(profileId, configRevision)
+      : this.codex.has(profileId) ? this.codex.target(profileId, configRevision)
+        : this.credentialTarget(this.select(profileId, configRevision));
+  }
+
   private select(profileId: string, configRevision: string): OpenCodeManagementProfile {
     this.assertCurrent();
+    this.assertTargetAvailable({ profileId, configRevision });
     const profile = this.profiles.get(profileId);
     if (!profile || configRevision !== profile.configRevision)
       throw new OpenCodeManagementError('profile-changed');
@@ -686,7 +691,8 @@ export class ProviderManagementCoordinator {
       ...[...this.v2Hosts.values()].map((host) => host.close()),
       ...[...this.v2Keys.values()].map((operation) => operation.close()),
     ]);
-    if (results.some((result) => result.status === 'rejected' || result.value !== true))
+    if (results.some((result) => result.status === 'rejected' || result.value !== true) ||
+        [...this.store.list()].some(row => row.resourceHeld))
       throw new OpenCodeManagementError('held');
   }
 }

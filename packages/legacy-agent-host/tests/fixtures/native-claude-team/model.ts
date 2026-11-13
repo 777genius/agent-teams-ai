@@ -240,6 +240,8 @@ export async function startNativeTeamModel(
   }[] = [];
   const currentLegacyProbes: string[] = [];
   let currentLegacyTokenRequests = 0;
+  let currentLegacyCatalogRequests = 0;
+  let donorSavedCatalogRequests = 0;
   const unexpectedNoToolsRequests: {
     model?: string;
     roles: unknown[];
@@ -266,6 +268,24 @@ export async function startNativeTeamModel(
         return;
       }
       assert.equal(failures.length, 0, 'oracle is sealed after its first protocol failure');
+      if (request.method === 'GET' &&
+          (request.url === '/v1/models' || request.url === '/v1/models?limit=1000')) {
+        assert.ok(originalDonorRead || originalLegacyRead,
+          'catalog read belongs to its original producer epoch');
+        assert.equal(request.headers['x-api-key'],
+          originalDonorRead ? 'TEST-donor-saved-only-key' : 'TEST-current-legacy-only-key');
+        const catalogRequests = originalDonorRead
+          ? ++donorSavedCatalogRequests : ++currentLegacyCatalogRequests;
+        assert.ok(catalogRequests <= 8, 'bounded original legacy catalog reads');
+        const ids = ['claude-sonnet-4-6', 'claude-opus-4-6'];
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end(JSON.stringify({
+          data: ids.map(id => ({ id, type: 'model', display_name: id,
+            created_at: '2026-01-01T00:00:00Z' })),
+          has_more: false, first_id: ids[0], last_id: ids.at(-1),
+        }));
+        return;
+      }
       assert.equal(request.method, 'POST');
       assert.ok(request.url?.startsWith('/v1/messages'));
       const chunks: Buffer[] = [];
@@ -803,6 +823,7 @@ export async function startNativeTeamModel(
               turns: currentLegacyTurns,
               probes: currentLegacyProbes,
               tokenRequests: currentLegacyTokenRequests,
+              catalogRequests: currentLegacyCatalogRequests,
             });
           },
         }

@@ -944,7 +944,7 @@ export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunc
 
 export interface TeamLaunchResponse {
   runId: string;
-  launchStatus?: 'started' | 'already_launching' | 'already_running';
+  launchStatus?: 'started' | 'already_launching' | 'already_running' | 'unconfirmed';
   alreadyLaunching?: boolean;
   alreadyRunning?: boolean;
 }

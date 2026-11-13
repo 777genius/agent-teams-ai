@@ -842,3 +842,610 @@ Source пока не исполнен; после actual projection отдель
 действительно ли context перенесён в другой доверенный native frame или потерян,
 и как это соотносится с прежним frontend. Диагностика не закрывает parity и не
 превращает missing captured configuration в успешный native command.
+
+## R16 — Первый одиночный "/" в captured Composer
+
+**Actual receipt boundary.** Source235, run `43394002053`, job `131780548885`
+завершился с `UI read timed out: captured native command suggestions`:
+`desktop-native-commands-ui-proof.ts:51 → desktop-codex-cost-ui-proof.ts:94 →
+desktop-launch-ui-smoke.ts:349`. Это первый /cost **до** исходного Stop/Resume.
+Native Launch уже прошёл existing eight-request assertions и Stats read; сам /cost
+ещё не отправлен. Artifact `14023246198`, ZIP SHA256
+`583eabbc08cebdefbe895d2be386f344fcbf39c5074da78ee4bc8969f15c004e`.
+Из completed log не следует, что native capability потеряна: receipt/PNG/runtime
+в ZIP пока не прочитаны. Ни runtime failure, ни causal closure не заявлены.
+
+### Круг1 — воспроизводимый UI seam
+
+В current `MessageComposer.tsx:432–495` наличие command suggestions зависит от
+текста, начинающегося с "/". При пустом тексте child получает пустой список,
+хотя exact captured lead уже имеет `sessionCommands`.
+`MentionableTextarea.tsx:443–453` включает "/" в triggerChars лишь при непустом
+commandSuggestions. Первый input обработан старым render:
+`useMentionDetection.ts:285–317` вызывает onValueChange, затем проверяет новый
+текст со старым triggerChars и dismiss. Новая render-проекция сама detection
+не вызывает; hook ждёт следующий input/selection event. Поэтому одиночный "/"
+может не открыть каталог, хотя дальнейшая обычная печать случайно исправляет UI.
+
+В existing `MessageComposer.pendingSend.test.tsx` добавить один critical
+controlled case с настоящим MentionableTextarea/useMentionDetection для этого
+case через существующий component mock boundary. Exact captured Codex lead
+имеет только /cost, draft первоначально пуст. Focus и **один** input "/",
+без дополнительного character/selection/key event, должны открыть ровно /cost.
+Никакого Send, backend invocation, skill lookup или альтернативного command
+catalog. Старые pending-send cases сохраняют прежний mock. Это проверка
+существующей пары компонентов, не новая UI test suite или harness.
+
+### Круг2 — минимальная исправляющая ветка
+
+В том же memo `MessageComposer` читать уже имеющиеся captured commands
+независимо от текста. Только captured-host branch переносится перед
+`slashCommandDataEnabled`; управление visibility/trigger остаётся у прежнего
+MentionableTextarea. Legacy built-ins и IO project/user skills сохраняют
+свои прежние guards, включая lazy fetch; команды из management/другого
+provider/current global defaults не добавляются.
+
+Снятие captured capability удаляет /cost из suggestions при следующем render;
+пустой captured список не переключается на legacy. Existing deferred-data
+case по-прежнему обязан показать ноль expensive reads до нужного trigger.
+Не добавлять повторный input в E2E, таймер, polling effect для искусственного
+открытия меню или изменение native /cost admission.
+
+### Круг3 — ограниченная квалификация
+
+Изменения: один production Composer и один existing component-test файл.
+Focused renderer test/types/lint; по возможности сначала original-source RED
+и затем исправленный PASS. Пока executor недоступен, source-only составление
+не является выполнением этого условия. Независимый source review обязателен.
+
+Далее тот же уже существующий Codex Resume UI job должен пройти первый catalog
+→ one Send → исходный Host-local report без model/input allocation, затем
+Stop/cold Resume, retained report и новый /cost по существующим assertions.
+Если actual gate снова не покажет каталог, отдельно разобрать original runtime
+projection/фокус по фактическому receipt; не ослаблять готовность, generation,
+captured-host authority, exact catalog или successful cleanup.
+
+## R17 — actual native `/review` fork context before a provider change
+
+### Круг 1 — подтверждённая причина и прежняя возможность
+
+Actual235 `native-claude-compaction` остановился на первом `/review` request:
+native expansion и original arguments уже прошли, но captured member marker
+отсутствовал в system и во всех 16 закрытых role/block counters. Предыдущие
+project/user команды сохранили marker и выполнили свои original MCP replies.
+Receipt SHA256 `ebc07efeed7e9427e861382ef504a81864c196012277ed38a2e248d3acfb58d4`;
+cleanup и source pins подтверждены. Это не successful review acceptance.
+
+Source audit сохранён отдельным immutable blob
+`c687a6b50befccb17dcbc43f966a68bc9090cef3`. В actual installed Linux SDK0.3.305 /
+CLI2.1.305 binary SHA256
+`86cb722ab68348877dba7971e4d0c659919e05e6228c05e006e83da320e656ef`
+bundled `code-review` alias `review` выбирает fork. Native slash dispatcher
+`no → aen → lR` создаёт отдельный general-purpose prompt; actual systemPrompt
+строится из его `getSystemPrompt`, а parent append остаётся только в options.
+Linux source объясняет Darwin symptom как inference; это ещё не новый native
+wire proof.
+
+Прежняя возможность проверена по exact donor4a, без подмены runtime:
+[lock1757d797](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/runtime.lock.json)
+указывает runtime0.0.160 / `e13edcd3d4ffbecc0272ae30195cc6b15b710ee7`.
+Его [review](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/commands/review.ts)
+— inline prompt без `context: fork`;
+[dispatcher](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/processUserInput/processSlashCommand.tsx)
+выделяет fork только при явном поле. Original
+[bootstrap loader](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/hooks/useNativeAppManagedBootstrapContextInjection.ts)
+передаёт member context как meta user prefix в ту же conversation через
+[Inbox submission](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/hooks/useInboxPoller.ts).
+Сохранять нужно доступность captured context при review, а не выдуманное
+требование, что старый frontend всегда размещал его в API system field.
+
+### Круг 2 — один отдельный bounded TEST proof публичного hook
+
+1. Создать новый isolated TEST project/HOME/config и original session/input UUID.
+   Не использовать root235 операции, session/history, личный HOME или credentials.
+   Зафиксировать SDK/package/native hashes до и после; выбранный binary только
+   actual pinned Linux0.3.305. Никакого vendor source patch.
+2. Reuse existing finite localhost Anthropic SSE implementation из
+   `tests/fixtures/native-claude-team/model.ts`: original parser/request-size
+   ceiling2MB и обычный `emitResponse`. Для одноразового diagnostic driver
+   допустим точный перенос emitter в TEST scratch с записанным source hash;
+   новый постоянный harness, workflow или suite не нужен. Принять ровно один
+   model request и вернуть один plain-text TEST result; любые tool-use/model
+   continuation/retry отказать. Token-count endpoint, если native его вызовет,
+   остаётся в прежнем finite bound8, отдельно от inference.
+3. SDK public `query` получает ровно один original `/review` с exact TEST args,
+   model Sonnet4-6, `tools: []`, пустые MCP/allowedTools, strictMcpConfig и
+   пустые settingSources. `canUseTool` отказывает всем неожиданным запросам.
+   Не включать internal appendSubagent flag, coordinator mode или permission
+   bypass; не переписывать slash text/native recipe.
+4. Передать разные TEST markers: один через обычный parent preset append,
+   другой — только через публичный
+   [SubagentStart additionalContext](https://code.claude.com/docs/en/hooks#subagentstart).
+   Hook проверяет actual original session_id, bounded native child id/type и
+   original cancellation signal; возвращает только context string, без
+   permission decision, updatedInput, authorization/registration или MCP grant.
+   Его marker не является копией parent marker и не маскирует отсутствие parent
+   append. Pinned source `lR → hTr → additionalContexts → hook_additional_context`
+   вызывается и для slash fork, не только Agent tool; native proof проверяет это.
+5. Сохранить только закрытый receipt: original input/session IDs, bounded native
+   child ID/type, hook/request/result counts, body/system hashes, role/marker
+   presence, exact review expansion booleans и native parent result association.
+   Не сохранять raw request, full prompts, transcript paths, environment или
+   произвольные hook fields. Missing original correlation остаётся unknown,
+   synthetic `forked-command-*` не превращается в observed Agent tool.
+6. Original session bound45s не увеличивать. Public spawn hook сохраняет именно
+   original ChildProcess/native identity; original SDK close/EOF и штатный
+   captured-process cleanup должны завершиться с actual exit и read-only
+   physical absence. Root exit, deadline или отсутствие event сами по себе
+   не являются whole cleanup. Собрать bounded failure receipt в finally,
+   закрыть localhost listener; не делать автоматический повтор input.
+
+### Круг 3 — граница результата и следующий product cut
+
+Proof выше квалифицирует только public hook delivery и actual fork/result
+identity. Он не закрывает P03 feature/e2e и не меняет strict current oracles.
+
+Сравнить отдельно два уже существующих product scope:
+- Original235 fixture задаёт `nativeTools: []`, поэтому ordinary subagent port
+  отсутствует; это не положительный тест parent MCP authority для native fork.
+- Обычный product profile с tools получает `ClaudeSubagents.hook`: child требует
+  original Agent-parent provenance, current original input и разрешённый child
+  tool; `createCapturedClaudeSubagents` исключает Team/MCP tools. Slash-fork
+  не получает этот parent только из native ID или context marker.
+
+После successful proof подготовить отдельное peer-reviewed уточнение D:
+literal original captured `projectInstructions.append` может передаваться как
+public child context с прежними session/signal guards, но не даёт child
+личность/полномочия Team member. Не менять ordinary child authorization,
+native receipt provenance, MCP scopes или main-thread correlation ради зелёного
+oracle. Before product implementation отдельно определить observed review
+result/tool path; прежние project/user MCP assertions сохранить. Затем reuse
+existing D critical hook case и actual compaction/Desktop command gates,
+без fake parent marker, новых native inputs в существующих journeys и
+расширения timeouts.
+
+## R18 — captured `/review` context and its original native result
+
+### Круг 1 — actual proof and the visible result contract
+
+R17 executed once in a new private TEST scope under exact Node24.21.0 and the
+pinned SDK0.3.305 Linux executable. Evidence manifest
+`cd4bf26edeaa944c05993a2a4b9cb867eaabcc4a` contains the frozen driver,
+Node-stripped executable and closed receipt
+`02da33de04568350b1fbfd3274e9951a0180ba8e`
+(SHA256 `ba03c7baaf3be64d35cd960cc1b0a5deedd1b15d5dda38e8527819c95e036628`).
+There was one inference, one public SubagentStart callback, no tools or permission
+requests, and 1.663 seconds elapsed within the original 45-second bound. Native
+exit0, absence of the original captured process group, listener closure and
+unchanged source hashes were observed. Profiles independently reviewed the
+driver source. Original235 remains INCOMPLETE; this proof is not Host/Desktop
+feature acceptance.
+
+The parent append marker was absent in every role; the separate hook marker
+was in one user block. The native task-start/task-notification and child user
+frame used the hook's native child ID. The main success result contained the
+plain review response and echoed the exact original native user UUID. Its
+main-thread assistant frame had neither a child ID nor an original UUID echo.
+The hook's prompt_id differed from the submitted UUID, and its control
+toolUseId is not an observed Agent parent.
+
+Source references for the next change:
+- D [session](https://github.com/agent-teams-ai/old-provider-implementations/blob/f4b4ac3f6fa4284091aca333e114778a8e84acd7/packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/session.ts):
+  PendingInput/captured command, currentInput, public hooks, accept/correlate
+  and exact echoed-result branch. An un-echoed assistant remains unbound.
+- D [commands](https://github.com/agent-teams-ai/old-provider-implementations/blob/f4b4ac3f6fa4284091aca333e114778a8e84acd7/packages/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/commands.ts)
+  and [existing actual catalog test](https://github.com/agent-teams-ai/old-provider-implementations/blob/f4b4ac3f6fa4284091aca333e114778a8e84acd7/packages/provider-implementations/tests/features/provider-session-implementation/claude-sdk/commands.test.ts):
+  builtin canonical code-review, alias review, exact-name precedence and
+  immutable catalog capture already exist.
+- Host [publisher](https://github.com/777genius/agent-teams-ai/blob/235b01b489a4f428b72c7667b0c89061c82cab1b/packages/legacy-agent-host/src/composition/publishNativeCommandOutput.ts)
+  already derives one visible /cost reply through the original Team ledger,
+  exact binding/input/operation, terminal state, delivery fingerprint and
+  nativeSessionCommandCause. Reuse this route; do not create a child MCP call.
+- Donor inline review and bootstrap references remain in R17. Functional
+  output belongs to the original human turn; the child is not a Team member.
+
+### Круг 2 — one native Read proof, then the complete command path
+
+Before changing D, run one new isolated TEST /review operation with one Read
+of its own immutable TEST file. Use the same exact Node/SDK/native pins, private
+HOME/project, public hooks, original 45-second bound and captured ChildProcess
+cleanup as R17. The finite localhost model may accept exactly two inference
+requests: one returns one native Read; the second requires that original
+tool_result and its TEST file marker, then returns the final review text.
+No MCP, shell, write, Agent call, retry or second input is admitted.
+
+Use public SDK `settings.permissions.ask: ['Read']` solely in this TEST
+query so ordinary in-workspace read approval cannot skip the permission seam.
+Keep tools=['Read'], allowedTools=[], no permission bypass. Record closed
+task-start/hook/PreToolUse/canUseTool sequence facts. Allow once only the exact
+original toolUseID, Read name, native child ID, unchanged TEST-file input and
+active signal; return no persistent permission update. Require actual
+canUseTool.agentID to join the task/hook child, the genuine Read result, exact
+original main-result UUID, unchanged TEST-file/source hashes and original
+physical cleanup. Keep bounded closed task_started facts: actual task/tool
+IDs and field-presence, task_type, parent_task_id, foreground/background
+flag, spawn depth, skip_transcript/ambient flags and exact canonical command
+label comparison; preserve monotonic task/hook/tool callback ordering.
+Do not store raw descriptions or prompts.
+
+Production routing has an explicit prerequisite: these actual public fields
+and their source-backed origin must distinguish this native command fork
+from a late/background ordinary Agent child. Same session, current input
+and general-purpose type alone are insufficient. If the discriminating
+field is missing, the needed envelope arrives only after a blocking hook,
+or the identity/ordering differs, retain the unknown qualification and
+amend the design before product source. Do not invent an origin from
+timing, an omitted field alone or a synthetic parent string.
+
+The production path is the existing authorized native command, not ordinary
+Agent delegation: Host nativeSessionCommandAuthorized/nativeSessionCommandCause
+already require the original completed human-to-lead command and captured
+binding. D retains that original PendingInput and the immutable selected
+profile. No new permission RPC, Team grant or configuration owner is needed.
+
+1. Keep the captured canonical builtin command on the original PendingInput.
+   Only that code-review selection qualifies; a custom command named review,
+   a stale catalog, ordinary text and other native commands do not.
+   Add at most one transient native fork correlation to that same pending
+   input. It is not a registry, replay record, tool owner or runnable entry.
+2. Observe the original SDK task-start metadata before the existing generic
+   child observer consumes it. Require the same native session, current handed
+   PendingInput, canonical review fork, a bounded native child ID and native
+   general-purpose/top-level foreground identity. Conflicting or missing
+   native metadata provides no context. The pinned native source registers
+   this task via KPn before lR invokes SubagentStart; control callbacks may
+   still race the output iterator, so use the existing original-input
+   cancellation/deadline pattern for their bounded join. Do not equate
+   hook prompt_id with nativeRef or turn a synthetic forked-command name
+   into an Agent parent.
+3. The public SubagentStart callback joins that exact original child/session
+   and active PendingInput, rechecks revocation and currentInput after any
+   await, then returns only the existing immutable
+   nativeOptions.projectInstructions.append as additionalContext.
+   No internal SDK option, prompt rewrite, environment injection, grant,
+   permission decision or updated tool input is added. Existing Pre/Post
+   hooks and ordinary Agent/subagent/tool-binding rules remain unchanged for
+   their existing scopes.
+4. Add the minimum explicit command-native-tool route to that same original
+   PendingInput, not an Agent parent entry. After exact native task→hook child
+   provenance is established, a native PreToolUse for that child may bind its
+   exact toolUseID/name using the existing per-session tool ownership and
+   tombstone checks. Its allowed names are only the original selected
+   nativeTools minus existing Team/Task/Agent/MCP/scheduling/delegation
+   exclusions; a command name or child ID does not select additional tools.
+   This route returns a neutral hook result, never a permission grant.
+   The original SDK permission mode, selected auto-allowed tools, deny rules
+   and original canUseTool/Interactions path still decide execution.
+   An ordinary Agent child continues through the existing ClaudeSubagents
+   guard. Missing/foreign child, conflicting/reused tool ID, changed current
+   input or revoked signal cannot enter the command route.
+5. Route an actual command-child canUseTool request only after its agentID
+   and toolUseID/name match that exact native pre-tool observation and current
+   PendingInput. Reuse existing Interactions and its cancellation/answer
+   handling; retain the native child identity instead of rewriting it as a
+   main-thread call. The callback that publishes the interaction may attribute
+   this proven command operation to its original input, but must not insert
+   an ordinary Agent parent, call the Team/MCP binding or auto-approve it.
+   Normalize only that original child's actual tool/tool-result activity
+   under the existing input/event byte budgets. Child text, usage and terminal
+   frames do not complete the parent turn or get reattributed as a main result.
+   Keep physical subprocess custody with the original SDK owner; this adds no
+   process registration, replay or cleanup substitute.
+6. In the existing exactly echoed main-result branch, project the successful,
+   nonempty native code-review result into one complete text fact under a
+   separate reserved `native-command-result:` message-ref namespace.
+   Require original session/nativeRef, main-thread shape, captured builtin
+   command and the original fork correlation; a child result, foreign echo,
+   failed result, missing result or custom command never gets this projection.
+   Preserve the existing local-command namespace and its /cost behavior.
+   Filter model-supplied text IDs from both reserved namespaces before adding
+   this trusted projection. Do not reattribute the unbound assistant frame.
+7. Extend the existing Host publisher's closed namespace check for this
+   review result, retaining its single-output ambiguity check and all original
+   Team cause, authority and ledger guards. The visible reply uses the same
+   existing `native-command-output-${runtimeDigest({ binding, inputId })}`
+   identity and /review summary. Exact lookup/recovery publishes it once,
+   without a second native input, another model request or an invented
+   message_send receipt.
+
+### Круг 3 — existing critical verification and full parity closure
+
+- Extend the existing D commands case with the real native field shapes:
+  task/control ordering, literal context, exact echoed main result and
+  reserved-prefix refusal. Keep foreign UUID/session, custom-command,
+  cancellation and ordinary MCP/Agent boundaries exercised through that
+  same fixture. Exercise the exact Read permission/tool-result path, including
+  an unrelated child/tool refusal and stale response after cancellation, in
+  the existing command/interaction cases. Do not introduce a new general
+  test matrix.
+- Extend the existing Host team-rich-message publication case for the new
+  explicit namespace and deterministic original reply. Retain original
+  /cost publication, repeated lookup and ambiguous/missing output refusal.
+- In the existing native compaction and Desktop native-command journey,
+  change only the review result mechanism: the native compaction scenario
+  uses one Read/tool-result exchange followed by a plain final response;
+  Desktop's review phase uses one plain final response. Both require the
+  exact native recipe/arguments and captured context in the actual
+  hook-delivered user block. Project/user commands still perform their
+  original two-request MCP tool/result exchanges with exact tool IDs.
+  The review assertion must prove exact terminal input/operation, original
+  native result text, one deterministic published Team reply and visible
+  conversation output; it must explicitly stop claiming a native MCP reply.
+  Compare original input/receipt/inbox bytes after cold lookup/reload and
+  require no added native allocation/request or duplicate publication.
+  Desktop's plain review uses one inference; the native filesystem proof uses
+  its exact two-round Read/result exchange. Input counts, ownership/cleanup
+  guards and time budgets do not increase. Retain closed failure diagnostics
+  and source-pin checks.
+- Qualify the command-tool route in the existing native commands fixture with
+  one actual read of a prepared TEST file and its original permission reply,
+  using the already existing original review input. Select Read in that
+  fixture's captured nativeTools; prepare its public TEST ask-Read setting
+  before source capture using the already selected settingSources, and
+  retain/hash that source alongside the TEST file. Use the existing Runtime
+  interaction reply route for exactly the observed original permission.
+  Do not add an arbitrary SDK option or permission bypass to product config.
+  The tool-result model
+  round replaces the previous child-MCP round: no additional native input or
+  larger budget is required. Retain the exact two-request review bound in that
+  scenario; the Desktop plain-result phase may remain one request because it
+  proves UI publication/reload. Freeze each scenario's actual expected counts,
+  rather than sharing an incorrect blanket total.
+- Full review parity requires all three observed parts: captured context,
+  native filesystem-tool/permission behavior under the original profile and
+  visible exact main-result publication with cold/reload stability. A source
+  review, the tool-free R17 experiment or a plain response alone does not
+  close this item. Do not widen ordinary Agent, Team/MCP or process authority
+  to make the new command path pass. Unsupported native task/permission
+  provenance stays unknown and causes a plan correction before release.
+
+
+### R18 follow-up — public PermissionRequest path, with native policy unchanged
+
+**Круг 1 — что известно и что ещё нужно доказать.** Оригинальный Read
+experiment остаётся `INCOMPLETE`: receipt
+`aca36b31f0aeaf3cd5d655eef637f58943de599c`, evidence manifest
+`759274ea071a40ad9244014d3f6b4cb913f3db38`, pinned source audit
+`0d954f797132d7af41a064673141fa8b6df96842`. Он наблюдал один original
+PreToolUse, ноль canUseTool и неуспешный predicate исходного Read result;
+точный raw error body не сохранён. Original child/listener cleanup подтверждён.
+Повтор того же operation/root или замена этого результата на PASS запрещены.
+
+В exact SDK0.3.305 native source slash dispatcher не передаёт canUseTool в
+fork. Нейтральный PreToolUse сохраняет explicit ask, а fallback `asksNoHost`
+не доставляет его existing Host UI. Production `captureClaudeSettingSources`
+по умолчанию загружает user/project/local: это поддерживаемая политика,
+а не искусственная особенность TEST. PreToolUse allow не отменяет native
+ask/deny. `dontAsk`, bypass, удаление правил и silent auto-approval непригодны.
+
+Официальные [permissions docs](https://code.claude.com/docs/en/agent-sdk/permissions)
+документируют `permissionPrompts: 'none'`: canUseTool не вызывается, но
+PermissionRequest hook ещё может решить исходный запрос, иначе native
+отказывает. [SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md)
+добавил option в0.3.259; прочитан immutable changelog blob
+`9b67287225a06d3814e967a3fc6e548d3613633c`. Это public **query-level**
+option, не изменение permissionMode и не доказательство работоспособности
+в нашем fork. Наличие более новой0.3.323 само по себе не доказывает fix.
+
+До нового native запуска прочитать exact уже закреплённые SDK/native bytes:
+public Options и сериализацию option; native flag→permission context;
+наследование этого context исходным slash fork; branch
+shouldAvoidPermissionPrompts→PermissionRequest; финальную native обработку
+allow/deny и updatedInput. Сохранить byte offsets/hash и краткие source
+выводы. Не редактировать бинарник, не передавать internal option и не
+выбирать другой SDK по предположению. При недоказанном inheritance — только
+source finding и уточнение плана, без production изменения.
+
+[PermissionRequest reference](https://code.claude.com/docs/en/hooks#permissionrequest)
+не обещает tool_use_id в hook input. Отдельный prerequisite: реальный public
+callback/envelope должен позволить однозначно связать ответ с original
+PreToolUse tool ID, native child/session и PendingInput. Нельзя выбрать
+один из параллельных одинаковых инструментов по имени/таймингу/первому
+совпадению. Отсутствующий или неоднозначный ID оставляет route неподтверждённым.
+`defer`/новый resume не является заменой этой связи или permission host.
+
+**Круг 2 — bounded TEST proof, только после source prerequisite.** Reuse
+immutable R18 driver `9fdc6c9c1fabc708fd12306ba0b5f472e4d79943`, exact
+Node24/SDK0.3.305/native hashes и original cleanup. Два независимых fresh
+TEST scopes, без reuse прежнего root/operation: (a) сохранённый explicit
+ask:Read с once approval через public PermissionRequest; (b) explicit
+native deny:Read как отрицательный tripwire. В каждом ровно один native
+/review input, максимум два inference, один предложенный Read своего
+неизменяемого TEST файла, ноль MCP/shell; прежний45s bound включает cleanup.
+Не менять mode, allow list, original Read arguments или source settings
+ради прохождения (кроме намеренно отдельного deny-сценария).
+
+В ask case добавить public option и PermissionRequest callback; прежний
+canUseTool остаётся счётчиком недопустимого неожиданного пути. Context и
+origin должны пройти все прежние task→SubagentStart→PreToolUse guards.
+Callback получает только exact original tool/child/session/input; повтор,
+foreign ID, abort или expired original deadline даёт отказ. Allow не пишет
+updatedPermissions и не меняет input; actual native tool_result обязан
+содержать original toolUseID, success и TEST file marker. Main result
+обязан эхом связаться с original user input. В deny case успешный Read
+запрещён, approval callback не может перевести native deny в allow;
+нужен exact original error tool_result без file marker и корректный main
+terminal, а не один счётчик запроса.
+
+Сохранить closed факты: callback ID presence/equality, child/session,
+native permission mode, исходный tool/input digest, request/result counts,
+is_error и marker presence отдельно (не один совмещённый predicate), source
+hashes, original physical cleanup. Raw prompt/path/tool body не публиковать.
+Если public hook не передаёт необходимую identity или callback не вызывается,
+закончить scope с честным INCOMPLETE/refusal, без fallback approval и rerun.
+Текущая недоступность executor не является execution evidence.
+
+**Круг 3 — только затем решение о D.** Proof не включает глобальное изменение
+provider option. Query-level переключение затронуло бы также обычные main
+tools, Agent children, questions и MCP, поэтому до такого изменения нужен
+отдельный bounded source review полного existing approval маршрута.
+Кандидат должен reuse `Interactions.request` и original Host approval
+owner, его exact-once reply, deadline, abort/cancel и current-input checks;
+source settings, native allow/ask/deny/mode и ordinary Agent/MCP authority
+остаются действующими. Не добавлять параллельный interaction registry,
+permission RPC, session rule или synthetic Agent parent.
+
+В existing D command/interaction cases затем проверить original approval,
+user denial, abort/timeout/stale reply и отсутствие второго effect; native
+deny не доходит до разрешающего UI пути. Question answer сохраняет свой
+original question contract. Нужная public correlation и эквивалентность
+обычных путей обязательны прежде product rollout. До их подтверждения R18
+context/result/tool parity остаётся открытой; existing native/Desktop gate
+и предыдущий failed status не ослабляются.
+
+### R19 — capabilities обновляются после Resume без потери стабилизации участников
+
+**Круг 1 — факты и точный source seam.** На `d35ef8256a9f24294b2fe50e8290ccb9841d9eb1`
+job `131818772612` (run `43405509757`) упал в
+`desktop-resume-ui-smoke.ts:245 → desktop-codex-cost-ui-proof.ts:94 →
+desktop-native-commands-ui-proof.ts:51`. Это второй `/cost`, после cold Resume.
+Первый `/cost`, original report readback, genuine Resume, второй обычный
+terminal-succeeded input, 11 original model requests и файл `ONE\nTWO\n`
+уже проверены до этого вызова. Ошибка — отсутствие suggestions после одного
+`Input.insertText('/')`; повторного ввода или Send не было. Original artifact
+`14030092315`, ZIP SHA256
+`3cb9bb783a762a674701a216b22bb107e5fdbf7882adc2efa3f7530eac7d4450`
+пока не распакован в недоступной среде. Из одного stack trace нельзя объявлять
+конкретную native/runtime причину.
+
+Независимо от неизвестной causal цепочки CI подтверждён source defect:
+`src/renderer/components/team/useStableActiveMembers.ts`
+(blob `134e9ee1df5e5d447cef40c072d732909185e38c`) сравнивает whitelist полей,
+в котором отсутствуют `runtimeOwner`, `sessionCommands`,
+`nativeInboxAttachmentsSupported` и `nativeInboxTextAttachmentsSupported`.
+При изменении только этих capabilities hook возвращает прежний array целиком.
+`TeamDetailView.tsx:1977,2655–2677` передаёт его через
+`sharedMessagesPanelProps.members` в настоящий Composer.
+`projectHostMemberAttachmentCapabilities.ts:11–46` намеренно отзывает
+capabilities и возвращает их только для exact ready/attached/current generation;
+старый array теряет и новое разрешённое capability, и его отзыв.
+R16 исправил вычисление статического captured catalog в самом Composer, но
+этот более ранний comparator оно не проходит.
+
+Read-only аудит также проверил: `useHostTeamResume.ts` ждёт
+`refreshTeamData` после ready; `projectRuntimeMember.ts:32–38` выдаёт
+Codex lead `/cost` без native catalog запроса; successful Codex terminal
+сам по себе не закрывает D session. Это source facts, не доказательство
+состояния конкретного failing renderer.
+
+**Круг 2 — минимальное изменение и сохранение поведения.**
+
+1. Дополнить existing `areResolvedMembersEqual` ровно четырьмя capability
+   полями. Ownership и два attachment flag сравниваются как исходные scalar
+   values, включая отсутствие значения. Captured command list сравнивается
+   по presence, length и ordered `name/description`; равный cloned IPC
+   payload сохраняет прежний array reference. Не вводить generic deepEqual,
+   новый cache, registry, вычисление capabilities из settings или fallback
+   legacy commands. Existing removed-member filtering и остальные comparisons
+   сохраняются. Тот же путь должен применять capability revocation.
+2. Расширить existing `MessageComposer.pendingSend.test.tsx` case
+   «opens only captured commands on the first single slash input» настоящим
+   `useStableActiveMembers` перед настоящим MentionableTextarea.
+   Перед единственным native input проверить переход absent ownership →
+   captured Host и затем absent catalog → captured `/cost` при неизменных
+   имени/status/history/settings. Проверить propagation attachment flags,
+   reference stability для одинакового cloned catalog и withdrawal catalog
+   без дополнительного input/select/key event. Не вызывать Send, model, legacy
+   skills/catalog load. Это один critical existing case, не новая unit suite.
+   Старый comparator должен воспроизвести FAIL; исправленные bytes должны
+   пройти тот же case и существующий Composer file. R16 first-input assertion
+   сохраняется, native UI probe не переписывается.
+
+**Отдельный пункт — bounded failure evidence для следующего обычного CI.**
+Если source cut включает диагностику, дополнить только already-existing
+`readRendererFailureSnapshot` в `desktop-team-ui-smoke.ts`. Использовать
+то же единственное CDP evaluation, already-present TEST devStore и DOM;
+не добавлять запросы getData/runtime/launch, listeners, timers или input.
+
+Вывести closed facts текущего selected raw member snapshot (это не заявление
+о фактических props Composer): presence/count/overflow, не более 32 member
+rows, только provider enum, captured-owner boolean, attachment booleans,
+catalog presence/count/overflow и `hasCost`. Не выводить member names,
+raw command names/descriptions, paths, settings или весь store. При недоступном
+DEV store сохранить явное unavailable; oversized/invalid arrays не считать
+пустым catalog. DOM projection: capped textarea/listbox/option counts,
+single textarea focus/connected/disabled/readOnly, exact bare-slash boolean,
+capped length/cursor facts и `/cost` option presence. Не выводить raw draft
+или arbitrary option text. Эти данные относятся к existing failure read,
+не к атомарному моменту input и не дают нового capability.
+
+**Круг 3 — проверка и граница результата.** Сначала immutable plan и немедленный
+root commit/push, затем bounded independent source review. Product source
+scope — один existing hook; acceptance — один existing Composer case.
+Диагностика ограничена existing failure snapshot helper. Нужны focused
+renderer tests, scripts types при diagnostic delta, lint/source caps и
+обычный actual cold Codex Resume gate на новом coherent head. Ни budgets
+30s/native inputs, ни source/ownership/cleanup guards не меняются. Среда
+недоступна: source review не является RED/PASS execution. R17/R18 Claude
+proof и current native failure остаются отдельными; full parity не объявлять
+по одному comparator test или одной диагностике.
+
+
+### R18 follow-up — readonly audit установленных SDK bytes в уже нужном CI
+
+**Круг 1 — штатный доступ к prerequisite, без нового native input.**
+Executor снова недоступен; исходный Read experiment остаётся INCOMPLETE.
+Нельзя заменить exact SDK0.3.305 source audit текущей документацией или
+отсутствующим локальным файлом. При этом существующий native Claude command
+gate уже устанавливает и фиксирует нужные bytes:
+`native-claude-compaction.native.ts` (blob
+`f38f9734c91e7918fd73d015e14da7c56368a6bb`) разрешает SDK от exact providerEntry,
+проверяет SDK version/hash, pinned Darwin arm64 executable, Node и D artifact;
+existing workflow сохраняет его log и receipt даже при отказе самого /review.
+Это доступный read-only источник в следующем уже необходимом CI. Linux audit
+`0d954f797132d7af41a064673141fa8b6df96842` остаётся отдельным: Darwin source
+нужно связать с его собственным actual hash, не выдать за те же native bytes.
+
+**Круг 2 — два существующих TEST файла и закрытый результат.**
+
+1. В `tests/fixtures/native-provider-artifact.ts` добавить один узкий readonly
+   helper для именно переданных already-pinned SDK/native paths и public type
+   declaration того же resolved SDK package. Не искать другой SDK, не скачивать
+   пакет, не выполнять import/query/native --version, не менять dependency или
+   executable. Для declarations принять только фиксированный файл внутри
+   exact SDK package; его observed hash и version записать отдельно.
+2. Читать каждый original file через один retained readonly FD, no-follow после
+   existing canonical resolution, с before/after fd + path identity/size/time
+   checks и SHA256 того же byte stream. SDK/declaration cap16MiB, native cap1GiB
+   соответствует существующему captured executable limit; chunks≤64KiB,
+   carry≤1024bytes плюс максимальная длина фиксированного anchor, чтобы окно
+   могло включать ограниченный preceding source. Проверять original node:test
+   abort signal между reads. Нет нового timeout или продления test/job budget.
+   Excerpts выдавать только после совпадения pinned SDK/native hash; mismatch,
+   unreadable/oversized/changed source дают finite unavailable classification,
+   не permission support и не новый путь запуска.
+3. Фиксированный небольшой anchor set: SDK `permissionPrompts` и
+   `hook_callback`; public declarations `permissionPrompts`,
+   `PermissionRequestHookInput`, `HookCallback`; native
+   `permissionPrompts`, `permission-prompts`, `shouldAvoidPermissionPrompts`,
+   `PermissionRequest`, `hook_callback`. Это search keys, не предположение о
+   точном CLI option или обещание их наличия. Для каждого — bounded occurrence
+   count с overflow flag, максимум два первых source windows≤1024bytes,
+   byte offset и window hash. Не логировать весь файл, произвольные соседние
+   файлы, paths/env/config, native input/transcript или secret-bearing data.
+   Только SDK/native package source. Непечатные bytes экранировать; итоговый
+   serialized audit≤32KiB, исключённые windows отметить явно.
+4. В existing native fixture вызвать helper ровно один раз после original
+   source pins, до model/native effects. Один bounded diagnostic в существующий
+   test log; тот же object в existing receipt под отдельным `sdkSourceAudit`.
+   Helper уже входит в sourcePaths, поэтому новых source inventories, workflow
+   steps/jobs/artifact globs и runner нет. Diagnostic не добавляет запрос модели,
+   tool, MCP, hook callback или native process. Existing assertion failures,
+   model counts, /review marker guard и original cleanup остаются прежними.
+
+**Круг 3 — что этот audit может и чего не доказывает.**
+Он даёт actual installed bytes/hash/offset excerpts для independent source
+review. Token occurrence сам по себе не превращать в boolean «SDK supports».
+По excerpts нужно восстановить public option serialization → native context →
+slash-fork inheritance → PermissionRequest decision и отдельно
+original tool-use ID в SDK callback/envelope. Truncated/ambiguous/missing
+фрагмент оставляет конкретное звено unqualified; не угадывать minified names,
+не связывать запросы по имени/input/time, не запускать новый proof автоматически.
+Readonly audit не закрывает ask/deny execution и не разрешает D rollout.
+Следующий fresh bounded ask/deny proof по уже опубликованному R18 follow-up
+допустим только после достаточного actual source evidence и peer review.
+
+Root commit/push этого append предшествует TEST edits. Проверки — bounded
+source peer, Host test types/lint/source caps при штатной доступности и тот же
+уже нужный CI native gate. Новой unit suite, UI oracle fallback, permissionMode
+переключения, удаления native settings/rules, opaque patch или replay нет.

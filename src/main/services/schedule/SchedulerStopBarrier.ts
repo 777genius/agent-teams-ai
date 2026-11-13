@@ -15,7 +15,10 @@ export class SchedulerStopBarrier {
   async withAdmission<T>(scheduleId: string, action: (isCurrent: () => boolean) => Promise<T>): Promise<T> {
     const marker = { current: true };
     let pending = this.admissions.get(scheduleId);
-    if (!pending) this.admissions.set(scheduleId, pending = new Set());
+    if (!pending) {
+      pending = new Set();
+      this.admissions.set(scheduleId, pending);
+    }
     pending.add(marker);
     try {
       return await action(() => marker.current);

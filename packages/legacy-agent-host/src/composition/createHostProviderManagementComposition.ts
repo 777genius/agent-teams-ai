@@ -1,3 +1,5 @@
+import { lstatSync } from 'node:fs';
+import { join } from 'node:path';
 import { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { RuntimeSourceIndex } from './RuntimeSourceIndex.js';
 import { teamModelProbeProfile } from './teamLaunchModelProbe.js';
@@ -13,15 +15,35 @@ export function createHostProviderManagementComposition(
   processCustody?: RegisteredProcessRootSource,
   assertCleanupWriter = assertWriter
 ) {
-  const sources = profile.management?.length
+  // Presence reads must not create stores before an unrelated Team namespace is admitted.
+  // Either retained namespace still requires strict validation after its current seed is removed.
+  assertWriter();
+  const needsSources =
+    Boolean(profile.management?.length) ||
+    ['runtime-sources', 'management-commands'].some((name) => {
+      try {
+        lstatSync(join(profile.owner.storageRoot, name));
+        return true;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+        throw error;
+      }
+    });
+  assertWriter();
+  const sources = needsSources
     ? new RuntimeSourceIndex(profile, assertWriter, {
         assertCleanupWriter,
         ...(processCustody ? { processCustody } : {}),
       })
     : undefined;
+  const retained = sources?.retainedManagementState() ?? {
+    profiles: [],
+    unavailable: [],
+    hasCommands: false,
+  };
   const profiles = [
     ...(profile.management ?? []),
-    ...(sources?.retainedManagementProfiles() ?? []),
+    ...retained.profiles,
     ...(profile.runtime?.members.flatMap((member) => {
       if (
         member.provider === 'opencode' &&
@@ -33,7 +55,7 @@ export function createHostProviderManagementComposition(
     }) ?? []),
   ];
   const required =
-    profiles.length ||
+    profiles.length || retained.hasCommands ||
     (profile.creation &&
       profile.runtime?.providerTemplates?.some(
         (row) =>
@@ -44,10 +66,11 @@ export function createHostProviderManagementComposition(
             row.embedded !== undefined)
       ));
   return {
-    sources,
+    sources: profile.management?.length || retained.hasCommands ? sources : undefined,
     management: required
       ? new ProviderManagementCoordinator(profiles, assertWriter, profile.owner.storageRoot, {
           onOAuthProgress,
+          unavailableProfiles: retained.unavailable,
           ...(processCustody ? { processCustody } : {}),
         })
       : undefined,

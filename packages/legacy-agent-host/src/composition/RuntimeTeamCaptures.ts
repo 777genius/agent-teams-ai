@@ -2,7 +2,15 @@ import { lstatSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
-import { runtimeDigest } from '../runtime/identity.js';
+import { normalizeBinding, runtimeDigest } from '../runtime/identity.js';
+import { RuntimeOwnerError } from '../runtime/contracts.js';
+import { settledRuntimeInput } from '../runtime/settledRuntimeInput.js';
+import { validateLaunchRecord } from '../team-launch/validateLaunchRecord.js';
+import { validateMemberSelectionChain } from '../team-launch/memberActions.js';
+import { validateNativeLaunchAdditions } from '../team-launch/nativeLaunchAddition.js';
+import { createMemberEntry } from './createMemberEntry.js';
+import { restoreNativeRuntimeEntries, validateRetainedNativeRuntimeEntries } from './restoreNativeRuntimeEntries.js';
+import { RuntimeSourceUnavailable } from './runtimeSourceGrantAuthority.js';
 import { effectId } from '../team/identity.js';
 import { prepareWorktreeLaunch } from '../team-launch/worktreePreparation.js';
 import { prepareCapturedRuntimeMcpRecipes } from './capturedRuntimeMcpRecipes.js';
@@ -18,12 +26,14 @@ import {
   captureRuntimeSource,
   compileRuntimeCapture,
   runtimeCaptureSourceSchema,
+  validateRuntimeCaptureMcpArtifacts,
   runtimeCaptureRegistration,
   runtimeCaptureBaseRecipes,
   runtimeCaptureRecipeCandidates,
   captureRuntimeRecipeSources,
 } from './runtimeCaptureSource.js';
 import type { HostedTeam } from './MemberEntry.js';
+import type { RuntimeBinding, RuntimeSessionRecord } from '../runtime/contracts.js';
 import type { TeamHostProfile } from './TeamHost.js';
 import type { RuntimeMemberProfile } from './runtimeProfile.js';
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
@@ -39,12 +49,15 @@ export const captureTeamRuntimeSchema = z.object({ rosterCommandId: id }).strict
 
 /** Reuses Team's registration receipt and the existing immutable launch record; no native effects. */
 export class RuntimeTeamCaptures {
+  private readonly unavailable = new Map<string, readonly TeamRuntimeCapture[]>();
+  private prepared = false;
   constructor(
     private readonly options: {
       profile: TeamHostProfile;
       sources?: RuntimeRecipeSources;
       teams: ReadonlyMap<string, HostedTeam>;
       assertCurrent(): void;
+      readRuntimeSiblings(binding: RuntimeBinding): RuntimeSessionRecord[];
       install(
         team: HostedTeam,
         profiles: RuntimeMemberProfile[],
@@ -53,12 +66,136 @@ export class RuntimeTeamCaptures {
     }
   ) {}
 
-  restore(): void {
+  /** Validate every original reference before any seed or retained entry enters a runnable map. */
+  prepareRestore(): void {
+    if (this.prepared) return;
     for (const team of this.options.teams.values()) {
+      const teamId = team.definition.binding.teamId;
+      if (!needsRuntimeRestore(this.options.profile, team)) continue;
+      const registrations = team.owner.runtimeCaptures(this.options.profile.principalId);
+      const sourceRows = registrations.map(registration => ({
+        registration, source: this.source(team, registration),
+      }));
+      const seedRecord = this.record(this.store(team), team.definition.scope.runId);
+      this.assertRecordScope(team, seedRecord);
+      validateRetainedNativeRuntimeEntries(this.options.profile, team);
+      for (const row of sourceRows)
+        validateRetainedNativeRuntimeEntries(this.options.profile, capturedTeam(team, row.source, row.registration));
+      try {
+        const seeds = this.options.profile.runtime?.members.filter(row => row.teamId === teamId) ?? [];
+        if (seedRecord?.definition.members.some(member => member.configurationDigest !== null &&
+            !seedRecord.nativeAdditions?.some(row => row.member.memberId === member.memberId) &&
+            !seeds.some(seed => seed.memberId === member.memberId)))
+          throw new RuntimeSourceUnavailable();
+        this.preflightEntries(team, seeds, seedRecord);
+        for (const row of sourceRows) {
+          const compiled = compileRuntimeCapture(this.options.profile, team, row.source, 'restore', this.options.sources);
+          this.preflightEntries(capturedTeam(team, row.source, row.registration), compiled.profiles,
+            this.record(this.store(team), row.registration.launchId));
+        }
+      } catch (error) {
+        if (!(error instanceof RuntimeSourceUnavailable)) throw error;
+        this.unavailable.set(teamId, structuredClone(registrations));
+      }
+    }
+    this.prepared = true;
+  }
+
+  private preflightEntries(team: HostedTeam, profiles: RuntimeMemberProfile[], record?: TeamLaunchRecord): void {
+    const projected = { ...team, definition: structuredClone(team.definition) };
+    const entries = profiles.map(baseProfile => createMemberEntry({
+      root: this.options.profile.owner.storageRoot, ownerId: this.options.profile.owner.ownerId,
+      team: projected, baseProfile, restoring: true,
+    }));
+    for (const entry of entries) {
+      const expected = record?.definition.members.find(member => member.memberId === entry.profile.memberId);
+      if (expected && expected.configurationDigest !== runtimeDigest(entry.profile))
+        throw new RuntimeSourceUnavailable();
+    }
+    const registry = new Map(entries.map(entry => [runtimeDigest(normalizeBinding(entry.binding)), entry]));
+    restoreNativeRuntimeEntries({ profile: this.options.profile, team: projected, entries, registry, restoring: true });
+  }
+
+  available(teamId: string): boolean {
+    return !this.unavailable.has(teamId);
+  }
+
+  assertAvailable(teamId: string): void {
+    if (!this.available(teamId)) throw new RuntimeOwnerError('hold');
+  }
+
+  restore(): void {
+    this.prepareRestore();
+    for (const team of this.options.teams.values()) {
+      if (!this.available(team.definition.binding.teamId) ||
+          !needsRuntimeRestore(this.options.profile, team)) continue;
       const selected = team.owner.runtimeCapture(this.options.profile.principalId);
       for (const registration of team.owner.runtimeCaptures(this.options.profile.principalId))
         this.restoreCapture(team, registration, selected?.launchId === registration.launchId ||
           (!selected && this.nativeSuccessor(team, registration)));
+    }
+  }
+
+  /** Read original debt only. A missing profile never grants cleanup or creates an empty Runtime record. */
+  assertUnavailableReleased(): void {
+    for (const [teamId, registrations] of this.unavailable) {
+      const team = this.options.teams.get(teamId)!;
+      const store = this.store(team);
+      const original = new Map<string, { binding: RuntimeBinding; absentAllowed: boolean }>();
+      const retain = (binding: RuntimeBinding | null | undefined, absentAllowed: boolean) => {
+        if (!binding) return;
+        const value = normalizeBinding(binding);
+        if (value.backendId !== team.definition.binding.backendId || value.teamId !== teamId)
+          throw new RuntimeOwnerError('hold');
+        const key = runtimeDigest(value), previous = original.get(key);
+        original.set(key, { binding: value, absentAllowed: absentAllowed && (previous?.absentAllowed ?? true) });
+      };
+      const inspect = (record: TeamLaunchRecord | undefined, bindings: readonly RuntimeBinding[]) => {
+        const settled = record && !record.memberActions?.some(row => !['selected', 'refused'].includes(row.phase)) &&
+          !record.resumePreparations?.some(row => row.members.some(member => !member.refused &&
+            !record.restorations?.some(selected => selected.commandId === member.commandId))) &&
+          (!record.worktreePreparation || record.worktreePreparation.completedSourceDigest !== undefined);
+        if (record && !settled) throw new RuntimeOwnerError('hold');
+        const unclaimed = !!record && !!settled && record.startCommandId === undefined &&
+          record.startedAtMs === undefined && record.preparation === undefined &&
+          record.members.every(member => member.attempts.every(attempt => attempt.claimed === false));
+        for (const binding of bindings) retain(binding, unclaimed);
+        for (const member of [
+          ...(record?.definition.members ?? []),
+          ...(record?.memberActions?.flatMap(row => [row.source, row.selected]) ?? []),
+          ...(record?.restorations?.map(row => row.member) ?? []),
+          ...(record?.nativeAdditions?.map(row => row.member) ?? []),
+        ]) {
+          retain(member.binding, unclaimed);
+          retain(member.restore?.sourceBinding, false);
+        }
+      };
+      const seedRecord = this.record(store, team.definition.scope.runId);
+      this.assertRecordScope(team, seedRecord);
+      inspect(seedRecord, team.definition.members.flatMap(member =>
+        member.delivery && !registrations.some(row => row.launchId === member.delivery!.runId)
+          ? [normalizeBinding(member.delivery)] : []));
+      for (const registration of registrations) {
+        this.source(team, registration); // Recheck the original registration/source, never a current seed.
+        inspect(this.record(store, registration.launchId), registration.members.map(member => normalizeBinding(member.delivery)));
+      }
+      const checked = new Map<string, RuntimeSessionRecord[]>();
+      for (const { binding, absentAllowed } of original.values()) {
+        const key = runtimeDigest({ backendId: binding.backendId, teamId: binding.teamId, memberId: binding.memberId });
+        let siblings = checked.get(key);
+        if (!siblings) {
+          siblings = this.options.readRuntimeSiblings(binding);
+          for (const row of siblings)
+            if (row.phase !== 'closed' || row.custody !== 'released' || row.control ||
+                row.inputs.some(input => !settledRuntimeInput(input)) ||
+                row.interactions.some(item => item.phase !== 'resolved') ||
+                row.checkpoints?.some(checkpoint => checkpoint.status === 'capturing'))
+              throw new RuntimeOwnerError('hold');
+          checked.set(key, siblings);
+        }
+        if (!siblings.some(row => runtimeDigest(normalizeBinding(row.binding)) === runtimeDigest(binding)) && !absentAllowed)
+          throw new RuntimeOwnerError('hold');
+      }
     }
   }
 
@@ -67,6 +204,7 @@ export class RuntimeTeamCaptures {
     const input = captureTeamRuntimeSchema.parse(raw),
       team = this.options.teams.get(teamId);
     if (!team) throw new TeamLaunchError('invalid', 'team');
+    this.assertAvailable(teamId);
     const operator = this.options.profile.principalId;
     team.owner.withLaunchAuthority(operator, 'control', () => undefined);
     const prior = team.owner.runtimeCaptures(operator).find((row) => row.commandId === commandId);
@@ -110,6 +248,7 @@ export class RuntimeTeamCaptures {
       team.owner.assertRuntimeRegistration(operator, runtimeCaptureRegistration(team, intent));
     const assertCurrent = () => {
       this.options.assertCurrent();
+      this.assertAvailable(teamId);
       if (!original && runtimeDigest(intent.recipeSources ?? []) !== runtimeDigest(
         captureRuntimeRecipeSources(this.options.profile, team, roster, this.options.sources)))
         throw new TeamLaunchError('hold', 'capture-source-selection-changed');
@@ -288,11 +427,26 @@ export class RuntimeTeamCaptures {
       record.fingerprint !== runtimeDigest(record.definition)
     )
       throw new TeamLaunchError('hold', 'capture-record');
+    validateLaunchRecord(record, record.fingerprint, record.definition.members.length);
+    validateNativeLaunchAdditions(record);
+    validateMemberSelectionChain(record);
     return record;
+  }
+
+  private assertRecordScope(team: HostedTeam, record: TeamLaunchRecord | undefined): void {
+    for (const member of record?.definition.members ?? []) {
+      if (!member.binding) continue;
+      const binding = normalizeBinding(member.binding);
+      if (binding.backendId !== team.definition.binding.backendId ||
+          binding.teamId !== team.definition.binding.teamId || binding.runId !== record!.definition.launchId ||
+          binding.memberId !== member.memberId)
+        throw new TeamLaunchError('hold', 'capture-binding');
+    }
   }
 
   private source(team: HostedTeam, registration: TeamRuntimeCapture) {
     const record = this.record(this.store(team), registration.launchId);
+    this.assertRecordScope(team, record);
     if (
       !record ||
       (record.worktreePreparation &&
@@ -306,6 +460,11 @@ export class RuntimeTeamCaptures {
       source.configurationRevision !== registration.configurationRevision
     )
       throw new TeamLaunchError('hold', 'capture-source');
+    const expected = runtimeCaptureRegistration(team, source);
+    if (expected.launchId !== registration.launchId ||
+        runtimeDigest(expected.members) !== runtimeDigest(registration.members))
+      throw new TeamLaunchError('hold', 'capture-binding');
+    validateRuntimeCaptureMcpArtifacts(this.options.profile, team, source);
     return source;
   }
 
@@ -327,4 +486,31 @@ export class RuntimeTeamCaptures {
       activate ? 'activate' : 'retain'
     );
   }
+}
+
+function needsRuntimeRestore(profile: TeamHostProfile, team: HostedTeam): boolean {
+  return !!profile.runtime?.members.some(member => member.teamId === team.definition.binding.teamId) ||
+    hasRetainedRuntime(profile, team);
+}
+
+/** Presence does not grant actor read or confirm that original custody was released. */
+function hasRetainedRuntime(profile: TeamHostProfile, team: HostedTeam): boolean {
+  if (team.owner.hasRetainedRuntime()) return true;
+  const store = new TeamOwnerStore(profile.owner.storageRoot, team.definition.binding.teamName);
+  try {
+    const stat = lstatSync(join(store.directory, 'launches', runtimeDigest(team.definition.scope.runId) + '.json'));
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 1024 * 1024)
+      throw new TeamLaunchError('hold', 'capture-record');
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+  return false;
+}
+
+/** Missing current runtime does not erase original seed/capture history or its cleanup debt. */
+export function hasRetainedTeamRuntime(profile: TeamHostProfile, teams: ReadonlyMap<string, HostedTeam>): boolean {
+  for (const team of teams.values())
+    if (hasRetainedRuntime(profile, team)) return true;
+  return false;
 }

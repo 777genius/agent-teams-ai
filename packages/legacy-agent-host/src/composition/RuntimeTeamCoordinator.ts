@@ -15,7 +15,7 @@ import { executeRuntimeMemberAction } from './executeRuntimeMemberAction.js';
 import type { RuntimeMemberActionOperation } from './executeRuntimeMemberAction.js';
 import type { NativeMemberActionSource } from './nativeMemberActionAdmission.js';
 import type { createHostWorkSyncComposition } from './createHostWorkSyncComposition.js';
-import { createRuntimeLifecyclePorts } from './createRuntimeLifecyclePorts.js';
+import { createRuntimeLifecyclePorts, closeRuntimeEntries } from './createRuntimeLifecyclePorts.js';
 import { executeRuntimeLaunch } from './executeRuntimeLaunch.js';
 import type {
   RuntimeLaunchAsyncOperation,
@@ -32,7 +32,7 @@ import type { TeamMcpCrossTeamPort } from '../mcp/nativeCrossTeamContracts.js';
 import { readHostTeamActivity } from './readHostTeamActivity.js';
 import { readRuntimeActivitySources, readEntryActivitySources, isRetainedActivityBinding } from './runtimeActivitySources.js';
 import { HostInteractionControls } from './HostInteractionControls.js';
-import { createMemberEntry, createPreparedMemberEntry } from './createMemberEntry.js';
+import { createMemberEntry, installRuntimeCaptureEntries } from './createMemberEntry.js';
 import { projectRuntimeActivity } from './runtimeActivityProjection.js';
 import { createRuntimeTeamLaunch } from './createRuntimeTeamLaunch.js';
 import { RuntimeTeamCaptures } from './RuntimeTeamCaptures.js';
@@ -108,9 +108,27 @@ export class RuntimeTeamCoordinator {
       createProvider?(context: MemberProviderContext): MemberProvider;
     }
   ) {
+    const store = new FileRuntimeStore(options.profile.owner.storageRoot);
+    this.captures = new RuntimeTeamCaptures({
+      profile: options.profile,
+      ...(options.sources ? { sources: options.sources } : {}),
+      teams: options.teams,
+      assertCurrent: () => {
+        options.assertWriter();
+        if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
+      },
+      readRuntimeSiblings: binding => store.fenced(binding, transaction => transaction.siblings()),
+      install: (team, profiles, mode) => installRuntimeCaptureEntries({
+        root: options.profile.owner.storageRoot, ownerId: options.profile.owner.ownerId,
+        entries: this.entries, install: (selected, entries, active, prepare) =>
+          this.installLaunch(selected, entries, active, prepare),
+      }, team, profiles, mode),
+    });
+    this.captures.prepareRestore();
     for (const baseProfile of options.profile.runtime?.members ?? []) {
       const team = options.teams.get(baseProfile.teamId);
       if (!team) throw new RuntimeOwnerError('invalid');
+      if (!this.captures.available(baseProfile.teamId)) continue;
       const entry = createMemberEntry({
         root: options.profile.owner.storageRoot,
         ownerId: options.profile.owner.ownerId,
@@ -121,7 +139,6 @@ export class RuntimeTeamCoordinator {
       if (this.entries.has(key)) throw new RuntimeOwnerError('invalid');
       this.entries.set(key, entry);
     }
-    const store = new FileRuntimeStore(options.profile.owner.storageRoot);
     if (
       new Set([...this.entries.values()].map((entry) => runtimeDigest(entry.config))).size !==
       this.entries.size
@@ -271,41 +288,6 @@ export class RuntimeTeamCoordinator {
       const entries = [...this.entries.values()].filter((entry) => entry.team === team);
       if (entries.length) this.installLaunch(team, entries, true);
     }
-    this.captures = new RuntimeTeamCaptures({
-      profile: options.profile,
-      ...(options.sources ? { sources: options.sources } : {}),
-      teams: options.teams,
-      assertCurrent: () => {
-        options.assertWriter();
-        if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
-      },
-      install: (team, profiles, mode) => {
-        const entries = profiles.map((baseProfile) => {
-          // Finalize the expected roster before consulting finalized binding selections.
-          // Preparation entries stay out of both the runtime and retained-launch registries.
-          const project = mode === 'prepare' ? createPreparedMemberEntry : createMemberEntry;
-          const next = project({
-            root: options.profile.owner.storageRoot,
-            ownerId: options.profile.owner.ownerId,
-            team,
-            baseProfile,
-          });
-          const key = this.key(next.binding),
-            prior = this.entries.get(key);
-          if (prior) {
-            if (
-              runtimeDigest(prior.baseProfile) !== runtimeDigest(next.baseProfile) ||
-              runtimeDigest(prior.team.capture) !== runtimeDigest(next.team.capture)
-            )
-              throw new RuntimeOwnerError('conflict');
-            return prior;
-          }
-          if (mode !== 'prepare') this.entries.set(key, next);
-          return next;
-        });
-        this.installLaunch(entries[0]!.team, entries, mode === 'activate', mode === 'prepare');
-      },
-    });
     this.captures.restore();
   }
 
@@ -351,10 +333,12 @@ export class RuntimeTeamCoordinator {
   }
 
   hasCurrentCapture(teamId: string): boolean {
+    this.captures.assertAvailable(teamId);
     return isCurrentCapturedTeam(this.capturedTeams.get(teamId));
   }
 
   readLaunchAdmission(teamId: string, launchId: string, commandId: string) {
+    this.captures.assertAvailable(teamId);
     this.options.assertWriter();
     if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
     const selected = this.retainedLaunches.get(runtimeDigest({ teamId, launchId }));
@@ -372,13 +356,14 @@ export class RuntimeTeamCoordinator {
     }
   }
 
-  executeMemberAction(
+  async executeMemberAction(
     teamId: string,
     operation: RuntimeMemberActionOperation | 'retry',
     commandId: string,
     raw: unknown,
     nativeSource?: NativeMemberActionSource
   ) {
+    this.captures.assertAvailable(teamId);
     return executeRuntimeMemberAction(
       {
         ...(nativeSource ? { nativeSource } : {}),
@@ -386,7 +371,7 @@ export class RuntimeTeamCoordinator {
         entries: this.entries,
         runtime: this.runtime,
         principalId: this.options.profile.principalId,
-        assertCurrent: () => this.options.assertWriter(),
+        assertCurrent: () => { this.options.assertWriter(); this.captures.assertAvailable(teamId); },
         isSealed: () => this.sealed,
       },
       teamId,
@@ -420,6 +405,7 @@ export class RuntimeTeamCoordinator {
     commandId: string,
     raw: unknown
   ): JsonValue | Promise<JsonValue> {
+    this.captures.assertAvailable(teamId);
     return executeRuntimeLaunch(
       {
         profile: this.options.profile,
@@ -434,7 +420,7 @@ export class RuntimeTeamCoordinator {
           this.trackOpening(this.captures.capture(id, command, value)),
         hasCurrentCapture: (id) => this.hasCurrentCapture(id),
         isSealed: () => this.sealed,
-        assertCurrent: () => this.options.assertWriter(),
+        assertCurrent: () => { this.options.assertWriter(); this.captures.assertAvailable(teamId); },
       },
       teamId,
       operation,
@@ -448,6 +434,7 @@ export class RuntimeTeamCoordinator {
     input: TeamModelProbeSelection,
     action: 'start' | 'read' | 'cancel'
   ) {
+    this.captures.assertAvailable(teamId);
     return captureTeamModelProbeSelection({
       profile: this.options.profile,
       ...(this.options.sources ? { sources: this.options.sources } : {}),
@@ -461,6 +448,7 @@ export class RuntimeTeamCoordinator {
       action,
       assertCurrent: () => {
         this.options.assertWriter();
+        this.captures.assertAvailable(teamId);
         if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
       },
     });
@@ -468,6 +456,7 @@ export class RuntimeTeamCoordinator {
 
   /** Private composition evidence; this does not select current sources or expose private recipes over RPC. */
   readLaunchSourceSelections(teamId: string, launchId: string) {
+    this.captures.assertAvailable(teamId);
     this.options.assertWriter();
     if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
     const selected = this.retainedLaunches.get(runtimeDigest({ teamId, launchId }));
@@ -482,6 +471,7 @@ export class RuntimeTeamCoordinator {
     members: readonly import('../team/contracts.js').TeamMember[]
   ): void {
     this.options.assertWriter();
+    this.captures.assertAvailable(teamId);
     if (this.sealed) throw new RuntimeOwnerError('hold');
     for (const { team, launch, entries } of this.retainedLaunches.values()) {
       if (team.definition.binding.teamId !== teamId) continue;
@@ -506,6 +496,7 @@ export class RuntimeTeamCoordinator {
   }
 
   async settleTeamCommands(teamId: string): Promise<void> {
+    this.captures.assertAvailable(teamId);
     if (this.sealed) throw new RuntimeOwnerError('hold');
     const team = this.options.teams.get(teamId);
     if (!team) throw new RuntimeOwnerError('invalid');
@@ -529,6 +520,7 @@ export class RuntimeTeamCoordinator {
           }
           for (const team of this.options.teams.values()) {
             if (this.sealed) break;
+            if (!this.captures.available(team.definition.binding.teamId)) continue;
             try {
               await team.owner.resumeTaskCommands(this.deliveryPort());
               if (this.sealed) break;
@@ -563,6 +555,7 @@ export class RuntimeTeamCoordinator {
   }
 
   groupRun(teamId: string, memberName: string) {
+    this.captures.assertAvailable(teamId);
     const team = this.options.teams.get(teamId);
     const binding = team?.owner
       .crossTeamIdentity(this.options.profile.principalId)
@@ -574,6 +567,7 @@ export class RuntimeTeamCoordinator {
     });
   }
   crossTeamActiveInputs(binding: RuntimeBinding) {
+    this.captures.assertAvailable(binding.teamId);
     const entry = this.entries.get(this.key(binding));
     if (!entry || !this.isCurrent(entry)) return [];
     const { record, attached } = this.runtime.readSession(binding);
@@ -591,6 +585,7 @@ export class RuntimeTeamCoordinator {
   }
 
   readLead(teamId: string, kind: 'activity' | 'context'): JsonValue {
+    this.captures.assertAvailable(teamId);
     return readLeadObservation(
       {
         team: this.options.teams.get(teamId),
@@ -609,6 +604,7 @@ export class RuntimeTeamCoordinator {
   }
 
   readTeamActivity(teamId: string, kind: 'logs' | 'stats', raw: unknown): JsonValue {
+    this.captures.assertAvailable(teamId);
     this.options.assertWriter();
     if (this.sealed) throw new RuntimeOwnerError('hold');
     return readHostTeamActivity(
@@ -627,7 +623,8 @@ export class RuntimeTeamCoordinator {
     );
   }
 
-  execute(teamId: string, operation: string, raw: unknown, commandId?: string): Promise<JsonValue> {
+  async execute(teamId: string, operation: string, raw: unknown, commandId?: string): Promise<JsonValue> {
+    this.captures.assertAvailable(teamId);
     return executeCapturedRuntimeControl(
       {
         teams: this.options.teams,
@@ -638,7 +635,7 @@ export class RuntimeTeamCoordinator {
         interactionControls: this.interactionControls,
         principalId: this.options.profile.principalId,
         isSealed: () => this.sealed,
-        assertWriter: () => this.options.assertWriter(),
+        assertWriter: () => { this.options.assertWriter(); this.captures.assertAvailable(teamId); },
         kick: () => this.kick(),
         dispatchSettled: () => this.pumping,
         closeEndpoint: (entry) => this.closeEndpoint(entry),
@@ -658,6 +655,7 @@ export class RuntimeTeamCoordinator {
   }
 
   assertNativeMessage(teamId: string, command: import('../team/contracts.js').TeamCommand) {
+    this.captures.assertAvailable(teamId);
     this.options.assertWriter();
     const team = this.options.teams.get(teamId);
     if (!team || this.sealed) throw new RuntimeOwnerError('hold');
@@ -689,49 +687,13 @@ export class RuntimeTeamCoordinator {
 
   async close(): Promise<void> {
     this.seal();
-    const openingEntries = [...this.entries.values()].filter((entry) => {
-      try {
-        return !!entry.provider && !this.runtime.readCapturedSession(entry.binding).attached;
-      } catch {
-        return false;
-      } // A corrupt record must not skip original owned cleanup.
+    await closeRuntimeEntries({
+      runtime: this.runtime, entries: this.entries, opening: this.opening,
+      ...(this.pumping ? { pumping: this.pumping } : {}),
+      disposeWake: () => this.workSyncWake.dispose(),
+      closeEndpoint: entry => this.closeEndpoint(entry),
+      assertUnavailableReleased: () => this.captures.assertUnavailableReleased(),
     });
-    const stop = (entry: MemberEntry) => this.runtime.stopCapturedSession(entry.binding);
-    // Each stop synchronously seals its Runtime record before the first cleanup await.
-    const stopping = [...this.entries.values()].map(stop);
-    const cleanup = async (entry: MemberEntry) =>
-      entry.provider ? entry.provider.cleanup() : true;
-    // An opening factory may need its original native transport closed before readiness can settle.
-    // Allocated drivers retain checkpoint -> driver close -> process cleanup ordering below.
-    const openingCleanup = new Map(openingEntries.map((entry) => [entry, cleanup(entry)]));
-    await Promise.allSettled([
-      this.workSyncWake.dispose(),
-      ...stopping,
-      ...openingCleanup.values(),
-      ...this.opening,
-      ...(this.pumping ? [this.pumping] : []),
-    ]);
-    let complete = true;
-    for (const entry of this.entries.values()) {
-      try {
-        const state = await stop(entry);
-        if (state && (state.phase !== 'closed' || state.custody !== 'released')) complete = false;
-      } catch {
-        complete = false;
-      }
-      // Physical cleanup of captured resources never depends on a still-valid user grant.
-      try {
-        if (!(await (openingCleanup.get(entry) ?? cleanup(entry)))) complete = false;
-      } catch {
-        complete = false;
-      }
-      try {
-        await this.closeEndpoint(entry);
-      } catch {
-        complete = false;
-      }
-    }
-    if (!complete) throw new RuntimeOwnerError('hold');
   }
 
   private projection(
@@ -754,18 +716,22 @@ export class RuntimeTeamCoordinator {
       entries: this.entries,
       delivery: this.deliveryPort(),
       assertWriter: this.options.assertWriter,
+      assertAvailable: binding => this.captures.assertAvailable(binding.teamId),
       closeEndpoint: (entry) => this.closeEndpoint(entry),
     });
   }
   private deliveryPort() {
     return {
       fingerprintDelivery: deliveryFingerprint,
-      admitDelivery: (intent: Parameters<RuntimeOwner['admitDelivery']>[0]) =>
-        this.runtime.admitDelivery(intent),
-      lookupDelivery: (intent: Parameters<RuntimeOwner['lookupDelivery']>[0]) =>
-        this.runtime.lookupDelivery(intent),
-      cancelDelivery: (intent: Parameters<RuntimeOwner['cancelDelivery']>[0]) =>
-        this.runtime.cancelDelivery(intent),
+      admitDelivery: (intent: Parameters<RuntimeOwner['admitDelivery']>[0]) => {
+        this.captures.assertAvailable(intent.binding.teamId); return this.runtime.admitDelivery(intent);
+      },
+      lookupDelivery: (intent: Parameters<RuntimeOwner['lookupDelivery']>[0]) => {
+        this.captures.assertAvailable(intent.binding.teamId); return this.runtime.lookupDelivery(intent);
+      },
+      cancelDelivery: (intent: Parameters<RuntimeOwner['cancelDelivery']>[0]) => {
+        this.captures.assertAvailable(intent.binding.teamId); return this.runtime.cancelDelivery(intent);
+      },
     };
   }
   private key(binding: RuntimeBinding): string {
@@ -781,6 +747,7 @@ export class RuntimeTeamCoordinator {
   }
   private assertCurrent(entry: MemberEntry): void {
     this.options.assertWriter();
+    this.captures.assertAvailable(entry.binding.teamId);
     assertCapturedRosterCurrent(entry.team, entry.profile.principalId);
     if (
       this.sealed ||
