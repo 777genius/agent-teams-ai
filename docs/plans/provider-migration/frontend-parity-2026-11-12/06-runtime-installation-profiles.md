@@ -1778,3 +1778,109 @@ Also join the already-required selected source index and its exact published man
 **Transitive source pin.** The extraction makes `desktop-runtime-source-fixture.ts` a direct dependency of the already-pinned `desktop-backend-fixture.ts` in every original Desktop fixture. Add exactly `scripts/legacy-agent-host/desktop-runtime-source-fixture.ts` beside that existing entry in `desktop-proof-sources.ts` (preimage `dd2c3e5750efe08e7310e00066b849d6a9a5f247`). Root composes this one line with Account's independent P05 helper addition. Do not add the standalone source-selection journey to unrelated Desktop proof inventories; its existing native source assertion already covers the scripts directory.
 
 The seven-file journey, four business inputs, 32 model-request cap, original physical cleanup/cold boundaries, default extraction and the declared CI recipe remain unchanged. Only the TEST observation helper and this one transitive inventory line change after publication of this clarification. Independent source review and the normal candidate-head compiler/native gates remain required; no execution PASS is transferred to the revised bytes.
+
+### §22.1 — original metadata callback evidence for the actual 0.169.0 candidate refusal
+
+**Status: PLAN ONLY / source 0.** This amendment leaves §23 reserved for the
+separate OpenCode V2 installation/selection work. It does not change Codex
+eligibility, the checked D artifact, provider configuration, the original
+candidate acceptance assertions, or any native invocation.
+
+**Observed failure.** On original F head
+`1160b575c4e43db045ab8726fd16d27bd611196a`,
+ordinary job `132024091308`, step 19
+completed the original initialize, model/list and config/read awaits, then
+`readCandidateCatalog` line 236 failed `2 !== 0` in the `unexpected` callback
+count. The original subtest took 878.113459 ms. Immutable original job log:
+F blob `aca5e82f3db016d24313f0e70e46dabf226d3b22`. The log shows no separate
+cleanup error in the AggregateError, but that alone is not a cleanup receipt.
+Artifact 14059882436 has ZIP SHA-256
+`567a2ff2695cc859d3259646f9d89d8828b97c13152a4cceda11bf569f27f764`;
+its member contents have not been read. No repeat run is authorized by this
+amendment.
+
+**Exact contract finding; no invented identities.** In consumed D
+`3b39a50b28319a3e91e0779493f0d64acb98d2e5`,
+[app-server.ts 223–242](https://github.com/agent-teams-ai/old-provider-implementations/blob/3b39a50b28319a3e91e0779493f0d64acb98d2e5/packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/app-server.ts#L223)
+(blob `612a2b847a4aab640819c5e4d40632e1af98e53f`) forwards unbound native
+notifications through `onEvent` as `unsupported_raw_event`, with optional
+thread/turn identity; only the separate account-login completion has its own
+private path. The callback therefore is not a conversation-only contract.
+The public event union is
+`session-types.ts` `58062e883ef8dca93687608b2cb661cf6961b0fd` +
+`contracts/codex-events.ts` `52c7dca32ecb7a86927e728811b3c608cf0e547d`.
+
+Official `openai/codex` tag `rust-v0.169.0` resolves through tag object
+`a41fe5b443652cbdbee57717fbb9fd78d8d8b32a` to commit
+`d32063f96c2dff1dc96af839b3952abb6acfeda4`.
+Its [app-server/lib.rs 1286–1310](https://github.com/openai/codex/blob/d32063f96c2dff1dc96af839b3952abb6acfeda4/codex-rs/app-server/src/lib.rs#L1286)
+(blob `7a2892b5984f815b1aaab59e584364b82f66e755`) sends
+`remoteControl/status/changed` on successful connection initialization after
+configuration warnings; the candidate's original initialize has no notification
+opt-out. [startup_warnings.rs](https://github.com/openai/codex/blob/d32063f96c2dff1dc96af839b3952abb6acfeda4/codex-rs/app-server/src/startup_warnings.rs)
+(blob `b2eec2f6b2b4d9c8865da4eac69b6db6bf754127`) sends `configWarning`
+and supports separate background `warning` notifications. These source facts
+disprove a general zero-callback metadata assumption. They do **not** identify
+both callbacks in this actual run or prove that an unknown notification is
+benign.
+
+The F callback currently increments a number and discards the event.
+The existing wire inspector also does not retain unsolicited notifications;
+candidate receipts retain outbound methods, approvals and selected replies,
+not those incoming event identities. More artifact readback cannot be assumed
+to reconstruct information this source never stored.
+
+**Smallest observation, same two existing TEST files.**
+
+| Existing path | Exact preimage on working parent 3c77393 | Planned delta |
+|---|---|---|
+| `packages/legacy-agent-host/tests/fixtures/native-codex-team/driver.ts` | `49b868c3275422887dc03e9b910ac54a326bdf03` | Retain a closed bounded projection from the original metadata `onEvent`, plus the original lexical metadata stage and completed-await flags; expose only a frozen snapshot to the existing receipt owner. |
+| `packages/legacy-agent-host/tests/native-codex-team.native.ts` | `3e9677bd30d74967763358a871ff482baf44b639` | Add that snapshot to the existing candidate receipt and one bounded failure-only summary after the original cleanup and successful receipt write. |
+
+1. Install the observation before the original client is initialized. Keep
+   `unexpected += 1` and the existing `assert.equal(unexpected, 0)` unchanged.
+   The original initialize/list/config calls, their order, deadlines, failure
+   propagation, permission refusal, client.close and original child cleanup
+   remain byte-semantically unchanged. No new wire read, RPC, listener, signal,
+   timer, retry or process is introduced.
+2. Retain at most eight rows. Each row contains only the original lexical
+   stage (`initialize`, `model-list`, `config-read`, `assertions`, `closing`
+   or `closed`), the closed D normalized event type (all declared union
+   literals, otherwise `other`), a closed native method classification, and
+   two booleans for a valid nonempty original threadId/turnId being present.
+   No actual ID, native payload, command, argument, error/warning text, path,
+   endpoint, account or token is copied.
+3. The native method projection accepts only explicit fixed literals
+   `remoteControl/status/changed`, `configWarning`, `warning`,
+   `deprecationNotice`, `account/updated`, `account/rateLimits/updated`,
+   `mcpServer/startupStatus/updated`, `thread/started`, `turn/started`,
+   `turn/completed`, `item/started`, `item/completed`. Unknown values become
+   `other`; a normalized event without rawType uses `not-exposed`.
+   No string-prefix fallback or arbitrary method/error string is retained.
+   Own data descriptors prevent getters from becoming observation effects.
+4. Keep a separate saturating observed-count projection (0…9, where 9 means
+   at least nine) and an overflow flag; this never replaces or changes the
+   original assertion counter. Set each completed-await flag immediately
+   after that original await returns, before a later assertion can fail.
+   An incomplete/invalid diagnostic remains unknown and cannot change the
+   original test result.
+5. The native receipt reads the original metadata driver's snapshot, without
+   selecting another driver/process. The failure-only console line performs
+   a second closed projection and is at most 2048 UTF-8 bytes including LF.
+   Emit only after original cleanup and successful original receipt write;
+   keep original first failure, cleanup errors and their AggregateError order.
+   A diagnostic failure/overflow cannot throw in place of that original error.
+   Existing candidate success and default 0.162.0 paths gain no admission rule.
+6. A subsequent acceptance-rule correction requires the actual closed event
+   evidence and another reviewed plan. This cut neither ignores the observed
+   two events nor declares them configuration-only, and it cannot produce a
+   candidate PASS while the original zero assertion fails.
+
+**Review and validation.** Independently review the exact source delta for
+finite keys/enums, untouched count-zero oracle, no raw assertion dumps, and
+original cleanup/error ordering. Check existing Host TEST/tool type projects,
+targeted lint/source-size gates and the unchanged ordinary CI lane on the
+coherent candidate head. No new suite/job/matrix or timeout increase is needed
+for this passive two-file observation. Executor unavailability means no local
+execution claim; source-only publication is not test, native, permission,
+checkpoint, Stop or consumer-eligibility qualification.

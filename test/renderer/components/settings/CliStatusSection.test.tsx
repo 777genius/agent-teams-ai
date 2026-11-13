@@ -280,6 +280,11 @@ describe('Settings OpenCode project status', () => {
       },
     });
     await act(async () => root.render(<CliStatusSection />));
+    expect(mocks.fetch).toHaveBeenCalledExactlyOnceWith('opencode', {
+      silent: true,
+      checkReason: 'launch_preflight',
+      projectPath: '/TEST/A',
+    });
     const manage = () =>
       [...host.querySelectorAll<HTMLButtonElement>('button')].filter(
         (button) => button.textContent === 'cliRuntime.actions.manage'
@@ -293,7 +298,7 @@ describe('Settings OpenCode project status', () => {
       projectPath: '/TEST/A',
       disabled: false,
     });
-    expect(mocks.fetch).not.toHaveBeenCalled();
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
     mocks.fetch.mockImplementation(
       async (_id: CliProviderId, options: CliProviderStatusFetchOptions) => {
         const verified = structuredClone(status);
@@ -321,7 +326,11 @@ describe('Settings OpenCode project status', () => {
       publish({ cliStatusLoading: false, cliStatus: { ...globalStatus, installed: false } })
     );
     expect(manage()).toHaveLength(0);
-    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    expect(mocks.fetch).toHaveBeenCalledTimes(2);
+    expect(mocks.fetch).toHaveBeenLastCalledWith('opencode', {
+      checkReason: 'provider_change',
+      projectPath: '/TEST/A',
+    });
   });
 
   it('masks unknown project B and ignores a late update for project A', async () => {
