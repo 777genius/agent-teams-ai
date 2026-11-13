@@ -476,3 +476,23 @@ plugin body witness из original installed inventory. Эти уточнения
 [R6]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/OpenCodeManagedPreferences.ts
 [R7]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/OpenCodeManagedDefaultSelection.ts
 [S7]: https://github.com/777genius/agent-teams-ai/blob/6a2bb4b88bffbe001e16ff7fd27430f330b43517/src/features/runtime-provider-management/main/infrastructure/FileManagedProviderPreferences.ts
+
+#### R10 повторный review связанного native/Desktop cut
+
+Связанный сценарий использует прежние Install, Create/Review/Apply, Edit, Composer, Launch, Stop
+и Uninstall. TEST inference проверяет фактический expanded body, аргументы и original Team reply;
+source body не подставляется в product prompt. Cold startup перед первым Launch сохраняет четыре
+исходных management receipts, а новый Query после Uninstall сохраняет user/project skills и уже
+не предлагает удалённый plugin.
+
+При независимом review сохранены прежние Resume checks и немедленное владение каждым новым
+ChildProcess у caller. Обе cold границы получают явный secondCleanup. До первого Launch
+проверяется отсутствие открытой Runtime session/input и inference; штатный краткий metadata
+process не объявляется нарушением. После первого Quit группа должна быть физически пуста,
+Host отсутствовать, writer lock освобождён до второго spawn.
+
+Source review также исправил ошибку hash helper: namespace — объект, поэтому применяется
+существующий canonical runtimeDigest, а не byte-only digest. Удалены дублирующие механизмы;
+общий cold callback вынесен в существующий desktop-captured-app, уменьшая общий runner.
+Source closure включает новые helpers и ранее добавленные Host cost/V2 MCP adapters.
+Compile, настоящий UI/native запуск и exact-head CI остаются необходимыми gates.

@@ -1,5 +1,13 @@
 /** Finite source closure for captured management, lifecycle, WorkSync and native roster. */
 export const desktopProofManagementSources = [
+  'packages/legacy-agent-host/src/team/hostCostCommand.ts',
+  'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CapturedMcp.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-claude-extensions/model.ts',
+  'scripts/legacy-agent-host/desktop-native-extension-consumption-fixture.ts',
+  'scripts/legacy-agent-host/desktop-native-extension-skills-ui.ts',
+  'scripts/legacy-agent-host/desktop-native-extension-consumption-ui-proof.ts',
+  'src/main/services/discovery/ProjectScanner.ts',
+  'src/main/services/infrastructure/ConfigManager.ts',
   'packages/legacy-agent-host/tests/fixtures/native-claude-schedules/model.ts',
   'scripts/legacy-agent-host/desktop-schedule-fixture.ts',
   'scripts/legacy-agent-host/desktop-schedule-ui-proof.ts',

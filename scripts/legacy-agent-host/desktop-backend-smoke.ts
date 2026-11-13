@@ -2,8 +2,7 @@ import { runDesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-s
 import { runDesktopScheduleUiProof } from './desktop-schedule-ui-proof.ts';
 import type { DesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
 import { verifyNativeProcessReadbackSource } from './desktop-native-process-readback.ts';
-import { checkpoint } from './desktop-resume-records.ts';
-import { connectCapturedDesktopApp, observePackedAppRelaunch, verifyCapturedDesktopBinding, cleanupCapturedDesktopApp } from './desktop-captured-app.ts';
+import { connectCapturedDesktopApp, restartCapturedDesktopApp, observePackedAppRelaunch, verifyCapturedDesktopBinding, cleanupCapturedDesktopApp } from './desktop-captured-app.ts';
 import type { DesktopCdpPort as CdpPort, DesktopCdpLibrary as CdpLibrary } from './desktop-captured-app.ts';
 import { observeDesktopStartup, requestObservedDesktopClose } from './startup-passive-observer.ts';
 import { runDesktopNativeExtensionsUiSmoke } from './desktop-native-extensions-ui-smoke.ts';
@@ -24,7 +23,7 @@ import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { desktopProofEvidence } from './desktop-proof-evidence.ts';
 import { runDesktopNativeReview } from './desktop-native-review-compose.ts';
 import { desktopReadbackArtifacts, runDesktopNativeReadback } from './desktop-readback-fixture.ts';
-import { assertCapturedDesktopMetadataAbsent, assertFirstResumeMetadataAbsent, captureDesktopOpenCodeV2ColdMetadata } from './desktop-opencode-v2-cold-metadata.ts';
+import { assertCapturedDesktopMetadataAbsent, captureDesktopOpenCodeV2ColdMetadata } from './desktop-opencode-v2-cold-metadata.ts';
 import { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
 import { captureDesktopCodexNativeInputs, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
@@ -47,12 +46,11 @@ import { runDesktopStoppedImportUiSmoke } from './desktop-stopped-import-ui-smok
 import { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
 import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
 import { spawn, execFileSync } from 'node:child_process';
-import { constants, createWriteStream } from 'node:fs';
-import { copyFile, lstat, mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { isDeepStrictEqual } from 'node:util';
 import {
   attachRendererDiagnostics,
   readRendererFailureSnapshot,
@@ -72,7 +70,6 @@ import {
   captureDesktopNativeStopPresence,
   prepareDesktopNativeStop,
   verifyDesktopNativeStopArtifact,
-  readDesktopNativeStopSessions,
 } from './desktop-native-stop-fixture.ts';
 import { runDesktopBackendBridgeProof } from './desktop-backend-bridge-proof.ts';
 
@@ -122,7 +119,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   if (packed) assert.equal(mode, 'native-launch-ui', 'one bounded packed workflow reuses the original native Launch proof');
   if (packedRelaunchMode) assert.ok(packed, 'automatic app relaunch is an explicit captured packed scope');
   if (scheduleUiMode) assert.ok(mode === 'native-launch-ui' && !packed, 'original source schedule controls');
-  const { mixedMode, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel, openCodeLifecycleMode, openCodeLifecycleModel: selectedOpenCodeModel, openCodeReviewModel: selectedOpenCodeReviewModel } =
+  const { mixedMode, extensionsUiMode, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel, openCodeLifecycleMode, openCodeLifecycleModel: selectedOpenCodeModel, openCodeReviewModel: selectedOpenCodeReviewModel } =
     await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
   conversationModel = model; mixedModels = selectedMixedModels;
   codexResumeModel = selectedCodexResumeModel;
@@ -415,113 +412,28 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         ...(openCodeLifecycleModel ? { openCodeModel: openCodeLifecycleModel } : {}),
         capturedGroup: () => group,
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
-        ...(mode === 'native-resume-ui' ? { restartAfterStop: async () => {
+        ...(mode === 'native-resume-ui' || extensionsUiMode ? { restartSameProfile: async () => {
           assert.ok(cdp && !packed && (conversationModel || codexResumeModel || openCodeLifecycleModel));
-          const resumeModel = openCodeLifecycleModel ?? codexResumeModel ?? conversationModel!;
-          const resumeProvider = openCodeLifecycleMode ? 'opencode' : codexResumeMode ? 'codex' : 'claude';
-          const originalApp = app, originalGroup = group;
-          const hosts = groupMembers(group).filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
-          assert.equal(hosts.length, 1, 'capture original Host before guarded cold Resume Quit');
-          const originalHost = hosts[0]!; hostPid = originalHost.pid;
-          const proof: Record<string, unknown> = { status: 'INCOMPLETE', provider: resumeProvider,
-            scope: 'Guarded app Quit and captured same-profile cold startup before explicit Resume',
-            firstEpoch: { app: evidence.app, startup: evidence.startup, startupOutcome: evidence.startupOutcome,
-              rendererTarget: evidence.rendererTarget, compiledBundleHashesAfterStartup: evidence.compiledBundleHashesAfterStartup,
-              discovery: evidence.discovery, homePathProof: evidence.homePathProof, host: originalHost } };
-          evidence.coldResumeBoundary = proof;
-          const stopped = await readDesktopNativeStopSessions(fixture.root);
-          assert.ok(stopped.length > 0 && stopped.every(row => row.phase === 'closed' && row.custody === 'released'));
-          const sourceSessions = stopped.filter(row => Array.isArray(row.inputs) && row.inputs.length === 1);
-          assert.equal(sourceSessions.length, 1);
-          const originalCheckpoint = await checkpoint(fixture.root, sourceSessions[0]!, resumeProvider);
-          proof.beforeQuitCheckpoint = { reference: originalCheckpoint.payload.reference,
-            payloadFileSha256: originalCheckpoint.payloadFileSha256, historySha256: originalCheckpoint.historySha256 };
-          // The next dev startup rebuilds dist. Retain this epoch's actual bytes first.
-          const bundleDirectory = join(fixture.root, 'cold-resume-epoch1-bundles');
-          const bundlePins = evidence.compiledBundleHashesAfterStartup;
-          assert.ok(Array.isArray(bundlePins) && bundlePins.length > 0 && bundlePins.length <= 4096);
-          for (const raw of bundlePins) {
-            const pin = object(raw), relative = String(pin.path), sha = String(pin.sha256);
-            assert.ok(!relative.startsWith('/') && !relative.split('/').includes('..'));
-            assert.match(relative, /\.(?:cjs|js)$/); assert.match(sha, /^[a-f0-9]{64}$/);
-            const source = join(repo, 'dist-electron', relative), target = join(bundleDirectory, relative);
-            assert.equal(await fileDigest(source), sha);
-            await mkdir(dirname(target), { recursive: true, mode: 0o700 });
-            await copyFile(source, target, constants.COPYFILE_EXCL);
-            assert.equal(await fileDigest(target), sha); assert.equal(await fileDigest(source), sha);
-          }
-          proof.epoch1BundleSnapshot = { directory: bundleDirectory, files: bundlePins };
-          assert.equal(resumeModel.observations.length, 8);
-          assertOwnedCdpListener(group);
-          quitRequested = true; // Fence the one original public Quit before its uncertain reply.
-          const quitObservation: Record<string, unknown> = { attempted: true }; proof.firstQuit = quitObservation;
-          try {
-            await bounded(cdp.evaluate('window.electronAPI.windowControls.close()'), 3000, 'original cold Resume Quit');
-            quitObservation.reply = 'acknowledged';
-          } catch (error) {
-            quitObservation.reply = 'unconfirmed';
-            quitObservation.reason = /timed out/i.test(String(error)) ? 'timeout' : 'closed-or-rejected';
-          }
-          const until = Date.now() + 30_000;
-          while (Date.now() < until && (originalApp.exitCode === null || groupMembers(originalGroup).length)) await tick();
-          const remaining = groupMembers(originalGroup);
-          const hostAbsent = !processTable().some(row => row.pid === originalHost.pid);
-          const writerReleased = await lstat(join(fixture.root, 'hoststore/.legacy-agent-host-writer.lock'))
-            .then(() => false, (error: NodeJS.ErrnoException) => { if (error.code === 'ENOENT') return true; throw error; });
-          proof.firstCleanup = { appExitCode: originalApp.exitCode, appSignalCode: originalApp.signalCode,
-            remaining, capturedHostAbsent: hostAbsent, writerLockReleased: writerReleased };
-          assert.equal(originalApp.exitCode, 0, 'original captured app exits normally before second spawn');
-          assert.equal(originalApp.signalCode, null);
-          assert.deepEqual(remaining, [], 'no group cleanup fallback before cold Resume');
-          assert.equal(hostAbsent, true); assert.equal(writerReleased, true); assertFirstResumeMetadataAbsent(evidence);
-          const postQuit = await readDesktopNativeStopSessions(fixture.root);
-          const definition = object((object(JSON.parse(await readFile(fixture.profilePath, 'utf8'))).teams as unknown[])[0]);
-          const descriptorMember = object((definition.members as unknown[]).find(value => object(value).memberId === object(sourceSessions[0]!.binding).memberId));
-          const { teamName: _descriptorTeamName, ...descriptorBinding } = object(descriptorMember.delivery);
-          // Original stopped sessions stay immutable; Quit may seal the never-opened descriptor.
-          for (const original of stopped) {
-            const matches = postQuit.filter(session => isDeepStrictEqual(session.binding, original.binding));
-            assert.equal(matches.length, 1); assert.deepEqual(matches[0], original);
-          }
-          const added = postQuit.filter(session => !stopped.some(original => isDeepStrictEqual(session.binding, original.binding)));
-          assert.ok(added.length <= 1, 'only one exact static descriptor tombstone may be added');
-          for (const tombstone of added) {
-            assert.deepEqual(tombstone.binding, descriptorBinding);
-            assert.equal(tombstone.phase, 'closed'); assert.equal(tombstone.custody, 'released'); assert.equal(tombstone.sealed, true);
-            assert.deepEqual(tombstone.inputs, []); assert.deepEqual(tombstone.interactions, []);
-            assert.equal(tombstone.config, null); assert.equal(tombstone.openFingerprint, null); assert.equal(tombstone.nativeReady, false);
-          }
-          assert.equal(resumeModel.observations.length, 8, 'Quit cannot release another native input');
-          await bounded(cdp.close(), 3000, 'disconnect original cold Resume renderer'); cdp = undefined;
-          assert.equal(await portOccupied(), false);
-          for (const [path, sha] of [[fixture.node, fixture.pins.nodeSha256], [fixture.hostEntry, fixture.pins.hostEntrySha256],
-            [fixture.profilePath, fixture.pins.profileSha256], [fixture.descriptorPath, fixture.pins.descriptorSha256]])
-            assert.equal(await fileDigest(path!), sha, 'same captured fixture pin before cold startup');
-          const second: Record<string, unknown> = { status: 'INCOMPLETE' }; proof.secondEpoch = second;
-          app = spawn(invocation[0]!, invocation.slice(1), { cwd: repo, env: fixture.appEnvironment,
-            stdio: ['ignore', 'pipe', 'pipe'], detached: true });
-          appEpochHandles.push(app); group = app.pid ?? 0; spawnError = false; appIdentity = ''; hostPid = undefined; quitRequested = false;
-          app.once('error', () => { spawnError = true; }); app.stdout.pipe(log, { end: false }); app.stderr.pipe(log, { end: false });
-          assert.ok(group > 0 && group !== originalGroup);
-          appIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='], { encoding: 'utf8', timeout: 3000 }).trim();
-          second.app = { pid: app.pid, processGroup: group, identity: appIdentity, invocation };
-          const connected = await connectCapturedDesktopApp({ app, group, spawnError: () => spawnError, packed: undefined, cdpLibrary, evidence: second });
-          cdp = connected.cdp;
-          await attachRendererDiagnostics(cdp, String(connected.target.url), second, {
-            remainingMs: connected.startupBudgetMs - (performance.now() - connected.startupStarted),
-            assertOwnedRenderer: () => assertOwnedCdpListener(group) });
-          await verifyCapturedDesktopBinding({ cdp, group, mode, fixture, evidence: second, repo, packed: undefined });
-          const currentHosts = groupMembers(group).filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
-          assert.equal(currentHosts.length, 1, 'one new standalone Host after cold discovery');
-          assert.notEqual(currentHosts[0]!.pid, originalHost.pid); hostPid = currentHosts[0]!.pid; second.host = currentHosts[0];
-          assert.deepEqual(await readDesktopNativeStopSessions(fixture.root), postQuit);
-          const coldCheckpoint = await checkpoint(fixture.root, sourceSessions[0]!, resumeProvider);
-          assert.equal(coldCheckpoint.payloadFileSha256, originalCheckpoint.payloadFileSha256);
-          assert.equal(coldCheckpoint.historySha256, originalCheckpoint.historySha256, 'same native history after cold Host startup');
-          second.checkpointAndHistoryUnchanged = true;
-          assert.equal(resumeModel.observations.length, 8, 'cold startup cannot release a prompt');
-          assert.deepEqual(resumeModel.failures, []);
-          second.status = 'PASS'; proof.status = 'PASS'; return cdp;
+          return restartCapturedDesktopApp({
+            app, cdp, group, fixture, repo, mode, evidence, cdpLibrary,
+            model: openCodeLifecycleModel ?? codexResumeModel ?? conversationModel!,
+            provider: openCodeLifecycleMode ? 'opencode' : codexResumeMode ? 'codex' : 'claude',
+            boundary: extensionsUiMode ? 'extensions-before-launch' : 'resume-after-stop',
+            markQuitRequested: () => { quitRequested = true; },
+            adoptRenderer: (next, nextHostPid) => { cdp = next; if (nextHostPid !== undefined) hostPid = nextHostPid; },
+            spawnNext: () => {
+              app = spawn(invocation[0]!, invocation.slice(1), { cwd: repo, env: fixture.appEnvironment,
+                stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+              appEpochHandles.push(app); group = app.pid ?? 0; spawnError = false; appIdentity = '';
+              hostPid = undefined; quitRequested = false;
+              app.once('error', () => { spawnError = true; });
+              app.stdout.pipe(log, { end: false }); app.stderr.pipe(log, { end: false });
+              assert.ok(group > 0);
+              appIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='],
+                { encoding: 'utf8', timeout: 3000 }).trim();
+              return { app, group, identity: appIdentity, invocation, spawnError: () => spawnError };
+            },
+          });
         } } : {}),
       });
     } else if (readbackMode) {
@@ -697,12 +609,13 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     const { remaining, cleanupFailure, capturedHostAbsent, hostPid: cleanedHostPid } =
       await cleanupCapturedDesktopApp({ app, group, fixture, evidence, appIdentity, hostPid, packedRelaunchMode });
     hostPid = cleanedHostPid;
-    if (evidence.coldResumeBoundary && object(evidence.coldResumeBoundary).secondEpoch) object(evidence.coldResumeBoundary).secondCleanup = {
+    const coldBoundary = evidence.coldResumeBoundary ?? evidence.coldExtensionBoundary;
+    if (coldBoundary && object(coldBoundary).secondEpoch) object(coldBoundary).secondCleanup = {
       processGroup: group, remaining, appExitCode: app.exitCode, appSignalCode: app.signalCode, capturedHostAbsent,
       ...(cleanupFailure ? { cleanupFailure } : {}),
     };
     evidence.cleanup = {
-      ...(evidence.coldResumeBoundary ? { scope: object(evidence.coldResumeBoundary).secondEpoch ? 'second captured app epoch; firstCleanup retained separately' : 'original epoch; second spawn refused' } : {}),
+      ...(coldBoundary ? { scope: object(coldBoundary).secondEpoch ? 'second captured app epoch; firstCleanup retained separately' : 'original epoch; second spawn refused' } : {}),
       processGroup: group,
       remaining,
       appExitCode: app.exitCode,

@@ -4,6 +4,7 @@ import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 
 import { captureNativeClaudeFile } from "../../packages/legacy-agent-host/dist/extensions/captureNativeClaudeFile.js";
+import { runtimeDigest } from "../../packages/legacy-agent-host/dist/runtime/identity.js";
 import {
   desktopBackendEnvironment,
   digest,
@@ -29,6 +30,15 @@ export interface NativeExtensionProofSelection {
   nativeConfig: string;
   neighborPath: string;
   neighborSha256: string;
+  /** Stable namespace only: capture, generation and runtime request IDs are deliberately excluded. */
+  runtimeNamespaceSha256?: string;
+}
+
+export function nativeExtensionNamespaceDigest(profile: Pick<ClaudeManagementProfile,
+  "cwd" | "executable" | "accountBinding" | "environment" | "settingSources">): string {
+  return runtimeDigest({ cwd: profile.cwd, executable: profile.executable,
+    accountBinding: profile.accountBinding, environment: profile.environment,
+    settingSources: profile.settingSources });
 }
 
 /** Original pinned native CLI, explicit TEST environment, no shell or ambient credential inheritance. */
@@ -54,6 +64,7 @@ export function extensionNativeCli(
 /** Overlay only this issuer's fresh TEST fixture. Marketplace setup is an actual native CLI action. */
 export async function prepareDesktopNativeExtensionsFixture(
   fixture: Fixture,
+  options: { sameRuntimeNamespace?: true } = {},
 ): Promise<Fixture> {
   assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, "1");
   assert.ok(basename(fixture.root).startsWith("TEST-desktop-backend-"));
@@ -64,12 +75,19 @@ export async function prepareDesktopNativeExtensionsFixture(
     sha256,
     "ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f",
   );
+  const hostProfile = JSON.parse(
+    await readFile(fixture.profilePath, "utf8"),
+  ) as TeamHostProfile;
+  const runtime = options.sameRuntimeNamespace ? hostProfile.runtime?.members[0] : undefined;
+  if (options.sameRuntimeNamespace) {
+    assert.equal(hostProfile.runtime?.members.length, 1);
+    assert.equal(runtime?.provider, "claude");
+    assert.equal(hostProfile.teams[0]!.members[0]!.role, "lead");
+  }
   const selected = join(fixture.root, "native-extensions");
   for (const path of [
     selected,
-    join(selected, "home"),
-    join(selected, "config"),
-    join(selected, "tmp"),
+    ...(!runtime ? [join(selected, "home"), join(selected, "config"), join(selected, "tmp")] : []),
     join(selected, "neighbor"),
   ])
     await mkdir(path, { mode: 0o700 });
@@ -82,7 +100,7 @@ export async function prepareDesktopNativeExtensionsFixture(
       flag: "wx",
     },
   );
-  const profile: ClaudeManagementProfile = {
+  let profile: ClaudeManagementProfile = {
     provider: "claude",
     sdkRevision: "0.3.305",
     profileId: "TEST-native-extensions",
@@ -111,6 +129,35 @@ export async function prepareDesktopNativeExtensionsFixture(
       NO_COLOR: "1",
     },
   };
+  let runtimeNamespaceSha256: string | undefined;
+  if (runtime) {
+    assert.equal(runtime.provider, "claude");
+    if (runtime.provider !== "claude") throw new Error("TEST extension consumption requires Claude");
+    assert.deepEqual(runtime.executable, { path: executable, sha256 });
+    assert.equal(runtime.cwd, join(fixture.root, "workspace"));
+    const management = hostProfile.management?.filter(row => row.provider === "claude");
+    assert.equal(management?.length, 1);
+    const original = management![0]!;
+    if (original.provider !== "claude") throw new Error("Original Claude management profile missing");
+    assert.equal(original.configNamespace, "custom-directory");
+    assert.equal(original.accountBinding, runtime.accountBinding);
+    assert.deepEqual(original.executable, runtime.executable);
+    assert.equal(original.cwd, runtime.cwd);
+    assert.deepEqual(original.environment, runtime.environment);
+    for (const name of ["HOME", "CLAUDE_CONFIG_DIR", "TMPDIR"] as const) {
+      const value = runtime.environment[name];
+      assert.ok(value?.startsWith(fixture.root + "/"));
+      assert.equal(await realpath(value), value);
+    }
+    profile = { ...original, settingSources: ["user", "project", "local"],
+      environment: { ...runtime.environment, GIT_CONFIG_NOSYSTEM: "1",
+        GIT_CONFIG_GLOBAL: "/dev/null", GIT_TERMINAL_PROMPT: "0" } };
+    runtime.environment = { ...profile.environment };
+    runtime.nativeOptions = { ...runtime.nativeOptions, settingSources: [...profile.settingSources!] };
+    runtimeNamespaceSha256 = nativeExtensionNamespaceDigest(profile);
+    assert.equal(nativeExtensionNamespaceDigest({ ...runtime,
+      settingSources: runtime.nativeOptions.settingSources }), runtimeNamespaceSha256);
+  }
   const setup: NativeExtensionProofSelection["setup"] = [];
   const args = [
     "plugin",
@@ -125,25 +172,16 @@ export async function prepareDesktopNativeExtensionsFixture(
     outcome: "observed-exit-0",
     outputSha256: digest(output),
   });
-  const hostProfile = JSON.parse(
-    await readFile(fixture.profilePath, "utf8"),
-  ) as TeamHostProfile;
   hostProfile.management = [profile];
   const profileBytes = JSON.stringify(hostProfile);
   await writeFile(fixture.profilePath, profileBytes, { mode: 0o600 });
   const descriptor = JSON.parse(await readFile(fixture.descriptorPath, "utf8"));
   descriptor.owners[0].profile.env.LEGACY_AGENT_HOST_PROFILE_SHA256 =
     digest(profileBytes);
-  descriptor.management = [
-    {
-      runtimeId: "claude",
-      owner: descriptor.defaultOwner,
-      contextId: "local",
-      projectPath: null,
-      profileId: profile.profileId,
-      configRevision: profile.configRevision,
-    },
-  ];
+  descriptor.management = (runtime ? [null, profile.cwd] : [null]).map(projectPath => ({
+    runtimeId: "claude", owner: descriptor.defaultOwner, contextId: "local", projectPath,
+    profileId: profile.profileId, configRevision: profile.configRevision,
+  }));
   const descriptorBytes = JSON.stringify(descriptor);
   await writeFile(fixture.descriptorPath, descriptorBytes, { mode: 0o600 });
   Object.assign(fixture.pins, {
@@ -166,6 +204,7 @@ export async function prepareDesktopNativeExtensionsFixture(
     nativeConfig: captureNativeClaudeFile(profile, () => {}).path,
     neighborPath,
     neighborSha256: await fileDigest(neighborPath),
+    ...(runtimeNamespaceSha256 ? { runtimeNamespaceSha256 } : {}),
   };
   await writeFile(
     join(fixture.root, "native-extensions-selection.json"),

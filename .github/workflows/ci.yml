@@ -1143,6 +1143,84 @@ jobs:
           console.log(JSON.stringify({ status: receipt.status, receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
             scope: 'Actual native commands, original Desktop controls, Stop and reload; finite localhost inference only' }));
           NODE
+      - name: Verify UI-installed plugins and skills in the same native namespace
+        if: matrix.mode == 'native-create-ui' && !matrix.variant
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: native-launch-ui
+          LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI: '1'
+          LEGACY_DESKTOP_COMMANDS_UI: ''
+          LEGACY_DESKTOP_SCHEDULE_UI: ''
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-native-extension-consumption.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-desktop-native-extension-consumption.log'), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'one original extension consumption journey, no retry');
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const r = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
+          assert.equal(r.mode, 'native-launch-ui'); assert.equal(r.status, 'PASS');
+          assert.equal(r.sourceFreezeFailure, undefined);
+          assert.deepEqual(r.selectedSourceHashesAfterFlow, r.selectedSourceHashesBeforeApp);
+          assert.equal(r.cleanup.capturedHostAbsent, true); assert.deepEqual(r.cleanup.remaining, []);
+          assert.equal(r.nativeExtensionInstallUi.status, 'PASS');
+          assert.equal(r.nativeExtensionInstallUi.completedOriginalCommandIds.length, 1);
+          assert.equal(r.nativeExtensionUninstallUi.status, 'PASS');
+          assert.equal(r.nativeExtensionUninstallUi.completedOriginalCommandIds.length, 2);
+          assert.equal(new Set(r.nativeExtensionUninstallUi.completedOriginalCommandIds).size, 2);
+          assert.ok(r.nativeExtensionUninstallUi.completedOriginalCommandIds.includes(r.nativeExtensionInstallUi.completedOriginalCommandIds[0]));
+          const skills = r.nativeExtensionSkillsUi;
+          assert.equal(skills.status, 'PASS');
+          assert.deepEqual(skills.mutations.map(row => row.scope), ['user', 'project', 'project']);
+          assert.equal(new Set(skills.mutations.map(row => row.commandId)).size, 3);
+          const cold = r.coldExtensionBoundary;
+          assert.equal(cold.status, 'PASS'); assert.equal(cold.secondEpoch.status, 'PASS');
+          assert.equal(cold.firstCleanup.appExitCode, 0); assert.deepEqual(cold.firstCleanup.remaining, []);
+          assert.equal(cold.firstCleanup.capturedHostAbsent, true); assert.equal(cold.firstCleanup.writerLockReleased, true);
+          assert.equal(cold.secondEpoch.originalMutationRecordsUnchanged.length, 4);
+          assert.equal(cold.secondCleanup.appExitCode, 0); assert.equal(cold.secondCleanup.appSignalCode, null);
+          assert.equal(cold.secondCleanup.capturedHostAbsent, true); assert.deepEqual(cold.secondCleanup.remaining, []);
+          assert.equal(r.launchDialogProof.coldStartupBeforeFirstLaunch, true);
+          assert.equal(r.launchDialogProof.status, 'PASS'); assert.equal(r.launchDialogProof.stop.releasedBeforeQuit, true);
+          assert.equal(r.relaunchDialogProof.status, 'PASS'); assert.equal(r.relaunchDialogProof.stop.releasedBeforeQuit, true);
+          const p = r.nativeExtensionConsumption;
+          assert.equal(p.status, 'PASS'); assert.match(p.namespaceSha256, /^[a-f0-9]{64}$/u);
+          assert.equal(p.namespaceSha256, skills.namespaceSha256); assert.equal(p.sameNamespaceSha256, p.namespaceSha256);
+          assert.equal(p.installedPlugin.id, 'frontend-design@claude-plugins-official');
+          assert.equal(p.installedPlugin.scope, 'user'); assert.ok(p.installedPlugin.version);
+          assert.match(p.installedPlugin.sourceSha256, /^[a-f0-9]{64}$/u);
+          assert.deepEqual(p.commands.map(row => row.phase), ['user-skill', 'project-skill', 'plugin']);
+          assert.equal(new Set(p.commands.map(row => row.inputId)).size, 3);
+          assert.equal(new Set(p.commands.map(row => row.commandId)).size, 3);
+          assert.equal(p.firstInputs.length, 4);
+          assert.deepEqual(p.nativeRequests.map(row => row.phase), ['user-skill', 'user-skill', 'project-skill', 'project-skill', 'plugin', 'plugin']);
+          assert.deepEqual(p.nativeRequests.map(row => row.step), [0, 1, 0, 1, 0, 1]);
+          for (const row of p.nativeRequests) {
+            assert.equal(row.nativeBodyObserved, true); assert.equal(row.requestedModel, 'claude-opus-4-6');
+            assert.equal(row.sourceSha256, p.commands.find(command => command.phase === row.phase).sourceSha256);
+          }
+          for (const name of ['/test-native-user-extension', '/test-native-project-extension']) {
+            assert.ok(p.nativeCatalogBefore.includes(name)); assert.ok(p.nativeCatalogAfter.includes(name));
+          }
+          assert.ok(p.nativeCatalogBefore.includes('/frontend-design:frontend-design'));
+          assert.equal(p.nativeCatalogAfter.includes('/frontend-design:frontend-design'), false);
+          assert.equal(p.originalCommandsRetained, true); assert.equal(p.noReplayAfterUninstall, true);
+          assert.equal(p.uninstalledPluginAbsentFromNewQuery, true); assert.equal(p.bothNativeRunsReleased, true);
+          assert.notDeepEqual(p.firstBinding, p.secondBinding);
+          console.log(JSON.stringify({ status: r.status, receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
+            scope: 'Same native namespace: original UI Install/Create/Edit, cold startup, expanded native commands, Uninstall and new Query' }));
+          NODE
       - name: Verify current native mixed history restore after Codex Desktop acceptance
         if: ${{ success() && matrix.resume_provider == 'codex' }}
         env:
@@ -1200,6 +1278,7 @@ jobs:
             ${{ runner.temp }}/stage1-native-commands.log
             ${{ runner.temp }}/stage1-native-commands-inputs.json
             ${{ runner.temp }}/stage1-desktop-native-commands.log
+            ${{ runner.temp }}/stage1-desktop-native-extension-consumption.log
             /private/tmp/TEST-native-claude-compaction-*/receipt.json
             /private/tmp/TEST-native-claude-compaction-*/host-stderr.log
             opencode-v2-desktop-inputs.json
@@ -1216,6 +1295,9 @@ jobs:
             /private/tmp/TEST-desktop-backend-*/workspace/**
             /private/tmp/TEST-desktop-backend-*/native-claude/config/projects/**/*.jsonl
             /private/tmp/TEST-desktop-backend-*/cold-resume-epoch1-bundles/**
+            /private/tmp/TEST-desktop-backend-*/cold-extension-epoch1-bundles/**
+            /private/tmp/TEST-desktop-backend-*/native-claude/config/skills/**
+            /private/tmp/TEST-desktop-backend-*/native-claude/config/plugins/installed_plugins.json
             /private/tmp/TEST-desktop-backend-*/home/Downloads/**
             /private/tmp/TEST-desktop-backend-*/native-codex/config/config.toml
             /private/tmp/TEST-desktop-backend-*/native-codex/config/sessions/**
