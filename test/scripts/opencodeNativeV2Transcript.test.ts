@@ -75,7 +75,7 @@ describe('bounded public V2 transcript failure observation', () => {
     const source = await readFile('scripts/e2e/opencode-native-windows-full.ts', 'utf8');
     const capture = source.indexOf("command: 'opencode.getRuntimeTranscript'");
     const stop = source.indexOf('await stopped(app, recordStop);', capture);
-    const after = source.indexOf("proof.runIds.at(-1)!, 'after_original_stop'", stop);
+    const after = source.indexOf("proof.runIds.at(-1)!, model, 'after_original_stop'", stop);
     expect(capture).toBeGreaterThan(0); expect(stop).toBeGreaterThan(capture); expect(after).toBeGreaterThan(stop);
     expect(source).toContain('capture.inputFileRemoved = await unlink(inputFile)');
     expect(source).toContain("await execute(bun, ['--no-env-file', `--config=${bunConfig}`, entry,");
