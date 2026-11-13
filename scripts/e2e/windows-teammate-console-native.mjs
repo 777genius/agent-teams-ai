@@ -275,7 +275,8 @@ async function runCustodyProbe() {
     process.stdout.write(JSON.stringify({ reportPath, ...report }) + '\n');
     assert.equal(teammateStillAlive, false,
       'Non-detached direct teammate survived app force-kill in native Windows process fixture');
-    // A surviving *tool descendant* is explicitly recorded, not misrepresented as a pass.
+    assert.equal(toolStillAlive, false,
+      'Original tool descendant survived app force-kill in native Windows process fixture');
   } finally {
     terminateOwnedTree(app);
     // Cleanup must attempt *both* original PIDs even if the first lookup/kill fails.
