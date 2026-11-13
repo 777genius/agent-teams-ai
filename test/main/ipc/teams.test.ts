@@ -7253,6 +7253,28 @@ describe('ipc teams handlers', () => {
     });
   });
 
+  it('optional CLI Validate matches Create/Launch admission for documented modes and empty values', async () => {
+    const validate = handlers.get(TEAM_VALIDATE_CLI_ARGS)!;
+    // Some supported CLI options are absent from the installed --help output.
+    teamHandlerMocks.getCliHelpOutput.mockResolvedValue('Usage: -p, --print');
+
+    const allowed = await validate({ sender: { send: vi.fn() } } as never,
+      '--max-turns 5 --teammate-mode tmux');
+    expect(allowed).toMatchObject({ success: true, data: { valid: true } });
+
+    const noValue = await validate({ sender: { send: vi.fn() } } as never, '--max-turns=');
+    expect(noValue).toMatchObject({
+      success: true, data: { valid: false, missingValueFlag: '--max-turns' },
+    });
+
+    const protectedMode = await validate({ sender: { send: vi.fn() } } as never,
+      '--teammate-mode unsupported');
+    expect(protectedMode).toMatchObject({
+      success: true, data: { valid: false, invalidFlags: ['--teammate-mode'] },
+    });
+    expect(teamHandlerMocks.getCliHelpOutput).toHaveBeenCalledTimes(3);
+  });
+
   // Simulated desktop submits that skip the optional Validate button.
   describe('extraCliArgs admission on desktop create and launch', () => {
     const blockedArgs = [
