@@ -945,9 +945,11 @@ Existing Windows TEST fixture теперь снимает закрытый snaps
 не засчитывается как native completion. Исходная ошибка/aggregate и все35s/7s/45s bounds сохранены.
 Два diagnostic files прошли независимый source/privacy review; compiler/native verification ещё pending.
 
-§26 helper также подготовлен и source-reviewed: shared original HANDLE/Job lifetime, отдельные bounded live
-records и terminal metadata, monotonic scope keys, exact request replay, deadline непосредственно перед
+§26 helper также подготовлен и source-reviewed: shared original HANDLE/Job lifetime, bounded records с retirement
+только unregistered root-exit+Job0, monotonic scope keys, exact request replay, deadline непосредственно перед
 destructive dispatch. Existing TEST scenario проверяет80 последовательных завершённых children при live cap64,
 old-key retirement и чужой живой service. Это не имитация физического PID reuse при удержанном HANDLE.
+Registered terminal scope пока удерживает HANDLE до releaseRegistration; отдельный owner-local tombstone без
+HANDLE относится к будущему §24.3–4, а не к уже подготовленному §26 helper.
 Production scoped Windows capability не включена. После actual vendor PASS остаются typed wire, async Team fence,
 V2 custody, original Processes UI, packaged evidence и отдельный положительный cold-owner gate §24.
