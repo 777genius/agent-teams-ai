@@ -338,6 +338,16 @@ test('initial prompt belongs to the original launch intent across a lost reply a
       const f = await setup(t, ['A']);
       const original = f.make();
       let callbacks = 0;
+      if (prompt === 'TEST scheduled instructions') {
+        const path = `launches/${runtimeDigest(f.definition.launchId)}.json`;
+        const before = f.store.read(path);
+        assert.throws(() => original.launch.start('TEST-schedule-start', undefined,
+          () => { callbacks++; }, 'TEST invalid\0prompt'),
+        error => error instanceof TeamLaunchError && error.code === 'invalid');
+        assert.deepEqual(f.store.read(path), before, 'invalid prompt cannot persist a start intent');
+        assert.equal(callbacks, 0);
+        assert.equal(f.opens.size, 0);
+      }
       assert.throws(() => original.launch.start('TEST-schedule-start', undefined, () => {
         callbacks++;
         throw new Error('TEST lost reply before native allocation');

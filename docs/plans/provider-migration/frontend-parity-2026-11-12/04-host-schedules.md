@@ -353,3 +353,265 @@ ephemeral transcript и original cleanup/source freeze проверены тем
 4. Existing always-upload удерживает оригинальные TEST receipts/logs. Следующий точный source SHA
    квалифицируется полным обязательным CI и этим UI journey; P04 остаётся открытым до положительного результата.
    Дополнительные однотипные unit tests на удалённые disabled props не добавляются.
+
+
+## R9 — исправления подтверждённых lifecycle замечаний ревью
+
+Сверка выполнена по parity `1bfccb9`, PR1186 threads `PRRT_kwDORVTEtM622qo8`,
+`PRRT_kwDORVTEtM624vcz`, `PRRT_kwDORVTEtM625-oR`. Это реальные source gaps;
+предыдущий native finite PASS не проверял эти interleavings.
+
+1. **Desktop Stop/Delete должны дойти до исходного Host occurrence.**
+   `createDesktopHostSchedules.ts` уже удерживает original ports и реализует
+   `cancel/cancelAll`. В `src/main/ipc/agentBackend.ts` экспортировать этот же
+   объект, а `src/main/index.ts` передавать его целиком в `createSchedulerService`.
+   Не создавать второй owner/map или дополнительную отмену команды.
+   Pause сохраняет прежнюю семантику: запрещает будущие ticks, текущий принятый run продолжается.
+2. **Поздний repository read не должен создавать run после Stop.**
+   В `SchedulerService.ts` проверять captured lifecycle epoch после read, до
+   allocation/locks. Общую часть admission/persist двух существующих путей
+   `triggerNow/onCronTick` вынести в один private method этого же service.
+   Он проверяет epoch до publication и после await; при отказе освобождает
+   только locks своего exact run, не locks нового occurrence. Это удаляет
+   существующий дубликат и укладывается в frozen850, без повышения cap.
+   Stop по-прежнему ждёт existing persistence finalizations.
+3. **Повторная проверка оригинального cleanup может снять held.**
+   `HostScheduledRuns.cancel/close` сохраняют начальный physical cleanup:
+   он нужен, чтобы освободить pending native open. После settlement исходного
+   execute заново сверить результат cleanup того же provider и Runtime
+   closed/released. Подтверждённый результат заменяет прежнее unresolved значение;
+   false/rejection не становятся PASS. Active entry удаляется только при совпадении
+   original map entry и обеих подтверждённых границ. Никакого replay/start,
+   PID lookup, нового provider или переноса authority.
+4. **Минимальные проверки.**
+   Расширить existing Scheduler integration задержанным getSchedule→Stop→read
+   и повторным стартом без утечки lock; existing Host RPC cleanup case —
+   переходом unknown→confirmed без нового input. Сохранить blocked-open case,
+   потому что ожидание pending до initial cleanup привело бы к deadlock.
+   Existing Desktop schedule journey остаётся обязательным для composition wiring.
+
+Круг source: проверены действительные call sites и ownership callback.
+Круг architecture: используется уже существующий lifecycle epoch, original ports,
+Runtime и persistence barrier; новая очередь и unit-матрица не нужны.
+Следующий круг — независимое ревью diff и targeted existing tests, затем exact-head CI.
+
+При выполнении targeted cases разделены два свидетельства: Runtime close/custody и
+дополнительный physical provider cleanup. Recovery case удерживает unresolved только
+во втором, при уже confirmed Runtime; иначе ожидаемый confirmed был бы ложным.
+Прежний case с неизвестными обеими границами остаётся и обязан завершать close с failure.
+
+**Отдельно остаются открытыми** delete-vs-admission, task start после смены legacy run,
+safe unopened Host member и task-first history после explicit rebind. Для них сначала
+сверить original atomic mutation/admission seams и сохранённые target receipts;
+нельзя игнорировать старую незавершённую task ради зелёной проверки.
+
+## R10 — original run при старте task и безопасный unopened Host member
+
+Source audit: parity `1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0`, после review
+R9 выше. Подтверждены PR1186 threads `PRRT_kwDORVTEtM622S2N` (idx20)
+и `PRRT_kwDORVTEtM622qox` (idx26). Source edits выполняются на свежем
+опубликованном root cut с сохранением R9; этот план не меняет delete-admission
+или previous-task history после explicit rebind, у которых отдельные владельцы.
+
+### 1. Сохранить существующий frontend workflow
+
+- Old frontend [SmartScheduleDispatcher](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/schedule/SmartScheduleDispatcher.ts)
+  сохраняет task-first задачу, затем запускает её через прежний task service;
+  non-lead member подключается только после подтверждения offline и readiness.
+- [createSchedulerService](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/src/main/services/schedule/createSchedulerService.ts)
+  уже связывает runtime, provisioning и task API. В
+  [TeamDataService.startTaskByUser](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/src/main/services/team/TeamDataService.ts)
+  последняя board mutation синхронная. Эти две точки достаточны для final guard.
+- Host [recipient admission](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/packages/legacy-agent-host/src/team/expectedTaskRecipient.ts)
+  уже проверяет exact member/run/generation, owner и requireIdle в существующем
+  Team command. Новый RPC, runtime owner, board store или очередь не нужны.
+
+### 2. Закрыть async window перед legacy board.startTask
+
+Сейчас `canStart` читает runtime snapshot, затем ждёт busy/alive predicates.
+Во время ожидания run может смениться; task service сверяет owner/status,
+но не проверяет original run непосредственно перед write.
+
+1. Existing private admission получает `expectedRunId` и синхронный
+   `isCurrent(): boolean`; SmartScheduleDispatcher связывает последний с
+   исходной cancellation closure. Optional admission для ordinary manual Start
+   сохраняется, renderer contract не меняется.
+2. Async preflight проверяет busy/alive, затем свежий runtime snapshot и исходные
+   run/member generation/readiness. Это полезная проверка, но сама по себе не
+   считается atomic admission.
+3. В `createSchedulerService` обернуть тот же admission final guard:
+   исходная cancellation ещё не сработала, existing
+   `apis.runtime.getCurrentRunId(team)` равен `expectedRunId`,
+   `apis.runtime.isTeamAlive(team)` истинен и
+   `provisioning.hasTeamOperationInProgress(team)` ложен.
+   Все эти getters синхронные и принадлежат существующим Main owners.
+4. В `TeamDataService` после последнего await и existing latest task
+   owner/status/active-work checks вызвать этот guard непосредственно перед
+   `board.startTask`. Между ним и write не добавлять await. При изменении run
+   оставить исходную task pending, без Start notification и без новой task.
+5. Host adapter получает тот же `expectedRunId` в existing `recipient` вместе
+   с expectedGeneration. Последующие async reads не дают ему выбрать новый run;
+   final Host command всё равно проверяет исходный recipient атомарно.
+   Cancellation guard проверяется после await, непосредственно перед dispatch.
+
+### 3. Разрешить только действительно attachable unopened member
+
+В [HostSmartScheduleRuntimeAdapter](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/src/features/agent-backend/main/adapters/output/HostSmartScheduleRuntimeAdapter.ts)
+safe unopened runtime сейчас проецируется в registered_only/error. Dispatcher
+поэтому не достигает уже существующего `runtime.open`.
+
+- Использовать один короткий predicate для projection и attach admission:
+  `phase === unopened && custody === owned && !attached && !sealed`.
+  Только этот дополнительный state проецируется как confirmed offline.
+- `attachMember` повторно читает exact member/generation и применяет тот же
+  predicate перед existing runtime.open. Unknown custody, held/sealed/attached
+  и начавшийся runtime не принимаются как безопасный unopened.
+- Dispatcher передаёт в existing `attachMember` optional expected `{runId, generation}`
+  исходного runtime. Host recipient сверяет оба значения перед open; legacy composition
+  синхронно проверяет тот же run, liveness и отсутствие team operation непосредственно
+  перед existing attach call. Это не даёт replacement run принять старую attach попытку.
+- Existing run/generation recipient fencing, original owner guards и readiness
+  перед task creation сохраняются. Не добавлять Restart или переоткрытие старого
+  session. Старые ограничения auto-attach для potentially shared OpenCode lanes
+  и deliberately skipped teammates сохраняются.
+
+### 4. Узкие existing проверки
+
+- Расширить existing TeamDataService scheduled admission case: async preflight
+  возвращает true, но original run/cancel guard меняется перед final board write;
+  task остаётся pending, board.startTask и notification отсутствуют.
+- Existing SmartScheduleDispatcher race case проверяет захваченный expectedRunId,
+  cancellation guard и fresh runtime read после awaited predicates. Не писать
+  отдельные тесты на каждую строку composition.
+- В existing schedule test файле добавить один bounded Host adapter case:
+  unopened/owned/unattached/unsealed → offline → один original runtime.open;
+  uncertain/sealed/attached states не открываются. Проверить, что foreign run
+  при сохранённой generation не создаёт task.start или runtime.open. Это controlled boundary proof,
+  не actual native или Desktop PASS.
+- Existing filesystem/Host schedule E2E, focused strict Main types, fast lint и
+  source cap проходят на итоговом cut. Whole-project CI и actual Desktop schedule
+  journey из R8 остаются обязательными. Не увеличивать frozen file caps и не
+  создавать новый runner, suite или provider fixture ради этих двух замечаний.
+
+Круг 1, source: подтверждены synchronous run/liveness/operation-lock getters,
+последняя синхронная board mutation и existing Host expectedRecipient guard.
+Круг 2, failure semantics: простой перенос async snapshot не закрывал write window;
+добавлена final synchronous проверка. Safe unopened отделён от unknown/held и от
+runtime, который потребует Restart. Scope ограничен existing admission/projection.
+Следующий круг — независимое plan/diff review, затем existing critical execution.
+
+## R11 — task-first history при обновлении context того же captured resource
+
+PR1186 `PRRT_kwDORVTEtM622qpD`: `resolvePreviousTask` сравнивает весь hostTarget
+и отказывает после смены contextId ещё до чтения исходной task/receipt.
+Source-круг Profiles: `DesktopBackendFeature.initialize` и
+`BackendOwnerRouter.retain/resolveOwner` сохраняют immutable handle→owner/profile/build/scope;
+`updateSchedule` не меняет teamName. Ordinary explicit Edit/Save может обновить
+context при тех же exact resource refs. Это не перенос в другой physical owner.
+
+1. Для previous task требовать exact `kind, handleId, ownerResourceRef, teamResourceRef`.
+   Разница только в contextId допускается, а read выполняется через **текущий**
+   captured target и его original current-authority guard. Старый context не даёт
+   нового разрешения; lookup не dispatch-ит прежний command.
+2. Не фильтровать историю по ScheduleRun.status и не пропускать foreign targets:
+   dispatched/completed/failed сами по себе не доказывают завершённость board task.
+   Missing target или разные owner/team resource refs остаются held. Existing API
+   не доказывает логическую тождественность storage после такой owner migration.
+3. Расширить existing HostSchedules.safe-e2e: cold reopen с context A→A2, прежними
+   binding directory/owner/handle/resources и явным Edit/Save rebind. Pending task
+   и lost task-create ACK продолжают блокировать повторную работу; prune-to-1
+   сохраняет ссылку на исходную task. После её настоящего completion разрешается
+   следующий occurrence. Foreign resource refs по-прежнему отказываются.
+4. Новый run field, owner resolver, task copy и общий history migration не нужны.
+   Source-круг подтвердил immutable namespace; architecture-круг исключил
+   молчаливое отбрасывание unfinished tasks и чтение через чужой новый owner.
+   Дальше независимый diff review, existing Host integration и actual Desktop gate.
+
+## R12 — deletion commit прекращает исходный admission до очистки файлов
+
+PR1186 `PRRT_kwDORVTEtM620d1u`, source baseline `522c80d168d698fc6842ee649cc4822406cd2632`.
+В `JsonScheduleRepository.deleteSchedule` metadata уже удалена, но Scheduler узнаёт
+об этом лишь после awaited cleanup runs/logs. Отдельное окно: ранее начатый
+`getSchedule` может вернуть старую запись после удаления. Одна ранняя отмена
+activeRun не закрывает оба случая.
+
+1. Расширить existing `ScheduleRepository.deleteSchedule` optional
+   `onCommitted(): void | Promise<void>`. Json implementation вызывает его сразу
+   после durable удаления metadata и **перед** удалением run/log файлов. Callback
+   awaited; неуспешный metadata write его не вызывает. Existing best-effort
+   file cleanup не становится доказательством native cleanup.
+2. В callback Scheduler инвалидирует исходные незавершённые admissions,
+   отменяет исходный activeRun, удаляет cron/warm-up timers и его locks, затем
+   ждёт original Host cancellation. Ошибка native cleanup видима вызывающему;
+   retained Host port остаётся доступным для повторного подтверждения/Stop.
+   До успешного metadata commit прежняя работа остаётся разрешённой, как в
+   существующем failed-delete persistence regression.
+3. Existing `SchedulerStopBarrier` получает краткоживущие admission markers:
+   `withAdmission(scheduleId, action(isCurrent))`, invalidation по scheduleId
+   и удаление marker в finally. Маркеры существуют только пока выполняется
+   исходное действие; постоянный deleted-ID set, новый scheduler owner/journal не нужны.
+   Охватить trigger/cron от чтения до dispatch, legacy retry fresh-read→dispatch
+   и ожидающий warm-up, чтобы он не запланировал retry после удаления.
+4. `startOccurrence` проверяет marker и lifecycle epoch до allocation и после
+   initial persistence; после await также требуется владение **тем же** activeRun.
+   Устаревший callback не освобождает locks другого occurrence. Existing dispatch
+   cancellation closure продолжает отслеживать original run во время выполнения.
+5. Повторяющийся trigger/cron lock check свести в один private predicate с прежними
+   причинами отказа; этим сохранить frozen cap848 без увеличения лимита и
+   искусственного уплотнения кода. Public renderer API и Pause semantics прежние.
+
+### Проверка двумя проходами
+
+- Source-проход: подтверждены durable deletion boundary, два async окна и already
+  retained Host cancel/cancelAll; ранняя отмена до persistence отклонена, потому что
+  она ломала бы живой schedule при storage failure.
+- Failure-проход: callback awaited, admission invalidation синхронная до первого
+  cleanup await; поздний read и поздний persist не дают нового provider effect.
+  Warm-up/retry не принимают удалённый schedule из прежнего snapshot.
+- Расширить existing `SchedulerService.test.ts` delete case: отдельно удержать
+  getSchedule и initial saveRun, выполнить durable delete с удержанной cleanup tail,
+  затем отпустить старый запрос. Проверить исходную отмену до конца delete promise,
+  отсутствие нового effect/лишнего run и отсутствие оставшихся locks. Existing
+  failed-delete persistence case должен сохранить исходную работу.
+- Существующие schedule integration, focused strict Main types, lint и source cap
+  обязательны; новый suite, fake native PASS или изменение CI timers не нужны.
+  Независимый plan/diff review и exact-head Desktop gate остаются следующими шагами.
+
+### R12, независимый круг: serialization исходного metadata файла
+
+Source review нашло два дополнительных окна; исходный запрет новой scheduler queue
+не запрещает необходимую атомарность существующего JSON repository.
+
+- Legacy retry повторяет existing lockConflict после awaited getSchedule, перед
+  dispatch: за время чтения другой occurrence мог занять schedule/cwd.
+- Finalizer мог прочитать запись до delete и поздним saveSchedule вставить её снова.
+  Поэтому JsonScheduleRepository последовательно выполняет **только** metadata
+  read-modify-write (save/delete) через короткий private promise tail. Это один
+  существующий файл/owner; native execution, reads, run/log I/O и ожидание cleanup
+  в эту секцию не включаются.
+- saveSchedule получает optional mustExist. Все Scheduler изменения уже созданной
+  записи используют этот режим; create сохраняет прежнее создание. Внутри той же
+  metadata секции отсутствующая запись отклоняется до write. Запись, начавшаяся
+  раньше delete, заканчивается до него; поздний update не воскрешает metadata.
+- Delete вызывает синхронную часть onCommitted в секции после durable write,
+  возвращает объект с original cleanup promise, затем await cleanup выполняется
+  **снаружи** секции. Rejected write не отравляет очередь следующих metadata intents;
+  исходный caller всё равно получает ошибку. Ошибка cleanup не откатывает delete.
+- Дополнить existing real Json delete case delayed write/read ordering и отказом
+  stale mustExist update; сохранить failed-persistence test. Original token guards
+  остаются нужны для provider admission, serialization их не заменяет.
+
+- Последний failure-проход: metadata mutations требуют читаемый исходный JSON;
+  read-only UI сохраняет прежний graceful fallback, но parse/I/O error при save/delete
+  не трактуется как пустой store и не вызывает onCommitted. Existing corrupt-JSON
+  case проверяет сохранение bytes/отсутствие callback, concurrent-save case — все5 записей.
+
+### Проверенный implementation cut R10–R12
+
+Изменения выполнены в existing Scheduler/JSON repository/Host adapter/TeamDataService.
+Root повторил75 existing schedule tests, включая real child Host context renewal,
+lost ACK/prune1 и Stop; после strict mutation read ещё17 JSON cases PASS.
+Account первоначально проверил239 existing scheduled admission/integration cases.
+Root focused strict Main types PASS; Profiles independently reviewed final four
+R12 production files и Account R10/R11 boundaries. Source cap848 снижен до847;
+whole-project и actual Desktop schedule CI ещё должны завершиться на published head.

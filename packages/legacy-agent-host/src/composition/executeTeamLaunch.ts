@@ -62,7 +62,7 @@ export function executeTeamLaunch(options: {
   const input = scope
     .extend({
       configuration: launchConfigurationSchema.optional(),
-      initialPrompt: z.string().min(1).max(100_000).refine((value) => Boolean(value.trim())).nullable().optional(),
+      initialPrompt: z.string().min(1).max(100_000).refine((value) => Boolean(value.trim()) && !value.includes('\0')).nullable().optional(),
     })
     .strict()
     .parse(options.payload);

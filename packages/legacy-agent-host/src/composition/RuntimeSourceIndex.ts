@@ -368,9 +368,11 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     try {
       await verifyRuntimeSourceCandidate(seed, input.candidate);
     } catch (error) {
-      if (error instanceof OpenCodeConfigurationError)
-        this.commands.write({ ...receipt, phase: 'held', resourceHeld: false, reason: error.reason });
-      throw error;
+      if (receipt.resourceHeld || !['prepared', 'verified'].includes(receipt.phase)) throw error;
+      (this.options.assertCleanupWriter ?? this.assertWriter)();
+      const reason = error instanceof OpenCodeConfigurationError ? error.reason : 'source-changed';
+      this.commands.write({ ...receipt, phase: 'held', resourceHeld: false, reason });
+      throw new RuntimeSourceAdmissionError(reason);
     }
     if (input.candidate.nativeCli && receipt.phase !== 'verified')
       receipt = await this.verifyNative(seed, input.candidate, receipt);
@@ -524,8 +526,8 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
 
   close(): Promise<void> {
     this.sealed = true;
-    if (!this.closing)
-      this.closing = (async () => {
+    if (!this.closing) {
+      const closing = (async () => {
         const closed = await Promise.all(
           [...this.checks].map(async ([commandId, check]) => {
             const clean = await check.close().catch(() => false);
@@ -547,6 +549,9 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
         await Promise.allSettled([...this.pending.values()].map((entry) => entry.result));
         if (closed.some((value) => !value)) fail('held');
       })();
+      this.closing = closing;
+      void closing.catch(() => { if (this.closing === closing) this.closing = undefined; });
+    }
     return this.closing;
   }
 

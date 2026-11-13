@@ -63,8 +63,12 @@ export class CapturedCodexAuthCommands {
     private readonly intents: CodexAuthIntentStore
   ) {}
 
-  async execute(kind: CredentialKind): Promise<CapturedProviderManagement> {
-    const target = await this.capture(null);
+  async execute(
+    kind: CredentialKind,
+    captured?: CapturedProviderManagement
+  ): Promise<CapturedProviderManagement> {
+    const target = captured ?? (await this.capture(null));
+    if (!target.isCurrent()) throw held();
     const running = this.active.get(target.targetId);
     if (running) {
       if (running.kind !== kind)

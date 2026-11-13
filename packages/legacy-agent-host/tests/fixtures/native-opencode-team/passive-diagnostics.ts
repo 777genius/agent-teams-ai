@@ -1,5 +1,6 @@
 /** TEST-only passive diagnostics for the original source Host on the qualified Node/platform tuples. */
 import { channel } from 'node:diagnostics_channel';
+import { lstat, open, unlink } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import type { ChildProcess } from 'node:child_process';
@@ -49,6 +50,132 @@ export function createPassiveNativeDiagnosticCapture() {
       }
     },
   };
+}
+
+const cpuCategories = ['configuration-read', 'credential-read', 'team-writer-authority',
+  'custody-image', 'provider-transport', 'other', 'idle'] as const;
+type CpuCategory = typeof cpuCategories[number];
+type CpuUnavailable = 'not-started' | 'host-not-exited' | 'missing' | 'file-unavailable' |
+  'invalid-profile' | 'discard-failed';
+type CpuTotals = { category: CpuCategory; exclusiveSamples: number; exclusiveSampledUs: number;
+  inclusiveSamples: number; inclusiveSampledUs: number };
+export type OriginalHostCpuProfile = { status: 'unavailable'; reason: CpuUnavailable; rawDiscarded: boolean } | {
+  status: 'available'; rawDiscarded: boolean; defaultIntervalUs: 1000; profileDurationUs: number;
+  sampledUs: number; unsampledUs: number; nodeCount: number; sampleCount: number;
+  attribution: 'nearest-allowlisted-stack-frame'; categories: CpuTotals[];
+};
+
+/** Closed source families only. No frame name, source URL, path or stack leaves this projection. */
+function cpuCategory(frame: Record<string, unknown>): number | undefined {
+  if (typeof frame.url !== 'string' || frame.url.length > 16_384 ||
+      typeof frame.functionName !== 'string' || frame.functionName.length > 16_384)
+    throw new Error('Invalid TEST CPU frame');
+  const path = frame.url.replaceAll('\\', '/');
+  if (/\/(?:adapters\/providers\/(?:OpenCodeConfigurationSource|OpenCodeV2CapturedConfiguration)|composition\/openCodeSelectedProviderConfiguration)\.[jt]s$/.test(path)) return 0;
+  if (/\/adapters\/providers\/OpenCodeV2(?:CredentialScope|SessionCredential|CredentialOperation)\.[jt]s$/.test(path)) return 1;
+  if (/\/(?:composition\/(?:captureMemberProviderAuthority|teamRoster)|adapters\/profile\/ProfileWriterLease)\.[jt]s$/.test(path) ||
+      /\/composition\/RuntimeTeamCoordinator\.[jt]s$/.test(path) && frame.functionName === 'assertCurrent') return 2;
+  if (/\/(?:adapters\/providers\/(?:OpenCodeV2EmbeddedGraph|OpenCodeV2CustodyReadback|WindowsJobCustody)|process\/(?:readPackagedProcessArtifact|DarwinRegisteredProcess)|composition\/processCustody)\.[jt]s$/.test(path) ||
+      /\/adapters\/providers\/OpenCodeV2EmbeddedMemberProvider\.[jt]s$/.test(path) && frame.functionName === 'attest') return 3;
+  if (/\/features\/provider-session-implementation\/adapters\/opencode-protocol\/[^/]+\.js$/.test(path)) return 4;
+  if (frame.functionName === '(idle)') return 6;
+  return undefined;
+}
+
+function projectCpuProfile(raw: unknown): OriginalHostCpuProfile {
+  const invalid = (): never => { throw new Error('Invalid TEST CPU profile'); };
+  const value = record(raw), start = integer(value.startTime, Number.MAX_SAFE_INTEGER),
+    end = integer(value.endTime, Number.MAX_SAFE_INTEGER);
+  if (start === null || end === null || end <= start || end - start > 3_600_000_000 ||
+      !Array.isArray(value.nodes) || value.nodes.length < 1 || value.nodes.length > 100_000 ||
+      !Array.isArray(value.samples) || !Array.isArray(value.timeDeltas) ||
+      value.samples.length < 1 || value.samples.length > 1_000_000 ||
+      value.samples.length !== value.timeDeltas.length) return invalid();
+  const duration = end - start;
+  const nodes = new Map<number, { category: number | undefined; children: number[] }>();
+  for (const rawNode of value.nodes) {
+    const node = record(rawNode), id = integer(node.id, 1_000_000);
+    if (id === null || id < 1 || nodes.has(id) ||
+        node.children !== undefined && !Array.isArray(node.children)) return invalid();
+    const children: number[] = [];
+    for (const child of (node.children ?? []) as unknown[]) {
+      const selected = integer(child, 1_000_000);
+      if (selected === null || selected < 1) return invalid();
+      children.push(selected);
+    }
+    nodes.set(id, { category: cpuCategory(record(node.callFrame)), children });
+  }
+  const first = integer(record(value.nodes[0]).id, 1_000_000)!;
+  const frames = new Map<number, { exclusive: number; inclusive: number }>();
+  const pending = [{ id: first, exclusive: 5, inclusive: 0 }];
+  while (pending.length) {
+    const current = pending.pop()!, node = nodes.get(current.id);
+    if (!node || frames.has(current.id)) return invalid(); // One connected, acyclic original stack tree.
+    const exclusive = node.category ?? current.exclusive;
+    const inclusive = current.inclusive | (node.category === undefined ? 0 : 1 << node.category);
+    frames.set(current.id, { exclusive, inclusive });
+    for (const id of node.children) pending.push({ id, exclusive, inclusive });
+  }
+  if (frames.size !== nodes.size) return invalid();
+  const categories: CpuTotals[] = cpuCategories.map(category => ({ category,
+    exclusiveSamples: 0, exclusiveSampledUs: 0, inclusiveSamples: 0, inclusiveSampledUs: 0 }));
+  let sampledUs = 0;
+  for (let index = 0; index < value.samples.length; index++) {
+    const id = integer(value.samples[index], 1_000_000), delta = integer(value.timeDeltas[index], duration);
+    const frame = id === null ? undefined : frames.get(id);
+    if (!frame || delta === null || sampledUs + delta > duration) return invalid();
+    sampledUs += delta;
+    const exclusive = categories[frame.exclusive]!;
+    exclusive.exclusiveSamples++; exclusive.exclusiveSampledUs += delta;
+    // A category is counted at most once per stack. Inclusive columns overlap; never sum them.
+    const inclusive = frame.inclusive | 1 << frame.exclusive;
+    for (let category = 0; category < categories.length; category++) if (inclusive & 1 << category) {
+      categories[category]!.inclusiveSamples++; categories[category]!.inclusiveSampledUs += delta;
+    }
+  }
+  return { status: 'available', rawDiscarded: false, defaultIntervalUs: 1000,
+    profileDurationUs: duration, sampledUs, unsampledUs: duration - sampledUs,
+    nodeCount: nodes.size, sampleCount: value.samples.length,
+    attribution: 'nearest-allowlisted-stack-frame', categories };
+}
+
+/** Read after the original process exits. This measures sampled Host stacks, not Bun CPU or request latency. */
+export async function readOriginalHostCpuProfile(path: string | undefined, originalExited: boolean): Promise<OriginalHostCpuProfile> {
+  if (!path) return { status: 'unavailable', reason: 'not-started', rawDiscarded: true };
+  if (!originalExited) return { status: 'unavailable', reason: 'host-not-exited', rawDiscarded: false };
+  let result: OriginalHostCpuProfile = { status: 'unavailable', reason: 'file-unavailable', rawDiscarded: false };
+  let reason: CpuUnavailable = 'file-unavailable';
+  try {
+    const before = await lstat(path);
+    if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 || before.size < 1 ||
+        before.size > 16 * 1024 * 1024) throw new Error('Invalid TEST CPU file');
+    const same = (after: typeof before) => after.isFile() && after.nlink === 1 &&
+      after.dev === before.dev && after.ino === before.ino && after.size === before.size &&
+      after.mtimeMs === before.mtimeMs && after.ctimeMs === before.ctimeMs;
+    const handle = await open(path, 'r');
+    let bytes: Buffer;
+    try {
+      if (!same(await handle.stat())) throw new Error('Changed TEST CPU file');
+      bytes = Buffer.alloc(before.size);
+      let offset = 0;
+      while (offset < bytes.length) {
+        const read = await handle.read(bytes, offset, bytes.length - offset, offset);
+        if (!read.bytesRead) throw new Error('Incomplete TEST CPU file');
+        offset += read.bytesRead;
+      }
+      if (!same(await handle.stat()) || !same(await lstat(path))) throw new Error('Changed TEST CPU file');
+    } finally { await handle.close(); }
+    reason = 'invalid-profile';
+    result = projectCpuProfile(JSON.parse(bytes.toString('utf8')) as unknown);
+  } catch (error) {
+    result = { status: 'unavailable', reason: record(error).code === 'ENOENT' ? 'missing' : reason, rawDiscarded: false };
+  }
+  try { await unlink(path); result.rawDiscarded = true; }
+  catch (error) {
+    if (record(error).code === 'ENOENT') result.rawDiscarded = true;
+    else result = { status: 'unavailable', reason: 'discard-failed', rawDiscarded: false };
+  }
+  return result;
 }
 
 /** Classify the pinned Undici Buffer-pair shape; no raw header value is retained. */

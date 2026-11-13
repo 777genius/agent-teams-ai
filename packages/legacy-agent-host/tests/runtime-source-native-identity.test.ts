@@ -6,7 +6,6 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
-  renameSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -152,6 +151,20 @@ function fixture(t: TestContext, provider: 'codex' | 'claude' | 'opencode' = 'co
     input,
     reads: () => (existsSync(marker) ? readFileSync(marker, 'utf8').trim().split('\n') : []),
   };
+}
+
+async function interruptPrepared(t: TestContext, index: RuntimeSourceIndex, input: unknown): Promise<void> {
+  const write = FileManagementCommandStore.prototype.write;
+  const fault = t.mock.method(FileManagementCommandStore.prototype, 'write',
+    function (this: FileManagementCommandStore, record: Parameters<typeof write>[0]) {
+      write.call(this, record);
+      if (record.kind === 'runtime.source' && record.phase === 'prepared')
+        throw new Error('TEST-interrupted-after-prepared');
+    });
+  try {
+    await assert.rejects(index.publish(input, () => assert.fail('interruption precedes admission')),
+      /TEST-interrupted-after-prepared/);
+  } finally { fault.mock.restore(); }
 }
 
 test('V1 preferences publish once, retain lost-ACK A and apply only the actual selected model limits', async (t) => {
@@ -501,6 +514,23 @@ test(
       { reason: 'unqualified-version' }
     );
     assert.deepEqual(f.reads(), []);
+    const staticRefusals = [];
+    for (const failure of ['missing', 'changed']) {
+      const input = f.input(`TEST-static-${failure}`), path = input.candidate.executable.path;
+      const bytes = readFileSync(path);
+      if (failure === 'missing') rmSync(path);
+      else writeFileSync(path, Buffer.concat([bytes, Buffer.from('\n# changed before admission\n')]));
+      await assert.rejects(f.index.publish(input, () => assert.fail('static refusal cannot admit')),
+        { reason: 'source-changed' });
+      assert.deepEqual(f.index.lookup({ grant: f.grant, commandId: input.commandId }),
+        { commandId: input.commandId, phase: 'held', reason: 'source-changed' });
+      assert.equal(f.store.read(input.commandId)?.resourceHeld, false);
+      assert.deepEqual(f.index.current({ grant: f.grant }), initial);
+      assert.deepEqual(f.reads(), [], 'static refusal precedes every native allocation');
+      writeFileSync(path, bytes, { mode: 0o700 });
+      assert.equal((await f.index.publish(input, () => assert.fail('original refusal is immutable'))).phase, 'held');
+      staticRefusals.push(input);
+    }
     const mismatch = await f.index.publish(
       f.input('TEST-mismatch', f.candidate('TEST-mismatch', '0.162.0', '0.161.0')),
       () => assert.fail('native mismatch')
@@ -516,6 +546,9 @@ test(
     );
     assert.deepEqual(f.index.current({ grant: f.grant }), initial);
     assert.equal(f.store.read('TEST-mutating')?.resourceHeld, false);
+    const repaired = await f.index.publish({ ...staticRefusals[0]!, commandId: 'TEST-explicit-static-repair' }, () => {});
+    assert.equal(repaired.phase, 'published');
+    assert.equal(f.reads().filter(row => row === 'TEST-static-missing').length, 1);
     await f.index.close();
   }
 );
@@ -526,12 +559,8 @@ test(
   async (t) => {
     const f = fixture(t),
       input = f.input('TEST-prepared-recovery');
-    const path = input.candidate.executable.path,
-      parked = path + '.TEST-parked';
-    renameSync(path, parked);
-    await assert.rejects(f.index.publish(input, () => assert.fail('missing original bytes')));
+    await interruptPrepared(t, f.index, input);
     assert.equal(f.store.read(input.commandId)?.phase, 'prepared');
-    renameSync(parked, path);
     await assert.rejects(
       f.index.publish(f.input('TEST-replacement'), () => {}),
       { code: 'held' }
@@ -553,8 +582,7 @@ test(
 test('source recovery refuses missing, changed and ambiguous durable intent snapshots', async (t) => {
   const f = fixture(t),
     input = f.input('TEST-original-intent');
-  rmSync(input.candidate.executable.path);
-  await assert.rejects(f.index.publish(input, () => assert.fail('missing original bytes')));
+  await interruptPrepared(t, f.index, input);
   const receipt = f.store.read(input.commandId)!;
   assert(receipt.kind === 'runtime.source');
   const { publicationJson: _snapshot, ...legacy } = receipt;
@@ -669,6 +697,35 @@ test('unknown cleanup is retained; only the original live handle may settle it w
   assert.equal(runs, 1);
   assert.equal(closes, 2);
   await index.close();
+});
+
+test('a later shutdown can confirm the same retained version check after an unconfirmed close', async (t) => {
+  const f = fixture(t), input = f.input('TEST-close-recovery');
+  let runs = 0, closes = 0, released = false;
+  const index = new RuntimeSourceIndex(f.profile, f.assertWriter, {
+    createNativeCheck: () => ({
+      run: async () => { runs++; return { nativeVersion: '0.162.0' }; },
+      close: async () => { closes++; return released; },
+    }),
+  });
+  assert.equal((await index.publish(input, () => assert.fail('cleanup is unknown'))).phase, 'held');
+  const first = index.close();
+  assert.equal(index.close(), first, 'concurrent close shares the same original attempt');
+  await assert.rejects(first, { code: 'held' });
+  assert.equal(f.store.read(input.commandId)?.resourceHeld, true);
+  released = true;
+  await index.close();
+  assert.equal(f.store.read(input.commandId)?.resourceHeld, false);
+  assert.equal(runs, 1);
+  assert.equal(closes, 3, 'publication and two shutdown observations use the same check');
+  await index.close();
+  assert.equal(closes, 3);
+  await assert.rejects(index.publish({ ...input, commandId: 'TEST-after-close' }, () => {}), { code: 'held' });
+  const cold = new RuntimeSourceIndex(f.profile, f.assertWriter, {
+    createNativeCheck: () => assert.fail('cold recovery cannot repeat the version process'),
+  });
+  assert.equal((await cold.publish(input, () => assert.fail('original outcome stays held'))).phase, 'held');
+  await cold.close();
 });
 
 test(

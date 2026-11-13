@@ -257,9 +257,10 @@ export function createCapturedCodexFeatures(
     async logout() {
       assertActive();
       if (!auth) return unsupported();
+      const original = await capture(null);
       await starting?.catch(() => {});
       await login?.cancel();
-      const target = await auth.execute('credential.forget');
+      const target = await auth.execute('credential.forget', original);
       assertActive();
       return readAccount(target, true);
     },

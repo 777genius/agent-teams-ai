@@ -122,7 +122,7 @@ function recipes(
             member.settings.providerId ?? leadProvider
           ),
       source.recipeSources?.find(row => row.memberId === member.memberId), selection?.scope,
-      source.savedSettings.cwd, selection?.sources
+      runtimeCaptureCwd({ savedSettings: source.savedSettings }, member), selection?.sources
     )
     ),
     source.savedSettings.extraCliArgs
@@ -511,10 +511,11 @@ export function captureRuntimeRecipeSources(profile: TeamHostProfile, team: Pick
 ): NonNullable<RuntimeCaptureSource['recipeSources']> {
   if (!sources) return [];
   if (!roster.savedSettings) refuse('saved-configuration-unavailable');
-  const selected = recipes(profile, team.definition.binding.teamId,
-    { savedSettings: roster.savedSettings, members: roster.members });
+  const source = { savedSettings: roster.savedSettings, members: roster.members };
+  const selected = recipes(profile, team.definition.binding.teamId, source);
   return selected.flatMap((recipe, index) => {
-    const reference = sources.currentForRecipe(team.definition.scope, roster.savedSettings!.cwd, recipe);
+    const reference = sources.currentForRecipe(team.definition.scope,
+      runtimeCaptureCwd(source, source.members[index]!), recipe);
     return reference ? [{ ...reference, memberId: roster.members[index]!.memberId }] : [];
   });
 }

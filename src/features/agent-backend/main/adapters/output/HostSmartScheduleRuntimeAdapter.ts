@@ -17,6 +17,10 @@ import type { CreateTaskRequest, MemberSpawnStatusesSnapshot, ScheduleRun, TeamA
 
 type Value = Extract<Awaited<ReturnType<CapturedHostScheduleTarget['invoke']>>, { ok: true }>['value'];
 
+function safeUnopened(state: BackendRuntimeSnapshot): boolean {
+  return state.phase === 'unopened' && state.custody === 'owned' && !state.attached && !state.sealed;
+}
+
 /** One occurrence, one original owner. All effects remain in existing Team/Runtime ledgers. */
 export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort {
   readonly targetKind = 'host' as const;
@@ -108,7 +112,7 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
       members[member.name] = { memberName: member.name, alive: Boolean(alive), restartable: false, updatedAt,
         ...(selected?.generation ? { runtimeGeneration: selected.generation } : {}),
         livenessKind: ready ? 'confirmed_bootstrap' : alive ? 'registered_only' :
-          (!observed || observed.custody === 'released') ? 'not_found' : 'registered_only',
+          (!observed || observed.custody === 'released' || safeUnopened(observed)) ? 'not_found' : 'registered_only',
         ...(member.settings.providerId ?? roster.savedSettings?.providerId
           ? { providerId: member.settings.providerId ?? roster.savedSettings?.providerId } : {}) };
     }
@@ -146,9 +150,9 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
   }
   async resolvePreviousTask(team: string, run: ScheduleRun): Promise<TeamTask | null> {
     this.assertTeam(team);
-    const original = this.options.target.target;
-    if (!run.hostTarget || (Object.keys(original) as (keyof typeof original)[]).some(key =>
-      run.hostTarget![key] !== original[key]))
+    const original = this.options.target.target, previous = run.hostTarget;
+    if (!previous || (['kind', 'handleId', 'ownerResourceRef', 'teamResourceRef'] as const).some(key =>
+      previous[key] !== original[key]))
       throw new Error('Previous occurrence belongs to another captured team');
     if (run.linkedTaskId) return this.getTask(team, run.linkedTaskId);
     const commandId = run.pendingTaskCommandId ?? run.id;
@@ -203,22 +207,24 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
   }
 
   async startTaskByUser(team: string, taskId: string,
-    admission?: { expectedOwner: string; expectedGeneration?: string; canStart: () => Promise<boolean> }) {
+    admission?: { expectedOwner: string; expectedRunId: string; expectedGeneration?: string;
+      isCurrent: () => boolean; canStart: () => Promise<boolean> }) {
     this.assertTeam(team);
     if (!admission || !(await admission.canStart())) throw new Error('Scheduled recipient changed before start');
     const expectedRecipient = await this.recipient(admission.expectedOwner,
-      { generation: admission.expectedGeneration });
-    if (!(await admission.canStart())) throw new Error('Scheduled recipient changed before start');
+      { runId: admission.expectedRunId, generation: admission.expectedGeneration });
+    if (!(await admission.canStart()) || !admission.isCurrent()) throw new Error('Scheduled recipient changed before start');
     const value = await this.call('task.start', { taskId, notification: 'user', expectedRecipient }, this.id(`start:${taskId}`));
     if (!value || !('operation' in value) || value.operation !== 'task.start' || !('phase' in value) || value.phase !== 'completed')
       throw new Error('Scheduled task start awaits confirmation');
     return { notifiedOwner: 'notifiedOwner' in value && value.notifiedOwner === true };
   }
 
-  async attachMember(team: string, name: string): Promise<void> {
+  async attachMember(team: string, name: string,
+    recipient?: { runId: string; generation?: string }): Promise<void> {
     this.assertTeam(team);
-    const expected = await this.recipient(name), state = await this.runtime(expected.memberId, expected.generation);
-    if (state.phase !== 'unopened' || state.custody === 'unknown' || state.attached)
+    const expected = await this.recipient(name, recipient), state = await this.runtime(expected.memberId, expected.generation);
+    if (!safeUnopened(state))
       throw new Error('Scheduled member cannot be attached without a manual restart');
     await this.call('runtime.open', { memberId: expected.memberId, expectedGeneration: expected.generation }, this.id(`attach:${expected.memberId}`));
   }

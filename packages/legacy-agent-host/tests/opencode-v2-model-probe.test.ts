@@ -195,6 +195,16 @@ test(
     assert.equal(foreign.accountBinding, configured.accountBinding);
     assert.deepEqual(foreign.environment, configured.environment);
     assert.ok(configured.embedded.providerConfiguration);
+    const originalPair = selectOpenCodeV2ManagementModel(configured,
+      { providerId: configured.nativeModel!.providerId, modelId: configured.nativeModel!.modelId });
+    assert.equal(originalPair.variant, configured.variant);
+    for (const providerId of [configured.nativeModel!.providerId, 'TEST-other']) {
+      const fallback = selectOpenCodeV2ManagementModel(configured,
+        { providerId, modelId: `${providerId}/TEST-fallback` });
+      assert.equal(fallback.variant, undefined, 'a credential fallback cannot inherit another model variant');
+      assert.equal(Boolean(fallback.embedded?.providerConfiguration), providerId === configured.nativeModel!.providerId);
+    }
+    assert.equal(configured.variant, 'high', 'selection does not mutate the original profile');
     for (const change of [
       { providerId: '' },
       { modelId: '' },

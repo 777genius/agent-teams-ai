@@ -84,6 +84,7 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
       const text = Buffer.concat(chunks).toString('utf8');
       const body = JSON.parse(text) as Record<string, unknown>;
       assert.equal(body.model, 'TEST-model');
+      assert.equal(body.reasoning_effort, undefined, 'verification fallback does not inherit the captured variant');
       assert.ok(body.tools === undefined || Array.isArray(body.tools) && body.tools.length === 0);
       const refused = requests.length === 0, timedOut = requests.length === 3;
       const authorizationMatched = request.headers.authorization === 'Bearer ' + (refused ? rejectedKey : selectedKey);
@@ -142,7 +143,7 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
         nativeGeneration: 'v2', protocolRevision: '2.1.4', accountBinding: 'TEST-account',
         cwd: join(root, 'workspace'), executable: { path: bun, sha256: digests.bun },
         endpoint: `http://127.0.0.1:${address.port}`, timeoutMs: 30000, modelProbeTimeoutMs: 30000,
-        nativeModel: { providerId: 'TEST-local', modelId: 'TEST-model' },
+        nativeModel: { providerId: 'TEST-local', modelId: 'TEST-unavailable-model' }, variant: 'high',
         environment: { HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'),
           XDG_CONFIG_HOME: join(root, 'config'), XDG_DATA_HOME: join(root, 'data'),
           XDG_CACHE_HOME: join(root, 'cache'), PATH: `${dirname(node)}:/usr/bin:/bin`, NO_COLOR: '1' },

@@ -153,8 +153,11 @@ Vendor access квалифицируется отдельно при выдел�
    Результат A не разрешает запуск B и не сохраняет B default; исходный probe корректно закрывается.
 5. **05-E5 — Custom model.** Объявить модель только в применимом global/project config из 07.
    Проверить модель через существующий UI, затем launch; неполный read-каталог не блокирует её автоматически.
-6. **05-E6 — Variant и сбой.** Выполнить baseline-qualified V2 variant, затем недопустимый variant/отказ доступа.
-   Первый отражён native readback; второй сохраняет старый default и не создаёт ложную успешную проверку.
+6. **05-E6 — Variant и сбой.** Для exact baseline, квалифицирующего variant, выполнить его и подтвердить native readback;
+   затем недопустимый variant/отказ доступа сохраняет старый default и не создаёт ложную успешную проверку.
+   Если exact baseline доказанно не поддерживает variant, сохранить его явный native refusal как отдельный unsupported outcome,
+   а не успешный variant test. Пустой/неполный catalog сам по себе такого доказательства не даёт; положительная проверка
+   owned embedded `2.1.4`, чей native variant contract установлен в §10, остаётся обязательной.
 
 Критичные новые tests: candidate/source revision mismatch, captured/saved branch admission и cancellation boundary.
 Неоднозначный ID, default precedence и successful-write/failed-refresh расширять только при изменении соответствующего validator; existing suites переиспользовать.
@@ -224,6 +227,36 @@ Native engine + observable localhost response отделены от mocked Host 
 - Existing `opencode-v2-embedded-host.native.ts` выбирает B/high через production `applyLaunchConfiguration`; все 11 фактических native model requests, Team tools, attachment и cold restore проверяют этот выбор. Workflow требует новый `modelSelection` receipt и точные probe observations.
 - Эти native journeys подготовлены и typechecked, **ещё не исполнены**. Local socket/Desktop ограничение не обходится; native proof выполняется штатным remote CI после нового D pin. Они не заменяют Desktop Create/Edit/Relaunch acceptance.
 - Ещё открыты: 07-G1/G2 baseline/selected config, project/global Default → actual new launch, custom global/project declarations, full Desktop 05-E1…E6, и проверка конкретных existing Claude/Codex/V1 choices в общем acceptance. Первый slice не объявляет весь P05 завершённым.
+
+## 11. Review исправления credential verification model — 2026-11-13
+
+Источник повторного аудита: exact frontend `522c80d168d698fc6842ee649cc4822406cd2632`,
+PR #1186 threads `PRRT_kwDORVTEtM620TRR` и `PRRT_kwDORVTEtM62675X`.
+Комментарии сверены с исходниками; они сами по себе не считаются доказательством поведения.
+
+### R1 — конкретный разрыв и минимальное изменение
+
+- В `OpenCodeV2CredentialOperation.ts` после native key connection выбирается enabled model текущего provider;
+  fallback может отличаться от `profile.nativeModel`. Сейчас новый pair записывается в копию profile до общего
+  `selectOpenCodeV2ManagementModel`, поэтому старый `variant` ошибочно выглядит выбором для новой модели.
+- Вывести verification profile из **исходного** profile через уже существующий `selectOpenCodeV2ManagementModel`
+  (`composition/openCodeV2ModelSelection.ts`). При смене pair прежний variant снимается; при том же pair сохраняется.
+  Никакого нового effort/default не назначать. Private provider configuration сохраняется только для прежнего provider.
+- Original command/provider, auth publication, native credential witness, cleanup и единственная verification operation
+  остаются у прежних owners. Это исправление derivation до probe, не новый credential retry или повод повторить Connect.
+
+### R2 — повторная проверка границ и доказательства
+
+- Не менять actual выбранную модель команды ради credential check; речь только о конечной проверке уже выбранного key provider.
+  Не превращать unsupported variant в успешную проверку и не переносить private settings чужому provider.
+- Расширить existing selection case в `opencode-v2-model-probe.test.ts`: same pair сохраняет variant,
+  model/provider fallback снимает его, исходный profile неизменен. Не добавлять отдельную mapper suite.
+- В existing `opencode-v2-credentials.native.ts` использовать original pair с отличающимся variant и enabled fallback,
+  сохранив прежние четыре native requests, wrong-key correction, no-tool prompt, lost outcome и cleanup assertions.
+  Actual verification request должен выбрать fallback без чужого variant; remote native result проверяется отдельно от типов.
+- Уточнение 05-E6 выше различает подтверждённый unsupported baseline и обязательный positive `2.1.4` путь.
+  Существующие negative/default-preservation проверки не становятся optional.
+- Статус: план до source change. Независимое review, compile и actual native acceptance ещё не объявлены выполненными.
 
 [M0]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/runtime.lock.json
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/runtime/ClaudeMultimodelBridgeService.ts

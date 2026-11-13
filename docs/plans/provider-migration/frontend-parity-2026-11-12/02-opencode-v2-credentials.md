@@ -446,3 +446,72 @@ Open завершился за 60614ms, modelRequests=0, custody-unresolved, cle
 R6 до implementation проходит независимый peer review и root publication.
 План сохраняется на отдельной docs branch, чтобы текущий R5 native run завершился
 штатно; публикация плана не является compiler, native или Desktop PASS.
+
+### R7 — исправление своего отклонённого ключа после смены runtime source
+
+PR1186 `PRRT_kwDORVTEtM6246fc` повторно сверён с frontend
+`522c80d168d698fc6842ee649cc4822406cd2632`. Комментарий review не считается
+самостоятельным доказательством; ниже — найденные source boundaries и план до кода.
+
+#### Круг 1 — прежнее поведение и точная причина
+
+- В [старом submitConnect](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts)
+  новый явный Connect использует выбранный provider/project/runtime revision; отдельный Forget не вызывается автоматически.
+  [CLI client](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts)
+  передаёт эту операцию existing native connect. Произвольная замена чужого ключа не становится supported workflow.
+- В текущем [ProviderManagementCoordinator](https://github.com/777genius/agent-teams-ai/blob/522c80d168d698fc6842ee649cc4822406cd2632/packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts)
+  `replaceableV2Auth` использует `v2CredentialState`, который предварительно отбирает exact profileId/configRevision.
+  [RuntimeSourceIndex.managementProfile](https://github.com/777genius/agent-teams-ai/blob/522c80d168d698fc6842ee649cc4822406cd2632/packages/legacy-agent-host/src/composition/RuntimeSourceIndex.ts)
+  создаёт новый immutable `runtime-source:<revision>`, сохраняя accountBinding и credential environment.
+  Поэтому исходная qualified rejection исчезает из replacement lookup при неизменённом ключе.
+- [OpenCodeV2CredentialScope.selected/prepare](https://github.com/777genius/agent-teams-ai/blob/522c80d168d698fc6842ee649cc4822406cd2632/packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CredentialScope.ts)
+  уже вычисляет private authDigest из accountBinding, providerId, HOME/data root paths и dev/ino,
+  auth subdirectory identities и выбранного значения. Это готовое доказательство того же account/key;
+  одного resourceId или совпадения текста ключа недостаточно.
+- Existing composition восстанавливает original retained profiles из runtime-source index до чтения command journals.
+  `CredentialCommandOwner` уже сохраняет monotonic finishedAtMs, original target, progress и cleanup;
+  lookup/resume исходного command остаются привязаны к его прежнему target.
+
+#### Круг 2 — минимальное изменение и отказные границы
+
+1. Оставить qualification `connectedV2/v2CredentialState` на exact profile/model. Для replacement сделать
+   отдельный небольшой проход по существующему owner journal в том же Coordinator, без нового store/helper framework.
+2. Отбирать тот же existing resourceId и providerId, исключая только текущий уже admitted commandId.
+   Любой unfinished/unknown outcome в этом namespace запрещает новый intent **даже с тем же key**:
+   простой возврат undefined недостаточен, потому что Scope.prepare допускает повтор неизменённого ключа.
+   Existing ManagementResourceFence и cleanup-held checks продолжают действовать.
+3. Использовать последний однозначный опубликованный auth witness по existing finishedAtMs;
+   более поздний успешный credential mutation отзывает прежнее rejected-publication разрешение.
+   Clean confirmed no-publication rejection не является новой публикацией. Отсутствующее/неоднозначное
+   terminal evidence не превращать в разрешение и не пропускать unknown rows по profileId.
+4. Candidate должен остаться исходным `credential.set`: terminalRejection, probe-completed,
+   verification.ok=false, resourceHeld=false и known terminal time. Найти его original retained V2 profile
+   и проверить original row через `assertManagementTarget` против **этого** профиля.
+   Затем сравнить сохранённый authDigest с новым `OpenCodeV2CredentialScope(profile, provider).capture().digest`.
+   Foreign accountBinding/HOME/data identity/provider, изменённый key или отсутствующий original profile отказываются.
+5. Вернуть только этот existing private digest в прежний Scope.prepare. Его повторный read/current guard
+   и compare-before-publication защищают изменение key между lookup и записью.
+   Сама новая операция использует новый current profile, original command journal и обычный native connect/probe/cleanup.
+   Старый receipt не переписывать, успешную проверку A не переносить на B, старый POST/probe не replay-ить.
+
+#### Existing проверки и завершение
+
+- В `opencode-v2-management-recovery.test.ts` расширить существующий controlled recovery scope:
+  original private auth publication + validated original rejection → новый source profile того же account →
+  новый explicit corrected Connect проходит admission. Проверить cold retained-profile recovery,
+  неизменность original receipt и exact native-admission count. Это boundary proof, не native vendor success.
+- Тем же bounded case проверить отказ при current authDigest/account/namespace mismatch, новой успешной publication
+  и unknown old-profile intent с confirmed cleanup, включая попытку нового ID с прежним key. Ни нового native effect,
+  ни изменения ключа/receipt при отказе. Existing credential-scope tests сохраняют V1/foreign-source и publication guards.
+- После freeze Profiles взять exact native fixture `43bc150c91262074fdd1a7453464e38425227fc5`.
+  В existing `opencode-v2-credentials.native.ts` между HTTP401 и cold corrected Connect опубликовать обычную
+  новую runtime source revision через existing RPC/index на тех же квалифицированных TEST runtime bytes.
+  Private bootstrap TeamHostProfile/profileHash не переписывать; original rejected receipt читать по старому target,
+  corrected Connect и дальнейшие existing steps используют новый target.
+- Сохранить unavailable-model/high → enabled fallback без чужого variant из P05, ровно прежние четыре
+  inference requests, current timeout/effect counts, unknown-intent no-replay и original cleanup assertions.
+  Новый source profile до corrected Connect показывает configured/unverified; он не получает connected по чужой revision.
+- Проверить Host build/test types, существующие coordinator/credential-scope suites, fast lint/source cap;
+  actual native/Host/Desktop outcome подтвердить на следующем штатном exact-source CI cut.
+  Не создавать новую suite/runner, не расширять native budgets и не объявлять native PASS по source review.
+- Следующий круг — independent plan review и root immediate commit/push, затем implementation и независимый diff review.

@@ -7,10 +7,10 @@ import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { gitIdentityResolver } from '../../../../src/main/services/parsing/GitIdentityResolver';
+import { TeamDraftPreflightCollisionError } from '../../../../src/main/services/team/createDraftTeamConfig';
 import { getEffectiveInboxMessageId } from '../../../../src/main/services/team/inboxMessageIdentity';
 import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
-import { TeamDraftPreflightCollisionError } from '../../../../src/main/services/team/createDraftTeamConfig';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamInboxReader } from '../../../../src/main/services/team/TeamInboxReader';
 import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMemberResolver';
@@ -458,9 +458,10 @@ describe('TeamDataService task projection cache invalidation', () => {
   });
 
   it.each([
-    { scenario: 'completed', change: { status: 'completed' as const } },
-    { scenario: 'reassigned', change: { owner: 'bob' } },
-  ])('does not start a task $scenario during asynchronous scheduled admission', async ({ change }) => {
+    { scenario: 'completed', change: { status: 'completed' as const }, stillCurrent: true },
+    { scenario: 'reassigned', change: { owner: 'bob' }, stillCurrent: true },
+    { scenario: 'whose runtime was replaced', change: {}, stillCurrent: false },
+  ])('does not start a task $scenario during asynchronous scheduled admission', async ({ change, stillCurrent }) => {
     const task: TeamTask = {
       id: 'task-1',
       subject: 'Scheduled assignment',
@@ -469,6 +470,7 @@ describe('TeamDataService task projection cache invalidation', () => {
     };
     const taskBoard = {
       getTask: vi.fn(() => task),
+      listTasks: vi.fn(() => [task]),
       startTask: vi.fn(),
     };
     const service = new TeamDataService(
@@ -484,16 +486,23 @@ describe('TeamDataService task projection cache invalidation', () => {
       {} as never,
       (() => ({ taskBoard })) as never
     );
+    const send = vi.spyOn(service, 'sendMessage');
+    let current = true;
     await expect(
       service.startTaskByUser('my-team', task.id, {
         expectedOwner: 'alice',
+        expectedRunId: 'original-run',
+        isCurrent: () => current,
         canStart: async () => {
           Object.assign(task, change);
+          current = stillCurrent;
           return true;
         },
       })
     ).rejects.toThrow('Scheduled task start superseded');
     expect(taskBoard.startTask).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+    if (!stillCurrent) expect(task.status).toBe('pending');
   });
 
   it.each([true, false])(
@@ -526,6 +535,8 @@ describe('TeamDataService task projection cache invalidation', () => {
       });
       const result = await service.startTaskByUser('my-team', original.id, {
         expectedOwner: 'alice',
+        expectedRunId: 'original-run',
+        isCurrent: () => true,
         canStart: async () => {
           currentTask = { ...original, subject: 'Current instruction' };
           return true;
@@ -562,6 +573,8 @@ describe('TeamDataService task projection cache invalidation', () => {
     expect(service.hasActiveOwnedTask('my-team', 'bob')).toBe(false);
     await expect(service.startTaskByUser('my-team', pending.id, {
       expectedOwner: 'alice',
+      expectedRunId: 'original-run',
+      isCurrent: () => true,
       canStart: async () => true,
     })).rejects.toThrow('Scheduled recipient is already working');
     expect(taskBoard.startTask).not.toHaveBeenCalled();

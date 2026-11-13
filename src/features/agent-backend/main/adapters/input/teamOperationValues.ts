@@ -190,7 +190,7 @@ export function parseBackendTeamOperation(
     case 'team.launch.start': {
       const p = object(value, ['launchId', 'rosterRevision', 'configuration', 'initialPrompt']);
       if (p.initialPrompt !== undefined && p.initialPrompt !== null &&
-        (typeof p.initialPrompt !== 'string' || !p.initialPrompt.trim() || p.initialPrompt.length > 100_000))
+        (typeof p.initialPrompt !== 'string' || !p.initialPrompt.trim() || p.initialPrompt.includes('\0') || p.initialPrompt.length > 100_000))
         throw new InvalidBackendOperation();
       return {
         launchId: text(p.launchId),
