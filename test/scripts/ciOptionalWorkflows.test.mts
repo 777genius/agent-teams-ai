@@ -85,3 +85,17 @@ test('policy tests run before main CI planning, without dependency installation'
   );
   assert.doesNotMatch(source, /Install dependencies/);
 });
+
+test('GitHub Pages: production deployment requires the main branch', () => {
+  const source = workflow('landing');
+  const mainOnly = "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'";
+  assert.match(source, /  workflow_dispatch:\n/);
+  for (const location of [
+    /- uses: actions\/configure-pages@v6\n\s+if: ([^\n]+)/,
+    /- uses: actions\/upload-pages-artifact@v5\n\s+if: ([^\n]+)/,
+    /\n  deploy:\n[\s\S]*?\n    if: ([^\n]+)/,
+    /\n  smoke:\n[\s\S]*?\n    if: ([^\n]+)/,
+  ]) {
+    assert.equal(source.match(location)?.[1], mainOnly);
+  }
+});

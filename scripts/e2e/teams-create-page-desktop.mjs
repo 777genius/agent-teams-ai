@@ -1358,6 +1358,24 @@ async function main() {
     await cdp.click(createButtonExpression('Continue creating'));
     await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
       'restored creation draft for config-only save');
+    // Verify the documented debug override survives actual renderer -> IPC ->
+    // persisted metadata. The fixture never launches tmux or a paid provider.
+    await cdp.waitFor(
+      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
+      'hydrated form before native teammate-mode override'
+    );
+    const overrideSettingsExpanded = await cdp.evaluate(
+      `${optionalSettingsButton}?.getAttribute('aria-expanded') === 'true'`
+    );
+    if (!overrideSettingsExpanded) await cdp.click(optionalSettingsButton);
+    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    const allowedTeammateArgs = '--max-turns 5 --teammate-mode tmux';
+    await cdp.fill(customArgsSelector, allowedTeammateArgs);
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === ${JSON.stringify(allowedTeammateArgs)}`,
+      'documented teammate override in real Advanced CLI editor'
+    );
+    await captureScreenshot(cdp, fixture, 'teammate-mode-override');
     // The fixture has no project-list entries. Choose the disposable path
     // through the real UI rather than relying on the app's config-only fallback.
     await cdp.click(createButtonExpression('Custom path'));
@@ -1405,6 +1423,8 @@ async function main() {
     const createdMembers = JSON.parse(await readFile(path.join(teamDir, 'members.meta.json'), 'utf8'));
     assert.equal(createdMeta.version, 1, 'Native team metadata has the wrong schema');
     assert.equal(createdMeta.cwd, fixture.projectPath, 'Saved working directory differs');
+    assert.equal(createdMeta.extraCliArgs, allowedTeammateArgs,
+      'Native create IPC rejected or dropped the documented teammate-mode override');
     // A config-only team may use the implicit lead without additional members.
     // Prove the typed roster metadata exists, not that it contains extra agents.
     assert.equal(createdMembers.version, 1, 'Native roster metadata has the wrong schema');
@@ -1681,6 +1701,7 @@ async function main() {
       manageProvidersNavigationRetainsDraft: true,
       retainedAcrossProcessRestart: true,
       advancedCliRetainedAcrossRename: true,
+      teammateModeOverridePersistedThroughNativeUi: true,
       advancedCliRetainedAcrossPaneSplit: true,
       advancedCliRetainedAcrossBackRemount: true,
       advancedCliRestoresUneditedDefaults: true,
