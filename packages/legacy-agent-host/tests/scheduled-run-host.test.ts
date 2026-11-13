@@ -60,7 +60,7 @@ class ControlledSession implements Session {
   }
 }
 
-async function fixture(t: TestContext, options: { blockOpen?: boolean; unknown?: boolean } = {}) {
+async function fixture(t: TestContext, options: { blockOpen?: boolean; unknown?: boolean; physicalUnknown?: boolean } = {}) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-scheduled-host-')));
   const teamBinding = { backendId: 'TEST-backend', teamId: 'TEST-team', teamName: 'test-scheduled' };
   const profile: TeamHostProfile = { schemaVersion: 1, principalId: 'human',
@@ -86,6 +86,7 @@ async function fixture(t: TestContext, options: { blockOpen?: boolean; unknown?:
   let input: PassThrough, output: PassThrough, sequence = 0, opens = 0;
   const frames = new Map<number, { result?: unknown; error?: unknown }>();
   let release: (() => void) | undefined;
+  let cleanupUnknown = options.unknown === true || options.physicalUnknown === true;
   const composition: NonNullable<Parameters<typeof createTeamHost>[2]> = {
     createProvider: () => assert.fail('standalone execution cannot allocate a Team member'),
     createScheduledProvider(context) {
@@ -99,7 +100,7 @@ async function fixture(t: TestContext, options: { blockOpen?: boolean; unknown?:
         return { driver: session, capabilities: [...context.request.requiredCapabilities] };
       } }, seal() { order.push('provider-sealed'); }, async cleanup() {
         order.push('original-physical-cleanup'); release?.(); release = undefined;
-        return options.unknown !== true;
+        return !cleanupUnknown;
       } };
     },
   };
@@ -137,6 +138,7 @@ async function fixture(t: TestContext, options: { blockOpen?: boolean; unknown?:
     return result.value;
   };
   return { root, profile, binding, contexts, sessions, order, opens: () => opens, rpc, read, request,
+    confirmOriginalCleanup() { cleanupUnknown = false; },
     async restart() { assert.equal((await host.dispose()).cleanup, 'completed'); host = open(); await raw('host.handshake', { protocolVersion: 1 }); },
     dispose: () => host.dispose() };
 }
@@ -218,6 +220,23 @@ test('unknown cleanup is retained and cannot authorize replay or another native 
   await until(async () => (await f.read(later.runId))?.phase !== 'running');
   assert.equal(f.opens(), 1);
   assert.equal((await f.dispose()).cleanup, 'failed');
+  for (const boundary of ['cancel', 'close']) {
+    const recovered = await fixture(t, { physicalUnknown: true }), original = recovered.request('TEST-recover-' + boundary);
+    await recovered.rpc('schedule.run.start', original, original.runId);
+    await until(() => recovered.sessions[0]?.inputs.length === 1);
+    recovered.sessions[0]!.finish();
+    await until(async () => (await recovered.read(original.runId))?.phase === 'held');
+    recovered.confirmOriginalCleanup();
+    if (boundary === 'cancel') {
+      const cancelled = await recovered.rpc('schedule.run.cancel', { runId: original.runId, scheduleId: original.scheduleId });
+      assert.equal(cancelled.value?.cleanup, 'confirmed');
+      assert.equal((await recovered.read(original.runId))?.cleanup, 'confirmed');
+      await recovered.rpc('schedule.run.start', original, original.runId);
+    }
+    assert.equal((await recovered.dispose()).cleanup, 'completed');
+    assert.equal(recovered.opens(), 1, 'cleanup recovery never allocates a replacement');
+    assert.equal(recovered.sessions[0]!.inputs.length, 1, 'original input is never replayed');
+  }
 });
 
 test('independent schedules run concurrently and cancelling one preserves the original neighbor', async t => {

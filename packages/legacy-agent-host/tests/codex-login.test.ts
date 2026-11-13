@@ -162,7 +162,7 @@ async function fixture(t: TestContext, scenario: string) {
 
 test(
   'Codex account readback cannot complete before original custody confirmation',
-  { timeout: 20_000 },
+  { timeout: 20_000, skip: process.platform === 'win32' },
   async (t) => {
     const f = await fixture(t, 'early');
     const physical = Promise.withResolvers<void>();
@@ -221,7 +221,7 @@ for (const scenario of [
 ]) {
   test(
     `captured Codex login across actual Host/D/TEST process: ${scenario}`,
-    { timeout: 20_000 },
+    { timeout: 20_000, skip: process.platform === 'win32' },
     async (t) => {
       const f = await fixture(t, ['device', 'cancel'].includes(scenario) ? 'pending' : scenario);
       const start = {

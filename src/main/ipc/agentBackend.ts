@@ -243,7 +243,7 @@ export function isDesktopAgentBackendSelected(): boolean {
   return active?.selected ?? false;
 }
 
-const desktopHostSchedules = createDesktopHostSchedules(() => active);
+export const desktopHostSchedules = createDesktopHostSchedules(() => active);
 export const captureDesktopHostSchedule = desktopHostSchedules.capture;
 export const createDesktopHostScheduleRuntime = desktopHostSchedules.create;
 

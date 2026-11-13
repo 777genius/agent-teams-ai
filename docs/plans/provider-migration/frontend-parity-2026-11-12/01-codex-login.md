@@ -272,3 +272,154 @@ Actual login Desktop и завершение vendor authentication остают�
 
 Source scope review — PASS. Actual Linux login UI и native authenticated completion
 пока pending; новый код login на основании census-only отказа не требуется.
+
+### R6 — исправления подтверждённых auth recovery замечаний, 2026-11-13
+
+Source audit выполнен на `24ba208ada96020938d59a96d97094d8a37c13e4`;
+auth paths сохранены в parity `1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0`.
+Замечания PR1186 сопоставлены с текущим кодом, а не приняты по тексту review.
+Этот срез не закрывает отдельно указанное в R5 успешное vendor authentication.
+
+#### Исходные контракты и ссылки
+
+- Старый frontend: [CodexLoginSessionManager.cancel](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/features/codex-account/main/infrastructure/CodexLoginSessionManager.ts)
+  захватывает исходную session, убирает observer, отменяет её loginId и закрывает
+  её client; Cancel не выполняет logout.
+- Новый [CapturedCodexLogin](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/src/features/runtime-provider-management/main/adapters/output/CapturedCodexLogin.ts)
+  уже удерживает original target, commandId, private intent и Host receipt.
+  Исправления остаются в этом owner, без второго OAuth engine.
+- [createCapturedCodexFeatures](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/src/features/runtime-provider-management/main/adapters/output/createCapturedCodexFeatures.ts)
+  сохраняет прежние account/quota/readiness DTO;
+  [CapturedCodexAuthCommands](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/src/features/runtime-provider-management/main/adapters/output/CapturedCodexAuthCommands.ts)
+  владеет existing credential intent/recovery.
+- [FileCodexAuthIntentStore](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/src/features/runtime-provider-management/main/infrastructure/FileCodexAuthIntentStore.ts)
+  хранит только original routing, не credentials. Существующие bounded scan,
+  per-target lock, atomic create и identity checks остаются основой.
+- [OAuthOperationOwner.finish/stop](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/packages/legacy-agent-host/src/management/OAuthOperationOwner.ts)
+  уже синхронно fences original entry перед awaited cancellation cleanup.
+
+#### 1. Повтор восстановления после transient failure
+
+Threads `PRRT_kwDORVTEtM622S19` и `PRRT_kwDORVTEtM625cCu` описывают один defect:
+rejected `this.recovery` остаётся навсегда. Следующий account read или Cancel
+повторяет rejection даже после восстановления store/context.
+
+- В существующем owner объединить original recovery в один coalesced promise.
+  При rejection очистить только тот promise, который по-прежнему является текущим.
+- Следующий явный read/cancel повторяет bounded intent lookup и restore исходного
+  target/context, затем только `oauth.read(original commandId)`.
+- Не переигрывать `oauth.start`, не выбирать текущий аккаунт вместо сохранённого.
+  Чужой context и неизвестный результат остаются unavailable/held.
+
+#### 2. Отдельное подтверждение retirement исходного intent
+
+Thread `PRRT_kwDORVTEtM6275kS`: terminal receipt помечает entry settled до
+успешного retire; после ошибки удаления intent дальнейшие observe/cancel не
+повторяют retire. Та же проблема возможна после доказанного pre-admission refusal.
+
+- После terminal receipt native effect остаётся fenced; хранить в том же entry
+  только короткое private состояние pending retirement исходного intent и
+  ожидаемую terminal projection. Публичный DTO и durable format не расширять.
+- Повтор observe/cancel сначала делает только idempotent `intents.retire(original)`.
+  Одновременные вызовы используют один текущий retirement promise; rejection
+  очищает promise, но сохраняет исходный pending intent для следующего вызова.
+- После успеха восстановить idle/cancelled/native-rejected projection и один раз
+  опубликовать settled/account readback. Не оставлять transient failure как вечный
+  failed и не повторять native cancellation/read/start для уже известного terminal.
+- Exact pre-admission refusal / доказанный not-dispatched также требует retry
+  только local retire: у такой операции нет native receipt, поэтому `oauth.read`
+  не может служить её восстановлением.
+- `held` по-прежнему сохраняет intent. Retry восстановления/retirement не должен
+  в том же start invocation незаметно перейти к новому login.
+
+#### 3. Один retained login для account facade
+
+Thread `PRRT_kwDORVTEtM622S2D`: settled held A оставляет свой intent, а
+target-local admission на B допускает второй. После restart bounded scan уже не
+может выбрать единственную original operation.
+
+- До admission учитывать existing `pendingLogin()` для всех targets, а не только
+  `read(selected targetId)`. Held A запрещает новый login B до подтверждения A.
+- Глобальный login check/create сериализовать существующим `withFileLock` в этой
+  же private directory, затем использовать прежний per-target lock/atomic create.
+  Это одна admission lock, не новый journal/registry; credential operations
+  сохраняют target-local семантику.
+- Не удалять чужой/held intent и не возвращать его данные как состояние B.
+  Existing 256-file scan bound и exact original identity checks сохраняются.
+
+#### 4. Logout остаётся привязан к выбору в момент действия
+
+Thread `PRRT_kwDORVTEtM622S2H`: logout сейчас ждёт starting/cancel, а затем
+`auth.execute` заново захватывает foreground target.
+
+- Захватить target для logout до первого ожидания login cleanup.
+- Передать этот же immutable target существующему auth command owner; после
+  ожиданий проверить его original current-authority guard до credential effect.
+- Смена A→B во время ожидания должна завершить original cleanup и отказать
+  устаревшему logout; B не получает `credential.forget`. Normal refresh и
+  original-intent lookup сохраняют прежнюю семантику.
+- Не добавлять renderer operation selector, RPC, новую очередь или account cache.
+
+#### 5. Private intent storage и platform capabilities
+
+Thread `PRRT_kwDORVTEtM625cCn`: POSIX group/other mode check сейчас применяется
+к Windows directory/file. [Node 24.21 file modes](https://nodejs.org/download/release/v24.21.0/docs/api/fs.html#file-modes)
+не предоставляют на Windows различие owner/group/others; это не ACL-проверка.
+
+- Применять существующую POSIX privacy проверку только на поддерживающих её ОС;
+  продолжать запрашивать 0700/0600 при создании.
+- Сохранить directory lstat/realpath/dev/ino fence и bounded exact UTF-8/schema read.
+  Для file read добавить same-original-file lstat→open/fstat→read→fstat/lstat
+  identity/type/size/mtime сверку, как в existing credential scope. Symlink/replaced
+  path не принимается даже там, где O_NOFOLLOW отсутствует.
+- Byte-exact проверка existing contextId validator подтвердила: реальные NUL/CR/LF
+  уже запрещены, ordinary n/r/0 разрешены. Повторно escaped отображение не является
+  source defect; validator сохраняется, existing original-context case остаётся.
+- Не добавлять ACL broker, private path в IPC или ослабление POSIX permissions.
+  Windows directory получает обычные inherited app userData ACL; mode bits не
+  объявляются доказательством этих ACL.
+- Threads `PRRT_kwDORVTEtM622S1y` и `PRRT_kwDORVTEtM622S2U`: existing
+  Host `codex-login.test.ts` и Main `capturedCodexLogin.safe-e2e.test.ts`
+  запускают POSIX shebang TEST child без Windows custody broker. Пометить только
+  эти process fixture registrations unsupported на win32. Настоящая Windows
+  SDK qualification остаётся отдельной проверкой, skip не считается её PASS.
+- Thread `PRRT_kwDORVTEtM622S2Q`: root test/test:ci используют Host dist, но
+  чистый local checkout не гарантирует его сборку. Переиспользовать existing
+  Host build command как script prerequisite; CI уже строит Host. Не добавлять
+  auto-build в test body или новый runner. Root проверяет согласование CI.
+- `PRRT_kwDORVTEtM622S2X` уже исправлен: IPC fixture имеет typed handle-only port.
+  Повторного source edit для этого замечания нет.
+
+#### 6. Cancel/completion: точная семантика, без ложного успеха
+
+Thread `PRRT_kwDORVTEtM620TQK` требует уточнить формулировку шага B:
+completed receipt, сохранённый до cancel fence, остаётся completed. Если первым
+сработал original stop fence, поздний complete не меняет эту operation на completed:
+подтверждённый close даёт cancelled, неподтверждённый cleanup — held.
+Отдельный account readback может показать, что vendor уже сохранил login;
+Cancel не откатывает credentials и не вызывает logout. Сам boolean close не
+доказывает успешную authentication. Переписывать Host lifecycle ради terminal
+названия не требуется.
+
+#### 7. Конечные проверки и review
+
+- Расширить существующий `capturedCodexAuth.test.ts`: fail-once store/restore
+  recovery, exact-ID terminal/pre-admission retirement retry и held-A→B refusal.
+  Assertions проверяют отсутствие второго start/native effect и сохранение
+  original identity. Store roundtrip/foreign-file case переиспользует тот же файл;
+  POSIX chmod assertions применяются только там, где mode bits имеют этот смысл.
+- Existing Main safe-E2E дополнить одним controlled logout race:
+  удержать original cancel response, сменить foreground A→B, отпустить response;
+  B не получает logout. Использовать прежние private TEST roots, Host/D fixture
+  и cleanup, без нового процесса-сервера или unit-матрицы.
+- Проверить чистый test prerequisite, exact-pin Host build/types, только затронутые
+  существующие cases, fast lint и source cap. Root запускает required exact-head
+  gates; Linux Desktop Start/Copy/Cancel и отдельный vendor-success gate из R5
+  остаются обязательными и не подменяются этими controlled cases.
+
+Круг 1, source: каждое замечание сверено с actual call path; 17/34 объединены,
+23 уже исправлено, cancel request не превращён в speculative Host rewrite.
+Круг 2, failure semantics: отдельно проверены pre-admission retirement без receipt,
+held cross-target admission, transient retry и selection change во время await.
+Новый store, auth framework, retry timer и широкая unit suite не требуются.
+Следующий круг: независимое plan/diff review, затем targeted execution и exact-head CI.

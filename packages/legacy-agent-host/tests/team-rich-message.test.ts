@@ -14,6 +14,7 @@ import { deliveryFingerprint } from '../dist/runtime/identity.js';
 import { publishNativeCommandOutput } from '../dist/composition/publishNativeCommandOutput.js';
 import { assertNativeSessionCommand, nativeSessionCommandAuthorized } from '../dist/composition/nativeSessionCommandAdmission.js';
 import { captureHostCostCommand } from '../dist/team/hostCostCommand.js';
+import { parseNativeSessionCommand } from '../dist/team/nativeSessionCommand.js';
 
 import type { FilesystemTeamOwnerOptions } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import type { TeamCommand } from '../dist/team/contracts.js';
@@ -116,6 +117,13 @@ test('prepared Composer identity and metadata survive product echo and native co
 });
 
 test('explicit native command keeps raw bytes and original receipt while old rich slash remains wrapped', (t) => {
+  for (const raw of ['/compact', '/compact\nTEST argument', '/' + 'a'.repeat(64) + '\u2003TEST',
+    '/compact' + ' '.repeat(32_768) + 'TEST']) {
+    assert.deepEqual(parseNativeSessionCommand(' ' + raw + ' '),
+      { name: raw.slice(1).split(/\s/u)[0], raw });
+  }
+  for (const text of ['/', '/1bad', '/compact/other', '/' + 'a'.repeat(65) + ' TEST'])
+    assert.equal(parseNativeSessionCommand(text), undefined);
   const f = fixture(t, false, 'lead');
   const command = { ...f.command, payload: { ...f.command.payload, text: ' /compact focus on TEST work ', nativeCommand: true as const } } as TeamCommand;
   const receipt = f.human.execute(command);
@@ -210,7 +218,8 @@ test('prepared Host cost recovers the original partial reply after a fault witho
   };
   assert.throws(() => f.owner.connect('native-alice').execute(command, prepare), { code: 'forbidden' });
   assert.equal(captures, 0, 'actor authorization precedes capture');
-  assert.throws(() => f.human.execute({ ...command, commandId: 'TEST-foreign-cost' },
+  assert.throws(() => f.human.execute({ ...command, commandId: 'TEST-foreign-cost',
+    payload: { ...command.payload, messageId: 'TEST-foreign-cost' } },
     () => captureHostCostCommand({ binding: { ...binding, generation: 'foreign' },
       stats: { inputTokens: 900, outputTokens: 800, gaps: [] }, now })), { code: 'hold' });
   assert.equal(f.human.lookup('TEST-foreign-cost'), undefined);

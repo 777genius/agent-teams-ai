@@ -353,3 +353,54 @@ ephemeral transcript и original cleanup/source freeze проверены тем
 4. Existing always-upload удерживает оригинальные TEST receipts/logs. Следующий точный source SHA
    квалифицируется полным обязательным CI и этим UI journey; P04 остаётся открытым до положительного результата.
    Дополнительные однотипные unit tests на удалённые disabled props не добавляются.
+
+
+## R9 — исправления подтверждённых lifecycle замечаний ревью
+
+Сверка выполнена по parity `1bfccb9`, PR1186 threads `PRRT_kwDORVTEtM622qo8`,
+`PRRT_kwDORVTEtM624vcz`, `PRRT_kwDORVTEtM625-oR`. Это реальные source gaps;
+предыдущий native finite PASS не проверял эти interleavings.
+
+1. **Desktop Stop/Delete должны дойти до исходного Host occurrence.**
+   `createDesktopHostSchedules.ts` уже удерживает original ports и реализует
+   `cancel/cancelAll`. В `src/main/ipc/agentBackend.ts` экспортировать этот же
+   объект, а `src/main/index.ts` передавать его целиком в `createSchedulerService`.
+   Не создавать второй owner/map или дополнительную отмену команды.
+   Pause сохраняет прежнюю семантику: запрещает будущие ticks, текущий принятый run продолжается.
+2. **Поздний repository read не должен создавать run после Stop.**
+   В `SchedulerService.ts` проверять captured lifecycle epoch после read, до
+   allocation/locks. Общую часть admission/persist двух существующих путей
+   `triggerNow/onCronTick` вынести в один private method этого же service.
+   Он проверяет epoch до publication и после await; при отказе освобождает
+   только locks своего exact run, не locks нового occurrence. Это удаляет
+   существующий дубликат и укладывается в frozen850, без повышения cap.
+   Stop по-прежнему ждёт existing persistence finalizations.
+3. **Повторная проверка оригинального cleanup может снять held.**
+   `HostScheduledRuns.cancel/close` сохраняют начальный physical cleanup:
+   он нужен, чтобы освободить pending native open. После settlement исходного
+   execute заново сверить результат cleanup того же provider и Runtime
+   closed/released. Подтверждённый результат заменяет прежнее unresolved значение;
+   false/rejection не становятся PASS. Active entry удаляется только при совпадении
+   original map entry и обеих подтверждённых границ. Никакого replay/start,
+   PID lookup, нового provider или переноса authority.
+4. **Минимальные проверки.**
+   Расширить existing Scheduler integration задержанным getSchedule→Stop→read
+   и повторным стартом без утечки lock; existing Host RPC cleanup case —
+   переходом unknown→confirmed без нового input. Сохранить blocked-open case,
+   потому что ожидание pending до initial cleanup привело бы к deadlock.
+   Existing Desktop schedule journey остаётся обязательным для composition wiring.
+
+Круг source: проверены действительные call sites и ownership callback.
+Круг architecture: используется уже существующий lifecycle epoch, original ports,
+Runtime и persistence barrier; новая очередь и unit-матрица не нужны.
+Следующий круг — независимое ревью diff и targeted existing tests, затем exact-head CI.
+
+При выполнении targeted cases разделены два свидетельства: Runtime close/custody и
+дополнительный physical provider cleanup. Recovery case удерживает unresolved только
+во втором, при уже confirmed Runtime; иначе ожидаемый confirmed был бы ложным.
+Прежний case с неизвестными обеими границами остаётся и обязан завершать close с failure.
+
+**Отдельно остаются открытыми** delete-vs-admission, task start после смены legacy run,
+safe unopened Host member и task-first history после explicit rebind. Для них сначала
+сверить original atomic mutation/admission seams и сохранённые target receipts;
+нельзя игнорировать старую незавершённую task ради зелёной проверки.

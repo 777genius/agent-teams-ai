@@ -210,4 +210,27 @@ it('reserves the occurrence before slow persistence and drains it on Quit withou
   await f.restart();
   expect((await f.repository.getLatestRun(schedule.id))?.status).toBe('failed_interrupted');
   expect(await f.snapshot()).toMatchObject({ ok: true, value: { tasks: [] } });
+  const before = await f.repository.listRuns(schedule.id);
+  const readSchedule = f.repository.getSchedule.bind(f.repository);
+  let readEntered!: () => void, releaseRead!: () => void;
+  const reading = new Promise<void>(resolve => { readEntered = resolve; });
+  const holdRead = new Promise<void>(resolve => { releaseRead = resolve; });
+  vi.spyOn(f.repository, 'getSchedule').mockImplementationOnce(async id => {
+    const selected = await readSchedule(id);
+    readEntered();
+    await holdRead;
+    return selected;
+  });
+  const delayed = f.scheduler.triggerNow(schedule.id);
+  const refused = expect(delayed).rejects.toThrow('Scheduler stopped before dispatch');
+  await reading;
+  await f.scheduler.stop();
+  releaseRead();
+  await refused;
+  expect(await f.repository.listRuns(schedule.id)).toEqual(before);
+  await f.scheduler.start();
+  const next = await f.scheduler.triggerNow(schedule.id);
+  expect(next.id).not.toBe(before[0]!.id);
+  await f.waitRun(schedule.id, row => row.id === next.id && row.status !== 'running');
+  expect((await f.repository.listRuns(schedule.id)).length).toBe(before.length + 1);
 }, 20000);

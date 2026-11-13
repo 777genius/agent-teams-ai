@@ -116,7 +116,7 @@ export class TeamLaunchOwner {
     if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
     this.id(commandId);
     if (initialPrompt !== undefined && initialPrompt !== null &&
-      (typeof initialPrompt !== 'string' || !initialPrompt.trim() || initialPrompt.length > 100_000))
+      (typeof initialPrompt !== 'string' || !initialPrompt.trim() || initialPrompt.includes('\0') || initialPrompt.length > 100_000))
       throw new TeamLaunchError('invalid', 'launch-prompt');
     this.options.authorized('control', () => {
       const record = this.load();

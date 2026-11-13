@@ -400,20 +400,8 @@ export class SchedulerService {
       throw new Error(`Working directory "${cwd}" is locked by another schedule: ${cwdHolder}`);
     }
 
-    const run = createScheduleRun(schedule);
-    this.activeRuns.set(id, run);
-    this.cwdLock.set(cwd, id);
-    try { await persistScheduleRun(this.repository, this.stopBarrier, run); }
-    catch (error) {
-      if (this.activeRuns.get(id)?.id === run.id) { this.releaseRunLocks(id); }
-      throw error;
-    }
-    if (this.stopped || generation !== this.lifecycleEpoch) throw new Error('Scheduler stopped before dispatch');
-    this.emitChange({ type: 'run-started', scheduleId: id, teamName: schedule.teamName });
-
-    // Execute in background (don't await — triggerNow returns immediately)
-    this.dispatchRun(schedule, run);
-
+    const run = await this.startOccurrence(schedule, generation);
+    if (!run) throw new Error('Scheduler stopped before dispatch');
     return run;
   }
 
@@ -573,23 +561,33 @@ export class SchedulerService {
       return;
     }
 
-    const run = createScheduleRun(schedule);
-    this.activeRuns.set(scheduleId, run);
-    this.cwdLock.set(cwd, scheduleId);
-    try { await persistScheduleRun(this.repository, this.stopBarrier, run); }
-    catch (error) {
-      if (this.activeRuns.get(scheduleId)?.id === run.id) { this.releaseRunLocks(scheduleId); }
-      throw error;
-    }
-    if (this.stopped || generation !== this.lifecycleEpoch) return;
-    this.emitChange({ type: 'run-started', scheduleId, teamName: schedule.teamName });
-
-    this.dispatchRun(schedule, run);
+    await this.startOccurrence(schedule, generation);
   }
 
   // ===========================================================================
   // Execution
   // ===========================================================================
+
+  /** Publish only in the original lifecycle; delayed reads cannot acquire locks after Stop. */
+  private async startOccurrence(schedule: Schedule, generation: number): Promise<ScheduleRun | null> {
+    if (this.stopped || generation !== this.lifecycleEpoch) return null;
+    const run = createScheduleRun(schedule);
+    this.activeRuns.set(schedule.id, run);
+    this.cwdLock.set(schedule.launchConfig.cwd, schedule.id);
+    try {
+      await persistScheduleRun(this.repository, this.stopBarrier, run);
+      if (this.stopped || generation !== this.lifecycleEpoch) {
+        if (this.activeRuns.get(schedule.id)?.id === run.id) this.releaseRunLocks(schedule.id);
+        return null;
+      }
+    } catch (error) {
+      if (this.activeRuns.get(schedule.id)?.id === run.id) this.releaseRunLocks(schedule.id);
+      throw error;
+    }
+    this.emitChange({ type: 'run-started', scheduleId: schedule.id, teamName: schedule.teamName });
+    this.dispatchRun(schedule, run);
+    return run;
+  }
 
   private dispatchRun(schedule: Schedule, run: ScheduleRun): void {
     void this.executeRunInBackground(schedule, run).catch((error: unknown) => {
