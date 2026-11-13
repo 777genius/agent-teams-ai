@@ -685,3 +685,52 @@ limit validation. Не менять ожидаемый saved view и не пов
 Review 1: one-shot metadata close после каждого GET отклонён — он обрывает штатный shared
 OAuth owner и создаёт лишние процессы. Выбран переход только между original owners на одном
 endpoint с прежней authority/fence. Source fix, focused checks и actual результат ещё не выполнены.
+
+
+### R12, review 6 — исходная native identity и durable redaction
+
+Actual Desktop V2 на `f2050de7`, run `43367646201`, job `131695834199`
+останавливается в `readEvents` на проверке `startIdentity`. Скачан официальный
+active-Quit artifact `14012120872`, ZIP SHA256
+`4f3ff4b6e4e1ce9e0d08f2e8ac243074c3d51f7fe9e81bfee1c019d1fb322848`.
+Этот ZIP сохраняет failure/receipt, но не `userData/logs`; конкретные исходные байты
+native identity из него не установлены.
+
+Source diagnosis отдельно подтверждён детерминированным проходом настоящих producer,
+Main decoder и persistent formatter: допустимый Darwin
+`bootUUID:pid:pidVersion:birth` превращается в `[redacted]:pid:pidVersion:birth`.
+`DarwinRegisteredProcess.readRootExecutable` создаёт исходную строку;
+`createOpenCodeMetadataDiagnostic` и `decodeClaudeCloseDiagnostics` принимают её
+без изменения. Далее `persistentAppLog.formatPersistentLogMessage` вызывает
+`sentryConfig.redactSentryEvent`, который штатно скрывает UUID. Прежние constructed
+`TEST-boot` cases не проходили через этот formatter и не проверяли данный boundary.
+Ссылки относятся к точному [source f2050de7](https://github.com/777genius/agent-teams-ai/tree/f2050de7e2bf52feb695393cb4dc07d1c0ee8d9a).
+
+Минимальное исправление:
+
+1. Только в существующем `CapturedHostClient` metadata diagnostic callback построить
+   закрытую durable projection: прежние owner/mode/provider/PID/stage/Host PID плюс
+   `startIdentityHash = SHA256(UTF-8 exact decoded original startIdentity)`.
+   Raw identity не передавать в общий logger. Host custody, stderr decoder и native
+   equality не менять; не отключать redaction и не допускать `[redacted]` как identity.
+2. В `desktop-opencode-metadata-lineage.ts` принимать ровно прежние поля с заменой
+   `startIdentity` на обязательный hex64 `startIdentityHash`. Ready/close/successor
+   по-прежнему связаны полным owner tuple; immutable prefix и запрет reused PID остаются.
+   Hash всегда получается из captured original ready, а не из текущего UI/PID.
+   Независимый OS census с parent/group/executable и неизменным `ps` birth сохраняется:
+   native identity hash и physical birth — разные доказательства, одно не подменяет другое.
+3. Расширить существующий critical subprocess/diagnostic case реальным проходом
+   producer → Host stderr → Main decoder/callback → persistent formatter → proof reader.
+   Проверить исходный UUID-format, одинаковый hash ready/confirmed-close, отказ при
+   иной native identity/owner и при raw/redacted поле. Existing lifecycle case продолжает
+   проверять original physical birth и retired absence. Новая suite/таймауты не нужны.
+4. Выполнить focused tests/types/lint; exact-head existing Desktop V2 lanes остаются
+   обязательной native приёмкой. Никакого вывода о product startup/Resume из исправления
+   test-observation boundary.
+
+Review 1: причина разделена на observed CI failure и воспроизводимый source-backed
+redaction path; отсутствие raw artifact bytes явно сохранено. Review 2 (Account):
+hash делать до logger из уже проверенного original observation, explicit fields,
+без spread неизвестных полей; custody и redaction остаются прежними. Review 3 (Root):
+полный native owner tuple и независимое physical birth evidence обязательны;
+hash не даёт process authority и не допускает PID adoption. Source fix ещё не выполнен.

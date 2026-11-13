@@ -18,9 +18,18 @@ import { assertNativeChatAttachments } from './chat-attachments.ts';
 import { assertNativeMessagePdf } from '../native-message-pdf.ts';
 import { contextCompactionScript } from '../native-claude-compaction/model.ts';
 import type { CompactionScenario } from '../native-claude-compaction/model.ts';
-import { nativeScheduleScript, type NativeScheduleScenario } from '../native-claude-schedules/model.ts';
-import { nativeCommandUiScript, type NativeCommandUiScenario } from '../native-claude-commands/model.ts';
-import { nativeExtensionUiScript, type NativeExtensionUiScenario } from '../native-claude-extensions/model.ts';
+import {
+  nativeScheduleScript,
+  type NativeScheduleScenario,
+} from '../native-claude-schedules/model.ts';
+import {
+  nativeCommandUiScript,
+  type NativeCommandUiScenario,
+} from '../native-claude-commands/model.ts';
+import {
+  nativeExtensionUiScript,
+  type NativeExtensionUiScenario,
+} from '../native-claude-extensions/model.ts';
 import { nativeMemberCreationScript } from './member-creation.ts';
 import type { NativeMemberCreationScenario } from './member-creation.ts';
 import { ordinarySubagentScript } from '../native-claude-subagent/model.ts';
@@ -167,6 +176,8 @@ export async function startNativeTeamModel(
     allowModelProbes?: boolean;
     /** Exact old-frontend PONG checks, only until its original app epoch is closed. */
     donorSavedProbes?: boolean;
+    /** One current-frontend legacy turn before its original Stop/Quit and Host import. */
+    currentLegacySource?: { teamName: string; prompt: string; reply: string };
     /** Original mixed Launch may renew one cancelled check after its explicit close/reopen. */
     nativeModelProbeLimit?: 8 | 9;
     /** TEST-only boundary advanced after verified Stop/reload by the owning UI test. */
@@ -188,8 +199,11 @@ export async function startNativeTeamModel(
   const schedules = options.nativeSchedules
     ? nativeScheduleScript(options.nativeSchedules, nativeToolReceipt)
     : undefined;
-  assert.ok([options.nativeCommands, options.nativeSchedules, options.nativeExtensions].filter(Boolean).length <= 1,
-    'one finite native UI scenario');
+  assert.ok(
+    [options.nativeCommands, options.nativeSchedules, options.nativeExtensions].filter(Boolean)
+      .length <= 1,
+    'one finite native UI scenario'
+  );
   const commands = options.nativeCommands
     ? nativeCommandUiScript(options.nativeCommands, nativeToolReceipt)
     : undefined;
@@ -204,9 +218,28 @@ export async function startNativeTeamModel(
     : undefined;
   const observations: Observation[] = [];
   const notificationObservations: (Observation & { notice: ObservedMixedTaskNotice })[] = [];
-  const probes: { requestedModel?: string; requestedEffort?: string; phase?: 'native' | 'cold-readback' }[] = [];
+  const probes: {
+    requestedModel?: string;
+    requestedEffort?: string;
+    phase?: 'native' | 'cold-readback';
+  }[] = [];
   const donorSavedProbes: { requestedModel?: string; advertisedTools: string[] }[] = [];
-  let donorSavedOpen = options.donorSavedProbes === true, pendingDonorReads = 0;
+  let donorSavedOpen = options.donorSavedProbes === true,
+    pendingDonorReads = 0;
+  assert.ok(
+    !(options.donorSavedProbes && options.currentLegacySource),
+    'one original legacy epoch'
+  );
+  let currentLegacyOpen = options.currentLegacySource !== undefined,
+    pendingLegacyReads = 0;
+  const currentLegacyTurns: {
+    prompt: string;
+    reply: string;
+    model: string;
+    advertisedTools: string[];
+  }[] = [];
+  const currentLegacyProbes: string[] = [];
+  let currentLegacyTokenRequests = 0;
   const unexpectedNoToolsRequests: {
     model?: string;
     roles: unknown[];
@@ -220,9 +253,13 @@ export async function startNativeTeamModel(
   let compactionTokenRequests = 0;
   const server = createServer((request, response) => {
     const originalDonorRead = donorSavedOpen;
+    const originalLegacyRead = currentLegacyOpen;
     if (originalDonorRead) pendingDonorReads++;
+    if (originalLegacyRead) pendingLegacyReads++;
     void (async () => {
       if (request.url?.includes('count_tokens')) {
+        if (originalLegacyRead)
+          assert.ok(++currentLegacyTokenRequests <= 8, 'bounded original legacy token checks');
         if (compaction || commands)
           assert.ok(++compactionTokenRequests <= 8, 'bounded native compact token-count requests');
         response.end('{"input_tokens":20}');
@@ -337,11 +374,66 @@ export async function startNativeTeamModel(
               .filter(Boolean)
               .join('\n')
           : undefined;
+      if (originalLegacyRead) {
+        assert.ok(tools.length <= 128, 'bounded current legacy catalog');
+        if (probeText === 'Output only the single word PONG.') {
+          assert.ok(currentLegacyProbes.length < 8, 'bounded current legacy model checks');
+          currentLegacyProbes.push(String(body.model));
+          emitResponse(response, ++sequence, { type: 'text', text: 'PONG' }, String(body.model));
+          return;
+        }
+        const source = options.currentLegacySource!;
+        assert.equal(currentLegacyTurns.length, 0, 'one original legacy business turn');
+        assert.ok(
+          probeText && probeText.endsWith('\nUser instructions:\n' + source.prompt),
+          'exact original Create prompt'
+        );
+        assert.equal(probeText.split(source.prompt).length, 2, 'one deliberate source marker');
+        assert.ok(
+          probeText.includes('You are "team-lead", the team lead.') &&
+            probeText.includes('- Your team is "' + source.teamName + '".'),
+          'original solo team scope'
+        );
+        assert.ok(!probeText.includes('Team roster (authoritative'), 'source has no teammates');
+        currentLegacyTurns.push({
+          prompt: source.prompt,
+          reply: source.reply,
+          model: String(body.model),
+          advertisedTools: [...tools],
+        });
+        emitResponse(
+          response,
+          ++sequence,
+          { type: 'text', text: source.reply },
+          String(body.model)
+        );
+        return;
+      }
+      if (options.currentLegacySource)
+        assert.ok(
+          !probeTexts.some((text) => text.includes(options.currentLegacySource!.prompt)),
+          'original legacy epoch is closed'
+        );
       if (originalDonorRead) {
-        assert.equal(probeText, 'Output only the single word PONG.', 'only the exact donor model check');
-        assert.ok(donorSavedProbes.length < 8 && tools.length <= 128, 'bounded donor diagnostic catalog');
-        donorSavedProbes.push({ ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}), advertisedTools: [...tools] });
-        emitResponse(response, ++sequence, { type: 'text', text: 'PONG' }, typeof body.model === 'string' ? body.model : undefined);
+        assert.equal(
+          probeText,
+          'Output only the single word PONG.',
+          'only the exact donor model check'
+        );
+        assert.ok(
+          donorSavedProbes.length < 8 && tools.length <= 128,
+          'bounded donor diagnostic catalog'
+        );
+        donorSavedProbes.push({
+          ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+          advertisedTools: [...tools],
+        });
+        emitResponse(
+          response,
+          ++sequence,
+          { type: 'text', text: 'PONG' },
+          typeof body.model === 'string' ? body.model : undefined
+        );
         return;
       }
       assert.notEqual(probeText, 'Output only the single word PONG.', 'donor epoch is closed');
@@ -355,7 +447,9 @@ export async function startNativeTeamModel(
           // One actual new preparation after original Stop/reload, never another
           // allowance for a retry in that same cold UI phase.
           assert.ok(
-            !nativeMember && probes.length >= 8 && probes.length <= nativeModelProbeLimit &&
+            !nativeMember &&
+              probes.length >= 8 &&
+              probes.length <= nativeModelProbeLimit &&
               !probes.some((probe) => probe.phase === 'cold-readback'),
             'finite native cold-readback model probe budget'
           );
@@ -660,13 +754,16 @@ export async function startNativeTeamModel(
         },
         typeof body.model === 'string' ? body.model : undefined
       );
-    })().catch((error) => {
-      failures.push(error instanceof Error ? error.message : 'fixture-failed');
-      if (!response.headersSent) response.writeHead(400);
-      response.end('TEST model fixture rejected request');
-    }).finally(() => {
-      if (originalDonorRead) pendingDonorReads--;
-    });
+    })()
+      .catch((error) => {
+        failures.push(error instanceof Error ? error.message : 'fixture-failed');
+        if (!response.headersSent) response.writeHead(400);
+        response.end('TEST model fixture rejected request');
+      })
+      .finally(() => {
+        if (originalDonorRead) pendingDonorReads--;
+        if (originalLegacyRead) pendingLegacyReads--;
+      });
   });
   server.requestTimeout = 15_000;
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -689,16 +786,45 @@ export async function startNativeTeamModel(
     ...(groupChats ? { groupRequests: groupChats.requests } : {}),
     ...(options.holdInitialTurnResponse ? { heldInitialRequests } : {}),
     probes,
-    ...(options.donorSavedProbes ? { donorSavedProbes, finishDonorSavedProbes: async () => {
-      assert.ok(options.donorSavedProbes && donorSavedOpen, 'close the original donor epoch once');
-      donorSavedOpen = false;
-      const deadline = Date.now() + 15_000;
-      while (pendingDonorReads && Date.now() < deadline)
-        await new Promise<void>(resolve => setTimeout(resolve, 100));
-      assert.equal(pendingDonorReads, 0, 'original donor HTTP reads settle before consumer');
-      assert.deepEqual(failures, []);
-      return structuredClone(donorSavedProbes);
-    } } : {}),
+    ...(options.currentLegacySource
+      ? {
+          currentLegacyTurns,
+          currentLegacyProbes,
+          finishCurrentLegacySource: async () => {
+            assert.ok(currentLegacyOpen, 'close the original current-legacy epoch once');
+            currentLegacyOpen = false;
+            const deadline = Date.now() + 15_000;
+            while (pendingLegacyReads && Date.now() < deadline)
+              await new Promise<void>((resolve) => setTimeout(resolve, 100));
+            assert.equal(pendingLegacyReads, 0, 'original legacy reads settle before consumer');
+            assert.equal(currentLegacyTurns.length, 1);
+            assert.deepEqual(failures, []);
+            return structuredClone({
+              turns: currentLegacyTurns,
+              probes: currentLegacyProbes,
+              tokenRequests: currentLegacyTokenRequests,
+            });
+          },
+        }
+      : {}),
+    ...(options.donorSavedProbes
+      ? {
+          donorSavedProbes,
+          finishDonorSavedProbes: async () => {
+            assert.ok(
+              options.donorSavedProbes && donorSavedOpen,
+              'close the original donor epoch once'
+            );
+            donorSavedOpen = false;
+            const deadline = Date.now() + 15_000;
+            while (pendingDonorReads && Date.now() < deadline)
+              await new Promise<void>((resolve) => setTimeout(resolve, 100));
+            assert.equal(pendingDonorReads, 0, 'original donor HTTP reads settle before consumer');
+            assert.deepEqual(failures, []);
+            return structuredClone(donorSavedProbes);
+          },
+        }
+      : {}),
     unexpectedNoToolsRequests,
     failures,
     close: () =>

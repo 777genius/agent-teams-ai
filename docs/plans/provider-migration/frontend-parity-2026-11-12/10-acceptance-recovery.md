@@ -567,3 +567,59 @@ review плана, implementation и actual exact-head результат ещё
 [C10-release]: https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/src/main/services/team/provisioning/LegacyNativeStopRelease.ts
 [C10-store]: https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/src/main/services/team/TeamLaunchStateStore.ts
 [C10-tail]: https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/scripts/legacy-agent-host/desktop-stopped-import-launch-ui.ts
+
+## 11. Original Task hover после Complete: bounded UI prerequisite
+
+Actual `f2050de7e2bf52feb695393cb4dc07d1c0ee8d9a`,
+[job131695834133](https://github.com/777genius/agent-teams-ai/actions/runs/43367646201/job/131695834133):
+Create/assignee, один drag, original blocked Start rejection, Complete исходного
+blocker и ровно один dependency-resolved comment прошли. Следующее открытие
+toolbar dependent Task остановилось на original read deadline. Official artifact
+`14010798529`, ZIP SHA256
+`46655a8e764e353915ea807fca36049355297726bb20b309bd1b0aab1fe2446e`
+содержит original receipts, trusted input events и screenshot; это failure,
+не проход всей Task board.
+
+[Нынешний hoverCard](https://github.com/777genius/agent-teams-ai/blob/f2050de7e2bf52feb695393cb4dc07d1c0ee8d9a/scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts)
+после canonical Complete сразу измеряет один DOM point и отправляет один move.
+Canonical receipt ещё не означает завершение renderer layout.
+[Existing click helper](https://github.com/777genius/agent-teams-ai/blob/f2050de7e2bf52feb695393cb4dc07d1c0ee8d9a/scripts/legacy-agent-host/desktop-ui-controls.ts)
+уже проверяет current target при изменении geometry. В данном failure исходные
+hover coordinates не сохранены, поэтому точная причина отсутствия toolbar
+пока не доказана; production Kanban/Radix менять по предположению нельзя.
+
+### Минимальный следующий срез
+
+1. В existing `desktop-ui-controls.ts` добавить узкий `hoverExpression`:
+   readonly original expression, прежний один 30s deadline, три последовательных
+   одинаковых eligible points. Между reads используется существующий 100ms
+   cadence; unavailable point сбрасывает стабильность. Это не новый sleep или
+   продление ожидания.
+2. После стабилизации проверить captured renderer и отправить ровно один
+   physical `mouseMoved`, сохранив его actual point в прежнем step receipt.
+   Не нажимать control, не вызывать app handler/DOM dispatch, не повторять
+   неизвестный effect и не менять выбранную Task.
+3. В `hoverCard` заменить только прежний lookup+move. Existing outside move,
+   один Escape, exact original Task ID/title, единственный open toolbar,
+   canonical dependency assertions и оригинальные Start/Complete clicks сохранить.
+   Source cap800 соблюдается без минификации или сжатия существующего кода.
+4. Один critical case в existing `desktop-team-ui-smoke.test.ts` проверяет
+   shifted/unavailable target, возврат стабильности и единственный move в
+   окончательную исходную geometry. Новая unit suite не нужна.
+5. Types/lint/source cap и existing UI-helper tests; затем тот же actual macOS
+   Task board job. Пока original toolbar, второй Start, attachments/reload и
+   cleanup не PASS, строка остаётся INCOMPLETE. При новом failure original
+   target в receipt позволит сопоставить move с фактическим layout; не делать
+   timer bump, click retry или скрытый app-state repair.
+
+### Review круги
+
+**Круг 1 — evidence.** Artifact подтверждает работу canonical graph/Complete,
+но не причину hover failure. Изменение ограничено отсутствующим UI prerequisite
+и сохранением исходной точки; regression production-кода не объявлена.
+
+**Круг 2 — минимальность и полномочия.** Existing shared TEST helper и существующий
+test file; один original input, прежние budgets и все semantic assertions.
+Не добавляются новая gesture abstraction, retry queue, generic framework,
+renderer state writes или отдельный CI job. Независимый source review и
+actual exact-head результат обязательны перед закрытием этой строки.

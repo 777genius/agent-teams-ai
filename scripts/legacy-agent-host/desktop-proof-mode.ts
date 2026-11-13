@@ -11,7 +11,7 @@ import { startProcessModel } from './desktop-native-process-model.ts';
 import { readProcessServices } from './desktop-native-process-fixture.ts';
 import { startDesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { startDesktopApprovalModel } from './desktop-approval-model.ts';
-import { LEGACY_IMPORT_TEAM } from './desktop-stopped-import-fixture.ts';
+import { LEGACY_IMPORT_TEAM, CURRENT_LEGACY_SOURCE_PROMPT, CURRENT_LEGACY_SOURCE_REPLY } from './desktop-stopped-import-fixture.ts';
 import { startNativeReviewModel } from './desktop-native-review-model.ts';
 import { startOpenCodeV2ReviewModel } from './desktop-opencode-v2-review-model.ts';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -359,6 +359,7 @@ export async function prepareDesktopProofMode(
                 ...(process.env.LEGACY_DESKTOP_DONOR_SAVED_ONLY === '1' ? { donorSavedProbes: true } : {}),
                 ...(process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1'
                   ? {
+                      currentLegacySource: { teamName: LEGACY_IMPORT_TEAM, prompt: CURRENT_LEGACY_SOURCE_PROMPT, reply: CURRENT_LEGACY_SOURCE_REPLY },
                       memberName: 'team-lead' as const,
                       principalId: () => {
                         const state = record(

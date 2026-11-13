@@ -875,6 +875,16 @@ jobs:
             qualification: 'Source Desktop and localhost inference only; no installed/packed or vendor-auth claim',
           }, null, 2));
           NODE
+      - name: Prepare current frontend runtime for its original Stop and import
+        if: matrix.import_launch == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          selected_node="$GITHUB_WORKSPACE/resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node"
+          mkdir "$STAGE1_INPUTS/current-runtime"
+          CLAUDE_DEV_RUNTIME_CACHE_ROOT="$STAGE1_INPUTS/current-runtime" "$selected_node" scripts/dev-with-runtime.mjs --print-runtime-path
+          printf 'LEGACY_DESKTOP_CURRENT_RUNTIME_CACHE=%s\n' "$STAGE1_INPUTS/current-runtime" >> "$GITHUB_ENV"
       - name: Verify captured Claude commands and original native receipt recovery
         if: matrix.mode == 'native-create-ui' && !matrix.variant
         run: |
@@ -1084,11 +1094,30 @@ jobs:
             assert.equal(imported?.status, 'PASS');
             assert.equal(imported.noLaunchSubmit, false, 'import-only is not native Launch acceptance');
             assert.equal(imported.nativeLaunch?.status, 'PASS');
-            assert.equal(imported.nativeLaunch.sourcePreparation?.sourceNativeInputs, 0,
-              'source preparation never claims old provider inference');
+            const source = imported.nativeLaunch.sourcePreparation;
+            assert.equal(source?.sourceNativeInputs, 1, 'actual current frontend source input required');
+            assert.equal(source.status, 'PASS'); assert.equal(source.sourceKind, 'actual-current-native-solo');
+            assert.deepEqual(source, receipt.currentStoppedProducer);
+            assert.equal(source.producer.commit, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+            assert.equal(source.producer.runtime.version, '0.0.158');
+            assert.equal(source.producer.runtime.cacheValidated, true);
+            assert.equal(source.hostDescriptorPresent, false); assert.equal(source.sourceFrozen, true);
+            assert.deepEqual(source.ordinaryQuit, { requestedOnce: true, exitCode: 0, signalCode: null,
+              originalGroupAbsent: true, remaining: [], listenerAbsent: true });
+            assert.deepEqual(source.cleanup.remaining, []); assert.equal(source.cleanup.cleanupFailure, undefined);
+            for (const census of [source.nativeChildren, source.nativeChildrenAfterCleanup]) {
+              assert.ok(census.captured.length >= 1 && census.captured.length <= 32);
+              assert.deepEqual(census.remaining, []); assert.deepEqual(census.unmatched, []);
+            }
+            assert.equal(source.originalStopDiagnostics.canonicalNodeRead.canonicalReleaseCurrent, true);
+            assert.equal(source.originalStopDiagnostics.canonicalNodeRead.proofParseable, true);
+            assert.equal(source.proof.target.runId, source.sourceRunId);
+            assert.equal(source.proof.target.sessionId, source.sourceSessionId);
+            assert.equal(source.model.turns.length, 1);
+            assert.deepEqual(imported.importedTask, source.sourceTask);
             const seedBytes = readFileSync(join(dirname(path), 'stopped-import-ui-seed.json'));
             assert.equal(createHash('sha256').update(seedBytes).digest('hex'), imported.seedSha256);
-            assert.equal(JSON.parse(seedBytes.toString('utf8')).sourceKind, 'captured-stopped-solo');
+            assert.equal(JSON.parse(seedBytes.toString('utf8')).sourceKind, 'actual-current-native-solo');
           }
           console.log(JSON.stringify({ status: receipt.status, mode: receipt.mode,
             variant: process.env.STAGE1_VARIANT, receipt: path }));

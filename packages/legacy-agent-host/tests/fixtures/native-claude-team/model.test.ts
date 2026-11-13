@@ -58,10 +58,12 @@ test('model probe admission is opt-in, exact, tool-free, and independently bound
     for (let count = 0; count < 8; count++) {
       const response = await request(
         enabled.url,
-        count % 2 ? [
-          { type: 'text', text: '<system-reminder>TEST SDK reminder</system-reminder>' },
-          { type: 'text', text: probePrompt },
-        ] : probePrompt
+        count % 2
+          ? [
+              { type: 'text', text: '<system-reminder>TEST SDK reminder</system-reminder>' },
+              { type: 'text', text: probePrompt },
+            ]
+          : probePrompt
       );
       assert.equal(response.status, 200);
       assert.match(await response.text(), /"text":"OK"/);
@@ -78,6 +80,56 @@ test('model probe admission is opt-in, exact, tool-free, and independently bound
     assert.match(enabled.failures[0]!, /probe request budget/);
   } finally {
     await enabled.close();
+  }
+});
+
+test('current legacy source has one text turn and closes before ordinary Host probes', async () => {
+  const { startNativeTeamModel } = await import('./model.ts');
+  const source = {
+    teamName: 'test-legacy',
+    prompt: 'TEST_CURRENT_LEGACY_SOURCE',
+    reply: 'TEST_SOURCE_REPLY',
+  };
+  const model = await startNativeTeamModel({ allowModelProbes: true, currentLegacySource: source });
+  const post = (content: string, tools: unknown[] = []) =>
+    fetch(model.url + '/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        messages: [{ role: 'user', content }],
+        tools,
+      }),
+    });
+  const prompt =
+    'You are "team-lead", the team lead.\n- Your team is "test-legacy".\n\nUser instructions:\n' +
+    source.prompt;
+  try {
+    assert.equal((await post('Output only the single word PONG.', [{ name: 'Bash' }])).status, 200);
+    const response = await post(prompt, [{ name: 'Bash' }]);
+    assert.equal(response.status, 200);
+    const text = await response.text();
+    assert.ok(text.includes(source.reply));
+    assert.equal(text.includes('tool_use'), false);
+    assert.deepEqual(model.observations, []);
+    assert.deepEqual(model.probes, []);
+    const frozen = await model.finishCurrentLegacySource!();
+    assert.equal(frozen.turns.length, 1);
+    assert.equal(frozen.probes.length, 1);
+    assert.equal(
+      (await post('Reply only OK. Do not use tools, access files or run commands.')).status,
+      200
+    );
+    assert.equal(model.probes.length, 1);
+    await assert.rejects(model.finishCurrentLegacySource!(), /once/);
+    assert.equal(
+      (await post(prompt)).status,
+      400,
+      'the old source cannot submit after the consumer boundary'
+    );
+    assert.deepEqual(model.currentLegacyTurns, frozen.turns);
+  } finally {
+    await model.close();
   }
 });
 
@@ -100,10 +152,16 @@ test('model probe accepts the SDK system envelope while rejecting additional inp
   for (const [messages, tools, status] of cases) {
     const fixture = await startNativeTeamModel({ allowModelProbes: true });
     try {
-      const response = await fetch(`${fixture.url}/v1/messages`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: 'claude-opus-5-5', messages, tools }) });
+      const response = await fetch(`${fixture.url}/v1/messages`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-opus-5-5', messages, tools }),
+      });
       assert.equal(response.status, status);
       assert.equal(fixture.probes.length, status === 200 ? 1 : 0);
-    } finally { await fixture.close(); }
+    } finally {
+      await fixture.close();
+    }
   }
 });
 
