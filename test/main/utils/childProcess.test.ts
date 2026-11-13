@@ -34,6 +34,21 @@ vi.mock('child_process', async (importOriginal) => {
   };
 });
 
+const selectedProcStat = vi.hoisted(() => ({ enabled: false }));
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>();
+  return {
+    ...actual,
+    readFileSync(...args: Parameters<typeof actual.readFileSync>) {
+      const [file, encoding] = args;
+      const pid = selectedProcStat.enabled && encoding === 'utf8' && typeof file === 'string'
+        ? /^\/proc\/(901|902|903)\/stat$/.exec(file)?.[1] : undefined;
+      return pid ? `${pid} (TEST selected child) S ${Array(18).fill('0').join(' ')} ${pid}` :
+        actual.readFileSync(...args);
+    },
+  };
+});
+
 type ExecCallback = (error: Error | null, stdout: string, stderr: string) => void;
 type SpawnCliChild = ReturnType<typeof spawnCli>;
 type ExecChild = ReturnType<typeof child.exec>;
@@ -1072,14 +1087,6 @@ describe('cli child process helpers', () => {
       const selection = vi.spyOn(launchSelection, 'selectedLinuxChildExecutable').mockReturnValue('/TEST/helper');
       const retained = selectedProcess(901);
       const nativeKill = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
-      const fs = await import('fs');
-      const readFileSync = fs.readFileSync;
-      // The synthetic Linux census needs original start ticks as well as ps rows.
-      const stat = vi.spyOn(fs, 'readFileSync').mockImplementation((file, options) => {
-        const pid = typeof file === 'string' ? /^\/proc\/(901|902|903)\/stat$/.exec(file)?.[1] : undefined;
-        return pid ? `${pid} (TEST selected child) S ${Array(18).fill('0').join(' ')} ${pid}` :
-          readFileSync(file, options);
-      });
       const table = Buffer.from(unixProcessTable([
         { pid: 901, parentPid: 1, processGroupId: 100 },
         { pid: 902, parentPid: 901, processGroupId: 100 },
@@ -1088,6 +1095,7 @@ describe('cli child process helpers', () => {
       spawnSyncMock.mockReturnValue({ status: 0, signal: null, pid: 990,
         output: [null, table, Buffer.alloc(0), Buffer.alloc(0)], stdout: table, stderr: Buffer.alloc(0) });
       try {
+        selectedProcStat.enabled = true;
         let finished = false;
         const result = execCli('/missing/original', ['--version']);
         const rejected = expect(result).rejects.toMatchObject({ code: 'ENOENT', allocated: true,
@@ -1126,7 +1134,7 @@ describe('cli child process helpers', () => {
           // No fabricated close is needed to settle the original unknown timeout.
           stillAlive.process.emit('close', null, 'SIGTERM');
         } finally { vi.useRealTimers(); }
-      } finally { stat.mockRestore(); nativeKill.mockRestore(); selection.mockRestore(); }
+      } finally { selectedProcStat.enabled = false; nativeKill.mockRestore(); selection.mockRestore(); }
     });
 
     it('enforces independent stdout and stderr output limits', async () => {
