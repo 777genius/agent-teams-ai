@@ -2522,3 +2522,112 @@ Unavailable dynamic validation of an unsigned original is an incomplete original
 negative image match or a reason to omit that format. Even a successful signed-native proof does
 not qualify compiler-default/unsigned executables, scripts, installed/custom runtimes or product
 activation. Keep the same existing native test/job budgets, matrix and original-child cleanup.
+
+## 52. Team journal: original Windows registration/Stop без async внутри Team fence
+
+**Статус:** план следующего связного B2/C-среза; private Main/Host consumer из manifest
+`5f8ed1db069e48303ffa34b4138297a96b14fc74` имеет peer source PASS, но его восстановленные
+тесты не исполнены. Actual Main → ordinary Claude gate §51 ещё не прошёл; production
+service capability по-прежнему не включаем для остальных провайдеров/default schema1.
+
+### 52.1. Проверенная существующая граница
+
+- [TeamProcessCommands@689](https://github.com/777genius/agent-teams-ai/blob/689dddb61cedf0649379975735bac162c87c2836/packages/legacy-agent-host/src/process/TeamProcessCommands.ts)
+  уже владеет `commands/`, fingerprint, grant fence, register/terminate/lookup.
+  `register` сейчас синхронно сохраняет native capture до policy write; receipt содержит
+  digest запроса, но не поля исходной регистрации. Windows capture/lookup требуют await.
+- [TeamOwner@689](https://github.com/777genius/agent-teams-ai/blob/689dddb61cedf0649379975735bac162c87c2836/packages/legacy-agent-host/src/team/TeamOwner.ts)
+  вызывает `processCommands().list()` внутри синхронного product snapshot. Этот путь нельзя
+  сделать Promise или снабдить вторым authoritative cache. [MCP wrapper@689](https://github.com/777genius/agent-teams-ai/blob/689dddb61cedf0649379975735bac162c87c2836/packages/legacy-agent-host/src/composition/createMemberProcessMcpPort.ts)
+  также пока проверяет current/source только синхронно.
+- [Public methods@689](https://github.com/777genius/agent-teams-ai/blob/689dddb61cedf0649379975735bac162c87c2836/packages/legacy-agent-host/src/process/createTeamProcessMethods.ts)
+  уже async и используют явную public projection. Новые private intent/capture поля не входят
+  в renderer/MCP result; `processRef`, существующая Processes row и Stop остаются прежними.
+  [Main@689](https://github.com/777genius/agent-teams-ai/blob/689dddb61cedf0649379975735bac162c87c2836/src/features/agent-backend/main/infrastructure/CapturedHostClient.ts)
+  уже уменьшает любой `budgetMs` на время своей очереди до `port.handle`.
+
+### 52.2. Минимальные контракты и порядок
+
+1. Расширить `RegisteredProcessCapture` только строгим v5 из уже проверенного
+   `retainedServiceContracts`; legacy Darwin v1/v2 и Linux v3/v4 декодируются без переписывания.
+   У receipt schema1 добавить optional `nativeIntent` и закрытую `originalRegistration`
+   (`pid/label/port?/url?/command?`, original policy memberName, `policyRequested`).
+   Использовать существующие пределы label1024, url/command4096 и общий receipt128KiB.
+   Новые поля участвуют в fingerprint только при наличии; old fingerprint/bytes не меняются.
+2. В существующем `TeamProcessCommands` оставить sync metadata/snapshot API. Добавить один
+   узкий Windows async facet через `WindowsTeamProcessCommands.ts`, получающий те же
+   admit/readReceipt/persist/view/select/enter callbacks и тот же store. Никакого второго
+   command registry, native owner, receipt journal или background recovery loop.
+   Sync view для v5 допускает durable completed terminate absence; иначе возвращает unknown,
+   без POSIX-adapter вызова или придуманного canTerminate.
+3. Windows `register`: под текущим fence проверить command replay, grant, original registrar,
+   input и active PID rows. Mint pure intent от единственного уже installed/resumed original
+   provider capability; сохранить его и закрытый original input **до первого await**.
+   Original requested/unknown registration разрешён только при этих Windows полях; это
+   application intent, не утверждение, что native capture уже состоялся.
+   Повтор original command возвращает receipt; serialized intent никогда не вызывает run.
+4. Capture run/lookup выполняется снаружи fence. После ответа войти в тот же fence, заново
+   проверить current grant/source/registrar, original receipt/intent/fingerprint и текущие rows.
+   Genuine capture сохраняется до любой policy mutation; changed source/отказ policy не
+   удаляют Main pending object и исходную cleanup authority.
+   Перед первым `registry.register/attachOriginal` сохранить `policyRequested:true`.
+   После этого recovery не вызывает register второй раз: завершить можно лишь по единственной
+   текущей row с тем же `capturedByCommand`, full capture и original policy input; иначе held.
+   Так lost capture ACK позволяет закончить ещё не начатую policy phase, а uncertain policy
+   write не превращается в повторную регистрацию.
+5. Windows list/read: зафиксировать исходные private captures под read fence, выполнить
+   bounded native query снаружи и снова проверить grant/current rows под fence. Сопоставлять
+   observation только по полному capture digest, не PID. Per-call projection не сохраняется
+   как authoritative cache; changed rows остаются unknown. Не больше трёх одновременных
+   native queries; один общий deadline, оставшиеся после его истечения строки unknown.
+6. Stop: под admin fence выбрать exact processRef/capture, persist original pure Stop intent
+   и requested/unknown receipt перед run. Lookup использует только original intent snapshot
+   и query того же capture; не пересылает Stop и не recapture по PID.
+   Absence требует точных retained/native facts; `signalAccepted` остаётся unknown, если
+   исходный protocol reply не доказывает принятие сигнала. Native refusal/transport loss
+   сами по себе не означают no effect; только явный not-dispatched может быть rejected.
+   Завершение pending Stop сохраняет существующий completed/observed-absent full-capture proof,
+   в том числе после metadata unregister и при наличии replacement row.
+7. Settle первого connected cut разрешён лишь после genuine absence и reconciliation всех
+   исходных pending terminate receipts для той же physical scope. Pure settle intent сохранить
+   optional в **том же** completed terminate receipt до await; lookup читает только его original
+   pending result. Никакого fake Human Stop для natural exit. Естественный terminal scope
+   остаётся читаемым из original Main; автоматическое retirement natural registered scopes
+   без completed Stop пока отдельный незакрытый gate, не объявлять его выполненным.
+8. Один deadline начинается при входе в public/MCP async process operation до capture/source
+   work и переносится через admission → run/query → settlement. Верхняя граница10s соответствует
+   существующему Windows provider Stop; reverse-frame max30s и native limits не увеличиваются.
+   Истёкший queued intent не исполняется; already dispatched unknown остаётся original.
+   MCP wrapper должен await результат и снова проверить source/current, сохранив opaque
+   failure и cleanup ownership при отказе после await.
+
+### 52.3. Конкретные файлы и следующий proof
+
+- `process/registeredProcessContracts.ts`, `validateProcessRecords.ts` — v5 и optional receipt
+  fields; `processReceiptFingerprint` остаётся единственным fingerprint алгоритмом.
+- `process/TeamProcessCommands.ts` + один небольшой `WindowsTeamProcessCommands.ts` —
+  shared synchronous owner callbacks и Windows async phases; `createTeamProcessMethods.ts`
+  await facet перед прежней projection. `team/createTeamCommandAccess.ts` передаёт optional
+  private port; `TeamOwner.ts`/его snapshot не увеличивать и не переводить на async.
+- `CapturedProcess.ts`, `WindowsCapturedProcess.ts`, provider `MemberProvider.ts` и обычный
+  `ClaudeMemberProvider.ts` — pure prepareCapture от exact existing pending root; если нет
+  ровно одного eligible original root, отказ до capture. Объявить эти common paths до edits.
+- `createMemberProcessMcpPort.ts`, `createTeamProcessComposition.ts` и существующий Host wiring —
+  same-member capture facet и global original-Main cleanup facet для read/Stop/lookup после
+  Host replacement. Никакой implicit activation Codex/OpenCode V1/V2.
+- Продолжить existing command/registered-process fixtures: (a) lost capture ACK → cold lookup
+  finishes once, (b) grant/source change после await не публикует row, (c) interrupted policy
+  phase не регистрирует повторно, (d) pending Stop + metadata removal + replacement PID
+  сохраняют original receipt и terminal history. Это проверки реальных опасных границ,
+  не отдельная suite для каждого mapper.
+- После исправления actual §51: existing native Windows Main/Host journey использует отдельно
+  staged schema2 product broker и genuine Claude background service → MCP register → Processes
+  read/Stop. Original service HANDLE absent, соседний service и provider alive; lost ACK и
+  same-Main Host replacement читают original receipt. Actual Windows x64/ARM CI и существующая
+  Linux/Darwin regression необходимы; source/test-double PASS их не заменяет.
+
+**R1 self-review:** обнаружен sync snapshot caller; сохранён sync API вместо Promise в snapshot.
+Обнаружено отсутствие original policy input и границы before-policy-write; добавлен один закрытый
+receipt field с `policyRequested`, чтобы recovery не повторял неизвестный metadata effect.
+Natural registered-scope retirement и full Main cold lifetime явно не повышены до готовых.
+**R2/R3:** независимое чтение плана и последующего source/native proof pending.

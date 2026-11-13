@@ -1198,3 +1198,97 @@ profile. No new permission RPC, Team grant or configuration owner is needed.
   close this item. Do not widen ordinary Agent, Team/MCP or process authority
   to make the new command path pass. Unsupported native task/permission
   provenance stays unknown and causes a plan correction before release.
+
+
+### R18 follow-up — public PermissionRequest path, with native policy unchanged
+
+**Круг 1 — что известно и что ещё нужно доказать.** Оригинальный Read
+experiment остаётся `INCOMPLETE`: receipt
+`aca36b31f0aeaf3cd5d655eef637f58943de599c`, evidence manifest
+`759274ea071a40ad9244014d3f6b4cb913f3db38`, pinned source audit
+`0d954f797132d7af41a064673141fa8b6df96842`. Он наблюдал один original
+PreToolUse, ноль canUseTool и неуспешный predicate исходного Read result;
+точный raw error body не сохранён. Original child/listener cleanup подтверждён.
+Повтор того же operation/root или замена этого результата на PASS запрещены.
+
+В exact SDK0.3.305 native source slash dispatcher не передаёт canUseTool в
+fork. Нейтральный PreToolUse сохраняет explicit ask, а fallback `asksNoHost`
+не доставляет его existing Host UI. Production `captureClaudeSettingSources`
+по умолчанию загружает user/project/local: это поддерживаемая политика,
+а не искусственная особенность TEST. PreToolUse allow не отменяет native
+ask/deny. `dontAsk`, bypass, удаление правил и silent auto-approval непригодны.
+
+Официальные [permissions docs](https://code.claude.com/docs/en/agent-sdk/permissions)
+документируют `permissionPrompts: 'none'`: canUseTool не вызывается, но
+PermissionRequest hook ещё может решить исходный запрос, иначе native
+отказывает. [SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md)
+добавил option в0.3.259; прочитан immutable changelog blob
+`9b67287225a06d3814e967a3fc6e548d3613633c`. Это public **query-level**
+option, не изменение permissionMode и не доказательство работоспособности
+в нашем fork. Наличие более новой0.3.323 само по себе не доказывает fix.
+
+До нового native запуска прочитать exact уже закреплённые SDK/native bytes:
+public Options и сериализацию option; native flag→permission context;
+наследование этого context исходным slash fork; branch
+shouldAvoidPermissionPrompts→PermissionRequest; финальную native обработку
+allow/deny и updatedInput. Сохранить byte offsets/hash и краткие source
+выводы. Не редактировать бинарник, не передавать internal option и не
+выбирать другой SDK по предположению. При недоказанном inheritance — только
+source finding и уточнение плана, без production изменения.
+
+[PermissionRequest reference](https://code.claude.com/docs/en/hooks#permissionrequest)
+не обещает tool_use_id в hook input. Отдельный prerequisite: реальный public
+callback/envelope должен позволить однозначно связать ответ с original
+PreToolUse tool ID, native child/session и PendingInput. Нельзя выбрать
+один из параллельных одинаковых инструментов по имени/таймингу/первому
+совпадению. Отсутствующий или неоднозначный ID оставляет route неподтверждённым.
+`defer`/новый resume не является заменой этой связи или permission host.
+
+**Круг 2 — bounded TEST proof, только после source prerequisite.** Reuse
+immutable R18 driver `9fdc6c9c1fabc708fd12306ba0b5f472e4d79943`, exact
+Node24/SDK0.3.305/native hashes и original cleanup. Два независимых fresh
+TEST scopes, без reuse прежнего root/operation: (a) сохранённый explicit
+ask:Read с once approval через public PermissionRequest; (b) explicit
+native deny:Read как отрицательный tripwire. В каждом ровно один native
+/review input, максимум два inference, один предложенный Read своего
+неизменяемого TEST файла, ноль MCP/shell; прежний45s bound включает cleanup.
+Не менять mode, allow list, original Read arguments или source settings
+ради прохождения (кроме намеренно отдельного deny-сценария).
+
+В ask case добавить public option и PermissionRequest callback; прежний
+canUseTool остаётся счётчиком недопустимого неожиданного пути. Context и
+origin должны пройти все прежние task→SubagentStart→PreToolUse guards.
+Callback получает только exact original tool/child/session/input; повтор,
+foreign ID, abort или expired original deadline даёт отказ. Allow не пишет
+updatedPermissions и не меняет input; actual native tool_result обязан
+содержать original toolUseID, success и TEST file marker. Main result
+обязан эхом связаться с original user input. В deny case успешный Read
+запрещён, approval callback не может перевести native deny в allow;
+нужен exact original error tool_result без file marker и корректный main
+terminal, а не один счётчик запроса.
+
+Сохранить closed факты: callback ID presence/equality, child/session,
+native permission mode, исходный tool/input digest, request/result counts,
+is_error и marker presence отдельно (не один совмещённый predicate), source
+hashes, original physical cleanup. Raw prompt/path/tool body не публиковать.
+Если public hook не передаёт необходимую identity или callback не вызывается,
+закончить scope с честным INCOMPLETE/refusal, без fallback approval и rerun.
+Текущая недоступность executor не является execution evidence.
+
+**Круг 3 — только затем решение о D.** Proof не включает глобальное изменение
+provider option. Query-level переключение затронуло бы также обычные main
+tools, Agent children, questions и MCP, поэтому до такого изменения нужен
+отдельный bounded source review полного existing approval маршрута.
+Кандидат должен reuse `Interactions.request` и original Host approval
+owner, его exact-once reply, deadline, abort/cancel и current-input checks;
+source settings, native allow/ask/deny/mode и ordinary Agent/MCP authority
+остаются действующими. Не добавлять параллельный interaction registry,
+permission RPC, session rule или synthetic Agent parent.
+
+В existing D command/interaction cases затем проверить original approval,
+user denial, abort/timeout/stale reply и отсутствие второго effect; native
+deny не доходит до разрешающего UI пути. Question answer сохраняет свой
+original question contract. Нужная public correlation и эквивалентность
+обычных путей обязательны прежде product rollout. До их подтверждения R18
+context/result/tool parity остаётся открытой; existing native/Desktop gate
+и предыдущий failed status не ослабляются.
