@@ -10,7 +10,10 @@
 /** Результат валидации пользовательских аргументов через `claude --help`. */
 export interface CliArgsValidationResult {
   valid: boolean;
+  /** Unknown and protected flags. */
   invalidFlags?: string[];
+  /** An option that needs a value but ends the args without one. */
+  missingValueFlag?: string;
 }
 
 /**
@@ -138,14 +141,22 @@ export function findOptionMissingValue(raw: string): string | undefined {
 }
 
 /**
- * Flags the CLI does not know, protected flags, and an option left without its
- * value. Launch rejects all of them, so Validate reports them together.
+ * Validate result for user args: flags the CLI does not know and protected flags
+ * in `invalidFlags`, and an option left without its value in `missingValueFlag`.
  */
-export function findInvalidUserFlags(raw: string, knownFlags: Set<string>): string[] {
+export function findInvalidUserFlags(
+  raw: string,
+  knownFlags: Set<string>
+): CliArgsValidationResult {
   const { flags, missingValue } = scanUserFlags(raw);
   const invalid = flags.filter((flag) => !knownFlags.has(flag));
   const protectedFlags = flags.filter((flag) => PROTECTED_CLI_FLAGS.has(flag));
-  return [...new Set([...invalid, ...protectedFlags, ...(missingValue ? [missingValue] : [])])];
+  const invalidFlags = [...new Set([...invalid, ...protectedFlags])];
+  return {
+    valid: invalidFlags.length === 0 && !missingValue,
+    invalidFlags: invalidFlags.length > 0 ? invalidFlags : undefined,
+    missingValueFlag: missingValue,
+  };
 }
 
 function scanUserFlags(raw: string): { flags: string[]; missingValue?: string } {
@@ -243,6 +254,17 @@ const OPTIONS_WITH_REQUIRED_VALUE = new Set([
   '--tools',
 ]);
 
+/** `claude --help` options shown with an optional `[value]`, which accept `--name=value`. */
+const OPTIONS_WITH_OPTIONAL_VALUE = new Set([
+  '--debug',
+  '--from-pr',
+  '--prompt-suggestions',
+  '--remote-control',
+  '--resume',
+  '--teleport',
+  '--worktree',
+]);
+
 /**
  * Splits a short-option token the way the CLI reads it, so protected checks see
  * `-r` in `-rabc`, `-r=abc` and `-pr`. A non-letter after a no-value option stays
@@ -257,7 +279,12 @@ function expandShortFlagToken(token: string): string[] {
       // The CLI reads the rest as its own option, so `-p-resume=x` is `--resume=x`.
       const rest = `-${letters.slice(i)}`;
       const equalsIndex = rest.startsWith('--') ? rest.indexOf('=') : -1;
-      flags.push(equalsIndex === -1 ? rest : rest.slice(0, equalsIndex));
+      const name = equalsIndex === -1 ? rest : rest.slice(0, equalsIndex);
+      // The CLI accepts `=x` only on an option that takes a value, so `-p-continue=x`
+      // stays whole and Validate reports it. Protected names are always kept bare.
+      const takesValue =
+        OPTIONS_WITH_REQUIRED_VALUE.has(name) || OPTIONS_WITH_OPTIONAL_VALUE.has(name);
+      flags.push(takesValue || PROTECTED_CLI_FLAGS.has(name) ? name : rest);
       break;
     }
     flags.push(`-${ch}`);

@@ -165,6 +165,9 @@ export const AdvancedCliSection: React.FC<AdvancedCliSectionProps> = ({
             t('advancedCli.validation.protectedFlags', { flags: protectedOnes.join(', ') })
           );
         }
+        if (result.missingValueFlag) {
+          parts.push(t('advancedCli.validation.missingValue', { flags: result.missingValueFlag }));
+        }
         setValidationMessage(parts.join(' | '));
       }
     } catch (err) {

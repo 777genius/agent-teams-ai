@@ -2569,6 +2569,7 @@
       "allFlagsValid": "جميع الأعلام صالحة",
       "unknownFlags": "غير معروف: {{flags}}",
       "protectedFlags": "محمية: {{flags}}",
+      "missingValue": "قيمة مفقودة: {{flags}}",
       "failed": "فشل التقييم"
     },
     "placeholders": {

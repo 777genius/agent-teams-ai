@@ -3774,6 +3774,7 @@ export default interface Resources {
       "validation": {
         "allFlagsValid": "All flags valid",
         "failed": "Validation failed",
+        "missingValue": "Missing value: {{flags}}",
         "protectedFlags": "Protected: {{flags}}",
         "unknownFlags": "Unknown: {{flags}}"
       }

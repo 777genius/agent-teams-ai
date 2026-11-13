@@ -190,6 +190,8 @@ describe('extractUserFlags', () => {
     expect(extractUserFlags('-p-resume=other-session')).toEqual(['-p', '--resume']);
     expect(extractUserFlags(`-p-settings='{"env":{}}'`)).toEqual(['-p', '--settings']);
     expect(extractUserFlags(`-p-settings '{"env":{}}' -r abc`)).toEqual(['-p', '--settings', '-r']);
+    expect(extractUserFlags('-p-continue=x')).toEqual(['-p', '--continue=x']);
+    expect(extractUserFlags('-p-max-turns=3')).toEqual(['-p', '--max-turns']);
   });
 });
 
@@ -213,19 +215,52 @@ describe('findOptionMissingValue', () => {
 });
 
 describe('findInvalidUserFlags', () => {
-  const known = new Set(['--model', '-p', '-n', '--append-system-prompt']);
+  const known = new Set(['--model', '-p', '-n', '--append-system-prompt', '--continue', '--debug']);
 
-  it('reports unknown, protected and value-less options once each', () => {
-    expect(findInvalidUserFlags('-p --nope --nope', known)).toEqual(['--nope']);
-    expect(findInvalidUserFlags('--model x', known)).toEqual(['--model']);
-    expect(findInvalidUserFlags('-p --append-system-prompt', known)).toEqual([
-      '--append-system-prompt',
-    ]);
+  it('reports unknown and protected flags once each', () => {
+    expect(findInvalidUserFlags('-p --nope --nope', known)).toEqual({
+      valid: false,
+      invalidFlags: ['--nope'],
+      missingValueFlag: undefined,
+    });
+    expect(findInvalidUserFlags('--model x', known)).toEqual({
+      valid: false,
+      invalidFlags: ['--model'],
+      missingValueFlag: undefined,
+    });
+  });
+
+  it('reports an option without its value as missing value, not unknown', () => {
+    expect(findInvalidUserFlags('-p --append-system-prompt', known)).toEqual({
+      valid: false,
+      invalidFlags: undefined,
+      missingValueFlag: '--append-system-prompt',
+    });
+    expect(findInvalidUserFlags('-pn', known)).toEqual({
+      valid: false,
+      invalidFlags: undefined,
+      missingValueFlag: '-n',
+    });
+  });
+
+  it('keeps an attached =value on a no-value option after a short cluster', () => {
+    expect(findInvalidUserFlags('-p-continue=x', known)).toEqual({
+      valid: false,
+      invalidFlags: ['--continue=x'],
+      missingValueFlag: undefined,
+    });
+    expect(findInvalidUserFlags('-p-continue', known).valid).toBe(true);
+    expect(findInvalidUserFlags('-p-debug=api', known).valid).toBe(true);
+    expect(findInvalidUserFlags('-p-model=x', known).invalidFlags).toEqual(['--model']);
   });
 
   it('accepts valid args', () => {
-    expect(findInvalidUserFlags('-p -n name --append-system-prompt "-x"', known)).toEqual([]);
-    expect(findInvalidUserFlags('', known)).toEqual([]);
+    expect(findInvalidUserFlags('-p -n name --append-system-prompt "-x"', known)).toEqual({
+      valid: true,
+      invalidFlags: undefined,
+      missingValueFlag: undefined,
+    });
+    expect(findInvalidUserFlags('', known).valid).toBe(true);
   });
 });
 

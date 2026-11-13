@@ -2569,6 +2569,7 @@
       "allFlagsValid": "सभी झंडे मान्य",
       "unknownFlags": "अज्ञात: {{flags}}",
       "protectedFlags": "संरक्षित: {{flags}}",
+      "missingValue": "मान अनुपलब्ध: {{flags}}",
       "failed": "सत्यापन विफल"
     },
     "placeholders": {

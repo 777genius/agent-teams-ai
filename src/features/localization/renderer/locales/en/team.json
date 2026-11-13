@@ -2783,6 +2783,7 @@
       "allFlagsValid": "All flags valid",
       "unknownFlags": "Unknown: {{flags}}",
       "protectedFlags": "Protected: {{flags}}",
+      "missingValue": "Missing value: {{flags}}",
       "failed": "Validation failed"
     },
     "placeholders": {

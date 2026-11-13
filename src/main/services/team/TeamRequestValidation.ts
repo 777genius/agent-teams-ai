@@ -139,6 +139,21 @@ export function assertOptionalExtraCliArgs(value: unknown): string | undefined {
   return extraCliArgs;
 }
 
+/**
+ * The same fail-closed guard as assertOptionalExtraCliArgs, for desktop IPC handlers
+ * that return an error result instead of throwing.
+ */
+export function checkOptionalExtraCliArgs(
+  value: unknown
+): { ok: true; value: string | undefined } | { ok: false; error: string } {
+  try {
+    return { ok: true, value: assertOptionalExtraCliArgs(value) };
+  } catch (error) {
+    if (error instanceof TeamRequestValidationError) return { ok: false, error: error.message };
+    throw error;
+  }
+}
+
 export function assertOptionalEffort(
   value: unknown,
   providerId: TeamLaunchRequest['providerId']
