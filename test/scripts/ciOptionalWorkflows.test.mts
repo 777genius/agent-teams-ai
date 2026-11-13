@@ -61,7 +61,7 @@ test('native packaged dispatch guards remain intact', () => {
 
 test('security schedules and main push triggers remain available', () => {
   assert.match(workflow('codeql'), /schedule:\n    - cron:/);
-  for (const name of ['codeql', 'codex-runtime-smoke', 'runtime-bootstrap-smoke']) {
+  for (const name of ['codeql', 'codex-runtime-smoke', 'runtime-bootstrap-smoke', 'windows-teammate-console-native']) {
     assert.match(workflow(name), /push:\n    branches: \[main\]/);
   }
 });

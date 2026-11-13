@@ -11,6 +11,16 @@ on:
       - 'src/main/utils/childProcess.ts'
       - 'src/main/services/team/provisioning/TeamProvisioningMemberLifecycle.ts'
       - 'src/features/token-usage/main/infrastructure/CliUsageImporters.ts'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/windows-teammate-console-native.yml'
+      - 'scripts/e2e/windows-teammate-console-native.mjs'
+      - 'scripts/e2e/teams-create-page-desktop.mjs'
+      - 'src/main/utils/cliProcessDefaults.ts'
+      - 'src/main/utils/childProcess.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningMemberLifecycle.ts'
+      - 'src/features/token-usage/main/infrastructure/CliUsageImporters.ts'
   workflow_dispatch:
 
 permissions:
