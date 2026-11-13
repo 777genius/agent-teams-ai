@@ -1063,3 +1063,76 @@ original-root/Job/witness cleanup proof. Затем тот же current Processe
 Actual SDK/Bun compatibility, writer handoff и lossless reverse transport остаются реальными gates;
 fixture-only broker retention не заменяет ни один из них. Review root + независимый peer обязателен до source;
 vendor PASS обязателен до product activation. Warm helper/wire из §26/§24.3 можно готовить независимо.
+
+## 31. Следующий §24.3 срез: scoped wire и bounded replay (source review, native pending)
+
+**Основа:** exact native head `55d95d83a181e66fcc17fa682d9602cf2819fb52`;
+обычный merge в `9d364968ea1c9f74b6ec9636604b9e4e0064849e` сохранил все шесть preimages.
+Ни этот Markdown, ни unattached source blobs не включают новую capability в продукт.
+Текущий native run `43361737432` относится к **9d3649**, без следующего wire среза.
+
+### Что меняется в существующем broker
+
+- Добавлены отдельные finite capture/query/Stop/settle opcodes и service responses.
+  Payload связывает non-reused scope key и original birth; lookup capture использует
+  exact retained PID + birth, без OpenProcess/adoption. Service facts не являются
+  `TreeReceipt` и не проходят через whole-provider `publishRoot`.
+- Native service handlers остаются только в прежней TEST debug сборке.
+  Обычный staged broker отвечает `unqualified`; product manifest/debug flag,
+  Host process integration и public UI в этом срезе не активируются.
+  Прежние TEST mode2/mode3 намеренно сохранены: actual vendor fixture пока использует
+  прежний TEST adapter. Его исход нельзя объявлять квалификацией нового typed wire.
+- У прежнего reply mutex один bounded effect history: максимум 4 unresolved effects
+  и 64 settled replies. Query не занимает replay history; pending unknown не вытесняется.
+  C lifetime frame limit 1024 убран, TS request ID идёт до uint64 max без reset;
+  существующий предел 4 TS waiters остаётся. Service workers ограничены 3, native работа
+  заканчивается до публикации ответа. Нового transport, journal или worker framework нет.
+- Identical pending/cached effect не dispatch-ится повторно. Evicted ID получает finite
+  retired/unknown refusal без нового effect и без abandon здорового провайдера.
+  Это **не** означает known-not-sent для прежней попытки: её effect мог завершиться.
+  Mismatched retained request/generation/corrupt frame сохраняет containment refusal.
+- Native Stop budget фиксируется при admission до worker. Узкий шестой hunk в
+  `serviceScopes.h` передаёт optional original monotonic admission time в прежний
+  `Scopes.stop`; очередь и ожидание registry потребляют тот же budget, перед
+  TerminateJobObject вновь проверяется deadline. Existing TEST callers сохраняют
+  собственный budget; query/settle не посылают signal.
+
+### Явные границы registration и lifetime
+
+Повторный `ServiceCapture` с новым request ID возвращает **тот же scope** и ставит
+прежний registration boolean. Это не несколько независимых native leases.
+Будущий product contract для нескольких logical registrations одной scope, late MCP
+registration и их settlement ещё должен быть согласован с existing Host registry/fence;
+нельзя снять чужую действующую регистрацию одной командой settle.
+Этот срез не добавляет owner-local terminal tombstones, durable natural-exit proof,
+Main retention/rebind (§30), WindowsRegisteredProcess или TeamProcessCommands изменения.
+
+### Проверка и следующие gates
+
+Существующий controlled native scenario, без новой suite, теперь проверяет 1025
+последовательных read-only queries, 64 дополнительных settled capture responses и
+retired original request ID; original scope/provider остаются живы. Также проверяются
+zero-budget Stop без signal, настоящий scoped Stop, settlement и replay исходного
+Stop ACK после retirement, отказ нового Stop/query по закрытому scope.
+Foreign/neighbor/provider witnesses и самостоятельный whole-provider cleanup сохранены.
+После замечания peer проверка потока ответов сохраняет единственный
+`rootExit`: до whole Stop его нет; затем проверяются original root birth и exitCode.
+Root exit, service absence и full provider cleanup по-прежнему разные факты.
+
+Root review всех 6 source файлов и независимый Profiles TS/conformance review — PASS;
+Account C lifetime review ещё pending. Exact preimages проверены по native tree,
+каждый draft blob прочитан обратно без различий. **Compile/native execution ещё не было**:
+executor недоступен, результат 9d не переносится на этот следующий срез.
+Native и TS changes с existing conformance fixture должны публиковаться вместе после
+review, затем получить собственные exact-head checks. Текущий 9d run не отменяется.
+После actual vendor PASS отдельно продолжаются manifest/capability/Host async-fence,
+registry/Processes UI, cold owner и packaged acceptance; этот source cut их не закрывает.
+
+| Path | Exact preimage | Reviewed draft blob |
+| --- | --- | --- |
+| `tools/owned-process-broker/protocol.h` | `98b2a2743863ab29598aa6306691332bc7144360` | `60f9ae497a0bc8f9cf9d7cc32c278bc6afbfe4a4` |
+| `tools/owned-process-broker/broker.cpp` | `b82e54077c41242027cbe6400f7240972074f460` | `0d90199e7a1c04f82e01d40bbd289c6cd675d93b` |
+| `tools/owned-process-broker/serviceScopes.h` | `6a4b39286bb4d0489aca8ec2aaf203015d404507` | `f837c905946282906d8ced5a5a260c0e43c26b2d` |
+| `packages/legacy-agent-host/src/owned-process/codec.ts` | `3f8268481f09b232c9f567f0fb1f64678d3877f0` | `ae5eded9c4f0520a65be73fa1bc8c92e135f3b91` |
+| `packages/legacy-agent-host/src/owned-process/windowsBroker.ts` | `2beae81680a9a4dd2e849e624a03b5321fa450b4` | `3684ca835d4ff592c261f553f2fdf9bce8972422` |
+| `tools/owned-process-broker/nativeDebugServiceScenario.ts` | `893f5ebe6fe3cc5d4294e26450f35e22db50c5e8` | `6cbc36e76cdf2c3ee80419c5098f7c4da8a55a77` |
