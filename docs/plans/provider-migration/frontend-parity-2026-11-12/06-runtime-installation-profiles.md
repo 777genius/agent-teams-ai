@@ -410,3 +410,138 @@ Hash/platform/malformed receipt suites переиспользовать; same-ve
 сценариев, fast lint и source cap — PASS; совместная root-проверка с R7 credentials: 37/37 PASS.
 Actual native/Desktop ещё требует обычного CI. Этот срез не закрывает pre-exec pathname race,
 stale seed/retained history, дедупликацию grant scopes или восстановление Create после source mismatch.
+
+## 17. Published Create восстанавливается после смены runtime source — review 9
+
+План до source. Review `PRRT_kwDORVTEtM622S08`; current source проверен на
+`64c33f663ba48f34352b927a5d4a88fb2ec04b12` (эти Create/model paths не менялись в
+`a2f327c8b07142a2ec857a5be6e0924c84f0fcef`). База этого документа —
+`76b31ccc39984695f0f986e2c5d8a94bfeb770ec`; §15–16 и их actual proof сохранены.
+
+### Круг 1 — конкретная ошибка и прежняя возможность
+
+- В `CreateTeamLaunchCoordinator.submit` registry уже published и capture B уже
+  зарегистрирован до проверки `readLaunchSourceSelections`. Если исходный submit
+  прерван здесь, `lookup` возвращает null до start admission. После source C
+  новый model proof C не может законно запустить immutable B; повтор original Create
+  отказывает `creation-source-changed`. Existing test в `team-create-launch.test.ts`
+  доказывает отсутствие открытия, но не возможность продолжить работу.
+- `CapturedTeamRegistry.submitCreation` превращает даже известную published Team в
+  hold/unknown; `retainedCreateSubmission` поэтому держит единственный Create slot.
+  Нельзя освободить slot по одному отсутствующему start record: original submit
+  может ещё продолжать async capture/worktree и позднее стартовать.
+- Донор `4a0e06277fe216d9f82dbbede362668fe46622ee`:
+  `CreateTeamDialog.tsx:2173–2250` отдельно сохраняет Team через createConfig и
+  открывает её; ordinary Launch существует в
+  `TeamProvisioningCreateLaunchOrchestration.ts:198+`. Сохраняем возможность
+  работать с уже созданной Team и явно запустить её позже. Не утверждаем, что
+  донор имел именно новый Host receipt recovery.
+- Current ordinary `createHostTeamLaunchSubmission` уже даёт fresh command →
+  `capture:<command>` → start. `TeamRuntimeRegistration` и
+  `teamRoster.assertRosterEditable` проверяют исходные unresolved/attached resources,
+  а `executeRuntimeLaunch` повторяет current-roster guard после worktree await.
+  Эти owner guards сохраняются.
+- Второй найденный seam: `model.configuration.read` для ещё не запущенного B сейчас
+  возвращает B; same-provider draft probe сохраняет B sourceReference. Одна
+  partial-навигация не доказывает цепь current C → proof C → capture C → start C.
+
+### Круг 2 — один partial result и существующий prospective model read
+
+1. В existing Create coordinator удерживать только active original command IDs на
+   lifetime самого исходного submit Promise: захват до первого await, удаление только
+   после settlement в finally. Timeout/abort RPC не завершает этот lifetime. Это ограничено
+   текущей Host RPC concurrency; отдельного scheduler, очереди, таймера или журнала
+   нет. Concurrent same-ID submit/lookup возвращает прежний held/unknown, не
+   наблюдает временное отсутствие start как завершённую операцию.
+2. Original lookup по exact command/draft/context по-прежнему сначала проверяет
+   registry и полный retained capture. Если original start admitted — прежний
+   replay/read. Если полного capture ещё нет, registry pending, writer потерян,
+   record повреждён или custody неопределённа — прежний hold/unknown, без partial.
+   Для completed capture без original start проверить исходный summary и Runtime
+   bindings этого original capture через existing read/roster proof: startedAtMs=null,
+   summary.admission отсутствует (и preparation, и aggregate start любого command,
+   не только ids.start), все attempts unclaimed, no attached/unresolved resources.
+   TeamLaunchOwner.summary уже выводит admission из record.preparation либо
+   record.startCommandId; чужой admitted/prepared command не становится partial. Более поздний
+   другой run этой Team не приписывается старой команде; его outcome остаётся в
+   existing Team/runtime read, а partial не заявляет его cleanup. Проверка не останавливает и не
+   открывает process. Только этот конкретный pre-admission случай даёт
+   `partialCreated` с original creation receipt и actual retained launch summary.
+3. Same-ID submit, прочитав такой partial, только возвращает его. Он не возобновляет
+   start B, не переписывает capture B/его source refs и не создаёт новую Team.
+   Первое выполнение, ещё не опубликовавшее Team, сохраняет прежний Create+Launch
+   путь. Изменённый draft с тем же ID остаётся conflict; unknown record не становится
+   partial по catch-all. Новый durable terminal marker не нужен для этой границы:
+   inactive submit + existing completed capture/owner proof дают явный read branch.
+4. `CapturedTeamRegistry` после отказа/потерянного ACK делает один original
+   `team.creation.lookup`; он умеет вернуть и admitted, и partial result.
+   Только owner-confirmed отсутствие создания позволяет прежний editable refusal.
+   Main регистрирует тот же canonical handle через existing `registerDynamic`.
+   В private result добавить закрытый additive `partialCreated:true`;
+   public `TeamCreateResponse.launchStatus` получает `unconfirmed`.
+   runId остаётся ID **настоящего capture B**, не фиктивным admission/native session.
+5. Existing renderer Host-create helper проверяет canonical team/run IDs и делает
+   ordinary fetchTeams. Для `unconfirmed` он не включает provisioning polling и
+   не показывает запуск успешным. Existing Create completion освобождает только
+   original intent при прежнем foreground epoch и открывает эту Team. В existing
+   TeamList confirmation/notice показать: Team сохранена, запуск не подтверждён;
+   дальнейший Launch — явное действие на существующей Team. Organization placement
+   и original context-change/unknown holds не меняются.
+6. Для этого ещё не начатого complete capture использовать existing
+   `savedTeamModelProbe` как **model-only prospective** read current C.
+   Eligibility проверяется Host-side при read и каждом existing probe current check:
+   exact current captured Team/roster, отсутствует summary.admission любого command
+   (включая preparation), отсутствует claimed attempt,
+   исходные Runtime bindings не attached и не имеют unresolved custody. Для
+   prospective C проверить **все retained launches/resources этой Team**, как уже
+   делает RuntimeTeamCoordinator.assertRosterEditable, а не только latest B.
+   Existing `assertRosterEditable` можно переиспользовать с read-authority mode
+   только для этой inspection; мутации сохраняют прежний control mode.
+   Ранее зарегистрированная история сама по себе не даёт eligibility.
+7. `model.configuration.read` для eligible never-started capture возвращает existing
+   `saved-model-` source digest от текущего saved roster + source C. Этот digest,
+   original authority и source refs проходят existing `captureSavedTeamModelProbe`;
+   `source(options)` повторно проверяет eligibility и C при продолжении probe.
+   Native start/claim, смена roster/source/authority делают proof stale. Перед новым
+   capture/start остаются existing registration/roster/source guards; зелёный UI
+   check сам по себе не даёт полномочий обойти их.
+   Running/admitted A, Resume и обычный pinned capture model path остаются прежними;
+   не менять общее правило same-provider draft на latest defaults.
+8. После зелёного C пользователь делает ordinary Launch: current roster save →
+   fresh capture command C → start C. Existing synchronous registration/admission
+   и post-await current guards запрещают поздний start B после C; если B уже
+   admitted/attached/unknown, existing mutation refusal сохраняется.
+   Старые records/unknown ownership не удаляются, никакого automatic Stop/retry.
+
+### Круг 3 — доказать полную recovery цепь в existing tests
+
+- Расширить existing interrupted-Create case с реальными registry/runtime/source
+  journals: B preflight → published complete capture B → injected interruption
+  до start → source C → original lookup/submit partial → cold read того же result.
+  Ordinary model.configuration/probe должен выбрать именно executable/source C,
+  затем existing roster/capture/start с fresh ID открывает только C один раз.
+  Старый Create после этого не открывает B и не меняет его record/source references.
+  Существующий running-B/defaults-after-C test остаётся byte-for-byte по assertions.
+- В том же existing file проверить concurrent same-ID lookup/submit на deferred
+  capture: пока original flow жив, partial недоступен; после отказа он доступен
+  только при выполненных owner checks. Claimed/unknown custody и незавершённый
+  capture/worktree не подтверждают partial. Это finite controlled composition,
+  не заявка на native provider inference.
+- Existing Main Create/refusal tests проверяют один original lookup, canonical
+  registration, additive projection и сохранение ambiguous transport hold.
+  Existing renderer Create test проверяет same-owner partial → navigation/slot
+  release без provisioning poll; foreground change и настоящий unknown сохраняют slot.
+  Новая suite, runner или искусственный native failpoint не нужны.
+- Source closure: existing CreateTeamLaunchCoordinator/RuntimeTeamCoordinator,
+  createLaunchContracts, executeRuntimeLaunch/savedTeamModelProbe/teamRoster;
+  existing Main CapturedTeamRegistry/createdHostTeam, shared response,
+  renderer Host-create helper/TeamList. Никакого нового owner/journal/framework.
+  Before code — independent plan review + root commit/push; after code —
+  independent authority/recovery review, Host/Main/renderer targeted types,
+  existing critical tests, lint/caps и штатный native/Desktop Create/Launch CI.
+  Actual CI подтверждает обычный UI/native path; injected interruption отдельно
+  обозначается как controlled journal recovery, без переноса native PASS на него.
+
+Donor references:
+[Create form](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/dialogs/CreateTeamDialog.tsx),
+[Create/Launch orchestration](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningCreateLaunchOrchestration.ts).
