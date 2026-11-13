@@ -1145,8 +1145,11 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
     assert.ok(evidence.mainElectronPid > 0 && evidence.teammatePid > 0);
     assert.deepEqual(evidence.tools.map(tool => tool.name), ['cmd', 'git', 'powershell']);
     assert.ok(evidence.tools.every(tool => tool.exitCode === 0 && tool.pid > 0));
-    assert.equal(evidence.tools.find(tool => tool.name === 'powershell').inheritedConsoleHidden, true,
-      'Real Electron-owned tool did not prove a hidden native console');
+    const powershell = evidence.tools.find(tool => tool.name === 'powershell');
+    assert.equal(powershell?.consoleWindowVisible, false,
+      'Real Electron-owned PowerShell unexpectedly had a visible console');
+    assert.ok(['none', 'hidden'].includes(powershell.consoleState),
+      'Real Electron-owned PowerShell console state was not verified');
     const rendererFocusedAfter = await client.evaluate('document.hasFocus()');
     const focusObservable = evidence.mainFocusedBefore === true && rendererFocusedBefore === true;
     if (focusObservable) {
@@ -1159,7 +1162,8 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
       schemaVersion: 1, success: true, scope: 'real Electron Main -> fixture teammate -> native tool calls',
       realElectronMainHosted: true, realProductTeammateLaunch: false,
       realVendorRuntimeOrModel: false, actualConsoleWindowsEnumerated: false,
-      cmdGitWindowVisibilityUnknown: true, powershellConsoleHiddenVerified: true,
+      cmdGitWindowVisibilityUnknown: true, powershellConsoleNotVisibleVerified: true,
+      powershellConsoleState: powershell.consoleState,
       nativeFocusObservable: focusObservable, rendererFocusedBefore, rendererFocusedAfter,
       ...evidence, screenshot: 'teams-create-windows-electron-console.png',
     };
