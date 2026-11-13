@@ -2881,3 +2881,77 @@ Source anchors на exact working c0f:
 В существующем Windows job добавить mode `scoped-services` рядом с existing `natural-services`, с отдельным original controller sandbox/receipt и тем же explicit schema2 stage. Одна дополнительная invocation покрывает **оба** public Stop перехода; нет новой matrix/job/runner или отдельного provider для каждого Stop. Оба x64/ARM64 должны пройти actual staged product/ordinary SDK/Team/public route. Сохранить startup10 s, request45 s, native turn35 s, per-process10 s, original Host-exit5 s, witness/drain limits, controller120 s и whole-job30 min; очереди и ожидание двух register blocks входят в исходный deadline. Не продлевать исходный controller attempt, не сбрасывать phase deadline при lookup и не увеличивать TTL.
 
 Приёмка exact next coherent head: existing Host build/type projects, scripts/protocol typecheck и targeted lint/source cap; existing protocol/tests только по затронутому риску; затем actual Windows native receipt со strict finite phase facts, exactly one allocation/prepare/resume, exactly two original captures, exactly two scoped Stop effects (primary A / neighbor B), same Main epoch, two observed Host incarnations, no B input/capture/launch and confirmed original cleanup. Любой extra effect, source/grant mismatch, unknown receipt/settlement либо invalid notification оставляет INCOMPLETE и сохраняет initial failure. `sdkColdConversationQualified`, `desktopQualified`, general provider/platform parity и `releaseQualified` остаются false: этот gate проверяет ordinary Team/public Processes contracts, а renderer clicks и packaged UI требуют своего existing acceptance. Никаких положительных native claims до actual receipts.
+
+## 57. POSIX TEST actor: минимальная переносимость после actual 2227 compile failures
+
+### Круг 1 — зафиксировать настоящий предел CI
+
+Exact live source `2227a997542fd603aab2bc8410433dacfa4e83a8`,
+[run43429091345](https://github.com/777genius/agent-teams-ai/actions/runs/43429091345):
+Linux job131897761669 и Darwin ARM job131897761474 завершили existing
+step24 до запуска POSIX native cases. В original Linux log GCC13 с
+`-Werror` отвергает игнорируемый результат write в C307/310 и read в318/324;
+Darwin compiler не видит `errSecSuccess` в214/215/216/218. Это ошибки
+компиляции TEST actor, не native отрицательный результат и не evidence,
+что прежний image/byte-stability guard прошёл или не прошёл.
+
+Source остаётся одним existing
+[fixtures/posix-exec-native.c](https://github.com/777genius/agent-teams-ai/blob/b13f668315b38182d6a0f47f10eef54cd43aaceb/packages/legacy-agent-host/tests/fixtures/posix-exec-native.c),
+preimage `65ae717da1a36dada1571191060df833c373caf1`.
+Оригинальный TS runner в registered-process-executable.native.ts354–365
+уже компилирует controller, sibling library и payload с
+`-std=c11 -Wall -Wextra -Werror -O2`, Security/CoreFoundation на Darwin.
+Параметры compiler, flags и CI budgets не ослабляются.
+
+### Круг 2 — ровно один TEST C path
+
+1. Darwin: явно подключить `Security/SecBase.h`, где Apple объявляет
+   `errSecSuccess = 0`
+   ([official SecBase.h](https://github.com/apple-oss-distributions/Security/blob/main/base/SecBase.h)).
+   Сохранить SecCode API, exact original audit token, no-network validity,
+   code-signing flags, сравнение original executable и все CF releases.
+   Не заменять код возврата произвольным числом и не обходить проверку
+   неподдерживаемого/неподписанного изображения.
+2. Linux child: зафиксированный errno ptrace/execve передать прежним
+   original error pipe одним write sizeof(int). Проверить возвращённый
+   byte count. Полный write сохраняет прежний exit111/112; failed/short
+   write завершает этот же original child отдельным finite failure113,
+   не продолжает exec/resume и не объявляет успешную доставку errno.
+   Не вводить повторный syscall loop, новый IPC/frame, signal или child.
+3. Linux parent: только после original waitpid и target_pid=0 прочитать
+   прежний pipe в local temporary integer. Публиковать execErrno лишь при
+   exact sizeof(int) и положительном errno; read error сохраняет его
+   errno, EOF/short/invalid report даёт EIO и execErrno=0. Частичные bytes
+   нельзя использовать как EPERM/ETXTBSY или отсутствие процесса. Два
+   одинаковых early-exit branches могут использовать один маленький
+   private Linux-only helper; writer helper также Linux-only, чтобы
+   Darwin/TEST_LIBRARY/TEST_PAYLOAD не получили unused-function warning.
+4. До read parent уже закрыл свою write end, а original child reaped;
+   новых ожиданий/таймеров нет. Все original PID slots, reap blocking,
+   cleanup, generation/identity, ptrace stop-before-user-space, suspended
+   Darwin launch, mutation-after-last-check, execve pathname/argv/env,
+   retained writer и marker proofs остаются. Никаких production adapters,
+   permission/capability workaround, signing-policy changes или новой
+   квалификации по факту компиляции.
+
+### Круг 3 — проверки и честный статус
+
+До source — root publication и независимый peer. Проверить точный one-file
+diff и readback. Локально разрешена только компиляция того же controller,
+library и payload с прежними strict flags; при необходимости воспроизвести
+Linux warn-unused-result на compile-only invocation с
+`_FORTIFY_SOURCE=2`, сохранив его и для final bytes. Не запускать повторный
+ptrace native scenario и не выдавать Linux compile за Darwin compile.
+
+Новая test suite/case, oracle, runner, retry, timeout или workflow не нужны.
+Existing compiler-default/ad-hoc/script/mutation cases следующего штатного
+CI остаются обязательными. Полный original errno получит прежний
+writer-open/ETXTBSY case; unknown/short pipe не может пройти этот oracle.
+Текущий2227 и прежний local EPERM receipt сохраняются неизменными. Source
+peer, local compiler и actual Linux/Darwin native outcomes отмечаются
+раздельно; original-path product activation этим исправлением не разрешается.
+
+**R1:** exact CI compiler diagnostics сопоставлены с четырьмя discarded I/O
+results и отсутствующим declaration header. **R2:** выбран fixed-size
+fail-closed original pipe без изменения custody/primitive. **R3:** peer,
+source и compile/native execution новой редакции ещё pending.
