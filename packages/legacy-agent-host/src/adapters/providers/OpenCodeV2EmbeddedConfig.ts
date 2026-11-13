@@ -93,3 +93,33 @@ export function openCodeV2EmbeddedConfig(context: MemberProviderContext,
     requiredToolNames: createTeamMcpTools(context.connection)
     .list().map(tool => tool.name).sort() };
 }
+
+/** A private, finite inert MCP challenge; ordinary metadata keeps its no-tool config. */
+export function openCodeV2CoordinationConfig(profile: OpenCodeManagementProfile,
+  endpoint: { readonly url: string; readonly bearerToken: string },
+  providerConfiguration?: ProviderConfiguration) {
+  const base = openCodeV2NoToolConfig(profile, providerConfiguration);
+  const names = ['coordination_task_briefing', 'coordination_message_send'];
+  const permissions: OpenCodeV2SessionPermissionRule[] = [
+    { action: '*', resource: '*', effect: 'deny' },
+    ...names.map(action => ({ action, resource: '*', effect: 'allow' as const })),
+  ];
+  const agent = 'agent-teams-local-coordination';
+  const selection = { ...base.selection, agent, permissions };
+  const config = {
+    ...base.config, default_agent: agent, permissions,
+    policies: [
+      { action: 'tool.use', resource: '*', effect: 'deny' },
+      ...names.map(name => ({ action: 'tool.use', resource: name + ':*', effect: 'allow' })),
+      { action: 'integration.use', resource: '*', effect: 'deny' },
+      { action: 'integration.use', resource: 'mcp:coordination', effect: 'allow' },
+    ],
+    mcp: { servers: { coordination: {
+      type: 'remote', url: endpoint.url,
+      headers: { Authorization: 'Bearer ' + endpoint.bearerToken }, oauth: false, codemode: false,
+    } } },
+    agents: { title: { disabled: true }, summary: { disabled: true },
+      [agent]: { model: base.config.model, mode: 'primary', permissions, steps: 3 } },
+  };
+  return { selection, config };
+}

@@ -30,10 +30,15 @@ const startSchema = identity
   })
   .strict();
 export type ModelProbeInput = z.infer<typeof startSchema>;
+export const nativeCoordinationPurpose = 'native-local-coordination-v1' as const;
+type CoordinationPurpose = typeof nativeCoordinationPurpose;
+const coordinationIdentity = identity.extend({
+  context: z.string().regex(/^[a-f0-9]{64}$/),
+}).strict();
 export interface NativeModelProbe {
   timeoutMs: number;
-  run(signal: AbortSignal): Promise<boolean>;
-  close(): Promise<boolean>;
+  run(signal: AbortSignal, originalDeadline?: number): Promise<boolean>;
+  close(originalDeadline?: number): Promise<boolean>;
 }
 interface ActiveProbe {
   saved: StoredModelProbe;
@@ -56,13 +61,37 @@ export class ModelProbeOwner {
       fence: ManagementResourceFence;
       assertWriter(): void;
       select(profileId: string, configRevision: string): ManagementTarget;
-      prepare(input: ModelProbeInput, isCurrent: () => boolean): NativeModelProbe;
+      prepare(input: ModelProbeInput, isCurrent: () => boolean, purpose?: CoordinationPurpose): NativeModelProbe;
     }
   ) {}
 
   start(raw: unknown, guard: () => boolean = () => true): ProviderModelProbeSnapshot {
-    const input = startSchema.parse(raw);
+    return this.admit(startSchema.parse(raw), guard);
+  }
+
+  /** Private composition only. The strict public start parser cannot select this purpose. */
+  startNativeCoordination(raw: unknown, guard: () => boolean): ProviderModelProbeSnapshot {
+    const input = startSchema.extend({ context: coordinationIdentity.shape.context }).parse(raw);
+    return this.admit(input, guard, nativeCoordinationPurpose);
+  }
+
+  /** Exact current proof only; running, held, historical text-only or expired rows cannot qualify. */
+  readNativeCoordination(raw: unknown): ProviderModelProbeSnapshot | null {
     this.assertAdmission();
+    const input = coordinationIdentity.parse(raw), saved = this.original(input);
+    if (!saved) return null;
+    if (saved.purpose !== nativeCoordinationPurpose || saved.context !== input.context)
+      throw new ManagementCommandError('conflict');
+    assertManagementTarget(saved, this.options.select(input.profileId, input.configRevision));
+    if (saved.phase !== 'completed' || !saved.ok || saved.resourceHeld || Date.now() >= saved.expiresAt)
+      throw new ManagementCommandError('held');
+    return this.snapshot(saved);
+  }
+
+  private admit(input: ModelProbeInput, guard: () => boolean,
+    purpose?: CoordinationPurpose): ProviderModelProbeSnapshot {
+    this.assertAdmission();
+    const admittedAt = Date.now();
     const isCurrent = () => {
       try {
         return guard();
@@ -72,7 +101,7 @@ export class ModelProbeOwner {
     };
     if (!isCurrent()) throw new ManagementCommandError('held');
     const target = this.options.select(input.profileId, input.configRevision);
-    const fingerprint = managementDigest(input);
+    const fingerprint = managementDigest(purpose ? { ...input, purpose, target } : input);
     const previous = this.options.store.read(input.commandId);
     if (previous) {
       if (previous.kind !== 'model.probe' || previous.fingerprint !== fingerprint)
@@ -83,17 +112,18 @@ export class ModelProbeOwner {
     this.options.fence.reserve(target.resourceId, input.commandId);
     let entry: ActiveProbe;
     try {
-      const native = this.options.prepare(input, isCurrent);
+      const native = this.options.prepare(input, isCurrent, purpose);
       if (
         !Number.isSafeInteger(native.timeoutMs) ||
         native.timeoutMs < 1 ||
-        native.timeoutMs > 180000
+        native.timeoutMs > (purpose ? 90000 : 180000)
       )
         throw new ManagementCommandError('invalid');
       const saved: StoredModelProbe = {
         schemaVersion: 1,
         ...target,
         kind: 'model.probe',
+        ...(purpose ? { purpose } : {}),
         commandId: input.commandId,
         providerId: input.providerId,
         modelId: input.modelId,
@@ -105,7 +135,7 @@ export class ModelProbeOwner {
         phase: 'running',
         resourceHeld: true,
         ok: false,
-        expiresAt: Date.now() + native.timeoutMs,
+        expiresAt: (purpose ? admittedAt : Date.now()) + native.timeoutMs,
       };
       this.options.store.write(saved);
       entry = { saved, native, abort: new AbortController(), retired: false, isCurrent };
@@ -116,7 +146,7 @@ export class ModelProbeOwner {
     }
     entry.timer = setTimeout(() => {
       void this.finish(entry, 'cancelled', false);
-    }, entry.native.timeoutMs);
+    }, purpose ? Math.max(0, entry.saved.expiresAt - Date.now()) : entry.native.timeoutMs);
     entry.timer.unref();
     void this.run(entry);
     return this.snapshot(entry.saved);
@@ -218,7 +248,7 @@ export class ModelProbeOwner {
   private async run(entry: ActiveProbe): Promise<void> {
     try {
       this.assertAdmission();
-      if (!entry.isCurrent()) {
+      if (!entry.isCurrent() || entry.saved.purpose && Date.now() >= entry.saved.expiresAt) {
         await this.finish(entry, 'cancelled', false);
         return;
       }
@@ -226,7 +256,8 @@ export class ModelProbeOwner {
         entry.saved,
         this.options.select(entry.saved.profileId, entry.saved.configRevision)
       );
-      const ok = await entry.native.run(entry.abort.signal);
+      const ok = await entry.native.run(entry.abort.signal,
+        entry.saved.purpose ? entry.saved.expiresAt : undefined);
       if (!entry.retired) await this.finish(entry, 'completed', ok);
     } catch {
       if (!entry.retired) await this.finish(entry, 'held', false);
@@ -241,11 +272,12 @@ export class ModelProbeOwner {
     entry.closing = Promise.resolve().then(async () => {
       let clean = false;
       try {
-        clean = await entry.native.close();
+        clean = await entry.native.close(entry.saved.purpose ? entry.saved.expiresAt : undefined);
       } catch {
         /* Unknown custody remains held. */
       }
-      if (phase === 'completed' && !entry.isCurrent()) {
+      if (phase === 'completed' && (!entry.isCurrent() ||
+          entry.saved.purpose && Date.now() >= entry.saved.expiresAt)) {
         phase = 'cancelled';
         ok = false;
       }

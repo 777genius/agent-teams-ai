@@ -20,6 +20,10 @@ import { assertManagementTarget, ManagementCommandError } from '../management/co
 import { ManagementResourceFence } from '../management/ManagementResourceFence.js';
 import { OAuthOperationOwner } from '../management/OAuthOperationOwner.js';
 import { ModelProbeOwner } from '../management/ModelProbeOwner.js';
+import type { ModelProbeInput, NativeModelProbe } from '../management/ModelProbeOwner.js';
+import { captureCoordinationConfiguration } from '../adapters/providers/OpenCodeCoordinationProbe.js';
+import type { OpenCodeV1Coordination } from '../adapters/providers/OpenCodeCoordinationProbe.js';
+import { OpenCodeCoordinationEndpoint, closeCoordinationByDeadline } from '../adapters/providers/OpenCodeCoordinationEndpoint.js';
 import { createOpenCodeV2ModelProbe } from '../adapters/providers/OpenCodeV2ModelProbe.js';
 import { OpenCodeV2ManagementHost } from '../adapters/providers/OpenCodeV2ManagementHost.js';
 import { createOpenCodeV2CredentialOperation } from '../adapters/providers/OpenCodeV2CredentialOperation.js';
@@ -195,7 +199,8 @@ export class ProviderManagementCoordinator {
       fence,
       assertWriter: () => this.assertWriter(),
       select: (profileId, configRevision) => this.target(profileId, configRevision),
-      prepare: (input, isCurrent) => {
+      prepare: (input, isCurrent, purpose) => {
+        if (purpose && !this.profiles.has(input.profileId)) throw new ManagementCommandError('invalid');
         if (this.claude.has(input.profileId)) return this.claude.prepareProbe(input, isCurrent);
         if (this.codex.has(input.profileId)) return this.codex.prepareProbe(input, isCurrent);
         const profile = this.select(input.profileId, input.configRevision);
@@ -214,7 +219,8 @@ export class ProviderManagementCoordinator {
               ));
               return isCurrent();
             } catch { return false; }
-          }, options.processCustody ? { processCustody: options.processCustody } : {});
+          }, { ...(options.processCustody ? { processCustody: options.processCustody } : {}),
+            ...(purpose ? { coordination: true } : {}) });
         }
         const timeoutMs = profile.modelProbeTimeoutMs ?? 90000;
         const deadline = Date.now() + timeoutMs;
@@ -222,6 +228,7 @@ export class ProviderManagementCoordinator {
         const qualifiedModel = input.modelId.startsWith(input.providerId + '/')
           ? input.modelId : `${input.providerId}/${input.modelId}`;
         const limits = input.limits ?? selectedOpenCodeManagedLimits(profile.managedPreferences, qualifiedModel);
+        if (purpose) return this.prepareCoordination(profile, { ...input, ...(limits ? { limits } : {}) }, isCurrent);
         if (!limits)
           return {
             timeoutMs,
@@ -292,6 +299,64 @@ export class ProviderManagementCoordinator {
         };
       },
     });
+  }
+
+  /** Private composition only: ordinary management RPCs cannot request this purpose. */
+  startNativeCoordination(input: unknown, isCurrent: () => boolean) {
+    this.assertCurrent();
+    return this.probes.startNativeCoordination(input, isCurrent);
+  }
+
+  private prepareCoordination(profile: OpenCodeManagementProfile, input: ModelProbeInput,
+    isCurrent: () => boolean): NativeModelProbe {
+    const target = this.credentialTarget(profile);
+    const current = () => {
+      try {
+        this.assertCurrent();
+        assertManagementTarget(target, this.credentialTarget(this.select(input.profileId, input.configRevision)));
+        return isCurrent();
+      } catch { return false; }
+    };
+    const selected = input.limits ? withOpenCodeModelLimits(profile, { ...input, limits: input.limits }) : profile;
+    const configuration = captureCoordinationConfiguration(selected, input, current);
+    const endpoint = new OpenCodeCoordinationEndpoint();
+    let original: OpenCodeManagementHost | undefined, dedicated: OpenCodeManagementHost | undefined;
+    let deadline = 0;
+    return {
+      timeoutMs: Math.min(profile.modelProbeTimeoutMs ?? 90000, 90000),
+      run: (signal, originalDeadline) => {
+        if (originalDeadline === undefined || deadline) throw new ManagementCommandError('invalid');
+        deadline = originalDeadline;
+        return this.withV1Host(profile, { deadline, signal, commandId: input.commandId,
+          isCurrent: configuration.isCurrent }, async (host, options) => {
+          original = host; this.replacing.add(profile.profileId);
+          if (!await closeCoordinationByDeadline(this.retireHost(profile.profileId, host), deadline))
+            throw new ManagementCommandError('held');
+          options.signal.throwIfAborted();
+          configuration.beforeAllocation();
+          await endpoint.start(deadline, options.signal, configuration.isCurrent);
+          options.signal.throwIfAborted();
+          configuration.beforeAllocation();
+          dedicated = this.createHost(selected, { input, endpoint, deadline,
+            config: configuration.v1Config(endpoint), isCurrent: configuration.isCurrent,
+            beforeAllocation: configuration.beforeAllocation });
+          this.hosts.set(profile.profileId, dedicated);
+          return dedicated.probeCoordination(options.signal);
+        });
+      },
+      close: originalDeadline => {
+        endpoint.seal();
+        const work = Promise.all([
+          original ? this.retireHost(profile.profileId, original) : true,
+          dedicated ? this.retireHost(profile.profileId, dedicated) : true,
+          endpoint.close(),
+        ]).then(results => {
+          if (results.every(Boolean)) this.replacing.delete(profile.profileId);
+          return results.every(Boolean);
+        });
+        return closeCoordinationByDeadline(work, originalDeadline ?? deadline);
+      },
+    };
   }
 
   private assertCurrent(): void {
@@ -559,7 +624,8 @@ export class ProviderManagementCoordinator {
     return host;
   }
 
-  private createHost(profile: OpenCodeManagementProfile): OpenCodeManagementHost {
+  private createHost(profile: OpenCodeManagementProfile,
+    coordination?: OpenCodeV1Coordination): OpenCodeManagementHost {
     const isCurrent = () => {
       if (this.sealed) return false;
       try {
@@ -572,7 +638,7 @@ export class ProviderManagementCoordinator {
     return new OpenCodeManagementHost(profile, {
       isCurrent,
       canAllocate: isCurrent,
-    });
+    }, coordination ? { coordination } : {});
   }
 
   async catalog(raw: unknown): Promise<ProviderManagementCatalog> {
