@@ -1223,8 +1223,9 @@ cross-platform startup/performance gap. No bound or cleanup requirement changes.
 In existing `tests/fixtures/native-host.ts`, handle the six registered
 `runtime.source.*` names before the existing session projection assertion.
 Use the existing strict `runtimeSourceSummarySchema` for current, its array
-for retained, and `runtimeSourcePublicationSchema` for publish, recover and
-refreshConfiguration. Lookup alone may return null. An unrecognised source
+for retained, and `runtimeSourcePublicationSchema` for publish and refreshConfiguration.
+Lookup and recover may return null; recover has no unfinished publication in
+that valid case. An unrecognised source
 method must fail. Keep the explicit no-Bearer response assertion.
 
 This is TEST response classification only. Do not expand the session DTO
@@ -1235,7 +1236,7 @@ that the original Host registers in `createRuntimeSourceMethods.ts`.
 ### Round2 — minimum source and independent review
 
 One existing fixture file, no new module or unit suite. Review all six action
-return types in `RuntimeSourceIndex`, including nullable lookup and strict
+return types in `RuntimeSourceIndex`, including nullable lookup/recover and strict
 nested selection. Existing session/activity/checkpoint assertions remain
 unchanged. A peer verifies the finite classifier before source execution.
 
