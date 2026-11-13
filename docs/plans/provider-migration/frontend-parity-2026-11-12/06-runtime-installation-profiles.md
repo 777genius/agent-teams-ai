@@ -843,3 +843,13 @@ restore и отсутствие skipped Team в shutdown aggregate. Оба вк�
 не ослабляет отказ такой смены и не смешивает её с уже исправленной aliases
 эквивалентностью. Source ещё не изменён; выполнение новых gates не заявляется.
 
+### §19 restore clarification: retained captures без source reference
+
+Retained capture может ссылаться на original bare seed без recipeSources. Только
+после structural launch/source/registration validation restore pass может
+классифицировать exact отсутствие current private recipe либо несовпадение
+saved recipeDigest как typed unavailable для этой Team. Early reference-eligibility
+check предшествует private template resolution, чтобы отсутствие template не
+обходило этот путь. Fresh capture не меняет свои refusal semantics; ambiguous/
+malformed templates, schema/record/I/O ошибки не превращаются в unavailable.
+Новый seed не подставляется вместо старого; его private bytes не реконструируются.
