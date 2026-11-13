@@ -1080,6 +1080,96 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
   };
 }
 
+
+/**
+ * Windows-only native E2E: launch a disposable teammate-shaped process from
+ * the real Electron Main process while its BrowserWindow is visible.
+ * It spawns cmd/git/PowerShell without forcing windowsHide on the tool children.
+ * This verifies Main -> native process console inheritance, NOT actual provider
+ * inference or TeamProvisioningMemberLifecycle product launch.
+ */
+async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture, log) {
+  assert.equal(process.platform, 'win32');
+  const inspector = await CdpClient.connect(inspectorUrl);
+  const nodeBinary = await realpath(process.execPath);
+  const scriptPath = path.join(repoRoot, 'scripts/e2e/windows-teammate-console-native.mjs');
+  try {
+    await inspector.send('Runtime.enable');
+    const rendererFocusedBefore = await client.evaluate('document.hasFocus()');
+    const expression = [
+      '(async () => {',
+      "  const req = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);",
+      "  if (!req) throw new Error('Electron main module require unavailable');",
+      "  const { spawn } = req('node:child_process');",
+      "  const { BrowserWindow } = req('electron');",
+      "  const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http://localhost:'));",
+      "  if (!win) throw new Error('Real Electron test BrowserWindow missing');",
+      '  const mainFocusedBefore = win.isFocused();',
+      '  const child = spawn(' + JSON.stringify(nodeBinary) + ', [' +
+        JSON.stringify(scriptPath) + ", '--teammate-fixture'], " +
+        "{ detached: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });",
+      '  return await new Promise((resolve, reject) => {',
+      '    let settled = false, ready = false, stderr = ""; const tools = [];',
+      '    const finish = (error, value) => {',
+      '      if (settled) return; settled = true; clearTimeout(deadline);',
+      "      if (error && child.pid && child.exitCode === null && child.signalCode === null) {",
+      "        spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });",
+      '      }',
+      '      if (error) reject(error); else resolve(value);',
+      '    };',
+      "    const deadline = setTimeout(() => finish(new Error('Electron-owned native teammate timeout')), 25000);",
+      "    child.stderr?.on('data', b => { stderr = (stderr + b.toString()).slice(-2000); });",
+      "    child.on('message', msg => {",
+      "      if (msg?.type === 'tool') tools.push(msg);",
+      "      if (msg?.type === 'ready') {",
+      "        if (msg.pid !== child.pid) return finish(new Error('Native teammate PID mismatch'));",
+      "        ready = true; child.send({ type: 'stop' });",
+      '      }',
+      '    });',
+      "    child.once('error', err => finish(err));",
+      "    child.once('close', (code, signal) => {",
+      "      if (!ready || code !== 0) return finish(new Error('Native teammate failed: ' + (signal || code) + ' ' + stderr));",
+      "      finish(null, { mainElectronPid: process.pid, teammatePid: child.pid,",
+      "        detached: false, windowsHide: true, mainFocusedBefore, mainFocusedAfter: win.isFocused(), tools });",
+      '    });',
+      '  });',
+      '})()',
+    ].join('\n');
+    const evidence = await inspector.evaluate(expression);
+    assert.equal(evidence.detached, false);
+    assert.equal(evidence.windowsHide, true);
+    assert.ok(evidence.mainElectronPid > 0 && evidence.teammatePid > 0);
+    assert.deepEqual(evidence.tools.map(tool => tool.name), ['cmd', 'git', 'powershell']);
+    assert.ok(evidence.tools.every(tool => tool.exitCode === 0 && tool.pid > 0));
+    assert.equal(evidence.tools.find(tool => tool.name === 'powershell').inheritedConsoleHidden, true,
+      'Real Electron-owned tool did not prove a hidden native console');
+    const rendererFocusedAfter = await client.evaluate('document.hasFocus()');
+    const focusObservable = evidence.mainFocusedBefore === true && rendererFocusedBefore === true;
+    if (focusObservable) {
+      assert.equal(evidence.mainFocusedAfter, true, 'Electron app lost native focus during tool calls');
+      assert.equal(rendererFocusedAfter, true, 'Electron renderer lost focus during tool calls');
+    }
+    await captureScreenshot(client, fixture, 'windows-electron-console');
+    const result = {
+      schemaVersion: 1, success: true, scope: 'real Electron Main -> fixture teammate -> native tool calls',
+      realElectronMainHosted: true, realProductTeammateLaunch: false,
+      realVendorRuntimeOrModel: false, actualConsoleWindowsEnumerated: false,
+      cmdGitWindowVisibilityUnknown: true, powershellConsoleHiddenVerified: true,
+      nativeFocusObservable: focusObservable, rendererFocusedBefore, rendererFocusedAfter,
+      ...evidence, screenshot: 'teams-create-windows-electron-console.png',
+    };
+    const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
+    await mkdir(outDir, { recursive: true });
+    await writeFile(path.join(outDir, 'teams-create-windows-console-result.json'),
+      JSON.stringify(result, null, 2) + '\n');
+    log('Windows Electron Main native console fixture completed');
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    return result;
+  } finally {
+    inspector.close();
+  }
+}
+
 async function main() {
   const fixture = await seedFixture();
   const unique = `create-page-e2e-${randomUUID().slice(0, 8)}`;
@@ -1102,6 +1192,10 @@ async function main() {
     let started = await startApp(fixture);
     cdp = await CdpClient.connect(started.renderer.webSocketDebuggerUrl);
     await initializeTeams(cdp, fixture);
+    if (process.argv.includes('--windows-console-only')) {
+      await exerciseWindowsElectronConsoleProbe(started.inspectorWebSocketDebuggerUrl, cdp, fixture, log);
+      return;
+    }
 
     log('click real Create Team button');
     await cdp.click(createButtonExpression('Create Team'));
