@@ -238,8 +238,11 @@ export async function produceDesktopDonorSavedTeam(options: {
       page + ' [data-testid="team-model-selector-model-option"][aria-label^="Sonnet 4.6"]';
     await ui.scrollTo(modelOption, 'donor Sonnet4.6 option');
     await ui.click(modelOption, 'select donor Sonnet4.6');
-    await ui.scrollTo(page + ' button', 'donor Low effort', 'Low');
-    await ui.click(page + ' button', 'select donor Low effort', 'Low');
+    await ui.waitRead(
+      '(() => {const button=document.querySelector(' + literal(page + ' #lead-effort') +
+        ');return button instanceof HTMLButtonElement&&button.disabled&&button.textContent.trim()==="Not supported";})()',
+      'donor compatible catalogue omits unsupported effort'
+    );
     await ui.scrollTo(page + ' button[aria-label="Add member"]', 'donor Add member');
     await ui.click(page + ' button[aria-label="Add member"]', 'add donor peer once');
     await fill(page + ' input[aria-label="Member 1 name"]', DONOR_SAVED_MEMBER, 'donor peer name');

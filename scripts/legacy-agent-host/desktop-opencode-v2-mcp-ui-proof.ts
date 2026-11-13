@@ -90,10 +90,10 @@ export async function runDesktopCapturedMcpUiProof(cdp: UiCdpPort, options: {
     return row;
   };
   const scopeState = (row: string, scope: string) => '(() => { const labels=[...document.querySelectorAll(' +
-    desktopJsLiteral(row + ' label') + ')].filter(e=>e.querySelector("span")?.textContent.trim()===' +
+    desktopJsLiteral(row + ' label') + ')].filter(e=>e.querySelector(":scope > span")?.textContent.trim()===' +
     desktopJsLiteral(scope) + '); if(labels.length!==1)return null; const c=labels[0].querySelector("[role=checkbox]"); return c?{state:c.getAttribute("data-state"),disabled:c.disabled}:null; })()';
   const scopePoint = (row: string, scope: string) => '(() => { const labels=[...document.querySelectorAll(' +
-    desktopJsLiteral(row + ' label') + ')].filter(e=>e.querySelector("span")?.textContent.trim()===' +
+    desktopJsLiteral(row + ' label') + ')].filter(e=>e.querySelector(":scope > span")?.textContent.trim()===' +
     desktopJsLiteral(scope) + '); if(labels.length!==1)return null; const e=labels[0].querySelector("[role=checkbox]"); if(!e||e.disabled)return null; const r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y); return r.width&&r.height&&hit&&(e===hit||e.contains(hit))?{x,y}:null; })()';
   const assertPolicy = async (name: string, allow: boolean) => {
     const row = await openPolicy(name);

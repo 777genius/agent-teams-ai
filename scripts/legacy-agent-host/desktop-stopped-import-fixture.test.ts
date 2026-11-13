@@ -159,6 +159,21 @@ test('import UI model proof permits finite exact preflight receipts while refusi
     unexpectedNoToolsRequests: [],
   };
   assert.doesNotThrow(() => assertStoppedImportModelChecks([receipt], model, selected));
+  const omittedSelection = { model: selected.model, effort: undefined };
+  const omittedReceipt = {
+    commandId: receipt.commandId,
+    kind: receipt.kind,
+    modelId: selected.model,
+    phase: receipt.phase,
+    ok: true,
+    resourceHeld: false,
+  };
+  const omittedModel = { ...model, probes: [{ requestedModel: selected.model }] };
+  assert.doesNotThrow(() =>
+    assertStoppedImportModelChecks([omittedReceipt], omittedModel, omittedSelection)
+  );
+  assert.throws(() => assertStoppedImportModelChecks([receipt], omittedModel, omittedSelection));
+  assert.throws(() => assertStoppedImportModelChecks([omittedReceipt], model, omittedSelection));
   assert.doesNotThrow(() =>
     assertStoppedImportModelChecks(
       [receipt, { ...receipt, commandId: 'TEST-probe-2' }],
