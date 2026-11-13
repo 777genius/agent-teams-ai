@@ -1047,11 +1047,18 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
   await captureScreenshot(cdp, fixture, 'zh-tw-task-detail-dialog');
   await cdp.click("document.querySelector('[role=dialog] [data-task-detail-open-tab]')");
   await cdp.waitFor(
-    `(() => { const s = window.__agentTeamsDevStore.getState(); return !s.globalTaskDetail &&
-      s.paneLayout.panes.some(p => p.tabs.some(t => t.id === p.activeTabId &&
-        t.taskDetail && t.teamName === ${JSON.stringify(fixture.teamName)})) &&
-      document.body?.innerText?.includes('TEST zh-TW task detail'); })()`,
-    'localized task detail displayed in separate native task tab', 60_000
+    `(() => {
+      const s = window.__agentTeamsDevStore.getState();
+      const activeTab = s.paneLayout.panes.some(p => p.tabs.some(t =>
+        t.id === p.activeTabId && t.taskDetail && t.teamName === ${JSON.stringify(fixture.teamName)}));
+      const page = document.querySelector('[data-task-detail-page][data-task-detail-task-id="77"]');
+      const visible = page && page.getClientRects().length > 0 && page.getBoundingClientRect().height > 0;
+      return !s.globalTaskDetail && activeTab && visible &&
+        page.getAttribute('data-task-detail-team') === ${JSON.stringify(fixture.teamName)} &&
+        page.getAttribute('data-origin-current') === 'true' &&
+        page.querySelector('h1')?.textContent?.includes('TEST zh-TW task detail');
+    })()`,
+    'fully hydrated visible localized task detail in active native tab', 60_000
   );
   await captureScreenshot(cdp, fixture, 'zh-tw-task-detail-tab');
   const taskDetailUiEvidence = {
