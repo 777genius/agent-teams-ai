@@ -1249,3 +1249,64 @@ configuration A-to-B checks, ordinary final cleanup and immutable input
 receipts. Any later native failure is recorded and investigated separately.
 The actual Windows/macOS writer-cost issue needs its own source-backed plan
 and exact native proof; it is not declared solved by this fixture correction.
+
+
+## R21 — bounded synchronous credential/configuration reads
+
+### Round1 — remaining cost and original ownership
+
+Actual d35 Windows/Darwin embedded receipts still spend most sampled Host time
+inside the original Team writer authority (R20); R19 is insufficient. Every
+credential-current check calls selected(), which reads the primary auth file
+and the alternate conflict source synchronously. Each private read currently
+re-enters the full owner callback before/after its own file. The callback then
+rechecks captured configuration, which independently repeats that same owner
+ahead of source/key predicates that already include it.
+
+No cache or retained proof is proposed. The owner and immutable config/auth
+sources must still be read afresh on every call, with all checks around awaits
+and native effects unchanged. TeamOwnerStore, Team grants/roster/launch readers,
+writer locks and current member binding semantics are outside this slice.
+
+### Round2 — two existing files, one synchronous operation boundary
+
+1. In `OpenCodeV2CredentialScope`, separate the existing root identity checks
+   from the original owner callback. Private read keeps root checks at its
+   existing before/after points plus every FD/type/path/digest check unchanged.
+   selected() checks owner and roots before its first source read and after
+   both primary/alternate reads and validation, before returning any key/digest.
+   There is no await, callback exposed to callers, mutation or native effect
+   between these boundary checks. An early missing-file return is still inside
+   the selected boundary. providerIds(), the only other read caller, gets the
+   same explicit owner+root checks before/after its one read. Constructor/write/
+   publication/rollback guards remain, and no private unguarded read is exported.
+2. In `OpenCodeV2CapturedConfiguration.isCurrent`, evaluate an existing key
+   predicate when present. For an unbound captured source use source.isCurrent,
+   which checks this exact original owner before/after its synchronous reads.
+   Otherwise a present key already includes that owner; if neither source nor
+   key supplies it, call ownerCurrent directly. Thus all key/source predicates
+   still run as required, without a separate duplicate leading owner callback.
+   A bound running session keeps key+owner checks; only its documented config
+   freshness exemption remains. Finite model probes never bind.
+
+Unlike a per-tick/TTL/microtask cache, the result is not reusable by another call.
+These checks delimit one synchronous read operation; its filesystem identity
+checks remain per file. Do not move/remove the after-read boundary, any await
+guard, explicit key conflict, alternate-auth conflict, signal/deadline,
+canAllocate, custody check, permission policy or cleanup-unknown handling.
+
+### Round3 — independent proof and minimum regression coverage
+
+Peer review follows every caller of the now identity-only private read and
+all four source/key/bound combinations. Reuse existing credential-scope,
+configuration-source, V2 model-probe and Main embedded-member cases for owner
+revocation, auth missing-to-present, root replacement, config-key conflict,
+bound running A versus next captured B, after-await revocation and failed cleanup.
+Extend only an existing critical case if providerIds after revocation lacks
+coverage; no call-count assertion, new suite or synthetic performance promise.
+
+After Host/Main targeted types and these existing cases, run the unchanged
+Linux full native and model-probe cases from a pushed clean source commit.
+Cross-platform exact-head CI keeps the original120s/native deadlines and all
+model/tool/MCP/approval/Stop/cold checks. Source simplification or local PASS
+alone does not close the Windows/macOS gap; preserve original failed receipts.

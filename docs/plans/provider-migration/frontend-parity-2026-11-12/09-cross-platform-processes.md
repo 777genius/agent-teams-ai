@@ -2510,3 +2510,15 @@ retry behavior, runner or time budgets. Use the next necessary native source cut
 current Linux jobs continue normally. R1: exact original receipts and rpc/counter source
 checked. R2: independent finite-projection review before source. Actual cause is still
 unproven; a pre-open rejection must not be repaired by guessing from success counters.
+
+### §50 review clarification: compiler-default and ad-hoc TEST artifacts
+
+Keep the compiler-default native binary and library as an independently recorded case. On Darwin,
+a second case may sign only fresh private TEST payload/library copies with ordinary ad-hoc signing
+(`codesign --sign -`), before capturing their original bytes. No entitlement, hardened-runtime,
+kill/hard option, provider-file change or permission change is allowed. Record compiler-default
+and ad-hoc inputs/digests and outcomes separately; never overwrite the former with the latter.
+Unavailable dynamic validation of an unsigned original is an incomplete original case, not a
+negative image match or a reason to omit that format. Even a successful signed-native proof does
+not qualify compiler-default/unsigned executables, scripts, installed/custom runtimes or product
+activation. Keep the same existing native test/job budgets, matrix and original-child cleanup.
