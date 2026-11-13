@@ -594,3 +594,15 @@ Root and an independent peer review phase A before source. Freeze exact candidat
 Current F consumes the previously captured D artifact; the later D ce03c60d620bfc6152623597637971ca8c529469 variant-projection source is separate evidence until F's normal verified pin/publication actually consumes it. Neither a future D source change nor a passed unrelated catalog/engine test closes this feature gap.
 
 Completion requires both parts: actual native purpose proof with confirmed cleanup, and the subsequently reviewed connected policy/refusal at every new-allocation boundary with the original ordinary native/UI acceptance. Phase-A success, one supported tuple, a UI text Test or source review alone is explicitly insufficient.
+
+### §16.1. Use the existing Linux V1 native case for the first purpose qualification
+
+The §16 V1 TEST path was imprecise. `tests/native-opencode-host.native.ts` at `0e2020d1e0f4e28dd50c28e0c8312106835ee898` explicitly selects the Darwin ARM Node and the pinned Darwin1.19.4 executable. A Linux-only branch there would not execute. Leave that original case unchanged.
+
+Substitute `tests/opencode-v1-version-host.native.ts`, exact preimage `1bece60cb1104033352e9b9c526ec3a8a0ba4ffa`, for that one path in the phase-A14-path inventory. This existing case asserts Linux x64 and Node24.21.0, verifies the original npm/native package identity and integrity, measures the selected executable and its actual --version, and already runs the original selected model/limits through Host, permission, tools, Stop and cold receipt readback.
+
+Run the additional private purpose operation only when `!activeUpdate && version === '1.19.4'`, after original native/profile verification and before the first business Host allocation. Add the selected private management recipe before the original profile bytes/hash are frozen; retain the existing original composition/writer lease and complete native/endpoint cleanup before releasing that lease and starting the Host. All other V1 versions and the active-update variant retain their original behavior.
+
+This case has eight original business model responses for its single original business input, not the Darwin case's eleven/two. Keep those eight responses, the one permission reply, exact task/message/file effect, selected model/limits and cold replay refusal unchanged. The separate three native coordination responses yield eleven total under the original model ceiling of sixteen. Preserve the existing normal180-second case deadline and active-update420-second variant; no new input, retry, job, version, matrix or timeout is authorized.
+
+The V2 source-case selection and all other §16 paths remain unchanged. Linux V1 qualification does not qualify Darwin V1; actual native proof, connected phase B, context-floor/applicability policy and final synchronous consumption remain separately required. Source and compiler checks alone cannot close those gates.
