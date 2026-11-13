@@ -624,6 +624,29 @@ jobs:
           pnpm --dir "$selected_v2_a" add --ignore-scripts --save-exact @opencode/cli@2.0.21 @opencode/cli-linux-x64@2.0.21 corepack@0.36.0
           pnpm --dir "$selected_v2_b" add --ignore-scripts --save-exact @opencode/cli@2.3.0 @opencode/cli-linux-x64@2.3.0
           printf 'OPENCODE_V2_UI_ORIGINAL_PACKAGES=%s\nOPENCODE_V2_UI_NEXT_PACKAGES=%s\n' "$selected_v2_a" "$selected_v2_b" >> "$GITHUB_ENV"
+          LEGACY_LINUX_CHILD_EXEC_GO=1 node packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts \
+            --linux-child-exec "$selected_inputs/linux-child-exec" "$(command -v cc)" "$(command -v readelf)" \
+            > "$selected_inputs/linux-child-exec-selection.json"
+          node --input-type=module - "$selected_inputs/linux-child-exec-selection.json" <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          const pin = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+          assert.deepEqual(Object.keys(pin).sort(), ['binarySha256', 'manifestPath', 'manifestSha256']);
+          assert.equal(pin.manifestPath, join(dirname(process.argv[2]), 'linux-child-exec/manifest.json'));
+          assert.equal(realpathSync(pin.manifestPath), pin.manifestPath);
+          const digest = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          assert.match(pin.manifestSha256, /^[a-f0-9]{64}$/);
+          assert.equal(digest(pin.manifestPath), pin.manifestSha256);
+          const manifest = JSON.parse(readFileSync(pin.manifestPath, 'utf8'));
+          assert.equal(manifest.protocol, 'linux-child-exec-v1');
+          assert.equal(manifest.sourceSha256, digest('packages/legacy-agent-host/native/linux-child-exec.c'));
+          assert.equal(manifest.binarySha256, pin.binarySha256);
+          assert.equal(digest(join(dirname(pin.manifestPath), 'linux-child-exec')), pin.binarySha256);
+          assert.ok(!/[\r\n]/.test(pin.manifestPath));
+          appendFileSync(process.env.GITHUB_ENV, `LEGACY_LINUX_CHILD_EXEC_MANIFEST=${pin.manifestPath}\nLEGACY_LINUX_CHILD_EXEC_SHA256=${pin.manifestSha256}\n`);
+          NODE
       - name: Bind retained inputs and exact stock helper source without launching a session
         run: node scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts
       - name: Exercise original retained V1 and new Host V2 controls once
@@ -814,6 +837,8 @@ jobs:
           path: |
             ${{ runner.temp }}/retained-opencode-*.json
             ${{ runner.temp }}/retained-opencode-*.log
+            ${{ runner.temp }}/TEST-retained-opencode-inputs-*/linux-child-exec-selection.json
+            ${{ runner.temp }}/TEST-retained-opencode-inputs-*/linux-child-exec/**
             ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.json
             ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.log
             ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.png

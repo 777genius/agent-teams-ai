@@ -15,7 +15,7 @@ import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/comp
 import { prepareNativeReviewWorkspace } from './desktop-native-review-fixture.ts';
 import { prepareDesktopReviewLedger } from './desktop-review-fixture.ts';
 import { prepareDesktopStoppedImport } from './desktop-stopped-import-fixture.ts';
-import { desktopBackendEnvironment, desktopRuntimeSourceEnvironment, prepareDesktopRuntimeProfile } from './desktop-runtime-source-fixture.ts';
+import { desktopBackendEnvironment, desktopRuntimeSourceEnvironment, prepareDesktopRuntimeProfile, readDesktopLinuxChildExecInput } from './desktop-runtime-source-fixture.ts';
 import type { DesktopOpenCodeSourceSelection } from './desktop-runtime-source-fixture.ts';
 export { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
 import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
@@ -89,6 +89,7 @@ export async function prepareDesktopBackendFixture(
     options.nativeChatAttachments || options.capturedMcpNonce ||
     options.claudeCheckpointDonor.repo !== join(repo, '.stage1-checkpoint-donor')))
     throw new Error('Checkpoint upgrade requires its exact original Claude Launch fixture');
+  const linuxChildExec = readDesktopLinuxChildExecInput();
   const node =
     options.candidateRuntime?.nodeExecutable ??
     (await realpath(options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ? process.execPath :
@@ -718,6 +719,7 @@ process.stderr.write('TEST sentinel refuses native agent invocation\\n');process
     root,
     node,
     hostEntry,
+    ...(linuxChildExec ? { linuxChildExec } : {}),
     handleId,
     sentinelLog,
     uiSeed,
@@ -741,7 +743,7 @@ process.stderr.write('TEST sentinel refuses native agent invocation\\n');process
     descriptorPath,
     profilePath,
     appEnvironment: desktopRuntimeSourceEnvironment(
-      desktopBackendEnvironment(root, node, descriptorPath, digest(descriptorBytes)), root, node,
+      desktopBackendEnvironment(root, node, descriptorPath, digest(descriptorBytes), linuxChildExec), root, node,
       options.nativeOpenCodeSourceSelection),
   };
 }
