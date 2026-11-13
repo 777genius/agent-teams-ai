@@ -750,3 +750,49 @@ Corrected shared predicate также принял **неизменённые** 
 recorded request bodies, которые до исправления отвергал прежний predicate.
 Raw slash/wrong target/missing heading/system-only/assistant/split-message cases
 по-прежнему отказываются. Production files0; native/Desktop acceptance pending.
+
+
+### R14 — actual CI: восстановление Promise-контракта и unopened activity oracle
+
+Qualification head `7563eb067b9196ca416a56228f9c7e38a2455a17`, parent
+`64c33f663ba48f34352b927a5d4a88fb2ec04b12`,
+[run43377998027](https://github.com/777genius/agent-teams-ai/actions/runs/43377998027):
+Host job131741574632 падает в existing `team-code-review.test.ts:317` с
+`Team operation hold`; Main job131741574659 — в `hostActivityRouting.test.ts:196`
+с generation1 против actual null. Сверка с exact current
+`3db75ad8b323bede28d92c99c6d8eb1defb50f1b` подтверждает, что оба source seam ещё
+не изменены. Это две разные причины, не повод ослаблять recovery/authority.
+
+**Круг1 — причинная граница и минимальный source.**
+
+1. `TeamOwner.resumeTaskCommands`289–291 добавил synchronous
+   `resumeHostCostCommands` перед existing `TaskRecovery.resume`.
+   `resumeHostCostCommands`261–263 валидирует все command families; отказ
+   `validateCommandEntry`138–139 теперь может выйти до возврата Promise.
+   Existing `TaskRecovery.run`267–275 выполнял тот же отказ внутри async operation.
+   Пометить **только** existing owner method как async: scan и исходный Task
+   continuation остаются в прежнем порядке/owner fence; unknown family по-прежнему
+   даёт HOLD, но через прежний Promise-контракт. Не ловить/пропускать receipt,
+   не запускать заново review mutation, не менять fingerprint/phase.
+2. R9/R10 intentionally исключают никогда не открытые configured recipes:
+   `readTeamActivity`74–77 проверяет unattached + отсутствующий record либо
+   config=null/inputs=[], а empty projection189–205 имеет generation=null.
+   В existing `hostActivityRouting`194–225 provider ни разу не открывается.
+   Исправить ровно его stale expectations на generation=null и generations=0;
+   сохранить null reported usage/cost, пустые events и явный retained-activity gap.
+   Existing `contexts=[]` продолжает проверять отсутствие allocation.
+
+**Круг2 — falsification и приёмка.**
+
+Existing `team-code-review` pending case должен сначала вернуть пустой Task
+continuation, сохранить original interrupted file/unknown review receipt,
+затем после намеренного unknown-family изменения вернуть rejected Promise/HOLD.
+Его `assert.rejects(originalMethod())` не переводить в catch, который скрывает
+синхронную регрессию. Нужны existing focused Host case/types и Main activity case;
+R9/R10 opened-empty/retained-history cases остаются прежними. Новая unit suite,
+runtime generation или native input не нужны.
+
+Source peer review проверяет, что async меняет лишь способ выдачи ошибки, а
+activity oracle не скрывает реально открытый пустой runtime. После root commit+push
+обычные CI jobs должны выполнить эти cases на новом source. Executor сейчас
+недоступен; этот план и immutable source readback не являются executed PASS.
