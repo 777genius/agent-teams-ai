@@ -30,6 +30,8 @@ jobs:
           node-version-file: .node-version
       - name: Run actual Windows teammate-shaped subprocess and tools
         run: node scripts/e2e/windows-teammate-console-native.mjs
+      - name: Observe original process custody after simulated app force-kill
+        run: node scripts/e2e/windows-teammate-console-native.mjs --custody-probe
       - name: Preserve native subprocess receipts
         if: always()
         uses: actions/upload-artifact@v4
