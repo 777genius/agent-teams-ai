@@ -47,6 +47,34 @@ function nativeInputProgress(value: Record<string, unknown>) {
   };
 }
 
+
+/** Public launch projection only; absolute times, bindings and native identities stay private. */
+function nativeLaunchProgress(reply: Record<string, unknown>) {
+  const value = record(reply.value);
+  const members = Array.isArray(value.members) ? value.members.slice(0, 8).map(record) : [];
+  const attempt = record(members.find(member => member.memberId === 'carol-id')?.attempt);
+  const choice = (entry: unknown, values: readonly string[]) =>
+    typeof entry === 'string' && values.includes(entry) ? entry : null;
+  const difference = (end: unknown, start: unknown) =>
+    typeof end === 'number' && typeof start === 'number' && Number.isSafeInteger(end) &&
+    Number.isSafeInteger(start) && start > 0 && end >= start && end - start <= 3_600_000 ? end - start : null;
+  const flag = (entry: unknown) => typeof entry === 'boolean' ? entry : null;
+  return {
+    available: reply.ok === true && typeof attempt.status === 'string',
+    status: choice(attempt.status, ['not-started', 'pending-bootstrap', 'pending-human', 'ready', 'failed', 'unknown', 'skipped']),
+    reason: choice(attempt.reason, ['not-started', 'opening', 'runtime-unconfigured', 'observation-unavailable',
+      'stopped', 'binding-mismatch', 'context-applied', 'bootstrap-timeout', 'dependency-unavailable',
+      'context-unconfirmed', 'custody-unresolved', 'retained-interaction-unavailable', 'human-decision',
+      'interaction-expired', 'launch-policy']),
+    elapsedSinceAttemptMs: difference(value.observedAtMs, attempt.startedAtMs),
+    capturedTimeoutMs: difference(attempt.deadlineMs, attempt.startedAtMs),
+    claimed: flag(attempt.claimed), nativeReady: flag(attempt.nativeReady),
+    contextApplied: flag(attempt.contextApplied), everReady: flag(attempt.everReady),
+    usable: flag(attempt.usable), controlAvailable: flag(attempt.controlAvailable),
+    noAllocation: flag(attempt.noAllocation),
+  };
+}
+
 export interface PackagedNativeHostInputs {
   sourceHead: string;
   node: string;
@@ -106,7 +134,9 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   let originalFailure: unknown;
   let lastInputProgress: ReturnType<typeof nativeInputProgress> | undefined;
   let inputReadCount = 0;
-  const passive = !packaged && process.platform === 'darwin' && process.arch === 'x64'
+  let originalOpenElapsedMs: number | undefined;
+  let originalLaunchProgress: ReturnType<typeof nativeLaunchProgress> | undefined;
+  const passive = !packaged
     ? (await import('./fixtures/native-opencode-team/passive-diagnostics.ts')).createPassiveNativeDiagnosticCapture()
     : undefined;
   let hostEpoch = 0;
@@ -230,7 +260,14 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     host = start();
     await host.rpc('host.handshake', { protocolVersion: 1 });
     // Observe the existing 120-second embedded startup plus MCP readiness; never retry the intent.
-    const opened = await host.rpc('runtime.open', envelope('TEST-open', { memberId: 'carol-id' }), 180_000);
+    const originalOpenStartedAt = performance.now();
+    const opened = await host.rpc('runtime.open', envelope('TEST-open', { memberId: 'carol-id' }), 180_000)
+      .finally(() => { originalOpenElapsedMs = Math.round(performance.now() - originalOpenStartedAt); });
+    // This read cannot open/retry a member. Keep its original attempt even when nativeReady is false.
+    try {
+      originalLaunchProgress = nativeLaunchProgress(await host.rpc('team.launch.read',
+        envelope('TEST-observe-original-launch', { launchId: scope.runId })));
+    } catch { /* A failed diagnostic read cannot replace the original outcome. */ }
     assert.equal(opened.ok, true, JSON.stringify(opened));
     await writeFile(projectPath, projectConfig('project-B'), { mode: 0o600 });
     lastInputProgress = nativeInputProgress(record(opened.value));
@@ -370,6 +407,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         digests: { ...digests, ...(windowsShellSha256 ? { windowsShell: windowsShellSha256 } : {}) },
         steps, cleanup, phaseElapsedMs, elapsedMs: elapsedMs(), cancelled: signal?.aborted === true,
         inputObservation: { reads: inputReadCount, last: lastInputProgress ?? null },
+        launchObservation: { openElapsedMs: originalOpenElapsedMs ?? null, afterOpen: originalLaunchProgress ?? null },
         ...(passive ? { passiveNativeDiagnostics: passive.entries } : {}),
         failureCode: originalFailure instanceof Error && 'code' in originalFailure &&
           typeof originalFailure.code === 'string' &&
