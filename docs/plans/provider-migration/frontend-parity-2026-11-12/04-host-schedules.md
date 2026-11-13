@@ -526,3 +526,53 @@ context при тех же exact resource refs. Это не перенос в д
    Source-круг подтвердил immutable namespace; architecture-круг исключил
    молчаливое отбрасывание unfinished tasks и чтение через чужой новый owner.
    Дальше независимый diff review, existing Host integration и actual Desktop gate.
+
+## R12 — deletion commit прекращает исходный admission до очистки файлов
+
+PR1186 `PRRT_kwDORVTEtM620d1u`, source baseline `522c80d168d698fc6842ee649cc4822406cd2632`.
+В `JsonScheduleRepository.deleteSchedule` metadata уже удалена, но Scheduler узнаёт
+об этом лишь после awaited cleanup runs/logs. Отдельное окно: ранее начатый
+`getSchedule` может вернуть старую запись после удаления. Одна ранняя отмена
+activeRun не закрывает оба случая.
+
+1. Расширить existing `ScheduleRepository.deleteSchedule` optional
+   `onCommitted(): void | Promise<void>`. Json implementation вызывает его сразу
+   после durable удаления metadata и **перед** удалением run/log файлов. Callback
+   awaited; неуспешный metadata write его не вызывает. Existing best-effort
+   file cleanup не становится доказательством native cleanup.
+2. В callback Scheduler инвалидирует исходные незавершённые admissions,
+   отменяет исходный activeRun, удаляет cron/warm-up timers и его locks, затем
+   ждёт original Host cancellation. Ошибка native cleanup видима вызывающему;
+   retained Host port остаётся доступным для повторного подтверждения/Stop.
+   До успешного metadata commit прежняя работа остаётся разрешённой, как в
+   существующем failed-delete persistence regression.
+3. Existing `SchedulerStopBarrier` получает краткоживущие admission markers:
+   `withAdmission(scheduleId, action(isCurrent))`, invalidation по scheduleId
+   и удаление marker в finally. Маркеры существуют только пока выполняется
+   исходное действие; постоянный deleted-ID set, новый owner/queue/journal не нужны.
+   Охватить trigger/cron от чтения до dispatch, legacy retry fresh-read→dispatch
+   и ожидающий warm-up, чтобы он не запланировал retry после удаления.
+4. `startOccurrence` проверяет marker и lifecycle epoch до allocation и после
+   initial persistence; после await также требуется владение **тем же** activeRun.
+   Устаревший callback не освобождает locks другого occurrence. Existing dispatch
+   cancellation closure продолжает отслеживать original run во время выполнения.
+5. Повторяющийся trigger/cron lock check свести в один private predicate с прежними
+   причинами отказа; этим сохранить frozen cap848 без увеличения лимита и
+   искусственного уплотнения кода. Public renderer API и Pause semantics прежние.
+
+### Проверка двумя проходами
+
+- Source-проход: подтверждены durable deletion boundary, два async окна и already
+  retained Host cancel/cancelAll; ранняя отмена до persistence отклонена, потому что
+  она ломала бы живой schedule при storage failure.
+- Failure-проход: callback awaited, admission invalidation синхронная до первого
+  cleanup await; поздний read и поздний persist не дают нового provider effect.
+  Warm-up/retry не принимают удалённый schedule из прежнего snapshot.
+- Расширить existing `SchedulerService.test.ts` delete case: отдельно удержать
+  getSchedule и initial saveRun, выполнить durable delete с удержанной cleanup tail,
+  затем отпустить старый запрос. Проверить исходную отмену до конца delete promise,
+  отсутствие нового effect/лишнего run и отсутствие оставшихся locks. Existing
+  failed-delete persistence case должен сохранить исходную работу.
+- Существующие schedule integration, focused strict Main types, lint и source cap
+  обязательны; новый suite, fake native PASS или изменение CI timers не нужны.
+  Независимый plan/diff review и exact-head Desktop gate остаются следующими шагами.

@@ -297,6 +297,9 @@ Hash/platform/malformed receipt suites переиспользовать; same-ve
 1. **Member cwd.** В `runtimeCaptureSource.ts:captureRuntimeRecipeSources` вызвать existing `runtimeCaptureCwd`
    для соответствующего roster member вместо общего `savedSettings.cwd`. Выбор всё ещё фиксируется до async preparation;
    lead и member без override сохраняют прежний cwd, future worktree не становится новым current lookup при replay.
+   Тот же original member cwd передать в `recipes` → `resolveCapturedRuntimeRecipe`; иначе B reference сразу
+   проверяется как A и отвергается. Здесь helper получает saved settings без later worktree override: reference
+   выбирался до async подготовки, а конечный runtime cwd по-прежнему вычисляется с actual worktree targetPath.
 2. **Повторное подтверждение cleanup.** В `RuntimeSourceIndex.close` снимать только совпадающий rejected closing Promise,
    сохраняя sealed admission, original native checks и durable unknown receipt. Следующий shutdown может повторно
    наблюдать/закрыть те же handles; он не запускает native verifier заново и не принимает новый process по PID.
