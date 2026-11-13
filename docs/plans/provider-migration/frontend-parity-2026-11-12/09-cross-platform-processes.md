@@ -3741,3 +3741,29 @@ No production source, public DTO, new test suite, native call, UI action, retry,
 ### Review 3 — publication and acceptance
 
 Publish this plan first, independently review the exact three-file delta, then publish it with the current reviewed source cut and its exact variant preimages. Run the unchanged legacy Host script typecheck and original source-size gate; the actual checkpoint and retained OpenCode Install/Refresh/Update journeys remain required on the resulting PR head. Local memory exhaustion is not a typecheck PASS. No new unit case is needed for the erased parameter rename or equivalent narrowing predicates; the unchanged original fixture/native gates exercise the runtime object assertion.
+
+
+### 66.13. Freeze the six shared launch sources in the existing Desktop proof
+
+#### Review 1 — exact omission and evidence boundary
+
+The composed §66 inventory (`24f004b3ae9d3c87e789773a5a612f01283d0e5a`) contains six shared launch sources absent from `scripts/legacy-agent-host/desktop-proof-sources.ts` (`ee554279a5388d33585f5bff9ec4fc15f5f31aca`) and its three imported rosters (`1a72f3be239ab78351a33a2e0bab1813bd62ca5e`, `6f3dad8e7f0bc576754260563b52d0fe77b2b28a`, `74b128c5701ae5a384bcc2863412c8fd336469de`). The existing `desktop-source-freeze.ts` (`da5d5319b7514c85aaafa18aba8043793826b361`) hashes only enumerated files before the proof and at the original flow/cleanup checks.
+
+The existing `desktop-captured-app.ts` (`c6a1e564219df097148671f2440a130657662e48`, lines230–234) separately captures compiled Main/preload bytes after startup and explicitly does not claim a reproducible source-to-bundle rebuild. That compiled evidence and the separate helper manifest/binary pin do not freeze omitted repository sources. In addition, the reviewed TEST runtime fixture and smoke import `linuxChildLaunchSelection.ts` directly. This is a finite source-evidence omission; it is not evidence of a changed executable, a completed native qualification or a new runtime authority defect.
+
+#### Review 2 — one existing roster, exactly six entries
+
+The root roster already has 797 physical lines, so adding six separate entries there would exceed the existing 800-line limit. Keep that file unchanged. After publishing this amendment, change only the existing `desktopProofProcessSources` array in `scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts`, preimage `1a72f3be239ab78351a33a2e0bab1813bd62ca5e` (146 lines before this six-line addition). The root roster already imports and spreads this array at its original position. Add these six exact paths there, retaining every previous entry and its order, with no formatting compression or cap change:
+
+- `src/main/utils/linuxChildLaunchSelection.ts`
+- `src/main/utils/linuxChildLaunch.ts`
+- `src/main/utils/unixProcessTable.ts`
+- `src/main/services/team/AgentTeamsMcpHttpServer.ts`
+- `packages/legacy-agent-host/native/linux-child-exec.c`
+- `packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts`
+
+All six exist in the coherent parent, native and qualification variants after §66.12. The existing source freeze must hash the builder actually present in each branch; the shared-only builder and native builder remain distinct as already reviewed. Do not add native-only qualifier, native proof or cold-UI paths to this shared roster. No glob, directory scan, new roster module, native allocation, mutation, observation event, retry, timing allowance or workflow change is introduced. The original proof and its existing failure projection consume the same finite list.
+
+#### Review 3 — verification and limits
+
+Independently review the six-entry delta, verify that removing exactly those entries recovers the complete preimage, and verify each path against the corresponding composed manifest. Existing duplicate removal, all source/compiled/helper checks, every original assertion and cleanup boundary remain unchanged. The normal existing Desktop journeys must produce the expanded before/after source evidence on the actual candidate head; source review alone is not that execution result. This closes only the enumerated-source omission and makes no new source-to-bundle reproducibility, Linux native, default activation or §47 executable-race claim.
