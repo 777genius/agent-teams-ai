@@ -92,17 +92,9 @@ export function createCapturedRuntimeProviderManagementClient(
   const oauth = deps.oauth ? new CapturedProviderOAuth(deps.oauth) : undefined;
   const credentials = new CapturedProviderCredentials();
   const createProbe = (selectedCapture: CapturedRuntimeProviderManagementDependencies['capture']) =>
-    new CapturedModelProbe(
-      selectedCapture,
-      async (target, input) => {
-        const selected = await selectedPreferences(target, null);
-        const limits = selected.resolved.modelLimitOverrides[input.modelId];
-        return limits
-          ? { contextTokens: limits.contextTokens, outputTokens: limits.outputTokens }
-          : undefined;
-      },
-      deps.captureClaude
-    );
+    // Ordinary probes consume the Host's immutable selected preferences. Only an
+    // explicit limits-editor test sends proposed values before they are saved.
+    new CapturedModelProbe(selectedCapture, undefined, deps.captureClaude);
   const probes = createProbe(deps.capture);
   const capture = (input: Dto.RuntimeProviderManagementLoadViewInput) => {
     if (input?.runtimeId !== 'opencode') throw new Error('Unsupported runtime');
@@ -128,11 +120,13 @@ export function createCapturedRuntimeProviderManagementClient(
   const view = async (
     target: CapturedProviderManagement,
     projectPath: string | null,
-    previous?: Awaited<ReturnType<typeof readCatalog>>
+    previous?: Awaited<ReturnType<typeof readCatalog>>,
+    refreshConfiguration = false
   ): Promise<Dto.RuntimeProviderManagementViewResponse> => {
     let current: Awaited<ReturnType<typeof readCatalog>>;
     let degraded = false;
     try {
+      if (refreshConfiguration && target.refreshConfiguration) target = await target.refreshConfiguration();
       current = await readCatalog(target);
     } catch (error) {
       if (!previous || !target.isCurrent()) throw error;
@@ -489,7 +483,7 @@ export function createCapturedRuntimeProviderManagementClient(
           };
         }
         await preferences.store!.setDefault(scope, captured.modelId);
-        return await view(target, projectPath, previous);
+        return await view(target, projectPath, previous, true);
       } catch (error) {
         return unavailable(error);
       }
@@ -503,7 +497,7 @@ export function createCapturedRuntimeProviderManagementClient(
         const preferences = await selectedPreferences(target, null);
         const previous = await readCatalog(target);
         await preferences.store!.setDefault('project', null);
-        return await view(target, captured.projectPath, previous);
+        return await view(target, captured.projectPath, previous, true);
       } catch (error) {
         return unavailable(error);
       }
@@ -542,6 +536,8 @@ export function createCapturedRuntimeProviderManagementClient(
           captured.contextTokens,
           captured.outputTokens
         );
+        let refreshed = true;
+        try { await target.refreshConfiguration?.(); } catch { refreshed = false; }
         return {
           schemaVersion: 1,
           runtimeId: 'opencode',
@@ -553,7 +549,7 @@ export function createCapturedRuntimeProviderManagementClient(
             saved: true,
             verified: true,
             message: 'Model limits were applied, tested and saved for this project.',
-            diagnostics: [],
+            diagnostics: refreshed ? [] : ['Model preferences were saved, but provider status could not be refreshed. Refresh before launching.'],
           },
         };
       } catch (error) {

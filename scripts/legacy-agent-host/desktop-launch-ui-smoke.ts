@@ -8,6 +8,7 @@ import { command, processTable } from './desktop-backend-observations.ts';
 import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { runDesktopRelaunchUiSmoke } from './desktop-relaunch-ui-smoke.ts';
+import { runDesktopNativeCommandsUiProof } from './desktop-native-commands-ui-proof.ts';
 import { codexRuntimeEndpointHash, runDesktopResumeUiSmoke } from './desktop-resume-ui-smoke.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
@@ -308,6 +309,14 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   const screenshotPath = join(fixture.root, 'ui-original-launch-native.png');
   await writeFile(screenshotPath, Buffer.from(screenshot.data, 'base64'), { mode: 0o600 });
   proof.screenshot = { path: screenshotPath, sha256: await fileDigest(screenshotPath) };
+  if (process.env.LEGACY_DESKTOP_COMMANDS_UI === '1') {
+    assert.ok(options.model && !codex && !opencode && options.model.commandRequests);
+    await runDesktopNativeCommandsUiProof(cdp, {
+      root: fixture.root, seed: options.seed, session: sessions[0]!,
+      model: { ...options.model, commandRequests: options.model.commandRequests },
+      evidence, assertOwnedRenderer: options.assertOwnedRenderer,
+    });
+  }
   const hostRows = processTable().filter(row => row.pgid === options.capturedGroup() && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
   assert.equal(hostRows.length, 1, 'only this TEST Host executable may be selected');
   const hostPid = hostRows[0]!.pid;

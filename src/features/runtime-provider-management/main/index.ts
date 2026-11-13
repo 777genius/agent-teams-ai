@@ -10,6 +10,7 @@ export {
 export { createCapturedRuntimeProviderStatusClient } from './adapters/output/CapturedRuntimeProviderStatusClient';
 export { captureNativeExtensionSelection } from './adapters/output/captureNativeExtensionSelection';
 export { createCapturedCodexFeatures } from './adapters/output/createCapturedCodexFeatures';
+export { captureManagedProviderRuntimePreferences } from './application/captureManagedProviderRuntimePreferences';
 export {
   createRuntimeProviderManagementFeature,
   type RuntimeProviderManagementFeatureFacade,

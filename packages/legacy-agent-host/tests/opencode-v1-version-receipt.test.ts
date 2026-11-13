@@ -19,6 +19,7 @@ function fixture(): Record<string, unknown> {
       { exitCode: 0, signalCode: null, stdoutValid: true },
     ],
     modelOrigin: 'localhost-scripted', modelRequests: 8,
+    preferencesSelection: { defaultModelId: 'TEST-local/TEST-model-B', contextTokens: 64000, outputTokens: 1024 },
     vendorAuthQualified: false, desktopQualified: false, releaseQualified: false,
   };
 }
@@ -31,6 +32,7 @@ for (const [key, wrong] of Object.entries({
   sourceHead: '0'.repeat(40), selectedCliVersion: '1.19.4', nativeVersion: '2.1.4',
   platform: 'darwin-arm64', status: 'INCOMPLETE', cleanup: false, nativeDigest: '',
   nodeVersion: 'v22.16.0', wireProtocolRevision: 'latest', modelRequests: 9,
+  preferencesSelection: { defaultModelId: 'TEST-local/TEST-model', contextTokens: 64000, outputTokens: 2000 },
   nativeIntegrity: 'sha512-aA==', modelOrigin: 'paid-provider', releaseQualified: true,
   vendorAuthQualified: true, desktopQualified: true, steps: V1_VERSION_HOST_STEPS.slice(0, 4),
   hostSourceDigest: '0'.repeat(64), hostDistDigest: '1'.repeat(64), providerDigest: '2'.repeat(64),

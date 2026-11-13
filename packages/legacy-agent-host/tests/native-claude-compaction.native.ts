@@ -31,6 +31,7 @@ import {
   PROJECT_COMMAND_BODY,
   USER_COMMAND_BODY,
   COMMAND_ARGS,
+  REVIEW_ARGS,
 } from './fixtures/native-claude-compaction/model.ts';
 import type { CompactionPhase } from './fixtures/native-claude-compaction/model.ts';
 import type { ProcessFact } from './fixtures/native-input-capture.ts';
@@ -50,6 +51,8 @@ const sourcePaths = [
   'tests/native-claude-compaction.native.ts',
   'tests/fixtures/native-claude-compaction/model.ts',
   'tests/fixtures/native-claude-team/model.ts',
+  'tests/fixtures/native-claude-commands/model.ts',
+  'tests/fixtures/native-claude-schedules/model.ts',
   'tests/fixtures/native-claude-subagent/model.ts',
   'tests/fixtures/native-peers.ts',
   'tests/fixtures/native-host.ts',
@@ -88,7 +91,7 @@ async function nativeBoundaries(config: string) {
 }
 
 test(
-  'actual marked Claude commands, local cost output, captured project/user skills and compact context recover their original receipts',
+  'actual marked Claude commands, local cost output, builtin review, captured skills and compact context recover their original receipts',
   { timeout: 300_000 },
   async (t) => {
     assert.equal(
@@ -469,7 +472,7 @@ test(
       });
       const initialReady = await ready('lead-id');
       const commands = (initialReady.sessionCommands as unknown[]).map(record);
-      for (const name of ['compact', 'cost', 'test-project-command', 'test-user-command'])
+      for (const name of ['compact', 'cost', 'review', 'test-project-command', 'test-user-command'])
         assert.ok(
           commands.some((command) => command.name === name),
           `actual Query advertises ${name}`
@@ -757,6 +760,23 @@ test(
         exactArguments: COMMAND_ARGS,
         nativeTeamReplies: 2,
       };
+      phase = 'review';
+      const reviewInputId = await send('TEST-p03-review', `/review ${REVIEW_ARGS}`);
+      const reviewInput = runtime().inputs.find((input) => input.intent.inputId === reviewInputId);
+      assert.equal(reviewInput?.intent.content, `/review ${REVIEW_ARGS}`);
+      assert.equal(reviewInput?.preparation, undefined);
+      const reviewReplies = (await userInbox()).filter(
+        (row) => row.messageId === 'TEST-p03-review-reply'
+      );
+      assert.equal(reviewReplies.length, 1);
+      assert.equal(reviewReplies[0]!.text, 'TEST_P03_review_VISIBLE_REPLY');
+      proofs.builtinReview = {
+        command: '/review',
+        exactArguments: REVIEW_ARGS,
+        inputId: reviewInputId,
+        nativeTeamReplies: 1,
+        nativeRequests: 2,
+      };
       for (const member of currentMembers) {
         const result = await rpc('runtime.stop', 'TEST-m10-stop-current', {
           memberId: member.memberId,
@@ -787,7 +807,7 @@ test(
         preparedInputProof(preparationBeforeCold)
       );
       assert.equal(model.compactionRequests.length, requestsBeforeCold);
-      assert.equal(requestsBeforeCold, 8);
+      assert.equal(requestsBeforeCold, 10);
       assert.equal(
         (await userInbox()).filter((row) => row.summary === '/cost').length,
         1,
@@ -818,6 +838,8 @@ test(
           'project-command',
           'user-command',
           'user-command',
+          'review',
+          'review',
         ]
       );
       assert.deepEqual(model.failures, []);

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { nativeProcessProfileSchema, isNativeProfilePath } from '../composition/nativeProcessProfile.js';
 import { openCodeV2EmbeddedProfileSchema } from '../composition/openCodeV2EmbeddedProfile.js';
 import { isCanonicalOpenCodeV2Directory } from '../composition/openCodeV2StaticPreflight.js';
+import { openCodeManagedPreferencesSchema } from '../composition/openCodeManagedPreferences.js';
 
 export const openCodeManagementProfileSchema = nativeProcessProfileSchema
   .extend({
@@ -17,6 +18,7 @@ export const openCodeManagementProfileSchema = nativeProcessProfileSchema
     nativeGeneration: z.enum(['v1', 'v2']).optional(),
     protocolRevision: z.literal('2.1.4').optional(),
     embedded: openCodeV2EmbeddedProfileSchema.optional(),
+    managedPreferences: openCodeManagedPreferencesSchema.optional(),
     nativeModel: z.object({
       providerId: z.string().min(1).max(256).refine(value => !/[\0\r\n]/u.test(value)),
       modelId: z.string().min(1).max(256).refine(value => !/[\0\r\n]/u.test(value)),

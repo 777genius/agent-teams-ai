@@ -45,6 +45,8 @@ export interface CapturedProviderManagement {
   readonly profileId: string;
   readonly configRevision: string;
   readonly preferences?: CapturedProviderPreferencePaths;
+  /** Explicit Save/Refresh may publish new settings through this same original descriptor. */
+  refreshConfiguration?(): Promise<CapturedProviderManagement>;
   isCurrent(): boolean;
   request(
     operation: ProviderManagementOperation,
@@ -58,6 +60,7 @@ export function captureProviderManagement(options: {
   profileId: string;
   configRevision: string;
   preferences?: CapturedProviderPreferencePaths;
+  refreshConfiguration?(): Promise<CapturedProviderManagement>;
   client: Pick<CapturedHostClient, 'request'>;
   start(): Promise<unknown>;
   ownerAvailable(): boolean;
@@ -88,6 +91,12 @@ export function captureProviderManagement(options: {
     profileId,
     configRevision,
     ...(options.preferences ? { preferences: Object.freeze({ ...options.preferences }) } : {}),
+    ...(options.refreshConfiguration ? { refreshConfiguration: async () => {
+      check(false, 'not-dispatched');
+      const target = await options.refreshConfiguration!();
+      check(false, 'unknown');
+      return target;
+    } } : {}),
     isCurrent: current,
     async request(operation: ProviderManagementOperation, payload: Record<string, JsonValue>) {
       if (

@@ -1,6 +1,13 @@
 /** Finite source closure for captured management, lifecycle, WorkSync and native roster. */
 export const desktopProofManagementSources = [
+  'packages/legacy-agent-host/tests/fixtures/native-claude-schedules/model.ts',
+  'scripts/legacy-agent-host/desktop-schedule-fixture.ts',
+  'scripts/legacy-agent-host/desktop-schedule-ui-proof.ts',
   'src/features/agent-backend/main/adapters/output/projectNativeSessionCommands.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-claude-commands/model.ts',
+  'scripts/legacy-agent-host/desktop-native-commands-fixture.ts',
+  'scripts/legacy-agent-host/desktop-native-commands-ui-proof.ts',
+  'src/shared/utils/contentSanitizer.ts',
   'src/renderer/utils/skillCommandSuggestions.ts',
   'packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts',
   'src/features/runtime-provider-management/main/adapters/output/CapturedProviderCredentials.ts',

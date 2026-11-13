@@ -5,6 +5,7 @@ import {
   crossTeamOwnerResourceRef,
   crossTeamTeamResourceRef,
 } from '@agent-teams/legacy-agent-host/cross-team';
+import { captureManagedProviderRuntimePreferences } from '@features/runtime-provider-management/main';
 import { createdTeamSelectionSignature } from '@shared/utils/createdTeamReadiness';
 
 import { BackendOperationsFacade } from '../adapters/input/BackendOperationsFacade';
@@ -383,12 +384,16 @@ export class DesktopBackendFeature {
   /** Captures one creation owner for preparation, polling and original cleanup. */
   async captureTeamCreation(contextId: string, guard: BackendRequestGuard) {
     const target = await this.registry(contextId, guard);
+    let preparedSources: Promise<void> | undefined;
     return {
-      prepare: (
+      prepare: async (
         action: 'prepare' | 'probe.read' | 'probe.cancel',
         input: CreateTeamLaunchPreparationInput
       ) => {
         if (input.draft.contextId !== contextId) throw new BackendRoutingError('forbidden');
+        if (action === 'prepare' && (input.draft.savedSettings.providerId === 'opencode' ||
+            input.draft.members.some(row => row.memberSettings.providerId === 'opencode')))
+          await (preparedSources ??= this.refreshLaunchConfiguration(contextId, input.draft.savedSettings.cwd, guard));
         return target.client.prepareCreation(
           action,
           input,
@@ -577,6 +582,25 @@ export class DesktopBackendFeature {
     return target;
   }
 
+  /** New preflight only; retained read/cancel/submit keep their original source revision. */
+  async refreshLaunchConfiguration(contextId: string, projectPath: string, guard: BackendRequestGuard,
+    handle?: BackendHandle): Promise<void> {
+    if (!isAbsolute(projectPath) || projectPath.includes('\0')) throw new BackendRoutingError('invalid-binding');
+    await this.initialize();
+    assertBackendRequestGuard(guard);
+    const owner = handle
+      ? this.handleDefinitions().find(row => row.handleId === handle.handleId && row.contextId === contextId)?.owner
+      : this.descriptor?.creation?.owner;
+    if (!owner || (handle && !this.authorizeHandle(contextId, handle))) throw new BackendRoutingError('forbidden');
+    const available = this.descriptor?.management?.filter(row => row.contextId === contextId &&
+      row.runtimeId === 'opencode' && ownerKey(row.owner) === ownerKey(owner)) ?? [];
+    const selected = available.find(row => row.projectPath === resolve(projectPath)) ??
+      available.find(row => row.projectPath === null);
+    if (!selected) return;
+    const sources = await this.captureSourceTarget(selected, guard);
+    if (sources) await refreshCapturedRuntimeConfiguration(sources);
+  }
+
   /** Main Skills choices derive solely from the original authorized descriptor, including optional runtimes. */
   async captureSkillsManagement(
     contextId: string,
@@ -668,6 +692,7 @@ export class DesktopBackendFeature {
       profileId,
       configRevision,
       ...(selected.preferences ? { preferences: selected.preferences } : {}),
+      refreshConfiguration: () => this.captureCurrentManagementTarget(selected, guard),
       client: owner.client,
       start: () => router.startOwner(selected.owner),
       ownerAvailable: () =>
@@ -735,6 +760,11 @@ export class DesktopBackendFeature {
         this.state === 'ready' &&
         this.clients.get(ownerKey(selected.owner)) === owner,
       foregroundCurrent: () => guard?.isCurrent() ?? true,
+      ...(selected.runtimeId === 'opencode' && selected.preferences ? {
+        capturePreferences: () => captureManagedProviderRuntimePreferences(selected.preferences!, () =>
+          !this.sealed && this.state === 'ready' && this.clients.get(ownerKey(selected.owner)) === owner &&
+          (guard?.isCurrent() ?? true)),
+      } : {}),
     });
   }
 

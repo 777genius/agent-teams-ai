@@ -25,10 +25,12 @@ afterEach(async () => {
 });
 const digest = (bytes: string | Buffer) => createHash('sha256').update(bytes).digest('hex');
 
-async function fixture(runtimeId: 'claude' | 'opencode' = 'claude') {
+async function fixture(runtimeId: 'claude' | 'opencode' = 'claude', withPreferences = false) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-desktop-sources-')));
   roots.push(root);
   await mkdir(join(root, '.claude'), { mode: 0o700 });
+  const preferencePaths = { projectRoot: join(root, 'preferences'), globalRoot: join(root, 'global-preferences') };
+  if (withPreferences) for (const path of Object.values(preferencePaths)) await mkdir(path, { mode: 0o700 });
   const nodeExecutable = await realpath(process.env.AGENT_BACKEND_TEST_NODE ?? process.execPath);
   const nodeSha256 = digest(await readFile(nodeExecutable));
   const hostEntry = join(root, 'TEST-host.mjs'),
@@ -76,6 +78,7 @@ void server.closed.then(() => process.exit(0));`;
     schemaVersion: 1,
     principalId: 'TEST-human',
     teams: [],
+    ...(withPreferences ? { creation: { contextIds: ['TEST-context'] } } : {}),
     owner: {
       ownerId: owner.ownerId,
       revision: owner.revision,
@@ -124,12 +127,14 @@ void server.closed.then(() => process.exit(0));`;
     projectPath: root,
     profileId: 'TEST-management',
     configRevision: 'TEST-config',
+    ...(withPreferences ? { preferences: preferencePaths } : {}),
   };
   const descriptor: DesktopBackendDescriptor = {
     schemaVersion: 1,
     defaultOwner: binding.owner,
     owners: [owner],
     handles: [],
+    ...(withPreferences ? { creation: { owner: binding.owner, contextIds: ['TEST-context'] } } : {}),
     management: [binding],
   };
   const descriptorPath = join(root, 'TEST-descriptor.json'),
@@ -144,8 +149,49 @@ void server.closed.then(() => process.exit(0));`;
     features.push(feature);
     return feature;
   };
-  return { root, original, replacement, binding, owner, open };
+  return { root, original, replacement, binding, owner, open, preferencePaths };
 }
+
+it('first launch preparation captures stored preferences through the real Main/Host source owner and restart keeps retained A', async () => {
+  const f = await fixture('opencode', true), desktop = f.open();
+  const globalFile = join(f.preferencePaths.globalRoot, 'global-runtime-preferences.json');
+  const projectFile = join(f.preferencePaths.projectRoot, 'agent-teams-runtime-preferences.json');
+  const limits = { contextTokens: 32000, outputTokens: 1000 };
+  await writeFile(globalFile, JSON.stringify({ schemaVersion: 2, defaultModelId: 'TEST-local/global',
+    modelLimitOverrides: { 'TEST-local/global': limits }, unrelated: 'TEST-preserved-global' }), { mode: 0o600 });
+  await writeFile(projectFile, JSON.stringify({ schemaVersion: 2, defaultModelId: 'TEST-local/project',
+    modelLimitOverrides: { 'TEST-local/global': { ...limits, outputTokens: 500, updatedAt: 'TEST-time' } },
+    unrelated: 'TEST-not-a-native-field' }), { mode: 0o600 });
+  await desktop.refreshLaunchConfiguration('TEST-context', f.root, { isCurrent: () => true });
+  const sources = await desktop.captureRuntimeSources('TEST-context', f.root, 'opencode');
+  const original = await sources.current();
+  expect(original.preferencesDigest).toMatch(/^[a-f0-9]{64}$/);
+  const target = await desktop.captureProviderManagement('TEST-context', f.root);
+  const before = JSON.parse(await readFile(join(f.root, 'runtime-sources/index.json'), 'utf8'));
+  expect(before.records).toHaveLength(1);
+  expect(before.records[0].candidate.openCodePreferences).toEqual({
+    defaultModelId: 'TEST-local/project', modelLimitOverrides: { 'TEST-local/global': { ...limits, outputTokens: 500 } },
+  });
+  expect(JSON.stringify(before)).not.toContain('TEST-not-a-native-field');
+  expect(JSON.stringify(before)).not.toContain('TEST-time');
+  await desktop.refreshLaunchConfiguration('TEST-context', f.root, { isCurrent: () => true });
+  expect(await sources.current()).toEqual(original);
+  await writeFile(projectFile, JSON.stringify({ schemaVersion: 2, defaultModelId: null, modelLimitOverrides: {} }), { mode: 0o600 });
+  const next = await target.refreshConfiguration!();
+  expect(next.profileId).not.toBe(target.profileId);
+  expect(target.isCurrent()).toBe(true);
+  const published = await sources.current();
+  expect(published.preferencesDigest).not.toBe(original.preferencesDigest);
+  const after = JSON.parse(await readFile(join(f.root, 'runtime-sources/index.json'), 'utf8'));
+  expect(after.records[1].candidate.openCodePreferences).toEqual({
+    defaultModelId: 'TEST-local/global', modelLimitOverrides: { 'TEST-local/global': limits },
+  });
+  await desktop.shutdown();
+  const restarted = f.open();
+  expect((await restarted.restoreProviderManagement('TEST-context', target.targetId)).profileId).toBe(target.profileId);
+  await restarted.refreshLaunchConfiguration('TEST-context', f.root, { isCurrent: () => true });
+  expect(await (await restarted.captureRuntimeSources('TEST-context', f.root, 'opencode')).current()).toEqual(published);
+}, 20000);
 
 it('real Main/Host publication preserves legacy target bytes and restores every retained target after restart', async () => {
   const f = await fixture(),

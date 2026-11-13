@@ -1,4 +1,5 @@
 import { runDesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
+import { runDesktopScheduleUiProof } from './desktop-schedule-ui-proof.ts';
 import type { DesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
 import { verifyNativeProcessReadbackSource } from './desktop-native-process-readback.ts';
 import { checkpoint } from './desktop-resume-records.ts';
@@ -26,7 +27,7 @@ import { desktopReadbackArtifacts, runDesktopNativeReadback } from './desktop-re
 import { assertCapturedDesktopMetadataAbsent, assertFirstResumeMetadataAbsent, captureDesktopOpenCodeV2ColdMetadata } from './desktop-opencode-v2-cold-metadata.ts';
 import { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
-import { captureDesktopCodexNativeInputs, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
+import { captureDesktopCodexNativeInputs, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopPackedFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
 import { runDesktopF08ReadTimingProof, runDesktopHostRoutingProof } from './desktop-host-routing-proof.ts';
 import { startDesktopCodexQuestionModel } from './desktop-codex-question-model.ts';
 import { prepareDesktopCodexQuestionFixture, prepareDesktopCodexQuestionLaunch, waitDesktopCodexQuestionRenderer } from './desktop-codex-question-fixture.ts';
@@ -109,12 +110,14 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   assert.ok(quitScenario === undefined || (mode === 'native-quit-ui' && quitScenario === 'pending-open'), 'explicit TEST Quit scenario');
   const startupDiagnosticMode = mode === 'startup-diagnostic-ui';
   const questionUiMode = mode === 'codex-question-ui';
+  const scheduleUiMode = process.env.LEGACY_DESKTOP_SCHEDULE_UI === '1';
   if (questionUiMode) questionModel = await startDesktopCodexQuestionModel();
   const packedCapturePath = process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH;
   const packed = packedCapturePath ? await readCapturedCandidateElectron({ path: packedCapturePath, sha256: process.env.LEGACY_DESKTOP_PACKED_CAPTURE_SHA256! }) : undefined;
   const permittedSentinelObservation = (row: Record<string, unknown>) => (mode === 'skills-ui' && isSkillsMetadataRefusal(row)) || (!packed ? row.allowed === true : row.executable === 'shell-env' ? row.allowed === true : row.allowed === false && row.argc === 1 && Array.isArray(row.flags) && row.flags.length === 1 && row.flags[0] === '--version');
   if (packed) assert.ok(mode === 'native-launch-ui' || (process.platform === 'linux' && process.arch === 'x64' && mode === 'process-cold-ui'), 'bounded packed Launch or Linux cold process proof');
   if (packedRelaunchMode) assert.ok(packed, 'automatic app relaunch is an explicit captured packed scope');
+  if (scheduleUiMode) assert.ok(mode === 'native-launch-ui' && !packed, 'original source schedule controls');
   const { mixedMode, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel, openCodeLifecycleMode, openCodeLifecycleModel: selectedOpenCodeModel, openCodeReviewModel: selectedOpenCodeReviewModel } =
     await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
   conversationModel = model; mixedModels = selectedMixedModels;
@@ -194,6 +197,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     codexResumeModel,
     openCodeLifecycleModel, openCodeReviewModel,
   });
+  if (scheduleUiMode) evidence.scope = 'Original Schedule controls, actual finite Claude and task-first native Bash/MCP, Stop, history and reload; localhost inference only';
   if (quitScenario === 'pending-open') {
     evidence.scope = 'Actual native provider open pending, zero inputs, guarded existing Quit API and physical cleanup; explicit TEST setup';
     evidence.excluded = (evidence.excluded as string[]).filter(value => value !== 'pending provider-open');
@@ -395,6 +399,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       await runDesktopMixedCreateLaunchUiSmoke(cdp, { fixture, models: mixedModels, appGroup: group, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (createConfigMode) {
       await runDesktopCreateUiSmoke(cdp, { fixture, evidence, model: conversationModel, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+    } else if (scheduleUiMode) {
+      assert.ok(conversationModel && 'scheduleRequests' in conversationModel);
+      await runDesktopScheduleUiProof(cdp, { fixture, model: conversationModel, evidence,
+        capturedGroup: () => group, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (launchDialogMode) {
       assert.ok(fixture.uiSeed && (conversationModel || codexResumeModel || openCodeLifecycleModel));
       await runDesktopLaunchUiSmoke(cdp, {
@@ -746,16 +754,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         evidence.status = 'INCOMPLETE';
       }
     );
-    if (packed) {
-      try {
-        const after = await readCapturedCandidateElectron({ path: packedCapturePath!, sha256: process.env.LEGACY_DESKTOP_PACKED_CAPTURE_SHA256! });
-        assert.deepEqual(after, packed, 'actual candidate resources remain exact after UI/Stop/Quit cleanup');
-        evidence.packedCandidateVerifiedAfterCleanup = true;
-      } catch (error) {
-        evidence.packedCandidateVerificationFailure = error instanceof Error ? error.message.slice(0, 1000) : 'candidate changed';
-        evidence.status = 'INCOMPLETE';
-      }
-    }
+    if (packed) await verifyDesktopPackedFreeze(
+      { path: packedCapturePath!, sha256: process.env.LEGACY_DESKTOP_PACKED_CAPTURE_SHA256! }, packed, evidence);
     if (controlledProcess) {
       try {
         await controlledProcess.cleanup();
@@ -770,6 +770,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     console.log(JSON.stringify({ status: evidence.status, receipt: receiptPath }));
     if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
     if (controlledProcessMode) assert.equal(evidence.status, 'PASS', 'controlled process cold UI proof incomplete; original evidence retained');
+    if (scheduleUiMode) assert.equal(evidence.status, 'PASS', 'original schedule UI proof incomplete; inspect its retained receipt');
     assert.ok(
       !cleanupFailure && remaining !== null && remaining.length === 0,
       'captured group cleanup unconfirmed; receipt retains debt and no further signal is authorized'

@@ -14,6 +14,8 @@ import { fileHash, startHost, tick, treeHash } from './fixtures/native-host.ts';
 import { CONTEXT_MARKER, startOpenCodeModel } from './fixtures/native-opencode-team/model.ts';
 import { prepareNativeOpenCodeInstaller } from './fixtures/native-opencode-installer.ts';
 import { assertNativeV1Build } from './opencode-v1-version-source.ts';
+import { applyOpenCodeRuntimeSource } from '../dist/composition/applyOpenCodeRuntimeSource.js';
+import { applyLaunchConfiguration } from '../dist/composition/launchConfiguration.js';
 
 const enabled = process.env.OPENCODE_V1_VERSION_HOST_GO === '1';
 const activeUpdate = process.env.OPENCODE_V1_TEST_ACTIVE_UPDATE === '1';
@@ -176,7 +178,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     assert.deepEqual({ hostSourceDigest, hostDistDigest, providerDigest }, expectedBuild);
     steps.push('native_version_package_integrity_and_source_measured');
 
-    model = await startOpenCodeModel();
+    model = await startOpenCodeModel({ selectedModel: { id: 'TEST-model-B' }, selectedOutputTokens: 1024 });
     const reservation = createServer();
     await new Promise<void>((done) => reservation.listen(0, '127.0.0.1', done));
     const address = reservation.address();
@@ -217,7 +219,8 @@ test('selected stable V1 executes native tools through Host and retains cold rec
           agent: { title: { disable: true }, summary: { disable: true }, 'TEST-member': { mode: 'primary' } },
           provider: { 'TEST-local': { npm: '@ai-sdk/openai-compatible', name: 'TEST local',
             options: { baseURL: `${model.url}/v1`, apiKey: 'TEST-LOCALHOST-ONLY' },
-            models: { 'TEST-model': { name: 'TEST-model', limit: { context: 200000, output: 2000 } } },
+            models: Object.fromEntries(['TEST-model', 'TEST-model-B'].map(id =>
+              [id, { name: id, limit: { context: 200000, output: 2000 } }])),
           } },
         }) },
         nativeOptions: { providerId: 'TEST-local', agent: 'TEST-member',
@@ -226,6 +229,15 @@ test('selected stable V1 executes native tools through Host and retains cold rec
           outputEvents: 1500, pendingInteractions: 4, timeoutMs: activeUpdate ? 180_000 : 45_000 },
       }] },
     };
+    const member = profile.runtime!.members[0]!;
+    assert(member.provider === 'opencode');
+    profile.runtime!.members[0] = applyLaunchConfiguration(applyOpenCodeRuntimeSource(member, {
+      sourceKind: 'captured', executable: member.executable,
+      openCodePreferences: { defaultModelId: 'TEST-local/TEST-model-B', modelLimitOverrides: {
+        'TEST-local/TEST-model-B': { contextTokens: 64000, outputTokens: 1024 },
+        'TEST-local/TEST-model': { contextTokens: 32000, outputTokens: 512 },
+      } },
+    }), {});
     const profilePath = join(root, 'profile.json');
     const profileBytes = JSON.stringify(profile);
     await writeFile(profilePath, profileBytes, { mode: 0o600 });
@@ -381,6 +393,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     await host.close(); hosts.push(host.facts()); host = undefined;
     assert.deepEqual(model.failures, [], 'cold readback must not trigger rejected model requests');
     assert.equal(model.observations.length, callsBefore);
+    assert.ok(model.observations.every(row => row.requestedModel === 'TEST-model-B' && row.requestedOutputTokens === 1024));
     assert.equal(await readFile(join(root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\n');
     assert.equal(await fileHash(binary), nativeDigest);
     assert.equal(await treeHash(join(pkg, 'src'), '.ts'), hostSourceDigest);
@@ -408,6 +421,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
         providerDigest, hostSourceDigest, hostDistDigest, steps,
         hosts: hosts.map(({ exitCode, signalCode, stdoutValid }) => ({ exitCode, signalCode, stdoutValid })),
         modelOrigin: 'localhost-scripted', modelRequests: model?.observations.length ?? 0,
+        preferencesSelection: { defaultModelId: 'TEST-local/TEST-model-B', contextTokens: 64000, outputTokens: 1024 },
         vendorAuthQualified: false, desktopQualified: false, releaseQualified: false,
         ...(managedUpdate ? { managedUpdate } : {}),
       }, null, 2) + '\n', { mode: 0o600 });

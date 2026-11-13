@@ -32,6 +32,7 @@ export function assertRuntimeSourceQualification(
   )
     held();
   const embedded = seed.provider === 'opencode' ? seed.embedded : undefined;
+  if (candidate.openCodePreferences && seed.provider !== 'opencode') held();
   if (candidate.openCodeConfiguration && (!embedded || seed.provider !== 'opencode' ||
       seed.nativeGeneration !== 'v2')) held();
   if (candidate.openCodeDefault && !candidate.openCodeConfiguration) held();
@@ -60,7 +61,9 @@ export async function verifyRuntimeSourceCandidate(
     const config = configuration.read(), selected = readOpenCodeConfiguredModel(config);
     if (runtimeDigest(selected ?? null) !== runtimeDigest(candidate.openCodeDefault ?? null) ||
         !(selected ?? seed.nativeModel)) throw new OpenCodeConfigurationError('configuration-changed');
-    selectOpenCodeV2ProviderConfiguration(config, (selected ?? seed.nativeModel)!, seed.environment);
+    const effective = readOpenCodeConfiguredModel({ model: candidate.openCodePreferences?.defaultModelId ?? undefined })
+      ?? selected ?? seed.nativeModel;
+    selectOpenCodeV2ProviderConfiguration(config, effective!, seed.environment);
   }
   verifyRuntimeSourceExecutable(candidate.executable);
   if (candidate.nativeCli && candidate.nativeCli.executable.path !== candidate.executable.path)

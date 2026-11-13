@@ -934,10 +934,14 @@ jobs:
           assert.equal(receipt.proofs.namedCommands.project, true);
           assert.equal(receipt.proofs.namedCommands.user, true);
           assert.equal(receipt.proofs.namedCommands.nativeTeamReplies, 2);
-          assert.equal(receipt.proofs.coldRecovery.exactOriginalReceipts, 7);
+          assert.equal(receipt.proofs.builtinReview.command, '/review');
+          assert.equal(receipt.proofs.builtinReview.exactArguments, 'TEST_NATIVE_P03_EXACT_REVIEW_ARGUMENTS');
+          assert.equal(receipt.proofs.builtinReview.nativeTeamReplies, 1);
+          assert.equal(receipt.proofs.builtinReview.nativeRequests, 2);
+          assert.equal(receipt.proofs.coldRecovery.exactOriginalReceipts, 8);
           assert.equal(receipt.proofs.coldRecovery.noNativeAllocation, true);
           assert.equal(receipt.proofs.coldRecovery.modelRequestsUnchanged, true);
-          assert.equal(receipt.modelRequests.length, 8);
+          assert.equal(receipt.modelRequests.length, 10);
           NODE
       - name: Stage exact OpenCode V2 base for original Desktop acceptance
         if: matrix.opencode_generation == 'v2'
@@ -1092,6 +1096,53 @@ jobs:
           verify('desktop', process.env.STAGE1_MODE);
           if (process.env.STAGE1_READBACK_MODE) verify('readback', process.env.STAGE1_READBACK_MODE);
           NODE
+      - name: Verify native commands through original Desktop Launch and Composer
+        if: matrix.mode == 'native-create-ui' && !matrix.variant
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: native-launch-ui
+          LEGACY_DESKTOP_COMMANDS_UI: '1'
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-native-commands.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-desktop-native-commands.log'), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'one original command UI journey, no replay');
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
+          assert.equal(receipt.mode, 'native-launch-ui'); assert.equal(receipt.status, 'PASS');
+          assert.equal(receipt.launchDialogProof.status, 'PASS');
+          assert.equal(receipt.launchDialogProof.stop.releasedBeforeQuit, true);
+          assert.equal(receipt.cleanup.capturedHostAbsent, true);
+          assert.deepEqual(receipt.cleanup.remaining, []);
+          assert.equal(receipt.sourceFreezeFailure, undefined);
+          assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
+          const proof = receipt.nativeCommandsUiProof;
+          assert.equal(proof.status, 'PASS');
+          assert.deepEqual(proof.commands.map(row => row.name), ['cost', 'compact', 'cost', 'test-project-command', 'review']);
+          assert.equal(new Set(proof.commands.map(row => row.inputId)).size, 5);
+          assert.equal(proof.localReplies.length, 2);
+          for (const reply of proof.localReplies) assert.match(reply.nativeMessageRef, /^local-command:.+/);
+          assert.deepEqual(proof.commandRequests.map(row => row.phase), ['compact', 'project-command', 'project-command', 'review', 'review']);
+          assert.equal(proof.builtinReview.name, 'review');
+          assert.equal(proof.builtinReview.exactArguments, 'TEST_NATIVE_P03_EXACT_REVIEW_ARGUMENTS');
+          assert.equal(proof.builtinReview.replyId, 'TEST-p03-ui-review-native-reply');
+          assert.equal(proof.originalIdsRetainedAfterReload, true);
+          assert.equal(proof.noReplayAfterReload, true); assert.equal(proof.sourcesUnchanged, true);
+          console.log(JSON.stringify({ status: receipt.status, receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
+            scope: 'Actual native commands, original Desktop controls, Stop and reload; finite localhost inference only' }));
+          NODE
       - name: Verify current native mixed history restore after Codex Desktop acceptance
         if: ${{ success() && matrix.resume_provider == 'codex' }}
         env:
@@ -1148,6 +1199,7 @@ jobs:
             ${{ runner.temp }}/stage1-native-restore-inputs.json
             ${{ runner.temp }}/stage1-native-commands.log
             ${{ runner.temp }}/stage1-native-commands-inputs.json
+            ${{ runner.temp }}/stage1-desktop-native-commands.log
             /private/tmp/TEST-native-claude-compaction-*/receipt.json
             /private/tmp/TEST-native-claude-compaction-*/host-stderr.log
             opencode-v2-desktop-inputs.json

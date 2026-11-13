@@ -506,6 +506,7 @@ test('native attachment capability projection requires the exact attached curren
     seal() {},
     cleanup: async () => true,
     attachmentCapabilities: capabilities,
+    sessionCommands: () => [{ name: 'cost', description: 'TEST native cost', privatePath: '/TEST-private-command-path' }],
   };
   const options = {
     entry,
@@ -523,6 +524,8 @@ test('native attachment capability projection requires the exact attached curren
     textFiles: false,
   });
   assert.equal(JSON.stringify(positive).includes('TEST-private-capability-path'), false);
+  assert.deepEqual(positive.sessionCommands, [{ name: 'cost', description: 'TEST native cost' }]);
+  assert.equal(JSON.stringify(positive).includes('TEST-private-command-path'), false);
   assert.doesNotThrow(() => assertSafeRuntimeProjection(positive));
   for (const overridden of [
     { isCurrent: () => false },
@@ -535,11 +538,13 @@ test('native attachment capability projection requires the exact attached curren
     const projection = projectRuntimeMember({ ...options, ...overridden });
     assert.ok(projection && typeof projection === 'object' && !Array.isArray(projection));
     assert.equal(projection.attachmentCapabilities, undefined);
+    assert.equal(projection.sessionCommands, undefined);
   }
   ready = false;
   const stopped = projectRuntimeMember(options);
   assert.ok(stopped && typeof stopped === 'object' && !Array.isArray(stopped));
   assert.equal(stopped.attachmentCapabilities, undefined);
+  assert.equal(stopped.sessionCommands, undefined);
 });
 
 test('native Host fixture admits only exact boolean attachment capability projections', () => {
@@ -571,4 +576,11 @@ test('native Host fixture admits only exact boolean attachment capability projec
     ...safe, inputs: [{ inputId: 'TEST-input', operationRef: 'TEST-private' }],
   }));
   assert.throws(() => assertSafeRuntimeProjection({ ...safe, diagnostic: 'Bearer TEST-private' }));
+  assert.doesNotThrow(() => assertSafeRuntimeProjection({ ...safe, sessionCommands: [] }));
+  assert.throws(() => assertSafeRuntimeProjection({ ...safe,
+    sessionCommands: [{ name: 'cost', description: 'TEST cost', nativePath: '/TEST-private' }],
+  }));
+  assert.throws(() => assertSafeRuntimeProjection({ ...safe,
+    sessionCommands: [{ name: 'cost', description: 'TEST cost' }, { name: 'cost', description: 'duplicate' }],
+  }));
 });
