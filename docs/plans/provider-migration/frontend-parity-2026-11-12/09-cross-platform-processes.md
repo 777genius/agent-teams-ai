@@ -1560,3 +1560,111 @@ Main physical owner; timeout/EOF не создаёт release/absence proof. Main
 capabilities даже при недоступном Host. Точки source: существующие `index.ts`, `HostCustodyClient`,
 `CapturedHostClient.shutdown` и Main composition; generic lifecycle framework, второй journal и новый budget не нужны.
 Root подтвердил необходимость этой границы, Account подтвердил retained-owner/late-epoch ограничения до source.
+
+## 39. Claude checkpoints до explicit executablePath — genuine producer перед compatibility change
+
+План до source. Review #1188 `PRRT_kwDORVTEtM623zRO` проверен по actual
+Stage1 `1d0f97f55de566036c970eab4f36b84620afdb3f`, native head
+`fe6eece10344cf1cd6f7dbc216c7eb19070c7c9e` и pinned D `f4b4ac3f`.
+Это отдельная compatibility граница; source §38 и его Main-held custody не меняются.
+
+### Круг 1 — установленная причина и границы доказательства
+
+- В [old ClaudeMemberProvider](https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts)
+  `ClaudeConfig` не получает executablePath. Current Host передаёт exact
+  `profile.executable.path`. У current D `claude-sdk/config:compatibility` этот
+  optional field входит в hash; `open-session` отказывает несовпадающему checkpoint
+  до sessionExists/query. Это не просто замечание к тесту.
+- Exact1d0 использует `opencode-v2-host-9ede557c` provider archive SHA256
+  `fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89`, contracts
+  `aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db`.
+  Локальные bytes сверены с git1d0. Его dependency pins: Claude SDK `0.3.305`,
+  Anthropic SDK `0.122.0`, MCP SDK `1.32.0`, Zod `4.6.7`. Old D не имел
+  executablePath; current hash дополнительно поддерживает disallowedTools и
+  sessionPersistence. Нельзя считать любые различия между версиями только path.
+- Старые `p4-mixed-native-restore-handoff.json`, `p5-existing-resume-ui-v1/manifest.json`
+  и `m16-existing-cold-resume-ui-handoff.json` сохраняют genuine native Resume
+  receipts. P5 фиксирует immutable source/resumed checkpoint SHA256
+  `2111e6b38d08cf23fded72fbf456998f0505a35cfd0bf87f258798e703de4d3a` /
+  `d5f257b0e25afed1edfac0c5a28d599ae2d24e0bc87b5931dcbdc382f353cb18`.
+  Их исходные payload bytes/executed corpus не найдены в текущем checkout;
+  manifests сами по себе не являются новым old→current compatibility PASS.
+  Local1628/f418 checkpoints уже получены после executablePath change.
+- Donor4a `TeamProvisioningLeadRuntimeRestart:buildLeadRuntimeResumeArgs` использует
+  original native `--resume` под legacy owner. `stopped-team-import/snapshot:disposition`
+  исключает checkpoint/runtime-checkpoints; import создаёт новый Host run.
+  Эти пути не превращают legacy session ID в Host checkpoint и не заменяют
+  сохранение ранее поддержанного Host Resume.
+- Host `CheckpointCoordinator.compatible` проверяет original profile/config/member,
+  history/custody/generation. Его read projection намеренно лишь
+  owner-eligible/native-backing-unverified; полную native совместимость проверяет D.
+  `createMemberEntry` проверяет original base/config digest, а CapturedProcess
+  по-прежнему требует exact path, SHA256 и unchanged file identity перед spawn.
+
+### Круг 2 — сначала неизменяемый old corpus и настоящий переход владельца
+
+1. Подготовить isolated checkout exact1d0 и собрать его original Host с original
+   lockfile/archive, Node24.21.0 и тем же pinned SDK. Записать commit, полный source/
+   dist digest, installed archive equality, SDK/native digest и canonical executable
+   path. Никаких изменений old production source, изменения checkpoint hash или
+   добавления/удаления executablePath в его config.
+2. Переиспользовать parameterized `fixtures/native-host.ts:startHost` и bounded
+   `native-claude-team/model.ts` из existing single-provider journey. Только новый
+   private TEST HOME/config/workspace/store и localhost model; original application
+   records создают Host/Team/Runtime RPC. Existing Darwin-only suite не объявлять
+   Linux suite и не снимать её guard: локальная POSIX inspection с этими helper
+   ports имеет отдельную явно записанную platform boundary. Если dependency/runtime
+   недоступны, сначала проверить обычный pinned install/имеющиеся artifacts.
+3. Original1d0 Host получает один existing ONE input, terminal history, обычный
+   checkpoint/Stop и confirmed original cleanup. До consumer сохранить неизменённые
+   checkpoint bytes+SHA, native transcript prefix/hash, original member/base/config
+   digests, native path/SHA и полный source owner/profile reference. Файлы читаются
+   только из этого TEST scope; fixture не создаёт opaque payload, native session ID,
+   runtime record или release receipt. При baseline Resume использовать original
+   old owner и exact native identity, без повторной отправки ONE.
+4. Отдельно проследить штатный cold-upgrade путь. `BackendOwnerRouter` связывает
+   owner revision с profile/build/Node/Host entry digest; `FileHandleBindingStore`
+   не перезаписывает старые handles. Нельзя заменить Host entry, owner/profile hash
+   или bootstrap прежними значениями ради достижения D. Зафиксировать, выбирает ли
+   current Main retained original owner или имеется явный существующий переход на
+   новый owner. Неизвестный/отсутствующий переход остаётся отдельным migration gap,
+   а не разрешением обойти binding и не объявлением старых checkpoints unsupported.
+5. С actual old payload воспроизвести current refusal на неизменной captured member
+   configuration. При inspection через public D использовать exact original bytes
+   и подтверждённую config projection; отсутствие allocation/model request должно
+   следовать из original boundary. Такой driver-level результат отдельно пометить:
+   он не доказывает Desktop owner migration. Сопоставить все effective compatibility
+   fields, не убирать дополнительные различия до совпадения.
+
+### Круг 3 — узкая correction только после producer и authority proof
+
+6. По сохранённому corpus выбрать минимальное D-owned правило совместимости только
+   для доказанно того же original captured executable/config/account/workspace.
+   До code описать exact proof/eligibility в amendment этого плана и независимо
+   проверить его. Нельзя принимать любой prior hash, удалять executablePath из
+   current config, переписывать opaque payload, обходить sessionExists или переносить
+   чужой executable/model/namespace. Default standalone D остаётся strict;
+   Host не получает native checkpoint parser. Если нужен product source-owner
+   transition, его authority должна быть доказана прежде positive migration claim.
+7. Менять D только в source repository и доставить обычный immutable package/pin;
+   vendored dist/tgz вручную не редактировать. Переиспользовать existing driver
+   checkpoint case для critical same-original acceptance / changed executable,
+   config или missing history refusal. Не создавать новый compatibility registry,
+   journal, generic migration framework или отдельную unit suite.
+8. Existing native single-provider Resume journey завершает old producer→current
+   authorized consumer: Resume не повторяет ONE, ordinary TWO содержит прежнюю
+   native history и выполняется один раз; сохраняются product launch/member,
+   selected model/effort, checkpoint immutability, original cleanup и прежние
+   finite budgets. Actual Desktop cold Resume и required exact-head checks остаются
+   отдельной приёмкой. Current→current PASS либо pure hash comparison не закрывают
+   old→current путь. До подтверждения этого результата review thread остаётся open.
+
+Source closure сначала TEST evidence/inspection с existing ports; production/API
+cut определяется только подтверждённым original corpus и существующей authority.
+Root публикует этот план до source; результаты каждого круга дописываются отдельно.
+
+Independent plan reviews (Profiles и root) — PASS. Reused TEST helpers должны
+соответствовать exact old RPC contract; source/dist identity old producer фиксируется
+до выполнения. Current before/after file checks не закрывают отдельный review24
+о промежутке verify→exec: здесь они сохраняются, но pinned execution этим не
+объявляется доказанным. D-only evidence не подменяет Main owner transition.
