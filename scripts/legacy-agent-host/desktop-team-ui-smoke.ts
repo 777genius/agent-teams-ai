@@ -416,6 +416,27 @@ export async function readRendererFailureSnapshot(cdp: UiCdpPort): Promise<unkno
         globalTasksLoading:s.globalTasksLoading,globalTasksInitialized:s.globalTasksInitialized,
         globalTasksError:s.globalTasksError?.slice(0,300),globalTaskCount:s.globalTasks.length,
         selectedTeamName:s.selectedTeamName,selectedTeamError:s.selectedTeamError?.slice(0,300),
+        selectedRawMemberCapabilities:(()=>{
+          const source=s.selectedTeamData?'selected':s.selectedTeamName&&s.teamDataCacheByName?.[s.selectedTeamName]?'cache':'unavailable';
+          const data=source==='selected'?s.selectedTeamData:source==='cache'?s.teamDataCacheByName[s.selectedTeamName]:null;
+          if(!data)return {source,state:'unavailable'};
+          if(!Array.isArray(data.members))return {source,state:'invalid'};
+          return {source,state:'available',count:Math.min(data.members.length,33),overflow:data.members.length>32,
+            members:data.members.slice(0,32).map(member=>{
+              if(!member||typeof member!=='object'||Array.isArray(member))return {valid:false};
+              const commands=member.sessionCommands;
+              const catalog=commands===undefined?{state:'absent',count:null,overflow:false,hasCost:null}:
+                !Array.isArray(commands)?{state:'invalid',count:null,overflow:false,hasCost:null}:
+                commands.length>64?{state:'oversized',count:65,overflow:true,hasCost:null}:
+                !commands.every(command=>command&&typeof command==='object'&&!Array.isArray(command)&&typeof command.name==='string'&&typeof command.description==='string')?
+                  {state:'invalid',count:commands.length,overflow:false,hasCost:null}:
+                  {state:'available',count:commands.length,overflow:false,hasCost:commands.some(command=>command.name==='cost')};
+              return {valid:true,provider:['claude','codex','opencode'].includes(member.providerId)?member.providerId:'unknown',
+                capturedOwner:member.runtimeOwner==='captured-host',
+                attachments:typeof member.nativeInboxAttachmentsSupported==='boolean'?member.nativeInboxAttachmentsSupported:null,
+                textAttachments:typeof member.nativeInboxTextAttachmentsSupported==='boolean'?member.nativeInboxTextAttachmentsSupported:null,catalog};
+            })};
+        })(),
         provisioning:[...new Set([s.selectedTeamName,...s.paneLayout.panes.flatMap(p=>p.tabs.filter(t=>t.type==='team').map(t=>t.teamName))].filter(team=>typeof team==='string'))].slice(0,8).map(team=>{
           const runId=s.currentProvisioningRunIdByTeam?.[team],progress=runId?s.provisioningRuns?.[runId]:null;
           return {teamName:team,currentProvisioningRunId:runId??null,currentRuntimeRunId:s.currentRuntimeRunIdByTeam?.[team]??null,
@@ -428,6 +449,22 @@ export async function readRendererFailureSnapshot(cdp: UiCdpPort): Promise<unkno
         globalTaskDetail:s.globalTaskDetail?{teamName:s.globalTaskDetail.teamName,taskId:s.globalTaskDetail.taskId}:null,
         paneTabs:s.paneLayout.panes.flatMap(p=>p.tabs.map(t=>({type:t.type,teamName:t.teamName}))).slice(0,24)
       }:null})(),
+      commandComposer:(()=>{
+        const areas=document.querySelectorAll('.message-composer-flat-layout textarea');
+        const listboxes=document.querySelectorAll('[role="listbox"]');
+        const options=document.querySelectorAll('[role="listbox"] [role="option"]');
+        const labels=document.querySelectorAll('[role="listbox"] [role="option"] .font-medium');
+        const area=areas.length===1?areas[0]:null;
+        return {observedAfterFailure:true,atomicWithInput:false,
+          textareaCount:Math.min(areas.length,5),textareaOverflow:areas.length>4,
+          single:area?{focused:document.activeElement===area,connected:area.isConnected,disabled:area.disabled,readOnly:area.readOnly,
+            bareSlash:area.value==='/',length:Math.min(area.value.length,4097),lengthOverflow:area.value.length>4096,
+            cursorStart:area.selectionStart===null?null:Math.min(area.selectionStart,4097),
+            cursorEnd:area.selectionEnd===null?null:Math.min(area.selectionEnd,4097)}:null,
+          listboxCount:Math.min(listboxes.length,9),listboxOverflow:listboxes.length>8,
+          optionCount:Math.min(options.length,65),optionOverflow:options.length>64,
+          hasCostOption:options.length>64||labels.length>64?null:[...labels].some(label=>{const text=label.textContent;return typeof text==='string'&&text.length<=128&&text.trim()==='/cost';})};
+      })(),
       rootChildCount:document.getElementById('root')?.childElementCount??null,
       dialogs:[...document.querySelectorAll('[role="dialog"]')].slice(0,3).map(e=>({text:e.innerText.slice(-8000),buttons:[...e.querySelectorAll('button')].slice(-24).map(b=>{const r=b.getBoundingClientRect();return{text:b.textContent.trim().slice(0,160),disabled:b.disabled,x:r.x,y:r.y,width:r.width,height:r.height};})})),
       tabs:[...document.querySelectorAll('[role=tab]')].slice(0,24).map(e=>({text:e.textContent.trim().slice(0,150),selected:e.getAttribute('aria-selected')})),

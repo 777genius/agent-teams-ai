@@ -1292,3 +1292,90 @@ original question contract. Нужная public correlation и эквивале�
 обычных путей обязательны прежде product rollout. До их подтверждения R18
 context/result/tool parity остаётся открытой; existing native/Desktop gate
 и предыдущий failed status не ослабляются.
+
+### R19 — capabilities обновляются после Resume без потери стабилизации участников
+
+**Круг 1 — факты и точный source seam.** На `d35ef8256a9f24294b2fe50e8290ccb9841d9eb1`
+job `131818772612` (run `43405509757`) упал в
+`desktop-resume-ui-smoke.ts:245 → desktop-codex-cost-ui-proof.ts:94 →
+desktop-native-commands-ui-proof.ts:51`. Это второй `/cost`, после cold Resume.
+Первый `/cost`, original report readback, genuine Resume, второй обычный
+terminal-succeeded input, 11 original model requests и файл `ONE\nTWO\n`
+уже проверены до этого вызова. Ошибка — отсутствие suggestions после одного
+`Input.insertText('/')`; повторного ввода или Send не было. Original artifact
+`14030092315`, ZIP SHA256
+`3cb9bb783a762a674701a216b22bb107e5fdbf7882adc2efa3f7530eac7d4450`
+пока не распакован в недоступной среде. Из одного stack trace нельзя объявлять
+конкретную native/runtime причину.
+
+Независимо от неизвестной causal цепочки CI подтверждён source defect:
+`src/renderer/components/team/useStableActiveMembers.ts`
+(blob `134e9ee1df5e5d447cef40c072d732909185e38c`) сравнивает whitelist полей,
+в котором отсутствуют `runtimeOwner`, `sessionCommands`,
+`nativeInboxAttachmentsSupported` и `nativeInboxTextAttachmentsSupported`.
+При изменении только этих capabilities hook возвращает прежний array целиком.
+`TeamDetailView.tsx:1977,2655–2677` передаёт его через
+`sharedMessagesPanelProps.members` в настоящий Composer.
+`projectHostMemberAttachmentCapabilities.ts:11–46` намеренно отзывает
+capabilities и возвращает их только для exact ready/attached/current generation;
+старый array теряет и новое разрешённое capability, и его отзыв.
+R16 исправил вычисление статического captured catalog в самом Composer, но
+этот более ранний comparator оно не проходит.
+
+Read-only аудит также проверил: `useHostTeamResume.ts` ждёт
+`refreshTeamData` после ready; `projectRuntimeMember.ts:32–38` выдаёт
+Codex lead `/cost` без native catalog запроса; successful Codex terminal
+сам по себе не закрывает D session. Это source facts, не доказательство
+состояния конкретного failing renderer.
+
+**Круг 2 — минимальное изменение и сохранение поведения.**
+
+1. Дополнить existing `areResolvedMembersEqual` ровно четырьмя capability
+   полями. Ownership и два attachment flag сравниваются как исходные scalar
+   values, включая отсутствие значения. Captured command list сравнивается
+   по presence, length и ordered `name/description`; равный cloned IPC
+   payload сохраняет прежний array reference. Не вводить generic deepEqual,
+   новый cache, registry, вычисление capabilities из settings или fallback
+   legacy commands. Existing removed-member filtering и остальные comparisons
+   сохраняются. Тот же путь должен применять capability revocation.
+2. Расширить existing `MessageComposer.pendingSend.test.tsx` case
+   «opens only captured commands on the first single slash input» настоящим
+   `useStableActiveMembers` перед настоящим MentionableTextarea.
+   Перед единственным native input проверить переход absent ownership →
+   captured Host и затем absent catalog → captured `/cost` при неизменных
+   имени/status/history/settings. Проверить propagation attachment flags,
+   reference stability для одинакового cloned catalog и withdrawal catalog
+   без дополнительного input/select/key event. Не вызывать Send, model, legacy
+   skills/catalog load. Это один critical existing case, не новая unit suite.
+   Старый comparator должен воспроизвести FAIL; исправленные bytes должны
+   пройти тот же case и существующий Composer file. R16 first-input assertion
+   сохраняется, native UI probe не переписывается.
+
+**Отдельный пункт — bounded failure evidence для следующего обычного CI.**
+Если source cut включает диагностику, дополнить только already-existing
+`readRendererFailureSnapshot` в `desktop-team-ui-smoke.ts`. Использовать
+то же единственное CDP evaluation, already-present TEST devStore и DOM;
+не добавлять запросы getData/runtime/launch, listeners, timers или input.
+
+Вывести closed facts текущего selected raw member snapshot (это не заявление
+о фактических props Composer): presence/count/overflow, не более 32 member
+rows, только provider enum, captured-owner boolean, attachment booleans,
+catalog presence/count/overflow и `hasCost`. Не выводить member names,
+raw command names/descriptions, paths, settings или весь store. При недоступном
+DEV store сохранить явное unavailable; oversized/invalid arrays не считать
+пустым catalog. DOM projection: capped textarea/listbox/option counts,
+single textarea focus/connected/disabled/readOnly, exact bare-slash boolean,
+capped length/cursor facts и `/cost` option presence. Не выводить raw draft
+или arbitrary option text. Эти данные относятся к existing failure read,
+не к атомарному моменту input и не дают нового capability.
+
+**Круг 3 — проверка и граница результата.** Сначала immutable plan и немедленный
+root commit/push, затем bounded independent source review. Product source
+scope — один existing hook; acceptance — один existing Composer case.
+Диагностика ограничена existing failure snapshot helper. Нужны focused
+renderer tests, scripts types при diagnostic delta, lint/source caps и
+обычный actual cold Codex Resume gate на новом coherent head. Ни budgets
+30s/native inputs, ни source/ownership/cleanup guards не меняются. Среда
+недоступна: source review не является RED/PASS execution. R17/R18 Claude
+proof и current native failure остаются отдельными; full parity не объявлять
+по одному comparator test или одной диагностике.
