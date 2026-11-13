@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { promises as fs } from 'fs';
 import { chmod, mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
@@ -82,6 +83,46 @@ function createTarball(entries: { name: string; data: string }[]): Buffer {
   );
 }
 
+function createRuntimePackage(marker: 'A' | 'B') {
+  const selected = getCodexRuntimePlatformCandidates()[0];
+  const suffix = process.platform === 'win32' ? '.exe' : '';
+  const files = [
+    { relativePath: `codex/codex${suffix}`, data: `TEST ${marker} codex` },
+    { relativePath: `path/rg${suffix}`, data: `TEST ${marker} rg` },
+    { relativePath: `codex/TEST-sandbox-helper${suffix}`, data: `TEST ${marker} helper` },
+  ];
+  return {
+    files,
+    tarball: createTarball(
+      files.map(({ relativePath, data }) => ({
+        name: `package/vendor/${selected.vendorTarget}/${relativePath}`,
+        data,
+      }))
+    ),
+  };
+}
+
+async function snapshotRuntimePackage(binaryPath: string, files: { relativePath: string }[]) {
+  const root = path.dirname(path.dirname(binaryPath));
+  const directory = await fs.stat(root);
+  return {
+    directory: { dev: directory.dev, ino: directory.ino, mode: directory.mode },
+    files: await Promise.all(
+      files.map(async ({ relativePath }) => {
+        const filePath = path.join(root, relativePath);
+        const identity = await fs.stat(filePath);
+        return {
+          relativePath,
+          bytes: await fs.readFile(filePath, 'utf8'),
+          dev: identity.dev,
+          ino: identity.ino,
+          mode: identity.mode,
+        };
+      })
+    ),
+  };
+}
+
 describe('CodexRuntimeInstallerService resolver', () => {
   beforeEach(async () => {
     tempRoot = await mkdtemp(path.join(os.tmpdir(), 'codex-runtime-resolver-'));
@@ -129,28 +170,138 @@ describe('CodexRuntimeInstallerService resolver', () => {
   it.each([172_854_349, 192 * 1024 * 1024])(
     'admits advertised package size %s and completes verified fixture installation',
     async (advertisedBytes) => {
-      const selected = getCodexRuntimePlatformCandidates()[0];
-      const binaryName = process.platform === 'win32' ? 'codex.exe' : 'codex';
-      const tarball = createTarball([
-        {
-          name: `package/vendor/${selected.vendorTarget}/codex/${binaryName}`,
-          data: 'TEST binary',
-        },
-      ]);
+      const firstPackage = createRuntimePackage('A');
       // Exercise the observed official header and exact policy boundary without
       // downloading or allocating a production-sized package. Integrity and
       // extraction still run against a complete small fixture payload.
       const fetch = stubPackageDownload(
-        new Response(new Uint8Array(tarball), {
+        new Response(new Uint8Array(firstPackage.tarball), {
           headers: { 'content-length': String(advertisedBytes) },
         }),
-        tarball
+        firstPackage.tarball
       );
-      const status = await createCodexRuntimeInstallerFeature().install();
+      const feature = createCodexRuntimeInstallerFeature();
+      const status = await feature.install();
       expect(status).toMatchObject({ installed: true, state: 'ready', source: 'app-managed' });
       expect(resolveAppManagedCodexRuntimeBinaryPath()).toBe(status.binaryPath);
       expect(fetch).toHaveBeenCalledTimes(3);
-      expect(execCliMock).toHaveBeenCalled();
+      expect(execCliMock).toHaveBeenCalledTimes(1);
+      if (!status.binaryPath) throw new Error('TEST first package has no binary path');
+      const firstSnapshot = await snapshotRuntimePackage(status.binaryPath, firstPackage.files);
+
+      const secondPackage = createRuntimePackage('B');
+      const secondFetch = stubPackageDownload(
+        new Response(new Uint8Array(secondPackage.tarball)),
+        secondPackage.tarball
+      );
+      const repaired = await feature.install();
+      expect(repaired).toMatchObject({ installed: true, state: 'ready', source: 'app-managed' });
+      if (!repaired.binaryPath) throw new Error('TEST repaired package has no binary path');
+      expect(repaired.binaryPath).not.toBe(status.binaryPath);
+      expect(resolveAppManagedCodexRuntimeBinaryPath()).toBe(repaired.binaryPath);
+      expect(await snapshotRuntimePackage(status.binaryPath, firstPackage.files)).toEqual(
+        firstSnapshot
+      );
+      const secondSnapshot = await snapshotRuntimePackage(
+        repaired.binaryPath,
+        secondPackage.files
+      );
+      expect(
+        secondSnapshot.files.map(({ relativePath, bytes }) => ({ relativePath, bytes }))
+      ).toEqual(
+        secondPackage.files.map(({ relativePath, data }) => ({ relativePath, bytes: data }))
+      );
+      if (process.platform !== 'win32') {
+        expect(firstSnapshot.files.map(({ mode }) => mode & 0o777)).toEqual([0o755, 0o755, 0o755]);
+        expect(secondSnapshot.files.map(({ mode }) => mode & 0o777)).toEqual([0o755, 0o755, 0o755]);
+      }
+      expect(secondFetch).toHaveBeenCalledTimes(3);
+      expect(execCliMock).toHaveBeenCalledTimes(2);
+    }
+  );
+
+  it.each(['verification', 'manifest-before-commit', 'manifest-after-commit'] as const)(
+    'retains the original full package after %s failure without rolling back publication',
+    async (stage) => {
+      const firstPackage = createRuntimePackage('A');
+      stubPackageDownload(
+        new Response(new Uint8Array(firstPackage.tarball)),
+        firstPackage.tarball
+      );
+      const feature = createCodexRuntimeInstallerFeature();
+      const first = await feature.install();
+      expect(first.state).toBe('ready');
+      if (!first.binaryPath) throw new Error('TEST original package has no binary path');
+      const original = await snapshotRuntimePackage(first.binaryPath, firstPackage.files);
+      const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'codex');
+      const manifestPath = path.join(runtimeRoot, 'current.json');
+      const originalManifest = await fs.readFile(manifestPath, 'utf8');
+      const secondPackage = createRuntimePackage('B');
+      const fetch = stubPackageDownload(
+        new Response(new Uint8Array(secondPackage.tarball)),
+        secondPackage.tarball
+      );
+      const fault = Object.assign(new Error(`TEST ${stage}`), { code: 'EIO' });
+      const originalRename = fs.rename;
+      const originalOpen = fs.open;
+      let manifestCommitted = false;
+      let packageDirectory: string | null = null;
+      // Only the selected filesystem boundary fails; extraction, rename and
+      // atomic manifest publication otherwise use the real TEST filesystem.
+      const rename = vi.spyOn(fs, 'rename').mockImplementation(async (source, target) => {
+        if (target === manifestPath && stage === 'manifest-before-commit') throw fault;
+        await originalRename(source, target);
+        if (target === manifestPath) manifestCommitted = true;
+        else if (typeof target === 'string') packageDirectory = target;
+      });
+      const open = vi.spyOn(fs, 'open').mockImplementation(async (...args) => {
+        if (manifestCommitted && args[0] === runtimeRoot && stage === 'manifest-after-commit') {
+          throw fault;
+        }
+        return originalOpen(...args);
+      });
+      try {
+        if (stage === 'verification') execCliMock.mockRejectedValueOnce(fault);
+        await expect(feature.install()).resolves.toMatchObject({
+          installed: true,
+          binaryPath: first.binaryPath,
+          state: 'failed',
+          error: fault.message,
+        });
+      } finally {
+        rename.mockRestore();
+        open.mockRestore();
+      }
+      expect(await snapshotRuntimePackage(first.binaryPath, firstPackage.files)).toEqual(original);
+      expect(manifestCommitted).toBe(stage === 'manifest-after-commit');
+      if (stage === 'manifest-after-commit') {
+        expect(packageDirectory).not.toBeNull();
+        const secondPath = path.join(packageDirectory!, secondPackage.files[0].relativePath);
+        expect(resolveAppManagedCodexRuntimeBinaryPath()).toBe(secondPath);
+        expect(JSON.parse(await fs.readFile(manifestPath, 'utf8'))).toMatchObject({
+          schemaVersion: 1,
+          binaryPath: secondPath,
+        });
+      } else {
+        expect(await fs.readFile(manifestPath, 'utf8')).toBe(originalManifest);
+        expect(resolveAppManagedCodexRuntimeBinaryPath()).toBe(first.binaryPath);
+      }
+      if (packageDirectory) {
+        const retained = await snapshotRuntimePackage(
+          path.join(packageDirectory, secondPackage.files[0].relativePath),
+          secondPackage.files
+        );
+        expect(retained.files.map(({ bytes }) => bytes)).toEqual(
+          secondPackage.files.map((file) => file.data)
+        );
+      } else {
+        expect(stage).toBe('verification');
+      }
+      expect(
+        (await fs.readdir(runtimeRoot)).filter((name) => /^(installing-|\.tmp\.)/.test(name))
+      ).toEqual([]);
+      expect(fetch).toHaveBeenCalledTimes(3);
+      expect(execCliMock).toHaveBeenCalledTimes(2);
     }
   );
 

@@ -1,5 +1,5 @@
 import { CODEX_RUNTIME_PROGRESS } from '@features/codex-runtime-installer/contracts';
-import { renamePathWithRetry } from '@main/utils/atomicWrite';
+import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import {
@@ -705,7 +705,7 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
         runtimeRoot,
         'versions',
         platformMetadata.version!,
-        selected.vendorTarget
+        `${selected.vendorTarget}-${randomUUID()}`
       );
       const binaryPath = path.join(versionDir, binaryRelativePath);
 
@@ -720,7 +720,6 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
         windowsHide: true,
       });
 
-      await fsp.rm(versionDir, { recursive: true, force: true });
       await fsp.mkdir(path.dirname(versionDir), { recursive: true });
       await renamePathWithRetry(tempDir, versionDir);
       tempDir = null;
@@ -733,10 +732,10 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
         integrity: platformMetadata.dist!.integrity!,
         installedAt: new Date().toISOString(),
       };
-      await fsp.writeFile(
+      await atomicWriteAsync(
         getCurrentManifestPath(),
         `${JSON.stringify(manifest, null, 2)}\n`,
-        'utf8'
+        { durability: 'strict', syncDirectory: true }
       );
 
       const status: CodexRuntimeStatus = {
