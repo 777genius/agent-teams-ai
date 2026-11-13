@@ -1,3 +1,4 @@
+import { verifyLinuxChildExecInput } from '../../src/main/utils/linuxChildLaunchSelection.ts';
 import { runDesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
 import { runDesktopScheduleUiProof } from './desktop-schedule-ui-proof.ts';
 import type { DesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
@@ -208,6 +209,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     codexResumeModel,
     openCodeLifecycleModel, openCodeReviewModel, capturedMcpModel,
   });
+  if (fixture.linuxChildExec) evidence.linuxChildExecInput = fixture.linuxChildExec;
   if (checkpointUpgrade) evidence.claudeCheckpointUpgrade = checkpointUpgrade.proof;
   if (capturedMcpUiMode) evidence.scope = 'Original Launch member MCP policies, selected external server and app-only isolation, actual native permission and tool effect, all-member Stop and saved UI readback; finite localhost inference only';
   if (scheduleUiMode) evidence.scope = 'Original Schedule controls, actual finite Claude and task-first native Bash/MCP, Stop, history and reload; localhost inference only';
@@ -753,6 +755,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       }
     }
     await verifyDesktopNativeFreeze(nativeInputs, evidence);
+    if (fixture.linuxChildExec) {
+      try { assert.deepEqual(verifyLinuxChildExecInput(fixture.linuxChildExec), fixture.linuxChildExec); evidence.linuxChildExecInputVerifiedAfterCleanup = true; }
+      catch { evidence.linuxChildExecInputVerifiedAfterCleanup = false; evidence.status = 'INCOMPLETE'; }
+    }
     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
     console.log(JSON.stringify({ status: evidence.status, receipt: receiptPath,
       ...(evidence.status !== 'PASS' && evidence.failureSource

@@ -134,6 +134,33 @@ jobs:
           printf 'LINUX_PROCESS_PNPM_ENTRY=%s\nLEGACY_DESKTOP_COREPACK_HOME=%s\n' "$corepack_entry" "$selected_inputs/cache" >> "$GITHUB_ENV"
           selection="$RUNNER_TEMP/TEST-linux-node24-$GITHUB_RUN_ID/selection.json"
           selection_sha=$(node -e "console.log(require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync(process.argv[1])).digest('hex'))" "$selection")
+          child_exec_pin="$(node --input-type=module - "$selection" "$selection_sha" <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
+          import { dirname, join, sep } from 'node:path';
+          const digest = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          assert.equal(digest(process.argv[2]), process.argv[3]);
+          const pin = JSON.parse(readFileSync(process.argv[2], 'utf8')).linuxChildExec;
+          assert.deepEqual(Object.keys(pin).sort(), ['binarySha256', 'manifestPath', 'manifestSha256']);
+          assert.ok(pin.manifestPath.startsWith(dirname(process.argv[2]) + sep));
+          assert.equal(realpathSync(pin.manifestPath), pin.manifestPath);
+          assert.ok(!/[\r\n]/.test(pin.manifestPath));
+          assert.match(pin.manifestSha256, /^[a-f0-9]{64}$/);
+          assert.equal(digest(pin.manifestPath), pin.manifestSha256);
+          const manifest = JSON.parse(readFileSync(pin.manifestPath, 'utf8'));
+          assert.equal(manifest.protocol, 'linux-child-exec-v1');
+          assert.equal(manifest.sourceSha256, digest('packages/legacy-agent-host/native/linux-child-exec.c'));
+          assert.equal(manifest.binarySha256, pin.binarySha256);
+          assert.equal(digest(join(dirname(pin.manifestPath), 'linux-child-exec')), pin.binarySha256);
+          appendFileSync(process.env.GITHUB_ENV, `LEGACY_LINUX_CHILD_EXEC_MANIFEST=${pin.manifestPath}\nLEGACY_LINUX_CHILD_EXEC_SHA256=${pin.manifestSha256}\n`);
+          process.stdout.write(`${pin.manifestPath}\n${pin.manifestSha256}\n`);
+          NODE
+          )"
+          readarray -t child_exec_values <<< "$child_exec_pin"
+          test "${#child_exec_values[@]}" -eq 2
+          export LEGACY_LINUX_CHILD_EXEC_MANIFEST="${child_exec_values[0]}"
+          export LEGACY_LINUX_CHILD_EXEC_SHA256="${child_exec_values[1]}"
           LEGACY_DESKTOP_COREPACK_HOME="$selected_inputs/cache" node scripts/legacy-agent-host/qualify-linux-process-sdk.ts \
             "$RUNNER_TEMP/TEST-linux-sdk-$GITHUB_RUN_ID" "$selection" "$selection_sha" "$corepack_entry" \
             2>&1 | tee native-evidence/linux-sdk.log

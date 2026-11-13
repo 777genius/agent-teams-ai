@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { RetainedWindowsCustody } from '@agent-teams/legacy-agent-host/owned-process';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { assertDesktopMetadataLineageReleased, desktopMetadataProfileHash,
   readDesktopMetadataLineage } from '../../../scripts/legacy-agent-host/desktop-opencode-metadata-lineage';
@@ -17,6 +17,8 @@ import {
   type SelectedHostProfile,
 } from '../../../src/features/agent-backend/main';
 import { capturedHostProfileDigest } from '../../../src/features/agent-backend/main/infrastructure/selectedHostProfile';
+import * as linuxLaunch from '../../../src/main/utils/linuxChildLaunch';
+import { linuxChildLaunchFailure } from '../../../src/main/utils/linuxChildLaunchSelection';
 import { formatPersistentLogMessage, installPersistentAppLog } from '../../../src/main/utils/persistentAppLog';
 import { addLogSink } from '../../../src/shared/utils/logger';
 
@@ -800,6 +802,24 @@ describe('captured legacy host client over real subprocess stdio', () => {
     const transport = client({ ...(await fixture()), expectedBuildId: 'another-build' });
     await expect(transport.start()).rejects.toMatchObject({ code: 'profile-mismatch' });
     expect((await transport.shutdown()).childExit).toBe('confirmed');
+
+    // A synthetic private helper failure still owns the actual Node child.
+    // No helper allocation/empty EOF is promoted to a Host handshake.
+    let allocated: ChildProcess | undefined;
+    const observe = vi.spyOn(linuxLaunch, 'observeLinuxChildLaunchFailure').mockImplementation((child, listener) => {
+      allocated = child;
+      queueMicrotask(() => listener(linuxChildLaunchFailure('status', true)));
+      return () => {};
+    });
+    try {
+      const stalled = client(await fixture('process.stdin.resume(); setInterval(() => {}, 1000);', 'raw'));
+      await expect(stalled.start()).rejects.toMatchObject({ code: 'transport-closed', outcome: 'unknown' });
+      expect(allocated?.pid).toBeGreaterThan(0);
+      expect(allocated?.exitCode).toBeNull(); expect(allocated?.signalCode).toBeNull();
+      await expect(stalled.request('echo')).rejects.toMatchObject({ outcome: 'not-dispatched' });
+      expect((await stalled.shutdown()).childExit).toBe('confirmed');
+      expect(allocated?.exitCode !== null || allocated?.signalCode !== null).toBe(true);
+    } finally { observe.mockRestore(); }
   });
 
   it('seals pending startup before validation can spawn the host', async () => {

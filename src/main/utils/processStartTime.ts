@@ -8,6 +8,8 @@ import {
   type ProcessProbeObserver,
 } from '@main/utils/processProbeDiagnostics';
 
+import { execFileWithLinuxChildLaunch } from './linuxChildLaunch';
+
 export { createProcessStartTimeCache };
 
 /** Compatible Main observer adapter; platform parsing and per-sweep cache are portable. */
@@ -34,6 +36,7 @@ export function readProcessStartTimeMs(
               event.stderr
             )
           )
-      : undefined
+      : undefined,
+    execFileWithLinuxChildLaunch
   );
 }

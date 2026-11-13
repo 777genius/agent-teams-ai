@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { copyFileSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildLinuxProcessNativeArtifact } from './buildLinuxProcessNativeArtifact.ts';
+import { buildLinuxChildExecArtifact, buildLinuxProcessNativeArtifact } from './buildLinuxProcessNativeArtifact.ts';
 
 /** Explicit native TEST build/proof actor; no import from product startup. */
 assert.equal(process.env.LEGACY_REGISTERED_PROCESS_NATIVE_GO, '1');
@@ -24,17 +24,23 @@ const artifact = buildLinuxProcessNativeArtifact({ compiler, compilerSha256: has
   headers: ['node_api.h', 'node_api_types.h', 'js_native_api.h', 'js_native_api_types.h']
     .map(file => ({ file, sha256: hash(join(headersRoot, file)) })),
   source, sourceSha256: hash(source), outputDirectory: join(output, 'artifact') });
+const helperSource = join(packageRoot, 'native/linux-child-exec.c');
+const linuxChildExec = buildLinuxChildExecArtifact({ compiler, compilerSha256: hash(compiler),
+  inspector, inspectorSha256: hash(inspector), source: helperSource, sourceSha256: hash(helperSource),
+  outputDirectory: join(output, 'linux-child-exec') });
 const actor = join(output, 'registered-process-actor');
 execFileSync(compiler, ['-D_GNU_SOURCE', '-std=c11', '-Wall', '-Wextra', '-Werror', '-pthread',
   join(packageRoot, 'tests/fixtures/registered-process-actor.c'), '-o', actor],
 { timeout: 30_000, maxBuffer: 1024 * 1024 });
 assert.equal(hash(compiler), artifact.manifest.compilerSha256);
-const selection = { directory: artifact.directory, manifestSha256: artifact.manifestSha256, actor };
+const selection = { directory: artifact.directory, manifestSha256: artifact.manifestSha256, actor, linuxChildExec };
 writeFileSync(join(output, 'selection.json'), JSON.stringify(selection, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
 for (const mode of ['automatic', 'warm'] as const) {
   const stdout = execFileSync(process.execPath, [join(packageRoot, 'tests/registered-process-linux.native.mjs'),
     artifact.directory, artifact.manifestSha256, actor, ...(mode === 'warm' ? ['warm'] : [])],
-  { encoding: 'utf8', timeout: 45_000, maxBuffer: 2 * 1024 * 1024 });
+  { encoding: 'utf8', timeout: 45_000, maxBuffer: 2 * 1024 * 1024,
+    env: { ...process.env, LEGACY_LINUX_CHILD_EXEC_MANIFEST: linuxChildExec.manifestPath,
+      LEGACY_LINUX_CHILD_EXEC_SHA256: linuxChildExec.manifestSha256 } });
   const prefix = mode === 'warm' ? 'warm-' : '';
   writeFileSync(join(output, prefix + 'native.log'), stdout, { mode: 0o600, flag: 'wx' });
   const proof = JSON.parse(stdout.trim()) as { workspace: string; completed: boolean; cleaned: boolean };
@@ -47,6 +53,8 @@ for (const mode of ['automatic', 'warm'] as const) {
   if (mode === 'warm') assert.equal(proved.captureVersion, 4);
   assert.ok(facts.some(fact => fact.phase === 'live-worker-after-thread-leader-exit' &&
     fact.observation === 'unknown' && fact.signal === 'refused' && fact.workerClosed === false));
+  assert.ok(facts.some(fact => fact.phase === 'isolated-same-child-launch' &&
+    fact.completed === true && fact.parentUnchanged === true && fact.helperSha256 === linuxChildExec.binarySha256));
   copyFileSync(join(proof.workspace, 'proof.ndjson'), join(output, prefix + 'proof.ndjson'));
 }
 console.log(JSON.stringify({ ...selection, completed: true, cleaned: true, automaticAndWarm: true,
