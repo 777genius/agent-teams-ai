@@ -53,7 +53,7 @@ export async function prepareNativeVendorInputs(destination: string, bashPath: s
   assert.ok(process.arch === 'x64' || process.arch === 'arm64');
   const arch = process.arch, integrity = integrities[arch];
   const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-  const lock = readFileSync(join(repository, 'pnpm-lock.yaml'), 'utf8');
+  const lock = readFileSync(join(repository, 'pnpm-lock.yaml'), 'utf8').replace(/\r\n/g, '\n');
   const packageName = '@anthropic-ai/claude-agent-sdk-win32-' + arch;
   assert.ok(lock.includes("'" + packageName + '@' + version + "':\n    resolution: {integrity: " + integrity + '}'),
     'Selected official integrity is still in the exact frozen repository lock');

@@ -780,3 +780,31 @@ cleanup обязательны. Capacity/lifetime checks дополняют actu
 V2 Bun graph, current Processes UI и packaged proof. `TeamProcessCommands`/Linux owner в этом helper cut не меняются.
 Оценка cut: примерно200–320 native/helper строк с переносом existing code,50–100 строк native checks/adapters;
 это не обещание полного Windows parity. Root/source review обязателен до activation.
+
+## 27. Exact c5 native CI: завершённые результаты и узкое исправление подготовки Windows
+
+[Run43348419492](https://github.com/777genius/agent-teams-ai/actions/runs/43348419492)
+проверил exact source `c5ae9b03a84965f9e497d60d4ff6beac1c5640b8`; все три jobs завершились.
+
+- Windows x64 [job131633266739](https://github.com/777genius/agent-teams-ai/actions/runs/43348419492/job/131633266739)
+  и ARM64 [job131633266857](https://github.com/777genius/agent-teams-ai/actions/runs/43348419492/job/131633266857):
+  existing Node26, Electron и HostNode24 native gates PASS. Step14 подготовки pinned Claude завершился
+  `Selected official integrity is still in the exact frozen repository lock`; actual SDK vendor step15 не выполнялся.
+  Exact Git lock содержит обе выбранные SRI SDK0.3.305. Старый текстовый поиск требует LF:
+  на exact LF bytes он проходит, на их CRLF форме воспроизводимо отказывает. Исправление нормализует только CRLF→LF
+  перед прежним exact package/version/SRI search. Обе архитектуры проходят LF/CRLF textual checks; изменённый SRI отвергается.
+  Это проверка исходных строк в V8, не native execution. Raw runner lock из artifact пока не прочитан;
+  CRLF — подтверждённый дефект проверки, но конкретные checkout bytes не объявляются наблюдёнными.
+- Linux [job131633266519](https://github.com/777genius/agent-teams-ai/actions/runs/43348419492/job/131633266519):
+  Node26/Node24/Electron primitive PASS; step11 **genuine Claude SDK → background Bash services → MCP register →
+  выбранный Human Stop → ordinary owner close PASS**, source freeze PASS. Step12 cold Host Processes UI завершился
+  wrapper exit1; packed preparation и packed UI steps13/14 не достигнуты. После исправления parser из §25
+  новая точная причина ещё не установлена: общий Actions log содержит только `desktop-backend-smoke.ts` child exit1.
+  Original evidence удержан в artifact `14003779154`, `registered-linux-x64-c5ae9b03a84965f9e497d60d4ff6beac1c5640b8`.
+  Artifact получен официальным download API; его ZIP content ещё не извлечён из-за unavailable executor.
+  До чтения original logs нельзя приписывать отказ прежнему parser или заявлять UI Stop/cleanup PASS.
+
+Следующий отдельный cut — только Windows EOL fix и этот status; текущий завершённый source не перезапускается.
+§26 helper draft имеет source review с исправлениями exact retained pid+birth lookup при PID reuse и deadline
+перед destructive dispatch; compiler/native qualification ещё не выполнена, staged product activation отсутствует.
+Windows vendor, Host registry/async fence, positive cold UI, packaged M19 и Linux older-kernel/ABI gates остаются открыты.
