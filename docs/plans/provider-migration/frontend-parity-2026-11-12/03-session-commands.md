@@ -1449,3 +1449,189 @@ Root commit/push этого append предшествует TEST edits. Пров
 source peer, Host test types/lint/source caps при штатной доступности и тот же
 уже нужный CI native gate. Новой unit suite, UI oracle fallback, permissionMode
 переключения, удаления native settings/rules, opaque patch или replay нет.
+
+
+### R20 — сохранить прежний inline `/review` с явной compatibility provenance
+
+**Круг 1 — что действительно поддерживал старый frontend.**
+
+Источник: immutable source audit
+`7c01908ce1fb1d58a335d3e1d6070f5ffe078372` (readback MATCH),
+frontend `4a0e06277fe216d9f82dbbede362668fe46622ee`,
+runtime `0.0.158`/tree `f5c69c2e9024ffc36a5db5eafe30f53539b52f62`
+и runtime `0.0.160`/commit `e13edcd3d4ffbecc0272ae30195cc6b15b710ee7`.
+Следующие runtime blobs совпадают у обеих версий:
+
+- `src/commands/review.ts` `f86ada0b10a063f5ea44d4236316a95bd5a4019e`:
+  builtin `review` — обычный prompt, без `context: fork` и без child agent.
+  Прежний recipe задаёт анализ pull request и вставляет исходные args после
+  `PR number:`; отдельный `/ultrareview` имеет другую реализацию.
+- `processSlashCommand.tsx` `a0bf451b0db54ce9a7d12177ac097ea3e6f65ef5`,
+  строки723–730/869–919: только explicit fork выбирает child path; обычный
+  prompt добавляет messages в тот же основной query.
+- `QueryEngine.ts` `60387c8554290ed57e9795a7417f23b70a277eba`,
+  423–441/745–755, и `cli/print.ts`
+  `cce4b77f94510c8c42b6e8f47d17da0df052cf9e`,
+  999–1004/1035–1046/2379–2398: inline messages выполняются с исходным
+  main-session `canUseTool`. Оmission callback при обработке slash не
+  означает его отсутствие у последующего main query.
+- `cli/structuredIO.ts` `366b56f592b2666b1a3132cfa29bfbdc911fd216`,
+  533–648, и permissions `99db042d3170fe8b90e12e626907b9e8453902d0`,
+  1169–1204: native deny остаётся deny, explicit Read ask идёт в stdio
+  control request с original tool-use ID/request ID. Frontend4a
+  `TeamProvisioningLeadToolApproval.ts` `820c14f2ff0b9cf56dddddfae9476d7aac9e74a5`
+  связывает ответ с original run и stdin. Пустой allow updatedInput
+  сохраняет original input по `PermissionPromptToolResultSchema.ts`
+  `09ce6fab427c0526562adfdbe729c9d0f3d71de1`,107–115.
+- Frontend `src/main/ipc/teams.ts` `6e8e9ac8c86b0f9f6fc4b256dca2f9f49da38570`,
+  2889–2997, сохраняет raw standalone slash и отправляет его в original
+  online lead. Create args `933b07504cd718f9099bc237c75bcdc5dc54fb2a`,
+  454–474, сохраняют user/project/local; manual mode использует default+stdio.
+  Default approval settings не auto-allow, Read не относится к auto edit/Bash.
+
+Это source-backed baseline semantics. Genuine old-native
+`/review + explicit Read ask` receipt в данном аудите не получен;
+его нельзя объявить PASS. R17 context proof, R18 Read INCOMPLETE и actual
+9ea Create marker FAIL сохраняются отдельными исходными результатами.
+Новый SDK0.3.305 builtin review стал fork; работоспособность его child
+permission path не следует из старого frontend, где builtin был inline.
+
+**Круг 2 — выбор минимального совместимого пути.**
+
+1. В pinned public SDK нет подтверждённого per-command переключателя
+   builtin fork обратно в inline. Inventory `supportedCommands()` является
+   описанием; private command object/options не мутировать. Новые user
+   skills/plugins или записи config ради override не создавать.
+2. Сохранение нового native fork требует пока неподтверждённой permission
+   маршрутизации. R18 audit `54ca48645f83bba8df876951a1cf27bc916d99ff`
+   не разрешает global none/denyInsteadOfPrompting, удаление ask/deny или
+   выдачу fork parent/MCP authority. Этот новый вариант остаётся unqualified.
+3. Выбранный compatibility путь: существующий D Claude command adapter
+   явно выполняет прежний inline recipe через обычный публичный SDK user
+   input в том же live Query. Он сохраняет старое поведение приложения,
+   но НЕ называется успешным выполнением нового SDK builtin fork.
+   Public capability description сообщает «Review a pull request in the
+   current conversation»; invocation-specific D observation/TEST receipt
+   отдельно обозначают `legacy-inline-review-v1`. Новые SDK fork flags
+   (`--fix`, `--comment`, effort/target syntax) не выдаются за старый PR recipe;
+   native canonical command metadata при этом не переписывается. Это небольшая фиксированная ветка, без нового
+   registry, plugin framework, persistent journal или конфигурационного mode.
+
+**Круг 3 — точная authority и реализация D.**
+
+Основные существующие файлы D (pin `f4b4ac3f6fa4284091aca333e114778a8e84acd7`):
+`adapters/claude-sdk/commands.ts` `c1d41f401d24991c8e5f133864354014b0d0fed8`
+и `session.ts` `c2022f8b1c4c84ebc5e001ad6182a0209f379d0a`.
+В Host нужен только небольшой existing `adapters/providers/claudeSessionCommands.ts`
+projection hunk для invocation-specific description; публичный DTO не меняется.
+
+1. Original live inventory остаётся неизменённым bounded capture.
+   Public SDK0.3.305 `SlashCommand.builtin?: boolean` документирует
+   exact-name/builtin precedence и отличие user/project/plugin/MCP rows
+   (pinned declarations SHA256
+   `54163099011f6d52d6445b975f6d204cafc36958a8e922b209233a202ed5fc9b`,
+   9645–9665). Existing `resolveClaudeCommand` сохраняется.
+   Имя или description сами по себе не являются доказательством builtin.
+   Actual pinned inventory fixture `94ab1c9799c2cc7054c2b5384879d808f0a48174`
+   содержит canonical `code-review`, aliases `["review"]`, builtin true;
+   exact native row `review` в нём отсутствует. Поэтому нельзя требовать
+   выдуманный selected.name=review или объявлять этот observed alias чужим.
+2. Compatibility применяется только когда original typed command — exact
+   lowercase `/review` с прежним допустимым separator, existing resolver
+   выбрал captured canonical row `code-review`, `builtin === true` и его
+   captured aliases содержат `review`; observeCommands включён для Host
+   surface, attachments отсутствуют. Это ровно observed pinned alias,
+   без угадывания других canonical names. Exact-name custom `/review`
+   выигрывает у builtin alias по existing resolver и остаётся native.
+   Custom-only/namespaced/project/plugin commands, другие typed aliases,
+   direct `/code-review`, ambiguous alias, missing/malformed marker и
+   отозванный catalog не подменяются; сохраняют existing dispatch/refusal.
+3. Одна pure helper ветка использует фиксированный recipe из exact old
+   review.ts. Args извлекаются по прежнему `slashCommandParsing.ts`
+   `98c6e7c0f69eeafc8b76e809fa0829317ad70182`: outer trim, ASCII-space
+   separator, сохранение внутреннего spacing/args. Новый generic parser
+   не нужен. Original raw `Input.content`, inputId, operationRef, native
+   user UUID и durable Team receipt не изменяются. Native wire content
+   содержит явное legacy recipe expansion только для этого pending input.
+4. Выбор выполняется один раз до первого handoff; expanded content обязан
+   пройти прежний inputBytes bound до `handed`. Нет native slash attempt
+   перед compatibility, retry/fallback после side effect, второго input
+   или нового Query. Сохраняются readiness, source/current, queue, Stop,
+   cancellation и exact callback ownership.
+5. D observer выдаёт closed invocation-specific annotation только из этой
+   собственной проверенной projection: invocation `review`, execution
+   `legacy-inline-review-v1`, fixed description и legacy PR argument hint.
+   Native capture не принимает annotation из SDK metadata. Original canonical
+   row/name/description/argumentHint/aliases/builtin и private this.commands
+   сохраняются; annotation не означает, что direct `/code-review` изменился.
+   Existing Host `claudeSessionCommands` сначала выполняет прежний resolver,
+   затем выбирает compatibility description только для matching invocation.
+   Exact-name custom row не получает чужую annotation. Projection остаётся
+   в прежних metadata/output bounds. Existing public name/description DTO
+   достаточен; нет virtual native row, RPC/saved Team schema change или нового
+   permission/capability store.
+6. Selected executable/SDK, settingSources, permissionMode, tools,
+   disallowedTools, native user/project/local ask/deny, question/plan
+   callbacks и original `ClaudeInteractions` не меняются.
+   Обычный main input использует существующие PreToolUse/tool ownership/
+   canUseTool paths. Child grants, agent ID rewriting и fake parent marker
+   отсутствуют.
+7. Completion берётся из настоящего original main SDK result с прежним
+   user-UUID/input/operation correlation. Existing genuine Team MCP reply
+   остаётся ordinary main tool call. Новый child-to-parent result bridge,
+   synthetic terminal, local-command namespace или publisher не нужен.
+   Source artifact/pin и receipt явно показывают compatibility execution.
+
+**Круг 4 — критическая проверка и честная граница завершения.**
+
+- Расширить существующий D `claude-sdk/commands.test.ts`, не новую suite:
+  actual captured `code-review`→`review` alias vs exact custom precedence,
+  direct canonical native path, args/raw-input preservation,
+  observation annotation, one SDK input и unchanged original result owner.
+  Существующие catalog revocation, alias, foreign echo, Stop/interaction
+  refusal cases сохранить; не создавать дублирующую матрицу всех команд.
+- В existing native Claude command/compaction journey заменить утверждение
+  о новом fork recipe явной проверкой старого inline recipe + checked
+  compatibility capability. Captured system marker, model/context/settings,
+  raw original `/review args`, source freezes, настоящие native events,
+  original Team reply и durable terminal проверяются строго.
+  Старый failed fork receipt не переписывать и не переименовывать в PASS.
+- Для доказательства manual permission расширить ровно тот же original
+  review turn: один Read уже существующего isolated TEST file с известным
+  immutable content/hash, explicit TEST project `ask: Read`, без
+  autoAllowed Read. Использовать existing original Runtime read/feed и
+  `runtime.interaction`: точные binding/generation/input/operation/ref,
+  tool name/path и единственный allow-once. Existing event store позволяет
+  подтвердить request без нового публичного API. Никакого broad auto-allow.
+  Первый native tool result обязан содержать original file marker и
+  соответствующий tool-use ID; затем прежний настоящий MCP message_send
+  и main terminal. Это один дополнительный model round/Read в existing
+  review turn, без нового user input/Host/process/job.
+- В TEST scope можно добавить только этот Read в captured nativeTools и
+  один frozen permission source; existing captured system instruction
+  явно разрешает чтение именно TEST file. Другие native tools, shell,
+  MCP permissions, model/native input counts остаются прежними.
+  Counter изменяется только на доказанный дополнительный round для review.
+  Native/provider timeout45s, existing test/job bounds, original process
+  cleanup и source/host ownership guards не увеличиваются.
+- Shared UI command model helper, который сейчас проверяет new-fork prompt,
+  должен требовать тот же explicit compatibility recipe. Существующий
+  Desktop review scenario остаётся с прежним input/receipt/action counts;
+  API-only proof не заменяет actual Desktop.
+- D build/types/critical existing tests, existing Host command projection case,
+  Host build/test types/scripts types,
+  existing command model cases и source caps; затем normal required native
+  command gate и Desktop command gate на новом coherent pin. Никаких
+  необоснованных rerun, новых runner или снятия failed assertion ради green.
+  Exact artifact publication/pin выполняет root после source peers.
+
+Root и independent peer сначала проверяют этот append, затем root немедленно
+commit/push. До этого production, SDK options, pinned dependency и native
+experiments не изменяются. Если actual original main approval или result
+correlation не подтвердятся, compatibility остаётся незавершённой; её нельзя
+заменить «tool-free review PASS» или присвоить неизвестному fork права.
+
+**R2 correction:** независимый peer выявил недостижимый exact-name guard в
+первом draft7552. Он заменён source-qualified canonical `code-review` +
+`review` alias через прежний resolver; presentation annotation сделана
+invocation-specific. Старый draft не является разрешением на implementation.
