@@ -42,6 +42,7 @@ export const RUN_SUPERSESSION_POLICY = {
     'updater-windows',
     'updater-windows-ota',
     'windows-backfill-diagnostic',
+    'windows-teammate-console-native',
   ],
   // Canonical group plus isolated PR edits for the required check.
   ci: ['ci'],
