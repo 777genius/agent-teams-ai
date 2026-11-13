@@ -14,6 +14,7 @@ import { preparedInputProof } from '../dist/runtime/inputPreparation.js';
 import { effectId } from '../dist/team/identity.js';
 import { fileHash, tick, treeHash, startHost } from './fixtures/native-host.ts';
 import {
+  auditPinnedClaudePermissionSource,
   readNativeProviderArtifact,
   verifyNativeProviderArtifact,
 } from './fixtures/native-provider-artifact.ts';
@@ -113,9 +114,10 @@ test(
       join(pkg, 'node_modules/@agent-teams/provider-implementations/dist/claude.js')
     );
     const sdk = createRequire(providerEntry).resolve('@anthropic-ai/claude-agent-sdk');
+    const sdkVersion = '0.3.305';
     assert.equal(
       record(JSON.parse(await readFile(join(dirname(sdk), 'package.json'), 'utf8'))).version,
-      '0.3.305'
+      sdkVersion
     );
     const native = {
       path: await realpath(
@@ -154,6 +156,11 @@ test(
     );
     assert.equal(artifacts.host.sourceSha256, required('LEGACY_NATIVE_HOST_SOURCE_SHA256'));
     assert.equal(artifacts.host.distSha256, required('LEGACY_NATIVE_HOST_DIST_SHA256'));
+    const sdkSourceAudit = await auditPinnedClaudePermissionSource({
+      sdkVersion, sdk: artifacts.sdk, native: artifacts.native, signal: t.signal,
+    });
+    t.diagnostic('TEST SDK source audit: ' + JSON.stringify(sdkSourceAudit));
+    t.signal.throwIfAborted();
     const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-native-claude-compaction-'))),
       namespace = basename(root);
     t.diagnostic(`TEST receipt: ${join(root, 'receipt.json')}`);
@@ -870,6 +877,7 @@ test(
           passed && cleanupConfirmed && cleanupFailure === undefined ? 'SCOPED_PASS' : 'INCOMPLETE',
         root,
         artifacts,
+        sdkSourceAudit,
         proofs,
         hosts,
         cleanupConfirmed,
