@@ -478,7 +478,9 @@ export async function runFullTeamSmoke({
         stdio: 'pipe',
         encoding: 'utf8',
         maxBuffer: 8 * 1024 * 1024,
-        timeout: 30 * 60_000,
+        // Vitest allows 35 minutes including owned-host cleanup; the outer
+        // process needs a separate five-minute startup/teardown reserve.
+        timeout: 40 * 60_000,
         killSignal: 'SIGTERM',
       }
     );

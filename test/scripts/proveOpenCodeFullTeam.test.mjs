@@ -236,7 +236,7 @@ test('isolates auth/home/config and retains cleanup-confirmed proof after succes
         assert.equal(path.basename(args[args.indexOf('--config') + 1]), 'vitest.opencode-proof.config.ts');
         assert.equal(options.env.OPENCODE_E2E_FULL_TEAM, '1');
         assert.equal(options.stdio, 'pipe');
-        assert.equal(options.timeout, 30 * 60_000);
+        assert.equal(options.timeout, 40 * 60_000);
         fs.writeFileSync(
           path.join(options.env.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'),
           JSON.stringify(passingProof())
