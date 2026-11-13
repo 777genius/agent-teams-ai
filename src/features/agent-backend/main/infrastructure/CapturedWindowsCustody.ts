@@ -3,6 +3,8 @@ import { constants } from 'node:fs';
 import { lstat, open, realpath, stat } from 'node:fs/promises';
 
 import {
+  captureWindowsLauncher,
+  matchesCapturedWindowsLauncher,
   nativeProcessProfileSchema,
   readCapturedProfile,
   RetainedWindowsCustody,
@@ -55,6 +57,7 @@ export function captureMainWindowsCustody(
     }
   }
   if (!selected.length) unavailable();
+  const recipes = selected.map(value => ({ profile: value, launcher: captureWindowsLauncher(value) }));
   const brokers = new Map(
     selected.map((value) => {
       const broker = value.windowsBroker!;
@@ -68,21 +71,16 @@ export function captureMainWindowsCustody(
     async verifyLaunch(spec, executableSha256, broker) {
       // A changed source refuses new work without discarding original cleanup capabilities.
       readCapturedProfile(path, sha256);
-      if (
-        !selected.some(
-          (value) =>
-            value.executable.path === spec.executable &&
-            value.executable.sha256 === executableSha256 &&
-            value.windowsBroker &&
-            windowsBrokerReference(value.windowsBroker) === windowsBrokerReference(broker)
-        )
-      )
-        unavailable();
+      const selectedRecipe = recipes.find(({ profile: value, launcher }) =>
+        launcher.executable.sha256 === executableSha256 &&
+        matchesCapturedWindowsLauncher(launcher, spec) && value.windowsBroker &&
+        windowsBrokerReference(value.windowsBroker) === windowsBrokerReference(broker));
+      if (!selectedRecipe) unavailable();
       if ((await realpath(spec.cwd)) !== spec.cwd || !(await stat(spec.cwd)).isDirectory())
         unavailable();
       await verifyFile(broker.path, broker.sha256, true);
       verifyStagedBroker(broker.path, broker.arch, broker.capability ?? 'whole-job-v1');
-      await verifyFile(spec.executable, executableSha256, false);
+      for (const file of selectedRecipe.launcher.files) await verifyFile(file.path, file.sha256, false);
       readCapturedProfile(path, sha256);
     },
   });

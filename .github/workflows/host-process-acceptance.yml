@@ -10,6 +10,7 @@ on:
       - 'packages/task-change-ledger/**'
       - 'src/features/agent-backend/**'
       - 'src/main/utils/ownedProcess/**'
+      - 'src/main/utils/childProcess.ts'
       - 'test/features/agent-backend/**'
       - 'tools/owned-process-broker/**'
       - 'scripts/build/buildOwnedProcessBroker.ts'
@@ -87,10 +88,12 @@ jobs:
           node agent-teams-controller/scripts/build.mjs
           node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json
           node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json
+          node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json
+          node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json
       - name: Verify process contracts and retained Main Host transport
         run: |
           set -euo pipefail
-          node --test packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log
+          node --test packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log
           node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log
           node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log
       - name: Verify original POSIX Node and shell lifecycle fixtures
@@ -129,6 +132,7 @@ jobs:
         run: |
           $build = Join-Path $env:RUNNER_TEMP 'TEST-process-build-${{ matrix.arch }}'
           $stage = Join-Path $env:RUNNER_TEMP 'TEST-process-stage-${{ matrix.arch }}'
+          $scoped = Join-Path $env:RUNNER_TEMP 'TEST-process-scoped-stage-${{ matrix.arch }}'
           $cmake = (Get-Command cmake.exe -ErrorAction Stop).Source
           node node_modules/tsx/dist/cli.mjs scripts/build/buildOwnedProcessBroker.ts '${{ matrix.arch }}' $build $stage $cmake
           if ($LASTEXITCODE -ne 0) { throw 'Native fixture build or product staging failed' }
@@ -137,6 +141,12 @@ jobs:
           "HOST_PROCESS_NATIVE_BUILD=$build" >> $env:GITHUB_ENV
           "HOST_PROCESS_NATIVE_STAGE=$stage" >> $env:GITHUB_ENV
           Copy-Item "$stage\manifest.json" process-acceptance-evidence/windows-manifest.json
+          node node_modules/tsx/dist/cli.mjs scripts/build/buildOwnedProcessBroker.ts '${{ matrix.arch }}' $build $scoped $cmake service-scopes-v1
+          if ($LASTEXITCODE -ne 0) { throw 'Scoped native fixture build or product staging failed' }
+          $scopedFiles = @(Get-ChildItem -File $scoped | Select-Object -ExpandProperty Name)
+          if ((($scopedFiles | Sort-Object) -join ',') -ne 'manifest.json,owned-process-broker.exe') { throw 'Unexpected scoped stage fixture' }
+          "HOST_PROCESS_SCOPED_STAGE=$scoped" >> $env:GITHUB_ENV
+          Copy-Item "$scoped\manifest.json" process-acceptance-evidence/windows-scoped-manifest.json
           Get-ChildItem -File "$build\Release\*.exe" | Get-FileHash -Algorithm SHA256 | Format-List | Out-File process-acceptance-evidence/windows-binary-sha256.txt
       - name: Qualify original Windows Job and control under Host Node
         if: runner.os == 'Windows'
@@ -162,6 +172,19 @@ jobs:
           $gate = Join-Path $PWD 'tools\owned-process-broker\nativeGate.ts'
           & $controller $electron $runner $gate "$env:HOST_PROCESS_NATIVE_STAGE\owned-process-broker.exe" "$build\Release\owned-process-fixture.exe" "$build\Release\owned-process-broker-birth-failure.exe" "$build\Release\owned-process-broker-accounting-failure.exe" "$build\Release\owned-process-broker-release-delay.exe" "$build\Release\owned-process-broker-debug-service.exe" 2>&1 | Tee-Object process-acceptance-evidence/windows-electron.log
           if ($LASTEXITCODE -ne 0) { throw 'Original Electron fixture controller did not confirm cleanup' }
+      - name: Qualify Windows wrappers and actual Main Host provider routes with TEST peers
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $build = $env:HOST_PROCESS_NATIVE_BUILD
+          $controller = "$build\Release\owned-process-gate-controller.exe"
+          $node = (Get-Command node.exe -ErrorAction Stop).Source
+          $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
+          $tsconfig = Join-Path $PWD 'tsconfig.json'
+          $gate = Join-Path $PWD 'tools\owned-process-broker\nativeEmulatedProviderGate.ts'
+          $receipt = Join-Path $PWD 'process-acceptance-evidence\windows-emulated-provider-receipt.json'
+          & $controller $node $runner --tsconfig $tsconfig $gate "$env:HOST_PROCESS_NATIVE_STAGE\owned-process-broker.exe" "$build\Release\owned-process-fixture.exe" "$build\Release\owned-process-broker-birth-failure.exe" "$build\Release\owned-process-broker-accounting-failure.exe" "$build\Release\owned-process-broker-release-delay.exe" "$env:HOST_PROCESS_SCOPED_STAGE\owned-process-broker.exe" $receipt 2>&1 | Tee-Object process-acceptance-evidence/windows-emulated-provider.log
+          if ($LASTEXITCODE -ne 0) { throw 'Original emulated-provider controller did not confirm cleanup' }
       - name: Require completed original platform receipts and unchanged source
         run: |
           set -euo pipefail
@@ -198,6 +221,25 @@ jobs:
               native.push({ log: name, scope: 'original Windows Job, control and C++ fixture',
                 scenarios: gates[0].results, cleanup: controllers[0] });
             }
+            const emulated = JSON.parse(readFileSync(join(directory, 'windows-emulated-provider-receipt.json'), 'utf8'));
+            assert.equal(emulated.kind, 'TEST_WINDOWS_EMULATED_PROVIDER_PARITY');
+            assert.equal(emulated.status, 'PASS'); assert.equal(emulated.cleanup, true);
+            assert.equal(emulated.sourceHead, process.env.HOST_PROCESS_SOURCE_HEAD);
+            assert.equal(emulated.platform, 'win32-' + process.arch); assert.equal(emulated.nodeVersion, 'v24.21.0');
+            assert.equal(emulated.realProviderExecuted, false); assert.equal(emulated.desktopQualified, false);
+            assert.equal(emulated.releaseQualified, false);
+            assert.deepEqual(emulated.wrappers, ['npm-node', 'generated-bun', 'opaque-cmd', 'positional-bat', 'npm-native']);
+            assert.deepEqual(emulated.providers.map(row => row.provider), ['codex', 'opencode']);
+            for (const row of emulated.providers) {
+              for (const field of ['nativeReady', 'inputCompleted', 'neighborSurvivedPrimary', 'providerSurvivedScopedStops', 'cleanup']) assert.equal(row[field], true);
+              assert.equal(row.registeredServices, 2); assert.equal(row.scopedStops, 2);
+              for (const field of ['allocate', 'prepare', 'resume', 'release']) assert.equal(row.counts[field], 1);
+              for (const field of ['serviceCapture', 'serviceStop', 'serviceSettle']) assert.equal(row.counts[field], 2);
+              assert.ok(row.counts.stop >= 1 && row.counts.stop <= 4);
+            }
+            const controllers = rows('windows-emulated-provider.log').filter(row => row.gateController);
+            assert.deepEqual(controllers, [{ gateController: 'drained', rootExitCode: 0, activeProcesses: 0 }]);
+            native.push({ log: 'windows-emulated-provider.log', scope: 'captured Windows wrappers and Main Host Codex/V1 adapters with Node peers', receipt: emulated });
           } else assert.equal(process.platform, 'darwin');
           writeFileSync(join(directory, 'scope.json'), JSON.stringify({
             kind: 'TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE', status: 'PASS',

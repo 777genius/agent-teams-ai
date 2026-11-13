@@ -29,24 +29,35 @@ test('offline Desktop admission refuses inherited native selections before prepa
   });
   Object.assign(process.env, { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
     LEGACY_DESKTOP_TEST_DISPLAY: ':97', LEGACY_DESKTOP_TEST_XAUTHORITY: '/TEST/Xauthority' });
-  for (const mode of ['team-ui', 'task-board-ui', 'emulated-management-ui']) {
+  for (const mode of ['team-ui', 'task-board-ui', 'emulated-management-ui', 'review-ui', 'review-readback-ui']) {
     process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
     if (process.platform === 'darwin' || process.platform === 'linux' && process.arch === 'x64')
       assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
     else assert.throws(() => assertDesktopProofEnvironment(false), /Linux Desktop portability/);
   }
-  for (const mode of ['native-launch-ui', 'codex-login-ui', 'process-cold-ui', 'bridge-diagnostics']) {
+  for (const mode of ['native-launch-ui', 'codex-login-ui', 'process-cold-ui', 'bridge-diagnostics', 'native-review-ui', 'native-review-readback-ui', 'native-readback-ui']) {
     process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
     assert.throws(() => assertDesktopProofEnvironment(true), /only the original offline/);
   }
   process.env.LEGACY_DESKTOP_PROOF_MODE = 'team-ui';
   for (const key of ['LEGACY_DESKTOP_CLAUDE_PATH', 'LEGACY_DESKTOP_CODEX_PATH',
     'LEGACY_DESKTOP_OPENCODE_PATH', 'LEGACY_DESKTOP_OPENCODE_GENERATION',
-    'LEGACY_DESKTOP_DIAGNOSTIC_HOST_ENTRY', 'LEGACY_DESKTOP_SCHEDULE_UI']) {
+    'LEGACY_DESKTOP_DIAGNOSTIC_HOST_ENTRY', 'LEGACY_DESKTOP_SCHEDULE_UI',
+    'LEGACY_DESKTOP_READBACK_ROOT', 'LEGACY_DESKTOP_READBACK_RECEIPT_SHA256']) {
     process.env[key] = 'TEST-refused';
     assert.throws(() => assertDesktopProofEnvironment(true), new RegExp(`provider-emulation refuses ${key}`));
     delete process.env[key];
   }
+  process.env.LEGACY_DESKTOP_PROOF_MODE = 'review-readback-ui';
+  process.env.LEGACY_DESKTOP_READBACK_ROOT = '/TEST/TEST-desktop-backend-abc123';
+  process.env.LEGACY_DESKTOP_READBACK_RECEIPT_SHA256 = 'a'.repeat(64);
+  if (process.platform === 'darwin' || process.platform === 'linux' && process.arch === 'x64')
+    assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
+  process.env.LEGACY_DESKTOP_READBACK_ATTEMPT_ID = 'abc123';
+  assert.throws(() => assertDesktopProofEnvironment(true), /provider-emulation refuses LEGACY_DESKTOP_READBACK_ATTEMPT_ID/);
+  delete process.env.LEGACY_DESKTOP_READBACK_ATTEMPT_ID;
+  process.env.LEGACY_DESKTOP_PROOF_MODE = 'review-ui';
+  assert.throws(() => assertDesktopProofEnvironment(true), /provider-emulation refuses LEGACY_DESKTOP_READBACK_ROOT/);
   process.env.LEGACY_DESKTOP_EMULATED_ONLY = 'false';
   assert.throws(() => assertDesktopProofEnvironment(true), /explicit provider-emulation admission/);
 });

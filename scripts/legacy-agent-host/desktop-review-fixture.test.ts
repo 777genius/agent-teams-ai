@@ -12,7 +12,7 @@ test('review UI seed uses one actual Task, explicit captured review profiles and
   const fixture = await prepareDesktopBackendFixture(repo, {
     seedUiTask: true,
     reviewUi: true,
-    pnpmEntry: '/opt/homebrew/Cellar/node@24/24.18.0/lib/node_modules/corepack/dist/pnpm.js',
+    pnpmEntry: process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/Cellar/node@24/24.18.0/lib/node_modules/corepack/dist/pnpm.js',
   });
   t.after(() => rm(fixture.root, { recursive: true, force: true }));
   assert.ok(fixture.uiSeed);

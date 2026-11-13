@@ -16,3 +16,10 @@ export { windowsBrokerReference } from './HostWindowsLaunch.js';
 export { readCapturedProfile } from './readCapturedProfile.js';
 export { nativeProcessProfileSchema } from '../composition/nativeProcessProfile.js';
 export type { NativeProcessProfile } from '../composition/nativeProcessProfile.js';
+export {
+  buildWindowsShellFallbackCommand,
+  isWindowsBatchLauncher,
+  quoteWindowsCmdArg,
+  resolveDirectWindowsLauncher,
+} from './windowsCliLauncher.js';
+export { captureWindowsLauncher, matchesCapturedWindowsLauncher } from './capturedWindowsLauncher.js';

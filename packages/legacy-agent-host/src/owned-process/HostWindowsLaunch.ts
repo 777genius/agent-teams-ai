@@ -6,8 +6,10 @@ import { encodeLaunch } from './codec.js';
 import { sameOwner } from './contract.js';
 import { HOST_CUSTODY_CHUNK_BYTES, HOST_CUSTODY_LAUNCH_MS } from './hostCustody.js';
 import { HostWindowsServices } from './HostWindowsServices.js';
+import { captureWindowsLauncher, matchesCapturedWindowsLauncher } from './capturedWindowsLauncher.js';
 
 import type { NativeProcessProfile } from '../composition/nativeProcessProfile.js';
+import type { CapturedWindowsLauncher } from './capturedWindowsLauncher.js';
 import type { WindowsRegisteredProcessPort, WindowsServiceSource } from './retainedServiceContracts.js';
 import type {
   HostCustodyCall,
@@ -94,12 +96,13 @@ export class HostWindowsLaunch {
     captureCurrent?: () => boolean): RetainedWindowsLaunchPort {
     const selected = structuredClone(profile);
     if (!selected.windowsBroker) unavailable();
+    const launcher = captureWindowsLauncher(selected);
     const originals = new WeakSet<RemotePending>();
     return {
       registeredProcesses: this.registeredProcesses,
       allocate: (owner) => {
         if (this.allocations.size >= 256) unavailable();
-        const pending = new RemotePending(this, selected, Object.freeze({ ...owner }), current, captureCurrent);
+        const pending = new RemotePending(this, selected, launcher, Object.freeze({ ...owner }), current, captureCurrent);
         this.allocations.set(pending.key, pending);
         originals.add(pending);
         return pending;
@@ -207,6 +210,7 @@ class RemotePending implements PreparedOwnedProcess {
   constructor(
     private readonly source: HostWindowsLaunch,
     private readonly profile: NativeProcessProfile,
+    private readonly launcher: CapturedWindowsLauncher,
     readonly owner: ProcessOwner,
     private readonly current: () => boolean,
     private readonly captureCurrent?: () => boolean
@@ -263,7 +267,7 @@ class RemotePending implements PreparedOwnedProcess {
 
   captureSpec(spec: ResolvedLaunchSpec): ResolvedLaunchSpec {
     this.assertInput(true);
-    if (this.stageQueued) unavailable();
+    if (this.stageQueued || !matchesCapturedWindowsLauncher(this.launcher, spec)) unavailable();
     this.stageQueued = true;
     return Object.freeze({ ...spec, environment: Object.freeze([...spec.environment]) });
   }
@@ -281,7 +285,7 @@ class RemotePending implements PreparedOwnedProcess {
         return {
           operation: 'allocate', capability: this.key, owner: this.owner,
           brokerRef: windowsBrokerReference(this.profile.windowsBroker!),
-          executableSha256: this.profile.executable.sha256,
+          executableSha256: this.launcher.executable.sha256,
           launchSha256, launchBytes: bytes.length,
           budgetMs: Math.max(0, Math.floor(this.deadline - performance.now())),
         };
