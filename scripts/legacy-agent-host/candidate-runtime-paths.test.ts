@@ -214,7 +214,7 @@ test(
       pnpmEntry: join(corepack, 'dist/pnpm.js'),
     });
     t.after(() => rm(executableFixture.root, { recursive: true, force: true }));
-    const env = { ...executableFixture.appEnvironment, PATH: '/TEST-NO-PATH' };
+    const env: Record<string, string> = { ...executableFixture.appEnvironment, PATH: '/TEST-NO-PATH' };
     const refused = spawnSync(join(executableFixture.root, 'bin/codex'), ['--version'], { env, encoding: 'utf8', timeout: 5000 });
     assert.equal(refused.error, undefined);
     assert.equal(refused.status, 78);

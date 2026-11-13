@@ -410,3 +410,37 @@ After the one Save, require the exact concrete route derived from that original 
 This is an acceptance-oracle correction within the already planned mixed dialog/helper/caller files. It adds no UI mutation, native input, model request, state write or production behavior. Global A → project B → Test B → clear → inherited A is still proved through the real Settings UI before the draft is materialized. The successful captured readiness/false-override correction immediately above remains in force, as do four/three Settings requests, all original business budgets, one cold boundary and complete physical cleanup.
 
 Independent source review and the normal candidate-head type/focused/native Desktop gates remain required. The source comparison establishes original serialization semantics; it is not a native execution PASS. Root publishes this append before changing the draft assertions.
+
+## 14. Baseline local-model policy: no supported override of a failed native-tool probe
+
+### Review 1 — exact original composition and writers
+
+This corrects only the §13 statement that a failed-local experimental override is an outstanding supported-feature parity point. The exact original frontend is `4a0e06277fe216d9f82dbbede362668fe46622ee`; the compared current tree is `f9c3451e3d0733e7d5216dd4ed5aad2ad0b5e83e`. This is a source-contract audit, not a native execution result.
+
+The following ordinary production chain is byte-identical in those two trees:
+
+| Source | Immutable blob | Relevant original contract |
+| --- | --- | --- |
+| OpenCodeLocalModelRuntimeInspector.ts | `90e45c63a10216a8806f1bfa436666405e87798e` | The only availability assignment is `experimentalOverrideAvailable:false` at567; failed native-tool coordination remains blocking. The allow flag is documented as retained for launch-cache identity. |
+| TeamProvisioningServiceComposition.ts | `142767a1bc6ab462a415c1b70c71f864032cbb1e` | Lines661–669 pass the real exported inspector unchanged into the ordinary preparation facade. |
+| TeamProvisioningPrepareFacade.ts | `b82d39f22fde3b9400616f4fc97376984c0fdc32` | Lines142/182 forward the same callback to the existing coordinator. |
+| TeamProvisioningPrepareCoordinator.ts | `230902c1bf488a71ec4ac42b5d1fe481b73ebae0` | Line307 forwards it into selected-model preparation; returned issues are retained. |
+| TeamProvisioningOpenCodeModelPreparation.ts | `93ed4ef85565d66d75b570186afc0877e89bb3b0` | Lines292–295 call that inspector. Lines395–409 propagate availability only when the original blocking result explicitly contains true. |
+| OpenCodeLocalModelPreflight.ts | `3fc317d520ecacb5aec8a27fe413f248583b699b` | The allow flag changes the inspection-cache key and supplied input, but every blocking result still contributes diagnostics and makes ok false. |
+| OpenCodeTeamRuntimeAdapter.ts | `35487475fdfe96f8ccae62f5d73780570aaf21d9` | Launch reuses that preflight and refuses its blocking result; the option does not skip the gate. |
+
+The adapter composition is also explicit: old Main index blob`802954baa373170c79c55628db8bfbdd08718926`:685–688 and current blob`6ac0ff69ee9fce5be4b4de185b0355bdda469462`:696–699 pass the same inspector to OpenCodeTeamRuntimeAdapter. The facade, coordinator and adapter wrapper do not synthesize an override-eligible issue. Other inspector outcomes omit the availability flag; unavailable verification is a warning that leaves the real execution probe authoritative, distinct from a proven failed tool probe.
+
+### Review 2 — Renderer propagation does not create eligibility
+
+Old providerPrepareDiagnosticsModels.ts blob`05e2d989dc7da05d15c66503079957901aa6a2fe`:57–66 requires a matching model issue whose flag is already true. Its current blob`5f18ece092a530e97ee0c9a9a204e94cc90423b0` preserves this function. Old providerPrepareDiagnostics.ts blob`d041a0048b83436f1f5672bb1d8c9e7b209f0960`:112–122 sets aggregate availability only after all failed model results already have that flag; its per-model true assignments are guarded by the same issue predicate. They are propagation, not an independent production writer.
+
+The unchanged experimentalLocalModelOverrideState.ts blob`860310280a1c3e2d714e824a379396775d546a4e` requires at least one failed check and true availability on every failed check before the UI can enable the option. Synthetic true values in Renderer tests verify this consumer contract; they do not establish an ordinary original producer or a supported force-launch route.
+
+For this inspected baseline production graph, failed native-tool verification therefore has no supported experimental override path. Correct the §13 parity inventory accordingly. Do not add a true writer, force a checkbox, weaken a readiness predicate, change request parsing or remove the retained option merely to satisfy the earlier mistaken expectation.
+
+### Review 3 — preserve the genuine readiness obligation
+
+The already-reviewed successful Settings/defaults/limits journey correctly retains the option absent or false. Its four V1/three V2 Settings requests, one cold boundary, native consumption assertions and physical cleanup remain unchanged. No TEST source or product edit is needed for this documentation correction.
+
+This does not qualify current Host local-model safety or functional readiness. Whether its captured model proof preserves the original failed-tool/context refusal policy is a separate source and acceptance question; a successful no-tool model request or the absence of the old checkbox is not proof of that equivalence. Keep that question explicit without inventing an override feature or transferring a synthetic test result to native acceptance. No new job, matrix, suite, provider run, permission, input or budget change is authorized here. Root publishes this reviewed clarification; execution evidence still comes from the original relevant coherent-head CI.
