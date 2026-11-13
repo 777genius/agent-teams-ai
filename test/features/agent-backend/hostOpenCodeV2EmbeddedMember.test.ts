@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -86,7 +86,7 @@ function fixture(image = true) {
     model: { providerID: 'TEST-provider', id: 'TEST-model' },
     permissions: [],
   };
-  let live = true;
+  let live = true, ownerCurrent = true;
   const ready = Object.freeze({ endpoint: 'http://127.0.0.1:12345', pid: 10, startIdentity: 'TEST-birth' });
   const stop = vi.fn(async () => { live = false; return true; }),
     resolve = vi.fn(async (binding: unknown) => ({ binding, bytes: new Uint8Array([1]) }));
@@ -190,7 +190,7 @@ function fixture(image = true) {
       }),
     },
     instructions: 'TEST original context',
-    isCurrent: () => true,
+    isCurrent: () => ownerCurrent,
     canAllocate: () => true,
     attachments: {
       model: 'TEST-provider/TEST-model',
@@ -206,6 +206,14 @@ function fixture(image = true) {
     stop,
     resolve,
     attachments: () => delegateContext!.attachments!,
+    revokeOwner() { ownerCurrent = false; },
+    publishAuth() {
+      const directory = join(root, 'data', 'opencode');
+      mkdirSync(directory, { mode: 0o700 });
+      writeFileSync(join(directory, 'auth.json'), JSON.stringify({
+        'TEST-provider': { type: 'api', key: 'TEST-new-key' },
+      }), { mode: 0o600 });
+    },
     fail(primary: Error) {
       callbackFailure = primary;
       disposalFailure = true;
@@ -237,28 +245,37 @@ test('rejected owned-client disposal stays UNKNOWN while physical stop preserves
   expect(f.resolve).not.toHaveBeenCalled();
 });
 
-test('seal during catalog disposal cannot call the original attachment byte resolver', async () => {
-  const f = fixture();
-  await f.provider.factory.open(f.request);
-  expect(f.provider.attachmentCapabilities).toEqual({
-    images: true,
-    documents: false,
-    textFiles: false,
-  });
-  const held = f.holdDispose();
-  const pending = f
-    .attachments()
-    .resolve(
-      {} as Parameters<NonNullable<MemberProviderContext['attachments']>['resolve']>[0],
-      new AbortController().signal
+test('seal, revoked owner or changed auth during catalog disposal cannot resolve attachment bytes', async () => {
+  for (const mode of ['seal', 'owner', 'auth'] as const) {
+    const f = fixture();
+    await f.provider.factory.open(f.request);
+    expect(f.provider.attachmentCapabilities).toEqual({
+      images: true,
+      documents: false,
+      textFiles: false,
+    });
+    const held = f.holdDispose();
+    const pending = f
+      .attachments()
+      .resolve(
+        {} as Parameters<NonNullable<MemberProviderContext['attachments']>['resolve']>[0],
+        new AbortController().signal
+      );
+    const rejected = expect(pending).rejects.toMatchObject(
+      mode === 'seal'
+        ? { name: 'AbortError' }
+        : { message: 'OpenCode V2 embedded session unavailable' }
     );
-  const rejected = expect(pending).rejects.toMatchObject({ name: 'AbortError' });
-  await held.entered;
-  f.provider.seal();
-  held.release();
-  await rejected;
-  expect(f.resolve).not.toHaveBeenCalled();
-  expect(await f.provider.cleanup()).toBe(true);
+    await held.entered;
+    if (mode === 'seal') f.provider.seal();
+    else if (mode === 'owner') f.revokeOwner();
+    else f.publishAuth();
+    held.release();
+    await rejected;
+    expect(f.resolve).not.toHaveBeenCalled();
+    expect(f.provider.isReady()).toBe(false);
+    expect(await f.provider.cleanup()).toBe(true);
+  }
 });
 
 test('image capability is absent before native catalog attestation and disabled for a text-only model', async () => {

@@ -13,15 +13,15 @@ export function createHostProviderManagementComposition(
   processCustody?: RegisteredProcessRootSource,
   assertCleanupWriter = assertWriter
 ) {
-  const sources = profile.management?.length
-    ? new RuntimeSourceIndex(profile, assertWriter, {
-        assertCleanupWriter,
-        ...(processCustody ? { processCustody } : {}),
-      })
-    : undefined;
+  // Retained source/command debt still exists after its current seed is removed.
+  const sources = new RuntimeSourceIndex(profile, assertWriter, {
+    assertCleanupWriter,
+    ...(processCustody ? { processCustody } : {}),
+  });
+  const retained = sources.retainedManagementState();
   const profiles = [
     ...(profile.management ?? []),
-    ...(sources?.retainedManagementProfiles() ?? []),
+    ...retained.profiles,
     ...(profile.runtime?.members.flatMap((member) => {
       if (
         member.provider === 'opencode' &&
@@ -33,7 +33,7 @@ export function createHostProviderManagementComposition(
     }) ?? []),
   ];
   const required =
-    profiles.length ||
+    profiles.length || retained.hasCommands ||
     (profile.creation &&
       profile.runtime?.providerTemplates?.some(
         (row) =>
@@ -44,10 +44,11 @@ export function createHostProviderManagementComposition(
             row.embedded !== undefined)
       ));
   return {
-    sources,
+    sources: profile.management?.length || retained.hasCommands ? sources : undefined,
     management: required
       ? new ProviderManagementCoordinator(profiles, assertWriter, profile.owner.storageRoot, {
           onOAuthProgress,
+          unavailableProfiles: retained.unavailable,
           ...(processCustody ? { processCustody } : {}),
         })
       : undefined,

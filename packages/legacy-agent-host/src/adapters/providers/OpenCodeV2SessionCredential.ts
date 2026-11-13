@@ -23,7 +23,7 @@ export function captureOpenCodeV2SessionCredential(
 ) {
   const captured = new OpenCodeV2CredentialScope(profile, providerId, isCurrent).capture();
   let prepared: Promise<Witness> | undefined;
-  const current = () => isCurrent() && captured.isCurrent();
+  const current = captured.isCurrent;
   const check = () => { if (!current()) held(); };
   async function prepare(config: CredentialTransport, owner: NativeClient, restored?: Awaited<ReturnType<NativeClient['readSession']>>): Promise<Witness> {
     check();

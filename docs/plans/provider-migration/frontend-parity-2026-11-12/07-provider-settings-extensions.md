@@ -1072,3 +1072,125 @@ called и cleanup===true. Соседний original callback failure + rejected 
 прежний Main CI job на опубликованном source. Source review и GitHub blob equality
 не подменяют execution: executor сейчас недоступен. Это correction oracle, не
 новый product lifecycle fix и не закрытие pending V2 startup/native acceptance.
+
+
+## R19 — убрать транзитивно повторённые V2 current checks
+
+### Actual evidence и предел вывода
+
+Exact parity `235b01b489a4f428b72c7667b0c89061c82cab1b`: Windows x64 —
+`104540586 / 130556486 us` в nearest exclusive категории `team-writer` /
+всего sampled Host; Darwin x64 — `96.57 / 131.62 s`. Model requests0.
+Это sampled Host stacks с interval10ms из R17, не точная стоимость отдельной
+функции, Bun CPU или HTTP. Размер будущего ускорения пока неизвестен.
+
+Source цепь: `OpenCodeV2EmbeddedMemberProvider.ts:49–59` →
+`OpenCodeV2CapturedConfiguration.ts:88–89` →
+`OpenCodeV2SessionCredential.ts:24–27` →
+`OpenCodeV2CredentialScope.ts:61–71,117–142`.
+Исходный callback повторно проверяет captured member/Team writer и original
+grant/fences; `TeamOwnerStore.fenced` синхронно проверяет свой namespace.
+`RuntimeSourceIndex` в этой обычной цепи после capture не вызывается.
+Source index и сам Team writer/fence этот срез не меняет.
+
+### Круг1 — три замены в двух существующих файлах
+
+1. `OpenCodeV2EmbeddedMemberProvider:57–58`: передать credential capture
+   `configuration.isCurrent` вместо wrapper
+   `() => contextCurrent() && configuration.isCurrent()`.
+   Configuration уже проверяет именно исходный `contextCurrent`.
+2. Там же aggregate `current:59` взять из `credential.isCurrent`, убрав
+   дублирующие `contextCurrent() && configuration.isCurrent()`.
+   Credential захватывает original configuration callback до allocation.
+3. `OpenCodeV2SessionCredential:26`: использовать `captured.isCurrent`
+   вместо `() => isCurrent() && captured.isCurrent()`.
+   Его primary read всегда начинается с `check()` → original owner callback,
+   включая отсутствующий auth.json; after-read checks остаются прежними.
+
+Статический пример: unbound configuration source без explicit config key,
+существующий primary auth и отсутствующий alternate auth дают20→9 original
+owner вызовов внутри aggregate current. Это расчёт по коду, не measured counter;
+другие наборы файлов/ключей дают другие числа. Тест с assertion этого числа
+и обещание пропорционального ускорения не нужны.
+
+### Круг2 — original authority и ключи сохраняются
+
+Никакого сохранённого результата, TTL, microtask cache или переноса результата
+через await. Каждый current заново читает original auth/config и вызывает
+original authority; все существующие checks до/после await остаются на месте.
+Seal/abort/deadline/canAllocate, native nonce/PID/birth/image, read-only snapshot
+final proof и проверки native mutations не меняются.
+
+`OpenCodeV2CapturedConfiguration` не редактируется. Explicit config key
+по-прежнему захватывается original credential scope, обязан совпасть с original
+auth key и перепроверяется через `key.isCurrent()`, включая его owner callback.
+Config/native key conflict, alternate V1 auth, file/namespace identity и digest
+guards сохраняются. `bindRunningSession()` продолжает снимать только source
+freshness для running A; owner/key остаются current. Новый source относится
+к следующему capture. Cleanup-unknown не становится успехом.
+
+### Круг3 — critical cases и actual native gate
+
+Расширить existing cases без новой unit suite:
+
+- `hostOpenCodeV2EmbeddedMember.test.ts`: original pending read/dispose barrier,
+  затем owner revocation либо actual auth source mutation; after-await refusal,
+  attachment resolver не вызван, original cleanup сохранён. Existing seal
+  AbortError и callback failure + failed disposal остаются точными.
+- `opencode-v2-credential-scope.test.ts` / existing configuration-source case:
+  actual TEST files и transitive session/config current, включая absent→present
+  auth, explicit config key match/conflict и revocation. Original scope не
+  заменяется mock, всегда возвращающим true.
+
+Independent review прослеживает все три private closures и explicit-key ветку.
+Затем focused existing tests и Host/Main types. Executor сейчас недоступен:
+immutable readback/source review не являются execution.
+
+Следующий необходимый exact-head native preflight сохраняет original120000ms,
+внутренние deadlines, request/input limits, custody и cleanup. Сопоставить
+R14/R17 sampled evidence и actual model/tool/MCP/approval/Stop/cold Resume.
+До успешного native результата startup gap открыт; достаточность трёх замен
+для прохождения CI заранее не утверждается.
+
+### R19, дополнительный круг — тот же predicate в finite model probe
+
+Actual235 mixed Desktop job131780548934 после original Bob Restart → whole
+Stop → renderer reload принял новый OpenCode model check. В original
+management row3958a684… остаются `phase=running/resourceHeld=true`, model
+`TEST-model`; commandId `team-preflight-2bbd40ae…` точно воспроизводится из
+сохранённых handle + текущих launch/rosterRevision + Carol + qualified model.
+Claude/Codex/OpenCode probes перед cleanup равны8/1/1, failures пусты.
+Это исключает отказ Resume до model admission, но не устанавливает, где
+внутри native startup/cleanup остановился probe. CPU этого check не измерялся.
+
+**Круг1 — доказательство по исходным closures.**
+`OpenCodeV2ModelProbe.ts:112–116` захватывает configuration с original
+`contextCurrent`, затем передаёт в SessionCredential повторный
+`contextCurrent && configuration.isCurrent` и ещё раз повторяет оба в current.
+Configuration.isCurrent всегда начинает с того же owner callback; explicit
+config-key scope и source freshness проверяются далее. CredentialScope.selected
+всегда начинает primary read с check → сохранённый configuration callback,
+включая missing auth/parent directory. SessionCredential R19 использует этот
+captured.isCurrent. Поэтому credential current транзитивно содержит оба
+удаляемых условия, original directory identities и closed/abort guards.
+
+**Круг2 — две замены в одном существующем provider файле.**
+Передать `configuration.isCurrent` напрямую в SessionCredential и использовать
+`credential.isCurrent` как aggregate current. Других substitutions не делать.
+Model probe не вызывает bindRunningSession: source freshness остаётся
+обязательной весь finite check. Original config-key equality/conflict и
+alternate auth checks неизменны; никакого cache, TTL или переноса результата
+через await. Assert до/после каждого await, beforeRequest custody lease,
+readPassword, canAllocate, original90s model timeout и cleanup не меняются.
+Это устранение повторной композиции, не измеренный performance результат
+и не доказательство исправления observed mixed failure.
+
+**Круг3 — существующая критичная проверка.**
+В `opencode-v2-model-probe.test.ts` расширить existing effect-free/revoked-run
+case: owner revoke, actual absent→present auth и original configuration mutation
+между capture и run должны отказать до создания probe namespace; same run Promise,
+no replay и original idempotent close сохранить. Проверить отсутствие namespace
+до close, чтобы cleanup не скрыл попытку allocation. Existing configuration/
+credential tests R19 и sealed/dispose cases переиспользовать, без нового sampler
+или suite. Independent closure review, focused Node24 tests и types; следующий
+необходимый exact-head native/mixed gate с прежними budgets остаётся обязательным.

@@ -901,7 +901,7 @@ jobs:
           resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
           import { execFileSync, spawnSync } from 'node:child_process';
-          import { closeSync, openSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+          import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
           import { join } from 'node:path';
           import { fileHash, treeHash } from './packages/legacy-agent-host/tests/fixtures/native-host.ts';
           import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
@@ -939,15 +939,16 @@ jobs:
             scope: 'Independent genuine old corpus; current public-D negative only; ordinary Main migration unqualified',
           };
           writeFileSync(join(process.env.RUNNER_TEMP, 'stage1-checkpoint-donor-inputs.json'), JSON.stringify(input, null, 2), { mode: 0o600 });
-          const logPath = join(process.env.RUNNER_TEMP, 'stage1-checkpoint-donor.log'), fd = openSync(logPath, 'w', 0o600);
-          let run;
-          try {
-            run = spawnSync(node, ['--test', 'packages/legacy-agent-host/tests/native-claude-host.native.ts'], {
-              cwd: repo, env: { ...process.env, ...pins }, stdio: ['ignore', fd, fd],
-            });
-          } finally { closeSync(fd); }
-          assert.ok(statSync(logPath).size <= 8 * 1024 * 1024, 'Bounded original checkpoint proof log');
-          const log = readFileSync(logPath, 'utf8'); console.log(log);
+          const logPath = join(process.env.RUNNER_TEMP, 'stage1-checkpoint-donor.log'), maxOutputBytes = 8 * 1024 * 1024;
+          const run = spawnSync(node, ['--test', 'packages/legacy-agent-host/tests/native-claude-host.native.ts'], {
+            cwd: repo, env: { ...process.env, ...pins }, maxBuffer: maxOutputBytes, stdio: ['ignore', 'pipe', 'pipe'],
+          });
+          const chunks = [run.stdout ?? Buffer.alloc(0), run.stderr ?? Buffer.alloc(0)];
+          const capturedBytes = chunks.reduce((bytes, chunk) => bytes + chunk.length, 0);
+          const bytes = Buffer.concat(chunks, Math.min(capturedBytes, maxOutputBytes));
+          writeFileSync(logPath, bytes, { mode: 0o600 });
+          const log = bytes.toString('utf8'); console.log(log);
+          assert.ok(capturedBytes <= maxOutputBytes, 'original checkpoint proof output exceeded its bound');
           assert.equal(run.error, undefined); assert.equal(run.status, 0);
           const matches = [...log.matchAll(/TEST receipt: (\/private\/tmp\/TEST-native-claude-checkpoint-donor-[^/\s]+\/receipt\.json)/g)];
           assert.equal(matches.length, 1, 'One new independent original donor attempt');

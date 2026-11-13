@@ -12,6 +12,7 @@ import { readCodexMcpCatalog } from '../adapters/providers/readCodexMcpCatalog.j
 import { openCodeV2CapturedMcp } from '../adapters/providers/OpenCodeV2CapturedMcp.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
+import { RuntimeSourceUnavailable } from './runtimeSourceGrantAuthority.js';
 import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
 import type { CodexMemberProfile, RuntimeMemberProfile } from './runtimeProfile.js';
 
@@ -94,10 +95,10 @@ function reconstruct(
   }
   return result;
 }
-function read(
+function readArtifact(
   store: TeamOwnerStore,
   commandId: string,
-  base: RuntimeMemberProfile,
+  memberId: string,
   expected?: string
 ) {
   for (const directory of ['launches', 'launches/mcp-recipes']) {
@@ -113,7 +114,7 @@ function read(
   let bytes: Buffer | undefined;
   try {
     bytes = readCapturedMcpBytes(
-      join(store.directory, locator(commandId, base.memberId)),
+      join(store.directory, locator(commandId, memberId)),
       MAX_ARTIFACT_BYTES
     );
   } catch {
@@ -127,13 +128,37 @@ function read(
     const artifact = artifactSchema.parse(JSON.parse(bytes.toString('utf8')));
     if (
       artifact.commandId !== commandId ||
-      artifact.memberId !== base.memberId ||
-      artifact.provider !== base.provider ||
-      artifact.cwd !== base.cwd ||
-      artifact.baseRecipeDigest !== runtimeDigest(base) ||
-      (expected !== undefined && runtimeDigest(artifact) !== expected)
+      artifact.memberId !== memberId ||
+      (expected !== undefined && runtimeDigest(artifact) !== expected) ||
+      (artifact.provider !== 'codex' && artifact.overlay.capturedMcpCatalog !== undefined) ||
+      (artifact.provider !== 'opencode' && artifact.overlay.mcpPolicyPlugin !== undefined)
     )
       return held();
+    if (artifact.provider === 'codex') {
+      if (!artifact.overlay.capturedMcpCatalog) return held();
+      captureCodexConfiguredMcpCatalog(artifact.overlay.capturedMcpCatalog);
+    }
+    return artifact;
+  } catch {
+    return held();
+  }
+}
+
+function read(
+  store: TeamOwnerStore,
+  commandId: string,
+  base: RuntimeMemberProfile,
+  expected?: string,
+  restoring = false
+) {
+  const artifact = readArtifact(store, commandId, base.memberId, expected);
+  if (!artifact) return undefined;
+  if (artifact.provider !== base.provider || artifact.cwd !== base.cwd ||
+      artifact.baseRecipeDigest !== runtimeDigest(base)) {
+    if (restoring) throw new RuntimeSourceUnavailable();
+    return held();
+  }
+  try {
     return {
       artifact,
       recipe: reconstruct(base, artifact.overlay),
@@ -142,6 +167,18 @@ function read(
   } catch {
     return held();
   }
+}
+
+/** Original artifact integrity only; this never supplies an executable recipe or current authority. */
+export function validateCapturedRuntimeMcpRecipe(
+  store: TeamOwnerStore,
+  commandId: string,
+  reference: CapturedRuntimeMcpReference,
+  cwd: string
+): void {
+  const original = capturedRuntimeMcpReferencesSchema.element.parse(reference);
+  const artifact = readArtifact(store, id.parse(commandId), original.memberId, original.digest);
+  if (!artifact || artifact.cwd !== cwd) return held();
 }
 
 /** Existing launch-owned private recipe artifacts. Historical construction performs no catalog IO. */
@@ -237,8 +274,9 @@ export function loadCapturedRuntimeMcpRecipe(
   store: TeamOwnerStore,
   commandId: string,
   base: RuntimeMemberProfile,
-  reference: CapturedRuntimeMcpReference
+  reference: CapturedRuntimeMcpReference,
+  restoring = false
 ): RuntimeMemberProfile {
   if (reference.memberId !== base.memberId) return held();
-  return read(store, id.parse(commandId), base, hash.parse(reference.digest))!.recipe;
+  return read(store, id.parse(commandId), base, hash.parse(reference.digest), restoring)!.recipe;
 }

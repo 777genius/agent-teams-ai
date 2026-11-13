@@ -156,6 +156,8 @@ export const runtimeSourceLookupSchema = z
 
 /** Selection is captured before asynchronous launch preparation; replay resolves only this reference. */
 export interface RuntimeRecipeSources {
+  /** Restore may establish original-reference eligibility before resolving any current template. */
+  assertReferenceAvailable?(reference: RuntimeSourceReference, scope: RuntimeSourceTeamScope, projectPath: string): void;
   currentForRecipe(
     scope: RuntimeSourceTeamScope,
     projectPath: string,

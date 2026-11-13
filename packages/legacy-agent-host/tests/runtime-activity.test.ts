@@ -226,6 +226,8 @@ test('snapshot and replay share a fence/cursor; persisted text/tools/usage/inter
     )
   );
   assert.equal(replay.cursor.sequence, snapshot.cursor.sequence);
+  assert.equal(typeof snapshot.lastObservedAt, 'string');
+  assert.equal(snapshot.lastObservedAt, replay.events.at(-1)?.observedAt);
   const empty = owner.readActivityFeed(binding(), snapshot.cursor);
   assert.deepEqual(empty.events, []);
   await owner.respondToInteraction(binding(), attribution.inputId, 'permission-A', {
@@ -239,6 +241,7 @@ test('snapshot and replay share a fence/cursor; persisted text/tools/usage/inter
   const restarted = f.make('host-2');
   const recovered = restarted.readActivitySnapshot(binding());
   assert.equal(recovered.cursor.sequence, changed.cursor.sequence);
+  assert.equal(recovered.lastObservedAt, changed.events.at(-1)?.observedAt);
   assert.equal(recovered.latest.text[0]?.data.text, 'completed text');
   assert.equal(recovered.gap?.reason, 'incarnation');
   assert.equal(restarted.readActivityFeed(binding(), changed.cursor).gap?.reason, 'incarnation');
@@ -642,6 +645,7 @@ test('enabling projections on an existing unprojected session preserves an expli
   const owner = f.make('new-host');
   const before = owner.readActivitySnapshot(binding());
   assert.equal(before.cursor.sequence, 0);
+  assert.equal(before.lastObservedAt, undefined);
   assert.equal(before.gap?.reason, 'retention');
   owner.reconcileSession(binding());
   const after = owner.readActivitySnapshot(binding());

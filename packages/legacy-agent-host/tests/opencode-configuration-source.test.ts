@@ -5,6 +5,9 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 
 import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
+import { captureOpenCodeV2Configuration } from '../dist/adapters/providers/OpenCodeV2CapturedConfiguration.js';
+import { captureOpenCodeV2SessionCredential } from '../dist/adapters/providers/OpenCodeV2SessionCredential.js';
+import type { OpenCodeManagementProfile } from '../dist/management/profile.js';
 import {
   mapOpenCodeV2SelectedModel,
   selectOpenCodeV2ProviderConfiguration,
@@ -86,7 +89,47 @@ test('captured OpenCode config keeps donor precedence and stores only original s
     () => captureOpenCodeConfigurationSource({ ...f.input, cwd: f.home }, captured.reference),
     { reason: 'configuration-changed' }
   );
+  const data = join(f.root, 'data'), auth = join(data, 'opencode', 'auth.json');
+  mkdirSync(data, { mode: 0o700 });
+  const selection = { providerId: 'TEST-local', modelId: 'TEST-model' };
+  const profile: OpenCodeManagementProfile = {
+    ...f.input, environment: { ...f.input.environment, XDG_DATA_HOME: data },
+    provider: 'opencode', profileId: 'TEST-profile', accountBinding: 'TEST-account',
+    configRevision: 'TEST-revision', executable: { path: process.execPath, sha256: 'a'.repeat(64) },
+    endpoint: 'http://127.0.0.1:12345', timeoutMs: 1000,
+    nativeGeneration: 'v2', protocolRevision: '2.1.4', nativeModel: selection,
+    embedded: { version: '2.1.4', directory: f.root, manifestSha256: 'b'.repeat(64),
+      platform: process.platform === 'win32' ? 'win32' : process.platform === 'darwin' ? 'darwin' : 'linux',
+      arch: process.arch === 'arm64' ? 'arm64' : 'x64', externalDirectory: 'deny',
+      configurationSource: captured.reference },
+  };
+  const writeKey = (key: string) => f.write(auth, { 'TEST-local': { type: 'api', key } });
+  writeKey('TEST-conflicting-key');
+  assert.throws(() => captureOpenCodeV2Configuration(profile, selection, () => current),
+    { reason: 'configuration-invalid' });
+  writeKey('TEST-private-key');
+  const configuration = captureOpenCodeV2Configuration(profile, selection, () => current);
+  const session = captureOpenCodeV2SessionCredential(profile, selection.providerId, configuration.isCurrent);
+  assert.equal(session.isCurrent(), true);
+  writeKey('TEST-replaced-key');
+  assert.equal(configuration.isCurrent(), false, 'explicit config key keeps its original auth witness');
+  assert.equal(session.isCurrent(), false, 'session current includes the captured config/key guard');
+  writeKey('TEST-private-key');
+  assert.equal(configuration.isCurrent(), true);
+
+  const running = captureOpenCodeV2Configuration(profile, selection, () => current);
+  running.bindRunningSession();
+  const runningSession = captureOpenCodeV2SessionCredential(profile, selection.providerId, running.isCurrent);
+  f.write(join(f.project, 'opencode.jsonc'), {
+    provider: { 'TEST-local': { models: { 'TEST-model': { name: 'next-capture' } } } },
+  });
+  assert.equal(configuration.isCurrent(), false, 'unbound capture still checks original source bytes');
+  assert.equal(session.isCurrent(), false);
+  assert.equal(running.isCurrent(), true, 'running capture retains its original private config');
+  assert.equal(runningSession.isCurrent(), true);
   current = false;
+  assert.equal(running.isCurrent(), false, 'binding the config never removes owner authority');
+  assert.equal(runningSession.isCurrent(), false);
   assert.equal(captured.isCurrent(), false);
   assert.throws(captured.read, { reason: 'configuration-changed' });
 });

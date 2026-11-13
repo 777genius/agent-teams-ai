@@ -125,12 +125,14 @@ const suggestionHarness = vi.hoisted(() => {
     taskOptions: [] as SuggestionHookOptions[],
     teamOptions: [] as SuggestionHookOptions[],
     currentTaskSuggestions: [] as MentionSuggestion[],
+    realEditor: false,
   };
   return {
     reset: () => {
       state.taskOptions = [];
       state.teamOptions = [];
       state.currentTaskSuggestions = [];
+      state.realEditor = false;
     },
     state,
   };
@@ -199,7 +201,8 @@ vi.mock('@renderer/components/team/messages/OpenCodeDeliveryWarning', () => ({
   OpenCodeDeliveryWarning: () => null,
 }));
 
-vi.mock('@renderer/components/ui/MentionableTextarea', () => {
+vi.mock('@renderer/components/ui/MentionableTextarea', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@renderer/components/ui/MentionableTextarea')>();
   const MockMentionableTextarea = React.forwardRef<
     HTMLTextAreaElement,
     {
@@ -276,7 +279,16 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
       )
   );
   MockMentionableTextarea.displayName = 'MockMentionableTextarea';
-  return { MentionableTextarea: MockMentionableTextarea };
+  const TestMentionableTextarea = React.forwardRef<
+    HTMLTextAreaElement,
+    React.ComponentPropsWithoutRef<typeof actual.MentionableTextarea>
+  >((props, ref) =>
+    suggestionHarness.state.realEditor
+      ? React.createElement(actual.MentionableTextarea, { ...props, ref })
+      : React.createElement(MockMentionableTextarea, { ...props, ref })
+  );
+  TestMentionableTextarea.displayName = 'TestMentionableTextarea';
+  return { MentionableTextarea: TestMentionableTextarea };
 });
 
 vi.mock('@renderer/components/ui/popover', () => {
@@ -1538,6 +1550,48 @@ describe('MessageComposer pending send lifecycle', () => {
     act(() => {
       root.unmount();
     });
+  });
+
+  it('opens only captured commands on the first single slash input', () => {
+    suggestionHarness.state.realEditor = true;
+    draftHarness.state.text = '';
+    const lead: ResolvedTeamMember = {
+      ...members[0],
+      agentType: 'team-lead',
+      providerId: 'codex',
+      runtimeOwner: 'captured-host',
+      sessionCommands: [{ name: 'cost', description: 'Captured session token usage' }],
+    };
+    const { host, render, root, onSend } = renderComposer({ members: [lead] });
+    try {
+      const textarea = host.querySelector('textarea');
+      if (!(textarea instanceof HTMLTextAreaElement)) throw new Error('Message textarea not found');
+      textarea.style.lineHeight = '20px';
+      act(() => textarea.focus());
+      expect(host.querySelector('[role="listbox"]')).toBeNull();
+      const setValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+      if (!setValue) throw new Error('Native textarea value setter unavailable');
+      act(() => {
+        setValue.call(textarea, '/');
+        expect(textarea.selectionStart).toBe(1);
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      render();
+      expect(draftHarness.methods.setText.mock.calls).toEqual([['/']]);
+      expect(
+        Array.from(host.querySelectorAll('[role="option"] .font-medium')).map(
+          (option) => option.textContent
+        )
+      ).toEqual(['/cost']);
+
+      render({ members: [{ ...lead, sessionCommands: [] }] });
+      expect(host.querySelectorAll('[role="option"]')).toHaveLength(0);
+      expect(onSend).not.toHaveBeenCalled();
+      expect(storeHarness.methods.fetchSkillsCatalog).not.toHaveBeenCalled();
+      expect(storeHarness.methods.fetchCrossTeamTargets).not.toHaveBeenCalled();
+    } finally {
+      act(() => root.unmount());
+    }
   });
 
   it('defers expensive mention data until the matching trigger is typed', () => {

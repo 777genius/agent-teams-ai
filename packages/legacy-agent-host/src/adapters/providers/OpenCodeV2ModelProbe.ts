@@ -113,8 +113,8 @@ export function createOpenCodeV2ModelProbe(
   const configuration = captureOpenCodeV2Configuration(profile, profile.nativeModel, contextCurrent);
   const { config, selection } = openCodeV2NoToolConfig(profile, configuration.configuration);
   const credential = captureOpenCodeV2SessionCredential(profile, input.providerId,
-    () => contextCurrent() && configuration.isCurrent());
-  const current = () => contextCurrent() && configuration.isCurrent() && credential.isCurrent();
+    configuration.isCurrent);
+  const current = credential.isCurrent;
   let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];
   const assertCurrent = (signal?: AbortSignal) => {
     signal?.throwIfAborted();
