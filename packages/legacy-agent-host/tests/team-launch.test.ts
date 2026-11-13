@@ -91,7 +91,8 @@ async function setup(t: { after(fn: () => Promise<void>): void }, members = ['A'
     store = new TeamOwnerStore(root, 'TEST-team'),
     runtimeStore = new FileRuntimeStore(root),
     sessions = new Map<string, ControlledSession>(),
-    opens = new Map<string, number>();
+    opens = new Map<string, number>(),
+    observationReads = new Map<string, number>();
   const configured = new Set(members),
     observationFailure = new Set<string>(),
     failBeforeRuntime = new Set<string>(),
@@ -158,6 +159,7 @@ async function setup(t: { after(fn: () => Promise<void>): void }, members = ['A'
         }),
       runtime: {
         read: (id) => {
+          observationReads.set(id, (observationReads.get(id) ?? 0) + 1);
           if (observationFailure.has(id)) throw new Error('TEST observation unavailable');
           const current = runtime.readSession(binding(id)),
             proof = evidence(id);
@@ -198,6 +200,7 @@ async function setup(t: { after(fn: () => Promise<void>): void }, members = ['A'
     runtimeStore,
     sessions,
     opens,
+    observationReads,
     configured,
     observationFailure,
     failBeforeRuntime,
@@ -678,23 +681,68 @@ test('missing/skipped members remain in the persisted expected roster; changed d
 });
 
 test('current authorization gates read/retry and corrupt expected roster is HOLD instead of a smaller launch', async (t) => {
-  const f = await setup(t, ['A']);
+  const f = await setup(t, ['A', 'B']);
   const { launch } = f.make();
   launch.start('launch-command');
   await settle(launch);
-  f.revoke();
-  assert.throws(
-    () => launch.read(),
-    (error) => error instanceof TeamLaunchError && error.code === 'forbidden'
-  );
   const path = join(f.store.directory, 'launches', `${runtimeDigest(f.definition.launchId)}.json`),
-    record = JSON.parse(await readFile(path, 'utf8')) as { members: unknown[] };
+    originalBytes = await readFile(path, 'utf8');
+  const original = launch.read();
+  const selection = {
+    launchId: original.launchId,
+    rosterRevision: original.rosterRevision,
+    memberIds: original.members.map(({ memberId }) => memberId),
+  };
+  f.observationFailure.add('A');
+  f.observationReads.clear();
+  assert.deepEqual(launch.readModelProbeSelection('control'), selection);
+  assert.deepEqual(launch.readModelProbeSelection('read'), selection);
+  assert.equal(f.observationReads.size, 0, 'model selection does not inspect native observations');
+  const observed = launch.read();
+  assert.equal(observed.members.find((member) => member.memberId === 'A')?.attempt.status, 'unknown');
+  assert.equal(observed.members.find((member) => member.memberId === 'B')?.attempt.status, 'ready');
+  assert.deepEqual(
+    [...f.observationReads.keys()],
+    ['A', 'B'],
+    'public read still observes both originals'
+  );
+  assert.deepEqual(
+    {
+      launchId: observed.launchId,
+      rosterRevision: observed.rosterRevision,
+      memberIds: observed.members.map(({ memberId }) => memberId),
+    },
+    selection
+  );
+  assert.equal(await readFile(path, 'utf8'), originalBytes, 'inspection leaves the original launch bytes');
+  assert.equal(f.opens.get('A'), 1);
+  assert.equal(f.opens.get('B'), 1);
+  assert.ok([...f.sessions.values()].every((session) => session.submits.length === 0));
+
+  const record = JSON.parse(originalBytes) as { members: unknown[] };
   record.members = [];
   await writeFile(path, JSON.stringify(record));
+  assert.throws(
+    () => launch.readModelProbeSelection('read'),
+    (error) => error instanceof TeamLaunchError && error.code === 'hold'
+  );
   assert.throws(
     () => launch.refresh(),
     (error) => error instanceof TeamLaunchError && error.code === 'hold'
   );
+  await writeFile(path, originalBytes);
+  f.revoke();
+  f.observationReads.clear();
+  assert.throws(
+    () => launch.readModelProbeSelection('control'),
+    (error) => error instanceof TeamLaunchError && error.code === 'forbidden'
+  );
+  assert.throws(
+    () => launch.read(),
+    (error) => error instanceof TeamLaunchError && error.code === 'forbidden'
+  );
+  assert.equal(f.observationReads.size, 0, 'revocation refuses before any Runtime observation');
+  assert.equal(await readFile(path, 'utf8'), originalBytes);
   launch.seal();
 });
 

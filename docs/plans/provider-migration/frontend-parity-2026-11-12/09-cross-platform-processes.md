@@ -2657,3 +2657,38 @@ Outer MCP wrapper продолжает проверять captured Runtime input
 native service admission также повторно проверяет исходную Main capability/source.
 Расширить один существующий critical fixture, чтобы pure prepare не входил в Runtime guard,
 а revoked Team capture и обычный input по-прежнему отказывались. Нового owner/authority cache нет.
+
+
+### 52.5 — узкое исправление фактического CI lint
+
+Native branch head `689dddb61cedf0649379975735bac162c87c2836`, existing
+Main CI job `131841865959`, завершился четырьмя blocking lint errors.
+Это source gate, не результат native execution; прежние provider receipts
+и незакрытая Windows Team integration не меняют статус.
+
+**Круг 1 — точные причины.** В
+`src/features/agent-backend/main/composition/DesktopBackendFeature.ts`
+(blob `341f6a7e9307620f4f7868b9b2ed6ae86f6a8ed8`) existing closeNativeOwners
+передаёт Promise.all union Promise<boolean> | true, запрещённый
+@typescript-eslint/await-thenable. В
+`src/features/agent-backend/main/infrastructure/CapturedHostClient.ts`
+(blob `a987c4ec992bd8da5a1a7557991b2eca4a4f0954`) три NativeRequest optional
+fields одновременно используют ? и | undefined, запрещённые
+sonarjs/no-redundant-optional. Main tsconfig и feature test tsconfig не
+включают exactOptionalPropertyTypes; это не Host package interface.
+
+**Круг 2 — минимальные изменения.** Только fallback отсутствующего
+nativeCustody заменить на Promise.resolve(true), сохранив тот же
+параллельный close, same results.some и hold. У timer, reply и admittedHint
+удалить избыточное | undefined, сохранив optional fields и все присваивания,
+deadlines, transport, control reserve и wire schemas. Ни blanket lint fix,
+ни подавления rule, ни новых unit tests. Проверить diff этих двух paths
+и отсутствие пересечения с §52 implementation.
+
+**Круг 3 — независимая проверка.** Root публикует этот plan до source.
+Peer сверяет unchanged runtime semantics и actual relevant tsconfigs.
+Следующий обычный exact-head lint/features и types должен подтвердить
+исправление; пока новых execution результатов нет. Отдельный старый
+qualification job `131794213135` падает на SchedulerStopBarrier nested
+assignment: это уже исправлено в parent d35 и переносится штатным parent
+sync, без второго source edit.

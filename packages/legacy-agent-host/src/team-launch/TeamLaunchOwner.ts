@@ -464,6 +464,18 @@ export class TeamLaunchOwner {
     this.active.set(`${memberId}:${claimed}`, pending);
     return pending;
   }
+  /** Private model selection only; public reads still project original Runtime observations. */
+  readModelProbeSelection(action: 'read' | 'control') {
+    return this.options.authorized(action, () => {
+      const record = this.load();
+      return {
+        launchId: record.definition.launchId,
+        rosterRevision: record.definition.rosterRevision,
+        memberIds: record.members.map(({ memberId }) => memberId),
+      };
+    });
+  }
+
   read(action: 'read' | 'control' = 'read'): TeamLaunchSummary {
     const record = this.options.authorized(action, () => structuredClone(this.load()));
     return this.summary(this.project(record));
