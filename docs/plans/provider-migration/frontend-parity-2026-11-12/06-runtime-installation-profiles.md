@@ -1643,3 +1643,124 @@ same-profile cold Desktop histories. Эти required §21 flows сохраняю
 до следующих обычных source/owner/UI receipts. Если D требует изменения,
 оно планируется из конкретного original failure и проверяется отдельно;
 old0.162 остаётся доступен без relabel/downgrade или переписывания history.
+
+
+### §21 Desktop implementation refinement — reachable controls and exact TEST source boundary
+
+**Review 4 — source reachability before a browser helper.** The healthy dashboard
+prerequisite does not expose Refresh: `OpenCodePrerequisite` returns no content
+for a Ready gate. Its `provider-quick-opencode-refresh` control is therefore not
+the planned healthy A selector. Settings' catalog refresh also does not by itself
+prove a runtime-source selection. No hidden-button click, direct installer IPC,
+renderer-store mutation or new product control substitutes for either route.
+
+The actual existing control is Create's
+`[data-testid="team-model-selector-refresh-providers"]` in
+[TeamModelProviderActions](https://github.com/777genius/agent-teams-ai/blob/48a28a6198cda1e2668e92f575505dddf7d69c35/src/renderer/components/team/dialogs/TeamModelProviderActions.tsx),
+blob `256f40673f9c11390fc83e90597b738dae0f0042`, byte-identical at old frontend
+`4a0e06277fe216d9f82dbbede362668fe46622ee`. It is rendered above the provider
+tabs and disabled only while its original refresh is pending. Its original
+callback independently invokes `invalidateOpenCodeRuntimeStatus` followed by
+`fetchOpenCodeRuntimeStatus`; the existing Codex/CLI/catalog work and error
+projection remain unchanged. Main's original
+[openCodeRuntime IPC](https://github.com/777genius/agent-teams-ai/blob/48a28a6198cda1e2668e92f575505dddf7d69c35/src/main/ipc/openCodeRuntime.ts)
+`invalidateStatus` reaches `CapturedOpenCodeRuntimeInstaller.selectInstalled`.
+Thus the second namespace opens the ordinary Create form, expands the original
+lead model control and clicks that one visible Refresh once. Before/after
+read-only source records must establish the expected A native-version
+publication and exact current target; a healthy label alone is insufficient.
+Other provider status outcomes are retained and do not authorize a second click.
+
+Fresh Install and live-A Update use the existing visible OpenCode controls in
+`CliStatusBanner`/`runtimeInstallActionUi`; the new maintenance cut supplies
+the original captured CLI's optional update metadata. Each control is located
+by its existing OpenCode scope and exact original label, checked visible/enabled
+and clicked once through `desktop-ui-controls`. Missing installed choice is
+observed before Install. A different discovered executable, unexpected stock
+candidate, hidden control or failed/unknown source publication fails this proof;
+the harness neither removes ambient files nor forces a Ready/Install state.
+
+**Review 5 — initial TEST inputs, accounting and cleanup.** An explicit
+`nativeOpenCodeSourceSelection` option belongs only to the existing disposable
+fixture. It captures verified full-package A, the original finite model URL,
+separate fixed member/management endpoints and initial `missing` or `path`
+choice. The new choice uses the actual selected Node24 executable on Linux.
+Its V1 recipe/provider template and management seed are complete before the
+first `createFilesystemTeamOwner` call. A is delivered as a real executable
+reference without inventing an installed `cliVersion` on the management seed.
+The original offline sidebar seed need not acquire a Runtime delivery merely
+to supply a provider template; initial definitions are validated by the same
+Host schemas before any app exists. No later profile, descriptor, pin, source,
+registry, Team or history rewrite is allowed.
+
+For this option alone, omit OpenCode's TEST sentinel from the two existing
+sentinel directories, omit all three existing OpenCode override variables and
+build the original app environment with the private TEST bins/selected Node
+plus system utility paths. Only the PATH namespace includes the canonical
+`bin` directory of the full verified A package. The missing namespace excludes
+A from discovery. The shell probe still preserves the exact initial environment;
+other sentinel/override guards remain. Actual stock discovery, including its
+unchanged fallback rules, decides whether the expected missing/A state exists.
+An unexpected original discovery is an INCOMPLETE result, not permission to
+delete/install over it or search for a replacement.
+
+The four business inputs remain exactly those in §21. The first input of each
+new Team is the ordinary Create form's `#team-prompt`, delivered once by its
+existing Create-and-Launch path. This follows
+`desktop-create-launch-ui-smoke.ts`'s original initial-input proof; it is not
+followed by an extra Send. Only A's second input uses the existing real Composer
+and once-only Send after B publication. Fixed distinct TEST markers bind the
+fresh-installed B, A-before-update, A-after-update and newly captured B.
+Every marker joins its original creation/launch/runtime input and actual native
+request/reply. The no-tool Host preflight accepts only the exact existing
+`Reply only OK. Do not use tools, access files or run commands.` prompt with
+its original no-tool shape. It is recorded separately and consumes the same
+total model cap32; default legacy strict-launch/PONG behaviour is preserved.
+
+The source-selection mode reuses `startRetainedOpenCodeApp`, its original
+CapturedProcess, renderer ownership, selected-path/image witnesses, normal Quit,
+cleanup and namespace census. The initial fresh-install namespace is fully
+closed before the PATH namespace starts. Original A remains live across the
+once-only B installation/publication and its second input; A Stop/released
+Runtime plus original physical absence precede new B Launch on the unchanged
+member endpoint. New B Stop precedes normal Quit. Every retained native/metadata
+birth and unmatched selected image remains part of the existing absence
+requirement, with no PID adoption or new signal authority. Cold startup keeps
+the same descriptor/profile/owner and reads the actual A/B histories and source
+receipts without another Create, input, install, Refresh or publication.
+
+**Exact candidate source manifest.** These preimages were read back at working
+`48a28a6198cda1e2668e92f575505dddf7d69c35`; no UI source bytes have changed.
+Root owns the existing `ci.yml` invocation/receipt assertion and composes its
+current preimage separately. All file paths below are under
+`scripts/legacy-agent-host/`.
+
+| Path | Exact preimage | Narrow change |
+|---|---|---|
+| desktop-retained-opencode-coexistence.native.ts | 9f569ea02e190a94e35f087620f6d812b8e52d16 | One explicit source-selection branch after the shared clean-source/build/Node setup; default retained legacy/V2 body remains unchanged. Same900s case. |
+| prepare-retained-opencode-coexistence.ts | 049a7416e5896b266d8ea9d2241d116a900812b7 | Explicit mode verifies full staged A and its package/lock/integrity evidence, uses the existing pure stock selection helper for exact B1.19.5 metadata, and writes a separate bounded input receipt; ordinary retained preparation unchanged. |
+| desktop-backend-fixture.ts | 0672763ee3533bb033dfa5aec9adf027bc897105 | Initial Linux V1 source option, exact source descriptor and sentinel/env choice before Owner bootstrap. Preserve the public environment export and all default callers. |
+| desktop-runtime-source-fixture.ts | new, directly consumed | Cohesively hold the existing V2 recipe/profile-preparation block and existing environment builder, preserving their default bytes/behaviour; add only the declared V1 source preparation beside them. This frees real preparation code from the790-line fixture without compression or a raised baseline. |
+| desktop-runtime-source-selection.ts | new, directly consumed | The two sequential namespaces, genuine UI actions, original durable/native/source joins and cleanup/cold readback. Reuse existing app/UI/Create/read-only Runtime helpers; no new browser/process owner or generic driver. |
+| desktop-retained-opencode-model.ts | d0db11b91875bbe6a3a5c87014e3eb35251d9a1c | Explicit finite source-selection mode for four fixed business markers and exact original Host no-tool preflights; same32 cap, same HTTP size/endpoint checks and original default mode. |
+| desktop-retained-opencode-model.test.ts | a651cfa2b53402fdd0e4a36035af818926ffa565 | Extend the existing business/probe case for the explicit mode, exact prompt/owner/marker joins and first-violation refusal; no new suite. |
+
+The preparer's metadata lookup is evidence before the original UI action, not a
+fake registry, source publication, new native session or implementation of the
+installer. B is still downloaded and verified by the stock installer. A's
+existing package closure remains available throughout A; measuring the official
+package/SRI, actual binary/version and source inputs does not rewrite it.
+All new helpers fall under the existing whole
+`scripts/legacy-agent-host` source-freeze input. Account's mixed Settings files
+and product status/qualification guards are not edited by this UI cut.
+
+**Review/qualification.** Root and an independent peer review this exact
+boundary before the helper source. Review the default-preserving extraction
+bytewise, then run existing focused model/fixture cases, script/Host types and
+source-size/lint guards when execution is available. No new generic unit suite,
+sampler, workflow job/matrix, native budget or timer is introduced. The existing
+Linux job receives one explicit additional mode and retains its30min budget and
+ordinary retained proof. Its actual new receipt must establish all four inputs,
+original A retention, B publication/new capture, cold history and complete
+cleanup. Environment loss means the present manifest is source-only planning;
+previous native/maintenance/source reviews are not executions of these bytes.
