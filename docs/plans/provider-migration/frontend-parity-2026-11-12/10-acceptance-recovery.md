@@ -774,3 +774,61 @@ bounded log projection лишь сохраняет причину в штатн�
 Круг3: root сверил оба места с exact3db; production changes0, weakened gates0.
 Следующий шаг — independent review малого diff и exact-head CI. Новые bytes пока
 не исполнялись.
+
+## 16. Actual235 stopped import: finite current-frontend model catalog route
+
+[Run43394002053/job131780548904](https://github.com/777genius/agent-teams-ai/actions/runs/43394002053/job/131780548904)
+сохранил первую причину: local model oracle получил GET при требовании POST.
+Original source frozen=true, cleanupFailed=false, remaining/nativeRemaining/unmatched=0.
+Это не PASS импорта: source producer по-прежнему INCOMPLETE, consumer не квалифицирован.
+
+Круг1 — source contract. `src/main/utils/anthropicApiKeyVerification.ts`
+(`2a4c10b94594c51b42ad1bbd6140b6248de7473d`) использует GET /v1/models;
+existing `scripts/e2e/anthropic-compatible-status/default-model-gateway.ts`
+также обслуживает этот read-only route. Current producer задаёт отдельный
+`TEST-current-legacy-only-key` и local origin. Actual log пока не содержит URL:
+маршрут /v1/models — source-backed объяснение, проверяемое следующим exact run.
+
+Круг2 — узкий TEST oracle. В existing native-claude-team/model.ts только при
+исходном открытом `currentLegacySource` обслужить exact GET /v1/models с исходным
+synthetic x-api-key. JSON содержит фиксированные TEST-supported Claude model IDs;
+никаких prompt/tool/native effect, редиректов или vendor authentication.
+Отдельный конечный счётчик не более8 catalog reads сохраняется в frozen source
+receipt рядом с существующими probe/token counts. Это не расходует и не расширяет
+один business turn, native model-probe8/9 или существующие request deadlines.
+После закрытия original source epoch, при другом path/key/method и превышении
+счётчика остаётся failure; закрытый oracle после protocol failure не открывается.
+Не обслуживать произвольный GET и не снимать прежний exact POST/messages contract.
+
+Круг3 — existing `native-claude-team/model.test.ts` case дополнить одним catalog
+read, проверкой frozen count и отказом позднего catalog read. Existing одна
+source turn, PONG/Host probe, closed source rejection и cleanup сохраняются.
+Independent source review + focused tests/types и следующий original Desktop
+source Stop → Task → Quit → import → native Launch обязательны. Source review
+не заменяет исполнение; никаких повторов старого head или расширения таймеров.
+
+## 17. Actual235 mixed Stop/reload: closed observation of original Launch refusal
+
+[Job131780548934](https://github.com/777genius/agent-teams-ai/actions/runs/43394002053/job/131780548934)
+дал baseline8/observed8/probes[]: новая model request не поступила.
+Причина находится до inference. Не заменять исходное требование count+1 нулём
+и не объявлять выбранную модель проверенной по прежнему запуску.
+
+Круг1: source `useHostTeamResume.ts` допускает fresh preflight после чтения
+original Resume/launch/checkpoint status; `LaunchTeamDialog.tsx` также ждёт saved
+hydration. Из одного model count нельзя отличить checkpoint-generation refusal,
+unresolved Resume, saved-source error и незавершённую hydration.
+
+Круг2: только в существующем failure catch mixed smoke добавить один read-only
+CDP snapshot исходного dialog. Закрытая проекция: dialog count, видимость known
+controls, disabled состояния, выбранный fresh/resume и список фиксированных
+reason IDs по exact known UI messages. Не выводить DOM/text, пользовательские
+данные, paths, arbitrary errors или новые API/RPC reads; не нажимать контролы.
+Использовать existing bounded CDP request; если чтение недоступно, записать только
+unavailable и бросить первоначальный poll error. Original90s poll, один Launch
+click, model count+1, model/effort, input counts и physical cleanup неизменны.
+
+Круг3: source/peer review закрытой проекции, existing scripts types и тот же
+native mixed Desktop job. Не писать отдельную unit suite для diagnostic strings.
+Следующий production/oracle fix выбирать по этому original evidence; не вводить
+retry, fallback на global model/новую Team или silent Fresh Launch.
