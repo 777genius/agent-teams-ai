@@ -1052,3 +1052,42 @@ next required exact source cut. No extra unit suite or CI job is added for
 this read-only failure metadata. Keep d35 INCOMPLETE and use the next actual
 journal/native evidence to choose the production correction; do not adjust
 guards, accept cached checks, or increase deadlines on a timing hypothesis.
+
+
+## 22. Packaged V2: self-contained TEST harness и официальный ESM jsonc-parser
+
+**Круг 1 — actual failure.** На parity d35 packaged workflow43405509695
+все пять platform jobs отказали при загрузке TEST harness, до native scenario.
+Root прочитал exact logs Linux131825045057, Darwin arm64131825044798 и
+Windows x64131825044892: одинаковый dynamic require("./impl/format") из
+jsonc-parser3.3.1/lib/umd/main.js. Исходный process exit1 без native receipt
+сохраняет cleanup unconfirmed, а disposable checkout остаётся relocated;
+последующий artifact upload поэтому тоже отказывает. Это не доказательство
+native Host failure или cleanup success. Исходные receipts/stack сохраняются.
+
+[Official jsonc-parser3.3.1 manifest](https://github.com/microsoft/node-jsonc-parser/blob/v3.3.1/package.json)
+задаёт main=lib/umd/main.js и module=lib/esm/main.js; оба принадлежат одному
+установленному pinned package. Source src/main.ts содержит обычные static
+imports impl/format, edit, scanner, parser. Existing staging esbuild настроен
+на platform=node/format=esm, поэтому package main выбрал UMD wrapper с
+dynamic require, который не является self-contained runtime import в этом
+ESM artifact.
+
+**Круг 2 — один существующий TEST staging file.** В
+scripts/legacy-agent-host/stage-opencode-v2-packaged.ts (base
+a155a3a9e1d8466b4f91ec83c0fd6bbe4916604c) добавить esbuild alias только для
+jsonc-parser на require.resolve('jsonc-parser/lib/esm/main.js') из того же
+installed package. Reuse existing createRequire; без замены package/version,
+global mainFields preference, CJS runtime shim, внешнего require или доступа
+к hidden source checkout. Обычные static imports входят в тот же bundle;
+its actual harness hash автоматически фиксируется прежним candidate manifest.
+Production modules, actual app.asar/Host/native capture и dependency lock
+не меняются. Не ослаблять source relocation либо unconfirmed cleanup rule.
+
+**Круг 3 — проверка.** Root commit/push этого append до one-file source edit.
+Independent source peer сверяет official package exports/paths и ограниченный
+alias scope. Existing staging types и все пять actual packaged gates должны
+загрузить именно собранный harness и затем пройти прежние11 model requests,
+manual approval, MCP/tools, Stop/cold Resume и original cleanup. Один import
+fix или source review не объявляются packaged PASS. Новой unit suite, runner,
+workflow, native invocation или увеличенного budget нет; source пока unexecuted.

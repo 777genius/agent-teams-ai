@@ -118,7 +118,7 @@ export class HostOutput {
   private pump(): void {
     if (this.stopped || this.writing) return;
     const control = this.priority.findIndex((entry) => entry.control);
-    let frame = this.priority.splice(control < 0 ? 0 : control, 1)[0]?.frame;
+    let frame: Buffer | undefined = this.priority.splice(control < 0 ? 0 : control, 1)[0]?.frame;
     if (frame) this.priorityBytes -= frame.length;
     else if (this.dropped > 0) {
       frame = this.encode({
