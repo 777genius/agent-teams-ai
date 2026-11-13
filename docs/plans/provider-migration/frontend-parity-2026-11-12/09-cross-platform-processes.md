@@ -1403,3 +1403,147 @@ immutable original unknown, отсутствие второго Stop frame до 
 Общая длительность native/provider/UI сценария не увеличивается и внешний CI timeout остаётся прежним.
 Меняется ошибочная привязка read deadline к неактивной прошлой фазе; Windows/Linux product custody,
 opaque captures, decoder и root-only запрет production signal не затрагиваются. До source нужен root review.
+
+## 38. Main-retained Windows owner: следующие product cuts после actual vendor PASS
+
+**План до source, база документа `f85fafb10a232a5e850ecd5b86cdf851a4803fbf`.**
+На exact `dde51b477db6a41fc4d69ab6fbe1e10f6db3e5e2`, run `43372037195`, Windows x64
+job `131709784668` и ARM64 job `131709784742` завершены SUCCESS, включая actual Claude SDK subtree Stop.
+Оба оригинальных vendor receipt подтверждают один Session, один разрешённый Bash interaction,
+service subtree absent, живой provider после scoped Stop и продолжение того же Session; final whole-Job cleanup PASS.
+Они явно сохраняют `registryQualified/coldOwnerQualified/desktopQualified/releaseQualified=false`.
+Это разрешает перейти от feasibility к продуктовой интеграции Claude на этих двух tuples;
+Codex, OpenCode V1 и Bun/V2 не получают qualification по этому результату.
+Следующий обычный native head `fe6eece10344cf1cd6f7dbc216c7eb19070c7c9e` содержит reviewed §34–37;
+его новый run `43377890875` ещё не даёт runtime evidence для описанной ниже реализации.
+
+### Конкретный source gap и порядок
+
+| Срез | Текущее ограничение | Конечный результат этого среза |
+| --- | --- | --- |
+| A. Настоящий Main owner + ordinary launch | `HostCustodyOwner` уже injected, но product `DesktopBackendFeature` его не создаёт; `TeamHost` не включает native transport, `WindowsCapturedProcess` запускает broker внутри Host. | Та же обычная Claude factory/SDK получает facade, физический pending/broker с момента allocation принадлежит существующему Main owner. Host loss сохраняет его handles и sealed input epoch. |
+| B. Scoped service adapter | `serviceScopes.h`/wire проверены, но debug loop и service operations всё ещё `OWNED_PROCESS_TEST_DEBUG_SERVICE`; Main/Host capture union Windows не содержит. | Явно поставляемый scoped-capable product artifact, original-current-child selector и typed capture/query/Stop/settle на той же capability. |
+| C. Journal/fence + Processes | `TeamProcessCommands` и MCP wrappers рассчитывают на synchronous native calls; UI уже использует processRef и original command lookup. | Async native work вне Team fence, обязательная повторная проверка исходной authority, прежние rows/history/Stop без PID fallback. |
+| D. Same-Main Host recovery | Router навсегда seals исходный client и пока не умеет заменить его после настоящего exit. | Один явный original-owner rebind, прежний processRef/receipt доступен новому Host, scoped Stop и Quit проходят реальный UI/packaged путь. |
+
+Срезы публикуются и проверяются отдельно; A не объявляется завершённой registration/cold фичей.
+Сначала A с настоящим consumer, затем B/C, затем D. Доставка Main/Host/OS capability выбирается только доверенной
+composition; новые пользовательские настройки, alternate Processes panel и Stage2 не добавляются.
+
+### A. Физический owner, prepare/resume и полный stdio contract
+
+1. В canonical `packages/legacy-agent-host/src/owned-process/` добавить один `RetainedWindowsCustody` adapter
+   поверх существующего `createWindowsOwnedLaunchPort`, без второго broker/helper process. Main composition
+   удерживает его в прежнем `CapturedBackendOwner` рядом с текущим client, а не в новом registry авторизации.
+   Adapter хранит реальные pending/prepared objects и только bounded physical receipts; Team commands он не пишет.
+   `allocate` регистрирует pending до любого await/prepare. Host transport abort закрывает только binding/input admission,
+   не вызывает `abandonControl`, `release` или implicit whole-Job Stop; Main Quit остаётся physical cleanup owner.
+2. Закрытый `hostCustody.ts` расширяется ровно operations подготовки/resume и lifecycle observation.
+   Размер native launch сейчас до1MiB (`codec.ts::MAX_LAUNCH_BYTES`), а reverse frame32KiB/chunk16KiB;
+   нельзя незаметно урезать валидные environment/args или увеличить frame budget.
+   Использовать bounded begin/chunk/commit подготовки **в том же pending object**: точные length/digest/offset,
+   один текущий staging buffer на attached owner и последовательную bounded очередь original prepares.
+   Chunk остаётся work lane; commit/resume проверяет complete captured spec; Stop/control reserve8 не ждёт загрузки.
+   Это временные private bytes, не файл/журнал/новый generic blob protocol; EOF/expiry не даёт права повторить effect.
+   Begin/chunk/commit/resume разделяют один original absolute launch deadline из существующего captured budget,
+   включая очередь: per-frame timeout ограничен его остатком, а не начинается заново на каждом chunk.
+   Main фиксирует собственный monotonic deadline при первом admission из переданного остатка; timestamp другого
+   процесса не сравнивается с его performance.now. Expiry закрывает staging/input admission, сохраняет original
+   pending/physical cleanup и никогда не разрешает поздний commit/resume под новой Host epoch.
+3. Main получает broker selection из того же hash-bound private Host profile, выбранного `SelectedHostProfile.env`
+   (`LEGACY_AGENT_HOST_PROFILE_PATH/SHA256`), а не из renderer или отдельного независимого broker preference.
+   Малый composition helper переиспользует bounded canonical file read; при необходимости вынести только этот
+   существующий reader из `readProfile.ts`, чтобы Main не импортировал Team/SDK composition ради чтения файла.
+   Closed request связан с original binding/profile/source/launch snapshot; Host повторяет текущий Runtime/source guard
+   до prepare и resume, Main заново проверяет selected broker/target и неизменность captured selection.
+   Изменившийся source запрещает новую allocation/resume, но никогда не отбрасывает original cleanup capability.
+4. Host remote launch adapter реализует существующий малый `OwnedLaunchPort`/prepared contract, без cast в ChildProcess.
+   `OwnedProcessFacade` остаётся синхронным SDK return value; pending request уже удержан, prepared root/observers
+   установлены внутри `resume(installOwner)` до native resume и первого stdin. ACK write означает actual native callback.
+   Main читает paused original stdout/stderr bounded chunks без потерь для исходного живого Host epoch.
+   После Host loss сохраняются ещё не доставленные bounded buffers; доставка in-flight в погибший Host остаётся
+   unknown. Старые bytes/SDK iterator не replay-ятся преемнику; нового read journal этот cut не вводит.
+   Root exit с exact birth/code передаётся отдельным reliable lifecycle readiness внутри той же закрытой family:
+   его нельзя ждать до stdout EOF, который может удерживать ещё живой descendant. Используется тот же marker/rearm
+   принцип §34, без polling или lossy data notifications; EOF, root exit, transport failure и tree proof различаются.
+   Ready markers/partial spec/queued writes имеют общие конечные бюджеты; data pressure не съедает Stop reserve.
+5. Подключить один общий captured bridge через `TeamHost` → `RuntimeTeamCoordinator` →
+   `createRuntimeMemberProviderFactory` → `MemberProviderContext` → ordinary `CapturedProcess/WindowsCapturedProcess`.
+   Не делать фиктивный `captureRoot(ChildProcess)` для remote facade: Windows launch capability отдельная typed ветка
+   существующей custody composition, POSIX root source сохраняет прежний контракт. Management/scheduled/V2 consumers
+   переносятся через тот же seam только со своими existing source guards и реальной tuple qualification.
+   Файлы A: `owned-process/{hostCustody,index,RetainedWindowsCustody,HostWindowsLaunch}.ts`,
+   `adapters/providers/{CapturedProcess,WindowsCapturedProcess,MemberProvider}.ts`, перечисленные composition callers,
+   Main `composition/{DesktopBackendFeature,createCapturedHostClient}.ts`, `CapturedHostClient.ts` и один narrow
+   Main selection helper. Существующие близкие к800-line composition files получают только wiring; extraction допустим
+   для связанного уже существующего кода, без обхода cap и второго orchestration framework.
+
+Первый acceptance A — actual captured Main client → ordinary Host CLI/Team factory → pinned Claude → existing broker
+на Windows x64/ARM64, с тем же captured source и исходной Main cleanup authority. Existing transport subprocess test
+добавляет physical-owner consumer и проверяет prepare→install→resume, write/EOF/root ordering и original Host loss;
+он не заменяет actual native run и не объявляет conversation restore. Нет отдельной новой test suite.
+
+### B/C. Original service scope и асинхронный прежний command owner
+
+1. `debugServiceTest.h` выделяет уже проверенный debug loop в общий небольшой helper; TEST modes2/3 и diagnostic-file
+   writer остаются TEST-only. `broker.cpp`, CMake/build/manifest и `brokerArtifact.ts` получают явную scoped capability;
+   старый whole-Job manifest не становится service-capable по наличию opcode. Native fixture отдельно проверяет
+   staged product binary, а не выдаёт unstaged TEST binary за product. No-debug fallback при failed admission запрещён.
+2. `Scopes.registerCurrent(pid)` выбирает только живой original child этого provider под прежним mutex
+   (`currentPids` → retained record → original HANDLE live); capture effect входит в existing replay cache до lookup.
+   Это current-child admission, не доказательство исторического PID. Missing/retired/unknown отказывает;
+   никакого OpenProcess/ancestry scan/PID+FILETIME adoption. Existing `registerExact` остаётся для exact TEST witness.
+   После capture все query/Stop/settle используют original key/birth и provider capability, никогда повторный PID selector.
+3. Private Windows capture добавляется как новая version в `registeredProcessContracts.ts` и existing strict validators:
+   same Main epoch, physical provider capability/generation, original root identity, scope key/birth, registrar.
+   Это metadata lookup живой Main authority, не transferable HANDLE и не permission создать новый native target.
+   Capture канонический: requestId/time/new Host incarnation в его digest не входят; repeated register того же active PID
+   обязан получить прежний scope/registrar, иначе current registry правильно возвращает conflict.
+4. Async ветка остаётся в `TeamProcessCommands` и прежнем `commands/` journal. Register сначала проверяет admit/replay,
+   фиксирует original intent **до нового await**, затем capture outside fence; после ответа вновь проверяет original
+   grant/revision/registrar/input/source и актуальные rows. Capture receipt сохраняется до register/attachOriginal.
+   Stop сохраняет requested-unknown и exact full capture, rechecks authority непосредственно перед synchronous enqueue;
+   await reply вне fence, settlement только после повторной проверки исходного receipt/fingerprint.
+   Lookup reconciles исходный request, не пересылает Stop и не делает новый capture при потерянном ACK.
+5. Не превращать всю Team snapshot policy в async. `TeamOwner.collectProductState` получает metadata projection;
+   существующие explicit `team.process.list/lookup/terminate` и MCP methods ждут свежую native observation отдельно.
+   Внутренние prepare/read/settle helpers одни; POSIX sync adapter и Windows awaitable adapter используют тот же
+   journal/validator/row policy. Обязательные callers: `createTeamProcessMethods`, `createTeamProcessComposition`,
+   `createMemberProcessMcpPort`, `mcp/{contracts,processTools}` и lifecycle `assertReleased` — promise нельзя забыть
+   ни в projection, ни в cleanup admission. Старый synchronous fence никогда не удерживается через await.
+6. Current `registered:boolean` относится к physical scope, не к каждому register command: существующий active PID
+   имеет максимум одну row, но разные completed receipts сохраняют тот же original capture. Metadata stop/unregister
+   и replacement registration не являются release authority. Settle допускается лишь после genuine scope absence
+   и durable reconciliation исходных pending terminate receipts. Old rows/receipts продолжают читать absence:
+   completed observed-absent из прежнего journal переносим; natural-exit tombstone остаётся owner-local §24.3–4.
+   Missing native key после release никогда не означает live/absent и не разрешает recapture.
+
+Приёмка B/C расширяет существующий Windows native vendor gate: обычный `process_register` через реальный Team MCP,
+Main-held scope → current list → operator Stop → same provider continuation + neighbor/foreign survivor.
+Добавить в existing process-command tests только critical async cases: revoke/source change между admission и reply,
+lost capture/Stop ACK без replay, repeated same PID registration с canonical capture, metadata removal при pending Stop.
+UI по-прежнему получает лишь processRef/rows, а не capability/env/birth selector. Не добавлять новый journal или leases.
+
+### D. Rebind, Quit и границы полного результата
+
+`BackendOwnerRouter` заменяет client внутри уже зарегистрированного exact owner только после observed old child exit,
+при живом исходном Main custody epoch, неизменных profile/build/storage/source и новом successful `ProfileWriterLease`.
+Старый client остаётся sealed; никаких автоматических mutation retries/restart loop. Public recovery entry связывается
+с существующим error/retry/Stop control и opaque handle, не принимает путь/PID/owner и выполняет сначала read/reconcile.
+Обычный `host.shutdown`/Quit по-прежнему stop→drain→release. Explicit recovery после Host crash/detach отдельно;
+непредоставленный old SDK iterator и неизвестный original Runtime input не превращаются в resumed conversation.
+После rebind original registration/Stop/history имеют тот же processRef/full capture, а new Host incarnation используется
+только в private transport admission. Changed-source refusal не мешает Main Quit освободить original handles.
+
+Окончательная приёмка — existing real Windows Processes UI и packaged artifact: Host A register → same-Main Host loss →
+Host B fresh writer → original row/history → scoped Stop → provider/neighbor alive → Main Quit original cleanup.
+Отдельно Main death и cancelled/late old epoch проверяются independent captured witness; Main loss не даёт durable
+absence без настоящего ранее сохранённого proof. Cold/Linux warm перенос и V2 sealed graph нельзя закрыть этим Claude
+gate: V2 требует fresh complete graph/executable attestation через Main port и actual Bun tuple; Codex/V1 свои native gates.
+
+**R1 self-review до source:** выявлены и включены launch1MiB↔frame32KiB mismatch, root exit до pipe EOF,
+sync Team snapshot/MCP projection и canonical capture при repeated register. **R2 Account:** B/C/D design PASS,
+register replay/attachOriginal/metadata-unregister constraints проверены по source. **R2 Profiles:** A/attestation
+согласованы с двумя точными исправлениями — unknown delivery в погибший Host и один deadline всей подготовки;
+они включены выше. Root подтвердил выбранные owner/stdio boundaries; final text передаётся на readback до source.
+Никакой product source из этого раздела пока не изменён и feature parity завершённой не объявляется.

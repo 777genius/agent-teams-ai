@@ -517,3 +517,16 @@ PR1186 `PRRT_kwDORVTEtM6246fc` повторно сверён с frontend
   actual native/Host/Desktop outcome подтвердить на следующем штатном exact-source CI cut.
   Не создавать новую suite/runner, не расширять native budgets и не объявлять native PASS по source review.
 - Следующий круг — independent plan review и root immediate commit/push, затем implementation и независимый diff review.
+
+### R7: проверенный source cut
+
+Исходный `ProviderManagementCoordinator` теперь ищет разрешение заменить отвергнутый ключ по прежнему
+account/provider/auth namespace, сохраняя точную исходную запись и digest. Неизвестный intent блокирует
+новый Connect даже с тем же ключом; смена account/HOME/key и более поздняя успешная публикация
+не наследуют разрешение. Connected/verification по-прежнему относятся к точной revision профиля.
+Native journey включает обычную публикацию runtime source между 401 и холодным исправлением ключа;
+новый marker обязателен в прежнем workflow, прежние четыре inference request сохранены.
+
+Независимое source review Profiles и root — PASS. Сборка Host, test types, 17 credential tests,
+fast lint и source cap — PASS; совместная root-проверка credentials + async source selection: 37/37 PASS.
+Это source/controlled proof; новый actual native Host/Desktop результат должен дать штатный CI.

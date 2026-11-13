@@ -398,3 +398,15 @@ Hash/platform/malformed receipt suites переиспользовать; same-ve
 [S8]: https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/src/features/opencode-runtime-installer/README.md
 [S9]: https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/src/features/agent-backend/main/composition/DesktopBackendFeature.ts
 [S10]: https://github.com/777genius/agent-teams-ai/blob/1d0f97f55de566036c970eab4f36b84620afdb3f/packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts
+
+### §16: проверенный source cut асинхронного хеширования
+
+`verifyRuntimeSourceCandidate` и оба места проверки в `RuntimeSourceIndex` используют async reads
+не более64KiB с прежним полным SHA-256 и пределом1GiB. Исходные дескрипторы удерживаются до
+финальной синхронной проверки fd/path и публикации; проверки writer/seal выполняются вокруг await,
+а все выходы закрывают дескрипторы. Ошибка после публикации не превращает её в статический отказ.
+
+Независимое source review Account и root — PASS. Сборка Host, test types, 20 existing identity/selection
+сценариев, fast lint и source cap — PASS; совместная root-проверка с R7 credentials: 37/37 PASS.
+Actual native/Desktop ещё требует обычного CI. Этот срез не закрывает pre-exec pathname race,
+stale seed/retained history, дедупликацию grant scopes или восстановление Create после source mismatch.
