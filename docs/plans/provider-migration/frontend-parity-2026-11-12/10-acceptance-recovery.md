@@ -832,3 +832,59 @@ click, model count+1, model/effort, input counts и physical cleanup неизм�
 native mixed Desktop job. Не писать отдельную unit suite для diagnostic strings.
 Следующий production/oracle fix выбирать по этому original evidence; не вводить
 retry, fallback на global model/новую Team или silent Fresh Launch.
+
+## 18. Actual235 draft Launch: preserve unconfirmed Create result
+
+[Validate job131783882257](https://github.com/777genius/agent-teams-ai/actions/runs/43394002053/job/131783882257)
+обнаружил TypeScript refusal в `src/main/ipc/teams.ts:2320`: draft Launch штатно
+вызывает `createTeam` и возвращает его результат без преобразования, но
+`TeamCreateResponse.launchStatus` после P06§17 включает `unconfirmed`, а
+`TeamLaunchResponse` в `src/shared/types/team.ts:945` ещё нет.
+
+### Круг1 — граница результата и потребители
+
+Сохранить точный additive status. Он сообщает, что Team сохранена, а исходный
+Launch не подтверждён; он не является ни `started`, ни доказательством отсутствия
+native allocation. Draft IPC уже возвращает полный response; HTTP draft route
+`src/main/http/teams.ts:383–418` делает то же. Не вводить cast, удаление status,
+переписывание runId или повторный create/launch.
+
+Текущий Host Create UI уже обрабатывает этот результат:
+`createHostTeamFromDialog.ts:35` не начинает polling, а
+`TeamListView.tsx:1040` открывает сохранённую canonical Team после пояснения.
+Обычный Host Launch в `createHostTeamLaunchSubmission.ts:43–51` возвращает
+started только после исходного capture/start, иначе отказывает; его native
+semantics не меняются. Legacy draft producer сейчас сам unconfirmed не создаёт,
+но общий публичный Launch contract должен честно принимать результат той Create
+операции, которую его handler вызывает.
+
+### Круг2 — минимальная связанная правка
+
+В shared `TeamLaunchResponse.launchStatus` добавить уже существующее значение
+unconfirmed. Сохранить все прежние значения, поля и canonical TeamCreate result.
+Не создавать отдельный status framework или новую transport DTO.
+
+В существующем `teamSlice.launchTeam` после API response и **до** регистрации
+response.runId, optimistic progress promotion и первого getProvisioningStatus
+обработать unconfirmed через существующий error/attempt cleanup: сохранить
+понятное сообщение «Team saved; launch not confirmed; check this team before
+launching again». Не утверждать завершение/отсутствие запуска, не регистрировать
+подтверждённый runtime, не запускать polling или автоматический retry. Текущая
+Team уже является адресатом Launch, поэтому новое Create/navigation действие
+не требуется. Существующие attempt/epoch guards в catch сохраняют более новый
+запуск; весь Host Create путь с canonical navigation остаётся прежним.
+
+### Круг3 — существующие critical cases
+
+В имеющемся draft IPC case в `test/main/ipc/teams.test.ts` проверить точную
+передачу исходного Create response с unconfirmed через TEAM_LAUNCH, сохранив все
+assertions saved metadata и однократного create вместо launch. В существующем
+`test/renderer/store/teamSlice.test.ts` дополнить ближайший failure/attempt case:
+response unconfirmed показывает честный refusal, снимает только свой optimistic
+pending, не публикует response run как running, не делает getStatus/poll/retry.
+Прежний started response и newer-attempt fence остаются покрыты существующими
+сценариями. Новых suites, harness, native inputs или CI jobs нет.
+
+Focused Main/renderer types и эти существующие cases, затем required validate
+того же source cut. Независимый source review обязателен. Этот compile/consumer
+fix не объясняет отдельный native /review marker loss и не закрывает его E2E.

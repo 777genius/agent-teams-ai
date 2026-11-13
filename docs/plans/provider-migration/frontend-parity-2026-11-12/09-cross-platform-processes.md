@@ -2215,3 +2215,51 @@ Thread `PRRT_kwDORVTEtM622qol` остаётся открытым по actual sou
 **R1:** найдено конкретное pathname окно, отдельно от P06 publication fd/hash и postspawn custody.
 **R2:** исключены permission/group shortcuts, непереносимый fd alias и незаметная смена executable location.
 Решение остаётся pending proof; до его получения thread и этот native acceptance пункт не закрываются.
+
+## 48. Genuine old checkpoint: retain the observed generation on later controls
+
+**Evidence before the change.** Exact parity head `235b01b489a4f428b72c7667b0c89061c82cab1b`,
+job `131780549007`, original artifact `14023871625`
+(ZIP SHA256 `303438118f5e09229df8d13c7918d9c5dfa42215a964af700ca5d4a4f2de3b51`)
+is INCOMPLETE, with cleanup confirmed. Its eleven model observations contain ONE and TWO,
+the original ONE native tool IDs in every TWO request, the selected Opus/medium options and
+the original team context. Both original business receipts completed. The first old Host
+checkpoint/Stop and the second old Host restore succeeded; the failure is the second
+`runtime.dispatch` at native-claude-host.native.ts:384, after TWO.
+
+### Source cause and smallest correction
+
+- The exact unchanged donor commit `1d0f97f55de566036c970eab4f36b84620afdb3f`,
+  `packages/legacy-agent-host/src/composition/resolveRuntimeControlEntry.ts`, rejects a
+  non-read control after a restore when `expectedGeneration` is absent. Its
+  `runtimeControlValues.ts` already accepts that field. Current Host retains the same rule.
+- The fixture's original `runtime.read` immediately preceding each dispatch already retains
+  the actual selected generation in `finalRuntime`. Supply that exact observed generation to
+  the existing dispatch. Do the same for the final Stop and for the existing cold outbox
+  dispatch using the original cold `runtime.read` result.
+- Preserve the original command IDs, one call per operation, the original capture/reference,
+  old Host source/dist/provider bytes, the strict current-D refusal and zero-allocation counters.
+  No replacement intent, retry, new generation lookup or provider admission is added.
+- Keep the fixture failure strict. A failed dispatch should report only its closed
+  `ok/code/outcome` fields in the assertion, so another refusal cannot disappear behind
+  a bare false/true diagnostic. Do not log native inputs or opaque checkpoint bytes.
+- The actual old source and receipt are the references; no production control guard is weakened.
+  This is a three-control TEST call-site correction, not a D compatibility implementation.
+
+### Verification and review rounds
+
+1. **R1 — original evidence and source:** verify the artifact digest and all eleven original
+   model observations; compare the exact donor guard and current guard. The old checkpoint is
+   still unqualified until the complete corrected gate finishes.
+2. **R2 — authority and scope:** independent review must confirm every supplied generation comes
+   from the same original selected Runtime read, including after cold restart; original IDs and
+   budgets remain unchanged. Do not skip dispatch/Stop, relabel the earlier failed run, or edit
+   donor source to make the corpus pass.
+3. **R3 — executable proof:** run the existing Host-script typecheck and the existing selected
+   runtime control/restore regression coverage, then the original native checkpoint gate on the
+   new exact head. Require checkpoint/history/PDF/native tool receipts, both original business
+   inputs, strict no-allocation refusal, final ordinary Stop/restart/replay and original cleanup.
+   No new unit-test suite or larger timeout is needed for the existing typed field.
+
+The subsequent §39 compatibility correction and current-Main route qualification remain open.
+A qualified old corpus alone cannot close the compatibility review thread.
