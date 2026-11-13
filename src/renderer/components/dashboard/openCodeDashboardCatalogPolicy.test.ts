@@ -25,6 +25,16 @@ describe('OpenCode dashboard catalog detection gate', () => {
     expect(
       canLoadOpenCodeDashboardCatalog(provider, { ...runtime, state: 'ready', v2Support: 'ready' })
     ).toBe(true);
+    const maintenance: NonNullable<OpenCodeRuntimeStatus['v2Maintenance']>[] = [
+      { kind: 'missing', engineVersion: '2.1.4' },
+      { kind: 'installed', cliVersion: '2.0.21', engineVersion: '2.1.4', support: 'required' },
+    ];
+    for (const v2Maintenance of maintenance) {
+      expect(canLoadOpenCodeDashboardCatalog(provider, {
+        ...runtime, state: 'ready', v2Support: 'ready', v2Maintenance,
+      })).toBe(true);
+      expect(canLoadOpenCodeDashboardCatalog(provider, { ...runtime, v2Maintenance })).toBe(false);
+    }
   });
   it.each(['opencode-live-host', 'opencode-managed-runtime'])(
     'permits read-only catalogs with %s evidence despite passive missing metadata',
@@ -51,6 +61,11 @@ describe('OpenCode dashboard catalog detection gate', () => {
     } as unknown as CliProviderStatus;
     expect(canLoadOpenCodeDashboardCatalog(provider, null)).toBe(false);
     expect(canLoadOpenCodeDashboardCatalog(null, null)).toBe(false);
+    expect(canLoadOpenCodeDashboardCatalog(provider, {
+      installed: false, source: 'captured-host', state: 'failed', version: '2.1.4',
+      engineVersion: '2.1.4', sourceRevision: 'TEST original source',
+      v2Maintenance: { kind: 'installed', cliVersion: '2.3.0', engineVersion: '2.1.4', support: 'ready' },
+    })).toBe(false);
   });
 });
 
