@@ -1,0 +1,3411 @@
+{
+  "activity": {
+    "chatVisualization": {
+      "description": "完整視覺化檢視",
+      "exceedsLimits": "視覺化內容超出顯示上限",
+      "incomplete": "視覺化內容不完整",
+      "open": "開啟視覺化內容",
+      "unavailable": "無法使用視覺化內容"
+    },
+    "reactions": {
+      "add": "添加回應 ({{count}})",
+      "remove": "移除回應 ({{count}})",
+      "count": "回應：{{count}}",
+      "failed": "無法更新回應"
+    },
+    "actions": {
+      "createTaskFromMessage": "從訊息建立任務",
+      "editMessage": "編輯訊息",
+      "expandMessage": "展開訊息",
+      "replyToMessage": "回覆訊息",
+      "restartTeam": "重新啟動團隊"
+    },
+    "authError": {
+      "description": "認證失敗。重新啟動團隊將重新整理工作階段並可能解決此問題。如果問題仍然存在，請檢查您的 API 憑證或稍後重試。"
+    },
+    "automation": {
+      "reviewPickup": "要求隊友接手審查",
+      "stallNudge": "要求隊友繼續停滯的任務",
+      "workSyncBody": "要求隊友同步目前工作"
+    },
+    "badges": {
+      "automation": "自動化",
+      "bootstrap": "載入程式",
+      "command": "指令",
+      "comment": "留言",
+      "live": "即時",
+      "note": "備註",
+      "rateLimited": "速率受限",
+      "restart": "重新啟動",
+      "result": "結果",
+      "session": "工作階段",
+      "stallNudge": "停滯提醒",
+      "start": "開始",
+      "workSync": "工作同步",
+      "agentError": "代理錯誤",
+      "apiError": "API 錯誤"
+    },
+    "bootstrap": {
+      "acknowledged": "已確認引導",
+      "restarting": "正在重新啟動隊友",
+      "starting": "正在啟動隊友"
+    },
+    "rawJson": "原始 JSON",
+    "unread": "未讀",
+    "thoughts": {
+      "count": "{{count}} 則思考",
+      "count_one": "{{count}} 則思考",
+      "expand": "展開思考",
+      "showMore": "顯示更多",
+      "showLess": "收起",
+      "count_few": "{{count}} 則思考",
+      "count_many": "{{count}} 則思考",
+      "count_other": "{{count}} 則思考",
+      "toolSummary": "🔧{{summary}}",
+      "titleForMember": "{{name}} - 思考"
+    },
+    "timeline": {
+      "loadingMessages": "正在載入訊息…",
+      "noMessages": "沒有訊息",
+      "emptyHint": "向成員傳送訊息以檢視活動。",
+      "newSession": "新工作階段",
+      "olderCount": "+{{count}} 則較早訊息",
+      "showMore": "再顯示 {{count}} 則",
+      "showAll": "顯示全部",
+      "olderCount_one": "+{{count}} 則較早訊息",
+      "olderCount_few": "+{{count}} 則較早訊息",
+      "olderCount_many": "+{{count}} 則較早訊息",
+      "olderCount_other": "+{{count}} 則較早訊息"
+    },
+    "pendingReplies": {
+      "title": "等待回覆",
+      "openMember": "開啟成員",
+      "messageSentAwaitingReply": "訊息已傳送，等待回覆",
+      "awaitingReply": "等待回覆",
+      "externalTeam": "外部團隊",
+      "crossTeamAwaitingReply": "跨團隊訊息已傳送，等待回覆",
+      "user": "使用者",
+      "awaitingApproval": "等待核准",
+      "discardQueued": {
+        "action": "丟棄排隊中的訊息",
+        "alreadyDelivered": "未丟棄任何內容：這些訊息已經送達「{{member}}」。",
+        "cancelLabel": "取消",
+        "confirmLabel": "丟棄",
+        "count": "排隊 {{count}} 則",
+        "count_few": "排隊 {{count}} 則",
+        "count_many": "排隊 {{count}} 則",
+        "count_one": "排隊 {{count}} 則",
+        "count_other": "排隊 {{count}} 則",
+        "failedFallbackMessage": "發生意外錯誤",
+        "failedTitle": "無法丟棄排隊中的訊息",
+        "message": "要丟棄發給「{{member}}」的 {{count}} 則排隊訊息嗎？它們尚未送達，將被永久刪除。已送達的訊息和代理之間的訊息不受影響。",
+        "message_few": "要丟棄發給「{{member}}」的 {{count}} 則排隊訊息嗎？它們尚未送達，將被永久刪除。已送達的訊息和代理之間的訊息不受影響。",
+        "message_many": "要丟棄發給「{{member}}」的 {{count}} 則排隊訊息嗎？它們尚未送達，將被永久刪除。已送達的訊息和代理之間的訊息不受影響。",
+        "message_one": "要丟棄發給「{{member}}」的 {{count}} 則排隊訊息嗎？它們尚未送達，將被永久刪除。已送達的訊息和代理之間的訊息不受影響。",
+        "message_other": "要丟棄發給「{{member}}」的 {{count}} 則排隊訊息嗎？它們尚未送達，將被永久刪除。已送達的訊息和代理之間的訊息不受影響。",
+        "okLabel": "確定",
+        "remaining": "已丟棄 {{discarded}} 則。仍在排隊：{{remaining}} 則。",
+        "resultTitle": "排隊中的訊息",
+        "title": "丟棄排隊中的訊息",
+        "tooltip": "丟棄該成員排隊中的訊息"
+      }
+    },
+    "reply": {
+      "replyingTo": "正在回覆",
+      "action": "回覆"
+    },
+    "activeTasks": {
+      "inProgress": "進行中",
+      "expandInProgress": "展開進行中項",
+      "collapseInProgress": "摺疊進行中項",
+      "reviewing": "審查",
+      "workingOn": "正在處理"
+    },
+    "expandDialog": {
+      "description": "擴充功能訊息檢視"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "建立",
+      "creating": "正在建立…",
+      "openExisting": "開啟現有團隊",
+      "skipPreflightAndCreate": "跳過預檢並建立",
+      "backToTeams": "返回團隊"
+    },
+    "conflict": {
+      "description": "在同一目錄中執行兩個團隊有風險：它們可能在編輯相同檔案時發生衝突。請考慮使用不同的目錄，或用 Git worktree 隔離。",
+      "title": "另一個團隊「{{team}}」已經在該工作目錄中執行",
+      "workingDirectory": "工作目錄："
+    },
+    "description": {
+      "copy": "在現有團隊的基礎上建立一個新團隊。",
+      "create": "設定您的團隊並選擇其開始方式。"
+    },
+    "errors": {
+      "nameExists": "團隊名稱已存在",
+      "nameLaunching": "具有此名稱的團隊目前正在啟動",
+      "createConfigFailed": "無法建立團隊設定",
+      "loadProjectsFailed": "無法載入專案"
+    },
+    "fields": {
+      "color": "顏色（選填）",
+      "description": "說明（選填）",
+      "prompt": "提示團隊負責人（選填）",
+      "teamName": "團隊名稱"
+    },
+    "launchAfterCreate": {
+      "description": "使用為團隊設定的代理執行環境立即啟動團隊。",
+      "label": "建立後執行指令"
+    },
+    "localOnly": "僅在本機 Electron 模式下可用。",
+    "onDisk": "在磁碟上：",
+    "placeholders": {
+      "description": "團隊用途的簡要說明",
+      "prompt": "為團隊負責人提供說明…"
+    },
+    "saved": "已儲存",
+    "solo": {
+      "description": "只有團隊負責人（主處理程序）才會啟動 - 不會啟動任何隊友。與您選擇的執行環境（Claude Code、Codex、OpenCode、Gemini）中的一般代理工作階段一樣工作，但可以存取任務看板進行規劃。透過避免隊友協調開銷來節省 Token。您可以稍後從團隊設定新增成員。",
+      "label": "單人團隊"
+    },
+    "title": {
+      "copy": "複製團隊",
+      "create": "建立團隊"
+    },
+    "optional": {
+      "launchSettingsTitle": "可選啟動設定",
+      "launchSettingsDescription": "如有需要，可在此設定提示詞、安全和 CLI 覆蓋項。",
+      "teamDetailsTitle": "可選團隊詳情",
+      "teamDetailsDescription": "保持預設流程緊湊，僅當您需要額外的上下文或自訂顏色時才開啟它。",
+      "summary": {
+        "leadPrompt": "負責人提示詞",
+        "autoApproveTools": "自動核准工具",
+        "fastMode": "Fast 模式",
+        "fastDisabled": "已停用 Fast 模式",
+        "fastDefault": "Fast 模式（預設）",
+        "anthropicLimitedContext": "Anthropic 上下文限制為 200K",
+        "worktree": "worktree：{{name}}",
+        "customCliArgs": "自訂 CLI 參數",
+        "description": "描述",
+        "color": "顏色：{{color}}"
+      }
+    },
+    "prepare": {
+      "unsupportedPreload": "目前的 preload 版本不支援 team:prepareProvisioning。請重新啟動開發版應用程式。",
+      "selectWorkingDirectory": "選擇一個工作目錄來驗證啟動環境。",
+      "someProvidersNeedAttention": "部分選定供應商需要注意。",
+      "readyWithNotes": "所有選定的供應商均已準備就緒，並附有註釋。",
+      "ready": "所有選定供應商均已就緒。",
+      "failed": "無法準備選定的供應商",
+      "checkingProviders": "檢查選定的供應商…",
+      "preparingEnvironment": "準備環境…",
+      "selectedProvidersReadyWithNotes": "選定的供應商已準備就緒（帶註釋）",
+      "selectedProvidersReady": "選定的供應商已準備就緒",
+      "providerStatusLoading": "{{provider}} 供應商狀態仍在載入中，模型檢查會自動開始。",
+      "selectedProvidersLabel": "已選擇的供應商",
+      "readyStatus": "就緒"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "名稱必須包含至少一個字母或數字",
+      "nameTooLong": "名稱太長（最多 64 個字元）",
+      "selectWorkingDirectory": "選擇工作目錄（cwd）",
+      "memberNameRequired": "成員名不能為空",
+      "memberNameInvalid": "成員名稱必須以字母數字開頭，僅使用 [a-zA-Z0-9._-]，最多 128 個字元",
+      "memberNamesUnique": "成員名稱必須是唯一的",
+      "openCodeLeadModelRequired": "OpenCode 負責人需要選擇模型。",
+      "openCodeTeammateRequired": "OpenCode 負責人需要至少一名 OpenCode 隊友。",
+      "teamLaunching": "目前團隊正在啟動",
+      "teamNameExists": "團隊名稱已存在",
+      "checkFormFields": "檢查表單欄位"
+    },
+    "organizationPlacement": {
+      "title": "組織位置",
+      "description": "先選擇組織，再選擇團隊所屬的根層或群組。",
+      "addToOrganization": "加入組織",
+      "organizationLabel": "組織",
+      "organizationHelp": "選擇擁有這個團隊的組織。",
+      "organizationPlaceholder": "組織",
+      "groupOrRootLabel": "群組或根層",
+      "groupOrRootHelp": "選擇一個群組，或保留在組織根層。",
+      "groupOrRootPlaceholder": "根層或群組",
+      "kind": {
+        "root": "根層",
+        "group": "群組"
+      },
+      "invalidSelection": "建立團隊前，請選擇有效的組織和目的地。"
+    },
+    "defaultDescription": {
+      "fallback": "用於佈建流程的團隊",
+      "named": "用於佈建流程的 {{teamName}} 團隊"
+    },
+    "defaultWorkflows": {
+      "reviewer": "審查專案中每一個已完成的任務。閱讀程式碼變更，檢查正確性、風格和潛在問題。核准任務，或附上清楚的回饋要求修改。"
+    },
+    "memberModelLockReason": "這位隊友與負責人模型同步。關閉同步才能設定自訂的供應商、模型或推理強度。",
+    "draft": {
+      "replaceConfirmation": "您有一份尚未完成的團隊草稿，開始這個動作會取代它。要繼續嗎？",
+      "replace": "取代草稿",
+      "continue": "繼續建立"
+    },
+    "placementFailure": {
+      "title": "團隊已建立，但未加入組織",
+      "message": "已建立團隊 {{teamName}}。請從組織圖中指派它，不要重複建立。",
+      "acknowledge": "知道了"
+    }
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "取消",
+      "save": "儲存"
+    },
+    "addMemberLockReason": "在團隊上線時，使用專用的「新增成員」對話方塊新增新的隊友。",
+    "description": "變更團隊名稱、描述和顏色",
+    "errors": {
+      "changesSavedRefreshFailed": "團隊變更已儲存，但無法重新整理最新檢視：{{message}}",
+      "liveRenameBlocked": "當團隊上線時，現有隊友無法重新命名。更名：{{names}}",
+      "memberNameEmpty": "成員名不能為空",
+      "memberNameInvalid": "成員名稱必須以字母數字開頭，僅使用 [a-zA-Z0-9._-]，最多 128 個字元",
+      "memberNameNumericSuffix": "不允許成員名稱「{{name}}」（為執行環境管理的數字字尾保留）。請改用「{{base}}」。",
+      "memberNameReserved": "成員名「{{name}}」已保留",
+      "memberNamesUnique": "儲存前成員名稱必須是唯一的",
+      "newLiveTeammates": "當團隊線上時，透過專用的「新增成員」對話方塊新增新的隊友。編輯團隊僅支援更新現有隊友。",
+      "provisioning": "當設定仍在進行時，無法編輯團隊設定。等待啟動完成，然後重試。",
+      "restartFailedMany": "團隊已儲存，但無法重新啟動這些隊友：{{failures}}",
+      "restartFailedOne": "團隊已儲存，但無法重新啟動該隊友：{{failures}}",
+      "saveFailed": "儲存失敗",
+      "settingsChanged": "此對話方塊開啟時團隊設定發生變更。重新開啟它並在儲存之前檢視最新狀態。",
+      "settingsSavedMembersAndRefreshFailed": "團隊設定已儲存，但成員變更失敗：{{message}}。重新整理也失敗：{{refreshError}}",
+      "settingsSavedMembersFailed": "團隊設定已儲存，但成員變更失敗：{{message}}",
+      "settingsSavedRefreshFailed": "團隊設定已儲存，但無法重新整理最新檢視：{{message}}",
+      "teamNameEmpty": "團隊名稱不能為空",
+      "unsupportedMixedPrimaryMutation": "尚不支援對混合 OpenCode 團隊中主要擁有的隊友進行即時編輯。停止團隊，編輯名單，然後重新啟動。受影響：{{names}}"
+    },
+    "fields": {
+      "colorOptional": "顏色（選填）",
+      "description": "描述",
+      "name": "姓名"
+    },
+    "leadRestartWarning": "儲存後會重新啟動負責人，以套用模型或推理強度的變更。隊友處理程序會繼續執行。",
+    "memberRestartWarning": "儲存將重新啟動該隊友以套用角色、工作流程、worktree 隔離、供應商、模型、推理強度或 MCP 存取變更。",
+    "displayedRuntimeHint": "成員卡片：{{runtime}}。已儲存的設定與此不同。",
+    "useDisplayedRuntime": "使用卡片中的設定",
+    "notices": {
+      "liveRenameBlocked": "由於現有隊友被重新命名，即時儲存被阻止。還原這些身分變更，或先停止團隊。",
+      "newLiveTeammates": "當團隊處於活動狀態時，無法從「編輯團隊」新增新隊友。請改用「新增成員」對話方塊。",
+      "provisioning": "團隊設定仍在進行中。編輯暫時鎖定，直到啟動完成。",
+      "restartMany": "儲存後會重新啟動或重新開啟這些隊友，以套用角色、工作流程、worktree 隔離、供應商、模型、推理強度或 MCP 存取權的變更：{{names}}。",
+      "restartOne": "儲存後會重新啟動或重新開啟這位隊友，以套用角色、工作流程、worktree 隔離、供應商、模型、推理強度或 MCP 存取權的變更：{{names}}。",
+      "unsupportedMixedPrimaryMutation": "對混合 OpenCode 團隊中主要擁有的隊友進行即時編輯/刪除需要停止並重新啟動團隊：{{names}}。"
+    },
+    "placeholders": {
+      "description": "團隊描述（選填）",
+      "teamName": "團隊名稱"
+    },
+    "teamLead": {
+      "changeRuntime": "變更負責人執行環境",
+      "changeRuntimeDescription": "開啟「重新啟動團隊」以變更負責人的供應商、模型或推理強度。",
+      "modelLockReason": "團隊負責人執行環境由重新啟動團隊管理。",
+      "readOnlyHint": "團隊負責人的名稱和角色在這裡為唯讀。請開啟負責人列上的執行環境面板來變更供應商、模型或推理強度。",
+      "role": "團隊負責人"
+    },
+    "title": "編輯團隊"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "刪除成員",
+      "removeAria": "刪除 {{name}}",
+      "restore": "還原成員",
+      "restoreAria": "還原 {{name}}"
+    },
+    "anthropicContext": {
+      "defaultSetting": "預設上下文設定",
+      "description": "此次啟動的 Anthropic 上下文是團隊範圍的：{{mode}}。使用主執行環境面板的「限制上下文」核取方塊來變更它。",
+      "limitEnabled": "啟用 200K 限制"
+    },
+    "mcp": {
+      "buttonInherit": "MCP 繼承",
+      "buttonScopes": "MCP 範圍",
+      "chooseScopes": "選擇範圍",
+      "inheritLead": "繼承領先",
+      "lockedInfo": "僅對所有隊友啟用 Agent Teams MCP。該隊友將僅使用 Agent Teams 伺服器啟動。",
+      "mode": "MCP 模式",
+      "scopes": {
+        "local": "本機",
+        "project": "專案",
+        "user": "使用者"
+      },
+      "serverNames": "伺服器名稱",
+      "settingInfo": "Agent Teams MCP 僅使用 Agent Teams 伺服器啟動此隊友。範圍和許可名單模式僅適用於該隊友啟動。",
+      "strictAllowlist": "嚴格的許可名單",
+      "tooltip": "{{label}}：控制該成員的 MCP 繼承策略",
+      "agentTeamsMcp": "Agent Teams MCP"
+    },
+    "model": {
+      "ariaLabel": "{{provider}} 供應商，{{model}}",
+      "currentLeadRuntime": "目前領先執行環境",
+      "default": "預設",
+      "inheritedTooltip": "啟用同步時，供應商、模型和推理強度將從團隊負責人繼承。",
+      "leadSuffix": "{{label}}（團隊負責人）",
+      "liveDisabled": "團隊上線期間無法變更供應商、模型和推理強度。請重新連線團隊以安全套用這些變更。",
+      "lockedActionFallback": "變更負責人執行環境會開啟「重新啟動團隊」，可在其中更新供應商、模型和推理強度。",
+      "restartWholeTeam": "儲存這些執行環境變更會重新啟動整個團隊。"
+    },
+    "nameAria": "成員 {{index}} 姓名",
+    "nameFallback": "成員 {{index}}",
+    "noRole": "沒有角色",
+    "removed": "已刪除",
+    "workflow": {
+      "addTooltip": "新增隊友工作流程",
+      "editTooltip": "編輯隊友工作流程",
+      "label": "工作流程（選填）",
+      "placeholder": "這個代理應該如何表現、與他人互動……",
+      "saved": "已儲存"
+    },
+    "worktree": {
+      "description": "勾選：使用獨立的 Git worktree，必要時在啟動時建立。現有 worktree 會保留目前分支。未勾選：使用共用的專案工作區，原有 worktree 會保留。",
+      "label": "worktree",
+      "existing": "上次使用的工作區：{{path}}。如有可用的託管 worktree 會重複使用，否則在啟動時建立。",
+      "new": "Worktree：如有可用的會重複使用，否則在啟動時建立。啟動後會顯示分支。",
+      "shared": "共享專案工作區: {{path}}。使用專案分支。",
+      "branch": "Worktree 分支: {{branch}}",
+      "branchUnavailable": "不可用",
+      "sharedPending": "共享工作區: 啟動時與負責人 worktree 一併確定。啟動後將顯示分支。"
+    },
+    "addMembers": {
+      "title": "新增成員",
+      "description": "新增新成員至 {{teamName}}"
+    },
+    "placeholders": {
+      "name": "成員名稱",
+      "mcpServers": "github、哨兵"
+    },
+    "gateway": {
+      "apiKeyLabel": "閘道 API 金鑰",
+      "apiKeyPlaceholder": "貼上隊友的閘道 API 金鑰",
+      "authRejected": "金鑰授權遭拒。",
+      "bindButton": "綁定隊友",
+      "bindingStatus": "已綁定到 {{profile}}",
+      "credentialChanged": "已儲存的金鑰已變更 — 請用新金鑰重新綁定",
+      "credentialMissing": "找不到已儲存的金鑰 — 請用新金鑰重新綁定",
+      "credentialReady": "金鑰已儲存",
+      "emptyCatalog": "模型目錄是空的。",
+      "keyRequired": "請先輸入閘道 API 金鑰。",
+      "modelLabel": "模型",
+      "modelPlaceholder": "選擇模型",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. 在開啟此表單前已儲存的繫結會立即更新，即使取消團隊表單，這些變更也會保留。",
+      "probeButton": "檢查金鑰並載入模型",
+      "probing": "正在檢查...",
+      "profileLabel": "閘道設定檔",
+      "profilePlaceholder": "選擇閘道設定檔",
+      "profileRequired": "請先選擇閘道設定檔。",
+      "renamedHint": "重新命名隊友會移除閘道綁定。儲存後請用新金鑰手動重新綁定 — 舊金鑰的歷史擁有者不會變更。",
+      "title": "閘道供應商",
+      "unbindButton": "解除綁定",
+      "unavailable": "閘道目前無法使用。"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "新增",
+      "cancel": "取消",
+      "delete": "刪除",
+      "editCode": "編輯程式碼",
+      "launch": "啟動",
+      "remove": "消除",
+      "stop": "停止",
+      "stopping": "正在停止...",
+      "task": "任務",
+      "usage": "使用量",
+      "visualize": "視覺化"
+    },
+    "deleteTeam": {
+      "description": "刪除隊伍「{{team}}」？此操作是不可逆轉的。所有團隊資料和任務都將被刪除。",
+      "title": "刪除團隊"
+    },
+    "draft": {
+      "descriptionPrefix": "這是草稿團隊 - ",
+      "descriptionSuffix": "已使用 {{count}} {{member}} 設定，但尚未由 CLI 進行設定。單擊啟動以選擇模型並啟動團隊。",
+      "descriptionSuffix_few": "已使用 {{count}} {{member}} 設定，但尚未由 CLI 進行設定。單擊啟動以選擇模型並啟動團隊。",
+      "descriptionSuffix_many": "已使用 {{count}} {{member}} 設定，但尚未由 CLI 進行設定。單擊啟動以選擇模型並啟動團隊。",
+      "descriptionSuffix_one": "已使用 {{count}} {{member}} 設定，但尚未由 CLI 進行設定。單擊啟動以選擇模型並啟動團隊。",
+      "descriptionSuffix_other": "已使用 {{count}} {{member}} 設定，但尚未由 CLI 進行設定。單擊啟動以選擇模型並啟動團隊。",
+      "member": "成員",
+      "member_few": "成員",
+      "member_many": "成員",
+      "member_one": "成員",
+      "member_other": "成員",
+      "title": "團隊尚未啟動"
+    },
+    "stopFailed": {
+      "title": "無法停止團隊",
+      "message": "團隊仍在執行。請檢查其狀態，然後再次按下「停止」。"
+    },
+    "stopUnknown": {
+      "title": "無法確認停止",
+      "message": "未收到執行環境回應。請重新整理團隊狀態後再試。"
+    },
+    "invalidTab": "團隊分頁無效",
+    "kanbanSafeData": "無法完整載入看板，目前顯示安全資料。",
+    "loadFailed": "無法載入團隊",
+    "loading": "裝貨隊",
+    "loadingSidebar": "正在載入團隊側邊欄",
+    "offline": {
+      "offline": "團隊離線",
+      "partialFailed": "上次啟動中途失敗",
+      "partialMissing": "上次啟動中途失敗 - {{missing}}/{{expected}} 隊友沒有加入",
+      "reconciling": "上次啟動仍在協調中"
+    },
+    "previous": "上一篇：{{paths}}",
+    "removeMember": {
+      "description": "從團隊中刪除「{{member}}」？任務和訊息將被保留，但該名稱不能重複使用。",
+      "title": "刪除成員"
+    },
+    "sections": {
+      "team": "團隊"
+    },
+    "solo": "獨奏",
+    "status": {
+      "active": "活躍",
+      "launching": "正在啟動…",
+      "running": "執行中"
+    },
+    "telemetry": {
+      "cpu": "中央處理器",
+      "memory": "記憶"
+    },
+    "tooltips": {
+      "deleteTeam": "刪除團隊",
+      "editTeam": "編輯團隊",
+      "editUnavailableProvisioning": "當設定仍在進行時，編輯團隊不可用",
+      "openBuiltInEditor": "在內建編輯器中開啟專案",
+      "openTeamGraph": "開啟團隊圖",
+      "openTeamUsage": "開啟團隊使用量",
+      "stopTeam": "停隊"
+    },
+    "waitingForProvisioning": "設定完成後將顯示團隊資料",
+    "context": {
+      "title": "上下文",
+      "loading": "載入中…",
+      "noSessionLoaded": "沒有載入工作階段",
+      "closePanel": "關閉 {{team}} 上下文面板",
+      "loadingContext": "正在載入上下文…",
+      "openLeadSession": "開啟團隊負責人工作階段以檢視上下文。"
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "接受",
+        "discard": "丟棄",
+        "discardTooltip": "放棄對此檔案的所有編輯",
+        "keepMyDraft": "保留我的草稿",
+        "reject": "拒絕",
+        "reloadFromDisk": "從磁碟重新載入",
+        "restore": "還原",
+        "restoreTooltip": "從預覽中在磁碟上建立/還原此檔案",
+        "saveFile": "儲封存案",
+        "saveFileTooltip": "將檔案儲存到磁碟"
+      },
+      "badges": {
+        "deleted": "已刪除",
+        "manualReview": "人工審查",
+        "new": "新的",
+        "worktree": "worktree"
+      },
+      "contentSource": {
+        "disk-current": "目前磁碟",
+        "file-history": "檔案歷史記錄",
+        "git-fallback": "Git 備援",
+        "ledger-exact": "任務分類帳",
+        "ledger-snapshot": "帳本快照",
+        "snippet-reconstruction": "重建",
+        "unavailable": "內容不可用"
+      },
+      "contentUnavailable": {
+        "badge": "內容不可用",
+        "description": "帳本記錄了此變更的後設資料，但全文內容不可用。這通常意味著二進位制、大型或僅雜湊內容。",
+        "safety": "對此檔案停用自動接受/拒絕，以避免不安全的磁碟寫入。",
+        "title": "文字內容不可用"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "由於全文內容不可用，接受/拒絕被停用。",
+        "acceptRejectMissingOnDisk": "當檔案在磁碟上遺失時，接受/拒絕將被停用。",
+        "rejectBaselineUnavailable": "由於原始基線不可用，拒絕被停用。",
+        "rejectContentUnavailable": "由於全文內容不可用，拒絕被停用。",
+        "rejectManualLedgerReview": "拒絕被停用，因為此帳本變更包含二進位制、大型或不可用的內容。"
+      },
+      "externalChange": {
+        "changedOnDisk": "磁碟上已變更",
+        "deletedOnDisk": "已在磁碟上刪除",
+        "recreatedOnDisk": "在磁碟上重新建立"
+      },
+      "missingOnDisk": {
+        "badge": "磁碟上遺失",
+        "description": "我們仍然可以顯示代理記錄的預覽，但您的檔案系統不同步。",
+        "restorePrefix": "使用",
+        "restoreSuffix": "將預覽內容寫回磁碟。",
+        "restoreUnavailable": "無法自動還原完整檔案內容。",
+        "title": "磁碟上檔案遺失"
+      },
+      "pathChange": {
+        "from": "來自 {{path}}",
+        "to": "至 {{path}}"
+      },
+      "worktree": {
+        "isolated": "孤立的 worktree"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} 待定",
+        "pending_one": "{{count}} 待定",
+        "pending_other": "{{count}} 待定",
+        "accepted": "{{count}} 已接受",
+        "accepted_one": "{{count}} 已接受",
+        "accepted_other": "{{count}} 已接受",
+        "rejected": "{{count}} 被拒絕",
+        "rejected_one": "{{count}} 被拒絕",
+        "rejected_other": "{{count}} 被拒絕",
+        "acrossFiles": "跨 {{count}} 檔案",
+        "acrossFiles_one": "跨 {{count}} 檔案",
+        "acrossFiles_other": "跨 {{count}} 檔案",
+        "edited": "{{count}} 已編輯",
+        "edited_one": "{{count}} 已編輯",
+        "edited_other": "{{count}} 已編輯",
+        "pending_few": "{{count}} 待定",
+        "pending_many": "{{count}} 待定",
+        "accepted_few": "{{count}} 已接受",
+        "accepted_many": "{{count}} 已接受",
+        "rejected_few": "{{count}} 被拒絕",
+        "rejected_many": "{{count}} 被拒絕",
+        "acrossFiles_few": "跨 {{count}} 檔案",
+        "acrossFiles_many": "跨 {{count}} 檔案",
+        "edited_few": "{{count}} 已編輯",
+        "edited_many": "{{count}} 已編輯"
+      },
+      "actions": {
+        "auto": "汽車",
+        "undo": "復原",
+        "redo": "取消復原",
+        "acceptAll": "全部接受",
+        "rejectAll": "全部拒絕",
+        "applying": "正在套用…",
+        "applyRejections": "套用拒絕"
+      },
+      "tooltips": {
+        "autoOn": "捲動到底時自動將檔案標記為已檢視（開啟）",
+        "autoOff": "捲動到底時自動將檔案標記為已檢視（關閉）",
+        "undo": "復原上次審查操作 (Ctrl+Z)",
+        "redo": "取消復原上一個已復原的審查操作（Ctrl+Shift+Z）",
+        "acceptAll": "接受所有檔案的所有變更",
+        "rejectAll": "拒絕所有檔案中所有可安全拒絕的變更",
+        "rejectAllDisabled": "沒有待處理的檔案具有可以拒絕的安全原始基線。",
+        "applyRejections": "將已拒絕的差異片段套用到磁碟；已接受的變更保持原樣"
+      }
+    },
+    "diffError": {
+      "title": "無法呈現差異檢視",
+      "unexpected": "呈現差異時發生意外錯誤。",
+      "actions": {
+        "retry": "重試"
+      },
+      "raw": {
+        "show": "顯示原始差異資料",
+        "file": "檔案：{{file}}",
+        "original": "- - 原來的",
+        "modified": "+++ 修改",
+        "charsTotal": "…（{{count}} 字元總數）",
+        "charsTotal_one": "…（{{count}} 字元總數）",
+        "charsTotal_other": "…（{{count}} 字元總數）",
+        "charsTotal_few": "…（{{count}} 字元總數）",
+        "charsTotal_many": "…（{{count}} 字元總數）"
+      }
+    },
+    "fileTree": {
+      "viewed": "已檢視",
+      "badges": {
+        "new": "新的",
+        "deleted": "已刪除"
+      },
+      "collapseFolder": "摺疊 {{name}}",
+      "expandFolder": "展開 {{name}}",
+      "empty": {
+        "noChangedFiles": "沒有變更的檔案",
+        "noMatchingFiles": "沒有符合的檔案"
+      },
+      "searchPlaceholder": "搜尋檔案…",
+      "filters": {
+        "unresolved": "未解決",
+        "rejected": "被拒絕",
+        "new": "新的",
+        "clear": "清除"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "上一個塊",
+      "nextChunk": "下一個塊",
+      "rejectChange": "拒絕變更 (⌘N)",
+      "acceptChange": "接受變更 (⌘Y)",
+      "undo": "復原",
+      "keep": "保持",
+      "rejectShortcut": "⌘N",
+      "acceptShortcut": "⌘Y"
+    },
+    "conflict": {
+      "title": "偵測到衝突",
+      "description": "自代理變更後此檔案已被修改",
+      "cancel": "取消",
+      "saveResolution": "儲存解析度",
+      "editManually": "手動編輯",
+      "useOriginal": "使用原始版本",
+      "keepCurrent": "保留目前版本"
+    },
+    "fullDiffLoading": {
+      "titleOne": "準備完整的差異",
+      "titleMany": "準備 {{count}} 完整差異",
+      "subtitleForFile": "最終確定 {{file}} 的確切編輯器差異。",
+      "subtitleCurrentFile": "完成目前檔案的確切編輯器差異。",
+      "subtitleMany": "解析目前載入檔案的準確之前/之後基線。",
+      "previewsReady": "{{count}} 預覽就緒",
+      "previewsReady_one": "{{count}} 預覽就緒",
+      "editorViewLoading": "編輯器檢視載入",
+      "filesInProgress": "{{count}} 檔案正在進行中",
+      "filesInProgress_one": "{{count}} 檔案正在進行中",
+      "filesReady": "{{ready}}/{{total}} 檔案準備就緒",
+      "progressDescription": "{{ready}} 已準備就緒，{{loading}} 仍在載入。當剩餘的基線得到解決時，預覽差異在下面保持可見。",
+      "singleDescription": "當準確的基線得到解決時，預覽差異在下面保持可見。",
+      "previewsReady_few": "{{count}} 預覽就緒",
+      "previewsReady_many": "{{count}} 預覽就緒",
+      "previewsReady_other": "{{count}} 預覽就緒",
+      "filesInProgress_few": "{{count}} 檔案正在進行中",
+      "filesInProgress_many": "{{count}} 檔案正在進行中",
+      "filesInProgress_other": "{{count}} 檔案正在進行中"
+    },
+    "fileMissingPrefix": "磁碟上檔案遺失。此差異可能只是代理記錄的預覽。使用",
+    "restore": "還原",
+    "fileMissingSuffix": "在磁碟上建立檔案。",
+    "filePlaceholder": {
+      "loading": "載入中",
+      "description": "為此檔案準備完整的編輯器差異。"
+    },
+    "loading": {
+      "diff": "差分法",
+      "ledgerObjectsProcessed": "{{count}} 處理的帳本物件",
+      "ledgerObjectsProcessed_one": "{{count}} 已處理的帳本物件",
+      "ledgerObjectsProcessed_other": "{{count}} 處理的帳本物件",
+      "ledgerObjectsProcessed_few": "{{count}} 處理的帳本物件",
+      "ledgerObjectsProcessed_many": "{{count}} 處理的帳本物件",
+      "phases": {
+        "readingLedger": "讀取任務分類帳…",
+        "resolvingFiles": "正在解析檔案狀態…",
+        "checkingWorktree": "正在檢查 worktree 上下文…",
+        "preparingDiffs": "正在準備審查差異…"
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} 已檢視"
+    },
+    "scope": {
+      "readMore": "閱讀更多",
+      "tiers": {
+        "exact": {
+          "title": "已精確判定任務範圍",
+          "detail": "在工作階段記錄中找到開始和完成 Token。差異僅包括在此特定任務持續時間所做的變更 - 排除修改相同檔案的其他任務。"
+        },
+        "endEstimated": {
+          "title": "估計結束邊界",
+          "detail": "僅找到開始 Token - 任務尚無完成 Token。顯示從任務開始到工作階段結束的變化。如果同一工作階段中此任務之後執行了其他任務，則也可能包括它們的變更。"
+        },
+        "startEstimated": {
+          "title": "估計的起始邊界",
+          "detail": "僅找到完成 Token - 未擷取工作開始。如果同一工作階段中在此任務之前執行了其他任務，則也可能包括它們對相同檔案的變更。"
+        },
+        "allSession": {
+          "title": "顯示所有工作階段變更",
+          "detail": "在工作階段記錄中找不到任務 Token。無法隔離此任務 - 顯示整個工作階段中的所有檔案變更，包括其他任務的變更。較早訊息的 CLI 版本或非標準工作流程可能會發生這種情況。"
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "任務分類帳擷取的變更",
+          "detail": "當代理執行此任務時，編排器擷取了這些檔案變更。",
+          "badge": "帳本精確"
+        },
+        "limited": {
+          "title": "擷取的變更具有有限的可審查性",
+          "detail": "編排器擷取了此任務的這些檔案變更，但至少有一個變更是從快照或僅後設資料源擷取的。檢視確切的文字差異（如果有）；二進位制或不可用的內容可能需要手動審查。",
+          "mixedBadge": "混合審查性",
+          "needsReviewBadge": "需要審查"
+        }
+      },
+      "workInterval": {
+        "title": "按持續工作間隔確定範圍",
+        "detail": "任務開始 Token 在工作階段記錄中不可用，因此差異的範圍由板上儲存的任務工作間隔決定。",
+        "badge": "區間範圍"
+      },
+      "confidence": {
+        "high": "高置信度",
+        "medium": "中等置信度",
+        "low": "信心度低",
+        "bestEffort": "盡力而為"
+      }
+    },
+    "shortcuts": {
+      "title": "鍵盤快速鍵",
+      "actions": {
+        "nextChange": "下一步變更",
+        "previousChange": "之前的變更",
+        "nextFile": "下一個檔案",
+        "previousFile": "上一個檔案",
+        "acceptChange": "接受變更",
+        "rejectChange": "拒絕改變",
+        "saveFile": "儲封存案",
+        "undo": "復原",
+        "redo": "取消復原",
+        "toggleShortcuts": "切換快速鍵",
+        "closeDialog": "關閉對話方塊"
+      }
+    },
+    "timeline": {
+      "empty": "無編輯事件",
+      "titleWithCount": "編輯時間線 ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "沒有可審查的檔案變更"
+    },
+    "empty": {
+      "noSafeDiff": "沒有可用的安全差異",
+      "noFileChangesRecorded": "沒有記錄檔案變更",
+      "noSafeDiffDescription": "任務分類帳未公開此任務的安全檔案差異。",
+      "noSafeDiffDiagnosticsDescription": "任務分類帳未公開此任務的安全檔案差異。下面的診斷解釋了原因。",
+      "noFileEventsYet": "任務分類帳尚無此任務的檔案事件。",
+      "noFileEvents": "任務分類帳沒有該任務的檔案事件。"
+    }
+  },
+  "messages": {
+    "groups": {
+      "mentions": "{{count}} 則提及您",
+      "create": "建立群聊",
+      "description": "請至少選擇兩個代理。你會自動加入。",
+      "name": "聊天名稱",
+      "autoInclude": "自動新增新成員",
+      "minimum": "請至少選擇兩個代理。",
+      "creating": "正在建立…",
+      "retryCreate": "重試建立",
+      "unavailable": "聊天不可用",
+      "message": "向此群聊傳送訊息",
+      "archivedHint": "此聊天已封存。還原後即可傳送訊息。",
+      "restartHint": "所有參與者都必須執行相容的執行環境才能傳送訊息。",
+      "unknownDelivery": "已儲存。投遞狀態未知。",
+      "sending": "正在傳送…",
+      "retrySend": "重發同一則訊息",
+      "send": "傳送",
+      "archived": "已封存的聊天",
+      "restore": "還原聊天",
+      "archive": "封存聊天",
+      "delivery": {
+        "queued": "排隊中",
+        "accepted": "已接受",
+        "failed": "失敗",
+        "unknown": "未知",
+        "skipped": "已跳過"
+      },
+      "recipient": "給 {{name}}",
+      "deliveryUnconfirmed": "尚未確認是否已送達 {{names}}",
+      "recipientRestartHint": "{{name}} 必須執行相容的執行環境，才能傳送。",
+      "showTasksOnBoard": "在看板上顯示任務"
+    },
+    "actions": {
+      "toLatest": "跳至最新",
+      "bottomSheetActions": "訊息底部工作表操作",
+      "collapseAll": "摺疊所有訊息",
+      "collapseSheet": "摺疊表",
+      "expandAll": "展開所有訊息",
+      "expandSheet": "展開表",
+      "floatComposer": "浮動輸入框",
+      "floatMessagesComposer": "浮動訊息編輯器",
+      "hideSearch": "隱藏搜尋",
+      "loadOlder": "載入舊訊息",
+      "markAllRead": "全部 Token 為已讀",
+      "messageActions": "訊息操作",
+      "moveMessagesToBottomSheet": "將訊息移至底部工作表",
+      "moveMessagesToSidebar": "將訊息移至側邊欄",
+      "moveToBottomSheet": "移至底部工作表",
+      "moveToInline": "移至內聯",
+      "moveToSidebar": "移至側邊欄",
+      "panelActions": "訊息面板操作",
+      "searchMessages": "搜尋訊息"
+    },
+    "delivery": {
+      "copied": "已複製",
+      "copyDebugDetails": "複製除錯詳細資訊",
+      "details": "細節",
+      "fields": {
+        "acceptanceUnknown": "接受未知",
+        "delivered": "發表",
+        "diagnostics": "診斷",
+        "ledgerStatus": "帳本狀態",
+        "messageId": "訊息 ID",
+        "providerId": "供應商 ID",
+        "queuedBehindMessageId": "佇列後面訊息 ID",
+        "reason": "原因",
+        "responsePending": "回應待處理",
+        "responseState": "回應狀態",
+        "statusMessageId": "狀態訊息 ID",
+        "userVisibleMessage": "使用者可見訊息",
+        "userVisibleNextReviewAt": "userVisibleNextReviewAt",
+        "userVisibleReasonCode": "使用者可見原因程式碼",
+        "userVisibleState": "使用者可見狀態",
+        "visibleReplyCorrelation": "可見回覆相關性",
+        "visibleReplyMessageId": "可見回覆訊息 ID"
+      }
+    },
+    "panelMode": "訊息面板模式",
+    "fullScreen": {
+      "label": "全螢幕",
+      "teamOnly": "全螢幕模式可在團隊介面中使用"
+    },
+    "title": "訊息",
+    "unread": {
+      "new": "{{count}} 新",
+      "unread": "{{count}} 未讀",
+      "new_few": "{{count}} 新",
+      "new_many": "{{count}} 新",
+      "new_one": "{{count}} 新",
+      "new_other": "{{count}} 新",
+      "unread_few": "{{count}} 未讀",
+      "unread_many": "{{count}} 未讀",
+      "unread_one": "{{count}} 未讀",
+      "unread_other": "{{count}} 未讀"
+    },
+    "chats": {
+      "teamFeed": "群聊",
+      "back": "返回聊天清單",
+      "clearSearch": "清除搜尋",
+      "emptyList": "暫無聊天",
+      "emptyThread": "此聊天暫無訊息",
+      "emptyPreview": "暫無訊息",
+      "draft": "草稿",
+      "draftAttachments_one": "{{count}} 個附件",
+      "draftAttachments_other": "{{count}} 個附件",
+      "draftReferences_one": "{{count}} 個參照",
+      "draftReferences_other": "{{count}} 個參照",
+      "drafts_one": "{{count}} 份草稿",
+      "drafts_other": "{{count}} 份草稿",
+      "previewFrom": "{{name}}：{{text}}",
+      "you": "你",
+      "rowAria": "{{name}}，{{unread}} 則未讀，{{attention}} 則發給你",
+      "rowAriaCounts": "{{unread}} 則未讀，{{attention}} 則發給你",
+      "activityUnread": "{{count}} 則未讀",
+      "attentionUnread": "{{count}} 則發給你",
+      "sortByActivity": "按新訊息排序",
+      "pin": "置頂聊天",
+      "unpin": "取消置頂",
+      "pinned": "已置頂"
+    },
+    "filter": {
+      "ariaLabel": "篩選訊息",
+      "tooltip": "篩選訊息",
+      "from": "從",
+      "to": "到",
+      "noData": "無資料",
+      "showStatusUpdates": "顯示狀態更新（空閒/關閉）",
+      "actions": {
+        "reset": "重設",
+        "save": "儲存"
+      }
+    },
+    "status": {
+      "title": "地位"
+    },
+    "actionMode": {
+      "label": "動作模式"
+    },
+    "search": {
+      "placeholder": "搜尋…"
+    },
+    "outbox": {
+      "storageWarning": "無法讀取部分本機傳送資訊。最後已知的訊息仍會顯示。",
+      "status": {
+        "sending": "正在傳送...",
+        "syncing": "已傳送 - 同步中...",
+        "delivery-unknown": "送達狀態不明",
+        "not-sent": "未傳送",
+        "recovered-draft": "已復原的草稿",
+        "memoryOnly": "保留到 應用程式關閉為止"
+      },
+      "actions": {
+        "edit": "編輯",
+        "useDraft": "使用草稿",
+        "restoreDraft": "還原為草稿",
+        "copy": "複製文字",
+        "delete": "刪除",
+        "removeLocally": "從本機移除",
+        "cancel": "取消"
+      },
+      "recoveredFor": "從 {{target}} 復原",
+      "removeUnknownDescription": "這只會移除本機副本。訊息可能已經送達，重試可能會產生重複訊息。",
+      "deleteDescription": "這會移除本機副本，且無法復原。",
+      "errors": {
+        "draftOccupied": "這個聊天已經有草稿，沒有覆寫任何內容。",
+        "changed": "已儲存的副本已變更，沒有覆寫任何內容。",
+        "active": "這則訊息仍在傳送中。",
+        "deleteBlocked": "無法安全地移除本機副本。"
+      }
+    },
+    "manualQueue": {
+      "title": "佇列中的訊息",
+      "send": "傳送",
+      "edit": "編輯",
+      "delete": "刪除",
+      "save": "儲存",
+      "cancel": "取消",
+      "editorLabel": "編輯佇列中的訊息",
+      "all": "全部",
+      "allHint": "傳送時目前所有的群組成員",
+      "do": "執行",
+      "ask": "詢問",
+      "sending": "傳送中",
+      "unknownWarning": "送達狀態不明。移除這筆紀錄不會取消訊息；再次傳送相同文字可能會產生重複訊息。",
+      "removeRecord": "移除紀錄（不會取消傳送）",
+      "copy": "複製文字",
+      "checkHistory": "在歷史紀錄中查看",
+      "invalidText": "請輸入最多 {{maximum}} 個字元的文字。",
+      "operationFailed": "無法更新佇列。",
+      "queueDisabled": "加入佇列（Cmd/Ctrl+Enter）",
+      "richUnsupported": "只有 Do 或 Ask 模式下的純文字可以加入佇列。請先移除附件、檔案標籤、指令或審查動作。",
+      "persistenceRequired": "草稿必須先持久儲存，才能加入佇列。",
+      "rootUnavailable": "訊息目的地仍在載入中。",
+      "recipientUnavailable": "此收件者已無法使用。",
+      "schemaError": "已儲存的佇列使用了不支援的資料，已保持原狀。",
+      "conflict": "佇列或草稿已變更。已保留您的文字，請再試一次。",
+      "notFound": "已載入的歷史紀錄中沒有符合的訊息，送達狀態仍不明。"
+    }
+  },
+  "modelSelector": {
+    "codexCatalogFallbackMessage": "正在顯示備用模型清單。帳號專屬的模型和最新發布的模型可能會缺失。",
+    "codexCatalogFallbackTitle": "即時 Codex 模型不可用",
+    "badges": {
+      "configured": "已設定",
+      "connected": "已連線",
+      "failed": "失敗",
+      "free": "免費",
+      "local": "本機",
+      "needsTest": "需要測試",
+      "verified": "已驗證",
+      "unavailable": "不可用",
+      "issue": "問題"
+    },
+    "customModelId": "自訂模型 ID",
+    "label": "模型（選填）",
+    "multimodelRequired": "Codex 和 Gemini 需要多模型模式。",
+    "openCode": {
+      "allSources": "所有 OpenCode 源",
+      "filterSource": "篩選 {{source}}",
+      "filterSources": "篩選 OpenCode 來源",
+      "freeOnly": "僅免費",
+      "freeTooltip": "OpenCode 將此模型 Token 為免費。",
+      "loadingModels": "正在載入 OpenCode 模型…",
+      "noSourcesFound": "未找到來源。",
+      "recommendedOnly": "僅推薦",
+      "searchSources": "搜尋來源",
+      "sourcesCount": "{{count}} OpenCode 原始碼",
+      "sourcesCount_few": "{{count}} OpenCode 原始碼",
+      "sourcesCount_many": "{{count}} OpenCode 原始碼",
+      "sourcesCount_one": "{{count}} OpenCode 原始碼",
+      "sourcesCount_other": "{{count}} OpenCode 原始碼"
+    },
+    "localModels": {
+      "tabLabel": "本機模型",
+      "counts": "已偵測 {{detected}} 個 · 已設定 {{configured}} 個",
+      "none": "無",
+      "check": "檢查",
+      "installedNotAdded": "已安裝於 {{provider}} · 尚未加入此專案",
+      "configuredModelUnavailable": "本機伺服器目前沒有提供這個已設定的模型。",
+      "addAndTest": "新增並測試",
+      "retryAddAndTest": "重試新增並測試",
+      "chooseProject": "新增這個本機模型前，請先選擇專案。",
+      "needsVerificationHint": "您現在就可以選擇它。啟動時仍會以 16K 以上的上下文執行原生工具呼叫檢查，只看模型大小和 Ollama 的 tools 標籤並不夠。「新增並測試」是最快的確認方式。",
+      "teammateRequirementsTitle": "隊友的最低需求",
+      "teammateRequirementsSize": "請使用 7B 以上的程式設計模型。3B 以下的模型幾乎不會呼叫工具，會無法通過「新增並測試」。",
+      "teammateRequirementsTools": "它必須真的會呼叫工具（寫入檔案、執行指令、使用 Agent Teams MCP），而不是在聊天中輸出 JSON。Ollama 的「tools」標籤並不夠。請使用「新增並測試」：如果模型只會在聊天中回覆，將無法啟動。",
+      "teammateRequirementsContext": "至少需要 16K 上下文（32K 更好）。Ollama 預設從 4K 開始，請在啟動前調高到 32K，否則隊友會失敗。",
+      "teammateRequirementsTiny": "0.5B 和 1.5B 的模型無法通過工具呼叫檢查，不會寫入檔案，也不會和團隊溝通。",
+      "addingHint": "正在將模型加入此專案並測試與 Agent Teams 的相容性。",
+      "lookupErrorTitle": "無法檢查本機模型",
+      "lookupErrorFallback": "現有的執行環境模型仍可使用。",
+      "retry": "重試",
+      "privateNetworkApproval": {
+        "title": "要允許這個區域網路伺服器嗎？",
+        "description": "Agent Teams 需要此專案的授權，才能新增並測試位於 {{baseUrl}} 的模型。",
+        "cancel": "取消",
+        "allowAndTest": "允許並測試"
+      },
+      "status": {
+        "ready": "就緒",
+        "notConfigured": "未設定",
+        "needsVerification": "需要驗證",
+        "incompatible": "不相容",
+        "experimental": "實驗性",
+        "adding": "正在新增並測試"
+      }
+    },
+    "reason": "原因：{{reason}}",
+    "runtimeModelsSyncing": "從目前執行環境載入顯式模型。同步清單時，預設值仍然可用。",
+    "fastMode": {
+      "codexLabel": "Fast 模式（2x 點數）",
+      "optionalLabel": "Fast 模式（選填）",
+      "defaultOff": "預設（關閉）",
+      "fast": "快速地",
+      "off": "關閉",
+      "defaultFast": "預設（快速）",
+      "defaultResolvesTo": "目前預設解析為 {{mode}}。",
+      "runtimeBackedHint": "Fast 模式由執行環境提供，只有在解析出的 Anthropic 啟動模型支援時才會啟用。"
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "閱讀 Anthropic 定價文件"
+    },
+    "searchModels": "搜尋模型",
+    "defaultModel": "預設",
+    "empty": {
+      "noSearchMatches": "沒有符合此搜尋的模型。",
+      "recommendedFreeOpenCode": "目前執行環境清單中沒有推薦的免費 OpenCode 模型。",
+      "freeOpenCode": "目前執行環境清單中沒有可用的免費 OpenCode 模型。",
+      "recommendedOpenCode": "目前執行環境清單中沒有推薦的 OpenCode 模型。",
+      "noModels": "目前執行環境清單中沒有可用的模型。"
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "OpenCode 尚未準備好團隊啟動",
+      "freeModelsAvailableTitle": "提供 OpenCode 免費模型",
+      "providerNotConnectedTitle": "OpenCode 供應商未連線",
+      "authRequiredModels": "有 {{count}} 個 OpenCode 目錄模型需要其供應商的帳號或 API 金鑰。連線前會先隱藏；顯示它們並不會讓它們可以使用。",
+      "showAuthRequired": "顯示無法使用的模型",
+      "hideAuthRequired": "隱藏無法使用的模型",
+      "readyTitle": "OpenCode 已準備就緒",
+      "readyMessage": "OpenCode 透過供應商準備工作。選擇它以為此團隊使用 OpenCode 模型。",
+      "useOpenCode": "使用 OpenCode",
+      "badges": {
+        "check": "檢視",
+        "install": "安裝",
+        "retry": "重試",
+        "free": "免費",
+        "setup": "設定"
+      },
+      "summary": {
+        "checking": "OpenCode 狀態：檢查執行環境",
+        "temporarilyUnavailable": "OpenCode 狀態：執行環境暫時無法使用",
+        "projectFolderMissing": "OpenCode 狀態：找不到專案資料夾",
+        "status": "OpenCode 狀態：{{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "團隊啟動受阻",
+        "providerOptional": "供應商連線可選",
+        "providerModelsNeedSetup": "供應商支援的模型需要設定",
+        "teamLaunchReady": "團隊啟動準備就緒",
+        "runtimeDetected": "偵測到執行環境",
+        "runtimeMissing": "執行環境缺失",
+        "freeWithoutAuth": "無需授權即可使用免費模型",
+        "providerConnected": "供應商已連線",
+        "providerNotConnected": "供應商未連線"
+      },
+      "messages": {
+        "checking": "應用程式仍在檢查 OpenCode 執行環境。請等供應商狀態檢查完成後再試一次。",
+        "temporarilyUnavailable": "OpenCode 執行環境檢查暫時無法使用，請重試檢查。",
+        "projectFolderMissing": "找不到專案資料夾：{{path}}。請選擇其他專案或建立該資料夾，然後重試。",
+        "projectFolderMissingGeneric": "選取的專案資料夾已不存在。請選擇其他專案或建立該資料夾，然後重試。",
+        "unsupported": "OpenCode 未安裝、未找到或偵測到的執行環境不受支援。安裝或更新 OpenCode，然後重新整理供應商狀態。您還可以使用首頁上的「安裝」按鈕。",
+        "freeAvailable": "偵測到 OpenCode。您可以使用免費的 OpenCode 模型，例如 Big Pickle，而無需連線供應商。僅當您需要供應商支援的模型時才連線供應商。",
+        "noFreeListed": "已偵測到 OpenCode，但尚未列出免費的 OpenCode 模型。重新整理供應商狀態，或在 OpenCode 中連線供應商以取得供應商支援的模型。",
+        "launchBlocked": "OpenCode 已安裝並經過認證，但 Agent Teams 啟動準備工作被阻止。",
+        "ready": "OpenCode 已準備好供團隊啟動。"
+      },
+      "loadingRuntime": "OpenCode 執行環境狀態仍在載入中。"
+    },
+    "advisory": {
+      "pingNotConfirmed": "Ping 未確認",
+      "note": "備註"
+    },
+    "placeholders": {
+      "customModelId": "openai/gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "OpenCode 設定",
+      "builtinFree": "免費內建",
+      "connectedProviders": "互聯供應商",
+      "otherCatalog": "其他 OpenCode 目錄"
+    },
+    "pricing": {
+      "free": "免費",
+      "inputShort": "在 {{rate}}",
+      "outputShort": "輸出 {{rate}}",
+      "perMillionSummary": "{{summary}}/1M",
+      "inputTitle": "輸入：每 1M Token {{rate}}",
+      "outputTitle": "輸出：每 100 萬個 Token {{rate}}",
+      "cacheReadTitle": "快取讀取：每 1M Token {{rate}}",
+      "cacheWriteTitle": "快取寫入：每 1M Token {{rate}}"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "使用與 Anthropic 相容的端點預設模型。 目前解析為 {{model}}。",
+      "anthropicCompatible": "使用與 Anthropic 相容的端點預設模型。",
+      "anthropic": "使用 Claude 團隊預設模型。 當啟用限制上下文時，解析為具有 1M 上下文的 {{longContextModel}} 或具有 200K 上下文的 {{limitedContextModel}}。",
+      "openCodeWithResolved": "使用 OpenCode 預設模型。 目前解析為 {{model}}。",
+      "openCode": "使用 OpenCode 執行環境預設模型。",
+      "runtime": "使用所選供應商的執行環境預設值。"
+    },
+    "multimodelOff": "多模型關閉",
+    "unavailableInRuntime": "目前執行環境不可用",
+    "defaultCompact": "{{model}} · 預設",
+    "defaultWithResolved": "預設 - {{model}}",
+    "openCodeDefaultUnavailable": "OpenCode 在此專案中沒有可用的預設模型，請明確選擇一個模型。",
+    "openCodeSelectedRouteUnavailable": "這個模型目前無法從其供應商取得。請選擇其他模型，或重新連接供應商後重新整理。",
+    "explicitChoice": "明確選擇 - {{model}}"
+  },
+  "taskDetail": {
+    "navigation": {
+      "reviewRefused": "無法開啟變更，請求已儲存。",
+      "editorRefused": "無法在團隊編輯器中開啟檔案，請求已儲存。"
+    },
+    "actions": {
+      "cancel": "取消",
+      "delete": "刪除",
+      "markResolved": "標記為已解決",
+      "save": "儲存",
+      "openInTaskTab": "在獨立分頁中開啟"
+    },
+    "attachments": {
+      "commentAttachment": "留言附件",
+      "fromComments": "來自留言",
+      "preview": "預覽 {{filename}}"
+    },
+    "changes": {
+      "badges": {
+        "attention": "注意力",
+        "noSafeDiff": "沒有安全差異"
+      },
+      "empty": {
+        "noFileChangesRecorded": "沒有記錄檔案變更",
+        "noFileChangesRecordedYet": "尚未記錄檔案變更",
+        "noReviewableChangesRecovered": "未恢復可審查的檔案變更",
+        "noSafeDiffAvailable": "沒有可用的安全差異"
+      },
+      "loadFailed": "無法載入任務變更摘要",
+      "loading": "正在載入變更…",
+      "fileCount": "{{count}} 檔案",
+      "fileRowsHidden": "{{count}} 檔案行隱藏",
+      "moreDiagnostics": "{{count}} 更多診斷",
+      "moreFiles": "{{count}} 更多檔案",
+      "openInEditor": "在編輯器中開啟",
+      "openTask": "開啟任務 {{subject}}",
+      "refresh": "重新整理變更",
+      "refreshFailed": "重新整理失敗：{{error}}",
+      "refreshing": "清爽",
+      "refreshingChanges": "令人耳目一新的變化…",
+      "refreshTeamChanges": "重新整理團隊變更",
+      "refreshShort": "重新整理",
+      "reviewDiff": "檢視差異",
+      "reviewTaskDiff": "檢查任務差異",
+      "scannedCandidateTasks": "已掃描 {{requested}} / {{eligible}} 個候選任務",
+      "tasksDeferred": "{{count}} 任務推遲了本次傳遞",
+      "title": "變化",
+      "fileCount_few": "{{count}} 檔案",
+      "fileCount_many": "{{count}} 檔案",
+      "fileCount_one": "{{count}} 檔案",
+      "fileCount_other": "{{count}} 檔案",
+      "fileRowsHidden_few": "{{count}} 檔案行隱藏",
+      "fileRowsHidden_many": "{{count}} 檔案行隱藏",
+      "fileRowsHidden_one": "{{count}} 檔案行隱藏",
+      "fileRowsHidden_other": "{{count}} 檔案行隱藏",
+      "moreDiagnostics_few": "{{count}} 更多診斷",
+      "moreDiagnostics_many": "{{count}} 更多診斷",
+      "moreDiagnostics_one": "{{count}} 更多診斷",
+      "moreDiagnostics_other": "{{count}} 更多診斷",
+      "moreFiles_few": "{{count}} 更多檔案",
+      "moreFiles_many": "{{count}} 更多檔案",
+      "moreFiles_one": "{{count}} 更多檔案",
+      "moreFiles_other": "{{count}} 更多檔案",
+      "tasksDeferred_few": "{{count}} 任務推遲了本次傳遞",
+      "tasksDeferred_many": "{{count}} 任務推遲了本次傳遞",
+      "tasksDeferred_one": "{{count}} 任務推遲了本次傳遞",
+      "tasksDeferred_other": "{{count}} 任務推遲了本次傳遞"
+    },
+    "clarification": {
+      "awaitingLead": "等待團隊負責人的澄清",
+      "awaitingUser": "等待您的澄清"
+    },
+    "description": {
+      "add": "點選新增描述…",
+      "edit": "編輯描述",
+      "placeholder": "任務描述（支援 markdown）"
+    },
+    "loading": {
+      "fetchingTeamData": "取得團隊資料",
+      "title": "正在載入任務…"
+    },
+    "logs": {
+      "newArriving": "新任務記錄到達"
+    },
+    "notFound": "未找到任務",
+    "page": {
+      "deleted": "任務已刪除",
+      "provisioning": "團隊佈建期間，任務暫時無法使用",
+      "unavailable": "任務無法使用"
+    },
+    "related": {
+      "blockedBy": "受阻於",
+      "blocks": "阻擋",
+      "linkedFrom": "連結自",
+      "links": "連結",
+      "title": "相關任務"
+    },
+    "review": {
+      "reviewer": "審稿人：{{reviewer}}"
+    },
+    "sections": {
+      "attachments": "附件",
+      "changes": "變化",
+      "comments": "留言",
+      "description": "描述",
+      "taskLogs": "任務記錄",
+      "workflowHistory": "工作流程歷史記錄"
+    },
+    "unassigned": "未分配",
+    "workflow": {
+      "implementationTimeTitle": "持續工作間隔的實施時間",
+      "inProgressTime": "進行中時間 {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "僅顯示最新的 {{formattedCount}} 則留言，以保持 UI 回應速度。",
+      "badges": {
+        "approved": "已核准",
+        "reviewRequested": "已請求審查"
+      },
+      "unknownTime": "未知時間",
+      "actions": {
+        "reply": "回覆",
+        "replyToComment": "回覆留言",
+        "showMore": "顯示更多留言（{{visible}}/{{total}}）",
+        "cancelReply": "取消回覆",
+        "comment": "留言"
+      },
+      "attachments": {
+        "previewAlt": "附件預覽",
+        "downloadFailed": "下載失敗"
+      },
+      "replyingTo": "正在回覆",
+      "input": {
+        "placeholder": "新增留言…（按 Enter 傳送）",
+        "charsLeft": "{{count}} 剩餘字元數",
+        "charsLeft_one": "{{count}} 左字元",
+        "charsLeft_other": "{{count}} 剩餘字元數",
+        "charsLeft_few": "{{count}} 剩餘字元數",
+        "charsLeft_many": "{{count}} 剩餘字元數"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "沒有記錄工作流程歷史記錄",
+      "currentImplementationInterval": "目前實施間隔",
+      "implementationIntervalEnded": "實施間隔在此過渡時結束",
+      "runningPrefix": "正在執行",
+      "createdAs": "建立為",
+      "by": "經過",
+      "reassigned": "重新分配",
+      "assignedTo": "分配給",
+      "unassignedFrom": "未分配自",
+      "ownerChanged": "所有者已變更",
+      "reviewRequested": "已請求審查",
+      "reviewStarted": "審查開始",
+      "changesRequested": "要求變更",
+      "approved": "已核准",
+      "unknownEvent": "未知事件"
+    },
+    "reviewStates": {
+      "approved": "已核准",
+      "needsFix": "需要修復",
+      "inReview": "審查中"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "受讓人",
+      "assigneeOptional": "受讓人（選填）",
+      "blockedByOptional": "被任務阻止（選填）",
+      "blockedBySummary": "任務將受阻於：{{tasks}}",
+      "cancel": "取消",
+      "create": "建立",
+      "creating": "正在建立…",
+      "description": "此任務會建立在團隊的 tasks/ 目錄中，並顯示在看板上。",
+      "descriptionOptional": "說明（選填）",
+      "detailsPlaceholder": "任務詳情（支援 markdown）",
+      "hideOptionalFields": "隱藏可選欄位",
+      "offlineNotice": {
+        "after": "- 啟動團隊開始執行。",
+        "before": "團隊離線。該任務將被新增到"
+      },
+      "promptOptional": "提示詞受讓人（選填）",
+      "promptPlaceholder": "為團隊成員定製說明…",
+      "relatedOptional": "相關任務（選填）",
+      "relatedSummary": "相關：{{tasks}}",
+      "saved": "已儲存",
+      "searchTasks": "搜尋任務…",
+      "selectMember": "選擇成員",
+      "selectMemberOptional": "選擇成員…",
+      "showOptionalFields": "顯示可選欄位",
+      "startImmediately": "立即開始",
+      "startOfflineHint": "團隊離線。首先啟動團隊以立即開始任務。",
+      "subject": "主題",
+      "subjectPlaceholder": "需要做什麼？",
+      "title": "建立任務",
+      "todo": "待辦事項"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "受阻於",
+        "blocks": "阻擋",
+        "id": "ID",
+        "owner": "所有者",
+        "status": "地位",
+        "subject": "主題"
+      },
+      "empty": "該團隊沒有任務",
+      "filters": {
+        "allOwners": "所有業主",
+        "allStatuses": "所有狀態",
+        "ownerAria": "按負責人篩選任務",
+        "statusAria": "按狀態篩選任務"
+      },
+      "showing": "顯示 {{shown}} 或 {{total}}"
+    },
+    "status": {
+      "completed": "完全的",
+      "deleted": "已刪除",
+      "inProgress": "進行中",
+      "pending": "待辦的"
+    },
+    "statusSummary": {
+      "progressAria": "任務 {{completed}}/{{total}} 已完成",
+      "inProgress": "{{count}} 進行中",
+      "inProgress_one": "{{count}} 進行中",
+      "inProgress_other": "{{count}} 進行中",
+      "inProgress_few": "{{count}} 進行中",
+      "inProgress_many": "{{count}} 進行中",
+      "pending": "{{count}} 待定",
+      "pending_one": "{{count}} 待定",
+      "pending_other": "{{count}} 待定",
+      "pending_few": "{{count}} 待定",
+      "pending_many": "{{count}} 待定",
+      "completed": "{{count}} 已完成",
+      "completed_one": "{{count}} 已完成",
+      "completed_other": "{{count}} 已完成",
+      "completed_few": "{{count}} 已完成",
+      "completed_many": "{{count}} 已完成"
+    },
+    "unassigned": "未分配",
+    "teamPrefix": "團隊：",
+    "openTask": "開放任務",
+    "deleteConfirm": {
+      "title": "刪除任務",
+      "message": "將任務 #{{taskId}} 移至垃圾桶？",
+      "confirmLabel": "刪除",
+      "cancelLabel": "取消"
+    },
+    "groupChat": {
+      "label": "群組聊天",
+      "none": "無",
+      "archived": " （已封存）",
+      "unavailable": "無法使用的群組（{{id}}）",
+      "loading": "群組（{{id}}）",
+      "catalogError": "無法載入群組聊天。您仍然可以移除目前的連結。"
+    }
+  },
+  "editor": {
+    "documentPreview": {
+      "limit": "只能預覽 {{size}} MiB 以內的文件。",
+      "readOnly": "唯讀文件預覽",
+      "loading": "正在載入文件預覽...",
+      "unavailable": "無法預覽。文件可能已加密、已損毀或格式不受支援。",
+      "title": "文件預覽"
+    },
+    "largeFilePreview": "預覽：只顯示前 256 KiB。可以在外部應用程式中開啟完整檔案。",
+    "showInFolder": "在資料夾中顯示",
+    "largeFileMode": "大型檔案模式：可以編輯全文，但會停用語法解析、摺疊、自動換行和 Markdown 預覽；草稿只保留在記憶體中。",
+    "actions": {
+      "cancel": "取消",
+      "closeEditor": "關閉編輯器",
+      "closeTab": "關閉分頁",
+      "closeTooltip": "關閉編輯器 (Esc)",
+      "discard": "丟棄",
+      "discardAndClose": "丟棄並關閉",
+      "keep": "保持",
+      "keepMine": "保留我的",
+      "keyboardShortcuts": "鍵盤快速鍵",
+      "overwrite": "覆蓋",
+      "refreshAria": "重新整理 (F5)",
+      "refreshTooltip": "重新整理 git 狀態 (F5)",
+      "reload": "重新載入",
+      "retry": "重試",
+      "save": "儲存",
+      "saveAllAndClose": "全部儲存並關閉"
+    },
+    "ariaLabel": "專案編輯",
+    "dialogs": {
+      "conflictDescription": "自您開啟該檔案以來，該檔案已被外部修改。用您的變更覆蓋？",
+      "conflictTitle": "拯救衝突",
+      "unsavedDescription": "您有未儲存的變更。你想做什麼？",
+      "unsavedFileDescription": "該檔案有未儲存的變更。你想做什麼？",
+      "unsavedTitle": "未儲存的變更"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "名稱不能為空",
+        "invalidName": "名稱無效",
+        "invalidCharacters": "名稱包含無效字元",
+        "nameTooLong": "名字太長"
+      },
+      "placeholders": {
+        "fileName": "檔名…",
+        "folderName": "資料夾名稱…"
+      },
+      "aria": {
+        "newFileName": "新檔名",
+        "newFolderName": "新資料夾名稱"
+      }
+    },
+    "draftRecovered": "恢復了上一個工作階段中未儲存的變更。",
+    "externalChange": {
+      "changed": "磁碟上的檔案已變更。",
+      "deleted": "檔案不再存在於磁碟上。"
+    },
+    "saveFailed": "儲存失敗：{{error}}",
+    "sidebar": {
+      "explorer": "探險家",
+      "hide": "隱藏側邊欄",
+      "hideWithShortcut": "隱藏側邊欄（{{shortcut}}）",
+      "show": "顯示側邊欄",
+      "showWithShortcut": "顯示側邊欄 ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "在檔案中搜尋",
+      "closeSearch": "關閉搜尋",
+      "closeSearchShortcut": "關閉搜尋 (Esc)",
+      "searchPlaceholder": "搜尋…",
+      "matchCase": "火柴盒",
+      "matchCaseToggle": "胺基酸",
+      "noResults": "未找到結果",
+      "resultsSummary": "在 {{fileCount}} 個檔案中找到 {{count}} 筆符合結果",
+      "resultsSummary_one": "在 {{fileCount}} 個檔案中找到 {{count}} 筆符合結果",
+      "truncated": "（截斷）",
+      "resultsSummary_few": "在 {{fileCount}} 個檔案中找到 {{count}} 筆符合結果",
+      "resultsSummary_many": "在 {{fileCount}} 個檔案中找到 {{count}} 筆符合結果",
+      "resultsSummary_other": "在 {{fileCount}} 個檔案中找到 {{count}} 筆符合結果"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "載入檔案失敗：{{error}}",
+      "loading": "正在載入檔案…",
+      "empty": "未找到檔案",
+      "dropForProjectRoot": "放到此處取得專案根目錄",
+      "moveToTrash": "移至垃圾桶",
+      "moveToTrashConfirm": "將「{{name}}」移至垃圾桶？",
+      "cancel": "取消"
+    },
+    "goToLine": {
+      "title": "前往行",
+      "position": "（目前：{{current}}，總計：{{total}}）",
+      "placeholder": "行號、+偏移量、-偏移量或%",
+      "go": "去"
+    },
+    "searchPanel": {
+      "previousMatch": "上一場比賽",
+      "nextMatch": "下一場比賽",
+      "close": "關閉",
+      "replacePlaceholder": "代替",
+      "replace": "代替",
+      "replaceNext": "替換下一個",
+      "all": "全部",
+      "replaceAll": "全部替換"
+    },
+    "statusBar": {
+      "position": "列 {{line}}，列 {{col}}",
+      "enableWatcher": "啟用檔案觀察器",
+      "disableWatcher": "停用檔案觀察器",
+      "watch": "手錶",
+      "watching": "觀看",
+      "watchExternalChanges": "留意外部變化",
+      "disableExternalWatcher": "停用外部變更觀察程式",
+      "encodingUtf8": "UTF-8",
+      "spaces": "空間：{{count}}"
+    },
+    "imagePreview": {
+      "loading": "正在載入預覽…",
+      "openFullSize": "開啟全尺寸預覽",
+      "openSystemViewer": "在系統檢視器中開啟"
+    },
+    "quickOpen": {
+      "title": "快速開啟",
+      "searchPlaceholder": "按名稱搜尋檔案…",
+      "loading": "正在載入檔案…",
+      "empty": "未找到檔案"
+    },
+    "errorBoundary": {
+      "crashed": "編輯器崩潰了",
+      "unknownError": "未知錯誤"
+    },
+    "binaryPlaceholder": {
+      "file": "二進位制檔案（{{size}}）"
+    },
+    "unsavedChanges": "未儲存的變更",
+    "empty": {
+      "selectFile": "從樹中選擇要編輯的檔案"
+    },
+    "search": {
+      "toggleReplace": "切換替換",
+      "placeholder": "搜尋"
+    },
+    "shortcuts": {
+      "title": "鍵盤快速鍵",
+      "groups": {
+        "fileOperations": "檔案操作",
+        "search": "搜尋",
+        "navigation": "導航",
+        "editing": "編輯",
+        "markdown": "Markdown",
+        "general": "一般"
+      },
+      "actions": {
+        "quickOpen": "快速開啟",
+        "save": "儲存",
+        "saveAll": "全部儲存",
+        "closeTab": "關閉分頁",
+        "findInFile": "在檔案中查詢",
+        "searchInFiles": "在檔案中搜尋",
+        "goToLine": "前往行",
+        "nextTab": "下一個分頁",
+        "previousTab": "上一個分頁",
+        "cycleTabs": "迴圈分頁",
+        "toggleSidebar": "切換側邊欄",
+        "undo": "復原",
+        "redo": "取消復原",
+        "selectNextMatch": "選擇下一場比賽",
+        "toggleComment": "切換留言",
+        "splitPreview": "分割預覽",
+        "fullPreview": "完整預覽",
+        "closeEditor": "關閉編輯器"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "啟用自動換行",
+      "disableWordWrap": "停用自動換行",
+      "closeSplitPreview": "關閉分割預覽",
+      "closePreview": "關閉預覽"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "建立排程",
+      "creating": "正在建立…",
+      "goToDashboard": "前往儀表板",
+      "launchTeam": "啟動團隊",
+      "launching": "正在啟動…",
+      "relaunchTeam": "重新啟動團隊",
+      "relaunching": "重新啟動…",
+      "saveChanges": "儲存變更",
+      "saving": "儲存…",
+      "skipPreflightAndLaunch": "跳過預檢並啟動"
+    },
+    "billing": {
+      "prefix": "自 2026 年 6 月 15 日起，Anthropic 帳單",
+      "readArticle": "閱讀 Anthropic 文章",
+      "suffix": "Agent SDK 使用量來自每月 Agent SDK 積分，獨立於互動式 Claude Code 限制。積分會重設每個計費週期，未使用的積分不會結轉。"
+    },
+    "conflict": {
+      "description": "在同一目錄中執行兩個團隊有風險：它們可能在編輯相同檔案時發生衝突。請考慮使用不同的目錄，或用 Git worktree 隔離。",
+      "title": "另一個團隊「{{team}}」已經在該工作目錄中執行",
+      "workingDirectory": "工作目錄："
+    },
+    "description": {
+      "createSchedule": "安排自動執行代理任務",
+      "createScheduleForTeam": "為團隊「{{team}}」安排自動執行",
+      "editSchedule": "編輯「{{team}}」團隊的排程",
+      "launchPrefix": "開始組隊",
+      "launchSuffix": "使用為其設定的代理執行環境。",
+      "relaunchPrefix": "停止目前執行",
+      "relaunchSuffix": "並使用為其設定的代理執行環境再次啟動。"
+    },
+    "prepare": {
+      "action": {
+        "launch": "啟動",
+        "relaunch": "重新啟動"
+      },
+      "blocked": "執行環境不可用 - {{action}} 被阻止",
+      "checkingProviders": "檢查選定的供應商…",
+      "experimentalLocalModelOverride": "以實驗方式啟動這個本機模型",
+      "experimentalLocalModelOverrideHint": "這絕不會略過未通過的工具呼叫檢查。如果模型是在聊天中回答而不是呼叫工具，請選擇其他模型。",
+      "failed": "無法準備選定的供應商",
+      "preflight": "飛行前檢查以在 {{action}} 之前擷取錯誤",
+      "preparingEnvironment": "準備環境…",
+      "ready": "所有選定供應商均已就緒。",
+      "readyWithNotes": "所有選定的供應商均已準備就緒，並附有註釋。",
+      "unsupportedPreload": "目前的 preload 版本不支援 team:prepareProvisioning。請重新啟動開發版應用程式。",
+      "selectWorkingDirectory": "選擇一個工作目錄來驗證啟動環境。",
+      "someProvidersNeedAttention": "部分選定供應商需要注意。"
+    },
+    "prompt": {
+      "label": "提示詞",
+      "oneShotPrefix": "該提示詞將被傳遞到",
+      "oneShotSuffix": "用於一次性執行",
+      "saved": "已儲存",
+      "schedulePlaceholder": "團隊負責人依排程執行的指示……",
+      "teamLeadOptional": "提示團隊負責人（選填）",
+      "teamLeadPlaceholder": "給團隊負責人的指示…"
+    },
+    "providerChanged": "供應商從 {{from}} 變更為 {{to}}。之前的負責人工作階段將不會恢復，並且負責人將以新的上下文開始，以便正確套用新的執行環境。",
+    "relaunchFreshSession": "團隊重新啟動將開始新的負責人工作階段。持久的團隊狀態、任務看板和成員設定會重新融入到啟動提示詞中。",
+    "relaunchWarning": {
+      "description": "儲存這些設定將停止目前的團隊處理程序，保留更新的名單，並使用新的執行環境再次啟動團隊。",
+      "title": "重新啟動將重新開始目前的團隊執行"
+    },
+    "workspaceTrust": {
+      "title": "第一次啟動時會信任此專案",
+      "description": "團隊啟動時可能會執行專案 hook 和 MCP 伺服器。"
+    },
+    "schedule": {
+      "agentDescription": "團隊未執行環境單獨啟動代理；團隊執行環境建立並分配任務。",
+      "execution": "執行方式",
+      "labelOptional": "標籤（選填）",
+      "labelPlaceholder": "例如，每日程式碼審查、每晚測試……",
+      "leadDefault": "團隊負責人（預設）",
+      "legacyNotice": "現有的一次性排程：儲存後會維持原本的行為。",
+      "maxBudgetUsd": "最高預算（美元）",
+      "maxTurns": "最大轉數",
+      "noLimit": "無限制",
+      "noMatches": "沒有團隊符合您的搜尋。",
+      "noTeams": "沒有可用的團隊。首先建立一個團隊。",
+      "oneAgent": "單個代理",
+      "searchTeams": "搜尋隊伍…",
+      "selectTeam": "選擇一個團隊…",
+      "target": "團隊執行環境的執行者",
+      "team": "團隊",
+      "teamDescription": "團隊未執行環境啟動已儲存的團隊；執行環境向負責人分配任務。使用已儲存的供應商和專案設定。",
+      "teamPathMissing": "請先為團隊儲存專案目錄，才能安排自動啟動。",
+      "title": "排程",
+      "upgradeSmart": "切換到智慧排程",
+      "wholeTeam": "整個團隊",
+      "taskFirstAgentDescription": "如有需要，先安全啟動團隊，再將看板任務交給所選隊友。不會中斷正在忙碌的代理。",
+      "taskFirstTeamDescription": "如有需要，先安全啟動團隊，再將協調任務交給負責人。不會中斷正在進行的工作。",
+      "taskFirstTarget": "分配給",
+      "taskFirstWholeTeam": "透過團隊負責人",
+      "historicalPromptReviewRequired": "排程前請先檢查團隊已儲存的一次性指示。請先清除或分開舊的啟動提示詞。",
+      "historicalPromptAcknowledged": "我已檢查儲存的舊提示並分離長期指令。保留舊文字，但不要在定時任務中執行。"
+    },
+    "title": {
+      "createSchedule": "建立排程",
+      "editSchedule": "編輯排程",
+      "launch": "傳送團隊",
+      "relaunch": "重新啟動團隊"
+    },
+    "errors": {
+      "loadProjectsFailed": "無法載入專案",
+      "saveScheduleFailed": "儲存排程失敗",
+      "relaunchFailed": "無法重新啟動團隊",
+      "launchFailed": "啟動團隊失敗"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "OpenCode 負責人需要選擇模型。",
+      "openCodeTeammateRequired": "OpenCode 負責人需要至少一名 OpenCode 隊友。",
+      "selectWorkingDirectory": "選擇工作目錄（cwd）",
+      "fixMemberNames": "啟動前修復成員名稱",
+      "memberNamesUnique": "啟動前成員名稱必須是唯一的"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "重新啟動設定",
+      "title": "可選啟動設定",
+      "relaunchDescription": "在重新啟動團隊之前，請檢查名單和負責人執行環境。",
+      "description": "將啟動流程集中在專案路徑上，並且僅在需要額外控制時才擴充功能此流程。"
+    }
+  },
+  "teamImport": {
+    "cancel": "取消",
+    "chooseFolder": "選擇資料夾",
+    "createDraft": "建立團隊草稿",
+    "createFailed": "無法建立匯入的團隊",
+    "creating": "正在建立...",
+    "description": "選擇本機代理團隊資料夾，並在建立草稿前檢查所有匯入的指令。",
+    "inspectFailed": "無法檢查所選資料夾",
+    "invalidTeamName": "請使用 kebab-case 格式的小寫英文字母、數字和連字元，長度不超過 64 個字元。",
+    "leadPrompt": "團隊負責人提示詞",
+    "members": "成員（{{count}}）",
+    "projectPath": "專案路徑",
+    "scanning": "正在掃描...",
+    "selectPrompt": "選擇資料夾以預覽要匯入的團隊。",
+    "skills": "發現的技能（{{count}}）",
+    "summary": "建立 {{teamName}}，包含 {{count}} 名成員。",
+    "teamName": "團隊名稱",
+    "teamNameRequired": "必須填寫團隊名稱。",
+    "teamNameReserved": "此團隊名稱為作業系統保留名稱。",
+    "title": "匯入代理團隊",
+    "warningDuplicateMember": "{{fileName}}：已跳過重複的成員名稱 {{name}}。",
+    "warningMemberInvalid": "{{fileName}}：成員名稱 {{name}} 無效。",
+    "warningMemberReserved": "{{fileName}}：成員名稱 {{name}} 為保留名稱。",
+    "warningMemberReservedSuffix": "{{fileName}}：成員名稱 {{name}} 使用了保留的自動字尾。",
+    "warningMissingClaudeMd": "未找到 .claude/CLAUDE.md 或 CLAUDE.md；團隊負責人提示詞將為空。",
+    "warningUnknownTaskOwner": "任務 {{description}} 引用了未知成員 {{owner}}，已在不指定負責人的情況下匯入。",
+    "warningUnsafeTaskCall": "無法安全重寫 Task 呼叫：{{call}}"
+  },
+  "list": {
+    "actions": {
+      "importTeam": "從資料夾匯入",
+      "copyTeam": "複製團隊",
+      "createTeam": "建立團隊",
+      "organizationMap": "組織圖",
+      "deleteForever": "永久刪除",
+      "deletePermanently": "永久刪除",
+      "deleteTeam": "刪除團隊",
+      "launching": "正在啟動…",
+      "launchTeam": "啟動團隊",
+      "relaunchTeam": "重新啟動團隊",
+      "restore": "還原",
+      "restoreTeam": "還原團隊",
+      "retry": "重試",
+      "stopTeam": "停隊",
+      "stopping": "停止…"
+    },
+    "electronOnly": {
+      "description": "在瀏覽器模式下，無法存取本機「~/.claude/teams」目錄。",
+      "title": "Teams 僅在 Electron 模式下可用"
+    },
+    "empty": {
+      "description": "在此建立一個團隊以開始。它會自動顯示在清單中。",
+      "localOnly": "團隊建立僅在本機 Electron 模式下可用。",
+      "title": "未找到隊伍"
+    },
+    "filter": {
+      "clearAll": "全部清除",
+      "label": "篩選團隊",
+      "projectPriority": "專案優先順序",
+      "status": "地位"
+    },
+    "loadFailed": "無法載入團隊",
+    "loading": "正在載入團隊…",
+    "localOnly": "僅在本機 Electron 模式下可用。",
+    "membersCount": "成員：{{count}}",
+    "membersCount_few": "成員：{{count}}",
+    "membersCount_many": "成員：{{count}}",
+    "membersCount_one": "成員： {{count}}",
+    "membersCount_other": "成員：{{count}}",
+    "noDescription": "無描述",
+    "noMatches": "沒有符合目前篩選條件的團隊",
+    "partial": {
+      "pending": "上次啟動仍在協調中。",
+      "skipped": "上次啟動跳過了隊友。",
+      "skippedWithCount": "上次啟動跳過了 {{count}}/{{expected}} 隊友。",
+      "skippedWithCount_few": "上次啟動跳過了 {{count}}/{{expected}} 隊友。",
+      "skippedWithCount_many": "上次啟動跳過了 {{count}}/{{expected}} 隊友。",
+      "skippedWithCount_one": "上次啟動跳過了 {{count}}/{{expected}} 隊友。",
+      "skippedWithCount_other": "上次啟動跳過了 {{count}}/{{expected}} 隊友。",
+      "stopped": "上次啟動在所有隊友加入之前停止了。",
+      "stoppedWithCount": "上次啟動在 {{count}}/{{expected}} 隊友加入之前停止。",
+      "stoppedWithCount_few": "上次啟動在 {{count}}/{{expected}} 隊友加入之前停止。",
+      "stoppedWithCount_many": "上次啟動在 {{count}}/{{expected}} 隊友加入之前停止。",
+      "stoppedWithCount_one": "上次啟動在 {{count}}/{{expected}} 隊友加入之前停止。",
+      "stoppedWithCount_other": "上次啟動在 {{count}}/{{expected}} 隊友加入之前停止。"
+    },
+    "searchPlaceholder": "搜尋隊伍…",
+    "sections": {
+      "otherTeams": "其他隊伍",
+      "projectTeams": "{{project}} 的團隊",
+      "selectedProject": "選定的專案"
+    },
+    "solo": "獨奏",
+    "status": {
+      "active": "活躍",
+      "deleted": "已刪除",
+      "launching": "正在啟動…",
+      "offline": "離線",
+      "partialFailure": "啟動中途失敗",
+      "partialPending": "引導掛起",
+      "partialSkipped": "啟動跳過的成員",
+      "running": "執行中"
+    },
+    "title": "選擇團隊",
+    "trash": "垃圾 ({{count}})",
+    "trash_few": "垃圾 ({{count}})",
+    "trash_many": "垃圾 ({{count}})",
+    "trash_one": "垃圾 ({{count}})",
+    "trash_other": "垃圾 ({{count}})",
+    "deleteDraft": {
+      "title": "刪除草稿",
+      "message": "要刪除草稿團隊「{{teamName}}」嗎？此操作無法復原。",
+      "confirmLabel": "刪除",
+      "cancelLabel": "取消"
+    },
+    "moveToTrash": {
+      "title": "移至垃圾桶",
+      "message": "將團隊「{{teamName}}」移至垃圾桶？您可以稍後還原它。",
+      "confirmLabel": "移至垃圾桶",
+      "cancelLabel": "取消"
+    },
+    "deleteForever": {
+      "title": "永久刪除",
+      "message": "永久刪除團隊「{{teamName}}」？所有資料都將遺失。",
+      "confirmLabel": "永久刪除",
+      "cancelLabel": "取消"
+    },
+    "deleteFailed": {
+      "title": "刪除團隊失敗",
+      "fallbackMessage": "發生意外錯誤",
+      "confirmLabel": "好的"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "提示詞：跨團隊訊息會發送至目標團隊負責人。如果您希望回覆返回給您的團隊負責人而不是您，請在訊息中明確說明。"
+    },
+    "attachments": {
+      "attachFiles": "附加檔案（貼上或拖放）",
+      "unavailable": "附件不可用",
+      "disabledHint": "線上團隊負責人和線上 OpenCode 隊友支援檔案附件。刪除附件或切換收件人。",
+      "restrictions": {
+        "crossTeam": "跨團隊訊息不支援檔案附件",
+        "teamOffline": "團隊必須線上才能附加檔案",
+        "unsupportedRecipient": "檔案可以傳送給團隊負責人或 OpenCode 隊友",
+        "openCodeOffline": "團隊必須線上才能為 OpenCode 隊友附加檔案",
+        "sending": "等待目前訊息傳送完成後再新增檔案",
+        "maximumReached": "已達到最大附件數",
+        "leadOnly": "檔案只能傳送給團隊負責人"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "斜線指令需要團隊負責人在線上，且不能和附件一起傳送",
+        "crossTeam": "斜線指令只能在目前的團隊負責人上執行",
+        "notLead": "斜線指令只能傳送給團隊負責人",
+        "leadOffline": "斜線指令需要團隊負責人在線上"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "重用最近的跨團隊請求",
+      "teamOffline": "離線",
+      "memoryOnly": "只保留到 應用程式關閉為止",
+      "previousDeliveryUnknown": "上一則訊息的送達狀態不明，再次傳送可能會產生重複訊息"
+    },
+    "revision": {
+      "editing": "編輯上一則訊息",
+      "cancel": "取消",
+      "preparing": "正在準備編輯...",
+      "occupied": "{{recipient}} 已經有草稿",
+      "saveDraft": "儲存草稿",
+      "unverified": "無法驗證原始訊息",
+      "continueAsNew": "以新訊息繼續",
+      "tooltip": "要求代理忽略之前的訊息並將它放回輸入框。"
+    },
+    "input": {
+      "charsLeft": "{{count}} 剩餘字元數",
+      "charsLeft_one": "{{count}} 左字元",
+      "charsLeft_other": "{{count}} 剩餘字元數",
+      "teamLaunchingPlaceholder": "團隊正在啟動…訊息將排隊等待收件箱傳遞。",
+      "crossTeamPlaceholder": "跨團隊訊息至 {{team}}…",
+      "teamFallback": "團隊",
+      "placeholder": "寫一則訊息…（Enter 傳送，Shift+Enter 換行）",
+      "slashTip": "提示：輸入「/」可執行團隊負責人所用執行環境支援的指令。",
+      "charsLeft_few": "{{count}} 剩餘字元數",
+      "charsLeft_many": "{{count}} 剩餘字元數"
+    },
+    "teamSelector": {
+      "thisTeam": "這支團隊",
+      "current": "目前的",
+      "online": "線上的",
+      "offline": "離線",
+      "onlineTitle": "線上的",
+      "offlineTitle": "離線"
+    },
+    "recipient": {
+      "select": "選擇…",
+      "searchPlaceholder": "搜尋…",
+      "noResults": "沒有結果",
+      "all": "全部",
+      "broadcastTextOnly": "以純文字傳給所有代理。附件和動作模式僅適用於單一收件者。"
+    },
+    "actions": {
+      "voiceToText": "語音轉文字",
+      "send": "傳送",
+      "sendingUnavailableLaunching": "團隊啟動時無法傳送"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "篩選記錄",
+      "tooltip": "篩選記錄",
+      "sections": {
+        "stream": "溪流",
+        "content": "內容"
+      },
+      "kinds": {
+        "output": "輸出",
+        "thinking": "思考",
+        "tool": "工具呼叫"
+      },
+      "actions": {
+        "reset": "重設",
+        "save": "儲存"
+      },
+      "streams": {
+        "stdout": "標準輸出",
+        "stderr": "標準錯誤"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} 原線",
+    "rawLineCount_one": "{{formattedCount}} 原線",
+    "rawLinesCaptured": "{{count}} 擷取",
+    "emptyRawLogs": "{{count}};還沒有一個是助手/工具輸出。",
+    "noLogsYet": "還沒有記錄。",
+    "teamNotRunning": "團隊沒有執行。",
+    "searchPlaceholder": "搜尋記錄…",
+    "clearSearch": "清除搜尋",
+    "newCount": "+{{count}} 新",
+    "loading": "載入中…",
+    "showMore": "顯示更多",
+    "noLogsCaptured": "沒有擷取記錄。",
+    "noMatchingLogs": "沒有符合的記錄。",
+    "rawLineCount_few": "{{formattedCount}} 原線",
+    "rawLineCount_many": "{{formattedCount}} 原線",
+    "rawLineCount_other": "{{formattedCount}} 原線",
+    "openFullscreen": "開啟全螢幕記錄",
+    "fullscreen": "全螢幕",
+    "viewingFullscreen": "以全螢幕模式檢視",
+    "logsTitle": "記錄",
+    "sourceSelect": {
+      "placeholder": "選擇記錄來源…",
+      "searchPlaceholder": "搜尋記錄來源…",
+      "emptyMessage": "未找到記錄來源。",
+      "ariaLabel": "記錄來源",
+      "leadLabel": "帶領",
+      "selectSourceEmpty": "選擇記錄來源。",
+      "leadDescription": "團隊負責人",
+      "removedLabel": "已刪除",
+      "removedDescription": "已刪除"
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "外部團隊",
+      "process": {
+        "startedBy": "開始於：",
+        "at": "在：",
+        "openUrl": "開啟 URL"
+      },
+      "overflow": {
+        "hiddenTasks": "隱藏任務",
+        "empty": "沒有可用的隱藏任務。"
+      },
+      "member": {
+        "lead": "帶領",
+        "workingOn": "正在處理",
+        "recentTools": "最近使用的工具",
+        "spawn": {
+          "waitingToStart": "等待開始",
+          "starting": "開始",
+          "failed": "失敗"
+        },
+        "state": {
+          "active": "活躍",
+          "idle": "閒置的",
+          "offline": "離線",
+          "runningTool": "執行工具"
+        },
+        "activeTool": {
+          "running": "執行工具",
+          "failed": "工具失敗",
+          "finished": "工具完成"
+        },
+        "actions": {
+          "message": "資訊",
+          "profile": "輪廓",
+          "task": "任務"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "記錄",
+      "loading": "載入記錄",
+      "more": "+{{count}} 更多",
+      "more_one": "+{{count}} 更多",
+      "more_other": "+{{count}} 更多",
+      "more_few": "+{{count}} 更多",
+      "more_many": "+{{count}} 更多",
+      "unsupportedProvider": "不受支援的供應商",
+      "openCodeLogsDelayed": "OpenCode 記錄延遲",
+      "logsUnavailable": "記錄不可用",
+      "noRecentLogs": "沒有最近的記錄",
+      "toolError": "工具錯誤",
+      "toolResult": "工具結果",
+      "toolUse": "工具使用",
+      "thinking": "思考",
+      "error": "錯誤",
+      "logEvent": "記錄事件",
+      "noErrorOutput": "無錯誤輸出",
+      "noOutput": "無輸出",
+      "noInput": "無輸入"
+    },
+    "blockingEdge": {
+      "title": "阻擋相依",
+      "blocks": "阻擋",
+      "close": "關閉",
+      "blockingHiddenTasks": "阻止隱藏任務",
+      "blockedHiddenTasks": "被阻止的隱藏任務",
+      "links_one": "{{count}} 連結",
+      "links_other": "{{count}} 連結",
+      "hiddenBlockingLinks_one": "{{count}} 隱藏阻止連結",
+      "hiddenBlockingLinks_other": "{{count}} 隱藏的阻止連結",
+      "hiddenTaskStack": "隱藏任務棧",
+      "hiddenTasks_one": "{{count}} 隱藏任務",
+      "hiddenTasks_other": "{{count}} 隱藏任務",
+      "task": "任務",
+      "openBlockerStack": "開啟攔截器堆疊",
+      "openBlockedStack": "開啟阻塞的堆疊",
+      "openBlockerTask": "開啟攔截器任務",
+      "openBlockedTask": "開啟被阻止的任務"
+    },
+    "activityHud": {
+      "activity": "活動",
+      "noRecentActivity": "最近沒有活動",
+      "more": "+{{count}} 更多",
+      "more_one": "+{{count}} 更多",
+      "more_other": "+{{count}} 更多",
+      "more_few": "+{{count}} 更多",
+      "more_many": "+{{count}} 更多"
+    },
+    "provisioning": {
+      "launchDetails": "啟動詳情",
+      "launchDetailsDescription": "詳細的團隊啟動進度、即時輸出和 CLI 記錄。"
+    }
+  },
+  "projectPath": {
+    "label": "專案",
+    "source": {
+      "claude": "Claude 發現",
+      "codex": "由 Codex 發現",
+      "mixed": "由 Claude 和 Codex 發現"
+    },
+    "deleted": {
+      "title": "專案資料夾不再存在",
+      "label": "已刪除",
+      "selectedError": "找不到專案資料夾：{{path}}。請選擇其他專案或建立該資料夾。"
+    },
+    "mode": {
+      "projectList": "來自專案清單",
+      "customPath": "自訂路徑"
+    },
+    "loadingProjects": "正在載入專案…",
+    "selectProject": "選擇一個專案…",
+    "searchPlaceholder": "按名稱或路徑搜尋專案",
+    "empty": "未找到任何內容",
+    "selectFromList": "從清單中選擇一個專案",
+    "noProjects": "未找到專案，切換到自訂路徑。",
+    "customWorkingDirectory": "自訂工作目錄",
+    "browse": "瀏覽",
+    "createAutomatically": "如果該目錄不存在，則會自動建立。",
+    "folder": {
+      "missingCreatedOnSubmit": "這個資料夾還不存在，會在您建立團隊時一併建立。",
+      "missingRequiredBeforeCreate": "這個資料夾還不存在。OpenCode 會在專案資料夾內檢查模型，請先建立資料夾。",
+      "missingMustExist": "這個資料夾不存在。請建立它或選擇其他資料夾來啟動團隊。",
+      "notDirectory": "這個路徑指向檔案，而不是資料夾。",
+      "invalid": "請輸入資料夾的絕對路徑。",
+      "unknown": "無法檢查這個資料夾。啟動前請選擇其他資料夾，或修正資料夾權限。",
+      "create": "建立資料夾",
+      "creating": "正在建立...",
+      "createFailed": {
+        "permission_denied": "無法建立資料夾：權限不足。",
+        "path_conflict": "無法建立資料夾，因為同一路徑已有檔案。",
+        "invalid_path": "無法建立資料夾：請輸入不是磁碟根目錄的絕對路徑。",
+        "failed": "無法建立資料夾。"
+      }
+    }
+  },
+  "members": {
+    "launchFailure": {
+      "graceTimeout": "隊友未在啟動寬限時間內加入。"
+    },
+    "badges": {
+      "worktree": "worktree"
+    },
+    "runtimeTelemetry": {
+      "title": "本機執行環境負載",
+      "description": "僅限父處理程序和子處理程序。不包括遠端 LLM 推理。",
+      "cpu": "中央處理器",
+      "memory": "記憶",
+      "summedRss": "RSS 彙總",
+      "sharedHost": "共享 OpenCode 主機指標。這並不是該成員獨有的。",
+      "processTreeCapped": "本次取樣的處理程序樹已達上限。",
+      "rssHint": "RSS 可以包含共享頁面，因此最好將其作為載入訊號來讀取，而不是獨佔記憶體。"
+    },
+    "editor": {
+      "title": "成員",
+      "addMember": "新增成員",
+      "editAsJson": "編輯為 JSON",
+      "runInSeparateWorktrees": "為所有隊友使用 worktree",
+      "agentTeamsMcpOnly": "僅限 Agent Teams MCP",
+      "removedCount": "已刪除 ({{count}})",
+      "removedModelLockReason": "已刪除的成員將保留軟刪除歷史記錄。還原它們以編輯設定。",
+      "memberNamesUnique": "成員名稱必須是唯一的",
+      "worktreeDescription": "勾選：所有隊友使用獨立的 worktree。部分勾選：僅選取的隊友使用。未勾選：使用共用的專案工作區。關閉此選項後，現有 worktree 仍會保留在磁碟上。"
+    },
+    "stats": {
+      "computing": "計算統計資料…",
+      "empty": "無可用統計資料",
+      "lines": "行",
+      "linesInfo": "約略值。Edit 和 Write 工具的數字準確；Bash 的檔案寫入是依指令模式（heredoc、echo、sed）估計，可能偏低。",
+      "files": "檔案",
+      "toolCalls": "工具呼叫",
+      "tokens": "Token",
+      "toolUsage": "工具使用",
+      "filesTouched": "觸及的檔案 ({{count}})",
+      "viewAllChanges": "檢視所有變更",
+      "showLess": "收起",
+      "moreFiles": "+{{count}} 更多",
+      "footer": "{{count}} 工作階段·計算出的 {{computedAgo}}",
+      "footer_one": "{{count}} 工作階段·計算出的 {{computedAgo}}",
+      "footer_few": "{{count}} 工作階段·計算出的 {{computedAgo}}",
+      "footer_many": "{{count}} 工作階段·計算出的 {{computedAgo}}",
+      "footer_other": "{{count}} 工作階段·計算出的 {{computedAgo}}"
+    },
+    "logs": {
+      "searching": "正在搜尋記錄…",
+      "empty": "未找到記錄",
+      "waitingForTaskActivity": "任務正在進行中 - 等待工作階段活動（自動重新整理）…",
+      "noTaskActivity": "此任務還沒有工作階段活動",
+      "noMemberActivity": "該成員尚未記錄工作階段活動",
+      "leadSessionTooltip": "完整的團隊負責人工作階段記錄 - 對於全域編排上下文有用，而不是特定於該代理",
+      "memberSessionTooltip": "完整的持久隊友工作階段記錄 - 當工作在根成員工作階段而不是子代理檔案中執行環境非常有用",
+      "startedAt": "開始 {{time}}",
+      "active": "活躍",
+      "showDetails": "顯示詳情",
+      "hideDetails": "隱藏詳細資訊",
+      "loadingDetails": "正在載入詳細資訊…",
+      "failedToLoadDetails": "無法載入詳細資訊"
+    },
+    "detail": {
+      "relaunchOpenCode": "重新啟動 OpenCode",
+      "restart": "重新啟動",
+      "legacyLogsFallback": "舊記錄備援",
+      "copyDiagnostics": "複製診斷",
+      "pid": "PID {{pid}}",
+      "removedAt": "刪除了 {{date}}",
+      "failedToRestartMember": "重新啟動成員失敗",
+      "sendMessage": "傳送訊息",
+      "assignTask": "分配任務",
+      "remove": "消除"
+    },
+    "list": {
+      "loading": "正在載入團隊成員",
+      "unavailable": "成員名單不可用",
+      "unavailableDescription": "從團隊後設資料中可以得知 {{count}} 隊友，但缺少名單詳細資訊。",
+      "unavailableDescription_one": "從團隊後設資料中可以得知 {{count}} 隊友，但缺少名單詳細資訊。",
+      "soloLeadOnly": "單人團隊 - 僅負責人",
+      "removedCount": "已刪除 ({{count}})",
+      "unavailableDescription_few": "從團隊後設資料中可以得知 {{count}} 隊友，但缺少名單詳細資訊。",
+      "unavailableDescription_many": "從團隊後設資料中可以得知 {{count}} 隊友，但缺少名單詳細資訊。",
+      "unavailableDescription_other": "從團隊後設資料中可以得知 {{count}} 隊友，但缺少名單詳細資訊。"
+    },
+    "executionLog": {
+      "empty": "沒有可顯示的內容",
+      "emptyUserMessage": "{{time}}-（空）",
+      "agentInstructions": "代理須知",
+      "memberTurn": "{{member}} 轉",
+      "agentTurn": "代理轉",
+      "turn": "轉動"
+    },
+    "recentMessages": {
+      "latest": "最新訊息",
+      "latestForMember": "最新訊息 - {{member}}",
+      "loadMore": "載入更多",
+      "expand": "擴張",
+      "collapse": "坍塌"
+    },
+    "leadModel": {
+      "defaultModel": "預設",
+      "providerModelAria": "{{provider}} 供應商，{{model}}",
+      "leadShort": "帶領",
+      "teamLead": "團隊負責人",
+      "syncWithTeammates": "與隊友同步模型",
+      "anthropicTeamWide": "Anthropic（全團隊）",
+      "runtimeInheritance": "領先執行環境適用於隊友，除非他們設定自己的供應商或模型。",
+      "anthropicContextLimit": "此次啟動的 Anthropic 執行環境的 200K 上下文限制是團隊範圍內的，包括自訂的 Anthropic 團隊成員。"
+    },
+    "runtimeLogs": {
+      "autoRefresh": "自動重新整理",
+      "wrapLines": "換行線",
+      "loadingTail": "正在載入處理程序記錄尾部…",
+      "empty": "尚未擷取該成員的處理程序記錄檔案。",
+      "copy": "複製",
+      "fileEmpty": "處理程序記錄檔案為空。",
+      "showingLast": "顯示最後一個 {{bytes}}。",
+      "showing": "顯示 {{bytes}}。"
+    },
+    "tasks": {
+      "empty": "沒有任務分配給該成員"
+    },
+    "messages": {
+      "loadOlder": "載入舊訊息",
+      "filters": {
+        "all": "全部",
+        "messages": "訊息",
+        "comments": "留言"
+      },
+      "empty": {
+        "loading": "正在載入活動…",
+        "noComments": "此成員沒有留言",
+        "noLoadedMessages": "該成員尚未載入訊息",
+        "noMessages": "沒有與該成員訊息",
+        "noLoadedActivity": "該成員尚未載入任何活動",
+        "noActivity": "該成員沒有任何活動"
+      }
+    },
+    "actions": {
+      "openProfile": "開啟個人資料",
+      "editRole": "編輯角色",
+      "sendMessage": "傳送訊息",
+      "assignTask": "分配任務"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "輸入自訂角色…"
+    }
+  },
+  "schedule": {
+    "actionFailed": "排程動作失敗",
+    "deleteConfirmation": "要刪除排程「{{label}}」嗎？它的執行紀錄也會一併移除。",
+    "runRequested": "已要求執行。請查看歷史紀錄，確認工作是否已交接。",
+    "count": "{{count}} 個排程",
+    "count_one": "{{count}} 個排程",
+    "count_other": "{{count}} 個排程",
+    "nextRun": "下次執行： {{next}}",
+    "actions": {
+      "runNow": "立即執行",
+      "edit": "編輯",
+      "pause": "暫停",
+      "resume": "恢復",
+      "delete": "刪除",
+      "addSchedule": "新增排程"
+    },
+    "runHistory": {
+      "loading": "正在載入執行歷史記錄…",
+      "empty": "尚無執行記錄"
+    },
+    "count_few": "{{count}} 個排程",
+    "count_many": "{{count}} 個排程",
+    "runLog": {
+      "title": "執行記錄",
+      "exitCode": "退出 {{code}}",
+      "retryCount": "重試 {{count}}/{{max}}",
+      "stillRunning": "任務仍在執行…",
+      "loadingLogs": "正在載入記錄…",
+      "errors": "錯誤",
+      "close": "關閉",
+      "openTask": "開啟任務"
+    },
+    "cron": {
+      "expression": "克朗表示式",
+      "highFrequencyWarning": "高頻率排程（間隔少於 5 分鐘）",
+      "nextRuns": "接下來執行：",
+      "timezone": "時區",
+      "selectTimezone": "選擇時區",
+      "searchTimezone": "搜尋時區...",
+      "noTimezones": "沒有符合的時區",
+      "warmUpTime": "預熱時間",
+      "warmUpDescription": "在排程執行前預先準備選取的供應商",
+      "errors": {
+        "enterExpression": "輸入 cron 表示式",
+        "invalidExpression": "無效的 cron 表示式"
+      },
+      "presets": {
+        "everyHour": "每小時",
+        "everySixHours": "每 6 小時",
+        "dailyAtNine": "每天上午 9 點",
+        "weekdaysAtNine": "工作日上午 9 點",
+        "mondayAtNine": "週一上午 9 點",
+        "everyThirtyMinutes": "每30 分鐘一班"
+      },
+      "warmUpOptions": {
+        "none": "無需熱身",
+        "fiveMinutes": "5 分鐘",
+        "tenMinutes": "10 分鐘",
+        "fifteenMinutes": "15 分鐘",
+        "thirtyMinutes": "30 分鐘"
+      }
+    },
+    "empty": {
+      "title": "還沒有排程",
+      "description": "建立排程，依 cron 設定自動執行團隊任務。"
+    },
+    "title": "排程",
+    "status": {
+      "active": "活躍",
+      "paused": "已暫停",
+      "disabled": "已停用"
+    },
+    "runStatus": {
+      "pending": "待辦的",
+      "warmingUp": "熱身",
+      "warm": "溫暖的",
+      "running": "執行中",
+      "completed": "完全的",
+      "dispatched": "已派發",
+      "skipped": "已跳過",
+      "failed": "失敗",
+      "interrupted": "被打斷",
+      "cancelled": "取消"
+    }
+  },
+  "openCodeLocalModelLimits": {
+    "title": "本機模型上下文預算",
+    "saved": "已儲存在 Agent Teams：{{contextTokens}} 個上下文 Token，最多輸出 {{outputTokens}} 個 Token。",
+    "detected": "從 OpenCode 偵測到：{{contextTokens}} 個上下文 Token，最多輸出 {{outputTokens}} 個 Token。",
+    "manualRequired": "OpenCode 沒有回報完整的上限。請輸入您本機模型伺服器支援的數值。",
+    "managedOnly": "只會儲存在 Agent Teams 管理的設定檔中，您的 OpenCode 和專案設定檔都不會變更。",
+    "contextWindow": "上下文視窗",
+    "maxOutput": "最大輸出",
+    "applyAndVerify": "套用並驗證",
+    "applying": "正在套用並驗證...",
+    "verified": "已儲存在 Agent Teams，並透過 OpenCode 驗證。",
+    "projectRequired": "設定本機模型上限前，請先選擇專案。",
+    "invalidLimits": "請輸入正整數。最大輸出不能超過上下文視窗。",
+    "unknownError": "OpenCode 沒有回傳設定結果。"
+  },
+  "sessions": {
+    "noProjectPath": "沒有連結專案路徑",
+    "provisioningHint": "工作階段將在團隊設定後出現",
+    "projectNotFound": "未找到專案",
+    "loading": "正在載入工作階段…",
+    "empty": "未找到工作階段",
+    "showAllSessions": "顯示所有工作階段",
+    "lead": "帶領",
+    "removeFilter": "移除篩選條件",
+    "filterBySession": "依此工作階段篩選",
+    "openSession": "公開工作階段",
+    "title": "工作階段"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "取消",
+    "moreWarningsHidden": "{{count}} 隱藏更多警告",
+    "diagnostics": "診斷",
+    "liveOutput": "即時輸出",
+    "diagnosticsCopied": "已複製診斷資訊",
+    "copyDiagnostics": "複製診斷",
+    "copied": "已複製",
+    "noOutput": "尚未擷取任何輸出。",
+    "cliLogs": "CLI 記錄",
+    "steps": {
+      "starting": "開始",
+      "configuring": "團隊設定",
+      "assembling": "成員加入",
+      "finalizing": "敲定"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "檢查…",
+        "ready": "好的",
+        "notes": "好的（註釋）",
+        "failed": "犯錯",
+        "pending": "等待"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI 二進位制檔案缺失",
+        "openCodeRuntimeMissing": "OpenCode 執行環境缺失",
+        "openCodeWindowsAccessBlocked": "OpenCode Windows 存取被阻止",
+        "openCodeNoOutput": "OpenCode 執行環境檢查未返回任何輸出",
+        "openCodeMcpUnreachable": "無法連線 OpenCode 應用程式的 MCP",
+        "workingDirectoryMissing": "工作目錄遺失",
+        "cliBinaryCouldNotStart": "CLI 二進位制檔案無法啟動",
+        "cliPreflightIncomplete": "CLI 預檢未完成",
+        "authenticationRequired": "需要認證",
+        "runtimeProviderNotConfigured": "未設定執行環境供應商",
+        "cliPreflightFailed": "CLI 預檢失敗",
+        "selectedModelCompatible": "所選模型相容",
+        "selectedModelCompatibilityPending": "所選模型相容性待定",
+        "selectedModelAvailable": "可選模型",
+        "selectedModelVerified": "所選模型已驗證",
+        "selectedModelUnavailable": "所選模型不可用",
+        "selectedModelTimedOut": "所選模型驗證逾時",
+        "selectedModelCheckFailed": "所選模型檢查失敗",
+        "selectedModelDeferred": "選定的模型驗證推遲",
+        "selectedModelPingNotConfirmed": "所選模型 ping 未確認",
+        "readyWithNotes": "準備好備註",
+        "needsAttention": "需要注意"
+      },
+      "modelChecksSummary": "選定模型檢查 - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} 模型不可用",
+        "unavailable_one": "{{count}} 模型不可用",
+        "unavailable_other": "{{count}} 模型不可用",
+        "checkFailed": "{{count}} 模型檢查失敗",
+        "checkFailed_one": "{{count}} 模型檢查失敗",
+        "checkFailed_other": "{{count}} 模型檢查失敗",
+        "timedOut": "{{count}} 個模型逾時",
+        "timedOut_one": "{{count}} 個模型逾時",
+        "timedOut_other": "{{count}} 個模型逾時",
+        "deferred": "{{count}} 驗證延遲",
+        "deferred_one": "{{count}} 驗證延遲",
+        "deferred_other": "{{count}} 驗證延遲",
+        "pingNotConfirmed": "{{count}} ping 未確認",
+        "pingNotConfirmed_one": "{{count}} ping 未確認",
+        "pingNotConfirmed_other": "{{count}} ping 未確認",
+        "compatibilityPending": "{{count}} 相容，深度驗證待定",
+        "compatibilityPending_one": "{{count}} 相容，深度驗證待定",
+        "compatibilityPending_other": "{{count}} 相容，深度驗證待定",
+        "compatible": "{{count}} 相容",
+        "compatible_one": "{{count}} 相容",
+        "compatible_other": "{{count}} 相容",
+        "checking": "{{count}} 檢查",
+        "checking_one": "{{count}} 檢查",
+        "checking_other": "{{count}} 檢查",
+        "available": "{{count}} 可用",
+        "available_one": "{{count}} 可用",
+        "available_other": "{{count}} 可用",
+        "verified": "{{count}} 已驗證",
+        "verified_one": "{{count}} 已驗證",
+        "verified_other": "{{count}} 已驗證",
+        "unavailable_few": "{{count}} 模型不可用",
+        "unavailable_many": "{{count}} 模型不可用",
+        "checkFailed_few": "{{count}} 模型檢查失敗",
+        "checkFailed_many": "{{count}} 模型檢查失敗",
+        "timedOut_few": "{{count}} 個模型逾時",
+        "timedOut_many": "{{count}} 個模型逾時",
+        "deferred_few": "{{count}} 驗證延遲",
+        "deferred_many": "{{count}} 驗證延遲",
+        "pingNotConfirmed_few": "{{count}} ping 未確認",
+        "pingNotConfirmed_many": "{{count}} ping 未確認",
+        "compatibilityPending_few": "{{count}} 相容，深度驗證待定",
+        "compatibilityPending_many": "{{count}} 相容，深度驗證待定",
+        "compatible_few": "{{count}} 相容",
+        "compatible_many": "{{count}} 相容",
+        "checking_few": "{{count}} 檢查",
+        "checking_many": "{{count}} 檢查",
+        "available_few": "{{count}} 可用",
+        "available_many": "{{count}} 可用",
+        "verified_few": "{{count}} 已驗證",
+        "verified_many": "{{count}} 已驗證"
+      },
+      "openProviderSettings": "開啟 {{provider}} 設定",
+      "copied": "已複製",
+      "copyDiagnostics": "複製診斷",
+      "deepVerificationPending": "深度驗證仍在執行。 OpenCode 免費模型可能需要大約 20 秒。",
+      "progress": {
+        "checkingSelectedProviders": "並行檢查選定的供應商…",
+        "checkingProvider": "正在檢查 {{provider}} 供應商…",
+        "checkingProviders": "正在檢查 {{providers}} 供應商…"
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "修正資料夾權限，或將專案移到使用者可寫入的資料夾。以系統管理員身分執行只是暫時的解法。",
+        "openCodeBridgeNoOutput": "重新啟動應用程式和 OpenCode 執行環境，然後重試。如果重複出現，請複製診斷資訊。",
+        "workingDirectoryMissing": "選擇現有的工作目錄，然後重新開啟此對話方塊。",
+        "authenticationRequired": "在所需供應商設定的執行環境中完成身分驗證，然後重新開啟此對話方塊。",
+        "runtimeProviderNotConfigured": "設定選定的供應商執行環境，然後重新開啟此對話方塊。",
+        "openCodeRuntimeMissing": "從供應商狀態卡安裝或重試 OpenCode 執行環境，然後重新開啟此對話方塊。",
+        "openCodeAppMcpUnreachable": "重試啟動以重新整理 OpenCode 應用程式的 MCP 橋接。若重複發生，請重新啟動應用程式和 OpenCode 執行環境。",
+        "cliBinaryMissing": "確保所需的本機執行環境已安裝且可以啟動，然後重新開啟此對話方塊。",
+        "default": "解決上述問題，然後重新開啟此對話方塊。",
+        "openCodeNodeModulesSymlinkPermission": "以系統管理員身分執行 Agent Teams AI，然後重試啟動。"
+      },
+      "modelAccessReasons": {
+        "usageLimit": "已達用量上限。請檢查您的方案上限、稍後重試，或選擇其他模型",
+        "needsConnectionGo": "這個路由需要 OpenCode Go 金鑰。請在{{section}}中連接 OpenCode Go",
+        "needsConnectionZen": "這個模型需要 OpenCode Zen 金鑰。請在{{section}}中連接 OpenCode Zen",
+        "needsConnection": "這個供應商尚未連接。請在{{section}}中連接",
+        "freeTierRestricted": "OpenCode 拒絕了這個免費模型請求。請選擇付費模型或其他供應商，或稍後再試"
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} 位隊友正在等待權限核准",
+      "nameListWithMore": "{{names}}, +{{count}} 更多",
+      "waitingForOpenCode": "等待 OpenCode：{{names}}",
+      "bootstrapStalled": "載入程式停止：{{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}};等待 OpenCode：{{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "載入程式停滯",
+        "shellOnly": "僅外殼",
+        "waitingForBootstrap": "等待載入程式",
+        "bootstrapUnconfirmed": "載入程式未經確認",
+        "awaitingPermission": "等待許可",
+        "waitingForRuntime": "等待執行環境",
+        "shellOnlyLower": "僅外殼",
+        "waitingForBootstrapLower": "等待載入程式",
+        "bootstrapUnconfirmedLower": "載入程式未確認",
+        "awaitingPermissionLower": "等待許可",
+        "waitingForRuntimeLower": "等待執行環境"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} 啟動失敗",
+        "teammatesFailedToStart": "{{count}} 隊友啟動失敗",
+        "teammatesFailedRatio": "{{count}}/{{total}} 隊友啟動失敗"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} 跳過本次啟動",
+        "memberSkippedWithReason": "本次啟動跳過了 {{name}} - {{reason}}",
+        "memberSkippedCompact": "{{name}} 已跳過",
+        "teammatesSkipped": "{{count}} 隊友跳過",
+        "teammatesSkippedList": "跳過的隊友：{{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} 隊友跳過了本次啟動"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} 隊友仍在加入",
+        "teammatesStillJoining_one": "{{count}} 隊友仍在加入",
+        "teammatesStillJoining_few": "{{count}} 隊友仍在加入",
+        "teammatesStillJoining_many": "{{count}} 隊友仍在加入",
+        "teammatesStillJoining_other": "{{count}} 隊友仍在加入",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} 隊友確認"
+      },
+      "ready": {
+        "leadOnline": "負責人已上線",
+        "allTeammatesJoined": "{{count}} 隊友全部加入",
+        "teamProvisionedLeadOnline": "團隊設定 - 線上負責人",
+        "teamProvisionedAllJoined": "團隊設定 - 所有 {{count}} 隊友都加入",
+        "teamProvisionedStillJoining": "團隊已設定 - 隊友仍在加入",
+        "launchFinishedWithErrors": "啟動完成但出現錯誤 - {{count}}/{{total}} 隊友啟動失敗",
+        "launchContinuedSkipped": "啟動繼續 - {{count}}/{{total}} 隊友跳過",
+        "teamLaunchedLeadOnline": "團隊啟動 - 線上負責人",
+        "teamLaunchedAllJoined": "團隊啟動 - 所有 {{count}} 隊友加入"
+      },
+      "panel": {
+        "launchFailed": "啟動失敗",
+        "launchDetails": "啟動詳情",
+        "launchFinishedWithErrors": "啟動完成但有錯誤",
+        "launchContinuedSkipped": "與跳過的隊友一起繼續啟動",
+        "coreTeamReady": "核心團隊準備就緒",
+        "finishingLaunch": "正在完成啟動",
+        "teamLaunched": "團隊啟動",
+        "launchingTeam": "啟動團隊"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "即時執行環境狀態",
+    "description": "僅顯示心跳和啟動狀態。過程控制保留在下面。",
+    "source": "來源：{{source}}",
+    "lane": "{{lane}} 車道",
+    "diagnosticOnly": "僅用於診斷",
+    "updated": "更新 {{value}}",
+    "states": {
+      "running": "執行中",
+      "starting": "開始",
+      "waiting": "等待",
+      "degraded": "需要注意",
+      "stopped": "已停止",
+      "unknown": "未知"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "確切的任務記錄",
+      "loading": "正在載入準確的任務記錄…",
+      "description": "使用記錄中使用的相同執行記錄元件呈現的精確轉錄切片。",
+      "emptyTitle": "尚無確切的任務記錄",
+      "emptyDescription": "當明確的任務連結轉錄本後設資料可用時，精確的轉錄本包將出現在此處。",
+      "summaryOnly": "僅摘要"
+    },
+    "executionSessions": {
+      "title": "執行工作階段",
+      "online": "線上的",
+      "updating": "更新中…",
+      "description": "傳統的以工作階段為中心的成績單瀏覽和預覽。"
+    },
+    "stream": {
+      "title": "任務記錄流"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "取消任務 {{taskId}}",
+      "cancel": "取消",
+      "moveBackToTodoConfirm": "將此任務移回 TODO 並通知團隊？",
+      "confirm": "確認",
+      "keep": "保持",
+      "changesNeedAttention": "變化需要關注",
+      "changes": "變化",
+      "deleteTask": "刪除任務",
+      "taskLogsActive": "任務記錄處於活動狀態",
+      "newTaskLogsArriving": "新任務記錄到達",
+      "awaitingUser": "等待使用者",
+      "awaitingLead": "等待負責人",
+      "blockedBy": "受阻於",
+      "blocks": "阻擋",
+      "start": "開始",
+      "complete": "完全的",
+      "approve": "核准",
+      "requestReview": "請求審查",
+      "manualReview": "人工審查",
+      "requestChanges": "請求變更"
+    },
+    "filter": {
+      "title": "篩選任務",
+      "session": "工作階段",
+      "allSessions": "所有工作階段",
+      "teammate": "隊友",
+      "unassigned": "（未分配）",
+      "column": "柱子",
+      "clearAll": "全部清除",
+      "group": "群組聊天",
+      "allGroups": "所有群組"
+    },
+    "board": {
+      "addTask": "新增任務",
+      "noTasks": "沒有任務",
+      "showMore": "再顯示 {{count}} 項",
+      "hiddenCount": "{{count}} 隱藏",
+      "trash": "垃圾",
+      "gridView": "網格檢視",
+      "columnsView": "列檢視",
+      "tableView": "表格檢視",
+      "configureColumns": "選擇列",
+      "resizeColumn": "調整{{column}}列寬"
+    },
+    "trash": {
+      "title": "垃圾",
+      "empty": "沒有刪除的任務",
+      "subject": "主題",
+      "owner": "所有者",
+      "deleted": "已刪除",
+      "unassigned": "未分配",
+      "restoreTask": "還原任務",
+      "restore": "還原",
+      "close": "關閉"
+    },
+    "sort": {
+      "title": "對任務進行排序",
+      "sortBy": "排序方式",
+      "reset": "重設",
+      "options": {
+        "updatedAt": {
+          "label": "最後更新",
+          "description": "最近更新的先"
+        },
+        "createdAt": {
+          "label": "已建立",
+          "description": "最新的優先"
+        },
+        "owner": {
+          "label": "所有者",
+          "description": "按受讓人字母順序排列"
+        },
+        "manual": {
+          "label": "手動的",
+          "description": "拖放順序"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "清除搜尋",
+      "tasks": "任務",
+      "createdAgo": "建立了 {{time}}",
+      "updatedAgo": "更新 {{time}}",
+      "placeholder": "搜尋任務…（#id 或文字）"
+    },
+    "grid": {
+      "addTask": "新增任務",
+      "noTasks": "沒有任務"
+    },
+    "title": "看板",
+    "columns": {
+      "todo": "待辦事項",
+      "inProgress": "進行中",
+      "review": "審查",
+      "done": "完畢",
+      "approved": "已核准"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "正在檢查隊友 worktree 的 Git 儲存庫狀態…",
+    "ready": "Git worktree 已準備就緒。",
+    "readyOnBranch": "Git worktree 已在分支 {{branch}} 上準備就緒。",
+    "needsSetup": "worktree 隔離需要 Git 設定",
+    "initialCommitNotice": "初始提交操作階段並提交帶有訊息的所有目前檔案",
+    "initializeRepository": "初始化 Git 儲存庫",
+    "createInitialCommit": "建立初始提交",
+    "initialCommitMessage": "雜務：初始提交"
+  },
+  "toolApproval": {
+    "settings": "設定",
+    "autoAllowAllTools": "自動允許所有工具",
+    "autoAllowFileEdits": "自動允許檔案編輯（編輯、寫入、NotebookEdit）",
+    "autoAllowSafeCommands": "自動允許安全指令（git、pnpm、npm、ls…）",
+    "onTimeout": "逾時後：",
+    "after": "後",
+    "secondsShort": "秒",
+    "timeoutActions": {
+      "wait": "永遠等待",
+      "allow": "允許",
+      "deny": "否定"
+    },
+    "submit": "提交",
+    "allow": "允許",
+    "deny": "否定",
+    "allowAll": "允許全部",
+    "pendingCount": "{{count}} 待定",
+    "autoActionIn": "將在 {{time}} 後自動{{action}}",
+    "diff": {
+      "previewChanges": "預覽變更",
+      "readingFile": "正在讀取檔案…",
+      "binaryFile": "二進位制檔案 - 無法預覽",
+      "truncated": "檔案被截斷為 2MB - diff 可能不完整",
+      "newFile": "新檔案"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "成員工作同步",
+      "actionableItems": "可操作的專案",
+      "fingerprint": "指紋",
+      "report": "報告",
+      "none": "無",
+      "shadowWouldNudge": "影子會輕推",
+      "yes": "是的",
+      "no": "不",
+      "moreActionableItems": "{{count}} 更多可操作專案",
+      "diagnostics": "診斷：{{diagnostics}}",
+      "autoResumeStopped": "自動續跑已停止。",
+      "continue": "繼續",
+      "stopAutoResume": "停止自動恢復",
+      "resumeAutoResume": "恢復自動恢復"
+    },
+    "title": "成員工作同步",
+    "loadingDiagnostics": "正在載入成員工作同步診斷。",
+    "diagnosticsUnavailable": "成員工作同步診斷不可用。"
+  },
+  "advancedCli": {
+    "title": "高階",
+    "useWorktree": "負責人 worktree (與隊友 worktree 分開)",
+    "recent": "最近的",
+    "commandPreview": "指令預覽",
+    "customArguments": "自訂引數",
+    "validate": "證實",
+    "validation": {
+      "allFlagsValid": "所有標誌均有效",
+      "unknownFlags": "未知：{{flags}}",
+      "protectedFlags": "密碼保護：{{flags}}",
+      "failed": "驗證失敗"
+    },
+    "placeholders": {
+      "worktreeName": "worktree 名稱"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} 前",
+    "stoppedAgo": "之前停止過 {{time}}",
+    "running": "執行中",
+    "stopped": "已停止",
+    "stopProcess": "停止處理程序（SIGTERM）",
+    "kill": "殺",
+    "openInBrowser": "在瀏覽器中開啟",
+    "open": "開啟",
+    "pid": "PID{{pid}}",
+    "title": "CLI 處理程序"
+  },
+  "taskActivity": {
+    "loadingDetails": "正在載入活動詳細資訊…",
+    "contextUnavailable": "此活動不再提供詳細的文字記錄上下文。",
+    "loading": "正在載入任務活動…",
+    "lowSignalOnly": "尚未找到關鍵任務活動。下面的任務記錄流中提供了低階執行詳細資訊。",
+    "empty": "在可用的記錄中尚未發現明確的任務活動。舊的或啟發式工作階段記錄可能仍可在下面的執行工作階段中使用。",
+    "title": "任務活動",
+    "description": "從轉錄後設資料連結到此任務的關鍵顯式執行環境活動。"
+  },
+  "sendMessage": {
+    "title": "傳送訊息",
+    "description": "向團隊成員傳送直接訊息。",
+    "recipientLabel": "接受者",
+    "selectMemberPlaceholder": "選擇成員…",
+    "messageLabel": "資訊",
+    "placeholder": "寫下您的資訊…（輸入以傳送）",
+    "send": "傳送",
+    "sending": "正在傳送…",
+    "charsLeft": "{{count}} 剩餘字元數",
+    "saved": "已儲存",
+    "attachments": {
+      "teamOnlineRequired": "團隊必須線上才能附加檔案",
+      "recipientUnsupported": "檔案可以傳送給團隊負責人或 OpenCode 隊友",
+      "openCodeOnlineRequired": "團隊必須線上才能為 OpenCode 隊友附加檔案",
+      "disabledHint": "線上團隊負責人和線上 OpenCode 隊友支援檔案附件。刪除附件或切換收件人。",
+      "attachFiles": "附加檔案（貼上或拖放）",
+      "unavailable": "附件不可用"
+    },
+    "quote": {
+      "remove": "刪除報價",
+      "replyingTo": "正在回覆"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "取消回覆",
+    "replyingTo": "正在回覆",
+    "placeholder": "新增留言…（按 Enter 傳送）",
+    "attachFile": "附加檔案（或貼上）",
+    "voiceToText": "語音轉文字",
+    "comment": "留言",
+    "charsLeft": "{{count}} 剩餘字元數",
+    "saved": "已儲存",
+    "awaitingReplyFrom": "正在等待回覆",
+    "or": "或"
+  },
+  "taskAttachments": {
+    "dropImageHere": "將影像拖放到此處",
+    "attachImage": "附上圖片",
+    "pasteOrDragDrop": "或貼上/拖放",
+    "fromOriginalMessage": "來自原始訊息",
+    "dropFilesHere": "將檔案拖放到此處",
+    "loading": "正在載入附件…"
+  },
+  "permissions": {
+    "autoApproveAllTools": "自動核准所有工具",
+    "autonomousModeDescription": "自主模式：團隊工具無需確認即可執行。對不受信任的程式碼要小心。",
+    "manualModeDescription": "手動模式：您將即時核准或拒絕每個工具呼叫。"
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "執行",
+      "process": "過程"
+    },
+    "filters": {
+      "all": "全部"
+    },
+    "logs": {
+      "title": "記錄",
+      "loading": "正在載入成員記錄流…",
+      "emptyTitle": "尚未找到該成員的記錄串流項目。",
+      "emptyDescription": "成員範圍的記錄或執行環境記錄將在可用時顯示在此處。"
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "描述需要變更的內容…（輸入提交）",
+    "submit": "提交",
+    "charsLeft": "{{count}} 剩餘字元數",
+    "saved": "已儲存",
+    "title": "請求變更"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "開啟儀表板",
+      "openTeam": "開放組隊",
+      "cancel": "取消"
+    },
+    "membersJson": {
+      "hide": "隱藏 JSON"
+    },
+    "optional": {
+      "badge": "選修的"
+    }
+  },
+  "runningTeams": {
+    "title": "執行團隊",
+    "status": {
+      "active": "活躍",
+      "provisioning": "啟動中",
+      "idle": "執行中"
+    },
+    "noProject": "沒有專案"
+  },
+  "layout": {
+    "maxPanesReached": "已達到 {{count}} 窗格的最大值"
+  },
+  "codexReconnect": {
+    "description": "您的 Codex 工作階段似乎已過時。重新連線以繼續。",
+    "useCode": "使用程式碼",
+    "generating": "生成…",
+    "openLogin": "開啟登入",
+    "generateLink": "生成連結"
+  },
+  "effortLevel": {
+    "label": "推理強度（選填）",
+    "maxDescription": "Max 為模型提供了完成困難任務最多的推理時間。"
+  },
+  "contextLimit": {
+    "limitTo200k": "將上下文限制為 200K Token",
+    "always200k": "（此模型始終為 200K）",
+    "tooltipContent": "如果支援，將啟動保持在 200K Token 上下文視窗內。",
+    "tooltipTitle": "上下文限制"
+  },
+  "roleSelect": {
+    "noRole": "沒有角色",
+    "customRole": "自訂角色…",
+    "searchPlaceholder": "搜尋角色…",
+    "empty": "未找到角色。",
+    "reservedRole": "該角色已保留",
+    "emptyCustomRole": "角色不能為空"
+  },
+  "terminalWorkspace": {
+    "currentWorkingDirectory": "目前的工作目錄",
+    "gitBranchTitle": "Git 分支：{{branch}}",
+    "openTerminalPlatformRepository": "在 GitHub 上開啟 terminal-platform",
+    "poweredByTerminalPlatform": "由 terminal-platform 提供技術支援",
+    "shellDefaultDirectory": "Shell 預設工作目錄",
+    "openTeamTerminal": "開啟 {{team}} 終端機",
+    "openTerminal": "開啟終端機",
+    "terminalSheetOpen": "終端機面板已開啟",
+    "teamTerminalTitle": "{{team}} 終端機",
+    "teamRuntime": "團隊執行環境",
+    "teamRuntimeBadge": "團隊執行環境",
+    "localShell": "本機 Shell",
+    "localShellBadge": "本機 Shell",
+    "reloadTerminalWorkspace": "重新載入終端機工作區",
+    "stopTerminalRuntime": "停止終端機執行環境",
+    "startingRuntimeTitle": "正在啟動終端機執行環境",
+    "startingRuntimeDetail": "正在準備團隊工作區並還原已儲存的終端機狀態。",
+    "runtimeUnavailableTitle": "終端機執行環境無法使用",
+    "runtimeDisconnectedTitle": "終端機執行環境未連線",
+    "runtimeDisconnectedDetail": "重新載入工作區以重新連線。",
+    "restoreHalfHeightSheet": "還原為半高面板",
+    "expandTerminalSheet": "展開終端機面板",
+    "openTerminalSettings": "開啟終端機設定",
+    "closeTerminalSettings": "關閉終端機設定",
+    "closeTerminalSheet": "關閉終端機面板",
+    "loadingTerminalTab": "正在載入終端機分頁",
+    "terminalCommandActions": "終端機指令動作",
+    "copy": "複製",
+    "copyCommand": "複製指令",
+    "copyOutput": "複製輸出",
+    "terminalTabs": "終端機分頁",
+    "noTerminalTabs": "沒有終端機分頁",
+    "closeTerminalTab": "關閉終端機分頁 {{tab}}",
+    "createAnotherTabBeforeClosing": "關閉這個分頁前，請先建立另一個分頁",
+    "editTerminalTabTitle": "編輯終端機分頁標題",
+    "renameTab": "重新命名分頁",
+    "tabColor": "分頁顏色",
+    "chooseColor": "選擇顏色",
+    "settingsTab": "設定",
+    "closeTerminalSettingsTab": "關閉終端機設定分頁",
+    "createTerminalTab": "建立終端機分頁",
+    "terminalTabsUnavailable": "無法使用終端機分頁",
+    "closeTerminalTabDialogTitle": "要關閉終端機分頁嗎？",
+    "closeTerminalTabDialogDescription": "這個分頁有終端機輸出紀錄。關閉後，分頁和可見的輸出會從這個工作區移除。",
+    "cancel": "取消",
+    "closeTab": "關閉分頁",
+    "commandPlaceholder": "輸入指令...",
+    "commandRun": "執行",
+    "commandRunTitle": "將指令傳送到目前焦點所在的窗格",
+    "commandInterrupt": "Ctrl+C",
+    "commandInterruptTitle": "將 Ctrl+C 傳送到目前焦點所在的窗格",
+    "settingsTitle": "終端機設定",
+    "settingsDescription": "外觀與執行環境控制。",
+    "settingsThemeTitle": "主題",
+    "settingsThemeDescription": "選擇終端機的基本配色。",
+    "settingsThemeAria": "終端機主題",
+    "settingsThemePlaceholder": "選擇主題",
+    "settingsFontTitle": "字型",
+    "settingsFontDescription": "調整文字大小和 SDK 字型預設集。",
+    "settingsFontPreset": "預設集",
+    "settingsFontPresetAria": "終端機字型預設集",
+    "settingsFontPresetPlaceholder": "字型預設集",
+    "settingsFontSize": "大小",
+    "settingsBackgroundTitle": "背景",
+    "settingsBackgroundDescription": "控制透明度、模糊、顏色和選用的圖片。",
+    "settingsOpacity": "不透明度",
+    "settingsOpacityAria": "終端機不透明度",
+    "settingsBackgroundMode": "背景",
+    "settingsBackgroundModeAria": "終端機背景模式",
+    "settingsBackgroundColorAria": "終端機背景顏色",
+    "settingsBackdropBlur": "背景模糊",
+    "settingsImageUrl": "圖片 URL",
+    "settingsImageFit": "圖片填滿方式",
+    "settingsImageFitAria": "終端機背景圖片填滿方式",
+    "settingsImageBlur": "圖片模糊",
+    "settingsDimImage": "調暗終端機文字後方的圖片",
+    "settingsBehaviorTitle": "行為",
+    "settingsBehaviorDescription": "讓長行的指令輸出保持易讀。",
+    "settingsWrapLongOutput": "自動換行過長的指令輸出",
+    "settingsRuntimeTitle": "執行環境",
+    "settingsRuntimeDescription": "只有在終端機傳輸看起來停滯時才使用這些功能。",
+    "settingsReconnect": "重新連線",
+    "settingsSessions": "工作階段",
+    "settingsReload": "重新載入",
+    "settingsStop": "停止",
+    "settingsResetAppearance": "重設外觀",
+    "backgroundModeTransparent": "透明",
+    "backgroundModeSolid": "純色",
+    "backgroundModeImage": "圖片",
+    "imageFitCover": "覆蓋",
+    "imageFitContain": "完整顯示",
+    "imageFitStretch": "延展",
+    "imageFitTile": "並排",
+    "imageFitCenter": "置中",
+    "themeDark": "深色",
+    "themeLight": "淺色",
+    "fontScaleCompact": "緊湊",
+    "fontScaleDefault": "預設",
+    "fontScaleLarge": "大",
+    "tabColorSlate": "石板灰",
+    "tabColorSky": "天藍色",
+    "tabColorBlue": "藍色",
+    "tabColorCyan": "青色",
+    "tabColorTeal": "藍綠色",
+    "tabColorEmerald": "翡翠綠",
+    "tabColorLime": "萊姆綠",
+    "tabColorAmber": "琥珀色",
+    "tabColorOrange": "橘色",
+    "tabColorRose": "玫瑰色",
+    "tabColorViolet": "紫羅蘭色"
+  },
+  "organizations": {
+    "map": {
+      "allOrganizationsTitle": "所有組織",
+      "defaultTitle": "組織圖",
+      "organizationPlaceholder": "組織",
+      "loading": "正在載入組織圖...",
+      "noOrganizationData": "沒有組織資料",
+      "scope": {
+        "currentOrg": "目前組織",
+        "allOrgs": "所有組織"
+      },
+      "actions": {
+        "edit": "編輯",
+        "editing": "編輯中",
+        "refresh": "重新整理"
+      },
+      "stats": {
+        "orgs": "{{count}} 個組織",
+        "orgs_one": "{{count}} 個組織",
+        "orgs_other": "{{count}} 個組織",
+        "teams": "{{count}} 個團隊",
+        "teams_one": "{{count}} 個團隊",
+        "teams_other": "{{count}} 個團隊",
+        "relations": "{{count}} 個關係",
+        "relations_one": "{{count}} 個關係",
+        "relations_other": "{{count}} 個關係",
+        "messages": "{{count}} 則訊息",
+        "messages_one": "{{count}} 則訊息",
+        "messages_other": "{{count}} 則訊息",
+        "orgs_few": "{{count}} 個組織",
+        "orgs_many": "{{count}} 個組織",
+        "teams_few": "{{count}} 個團隊",
+        "teams_many": "{{count}} 個團隊",
+        "relations_few": "{{count}} 個關係",
+        "relations_many": "{{count}} 個關係",
+        "messages_few": "{{count}} 則訊息",
+        "messages_many": "{{count}} 則訊息",
+        "agents": "{{count}} 個代理",
+        "agents_one": "{{count}} 個代理",
+        "agents_few": "{{count}} 個代理",
+        "agents_many": "{{count}} 個代理",
+        "agents_other": "{{count}} 個代理",
+        "runtimeLinks": "{{count}} 個執行環境連結",
+        "runtimeLinks_one": "{{count}} 個執行環境連結",
+        "runtimeLinks_other": "{{count}} 個執行環境連結",
+        "runtimeLinks_few": "{{count}} 個執行環境連結",
+        "runtimeLinks_many": "{{count}} 個執行環境連結"
+      }
+    },
+    "editor": {
+      "title": "組織設定",
+      "loadingOrganization": "正在載入組織",
+      "fallbackOrganization": "組織",
+      "saving": "正在儲存...",
+      "source": {
+        "loading": "載入中",
+        "configured": "已設定",
+        "generated": "自動產生"
+      },
+      "badges": {
+        "groups": "{{count}} 個群組",
+        "groups_one": "{{count}} 個群組",
+        "groups_other": "{{count}} 個群組",
+        "placed": "已放置 {{count}} 個",
+        "placed_one": "已放置 {{count}} 個",
+        "placed_other": "已放置 {{count}} 個",
+        "unplaced": "未放置 {{count}} 個",
+        "unplaced_one": "未放置 {{count}} 個",
+        "unplaced_other": "未放置 {{count}} 個",
+        "groups_few": "{{count}} 個群組",
+        "groups_many": "{{count}} 個群組",
+        "placed_few": "已放置 {{count}} 個",
+        "placed_many": "已放置 {{count}} 個",
+        "unplaced_few": "未放置 {{count}} 個",
+        "unplaced_many": "未放置 {{count}} 個"
+      },
+      "tabs": {
+        "structure": "結構",
+        "teams": "團隊",
+        "links": "連結",
+        "organizations": "組織"
+      },
+      "newOrganization": "新增組織",
+      "parentOrganization": "上層組織",
+      "topLevel": "最上層",
+      "underLabel": "位於 {{label}} 之下",
+      "selectedLocation": "選取的位置",
+      "organizationTree": "組織樹",
+      "noOrganizationUnits": "尚無組織單位",
+      "dropHere": "放到這裡",
+      "createGroup": "建立群組",
+      "groupPlaceholder": "部門、小組、產品領域",
+      "createUnderPlaceholder": "建立於",
+      "placeExistingTeam": "放置現有團隊",
+      "teamPlaceholder": "團隊",
+      "placeUnderPlaceholder": "放置於",
+      "selectedItem": "選取的項目",
+      "rootSelected": "已選取組織根層",
+      "moveUnderPlaceholder": "移到",
+      "manualRelation": "手動關係",
+      "sourcePlaceholder": "來源",
+      "targetPlaceholder": "目標",
+      "kindPlaceholder": "類型",
+      "kind": {
+        "org": "組織",
+        "group": "群組",
+        "team": "團隊"
+      },
+      "relationKind": {
+        "dependsOn": "相依於",
+        "delegates": "委派",
+        "observes": "觀察"
+      },
+      "actions": {
+        "create": "建立",
+        "teamHere": "在此放置團隊",
+        "addGroup": "新增群組",
+        "assignTeam": "指派團隊",
+        "move": "移動",
+        "remove": "移除",
+        "addRelation": "新增關係"
+      }
+    },
+    "inspector": {
+      "closeSelection": "關閉選取",
+      "kind": {
+        "group": "群組",
+        "organization": "組織"
+      },
+      "childNodes": "{{count}} 個子節點",
+      "childNodes_one": "{{count}} 個子節點",
+      "childNodes_other": "{{count}} 個子節點",
+      "agents": "{{count}} 個代理",
+      "agents_one": "{{count}} 個代理",
+      "agents_other": "{{count}} 個代理",
+      "status": {
+        "online": "線上",
+        "offline": "離線"
+      },
+      "taskCounts": {
+        "active": "進行中",
+        "pending": "待處理",
+        "done": "已完成"
+      },
+      "actions": {
+        "expand": "展開",
+        "collapse": "收合",
+        "open": "開啟",
+        "graph": "圖表",
+        "expandSubtree": "展開子樹",
+        "collapseSubtree": "收合子樹"
+      },
+      "inProgress": "進行中",
+      "noActiveAgentTasks": "沒有進行中的代理任務",
+      "childNodes_few": "{{count}} 個子節點",
+      "childNodes_many": "{{count}} 個子節點",
+      "agents_few": "{{count}} 個代理",
+      "agents_many": "{{count}} 個代理",
+      "tags": {
+        "system": "系統",
+        "unassigned": "未指派"
+      },
+      "descriptions": {
+        "allOrganizations": "所有已設定的組織。",
+        "unassignedTeams": "尚未放進組織的團隊。"
+      }
+    },
+    "graph": {
+      "actions": {
+        "createTeamIn": "在 {{label}} 中建立團隊"
+      },
+      "layout": {
+        "switchToHierarchy": "切換為階層圖",
+        "switchToNested": "切換為巢狀地圖"
+      },
+      "view": {
+        "overview": "總覽",
+        "hierarchy": "階層",
+        "structure": "結構",
+        "relations": "關係"
+      },
+      "overviewCard": {
+        "summary": "{{groupCount}} 個群組 · {{teamCount}} 個團隊 · {{agentCount}} 個代理",
+        "activeTasks": "{{count}} 個進行中的任務",
+        "attention": "{{count}} 個需要注意",
+        "teamsOnline": "{{onlineCount}}/{{teamCount}} 個團隊在線上"
+      },
+      "toolbar": {
+        "filters": "地圖篩選條件",
+        "fit": "縮放至有意義的總覽",
+        "reset": "重設搜尋、焦點和篩選條件",
+        "tasks": "任務",
+        "connections": "連線",
+        "animation": "動畫",
+        "zoomIn": "放大",
+        "zoomOut": "縮小"
+      },
+      "legend": {
+        "organization": "組織",
+        "group": "群組",
+        "hierarchy": "階層",
+        "connection": "連線",
+        "online": "線上"
+      },
+      "focus": {
+        "searchLabel": "搜尋組織圖",
+        "searchPlaceholder": "組織、群組、團隊或任務...",
+        "clearSearch": "清除搜尋",
+        "noResults": "找不到結果",
+        "taskMatch": "任務：{{task}}",
+        "pathToRoot": "到根節點的路徑",
+        "connectedOnly": "已連線（{{count}}）",
+        "collapseBranch": "收合分支",
+        "expandBranch": "展開分支",
+        "clearFocus": "清除焦點",
+        "kind": {
+          "organization": "組織",
+          "container": "群組",
+          "team": "團隊"
+        }
+      },
+      "canvas": {
+        "organizationMap": "組織圖",
+        "allOrganizations": "所有組織",
+        "unassignedTeams": "未指派的團隊",
+        "agents": "{{count}} 個代理",
+        "agents_one": "{{count}} 個代理",
+        "agents_few": "{{count}} 個代理",
+        "agents_many": "{{count}} 個代理",
+        "agents_other": "{{count}} 個代理",
+        "activeAgents": "{{count}} 個活躍代理",
+        "activeAgents_one": "{{count}} 個活躍代理",
+        "activeAgents_few": "{{count}} 個活躍代理",
+        "activeAgents_many": "{{count}} 個活躍代理",
+        "activeAgents_other": "{{count}} 個活躍代理",
+        "teams": "{{count}} 個團隊",
+        "teams_one": "{{count}} 個團隊",
+        "teams_few": "{{count}} 個團隊",
+        "teams_many": "{{count}} 個團隊",
+        "teams_other": "{{count}} 個團隊",
+        "orgsAndTeams": "{{orgCount}} 個組織 - {{teamCount}} 個團隊",
+        "teamRole": "{{memberCount}} 個代理 - {{activeCount}} 個活躍",
+        "groupSummary": "{{teamCount}} 個團隊 · {{activeTeamCount}} 個進行中 · {{taskCount}} 個任務",
+        "teamSummary": "{{status}} · {{activeTaskCount}} 個進行中 · {{taskCount}} 個任務",
+        "minimap": "組織圖導覽",
+        "teamReference": "團隊參照",
+        "notFound": "找不到",
+        "online": "線上",
+        "offline": "離線",
+        "agentStatus": {
+          "active": "活躍",
+          "idle": "閒置",
+          "offline": "離線",
+          "unknown": "未知"
+        }
+      },
+      "edgeOverlay": {
+        "runtimeMessages": "執行環境跨團隊訊息",
+        "manualRelation": "手動組織關係",
+        "close": "關閉關係詳細資訊",
+        "messages": "{{count}} 則訊息",
+        "messages_one": "{{count}} 則訊息",
+        "messages_other": "{{count}} 則訊息",
+        "weight": "權重 {{count}}",
+        "weight_one": "權重 {{count}}",
+        "weight_other": "權重 {{count}}",
+        "messages_few": "{{count}} 則訊息",
+        "messages_many": "{{count}} 則訊息",
+        "weight_few": "權重 {{count}}",
+        "weight_many": "權重 {{count}}"
+      }
+    }
+  },
+  "templates": {
+    "label": "團隊範本",
+    "placeholder": "從團隊範本開始",
+    "confirmTitle": "要套用團隊範本嗎？",
+    "confirmMessage": "這會以範本的內容取代您的隊友、指示和團隊設定。",
+    "confirmAction": "套用範本",
+    "names": {
+      "software-product": "軟體產品團隊",
+      "marketing": "行銷團隊",
+      "content": "內容工作室",
+      "research": "研究團隊",
+      "sales": "業務團隊",
+      "customer-support": "客戶支援團隊",
+      "operations": "營運團隊",
+      "learning": "學習團隊"
+    },
+    "providerLabel": "選擇團隊供應商",
+    "providerPlaceholder": "選擇供應商",
+    "modelAfterProvider": "選擇供應商後即可選擇模型。",
+    "descriptions": {
+      "software-product": "設計、開發並驗證 應用程式、網站和數位產品。",
+      "marketing": "為產品或小型企業規劃行銷活動和訊息。",
+      "content": "撰寫清楚易懂的文章、電子報、教育內容和腳本。",
+      "research": "以證據為基礎研究市場、主題和實務決策。",
+      "sales": "了解客戶需求，準備報價、開發聯繫和後續追蹤。",
+      "customer-support": "解答客戶問題，並將常見問題整理成實用的說明內容。",
+      "operations": "以實際可行的計畫和流程改善來安排專案與日常工作。",
+      "learning": "透過清楚的說明、練習和回饋學習一個主題或技能。"
+    }
+  },
+  "externalPrompt": {
+    "runCodex": "在 Codex 中執行",
+    "runClaude": "在 Claude Code 中執行",
+    "runCancel": "取消執行",
+    "runCodexNotReady": "Codex 需要通過驗證的單次執行就緒狀態，以及一個可用的帳號。",
+    "runClaudeNotReady": "Claude Code 需要通過驗證的原生單次執行就緒狀態。",
+    "runCodexMissing": "無法使用 Codex。請在供應商設定中安裝或重新連接。",
+    "runClaudeMissing": "無法使用 Claude Code。請在供應商設定中安裝或重新連接。",
+    "runTask": "正在執行請求：{{task}}",
+    "runCompletedHelp": "代理處理程序已成功結束。請查看它的輸出，確認每項要求變更的結果。",
+    "runRequestFailed": "無法更新這次執行。請重新整理連線和供應商狀態，然後重試。",
+    "runStatuses": {
+      "preparing": "準備中",
+      "running": "執行中",
+      "completed": "處理程序已完成",
+      "failed": "執行失敗",
+      "cancelled": "已取消"
+    },
+    "title": "用提示詞管理",
+    "description": "為您的外部代理撰寫請求。下方範本僅供參考，無法編輯。",
+    "taskLabel": "要讓代理做什麼？",
+    "taskTooLong": "原生執行最多支援 {{limit}} 個字元的請求。請縮短請求後再執行。",
+    "taskPlaceholder": "為我的專案建立一個行銷團隊。從「行銷團隊」範本開始，再加入一位設計師。",
+    "createOnly": "目前只支援建立一份或多份已儲存的草稿。此流程無法編輯、移到垃圾桶或啟動。",
+    "taskRequired": "請輸入請求以複製提示詞。目前只支援建立已儲存的草稿。",
+    "templatesTitle": "可用的團隊範本（參考）",
+    "coordinator": "協調者",
+    "responsibilities": "職責",
+    "connectionStatus": "MCP：{{mcp}}；UI 存取：{{cdp}}",
+    "connectionSettings": "連線設定",
+    "connectionRequired": "複製前請等待 MCP 應用程式連線完成，或重試連線。",
+    "contextChanged": "應用程式或資料根目錄已變更。複製前請重新整理連線。",
+    "loading": "正在讀取本機應用程式連線...",
+    "localOnly": "外部提示詞需要在本機桌面應用程式環境中使用。",
+    "retry": "重試連線",
+    "preview": "檢視最終提示詞",
+    "previewLabel": "最終提示詞",
+    "copy": "複製給代理的提示詞",
+    "copying": "正在複製...",
+    "copied": "已複製",
+    "copiedDescription": "已複製提示詞。這不代表外部代理已經連線或完成了您的請求。",
+    "copyFailed": "無法寫入剪貼簿。請手動選取並複製最終提示詞。",
+    "responsibilitiesFor": "{{name}} 的職責",
+    "requestHelp": "在請求中指定要使用的範本，並描述要做的修改。",
+    "editAvailable": "可以編輯草稿或已停止團隊的設定。",
+    "trashAvailable": "可以將草稿或已停止的團隊移到垃圾桶（可復原）。",
+    "previewPlaceholder": "輸入請求即可查看最終提示詞。需要就緒的 MCP 連線。"
+  },
+  "managementChanges": {
+    "title": "最近的變更",
+    "created": "已建立",
+    "edited": "已編輯",
+    "hidden": "部分最近的變更被目前的篩選條件隱藏。",
+    "roster": "角色：+{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "名稱已變更",
+      "description": "描述已變更",
+      "color": "顏色已變更",
+      "leadInstructions": "負責人指示已變更",
+      "members": "成員已變更"
+    }
+  }
+}
