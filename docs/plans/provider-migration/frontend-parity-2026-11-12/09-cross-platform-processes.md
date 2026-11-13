@@ -2019,3 +2019,15 @@ qualification13 policy/Node guards при последующем merge, bounded 
 и запись partial log до error assertion. Использовать существующую CI
 проверку workflow и следующий уже необходимый native-resume row; не добавлять
 новую suite/runner/model input. Исполнение correction пока pending.
+
+### §43 actual CI: explicit type for the retained census counter
+
+Native head `dfcea017fad525e24e53d775088a72d013a5b96d`,
+[run43394213408/job131781100866](https://github.com/777genius/agent-teams-ai/actions/runs/43394213408/job/131781100866):
+Host build прошёл, scripts typecheck остановился с TS7022 на
+`desktop-backend-observations.test.ts:131` (`censusReads = reads`).
+Добавить только явный `number` к сохранённому счётчику в existing loop.
+Initializer, строгий listener guard, failure projection, число census reads
+и byte-equality assertions остаются прежними. Новые tests и бюджеты не нужны.
+Это исправление compilation, не доказательство устранения Linux listener leak;
+следующий штатный native cut обязан повторно пройти types и actual gate.
