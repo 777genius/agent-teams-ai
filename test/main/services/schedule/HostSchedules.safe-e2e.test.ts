@@ -16,7 +16,7 @@ import { createDesktopHostSchedules } from '@main/composition/createDesktopHostS
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { SchedulerService } from '@main/services/schedule/SchedulerService';
 import { SelectedScheduleDispatcher } from '@main/services/schedule/SelectedScheduleDispatcher';
-import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { getSchedulesBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import type { TeamHostProfile } from '@agent-teams/legacy-agent-host/team-host';
@@ -165,6 +165,17 @@ it('carries a lost task-create acknowledgement through cold context renewal unti
   const rebound = await f.scheduler.updateSchedule(schedule.id, { label: 'TEST renewed context' }, await f.capture());
   expect(rebound.hostTarget).toEqual({ ...schedule.hostTarget, contextId: 'TEST-A2' });
   f.switchForeground('TEST-B');
+  const historyPath = join(getSchedulesBasePath(), 'runs', `${schedule.id}.json`);
+  const originalHistory = await readFile(historyPath, 'utf8');
+  const damagedHistory = originalHistory.slice(0, -1);
+  await writeFile(historyPath, damagedHistory);
+  // An unreadable pending receipt is not an empty history: admission must stop
+  // before overwriting it or creating another task after the lost response.
+  await expect(f.scheduler.triggerNow(schedule.id)).rejects.toBeInstanceOf(SyntaxError);
+  expect(await readFile(historyPath, 'utf8')).toBe(damagedHistory);
+  expect(await f.snapshot()).toMatchObject({ ok: true, value: { tasks: [expect.any(Object)] } });
+  expect(await f.snapshot('TEST-handle-1')).toMatchObject({ ok: true, value: { tasks: [] } });
+  await writeFile(historyPath, originalHistory);
   await f.scheduler.triggerNow(schedule.id);
   const recovered = await f.waitRun(schedule.id, row => row.id !== first.id && row.status === 'skipped');
   expect(recovered.linkedTaskId).toBeTruthy();

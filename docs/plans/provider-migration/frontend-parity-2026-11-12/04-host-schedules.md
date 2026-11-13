@@ -783,3 +783,14 @@ cases and controlled finite-session Host cases. This qualifies the storage and
 recovery boundary only; it is not native-provider or Desktop UI evidence.
 Estimated delta: 1–10 production lines and 15–30 integration-test lines;
 complexity 3/10, reliability after verification 8/10, confidence 9/10.
+
+Verification on the `1160b575` source plus this slice: the extended child-Host
+journey failed before the fix because Run now returned a new running occurrence.
+After strict reads, all six existing scheduler suites passed (131 tests,
+0 failures, 0 skipped), including real Croner ticks, cold context renewal,
+lost acknowledgements and Stop during admission. Three existing controlled
+Host session/activity/message files also passed (32 tests, 0 skipped).
+The correction adds no provider input and changes no native execution policy.
+The existing controlled Team/Runtime Host suite passed all 30 cases, including
+Codex usage, mixed V2 ownership, launch replay and checkpoint recovery. Focused
+lint passed for the changed repository and integration file.
