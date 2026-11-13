@@ -124,10 +124,15 @@ jobs:
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.png
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold-dashboard.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold-dashboard.png
-            # The real-runtime fixture strips ambient credentials before app launch.
-            # Preserve original startup output on failure, as the desktop E2E does,
-            # to explain missing/reused launcher identity without bypassing custody.
-            ${{ runner.temp }}/opencode-diagnostics-e2e-*/desktop.log
+      - name: Preserve isolated desktop startup log after failed E2E
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-runtime-startup-log-${{ matrix.platform }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          # The disposable fixture strips inherited provider credentials.
+          path: ${{ runner.temp }}/opencode-diagnostics-e2e-*/desktop.log
       - name: Preserve owned startup resource samples
         if: always()
         uses: actions/upload-artifact@v4
