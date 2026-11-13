@@ -19,6 +19,7 @@ import {
   portOccupied,
   processTable,
   compiledBundleHashes,
+  projectDesktopHarnessFailure,
 } from './desktop-backend-observations.ts';
 import {
   captureDonorSavedInputs,
@@ -31,6 +32,7 @@ import {
 import type { DonorSavedSeed, DonorRow } from './desktop-donor-saved-fixture.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
 import { desktopCreateTeamHeaderButtonSelector } from './desktop-create-config-ui-smoke.ts';
+import { desktopProofSources } from './desktop-proof-sources.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
@@ -124,6 +126,8 @@ export async function produceDesktopDonorSavedTeam(options: {
     ],
   };
   options.evidence.donorSavedProducer = proof;
+  let phase = 'connect';
+  let failureObservation: DonorRow | undefined;
   const receiptPath = join(fixture.root, 'desktop-donor-saved-producer.json');
   const log = createWriteStream(join(fixture.root, 'desktop-donor-saved-app.log'), { mode: 0o600 });
   const invocation = [
@@ -215,6 +219,7 @@ export async function produceDesktopDonorSavedTeam(options: {
         label + ' retained'
       );
     };
+    phase = 'create-form';
     await ui.observeInput();
     await ui.waitRead(
       'Boolean(document.querySelector(\'button[aria-label="More actions"]\'))',
@@ -232,6 +237,7 @@ export async function produceDesktopDonorSavedTeam(options: {
       'donor Create hydration'
     );
     await fill(page + ' #team-name', teamName, 'donor unique name');
+    phase = 'model-selection';
     await ui.scrollTo(page + ' button[aria-label*=" provider,"]', 'donor lead model');
     await ui.click(page + ' button[aria-label*=" provider,"]', 'open donor lead model');
     const modelOption =
@@ -243,6 +249,7 @@ export async function produceDesktopDonorSavedTeam(options: {
         ');return button instanceof HTMLButtonElement&&button.disabled&&button.textContent.trim()==="Not supported";})()',
       'donor compatible catalogue omits unsupported effort'
     );
+    phase = 'member-configuration';
     await ui.scrollTo(page + ' button[aria-label="Add member"]', 'donor Add member');
     await ui.click(page + ' button[aria-label="Add member"]', 'add donor peer once');
     await fill(page + ' input[aria-label="Member 1 name"]', DONOR_SAVED_MEMBER, 'donor peer name');
@@ -267,6 +274,7 @@ export async function produceDesktopDonorSavedTeam(options: {
       join(fixture.root, 'workspace'),
       'donor working directory'
     );
+    phase = 'save';
     await ui.scrollTo(page + ' #launch-team', 'donor Save without Launch');
     assert.equal(
       await renderer.evaluate(
@@ -303,6 +311,7 @@ export async function produceDesktopDonorSavedTeam(options: {
       flag: 'wx',
     });
     proof.screenshot = { path: screenshotPath, sha256: await fileDigest(screenshotPath) };
+    phase = 'native-drain';
     // Donor's existing model check owns a 60s timeout; observe its original completion,
     // never start another check or signal a detached child from this TEST harness.
     const probeDeadline = Date.now() + 60_000;
@@ -323,6 +332,7 @@ export async function produceDesktopDonorSavedTeam(options: {
       !beforeQuit.some((entry) => command(entry.pid) === fixture.node + ' ' + fixture.hostEntry),
       'no current Host in donor epoch'
     );
+    phase = 'quit';
     quitRequested = true;
     await renderer.evaluate('window.electronAPI.windowControls.close()').catch(() => undefined);
     const deadline = Date.now() + 20_000;
@@ -365,6 +375,7 @@ export async function produceDesktopDonorSavedTeam(options: {
     const donorProbes = await finishDonor();
     assert.ok(donorProbes.length <= 8, 'finite original read-only model checks only');
     assert.deepEqual(model.probes, [], 'current Host has not started in the donor epoch');
+    phase = 'source-capture';
     const source = await captureDonorSavedCorpus(fixture.root, teamName);
     seed = {
       sourceKind: 'actual-donor-saved-only',
@@ -385,6 +396,11 @@ export async function produceDesktopDonorSavedTeam(options: {
     proof.seedSha256 = await fileDigest(join(fixture.root, 'desktop-donor-saved-seed.json'));
     proof.status = 'PASS';
   } catch (error) {
+    try {
+      failureObservation = {
+        phase, source: projectDesktopHarnessFailure(error, join(import.meta.dirname, '../..'), desktopProofSources),
+      };
+    } catch { failureObservation = { phase, source: { kind: 'unclassified', frames: [] } }; }
     proof.failure = error instanceof Error ? error.message.slice(0, 4000) : 'donor producer failed';
     throw error;
   } finally {
@@ -429,6 +445,22 @@ export async function produceDesktopDonorSavedTeam(options: {
       proof.status = 'INCOMPLETE';
       proof.freezeFailure =
         error instanceof Error ? error.message.slice(0, 4000) : 'donor freeze failed';
+    }
+    if (proof.status !== 'PASS') {
+      try {
+        const observation = {
+          diagnostic: 'donor-saved-producer',
+          ...(failureObservation ?? { phase: 'cleanup-or-freeze', source: { kind: 'unclassified', frames: [] } }),
+          sourceFrozen: proof.sourceFrozen === true, cleanupFailed: cleanup.cleanupFailure !== undefined,
+          cleanupEmpty: cleanup.remaining === null ? null : cleanup.remaining.length === 0,
+          capturedNativeEmpty: nativeAfterCleanup.remaining.length === 0,
+          unmatchedNativeEmpty: nativeAfterCleanup.unmatched.length === 0,
+        };
+        const encoded = JSON.stringify(observation);
+        assert.ok(Buffer.byteLength(encoded) <= 4096);
+        proof.failureObservation = observation;
+        console.log(encoded);
+      } catch { /* Keep the original failure and cleanup. */ }
     }
     app.stdout.unpipe(log);
     app.stderr.unpipe(log);

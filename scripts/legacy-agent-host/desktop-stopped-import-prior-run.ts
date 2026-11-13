@@ -31,9 +31,11 @@ import {
   processTable,
   selectedCdpPort,
   compiledBundleHashes,
+  projectDesktopHarnessFailure,
 } from './desktop-backend-observations.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
 import { openOriginalCreateForm } from './desktop-create-config-ui-smoke.ts';
+import { desktopProofSources } from './desktop-proof-sources.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
@@ -133,6 +135,8 @@ export async function produceDesktopCurrentStoppedTeam(options: {
       hostDescriptorPresent: false,
     };
   options.evidence.currentStoppedProducer = proof;
+  let phase = 'connect';
+  let failureObservation: Row | undefined;
   const receiptPath = join(fixture.root, 'stopped-import-prior-run.json');
   const log = createWriteStream(join(fixture.root, 'desktop-current-stopped-app.log'), {
     mode: 0o600,
@@ -198,8 +202,10 @@ export async function produceDesktopCurrentStoppedTeam(options: {
       assertOwnedRenderer: assertOriginal,
       step: (value) => steps.push(value),
     });
+    phase = 'create-form';
     await openOriginalCreateForm(renderer, ui, join(fixture.root, 'workspace'), LEGACY_IMPORT_TEAM);
     const page = '[data-testid="create-team-page"]';
+    phase = 'model-selection';
     await ui.scrollTo(page + ' button[aria-label*=" provider,"]', 'current original lead model');
     await ui.click(page + ' button[aria-label*=" provider,"]', 'open current original lead model');
     const option =
@@ -214,6 +220,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
       ),
       0
     );
+    phase = 'launch-settings';
     const optional = row(
       await ui.waitRead(
         `(()=>{const b=[...document.querySelectorAll('${page} button[aria-controls]')].find(e=>e.textContent.includes('Optional launch settings'));return b?{id:b.getAttribute('aria-controls'),expanded:b.getAttribute('aria-expanded')}:null})()`,
@@ -249,6 +256,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
       ),
       'checked'
     );
+    phase = 'create-launch';
     await ui.scrollTo(page + ' button', 'current original Create', 'Create');
     await ui.click(page + ' button', 'create and launch one current solo Team', 'Create');
     await ui.waitRead(`!document.querySelector('${page}')`, 'current Create completes', 90_000);
@@ -267,6 +275,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
       assert.ok(accepts(value), label);
       return value;
     };
+    phase = 'source-identity';
     const launch = await poll(
       () =>
         read(join(team, 'launch-state.json')).catch((error: NodeJS.ErrnoException) => {
@@ -290,6 +299,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
     assert.equal(config.leadSessionId, launch.leadSessionId);
     proof.sourceRunId = launch.publicationRunId;
     proof.sourceSessionId = launch.leadSessionId;
+    phase = 'reply';
     await ui.click('button[aria-label^="lead,"]', 'open original current lead thread');
     await ui.waitRead(
       `document.body.innerText.includes(${literal(CURRENT_LEGACY_SOURCE_REPLY)})`,
@@ -309,6 +319,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
     native.observe();
     const beforeStop = native.remaining();
     assert.ok(beforeStop.length >= 1, 'original source CLI still alive before Stop');
+    phase = 'stop';
     await ui.click('button[aria-label="Stop"]', 'original current source Stop exactly once');
     const stopped = await poll(
       () =>
@@ -334,6 +345,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
       'all original source native children absent'
     );
     proof.proof = release;
+    phase = 'create-task';
     const taskRoot = join(fixture.root, 'claude/tasks', LEGACY_IMPORT_TEAM);
     const tasks = async () =>
       Promise.all(
@@ -381,6 +393,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
       1,
       'saving a stopped Task never submits another input'
     );
+    phase = 'stop-proof';
     const diagnostics = await readStoppedImportSourceDiagnostics(fixture.root, {
       node: fixture.node,
       electron: inputs.electron.path,
@@ -394,6 +407,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
         (entry) => command(entry.pid) === fixture.node + ' ' + fixture.hostEntry
       )
     );
+    phase = 'quit';
     quitRequested = true;
     await renderer.evaluate('window.electronAPI.windowControls.close()').catch(() => undefined);
     const deadline = Date.now() + 20_000;
@@ -424,6 +438,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
       remaining: [],
       listenerAbsent: true,
     };
+    phase = 'oracle-drain';
     assert.ok(model.finishCurrentLegacySource);
     const sourceModel = await model.finishCurrentLegacySource();
     assert.equal(sourceModel.turns[0]!.model, 'claude-sonnet-4-6');
@@ -432,6 +447,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
     assert.deepEqual(model.observations, []);
     assert.deepEqual(model.probes, []);
     assert.deepEqual(model.failures, []);
+    phase = 'source-capture';
     const roots: string[] = [],
       absentRoots: string[] = [];
     for (const path of [
@@ -490,6 +506,16 @@ export async function produceDesktopCurrentStoppedTeam(options: {
     proof.source = { roots, absentRoots, files: seed.before };
     proof.status = 'PASS';
   } catch (error) {
+    try {
+      const captured = native.captured(), exceeded = model.failures[0] === 'bounded original legacy catalog reads';
+      const count = (value: unknown, cap: number) => Array.isArray(value) && value.length <= cap ? value.length : null;
+      failureObservation = {
+        phase, source: projectDesktopHarnessFailure(error, options.repo, desktopProofSources),
+        catalogLimitExceeded: exceeded ? true : null, catalogReadsAtLeast: exceeded ? 9 : null,
+        nativeBusinessCount: count(model.currentLegacyTurns, 1), modelProbeCount: count(model.currentLegacyProbes, 8),
+        capturedNativeCount: count(captured, 32), capturedNativeOverflow: captured.length > 32,
+      };
+    } catch { failureObservation = { phase, source: { kind: 'unclassified', frames: [] } }; }
     proof.failure = error instanceof Error ? error.message.slice(0, 4000) : 'current source failed';
     throw error;
   } finally {
@@ -534,6 +560,22 @@ export async function produceDesktopCurrentStoppedTeam(options: {
       proof.status = 'INCOMPLETE';
       proof.freezeFailure =
         error instanceof Error ? error.message.slice(0, 4000) : 'source changed';
+    }
+    if (proof.status !== 'PASS') {
+      try {
+        const observation = {
+          diagnostic: 'current-stopped-producer',
+          ...(failureObservation ?? { phase: 'cleanup-or-freeze', source: { kind: 'unclassified', frames: [] } }),
+          sourceFrozen: proof.sourceFrozen === true, cleanupFailed: cleanup.cleanupFailure !== undefined,
+          cleanupEmpty: cleanup.remaining === null ? null : cleanup.remaining.length === 0,
+          capturedNativeEmpty: nativeChildrenAfterCleanup.remaining.length === 0,
+          unmatchedNativeEmpty: nativeChildrenAfterCleanup.unmatched.length === 0,
+        };
+        const encoded = JSON.stringify(observation);
+        assert.ok(Buffer.byteLength(encoded) <= 4096);
+        proof.failureObservation = observation;
+        console.log(encoded);
+      } catch { /* Keep the original failure and cleanup. */ }
     }
     app.stdout.unpipe(log);
     app.stderr.unpipe(log);
