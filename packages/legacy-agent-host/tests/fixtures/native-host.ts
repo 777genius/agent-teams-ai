@@ -32,6 +32,7 @@ export function assertSafeRuntimeProjection(value: unknown): void {
         'interactions',
         'diagnostic',
         'attachmentCapabilities',
+        'sessionCommands',
       ].includes(key)
     ),
     'runtime RPC exposes only its explicit safe projection'
@@ -47,6 +48,20 @@ export function assertSafeRuntimeProjection(value: unknown): void {
     const capabilities = record(safe.attachmentCapabilities);
     assert.deepEqual(Object.keys(capabilities).sort(), ['documents', 'images', 'textFiles']);
     assert.ok(Object.values(capabilities).every((value) => typeof value === 'boolean'));
+  }
+  if (Object.hasOwn(safe, 'sessionCommands')) {
+    assert.ok(Array.isArray(safe.sessionCommands) && safe.sessionCommands.length <= 4096);
+    const names = new Set<string>();
+    for (const value of safe.sessionCommands) {
+      const command = record(value);
+      assert.deepEqual(Object.keys(command).sort(), ['description', 'name']);
+      assert.equal(typeof command.name, 'string');
+      assert.match(String(command.name), /^[a-z][a-z0-9:-]{0,63}$/iu);
+      assert.equal(names.has(String(command.name)), false);
+      names.add(String(command.name));
+      assert.ok(typeof command.description === 'string' && command.description.length <= 4096);
+      assert.equal(command.description.includes('\0'), false);
+    }
   }
   assert.equal(JSON.stringify(safe).includes('Bearer '), false);
 }

@@ -97,6 +97,7 @@ export function teamModelProbeProfile(base: RuntimeMemberProfile): ProviderManag
       ...common,
       provider: 'opencode',
       endpoint: base.endpoint,
+      ...(base.managedPreferences ? { managedPreferences: structuredClone(base.managedPreferences) } : {}),
       ...(base.nativeOptions.variant === undefined ? {} : { variant: base.nativeOptions.variant }),
       ...(base.nativeGeneration === 'v2' ? {
         nativeGeneration: 'v2' as const, protocolRevision: '2.1.4' as const,

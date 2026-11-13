@@ -13,13 +13,15 @@ export const COMPACT_FOLLOWUP = 'TEST_NATIVE_M10_FOLLOWUP_NO_SECOND_REMINDER_V1'
 export const PROJECT_COMMAND_BODY = 'TEST_NATIVE_P03_PROJECT_COMMAND_BODY_V1';
 export const USER_COMMAND_BODY = 'TEST_NATIVE_P03_USER_COMMAND_BODY_V1';
 export const COMMAND_ARGS = 'TEST_NATIVE_P03_EXACT_ARGUMENTS';
+export const REVIEW_ARGS = 'TEST_NATIVE_P03_EXACT_REVIEW_ARGUMENTS';
 export type CompactionPhase =
   | 'seed'
   | 'compact'
   | 'verify'
   | 'followup'
   | 'project-command'
-  | 'user-command';
+  | 'user-command'
+  | 'review';
 export interface CompactionScenario {
   phase(): CompactionPhase;
   taskId(): string;
@@ -55,10 +57,13 @@ export function contextCompactionScript(
   return {
     requests,
     respond(body: Row, tools: string[]): Row {
-      assert.ok(requests.length < 8, 'four context turns and two exact skill/tool-result pairs');
+      assert.ok(
+        requests.length < 10,
+        'four context turns and three exact command/tool-result pairs'
+      );
       const phase = options.phase();
       const count = phases.get(phase) ?? 0;
-      const command = phase === 'project-command' || phase === 'user-command';
+      const command = phase === 'project-command' || phase === 'user-command' || phase === 'review';
       assert.ok(
         count < (command ? 2 : 1),
         'bounded phase: no duplicate native model spend for an original phase'
@@ -123,13 +128,23 @@ export function contextCompactionScript(
           'represented epoch is not injected again'
         );
       } else {
+        if (phase === 'review') {
+          assert.ok(
+            serialized.includes('You are an expert code reviewer.'),
+            'native builtin review expands its prompt'
+          );
+          assert.ok(
+            serialized.includes(`PR number: ${REVIEW_ARGS}`),
+            'native builtin review retains original args'
+          );
+        } else
+          assert.ok(
+            serialized.includes(
+              phase === 'project-command' ? PROJECT_COMMAND_BODY : USER_COMMAND_BODY
+            )
+          );
         assert.ok(
-          serialized.includes(
-            phase === 'project-command' ? PROJECT_COMMAND_BODY : USER_COMMAND_BODY
-          )
-        );
-        assert.ok(
-          serialized.includes(COMMAND_ARGS),
+          serialized.includes(phase === 'review' ? REVIEW_ARGS : COMMAND_ARGS),
           'actual native command expands its original arguments'
         );
         assert.ok(

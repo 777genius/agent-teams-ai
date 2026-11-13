@@ -89,6 +89,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   if (packaged && process.platform === 'darwin') assert.ok(packaged.processCustody);
   const { applyLaunchConfiguration } = await import(pathToFileURL(join(pkg, 'dist/composition/launchConfiguration.js')).href) as
     typeof import('../dist/composition/launchConfiguration.js');
+  const { applyOpenCodeRuntimeSource } = await import(pathToFileURL(join(pkg, 'dist/composition/applyOpenCodeRuntimeSource.js')).href) as
+    typeof import('../dist/composition/applyOpenCodeRuntimeSource.js');
   const node = packaged ? packaged.node : await realpath(process.execPath);
   const entry = packaged ? packaged.entry : join(pkg, 'dist/cli.js');
   assert.equal(await realpath(process.execPath), node, 'scenario and Host must use the selected original Node');
@@ -178,10 +180,6 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
           outputEvents: 1500, pendingInteractions: 4, timeoutMs: 120_000 },
       }] },
     };
-    profile.runtime!.members[0] = applyLaunchConfiguration(profile.runtime!.members[0]!, {
-      model: 'TEST-local/TEST-model-B', effort: 'high',
-      permissions: approvalMode === 'auto' ? 'bypass' : 'manual',
-    });
     const globalDirectory = join(root, 'home/.config/opencode');
     await mkdir(globalDirectory, { recursive: true, mode: 0o700 });
     await writeFile(join(globalDirectory, 'opencode.json'), JSON.stringify({
@@ -198,7 +196,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     }), { mode: 0o600 });
     const projectPath = join(root, 'workspace/opencode.jsonc');
     const projectConfig = (scope: string) => JSON.stringify({
-      model: 'TEST-local/TEST-model-B#high', provider: { 'TEST-local': { models: {
+      model: 'TEST-local/TEST-model', provider: { 'TEST-local': { models: {
         'TEST-model-B': { body: { test_config_scope: scope }, headers: { 'x-test-config-scope': scope } },
       } } },
     });
@@ -211,6 +209,11 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     const member = profile.runtime!.members[0]!;
     assert(member.provider === 'opencode' && member.embedded);
     member.embedded.configurationSource = captureOpenCodeConfigurationSource(member).reference;
+    profile.runtime!.members[0] = applyLaunchConfiguration(applyOpenCodeRuntimeSource(member, {
+      sourceKind: 'captured', executable: member.executable,
+      openCodeDefault: { providerId: 'TEST-local', modelId: 'TEST-model' },
+      openCodePreferences: { defaultModelId: 'TEST-local/TEST-model-B', modelLimitOverrides: {} },
+    }), { effort: 'high', permissions: approvalMode === 'auto' ? 'bypass' : 'manual' });
     const profilePath = join(root, 'profile.json');
     const bytes = JSON.stringify(profile);
     await writeFile(profilePath, bytes, { mode: 0o600 });
@@ -363,6 +366,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         version: '2.1.4', approvalMode, nodeVersion: process.version,
         modelSelection: { providerId: 'TEST-local', modelId: 'TEST-model-B', variant: 'high' },
         configurationSelection: { scope: 'project', original: 'project-A', later: 'project-B' },
+        preferencesSelection: { nativeDefault: 'TEST-local/TEST-model', appDefault: 'TEST-local/TEST-model-B' },
         digests: { ...digests, ...(windowsShellSha256 ? { windowsShell: windowsShellSha256 } : {}) },
         steps, cleanup, phaseElapsedMs, elapsedMs: elapsedMs(), cancelled: signal?.aborted === true,
         inputObservation: { reads: inputReadCount, last: lastInputProgress ?? null },

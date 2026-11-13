@@ -1,4 +1,5 @@
 import { runDesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
+import { runDesktopScheduleUiProof } from './desktop-schedule-ui-proof.ts';
 import type { DesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
 import { verifyNativeProcessReadbackSource } from './desktop-native-process-readback.ts';
 import { checkpoint } from './desktop-resume-records.ts';
@@ -119,12 +120,14 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   assert.ok(quitScenario === undefined || (mode === 'native-quit-ui' && quitScenario === 'pending-open'), 'explicit TEST Quit scenario');
   const startupDiagnosticMode = mode === 'startup-diagnostic-ui';
   const questionUiMode = mode === 'codex-question-ui';
+  const scheduleUiMode = process.env.LEGACY_DESKTOP_SCHEDULE_UI === '1';
   if (questionUiMode) questionModel = await startDesktopCodexQuestionModel();
   const packedCapturePath = process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH;
   const packed = packedCapturePath ? await readCapturedCandidateElectron({ path: packedCapturePath, sha256: process.env.LEGACY_DESKTOP_PACKED_CAPTURE_SHA256! }) : undefined;
   const permittedSentinelObservation = (row: Record<string, unknown>) => (mode === 'skills-ui' && isSkillsMetadataRefusal(row)) || (!packed ? row.allowed === true : row.executable === 'shell-env' ? row.allowed === true : row.allowed === false && row.argc === 1 && Array.isArray(row.flags) && row.flags.length === 1 && row.flags[0] === '--version');
   if (packed) assert.equal(mode, 'native-launch-ui', 'one bounded packed workflow reuses the original native Launch proof');
   if (packedRelaunchMode) assert.ok(packed, 'automatic app relaunch is an explicit captured packed scope');
+  if (scheduleUiMode) assert.ok(mode === 'native-launch-ui' && !packed, 'original source schedule controls');
   const { mixedMode, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel, openCodeLifecycleMode, openCodeLifecycleModel: selectedOpenCodeModel, openCodeReviewModel: selectedOpenCodeReviewModel } =
     await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
   conversationModel = model; mixedModels = selectedMixedModels;
@@ -205,6 +208,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     codexResumeModel,
     openCodeLifecycleModel, openCodeReviewModel,
   });
+  if (scheduleUiMode) evidence.scope = 'Original Schedule controls, actual finite Claude and task-first native Bash/MCP, Stop, history and reload; localhost inference only';
   if (mode === 'codex-login-ui') {
     evidence.source = {
       head: execFileSync('/usr/bin/git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
@@ -385,6 +389,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       await runDesktopMixedCreateLaunchUiSmoke(cdp, { fixture, models: mixedModels, appGroup: group, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (createConfigMode) {
       await runDesktopCreateUiSmoke(cdp, { fixture, evidence, model: conversationModel, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+    } else if (scheduleUiMode) {
+      assert.ok(conversationModel && 'scheduleRequests' in conversationModel);
+      await runDesktopScheduleUiProof(cdp, { fixture, model: conversationModel, evidence,
+        capturedGroup: () => group, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (launchDialogMode) {
       assert.ok(fixture.uiSeed && (conversationModel || codexResumeModel || openCodeLifecycleModel));
       await runDesktopLaunchUiSmoke(cdp, {
@@ -761,6 +769,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
     if (controlledProcessMode) assert.equal(evidence.status, 'PASS', 'controlled process cold UI proof incomplete; original evidence retained');
     if (mode === 'codex-login-ui') assert.equal(evidence.status, 'PASS', 'Codex login UI proof incomplete; inspect its retained finite receipt');
+    if (scheduleUiMode) assert.equal(evidence.status, 'PASS', 'original schedule UI proof incomplete; inspect its retained receipt');
     assert.ok(
       !cleanupFailure && remaining !== null && remaining.length === 0,
       'captured group cleanup unconfirmed; receipt retains debt and no further signal is authorized'

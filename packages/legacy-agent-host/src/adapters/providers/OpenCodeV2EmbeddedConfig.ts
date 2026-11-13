@@ -1,4 +1,5 @@
 import { createTeamMcpTools } from '../../mcp/tools.js';
+import { openCodeV2CapturedMcp, openCodeV2TeamToolActions } from './OpenCodeV2CapturedMcp.js';
 import type { MemberProviderContext } from './MemberProvider.js';
 import type { OpenCodeV2SessionPermissionRule } from '@agent-teams/provider-implementations/opencode';
 import type { OpenCodeManagementProfile } from '../../management/profile.js';
@@ -51,6 +52,7 @@ export function openCodeV2EmbeddedConfig(context: MemberProviderContext,
     throw new Error('OpenCode V2 embedded selection unavailable');
   providerConfiguration ??= profile.embedded.providerConfiguration;
   const manual = profile.nativeOptions.toolApprovalMode !== 'auto';
+  const external = openCodeV2CapturedMcp(profile.capturedMcpServers);
   const permissions: OpenCodeV2SessionPermissionRule[] = [
     { action: '*', resource: '*', effect: 'deny' },
     ...['read', 'glob', 'grep', 'todowrite', 'edit', 'shell'].map(action => ({
@@ -58,8 +60,10 @@ export function openCodeV2EmbeddedConfig(context: MemberProviderContext,
     })),
     { action: 'subagent', resource: '*', effect: 'deny' },
     { action: 'execute', resource: '*', effect: 'deny' },
-    ...['agent-teams_*', 'agent_teams_*', 'mcp__agent-teams__*', 'mcp__agent_teams__*']
+    ...openCodeV2TeamToolActions
       .map(action => ({ action, resource: '*', effect: 'allow' as const })),
+    ...external.namespaces.map(namespace => ({ action: `${namespace}_*`, resource: '*',
+      effect: manual ? 'ask' as const : 'allow' as const })),
     { action: 'external_directory', resource: '*', effect: profile.embedded.externalDirectory },
   ];
   const selection = {
@@ -76,7 +80,7 @@ export function openCodeV2EmbeddedConfig(context: MemberProviderContext,
     plugins: [], model, default_agent: selection.agent, permissions,
     agents: { title: { disabled: true }, summary: { disabled: true },
       [selection.agent]: { model, permissions, mode: 'primary' } },
-    mcp: { servers: { 'agent-teams': {
+    mcp: { servers: { ...external.servers, 'agent-teams': {
       type: 'remote', url: context.endpoint.url,
       headers: { Authorization: `Bearer ${context.endpoint.bearerToken}` },
       oauth: false, codemode: false,
@@ -85,6 +89,7 @@ export function openCodeV2EmbeddedConfig(context: MemberProviderContext,
       providers: { [selection.model.providerID]: providerConfiguration },
     } : {}),
   };
-  return { config, selection, requiredToolNames: createTeamMcpTools(context.connection)
+  return { config, selection, requiredServerNames: [...external.names, 'agent-teams'].sort(),
+    requiredToolNames: createTeamMcpTools(context.connection)
     .list().map(tool => tool.name).sort() };
 }

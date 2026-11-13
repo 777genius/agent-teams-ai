@@ -9,6 +9,7 @@ import { runtimeMemberProfileSchema } from './runtimeProfile.js';
 import { nativeProfilePathSchema } from './nativeProcessProfile.js';
 import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
 import { readCodexMcpCatalog } from '../adapters/providers/readCodexMcpCatalog.js';
+import { openCodeV2CapturedMcp } from '../adapters/providers/OpenCodeV2CapturedMcp.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
@@ -77,14 +78,14 @@ function reconstruct(
   )
     return held();
   if (base.provider === 'opencode' && base.nativeGeneration === 'v2') {
-    // Retain the existing digest-bound artifact format for the empty external
-    // policy, without turning it into a V1 overlay on the native V2 profile.
-    if (Object.keys(overlay.capturedMcpServers).length || overlay.capturedMcpSource !== undefined ||
-        overlay.mcpPolicyPlugin !== undefined || base.capturedMcpServers !== undefined ||
-        base.capturedMcpSource !== undefined || base.mcpPolicyPlugin !== undefined ||
-        base.mcpCatalogSource !== undefined)
-      return held();
-    return runtimeMemberProfileSchema.parse(base);
+    if (overlay.mcpPolicyPlugin !== undefined || base.mcpPolicyPlugin !== undefined) return held();
+    const legacyEmpty = !Object.keys(overlay.capturedMcpServers).length &&
+      overlay.capturedMcpSource === undefined && base.capturedMcpServers === undefined &&
+      base.capturedMcpSource === undefined && base.mcpCatalogSource === undefined;
+    if (legacyEmpty) return runtimeMemberProfileSchema.parse(base);
+    if (base.protocolRevision !== '2.1.4' || !base.embedded) return held();
+    try { openCodeV2CapturedMcp(overlay.capturedMcpServers); }
+    catch { return held(); }
   }
   const result = runtimeMemberProfileSchema.parse({ ...withoutOverlay(base), ...overlay });
   if (result.provider === 'codex') {
@@ -173,8 +174,9 @@ export async function prepareCapturedRuntimeMcpRecipes(options: {
       !selected ||
       runtimeDigest(withoutOverlay(base)) !== runtimeDigest(withoutOverlay(selected)) ||
       (nativeV2
-        ? selected.capturedMcpServers !== undefined || selected.capturedMcpSource !== undefined ||
-          (selected.provider === 'opencode' && selected.mcpPolicyPlugin !== undefined) ||
+        ? (selected.provider === 'opencode' && selected.mcpPolicyPlugin !== undefined) ||
+          ((base.protocolRevision !== '2.1.4' || !base.embedded) &&
+            (selected.capturedMcpServers !== undefined || selected.capturedMcpSource !== undefined)) ||
           ('capturedMcpCatalog' in selected && selected.capturedMcpCatalog !== undefined)
         : !selected.capturedMcpServers)
     )

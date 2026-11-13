@@ -1,3 +1,4 @@
+import { readOpenCodeConfiguredModel } from './openCodeSelectedProviderConfiguration.js';
 import type { OpenCodeManagementProfile } from '../management/profile.js';
 import type { OpenCodeMemberProfile } from './runtimeProfile.js';
 import type { RuntimeSourceCandidate } from './runtimeSourceContracts.js';
@@ -16,21 +17,32 @@ export function applyOpenCodeRuntimeSource(
   candidate: RuntimeSourceCandidate
 ): OpenCodeManagementProfile | OpenCodeMemberProfile {
   const profile = structuredClone(raw);
-  if (!profile.embedded) return profile;
-  profile.embedded = {
+  if (candidate.openCodePreferences)
+    profile.managedPreferences = structuredClone(candidate.openCodePreferences);
+  if (profile.embedded) profile.embedded = {
     ...profile.embedded,
     ...candidate.embedded,
     ...(candidate.openCodeConfiguration
       ? { configurationSource: candidate.openCodeConfiguration }
       : {}),
   };
-  const selected = candidate.openCodeDefault;
+  const selected = readOpenCodeConfiguredModel({ model: candidate.openCodePreferences?.defaultModelId ?? undefined })
+    ?? candidate.openCodeDefault;
   if (!selected) return profile;
   const previous =
     'profileId' in profile ? profile.nativeModel?.providerId : profile.nativeOptions.providerId;
-  if (previous !== selected.providerId) delete profile.embedded.providerConfiguration;
+  if (profile.embedded && previous !== selected.providerId) delete profile.embedded.providerConfiguration;
   if ('profileId' in profile) {
-    profile.nativeModel = { providerId: selected.providerId, modelId: selected.modelId };
+    if (profile.nativeGeneration === 'v2')
+      profile.nativeModel = { providerId: selected.providerId, modelId: selected.modelId };
+    else {
+      const config: unknown = JSON.parse(profile.environment.OPENCODE_CONFIG_CONTENT ?? '{}');
+      if (!config || typeof config !== 'object' || Array.isArray(config))
+        throw new Error('Invalid captured OpenCode config');
+      profile.environment.OPENCODE_CONFIG_CONTENT = JSON.stringify({
+        ...config, model: `${selected.providerId}/${selected.modelId}`,
+      });
+    }
     delete profile.variant;
     if (selected.variant !== undefined) profile.variant = selected.variant;
   } else {

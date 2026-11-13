@@ -2,8 +2,12 @@
 import { mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
 import { expect, it, vi } from 'vitest';
+
 import { createCapturedRuntimeProviderManagementClient } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient';
+import { captureManagedProviderRuntimePreferences } from '../../../src/features/runtime-provider-management/main/application/captureManagedProviderRuntimePreferences';
+
 import type { CapturedProviderManagement } from '../../../src/features/agent-backend/main';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
@@ -19,12 +23,19 @@ async function fixture(configuredAuthless = false) {
     catalogs = 0;
   const calls: string[] = [];
   const requestedLimits: unknown[] = [];
+  const capturedPreferences: unknown[] = [];
   const target: CapturedProviderManagement = {
     targetId: 'a'.repeat(64),
     profileId: 'TEST-profile',
     configRevision: 'TEST-v1',
     preferences: { projectRoot, globalRoot },
     isCurrent: () => current,
+    async refreshConfiguration() {
+      calls.push('source.refresh');
+      if (failRefresh) throw new Error('TEST source refresh unavailable');
+      capturedPreferences.push(await captureManagedProviderRuntimePreferences({ projectRoot, globalRoot }, () => current));
+      return target;
+    },
     async request(operation, payload): Promise<JsonValue> {
       calls.push(operation);
       if (operation === 'probe.start') {
@@ -90,6 +101,7 @@ async function fixture(configuredAuthless = false) {
     capture,
     calls,
     requestedLimits,
+    capturedPreferences,
     projectRoot,
     globalRoot,
     projectFile: join(projectRoot, 'agent-teams-runtime-preferences.json'),
@@ -123,6 +135,7 @@ it('saves only after an actual probe and uses the same captured owner for prefer
   expect(f.calls).toContain('probe.start');
   expect(f.capture).toHaveBeenCalledTimes(1);
   expect(JSON.parse(await readFile(f.projectFile, 'utf8')).defaultModelId).toBe(input.modelId);
+  expect(f.capturedPreferences).toEqual([{ defaultModelId: input.modelId, modelLimitOverrides: {} }]);
   expect((await f.port.loadModels(input)).models?.models[0]?.default).toBe(true);
 });
 
@@ -228,11 +241,15 @@ it('limits reject invalid numbers, missing project or a non-local model without 
   await expect(readFile(f.projectFile)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
-it('ordinary model test and default verification consume saved limits from the same captured preference binding', async () => {
+it('ordinary probes retain Host preferences while only an explicit editor test sends proposed limits', async () => {
   const f = await fixture(true);
   const limits = { contextTokens: 4096, outputTokens: 128 };
   expect((await f.port.configureModelLimits({ ...input, ...limits })).result?.saved).toBe(true);
   expect((await f.port.testModel(input)).result?.ok).toBe(true);
   expect((await f.port.setDefaultModel(input)).view?.defaultModel).toBe(input.modelId);
-  expect(f.requestedLimits).toEqual([limits, limits, limits]);
+  expect(f.requestedLimits).toEqual([limits, undefined, undefined]);
+  expect(f.capturedPreferences).toEqual([
+    { defaultModelId: null, modelLimitOverrides: { [input.modelId]: limits } },
+    { defaultModelId: input.modelId, modelLimitOverrides: { [input.modelId]: limits } },
+  ]);
 });

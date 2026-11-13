@@ -12,6 +12,7 @@ import {
   OpenCodeManagementHost,
 } from '../adapters/providers/OpenCodeManagementHost.js';
 import { withOpenCodeModelLimits } from '../adapters/providers/withOpenCodeModelLimits.js';
+import { selectedOpenCodeManagedLimits } from './openCodeManagedPreferences.js';
 import { readOpenCodeCatalog } from '../adapters/providers/readOpenCodeCatalog.js';
 import { FileManagementCommandStore } from '../adapters/providers/FileManagementCommandStore.js';
 import { CredentialCommandOwner } from '../management/CredentialCommandOwner.js';
@@ -219,7 +220,10 @@ export class ProviderManagementCoordinator {
         }
         const host = this.getHost(profile);
         const timeoutMs = profile.modelProbeTimeoutMs ?? 90000;
-        if (!input.limits)
+        const qualifiedModel = input.modelId.startsWith(input.providerId + '/')
+          ? input.modelId : `${input.providerId}/${input.modelId}`;
+        const limits = input.limits ?? selectedOpenCodeManagedLimits(profile.managedPreferences, qualifiedModel);
+        if (!limits)
           return {
             timeoutMs,
             run: (signal) =>
@@ -237,7 +241,7 @@ export class ProviderManagementCoordinator {
           };
         // Construction allocates no process. Durable admission must precede native calls.
         const limited = this.createHost(
-          withOpenCodeModelLimits(profile, { ...input, limits: input.limits })
+          withOpenCodeModelLimits(profile, { ...input, limits })
         );
         return {
           timeoutMs,
@@ -253,7 +257,7 @@ export class ProviderManagementCoordinator {
               ? input.modelId.slice(input.providerId.length + 1)
               : input.modelId;
             if (
-              !provider?.configuredAuthless ||
+              !provider || (input.limits && !provider.configuredAuthless) ||
               !provider.models.some((row) => row.modelId === modelId) ||
               !(await this.retireHost(profile.profileId, host))
             )
@@ -265,7 +269,7 @@ export class ProviderManagementCoordinator {
               {
                 providerId: input.providerId,
                 modelId: input.modelId,
-                limits: input.limits!,
+                limits,
                 ...(profile.variant === undefined ? {} : { variant: profile.variant }),
               },
               signal,

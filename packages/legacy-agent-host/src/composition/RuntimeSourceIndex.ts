@@ -11,6 +11,7 @@ import { runtimeDigest } from '../runtime/identity.js';
 import { runtimeMemberProfileSchema } from './runtimeProfile.js';
 import { applyOpenCodeRuntimeSource } from './applyOpenCodeRuntimeSource.js';
 import { readOpenCodeConfiguredModel, selectOpenCodeV2ProviderConfiguration } from './openCodeSelectedProviderConfiguration.js';
+import { openCodeManagedPreferencesDigest } from './openCodeManagedPreferences.js';
 import {
   publishRuntimeSourceSchema,
   publishRuntimeSourceRequestSchema,
@@ -248,24 +249,27 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
         fail('conflict');
       return this.publish(original, admit);
     }
-    if (seed.provider !== 'opencode' || seed.nativeGeneration !== 'v2' || !seed.embedded)
-      fail('invalid');
+    if (seed.provider !== 'opencode') fail('invalid');
     if (this.current({ grant: input.grant }).revision !== input.expectedRevision) fail('conflict');
     const previous = this.read().records.find(record => record.grant.targetId === input.grant.targetId &&
       record.revision === input.expectedRevision);
-    const captured = captureOpenCodeConfigurationSource(seed, undefined, () => !this.sealed,
-      input.grant.projectPath === null ? 'global' : 'project');
-    const config = captured.read(), configuredModel = readOpenCodeConfiguredModel(config);
-    const selectedModel = configuredModel ?? seed.nativeModel;
-    if (!selectedModel) fail('invalid');
-    selectOpenCodeV2ProviderConfiguration(config, selectedModel, seed.environment);
     const candidate: RuntimeSourceCandidate = { ...(previous?.candidate ??
-      { sourceKind: 'captured', executable: seed.executable }), openCodeConfiguration: captured.reference };
-    delete candidate.openCodeDefault;
-    if (configuredModel) candidate.openCodeDefault = configuredModel;
-    return this.publish({ ...input, intent: 'configuration', candidate: {
-      ...candidate,
-    } }, admit);
+      { sourceKind: 'captured', executable: seed.executable }) };
+    if (input.openCodePreferences) candidate.openCodePreferences = input.openCodePreferences;
+    if (seed.nativeGeneration === 'v2' && seed.embedded) {
+      const captured = captureOpenCodeConfigurationSource(seed, undefined, () => !this.sealed,
+        input.grant.projectPath === null ? 'global' : 'project');
+      const config = captured.read(), configuredModel = readOpenCodeConfiguredModel(config);
+      const selectedModel = readOpenCodeConfiguredModel({ model: candidate.openCodePreferences?.defaultModelId ?? undefined })
+        ?? configuredModel ?? seed.nativeModel;
+      if (!selectedModel) fail('invalid');
+      selectOpenCodeV2ProviderConfiguration(config, selectedModel, seed.environment);
+      candidate.openCodeConfiguration = captured.reference;
+      delete candidate.openCodeDefault;
+      if (configuredModel) candidate.openCodeDefault = configuredModel;
+    } else if (seed.nativeGeneration === 'v2' || !input.openCodePreferences) fail('invalid');
+    return this.publish({ grant: input.grant, commandId: input.commandId,
+      expectedRevision: input.expectedRevision, intent: 'configuration', candidate }, admit);
   }
 
   private capturePublication(raw: unknown): PublishRuntimeSource {
@@ -303,6 +307,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
         ...(previous?.candidate.openCodeConfiguration
           ? { openCodeConfiguration: previous.candidate.openCodeConfiguration } : {}),
         ...(previous?.candidate.openCodeDefault ? { openCodeDefault: previous.candidate.openCodeDefault } : {}),
+        ...(previous?.candidate.openCodePreferences ? { openCodePreferences: previous.candidate.openCodePreferences } : {}),
       },
     });
   }
@@ -323,7 +328,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     }
     if (this.current({ grant: input.grant }).revision !== input.expectedRevision) fail('conflict');
     assertRuntimeSourceQualification(seed, input.candidate);
-    if ((input.intent === 'configuration' && !input.candidate.openCodeConfiguration) ||
+    if ((input.intent === 'configuration' && !input.candidate.openCodeConfiguration && !input.candidate.openCodePreferences) ||
         (input.candidate.openCodeConfiguration && input.candidate.openCodeConfiguration.scope !==
           (input.grant.projectPath === null ? 'global' : 'project'))) fail('invalid');
     this.assertSourceReleased(input.grant.targetId, input.commandId);
@@ -335,6 +340,8 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       ...(input.intent ? { intent: input.intent } : {}),
     };
     const record: RuntimeSourceRecord = { ...selection, revision: runtimeDigest(selection) };
+    // Reject an unrepresentable selected default before reserving its publication command.
+    const managementProfile = this.managementProfile(record);
     let receipt: StoredRuntimeSourceCommand = storedRuntimeSourceCommandSchema.parse({
       schemaVersion: 1,
       kind: 'runtime.source',
@@ -394,7 +401,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     const known = this.lookup({ grant: input.grant, commandId: input.commandId });
     if (known?.phase === 'published') return known;
     // Admission preserves original auth/config bindings and cannot replace a previously admitted profile ID.
-    admit(this.managementProfile(record));
+    admit(managementProfile);
     this.store.publish(record, this.seedRevision(input.grant, seed));
     this.commands.write({ ...receipt, phase: 'published' });
     return {
@@ -580,7 +587,7 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     if (
       recipe.provider === 'opencode' &&
       seed.provider === 'opencode' &&
-      (recipe.nativeGeneration !== seed.nativeGeneration ||
+      ((recipe.nativeGeneration ?? 'v1') !== (seed.nativeGeneration ?? 'v1') ||
         recipe.embedded?.manifestSha256 !== seed.embedded?.manifestSha256)
     )
       fail('held');
@@ -666,6 +673,9 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       profileId: record ? `runtime-source:${record.revision}` : seed.profileId,
       configRevision: record ? `runtime-source:${record.revision}` : seed.configRevision,
       sourceKind: record?.candidate.sourceKind ?? 'captured',
+      ...(record?.candidate.openCodePreferences ? {
+        preferencesDigest: openCodeManagedPreferencesDigest(record.candidate.openCodePreferences),
+      } : {}),
       ...(record?.candidate.nativeCli ? { cliVersion: record.candidate.nativeCli.version } : {}),
       ...(seed.provider === 'opencode'
         ? {

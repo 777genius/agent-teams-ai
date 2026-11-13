@@ -1,6 +1,6 @@
 # 07. Настройки провайдера, лимиты, skills, MCP и plugins
 
-Статус: source capture/publication foundation реализован и проверен; native consumption и G1–G4 ещё открыты.
+Статус: source capture/publication, selected native config, app default и V1 saved limits реализованы; actual acceptance G1–G4 и extension/skill consumption ещё открыты.
 Цель: сохранить применимые возможности существующего frontend, используя уже выделенных владельцев.
 Новая архитектура не даёт основания игнорировать сохранённую настройку или объявить рабочий control unsupported.
 Публикация source/profile revisions целиком принадлежит [06](06-runtime-installation-profiles.md).
@@ -261,6 +261,190 @@ Unit список сокращён до новых опасных mapping/source
 - Existing native model-probe fixture должен использовать global config через symlink и project override, затем наблюдать реальные model/body/headers/limits/default. Existing Team fixture меняет config после readiness и требует исходные A settings во всех последующих запросах. Проверка scoped UI error сохраняет safe reason без raw config/token.
 - Промежуточные проверки native input: Host build и 28 focused tests PASS до последнего type-only/noise fix; Main focused TypeScript, 11 management UI tests, fast lint без ошибок и source-size guard PASS. Общий Host rebuild/testtypes выполнить после согласованного P03 package pin; actual native/Desktop и G1–G4 остаются открытыми до штатного CI.
 
+### R8 — сохранённый app default и V1 limits до фактического launch
+
+**Повторное source review перед реализацией; выбран private snapshot в existing recipe, согласовано с root.**
+P07 native config опубликован `6a2bb4b88bffbe001e16ff7fd27430f330b43517`.
+Он не закрывает отдельную цепочку preference file → новый launch: UI уже читает/сохраняет default и limits,
+но source recipe пока не получает эти значения. Именно эту цепочку исправляет следующий срез.
+
+1. **Сохранить donor precedence.** [R6] хранит app preferences; [R7] выбирает project default,
+   затем all-projects default. В [R1] `prepareProfileInternal` (`3581–3654`) default накладывается на imported config,
+   а limits объединяются global → project; `applyOpenCodeModelLimitOverrides` (`927–962`) задаёт
+   `limit: { context, output }` выбранного qualified model. V2 `materializeOpenCodeV2CatalogScope`
+   (`4021–4050`) тоже предпочитает app default перед config default, но не подключает V1 limits editor.
+   Явно выбранная в Team модель остаётся выше default. Очистка project default возвращает global/native fallback.
+
+2. **Один preference owner.** Переиспользовать [S7] `FileManagedProviderPreferences.capture/read` и
+   `resolveManagedPreferences`; добавить узкий read-only export из `runtime-provider-management/main`.
+   Он получает original descriptor roots и guard, возвращает только resolved default и числовые
+   `contextTokens/outputTokens` по qualified model ID. Не переносить неизвестные поля, timestamps, paths,
+   raw config или credentials в Host DTO. Global capture не читает project preferences другой вкладки.
+   Запись остаётся в существующих `setDefault`/`setLimits`, с сохранением посторонних полей.
+
+3. **Использовать existing source publication/recovery.** Передать canonical safe snapshot через
+   существующий `runtime.source.refreshConfiguration`, сохранить его в той же immutable candidate/recipe.
+   Digest входит в прежнюю source/config revision; одинаковые семантические значения не создают revision
+   из-за timestamps или порядка ключей. V1 получает этот refresh без V2 config import; V2 сохраняет R5–R7
+   references и получает app default. Retry старого command использует original `publicationJson`,
+   даже если preference file уже B. Новый command может опубликовать B; retained A остаётся A.
+   Не добавлять второй settings store/journal или Host reader пользовательских preference paths.
+
+4. **Применять limits после реального выбора модели.** `applyOpenCodeRuntimeSource` задаёт app default
+   для следующего base recipe; existing `applyLaunchConfiguration` затем сохраняет explicit Team selection.
+   После этого применить **только V1 override реально выбранного qualified model** через existing
+   `withOpenCodeModelLimits`, обобщив его environment helper при необходимости. Safe snapshot остаётся
+   private частью recipe, а все overrides не разворачиваются в `OPENCODE_CONFIG_CONTENT`.
+   Это сохраняет non-default model и нынешний inline budget. V2 принимает app default, а declared limits
+   продолжают идти через strict selected config; новый V2 editor/override route не вводится.
+   Native preflight и actual launch должны видеть одинаковые selected values; cross-provider qualified
+   model обновляет provider/model как одну пару, без чужого providerConfiguration.
+
+5. **Связать Save/Refresh и первый запуск.** Existing management capture сравнивает safe snapshot digest
+   вместе с configuration references. Успешный Save остаётся успешным даже при failed Refresh, с прежним
+   предупреждением и без ложного native verification. До **новой** Create/saved-Team preparation вызвать
+   тот же узкий captured OpenCode refresh для исходных context/project/owner; это применит уже сохранённые
+   preferences и после перезапуска приложения, когда Settings ещё не открывали. Сначала original guard,
+   recover/publish, затем capture/probe; read/cancel/lookup/submit существующей preparation не перечитывают
+   настройки и не переадресуют исходный intent. Existing schedule capture переиспользует тот же recipe,
+   без второго scheduler preference reader. `DesktopBackendFeature` получает только узкий method/call,
+   существующий `captureScheduledRuns` сохраняется.
+
+6. **Минимальные проверки и повторное ревью.** Расширить existing preference/source integration cases:
+   project → global fallback; saved file → source → new launch; explicit non-default model со своим V1 limit;
+   successful Save + failed Refresh; lost ACK retry с A после записи B. Использовать существующие native
+   fixtures: V1 effective config/readback с app default и selected limit; V2 model B против native default A,
+   с проверкой actual request. Already running A продолжает работу после публикации B. Actual Desktop
+   journey использует те же descriptor preference roots и штатный remote CI. Не добавлять unit на каждый
+   getter/mapper и не дублировать проверенные parsers/atomic write primitives. Перед publication проверить
+   cross-feature barrel, original-owner fence, отсутствие secret fields и прежние size/protocol budgets;
+   при приближении `RuntimeSourceIndex` к 800 строкам вынести только stateless projection, без нового owner.
+
+**Результат R8 review:** отвергнуто разворачивание всех limit overrides в inline config до model selection:
+оно теряло non-default choice или раздувало private config. Выбран snapshot + selected-only application.
+Ни работающий receipt, ни mocked preferences test не закрывают native/Desktop acceptance сами по себе.
+
+
+## R9 — external MCP: закрыть выявленное UI/native несоответствие
+
+**Source review до изменений.** [M1]/[M2] предлагают `inheritLead`, `inheritScopes`, `strictAllowlist`, `appOnly`.
+[R2] действительно формирует только controller server. В exact `@opencode/schema@2.1.4`,
+`dist/mcp.js`, native поддерживает local command/environment и remote URL/headers; `codemode: false`
+выставляет прямые tools. Exact `@opencode/core@2.1.4` `dist/tool/mcp.js` →
+`dist/chunks/location-xyswfhq2.js` формирует namespace заменой символов вне `[a-zA-Z0-9_-]` на `_`
+и проверяет permission action `<namespace>_<tool>`. Это новый bounded adapter для уже доступной политики UI,
+а не утверждение, что старый V2 запуск её применял.
+
+1. **Переиспользовать capture.** `captureRuntimeMcp.ts` остаётся единственным выбором user/project/local
+   catalog, precedence и allowlist. Для embedded 2.1.4 сохранить выбранные `capturedMcpServers` и original
+   `capturedMcpSource` тем же immutable launch artifact. Не подключать `OpenCodeMcpPolicyPlugin` V1,
+   не читать ambient config второй раз в engine и не менять controller endpoint/bearer.
+2. **Сохранить старые identities.** `capturedRuntimeMcpRecipes.ts` реконструирует новые non-empty captures
+   существующим overlay. Прежний empty V2 capture без новых полей должен давать прежний recipe bytes/digest.
+   `inheritNativeMemberMcp.ts` переносит только original authenticated lead selection; account/model/provider
+   сохраняются у нового member. Published 2.0.0/2.0.21 path не получает embedded-only capability автоматически.
+3. **Добавить маленькую V2 translation.** Один helper преобразует captured stdio в native local
+   `{ command: [executable, ...args], environment }`, http/sse — в native remote с исходным URL/headers.
+   V2 сам выбирает совместимый HTTP transport. Все внешние servers имеют `codemode: false`; remote также
+   `oauth: false`, соответствуя текущему captured transport contract без нового login owner.
+   Mapping не меняет сохранённые пользовательские config-файлы и не запускает команды при metadata read.
+4. **Сохранить permission boundary.** Для выбранных внешних namespaces добавить только native rule
+   `<namespace>_*`: manual → ask, auto → allow. Builtin tools и Team MCP сохраняют нынешние rules.
+   До allocation отклонить collisions уже нормализованных namespaces и все четыре privileged Team action
+   prefixes, включая `agent-teams_extra` и `mcp__agent_teams__x`, а не только exact raw `team`/`agent-teams`;
+   иначе выбранный внешний сервер мог бы получить автоматическое разрешение Team tool в manual режиме.
+   `appOnly` даёт ровно controller без внешних конфигураций и разрешений.
+5. **Проверять настоящий native inventory.** `OpenCodeV2EmbeddedMemberProvider` сверяет точный набор имён
+   всех ожидаемых connected servers и прежний original Team catalog receipt. Тот же source-current guard
+   применяется до allocation/dispatch; изменение источника не заменяет конфигурацию running session.
+   Лишние ambient servers не принимаются; retry не пересобирает selection из current catalog.
+   Cleanup остаётся у существующего native Session/custody; отдельный manager внешних процессов не добавляется.
+6. **Приёмка без размножения тестов.** Existing MCP/source/overlay suites расширить лишь critical cases:
+   namespace authority collision, прежний empty digest, selected-source drift и original retry после изменения файла.
+   Native gate использует один sentinel MCP с real tool effect и original readback: strictAllowlist допускает только
+   выбранный server, appOnly не обнаруживает и не вызывает его, Team tools работают в обоих случаях.
+   Реальный native lifecycle подтверждает cleanup. Existing Desktop member-policy controls затем сохраняют
+   выбранную policy и выполняют тот же один native tool; API setup не выдаётся за UI acceptance.
+
+**R9 проверка упрощения.** Остаются прежние catalog, launch artifact, member creation и permissions owners.
+Нет нового MCP registry, protocol version, plugin injection, middleware, renderer API или provider daemon.
+Control не удаляется для скрытия mismatch. До native и Desktop receipts пункт 07-G3 остаётся открытым.
+Независимый повторный review подтвердил reuse owners и empty-capture compatibility; уточнения по normalized
+prefixes, exact inventory и original retry внесены до implementation.
+
+## R10 — подтвердить consumption plugins/skills в том же native namespace
+
+**Найденный acceptance gap.** В `scripts/legacy-agent-host/desktop-native-extensions-fixture.ts`
+`prepareDesktopNativeExtensionsFixture` заменяет только `hostProfile.management` на отдельный
+`native-extensions/{home,config,tmp}`. Existing UI smoke действительно выполняет Install/Uninstall,
+проверяет `settings.json` и native `plugin list`, но runtime member не использует этот namespace.
+`desktop-skills-fixture.ts` намеренно требует `profile.runtime === undefined` и refusal-only CLI:
+он доказывает Create/Edit/Import/Trash/original-target safety, но не native consumption.
+Эти результаты сохраняются; 07-E4/E5 требуют отдельного короткого same-profile продолжения.
+
+**Existing seams для reuse.** Production `composition/claudeSettingSources.ts` сохраняет
+`user/project/local`, `runtimeCaptureSource.ts` переносит их независимо от MCP policy,
+`adapters/providers/ClaudeMemberProvider.ts` передаёт их в native Query. [S3]/[S4] уже владеют
+mutations и original target. P03 `desktop-native-commands-ui-proof.ts` и
+`tests/fixtures/native-claude-commands/model.ts` проверяют actual native command inventory,
+marked Composer Send и реальный Team MCP reply. Нужен acceptance wiring через эти границы;
+production reader/registry/API заранее не добавляется.
+
+1. **Один captured namespace.** Вариант existing `native-launch-ui` готовит настоящий pinned Claude
+   через `prepareDesktopBackendFixture`, затем получает management profile из этого же runtime member:
+   executable SHA, `cwd`, `HOME`, `CLAUDE_CONFIG_DIR`, account binding и setting sources совпадают.
+   Descriptor по-прежнему явно выбирает original project/user scope. Сравнить эти private identities
+   до старта приложения; в receipt сохранить только их digest и выбранный scope. Не заменять runtime
+   чужим profile после запуска. Neighbor TEST namespace остаётся неизменным.
+   Этот digest не включает runtime generation/capture identity: новый запуск обязан получить новые IDs.
+2. **Один native setup, реальные UI mutations.** Marketplace setup использует прежнюю exact CLI action
+   из `desktop-native-extensions-fixture.ts`. Existing Plugins panel устанавливает
+   `frontend-design@claude-plugins-official`; дождаться original completed operation, затем прочитать
+   native installed inventory и source digest. Не писать `enabledPlugins`, installed metadata или
+   plugin-directory flags вручную. Вынести только повторно используемый plugin UI phase либо добавить
+   узкие lifecycle hooks existing helper; не дублировать полный MCP/negative extension journey.
+3. **Skills через имеющиеся controls.** В том же captured profile existing Create/Review/Apply создаёт
+   небольшой user skill и project skill с различимыми TEST body markers; existing Edit меняет project
+   marker A→B. Сохранить scoped bytes/digests после completed original journals. Использовать текущие
+   `SkillsPanel` scope/root choices, без fixture записи вместо UI mutation. Прежние import/source-drift,
+   Trash и held Codex случаи не повторять в новом inference journey.
+4. **Настоящий новый launch и invocation.** Закрыть extension panel и штатно перезапустить приложение
+   на тех же descriptor/profile pins, затем использовать existing Launch controls. Actual native Query
+   inventory должен содержать installed plugin command и оба user/project skills. Выбирать command
+   из существующей подсказки Composer; P03 marked dispatch проверяет original inventory и отправляет
+   raw command один раз. Native request должен содержать тело выбранного plugin/skill, а не только
+   введённое имя/arguments: для TEST skills проверять markers, для установленного plugin — bounded
+   body witness из фактически установленного `SKILL.md`, с отдельным source digest.
+   Witness читается по native installed inventory именно выбранного namespace; package/version закреплены.
+   Не подставлять содержимое файла в product send. Finite model oracle возвращает один безопасный Team MCP reply;
+   проверить exact journal/input receipt и видимый ответ.
+5. **Следующий launch после удаления.** Штатно Stop/дождаться released custody, затем existing UI
+   Uninstall. После completed mutation открыть новый runtime через existing Launch control с новым capture и проверить actual new Query inventory: plugin отсутствует, user/project skills остаются.
+   Старый command receipt и terminal input не воспроизводятся, прежний plugin name нельзя отправить
+   через stale suggestion. Новый runtime identity обязателен; reload renderer и `plugin list` поодиночке
+   не заменяют эту проверку. Изменения не переадресуют уже captured request на другой project/account.
+6. **Ограничить harness.** Один TEST variant flag existing Launch mode, несовместимый с schedule/command
+   variants; отдельный небольшой helper содержит только plugin/skill lifecycle и его finite oracle phases.
+   Existing cost/compact/review checks P03 не переписывать. Если второй fresh launch требует другого
+   initial prompt, изменить его через тот же Launch dialog; не вызывать runtime/product mutation через
+   CDP evaluate. Существующие request/protocol limits не увеличивать автоматически; exact phase counts
+   и cleanup должны быть видны в receipt. Нет новой provider×extension матрицы или production scanner.
+7. **Проверка и закрытие.** Сначала focused scripts TS/Host contracts и existing guard regressions только
+   для реально изменившихся boundaries. Actual Desktop запускается обычным remote CI на exact HEAD;
+   сохраняет install/skill journals, native inventory before/after, body witnesses, visible replies,
+   same-namespace digest и cleanup. Required CI verifier не принимает отсутствующий consumption блок.
+   07-E4/E5 закрываются только после native result; file mutation, успешный CLI exit и mocked catalog
+   отдельно для этого недостаточны. Codex/V1 MCP inventory остаётся 07-E3, OpenCode V2 MCP — R9.
+
+**R10 review 1 — parity.** Выбран actual native Launch profile вместо второго management-only namespace;
+проверяются UI mutations, native body и следующий launch после uninstall, а не только installed list.
+**R10 review 2 — упрощение и scope.** Сохранены NativeExtensionCoordinator/SkillCoordinator/P03 command
+owners. Existing isolated negative suites остаются на месте; новый scenario добавляет только недостающую
+связь mutation→new native Query. Любой найденный production mismatch сначала фиксируется точным source
+ref и исправляется в существующем owner, а не обходится TEST profile или ручной metadata подстановкой.
+**Независимый review:** уточнено различие same-namespace и нового runtime capture, а также происхождение
+plugin body witness из original installed inventory. Эти уточнения внесены до implementation.
+
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts
 [M3]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/extensions/ExtensionStoreView.tsx
@@ -277,3 +461,6 @@ Unit список сокращён до новых опасных mapping/source
 [R3]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/features/runtimeProviderManagement/adapters/opencode/OpenCodeProviderManagementAdapter.ts
 [R4]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/bridge/OpenCodeV2LaunchPlan.ts
 [R5]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/catalog/OpenCodeV2RuntimeStatus.ts
+[R6]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/OpenCodeManagedPreferences.ts
+[R7]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/OpenCodeManagedDefaultSelection.ts
+[S7]: https://github.com/777genius/agent-teams-ai/blob/6a2bb4b88bffbe001e16ff7fd27430f330b43517/src/features/runtime-provider-management/main/infrastructure/FileManagedProviderPreferences.ts
