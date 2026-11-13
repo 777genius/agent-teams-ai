@@ -38,6 +38,7 @@ vi.mock(
     openCodeV2EmbeddedConfig: () => ({
       config: {},
       requiredToolNames: ['TEST-tool'],
+      requiredServerNames: ['agent-teams'],
       selection: {
         agent: 'TEST-agent',
         model: { providerID: 'TEST-provider', id: 'TEST-model' },
@@ -78,14 +79,16 @@ afterEach(() => {
 function fixture(image = true) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-attachment-owner-')));
   roots.push(root);
-  for (const name of ['config', 'data', 'workspace']) mkdirSync(join(root, name));
+  for (const name of ['config', 'data', 'workspace', 'home']) mkdirSync(join(root, name));
   const selection = {
     id: 'ses_TEST',
     agent: 'TEST-agent',
     model: { providerID: 'TEST-provider', id: 'TEST-model' },
     permissions: [],
   };
-  const stop = vi.fn(async () => true),
+  let live = true;
+  const ready = Object.freeze({ endpoint: 'http://127.0.0.1:12345', pid: 10, startIdentity: 'TEST-birth' });
+  const stop = vi.fn(async () => { live = false; return true; }),
     resolve = vi.fn(async (binding: unknown) => ({ binding, bytes: new Uint8Array([1]) }));
   let callbackFailure: Error | undefined,
     disposalFailure = false,
@@ -113,10 +116,14 @@ function fixture(image = true) {
     },
     async readCatalog() {
       return {
+        provider: { id: 'TEST-provider', name: 'TEST provider', activation: 'enabled' },
+        defaultModel: { providerId: 'TEST-provider', modelId: 'TEST-model' },
         models: [
           {
             id: 'TEST-model',
             enabled: true,
+            variants: ['default'],
+            supportsTools: true,
             inputModalities: image ? ['text', 'image'] : ['text'],
           },
         ],
@@ -131,10 +138,12 @@ function fixture(image = true) {
   controlled.client = () => client;
   controlled.server = () => ({
     async start() {
-      return { pid: 10, startIdentity: 'TEST-birth' };
+      return ready;
     },
+    isOriginalLive: (capture: unknown) => capture === ready && live,
     async readNativeCustody() {
-      return { pid: 10, version: '2.1.4' };
+      return live ? { pid: ready.pid, startIdentity: ready.startIdentity, version: '2.1.4',
+        executablePath: '/TEST/bun', executableSha256: 'a'.repeat(64) } : undefined;
     },
     readPassword: () => 'TEST-private',
     stopOwned: stop,
@@ -169,7 +178,7 @@ function fixture(image = true) {
       nativeOptions: { providerId: 'TEST-provider' },
       limits: { timeoutMs: 1000 },
       executable: { path: '/TEST/bun', sha256: 'a'.repeat(64) },
-      environment: { XDG_CONFIG_HOME: join(root, 'config'), XDG_DATA_HOME: join(root, 'data') },
+      environment: { HOME: join(root, 'home'), XDG_CONFIG_HOME: join(root, 'config'), XDG_DATA_HOME: join(root, 'data') },
     },
     request,
     endpoint: {

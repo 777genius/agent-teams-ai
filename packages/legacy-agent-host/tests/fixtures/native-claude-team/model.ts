@@ -20,6 +20,7 @@ import { contextCompactionScript } from '../native-claude-compaction/model.ts';
 import type { CompactionScenario } from '../native-claude-compaction/model.ts';
 import { nativeScheduleScript, type NativeScheduleScenario } from '../native-claude-schedules/model.ts';
 import { nativeCommandUiScript, type NativeCommandUiScenario } from '../native-claude-commands/model.ts';
+import { nativeExtensionUiScript, type NativeExtensionUiScenario } from '../native-claude-extensions/model.ts';
 import { nativeMemberCreationScript } from './member-creation.ts';
 import type { NativeMemberCreationScenario } from './member-creation.ts';
 import { ordinarySubagentScript } from '../native-claude-subagent/model.ts';
@@ -154,6 +155,7 @@ export async function startNativeTeamModel(
     contextCompaction?: CompactionScenario;
     nativeSchedules?: NativeScheduleScenario;
     nativeCommands?: NativeCommandUiScenario;
+    nativeExtensions?: NativeExtensionUiScenario;
     nativeMemberCreation?: NativeMemberCreationScenario;
     requireVisibleReply?: boolean;
     /** TEST Quit proof: hold one real first-turn inference until its client is closed. */
@@ -163,6 +165,8 @@ export async function startNativeTeamModel(
     /** TEST-only original native tool-use IDs observed in actual model request history. */
     captureHistoryMarkers?: boolean;
     allowModelProbes?: boolean;
+    /** Exact old-frontend PONG checks, only until its original app epoch is closed. */
+    donorSavedProbes?: boolean;
     /** Original mixed Launch may renew one cancelled check after its explicit close/reopen. */
     nativeModelProbeLimit?: 8 | 9;
     /** TEST-only boundary advanced after verified Stop/reload by the owning UI test. */
@@ -184,9 +188,13 @@ export async function startNativeTeamModel(
   const schedules = options.nativeSchedules
     ? nativeScheduleScript(options.nativeSchedules, nativeToolReceipt)
     : undefined;
-  assert.ok(!(options.nativeCommands && options.nativeSchedules), 'one finite native UI scenario');
+  assert.ok([options.nativeCommands, options.nativeSchedules, options.nativeExtensions].filter(Boolean).length <= 1,
+    'one finite native UI scenario');
   const commands = options.nativeCommands
     ? nativeCommandUiScript(options.nativeCommands, nativeToolReceipt)
+    : undefined;
+  const extensions = options.nativeExtensions
+    ? nativeExtensionUiScript(options.nativeExtensions, nativeToolReceipt)
     : undefined;
   const ordinary = options.ordinarySubagents
     ? ordinarySubagentScript(
@@ -197,6 +205,8 @@ export async function startNativeTeamModel(
   const observations: Observation[] = [];
   const notificationObservations: (Observation & { notice: ObservedMixedTaskNotice })[] = [];
   const probes: { requestedModel?: string; requestedEffort?: string; phase?: 'native' | 'cold-readback' }[] = [];
+  const donorSavedProbes: { requestedModel?: string; advertisedTools: string[] }[] = [];
+  let donorSavedOpen = options.donorSavedProbes === true, pendingDonorReads = 0;
   const unexpectedNoToolsRequests: {
     model?: string;
     roles: unknown[];
@@ -209,6 +219,8 @@ export async function startNativeTeamModel(
   let sequence = 0;
   let compactionTokenRequests = 0;
   const server = createServer((request, response) => {
+    const originalDonorRead = donorSavedOpen;
+    if (originalDonorRead) pendingDonorReads++;
     void (async () => {
       if (request.url?.includes('count_tokens')) {
         if (compaction || commands)
@@ -259,6 +271,11 @@ export async function startNativeTeamModel(
       const commandBlock = commands?.respond(body, tools);
       if (commandBlock) {
         emitResponse(response, ++sequence, commandBlock, String(body.model));
+        return;
+      }
+      const extensionBlock = extensions?.respond(body, tools);
+      if (extensionBlock) {
+        emitResponse(response, ++sequence, extensionBlock, String(body.model));
         return;
       }
       if (compaction) {
@@ -320,6 +337,14 @@ export async function startNativeTeamModel(
               .filter(Boolean)
               .join('\n')
           : undefined;
+      if (originalDonorRead) {
+        assert.equal(probeText, 'Output only the single word PONG.', 'only the exact donor model check');
+        assert.ok(donorSavedProbes.length < 8 && tools.length <= 128, 'bounded donor diagnostic catalog');
+        donorSavedProbes.push({ ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}), advertisedTools: [...tools] });
+        emitResponse(response, ++sequence, { type: 'text', text: 'PONG' }, typeof body.model === 'string' ? body.model : undefined);
+        return;
+      }
+      assert.notEqual(probeText, 'Output only the single word PONG.', 'donor epoch is closed');
       if (
         options.allowModelProbes &&
         probeText === 'Reply only OK. Do not use tools, access files or run commands.' &&
@@ -639,6 +664,8 @@ export async function startNativeTeamModel(
       failures.push(error instanceof Error ? error.message : 'fixture-failed');
       if (!response.headersSent) response.writeHead(400);
       response.end('TEST model fixture rejected request');
+    }).finally(() => {
+      if (originalDonorRead) pendingDonorReads--;
     });
   });
   server.requestTimeout = 15_000;
@@ -652,6 +679,7 @@ export async function startNativeTeamModel(
     compactionRequests: compaction?.requests ?? [],
     ...(schedules ? { scheduleRequests: schedules.requests } : {}),
     ...(commands ? { commandRequests: commands.requests } : {}),
+    ...(extensions ? { extensionRequests: extensions.requests } : {}),
     get compactionTokenRequests() {
       return compactionTokenRequests;
     },
@@ -661,6 +689,16 @@ export async function startNativeTeamModel(
     ...(groupChats ? { groupRequests: groupChats.requests } : {}),
     ...(options.holdInitialTurnResponse ? { heldInitialRequests } : {}),
     probes,
+    ...(options.donorSavedProbes ? { donorSavedProbes, finishDonorSavedProbes: async () => {
+      assert.ok(options.donorSavedProbes && donorSavedOpen, 'close the original donor epoch once');
+      donorSavedOpen = false;
+      const deadline = Date.now() + 15_000;
+      while (pendingDonorReads && Date.now() < deadline)
+        await new Promise<void>(resolve => setTimeout(resolve, 100));
+      assert.equal(pendingDonorReads, 0, 'original donor HTTP reads settle before consumer');
+      assert.deepEqual(failures, []);
+      return structuredClone(donorSavedProbes);
+    } } : {}),
     unexpectedNoToolsRequests,
     failures,
     close: () =>

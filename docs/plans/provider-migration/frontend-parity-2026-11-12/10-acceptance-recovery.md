@@ -256,3 +256,171 @@ R3 reviewer интеграции: `/root/estimate_account_commands`; reviewed pl
 Основания CI: [actual jobs/needs](https://github.com/777genius/agent-teams-ai/blob/cda065d869ccffb5930ed2a817b3e0654b00bb31/.github/workflows/ci.yml),
 [dispatch scope](https://github.com/777genius/agent-teams-ai/blob/cda065d869ccffb5930ed2a817b3e0654b00bb31/scripts/ci/ci-change-scope.mts),
 [portable lifecycle donor](https://github.com/777genius/agent-teams-ai/blob/cda065d869ccffb5930ed2a817b3e0654b00bb31/scripts/e2e/teams-create-page-desktop.mjs).
+
+## 8. Точечные исправления qualification, 2026-11-13
+
+Full-root typecheck на `61bcc71785bc23aeabb3a9a288fdb6a001c6ac16`
+([job131636340469](https://github.com/777genius/agent-teams-ai/actions/runs/43349349197/job/131636340469))
+нашёл два type-boundary дефекта: inferred optional undefined в schedule Host reply и cast неполного
+Electron IPC test port. Исправление задаёт прежний JsonValue return явно и сужает registration port
+до уже используемого `Pick<IpcMain, 'handle'>`; runtime behavior и existing tests не меняются.
+Независимое source review выполнено; свежий compiler result пока не получен из-за недоступного executor.
+
+Для V2 native failures существующий bounded passive trace дополняется завершением finite log body,
+безопасным enum content encoding и изменением количества TEST model requests. Он не пишет native
+bytes/headers/credentials, не отправляет дополнительные запросы и не увеличивает deadlines.
+Прежний diagnostic receipt не является доказательством причины задержки или прохождения E2E.
+
+Windows static V1 cases используют прежнюю actual-OS policy nativeProcessProfile: TEST paths теперь
+соответствуют текущему Host, а foreign-OS cwd по-прежнему отвергается. Production policy не изменена.
+
+[Lint job131606204662](https://github.com/777genius/agent-teams-ai/actions/runs/43335609196/job/131606204662)
+на qualification head `b54390e9844a4f868c6f460905c4d9664e1340e8` обнаружил два локальных
+дефекта: лишний non-null assertion в schedule lead и вложенное присваивание promise
+при подготовке OpenCode sources. Исправления сохраняют прежний выбор и один shared promise.
+[Test shard4](https://github.com/777genius/agent-teams-ai/actions/runs/43335609196/job/131606204703)
+нашёл3 устаревших V2 test fixtures (обязательный HOME/catalog/ready contract) и4 Codex login
+failures: fixture выбирал Node26 через process.execPath, хотя CI уже подготовил Node24.21
+в AGENT_BACKEND_TEST_NODE. Используется этот существующий captured runtime; Host version guard
+сохранён. Исправление3 V2 сценариев идёт вместе с P02 R5, новые unit cases ради этих repairs
+не добавлены. Это source-reviewed cut; новые exact-head lint/tests/native результаты ещё ожидаются.
+
+## 9. R4 — настоящий donor corpus и границы импорта
+
+### Уточнение после source audit
+
+Сценарии B–C выполняются раздельно по фактическому владельцу данных. Зафиксированный
+donor frontend — [`4a0e06277fe216d9f82dbbede362668fe46622ee`](https://github.com/777genius/agent-teams-ai/tree/4a0e06277fe216d9f82dbbede362668fe46622ee).
+Его [CreateTeamDialog](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/dialogs/CreateTeamDialog.tsx)
+поддерживает обычный `#launch-team` unchecked → Create. Реальные записи такого
+сохранения — `team.meta.json` и `members.meta.json`, без CLI `config.json`;
+[current source reader](https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource.ts)
+явно поддерживает этот `saved-draft` формат.
+
+Другая граница — уже запускавшаяся команда. Donor
+[TeamLaunchStateStore.markStopped](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/TeamLaunchStateStore.ts)
+сохраняет `stopId/stoppedAt`, но не `nativeRelease`. Нынешний reader правильно
+оставляет prior-native/launch данные в HOLD без original release. Отсутствие PID,
+обычный stopped label, копирование backup или изменение JSON не заменяют release.
+[LegacyNativeStopRelease](https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/src/main/services/team/provisioning/LegacyNativeStopRelease.ts)
+сейчас квалифицирует original Unix solo Claude; расширение на OpenCode/multi-member
+не возникает автоматически из сохранённого старого файла.
+
+| Данные / producer | Что доказываем | Existing lane |
+| --- | --- | --- |
+| Actual donor4a UI, Create без запуска | Settings/roster → штатный import → тот же Launch dialog; source bytes неизменны | `stage1-desktop / stopped-import-ui`, saved legacy import only |
+| Actual donor4a UI, native V1 история и original Stop/Quit | Новый frontend читает прежние задачи/сообщения/native history через retained owner; cold startup не повторяет input | `retained-opencode-coexistence` |
+| Current frontend, legacy owner, actual solo Claude turn и original Stop | Настоящий release → штатный import → новый Host Launch/Stop; это current-owner proof | `stopped-import-native-launch` |
+| Retained Stage1 Darwin captures | Планируемый gate: raw historical bytes/hash/processRef и exact producer ещё не получены; constructed decoder cases не являются donor proof | Существующий отдельный P09/P10 capture gate |
+
+### Первый минимальный срез: genuine saved draft в существующем UI job
+
+1. В saved-import matrix entry подготовить отдельный чистый checkout exact donor4a
+   с его frozen lockfile/toolchain. Не патчить donor source и не менять integration
+   checkout. Зафиксировать commit/tree, lockfile и Electron executable digest.
+   Новый runner, workflow или production API для этого не нужен.
+2. Перед запуском нового frontend запустить donor в том же disposable TEST
+   HOME/project/userData, который затем прочитает consumer. Descriptor нового Host
+   в donor environment отсутствует. Использовать существующие captured app/CDP
+   startup и cleanup primitives из `desktop-captured-app.ts`; небольшой отдельный
+   producer helper владеет только этим первым app epoch. Старый и новый Main
+   одновременно не работают, corpus не требует переписывать абсолютные cwd.
+3. Через физические UI controls открыть Create Team, ввести уникальное имя,
+   описание, cwd и участника; снять `#launch-team`, нажать Create. Читать результат
+   через обычный read-only API и фактические product files. Не вызывать mutation API
+   из CDP и не писать team/session/config records вручную. Донорский
+   [teams-create-page-desktop.mjs](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/scripts/e2e/teams-create-page-desktop.mjs)
+   даёт проверенные селекторы этого пути; его seeded team, deny-all executable,
+   dev-store mutations и весь длинный suite не переносить.
+4. Обычный Quit donor → подтверждённая original app absence → checksum census
+   только созданных TEST team/task/attachment roots. Сохранить producer receipt,
+   UI screenshots и неизменный минимальный corpus. Допустима настройка пустого TEST
+   HOME, model endpoint и project files; это не основание создавать product records.
+   Saved-only case требует ноль native business inputs и отсутствие native identity.
+   Уточнение review: donor [`providerModelProbe.ts`](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/runtime/providerModelProbe.ts)
+   использует exact `Output only the single word PONG.`, `--max-turns 1` и
+   `--no-session-persistence`. Выбор cwd может успеть начать эту проверку до снятия
+   Launch. В existing finite model actor разрешить этот exact single-user prompt
+   только в отдельном opt-in donor epoch, максимум 8 checks; native advertised
+   tool catalog допустим, ответ только text PONG, tool effects/business inputs — 0.
+   После ordinary Quit и original absence закрыть приём этого epoch одноразово,
+   дождаться уже принятых HTTP reads в прежнем 15s request budget и сохранить
+   immutable отдельный counter. Поздний PONG отвергается. Нынешний Host OK/no-tools
+   path и его отдельный максимум 8 не меняются; donor checks не выдаются за Host
+   management receipts или native history.
+   Donor `execCli` на POSIX создаёт detached process group: отсутствие app PGID
+   не подтверждает завершение model probe. Existing read-only OS oracle фиксирует
+   original selected TEST runtime executable, ancestry к original app и birth до
+   Quit. Перед consumer обязательны отсутствие всех captured original identities
+   и отсутствие unmatched children этого unique executable. PID/path не дают
+   полномочий на cleanup; новые сигналы, повторные probe и process adoption запрещены.
+5. Включить уже подготовленный Host descriptor и продолжить existing import UI:
+   original Team Detail → Launch → Main import → captured Host dialog → close,
+   renderer reload и lookup original import. Проверять actual saved settings/roster,
+   единственную import publication и неизменные source hashes. Assertions читать
+   фактические donor IDs, а не переименовывать их под synthetic fixture.
+6. Существующий synthetic attachment/reference corpus оставить честно обозначенным
+   отдельным доказательством этих границ. Не приписывать его сообщения, Review,
+   session IDs или release настоящему donor saved draft. Первый actual corpus
+   закрывает только соответствующую строку таблицы, остальные продолжаются ниже.
+
+### Native history и current original-stop positive
+
+Donor [runtime.lock.json](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/runtime.lock.json)
+закрепляет runtime **0.0.160**. Existing
+[retained inputs](https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts)
+и [coexistence runner](https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts)
+используют **0.0.158** и current frontend с legacy owner; их существующий результат
+сохраняется. Он не является actual donor4a/runtime0.0.160 proof.
+
+Следующий срез расширяет тот же retained job: отдельный actual donor epoch с
+runtime0.0.160 из его lock, штатным V1 binary/config и finite model oracle; через UI
+получить task/message и native history, выполнить original Stop/Quit, сохранить
+exact producer/asset/bytes. После обновления проверить прежние IDs и видимую историю,
+затем cold read без дополнительного inference. `startRetainedOpenCodeApp({repo})`
+уже позволяет выбрать donor checkout; прежний0.0.158 corpus не заменяется. Если
+payload требует source-built helper, его квалификация фиксируется отдельно и
+`publishedRuntimeComplete=false` не переименовывается в release PASS.
+
+Actual donor Review change и attachment corpus из B2 этим task/message/history
+срезом ещё не закрыты. Они остаются отдельным pending пунктом до настоящего
+old-frontend tool file-change/Review и сохранённых исходных attachment bytes;
+synthetic fixtures не заменяют эту приёмку. Raw historical Stage1 Darwin v1/v2
+captures с checksum и exact producer пока также не найдены. Первый saved-only
+срез от их получения не зависит, но не объявляет их доказанными.
+
+Для current solo-stop строки заменить именно synthetic prior-run setup новым
+actual legacy Claude UI turn в current frontend до выбора Host. Original owner
+выполняет Stop и сам публикует branded release. Existing import/Launch assertions
+затем продолжаются без ручного `nativeRelease`, прямого native DB редактирования
+или усыновления старого процесса. До этого нынешний
+[prior-run fixture](https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/scripts/legacy-agent-host/desktop-stopped-import-prior-run.ts)
+с `sourceNativeInputs: 0` остаётся synthetic-record/actual-TEST-child-Stop proof.
+
+### Recovery reuse и приёмка
+
+Source audit P01/P04 выявил одну оставшуюся boundary. P01
+`codex-login.test.ts` и `capturedCodexLogin.safe-e2e.test.ts` используют actual
+Host/D, но TEST metadata peer вместо native Codex. P04
+`scheduled-run-host.native.ts` доказывает actual completion → duplicate intent →
+cold read/repeat, однако сначала получает original start ACK. Эти результаты
+сохраняются, но не закрывают native effect-before-lost-ACK.
+
+Добавить ровно один такой случай в existing Codex scheduled native journey:
+в TEST application response adapter удержать original `schedule.run.start` reply
+до независимо наблюдённого native effect, затем потерять ответ для исходного caller.
+Это application-level ACK boundary: wire/server ACK уже может существовать,
+но исходный application caller ещё не получил success. Не считать простое игнорирование уже полученного success потерей ACK. После
+unknown выполнить original lookup, обычное закрытие Host, cold lookup и явный
+same-intent retry; требовать original run/operation/input receipt, неизменный native
+effect и число model/native attempts, а также ноль скрыто созданных Tasks. Finite
+scheduled journey Task не создаёт; linkedTask относится к другому existing smart
+journey и сюда не переносится. Нового runner, provider process, journal или общего
+fault framework нет. Claude completion/replay case не дублировать. Source/CI
+qualification этой границы остаётся pending до actual receipt.
+
+Никаких новых unit suites для corpus generation. Достаточно existing source/type
+gates и exact-head UI/native receipts с original cleanup, hashes, producer SHA,
+runtime tuple и числом business inputs. Plan/source review не означает runtime PASS;
+launched donor import без release остаётся неподдержанным данным reader, а доступ
+к его сохранённой истории проверяется через прежний owner.

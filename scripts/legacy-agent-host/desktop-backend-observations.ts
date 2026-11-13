@@ -37,15 +37,22 @@ export function processTable(): ProcessIdentity[] {
     .trim()
     .split('\n')
     .map((line) => {
-      const [pid, ppid, pgid] = line.trim().split(/\s+/).map(Number);
-      assert.ok(pid && ppid !== undefined && pgid);
+      const fields = /^\s*(\d+)\s+(\d+)\s+(\d+)\s*$/u.exec(line);
+      assert.ok(fields, 'Malformed process table row');
+      const pid = Number(fields[1]), ppid = Number(fields[2]), pgid = Number(fields[3]);
+      // Linux kernel processes may have PGID 0; they are visible but never an owned app group.
+      assert.ok(Number.isSafeInteger(pid) && pid > 0 &&
+        Number.isSafeInteger(ppid) && ppid >= 0 &&
+        Number.isSafeInteger(pgid) && pgid >= 0, 'Invalid process table identity');
       return { pid, ppid, pgid };
     });
 }
 export function groupMembers(group: number): ProcessIdentity[] {
+  assert.ok(Number.isSafeInteger(group) && group > 0, 'Captured app group must be positive');
   return processTable().filter((row) => row.pgid === group);
 }
 export function safeGroupSnapshot(group: number): (ProcessIdentity & { executable: string })[] {
+  assert.ok(Number.isSafeInteger(group) && group > 0, 'Captured app group must be positive');
   const rows = execFileSync('/bin/ps', ['-ax', '-o', 'pid=,ppid=,pgid=,comm='], {
     encoding: 'utf8',
     timeout: 3000,
@@ -86,6 +93,70 @@ export function command(pid: number): string {
     throw error;
   }
 }
+
+interface CdpListenerFile {
+  pid: number;
+  fd: string;
+  family: 'IPv4' | 'IPv6' | 'unknown';
+  inode: string | null;
+  device: string | null;
+  endpoint: 'loopback-v4' | 'loopback-v6' | 'wildcard' | 'other' | 'unknown';
+  state: 'LISTEN' | 'other' | 'unknown';
+}
+interface CdpListenerFacts {
+  scope: 'original-linux-lsof-test-cdp';
+  port: number;
+  holderCount: number;
+  fileCount: number;
+  truncated: boolean;
+  files: CdpListenerFile[];
+}
+const cdpListenerFailures = new WeakMap<Error, CdpListenerFacts>();
+/** Facts belong to the original failed read, never a later PID/socket census. */
+export function readOwnedCdpListenerFailure(value: unknown): CdpListenerFacts | undefined {
+  return value instanceof Error ? cdpListenerFailures.get(value) : undefined;
+}
+function parseLinuxCdpListeners(output: string): { listeners: number[]; facts: CdpListenerFacts } {
+  const pids = new Set<number>(), withFiles = new Set<number>();
+  const files: CdpListenerFile[] = [];
+  let pid: number | undefined, current: CdpListenerFile | undefined, fileCount = 0;
+  const finish = () => {
+    if (!current) return;
+    withFiles.add(current.pid); fileCount++;
+    if (files.length < 16) files.push(current);
+    current = undefined;
+  };
+  assert.ok(output.endsWith('\n'), 'Complete original lsof machine output');
+  for (const line of output.slice(0, -1).split('\n')) {
+    assert.ok(line.length <= 256 && !/[\u0000-\u001f\u007f]/u.test(line), 'Bounded lsof field');
+    if (/^p[1-9]\d{0,15}$/u.test(line)) {
+      finish(); pid = Number(line.slice(1));
+      assert.ok(Number.isSafeInteger(pid), 'Valid lsof PID'); pids.add(pid);
+    } else if (/^f\d{1,9}$/u.test(line)) {
+      finish(); assert.ok(pid !== undefined, 'lsof descriptor has its original holder');
+      current = { pid, fd: line.slice(1), family: 'unknown', inode: null, device: null,
+        endpoint: 'unknown', state: 'unknown' };
+    } else {
+      assert.ok(current, 'lsof field has its original descriptor');
+      if (line === 'tIPv4' || line === 'tIPv6') current.family = line === 'tIPv4' ? 'IPv4' : 'IPv6';
+      else if (/^i\d{1,20}$/u.test(line)) current.inode = line.slice(1);
+      else if (/^D0x[0-9a-f]{1,16}$/iu.test(line)) current.device = line.slice(1);
+      else if (line === 'PTCP') { /* The query already selects only TCP LISTEN descriptors. */ }
+      else if (/^TST=[A-Z_]{1,24}$/u.test(line)) current.state = line === 'TST=LISTEN' ? 'LISTEN' : 'other';
+      else if (line.startsWith('n')) {
+        const endpoint = line.slice(1);
+        current.endpoint = endpoint === `127.0.0.1:${selectedCdpPort}` ? 'loopback-v4'
+          : endpoint === `[::1]:${selectedCdpPort}` ? 'loopback-v6'
+          : [`*:${selectedCdpPort}`, `0.0.0.0:${selectedCdpPort}`, `[::]:${selectedCdpPort}`].includes(endpoint)
+            ? 'wildcard' : 'other';
+      } else assert.fail('Unexpected lsof machine field');
+    }
+  }
+  finish();
+  assert.ok(pids.size > 0 && pids.size === withFiles.size, 'Positive original lsof descriptor census');
+  return { listeners: [...pids], facts: { scope: 'original-linux-lsof-test-cdp', port: selectedCdpPort,
+    holderCount: pids.size, fileCount, truncated: fileCount > files.length, files } };
+}
 export function assertOwnedCdpListener(group: number): number {
   // Limit descriptor inspection to the captured TEST group. A machine-wide
   // lsof scan for every UI read can time out under unrelated process load.
@@ -102,9 +173,9 @@ export function assertOwnedCdpListener(group: number): number {
         owned.map((row) => row.pid).join(','),
         `-iTCP:${selectedCdpPort}`,
         '-sTCP:LISTEN',
-        '-t',
+        ...(process.platform === 'linux' ? ['-w', '-FpfDtinPT', '-Ts'] : ['-t']),
       ],
-      { encoding: 'utf8', timeout: 10_000 }
+      { encoding: 'utf8', timeout: 10_000, maxBuffer: 1024 * 1024 }
     );
   } catch (error) {
     const result = error as {
@@ -120,20 +191,27 @@ export function assertOwnedCdpListener(group: number): number {
       result.status !== 1 ||
       result.signal ||
       typeof result.stdout !== 'string' ||
-      !/^\d+(?:\n\d+)*\n?$/.test(result.stdout) ||
+      !(process.platform === 'linux' ? /^p[1-9]\d*\n/u.test(result.stdout)
+        : /^\d+(?:\n\d+)*\n?$/.test(result.stdout)) ||
       String(result.stderr ?? '').trim()
     )
       throw error;
     output = result.stdout;
   }
-  const listeners = output.trim().split('\n').map(Number);
-  assert.equal(new Set(listeners).size, 1, 'one CDP listener');
-  const listener = listeners[0];
-  assert.ok(
-    groupMembers(group).some((row) => row.pid === listener),
-    'CDP belongs to the captured TEST app process group'
-  );
-  return listener!;
+  const census = process.platform === 'linux' ? parseLinuxCdpListeners(output) : undefined;
+  const listeners = census?.listeners ?? output.trim().split('\n').map(Number);
+  try {
+    assert.equal(new Set(listeners).size, 1, 'one CDP listener');
+    const listener = listeners[0];
+    assert.ok(
+      groupMembers(group).some((row) => row.pid === listener),
+      'CDP belongs to the captured TEST app process group'
+    );
+    return listener!;
+  } catch (error) {
+    if (census && error instanceof Error) cdpListenerFailures.set(error, census.facts);
+    throw error;
+  }
 }
 export async function compiledBundleHashes(
   directory: string,

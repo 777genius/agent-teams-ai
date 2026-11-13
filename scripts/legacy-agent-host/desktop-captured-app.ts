@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
 import { execFileSync, type ChildProcess } from 'node:child_process';
-import { realpathSync } from 'node:fs';
+import { constants, realpathSync } from 'node:fs';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
-import { lstat, readFile, realpath, writeFile } from 'node:fs/promises';
+import { copyFile, lstat, mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { isDeepStrictEqual } from 'node:util';
+import { checkpoint } from './desktop-resume-records.ts';
+import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
+import { assertFirstResumeMetadataAbsent, observeDesktopMetadataClose } from './desktop-opencode-v2-cold-metadata.ts';
 import { bounded } from './desktop-proof-bounds.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { assertOwnedCdpListener, command, processTable, selectedCdpPort, compiledBundleHashes, getTargets, portOccupied,
@@ -397,4 +401,168 @@ export async function cleanupCapturedDesktopApp(options: {
       error instanceof Error ? error.message.slice(0, 4000) : 'unclassified cleanup failure';
   }
   return { remaining, cleanupFailure, capturedHostAbsent, hostPid };
+}
+
+/** Original guarded same-profile cold startup. The caller immediately retains every new ChildProcess. */
+export async function restartCapturedDesktopApp(options: {
+  app: ChildProcess; cdp: DesktopCdpPort; group: number; fixture: Fixture; repo: string; mode: string;
+  evidence: Evidence; cdpLibrary: DesktopCdpLibrary;
+  provider: 'claude' | 'codex' | 'opencode';
+  model: { observations: readonly unknown[]; failures: readonly string[] };
+  boundary: 'resume-after-stop' | 'extensions-before-launch';
+  markQuitRequested(): void;
+  adoptRenderer(cdp: DesktopCdpPort | undefined, hostPid?: number): void;
+  spawnNext(): { app: ChildProcess; group: number; identity: string; invocation: readonly string[];
+    spawnError(): boolean };
+}): Promise<DesktopCdpPort> {
+  const { app, cdp, group, fixture, repo, mode, evidence, provider, model, cdpLibrary } = options;
+  const initial = options.boundary === 'extensions-before-launch';
+  assert.equal(mode, initial ? 'native-launch-ui' : 'native-resume-ui');
+  if (initial) {
+    assert.equal(process.env.LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI, '1');
+    assert.equal(provider, 'claude');
+  }
+  const hosts = groupMembers(group).filter(row => command(row.pid) === fixture.node + ' ' + fixture.hostEntry);
+  assert.equal(hosts.length, 1, 'capture original Host before guarded cold startup Quit');
+  const originalHost = hosts[0]!;
+  options.adoptRenderer(cdp, originalHost.pid);
+  const proof: Evidence = { status: 'INCOMPLETE', provider,
+    scope: initial ? 'Guarded same-profile cold startup after extension/skill mutations, before any native Launch'
+      : 'Guarded app Quit and captured same-profile cold startup before explicit Resume',
+    firstEpoch: { app: evidence.app, startup: evidence.startup, startupOutcome: evidence.startupOutcome,
+      rendererTarget: evidence.rendererTarget, compiledBundleHashesAfterStartup: evidence.compiledBundleHashesAfterStartup,
+      discovery: evidence.discovery, homePathProof: evidence.homePathProof, host: originalHost } };
+  evidence[initial ? 'coldExtensionBoundary' : 'coldResumeBoundary'] = proof;
+  const readSessions = () => readDesktopNativeStopSessions(fixture.root).catch(
+    (error: NodeJS.ErrnoException & { path?: string }) => {
+      if (initial && error.code === 'ENOENT' && error.path === join(fixture.root, 'hoststore/runtime-sessions'))
+        return [];
+      throw error;
+    });
+  const before = await readSessions();
+  const sources = before.filter(row => Array.isArray(row.inputs) && row.inputs.length === 1);
+  const profile = object(JSON.parse(await readFile(fixture.profilePath, 'utf8')));
+  const definition = object((profile.teams as unknown[])[0]);
+  if (initial) assert.equal((definition.members as unknown[]).length, 1);
+  else assert.equal(sources.length, 1);
+  const member = object(initial ? (definition.members as unknown[])[0]
+    : (definition.members as unknown[]).find(value =>
+      object(value).memberId === object(sources[0]!.binding).memberId));
+  const { teamName: _teamName, ...descriptorBinding } = object(member.delivery);
+  const assertNeverOpened = (row: Evidence) => {
+    assert.deepEqual(row.binding, descriptorBinding);
+    assert.deepEqual(row.inputs, []); assert.deepEqual(row.interactions, []);
+    assert.equal(row.config, null); assert.equal(row.openFingerprint, null); assert.equal(row.nativeReady, false);
+  };
+  if (initial) {
+    assert.ok(before.length <= 1, 'only the never-opened original static descriptor may exist');
+    for (const row of before) assertNeverOpened(row);
+    // Completed management mutations may be followed by finite metadata reads.
+    // No Runtime session/input is opened; original Quit below must close the entire captured group.
+    assert.equal(sources.length, 0);
+  } else {
+    assert.ok(before.length > 0 && before.every(row => row.phase === 'closed' && row.custody === 'released'));
+    assert.equal(sources.length, 1);
+    assert.equal(object(sources[0]!.binding).memberId, member.memberId);
+  }
+  const originalCheckpoint = initial ? undefined : await checkpoint(fixture.root, sources[0]!, provider);
+  if (originalCheckpoint) proof.beforeQuitCheckpoint = { reference: originalCheckpoint.payload.reference,
+    payloadFileSha256: originalCheckpoint.payloadFileSha256, historySha256: originalCheckpoint.historySha256 };
+  const managementRecords = async () => {
+    const directory = join(fixture.root, 'hoststore/management-commands');
+    const names = (await readdir(directory)).filter(name => /^[a-f0-9]{64}\.json$/u.test(name)).sort();
+    assert.ok(names.length <= 16);
+    return Promise.all(names.map(async name => ({ name, sha256: await fileDigest(join(directory, name)) })));
+  };
+  const originalMutations = initial ? await managementRecords() : undefined;
+  if (originalMutations) assert.equal(originalMutations.length, 4, 'one plugin install and three skill mutations');
+  const bundleDirectory = join(fixture.root, initial ? 'cold-extension-epoch1-bundles' : 'cold-resume-epoch1-bundles');
+  const bundlePins = evidence.compiledBundleHashesAfterStartup;
+  assert.ok(Array.isArray(bundlePins) && bundlePins.length > 0 && bundlePins.length <= 4096);
+  for (const raw of bundlePins) {
+    const pin = object(raw), relative = String(pin.path), sha = String(pin.sha256);
+    assert.ok(!relative.startsWith('/') && !relative.split('/').includes('..'));
+    assert.match(relative, /\.(?:cjs|js)$/); assert.match(sha, /^[a-f0-9]{64}$/);
+    const source = join(repo, 'dist-electron', relative), target = join(bundleDirectory, relative);
+    assert.equal(await fileDigest(source), sha);
+    await mkdir(dirname(target), { recursive: true, mode: 0o700 });
+    await copyFile(source, target, constants.COPYFILE_EXCL);
+    assert.equal(await fileDigest(target), sha); assert.equal(await fileDigest(source), sha);
+  }
+  proof.epoch1BundleSnapshot = { directory: bundleDirectory, files: bundlePins };
+  assert.equal(model.observations.length, initial ? 0 : 8);
+  assertOwnedCdpListener(group);
+  options.markQuitRequested(); // One original public Quit, fenced before its uncertain reply.
+  const quitObservation: Evidence = { attempted: true }; proof.firstQuit = quitObservation;
+  try {
+    await bounded(cdp.evaluate('window.electronAPI.windowControls.close()'), 3000, 'original same-profile Quit');
+    quitObservation.reply = 'acknowledged';
+  } catch (error) {
+    quitObservation.reply = 'unconfirmed';
+    quitObservation.reason = /timed out/i.test(String(error)) ? 'timeout' : 'closed-or-rejected';
+  }
+  const until = Date.now() + 30_000;
+  while (Date.now() < until && (app.exitCode === null || groupMembers(group).length)) await tick();
+  const remaining = groupMembers(group), hostAbsent = !processTable().some(row => row.pid === originalHost.pid);
+  const writerReleased = await lstat(join(fixture.root, 'hoststore/.legacy-agent-host-writer.lock'))
+    .then(() => false, (error: NodeJS.ErrnoException) => { if (error.code === 'ENOENT') return true; throw error; });
+  proof.firstCleanup = { appExitCode: app.exitCode, appSignalCode: app.signalCode,
+    remaining, capturedHostAbsent: hostAbsent, writerLockReleased: writerReleased };
+  assert.equal(app.exitCode, 0, 'captured app exits normally before second spawn');
+  assert.equal(app.signalCode, null);
+  assert.deepEqual(remaining, [], 'no group cleanup fallback before cold startup');
+  assert.equal(hostAbsent, true); assert.equal(writerReleased, true);
+  if (!initial) {
+    await observeDesktopMetadataClose(fixture.root, evidence, true);
+    assertFirstResumeMetadataAbsent(evidence);
+  }
+  const postQuit = await readSessions();
+  if (!initial) for (const original of before) {
+    const matches = postQuit.filter(row => isDeepStrictEqual(row.binding, original.binding));
+    assert.equal(matches.length, 1); assert.deepEqual(matches[0], original);
+  }
+  const added = initial ? postQuit : postQuit.filter(row =>
+    !before.some(original => isDeepStrictEqual(row.binding, original.binding)));
+  assert.ok(added.length <= 1, 'only one exact static descriptor tombstone may be added');
+  for (const row of added) {
+    assertNeverOpened(row);
+    assert.equal(row.phase, 'closed'); assert.equal(row.custody, 'released'); assert.equal(row.sealed, true);
+  }
+  assert.equal(model.observations.length, initial ? 0 : 8, 'Quit cannot release a native input');
+  await bounded(cdp.close(), 3000, 'disconnect original renderer');
+  options.adoptRenderer(undefined);
+  assert.equal(await portOccupied(), false);
+  for (const [path, sha] of [[fixture.node, fixture.pins.nodeSha256], [fixture.hostEntry, fixture.pins.hostEntrySha256],
+    [fixture.profilePath, fixture.pins.profileSha256], [fixture.descriptorPath, fixture.pins.descriptorSha256]])
+    assert.equal(await fileDigest(path!), sha, 'same captured fixture pin before cold startup');
+  const second: Evidence = { status: 'INCOMPLETE' }; proof.secondEpoch = second;
+  const next = options.spawnNext(); // Caller adopts before any fallible startup observation.
+  assert.ok(next.group > 0 && next.group !== group);
+  second.app = { pid: next.app.pid, processGroup: next.group, identity: next.identity, invocation: next.invocation };
+  const connected = await connectCapturedDesktopApp({
+    app: next.app, group: next.group, spawnError: next.spawnError, packed: undefined, cdpLibrary, evidence: second });
+  options.adoptRenderer(connected.cdp);
+  await attachRendererDiagnostics(connected.cdp, String(connected.target.url), second, {
+    remainingMs: connected.startupBudgetMs - (performance.now() - connected.startupStarted),
+    assertOwnedRenderer: () => assertOwnedCdpListener(next.group) });
+  await verifyCapturedDesktopBinding({ cdp: connected.cdp, group: next.group, mode, fixture, evidence: second, repo, packed: undefined });
+  const currentHosts = groupMembers(next.group).filter(row => command(row.pid) === fixture.node + ' ' + fixture.hostEntry);
+  assert.equal(currentHosts.length, 1, 'one new standalone Host after cold discovery');
+  assert.notEqual(currentHosts[0]!.pid, originalHost.pid);
+  options.adoptRenderer(connected.cdp, currentHosts[0]!.pid); second.host = currentHosts[0];
+  assert.deepEqual(await readSessions(), postQuit);
+  if (originalCheckpoint) {
+    const cold = await checkpoint(fixture.root, sources[0]!, provider);
+    assert.equal(cold.payloadFileSha256, originalCheckpoint.payloadFileSha256);
+    assert.equal(cold.historySha256, originalCheckpoint.historySha256);
+    second.checkpointAndHistoryUnchanged = true;
+  }
+  if (originalMutations) {
+    assert.deepEqual(await managementRecords(), originalMutations);
+    second.originalMutationRecordsUnchanged = originalMutations;
+  }
+  assert.equal(model.observations.length, initial ? 0 : 8, 'cold startup cannot release a prompt');
+  assert.deepEqual(model.failures, []);
+  second.status = 'PASS'; proof.status = 'PASS';
+  return connected.cdp;
 }

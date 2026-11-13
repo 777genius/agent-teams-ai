@@ -33,6 +33,54 @@ const rows = (value: unknown) => {
   return value.map(record);
 };
 
+/** TEST-only reuse of the exact native suggestion → original Composer Send path. */
+export async function sendDesktopNativeCommandFromComposer(
+  cdp: UiCdpPort,
+  ui: ReturnType<typeof createDesktopUiControls>,
+  name: string,
+  args: string,
+  inspectCatalog: (catalog: readonly unknown[]) => void
+): Promise<string> {
+  const raw = '/' + name + (args ? ' ' + args : '');
+  await ui.click('.message-composer-flat-layout textarea', 'focus original lead Composer');
+  assert.equal(
+    await cdp.evaluate(`document.querySelector('.message-composer-flat-layout textarea')?.value`),
+    ''
+  );
+  await cdp.send('Input.insertText', { text: '/' });
+  const catalog = await ui.waitRead(
+    `(() => { const names=[...document.querySelectorAll('[role="listbox"] [role="option"] .font-medium')].map(e=>e.textContent.trim()); return names.includes(${desktopJsLiteral('/' + name)})?names:null; })()`,
+    'captured native command suggestions'
+  );
+  assert.ok(Array.isArray(catalog));
+  inspectCatalog(catalog);
+  const target = `(() => {const rows=[...document.querySelectorAll('[role="listbox"] [role="option"]')].filter(e=>e.querySelector('.font-medium')?.textContent.trim()===${desktopJsLiteral('/' + name)});if(rows.length!==1)return null;const e=rows[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))?{x,y,tag:e.tagName}:null;})()`;
+  await ui.clickExpression(target, 'choose actual native /' + name);
+  const selected = await cdp.evaluate(
+    `document.querySelector('.message-composer-flat-layout textarea')?.value`
+  );
+  assert.equal(typeof selected, 'string');
+  assert.equal(String(selected).trim(), '/' + name);
+  if (args)
+    await cdp.send('Input.insertText', {
+      text: (String(selected).endsWith(' ') ? '' : ' ') + args,
+    });
+  await ui.waitRead(
+    `document.querySelector('.message-composer-flat-layout textarea')?.value.trim()===${desktopJsLiteral(raw)}`,
+    'selected command retains exact arguments'
+  );
+  await ui.click(
+    'button.message-composer-send-button',
+    'Send original /' + name + ' once',
+    'Send'
+  );
+  await ui.waitRead(
+    `document.querySelector('.message-composer-flat-layout textarea')?.value===''`,
+    'command admission clears Composer'
+  );
+  return raw;
+}
+
 /** Called after the existing Launch turn and before its Stop; every send comes from actual Composer controls. */
 export async function runDesktopNativeCommandsUiProof(
   cdp: UiCdpPort,
@@ -129,53 +177,19 @@ export async function runDesktopNativeCommandsUiProof(
 
   const send = async (name: string, args = '') => {
     const before = new Set((await commandRows()).map((row) => row.commandId));
-    const raw = '/' + name + (args ? ' ' + args : '');
-    await ui.click('.message-composer-flat-layout textarea', 'focus original lead Composer');
-    assert.equal(
-      await cdp.evaluate(`document.querySelector('.message-composer-flat-layout textarea')?.value`),
-      ''
-    );
-    await cdp.send('Input.insertText', { text: '/' });
-    const catalog = await ui.waitRead(
-      `(() => { const names=[...document.querySelectorAll('[role="listbox"] [role="option"] .font-medium')].map(e=>e.textContent.trim()); return names.includes('/${name}')?names:null; })()`,
-      'captured native command suggestions'
-    );
-    assert.ok(Array.isArray(catalog));
-    for (const required of [
-      '/compact',
-      '/cost',
-      '/review',
-      '/test-project-command',
-      '/test-user-command',
-    ])
-      assert.ok(catalog.includes(required));
-    for (const excluded of ['/test-hidden-command', '/model', '/effort', '/fast', '/clear'])
-      assert.equal(catalog.includes(excluded), false);
-    proof.catalog = catalog;
-    const target = `(() => {const rows=[...document.querySelectorAll('[role="listbox"] [role="option"]')].filter(e=>e.querySelector('.font-medium')?.textContent.trim()===${desktopJsLiteral('/' + name)});if(rows.length!==1)return null;const e=rows[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))?{x,y,tag:e.tagName}:null;})()`;
-    await ui.clickExpression(target, 'choose actual native /' + name);
-    const selected = await cdp.evaluate(
-      `document.querySelector('.message-composer-flat-layout textarea')?.value`
-    );
-    assert.equal(typeof selected, 'string');
-    assert.equal(String(selected).trim(), '/' + name);
-    if (args)
-      await cdp.send('Input.insertText', {
-        text: (String(selected).endsWith(' ') ? '' : ' ') + args,
-      });
-    await ui.waitRead(
-      `document.querySelector('.message-composer-flat-layout textarea')?.value.trim()===${desktopJsLiteral(raw)}`,
-      'selected command retains exact arguments'
-    );
-    await ui.click(
-      'button.message-composer-send-button',
-      'Send original /' + name + ' once',
-      'Send'
-    );
-    await ui.waitRead(
-      `document.querySelector('.message-composer-flat-layout textarea')?.value===''`,
-      'command admission clears Composer'
-    );
+    const raw = await sendDesktopNativeCommandFromComposer(cdp, ui, name, args, catalog => {
+      for (const required of [
+        '/compact',
+        '/cost',
+        '/review',
+        '/test-project-command',
+        '/test-user-command',
+      ])
+        assert.ok(catalog.includes(required));
+      for (const excluded of ['/test-hidden-command', '/model', '/effort', '/fast', '/clear'])
+        assert.equal(catalog.includes(excluded), false);
+      proof.catalog = catalog;
+    });
     const original = await poll(
       commandRows,
       (entries) =>

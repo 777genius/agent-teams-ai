@@ -71,14 +71,15 @@ export function createDesktopUiControls(
   const waitRead = async (
     expression: string,
     label: string,
-    timeoutMs = 30_000
+    timeoutMs = 30_000,
+    isReady: (value: unknown) => boolean = Boolean
   ): Promise<unknown> => {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       options.assertOwnedRenderer();
       try {
         const value = await cdp.evaluate(expression);
-        if (value) return value;
+        if (isReady(value)) return value;
       } catch (error) {
         if (
           !/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(
@@ -96,10 +97,14 @@ export function createDesktopUiControls(
     const elements = [...document.querySelectorAll(${desktopJsLiteral(selector)})].filter(e => {
       const r=e.getBoundingClientRect(); return r.width>0&&r.height>0${text === undefined ? '' : `&&e.textContent.trim()===${desktopJsLiteral(text)}`};
     });
-    if(elements.length!==1)return null;
+    if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};
     const e=elements[0], r=e.getBoundingClientRect(), x=r.x+r.width/2,y=r.y+r.height/2;
-    const hit=document.elementFromPoint(x,y);
-    if(!hit||!(hit===e||e.contains(hit))||e.matches(':disabled'))return null;
+    const hit=document.elementFromPoint(x,y), disabled=e.matches(':disabled');
+    if(!hit||!(hit===e||e.contains(hit))||disabled)return {
+      unavailableTarget:true,matches:1,disabled,ariaDisabled:e.getAttribute('aria-disabled')==='true',
+      pointerEventsNone:getComputedStyle(e).pointerEvents==='none',
+      centerInViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight,hitPresent:Boolean(hit)
+    };
     return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName};
   })()`;
   const clickExpression = async (
@@ -109,7 +114,33 @@ export function createDesktopUiControls(
     text?: string
   ): Promise<void> => {
     await cdp.send('Page.bringToFront');
-    let point = record(await waitRead(expression, label));
+    // Reuse the original passive reads and deadline. Retain only closed facts,
+    // never DOM text, attributes, HTML or another request after a failed click.
+    const readPoint = async (phase: string): Promise<Record<string, unknown>> => {
+      let facts: Record<string, boolean | number> | undefined;
+      try {
+        return record(await waitRead(expression, phase, 30_000, value => {
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            const row = value as Record<string, unknown>;
+            if (row.unavailableTarget === true) {
+              facts = {
+                matches: Number.isSafeInteger(row.matches) && Number(row.matches) >= 0
+                  ? Math.min(Number(row.matches), 256) : 0,
+                disabled: row.disabled === true, ariaDisabled: row.ariaDisabled === true,
+                pointerEventsNone: row.pointerEventsNone === true,
+                centerInViewport: row.centerInViewport === true, hitPresent: row.hitPresent === true,
+              };
+              return false;
+            }
+          }
+          return Boolean(value);
+        }));
+      } catch (error) {
+        if (facts) throw new Error(`UI target read failed: ${phase}; facts=${JSON.stringify(facts)}`, { cause: error });
+        throw error;
+      }
+    };
+    let point = await readPoint(label);
     options.assertOwnedRenderer();
     step({ action: 'mouseMoved', label: 'hover ' + label, selector, target: point });
     await cdp.send('Input.dispatchMouseEvent', {
@@ -117,13 +148,13 @@ export function createDesktopUiControls(
       x: point.x,
       y: point.y,
     });
-    point = record(await waitRead(expression, label + ' after pointer enter'));
+    point = await readPoint(label + ' after pointer enter');
     // Async Host hydration can shift the DOM after hover. Check the original
     // target is stable before ONE physical click, never replay an uncertain click.
     let stableSamples = 0;
     for (let sample = 0; sample < 15 && stableSamples < 2; sample++) {
       await new Promise<void>((done) => setTimeout(done, 100));
-      const next = record(await waitRead(expression, label + ' stable target'));
+      const next = await readPoint(label + ' stable target');
       stableSamples =
         next.x === point.x && next.y === point.y && next.tag === point.tag
           ? stableSamples + 1

@@ -19,6 +19,7 @@ import { desktopOpenCodeV2ManagementProfile, prepareDesktopOpenCodeV2Recipe } fr
 import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
 import { desktopCodexSha256, prepareDesktopCodexLoginOpener } from './desktop-codex-login-fixture.ts';
 export { desktopCodexSha256 } from './desktop-codex-login-fixture.ts';
+import { DESKTOP_MCP_MEMBERS, prepareDesktopCapturedMcpRecipes } from './desktop-opencode-v2-mcp-fixture.ts';
 
 export const digest = (bytes: Uint8Array | string): string =>
   createHash('sha256').update(bytes).digest('hex');
@@ -71,6 +72,7 @@ export async function prepareDesktopBackendFixture(
     nativeCodex?: { path: string; sha256: string };
     nativeClaude?: { path: string; sha256: string; modelUrl?: string };
     nativeOpenCodeV2?: DesktopOpenCodeV2Selection;
+    capturedMcpNonce?: string;
   }
 ) {
   if (options.nativeOpenCodeV2 && (options.nativeClaude || options.nativeCodex || options.candidateRuntime || options.nativeGroupChats))
@@ -484,6 +486,11 @@ export async function prepareDesktopBackendFixture(
     profile.management = [desktopOpenCodeV2ManagementProfile(member,
       options.nativeOpenCodeV2.managementEndpoint, 'TEST-opencode-v2-management')];
   }
+  if (options.capturedMcpNonce !== undefined) {
+    if (!options.nativeOpenCodeV2 || !options.launchDialog || options.creation)
+      throw new Error('Captured MCP requires the original V2 Launch fixture');
+    await prepareDesktopCapturedMcpRecipes({ profile, root, node, nonce: options.capturedMcpNonce });
+  }
   let uiSeed:
     | {
         taskId: string;
@@ -580,7 +587,7 @@ export async function prepareDesktopBackendFixture(
     await prepareDesktopReviewLedger(root, uiSeed.taskId);
   }
   if (options.nativeReviewUi) await prepareNativeReviewWorkspace(root, options.nativeOpenCodeV2 ? 'opencode-v2' : 'claude');
-  if (options.stoppedImportUi)
+  if (options.stoppedImportUi && process.env.LEGACY_DESKTOP_DONOR_SAVED_ONLY !== '1')
     await prepareDesktopStoppedImport(root, {
       priorRun: process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1',
       node,
@@ -663,6 +670,7 @@ export async function prepareDesktopBackendFixture(
         label: 'TEST private backend',
         members: [
           { memberId: 'alice-id', label: 'alice' },
+          ...(options.capturedMcpNonce ? DESKTOP_MCP_MEMBERS.map(row => ({ memberId: row.memberId, label: row.name })) : []),
           ...(options.nativeGroupChats ? [{ memberId: 'bob-id', label: 'bob' }] : []),
           ...(options.taskBoardGroup
             ? [{ memberId: 'TEST-board-peer-id', label: 'board-peer' }]

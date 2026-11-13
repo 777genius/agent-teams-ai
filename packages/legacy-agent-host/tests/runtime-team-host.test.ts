@@ -7,6 +7,7 @@ import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
 
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
+import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import { ClaudeManagementCoordinator } from '../dist/composition/ClaudeManagementCoordinator.js';
@@ -279,6 +280,15 @@ test('saved configuration captures fresh native identities, preserves historical
     1,
     'original start replay cannot duplicate the launch prompt'
   );
+  const firstInput = f.session().submits[0]!;
+  f.session().emit({
+    kind: 'usage',
+    sessionRef: f.session().sessionRef,
+    inputId: firstInput.inputId,
+    operationRef: firstInput.operationRef,
+    inputTokens: 17,
+    outputTokens: 9,
+  });
   f.session().finish(0);
   await eventually(
     () =>
@@ -299,6 +309,20 @@ test('saved configuration captures fresh native identities, preserves historical
     assert.equal(context.profile.nativeOptions!.permissionMode, 'default');
     assert.equal(context.profile.nativeOptions!.fastMode, false);
   }
+  const readStats = async () => {
+    const result = (await f.rpc('team.activity.stats.read', { memberName: 'alice' })) as {
+      ok: boolean;
+      value: { stats: { generations: number; inputTokens: number | null; outputTokens: number | null } };
+    };
+    assert.equal(result.ok, true, JSON.stringify(result));
+    return {
+      generations: result.value.stats.generations,
+      inputTokens: result.value.stats.inputTokens,
+      outputTokens: result.value.stats.outputTokens,
+    };
+  };
+  const originalStats = { generations: 1, inputTokens: 17, outputTokens: 9 };
+  assert.deepEqual(await readStats(), originalStats, 'unused configured recipe is not activity');
   // A second capture while this exact native session is live must hold without switching selection.
   const denied = await f.rpc('team.launch.capture', input, { commandId: 'TEST-second-capture' });
   assert.deepEqual(denied, { ok: false, code: 'hold', outcome: 'unknown' });
@@ -316,6 +340,10 @@ test('saved configuration captures fresh native identities, preserves historical
   assert.equal(next.ok, true, JSON.stringify(next));
   assert.notEqual(next.value.launch.launchId, start.launchId);
   assert.equal(context.isCurrent(), false, 'new grants cannot revive the original member context');
+  assert.deepEqual(
+    await readStats(), originalStats,
+    'original closed activity remains readable after a new capture replaces delivery'
+  );
   assert.equal(
     (
       (await f.rpc('team.launch.read', { launchId: start.launchId })) as {
@@ -326,6 +354,7 @@ test('saved configuration captures fresh native identities, preserves historical
   );
   await f.restart();
   assert.equal(f.opens(), 1, 'cold reconstruction does not allocate a provider');
+  assert.deepEqual(await readStats(), originalStats, 'cold reconstruction retains original activity');
   const replay = (await f.rpc('team.launch.capture', input, {
     commandId: 'TEST-second-capture',
   })) as typeof capture;
@@ -1487,11 +1516,13 @@ test(
 );
 
 test(
-  'Codex Host selection uses its actual public capability vocabulary and keeps private config off RPC',
+  'Codex Host cost reports retained usage once without native dispatch or private snapshot leakage',
   { timeout: 10000 },
   async (t) => {
     const f = await fixture(t, {
+      checkpointHistory: true,
       changeProfile(selected) {
+        selected.teams[0]!.members[0]!.role = 'lead';
         const member = selected.runtime!.members[0]!;
         if (member.provider !== 'claude') throw new Error('Expected Claude fixture');
         const {
@@ -1512,10 +1543,35 @@ test(
     });
     const opened = (await f.rpc('runtime.open', { memberId: 'alice-id' })) as {
       ok: boolean;
-      value: { nativeReady: boolean };
+      value: { generation: string; nativeReady: boolean; sessionCommands: { name: string; description: string }[] };
     };
     assert.equal(opened.ok, true);
     assert.equal(opened.value.nativeReady, true);
+    assert.deepEqual(opened.value.sessionCommands.map(command => command.name), ['cost']);
+    const cost = { operation: 'message.send', payload: { to: 'alice', text: '/cost',
+      messageId: 'TEST-cost-unknown', nativeCommand: true as const } };
+    const unknown = await f.rpc('team.execute', cost, { commandId: 'TEST-cost-unknown' }) as {
+      ok: boolean; value: CommandReceipt;
+    };
+    assert.equal(unknown.ok, true);
+    assert.equal(unknown.value.phase, 'completed');
+    assert.equal(unknown.value.hostCommand, undefined, 'private prepared facts never cross RPC');
+    const inboxPath = join(f.root, 'teams/test-runtime-host/inboxes/user.json');
+    const replies = () => JSON.parse(readFileSync(inboxPath, 'utf8')) as {
+      messageId: string; text: string; from: string; summary: string;
+    }[];
+    assert.match(replies()[0]!.text, /Input tokens reported: not reported/u);
+    assert.match(replies()[0]!.text, /Output tokens reported: not reported/u);
+    assert.match(replies()[0]!.text, /not a full session total/u);
+    assert.match(replies()[0]!.text, /Price: not reported by Codex/u);
+    assert.equal(f.session().submits.length, 0);
+    for (const payload of [
+      { ...cost.payload, text: '/cost arguments-are-not-a-native-prompt' },
+      { ...cost.payload, to: 'bob' },
+    ]) {
+      const denied = await f.rpc('team.execute', { operation: 'message.send', payload });
+      assert.deepEqual(denied, { ok: false, code: 'invalid', outcome: 'rejected' });
+    }
     assert.deepEqual(f.contexts[0]!.request.requiredCapabilities, ['text', 'tools']);
     assert.equal(f.contexts[0]!.profile.provider, 'codex');
     await f.rpc('team.execute', {
@@ -1526,14 +1582,102 @@ test(
       () => f.session().submits.length === 1,
       'captured Codex selection must receive exactly one input'
     );
+    const original = f.session().submits[0]!;
+    const source = { sessionRef: f.session().sessionRef,
+      inputId: original.inputId, operationRef: original.operationRef };
+    f.session().emit({ ...source, kind: 'usage', inputTokens: 11, outputTokens: 5 });
+    f.session().emit({ ...source, kind: 'usage', inputTokens: 17, outputTokens: 9 });
     f.session().finish(0);
-    await tick();
+    await eventually(() => new FileRuntimeStore(f.root).fenced(f.runtimeBinding,
+      tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'reported original usage must persist');
+    const reportedCommand = { ...cost, payload: { ...cost.payload, messageId: 'TEST-cost-reported' } };
+    const reported = await f.rpc('team.execute', reportedCommand, { commandId: 'TEST-cost-reported' }) as {
+      ok: boolean; value: CommandReceipt;
+    };
+    assert.equal(reported.ok, true);
+    const bytes = readFileSync(inboxPath, 'utf8');
+    assert.equal(replies().length, 2);
+    assert.equal(replies()[1]!.from, 'alice');
+    assert.equal(replies()[1]!.summary, '/cost');
+    assert.match(replies()[1]!.text, /Input tokens reported: 17/u);
+    assert.match(replies()[1]!.text, /Output tokens reported: 9/u);
+    assert.doesNotMatch(replies()[1]!.text, /\$|API duration/u);
+    assert.deepEqual(await f.rpc('team.execute', reportedCommand, { commandId: 'TEST-cost-reported' }), reported);
+    assert.deepEqual(await f.rpc('team.lookup', {}, { commandId: 'TEST-cost-reported' }), reported);
+    assert.equal(readFileSync(inboxPath, 'utf8'), bytes, 'original lookup and replay cannot publish again');
+    const ownerStore = new TeamOwnerStore(f.root, 'test-runtime-host');
+    const outbox = ownerStore.fenced(() => ownerStore.list<{ commandId: string }>('outbox'));
+    assert.equal(outbox.length, 1, 'only the ordinary message has a Runtime delivery');
+    assert.ok(outbox.every(entry => !entry.commandId.startsWith('TEST-cost-')));
+    const state = await f.rpc('runtime.read', { memberId: 'alice-id' }) as { value: { inputs: unknown[] } };
+    assert.equal(state.value.inputs.length, 1);
+    assert.equal(f.session().submits.length, 1);
+    const checkpoint = await f.rpc('runtime.checkpoint', {
+      memberId: 'alice-id', checkpointId: 'TEST-cost-checkpoint',
+    }) as { ok: boolean; value: { status: string; reference: string } };
+    assert.equal(checkpoint.ok, true); assert.equal(checkpoint.value.status, 'published');
     const stopped = (await f.rpc('runtime.stop', { memberId: 'alice-id' })) as {
-      value: { phase: string; custody: string };
+      value: { phase: string; custody: string; sessionCommands?: unknown };
     };
     assert.equal(stopped.value.phase, 'closed');
     assert.equal(stopped.value.custody, 'released');
-    const publicBytes = JSON.stringify(f.frames);
+    assert.equal(stopped.value.sessionCommands, undefined);
+    assert.deepEqual(await f.rpc('team.execute', { ...cost,
+      payload: { ...cost.payload, messageId: 'TEST-cost-stale' } }, { commandId: 'TEST-cost-stale' }),
+      { ok: false, code: 'invalid', outcome: 'rejected' });
+    const warmFrames = JSON.stringify(f.frames);
+    await f.restart();
+    assert.deepEqual(await f.rpc('team.lookup', {}, { commandId: 'TEST-cost-reported' }), reported);
+    assert.equal(readFileSync(inboxPath, 'utf8'), bytes, 'cold lookup keeps original output bytes');
+    assert.equal(f.opens(), 1);
+    const resumed = await f.rpc('runtime.restore', {
+      memberId: 'alice-id', reference: checkpoint.value.reference,
+      expectedGeneration: opened.value.generation,
+    }, { commandId: 'TEST-cost-resume' }) as { ok: boolean; value: { generation: string; nativeReady: boolean } };
+    assert.equal(resumed.ok, true, JSON.stringify(resumed)); assert.equal(resumed.value.nativeReady, true);
+    await f.rpc('team.execute', {
+      operation: 'message.send', payload: { to: 'alice', text: 'TEST Codex after Resume' },
+    });
+    await eventually(() => f.session().submits.length === 1, 'one new input reaches resumed Codex');
+    const continued = f.session().submits[0]!;
+    f.session().emit({ kind: 'usage', sessionRef: f.session().sessionRef,
+      inputId: continued.inputId, operationRef: continued.operationRef, inputTokens: 7, outputTokens: 3 });
+    f.session().finish(0);
+    await eventually(() => new FileRuntimeStore(f.root).fenced(
+      { ...f.runtimeBinding, generation: resumed.value.generation },
+      tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'resumed usage persists');
+    const resumedCost = { ...cost, payload: { ...cost.payload, messageId: 'TEST-cost-resumed' } };
+    assert.equal((await f.rpc('team.execute', resumedCost,
+      { commandId: 'TEST-cost-resumed' }) as { ok: boolean }).ok, true);
+    assert.match(replies().at(-1)!.text, /Input tokens reported: 24/u);
+    assert.match(replies().at(-1)!.text, /Output tokens reported: 12/u);
+    assert.deepEqual(replies().slice(0, 2), JSON.parse(bytes), 'old cost outputs keep their captured units');
+    assert.deepEqual(await f.rpc('team.lookup', {}, { commandId: 'TEST-cost-reported' }), reported);
+    assert.equal(f.session().submits.length, 1, '/cost adds no resumed native input');
+    await f.rpc('runtime.stop', { memberId: 'alice-id', expectedGeneration: resumed.value.generation });
+    await f.restart();
+    const launch = await f.rpc('team.launch.read', {}) as { value: { launchId: string; rosterRevision: string } };
+    const restart = { launchId: launch.value.launchId, rosterRevision: launch.value.rosterRevision,
+      memberId: 'alice-id', expectedGeneration: resumed.value.generation, action: 'restart' };
+    for (const operation of ['prepare', 'execute']) {
+      const changed = await f.rpc('team.member.action.' + operation, restart,
+        { commandId: 'TEST-cost-fresh-restart' }) as { ok: boolean };
+      assert.equal(changed.ok, true, JSON.stringify(changed));
+    }
+    await eventually(() => f.opens() === 3, 'explicit fresh Restart opens one new session');
+    assert.equal((await f.rpc('team.execute', { ...cost,
+      payload: { ...cost.payload, messageId: 'TEST-cost-fresh' } },
+      { commandId: 'TEST-cost-fresh' }) as { ok: boolean }).ok, true);
+    assert.match(replies().at(-1)!.text, /Input tokens reported: not reported/u,
+      'fresh native session cost cannot borrow prior Resume-segment tokens');
+    assert.equal(f.session().submits.length, 0, 'new-session cost is Host-only');
+    const historical = await f.rpc('team.activity.stats.read', { memberName: 'alice' }) as {
+      ok: boolean; value: { stats: { generations: number; inputTokens: number; outputTokens: number } };
+    };
+    assert.equal(historical.ok, true, JSON.stringify(historical));
+    assert.equal(historical.value.stats.generations, 3, 'Stats retains opened empty Restart and both Resume generations');
+    assert.equal(historical.value.stats.inputTokens, 24); assert.equal(historical.value.stats.outputTokens, 12);
+    const publicBytes = warmFrames + JSON.stringify(f.frames);
     for (const secret of [
       'PRIVATE-environment-token',
       'PRIVATE-account',
@@ -1707,6 +1851,8 @@ test(
     for (const [operation, payload] of [
       ['runtime.activity.snapshot', { memberId: 'alice-id' }],
       ['runtime.activity.feed', { memberId: 'alice-id', cursor: snapshot.value.cursor }],
+      ['team.activity.stats.read', { memberName: 'alice' }],
+      ['team.activity.logs.read', { memberName: 'alice' }],
       ['team.launch.configuration.read', {}],
     ] as const)
       assert.deepEqual(await f.rpc(operation, payload), {
@@ -2025,6 +2171,14 @@ test('launch options refuse allocated state and compile every selected provider 
 
 test('selected checkpoint resumes through a new Host/generation, retains Team delivery ownership and fences stale controls', async (t) => {
   const f = await fixture(t, { checkpointHistory: true });
+  const stats = async () => {
+    const result = await f.rpc('team.activity.stats.read', { memberName: 'alice' }) as {
+      ok: boolean; value: { stats: { generations: number; inputTokens: number; outputTokens: number;
+        costUsd: number | null; gaps: string[]; computedAt: string } };
+    };
+    assert.equal(result.ok, true, JSON.stringify(result));
+    const { computedAt: _computedAt, ...snapshot } = result.value.stats; return snapshot;
+  };
   const initial = (await f.rpc('team.launch.read', {})) as {
     value: { launchId: string; rosterRevision: string };
   };
@@ -2061,6 +2215,9 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
   const messageA = { operation: 'message.send', payload: { to: 'alice', text: 'TEST_HISTORY_A' } };
   const receiptA = await f.rpc('team.execute', messageA, { commandId: 'TEST-original-A' });
   await eventually(() => f.session().submits.length === 1, 'first input dispatched');
+  f.session().emit({ kind: 'usage', sessionRef: f.session().sessionRef,
+    inputId: f.session().submits[0]!.inputId, operationRef: f.session().submits[0]!.operationRef,
+    inputTokens: 17, outputTokens: 9, cumulativeCostUsd: 0.02 });
   f.session().finish(0);
   await eventually(
     () =>
@@ -2070,6 +2227,9 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
       ),
     'first input persisted'
   );
+  const firstStats = await stats();
+  assert.equal(firstStats.generations, 1); assert.equal(firstStats.inputTokens, 17);
+  assert.equal(firstStats.outputTokens, 9); assert.equal(firstStats.costUsd, 0.02);
   const captured = (await f.rpc('runtime.checkpoint', {
     memberId: 'alice-id',
     checkpointId: 'TEST-selected',
@@ -2120,6 +2280,10 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
     'old human receipt keeps its original delivery instead of retargeting it'
   );
   assert.equal(f.session().submits.length, 0);
+  const beforeSecondTurn = await stats();
+  assert.equal(beforeSecondTurn.generations, 2);
+  assert.equal(beforeSecondTurn.inputTokens, 17, 'Resume retains first-generation input usage');
+  assert.equal(beforeSecondTurn.outputTokens, 9);
   assert.deepEqual(
     await f.rpc(
       'team.launch.start',
@@ -2158,7 +2322,18 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
     'new Team delivery reaches restored generation'
   );
   assert.equal(f.session().submits[0]?.content, 'TEST_HISTORY_B');
+  f.session().emit({ kind: 'usage', sessionRef: f.session().sessionRef,
+    inputId: f.session().submits[0]!.inputId, operationRef: f.session().submits[0]!.operationRef,
+    inputTokens: 7, outputTokens: 3, cumulativeCostUsd: 0.03 });
   f.session().finish(0);
+  await eventually(() => new FileRuntimeStore(f.root).fenced(
+    { ...f.runtimeBinding, generation: result.value.generation },
+    tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'second original input usage persisted');
+  const afterSecondTurn = await stats();
+  assert.equal(afterSecondTurn.inputTokens, 24);
+  assert.equal(afterSecondTurn.outputTokens, 12);
+  assert.equal(afterSecondTurn.costUsd, null, 'unqualified resumed cumulative USD cannot be added twice');
+  assert.ok(afterSecondTurn.gaps.some(gap => gap.includes('Cumulative cost across resumed generations')));
   await f.rpc('runtime.restore', restore, { commandId: 'TEST-resume-original' });
   assert.equal(f.opens(), 2, 'same original restore cannot allocate twice');
   assert.deepEqual(
@@ -2180,6 +2355,7 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
   assert.equal(recovered.ok, true, JSON.stringify(recovered));
   assert.equal(recovered.value.phase, 'closed');
   assert.equal(recovered.value.attached, false);
+  assert.deepEqual(await stats(), afterSecondTurn, 'cold read retains both original usage journals');
   assert.equal(
     f.opens(),
     2,
@@ -2191,6 +2367,13 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
     runtimeDigest('TEST-run') + '.json'
   );
   const journal = JSON.parse(readFileSync(journalPath, 'utf8'));
+  const originalJournal = JSON.stringify(journal);
+  journal.restorations[0].member.restore.sourceBinding.teamId = 'FOREIGN-team';
+  writeFileSync(journalPath, JSON.stringify(journal));
+  assert.equal((await f.rpc('team.activity.stats.read', { memberName: 'alice' }) as { ok: boolean }).ok, false,
+    'foreign historical binding cannot authorize activity');
+  writeFileSync(journalPath, originalJournal);
+  journal.restorations[0].member.restore.sourceBinding.teamId = f.runtimeBinding.teamId;
   journal.restorations[0].fingerprint = '0'.repeat(64);
   writeFileSync(journalPath, JSON.stringify(journal));
   await assert.rejects(

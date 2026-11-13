@@ -392,8 +392,10 @@ export class DesktopBackendFeature {
       ) => {
         if (input.draft.contextId !== contextId) throw new BackendRoutingError('forbidden');
         if (action === 'prepare' && (input.draft.savedSettings.providerId === 'opencode' ||
-            input.draft.members.some(row => row.memberSettings.providerId === 'opencode')))
-          await (preparedSources ??= this.refreshLaunchConfiguration(contextId, input.draft.savedSettings.cwd, guard));
+            input.draft.members.some(row => row.memberSettings.providerId === 'opencode'))) {
+          preparedSources ??= this.refreshLaunchConfiguration(contextId, input.draft.savedSettings.cwd, guard);
+          await preparedSources;
+        }
         return target.client.prepareCreation(
           action,
           input,

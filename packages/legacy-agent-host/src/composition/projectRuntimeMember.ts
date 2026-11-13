@@ -29,7 +29,14 @@ export function projectRuntimeMember(options: {
     runtimeDigest(record.binding) === runtimeDigest(binding) &&
     runtimeDigest(observed.record) === runtimeDigest(record);
   const attachmentCapabilities = captured ? entry.provider?.attachmentCapabilities : undefined;
-  const sessionCommands = captured ? entry.provider?.sessionCommands?.() ?? [] : undefined;
+  const sessionCommands = captured
+    ? entry.profile.provider === 'codex'
+      ? entry.team.connection.readRoster().members.some(member =>
+          member.memberId === entry.profile.memberId && member.role === 'lead')
+        ? [{ name: 'cost', description: 'Show reported token usage for this captured session' }]
+        : []
+      : entry.provider?.sessionCommands?.() ?? []
+    : undefined;
   return {
     memberId: entry.profile.memberId,
     generation: binding.generation,

@@ -5,10 +5,10 @@
 ещё **4 Host/RPC + 3 existing ordinary-delegation checks PASS**.
 Host build, focused Main/renderer TypeScript, changed production fast lint (0 errors),
 source-size и diff-check прошли. Это не native/Desktop acceptance.
-Нативные Claude/Codex, фактический limit gate и Desktop journey ещё открыты;
-UI пока сохраняет ограничение до проверки полного execution path.
-R5: подготовлен bounded native Host fixture для actual Claude/Codex; static TypeScript и lint проверены,
-но запуск native/GUI остаётся отдельным CI gate и не считается пройденным.
+R8: actual finite Claude/Codex и native limit/cancellation/replay gate прошли на exact `b54390e9`;
+результат и его границы записаны ниже. Это prerequisite для снятия blanket Host UI restriction.
+Desktop Add/Edit/Pause/Resume/Run now/history и smart dispatch ещё требуют actual UI acceptance;
+новый source HEAD должен пройти проверки заново.
 Frontend baseline: `4a0e06277fe216d9f82dbbede362668fe46622ee`.
 Stage 1 baseline: `1d0f97f55de566036c970eab4f36b84620afdb3f`.
 Цель: сохранить нынешние schedule controls и режимы выполнения при выбранном Host.
@@ -319,3 +319,37 @@ Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b
   или заполнение отсутствующих receipt полей без выполнения исходного сценария не допускается.
 - После actual finite gate отдельный commit включает доступность прежних Schedule controls, затем тот же
   Desktop runner выполняет R6. До обоих результатов P04 не считается принятым end-to-end.
+
+## R8 — actual finite prerequisite и включение прежних Schedule controls
+
+На `b54390e9844a4f868c6f460905c4d9664e1340e8`
+[Linux job131606204672](https://github.com/777genius/agent-teams-ai/actions/runs/43335609196/job/131606204672)
+step9 завершил обе actual native проверки: Claude16.8s, Codex19.3s,2/2 PASS (2026-11-13T03:24:05Z).
+`scheduled-run-host.native.ts` действительно выполняет native tool, проверяет файл/следующий model request,
+повтор исходного intent без нового inference, закрытие Host и cold read того же завершённого результата.
+Claude turn/budget limits, Codex unsupported-limit refusal до model allocation, active cancellation,
+ephemeral transcript и original cleanup/source freeze проверены тем же finite fixture.
+Последующий Desktop **login** step10 завершился INCOMPLETE; его отказ не превращает native schedule result
+в Desktop PASS и отдельно разбирается в P01. Сами schedule UI controls в этом job ещё не проверялись.
+
+Этот native сценарий получает original start ACK до effect: он доказывает normal replay/cold lookup,
+но **не** effect-before-lost-ACK boundary. P10 не должен объявлять последнюю покрытой по этому результату.
+
+Минимальный следующий source cut после prerequisite:
+
+1. В existing `ScheduleSection.tsx` удалить blanket `isHostTeamSelectionKey` restriction и связанный
+   unsupported status/disabled guards. Add/Edit/Resume/Run now возвращаются к прежним controls;
+   Run now по-прежнему доступен только для active schedule. Pause/Delete/history/visible action errors
+   сохраняют existing handlers. Никакой новый renderer write port или обход Main target capture не нужен.
+2. Existing `LaunchTeamDialog` сохраняет original create/update, explicit Edit/Save rebind старого record,
+   provider capabilities и отказ неподдерживаемых limits. Production Host target/fence/history остаются
+   в ранее реализованном Main composition; этот cut не меняет scheduler, Croner или replay policy.
+3. В уже существующем plain native Create Desktop job добавить один последовательный запуск прежнего
+   `native-launch-ui` с `LEGACY_DESKTOP_SCHEDULE_UI=1`. Используются готовые `desktop-schedule-ui-proof.ts`,
+   private TEST fixture и native model; новый job/matrix/runner или увеличение timeout не нужны.
+   Original receipt обязан показать completed finite run с реальным Bash/output, edited limits/rebind,
+   task-first Host launch с linked task и actual MCP reply, Stop/release, reload без повторных effects,
+   Pause/Resume/Delete через текущие controls, source freeze и cleanup.
+4. Existing always-upload удерживает оригинальные TEST receipts/logs. Следующий точный source SHA
+   квалифицируется полным обязательным CI и этим UI journey; P04 остаётся открытым до положительного результата.
+   Дополнительные однотипные unit tests на удалённые disabled props не добавляются.

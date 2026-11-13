@@ -1,6 +1,10 @@
 import { TeamOwnerError } from '../team/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { nativeCommandMessage, parseNativeSessionCommand } from '../team/nativeSessionCommand.js';
+import { captureHostCostCommand } from '../team/hostCostCommand.js';
+import type { PrepareHostCost } from '../team/hostCostCommand.js';
+import { readTeamActivity, summarizeTeamActivity } from './readTeamActivity.js';
+import type { RuntimeActivitySource } from './runtimeActivitySources.js';
 import type { TeamCommand } from '../team/contracts.js';
 import type { RuntimeDelivery } from '../runtime/contracts.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
@@ -23,7 +27,7 @@ export function assertNativeSessionCommand(
     isCurrent(entry: MemberEntry): boolean;
   },
   command: TeamCommand
-): void {
+): MemberEntry | undefined {
   const native = nativeCommandMessage(command);
   if (!native || command.operation !== 'message.send') return;
   const member = options.team.connection
@@ -38,7 +42,9 @@ export function assertNativeSessionCommand(
       options.isCurrent(entry)
   );
   const entry = entries.length === 1 ? entries[0] : undefined;
-  if (!entry || !capability(entry, native.name)) throw new TeamOwnerError('invalid');
+  const hostCost = entry?.profile.provider === 'codex' && entry.provider?.isReady() === true &&
+    command.payload.nativeCommand === true && native.raw === '/cost';
+  if (!entry || (!hostCost && !capability(entry, native.name))) throw new TeamOwnerError('invalid');
   const { record, attached } = options.runtime.readCapturedSession(entry.binding);
   if (
     !record ||
@@ -51,6 +57,40 @@ export function assertNativeSessionCommand(
     Buffer.byteLength(native.raw) > entry.profile.limits.inputBytes
   )
     throw new TeamOwnerError('hold');
+  return entry;
+}
+
+/** Trusted composition callback runs only inside the original Team command fence. */
+export function prepareNativeSessionCommand(
+  options: Parameters<typeof assertNativeSessionCommand>[0] & {
+    principalId: string;
+    runtime: Pick<RuntimeOwner, 'readCapturedSession' | 'readActivitySnapshot' | 'readActivityFeed'>;
+    launch(): { launchId: string; startedAtMs: number | null } | undefined;
+    activityEntries?(entry: MemberEntry): readonly RuntimeActivitySource[];
+    assertCurrent(): void;
+  },
+  command: TeamCommand
+): PrepareHostCost | undefined {
+  const entries = [...options.entries];
+  const entry = assertNativeSessionCommand({ ...options, entries }, command);
+  if (!entry || entry.profile.provider !== 'codex' || command.operation !== 'message.send') return;
+  return () => {
+    const assertCurrent = () => {
+      options.assertCurrent();
+      if (assertNativeSessionCommand({ ...options, entries }, command) !== entry)
+        throw new TeamOwnerError('hold');
+    };
+    assertCurrent();
+    const activityEntries = options.activityEntries?.(entry) ?? [entry];
+    const logs = readTeamActivity({
+      team: options.team, principalId: options.principalId, entries: activityEntries,
+      runtime: options.runtime, taskCause: () => null, assertCurrent,
+    }, { memberName: command.payload.to });
+    return captureHostCostCommand({
+      binding: entry.binding, stats: summarizeTeamActivity(command.payload.to, logs, activityEntries),
+      launch: options.launch(), now: Date.now(),
+    });
+  };
 }
 
 /** Defense in depth for recovered/out-of-band deliveries; Team already verified the exact receipt. */

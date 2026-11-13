@@ -93,7 +93,7 @@ export class HostSmartScheduleRuntimeAdapter implements SmartScheduleRuntimePort
   async getLeadName(team: string): Promise<string | null> {
     this.assertTeam(team);
     const leads = (await this.roster()).members.filter(row => row.role === 'lead');
-    return leads.length === 1 ? leads[0]!.name : null;
+    return leads.length === 1 ? leads[0].name : null;
   }
 
   async getRuntime(team: string): Promise<TeamAgentRuntimeSnapshot> {

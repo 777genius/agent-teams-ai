@@ -21,8 +21,7 @@ const pins = {
 const object = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Record<string, unknown>;
 };
-async function until(check: () => boolean | Promise<boolean>, label: string) {
-  const deadline = Date.now() + 75_000;
+async function until(check: () => boolean | Promise<boolean>, label: string, deadline = Date.now() + 75_000) {
   while (!await check()) { assert.ok(Date.now() < deadline, label); await delay(50); }
 }
 async function transcriptFiles(path: string): Promise<string[]> {
@@ -31,6 +30,34 @@ async function transcriptFiles(path: string): Promise<string[]> {
     return (await Promise.all(entries.map(entry => entry.isDirectory() ? transcriptFiles(join(path, entry.name))
       : Promise.resolve(entry.name.endsWith('.jsonl') ? [join(path, entry.name)] : [])))).flat();
   } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []; throw error; }
+}
+
+/** Original private Runtime input only; no reconstructed IDs or product writes. */
+async function originalScheduledInput(root: string, runId: string) {
+  const directory = join(root, 'store/runtime-sessions');
+  const members = (await readdir(directory, { withFileTypes: true }))
+    .filter(entry => entry.isDirectory() && /^[a-f0-9]{64}$/.test(entry.name));
+  assert.ok(members.length <= 8);
+  const selected: Record<string, unknown>[] = [];
+  for (const member of members) {
+    const files = (await readdir(join(directory, member.name))).filter(name => /^[a-f0-9]{64}\.json$/.test(name));
+    assert.ok(files.length <= 8);
+    for (const name of files) {
+      const bytes = await readFile(join(directory, member.name, name), 'utf8');
+      assert.ok(Buffer.byteLength(bytes) <= 512 * 1024);
+      const record = object(JSON.parse(bytes)), binding = object(record.binding);
+      if (binding.runId === 'scheduled-standalone' && binding.generation === runId) selected.push(record);
+    }
+  }
+  assert.equal(selected.length, 1, 'one original scheduled Runtime');
+  const record = selected[0]!;
+  assert.ok(Array.isArray(record.inputs)); assert.equal(record.inputs.length, 1);
+  const input = object(record.inputs[0]), intent = object(input.intent);
+  assert.equal(intent.inputId, runId); assert.deepEqual(intent.binding, record.binding);
+  assert.ok(typeof input.operationRef === 'string' && input.operationRef.length > 0);
+  assert.ok(typeof input.fingerprint === 'string' && input.fingerprint.length > 0);
+  return { binding: record.binding, inputId: intent.inputId, operationRef: input.operationRef,
+    fingerprint: input.fingerprint };
 }
 
 for (const provider of ['claude', 'codex'] as const) test(
@@ -137,6 +164,7 @@ stream_max_retries = 0
     finalOwnsCleanup = true;
     const binding = { schemaVersion: 1, handleId: 'TEST-schedule-handle', owner: profile.owner, scope };
     const receipts: unknown[] = [];
+    let applicationReplyLoss: Record<string, unknown> | undefined;
     const rpc = (method: string, payload: unknown, commandId = 'TEST-read') => host.rpc(method, { commandId, binding, payload });
     try {
       await host.rpc('host.handshake', { protocolVersion: 1 });
@@ -151,17 +179,46 @@ stream_max_retries = 0
         const result = await rpc('schedule.run.read', { runId: input.runId, scheduleId: input.scheduleId });
         assert.equal(result.ok, true); return scheduledRunSnapshotSchema.parse(result.value);
       };
-      const finish = async (input: ScheduledRunInput) => {
+      const finish = async (input: ScheduledRunInput, deadline?: number) => {
         await until(async () => {
           assert.deepEqual(model.failures, []);
           const value = await read(input); assert.notEqual(value.phase, 'held', JSON.stringify(value));
           return value.phase === 'completed' || value.phase === 'interrupted';
-        }, 'original native schedule settles');
+        }, 'original native schedule settles', deadline);
         const value = await read(input); assert.equal(value.cleanup, 'confirmed'); receipts.push(value); return value;
       };
       const first = request('success');
-      assert.equal((await rpc('schedule.run.start', first, first.runId)).ok, true);
-      const completed = await finish(first);
+      const firstDeadline = provider === 'codex' ? Date.now() + 75_000 : undefined;
+      if (provider === 'codex') {
+        const lost = new Error('TEST original application start reply lost after native effect');
+        let deliveredSuccess = false;
+        const observation: Record<string, unknown> = { boundary: 'application', commandId: first.runId,
+          wireReplyObserved: false, effectBeforeLoss: false, callerOutcome: 'pending' };
+        applicationReplyLoss = observation;
+        // This TEST response adapter owns the wire reply; its application caller never receives success.
+        const applicationStart = async () => {
+          const wireReply = await rpc('schedule.run.start', first, first.runId);
+          assert.equal(wireReply.ok, true);
+          observation.wireReplyObserved = true;
+          await until(async () => {
+            assert.deepEqual(model.failures, []);
+            if (model.counts.get('success') !== 2) return false;
+            return await readFile(join(common.cwd, 'schedule-success.txt'), 'utf8') === 'TEST_NATIVE_TOOL\n';
+          }, 'native tool effect exists while the original application reply is withheld', firstDeadline);
+          observation.effectBeforeLoss = true;
+          observation.original = await originalScheduledInput(root, first.runId);
+          throw lost;
+        };
+        const caller = applicationStart().then(reply => { deliveredSuccess = true; return reply; });
+        await assert.rejects(caller, error => error === lost);
+        assert.equal(deliveredSuccess, false);
+        assert.equal(observation.effectBeforeLoss, true);
+        observation.callerOutcome = 'unknown';
+        observation.successDelivered = deliveredSuccess;
+      } else assert.equal((await rpc('schedule.run.start', first, first.runId)).ok, true);
+      const completed = await finish(first, firstDeadline);
+      if (applicationReplyLoss)
+        assert.deepEqual(await originalScheduledInput(root, first.runId), applicationReplyLoss.original);
       assert.equal(completed.result?.exitCode, 0); assert.match(completed.result!.stdout, /TEST_SCHEDULE_DONE/);
       assert.equal(await readFile(join(common.cwd, 'schedule-success.txt'), 'utf8'), 'TEST_NATIVE_TOOL\n');
       assert.equal(model.counts.get('success'), 2);
@@ -169,8 +226,18 @@ stream_max_retries = 0
       assert.equal(model.counts.get('success'), 2, 'same intent only reads its receipt');
       await host.close(); host = open(); await host.rpc('host.handshake', { protocolVersion: 1 });
       const cold = await read(first); assert.equal(cold.result?.exitCode, 0); assert.equal(cold.cleanup, 'confirmed');
+      assert.deepEqual(cold, completed, 'cold lookup returns the original completed result');
+      if (applicationReplyLoss)
+        assert.deepEqual(await originalScheduledInput(root, first.runId), applicationReplyLoss.original);
       assert.equal((await rpc('schedule.run.start', first, first.runId)).ok, true);
       assert.equal(model.counts.get('success'), 2);
+      assert.equal(await readFile(join(common.cwd, 'schedule-success.txt'), 'utf8'), 'TEST_NATIVE_TOOL\n',
+        'same intent never appends a second native effect after the lost application reply');
+      if (applicationReplyLoss) {
+        assert.deepEqual(await originalScheduledInput(root, first.runId), applicationReplyLoss.original);
+        applicationReplyLoss.coldLookupRetained = true;
+        applicationReplyLoss.sameIntentRetained = true;
+      }
       if (provider === 'claude') for (const mode of ['turn-limit', 'budget'] as const) {
         const limited = request(mode); assert.equal((await rpc('schedule.run.start', limited, limited.runId)).ok, true);
         const result = await finish(limited); assert.equal(result.phase, 'completed'); assert.equal(result.result?.exitCode, 1);
@@ -208,6 +275,7 @@ stream_max_retries = 0
           sourceHead, hostSourceSha256: sourceBefore, hostDistSha256: distBefore,
           harnessSha256: harnessBefore, cleanup, frozen,
           modelRequests: model.requests, modelFailures: model.failures, receipts, root,
+          ...(applicationReplyLoss ? { applicationReplyLoss } : {}),
           desktopQualified: false, vendorAuthQualified: false,
         }, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
         assert.equal(frozen, true);

@@ -40,6 +40,7 @@ export class ProviderManagementCoordinator {
   private readonly profiles = new Map<string, OpenCodeManagementProfile>();
   private readonly hosts = new Map<string, OpenCodeManagementHost>();
   private readonly v2Hosts = new Map<string, OpenCodeV2ManagementHost>();
+  private readonly v2CatalogReads = new Map<string, Promise<ProviderManagementCatalog>>();
   private readonly v2Keys = new Map<string, ReturnType<typeof createOpenCodeV2CredentialOperation>>();
   private readonly processCustody: RegisteredProcessRootSource | undefined;
   private readonly store: FileManagementCommandStore;
@@ -489,42 +490,22 @@ export class ProviderManagementCoordinator {
       .parse(raw);
     const profile = this.select(input.profileId, input.configRevision);
     if (profile.nativeGeneration === 'v2') {
-      if (this.replacing.has(profile.profileId)) throw new OpenCodeManagementError('held');
-      const selectedProvider = input.providerId ?? (input.includeModels ? profile.nativeModel?.providerId : undefined);
-      let host = this.v2Hosts.get(profile.profileId);
-      if (host && !host.matchesCatalog(selectedProvider)) {
-        this.replacing.add(profile.profileId);
-        const clean = await host.close().catch(() => false);
-        if (!clean) throw new OpenCodeManagementError('held');
-        if (this.v2Hosts.get(profile.profileId) === host) this.v2Hosts.delete(profile.profileId);
-        this.replacing.delete(profile.profileId);
-        host = undefined;
-      }
-      if (!host) {
-        const target = this.credentialTarget(profile);
-        host = new OpenCodeV2ManagementHost(profile, () => {
-          try {
-            this.assertCurrent();
-            assertManagementTarget(target, this.credentialTarget(this.select(input.profileId, input.configRevision)));
-            return true;
-          } catch { return false; }
-        }, this.processCustody, {
-          ...(selectedProvider ? { catalogProviderId: selectedProvider } : {}),
-          connected: (providerId, authDigest) => this.connectedV2(profile, providerId, authDigest),
-        });
-        this.v2Hosts.set(profile.profileId, host);
-      }
-      try {
-        const result = await host.catalog(input.providerId, input.includeModels);
-        this.assertCurrent();
-        return result;
-      } catch (error) {
-        // Failed catalog reads seal their original child. Retire that exact
-        // owner only after cleanup; an unknown child keeps the profile held.
-        const clean = await host.close().catch(() => false);
-        if (clean && this.v2Hosts.get(profile.profileId) === host)
-          this.v2Hosts.delete(profile.profileId);
-        throw error;
+      const deadline = Date.now() + profile.timeoutMs;
+      const target = this.credentialTarget(profile);
+      // Status, directory and provider reads share this original metadata owner.
+      // Complete the whole previous read before another mode can close its child.
+      const previous = this.v2CatalogReads.get(profile.profileId) ?? Promise.resolve();
+      const pending = previous.catch(() => {}).then(async () => {
+        const current = this.select(input.profileId, input.configRevision);
+        assertManagementTarget(target, this.credentialTarget(current));
+        if (Date.now() >= deadline) throw new OpenCodeManagementError('held');
+        return this.readV2Catalog(current, input, deadline);
+      });
+      this.v2CatalogReads.set(profile.profileId, pending);
+      try { return await pending; }
+      finally {
+        if (this.v2CatalogReads.get(profile.profileId) === pending)
+          this.v2CatalogReads.delete(profile.profileId);
       }
     }
     const host = this.getHost(profile);
@@ -542,6 +523,52 @@ export class ProviderManagementCoordinator {
     this.assertWriter();
     if (this.sealed) throw new OpenCodeManagementError('unavailable');
     return { ...result, runtime: { generation: 'v1' } };
+  }
+
+  private async readV2Catalog(
+    profile: OpenCodeManagementProfile,
+    input: { profileId: string; configRevision: string; providerId?: string | undefined; includeModels?: boolean | undefined },
+    deadline: number
+  ): Promise<ProviderManagementCatalog> {
+    if (this.replacing.has(profile.profileId)) throw new OpenCodeManagementError('held');
+    const target = this.credentialTarget(profile);
+    const selectedProvider = input.providerId ?? (input.includeModels ? profile.nativeModel?.providerId : undefined);
+    let host = this.v2Hosts.get(profile.profileId);
+    if (host && !host.matchesCatalog(selectedProvider)) {
+      this.replacing.add(profile.profileId);
+      const clean = await host.close().catch(() => false);
+      if (!clean) throw new OpenCodeManagementError('held');
+      if (this.v2Hosts.get(profile.profileId) === host) this.v2Hosts.delete(profile.profileId);
+      this.replacing.delete(profile.profileId);
+      host = undefined;
+    }
+    if (!host) {
+      assertManagementTarget(target, this.credentialTarget(this.select(input.profileId, input.configRevision)));
+      if (Date.now() >= deadline) throw new OpenCodeManagementError('held');
+      host = new OpenCodeV2ManagementHost(profile, () => {
+        try {
+          this.assertCurrent();
+          assertManagementTarget(target, this.credentialTarget(this.select(input.profileId, input.configRevision)));
+          return true;
+        } catch { return false; }
+      }, this.processCustody, {
+        ...(selectedProvider ? { catalogProviderId: selectedProvider } : {}),
+        connected: (providerId, authDigest) => this.connectedV2(profile, providerId, authDigest),
+      });
+      this.v2Hosts.set(profile.profileId, host);
+    }
+    try {
+      const result = await host.catalog(input.providerId, input.includeModels, deadline);
+      this.assertCurrent();
+      return result;
+    } catch (error) {
+      // Failed catalog reads seal their original child. Retire that exact
+      // owner only after cleanup; an unknown child keeps the profile held.
+      const clean = await host.close().catch(() => false);
+      if (clean && this.v2Hosts.get(profile.profileId) === host)
+        this.v2Hosts.delete(profile.profileId);
+      throw error;
+    }
   }
 
   seal(): void {

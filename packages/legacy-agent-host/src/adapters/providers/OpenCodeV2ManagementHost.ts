@@ -15,6 +15,7 @@ import { isConfiguredAuthless } from './openCodeConfiguredAuthless.js';
 import { captureOpenCodeV2SessionCredential } from './OpenCodeV2SessionCredential.js';
 import { OpenCodeV2CredentialScope } from './OpenCodeV2CredentialScope.js';
 import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
+import { createOpenCodeMetadataDiagnostic } from './createClaudeCloseDiagnostic.js';
 
 import type { ProviderManagementCatalog } from '../../management/contracts.js';
 import type { OpenCodeManagementProfile } from '../../management/profile.js';
@@ -52,6 +53,7 @@ export class OpenCodeV2ManagementHost {
   private readonly catalogCredential?: ReturnType<typeof captureOpenCodeV2SessionCredential>;
   private readonly configuration: ReturnType<typeof captureOpenCodeV2Configuration>;
   private readonly configuredProviderId: string;
+  private readonly metadataDiagnostic?: ReturnType<typeof createOpenCodeMetadataDiagnostic>;
 
   constructor(
     raw: OpenCodeManagementProfile,
@@ -71,6 +73,8 @@ export class OpenCodeV2ManagementHost {
       throw new OpenCodeManagementError('invalid-profile');
     this.profile = structuredClone(selected.data);
     this.options = Object.freeze({ ...options });
+    if (!this.options.retainedCommandId)
+      this.metadataDiagnostic = createOpenCodeMetadataDiagnostic(this.profile, this.options.catalogProviderId);
     try {
       for (const directory of [this.profile.cwd, ...['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
         .map(key => this.profile.environment[key])]) {
@@ -144,6 +148,7 @@ export class OpenCodeV2ManagementHost {
       ...(this.processCustody ? { processCustody: this.processCustody } : {}),
     });
     this.ready = await this.server.start(signal);
+    this.metadataDiagnostic?.ready(this.ready);
     this.assertCurrent(signal);
   }
 
@@ -173,9 +178,10 @@ export class OpenCodeV2ManagementHost {
     }) };
   }
 
-  private async read(providerId: string | undefined, includeModels: boolean): Promise<ProviderManagementCatalog> {
-    const signal = AbortSignal.any([this.abort.signal, AbortSignal.timeout(this.profile.timeoutMs)]);
-    const deadline = Date.now() + this.profile.timeoutMs;
+  private async read(providerId: string | undefined, includeModels: boolean, deadline: number): Promise<ProviderManagementCatalog> {
+    const remaining = Math.min(this.profile.timeoutMs, deadline - Date.now());
+    if (!Number.isSafeInteger(remaining) || remaining <= 0) return held();
+    const signal = AbortSignal.any([this.abort.signal, AbortSignal.timeout(remaining)]);
     const { client, config, ready } = await this.nativeClient(signal, deadline);
     const selected = this.profile.nativeModel!;
     let result: ProviderManagementCatalog | undefined, failure: unknown, failed = false;
@@ -255,8 +261,8 @@ export class OpenCodeV2ManagementHost {
     return result!;
   }
 
-  catalog(providerId?: string, includeModels = false): Promise<ProviderManagementCatalog> {
-    return this.tracked(() => this.read(providerId, includeModels));
+  catalog(providerId?: string, includeModels = false, deadline = Date.now() + this.profile.timeoutMs): Promise<ProviderManagementCatalog> {
+    return this.tracked(() => this.read(providerId, includeModels, deadline));
   }
 
   /** One retained native credential database under the existing durable command/fence. */
@@ -327,6 +333,12 @@ export class OpenCodeV2ManagementHost {
         }
         return true;
       } catch { return false; }
-    })());
+    })().then(clean => {
+      this.metadataDiagnostic?.closed(clean);
+      return clean;
+    }, error => {
+      this.metadataDiagnostic?.closed(false);
+      throw error;
+    }));
   }
 }

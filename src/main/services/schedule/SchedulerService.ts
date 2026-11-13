@@ -404,7 +404,10 @@ export class SchedulerService {
     this.activeRuns.set(id, run);
     this.cwdLock.set(cwd, id);
     try { await persistScheduleRun(this.repository, this.stopBarrier, run); }
-    catch (error) { if (this.activeRuns.get(id)?.id === run.id) this.releaseRunLocks(id); throw error; }
+    catch (error) {
+      if (this.activeRuns.get(id)?.id === run.id) { this.releaseRunLocks(id); }
+      throw error;
+    }
     if (this.stopped || generation !== this.lifecycleEpoch) throw new Error('Scheduler stopped before dispatch');
     this.emitChange({ type: 'run-started', scheduleId: id, teamName: schedule.teamName });
 
@@ -574,7 +577,10 @@ export class SchedulerService {
     this.activeRuns.set(scheduleId, run);
     this.cwdLock.set(cwd, scheduleId);
     try { await persistScheduleRun(this.repository, this.stopBarrier, run); }
-    catch (error) { if (this.activeRuns.get(scheduleId)?.id === run.id) this.releaseRunLocks(scheduleId); throw error; }
+    catch (error) {
+      if (this.activeRuns.get(scheduleId)?.id === run.id) { this.releaseRunLocks(scheduleId); }
+      throw error;
+    }
     if (this.stopped || generation !== this.lifecycleEpoch) return;
     this.emitChange({ type: 'run-started', scheduleId, teamName: schedule.teamName });
 

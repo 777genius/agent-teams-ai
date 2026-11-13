@@ -7,20 +7,109 @@ import { OpenCodeV2ManagementHost } from '../dist/adapters/providers/OpenCodeV2M
 import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
 import { openCodeManagementProfileSchema } from '../dist/management/profile.js';
 
+function testProfile(root: string) {
+  return openCodeManagementProfileSchema.parse({
+    provider: 'opencode', nativeGeneration: 'v2', protocolRevision: '2.1.4',
+    profileId: 'TEST-profile', configRevision: 'TEST-config', accountBinding: 'TEST-account',
+    cwd: root, executable: { path: join(root, 'TEST-bun'), sha256: 'a'.repeat(64) },
+    environment: Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
+      .map(key => [key, root])),
+    endpoint: 'http://127.0.0.1:19332', timeoutMs: 1000,
+    nativeModel: { providerId: 'TEST-provider', modelId: 'TEST-model' },
+    embedded: { version: '2.1.4', platform: process.platform, arch: process.arch,
+      directory: join(root, 'engine'), manifestSha256: 'b'.repeat(64), externalDirectory: 'deny' },
+  });
+}
+
+test('overlapping V2 status and directory reads preserve the active owner and original deadlines', async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-catalog-overlap-')));
+  const profile = testProfile(root);
+  const originalFailure = new Error('TEST original read failed');
+  const catalog = { profileId: profile.profileId, configRevision: profile.configRevision,
+    configuredDefaultModelId: null, providers: [] };
+  const calls: { host: OpenCodeV2ManagementHost; deadline: number | undefined }[] = [];
+  const closed = new Set<OpenCodeV2ManagementHost>();
+  let clock = Date.now(), pending = Promise.withResolvers<void>(), entered = Promise.withResolvers<void>();
+  let closing: ReturnType<typeof Promise.withResolvers<void>> | undefined;
+  const closeEntered = Promise.withResolvers<void>();
+  let fail = false;
+  t.mock.method(Date, 'now', () => clock);
+  t.mock.method(OpenCodeV2ManagementHost.prototype, 'catalog', async function (
+    this: OpenCodeV2ManagementHost, _providerId?: string, _includeModels?: boolean, deadline?: number
+  ) {
+    calls.push({ host: this, deadline });
+    const gate = pending.promise, rejected = fail;
+    entered.resolve();
+    await gate;
+    assert.equal(closed.has(this), false, 'a mode change cannot close a pending native read');
+    if (rejected) throw originalFailure;
+    return catalog;
+  });
+  t.mock.method(OpenCodeV2ManagementHost.prototype, 'close', async function (this: OpenCodeV2ManagementHost) {
+    closed.add(this);
+    if (closing) { closeEntered.resolve(); await closing.promise; }
+    return true;
+  });
+  const owner = new ProviderManagementCoordinator([profile], () => {}, root);
+  const request = { profileId: profile.profileId, configRevision: profile.configRevision };
+  try {
+    const admittedAt = clock;
+    const status = owner.catalog({ ...request, includeModels: true });
+    await entered.promise;
+    const directory = owner.catalog(request);
+    await Promise.resolve();
+    assert.equal(calls.length, 1);
+    assert.equal(closed.size, 0);
+    clock += 50;
+    pending.resolve();
+    assert.deepEqual(await Promise.all([status, directory]), [catalog, catalog]);
+    assert.equal(calls.length, 2);
+    assert.notEqual(calls[0]!.host, calls[1]!.host);
+    assert.deepEqual(calls.map(call => call.deadline), [admittedAt + profile.timeoutMs, admittedAt + profile.timeoutMs],
+      'queue wait does not reset the original native read budget');
+
+    pending = Promise.withResolvers<void>(); entered = Promise.withResolvers<void>(); fail = true;
+    const failing = owner.catalog(request);
+    const rejected = assert.rejects(failing, error => error === originalFailure);
+    await entered.promise;
+    const afterFailure = owner.catalog({ ...request, includeModels: true });
+    fail = false;
+    pending.resolve();
+    await rejected;
+    assert.deepEqual(await afterFailure, catalog, 'a failed predecessor does not poison later reads');
+    assert.notEqual(calls[2]!.host, calls[3]!.host);
+
+    pending = Promise.withResolvers<void>(); entered = Promise.withResolvers<void>();
+    const active = owner.catalog({ ...request, includeModels: true });
+    await entered.promise;
+    const expired = owner.catalog(request);
+    const expiry = assert.rejects(expired, /held/);
+    clock += profile.timeoutMs;
+    pending.resolve();
+    await active; await expiry;
+    assert.equal(calls.length, 5, 'an expired queued request cannot allocate or read another owner');
+
+    closing = Promise.withResolvers<void>();
+    const revoking = owner.catalog(request);
+    const revoked = assert.rejects(revoking, /unavailable/);
+    await closeEntered.promise;
+    const queued = owner.catalog({ ...request, includeModels: true }), sealed = assert.rejects(queued, /unavailable/);
+    owner.seal();
+    closing.resolve();
+    await revoked; await sealed;
+    assert.equal(calls.length, 5, 'seal during original cleanup prevents replacement and queued native reads');
+  } finally {
+    pending.resolve();
+    closing?.resolve();
+    await owner.close().catch(() => {});
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 for (const cleanup of ['confirmed', 'unknown', 'rejected'] as const) {
   test(`a failed V2 catalog retires only after ${cleanup} original cleanup`, async t => {
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-catalog-recovery-')));
-    const profile = openCodeManagementProfileSchema.parse({
-      provider: 'opencode', nativeGeneration: 'v2', protocolRevision: '2.1.4',
-      profileId: 'TEST-profile', configRevision: 'TEST-config', accountBinding: 'TEST-account',
-      cwd: root, executable: { path: join(root, 'TEST-bun'), sha256: 'a'.repeat(64) },
-      environment: Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
-        .map(key => [key, root])),
-      endpoint: 'http://127.0.0.1:19332', timeoutMs: 1000,
-      nativeModel: { providerId: 'TEST-provider', modelId: 'TEST-model' },
-      embedded: { version: '2.1.4', platform: process.platform, arch: process.arch,
-        directory: join(root, 'engine'), manifestSha256: 'b'.repeat(64), externalDirectory: 'deny' },
-    });
+    const profile = testProfile(root);
     const seen: OpenCodeV2ManagementHost[] = [], sealed = new Set<OpenCodeV2ManagementHost>();
     const originalFailure = new Error('TEST original catalog deadline');
     const catalog = { profileId: profile.profileId, configRevision: profile.configRevision,

@@ -62,7 +62,7 @@ export async function startScheduledNativeModel(provider: 'claude' | 'codex') {
       requests.push({ mode, model: body.model, ...(body.reasoning ? { effort: object(body.reasoning).effort } : {}),
         ...(body.service_tier === undefined ? {} : { serviceTier: body.service_tier }) });
       if (mode === 'cancel') return; // The actual client remains in flight until original Host cancellation.
-      const command = `printf '%s\\n' 'TEST_NATIVE_TOOL' > 'schedule-${mode}.txt'; cat 'schedule-${mode}.txt'`;
+      const command = `printf '%s\\n' 'TEST_NATIVE_TOOL' >> 'schedule-${mode}.txt'; cat 'schedule-${mode}.txt'`;
       const id = `TEST-schedule-${provider}-${mode}-${count}`;
       if (mode === 'success' && count > 1) {
         const toolId = `TEST-schedule-${provider}-${mode}-1-tool`;
