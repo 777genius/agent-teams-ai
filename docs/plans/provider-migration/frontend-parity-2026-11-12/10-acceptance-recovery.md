@@ -644,6 +644,11 @@ Qualification PR1187: `PRRT_kwDORVTEtM622BTZ`, `PRRT_kwDORVTEtM624t0Y`.
 3. Сверить существующие workflow validation/tests для selected/skipped/failure gate;
    native schedule proof обязан остаться тем же. Exact-head native/Desktop CI
    завершает приёмку, локальный YAML parse её не заменяет.
+4. Thread `PRRT_kwDORVTEtM622BTf`: Linux fixture выбирает actual `process.execPath`,
+   но descriptor вне V2 ещё записывает fixed24.21.0. Использовать `process.version`
+   ровно при выборе current executable (Linux или source V2); candidate оставляет
+   свою attested version, Darwin fixed-path — свой pin. CI остаётся на Node24.21.0;
+   это согласование identity, а не смена native qualification runtime.
 
 Круг source: job predicate и aggregate needs сверены отдельно; действующий provider
 archive verifier уже читает actual package pin, старый archive не возвращается.
