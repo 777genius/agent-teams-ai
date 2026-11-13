@@ -156,3 +156,91 @@ export async function runDesktopCodexLoginUiProof(
   proof.input = inputProof;
   proof.status = 'PASS';
 }
+
+/** Existing receipt facts only: an attempted input never proves its native outcome. */
+export function projectDesktopCodexLoginFailure(evidence: Record<string, unknown>): Record<string, unknown> {
+  const scope = 'codex-login-ui-retained-failure';
+  const object = (value: unknown): Record<string, unknown> | undefined =>
+    value !== null && typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown> : undefined;
+  const present = (value: unknown): boolean | null => {
+    if (value === undefined) return false;
+    return object(value) ? true : null;
+  };
+  const failureRecorded = (value: unknown): boolean | null => {
+    if (value === undefined) return false;
+    return typeof value === 'string' ? true : null;
+  };
+  const boolean = (value: unknown): boolean | null => typeof value === 'boolean' ? value : null;
+  const choice = (value: unknown, allowed: readonly string[]): string | null =>
+    typeof value === 'string' && allowed.includes(value) ? value : null;
+  const count = (value: unknown, limit: number) =>
+    typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+      ? { count: Math.min(value, limit), overflow: value > limit } : { count: null, overflow: null };
+  try {
+    const proof = object(evidence.codexLoginUi), cleanup = object(evidence.cleanup);
+    const listener = object(evidence.cdpListenerFailure);
+    const rawSteps = proof?.steps, rawCases = proof?.cases, remaining = cleanup?.remaining;
+    const steps: unknown[] | undefined = Array.isArray(rawSteps) ? rawSteps : undefined;
+    const cases: unknown[] | undefined = Array.isArray(rawCases) ? rawCases : undefined;
+    const last = steps?.length ? object(steps[steps.length - 1]) : undefined;
+    const rawLabel = last?.label;
+    const label = typeof rawLabel === 'string' && rawLabel.length <= 128
+      ? rawLabel.replace(/^hover /, '') : undefined;
+    const stages = new Map([
+      ['open existing More menu', 'more-menu'], ['open existing Settings', 'settings'],
+      ['open existing Providers settings', 'providers'],
+      ['show original Codex Manage action', 'manage'], ['open original Codex settings dialog', 'manage'],
+      ['show original login action', 'start'], ['start one original browser login', 'browser-start'],
+      ['start one original device_code login', 'device-code-start'],
+      ['copy original private login link/code', 'copy'],
+      ['show original Open login action', 'open-login'], ['open original login through TEST OS opener', 'open-login'],
+      ['show original Cancel login action', 'cancel'], ['cancel original browser login', 'browser-cancel'],
+      ['cancel original device_code login', 'device-code-cancel'],
+    ]);
+    const projection = {
+      scope, unavailable: false,
+      status: choice(evidence.status, ['PASS', 'INCOMPLETE']),
+      initialSnapshotRecorded: present(evidence.codexInitialAccount),
+      proofRecorded: present(evidence.codexLoginUi),
+      originalFailureRecorded: failureRecorded(evidence.failure),
+      listenerFailure: {
+        recorded: present(evidence.cdpListenerFailure),
+        ...count(listener?.scope === 'original-linux-lsof-test-cdp' ? listener.holderCount : undefined, 256),
+      },
+      proofStatus: choice(proof?.status, ['PASS', 'INCOMPLETE']),
+      steps: {
+        ...count(steps?.length, 256),
+        lastAction: choice(last?.action, ['mouseMoved', 'mouseClick', 'mouseWheel']),
+        lastAttempt: label === undefined ? null : stages.get(label) ?? null,
+      },
+      cases: {
+        ...count(cases?.length, 2),
+        items: (cases?.slice(0, 2) ?? []).map(value => {
+          const item = object(value);
+          return {
+            mode: choice(item?.mode, ['browser', 'device_code']),
+            status: choice(item?.status, ['PASS', 'INCOMPLETE']),
+            nativeStatus: choice(item?.nativeStatus, ['pending', 'failed']),
+            copyAcknowledged: boolean(item?.copyAcknowledged),
+            externalOpenDispatched: boolean(item?.externalOpenDispatched),
+            reopenPreservedOriginal: boolean(item?.reopenPreservedOriginal),
+            cancelledOriginal: boolean(item?.cancelledOriginal),
+            privateFieldsCleared: boolean(item?.privateFieldsCleared),
+          };
+        }),
+      },
+      cleanup: {
+        recorded: present(evidence.cleanup),
+        ...count(Array.isArray(remaining) ? remaining.length : undefined, 256),
+        capturedHostObserved: boolean(cleanup?.capturedHostObserved),
+        capturedHostAbsent: boolean(cleanup?.capturedHostAbsent),
+        failureRecorded: failureRecorded(cleanup?.cleanupFailure),
+      },
+    };
+    return Buffer.byteLength(JSON.stringify(projection)) <= 4096
+      ? projection : { scope, unavailable: true };
+  } catch {
+    return { scope, unavailable: true };
+  }
+}

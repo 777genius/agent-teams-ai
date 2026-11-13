@@ -2692,3 +2692,108 @@ Peer сверяет unchanged runtime semantics и actual relevant tsconfigs.
 qualification job `131794213135` падает на SchedulerStopBarrier nested
 assignment: это уже исправлено в parent d35 и переносится штатным parent
 sync, без второго source edit.
+
+
+## 53. Linux CDP: уточнить конкретный original Node child перед product fix
+
+### Круг 1 — уже наблюдённое и оставшаяся неопределённость
+
+Actual native `79847dee72c5ed1c08914a44409f76c0dd25d168` artifact
+`14026961740` (ZIP SHA256
+`3c200d9f7e9fd34bc8e73912d751c6fc5e91e13c1171b52e0f82c5d52616721e`)
+связывает исходный Electron Main5154 и direct Node5245 с одним socket
+inode22591/FD60, non-CLOEXEC, при стабильном process birth до/после.
+Node executable совпал с fixture, полный Host argv **не** совпал.
+Поэтому считать этот PID captured Host нельзя. App.log сообщает о dev MCP
+build, но сам по себе не связывает build с PID5245. Более новый689 artifact
+`14028911546` пока не разобран: нельзя переименовать его failure в ту же причину.
+
+Exact [WorkspaceMcpBundle](https://github.com/777genius/agent-teams-ai/blob/689dddb61cedf0649379975735bac162c87c2836/src/main/services/team/WorkspaceMcpBundle.ts)
+(blob `37b559838b774022fb5bd94400a55ee590b5a67d`) действительно запускает
+selected Node с canonical `mcp-server/node_modules/tsup/dist/cli-default.js`,
+`--out-dir` и новой output directory. Пока это только проверяемый кандидат.
+Public libuv uv_disable_stdio_inheritance является best-effort: exact Node
+24.22.1 implementation останавливает scan при первой дыре FD>15; это не
+гарантия для observed FD60. CDP pipe также не доказывает isolation, поэтому
+ни один такой вариант сейчас не выбран исправлением.
+
+### Круг 2 — минимальная diagnostic delta в существующей попытке
+
+1. Только source/Linux harness до original Electron launch один раз сохранить
+   canonical path фиксированного tsup entry из того же repository. При
+   недоступном path diagnostic остаётся unavailable; production launch и
+   initial assertions не меняются. Packed scope не получает этого expectation.
+2. В существующую однократную after-failed-census correlation добавить
+   `fixtureMcpBuilderEntry: boolean | null`. Использовать уже прочитанный
+   bounded NUL argv: exact selected Node + exact captured builder entry,
+   единственный --out-dir и один непустой output argument, без вывода strings.
+   Это совпадение declared entry/invocation shape, не attestation output path,
+   JS bytes или execution purpose. Все original birth/socket checks, max16,
+   fdinfo bounds и immutable failed census остаются прежними.
+3. В existing smoke catch вывести ту же закрытую cdpListenerFailure projection
+   один раз в existing CI log с fixed TEST prefix и cap32KiB. Receipt остаётся
+   исходным носителем тех же facts. Никакого нового census/RPC/input/signal,
+   чтения дополнительных process paths или workflow/artifact/job/runner.
+4. В одном existing critical observation case добавить builder и иной argv
+   рядом с прежними Host/executable/reused-birth/changed-socket assertions.
+   Retained holderCount2 по-прежнему является failure; raw path/argv markers
+   по-прежнему отсутствуют, lookup не повторяет read. Новой suite нет.
+
+Declared paths: desktop-backend-observations.ts, desktop-backend-smoke.ts и
+desktop-backend-observations.test.ts. Root публикует plan до этих TEST edits;
+peer проверяет bounded source и неизменный original strict admission.
+
+### Круг 3 — решение по exact evidence
+
+Следующий уже необходимый native Linux gate даст факт builder match, другой
+child либо unknown в доступном original log. После actual exact match
+исправлять его настоящий launch boundary, с сохранением selected Node/entry,
+stdio/control/custody; заранее не добавлять глобальное закрытие descriptors,
+native/shell wrapper или hidden mutation. Даже если builder подтвердится,
+поздний captured Host launch проверяется отдельно: prebuild сам по себе
+не устраняет общую наследуемость descriptor. Final Linux acceptance требует
+полного cold UI и packed journey с исходным strict listener guard,
+native inputs, Stop/Quit и cleanup. Эта диагностическая правка не PASS и не
+закрытие Linux. Новые source bytes не исполнялись в недоступной local среде.
+
+### Уточнение §44: единая типизация пустой очереди HostOutput — actual CI 689 (2026-11-13)
+
+- Actual [Main CI 689, validate step14](https://github.com/777genius/agent-teams-ai/actions/runs/43407471337/job/131841866561) завершился с двумя TS2322 в `packages/legacy-agent-host/src/output.ts:124,131`: исходный `frame` выведен как `Buffer`, тогда как существующие `encode()` и `data.shift()` возвращают также `undefined`. Отдельные Host build/test types этой межпроектной типовой проверки не заменяют.
+- Минимальный source cut — одна явная аннотация `let frame: Buffer | undefined` на исходном извлечении priority entry ([точный source dd1ee0ca](https://github.com/777genius/agent-teams-ai/blob/689dddb61cedf0649379975735bac162c87c2836/packages/legacy-agent-host/src/output.ts#L118-L134)). Порядок control/work/data, byte accounting, callback, budget, существующая проверка `if (!frame) return` и все runtime ветки сохраняются. Новая suite не нужна; проверка — исходный root TypeScript closure при следующем необходимом coherent head. Этот type-only fix не означает PASS нового native gate.
+
+## 54. Естественное завершение Windows service: исходная registration receipt и lifecycle preflight (план, 2026-11-13)
+
+### Круг 1 — подтверждённый разрыв и граница исправления
+
+Source base — native working [a3e57fb](https://github.com/777genius/agent-teams-ai/tree/a3e57fb61e13e7f7dead9eec10c105f73f1aabe4), содержащий опубликованный §52. В [TeamProcessCommands](https://github.com/777genius/agent-teams-ai/blob/a3e57fb61e13e7f7dead9eec10c105f73f1aabe4/packages/legacy-agent-host/src/process/TeamProcessCommands.ts#L99-L109) синхронная durable absence выводится только из completed `terminate` receipt. [Windows async list](https://github.com/777genius/agent-teams-ai/blob/a3e57fb61e13e7f7dead9eec10c105f73f1aabe4/packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts#L264-L290) уже может показать настоящее `absent` и выключить Stop, но это наблюдение не сохраняется. Поэтому естественно завершившийся v5 service остаётся `unknown` для [assertReleased](https://github.com/777genius/agent-teams-ai/blob/a3e57fb61e13e7f7dead9eec10c105f73f1aabe4/packages/legacy-agent-host/src/process/TeamProcessCommands.ts#L240-L256), и lifecycle может оставаться held.
+
+[OwnerScopedTeamPurge.admission](https://github.com/777genius/agent-teams-ai/blob/a3e57fb61e13e7f7dead9eec10c105f73f1aabe4/packages/legacy-agent-host/src/adapters/lifecycle/OwnerScopedTeamPurge.ts#L28-L55) выполняет окончательную проверку references под синхронным Team fence, включая повторную проверку внутри destructive boundary. Native await туда не помещается. Исправление добавляет private async preflight до этой границы и сохраняет окончательные синхронные проверки. Открывать Processes до удаления, нажимать фиктивный Stop или создавать новый process command не требуется.
+
+### Круг 2 — минимальное изменение в тех же владельцах
+
+1. **Доказательство хранится в исходной регистрации.** Добавить необязательное строгое `nativeAbsence` только в structurally validated completed `register` receipt с v5 capture, originalRegistration и настоящим original capture intent. Поле содержит fixed schema/kind, digest полного canonical capture, один из существующих evidence kinds `native-scope | retained-terminal | original-whole-job` и закрытое состояние собственного settlement. `operation: register`, principal, commandId, requestDigest, authorityRevision, original registration input, capture и состояние `completed/not-requested` сохраняются. Это факт наблюдения, а не новый Human Stop. Поле входит в существующий fingerprint только при наличии; bytes/hash старых receipts без поля не меняются.
+
+2. **Факт допускается только от исходного Main.** Existing `WindowsRegisteredProcessPort.query` должен вернуть validated `observed/absent` для точно того же полного v5 capture в исходном deadline. [RetainedWindowsServices](https://github.com/777genius/agent-teams-ai/blob/a3e57fb61e13e7f7dead9eec10c105f73f1aabe4/packages/legacy-agent-host/src/owned-process/RetainedWindowsServices.ts#L81-L103) уже связывает scope с original Main epoch, provider capability/generation/root, target key/birth/PID и registrar; native absence требует original root exit вместе с Job activeProcesses=0, либо ранее сохранённый terminal/тот же genuine whole-Job proof. `EOF`, один rootExit, missing scope, PID lookup, metadata stoppedAt, no-local-dispatch или чужой whole-Job receipt фактом не становятся. Неподдержанный/утраченный original owner сохраняет hold.
+
+3. **Private reconciliation под текущим Team admin.** Расширить существующий Windows facet одним private `reconcileNaturalAbsence(originalDeadline)`, используемым lifecycle composition. Он сканирует уже существующие validated process receipts/rows того же binding, включая исходные регистрации других principals, как это уже делает admin `assertReleased`. Public `readReceipt/lookup` с проверкой principalId не ослабляется. Не подставлять principal регистрации в новые grants и не требовать живой MCP input от cleanup давно завершившегося Runtime. Подходящий original completed register выбирается только по полной captured identity. Неизвестная незавершённая registration не превращается в completed по одному PID.
+
+4. **Await остаётся за fence.** В исходном Team fence проверить read+admin, current writer/profile, binding, исходную receipt и полную capture; взять неизменяемый снимок. Query выполняется снаружи. После await отдельно проверить полный current guard, затем снова под Team fence перечитать grant, original receipt/capture и текущие receipts/rows. Только совпадающий, своевременный `observed/absent` позволяет сохранить факт. Source/grant/epoch change либо истечение исходного deadline перед новой записью оставляют исходную custody/evidence удержанной; catch не превращает такой отказ в разрешение продолжить mutation. Повторный capture, fresh PID selector и replay native effects отсутствуют.
+
+5. **Одна physical scope, несколько прежних регистраций.** Уже сохранённый natural-absence anchor для exact full capture выбирается прежде новой записи. Если его ещё нет, выбрать один completed original register детерминированно под тем же fence и сохранить факт до любого settle await; последующие calls находят этот anchor в существующем journal. Новая metadata registration или unregister не удаляет его. Несогласованные дубликаты/разные capture держат hold. Все строки/receipts того же full capture используют этот факт, без нового owner map, lease counter или parallel journal. Existing genuine completed Stop absence остаётся отдельным уже поддержанным путём; естественное завершение не создаёт второй Stop/settle для него.
+
+6. **Settlement не уничтожает неизвестные original requests.** Перед mint/dispatch и после await проверить отсутствие unresolved `terminate` для exact full capture; такие receipts удерживают cleanup и остаются доступны своим прежним original lookup. Не помечать их завершёнными от имени нового lifecycle command. После durable natural absence pure `prepareControl(capture, 'settle')` сохраняется в существующем `nativeSettlement` этого же original register до первого run. Последующее восстановление использует только исходный operationRef/lookup. Full-capture `settled` допускает пометку завершённого settlement; это не Stop и не signal. Registered scope/исходные Main pending refs и лимиты retention сохраняются до настоящей native settlement/debt qualification.
+
+7. **Неизвестность и доказанный no-dispatch различаются.** Закрытое состояние natural settlement различает ещё не подготовленный intent, requested/unknown, подтверждённый no-dispatch и подтверждённый settled. Unknown/lost ACK удерживает тот же intent и допускает только original lookup. Genuine typed no-dispatch сохраняется с исходным intent; в этом call автоматического повтора нет. Только последующий явный lifecycle preflight может заменить такой доказанно не исполнявшийся settlement intent новым для той же immutable capture, после повторных current/admin/debt checks и в собственном исходном budget. Ни query refusal, ни timeout/transport error не дают этого разрешения. Это не позволяет навечно превратить pre-admission pressure в cleanup unknown и не переигрывает dispatched uncertainty.
+
+8. **Синхронный читатель получает только durable truth.** Existing sync `observeOriginal` может считать v5 absent по проверенному `nativeAbsence` с тем же full-capture digest. `assertReleased` для этого нового natural пути дополнительно требует подтверждённый settlement и отсутствие unresolved original receipts. При pending settlement Processes может честно показывать absent/Stop disabled, но destructive lifecycle остаётся held. Совершённый original Stop и POSIX версии 1–4 сохраняют прежние правила. Новые private fields не проходят explicit Desktop/MCP projection. Terminal fact не зависит от дальнейшей доступности закрытого HANDLE; он не даёт права захватить новый процесс.
+
+9. **Lifecycle работает без предшествующего UI polling.** Перед ещё не пересечённой destructive boundary existing `OwnerScopedTeamPurge.purge` повторно использует собственную admission-проверку actor/binding/expectedRevision/deleted/cleanupPending и завершённости command receipts, пока без финального references assertion. Затем через optional private hook в `createTeamBackupComposition`/`createHostTeamLifecycleComposition` вызывает этот same-owner reconciliation вне Team fence. После await остаются прежние full admission и повторная atomic boundary validation. Уже `deleting/deleted` original intent продолжает прежний захваченный путь без нового query/adoption. Deadline preflight начинается при входе в исходный purge call, до lookup/initialization/admission, ограничен прежними 10 s process facet и не обновляется для query/settle/lookup; concurrency native queries не выше прежних 3. Очереди, Main controls reserve и physical capacities не увеличиваются. Наличие нового live capture после preflight приводит к отказу final sync admission.
+
+10. **Source closure и разумный размер.** Плановый bounded cut: `process/registeredProcessContracts.ts`, `validateProcessRecords.ts`, `WindowsTeamProcessCommands.ts`, `TeamProcessCommands.ts`; `composition/createHostTeamLifecycleComposition.ts`, `createTeamBackupComposition.ts`, `TeamHost.ts`; `adapters/lifecycle/OwnerScopedTeamPurge.ts`. Используется уже существующий global retained Windows port, без `prepareCapture` authority. TeamOwner (800 lines), Runtime conversation restore, новые provider flags, named Jobs и OS PID adoption не меняются. Если helper выходит за cap, сначала отдельная обоснованная extraction, не сжатие форматирования.
+
+### Круг 3 — проверка исходного дефекта и честная приёмка
+
+- Расширить существующие `registered-process-commands.test.ts` и `lifecycle-process-release.test.ts`: completed original registration другого principal; естественное exact-scope absence; admin purge/preflight **без прежнего list/Stop**; durable fact + exact settled readback после пересоздания Host-side journal. Fake/synthetic primitive в этих случаях явно остаётся synthetic, не OS qualification.
+- Critical branches в тех же cases: reused PID/другая capture не получают absence; unresolved Stop удерживает settle; после source/grant change и deadline нет новой записи; lost settlement ACK не создаёт новый intent, original late result завершает только его; genuine pre-admission no-dispatch разрешает только следующий явный preflight, а unknown — нет. Legacy fingerprint без поля и public cross-principal lookup refusal должны сохраниться.
+- После source/build/types и этих focused tests требуется существующий staged Windows gate: настоящий service естественно завершился, original provider и соседний service живы; original native query подтверждает full-scope absence, scoped settle освобождает только эту registration; повторный Host/read/lifecycle использует сохранённый факт без native Stop/PID reselection. Остальные original processes завершаются прежним Main cleanup. Новый runner, hidden replay и увеличение timers не нужны.
+- Пока actual Main ordinary-Claude/service-registration gate не завершён, этот cut не объявляет Windows full parity или cold Runtime conversation restore. Ранее опубликованный §52 source peer PASS не становится исполнением §54; production activation по-прежнему ограничена уже согласованными фактическими gates.

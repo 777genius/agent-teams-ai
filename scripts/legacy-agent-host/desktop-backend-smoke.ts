@@ -10,6 +10,7 @@ import { isSkillsMetadataRefusal } from './desktop-skills-fixture.ts';
 import { readCapturedCandidateElectron } from './candidate-electron.ts';
 import { bounded } from './desktop-proof-bounds.ts';
 import { runDesktopCodexAccountProof, readDesktopCodexInitialAccount } from './desktop-codex-account-proof.ts';
+import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
 import { runDesktopActivityUiSmoke, finalizeDesktopActivityReadback } from './desktop-activity-ui-smoke.ts';
 import { processFixtureBashCommand } from './desktop-native-process-fixture.ts';
 import { qualifyPreparedProcessRegistration } from './desktop-native-process-host.ts';
@@ -715,7 +716,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     }
     await verifyDesktopNativeFreeze(nativeInputs, evidence);
     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
-    console.log(JSON.stringify({ status: evidence.status, receipt: receiptPath }));
+    console.log(JSON.stringify({ status: evidence.status, receipt: receiptPath,
+      ...(mode === 'codex-login-ui' && evidence.status !== 'PASS'
+        ? { loginFailure: projectDesktopCodexLoginFailure(evidence) } : {}),
+    }));
     if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
     if (controlledProcessMode) assert.equal(evidence.status, 'PASS', 'controlled process cold UI proof incomplete; original evidence retained');
     if (mode === 'codex-login-ui') assert.equal(evidence.status, 'PASS', 'Codex login UI proof incomplete; inspect its retained finite receipt');
