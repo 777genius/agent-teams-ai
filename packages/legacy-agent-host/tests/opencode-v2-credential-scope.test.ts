@@ -9,6 +9,8 @@ import { createOpenCodeV2OwnedSessionClient } from '@agent-teams/provider-implem
 
 import { captureOpenCodeV2SessionCredential } from '../dist/adapters/providers/OpenCodeV2SessionCredential.js';
 import { OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
+import { OpenCodeV2ManagementHost } from '../dist/adapters/providers/OpenCodeV2ManagementHost.js';
+import { openCodeManagementProfileSchema } from '../dist/management/profile.js';
 
 function fixture() {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-credential-scope-')));
@@ -159,6 +161,168 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         server.closeAllConnections();
         await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
       }
+    }
+  }
+
+  // Real Host catalog/key selectors and pinned protocol clients; only original native
+  // launch/custody admission is synthetic. This does not qualify an engine or OS owner.
+  for (const mode of ['same-id', 'integration-only', 'explicit', 'explicit-foreign', 'missing',
+    'unrelated', 'form', 'null', 'empty', 'numeric', 'excluded'] as const) {
+    const providerId = mode === 'excluded' ? 'exa' : 'TEST-provider';
+    const explicit = mode === 'explicit' || mode === 'explicit-foreign';
+    const integrationId = explicit ? 'TEST-explicit' : providerId;
+    const malformed = mode === 'null' || mode === 'empty' || mode === 'numeric';
+    const accepted = mode === 'same-id' || mode === 'integration-only' || mode === 'explicit';
+    const requests: string[] = [], failures: unknown[] = [], selectedIds: string[] = [];
+    let connected = false;
+    const server = createServer((request, response) => {
+      void (async () => {
+        assert.ok(requests.length < 19, 'one catalog and one explicit key operation, without replay');
+        const url = new URL(request.url!, 'http://127.0.0.1');
+        requests.push(request.method + ' ' + url.pathname);
+        assert.deepEqual([...url.searchParams], ['/api/info', '/api/permission/saved'].includes(url.pathname)
+          ? [] : [['location[directory]', f.root]]);
+        assert.equal(request.headers.authorization,
+          'Basic ' + Buffer.from('opencode:TEST-server-password').toString('base64'));
+        const chunks: Buffer[] = [];
+        let bytes = 0;
+        for await (const chunk of request) {
+          const value = Buffer.from(chunk); bytes += value.length;
+          assert.ok(bytes <= 1024, 'TEST request body is bounded');
+          chunks.push(value);
+        }
+        const body = Buffer.concat(chunks).toString('utf8');
+        if (request.method === 'POST') {
+          assert.equal(url.pathname, '/api/integration/' + integrationId + '/connect/key');
+          assert.equal(accepted, true, 'refused selection or form cannot receive a key');
+          assert.equal(connected, false, 'exactly one original key POST');
+          assert.deepEqual(JSON.parse(body), { key: 'TEST-corrected-key' });
+          connected = true; response.writeHead(204); response.end(); return;
+        }
+        assert.equal(request.method, 'GET'); assert.equal(body, '');
+        let data: unknown;
+        if (url.pathname === '/api/info') {
+          response.writeHead(200, { 'content-type': 'application/json' });
+          response.end(JSON.stringify({ pid: process.pid, version: '2.1.4' })); return;
+        }
+        if (url.pathname === '/api/plugin' || url.pathname === '/api/permission/saved' ||
+            url.pathname === '/api/mcp' || url.pathname === '/api/model') data = [];
+        else if (url.pathname === '/api/model/default') data = null;
+        else if (url.pathname === '/api/provider') data = mode === 'integration-only' ? [] : [{
+          id: providerId, name: 'TEST provider', activation: 'enabled',
+          ...(explicit ? { integrationID: integrationId } : malformed
+            ? { integrationID: mode === 'null' ? null : mode === 'empty' ? '' : 7 } : {}),
+        }];
+        else if (url.pathname === '/api/integration') {
+          const method = { type: 'key', ...(mode === 'form' ? { form: {} } : {}) };
+          data = mode === 'missing' ? [] : mode === 'explicit'
+            ? [{ id: providerId, name: 'TEST distractor', methods: [{ type: 'oauth' }] },
+              { id: integrationId, name: 'TEST integration', methods: [method] }]
+            : [{ id: mode === 'unrelated' ? 'TEST-other' : providerId,
+              name: 'TEST integration', methods: [method] }];
+        } else {
+          assert.equal(url.pathname, '/api/integration/' + integrationId,
+            'an explicit native ID never falls back to the same-ID distractor');
+          data = { id: mode === 'explicit-foreign' ? providerId : integrationId,
+            name: 'TEST integration', methods: [{ type: 'key', ...(mode === 'form' ? { form: {} } : {}) }],
+            connections: connected ? [{ type: 'credential', id: 'cred_TEST', method: 'key' }] : [] };
+        }
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end(JSON.stringify({ location: { directory: f.root }, data }));
+      })().catch(error => {
+        failures.push(error);
+        if (!response.headersSent) response.writeHead(500);
+        response.end();
+      });
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', () => { server.off('error', reject); resolve(); });
+    });
+    try {
+      const address = server.address(); assert.ok(address && typeof address !== 'string');
+      const endpoint = 'http://127.0.0.1:' + address.port;
+      const profile = openCodeManagementProfileSchema.parse({
+        provider: 'opencode', nativeGeneration: 'v2', protocolRevision: '2.1.4',
+        profileId: 'TEST-management-profile', configRevision: 'TEST-config', accountBinding: 'TEST-account',
+        cwd: f.root, executable: { path: join(f.root, 'TEST-bun'), sha256: 'a'.repeat(64) },
+        environment: { HOME: f.home, XDG_DATA_HOME: f.data, XDG_CONFIG_HOME: f.root, XDG_CACHE_HOME: f.root },
+        endpoint, timeoutMs: 5000, nativeModel: { providerId, modelId: 'TEST-model' },
+        embedded: { version: '2.1.4', platform: process.platform, arch: process.arch,
+          directory: join(f.root, 'engine'), manifestSha256: 'b'.repeat(64), externalDirectory: 'deny' },
+      });
+      for (const kind of ['catalog', 'key'] as const) {
+        const start = requests.length;
+        const host = new OpenCodeV2ManagementHost(profile, () => true, undefined,
+          kind === 'key' ? { retainedCommandId: 'TEST-original-key-' + mode } : {});
+        type Config = Omit<Parameters<typeof createOpenCodeV2OwnedSessionClient>[0], 'nativeSessionId'>;
+        const admitted = host as unknown as {
+          assertCurrent(signal: AbortSignal): void;
+          nativeClient(signal: AbortSignal, deadline: number): Promise<{
+            ready: { pid: number }; config: Config; client: ReturnType<typeof createOpenCodeV2OwnedSessionClient>;
+          }>;
+        };
+        let client: ReturnType<typeof createOpenCodeV2OwnedSessionClient> | undefined;
+        let disposals = 0, admissions = 0;
+        const replacement = t.mock.method(admitted, 'nativeClient', async (signal, deadline) => {
+          admissions++; assert.equal(admissions, 1);
+          admitted.assertCurrent(signal);
+          const config: Config = { endpoint, directory: f.root, version: '2.1.4', signal, deadline,
+            beforeRequest: async requestSignal => { admitted.assertCurrent(requestSignal); },
+            readPassword: () => { admitted.assertCurrent(signal); return 'TEST-server-password'; } };
+          client = createOpenCodeV2OwnedSessionClient({ ...config, nativeSessionId: 'ses_TEST' });
+          const dispose = client.dispose;
+          t.mock.method(client, 'dispose', async () => { disposals++; await dispose(); });
+          return { ready: { pid: process.pid }, config, client };
+        });
+        try {
+          if (kind === 'catalog') {
+            const catalog = host.catalog(providerId, true);
+            if (malformed) await assert.rejects(catalog, { code: 'invalid_native_catalog' });
+            else {
+              const result = await catalog;
+              assert.equal(result.providers.length, mode === 'excluded' ? 0 : 1);
+              if (mode !== 'excluded') {
+                assert.equal(result.providers[0]!.providerId, providerId);
+                assert.deepEqual(result.providers[0]!.authMethods, accepted ? ['api'] : []);
+                assert.equal(result.providers[0]!.connected, false, 'inventory never proves authentication');
+              }
+            }
+          } else {
+            const key = host.keyOperation(providerId, async native => {
+              selectedIds.push(native.integrationId);
+              assert.equal(native.integrationId, integrationId);
+              return native.connectKey('TEST-corrected-key');
+            });
+            if (accepted) assert.deepEqual(await key, { integrationId, credentialId: 'cred_TEST' });
+            else await assert.rejects(key, { code: malformed ? 'invalid_native_catalog'
+              : mode === 'explicit-foreign' ? 'invalid_native_integration'
+                : mode === 'form' ? 'native_key_existing_or_unsupported' : 'held' });
+          }
+          const before = ['GET /api/info', 'GET /api/plugin', 'GET /api/permission/saved', 'GET /api/mcp',
+            'GET /api/provider', 'GET /api/model', 'GET /api/model/default'];
+          const directory = malformed ? before : [...before, 'GET /api/integration'];
+          const keyRead = 'GET /api/integration/' + integrationId;
+          assert.deepEqual(requests.slice(start), [...directory, ...(kind === 'key' && accepted
+            ? [keyRead, 'POST /api/integration/' + integrationId + '/connect/key', keyRead]
+            : kind === 'key' && (mode === 'form' || mode === 'explicit-foreign') ? [keyRead] : [])], mode + ':' + kind);
+          assert.equal(admissions, 1); assert.equal(disposals, 1, 'the original Host joins its real client');
+          assert.deepEqual(failures, [], 'only the original finite protocol was admitted');
+          assert.deepEqual(readFileSync(f.file), originalAuth, 'management never rewrites the captured auth source');
+        } finally {
+          try { assert.equal(await host.close(), true); }
+          finally {
+            if (client && disposals === 0) await client.dispose();
+            replacement.mock.restore();
+          }
+        }
+      }
+      assert.deepEqual(selectedIds, accepted || mode === 'form' || mode === 'explicit-foreign' ? [integrationId] : []);
+      assert.equal(connected, accepted);
+      assert.equal(requests.filter(route => route.startsWith('POST ')).length, accepted ? 1 : 0);
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
     }
   }
 });
