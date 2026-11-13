@@ -2254,3 +2254,170 @@ Only root publishes after root and independent source review.
 The next ordinary original native run may distinguish deadline, invalid
 catalog, ownership/current refusal or transport/cleanup. No cause is claimed
 until that new observation actually exists; current Linux failures remain.
+
+## Review 30 — refine the original namespace-fence sampled-stack attribution
+
+### R1 — observed evidence and the bounded question
+
+The original e29dbde receipts reported the following first-Host sampling
+results. These are the already completed original jobs, not new runs:
+
+| Original job / platform | sampledUs | writer exclusive sampledUs | namespace-fence exclusive sampledUs | nodeCount / sampleCount | fileBytes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| [132132912841, Windows x64](https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132132912841) | 149629498 | 79163933 | 72218739 | 26762 / 14555 | 6113051 |
+| [132132912961, Windows ARM](https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132132912961) | 193032508 | 138847670 | 123412990 | 29721 / 18635 | 7133927 |
+| [132132913050, Darwin x64](https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132132913050) | 198047584 | 133363007 | 120904811 | 17645 / 6526 | 4210370 |
+
+All three retained projections have samplingIntervalUs=10000 and
+rawDiscarded=true. The profile covers the same original Host epoch1,
+including its existing cleanup. These sampled stack durations neither
+measure pure namespace validation CPU nor identify syscall counts, lock
+contention, exact wall-time responsibility, or a cause of the native
+terminal failure. The deleted profiles cannot be reclassified retrospectively.
+
+Review24 already identifies namespace-fence through the nearest original
+TeamOwnerStore.fenced/validateNamespace frame. That bucket can contain
+directory-prefix checks, recursive tree inspection, lock acquisition or
+release, and unclassified work under the protected callback. Refine only
+that existing bucket so the next ordinary run can distinguish the known
+source families. No production optimization or guard change is selected.
+
+### R2 — exact source and controller path prerequisite
+
+Use these immutable sources at parent
+15fc115e92b249b5d6cb35dbf8dbe78dd784ea4c:
+
+- packages/legacy-agent-host/src/adapters/team/TeamOwnerStore.ts,
+  17c422fbabf290e582dad1f48f973d85d42dc082: fenced calls
+  validateNamespace before the lock and again inside its callback.
+  validateNamespace contains the exact local functions directoryPath and
+  tree (lines68 and84); the former walks path components with lstatSync,
+  the latter recursively inspects readdirSync entries.
+- packages/legacy-agent-host/src/adapters/team/ControllerAdapter.ts,
+  45ca266cf44afd3a65c5db3312640d71f67328eb, lines62–79:
+  withTeamFileFence is the existing withFileLockSync export obtained from
+  agent-teams-controller/src/internal/fileLock.js. Do not assume this
+  import points at controller/dist.
+- agent-teams-controller/package.json,
+  293fb7e08df5e9cc00663e0e5454dfde6ecfb103: CommonJS main is src/index.js;
+  both src and dist are published roots.
+- agent-teams-controller/scripts/build.mjs,
+  bf2ce41041a9aee92261319e86cf802d82004739: recursively copies src to
+  dist without transforming function names or rewriting imports.
+- agent-teams-controller/src/internal/fileLock.js,
+  3c087f7e7f35106e72340c3eca51b325e10d8314: the exact synchronous
+  acquisition/release helpers are source-backed; withFileLockSync and
+  withFileLock each invoke an arbitrary protected callback.
+- scripts/legacy-agent-host/candidate-closure.ts,
+  b6ad8b343f2210cec5e51c0876e9cbefcafc64b7, lines95–157: packaged
+  dependency roots are copied to numeric host/packages/NNNN folders.
+  A numeric folder alone is not proof of the controller package identity.
+
+A controller family match requires the normalized, segment-anchored path
+/agent-teams-controller/(src|dist)/internal/fileLock.js and an exact
+allowlisted function name. The src path is the actual current Host import;
+the dist path is the verified copy-equivalent build layout, not a claim
+that an old profile used it. Do not match generic internal/fileLock.js,
+arbitrary numeric package roots, or a function name by itself.
+If packaging, inlining or an unavailable frame prevents this exact match,
+retain residual attribution. No new path lookup, require.resolve, module
+load, file read, profiler hook or source-root inference is introduced.
+
+### R3 — two-file TEST-only change, preserving the original sums
+
+Only these existing files may change after the reviewed plan is published:
+
+1. packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts,
+   preimage 1148b16387db9ef033ed6e9efa1e5f785783ea04.
+2. packages/legacy-agent-host/tests/native-host-close.test.ts,
+   preimage 8bbd83ce4406438b066dcc7c58c57d1bbba35705.
+
+Keep all seven original broad categories, all seven teamWriterDetails
+rows, original order, matching rules, exclusive/inclusive arithmetic and
+attribution string unchanged. Add one fixed four-row namespaceFenceDetails
+partition to an available CPU projection; each row carries only family,
+exclusiveSamples and exclusiveSampledUs. Its fixed families are
+directoryPath, tree, controller-lock and residual. It is additional detail
+of the original namespace row, never additional sampled time.
+
+directoryPath and tree require the exact existing
+/adapters/team/TeamOwnerStore.[jt]s suffix plus the corresponding exact
+function name. controller-lock requires the controller path above and
+one of these existing named private operations:
+
+codeOf, statOrMissing, readOrMissing, unlinkOrMissing, removeEmptyGate,
+isProcessAlive, parsePid, writeComplete, recoverGate, acquireGate,
+readLockInfo, sameLock, recoverDataLock, releaseLock, tryAcquire,
+sleepSync, resolveLockOptions, acquireFileLockSync.
+
+In particular sleepSync is matched only with that controller path and
+the original namespace/writer context; no generic sleep or filesystem
+frame becomes a controller match. The wrapper functions withFileLockSync
+and withFileLock are not controller-lock roots. Their exact frames reset
+the new subfamily to residual, so an arbitrary protected callback is not
+automatically described as lock work. Anonymous release-wrapper overhead
+without a more precise private helper remains residual.
+
+Traverse only the same already validated original stack tree. Compute the
+original broad category and writer family first, with their current rules
+unchanged. The new subfamily is eligible only while the original exclusive
+category is team-writer-authority and the original writer family is
+namespace-fence. Outside that intersection reset the subfamily to residual;
+never carry a directory/lock label across a different broad/writer family.
+Every new exact fenced or validateNamespace frame also resets it to
+residual before any narrower descendant match. Within the eligible context
+a nearest exact directoryPath, tree or controller helper frame supplies
+the subfamily inherited by its unclassified synchronous descendants.
+The wrapper boundary above resets it again. Returning to a sibling branch
+uses its own original ancestor context, not a global last-seen label.
+
+For every eligible original sample, increment exactly one new row using
+the same original sample count and timeDelta. The four rows must sum
+exactly to the unchanged namespace-fence row for both counts and sampledUs.
+They are source-family stack attribution, including native descendant
+work, not isolated function self-time or a proof of pure validation cost.
+Unknown, inlined and unmatched work remains residual without a guessed
+family, a new broad category, or invented cause.
+
+No raw frame/function name, URL, pathname, stack, arguments, IDs or private
+text is copied into the receipt. Only the four fixed labels and bounded
+integer totals leave the projection. An unavailable/invalid profile
+remains unavailable and gains no successful detail rows.
+
+### R4 — original limits and meaningful existing coverage
+
+Keep the existing first-Host-only sampler, 10000us native interval and
+supported interval validation, original native scenario/deadlines,
+16MiB file limit, fixed node/sample/duration bounds, one connected acyclic
+tree check, safe timeDelta arithmetic, before/after file identity checks,
+original read/discard failure semantics and mandatory raw-profile unlink.
+All R25–R29 event, byte, request and child limits and first-failure
+observations remain untouched. No new child, run, retry, stage, job,
+matrix, benchmark, production read, lock, timer or retained raw profile.
+
+Extend the same existing failed-original-Node-child test case. Preserve
+its one actual child and all earlier broad/writer expected values, exit1,
+privacy, malformed-profile, file-size and unlink assertions. Add finite
+controlled profile data inside that same case to prove:
+
+- All four exact new rows, nearest descendant inheritance, recursive tree
+  attribution and both count/time conservation against the original row.
+- Exact controller src and copy-equivalent dist paths match only the
+  finite named helpers; a wrong path, same-named foreign function and
+  numeric packaged path remain residual.
+- Wrapper callback work, a nested fresh fenced/validateNamespace boundary
+  and missing/inlined frames remain residual until a precise new match.
+  A lock frame outside the original namespace/writer intersection, or a
+  nested different broad/writer family, contributes no new namespace row.
+- An invalid original tree/sample still returns unavailable, without the
+  new detail field; no raw marker/path/function name escapes and each
+  controlled raw profile is discarded by the same reader.
+
+These controlled profiles prove the classifier contract only. They do
+not prove the family distribution, improvement, successful native input
+or failure cause on any platform. Host build, the existing native-host-close
+suite, affected canonical types/lint and source-size checks remain required
+before acceptance. With execution unavailable, source publication remains
+SOURCE_ONLY_UNEXECUTED and those checks run in ordinary CI, without changing
+budgets or retrying the original jobs. Root alone publishes after root
+and independent plan/source review.
