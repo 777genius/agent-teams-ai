@@ -43,11 +43,12 @@ export async function capturedWitness(
   pid: number,
   birth: string,
   track: (child: ChildProcess) => void,
-  events: NativeGateEvents
+  events: NativeGateEvents,
+  mode: 'wait-gated' | 'vendor-wait-gated' = 'wait-gated'
 ): Promise<{ process: ChildProcess; exit: Promise<number | null> }> {
   const guardedTimeout = <T>(operation: Promise<T>, ms?: number): Promise<T> =>
     timeout(events.wait(operation), ms);
-  const process = spawn(fixture, ['wait-gated', String(pid), birth], {
+  const process = spawn(fixture, [mode, String(pid), birth], {
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true,
   });

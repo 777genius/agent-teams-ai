@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/sentry-owned-process-native.yml'
       - 'tools/owned-process-broker/**'
+      - 'packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts'
       - 'src/main/utils/ownedProcess/**'
       - 'packages/legacy-agent-host/src/owned-process/**'
       - 'packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts'
@@ -320,6 +321,32 @@ jobs:
           $gate = Join-Path $PWD 'tools\owned-process-broker\nativeGate.ts'
           & $controller $node $runner $gate "$env:NATIVE_STAGE\owned-process-broker.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-birth-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-accounting-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-release-delay.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-debug-service.exe" 2>&1 | Tee-Object native-evidence/host-node-native.log
           if ($LASTEXITCODE -ne 0) { throw 'Host Node native controller gate failed' }
+      - name: Prepare pinned official native Claude for debug compatibility
+        env:
+          OWNED_PROCESS_VENDOR_TEST_GO: '1'
+        run: |
+          $inputs = Join-Path $env:RUNNER_TEMP ("TEST-native-vendor-" + $env:GITHUB_RUN_ID + "-" + $env:RUNNER_ARCH)
+          $bash = Join-Path $env:ProgramFiles 'Git\bin\bash.exe'
+          if (-not (Test-Path $bash -PathType Leaf)) { throw 'Explicit runner Git Bash is absent' }
+          node --import tsx tools/owned-process-broker/nativeVendorInputs.ts $inputs $bash
+          if ($LASTEXITCODE -ne 0) { throw 'Official native Claude archive qualification failed' }
+          "NATIVE_VENDOR_INPUTS=$inputs" >> $env:GITHUB_ENV
+          Copy-Item "$inputs\selection.json" native-evidence/vendor-inputs.json
+      - name: Actual Claude SDK background subtree Stop and surviving provider
+        env:
+          OWNED_PROCESS_VENDOR_TEST_GO: '1'
+        run: |
+          $controller = "$env:NATIVE_BUILD\Release\owned-process-gate-controller.exe"
+          $node = (Get-Command node.exe -ErrorAction Stop).Source
+          $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
+          $gate = Join-Path $PWD 'tools\owned-process-broker\nativeVendorGate.ts'
+          $selection = "$env:NATIVE_VENDOR_INPUTS\selection.json"
+          $sha256 = (Get-FileHash -Algorithm SHA256 $selection).Hash.ToLowerInvariant()
+          $receipt = Join-Path $PWD 'native-evidence\native-vendor-receipt.json'
+          & $controller $node $runner $gate "$env:NATIVE_BUILD\Release\owned-process-broker-debug-service.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" $selection $sha256 $receipt 2>&1 | Tee-Object native-evidence/native-vendor.log
+          if ($LASTEXITCODE -ne 0) { throw 'Actual vendor native controller gate failed' }
+          node --input-type=module -e "import assert from 'node:assert/strict'; import fs from 'node:fs'; const r=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); assert.equal(r.kind,'TEST_WINDOWS_NATIVE_CLAUDE_SERVICE_SCOPE'); assert.equal(r.sourceHead,process.env.EXPECTED_SOURCE_SHA); assert.equal(r.platform,'win32-'+process.arch); assert.equal(r.nodeVersion,'v24.21.0'); assert.equal(r.status,'PASS'); assert.equal(r.cleanup,true); assert.equal(r.originalProviderJobReleased,true); assert.equal(r.oneOriginalSession,true); assert.equal(r.installedBeforeInput,true); assert.equal(r.scopedProof.activeProcesses,0); assert.equal(r.scopedProof.duplicateAckMatched,true); assert.deepEqual(r.nativeRequests,['native_background_tool','native_background_result','same_session_after_scoped_stop']); assert.deepEqual(r.nativeFailures,[]); assert.equal(r.registryQualified,false); assert.equal(r.coldOwnerQualified,false); assert.equal(r.vendorAuthQualified,false); assert.equal(r.desktopQualified,false); assert.equal(r.releaseQualified,false);" $receipt
+          if ($LASTEXITCODE -ne 0) { throw 'Actual vendor exact receipt is incomplete' }
       - name: Retain exact-source binary and independent controller evidence
         if: always()
         uses: actions/upload-artifact@v7.0.1

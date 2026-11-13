@@ -48,15 +48,22 @@ export function processTable(): ProcessIdentity[] {
     .trim()
     .split('\n')
     .map((line) => {
-      const [pid, ppid, pgid] = line.trim().split(/\s+/).map(Number);
-      assert.ok(pid && ppid !== undefined && pgid);
+      const fields = /^\s*(\d+)\s+(\d+)\s+(\d+)\s*$/u.exec(line);
+      assert.ok(fields, 'Malformed process table row');
+      const pid = Number(fields[1]), ppid = Number(fields[2]), pgid = Number(fields[3]);
+      // Linux kernel processes may have PGID 0; they are visible but never an owned app group.
+      assert.ok(Number.isSafeInteger(pid) && pid > 0 &&
+        Number.isSafeInteger(ppid) && ppid >= 0 &&
+        Number.isSafeInteger(pgid) && pgid >= 0, 'Invalid process table identity');
       return { pid, ppid, pgid };
     });
 }
 export function groupMembers(group: number): ProcessIdentity[] {
+  assert.ok(Number.isSafeInteger(group) && group > 0, 'Captured app group must be positive');
   return processTable().filter((row) => row.pgid === group);
 }
 export function safeGroupSnapshot(group: number): (ProcessIdentity & { executable: string })[] {
+  assert.ok(Number.isSafeInteger(group) && group > 0, 'Captured app group must be positive');
   const rows = execFileSync('/bin/ps', ['-ax', '-o', 'pid=,ppid=,pgid=,comm='], {
     encoding: 'utf8',
     timeout: 3000,
