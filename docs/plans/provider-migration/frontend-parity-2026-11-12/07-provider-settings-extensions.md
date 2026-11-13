@@ -734,3 +734,101 @@ hash делать до logger из уже проверенного original obse
 без spread неизвестных полей; custody и redaction остаются прежними. Review 3 (Root):
 полный native owner tuple и независимое physical birth evidence обязательны;
 hash не даёт process authority и не допускает PID adoption. Source fix ещё не выполнен.
+
+
+### R14 — measured V2 startup cost before changing read composition
+
+Actual native Windows `f2050de7` receipt (job `131695720785`) reports original
+`runtime.open` elapsed 127415ms against its unchanged 120000ms launch budget.
+The original child became ready at 24962ms; native session creation completed near
+98932ms; the plugins response reached headers at 125155ms. All 19 observed HTTP
+requests reached successful response headers and no HTTP reset was recorded.
+Headers do not prove complete body-read latency. The original cleanup remained
+responsible for the same child; this is still an incomplete native journey.
+
+Source evidence separates two candidates. `OpenCodeV2SessionCredential.prepare`
+reads a catalog and, when its provider is absent, reads the directory again before
+key import; selected-model attestation subsequently reads another catalog.
+Independently, `EmbeddedMemberProvider.current` nests configuration and credential
+source checks whose callbacks re-enter original Team/writer authority. A local
+constructed TEST-source measurement through the actual capture functions and pinned
+D client counted 20 outer authority callbacks for one current check, and 220 for a
+single identity snapshot (11 current checks, one fake GET, two stub custody reads).
+That test has no native child and a constant-true authority: it proves amplification,
+not the time spent by the actual Windows owner or the cause of its timeout.
+
+The next cut is measurement only, using the existing source native journey:
+
+1. Add an explicit TEST-only CPU-profile option to `tests/fixtures/native-host.ts`
+   for the original Host process. Use pinned Node24's standard `--cpu-prof`,
+   default 1000us sampling, and an exact file in the existing private TEST root.
+   Keep the same Host launch, captured profile, child ownership, request sequence,
+   120s native budget and ordinary cleanup. No inspector listener/port, function
+   replacement, process adoption, injected cache or extra inference.
+2. Enable it only alongside the existing source-only
+   `native-opencode-team/passive-diagnostics.ts` observation for the first actual
+   Host epoch. Packaged runs and normal product launches stay unchanged. Correlate
+   that epoch's totals with its existing original-open/HTTP/child timeline; distinguish
+   inclusive stack time from exclusive sample time and never add overlapping totals.
+   Do not infer per-request sample alignment from unrelated clock origins; the profile
+   covers the first Host epoch and its normal cleanup, not an invented startup span.
+3. After that original Host exits, read only its exact bounded regular profile file.
+   Project an allowlisted category table for configuration reads, credential reads,
+   Team/writer authority, custody/image checks, D transport, and other/idle.
+   Retain only finite counts/durations and qualification status in the existing
+   native JSON receipt. No raw source URLs, filesystem paths, function arguments,
+   profile body or call stacks are uploaded. Discard the raw TEST profile after
+   projection; absent/truncated/unparseable data is unavailable evidence, not zero
+   work or successful startup. No new runner, workflow matrix or production protocol.
+4. Check the projection with one actual pinned-Node finite profile and existing
+   source/types gates. The next normal native CI run supplies platform attribution;
+   do not rerun or relax it merely to obtain timing. Keep current command/control,
+   abort/deadline/source checks and all image attestations byte-identical.
+5. Only after these measurements identify the cost, propose the smallest correction
+   in the existing read composition/guard call graph. No mutable freshness cache,
+   guessed port, reduced cleanup proof, higher timeout or claim that grouping alone
+   fixes startup. Existing native model/tool/MCP/Stop/cold Resume remains the gate.
+
+Review 1: HTTP headers and inter-request gaps alone cannot attribute body processing,
+source validation or custody cost. Review 2 (Account): credential `selected/read`
+re-enters owner checks both before and after successful reads; missing files have a
+different count, so no constant call count is imposed on native execution. Review 3
+(Root): measure the same actual finite Host first; upload only the closed aggregate,
+keep raw profiles private, and leave production checks unchanged until attribution.
+
+## R15 — cold V2 readback сохраняет подтверждённую metadata lineage
+
+Факт: PR1186 head `522c80d168d698fc6842ee649cc4822406cd2632`, job
+`131717484578` / run `43373956602`: native active-input Quit завершился PASS,
+но второй app readback INCOMPLETE. Original artifact `14013109806`,
+ZIP SHA256 `d7dd3e617499c752091a911d72431935be71bc38f14a5f1aeff9a6aaadc55065`.
+Cold helper сохранил metadata child7327; поздний UI census уже не нашёл его.
+Смена metadata mode — объяснение из текущего source, требующее actual lineage evidence;
+legacy passive check требовал вечного существования прежнего PID. Нельзя
+исправлять это принятием произвольного нового child или удалением проверки.
+
+1. После **того же единственного** existing cold loadModels получить actual selected
+   global source/profile из existing runtime-source index и наблюдать его через
+   уже реализованный `captureMetadataObservation/readDesktopMetadataLineage`.
+   Выделить лишь маленький read-only wrapper в existing desktop-native-stop-fixture.
+   Не повторять catalog RPC и не создавать новую native operation.
+2. Cold assertNoRuntimeChildren обновляет captured observation по exact Host birth,
+   прежним profile hashes и непрерывной original lineage. Successor допустим только
+   после exact previous ready→released и physical absence прежнего PID, с собственной
+   подтверждённой birth; unknown cleanup/foreign profile/PID reuse отказываются.
+   Existing Runtime records, source/profile/executable digests остаются неизменными,
+   zero Runtime allocation и один active metadata owner сохраняются.
+3. В cold evidence сохранить original capture и latest validated readback capture.
+   Ordinary Quit затем должен подтвердить release **всех** исходных и successor
+   metadata identities из этой lineage, до harness cleanup. Применить existing
+   bounded log-drain/absence machinery к cold metadata branch; hot paths сохраняются.
+4. Расширить existing V2 lifecycle case именно cold transition/cleanup:
+   confirmed retired original + exact successor допускаются; missing release,
+   чужой active child, reused PID или оставшийся successor после Quit отказываются.
+   Это проверка correlation; actual пяти cold Desktop jobs остаётся отдельным gate.
+   Не увеличивать timeouts, не повторять native input/metadata calls ради PASS.
+
+Source-круг нашёл несовпадение old passive cold path с уже production-supported
+global/provider metadata handoff. Второй круг сохраняет original-owner proof,
+zero-runtime invariant и cleanup всех поколений. Следующий шаг — independent
+diff review, existing scripts types/tests и штатный exact-head Desktop CI.

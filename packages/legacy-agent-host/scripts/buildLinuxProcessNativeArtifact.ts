@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { release } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 const hash = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
 const file = (path: string, expected: string) => {
@@ -36,15 +36,25 @@ export function buildLinuxProcessNativeArtifact(input: {
     }
   };
   validate();
-  mkdirSync(input.outputDirectory, { recursive: true, mode: 0o700 });
-  if (realpathSync(input.outputDirectory) !== input.outputDirectory ||
-      !lstatSync(input.outputDirectory).isDirectory() || readdirSync(input.outputDirectory).length)
-    throw new Error('Output must be a new empty private artifact directory');
+  const refuse = () => new Error('Output must be a new empty private artifact directory');
+  const parent = dirname(input.outputDirectory), originalParent = lstatSync(parent, { bigint: true });
+  if (realpathSync(parent) !== parent || !originalParent.isDirectory() || originalParent.isSymbolicLink()) throw refuse();
+  try { mkdirSync(input.outputDirectory, { mode: 0o700 }); } catch { throw refuse(); }
+  const originalOutput = lstatSync(input.outputDirectory, { bigint: true });
+  const validateOutput = () => {
+    const directory = lstatSync(input.outputDirectory, { bigint: true }), currentParent = lstatSync(parent, { bigint: true });
+    if (realpathSync(input.outputDirectory) !== input.outputDirectory || !directory.isDirectory() ||
+        directory.isSymbolicLink() || directory.uid !== BigInt(process.getuid!()) ||
+        (directory.mode & 0o777n) !== 0o700n || directory.dev !== originalOutput.dev || directory.ino !== originalOutput.ino ||
+        currentParent.dev !== originalParent.dev || currentParent.ino !== originalParent.ino) throw refuse();
+  };
+  validateOutput();
+  if (readdirSync(input.outputDirectory).length) throw refuse();
   const library = join(input.outputDirectory, 'registered-process.node');
   execFileSync(input.compiler, ['-shared', '-fPIC', '-DNAPI_VERSION=8', '-DNODE_GYP_MODULE_NAME=registered_process',
     '-I', input.headersRoot, '-std=c11', '-Wall', '-Wextra', '-Werror', input.source, '-o', library],
   { timeout: 60_000, maxBuffer: 1024 * 1024 });
-  validate();
+  validate(); validateOutput();
   const options = { encoding: 'utf8' as const, timeout: 10_000, maxBuffer: 1024 * 1024,
     env: { ...process.env, LC_ALL: 'C' } };
   const elf = execFileSync(input.inspector, ['--file-header', library], options);
@@ -60,7 +70,7 @@ export function buildLinuxProcessNativeArtifact(input: {
     }
     return 0;
   });
-  validate();
+  validate(); validateOutput();
   const manifest = { schemaVersion: 1, abi: 'napi-8', platform: 'linux', architecture: 'x64',
     kernelCapability: 'pidfd-live-v1', buildKernelRelease: release(),
     libc: { family: 'glibc', minimumVersion: requiredVersions.at(-1)! }, library: 'registered-process.node',

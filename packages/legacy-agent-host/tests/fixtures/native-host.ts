@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { delimiter, dirname, isAbsolute, join } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -145,12 +146,19 @@ export function startHost(options: {
   profileHash: string;
   onDiagnostic?(chunk: Buffer): void;
   testImports?: readonly string[];
+  /** Source-only observation of the original TEST Host; never propagated to native children. */
+  testCpuProfile?: true;
   gitBinDirectory?: string;
   onNotification?(method: string, params: unknown): void;
 }) {
+  const testCpuProfilePath = options.testCpuProfile
+    ? join(options.root, 'TEST-original-host.cpuprofile') : undefined;
+  if (testCpuProfilePath) assert.equal(existsSync(testCpuProfilePath), false, 'fresh original TEST CPU profile');
   const child = spawn(
     options.node,
-    [...(options.testImports ?? []).flatMap((path) => ['--import', path]), options.entry],
+    [...(testCpuProfilePath ? ['--cpu-prof', `--cpu-prof-dir=${options.root}`,
+      '--cpu-prof-name=TEST-original-host.cpuprofile'] : []),
+      ...(options.testImports ?? []).flatMap((path) => ['--import', path]), options.entry],
     {
       cwd: options.root,
       env: {
@@ -228,6 +236,7 @@ export function startHost(options: {
   }
   return {
     child,
+    testCpuProfilePath,
     async rpc(method: string, params: unknown, timeoutMs = 60_000): Promise<Record<string, unknown>> {
       assert.ok(!exited && stdoutValid);
       assert.ok(

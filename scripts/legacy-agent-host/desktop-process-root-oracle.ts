@@ -19,20 +19,21 @@ export function createDesktopProcessRootOracle(input: {
   validateProcessCapture(input.capture);
   const original = structuredClone(input.capture);
   assert.ok(original.version !== 4, 'Cold original-root oracle requires durable kernel identity');
-  if (original.version !== 3) {
-    const rootCapture: RegisteredProcessCapture = { ...original, target: structuredClone(original.root) };
-    return { rootCapture, rootIdentity: original.root, observe: () => input.observe(rootCapture) };
-  }
+  const rootCapture: RegisteredProcessCapture | undefined = original.version === 3 ? undefined
+    : { ...original, target: structuredClone(original.root) };
   const args = [import.meta.filename, '--observe-linux-root', JSON.stringify(input.selection), JSON.stringify(original)];
   let reads = 0;
-  const deadline = Date.now() + 180_000;
   return {
-    rootCapture: undefined,
+    rootCapture,
     rootIdentity: original.root,
-    observe(): ProcessObservation {
-      assert.ok(++reads <= 12 && Date.now() < deadline, 'bounded original-root oracle; no busy spawn loop');
-      const output = execFileSync(input.node, args, { encoding: 'utf8', timeout: 5_000,
-        maxBuffer: 8192, env: { NODE_NO_WARNINGS: '1' } }).trim();
+    observe(deadlineMs: number): ProcessObservation {
+      const remaining = Math.floor(deadlineMs - Date.now());
+      assert.ok(Number.isFinite(deadlineMs) && ++reads <= 12 && remaining > 0,
+        'bounded original-root oracle; original caller deadline and no busy spawn loop');
+      const output = rootCapture ? input.observe(rootCapture)
+        : execFileSync(input.node, args, { encoding: 'utf8', timeout: Math.min(5_000, remaining),
+          maxBuffer: 8192, env: { NODE_NO_WARNINGS: '1' } }).trim();
+      assert.ok(Date.now() < deadlineMs, 'original-root oracle reply exceeded its original caller deadline');
       assert.ok(['same-live', 'absent', 'stale', 'unknown'].includes(output));
       return output as ProcessObservation;
     },

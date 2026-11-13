@@ -7,6 +7,12 @@ import {
 } from './contracts.js';
 import { BoundedLineDecoder } from './framing.js';
 import { HostOutput } from './output.js';
+import {
+  HOST_CUSTODY_BIND_METHOD,
+  HOST_CUSTODY_CAPABILITY,
+  HOST_CUSTODY_FRAME_BYTES,
+  HostCustodyClient,
+} from './owned-process/hostCustody.js';
 
 import type {
   HostCloseReason,
@@ -44,6 +50,8 @@ export interface HostServerOptions {
   limits?: Partial<HostLimits>;
   reviewTransport?: HostReviewTransportProfile;
   methods?: Readonly<Record<string, HostMethod>>;
+  /** Trusted opt-in for the closed private owner port; the ordinary CLI leaves this absent. */
+  nativeCustody?: { timeoutMs: number };
   /** Synchronous work seal, before any abort/cleanup await, including pending allocations. */
   onSeal?(): void;
   /** Caller must retain durable obligations; called once even after transport failure. */
@@ -53,6 +61,7 @@ export interface HostServerOptions {
 export interface HostServer {
   readonly handshake: HostHandshake;
   readonly closed: Promise<HostCloseResult>;
+  readonly nativeCustody?: HostCustodyClient;
   notifyData(method: string, params: JsonValue): boolean;
   notifyControl(method: string, params: JsonValue): boolean;
   dispose(reason?: HostCloseReason): Promise<HostCloseResult>;
@@ -87,6 +96,7 @@ export function createHostServer(options: HostServerOptions): HostServer {
       'transport.ndjson',
       'transport.gap',
       ...(options.reviewTransport ? ['transport.review-v1'] : []),
+      ...(options.nativeCustody ? [HOST_CUSTODY_CAPABILITY] : []),
       ...(options.capabilities ?? []),
     ],
     limits,
@@ -104,6 +114,14 @@ export function createHostServer(options: HostServerOptions): HostServer {
     void dispose(reason);
   };
   const output = new HostOutput(options.output, limits, fail);
+  const nativeCustody = options.nativeCustody
+    ? new HostCustodyClient({
+        hostIncarnation: handshake.hostIncarnation,
+        limits,
+        timeoutMs: options.nativeCustody.timeoutMs,
+        send: (frame, control) => output.sendPrivate(frame, control, HOST_CUSTODY_FRAME_BYTES),
+      })
+    : undefined;
   const decoder = new BoundedLineDecoder(limits.maxFrameBytes, receive, fail);
 
   function sendError(id: RpcId | null, code: number, message: string): void {
@@ -117,6 +135,12 @@ export function createHostServer(options: HostServerOptions): HostServer {
       value = JSON.parse(frame);
     } catch {
       sendError(null, -32700, 'Invalid JSON');
+      return;
+    }
+    try {
+      if (nativeCustody?.receive(value, Buffer.byteLength(frame))) return;
+    } catch {
+      fail('input_error');
       return;
     }
     if (!isRequest(value)) {
@@ -156,7 +180,16 @@ export function createHostServer(options: HostServerOptions): HostServer {
         sendError(request.id, -32001, 'Handshake required');
         return;
       }
-      if (Object.hasOwn(options.methods ?? {}, request.method))
+      if (request.method === HOST_CUSTODY_BIND_METHOD && nativeCustody) {
+        method = {
+          lane: 'control',
+          handle(params) {
+            if (!nativeCustody.bind(params))
+              throw new HostRpcError(-32010, 'Native binding refused');
+            return { bound: true };
+          },
+        };
+      } else if (Object.hasOwn(options.methods ?? {}, request.method))
         method = options.methods?.[request.method];
     }
     if (!method) {
@@ -225,6 +258,7 @@ export function createHostServer(options: HostServerOptions): HostServer {
   function dispose(reason: HostCloseReason = 'disposed'): Promise<HostCloseResult> {
     if (closing) return closed;
     closing = true;
+    nativeCustody?.seal();
     let sealFailed = false;
     try {
       options.onSeal?.();
@@ -263,6 +297,7 @@ export function createHostServer(options: HostServerOptions): HostServer {
   return {
     handshake,
     closed,
+    ...(nativeCustody ? { nativeCustody } : {}),
     notifyData: (method, params) =>
       output.sendData(
         { jsonrpc: '2.0', method, params },

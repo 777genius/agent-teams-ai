@@ -1,11 +1,17 @@
 import { HOST_GAP_METHOD } from './contracts.js';
 
-import type { HostCloseReason, HostLimits, RpcNotification, RpcResponse } from './contracts.js';
+import type {
+  HostCloseReason,
+  HostLimits,
+  RpcNotification,
+  RpcRequest,
+  RpcResponse,
+} from './contracts.js';
 import type { Writable } from 'node:stream';
 
 /** One in-flight write; bounded priority/data budgets never await a producer. */
 export class HostOutput {
-  private priority: Buffer[] = [];
+  private priority: { frame: Buffer; control: boolean }[] = [];
   private data: Buffer[] = [];
   private priorityBytes = 0;
   private dataBytes = 0;
@@ -34,7 +40,24 @@ export class HostOutput {
       this.fail('priority_overflow');
       return false;
     }
-    this.priority.push(frame);
+    this.priority.push({ frame, control: true });
+    this.priorityBytes += frame.length;
+    this.pump();
+    return true;
+  }
+
+  /** Private work shares the existing priority budget and leaves the original control reserve. */
+  sendPrivate(message: RpcRequest, control: boolean, maxFrameBytes: number): boolean {
+    if (this.stopped) return false;
+    const frame = this.encode(message, maxFrameBytes);
+    const count =
+      this.limits.maxPriorityMessages - (control ? 0 : this.limits.reservedControlRequests);
+    const bytes = this.limits.maxPriorityBytes - (control ? 0 : this.limits.maxFrameBytes);
+    if (!frame || this.priority.length >= count || this.priorityBytes + frame.length > bytes) {
+      if (control) this.fail('priority_overflow');
+      return false;
+    }
+    this.priority.push({ frame, control });
     this.priorityBytes += frame.length;
     this.pump();
     return true;
@@ -69,7 +92,7 @@ export class HostOutput {
   }
 
   private encode(
-    message: RpcResponse | RpcNotification,
+    message: RpcResponse | RpcNotification | RpcRequest,
     maxFrameBytes = this.limits.maxFrameBytes
   ): Buffer | undefined {
     try {
@@ -84,7 +107,8 @@ export class HostOutput {
 
   private pump(): void {
     if (this.stopped || this.writing) return;
-    let frame = this.priority.shift();
+    const control = this.priority.findIndex((entry) => entry.control);
+    let frame = this.priority.splice(control < 0 ? 0 : control, 1)[0]?.frame;
     if (frame) this.priorityBytes -= frame.length;
     else if (this.dropped > 0) {
       frame = this.encode({

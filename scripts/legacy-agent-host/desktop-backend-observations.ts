@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { closeSync, constants, openSync, readlinkSync, readSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { createConnection } from 'node:net';
 import { basename, join } from 'node:path';
@@ -144,6 +145,77 @@ interface CdpListenerFile {
   device: string | null;
   endpoint: 'loopback-v4' | 'loopback-v6' | 'wildcard' | 'other' | 'unknown';
   state: 'LISTEN' | 'other' | 'unknown';
+  afterCensus?: CdpProcFacts;
+}
+type CdpRole = 'electron-main' | 'electron-renderer' | 'electron-zygote' | 'electron-gpu' |
+  'electron-utility' | 'electron-crashpad' | 'node' | 'unknown';
+interface ProcBirth { startTicks: string; ppid: number; pgid: number; }
+interface CdpProcFacts {
+  scope: 'after-original-census'; atomic: false; birth: 'same' | 'unknown';
+  startTicks: string | null; ppid: number | null; pgid: number | null;
+  role: CdpRole; socketInode: string | null;
+}
+/** Bounded TEST diagnostics; proc data never admits a listener or authorizes a signal. */
+function boundedProcText(path: string): string | undefined {
+  let fd: number | undefined;
+  try {
+    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const buffer = Buffer.alloc(4097);
+    const count = readSync(fd, buffer, 0, buffer.length, 0);
+    return count <= 4096 ? buffer.toString('utf8', 0, count) : undefined;
+  } catch { return undefined; }
+  finally { if (fd !== undefined) { try { closeSync(fd); } catch { /* Diagnostic only. */ } } }
+}
+function readProcBirth(pid: number): ProcBirth | undefined {
+  const value = boundedProcText(`/proc/${pid}/stat`);
+  if (!value?.startsWith(`${pid} (`) || !value.endsWith('\n')) return undefined;
+  const end = value.lastIndexOf(') ');
+  if (end < 0) return undefined;
+  const fields = value.slice(end + 2).trim().split(/\s+/u);
+  if (!/^[A-Za-z]$/u.test(fields[0] ?? '') || !/^\d{1,16}$/u.test(fields[1] ?? '') ||
+      !/^\d{1,16}$/u.test(fields[2] ?? '') || !/^\d{1,20}$/u.test(fields[19] ?? '')) return undefined;
+  const ppid = Number(fields[1]), pgid = Number(fields[2]);
+  return Number.isSafeInteger(ppid) && Number.isSafeInteger(pgid)
+    ? { ppid, pgid, startTicks: fields[19]! } : undefined;
+}
+function captureProcBirths(owned: readonly ProcessIdentity[]): Map<number, ProcBirth> {
+  const captured = new Map<number, ProcBirth>();
+  for (const row of owned.slice(0, 64)) {
+    const birth = readProcBirth(row.pid);
+    if (birth?.pgid === row.pgid && birth.ppid === row.ppid) captured.set(row.pid, birth);
+  }
+  return captured;
+}
+function readProcRole(pid: number): CdpRole {
+  const commandLine = boundedProcText(`/proc/${pid}/cmdline`);
+  if (!commandLine?.endsWith('\0')) return 'unknown';
+  const args = commandLine.split('\0'), executable = basename(args[0]!);
+  if (executable === 'node') return 'node';
+  if (executable === 'chrome_crashpad_handler') return 'electron-crashpad';
+  if (!['electron', 'agent-teams-ai', 'Agent Teams AI'].includes(executable)) return 'unknown';
+  const type = args.find(arg => arg.startsWith('--type='));
+  if (type === undefined) return 'electron-main';
+  if (type === '--type=renderer') return 'electron-renderer';
+  if (type === '--type=zygote') return 'electron-zygote';
+  if (type === '--type=gpu-process') return 'electron-gpu';
+  if (type === '--type=utility') return 'electron-utility';
+  return 'unknown';
+}
+function afterCdpCensus(file: CdpListenerFile, group: number, original?: ProcBirth): CdpProcFacts {
+  const unknown: CdpProcFacts = { scope: 'after-original-census', atomic: false, birth: 'unknown',
+    startTicks: null, ppid: null, pgid: null, role: 'unknown', socketInode: null };
+  if (!original) return unknown;
+  try {
+    const before = readProcBirth(file.pid);
+    if (!before || before.startTicks !== original.startTicks || before.pgid !== group) return unknown;
+    const target = readlinkSync(`/proc/${file.pid}/fd/${file.fd}`);
+    const inode = /^socket:\[(\d{1,20})\]$/u.exec(target)?.[1] ?? null;
+    const role = readProcRole(file.pid), after = readProcBirth(file.pid);
+    if (!after || after.startTicks !== original.startTicks || after.pgid !== group) return unknown;
+    // The fd may still have changed between the original lsof and this observation.
+    return { scope: 'after-original-census', atomic: false, birth: 'same', startTicks: after.startTicks,
+      ppid: after.ppid, pgid: after.pgid, role, socketInode: inode };
+  } catch { return unknown; }
 }
 interface CdpListenerFacts {
   scope: 'original-linux-lsof-test-cdp';
@@ -154,7 +226,7 @@ interface CdpListenerFacts {
   files: CdpListenerFile[];
 }
 const cdpListenerFailures = new WeakMap<Error, CdpListenerFacts>();
-/** Facts belong to the original failed read, never a later PID/socket census. */
+/** Original failed lsof facts; any later proc observation is explicitly non-atomic and diagnostic. */
 export function readOwnedCdpListenerFailure(value: unknown): CdpListenerFacts | undefined {
   return value instanceof Error ? cdpListenerFailures.get(value) : undefined;
 }
@@ -204,6 +276,7 @@ export function assertOwnedCdpListener(group: number): number {
   // lsof scan for every UI read can time out under unrelated process load.
   const owned = groupMembers(group);
   assert.ok(owned.length > 0, 'captured TEST app group still exists');
+  const births = process.platform === 'linux' ? captureProcBirths(owned) : undefined;
   let output: string;
   try {
     output = execFileSync(
@@ -251,7 +324,12 @@ export function assertOwnedCdpListener(group: number): number {
     );
     return listener!;
   } catch (error) {
-    if (census && error instanceof Error) cdpListenerFailures.set(error, census.facts);
+    if (census && error instanceof Error) {
+      for (const file of census.facts.files) {
+        if (file.inode === null) file.afterCensus = afterCdpCensus(file, group, births?.get(file.pid));
+      }
+      cdpListenerFailures.set(error, census.facts);
+    }
     throw error;
   }
 }

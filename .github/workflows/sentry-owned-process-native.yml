@@ -236,6 +236,9 @@ jobs:
           name: registered-linux-x64-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             native-evidence
+            ${{ runner.temp }}/TEST-linux-node26-${{ github.run_id }}
+            ${{ runner.temp }}/TEST-linux-node24-${{ github.run_id }}
+            ${{ runner.temp }}/TEST-linux-electron-${{ github.run_id }}
             /tmp/TEST-linux-pidfd-*/proof.ndjson
             /tmp/TEST-linux-pidfd-*/original-capture.json
           if-no-files-found: error

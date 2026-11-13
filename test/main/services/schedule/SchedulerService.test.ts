@@ -106,11 +106,13 @@ function createMockRepository(): ScheduleRepository {
     getSchedulesByTeam: vi.fn(async (teamName: string) =>
       [...schedules.values()].filter((s) => s.teamName === teamName)
     ),
-    saveSchedule: vi.fn(async (schedule: Schedule) => {
+    saveSchedule: vi.fn(async (schedule: Schedule, options?: { mustExist: true }) => {
+      if (options?.mustExist && !schedules.has(schedule.id)) throw new Error('Schedule no longer exists');
       schedules.set(schedule.id, schedule);
     }),
-    deleteSchedule: vi.fn(async (id: string) => {
+    deleteSchedule: vi.fn(async (id: string, onCommitted?: () => void | Promise<void>) => {
       schedules.delete(id);
+      await onCommitted?.();
       runs.delete(id);
     }),
     listRuns: vi.fn(async (scheduleId: string) => runs.get(scheduleId) ?? []),
@@ -513,7 +515,7 @@ describe('SchedulerService', () => {
 
     await service.deleteSchedule(schedule.id);
 
-    expect(repo.deleteSchedule).toHaveBeenCalledWith(schedule.id);
+    expect(repo.deleteSchedule).toHaveBeenCalledWith(schedule.id, expect.any(Function));
     // executor.cancel not called when no active run exists for this schedule
     expect(executor.cancel).not.toHaveBeenCalled();
     const deleteEvent = events.find((e) => e.detail === 'deleted');
@@ -892,7 +894,7 @@ describe('SchedulerService', () => {
 
   // --- Delete While Running ---
 
-  it('deleteSchedule() cancels active run by runId', async () => {
+  it('deleteSchedule() cancels the original run at commit and refuses delayed admission', async () => {
     executor.execute.mockImplementation(
       () => new Promise(() => {}) // never resolves
     );
@@ -908,11 +910,63 @@ describe('SchedulerService', () => {
     const run = await service.triggerNow(schedule.id);
     await vi.advanceTimersByTimeAsync(50);
 
-    // Delete while run is active
-    await service.deleteSchedule(schedule.id);
-
-    // executor.cancel called with the run's ID (not schedule ID)
+    const remove = vi.mocked(repo.deleteSchedule).getMockImplementation()!;
+    let committed!: () => void;
+    const commit = new Promise<void>((resolve) => { committed = resolve; });
+    let finishCleanup!: () => void;
+    const cleanup = new Promise<void>((resolve) => { finishCleanup = resolve; });
+    vi.mocked(repo.deleteSchedule).mockImplementationOnce(async (id, onCommitted) => {
+      await remove(id, onCommitted);
+      committed();
+      await cleanup;
+    });
+    const deletion = service.deleteSchedule(schedule.id);
+    await commit;
     expect(executor.cancel).toHaveBeenCalledWith(run.id);
+    expect(await repo.getSchedule(schedule.id)).toBeNull();
+    finishCleanup();
+    await deletion;
+
+    for (const delayed of ['read', 'persist'] as const) {
+      const candidate = await service.createSchedule({
+        teamName: 'my-team', cronExpression: '0 9 * * *', timezone: 'UTC',
+        launchConfig: { cwd: '/tmp/project', prompt: `TEST delayed ${delayed}` },
+      });
+      let entered!: () => void;
+      const pending = new Promise<void>((resolve) => { entered = resolve; });
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => { release = resolve; });
+      const save = vi.mocked(repo.saveRun).getMockImplementation()!;
+      if (delayed === 'read') {
+        vi.mocked(repo.getSchedule).mockImplementationOnce(async () => {
+          entered();
+          await held;
+          return candidate;
+        });
+      } else {
+        vi.mocked(repo.saveRun).mockImplementationOnce(async (value) => {
+          entered();
+          await held;
+          await save(value);
+        });
+      }
+      const refused = expect(service.triggerNow(candidate.id)).rejects.toThrow('before dispatch');
+      await pending;
+      const savedCount = vi.mocked(repo.saveRun).mock.calls.length;
+      await service.deleteSchedule(candidate.id);
+      release();
+      await refused;
+      expect(repo.saveRun).toHaveBeenCalledTimes(savedCount);
+      expect(executor.execute).toHaveBeenCalledOnce();
+    }
+
+    // Neither delayed operation leaves a CWD lock behind.
+    const next = await service.createSchedule({
+      teamName: 'my-team', cronExpression: '0 9 * * *', timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project', prompt: 'TEST next independent schedule' },
+    });
+    await service.triggerNow(next.id);
+    expect(executor.execute).toHaveBeenCalledTimes(2);
 
     await service.stop();
   });

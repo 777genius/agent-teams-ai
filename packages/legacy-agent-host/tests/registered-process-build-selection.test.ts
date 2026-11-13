@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import childProcess, { ChildProcess } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createRequire, syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, sep, toNamespacedPath } from 'node:path';
 import { test } from 'node:test';
 import { buildProcessNativeArtifact } from '../scripts/buildProcessNativeArtifact.ts';
+import { buildLinuxProcessNativeArtifact } from '../scripts/buildLinuxProcessNativeArtifact.ts';
 import { createQualifiedDarwinProcessApi } from '../dist/process/DarwinRegisteredProcess.js';
 import { readPackagedProcessArtifact } from '../dist/process/readPackagedProcessArtifact.js';
 import { validateProcessCapture } from '../dist/process/validateProcessRecords.js';
@@ -37,6 +38,27 @@ function selected(t: TestContext, osBuild: string, architecture = process.arch) 
     binarySha256: hash(path) }));
   return { directory, manifestSha256: hash(manifestPath) };
 }
+
+test('Linux builder refuses an existing or linked output leaf before any compiler dispatch',
+  { skip: process.platform !== 'linux' || process.arch !== 'x64' }, t => {
+    const root = sandbox(t), headersRoot = join(root, 'headers'); mkdirSync(headersRoot);
+    const compiler = join(root, 'TEST-compiler'), inspector = join(root, 'TEST-inspector'), source = join(root, 'TEST-source.c');
+    for (const path of [compiler, inspector, source]) writeFileSync(path, 'TEST pinned input; never execute');
+    const headers = ['node_api.h', 'node_api_types.h', 'js_native_api.h', 'js_native_api_types.h'].map(file => {
+      const path = join(headersRoot, file); writeFileSync(path, `TEST ${file}`); return { file, sha256: hash(path) };
+    });
+    const shared = join(root, 'shared'), existing = join(root, 'existing'), linked = join(root, 'linked');
+    mkdirSync(shared); chmodSync(shared, 0o777); mkdirSync(existing, { mode: 0o700 }); symlinkSync(existing, linked);
+    let compiled = 0;
+    t.mock.method(childProcess, 'execFileSync', () => { compiled++; throw new Error('TEST compiler must not be reached'); });
+    syncBuiltinESMExports();
+    t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+    const input = { compiler, compilerSha256: hash(compiler), inspector, inspectorSha256: hash(inspector),
+      headersRoot, headers, source, sourceSha256: hash(source) };
+    for (const outputDirectory of [shared, existing, linked])
+      assert.throws(() => buildLinuxProcessNativeArtifact({ ...input, outputDirectory }), /new empty private artifact directory/u);
+    assert.equal(compiled, 0);
+  });
 
 // Synthetic ABI boundary only: the exact TEST addon load is mocked; no native bytes execute.
 function bridge(t: TestContext, osBuild: QualifiedDarwinBuild = '24G624') {

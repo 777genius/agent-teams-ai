@@ -655,3 +655,28 @@ R10 является планом следующего среза. R9 fix и с�
 
 **Оставшийся gate:** independent review source и exact-head native/Desktop CI ещё pending.
 Локальные composition fixtures/typecheck не являются native или Desktop PASS.
+
+
+### R12 — ограниченный разбор имени slash command
+
+PR1186 `PRRT_kwDORVTEtM625QoJ` указывает на overlapping whitespace regex в
+`packages/legacy-agent-host/src/team/nativeSessionCommand.ts`.
+Текущий код использует из match только command name и сохраняет исходный trimmed text.
+
+1. Разбирать только bounded имя (1–64 символа) с whitespace/end boundary.
+   Остаток строки не сканировать второй regex-группой: native arguments по-прежнему
+   передаются в исходном trimmed `raw`, без нового parser/normalizer.
+2. Сохранить прежние допустимые names, Unicode whitespace, многострочные аргументы,
+   отказ пустой/слишком длинной/невалидной команды и native ownership gates.
+3. В existing command integration добавить только существенные boundary/adversarial
+   inputs; проверить одинаковый результат до/после для конечного набора форм и
+   большой whitespace suffix без отдельной benchmark/unit suite.
+
+Source-круг: parser consumers читают только `name/raw`; arguments API не меняется.
+Architecture-круг: один bounded regex, без dependency или command framework.
+Независимое source review и existing command tests обязательны до source publication.
+
+Existing foreign-cost case при исполнении оказался остановлен раньше нужной проверки:
+он меняет commandId, оставляя старый payload.messageId. Исправить только oracle, связав
+оба ID с одной original попыткой; проверка чужой generation должна дойти до hold,
+а production запрет несовпадающих message/command IDs остаётся прежним.

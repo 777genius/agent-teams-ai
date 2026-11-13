@@ -1299,3 +1299,107 @@ Actual retry сохраняет request ID/receipt/key в existing effect cache;
 Existing exact capture остаётся. После initial capture все query/Stop/settle идут только по original key;
 новый tombstone registry ради исторического PID lookup не вводится. Этот selector требует собственного native proof
 и пока не входит ни в первый transport cut, ни в product `RegisteredProcessCapture` union.
+
+## 35. Linux cold UI: наблюдение двух исходных CDP holders до изменения admission
+
+Фактический run [43366664072](https://github.com/777genius/agent-teams-ai/actions/runs/43366664072),
+head `dc16f3373edd5994c41fb30ff660b0dd6a2beecc`: Linux job `131692551964` прошёл native Node26,
+Host Node24, Electron и actual SDK/service Stop; cold UI step12 отказал до UI interaction, packed steps13/14 skipped.
+Artifact `14012602104`, ZIP SHA256 `d7f18526518ca796ebb0ebdbbd2fdd53b302182d7b98767ede038face8477320`,
+сохранил original failed lsof read: PID5448/FD61 и PID5536/FD61, оба IPv4 loopback LISTEN,
+`inode=null`, `device=null`. Первый PID подтверждён Chromium log исходного Electron; роль второго не установлена.
+Одинаковый FD не доказывает общий socket. Controlled root/primary/neighbor cleanup и пустая app group подтверждены,
+но это не proof cold UI/packaged parity. ABI lane отдельно PASS; выводы о Main/Windows cold authority не меняются.
+
+Официальный [lsof manpage, OUTPUT FOR OTHER PROGRAMS](https://lsof.readthedocs.io/en/stable/manpage/)
+указывает, что inode `i` и protocol `P` взаимоисключающие и выводятся только доступные поля.
+Поэтому текущий `-FpfDtinPT` с TCP не гарантирует inode; ещё один такой же read не закрывает неопределённость.
+Следующий срез — только passive диагностика в existing `desktop-backend-observations.ts` и его existing regression,
+без изменения строгого `one CDP listener`, signal authority, выбора renderer или условий PASS:
+
+1. Перед original lsof сохранить birth/parent facts максимум64 уже captured TEST group entries из исходного ps read.
+   Linux `/proc/<pid>/stat` читается до4KiB; vanished/ambiguous/oversize/непокрытый лимитом PID → диагностическое unknown.
+2. Только после прежнего отказа и только для его retained PID/FD с отсутствующим inode прочитать
+   `/proc/<pid>/fd/<fd>` как symlink; принимать лишь `socket:[decimal]`. Сверить process birth до/после
+   этого read и с pre-lsof capture; изменение/исчезновение даёт unknown, не fallback или adoption.
+3. В той же ограниченной диагностике сохранить parent/PGID и finite role из оригинального процесса;
+   `/proc/<pid>/cmdline` читается до4KiB только для retained holders и проецируется в фиксированный role enum.
+   Никаких argv/env/payload/path dumps: разрешены только известные роли Electron/Node и `unknown`.
+   Показать, что FD observation сделано **после** original census; оно не является атомарным lsof snapshot
+   и не доказывает непрерывное владение FD между чтениями. Непрерывность нельзя вывести из одного PID.
+4. Сохранить original AssertionError и прежний WeakMap receipt; supplemental failure не заменяет его
+   и не влияет на cleanup. Верхние границы group/process/FD reads явные; max16 retained descriptors,
+   никаких machine-wide searches, periodic polling или второго runner.
+5. Дополнить один existing critical diagnostic case: reused/vanished birth не получает socket identity,
+   two-holder refusal сохраняется даже при совпадающем socket inode; private markers не сериализуются.
+   После root/peer source review и focused types этот TEST срез идёт в очередной необходимый native cut,
+   без отмены/ручного повторения текущего штатного run для `dde51b477db6a41fc4d69ab6fbe1e10f6db3e5e2`.
+
+Это discovery gate перед исправлением actual harness cause. Пока нет новых exact-source artifacts,
+shared-socket inheritance, безопасный alternate admission и успешный Linux cold UI/packaged не заявляются.
+
+## 36. Следующий review-driven cut: четыре ограниченных lifecycle/build исправления
+
+Source baseline — `dde51b477db6a41fc4d69ab6fbe1e10f6db3e5e2`; перед изменениями root/peer review.
+Никаких новых владельцев, журналов, native fallback, увеличения timeout или изменения product activation.
+
+| Подтверждённый thread | Причина в текущем source | Минимальная правка и доказательство |
+| --- | --- | --- |
+| `PRRT_kwDORVTEtM622S05`, failed prepare cleanup | `WindowsCapability.prepare` после sealed race возвращает retained `cleanup`, но `WindowsCapturedProcess.stop` вызывает drain только при `allocation.prepared`; release затем отказывает из-за `drainSettled=false`. | Перенести уже существующий typed `drain(deadline)` в `PendingOwnedProcess`; wrapper дренирует ту же pending capability и лишь затем передаёт её genuine receipt в release. 3s drain и native Stop/release proof сохраняются; incomplete drain отдельно от tree absence. |
+| `PRRT_kwDORVTEtM622S1t`, expired Stop cache | Таймер разрешает shared `stopOperation.promise` как unknown, но pointer остаётся до wire ACK/60s; новые explicit close attempts используют уже завершённый unknown и исчерпывают wrapper limit4. Немедленная повторная отправка тоже неверна: native `stopBusy.exchange(true)` при ещё активном Stop вызывает `abandon()`. | Удалять только истёкшую shared operation при её deadline, сохраняя original wire waiter/ID и immutable result прежнего attempt. Проверять expiry также при новом admission, если timer callback задержан. Новый explicit attempt ждёт settlement прежнего wire Stop в своём прежнем deadline; только после него допускается fresh wire dispatch/accounting того же original Job. Late old ACK может снять ожидание, но не завершает и не удаляет новый attempt. |
+| `PRRT_kwDORVTEtM622VsE`, native failure artifacts | Node26/24/Electron qualifier выполняется до `cp`, поэтому при его failure исходная artifact/manifest directory не попадает в always-upload. | Existing always artifact step включает три exact `$RUNNER_TEMP/TEST-linux-{node26,node24,electron}-$GITHUB_RUN_ID` directories независимо от exit qualifier. Failure остаётся failure; нет broad filesystem glob/new job. |
+| `PRRT_kwDORVTEtM622VsM`, private build directory | Recursive mkdir разрешает существующую empty directory, не обеспечивая заявленный контракт new/private. | Exclusive leaf mkdir, canonical parent и проверка созданной leaf identity/type/owner/private mode перед compiler. Existing directory/symlink отказывается; существующие permissions не исправляются chmod. Native/ABI callers уже создают private parent и передают несуществующую leaf `artifact`. |
+
+Конкретные source paths: `packages/legacy-agent-host/src/owned-process/contract.ts`,
+`src/adapters/providers/WindowsCapturedProcess.ts` относительно того же Host package,
+`src/owned-process/windowsBroker.ts`, `packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts`
+и `.github/workflows/sentry-owned-process-native.yml`. Main reexports используют canonical Host core автоматически.
+`windowsBroker.ts` на этом baseline содержит786 строк. Чтобы не обходить800-line cap сжатием lifecycle-кода,
+механически вынести существующие `boundedFile`/`verifyStagedBroker` в соседний `brokerArtifact.ts`;
+исходный module импортирует и reexport-ит ту же функцию с прежней сигнатурой. Все PE/hash/manifest/input bounds
+сохраняются; это перенос существующей проверки, не новый owner, protocol или admission policy.
+Нативный broker/Job owner и прежние 4 wire waiters/64 attempt receipts остаются; native `stopBusy`/confirmed accounting
+не заменяются предположением, что deadline означает неотправленный effect. Один старый attempt не replay-ится новым ID.
+Если исходный wire не завершился до deadline следующего attempt, следующий тоже остаётся unknown без второго Stop frame;
+завершение transport ожидания без ACK не доказывает, что native `stopBusy` освобождён: fresh dispatch допускается лишь
+после actual original wire reply, либо original broker terminal state исключает любые новые отправки.
+
+Расширить существующий `tools/owned-process-broker/protocol.test.ts` двумя critical cases:
+Stop во время held prepare → failed preparation, original bounded drain, receipt/release; expired shared Stop →
+immutable original unknown, отсутствие второго Stop frame до original ACK, затем fresh explicit attempt/ACK и
+невозможность завершить его старым ACK. Это synthetic wire policy, не native cleanup proof.
+В `registered-process-build-selection.test.ts` добавить только refusal существующей непригодной directory без compiler call;
+положительный build/load остаётся реальным existing Linux/ABI CI. Native Windows facade/prepare cancellation сценарий
+проверяется existing harness при следующем штатном native cut; guard/timer не ослабляются ради теста.
+
+Отдельно остаётся `PRRT_kwDORVTEtM623zRW`: root-oracle deadline привязан к регистрации, а поздняя cleanup фаза имеет
+собственный допустимый бюджет. Перед его правкой нужен узкий phase-boundary вариант с тем же original capture,
+одним initial read и bounded cleanup window, без увеличения времени/числа native queries. Этот finding не скрывается
+ни source PASS transport §34, ни успешными SDK runs; он не расширяет текущий четырёхпунктный cut.
+
+## 37. Original-root oracle: deadline именно выполняемой фазы
+
+`PRRT_kwDORVTEtM623zRW` подтверждён текущим source, но не объявляется причиной любого CI failure:
+`desktop-process-root-oracle.ts` создаёт `Date.now()+180000` при регистрации, а
+`desktop-native-process-host.ts` сначала доказывает root live, затем выполняет реальные provider/RPC/service
+фазы и обращается к тому же oracle только после owner Stop/close. Его cleanup loop уже имеет собственный
+30s deadline и3s interval. Валидные предыдущие фазы могут израсходовать старые180s до первого cleanup read.
+
+Минимальный срез — три existing helper/caller и один critical case в existing observations test:
+
+1. `createDesktopProcessRootOracle` сохраняет тот же validated original capture, exact artifact selection и
+   суммарный max12 запросов; ни новый oracle/capture, ни новый native owner между фазами не создаются.
+   `observe(deadlineMs)` принимает absolute deadline исходного caller; перед каждым read требует остаток,
+   ограничивает native actor timeout значением `min(5000, remaining)` и отвергает поздний ответ.
+2. `desktop-native-process-host.ts`: initial `same-live` read получает прежний max5s; cleanup передаёт
+   original deadline уже существующего30s `wait` в callback, а не создаёт новый срок при каждой итерации.
+   Остальные callback этого helper сохраняют прежнее поведение; interval3s и total query cap не растут.
+3. `desktop-controlled-process-fixture.ts`: единственный read после original EOF/child cleanup использует
+   тот же max5s. Existing15s ожидание root exit и3s ожидание детей не меняются.
+4. Один bounded test: время между initial и cleanup переводится за180s; original capture/selection/argv
+   не меняются, cleanup использует свой исходный30s и обрезает каждое чтение до остатка. Просроченный caller,
+   поздний ответ и13-й запрос отвергаются без signal/replay. Это проверка бюджета TEST actor, не native proof.
+
+Общая длительность native/provider/UI сценария не увеличивается и внешний CI timeout остаётся прежним.
+Меняется ошибочная привязка read deadline к неактивной прошлой фазе; Windows/Linux product custody,
+opaque captures, decoder и root-only запрет production signal не затрагиваются. До source нужен root review.

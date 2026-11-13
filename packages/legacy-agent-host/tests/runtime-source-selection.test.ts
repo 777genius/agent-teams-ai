@@ -238,6 +238,37 @@ test('publication pins new captures while seed and retained captures replay unch
   assert.throws(() => f.restart(), { code: 'held' }, 'missing published index cannot fall back to the seed after restart');
 });
 
+test('member project source is captured before preparation and retained through cold compile', async (t) => {
+  const f = leased(t), workerCwd = join(f.root, 'TEST-worker-project');
+  mkdirSync(workerCwd);
+  f.profile.management!.push({ ...f.profile.management![0]!, cwd: workerCwd,
+    profileId: 'TEST-worker-management', configRevision: 'TEST-worker-config' });
+  f.profile.runtime!.members.push({ ...f.profile.runtime!.members[0]!, memberId: 'worker',
+    principalId: 'TEST-worker-agent', sessionId: 'TEST-worker-session', cwd: workerCwd });
+  f.profile.teams[0]!.members.push({ memberId: 'worker', name: 'worker', role: 'member' });
+  f.roster.members.push({ memberId: 'worker', name: 'worker', role: 'member', settings: { cwd: workerCwd } });
+  const workerGrant = { ...f.grant, targetId: 'e'.repeat(64), projectPath: workerCwd,
+    profileId: 'TEST-worker-management', configRevision: 'TEST-worker-config' };
+  const lead = await f.index.publish({ grant: f.grant, commandId: 'TEST-lead-project',
+    expectedRevision: f.index.current({ grant: f.grant }).revision, candidate: f.candidate }, () => {});
+  const worker = await f.index.publish({ grant: workerGrant, commandId: 'TEST-worker-project',
+    expectedRevision: f.index.current({ grant: workerGrant }).revision,
+    candidate: { sourceKind: 'override', executable: f.original } }, () => {});
+  const captured = captureRuntimeSource(f.profile, f.team, 'TEST-project-capture', 'TEST-roster', f.roster,
+    { deferMcp: true, sources: f.index });
+  assert.deepEqual(captured.recipeSources, [
+    { memberId: 'lead', sourceId: f.grant.targetId, revision: lead.selection!.revision },
+    { memberId: 'worker', sourceId: workerGrant.targetId, revision: worker.selection!.revision },
+  ]);
+  await f.index.publish({ grant: workerGrant, commandId: 'TEST-worker-new-default',
+    expectedRevision: worker.selection!.revision, candidate: f.candidate }, () => {});
+  f.restart();
+  const profiles = compileRuntimeCapture(f.profile, f.team, captured, 'model-preflight', f.index).profiles;
+  assert.deepEqual(profiles.map(row => ({ cwd: row.cwd, executable: row.executable })), [
+    { cwd: f.root, executable: f.replacement }, { cwd: workerCwd, executable: f.original },
+  ]);
+});
+
 test('source admission refuses scope widening, changed bytes and arbitrary configuration without changing current', async (t) => {
   const f = leased(t),
     initial = f.index.current({ grant: f.grant });
@@ -270,7 +301,9 @@ test('source admission refuses scope widening, changed bytes and arbitrary confi
     f.index.publish(input, () => assert.fail('unverified bytes cannot be admitted'))
   );
   assert.deepEqual(f.index.current({ grant: f.grant }), initial);
-  assert.equal(f.index.lookup({ grant: f.grant, commandId: input.commandId })?.phase, 'prepared');
+  assert.deepEqual(f.index.lookup({ grant: f.grant, commandId: input.commandId }),
+    { commandId: input.commandId, phase: 'held', reason: 'source-changed' });
+  assert.equal(new FileManagementCommandStore(f.root).read(input.commandId)?.resourceHeld, false);
   assert.equal(
     f.index.currentForRecipe(
       { ...f.profile.teams[0]!.scope, teamId: 'foreign' },
@@ -339,9 +372,8 @@ test('private Host RPC publishes and restores sources and admits existing Skills
         const target = waiting.get(frame.id);
         if (target) {
           waiting.delete(frame.id);
-          frame.error
-            ? target.reject(new Error(frame.error.message))
-            : target.resolve(frame.result);
+          if (frame.error) target.reject(new Error(frame.error.message));
+          else target.resolve(frame.result);
         }
       }
     });

@@ -16,6 +16,26 @@ import {
   type RpcRequest,
   TEAM_HOST_DISPOSE_TIMEOUT_MS,
 } from '@agent-teams/legacy-agent-host/contracts';
+import {
+  HOST_CUSTODY_BIND_METHOD,
+  HOST_CUSTODY_CAPABILITY,
+  HOST_CUSTODY_FRAME_BYTES,
+  HOST_CUSTODY_METHOD,
+  HOST_CUSTODY_READY_METHOD,
+  type HostCustodyBinding,
+  hostCustodyBindingSchema,
+  type HostCustodyCall,
+  hostCustodyControl,
+  type HostCustodyHint,
+  hostCustodyHintSchema,
+  type HostCustodyOwner,
+  type HostCustodyPort,
+  type HostCustodyReply,
+  hostCustodyRequestSchema,
+  hostCustodySequence,
+  sameHostCustodyBinding,
+  validateHostCustodyResult,
+} from '@agent-teams/legacy-agent-host/owned-process';
 import { createLogger } from '@shared/utils/logger';
 
 import { decodeClaudeCloseDiagnostics } from './decodeClaudeCloseDiagnostics';
@@ -93,6 +113,14 @@ export class CapturedHostClient {
   private writeBytes = 0;
   private writeCount = 0;
   private writeTimers = new Set<ReturnType<typeof setTimeout>>();
+  private readonly nativeAbort = new AbortController();
+  private nativeBinding?: HostCustodyBinding;
+  private nativePort?: HostCustodyPort;
+  private nativeUnsubscribe?: () => void;
+  // HostOutput preserves FIFO within each lane while control can overtake queued work.
+  private readonly nativeHighWatermark = { work: 0n, control: 0n };
+  private readonly nativePending = new Map<string, HostCustodyCall>();
+  private readonly nativeHints = new Map<string, { hint: HostCustodyHint; sent: boolean }>();
   private diagnosticTail = Buffer.alloc(0);
   private readonly retainCloseDiagnostic = decodeClaudeCloseDiagnostics(
     (observation) => {
@@ -112,7 +140,10 @@ export class CapturedHostClient {
     }
   );
 
-  constructor(profile: SelectedHostProfile) {
+  constructor(
+    profile: SelectedHostProfile,
+    private readonly nativeOwner?: HostCustodyOwner
+  ) {
     this.profile = captureHostProfile(profile);
   }
 
@@ -163,6 +194,7 @@ export class CapturedHostClient {
         this.profile.startupTimeoutMs
       );
       const handshake = this.validateHandshake(result);
+      if (this.nativeOwner) await this.bindNative(handshake);
       if (this.sealed) throw new HostClientError('shutting-down', 'not-dispatched');
       this.ready = true;
       observeCapturedHostStartup('ready');
@@ -213,6 +245,8 @@ export class CapturedHostClient {
     params?: JsonValue,
     options: { control?: boolean } = {}
   ): Promise<JsonValue> {
+    if (method.startsWith(HOST_CUSTODY_METHOD))
+      return Promise.reject(new HostClientError('protocol-error', 'not-dispatched'));
     if (!this.ready || this.sealed) {
       return Promise.reject(
         new HostClientError(this.sealed ? 'shutting-down' : 'transport-closed', 'not-dispatched')
@@ -258,13 +292,7 @@ export class CapturedHostClient {
     } catch {
       return Promise.reject(new HostClientError('protocol-error', 'not-dispatched'));
     }
-    const writeCountLimit = control
-      ? this.limits.maxPriorityMessages
-      : this.limits.maxPriorityMessages - this.limits.reservedControlRequests;
-    const writeByteLimit = control
-      ? this.limits.maxPriorityBytes
-      : this.limits.maxPriorityBytes - this.limits.maxFrameBytes;
-    if (this.writeCount >= writeCountLimit || this.writeBytes + frame.length > writeByteLimit) {
+    if (!this.canWrite(frame.length, control)) {
       return Promise.reject(new HostClientError('capacity-exceeded', 'not-dispatched'));
     }
     return new Promise<JsonValue>((resolve, reject) => {
@@ -292,21 +320,238 @@ export class CapturedHostClient {
         timer,
         maxFrameBytes: hostMethodFrameLimit(method, this.profile.reviewTransport),
       });
-      this.writeBytes += frame.length;
-      this.writeCount++;
-      const writeTimer = setTimeout(
-        () => this.fail(new HostClientError('transport-closed', 'unknown')),
-        this.profile.writeTimeoutMs
-      );
-      this.writeTimers.add(writeTimer);
-      child.stdin.write(frame, (error) => {
-        clearTimeout(writeTimer);
-        this.writeTimers.delete(writeTimer);
-        this.writeBytes -= frame.length;
-        this.writeCount--;
-        if (error) this.fail(new HostClientError('transport-closed', 'unknown'));
-      });
+      if (!this.writeFrame(frame, control))
+        this.fail(new HostClientError('transport-closed', 'unknown'));
     });
+  }
+
+  private canWrite(bytes: number, control: boolean): boolean {
+    const count =
+      this.limits.maxPriorityMessages - (control ? 0 : this.limits.reservedControlRequests);
+    const budget = this.limits.maxPriorityBytes - (control ? 0 : this.limits.maxFrameBytes);
+    // Reserve each admitted reverse reply before the owner can consume bytes or perform an effect.
+    return (
+      this.writeCount + this.nativePending.size < count &&
+      this.writeBytes + this.nativePending.size * (HOST_CUSTODY_FRAME_BYTES + 1) + bytes <= budget
+    );
+  }
+
+  private writeFrame(frame: Buffer, control: boolean): boolean {
+    const child = this.child;
+    if (
+      this.sealed ||
+      !child ||
+      this.exited ||
+      child.stdin.destroyed ||
+      !this.canWrite(frame.length, control)
+    )
+      return false;
+    this.writeBytes += frame.length;
+    this.writeCount++;
+    let completed = false;
+    const timer = setTimeout(
+      () => this.fail(new HostClientError('transport-closed', 'unknown')),
+      this.profile.writeTimeoutMs
+    );
+    this.writeTimers.add(timer);
+    const finish = (error?: Error | null) => {
+      if (completed) return;
+      completed = true;
+      clearTimeout(timer);
+      this.writeTimers.delete(timer);
+      this.writeBytes -= frame.length;
+      this.writeCount--;
+      if (error) this.fail(new HostClientError('transport-closed', 'unknown'));
+      else this.pumpNativeHints();
+    };
+    try {
+      child.stdin.write(frame, finish);
+    } catch {
+      finish(new Error('Captured Host write failed'));
+      return false;
+    }
+    return true;
+  }
+
+  private async bindNative(handshake: HostHandshake): Promise<void> {
+    const owner = this.nativeOwner;
+    if (!owner || !this.exitPromise || !handshake.capabilities.includes(HOST_CUSTODY_CAPABILITY))
+      throw new HostClientError('profile-mismatch', 'unknown');
+    const {
+      env,
+      startupTimeoutMs: _startup,
+      requestTimeoutMs: _request,
+      writeTimeoutMs: _write,
+      shutdownTimeoutMs: _shutdown,
+      ...source
+    } = this.profile;
+    const profileDigest = createHash('sha256')
+      .update(
+        JSON.stringify({
+          ...source,
+          env: Object.entries(env).sort(([a], [b]) => a.localeCompare(b)),
+        })
+      )
+      .digest('hex');
+    const binding = hostCustodyBindingSchema.parse({
+      mainEpoch: owner.mainEpoch,
+      hostIncarnation: handshake.hostIncarnation,
+      profileDigest,
+    });
+    this.nativeBinding = Object.freeze(binding);
+    this.nativePort = owner.attach({
+      binding,
+      profileId: this.profile.profileId,
+      signal: this.nativeAbort.signal,
+      hostExited: this.exitPromise,
+    });
+    const ack = await this.send(
+      HOST_CUSTODY_BIND_METHOD,
+      binding,
+      true,
+      this.profile.startupTimeoutMs
+    );
+    if (!isRecord(ack) || ack.bound !== true || this.sealed)
+      throw new HostClientError('profile-mismatch', 'unknown');
+    this.nativeUnsubscribe = this.nativePort.onReadable((hint) => this.queueNativeHint(hint));
+  }
+
+  private queueNativeHint(value: HostCustodyHint): void {
+    if (this.sealed) return;
+    const parsed = hostCustodyHintSchema.safeParse(value);
+    if (!parsed.success) {
+      this.fail(new HostClientError('protocol-error', 'unknown'));
+      return;
+    }
+    const hint = parsed.data;
+    const key = `${hint.capability}:${hint.stream}`;
+    const previous = this.nativeHints.get(key);
+    if (!previous) {
+      if (this.nativeHints.size >= this.limits.maxPendingRequests) {
+        this.fail(new HostClientError('capacity-exceeded', 'unknown'));
+        return;
+      }
+    }
+    this.nativeHints.set(key, { hint, sent: previous?.sent ?? false });
+    this.pumpNativeHints();
+  }
+
+  private pumpNativeHints(): void {
+    if (this.sealed || !this.nativeBinding) return;
+    for (const hint of this.nativeHints.values()) {
+      if (hint.sent) continue;
+      const frame = Buffer.from(
+        JSON.stringify({
+          jsonrpc: '2.0',
+          method: HOST_CUSTODY_READY_METHOD,
+          params: { binding: this.nativeBinding, hint: hint.hint },
+        }) + '\n'
+      );
+      if (!this.canWrite(frame.length, false)) return;
+      hint.sent = true;
+      if (!this.writeFrame(frame, false)) {
+        this.fail(new HostClientError('transport-closed', 'unknown'));
+        return;
+      }
+    }
+  }
+
+  private receiveNative(value: unknown, frameBytes: number): void {
+    const parsed = hostCustodyRequestSchema.safeParse(value);
+    const binding = this.nativeBinding,
+      port = this.nativePort;
+    if (
+      !parsed.success ||
+      frameBytes > HOST_CUSTODY_FRAME_BYTES ||
+      !binding ||
+      !port ||
+      !sameHostCustodyBinding(parsed.data.params.binding, binding)
+    )
+      throw new Error('Native request');
+    const {
+      id,
+      params: { call },
+    } = parsed.data;
+    const control = hostCustodyControl(call);
+    const sequence = hostCustodySequence(id, binding.hostIncarnation, control);
+    if (sequence === undefined) throw new Error('Native request ID');
+    const lane = control ? 'control' : 'work';
+    if (sequence <= this.nativeHighWatermark[lane]) {
+      this.replyNative(id, { status: 'unknown' });
+      return;
+    }
+    this.nativeHighWatermark[lane] = sequence;
+    const capacity =
+      this.limits.maxPendingRequests - (control ? 0 : this.limits.reservedControlRequests);
+    if (
+      this.nativePending.size >= capacity ||
+      !this.canWrite(HOST_CUSTODY_FRAME_BYTES + 1, control) ||
+      (call.operation === 'read' &&
+        [...this.nativePending.values()].some(
+          (other) =>
+            other.operation === 'read' &&
+            other.capability === call.capability &&
+            other.stream === call.stream
+        ))
+    ) {
+      this.replyNative(id, { status: 'refused' });
+      return;
+    }
+    this.nativePending.set(id, call);
+    void this.executeNative(id, call, port);
+  }
+
+  private async executeNative(
+    id: string,
+    call: HostCustodyCall,
+    port: HostCustodyPort
+  ): Promise<void> {
+    const hintKey = call.operation === 'read' ? `${call.capability}:${call.stream}` : undefined;
+    const admittedHint = hintKey ? this.nativeHints.get(hintKey) : undefined;
+    let reply: HostCustodyReply;
+    try {
+      reply = {
+        status: 'completed',
+        value: validateHostCustodyResult(call, await port.handle(call)),
+      };
+    } catch {
+      reply = { status: 'unknown' };
+    }
+    if (this.sealed || !this.nativePending.delete(id)) return;
+    const read =
+      reply.status === 'completed' && reply.value.operation === 'read' ? reply.value : undefined;
+    if (hintKey && read) {
+      const current = this.nativeHints.get(hintKey);
+      if (current === admittedHint) this.nativeHints.delete(hintKey);
+      else if (current) current.sent = false; // New readiness must follow this read's reply.
+    }
+    this.replyNative(id, reply);
+    if (call.operation === 'read' && read?.more)
+      this.queueNativeHint({ capability: call.capability, stream: call.stream });
+    this.pumpNativeHints();
+  }
+
+  private replyNative(id: string, reply: HostCustodyReply): void {
+    const frame = Buffer.from(
+      JSON.stringify({ jsonrpc: '2.0', id, result: { binding: this.nativeBinding, reply } }) + '\n'
+    );
+    // Exchange already-reserved reply bytes; completion is not a new work admission.
+    if (frame.length - 1 > HOST_CUSTODY_FRAME_BYTES || !this.writeFrame(frame, true))
+      this.fail(new HostClientError('transport-closed', 'unknown'));
+  }
+
+  private sealNative(): void {
+    this.nativeAbort.abort();
+    const unsubscribe = this.nativeUnsubscribe;
+    this.nativeUnsubscribe = undefined;
+    this.nativePending.clear();
+    this.nativeHints.clear();
+    try {
+      unsubscribe?.();
+    } catch {
+      /* Transport failure retains the independent physical owner. */
+    }
+    // The caller-owned physical port/receipts remain outside this transport's lifetime.
   }
 
   private decode(chunk: Buffer): void {
@@ -345,6 +590,10 @@ export class CapturedHostClient {
     try {
       const message: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(frame));
       if (!isRecord(message) || message.jsonrpc !== '2.0') throw new Error('envelope');
+      if (typeof message.method === 'string' && message.method.startsWith(HOST_CUSTODY_METHOD)) {
+        this.receiveNative(message, frame.length);
+        return true;
+      }
       if ('id' in message) {
         if (typeof message.id !== 'string' || 'result' in message === 'error' in message)
           throw new Error('response');
@@ -406,6 +655,7 @@ export class CapturedHostClient {
 
   private fail(error: HostClientError): void {
     this.sealed = true;
+    this.sealNative();
     this.ready = false;
     this.frame = Buffer.alloc(0);
     this.frameBytes = 0;
@@ -423,6 +673,7 @@ export class CapturedHostClient {
 
   shutdown(): Promise<CapturedHostShutdown> {
     this.sealed = true; // Synchronous fence prevents late validation/startup from allocating.
+    this.sealNative();
     this.ready = false;
     this.shutdownPromise ??= this.dispose();
     return this.shutdownPromise;

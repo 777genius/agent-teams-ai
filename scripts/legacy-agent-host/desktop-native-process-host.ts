@@ -158,7 +158,7 @@ async function qualifyOriginalNativeRegistration(
     capture: primary.capturedNative, selection: profile.processCustody,
     observe: capture => custody.observe(capture) });
   const { rootCapture } = rootOracle;
-  assert.equal(rootOracle.observe(), 'same-live', 'original SDK root before any Stop or crash');
+  assert.equal(rootOracle.observe(Date.now() + 5000), 'same-live', 'original SDK root before any Stop or crash');
   const linux = primary.capturedNative.version === 3;
   const adapter = linux ? 'LinuxRegisteredProcess' : 'DarwinRegisteredProcess';
   const oraclePaths = [
@@ -445,9 +445,9 @@ export async function qualifyNativeRegistrationThenStop(
     const lines = text.trim().split('\n').filter(Boolean); assert.ok(lines.length <= 3);
     return lines.map(line => row(JSON.parse(line)));
   };
-  const wait = async (check: () => Promise<boolean>, label: string, intervalMs = 100) => {
+  const wait = async (check: (deadline: number) => Promise<boolean>, label: string, intervalMs = 100) => {
     const deadline = Date.now() + 30_000;
-    do { if (await check()) return; await delay(intervalMs); } while (Date.now() < deadline);
+    do { if (await check(deadline)) return; await delay(intervalMs); } while (Date.now() < deadline);
     throw new Error(`Original normal process observation exhausted: ${label}; no replay`);
   };
   let failure: unknown;
@@ -494,7 +494,7 @@ export async function qualifyNativeRegistrationThenStop(
     assert.equal(runtime.phase, 'closed'); assert.equal(runtime.custody, 'released');
     proof.runtime = runtime;
     await close();
-    await wait(async () => rootOracle.observe() === 'absent', 'original SDK root absent', 3000);
+    await wait(async deadline => rootOracle.observe(deadline) === 'absent', 'original SDK root absent', 3000);
     await wait(async () => (await lifecycle('neighbor')).some(event => event.event === 'closed'),
       'original neighbor lifecycle closed during owner cleanup');
     const neighborLifecycle = await lifecycle('neighbor');

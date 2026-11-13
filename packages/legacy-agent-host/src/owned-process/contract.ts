@@ -77,6 +77,8 @@ export interface PendingOwnedProcess {
   /** Observed finite transport facts only; never a tree proof or new authority. */
   diagnostics(): ControlDiagnostics;
   stop(request: StopRequest): Promise<TreeOutcome>;
+  /** Independently bounded even when preparation failed; never a tree proof. */
+  drain(deadlineMs: number): Promise<TargetDrain>;
   /** Last-handle containment fallback; retains unknown evidence, never releases ownership. */
   abandonControl(expectedOwner: ProcessOwner): void;
   /** Requires this capability's genuine receipt and component-required coverage. */
@@ -91,8 +93,6 @@ export interface PreparedOwnedProcess extends PendingOwnedProcess {
   observeTransportFailure(callback: (reason: string) => void): () => void;
   /** Persist exact owner and attach runtime observers in installOwner before native resume. */
   resume(expectedOwner: ProcessOwner, installOwner: () => Promise<void>): Promise<void>;
-  /** Lifecycle finalization must wait for this independently bounded drain. */
-  drain(deadlineMs: number): Promise<TargetDrain>;
 }
 export type Preparation =
   | Readonly<{ kind: 'prepared'; process: PreparedOwnedProcess }>

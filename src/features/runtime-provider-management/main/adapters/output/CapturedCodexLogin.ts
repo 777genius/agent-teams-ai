@@ -32,6 +32,7 @@ interface Login {
   receipt?: ProviderOAuthSnapshot;
   settled: boolean;
   observing?: boolean;
+  retirement?: { state: CodexLoginStateDto; pending?: Promise<void> };
 }
 
 /** Private original intent and UI observation; the Host alone owns native login/completion. */
@@ -60,11 +61,18 @@ export class CapturedCodexLogin {
   async observe(target: CapturedProviderManagement): Promise<void> {
     this.abort.signal.throwIfAborted();
     const recovered = this.recovery !== undefined;
-    this.recovery ??= this.recover();
-    await this.recovery;
+    await this.ensureRecovered();
     if (this.active?.intent.targetId === target.targetId && target.isCurrent())
       this.active.presentationTarget = target;
     const entry = this.active;
+    if (recovered && entry?.retirement) {
+      try {
+        await this.retire(entry);
+      } catch {
+        this.fail(entry);
+      }
+      return;
+    }
     if (
       recovered &&
       entry &&
@@ -78,6 +86,16 @@ export class CapturedCodexLogin {
       } finally {
         this.reconciling = undefined;
       }
+    }
+  }
+
+  private async ensureRecovered(): Promise<void> {
+    const pending = (this.recovery ??= this.recover());
+    try {
+      await pending;
+    } catch (error) {
+      if (this.recovery === pending) this.recovery = undefined;
+      throw error;
     }
   }
 
@@ -126,7 +144,7 @@ export class CapturedCodexLogin {
   async start(target: CapturedCodexTarget, mode: CodexChatgptLoginMode): Promise<void> {
     if (!['browser', 'device_code'].includes(mode)) throw new Error('Invalid Codex sign-in mode.');
     const before = this.active;
-    const recovering = before?.state.status === 'failed' && !before.settled;
+    const recovering = before?.retirement || (before?.state.status === 'failed' && !before.settled);
     await this.observe(target);
     if ((this.active && this.active !== before) || recovering) return;
     if (this.admission) return this.admission;
@@ -148,6 +166,7 @@ export class CapturedCodexLogin {
     if (
       !target.isCurrent() ||
       !target.originalContextId ||
+      (await this.intents.pendingLogin()) ||
       (await this.intents.read(target.targetId))
     )
       throw new Error(unavailable);
@@ -180,16 +199,27 @@ export class CapturedCodexLogin {
         ['busy', 'invalid', 'conflict'].includes(String(reply.code)) &&
         Object.keys(reply).length === 2
       ) {
-        await this.intents.retire(intent);
-        entry.settled = true;
-        throw new Error(unavailable);
+        await this.settle(entry, {
+          status: 'failed',
+          error: unavailable,
+          startedAt: entry.state.startedAt,
+        });
+        return;
       }
       await this.accept(entry, result);
       if (!entry.settled) void this.watch(entry);
     } catch (error) {
       if (error instanceof BackendRoutingError && error.outcome === 'not-dispatched') {
-        await this.intents.retire(intent);
-        entry.settled = true;
+        try {
+          await this.settle(entry, {
+            status: 'failed',
+            error: unavailable,
+            startedAt: entry.state.startedAt,
+          });
+          return;
+        } catch {
+          // No native receipt exists. A later observation retries only the original local retirement.
+        }
       }
       // An unknown dispatch remains available to cancel/read with the original ID.
       this.fail(entry);
@@ -245,21 +275,27 @@ export class CapturedCodexLogin {
     if (entry.receipt && receipt.sequence < entry.receipt.sequence) return;
     if (entry.receipt?.sequence === receipt.sequence && entry.receipt.phase !== receipt.phase)
       throw new Error(unavailable);
+    if (entry.receipt?.sequence === receipt.sequence && entry.settled && !entry.retirement) return;
     const previous = entry.receipt?.sequence;
     entry.receipt = receipt;
     if (terminal(receipt.phase)) {
-      entry.state = {
+      const state: CodexLoginStateDto = {
         status:
           receipt.phase === 'completed'
             ? 'idle'
             : receipt.phase === 'cancelled'
               ? 'cancelled'
               : 'failed',
-        error: receipt.phase === 'held' ? unavailable : receipt.phase === 'failed' ? rejected : null,
+        error:
+          receipt.phase === 'held' ? unavailable : receipt.phase === 'failed' ? rejected : null,
         startedAt: entry.state.startedAt,
       };
+      if (receipt.phase !== 'held') {
+        await this.settle(entry, state);
+        return;
+      }
+      entry.state = state;
       entry.settled = true;
-      if (receipt.phase !== 'held') await this.intents.retire(entry.intent);
     } else {
       entry.state = {
         ...entry.state,
@@ -268,6 +304,31 @@ export class CapturedCodexLogin {
       };
     }
     if (previous !== receipt.sequence) this.notify(entry, terminal(receipt.phase));
+  }
+
+  private settle(entry: Login, state: CodexLoginStateDto): Promise<void> {
+    entry.settled = true; // The known native outcome must never be dispatched again.
+    entry.state = state;
+    entry.retirement ??= { state };
+    return this.retire(entry);
+  }
+
+  private async retire(entry: Login): Promise<void> {
+    const retirement = entry.retirement;
+    if (!retirement) return;
+    if (retirement.pending) return retirement.pending;
+    const pending = this.intents.retire(entry.intent).then(() => {
+      if (entry.retirement !== retirement) return;
+      entry.retirement = undefined;
+      entry.state = retirement.state;
+      this.notify(entry, true);
+    });
+    retirement.pending = pending;
+    try {
+      await pending;
+    } finally {
+      if (retirement.pending === pending) retirement.pending = undefined;
+    }
   }
 
   private async authorization(entry: Login): Promise<void> {
@@ -338,10 +399,20 @@ export class CapturedCodexLogin {
   }
 
   async cancel(): Promise<void> {
-    this.recovery ??= this.recover();
-    await this.recovery;
+    const recovered = this.recovery !== undefined;
+    await this.ensureRecovered();
     await this.admission;
     const entry = this.active;
+    if (entry?.retirement) {
+      if (recovered) {
+        try {
+          await this.retire(entry);
+        } catch {
+          this.fail(entry);
+        }
+      }
+      return;
+    }
     if (!entry || entry.settled) return;
     try {
       await this.accept(

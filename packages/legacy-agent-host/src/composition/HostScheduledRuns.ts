@@ -118,7 +118,7 @@ export class HostScheduledRuns {
     running.pending = Promise.resolve().then(() => this.execute(running)).finally(() => {
       running.running = false;
       const state = this.runtime.readCapturedSession(running.binding).record;
-      if (running.cleanupConfirmed && state?.phase === 'closed' && state.custody === 'released')
+      if (this.active.get(key) === running && running.cleanupConfirmed && state?.phase === 'closed' && state.custody === 'released')
         this.active.delete(key);
       running.wake?.();
     });
@@ -139,18 +139,17 @@ export class HostScheduledRuns {
     const entry = this.select(team, runId);
     if (entry && entry.capture.input.scheduleId !== scheduleId) throw new RuntimeOwnerError('conflict');
     const binding = entry?.binding ?? this.binding(team, runId, scheduleId);
-    const active = this.active.get(runtimeDigest(binding));
+    const key = runtimeDigest(binding), active = this.active.get(key);
     if (active) { active.cancelled = true; active.wake?.(); }
     // An unseen cancellation seals the original binding before a delayed start can arrive.
     await this.runtime.stopCapturedSession(binding);
     active?.provider?.seal();
-    const cleanup = await active?.provider?.cleanup();
+    if (active) await this.confirmCleanup(active);
     await Promise.allSettled([active?.pending]);
+    const cleanup = active ? await this.confirmCleanup(active) : true;
     const stopped = await this.runtime.stopCapturedSession(binding);
     const clean = stopped.phase === 'closed' && stopped.custody === 'released';
-    if (active && cleanup === false) active.cleanupConfirmed = false;
-    if (clean && cleanup !== false && active?.cleanupConfirmed !== false)
-      this.active.delete(runtimeDigest(binding));
+    if (clean && cleanup && this.active.get(key) === active) this.active.delete(key);
     return entry ? this.snapshot(entry) : { runId, phase: clean ? 'interrupted' : 'held',
       cleanup: clean ? 'confirmed' : 'unresolved' };
   }
@@ -164,13 +163,24 @@ export class HostScheduledRuns {
     this.seal();
     const entries = [...this.active.values()];
     await Promise.allSettled(entries.map(entry => this.runtime.stopCapturedSession(entry.binding)));
-    const cleanup = await Promise.allSettled(entries.map(entry => entry.provider?.cleanup()));
+    // The first cleanup releases pending native opens; settlement alone cannot do that.
+    await Promise.allSettled(entries.map(entry => this.confirmCleanup(entry)));
     await Promise.allSettled(entries.map(entry => entry.pending));
+    const cleanup = await Promise.allSettled(entries.map(entry => this.confirmCleanup(entry)));
     const records = await Promise.all(entries.map(entry => this.runtime.stopCapturedSession(entry.binding)));
     if (cleanup.some(result => result.status === 'rejected' || result.value === false) ||
-      entries.some(entry => entry.cleanupConfirmed === false) ||
       records.some(record => record.phase !== 'closed' || record.custody !== 'released'))
       throw new RuntimeOwnerError('hold');
+    for (const entry of entries) {
+      const key = runtimeDigest(entry.binding);
+      if (this.active.get(key) === entry) this.active.delete(key);
+    }
+  }
+
+  private async confirmCleanup(entry: ActiveRun): Promise<boolean> {
+    entry.cleanupConfirmed = false;
+    entry.cleanupConfirmed = (await entry.provider?.cleanup()) ?? true;
+    return entry.cleanupConfirmed;
   }
 
   private binding(team: HostedTeam, runId: string, scheduleId: string): RuntimeBinding {
@@ -246,7 +256,7 @@ export class HostScheduledRuns {
     } finally {
       await this.runtime.stopCapturedSession(entry.binding);
       entry.provider?.seal();
-      entry.cleanupConfirmed = (await entry.provider?.cleanup()) ?? true;
+      await this.confirmCleanup(entry);
     }
   }
 }

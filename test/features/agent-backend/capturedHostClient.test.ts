@@ -18,6 +18,12 @@ import {
 import { formatPersistentLogMessage, installPersistentAppLog } from '../../../src/main/utils/persistentAppLog';
 import { addLogSink } from '../../../src/shared/utils/logger';
 
+import type {
+  HostCustodyHint,
+  HostCustodyOwner,
+  HostCustodyResult,
+} from '@agent-teams/legacy-agent-host/owned-process';
+
 let nodeExecutable: string;
 let nodeVersion: string;
 let nodeSha256: string;
@@ -67,7 +73,11 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
-async function fixture(body = '', mode: 'server' | 'raw' = 'server'): Promise<SelectedHostProfile> {
+async function fixture(
+  body = '',
+  mode: 'server' | 'raw' = 'server',
+  nativeOptions = ''
+): Promise<SelectedHostProfile> {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-agent-backend-')));
   roots.push(root);
   const hostEntry = join(root, 'host.mts');
@@ -79,6 +89,7 @@ async function fixture(body = '', mode: 'server' | 'raw' = 'server'): Promise<Se
     import { appendFileSync } from 'node:fs';
     const server = createHostServer({ input: process.stdin, output: process.stdout,
       buildId: 'TEST-host-v1',
+      ${nativeOptions}
       methods: {
         echo: { lane: 'work', handle: (params) => params },
         loss: { lane: 'work', handle: () => { appendFileSync(${JSON.stringify(join(root, 'effects'))}, 'effect\\n'); process.exit(0); } },
@@ -109,13 +120,273 @@ async function fixture(body = '', mode: 'server' | 'raw' = 'server'): Promise<Se
   };
 }
 
-function client(profile: SelectedHostProfile): CapturedHostClient {
-  const instance = createCapturedHostClient(profile);
+function client(profile: SelectedHostProfile, owner?: HostCustodyOwner): CapturedHostClient {
+  const instance = createCapturedHostClient(profile, owner);
   clients.push(instance);
   return instance;
 }
 
 describe('captured legacy host client over real subprocess stdio', () => {
+  it('keeps the original TEST physical owner across Host loss, without replaying an unacknowledged write', async () => {
+    const profile = await fixture(
+      `
+      nativeRead: { lane: 'work', handle: async () => {
+        let off = () => {};
+        await new Promise(resolve => { off = server.nativeCustody.onReadable(resolve); }); off();
+        return server.nativeCustody.request({operation:'read', capability:'TEST-original', stream:'stdout'});
+      } },
+      nativeWrite: { lane:'work', handle: bytes => server.nativeCustody.request({operation:'write', capability:'TEST-original', bytes}) },
+      nativeObserve: { lane:'control', handle: () => server.nativeCustody.request({operation:'observe', capability:'TEST-original'}) },
+      nativeStop: { lane:'control', handle: () => server.nativeCustody.request({operation:'stop', capability:'TEST-original', attemptRef:'TEST-stop', budgetMs:1000}) },
+    `,
+      'server',
+      'nativeCustody: { timeoutMs: 2000 },'
+    );
+    const physical = spawn(
+      nodeExecutable,
+      [
+        '-e',
+        "process.stdout.write('TEST-private-stream'); process.stdin.on('data', b => process.stdout.write(b));",
+      ],
+      { cwd: profile.cwd, env: { ...profile.env }, stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    let physicallyClosed = false,
+      notify: ((hint: HostCustodyHint) => void) | undefined;
+    const physicalExit = new Promise<void>((resolve) =>
+      physical.once('close', () => {
+        physicallyClosed = true;
+        resolve();
+      })
+    );
+    const writes: string[] = [],
+      releases: (() => void)[] = [];
+    const commits: (() => void)[] = [];
+    const committed = [0, 1].map(() => new Promise<void>((resolve) => commits.push(resolve)));
+    let deferRead = false;
+    let releaseRead: ((value: HostCustodyResult) => void) | undefined;
+    let readStarted: (() => void) | undefined, lateReadable: (() => void) | undefined;
+    let attached: { exited: boolean } | undefined, source: string | undefined;
+    const ready = () => {
+      if (physical.stdout.readableLength || physical.stdout.readableEnded) {
+        notify?.({ capability: 'TEST-original', stream: 'stdout' });
+        lateReadable?.();
+      }
+    };
+    physical.stdout.on('readable', ready).on('end', ready);
+    const owner: HostCustodyOwner = {
+      mainEpoch: 'TEST-main-original',
+      attach(context) {
+        if (attached && !attached.exited) throw new Error('Old captured Host has not exited');
+        if (source && source !== context.binding.profileDigest) throw new Error('Changed source');
+        source = context.binding.profileDigest;
+        const current = { exited: false };
+        attached = current;
+        void context.hostExited.then(() => {
+          current.exited = true;
+        });
+        return {
+          onReadable(observer) {
+            notify = observer;
+            ready();
+            return () => {
+              if (notify === observer) notify = undefined;
+            };
+          },
+          async handle(call): Promise<HostCustodyResult> {
+            if (context.signal.aborted || call.capability !== 'TEST-original')
+              throw new Error('Sealed original binding');
+            if (call.operation === 'read') {
+              if (deferRead) {
+                deferRead = false;
+                expect(physical.stdout.readableLength).toBe(0);
+                const pending = new Promise<HostCustodyResult>((resolve) => {
+                  releaseRead = resolve;
+                });
+                readStarted?.();
+                return pending;
+              }
+              const length = Math.min(physical.stdout.readableLength, 16 * 1024);
+              const bytes = length ? (physical.stdout.read(length) as Buffer) : undefined;
+              const emptyState = physical.stdout.readableEnded ? 'eof' : 'empty';
+              return {
+                operation: 'read',
+                state: bytes ? 'data' : emptyState,
+                bytes: bytes?.toString('base64') ?? '',
+                more: physical.stdout.readableLength > 0,
+              };
+            }
+            if (call.operation === 'write') {
+              await new Promise<void>((resolve, reject) =>
+                physical.stdin.write(Buffer.from(call.bytes, 'base64'), (error) =>
+                  error ? reject(error) : resolve()
+                )
+              );
+              const index = writes.push(call.bytes) - 1;
+              const pending = new Promise<void>((resolve) => releases.push(resolve));
+              commits[index]?.();
+              await pending; // Lose only this application ACK; the original physical write already completed.
+              return { operation: 'write', state: 'completed' };
+            }
+            if (call.operation === 'observe')
+              return { operation: 'observe', root: physicallyClosed ? 'exited' : 'running' };
+            if (call.operation === 'stop') {
+              physical.kill();
+              physical.stdout.off('readable', ready).off('end', ready).resume();
+              physical.stderr.resume();
+              await physicalExit;
+              return { operation: 'stop', state: 'unknown' }; // A TEST leaf exit is never a fabricated Job receipt.
+            }
+            throw new Error('TEST owner has no other capability');
+          },
+        };
+      },
+    };
+    try {
+      const a = client(profile, owner);
+      await a.start();
+      const first = await a.request('nativeRead');
+      expect(first).toMatchObject({
+        status: 'completed',
+        value: {
+          operation: 'read',
+          state: 'data',
+          bytes: Buffer.from('TEST-private-stream').toString('base64'),
+        },
+      });
+      deferRead = true;
+      const oldReadStarted = new Promise<void>((resolve) => {
+        readStarted = resolve;
+      });
+      const lateData = new Promise<void>((resolve) => {
+        lateReadable = resolve;
+      });
+      notify?.({ capability: 'TEST-original', stream: 'stdout' });
+      const oldEmptyRead = a.request('nativeRead');
+      await oldReadStarted;
+      physical.stdin.write('TEST-ready-during-read');
+      await lateData;
+      lateReadable = undefined;
+      releaseRead?.({ operation: 'read', state: 'empty', bytes: '', more: false });
+      expect(await oldEmptyRead).toMatchObject({ status: 'completed', value: { state: 'empty' } });
+      expect(await a.request('nativeRead')).toMatchObject({
+        status: 'completed',
+        value: { state: 'data', bytes: Buffer.from('TEST-ready-during-read').toString('base64') },
+      });
+      const bytesA = Buffer.from('TEST-write-A').toString('base64');
+      const lost = a.request('nativeWrite', bytesA).catch((error: unknown) => error);
+      await committed[0];
+      expect((await a.shutdown()).childExit).toBe('confirmed');
+      expect(await lost).toMatchObject({ outcome: 'unknown' });
+      expect(physicallyClosed).toBe(false);
+      const b = client(profile, owner);
+      await b.start();
+      expect(await b.request('nativeObserve', undefined, { control: true })).toMatchObject({
+        status: 'completed',
+        value: { root: 'running' },
+      });
+      const bytesB = Buffer.from('TEST-write-B').toString('base64');
+      let finishedB = false;
+      const current = b.request('nativeWrite', bytesB);
+      const finished = () => {
+        finishedB = true;
+      };
+      void current.then(finished, finished);
+      await committed[1];
+      releases[0]?.();
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(finishedB, 'Late Host A reply cannot settle Host B request').toBe(false);
+      releases[1]?.();
+      expect(await current).toMatchObject({ status: 'completed', value: { operation: 'write' } });
+      expect(writes).toEqual([bytesA, bytesB]);
+      expect(a.takeNotifications().notifications).toEqual([]);
+      expect(b.takeNotifications().notifications).toEqual([]);
+      expect(await b.request('nativeStop', undefined, { control: true })).toMatchObject({
+        status: 'completed',
+        value: { operation: 'stop', state: 'unknown' },
+      });
+      expect(physicallyClosed).toBe(true);
+    } finally {
+      releaseRead?.({ operation: 'read', state: 'empty', bytes: '', more: false });
+      for (const release of releases) release();
+      if (!physicallyClosed) physical.kill('SIGKILL');
+      physical.stdout.off('readable', ready).off('end', ready).resume();
+      physical.stderr.resume();
+      await physicalExit;
+    }
+  });
+
+  it('reserves native control under full reverse request and shared reply-byte budgets', async () => {
+    const profile = await fixture(
+      `
+      interleave: { lane:'work', handle: async () => Promise.all([
+        server.nativeCustody.request({operation:'write', capability:'TEST-first', bytes:'MQ=='}),
+        server.nativeCustody.request({operation:'write', capability:'TEST-second', bytes:'Mg=='}),
+        server.nativeCustody.request({operation:'observe', capability:'TEST-original'}),
+        server.nativeCustody.request({operation:'end', capability:'TEST-original'}),
+      ]) },
+      pressure: { lane:'work', handle: async () => {
+        const work = Array.from({length:24}, (_, i) => server.nativeCustody.request({operation:'read', capability:'TEST-held-' + i, stream:'stdout'}));
+        const overflow = server.nativeCustody.request({operation:'read', capability:'TEST-overflow', stream:'stdout'});
+        globalThis.TEST_pressureReady = new Promise(resolve => { for (const task of work) task.then(reply => { if (reply.status === 'refused') resolve(true); }); });
+        return {work: await Promise.all(work), overflow: await overflow};
+      } },
+      pressureReady: {lane:'control', handle: () => globalThis.TEST_pressureReady},
+      nativeStop: {lane:'control', handle: () => server.nativeCustody.request({operation:'stop', capability:'TEST-original', attemptRef:'TEST-control', budgetMs:1000})},
+    `,
+      'server',
+      'nativeCustody:{timeoutMs:2000}, limits:{maxFrameBytes:65536,maxPriorityBytes:196608},'
+    );
+    const held: ((value: HostCustodyResult) => void)[] = [];
+    const order: string[] = [];
+    let stoppedWith = 0;
+    const owner: HostCustodyOwner = {
+      mainEpoch: 'TEST-main-pressure',
+      attach: () => ({
+        onReadable: () => () => undefined,
+        handle(call) {
+          if (call.operation === 'write') {
+            order.push('write:' + Buffer.from(call.bytes, 'base64').toString());
+            return { operation: 'write', state: 'completed' };
+          }
+          if (call.operation === 'observe') {
+            order.push('observe');
+            return { operation: 'observe', root: 'running' };
+          }
+          if (call.operation === 'end') {
+            order.push('end');
+            return { operation: 'end', state: 'completed' };
+          }
+          if (call.operation === 'read')
+            return new Promise<HostCustodyResult>((resolve) => held.push(resolve));
+          if (call.operation !== 'stop') throw new Error('Unexpected TEST operation');
+          stoppedWith = held.length;
+          for (const release of held)
+            release({ operation: 'read', state: 'empty', bytes: '', more: false });
+          return { operation: 'stop', state: 'unknown' };
+        },
+      }),
+    };
+    const transport = client({ ...profile, requestTimeoutMs: 3000 }, owner);
+    await transport.start();
+    const interleaved = (await transport.request('interleave')) as { status: string }[];
+    expect(order).toEqual(['write:1', 'observe', 'write:2', 'end']);
+    expect(interleaved.map((reply) => reply.status)).toEqual(Array(4).fill('completed'));
+    const pressure = transport.request('pressure');
+    expect(await transport.request('pressureReady', undefined, { control: true })).toBe(true);
+    const stop = await transport.request('nativeStop', undefined, { control: true });
+    const result = (await pressure) as { work: { status: string }[]; overflow: unknown };
+    expect(stoppedWith).toBeGreaterThan(0);
+    expect(
+      stoppedWith,
+      'Byte reservation refused work before all request slots were consumed'
+    ).toBeLessThan(24);
+    expect(result.overflow).toEqual({ status: 'refused' });
+    expect(result.work.filter((reply) => reply.status === 'completed')).toHaveLength(stoppedWith);
+    expect(result.work.some((reply) => reply.status === 'refused')).toBe(true);
+    expect(stop).toEqual({ status: 'completed', value: { operation: 'stop', state: 'unknown' } });
+    expect(transport.takeNotifications().notifications).toEqual([]);
+  });
+
   it('starts the actual public CLI with the selected standalone Node artifact', async () => {
     const hostEntry = await realpath(fileURLToPath(cliUrl));
     const hostEntrySha256 = createHash('sha256')
@@ -152,7 +423,7 @@ describe('captured legacy host client over real subprocess stdio', () => {
     })(),`);
     const transport = client(profile);
     const log = installPersistentAppLog({ directory: join(profile.cwd, 'userData/logs'), appVersion: 'TEST' });
-    let onReady = () => {}, onReleased = () => {};
+    let onReady: () => void = () => undefined, onReleased: () => void = () => undefined;
     const ready = new Promise<void>(resolve => { onReady = resolve; });
     const released = new Promise<void>(resolve => { onReleased = resolve; });
     const removeSink = addLogSink(entry => {
@@ -355,8 +626,8 @@ describe('captured legacy host client over real subprocess stdio', () => {
       const transport = client({ ...profile, shutdownTimeoutMs: 20 });
       await transport.start();
       expect((await transport.shutdown()).childExit).toBe('confirmed');
-      expect(await readFile(join(profile.env.HOME!, 'cleanup'), 'utf8')).toBe('completed');
-      await expect(readFile(join(profile.env.HOME!, 'signals'), 'utf8')).rejects.toMatchObject({
+      expect(await readFile(join(profile.env.HOME, 'cleanup'), 'utf8')).toBe('completed');
+      await expect(readFile(join(profile.env.HOME, 'signals'), 'utf8')).rejects.toMatchObject({
         code: 'ENOENT',
       });
     }
@@ -385,7 +656,7 @@ describe('captured legacy host client over real subprocess stdio', () => {
       childExit: 'confirmed',
       providerCustody: 'unresolved',
     });
-    expect(JSON.parse(await readFile(join(profile.env.HOME!, 'close-result'), 'utf8'))).toEqual({
+    expect(JSON.parse(await readFile(join(profile.env.HOME, 'close-result'), 'utf8'))).toEqual({
       reason: 'input_eof',
       cleanup: 'timeout',
     });

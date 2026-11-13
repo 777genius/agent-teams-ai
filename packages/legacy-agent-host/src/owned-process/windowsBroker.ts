@@ -1,10 +1,10 @@
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { closeSync, fstatSync, openSync, readSync } from 'node:fs';
-import { basename, dirname, join, win32 } from 'node:path';
+import { win32 } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { Duplex, Readable, Writable } from 'node:stream';
 
+import { verifyStagedBroker } from './brokerArtifact.js';
 import {
   encodeFrame,
   encodeLaunch,
@@ -12,7 +12,6 @@ import {
   FrameDecoder,
   generationBytes,
   Op,
-  VERSION,
 } from './codec.js';
 import {
   type BrokerExit,
@@ -36,6 +35,8 @@ import {
 } from './contract.js';
 import { BrokerReleaseConfirmation } from './releaseConfirmation.js';
 
+export { verifyStagedBroker } from './brokerArtifact.js';
+
 const nativeExitCategories: readonly NativeExitCategory[] = [
   'owner-eof',
   'bootstrap',
@@ -57,6 +58,7 @@ interface Waiter {
   observation: RequestObservation;
   resolve: (frame: Frame) => void;
   reject: (error: Error) => void;
+  received?: () => void;
 }
 interface RequestObservation {
   phase: ControlPhase;
@@ -69,6 +71,12 @@ interface StopFacts {
   dispatchError: number;
   queryError: number;
   payload: Buffer;
+}
+interface StopOperation {
+  deadline: number;
+  timer: ReturnType<typeof setTimeout>;
+  settle: (value: StopFacts | undefined) => void;
+  promise: Promise<StopFacts | undefined>;
 }
 const remaining = (deadline: number): number =>
   Math.max(0, Math.min(60000, Math.floor(deadline - performance.now())));
@@ -129,61 +137,6 @@ export function connectPrivateBroker(path: string): BrokerTransport {
     },
   };
 }
-function boundedFile(path: string, limit: number): Buffer {
-  const fd = openSync(path, 'r');
-  try {
-    const info = fstatSync(fd);
-    if (!info.isFile() || info.size > limit) throw new Error('Broker admission file exceeds limit');
-    const bytes = Buffer.alloc(info.size);
-    let offset = 0;
-    while (offset < bytes.length) {
-      const count = readSync(fd, bytes, offset, bytes.length - offset, offset);
-      if (!count) {
-        throw new Error('Broker admission file changed');
-      }
-      offset += count;
-    }
-    if (readSync(fd, Buffer.alloc(1), 0, 1, bytes.length))
-      throw new Error('Broker admission file changed');
-    return bytes;
-  } finally {
-    closeSync(fd);
-  }
-}
-/** Bounded staged-artifact verification; not a guarantee against a malicious filesystem/OS race. */
-export function verifyStagedBroker(path: string, arch: string): void {
-  if (basename(path) !== 'owned-process-broker.exe' || (arch !== 'x64' && arch !== 'arm64')) {
-    throw new Error('Unsupported staged broker');
-  }
-  const manifest: unknown = JSON.parse(
-    boundedFile(join(dirname(path), 'manifest.json'), 4096).toString('utf8')
-  );
-  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest))
-    throw new Error('Invalid broker manifest');
-  const m = manifest as Record<string, unknown>;
-  if (
-    Object.keys(m).sort().join(',') !== 'arch,file,platform,protocol,schema,sha256' ||
-    m.schema !== 1 ||
-    m.protocol !== VERSION ||
-    m.platform !== 'win32' ||
-    m.arch !== arch ||
-    m.file !== basename(path) ||
-    typeof m.sha256 !== 'string' ||
-    !/^[0-9a-f]{64}$/.test(m.sha256)
-  )
-    throw new Error('Invalid broker manifest');
-  const bytes = boundedFile(path, 16 * 1024 * 1024);
-  if (bytes.length < 64 || bytes.toString('ascii', 0, 2) !== 'MZ')
-    throw new Error('Invalid broker PE');
-  const offset = bytes.readUInt32LE(60);
-  if (
-    offset > bytes.length - 24 ||
-    bytes.toString('ascii', offset, offset + 4) !== 'PE\0\0' ||
-    bytes.readUInt16LE(offset + 4) !== (arch === 'x64' ? 0x8664 : 0xaa64) ||
-    createHash('sha256').update(bytes).digest('hex') !== m.sha256
-  )
-    throw new Error('Broker architecture or digest mismatch');
-}
 const nativeTransport: BrokerTransportFactory = {
   available: (path) => {
     if (process.platform !== 'win32' || !win32.isAbsolute(path)) return false;
@@ -228,12 +181,8 @@ class WindowsCapability implements PreparedOwnedProcess {
   private resumeStarted = false;
   private drainSettled = false;
   private streamFailed = false;
-  private stopOperation: {
-    deadline: number;
-    timer: ReturnType<typeof setTimeout>;
-    settle: (value: StopFacts | undefined) => void;
-    promise: Promise<StopFacts | undefined>;
-  } | undefined;
+  private stopOperation: StopOperation | undefined;
+  private stopWireReply: Promise<boolean> | undefined;
   constructor(
     owner: ProcessOwner,
     private readonly brokerPath: string,
@@ -364,12 +313,14 @@ class WindowsCapability implements PreparedOwnedProcess {
       this.recordCause('native-failed', waiter.observation);
       waiter.reject(new Error(`Broker operation failed (${frame.payload.readUInt32LE(1)})`));
     } else waiter.resolve(frame);
+    waiter.received?.(); // Only a validated wire reply, even after its public deadline expired.
   }
   private request(
     opcode: number,
     response: number,
     payload: Buffer,
-    deadline: number
+    deadline: number,
+    received?: () => void
   ): Promise<Frame> {
     if (
       !this.control ||
@@ -404,6 +355,7 @@ class WindowsCapability implements PreparedOwnedProcess {
       this.waiters.set(id, {
         opcode: response,
         observation,
+        ...(received ? { received } : {}),
         resolve: (frame) => {
           clearTimeout(timer);
           if (!settled) resolve(frame);
@@ -594,6 +546,7 @@ class WindowsCapability implements PreparedOwnedProcess {
         deadlineExpired: remaining(coalescedDeadline) === 0,
       });
     if (request.mode !== 'force') return unknown('Graceful Windows Stop unsupported');
+    if (this.transportFailure || remaining(request.deadlineMs) === 0) return unknown('Stop unavailable before deadline');
     let proof: StopFacts | undefined;
     if (!this.started)
       proof = {
@@ -605,18 +558,33 @@ class WindowsCapability implements PreparedOwnedProcess {
         payload: Buffer.alloc(0),
       };
     else {
+      for (;;) {
+        const previous = this.stopOperation;
+        if (previous && remaining(previous.deadline) === 0) this.expireStop(previous);
+        if (this.stopOperation || !this.stopWireReply) break;
+        // Native stopBusy remains owned until its actual reply; timeout cannot authorize a second Stop.
+        if (!await this.waitStopWire(this.stopWireReply, request.deadlineMs) || this.transportFailure ||
+            remaining(request.deadlineMs) === 0) return unknown('Original Stop wire reply unavailable');
+      }
       if (!this.stopOperation) {
         let settle!: (value: StopFacts | undefined) => void;
         const promise = new Promise<StopFacts | undefined>((resolve) => {
           settle = resolve;
         });
-        const timer = setTimeout(() => settle(undefined), remaining(request.deadlineMs));
+        const timer = setTimeout(() => this.expireStop(operation), remaining(request.deadlineMs));
         const operation = { deadline: request.deadlineMs, timer, settle, promise };
         this.stopOperation = operation;
+        let acknowledge!: (received: boolean) => void;
+        const wireReply = new Promise<boolean>(resolve => { acknowledge = resolve; });
+        this.stopWireReply = wireReply;
+        const received = () => {
+          if (this.stopWireReply === wireReply) this.stopWireReply = undefined;
+          acknowledge(true);
+        };
         const payload = Buffer.alloc(5);
         payload.writeUInt32LE(remaining(request.deadlineMs));
         payload[4] = 1;
-        void this.request(Op.stop, Op.stopped, payload, performance.now() + 60000).then(
+        void this.request(Op.stop, Op.stopped, payload, performance.now() + 60000, received).then(
           (frame) => {
             let result: StopFacts | undefined;
             try {
@@ -629,6 +597,7 @@ class WindowsCapability implements PreparedOwnedProcess {
             if (this.stopOperation === operation) this.stopOperation = undefined;
           },
           () => {
+            acknowledge(false); // A deadline/error is not a reply; keep the original wire debt.
             clearTimeout(operation.timer);
             operation.settle(undefined);
             if (this.stopOperation === operation) this.stopOperation = undefined;
@@ -639,7 +608,7 @@ class WindowsCapability implements PreparedOwnedProcess {
         clearTimeout(this.stopOperation.timer);
         const operation = this.stopOperation;
         operation.timer = setTimeout(
-          () => operation.settle(undefined),
+          () => this.expireStop(operation),
           remaining(request.deadlineMs)
         );
       }
@@ -678,6 +647,16 @@ class WindowsCapability implements PreparedOwnedProcess {
     });
     this.receipts.add(receipt);
     return Object.freeze({ kind: 'confirmed', receipt });
+  }
+  private expireStop(operation: StopOperation): void {
+    clearTimeout(operation.timer); operation.settle(undefined);
+    if (this.stopOperation === operation) this.stopOperation = undefined;
+  }
+  private waitStopWire(reply: Promise<boolean>, deadline: number): Promise<boolean> {
+    return new Promise(resolve => {
+      const timer = setTimeout(() => resolve(false), remaining(deadline));
+      void reply.then(received => { clearTimeout(timer); resolve(received); });
+    });
   }
   async drain(deadlineMs: number): Promise<TargetDrain> {
     validDeadline(deadlineMs);

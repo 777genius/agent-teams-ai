@@ -138,7 +138,7 @@ export class WindowsCapturedProcess {
         if (outcome.kind !== 'confirmed') return false;
         // Drain is separately bounded. An incomplete tail is never root/tree proof;
         // only the genuine Stop receipt and full release ACK/exit settle custody.
-        if (allocation.prepared) await allocation.prepared.drain(performance.now() + 3000);
+        await allocation.pending.drain(performance.now() + 3000);
         await allocation.pending.release(outcome.receipt, 'job-membership');
         allocation.stopped = true;
         return true;

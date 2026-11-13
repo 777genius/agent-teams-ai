@@ -30,6 +30,9 @@ import type {
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 import type { IpcMainInvokeEvent } from 'electron';
 
+// This controlled shebang child has POSIX custody. Native Windows qualification is separate.
+const posixIt = it.skipIf(process.platform === 'win32');
+
 /** Actual account IPC/Main → Host/D → controlled child. Electron UI/vendor login are separate gates. */
 async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', sameContext = false) {
   const repo = resolve(import.meta.dirname, '../../..');
@@ -110,6 +113,12 @@ async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', 
   const store = new FileCodexAuthIntentStore(join(root, 'intents'));
   const restoreCalls: { targetId: string; contextId: string }[] = [];
   const clients: ReturnType<typeof createCapturedCodexFeatures>[] = [];
+  let cancelReply:
+    | {
+        started: ReturnType<typeof Promise.withResolvers<void>>;
+        release: ReturnType<typeof Promise.withResolvers<void>>;
+      }
+    | undefined;
   const target = (key: string) => ({
     ...captureProviderManagement({
       targetId: key.repeat(64),
@@ -118,6 +127,12 @@ async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', 
       client: {
         request: async (method, payload) => {
           const result = await host.rpc(method, payload);
+          const pending = cancelReply;
+          if (method === 'management.oauth.cancel' && pending) {
+            pending.started.resolve();
+            await pending.release.promise;
+            if (cancelReply === pending) cancelReply = undefined;
+          }
           if (loseStart && method === 'management.oauth.start') {
             loseStart = false;
             throw new BackendRoutingError('unavailable', 'unknown');
@@ -194,7 +209,16 @@ async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', 
       loseStart = true;
     },
     complete: () => writeFile(join(root, 'a/home/TEST-complete-login'), 'TEST', { mode: 0o600 }),
+    holdCancelReply: () => {
+      const pending = {
+        started: Promise.withResolvers<void>(),
+        release: Promise.withResolvers<void>(),
+      };
+      cancelReply = pending;
+      return { started: pending.started.promise, release: () => pending.release.resolve() };
+    },
     async cleanup() {
+      cancelReply?.release.resolve();
       await Promise.allSettled(clients.map((client) => client.accountFeature.dispose()));
       await host.close();
       await rm(root, { recursive: true, force: true });
@@ -203,7 +227,7 @@ async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', 
 }
 
 for (const mode of ['browser', 'device_code'] as const) {
-  it(`account IPC preserves ${mode} login, exact account readiness, private presentation and refresh/logout`, async () => {
+  posixIt(`account IPC preserves ${mode} login, exact account readiness, private presentation and refresh/logout`, async () => {
     const f = await fixture(mode === 'browser' ? 'early' : 'pending', mode === 'device_code');
     try {
       const api = f.create();
@@ -291,7 +315,7 @@ for (const mode of ['browser', 'device_code'] as const) {
   }, 30_000);
 }
 
-it('exact native rejection clears the private intent after cleanup and permits only an explicit new login', async () => {
+posixIt('exact native rejection clears the private intent after cleanup and permits only an explicit new login', async () => {
   const f = await fixture('rejected-then-pending');
   try {
     const api = f.create();
@@ -323,7 +347,7 @@ it('exact native rejection clears the private intent after cleanup and permits o
   }
 }, 30_000);
 
-it('a lost login response survives Main recreation and a different context, with original cancel and no replay/logout', async () => {
+posixIt('a lost login response survives Main recreation and a different context, with original cancel and no replay/logout', async () => {
   const f = await fixture('pending');
   try {
     await writeFile(join(f.root, 'a/codex/TEST-login-account.json'), 'true', { mode: 0o600 });
@@ -361,3 +385,44 @@ it('a lost login response survives Main recreation and a different context, with
     await f.cleanup();
   }
 }, 30_000);
+
+posixIt(
+  'logout cannot retarget after waiting for original login cancellation',
+  async () => {
+    const f = await fixture('pending');
+    try {
+      await writeFile(join(f.root, 'b/codex/TEST-login-account.json'), 'true', { mode: 0o600 });
+      const api = f.create();
+      await api.invoke(CODEX_ACCOUNT_START_CHATGPT_LOGIN, { mode: 'browser' });
+      await vi.waitFor(async () =>
+        expect((await api.invoke(CODEX_ACCOUNT_GET_SNAPSHOT)).login.status).toBe('pending')
+      );
+      const original = await f.store.pendingLogin();
+      const barrier = f.holdCancelReply();
+      const logout = api.invoke(CODEX_ACCOUNT_LOGOUT).catch((error: unknown) => error);
+      await barrier.started;
+      f.select('b');
+      barrier.release();
+      expect(await logout).toBeInstanceOf(Error);
+      expect(await f.store.pendingLogin()).toBeNull();
+      expect(await api.invoke(CODEX_ACCOUNT_GET_SNAPSHOT)).toMatchObject({
+        managedAccount: { type: 'chatgpt' },
+        login: { status: 'idle' },
+      });
+      expect(original?.targetId).toBe('a'.repeat(64));
+      const a = await f.wire('a'),
+        b = await f.wire('b');
+      expect(a.filter((row) => row.method === 'account/login/start')).toHaveLength(1);
+      expect(a.filter((row) => row.method === 'account/login/cancel')).toHaveLength(1);
+      expect(a.filter((row) => row.method === 'account/logout')).toHaveLength(0);
+      expect(
+        b.filter(
+          (row) => row.method.startsWith('account/login/') || row.method === 'account/logout'
+        )
+      ).toHaveLength(0);
+    } finally {
+      await f.cleanup();
+    }
+  },
+  30_000
+);

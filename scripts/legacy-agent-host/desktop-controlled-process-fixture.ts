@@ -203,7 +203,7 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
         await until(async () => [primaryCapture!, neighborCapture!].every(value => native.observe(value) === 'absent'), 3_000, 'two original services absent');
         const rootOracle = createDesktopProcessRootOracle({ node: fixture.node, capture: primaryCapture,
           selection: artifact, observe: capture => native.observe(capture) });
-        const originalRootObservation = rootOracle.observe();
+        const originalRootObservation = rootOracle.observe(Date.now() + 5000);
         assert.equal(originalRootObservation, 'absent', 'one bounded exact-root read after original EOF exit');
         const lifecycle = async (role: string) => (await readFile(join(fixture.root, `workspace/process-${role}-lifecycle.ndjson`), 'utf8')).trim().split('\n').map(line => row(JSON.parse(line)));
         const services = await readProcessServices(fixture.root), primaryLifecycle = await lifecycle('primary'), neighborLifecycle = await lifecycle('neighbor');

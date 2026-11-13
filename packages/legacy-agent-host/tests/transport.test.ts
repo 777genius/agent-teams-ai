@@ -11,6 +11,10 @@ import { fileURLToPath } from 'node:url';
 
 import { createHostServer, HostRpcError } from '../dist/index.js';
 import { DEFAULT_HOST_LIMITS, HOST_PROTOCOL_VERSION } from '../dist/contracts.js';
+import {
+  HOST_CUSTODY_BIND_METHOD,
+  HOST_CUSTODY_READY_METHOD,
+} from '../dist/owned-process/index.js';
 
 import type { HostServerOptions, JsonValue } from '../dist/index.js';
 
@@ -198,6 +202,124 @@ class GateOutput extends Writable {
     await tick();
   }
 }
+
+test('private custody hints are reliable/sticky and an old epoch reply cannot finish a current read', async () => {
+  const f = fixture({ nativeCustody: { timeoutMs: 1000 } });
+  await handshake(f.input);
+  const binding = {
+    mainEpoch: 'TEST-main',
+    hostIncarnation: f.server.handshake.hostIncarnation,
+    profileDigest: 'a'.repeat(64),
+  };
+  f.input.write(request(2, HOST_CUSTODY_BIND_METHOD, binding));
+  await tick();
+  const hint = { capability: 'TEST-original', stream: 'stdout' };
+  const ready =
+    JSON.stringify({
+      jsonrpc: '2.0',
+      method: HOST_CUSTODY_READY_METHOD,
+      params: { binding, hint },
+    }) + '\n';
+  f.input.write(ready + ready);
+  await tick();
+  let hints = 0;
+  f.server.nativeCustody!.onReadable(() => {
+    hints++;
+  });
+  assert.equal(hints, 1, 'An early readiness hint survives until its confirmed read');
+  let completed = false;
+  const read = f.server
+    .nativeCustody!.request({ operation: 'read', capability: 'TEST-original', stream: 'stdout' })
+    .then((reply) => {
+      completed = true;
+      return reply;
+    });
+  await tick();
+  const id = f.frames.find(
+    (frame) => typeof frame.id === 'string' && frame.id.startsWith('custody:')
+  )!.id;
+  const result = {
+    binding,
+    reply: {
+      status: 'completed',
+      value: {
+        operation: 'read',
+        state: 'data',
+        bytes: Buffer.from('TEST-private-stream').toString('base64'),
+        more: false,
+      },
+    },
+  };
+  f.input.write(JSON.stringify({ jsonrpc: '2.0', id: 'custody:TEST-old-host:1', result }) + '\n');
+  await tick();
+  assert.equal(completed, false);
+  f.input.write(JSON.stringify({ jsonrpc: '2.0', id, result }) + '\n');
+  assert.deepEqual(await read, result.reply);
+  f.input.write(ready);
+  await tick();
+  assert.equal(hints, 2, 'Confirmed read permits the next reliable hint');
+  const pending = f.server.nativeCustody!.request({
+    operation: 'write',
+    capability: 'TEST-original',
+    bytes: 'VEVTVA==',
+  });
+  await f.server.dispose();
+  assert.deepEqual(await pending, { status: 'unknown' });
+});
+
+test('private stream frames leave byte capacity for control and yield the next frame to Stop', async () => {
+  const input = new PassThrough(),
+    output = new GateOutput();
+  const server = createHostServer({
+    input,
+    output,
+    buildId: 'TEST-native-pressure',
+    nativeCustody: { timeoutMs: 1000 },
+    limits: { maxFrameBytes: 65536, maxPriorityBytes: 196608 },
+  });
+  await handshake(input);
+  await output.release();
+  input.write(
+    request(2, HOST_CUSTODY_BIND_METHOD, {
+      mainEpoch: 'TEST-main',
+      hostIncarnation: server.handshake.hostIncarnation,
+      profileDigest: 'b'.repeat(64),
+    })
+  );
+  await tick();
+  await output.release();
+  const before = output.frames.length;
+  const work = Array.from({ length: 24 }, () =>
+    server.nativeCustody!.request({
+      operation: 'write',
+      capability: 'TEST-original',
+      bytes: Buffer.alloc(16 * 1024, 0x61).toString('base64'),
+    })
+  );
+  const stop = server.nativeCustody!.request({
+    operation: 'stop',
+    capability: 'TEST-original',
+    attemptRef: 'TEST-stop',
+    budgetMs: 1000,
+  });
+  assert.equal(output.frames.length, before + 1, 'Only one write is in flight');
+  await output.release();
+  const control = output.frames[before + 1] as { params: { call: { operation: string } } };
+  assert.equal(
+    control.params.call.operation,
+    'stop',
+    'Control precedes queued private stream work'
+  );
+  await server.dispose();
+  assert.deepEqual(
+    await stop,
+    { status: 'unknown' },
+    'Frame dispatch alone is never native Stop proof'
+  );
+  const results = await Promise.all(work);
+  assert.equal(results.length, 24);
+  assert.ok(results.every((reply) => reply.status === 'unknown'));
+});
 
 test('slow data consumer receives an explicit gap and control overtakes queued data', async () => {
   const output = new GateOutput();

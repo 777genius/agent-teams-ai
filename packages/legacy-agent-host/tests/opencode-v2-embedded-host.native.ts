@@ -138,9 +138,9 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   const modelProgress: { elapsedMs: number; requests: number }[] = [];
   let originalOpenElapsedMs: number | undefined;
   let originalLaunchProgress: ReturnType<typeof nativeLaunchProgress> | undefined;
-  const passive = !packaged
-    ? (await import('./fixtures/native-opencode-team/passive-diagnostics.ts')).createPassiveNativeDiagnosticCapture()
-    : undefined;
+  const passiveModule = !packaged ? await import('./fixtures/native-opencode-team/passive-diagnostics.ts') : undefined;
+  const passive = passiveModule?.createPassiveNativeDiagnosticCapture();
+  let originalProfiledHost: ReturnType<typeof startHost> | undefined;
   let hostEpoch = 0;
   let windowsShellSha256: string | undefined;
   const cleanupErrors: unknown[] = [];
@@ -252,10 +252,13 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     const start = () => {
       signal?.throwIfAborted();
       const epoch = ++hostEpoch;
-      return startHost({ node, entry, root, profile: profilePath,
+      const child = startHost({ node, entry, root, profile: profilePath,
         profileHash: createHash('sha256').update(bytes).digest('hex'),
         ...(passive ? { testImports: [new URL('./fixtures/native-opencode-team/passive-diagnostics.ts', import.meta.url).href],
-          onDiagnostic: (chunk: Buffer) => passive.accept(chunk, epoch) } : {}) });
+          onDiagnostic: (chunk: Buffer) => passive.accept(chunk, epoch),
+          ...(epoch === 1 ? { testCpuProfile: true as const } : {}) } : {}) });
+      if (passive && epoch === 1) originalProfiledHost = child;
+      return child;
     };
     const binding = { schemaVersion: 1, handleId: `TEST-handle-${namespace}`, owner, scope };
     const envelope = (commandId: string, payload: unknown) => ({ commandId, binding, payload });
@@ -396,6 +399,9 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     try { await model?.close(); } catch (error) { cleanupErrors.push(error); }
     signal?.removeEventListener('abort', cancelOriginalHost);
     cleanup = cleanupErrors.length === 0;
+    const originalHostCpu = await passiveModule?.readOriginalHostCpuProfile(originalProfiledHost?.testCpuProfilePath,
+      originalProfiledHost !== undefined &&
+      (originalProfiledHost.child.exitCode !== null || originalProfiledHost.child.signalCode !== null));
     let serialized: string | undefined;
     let receiptWritten = false;
     try {
@@ -412,7 +418,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         steps, cleanup, phaseElapsedMs, elapsedMs: elapsedMs(), cancelled: signal?.aborted === true,
         inputObservation: { reads: inputReadCount, last: lastInputProgress ?? null },
         launchObservation: { openElapsedMs: originalOpenElapsedMs ?? null, afterOpen: originalLaunchProgress ?? null },
-        ...(passive ? { passiveNativeDiagnostics: passive.entries } : {}),
+        ...(passive ? { passiveNativeDiagnostics: passive.entries,
+          originalHostCpu: { epoch: 1, scope: 'original-source-host-including-cleanup', ...originalHostCpu } } : {}),
         failureCode: originalFailure instanceof Error && 'code' in originalFailure &&
           typeof originalFailure.code === 'string' &&
           ['ERR_ASSERTION', 'ABORT_ERR', 'EPIPE', 'ECONNRESET', 'ETIMEDOUT'].includes(originalFailure.code)

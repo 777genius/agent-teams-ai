@@ -12,7 +12,7 @@ export interface NativeSessionCommandCapability {
 /** Same bounded standalone syntax as the existing Composer, without provider assumptions. */
 export function parseNativeSessionCommand(text: string): NativeSessionCommand | undefined {
   const raw = text.trim();
-  const match = /^\/([a-z][a-z0-9:-]{0,63})(?:\s+([\s\S]*\S))?$/iu.exec(raw);
+  const match = /^\/([a-z][a-z0-9:-]{0,63})(?=\s|$)/iu.exec(raw);
   return match ? { name: match[1]!, raw } : undefined;
 }
 

@@ -263,7 +263,7 @@ export class SchedulerService {
       : null;
     try {
       if (admission && !admission.isCurrent()) throw new Error('Scheduled team context changed');
-      await this.repository.saveSchedule(updated);
+      await this.repository.saveSchedule(updated, { mustExist: true });
     } catch (error) {
       nextJob?.stop();
       throw error;
@@ -286,12 +286,14 @@ export class SchedulerService {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
     // Do not stop a live schedule unless the durable deletion succeeds.
-    await this.repository.deleteSchedule(id);
-    const activeRun = this.activeRuns.get(id);
-    if (activeRun) this.executor.cancel(activeRun.id);
-    this.removeCronJob(id);
-    this.releaseRunLocks(id);
-    if (activeRun) await this.smartDispatcher?.cancel?.(activeRun.id);
+    await this.repository.deleteSchedule(id, async () => {
+      this.stopBarrier.cancelAdmissions(id);
+      const activeRun = this.activeRuns.get(id);
+      if (activeRun) this.executor.cancel(activeRun.id);
+      this.removeCronJob(id);
+      this.releaseRunLocks(id);
+      if (activeRun) await this.smartDispatcher?.cancel?.(activeRun.id);
+    });
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: id,
@@ -312,7 +314,7 @@ export class SchedulerService {
     };
 
     // Persistence errors must not leave an active record without a live job.
-    await this.repository.saveSchedule(updated);
+    await this.repository.saveSchedule(updated, { mustExist: true });
     this.cronJobs.get(id)?.pause();
     this.clearWarmUpTimer(id);
     this.emitChange({
@@ -344,7 +346,7 @@ export class SchedulerService {
     updated.nextRunAt = computeScheduleNextRunAt(updated) ?? undefined;
     const job = this.prepareCronJob(updated);
     try {
-      await this.repository.saveSchedule(updated);
+      await this.repository.saveSchedule(updated, { mustExist: true });
     } catch (error) {
       job.stop();
       throw error;
@@ -381,40 +383,16 @@ export class SchedulerService {
   async triggerNow(id: string): Promise<ScheduleRun> {
     if (this.stopped) throw new Error('Scheduler is stopped');
     const generation = this.lifecycleEpoch;
-    const schedule = await this.repository.getSchedule(id);
-    if (!schedule) {
-      throw new Error(`Schedule not found: ${id}`);
-    }
-
-    // Reject foreign owner keys before allocating an execution record.
-    assertScheduledTeamTarget(schedule, this.smartDispatcher?.supportsHost === true);
-
-    // Check locks
-    if (this.activeRuns.has(id)) {
-      throw new Error(`Schedule ${id} already has an active run`);
-    }
-
-    const cwd = schedule.launchConfig.cwd;
-    const cwdHolder = this.cwdLock.get(cwd);
-    if (cwdHolder && cwdHolder !== id) {
-      throw new Error(`Working directory "${cwd}" is locked by another schedule: ${cwdHolder}`);
-    }
-
-    const run = createScheduleRun(schedule);
-    this.activeRuns.set(id, run);
-    this.cwdLock.set(cwd, id);
-    try { await persistScheduleRun(this.repository, this.stopBarrier, run); }
-    catch (error) {
-      if (this.activeRuns.get(id)?.id === run.id) { this.releaseRunLocks(id); }
-      throw error;
-    }
-    if (this.stopped || generation !== this.lifecycleEpoch) throw new Error('Scheduler stopped before dispatch');
-    this.emitChange({ type: 'run-started', scheduleId: id, teamName: schedule.teamName });
-
-    // Execute in background (don't await — triggerNow returns immediately)
-    this.dispatchRun(schedule, run);
-
-    return run;
+    return this.stopBarrier.withAdmission(id, async (isCurrent) => {
+      const schedule = await this.repository.getSchedule(id);
+      if (!schedule) throw new Error(`Schedule not found: ${id}`);
+      assertScheduledTeamTarget(schedule, this.smartDispatcher?.supportsHost === true);
+      const conflict = this.lockConflict(schedule);
+      if (conflict) throw new Error(conflict);
+      const run = await this.startOccurrence(schedule, generation, isCurrent);
+      if (!run) throw new Error(isCurrent() ? 'Scheduler stopped before dispatch' : 'Schedule deleted before dispatch');
+      return run;
+    });
   }
 
   // ===========================================================================
@@ -513,36 +491,39 @@ export class SchedulerService {
 
   private async performWarmUp(schedule: Schedule, retryCount = 0): Promise<void> {
     const generation = this.lifecycleEpoch;
-    logger.info(
-      `[${schedule.id}] Starting warm-up (attempt ${retryCount + 1}/${WARMUP_MAX_RETRIES})`
-    );
+    return this.stopBarrier.withAdmission(schedule.id, async (isCurrent) => {
+      if (this.stopped || generation !== this.lifecycleEpoch) return;
+      logger.info(
+        `[${schedule.id}] Starting warm-up (attempt ${retryCount + 1}/${WARMUP_MAX_RETRIES})`
+      );
 
-    try {
-      const result = await this.warmUpFn(schedule.launchConfig.cwd);
+      try {
+        const result = await this.warmUpFn(schedule.launchConfig.cwd);
 
-      if (result.ready) {
-        logger.info(`[${schedule.id}] Warm-up successful: ${result.message}`);
-        return;
+        if (result.ready) {
+          logger.info(`[${schedule.id}] Warm-up successful: ${result.message}`);
+          return;
+        }
+
+        logger.warn(`[${schedule.id}] Warm-up not ready: ${result.message}`);
+      } catch (err) {
+        logger.warn(`[${schedule.id}] Warm-up error: ${err}`);
       }
 
-      logger.warn(`[${schedule.id}] Warm-up not ready: ${result.message}`);
-    } catch (err) {
-      logger.warn(`[${schedule.id}] Warm-up error: ${err}`);
-    }
-
-    // Retry
-    if (this.stopped || generation !== this.lifecycleEpoch) return;
-    if (retryCount < WARMUP_MAX_RETRIES - 1) {
-      const retryTimer = setTimeout(() => {
-        this.warmUpTimers.delete(schedule.id);
-        void this.performWarmUp(schedule, retryCount + 1);
-      }, WARMUP_RETRY_DELAY_MS);
-      retryTimer.unref();
-      // Store in warmUpTimers so clearWarmUpTimer/stop() can cancel it
-      this.warmUpTimers.set(schedule.id, retryTimer);
-    } else {
-      logger.warn(`[${schedule.id}] Warm-up failed after ${WARMUP_MAX_RETRIES} attempts`);
-    }
+      // Retry
+      if (!isCurrent() || this.stopped || generation !== this.lifecycleEpoch) return;
+      if (retryCount < WARMUP_MAX_RETRIES - 1) {
+        const retryTimer = setTimeout(() => {
+          this.warmUpTimers.delete(schedule.id);
+          void this.performWarmUp(schedule, retryCount + 1);
+        }, WARMUP_RETRY_DELAY_MS);
+        retryTimer.unref();
+        // Store in warmUpTimers so clearWarmUpTimer/stop() can cancel it
+        this.warmUpTimers.set(schedule.id, retryTimer);
+      } else {
+        logger.warn(`[${schedule.id}] Warm-up failed after ${WARMUP_MAX_RETRIES} attempts`);
+      }
+    });
   }
 
   // ===========================================================================
@@ -551,45 +532,55 @@ export class SchedulerService {
 
   private async onCronTick(scheduleId: string): Promise<void> {
     const generation = this.lifecycleEpoch;
-    const schedule = await this.repository.getSchedule(scheduleId);
-    if (schedule?.status !== 'active' || !hasScheduledTeamTarget(schedule, this.smartDispatcher?.supportsHost === true)) {
-      logger.debug(`Cron tick for ${scheduleId} skipped (not active or unsupported owner)`);
-      return;
-    }
+    await this.stopBarrier.withAdmission(scheduleId, async (isCurrent) => {
+      const schedule = await this.repository.getSchedule(scheduleId);
+      if (schedule?.status !== 'active' || !hasScheduledTeamTarget(schedule, this.smartDispatcher?.supportsHost === true)) {
+        logger.debug(`Cron tick for ${scheduleId} skipped (not active or unsupported owner)`);
+        return;
+      }
+      const conflict = this.lockConflict(schedule);
+      if (conflict) {
+        logger.warn(`[${scheduleId}] Cron tick skipped: ${conflict}`);
+        return;
+      }
+      await this.startOccurrence(schedule, generation, isCurrent);
+    });
+  }
 
-    // Check schedule-level lock
-    if (this.activeRuns.has(scheduleId)) {
-      logger.warn(`[${scheduleId}] Cron tick skipped: previous run still active`);
-      return;
-    }
-
-    // Check cwd lock
+  private lockConflict(schedule: Schedule): string | undefined {
+    if (this.activeRuns.has(schedule.id)) return `Schedule ${schedule.id} already has an active run`;
     const cwd = schedule.launchConfig.cwd;
-    const cwdHolder = this.cwdLock.get(cwd);
-    if (cwdHolder && cwdHolder !== scheduleId) {
-      logger.warn(
-        `[${scheduleId}] Cron tick skipped: cwd "${cwd}" locked by schedule ${cwdHolder}`
-      );
-      return;
-    }
-
-    const run = createScheduleRun(schedule);
-    this.activeRuns.set(scheduleId, run);
-    this.cwdLock.set(cwd, scheduleId);
-    try { await persistScheduleRun(this.repository, this.stopBarrier, run); }
-    catch (error) {
-      if (this.activeRuns.get(scheduleId)?.id === run.id) { this.releaseRunLocks(scheduleId); }
-      throw error;
-    }
-    if (this.stopped || generation !== this.lifecycleEpoch) return;
-    this.emitChange({ type: 'run-started', scheduleId, teamName: schedule.teamName });
-
-    this.dispatchRun(schedule, run);
+    const holder = this.cwdLock.get(cwd);
+    if (holder && holder !== schedule.id) return `Working directory "${cwd}" is locked by another schedule: ${holder}`;
+    return undefined;
   }
 
   // ===========================================================================
   // Execution
   // ===========================================================================
+
+  /** Publish only in the original lifecycle; delayed reads cannot acquire locks after Stop. */
+  private async startOccurrence(
+    schedule: Schedule, generation: number, isCurrent: () => boolean
+  ): Promise<ScheduleRun | null> {
+    if (!isCurrent() || this.stopped || generation !== this.lifecycleEpoch) return null;
+    const run = createScheduleRun(schedule);
+    this.activeRuns.set(schedule.id, run);
+    this.cwdLock.set(schedule.launchConfig.cwd, schedule.id);
+    try {
+      await persistScheduleRun(this.repository, this.stopBarrier, run);
+      if (!isCurrent() || this.stopped || generation !== this.lifecycleEpoch || this.activeRuns.get(schedule.id)?.id !== run.id) {
+        if (this.activeRuns.get(schedule.id)?.id === run.id) this.releaseRunLocks(schedule.id);
+        return null;
+      }
+    } catch (error) {
+      if (this.activeRuns.get(schedule.id)?.id === run.id) this.releaseRunLocks(schedule.id);
+      throw error;
+    }
+    this.emitChange({ type: 'run-started', scheduleId: schedule.id, teamName: schedule.teamName });
+    this.dispatchRun(schedule, run);
+    return run;
+  }
 
   private dispatchRun(schedule: Schedule, run: ScheduleRun): void {
     void this.executeRunInBackground(schedule, run).catch((error: unknown) => {
@@ -675,8 +666,12 @@ export class SchedulerService {
         // A cancelled external dispatch cannot write after stop/fixture teardown.
         if (!finishFinalization) return;
         await this.updateScheduleTimestamps(schedule);
-        const freshSchedule = await this.repository.getSchedule(scheduleId);
-        if (!this.stopped && freshSchedule?.status === 'active') this.scheduleWarmUp(freshSchedule);
+        await this.stopBarrier.withAdmission(scheduleId, async (isCurrent) => {
+          const freshSchedule = await this.repository.getSchedule(scheduleId);
+          if (isCurrent() && !this.stopped && generation === this.lifecycleEpoch && freshSchedule?.status === 'active') {
+            this.scheduleWarmUp(freshSchedule);
+          }
+        });
       } finally {
         finishFinalization?.();
       }
@@ -693,6 +688,7 @@ export class SchedulerService {
     exitCode: number | null,
     error: string
   ): Promise<boolean> {
+    const generation = this.lifecycleEpoch;
     logger.warn(`[${schedule.id}] Run ${run.id} failed: ${error}`);
 
     // Retry logic
@@ -727,15 +723,16 @@ export class SchedulerService {
         return false;
       }
 
-      const freshSchedule = await this.repository.getSchedule(schedule.id);
-      if (this.stopped || freshSchedule?.status !== 'active') {
-        await this.completeRun(retryRun, 'failed', exitCode, undefined, error);
-        return false;
-      }
-
-      // Dispatch retry — caller's finally must not run cleanup
-      this.dispatchRun(freshSchedule, retryRun);
-      return true;
+      return this.stopBarrier.withAdmission(schedule.id, async (isCurrent) => {
+        const freshSchedule = await this.repository.getSchedule(schedule.id);
+        if (!isCurrent() || this.stopped || generation !== this.lifecycleEpoch || freshSchedule?.status !== 'active' || this.lockConflict(freshSchedule)) {
+          await this.completeRun(retryRun, 'failed', exitCode, undefined, error);
+          return false;
+        }
+        // Dispatch retry — caller's finally must not run cleanup.
+        this.dispatchRun(freshSchedule, retryRun);
+        return true;
+      });
     }
 
     // Max retries exhausted
@@ -771,7 +768,7 @@ export class SchedulerService {
       consecutiveFailures: 0,
       updatedAt: new Date().toISOString(),
     };
-    await this.repository.saveSchedule(updated);
+    await this.repository.saveSchedule(updated, { mustExist: true });
   }
 
   private async incrementConsecutiveFailures(schedule: Schedule): Promise<void> {
@@ -791,7 +788,7 @@ export class SchedulerService {
       logger.warn(`[${schedule.id}] Auto-pausing after ${newCount} consecutive failures`);
     }
 
-    await this.repository.saveSchedule(updated);
+    await this.repository.saveSchedule(updated, { mustExist: true });
 
     if (shouldAutoPause) {
       this.cronJobs.get(schedule.id)?.pause();
@@ -824,7 +821,7 @@ export class SchedulerService {
       updatedAt: now,
     };
 
-    await this.repository.saveSchedule(updated);
+    await this.repository.saveSchedule(updated, { mustExist: true });
     this.emitChange({
       type: 'schedule-updated',
       scheduleId: fresh.id,

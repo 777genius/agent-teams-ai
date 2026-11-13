@@ -425,6 +425,73 @@ describe('bounded owned process protocol', () => {
     expect(results).toMatchObject([{ deadlineExpired: true }, { deadlineExpired: true }]);
     pending.abandonControl(owner);
   });
+  it('retains bounded drain on the original pending authority when Stop wins held preparation', async () => {
+    const peer = wirePeer({ holdLaunch: true });
+    const port = createWindowsOwnedLaunchPort('C:\\sandbox\\owned-process-broker.exe', 'job-membership', peer.factory);
+    const pending = port.allocate(owner), preparing = port.prepare(pending, spec);
+    const stopping = pending.stop({ expectedOwner: owner, attemptId: 'prepare-race', mode: 'force',
+      deadlineMs: performance.now() + 1000 });
+    peer.prepared();
+    const preparation = await preparing;
+    expect(preparation).toMatchObject({ kind: 'failed', cleanup: pending });
+    peer.stopped();
+    const stopped = await stopping;
+    if (stopped.kind !== 'confirmed' || preparation.kind !== 'failed') throw new Error('Expected original synthetic receipt');
+    await expect(preparation.cleanup.release(stopped.receipt, 'job-membership')).rejects.toThrow('drain');
+    peer.stdout.end('TEST tail never consumed by a prepared facade'); peer.stderr.end();
+    expect((await preparation.cleanup.drain(performance.now() + 20)).kind).toBe('incomplete');
+    await preparation.cleanup.release(stopped.receipt, 'job-membership');
+    expect(peer.requests.filter(frame => frame.opcode === Op.release)).toHaveLength(1);
+  });
+  it('an expired Stop waits for its original wire reply before a fresh attempt needs its own ACK', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    let clock = 1000;
+    vi.spyOn(performance, 'now').mockImplementation(() => clock);
+    const peer = wirePeer();
+    const port = createWindowsOwnedLaunchPort('C:\\sandbox\\owned-process-broker.exe', 'job-membership', peer.factory);
+    const pending = port.allocate(owner);
+    try {
+      await port.prepare(pending, spec);
+      const first = { expectedOwner: owner, attemptId: 'expired', mode: 'force' as const, deadlineMs: 1010 };
+      const firstPromise = pending.stop(first);
+      clock = 1011; await vi.advanceTimersByTimeAsync(11);
+      const original = await firstPromise;
+      expect(original).toMatchObject({ kind: 'unknown', deadlineExpired: true });
+      let secondSettled = false;
+      const second = pending.stop({ ...first, attemptId: 'reconcile', deadlineMs: 2011 });
+      void second.then(() => { secondSettled = true; });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(secondSettled).toBe(false);
+      expect(peer.requests.filter(frame => frame.opcode === Op.stop)).toHaveLength(1);
+      peer.stopped();
+      await vi.advanceTimersByTimeAsync(0);
+      const requests = peer.requests.filter(frame => frame.opcode === Op.stop);
+      expect(requests).toHaveLength(2);
+      expect(requests[1]!.requestId).not.toBe(requests[0]!.requestId);
+      expect(secondSettled, 'late original ACK only unblocks dispatch; it is not the second receipt').toBe(false);
+      expect(await pending.stop(first)).toBe(original);
+      peer.stopped();
+      expect(await second).toMatchObject({ kind: 'confirmed', receipt: { attemptId: 'reconcile' } });
+      expect(await pending.stop(first)).toBe(original);
+      clock = 10_000;
+      const lost = { ...first, attemptId: 'wire-deadline', deadlineMs: 10_010 };
+      const lostResult = pending.stop(lost);
+      clock = 10_011; await vi.advanceTimersByTimeAsync(11);
+      const lostOutcome = await lostResult;
+      expect(lostOutcome.kind).toBe('unknown');
+      clock = 70_011; await vi.advanceTimersByTimeAsync(60_000);
+      const refused = await pending.stop({ ...first, attemptId: 'without-wire-ack', deadlineMs: 71_011 });
+      expect(refused.kind).toBe('unknown');
+      expect(peer.requests.filter(frame => frame.opcode === Op.stop)).toHaveLength(3);
+      peer.stopped(); // The retained wire waiter consumes the reply after its public60s timeout.
+      await vi.advanceTimersByTimeAsync(0);
+      const afterReply = pending.stop({ ...first, attemptId: 'after-real-late-ack', deadlineMs: 71_011 });
+      expect(peer.requests.filter(frame => frame.opcode === Op.stop)).toHaveLength(4);
+      peer.stopped();
+      expect((await afterReply).kind).toBe('confirmed');
+      expect(await pending.stop(lost)).toBe(lostOutcome);
+    } finally { pending.abandonControl(owner); vi.restoreAllMocks(); vi.useRealTimers(); }
+  });
   it('a failed native dispatch stays unknown despite a valid root witness and zero membership', async () => {
     const peer = wirePeer();
     const port = createWindowsOwnedLaunchPort(
