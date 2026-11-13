@@ -1363,3 +1363,404 @@ identities, published source receipts, cold history и full cleanup.
 Source-only PASS, прежние Linux receipts и будущий Darwin/Windows результат
 не переносятся друг на друга. §§17–20 stale/unknown/grant isolation и
 retained custody остаются обязательными во всех этих flows.
+
+
+## 22. Codex 0.169.0: первый bounded public-D candidate proof до source eligibility
+
+Статус на 2026-11-13: PLAN ONLY. Этот appendix уточняет Codex-часть §21.
+Он не объявляет CLI 0.169.0 поддержанным Host, не меняет provider pins и не
+разрешает запуск до отдельного source review/GO. Исходная пара остаётся
+A=0.162.0, B=0.169.0; число в protocolRevision не заменяет actual --version.
+
+### Круг 1 — реальные существующие проверки и недостающие границы
+
+Source audit выполнен по frontend
+[7ce224d148205867d46fd2ca980a48e1b9e8c48b](https://github.com/777genius/agent-teams-ai/tree/7ce224d148205867d46fd2ca980a48e1b9e8c48b)
+и D
+[3b39a50b28319a3e91e0779493f0d64acb98d2e5](https://github.com/agent-teams-ai/old-provider-implementations/tree/3b39a50b28319a3e91e0779493f0d64acb98d2e5).
+В D нет отдельной найденной actual native Codex suite. Его
+driver-permissions.test.ts и checkpoint cases — controlled protocol tests.
+Под «existing lane» в §21 понимаются существующие F native fixtures,
+публичный D API и уже имеющаяся CI job, а не несуществующий D native gate.
+
+| Требование | Существующий точный source | Что надо доказать для B |
+|---|---|---|
+| initialize / native readiness | F native-codex-team.native.ts + fixtures/native-codex-team/driver.ts; D factory.open → initialize → thread/start, actual MCP readiness | Те же реальные wire/SDK границы на проверенных 0.169 bytes; ACK submit остаётся client-consumed / providerAcceptance unknown |
+| Native model catalog / выбранный model | F native-codex-metadata.native.ts и desktop-codex-resume-fixture.ts используют Host metadata с literal 0.162; D public CodexAppServerClient имеет initialize/listModels/readModelConfiguration | Один отдельный metadata child с public D, bounded actual catalog; выбранное значение должно затем совпасть с model в actual inference requests |
+| Input / Team MCP / effects | Direct fixture исполняет CODEX_TEAM_ONE/TWO, реальные task/message tools, ONE+TWO bytes, 11 Responses requests | Переиспользовать тот же model и реальные MCP effects; не заменять native tools synthetic replies |
+| Manual permission | Direct fixture выставляет approvalPolicy=never; controlled D permission tests не являются native доказательством | Один exact modern Bash approval с исходными session/input/operation/interaction refs; отсутствие effect до allow, затем реальный effect |
+| Stop | Direct fixture закрывает original child после двух завершённых inputs; Host fixture имеет отдельный owner Stop | Дополнительно проверить interrupt активного candidate C2 input через public Session: requested/unconfirmed отдельно от actual cancelled terminal, затем original close/child exit |
+| Cold Resume | Direct fixture не сохраняет checkpoint; native-codex-host cold часть — readback без нового input. Existing Desktop Codex Resume делает настоящий selected restore, но на 0.162 | Получить genuine checkpoint C1, закрыть C1, открыть новый native process C2 через тот же public factory и original checkpointRef; actual thread/resume и prior context без повторной отправки ONE |
+| Stock installer → captured source | CodexRuntimeInstallerService + codexRuntime IPC одинаковы в old main4a0e062 и current7ce, install/invalidate не публикуют source | Отдельный следующий consumer cut после native evidence; успех установки не квалифицирует D/Host |
+
+D публичные source anchors:
+[Session/DriverFactory contract](https://github.com/agent-teams-ai/old-provider-implementations/blob/3b39a50b28319a3e91e0779493f0d64acb98d2e5/packages/provider-session-contracts/src/features/provider-session-contracts/contracts/session.ts)
+(blob bd4668e0cf16ee7c2c2eb0d7b63863049b7cb5f6);
+[public codex export](https://github.com/agent-teams-ai/old-provider-implementations/blob/3b39a50b28319a3e91e0779493f0d64acb98d2e5/packages/provider-implementations/src/codex.ts)
+(c83aabee50ed75973eeae36a3ddbd0d37c7aa7ce).
+driver-config d02d3c6ab540aa6415fbf32e16bf6e3be2f0377e допускает непустую
+protocolRevision, а driverCompatibility включает её вместе с исходными
+tenant/project/session/config/source/model params. Поэтому candidate
+может честно использовать 0.169.0 без изменения D или Host schema.
+driver-session ace1ef025ff21f7f14e0d82554372cdd8693507f возвращает собственный
+checkpoint v2/nativeThreadId/itemOwners/compatibility; factory
+daeeb1f64df310c895aa2df1c84f66d04a3d33b8 восстанавливает только полученный
+original checkpoint. Эти bytes не переписываются под новую версию.
+Точная функция driverCompatibility, lines105–113, destructures только
+{tenantId, projectId, sessionId}; binding.generation отсутствует в hash.
+Config binding каждого open обязан совпасть со своим request, поэтому
+C2 использует согласованную новую generation, а все поля compatibility
+остаются исходными. Это same0.169 checkpoint proof; cross-version
+restore0.162→0.169 не заявляется. Старые A histories сохраняют original
+0.162 executable/capture/provenance.
+
+### Круг 2 — точный candidate и evidence до первого исполнения
+
+Официальный release
+[rust-v0.169.0](https://github.com/openai/codex/releases/tag/rust-v0.169.0)
+опубликован 2026-11-13T08:37:05Z, release id443990865.
+Annotated tag a41fe5b443652cbdbee57717fbb9fd78d8d8b32a указывает на exact
+[source commit d32063f96c2dff1dc96af839b3952abb6acfeda4](https://github.com/openai/codex/tree/d32063f96c2dff1dc96af839b3952abb6acfeda4).
+Readonly release API сообщает для полного
+[codex-npm-darwin-arm64-0.169.0.tgz](https://github.com/openai/codex/releases/download/rust-v0.169.0/codex-npm-darwin-arm64-0.169.0.tgz):
+153831622 bytes, SHA256
+d67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d.
+Первый candidate берёт именно этот полный platform package в отдельный
+TEST directory, сохраняет весь vendor target и sibling resources; stage
+не заменяет прежние 0.162 artifacts. До parsing проверяются длина/hash
+архива, package/platform/version и containment regular files; затем actual
+executable --version должен быть ровно codex-cli 0.169.0. SHA256 бинаря и
+нужных siblings измеряются после verified extraction, сохраняются в
+immutable input receipt и повторно сверяются до каждого launch и после
+cleanup. Сейчас эти archive bytes не скачаны/не исполнены; API digest не
+выдаётся за уже измеренный executable hash.
+
+Registry audit §21
+[93c904871af47e8e51740c1481815d8120a4f225](https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/93c904871af47e8e51740c1481815d8120a4f225)
+в 13:55:10Z фиксирует @openai/codex/latest=0.169.0, root metadata SHA256
+bc0cad6c06791b215d5bead6313227eb3d85a25b4c44b575a21e1fceb17f3b29
+и root npm integrity
+sha512-KhzYlkKPxoNssR8CEm45IjqnFWn7UtlF4CiD3tOJPea51xBs7MaHy0UQG9GSbCqk6Lrjn5QdJDV0QD1/FgWlGw==.
+Это не platform tarball integrity. Stock installer отдельно проверяет SRI
+своего exact platform package. Побайтовая идентичность GitHub release
+tarball и будущего registry download не предполагается: при consumer
+qualification записываются оба provenance и реальные selected bytes.
+
+D остаётся тем же F dependency, без repack/pin update:
+vendor/provider-migration/claude-review-3b39a50b/agent-teams-provider-implementations-0.0.0.tgz,
+SHA256 f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2,
+SRI sha512-OskMRUunXXpgl7jWcFSS1UuAQIhmH0Uqjcc/IRQc4enDFsv4tqGebjlhM9cSMIkPO82+S+JXQb359vKjiyNRNA==.
+[Existing source receipt](https://github.com/777genius/agent-teams-ai/blob/7ce224d148205867d46fd2ca980a48e1b9e8c48b/vendor/provider-migration/claude-review-3b39a50b/source-receipt.json)
+связывает source3b39, original checked artifact14043230900 и
+Node24.21/26.11 pnpm check PASS. Это source/packed-consumer evidence,
+не actual Codex0.169 execution. Contracts archive остаётся aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db.
+
+### Круг 3 — один explicit mode, исходные budgets и original refs
+
+Первый tuple — Darwin ARM64, существующий pinned Node24.21.0.
+C1/C2 ниже — два последовательных app-server процесса одного candidate
+0.169.0; они не обозначают old/new version pair A0.162/B0.169 из §21.
+Используется уже существующая stage1-desktop matrix row
+variant=native-codex-resume-ui, до её ordinary Desktop launch.
+Job сохраняет 45min; native test сохраняет общий 180s, D limits30s,
+existing60s input wait, конечные read-only observer caps и cleanup bounds.
+Каждый фазовый wait ограничивается remaining общего исходного deadline;
+нет retry, нового runner/job/matrix или увеличения timeout.
+Stock codex-runtime-smoke остаётся отдельным installer/version gate.
+Остальные tuples не становятся eligible из результата Darwin ARM.
+
+Предлагаемый exact invocation в этой row (ещё не выполнен):
+
+~~~sh
+LEGACY_CODEX_TEAM_GO=1 \
+LEGACY_CODEX_CANDIDATE_VERSION=0.169.0 \
+LEGACY_CODEX_CANDIDATE_INPUTS="$STAGE1_INPUTS/codex-0.169.0/input-pins.json" \
+LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/claude-review-3b39a50b/agent-teams-provider-implementations-0.0.0.tgz \
+LEGACY_NATIVE_PROVIDER_SHA256=f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2 \
+resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node --test \
+packages/legacy-agent-host/tests/native-codex-team.native.ts
+~~~
+
+Only exact explicit 0.169 mode допускает candidate pins; отсутствие mode
+сохраняет прежний 0.162 сценарий, иной literal отказывает до spawn.
+Новый mode reuse existing TEST Team/MCP/model и caller-owned original
+ChildProcess transport. Он упражняет public D Session прямо; не проводит
+candidate через Host schema, RuntimeSourceIndex или fake Runtime restore.
+
+1. **Metadata.** До conversation один отдельный original child использует
+   public CodexAppServerClient.initialize + listModels({limit:100,
+   includeHidden:false}) + readModelConfiguration. Одна первая bounded
+   page достаточна для выбора visible text model; полный каталог не
+   заявляется. Default startup provider — тот же isolated TEST_fixture,
+   его localhost/dummy-key config и no-user-home остаются прежними.
+   Нет account/login/refresh или inference probe. Отдельный metadata
+   client завершается и original child подтверждён exited до C1.
+   Один stdio stream всегда имеет ровно одного RPC owner; native factory
+   и metadata client не читают одновременно один pipe.
+2. **C1 / ONE / permission.** Выбранный model и exact0.169 revision входят
+   в настоящий config до первого conversation child и больше не меняются.
+   Новый mode добавляет только для уже существующего первого exec_command
+   explicit require_escalated при approvalPolicy=on-request.
+   Реальный modern item/commandExecution/requestApproval должен дойти до
+   Session interaction Bash. До единственного allow проверяются exact
+   current session/input/operation и original normalized command/cwd,
+   native-effect.txt ещё отсутствует. Public
+   respondToInteraction(originalRef,{kind:'permission',decision:'allow'})
+   должен вернуть ok; session/persistent allow rule не создаётся.
+   D approval-request a6c8bee2b7e6efca8e5bca6a5e9f8db1c3e94dfd и
+   driver-interactions7b3c366ae6251fec60346e77febde5a07297136e показывают
+   точный modern one-shot путь. item/permissions/requestApproval,
+   diagnostic, отсутствие interaction или неизвестная форма не считаются
+   permission PASS. Должны произойти исходные task effects, ONE bytes,
+   command exit7/tool-error и terminal succeeded C1.
+
+   Source prerequisite подтверждён по official0.169 commitd32063f, не по
+   названию option. Сохраняется именно workspace-write из existing driver;
+   danger-full-access/external sandbox не используются. Native
+   config/permission_config.rs blob04baea04840d8952f88c22b242835685d1b22fa3,
+   lines88–101, переводит WorkspaceWrite в workspace_write profile;
+   protocol/permissions.rs6cc2839485cbbcbd4d7aad47a707ce234ea09fcc,
+   lines804–858, строит Restricted filesystem policy. В
+   [core/src/exec_policy.rs](https://github.com/openai/codex/blob/d32063f96c2dff1dc96af839b3952abb6acfeda4/codex-rs/core/src/exec_policy.rs)
+   blobfce3479f90fe0f63ed7b123768de675476a73f69, lines915–931,
+   OnRequest + Restricted + requests_sandbox_override даёт Prompt;
+   Unrestricted/ExternalSandbox дали бы Allow. Тот же file433–489 переводит
+   Prompt в NeedsApproval, если policy не отказывает. В пустом private
+   TEST home не создаются exec allow rules, hooks или persistent grants;
+   внешний managed policy не обходится, неожиданный результат держит FAIL.
+   handlers/mod.rsda4da19939255755fd31634cd8aa72036ba069ab, lines327–332,
+   сохраняет RequireEscalated как permissions_preapproved=false;
+   orchestrator.rs9ba96e57eea42bcd988b1d4d257d92149a50cc3a, lines208–235,
+   awaits approval до первого execution attempt. В
+   app-server/src/bespoke_event_handling.rs485f8e144532ffcb67f89b48aeaaf8a7388f7b58,
+   lines785–806, original thread/turn/item/command становятся native
+   CommandExecutionRequestApproval; app-server-protocol/src/protocol/common.rs
+   52ed76c60687defce3f3405148ff15b44769d433, line1899, задаёт exact wire
+   item/commandExecution/requestApproval. Этот trace обосновывает выбранный
+   stimulus; PASS требует реальный original interaction и эффект после
+   allow, synthetic approval из TEST не допускается.
+3. **Original checkpoint / cold native C2.** После terminal C1 и idle
+   вызывается public Session.checkpoint. Его opaque payload сохраняется
+   один раз в private0600 TEST file с digest/reference. Затем C1.close
+   должен вернуть cleanup=confirmed и original C1 child завершиться.
+   Новый original child C2 запускается с тем же native home, package,
+   config/account/model/MCP context; новый binding generation не меняет
+   opaque bytes/compatibility/nativeThreadId. Единственный readCheckpoint
+   callback возвращает payload только по original captured reference.
+   Native facts требуют один thread/start C1 и один thread/resume C2 с тем
+   же original thread; no fresh-thread fallback. Перед TWO у C2 ноль submits
+   и нет новых business effects; ONE не воспроизводится.
+4. **C2 / TWO / active Stop.** Второй новый input/operation отличается от C1;
+   model обязан видеть prior context и исходные native tool IDs.
+   TWO выполняет существующий append и Team reply. Только его последний
+   уже существующий model response удерживается TEST server без отправки
+   synthetic terminal; после получения этого original request caller
+   вызывает C2.interrupt(originalOperationRef). requested/unconfirmed
+   отдельно от matching actual result cancelled. Второй Stop/новый input
+   по timeout не допускается. Затем C2.close и exit original C2 child.
+   Таким образом остаются два business inputs и те же 11 model requests
+   (8 C1 +3 C2); второй terminal здесь отменён намеренно. Header/request
+   effects не считаются terminal. Server close выполняется в cleanup,
+   не используется как доказательство успешного interrupt.
+5. **Receipt / cleanup.** Сохраняются candidate/native/D/Node provenance,
+   actual selected model, original child refs, input/operation joins,
+   checkpoint digest/ref, exact thread-resume equality, permission-before-
+   effect, one interrupt/actual cancelled, finite HTTP/tool/effect counts,
+   original close/exit и first failure. Metadata не считается business
+   input. Все three original children (metadata/C1/C2) имеют retained
+   cleanup с момента spawn; fallback cleanup сохраняет INCOMPLETE вместо
+   превращения unknown close в PASS. Existing original-child cleanup
+   не выдаётся за whole descendant custody, production Host Stop или
+   renderer acceptance. Opaque payload/native config/tokens остаются
+   private TEST artifacts; summary не публикует bearer/env/raw stderr.
+   Initial outcome и оригинальные ошибки не заменяются поздним cleanup.
+
+Actual model/catalog/approval behavior0.169 остаётся gate: например,
+новый native route или incompatible checkpoint сохраняет failure и
+требует отдельного source-backed решения. Oracle не выдумывает model
+catalog, не принимает произвольный tool и не подстраивает count после
+прогона. [Official exact app-server source](https://github.com/openai/codex/blob/d32063f96c2dff1dc96af839b3952abb6acfeda4/codex-rs/app-server/README.md)
+отдельно описывает startup-provider model/list и сохранённый provider
+при cold resume; это контрактное основание проверки, не её исполнение.
+
+### Минимальный source manifest и последующий consumer
+
+До source нужны второй independent review и root publication этого плана.
+Первый TEST cut ограничен следующими existing files; полный immutable
+manifest проверяется ещё раз относительно actual integration head:
+
+| Path | Exact preimage at7ce |
+|---|---|
+| packages/legacy-agent-host/tests/native-codex-team.native.ts | 13455bbe85f0f99301bab014aa0219c89a9a7e02 |
+| packages/legacy-agent-host/tests/fixtures/native-codex-team/driver.ts | b1de89b55c7123d71b1ec0956cbfb3edb2e353b7 |
+| packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts | 0ab116513b4e8098fe8a5cec6449cf53074fcb39 |
+| packages/legacy-agent-host/tests/fixtures/native-codex-team/model.test.ts | 3a75e20efba06287f8072fded058ae9624d1babc |
+| .github/workflows/ci.yml | 0eab99cf8121dec4de96678b9fa1679eba27b4d3 |
+
+Driver reuse ограничивается непосредственно используемым original process
+IO/config helper в том же файле, чтобы metadata/C1/C2 имели одинаковый
+cleanup contract. Нет общего нового RPC/orchestration framework.
+Existing model case расширяется только для critical candidate marker/count,
+default mode unchanged и одного held original final response без extra
+request/replay. Before-allow no-effect, native checkpoint/resume и actual
+cancelled проверяет настоящий native case, не synthetic model test. Existing build/testtypes/target lint/source caps обязательны до final
+acceptance/upward merge. При unavailable executor допустима reviewed
+source-only publication кандидата для обычного canonical CI; она не
+объявляется локальным PASS. Эти проверки должны реально пройти на exact
+candidate head, а их PASS не заменяет actual native receipt.
+
+Следующий production slice сейчас не разрешён: после actual proof надо
+отдельно уточнить finite tuple/version eligibility и обычный Main/Host
+proof, затем связать Codex stock installer с уже существующим captured
+source port. Read-only preimages этой недостающей связки:
+
+- CodexRuntimeInstallerService.ts:
+  src/features/codex-runtime-installer/main/infrastructure/,
+  1efd89b69448ccc93d97328a990f0e194d70e5bc; stock install реально проверяет
+  platform SRI/full vendor layout и пишет current.json, но source не
+  публикует. Same-version repair сейчас может replace versionDir;
+  retained A closure нельзя считать автоматически защищённой этим путём.
+- src/main/ipc/codexRuntime.ts116bd3001be3f872d0f47da253394a75927c0485
+  и createCodexRuntimeInstallerFeature.ts06c919fef1d2d63b411072f92a4a895fc556f15a:
+  stock composition, без existing captured source consumer.
+- src/features/agent-backend/main/infrastructure/CapturedRuntimeSources.ts
+  0b3fe40f6cc29c2a4c53b10ad1d96aaea7b87a0e уже даёт current/recover/
+  publish/lookup. CapturedOpenCodeRuntimeInstaller35e58d04 и его composition
+  3c56cfb8 показывают existing source/expectedRevision/lost-ACK discipline;
+  Codex не получает вторую source registry, новые implicit PID owners
+  или автоматический fallback после refused publication.
+- Host composition/runtimeProfile a1daa87f33aceeae3fe81d9d91217d89ed12bb8d,
+  management/profile e1af7fe25cd74a1c2710713853eaae729b81ed1a и
+  runtimeSourceQualification3b6d4abafd37c0677f5e4b32334b958416975c98
+  остаются прежними; exact native version, actual executable/source и
+  retained capture не превращаются в arbitrary semver range.
+
+Положительный первый receipt означает только actual public-D candidate
+Darwin ARM proof при перечисленных inputs/policies. Он не закрывает
+Linux/Windows, public Main/Host source admission, renderer Install/Update,
+A0.162 active while B0.169 installed, genuine retained A/B Stop, или
+same-profile cold Desktop histories. Эти required §21 flows сохраняются
+до следующих обычных source/owner/UI receipts. Если D требует изменения,
+оно планируется из конкретного original failure и проверяется отдельно;
+old0.162 остаётся доступен без relabel/downgrade или переписывания history.
+
+
+### §21 Desktop implementation refinement — reachable controls and exact TEST source boundary
+
+**Review 4 — source reachability before a browser helper.** The healthy dashboard
+prerequisite does not expose Refresh: `OpenCodePrerequisite` returns no content
+for a Ready gate. Its `provider-quick-opencode-refresh` control is therefore not
+the planned healthy A selector. Settings' catalog refresh also does not by itself
+prove a runtime-source selection. No hidden-button click, direct installer IPC,
+renderer-store mutation or new product control substitutes for either route.
+
+The actual existing control is Create's
+`[data-testid="team-model-selector-refresh-providers"]` in
+[TeamModelProviderActions](https://github.com/777genius/agent-teams-ai/blob/48a28a6198cda1e2668e92f575505dddf7d69c35/src/renderer/components/team/dialogs/TeamModelProviderActions.tsx),
+blob `256f40673f9c11390fc83e90597b738dae0f0042`, byte-identical at old frontend
+`4a0e06277fe216d9f82dbbede362668fe46622ee`. It is rendered above the provider
+tabs and disabled only while its original refresh is pending. Its original
+callback independently invokes `invalidateOpenCodeRuntimeStatus` followed by
+`fetchOpenCodeRuntimeStatus`; the existing Codex/CLI/catalog work and error
+projection remain unchanged. Main's original
+[openCodeRuntime IPC](https://github.com/777genius/agent-teams-ai/blob/48a28a6198cda1e2668e92f575505dddf7d69c35/src/main/ipc/openCodeRuntime.ts)
+`invalidateStatus` reaches `CapturedOpenCodeRuntimeInstaller.selectInstalled`.
+Thus the second namespace opens the ordinary Create form, expands the original
+lead model control and clicks that one visible Refresh once. Before/after
+read-only source records must establish the expected A native-version
+publication and exact current target; a healthy label alone is insufficient.
+Other provider status outcomes are retained and do not authorize a second click.
+
+Fresh Install and live-A Update use the existing visible OpenCode controls in
+`CliStatusBanner`/`runtimeInstallActionUi`; the new maintenance cut supplies
+the original captured CLI's optional update metadata. Each control is located
+by its existing OpenCode scope and exact original label, checked visible/enabled
+and clicked once through `desktop-ui-controls`. Missing installed choice is
+observed before Install. A different discovered executable, unexpected stock
+candidate, hidden control or failed/unknown source publication fails this proof;
+the harness neither removes ambient files nor forces a Ready/Install state.
+
+**Review 5 — initial TEST inputs, accounting and cleanup.** An explicit
+`nativeOpenCodeSourceSelection` option belongs only to the existing disposable
+fixture. It captures verified full-package A, the original finite model URL,
+separate fixed member/management endpoints and initial `missing` or `path`
+choice. The new choice uses the actual selected Node24 executable on Linux.
+Its V1 recipe/provider template and management seed are complete before the
+first `createFilesystemTeamOwner` call. A is delivered as a real executable
+reference without inventing an installed `cliVersion` on the management seed.
+The original offline sidebar seed need not acquire a Runtime delivery merely
+to supply a provider template; initial definitions are validated by the same
+Host schemas before any app exists. No later profile, descriptor, pin, source,
+registry, Team or history rewrite is allowed.
+
+For this option alone, omit OpenCode's TEST sentinel from the two existing
+sentinel directories, omit all three existing OpenCode override variables and
+build the original app environment with the private TEST bins/selected Node
+plus system utility paths. Only the PATH namespace includes the canonical
+`bin` directory of the full verified A package. The missing namespace excludes
+A from discovery. The shell probe still preserves the exact initial environment;
+other sentinel/override guards remain. Actual stock discovery, including its
+unchanged fallback rules, decides whether the expected missing/A state exists.
+An unexpected original discovery is an INCOMPLETE result, not permission to
+delete/install over it or search for a replacement.
+
+The four business inputs remain exactly those in §21. The first input of each
+new Team is the ordinary Create form's `#team-prompt`, delivered once by its
+existing Create-and-Launch path. This follows
+`desktop-create-launch-ui-smoke.ts`'s original initial-input proof; it is not
+followed by an extra Send. Only A's second input uses the existing real Composer
+and once-only Send after B publication. Fixed distinct TEST markers bind the
+fresh-installed B, A-before-update, A-after-update and newly captured B.
+Every marker joins its original creation/launch/runtime input and actual native
+request/reply. The no-tool Host preflight accepts only the exact existing
+`Reply only OK. Do not use tools, access files or run commands.` prompt with
+its original no-tool shape. It is recorded separately and consumes the same
+total model cap32; default legacy strict-launch/PONG behaviour is preserved.
+
+The source-selection mode reuses `startRetainedOpenCodeApp`, its original
+CapturedProcess, renderer ownership, selected-path/image witnesses, normal Quit,
+cleanup and namespace census. The initial fresh-install namespace is fully
+closed before the PATH namespace starts. Original A remains live across the
+once-only B installation/publication and its second input; A Stop/released
+Runtime plus original physical absence precede new B Launch on the unchanged
+member endpoint. New B Stop precedes normal Quit. Every retained native/metadata
+birth and unmatched selected image remains part of the existing absence
+requirement, with no PID adoption or new signal authority. Cold startup keeps
+the same descriptor/profile/owner and reads the actual A/B histories and source
+receipts without another Create, input, install, Refresh or publication.
+
+**Exact candidate source manifest.** These preimages were read back at working
+`48a28a6198cda1e2668e92f575505dddf7d69c35`; no UI source bytes have changed.
+Root owns the existing `ci.yml` invocation/receipt assertion and composes its
+current preimage separately. All file paths below are under
+`scripts/legacy-agent-host/`.
+
+| Path | Exact preimage | Narrow change |
+|---|---|---|
+| desktop-retained-opencode-coexistence.native.ts | 9f569ea02e190a94e35f087620f6d812b8e52d16 | One explicit source-selection branch after the shared clean-source/build/Node setup; default retained legacy/V2 body remains unchanged. Same900s case. |
+| prepare-retained-opencode-coexistence.ts | 049a7416e5896b266d8ea9d2241d116a900812b7 | Explicit mode verifies full staged A and its package/lock/integrity evidence, uses the existing pure stock selection helper for exact B1.19.5 metadata, and writes a separate bounded input receipt; ordinary retained preparation unchanged. |
+| desktop-backend-fixture.ts | 0672763ee3533bb033dfa5aec9adf027bc897105 | Initial Linux V1 source option, exact source descriptor and sentinel/env choice before Owner bootstrap. Preserve the public environment export and all default callers. |
+| desktop-runtime-source-fixture.ts | new, directly consumed | Cohesively hold the existing V2 recipe/profile-preparation block and existing environment builder, preserving their default bytes/behaviour; add only the declared V1 source preparation beside them. This frees real preparation code from the790-line fixture without compression or a raised baseline. |
+| desktop-runtime-source-selection.ts | new, directly consumed | The two sequential namespaces, genuine UI actions, original durable/native/source joins and cleanup/cold readback. Reuse existing app/UI/Create/read-only Runtime helpers; no new browser/process owner or generic driver. |
+| desktop-retained-opencode-model.ts | d0db11b91875bbe6a3a5c87014e3eb35251d9a1c | Explicit finite source-selection mode for four fixed business markers and exact original Host no-tool preflights; same32 cap, same HTTP size/endpoint checks and original default mode. |
+| desktop-retained-opencode-model.test.ts | a651cfa2b53402fdd0e4a36035af818926ffa565 | Extend the existing business/probe case for the explicit mode, exact prompt/owner/marker joins and first-violation refusal; no new suite. |
+
+The preparer's metadata lookup is evidence before the original UI action, not a
+fake registry, source publication, new native session or implementation of the
+installer. B is still downloaded and verified by the stock installer. A's
+existing package closure remains available throughout A; measuring the official
+package/SRI, actual binary/version and source inputs does not rewrite it.
+All new helpers fall under the existing whole
+`scripts/legacy-agent-host` source-freeze input. Account's mixed Settings files
+and product status/qualification guards are not edited by this UI cut.
+
+**Review/qualification.** Root and an independent peer review this exact
+boundary before the helper source. Review the default-preserving extraction
+bytewise, then run existing focused model/fixture cases, script/Host types and
+source-size/lint guards when execution is available. No new generic unit suite,
+sampler, workflow job/matrix, native budget or timer is introduced. The existing
+Linux job receives one explicit additional mode and retains its30min budget and
+ordinary retained proof. Its actual new receipt must establish all four inputs,
+original A retention, B publication/new capture, cold history and complete
+cleanup. Environment loss means the present manifest is source-only planning;
+previous native/maintenance/source reviews are not executions of these bytes.

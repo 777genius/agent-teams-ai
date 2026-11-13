@@ -70,6 +70,7 @@ let providerRuntimeSettingsDialogProps: {
   onSelectBackend?: (providerId: string, backendId: string) => Promise<void> | void;
   onRefreshProvider?: (providerId: string) => Promise<boolean>;
   open?: boolean;
+  disabled?: boolean;
   initialProviderId?: string;
   initialRuntimeProviderId?: string | null;
   initialRuntimeProviderAction?: 'connect' | 'select' | null;
@@ -192,6 +193,7 @@ vi.mock('@renderer/components/runtime/ProviderRuntimeSettingsDialog', () => ({
     onSelectBackend?: (providerId: string, backendId: string) => Promise<void> | void;
     onRefreshProvider?: (providerId: string) => Promise<boolean>;
     open?: boolean;
+    disabled?: boolean;
     initialProviderId?: string;
     initialRuntimeProviderId?: string | null;
     initialRuntimeProviderAction?: 'connect' | 'select' | null;
@@ -3717,6 +3719,81 @@ describe('CLI status visibility during completed install state', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('opens each provider settings with an installed captured Host and no legacy command path', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    const providers = (['anthropic', 'codex', 'opencode'] as const).map((providerId) => ({
+      ...createDeferredMultimodelProvider(providerId, providerId),
+      verificationState: 'error',
+      statusMessage: 'TEST provider configuration requires attention',
+    }));
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      binaryPath: null,
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      providers,
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = async (key: string) => {
+      await act(async () => {
+        root.render(React.createElement(CliStatusBanner, { isDashboardActive: true, key }));
+        await flushLazyImports();
+      });
+    };
+    try {
+      for (const providerId of ['anthropic', 'codex', 'opencode'] as const) {
+        await render(providerId);
+        const manage = host.querySelector<HTMLButtonElement>(
+          `[data-testid="runtime-manage-${providerId}"]`
+        );
+        expect(manage).not.toBeNull();
+        expect(manage?.disabled).toBe(false);
+        await act(async () => {
+          manage!.click();
+          await flushLazyImports();
+        });
+        expect(providerRuntimeSettingsDialogProps?.open).toBe(true);
+        expect(providerRuntimeSettingsDialogProps?.initialProviderId).toBe(providerId);
+        expect(providerRuntimeSettingsDialogProps?.disabled).toBe(false);
+        expect(host.querySelector('[data-testid="terminal-modal"]')).toBeNull();
+      }
+      expect(storeState.cliStatus.providers).toBe(providers);
+      expect(providers.every((provider) => provider.verificationState === 'error')).toBe(true);
+      storeState.cliStatusLoading = true;
+      await render('opencode');
+      for (const providerId of ['anthropic', 'codex', 'opencode']) {
+        const manage = host.querySelector<HTMLButtonElement>(
+          `[data-testid="runtime-manage-${providerId}"]`
+        );
+        expect(manage === null || manage.disabled).toBe(true);
+      }
+      if (host.querySelector('[data-testid="provider-runtime-settings-dialog"]')) {
+        expect(providerRuntimeSettingsDialogProps?.disabled).toBe(true);
+      }
+      storeState.cliStatusLoading = false;
+      storeState.cliStatus = { ...storeState.cliStatus, installed: false };
+      await render('opencode');
+      expect(host.querySelector('[data-testid^="runtime-manage-"]')).toBeNull();
+      expect(host.querySelector('[data-testid="terminal-modal"]')).toBeNull();
+      expect(storeState.installCli).not.toHaveBeenCalled();
+      expect(storeState.installOpenCodeRuntime).not.toHaveBeenCalled();
+      expect(storeState.installCodexRuntime).not.toHaveBeenCalled();
+      expect(storeState.updateConfig).not.toHaveBeenCalled();
+      expect(codexAccountHookState.startChatgptLogin).not.toHaveBeenCalled();
+      expect(codexAccountHookState.cancelChatgptLogin).not.toHaveBeenCalled();
+      expect(codexAccountHookState.logout).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await flushLazyImports();
+      });
+    }
   });
 
   it('routes API-key misconfiguration to provider settings instead of login', async () => {
