@@ -89,7 +89,7 @@ export function buildLinuxChildExecArtifact(input: {
 }) {
   if (process.platform !== 'linux' || process.arch !== 'x64') throw new Error('Unsupported helper build tuple');
   const deadline = performance.now() + 60_000;
-  const environment = { ...process.env, LC_ALL: 'C' };
+  const environment: NodeJS.ProcessEnv = { ...process.env, LC_ALL: 'C' };
   const timeout = () => {
     const value = Math.floor(deadline - performance.now());
     if (value <= 0) throw new Error('Original helper build deadline expired');
