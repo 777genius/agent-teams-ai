@@ -796,6 +796,43 @@ different count, so no constant call count is imposed on native execution. Revie
 (Root): measure the same actual finite Host first; upload only the closed aggregate,
 keep raw profiles private, and leave production checks unchanged until attribution.
 
+#### R14 follow-up — различать отказ чтения профиля до вывода о CPU
+
+Actual `522c80d168d698fc6842ee649cc4822406cd2632`, Darwin x64 job `131716085217`
+завершился с original Host exit1 и `originalHostCpu.status=unavailable`,
+`reason=file-unavailable`, `rawDiscarded=true`. Original open занял126906ms,
+весь fixture142430ms; 15 HTTP responses успешны, model requests0. Это не CPU attribution и не доказательство
+отсутствующего файла: current reader отдельно выдаёт `missing` для ENOENT, но
+`file-unavailable` объединяет size/type, open/read и fd/path identity refusals.
+
+1. В existing `native-opencode-team/passive-diagnostics.ts:readOriginalHostCpuProfile`
+   разделить только закрытые причины: stat/shape, empty/over-limit, open/read,
+   incomplete/changed-file, invalid profile и discard failure. При наличии stat
+   сохранить только bounded числовой size fact: min(original size,16MiB+1) с явным
+   признаком превышения, не выдавая clamp за точный размер. Ни paths, errors,
+   stack frames, profile bytes или произвольные filesystem metadata в receipt не добавляются.
+2. Сохранить прежний maximum16MiB, original regular-file/no-symlink/nlink check,
+   fd/path identity до/после, exact original path и обязательное удаление raw.
+   Oversized файл классифицировать до allocation/read; не увеличивать cap,
+   sampling interval, native/cleanup budget и не переносить CPU profiling в product.
+   `missing`, неполный profile и ошибка discard по-прежнему unavailable, не нулевые samples.
+3. В existing `native-host-close.test.ts` один finite pinned-Node case использует
+   тот же `startHost(...testCpuProfile:true)` и обычный `process.exit(1)` TEST child:
+   исходный nonzero exit остаётся failure, его реальный профиль можно прочесть и удалить.
+   В этом же bounded case проверить missing и empty/over-limit refusal без чтения
+   oversized bytes; artifact содержит только закрытый result. Новая suite/runner не нужна.
+4. Проверить types/lint и этот existing test; затем ждать следующий штатный native CI.
+   Пока actual reason/sample attribution неизвестны, не менять read composition,
+   freshness/custody checks или startup timeout по одной гипотезе.
+
+Круг1: точный receipt/source различает `file-unavailable` и ENOENT. Круг2:
+официальный Node24.21.0 `src/inspector_profiler.cc` (blob
+`559b4fd27d56abed0a9aaa7981e10fe12ebb0c2a`) пишет результат через `WriteFileSync`
+при завершении profiler. Локальный finite Node24.21.0 process.exit(1) действительно
+создал7822-byte profile; existing projector вернул available и удалил raw. Это
+подтверждение TEST exit1 path на Linux, не объяснение Darwin отказа. Круг3:
+independent plan review/root commit+push перед source; R15 и production не меняются.
+
 ## R15 — cold V2 readback сохраняет подтверждённую metadata lineage
 
 Факт: PR1186 head `522c80d168d698fc6842ee649cc4822406cd2632`, job
@@ -832,3 +869,206 @@ Source-круг нашёл несовпадение old passive cold path с у�
 global/provider metadata handoff. Второй круг сохраняет original-owner proof,
 zero-runtime invariant и cleanup всех поколений. Следующий шаг — independent
 diff review, existing scripts types/tests и штатный exact-head Desktop CI.
+
+
+## R16 — первый OpenCode status привязан к уже захваченному configuration target
+
+**План до source, база документа `4900526b4043ce159f57125da0ae36cfe16e9264`.**
+Actual Review на `522c80d168d698fc6842ee649cc4822406cd2632`, job `131717484574`,
+artifact `14013479408`: обычный `openCodeRuntime:getStatus` записал
+`Native runtime selection changed`; global и project configuration publications присутствуют,
+seed `embedded.configurationSource` отсутствует. Один отдельный no-tool Team probe завершён,
+business inputs0. Позже Review остановился на expected2 metadata scopes / actual1.
+Артефакт сохранил только первоначальный global ready child6322 под Host6040;
+private metadata NDJSON и последующих closed events в нём нет. Эти два отказа
+нельзя объявлять одной доказанной причиной.
+
+### A. Устранить несовместимые snapshots в существующем status read
+
+Source-цепочка конкретна: `CapturedRuntimeProviderStatusClient.ts:167–182`
+читает `sources.current()` до `deps.capture(null)`.
+`DesktopBackendFeature.captureCurrentManagementTarget:708–716` внутри capture
+вызывает `refreshCapturedRuntimeConfiguration`; этот existing helper при первом
+V2 configuration capture может законно опубликовать новый source revision и вернуть
+derived management profile. Сравнение старого seed snapshot с этим новым target
+даёт ложный отказ собственного первого чтения. Старый frontend определял выбранный
+runtime и показывал status; штатная фиксация его configuration не должна сама
+делать это чтение устаревшим.
+
+1. Сохранить original `captureGuard` и захваченный `sources` handle. В том же
+   `readOpenCodeRuntimeStatus` сначала дождаться `deps.capture(null)`, и только
+   затем получить `selection = sources?.current()`. Это перестановка existing
+   read относительно разрешённой initial configuration publication, не retry.
+2. Запросить тот же единственный `target.request('catalog', {})`. Сохранить
+   unchanged final `target.isCurrent()/current()`, exact profileId/configRevision,
+   native generation и повторный `sources.current().revision` guard.
+   Другая publication после capture, смена context/owner или unknown остаются отказом;
+   текущая UI selection не заменяет исходный target. V1 CLI/null fallback и V2
+   engine/installed-source DTO не меняются. Число capture/current/catalog calls прежнее.
+3. Расширить existing `capturedRuntimeStatus.test.ts` case о current source:
+   controlled first configuration publication происходит внутри original capture;
+   один status read возвращает ready для именно этой derived selection.
+   Затем existing concurrent-source-change case по-прежнему обязан отказать.
+   Проверить counts для одного capture/catalog и прежних двух current reads.
+   Existing foreground-revocation cases сохранить; новой unit suite не создавать.
+4. Проверить focused Main types и этот existing test file. Actual штатный Desktop CI
+   должен заново проверить first status и исходные Launch/Review пути; локальный
+   controlled case не доказывает native execution и не закрывает expected2/actual1.
+
+### B. Сохранить закрытые факты исходного metadata отказа
+
+Для отдельного Review1!=2 недостаёт causal evidence. Не добавлять catalog reads,
+не ослаблять live-owner count и не выгружать private unfiltered app logs.
+
+1. В existing `readDesktopMetadataLineage` сохранить только уже прочитанные и
+   schema-validated closed events из **того же** log read, если последующая lineage
+   validation бросила ошибку. Малый private WeakMap связывает исходный Error с
+   конечной diagnostic projection: original Host PID, expected profile hashes,
+   максимум128 closed lifecycle events и только встреченные в этом же existing
+   physical census PID из этих events. Никаких argv/env/command paths, raw log lines,
+   произвольных error objects или новых authority records.
+2. Прежняя ошибка, strict validation и bounded observation deadline сохраняются.
+   Existing `desktop-backend-smoke.ts` catch добавляет projection в failure receipt,
+   только если она присутствует у именно этой ошибки. Никаких повторных log/OS reads,
+   изменения exception outcome или adoption/replay после отказа. Ошибка чтения
+   до validated events не получает выдуманную пустую lineage.
+3. В existing lifecycle test case проверить actual private TEST log framing:
+   один validated active scope при expected2 по-прежнему бросает исходную ошибку,
+   а projection точно содержит исходные closed events; successful cleanup этим
+   не доказывается. Достаточно одной critical existing-case проверки и scripts types.
+4. Следующий штатный exact-source Review run позволит различить отсутствие project
+   ready, подтверждённый release, незавершённый mode handoff и unknown cleanup.
+   Только его факты определят дальнейший product/test fix. R15 cold source,
+   source/profile identity и native operation budgets остаются прежними.
+
+**Круг1:** совместно сверены actual artifact и точные current source callbacks:
+собственная first configuration publication действительно находится между двумя
+несогласованными snapshots. **Круг2 (Profiles):** минимально переносится только
+selection read после target capture; final revision/foreground guards и original
+sources handle сохраняются. **Круг3:** root/independent plan review и немедленный
+commit+push перед source; A и diagnostic B не подменяют native acceptance.
+
+### R14/R15 source evidence перед R16
+
+R14 closed file classification и R15 cold lineage опубликованы в parity commit
+`a2f327c8b07142a2ec857a5be6e0924c84f0fcef`. R15 four-file diff независимо проверен
+Profiles и root; R14 two-file diff — Account и root. Root24 existing UI/lifecycle
+cases (включая11 cold lineage) и4 finite Node24 sampler/close cases — PASS;
+scripts/Host test types, fast lint и source cap — PASS. Native failure reason,
+all cold Desktop flows и отдельный Review2-owner результат ещё требуют actual CI.
+R16 A/B root design review — PASS: exact original handles/guards и прежние budgets сохранены.
+
+### R16 A/B implementation evidence
+
+Five-file cut основан на parity `a2f327c8b07142a2ec857a5be6e0924c84f0fcef`.
+A переносит единственный selection read после original target capture; final
+profile/revision/generation/foreground guards и counts остаются прежними.
+B связывает immutable closed metadata projection только с original validation Error
+после того же parsed log read; malformed/unvalidated logs projection не получают.
+Ожидаемые два metadata owner, original exception и native calls не изменены.
+
+Existing first-publication case сначала воспроизвёл отказ (15 PASS / 1 FAIL),
+после correction весь existing file16/16 PASS. Existing lifecycle file11/11 PASS.
+Profiles и root source review — PASS; root повторил эти27 cases на coherent a2 base.
+Focused Main types, scripts types, fast lint (0 errors, 2 прежних warnings) и
+source-size cap — PASS. Новая unit suite не добавлялась.
+Actual first-status/Desktop acceptance и отдельная причина Review expected2/actual1
+остаются pending штатного exact-head CI; diagnostic projection не означает fix
+неустановленной metadata причины.
+
+
+## R17 — actual profile-over-limit: достаточная CPU детализация в прежнем размере
+
+Exact parity `3db75ad8b323bede28d92c99c6d8eb1defb50f1b`, run
+[43386942824](https://github.com/777genius/agent-teams-ai/actions/runs/43386942824):
+Darwin x64 job131757593612 и Windows ARM64 job131757593845 завершают original open
+за125133/131063ms при unchanged120000ms budget, без model requests и с unresolved
+cleanup. Darwin ARM64 job131757593960 доходит до allocated/nativeReady, но bootstrap
+занимает159746ms, затем первый input не достигает модели; ordinary cleanup там
+подтверждён. Все три actual receipts дают `originalHostCpu.reason=profile-over-limit`,
+bounded lower size16777217 и `rawDiscarded=true`. Теперь конкретная причина
+недоступности профиля установлена; CPU attribution всё ещё отсутствует.
+
+### Круг1 — минимальная корректировка именно измерения
+
+R14 follow-up запрещал менять sampling до выяснения причины чтения. После этих
+actual facts следующий срез явно заменяет **только** его default1000us sampling
+на фиксированный10000us (10ms) в исходном TEST Host. Официальный
+[Node24.21.0 CLI](https://github.com/nodejs/node/blob/v24.21.0/doc/api/cli.md)
+поддерживает `--cpu-prof-interval` в microseconds. Наш вопрос — стоимость
+многосекундных фаз и повторных source checks; субмиллисекундная детализация для
+этого не требуется. Меньшая частота уменьшает ожидаемое число samples/stack nodes,
+но успешное размещение профиля в лимит заранее не гарантируется.
+
+- В existing `tests/fixtures/native-host.ts` explicit first-Host CPU option
+  добавляет ровно `--cpu-prof-interval=10000`; вернуть configured interval рядом
+  с original profile path. Default product Host и native child не получают flag.
+- Existing `readOriginalHostCpuProfile` принимает captured configured interval;
+  closed receipt называет его `samplingIntervalUs`, а не ложно оставляет
+  `defaultIntervalUs:1000`. Existing legacy caller может явно сохранить1000;
+  exact new native caller передаёт interval исходного ChildProcess fixture.
+  Фактические sampled durations по-прежнему берутся из original V8 timeDeltas,
+  не умножаются на configured interval и не получают выдуманной точности.
+- Maximum16MiB, nofollow/regular/nlink, fd/path identity, original-exited check,
+  exact path, raw discard и unavailable outcomes остаются прежними. Никаких
+  чтений слишком большого файла, raw uploads или расширения maximum nodes/samples.
+
+### Круг2 — смысл native сценария сохраняется
+
+Original request sequence, provider source/config/image checks, native120s и
+обычный cleanup не меняются. Не добавлять кэш, искусственное serial wait,
+новый runner, повтор промпта либо повтор failed run. Это менее тяжёлая
+диагностика в следующем необходимом exact-head preflight, а не performance fix.
+На Windows/Darwin/Linux сохраняются отдельные actual receipts. Старые timings
+с1000us sampler не объявляются равными timings нового10000us sampler.
+
+### Круг3 — приёмка и следующий вывод
+
+Расширить существующий finite exit1 sampler case в `native-host-close.test.ts`:
+original Node получает explicit interval10000, generated profile читается,
+closed projection указывает именно его, исходный exit1 не превращается в success,
+raw удаляется. Existing missing/empty/over-limit и privacy assertions сохраняются;
+новая unit suite не нужна. Source review и focused Host test types обязательны;
+executor сейчас недоступен, поэтому ни source review, ни immutable blob readback
+не выдаются за executed test.
+
+После actual native результата использовать категории R14 с оговоркой про
+sampling/перекрывающиеся inclusive stacks. Если профиль снова unavailable,
+не выводить причину задержки по одним HTTP headers. При usable profile выбрать
+минимальный product read-composition fix с сохранением проверок свежести и
+физического owner, затем повторно пройти original native tools/MCP/approval/
+Stop/cold Resume. До этого startup parity остаётся открыта.
+
+Self-review: повышается только шаг диагностического sampling, не admission limit,
+timeout или допустимый размер. Native failures и отсутствие attribution показаны
+явно; source ещё не менялся.
+
+
+## R18 — actual seal during catalog disposal: точный AbortError oracle
+
+Qualification head `7563eb067b9196ca416a56228f9c7e38a2455a17`,
+[run43377998027](https://github.com/777genius/agent-teams-ai/actions/runs/43377998027),
+job131741574610: existing `hostOpenCodeV2EmbeddedMember.test.ts`240–261 ожидает
+generic `OpenCode V2 embedded session unavailable`, но original pending catalog
+read после provider.seal() возвращает AbortError. Exact source/test на current3db
+совпадает с old64; это не доказательство потери cleanup или доступа к attachment.
+
+**Круг1 — source contract.** `OpenCodeV2EmbeddedMemberProvider` captureClient
+связывает wire signal с original private abort; seal вызывает abort().
+Existing `OpenCodeV2ReadOnlySnapshot.check`35 сначала делает
+`signal.throwIfAborted()`, после client.dispose повторно attest/check.
+Следовательно исходный abort обязан завершить pending read до original byte
+resolver. Сохранить этот порядок: не заменять production abort на generic error
+и не ослаблять current-owner/disposal checks.
+
+**Круг2 — самый узкий TEST diff.** В том же held-disposal case заменить только
+message matcher на exact structured `{ name: 'AbortError' }`. Оставить actual
+barrier entered → original provider.seal → release, rejection, resolver never
+called и cleanup===true. Соседний original callback failure + rejected disposal
+по-прежнему требует UNKNOWN и exact cause; text-only capability case не менять.
+Новый harness, timer, provider input или native request не нужны.
+
+**Круг3 — приёмка.** Independent diff review, existing focused test/types, затем
+прежний Main CI job на опубликованном source. Source review и GitHub blob equality
+не подменяют execution: executor сейчас недоступен. Это correction oracle, не
+новый product lifecycle fix и не закрытие pending V2 startup/native acceptance.

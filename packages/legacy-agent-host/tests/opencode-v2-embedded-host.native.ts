@@ -401,7 +401,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     cleanup = cleanupErrors.length === 0;
     const originalHostCpu = await passiveModule?.readOriginalHostCpuProfile(originalProfiledHost?.testCpuProfilePath,
       originalProfiledHost !== undefined &&
-      (originalProfiledHost.child.exitCode !== null || originalProfiledHost.child.signalCode !== null));
+      (originalProfiledHost.child.exitCode !== null || originalProfiledHost.child.signalCode !== null),
+      originalProfiledHost?.testCpuProfileIntervalUs);
     let serialized: string | undefined;
     let receiptWritten = false;
     try {

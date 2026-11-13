@@ -169,8 +169,14 @@ function leased(t: TestContext) {
 }
 
 test('publication pins new captures while seed and retained captures replay unchanged after a cold restart', async (t) => {
-  const f = leased(t),
-    initial = f.index.current({ grant: f.grant });
+  const f = leased(t), firstScope = f.grant.teamScopes[0]!;
+  const otherScope = { ...firstScope, teamId: 'TEST-second-team' };
+  f.profile.teams.push({ ...f.profile.teams[0]!,
+    binding: { ...f.profile.teams[0]!.binding, teamId: otherScope.teamId, teamName: 'second-source-team' },
+    scope: { ...f.profile.teams[0]!.scope, teamId: otherScope.teamId } });
+  f.grant.teamScopes = [firstScope, otherScope, firstScope];
+  const equivalent = { ...f.grant, teamScopes: [otherScope, firstScope] };
+  const initial = f.index.current({ grant: f.grant });
   const seed = captureRuntimeSource(f.profile, f.team, 'TEST-seed', 'TEST-roster', f.roster, {
     deferMcp: true,
   });
@@ -184,10 +190,18 @@ test('publication pins new captures while seed and retained captures replay unch
   };
   const first = await f.index.publish(input, () => {});
   assert.equal(first.phase, 'published');
+  const originalBytes = readFileSync(join(f.root, 'runtime-sources', 'index.json'), 'utf8');
+  const originalReceipt = JSON.stringify(new FileManagementCommandStore(f.root).read(input.commandId));
+  assert.deepEqual(f.index.current({ grant: equivalent }), first.selection);
+  assert.deepEqual(f.index.lookup({ grant: equivalent, commandId: input.commandId }), first);
+  assert.throws(() => f.index.current({ grant: { ...equivalent, teamScopes: [firstScope] } }),
+    { code: 'conflict' }, 'removing a real scope is not alias deduplication');
   assert.deepEqual(
-    await f.index.publish(input, () => assert.fail('replay must not re-admit')),
+    await f.index.publish({ ...input, grant: equivalent }, () => assert.fail('replay must not re-admit')),
     first
   );
+  assert.equal(readFileSync(join(f.root, 'runtime-sources', 'index.json'), 'utf8'), originalBytes);
+  assert.equal(JSON.stringify(new FileManagementCommandStore(f.root).read(input.commandId)), originalReceipt);
   const selected = captureRuntimeSource(f.profile, f.team, 'TEST-new', 'TEST-roster', f.roster, {
     deferMcp: true,
     sources: f.index,
@@ -197,7 +211,7 @@ test('publication pins new captures while seed and retained captures replay unch
     { ...f.team.definition.scope, teamId: 'TEST-foreign-team' }, f.root, f.profile.runtime!.members[0]!), { code: 'held' });
   const next = await f.index.publish(
     {
-      grant: f.grant,
+      grant: equivalent,
       commandId: 'TEST-publish-2',
       expectedRevision: first.selection!.revision,
       candidate: { ...f.candidate, executable: f.original, sourceKind: 'override' },
@@ -210,7 +224,9 @@ test('publication pins new captures while seed and retained captures replay unch
   );
   assert.deepEqual(f.index.lookup({ grant: f.grant, commandId: input.commandId }), first);
   f.restart();
-  assert.equal(f.index.current({ grant: f.grant }).revision, next.selection!.revision);
+  assert.equal(f.index.current({ grant: equivalent }).revision, next.selection!.revision);
+  const retainedIndex = JSON.parse(readFileSync(join(f.root, 'runtime-sources', 'index.json'), 'utf8'));
+  assert.deepEqual(retainedIndex.records.map((row: { grant: RuntimeSourceGrant }) => row.grant), [f.grant, f.grant]);
   assert.deepEqual(
     compileRuntimeCapture(f.profile, f.team, selected, 'model-preflight', f.index).profiles[0]!
       .executable,
@@ -222,7 +238,7 @@ test('publication pins new captures while seed and retained captures replay unch
     f.original
   );
   assert.equal(JSON.stringify(seed), seedJson);
-  assert.equal(f.index.retained({ grant: f.grant }).length, 3);
+  assert.equal(f.index.retained({ grant: equivalent }).length, 3);
   assert.equal(
     f.index.retainedManagementProfiles()[0]!.environment.TEST_AUTH_VALUE,
     'TEST-do-not-persist-secret'
@@ -314,17 +330,21 @@ test('source admission refuses scope widening, changed bytes and arbitrary confi
   );
 });
 
-test('a crash after pointer publication recovers the original receipt without selecting current again', async (t) => {
-  const f = leased(t),
-    current = f.index.current({ grant: f.grant });
+test('cold recovery keeps the original grant through prepared intent and lost pointer acknowledgement', async (t) => {
+  const f = leased(t), equivalent = structuredClone(f.grant);
+  f.grant.teamScopes.push({ ...f.grant.teamScopes[0]! });
+  const current = f.index.current({ grant: f.grant });
+  let interrupt: 'prepared' | 'published' = 'prepared';
   const write = FileManagementCommandStore.prototype.write;
   const fault = t.mock.method(
     FileManagementCommandStore.prototype,
     'write',
     function (this: FileManagementCommandStore, record: Parameters<typeof write>[0]) {
-      if (record.kind === 'runtime.source' && record.phase === 'published')
+      if (record.kind === 'runtime.source' && record.phase === 'published' && interrupt === 'published')
         throw new Error('TEST crash before receipt completion');
       write.call(this, record);
+      if (record.kind === 'runtime.source' && record.phase === 'prepared' && interrupt === 'prepared')
+        throw new Error('TEST crash after prepared intent');
     }
   );
   const input = {
@@ -335,18 +355,30 @@ test('a crash after pointer publication recovers the original receipt without se
   };
   await assert.rejects(
     f.index.publish(input, () => {}),
-    /TEST crash/
+    /TEST crash after prepared intent/
   );
+  const original = new FileManagementCommandStore(f.root).read(input.commandId)!;
+  assert.equal(original.kind, 'runtime.source');
+  assert(original.kind === 'runtime.source');
+  f.restart();
+  interrupt = 'published';
+  let admits = 0;
+  await assert.rejects(f.index.recover({ grant: equivalent }, () => { admits++; }), /TEST crash before receipt completion/);
+  assert.equal(admits, 1);
   fault.mock.restore();
   f.restart();
-  const recovered = f.index.lookup({ grant: f.grant, commandId: input.commandId });
+  const recovered = f.index.lookup({ grant: equivalent, commandId: input.commandId });
   assert.equal(recovered?.phase, 'published');
   assert.equal(f.index.current({ grant: f.grant }).revision, recovered?.selection?.revision);
   assert.deepEqual(
-    await f.index.publish(input, () => assert.fail('recovery cannot re-admit')),
+    await f.index.publish({ ...input, grant: equivalent }, () => assert.fail('recovery cannot re-admit')),
     recovered
   );
   assert.equal(new FileManagementCommandStore(f.root).read(input.commandId)?.phase, 'published');
+  const saved = new FileManagementCommandStore(f.root).read(input.commandId)!;
+  assert(saved.kind === 'runtime.source');
+  for (const field of ['fingerprint', 'selectionDigest', 'revision', 'publicationJson'] as const)
+    assert.equal(saved[field], original[field], 'the original request identity is not rewritten');
 });
 
 test('private Host RPC publishes and restores sources and admits existing Skills and extension targets', async (t) => {

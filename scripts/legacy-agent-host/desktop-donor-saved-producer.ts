@@ -18,7 +18,6 @@ import {
   groupMembers,
   portOccupied,
   processTable,
-  selectedCdpPort,
   compiledBundleHashes,
 } from './desktop-backend-observations.ts';
 import {
@@ -31,6 +30,7 @@ import {
 } from './desktop-donor-saved-fixture.ts';
 import type { DonorSavedSeed, DonorRow } from './desktop-donor-saved-fixture.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
+import { desktopCreateTeamHeaderButtonSelector } from './desktop-create-config-ui-smoke.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
@@ -130,8 +130,6 @@ export async function produceDesktopDonorSavedTeam(options: {
     fixture.node,
     fixture.packageManager.entry,
     'dev:mcp',
-    '--remoteDebuggingPort',
-    String(selectedCdpPort),
   ];
   const app = spawn(invocation[0]!, invocation.slice(1), {
     cwd: inputs.root,
@@ -215,7 +213,7 @@ export async function produceDesktopDonorSavedTeam(options: {
     );
     await ui.click('button[aria-label="More actions"]', 'open donor original menu');
     await ui.click('button', 'open donor Teams', 'Teams');
-    await ui.click('button', 'open donor original Create', 'Create Team');
+    await ui.click(desktopCreateTeamHeaderButtonSelector, 'open donor original Create', 'Create Team');
     const page = '[data-testid="create-team-page"]';
     await ui.waitRead(
       "(() => { const b=document.querySelector('" +

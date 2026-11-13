@@ -24,6 +24,18 @@ export interface DesktopNativeHostSnapshot {
   children: ProcessFact[];
   metadataLineage?: DesktopMetadataLineage;
 }
+interface DesktopMetadataFailure {
+  readonly hostPid: number;
+  readonly expectedProfileHashes: readonly string[];
+  readonly events: readonly DesktopMetadataEvent[];
+  readonly observedMetadataPids: readonly number[];
+}
+const failures = new WeakMap<Error, DesktopMetadataFailure>();
+
+/** Only the original failed read can supply these closed diagnostic facts. */
+export function readDesktopMetadataLineageFailure(error: unknown): DesktopMetadataFailure | undefined {
+  return error instanceof Error ? failures.get(error) : undefined;
+}
 const object = (value: unknown): Row => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value as Row;
@@ -113,11 +125,23 @@ export function captureDesktopMetadataLineage(options: {
   observed: readonly ProcessFact[];
   executable: string;
   original?: DesktopMetadataLineage;
+  initialBirths?: readonly ProcessFact[];
 }): DesktopMetadataLineage {
-  const { events, host, profileHashes, observed, original } = options;
+  const { events, host, profileHashes, observed, original, initialBirths } = options;
   const state = lifecycle(events, profileHashes, host.pid);
   assert.equal(state.active.size, profileHashes.length, 'every selected metadata scope has one live owner');
-  const births = (original?.births ?? []).map(row => ({ ...row }));
+  assert.ok(!original || initialBirths === undefined, 'initial physical births cannot replace an existing lineage');
+  if (initialBirths) {
+    assert.ok(initialBirths.length <= profileHashes.length);
+    assert.equal(new Set(initialBirths.map(row => row.pid)).size, initialBirths.length);
+    for (const before of initialBirths) {
+      assert.ok(state.originals.has(before.pid), 'each pre-read physical birth has its original ready observation');
+      assert.equal(before.parentPid, host.pid); assert.equal(before.groupId, before.pid);
+      assert.equal(before.command, options.executable);
+      assert.ok(typeof before.birth === 'string' && before.birth.length > 0);
+    }
+  }
+  const births = (original?.births ?? initialBirths ?? []).map(row => ({ ...row }));
   for (const [pid, event] of state.originals) {
     const physical = observed.filter(row => row.pid === pid);
     if (state.active.get(event.profileHash) === event) {
@@ -138,10 +162,26 @@ export function captureDesktopMetadataLineage(options: {
 }
 
 export function readDesktopMetadataLineage(root: string, captured: DesktopNativeHostSnapshot,
-  profileHashes: readonly string[], observed: readonly ProcessFact[], original?: DesktopMetadataLineage
+  profileHashes: readonly string[], observed: readonly ProcessFact[], original?: DesktopMetadataLineage,
+  initialBirths?: readonly ProcessFact[]
 ): DesktopMetadataLineage {
-  return captureDesktopMetadataLineage({ events: readEvents(root, captured.host.pid), host: captured.host,
-    profileHashes, observed, executable: process.env.OPENCODE_V2_EMBEDDED_BUN!, ...(original ? { original } : {}) });
+  const events = readEvents(root, captured.host.pid);
+  try {
+    return captureDesktopMetadataLineage({ events, host: captured.host,
+      profileHashes, observed, executable: process.env.OPENCODE_V2_EMBEDDED_BUN!, ...(original ? { original } : {}),
+      ...(initialBirths ? { initialBirths } : {}) });
+  } catch (error) {
+    if (error instanceof Error && profileHashes.length >= 1 && profileHashes.length <= 2 && profileHashes.every(hash)) {
+      const eventPids = new Set(events.map(event => event.pid));
+      failures.set(error, Object.freeze({
+        hostPid: captured.host.pid,
+        expectedProfileHashes: Object.freeze([...profileHashes]),
+        events: Object.freeze(events.map(event => Object.freeze({ ...event }))),
+        observedMetadataPids: Object.freeze([...new Set(observed.filter(row => eventPids.has(row.pid)).map(row => row.pid))]),
+      }));
+    }
+    throw error;
+  }
 }
 
 export function desktopActiveMetadata(captured: DesktopNativeHostSnapshot): ProcessFact[] {

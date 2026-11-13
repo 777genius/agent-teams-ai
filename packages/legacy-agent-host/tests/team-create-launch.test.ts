@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import {
   existsSync,
+  readFileSync,
   writeFileSync,
   mkdirSync,
   mkdtempSync,
@@ -15,6 +16,7 @@ import { PassThrough } from 'node:stream';
 import { createInterface } from 'node:readline';
 import { test } from 'node:test';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
+import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { FileTeamRegistryStore } from '../dist/adapters/team-registry/FileTeamRegistryStore.js';
 import { admitRegistryTeamNamespace } from '../dist/adapters/team-registry/admitRegistryTeamNamespace.js';
@@ -253,6 +255,7 @@ function fixture(withSources = false) {
     teams,
     store,
     probes,
+    claude,
     opens: () => opens,
     spends: () => spends,
     async green() {
@@ -349,25 +352,77 @@ test('legacy seed probe receipts remain cancellable after the first source publi
   } finally { await f.close(); }
 });
 
-test('a renewed current-source proof cannot start an older pending capture after interrupted Create admission', async () => {
+test('an interrupted published Create preserves B and permits an explicit proved fresh Launch on C', async () => {
   const f = fixture(true);
   try {
     await f.sources!.publish('TEST-source-B');
     await f.coordinator.prepare('start', f.input);
     await f.green();
     const read = f.runtime.readLaunchSourceSelections.bind(f.runtime);
-    f.runtime.readLaunchSourceSelections = () => { throw new TeamLaunchError('hold', 'TEST-interrupted-before-start'); };
+    let concurrent: Promise<unknown> | undefined;
+    f.runtime.readLaunchSourceSelections = () => {
+      assert.throws(() => f.coordinator.lookup('TEST-source-create', f.input), { reason: 'creation-pending' });
+      concurrent = assert.rejects(f.coordinator.submit('TEST-source-create', f.input), { reason: 'creation-pending' });
+      throw new TeamLaunchError('hold', 'TEST-interrupted-before-start');
+    };
     await assert.rejects(f.coordinator.submit('TEST-source-create', f.input), { code: 'hold' });
     f.runtime.readLaunchSourceSelections = read;
+    await concurrent;
     assert.equal(f.registry.list('TEST-context').teams.length, 1);
     assert.equal(f.opens(), 0);
-    await f.sources!.publish('TEST-source-C');
+    const selectedC = await f.sources!.publish('TEST-source-C');
     const renewed = { ...f.input, preparationId: 'TEST-source-C-preflight' };
-    await f.coordinator.prepare('start', renewed);
+    const partial = await f.coordinator.submit('TEST-source-create', renewed);
+    assert.equal(partial.partialCreated, true);
+    assert.equal(partial.launch.admission, undefined);
+    assert.equal(partial.launch.startedAtMs, null);
+    const teamId = partial.creation.record.teamId, team = f.teams.get(teamId)!;
+    const records = new TeamOwnerStore(f.root, partial.creation.record.teamName);
+    const oldPath = join(records.directory, 'launches', `${digest(partial.launch.launchId)}.json`);
+    const oldBytes = readFileSync(oldPath);
+    await f.restart();
+    const cold = f.coordinator.lookup('TEST-source-create', renewed)!;
+    assert.equal(cold.partialCreated, true);
+    assert.equal(cold.launch.launchId, partial.launch.launchId);
+    const view = f.runtime.executeLaunch(teamId, 'model.configuration.read', 'TEST-next-model-read', {}) as {
+      source: { sourceId: string; rosterRevision: string };
+      members: Array<{ memberId: string }>;
+    };
+    assert.ok(view.source.sourceId.startsWith('saved-model-'));
+    const checked = f.runtime.captureLaunchModelProbe(teamId, {
+      launchId: view.source.sourceId, rosterRevision: view.source.rosterRevision,
+      memberId: view.members[0]!.memberId, model: 'TEST-model',
+      draft: { providerId: 'anthropic', target: { kind: 'lead' }, workspace: join(f.root, 'project') },
+    }, 'start');
+    assert.equal(checked.profile?.provider, 'claude');
+    assert.equal(checked.profile?.executable.path, selectedC.executable.path);
+    assert.equal(checked.isCurrent(), true);
+    const nativeProfile = checked.profile!;
+    if (nativeProfile.provider !== 'claude') assert.fail('expected Claude probe');
+    f.claude.admitProbeProfile(nativeProfile);
+    const probeId = { commandId: 'TEST-fresh-launch-model', profileId: nativeProfile.profileId,
+      configRevision: nativeProfile.configRevision };
+    f.probes.start({ ...probeId, providerId: 'anthropic', modelId: checked.model, context: checked.context }, checked.isCurrent);
     await f.green();
-    await assert.rejects(f.coordinator.submit('TEST-source-create', renewed), { reason: 'creation-source-changed' });
+    assert.equal(f.probes.read(probeId)?.ok, true);
     assert.equal(f.opens(), 0);
     assert.equal(f.spends(), 2);
+    team.connection.replaceRoster({ commandId: 'TEST-fresh-roster', expectedRevision: team.connection.readRoster().revision,
+      savedSettings: f.input.draft.savedSettings,
+      members: f.input.draft.members.map(({ name, memberSettings }) => ({ name, ...memberSettings })) });
+    const next = await f.runtime.executeLaunch(teamId, 'capture', 'TEST-fresh-capture', { rosterCommandId: 'TEST-fresh-roster' }) as {
+      launch: { launchId: string; rosterRevision: string };
+    };
+    assert.ok(f.runtime.readLaunchSourceSelections(teamId, next.launch.launchId).every(row => row.revision === selectedC.selection.revision));
+    const nextScope = { launchId: next.launch.launchId, rosterRevision: next.launch.rosterRevision };
+    await f.runtime.executeLaunch(teamId, 'start', 'TEST-fresh-start', nextScope);
+    await tick();
+    assert.deepEqual(f.openedExecutables, [selectedC.executable.path, selectedC.executable.path]);
+    await f.runtime.executeLaunch(teamId, 'start', 'TEST-fresh-start', nextScope);
+    assert.equal((await f.coordinator.submit('TEST-source-create', renewed)).partialCreated, true);
+    assert.equal(f.opens(), 2);
+    assert.deepEqual(readFileSync(oldPath), oldBytes);
+    assert.equal(f.registry.list('TEST-context').teams.length, 1);
   } finally { await f.close(); }
 });
 

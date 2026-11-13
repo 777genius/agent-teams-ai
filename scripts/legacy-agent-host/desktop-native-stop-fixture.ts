@@ -284,7 +284,7 @@ async function captureMetadataObservation(fixture: MetadataFixture, group: numbe
       assert.deepEqual(table.find(row => row.pid === captured.host.pid), captured.host);
       if (original) assert.deepEqual(captured.host, original.host);
       captured.metadataLineage = readDesktopMetadataLineage(fixture.root, captured, profileHashes, table,
-        original?.metadataLineage);
+        original?.metadataLineage, original?.metadataLineage ? undefined : original?.children);
       const metadata = desktopActiveMetadata(captured);
       const runtime = captured.children.filter(row => !metadata.some(child => child.pid === row.pid));
       const expected = expectedRuntimeCount ?? runtime.length;
@@ -361,6 +361,17 @@ async function metadataOnlyRuntimeDigest(root: string): Promise<string> {
         'every original no-tool probe has finished its native close');
   }
   return runtimeDigest(sessions);
+}
+
+/** After the one original cold metadata read, correlate its real pre-read births without another RPC. */
+export async function captureDesktopOpenCodeColdMetadata(fixture: MetadataFixture, group: number,
+  before: DesktopNativeHostSnapshot) {
+  assert.ok(before.children.length <= 1);
+  assert.equal(before.metadataLineage, undefined);
+  const source = await readDesktopOpenCodeMetadataSource(fixture.root, null);
+  const { captured } = await captureMetadataObservation(fixture, group, [desktopMetadataProfileHash(source)], before, 0);
+  assert.equal(captured.children.length, 1);
+  return { captured, source };
 }
 
 /** Before project selection, observe one actual global catalog child through the existing read-only IPC. */

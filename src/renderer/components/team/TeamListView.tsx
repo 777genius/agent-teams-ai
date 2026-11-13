@@ -1037,6 +1037,15 @@ export const TeamListView = memo(function TeamListView({ tabId, isActive }: { ta
     async (request: TeamCreateRequest, placement?: OrganizationPlacementSelection) => {
       const created = await createTeam(request);
       const teamName = created.teamName ?? request.teamName;
+      if (created.launchStatus === 'unconfirmed')
+        await confirm({
+          mode: 'info',
+          title: t('create.partial.title', { defaultValue: 'Team saved' }),
+          message: t('create.partial.message', {
+            defaultValue: 'Launch was not confirmed. Open this team to check its status and launch it.',
+          }),
+          confirmLabel: t('create.partial.open', { defaultValue: 'Open team' }),
+        });
       await assignCreatedTeamToOrganization({
         placement,
         teamName,

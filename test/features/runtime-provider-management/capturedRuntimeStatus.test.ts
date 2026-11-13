@@ -153,7 +153,7 @@ it('only the explicit successful native V1 catalog retains the separate installe
   expect(f.request).toHaveBeenCalledExactlyOnceWith('catalog', {});
 });
 
-it('current source status separates the installed CLI from V2 engine and fences a concurrent source replacement', async () => {
+it('current source status accepts its first captured configuration and fences a concurrent source replacement', async () => {
   const f = fixture({ generation: 'v2', version: '2.1.4' });
   const selection = {
     sourceId: 'a'.repeat(64),
@@ -165,7 +165,15 @@ it('current source status separates the installed CLI from V2 engine and fences 
     cliVersion: '2.9.0',
     engineVersion: '2.1.4',
   };
-  const current = vi.fn(async () => selection);
+  let selected = { ...selection, revision: '0'.repeat(64),
+    profileId: 'TEST-before-configuration', configRevision: 'TEST-before-configuration' };
+  const captureOriginal = f.capture.getMockImplementation()!;
+  f.capture.mockImplementation(async () => {
+    const target = await captureOriginal();
+    selected = selection; // The original capture publishes its first configuration before returning.
+    return target;
+  });
+  const current = vi.fn(async () => selected);
   const port = createCapturedRuntimeProviderStatusClient({
     capture: f.capture,
     readHealth: f.readHealth,
@@ -181,6 +189,9 @@ it('current source status separates the installed CLI from V2 engine and fences 
     sourceRevision: selection.revision,
     v2Support: 'ready',
   });
+  expect(f.capture).toHaveBeenCalledExactlyOnceWith(null);
+  expect(f.request).toHaveBeenCalledExactlyOnceWith('catalog', {});
+  expect(current).toHaveBeenCalledTimes(2);
   expect(canManagedInstallChangeOpenCodeRuntime({ ...status!, source: 'captured-host' })).toBe(
     true
   );

@@ -220,13 +220,31 @@ stream_max_retries = 0
       if (applicationReplyLoss)
         assert.deepEqual(await originalScheduledInput(root, first.runId), applicationReplyLoss.original);
       assert.equal(completed.result?.exitCode, 0); assert.match(completed.result!.stdout, /TEST_SCHEDULE_DONE/);
+      assert.ok(Number.isFinite(completed.result!.durationMs) && completed.result!.durationMs > 0);
+      const logRows = completed.result!.stdout.split('\n').map(line => object(JSON.parse(line)));
+      assert.deepEqual(logRows.filter(row => row.type === 'result').map(row => row.duration_ms),
+        [completed.result!.durationMs]);
+      const blocks = logRows.flatMap(row => {
+        if (row.message === undefined) return [];
+        const content = object(row.message).content;
+        assert.ok(Array.isArray(content)); return content.map(object);
+      });
+      const toolId = `TEST-schedule-${provider}-success-1-tool`,
+        tools = blocks.filter(block => block.type === 'tool_use'),
+        results = blocks.filter(block => block.type === 'tool_result');
+      assert.equal(tools.length, 1); assert.equal(tools[0]!.id, toolId);
+      assert.equal(results.length, 1); assert.equal(results[0]!.tool_use_id, toolId);
+      assert.equal(results[0]!.is_error, false);
+      assert.match(JSON.stringify(results[0]!.content), /TEST_NATIVE_TOOL/);
       assert.equal(await readFile(join(common.cwd, 'schedule-success.txt'), 'utf8'), 'TEST_NATIVE_TOOL\n');
       assert.equal(model.counts.get('success'), 2);
       assert.equal((await rpc('schedule.run.start', first, first.runId)).ok, true);
       assert.equal(model.counts.get('success'), 2, 'same intent only reads its receipt');
       await host.close(); host = open(); await host.rpc('host.handshake', { protocolVersion: 1 });
       const cold = await read(first); assert.equal(cold.result?.exitCode, 0); assert.equal(cold.cleanup, 'confirmed');
-      assert.deepEqual(cold, completed, 'cold lookup returns the original completed result');
+      assert.deepEqual(cold, { ...completed, result: { ...completed.result!,
+        stderr: 'Some retained runtime log entries are unavailable.' } },
+      'cold lookup preserves the entire original result and reports its original-incarnation log gap');
       if (applicationReplyLoss)
         assert.deepEqual(await originalScheduledInput(root, first.runId), applicationReplyLoss.original);
       assert.equal((await rpc('schedule.run.start', first, first.runId)).ok, true);

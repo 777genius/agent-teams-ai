@@ -9,6 +9,7 @@ import {
   isLegacySavedTeamProductRecords,
 } from '../../src/main/services/team/LegacySavedTeamNativeIdentity.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
+import { selectedCdpPort } from './desktop-backend-observations.ts';
 import { stoppedImportSourceBytes } from './desktop-stopped-import-fixture.ts';
 
 export const DONOR_SAVED_COMMIT = '4a0e06277fe216d9f82dbbede362668fe46622ee';
@@ -42,6 +43,9 @@ export async function captureDonorSavedInputs(directory: string, node: string) {
     'donor source and lock remain unchanged'
   );
   const packageJson = await readDonorJson(join(root, 'package.json'));
+  assert.equal(donorRow(packageJson.scripts)['dev:mcp'],
+    'node ./scripts/dev-with-runtime.mjs --remoteDebuggingPort ' + String(selectedCdpPort),
+    'the original donor script supplies the selected CDP argument exactly once');
   assert.match(String(packageJson.packageManager), /^pnpm@11\.22\.0\+sha512\./);
   const runtimeLock = await readDonorJson(join(root, 'runtime.lock.json'));
   assert.equal(runtimeLock.version, '0.0.160');

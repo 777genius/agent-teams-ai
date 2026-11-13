@@ -615,3 +615,132 @@ Account первоначально проверил239 existing scheduled admiss
 Root focused strict Main types PASS; Profiles independently reviewed final four
 R12 production files и Account R10/R11 boundaries. Source cap848 снижен до847;
 whole-project и actual Desktop schedule CI ещё должны завершиться на published head.
+
+
+## R13 — actual cold result oracle и сохранённые native tool log blocks
+
+В qualification [run43377998027](https://github.com/777genius/agent-teams-ai/actions/runs/43377998027),
+head `7563eb067b9196ca416a56228f9c7e38a2455a17`, job131741574538 падает **до**
+Codex login UI: оба original Claude/Codex `scheduled-run-host.native.ts` случая
+доходят до terminal success, confirmed cleanup и cold lookup, но строка229
+ожидает неизменный stderr. Actual cold stderr:
+`Some retained runtime log entries are unavailable.`
+Остальные поля completed result совпадают. Current3db и old64 имеют одинаковые
+Host projection/Runtime activity sources и этот native oracle.
+
+### Круг1 — исправить точный oracle, сохранив исходную неопределённость
+
+`RuntimeActivityCoordinator.read`283–284 сообщает смену incarnation в snapshot.
+Existing controlled `scheduled-run-host.test.ts`181–183 уже явно требует этот
+cold warning при сохранённом результате. Native assertion должен использовать
+тот же контракт: whole snapshot/result deep equality с **единственной** явно
+ожидаемой заменой stderr на эту строку. Phase/completed, cleanup/confirmed,
+exitCode, stdout, summary/duration и original runId не ослаблять.
+Сохранить actual business effect, два model requests, original input bytes,
+lost application ACK/readback и no-replay assertions. Не удалять gap, не переписывать
+Runtime history или original receipt ради тождества hot/cold readback.
+
+### Круг2 — отдельный подтверждённый source дефект tool logs
+
+`RuntimeActivityCoordinator.snapshot`166–174 сохраняет последнее состояние
+каждого original tool и tool-result в bounded `latest.tools`; строка194
+намеренно возвращает `events: []`. Однако
+`scheduledRunProjection.ts`24–26 ищет tool blocks именно в пустом events.
+Это source-proven потеря tool log blocks, отдельная от actual stderr mismatch.
+
+Заменить только этот источник на existing `activity.latest.tools`.
+Сохраняются eventId/toolRef, sequence ordering, текущая Runtime read authority,
+dedup latest projection, 256KiB snapshot и 512KiB final stdout limits.
+Не добавлять feed reads, cursor store, RPC, новый snapshot или native allocation.
+Завершённый tool-result не превращать в новый tool effect.
+
+В existing controlled finite-run case добавить пару original tool/tool-result
+к уже существующим Session events и проверить их в hot и cold stdout. Existing
+native finite Claude/Codex case уже выполняет один настоящий command: проверить
+retained paired `tool_use`/`tool_result` blocks и их original matching id,
+сохранив те же два inference requests и file effect. Не добавлять модельный ввод,
+fixture suite или новую matrix row.
+
+### Круг3 — проверка целого контракта
+
+Сначала независимое source review двух причин; затем existing scheduled Host
+tests/types и прежний native prerequisite в обычном exact-head CI. Native test
+остаётся строгим к остальным result fields и physical cleanup; controlled case
+не выдаётся за реальный provider proof. Никакие timeout/лимиты либо workflow
+success gates не повышаются. Новые bytes пока не исполнялись: executor unavailable.
+
+
+## R14 — длительность retained Host result из исходного времени наблюдения
+
+**Source-proven дефект, отдельно от R13 и UI row.** На parity
+`235b01b489a4f428b72c7667b0c89061c82cab1b`
+`scheduledRunProjection.ts`44–45 берёт последний timestamp из
+`activity.events`, но `RuntimeActivityCoordinator.snapshot`194 всегда
+возвращает этот массив пустым. Поэтому Host `result.durationMs` и JSONL
+`result.duration_ms` равны0 даже после длительного завершённого запуска.
+Main `SchedulerService`638 печатает это неверное значение в success log.
+
+Не расширять вывод: видимая длительность schedule row/dialog уже считается
+`completeScheduleRun.ts`17–23 из original `run.startedAt` и terminal
+`completedAt`; эти UI поля не сломаны и не требуют изменения. Renderer
+`streamJsonParser` не использует result duration для своей временной шкалы.
+Старая frontend реализация
+`4a0e06277fe216d9f82dbbede362668fe46622ee:src/main/services/schedule/ScheduledTaskExecutor.ts`
+снимала время до подготовки CLI и после его исходного close. Здесь сохраняем
+смысл уже предусмотренной Host-проекции: original capture → последнее
+сохранённое Host observation, без выдачи этого значения за native inference
+time или отдельное доказательство physical cleanup.
+
+### Круг1 — получить существующий timestamp без нового чтения или journal
+
+1. `RuntimeInput`/session record не содержат terminal timestamps. Они уже есть
+   в bounded derived events: `RuntimeActivityCoordinator.prepare`323–328
+   ставит `observedAt` при исходной публикации; `FileRuntimeEventStorage`
+   проверяет digest, exact binding, sequence и finite ISO timestamp.
+   Исторические записи до этого поля и oversized gap events законно не имеют
+   timestamp. Нельзя заменять его моментом холодного lookup.
+2. Добавить один optional **internal** scalar `lastObservedAt` в existing
+   `RuntimeActivitySnapshot`. В `snapshot` взять его у последнего event
+   того же уже прочитанного и проверенного feed, прежде чем вернуть
+   `events: []`. Если последний event не датирован — scalar отсутствует;
+   не искать более ранний text/usage event как подмену конца запуска.
+   Current read grant, member fence, binding, retained sequence и gap остаются
+   прежними. Никаких новых storage reads, RPC, cursors или write timestamps.
+3. `projectScheduledRun` использует этот scalar вместо пустого массива:
+   finite delta от immutable `capture.capturedAt`, с прежним nonnegative
+   clamp. Нет `Date.now()`, времени Main/CI или latest-text fallback.
+   Для отсутствующего/невалидного timestamp сохраняется совместимый numeric0,
+   но выдаётся existing retained-log warning; 0 без такого доказательства
+   не представляется измеренной длительностью. Тот же scalar идёт в returned
+   duration и result JSONL.
+4. `projectRuntimeActivity`99–131 уже перечисляет public поля явно:
+   новый internal scalar туда не добавлять. Public activity/schedule schemas,
+   native SPI, Runtime session/effect journal и custody semantics неизменны.
+   Cold read/повтор original Stop не обновляют timestamp: readSession/snapshot
+   не пишут, а settled Stop сохраняет original record без нового put.
+
+### Круг2 — критические existing cases, без таймеров и новых native inputs
+
+- В existing Runtime activity snapshot/cold case проверить, что scalar равен
+  времени последнего исходного сохранённого event, остаётся тем же при cold
+  read и отсутствует у existing unprojected historical case. Сохранить
+  incarnation/retention/refused read assertions.
+- В existing controlled finite scheduled-run case сопоставить returned
+  duration с original capture и validated retained tail timestamp, а JSONL
+  result duration — с этим же returned значением. Читать только существующие
+  TEST records; не переписывать продуктовые даты ради oracle и не добавлять
+  sleep/clock allowance. Whole cold result equality R13 остаётся строгой.
+- В existing native Claude/Codex finite cases проверить finite positive
+  duration исходного завершённого запуска и равенство JSONL/returned duration.
+  Использовать уже прочитанный snapshot; сохраняются прежние native запросы,
+  original input/effect, lost ACK, cold equality, cancellation и limits.
+  Отдельная suite, matrix row или native replay не нужны.
+
+### Круг3 — review и фактическая приёмка
+
+Independent review должен проверить internal-only shape, отсутствие late-read
+clock и отсутствие подмены missing/partial timestamp; затем existing focused
+Host activity/schedule cases, types и прежний native gate на опубликованном
+source. R13 tool/cold-warning cut уже опубликован и не пересобирается этим
+исправлением. Текущий executor недоступен; source inspection/immutable
+readback не являются выполненным тестом или actual native PASS.

@@ -5,6 +5,9 @@ import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
+import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
+import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
+import { readScheduledRunCapture } from '../dist/composition/scheduledRunCapture.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { ScheduledRunInput, ScheduledRunSnapshot } from '../dist/composition/scheduledRunContracts.js';
 import type { ScheduledRunProviderContext } from '../dist/adapters/providers/ScheduledRunProvider.js';
@@ -52,8 +55,12 @@ class ControlledSession implements Session {
   finish() {
     const input = this.inputs[0]; assert.ok(input);
     const identity = { sessionRef: this.sessionRef, inputId: input.inputId, operationRef: input.operationRef };
-    this.events.push({ ...identity, kind: 'text', messageRef: 'TEST-message', block: 0,
-      phase: 'complete', text: 'TEST finite model result' },
+    this.events.push(
+      { ...identity, kind: 'tool', messageRef: 'TEST-tool-message', toolRef: 'TEST-scheduled-tool',
+        name: 'Bash', input: { command: 'TEST command' } },
+      { ...identity, kind: 'tool-result', toolRef: 'TEST-scheduled-tool', content: 'TEST tool result', isError: false },
+      { ...identity, kind: 'text', messageRef: 'TEST-message', block: 0,
+        phase: 'complete', text: 'TEST finite model result' },
       { ...identity, kind: 'usage', inputTokens: 7, outputTokens: 3, cumulativeCostUsd: 0.01 },
       { ...identity, kind: 'result', outcome: 'succeeded' });
     this.wake?.(); delete this.wake;
@@ -173,6 +180,22 @@ test('finite Host run keeps scheduled choices, one input and original outcome ac
   assert.equal(terminal?.result?.summary, 'TEST finite model result');
   assert.match(terminal!.result!.stdout, /"type":"assistant"/u);
   assert.match(terminal!.result!.stdout, /"total_cost_usd":0.01/u);
+  const capture = readScheduledRunCapture(
+    new TeamOwnerStore(f.root, f.profile.teams[0]!.binding.teamName), request.runId);
+  const runtimeStore = new FileRuntimeStore(f.root);
+  const lastTime = runtimeStore.fenced(context.binding, () =>
+    runtimeStore.readActivity(context.binding)?.events.at(-1)?.observedAt);
+  assert.ok(capture && lastTime);
+  const durationMs = Math.max(0, Date.parse(lastTime) - Date.parse(capture.capturedAt));
+  assert.equal(terminal!.result!.durationMs, durationMs);
+  const logRows = terminal!.result!.stdout.split('\n').map(line =>
+    JSON.parse(line) as { type?: string; duration_ms?: number; message?: { content?: Record<string, unknown>[] } });
+  assert.deepEqual(logRows.filter(row => row.type === 'result').map(row => row.duration_ms), [durationMs]);
+  const blocks = logRows.flatMap(row => row.message?.content ?? []);
+  assert.deepEqual(blocks.filter(block => ['tool_use', 'tool_result'].includes(String(block.type))), [
+    { type: 'tool_use', id: 'TEST-scheduled-tool', name: 'Bash', input: { command: 'TEST command' } },
+    { type: 'tool_result', tool_use_id: 'TEST-scheduled-tool', content: 'TEST tool result', is_error: false },
+  ]);
   assert.equal(await context.subagents?.authorize(authorization), false);
   assert.equal(JSON.stringify(terminal).includes('PRIVATE-'), false);
   const tasks = await f.rpc('team.tasks.list', {}) as unknown as { value: unknown[] };

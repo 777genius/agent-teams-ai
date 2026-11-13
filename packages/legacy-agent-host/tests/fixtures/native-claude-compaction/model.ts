@@ -47,6 +47,71 @@ const userText = (message: Row) =>
           .join('\n')
       : '';
 
+/** The pinned native recipe must expand the exact target in one original user message. */
+export function assertNativeReviewExpansion(body: Row): void {
+  const messages = (Array.isArray(body.messages) ? body.messages : []).map(record);
+  assert.ok(
+    messages.some((message) => {
+      if (message.role !== 'user') return false;
+      const text = userText(message);
+      return text.includes(`Review target: \`${REVIEW_ARGS}\``) &&
+        text.includes('## Phase 0 — Gather the diff');
+    }),
+    'native builtin review expands its exact target in original user context'
+  );
+}
+
+/** Preserve the strict system predicate; expose only closed facts when it fails. */
+export function assertCapturedCommandSystem(
+  body: Row,
+  phase: 'project-command' | 'user-command' | 'review'
+): void {
+  const marker = 'TEST_CAPTURED_ALICE_ROLE_CONTEXT_V1';
+  const system = JSON.stringify(body.system);
+  if (system?.includes(marker)) return;
+  const markerBlocks = {
+    user: { text: 0, tool_use: 0, tool_result: 0, other: 0 },
+    assistant: { text: 0, tool_use: 0, tool_result: 0, other: 0 },
+    system: { text: 0, tool_use: 0, tool_result: 0, other: 0 },
+    other: { text: 0, tool_use: 0, tool_result: 0, other: 0 },
+  };
+  for (const messageValue of Array.isArray(body.messages) ? body.messages : []) {
+    const message = record(messageValue);
+    const role =
+      message.role === 'user' || message.role === 'assistant' || message.role === 'system'
+        ? message.role
+        : 'other';
+    const blocks = Array.isArray(message.content) ? message.content : [message.content];
+    for (const blockValue of blocks) {
+      if (!JSON.stringify(blockValue)?.includes(marker)) continue;
+      const block = record(blockValue);
+      const type =
+        typeof blockValue === 'string'
+          ? 'text'
+          : block.type === 'text' || block.type === 'tool_use' || block.type === 'tool_result'
+            ? block.type
+            : 'other';
+      markerBlocks[role][type] += 1;
+    }
+  }
+  const facts = JSON.stringify({
+    phase,
+    bodySha256: sha(JSON.stringify(body)),
+    systemSha256: sha(system ?? ''),
+    systemShape:
+      body.system === undefined
+        ? 'absent'
+        : typeof body.system === 'string'
+          ? 'string'
+          : Array.isArray(body.system)
+            ? 'blocks'
+            : 'other',
+    markerBlocks,
+  });
+  assert.ok(Buffer.byteLength(facts) <= 2_048, 'bounded captured system diagnostic');
+  assert.fail('named native command keeps captured team system configuration; ' + facts);
+}
+
 /** Only Anthropic response text is scripted. Real SDK/native `/compact` must emit the boundary. */
 export function contextCompactionScript(
   options: CompactionScenario,
@@ -128,16 +193,8 @@ export function contextCompactionScript(
           'represented epoch is not injected again'
         );
       } else {
-        if (phase === 'review') {
-          assert.ok(
-            serialized.includes('You are an expert code reviewer.'),
-            'native builtin review expands its prompt'
-          );
-          assert.ok(
-            serialized.includes(`PR number: ${REVIEW_ARGS}`),
-            'native builtin review retains original args'
-          );
-        } else
+        if (phase === 'review') assertNativeReviewExpansion(body);
+        else
           assert.ok(
             serialized.includes(
               phase === 'project-command' ? PROJECT_COMMAND_BODY : USER_COMMAND_BODY
@@ -147,10 +204,7 @@ export function contextCompactionScript(
           serialized.includes(phase === 'review' ? REVIEW_ARGS : COMMAND_ARGS),
           'actual native command expands its original arguments'
         );
-        assert.ok(
-          JSON.stringify(body.system).includes('TEST_CAPTURED_ALICE_ROLE_CONTEXT_V1'),
-          'named native command keeps captured team system configuration'
-        );
+        assertCapturedCommandSystem(body, phase);
         assert.ok(
           tools.includes('mcp__team__message_send'),
           'command retains the captured Team tool'
