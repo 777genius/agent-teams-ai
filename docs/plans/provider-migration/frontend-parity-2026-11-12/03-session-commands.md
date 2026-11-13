@@ -904,3 +904,102 @@ Stop/cold Resume, retained report и новый /cost по существующ�
 Если actual gate снова не покажет каталог, отдельно разобрать original runtime
 projection/фокус по фактическому receipt; не ослаблять готовность, generation,
 captured-host authority, exact catalog или successful cleanup.
+
+## R17 — actual native `/review` fork context before a provider change
+
+### Круг 1 — подтверждённая причина и прежняя возможность
+
+Actual235 `native-claude-compaction` остановился на первом `/review` request:
+native expansion и original arguments уже прошли, но captured member marker
+отсутствовал в system и во всех 16 закрытых role/block counters. Предыдущие
+project/user команды сохранили marker и выполнили свои original MCP replies.
+Receipt SHA256 `ebc07efeed7e9427e861382ef504a81864c196012277ed38a2e248d3acfb58d4`;
+cleanup и source pins подтверждены. Это не successful review acceptance.
+
+Source audit сохранён отдельным immutable blob
+`c687a6b50befccb17dcbc43f966a68bc9090cef3`. В actual installed Linux SDK0.3.305 /
+CLI2.1.305 binary SHA256
+`86cb722ab68348877dba7971e4d0c659919e05e6228c05e006e83da320e656ef`
+bundled `code-review` alias `review` выбирает fork. Native slash dispatcher
+`no → aen → lR` создаёт отдельный general-purpose prompt; actual systemPrompt
+строится из его `getSystemPrompt`, а parent append остаётся только в options.
+Linux source объясняет Darwin symptom как inference; это ещё не новый native
+wire proof.
+
+Прежняя возможность проверена по exact donor4a, без подмены runtime:
+[lock1757d797](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/runtime.lock.json)
+указывает runtime0.0.160 / `e13edcd3d4ffbecc0272ae30195cc6b15b710ee7`.
+Его [review](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/commands/review.ts)
+— inline prompt без `context: fork`;
+[dispatcher](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/processUserInput/processSlashCommand.tsx)
+выделяет fork только при явном поле. Original
+[bootstrap loader](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/hooks/useNativeAppManagedBootstrapContextInjection.ts)
+передаёт member context как meta user prefix в ту же conversation через
+[Inbox submission](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/hooks/useInboxPoller.ts).
+Сохранять нужно доступность captured context при review, а не выдуманное
+требование, что старый frontend всегда размещал его в API system field.
+
+### Круг 2 — один отдельный bounded TEST proof публичного hook
+
+1. Создать новый isolated TEST project/HOME/config и original session/input UUID.
+   Не использовать root235 операции, session/history, личный HOME или credentials.
+   Зафиксировать SDK/package/native hashes до и после; выбранный binary только
+   actual pinned Linux0.3.305. Никакого vendor source patch.
+2. Reuse existing finite localhost Anthropic SSE implementation из
+   `tests/fixtures/native-claude-team/model.ts`: original parser/request-size
+   ceiling2MB и обычный `emitResponse`. Для одноразового diagnostic driver
+   допустим точный перенос emitter в TEST scratch с записанным source hash;
+   новый постоянный harness, workflow или suite не нужен. Принять ровно один
+   model request и вернуть один plain-text TEST result; любые tool-use/model
+   continuation/retry отказать. Token-count endpoint, если native его вызовет,
+   остаётся в прежнем finite bound8, отдельно от inference.
+3. SDK public `query` получает ровно один original `/review` с exact TEST args,
+   model Sonnet4-6, `tools: []`, пустые MCP/allowedTools, strictMcpConfig и
+   пустые settingSources. `canUseTool` отказывает всем неожиданным запросам.
+   Не включать internal appendSubagent flag, coordinator mode или permission
+   bypass; не переписывать slash text/native recipe.
+4. Передать разные TEST markers: один через обычный parent preset append,
+   другой — только через публичный
+   [SubagentStart additionalContext](https://code.claude.com/docs/en/hooks#subagentstart).
+   Hook проверяет actual original session_id, bounded native child id/type и
+   original cancellation signal; возвращает только context string, без
+   permission decision, updatedInput, authorization/registration или MCP grant.
+   Его marker не является копией parent marker и не маскирует отсутствие parent
+   append. Pinned source `lR → hTr → additionalContexts → hook_additional_context`
+   вызывается и для slash fork, не только Agent tool; native proof проверяет это.
+5. Сохранить только закрытый receipt: original input/session IDs, bounded native
+   child ID/type, hook/request/result counts, body/system hashes, role/marker
+   presence, exact review expansion booleans и native parent result association.
+   Не сохранять raw request, full prompts, transcript paths, environment или
+   произвольные hook fields. Missing original correlation остаётся unknown,
+   synthetic `forked-command-*` не превращается в observed Agent tool.
+6. Original session bound45s не увеличивать. Public spawn hook сохраняет именно
+   original ChildProcess/native identity; original SDK close/EOF и штатный
+   captured-process cleanup должны завершиться с actual exit и read-only
+   physical absence. Root exit, deadline или отсутствие event сами по себе
+   не являются whole cleanup. Собрать bounded failure receipt в finally,
+   закрыть localhost listener; не делать автоматический повтор input.
+
+### Круг 3 — граница результата и следующий product cut
+
+Proof выше квалифицирует только public hook delivery и actual fork/result
+identity. Он не закрывает P03 feature/e2e и не меняет strict current oracles.
+
+Сравнить отдельно два уже существующих product scope:
+- Original235 fixture задаёт `nativeTools: []`, поэтому ordinary subagent port
+  отсутствует; это не положительный тест parent MCP authority для native fork.
+- Обычный product profile с tools получает `ClaudeSubagents.hook`: child требует
+  original Agent-parent provenance, current original input и разрешённый child
+  tool; `createCapturedClaudeSubagents` исключает Team/MCP tools. Slash-fork
+  не получает этот parent только из native ID или context marker.
+
+После successful proof подготовить отдельное peer-reviewed уточнение D:
+literal original captured `projectInstructions.append` может передаваться как
+public child context с прежними session/signal guards, но не даёт child
+личность/полномочия Team member. Не менять ordinary child authorization,
+native receipt provenance, MCP scopes или main-thread correlation ради зелёного
+oracle. Before product implementation отдельно определить observed review
+result/tool path; прежние project/user MCP assertions сохранить. Затем reuse
+existing D critical hook case и actual compaction/Desktop command gates,
+без fake parent marker, новых native inputs в существующих journeys и
+расширения timeouts.
