@@ -1668,3 +1668,13 @@ Independent plan reviews (Profiles и root) — PASS. Reused TEST helpers дол
 до выполнения. Current before/after file checks не закрывают отдельный review24
 о промежутке verify→exec: здесь они сохраняются, но pinned execution этим не
 объявляется доказанным. D-only evidence не подменяет Main owner transition.
+
+
+## 40. Уточнение приёмки §38 A: свежий факт по исходному Windows HANDLE
+
+- В первом кандидате `nativeRetainedHostGate.ts` проверка `witness.process.exitCode === null` после выхода Host доказывает лишь отсутствие полученного Node события. Она недостаточна для положительного утверждения, что исходный native process ещё жив. Такой кандидат не считается native PASS.
+- В existing TEST witness добавляется отдельный opt-in `vendor-query-wait-gated`: прежний `OpenProcess` + exact birth выполняется один раз, **до первого resume исходного provider**. Дальнейшие максимум четыре запросa `Q` используют только уже удержанный HANDLE и `WaitForSingleObject(handle, 0)`: `WAIT_TIMEOUT → alive`, `WAIT_OBJECT_0 → absent`, прочее → отказ. PID повторно не открывается, process table не используется. Это одномоментное наблюдение HANDLE, без обещания будущей живости.
+- После одного фиксированного `W` тот же witness переходит в прежнее ожидание исходного exit и завершается с тем же проверяемым кодом. Ошибочный/лишний запрос закрывает TEST протокол с ошибкой. Никаких новых сигналов или управления provider у свидетеля нет; его время жизни по-прежнему ограничивает исходный independent controller Job и общий deadline 120 s.
+- Узкие файлы: `tools/owned-process-broker/nativeFixture.cpp`, existing `nativeGateContext.ts` (типизированный TEST helper для двух закрытых ответов), новый `nativeRetainedHostGate.ts`. Остальные fixture modes и production broker неизменны. Native gate требует `alive` после обычного SDK input, `alive` после доказанного exit Host в crash-case и `absent` после Main cleanup через тот же исходный HANDLE; затем original witness exit0 и controller Job0. Соседний sentinel остаётся жив до собственного cleanup.
+- Это исправление TEST oracle. Оно не активирует private product mode, не подтверждает rebind/Registry/SDK cold conversation и не заменяет реальное исполнение на Windows x64/ARM. Пока новый сценарий не прошёл, §38 A остаётся source candidate.
+- Основание: [Microsoft WaitForSingleObject](https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject); исходный HANDLE, а не Node event delivery, задаёт объект наблюдения.
