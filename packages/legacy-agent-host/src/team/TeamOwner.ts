@@ -395,7 +395,7 @@ export class TeamOwner {
   authorizeRuntimeAccess(
     principalId: string,
     binding: RuntimeMemberBinding,
-    action: 'read' | 'control'
+    action: 'read' | 'control' | 'provider'
   ): boolean {
     return this.deliveryAuthority.runtimeAccess(principalId, binding, action);
   }
