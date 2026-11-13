@@ -474,3 +474,42 @@ export async function readStoppedImportSourceDiagnostics(
     ),
   };
 }
+
+/** Closed facts from existing UI steps only; this projection never performs a read or retry. */
+export function projectCurrentStoppedProducerFailure(options: {
+  phase: string;
+  source: unknown;
+  model: {
+    readonly failures: readonly string[];
+    readonly currentLegacyCatalogRequests?: number;
+    readonly currentLegacyTurns?: readonly unknown[];
+    readonly currentLegacyProbes?: readonly unknown[];
+  };
+  captured: readonly unknown[];
+  steps: readonly Record<string, unknown>[];
+}) {
+  const phases = ['connect', 'create-form', 'model-selection', 'launch-settings', 'create-launch',
+    'source-identity', 'reply', 'stop', 'create-task', 'stop-proof', 'quit', 'oracle-drain', 'source-capture'];
+  const count = (value: unknown, cap: number) =>
+    Array.isArray(value) && value.length <= cap ? value.length : null;
+  const catalogCount = (value: unknown) =>
+    typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 9 ? value : null;
+  const exceeded = options.model.failures[0] === 'bounded original legacy catalog reads';
+  return {
+    phase: phases.includes(options.phase) ? options.phase : 'unknown',
+    source: options.source,
+    catalogLimitExceeded: exceeded ? true : null,
+    catalogReadsAtLeast: exceeded ? 9 : null,
+    catalogRequests: catalogCount(options.model.currentLegacyCatalogRequests),
+    catalogByPhase: phases.flatMap(phase => {
+      const steps = options.steps.filter(step => step.producerPhase === phase);
+      return steps.length ? [{ phase,
+        first: catalogCount(steps[0]!.catalogRequests),
+        last: catalogCount(steps.at(-1)!.catalogRequests) }] : [];
+    }),
+    nativeBusinessCount: count(options.model.currentLegacyTurns, 1),
+    modelProbeCount: count(options.model.currentLegacyProbes, 8),
+    capturedNativeCount: count(options.captured, 32),
+    capturedNativeOverflow: options.captured.length > 32,
+  };
+}
