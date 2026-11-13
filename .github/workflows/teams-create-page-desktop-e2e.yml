@@ -6,6 +6,10 @@ on:
     paths:
       - '.github/workflows/teams-create-page-desktop-e2e.yml'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
+      # Native desktop create/launch admission and Validate share these guards.
+      - 'src/shared/utils/cliArgsParser.ts'
+      - 'src/main/services/team/TeamRequestValidation.ts'
+      - 'src/main/ipc/teams.ts'
       # Runtime provider preflight affects the existing Create/Launch controls.
       - 'src/main/services/infrastructure/CliInstallerService.ts'
       - 'src/main/services/runtime/ClaudeMultimodelBridgeService.ts'
@@ -23,6 +27,10 @@ on:
     paths:
       - '.github/workflows/teams-create-page-desktop-e2e.yml'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
+      # Native desktop create/launch admission and Validate share these guards.
+      - 'src/shared/utils/cliArgsParser.ts'
+      - 'src/main/services/team/TeamRequestValidation.ts'
+      - 'src/main/ipc/teams.ts'
       # Runtime provider preflight affects the existing Create/Launch controls.
       - 'src/main/services/infrastructure/CliInstallerService.ts'
       - 'src/main/services/runtime/ClaudeMultimodelBridgeService.ts'
