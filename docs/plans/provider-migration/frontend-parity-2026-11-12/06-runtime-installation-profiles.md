@@ -903,3 +903,52 @@ unknown/malformed protocol-specific state не превращается в ра�
 другой; missing/corrupt artifact при том же unavailable seed должен оставаться
 общим отказом. Контроль unchanged artifacts/receipts и исходного cleanup debt
 сохраняется. Это уточнение найденного seam; source/CI PASS пока не заявляется.
+
+### §19 проверка cold replay: повторное trusted admission точного probe profile
+
+Первый фактический focused Node24.21 прогон materialized §19/R19 среза дал
+58/61 PASS. Два отказа были ошибками TEST oracle: имя Runtime-файла должно
+использовать `runtimeDigest(normalizeBinding(binding))`, как FileRuntimeStore;
+Host onDispose rejection даёт `cleanup: failed`, сохраняя unknown native custody.
+Исправляются только эти ожидания в existing composition case, без ослабления
+original debt, payload или custody assertions.
+
+Следующий прогон той же новой unavailable-history case также показал, что
+`roster.replace members:[]` повторяет исходный пустой roster и штатно является
+no-op. Existing mutation assertion использует реальное добавление TEST bob,
+сохраняя строгое ожидание hold и неизменность исходных bytes/grants. Production
+no-op semantics не меняются; это уточнение oracle, не новый обход mutation gate.
+
+Третий отказ — source regression в candidate ProviderManagementCoordinator
+`edec81ca6fec37cf997677060c731169fba5c84a`. Existing stopped fresh capture case
+успешно завершает original model probe, закрывает Host, затем тот же cold
+`team.launch.probe.start` возвращает hold. Read-only debugger в отдельной TEST
+копии сохранил исходный FAIL и показал actual chain
+`assertTargetAvailable → target → ModelProbeOwner.start → executeTeamModelProbe`.
+Production методы, guard и результат не подменялись; Runtime/generation mismatch
+этим отказом не подтверждается.
+
+**Круг1 — причина.** Constructor отмечает retained command target недоступным,
+если его profile отсутствует в начальном списке management/seed profiles.
+Dynamic Team probe profile штатно восстанавливается позже из current captured
+Team. `executeTeamModelProbe` проводит original roster/control/selection/current
+проверки и вызывает private `admitTeamProbeProfile`, но отметка unavailable
+сохраняется даже после успешного exact admission.
+
+**Круг2 — минимальная коррекция.** После полного успешного private admission
+и existing same-profile digest check удалить только marker exact
+`{profileId, configRevision}` из existing unavailableTargets. Снятие marker
+не берёт profile из journal или RPC и не восстанавливает его из нового seed.
+Если current authority/recipe недоступны, private admission не произойдёт;
+конфликт/ошибка admission сохраняет marker. Pending/unknown command rows,
+resource fence, original receipt и physical target digest не меняются.
+Последующие ModelProbeOwner.select/assertManagementTarget/current проверки
+по-прежнему обязательны до replay или нового native effect.
+
+**Круг3 — проверка.** Повторно использовать существующий stopped fresh capture
+cold replay case: original completed receipt возвращается без второго run,
+новый explicit intent запускает один новый probe. Существующие unavailable
+management/debt cases должны оставаться held и сохранять исходные bytes/fences.
+Новых suites, RPC, owners, таймаутов или native budget нет. Source peer review,
+Host build/types и focused existing tests обязательны на exact corrected bytes;
+actual Desktop/native gates отдельно, timing улучшение здесь не заявляется.
