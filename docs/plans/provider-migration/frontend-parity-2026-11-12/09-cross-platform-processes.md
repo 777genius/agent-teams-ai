@@ -3082,3 +3082,63 @@ location if the journey fails again. A failed journey stays failed. A green
 journey must still satisfy all original native MCP/permission/effect/Stop
 and retained-settings assertions. This section closes only missing safe
 failure visibility, not the unobserved underlying MCP failure.
+
+
+## 60. Original Taskboard and producer refusals: bounded failure observations
+
+### R1 — exact evidence and remaining uncertainty
+
+This is a TEST observation plan, not an inferred product fix. At original head
+7ce224d148205867d46fd2ca980a48e1b9e8c48b, Main run43440481656 has three distinct failures:
+
+| Original job | Immutable original log | What the log proves |
+| --- | --- | --- |
+| 131936501218 | 282dfad6a3a3aeffb15ba942fea5c239c797bd8e | The one Mark resolved attempt was followed by the failed banner-clear read at desktop-task-board-ui-smoke.ts:463. |
+| 131936501807 | 7ec75ea4848855eb0c072bbab56f30ed3271ec3e | Saved donor producer finally437 reports INCOMPLETE; the earlier caught failure is not visible. |
+| 131936501853 | 6cb87a09af9b88dcb38cf0b5329fdb65e06c271f | The original current-legacy model rejects catalog read number nine under its unchanged limit8; sourceFrozen and cleanup absence do not establish the completed business/Stop stage. |
+
+The official original ZIP downloads do not supply inspected inner receipts in the unavailable executor. Do not infer a Task mutation failure, a donor UI cause, or legitimate catalog cadence from these final assertions. All three source callers and model632808e8729145967b321f4fd41625ce4a71c995 remain byte-identical between7ce and native12d54316c69326fd3d405459ebf77062d818324f.
+
+Runtime0.0.158, exact tag treef5c69c2e9024ffc36a5db5eafe30f53539b52f62 in777genius/agent_teams_orchestrator, has a process-local catalog cache (anthropicCatalog.ts adec3f0b3655f691c0efa87ae0910e7e7625a707:1233–1272). Its full registry status fetches the catalog; summary does not (registry.ts57f89dd1d54b7dd5c124933c2290db460ec49209:442–489). Frontend ClaudeMultimodelBridgeService68e89e584395a022fa4e7b4d7017a7f3a397f154:1222–1333 starts scoped status commands and reuses completed results only for OpenCode. This establishes why a warm-process cache does not prove a whole-producer limit8; it does not justify raising that limit.
+
+### R2 — only three existing source paths
+
+| Path | Exact preimage | Narrow change |
+| --- | --- | --- |
+| scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts | ebaf64ed7e8e3c1e8ecfe5571cd031ed01c375b7 | Observe the existing Taskboard failure at its existing caller; the794-line UI implementation stays untouched. |
+| scripts/legacy-agent-host/desktop-donor-saved-producer.ts | bee89100fc5740abaeacd2b9e1fd9ee5f2b508df | Retain a closed attempted stage and project the original caught source before its existing finally assertion. |
+| scripts/legacy-agent-host/desktop-stopped-import-prior-run.ts | d239c0e806ac17535dafb5b532b6f639a191b056 | Project the original caught stage plus existing oracle and captured-child facts. |
+
+Reuse the unchanged §59 projectDesktopHarnessFailure(error, repository, desktopProofSources). The published parent implementation is ab850ddfc2d146a420f1685f84b5424f7f36d0bd; native retains its original e5625eb9a2ad06ac0c3e5798a07381dbd25e44ca. Its16KiB stack/40-line/six-relative-frame bounds and frozen allowlist remain intact. All three callers, desktop-ui-controls.ts and the existing pure command-entry validators are already in the frozen Desktop source closure. No shared observations/smoke/inventory file, new helper file or production owner changes belong to this slice. Root retains those shared files.
+
+### R3 — Taskboard: distinguish original command evidence from the stale banner
+
+Catch only the rejected existing runDesktopTaskBoardUiSmoke promise in its existing caller. Collect this diagnostic only when the already retained proof identifies its one original created task and its latest recorded UI action is the attempted click with the exact recorded label `clear original clarification once`. There is no second click, DOM evaluation, RPC, command lookup through a live owner, recovery or replay. Other failure stages continue to propagate without this extra journal observation.
+
+Use the original createReceipt binding/effects.taskId, original fixture root and fixed TEST Team namespace. Validate the original task ID before deriving its fixed file. Read that canonical task and enumerate the existing .host-owner/commands directory once, using read-only no-follow FDs and canonical original paths. Bound the directory walk to128 entries, each JSON read to64KiB plus one over-limit detection byte, and combined file reads to1MiB. Verify regular-file shape and retained-FD/named-path identity before and after the bounded read. Do not follow new paths supplied by JSON. An unsafe, missing, malformed, replaced, oversized or incomplete observation stays unavailable; there is no diagnostic retry.
+
+Use existing pure validateCommandEntry/teamCommandPath validation, without constructing a Team owner or store. Match only original binding/principal, exact original taskId, operation task.clarification and value null. Emit no IDs, names, payloads, filenames or rows. The closed result reports canonical clarification as user/lead/absent/unknown, scan completeness, matching count and the five existing phase counts prepared/applying/completed/rejected/held. Counts are null when the scan is not complete; never fabricate a zero. Validated unrelated receipt families do not contribute.
+
+These are bounded point observations, not an atomic Team transaction. A zero matching count does not prove that an in-flight action will never dispatch; a completed count alone does not authorize another action or substitute for the existing acceptance assertions. The result lets the next failed run distinguish retained null-command/canonical-state evidence from the unchanged banner; unstable files explicitly leave that distinction unresolved.
+
+### R4 — saved producer: retain the earlier caught location
+
+Keep a local closed attempted-stage value at existing control boundaries: connect, create-form, model-selection, member-configuration, save, native-drain, quit, source-capture. It describes the operation being attempted, not confirmed completion. In the existing catch, retain that stage and the §59 projection of that exact original error before the existing throw/finally flow. Do not parse or print the raw error, assertion values, stack, private receipt or UI labels.
+
+No additional file/DOM/process read is needed. Existing raw private receipt fields, ordinary Quit, native/group absence, source freeze, INCOMPLETE and final guard remain unchanged. Cleanup-only failure without a preceding caught source must remain explicitly unclassified rather than attributed to an earlier successful stage.
+
+### R5 — stopped producer: stage and existing counters, without changing the model
+
+Keep a closed attempted stage at existing boundaries: connect, create-form, model-selection, launch-settings, create-launch, source-identity, reply, stop, create-task, stop-proof, quit, oracle-drain, source-capture. At the existing original catch, project its source once and read only already available original values:
+
+- catalogLimitExceeded is true only for the existing first oracle failure literal bounded original legacy catalog reads. Under the unchanged source guard this supplies catalogReadsAtLeast9; it is not an exact final catalog count. Other/unknown failures are not relabelled.
+- Native business count is the existing currentLegacyTurns length (bound1), model-probe count is currentLegacyProbes length (bound8). Invalid/overflow values are unavailable, not clamped into successful acceptance.
+- Captured-native count comes only from native.captured(), whose implementation copies the original in-memory map (desktop-captured-app.ts:48–85). Bound32 and report overflow separately. Do not call observe(), remaining(), processTable(), selectedDesktopRuntime(), ps or any new census. This count is retained witness metadata, not proof of currently live or released processes.
+
+The original model, catalog limit8, HEAD limit32, probe/input limits, response handling, sealed-first-failure rule and finishCurrentLegacySource drain stay byte-identical. No getter, counter API, cache, new request or model-file size change is needed. Stage plus these source-bound facts tells whether the catalog refusal occurred before Create, during the one native turn, or during later Stop/Quit observation; it does not claim its network/CPU cause.
+
+### R6 — output, failure precedence and qualification
+
+The Taskboard catch saves and emits its one closed observation. Each producer retains the original catch observation, then uses its existing final failure boundary to save and emit at most one labelled JSON diagnostic row after the original cleanup/freeze observations. Without a prior caught error, report only cleanup-or-freeze/unclassified and the already available closed cleanup/freeze flags; do not assign a successful earlier stage as a cause. Every row is at most4KiB, constructed only from fixed enums, finite counts/booleans and the §59 projection. Serialization/reading/logging failures must be contained and leave the exact original caught error, existing finally/cleanup and failing acceptance unchanged. Never print an arbitrary receipt/error field. Missing diagnostic data is unavailable, never PASS, completed, no-dispatch or release.
+
+No new test suite, helper framework, job, matrix row, native invocation, input, permission, timer, polling loop, read retry or budget increase is introduced. No baseline raise or code compression is authorized; the three existing script files remain below800 physical lines. Independent review checks exact original-failure identity, read bounds/no-follow containment, closed output and all unchanged actions. Existing script types/lint/source cap and the next normal coherent-head original CI gates supply execution evidence. This plan and source-only review do not close any of the three acceptance failures.
