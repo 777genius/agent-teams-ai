@@ -637,3 +637,25 @@ Published либо unfinished original command при наличии chain до�
 её **raw** original grant, не только эквивалентный set. Terminal held/no-resource
 receipt без собственного index record читается как его прежний отказ; он не
 меняет более позднюю chain и не разрешает новый native effect.
+
+### §18 validation: исправить прежний prepared-recovery TEST oracle
+
+После correction Host20/20 existing source-selection/native-identity cases PASS,
+включая duplicate/reordered grant, immutable read/replay и два cold recovery окна.
+Existing Main file дал4/5 PASS; его старый `restarted installer` case ожидает
+prepared после публикации **отсутствующего** executable. Это противоречит уже
+принятому §15 R2: static source refusal сохраняется terminal held/no-resource и
+не восстанавливается созданием файла задним числом. Новый alias binding это
+поведение не вводит; отказ обнаружился при полном existing-file прогоне.
+
+Минимально исправить сам существующий TEST case: подготовить valid original
+executable до publication; existing private TEST Host entry вызывает настоящий
+FileManagementCommandStore.write для original prepared record и затем один
+TEST-scoped throw, имитируя потерю выполнения после durable intent. Такая же
+граница уже используется existing Host interruptPrepared helper. Ни production
+failpoint, ни изменение raw record, fake receipt или native replay не добавляются.
+Cold restart восстанавливает тот же saved publication через штатный installer,
+без нового acquisition/candidate capture; missing-file static refusal остаётся
+отдельно проверенной immutable held. Counts/budgets и existing native identity
+tests сохраняются. Root source-круг и negative baseline: старый built Host отказал
+в новых двух alias/recovery cases; rebuilt Host прошёл все20.
