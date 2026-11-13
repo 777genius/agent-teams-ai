@@ -349,3 +349,13 @@ R5 independent plan review: `/root/profiles_models_continue`, 2026-11-13.
 Root review добавил закрытие port lease после callback/finally, отказ при escaped
 или не дождавшихся body operations и проверку pinned GET-only methods.
 Это review плана, не compiler/native/Desktop PASS.
+
+R5 source review: `/root/profiles_models_continue`, 2026-11-13. Проверены закрытый
+runtime port, inherited deadline, original ready identity, full before/after,
+escaped/lazy refusal и unchanged mutation path. Probe5GET (8с image catalog)
+использует2 full reads; policy3GET и catalog3GET также по2. Добавлены ровно2
+critical tests и3 identity assertions в existing native server fixture.
+Старый Main fixture приведён к обязательным private HOME/current catalog/ready
+contracts с сохранением его3 cleanup/attachment scenarios. Новый helper и critical
+test включены в explicit Desktop source freeze inventory. Compiler, native matrix
+и Desktop acceptance этого source cut ещё pending; source review не заменяет их.

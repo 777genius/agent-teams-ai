@@ -570,6 +570,8 @@ export const desktopProofIntegratedSources = [
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedGraph.ts',
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts',
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedMemberProvider.ts',
+  'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ReadOnlySnapshot.ts',
+  'packages/legacy-agent-host/tests/opencode-v2-read-snapshot.test.ts',
   'test/features/agent-backend/hostOpenCodeV2EmbeddedMember.test.ts',
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedConfig.ts',
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts',

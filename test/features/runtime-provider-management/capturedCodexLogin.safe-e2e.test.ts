@@ -49,7 +49,7 @@ async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', 
     'b/workspace',
   ])
     await mkdir(join(root, name), { mode: 0o700 });
-  const node = await realpath(process.execPath);
+  const node = await realpath(process.env.AGENT_BACKEND_TEST_NODE ?? process.execPath);
   const executable = join(root, 'bin/TEST-codex.ts');
   await writeFile(
     executable,

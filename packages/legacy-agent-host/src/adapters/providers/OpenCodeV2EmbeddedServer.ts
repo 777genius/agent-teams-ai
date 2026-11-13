@@ -145,6 +145,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   const lifecycle = new AbortController();
   let child: ObservableNativeProcess | undefined;
   let ready: OpenCodeV2EmbeddedReady | undefined;
+  let readyChild: ObservableNativeProcess | undefined;
   let starting: Promise<OpenCodeV2EmbeddedReady> | undefined;
   let stopping: Promise<boolean> | undefined;
   const alive = () =>
@@ -363,6 +364,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
         });
         launched.stdout.resume();
         const observed = await measure(combined);
+        readyChild = launched;
         ready = Object.freeze({
           endpoint,
           pid: observed.pid,
@@ -382,6 +384,12 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
 
   return {
     start,
+    // This is lifetime evidence for a nonce-checked original ready object, not
+    // an executable digest or a new PID capture. Read snapshots still bracket
+    // their requests with the full native/image measure below.
+    isOriginalLive: (capture: Readonly<OpenCodeV2EmbeddedReady>): boolean =>
+      ready !== undefined && capture === ready && readyChild !== undefined &&
+      child === readyChild && !stopping && !lifecycle.signal.aborted && alive(),
     readPassword: () => password,
     readNativeCustody: async (signal: AbortSignal): Promise<NativeCustody | undefined> => {
       if (!ready || stopping) return undefined;

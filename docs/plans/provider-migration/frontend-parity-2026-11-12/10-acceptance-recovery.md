@@ -273,3 +273,14 @@ bytes/headers/credentials, не отправляет дополнительны�
 
 Windows static V1 cases используют прежнюю actual-OS policy nativeProcessProfile: TEST paths теперь
 соответствуют текущему Host, а foreign-OS cwd по-прежнему отвергается. Production policy не изменена.
+
+[Lint job131606204662](https://github.com/777genius/agent-teams-ai/actions/runs/43335609196/job/131606204662)
+на qualification head `b54390e9844a4f868c6f460905c4d9664e1340e8` обнаружил два локальных
+дефекта: лишний non-null assertion в schedule lead и вложенное присваивание promise
+при подготовке OpenCode sources. Исправления сохраняют прежний выбор и один shared promise.
+[Test shard4](https://github.com/777genius/agent-teams-ai/actions/runs/43335609196/job/131606204703)
+нашёл3 устаревших V2 test fixtures (обязательный HOME/catalog/ready contract) и4 Codex login
+failures: fixture выбирал Node26 через process.execPath, хотя CI уже подготовил Node24.21
+в AGENT_BACKEND_TEST_NODE. Используется этот существующий captured runtime; Host version guard
+сохранён. Исправление3 V2 сценариев идёт вместе с P02 R5, новые unit cases ради этих repairs
+не добавлены. Это source-reviewed cut; новые exact-head lint/tests/native результаты ещё ожидаются.
