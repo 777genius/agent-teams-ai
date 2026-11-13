@@ -2141,11 +2141,16 @@ Controller выдал TEST sandbox с `RUNNER~1`; fixture захватывает
 вызывают один `binding.realpath`; Windows [libuv](https://github.com/nodejs/node/blob/v24.21.0/deps/uv/src/win/fs.c)
 получает canonical name через `GetFinalPathNameByHandleW`. Короткое имя не является равной canonical строкой.
 
-Узкий исправляющий cut: только `SelectedHostProfile.nodeExecutable/hostEntry` в
+Узкий исправляющий cut: `SelectedHostProfile.nodeExecutable/hostEntry` в
 `tools/owned-process-broker/nativeRetainedHostGate.ts` захватываются через `realpathSync.native`.
-Candidate blob `8a0ccea8dbf6f7ef0778864066390650f9a0aec3` относительно `bef380e2d19fd423c54af5694117d1dc95ad249c`;
-ровно2 replacements, readback MATCH, Account source peer PASS. Original file hashes/args/env,
-strict equality/isFile guards, deadlines, first-input admission и original cleanup не меняются.
+Source follow-up перед публикацией также проверил `CapturedWindowsCustody.verifyLaunch`: native canonical equality
+обязательна для `spec.cwd`. Поэтому `prepareProfile` один раз разрешает **исходный controller sandbox** через
+тот же native realpath, затем строит cwd/env/storage/profile paths прежними join из этого каталога.
+Исходный controller sandbox guard до вызова сохранён; нет нового root, path fallback или ослабления equality.
+Candidate blob `945eb8f7d37b4500a4f3b0e6c06ea5db1961afbb` относительно `bef380e2d19fd423c54af5694117d1dc95ad249c`;
+readback MATCH. Hashes по-прежнему вычисляются из фактически созданных/captured файлов; canonical paths обозначают
+те же TEST locations. Strict equality/isFile checks, deadlines, first-input admission и original cleanup сохранены.
+Account source peer PASS для двух file captures и дополнительного canonical-root hunk; compiler/native execution pending.
 Это TEST capture correction; runtime PASS для новых bytes ещё нет. Existing exact-head A gate должен
 дойти до ordinary native turn и исходных HANDLE observations в обоих режимах, без нового oracle/runner/таймера.
 Текущие ARM/Linux jobs продолжают штатно; новую проверку получит следующий необходимый source commit.
