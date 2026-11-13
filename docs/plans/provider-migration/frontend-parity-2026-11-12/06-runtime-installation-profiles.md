@@ -853,3 +853,14 @@ check предшествует private template resolution, чтобы отсу�
 обходило этот путь. Fresh capture не меняет свои refusal semantics; ambiguous/
 malformed templates, schema/record/I/O ошибки не превращаются в unavailable.
 Новый seed не подставляется вместо старого; его private bytes не реконструируются.
+
+### §19 preflight retained native additions
+
+`restoreNativeRuntimeEntries.ts:21–64` также eager-compile сохранённых additions
+внутри `installLaunch`. Ранний restore pass проверяет их original launch/creation
+receipt и selection binding до публикации runnable maps, используя временную
+проекцию тех же existing entries. Только restore-only exact missing private
+recipe или несовпадение сохранённого recipeDigest получает тот же unavailable;
+malformed/ambiguous capture, receipt/registration/I/O ошибки остаются global hold.
+Fresh native member capture не меняется. Никакого второго registry, исправления
+старых digest или нового launch owner для недоступной Team не создаётся.
