@@ -705,7 +705,7 @@ Evidence на head `522c80d168d698fc6842ee649cc4822406cd2632`, run `43373956602`
    Сохраняются occupied-port refusal, exact original listener/process-group/birth,
    renderer ownership и cleanup guard. Не искать произвольный доступный listener
    и не прикрепляться к чужому экземпляру.
-3. Перенос ограничен четырьмя существующими TEST files. Проверить scripts types,
+3. Перенос ограничен тремя существующими TEST files. Проверить scripts types,
    lint/diff и existing UI controls tests. Для смены selector/argv не создавать
    отдельные unit suites, зеркалящие строковые литералы.
 4. Следующий обычный actual macOS job должен пройти current Create→native turn→Stop→Task→Quit
@@ -716,3 +716,8 @@ Evidence на head `522c80d168d698fc6842ee649cc4822406cd2632`, run `43373956602`
 с ошибкой native Claude `/review` из другого job. Круг2: существующие controls/producer
 и исходные бюджеты сохраняются, production UI не меняется. Круг3: independent source
 review и exact-head CI обязательны; green локальный helper не заменяет настоящий Desktop.
+
+**R3 source cut:** Account независимо сверил оба реальных header и immutable donor script: PASS.
+Root scripts types, fast lint и24 existing UI/lifecycle tests — PASS (11 cold V2 +13 shared UI).
+Source сохраняет original controls, однократные inputs и listener/cleanup gates.
+Actual current-source Stop/Task/import и donor Save/import ещё ждут следующего штатного CI.
