@@ -133,8 +133,10 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   assertOwnedRenderer(): void;
   capturedGroup(): number;
   restartSameProfile?(): Promise<UiCdpPort>;
+  currentFixture?(): Awaited<ReturnType<typeof prepareDesktopProofFixture>>;
 }): Promise<void> {
-  const { fixture, evidence } = options;
+  let fixture = options.fixture;
+  const { evidence } = options;
   const model = options.openCodeModel ?? options.codexResumeModel ?? options.model;
   assert.ok(model);
   const extensions = process.env.LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI === '1';
@@ -384,6 +386,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   if (options.restartSameProfile && !extensions) {
     assert.equal(evidence.mode, 'native-resume-ui', 'cold boundary belongs only to explicit Resume proof');
     cdp = await options.restartSameProfile();
+    fixture = options.currentFixture?.() ?? fixture;
     ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step });
     await ui.waitRead(`Boolean(window.electronAPI)&&!document.getElementById('splash')`, 'cold same-profile real renderer');
   } else {
@@ -416,7 +419,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   if (options.restartSameProfile && !extensions) proof.settingsRetainedAfterColdStartup = true;
   else proof.settingsRetainedAfterReload = true;
   if (evidence.mode === 'native-resume-ui')
-    await runDesktopResumeUiSmoke(cdp, { ...options, model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession: sessions[0]!,
+    await runDesktopResumeUiSmoke(cdp, { ...options, fixture, model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession: sessions[0]!,
       ...(resumeGlobalMetadata ? { metadataGlobal: resumeGlobalMetadata } : {}) });
   if (evidence.mode === 'native-relaunch-ui' || extensions) {
     assert.ok(options.model && !codex);

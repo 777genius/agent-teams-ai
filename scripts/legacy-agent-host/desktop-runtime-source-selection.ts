@@ -1,20 +1,25 @@
-/** Original visible V1 Install/Refresh/Update, four native inputs and same-profile cold history. */
+/** Original visible source Install/Update/Repair, four native inputs and same-profile cold history. */
 import assert from 'node:assert/strict';
 import { constants } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { lstat, open, readdir, realpath, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
-import { isAbsolute, join } from 'node:path';
+import { basename, dirname, isAbsolute, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { runtimeSourceRecordSchema } from '../../packages/legacy-agent-host/dist/adapters/profile/FileRuntimeSourceIndex.js';
 import { runtimeCaptureSourceSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeCaptureSource.js';
 import { storedManagementCommandSchema } from '../../packages/legacy-agent-host/dist/management/commandRecords.js';
 import { managementDigest } from '../../packages/legacy-agent-host/dist/management/identity.js';
 import { deliveryFingerprint, normalizeBinding, runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
+import { verifyOpenCodeV2EmbeddedGraph } from '../../packages/legacy-agent-host/dist/adapters/providers/OpenCodeV2EmbeddedGraph.js';
+import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
+import { captureDesktopSourceMetadataLineage, desktopMetadataProfileHash } from './desktop-opencode-metadata-lineage.ts';
+import type { DesktopSourceMetadataLineage } from './desktop-opencode-metadata-lineage.ts';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { waitFor } from '../e2e/release-updater/cdp.mts';
 import { fileDigest, prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import { openOriginalCreateForm } from './desktop-create-config-ui-smoke.ts';
-import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
+import { readDesktopNativeHostProcesses, readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { linuxProcessIdentity, originalLinuxProcessPresent, startRetainedOpenCodeApp,
   testNamespaceLinuxProcesses } from './desktop-retained-opencode-app.ts';
 import { SOURCE_SELECTION_MARKERS, startRetainedOpenCodeModel } from './desktop-retained-opencode-model.ts';
@@ -154,20 +159,29 @@ export async function runDesktopRuntimeSourceSelection(input: {
 }) {
   assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
   assert.equal(process.version, 'v24.21.0'); assert.equal(await realpath(process.execPath), input.node);
-  const inputsPath = process.env.OPENCODE_V1_UI_SOURCE_INPUTS_RECEIPT!;
+  const v2 = process.env.OPENCODE_V2_UI_SOURCE_SELECTION_GO === '1';
+  assert.ok(!v2 || process.env.OPENCODE_V1_UI_SOURCE_SELECTION_GO !== '1');
+  const inputsPath = (v2 ? process.env.OPENCODE_V2_UI_SOURCE_INPUTS_RECEIPT : process.env.OPENCODE_V1_UI_SOURCE_INPUTS_RECEIPT)!;
   assert.ok(inputsPath && isAbsolute(inputsPath));
-  const inputs = await readJson(inputsPath, 64 * 1024), original = record(inputs.v1), next = record(inputs.next);
-  assert.equal(inputs.kind, 'TEST_DESKTOP_V1_SOURCE_INPUTS'); assert.equal(inputs.status, 'READY');
+  const inputs = await readJson(inputsPath, 64 * 1024), original = record(v2 ? inputs.v2 : inputs.v1), next = record(inputs.next);
+  assert.equal(inputs.kind, v2 ? 'TEST_DESKTOP_V2_SOURCE_INPUTS' : 'TEST_DESKTOP_V1_SOURCE_INPUTS');
+  assert.equal(inputs.status, 'READY');
   assert.equal(inputs.sourceHead, input.sourceHead);
-  assert.equal(original.version, '1.19.4'); assert.equal(original.sha256, A);
-  assert.equal(next.version, '1.19.5'); assert.equal(next.executableSha256, B);
-  assert.equal(next.packageName, 'opencode-linux-x64');
+  const versionA = v2 ? '2.0.21' : '1.19.4', versionB = v2 ? '2.3.0' : '1.19.5';
+  const digestA = v2 ? hash(original.sha256) : A, digestB = v2 ? hash(next.executableSha256) : B;
+  assert.equal(original.version, versionA); assert.equal(original.sha256, digestA);
+  assert.equal(next.version, versionB); assert.equal(next.executableSha256, digestB);
+  assert.equal(next.packageName, v2 ? '@opencode/cli-linux-x64' : 'opencode-linux-x64');
+  const engine = v2 ? record(inputs.engine) : undefined, bun = engine && record(engine.bun);
+  if (engine) assert.equal(engine.version, '2.1.4');
   assert.match(text(next.integrity), /^sha512-[A-Za-z0-9+/]+={0,2}$/);
   const aPath = text(original.path), packages = text(original.packageDirectory);
   const corepack = record(inputs.corepack);
   assert.equal(corepack.version, '0.36.0');
   const immutablePins = [original, record(original.rootManifest), record(original.rootLauncher),
-    record(original.nativeManifest), record(inputs.packageLock), corepack];
+    record(original.nativeManifest), record(v2 ? original.packageLock : inputs.packageLock), corepack,
+    ...(v2 ? [next, record(next.rootManifest), record(next.rootLauncher), record(next.nativeManifest),
+      record(next.packageLock), bun!, record(engine!.manifest)] : [])];
   const verifyInputs = async () => {
     input.assertSource();
     for (const pin of immutablePins) {
@@ -179,14 +193,16 @@ export async function runDesktopRuntimeSourceSelection(input: {
   const model = await startRetainedOpenCodeModel({ sourceSelection: true });
   const namespaces: Row[] = [], steps: Row[] = [], originals = new Map<string, Birth>();
   const roots: string[] = [], installed = new Map<string, string>();
+  const metadata = new Map<string, { root: string; lineage: DesktopSourceMetadataLineage }>();
   const proof: Row = { kind: 'TEST_NATIVE_OPENCODE_SOURCE_SELECTION_DESKTOP', sourceHead: input.sourceHead,
+    generation: v2 ? 'v2' : 'v1',
     platform: 'linux-x64', status: 'INCOMPLETE', build: input.build, inputs, namespaces, steps,
     businessInputs: [...SOURCE_SELECTION_MARKERS], vendorAuthQualified: false, releaseQualified: false };
   let app: App | undefined, fixture: Fixture | undefined;
   let failure: unknown, passed = false, cleanup = false, epoch = 0;
   const cleanupErrors: string[] = [];
   const save = () => writeFile(input.receiptPath, JSON.stringify({ ...proof, cleanup,
-    originalNativeBirths: [...originals.values()], modelObservations: model.observations,
+    originalNativeBirths: [...originals.values()], metadataLineages: [...metadata.values()], modelObservations: model.observations,
     modelFailures: model.failures, cleanupErrors }, null, 2), { mode: 0o600 });
   const current = () => { assert.ok(app); app.assertCurrent(); assert.deepEqual(model.failures, []); };
   const remember = (values: Birth[]) => {
@@ -195,7 +211,8 @@ export async function runDesktopRuntimeSourceSelection(input: {
   };
   const observe = async () => {
     assert.ok(app); current();
-    for (const path of [aPath, ...installed.keys()]) remember(await app.nativeChildren(path));
+    for (const path of [aPath, ...installed.keys(), ...(bun ? [text(bun.path)] : [])])
+      remember(await app.nativeChildren(path));
   };
   const pins = async () => {
     assert.ok(fixture);
@@ -209,6 +226,13 @@ export async function runDesktopRuntimeSourceSelection(input: {
       'every retained original native birth is absent');
     assert.deepEqual(await testNamespaceLinuxProcesses(root, input.processBaseline), [],
       'no unmatched original TEST namespace child');
+    for (const [key, value] of metadata) if (value.root === root) {
+      const lineage = captureDesktopSourceMetadataLineage({ root, host: value.lineage.host,
+        profileHashes: value.lineage.profileHashes, observed: processFacts(), executable: text(bun!.path),
+        original: value.lineage, released: true });
+      metadata.set(key, { root, lineage });
+    }
+    assert.ok([...metadata.values()].reduce((sum, value) => sum + value.lineage.events.length, 0) <= 128);
     const commands = await managementRows(root);
     assert.ok(commands.every(row => !row.resourceHeld), 'all original management cleanup debt settled');
     return commands.map(row => ({ commandId: row.commandId, kind: row.kind, phase: row.phase,
@@ -223,14 +247,24 @@ export async function runDesktopRuntimeSourceSelection(input: {
       const endpoint = `http://127.0.0.1:${memberPort}`;
       fixture = await prepareDesktopBackendFixture(input.repo, { pnpmEntry: text(corepack.path),
         seedUiTask: true, seedUiPreferences: true, creation: true,
-        nativeOpenCodeSourceSelection: { packageDirectory: packages, executable: { path: aPath, sha256: A },
-          modelUrl: model.url, endpoint, managementEndpoint: `http://127.0.0.1:${metadataPort}`, initial } });
+        nativeOpenCodeSourceSelection: { packageDirectory: packages, executable: { path: aPath, sha256: digestA },
+          modelUrl: model.url, endpoint, managementEndpoint: `http://127.0.0.1:${metadataPort}`, initial,
+          ...(engine ? { v2: { bunPath: text(bun!.path), bunSha256: hash(bun!.sha256),
+            engineDirectory: text(engine.directory) } } : {}) } });
       roots.push(fixture.root);
       const selectedFixture = fixture, root = fixture.root;
       const phase: Row = { initial, root, status: 'INCOMPLETE', memberPort, metadataPort,
         profileSha256: fixture.pins.profileSha256, descriptorSha256: fixture.pins.descriptorSha256 };
       namespaces.push(phase);
       const profile = await readJson(fixture.profilePath), owner = record(profile.owner);
+      const descriptor = await readJson(fixture.descriptorPath), management = rows(descriptor.management);
+      assert.equal(management.length, 1); assert.equal(management[0]!.projectPath, null);
+      assert.equal(management[0]!.profileId, 'TEST-opencode-source-management');
+      assert.equal(management[0]!.configRevision, 'TEST-opencode-management');
+      const embeddedEntry = v2 ? await realpath(join(dirname(fixture.hostEntry), 'adapters/providers/OpenCodeV2EmbeddedChild.js')) : '';
+      if (v2) immutablePins.push({ path: embeddedEntry, sha256: await fileDigest(embeddedEntry) });
+      let retainedIndex: Awaited<ReturnType<typeof sourceIndex>> | undefined;
+      let sourceMetadata: DesktopSourceMetadataLineage | undefined;
       const start = async () => {
         await pins(); assert.equal(await reservePort(9222), 9222);
         const value = await startRetainedOpenCodeApp({ repo: input.repo, root, node: input.node,
@@ -255,7 +289,10 @@ export async function runDesktopRuntimeSourceSelection(input: {
       const status = () => app!.cdp.evaluate<Row | null>(`(()=>{
         const s=window.__agentTeamsDevStore?.getState().openCodeRuntimeStatus;
         return s?{installed:s.installed,source:s.source,state:s.state,version:s.version??null,
-          sourceRevision:s.sourceRevision??null,updateAvailable:s.updateAvailable??false}:null})()`);
+          sourceRevision:s.sourceRevision??null,updateAvailable:s.updateAvailable??false,
+          engineVersion:s.engineVersion??null,v2Support:s.v2Support??null,maintenance:s.v2Maintenance??null,
+          loading:window.__agentTeamsDevStore.getState().openCodeRuntimeStatusLoading,
+          scopeRevision:window.__agentTeamsDevStore.getState().cliProviderStatusScopeRevision}:null})()`);
       const openSettings = async () => {
         await ui.click('button[aria-label="More actions"]', 'open original Settings menu');
         await ui.click('button', 'open original Settings', 'Settings');
@@ -274,7 +311,52 @@ export async function runDesktopRuntimeSourceSelection(input: {
         await ui.scrollTo(card + ' button', 'original OpenCode maintenance control', label);
         await ui.click(card + ' button', 'one original OpenCode maintenance action', label);
       };
-      const selection = async (version: '1.19.4' | '1.19.5', count: number) => {
+      const census = async () => {
+        assert.ok(v2 && bun && retainedIndex);
+        current();
+        const before = await sourceIndex(root), commands = await managementRows(root);
+        assert.deepEqual(before, retainedIndex, 'no source publication during the physical witness');
+        if (commands.some(row => row.resourceHeld)) throw new SnapshotChanged('Original management cleanup is pending');
+        const captured = readDesktopNativeHostProcesses(selectedFixture, app!.original.group);
+        const natives = await app!.nativeChildren(text(bun.path)); remember(natives);
+        const lineage = captureDesktopSourceMetadataLineage({ root, host: captured.host,
+          profileHashes: before.records.map(row => desktopMetadataProfileHash({
+            profileId: 'runtime-source:' + row.revision, configRevision: 'runtime-source:' + row.revision })),
+          observed: processFacts(), executable: text(bun.path), ...(sourceMetadata ? { original: sourceMetadata } : {}) });
+        const direct = natives.filter(row => row.ppid === captured.host.pid);
+        assert.deepEqual(direct.map(row => row.pid).sort(), captured.children
+          .filter(row => row.command === bun.path).map(row => row.pid).sort());
+        for (const native of direct) {
+          assert.equal(originalLinuxProcessPresent(native), true); assert.equal(native.group, native.pid);
+          assert.deepEqual(await originalCmdline(native.pid),
+            [text(bun.path), '--no-env-file', '--config=/dev/null', '--no-install', embeddedEntry]);
+          assert.equal(originalLinuxProcessPresent(native), true);
+        }
+        for (const birth of lineage.live) {
+          const native = direct.find(row => row.pid === birth.pid); assert.ok(native);
+          const ready = lineage.events.find(row => row.pid === birth.pid && row.stage === 'ready'); assert.ok(ready);
+          assert.equal(ready.startIdentityHash, createHash('sha256').update(birthKey(native)).digest('hex'),
+            'actual Linux pid:startTicks, never ps lstart');
+        }
+        assert.deepEqual(await sourceIndex(root), before); current();
+        if (runtimeDigest(await managementRows(root)) !== runtimeDigest(commands))
+          throw new SnapshotChanged('Original management snapshot changed');
+        sourceMetadata = lineage;
+        metadata.set(`${root}:${captured.host.pid}:${captured.host.birth}`, { root, lineage });
+        assert.ok([...metadata.values()].reduce((sum, value) => sum + value.lineage.events.length, 0) <= 128);
+        return direct.filter(row => !lineage.live.some(value => value.pid === row.pid));
+      };
+      const support = async (selected: Source) => {
+        const embedded = selected.candidate.embedded; assert.ok(embedded);
+        assert.equal(embedded.version, '2.1.4'); assert.equal(embedded.manifestSha256, hash(engine!.manifestSha256));
+        assert.ok(embedded.directory.startsWith(join(root, 'userData/data/runtimes/opencode-v2') + '/'));
+        await verifyOpenCodeV2EmbeddedGraph(embedded);
+        const receipt = await readJson(join(dirname(embedded.directory), 'installed.json'), 4096);
+        assert.equal(receipt.schemaVersion, 1); assert.equal(receipt.instance, basename(embedded.directory));
+        assert.equal(receipt.manifestSha256, embedded.manifestSha256);
+        return { embedded, receipt };
+      };
+      const selection = async (version: string | null, count: number) => {
         let indexObserved = false;
         let originalSelection: { commandId: string; revision: string } | undefined;
         const { index, selected, command } = await poll(async () => {
@@ -285,43 +367,51 @@ export async function runDesktopRuntimeSourceSelection(input: {
             assert.ok(selected, 'original publication remains selected');
             assert.equal(selected.commandId, originalSelection.commandId);
             assert.equal(selected.revision, originalSelection.revision);
-          } else if (index.records.length === count && selected?.candidate.nativeCli?.version === version) {
+          } else if (index.records.length === count && (version === null ? selected?.intent === 'configuration' : selected?.candidate.nativeCli?.version === version)) {
             originalSelection = { commandId: selected.commandId, revision: selected.revision };
           }
-          const command = index.records.length === count && selected?.candidate.nativeCli?.version === version
+          const command = index.records.length === count && (version === null ? selected?.intent === 'configuration' : selected?.candidate.nativeCli?.version === version)
             ? (await managementRows(root)).find(row => row.commandId === selected.commandId) : undefined;
           return { index, selected, command };
         }, value => value.index.records.length === count && value.index.current.length === 1 &&
-          value.selected?.candidate.nativeCli?.version === version && value.command?.kind === 'runtime.source' &&
+          (version === null ? value.selected?.intent === 'configuration' : value.selected?.candidate.nativeCli?.version === version) && value.command?.kind === 'runtime.source' &&
           value.command.phase === 'published' && value.command.resourceHeld === false,
         'original native source publication');
         assert.ok(selected);
-        assert.equal(selected.intent, undefined);
+        assert.equal(selected.intent, version === null ? 'configuration' : undefined);
+        if (retainedIndex) assert.deepEqual(index.records.slice(0, retainedIndex.records.length), retainedIndex.records);
+        retainedIndex = index;
         assert.equal(selected.grant.ownerId, owner.ownerId); assert.equal(selected.grant.ownerRevision, owner.revision);
         assert.equal(selected.grant.contextId, 'local'); assert.equal(selected.grant.projectPath, null);
         assert.equal(selected.grant.runtimeId, 'opencode');
         assert.equal(selected.grant.profileId, 'TEST-opencode-source-management');
         assert.equal(selected.grant.configRevision, 'TEST-opencode-management');
-        const cli = selected.candidate.nativeCli!;
-        assert.equal(cli.generation, 'v1'); assert.equal(cli.version, version);
-        assert.deepEqual(selected.candidate.executable, cli.executable);
-        assert.equal(selected.candidate.embedded, undefined);
-        assert.equal(cli.executable.sha256, version === '1.19.4' ? A : B);
-        assert.equal(await realpath(cli.executable.path), cli.executable.path);
-        assert.equal(await fileDigest(cli.executable.path), cli.executable.sha256);
-        if (version === '1.19.4') {
-          assert.equal(selected.candidate.sourceKind, 'path'); assert.equal(cli.executable.path, aPath);
+        const cli = selected.candidate.nativeCli;
+        if (version === null) {
+          assert.equal(cli, undefined); assert.equal(selected.candidate.sourceKind, 'captured');
+          assert.ok(selected.candidate.openCodeConfiguration); assert.equal(selected.candidate.embedded, undefined);
         } else {
-          assert.equal(selected.candidate.sourceKind, 'app-managed');
-          const manifest = await readJson(join(root, 'userData/data/runtimes/opencode/current.json'), 64 * 1024);
-          assert.equal(manifest.schemaVersion, 1); assert.equal(manifest.version, '1.19.5');
-          assert.equal(manifest.platformPackage, next.packageName); assert.equal(manifest.integrity, next.integrity);
-          assert.equal(await realpath(text(manifest.binaryPath)), cli.executable.path);
-          assert.ok(cli.executable.path.startsWith(join(root, 'userData/data/runtimes/opencode') + '/'));
-          installed.set(cli.executable.path, B); phase.installedManifest = manifest;
+          assert.ok(cli); assert.equal(cli.generation, v2 ? 'v2' : 'v1'); assert.equal(cli.version, version);
+          assert.equal(cli.executable.sha256, version === versionA ? digestA : digestB);
+          assert.equal(await realpath(cli.executable.path), cli.executable.path);
+          assert.equal(await fileDigest(cli.executable.path), cli.executable.sha256);
+          if (version === versionA) {
+            assert.equal(selected.candidate.sourceKind, 'path'); assert.equal(cli.executable.path, aPath);
+          } else {
+            assert.equal(selected.candidate.sourceKind, 'app-managed');
+            const manifest = await readJson(join(root, 'userData/data/runtimes/opencode/current.json'), 64 * 1024);
+            assert.equal(manifest.schemaVersion, 1); assert.equal(manifest.version, versionB);
+            assert.equal(manifest.platformPackage, next.packageName); assert.equal(manifest.integrity, next.integrity);
+            assert.equal(await realpath(text(manifest.binaryPath)), cli.executable.path);
+            assert.ok(cli.executable.path.startsWith(join(root, 'userData/data/runtimes/opencode') + '/'));
+            installed.set(cli.executable.path, digestB); phase.installedManifest = manifest;
+          }
+          if (v2) phase.support = await support(selected);
+          else { assert.deepEqual(selected.candidate.executable, cli.executable); assert.equal(selected.candidate.embedded, undefined); }
         }
+        if (v2) assert.deepEqual(selected.candidate.executable, { path: bun!.path, sha256: bun!.sha256 });
         assert.ok(command?.kind === 'runtime.source'); assert.equal(command.phase, 'published');
-        assert.equal(command.resourceHeld, false); assert.equal(command.nativeVersion, version);
+        assert.equal(command.resourceHeld, false); assert.equal(command.nativeVersion, version ?? undefined);
         assert.equal(command.sourceId, selected.grant.targetId); assert.equal(command.revision, selected.revision);
         assert.equal(command.expectedRevision, selected.previousRevision);
         const publication = record(JSON.parse(command.publicationJson!));
@@ -330,12 +420,15 @@ export async function runDesktopRuntimeSourceSelection(input: {
         assert.equal(publication.expectedRevision, selected.previousRevision);
         assert.equal(command.fingerprint, runtimeDigest(publication));
         phase.currentStatus = await poll(status, value => value?.installed === true &&
-          value.state === 'ready' && value.version === version && value.sourceRevision === selected.revision,
+          value.state === 'ready' && value.version === (version ?? '2.1.4') && value.sourceRevision === selected.revision &&
+          (!v2 || (value.engineVersion === '2.1.4' && value.v2Support === 'ready')),
           'original visible runtime status follows the published source');
         await observe(); await pins();
         return { index, selected, command };
       };
       const memberBirth = async (selected: Source) => {
+        if (v2) return (await poll(census, values => values.length === 1,
+          'one original member Bun after subtracting proved metadata births'))[0]!;
         const path = selected.candidate.nativeCli!.executable.path;
         const found = await poll(async () => {
           await observe(); const candidates = await app!.nativeChildren(path); remember(candidates);
@@ -431,6 +524,7 @@ export async function runDesktopRuntimeSourceSelection(input: {
         await ui.waitRead(`document.querySelector(${literal(prompt)})?.value===${literal(marker)}`,
           'original initial prompt retained');
         assert.equal(await app!.cdp.evaluate(`document.querySelector('[data-testid="create-team-page"] #launch-team')?.getAttribute('data-state')`), 'checked');
+        if (v2) await poll(census, values => values.length === 0, 'zero unclassified Bun before original Create');
         model.expectSourceInput(marker);
         await ui.scrollTo('[data-testid="create-team-page"] button', 'original Create submit', 'Create');
         await ui.click('[data-testid="create-team-page"] button', 'one original Create and initial input', 'Create');
@@ -490,37 +584,68 @@ export async function runDesktopRuntimeSourceSelection(input: {
           'original member birth absent before another capture');
         return { runtime: final, history: await readData(team.key) };
       };
-      assert.deepEqual(await sourceIndex(root, true), { records: [], current: [] });
-      if (initial === 'missing') {
+      if (v2) {
         await openSettings();
-        const missing = await poll(status, value => value?.installed === false && value.source === 'missing',
-          'original stock discovery is missing before Install');
+        phase.configuration = await selection(null, 1);
+        await poll(census, values => values.length === 0, 'original configuration metadata before Install');
+        for (const folder of ['opencode', 'opencode-v2'])
+          await assert.rejects(lstat(join(root, 'userData/data/runtimes', folder)), { code: 'ENOENT' });
+      } else assert.deepEqual(await sourceIndex(root, true), { records: [], current: [] });
+      if (initial === 'missing') {
+        if (!v2) await openSettings();
+        const missing = await poll(status, value => v2 ? value?.maintenance != null && record(value.maintenance).kind === 'missing' :
+          value?.installed === false && value.source === 'missing', 'original stock discovery is missing before Install');
         phase.before = missing; await observe();
-        await maintenance('Install OpenCode V1');
-        const selected = await selection('1.19.5', 1); phase.publication = selected;
+        await maintenance(v2 ? 'Install V2 2.1.4' : 'Install OpenCode V1');
+        const selected = await selection(versionB, v2 ? 2 : 1); phase.publication = selected;
         const team = await create('test-source-install-b', SOURCE_SELECTION_MARKERS[0], selected.selected);
         phase.stopped = await stop(team, 1);
       } else {
-        await prepareCreate('test-source-path-a');
-        phase.before = await poll(status, value => value?.installed === true && value.source === 'path' &&
-          value.version === '1.19.4', 'original PATH A is Ready before healthy Refresh');
-        await observe();
-        const refresh = '[data-testid="create-team-page"] [data-testid="team-model-selector-refresh-providers"]';
-        await ui.scrollTo(refresh, 'original healthy Create Refresh');
-        await ui.click(refresh, 'one original healthy Create Refresh');
-        const selectedA = await selection('1.19.4', 1); phase.publicationA = selectedA;
-        const teamA = await create('test-source-path-a', SOURCE_SELECTION_MARKERS[1], selectedA.selected, true);
+        if (v2) {
+          phase.before = await poll(status, value => value?.maintenance != null &&
+            record(value.maintenance).kind === 'installed' && record(value.maintenance).cliVersion === versionA &&
+            record(value.maintenance).support === 'required', 'genuine PATH A needs support before first Install');
+          await maintenance('Finish OpenCode V2 setup');
+        } else {
+          await prepareCreate('test-source-path-a');
+          phase.before = await poll(status, value => value?.installed === true && value.source === 'path' &&
+            value.version === versionA, 'original PATH A is Ready before healthy Refresh');
+          await observe();
+          const refresh = '[data-testid="create-team-page"] [data-testid="team-model-selector-refresh-providers"]';
+          await ui.scrollTo(refresh, 'original healthy Create Refresh');
+          await ui.click(refresh, 'one original healthy Create Refresh');
+        }
+        const selectedA = await selection(versionA, v2 ? 2 : 1); phase.publicationA = selectedA;
+        const teamA = await create('test-source-path-a', SOURCE_SELECTION_MARKERS[1], selectedA.selected, !v2);
         const aInputs = rows(teamA.runtime.inputs);
         await openSettings();
-        await maintenance('Update v1.19.4 → v1.19.5');
-        const selectedB = await selection('1.19.5', 2); phase.publicationB = selectedB;
-        assert.deepEqual(selectedB.index.records[0], selectedA.selected);
+        await maintenance(`Update v${versionA} → v${versionB}`);
+        const selectedB = await selection(versionB, v2 ? 3 : 2); phase.publicationB = selectedB;
+        assert.deepEqual(selectedB.index.records.slice(0, selectedA.index.records.length), selectedA.index.records);
         assert.equal(selectedB.selected.previousRevision, selectedA.selected.revision);
         assert.equal(originalLinuxProcessPresent(teamA.native), true, 'live A survives B source publication');
         assert.deepEqual(await launchRecord(teamA.name, text(teamA.registration.launchId)), teamA.launch);
         const afterPublish = await session(text(teamA.registration.launchId), 1);
         assert.deepEqual(sessionIdentity(afterPublish), sessionIdentity(teamA.runtime));
         assert.deepEqual(afterPublish.inputs, aInputs);
+        if (v2) {
+          const beforeRepair = await support(selectedB.selected);
+          assert.deepEqual(beforeRepair, await support(selectedA.selected), 'healthy update retains the same support instance');
+          await maintenance('Reinstall V2 support');
+          await ui.waitRead("Boolean(document.querySelector('[data-testid=\"opencode-v2-reinstall-dialog\"]'))", 'original support Repair dialog');
+          const beforeStatus = record(await status()); assert.equal(beforeStatus.loading, false);
+          assert.ok(Number.isSafeInteger(beforeStatus.scopeRevision));
+          await ui.click('[data-testid="opencode-v2-reinstall-confirm"]', 'one original healthy support Repair confirmation');
+          await ui.waitRead("!document.querySelector('[data-testid=\"opencode-v2-reinstall-dialog\"]')", 'original Repair dialog closes');
+          const completed = await poll(status, value => value?.loading === false &&
+            value.scopeRevision === Number(beforeStatus.scopeRevision) + 1, 'original Repair operation completes');
+          assert.equal(completed?.state, 'ready'); assert.equal(completed?.sourceRevision, selectedB.selected.revision);
+          assert.deepEqual(await sourceIndex(root), selectedB.index); assert.deepEqual(await support(selectedB.selected), beforeRepair);
+          assert.equal(await fileDigest(selectedB.selected.candidate.nativeCli!.executable.path), digestB);
+          assert.deepEqual((await managementRows(root)).find(row => row.commandId === selectedB.command!.commandId), selectedB.command);
+          assert.deepEqual(await memberBirth(selectedA.selected), teamA.native);
+          phase.repair = { verified: true, newInstance: false, samePublication: true, support: beforeRepair, completed };
+        }
         await showTeam(teamA.key);
         const composer = '.message-composer-flat-layout textarea', marker = SOURCE_SELECTION_MARKERS[2];
         await ui.scrollTo(composer, 'original A Composer'); await ui.click(composer, 'focus original A Composer');
@@ -548,8 +673,10 @@ export async function runDesktopRuntimeSourceSelection(input: {
         const stoppedB = await stop(teamB, 1);
         phase.stopped = { A: stoppedA, B: stoppedB };
         const indexBeforeCold = await sourceIndex(root), callsBeforeCold = model.observations.length;
+        if (v2) await poll(census, values => values.length === 0, 'warm metadata accounted before Quit');
         await observe(); await pins(); await app.close(); app = undefined;
         phase.warmCleanup = await released(root); await verifyInputs();
+        sourceMetadata = undefined;
         app = await start();
         ui = createDesktopUiControls(app.cdp, { assertOwnedRenderer: current,
           step: value => { assert.ok(steps.length < 512); steps.push({ initial, epoch, ...value }); } });
@@ -565,11 +692,13 @@ export async function runDesktopRuntimeSourceSelection(input: {
           assert.deepEqual(retained.inputs, stopped.runtime.inputs);
           assert.deepEqual(await launchRecord(team.name, text(team.registration.launchId)), team.launch);
         }
+        if (v2) await poll(census, values => values.length === 0, 'cold metadata never creates a member');
         assert.deepEqual(await sourceIndex(root), indexBeforeCold);
         assert.equal(model.observations.length, callsBeforeCold, 'cold readback never replays a native input');
         phase.cold = { originalProfile: true, historyEqual: true, callsBefore: callsBeforeCold,
           callsAfter: model.observations.length, sourceIndex: indexBeforeCold };
       }
+      if (v2) await poll(census, values => values.length === 0, 'original metadata accounted before Quit');
       await observe(); await pins(); await app.close(); app = undefined;
       phase.cleanup = await released(root); await verifyInputs(); phase.status = 'PASS'; await save();
     }

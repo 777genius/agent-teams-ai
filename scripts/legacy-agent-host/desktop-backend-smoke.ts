@@ -145,7 +145,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   controlledProcess = baseFixture.controlledProcess;
   const processReadbackSource = processReadbackMode ? await verifyNativeProcessReadbackSource(baseFixture.root, object(JSON.parse(await readFile(join(baseFixture.root, 'desktop-backend-receipt.json'), 'utf8')))) : undefined;
   if (mixedModels) await mixedModels.retainEvidenceAt(baseFixture.root);
-  const fixture = questionUiMode ? await prepareDesktopCodexQuestionFixture(baseFixture, { executable: process.env.LEGACY_DESKTOP_CODEX_PATH!, model: questionModel! }) : mixedMode ? await prepareDesktopMixedNativeFixture(baseFixture, {
+  let fixture = questionUiMode ? await prepareDesktopCodexQuestionFixture(baseFixture, { executable: process.env.LEGACY_DESKTOP_CODEX_PATH!, model: questionModel! }) : mixedMode ? await prepareDesktopMixedNativeFixture(baseFixture, {
     models: selectedMixedModels!, codexPath: process.env.LEGACY_DESKTOP_CODEX_PATH!, openCodePath: process.env.LEGACY_DESKTOP_OPENCODE_PATH!,
     ...(process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2' ? {
       openCodeV2: { bunPath: process.env.OPENCODE_V2_EMBEDDED_BUN!,
@@ -164,6 +164,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     : undefined;
   if (startupDiagnosticMode || mixedMode) Object.assign(fixture.appEnvironment, { LEGACY_DESKTOP_STARTUP_DIAGNOSTICS: '1' });
   const activitySource = baseFixture.activitySource;
+  const checkpointUpgrade = baseFixture.claudeCheckpointUpgrade;
   const require = createRequire(import.meta.url);
   if (!packed && (questionUiMode || processUiMode || nativeReviewMode || nativeStopMode || readbackMode || launchDialogMode || createConfigMode || legacyImportMode))
     await verifyDesktopNativeStopArtifact(repo);
@@ -207,6 +208,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     codexResumeModel,
     openCodeLifecycleModel, openCodeReviewModel, capturedMcpModel,
   });
+  if (checkpointUpgrade) evidence.claudeCheckpointUpgrade = checkpointUpgrade.proof;
   if (capturedMcpUiMode) evidence.scope = 'Original Launch member MCP policies, selected external server and app-only isolation, actual native permission and tool effect, all-member Stop and saved UI readback; finite localhost inference only';
   if (scheduleUiMode) evidence.scope = 'Original Schedule controls, actual finite Claude and task-first native Bash/MCP, Stop, history and reload; localhost inference only';
   if (donorSavedOnly) evidence.scope = 'Exact donor UI saves genuine settings/roster, ordinary Quit and absence, then current original import/dialog/reload; zero native business input';
@@ -288,9 +290,15 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     assert.ok(cdp && !packed && selection.model);
     return restartCapturedDesktopApp({
       app, cdp, group, fixture, repo, mode, evidence, cdpLibrary, ...selection,
+      ...(checkpointUpgrade ? { checkpointUpgrade } : {}),
       markQuitRequested: () => { quitRequested = true; },
       adoptRenderer: (next, nextHostPid) => { cdp = next; if (nextHostPid !== undefined) hostPid = nextHostPid; },
-      spawnNext: () => {
+      spawnNext: (nextFixture) => {
+        if (nextFixture !== fixture) {
+          assert.ok(checkpointUpgrade && fixture === checkpointUpgrade.original &&
+            nextFixture === checkpointUpgrade.successor);
+          fixture = nextFixture;
+        }
         app = spawn(invocation[0]!, invocation.slice(1), { cwd: repo, env: fixture.appEnvironment,
           stdio: ['ignore', 'pipe', 'pipe'], detached: true });
         appEpochHandles.push(app); group = app.pid ?? 0; spawnError = false; appIdentity = '';
@@ -470,6 +478,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     } else if (launchDialogMode) {
       assert.ok(fixture.uiSeed && (conversationModel || codexResumeModel || openCodeLifecycleModel));
       await runDesktopLaunchUiSmoke(cdp, {
+        ...(checkpointUpgrade ? { currentFixture: () => fixture } : {}),
         fixture, seed: fixture.uiSeed, evidence, ...(conversationModel ? { model: conversationModel } : {}),
         ...(codexResumeModel ? { codexResumeModel } : {}),
         ...(openCodeLifecycleModel ? { openCodeModel: openCodeLifecycleModel } : {}),
@@ -587,6 +596,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     await verifyDesktopNativeQuitAfterShutdown(mode, fixture.root, evidence, nativeChildren, openCodeLifecycleModel ?? conversationModel, group);
     if (activitySource) await finalizeDesktopActivityReadback(evidence, activitySource, () => assert.equal(processTable().some(row => row.pid === hostPid), false));
     if (finishMixedSettings) await finishMixedSettings();
+    if (checkpointUpgrade) await checkpointUpgrade.finish();
     evidence.status = 'PASS';
   } catch (error) {
     evidence.failureSource = projectDesktopHarnessFailure(error, repo, desktopProofSources);

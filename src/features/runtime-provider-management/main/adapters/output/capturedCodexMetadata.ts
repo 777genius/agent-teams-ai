@@ -83,7 +83,7 @@ function decode(raw: unknown): CapturedCodexMetadata {
       if (Object.keys(account).length !== 1) return invalid();
     } else if (
       account.type !== 'chatgpt' ||
-      !text(account.email, 1024) ||
+      (account.email !== null && !text(account.email, 1024)) ||
       !text(account.planType, 128)
     )
       return invalid();

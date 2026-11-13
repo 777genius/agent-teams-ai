@@ -3373,3 +3373,49 @@ Independent source review must check the exact runtime/frontend source chain, no
 The next already-required original saved donor and current-native stopped-import journeys must still prove their original ordinary Quit and captured native absence, immutable source bytes, actual source-owned Stop for the current producer, read-only import and existing authorized Launch continuation where applicable. No rerun, new job, new matrix entry, timeout increase, catalogue cap increase, hidden UI retry or extra native input is introduced by this plan. If catalogue9 still occurs after the impossible Low wait is removed, it remains a real failing gate requiring its own observed/source-backed explanation; this appendix does not preauthorize a larger cap.
 
 Root alone publishes the reviewed plan before source changes, and publishes each coherent source cut with immediate push/readback. No production compatibility claim, native PASS, upward merge or merge to main is authorized by an unexecuted oracle correction.
+
+## 64. Consume the checked checkpoint-compatible archive with every active proof pin
+
+This is a bounded refinement of §61's already reviewed normal dependency consumption. The exact P09 prefix is f323db47b161e04b78ef61db4e5239c35919a5cd. Source/native/packaged acceptance remains pending; a checked package does not replace any F gate.
+
+### First review — immutable input and current evidence
+
+D advanced from ce03c60d620bfc6152623597637971ca8c529469 to 68dca527b779ebb82923f30d7b08441085d8b579 by one inspected four-file commit. Its Codex projection permits the official nullable ChatGPT email while retaining the allowlist; unsupported humanCommand/future command kinds are declined before automatic approval because requiredHumanApproval is not negotiated. It preserves §61's original checkpoint-source contract, R28's native-cut preparation and the independently reviewed model-variant projection.
+
+The exact source/packed-consumer CI43479531998 passed. Its checked artifact14062879890 is184234 bytes, ZIP SHA256854f74916005deb7e5a9f23fed41a99605bfb5757c24c269c0b573ff4374d822. The downloaded receipt names this exact source; archive entries, size and digest were verified. Provider TGZ is177100 bytes, SHA25607241cca756e69aa6001df41d6a7408aad5d8ab4c8277f9d70f35d0d66736c73, integrity sha512-RdXbo97Amr2CMjqfe8HxzrB02WwwZqzGEWhixzgHqCEqTOdQ11CZ/vTW77SRCJGhbwXTZ5SuQzBnpJVEMX4baA==. Contracts TGZ is byte-identical to the existing canonical9ede pin, SHA256aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db.
+
+Native run43479531758 attempt1 has52 successful jobs and one macOS embedded-target-model job cancelled before any step. One standard failed-job retry on this unchanged head was requested; its outcome must be observed, not inferred. Previous ce03 native success is not assigned to68d. The checked artifact's own source-and-packed-consumer-only qualification and nativeHostQualified=false/packagedElectronQualified=false remain unchanged even if this separate native run later passes.
+
+### Second review — smallest coherent consumer edit
+
+| Existing F path / exact preimage | Change |
+| --- | --- |
+| packages/legacy-agent-host/package.json1442148b48a700eb00d7f3e7df429260f54665c5 | Point only provider-implementations at the new immutable checked TGZ. Keep SDK and contracts pins. |
+| pnpm-lock.yaml13d24c7b4c38f374ad299cb5e02e63b2e462b882 | Generate the matching file resolution/integrity with pinned pnpm11.22.0; reject unrelated dependency drift. |
+| packages/legacy-agent-host/tests/native-claude-host.native.ts09ee50328f1b6d8854f5e22719750fda51009cb6 | Replace only the current provider digest; genuine old donor pins, refusal and old-owner proof remain. |
+| packages/legacy-agent-host/tests/native-codex-team.native.ts1a01e2ad74be8006423960c1bc7099af9af93014 | Replace only the same current provider digest at the existing installed-archive check. Preserve §22.1 diagnostics, zero-unexpected assertion and finite candidate version/input/permission/cleanup proof. |
+| .github/workflows/ci.yml2f00c1be87037da32332ad42493c7130bb896dd5; qualification variant c4b33ea519f0f40c5527e34b644c290a8e209faa | Compose the separately reviewed §61 three-block ordinary Claude Resume wiring and update all five active current-provider digest literals plus both active archive paths. Keep old donor and contracts values, jobs/matrices/budgets and every existing assertion. |
+
+Create only vendor/provider-migration/claude-checkpoint-68dca527/agent-teams-provider-implementations-0.0.0.tgz, README.md, source-receipt.json and checked-artifact-receipt.json. Copy the exact official TGZ and receipt bytes; never rebuild/repack or patch installed output. Follow the existing source-receipt format, recording actual source/tree/check-job IDs, checked ZIP and TGZ identities and unchanged contracts location. Do not duplicate the byte-identical contracts package. Historical vendor directories/receipts and historical proof records stay immutable.
+
+The CI current-provider literal at654 and native Codex literal at151 were found by a complete active-source search; they are the same archive custody check, not new native operations. This appendix adds the one omitted Codex TEST path to §61's finite scope. Search again after composition to prove no active stale current pin remains, while preserving deliberate historical values.
+
+### Third review — installation and actual gates
+
+Install through the normal project package manager and original dependency policies. The existing readNativeProviderArtifact/verifyNativeProviderArtifact adapter must read the new owning manifest/receipt and compare every installed provider dist JavaScript file to its archive. No stale node_modules link, generated declaration substitution, widened protocol eligibility or hand-written lock integrity is acceptable.
+
+Run Host build/test types, canonical Main types, legacy Host script types, the existing critical runtime-team-host restoration case, relevant source/fixture tests, source-size guard and lint. Any real compiler mismatch in nullable metadata or the new private checkpoint declaration is investigated at its actual consumer; an additional source path requires an exact bounded follow-up before editing. Preserve the common parent and separately reviewed child source compositions. Source review is not test execution.
+
+Root records the exact dependency and native/check outcomes, commits and immediately pushes the reviewed working heads, and reads back refs/trees. Active live PR checks are allowed to finish before a new head; no cancellation, redundant full rerun, main merge, Stage2 activation or release. The ordinary old-Host ONE → physical Quit → current-Host cold Resume → TWO receipt and original cleanup remain the §61 acceptance gate.
+
+### §64.1. Generate the unchanged dependency's file record without resolving unrelated workspaces
+
+The normal full/scoped project lock-only resolver did not finish in the restored local environment: earlier processes were killed, and the bounded384MiB measurement explicitly ended with V8 heap exhaustion (peak resident590684KiB). The original lock13d24c7b4c38f374ad299cb5e02e63b2e462b882 remains unchanged. Do not repeat those same attempts or weaken repository install policies. D68's separate native run has now completed53/53 successfully on the exact head, including the one original never-started job's standard retry.
+
+The old3b39 and new68 checked TGZ package/package.json objects were compared in full and are identical, including name/version, dependencies, peers, optional dependencies, exports and engine metadata. Only the archive identity and existing file locator need to change in the owning lock. No dependency graph change is authorized by this refinement.
+
+Use pinned pnpm11.22.0 to generate the new file resolution in one temporary, private packed-consumer workspace outside the repository. Select the exact verified TGZ and existing canonical contracts archive; preserve the repository's release-age, peer, override and build policies for those dependencies. Normalize only fixture-relative file locators to the same actual checked files. Run the ordinary lock-only resolver offline with one worker; no package repack, patch, registry substitution or ignored security/build policy. The consumer is a dependency-resolution fixture, never native/Host/packaged acceptance.
+
+Read pnpm's generated file record and independently compare its integrity to SHA512 of the exact177100 TGZ bytes. Transfer only that generated integrity and the checked locator into the existing full lock: the five original3b39 path occurrences and one original integrity scalar. Preserve all transitive package/snapshot values and the existing supports-color peer identity byte-for-byte. Require exact old-lock SHA before editing; reversing only these declared scalar substitutions must recover the complete original lock. Any metadata, peer, dependency or additional lock change refuses this narrow operation and needs investigation.
+
+The full repository must then pass its ordinary frozen-lockfile install with all original policies/hooks, and the unchanged installed-provider/archive equality verifier. No partial node_modules execution or synthetic successful install receipt is permitted. This is a bounded pnpm-generated lock update for byte-identical dependency metadata; it does not waive compilation, meaningful tests or any native/Desktop gate. Root and an independent peer review the exact generated record and minimal lock diff before source publication.
