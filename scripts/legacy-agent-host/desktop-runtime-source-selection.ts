@@ -286,13 +286,64 @@ export async function runDesktopRuntimeSourceSelection(input: {
           try { const value = await read(); return accepts(value) ? { value } : null; }
           catch (error) { if (error instanceof SnapshotChanged) return null; throw error; }
         }, label, 90_000).then(result => result.value);
-      const status = () => app!.cdp.evaluate<Row | null>(`(()=>{
+      const own = (value: unknown, key: string): unknown => value && typeof value === 'object'
+        ? Object.getOwnPropertyDescriptor(value, key)?.value : undefined;
+      const bool = (value: unknown) => typeof value === 'boolean' ? value : null;
+      const choice = (value: unknown, allowed: readonly string[]) =>
+        typeof value === 'string' && allowed.includes(value) ? value : null;
+      const eventKinds = ['Runtime.executionContextCreated', 'Runtime.executionContextDestroyed',
+        'Runtime.executionContextsCleared', 'Runtime.exceptionThrown', 'Runtime.consoleAPICalled', 'Log.entryAdded',
+        'Page.frameNavigated', 'Page.frameDetached', 'Page.loadEventFired', 'Inspector.detached', 'Inspector.targetCrashed'];
+      const closedStatus = (value: unknown, purpose: string, attempt: number, expected?: string): Row => {
+        const version = own(value, 'version'), revision = own(value, 'sourceRevision'), scope = own(value, 'scopeRevision');
+        const revisionPresent = revision === null ? false : typeof revision === 'string' && revision.length > 0 ? true : null;
+        return { purpose, attempt, present: value === null ? false : value && typeof value === 'object' && !Array.isArray(value) ? true : null,
+          installed: bool(own(value, 'installed')), loading: bool(own(value, 'loading')),
+          state: choice(own(value, 'state'), ['idle', 'checking', 'downloading', 'installing', 'ready', 'failed']),
+          source: choice(own(value, 'source'), ['missing', 'path', 'override', 'app-managed', 'captured-host']),
+          version: typeof version !== 'string' || !version ? null : version === versionA ? 'a' : version === versionB ? 'b' : version === '2.1.4' ? 'engine' : 'other',
+          revisionPresent, revisionMatches: expected === undefined || revisionPresent === null ? null : revision === expected,
+          scopeRevision: typeof scope === 'number' && Number.isSafeInteger(scope) && scope >= 0 ? scope : null };
+      };
+      let statusAttempts = 0, statusAttemptOverflow = false, statusFailureCaptured = false, lastStatus: Row | null = null;
+      let lastStatusOwner: App | undefined;
+      const status = async (purpose: 'published-source' | 'missing-before-install' | 'path-before-support' |
+        'path-before-refresh' | 'repair-before-confirm' | 'repair-completion', expectedRevision?: string) => {
+        if (statusAttempts < 1024) statusAttempts++; else statusAttemptOverflow = true;
+        const attempt = statusAttempts, captured = app!, events = captured.cdp.events, offset = events.length;
+        const prefix = events[offset - 1], started = performance.now();
+        if (lastStatusOwner !== captured) { lastStatus = null; lastStatusOwner = captured; }
+        try {
+          const value = await captured.cdp.evaluate<Row | null>(`(()=>{
         const s=window.__agentTeamsDevStore?.getState().openCodeRuntimeStatus;
         return s?{installed:s.installed,source:s.source,state:s.state,version:s.version??null,
           sourceRevision:s.sourceRevision??null,updateAvailable:s.updateAvailable??false,
           engineVersion:s.engineVersion??null,v2Support:s.v2Support??null,maintenance:s.v2Maintenance??null,
           loading:window.__agentTeamsDevStore.getState().openCodeRuntimeStatusLoading,
           scopeRevision:window.__agentTeamsDevStore.getState().cliProviderStatusScopeRevision}:null})()`);
+          try { lastStatus = closedStatus(value, purpose, attempt, expectedRevision); } catch { lastStatus = null; }
+          return value;
+        } catch (error) {
+          if (!statusFailureCaptured) {
+            statusFailureCaptured = true;
+            try {
+              const interval = captured.cdp.events === events && events.length >= offset &&
+                (offset === 0 || events[offset - 1] === prefix);
+              const count = interval ? events.length - offset : null, elapsed = performance.now() - started;
+              const message = own(error, 'message');
+              const observation = { purpose, attempt, attemptOverflow: statusAttemptOverflow,
+                elapsedMs: Math.max(0, Math.min(900000, Math.round(elapsed))), elapsedCapped: elapsed > 900000,
+                reportedError: message === 'CDP timeout: Runtime.evaluate' ? 'cdp-timeout' : message === 'Native CDP closed' ? 'cdp-closed' : 'other',
+                lastResult: lastStatus, eventCount: count === null ? null : Math.min(count, 1024),
+                eventCountOverflow: count === null ? null : count > 1024, eventsTruncated: count === null ? null : count > 16,
+                eventKinds: count === null ? null : events.slice(Math.max(offset, events.length - 16))
+                  .map(event => choice(own(event, 'method'), eventKinds) ?? 'other') };
+              phase.statusFailureObservation = Buffer.byteLength(JSON.stringify(observation), 'utf8') <= 2048 ? observation : { unavailable: true };
+            } catch { phase.statusFailureObservation = { unavailable: true }; }
+          }
+          throw error;
+        }
+      };
       const openSettings = async () => {
         await ui.click('button[aria-label="More actions"]', 'open original Settings menu');
         await ui.click('button', 'open original Settings', 'Settings');
@@ -419,7 +470,7 @@ export async function runDesktopRuntimeSourceSelection(input: {
         assert.equal(publication.commandId, command.commandId);
         assert.equal(publication.expectedRevision, selected.previousRevision);
         assert.equal(command.fingerprint, runtimeDigest(publication));
-        phase.currentStatus = await poll(status, value => value?.installed === true &&
+        phase.currentStatus = await poll(() => status('published-source', selected.revision), value => value?.installed === true &&
           value.state === 'ready' && value.version === (version ?? '2.1.4') && value.sourceRevision === selected.revision &&
           (!v2 || (value.engineVersion === '2.1.4' && value.v2Support === 'ready')),
           'original visible runtime status follows the published source');
@@ -593,7 +644,7 @@ export async function runDesktopRuntimeSourceSelection(input: {
       } else assert.deepEqual(await sourceIndex(root, true), { records: [], current: [] });
       if (initial === 'missing') {
         if (!v2) await openSettings();
-        const missing = await poll(status, value => v2 ? value?.maintenance != null && record(value.maintenance).kind === 'missing' :
+        const missing = await poll(() => status('missing-before-install'), value => v2 ? value?.maintenance != null && record(value.maintenance).kind === 'missing' :
           value?.installed === false && value.source === 'missing', 'original stock discovery is missing before Install');
         phase.before = missing; await observe();
         await maintenance(v2 ? 'Install V2 2.1.4' : 'Install OpenCode V1');
@@ -602,13 +653,13 @@ export async function runDesktopRuntimeSourceSelection(input: {
         phase.stopped = await stop(team, 1);
       } else {
         if (v2) {
-          phase.before = await poll(status, value => value?.maintenance != null &&
+          phase.before = await poll(() => status('path-before-support'), value => value?.maintenance != null &&
             record(value.maintenance).kind === 'installed' && record(value.maintenance).cliVersion === versionA &&
             record(value.maintenance).support === 'required', 'genuine PATH A needs support before first Install');
           await maintenance('Finish OpenCode V2 setup');
         } else {
           await prepareCreate('test-source-path-a');
-          phase.before = await poll(status, value => value?.installed === true && value.source === 'path' &&
+          phase.before = await poll(() => status('path-before-refresh'), value => value?.installed === true && value.source === 'path' &&
             value.version === versionA, 'original PATH A is Ready before healthy Refresh');
           await observe();
           const refresh = '[data-testid="create-team-page"] [data-testid="team-model-selector-refresh-providers"]';
@@ -633,11 +684,11 @@ export async function runDesktopRuntimeSourceSelection(input: {
           assert.deepEqual(beforeRepair, await support(selectedA.selected), 'healthy update retains the same support instance');
           await maintenance('Reinstall V2 support');
           await ui.waitRead("Boolean(document.querySelector('[data-testid=\"opencode-v2-reinstall-dialog\"]'))", 'original support Repair dialog');
-          const beforeStatus = record(await status()); assert.equal(beforeStatus.loading, false);
+          const beforeStatus = record(await status('repair-before-confirm')); assert.equal(beforeStatus.loading, false);
           assert.ok(Number.isSafeInteger(beforeStatus.scopeRevision));
           await ui.click('[data-testid="opencode-v2-reinstall-confirm"]', 'one original healthy support Repair confirmation');
           await ui.waitRead("!document.querySelector('[data-testid=\"opencode-v2-reinstall-dialog\"]')", 'original Repair dialog closes');
-          const completed = await poll(status, value => value?.loading === false &&
+          const completed = await poll(() => status('repair-completion'), value => value?.loading === false &&
             value.scopeRevision === Number(beforeStatus.scopeRevision) + 1, 'original Repair operation completes');
           assert.equal(completed?.state, 'ready'); assert.equal(completed?.sourceRevision, selectedB.selected.revision);
           assert.deepEqual(await sourceIndex(root), selectedB.index); assert.deepEqual(await support(selectedB.selected), beforeRepair);
