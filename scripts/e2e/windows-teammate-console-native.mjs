@@ -157,7 +157,135 @@ async function runParent() {
   }
 }
 
-if (process.argv.includes('--teammate-fixture')) {
+// A separate fixture mimics forced termination of the owning app process.
+ // The test is never described as an Electron GUI / real provider proof.
+function originalProcessAlive(pid, marker) {
+  assert.ok(Number.isSafeInteger(pid) && pid > 0);
+  assert.match(marker, /^native-custody-[0-9a-f-]{36}$/);
+  const script = "$p = Get-CimInstance Win32_Process -Filter 'ProcessId = " + pid +
+    "'; if ($p -and $p.CommandLine -like '*" + marker + "*') { 'alive' } else { 'gone' }";
+  const found = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+    windowsHide: true,
+    encoding: 'utf8',
+    timeout: 15_000,
+    maxBuffer: 16_384,
+  });
+  if (found.error || found.status !== 0) {
+    throw new Error('Native Windows process identity lookup failed: ' +
+      String(found.error || found.stderr).slice(0,500));
+  }
+  const result = found.stdout.trim();
+  assert.ok(result === 'alive' || result === 'gone', 'Unexpected native process lookup output');
+  return result === 'alive';
+}
+
+function killVerifiedOriginal(pid, marker) {
+  if (!Number.isSafeInteger(pid) || !marker) return;
+  if (!originalProcessAlive(pid, marker)) return;
+  const killed = spawnSync('taskkill.exe', ['/PID', String(pid), '/T', '/F'], {
+    windowsHide: true, encoding: 'utf8', timeout: 10_000,
+  });
+  if (killed.error || killed.status !== 0) {
+    throw new Error('Could not clean up original fixture PID ' + pid);
+  }
+}
+
+async function runCustodyTeammate() {
+  const marker = process.argv.at(-1);
+  const tool = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)', marker], {
+    windowsHide: true, detached: false, stdio: 'ignore',
+  });
+  assert.ok(tool.pid);
+  process.send?.({ type: 'custody-ready', teammatePid: process.pid, toolPid: tool.pid, marker });
+  setInterval(() => {}, 1000);
+}
+
+async function runCustodyApp() {
+  const marker = process.argv.at(-1);
+  const child = spawn(process.execPath, [file, '--custody-teammate', marker],
+    withCliProcessDefaults({ detached: false, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] }));
+  assert.ok(child.pid);
+  child.on('message', (msg) => {
+    if (msg?.type === 'custody-ready') {
+      process.send?.({ ...msg, appPid: process.pid });
+    }
+  });
+  setInterval(() => {}, 1000);
+}
+
+async function runCustodyProbe() {
+  assert.equal(process.platform, 'win32');
+  const marker = 'native-custody-' + randomUUID();
+  const app = spawn(process.execPath, [file, '--custody-app', marker],
+    withCliProcessDefaults({ detached: false, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] }));
+  let matePid;
+  let toolPid;
+  try {
+    const ready = await new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (error, value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (error) reject(error);
+        else resolve(value);
+      };
+      const timeout = setTimeout(() => finish(new Error('Custody fixture startup timeout')), 30_000);
+      app.once('error', (err) => finish(err));
+      app.once('close', (code) => finish(new Error('App fixture exited before custody readiness: ' + code)));
+      app.on('message', (msg) => {
+        if (msg?.type !== 'custody-ready') return;
+        if (msg.appPid !== app.pid || msg.marker !== marker ||
+            !Number.isSafeInteger(msg.teammatePid) || !Number.isSafeInteger(msg.toolPid)) {
+          finish(new Error('Custody fixture returned an unbound identity'));
+          return;
+        }
+        finish(null, msg);
+      });
+    });
+    matePid = ready.teammatePid;
+    toolPid = ready.toolPid;
+    assert.equal(originalProcessAlive(matePid, marker), true, 'teammate must be live before kill');
+    assert.equal(originalProcessAlive(toolPid, marker), true, 'tool must be live before kill');
+
+    // Terminate the original *app-like* owner, not the teammate or tool.
+    app.kill('SIGKILL');
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('App force-kill did not settle')), 10_000);
+      app.once('close', () => { clearTimeout(timeout); resolve(); });
+    });
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+    const teammateStillAlive = originalProcessAlive(matePid, marker);
+    const toolStillAlive = originalProcessAlive(toolPid, marker);
+    const report = {
+      schemaVersion: 1, platform: process.platform, kind: 'simulated-app-crash',
+      marker, appPid: app.pid, teammatePid: matePid, toolPid,
+      teammateStillAliveAfterAppForceKill: teammateStillAlive,
+      toolStillAliveAfterAppForceKill: toolStillAlive,
+      realElectronGuiObserved: false, realProviderExecuted: false,
+      status: 'observed',
+    };
+    const reportPath = path.join(process.env.RUNNER_TEMP || os.tmpdir(),
+      'windows-console-native-custody-' + randomUUID() + '.json');
+    await fs.writeFile(reportPath, JSON.stringify(report, null, 2) + '\n', { flag: 'wx' });
+    process.stdout.write(JSON.stringify({ reportPath, ...report }) + '\n');
+    assert.equal(teammateStillAlive, false,
+      'Non-detached direct teammate survived app force-kill in native Windows process fixture');
+    // A surviving *tool descendant* is explicitly recorded, not misrepresented as a pass.
+  } finally {
+    terminateOwnedTree(app);
+    if (matePid) killVerifiedOriginal(matePid, marker);
+    if (toolPid) killVerifiedOriginal(toolPid, marker);
+  }
+}
+
+if (process.argv.includes('--custody-teammate')) {
+  await runCustodyTeammate();
+} else if (process.argv.includes('--custody-app')) {
+  await runCustodyApp();
+} else if (process.argv.includes('--custody-probe')) {
+  await runCustodyProbe();
+} else if (process.argv.includes('--teammate-fixture')) {
   await runTeammateFixture();
 } else {
   await runParent();
