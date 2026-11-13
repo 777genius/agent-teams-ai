@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { createHash, randomUUID } from 'node:crypto';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
+import { fileHash, startHost } from './fixtures/native-host.ts';
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { readScheduledRunCapture } from '../dist/composition/scheduledRunCapture.js';
@@ -275,4 +278,144 @@ test('independent schedules run concurrently and cancelling one preserves the or
   f.sessions[1]!.finish();
   await until(async () => (await f.read(second.runId, second.scheduleId))?.phase === 'completed');
   assert.equal(f.opens(), 2);
+});
+
+
+test('actual pinned SDK standalone run completes, cancels and survives cold replay without mutating the Team recipe', {
+  skip: process.platform === 'win32' ? 'POSIX TEST shebang; actual Windows custody has its separate native gate' : false,
+  timeout: 45_000,
+}, async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-claude-standalone-')));
+  const node = realpathSync(process.env.AGENT_BACKEND_TEST_NODE ?? process.execPath);
+  const entry = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
+  const peer = fileURLToPath(new URL('../../../tools/owned-process-broker/fixtures/claudeProviderPeer.mjs', import.meta.url));
+  const peerRoot = join(root, 'TEST-peer-claude-scope'), cwd = join(root, 'workspace');
+  for (const path of [cwd, join(root, 'home'), join(root, 'tmp'), peerRoot,
+    join(peerRoot, 'home'), join(peerRoot, 'config'), join(peerRoot, 'tmp')]) mkdirSync(path, { mode: 0o700 });
+  const effects = join(peerRoot, 'effects.ndjson'), executablePath = join(root, 'TEST-claude-peer');
+  const sourceHash = await fileHash(peer);
+  const wrapper = '#!' + node + '\n' +
+    "import assert from 'node:assert/strict';import {createHash} from 'node:crypto';import {readFileSync,realpathSync} from 'node:fs';\n" +
+    'const source=' + JSON.stringify({ path: peer, sha256: sourceHash }) + ';\n' +
+    "assert.equal(realpathSync(source.path),source.path);assert.equal(createHash('sha256').update(readFileSync(source.path)).digest('hex'),source.sha256);\n" +
+    'await import(' + JSON.stringify(pathToFileURL(peer).href) + ');\n';
+  writeFileSync(executablePath, wrapper, { mode: 0o700, flag: 'wx' });
+  const teamBinding = { backendId: 'TEST-sdk-owner', teamId: 'TEST-sdk-team', teamName: 'test-sdk-scheduled' };
+  const profile: TeamHostProfile = { schemaVersion: 1, principalId: 'human',
+    owner: { ownerId: teamBinding.backendId, revision: '1', storageRoot: root,
+      profileId: 'TEST-sdk-profile', protocolVersion: 1, buildId: 'TEST-sdk-scheduled',
+      nodeSha256: await fileHash(node), hostEntrySha256: await fileHash(entry) },
+    teams: [{ binding: teamBinding,
+      scope: { projectId: 'TEST-project', workspaceId: 'TEST-project', teamId: teamBinding.teamId,
+        runId: 'TEST-team-run', memberId: 'human', generation: '1' },
+      savedSettings: { cwd, providerId: 'anthropic', model: 'sonnet', prompt: '', skipPermissions: false },
+      members: [{ memberId: 'alice-id', name: 'alice', role: 'lead',
+        delivery: { ...teamBinding, runId: 'TEST-team-run', memberId: 'alice-id', generation: '1' } }],
+      grants: [{ principalId: 'human', memberName: 'user', permissions: ['read', 'admin', 'task.write', 'message.write'] },
+        { principalId: 'alice-session', memberName: 'alice', permissions: ['read', 'task.write', 'message.write'] }] }],
+    runtime: { members: [{ provider: 'claude', teamId: teamBinding.teamId, memberId: 'alice-id',
+      principalId: 'alice-session', sessionId: randomUUID(), generation: 1, configRevision: 'TEST-original-recipe',
+      cwd, model: 'sonnet', accountBinding: 'TEST-no-vendor-account', configNamespace: 'custom-directory',
+      executable: { path: executablePath, sha256: createHash('sha256').update(wrapper).digest('hex') },
+      environment: { HOME: join(peerRoot, 'home'), CLAUDE_CONFIG_DIR: join(peerRoot, 'config'),
+        TMPDIR: join(peerRoot, 'tmp'), PATH: dirname(node) + ':/usr/bin:/bin',
+        TEST_EMULATED_DESKTOP_PROVIDER: '1', TEST_PEER_SCENARIO: 'desktop-ui-v1', TEST_PEER_PROVIDER: 'claude',
+        TEST_PEER_ROLE: 'runtime', TEST_DESKTOP_PEER_ROOT: peerRoot, TEST_PEER_EFFECTS: effects,
+        TEST_DESKTOP_PEER_WORKSPACE: cwd },
+      nativeTools: ['Read', 'Write', 'AskUserQuestion'], autoAllowedTools: [],
+      nativeOptions: { permissionMode: 'default', settingSources: [], effort: 'low', fastMode: false },
+      limits: { queuedInputs: 2, inputBytes: 65536, outputBytes: 1_000_000, outputEvents: 1500,
+        pendingInteractions: 4, timeoutMs: 20_000 } }] } };
+  const profilePath = join(root, 'profile.json');
+  writeFileSync(profilePath, JSON.stringify(profile), { mode: 0o600, flag: 'wx' });
+  const profileHash = await fileHash(profilePath);
+  const binding = { schemaVersion: 1, handleId: 'TEST-sdk-handle', owner: profile.owner, scope: profile.teams[0]!.scope };
+  const open = () => startHost({ node, entry, root, profile: profilePath, profileHash });
+  let host = open();
+  const journal = (): Record<string, unknown>[] => existsSync(effects)
+    ? readFileSync(effects, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line) as Record<string, unknown>) : [];
+  const present = (pid: number) => {
+    // Signal zero only observes presence; original Host custody owns every actual termination.
+    try { process.kill(pid, 0); return true; }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false; throw error; }
+  };
+  const wait = async (predicate: () => boolean | Promise<boolean>) => {
+    const deadline = Date.now() + 15_000;
+    while (!(await predicate())) {
+      assert.equal(journal().some(row => row.event === 'failure'), false);
+      assert.ok(Date.now() < deadline, 'bounded original SDK outcome; no replay');
+      await new Promise<void>(resolve => setTimeout(resolve, 25));
+    }
+  };
+  const rpc = async <T>(method: string, payload: unknown, commandId = 'TEST-read'): Promise<T> => {
+    const result = await host.rpc(method, { commandId, binding, payload });
+    assert.equal(result.ok, true, JSON.stringify(result)); return result.value as T;
+  };
+  t.after(async () => {
+    await host.close();
+    assert.equal(journal().some(row => row.event === 'failure'), false);
+    for (const row of journal().filter(row => row.event === 'launch')) assert.equal(present(Number(row.pid)), false);
+    assert.equal(await fileHash(peer), sourceHash);
+    assert.equal(await fileHash(profilePath), profileHash);
+    rmSync(root, { recursive: true, force: true });
+  });
+  await host.rpc('host.handshake', { protocolVersion: 1 });
+  const roster = await rpc<{ revision: string }>('team.roster.read', {});
+  const request = (runId: string, prompt: string): ScheduledRunInput => ({
+    runId, scheduleId: 'TEST-legacy-schedule', expectedRosterRevision: roster.revision,
+    config: { cwd, prompt, providerId: 'anthropic', model: 'sonnet', effort: 'low',
+      resolvedFastMode: false, skipPermissions: true }, maxTurns: 6, maxBudgetUsd: 0.25,
+  });
+  const read = (runId: string) => rpc<ScheduledRunSnapshot>('schedule.run.read', { runId, scheduleId: 'TEST-legacy-schedule' });
+  const done = request('TEST-sdk-done', 'TEST_UI_STANDALONE_DONE');
+  await rpc('schedule.run.start', done, done.runId);
+  await wait(async () => (await read(done.runId)).phase === 'completed');
+  const completed = await read(done.runId);
+  assert.equal(completed.cleanup, 'confirmed'); assert.equal(completed.result?.exitCode, 0);
+  assert.equal(completed.result?.summary, 'TEST standalone complete');
+  assert.match(completed.result!.stdout, /TEST standalone complete/u);
+  const captured = readScheduledRunCapture(new TeamOwnerStore(root, teamBinding.teamName), done.runId)!;
+  assert.deepEqual(captured.input, done);
+  assert.equal(journal().filter(row => row.event === 'input').length, 1);
+  await rpc('schedule.run.start', done, done.runId);
+  assert.equal(journal().filter(row => row.event === 'input').length, 1);
+
+  const held = request('TEST-sdk-held', 'TEST_UI_STANDALONE_HOLD');
+  await rpc('schedule.run.start', held, held.runId);
+  await wait(() => journal().some(row => row.event === 'partial' && row.marker === held.config.prompt));
+  const cancelled = await rpc<ScheduledRunSnapshot>('schedule.run.cancel', { runId: held.runId, scheduleId: held.scheduleId }, 'TEST-original-cancel');
+  assert.equal(cancelled.phase, 'interrupted'); assert.equal(cancelled.cleanup, 'confirmed');
+  const nativeInputs = journal().filter(row => row.event === 'input');
+  assert.deepEqual(nativeInputs.map(row => row.marker), [done.config.prompt, held.config.prompt]);
+  assert.equal(journal().some(row => row.event === 'mcp-connected'), false);
+  assert.equal(existsSync(join(peerRoot, 'config/projects')), false);
+  assert.deepEqual(await rpc('team.tasks.list', {}), []);
+  const launches = journal().filter(row => row.event === 'launch');
+  assert.equal(launches.length, 2); assert.ok(launches.every(row => row.parentPid === host.child.pid));
+  await wait(() => launches.every(row => !present(Number(row.pid))));
+
+  // The original Team recipe stays persistent/manual and still accepts original rich Composer input.
+  const opened = await rpc<{ nativeReady: boolean }>('runtime.open', { memberId: 'alice-id' }, 'TEST-open-original-team');
+  assert.equal(opened.nativeReady, true, JSON.stringify(opened));
+  const commandId = 'TEST-rich-composer-input';
+  const sent = await rpc<{ effects: { deliveryId: string } }>('team.execute', {
+    operation: 'message.send', payload: { to: 'alice', text: 'TEST_UI_BOOT', messageId: commandId, actionMode: 'do' },
+  }, commandId);
+  type View = { phase: string; custody: string; inputs: { inputId: string; phase: string; terminal?: string }[] };
+  const teamRead = () => rpc<View>('runtime.read', { memberId: 'alice-id' });
+  await wait(async () => (await teamRead()).inputs.some(row => row.inputId === sent.effects.deliveryId && row.terminal === 'succeeded'));
+  const rich = journal().filter(row => row.event === 'input' && row.marker === 'TEST_UI_BOOT');
+  assert.equal(rich.length, 1); assert.equal(rich[0]!.wrapped, true);
+  assert.equal(journal().filter(row => row.event === 'mcp-connected').length, 1);
+  const stopped = await rpc<View>('runtime.stop', { memberId: 'alice-id' }, 'TEST-stop-original-team');
+  assert.equal(stopped.phase, 'closed'); assert.equal(stopped.custody, 'released');
+  const counts = () => ['input', 'launch'].map(event => journal().filter(row => row.event === event).length);
+  const beforeCold = counts(); assert.deepEqual(beforeCold, [3, 3]);
+  await host.close();
+  host = open(); await host.rpc('host.handshake', { protocolVersion: 1 });
+  for (const [input, phase] of [[done, 'completed'], [held, 'interrupted']] as const) {
+    const retained = await read(input.runId); assert.equal(retained.phase, phase); assert.equal(retained.cleanup, 'confirmed');
+    await rpc('schedule.run.start', input, input.runId);
+  }
+  assert.deepEqual(counts(), beforeCold);
 });

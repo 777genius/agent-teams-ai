@@ -169,14 +169,18 @@ test('coordinator current guard is observed before Host creation without changin
 test('actual pinned SDK reads metadata and probes only the finite Node stream-JSON peer under original cleanup', async () => {
   const { root, selected } = await profile();
   const peer = fileURLToPath(new URL('../../../tools/owned-process-broker/fixtures/claudeProviderPeer.mjs', import.meta.url));
-  const effects = join(root, 'effects.ndjson');
+  const peerRoot = join(root, 'TEST-peer-claude-scope');
+  const effects = join(peerRoot, 'effects.ndjson');
   try {
+    await mkdir(peerRoot);
+    for (const name of ['home', 'config']) await mkdir(join(peerRoot, name));
     for (const operation of ['metadata', 'probe'] as const) {
       let child: ChildProcessWithoutNullStreams | undefined;
       let exited: Promise<void> | undefined, signal: AbortSignal | undefined, stops = 0;
-      const environment = { ...selected.environment, TEST_EMULATED_DESKTOP_PROVIDER: '1',
+      const environment = { ...selected.environment, HOME: join(peerRoot, 'home'),
+        CLAUDE_CONFIG_DIR: join(peerRoot, 'config'), TEST_EMULATED_DESKTOP_PROVIDER: '1',
         TEST_PEER_SCENARIO: 'desktop-ui-v1', TEST_PEER_PROVIDER: 'claude', TEST_PEER_ROLE: operation === 'probe' ? 'runtime' : 'management',
-        TEST_DESKTOP_PEER_ROOT: root, TEST_PEER_EFFECTS: effects };
+        TEST_DESKTOP_PEER_ROOT: peerRoot, TEST_DESKTOP_PEER_WORKSPACE: selected.cwd, TEST_PEER_EFFECTS: effects };
       // This protocol test owns one actual Node handle. Desktop tests exercise the production launcher.
       const host = new ClaudeManagementHost({ ...selected, environment, timeoutMs: 5000 }, () => true, () => ({
         launch: request => {
@@ -207,6 +211,8 @@ test('actual pinned SDK reads metadata and probes only the finite Node stream-JS
       } finally { await host.close(); }
     }
     const rows = (await readFile(effects, 'utf8')).trim().split('\n').map(line => JSON.parse(line) as Record<string, unknown>);
+    assert.equal(rows.filter(row => row.event === 'launch').length, 2);
+    assert.ok(rows.filter(row => row.event === 'launch').every(row => row.parentPid === process.pid));
     assert.equal(rows.filter(row => row.event === 'initialized').length, 2);
     assert.equal(rows.filter(row => row.event === 'input').length, 1);
     assert.equal(rows.find(row => row.event === 'input')?.marker, 'TEST_MODEL_PROBE');

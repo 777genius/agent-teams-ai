@@ -245,6 +245,9 @@ describe('MemberWorkSyncNudgeOutboxPlanner invariants', () => {
     expect(Boolean(recoveryInput)).toBe(scenario.expectedRecovery);
     if (scenario.expectedRecovery) {
       expect(result.planned).toBe(true);
+      expect(recoveryInput?.payload.text).toContain('preserving any server prefix');
+      expect(recoveryInput?.payload.text).toContain('otherwise omit it');
+      expect(recoveryInput?.payload.text).not.toMatch(/mcp__(?:agent-teams|team)__/);
     }
   });
 

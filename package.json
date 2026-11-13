@@ -42,7 +42,7 @@
     "team:prove-launch-matrix": "pnpm exec vitest run --maxWorkers=1 test/main/services/team/TeamAgentLaunchMatrix.safe-e2e.test.ts",
     "team:smoke-changes-real-data": "tsx scripts/team-changes-real-data-smoke.ts",
     "smoke:codex-runtime-install": "tsx scripts/smoke/codex-runtime-install.ts",
-    "prebuild": "pnpm --filter @agent-teams/legacy-agent-host build && node ./scripts/ci/verify-radix-presence-patch.mjs && tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
+    "prebuild": "node ./scripts/build/buildLinuxNodeExec.mjs && pnpm --filter @agent-teams/legacy-agent-host build && node ./scripts/ci/verify-radix-presence-patch.mjs && tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
     "build": "node --max-old-space-size=8192 ./node_modules/electron-vite/bin/electron-vite.js build",
     "postbuild": "node ./scripts/ci/verify-radix-renderer-bundle.mjs",
     "stage-runtime": "node ./scripts/stage-runtime.mjs",
@@ -470,6 +470,13 @@
       "icon": "resources/icons/win/icon.ico"
     },
     "linux": {
+      "extraResources": [
+        {
+          "from": "resources/process-launch/linux-x64",
+          "to": "process-launch/linux-x64",
+          "filter": ["manifest.json", "node-exec"]
+        }
+      ],
       "target": [
         "AppImage",
         "deb",

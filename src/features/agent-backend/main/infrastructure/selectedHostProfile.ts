@@ -4,6 +4,8 @@ import { constants, createReadStream } from 'node:fs';
 import { access, realpath, stat } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 
+import { resolveElectronNodeLaunch } from '@main/utils/electronNodeLaunch';
+
 import type { HostClientFailureCode, HostRequestOutcome } from '../../contracts';
 import type { HostReviewTransportProfile } from '@agent-teams/legacy-agent-host/contracts';
 
@@ -88,10 +90,11 @@ export async function validateHostProfile(profile: SelectedHostProfile): Promise
     if (!(await stat(profile.cwd)).isDirectory() || !(await stat(profile.env.HOME)).isDirectory()) {
       throw new HostClientError('invalid-profile', 'not-dispatched');
     }
+    const launch = await resolveElectronNodeLaunch(profile.nodeExecutable, ['--version']);
     const version = await new Promise<string>((resolve, reject) => {
       execFile(
-        profile.nodeExecutable,
-        ['--version'],
+        launch.command,
+        launch.args,
         {
           cwd: profile.cwd,
           env: { ...profile.env },

@@ -422,3 +422,64 @@ source-index policy. Before correction, the controlled Windows-like test failed
 and the POSIX refusal passed. The local executor became unavailable before
 after-correction execution. Source review is not actual Windows qualification;
 the original matrix remains required, with no assertion/timeout/gate reduction.
+
+### Follow-up — descriptor/model intents and original-file checks
+
+A bounded audit of the existing Host adapter stores and Main descriptor/model-intent
+readers found two more unconditional POSIX mode checks:
+`loadDesktopBackendDescriptor` and `FileTeamModelProbeIntents`. Apply the same
+Windows distinction there; retain the descriptor's canonical path, bounded open
+file read, exact SHA and strict schema. Existing source-index, lifecycle and shared
+ledger directory-sync helpers already distinguish unsupported Windows directory
+operations from real I/O failures, so this slice does not change those helpers.
+
+Independent review found a concrete second boundary: Node 24.21.0's
+[Windows libuv header](https://github.com/nodejs/node/blob/v24.21.0/deps/uv/include/uv/win.h)
+defines `UV_FS_O_NOFOLLOW` as zero. Removing the mode refusal alone could therefore
+admit a valid symlink record in the management journal or model-intent store.
+Both readers now compare the original named file, opened descriptor, final
+descriptor and final named file using BigInt device/inode/size/mtime identity;
+each named snapshot must be a regular non-symlink file. The exact bounded byte
+count, digest and schema remain required. Only an initial, unobserved ENOENT is
+absence; disappearance after an observed record is held. The original descriptor
+closes on every path, and the management journal retains its original-directory
+check before and after the read. No new root canonicalization, nlink requirement
+or ctime equality is imposed: dropping the temporary hardlink is part of the
+existing concurrent `atomicCreate` publication and does not change file contents.
+These checks do not claim an atomic pathname-to-exec guarantee.
+
+After the executor returned, focused Linux/Node v24.22.1 filesystem checks used
+exact 6fbc source preimages and the reviewed replacements in a separate validation
+worktree. The isolated Host reader/import graph was transformed with Node's
+strip-types operation; this is not a TypeScript build or actual Windows run.
+
+| Controlled existing suite | Before repair | After repair |
+| --- | --- | --- |
+| Management command journal, including simulated Windows no-follow-zero and three replacement/disappearance boundaries | 2 PASS / 4 assertion failures | 6 PASS / 0 skip |
+| Main immutable model intents, including the existing concurrent-winner case and the same alias/replacement boundaries | 5 PASS / 5 assertion failures | 10 PASS / 0 skip |
+| Two descriptor mode regressions only | 1 PASS / 1 assertion failure | 2 PASS; 11 unrelated cases not selected |
+
+The full existing descriptor and model-intent test files are added to the same
+five-platform controlled lane without a test-name filter. Source review by the
+independent provider reviewer accepts these exact read/refusal and FD-cleanup
+boundaries; actual Windows x64/ARM64, full TypeScript and the unchanged complete
+matrix remain required. No ACL or Desktop qualification is inferred from mode
+projection tests.
+
+### Follow-up — retain the original native fixture inventory
+
+At exact 6fbc, [run43494936182](https://github.com/777genius/agent-teams-ai/actions/runs/43494936182)
+passed the controlled Windows contracts and native builds, then Windows x64
+job132125643973 and ARM64 job132125644073 failed the original pending-write gate:
+`native-evidence/binary-sha256.txt` was missing. That gate validates the actual C++
+fixture hash against the build inventory before admission. The safe workflow had
+already written the same inventory under `process-acceptance-evidence`, but did
+not populate the original gate's required path.
+
+Mirror that exact build-generated inventory to the original `native-evidence`
+path and retain both evidence directories in the existing always-upload step.
+No binary/hash predicate, native scenario, controller cleanup requirement or
+success assertion changes. The original failing runs remain failed; later
+Windows wrapper/Electron steps were not reached. Darwin Intel's package-manager
+bootstrap failure and Darwin's original executable-mutation HOLD are separate
+and receive no qualification from this correction.

@@ -3170,3 +3170,117 @@ Root checked the official action source; an independent session reviewer
 approved this exact order and explicit early cache disable. The executor is
 unavailable, so this publication has source review only; the next unchanged
 macOS Intel process gate must supply the actual execution result.
+
+## 62. Actual Electron listener inheritance: original Node launch boundary
+
+### Evidence, scope and independent plan review — 2026-11-13
+
+Original b464 UI run43487488970/job132099684829 observed two original holders of
+the same CDP listening socket: Electron Main4074 and its MCP-bundle Node builder4180,
+fd52/inode22232, with closeOnExec false. Original6fbc run43494936007/job132125618409
+reproduced the same builder role at fd54/inode22907. Both failed the existing
+single-owner guard before UI controls; neither produced successful UI evidence.
+No second holder is exempted and no original admission assertion is relaxed.
+
+The previously recorded exact Electron44.10.1/Node24.22.1/libuv sources explain
+why Linux spawn with three stdio entries does not close unrelated inherited
+descriptors. The correction acts before selected Node initialization: a tiny
+prebuilt static Linux C stage closes descriptors3..UINT_MAX, then execve uses
+the exact selected absolute Node and original argv. It creates no child/thread,
+does not adopt a PID, and preserves cwd/env/0–2 and the original ChildProcess,
+PID/birth/PGID. The original profile/recipe digests and process owners do not
+gain persisted metadata.
+
+close_range uses flags0; ENOSYS alone selects the bounded single-thread
+/proc/self/fd enumeration fallback. Enumeration errors and unexpected close
+errors refuse. The directory FD is excluded only during enumeration and is
+closed before exec; Linux close(EINTR) is never retried. Any failure emits one
+fixed stderr line and exits125 before target Node. No shell, JS preload,
+arbitrary PID signaling or silent direct-spawn fallback is added.
+
+### Artifact, development and packaging boundary
+
+The existing supported Linux runtime tuple is x64; development's platform
+selector and existing release assets do not admit Linux ARM64. Build only for
+that actual tuple, outside Electron, with a pinned original compiler and
+reviewed C source. Static ELF validation forbids both PT_INTERP and PT_DYNAMIC,
+avoiding a new dynamic glibc minimum. The immutable manifest records exact
+source/compiler/binary digests. The source association is embedded in the
+Main selector; bounded no-follow reads verify canonical regular files and
+named/open-FD identity before/after each read. Main captures the original
+directory/manifest/image once, revalidates at each use, and refuses replacements.
+
+The dev launcher, ordinary prebuild and actual Linux packaging entry stage the
+artifact before Electron. Main never compiles or repairs it. Linux-only
+extraResources copies the two named files; afterPack compares the actual copied
+manifest/image with the original selected build artifact. Official v26
+LinuxConfiguration documents platform-specific extraResources:
+https://www.electron.build/v26/docs/api/app-builder-lib.interface.linuxconfiguration/
+
+Only WorkspaceMcpBundle's existing direct Node/three-pipe build and the captured
+Host's Node version probe/start use the recipe. The helper imports Electron only
+inside the Linux browser-process branch, preserving Node/standalone and other
+OS paths. Host's sealed/quiescing check remains immediately after the new await
+and before spawn. Arbitrary CLI, extra-FD IPC and bare-PATH launches are not
+silently rewritten. Existing build-input/output fingerprints, exact Node SHA,
+Host handshake and provider custody remain independent.
+
+### Critical native qualification and exact remaining UI gate
+
+The finite C fixture creates real listening sockets at52 and4096 with a hole,
+then execs the production stage. It also uses original per-process seccomp
+filters to exercise ENOSYS and EPERM, without changing production source.
+Original selected Node reports its PID/argv/cwd/env and descriptors; the test
+requires original stdin/EOF/stdout/stderr, same PID/PGID, target refusal on
+unexpected close failure, Stop/physical absence and a surviving original sibling.
+Manifest/image replacement must be refused. Bounded readiness/close observations
+and registered original-handle cleanup prevent a failed assertion from leaking
+a fixture process.
+
+Independent provider review read all six initial implementation/fixture files;
+root incorporated accumulated-output readiness and bounded original-handle
+cleanup. Exact current C source SHA256:
+4a6e27406a7c1125cadcef66fc54cf10160b82d920a9b7d516f01ca467426dd3.
+After the executor recovered, the finite native suite passed6/6 with zero skips
+under Node24.21.0 and separately under Electron44.10.1's actual Node mode.
+Logs: TEST-linux-node-exec-first.log and TEST-linux-node-exec-electron.log.
+These are constituent proofs, not final-HEAD or visible Desktop acceptance.
+
+The unchanged five-OS process lane must retain native fixture logs and run the
+Linux stage under both Node parents. The Desktop lane stages and captures the
+manifest/image before launch and checks them again after all original journeys.
+Its source closure includes the native/build/selector sources. Original strict
+CDP ownership, finite-vendor exclusion, full visible controls, rendered PNG
+inspection, final source freeze and original cleanup remain required. No actual
+Desktop PASS, release/default enablement or real Codex/Claude qualification is
+claimed by this source slice.
+
+## 63. macOS Intel package-manager bootstrap: original failure and bundled Corepack
+
+Original6fbc process job132125644028 selected Node24.21.0 before pnpm/action-setup,
+but still failed before workspace install. The actual action used standalone:false;
+its bootstrap pnpm11.25 switched to11.22 and rejected the missing optional
+@pnpm/exe.darwin-x64 lock identity. The §61 order-only change therefore did not
+qualify macOS Intel. Original log: TEST-ci-6fbc-darwin-bootstrap.log.
+
+Use Corepack0.36.0 bundled by the exact Node24.21.0 distribution (official
+nodejs/node v24.21.0 deps/corepack/package.json, Git blob
+170b48449fc71c2d68c0b3576289a5623ec1b6ea). Assert that version, enable its shims,
+install the exact pnpm11.22.0, and assert the resulting version before the existing
+cache-enabled setup-node step. Keep the early package-manager-cache:false,
+frozen project lock, integrity policy and all five original process matrix rows.
+No pnpm bootstrap11.25 or native optional-engine self-switch participates.
+
+Independent session review approved this narrow replacement. The unchanged
+actual macOS Intel lane must confirm execution; source review is not a pass.
+The safe process lane also executes the two existing Claude finite-peer Host
+suites and Linux descriptor tests under pinned Node and Electron Node, preserving
+original process receipts and actual copied-stage packaging checks.
+
+The separately reviewed actual afterPack test passed63/63 with zero skips under
+Node24.21.0 and pnpm11.22.0. The real Linux x64 case built the production static
+stage, checked the copied artifact, rejected missing or changed bytes and a
+valid-but-different manifest, and retained unchanged original source artifacts.
+Log: TEST-linux-node-exec-afterpack.log. Synthetic Linux pruning cases still
+exercise the original pruning/native validators; full other-OS/error hook checks
+remain. This does not substitute for the original Desktop UI journey.

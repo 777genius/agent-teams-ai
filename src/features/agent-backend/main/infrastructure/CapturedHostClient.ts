@@ -39,6 +39,7 @@ import {
   sameHostCustodyBinding,
   validateHostCustodyResult,
 } from '@agent-teams/legacy-agent-host/owned-process';
+import { resolveElectronNodeLaunch } from '@main/utils/electronNodeLaunch';
 import { createLogger } from '@shared/utils/logger';
 
 import { decodeClaudeCloseDiagnostics } from './decodeClaudeCloseDiagnostics';
@@ -173,8 +174,9 @@ export class CapturedHostClient {
       observeCapturedHostStartup('profile-validation-start');
       await validateHostProfile(this.profile);
       observeCapturedHostStartup('profile-validation-complete');
+      const launch = await resolveElectronNodeLaunch(this.profile.nodeExecutable, [this.profile.hostEntry]);
       if (this.sealed || this.quiescing) throw new HostClientError('shutting-down', 'not-dispatched');
-      const child = spawn(this.profile.nodeExecutable, [this.profile.hostEntry], {
+      const child = spawn(launch.command, launch.args, {
         cwd: this.profile.cwd,
         env: { ...this.profile.env },
         stdio: ['pipe', 'pipe', 'pipe'],

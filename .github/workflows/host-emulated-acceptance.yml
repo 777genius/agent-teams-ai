@@ -10,6 +10,13 @@ on:
       - 'packages/task-change-ledger/**'
       - 'scripts/legacy-agent-host/**'
       - 'tools/owned-process-broker/fixtures/**'
+      - 'tools/linux-node-exec/**'
+      - 'scripts/build/buildLinuxNodeExec.mjs'
+      - 'scripts/dev-with-runtime.mjs'
+      - 'scripts/build/linuxNodeExec.native.test.mjs'
+      - 'scripts/electron-builder/afterPack.cjs'
+      - 'scripts/electron-builder/dist.mjs'
+      - 'scripts/electron-builder/verifyLinuxNodeExec.cjs'
       - 'src/features/agent-backend/**'
       - 'src/features/runtime-provider-management/**'
       - 'src/main/**'
@@ -68,6 +75,7 @@ jobs:
       - name: Build existing Desktop prerequisites and verify admission
         run: |
           set -euo pipefail
+          node scripts/build/buildLinuxNodeExec.mjs
           pnpm --filter @agent-teams/legacy-agent-host build
           pnpm --filter agent-teams-controller build
           pnpm --filter agent-teams-mcp build
@@ -84,12 +92,14 @@ jobs:
           import assert from 'node:assert/strict';
           import { createHash } from 'node:crypto';
           import { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { captureLinuxNodeExecArtifact } from './src/main/utils/linuxNodeExecArtifact.ts';
           import { join } from 'node:path';
           const sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');
           const selected = process.env.HOST_EMULATED_INPUTS;
           const corepack = realpathSync(join(selected, 'corepack/node_modules/corepack'));
           assert.equal(JSON.parse(readFileSync(join(corepack, 'package.json'), 'utf8')).version, '0.36.0');
           const pnpm = join(corepack, 'dist/pnpm.js');
+          const processLauncher = captureLinuxNodeExecArtifact(realpathSync('resources/process-launch/linux-x64'));
           const values = {
             LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
             LEGACY_DESKTOP_COREPACK_HOME: join(selected, 'cache'),
@@ -103,6 +113,7 @@ jobs:
           writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), JSON.stringify({
             sourceHead: process.env.HOST_EMULATED_SOURCE_HEAD, platform: process.platform,
             architecture: process.arch, nativeProviders: 'forbidden', values,
+            processLauncher: { manifestSha256: processLauncher.manifestSha256, binarySha256: processLauncher.binarySha256 },
           }, null, 2), { mode: 0o600 });
           NODE
       - name: Exercise ordinary Team controls and renderer reload
@@ -129,14 +140,14 @@ jobs:
           xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
             bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
             2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-management-ui.log"
-      - name: Exercise original Codex conversation and schedule controls through the pinned TEST peer
-        env:
-          LEGACY_DESKTOP_PROOF_MODE: emulated-codex-runtime-ui
+      - name: Exercise original provider conversations and schedules through pinned TEST peers
         run: |
           set -euo pipefail
-          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
-            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
-            2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-codex-runtime-ui.log"
+          for proof_mode in emulated-codex-runtime-ui emulated-claude-runtime-ui emulated-opencode-runtime-ui; do
+            LEGACY_DESKTOP_PROOF_MODE="$proof_mode" xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+              bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+              2>&1 | tee "$RUNNER_TEMP/host-emulated-$proof_mode.log"
+          done
       - name: Exercise original Review Keep, Reject, Undo, Redo and reload
         id: review
         env:
@@ -186,9 +197,14 @@ jobs:
           import assert from 'node:assert/strict';
           import { createHash } from 'node:crypto';
           import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { captureLinuxNodeExecArtifact } from './src/main/utils/linuxNodeExecArtifact.ts';
           import { basename, dirname, join } from 'node:path';
+          const inputs = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), 'utf8'));
+          const processLauncher = captureLinuxNodeExecArtifact(realpathSync('resources/process-launch/linux-x64'));
+          assert.equal(processLauncher.manifestSha256, inputs.processLauncher.manifestSha256);
+          assert.equal(processLauncher.binarySha256, inputs.processLauncher.binarySha256);
           const completed = [];
-          for (const mode of ['team-ui', 'task-board-ui', 'emulated-management-ui', 'emulated-codex-runtime-ui', 'review-ui', 'review-readback-ui']) {
+          for (const mode of ['team-ui', 'task-board-ui', 'emulated-management-ui', 'emulated-codex-runtime-ui', 'emulated-claude-runtime-ui', 'emulated-opencode-runtime-ui', 'review-ui', 'review-readback-ui']) {
             const rows = readFileSync(join(process.env.RUNNER_TEMP, `host-emulated-${mode}.log`), 'utf8')
               .split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));
             const last = rows.findLast(row => row.receipt && row.status);
@@ -199,7 +215,8 @@ jobs:
             assert.equal(receipt.status, 'PASS'); assert.equal(receipt.mode, mode);
             assert.equal(receipt.source.head, process.env.HOST_EMULATED_SOURCE_HEAD);
             assert.equal(receipt.source.dirty, false);
-            const runtime = mode === 'emulated-codex-runtime-ui';
+            const runtimeProvider = { 'emulated-codex-runtime-ui': 'codex', 'emulated-claude-runtime-ui': 'claude', 'emulated-opencode-runtime-ui': 'opencode' }[mode];
+            const runtime = runtimeProvider !== undefined;
             assert.deepEqual(receipt.emulation, { only: true, runtimeConfigured: runtime,
               managementConfigured: mode === 'emulated-management-ui' || runtime, noNativeHostChildrenBeforeUi: true, noNativeHostChildren: true });
             assert.equal(receipt.hostChild.observedBeforeShutdown, true);
@@ -230,16 +247,31 @@ jobs:
               assert.match(proof.seedSha256, /^[a-f0-9]{64}$/); assert.match(proof.fileSha256, /^[a-f0-9]{64}$/);
             }
             if (runtime) {
-              assert.equal(proof.provider, 'codex'); assert.equal(proof.reloadWithoutReplay, true);
-              assert.equal(proof.stopReleased, true); assert.deepEqual(proof.catalog, ['/cost']);
+              assert.equal(proof.provider, runtimeProvider); assert.equal(proof.reloadWithoutReplay, true);
+              assert.equal(proof.stopReleased, true); assert.equal(proof.stoppedInput.phase, 'unknown'); assert.equal(proof.stoppedInput.terminalConfirmed, false);
+              const catalog = { codex: ['/cost'], claude: ['/compact', '/cost', '/review', '/test-desktop-skill'], opencode: [] }[runtimeProvider];
+              assert.deepEqual([...proof.catalog].sort(), [...catalog].sort());
+              if (runtimeProvider === 'claude') {
+                assert.equal(proof.nativeCommands.length, 4);
+                assert.equal(proof.standalone.logVisible, true); assert.equal(proof.standalone.deletedWhileActive, true);
+                assert.equal(proof.standalone.cleanup, 'confirmed'); assert.equal(proof.standalone.taskWrites, 0);
+                assert.equal(proof.standalone.originalPids.length, 2); assert.deepEqual(proof.standalone.limits, { maxTurns: 6, maxBudgetUsd: 0.25 });
+                assert.equal(proof.standalone.releasedRecord.phase, 'closed'); assert.equal(proof.standalone.releasedRecord.custody, 'released');
+              }
+              if (runtimeProvider === 'opencode') {
+                for (const key of ['inputTokens', 'outputTokens', 'costUsd']) assert.equal(proof.stats[key], null);
+                assert.deepEqual(proof.unsupportedBaseline, ['structured questions', 'native slash commands', 'native usage counters']);
+              }
               assert.equal(proof.fixturePins.vendorsAllowed, false);
               assert.equal(proof.fixturePins.runtimeConfigured, true);
               assert.equal(proof.fixturePins.managementConfigured, true);
+              assert.equal(proof.fixturePins.protocolRevision, { codex: '0.169.0', claude: 'sdk-0.3.305', opencode: '1.19.4' }[runtimeProvider]);
               assert.equal(proof.schedule.status, 'dispatched'); assert.ok(proof.schedule.taskId);
+              assert.equal(proof.schedule.savedPromptAcknowledged, true); assert.equal(proof.schedule.savedPromptNotReplayed, true);
               assert.equal(receipt.emulatedRuntimeCleanup.absent, true);
               assert.ok(receipt.emulatedRuntimeCleanup.originalPeerPids.length > 0);
               assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);
-              assert.ok(proof.effects.some(row => row.event === 'connected'));
+              assert.ok(proof.effects.some(row => ['connected', 'mcp-connected'].includes(row.event)));
               assert.equal(proof.effects.some(row => row.event === 'failure'), false);
             }
             if (mode === 'review-readback-ui') {
@@ -249,7 +281,9 @@ jobs:
             const screenshots = mode === 'team-ui' ? [receipt.uiScreenshot] :
               (mode === 'task-board-ui' ? ['initialScreenshot', 'dependencyScreenshot', 'reorderedScreenshot', 'blockedStartScreenshot', 'reloadedScreenshot'] :
                 mode === 'emulated-management-ui' ? ['selectionScreenshot', 'reloadedScreenshot', 'connectedScreenshot', 'oauthWaitingScreenshot', 'finalScreenshot'] :
-                runtime ? ['launchScreenshot', 'partialScreenshot', 'completedScreenshot', 'denyScreenshot', 'allowScreenshot', 'questionScreenshot', 'questionDeclineScreenshot', 'costScreenshot', 'logsScreenshot', 'statsScreenshot', 'reloadedScreenshot', 'scheduleScreenshot', 'heldScreenshot', 'stoppedScreenshot'] :
+                runtime ? ['launchScreenshot', 'partialScreenshot', 'completedScreenshot', 'denyScreenshot', 'allowScreenshot', 'logsScreenshot', 'statsScreenshot', 'reloadedScreenshot', 'scheduleScreenshot', 'heldScreenshot', 'stoppedScreenshot',
+                  ...(runtimeProvider !== 'opencode' ? ['questionScreenshot', 'questionDeclineScreenshot', 'costScreenshot'] : []),
+                  ...(runtimeProvider === 'claude' ? ['compactScreenshot', 'skillScreenshot', 'reviewScreenshot', 'standaloneCompletedScreenshot', 'standaloneHeldScreenshot', 'standaloneDeletedScreenshot'] : [])] :
                 mode === 'review-ui' ? ['historyScreenshot', 'reloadedHistoryScreenshot'] : ['restartedHistoryScreenshot', 'staleScreenshot'])
                 .map(key => proof[key]);
             for (const screenshot of screenshots) {

@@ -29,7 +29,7 @@ test('offline Desktop admission refuses inherited native selections before prepa
   });
   Object.assign(process.env, { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
     LEGACY_DESKTOP_TEST_DISPLAY: ':97', LEGACY_DESKTOP_TEST_XAUTHORITY: '/TEST/Xauthority' });
-  for (const mode of ['team-ui', 'task-board-ui', 'emulated-management-ui', 'emulated-codex-runtime-ui', 'review-ui', 'review-readback-ui']) {
+  for (const mode of ['team-ui', 'task-board-ui', 'emulated-management-ui', 'emulated-codex-runtime-ui', 'emulated-claude-runtime-ui', 'emulated-opencode-runtime-ui', 'review-ui', 'review-readback-ui']) {
     process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
     if (process.platform === 'darwin' || process.platform === 'linux' && process.arch === 'x64')
       assert.doesNotThrow(() => assertDesktopProofEnvironment(false));

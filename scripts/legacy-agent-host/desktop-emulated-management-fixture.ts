@@ -13,6 +13,19 @@ const record = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 
+/** V1's existing status fallback may read this finite version; every other invocation is refused. */
+export async function prepareDesktopOpenCodeVersionSentinel(fixture: { root: string; node: string; sentinelLog: string }) {
+  const source = `${desktopNodeScriptHeader(fixture.node)}import {appendFileSync} from 'node:fs';
+const args=process.argv.slice(2),allowed=args.length===1&&args[0]==='--version';
+appendFileSync(${JSON.stringify(fixture.sentinelLog)},JSON.stringify({executable:'opencode',allowed,argc:args.length,flags:args.filter(x=>x.startsWith('-')),emulated:'version-only'})+'\\n',{mode:0o600});
+if(allowed){console.log('1.19.4');process.exit(0)}
+process.stderr.write('TEST sentinel refuses native provider invocation\\n');process.exit(78);
+`;
+  const paths = [join(fixture.root, 'bin/opencode'), join(fixture.root, 'claude/local/node_modules/.bin/opencode')];
+  for (const path of paths) await writeFile(path, source, { mode: 0o700 });
+  return { versionPaths: paths, versionSha256: digest(source) };
+}
+
 /** The original HTTP protocol peer is the only provider-shaped executable in this TEST scope. */
 export async function prepareDesktopEmulatedManagementFixture(repo: string, pnpmEntry: string) {
   const fixture = await prepareDesktopBackendFixture(repo, {
@@ -56,15 +69,7 @@ export async function prepareDesktopEmulatedManagementFixture(repo: string, pnpm
   await writeFile(fixture.descriptorPath, descriptorBytes, { mode: 0o600 });
   fixture.pins.descriptorSha256 = digest(descriptorBytes);
   fixture.appEnvironment.AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256 = fixture.pins.descriptorSha256;
-  // V1's existing runtime-status fallback may read --version. It cannot run a provider.
-  const versionSentinel = `${desktopNodeScriptHeader(fixture.node)}import {appendFileSync} from 'node:fs';
-const args=process.argv.slice(2),allowed=args.length===1&&args[0]==='--version';
-appendFileSync(${JSON.stringify(fixture.sentinelLog)},JSON.stringify({executable:'opencode',allowed,argc:args.length,flags:args.filter(x=>x.startsWith('-')),emulated:'version-only'})+'\\n',{mode:0o600});
-if(allowed){console.log('1.19.4');process.exit(0)}
-process.stderr.write('TEST sentinel refuses native provider invocation\\n');process.exit(78);
-`;
-  const versionPaths = [join(fixture.root, 'bin/opencode'), join(fixture.root, 'claude/local/node_modules/.bin/opencode')];
-  for (const path of versionPaths) await writeFile(path, versionSentinel, { mode: 0o700 });
+  const versionSentinel = await prepareDesktopOpenCodeVersionSentinel(fixture);
   assert.equal(process.platform, 'linux', 'this management UI fixture owns a Linux TEST opener');
   const openerPath = join(fixture.root, 'bin/xdg-open');
   const opener = `${desktopNodeScriptHeader(fixture.node)}import {appendFileSync} from 'node:fs';
@@ -75,7 +80,7 @@ appendFileSync(${JSON.stringify(join(fixture.root, 'ui-emulated-external-open.nd
   await writeFile(openerPath, opener, { mode: 0o700, flag: 'wx' });
   return { ...fixture, emulatedManagement: {
     peerRoot, peer, sourcePath, sourceSha256: await fileDigest(sourcePath),
-    versionPaths, versionSha256: digest(versionSentinel), openerPath, openerSha256: digest(opener),
+    ...versionSentinel, openerPath, openerSha256: digest(opener),
     command: `${fixture.node} ${peerPath} serve --hostname 127.0.0.1 --port ${new URL(endpoint).port}`,
     observedPeerPids: [] as number[],
   } };

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { access, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -420,6 +420,41 @@ it('captures only the explicit supported review transport profile from a private
   await expect(loadDesktopBackendDescriptor(await selected(unsupported))).rejects.toMatchObject({
     code: 'hold',
   });
+});
+
+it('keeps Windows descriptor digest and schema checks without treating synthetic POSIX mode bits as authority', async () => {
+  const setup = await fixture();
+  const selection = await selected(setup.descriptor);
+  await chmod(selection.path, 0o666);
+  expect((await stat(selection.path)).mode & 0o077).not.toBe(0);
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+  try {
+    Object.defineProperty(process, 'platform', { ...platform, value: 'win32' });
+    await expect(loadDesktopBackendDescriptor(selection)).resolves.toEqual(setup.descriptor);
+    await expect(
+      loadDesktopBackendDescriptor({ ...selection, sha256: '0'.repeat(64) })
+    ).rejects.toMatchObject({ code: 'hold' });
+    const malformed = await selected({ ...setup.descriptor, schemaVersion: 2 });
+    await expect(loadDesktopBackendDescriptor(malformed)).rejects.toMatchObject({ code: 'hold' });
+  } finally {
+    Object.defineProperty(process, 'platform', platform);
+  }
+  for (const owner of setup.descriptor.owners)
+    await expect(access(join(owner.storageRoot, 'started'))).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+it('continues to hold non-private POSIX descriptor files', async () => {
+  const setup = await fixture();
+  const selection = await selected(setup.descriptor);
+  await chmod(selection.path, 0o644);
+  expect((await stat(selection.path)).mode & 0o077).not.toBe(0);
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+  try {
+    Object.defineProperty(process, 'platform', { ...platform, value: 'linux' });
+    await expect(loadDesktopBackendDescriptor(selection)).rejects.toMatchObject({ code: 'hold' });
+  } finally {
+    Object.defineProperty(process, 'platform', platform);
+  }
 });
 
 it('rejects digest mismatch, symlink/noncanonical path and oversized private descriptor safely', async () => {

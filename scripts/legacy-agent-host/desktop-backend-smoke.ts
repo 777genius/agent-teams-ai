@@ -108,7 +108,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   assertDesktopProofEnvironment(mode === 'process-cold-ui' || codexAccountMode);
   const emulatedOnly = process.env.LEGACY_DESKTOP_EMULATED_ONLY === '1';
   const emulatedManagementMode = mode === 'emulated-management-ui';
-  const emulatedRuntimeMode = mode === 'emulated-codex-runtime-ui';
+  const emulatedRuntimeProvider = mode === 'emulated-codex-runtime-ui' ? 'codex' : mode === 'emulated-claude-runtime-ui' ? 'claude' : mode === 'emulated-opencode-runtime-ui' ? 'opencode' : undefined;
+  const emulatedRuntimeMode = emulatedRuntimeProvider !== undefined;
   if (emulatedManagementMode || emulatedRuntimeMode) assert.equal(emulatedOnly, true, 'TEST providers require provider-emulation admission');
   assert.equal(
     await portOccupied(),
@@ -140,7 +141,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     : mixedMode || codexResumeMode ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
   const emulatedManagementFixture = emulatedManagementMode ? await prepareDesktopEmulatedManagementFixture(repo, pnpm) : undefined;
-  const emulatedRuntimeFixture = emulatedRuntimeMode ? await prepareDesktopEmulatedRuntimeFixture(repo, pnpm) : undefined;
+  const emulatedRuntimeFixture = emulatedRuntimeProvider ? await prepareDesktopEmulatedRuntimeFixture(repo, pnpm, emulatedRuntimeProvider) : undefined;
   const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = emulatedRuntimeFixture ?? emulatedManagementFixture ?? (questionUiMode ? await prepareDesktopBackendFixture(repo, {
     seedUiTask: true, pnpmEntry: pnpm, nativeClaude: { path: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
       sha256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f', modelUrl: questionModel!.url },

@@ -11,9 +11,20 @@ on:
       - 'src/features/agent-backend/**'
       - 'src/main/utils/ownedProcess/**'
       - 'src/main/utils/childProcess.ts'
+      - 'src/main/utils/electronNodeLaunch.ts'
+      - 'src/main/utils/linuxNodeExecArtifact.ts'
+      - 'src/main/services/team/WorkspaceMcpBundle.ts'
+      - 'test/main/build/electronBuilderAfterPack.test.ts'
       - 'test/features/agent-backend/**'
       - 'tools/owned-process-broker/**'
       - 'scripts/build/buildOwnedProcessBroker.ts'
+      - 'tools/linux-node-exec/**'
+      - 'scripts/build/buildLinuxNodeExec.mjs'
+      - 'scripts/dev-with-runtime.mjs'
+      - 'scripts/build/linuxNodeExec.native.test.mjs'
+      - 'scripts/electron-builder/afterPack.cjs'
+      - 'scripts/electron-builder/dist.mjs'
+      - 'scripts/electron-builder/verifyLinuxNodeExec.cjs'
       - 'scripts/ci/**'
       - 'scripts/ensure-electron-install.cjs'
       - 'vendor/provider-migration/**'
@@ -67,13 +78,19 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      # pnpm/action-setup inspects PATH Node before choosing its bootstrap package.
-      # Select our pinned Node before that decision, including macOS Intel runners.
+      # Use the exact Corepack bundled with the selected Node; avoid a second
+      # package-manager bootstrap and native-engine self-switch on macOS Intel.
       - uses: actions/setup-node@v7.0.0
         with:
           node-version: 24.21.0
           package-manager-cache: false
-      - uses: pnpm/action-setup@v6.1.0
+      - name: Select the pinned package manager with bundled Corepack
+        run: |
+          set -euo pipefail
+          test "$(corepack --version)" = 0.36.0
+          corepack enable
+          corepack install --global pnpm@11.22.0
+          test "$(pnpm --version)" = 11.22.0
       - uses: actions/setup-node@v7.0.0
         with:
           node-version: 24.21.0
@@ -99,9 +116,9 @@ jobs:
       - name: Verify process contracts and retained Main Host transport
         run: |
           set -euo pipefail
-          node --test packages/legacy-agent-host/tests/management-command-store.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log
+          node --test packages/legacy-agent-host/tests/claude-management-host.test.ts packages/legacy-agent-host/tests/scheduled-run-host.test.ts packages/legacy-agent-host/tests/management-command-store.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log
           node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log
-          node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log
+          node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/desktopBackendFeature.test.ts test/features/agent-backend/fileTeamModelProbeIntents.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log
       - name: Verify original POSIX Node and shell lifecycle fixtures
         if: runner.os != 'Windows'
         run: |
@@ -113,6 +130,13 @@ jobs:
           set -euo pipefail
           node scripts/ensure-electron-install.cjs --strict
           node --input-type=module -e "import assert from 'node:assert/strict'; import {createRequire} from 'node:module'; assert.equal(createRequire(import.meta.url)('electron/package.json').version,'44.10.1')"
+      - name: Verify Linux Node exec descriptor closure under both original parents
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          HOST_NODE_EXEC_TARGET="$(command -v node)" node --test scripts/build/linuxNodeExec.native.test.mjs 2>&1 | tee process-acceptance-evidence/linux-node-exec-node24.log
+          HOST_NODE_EXEC_TARGET="$(command -v node)" ELECTRON_RUN_AS_NODE=1 node_modules/electron/dist/electron --test scripts/build/linuxNodeExec.native.test.mjs 2>&1 | tee process-acceptance-evidence/linux-node-exec-electron.log
+          node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/main/build/electronBuilderAfterPack.test.ts 2>&1 | tee process-acceptance-evidence/linux-node-exec-packaging.log
       - name: Qualify original Linux pidfs and retained pidfd under Host Node
         if: runner.os == 'Linux'
         env:
@@ -154,6 +178,8 @@ jobs:
           "HOST_PROCESS_SCOPED_STAGE=$scoped" >> $env:GITHUB_ENV
           Copy-Item "$scoped\manifest.json" process-acceptance-evidence/windows-scoped-manifest.json
           Get-ChildItem -File "$build\Release\*.exe" | Get-FileHash -Algorithm SHA256 | Format-List | Out-File process-acceptance-evidence/windows-binary-sha256.txt
+          New-Item -ItemType Directory -Path native-evidence | Out-Null
+          Copy-Item process-acceptance-evidence/windows-binary-sha256.txt native-evidence/binary-sha256.txt
       - name: Qualify original Windows Job and control under Host Node
         if: runner.os == 'Windows'
         shell: pwsh
@@ -264,10 +290,12 @@ jobs:
           retention-days: 14
           if-no-files-found: error
           path: |
+            native-evidence/
             process-acceptance-evidence/
             ${{ runner.temp }}/TEST-process-node24-${{ github.run_id }}/
             ${{ runner.temp }}/TEST-process-electron-${{ github.run_id }}/
 
 # Darwin covers real controlled POSIX lifecycle plus contract tests here. Its registered-token
 # native admission and the known POSIX executable mutation feasibility failure remain separate.
-# No vendor CLI, provider SDK gate, login, model server or production tuple admission runs here.
+# No vendor CLI, vendor login, remote model server or production tuple admission runs here.
+# Claude SDK checks use only the finite Node peer and the local TEST Host MCP.
