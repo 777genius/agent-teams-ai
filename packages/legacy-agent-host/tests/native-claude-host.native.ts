@@ -20,7 +20,7 @@ const DONOR_COMMIT = '1d0f97f55de566036c970eab4f36b84620afdb3f';
 const DONOR_ARTIFACT = 'vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-implementations-0.0.0.tgz';
 const DONOR_SHA256 = 'fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89';
 const CONTRACTS_SHA256 = 'aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db';
-const CURRENT_SHA256 = '73c7034aef1283ee694114d2a31d12383370286b45c18120958ca0edef789957';
+const CURRENT_SHA256 = 'f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2';
 
 function donorSourceCurrent(repo: string): void {
   assert.equal(execFileSync('git', ['-C', repo, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), DONOR_COMMIT);
