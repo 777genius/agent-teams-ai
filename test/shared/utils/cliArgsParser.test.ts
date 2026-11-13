@@ -197,6 +197,14 @@ describe('extractUserFlags', () => {
 });
 
 describe('findOptionMissingValue', () => {
+  it('reports empty equals values for required options', () => {
+    expect(findOptionMissingValue('--max-turns=')).toBe('--max-turns');
+    expect(findOptionMissingValue('--max-turns=""')).toBe('--max-turns');
+    expect(findOptionMissingValue('--append-system-prompt=')).toBe('--append-system-prompt');
+    expect(findInvalidUserFlags('--max-turns=', new Set()).missingValueFlag).toBe('--max-turns');
+    expect(findOptionMissingValue('--max-turns=5')).toBeUndefined();
+  });
+
   it('reports an option that needs a value but ends the args', () => {
     expect(findOptionMissingValue('-n')).toBe('-n');
     expect(findOptionMissingValue('-pn')).toBe('-n');

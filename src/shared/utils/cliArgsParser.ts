@@ -226,7 +226,13 @@ function scanUserFlags(raw: string): {
     // parseCliArgs splits only on whitespace/quotes, so `--flag=value` arrives
     // as a single token and would otherwise miss an exact-match blocklist.
     const equalsIndex = token.indexOf('=');
-    flags.push(equalsIndex === -1 ? token : token.slice(0, equalsIndex));
+    const option = equalsIndex === -1 ? token : token.slice(0, equalsIndex);
+    flags.push(option);
+    // A required option with --option= (including quoted empty values)
+    // supplies no value. Reject it before accepting Create/Launch/Validate.
+    if (equalsIndex !== -1 && token.length === equalsIndex + 1 && OPTIONS_WITH_REQUIRED_VALUE.has(option)) {
+      missingValue = option;
+    }
     // `--append-system-prompt "-review it"`: the CLI reads the next token as the
     // value of an option that requires one, even if it starts with `-`.
     if (equalsIndex === -1 && OPTIONS_WITH_REQUIRED_VALUE.has(token)) {
