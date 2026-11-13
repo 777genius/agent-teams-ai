@@ -35,6 +35,12 @@ import type { CredentialCommand, CredentialTarget, CredentialProgressWriter } fr
 import type { RegisteredProcessRootSource } from '../process/registeredProcessContracts.js';
 import type { StoredCredentialCommand } from '../management/commandRecords.js';
 import type { CapturedNativeProcessFactory } from '../adapters/providers/capturedNativeProcessFactory.js';
+import type { ModelProbeInput, ModelProbePreparation, NativeModelProbe } from '../management/ModelProbeOwner.js';
+import { runtimeSourceProcessOriginSchema } from './runtimeSourceProcessOrigin.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
+
+type ProcessSelection = { createProcess: CapturedNativeProcessFactory | undefined; identity: string };
+type CaptureProcess = (profile: ProviderManagementProfile, origin?: RuntimeSourceProcessOrigin) => CapturedNativeProcessFactory;
 
 /** The captured Host owns management process custody; Team policy and Session SPI stay separate. */
 export class ProviderManagementCoordinator {
@@ -46,6 +52,8 @@ export class ProviderManagementCoordinator {
   private readonly v2Keys = new Map<string, ReturnType<typeof createOpenCodeV2CredentialOperation>>();
   private readonly processCustody: RegisteredProcessRootSource | undefined;
   private readonly createProcess: CapturedNativeProcessFactory | undefined;
+  private readonly captureProcess: CaptureProcess | undefined;
+  private readonly hostSelections = new WeakMap<OpenCodeManagementHost, string>();
   private readonly store: FileManagementCommandStore;
   private readonly fence: ManagementResourceFence;
   private sealed = false;
@@ -69,10 +77,12 @@ export class ProviderManagementCoordinator {
       unavailableProfiles?: readonly { profileId: string; configRevision: string }[];
       processCustody?: RegisteredProcessRootSource;
       createProcess?: CapturedNativeProcessFactory;
+      captureProcess?: CaptureProcess;
     } = {}
   ) {
     this.processCustody = options.processCustody;
     this.createProcess = options.createProcess;
+    this.captureProcess = options.captureProcess;
     if (new Set(profiles.map((profile) => profile.profileId)).size !== profiles.length)
       throw new ManagementCommandError('invalid');
     this.codex = new CodexManagementCoordinator(
@@ -202,108 +212,131 @@ export class ProviderManagementCoordinator {
       fence,
       assertWriter: () => this.assertWriter(),
       select: (profileId, configRevision) => this.target(profileId, configRevision),
-      prepare: (input, isCurrent) => {
-        if (this.claude.has(input.profileId)) return this.claude.prepareProbe(input, isCurrent);
-        if (this.codex.has(input.profileId)) return this.codex.prepareProbe(input, isCurrent);
-        const profile = this.select(input.profileId, input.configRevision);
-        if (
-          input.modelContext !== undefined ||
-          (profile.nativeGeneration !== 'v2' && input.effort !== undefined && input.effort !== profile.variant)
-        )
-          throw new ManagementCommandError('invalid');
-        if (profile.nativeGeneration === 'v2') {
-          const target = this.credentialTarget(profile);
-          return createOpenCodeV2ModelProbe(profile, input, () => {
-            try {
-              this.assertCurrent();
-              assertManagementTarget(target, this.credentialTarget(
-                this.select(input.profileId, input.configRevision)
-              ));
-              return isCurrent();
-            } catch { return false; }
-          }, options.processCustody ? { processCustody: options.processCustody } : {});
-        }
-        const timeoutMs = profile.modelProbeTimeoutMs ?? 90000;
-        const deadline = Date.now() + timeoutMs;
-        let host: OpenCodeManagementHost | undefined;
-        const qualifiedModel = input.modelId.startsWith(input.providerId + '/')
-          ? input.modelId : `${input.providerId}/${input.modelId}`;
-        const limits = input.limits ?? selectedOpenCodeManagedLimits(profile.managedPreferences, qualifiedModel);
-        if (!limits)
-          return {
-            timeoutMs,
-            run: (signal) =>
-              this.withV1Host(profile, { deadline, signal, commandId: input.commandId, isCurrent }, (selected, options) => {
-                host = selected;
-                return selected.probeModel(
-                  {
-                    providerId: input.providerId,
-                    modelId: input.modelId,
-                    ...(profile.variant === undefined ? {} : { variant: profile.variant }),
-                  },
-                  options.signal,
-                  options.timeoutMs,
-                  isCurrent
-                );
-              }),
-            close: () => host ? this.retireHost(profile.profileId, host) : Promise.resolve(true),
-          };
-        // Construction allocates no process. Durable admission must precede native calls.
-        const limited = this.createHost(
-          withOpenCodeModelLimits(profile, { ...input, limits })
-        );
-        return {
-          timeoutMs,
-          run: (signal) => this.withV1Host(profile, { deadline, signal, commandId: input.commandId, isCurrent }, async (selected, options) => {
+      prepare: (input, isCurrent) => this.prepareProbe(input, isCurrent),
+    });
+  }
+
+  private prepareProbe(input: ModelProbeInput, isCurrent: () => boolean,
+    selection?: ProcessSelection): NativeModelProbe {
+    if (this.claude.has(input.profileId)) return this.claude.prepareProbe(input, isCurrent, selection?.createProcess);
+    if (this.codex.has(input.profileId)) return this.codex.prepareProbe(input, isCurrent, selection?.createProcess);
+    const profile = this.select(input.profileId, input.configRevision);
+    if (
+      input.modelContext !== undefined ||
+      (profile.nativeGeneration !== 'v2' && input.effort !== undefined && input.effort !== profile.variant)
+    )
+      throw new ManagementCommandError('invalid');
+    if (profile.nativeGeneration === 'v2') {
+      const target = this.credentialTarget(profile);
+      return createOpenCodeV2ModelProbe(profile, input, () => {
+        try {
+          this.assertCurrent();
+          assertManagementTarget(target, this.credentialTarget(
+            this.select(input.profileId, input.configRevision)
+          ));
+          return isCurrent();
+        } catch { return false; }
+      }, this.processCustody ? { processCustody: this.processCustody } : {});
+    }
+    const processSelection = selection ?? this.selectProcess(profile);
+    const timeoutMs = profile.modelProbeTimeoutMs ?? 90000;
+    const deadline = Date.now() + timeoutMs;
+    let host: OpenCodeManagementHost | undefined;
+    const qualifiedModel = input.modelId.startsWith(input.providerId + '/')
+      ? input.modelId : `${input.providerId}/${input.modelId}`;
+    const limits = input.limits ?? selectedOpenCodeManagedLimits(profile.managedPreferences, qualifiedModel);
+    if (!limits)
+      return {
+        timeoutMs,
+        run: (signal) =>
+          this.withV1Host(profile, { deadline, signal, commandId: input.commandId, isCurrent, processSelection }, (selected, options) => {
             host = selected;
-            this.replacing.add(profile.profileId);
-            const catalog = await selected.run(
-              (client) => readOpenCodeCatalog(client, input, input.providerId),
-              options
-            );
-            if (!isCurrent()) throw new ManagementCommandError('held');
-            const provider = catalog.providers.find((row) => row.providerId === input.providerId);
-            const modelId = input.modelId.startsWith(input.providerId + '/')
-              ? input.modelId.slice(input.providerId.length + 1)
-              : input.modelId;
-            if (
-              !provider || (input.limits && !provider.configuredAuthless) ||
-              !provider.models.some((row) => row.modelId === modelId) ||
-              !(await this.retireHost(profile.profileId, selected))
-            )
-              throw new ManagementCommandError('held');
-            options.signal.throwIfAborted();
-            this.assertCurrent();
-            if (!isCurrent() || Date.now() >= deadline) throw new ManagementCommandError('held');
-            this.hosts.set(profile.profileId, limited);
-            return limited.probeModel(
+            return selected.probeModel(
               {
                 providerId: input.providerId,
                 modelId: input.modelId,
-                limits,
                 ...(profile.variant === undefined ? {} : { variant: profile.variant }),
               },
               options.signal,
-              deadline - Date.now(),
+              options.timeoutMs,
               isCurrent
             );
           }),
-          close: async () => {
-            const closed = await Promise.all([
-              host ? this.retireHost(profile.profileId, host) : Promise.resolve(true),
-              this.retireHost(profile.profileId, limited),
-            ]);
-            if (closed.every(Boolean)) this.replacing.delete(profile.profileId);
-            return closed.every(Boolean);
+        close: () => host ? this.retireHost(profile.profileId, host) : Promise.resolve(true),
+      };
+    // Construction allocates no process. Durable admission must precede native calls.
+    const limited = this.createHost(
+      withOpenCodeModelLimits(profile, { ...input, limits }), processSelection
+    );
+    return {
+      timeoutMs,
+      run: (signal) => this.withV1Host(profile, { deadline, signal, commandId: input.commandId, isCurrent, processSelection }, async (selected, options) => {
+        host = selected;
+        this.replacing.add(profile.profileId);
+        const catalog = await selected.run(
+          (client) => readOpenCodeCatalog(client, input, input.providerId),
+          options
+        );
+        if (!isCurrent()) throw new ManagementCommandError('held');
+        const provider = catalog.providers.find((row) => row.providerId === input.providerId);
+        const modelId = input.modelId.startsWith(input.providerId + '/')
+          ? input.modelId.slice(input.providerId.length + 1)
+          : input.modelId;
+        if (
+          !provider || (input.limits && !provider.configuredAuthless) ||
+          !provider.models.some((row) => row.modelId === modelId) ||
+          !(await this.retireHost(profile.profileId, selected))
+        )
+          throw new ManagementCommandError('held');
+        options.signal.throwIfAborted();
+        this.assertCurrent();
+        if (!isCurrent() || Date.now() >= deadline) throw new ManagementCommandError('held');
+        this.hosts.set(profile.profileId, limited);
+        return limited.probeModel(
+          {
+            providerId: input.providerId,
+            modelId: input.modelId,
+            limits,
+            ...(profile.variant === undefined ? {} : { variant: profile.variant }),
           },
-        };
+          options.signal,
+          deadline - Date.now(),
+          isCurrent
+        );
+      }),
+      close: async () => {
+        const closed = await Promise.all([
+          host ? this.retireHost(profile.profileId, host) : Promise.resolve(true),
+          this.retireHost(profile.profileId, limited),
+        ]);
+        if (closed.every(Boolean)) this.replacing.delete(profile.profileId);
+        return closed.every(Boolean);
       },
-    });
+    };
   }
 
   private assertCurrent(): void {
     this.assertWriter();
     if (this.sealed) throw new OpenCodeManagementError('unavailable');
+  }
+
+  /** One admitted operation owns this immutable origin; profile IDs never index an origin cache. */
+  prepareTeamProbe(raw: ProviderManagementProfile, source?: RuntimeSourceProcessOrigin): ModelProbePreparation {
+    const profile = providerManagementProfileSchema.parse(structuredClone(raw));
+    const origin = source === undefined ? undefined : runtimeSourceProcessOriginSchema.parse(structuredClone(source));
+    return (input, current) => {
+      if (input.profileId !== profile.profileId || input.configRevision !== profile.configRevision)
+        throw new ManagementCommandError('conflict');
+      // Recheck the complete admitted bytes before any sanctioned model/server overlay.
+      this.admitTeamProbeProfile(profile);
+      return this.prepareProbe(input, current, this.selectProcess(profile, origin));
+    };
+  }
+
+  private selectProcess(profile: ProviderManagementProfile, origin?: RuntimeSourceProcessOrigin): ProcessSelection {
+    if (origin && !this.captureProcess) throw new ManagementCommandError('held');
+    return { createProcess: this.captureProcess?.(profile, origin) ?? this.createProcess,
+      identity: managementDigest(origin ?? null) };
   }
 
   /** Private composition admission, not a management RPC or caller-supplied native profile. */
@@ -509,6 +542,7 @@ export class ProviderManagementCoordinator {
     operation: {
       deadline: number; commandId?: string; signal?: AbortSignal;
       originalHost?: OpenCodeManagementHost; isCurrent?: () => boolean;
+      processSelection?: ProcessSelection;
     },
     action: (host: OpenCodeManagementHost, options: { signal: AbortSignal; timeoutMs: number }) => Promise<T>
   ): Promise<T> {
@@ -522,6 +556,7 @@ export class ProviderManagementCoordinator {
         throw new ManagementCommandError('held');
     };
     check();
+    const selection = operation.processSelection ?? this.selectProcess(profile);
     const queue = this.v1EndpointOperations.get(profile.endpoint) ?? { tail: Promise.resolve(), pending: 0 };
     // Native probes return admission before work completes; retain the existing RPC-sized bound here too.
     if (queue.pending >= 32) throw new ManagementCommandError('busy');
@@ -538,10 +573,18 @@ export class ProviderManagementCoordinator {
         check();
       }
       this.fence.assertAvailable(target.resourceId, operation.commandId);
+      const original = this.hosts.get(profile.profileId);
+      if (original && this.hostSelections.get(original) !== selection.identity) {
+        if (operation.originalHost || !await this.retireHost(profile.profileId, original))
+          throw new ManagementCommandError('held');
+        check();
+      }
+      // Original cleanup may await; a newly reserved target cannot be borrowed afterward.
+      this.fence.assertAvailable(target.resourceId, operation.commandId);
       const timeoutMs = operation.deadline - Date.now();
       const timeout = AbortSignal.timeout(timeoutMs);
       const signal = operation.signal ? AbortSignal.any([operation.signal, timeout]) : timeout;
-      const result = await action(this.getHost(profile), { signal, timeoutMs });
+      const result = await action(this.getHost(profile, selection), { signal, timeoutMs });
       check();
       return result;
     });
@@ -555,18 +598,18 @@ export class ProviderManagementCoordinator {
     }
   }
 
-  private getHost(profile: OpenCodeManagementProfile): OpenCodeManagementHost {
+  private getHost(profile: OpenCodeManagementProfile, selection: ProcessSelection): OpenCodeManagementHost {
     this.assertCurrent();
     if (this.replacing.has(profile.profileId)) throw new OpenCodeManagementError('held');
     let host = this.hosts.get(profile.profileId);
     if (!host) {
-      host = this.createHost(profile);
+      host = this.createHost(profile, selection);
       this.hosts.set(profile.profileId, host);
     }
     return host;
   }
 
-  private createHost(profile: OpenCodeManagementProfile): OpenCodeManagementHost {
+  private createHost(profile: OpenCodeManagementProfile, selection: ProcessSelection): OpenCodeManagementHost {
     const isCurrent = () => {
       if (this.sealed) return false;
       try {
@@ -576,10 +619,12 @@ export class ProviderManagementCoordinator {
         return false;
       }
     };
-    return new OpenCodeManagementHost(profile, {
+    const host = new OpenCodeManagementHost(profile, {
       isCurrent,
       canAllocate: isCurrent,
-    }, this.createProcess ? { createProcess: this.createProcess } : {});
+    }, selection.createProcess ? { createProcess: selection.createProcess } : {});
+    this.hostSelections.set(host, selection.identity);
+    return host;
   }
 
   async catalog(raw: unknown): Promise<ProviderManagementCatalog> {

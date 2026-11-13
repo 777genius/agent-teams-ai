@@ -82,7 +82,8 @@ export class ClaudeManagementCoordinator {
     };
   }
 
-  prepareProbe(input: ModelProbeInput, isCurrent: () => boolean = () => true): NativeModelProbe {
+  prepareProbe(input: ModelProbeInput, isCurrent: () => boolean = () => true,
+    createProcess = this.createProcess): NativeModelProbe {
     const profile = this.select(input.profileId, input.configRevision);
     if (input.providerId !== 'anthropic' || input.limits || /[\0\r\n]/u.test(input.modelId))
       throw new ManagementCommandError('invalid');
@@ -138,7 +139,7 @@ export class ClaudeManagementCoordinator {
             }
           };
           stage = 'probe-host';
-          host = new ClaudeManagementHost(profile, current, this.createProcess);
+          host = new ClaudeManagementHost(profile, current, createProcess);
           this.live.set(key, host);
           stage = 'probe-native';
           return await host.probe(input.modelId, signal, {

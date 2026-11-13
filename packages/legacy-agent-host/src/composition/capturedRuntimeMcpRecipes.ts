@@ -16,6 +16,7 @@ import { RuntimeSourceUnavailable } from './runtimeSourceGrantAuthority.js';
 import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
 import type { CodexMemberProfile, RuntimeMemberProfile } from './runtimeProfile.js';
 import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/u);
 const id = z
@@ -191,11 +192,13 @@ export async function prepareCapturedRuntimeMcpRecipes(options: {
   assertCurrent(): void;
   withAuthority<T>(action: () => T): T;
   retainedWindowsLaunch?: HostWindowsLaunch;
+  processOrigin?(profile: RuntimeMemberProfile): RuntimeSourceProcessOrigin | undefined;
   readCatalog?: (
     profile: CodexMemberProfile,
     assertCurrent: () => void,
     signal?: AbortSignal,
-    retainedWindowsLaunch?: HostWindowsLaunch
+    retainedWindowsLaunch?: HostWindowsLaunch,
+    processOrigin?: RuntimeSourceProcessOrigin
   ) => Promise<CodexConfiguredMcpCatalog>;
   signal?: AbortSignal;
 }): Promise<CapturedRuntimeMcpReference[]> {
@@ -242,7 +245,8 @@ export async function prepareCapturedRuntimeMcpRecipes(options: {
           selected,
           options.assertCurrent,
           options.signal,
-          options.retainedWindowsLaunch
+          options.retainedWindowsLaunch,
+          options.processOrigin?.(selected)
         )
       );
     options.assertCurrent();

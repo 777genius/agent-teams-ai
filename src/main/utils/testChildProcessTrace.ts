@@ -138,12 +138,12 @@ export function createTestChildProcessTrace(options: TraceOptions) {
 
 let active: ReturnType<typeof createTestChildProcessTrace> | undefined;
 
-/** Inert in ordinary development, packaged builds, other platforms and non-Electron processes. */
+/** Enabled only for explicit Linux Electron development TEST fixtures. */
 export function installTestChildProcessTrace(): boolean {
   try {
     if (active) return true;
     const descriptor = process.env.AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH;
-    if (process.platform !== 'linux' || !process.versions.electron || process.type !== 'browser' ||
+    if (process.platform !== 'linux' || !process.versions.electron || !('type' in process) || process.type !== 'browser' ||
         process.env.NODE_ENV !== 'development' || process.env.LEGACY_DESKTOP_TEST_CHILD_TRACE !== '1' ||
         !descriptor || !isAbsolute(descriptor) || basename(descriptor) !== 'desktop-descriptor.json') return false;
     const root = dirname(descriptor);

@@ -595,3 +595,33 @@ reuse and original-handle cleanup. A verified copy of the same engine may use
 the original temporary-memory location to distinguish filesystem contention;
 the manifest and installed provider digests remain mandatory. Native rejection,
 exact request counts and physical cleanup assertions remain unchanged.
+
+## 2026-11-13: exact-source native credential acceptance on `e7c6f4b1`
+
+The original credential scenario passed on clean source
+`e7c6f4b1ec758541738724425d2556a1558c8397` with freshly rebuilt Host/ledger,
+Node 24.21.0, the original OpenCode 2.1.4 engine, pinned Bun 1.3.11 and checked
+provider archive `68dca527`. The original installed-file census verified local
+provider/contracts copies against the selected archives before execution.
+No real Codex or Claude Code process was executed.
+
+The [complete receipt](../evidence/frontend-parity-e7c6-v2-credentials.json)
+has SHA-256 `1f178e850809da0c8d9fab1d29280478bbc6c80eaecb9fb5b6a3c7f2681f5ffe`.
+It records all seven original journey steps: passive directory, rejected key,
+source revision, explicit corrected key with lost acknowledgement, cold saved-key
+Check, retained unknown intent without replay, and isolated native databases
+with foreign auth preserved. Exactly four localhost model requests occurred;
+the final request intentionally timed out and remained unknown. Three native
+credential rows were retained. All four original Hosts exited zero, every
+observed native process was absent, and cleanup succeeded. The run took
+174.55 seconds; kernel OOM count remained 83 → 83.
+
+The existing bounded diagnostic collector is now owned by each original Host
+lifetime instead of sharing one early-exhausted buffer across four Hosts.
+Epochs retained 194/122/256/25 rows; epoch 3 reached its unchanged trace limit.
+Those bounded diagnostics do not replace the original owner exit, no-replay,
+database or cleanup assertions. Earlier failed receipts remain failed; this
+successful exact-source repeat does not prove the cause of the older local
+cleanup failure. No deadline, retry, effect count or oracle was relaxed.
+The result qualifies this native localhost credential journey, not vendor
+authentication, Desktop interaction, other OS tuples or release readiness.

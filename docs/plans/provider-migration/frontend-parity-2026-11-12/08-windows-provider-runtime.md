@@ -389,6 +389,130 @@ The same scoped Windows profile still reaches `CapturedProcess` without its orig
 
 Initial scope is the existing Host management/scheduled/MCP composition and process factory seams, Main captured custody/runtime-source composition, a bounded read-only reuse of the existing source journal validation, and their focused tests. No new native protocol, separate persistent source store, generic executor, production test flag, provider subscription or Stage2 work is introduced. All Git publication stays with the coordinator. This plan does not close the separate POSIX pathname-to-exec limitation or Darwin native qualification gap.
 
+### Round 3 — source identity and original Team association review
+
+The coordinator accepted the Phase1 port wiring separately in `0233b1b6`. Phase2 review found that matching a published candidate only by provider, original executable hash and broker would allow an unrelated original profile using the same binary to adopt that candidate. Credential namespace matching alone cannot distinguish two Teams with identical HOME/config roots, and requiring the original cwd would break legitimate worktree launches.
+
+Before changing the private allocation wire, the coordinator approved this bounded association plan:
+
+1. Add one optional, strict, bounded `runtimeSourceOrigin` value to a captured native profile and the existing private custody allocation. It names the original `sourceId`/`revision` plus either the original management profile/configuration identity or the original runtime scope, project path, member selector and recipe identity. Store it immutably with the same original allocation; no later request can replace it.
+2. Only the existing `RuntimeSourceIndex` source derivation creates this value from its validated record. Reuse the existing source scope/project/creation predicate and a shared identity over the original provider/account/executable/environment/broker/generation selection. Model/run settings and a derived worktree cwd do not become alternate account or source identities.
+3. Main independently validates the complete original descriptor grant, original released source receipt and full publication chain. For management it selects the exact original seed. For Runtime it selects the exact original member recipe when present, otherwise the unique explicitly captured provider template, compares the recipe identity and checks the same source scope/project/creation predicate. The actual native credential namespace must still match that original recipe. Every dynamically source-selected process requires this association; there is no image-hash-only fallback.
+4. Preserve the private association through the existing model-probe and Codex MCP derivations. Finite `--version` reads deliberately omit it and remain bound to one exact pending publish, prepared-never-allocated recovery or explicit configuration-refresh operation. Cold reads, source discovery and retained restore alone do not authorize a version probe. Verifying, held or unknown native receipts never gain new execution authority.
+5. Add a critical same-image/same-HOME foreign-Team refusal, exact original management and runtime positives, explicitly authorized second-Team and dynamic-template/worktree positives, and forged source/recipe/purpose negatives. Revocation blocks new prepare/resume while original Stop, drain and release stay with Main. The selector operates inside the existing trusted Host private boundary; it is not a claim that Main authenticates a compromised Host's semantic Team labels.
+
+The actual Windows x64 and ARM64 safe lanes at `b4641f` both exposed the existing management journal's unconditional POSIX mode-bit check. Diagnose and repair that platform-specific file observation separately while retaining canonical path, immutable directory, receipt digest, size and original-source checks. POSIX privacy checks stay unchanged; Windows POSIX bits must not be described as an ACL proof. No new native/provider probe is authorized by a file-mode repair.
+
+### Round 4 — process-only origin and original operation preparation
+
+Round 3's proposed enumerable profile field was rejected before publication: it
+would change existing recipe, MCP artifact, configuration and model-probe
+identities. The reviewed implementation keeps all persisted profile schemas and
+bytes unchanged. `runtimeSourceProcessOrigin.ts` defines private metadata;
+`RuntimeSourceIndex.processOrigin` derives it beside a validated retained source
+reference. It travels as a separate fourth `HostWindowsLaunch.port` argument and
+is captured immutably on the existing private allocation. Main reuses the original
+`resolveRuntimeRecipe` exact-member/unique-template selection, checks the complete
+original grant and source history, requires equal Team and scope Team IDs and the
+exact captured scope for an existing Team, and checks the actual native credential
+namespace. Worktree cwd is not an alternate original recipe identity.
+
+Runtime, scheduled-run and Codex MCP composition derive this sidecar from their
+existing captured source reference, original scope/project and private recipe.
+Saved/non-draft model probes and explicit same-provider drafts must derive it
+beside the saved reference too: those branches may never call `privateRecipe`.
+The new/provider-switch branch observes its existing private selection without
+adding a default-selection read or changing the returned recipe.
+
+Independent review found that two source revisions may produce byte-identical
+model profiles and therefore the same original model-probe IDs. An origin map
+keyed only by those IDs or profile digest cannot own the operation. Instead the
+original `ModelProbeOwner.start` preparation boundary accepts a private optional
+preparation callback: after existing-command lookup and resource reservation,
+the same synchronous prepare captures a bound process factory. Existing receipts,
+fingerprints, replay and cold-read behavior remain unchanged. Claude carries that
+factory across its metadata wait; Codex carries it through its existing queue.
+V1 retains the immutable origin of each cached host and uses its original endpoint
+queue and confirmed retirement before allocating a different origin. Original
+close/Stop ownership is never replaced by a later source selection. Ordinary
+source-management profile IDs already name the exact source revision.
+
+Critical checks include byte-identical old profile/digest/cold-receipt behavior;
+same-image/same-HOME foreign-Team refusal; authorized exact member, template and
+worktree selection; saved/non-draft and switched draft model origins; two equal
+profiles with different source revisions retaining their own queued preparation;
+replay without preparing again; and confirmed V1 A retirement before B. Finite
+version-only pending grants remain separate. These changes do not authenticate a
+compromised Host's semantic labels and do not alter the separate POSIX exec-window
+limitation. Root and the independent provider reviewer accepted this plan before
+implementation; exact code and Windows fixture results still require review.
+
+### Round 5 — merged baseline and complete private profiles
+
+Phase2 is reconciled onto `e7c6f4b1ec758541738724425d2556a1558c8397` with the
+new Claude checkpoint source, validated Skip transformation and original writer
+fence preserved. The complete captured Team scope includes run, member and
+generation fields; the private Main context reader projects only the three source
+scope fields, and the origin producer explicitly selects sourceId/revision from
+the member reference. The actual source grant and allocation-origin schemas stay
+strict. An original profile without `main-windows-v1` retains the existing
+whole-Job path without an origin, after the same source/scope checks. A scoped
+broker without Main continues to refuse allocation. A plain broker with Main
+still carries its exact origin.
+
+Critical complete-profile fixtures cover equal image, HOME and account with a
+foreign Team; the original authorized template with a derived worktree; identical
+recipe/profile/probe IDs from distinct immutable source revisions; full captured
+member references; and saved no-draft/default model probes. The existing original
+journal replay, coordinator queues, V1 cache retirement and namespace fence own
+their checks. Every affected source is included in the Desktop proof closure.
+No actual Windows or Desktop result is inferred before the exact-source safe
+matrix and original repository-peer journeys finish.
+
+### Round 6 — controlled reconciliation checks, not Windows qualification
+
+The isolated `phase2-e7c6` checkout uses its own Host/controller/ledger package
+aliases and the unchanged checked provider archive at `68dca527`. Its bounded
+Node24.21/TS7 source build and focused Host/Main type projects passed. The first
+Host build had no local ledger output; building that original dependency resolved
+its missing declarations without a source change. Two existing V1 test accesses
+needed explicit non-null profile assertions; the private origin types were not
+weakened.
+
+The six focused Host suites passed 78/78 with no skips, including complete source
+capture/restore, source-native TEST version processes, saved/draft model probes,
+finite management routing and the actual SDK standalone journey against the
+repository Node peer. The independent model-owner and coordinator queue suites
+passed another 14/14 with no skips. The four unaffected Main suites passed 15/15;
+the corrected five-case history suite passed 5/5 separately. The original combined
+Main run was 19/20 and remains preserved as a failed run. These checks
+include the original nine real Main/Host source and installer journeys using
+TEST executable bytes. No real Claude or Codex CLI was launched.
+
+Original failed observations remain preserved: the queue fixture initially used
+JSON property order as an equality oracle; the source fixture initially conflated
+private recipe equality with the existing distinct full-capture configRevision;
+the same-account/HOME Main fixture initially called its identical B recipe hash
+a forged hash. Each correction changes only that test oracle. Full capture
+lineage, exact retained A reconstruction, same-account/HOME foreign-Team refusal,
+source grant checks and production cleanup predicates remain required.
+
+The full frontend `pnpm typecheck` attempt on this working tree did not pass:
+its Host pretypecheck compiler exited 137 after 7.1 seconds, before the frontend
+compiler ran, while the kernel OOM counter increased from 90 to 91. The original
+command, environment, diff digest and log digest are retained in the local
+`TEST-p08-phase2-full-frontend-types.json` receipt. Earlier focused source/type
+checks remain separate evidence; the final Host test-only oracle correction was
+executed by the 78-case run after its focused typecheck. No full frontend type
+success or final exact-head native result is inferred from these observations.
+The five-platform safe workflow now includes the four affected Host and three
+Main controlled suites without changing any native step or success predicate.
+
+The remaining actual Windows metadata/version/source-selection extension must use
+the original Main/Host/broker and finite repository peers. These Linux controlled
+results do not qualify Windows kernel custody, Desktop UI, the separate Darwin
+exec-mutation invariant, or any real provider integration.
+
 ## 16. Actual Windows source publication: platform-correct journal I/O
 
 ### Evidence and reviewed plan — 2026-11-13

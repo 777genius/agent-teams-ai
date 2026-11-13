@@ -11,6 +11,7 @@ import type {
 import { restoreNativeRuntimeEntries } from './restoreNativeRuntimeEntries.js';
 import { createRuntimeWorkSyncWake } from './createRuntimeWorkSyncWake.js';
 import { createRuntimeMemberProviderFactory } from './createRuntimeMemberProviderFactory.js';
+import { captureMemberProcessOrigin } from './captureRuntimeProcessOrigin.js';
 import { executeRuntimeMemberAction } from './executeRuntimeMemberAction.js';
 import type { RuntimeMemberActionOperation } from './executeRuntimeMemberAction.js';
 import type { NativeMemberActionSource } from './nativeMemberActionAdmission.js';
@@ -156,6 +157,7 @@ export class RuntimeTeamCoordinator {
       driverFactory: createRuntimeMemberProviderFactory({
         entries: this.entries,
         assertWriter: () => options.assertWriter(),
+        captureProcessOrigin: entry => captureMemberProcessOrigin(options.profile, entry, options.sources),
         storageRoot: options.profile.owner.storageRoot,
         profileId: options.profile.owner.profileId,
         principalId: options.profile.principalId,

@@ -8,6 +8,7 @@ import { runtimeDigest } from '../runtime/identity.js';
 import { effectId } from '../team/identity.js';
 import { capturedMcpSourceCurrent } from '../mcp-catalog/capturedSource.js';
 import { captureRuntimeMcp } from './captureRuntimeMcp.js';
+import { captureScheduledProcessOrigin } from './captureRuntimeProcessOrigin.js';
 import { createCapturedClaudeSubagents } from './createClaudeSubagents.js';
 import { loadCapturedRuntimeMcpRecipe, prepareCapturedRuntimeMcpRecipes } from './capturedRuntimeMcpRecipes.js';
 import { scheduledRunInputSchema } from './scheduledRunContracts.js';
@@ -59,11 +60,13 @@ export class HostScheduledRuns {
         const current = () => this.current(entry);
         this.assert(entry);
         const base = scheduledRunProfile(options.profile, entry.team, entry.capture, options.sources);
+        const processOrigin = captureScheduledProcessOrigin(options.profile, entry.team, entry.capture, options.sources);
         const selected = captureRuntimeMcp({ recipes: [base], savedCwd: base.cwd,
           members: [{ role: 'lead', settings: {} }] });
         const [reference] = await prepareCapturedRuntimeMcpRecipes({ store: entry.store,
           commandId: entry.capture.input.runId, baseRecipes: [base], selectedRecipes: selected,
           ...(options.retainedWindowsLaunch ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
+          processOrigin: () => processOrigin,
           assertCurrent: () => this.assert(entry),
           withAuthority: action => entry.team.owner.withLaunchAuthority(options.profile.principalId, 'control', () => {
             this.assert(entry); return action();
@@ -78,6 +81,7 @@ export class HostScheduledRuns {
           readRuntime: binding => this.runtime.readCapturedSession(binding),
           observe: (binding, session, activity) => this.runtime.observeProviderActivity(binding, session, activity) });
         const provider = (options.createProvider ?? createScheduledRunProvider)({ profile, request, binding: entry.binding,
+          ...(processOrigin ? { processOrigin } : {}),
           ...(subagents ? { subagents } : {}),
           ...(entry.capture.input.config.disallowedTools !== undefined ?
             { disallowedTools: [...entry.capture.input.config.disallowedTools] } : {}),

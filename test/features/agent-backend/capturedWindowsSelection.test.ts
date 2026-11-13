@@ -38,7 +38,8 @@ it('Main admits each finite process-backed provider without requiring a Claude m
       expect(captureMainWindowsCustody(selected([member(provider)]))).toBeInstanceOf(RetainedWindowsCustody);
       expect(captureMainWindowsCustody(selected(undefined, [member(provider)]))).toBeInstanceOf(RetainedWindowsCustody);
     }
-    for (const unsupported of [member('unknown'), member('opencode', 'v2')]) {
+    for (const unsupported of [member('unknown'), member('opencode', 'v2'), member('opencode', 'v3'),
+      { ...member('codex'), provider: { toString: () => 'codex' } }]) {
       expect(() => captureMainWindowsCustody(selected([unsupported]))).toThrow('Captured Main custody unavailable');
     }
     const captured = selected([member('codex')]);

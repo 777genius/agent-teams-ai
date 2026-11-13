@@ -1,6 +1,7 @@
 /** Closed private Main/Host custody transport. This module grants no native process authority. */
 import { performance } from 'node:perf_hooks';
 import { z } from 'zod';
+import { runtimeSourceProcessOriginSchema } from '../composition/runtimeSourceProcessOrigin.js';
 
 import { MAX_LAUNCH_BYTES } from './codec.js';
 import { hostServiceCallSchemas, hostServiceResultSchemas, isHostServiceCall,
@@ -46,6 +47,7 @@ const callSchema = z.discriminatedUnion('operation', [
   ...hostServiceCallSchemas,
   z.object({ operation: z.literal('allocate'), capability: ref, owner, brokerRef: hash,
     executableSha256: hash, launchSha256: hash, launchBytes: z.number().int().min(1).max(MAX_LAUNCH_BYTES),
+    runtimeSourceOrigin: runtimeSourceProcessOriginSchema.optional(),
     budgetMs: z.number().int().min(0).max(HOST_CUSTODY_LAUNCH_MS) }).strict(),
   z.object({ operation: z.literal('launch-chunk'), capability: ref, offset: z.number().int().min(0).max(MAX_LAUNCH_BYTES), bytes }).strict(),
   z.object({ operation: z.literal('launch-commit'), capability: ref }).strict(),
@@ -361,8 +363,12 @@ export class HostCustodyClient {
     const id = `custody:${this.binding.hostIncarnation}:${control ? 'control' : 'work'}:${this.next++}`;
     const hintKey = hostCustodyHintKey(call);
     const admittedHint = hintKey ? this.hints.get(hintKey) : undefined;
+    const wireCall = call.operation === 'allocate' ? (() => {
+      const { runtimeSourceOrigin, ...original } = call;
+      return runtimeSourceOrigin === undefined ? original : { ...original, runtimeSourceOrigin };
+    })() : call;
     const frame: RpcRequest = {
-      jsonrpc: '2.0', id, method: HOST_CUSTODY_METHOD, params: { binding: this.binding, call, remainingMs: remaining },
+      jsonrpc: '2.0', id, method: HOST_CUSTODY_METHOD, params: { binding: this.binding, call: wireCall, remainingMs: remaining },
     };
     return new Promise((resolve) => {
       let returned = false;

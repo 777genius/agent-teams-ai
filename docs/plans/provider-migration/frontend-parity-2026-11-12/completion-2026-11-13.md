@@ -1,5 +1,70 @@
 # Завершение frontend parity: 13 ноября 2026
 
+## Актуальный проверенный срез: `e7c6f4b1`
+
+[Draft PR #1192](https://github.com/777genius/agent-teams-ai/pull/1192) содержит
+исправления этой работы и согласован с новым HEAD базового #1186
+`e29dbde300ea73ec4e46e5f57f9e007ca5473552`. Опубликованный merge commit —
+`e7c6f4b1ec758541738724425d2556a1558c8397`; его родители сохраняют как ранее
+проверенные исправления `f0d275e6`, так и одиннадцать новых базовых commits.
+Данные ниже описывают фактически проверенные границы, а последующие разделы
+сохраняют историю работы. Общая frontend/platform приёмка ещё не объявляется.
+
+Выбранный provider archive остаётся из
+[`old-provider-implementations` #8](https://github.com/agent-teams-ai/old-provider-implementations/pull/8),
+source `68dca527b779ebb82923f30d7b08441085d8b579`, SHA-256
+`07241cca756e69aa6001df41d6a7408aad5d8ab4c8277f9d70f35d0d66736c73`.
+Новый base содержит дополнительную копию тех же bytes для Claude checkpoint;
+package, lock и qualification workflows последовательно выбирают существующий
+`frontend-parity-68dca527` archive. Новый provider graph не создавался.
+
+| Область | Фактический результат | Открытая граница |
+| --- | --- | --- |
+| P01/P05/P07 — accounts, models, settings | На объединённых bytes прошли 62 проверки Main/renderer consumers; checked provider source/packed suites ранее дали 526 PASS без skips | Это не вход в настоящий Codex/Claude и не отдельный Desktop screenshot |
+| P02 — OpenCode V2 credentials | На чистом `e7c6f4b1` настоящий OpenCode 2.1.4 прошёл 401 → source publication → явное исправление → lost ACK → cold recovery → saved-key Check → неизвестный intent без replay; все четыре Host завершились с кодом 0 | Vendor authentication, Desktop и release этим localhost сценарием не квалифицированы |
+| P03/P04 — conversation, schedules, recovery | Настоящий pinned Claude SDK с конечным TEST Node peer прошёл rich messages, Allow/Deny, questions, commands, task completion, checkpoint/new Host/Resume и Stop; сборка и 48 затронутых Host checks прошли | Полная разрешённая Electron-последовательность Codex/Claude/V1 ожидает текущий UI CI |
+| P06 — installation/source transitions | 33 проверки Codex installer прошли; объединённый Claude checkpoint/Skip regression проходит, повреждённая цепочка отклоняется | Динамическая Windows source association P08 phase 2 проверяется отдельным следующим срезом |
+| P08/P09 — process ownership | Linux FD exec stage прошёл 6 native fixtures на Node и отдельно 6 на Electron; afterPack — 63 PASS; оригинальные Main/Host authority suites на объединённых bytes — 40 PASS, runtime team — 30 PASS | Windows/macOS и native процессы должны дать собственные receipts; Darwin mutation feasibility остаётся отдельным незакрытым gate |
+| P10 — original UI and recovery | Desktop helper/types — 44 PASS; UI harness сохраняет исходные controls, strict single-CDP-owner guard, sentinels и cleanup | На новом source запущен штатный Host Emulated Acceptance; queued/running не считаются PASS |
+
+Проверки в строках пересекаются и не складываются в общий счётчик покрытия.
+Новая база потребовала конкретного исправления Skip: исходная валидная цепочка
+явного Skip теперь принимается после configured Launch/Stop; отсутствующие,
+невыбранные или hash-consistent повреждённые transitions по-прежнему отказывают
+до новой allocation. Право провайдера проверяется под одним исходным синхронным
+Team lock без кэша authority между await, изменения таймеров или ослабления
+writer/namespace/policy checks.
+
+Native credential receipt сохранён
+[полностью](../evidence/frontend-parity-e7c6-v2-credentials.json), SHA-256
+`1f178e850809da0c8d9fab1d29280478bbc6c80eaecb9fb5b6a3c7f2681f5ffe`.
+Прогон занял 174,55 секунды, дал ровно четыре исходных model requests и три
+native credential rows; foreign auth bytes сохранены. Cleanup подтверждён;
+kernel OOM counter остался 83 → 83. Ранее неуспешный local `6fbc` receipt
+сохранён и не переименован в PASS. Успешный повтор не устанавливает причину
+того старого сбоя и не приписывается диагностике либо Team authority patch.
+
+На точном `e7c6f4b1` запущены
+[Host Emulated Acceptance](https://github.com/777genius/agent-teams-ai/actions/runs/43507523266),
+[Host process fixtures](https://github.com/777genius/agent-teams-ai/actions/runs/43507523307),
+[V2 preflight](https://github.com/777genius/agent-teams-ai/actions/runs/43507522897)
+и [общий CI](https://github.com/777genius/agent-teams-ai/actions/runs/43507523549).
+Первый Windows process job выявил POSIX-only путь в controlled schedule fixture;
+строгая production path schema корректно отказала до запуска процесса.
+Независимо проверенное исправление использует native absolute путь внутри
+исходной временной директории и не запускает реального провайдера.
+Darwin ARM64 process job `132168946689` прошёл: 81 Host checks (два Linux-only
+skip), 49 protocol, 53 Main и 23 actual POSIX Node/shell lifecycle checks.
+Он явно не квалифицирует native registration, executable admission, Desktop
+или vendor runtime. На Darwin x64 исправленная Corepack/pnpm bootstrap стадия
+тоже пройдена; результат всей job пока не заявляется.
+
+Host TS7 build и focused desktop-script types прошли. Полный frontend typecheck
+локально ранее завершился OOM/137 без итогового PASS; он остаётся открытым до
+точного успешного общего CI либо отдельного полноценного прогона. #1192 остаётся
+Draft: реальные Codex/Claude jobs пропущены штатными Draft gates, без изменения
+required checks. Main, release и default activation не изменяются.
+
 ## Зафиксированная исходная точка
 
 - Frontend integration: PR #1186, `1160b575c4e43db045ab8726fd16d27bd611196a`.

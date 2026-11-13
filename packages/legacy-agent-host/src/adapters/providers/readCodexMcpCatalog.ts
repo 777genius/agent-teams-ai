@@ -3,13 +3,15 @@ import { capturedNativeProcessFactory } from './capturedNativeProcessFactory.js'
 import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
 import type { CodexMemberProfile } from '../../composition/runtimeProfile.js';
 import type { HostWindowsLaunch } from '../../owned-process/HostWindowsLaunch.js';
+import type { RuntimeSourceProcessOrigin } from '../../composition/runtimeSourceProcessOrigin.js';
 
 /** D owns native metadata decoding; Host retains only this original short-lived child handle. */
 export async function readCodexMcpCatalog(
   profile: CodexMemberProfile,
   assertCurrent: () => void,
   signal?: AbortSignal,
-  retainedWindowsLaunch?: HostWindowsLaunch
+  retainedWindowsLaunch?: HostWindowsLaunch,
+  processOrigin?: RuntimeSourceProcessOrigin
 ): Promise<CodexConfiguredMcpCatalog> {
   assertCurrent();
   const current = () => {
@@ -20,7 +22,7 @@ export async function readCodexMcpCatalog(
       return false;
     }
   };
-  const custody = capturedNativeProcessFactory(retainedWindowsLaunch)(profile, current);
+  const custody = capturedNativeProcessFactory(retainedWindowsLaunch, processOrigin)(profile, current);
   return readCodexConfiguredMcpCatalog(
     {
       cwd: profile.cwd,

@@ -15,12 +15,14 @@ import type { OpenCodeEvidenceCapture } from '../../evidence/opencodeCaptureCont
 import type { NativeSessionCommandCapability } from '../../team/nativeSessionCommand.js';
 import type { WindowsServiceIntent } from '../../owned-process/retainedServiceContracts.js';
 import type { HostWindowsLaunch } from '../../owned-process/HostWindowsLaunch.js';
+import type { RuntimeSourceProcessOrigin } from '../../composition/runtimeSourceProcessOrigin.js';
 
 export interface MemberProviderContext {
   profile: RuntimeMemberProfile;
   processCustody?: RegisteredProcessRootSource;
   /** Private original Main launch capability for process-backed providers. */
   retainedWindowsLaunch?: HostWindowsLaunch;
+  processOrigin?: RuntimeSourceProcessOrigin;
   request: OpenConfig;
   endpoint: TeamMcpEndpoint;
   connection: TeamMcpConnection;

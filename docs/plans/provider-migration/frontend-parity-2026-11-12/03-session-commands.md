@@ -1832,3 +1832,26 @@ The same original12 observation attempts and150ms intervals bound this scoped ro
 Independent review must verify the renderer identity derivation, full-text equality, clipping/hit checks and preservation of all existing source guards and command effects. Retain both original /cost commands, the single /compact, subsequent conversation and review paths, original model/input counts, selected command IDs, Stop/cold/cleanup semantics and strict final receipts. Do not add broad unit cases that mirror the selector.
 
 Run existing source/script typing/lint and the same required native-command Desktop invocation in normal coherent CI. The current failure at the first cost observation does not qualify the later compact/review UI path. Any initial source publication remains SOURCE_ONLY_UNEXECUTED until those gates actually execute. Root publishes this plan before source, immediately pushes each commit, and makes no main/upward merge here.
+
+## R23 — original OpenCode V1 usage and cost boundary (2026-11-13)
+
+Root followed the original native-to-renderer path instead of inferring a missing
+feature from the new adapter. In locked runtime `f5c69c2`,
+`OpenCodeTranscriptProjector.ts` (blob `89a778772cd4e0f47f5cee74fbe10d3dfabe6d91`)
+and `OpenCodeLogProjector.ts` (blob `44cc0ddad7a071b617f6c4b2971103886f3aea56`)
+do not project native token, cache or cost counters. Their canonical and
+frontend log messages contain attributed text, reasoning and tool effects.
+`OpenCodeEventTranslator.ts` (blob `bb48227f802473a49c16710a7d6c1bcc7b351aeb`)
+delegates to that same transcript projector; it does not add usage.
+
+At original frontend [`4a0e062`](https://github.com/777genius/agent-teams-ai/tree/4a0e06277fe216d9f82dbbede362668fe46622ee),
+`MemberStatsComputer.ts` (blob `0d6cf532152c004868d0b18ad3553c13588178cd`)
+reads original JSONL paths from `TeamMemberLogsFinder.ts`
+(`1340ff425a8303ed75f36e7dbcda1fe5973798ef`), extracts only the generic
+`usage.input_tokens`, `output_tokens` and cache fields, and hardcodes `costUsd: 0`.
+It has no native OpenCode counter reader. Consequently the V1 emulated UI must
+show unavailable usage as Unknown, preserve actual text/tool/activity evidence,
+and must not invent a zero cost or reported token totals. Codex/Claude reported
+usage remains independently checked through each actual adapter. This is an
+explicit original capability boundary, not permission to disable a working
+usage source in another provider.

@@ -109,7 +109,7 @@ export function createCodexMemberProvider(
         context.processCustody,
         canCapture,
         undefined,
-        context.retainedWindowsLaunch?.port(selected, canAllocate, canCapture)
+        context.retainedWindowsLaunch?.port(selected, canAllocate, canCapture, context.processOrigin)
       ))
   )(captured, canAllocate);
   let sealed = false;

@@ -35,6 +35,10 @@ export interface NativeModelProbe {
   run(signal: AbortSignal): Promise<boolean>;
   close(): Promise<boolean>;
 }
+export type ModelProbePreparation = (
+  input: ModelProbeInput,
+  isCurrent: () => boolean
+) => NativeModelProbe;
 interface ActiveProbe {
   saved: StoredModelProbe;
   native: NativeModelProbe;
@@ -56,11 +60,12 @@ export class ModelProbeOwner {
       fence: ManagementResourceFence;
       assertWriter(): void;
       select(profileId: string, configRevision: string): ManagementTarget;
-      prepare(input: ModelProbeInput, isCurrent: () => boolean): NativeModelProbe;
+      prepare: ModelProbePreparation;
     }
   ) {}
 
-  start(raw: unknown, guard: () => boolean = () => true): ProviderModelProbeSnapshot {
+  start(raw: unknown, guard: () => boolean = () => true,
+    prepare: ModelProbePreparation = this.options.prepare): ProviderModelProbeSnapshot {
     const input = startSchema.parse(raw);
     this.assertAdmission();
     const isCurrent = () => {
@@ -83,7 +88,9 @@ export class ModelProbeOwner {
     this.options.fence.reserve(target.resourceId, input.commandId);
     let entry: ActiveProbe;
     try {
-      const native = this.options.prepare(input, isCurrent);
+      // Trusted composition may bind one operation's private process origin.
+      // Replay and failed resource admission never capture a new native owner.
+      const native = prepare(input, isCurrent);
       if (
         !Number.isSafeInteger(native.timeoutMs) ||
         native.timeoutMs < 1 ||

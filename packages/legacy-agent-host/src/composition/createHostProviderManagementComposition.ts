@@ -9,6 +9,10 @@ import type { TeamHostProfile } from './TeamHost.js';
 import type { ProviderOAuthSnapshot } from '../management/contracts.js';
 import type { RegisteredProcessRootSource } from '../process/registeredProcessContracts.js';
 import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
+import { providerManagementProfileSchema } from '../management/profile.js';
+import type { ProviderManagementProfile } from '../management/profile.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
+import type { CapturedNativeProcessFactory } from '../adapters/providers/capturedNativeProcessFactory.js';
 
 /** Restore source-derived private profiles before existing operation owners read their journals. */
 export function createHostProviderManagementComposition(
@@ -48,6 +52,16 @@ export function createHostProviderManagementComposition(
     unavailable: [],
     hasCommands: false,
   };
+  // Admission uses the unmodified private profile. V1 server/limit overlays are
+  // applied only after this operation's process factory retains its source.
+  const captureProcess = retainedWindowsLaunch
+    ? (selected: ProviderManagementProfile, origin?: RuntimeSourceProcessOrigin) =>
+      capturedNativeProcessFactory(retainedWindowsLaunch,
+        origin ?? sources?.managementProcessOrigin(selected))
+    : undefined;
+  const createManagementProcess: CapturedNativeProcessFactory | undefined = captureProcess
+    ? (selected, current, custody) => captureProcess(providerManagementProfileSchema.parse(selected))(selected, current, custody)
+    : undefined;
   const profiles = [
     ...(profile.management ?? []),
     ...retained.profiles,
@@ -79,7 +93,8 @@ export function createHostProviderManagementComposition(
           onOAuthProgress,
           unavailableProfiles: retained.unavailable,
           ...(processCustody ? { processCustody } : {}),
-          ...(createProcess ? { createProcess } : {}),
+          ...(createManagementProcess ? { createProcess: createManagementProcess } : {}),
+          ...(captureProcess ? { captureProcess } : {}),
         })
       : undefined,
   };

@@ -9,6 +9,7 @@ import { isHostServiceCall } from './retainedServiceContracts.js';
 
 import type { Readable } from 'node:stream';
 import type { NativeProcessProfile } from '../composition/nativeProcessProfile.js';
+import type { RuntimeSourceProcessOrigin } from '../composition/runtimeSourceProcessOrigin.js';
 import type {
   OwnedLaunchPort,
   PendingOwnedProcess,
@@ -87,7 +88,9 @@ export class RetainedWindowsCustody implements HostCustodyOwner {
       verifyLaunch(
         spec: ResolvedLaunchSpec,
         executableSha256: string,
-        broker: Selection
+        broker: Selection,
+        admission: { capability: string; phase: 'prepare' | 'resume' | 'service';
+          runtimeSourceOrigin?: RuntimeSourceProcessOrigin | undefined }
       ): Promise<void>;
       /** Existing launch primitive dependency; production composition leaves this absent. */
       createPort?(selection: Selection): OwnedLaunchPort;
@@ -226,7 +229,8 @@ export class RetainedWindowsCustody implements HostCustodyOwner {
   private async prepare(allocation: Allocation): Promise<void> {
     this.input(allocation.attachment, allocation);
     const spec = allocation.spec ?? unavailable();
-    await this.options.verifyLaunch(spec, allocation.call.executableSha256, allocation.selection);
+    await this.options.verifyLaunch(spec, allocation.call.executableSha256, allocation.selection,
+      { capability: allocation.call.capability, phase: 'prepare', runtimeSourceOrigin: allocation.call.runtimeSourceOrigin });
     this.input(allocation.attachment, allocation);
     const result = await allocation.port.prepare(allocation.pending, spec);
     if (result.kind !== 'prepared') unavailable();
@@ -325,7 +329,8 @@ export class RetainedWindowsCustody implements HostCustodyOwner {
             unavailable();
         };
         current();
-        await this.options.verifyLaunch(allocation.spec!, allocation.call.executableSha256, allocation.selection);
+        await this.options.verifyLaunch(allocation.spec!, allocation.call.executableSha256, allocation.selection,
+          { capability: allocation.call.capability, phase: 'service', runtimeSourceOrigin: allocation.call.runtimeSourceOrigin });
         current();
       });
     }
@@ -360,7 +365,8 @@ export class RetainedWindowsCustody implements HostCustodyOwner {
             await this.options.verifyLaunch(
               allocation.spec!,
               allocation.call.executableSha256,
-              allocation.selection
+              allocation.selection,
+              { capability: allocation.call.capability, phase: 'resume', runtimeSourceOrigin: allocation.call.runtimeSourceOrigin }
             );
             this.input(attached, allocation);
           })

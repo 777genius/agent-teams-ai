@@ -13,6 +13,7 @@ import type { RuntimeMemberProfile } from '../../composition/runtimeProfile.js';
 import type { ProcessCustody } from '../../composition/processCustody.js';
 import type { RuntimeBinding } from '../../runtime/contracts.js';
 import type { HostWindowsLaunch } from '../../owned-process/HostWindowsLaunch.js';
+import type { RuntimeSourceProcessOrigin } from '../../composition/runtimeSourceProcessOrigin.js';
 
 export interface ScheduledRunProviderContext {
   profile: RuntimeMemberProfile;
@@ -22,6 +23,7 @@ export interface ScheduledRunProviderContext {
   disallowedTools?: readonly string[];
   processCustody?: ProcessCustody;
   retainedWindowsLaunch?: HostWindowsLaunch;
+  processOrigin?: RuntimeSourceProcessOrigin;
   isCurrent(): boolean;
   onProgress(): void;
 }
@@ -38,7 +40,7 @@ export function createScheduledRunProvider(context: ScheduledRunProviderContext)
   let allocated = false;
   let sealed = false;
   const current = () => !sealed && context.isCurrent() && capturedMcpSourceCurrent(profile);
-  const custody = capturedNativeProcessFactory(context.retainedWindowsLaunch)(profile, current, context.processCustody);
+  const custody = capturedNativeProcessFactory(context.retainedWindowsLaunch, context.processOrigin)(profile, current, context.processCustody);
   const childLogs = new ClaudeSubagentLogProjection(context.binding);
   const selected = (value: OpenConfig) => current() &&
     JSON.stringify(value) === JSON.stringify(request) && value.checkpointRef === undefined;
@@ -91,7 +93,7 @@ export function createScheduledRunProvider(context: ScheduledRunProviderContext)
       if (!policy) return current();
       const assertCurrent = () => { if (!current()) throw new Error('Scheduled source changed'); };
       try {
-        const observed = await readCodexMcpCatalog(profile, assertCurrent, signal, context.retainedWindowsLaunch);
+        const observed = await readCodexMcpCatalog(profile, assertCurrent, signal, context.retainedWindowsLaunch, context.processOrigin);
         return current() && observed.digest === policy.catalog.digest;
       } catch { return false; }
     };

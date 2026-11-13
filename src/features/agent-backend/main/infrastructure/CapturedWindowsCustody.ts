@@ -13,9 +13,12 @@ import {
 } from '@agent-teams/legacy-agent-host/owned-process';
 
 import { capturedHostProfileDigest } from './selectedHostProfile';
+import { bindMainWindowsRuntimeSources, CapturedWindowsRuntimeSources } from './CapturedWindowsRuntimeSources';
+import { captureWindowsSourceAssociation } from './capturedWindowsSourceAssociation';
 
 import type { SelectedHostProfile } from './selectedHostProfile';
-import type { NativeProcessProfile } from '@agent-teams/legacy-agent-host/owned-process';
+import type { SelectedWindowsProcessProfile, WindowsSourceLaunchSelection } from './CapturedWindowsRuntimeSources';
+import type { RuntimeSourceGrant } from '@agent-teams/legacy-agent-host/runtime-sources';
 
 function unavailable(): never {
   throw new Error('Captured Main custody unavailable');
@@ -27,7 +30,8 @@ const record = (value: unknown): Record<string, unknown> =>
 
 /** Composition-only opt-in read from the very file/hash passed to the original Host. */
 export function captureMainWindowsCustody(
-  profile: SelectedHostProfile
+  profile: SelectedHostProfile,
+  sourceGrants: readonly RuntimeSourceGrant[] = []
 ): RetainedWindowsCustody | undefined {
   if (process.platform !== 'win32') return;
   const path = profile.env.LEGACY_AGENT_HOST_PROFILE_PATH;
@@ -44,46 +48,59 @@ export function captureMainWindowsCustody(
     return;
   if (Object.keys(custody).length !== 1) unavailable();
   const runtime = source.runtime === undefined ? {} : record(source.runtime);
-  const selected: NativeProcessProfile[] = [];
-  for (const raw of [runtime.members ?? [], runtime.providerTemplates ?? [], source.management ?? []]) {
+  const selected: SelectedWindowsProcessProfile[] = [];
+  for (const [kind, raw] of [['member', runtime.members ?? []], ['template', runtime.providerTemplates ?? []],
+    ['management', source.management ?? []]] as const) {
     if (!Array.isArray(raw) || raw.length > 256) unavailable();
     for (const candidate of raw) {
       const member = record(candidate);
       if ((member.provider !== 'claude' && member.provider !== 'codex' && member.provider !== 'opencode') ||
-          (member.provider === 'opencode' && member.nativeGeneration === 'v2')) continue;
+          (member.provider === 'opencode' && member.nativeGeneration !== undefined && member.nativeGeneration !== 'v1')) continue;
       const parsed = nativeProcessProfileSchema.parse(candidate);
       if (!parsed.windowsBroker || parsed.windowsBroker.arch !== process.arch) unavailable();
-      selected.push(structuredClone(parsed));
+      const association = captureWindowsSourceAssociation(kind, member);
+      selected.push({ ...structuredClone(parsed), provider: member.provider,
+        ...(member.provider === 'opencode' && member.nativeGeneration === 'v1' ? { nativeGeneration: 'v1' } : {}),
+        ...(association ? { association } : {}) });
     }
   }
-  if (!selected.length) unavailable();
+  const assertOriginal = () => { readCapturedProfile(path, sha256); };
+  const sources = sourceGrants.length ? new CapturedWindowsRuntimeSources(source, sourceGrants, selected, assertOriginal) : undefined;
+  const sourceBrokers = sources?.versionBrokers() ?? [];
+  if (!selected.length && !sourceBrokers.length) unavailable();
   const recipes = selected.map(value => ({ profile: value, launcher: captureWindowsLauncher(value) }));
   const brokers = new Map(
-    selected.map((value) => {
-      const broker = value.windowsBroker!;
+    [...selected.map(value => value.windowsBroker!), ...sourceBrokers].map((broker) => {
       return [windowsBrokerReference(broker), Object.freeze({ ...broker })] as const;
     })
   );
-  return new RetainedWindowsCustody({
+  const owner = new RetainedWindowsCustody({
     profileId: profile.profileId,
     profileDigest: capturedHostProfileDigest(profile),
     selectBroker: (reference) => brokers.get(reference) ?? unavailable(),
-    async verifyLaunch(spec, executableSha256, broker) {
+    async verifyLaunch(spec, executableSha256, broker, admission) {
       // A changed source refuses new work without discarding original cleanup capabilities.
       readCapturedProfile(path, sha256);
-      const selectedRecipe = recipes.find(({ profile: value, launcher }) =>
+      const originalRecipe = admission.runtimeSourceOrigin === undefined ? recipes.find(({ profile: value, launcher }) =>
         launcher.executable.sha256 === executableSha256 &&
         matchesCapturedWindowsLauncher(launcher, spec) && value.windowsBroker &&
-        windowsBrokerReference(value.windowsBroker) === windowsBrokerReference(broker));
+        windowsBrokerReference(value.windowsBroker) === windowsBrokerReference(broker)) : undefined;
+      const selectedRecipe: WindowsSourceLaunchSelection | undefined = originalRecipe
+        ? { ...originalRecipe, assertCurrent: assertOriginal }
+        : sources?.select(spec, executableSha256, broker, admission);
       if (!selectedRecipe) unavailable();
+      selectedRecipe.assertCurrent();
       if ((await realpath(spec.cwd)) !== spec.cwd || !(await stat(spec.cwd)).isDirectory())
         unavailable();
       await verifyFile(broker.path, broker.sha256, true);
       verifyStagedBroker(broker.path, broker.arch, broker.capability ?? 'whole-job-v1');
       for (const file of selectedRecipe.launcher.files) await verifyFile(file.path, file.sha256, false);
+      selectedRecipe.assertCurrent();
       readCapturedProfile(path, sha256);
     },
   });
+  if (sources) bindMainWindowsRuntimeSources(owner, sources);
+  return owner;
 }
 
 /** Fresh same-file checks; this does not claim an OS execute-pinned-image guarantee. */

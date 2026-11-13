@@ -23,11 +23,14 @@ import { ModelProbeOwner } from '../dist/management/ModelProbeOwner.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
 import { resolveTeamModelProbeRecipe, applyTeamModelProbeSelection } from '../dist/composition/teamModelProbeRecipe.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
+import { teamHostProfileSchema } from '../dist/composition/TeamHost.js';
 import { runtimeSourceSelectionFixture } from './fixtures/runtime-source-selection.ts';
 import type { HostedTeam } from '../dist/composition/MemberEntry.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { ProviderManagementProfile } from '../dist/management/profile.js';
 import type { TeamModelProbeSelection } from '../dist/composition/teamLaunchModelProbe.js';
+import type { RuntimeSourceProcessOrigin } from '../dist/composition/runtimeSourceProcessOrigin.js';
+import type { ModelProbePreparation } from '../dist/management/ModelProbeOwner.js';
 import type { TestContext } from 'node:test';
 
 function files(root: string, prefix = ''): unknown[] {
@@ -45,7 +48,7 @@ function files(root: string, prefix = ''): unknown[] {
         ];
   });
 }
-function fixture(t: TestContext, withSources = false) {
+function fixture(t: TestContext, withSources = false, windowsMain = false) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-saved-model-source-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const binding = {
@@ -121,7 +124,7 @@ function fixture(t: TestContext, withSources = false) {
           cwd: root,
           model: 'TEST-default-model',
           accountBinding: 'TEST-private-account',
-          executable: { path: '/TEST/claude', sha256: 'c'.repeat(64) },
+          executable: { path: join(root, 'TEST-never-launched-claude'), sha256: 'c'.repeat(64) },
           environment: {
             HOME: root,
             CLAUDE_CONFIG_DIR: root,
@@ -141,6 +144,14 @@ function fixture(t: TestContext, withSources = false) {
       ],
     },
   };
+  if (windowsMain) {
+    profile.processCustody = { kind: 'main-windows-v1' };
+    profile.runtime!.providerTemplates![0]!.windowsBroker = {
+      path: 'C:\\TEST\\broker.exe', sha256: 'e'.repeat(64), arch: 'x64', protocol: 1,
+      capability: 'service-scopes-v1',
+    };
+    assert.deepEqual(teamHostProfileSchema.parse(profile), profile);
+  }
   const owner = createFilesystemTeamOwner({
     root,
     binding,
@@ -246,6 +257,66 @@ test('saved model evidence follows the published source and cannot authorize a l
   const cleanup = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'cancel');
   assert.equal(cleanup.profile, null);
   assert.equal(cleanup.context, captured.context);
+  assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+});
+
+test('saved no-draft and same-provider draft probes retain their source origin outside original profile and journal bytes', async t => {
+  const f = fixture(t, true, true), published = await f.sources!.publish('TEST-saved-source-A');
+  const input = f.selection(), captured = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+  assert.ok(captured.profile && captured.processOrigin);
+  const origin = structuredClone(captured.processOrigin), profile = structuredClone(captured.profile);
+  assert.equal(origin.revision, published.selection.revision);
+  assert.equal(origin.sourceId, published.selection.sourceId);
+  assert.equal(origin.origin.kind, 'runtime');
+  assert.equal('processOrigin' in profile, false);
+  assert.equal('runtimeSourceOrigin' in profile, false);
+  const workspace = join(f.root, 'TEST-probe-workspace'); mkdirSync(workspace);
+  const { effort: _effort, ...withoutEffort } = input;
+  const draft = f.runtime.captureLaunchModelProbe('TEST-imported-team', {
+    ...withoutEffort, model: '__provider_default__',
+    draft: { providerId: 'anthropic', target: { kind: 'lead' }, workspace },
+  }, 'start');
+  assert.ok(draft.profile);
+  assert.deepEqual(draft.processOrigin, origin, 'default selection cannot replace the original saved source witness');
+  assert.equal(draft.profile?.cwd, workspace);
+  assert.equal(draft.model, 'TEST-default-model');
+  assert.equal(draft.isCurrent(), true);
+  const store = new FileManagementCommandStore(f.root), profiles = new Map<string, ProviderManagementProfile>();
+  let factories = 0, runs = 0, closes = 0, finish!: (value: boolean) => void;
+  const probes = new ModelProbeOwner({ store, fence: new ManagementResourceFence(store.list()),
+    assertWriter() {}, select(profileId, configRevision) {
+      return { profileId, configRevision, selectionDigest: runtimeDigest(profiles.get(profileId)),
+        resourceId: runtimeDigest('TEST-original-account') };
+    }, prepare: () => assert.fail('A source-derived probe must use its original private preparation') });
+  t.after(() => probes.close());
+  const management = { probes,
+    admitTeamProbeProfile(value: ProviderManagementProfile) { profiles.set(value.profileId, structuredClone(value)); },
+    prepareTeamProbe(value: ProviderManagementProfile, selected?: RuntimeSourceProcessOrigin): ModelProbePreparation {
+      assert.deepEqual(value, profile); assert.deepEqual(selected, origin);
+      return () => {
+        factories++;
+        return { timeoutMs: 10000, run: () => { runs++; return new Promise<boolean>(resolve => { finish = resolve; }); },
+          close: async () => { closes++; finish(false); return true; } };
+      };
+    },
+  };
+  const request = { runtime: f.runtime, management, teamId: 'TEST-imported-team',
+    commandId: 'TEST-original-source-probe', payload: input };
+  assert.equal(await executeTeamModelProbe({ ...request, action: 'read' }), null);
+  assert.equal(factories, 0);
+  assert.equal((await executeTeamModelProbe({ ...request, action: 'start' }))?.phase, 'running');
+  const journal = store.read(request.commandId)!;
+  assert.equal(factories, 1); assert.equal(runs, 1);
+  await executeTeamModelProbe({ ...request, action: 'start' });
+  assert.equal(factories, 1); assert.equal(runs, 1); assert.deepEqual(store.read(request.commandId), journal);
+  assert.equal(JSON.stringify(journal).includes('processOrigin'), false);
+  assert.equal(JSON.stringify(journal).includes('runtimeSourceOrigin'), false);
+  assert.equal((await executeTeamModelProbe({ ...request, action: 'cancel' }))?.phase, 'cancelled');
+  assert.equal(closes, 1);
+  await probes.close();
+  await f.sources!.publish('TEST-saved-source-B');
+  assert.equal(captured.isCurrent(), false); assert.equal(draft.isCurrent(), false);
+  assert.deepEqual(captured.processOrigin, origin);
   assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
 });
 
@@ -827,6 +898,7 @@ test('V1 saved Default rebases only its proven limit overlay and resets the nati
   });
   const input = f.selection();
   const original = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+  assert.ok(original.profile);
   assert.equal(original.model, 'chosen');
   assert.equal(original.providerId, 'TEST-other');
   const originalConfig = JSON.parse(original.profile!.environment.OPENCODE_CONFIG_CONTENT!);
@@ -836,6 +908,7 @@ test('V1 saved Default rebases only its proven limit overlay and resets the nati
     ...withoutEffort, model: '__provider_default__',
     draft: { providerId: 'opencode', target: { kind: 'lead' }, workspace: f.root },
   }, 'start');
+  assert.ok(fresh.profile);
   assert.equal(fresh.model, 'default');
   assert.equal(fresh.providerId, 'TEST-local');
   const config = JSON.parse(fresh.profile!.environment.OPENCODE_CONFIG_CONTENT!);

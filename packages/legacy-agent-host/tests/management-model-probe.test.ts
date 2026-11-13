@@ -10,6 +10,7 @@ import { ManagementResourceFence } from '../dist/management/ManagementResourceFe
 import { ModelProbeOwner } from '../dist/management/ModelProbeOwner.js';
 import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
 import type { ManagementCommandStore } from '../src/management/commandRecords.ts';
+import type { ModelProbePreparation } from '../src/management/ModelProbeOwner.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -85,25 +86,26 @@ function fixture(
   const writer = () => {
     if (!current) throw new Error('TEST revoked');
   };
+  const prepare: ModelProbePreparation = () => ({
+    timeoutMs: options.timeoutMs ?? 10000,
+    async run() {
+      assert.equal(base.read(start.commandId)?.phase, 'running');
+      runs++;
+      if (options.failRun) throw new Error('TEST native observation unavailable');
+      return result.promise;
+    },
+    async close() {
+      closes++;
+      return options.blockClose ? close.promise : !options.cleanupFails;
+    },
+  });
   const make = () =>
     new ModelProbeOwner({
       store,
       fence,
       assertWriter: writer,
       select: () => ({ ...target }),
-      prepare: () => ({
-        timeoutMs: options.timeoutMs ?? 10000,
-        async run() {
-          assert.equal(base.read(start.commandId)?.phase, 'running');
-          runs++;
-          if (options.failRun) throw new Error('TEST native observation unavailable');
-          return result.promise;
-        },
-        async close() {
-          closes++;
-          return options.blockClose ? close.promise : !options.cleanupFails;
-        },
-      }),
+      prepare,
     });
   const owner = make();
   const credentials = new CredentialCommandOwner({
@@ -118,6 +120,7 @@ function fixture(
     base,
     owner,
     make,
+    prepare,
     credentials,
     result,
     close,
@@ -136,11 +139,32 @@ function fixture(
 test('model probe claims before native work and returns original result without a second model request on replay', async (t) => {
   const f = fixture();
   t.after(f.cleanup);
-  assert.equal(f.owner.start(start).phase, 'running');
+  const journalBytes = () => readdirSync(join(f.root, 'management-commands')).sort()
+    .map((name) => ({ name, bytes: readFileSync(join(f.root, 'management-commands', name)) }));
+  let preparations = 0;
+  const original: ModelProbePreparation = (input, current) => {
+    preparations++;
+    assert.deepEqual(input, start);
+    assert.equal(f.base.read(start.commandId), undefined);
+    return f.prepare(input, current);
+  };
+  const replacement: ModelProbePreparation = () => {
+    assert.fail('Replay or refused admission must not prepare another native operation');
+  };
+  assert.equal(f.owner.start(start, () => true, original).phase, 'running');
+  assert.equal(preparations, 1);
   assert.equal(f.runs(), 1);
-  assert.equal(f.owner.start(start).phase, 'running');
+  const pendingBytes = journalBytes();
+  assert.equal(f.owner.start(start, () => true, replacement).phase, 'running');
+  assert.equal(f.make().start(start, () => true, replacement).phase, 'held');
+  assert.deepEqual(journalBytes(), pendingBytes, 'live and cold replay retain exact original bytes');
   assert.equal(f.runs(), 1);
-  assert.throws(() => f.owner.start({ ...start, modelId: 'TEST-other' }), { code: 'conflict' });
+  assert.throws(() => f.owner.start({ ...start, modelId: 'TEST-other' }, () => true, replacement),
+    { code: 'conflict' });
+  assert.throws(() => f.owner.start({ ...start, commandId: 'TEST-competing-probe' }, () => true, replacement),
+    { code: 'busy' });
+  assert.equal(f.base.read('TEST-competing-probe'), undefined);
+  assert.deepEqual(journalBytes(), pendingBytes, 'resource refusal precedes preparation and publication');
   await assert.rejects(
     f.credentials.execute({
       ...lookup,
@@ -154,7 +178,10 @@ test('model probe claims before native work and returns original result without 
   await until(() => f.owner.read(lookup)?.phase === 'completed');
   assert.equal(f.owner.read(lookup)?.ok, true);
   assert.equal(f.closes(), 1);
-  assert.equal(f.make().start(start).ok, true);
+  const completedBytes = journalBytes();
+  assert.equal(f.make().start(start, () => true, replacement).ok, true);
+  assert.deepEqual(journalBytes(), completedBytes, 'cold completion replay is read-only');
+  assert.equal(preparations, 1);
   assert.equal(f.runs(), 1);
   const journal = readdirSync(join(f.root, 'management-commands'))
     .map((name) => readFileSync(join(f.root, 'management-commands', name), 'utf8'))

@@ -14,6 +14,7 @@ import { RuntimeSourceUnavailable } from './runtimeSourceGrantAuthority.js';
 import { effectId } from '../team/identity.js';
 import { prepareWorktreeLaunch } from '../team-launch/worktreePreparation.js';
 import { prepareCapturedRuntimeMcpRecipes } from './capturedRuntimeMcpRecipes.js';
+import { captureRuntimeSourceProcessOrigin } from './captureRuntimeProcessOrigin.js';
 import {
   hasRuntimeWorktrees,
   runtimeWorktreeGit,
@@ -280,6 +281,8 @@ export class RuntimeTeamCaptures {
         baseRecipes,
         selectedRecipes,
         assertCurrent,
+        processOrigin: member => captureRuntimeSourceProcessOrigin(this.options.profile,
+          team.definition.scope, teamId, intent, member, this.options.sources),
         ...(this.options.retainedWindowsLaunch ? { retainedWindowsLaunch: this.options.retainedWindowsLaunch } : {}),
         withAuthority: (action) =>
           team.owner.withLaunchAuthority(operator, 'control', () => {

@@ -7,8 +7,10 @@ import { sameOwner } from './contract.js';
 import { HOST_CUSTODY_CHUNK_BYTES, HOST_CUSTODY_LAUNCH_MS } from './hostCustody.js';
 import { HostWindowsServices } from './HostWindowsServices.js';
 import { captureWindowsLauncher, matchesCapturedWindowsLauncher } from './capturedWindowsLauncher.js';
+import { runtimeSourceProcessOriginSchema } from '../composition/runtimeSourceProcessOrigin.js';
 
 import type { NativeProcessProfile } from '../composition/nativeProcessProfile.js';
+import type { RuntimeSourceProcessOrigin } from '../composition/runtimeSourceProcessOrigin.js';
 import type { CapturedWindowsLauncher } from './capturedWindowsLauncher.js';
 import type { WindowsRegisteredProcessPort, WindowsServiceSource } from './retainedServiceContracts.js';
 import type {
@@ -93,8 +95,10 @@ export class HostWindowsLaunch {
   }
 
   port(profile: NativeProcessProfile, current: () => boolean,
-    captureCurrent?: () => boolean): RetainedWindowsLaunchPort {
+    captureCurrent?: () => boolean, processOrigin?: RuntimeSourceProcessOrigin): RetainedWindowsLaunchPort {
     const selected = structuredClone(profile);
+    const origin = processOrigin === undefined ? undefined :
+      runtimeSourceProcessOriginSchema.parse(structuredClone(processOrigin));
     if (!selected.windowsBroker) unavailable();
     const launcher = captureWindowsLauncher(selected);
     const originals = new WeakSet<RemotePending>();
@@ -102,7 +106,7 @@ export class HostWindowsLaunch {
       registeredProcesses: this.registeredProcesses,
       allocate: (owner) => {
         if (this.allocations.size >= 256) unavailable();
-        const pending = new RemotePending(this, selected, launcher, Object.freeze({ ...owner }), current, captureCurrent);
+        const pending = new RemotePending(this, selected, launcher, Object.freeze({ ...owner }), current, captureCurrent, origin);
         this.allocations.set(pending.key, pending);
         originals.add(pending);
         return pending;
@@ -213,7 +217,8 @@ class RemotePending implements PreparedOwnedProcess {
     private readonly launcher: CapturedWindowsLauncher,
     readonly owner: ProcessOwner,
     private readonly current: () => boolean,
-    private readonly captureCurrent?: () => boolean
+    private readonly captureCurrent?: () => boolean,
+    private readonly processOrigin?: RuntimeSourceProcessOrigin
   ) {
     const read = (stream: 'stdout' | 'stderr') => async () => {
       const value = await source.request('read', () => ({ operation: 'read', capability: this.key, stream }));
@@ -286,6 +291,7 @@ class RemotePending implements PreparedOwnedProcess {
           operation: 'allocate', capability: this.key, owner: this.owner,
           brokerRef: windowsBrokerReference(this.profile.windowsBroker!),
           executableSha256: this.launcher.executable.sha256,
+          ...(this.processOrigin ? { runtimeSourceOrigin: structuredClone(this.processOrigin) } : {}),
           launchSha256, launchBytes: bytes.length,
           budgetMs: Math.max(0, Math.floor(this.deadline - performance.now())),
         };

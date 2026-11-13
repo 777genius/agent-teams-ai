@@ -40,7 +40,8 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
     context.retainedWindowsLaunch?.port(profile,
       () => context.canAllocate() && capturedMcpSourceCurrent(profile),
       context.canCaptureRegisteredProcess
-        ? () => context.canCaptureRegisteredProcess!() && capturedMcpSourceCurrent(profile) : undefined)
+        ? () => context.canCaptureRegisteredProcess!() && capturedMcpSourceCurrent(profile) : undefined,
+      context.processOrigin)
   );
   let ready = false;
   let sealed = false;

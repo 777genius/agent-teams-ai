@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { isNativeProfilePath } from './nativeProcessProfile.js';
+import { captureTeamProbePreparation } from './captureTeamProbePreparation.js';
+import type { TeamProbeManagement } from './captureTeamProbePreparation.js';
 import {
   resolveTeamModelProbeRecipe,
   applyTeamModelProbeSelection,
@@ -12,8 +14,8 @@ import type { MemberEntry } from './MemberEntry.js';
 import type { RuntimeMemberProfile, RuntimeProfile } from './runtimeProfile.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { ProviderManagementProfile } from '../management/profile.js';
-import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import type { RuntimeTeamCoordinator } from './RuntimeTeamCoordinator.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
 const id = z
   .string()
@@ -153,6 +155,7 @@ export function captureTeamModelProbe(options: {
   runtime: RuntimeProfile | undefined;
   sources?: import('./runtimeSourceContracts.js').RuntimeRecipeSources;
   sourceReference?: import('./runtimeSourceContracts.js').RuntimeSourceReference | undefined;
+  sourceProjectPath?: string | undefined;
   input: TeamModelProbeSelection;
   action: 'start' | 'read' | 'cancel';
   principalId: string;
@@ -161,7 +164,8 @@ export function captureTeamModelProbe(options: {
   const { input, launch } = options;
   const entry = options.entries.find((row) => row.profile.memberId === input.memberId);
   if (!entry && !input.draft) throw new TeamLaunchError('invalid', 'probe-member');
-  const recipe = () =>
+  let processOrigin: RuntimeSourceProcessOrigin | undefined;
+  const recipe = (captureOrigin = false) =>
     resolveTeamModelProbeRecipe({
       runtime: options.runtime,
       team: options.team,
@@ -169,8 +173,10 @@ export function captureTeamModelProbe(options: {
       saved: entry?.baseProfile,
       ...(options.sources ? { sources: options.sources } : {}),
       sourceReference: options.sourceReference,
+      sourceProjectPath: options.sourceProjectPath,
+      ...(captureOrigin ? { onProcessOrigin: (value: RuntimeSourceProcessOrigin | undefined) => { processOrigin = value; } } : {}),
     });
-  const selected = recipe();
+  const selected = recipe(true);
   const source = runtimeDigest({ entry: entry?.profile, recipe: selected });
   const profile = applyTeamModelProbeSelection(selected, input);
   const authority = () => ({
@@ -216,6 +222,7 @@ export function captureTeamModelProbe(options: {
   assertSelection();
   return {
     profile: teamModelProbeProfile(profile.provider === 'claude' ? selected : profile),
+    ...(processOrigin ? { processOrigin } : {}),
     context: input.draft
       ? teamModelProbeContext(options.team.definition.binding.teamId, input)
       : runtimeDigest({
@@ -239,7 +246,7 @@ export function captureTeamModelProbe(options: {
 /** Uses the existing model-probe journal/fence; this is not another lifecycle owner. */
 export async function executeTeamModelProbe(options: {
   runtime: Pick<RuntimeTeamCoordinator, 'captureLaunchModelProbe'>;
-  management: Pick<ProviderManagementCoordinator, 'admitTeamProbeProfile' | 'probes'>;
+  management: TeamProbeManagement;
   teamId: string;
   action: 'start' | 'read' | 'cancel';
   commandId: string;
@@ -284,7 +291,8 @@ export async function executeTeamModelProbe(options: {
             ...(captured.modelContext === undefined ? {} : { modelContext: captured.modelContext }),
             context: captured.context,
           },
-          captured.isCurrent
+          captured.isCurrent,
+          captureTeamProbePreparation(options.management, captured.profile, captured.processOrigin)
         )
       : options.action === 'cancel'
         ? await owner.cancel(identity)

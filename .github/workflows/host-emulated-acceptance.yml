@@ -36,17 +36,22 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
 
 jobs:
-  offline-desktop:
-    name: Offline Host Desktop (Linux x64)
+  offline-desktop-scenario:
+    name: Offline Host Desktop (Linux x64, ${{ matrix.lane }})
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [team, taskboard, management, codex, claude, opencode, review]
     defaults:
       run:
         shell: bash
     env:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       HOST_EMULATED_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      HOST_EMULATED_LANE: ${{ matrix.lane }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -81,6 +86,7 @@ jobs:
           pnpm --filter agent-teams-mcp build
           node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts
       - name: Capture package-manager and Host inputs without vendor executables
+        id: inputs
         run: |
           set -euo pipefail
           selected_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-emulated-ui-inputs-XXXXXX")"
@@ -117,6 +123,7 @@ jobs:
           }, null, 2), { mode: 0o600 });
           NODE
       - name: Exercise ordinary Team controls and renderer reload
+        if: matrix.lane == 'team'
         env:
           LEGACY_DESKTOP_PROOF_MODE: team-ui
         run: |
@@ -125,6 +132,7 @@ jobs:
             bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
             2>&1 | tee "$RUNNER_TEMP/host-emulated-team-ui.log"
       - name: Exercise ordinary Taskboard controls and persistence
+        if: matrix.lane == 'taskboard'
         env:
           LEGACY_DESKTOP_PROOF_MODE: task-board-ui
         run: |
@@ -133,6 +141,7 @@ jobs:
             bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
             2>&1 | tee "$RUNNER_TEMP/host-emulated-task-board-ui.log"
       - name: Exercise model, effort and credential controls with the pinned TEST peer
+        if: matrix.lane == 'management'
         env:
           LEGACY_DESKTOP_PROOF_MODE: emulated-management-ui
         run: |
@@ -141,14 +150,16 @@ jobs:
             bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
             2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-management-ui.log"
       - name: Exercise original provider conversations and schedules through pinned TEST peers
+        if: contains(fromJSON('["codex", "claude", "opencode"]'), matrix.lane)
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: emulated-${{ matrix.lane }}-runtime-ui
         run: |
           set -euo pipefail
-          for proof_mode in emulated-codex-runtime-ui emulated-claude-runtime-ui emulated-opencode-runtime-ui; do
-            LEGACY_DESKTOP_PROOF_MODE="$proof_mode" xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
-              bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
-              2>&1 | tee "$RUNNER_TEMP/host-emulated-$proof_mode.log"
-          done
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-$LEGACY_DESKTOP_PROOF_MODE.log"
       - name: Exercise original Review Keep, Reject, Undo, Redo and reload
+        if: matrix.lane == 'review'
         id: review
         env:
           LEGACY_DESKTOP_PROOF_MODE: review-ui
@@ -181,6 +192,7 @@ jobs:
           appendFileSync(process.env.GITHUB_OUTPUT, `root=${root}\nreceipt_sha256=${createHash('sha256').update(bytes).digest('hex')}\n`);
           NODE
       - name: Exercise original Review after a cold Host and app restart
+        if: matrix.lane == 'review' && steps.review.outcome == 'success'
         env:
           LEGACY_DESKTOP_PROOF_MODE: review-readback-ui
           LEGACY_DESKTOP_READBACK_ROOT: ${{ steps.review.outputs.root }}
@@ -191,6 +203,7 @@ jobs:
             bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
             2>&1 | tee "$RUNNER_TEMP/host-emulated-review-readback-ui.log"
       - name: Verify exact source, original screenshots, receipts and cleanup
+        if: ${{ !cancelled() && steps.inputs.outcome == 'success' }}
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
@@ -203,8 +216,19 @@ jobs:
           const processLauncher = captureLinuxNodeExecArtifact(realpathSync('resources/process-launch/linux-x64'));
           assert.equal(processLauncher.manifestSha256, inputs.processLauncher.manifestSha256);
           assert.equal(processLauncher.binarySha256, inputs.processLauncher.binarySha256);
+          const modesByLane = {
+            team: ['team-ui'],
+            taskboard: ['task-board-ui'],
+            management: ['emulated-management-ui'],
+            codex: ['emulated-codex-runtime-ui'],
+            claude: ['emulated-claude-runtime-ui'],
+            opencode: ['emulated-opencode-runtime-ui'],
+            review: ['review-ui', 'review-readback-ui'],
+          };
+          const lane = process.env.HOST_EMULATED_LANE;
+          assert.ok(Object.hasOwn(modesByLane, lane), 'one exact declared UI lane');
           const completed = [];
-          for (const mode of ['team-ui', 'task-board-ui', 'emulated-management-ui', 'emulated-codex-runtime-ui', 'emulated-claude-runtime-ui', 'emulated-opencode-runtime-ui', 'review-ui', 'review-readback-ui']) {
+          for (const mode of modesByLane[lane]) {
             const rows = readFileSync(join(process.env.RUNNER_TEMP, `host-emulated-${mode}.log`), 'utf8')
               .split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));
             const last = rows.findLast(row => row.receipt && row.status);
@@ -296,7 +320,7 @@ jobs:
             completed.push({ mode, receipt: last.receipt, screenshots: screenshots.map(row => row.sha256) });
           }
           writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-summary.json'), JSON.stringify({
-            status: 'PASS', sourceHead: process.env.HOST_EMULATED_SOURCE_HEAD, completed,
+            status: 'PASS', scope: 'selected lane only', lane, sourceHead: process.env.HOST_EMULATED_SOURCE_HEAD, completed,
             nativeProviders: 'not executed', vendorAuthQualified: false, releaseQualified: false,
             visualReview: 'original screenshots retained for independent inspection',
           }, null, 2));
@@ -305,7 +329,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: host-emulated-linux-x64-${{ github.event.pull_request.head.sha || github.sha }}
+          name: host-emulated-linux-x64-${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.lane }}
           retention-days: 14
           if-no-files-found: warn
           path: |
@@ -322,3 +346,16 @@ jobs:
             ${{ runner.temp }}/TEST-desktop-backend-*/TEST-peer-*/effects.ndjson
             ${{ runner.temp }}/TEST-desktop-backend-*/ui-*.json
             ${{ runner.temp }}/TEST-desktop-backend-*/ui-*.png
+
+  offline-desktop:
+    name: Offline Host Desktop (Linux x64)
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    needs: offline-desktop-scenario
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every original UI lane to pass
+        env:
+          HOST_EMULATED_MATRIX_RESULT: ${{ needs['offline-desktop-scenario'].result }}
+        run: |
+          test "$HOST_EMULATED_MATRIX_RESULT" = success

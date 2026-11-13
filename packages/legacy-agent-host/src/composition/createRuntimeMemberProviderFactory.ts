@@ -30,6 +30,7 @@ import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { MemberEntry } from './MemberEntry.js';
 import type { ProcessCustody } from './processCustody.js';
 import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
+import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
 export type MemberInputCapture = (
   requireLead?: boolean
@@ -44,6 +45,7 @@ export function createRuntimeMemberProviderFactory(options: {
   windows: ToolEvidenceWindows;
   processCustody?: ProcessCustody;
   retainedWindowsLaunch?: HostWindowsLaunch;
+  captureProcessOrigin?(entry: MemberEntry): RuntimeSourceProcessOrigin | undefined;
   createProvider?(context: MemberProviderContext): MemberProvider;
   groups?(
     entry: MemberEntry,
@@ -199,6 +201,7 @@ export function createRuntimeMemberProviderFactory(options: {
           assertCurrent: authority.assertCurrent,
           readRuntime: options.readRuntime,
         });
+        const processOrigin = options.captureProcessOrigin?.(entry);
         const provider = (
           options.createProvider ??
           (entry.profile.provider === 'claude'
@@ -210,6 +213,7 @@ export function createRuntimeMemberProviderFactory(options: {
                 : createOpenCodeMemberProvider)
         )({
           profile: entry.profile,
+          ...(processOrigin ? { processOrigin } : {}),
           request,
           endpoint,
           connection,

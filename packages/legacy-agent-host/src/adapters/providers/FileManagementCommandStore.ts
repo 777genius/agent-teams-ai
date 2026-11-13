@@ -44,11 +44,11 @@ export class FileManagementCommandStore implements ManagementCommandStore {
   private readonly directory: string;
   private readonly identity: { dev: number; ino: number };
 
-  constructor(root: string) {
+  constructor(root: string, private readonly readOnly = false) {
     if (!isAbsolute(root) || resolve(root) !== root || realpathSync(root) !== root)
       throw new ManagementCommandError('invalid');
     this.directory = join(root, 'management-commands');
-    try {
+    if (!readOnly) try {
       mkdirSync(this.directory, { mode: 0o700 });
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
@@ -77,6 +77,7 @@ export class FileManagementCommandStore implements ManagementCommandStore {
   }
 
   write(record: StoredManagementCommand): void {
+    if (this.readOnly) throw new ManagementCommandError('held');
     this.checkDirectory();
     const body = storedManagementCommandSchema.parse(record);
     const path = this.path(body.commandId);
