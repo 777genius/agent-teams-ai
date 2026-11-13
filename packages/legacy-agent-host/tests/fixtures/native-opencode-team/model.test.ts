@@ -20,8 +20,10 @@ const tools = [...REQUIRED_TOOLS.map((name) => `team_${name}`), 'bash'].map((nam
   function: { name },
 }));
 
+const ordinaryProbeMessages = [{ role: 'user', content: 'Reply only OK. Do not use tools, access files or run commands.' }];
+
 test('OpenCode inference oracle requires native context/catalog and scripts two sequential business turns', async () => {
-  const model = await startOpenCodeModel({ coordinationProof: true });
+  const model = await startOpenCodeModel({ coordinationProof: true, localReadinessProof: true });
   try {
     const first: unknown[] = [
       { role: 'system', content: CONTEXT_MARKER },
@@ -45,6 +47,12 @@ test('OpenCode inference oracle requires native context/catalog and scripts two 
     // Synthetic HTTP oracle proof; real endpoint/native Session evidence is required by the native case.
     assert.ok(model.coordination);
     model.coordination.arm();
+    assert.ok(model.localReadiness);
+    assert.equal((await next(ordinaryProbeMessages, [])).content, 'OK');
+    const inventory = await fetch(model.url + '/v1/models');
+    assert.equal(inventory.status, 200);
+    assert.deepEqual(await inventory.json(), { data: [{ id: 'TEST-model' }] });
+    assert.equal(model.localReadiness.ordinary.length, 1); assert.equal(model.localReadiness.inventoryReads, 1);
     const offered = COORDINATION_TOOLS.map(name => ({ type: 'function', function: { name } }));
     const challenge: unknown[] = [{ role: 'user', content: COORDINATION_PROMPT }];
     const briefing = await next(challenge, offered);
@@ -98,7 +106,7 @@ test('OpenCode inference oracle requires native context/catalog and scripts two 
     assert.equal((await next(second)).tool_calls?.[0]?.function.name, 'team_message_send');
     assert.equal((await next(second)).content, 'DONE_OPENCODE_TEAM_TWO');
     assert.equal(model.observations.length, 11);
-    assert.equal(model.observations.length + model.coordination.observations.length, 14);
+    assert.equal(model.observations.length + model.coordination.observations.length + model.localReadiness.ordinary.length, 15);
     assert.ok(model.observations.every((item) => item.contextEffective));
     assert.ok(
       model.observations
@@ -181,6 +189,45 @@ test('OpenCode inference oracle seals on absent member context instead of return
       }
       assert.equal(original.failures.length, 1);
       assert.equal(original.observations.length, 0);
+      assert.throws(() => original.coordination!.finish());
+    } finally { await original.close(); }
+  }
+  for (const mode of ['premature-inventory', 'duplicate-inventory', 'inventory-query', 'inventory-auth',
+    'ordinary-repeat', 'ordinary-tools', 'challenge-before-inventory', 'business-before-proof', 'keyed-ordinary']) {
+    const original = await startOpenCodeModel({ coordinationProof: true, localReadinessProof: true });
+    try {
+      assert.ok(original.coordination && original.localReadiness);
+      original.coordination.arm();
+      const post = (messages: unknown[], offered: unknown[] = [], keyed = false) => fetch(
+        original.url + '/v1/chat/completions', { method: 'POST',
+          headers: { 'content-type': 'application/json', ...(keyed ? { authorization: 'Bearer TEST-foreign' } : {}) },
+          body: JSON.stringify({ messages, tools: offered }) });
+      const get = (suffix = '', keyed = false) => fetch(original.url + '/v1/models' + suffix,
+        keyed ? { headers: { authorization: 'Bearer TEST-foreign' } } : {});
+      let failure: Response;
+      if (mode === 'premature-inventory') failure = await get();
+      else if (mode === 'ordinary-tools' || mode === 'keyed-ordinary')
+        failure = await post(ordinaryProbeMessages, mode === 'ordinary-tools' ? tools : [], mode === 'keyed-ordinary');
+      else {
+        const ordinary = await post(ordinaryProbeMessages);
+        assert.equal(ordinary.status, 200); await ordinary.text();
+        assert.equal(original.localReadiness.ordinary.length, 1);
+        if (mode === 'inventory-query') failure = await get('?foreign=1');
+        else if (mode === 'inventory-auth') failure = await get('', true);
+        else if (mode === 'ordinary-repeat') failure = await post(ordinaryProbeMessages);
+        else if (mode === 'challenge-before-inventory') failure = await post(
+          [{ role: 'user', content: COORDINATION_PROMPT }],
+          COORDINATION_TOOLS.map(name => ({ type: 'function', function: { name } })));
+        else {
+          const inventory = await get(); assert.equal(inventory.status, 200); await inventory.json();
+          if (mode === 'duplicate-inventory') failure = await get();
+          else failure = await post([{ role: 'system', content: CONTEXT_MARKER },
+            { role: 'user', content: 'OPENCODE_TEAM_ONE' }], tools);
+        }
+      }
+      assert.equal(failure.status, 400); await failure.text();
+      assert.equal(original.failures.length, 1, 'each compound refusal is the original first failure');
+      assert.equal(original.observations.length, 0); assert.equal(original.coordination.observations.length, 0);
       assert.throws(() => original.coordination!.finish());
     } finally { await original.close(); }
   }

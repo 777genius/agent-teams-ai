@@ -1,12 +1,13 @@
 import { z } from 'zod';
 
-import { assertManagementTarget, ManagementCommandError } from './commandRecords.js';
+import { assertManagementTarget, ManagementCommandError, nativeLocalReadinessEvidenceSchema } from './commandRecords.js';
 import { managementDigest } from './identity.js';
 import { modelProbeLimitsSchema } from './modelLimits.js';
 
 import type {
   ManagementCommandStore,
   ManagementTarget,
+  NativeLocalReadinessEvidence,
   StoredModelProbe,
 } from './commandRecords.js';
 import type { ProviderModelProbeSnapshot } from './contracts.js';
@@ -31,7 +32,8 @@ const startSchema = identity
   .strict();
 export type ModelProbeInput = z.infer<typeof startSchema>;
 export const nativeCoordinationPurpose = 'native-local-coordination-v1' as const;
-type CoordinationPurpose = typeof nativeCoordinationPurpose;
+export const nativeLocalReadinessPurpose = 'native-local-readiness-v1' as const;
+export type NativeModelProbePurpose = typeof nativeCoordinationPurpose | typeof nativeLocalReadinessPurpose;
 const coordinationIdentity = identity.extend({
   context: z.string().regex(/^[a-f0-9]{64}$/),
 }).strict();
@@ -39,6 +41,8 @@ export interface NativeModelProbe {
   timeoutMs: number;
   run(signal: AbortSignal, originalDeadline?: number): Promise<boolean>;
   close(originalDeadline?: number): Promise<boolean>;
+  /** Private adapter observation. Only the original owner can persist or qualify it. */
+  readiness?(): NativeLocalReadinessEvidence | undefined;
 }
 interface ActiveProbe {
   saved: StoredModelProbe;
@@ -48,6 +52,7 @@ interface ActiveProbe {
   closing?: Promise<void>;
   retired: boolean;
   isCurrent(): boolean;
+  readiness?: NativeLocalReadinessEvidence;
 }
 
 /** Durable at-most-once admission for explicit model tests; lookup/restart cannot spend twice. */
@@ -61,7 +66,7 @@ export class ModelProbeOwner {
       fence: ManagementResourceFence;
       assertWriter(): void;
       select(profileId: string, configRevision: string): ManagementTarget;
-      prepare(input: ModelProbeInput, isCurrent: () => boolean, purpose?: CoordinationPurpose): NativeModelProbe;
+      prepare(input: ModelProbeInput, isCurrent: () => boolean, purpose?: NativeModelProbePurpose): NativeModelProbe;
     }
   ) {}
 
@@ -73,6 +78,27 @@ export class ModelProbeOwner {
   startNativeCoordination(raw: unknown, guard: () => boolean): ProviderModelProbeSnapshot {
     const input = startSchema.extend({ context: coordinationIdentity.shape.context }).parse(raw);
     return this.admit(input, guard, nativeCoordinationPurpose);
+  }
+
+  /** Private compound proof; the public start parser cannot supply purpose or evidence. */
+  startNativeReadiness(raw: unknown, guard: () => boolean): ProviderModelProbeSnapshot {
+    const input = startSchema.extend({ context: coordinationIdentity.shape.context }).parse(raw);
+    return this.admit(input, guard, nativeLocalReadinessPurpose);
+  }
+
+  /** B2 may consume only this original complete receipt, never a public ok boolean. */
+  readNativeReadiness(raw: unknown) {
+    this.assertAdmission();
+    const input = coordinationIdentity.parse(raw), saved = this.original(input);
+    if (!saved) return null;
+    if (saved.purpose !== nativeLocalReadinessPurpose || saved.context !== input.context)
+      throw new ManagementCommandError('conflict');
+    assertManagementTarget(saved, this.options.select(input.profileId, input.configRevision));
+    if (saved.phase !== 'completed' || saved.resourceHeld || !saved.readiness ||
+        Date.now() >= saved.expiresAt || saved.readiness.context !== input.context ||
+        saved.readiness.selectionDigest !== saved.selectionDigest)
+      throw new ManagementCommandError('held');
+    return Object.freeze({ ...this.snapshot(saved), readiness: structuredClone(saved.readiness) });
   }
 
   /** Exact current proof only; running, held, historical text-only or expired rows cannot qualify. */
@@ -89,7 +115,7 @@ export class ModelProbeOwner {
   }
 
   private admit(input: ModelProbeInput, guard: () => boolean,
-    purpose?: CoordinationPurpose): ProviderModelProbeSnapshot {
+    purpose?: NativeModelProbePurpose): ProviderModelProbeSnapshot {
     this.assertAdmission();
     const admittedAt = Date.now();
     const isCurrent = () => {
@@ -258,6 +284,11 @@ export class ModelProbeOwner {
       );
       const ok = await entry.native.run(entry.abort.signal,
         entry.saved.purpose ? entry.saved.expiresAt : undefined);
+      if (!entry.retired && entry.saved.purpose === nativeLocalReadinessPurpose) {
+        const evidence = nativeLocalReadinessEvidenceSchema.parse(entry.native.readiness?.());
+        if (ok !== (evidence.decision === 'allow')) throw new ManagementCommandError('held');
+        entry.readiness = evidence;
+      }
       if (!entry.retired) await this.finish(entry, 'completed', ok);
     } catch {
       if (!entry.retired) await this.finish(entry, 'held', false);
@@ -286,6 +317,10 @@ export class ModelProbeOwner {
         phase: clean ? phase : 'held',
         resourceHeld: !clean,
         ok: clean && phase === 'completed' && ok,
+        ...(clean && phase === 'completed' && entry.readiness ? { readiness: {
+          context: entry.saved.context!, selectionDigest: entry.saved.selectionDigest,
+          evidence: entry.readiness,
+        } } : {}),
       };
       try {
         this.options.assertWriter();

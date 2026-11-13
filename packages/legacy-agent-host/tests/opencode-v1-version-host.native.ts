@@ -182,7 +182,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     steps.push('native_version_package_integrity_and_source_measured');
 
     model = await startOpenCodeModel({ selectedModel: { id: 'TEST-model-B' }, selectedOutputTokens: 1024,
-      ...(qualifyCoordination ? { coordinationProof: true as const } : {}) });
+      ...(qualifyCoordination ? { coordinationProof: true as const, localReadinessProof: true as const } : {}) });
     const reservation = createServer();
     await new Promise<void>((done) => reservation.listen(0, '127.0.0.1', done));
     const address = reservation.address();
@@ -222,7 +222,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
           permission: { '*': 'deny', bash: 'ask' }, compaction: { auto: false },
           agent: { title: { disable: true }, summary: { disable: true }, 'TEST-member': { mode: 'primary' } },
           provider: { 'TEST-local': { npm: '@ai-sdk/openai-compatible', name: 'TEST local',
-            options: { baseURL: `${model.url}/v1`, apiKey: 'TEST-LOCALHOST-ONLY' },
+            options: { baseURL: `${model.url}/v1`, ...(qualifyCoordination ? {} : { apiKey: 'TEST-LOCALHOST-ONLY' }) },
             models: Object.fromEntries(['TEST-model', 'TEST-model-B'].map(id =>
               [id, { name: id, limit: { context: 200000, output: 2000 } }])),
           } },
@@ -367,7 +367,10 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     assert.deepEqual(model.failures, []);
     assert.equal(model.observations.length, 8, 'seven actual tools followed by one terminal model response');
     assert.equal(model.coordination?.observations.length ?? 0, qualifyCoordination ? 3 : 0);
-    assert.ok(model.observations.length + (model.coordination?.observations.length ?? 0) <= 16);
+    assert.equal(model.localReadiness?.ordinary.length ?? 0, qualifyCoordination ? 1 : 0);
+    assert.equal(model.localReadiness?.inventoryReads ?? 0, qualifyCoordination ? 1 : 0);
+    assert.ok(model.observations.length + (model.coordination?.observations.length ?? 0) +
+      (model.localReadiness?.ordinary.length ?? 0) <= 16);
     assert.ok(model.observations.every(row => row.contextEffective));
     assert.equal(await readFile(join(root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\n');
     const listed = await host.rpc('team.tasks.list', envelope('TEST-tasks', null));

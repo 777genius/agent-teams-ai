@@ -7,7 +7,7 @@ import { ProviderManagementCoordinator } from '../../../dist/composition/Provide
 import { readTeamHostProfile } from '../../../dist/composition/readProfile.js';
 import { teamModelProbeProfile } from '../../../dist/composition/teamLaunchModelProbe.js';
 import { managementDigest } from '../../../dist/management/identity.js';
-import { nativeCoordinationPurpose } from '../../../dist/management/ModelProbeOwner.js';
+import { nativeLocalReadinessPurpose } from '../../../dist/management/ModelProbeOwner.js';
 import { providerManagementProfileSchema } from '../../../dist/management/profile.js';
 import { tick } from '../native-host.ts';
 
@@ -17,7 +17,7 @@ import type { startOpenCodeModel } from './model.ts';
 
 type Model = Awaited<ReturnType<typeof startOpenCodeModel>>;
 type Evidence = {
-  purpose: typeof nativeCoordinationPurpose;
+  purpose: typeof nativeLocalReadinessPurpose;
   nativeGeneration: 'v1' | 'v2';
   status: 'unqualified' | 'INCOMPLETE' | 'PASS';
   cleanup: boolean | null;
@@ -27,6 +27,7 @@ type Evidence = {
   originalReceiptUnchanged?: true;
   receipt?: { commandId: string; phase: string; ok: boolean; resourceHeld: boolean; expiresAt: number };
   modelRequests?: number;
+  metadataRequests?: number;
 };
 export interface NativeCoordinationFixture {
   readonly evidence: Evidence;
@@ -61,7 +62,7 @@ export function captureNativeCoordinationFixture(profile: TeamHostProfile,
   };
   const lookup = { commandId: input.commandId, profileId: input.profileId, configRevision: input.configRevision };
   const evidence: Evidence = {
-    purpose: nativeCoordinationPurpose, nativeGeneration: member.nativeGeneration === 'v2' ? 'v2' : 'v1',
+    purpose: nativeLocalReadinessPurpose, nativeGeneration: member.nativeGeneration === 'v2' ? 'v2' : 'v1',
     status: 'unqualified', cleanup: null, profileId: selected.profileId, configRevision: selected.configRevision, context,
   };
   let attempted = false;
@@ -70,7 +71,7 @@ export function captureNativeCoordinationFixture(profile: TeamHostProfile,
     async run({ profilePath, profileSha256, model, signal }) {
       assert.equal(attempted, false, 'one original qualification invocation');
       attempted = true; evidence.status = 'INCOMPLETE';
-      assert.ok(model.coordination);
+      assert.ok(model.coordination && model.localReadiness);
       signal?.throwIfAborted();
       const lease = acquireProfileWriterLease(profile.owner.storageRoot);
       let manager: ProviderManagementCoordinator | undefined;
@@ -97,7 +98,7 @@ export function captureNativeCoordinationFixture(profile: TeamHostProfile,
         signal?.addEventListener('abort', cancel, { once: true });
         current();
         model.coordination.arm();
-        let observed = manager.startNativeCoordination(input, current);
+        let observed = manager.startNativeReadiness(input, current);
         admitted = true;
         const deadline = admissionDeadline = observed.expiresAt;
         assert.ok(deadline > Date.now() && deadline - Date.now() <= 90000);
@@ -106,21 +107,32 @@ export function captureNativeCoordinationFixture(profile: TeamHostProfile,
           const next = manager.probes.read(lookup); assert.ok(next); observed = next;
         }
         current();
-        assert.equal(observed.phase, 'completed', 'actual original native coordination completed');
+        assert.equal(observed.phase, 'completed', 'actual original native compound readiness completed');
         assert.equal(observed.ok, true);
-        const proof = manager.probes.readNativeCoordination({ ...lookup, context });
+        const proof = manager.probes.readNativeReadiness({ ...lookup, context });
         assert.ok(proof?.ok);
+        assert.equal(proof.readiness.evidence.ordinary, 'confirmed');
+        assert.equal(proof.readiness.evidence.coordination, 'compatible');
+        assert.equal(proof.readiness.evidence.decision, 'allow');
+        assert.equal(proof.readiness.context, context);
         const saved = store.read(input.commandId);
         assert.ok(saved?.kind === 'model.probe');
-        assert.equal(saved.purpose, nativeCoordinationPurpose); assert.equal(saved.context, context);
+        assert.equal(saved.purpose, nativeLocalReadinessPurpose); assert.equal(saved.context, context);
         assert.equal(saved.phase, 'completed'); assert.equal(saved.ok, true); assert.equal(saved.resourceHeld, false);
         assert.equal(saved.expiresAt, deadline);
+        assert.deepEqual(proof.readiness, saved.readiness);
+        assert.equal(proof.readiness.selectionDigest, saved.selectionDigest);
+        assert.equal(model.localReadiness.ordinary.length, 1); assert.equal(model.localReadiness.inventoryReads, 1);
+        assert.equal(model.localReadiness.ordinary[0]?.requestedModel, member.model);
+        assert.equal(model.localReadiness.ordinary[0]?.requestedEffort, variant);
+        if (limits) assert.equal(model.localReadiness.ordinary[0]?.requestedOutputTokens, limits.outputTokens);
         assert.equal(model.coordination.observations.length, 3); assert.deepEqual(model.failures, []);
         assert.equal(model.observations.length, 0, 'no business model input before original writer release');
         originalReceipt = JSON.stringify(saved);
         evidence.receipt = { commandId: saved.commandId, phase: saved.phase, ok: saved.ok,
           resourceHeld: saved.resourceHeld, expiresAt: saved.expiresAt };
-        evidence.modelRequests = model.coordination.observations.length;
+        evidence.modelRequests = model.localReadiness.ordinary.length + model.coordination.observations.length;
+        evidence.metadataRequests = model.localReadiness.inventoryReads;
       } catch (error) { failed = true; failure = error; }
       finally {
         signal?.removeEventListener('abort', cancel);
