@@ -15,9 +15,9 @@ it('Main admits each finite process-backed provider without requiring a Claude m
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-windows-selection-')));
   const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
   const path = join(root, 'profile.json');
-  const selected = (members: unknown[]): SelectedHostProfile => {
+  const selected = (members: unknown[] | undefined, management: unknown[] = []): SelectedHostProfile => {
     const bytes = JSON.stringify({ processCustody: { kind: 'main-windows-v1' },
-      runtime: { members, providerTemplates: [] } });
+      ...(members ? { runtime: { members, providerTemplates: [] } } : {}), management });
     writeFileSync(path, bytes);
     return { profileId: 'TEST-profile', nodeExecutable: process.execPath, nodeVersion: process.version,
       nodeSha256: 'a'.repeat(64), hostEntry: path, hostEntrySha256: 'b'.repeat(64),
@@ -36,6 +36,7 @@ it('Main admits each finite process-backed provider without requiring a Claude m
     Object.defineProperty(process, 'platform', { ...platform, value: 'win32' });
     for (const provider of ['claude', 'codex', 'opencode']) {
       expect(captureMainWindowsCustody(selected([member(provider)]))).toBeInstanceOf(RetainedWindowsCustody);
+      expect(captureMainWindowsCustody(selected(undefined, [member(provider)]))).toBeInstanceOf(RetainedWindowsCustody);
     }
     for (const unsupported of [member('unknown'), member('opencode', 'v2')]) {
       expect(() => captureMainWindowsCustody(selected([unsupported]))).toThrow('Captured Main custody unavailable');

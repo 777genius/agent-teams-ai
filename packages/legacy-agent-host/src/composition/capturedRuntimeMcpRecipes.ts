@@ -15,6 +15,7 @@ import { TeamLaunchError } from '../team-launch/contracts.js';
 import { RuntimeSourceUnavailable } from './runtimeSourceGrantAuthority.js';
 import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
 import type { CodexMemberProfile, RuntimeMemberProfile } from './runtimeProfile.js';
+import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/u);
 const id = z
@@ -189,10 +190,12 @@ export async function prepareCapturedRuntimeMcpRecipes(options: {
   selectedRecipes: readonly RuntimeMemberProfile[];
   assertCurrent(): void;
   withAuthority<T>(action: () => T): T;
+  retainedWindowsLaunch?: HostWindowsLaunch;
   readCatalog?: (
     profile: CodexMemberProfile,
     assertCurrent: () => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    retainedWindowsLaunch?: HostWindowsLaunch
   ) => Promise<CodexConfiguredMcpCatalog>;
   signal?: AbortSignal;
 }): Promise<CapturedRuntimeMcpReference[]> {
@@ -238,7 +241,8 @@ export async function prepareCapturedRuntimeMcpRecipes(options: {
         await (options.readCatalog ?? readCodexMcpCatalog)(
           selected,
           options.assertCurrent,
-          options.signal
+          options.signal,
+          options.retainedWindowsLaunch
         )
       );
     options.assertCurrent();

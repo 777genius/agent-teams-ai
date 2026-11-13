@@ -128,7 +128,8 @@ export function createCodexMemberProvider(
       const actual = await (options.readCatalog ?? readCodexMcpCatalog)(
         profile,
         assertCurrent,
-        signal
+        signal,
+        context.retainedWindowsLaunch
       );
       assertCurrent();
       return actual.digest === policy.catalog.digest;

@@ -105,7 +105,7 @@ export function createTeamHost(
     const providerManagement = createHostProviderManagementComposition(profile, () => {
       if (sealed) throw new ManagementCommandError('held');
       lease.assertCurrent();
-    }, snapshot => emitOAuthProgress?.(snapshot), processCustody, () => lease.assertCurrent());
+    }, snapshot => emitOAuthProgress?.(snapshot), processCustody, () => lease.assertCurrent(), retainedWindowsLaunch);
     management = providerManagement.management;
     const sources = providerManagement.sources;
     const teams = new Map<string, HostedTeam>();
@@ -116,6 +116,7 @@ export function createTeamHost(
     if (profile.runtime) scheduledRuns = createHostScheduledRunComposition({ profile, teams,
       assertWriter: () => lease.assertCurrent(), ...(sources ? { sources } : {}),
       ...(processCustody ? { processCustody } : {}),
+      ...(retainedWindowsLaunch ? { retainedWindowsLaunch } : {}),
       ...(composition?.createScheduledProvider ? { createProvider: composition.createScheduledProvider } : {}) });
     const crossTeam = createHostCrossTeamComposition({
       profile,

@@ -27,6 +27,7 @@ import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { RuntimeMemberProfile } from './runtimeProfile.js';
 import type { JsonValue } from '../contracts.js';
+import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 
 export interface RetainedNativeLaunch {
   team: HostedTeam;
@@ -47,6 +48,7 @@ export function createRuntimeNativeMemberCreation(options: {
   entries: Map<string, MemberEntry>;
   runtime: RuntimeOwner;
   preflight?: NativeMemberModelPreflight;
+  retainedWindowsLaunch?: HostWindowsLaunch;
   assertCurrent(): void;
   trackOpening<T>(pending: Promise<T>): Promise<T>;
 }) {
@@ -95,6 +97,7 @@ export function createRuntimeNativeMemberCreation(options: {
             commandId: input.commandId,
             baseRecipes: [base],
             selectedRecipes: selected,
+            ...(options.retainedWindowsLaunch ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
             assertCurrent: current,
             withAuthority: (callback) => owner.withPrepared(original, input, callback),
           });

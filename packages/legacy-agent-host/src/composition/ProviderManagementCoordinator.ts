@@ -34,6 +34,7 @@ import { providerManagementProfileSchema } from '../management/profile.js';
 import type { CredentialCommand, CredentialTarget, CredentialProgressWriter } from '../management/CredentialCommandOwner.js';
 import type { RegisteredProcessRootSource } from '../process/registeredProcessContracts.js';
 import type { StoredCredentialCommand } from '../management/commandRecords.js';
+import type { CapturedNativeProcessFactory } from '../adapters/providers/capturedNativeProcessFactory.js';
 
 /** The captured Host owns management process custody; Team policy and Session SPI stay separate. */
 export class ProviderManagementCoordinator {
@@ -44,6 +45,7 @@ export class ProviderManagementCoordinator {
   private readonly v2CatalogReads = new Map<string, Promise<ProviderManagementCatalog>>();
   private readonly v2Keys = new Map<string, ReturnType<typeof createOpenCodeV2CredentialOperation>>();
   private readonly processCustody: RegisteredProcessRootSource | undefined;
+  private readonly createProcess: CapturedNativeProcessFactory | undefined;
   private readonly store: FileManagementCommandStore;
   private readonly fence: ManagementResourceFence;
   private sealed = false;
@@ -66,23 +68,28 @@ export class ProviderManagementCoordinator {
       onOAuthProgress?(snapshot: ProviderOAuthSnapshot): void;
       unavailableProfiles?: readonly { profileId: string; configRevision: string }[];
       processCustody?: RegisteredProcessRootSource;
+      createProcess?: CapturedNativeProcessFactory;
     } = {}
   ) {
     this.processCustody = options.processCustody;
+    this.createProcess = options.createProcess;
     if (new Set(profiles.map((profile) => profile.profileId)).size !== profiles.length)
       throw new ManagementCommandError('invalid');
     this.codex = new CodexManagementCoordinator(
       profiles.filter((profile) => profile.provider === 'codex'),
-      assertWriter
+      assertWriter,
+      options.createProcess
     );
     this.claude = new ClaudeManagementCoordinator(
       profiles.filter((profile) => profile.provider === 'claude'),
-      assertWriter
+      assertWriter,
+      options.createProcess
     );
     this.claudeAuth = new ClaudeAuthenticationCoordinator(
       profiles.filter((profile) => profile.provider === 'claude'),
       (profileId, revision) => this.claude.target(profileId, revision),
-      () => this.assertCurrent()
+      () => this.assertCurrent(),
+      options.createProcess
     );
     for (const profile of structuredClone(profiles)) {
       if (profile.provider !== 'opencode') continue;
@@ -572,7 +579,7 @@ export class ProviderManagementCoordinator {
     return new OpenCodeManagementHost(profile, {
       isCurrent,
       canAllocate: isCurrent,
-    });
+    }, this.createProcess ? { createProcess: this.createProcess } : {});
   }
 
   async catalog(raw: unknown): Promise<ProviderManagementCatalog> {

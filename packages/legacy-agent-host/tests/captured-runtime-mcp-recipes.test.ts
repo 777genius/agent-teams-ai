@@ -29,6 +29,7 @@ import { inheritNativeMemberMcp } from '../dist/composition/inheritNativeMemberM
 import { verifyOpenCodeMcpPolicyPlugin } from '../dist/adapters/providers/openCodeMcpPolicy.js';
 import { openCodeV2CapturedMcp } from '../dist/adapters/providers/OpenCodeV2CapturedMcp.js';
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
+import { HostWindowsLaunch } from '../dist/owned-process/HostWindowsLaunch.js';
 import type { ClaudeMemberProfile } from '../dist/composition/runtimeProfile.js';
 import type { CodexMemberProfile } from '../dist/composition/runtimeProfile.js';
 import type { OpenCodeMemberProfile } from '../dist/composition/runtimeProfile.js';
@@ -93,6 +94,26 @@ function fixture() {
     withAuthority: <T>(action: () => T) => store.fenced(action),
   };
 }
+
+test('new Codex MCP recipe capture forwards its exact retained Main owner to the finite catalog read', async () => {
+  const f = fixture(), retained = new HostWindowsLaunch(() => undefined);
+  let reads = 0;
+  try {
+    const selected = captureRuntimeMcp({ recipes: [f.profile], savedCwd: f.profile.cwd,
+      members: [{ role: 'lead', settings: {} }] });
+    const references = await prepareCapturedRuntimeMcpRecipes({ store: f.store, commandId: 'TEST-command',
+      baseRecipes: [f.profile], selectedRecipes: selected, assertCurrent() {}, withAuthority: f.withAuthority,
+      retainedWindowsLaunch: retained,
+      readCatalog: async (_profile, current, _signal, original) => {
+        reads++; current(); assert.equal(original, retained); return f.catalog;
+      } });
+    assert.equal(reads, 1); assert.equal(references.length, 1);
+    await prepareCapturedRuntimeMcpRecipes({ store: f.store, commandId: 'TEST-command',
+      baseRecipes: [f.profile], selectedRecipes: selected, assertCurrent() {}, withAuthority: f.withAuthority,
+      retainedWindowsLaunch: retained, readCatalog: async () => assert.fail('Retained recipe cannot repeat native IO') });
+    assert.equal(reads, 1);
+  } finally { rmSync(f.root, { recursive: true, force: true }); }
+});
 
 function nativeV2(f: ReturnType<typeof fixture>): OpenCodeMemberProfile {
   const profile = runtimeMemberProfileSchema.parse({

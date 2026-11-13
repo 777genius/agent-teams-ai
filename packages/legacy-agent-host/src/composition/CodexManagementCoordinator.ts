@@ -12,6 +12,7 @@ import type { CodexMetadataSnapshot } from '../management/contracts.js';
 import type { ManagementTarget } from '../management/commandRecords.js';
 import type { ModelProbeInput, NativeModelProbe } from '../management/ModelProbeOwner.js';
 import type { OAuthNativeConversation } from '../management/OAuthOperationOwner.js';
+import type { CapturedNativeProcessFactory } from '../adapters/providers/capturedNativeProcessFactory.js';
 
 /** Selected finite Codex account operations, separate from OAuth and conversation owners. */
 export class CodexManagementCoordinator {
@@ -24,7 +25,8 @@ export class CodexManagementCoordinator {
 
   constructor(
     profiles: CodexManagementProfile[],
-    private readonly assertWriter: () => void
+    private readonly assertWriter: () => void,
+    private readonly createProcess?: CapturedNativeProcessFactory
   ) {
     this.profiles = new Map(
       structuredClone(profiles).map((profile) => [profile.profileId, profile])
@@ -56,7 +58,8 @@ export class CodexManagementCoordinator {
         } catch {
           return false;
         }
-      }
+      },
+      this.createProcess
     );
     this.live.add(conversation);
     const close = async () => {
@@ -239,7 +242,7 @@ export class CodexManagementCoordinator {
       } catch {
         return false;
       }
-    });
+    }, this.createProcess);
     this.live.add(host);
     try {
       const result = await action(host);

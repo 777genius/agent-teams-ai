@@ -201,6 +201,8 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
     const rejectedCatalog = selected(await directory());
     assert.equal(rejectedCatalog.configured, true);
     assert.equal(rejectedCatalog.connected, false);
+    const originalCatalogPids = await children();
+    assert.equal(originalCatalogPids.length, 1, 'the rejected source retains one original catalog owner');
     const grant: RuntimeSourceGrant = { targetId: 'c'.repeat(64), ownerId: profile.owner.ownerId,
       ownerRevision: profile.owner.revision, contextId: 'TEST-context', projectPath: join(root, 'workspace'),
       runtimeId: 'opencode', ...target, teamScopes: [] };
@@ -217,7 +219,9 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
     connect = { ...connect, ...target };
     assert.equal(selected(await directory()).connected, false, 'a source revision cannot inherit old model verification');
     assert.equal(requests.length, 1, 'source publication and passive read do not verify a model');
-    await observeNative();
+    // Distinct retained source profiles own distinct passive catalogs until the original Host closes.
+    await observeNative(2);
+    assert.ok((await children()).includes(originalCatalogPids[0]!), 'new source cannot retarget the old catalog owner');
     await stop();
     await start();
     assert.deepEqual(value(await host!.rpc('management.credential.lookup', {

@@ -418,10 +418,13 @@ test(
       if (host)
         try {
           await host.close();
-          hosts.push(host.facts());
-          host = undefined;
         } catch (error) {
           cleanupErrors.push(error);
+        } finally {
+          // A failed cleanup must retain the original exit/signal evidence too.
+          // Do not replace the failure with a successful receipt or a fresh Host.
+          hosts.push(host.facts());
+          host = undefined;
         }
       for (const release of gates) release();
       model.closeAllConnections();
@@ -458,10 +461,11 @@ test(
               steps,
               requests,
               nativeProcessCount: nativePids.length,
-              hosts: hosts.map(({ exitCode, signalCode, stdoutValid }) => ({
+              hosts: hosts.map(({ exitCode, signalCode, stdoutValid, diagnosticBytes }) => ({
                 exitCode,
                 signalCode,
                 stdoutValid,
+                diagnosticBytes,
               })),
               passiveNativeDiagnostics: passive.entries,
               vendorAuthQualified: false,

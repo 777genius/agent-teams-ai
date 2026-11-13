@@ -114,6 +114,7 @@ export class RuntimeTeamCoordinator {
     this.captures = new RuntimeTeamCaptures({
       profile: options.profile,
       ...(options.sources ? { sources: options.sources } : {}),
+      ...(options.retainedWindowsLaunch ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
       teams: options.teams,
       assertCurrent: () => {
         options.assertWriter();
@@ -192,6 +193,7 @@ export class RuntimeTeamCoordinator {
               retainedLaunches: this.retainedLaunches,
               entries: this.entries,
               runtime: this.runtime,
+              ...(options.retainedWindowsLaunch ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
               ...(options.nativeMemberModelPreflight
                 ? { preflight: options.nativeMemberModelPreflight }
                 : {}),

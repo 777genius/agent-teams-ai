@@ -43,9 +43,9 @@ export function captureMainWindowsCustody(
   )
     return;
   if (Object.keys(custody).length !== 1) unavailable();
-  const runtime = record(source.runtime);
+  const runtime = source.runtime === undefined ? {} : record(source.runtime);
   const selected: NativeProcessProfile[] = [];
-  for (const raw of [runtime.members, runtime.providerTemplates ?? []]) {
+  for (const raw of [runtime.members ?? [], runtime.providerTemplates ?? [], source.management ?? []]) {
     if (!Array.isArray(raw) || raw.length > 256) unavailable();
     for (const candidate of raw) {
       const member = record(candidate);

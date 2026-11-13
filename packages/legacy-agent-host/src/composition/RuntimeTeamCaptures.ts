@@ -39,6 +39,7 @@ import type { RuntimeMemberProfile } from './runtimeProfile.js';
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import type { TeamLaunchRecord } from '../team-launch/contracts.js';
 import type { TeamRuntimeCapture } from '../team/runtimeRegistrationContracts.js';
+import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 
 const id = z
   .string()
@@ -55,6 +56,7 @@ export class RuntimeTeamCaptures {
     private readonly options: {
       profile: TeamHostProfile;
       sources?: RuntimeRecipeSources;
+      retainedWindowsLaunch?: HostWindowsLaunch;
       teams: ReadonlyMap<string, HostedTeam>;
       assertCurrent(): void;
       readRuntimeSiblings(binding: RuntimeBinding): RuntimeSessionRecord[];
@@ -278,6 +280,7 @@ export class RuntimeTeamCaptures {
         baseRecipes,
         selectedRecipes,
         assertCurrent,
+        ...(this.options.retainedWindowsLaunch ? { retainedWindowsLaunch: this.options.retainedWindowsLaunch } : {}),
         withAuthority: (action) =>
           team.owner.withLaunchAuthority(operator, 'control', () => {
             assertCurrent();

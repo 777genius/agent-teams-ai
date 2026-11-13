@@ -3,9 +3,12 @@ import { join } from 'node:path';
 import { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { RuntimeSourceIndex } from './RuntimeSourceIndex.js';
 import { teamModelProbeProfile } from './teamLaunchModelProbe.js';
+import { capturedNativeProcessFactory } from '../adapters/providers/capturedNativeProcessFactory.js';
+import { RuntimeSourceNativeVersion } from '../adapters/providers/RuntimeSourceNativeVersion.js';
 import type { TeamHostProfile } from './TeamHost.js';
 import type { ProviderOAuthSnapshot } from '../management/contracts.js';
 import type { RegisteredProcessRootSource } from '../process/registeredProcessContracts.js';
+import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 
 /** Restore source-derived private profiles before existing operation owners read their journals. */
 export function createHostProviderManagementComposition(
@@ -13,7 +16,8 @@ export function createHostProviderManagementComposition(
   assertWriter: () => void,
   onOAuthProgress: (snapshot: ProviderOAuthSnapshot) => void,
   processCustody?: RegisteredProcessRootSource,
-  assertCleanupWriter = assertWriter
+  assertCleanupWriter = assertWriter,
+  retainedWindowsLaunch?: HostWindowsLaunch
 ) {
   // Presence reads must not create stores before an unrelated Team namespace is admitted.
   // Either retained namespace still requires strict validation after its current seed is removed.
@@ -30,10 +34,13 @@ export function createHostProviderManagementComposition(
       }
     });
   assertWriter();
+  const createProcess = retainedWindowsLaunch ? capturedNativeProcessFactory(retainedWindowsLaunch) : undefined;
   const sources = needsSources
     ? new RuntimeSourceIndex(profile, assertWriter, {
         assertCleanupWriter,
         ...(processCustody ? { processCustody } : {}),
+        ...(createProcess ? { createNativeCheck: (seed, candidate, current) =>
+          new RuntimeSourceNativeVersion(seed, candidate, current, processCustody, createProcess) } : {}),
       })
     : undefined;
   const retained = sources?.retainedManagementState() ?? {
@@ -72,6 +79,7 @@ export function createHostProviderManagementComposition(
           onOAuthProgress,
           unavailableProfiles: retained.unavailable,
           ...(processCustody ? { processCustody } : {}),
+          ...(createProcess ? { createProcess } : {}),
         })
       : undefined,
   };

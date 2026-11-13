@@ -558,3 +558,21 @@ probe, retained unknown intent and preserved foreign auth. Its result is separat
 from emulator and Desktop evidence. The native model-probe scenario also needs
 its strict expected catalog to include the exact safe variant IDs added by P05;
 the observed low/medium/high and high sets must be compared exactly.
+
+The same-ID correction passed the 13 focused credential/configuration/recovery
+checks and the native journey now reaches the original HTTP 401 rejection.
+At the next source-publication observation, the test must retain exactly two
+metadata owners: original profile A and new profile B. The existing coordinator
+explicitly keeps its V2 hosts by immutable profile ID; publishing B does not
+replace A. Record A's original PID before publication, require it still present
+among the two afterwards, and retain both original-image and final PID-absence
+checks. Independent provider review confirmed this census correction; it is not
+a production cleanup change or permission to accept an arbitrary process count.
+
+Native model-probe evidence on `26043bb687700046d4cad189707ce0d09c9d8b83`
+completed the two selected-model requests and original cancellation without a
+replay, then failed while observing the refused variant. This remains
+INCOMPLETE. Preserve the original Host exit code, signal and diagnostic byte
+count in its receipt even when cleanup throws, so a subsequent exact-source
+run can diagnose that failure. No timeout, production behavior or success
+assertion is relaxed.

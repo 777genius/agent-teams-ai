@@ -5,11 +5,13 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { appendFileSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
+import { createRequire } from 'node:module';
 import { createInterface } from 'node:readline';
 import process from 'node:process';
-import { URL } from 'node:url';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { pathToFileURL, URL } from 'node:url';
+const hostRequire = createRequire(new URL('../../../packages/legacy-agent-host/package.json', import.meta.url));
+const { Client } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/index.js')).href);
+const { StreamableHTTPClientTransport } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/streamableHttp.js')).href);
 
 assert.equal(process.env.TEST_EMULATED_WINDOWS_PROVIDER, '1');
 const provider = process.env.TEST_PEER_PROVIDER;

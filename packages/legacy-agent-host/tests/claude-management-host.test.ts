@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { ChildProcess } from 'node:child_process';
+import { ChildProcess, spawn } from 'node:child_process';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
-import { mkdtemp, mkdir, realpath, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, realpath, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { PassThrough } from 'node:stream';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import type { TestContext } from 'node:test';
 import { ClaudeManagementCoordinator } from '../dist/composition/ClaudeManagementCoordinator.js';
@@ -162,5 +163,55 @@ test('coordinator current guard is observed before Host creation without changin
     assert.match(observed.commandHash, /^[a-f0-9]{64}$/);
     assert.equal(lines.join('').includes('TEST-original-command'), false);
     await coordinator.close();
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('actual pinned SDK reads metadata and probes only the finite Node stream-JSON peer under original cleanup', async () => {
+  const { root, selected } = await profile();
+  const peer = fileURLToPath(new URL('../../../tools/owned-process-broker/fixtures/claudeProviderPeer.mjs', import.meta.url));
+  const effects = join(root, 'effects.ndjson');
+  try {
+    for (const operation of ['metadata', 'probe'] as const) {
+      let child: ChildProcessWithoutNullStreams | undefined;
+      let exited: Promise<void> | undefined, signal: AbortSignal | undefined, stops = 0;
+      const environment = { ...selected.environment, TEST_EMULATED_DESKTOP_PROVIDER: '1',
+        TEST_PEER_SCENARIO: 'desktop-ui-v1', TEST_PEER_PROVIDER: 'claude', TEST_PEER_ROLE: operation === 'probe' ? 'runtime' : 'management',
+        TEST_DESKTOP_PEER_ROOT: root, TEST_PEER_EFFECTS: effects };
+      // This protocol test owns one actual Node handle. Desktop tests exercise the production launcher.
+      const host = new ClaudeManagementHost({ ...selected, environment, timeoutMs: 5000 }, () => true, () => ({
+        launch: request => {
+          assert.equal(child, undefined); assert.equal(request.command, process.execPath);
+          assert.equal(request.cwd, selected.cwd); assert.equal(request.args.includes('--version'), false);
+          signal = request.signal;
+          child = spawn(process.execPath, [peer, ...request.args], { cwd: selected.cwd, env: environment, stdio: ['pipe', 'pipe', 'pipe'] });
+          child.stderr.resume();
+          exited = new Promise((resolve, reject) => { child!.once('error', reject); child!.once('close', () => resolve()); });
+          return child;
+        },
+        seal: () => {}, isRunning: () => child !== undefined && child.exitCode === null,
+        confirmStopped: async () => {
+          stops++; assert.equal(signal?.aborted, false);
+          child?.stdin.end(); await exited;
+          return child === undefined || child.exitCode === 0;
+        },
+      }));
+      try {
+        if (operation === 'metadata') {
+          const result = await host.read();
+          assert.equal(result.models[0]?.modelId, 'sonnet');
+          assert.equal(result.models[0]?.resolvedModel, 'TEST-claude-sonnet');
+          assert.equal(result.account.tokenSource, 'TEST-emulated');
+        } else assert.equal(await host.probe('sonnet', new AbortController().signal, { effort: 'medium' }), true);
+        assert.equal(await host.close(), true); assert.equal(stops, 1);
+        assert.equal(child?.exitCode, 0);
+      } finally { await host.close(); }
+    }
+    const rows = (await readFile(effects, 'utf8')).trim().split('\n').map(line => JSON.parse(line) as Record<string, unknown>);
+    assert.equal(rows.filter(row => row.event === 'initialized').length, 2);
+    assert.equal(rows.filter(row => row.event === 'input').length, 1);
+    assert.equal(rows.find(row => row.event === 'input')?.marker, 'TEST_MODEL_PROBE');
+    assert.equal(rows.filter(row => row.event === 'exited' && row.code === 0).length, 2);
+    assert.equal(rows.filter(row => row.event === 'stdin-ended' && row.active === false).length, 2);
+    assert.equal(rows.some(row => row.event === 'failure' || row.event === 'mcp-connected'), false);
   } finally { await rm(root, { recursive: true, force: true }); }
 });

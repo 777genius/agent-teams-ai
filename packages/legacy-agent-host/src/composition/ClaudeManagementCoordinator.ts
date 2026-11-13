@@ -13,6 +13,7 @@ import type { ClaudeMetadataSnapshot } from '../management/contracts.js';
 import type { ClaudeManagementProfile } from '../management/profile.js';
 import type { ManagementTarget } from '../management/commandRecords.js';
 import type { ModelProbeInput, NativeModelProbe } from '../management/ModelProbeOwner.js';
+import type { CapturedNativeProcessFactory } from '../adapters/providers/capturedNativeProcessFactory.js';
 
 /** Captured Claude mechanism selection. Durable model-test intents belong to ModelProbeOwner. */
 export class ClaudeManagementCoordinator {
@@ -24,7 +25,8 @@ export class ClaudeManagementCoordinator {
 
   constructor(
     profiles: ClaudeManagementProfile[],
-    private readonly assertWriter: () => void
+    private readonly assertWriter: () => void,
+    private readonly createProcess?: CapturedNativeProcessFactory
   ) {
     this.profiles = new Map(
       structuredClone(profiles).map((profile) => [profile.profileId, profile])
@@ -136,7 +138,7 @@ export class ClaudeManagementCoordinator {
             }
           };
           stage = 'probe-host';
-          host = new ClaudeManagementHost(profile, current);
+          host = new ClaudeManagementHost(profile, current, this.createProcess);
           this.live.set(key, host);
           stage = 'probe-native';
           return await host.probe(input.modelId, signal, {
@@ -174,7 +176,7 @@ export class ClaudeManagementCoordinator {
       } catch {
         return false;
       }
-    });
+    }, this.createProcess);
     let finished!: () => void;
     const reading = new Promise<void>((resolve) => {
       finished = resolve;
