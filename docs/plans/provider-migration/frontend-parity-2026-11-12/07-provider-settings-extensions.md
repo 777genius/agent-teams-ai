@@ -1310,3 +1310,100 @@ Linux full native and model-probe cases from a pushed clean source commit.
 Cross-platform exact-head CI keeps the original120s/native deadlines and all
 model/tool/MCP/approval/Stop/cold checks. Source simplification or local PASS
 alone does not close the Windows/macOS gap; preserve original failed receipts.
+
+
+## R22 — model selection guard без неиспользуемой Runtime projection
+
+### Круг 1 — исходный факт и граница причинного вывода
+
+Actual mixed V1 job `131818772113` сохраняет новый original OpenCode
+`team-preflight-d4bad0c185b279709abd8deea9035ae667fbe72d56c48de6eecd836813381a2d`
+как running/resourceHeld при отсутствии нового Claude model request.
+Закрытый TEST diagnostic в логе появился в `10:06:18.883971Z` с
+baseline8/observed8; original row expiresAt=`1794564380563`
+(`10:06:20.563Z`). Следовательно, запись ещё не просрочена в момент
+diagnostic; из running нельзя вывести сломанный timer или бесконечную работу.
+V2 job `131818772401` также не увидел нового Claude probe. Эти факты не
+устанавливают стоимость конкретного Host callback или native phase.
+
+Независимый source audit на `d35ef8256a9f24294b2fe50e8290ccb9841d9eb1`
+обнаружил более узкую, доказуемую лишнюю работу:
+
+- [captureTeamModelProbe](https://github.com/777genius/agent-teams-ai/blob/d35ef8256a9f24294b2fe50e8290ccb9841d9eb1/packages/legacy-agent-host/src/composition/teamLaunchModelProbe.ts)
+  в assertSelection читает `launch.read(action)`, затем использует только
+  launchId, rosterRevision и membership по memberId. Attempt status, readiness,
+  custody, timestamps, admission summary и native context этому guard не нужны.
+- [TeamLaunchOwner.read/project/summary](https://github.com/777genius/agent-teams-ai/blob/d35ef8256a9f24294b2fe50e8290ccb9841d9eb1/packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts)
+  сначала делает тот же authorized/load/validation, затем project читает Runtime
+  каждого claimed member. Project меняет только attempt observation fields;
+  эти три selection поля остаются исходными. Ошибка Runtime observation ловится
+  и превращается в attempt unknown, который model guard всё равно не читает.
+- [createRuntimeTeamLaunch](https://github.com/777genius/agent-teams-ai/blob/d35ef8256a9f24294b2fe50e8290ccb9841d9eb1/packages/legacy-agent-host/src/composition/createRuntimeTeamLaunch.ts)
+  связывает этот callback с readSession и текущими provider evidence getters.
+  [RuntimeOwner.readSession](https://github.com/777genius/agent-teams-ai/blob/d35ef8256a9f24294b2fe50e8290ccb9841d9eb1/packages/legacy-agent-host/src/runtime/RuntimeOwner.ts)
+  читает original transaction под Runtime fence; он не открывает, не останавливает,
+  не dispatch-ит и не восстанавливает native session. RuntimeActivityCoordinator
+  добавляет публикацию только в put, которого здесь нет.
+  Team authorization внутри read повторно валидирует Team state/retained bindings.
+  Ordinary roster recovery исходного Team уже сохраняется в неизменном
+  authorized callback нового selection read; отдельного native recovery effect
+  из project не теряем.
+
+После Stop попытки остаются claimed: projection продолжает обходить released
+Runtime records. Это source-backed amplification, не measured объяснение90s.
+Для уже admitted capture prospective saved-model branch не становится
+разрешённым: isUnstartedCaptureEditable проверяет original admission. Его
+полную history/custody проверку этим изменением не трогаем.
+
+### Круг 2 — минимальный внутренний read
+
+1. Добавить в существующий TeamLaunchOwner один явно названный composition-only
+   `readModelProbeSelection(action)`. Под **тем же** options.authorized(action)
+   вызвать **тот же** private load, сохраняющий full fingerprint, expected roster,
+   native additions, restore/resume/preparation/retry и current attempt validation.
+   Вернуть новый закрытый object только с launchId, rosterRevision и ordered
+   memberIds из тех же record fields, что использует public summary.
+   Никаких Runtime observations, cache, retained proof, нового журнала или RPC.
+2. Только assertSelection в captureTeamModelProbe использовать этот read;
+   прежние action start→control, read/cancel→read, cancellation branch,
+   original owner/lease/current capture, member Runtime control authority
+   для non-draft, source/recipe/config digest и operator/member revision comparisons
+   остаются на тех же местах. Все before/after-await и native-effect проверки
+   остаются. Новый read не отвечает на вопросы readiness, release или canWork.
+3. Полный public launch.read, readOriginalStart, refresh, DTO, UI status,
+   настоящие Runtime reads и все start/Stop/retry/Resume/cleanup пути неизменны.
+   Поиск existing equivalent завершён: readRestorations не содержит selection;
+   memberActions.read требует существующий member и только read authority,
+   поэтому не заменяет start/control и fresh-draft-member cases.
+   Не добавлять optional boolean, меняющий значение общего public read.
+
+### Круг 3 — независимый review и один существующий critical case
+
+До source — root publication этого append. Peer сверяет три project-invariant
+поля и все ошибки load/authorization, а также отсутствие нужного recovery/effect
+в удаляемом observation обходе. Source scope: TeamLaunchOwner.ts,
+teamLaunchModelProbe.ts и один existing Team launch case.
+
+Расширить существующий authorization/corrupt-roster case в
+`packages/legacy-agent-host/tests/team-launch.test.ts`: настоящий controlled
+Launch с claimed members, затем original observation unavailable; selection
+остаётся exact без обращения к Runtime observation, public read всё ещё
+показывает unknown. Использовать existing controlled read callback как
+tripwire/census, не подменять production guards. Revoked grant и corrupt
+original launch по-прежнему отказывают; original bytes и native open/input
+counts не меняются от selection inspection. Это один meaningful case,
+не новая suite и не timing/call-count benchmark производительности.
+
+Нужны Host build/test types, existing team-launch/model-probe/saved-probe
+cases, lint/source caps. После этого обычные mixed V1/V2 Desktop и native
+model-probe gates на exact coherent head проверяют результат с прежними
+90s/native deadlines, model request counts и cleanup obligations.
+До actual gates не объявлять timeout устранённым, не менять budgets,
+не ослаблять source/actor/custody и не нормализовать original failed receipts.
+
+**R1:** проверены actual expiry и неиспользуемые project fields; отсутствие
+sampled mixed CPU данных сохранено явно. **R2:** прочитаны authorized/load,
+full launch validator, Runtime read transaction и existing read alternatives;
+guard не зависел от project status даже при observation refusal.
+**R3:** независимый plan/source review и execution ещё требуются; среда
+недоступна, новые source bytes пока не созданы.
