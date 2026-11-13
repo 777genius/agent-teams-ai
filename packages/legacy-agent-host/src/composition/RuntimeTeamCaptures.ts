@@ -71,6 +71,7 @@ export class RuntimeTeamCaptures {
     if (this.prepared) return;
     for (const team of this.options.teams.values()) {
       const teamId = team.definition.binding.teamId;
+      if (!needsRuntimeRestore(this.options.profile, team)) continue;
       const registrations = team.owner.runtimeCaptures(this.options.profile.principalId);
       const sourceRows = registrations.map(registration => ({
         registration, source: this.source(team, registration),
@@ -126,7 +127,8 @@ export class RuntimeTeamCaptures {
   restore(): void {
     this.prepareRestore();
     for (const team of this.options.teams.values()) {
-      if (!this.available(team.definition.binding.teamId)) continue;
+      if (!this.available(team.definition.binding.teamId) ||
+          !needsRuntimeRestore(this.options.profile, team)) continue;
       const selected = team.owner.runtimeCapture(this.options.profile.principalId);
       for (const registration of team.owner.runtimeCaptures(this.options.profile.principalId))
         this.restoreCapture(team, registration, selected?.launchId === registration.launchId ||
@@ -486,19 +488,29 @@ export class RuntimeTeamCaptures {
   }
 }
 
+function needsRuntimeRestore(profile: TeamHostProfile, team: HostedTeam): boolean {
+  return !!profile.runtime?.members.some(member => member.teamId === team.definition.binding.teamId) ||
+    hasRetainedRuntime(profile, team);
+}
+
+/** Presence does not grant actor read or confirm that original custody was released. */
+function hasRetainedRuntime(profile: TeamHostProfile, team: HostedTeam): boolean {
+  if (team.owner.hasRetainedRuntime()) return true;
+  const store = new TeamOwnerStore(profile.owner.storageRoot, team.definition.binding.teamName);
+  try {
+    const stat = lstatSync(join(store.directory, 'launches', runtimeDigest(team.definition.scope.runId) + '.json'));
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 1024 * 1024)
+      throw new TeamLaunchError('hold', 'capture-record');
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+  return false;
+}
+
 /** Missing current runtime does not erase original seed/capture history or its cleanup debt. */
 export function hasRetainedTeamRuntime(profile: TeamHostProfile, teams: ReadonlyMap<string, HostedTeam>): boolean {
-  for (const team of teams.values()) {
-    if (team.owner.runtimeCaptures(profile.principalId).length) return true;
-    const store = new TeamOwnerStore(profile.owner.storageRoot, team.definition.binding.teamName);
-    try {
-      const stat = lstatSync(join(store.directory, 'launches', runtimeDigest(team.definition.scope.runId) + '.json'));
-      if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 1024 * 1024)
-        throw new TeamLaunchError('hold', 'capture-record');
-      return true;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    }
-  }
+  for (const team of teams.values())
+    if (hasRetainedRuntime(profile, team)) return true;
   return false;
 }
