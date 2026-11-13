@@ -569,11 +569,30 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   const nativeClaudeProbeCount = models.beginColdReadbackProbes();
   proof.nativeClaudeProbeCount = nativeClaudeProbeCount;
   await ui.click('button', 'reopen original mixed Launch after Stop/reload', 'Launch');
-  await poll(
-    async () => models.claude.probes.length,
-    (count) => count === nativeClaudeProbeCount + 1,
-    'one fresh original cold Launch model preflight'
-  );
+  try {
+    await poll(
+      async () => models.claude.probes.length,
+      (count) => count === nativeClaudeProbeCount + 1,
+      'one fresh original cold Launch model preflight'
+    );
+  } catch (error) {
+    const failure = {
+      kind: 'TEST_MIXED_COLD_MODEL_PREFLIGHT',
+      baseline: nativeClaudeProbeCount,
+      observed: models.claude.probes.length,
+      probes: models.claude.probes
+        .slice(nativeClaudeProbeCount, nativeClaudeProbeCount + 8)
+        .map((probe) => ({
+          phase: probe.phase ?? null,
+          requestedModel: probe.requestedModel?.slice(0, 160) ?? null,
+          requestedEffort: probe.requestedEffort?.slice(0, 32) ?? null,
+        })),
+      omitted: Math.max(0, models.claude.probes.length - nativeClaudeProbeCount - 8),
+    };
+    proof.coldModelPreflightFailure = failure;
+    process.stderr.write(JSON.stringify(failure) + '\n');
+    throw error;
+  }
   assert.deepEqual(models.claude.probes.slice(nativeClaudeProbeCount), [
     { phase: 'cold-readback', requestedModel: 'claude-opus-4-6', requestedEffort: 'medium' },
   ]);

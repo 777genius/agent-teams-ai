@@ -1042,3 +1042,33 @@ Stop/cold Resume. До этого startup parity остаётся открыта
 Self-review: повышается только шаг диагностического sampling, не admission limit,
 timeout или допустимый размер. Native failures и отсутствие attribution показаны
 явно; source ещё не менялся.
+
+
+## R18 — actual seal during catalog disposal: точный AbortError oracle
+
+Qualification head `7563eb067b9196ca416a56228f9c7e38a2455a17`,
+[run43377998027](https://github.com/777genius/agent-teams-ai/actions/runs/43377998027),
+job131741574610: existing `hostOpenCodeV2EmbeddedMember.test.ts`240–261 ожидает
+generic `OpenCode V2 embedded session unavailable`, но original pending catalog
+read после provider.seal() возвращает AbortError. Exact source/test на current3db
+совпадает с old64; это не доказательство потери cleanup или доступа к attachment.
+
+**Круг1 — source contract.** `OpenCodeV2EmbeddedMemberProvider` captureClient
+связывает wire signal с original private abort; seal вызывает abort().
+Existing `OpenCodeV2ReadOnlySnapshot.check`35 сначала делает
+`signal.throwIfAborted()`, после client.dispose повторно attest/check.
+Следовательно исходный abort обязан завершить pending read до original byte
+resolver. Сохранить этот порядок: не заменять production abort на generic error
+и не ослаблять current-owner/disposal checks.
+
+**Круг2 — самый узкий TEST diff.** В том же held-disposal case заменить только
+message matcher на exact structured `{ name: 'AbortError' }`. Оставить actual
+barrier entered → original provider.seal → release, rejection, resolver never
+called и cleanup===true. Соседний original callback failure + rejected disposal
+по-прежнему требует UNKNOWN и exact cause; text-only capability case не менять.
+Новый harness, timer, provider input или native request не нужны.
+
+**Круг3 — приёмка.** Independent diff review, existing focused test/types, затем
+прежний Main CI job на опубликованном source. Source review и GitHub blob equality
+не подменяют execution: executor сейчас недоступен. Это correction oracle, не
+новый product lifecycle fix и не закрытие pending V2 startup/native acceptance.

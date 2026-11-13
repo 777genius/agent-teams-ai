@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import {
+  assertCapturedCommandSystem,
   assertNativeReviewExpansion,
   contextCompactionScript,
   COMPACT_AUTHORIZATION,
@@ -115,4 +117,48 @@ test('native script rejects unrelated, stale, repeated or unexpanded inputs', ()
     { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'TEST-p03-review-tool', content: 'TEST-result' }] },
   ] });
   assert.equal(model('review').respond(request(recipe), ['mcp__team__message_send']).type, 'tool_use');
+});
+
+test('named command context refusal exposes only closed marker-location facts', () => {
+  const marker = 'TEST_CAPTURED_ALICE_ROLE_CONTEXT_V1';
+  const privateText = 'TEST_R15_RAW_PROMPT_MUST_NOT_LEAK';
+  const body = {
+    system: privateText,
+    messages: [
+      { role: 'user', content: marker + privateText },
+      {
+        role: 'assistant',
+        content: [{ type: 'tool_use', input: { marker, privateText } }],
+      },
+      {
+        role: privateText + '_role',
+        content: [{ type: privateText + '_block', text: marker }],
+      },
+    ],
+  };
+  assert.throws(
+    () => assertCapturedCommandSystem(body, 'review'),
+    (error: unknown) => {
+      assert.ok(error instanceof assert.AssertionError);
+      const prefix = 'named native command keeps captured team system configuration; ';
+      assert.ok(error.message.startsWith(prefix));
+      const facts = error.message.slice(prefix.length);
+      assert.ok(Buffer.byteLength(facts) <= 2_048);
+      assert.equal(facts.includes(privateText), false);
+      assert.equal(facts.includes(marker), false);
+      assert.deepEqual(JSON.parse(facts), {
+        phase: 'review',
+        bodySha256: createHash('sha256').update(JSON.stringify(body)).digest('hex'),
+        systemSha256: createHash('sha256').update(JSON.stringify(body.system)).digest('hex'),
+        systemShape: 'string',
+        markerBlocks: {
+          user: { text: 1, tool_use: 0, tool_result: 0, other: 0 },
+          assistant: { text: 0, tool_use: 1, tool_result: 0, other: 0 },
+          system: { text: 0, tool_use: 0, tool_result: 0, other: 0 },
+          other: { text: 0, tool_use: 0, tool_result: 0, other: 1 },
+        },
+      });
+      return true;
+    }
+  );
 });

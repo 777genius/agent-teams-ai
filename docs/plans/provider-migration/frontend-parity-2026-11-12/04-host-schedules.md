@@ -615,3 +615,56 @@ Account первоначально проверил239 existing scheduled admiss
 Root focused strict Main types PASS; Profiles independently reviewed final four
 R12 production files и Account R10/R11 boundaries. Source cap848 снижен до847;
 whole-project и actual Desktop schedule CI ещё должны завершиться на published head.
+
+
+## R13 — actual cold result oracle и сохранённые native tool log blocks
+
+В qualification [run43377998027](https://github.com/777genius/agent-teams-ai/actions/runs/43377998027),
+head `7563eb067b9196ca416a56228f9c7e38a2455a17`, job131741574538 падает **до**
+Codex login UI: оба original Claude/Codex `scheduled-run-host.native.ts` случая
+доходят до terminal success, confirmed cleanup и cold lookup, но строка229
+ожидает неизменный stderr. Actual cold stderr:
+`Some retained runtime log entries are unavailable.`
+Остальные поля completed result совпадают. Current3db и old64 имеют одинаковые
+Host projection/Runtime activity sources и этот native oracle.
+
+### Круг1 — исправить точный oracle, сохранив исходную неопределённость
+
+`RuntimeActivityCoordinator.read`283–284 сообщает смену incarnation в snapshot.
+Existing controlled `scheduled-run-host.test.ts`181–183 уже явно требует этот
+cold warning при сохранённом результате. Native assertion должен использовать
+тот же контракт: whole snapshot/result deep equality с **единственной** явно
+ожидаемой заменой stderr на эту строку. Phase/completed, cleanup/confirmed,
+exitCode, stdout, summary/duration и original runId не ослаблять.
+Сохранить actual business effect, два model requests, original input bytes,
+lost application ACK/readback и no-replay assertions. Не удалять gap, не переписывать
+Runtime history или original receipt ради тождества hot/cold readback.
+
+### Круг2 — отдельный подтверждённый source дефект tool logs
+
+`RuntimeActivityCoordinator.snapshot`166–174 сохраняет последнее состояние
+каждого original tool и tool-result в bounded `latest.tools`; строка194
+намеренно возвращает `events: []`. Однако
+`scheduledRunProjection.ts`24–26 ищет tool blocks именно в пустом events.
+Это source-proven потеря tool log blocks, отдельная от actual stderr mismatch.
+
+Заменить только этот источник на existing `activity.latest.tools`.
+Сохраняются eventId/toolRef, sequence ordering, текущая Runtime read authority,
+dedup latest projection, 256KiB snapshot и 512KiB final stdout limits.
+Не добавлять feed reads, cursor store, RPC, новый snapshot или native allocation.
+Завершённый tool-result не превращать в новый tool effect.
+
+В existing controlled finite-run case добавить пару original tool/tool-result
+к уже существующим Session events и проверить их в hot и cold stdout. Existing
+native finite Claude/Codex case уже выполняет один настоящий command: проверить
+retained paired `tool_use`/`tool_result` blocks и их original matching id,
+сохранив те же два inference requests и file effect. Не добавлять модельный ввод,
+fixture suite или новую matrix row.
+
+### Круг3 — проверка целого контракта
+
+Сначала независимое source review двух причин; затем existing scheduled Host
+tests/types и прежний native prerequisite в обычном exact-head CI. Native test
+остаётся строгим к остальным result fields и physical cleanup; controlled case
+не выдаётся за реальный provider proof. Никакие timeout/лимиты либо workflow
+success gates не повышаются. Новые bytes пока не исполнялись: executor unavailable.
