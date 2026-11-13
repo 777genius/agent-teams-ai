@@ -12,8 +12,13 @@
 #include <mutex>
 #include <map>
 #include <thread>
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE) && defined(OWNED_PROCESS_SERVICE_SCOPES)
+#error Product service scopes cannot include the TEST debugger adapter
+#endif
 #ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
 #include "debugServiceTest.h"
+#elif defined(OWNED_PROCESS_SERVICE_SCOPES)
+#include "serviceDebugLoop.h"
 #endif
 
 namespace {
@@ -26,8 +31,22 @@ std::deque<wire::Frame> replies;
 // One bounded effect history under repliesMutex; read-only queries never enter it.
 std::map<uint64_t,wire::Frame> cachedReplies, idempotentRequests;
 constexpr size_t PendingEffects=4, SettledReplies=64;
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE) || defined(OWNED_PROCESS_SERVICE_SCOPES)
+std::atomic<unsigned> serviceBusy{0}; // Three service workers leave the fourth wire slot for whole-Job cleanup.
 #ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
-std::atomic<unsigned> serviceBusy{0};
+namespace service_runtime=debug_service_test;
+#else
+namespace service_runtime {
+// Separate product bound: current Team rows are capped at 1024. Unregistered
+// descendants share this finite budget and retire only after original absence.
+// Query/Stop/release need no new scope allocation, even when this budget is full.
+constexpr size_t ProductScopeLimit=4096;
+owned_service::Scopes scopes{ProductScopeLimit};
+bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::timed_mutex>& lock) {
+  return owned_service::runDebugLoop(rootPid,root,outer,lock,scopes);
+}
+}
+#endif
 #endif
 std::array<uint8_t,16> generation{};
 std::atomic<bool> sealed{false}, launched{false}, admissionDone{false}, stopBusy{false};
@@ -203,7 +222,7 @@ void admit(wire::Frame frame) {
     if(!sealed) {
       creation=Uncertain; // any interrupted admission is uncertain until positively returned
       DWORD flags=EXTENDED_STARTUPINFO_PRESENT|CREATE_SUSPENDED|CREATE_UNICODE_ENVIRONMENT|CREATE_NO_WINDOW;
-#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE) || defined(OWNED_PROCESS_SERVICE_SCOPES)
       flags|=DEBUG_PROCESS;
 #endif
       ok=CreateProcessW(spec.executable.c_str(),spec.command.data(),nullptr,nullptr,TRUE,
@@ -224,10 +243,10 @@ void admit(wire::Frame frame) {
     birthKnown=true; admissionDone=true;
     std::vector<uint8_t> p; wire::append(p,process.dwProcessId); wire::append(p,birth);
     reply(wire::Prepared,frame.id,p);
-#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE) || defined(OWNED_PROCESS_SERVICE_SCOPES)
     // Preserve the existing admission worker as the creating/debugging thread.
     // The command reader, root watcher and Stop worker remain independent.
-    if(!debug_service_test::run(process.dwProcessId,root,job,lock)) abandon();
+    if(!service_runtime::run(process.dwProcessId,root,job,lock)) abandon();
 #endif
   } catch(DWORD error) {
     admissionDone=true; closeTargetCopies(); failure(frame.id,creation,error);
@@ -292,11 +311,11 @@ void stop(wire::Frame frame) {
 }
 
 bool serviceRequest(uint16_t op) {
-  return op>=wire::ServiceCapture&&op<=wire::ServiceSettle;
+  return op>=wire::ServiceCapture&&op<=wire::ServiceCaptureCurrent;
 }
 bool effectRequest(uint16_t op) {
   return op==wire::Stop||op==wire::Release||op==wire::ServiceCapture||
-    op==wire::ServiceStop||op==wire::ServiceSettle;
+    op==wire::ServiceStop||op==wire::ServiceSettle||op==wire::ServiceCaptureCurrent;
 }
 std::vector<uint8_t> refusalPayload(wire::ServiceRejection reason,DWORD code) {
   std::vector<uint8_t> p; wire::append(p,static_cast<uint8_t>(reason)); wire::append(p,code); return p;
@@ -313,7 +332,7 @@ bool retainEffect(const wire::Frame& frame) {
   if(idempotentRequests.size()-cachedReplies.size()>=PendingEffects) return false;
   idempotentRequests.emplace(frame.id,frame); return true;
 }
-#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE) || defined(OWNED_PROCESS_SERVICE_SCOPES)
 std::vector<uint8_t> serviceIdentity(const owned_service::Facts& facts) {
   std::vector<uint8_t> p; wire::append(p,facts.key); wire::append(p,facts.birth); return p;
 }
@@ -326,10 +345,11 @@ void serviceOperation(wire::Frame frame,ULONGLONG admittedAt) {
   uint16_t response=wire::ServiceRefused;
   std::vector<uint8_t> payload;
   try {
-    auto& scopes=debug_service_test::scopes;
-    if(frame.op==wire::ServiceCapture) {
-      const auto key=scopes.registerExact(wire::get<DWORD>(frame.payload.data()),
-        wire::get<uint64_t>(frame.payload.data()+4));
+    auto& scopes=service_runtime::scopes;
+    if(frame.op==wire::ServiceCapture||frame.op==wire::ServiceCaptureCurrent) {
+      const auto pid=wire::get<DWORD>(frame.payload.data());
+      const auto key=frame.op==wire::ServiceCaptureCurrent?scopes.registerCurrent(pid):
+        scopes.registerExact(pid,wire::get<uint64_t>(frame.payload.data()+4));
       payload=serviceIdentity(scopes.query(key)); response=wire::ServiceCaptured;
     } else {
       const auto key=wire::get<uint64_t>(frame.payload.data());
@@ -356,12 +376,13 @@ void serviceOperation(wire::Frame frame,ULONGLONG admittedAt) {
 #endif
 void admitService(wire::Frame frame) {
   const auto admittedAt=GetTickCount64(); // Capture once, before an asynchronous worker may wait.
-  const size_t expected=(frame.op==wire::ServiceCapture||frame.op==wire::ServiceStop)?12:8;
+  const size_t expected=frame.op==wire::ServiceCaptureCurrent?4:
+    (frame.op==wire::ServiceCapture||frame.op==wire::ServiceStop)?12:8;
   if(frame.payload.size()!=expected||
      (frame.op==wire::ServiceStop&&wire::get<DWORD>(frame.payload.data()+8)>60000)) {
     serviceRefusal(frame.id,wire::Invalid,ERROR_INVALID_PARAMETER); return;
   }
-#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE) || defined(OWNED_PROCESS_SERVICE_SCOPES)
   if(!launched||!admissionDone||sealed) {
     serviceRefusal(frame.id,wire::Invalid,ERROR_INVALID_STATE); return;
   }

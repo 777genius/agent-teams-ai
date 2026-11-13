@@ -128,7 +128,7 @@ test('Linux CDP diagnostics retain the original bounded descriptor read without 
     try { assertOwnedCdpListener(4100); } catch (error) { failure = error; }
     assert.ok(failure instanceof assert.AssertionError);
     const originalFacts = readOwnedCdpListenerFailure(failure)!;
-    const originalBytes = JSON.stringify(originalFacts), censusReads = reads;
+    const originalBytes = JSON.stringify(originalFacts), censusReads: number = reads;
     comparing = true;
     const projected = readOwnedCdpListenerFailure(failure, fixture)!;
     assert.equal(projected.holderCount, 2);

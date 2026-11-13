@@ -152,6 +152,24 @@ public:
     currentPids[selected->pid]=selected->key;
   }
 
+  /** First admission selects only the current live prebirth capture of this broker.
+   * A PID is not historical identity; later operations use the returned original key. */
+  Key registerCurrent(DWORD pid) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if(!pid) throw DWORD{ERROR_INVALID_PARAMETER};
+    const auto indexed=currentPids.find(pid);
+    if(indexed==currentPids.end()) throw DWORD{ERROR_NOT_FOUND};
+    const auto selected=find(indexed->second);
+    if(selected->pid!=pid||selected->key!=indexed->second)
+      throw DWORD{ERROR_INVALID_DATA};
+    const DWORD waited=WaitForSingleObject(selected->process,0);
+    if(waited==WAIT_OBJECT_0) throw DWORD{ERROR_NOT_FOUND};
+    if(waited==WAIT_FAILED) throw GetLastError();
+    if(waited!=WAIT_TIMEOUT) throw DWORD{ERROR_INVALID_DATA};
+    selected->registered=true;
+    return selected->key;
+  }
+
   /** Exact retained identity only; current TEST callers already captured its birth.
    * Lookup never adopts a PID or substitutes the current-event index for a scope. */
   Key registerExact(DWORD pid,uint64_t birth) {

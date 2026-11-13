@@ -4,7 +4,7 @@ import { closeSync, existsSync, openSync, readFileSync, writeFileSync } from 'no
 import { Duplex } from 'node:stream';
 
 import { decodeServiceFacts, decodeServiceIdentity, decodeServiceRefusal, encodeFrame, encodeLaunch,
-  encodeServiceCapture, encodeServiceScope, encodeServiceStop, FrameDecoder, Op, ServiceRefusal,
+  encodeServiceCapture, encodeServiceCaptureCurrent, encodeServiceScope, encodeServiceStop, FrameDecoder, Op, ServiceRefusal,
 } from '@agent-teams/legacy-agent-host/owned-process';
 import { capturedWitness, timeout, waitFor } from './nativeGateContext';
 import { createFixtureOutputCollector } from './nativeGateOutput';
@@ -110,14 +110,27 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
       writeFileSync(`${start.path}.branch-release`, start.nonce, { flag: 'wx' });
       assert.equal(await timeout(events.wait(serviceWitnesses[0]!.exit)), 0);
     }
-    const capture = encodeServiceCapture(service.pid, service.birth);
+    const currentCapture = encodeServiceCaptureCurrent(service.pid);
+    const captureOpcode = mode === 'service-pair' ? Op.serviceCaptureCurrent : Op.serviceCapture;
+    const capture = mode === 'service-pair' ? currentCapture : encodeServiceCapture(service.pid, service.birth);
     const wrong = encodeServiceCapture(service.pid,
       (BigInt('0x' + service.birth) ^ 1n).toString(16).padStart(16, '0'));
     phase('service-capture');
     assert.equal(decodeServiceRefusal(await request(Op.serviceCapture, Op.serviceRefused, wrong)).reason,
       ServiceRefusal.missing, 'Wrong original identity has no native effect');
+    const sentinelPid = sentinel.pid; assert.ok(sentinelPid);
+    for (const pid of [rootPid, sentinelPid]) {
+      assert.equal(decodeServiceRefusal(await request(Op.serviceCaptureCurrent, Op.serviceRefused,
+        encodeServiceCaptureCurrent(pid))).reason, ServiceRefusal.missing,
+        'Provider and foreign PIDs cannot enter this broker service registry');
+    }
+    if (mode === 'service-first') {
+      assert.equal(decodeServiceRefusal(await request(Op.serviceCaptureCurrent, Op.serviceRefused,
+        currentCapture)).reason, ServiceRefusal.missing,
+        'A current-child selector cannot register an exited original root with live descendants');
+    }
     const captureId = lastId + 1n;
-    const selected = decodeServiceIdentity(await request(Op.serviceCapture, Op.serviceCaptured, capture));
+    const selected = decodeServiceIdentity(await request(captureOpcode, Op.serviceCaptured, capture));
     assert.equal(selected.birth, service.birth);
     assert.ok(BigInt('0x' + selected.key) > (mode === 'service-pair' ? 64n : 0n),
       'scope keys never restart or alias after cumulative native retirement');
@@ -139,8 +152,8 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
       }
       phase('service-effect-retirement');
       for (let index = 0; index < 64; index++)
-        assert.deepEqual(decodeServiceIdentity(await request(Op.serviceCapture, Op.serviceCaptured, capture)), selected);
-      assert.equal(decodeServiceRefusal(await request(Op.serviceCapture, Op.serviceRefused, capture, captureId)).reason,
+        assert.deepEqual(decodeServiceIdentity(await request(captureOpcode, Op.serviceCaptured, capture)), selected);
+      assert.equal(decodeServiceRefusal(await request(captureOpcode, Op.serviceRefused, capture, captureId)).reason,
         ServiceRefusal.retiredRequest, 'Evicted command ID is refused, never dispatched as a new registration');
       await observe(); // Refusing an old request cannot abandon a healthy provider or its original scope.
     }
@@ -152,6 +165,8 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
     assert.equal(expired.dispatchError, 0);
     assert.ok(serviceWitnesses.slice(1).every(witness => witness.process.exitCode === null));
     await observe();
+    const retainedCaptureId = lastId + 1n;
+    assert.deepEqual(decodeServiceIdentity(await request(captureOpcode, Op.serviceCaptured, capture)), selected);
     phase('stop');
     const stopId = lastId + 1n;
     const stop = encodeServiceStop(selected.key, 10000);
@@ -164,6 +179,10 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
     phase('witness-exits');
     assert.deepEqual(await timeout(events.wait(Promise.all(serviceWitnesses.map(value => value.exit)))), [0, 0, 0]);
     assert.deepEqual(decodeServiceIdentity(await request(Op.serviceSettle, Op.serviceSettled, key)), selected);
+    assert.deepEqual(decodeServiceIdentity(await request(captureOpcode, Op.serviceCaptured, capture, retainedCaptureId)), selected,
+      'An original capture ACK replays after retirement without a current-PID lookup');
+    assert.equal(decodeServiceRefusal(await request(Op.serviceCaptureCurrent, Op.serviceRefused,
+      currentCapture)).reason, ServiceRefusal.missing, 'Fresh admission cannot reacquire a retired original');
     assert.deepEqual((await request(Op.serviceStop, Op.serviceStopped, stop, stopId)).payload, stopped.payload,
       'original ACK remains replayable after its native scope retired, without recapture');
     assert.equal(decodeServiceRefusal(await request(Op.serviceStop, Op.serviceRefused, stop)).reason,

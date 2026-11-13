@@ -38,7 +38,8 @@ interface Selection {
 }
 type Case = 'graceful' | 'crash';
 
-function prepareProfile(root: string, broker: string, selected: Selection, url: string) {
+function prepareProfile(originalSandbox: string, broker: string, selected: Selection, url: string) {
+  const root = realpathSync.native(originalSandbox);
   const systemRoot = process.env.SystemRoot;
   assert.ok(systemRoot && /^[a-z]:\\/i.test(systemRoot));
   for (const name of ['home', 'tmp', 'config', 'workspace', 'appdata', 'localdata', 'storage'])
@@ -183,10 +184,10 @@ function prepareProfile(root: string, broker: string, selected: Selection, url: 
   writeFileSync(source, JSON.stringify(profile), { flag: 'wx' });
   const host: SelectedHostProfile = {
     profileId,
-    nodeExecutable: realpathSync(process.execPath),
+    nodeExecutable: realpathSync.native(process.execPath),
     nodeVersion: process.version,
     nodeSha256: profile.owner.nodeSha256,
-    hostEntry: realpathSync(hostEntry),
+    hostEntry: realpathSync.native(hostEntry),
     hostEntrySha256: profile.owner.hostEntrySha256,
     expectedBuildId: profile.owner.buildId,
     cwd: root,

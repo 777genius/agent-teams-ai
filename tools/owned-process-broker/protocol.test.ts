@@ -6,6 +6,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+import { encodeServiceCaptureCurrent } from '@agent-teams/legacy-agent-host/owned-process';
 
 import {
   encodeFrame,
@@ -175,21 +176,31 @@ function wirePeer(
   };
 }
 describe('bounded owned process protocol', () => {
-  it('preserves request IDs beyond Number precision across fragmented and coalesced frames', () => {
+  it('preserves exact request IDs and a current-child selector across fragmented and coalesced frames', () => {
     const decoder = new FrameDecoder(generation);
-    const received: bigint[] = [];
+    const received: Frame[] = [];
     const frame = encodeFrame({
       opcode: Op.stop,
       requestId: 9007199254740993n,
       generation,
       payload: Buffer.from([1]),
     });
-    decoder.push(frame.subarray(0, 17), (value) => received.push(value.requestId));
-    decoder.push(Buffer.concat([frame.subarray(17), frame]), (value) =>
-      received.push(value.requestId)
+    const current = encodeFrame({
+      opcode: Op.serviceCaptureCurrent,
+      requestId: 9007199254740994n,
+      generation,
+      payload: encodeServiceCaptureCurrent(421),
+    });
+    decoder.push(frame.subarray(0, 17), (value) => received.push(value));
+    decoder.push(Buffer.concat([frame.subarray(17), frame, current]), (value) =>
+      received.push(value)
     );
     decoder.end();
-    expect(received).toEqual([9007199254740993n, 9007199254740993n]);
+    expect(received.map(value => value.requestId)).toEqual([9007199254740993n, 9007199254740993n, 9007199254740994n]);
+    expect(received[2]!.opcode).toBe(Op.serviceCaptureCurrent);
+    expect(received[2]!.payload).toEqual(Buffer.from([165, 1, 0, 0]));
+    for (const invalid of [0, -1, 1.5, 0x100000000, Number.NaN, Number.POSITIVE_INFINITY])
+      expect(() => encodeServiceCaptureCurrent(invalid)).toThrow('selector');
   });
   it.each(['version', 'generation', 'length', 'opcode'])(
     'seals on invalid %s before receiving the payload',
@@ -913,7 +924,7 @@ describe('bounded owned process protocol', () => {
       file: 'owned-process-broker.exe',
       sha256: createHash('sha256').update(bytes).digest('hex'),
     };
-    const write = (value = manifest): void => {
+    const write = (value: Record<string, unknown> = manifest): void => {
       writeFileSync(path, bytes);
       writeFileSync(join(sandbox, 'manifest.json'), JSON.stringify(value));
     };
@@ -925,6 +936,16 @@ describe('bounded owned process protocol', () => {
       expect(() => verifyStagedBroker(path, 'x64')).toThrow('manifest');
       write({ ...manifest, schema: 2 });
       expect(() => verifyStagedBroker(path, 'x64')).toThrow('manifest');
+      write();
+      expect(() => verifyStagedBroker(path, 'x64', 'service-scopes-v1')).toThrow('manifest');
+      const scoped = { ...manifest, schema: 2, capability: 'service-scopes-v1' };
+      write(scoped);
+      expect(() => verifyStagedBroker(path, 'x64')).toThrow('manifest'); // No implicit consumer activation.
+      verifyStagedBroker(path, 'x64', 'service-scopes-v1');
+      write({ ...scoped, capability: 'test-debug-service' });
+      expect(() => verifyStagedBroker(path, 'x64', 'service-scopes-v1')).toThrow('manifest');
+      write({ ...scoped, testMode: true });
+      expect(() => verifyStagedBroker(path, 'x64', 'service-scopes-v1')).toThrow('manifest');
       write();
       bytes[100] = 1;
       writeFileSync(path, bytes);

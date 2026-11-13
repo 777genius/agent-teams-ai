@@ -13,6 +13,7 @@ export const Op = Object.freeze({
   serviceQuery: 6,
   serviceStop: 7,
   serviceSettle: 8,
+  serviceCaptureCurrent: 9,
   prepared: 101,
   resumed: 102,
   stopped: 103,
@@ -217,6 +218,13 @@ export function encodeServiceCapture(pid: number, birth: string): Buffer {
     throw new Error('Invalid service PID metadata');
   const payload = Buffer.alloc(12);
   payload.writeUInt32LE(pid); payload.writeBigUInt64LE(serviceUint64(birth), 4);
+  return payload;
+}
+/** Select the broker's current live prebirth capture; this cannot prove a past PID's identity. */
+export function encodeServiceCaptureCurrent(pid: number): Buffer {
+  if (!Number.isInteger(pid) || pid <= 0 || pid > 0xffffffff)
+    throw new Error('Invalid service PID selector');
+  const payload = Buffer.alloc(4); payload.writeUInt32LE(pid);
   return payload;
 }
 export function encodeServiceScope(key: string): Buffer {

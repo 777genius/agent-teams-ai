@@ -26,7 +26,13 @@ function boundedFile(path: string, limit: number): Buffer {
   }
 }
 /** Bounded staged-artifact verification; not a guarantee against a malicious filesystem/OS race. */
-export function verifyStagedBroker(path: string, arch: string): void {
+export function verifyStagedBroker(
+  path: string,
+  arch: string,
+  capability: 'whole-job-v1' | 'service-scopes-v1' = 'whole-job-v1'
+): void {
+  if (capability !== 'whole-job-v1' && capability !== 'service-scopes-v1')
+    throw new Error('Unsupported staged broker capability');
   if (basename(path) !== 'owned-process-broker.exe' || (arch !== 'x64' && arch !== 'arm64')) {
     throw new Error('Unsupported staged broker');
   }
@@ -37,8 +43,12 @@ export function verifyStagedBroker(path: string, arch: string): void {
     throw new Error('Invalid broker manifest');
   const m = manifest as Record<string, unknown>;
   if (
-    Object.keys(m).sort().join(',') !== 'arch,file,platform,protocol,schema,sha256' ||
-    m.schema !== 1 ||
+    Object.keys(m).sort().join(',') !== (capability === 'service-scopes-v1'
+      ? 'arch,capability,file,platform,protocol,schema,sha256'
+      : 'arch,file,platform,protocol,schema,sha256') ||
+    (capability === 'service-scopes-v1'
+      ? m.schema !== 2 || m.capability !== capability
+      : m.schema !== 1) ||
     m.protocol !== VERSION ||
     m.platform !== 'win32' ||
     m.arch !== arch ||

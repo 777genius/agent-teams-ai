@@ -1972,3 +1972,362 @@ Self-review: §33/35 факты не переименованы в PASS; raw pat
 - Existing48-member launch/graceful close, byte-pressure, EOF/old epoch, lost-ACK/no-replay и §34 order/readiness cases остаются обязательными. Build/types/actual subprocess и Windows §38/40 выполняются на окончательном source; прежние A30/§42 source review не подменяют эти результаты.
 
 Independent plan review: root и Profiles — PASS; новые source/execution results пока отсутствуют.
+
+
+## §41 follow-up — ограничить output во время original donor gate
+
+**Найдено при root review qualification merge, до новой execution claim.**
+В опубликованном §41 workflow `a84f5236f33261d12cc0dea3450a40da02a34e87`
+`spawnSync` направляет stdout/stderr прямо в fd; проверка файла≤8MiB
+выполняется только после выхода. Она не ограничивает writer во время работы.
+Предыдущий source review это пропустил. Genuine corpus/old→old/current-D
+acceptance по-прежнему требуют actual CI, исправление ниже их не подменяет.
+
+### Круг1 — ровно existing workflow seam
+
+1. В `Qualify genuine old checkpoint and strict current D refusal before
+   Desktop Resume` заменить только direct-file stdio на
+   `['ignore', 'pipe', 'pipe']` и `maxBuffer: 8 * 1024 * 1024`.
+   Путь Node, original argv, cwd, environment pins, old1d/current source
+   equality, dependency/archive hashes и сам native test не меняются.
+2. После original `spawnSync` взять его фактические stdout/stderr Buffers,
+   определить captured byte count и сохранить не более8MiB combined bytes
+   по прежнему artifact path, **до** assertion по overflow/error/status.
+   Консоль получает только эти bounded bytes. Так original partial output
+   сохраняется и при native/child failure; post-exit stat больше не выдаётся
+   за действующий output limit. Это тот же простой bounded-buffer приём,
+   который уже используется qualification13 scheduled-native prerequisite.
+   Не добавлять streaming collector, новый helper/framework или второй child.
+3. После сохранения partial bytes требовать captured combined size≤8MiB,
+   отсутствие `run.error` и status0; только затем разбирать единственный
+   actual receipt и проверять прежние corpus, no-allocation, original history,
+   source freeze и `cleanupConfirmed` assertions. Частичный/truncated log,
+   maxBuffer termination, отсутствие receipt/child close не доказывают cleanup.
+   Не синтезировать INCOMPLETE receipt, release или подтверждение остановки.
+
+### Круг2 — бюджеты и falsification
+
+Existing native test180s, provider45s и job45min остаются прежними.
+В этом узком correction не вводить новый внешний timeout и не увеличивать
+существующие бюджеты: дополнительный kill ровно на180s мог бы оборвать
+уже предусмотренный original finally/Host close. При output-limit error
+gate остаётся failed/cleanup-unqualified; никакого native rerun или signal
+по заново найденному PID. Сохранённый log не заменяет original custody proof.
+
+Source peer проверяет точный diff одного workflow step: никакой потери
+qualification13 policy/Node guards при последующем merge, bounded allocation
+и запись partial log до error assertion. Использовать существующую CI
+проверку workflow и следующий уже необходимый native-resume row; не добавлять
+новую suite/runner/model input. Исполнение correction пока pending.
+
+### §43 actual CI: explicit type for the retained census counter
+
+Native head `dfcea017fad525e24e53d775088a72d013a5b96d`,
+[run43394213408/job131781100866](https://github.com/777genius/agent-teams-ai/actions/runs/43394213408/job/131781100866):
+Host build прошёл, scripts typecheck остановился с TS7022 на
+`desktop-backend-observations.test.ts:131` (`censusReads = reads`).
+Добавить только явный `number` к сохранённому счётчику в existing loop.
+Initializer, строгий listener guard, failure projection, число census reads
+и byte-equality assertions остаются прежними. Новые tests и бюджеты не нужны.
+Это исправление compilation, не доказательство устранения Linux listener leak;
+следующий штатный native cut обязан повторно пройти types и actual gate.
+
+## 45. §38 B/C: явная native поставка и исходный prepared intent до await
+
+**Уточнение до следующего source, база P09 `37cd3b4dd32a9899f92dfecbb9ab3f3489ba8711`.**
+A/§40/42/44 и §43 опубликованы в native child `dfcea017fad525e24e53d775088a72d013a5b96d`;
+run `43394213408` только начался. Новый A source не получает native PASS от прежних vendor runs.
+B/C остаются отдельной ещё не включённой фичей; этот раздел не меняет §38 D и не обещает восстановление SDK iterator.
+
+### Проверенные границы текущего source
+
+- [`brokerArtifact.ts` на fe6](https://github.com/777genius/agent-teams-ai/blob/fe6eece10344cf1cd6f7dbc216c7eb19070c7c9e/packages/legacy-agent-host/src/owned-process/brokerArtifact.ts)
+  принимает ровно schema1/шесть полей и проверяет PE/digest. Это whole-Job delivery, не доказательство service scopes.
+  [`debugServiceTest.h`](https://github.com/777genius/agent-teams-ai/blob/fe6eece10344cf1cd6f7dbc216c7eb19070c7c9e/tools/owned-process-broker/debugServiceTest.h)
+  включает debugger и `Scopes{64}` только в TEST target; product manifest не должен объявить их по наличию opcodes.
+- [`TeamProcessCommands.admit/register`](https://github.com/777genius/agent-teams-ai/blob/fe6eece10344cf1cd6f7dbc216c7eb19070c7c9e/packages/legacy-agent-host/src/process/TeamProcessCommands.ts)
+  сейчас создаёт prepared object, но пишет его лишь **после** synchronous capture. Простое добавление await оставит
+  effect без durable original intent. Existing `commands/`, validator/fingerprint и Team fence остаются единственным owner.
+- [`registeredProcessContracts.ts`](https://github.com/777genius/agent-teams-ai/blob/fe6eece10344cf1cd6f7dbc216c7eb19070c7c9e/packages/legacy-agent-host/src/process/registeredProcessContracts.ts)
+  допускает только Darwin/Linux capture; synchronous `signal(capture)` не несёт original command/deadline.
+  A Windows allocation не добавляется в POSIX `processRoots`: нужен настоящий typed consumer исходной Main capability.
+
+### B1. Одна явно выбранная сборка с service scopes
+
+1. Выделить общий debug loop из `debugServiceTest.h` в небольшой helper рядом с `serviceScopes.h`.
+   Product compile capability отдельна от `OWNED_PROCESS_TEST_DEBUG_SERVICE`; TEST modes2/3, diagnostic FD4
+   и fault injection не входят в staged product binary. Один broker по-прежнему создаёт исходный provider и его Jobs;
+   второго daemon/debugger/owner не появляется. Failed scope admission не переключается на недоказанный no-debug режим.
+2. `CMakeLists.txt`, `scripts/build/buildOwnedProcessBroker.ts` и `brokerArtifact.ts` получают закрытый
+   schema2 manifest с единственной явной capability `service-scopes-v1`; schema1 остаётся только whole-Job.
+   Exact schema/PE/digest проверяются до launch, выбранная capability входит в private captured profile/selection.
+   Поле из renderer/имя файла/успешный неизвестный opcode не являются admission. Название executable можно сохранить
+   в отдельном штатном staging directory; за один launch выбирается ровно одна проверенная поставка.
+3. Подключение допускается сначала для ordinary Claude Windows x64/ARM64, с собственным actual staged-product gate.
+   Codex/V1/Bun, management и scheduled consumers не переключаются вслед за общим manifest reader.
+   Перед выбором product quota сопоставить текущие1024 Team rows и lifetime зарегистрированных originals с live-child
+   accounting; TEST limit64 не переносить молча. Явный конечный quota и отказ при исчерпании сохраняют original cleanup.
+4. В той же native `Scopes` добавить current-child selector: под mutex взять `currentPids→records`, проверить
+   retained HANDLE live и согласованность записи, вернуть original key/birth. Это только первый atomic current admission;
+   historical PID не доказывается. Effect получает место в existing request cache **до** lookup. Retry исходного intent
+   использует прежнюю запись/ответ; новый ID не превращается в replay. Query/Stop/settle далее работают только по scope key.
+
+### B2/C. Journal → один native effect → fence settlement
+
+1. В existing `ProcessCommandReceipt` добавить только закрытое private native-intent поле, достаточное для ссылки
+   на original capture/Stop request: operation, original provider capability/generation и стабильный operation reference.
+   Валидатор и fingerprint включают это поле; отсутствие поля в настоящих старых receipts остаётся прежним legacy path.
+   Это metadata ссылки в том же journal, не HANDLE, не новый target и не отдельный журнал/авторизационный registry.
+   Broker wire ID назначает и удерживает тот же Main physical owner; durable operation reference связывает его с командой.
+2. Register под синхронным fence делает enter/admit/replay, проверяет input/rows/registrar, сохраняет prepared intent
+   **до первого await и до отправки current-child capture**. Replay возвращает прежний receipt/lookup, не захватывает PID снова.
+   Native await идёт вне fence. По ответу повторно читаются exact receipt/fingerprint, grant revision, original registrar,
+   captured source и актуальные active PID rows; только затем разрешены policy register/attachOriginal.
+   Original capture evidence фиксируется прежде этих policy writes; отказ/утрата authority не выдаётся за отсутствие effect
+   и не лишает Main уже удержанной cleanup capability.
+3. Canonical Windows capture хранит same-Main owner epoch, provider generation/root identity, scope key/birth и registrar.
+   CommandId/requestId/time/новая Host incarnation не входят в physical digest. Повторная регистрация той же active row
+   возвращает тот же original capture; отдельные completed command receipts продолжают хранить каждый свой original result.
+   Новая capture version получает strict keys/limits в `validateProcessRecords.ts`, включая row PID consistency.
+4. Stop пишет requested-unknown + exact original capture + native-intent до синхронного enqueue, повторяет исходную
+   authority перед enqueue и ждёт ответ вне fence. Original deadline включает очередь; §44 remaining/wire debt сохраняются.
+   Timeout/Host loss не создают новый Stop ID. Lookup читает/reconciles именно original Main operation; потерянный capture
+   ACK не разрешает повторный current-child lookup, потерянный Stop ACK не разрешает повторный TerminateJobObject.
+   Existing broker допускает три service worker и четыре исходных wire waiter/pending effect; bounded admission
+   остаётся у того же physical capability, учитывает original deadline и оставляет место whole-provider cleanup.
+   Эти пределы не повышаются до32 Host slots; очередь не создаёт новый effect ID после unknown.
+   Native `dispatchError=0` само по себе не доказывает dispatch: уже пустой scope мог не получать signal.
+   Portable completed absence требует свежего original scope proof; accepted signal и metadata stop его не заменяют.
+5. `registered:boolean` остаётся lifetime физического scope. Settle разрешён после genuine absence и durable reconciliation
+   связанных pending receipts; metadata unregister/replacement registration не освобождают HANDLE. После settle original
+   completed observed-absent читается из прежнего journal, естественное завершение остаётся owner-local tombstone.
+   Missing key не означает absence и не допускает повторный capture. Bounded original operation replies остаются при том
+   же Main pending capability, без второго application journal.
+6. Точный TS cut: `owned-process/{contract,codec,windowsBroker,RetainedWindowsCustody,HostWindowsLaunch,hostCustody}.ts`,
+   private Windows capture adapter и existing `process/{registeredProcessContracts,validateProcessRecords,TeamProcessCommands}.ts`.
+   Затем только await propagation в `createTeamProcessMethods/createTeamProcessComposition/createMemberProcessMcpPort`,
+   `mcp/{contracts,processTools}` и lifecycle `assertReleased`. Team snapshot остаётся синхронной metadata projection;
+   реальные list/lookup/terminate ждут native read отдельно. POSIX custody/decoder и старые receipts не переписываются.
+
+### Конечная проверка именно этого cut
+
+Existing Windows vendor/Main gate использует **staged schema2 product broker**, обычную Claude factory и реальный Team
+`process_register`; проверяет canonical repeated registration, list → original operator Stop → scope absent при живых
+provider/neighbor/foreign witness и продолжение исходного Session. Existing process-command cases расширяются лишь
+для prepared-before-await, revoke/source change до commit, lost original capture/Stop ACK, metadata removal при pending Stop.
+Неизменённые replay, old receipt decode и async caller closure проходят прежние suites. Отдельной test framework нет.
+Same-Main Host rebind, остальные provider tuples и packaged Processes UI остаются §38 D/общей приёмкой.
+
+**R1 source critique:** исправлены неверные предположения «admit уже durable» и «TEST opcode означает product capability»;
+отдельно отмечены original operation reference, canonical capture и signal/absence distinction.
+**R2 Account:** B2/C authority/replay design PASS: prepared intent до await, original operation reference,
+canonical capture, повторный fence и cleanup custody сохранены. **R2 Profiles:** B1 delivery/attestation design PASS:
+schema1/schema2, exact staged PE/private selection, TEST isolation и конечные quota явно разделены.
+Root review pending; production source по §45 не изменён. Existing3 service worker/4 waiter не повышаются.
+
+R3 root: план source-reviewed; схема поставки и два исходных command fence сохраняются. Actual A/B native acceptance остаётся обязательной; B1 можно подготовить отдельным неактивным срезом без изменения текущего running A head.
+
+## 46. Actual dfcea Windows A: canonical capture до первого Host spawn
+
+Exact native head `dfcea017fad525e24e53d775088a72d013a5b96d`, run `43394213408`,
+x64 job `131781101241`: прежние Node/Electron/Host facade gates и actual Claude service-scope step15 PASS.
+Новый A step16 отказал в `validateHostProfile:80` с `profile-mismatch/not-dispatched`, до Host spawn/native input.
+По этому результату Main-retained A, graceful/crash HANDLE proof и дальнейшие B/C/D не квалифицированы.
+
+Controller выдал TEST sandbox с `RUNNER~1`; fixture захватывает file paths через обычный `realpathSync`,
+а production guard сравнивает их с `fs.promises.realpath`. В exact
+[Node24.21 lib/fs.js](https://github.com/nodejs/node/blob/v24.21.0/lib/fs.js) обычный sync — JS walk,
+а `realpathSync.native` и [promises.realpath](https://github.com/nodejs/node/blob/v24.21.0/lib/internal/fs/promises.js)
+вызывают один `binding.realpath`; Windows [libuv](https://github.com/nodejs/node/blob/v24.21.0/deps/uv/src/win/fs.c)
+получает canonical name через `GetFinalPathNameByHandleW`. Короткое имя не является равной canonical строкой.
+
+Узкий исправляющий cut: `SelectedHostProfile.nodeExecutable/hostEntry` в
+`tools/owned-process-broker/nativeRetainedHostGate.ts` захватываются через `realpathSync.native`.
+Source follow-up перед публикацией также проверил `CapturedWindowsCustody.verifyLaunch`: native canonical equality
+обязательна для `spec.cwd`. Поэтому `prepareProfile` один раз разрешает **исходный controller sandbox** через
+тот же native realpath, затем строит cwd/env/storage/profile paths прежними join из этого каталога.
+Исходный controller sandbox guard до вызова сохранён; нет нового root, path fallback или ослабления equality.
+Candidate blob `945eb8f7d37b4500a4f3b0e6c06ea5db1961afbb` относительно `bef380e2d19fd423c54af5694117d1dc95ad249c`;
+readback MATCH. Hashes по-прежнему вычисляются из фактически созданных/captured файлов; canonical paths обозначают
+те же TEST locations. Strict equality/isFile checks, deadlines, first-input admission и original cleanup сохранены.
+Account source peer PASS для двух file captures и дополнительного canonical-root hunk; compiler/native execution pending.
+Это TEST capture correction; runtime PASS для новых bytes ещё нет. Existing exact-head A gate должен
+дойти до ordinary native turn и исходных HANDLE observations в обоих режимах, без нового oracle/runner/таймера.
+Текущие ARM/Linux jobs продолжают штатно; новую проверку получит следующий необходимый source commit.
+
+## 47. POSIX verify → exec: подтверждённый разрыв и оставшееся доказательство
+
+Thread `PRRT_kwDORVTEtM622qol` остаётся открытым по actual source
+`235b01b489a4f428b72c7667b0c89061c82cab1b`. Это source audit; нового native запуска,
+исправления production или положительного safety outcome здесь нет.
+
+### Что именно подтверждено
+
+- `CapturedProcess.ts` (`b5c545e518ec91e7efa784ee2e494dfa0038644e`) проверяет pathname/SHA,
+  затем делает дополнительные directory reads и вызывает `spawn(request.command, request.args, ...)`.
+  Исходный executable descriptor до exec не удерживается. Поздний `captureRoot/readRootExecutable`
+  не исключает исполнение подменённого файла до этой проверки.
+- `RuntimeSourceNativeVersion.ts` (`0ec09130bf10bca87b64a13efc4aab5494b13d30`) использует тот же
+  CapturedProcess для `--version`; исправление P06 async hashing относится к publication admission.
+  Его descriptor закрывается в `verifyRuntimeSourceCandidate` и не является launch capability.
+- Exact [Node24.21 libuv process.c](https://github.com/nodejs/node/blob/v24.21.0/deps/uv/src/unix/process.c)
+  передаёт pathname в Linux `execvp` и Darwin `posix_spawn`. Повторный hash непосредственно перед
+  этим вызовом уменьшает окно, но не закрывает его. Профиль сейчас не ограничивает executable только ELF/Mach-O.
+
+### Исключённые короткие решения
+
+1. Не вводить blanket `mode & 022 === 0` или доверие всему GID текущего пользователя.
+   [Homebrew installer](https://github.com/Homebrew/install/blob/main/install.sh) штатно задаёт
+   `g+rwx`, на macOS обычно группе `admin`, на Linux основной группе пользователя.
+   Членство других пользователей не следует из owner UID/GID. Это потребовало бы новой trust policy
+   и могло бы сломать поддерживаемую installed/custom установку.
+2. Mode alone не доказывает macOS ACL; см. [Apple file-system ACL semantics](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemDetails/FileSystemDetails.html).
+   Sticky ancestors и writable executable требуют отдельных доводов; world-writable `/tmp` нельзя
+   просто принять или запретить без проверки исходного protected child.
+3. Linux fd execution не является автоматически переносимым на macOS. В current
+   [XNU devfs_fdesc_support.c](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/miscfs/devfs/devfs_fdesc_support.c)
+   `fdesc_open` обслуживает специальное дублирование fd, а `fdesc_read` возвращает ENOTSUP;
+   обычный `exec("/dev/fd/N")` не считать equivalent of Linux `/proc/self/fd/N`.
+   Удержание inode также само по себе не запрещает in-place запись в него.
+4. Не копировать одиночный executable в новый cache и не считать это прозрачной заменой:
+   argv0, interpreter scripts, executable-relative assets/dylibs и reported provenance должны сохраниться.
+   Postspawn pathname/hash, advisory lock или успешный `--version` не заменяют pre-execution proof.
+
+### Следующий узкий proof, до выбора product implementation
+
+- В существующем POSIX native TEST seam связать original captured file с реально выбранным kernel image,
+  сохраняя original process/session/group custody. Контролируемая замена pathname между verification и
+  allocation должна дать **ноль инструкций TEST replacement**, а не только поздний отказ/cleanup.
+  Отдельно различить rename replacement и in-place mutation; не выдавать одно за покрытие другого.
+- Linux candidate: запуск из исходного проверенного descriptor, если доказаны byte stability и сохранение
+  original argv/env/cwd/executable identity/relative resources. Никакого silent fallback к pathname.
+- Darwin candidate: существующий private native adapter и
+  [POSIX_SPAWN_START_SUSPENDED](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/posix_spawnattr_getflags.3.html)
+  позволяют рассмотреть проверку до user-space. Сам suspended state недостаточен:
+  нужны exact kernel-selected file/image, исходные birth/parent/session и проверенные bytes до resume.
+  Пока штатный original-image proof и совместимость с уже разрешёнными custom executables не установлены,
+  новый launch API/порт/административные entitlements не проектировать как готовое решение.
+- В выбранном existing gate сохранить native/installed/custom пути, все текущие аргументы и environment,
+  sibling resources, provenance, cancellation и исходное cleanup. Не менять executable identity contract,
+  не добавлять daemon, новый owner/journal или увеличенный deadline. Новый native результат нужен именно
+  для новых bytes; текущий source audit не разрешает production activation.
+
+**R1:** найдено конкретное pathname окно, отдельно от P06 publication fd/hash и postspawn custody.
+**R2:** исключены permission/group shortcuts, непереносимый fd alias и незаметная смена executable location.
+Решение остаётся pending proof; до его получения thread и этот native acceptance пункт не закрываются.
+
+## 48. Genuine old checkpoint: retain the observed generation on later controls
+
+**Evidence before the change.** Exact parity head `235b01b489a4f428b72c7667b0c89061c82cab1b`,
+job `131780549007`, original artifact `14023871625`
+(ZIP SHA256 `303438118f5e09229df8d13c7918d9c5dfa42215a964af700ca5d4a4f2de3b51`)
+is INCOMPLETE, with cleanup confirmed. Its eleven model observations contain ONE and TWO,
+the original ONE native tool IDs in every TWO request, the selected Opus/medium options and
+the original team context. Both original business receipts completed. The first old Host
+checkpoint/Stop and the second old Host restore succeeded; the failure is the second
+`runtime.dispatch` at native-claude-host.native.ts:384, after TWO.
+
+### Source cause and smallest correction
+
+- The exact unchanged donor commit `1d0f97f55de566036c970eab4f36b84620afdb3f`,
+  `packages/legacy-agent-host/src/composition/resolveRuntimeControlEntry.ts`, rejects a
+  non-read control after a restore when `expectedGeneration` is absent. Its
+  `runtimeControlValues.ts` already accepts that field. Current Host retains the same rule.
+- The fixture's original `runtime.read` immediately preceding each dispatch already retains
+  the actual selected generation in `finalRuntime`. Supply that exact observed generation to
+  the existing dispatch. Do the same for the final Stop and for the existing cold outbox
+  dispatch using the original cold `runtime.read` result.
+- Preserve the original command IDs, one call per operation, the original capture/reference,
+  old Host source/dist/provider bytes, the strict current-D refusal and zero-allocation counters.
+  No replacement intent, retry, new generation lookup or provider admission is added.
+- Keep the fixture failure strict. A failed dispatch should report only its closed
+  `ok/code/outcome` fields in the assertion, so another refusal cannot disappear behind
+  a bare false/true diagnostic. Do not log native inputs or opaque checkpoint bytes.
+- The actual old source and receipt are the references; no production control guard is weakened.
+  This is a three-control TEST call-site correction, not a D compatibility implementation.
+
+### Verification and review rounds
+
+1. **R1 — original evidence and source:** verify the artifact digest and all eleven original
+   model observations; compare the exact donor guard and current guard. The old checkpoint is
+   still unqualified until the complete corrected gate finishes.
+2. **R2 — authority and scope:** independent review must confirm every supplied generation comes
+   from the same original selected Runtime read, including after cold restart; original IDs and
+   budgets remain unchanged. Do not skip dispatch/Stop, relabel the earlier failed run, or edit
+   donor source to make the corpus pass.
+3. **R3 — executable proof:** run the existing Host-script typecheck and the existing selected
+   runtime control/restore regression coverage, then the original native checkpoint gate on the
+   new exact head. Require checkpoint/history/PDF/native tool receipts, both original business
+   inputs, strict no-allocation refusal, final ordinary Stop/restart/replay and original cleanup.
+   No new unit-test suite or larger timeout is needed for the existing typed field.
+
+The subsequent §39 compatibility correction and current-Main route qualification remain open.
+A qualified old corpus alone cannot close the compatibility review thread.
+
+## 49. §45 B2/C: original service operation through the existing broker
+
+**Source refinement before the next implementation.** B1 delivery and the bounded native
+current-child selector remain inactive candidates; their source reviews do not qualify staged
+Windows behavior. Current A gate still needs the §46 TEST capture correction. Main cold rebind,
+other providers and packaged Processes UI remain separate acceptance work.
+
+### Concrete missing seams
+
+- `WindowsCapability.request` retains an expired wire waiter, but its `received(): void` callback
+  cannot retain the late decoded reply for original capture/Stop lookup. Preserve the original
+  frame at this same waiter; do not resolve the timed-out caller again or allocate another wire ID.
+- `windowsBrokerReference` currently hashes an explicit schema1 projection. An optional private
+  `service-scopes-v1` selection must participate in that projection, schema validation and all
+  Host/Main/broker verification calls. An absent field preserves the original schema1 reference;
+  no consumer infers the capability from a filename or successful opcode.
+- Whole-provider release ends the original broker's service handles too. Missing scope/closed
+  transport is never absence. Retain an actual terminal scope fact, or derive owner-local absence
+  only from the same capability's genuine `job-membership` whole-Job receipt and the scope's
+  previously proven membership. Root exit, EOF, metadata stop and `no-local-dispatch` are insufficient.
+
+### Small typed API and one physical owner
+
+1. Add an optional closed service port to the prepared original process. It allocates a pure
+   pending capture/Stop/settle operation before dispatch; read-only query does not create durable
+   operation history. Main stores this pending object under the original journal operation reference
+   before running it. The operation retains its exact request, first deadline, wire ID when assigned,
+   immutable initial outcome and the latest original validated reply. Lookup reads that object;
+   it never resends capture/Stop or calls the current-child selector under a fresh ID.
+2. A narrow `owned-process/WindowsServiceOperations.ts` helper may hold this typed queue/state,
+   using the existing `WindowsCapability` transport and decoder. It is not another broker or RPC
+   family. At most three service requests hold the existing four wire slots; whole-provider
+   Stop/release retains the fourth. Queue admission and native Stop payload consume the original
+   absolute deadline. Late ACK retires only its own wire debt. Service replies cannot enter
+   `publishRoot`, manufacture a whole-Job `TreeReceipt`, or rewrite another operation.
+3. Keep original service operation references at the existing Main allocation. The explicit ceiling
+   is 10000 per allocation, matching the existing Team command-entry ceiling; no unresolved record
+   is evicted. Read-only queries do not consume it. Scope facts remain bounded by the selected
+   product's 4096-scope ceiling. Capacity refusal precedes dispatch and preserves whole-provider
+   cleanup. Neither the native64 settled-frame cache nor Host32 slots becomes application history.
+4. Ordinary Claude first uses its exact installed original root capability; PID does not select a
+   provider, member or new root. Any nonunique/unavailable root selection stays held until its
+   explicitly qualified route exists. Canonical capture uses original Main epoch, provider capability/
+   generation/root, native scope key/birth, target PID and registrar. A new command or replacement
+   Host does not change that physical identity. Same scope with conflicting registrar/physical
+   metadata refuses instead of overwriting the original result.
+5. Extend only the existing private Host custody family with typed service capture/query/Stop/
+   settle/lookup. Same binding, lane, remaining budget, quiescing and late-ACK rules apply.
+   New captures require current input/source admission; query, original Stop, settlement and lookup
+   remain cleanup operations on already retained capabilities. Source refusal cannot discard cleanup.
+6. The existing Team journal stores the original native intent before the first await, exactly as
+   §45 specifies. Native work remains outside the synchronous Team fence; after-await settlement
+   rechecks the same receipt, grant, registrar/source and active rows. Async list/lookup/terminate
+   use exact original capture, while synchronous Team snapshots project metadata only. POSIX
+   capture and genuine old receipt decoding remain unchanged.
+
+### Verification scope
+
+Extend existing broker protocol and retained-owner/Host process-command tests for the one genuine
+late service reply, bounded queue plus whole-provider cleanup reserve, prepared-intent-before-await
+and no duplicate effect on lookup. Use the existing Windows staged-product/ordinary Claude gate
+for registration, original subtree Stop, neighbor/provider survival and original Session continuation;
+an unstaged TEST helper does not replace that proof. No new test framework, runner or time budget.
+
+**R1:** the late-frame loss, explicit capability hash projection and whole-release boundary are
+confirmed in exact `dfcea017` source. This is a design refinement only; source/compile/native
+acceptance of this next layer is pending. B1/native-selector source reviews remain separate.
