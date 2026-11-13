@@ -732,17 +732,17 @@ export class DesktopBackendFeature {
     if (this.sealed || this.clients.get(ownerKey(selected.owner)) !== owner)
       throw new BackendRoutingError('unavailable');
     if (!handshake.capabilities.includes('runtime.sources')) return undefined;
-    const teamScopes = (this.descriptor?.handles ?? [])
+    const teamScopes = [...new Map((this.descriptor?.handles ?? [])
       .filter(
         (entry) =>
           entry.contextId === selected.contextId &&
           ownerKey(entry.owner) === ownerKey(selected.owner)
       )
-      .map(({ scope }) => ({
+      .map(({ scope }) => [JSON.stringify([scope.teamId, scope.projectId, scope.workspaceId]), {
         teamId: scope.teamId,
         projectId: scope.projectId,
         workspaceId: scope.workspaceId,
-      }));
+      }] as const)).values()];
     return captureRuntimeSources({
       grant: {
         targetId: this.managementTargetId(selected),

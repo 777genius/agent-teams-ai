@@ -1408,7 +1408,7 @@ export interface TeamCreateResponse {
   runId: string;
   /** Canonical owner-qualified selection returned by the selected Host. */
   teamName?: string;
-  launchStatus?: 'started' | 'already_launching' | 'already_running';
+  launchStatus?: 'started' | 'already_launching' | 'already_running' | 'unconfirmed';
   alreadyLaunching?: boolean;
   alreadyRunning?: boolean;
 }

@@ -173,6 +173,6 @@ export async function createLaunchedHostTeam(options: {
   return {
     teamName: hostTeamSelectionKey(handleId),
     runId: hostTeamRunId(handleId, result.launch.launchId, result.launch.rosterRevision),
-    launchStatus: 'started',
+    launchStatus: result.partialCreated ? 'unconfirmed' : 'started',
   };
 }

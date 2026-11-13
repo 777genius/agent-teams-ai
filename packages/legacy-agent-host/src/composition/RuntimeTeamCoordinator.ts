@@ -40,7 +40,7 @@ import { runtimeCaptureSourceSchema, runtimeCaptureSourceSelections } from './ru
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import { ToolEvidenceWindows } from '../evidence/ToolEvidenceWindows.js';
 import { captureTeamModelProbeSelection, isCurrentCapturedTeam } from './savedTeamModelProbe.js';
-import { assertCapturedRosterCurrent, assertRosterEditable } from './teamRoster.js';
+import { assertCapturedRosterCurrent, assertRosterEditable, readCreatedLaunchAdmission } from './teamRoster.js';
 import type { TeamModelProbeSelection } from './teamLaunchModelProbe.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
@@ -359,7 +359,8 @@ export class RuntimeTeamCoordinator {
     if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
     const selected = this.retainedLaunches.get(runtimeDigest({ teamId, launchId }));
     if (!selected) throw new TeamLaunchError('hold', 'capture-unavailable');
-    return selected.launch.readOriginalStart(commandId);
+    return readCreatedLaunchAdmission({ selected, commandId, runtime: this.runtime,
+      entries: [...this.entries.values()] });
   }
 
   private async trackOpening<T>(pending: Promise<T>): Promise<T> {
@@ -454,6 +455,8 @@ export class RuntimeTeamCoordinator {
       capturedTeam: this.capturedTeams.get(teamId),
       launch: this.launches.get(teamId),
       entries: [...this.entries.values()],
+      runtime: this.runtime,
+      retainedLaunches: this.retainedLaunches,
       input,
       action,
       assertCurrent: () => {

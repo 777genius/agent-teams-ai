@@ -12,13 +12,15 @@ import {
   teamModelProbeEffort,
   teamModelProbeContext,
 } from './teamLaunchModelProbe.js';
-import { assertCapturedRosterCurrent } from './teamRoster.js';
+import { assertCapturedRosterCurrent, isUnstartedCaptureEditable } from './teamRoster.js';
 import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { TeamHostProfile } from './TeamHost.js';
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import type { TeamModelProbeSelection } from './teamLaunchModelProbe.js';
 import type { JsonValue } from '../contracts.js';
+import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
+import type { RetainedLaunchInspection } from './teamRoster.js';
 
 const prefix = 'saved-model-';
 export const isSavedTeamModelSource = (sourceId: string) => sourceId.startsWith(prefix);
@@ -28,9 +30,10 @@ type Options = {
   sources?: RuntimeRecipeSources;
   team: HostedTeam;
   assertCurrent(): void;
+  assertRuntimeHistory?(): void;
 };
 
-/** Pure compilation of a never-captured canonical roster. No registrations, grants or launch records. */
+/** Model-only compilation of saved choices; retained history requires its original offline proof. */
 function source(options: Options) {
   options.assertCurrent();
   const { profile, team } = options;
@@ -42,8 +45,10 @@ function source(options: Options) {
   if (
     team.owner.runtimeCaptures(profile.principalId).length ||
     team.definition.members.some((member) => member.delivery)
-  )
-    throw new TeamLaunchError('hold', 'saved-model-runtime-history');
+  ) {
+    if (!options.assertRuntimeHistory) throw new TeamLaunchError('hold', 'saved-model-runtime-history');
+    options.assertRuntimeHistory();
+  }
   const roster = team.connection.readRoster();
   const captured = captureRuntimeSource(
     profile,
@@ -186,6 +191,8 @@ export function captureTeamModelProbeSelection(options: {
   capturedTeam: HostedTeam | undefined;
   launch: TeamLaunchOwner | undefined;
   entries: readonly MemberEntry[];
+  runtime: RuntimeOwner;
+  retainedLaunches: ReadonlyMap<string, RetainedLaunchInspection>;
   input: TeamModelProbeSelection;
   action: 'start' | 'read' | 'cancel';
   assertCurrent(): void;
@@ -206,7 +213,11 @@ export function captureTeamModelProbeSelection(options: {
   }
   if (!team || !launch || isSavedTeamModelSource(input.launchId)) {
     if (!options.team) throw new TeamLaunchError('invalid', 'team');
-    return captureSavedTeamModelProbe({ ...options, team: options.team });
+    return captureSavedTeamModelProbe({ ...options, team: options.team,
+      assertRuntimeHistory: () => {
+        if (!isUnstartedCaptureEditable({ ...options, team: options.capturedTeam }))
+          throw new TeamLaunchError('hold', 'saved-model-runtime-history');
+      } });
   }
   if (action !== 'cancel') assertCapturedRosterCurrent(team);
   return captureTeamModelProbe({

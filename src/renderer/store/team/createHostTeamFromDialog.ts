@@ -32,6 +32,7 @@ export async function createHostTeamFromDialog(
     .catch(() => undefined);
   if (!isContextScopedRequestEpochCurrent(epoch))
     throw new Error('Team context changed after Create.');
+  if (response.launchStatus === 'unconfirmed') return response;
   await get()
     .getProvisioningStatus(response.runId)
     .catch(() => undefined);

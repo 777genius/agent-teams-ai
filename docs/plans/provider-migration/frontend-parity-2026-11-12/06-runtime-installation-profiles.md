@@ -410,3 +410,281 @@ Hash/platform/malformed receipt suites переиспользовать; same-ve
 сценариев, fast lint и source cap — PASS; совместная root-проверка с R7 credentials: 37/37 PASS.
 Actual native/Desktop ещё требует обычного CI. Этот срез не закрывает pre-exec pathname race,
 stale seed/retained history, дедупликацию grant scopes или восстановление Create после source mismatch.
+
+## 17. Published Create восстанавливается после смены runtime source — review 9
+
+План до source. Review `PRRT_kwDORVTEtM622S08`; current source проверен на
+`64c33f663ba48f34352b927a5d4a88fb2ec04b12` (эти Create/model paths не менялись в
+`a2f327c8b07142a2ec857a5be6e0924c84f0fcef`). База этого документа —
+`76b31ccc39984695f0f986e2c5d8a94bfeb770ec`; §15–16 и их actual proof сохранены.
+
+### Круг 1 — конкретная ошибка и прежняя возможность
+
+- В `CreateTeamLaunchCoordinator.submit` registry уже published и capture B уже
+  зарегистрирован до проверки `readLaunchSourceSelections`. Если исходный submit
+  прерван здесь, `lookup` возвращает null до start admission. После source C
+  новый model proof C не может законно запустить immutable B; повтор original Create
+  отказывает `creation-source-changed`. Existing test в `team-create-launch.test.ts`
+  доказывает отсутствие открытия, но не возможность продолжить работу.
+- `CapturedTeamRegistry.submitCreation` превращает даже известную published Team в
+  hold/unknown; `retainedCreateSubmission` поэтому держит единственный Create slot.
+  Нельзя освободить slot по одному отсутствующему start record: original submit
+  может ещё продолжать async capture/worktree и позднее стартовать.
+- Донор `4a0e06277fe216d9f82dbbede362668fe46622ee`:
+  `CreateTeamDialog.tsx:2173–2250` отдельно сохраняет Team через createConfig и
+  открывает её; ordinary Launch существует в
+  `TeamProvisioningCreateLaunchOrchestration.ts:198+`. Сохраняем возможность
+  работать с уже созданной Team и явно запустить её позже. Не утверждаем, что
+  донор имел именно новый Host receipt recovery.
+- Current ordinary `createHostTeamLaunchSubmission` уже даёт fresh command →
+  `capture:<command>` → start. `TeamRuntimeRegistration` и
+  `teamRoster.assertRosterEditable` проверяют исходные unresolved/attached resources,
+  а `executeRuntimeLaunch` повторяет current-roster guard после worktree await.
+  Эти owner guards сохраняются.
+- Второй найденный seam: `model.configuration.read` для ещё не запущенного B сейчас
+  возвращает B; same-provider draft probe сохраняет B sourceReference. Одна
+  partial-навигация не доказывает цепь current C → proof C → capture C → start C.
+
+### Круг 2 — один partial result и существующий prospective model read
+
+1. В existing Create coordinator удерживать только active original command IDs на
+   lifetime самого исходного submit Promise: захват до первого await, удаление только
+   после settlement в finally. Timeout/abort RPC не завершает этот lifetime. Это ограничено
+   текущей Host RPC concurrency; отдельного scheduler, очереди, таймера или журнала
+   нет. Concurrent same-ID submit/lookup возвращает прежний held/unknown, не
+   наблюдает временное отсутствие start как завершённую операцию.
+2. Original lookup по exact command/draft/context по-прежнему сначала проверяет
+   registry и полный retained capture. Если original start admitted — прежний
+   replay/read. Если полного capture ещё нет, registry pending, writer потерян,
+   record повреждён или custody неопределённа — прежний hold/unknown, без partial.
+   Для completed capture без original start проверить исходный summary и Runtime
+   bindings этого original capture через existing read/roster proof: startedAtMs=null,
+   summary.admission отсутствует (и preparation, и aggregate start любого command,
+   не только ids.start), все attempts unclaimed, no attached/unresolved resources.
+   TeamLaunchOwner.summary уже выводит admission из record.preparation либо
+   record.startCommandId; чужой admitted/prepared command не становится partial. Более поздний
+   другой run этой Team не приписывается старой команде; его outcome остаётся в
+   existing Team/runtime read, а partial не заявляет его cleanup. Проверка не останавливает и не
+   открывает process. Только этот конкретный pre-admission случай даёт
+   `partialCreated` с original creation receipt и actual retained launch summary.
+3. Same-ID submit, прочитав такой partial, только возвращает его. Он не возобновляет
+   start B, не переписывает capture B/его source refs и не создаёт новую Team.
+   Первое выполнение, ещё не опубликовавшее Team, сохраняет прежний Create+Launch
+   путь. Изменённый draft с тем же ID остаётся conflict; unknown record не становится
+   partial по catch-all. Новый durable terminal marker не нужен для этой границы:
+   inactive submit + existing completed capture/owner proof дают явный read branch.
+4. `CapturedTeamRegistry` после отказа/потерянного ACK делает один original
+   `team.creation.lookup`; он умеет вернуть и admitted, и partial result.
+   Только owner-confirmed отсутствие создания позволяет прежний editable refusal.
+   Main регистрирует тот же canonical handle через existing `registerDynamic`.
+   В private result добавить закрытый additive `partialCreated:true`;
+   public `TeamCreateResponse.launchStatus` получает `unconfirmed`.
+   runId остаётся ID **настоящего capture B**, не фиктивным admission/native session.
+5. Existing renderer Host-create helper проверяет canonical team/run IDs и делает
+   ordinary fetchTeams. Для `unconfirmed` он не включает provisioning polling и
+   не показывает запуск успешным. Existing Create completion освобождает только
+   original intent при прежнем foreground epoch и открывает эту Team. В existing
+   TeamList confirmation/notice показать: Team сохранена, запуск не подтверждён;
+   дальнейший Launch — явное действие на существующей Team. Organization placement
+   и original context-change/unknown holds не меняются.
+6. Для этого ещё не начатого complete capture использовать existing
+   `savedTeamModelProbe` как **model-only prospective** read current C.
+   Eligibility проверяется Host-side при read и каждом existing probe current check:
+   exact current captured Team/roster, отсутствует summary.admission любого command
+   (включая preparation), отсутствует claimed attempt,
+   исходные Runtime bindings не attached и не имеют unresolved custody. Для
+   prospective C проверить **все retained launches/resources этой Team**, как уже
+   делает RuntimeTeamCoordinator.assertRosterEditable, а не только latest B.
+   Existing `assertRosterEditable` можно переиспользовать с read-authority mode
+   только для этой inspection; мутации сохраняют прежний control mode.
+   Ранее зарегистрированная история сама по себе не даёт eligibility.
+7. `model.configuration.read` для eligible never-started capture возвращает existing
+   `saved-model-` source digest от текущего saved roster + source C. Этот digest,
+   original authority и source refs проходят existing `captureSavedTeamModelProbe`;
+   `source(options)` повторно проверяет eligibility и C при продолжении probe.
+   Native start/claim, смена roster/source/authority делают proof stale. Перед новым
+   capture/start остаются existing registration/roster/source guards; зелёный UI
+   check сам по себе не даёт полномочий обойти их.
+   Running/admitted A, Resume и обычный pinned capture model path остаются прежними;
+   не менять общее правило same-provider draft на latest defaults.
+8. После зелёного C пользователь делает ordinary Launch: current roster save →
+   fresh capture command C → start C. Existing synchronous registration/admission
+   и post-await current guards запрещают поздний start B после C; если B уже
+   admitted/attached/unknown, existing mutation refusal сохраняется.
+   Старые records/unknown ownership не удаляются, никакого automatic Stop/retry.
+
+### Круг 3 — доказать полную recovery цепь в existing tests
+
+- Расширить existing interrupted-Create case с реальными registry/runtime/source
+  journals: B preflight → published complete capture B → injected interruption
+  до start → source C → original lookup/submit partial → cold read того же result.
+  Ordinary model.configuration/probe должен выбрать именно executable/source C,
+  затем existing roster/capture/start с fresh ID открывает только C один раз.
+  Старый Create после этого не открывает B и не меняет его record/source references.
+  Существующий running-B/defaults-after-C test остаётся byte-for-byte по assertions.
+- В том же existing file проверить concurrent same-ID lookup/submit на deferred
+  capture: пока original flow жив, partial недоступен; после отказа он доступен
+  только при выполненных owner checks. Claimed/unknown custody и незавершённый
+  capture/worktree не подтверждают partial. Это finite controlled composition,
+  не заявка на native provider inference.
+- Existing Main Create/refusal tests проверяют один original lookup, canonical
+  registration, additive projection и сохранение ambiguous transport hold.
+  Existing renderer Create test проверяет same-owner partial → navigation/slot
+  release без provisioning poll; foreground change и настоящий unknown сохраняют slot.
+  Новая suite, runner или искусственный native failpoint не нужны.
+- Source closure: existing CreateTeamLaunchCoordinator/RuntimeTeamCoordinator,
+  createLaunchContracts, executeRuntimeLaunch/savedTeamModelProbe/teamRoster;
+  existing Main CapturedTeamRegistry/createdHostTeam, shared response,
+  renderer Host-create helper/TeamList. Никакого нового owner/journal/framework.
+  Before code — independent plan review + root commit/push; after code —
+  independent authority/recovery review, Host/Main/renderer targeted types,
+  existing critical tests, lint/caps и штатный native/Desktop Create/Launch CI.
+  Actual CI подтверждает обычный UI/native path; injected interruption отдельно
+  обозначается как controlled journal recovery, без переноса native PASS на него.
+
+Donor references:
+[Create form](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/dialogs/CreateTeamDialog.tsx),
+[Create/Launch orchestration](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningCreateLaunchOrchestration.ts).
+
+## 18. Повторные descriptor handles не расширяют source grant — review 16
+
+План до source; thread `PRRT_kwDORVTEtM622S17`, parity
+`cd2406a1cd040cf451a504857ebd5c985579c3da`. `DesktopBackendFeature.captureSourceTarget`
+переносит каждый подходящий handle в `teamScopes`. Descriptor допускает512 handles,
+private grant —256 scopes. Несколько handles одной Team имеют одинаковую тройку
+team/project/workspace и не дают новых прав, но257 таких aliases блокируют capture.
+
+### Круг1 — совместимость исходных записей
+
+Main-only dedup недостаточен. `managementTargetId` зависит от selected+owner и
+не меняется от aliases; `RuntimeSourceIndex` включает **полную исходную** grant
+representation в seedRevision, publication revision/fingerprint, receipt selectionDigest
+и publicationJson. Существующие records/receipts могли сохранить повторные scopes.
+Нельзя переписать их, нормализовать при чтении schema или ослабить проверку старых hashes.
+
+1. В existing Main `captureSourceTarget` убрать только одинаковые тройки
+   `(teamId, projectId, workspaceId)`, сохранив первый порядок distinct triples.
+   Фильтр original context/owner сохраняется. Grant schema по-прежнему требует
+   максимум256 **distinct** scopes;257 реально разных не обрезаются и не принимаются.
+   targetId, owner/context/seed fields и descriptor512 bound не меняются.
+2. В Host boundary сопоставлять новый grant с **исходной сохранённой representation**
+   только при точном равенстве всех остальных fields и равенстве множеств троек.
+   Перестановка/повтор одного scope не меняют authority; добавление, удаление
+   scope, чужой owner/revision/context/path/runtime/profile/config по-прежнему conflict.
+   Incoming grant и original grant отдельно проходят прежний current seed/authority
+   validator. Это не решение отдельного stale-seed review12.
+3. Для lookup/replay конкретного command первым источником является его original
+   publicationJson, если он существует. До повторного использования проверить его
+   прежние command/source/resource/profile/config/provider, expectedRevision,
+   fingerprint, selectionDigest и revision против **его исходного grant+seed**.
+   После equivalence check использовать тот же original grant в existing algorithm.
+   Terminal rejected/no-allocation operation остаётся собственным receipt, даже если
+   позже опубликована другая операция; не превращать её в новый native effect.
+4. Для current/retained/new publication использовать original grant из полностью
+   валидированной existing source chain. Если первой index publication ещё нет,
+   единственная unfinished original operation с валидным publicationJson сохраняет
+   свою representation и исходный seed revision. Несколько unfinished operations,
+   отсутствие нужного snapshot либо повреждённый snapshot не разрешают догадку,
+   новый grant baseline или повтор native verification; прежний held остаётся held.
+   При отсутствии retained/unfinished authority новый grant сохраняется как получен.
+5. Применить binding последовательно к current, retained, lookup, recover,
+   refreshConfiguration и capturePublication, **до** вычисления новых fingerprints.
+   Existing raw journal validation, previous-revision chain, pointer CAS,
+   exact original request/candidate identity, native identity/cleanup, pending same-ID
+   coordination и immutable records сохраняются. При повторном вызове не читается
+   current UI selection вместо original scope.
+6. `RuntimeSourceIndex.ts` сейчас770 lines при cap800. Перенести существующий
+   чистый publicationSnapshot validator и маленькое scope-equivalence сравнение в
+   один узкий `runtimeSourceGrantAuthority.ts`; storage owner остаётся прежним.
+   Snapshot validator не получает новый journal, writer, cache или API.
+   Main dedup остаётся в existing capture method; новая generic grant migration,
+   schema transform, version registry и background repair не нужны.
+
+### Круг2 — конечные проверки
+
+- Existing real Main/Host source test: private descriptor с257 aliases одной
+  допустимой Team проходит source capture/current через настоящий Host subprocess;
+  полученный original grant содержит одну тройку. Foreign-context/owner handles
+  не попадают в неё. Отдельная existing-schema negative сохраняет отказ257 distinct.
+- Existing Host publication/cold test: сначала сохранить допустимый legacy grant
+  с duplicate scopes; затем new deduplicated/reordered equivalent grant читает тот
+  же current/retained и original lookup/replay. До/после read byte-for-byte сравнить
+  original index/receipt. Следующая новая publication продолжает исходную chain и
+  сохраняет её grant representation; original command не re-admit/re-execute.
+- Existing crash/recovery test дополнить потерей выполнения после durable prepared
+  snapshot **до первой index publication**, затем cold recover через deduplicated
+  grant. Сохраняются original commandId/fingerprint/selectionDigest/revision/
+  publicationJson; candidate не заменяется текущим selection. Existing lost-ACK
+  after pointer case остаётся. Corrupt/missing/ambiguous snapshot отказывает.
+- Existing scope-widening case дополнить удалением/добавлением реально другого
+  разрешённого scope: семантическое отличие не маскируется dedup. No new unit suite;
+  только реальные boundary/recovery assertions в existing integration files.
+- Host build/test types, focused Main types, existing affected integration files,
+  lint/cap и independent source review. Actual provider/Desktop flows остаются
+  штатным exact-head CI; controlled fixture не квалифицирует native inference.
+
+### Круг3 — границы решения
+
+Review12 (изменившийся bootstrap seed), review24 (verify→exec pathname race) и
+§17 Create recovery не входят в этот cut. Не ослаблять `seed()` и original chain
+validators ради прохождения нового alias case. Root публикует и проверяет этот
+план перед source; independent review должен отдельно проверить сохранность
+pre-first-publication recovery и отсутствие silent widening/old-hash rewriting.
+
+Independent plan review (Profiles) — PASS. Выбор source chain/unfinished intent
+ограничен тем же targetId; чужая source operation не задаёт эту representation.
+Published либо unfinished original command при наличии chain должен сохранить
+её **raw** original grant, не только эквивалентный set. Terminal held/no-resource
+receipt без собственного index record читается как его прежний отказ; он не
+меняет более позднюю chain и не разрешает новый native effect.
+
+### §18 validation: исправить прежний prepared-recovery TEST oracle
+
+После correction Host20/20 existing source-selection/native-identity cases PASS,
+включая duplicate/reordered grant, immutable read/replay и два cold recovery окна.
+Existing Main file дал4/5 PASS; его старый `restarted installer` case ожидает
+prepared после публикации **отсутствующего** executable. Это противоречит уже
+принятому §15 R2: static source refusal сохраняется terminal held/no-resource и
+не восстанавливается созданием файла задним числом. Новый alias binding это
+поведение не вводит; отказ обнаружился при полном existing-file прогоне.
+
+Минимально исправить сам существующий TEST case: подготовить valid original
+executable до publication; existing private TEST Host entry вызывает настоящий
+FileManagementCommandStore.write для original prepared record и затем один
+TEST-scoped throw, имитируя потерю выполнения после durable intent. Такая же
+граница уже используется existing Host interruptPrepared helper. Ни production
+failpoint, ни изменение raw record, fake receipt или native replay не добавляются.
+Cold restart восстанавливает тот же saved publication через штатный installer,
+без нового acquisition/candidate capture; missing-file static refusal остаётся
+отдельно проверенной immutable held. Counts/budgets и existing native identity
+tests сохраняются. Root source-круг и negative baseline: старый built Host отказал
+в новых двух alias/recovery cases; rebuilt Host прошёл все20.
+
+### §17/§18 source cut: recovery и aliases
+
+§17 production/test candidate состоит из14 existing files. Account независимо
+перечитал Host core; root проверил все production deltas и три meaningful existing
+test deltas, включая concurrent original submit, cold partial read, actual model
+proof C и fresh launch C без старого B replay. §18 добавляет пять files (один
+маленький чистый validator extraction); Profiles и root source review — PASS.
+
+До отключения executor наблюдались: §17 Host12/12, Main/renderer35/35,
+targeted types/build/lint PASS; §18 Host20/20, real Main/Host5/5, Host testtypes,
+build и fast lint PASS. Старый built Host воспроизвёл оба alias/cold refusal.
+Основной Main recovery oracle теперь создаёт valid executable и прерывается
+только после настоящего durable prepared write; static missing-file refusal
+по-прежнему terminal held и не используется как crash simulation.
+
+Executor отключился до финальной фиксации всех local Git SHA. Source восстановлен
+из exact base `cd2406a1cd040cf451a504857ebd5c985579c3da` и записанных edits;
+все19 новых immutable blobs проверены полным GitHub readback. Четыре tracked §18
+prefixes и шесть §17 prefixes совпали с independently прочитанным local git diff
+до потери среды. Это не перенос прежнего execution PASS на новый commit:
+source review завершён, **точный опубликованный head ещё требует штатного CI**.
+Ни один native/Desktop gate, неизвестный outcome или неполный локальный native
+producer не объявляется прошедшим из-за этой реконструкции.
+
+§17 manifest `217ea431c595d51262766cd4f65b7c6d8517d6f8` сохраняет разницу
+между прежними local checks и новым candidate. §18 original authority/receipt
+representations неизменны; source Index774, helper50 и Main feature778 lines.
+Новые owners/journals, unit suites, timeout increases и skip не добавлены.

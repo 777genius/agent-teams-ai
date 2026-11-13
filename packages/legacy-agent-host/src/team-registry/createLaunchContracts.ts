@@ -49,6 +49,8 @@ export type CreateTeamLaunchPreparationSnapshot = z.infer<
 export interface CreateTeamLaunchSubmitResult {
   creation: TeamRegistryReceipt;
   launch: TeamLaunchSummary;
+  /** The Team and capture exist; this does not claim that a native launch succeeded. */
+  partialCreated?: true | undefined;
 }
 const timestamp = z.number().int().nonnegative();
 const launchSummarySchema = z
@@ -119,5 +121,12 @@ export const createTeamLaunchSubmitResultSchema: z.ZodType<CreateTeamLaunchSubmi
   .object({
     creation: teamRegistryReceiptSchema,
     launch: launchSummarySchema,
+    partialCreated: z.literal(true).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if (value.partialCreated && (value.creation.phase !== 'published' ||
+        value.launch.admission || value.launch.startedAtMs !== null ||
+        value.launch.members.some(member => member.attempt.claimed)))
+      context.addIssue({ code: 'custom', message: 'Partial creation requires a published Team and an unadmitted capture' });
+  });
