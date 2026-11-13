@@ -46,7 +46,9 @@ export function captureMainWindowsCustody(
   for (const raw of [runtime.members, runtime.providerTemplates ?? []]) {
     if (!Array.isArray(raw) || raw.length > 256) unavailable();
     for (const candidate of raw) {
-      if (record(candidate).provider !== 'claude') continue;
+      const member = record(candidate);
+      if ((member.provider !== 'claude' && member.provider !== 'codex' && member.provider !== 'opencode') ||
+          (member.provider === 'opencode' && member.nativeGeneration === 'v2')) continue;
       const parsed = nativeProcessProfileSchema.parse(candidate);
       if (!parsed.windowsBroker || parsed.windowsBroker.arch !== process.arch) unavailable();
       selected.push(structuredClone(parsed));

@@ -96,6 +96,10 @@ export function createCodexMemberProvider(
       [TEAM_TOKEN_ENV]: context.endpoint.bearerToken,
     },
   };
+  const canAllocate = () => context.canAllocate() && capturedMcpSourceCurrent(profile);
+  const canCapture = () =>
+    (context.canCaptureRegisteredProcess?.() ?? context.canAllocate()) &&
+    capturedMcpSourceCurrent(profile);
   const custody = (
     options.createProcess ??
     ((selected, canAllocate) =>
@@ -103,9 +107,11 @@ export function createCodexMemberProvider(
         selected,
         canAllocate,
         context.processCustody,
-        context.canCaptureRegisteredProcess
+        canCapture,
+        undefined,
+        context.retainedWindowsLaunch?.port(selected, canAllocate, canCapture)
       ))
-  )(captured, context.canAllocate);
+  )(captured, canAllocate);
   let sealed = false;
   let ready = false;
   let allocated = false;
@@ -255,6 +261,10 @@ export function createCodexMemberProvider(
       : {}),
     ...(custody.captureRegisteredProcess
       ? { captureRegisteredProcess: custody.captureRegisteredProcess.bind(custody) }
+      : {}),
+    ...(profile.windowsBroker?.capability === 'service-scopes-v1' &&
+        context.retainedWindowsLaunch && custody.prepareRegisteredWindowsProcess
+      ? { prepareRegisteredWindowsProcess: custody.prepareRegisteredWindowsProcess.bind(custody) }
       : {}),
     isReady: () => ready && current(),
     initialContextEvidence: () =>

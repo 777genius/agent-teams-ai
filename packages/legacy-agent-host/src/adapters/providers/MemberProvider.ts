@@ -19,7 +19,7 @@ import type { HostWindowsLaunch } from '../../owned-process/HostWindowsLaunch.js
 export interface MemberProviderContext {
   profile: RuntimeMemberProfile;
   processCustody?: RegisteredProcessRootSource;
-  /** Private original Main launch capability, initially qualified for ordinary Claude only. */
+  /** Private original Main launch capability for process-backed providers. */
   retainedWindowsLaunch?: HostWindowsLaunch;
   request: OpenConfig;
   endpoint: TeamMcpEndpoint;
