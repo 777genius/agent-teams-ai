@@ -680,3 +680,66 @@ Existing foreign-cost case при исполнении оказался оста
 он меняет commandId, оставляя старый payload.messageId. Исправить только oracle, связав
 оба ID с одной original попыткой; проверка чужой generation должна дойти до hold,
 а production запрет несовпадающих message/command IDs остаётся прежним.
+
+### R13 — builtin /review в закреплённом Claude SDK 0.3.305
+
+**План до source.** На parity `522c80d168d698fc6842ee649cc4822406cd2632`
+actual Create job [131717484659](https://github.com/777genius/agent-teams-ai/actions/runs/43373956602/job/131717484659)
+отказал в `native-claude-compaction.native.ts` до Desktop UI:
+`native builtin review expands its prompt`. Artifact `14014049387`,
+ZIP SHA256 `b73b8e25fa91c9d57a639cd127b94e46f37f86fd750b097e2e75bc9dd8eaacc7`.
+Оба TEST oracle — `fixtures/native-claude-compaction/model.ts` и
+`fixtures/native-claude-commands/model.ts` — требуют прежние expert-reviewer/PR-number
+строки. Эти строки отсутствуют в actual pinned native CLI; изменение product
+command parser или D dispatch по этому отказу не обосновано.
+
+#### Источник нового критерия
+
+В отдельном изолированном TEST Linux scope прочитан первый настоящий model request
+через установленный SDK `0.3.305`, native CLI `2.1.305`, Node `24.21.0`.
+Native executable SHA256
+`86cb722ab68348877dba7971e4d0c659919e05e6228c05e006e83da320e656ef`.
+Два конечных original query — Sonnet4.6 и Opus4.6 — передали ровно один исходный
+`/review TEST_NATIVE_P03_EXACT_REVIEW_ARGUMENTS` каждый. В обоих expanded user
+blocks присутствуют exact target header и heading сбора diff; основной recipe
+одинаков. Только localhost модель возвращала конечный текст, инструментов не было.
+Для каждого query: один model request, SDK result success, original child exit0,
+HTTP server закрыт, private TEST root удалён. Это inspection native recipe на Linux,
+не Host, vendor-auth, Darwin или Desktop qualification.
+
+#### Минимальный correction
+
+1. В двух existing TEST model scripts заменить только устаревший review-prompt
+   predicate. Требовать actual expansion в **одном user text message**:
+   exact ``Review target: `TEST_NATIVE_P03_EXACT_REVIEW_ARGUMENTS` `` и
+   `## Phase 0 — Gather the diff`. Bare slash input, generic review prose,
+   неправильные args и совпадение только в system/tool text не доказывают expansion.
+   Для второго model request искать retained original user message в той же history:
+   latest user там законно является tool_result.
+2. Если predicate переиспользуется, оставить маленький TEST helper в existing
+   compaction model, откуда commands model уже импортирует constants. Не добавлять
+   dependency, recipe parser, полный proprietary prompt snapshot или версионный
+   allowlist/fallback на старые фразы.
+3. Сохранить exact selected model, captured role/system context, original args,
+   marked slash command receipt, MCP tool/reply IDs и text, два requests на command,
+   compaction/current-context checks, original process ownership, cleanup и budgets.
+   Production SDK/Host/D code и native effect sequence не меняются.
+4. Расширить только existing critical model test: raw slash, wrong target,
+   отсутствующий diff heading, system-only совпадение отказываются; observed minimal
+   recipe в actual user history принимается. Existing tool_result/role/tool-count
+   assertions остаются. Отдельная unit suite на шаблон не нужна.
+5. После независимого source review проверить existing compaction model tests,
+   Host test types и scripts types. Далее штатный exact-head Create/Commands
+   native/Desktop CI должен пройти всю прежнюю цепь; локальный recipe inspection
+   и обновлённый TEST oracle не являются полным e2e PASS.
+
+**Круг1 — факты:** сопоставлены actual Darwin failure и два bounded native Linux
+request на тех же SDK/CLI/model revisions. **Круг2 — минимальность:** меняется
+только сломанный predicate, причём совпадение ограничено одним user message;
+сильные product/ownership/effect guards сохраняются. **Круг3:** independent review
+плана, commit+push перед source, затем independent diff review и existing gates.
+
+Independent plan review (Account) — PASS: оба original local receipts/model bodies
+проверены, anchors находятся в user text; wrong target, raw slash и system-only
+match не дают acceptance. До source отдельно воспроизведено, что прежний oracle
+отказывает на обоих actual pinned request bodies с тем же review-expansion assertion.
