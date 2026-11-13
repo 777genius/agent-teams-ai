@@ -45,6 +45,55 @@ test('a failed original Node child retains CPU evidence and bounded file refusal
       fileBytes: 16 * 1024 * 1024 + 1, fileOverLimit: true,
     });
     assert.equal(existsSync(path), false);
+
+    // Synthetic stack attribution only: the original finite sampler above is the sole child.
+    const privateSource = `file://${root}/TEST-private-cpu-token`;
+    const frame = (source: string, functionName: string) => ({ url: `${privateSource}/${source}`, functionName });
+    const clone = { url: 'node:internal/worker/js_transferable', functionName: 'structuredClone' };
+    const profile = { startTime: 100, endTime: 1100, nodes: [
+      { id: 1, callFrame: { url: '', functionName: '(root)' }, children: [2, 12] },
+      { id: 2, callFrame: frame('composition/captureMemberProviderAuthority.js', 'assertCurrent'), children: [3, 9, 10, 11] },
+      { id: 3, callFrame: frame('adapters/team/TeamOwnerStore.js', 'fenced'), children: [4] },
+      { id: 4, callFrame: frame('team/TeamOwner.js', 'state'), children: [5, 6] },
+      { id: 5, callFrame: frame('team/TeamRuntimeRegistration.js', 'validate'), children: [] },
+      { id: 6, callFrame: frame('adapters/team/FileTeamRuntimeBindings.js', 'current'), children: [7, 8] },
+      { id: 7, callFrame: frame('adapters/team/FileTeamRuntimeBindings.js', 'read'), children: [14] },
+      { id: 8, callFrame: clone, children: [] },
+      { id: 9, callFrame: frame('foreign/FileTeamRuntimeBindings.js', 'current'), children: [] },
+      { id: 10, callFrame: clone, children: [] },
+      { id: 11, callFrame: frame('adapters/providers/OpenCodeV2CredentialScope.js', 'selected'), children: [] },
+      { id: 12, callFrame: frame('adapters/team/FileTeamRuntimeBindings.js', 'current'), children: [13] },
+      { id: 13, callFrame: clone, children: [] },
+      { id: 14, callFrame: clone, children: [] },
+    ], samples: [3, 4, 5, 6, 14, 8, 9, 10, 11, 13], timeDeltas: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] };
+    writeFileSync(path, JSON.stringify(profile), { mode: 0o600 });
+    const projected = await readOriginalHostCpuProfile(path, true, 10000);
+    assert.equal(projected.status, 'available');
+    assert.equal(projected.sampledUs, 550); assert.equal(projected.unsampledUs, 450);
+    assert.deepEqual(projected.categories.map(row => [row.category, row.exclusiveSamples,
+      row.exclusiveSampledUs, row.inclusiveSamples, row.inclusiveSampledUs]), [
+      ['configuration-read', 0, 0, 0, 0], ['credential-read', 1, 90, 1, 90],
+      ['team-writer-authority', 8, 360, 9, 450], ['custody-image', 0, 0, 0, 0],
+      ['provider-transport', 0, 0, 0, 0], ['other', 1, 100, 1, 100], ['idle', 0, 0, 0, 0],
+    ], 'original broad totals and inclusive overlap remain unchanged');
+    assert.deepEqual(projected.teamWriterDetails, [
+      { family: 'namespace-fence', exclusiveSamples: 1, exclusiveSampledUs: 10 },
+      { family: 'team-state', exclusiveSamples: 1, exclusiveSampledUs: 20 },
+      { family: 'team-state-validation', exclusiveSamples: 1, exclusiveSampledUs: 30 },
+      { family: 'launch-binding-read', exclusiveSamples: 1, exclusiveSampledUs: 50 },
+      { family: 'launch-binding-current', exclusiveSamples: 1, exclusiveSampledUs: 40 },
+      { family: 'launch-binding-clone', exclusiveSamples: 1, exclusiveSampledUs: 60 },
+      { family: 'other-writer', exclusiveSamples: 2, exclusiveSampledUs: 150 },
+    ]);
+    assert.equal(projected.teamWriterDetails.reduce((sum, row) => sum + row.exclusiveSampledUs, 0), 360);
+    assert.equal(JSON.stringify(projected).includes(root), false);
+    assert.equal(JSON.stringify(projected).includes('TEST-private-cpu-token'), false);
+    assert.equal(projected.rawDiscarded, true); assert.equal(existsSync(path), false);
+    writeFileSync(path, JSON.stringify({ ...profile, samples: [99], timeDeltas: [1] }), { mode: 0o600 });
+    const malformed = await readOriginalHostCpuProfile(path, true, 10000);
+    assert.equal(malformed.status, 'unavailable'); assert.equal(malformed.reason, 'invalid-profile');
+    assert.equal('teamWriterDetails' in malformed, false);
+    assert.equal(malformed.rawDiscarded, true); assert.equal(existsSync(path), false);
   } finally {
     if (host.child.exitCode === null && host.child.signalCode === null) await host.close().catch(() => {});
     rmSync(root, { recursive: true, force: true });

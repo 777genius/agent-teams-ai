@@ -55,6 +55,8 @@ export function createPassiveNativeDiagnosticCapture() {
 const cpuCategories = ['configuration-read', 'credential-read', 'team-writer-authority',
   'custody-image', 'provider-transport', 'other', 'idle'] as const;
 type CpuCategory = typeof cpuCategories[number];
+const cpuWriterFamilies = ['namespace-fence', 'team-state', 'team-state-validation',
+  'launch-binding-read', 'launch-binding-current', 'launch-binding-clone', 'other-writer'] as const;
 type CpuUnavailable = 'not-started' | 'host-not-exited' | 'missing' | 'stat-failed' | 'file-shape' |
   'empty-profile' | 'profile-over-limit' | 'open-failed' | 'read-failed' | 'incomplete-read' |
   'changed-file' | 'invalid-profile' | 'discard-failed';
@@ -66,10 +68,14 @@ type CpuFileSize = {
 };
 type CpuTotals = { category: CpuCategory; exclusiveSamples: number; exclusiveSampledUs: number;
   inclusiveSamples: number; inclusiveSampledUs: number };
+type CpuWriterTotals = { family: typeof cpuWriterFamilies[number]; exclusiveSamples: number;
+  exclusiveSampledUs: number };
 export type OriginalHostCpuProfile = CpuFileSize & ({ status: 'unavailable'; reason: CpuUnavailable; rawDiscarded: boolean } | {
   status: 'available'; rawDiscarded: boolean; samplingIntervalUs: 1000 | 10000; profileDurationUs: number;
   sampledUs: number; unsampledUs: number; nodeCount: number; sampleCount: number;
   attribution: 'nearest-allowlisted-stack-frame'; categories: CpuTotals[];
+  /** Partition of the unchanged exclusive team-writer-authority totals, not additional sampled time. */
+  teamWriterDetails: CpuWriterTotals[];
 });
 
 /** Closed source families only. No frame name, source URL, path or stack leaves this projection. */
@@ -89,6 +95,24 @@ function cpuCategory(frame: Record<string, unknown>): number | undefined {
   return undefined;
 }
 
+/** Exact source/function families within the original writer category; no additional raw fields escape. */
+function cpuWriterFamily(frame: Record<string, unknown>): number | undefined {
+  if (typeof frame.url !== 'string' || typeof frame.functionName !== 'string') return undefined;
+  const path = frame.url.replaceAll('\\', '/'), name = frame.functionName;
+  if (/\/adapters\/team\/TeamOwnerStore\.[jt]s$/.test(path) &&
+      (name === 'fenced' || name === 'validateNamespace')) return 0;
+  // state also includes the existing roster recovery; its residual is not pure validation CPU.
+  if (/\/team\/TeamOwner\.[jt]s$/.test(path) && name === 'state') return 1;
+  if (/\/team\/(?:TeamRuntimeRegistration|TeamRosterTransitions)\.[jt]s$/.test(path) && name === 'validate') return 2;
+  if (/\/adapters\/team\/FileTeamRuntimeBindings\.[jt]s$/.test(path)) {
+    if (name === 'read') return 3;
+    if (name === 'current') return 4;
+  }
+  // This candidate is accepted only below the exact binding-current context during tree traversal.
+  if (path === 'node:internal/worker/js_transferable' && name === 'structuredClone') return 5;
+  return undefined;
+}
+
 function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): OriginalHostCpuProfile {
   const invalid = (): never => { throw new Error('Invalid TEST CPU profile'); };
   const value = record(raw), start = integer(value.startTime, Number.MAX_SAFE_INTEGER),
@@ -99,7 +123,7 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
       value.samples.length < 1 || value.samples.length > 1_000_000 ||
       value.samples.length !== value.timeDeltas.length) return invalid();
   const duration = end - start;
-  const nodes = new Map<number, { category: number | undefined; children: number[] }>();
+  const nodes = new Map<number, { category: number | undefined; writerFamily: number | undefined; children: number[] }>();
   for (const rawNode of value.nodes) {
     const node = record(rawNode), id = integer(node.id, 1_000_000);
     if (id === null || id < 1 || nodes.has(id) ||
@@ -110,22 +134,28 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
       if (selected === null || selected < 1) return invalid();
       children.push(selected);
     }
-    nodes.set(id, { category: cpuCategory(record(node.callFrame)), children });
+    const callFrame = record(node.callFrame);
+    nodes.set(id, { category: cpuCategory(callFrame), writerFamily: cpuWriterFamily(callFrame), children });
   }
   const first = integer(record(value.nodes[0]).id, 1_000_000)!;
-  const frames = new Map<number, { exclusive: number; inclusive: number }>();
-  const pending = [{ id: first, exclusive: 5, inclusive: 0 }];
+  const frames = new Map<number, { exclusive: number; inclusive: number; writerFamily: number }>();
+  const pending = [{ id: first, exclusive: 5, inclusive: 0, writerFamily: 6 }];
   while (pending.length) {
     const current = pending.pop()!, node = nodes.get(current.id);
     if (!node || frames.has(current.id)) return invalid(); // One connected, acyclic original stack tree.
     const exclusive = node.category ?? current.exclusive;
     const inclusive = current.inclusive | (node.category === undefined ? 0 : 1 << node.category);
-    frames.set(current.id, { exclusive, inclusive });
-    for (const id of node.children) pending.push({ id, exclusive, inclusive });
+    const writerFamily = node.writerFamily === 5
+      ? (current.writerFamily === 4 ? 5 : current.writerFamily)
+      : node.writerFamily ?? current.writerFamily;
+    frames.set(current.id, { exclusive, inclusive, writerFamily });
+    for (const id of node.children) pending.push({ id, exclusive, inclusive, writerFamily });
   }
   if (frames.size !== nodes.size) return invalid();
   const categories: CpuTotals[] = cpuCategories.map(category => ({ category,
     exclusiveSamples: 0, exclusiveSampledUs: 0, inclusiveSamples: 0, inclusiveSampledUs: 0 }));
+  const teamWriterDetails: CpuWriterTotals[] = cpuWriterFamilies.map(family => ({ family,
+    exclusiveSamples: 0, exclusiveSampledUs: 0 }));
   let sampledUs = 0;
   for (let index = 0; index < value.samples.length; index++) {
     const id = integer(value.samples[index], 1_000_000), delta = integer(value.timeDeltas[index], duration);
@@ -134,6 +164,10 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
     sampledUs += delta;
     const exclusive = categories[frame.exclusive]!;
     exclusive.exclusiveSamples++; exclusive.exclusiveSampledUs += delta;
+    if (frame.exclusive === 2) {
+      const detail = teamWriterDetails[frame.writerFamily]!;
+      detail.exclusiveSamples++; detail.exclusiveSampledUs += delta;
+    }
     // A category is counted at most once per stack. Inclusive columns overlap; never sum them.
     const inclusive = frame.inclusive | 1 << frame.exclusive;
     for (let category = 0; category < categories.length; category++) if (inclusive & 1 << category) {
@@ -143,7 +177,7 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
   return { status: 'available', rawDiscarded: false, samplingIntervalUs,
     profileDurationUs: duration, sampledUs, unsampledUs: duration - sampledUs,
     nodeCount: nodes.size, sampleCount: value.samples.length,
-    attribution: 'nearest-allowlisted-stack-frame', categories };
+    attribution: 'nearest-allowlisted-stack-frame', categories, teamWriterDetails };
 }
 
 /** Read after the original process exits. This measures sampled Host stacks, not Bun CPU or request latency. */
