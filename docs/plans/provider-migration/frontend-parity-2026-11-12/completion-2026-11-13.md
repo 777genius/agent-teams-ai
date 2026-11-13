@@ -118,3 +118,43 @@ Existing native/required workflows и production admission не ослаблен
 требование native runtime в старых разделах планов не запрещает эту разрешённую
 проверку. Любой оставшийся product defect рассматривается отдельно от отсутствия
 разрешения на native vendor run.
+
+## Текущий опубликованный срез и отдельные границы приёмки
+
+Проверенный пакет providers обновлён до
+`68dca527b779ebb82923f30d7b08441085d8b579` из PR provider #8.
+Его штатный [CI 43479531998](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43479531998)
+прошёл на Node 24.21 и 26.11.1; архив и пакет повторно проверены перед
+frozen установкой во frontend. Nullable Codex account email и неизвестные
+approval payloads обрабатываются явно; ненеготированный humanCommand не
+получает автоматическое разрешение. Исходные реальные Codex/Claude не запускались.
+
+P06 опубликован в `26043bb6`: установка пишет новую неизменяемую директорию,
+ready появляется после принятия source исходным Host, а ошибка выбора остаётся
+повторяемой явным действием пользователя. Прежние retained bytes и активные
+receipts не переназначаются. Проверены реальные Main IPC/source-переходы,
+renderer-consumers и обе конечные Codex protocol revisions 0.162/0.169.
+
+P08 phase 1 опубликован в `0233b1b6`: finite account/auth/model/MCP операции,
+отдельные scheduled runs и native version qualification получают исходный
+Main process port. 25 проверок маршрутизации/MCP, Main selection, Host build,
+test types, targeted lint и source caps прошли. Фактическая Windows-матрица
+ожидает штатный CI; dynamic source admission phase 2 остаётся отдельной работой.
+
+Codex TEST peer прошёл actual Host → checked D → Node child → original MCP:
+preflight, partial/final, Allow/Deny, question answer/decline, protocol interrupt,
+local /cost без нового input, Runtime Stop и отсутствие всех исходных peer PID.
+Существующий Desktop harness теперь проводит Launch, Composer, те же решения,
+Stats/Logs, renderer reload, task-first Schedule Add/Edit/Pause/Resume/Run now/
+Delete и Team Stop через исходные controls. Он сохраняет 14 оригинальных PNG,
+receipt и точный source. Source/type/guard checks прошли; actual Electron
+и визуальная проверка ещё не заявляются. Standalone schedules и Claude/V1
+conversation имеют отдельные оставшиеся сценарии.
+
+Разрешённый настоящий OpenCode 2.1.4 уже дал отдельные PASS для embedded Team,
+captured MCP и permission lifecycle на предыдущем точном source `96bb78f4`.
+Эти receipts не приписываются текущему HEAD. После исправления same-ID
+integration и exact variant catalog повторная credential/model-probe приёмка
+на новых source остаётся INCOMPLETE из-за неожиданного завершения Host;
+сохраняются неуспешные receipts, проверяются исходный сигнал и память процесса.
+Ни timeout, ни cleanup assertion ради зелёного результата не ослаблены.

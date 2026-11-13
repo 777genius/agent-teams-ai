@@ -1,6 +1,7 @@
 import { readDesktopNativeProviderArtifact } from './desktop-native-stop-fixture.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
@@ -9,6 +10,26 @@ import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fix
 import type { startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import type { startOpenCodeV2ReviewModel } from './desktop-opencode-v2-review-model.ts';
 import type { startDesktopCapturedMcpModel } from './desktop-opencode-v2-mcp-fixture.ts';
+
+/** Preserve exact source and scope facts in the existing evidence owner. */
+export function captureDesktopProofScope(evidence: Record<string, unknown>, options: {
+  repo: string; mode: string; emulatedOnly: boolean; emulatedManagementMode: boolean; emulatedRuntimeMode: boolean;
+}): void {
+  const { repo, mode, emulatedOnly, emulatedManagementMode, emulatedRuntimeMode } = options;
+  if (mode === 'codex-login-ui' || emulatedOnly) evidence.source = {
+    head: execFileSync('/usr/bin/git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
+    dirty: execFileSync('/usr/bin/git', ['status', '--porcelain', '--untracked-files=no'], { cwd: repo, encoding: 'utf8' }).trim().length > 0,
+  };
+  if (emulatedOnly) {
+    evidence.emulation = { only: true, runtimeConfigured: emulatedRuntimeMode, managementConfigured: emulatedManagementMode || emulatedRuntimeMode };
+    evidence.scope = 'Original Electron controls, standalone Host persistence and renderer reload; only separately pinned TEST provider peers permitted';
+    evidence.excluded = [...(emulatedRuntimeMode ? [] : ['provider sessions']), 'vendor authentication', 'native model execution', 'full Stage1/release/default activation'];
+  }
+  if (mode === 'codex-login-ui') {
+    evidence.scope = 'Existing Electron Codex Settings controls through preload/Main/Host/D and pinned native app-server: fresh browser/device login start, private link/code, copy and cancel. No authenticated account completion.';
+    evidence.excluded = ['authenticated vendor login completion', 'vendor inference', 'personal browser navigation', 'other OS tuples', 'Desktop team launch', 'full Stage1/release/default activation'];
+  }
+}
 export async function desktopProofEvidence(options: {
   mode: string;
   fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>;

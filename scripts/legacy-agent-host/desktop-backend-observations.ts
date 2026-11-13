@@ -20,8 +20,8 @@ export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
   assert.ok(emulatedOnly === undefined || emulatedOnly === '1', 'explicit provider-emulation admission');
   if (emulatedOnly === '1') {
     const mode = process.env.LEGACY_DESKTOP_PROOF_MODE;
-    assert.ok(['team-ui', 'task-board-ui', 'emulated-management-ui', 'review-ui', 'review-readback-ui'].includes(mode ?? ''),
-      'provider-emulation admits only the original offline Team, Taskboard, Review and TEST management controls');
+    assert.ok(['team-ui', 'task-board-ui', 'emulated-management-ui', 'emulated-codex-runtime-ui', 'review-ui', 'review-readback-ui'].includes(mode ?? ''),
+      'provider-emulation admits only the original offline controls and exact pinned TEST provider modes');
     // Reject inherited native/scenario selectors before any fixture or model starts.
     const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|EMULATED_ONLY|PROOF_MODE|CDP_PORT|TEST_DISPLAY|TEST_XAUTHORITY|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
     for (const key of Object.keys(process.env))

@@ -3,16 +3,26 @@ import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { appendFileSync, readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { createInterface } from 'node:readline';
 import process from 'node:process';
-import { pathToFileURL, URL } from 'node:url';
+import { fileURLToPath, pathToFileURL, URL } from 'node:url';
 const hostRequire = createRequire(new URL('../../../packages/legacy-agent-host/package.json', import.meta.url));
 const { Client } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/index.js')).href);
 const { StreamableHTTPClientTransport } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/streamableHttp.js')).href);
 
+if (process.env.TEST_EMULATED_DESKTOP_PROVIDER !== undefined) {
+  assert.equal(process.env.TEST_EMULATED_DESKTOP_PROVIDER, '1');
+  assert.equal(process.env.TEST_EMULATED_WINDOWS_PROVIDER, undefined);
+  const helper = new URL('./providerDesktopPeer.mjs', import.meta.url);
+  const path = fileURLToPath(helper);
+  assert.equal(realpathSync(path), path, 'Only the original pinned TEST helper');
+  assert.match(process.env.TEST_PEER_HELPER_SHA256 ?? '', /^[a-f0-9]{64}$/);
+  assert.equal(createHash('sha256').update(readFileSync(path)).digest('hex'), process.env.TEST_PEER_HELPER_SHA256);
+  await import(helper.href);
+} else {
 assert.equal(process.env.TEST_EMULATED_WINDOWS_PROVIDER, '1');
 const provider = process.env.TEST_PEER_PROVIDER;
 assert.ok(provider === 'codex' || provider === 'opencode');
@@ -140,4 +150,5 @@ if (provider === 'codex') {
   const port = Number(argv[argv.indexOf('--port') + 1]);
   assert.ok(port > 0 && port <= 65535);
   server.listen(port, '127.0.0.1');
+}
 }

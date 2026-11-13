@@ -9,6 +9,7 @@ on:
       - 'packages/legacy-agent-host/**'
       - 'packages/task-change-ledger/**'
       - 'scripts/legacy-agent-host/**'
+      - 'tools/owned-process-broker/fixtures/**'
       - 'src/features/agent-backend/**'
       - 'src/features/runtime-provider-management/**'
       - 'src/main/**'
@@ -128,6 +129,14 @@ jobs:
           xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
             bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
             2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-management-ui.log"
+      - name: Exercise original Codex conversation and schedule controls through the pinned TEST peer
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: emulated-codex-runtime-ui
+        run: |
+          set -euo pipefail
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-codex-runtime-ui.log"
       - name: Exercise original Review Keep, Reject, Undo, Redo and reload
         id: review
         env:
@@ -179,7 +188,7 @@ jobs:
           import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
           import { basename, dirname, join } from 'node:path';
           const completed = [];
-          for (const mode of ['team-ui', 'task-board-ui', 'emulated-management-ui', 'review-ui', 'review-readback-ui']) {
+          for (const mode of ['team-ui', 'task-board-ui', 'emulated-management-ui', 'emulated-codex-runtime-ui', 'review-ui', 'review-readback-ui']) {
             const rows = readFileSync(join(process.env.RUNNER_TEMP, `host-emulated-${mode}.log`), 'utf8')
               .split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));
             const last = rows.findLast(row => row.receipt && row.status);
@@ -190,8 +199,9 @@ jobs:
             assert.equal(receipt.status, 'PASS'); assert.equal(receipt.mode, mode);
             assert.equal(receipt.source.head, process.env.HOST_EMULATED_SOURCE_HEAD);
             assert.equal(receipt.source.dirty, false);
-            assert.deepEqual(receipt.emulation, { only: true, runtimeConfigured: false,
-              managementConfigured: mode === 'emulated-management-ui', noNativeHostChildrenBeforeUi: true, noNativeHostChildren: true });
+            const runtime = mode === 'emulated-codex-runtime-ui';
+            assert.deepEqual(receipt.emulation, { only: true, runtimeConfigured: runtime,
+              managementConfigured: mode === 'emulated-management-ui' || runtime, noNativeHostChildrenBeforeUi: true, noNativeHostChildren: true });
             assert.equal(receipt.hostChild.observedBeforeShutdown, true);
             assert.equal(receipt.cleanup.capturedHostAbsent, true);
             assert.deepEqual(receipt.cleanup.remaining, []);
@@ -201,7 +211,7 @@ jobs:
             assert.deepEqual(receipt.finalSentinelCensus.refusedInvocations, []);
             assert.ok(receipt.finalSentinelCensus.invocations.length > 0);
             const proof = mode === 'team-ui' ? receipt.userControlProof : mode === 'task-board-ui' ? receipt.taskBoardUiProof :
-              mode === 'emulated-management-ui' ? receipt.emulatedManagementUiProof : receipt.reviewUiProof;
+              mode === 'emulated-management-ui' ? receipt.emulatedManagementUiProof : runtime ? receipt.emulatedRuntimeUiProof : receipt.reviewUiProof;
             assert.equal(proof.status, 'PASS'); assert.ok(proof.steps.length > 0);
             if (mode === 'emulated-management-ui') {
               assert.deepEqual(proof.savedSelection, { providerId: 'opencode', model: 'TEST-api/TEST-model', effort: 'high' });
@@ -219,6 +229,19 @@ jobs:
               assert.ok(proof.persistence.length > 0);
               assert.match(proof.seedSha256, /^[a-f0-9]{64}$/); assert.match(proof.fileSha256, /^[a-f0-9]{64}$/);
             }
+            if (runtime) {
+              assert.equal(proof.provider, 'codex'); assert.equal(proof.reloadWithoutReplay, true);
+              assert.equal(proof.stopReleased, true); assert.deepEqual(proof.catalog, ['/cost']);
+              assert.equal(proof.fixturePins.vendorsAllowed, false);
+              assert.equal(proof.fixturePins.runtimeConfigured, true);
+              assert.equal(proof.fixturePins.managementConfigured, true);
+              assert.equal(proof.schedule.status, 'dispatched'); assert.ok(proof.schedule.taskId);
+              assert.equal(receipt.emulatedRuntimeCleanup.absent, true);
+              assert.ok(receipt.emulatedRuntimeCleanup.originalPeerPids.length > 0);
+              assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);
+              assert.ok(proof.effects.some(row => row.event === 'connected'));
+              assert.equal(proof.effects.some(row => row.event === 'failure'), false);
+            }
             if (mode === 'review-readback-ui') {
               assert.equal(proof.staleGuard.externalChangeBanner, true);
               assert.equal(proof.staleGuard.undoDisabled, true);
@@ -226,6 +249,7 @@ jobs:
             const screenshots = mode === 'team-ui' ? [receipt.uiScreenshot] :
               (mode === 'task-board-ui' ? ['initialScreenshot', 'dependencyScreenshot', 'reorderedScreenshot', 'blockedStartScreenshot', 'reloadedScreenshot'] :
                 mode === 'emulated-management-ui' ? ['selectionScreenshot', 'reloadedScreenshot', 'connectedScreenshot', 'oauthWaitingScreenshot', 'finalScreenshot'] :
+                runtime ? ['launchScreenshot', 'partialScreenshot', 'completedScreenshot', 'denyScreenshot', 'allowScreenshot', 'questionScreenshot', 'questionDeclineScreenshot', 'costScreenshot', 'logsScreenshot', 'statsScreenshot', 'reloadedScreenshot', 'scheduleScreenshot', 'heldScreenshot', 'stoppedScreenshot'] :
                 mode === 'review-ui' ? ['historyScreenshot', 'reloadedHistoryScreenshot'] : ['restartedHistoryScreenshot', 'staleScreenshot'])
                 .map(key => proof[key]);
             for (const screenshot of screenshots) {
@@ -261,5 +285,6 @@ jobs:
             ${{ runner.temp }}/TEST-desktop-backend-*/review-ui-initial-git-diff.txt
             ${{ runner.temp }}/TEST-desktop-backend-*/sentinel-invocations.ndjson
             ${{ runner.temp }}/TEST-desktop-backend-*/TEST-oauth-host-management/native-effects.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/TEST-peer-*/effects.ndjson
             ${{ runner.temp }}/TEST-desktop-backend-*/ui-*.json
             ${{ runner.temp }}/TEST-desktop-backend-*/ui-*.png

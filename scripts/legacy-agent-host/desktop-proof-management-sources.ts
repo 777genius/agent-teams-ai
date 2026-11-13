@@ -2,6 +2,11 @@
 export const desktopProofManagementSources = [
   'scripts/legacy-agent-host/desktop-emulated-management-fixture.ts',
   'scripts/legacy-agent-host/desktop-emulated-management-ui.ts',
+  'scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts',
+  'scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts',
+  'tools/owned-process-broker/fixtures/providerPeer.mjs',
+  'tools/owned-process-broker/fixtures/providerDesktopPeer.mjs',
+  'packages/legacy-agent-host/src/adapters/providers/capturedNativeProcessFactory.ts',
   'packages/legacy-agent-host/tests/fixtures/management-opencode-process.ts',
   'src/renderer/components/team/dialogs/EffortLevelSelector.tsx',
   'src/renderer/utils/teamEffortOptions.ts',
