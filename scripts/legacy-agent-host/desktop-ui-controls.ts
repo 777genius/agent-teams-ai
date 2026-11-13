@@ -46,6 +46,83 @@ export function createDesktopUiControls(
       window.__TEST_desktopInputEvents=[];
       window.__TEST_desktopDragEvents=[];
       const describe=el=>el instanceof Element?{tag:el.tagName,id:el.id,ariaLabel:el.getAttribute('aria-label'),className:String(el.className).slice(0,120)}:null;
+      const taskClarification=e=>{
+        try{
+          const target=e.target instanceof Element?e.target:null,dialog=target?.closest('[role="dialog"]');
+          if(!dialog||!dialog.getClientRects().length)return null;
+          const buttons=dialog.querySelectorAll('button');if(buttons.length>128)return null;
+          const matches=[...buttons].filter(button=>button.textContent?.trim()==='Mark resolved');
+          if(matches.length!==1||!(matches[0] instanceof HTMLButtonElement))return null;
+          const control=matches[0],rect=control.getBoundingClientRect();
+          const point=Number.isFinite(e.clientX)&&Number.isFinite(e.clientY);
+          const geometry=[rect.left,rect.right,rect.top,rect.bottom,rect.width,rect.height].every(Number.isFinite);
+          const hit=point?document.elementFromPoint(e.clientX,e.clientY):null;
+          const pointer=getComputedStyle(control).pointerEvents;
+          const facts={
+            targetIsControl:target===control||control.contains(target),
+            targetIsControlParent:target===control.parentElement,
+            pointInsideControl:point&&geometry?rect.width>0&&rect.height>0&&e.clientX>=rect.left&&e.clientX<rect.right&&e.clientY>=rect.top&&e.clientY<rect.bottom:null,
+            pointHitsControl:point?hit===control||control.contains(hit):null,
+            controlConnected:control.isConnected,controlDisabled:control.disabled,
+            pointerEvents:pointer==='auto'||pointer==='none'?pointer:typeof pointer==='string'&&pointer?'other':null,
+            renderedOwner:null,storedSurfaceMatches:null,storedRevisionMatches:null,
+            contextMatches:null,selectedTeamMatches:null,detailPhase:null,
+            detailLoading:null,detailRefreshPending:null,deletionIntentPresent:null
+          };
+          const finish=()=>JSON.stringify(facts).length<=768?facts:null;
+          const own=(value,key)=>{
+            if(!value||(typeof value!=='object'&&typeof value!=='function'))return undefined;
+            const descriptor=Object.getOwnPropertyDescriptor(value,key);
+            return descriptor&&'value' in descriptor?descriptor.value:undefined;
+          };
+          const text=value=>typeof value==='string'&&value.length>0;
+          const bool=value=>typeof value==='boolean'?value:null;
+          const currentFiber=node=>{
+            const keys=Object.keys(node).filter(key=>key.startsWith('__reactFiber$'));
+            if(keys.length!==1)return null;const fiber=own(node,keys[0]);
+            for(const candidate of [fiber,own(fiber,'alternate')]){
+              if(!candidate)continue;let root=candidate,depth=0;
+              while(own(root,'return')&&depth++<256)root=own(root,'return');
+              if(!own(root,'return')&&own(own(root,'stateNode'),'current')===root)return candidate;
+            }
+            return null;
+          };
+          const controllers=new Set();let ambiguous=false,fiber=currentFiber(dialog),depth=0;
+          for(;fiber&&depth<128;fiber=own(fiber,'return'),depth++){
+            const props=own(fiber,'memoizedProps'),controller=own(props,'sessionController');
+            if(own(props,'open')!==true||controller===undefined)continue;
+            const identity=own(controller,'identity'),team=own(props,'teamName'),task=own(own(props,'task'),'id');
+            if(!text(team)||!text(task)||!text(own(identity,'contextId'))||
+              own(identity,'teamName')!==team||own(identity,'taskId')!==task||!text(own(controller,'surfaceId'))){
+              ambiguous=true;continue;
+            }
+            controllers.add(controller);
+          }
+          if(fiber||ambiguous||controllers.size!==1)return finish();
+          const controller=[...controllers][0],identity=own(controller,'identity'),surface=own(controller,'surfaceId');
+          facts.renderedOwner=bool(own(controller,'isOwner'));
+          const getState=own(own(window,'__agentTeamsDevStore'),'getState');
+          if(typeof getState!=='function')return finish();const state=getState();
+          const context=own(identity,'contextId'),team=own(identity,'teamName'),task=own(identity,'taskId');
+          const key=JSON.stringify([context,team,task]);
+          const session=own(own(state,'taskDetailSessionById'),key),renderedSession=own(controller,'session');
+          const storedSurface=own(session,'ownerSurfaceId');
+          facts.storedSurfaceMatches=storedSurface===null||text(storedSurface)?storedSurface===surface:null;
+          const storedRevision=own(session,'ownerRevision'),renderedRevision=own(renderedSession,'ownerRevision');
+          facts.storedRevisionMatches=Number.isSafeInteger(storedRevision)&&storedRevision>=0&&Number.isSafeInteger(renderedRevision)&&renderedRevision>=0?storedRevision===renderedRevision:null;
+          const activeContext=own(state,'activeContextId'),switching=own(state,'isContextSwitching'),selectedTeam=own(state,'selectedTeamName');
+          facts.contextMatches=text(activeContext)&&typeof switching==='boolean'?!switching&&activeContext===context:null;
+          facts.selectedTeamMatches=selectedTeam===null||text(selectedTeam)?selectedTeam===team:null;
+          const detail=own(own(state,'taskDetailById'),key),detailIdentity=own(detail,'identity');
+          if(own(detailIdentity,'contextId')===context&&own(detailIdentity,'teamName')===team&&own(detailIdentity,'taskId')===task){
+            const phase=own(detail,'phase'),deletion=own(detail,'deletionIntent');
+            facts.detailPhase=['hydrating','ready','missing','deleted','provisioning','unavailable'].includes(phase)?phase:null;
+            facts.detailLoading=bool(own(detail,'loading'));facts.detailRefreshPending=bool(own(detail,'refreshPending'));
+            facts.deletionIntentPresent=deletion===null?false:deletion==='deleting'||deletion==='restoring'?true:null;
+          }
+          return finish();
+        }catch{return null;}
+      };
       for(const type of ['pointerdown','pointerup','pointercancel','pointermove','click','keydown','keyup','focusin','focusout'])document.addEventListener(type,e=>{
         if(type==='pointermove'&&!e.buttons)return;
         const dragging=type==='pointermove'||type==='pointercancel';
@@ -58,6 +135,7 @@ export function createDesktopUiControls(
           taskId:e.target instanceof Element?e.target.closest('.kanban-task-card')?.getAttribute('data-task-id')??null:null,
           activeSortable:[...document.querySelectorAll('[aria-roledescription="sortable"][aria-pressed="true"]')].map(el=>({taskId:el.querySelector('.kanban-task-card')?.getAttribute('data-task-id'),transform:el.style.transform})),
           dragAnnouncement:[...document.querySelectorAll('[id^="DndLiveRegion-"]')].map(el=>el.textContent)};
+        if(type==='pointerdown'||type==='pointerup'||type==='click')row.taskClarification=taskClarification(e);
         rows.push(row);queueMicrotask(()=>{row.defaultPreventedAfterMicrotask=e.defaultPrevented;row.focusAfterMicrotask=describe(document.activeElement);
           setTimeout(()=>{row.defaultPreventedAfterDispatch=e.defaultPrevented;row.focusAfterDispatch=describe(document.activeElement);},0);});
       },{capture:true,passive:true});return true;
