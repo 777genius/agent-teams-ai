@@ -27,14 +27,26 @@ export const OpenCodeV2InstallAction = ({
   const { t } = useAppTranslation('dashboard');
   if (busy || !status || ['checking', 'downloading', 'installing'].includes(status.state))
     return null;
-  if (
-    status?.installed &&
+  const maintenance =
+    status.installed &&
+    status.state === 'ready' &&
     status.version?.startsWith('2.') &&
-    status.v2Support &&
-    status.compatibleV2Version
-  ) {
+    status.v2Support === 'ready' &&
+    status.sourceRevision &&
+    status.engineVersion &&
+    status.v2Maintenance?.engineVersion === status.engineVersion
+      ? status.v2Maintenance
+      : undefined;
+  const support = maintenance
+    ? maintenance.kind === 'installed'
+      ? maintenance.support
+      : undefined
+    : status.installed && status.version?.startsWith('2.') && status.compatibleV2Version
+      ? status.v2Support
+      : undefined;
+  if (support) {
     const installSupport = () => onInstall({ generation: 'v2', supportOnly: true });
-    if (status.v2Support === 'required') {
+    if (support === 'required') {
       return (
         <Button
           variant="outline"
@@ -79,21 +91,21 @@ export const OpenCodeV2InstallAction = ({
     );
   }
 
-  // Fresh installations show V1 only; keep diagnostics for a broken binary override.
+  // Unselected fresh installations still show V1; only original V2 evidence offers this download.
   if (
-    !status ||
-    (!status.installed && status.source !== 'override') ||
-    (status.installed && (status.version?.startsWith('1.') || status.version?.startsWith('2.')))
+    maintenance?.kind !== 'missing' &&
+    ((!status.installed && status.source !== 'override') ||
+      (status.installed && (status.version?.startsWith('1.') || status.version?.startsWith('2.'))))
   )
     return null;
-  if (status.source === 'override') {
+  if (status.source === 'override' && maintenance?.kind !== 'missing') {
     return (
       <span className="max-w-64 text-[10px] text-[var(--color-text-muted)]">
         {t('cliStatus.runtimeInstall.overrideSelection')}
       </span>
     );
   }
-  if (!status.compatibleV2Version) {
+  if (!status.compatibleV2Version && maintenance?.kind !== 'missing') {
     return (
       <span className="max-w-64 text-[10px] text-[var(--color-text-muted)]">
         {t('cliStatus.runtimeInstall.v2Unavailable')}
@@ -108,7 +120,8 @@ export const OpenCodeV2InstallAction = ({
       onClick={() => onInstall({ generation: 'v2' })}
       className="h-6 px-2 text-[10px]"
     >
-      {t('cliStatus.runtimeInstall.install')} V2 {status.compatibleV2Version}
+      {t('cliStatus.runtimeInstall.install')} V2{' '}
+      {maintenance?.kind === 'missing' ? maintenance.engineVersion : status.compatibleV2Version}
     </Button>
   );
 };
