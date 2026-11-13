@@ -2126,3 +2126,26 @@ schema1/schema2, exact staged PE/private selection, TEST isolation и конеч
 Root review pending; production source по §45 не изменён. Existing3 service worker/4 waiter не повышаются.
 
 R3 root: план source-reviewed; схема поставки и два исходных command fence сохраняются. Actual A/B native acceptance остаётся обязательной; B1 можно подготовить отдельным неактивным срезом без изменения текущего running A head.
+
+## 46. Actual dfcea Windows A: canonical capture до первого Host spawn
+
+Exact native head `dfcea017fad525e24e53d775088a72d013a5b96d`, run `43394213408`,
+x64 job `131781101241`: прежние Node/Electron/Host facade gates и actual Claude service-scope step15 PASS.
+Новый A step16 отказал в `validateHostProfile:80` с `profile-mismatch/not-dispatched`, до Host spawn/native input.
+По этому результату Main-retained A, graceful/crash HANDLE proof и дальнейшие B/C/D не квалифицированы.
+
+Controller выдал TEST sandbox с `RUNNER~1`; fixture захватывает file paths через обычный `realpathSync`,
+а production guard сравнивает их с `fs.promises.realpath`. В exact
+[Node24.21 lib/fs.js](https://github.com/nodejs/node/blob/v24.21.0/lib/fs.js) обычный sync — JS walk,
+а `realpathSync.native` и [promises.realpath](https://github.com/nodejs/node/blob/v24.21.0/lib/internal/fs/promises.js)
+вызывают один `binding.realpath`; Windows [libuv](https://github.com/nodejs/node/blob/v24.21.0/deps/uv/src/win/fs.c)
+получает canonical name через `GetFinalPathNameByHandleW`. Короткое имя не является равной canonical строкой.
+
+Узкий исправляющий cut: только `SelectedHostProfile.nodeExecutable/hostEntry` в
+`tools/owned-process-broker/nativeRetainedHostGate.ts` захватываются через `realpathSync.native`.
+Candidate blob `8a0ccea8dbf6f7ef0778864066390650f9a0aec3` относительно `bef380e2d19fd423c54af5694117d1dc95ad249c`;
+ровно2 replacements, readback MATCH, Account source peer PASS. Original file hashes/args/env,
+strict equality/isFile guards, deadlines, first-input admission и original cleanup не меняются.
+Это TEST capture correction; runtime PASS для новых bytes ещё нет. Existing exact-head A gate должен
+дойти до ordinary native turn и исходных HANDLE observations в обоих режимах, без нового oracle/runner/таймера.
+Текущие ARM/Linux jobs продолжают штатно; новую проверку получит следующий необходимый source commit.
