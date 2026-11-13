@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "agent-teams-ai/old-provider-implementations",
+  "sourceCommit": "976905403b40078c3c2cfae3c442d5ec91056fc2",
+  "sourceTree": "314dc396b2f49fbc588421040e80fa7d15fa35a4",
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "fullChecks": [
+    {
+      "node": "24.21.0",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "runId": 43510761520,
+      "jobId": 132180086466,
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43510761520/job/132180086466"
+    },
+    {
+      "node": "26.11.1",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "runId": 43510761520,
+      "jobId": 132180086209,
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43510761520/job/132180086209"
+    }
+  ],
+  "checkedArtifact": {
+    "id": 14078576670,
+    "name": "opencode-v2-spi-consumer-checked-976905403b40078c3c2cfae3c442d5ec91056fc2",
+    "bytes": 185401,
+    "sha256": "f6c7f2a5d609e9ddf651b4cccffd83c7027e3d37c4560613e3d6a8537aaf90d9",
+    "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43510761520/artifacts/14078576670"
+  },
+  "packages": {
+    "provider-implementations": {
+      "file": "agent-teams-provider-implementations-0.0.0.tgz",
+      "oldSha256": "07241cca756e69aa6001df41d6a7408aad5d8ab4c8277f9d70f35d0d66736c73",
+      "newSha256": "73dbbfba5e8fed6719ccdeaae499a47284b72ac831c33a2c7206fbf2799f77b8",
+      "bytes": 178265,
+      "integrity": "sha512-eSYYzVEIXTHDPR7Mou+/ff7YlnEOS7nwJHt6knLer1Zb1Qv+Nvnp4xhMsjJRjpnIJwiTFTQvHQ3wq/xreFWtJw=="
+    },
+    "provider-session-contracts": {
+      "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+      "existingPath": "../opencode-v2-host-9ede557c/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "oldSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "newSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "bytes": 6220,
+      "integrity": "sha512-DnVXK40iBmyDx/lRRGYPY65Ek6yCbyncbqMs8Ridcc7kXthAl/aAc4wO4idedyNDKm1QG/tgxYJb9YVMqs4KMw=="
+    }
+  },
+  "nativeChecks": {
+    "runId": 43510761545,
+    "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43510761545",
+    "result": "PASS",
+    "successfulJobs": 53,
+    "applicationQualified": false
+  }
+}
