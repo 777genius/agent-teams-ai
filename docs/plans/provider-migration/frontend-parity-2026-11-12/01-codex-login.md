@@ -500,3 +500,28 @@ ZIP SHA256 `bc87f2e79b9bfafa8bdd6c07cff6aa8966353240463a7a043f52b00854f3ecf9`,
   renderer collector остаётся запрещён login mode. Далее независимое plan/source
   review и фактический exact-head CI. Здесь source implementation/исполнение ещё
   не выполнялись.
+
+
+### R8 — nullable ChatGPT email после checked D68, 2026-11-13
+
+#### Подтверждённая source-цепь и граница результата
+
+- Current D `68dca527b779ebb82923f30d7b08441085d8b579` сохраняет официальный allowlisted `account.type='chatgpt', email:string|null, planType:string`: metadata blob `253dbf8d920defcb1bfa602dc1d19df7788bb4bd`. `null` допускается явно; отсутствующее поле/число по-прежнему отвергаются. D existing metadata case `ac95dd3cc3e70518b486a6a024b131cde1b40c4f` отдельно проверяет nullable email и удаление private workspace/user/token fields. Это source evidence; F с новой зависимостью ещё не собран и actual login не квалифицирован.
+- В F `CodexManagementHost.read` переносит `...account` в `CodexMetadataSnapshot`, но Host contracts пока требуют `email:string`. Main `capturedCodexMetadata.decode` дополнительно отвергает null через `!text(account.email,1024)`. Это два конкретных несогласованных потребителя одного исходного native поля; не причина, установленная по старому generic Desktop failure.
+- Downstream `createCapturedCodexFeatures.ts` blob `bd43e8b06bf1e58116fa16b5bfea055f35be16c9` переносит `native.email` без преобразования; существующий `CodexManagedAccountDto` blob `062bd5510821ebffb044747276220ae8df180da5` уже имеет `string|null`. `evaluateCodexLaunchReadiness` blob `c4f1b50cdd31730d6a84114921c8b1cb2331fc66` проверяет исходный account type/health/mode, не email. Отдельный model/native Launch proof остаётся необходимым.
+- Реальный Renderer `ProviderRuntimeSettingsDialog.tsx` blob `87b55692a18e7f2816f0bfc6c7cbc59f1dd94d1a`, строки 2607–2618, отображает plan отдельно и email только при truthy value. При null email span отсутствует; существующие account/login/app-server состояния продолжают отображаться. Не вводить placeholder email, пустую строку, маску, новую локализацию или дополнительный UI gate.
+- D68 unnegotiated `humanCommand`/unknown command kinds отклоняются до automatic approval policy. Host по-прежнему не объявляет `requiredHumanApproval`; обычные absent/`command`/`writeStdin` идут прежним путём. Этот audit не требует F permission/auth mutation и не расширяет scope ниже.
+
+#### Минимальный connected follow-up, ровно три existing файла
+
+| Путь | Точный preimage | Изменение |
+| --- | --- | --- |
+| `packages/legacy-agent-host/src/management/contracts.ts` | `c4e5c187ca17757f799916e4912fbaa9c48b131b` | Только `CodexMetadataSnapshot` ChatGPT email: `string|null`; apiKey/account-null и остальные поля прежние. |
+| `src/features/runtime-provider-management/main/adapters/output/capturedCodexMetadata.ts` | `24f46a3bb5048ac9bec03357e51822623346b559` | Допустить только literal null либо прежний nonempty text до 1024 без NUL; missing/number/array/object/extra private keys по-прежнему отказ. |
+| `test/features/runtime-provider-management/capturedCodexFeatures.test.ts` | `93b251caf7f0a04fff04b3cb6339357875aba32b` | Расширить существующий critical case foreign/stale/secret-bearing metadata: genuine TEST reply с nullable email сохраняет account type/plan/email null в snapshot; malformed и private-bearing account replies не публикуются. |
+
+- Сохранить exact profile/config/target-current checks, finite model/rate-limit bounds, original management request/receipt ownership, existing API-key projection, known-plan mapping и отсутствие ambient fallback. Null является данными исходного native account, не доказательством другого аккаунта или нового login.
+- Проверка malformed использует свежий fixture/исходный read, чтобы prior valid cache не маскировал отказ; сохранить исходные foreign/stale/private top-level assertions. Отдельно отличить literal null от missing email, числа, пустого/NUL-containing/overbound текста и extra private account key; никаких токенов/реальных аккаунтов или новых suite.
+- Не изменять login/logout/refresh-token/auth intent, process/transport, permissions, Runtime/Team grants, Renderer, public IPC, timeouts, requests или CI matrix. No `null→''`/`unknown` cast; validated null проходит до уже nullable DTO.
+- Root включает эти точные bytes вместе с официально checked D68 archive/pin по P09 §64. Проверить Host build/test types, canonical Main types и existing capturedCodexFeatures tests; несовместимость источников до установки нового archive не выдаётся за compiler result. Existing genuine login/native/desktop gates остаются обязательными для acceptance.
+- Круг 1: source audit подтвердил ровно Host type + Main decoder mismatch; downstream DTO и actual display готовы к null. Круг 2: independent plan/source review до publication; runtime/compile утверждения только по фактическим checks. Installer §25 A остаётся отдельными двумя файлами без этого follow-up.
