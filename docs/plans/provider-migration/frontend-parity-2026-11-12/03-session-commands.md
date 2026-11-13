@@ -842,3 +842,65 @@ Source пока не исполнен; после actual projection отдель
 действительно ли context перенесён в другой доверенный native frame или потерян,
 и как это соотносится с прежним frontend. Диагностика не закрывает parity и не
 превращает missing captured configuration в успешный native command.
+
+## R16 — Первый одиночный "/" в captured Composer
+
+**Actual receipt boundary.** Source235, run `43394002053`, job `131780548885`
+завершился с `UI read timed out: captured native command suggestions`:
+`desktop-native-commands-ui-proof.ts:51 → desktop-codex-cost-ui-proof.ts:94 →
+desktop-launch-ui-smoke.ts:349`. Это первый /cost **до** исходного Stop/Resume.
+Native Launch уже прошёл existing eight-request assertions и Stats read; сам /cost
+ещё не отправлен. Artifact `14023246198`, ZIP SHA256
+`583eabbc08cebdefbe895d2be386f344fcbf39c5074da78ee4bc8969f15c004e`.
+Из completed log не следует, что native capability потеряна: receipt/PNG/runtime
+в ZIP пока не прочитаны. Ни runtime failure, ни causal closure не заявлены.
+
+### Круг1 — воспроизводимый UI seam
+
+В current `MessageComposer.tsx:432–495` наличие command suggestions зависит от
+текста, начинающегося с "/". При пустом тексте child получает пустой список,
+хотя exact captured lead уже имеет `sessionCommands`.
+`MentionableTextarea.tsx:443–453` включает "/" в triggerChars лишь при непустом
+commandSuggestions. Первый input обработан старым render:
+`useMentionDetection.ts:285–317` вызывает onValueChange, затем проверяет новый
+текст со старым triggerChars и dismiss. Новая render-проекция сама detection
+не вызывает; hook ждёт следующий input/selection event. Поэтому одиночный "/"
+может не открыть каталог, хотя дальнейшая обычная печать случайно исправляет UI.
+
+В existing `MessageComposer.pendingSend.test.tsx` добавить один critical
+controlled case с настоящим MentionableTextarea/useMentionDetection для этого
+case через существующий component mock boundary. Exact captured Codex lead
+имеет только /cost, draft первоначально пуст. Focus и **один** input "/",
+без дополнительного character/selection/key event, должны открыть ровно /cost.
+Никакого Send, backend invocation, skill lookup или альтернативного command
+catalog. Старые pending-send cases сохраняют прежний mock. Это проверка
+существующей пары компонентов, не новая UI test suite или harness.
+
+### Круг2 — минимальная исправляющая ветка
+
+В том же memo `MessageComposer` читать уже имеющиеся captured commands
+независимо от текста. Только captured-host branch переносится перед
+`slashCommandDataEnabled`; управление visibility/trigger остаётся у прежнего
+MentionableTextarea. Legacy built-ins и IO project/user skills сохраняют
+свои прежние guards, включая lazy fetch; команды из management/другого
+provider/current global defaults не добавляются.
+
+Снятие captured capability удаляет /cost из suggestions при следующем render;
+пустой captured список не переключается на legacy. Existing deferred-data
+case по-прежнему обязан показать ноль expensive reads до нужного trigger.
+Не добавлять повторный input в E2E, таймер, polling effect для искусственного
+открытия меню или изменение native /cost admission.
+
+### Круг3 — ограниченная квалификация
+
+Изменения: один production Composer и один existing component-test файл.
+Focused renderer test/types/lint; по возможности сначала original-source RED
+и затем исправленный PASS. Пока executor недоступен, source-only составление
+не является выполнением этого условия. Независимый source review обязателен.
+
+Далее тот же уже существующий Codex Resume UI job должен пройти первый catalog
+→ one Send → исходный Host-local report без model/input allocation, затем
+Stop/cold Resume, retained report и новый /cost по существующим assertions.
+Если actual gate снова не покажет каталог, отдельно разобрать original runtime
+projection/фокус по фактическому receipt; не ослаблять готовность, generation,
+captured-host authority, exact catalog или successful cleanup.
