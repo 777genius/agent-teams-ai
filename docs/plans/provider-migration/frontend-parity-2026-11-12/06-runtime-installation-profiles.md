@@ -328,6 +328,62 @@ Hash/platform/malformed receipt suites переиспользовать; same-ve
   Этот срез не маскирует их, не вводит общий cache/owner/journal и не объявляет PR/планы полностью закрытыми.
 - Статус: авторские проходы R1/R2/R3 выполнены по коду; независимое review и source implementation впереди.
 
+## 16. Ограниченное асинхронное чтение выбранного executable — review 13
+
+### Круг 1 — причина и сохраняемая функция
+
+- Review `PRRT_kwDORVTEtM622S1p` сверён с source `64c33f663ba48f34352b927a5d4a88fb2ec04b12`.
+  Existing `verifyRuntimeSourceCandidate.ts:verifyRuntimeSourceExecutable` принимает файл до 1 GiB,
+  затем выполняет `readFileSync(fd)` и SHA256 всего Buffer в Host event loop. Проверка выполняется
+  при admission и повторно непосредственно перед `RuntimeSourceIndex.publishCandidate` publication.
+  Объявление внешней функции `async` не делает эти чтения асинхронными.
+- Сохраняется существующий Install/Refresh/explicit source workflow из [M1]/[M3]: тот же выбранный путь,
+  тот же expected SHA/version, тот же original command и qualified native verifier. Не менять installed
+  executable location, формат selection/receipt или current/retained revision semantics.
+- Это ограниченный срез чтения source selection. Отдельный `CapturedProcess.verifyExecutable` перед
+  native `--version` пока тоже синхронный; его pathname verify→exec gap остаётся review 24.
+  Этот план не обещает полностью устранить Host startup latency или создать pre-exec byte pin.
+
+### Круг 2 — минимальный private read и publication boundary
+
+1. В существующем `verifyRuntimeSourceCandidate.ts` читать исходный открытый descriptor асинхронно
+   блоками не более 64 KiB и обновлять SHA256 по каждому прочитанному блоку. Не собирать весь файл
+   в Buffer/array, не открывать pathname заново на каждый блок и не использовать worker/child/cache.
+   Сохранить предел 1 GiB, canonical path, regular-file/no-follow, executable mode и точный expected SHA.
+   Short read/EOF и growth проверять по фактическому числу bytes и original size; лишние bytes не принимать.
+2. Сохранить private original descriptor и его dev/ino/size/mtimeNs/ctimeNs до завершения проверки.
+   Перед/после чтения сверять opened fd и pathname; конечный recheck должен видеть именно original inode,
+   а не новый файл по тому же имени. Все открытые descriptors закрывать в finally при success/refusal.
+   Одновременно удерживается не более двух existing executable selections, никаких persistent handles.
+3. Existing owner callback проверяет writer/sealed state до и после await каждого блока.
+   Потеря authority или seal прекращает read до native allocation/admission; новая writer authority не
+   превращает старую попытку в новый intent. Запись terminal no-allocation receipt использует прежний
+   cleanup writer; без него нельзя заявлять завершённый cleanup или переписывать journal.
+   Recovery verifying/unknown и повторное подтверждение original native cleanup из §15 не меняются.
+4. Обновить оба existing callsites: первоначальную candidate verification и final verification после
+   original native version outcome. Final async read удерживает проверенные fd до publication block.
+   После последнего await повторить original writer/seal, fd/path identity и configuration checks;
+   затем `lookup/admit/store.publish/receipt` выполняются без нового await до existing atomic publication.
+   Сохранить existing store expectedRevision/CAS и original fingerprint; не переносить publication errors
+   под catch, который мог бы переписать уже опубликованный outcome как static refusal.
+5. Private fd/hash result нужен только внутри этой одной проверки; новый public API, owner, очередь,
+   journal, retained cache или настройка лимита не добавляются. Изменения остаются в двух existing
+   production files; `RuntimeSourceIndex.ts` сохраняет предел 800 строк без новой exception.
+
+### Круг 3 — критическая проверка и независимый review
+
+- В existing `runtime-source-native-identity.test.ts` один controlled finite executable размером в несколько
+  блоков должен пропустить event-loop control callback до publication. Callback sealing/revocation
+  запрещает native allocation/admission/current-pointer update и сохраняет original refusal/recovery.
+  Это ordering assertion, не нестабильный wall-clock performance threshold и не 1 GiB benchmark.
+- В том же existing boundary проверить replacement/byte drift между asynchronous read и final publication:
+  проверенный старый fd не разрешает новый pathname; прежний pointer и original command outcome сохраняются.
+  Сохранить existing verified/lost-ACK recovery, post-version drift и unknown-cleanup assertions.
+- До source — independent plan review и immediate commit/push. После source — peer review обоих callsites,
+  Host build/test types, затронутые integration tests, lint и size guard. Native/Desktop gates остаются
+  штатными exact-source CI; новых runners, budgets, manual rerun или main merge нет.
+- Статус: выполнены авторские source/design/test-plan проходы; compiler/native результаты не заявляются.
+
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/runtime/openCodeRuntimeBinaryEnv.ts
 [M3]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/settings/sections/CliStatusSection.tsx

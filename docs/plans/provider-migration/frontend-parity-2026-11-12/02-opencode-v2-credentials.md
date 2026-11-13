@@ -511,6 +511,8 @@ PR1186 `PRRT_kwDORVTEtM6246fc` повторно сверён с frontend
 - Сохранить unavailable-model/high → enabled fallback без чужого variant из P05, ровно прежние четыре
   inference requests, current timeout/effect counts, unknown-intent no-replay и original cleanup assertions.
   Новый source profile до corrected Connect показывает configured/unverified; он не получает connected по чужой revision.
+  Existing required-step список в `opencode-v2-stage1-preflight.yml` требует новый marker
+  `runtime_source_revision_preserves_original_rejected_key_replacement_authority`, чтобы CI проверял этот переход.
 - Проверить Host build/test types, существующие coordinator/credential-scope suites, fast lint/source cap;
   actual native/Host/Desktop outcome подтвердить на следующем штатном exact-source CI cut.
   Не создавать новую suite/runner, не расширять native budgets и не объявлять native PASS по source review.
