@@ -743,3 +743,10 @@ Independent plan review (Account) — PASS: оба original local receipts/model
 проверены, anchors находятся в user text; wrong target, raw slash и system-only
 match не дают acceptance. До source отдельно воспроизведено, что прежний oracle
 отказывает на обоих actual pinned request bodies с тем же review-expansion assertion.
+
+R13 source3 independent review (Account) — PASS. Existing two critical model
+cases PASS; Host test types, scripts types, fast lint и diff check PASS.
+Corrected shared predicate также принял **неизменённые** оба actual local
+recorded request bodies, которые до исправления отвергал прежний predicate.
+Raw slash/wrong target/missing heading/system-only/assistant/split-message cases
+по-прежнему отказываются. Production files0; native/Desktop acceptance pending.
