@@ -1,7 +1,22 @@
 /** Compatibility entry; the canonical owner contract is shared with the Host. */
-export { sameOwner } from '@agent-teams/legacy-agent-host/owned-process';
 export type {
-  ProcessOwner, Creation, Coverage, TreeReceipt, TreeOutcome, StopRequest, ResolvedLaunchSpec,
-  RootExit, BrokerExit, ControlCause, ControlPhase, NativeExitCategory, ControlDiagnostics,
-  TargetDrain, PendingOwnedProcess, PreparedOwnedProcess, Preparation, OwnedLaunchPort,
+  BrokerExit,
+  ControlCause,
+  ControlDiagnostics,
+  ControlPhase,
+  Coverage,
+  Creation,
+  NativeExitCategory,
+  OwnedLaunchPort,
+  PendingOwnedProcess,
+  Preparation,
+  PreparedOwnedProcess,
+  ProcessOwner,
+  ResolvedLaunchSpec,
+  RootExit,
+  StopRequest,
+  TargetDrain,
+  TreeOutcome,
+  TreeReceipt,
 } from '@agent-teams/legacy-agent-host/owned-process';
+export { sameOwner } from '@agent-teams/legacy-agent-host/owned-process';

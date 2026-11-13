@@ -487,3 +487,35 @@ technical generation меняется; исходная session history и cost 
 Независимый review Profiles и root source review пройдены. Root дополнительно сделал сравнение
 чисел точными строками, чтобы expected1 не принимал prefix11. Compile/native/Desktop результаты
 нового cut ещё pending; наличие сценария и source review не объявляются E2E PASS.
+
+### R8 — исправление каталога Claude после actual SDK failure, 2026-11-13
+
+**Доказанная причина.** Native gate `e2af82d`, run `43338183806`,
+job `131599601406`, отказал на «actual Query advertises compact» до первого model request.
+Отдельная read-only инициализация pinned `@anthropic-ai/claude-agent-sdk@0.3.305`
+на Linux x64 с новым TEST HOME/config вернула 46 строк. Каталог содержит `compact`,
+`usage` с aliases `cost/stats`, `code-review` с alias `review` и обе TEST skills.
+D `04e40ea` преобразовал его в пустой массив: native builtin `__remote-workflow`
+не соответствует product grammar. Это служебная metadata, а не разрешённая UI command.
+Проверка не отправляла prompt, не поднимала listener/MCP и завершила original child с code 0.
+SDK JS digest совпал с прежним qualified `c8d3e6cf…`; это diagnosis, не полный P03 PASS.
+
+1. В existing D `claude-sdk/commands.ts` отделить bounded native metadata spelling от
+   product executable spelling. Native underscore names допустимы при проверке metadata;
+   строки и aliases, не представимые прежней product grammar, исключаются из product catalog.
+   Не расширять `claudeCommandName`, Host parser, builtin allowlist или raw dispatch.
+2. Сохранить прежние shape/count/byte bounds, builtin precedence и alias correlation.
+   Невалидные типы, NUL/чрезмерные данные по-прежнему не дают command authority.
+   Один служебный native builtin не должен скрывать другие допустимые команды.
+3. Добавить один критичный regression в existing D command integration: вернуть фактические
+   46 catalog rows, получить прежние compact/cost/review/user capabilities, исключить
+   `__remote-workflow` и проверить отказ его raw-command grammar. Новая unit suite не нужна.
+4. Проверить D штатным full check под Node 24 и 26; повторить тот же read-only catalog projection
+   на исправленном D. После checked pack/pin выполнить существующие native Claude commands и
+   Desktop Launch/Composer gates на exact head. Не менять intentional old artifact corpus,
+   model counts, receipt correlation, waits или критерии PASS.
+
+**Review 1 — parity.** Actual native metadata содержит private names; product grammar не обязана
+разрешать их пользователю. **Review 2 — минимальность.** Исправляется существующий codec и один
+regression; нет новой discovery API, списка разрешённых внутренних commands или fallback dispatch.
+Compact, cost, review и scoped skills остаются открытыми до actual native/Desktop acceptance.

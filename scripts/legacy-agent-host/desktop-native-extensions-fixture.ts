@@ -145,7 +145,7 @@ export async function prepareDesktopNativeExtensionsFixture(
     assert.equal(original.cwd, runtime.cwd);
     assert.deepEqual(original.environment, runtime.environment);
     for (const name of ["HOME", "CLAUDE_CONFIG_DIR", "TMPDIR"] as const) {
-      const value = runtime.environment[name];
+      const value: string | undefined = runtime.environment[name];
       assert.ok(value?.startsWith(fixture.root + "/"));
       assert.equal(await realpath(value), value);
     }

@@ -1226,8 +1226,6 @@ jobs:
         env:
           LEGACY_NATIVE_MIXED_HOST_GO: '1'
           LEGACY_NATIVE_MIXED_RESTORE_GO: '1'
-          LEGACY_NATIVE_PROVIDER_ARTIFACT: vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-implementations-0.0.0.tgz
-          LEGACY_NATIVE_PROVIDER_SHA256: fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89
         run: |
           set -euo pipefail
           unset LEGACY_NATIVE_MIXED_PEERS_GO LEGACY_NATIVE_MIXED_CROSS_TEAM_GO
@@ -1236,11 +1234,23 @@ jobs:
           selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
           export LEGACY_NATIVE_HOST_SOURCE_SHA256="$("$selected_node" --input-type=module -e 'import { treeHash } from "./packages/legacy-agent-host/tests/fixtures/native-host.ts"; console.log(await treeHash("packages/legacy-agent-host/src", ".ts"));')"
           export LEGACY_NATIVE_HOST_DIST_SHA256="$("$selected_node" --input-type=module -e 'import { treeHash } from "./packages/legacy-agent-host/tests/fixtures/native-host.ts"; console.log(await treeHash("packages/legacy-agent-host/dist", ".js"));')"
-          "$selected_node" --test packages/legacy-agent-host/tests/native-mixed-host.native.ts 2>&1 | tee "$RUNNER_TEMP/stage1-native-restore.log"
+          "$selected_node" --input-type=module <<'NODE' 2>&1 | tee "$RUNNER_TEMP/stage1-native-restore.log"
+          import { spawnSync } from 'node:child_process';
+          import { readNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+          const provider = await readNativeProviderArtifact(process.cwd());
+          const result = spawnSync(process.execPath, ['--test', 'packages/legacy-agent-host/tests/native-mixed-host.native.ts'], {
+            stdio: 'inherit',
+            env: { ...process.env, LEGACY_NATIVE_PROVIDER_ARTIFACT: provider.path, LEGACY_NATIVE_PROVIDER_SHA256: provider.sha256 },
+          });
+          if (result.error) throw result.error;
+          process.exit(result.status ?? 1);
+          NODE
           "$selected_node" --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
           import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
           import { join } from 'node:path';
+          import { readNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+          const provider = await readNativeProviderArtifact(process.cwd());
           const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-native-restore.log'), 'utf8');
           const matches = [...log.matchAll(/TEST receipt: (\/private\/tmp\/TEST-native-mixed-host-[^/\s]+\/receipt\.json)/g)];
           assert.equal(matches.length, 1, 'one original native restore attempt');
@@ -1251,7 +1261,9 @@ jobs:
           assert.equal(receipt.exercisePeers, false); assert.equal(receipt.exerciseCrossTeam, false);
           assert.equal(receipt.cleanupConfirmed, true);
           assert.deepEqual(Object.keys(receipt.restoreSelections).sort(), ['alice', 'bob', 'carol']);
-          assert.equal(receipt.artifacts.providerSha256, process.env.LEGACY_NATIVE_PROVIDER_SHA256);
+          assert.equal(receipt.artifacts.providerSha256, provider.sha256);
+          assert.equal(receipt.artifacts.source, process.env.LEGACY_NATIVE_HOST_SOURCE_SHA256);
+          assert.equal(receipt.artifacts.dist, process.env.LEGACY_NATIVE_HOST_DIST_SHA256);
           assert.equal(receipt.artifacts.executables.opencode.sha256, '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b');
           assert.ok(receipt.excluded.includes('Desktop controls'));
           writeFileSync(join(process.env.RUNNER_TEMP, 'stage1-native-restore-inputs.json'), JSON.stringify({

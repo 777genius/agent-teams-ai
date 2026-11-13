@@ -191,7 +191,7 @@ test('native V2 captured allowlist and app-only preserve Team tools, original re
       assert.deepEqual(await events(excludedLog), []);
       const command = envelope({ operation: 'message.send',
         payload: { to: memberId, text: mcpTurnText(turn) } }, 'TEST-original-mcp-' + turn);
-      const receipt = await host.rpc('team.execute', command);
+      const receipt: Record<string, unknown> = await host.rpc('team.execute', command);
       const accepted = value(receipt);
       assert.equal(accepted.phase, 'completed');
       const inputId = record(accepted.effects).deliveryId;
