@@ -1443,3 +1443,19 @@ Do not clear the fetch history, mock the Dashboard hook, change its effect, add 
 ### Review 3 — gates and ownership
 
 Root publishes this append before the source edit. Independent review compares the exact one-file diff; no new test suite, timer, input, fixture, workflow or dependency is needed. The same existing CliStatusSection file and normal renderer shard/types/lint are the execution gates. With the executor unavailable, the candidate remains SOURCE_ONLY_UNEXECUTED until an actual available gate runs. Root remains sole publisher; this narrow TEST correction does not alter P05 §15 diagnostics or the separate §16 local-readiness parity work.
+
+## §32 — explicit reply-array types at two actual native UI script errors
+
+### Review 1 — actual source error and already-declared data shape
+
+Parent1160 packaged Linux job132037060973 fails the existing script type project with TS7022 at desktop-native-commands-ui-proof.ts336 and desktop-native-extension-consumption-ui-proof.ts112. Both errors concern a local replies variable initialized by filtering the original inbox rows. They occur before packaged native execution; this is not a packaged native failure. The original rows projection returns Row[], and both files already declare Row as Record<string, unknown>.
+
+The commands file currently includes reviewed R22 scoped /cost visibility (f37656eea681a562c57bc811c8defc595bcf4cb8); that implementation is preserved. The extension file remains83a25242151b126c27e8afe61d3983ae47f7d3ce. The failing declarations are original native MCP reply arrays; the /cost local-command output identity stays unchanged.
+
+### Review 2 — two erased annotations only
+
+Add the explicit Row[] annotation to exactly the reported replies declaration in each existing file. Keep each original filter callback, effectId, native IDs, output/readback assertions and all timeout/count/owner guards byte-identical. Do not add a cast, any, diagnostic suppression, new helper, fixture or test. The annotation must check the existing returned shape rather than coerce it.
+
+### Review 3 — existing gates
+
+Root publishes this plan before the source. Independent source review verifies that the only emitted-code-neutral delta is the two Row[] annotations. The unchanged pinned script type project and existing packaged/ordinary Desktop CI lanes remain required; source review does not qualify their execution. No workflow, runner, retry or budget change belongs to this correction.
