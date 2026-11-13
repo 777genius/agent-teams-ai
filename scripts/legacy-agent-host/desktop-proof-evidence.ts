@@ -8,6 +8,7 @@ import type { startNativeTeamModel } from '../../packages/legacy-agent-host/test
 import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
 import type { startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import type { startOpenCodeV2ReviewModel } from './desktop-opencode-v2-review-model.ts';
+import type { startDesktopCapturedMcpModel } from './desktop-opencode-v2-mcp-fixture.ts';
 export async function desktopProofEvidence(options: {
   mode: string;
   fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>;
@@ -22,6 +23,7 @@ export async function desktopProofEvidence(options: {
   codexResumeModel?: Awaited<ReturnType<typeof startCodexModel>> | undefined;
   openCodeLifecycleModel?: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
   openCodeReviewModel?: Awaited<ReturnType<typeof startOpenCodeV2ReviewModel>> | undefined;
+  capturedMcpModel?: Awaited<ReturnType<typeof startDesktopCapturedMcpModel>> | undefined;
 }): Promise<Record<string, unknown>> {
   const {
     mode,
@@ -36,6 +38,7 @@ export async function desktopProofEvidence(options: {
     codexResumeModel,
     openCodeLifecycleModel,
     openCodeReviewModel,
+    capturedMcpModel,
   } = options;
   const resumeEvidence: Record<string, unknown> = {};
   if (mode === 'native-resume-ui') {
@@ -70,6 +73,10 @@ export async function desktopProofEvidence(options: {
       observations: openCodeReviewModel.observations, probes: openCodeReviewModel.probes,
       failures: openCodeReviewModel.failures,
       inference: 'Local scripted model; original V2 tools and Host own every file and Task effect',
+    } } : {}),
+    ...(capturedMcpModel ? { nativeProvider: 'opencode', nativeGeneration: 'v2', model: {
+      requests: capturedMcpModel.requests, probes: capturedMcpModel.probes, failures: capturedMcpModel.failures,
+      inference: 'Local finite oracle only; actual native V2 owns captured MCP discovery and effects',
     } } : {}),
     ...resumeEvidence,
     ...(openCodeLifecycleModel ? { nativeProvider: 'opencode', nativeGeneration: 'v2', model: {

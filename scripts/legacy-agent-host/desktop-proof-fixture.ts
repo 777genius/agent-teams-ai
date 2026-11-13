@@ -42,6 +42,7 @@ export async function prepareDesktopProofFixture(
     modelUrl?: string;
     codexResumeMode?: boolean;
     openCodeLifecycleMode?: boolean;
+    capturedMcpNonce?: string;
   }
 ): Promise<
   Awaited<ReturnType<typeof prepareDesktopBackendFixture>> & {
@@ -51,6 +52,11 @@ export async function prepareDesktopProofFixture(
     controlledProcess?: Awaited<ReturnType<typeof prepareControlledProcessFixture>>['controlledProcess'];
   }
 > {
+  if (options.capturedMcpNonce !== undefined) {
+    assert.equal(mode, 'native-launch-ui');
+    assert.ok(options.openCodeLifecycleMode && !options.candidateRuntime && options.modelUrl);
+    assert.equal(process.env.LEGACY_DESKTOP_OPENCODE_MCP_UI, '1');
+  }
   if (process.env.LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI === '1') {
     assert.equal(mode, 'native-launch-ui');
     assert.notEqual(process.env.LEGACY_DESKTOP_SCHEDULE_UI, '1');
@@ -119,6 +125,7 @@ export async function prepareDesktopProofFixture(
   } : undefined;
   const fixture = await prepareDesktopBackendFixture(repo, {
     ...(selectedV2 ? { nativeOpenCodeV2: selectedV2 } : {}),
+    ...(options.capturedMcpNonce ? { capturedMcpNonce: options.capturedMcpNonce } : {}),
     ...(options.candidateRuntime ? { candidateRuntime: options.candidateRuntime } : {}),
     ...(process.env.LEGACY_DESKTOP_DIAGNOSTIC_HOST_ENTRY
       ? {

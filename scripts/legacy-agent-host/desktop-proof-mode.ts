@@ -6,6 +6,7 @@ import { nativeProcessReadbackAction } from './desktop-native-process-readback.t
 import { desktopScheduleScenario } from './desktop-schedule-fixture.ts';
 import { desktopNativeCommandScenario } from './desktop-native-commands-fixture.ts';
 import { desktopNativeExtensionScenario } from './desktop-native-extension-consumption-fixture.ts';
+import { startDesktopCapturedMcpModel } from './desktop-opencode-v2-mcp-fixture.ts';
 import { startProcessModel } from './desktop-native-process-model.ts';
 import { readProcessServices } from './desktop-native-process-fixture.ts';
 import { startDesktopMixedModels } from './desktop-mixed-native-fixture.ts';
@@ -76,6 +77,12 @@ export async function prepareDesktopProofMode(
   if (extensionsUiMode) {
     assert.equal(mode, 'native-launch-ui', 'extension consumption extends the original Launch mode');
     assert.ok(!scheduleUiMode && !commandsUiMode, 'one finite UI variant');
+  }
+  const capturedMcpUiMode = process.env.LEGACY_DESKTOP_OPENCODE_MCP_UI === '1';
+  if (capturedMcpUiMode) {
+    assert.equal(mode, 'native-launch-ui');
+    assert.equal(process.env.LEGACY_DESKTOP_OPENCODE_GENERATION, 'v2');
+    assert.ok(!scheduleUiMode && !commandsUiMode && !extensionsUiMode, 'one finite UI variant');
   }
   const processUiMode = mode === 'native-process-ui';
   const controlledProcessMode = mode === 'process-cold-ui';
@@ -195,7 +202,7 @@ export async function prepareDesktopProofMode(
   assert.ok(openCodeGeneration === undefined || openCodeGeneration === '' || openCodeGeneration === 'v2',
     'explicit known Desktop OpenCode generation');
   const openCodeLifecycleMode = openCodeGeneration === 'v2' &&
-    ['native-resume-ui', 'native-stop-ui', 'native-quit-ui', 'native-quit-readback-ui', 'native-review-ui', 'native-review-readback-ui', 'native-conversation-ui', 'native-readback-ui'].includes(mode);
+    (capturedMcpUiMode || ['native-resume-ui', 'native-stop-ui', 'native-quit-ui', 'native-quit-readback-ui', 'native-review-ui', 'native-review-readback-ui', 'native-conversation-ui', 'native-readback-ui'].includes(mode));
   const openCodeReviewMode = openCodeGeneration === 'v2' && nativeReviewMode;
   if (openCodeReviewMode) assert.equal(nativeReviewContinuationMode, false);
   if (openCodeLifecycleMode && conversationMode) assert.ok(chatAttachments && !groupChats,
@@ -277,7 +284,8 @@ export async function prepareDesktopProofMode(
       return member.principalId;
     },
   }) : undefined;
-  const openCodeLifecycleModel = openCodeLifecycleMode && !openCodeReviewMode && !readbackMode ? await startOpenCodeModel({
+  const capturedMcpModel = capturedMcpUiMode ? await startDesktopCapturedMcpModel(fixtureRoot) : undefined;
+  const openCodeLifecycleModel = openCodeLifecycleMode && !capturedMcpUiMode && !openCodeReviewMode && !readbackMode ? await startOpenCodeModel({
     nativeGeneration: 'v2', memberName: 'alice', uiGeneratedMessageIds: true,
     nativeMessageImage: conversationMode && chatAttachments,
     captureHistoryMarkers: resumeMode, allowModelProbes: resumeMode,
@@ -468,6 +476,8 @@ export async function prepareDesktopProofMode(
     mixedMode,
     mixedModels,
     extensionsUiMode,
+    capturedMcpUiMode,
+    capturedMcpModel,
     processUiMode,
     controlledProcessMode,
     processReadbackMode,

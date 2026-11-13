@@ -1,5 +1,11 @@
 /** Finite source closure for captured management, lifecycle, WorkSync and native roster. */
 export const desktopProofManagementSources = [
+  'scripts/legacy-agent-host/desktop-opencode-v2-mcp-fixture.ts',
+  'scripts/legacy-agent-host/desktop-opencode-v2-mcp-ui-proof.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-opencode-v2-mcp/model.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-opencode-v2-mcp/server.mjs',
+  'src/renderer/components/team/members/MemberMcpPolicyPanel.tsx',
+  'src/renderer/components/team/members/MemberDraftRow.tsx',
   'packages/legacy-agent-host/src/team/hostCostCommand.ts',
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CapturedMcp.ts',
   'packages/legacy-agent-host/tests/fixtures/native-claude-extensions/model.ts',

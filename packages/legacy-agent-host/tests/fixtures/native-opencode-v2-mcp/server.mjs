@@ -13,10 +13,16 @@ assert.ok(server === 'selected' || server === 'excluded');
 assert.equal(process.env.TEST_MCP_NONCE, nonce);
 assert.equal(process.version, 'v24.21.0');
 const instanceId = randomUUID();
-const stat = readFileSync('/proc/self/stat', 'utf8');
-const startTicks = stat.slice(stat.lastIndexOf(') ') + 2).trim().split(/\s+/)[19];
-assert.match(startTicks ?? '', /^\d+$/);
-const identity = { server, instanceId, pid: process.pid, startTicks };
+assert.ok(process.platform === 'linux' || process.platform === 'darwin');
+let birth = {};
+if (process.platform === 'linux') {
+  const stat = readFileSync('/proc/self/stat', 'utf8');
+  const startTicks = stat.slice(stat.lastIndexOf(') ') + 2).trim().split(/\s+/)[19];
+  assert.match(startTicks ?? '', /^\d+$/);
+  birth = { startTicks };
+}
+// Desktop captures Darwin birth/ancestry through its existing read-only processFacts observer.
+const identity = { server, instanceId, pid: process.pid, ...birth };
 const log = (event, detail = {}) => appendFileSync(logPath,
   JSON.stringify({ ...identity, event, ...detail }) + '\n', { mode: 0o600 });
 log('started');

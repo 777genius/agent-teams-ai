@@ -594,3 +594,16 @@ Source review также исправил ошибку hash helper: namespace �
 общий cold callback вынесен в существующий desktop-captured-app, уменьшая общий runner.
 Source closure включает новые helpers и ранее добавленные Host cost/V2 MCP adapters.
 Compile, настоящий UI/native запуск и exact-head CI остаются необходимыми gates.
+
+#### R11 source review connected acceptance
+
+Connected TEST cut использует existing native-launch-ui и один follow-up шаг existing mixed-V2 job.
+Native oracle принимает пять ordinary requests и отдельные bounded no-tool probes; policy settings,
+исходный actor birth/ancestor, единственный external effect и original Team replies связаны с receipts.
+После Stop проверяются три released Runtime, отсутствие original actor и сохранённые source owners.
+
+Root review нашёл гонку повторного preflight при readback. Сценарий теперь дожидается readiness
+через существующий control, закрывает dialog, затем проверяет completed/cancelled original probes
+с resourceHeld=false и неизменность всех закрытых Runtime, прежде чем фиксировать count/PASS.
+Account independently reviewed final UI/oracle/cleanup. Types и actual native/Desktop run для этого
+cut ещё не выполнены: unavailable local executor, CI remains required. Новых unit suites нет.

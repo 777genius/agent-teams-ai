@@ -1221,6 +1221,107 @@ jobs:
           console.log(JSON.stringify({ status: r.status, receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
             scope: 'Same native namespace: original UI Install/Create/Edit, cold startup, expanded native commands, Uninstall and new Query' }));
           NODE
+      - name: Verify captured member MCP policies through original V2 Desktop controls
+        if: matrix.variant == 'native-mixed-v2-create-launch-ui'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: native-launch-ui
+          LEGACY_DESKTOP_OPENCODE_MCP_UI: '1'
+          LEGACY_DESKTOP_COMMANDS_UI: ''
+          LEGACY_DESKTOP_SCHEDULE_UI: ''
+          LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI: ''
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-native-captured-mcp.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-desktop-native-captured-mcp.log'), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'one original MCP UI journey, no replay');
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const r = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
+          assert.equal(r.mode, 'native-launch-ui'); assert.equal(r.status, 'PASS');
+          assert.equal(r.nativeProvider, 'opencode'); assert.equal(r.nativeGeneration, 'v2');
+          assert.equal(r.sourceFreezeFailure, undefined);
+          assert.deepEqual(r.selectedSourceHashesAfterFlow, r.selectedSourceHashesBeforeApp);
+          assert.equal(r.cleanup.capturedHostAbsent, true); assert.deepEqual(r.cleanup.remaining, []);
+          const p = r.launchDialogProof;
+          assert.equal(p.status, 'PASS'); assert.equal(p.variant, 'captured-mcp-member-policies');
+          assert.equal(p.provider, 'opencode'); assert.equal(p.metadataAbsentBeforeHarnessCleanup, true);
+          assert.deepEqual(p.metadataSources.map(row => row.scope), ['global', 'project']);
+          assert.equal(new Set(p.metadataSources.map(row => row.profileId)).size, 2);
+          assert.equal(p.originalMetadataBeforeLaunch.children.length, 2);
+          assert.deepEqual(p.metadataAfterStop, p.originalMetadataBeforeLaunch);
+          assert.deepEqual(p.savedPolicies, [
+            { mode: 'strictAllowlist', scopes: { user: true, project: false, local: false }, serverNames: ['TEST.selected'] },
+            { mode: 'appOnly' },
+          ]);
+          assert.equal(p.policiesRetainedAfterStop, true); assert.equal(p.originalCommandsRetained, true);
+          assert.match(p.readbackRuntimeDigest, /^[a-f0-9]{64}$/u);
+          assert.ok(p.readbackModelProbes.length > 0 && p.readbackModelProbes.length <= 128);
+          assert.ok(p.readbackModelProbes.every(row => row.resourceHeld === false && ['completed', 'cancelled'].includes(row.phase)));
+          assert.equal(p.savedSettings.prompt ?? '', ''); assert.equal(p.savedSettings.skipPermissions, false);
+          assert.equal(p.leadInputs, 0); assert.equal(p.ordinaryRequests, 5);
+          assert.ok(p.probeRequests > 0 && p.probeRequests <= 8);
+          assert.deepEqual(r.model.failures, []); assert.equal(r.model.probes.length, p.probeRequests);
+          assert.ok(r.model.probes.every(row => row.requestedModel === 'TEST-model'));
+          assert.deepEqual(r.model.requests.map(row => [row.turn, row.step]), [
+            ['ALLOW', 0], ['ALLOW', 1], ['ALLOW', 2], ['APP_ONLY', 0], ['APP_ONLY', 1],
+          ]);
+          assert.equal(r.model.requests[0].tool, 'TEST_selected_write_marker');
+          assert.ok(['agent-teams_message_send', 'mcp__agent-teams__message_send'].includes(r.model.requests[1].tool));
+          assert.equal(r.model.requests[3].tool, r.model.requests[1].tool);
+          assert.equal(r.model.requests[2].tool, null); assert.equal(r.model.requests[4].tool, null);
+          assert.equal(p.excludedActorStarted, false); assert.equal(p.externalCalls, 1);
+          const source = JSON.parse(readFileSync(join(dirname(path), 'captured-mcp-fixture.json'), 'utf8'));
+          assert.equal(p.catalogSha256, source.catalogSha256);
+          assert.deepEqual(p.externalEffect, { server: 'selected', instanceId: p.originalActor.instanceId,
+            pid: p.originalActor.pid, nonce: source.nonce });
+          assert.equal(p.originalActor.physical.pid, p.originalActor.pid);
+          assert.ok(p.originalActor.physical.birth); assert.ok(p.originalActor.runtimeParent.birth);
+          assert.deepEqual(p.stop.actor, p.originalActor.physical);
+          assert.equal(p.stop.nativeChildren.length, 3);
+          assert.ok(p.stop.nativeChildren.some(row => JSON.stringify(row) === JSON.stringify(p.originalActor.runtimeParent)));
+          assert.equal(p.stop.originalActorAbsentBeforeQuit, true); assert.equal(p.stop.releasedBeforeQuit, true);
+          assert.equal(p.manualPermission.beforeEffect, true); assert.equal(p.manualPermission.clicks, 1);
+          assert.equal(p.manualPermission.decision, 'allow'); assert.ok(p.manualPermission.interactionRef);
+          assert.equal(p.manualPermission.inputId, p.commands[0].inputId);
+          assert.equal(p.steps.filter(row => row.action === 'mouseClick' && row.label === 'Allow this exact original MCP request once').length, 1);
+          assert.equal(p.steps.filter(row => row.action === 'mouseClick' && row.label === 'one original three-member Launch').length, 1);
+          assert.equal(p.steps.filter(row => row.action === 'mouseClick' && row.label === 'Send original member input once').length, 2);
+          assert.deepEqual(p.commands.map(row => row.memberId), ['TEST-mcp-allowed', 'TEST-mcp-app-only']);
+          assert.equal(new Set(p.commands.map(row => row.inputId)).size, 2);
+          assert.equal(new Set(p.commands.map(row => row.command.commandId)).size, 2);
+          assert.equal(p.capture.members.length, 3); assert.equal(p.artifacts.length, 3);
+          for (const [index, item] of p.commands.entries()) {
+            const member = p.capture.members.find(row => row.memberId === item.memberId);
+            assert.ok(member); assert.equal(item.command.phase, 'completed');
+            assert.equal(item.command.principalId, 'TEST-human'); assert.equal(item.command.command.operation, 'message.send');
+            assert.equal(item.outbox.phase, 'admitted'); assert.equal(item.outbox.inputId, item.inputId);
+            assert.equal(item.outbox.commandId, item.command.commandId); assert.equal(item.outbox.messageId, item.command.effects.messageId);
+            assert.deepEqual(item.outbox.binding, member.delivery);
+            assert.equal(item.nativeReply.phase, 'completed'); assert.equal(item.nativeReply.principalId, member.principalId);
+            assert.equal(item.nativeReply.commandId, 'TEST-mcp-native-reply-' + (index === 0 ? 'ALLOW' : 'APP_ONLY'));
+          }
+          assert.equal(p.nativeSessionsAfterStop.length, 3);
+          for (const session of p.nativeSessionsAfterStop) {
+            assert.equal(session.phase, 'closed'); assert.equal(session.custody, 'released'); assert.equal(session.sealed, true);
+            const expected = p.commands.find(row => row.memberId === session.binding.memberId);
+            assert.deepEqual(session.inputs.map(row => [row.inputId, row.phase, row.terminal]),
+              expected ? [[expected.inputId, 'terminal', 'succeeded']] : []);
+          }
+          console.log(JSON.stringify({ status: r.status, receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
+            scope: 'Original per-member MCP controls, actual V2 inventory and permission, once native effect, Team replies, Stop and readback' }));
+          NODE
       - name: Verify current native mixed history restore after Codex Desktop acceptance
         if: ${{ success() && matrix.resume_provider == 'codex' }}
         env:
@@ -1291,6 +1392,7 @@ jobs:
             ${{ runner.temp }}/stage1-native-commands-inputs.json
             ${{ runner.temp }}/stage1-desktop-native-commands.log
             ${{ runner.temp }}/stage1-desktop-native-extension-consumption.log
+            ${{ runner.temp }}/stage1-desktop-native-captured-mcp.log
             /private/tmp/TEST-native-claude-compaction-*/receipt.json
             /private/tmp/TEST-native-claude-compaction-*/host-stderr.log
             opencode-v2-desktop-inputs.json
@@ -1305,6 +1407,7 @@ jobs:
             /private/tmp/TEST-desktop-backend-*/claude/teams/test-stopped-legacy/**
             /private/tmp/TEST-desktop-backend-*/claude/tasks/test-stopped-legacy/**
             /private/tmp/TEST-desktop-backend-*/workspace/**
+            /private/tmp/TEST-desktop-backend-*/home/TEST-mcp-catalog.json
             /private/tmp/TEST-desktop-backend-*/native-claude/config/projects/**/*.jsonl
             /private/tmp/TEST-desktop-backend-*/cold-resume-epoch1-bundles/**
             /private/tmp/TEST-desktop-backend-*/cold-extension-epoch1-bundles/**

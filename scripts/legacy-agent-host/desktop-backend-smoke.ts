@@ -40,6 +40,7 @@ import { runDesktopTaskTrashRestoreUiSmoke } from './desktop-task-trash-ui-smoke
 import { runDesktopComposerUiSmoke } from './desktop-composer-ui-smoke.ts';
 import { prepareDesktopProofMode } from './desktop-proof-mode.ts';
 import { runDesktopLaunchUiSmoke } from './desktop-launch-ui-smoke.ts';
+import { runDesktopCapturedMcpUiProof } from './desktop-opencode-v2-mcp-ui-proof.ts';
 import { runDesktopCreateUiSmoke } from './desktop-create-launch-ui-smoke.ts';
 import { runDesktopReviewUiSmoke } from './desktop-review-ui-smoke.ts';
 import { runDesktopStoppedImportUiSmoke } from './desktop-stopped-import-ui-smoke.ts';
@@ -79,6 +80,7 @@ let conversationModel: Awaited<ReturnType<typeof startNativeTeamModel>> | undefi
 let codexResumeModel: Awaited<ReturnType<typeof startCodexModel>> | undefined;
 let openCodeLifecycleModel: Awaited<ReturnType<typeof prepareDesktopProofMode>>['openCodeLifecycleModel'];
 let openCodeReviewModel: Awaited<ReturnType<typeof prepareDesktopProofMode>>['openCodeReviewModel'];
+let capturedMcpModel: Awaited<ReturnType<typeof prepareDesktopProofMode>>['capturedMcpModel'];
 let controlledProcess: Awaited<ReturnType<typeof prepareControlledProcessFixture>>['controlledProcess'] | undefined;
 const object = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
@@ -119,11 +121,13 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   if (packed) assert.equal(mode, 'native-launch-ui', 'one bounded packed workflow reuses the original native Launch proof');
   if (packedRelaunchMode) assert.ok(packed, 'automatic app relaunch is an explicit captured packed scope');
   if (scheduleUiMode) assert.ok(mode === 'native-launch-ui' && !packed, 'original source schedule controls');
-  const { mixedMode, extensionsUiMode, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel, openCodeLifecycleMode, openCodeLifecycleModel: selectedOpenCodeModel, openCodeReviewModel: selectedOpenCodeReviewModel } =
+  if (process.env.LEGACY_DESKTOP_OPENCODE_MCP_UI === '1') assert.ok(!packed && !packedRelaunchMode, 'captured MCP uses the existing source Launch scope');
+  const { mixedMode, extensionsUiMode, capturedMcpUiMode, capturedMcpModel: selectedCapturedMcpModel, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel, openCodeLifecycleMode, openCodeLifecycleModel: selectedOpenCodeModel, openCodeReviewModel: selectedOpenCodeReviewModel } =
     await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
   conversationModel = model; mixedModels = selectedMixedModels;
   codexResumeModel = selectedCodexResumeModel;
   openCodeLifecycleModel = selectedOpenCodeModel; openCodeReviewModel = selectedOpenCodeReviewModel;
+  capturedMcpModel = selectedCapturedMcpModel;
   const nativeInputs = mixedMode || codexResumeMode ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
   const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = questionUiMode ? await prepareDesktopBackendFixture(repo, {
@@ -131,7 +135,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       sha256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f', modelUrl: questionModel!.url },
   }) : await prepareDesktopProofFixture(repo, mode, pnpm, {
     processUiMode, controlledProcessMode, processReadbackMode, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewReadbackMode, reviewUiMode, legacyImportMode, uiMode,
-    launchDialogMode, createConfigMode, nativeStopMode, approvalUiMode, codexResumeMode, openCodeLifecycleMode, ...(packed ? { candidateRuntime: packed.runtime } : {}), modelUrl: openCodeReviewModel?.url ?? openCodeLifecycleModel?.url ?? codexResumeModel?.url ?? conversationModel?.url ?? mixedModels?.claude.url,
+    launchDialogMode, createConfigMode, nativeStopMode, approvalUiMode, codexResumeMode, openCodeLifecycleMode, ...(capturedMcpModel ? { capturedMcpNonce: capturedMcpModel.nonce } : {}), ...(packed ? { candidateRuntime: packed.runtime } : {}), modelUrl: capturedMcpModel?.url ?? openCodeReviewModel?.url ?? openCodeLifecycleModel?.url ?? codexResumeModel?.url ?? conversationModel?.url ?? mixedModels?.claude.url,
   });
   controlledProcess = baseFixture.controlledProcess;
   const processReadbackSource = processReadbackMode ? await verifyNativeProcessReadbackSource(baseFixture.root, object(JSON.parse(await readFile(join(baseFixture.root, 'desktop-backend-receipt.json'), 'utf8')))) : undefined;
@@ -196,8 +200,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     uiMode,
     conversationModel,
     codexResumeModel,
-    openCodeLifecycleModel, openCodeReviewModel,
+    openCodeLifecycleModel, openCodeReviewModel, capturedMcpModel,
   });
+  if (capturedMcpUiMode) evidence.scope = 'Original Launch member MCP policies, selected external server and app-only isolation, actual native permission and tool effect, all-member Stop and saved UI readback; finite localhost inference only';
   if (scheduleUiMode) evidence.scope = 'Original Schedule controls, actual finite Claude and task-first native Bash/MCP, Stop, history and reload; localhost inference only';
   if (quitScenario === 'pending-open') {
     evidence.scope = 'Actual native provider open pending, zero inputs, guarded existing Quit API and physical cleanup; explicit TEST setup';
@@ -404,6 +409,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       assert.ok(conversationModel && 'scheduleRequests' in conversationModel);
       await runDesktopScheduleUiProof(cdp, { fixture, model: conversationModel, evidence,
         capturedGroup: () => group, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+    } else if (capturedMcpUiMode) {
+      assert.ok(capturedMcpModel);
+      await runDesktopCapturedMcpUiProof(cdp, { fixture, model: capturedMcpModel, group, evidence,
+        assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (launchDialogMode) {
       assert.ok(fixture.uiSeed && (conversationModel || codexResumeModel || openCodeLifecycleModel));
       await runDesktopLaunchUiSmoke(cdp, {
@@ -696,6 +705,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
     if (controlledProcessMode) assert.equal(evidence.status, 'PASS', 'controlled process cold UI proof incomplete; original evidence retained');
     if (scheduleUiMode) assert.equal(evidence.status, 'PASS', 'original schedule UI proof incomplete; inspect its retained receipt');
+    if (capturedMcpUiMode) assert.equal(evidence.status, 'PASS', 'original MCP UI proof incomplete; inspect its retained receipt');
     assert.ok(
       !cleanupFailure && remaining !== null && remaining.length === 0,
       'captured group cleanup unconfirmed; receipt retains debt and no further signal is authorized'
@@ -717,6 +727,6 @@ try {
 } finally {
   try { await controlledProcess?.cleanup(); } catch (error) { if (!originalFailure) throw error; }
   await questionModel?.close();
-  await (openCodeReviewModel ?? openCodeLifecycleModel ?? codexResumeModel ?? conversationModel)?.close();
+  await (capturedMcpModel ?? openCodeReviewModel ?? openCodeLifecycleModel ?? codexResumeModel ?? conversationModel)?.close();
   await mixedModels?.close();
 }

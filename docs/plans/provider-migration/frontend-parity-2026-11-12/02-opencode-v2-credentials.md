@@ -238,3 +238,114 @@ Reviewer: root; входной published SHA `cda065d869ccffb5930ed2a817b3e0654b
 - Согласован узкий путь исправления своего подтверждённо записанного неверного ключа через обычный Connect. Existing ledger даёт authority только для последней rejected publication с неизменённым authDigest и подтверждённой очисткой.
 - Новый явный UUID использует обычный native key POST в своей private DB и guarded writer существующего auth.json. Старые DB/receipts остаются исходными; прямых DB mutations, automatic delete-and-replace и нового repair UI нет.
 - Native acceptance раздельно проверяет HTTP401/corrected key и timeout/no-replay. Пока эти проверки не прошли, R4 является review кода, а не native qualification.
+
+### R5 — bounded native read-only snapshots при открытии V2 Host
+
+**Основание, 2026-11-13.** На source `61bcc71785bc23aeabb3a9a288fdb6a001c6ac16`
+Darwin arm64 [job131636477308](https://github.com/777genius/agent-teams-ai/actions/runs/43349349312/job/131636477308)
+вернул native readiness через166734ms при captured budget120000ms; Windows x64
+[job131636477278](https://github.com/777genius/agent-teams-ai/actions/runs/43349349312/job/131636477278)
+не закончил `runtime.open` за180s. В обоих случаях ordinary model requests равны0.
+Это подтверждённые failures; source показывает повторение дорогой проверки,
+но доля времени каждой операции пока отдельно не измерена.
+
+В `OpenCodeV2EmbeddedMemberProvider.withClient.beforeRequest` каждый native GET
+повторяет `server.readNativeCustody`. В arm64 trace47GET/POST до readiness;
+вместе с `server.start` это как минимум48 измерений. На Darwin
+`DarwinRegisteredProcess.readRootExecutable` читает и SHA256-проверяет весь Bun
+между двумя проверками original audit token/birth; на Windows
+`WindowsJobCustody.readExecutable` сохраняет original process/Job HANDLE,
+читает весь Bun и проверяет native identity до/после. Эти проверки остаются
+источником image authority; size/mtime-only cache их не заменяет.
+
+**Минимальная форма, один существующий владелец.**
+
+1. Добавить только internal `withReadOnlyClient(signal, callback)` в V2 embedded
+   composition. Callback получает закрытый `Object.freeze` port из существующих
+   `identity/readSession/readCatalog/savedPermissionsEmpty/builtinPluginsOnly/readMcp/instructions`.
+   В port нет create, credential connect/remove, PUT, prompt, permission reply,
+   interrupt, config или raw fetch; тип и runtime object совпадают. Pinned методы
+   проверены по D source: они выполняют только GET. Если транспорт передаёт method
+   в admission, дополнительно требовать GET; нового generic routing layer нет.
+   Lease active закрывается при settlement callback и в finally. Сохранённый
+   method после callback не отправляет запрос; начатые, но не await-consumed
+   operations не дают positive result. Публикуется только конечный прочитанный
+   DTO, без lazy promise/stream/function, переносящих native чтение за snapshot.
+2. Захватить исходные server object, `OpenCodeV2EmbeddedReady`, nativeSessionId,
+   profile/credential authority и endpoint. Полный custody read до первого GET
+   сверяет version, executable path/SHA, PID/startIdentity с этим original pin.
+   В конце выполнить такой же полный read и exact equality. После await final
+   custody и `client.dispose()` повторно проверить current, signal, original live
+   capture и absolute deadline непосредственно перед возвратом. Ни callback result,
+   ни `nativeImages`, readiness или capability не публиковать до final proof.
+3. Узкий `server.isOriginalLive(originalReady)` сравнивает именно тот object,
+   полученный после nonce-checked startup, с текущим ready и retained child;
+   проверяет same endpoint, lifecycle, stopping и исходный ChildProcess alive.
+   Он не читает/переоткрывает PID, не утверждает неизменность image bytes и не
+   становится signal/Stop authority. Full native custody до/после остаётся обязательным.
+4. Перед каждым GET и чтением исходного password проверять signal, original
+   live capture и existing `current()` (profile, lease, credential, MCP source).
+   Host revocation не может разрешить следующий запрос. Endpoint/password
+   принадлежат прежнему child; нового lookup, owner, child или credential cache нет.
+5. Один snapshot получает исходный absolute owner deadline и использует
+   `min(ownerDeadline, now + 30000)`, не более16 native requests,
+   существующие response/body budgets и обязательный `client.dispose()`.
+   Owner deadline фиксируется до первой async операции исходного probe/start;
+   retry или следующий GET не создаёт новый budget. Callback выполняет один
+   конечный read pass. Activation retry остаётся снаружи с тем же deadline.
+   Accepted-ветка `owned.probe` тоже проверяет deadline непосредственно перед
+   true: прежний deadline check только в false-ветке недостаточен.
+   Повторная попытка не превращает failed custody в ready.
+
+**Точные места применения.**
+
+- `owned.probe`: identity/session/permissions/plugins/MCP и при необходимости
+  image catalog составляют один read pass (не более8GET). Полный before/after
+  заменяет повторный full image read между этими GET. При false/unavailable
+  snapshot не оставляет положительной capability; configuration binding идёт после proof.
+- `readNativeEffectivePermissions`: один snapshot трёх GET; результат содержит
+  тот же original PID/startIdentity, session/model/rules и isolation checks.
+  Внешний `OpenCodeV2MemberProvider.probe` сохраняет отдельные initial/final
+  custody и policy checks вокруг initial context PUT.
+- P05 catalog attestation: каждый existing `readCatalog` pass из трёх GET
+  использует этот port; polling loop и before-session-create model/variant gate
+  сохраняются. Credential prepare и session create остаются отдельными operations.
+- Single-read instruction checks можно оставить существующему пути.
+  Connect/import, createSession и context PUT всегда используют прежний
+  full-custody-before-request transport; read-only port к ним недоступен.
+
+**Почему это сохраняет admission.** Уже действующий
+`OpenCodeV2MemberProvider.resolveConfiguration` использует для D active-turn
+GETs `requests.beforeRequest` с current/ready/original request lease между
+полными probe attestations. Здесь тот же принцип применяется только к конечному
+internal чтению: callback ещё не выдаёт readiness или result, original lifetime
+проверяется перед каждым request, full image/native identity повторно сверяются
+до приёма результата. Byte replacement, owner/credential revocation, original
+child exit и uncertain cleanup по-прежнему не дают positive receipt.
+Временное отсутствие authority не создаёт новый capture.
+
+**Проверки и порядок публикации.**
+
+- До source: независимый review этого API/границ, commit+push плана.
+- Два критических regression в существующем V2 Host seam: current loss между
+  GET запрещает следующий HTTP; final native/image mismatch запрещает result
+  и readiness, сохраняя original cleanup. Port не предоставляет write methods.
+  Не добавлять тест на каждый getter или отдельную framework suite.
+- Source review: записать точный count full custody reads для одного pass;
+  сверить abort/dispose и отсутствие принятого промежуточного результата.
+  При недостаточном timing evidence использовать bounded diagnostics_channel
+  durations существующих manifest/image checks, без native IDs, raw paths,
+  headers, bytes, новых запросов или изменения admission.
+- Host build/test types и затронутые critical tests; затем existing exact-head
+  V2 native matrix/credential/model/MCP/Desktop lanes. Linux finite-SSE delay
+  имеет отдельный passive response-end/contentEncoding trace; исправление
+  startup не считается его доказанным исправлением.
+- Native/Desktop acceptance остаётся pending до реальных receipts.
+  Новых budgets, ручных CI rerun, main merge и feature activation нет.
+
+R5 independent plan review: `/root/profiles_models_continue`, 2026-11-13.
+Уточнены final checks после custody/dispose и наследование absolute owner deadline
+без нового budget на retry; nativeImages остаётся локальным до final proof.
+Root review добавил закрытие port lease после callback/finally, отказ при escaped
+или не дождавшихся body operations и проверку pinned GET-only methods.
+Это review плана, не compiler/native/Desktop PASS.
