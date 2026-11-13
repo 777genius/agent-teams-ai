@@ -24,6 +24,18 @@ export interface DesktopNativeHostSnapshot {
   children: ProcessFact[];
   metadataLineage?: DesktopMetadataLineage;
 }
+interface DesktopMetadataFailure {
+  readonly hostPid: number;
+  readonly expectedProfileHashes: readonly string[];
+  readonly events: readonly DesktopMetadataEvent[];
+  readonly observedMetadataPids: readonly number[];
+}
+const failures = new WeakMap<Error, DesktopMetadataFailure>();
+
+/** Only the original failed read can supply these closed diagnostic facts. */
+export function readDesktopMetadataLineageFailure(error: unknown): DesktopMetadataFailure | undefined {
+  return error instanceof Error ? failures.get(error) : undefined;
+}
 const object = (value: unknown): Row => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value as Row;
@@ -153,9 +165,23 @@ export function readDesktopMetadataLineage(root: string, captured: DesktopNative
   profileHashes: readonly string[], observed: readonly ProcessFact[], original?: DesktopMetadataLineage,
   initialBirths?: readonly ProcessFact[]
 ): DesktopMetadataLineage {
-  return captureDesktopMetadataLineage({ events: readEvents(root, captured.host.pid), host: captured.host,
-    profileHashes, observed, executable: process.env.OPENCODE_V2_EMBEDDED_BUN!, ...(original ? { original } : {}),
-    ...(initialBirths ? { initialBirths } : {}) });
+  const events = readEvents(root, captured.host.pid);
+  try {
+    return captureDesktopMetadataLineage({ events, host: captured.host,
+      profileHashes, observed, executable: process.env.OPENCODE_V2_EMBEDDED_BUN!, ...(original ? { original } : {}),
+      ...(initialBirths ? { initialBirths } : {}) });
+  } catch (error) {
+    if (error instanceof Error && profileHashes.length >= 1 && profileHashes.length <= 2 && profileHashes.every(hash)) {
+      const eventPids = new Set(events.map(event => event.pid));
+      failures.set(error, Object.freeze({
+        hostPid: captured.host.pid,
+        expectedProfileHashes: Object.freeze([...profileHashes]),
+        events: Object.freeze(events.map(event => Object.freeze({ ...event }))),
+        observedMetadataPids: Object.freeze([...new Set(observed.filter(row => eventPids.has(row.pid)).map(row => row.pid))]),
+      }));
+    }
+    throw error;
+  }
 }
 
 export function desktopActiveMetadata(captured: DesktopNativeHostSnapshot): ProcessFact[] {

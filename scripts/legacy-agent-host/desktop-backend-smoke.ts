@@ -24,6 +24,7 @@ import { desktopProofEvidence } from './desktop-proof-evidence.ts';
 import { runDesktopNativeReview } from './desktop-native-review-compose.ts';
 import { desktopReadbackArtifacts, runDesktopNativeReadback } from './desktop-readback-fixture.ts';
 import { assertCapturedDesktopMetadataAbsent, observeDesktopMetadataClose, captureDesktopOpenCodeV2ColdMetadata } from './desktop-opencode-v2-cold-metadata.ts';
+import { readDesktopMetadataLineageFailure } from './desktop-opencode-metadata-lineage.ts';
 import { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
 import { captureDesktopCodexNativeInputs, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
@@ -576,6 +577,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   } catch (error) {
     evidence.failure =
       error instanceof Error ? error.message.slice(0, 4000) : 'unclassified harness failure';
+    const metadataFailure = readDesktopMetadataLineageFailure(error);
+    if (metadataFailure) evidence.metadataObservationFailure = metadataFailure;
     if (uiMode && cdp) {
       try {
         assertOwnedCdpListener(group);

@@ -869,3 +869,109 @@ Source-круг нашёл несовпадение old passive cold path с у�
 global/provider metadata handoff. Второй круг сохраняет original-owner proof,
 zero-runtime invariant и cleanup всех поколений. Следующий шаг — independent
 diff review, existing scripts types/tests и штатный exact-head Desktop CI.
+
+
+## R16 — первый OpenCode status привязан к уже захваченному configuration target
+
+**План до source, база документа `4900526b4043ce159f57125da0ae36cfe16e9264`.**
+Actual Review на `522c80d168d698fc6842ee649cc4822406cd2632`, job `131717484574`,
+artifact `14013479408`: обычный `openCodeRuntime:getStatus` записал
+`Native runtime selection changed`; global и project configuration publications присутствуют,
+seed `embedded.configurationSource` отсутствует. Один отдельный no-tool Team probe завершён,
+business inputs0. Позже Review остановился на expected2 metadata scopes / actual1.
+Артефакт сохранил только первоначальный global ready child6322 под Host6040;
+private metadata NDJSON и последующих closed events в нём нет. Эти два отказа
+нельзя объявлять одной доказанной причиной.
+
+### A. Устранить несовместимые snapshots в существующем status read
+
+Source-цепочка конкретна: `CapturedRuntimeProviderStatusClient.ts:167–182`
+читает `sources.current()` до `deps.capture(null)`.
+`DesktopBackendFeature.captureCurrentManagementTarget:708–716` внутри capture
+вызывает `refreshCapturedRuntimeConfiguration`; этот existing helper при первом
+V2 configuration capture может законно опубликовать новый source revision и вернуть
+derived management profile. Сравнение старого seed snapshot с этим новым target
+даёт ложный отказ собственного первого чтения. Старый frontend определял выбранный
+runtime и показывал status; штатная фиксация его configuration не должна сама
+делать это чтение устаревшим.
+
+1. Сохранить original `captureGuard` и захваченный `sources` handle. В том же
+   `readOpenCodeRuntimeStatus` сначала дождаться `deps.capture(null)`, и только
+   затем получить `selection = sources?.current()`. Это перестановка existing
+   read относительно разрешённой initial configuration publication, не retry.
+2. Запросить тот же единственный `target.request('catalog', {})`. Сохранить
+   unchanged final `target.isCurrent()/current()`, exact profileId/configRevision,
+   native generation и повторный `sources.current().revision` guard.
+   Другая publication после capture, смена context/owner или unknown остаются отказом;
+   текущая UI selection не заменяет исходный target. V1 CLI/null fallback и V2
+   engine/installed-source DTO не меняются. Число capture/current/catalog calls прежнее.
+3. Расширить existing `capturedRuntimeStatus.test.ts` case о current source:
+   controlled first configuration publication происходит внутри original capture;
+   один status read возвращает ready для именно этой derived selection.
+   Затем existing concurrent-source-change case по-прежнему обязан отказать.
+   Проверить counts для одного capture/catalog и прежних двух current reads.
+   Existing foreground-revocation cases сохранить; новой unit suite не создавать.
+4. Проверить focused Main types и этот existing test file. Actual штатный Desktop CI
+   должен заново проверить first status и исходные Launch/Review пути; локальный
+   controlled case не доказывает native execution и не закрывает expected2/actual1.
+
+### B. Сохранить закрытые факты исходного metadata отказа
+
+Для отдельного Review1!=2 недостаёт causal evidence. Не добавлять catalog reads,
+не ослаблять live-owner count и не выгружать private unfiltered app logs.
+
+1. В existing `readDesktopMetadataLineage` сохранить только уже прочитанные и
+   schema-validated closed events из **того же** log read, если последующая lineage
+   validation бросила ошибку. Малый private WeakMap связывает исходный Error с
+   конечной diagnostic projection: original Host PID, expected profile hashes,
+   максимум128 closed lifecycle events и только встреченные в этом же existing
+   physical census PID из этих events. Никаких argv/env/command paths, raw log lines,
+   произвольных error objects или новых authority records.
+2. Прежняя ошибка, strict validation и bounded observation deadline сохраняются.
+   Existing `desktop-backend-smoke.ts` catch добавляет projection в failure receipt,
+   только если она присутствует у именно этой ошибки. Никаких повторных log/OS reads,
+   изменения exception outcome или adoption/replay после отказа. Ошибка чтения
+   до validated events не получает выдуманную пустую lineage.
+3. В existing lifecycle test case проверить actual private TEST log framing:
+   один validated active scope при expected2 по-прежнему бросает исходную ошибку,
+   а projection точно содержит исходные closed events; successful cleanup этим
+   не доказывается. Достаточно одной critical existing-case проверки и scripts types.
+4. Следующий штатный exact-source Review run позволит различить отсутствие project
+   ready, подтверждённый release, незавершённый mode handoff и unknown cleanup.
+   Только его факты определят дальнейший product/test fix. R15 cold source,
+   source/profile identity и native operation budgets остаются прежними.
+
+**Круг1:** совместно сверены actual artifact и точные current source callbacks:
+собственная first configuration publication действительно находится между двумя
+несогласованными snapshots. **Круг2 (Profiles):** минимально переносится только
+selection read после target capture; final revision/foreground guards и original
+sources handle сохраняются. **Круг3:** root/independent plan review и немедленный
+commit+push перед source; A и diagnostic B не подменяют native acceptance.
+
+### R14/R15 source evidence перед R16
+
+R14 closed file classification и R15 cold lineage опубликованы в parity commit
+`a2f327c8b07142a2ec857a5be6e0924c84f0fcef`. R15 four-file diff независимо проверен
+Profiles и root; R14 two-file diff — Account и root. Root24 existing UI/lifecycle
+cases (включая11 cold lineage) и4 finite Node24 sampler/close cases — PASS;
+scripts/Host test types, fast lint и source cap — PASS. Native failure reason,
+all cold Desktop flows и отдельный Review2-owner результат ещё требуют actual CI.
+R16 A/B root design review — PASS: exact original handles/guards и прежние budgets сохранены.
+
+### R16 A/B implementation evidence
+
+Five-file cut основан на parity `a2f327c8b07142a2ec857a5be6e0924c84f0fcef`.
+A переносит единственный selection read после original target capture; final
+profile/revision/generation/foreground guards и counts остаются прежними.
+B связывает immutable closed metadata projection только с original validation Error
+после того же parsed log read; malformed/unvalidated logs projection не получают.
+Ожидаемые два metadata owner, original exception и native calls не изменены.
+
+Existing first-publication case сначала воспроизвёл отказ (15 PASS / 1 FAIL),
+после correction весь existing file16/16 PASS. Existing lifecycle file11/11 PASS.
+Profiles и root source review — PASS; root повторил эти27 cases на coherent a2 base.
+Focused Main types, scripts types, fast lint (0 errors, 2 прежних warnings) и
+source-size cap — PASS. Новая unit suite не добавлялась.
+Actual first-status/Desktop acceptance и отдельная причина Review expected2/actual1
+остаются pending штатного exact-head CI; diagnostic projection не означает fix
+неустановленной metadata причины.

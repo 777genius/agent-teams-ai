@@ -8,7 +8,8 @@ import { test } from 'node:test';
 import { CONTEXT_MARKER, REQUIRED_TOOLS, startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import { checkpoint, jsonDigest, originalHistoryMarker } from './desktop-resume-records.ts';
 import { separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fixture.ts';
-import { captureDesktopMetadataLineage, desktopMetadataProfileHash, assertDesktopMetadataReleasedEvidence } from './desktop-opencode-metadata-lineage.ts';
+import { captureDesktopMetadataLineage, desktopMetadataProfileHash, assertDesktopMetadataReleasedEvidence,
+  readDesktopMetadataLineage, readDesktopMetadataLineageFailure } from './desktop-opencode-metadata-lineage.ts';
 import type { DesktopNativeHostSnapshot, DesktopMetadataEvent } from './desktop-opencode-metadata-lineage.ts';
 import { assertCapturedDesktopMetadataAbsent, assertFirstResumeMetadataAbsent, assertColdOpenCodeRuntimeRecords } from './desktop-opencode-v2-cold-metadata.ts';
 
@@ -118,7 +119,7 @@ test('cold metadata reads accept only original completed PNG inputs and no extra
   assert.throws(() => assertColdOpenCodeRuntimeRecords(source, {}, [session, session]));
 });
 
-test('cold metadata retains a child retired during the original read and proves every successor absent on Quit', () => {
+test('cold metadata retains a child retired during the original read and proves every successor absent on Quit', async () => {
   const host = { pid: 10, parentPid: 1, groupId: 10, birth: 'TEST-host-birth', command: '/TEST/node' };
   const child = { pid: 11, parentPid: 10, groupId: 11, birth: 'TEST-metadata-birth', command: '/TEST/bun' };
   const successor = { ...child, pid: 12, groupId: 12, birth: 'TEST-successor-birth' };
@@ -172,6 +173,33 @@ test('cold metadata retains a child retired during the original read and proves 
   const absent: Record<string, unknown> = {};
   assertCapturedDesktopMetadataAbsent(absent, []);
   assert.deepEqual(absent, {});
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-metadata-failure-')));
+  try {
+    const directory = join(root, 'userData/logs');
+    await mkdir(directory, { recursive: true });
+    const path = join(directory, 'app-errors.ndjson');
+    const line = (event: unknown) => JSON.stringify({ namespace: 'Host:OpenCodeMetadata',
+      message: 'OpenCode metadata stage ' + JSON.stringify(event) });
+    await writeFile(path, events.map(line).join('\n') + '\n');
+    const expected = [ready.profileHash, 'c'.repeat(64)];
+    let originalError: unknown;
+    assert.throws(() => {
+      try { readDesktopMetadataLineage(root, captured, expected, [successor]); }
+      catch (error) { originalError = error; throw error; }
+    }, /every selected metadata scope has one live owner/);
+    const failure = readDesktopMetadataLineageFailure(originalError);
+    assert.ok(failure);
+    assert.deepEqual(failure, { hostPid: host.pid, expectedProfileHashes: expected,
+      events, observedMetadataPids: [successor.pid] });
+    assert.ok(Object.isFrozen(failure) && Object.isFrozen(failure.events) && failure.events.every(Object.isFrozen));
+    assert.equal(JSON.stringify(failure).includes(root), false);
+    assert.equal(readDesktopMetadataLineageFailure(new Error('same message is not the original read')), undefined);
+    await writeFile(path, line({ ...ready, rawPrivateField: 'TEST-unvalidated-line' }));
+    assert.throws(() => {
+      try { readDesktopMetadataLineage(root, captured, expected, [successor]); }
+      catch (error) { assert.equal(readDesktopMetadataLineageFailure(error), undefined); throw error; }
+    });
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test('mixed Quit proves its original detached metadata child absent without adopting an orphan or reused PID', () => {
