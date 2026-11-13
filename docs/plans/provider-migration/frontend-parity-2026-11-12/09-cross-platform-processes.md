@@ -1299,3 +1299,41 @@ Actual retry сохраняет request ID/receipt/key в existing effect cache;
 Existing exact capture остаётся. После initial capture все query/Stop/settle идут только по original key;
 новый tombstone registry ради исторического PID lookup не вводится. Этот selector требует собственного native proof
 и пока не входит ни в первый transport cut, ни в product `RegisteredProcessCapture` union.
+
+## 35. Linux cold UI: наблюдение двух исходных CDP holders до изменения admission
+
+Фактический run [43366664072](https://github.com/777genius/agent-teams-ai/actions/runs/43366664072),
+head `dc16f3373edd5994c41fb30ff660b0dd6a2beecc`: Linux job `131692551964` прошёл native Node26,
+Host Node24, Electron и actual SDK/service Stop; cold UI step12 отказал до UI interaction, packed steps13/14 skipped.
+Artifact `14012602104`, ZIP SHA256 `d7f18526518ca796ebb0ebdbbd2fdd53b302182d7b98767ede038face8477320`,
+сохранил original failed lsof read: PID5448/FD61 и PID5536/FD61, оба IPv4 loopback LISTEN,
+`inode=null`, `device=null`. Первый PID подтверждён Chromium log исходного Electron; роль второго не установлена.
+Одинаковый FD не доказывает общий socket. Controlled root/primary/neighbor cleanup и пустая app group подтверждены,
+но это не proof cold UI/packaged parity. ABI lane отдельно PASS; выводы о Main/Windows cold authority не меняются.
+
+Официальный [lsof manpage, OUTPUT FOR OTHER PROGRAMS](https://lsof.readthedocs.io/en/stable/manpage/)
+указывает, что inode `i` и protocol `P` взаимоисключающие и выводятся только доступные поля.
+Поэтому текущий `-FpfDtinPT` с TCP не гарантирует inode; ещё один такой же read не закрывает неопределённость.
+Следующий срез — только passive диагностика в existing `desktop-backend-observations.ts` и его existing regression,
+без изменения строгого `one CDP listener`, signal authority, выбора renderer или условий PASS:
+
+1. Перед original lsof сохранить birth/parent facts максимум64 уже captured TEST group entries из исходного ps read.
+   Linux `/proc/<pid>/stat` читается до4KiB; vanished/ambiguous/oversize/непокрытый лимитом PID → диагностическое unknown.
+2. Только после прежнего отказа и только для его retained PID/FD с отсутствующим inode прочитать
+   `/proc/<pid>/fd/<fd>` как symlink; принимать лишь `socket:[decimal]`. Сверить process birth до/после
+   этого read и с pre-lsof capture; изменение/исчезновение даёт unknown, не fallback или adoption.
+3. В той же ограниченной диагностике сохранить parent/PGID и finite role из оригинального процесса;
+   `/proc/<pid>/cmdline` читается до4KiB только для retained holders и проецируется в фиксированный role enum.
+   Никаких argv/env/payload/path dumps: разрешены только известные роли Electron/Node и `unknown`.
+   Показать, что FD observation сделано **после** original census; оно не является атомарным lsof snapshot
+   и не доказывает непрерывное владение FD между чтениями. Непрерывность нельзя вывести из одного PID.
+4. Сохранить original AssertionError и прежний WeakMap receipt; supplemental failure не заменяет его
+   и не влияет на cleanup. Верхние границы group/process/FD reads явные; max16 retained descriptors,
+   никаких machine-wide searches, periodic polling или второго runner.
+5. Дополнить один existing critical diagnostic case: reused/vanished birth не получает socket identity,
+   two-holder refusal сохраняется даже при совпадающем socket inode; private markers не сериализуются.
+   После root/peer source review и focused types этот TEST срез идёт в очередной необходимый native cut,
+   без отмены/ручного повторения текущего штатного run для `dde51b477db6a41fc4d69ab6fbe1e10f6db3e5e2`.
+
+Это discovery gate перед исправлением actual harness cause. Пока нет новых exact-source artifacts,
+shared-socket inheritance, безопасный alternate admission и успешный Linux cold UI/packaged не заявляются.
