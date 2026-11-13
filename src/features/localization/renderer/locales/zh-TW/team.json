@@ -378,7 +378,7 @@
     },
     "placeholders": {
       "name": "成員名稱",
-      "mcpServers": "github、哨兵"
+      "mcpServers": "github, sentry"
     },
     "gateway": {
       "apiKeyLabel": "閘道 API 金鑰",
