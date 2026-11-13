@@ -1,5 +1,5 @@
 import { CODEX_RUNTIME_PROGRESS } from '@features/codex-runtime-installer/contracts';
-import { renamePathWithRetry } from '@main/utils/atomicWrite';
+import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
 import { getAppDataPath } from '@main/utils/pathDecoder';
 import {
@@ -747,10 +747,10 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
         integrity: platformMetadata.dist!.integrity!,
         installedAt: new Date().toISOString(),
       };
-      await fsp.writeFile(
+      await atomicWriteAsync(
         getCurrentManifestPath(),
         `${JSON.stringify(manifest, null, 2)}\n`,
-        'utf8'
+        { durability: 'strict', syncDirectory: true }
       );
 
       const status: CodexRuntimeStatus = {

@@ -371,12 +371,12 @@ export class TeamOwner {
     );
   }
   /** Trusted composition reads the launch-owned current technical selection, never native tokens. */
-  runtimeSelection(principalId: string, memberId: string) {
+  runtimeSelection(principalId: string, memberId: string, checkpointRef?: string) {
     return this.store.fenced(() => {
       this.authorize(principalId, 'read');
       const member = this.state().members.find((item) => item.memberId === memberId);
       if (!member?.delivery) throw new TeamOwnerError('invalid');
-      return this.runtimeBindings?.current(memberBinding(member.delivery));
+      return this.runtimeBindings?.current(memberBinding(member.delivery), checkpointRef);
     });
   }
 

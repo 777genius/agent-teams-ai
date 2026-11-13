@@ -46,7 +46,8 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
   const steps: string[] = [], failures: string[] = [];
   const requests: { authorizationMatched: boolean; tools: number; promptMatched: boolean; outcome: string }[] = [];
   const hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
-  const passive = createPassiveNativeDiagnosticCapture();
+  // Four original Host lifetimes; each unchanged collector retains at most 257 sanitized rows.
+  const passive: ReturnType<typeof createPassiveNativeDiagnosticCapture>[] = [];
   let hostEpoch = 0;
   const nativePids = new Set<number>();
   let host: ReturnType<typeof startHost> | undefined, originalFailure: unknown;
@@ -166,9 +167,11 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
     const start = async () => {
       await assertNativeV1Build(repo, sourceHead, build);
       const epoch = ++hostEpoch;
+      const diagnostics = createPassiveNativeDiagnosticCapture();
+      passive.push(diagnostics);
       host = startHost({ node, entry, root, profile: profilePath, profileHash,
         testImports: [new URL('./fixtures/native-opencode-team/passive-diagnostics.ts', import.meta.url).href],
-        onDiagnostic: (chunk: Buffer) => passive.accept(chunk, epoch) });
+        onDiagnostic: (chunk: Buffer) => diagnostics.accept(chunk, epoch) });
       await host.rpc('host.handshake', { protocolVersion: 1 });
     };
     const stop = async () => {
@@ -347,7 +350,7 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
         digests, steps, requests, nativeCredentialCount, nativeProcessCount: nativePids.size,
         hosts: hosts.map(({ exitCode, signalCode, stdoutValid, diagnosticBytes }) =>
           ({ exitCode, signalCode, stdoutValid, diagnosticBytes })),
-        passiveNativeDiagnostics: passive.entries,
+        passiveNativeDiagnostics: passive.flatMap(diagnostics => diagnostics.entries),
         vendorAuthQualified: false, desktopQualified: false, releaseQualified: false }, null, 2) + '\n', { mode: 0o600 });
     } catch (error) { cleanupErrors.push(error); }
   }

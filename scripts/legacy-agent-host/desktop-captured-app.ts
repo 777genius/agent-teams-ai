@@ -17,6 +17,7 @@ import { assertOwnedCdpListener, command, processTable, selectedCdpPort, compile
 import type { ProcessIdentity } from './desktop-backend-observations.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { readCapturedCandidateElectron } from './candidate-electron.ts';
+import type { DesktopClaudeCheckpointUpgrade } from './desktop-claude-checkpoint-upgrade.ts';
 export interface DesktopCdpPort {
   on(method: string, listener: (value: unknown) => void): void;
   send(method: string, params?: Record<string, unknown>, timeoutMs?: number): Promise<unknown>;
@@ -480,15 +481,21 @@ export async function restartCapturedDesktopApp(options: {
   boundary: 'resume-after-stop' | 'extensions-before-launch' | 'settings-saved-before-launch';
   createdHandleId?: string;
   afterOriginalSettingsQuit?(): Promise<void>;
+  checkpointUpgrade?: DesktopClaudeCheckpointUpgrade;
   markQuitRequested(): void;
   adoptRenderer(cdp: DesktopCdpPort | undefined, hostPid?: number): void;
-  spawnNext(): { app: ChildProcess; group: number; identity: string; invocation: readonly string[];
+  spawnNext(fixture: Fixture): { app: ChildProcess; group: number; identity: string; invocation: readonly string[];
     spawnError(): boolean };
 }): Promise<DesktopCdpPort> {
   const { app, cdp, group, fixture, repo, mode, evidence, provider, model, cdpLibrary } = options;
   const settings = options.boundary === 'settings-saved-before-launch';
   const extensions = options.boundary === 'extensions-before-launch';
   const initial = extensions || settings;
+  if (options.checkpointUpgrade) {
+    assert.equal(initial, false); assert.equal(provider, 'claude');
+    assert.equal(options.checkpointUpgrade.kind, 'same-owner-claude-checkpoint');
+    assert.equal(options.checkpointUpgrade.original, fixture);
+  }
   assert.equal(mode, settings ? 'native-mixed-create-launch-ui' : initial ? 'native-launch-ui' : 'native-resume-ui');
   if (settings) {
     assert.ok(options.createdHandleId && options.afterOriginalSettingsQuit);
@@ -580,6 +587,10 @@ export async function restartCapturedDesktopApp(options: {
   const originalCheckpoint = initial ? undefined : await checkpoint(fixture.root, sources[0]!, provider);
   if (originalCheckpoint) proof.beforeQuitCheckpoint = { reference: originalCheckpoint.payload.reference,
     payloadFileSha256: originalCheckpoint.payloadFileSha256, historySha256: originalCheckpoint.historySha256 };
+  if (options.checkpointUpgrade) {
+    assert.ok(originalCheckpoint);
+    await options.checkpointUpgrade.beforeQuit(sources[0]!, originalCheckpoint);
+  }
   const managementRecords = async () => {
     const directory = join(fixture.root, 'hoststore/management-commands');
     const names = (await readdir(directory)).filter(name => /^[a-f0-9]{64}\.json$/u.test(name)).sort();
@@ -650,7 +661,8 @@ export async function restartCapturedDesktopApp(options: {
     [fixture.profilePath, fixture.pins.profileSha256], [fixture.descriptorPath, fixture.pins.descriptorSha256]])
     assert.equal(await fileDigest(path!), sha, 'same captured fixture pin before cold startup');
   const second: Evidence = { status: 'INCOMPLETE' }; proof.secondEpoch = second;
-  const next = options.spawnNext(); // Caller adopts before any fallible startup observation.
+  const nextFixture = options.checkpointUpgrade ? await options.checkpointUpgrade.afterOriginalQuit() : fixture;
+  const next = options.spawnNext(nextFixture); // Caller adopts before any fallible startup observation.
   assert.ok(next.group > 0 && next.group !== group);
   second.app = { pid: next.app.pid, processGroup: next.group, identity: next.identity, invocation: next.invocation };
   const connected = await connectCapturedDesktopApp({
@@ -659,9 +671,9 @@ export async function restartCapturedDesktopApp(options: {
   await attachRendererDiagnostics(connected.cdp, String(connected.target.url), second, {
     remainingMs: connected.startupBudgetMs - (performance.now() - connected.startupStarted),
     assertOwnedRenderer: () => assertOwnedCdpListener(next.group) });
-  await verifyCapturedDesktopBinding({ cdp: connected.cdp, group: next.group, mode, fixture, evidence: second,
+  await verifyCapturedDesktopBinding({ cdp: connected.cdp, group: next.group, mode, fixture: nextFixture, evidence: second,
     repo, packed: undefined, ...(savedTeamBindings ? { savedTeamBindings } : {}) });
-  const currentHosts = groupMembers(next.group).filter(row => command(row.pid) === fixture.node + ' ' + fixture.hostEntry);
+  const currentHosts = groupMembers(next.group).filter(row => command(row.pid) === nextFixture.node + ' ' + nextFixture.hostEntry);
   assert.equal(currentHosts.length, 1, 'one new standalone Host after cold discovery');
   assert.notEqual(currentHosts[0]!.pid, originalHost.pid);
   options.adoptRenderer(connected.cdp, currentHosts[0]!.pid); second.host = currentHosts[0];
@@ -678,6 +690,11 @@ export async function restartCapturedDesktopApp(options: {
   }
   assert.equal(model.observations.length, initial ? 0 : 8, 'cold startup cannot release a prompt');
   assert.deepEqual(model.failures, []);
+  if (options.checkpointUpgrade) {
+    assert.deepEqual(object(second.discovery).bindings, object(object(proof.firstEpoch).discovery).bindings);
+    await options.checkpointUpgrade.afterColdDiscovery();
+    proof.originalBindingRetained = true;
+  }
   second.status = 'PASS'; proof.status = 'PASS';
   return connected.cdp;
 }

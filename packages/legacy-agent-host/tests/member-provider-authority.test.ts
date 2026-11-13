@@ -1,10 +1,78 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import { captureMemberProviderAuthority } from '../dist/composition/captureMemberProviderAuthority.js';
+import { assertCapturedRosterCurrent } from '../dist/composition/teamRoster.js';
+import { acquireProfileWriterLease } from '../dist/adapters/profile/ProfileWriterLease.js';
 import { emptySession } from '../dist/runtime/sessionState.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import { captureNativeInputAuthority } from '../dist/composition/captureNativeInputAuthority.js';
 import { fixture } from './native-member-actions-fixture.ts';
+
+test('one original writer-fenced provider check keeps live revocation and rejects replaced authority before lock writes', async (t) => {
+  const f = await fixture(t);
+  const entry = [...f.entries.values()].find(value => value.binding.memberId === 'A')!;
+  const team = entry.team;
+  const writer = acquireProfileWriterLease(f.root);
+  const authorityLock = join(f.store.directory, 'authority.lock');
+  let lockPublications = 0, currentChecks = 0, runtimeReads = 0;
+  const link = fs.linkSync;
+  t.mock.method(fs, 'linkSync', (...args: Parameters<typeof fs.linkSync>) => {
+    if (args[1] === authorityLock) lockPublications++;
+    return link(...args);
+  });
+  const authority = captureMemberProviderAuthority({
+    entry, request: entry.config, profileId: 'TEST-profile', hostIncarnation: 'TEST-host',
+    assertWriter: writer.assertCurrent,
+    assertCurrent() {
+      currentChecks++;
+      writer.assertCurrent();
+      assertCapturedRosterCurrent(entry.team, entry.profile.principalId);
+      assert.equal(f.owner.authorizeMemberBinding(entry.binding, 'dispatch'), true);
+    },
+    readRuntime() { runtimeReads++; assert.fail('Current authority must not acquire the Runtime fence'); },
+  });
+  try {
+    assert.equal(authority.isCurrent(), true);
+    assert.equal(lockPublications, 1, 'all existing nested Team checks share one original lock publication');
+    assert.equal(currentChecks, 1);
+    assert.equal(runtimeReads, 0);
+    await Promise.resolve();
+    assert.equal(authority.isCurrent(), true);
+    assert.equal(lockPublications, 2, 'a later check obtains fresh authority');
+
+    const beforeReplacement = lockPublications, beforeCallbacks = currentChecks;
+    entry.team = { ...team };
+    try {
+      assert.equal(authority.isCurrent(), false);
+      assert.equal(lockPublications, beforeReplacement);
+      assert.equal(currentChecks, beforeCallbacks, 'changed Team cannot invoke a foreign authority callback');
+    } finally { entry.team = team; }
+
+    const retainedRoot = f.root + '-original';
+    fs.renameSync(f.root, retainedRoot);
+    try {
+      // A complete directory shape would let a namespace-only guard acquire a
+      // new lock. The original writer identity must refuse before that write.
+      fs.mkdirSync(f.store.directory, { recursive: true, mode: 0o700 });
+      assert.equal(authority.isCurrent(), false);
+      assert.equal(lockPublications, beforeReplacement);
+      assert.equal(currentChecks, beforeCallbacks);
+    } finally {
+      fs.rmSync(f.root, { recursive: true, force: true });
+      fs.renameSync(retainedRoot, f.root);
+    }
+
+    f.human.revoke(entry.profile.principalId);
+    const beforeRevokedCheck = lockPublications;
+    assert.equal(authority.isCurrent(), false, 'the next check observes the actual persisted grant revocation');
+    assert.equal(lockPublications, beforeRevokedCheck + 1);
+    assert.equal(runtimeReads, 0);
+  } finally {
+    writer.release();
+  }
+});
 
 test('restored provider authority binds the complete open request and keeps current fences', async (t) => {
   const f = await fixture(t);

@@ -1,5 +1,6 @@
 import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from './contracts.js';
+import { validateMemberSelectionChain } from './memberActions.js';
 import type { LaunchPreparation, TeamLaunchRecord } from './contracts.js';
 
 const identity = (value: unknown): value is string =>
@@ -34,6 +35,14 @@ export function validateLaunchPreparation(record: TeamLaunchRecord): void {
       throw new Error();
     for (const member of input.members) {
       const selected = record.definition.members.find((item) => item.memberId === member.memberId);
+      if (selected?.skipped) {
+        validateMemberSelectionChain(record);
+        if (!(record.memberActions ?? []).some(action =>
+          action.phase === 'selected' && action.input.action === 'skip' &&
+          action.input.memberId === member.memberId &&
+          runtimeDigest(action.selected) === runtimeDigest(selected)))
+          throw new Error();
+      }
       if (
         !identity(member.memberId) ||
         !identity(member.configRevision) ||
@@ -43,7 +52,6 @@ export function validateLaunchPreparation(record: TeamLaunchRecord): void {
         typeof member.configuration !== 'object' ||
         Array.isArray(member.configuration) ||
         !selected?.binding ||
-        selected.skipped ||
         selected.configRevision !== member.configRevision ||
         selected.baseConfigurationDigest !== member.baseConfigurationDigest ||
         (!selected.restore && selected.configurationDigest !== member.configurationDigest)

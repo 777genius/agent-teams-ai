@@ -1,3 +1,7 @@
+import {
+  getLatestQualifiedOpenCodeV2Version,
+  getOpenCodeV2EngineVersion,
+} from '@features/opencode-compatibility';
 import { parseOpenCodeInstallOptions } from '@features/opencode-runtime-installer';
 import { createCapturedOpenCodeRuntimeInstaller } from '@features/opencode-runtime-installer/main';
 import {
@@ -66,12 +70,96 @@ async function handleGetStatus(
     // Only the explicit native V1 tag retains this existing CLI status source.
     const status = captured === null ? await requireService().getStatus() : captured;
     if (!current()) return { success: false, error: 'Native runtime status context changed' };
-    return { success: true, data: status };
+    const result = captured === null ? status : await withV2Maintenance(_event, current, status);
+    if (!current()) return { success: false, error: 'Native runtime status context changed' };
+    return { success: true, data: result };
   } catch (error) {
     const message = getErrorMessage(error);
     logger.error('Error in openCodeRuntime:getStatus:', message);
     return { success: false, error: message };
   }
+}
+
+/** Optional maintenance is observed beside the same original engine, never as its replacement. */
+async function withV2Maintenance(
+  event: IpcMainInvokeEvent,
+  current: () => boolean,
+  status: OpenCodeRuntimeStatus
+): Promise<OpenCodeRuntimeStatus> {
+  if (
+    !status.installed ||
+    status.state !== 'ready' ||
+    status.v2Support !== 'ready' ||
+    !status.engineVersion ||
+    !status.sourceRevision
+  )
+    return status;
+  const sources = await captureDesktopRuntimeSources(event, 'opencode');
+  if (!current()) throw new Error('Native runtime status context changed');
+  if (!sources) return status;
+  const original = await sources.current();
+  if (!current()) throw new Error('Native runtime status context changed');
+  if (
+    original.revision !== status.sourceRevision ||
+    original.nativeGeneration !== 'v2' ||
+    original.engineVersion !== status.engineVersion
+  )
+    throw new Error('Native runtime selection changed');
+  if (
+    original.cliVersion !== undefined ||
+    original.configurationCurrent !== true ||
+    getLatestQualifiedOpenCodeV2Version(process.platform, process.arch) !== original.engineVersion
+  )
+    return status;
+  const identity = (selection: typeof original) => [
+    selection.sourceId,
+    selection.revision,
+    selection.profileId,
+    selection.configRevision,
+    selection.sourceKind,
+    selection.nativeGeneration,
+    selection.cliVersion,
+    selection.engineVersion,
+    selection.configurationCurrent,
+    selection.preferencesDigest,
+  ];
+  const retained = identity(original);
+  let stock: OpenCodeRuntimeStatus | undefined;
+  try {
+    stock = await requireService().getReadinessStatus();
+  } catch {
+    // An optional CLI discovery failure does not alter the original engine evidence.
+  }
+  const observed = identity(await sources.current());
+  if (!current()) throw new Error('Native runtime status context changed');
+  if (observed.some((value, index) => value !== retained[index]))
+    throw new Error('Native runtime selection changed');
+  if (
+    stock?.installed === false &&
+    stock.source === 'missing' &&
+    stock.state === 'idle' &&
+    !stock.ignoredOverride
+  )
+    return { ...status, v2Maintenance: { kind: 'missing', engineVersion: status.engineVersion } };
+  if (
+    stock?.installed &&
+    ['app-managed', 'path', 'override'].includes(stock.source) &&
+    stock.version &&
+    getOpenCodeV2EngineVersion(stock.version) === status.engineVersion &&
+    stock.compatibleV2Version === status.engineVersion &&
+    ((stock.state === 'idle' && stock.v2Support === 'required') ||
+      (stock.state === 'ready' && stock.v2Support === 'ready'))
+  )
+    return {
+      ...status,
+      v2Maintenance: {
+        kind: 'installed',
+        cliVersion: stock.version,
+        engineVersion: status.engineVersion,
+        support: stock.v2Support,
+      },
+    };
+  return status;
 }
 
 async function handleInstall(

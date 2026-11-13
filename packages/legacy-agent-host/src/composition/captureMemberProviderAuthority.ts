@@ -11,10 +11,12 @@ export function captureMemberProviderAuthority(options: {
   profileId: string;
   hostIncarnation: string;
   assertAllocation?: () => void;
+  /** Original writer lease, required by the production factory before sharing a Team fence. */
+  assertWriter?(): void;
   assertCurrent(): void;
   readRuntime(): { record: RuntimeSessionRecord | undefined; attached: boolean };
 }) {
-  const { entry } = options;
+  const { entry, assertWriter } = options;
   const original = {
     team: entry.team,
     binding: runtimeDigest(entry.binding),
@@ -26,7 +28,7 @@ export function captureMemberProviderAuthority(options: {
     fingerprint: runtimeDigest({ profileId: options.profileId, config: options.request }),
   };
   // No Runtime lookup here: called inside Runtime/Team fences as well as native callbacks.
-  function assertCurrent() {
+  function checkCurrent() {
     options.assertCurrent();
     if (
       entry.team !== original.team ||
@@ -39,6 +41,17 @@ export function captureMemberProviderAuthority(options: {
       !entry.team.owner.authorizeRuntimeAccess(original.principalId, entry.binding, 'control')
     )
       throw new RuntimeOwnerError('forbidden');
+  }
+  function assertCurrent() {
+    // Never enter a different Team's lock through a replaced mutable entry.
+    if (entry.team !== original.team) throw new RuntimeOwnerError('forbidden');
+    // Direct legacy compositions retain their original independent fences.
+    if (!assertWriter) return checkCurrent();
+    // A replaced store root must be refused before even publishing a lock there.
+    assertWriter();
+    // This callback is synchronous. Nested namespace checks and policy reads stay
+    // current; only the original cross-process lock acquisition is shared.
+    original.team.owner.withLaunchAuthority(original.principalId, 'read', checkCurrent);
   }
   function isCurrent() {
     try {

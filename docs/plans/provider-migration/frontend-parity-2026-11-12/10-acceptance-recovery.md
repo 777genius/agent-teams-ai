@@ -1399,6 +1399,9 @@ These annotations do not emit runtime code, suppress an error, weaken an asserti
 
 Root and an independent peer check the two exact annotations and branch-specific preimages before source publication. The existing scripts typecheck and original affected CI lanes must pass on the new coherent head. The executor is currently unavailable; source review is not a compiler/native PASS. Publish the reviewed correction normally without cancelling or rerunning the still-active native matrix.
 
+
+**Concurrent audit provenance (2026-11-13):** The appendices below retain the independently published additions from `f0d275e6ee8ed5072ec393a9c714f4b8f519e8c8` and base `e29dbde300ea73ec4e46e5f57f9e007ca5473552`. Their original section numbers, titles, source references and qualification limits are preserved; repeated numbers refer to the distinct titled audits, not to a replacement or a combined acceptance result.
+
 ## 30. Work-sync nudge: actual session tool names and argument schemas
 
 ### Round 1 — existing contracts and the disproved alias suspicion
@@ -1455,3 +1458,64 @@ against the exact GitHub d714 blobs with unique replacement checks. Targeted
 domain/invariant suites, lint/types and current CI remain required; source
 review is not an execution PASS. Finite emulation does not establish that an
 arbitrary model obeyed the prose or qualify a real vendor CLI.
+
+## 30. Existing offline-runtime tests must assert their intentional warnings
+
+### Review 1 — actual root-shard failure and unchanged product behavior
+
+Native12d run43457244582/job132021060689 fails two existing capturedRuntimeStatus cases; immutable logd86d080fc7ed5bfd76bfb97bf487578b743f808e identifies only unexpected console.warn calls from deliberately rejected latest-version lookups. The authoritative captured runtime/source assertions themselves are not reported as failures. The test preimage is3e7c1cc51997a2abff25428d06f77c2390eb03bb, identical in all three working branches.
+
+Production openCodeRuntimeLatestVersion.tsc39d060b6651cd6d2253b9ea4bb73a8e02e2c418 deliberately logs the failed optional registry lookup, then retains the already-known runtime status. Logger88bb1d9c1fe670370e86a8945654f8b79b2a572d emits the namespace and original message/error arguments to console.warn. Global test/setupe24e03f9e2b9f7b9bdc3720212713c4106c64a1c correctly rejects unacknowledged warnings.
+
+### Review 2 — one existing test file and three exact acknowledgements
+
+Only change test/features/runtime-provider-management/capturedRuntimeStatus.test.ts. In the original V2 offline case and the two original V1 failure/revocation paths, assert exactly one console.warn call with the existing namespace, fixed warning text and exact injected TEST error message. Clear the existing mocked console.warn call history only after that exact assertion passes, using the repository's existing vi.mocked(console.warn).mockClear pattern.
+
+Keep every original status/version/source-revision assertion and all native/source revocation guards. An extra or different warning must fail before the clear; later unrelated warnings still fail in the unchanged global afterEach. Do not silence production logging, add a global allowlist, replace the logger, or suppress an unverified warning.
+
+### Review 3 — existing failed gate supplies validation
+
+No new test, fixture, helper, suite, timer, dependency or production change is needed. Independent source review precedes the one-file candidate. Run the same targeted existing file and normal root shard/types/lint through available execution or the ordinary exact-head CI before acceptance. Source publication is SOURCE_ONLY_UNEXECUTED until those checks actually pass. Root commits/pushes the reviewed plan first and immediately pushes each later source commit; no main/upward merge is included.
+
+## §31 — Settings entry-read oracle in the existing V2 Test case (PLAN ONLY)
+
+### Review 1 — actual failure and exact source cause
+
+Native source12d54316c69326fd3d405459ebf77062d818324f shard4 job132021060766 failed the existing case “updates a V2 Test proof in the dialog without advertising a credential or team launch”. Its expected zero status calls conflicts with one original scoped `opencode` read with `checkReason:"launch_preflight"`; this is an entry-read observation, not evidence of native model execution or a Team launch.
+
+The exact test preimage is test/renderer/components/settings/CliStatusSection.test.tsx blob2565b8c5d4df331f51cf1d59879b38e35d4b87ad, case267–325. It renders the section, opens Manage, then incorrectly asserts zero calls at296 and one total at324. This preimage is also unchanged on working parent3c77393bf3ac477296da61d5e84bfe22e707b028.
+
+CliStatusSection.tsx ce0a93347e54e2dcbb6480ef7ba171b371f16f9f:189–194 delegates the same project snapshot to useSettingsCliStatus.ts c06322ba9fa8579d3e280e035545e2dbec53afc2. That hook calls useOpenCodeDashboardStatus.ts8e6e603a9ace5cdf536f91f47a2503ca70336d50. Its effect at231–250 reads once on entry to the current project/revision, including when a cached supported model-only snapshot exists. It uses `{silent:true,checkReason:"launch_preflight",projectPath:"/TEST/A"}` in this case.
+
+The Dashboard hook is byte-identical at original frontend4a0e06277fe216d9f82dbbede362668fe46622ee and source12d. Manage's actual handler atce0a:285–288 only changes selected provider/dialog state. The explicit dialog refresh at252–263 invalidates status and requests the selected provider with its supplied reason/project. There is no basis here for changing product refresh behavior, suppressing the original entry read, or attributing an auth/Team launch effect to Manage.
+
+### Review 2 — one existing TEST case, with separate exact call boundaries
+
+Only change test/renderer/components/settings/CliStatusSection.test.tsx, preserving the same existing case and all surrounding cases:
+
+1. Immediately after the original render, assert exactly one fetch with provider `opencode` and the original `silent:true/launch_preflight/projectPath:"/TEST/A"` arguments.
+2. Keep the single original Manage click and dialog assertions. Replace the zero-call oracle with exactly one total call, proving Manage adds no status read.
+3. Keep the original mocked verified-model update and the single explicit dialog `onRefreshProvider("opencode","provider_change")`. Require exactly two total calls and the exact second arguments `{checkReason:"provider_change",projectPath:"/TEST/A"}`.
+4. Preserve the verified proof/requiresExecutionProof checks, authenticated=false, teamLaunch=false, disconnected header, project isolation, disabled/loading/missing controls and no unrelated effects. The call-count correction cannot promote the synthetic status update into native execution evidence.
+
+Do not clear the fetch history, mock the Dashboard hook, change its effect, add a new case, broaden acceptable arguments, or change any product/auth/Launch code. Both original calls remain individually falsifiable.
+
+### Review 3 — gates and ownership
+
+Root publishes this append before the source edit. Independent review compares the exact one-file diff; no new test suite, timer, input, fixture, workflow or dependency is needed. The same existing CliStatusSection file and normal renderer shard/types/lint are the execution gates. With the executor unavailable, the candidate remains SOURCE_ONLY_UNEXECUTED until an actual available gate runs. Root remains sole publisher; this narrow TEST correction does not alter P05 §15 diagnostics or the separate §16 local-readiness parity work.
+
+## §32 — explicit reply-array types at two actual native UI script errors
+
+### Review 1 — actual source error and already-declared data shape
+
+Parent1160 packaged Linux job132037060973 fails the existing script type project with TS7022 at desktop-native-commands-ui-proof.ts336 and desktop-native-extension-consumption-ui-proof.ts112. Both errors concern a local replies variable initialized by filtering the original inbox rows. They occur before packaged native execution; this is not a packaged native failure. The original rows projection returns Row[], and both files already declare Row as Record<string, unknown>.
+
+The commands file currently includes reviewed R22 scoped /cost visibility (f37656eea681a562c57bc811c8defc595bcf4cb8); that implementation is preserved. The extension file remains83a25242151b126c27e8afe61d3983ae47f7d3ce. The failing declarations are original native MCP reply arrays; the /cost local-command output identity stays unchanged.
+
+### Review 2 — two erased annotations only
+
+Add the explicit Row[] annotation to exactly the reported replies declaration in each existing file. Keep each original filter callback, effectId, native IDs, output/readback assertions and all timeout/count/owner guards byte-identical. Do not add a cast, any, diagnostic suppression, new helper, fixture or test. The annotation must check the existing returned shape rather than coerce it.
+
+### Review 3 — existing gates
+
+Root publishes this plan before the source. Independent source review verifies that the only emitted-code-neutral delta is the two Row[] annotations. The unchanged pinned script type project and existing packaged/ordinary Desktop CI lanes remain required; source review does not qualify their execution. No workflow, runner, retry or budget change belongs to this correction.

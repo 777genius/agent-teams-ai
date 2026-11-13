@@ -155,6 +155,7 @@ export class RuntimeTeamCoordinator {
       hostIncarnation: this.hostIncarnation,
       driverFactory: createRuntimeMemberProviderFactory({
         entries: this.entries,
+        assertWriter: () => options.assertWriter(),
         storageRoot: options.profile.owner.storageRoot,
         profileId: options.profile.owner.profileId,
         principalId: options.profile.principalId,

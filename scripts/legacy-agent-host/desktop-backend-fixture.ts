@@ -58,6 +58,7 @@ export async function prepareDesktopBackendFixture(
   options: {
     candidateRuntime?: CandidateRuntimePaths;
     diagnosticHostEntry?: { path: string; sha256: string };
+    claudeCheckpointDonor?: { repo: string; hostEntrySha256: string };
     approvalUi?: boolean;
     nativeChatAttachments?: boolean;
     nativeGroupChats?: boolean;
@@ -85,6 +86,13 @@ export async function prepareDesktopBackendFixture(
     options.nativeCodex || options.candidateRuntime || options.nativeGroupChats || options.launchDialog ||
     options.nativeReviewUi || options.capturedMcpNonce || options.creation !== true))
     throw new Error('Native source selection requires its original V1 Create fixture');
+  if (options.claudeCheckpointDonor && (!options.nativeClaude?.modelUrl || options.launchDialog !== true ||
+    options.nativeCodex || options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ||
+    options.candidateRuntime || options.diagnosticHostEntry || options.creation || options.nativeGroupChats ||
+    options.nativeReviewUi || options.reviewUi || options.stoppedImportUi || options.approvalUi ||
+    options.nativeChatAttachments || options.capturedMcpNonce ||
+    options.claudeCheckpointDonor.repo !== join(repo, '.stage1-checkpoint-donor')))
+    throw new Error('Checkpoint upgrade requires its exact original Claude Launch fixture');
   const node =
     options.candidateRuntime?.nodeExecutable ??
     (await realpath(options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection || process.platform === 'linux' ? process.execPath :
@@ -92,7 +100,8 @@ export async function prepareDesktopBackendFixture(
   const hostEntry =
     options.candidateRuntime?.hostEntry ??
     (await realpath(
-      options.diagnosticHostEntry?.path ?? join(repo, 'packages/legacy-agent-host/dist/cli.js')
+      options.diagnosticHostEntry?.path ??
+        join(options.claudeCheckpointDonor?.repo ?? repo, 'packages/legacy-agent-host/dist/cli.js')
     ));
   if (
     options.diagnosticHostEntry &&
@@ -104,6 +113,8 @@ export async function prepareDesktopBackendFixture(
     throw new Error('Invalid TEST diagnostic Host entry');
   const nodeSha256 = await fileDigest(node);
   const hostEntrySha256 = await fileDigest(hostEntry);
+  if (options.claudeCheckpointDonor && hostEntrySha256 !== options.claudeCheckpointDonor.hostEntrySha256)
+    throw new Error('Original compiled donor Host changed');
   const pnpmEntry = await realpath(options.pnpmEntry);
   const corepackPackagePath = join(dirname(pnpmEntry), '../package.json');
   const corepackLibraryPath = join(dirname(pnpmEntry), 'lib/corepack.cjs');

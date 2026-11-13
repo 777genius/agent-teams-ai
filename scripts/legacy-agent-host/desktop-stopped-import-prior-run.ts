@@ -212,8 +212,10 @@ export async function produceDesktopCurrentStoppedTeam(options: {
       page + ' [data-testid="team-model-selector-model-option"][aria-label^="Sonnet 4.6"]';
     await ui.scrollTo(option, 'current Sonnet4.6');
     await ui.click(option, 'select current Sonnet4.6');
-    await ui.scrollTo(page + ' button', 'current Low effort', 'Low');
-    await ui.click(page + ' button', 'select current Low effort', 'Low');
+    await ui.waitRead(
+      `(() => {const b=document.querySelector('${page} #lead-effort');return b instanceof HTMLButtonElement&&b.disabled&&b.textContent.trim()==="Not supported";})()`,
+      'current compatible catalogue omits unsupported effort'
+    );
     assert.equal(
       await renderer.evaluate(
         `document.querySelectorAll('${page} input[aria-label^="Member "]').length`
@@ -471,7 +473,8 @@ export async function produceDesktopCurrentStoppedTeam(options: {
     assert.equal(meta.prompt, CURRENT_LEGACY_SOURCE_PROMPT);
     assert.equal(meta.providerId, 'anthropic');
     assert.equal(meta.model, 'claude-sonnet-4-6');
-    assert.equal(meta.effort, 'low');
+    assert.equal(meta.effort, undefined);
+    assert.equal(Object.hasOwn(meta, 'effort'), false);
     assert.equal(meta.skipPermissions, false);
     const savedSettings = Object.fromEntries(
       [

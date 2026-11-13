@@ -3143,6 +3143,9 @@ The Taskboard catch saves and emits its one closed observation. Each producer re
 
 No new test suite, helper framework, job, matrix row, native invocation, input, permission, timer, polling loop, read retry or budget increase is introduced. No baseline raise or code compression is authorized; the three existing script files remain below800 physical lines. Independent review checks exact original-failure identity, read bounds/no-follow containment, closed output and all unchanged actions. Existing script types/lint/source cap and the next normal coherent-head original CI gates supply execution evidence. This plan and source-only review do not close any of the three acceptance failures.
 
+
+**Concurrent audit provenance (2026-11-13):** The appendices below retain the independently published additions from `f0d275e6ee8ed5072ec393a9c714f4b8f519e8c8` and base `e29dbde300ea73ec4e46e5f57f9e007ca5473552`. Their original section numbers, titles, source references and qualification limits are preserved; repeated numbers refer to the distinct titled audits, not to a replacement or a combined acceptance result.
+
 ## 61. macOS Intel process gate: choose the pinned Node before pnpm bootstrap
 
 ### Original evidence and narrow correction — 2026-11-13
@@ -3284,3 +3287,362 @@ valid-but-different manifest, and retained unchanged original source artifacts.
 Log: TEST-linux-node-exec-afterpack.log. Synthetic Linux pruning cases still
 exercise the original pruning/native validators; full other-OS/error hook checks
 remain. This does not substitute for the original Desktop UI journey.
+
+## 61. Genuine old Claude Host checkpoint: original-executable proof and ordinary current Main Resume
+
+### Review 1 — demonstrated defect and exact acceptance scope
+
+This is a plan before source changes. D's current stable source is `4b005ece46dfe141013ac4fb06220b20d955b90f` in agent-teams-ai/old-provider-implementations; its Claude factory/open/config blobs remain the ones identified below. F source preimages are verified at `1160b575c4e43db045ab8726fd16d27bd611196a`. F still selects the checked D3b39 archive `f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2`; D4b005 CI success is not evidence that this later archive is installed in F.
+
+The genuine exact1d0 producer is already separate from synthetic compatibility tests: run43420487453/job131868952891/artifact14036966833 recorded old-Host ONE, unchanged checkpoint/native bytes, current public-D refusal before native callbacks, and old-owner cold TWO. Preserve those facts and the independent standalone test. The first local producer attempt whose outcome was lost remains INCOMPLETE/unknown; it is neither replayed nor retrospectively assigned an outcome. The later7ce old-corpus failure was the exact stale archive literal already corrected by §58, not new evidence about checkpoint semantics.
+
+Old F `1d0f97f55de566036c970eab4f36b84620afdb3f` used SDK0.3.305 and D9ede's checked archive `fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89`. Its actual CapturedProcess required the SDK-requested command to equal the original captured executable path and verified its SHA before spawn. Current F supplies that selected executablePath to D. The current D compatibility hash adds this path when present; old Host checkpoints omitted that one field. This does not authorize accepting arbitrary old opaque bytes, deriving a filename from PATH, or ignoring other compatibility fields.
+
+The target acceptance is **a genuine old Host checkpoint consumed through the ordinary current Main UI**. The first Main/Electron executable in this bounded test may already be current: it selects the frozen old Host in its original captured descriptor. Its successor is the same current Main selecting the current Host. Do not label this an old-Main executable upgrade. There is no new old-frontend checkout/build, generic checkpoint import, public migration operation, owner rebind, or protocol change.
+
+### Review 2 — source authority and the missing-journal counterexample
+
+The relevant unchanged source contracts are:
+
+| Source | Immutable blob | Binding fact |
+| --- | --- | --- |
+| CheckpointCoordinator.ts | `cc6a36675b183d68ed29c9fd409694a0754adbdb` | readCheckpoint272–295 verifies the exact ref/request, published payload/source config/history, closed/released idle source, current grants and exactly one original current-Host opening target before returning opaque bytes. |
+| createMemberEntry.ts | `48e6e6ca24e09966297a2461bd1b3b0abd14ed17` | The persisted selected base digest must equal the full compiled base profile; selected effective digest must equal the prepared profile at that technical generation. |
+| runtimeCaptureSource.ts | `3a7d6b0d4f1db25670531cc1eb904ca7a7e30ca5` | Original capture recipes/configuration and registered member scope are validated before compiling a runnable entry. Raw recipeDigest and compiled base-profile digest are distinct and must not be equated. |
+| launchConfiguration.ts | `ecb0e8061d1e27685cc099e3a7121cb5ebb03329` | Its closed app options change selected model/settings; they do not replace the captured executable, account or namespace. |
+| TeamLaunchOwner.ts | `29822d71440cef625bdc2b43263cbeba7a9c96e2` | A missing launch file may be initialized from today's seed at66–88. selectRestore319–357 validates the source selection and atomically appends the new restore attempt and matching restoration row. |
+| FileTeamRuntimeBindings.ts | `04cbb4bda9a4ecba22cfbd664e86de1c16e8733a` | The existing fenced projection reads the authoritative launch record, validates its fingerprint/preparation/native additions/selection chain and returns the selected base/effective digests. |
+| validateLaunchRecord.ts | `f53a249f6597bba3502c3071da69676eeb171141` | Member attempt IDs are unique, bounded to65 and currentAttemptId is the last entry; full attempt-field checks currently cover only that current attempt. |
+
+Thus today's entry.selection, current seed, a matching hostIncarnation by itself, or source cleanup alone cannot prove which executable produced the checkpoint. In particular, a missing old launch journal can be recreated from a current seed and then receive a restore selection. A second cold startup must not turn that recreated row into original producer evidence.
+
+Use the original append already owned by selectRestore. For the exact selected restoration command/ref/member, its target attempt is `restore-${runtimeDigest(commandId)}`. The immediately preceding attempt in that same member's bounded list was current when the atomic source→target selection was published. Existing retries and member actions only append; native addition creates a separate member list. Later append-only operations preserve this adjacency. This is a source-derived join to the exact restoration row, not a search for any attempt sharing a Host nonce.
+
+A selected Skip is the one same-binding exception to a directly claimed predecessor: memberActions.publish appends a new attempt without changing the Runtime binding. If the exact predecessor is such a validated selected Skip, follow only that action's original sourceAttemptId backward through the same member/binding. Each link must point to an earlier retained attempt and the same validated source/selected binding; the existing65-attempt limit bounds the walk. Refuse cycles, missing/ambiguous links and arbitrary unclaimed attempts. Do not infer a source from timestamps, labels or a shared Host nonce, and do not discard legitimate Resume-after-Skip merely because its last metadata-only attempt is unclaimed.
+
+For this projection, explicitly validate every historical field actually consumed, rather than treating the current-only validator as historical proof. Require one matching target attempt and one preceding source attempt; source claimed must be true, its original hostIncarnation must equal the checkpoint source Runtime record, its identity/times/boolean fields must be well-formed, and noAllocation must not claim a known nonallocation. The exact row supplies original sourceBinding/reference and current selected binding; both must join the selected member/run and Runtime facts. Missing, malformed, ambiguous or unclaimed lineage refuses. Do not rewrite an old attempt or manufacture a new claim to obtain this proof.
+
+### Review 3 — narrow F composition proof, without a Runtime/API extension
+
+Extend the existing private TeamRuntimeBindings.current / TeamOwner.runtimeSelection projection with an optional **checkpoint reference**, used only by the Claude restoration proof. Ordinary callers receive the existing selected projection and behavior. When the reference is supplied, the same original Team read authority/store fence validates the exact selected restoration and returns a closed source-claim projection from the same launch record. There is no new journal, owner, RPC, renderer field, cleanup authority or explicit recovery/replay operation. This reuses the existing Team read semantics: runtimeSelection calls authorize/state, whose original state path may run roster.recover (TeamOwner513–540). Do not mislabel it a new raw no-recovery read, bypass that authority path, or call recover directly. The new claim projection itself only validates/returns original launch data; existing recovery cannot manufacture the required original source claim. The callback makes exactly two explicit synchronous runtimeSelection calls on this legacy candidate: the initial source-claim snapshot and one final equality/current-selection reread after the separate Runtime reads. Each successful existing runtimeSelection performs two state visits (authorize→state and its direct state call), so these are four additional recovery-bearing visits, not zero; the existing authority/allocation callbacks at entry/exit retain their own read semantics as well. There is no loop, direct recover call or extra await. TeamRosterTransitions.recover81–92 (875fd7165c2ea4d39e8cc2e222d62807cdfa1cc5) only completes the already-decided config/state projection and invalidates its existing cache; it cannot write launch attempts, claimed/hostIncarnation fields or Runtime records. Both snapshots must preserve the same original source claim; recovery cannot supply a prospective claim, and a missing original claim still refuses. TeamOwner's change is only the optional argument and forwarding on its existing lines; its current800-line limit is not raised or met by code compression.
+
+A directly consumed composition helper constructs a synchronous, request/ref-local reader for this one provider factory opening. It captures the original selected request, target binding, base/effective profile and authority closure, and returns no mutable authority object. Its checks are:
+
+1. The supplied ref is exactly the original request.checkpointRef; every OpenConfig field and required capability belongs to that original captured request. The current target Runtime is the exact opening/unknown record for this binding/current Host and has restoredFrom with that ref and sourceBinding.
+2. The selected Team projection is still the same target, original member/run and restoration command. Its baseConfigurationDigest equals the full captured base profile; its effective configuration/generation digest equals the current selected compiled profile. Original captured recipe/configuration/registration validations remain in force. A new seed or default fallback is not a source.
+3. Read the exact source Runtime through the existing private readCapturedSession surface, outside the Team fence. Require the original same profile/session/config scope, closed/released/unattached idle source and published reference/history accepted by the existing readCheckpoint path. Join its binding and original hostIncarnation to the exact preceding claimed launch attempt described above. No Runtime fence is nested inside the Team fence.
+4. Require the source and target profile generation/configuration chain to match the existing validated restore chain. The original base digest preserves the captured executable path and SHA across these transitions; closed launch preparation cannot change them. If a retained original effective-profile digest is available in preparation/source selection, check it as well. Do not claim an old effective digest was stored where the journal retains only the invariant base digest.
+5. Require the selected Claude profile's executable {path,sha256} to equal that original captured base identity, with canonical nonempty path and full SHA shape. Recheck the captured Team/grant/selection/allocation authority after the sequential reads, including the second exact source-claim projection comparison described above. Existing actual file/hash, MCP source, custody, input and physical cleanup checks remain unchanged.
+
+The returned private Host evidence contains only the exact checkpoint reference, captured OpenConfig and original/selected executable {path,sha256}. It does not return an expected compatibility hash, a release assertion, an allow flag, a provider-supplied selector, or opaque/native session contents. The reader is synchronous: it introduces no new await, retry, deadline or background lifetime. The existing D factory calls it only after its original successful readCheckpoint and only when the narrow legacy hash is a candidate. Existing probe/custody guards continue to fence subsequent asynchronous SDK/file work.
+
+A static descriptor with no original claimed source journal fails this gate. A static descriptor that retains a genuine, exactly bound original launch claim is judged by that same evidence; the mere static/captured label grants nothing. Missing-journal recreation and a later cold restart must still fail before native construction.
+
+### Review 4 — D owns the compatibility comparison
+
+Keep the public three-argument openClaudeSession strict. Factor its current implementation only as needed for an internal Host entry that the existing factory consumes; do not add that internal entry to the package's public export barrel.
+
+The existing private ClaudeDriverHost receives one optional synchronous source-reader callback. The factory binds it to the same frozen selected request/ref whose opaque value came from its original readCheckpoint. F's provider/context wiring supplies the reader from Review3; generic callers without it retain current behavior.
+
+The internal open algorithm keeps this order:
+
+- Validate/snapshot configuration and parse checkpoint exactly as today. Ephemeral checkpoints, malformed payloads and a different engine remain incompatible.
+- A normal current compatibility match follows the unchanged current path without calling the source reader.
+- Only for engine0.3.305 and an actual current-hash mismatch, compute a second hash from the same snapped configuration with **only executablePath omitted from that hash projection**. Never omit it from the real configuration or SDK options. Every other current compatibility component—namespace/HOME/config directory, account/trusted binding, cwd, revision, model, native and required tools/order, permissions/settings, extra args, attachment and subagent policy—remains in the same hash.
+- If this one legacy projection does not equal the actual unchanged checkpoint hash, refuse before the source reader/native callbacks. Otherwise require the reader's closed proof, exact ref/request, original path+SHA equal selected path+SHA, and selected path equal the real config.executablePath. Missing/invalid proof yields checkpoint-incompatible, with no fresh fallback.
+- Only then run the existing native session-store check, ordinary SDK readiness/construction and original custody path. Reuse the actual original selected executable path; no ambient SDK/PATH replacement.
+- Newly emitted checkpoints still use the normal current compatibility function, including executablePath. No opaque hash, nativeSession, checkpoint payload, Runtime history, original claim or handle is rewritten.
+
+This is a compatibility rule inside D's trusted Host composition, not a general public open option. The optional callback's type is reachable through the already exported private ClaudeDriverHost type; no new public Runtime contract or top-level compatibility switch is introduced.
+
+### Review 5 — focused controlled qualification before native acceptance
+
+Extend the existing D factory restore/effective-config cases, preserving the public-open negative. A genuine controlled checkpoint produced with the old no-path configuration may be used as a unit fixture; label it synthetic, not an old-Host upgrade corpus. Verify the same native session is selected only with exact source proof, actual SDK options retain the selected path, and its next checkpoint uses the normal path-inclusive hash. Cover missing/wrong ref/request/path/SHA proof, changed nonpath compatibility fields and no-reader calls; count source-reader, sessionExists, probe and query callbacks so all refusal boundaries are visible. Do not weaken or replace existing configuration/namespace/permission tests.
+
+Extend the existing controlled runtime-team-host selected-checkpoint case and its existing fixture. Exercise the real Team launch claim→Runtime checkpoint→Stop→cold restore chain and inspect the composition reader for that exact opening. Add bounded variants within this existing suite for missing/recreated launch history, a second cold startup after recreation, a foreign member/source/ref, malformed or unclaimed predecessor, the exact same-binding Skip link versus an unrelated claim, changed base executable identity, and revoked current authority. Use original captured payload bytes; test faults occur only after the original owner has closed and are restored explicitly. Verify old Runtime/checkpoint/native input records remain unchanged and no controlled provider handoff/input is released on refusal. A direct Runtime-only test or a fabricated source-proof object does not close F provenance.
+
+D check/build/pack verification must finish on the exact candidate. Root alone publishes D, consumes its official checked archive, updates F's ordinary package pin/lock/provenance, and keeps installed declarations/archive equality intact. The existing standalone current-provider archive literals in native-claude-host.native.ts and ci.yml must move to this exact checked archive together, preserving §58's old pins and strict negative. No symlink/package bypass, SDK upgrade or contract archive change is authorized.
+
+Then run the coherent Host build, Host/script types and the existing focused cases. A resource kill or unavailable executor is not PASS; the same normal candidate-head CI may supply the required result before final acceptance/upward merge. Do not repeat native experiments merely because local execution is unavailable.
+
+### Review 6 — one existing Desktop Resume invocation, two honest Host epochs
+
+Use only the existing Claude `native-resume-ui` matrix row. The exact1d0 checkout and frozen Host-only build already exist. Keep its independent standalone old→old/current-public-D-negative prerequisite unchanged. Do not reuse that standalone producer root, operation IDs or native history as the Desktop session; the already necessary Desktop root is fresh and its first original ONE is produced by old Host.
+
+A directly consumed TEST preparation/inspection helper selects that frozen donor Host and resolves its SDK-native executable through the **original installed D→SDK→platform package chain**, as the current donor test already does. Require SDK0.3.305, the original native SHA, checked old D/contracts archives and frozen source/dist/lock provenance. Verify the current D/archive and current Host source/dist separately. Both the original and current readTeamHostProfile validators must accept the same unchanged profile bytes before effects; never drop a selected field to force old compatibility. Do not edit either checkout's source or old compiled output.
+
+Before the first app/native effect, compare the naturally produced old/current compiled dist/cli.js bytes and SHA, captured Node/version/SHA, profile/build/owner identity and storage scope. Identical cli.ts source alone is insufficient. The first TEST descriptor names the real old compiled entry; the successor names the real current entry at its own canonical path. Their immutable owner tuple must naturally be identical. The original profile bytes, executable path/SHA, ownerId/revision/storageRoot/profileId/buildId/protocol/nodeSHA/entrySHA, Team scope and handleId stay unchanged. A tuple mismatch leaves the route unqualified before effects; never copy a bootstrap, substitute an expected hash, relabel a build or migrate a handle to make this gate pass.
+
+Create the successor descriptor as a separate immutable file with its own actual descriptor SHA. Do not rewrite the original descriptor or profile. Its only deliberate selection difference is the genuine current Host entry path; actual identical entry bytes are a prerequisite, not an assertion forced into the data. Preserve original env/profile file pins, timeouts, native CLI path and all descriptor scopes. Record both full Host source/dist identities, so equal small entry bytes do not obscure different producer/consumer implementations.
+
+The first current Main follows its normal descriptor registration and public Launch UI against old Host. It creates the real immutable handle in the normal `userData/agent-backend/bindings` store, uses the original selected model/settings and sends ONE exactly once. After the existing Stop, retain unchanged original checkpoint bytes/native-history prefix, original Runtime/source selection/base profile and the actual persisted handle record. Check the stored owner tuple against both naturally captured profiles; a descriptor or renderer handle alone is not persisted-owner proof.
+
+At the existing single cold boundary, retain all current assertions: one public Quit, original app exit0, entire original group and captured Host absent, writer lock gone, native/metadata cleanup complete, original Runtime/checkpoint unchanged and eight model observations unchanged. Only after these proofs may the caller adopt the already verified successor fixture, descriptor, ChildProcess/group and new CDP. Every failure cleanup keeps the correct original/new process object and selected fixture; do not query the exited old CDP or silently mutate original fixture pins. Use the existing guarded cold helper with a closed explicit checkpoint-upgrade option, never a generic arbitrary owner switch.
+
+The second current Main must load the same actual stored handle through BackendOwnerRouter/ DesktopBackendFeature unchanged. Those production paths compare the stored whole owner JSON/tuple and preserve immutable handles; no migration API is added. Verify the same handle bytes, source Runtime/checkpoint/history prefix, ownerResourceRef and Team scope after real cold discovery. The existing Launch helper receives the actually adopted successor fixture through one explicit current-fixture accessor before invoking Resume; an old hostEntry must not remain in later census/cleanup helpers.
+
+Perform the same real Resume click, no input on Resume, one new technical generation, then ordinary Composer/Send TWO once. Require the same actual native session/history marker, existing main terminal result and Team effects, original settings, two total business inputs, exactly eight first-turn plus three second-turn model requests and existing second Stop/physical cleanup. Preserve the original source checkpoint bytes while the current generation emits its own normal checkpoint; D's focused test proves the exact current-hash emission rule, and the real receipt must retain both observed opaque hashes/session identities without rewriting either.
+
+This qualifies old Host→current Main/Host consumption only on natural owner equality. Current→current Resume, old→old Resume, D-only inspection, a successful compatibility hash calculation, or a callback count alone cannot substitute for this UI/native result. No extra model request, input, permission approval, startup, cold epoch, job, matrix row, runner or timeout increase is planned. The existing180s standalone prerequisite, Desktop row45-minute job limit, current UI/operation polls and original cleanup budgets remain unchanged.
+
+### Review 7 — exact source ownership and bounded publication slices
+
+D source is limited to its existing Claude SDK factory/open-session and existing factory test:
+
+| D path suffix under packages/provider-implementations | Preimage |
+| --- | --- |
+| src/features/provider-session-implementation/adapters/claude-sdk/factory.ts | `386b833f6600452f9f41968bb04266413bff21ad` |
+| src/features/provider-session-implementation/adapters/claude-sdk/open-session.ts | `dd8a10a9ed4684a692fa6a771c9612a6309a888c` |
+| tests/features/provider-session-implementation/claude-sdk/factory.test.ts | `3676b224f6b660c71d53d4448bfa37065f7d7d36` |
+
+F production is limited to the existing private selection/context/provider path plus one directly consumed proof helper:
+
+| F path under packages/legacy-agent-host | Preimage |
+| --- | --- |
+| src/team/ports.ts | `c86f1f8c4c72315af8116f36d5c0e43617beeab4` |
+| src/adapters/team/FileTeamRuntimeBindings.ts | `04cbb4bda9a4ecba22cfbd664e86de1c16e8733a` |
+| src/team/TeamOwner.ts | `cac55964ea60016be093ee14bd67c9ed6a420c3c` |
+| src/composition/createRuntimeMemberProviderFactory.ts | `abc1c70c289aac1c1cb7ea8288f4e4d009aa2661` |
+| src/composition/createClaudeCheckpointSource.ts | New, directly used by that factory; no independent store/API |
+| src/adapters/providers/MemberProvider.ts | `ba07244fcc8128056cc5db3992f80e7a612a8003` |
+| src/adapters/providers/ClaudeMemberProvider.ts | `49c7e2cb975921f5f121fc34b2a9460f51dbb76b` |
+| tests/runtime-team-host.test.ts | `ce7f45c43a35ae17a7ccc4eeb5276b6084716ee8` |
+
+No production Runtime, checkpoint storage, Main routing/store, public RPC/MCP or renderer changes are authorized by this plan.
+
+The existing TEST lane changes are confined to these paths and the normal checked archive/pin files:
+
+| F TEST path | Preimage / purpose |
+| --- | --- |
+| scripts/legacy-agent-host/desktop-claude-checkpoint-upgrade.ts | New direct preparation/readonly evidence helper; frozen original and actual successor descriptors/owner facts |
+| scripts/legacy-agent-host/desktop-backend-fixture.ts | `c041f8662b8bd5db1665563edb76f5773fe4cb45`; explicit old-Host selection only for this qualified TEST mode; default/other provider paths unchanged |
+| scripts/legacy-agent-host/desktop-proof-fixture.ts | `5aff276a8b0f1c2b07727e12b5995b58d34b945f`; select the explicit pair for the existing Claude Resume row |
+| scripts/legacy-agent-host/desktop-captured-app.ts | `48c091170baefb5d1404c7beac9200991989f52c`; preserve guarded cold closure, then verify the explicit successor and unchanged real handle |
+| scripts/legacy-agent-host/desktop-backend-smoke.ts | `eb033a2ff980564c21be67c65bba0ed99f2c8143`; retain/adopt each actual fixture/process at its existing spawn, include final readonly proof in existing receipt |
+| scripts/legacy-agent-host/desktop-launch-ui-smoke.ts | `6b819a2ec7060ad1ec93cda49ecd9320f849e877`; pass the actually selected successor fixture to the existing unchanged Resume journey |
+| scripts/legacy-agent-host/desktop-proof-sources.ts | `3f8d41fb20553ee9890a8f14e39e26ad2dcaabfc`; exact directly consumed helper/dependency entries, preserve all existing pins |
+| packages/legacy-agent-host/tests/native-claude-host.native.ts | `09ee50328f1b6d8854f5e22719750fda51009cb6`; checked current-archive literal only, original standalone producer/negative/old-owner acceptance unchanged |
+| .github/workflows/ci.yml | `2f00c1be87037da32332ad42493c7130bb896dd5`; existing row's explicit donor selection/pins and closed old→current receipt assertions, plus coherent archive literal |
+
+New readonly TEST observations use fixed original paths and established bounds: immutable handle ≤16 KiB, original profile/descriptor within their existing schemas/budgets, launch journal ≤1 MiB, checkpoint payload ≤8 MiB and native history within the existing64 MiB bound. Validate canonical path/regular file/link/size and retained FD identity before and after bounded reads; preserve missing/corrupt/changed evidence as failure. No raw account/token/body output, directory-wide discovery, unbounded read or new polling/retry loop. Reuse the existing finite source/dist/archive proof helpers and stream native-file hashes; no whole-binary dump. Private retained artifacts and closed receipt facts are separate.
+
+Root composes child-specific ci/smoke deltas without dropping qualification/native changes; no force or branch update by the implementation peer. Preserve each existing file cap, including TeamOwner800 and script800; use the one consumed helper for its coherent responsibility, with no baseline raise, cosmetic compression, new suite or generic framework.
+
+Acceptance remains pending until independent source reviews, exact D/archive/F type/focused checks and this ordinary native Desktop gate pass. On an unavailable executor, prepare immutable source/handoffs and use the next already-required normal CI; do not label source review as compilation or runtime success. Publish this plan before any of these source edits.
+
+## 62. Original POSIX actor failure: bounded case/stage observation
+
+### Review 1 — actual native-only failures
+
+The original native12d preflight run43457244534 completed. Linux job131994517305 passed the existing POSIX actor (immutable log559cbfa1d7ee0e64beb6ba4d59df43347946921b). Darwin x64 job131994517109 failed the actor's existing errno assertion at463 with13 rather than0 (log3b5000490a1c5c7fec4659d1e30b90348070b5f5). Darwin ARM job131994517191 failed at483 because the original mutation case retained LIB/BIN:A/MAIN:A markers (log6cabd9196bcb5da98d05500287ef60ba34e2896b). The complete per-case receipt is retained in the ordinary artifact but its members have not been read in this session. Do not assign a case label, native stage or cause from an assertion line alone.
+
+The passing Linux actor qualifies only that controlled fixture. Both Darwin failures remain real failures. No result closes the product pathname-to-exec gap or qualifies installed/custom executables and scripts.
+
+### Review 2 — one existing TEST file, original observation only
+
+Only native repair branch contains this actor. Its source path is packages/legacy-agent-host/tests/registered-process-executable.native.ts, preimage6108342759147bcb480e634ccad7877a0807adc9; the C controller882c986d13920db54720b4672dd6cfc55e361aaf remains unchanged. Parent and qualification receive this plan only, with no newly introduced actor or job.
+
+At the existing per-case assertion catch, retain a closed projection for the first original failing observation. It uses only that already decoded/validated fact, the locally enumerated case label, existing bounded marker list and controller-interruption boolean. Do not reread any file, call native code, start another child, examine the exception, or change failure selection. Preserve the original failure object and all later bounded cases.
+
+The fixed TEST_POSIX_EXEC_FAILURE row contains sourceHead, platform/arch, original case label and native stage; errno, execErrno and mutationAfterCheckErrno; original stopped-before-user, marker-absence, image-observed/matched, resumed and cleanup booleans; the existing marker names, exitCode/exitSignal and original controllerInterrupted. It omits PIDs, birth/inode identities, paths, arguments, environment, hashes of user material, raw stdout/stderr and exception text. The case/stage/marker values use only the existing finite vocabulary and numeric/boolean projections are validated. One line is at most2048 UTF-8 bytes including its newline. Invalid/missing diagnostic data yields an absent observation, never a replacement cause or PASS.
+
+Emit at most once, only after the existing cleanup and successful original receipt write, before the unchanged final rethrow. Contain observation/emission errors so they cannot mask the original failure. Original receipt-write failure keeps its original precedence; it does not justify another write or retrospective case inference. Retain the complete existing private receipt and all original assertions.
+
+### Review 3 — acceptance without another suite
+
+Do not change actor code, codesigning, compiler flags, enumerated cases, timeout120000, deadline100000, per-case budget20000, cleanup4000, runner permissions, workflow or fixture/product qualification flags. In particular no acceptance of Darwin markers, errno13 or a missing observation is added.
+
+Use independent source review, affected script/test type checking and the next already-required ordinary native candidate CI. The existing failing case itself must retain its original failure while supplying its closed case/stage row. No new unit suite or native replay is warranted for this diagnostic-only addition. Source review remains SOURCE_ONLY_UNEXECUTED until canonical checks execute; a cause or platform fix can be planned only from actual evidence.
+
+Root alone publishes the plan before this one-file source change, composes the native-only delta and immediately pushes every commit. No merge to main or upward merge is included.
+
+
+## §63 — original compatible-API effort and donor preconnect oracles after the actual 1160 producer failures
+
+Status: PLAN ONLY. This appendix changes no production behavior, native budget, source identity, cleanup policy or published result. The source proposal below requires root publication and independent review before implementation. The original failing runs remain failed until the existing ordinary gates execute a coherent candidate.
+
+### Review 1 — actual evidence, source facts and remaining uncertainty
+
+The original parent head 1160b575c4e43db045ab8726fd16d27bd611196a produced two distinct failures:
+
+- Saved donor job132024091001, full log blob947c2a8fda0e1a558a0a0f8f7d3150b4f2e18ae3, reports phase quit and an assertion at desktop-donor-saved-producer.ts371. That assertion is the existing model.failures equality. Original wrapper exit0, signal null, empty original group, absent listener, absent captured births and absent unmatched selected executable have already passed at lines347–360. The reported phase is the last retained stage; it is not proof that ordinary Quit failed. The private original model error has not been read, and this plan does not identify its actual first message from the phase or cleanup booleans.
+- Current stopped producer job132024090988, full log blobed8517497a57727b2f34972c5b59d39ecbab62aa, reports model-selection with the original model.failures assertion at desktop-stopped-import-prior-run.ts199 while the original UI call at215 is looking for Low. The existing closed diagnostic establishes catalogLimitExceeded=true and lowerBound9, zero business turns and zero consumer probes; the twenty captured native children and all original cleanup/source-freeze facts remain separate evidence. This establishes a genuine ninth catalogue request, not the reason for all nine requests.
+
+The compatible-API effort mismatch is source-proven. Runtime0.0.158 tag f5c69c2e9024ffc36a5db5eafe30f53539b52f62 and donor0.0.160 tag e13edcd3d4ffbecc0272ae30195cc6b15b710ee7 contain the same anthropicCatalog.ts adec3f0b3655f691c0efa87ae0910e7e7625a707. Its API-compatible builder assigns supportedReasoningEfforts=[], defaultReasoningEffort=null and supportsFastMode=false to the returned gateway rows, including the fixture's actual Sonnet4.6 model. The original teamEffortOptions.ts32eca9e61d1f2a2ce4ffc97c0e13eea742061b25 therefore renders the exact #lead-effort control disabled with Not supported. CreateTeamDialog.tsx0a06948c13254c1b5fb724b5483629b5467263571526–1528 maps the empty selected effort to undefined, and TeamMetaStore.ts99c2ae66d7bc51535eab90166a79503897fa3004299 preserves omission in serialization. The saved donor already asserts this original UI behavior under P10§24. The stopped producer's two Low actions and later forced low metadata assertion were missed by that correction. Waiting for the impossible Low control can extend the active observation period, but this is only a source explanation for the wait, not a measured allocation of the nine GETs.
+
+A second, independent protocol mismatch is also source-proven. Old4a and the current frontend use the same CliProviderModelAvailabilityService.ts eeac204b1ca9afc16e0c7c59574df61f433fd675 and providerModelProbe.ts233363243dd639556ae58e3ca1801dea5af27df0. Their ordinary native model check executes -p with the exact PONG input. Both pinned runtime versions use entrypoints/cli.tsx ce5308b112e1a0b36c73a139c0feb49ef8fc2561 → main.tsx1d5898a83dc2d9c59b9b1cbcad3c4b1c6a71a408 → entrypoints/init.ts e03a6a5b1d2792bb886030a4c6a5825dde069a48 → utils/apiPreconnect.ts6a8de649b3ff3918dd27b31a90a7678f8c92161a. In the captured producer environment, that once-per-process preconnect sends HEAD to the exact ANTHROPIC_BASE_URL, with no credentials or body. The isolated URL is the model server root /. The runtime status fast path is separate and does not establish that every status process performs a preconnect.
+
+The current oracle632808e8729145967b321f4fd41625ce4a71c995 admits this exact HEAD only when originalLegacyRead is true, although it separately admits the donor's catalogue and exact PONG. Therefore a legitimate donor PONG process can seal the oracle on its preceding HEAD. The runtime's ignored preconnect response does not erase the fixture's first failure. This is a concrete missing protocol case; it remains an inference, not observed proof, that it was the first failure in job132024091001. Catalogue exhaustion or another first error is still possible.
+
+### Review 2 — seven existing TEST paths, no product or workflow delta
+
+| Existing path | Exact preimage | Narrow change |
+| --- | --- | --- |
+| scripts/legacy-agent-host/desktop-stopped-import-prior-run.ts | ff6622d0bf6d87f5321d8c272205096f7ef0f7c2 | Observe the actual disabled effort control and require omitted original saved effort. |
+| scripts/legacy-agent-host/desktop-stopped-import-fixture.ts | 71dfae471ad0c8d1fdc3247b91236725b1f9bc92 | Make effort optional only in CurrentNativeStoppedImportSeed; retain the separate rich Low fixture. |
+| scripts/legacy-agent-host/desktop-stopped-import-ui-smoke.ts | b3df0c619b9b86f4fbdbc83e9f3636bf1c6a9816 | Preserve that omission through original import and exact model-proof comparison. |
+| scripts/legacy-agent-host/desktop-stopped-import-fixture.test.ts | a2754a1b9968e0c360742e87c78af4add0f67930 | Use a genuinely absent effort property in the existing omitted-selection case, retaining Low and both mismatch refusals. |
+| packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts | 632808e8729145967b321f4fd41625ce4a71c995 | Admit the same exact bounded original HEAD for the mutually exclusive donor epoch, with a distinct donor counter. |
+| packages/legacy-agent-host/tests/fixtures/native-claude-team/model.test.ts | bd968e145c3d9a86b46521e45994ef6be74d5b1f | Extend existing current/donor HTTP cases to exercise exact donor admission and independent first-failure refusals. |
+| scripts/legacy-agent-host/desktop-donor-saved-producer.ts | bbade7afcc4900dc9c29d1330e09405c03f22735 | Add only a closed first-model-failure classification to the existing failure-only §60 projection. |
+
+These are existing transitive proof sources, so no inventory addition is required. The current workflow does not require a literal Low setting for this genuine source branch; source/receipt equality and all existing assertions continue to apply. Parent/native/qualification preimages must be checked before composition; no child-specific source delta may be overwritten.
+
+For the current stopped producer, keep the original single Sonnet4.6 selection and use the same existing read-only wait helper to assert #lead-effort is a disabled HTMLButtonElement with the exact original Not supported label. Remove only the two impossible Low actions; do not click a substitute value, inject settings, synthesize a failed model check or force a default. After the existing source-owned Stop/Quit, require meta.effort===undefined and absence of its own effort property. Preserve every other source/configuration, task, native-history, Stop/release and byte-freeze assertion.
+
+Only the actual-current-native-solo seed permits missing effort; the synthetic rich Low corpus remains unchanged. On import, require the actual-current seed and imported owner.savedSettings to retain the same absent own property, in addition to all original saved-field equalities. assertStoppedImportModelChecks accepts an optional effort property but still compares every retained receipt and actual consumer request to exactly selected.effort, including undefined. It must not substitute low, medium or an alias. The existing test still proves Low success and both cross-effort refusals, and its omitted-selection positive now has no effort own property. This is an oracle correction, not a change to native request shaping.
+
+The stopped producer is currently797 physical lines. Keep its narrow replacement within the existing800-line limit; do not compact unrelated code, raise the limit or add a baseline exception. The shared model lives in the already excluded tests/fixtures scope of the existing size policy; do not amend that policy. All other changed source paths retain their existing limits.
+
+### Review 3 — donor HEAD admission, epoch ownership and unchanged conservation
+
+Reuse the existing HEAD branch and its exact original checks. It may run only when originalDonorRead or originalLegacyRead was captured for this request; the existing constructor already forbids enabling both original epochs. Preserve the first-failure seal, exact URL /, absent Authorization and x-api-key, absent transfer-encoding, absent-or-zero content-length, zero received bytes and204 empty response. No other method, pathname, query, credential or payload becomes accepted.
+
+Increment a separate donorSavedPreconnectRequests counter for originalDonorRead, otherwise the existing currentLegacyPreconnectRequests. Each remains bounded by32, the already declared maximum original captured native births; preconnect is once per original native process. This is admission of a previously rejected, source-derived protocol operation, not an increase to an existing request cap. Catalogue GET limits stay8 per original producer, donor/current PONG limits stay8, current source business input stays exactly1, native census stays32, and all existing token/consumer/model budgets remain unchanged. No counters reset at a successful response or at finish.
+
+The same pendingDonorReads/pendingLegacyReads and original finish barriers already cover every HTTP method. Preserve those counters, the one-time original epoch closure, existing15s finish bound and no-consumer-before-settlement rule. Do not change the return shape of finishDonorSavedProbes or add a request to the desktop journey. After closure, a fresh HEAD must refuse; an earlier failed request must continue to seal all later requests.
+
+Extend the existing donor case with one exact HEAD before its original catalogue/PONG, and keep its original post-close catalogue rejection as its first failure. Replace the former blanket donor-refusal variant in the current HEAD case with a genuinely closed donor epoch, so that the new supported case is not accidentally tested as forbidden. Within the existing donor case, use fresh isolated model instances for malformed path/query, nonzero body, each credential header, overflow after32 genuine successes and closed-epoch HEAD. Each negative must be the first failing request in its own instance and leave business/consumer observations empty. The existing current case's original late POST rejection must retain its ordering; no new HEAD may seal the oracle before that assertion. Do not add a new suite or actual native invocation.
+
+### Review 4 — accurate failure observation without a cause claim
+
+The existing donor failure-only projection may add firstModelFailure with a fixed vocabulary: catalogue-limit, preconnect-epoch, preconnect-limit, unclassified or null. It reads only the first already retained model.failures element; exact equality to the fixed oracle assertion messages selects a known label, a different present string is unclassified, and an empty original failures array yields null. No raw error text, requested model, account, URL, path, environment, payload, response body or stack is copied. There is no additional RPC, CDP evaluation, file read, census, request, loop or timer.
+
+Retain the existing4096-byte log cap, try/catch containment, original receipt write, original failure object/status and cleanup precedence. Do not relabel phase quit as a cleanup failure, and do not turn missing/unclassified observation into proof of HEAD, absence of GET9, or successful shutdown. Exact message matching may conservatively classify a differently formatted runtime assertion as unclassified; broad substring parsing or raw logging is unnecessary. This diagnostic does not control admission or change an assertion.
+
+### Review 5 — acceptance and remaining gates
+
+Independent source review must check the exact runtime/frontend source chain, no-effort ownership through original saved bytes/import/probe, epoch-exclusive HEAD bounds, first-failure ordering and all child compositions. Run the existing stopped-import fixture case, existing shared model HTTP cases, affected script/Host test type checks, formatting and source-size guard through the ordinary canonical environment. If the executor is unavailable, these remain pending for normal candidate CI; source review is not execution.
+
+The next already-required original saved donor and current-native stopped-import journeys must still prove their original ordinary Quit and captured native absence, immutable source bytes, actual source-owned Stop for the current producer, read-only import and existing authorized Launch continuation where applicable. No rerun, new job, new matrix entry, timeout increase, catalogue cap increase, hidden UI retry or extra native input is introduced by this plan. If catalogue9 still occurs after the impossible Low wait is removed, it remains a real failing gate requiring its own observed/source-backed explanation; this appendix does not preauthorize a larger cap.
+
+Root alone publishes the reviewed plan before source changes, and publishes each coherent source cut with immediate push/readback. No production compatibility claim, native PASS, upward merge or merge to main is authorized by an unexecuted oracle correction.
+
+## 64. Consume the checked checkpoint-compatible archive with every active proof pin
+
+This is a bounded refinement of §61's already reviewed normal dependency consumption. The exact P09 prefix is f323db47b161e04b78ef61db4e5239c35919a5cd. Source/native/packaged acceptance remains pending; a checked package does not replace any F gate.
+
+### First review — immutable input and current evidence
+
+D advanced from ce03c60d620bfc6152623597637971ca8c529469 to 68dca527b779ebb82923f30d7b08441085d8b579 by one inspected four-file commit. Its Codex projection permits the official nullable ChatGPT email while retaining the allowlist; unsupported humanCommand/future command kinds are declined before automatic approval because requiredHumanApproval is not negotiated. It preserves §61's original checkpoint-source contract, R28's native-cut preparation and the independently reviewed model-variant projection.
+
+The exact source/packed-consumer CI43479531998 passed. Its checked artifact14062879890 is184234 bytes, ZIP SHA256854f74916005deb7e5a9f23fed41a99605bfb5757c24c269c0b573ff4374d822. The downloaded receipt names this exact source; archive entries, size and digest were verified. Provider TGZ is177100 bytes, SHA25607241cca756e69aa6001df41d6a7408aad5d8ab4c8277f9d70f35d0d66736c73, integrity sha512-RdXbo97Amr2CMjqfe8HxzrB02WwwZqzGEWhixzgHqCEqTOdQ11CZ/vTW77SRCJGhbwXTZ5SuQzBnpJVEMX4baA==. Contracts TGZ is byte-identical to the existing canonical9ede pin, SHA256aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db.
+
+Native run43479531758 attempt1 has52 successful jobs and one macOS embedded-target-model job cancelled before any step. One standard failed-job retry on this unchanged head was requested; its outcome must be observed, not inferred. Previous ce03 native success is not assigned to68d. The checked artifact's own source-and-packed-consumer-only qualification and nativeHostQualified=false/packagedElectronQualified=false remain unchanged even if this separate native run later passes.
+
+### Second review — smallest coherent consumer edit
+
+| Existing F path / exact preimage | Change |
+| --- | --- |
+| packages/legacy-agent-host/package.json1442148b48a700eb00d7f3e7df429260f54665c5 | Point only provider-implementations at the new immutable checked TGZ. Keep SDK and contracts pins. |
+| pnpm-lock.yaml13d24c7b4c38f374ad299cb5e02e63b2e462b882 | Generate the matching file resolution/integrity with pinned pnpm11.22.0; reject unrelated dependency drift. |
+| packages/legacy-agent-host/tests/native-claude-host.native.ts09ee50328f1b6d8854f5e22719750fda51009cb6 | Replace only the current provider digest; genuine old donor pins, refusal and old-owner proof remain. |
+| packages/legacy-agent-host/tests/native-codex-team.native.ts1a01e2ad74be8006423960c1bc7099af9af93014 | Replace only the same current provider digest at the existing installed-archive check. Preserve §22.1 diagnostics, zero-unexpected assertion and finite candidate version/input/permission/cleanup proof. |
+| .github/workflows/ci.yml2f00c1be87037da32332ad42493c7130bb896dd5; qualification variant c4b33ea519f0f40c5527e34b644c290a8e209faa | Compose the separately reviewed §61 three-block ordinary Claude Resume wiring and update all five active current-provider digest literals plus both active archive paths. Keep old donor and contracts values, jobs/matrices/budgets and every existing assertion. |
+
+Create only vendor/provider-migration/claude-checkpoint-68dca527/agent-teams-provider-implementations-0.0.0.tgz, README.md, source-receipt.json and checked-artifact-receipt.json. Copy the exact official TGZ and receipt bytes; never rebuild/repack or patch installed output. Follow the existing source-receipt format, recording actual source/tree/check-job IDs, checked ZIP and TGZ identities and unchanged contracts location. Do not duplicate the byte-identical contracts package. Historical vendor directories/receipts and historical proof records stay immutable.
+
+The CI current-provider literal at654 and native Codex literal at151 were found by a complete active-source search; they are the same archive custody check, not new native operations. This appendix adds the one omitted Codex TEST path to §61's finite scope. Search again after composition to prove no active stale current pin remains, while preserving deliberate historical values.
+
+### Third review — installation and actual gates
+
+Install through the normal project package manager and original dependency policies. The existing readNativeProviderArtifact/verifyNativeProviderArtifact adapter must read the new owning manifest/receipt and compare every installed provider dist JavaScript file to its archive. No stale node_modules link, generated declaration substitution, widened protocol eligibility or hand-written lock integrity is acceptable.
+
+Run Host build/test types, canonical Main types, legacy Host script types, the existing critical runtime-team-host restoration case, relevant source/fixture tests, source-size guard and lint. Any real compiler mismatch in nullable metadata or the new private checkpoint declaration is investigated at its actual consumer; an additional source path requires an exact bounded follow-up before editing. Preserve the common parent and separately reviewed child source compositions. Source review is not test execution.
+
+Root records the exact dependency and native/check outcomes, commits and immediately pushes the reviewed working heads, and reads back refs/trees. Active live PR checks are allowed to finish before a new head; no cancellation, redundant full rerun, main merge, Stage2 activation or release. The ordinary old-Host ONE → physical Quit → current-Host cold Resume → TWO receipt and original cleanup remain the §61 acceptance gate.
+
+### §64.1. Generate the unchanged dependency's file record without resolving unrelated workspaces
+
+The normal full/scoped project lock-only resolver did not finish in the restored local environment: earlier processes were killed, and the bounded384MiB measurement explicitly ended with V8 heap exhaustion (peak resident590684KiB). The original lock13d24c7b4c38f374ad299cb5e02e63b2e462b882 remains unchanged. Do not repeat those same attempts or weaken repository install policies. D68's separate native run has now completed53/53 successfully on the exact head, including the one original never-started job's standard retry.
+
+The old3b39 and new68 checked TGZ package/package.json objects were compared in full and are identical, including name/version, dependencies, peers, optional dependencies, exports and engine metadata. Only the archive identity and existing file locator need to change in the owning lock. No dependency graph change is authorized by this refinement.
+
+Use pinned pnpm11.22.0 to generate the new file resolution in one temporary, private packed-consumer workspace outside the repository. Select the exact verified TGZ and existing canonical contracts archive; preserve the repository's release-age, peer, override and build policies for those dependencies. Normalize only fixture-relative file locators to the same actual checked files. Run the ordinary lock-only resolver offline with one worker; no package repack, patch, registry substitution or ignored security/build policy. The consumer is a dependency-resolution fixture, never native/Host/packaged acceptance.
+
+Read pnpm's generated file record and independently compare its integrity to SHA512 of the exact177100 TGZ bytes. Transfer only that generated integrity and the checked locator into the existing full lock: the five original3b39 path occurrences and one original integrity scalar. Preserve all transitive package/snapshot values and the existing supports-color peer identity byte-for-byte. Require exact old-lock SHA before editing; reversing only these declared scalar substitutions must recover the complete original lock. Any metadata, peer, dependency or additional lock change refuses this narrow operation and needs investigation.
+
+The full repository must then pass its ordinary frozen-lockfile install with all original policies/hooks, and the unchanged installed-provider/archive equality verifier. No partial node_modules execution or synthetic successful install receipt is permitted. This is a bounded pnpm-generated lock update for byte-identical dependency metadata; it does not waive compilation, meaningful tests or any native/Desktop gate. Root and an independent peer review the exact generated record and minimal lock diff before source publication.
+
+## 65. Preserve native 2.1.4 implicit integration identity during captured credential preparation
+
+This is a bounded P09/P05 catalog correction after the actual qualification591 Linux failure. The exact P09 prefix is 90c0cdf7ea7e4b8c10291913c0a4ab4eba475f50. Only the existing credential selector and one existing focused test file are in scope. It does not change P05 §16's private purpose, readiness protocol or source authorization.
+
+### First review — observed failure and exact source distinction
+
+Original job132057339187 on source5912c66f915b1feb9e78c7ec7c97e9d882788583 passed the existing embedded native lifecycle, then failed the first model-probe catalog assertion. Its retained R29 line reports unknownProbeCancelled=true, catalogAttempted=true, catalogCompleted=true, catalogPhase=first-call, catalogReply=held, modelRequests=3, cleanup=true, traceLimited=true, and metadataFailure={epoch:1,stage:credential,code:held,elapsedMs:8679,deadlineExpired:false,aborted:false}. The original log was read through the official job-log endpoint. This is an actual completed refusal with confirmed fixture cleanup, not evidence of a timeout or a still-running catalog RPC.
+
+The diagnostic records the outer credential stage, not the exact failing branch. Current/auth/config revocation and original process-custody loss can also raise held there. The following source defect therefore explains a supported failing input and is consistent with this run; the actual branch and native repair remain unqualified until the unchanged real gate executes. The prior successful/cancelled probes and unknown-variant cancellation are preserved as separate original outcomes. No failure is assigned to the cancellation merely because it preceded the catalog.
+
+Primary source is the official anomalyco/opencode tag v2.1.4, resolved through GitHub to commit68bc26b7da1990ce10ffecfbc1e09eb13aa5d824:
+
+| Exact primary path / blob | Relevant native behavior |
+| --- | --- |
+| packages/core/src/config/plugin/provider.ts / 21a1a87edb84544120c69b58ac5bbdf9188bc562, lines23–42 and54–76 | A configured provider gets a same-ID integration and a plain-key method if absent. The configured provider is enabled; this transform does not add integrationID to its provider row. |
+| packages/schema/src/provider.ts / 6306eb374d91b4c45768ed76cd3fbda33d2378d1 | integrationID is optional; Info.empty(id) omits it. |
+| packages/core/src/provider.ts / b4f88d649d1b8e34434b715fe05e61a4c754b52b, lines448–469 | Native availability resolves the integration using provider.integrationID ?? provider.id, then respects provider activation and original connections. |
+| packages/server/src/handlers/provider.ts / ab9c2201a5eea69a943b47cf871aec49ada22e14, lines12–15 | The public provider-list handler returns that native available-provider projection. |
+| packages/core/src/aisdk-native.ts / 9bbbbd66a463ece24411b61fda8579d76d99e15e, lines24–54 | The configured AI SDK package translation changes package/options/model fields; it does not manufacture an integrationID. |
+
+Primary links: https://github.com/anomalyco/opencode/blob/68bc26b7da1990ce10ffecfbc1e09eb13aa5d824/packages/core/src/config/plugin/provider.ts and https://github.com/anomalyco/opencode/blob/68bc26b7da1990ce10ffecfbc1e09eb13aa5d824/packages/core/src/provider.ts. F's original runtime.lock pins engine2.1.4; the official tag source explains its declared contract. This read is not a new measurement of the original runner's installed engine bytes.
+
+F OpenCodeV2SessionCredential.ts8a2a46db5175467a7e152bce2415f2a9f89ffd47 lines35–39 currently chooses catalog.provider ? catalog.provider.integrationId : same-ID-directory-integration. Thus a valid already-present configured provider without the optional explicit integrationId refuses, whereas an absent provider can use the original same-ID fallback. D's original native catalog projector preserves an absent integrationID as absent; it does not invent a relation. This defect is independent of any inference about when the original runner's native inventory became available.
+
+### Second review — minimal selector and retained authority
+
+Keep the original selected providerId, captured credential scope, catalog read and post-read current check. Retain a present native catalog.provider.integrationId as the selected explicit reference. Only when that explicit reference is absent, consult the same original owner's readDirectory and accept the entry whose native integration id exactly equals the original providerId. Preserve the existing held result when no such entry exists.
+
+Use the existing pinned D directory decoder: it already validates the original location, finite row bounds and unique native integration IDs. No name/description similarity, first-row selection, ambient provider, remembered connection or generated integration is admitted. A foreign-only directory, wrong location, duplicate native IDs or missing integration cannot authorize a key POST.
+
+An explicit native integration reference is never replaced by the implicit fallback after its own read/connect fails. A legitimate explicit integration ID may differ from providerId; the original native reference remains authoritative and the existing key client still checks that exact ID/location. A missing or foreign readback for that explicit reference remains a refusal; a same-ID directory entry must not rescue it. Preserve original error types rather than translating every native refusal into held.
+
+All subsequent operations are unchanged: captured.readKey, the existing same-account/source/config guards, the actual key client's empty-before/plain-key check, one original connect attempt and exact credential readback, disposal, final current check, and the memoized preparation Promise. No new transport option, permission, credential journal, publication, session, prompt, timer, polling loop or automatic retry is introduced. The fallback is a finite existing read route under the same native owner, custody checks, abort signal and absolute deadline. Metadata and model-probe callers share this correction; it does not bypass their original authority or start P05 §16B.
+
+### Exact two-file source scope
+
+| Existing F path / exact preimage | Planned change |
+| --- | --- |
+| packages/legacy-agent-host/src/adapters/providers/OpenCodeV2SessionCredential.ts / 8a2a46db5175467a7e152bce2415f2a9f89ffd47 | Select the explicit integrationId when present; otherwise use the existing exact same-ID directory fallback. Preserve every original check/await/dispose/once boundary. |
+| packages/legacy-agent-host/tests/opencode-v2-credential-scope.test.ts / 1e1ff69f27fb937eab506d8590c6368393d735e1 | Extend the existing credential publication/rollback case with the session-credential selector and actual pinned owned/key clients against a finite TEST loopback peer. Keep the existing source-file/foreign-key/rollback assertions. |
+
+Both preimages were reread at current working parent2249be257b28e1b3aaf7fdb5a1cc70fb7d115d13 and match the actual591 source. The TEST peer supplies only synthetic native envelopes and TEST keys; this is a protocol/selector regression, not a native-engine or authentication qualification. It does not replace the captured process/native gate.
+
+The existing case must distinguish: (1) present configured provider with omitted integrationId plus exact same-ID integration succeeds; (2) absent provider retains its prior exact fallback behavior; (3) a valid explicit native reference remains authoritative without a directory fallback; (4) missing and foreign-only implicit integrations refuse before any key POST; (5) a wrong-scope or wrong-ID explicit readback refuses without falling back to an available same-ID row. Retain exact original location/request accounting and one connect per accepted original preparation; repeated prepare calls return the original Promise and do not repeat reads or POST. The real original auth.json bytes remain unchanged by native preparation. Use normal client disposal and TEST listener cleanup, no module/global fetch monkeypatch or vendor/source rewrite.
+
+### Third review — checks and actual acceptance
+
+After plan publication, prepare only these two source candidates, obtain independent source review and send exact preimages/final blobs/readbacks to root. Root alone publishes/consumes the coherent dependency cut. The earlier D68 change does not repair this F selector and its successful checks are not transferred to this change.
+
+Run the existing credential-scope test file, Host build/test types, relevant fast lint and source-size/diff guards when the authorized setup slot and complete ordinary installation are available. If execution is unavailable, keep the candidate explicitly source-only and let ordinary candidate CI perform required checks; do not use partial node_modules or substitute declarations. Preserve prior install137 outcomes and original native failure.
+
+The next already-required existing opencode-v2-model-probe.native.ts gate must complete its original catalog/model/default/variant assertions, repeated metadata reads, model request accounting and physical cleanup with unchanged budgets and inputs. No new native experiment, job, matrix, cap increase or timeout is authorized here. Only that observed result can qualify the native catalog path; source review alone cannot identify the original held branch or mark frontend/Team readiness complete.
+
+## 66. Darwin 24H232: the POSIX suspended-image candidate remains unqualified
+
+At exact `6fbc3a4d752dc9c12f5269ecb7d830c03d3c78d5`, [run43494935668/job132125676456](https://github.com/777genius/agent-teams-ai/actions/runs/43494935668/job/132125676456) passed the existing Darwin original-owner custody scenario, captured Desktop descriptor check, and actual embedded OpenCode2.1.4 tools/MCP/approval/cold-resume journey. The later, separate TEST POSIX feasibility scenario failed at `registered-process-executable.native.ts:483`. Artifact14072139328 (`opencode-v2-embedded-native-darwin-arm64`, ZIP SHA256 `ed91290d687614a51b7c30da50c3e20beeb1125ded2ad989856280f292440bce`) retains both successful native receipts and `opencode-v2-posix-exec.json`; no result is relabelled.
+
+The POSIX receipt binds Darwin arm64 build24H232, Node24.21.0 and TEST actor source SHA256 `b6ecbe29bfbaa4542534244bb002de1828394cfcea676f27b44044745471fcdc` (C source blob `882c986d13920db54720b4672dd6cfc55e361aaf`). Original-path baseline ran A with its sibling asset and library. Rename and in-place replacement before the suspended-image check were refused before constructors. In both ad-hoc TEST after-check and writer-open cases, the retained original child was stopped before user instructions, audit/image identity and SHA matched A, and the subsequent write/ftruncate/fsync sequence returned0. After resume, markers were `LIB\nBIN:A\nMAIN:A\n`, exit0; original cleanup was confirmed. Script-negative ran B through the validated interpreter and remains an explicit counterexample. Overall POSIX status stays INCOMPLETE and all native/product/installed/custom/script qualification fields remain false.
+
+The established defect in this candidate is lack of continued byte stability between its last successful observation and resume. The recorded dynamic signing flags were `0x22000001`; a successful dynamic identity check is not write exclusion. Apple's [SecCodeCheckValidity documentation](https://developer.apple.com/documentation/security/seccodecheckvalidity(_:_:_:)) describes validation of dynamic identity and its host. [TN3126](https://developer.apple.com/documentation/technotes/tn3126-inside-code-signing-hashes) describes per-page validation on faults, and [Updating Mac Software](https://developer.apple.com/documentation/security/updating-mac-software) documents that same-inode writes do not flush the signature cache. These sources explain why instantaneous identity cannot establish a continuing exclusion guarantee; they do not prove the exact VM/cache mechanism behind this particular A execution. The existing receipt does not contain a post-mutation file hash or a second dynamic-status observation. Root read these three original Apple documents; pr_chain independently reviewed the original JSON and C source.
+
+No timeout, oracle, signing flags, entitlements, admission or executable-format policy changes are justified. Do not accept A's constructors after successful mutation, insert another last-moment hash as a purported atomic fix, or substitute a copied executable. Keep the current strict failure and unresolved qualification described in the earlier POSIX sections. Before any production integration, a new reviewed native candidate must demonstrate continuous exclusion of both preopened and later same-inode writers from its final image check through resume, while preserving original path/resources, custody, supported wrappers and script semantics. No such Darwin primitive has been established within the existing ordinary-user constraints. This evidence is not a universal impossibility proof. The existing product-journey PASS remains separate from this failed broader feasibility claim.
+
+## 67. Keep each original provider authority check inside one original Team lock
+
+### Observed cost and approved scope
+
+Original6fbc native CPU evidence on Windows and macOS attributes substantial synchronous time to the Team namespace-fence family. That category includes both recursive namespace validation and the controller lock protocol; it does not identify their individual costs. A successful current-authority path previously entered four separate outer Team fences. The Linux CI native journey also passed with measurable time in that same family. These observations do not explain the local credentials late-cleanup failure: that fixture has `teams: []` and does not use Team authority.
+
+The reviewed change shares only the original synchronous Team lock. Reject a changed Team object first; then validate the original writer lease before publishing any lock in its namespace. Enter the captured Team owner's existing read-authority callback, execute every original roster/dispatch/admission/control check, and return before any await. Existing nested namespace/record checks and the repeated writer check remain. The production factory explicitly receives the original writer check. Direct legacy compositions without that capability retain their old independent-fence path. There is no permission/state/namespace cache, executable hash cache, new authority store, timeout increase, or new Runtime lookup inside the currentness guard.
+
+### Constituent evidence and merged qualification
+
+On isolated6fbc plus the exact reviewed four files, TS7.0.2 Host build and focused test types passed. Six existing suites passed40/40 with zero skips: original authority, namespace/record fencing, writer recovery, controlled member actions and original Host close. The new real-filesystem regression observes one original lock publication per successful check, a fresh check after await, persisted grant revocation, replaced-root refusal before lock writes, and changed-Team refusal before callbacks. The original logs/receipt are `TEST-authority-isolated-{build,critical-tests,types-colocated}.log` and `TEST-authority-isolated-receipt.json`. The initial out-of-package types configuration failed Node type lookup; the colocated configuration extending the original test project passed. No source change was needed for that setup correction.
+
+The new e29 base also changes Team runtime-selection/checkpoint readers. Its merge retains the new `createClaudeCheckpointSource` factory wiring while adding only the reviewed writer option and pass-through. Therefore the constituent40-pass result is not substituted for merged-head qualification: rerun the existing authority/namespace and runtime-team restore suites against the merged Host. Native wall-time improvement, latest-head Desktop controls and platform cleanup remain separate acceptance gates.
+
+## 68. Retain original credential diagnostics across all four Host lifetimes
+
+The exact6fbc Linux CI credential journey passed all business assertions and four original Host exits with cleanup:true. A local exact6fbc run passed the wrong-key/correction/saved-key assertions and retained the later held intent, but its third original Host exited1 during EOF cleanup. Both original receipts used one shared257-row capture, which filled in epoch2 and omitted the late failure. No specific read-cut or disposal cause can be inferred from those missing rows; preserve the successful CI and incomplete local outcomes separately.
+
+Each of the same four literal original start calls now retains its own unchanged bounded diagnostic collector and immutable epoch callback. The existing receipt field flattens those four original collections after cleanup. With the merged base helper, each collector remains bounded by257 sanitized rows and64KiB; the complete four-Host trace remains bounded. Partial stderr from one closed Host cannot join the next Host's capture. No native requests, deadline, process lifetime, assertions, cleanup behavior, provider implementation or diagnostic getter is changed. Independent source review and pinned Node syntax check passed; the next actual native credential run must supply the missing third-epoch evidence.

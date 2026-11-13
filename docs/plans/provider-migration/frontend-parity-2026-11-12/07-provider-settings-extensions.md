@@ -2074,3 +2074,183 @@ Keep existing matrix, per-gate budgets, model counts, original child/capture
 identities, permission/interrupt/checkpoint/cleanup and failure assertions.
 Source review and controlled concurrency do not establish native success;
 current actual failures remain until coherent-head execution supplies proof.
+
+
+## Review 29 — original Linux metadata-catalog failure, with a reserved closed observation
+
+### R1 — exact failures and the separate owner boundary
+
+The original Linux model-probe case fails at its first management.catalog,
+opencode-v2-model-probe.native.ts:360, after the unknown-variant probe has
+already returned cancelled at line356. This is present in three immutable
+original logs: parity7ce job131936500382 (blob
+0f68d6a4961c407372dee03e83cdf5ddf8472788; case58552.848932ms),
+qualification62f job131938757997 (blob
+c2a13ffb49a1296bf8c86229780a29fb239d93d1; case59282.964454ms),
+and native12d job131994517305 (blob
+559cbfa1d7ee0e64beb6ba4d59df43347946921b; case80750.115391ms).
+Each log exposes only the original closed reply {"ok":false,"code":"held"}.
+Those case durations are not measurements of the catalog call. The private
+model-probe receipt members have not been extracted; do not infer their
+contents, a timeout, CPU pressure, activation failure or a decoder defect.
+
+ModelProbeOwner ae3912d6a4f3a3a46f0bb8a12e11e72334b90519:142-156,
+236-277 retains the original probe close/fence result. The completed cancel
+is consistent with a released probe resource; an uncertain native close
+would retain resourceHeld. ProviderManagementCoordinator
+8d2d656cc043d135fef925698363c4ec48e2eb48:578-665 serializes catalog calls
+through its separate v2CatalogReads and v2Hosts, with a new metadata owner
+and catalog namespaces. It does not reuse the probe object or reserve its
+ModelProbeOwner resource. Its original 30000ms catalog deadline is captured
+before the metadata queue; the probe's separate60000ms does not transfer.
+
+OpenCodeV2ManagementHost c25ee725dab4cda3f151a79c4d489a89e530330a
+starts that original metadata child, then reads identity, plugins, saved
+permissions, MCP, optional credential preparation and full directory.
+The full directory reads provider/model/default/integration and validates
+every returned projected row. Selected-model probe admission validates
+its selected provider/model; these are different paths. The outer methods
+adapter708d880bb9be0dcaae978b97b0686b548b7873a3 translates otherwise
+unclassified errors to held. A successful previous probe cannot identify
+the failing metadata stage.
+
+Official upstream is independently located from opencode.ai's repository
+link and the v2.1.4 tag, commit68bc26b7da1990ce10ffecfbc1e09eb13aa5d824:
+[provider available snapshot](https://github.com/anomalyco/opencode/blob/68bc26b7da1990ce10ffecfbc1e09eb13aa5d824/packages/core/src/provider.ts)
+uses integration connections and activation;
+[model handlers](https://github.com/anomalyco/opencode/blob/68bc26b7da1990ce10ffecfbc1e09eb13aa5d824/packages/server/src/handlers/model.ts)
+wait for activation through the existing server helper;
+[integration handler](https://github.com/anomalyco/opencode/blob/68bc26b7da1990ce10ffecfbc1e09eb13aa5d824/packages/server/src/handlers/integration.ts)
+also waits for activation.
+Their blobs are b4f88d649d1b8e34434b715fe05e61a4c754b52b,
+5af4334c68aa4079b50a21e54c3b5c99fb2742e7 and
+dfdbaa447620a9af7ceac9cd7ca962bbe8d2dda9.
+Canonical runtime sourcef5c69c2e9024ffc36a5db5eafe30f53539b52f62,
+bun.lock5a27e40bf9d146a1bd7f8a68d454ad9868b7a2a0 pins
+@opencode/server@2.1.4 and its @opencode/core@2.1.4 dependency.
+This locates exact upstream semantics; it is not an asserted byte comparison
+with the shipped compiled chunks, or proof that any activation wait caused
+the three failures. F still consumes checked D3b39/f251; D4b005's green jobs
+do not qualify this unchanged F metadata path.
+
+### R2 — exact four-file candidate; no changed control or native behavior
+
+Use these verified preimages from current parent1160b575c4e43db045ab8726fd16d27bd611196a:
+- packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts
+  c25ee725dab4cda3f151a79c4d489a89e530330a;
+- packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts
+  c905cddbdebfa1aed8fe963279383515a32fe6b3;
+- packages/legacy-agent-host/tests/native-host-close.test.ts
+  15bd06999447025ae99b18731f6ea921aaccbeb6;
+- packages/legacy-agent-host/tests/opencode-v2-model-probe.native.ts
+  7ff5ff738424370cc6699b2dc7127609fc2a345d.
+
+Instrument only the existing metadata read. A fixed private diagnostics_channel
+agent-teams:opencode-v2:metadata-read-failed emits at most once per failed
+read, with stage, reason, elapsedMs, deadlineExpired and aborted. No successful
+read or ordinary empty-inventory activation-loop iteration emits this event.
+The original per-read diagnostic start is monotonic; deadlineExpired compares
+the same caller absolute deadline already passed to read, and aborted records
+the original read signal. Before that signal exists, aborted is null (unknown),
+never an invented false; after creation it is the original boolean. Reason is
+not inferred from those flags. Neither a diagnostic timestamp nor the schema's
+existing timeout range creates a new operational deadline.
+
+The finite stages are admission, native-client, identity, plugins,
+permissions, mcp, credential, directory, activation-wait, current,
+projection, dispose and result-current. native-client includes original
+startup/first retained-client establishment; it does not claim a particular
+internal startup substage. Preserve exact evaluation and short-circuit order
+when separating the existing combined read-only guard into stage-marked
+expressions. All provider/custody/configuration checks, 50ms activation wait,
+serial directory calls, model counts, no-tool config, readonly selected
+endpoint refusal and every cleanup action remain unchanged.
+
+Capture the first original failure at its lexical stage before dispose,
+self-abort or outer error translation. Preserve its original object for
+rethrow and the existing failed/failure precedence. A dispose failure may
+be the first diagnostic failure only if no earlier read failed; it cannot
+replace an earlier reason/stage. Existing cleanupUnknown, tracked pending
+retirement, close and directory removal continue unchanged. nativeClient
+failure and the final current check also receive their original lexical
+stage without moving the native await or changing the cleanup path.
+The observer must be nonthrowing and cannot determine the public result.
+
+Reason is an allowlisted own data-property code only: held, conflict,
+invalid, busy, deadline, cleanup_unknown, transport_failure,
+authority_mismatch, disposed, http_failure, media_type, body_limit,
+frame_limit, invalid_response, invalid_native_catalog,
+native_catalog_binding_mismatch, capabilities_pending, unqualified_version,
+ABORT_ERR, or unknown. At most one already-known ClientError/Transport
+wrapper may be inspected through own data descriptors for its original
+cause code; no generic cause traversal. Do not read arbitrary getters,
+error.message, stack, argv, environment, paths, endpoint, credentials,
+request IDs, profile/provider/model IDs, response fields or raw bodies.
+Elapsed is a finite nonnegative integer under the existing3600000ms
+diagnostic time-field bound; this changes no timeout or wait.
+The event is frozen and the fixed projection is checked again by the TEST
+subscriber and again at the receipt boundary.
+
+### R3 — reserve a terminal slot and bytes within the existing capture bounds
+
+The existing generic trace has256 event slots and one trace-limit marker.
+Reserve one of those256 slots for the first valid metadata-read-failed in
+each original Host observer. There remain at most255 ordinary events,
+one metadata failure and the same single trace-limit marker: total<=257,
+never a reset, second collector, new process or additional subscription
+epoch. Invalid records do not consume the terminal reservation; subsequent
+valid metadata failures in that Host cannot replace the first. The existing
+parent capture spans Host epochs1/2: its count, aggregate bytes and one terminal
+reservation remain global to that same capture, retain the first valid terminal
+overall, and never reset or allocate another terminal slot on epoch change.
+
+The current64KiB check is a raw pending+incoming-chunk guard, not an aggregate
+emitted-byte ledger. State this accurately. Add bounded closed-trace byte
+accounting at the existing producer and receipt collection: ordinary lines
+must leave space for both the maximum512-byte closed terminal line plus LF
+and the same maximum512-byte trace-limit line plus LF, inside64KiB.
+Reserve at most2x513 bytes; do not increase the original512 line limit,
+64KiB raw buffering guard, request4096 or child5 bounds. The source deliberately
+trades at most one ordinary event and the necessary finite byte space for
+the late terminal observation. The first valid terminal event remains
+eligible after ordinary count/byte saturation. Overflow or foreign raw
+stderr that trips the existing raw guard still yields missing/unknown
+diagnostics, never a claimed cause or success.
+
+Extend the existing original model-probe failure path to publish one small,
+closed TEST_NATIVE_V2_CATALOG_FAILURE line after its existing cleanup.
+Use only the original catalog reply/phase, original captured passive event,
+sourceHead, fixed booleans/counts and cleanup result. In particular expose
+whether the first catalog call was attempted/completed, the already-confirmed
+unknown-probe cancel, and whether the trace was limited. Do not print the
+whole receipt, original exception or raw diagnostic object.
+No additional RPC, native read, retry, input, IO read, awaited write or timer
+is introduced. The existing receipt file remains complete; all original
+success assertions and original failure/cleanup exception order remain.
+A missing event is explicitly unknown and may mean failure before read,
+raw capture overflow or unavailable diagnostics.
+
+### R4 — same existing critical coverage and honest acceptance
+
+Extend the sole existing synthetic failed-Node-child case, preserving its
+original exit1, CPU read/discard, R26 request-object joins and R28 cut event.
+Publish a valid metadata failure only after the ordinary trace has saturated;
+verify it survives exactly once without allowing a second failure to replace
+it and without exceeding the total event/line/byte limits. Use the existing
+in-memory receipt checks to exercise byte pressure as well as slot pressure.
+A malformed stage/reason/flag/elapsed or own accessor is refused (the sole
+null flag is pre-signal aborted); getters
+are never invoked, and injected raw token/path/stack never reaches the
+closed event or assertion output. Compare only the safe projection or a
+boolean contract assertion, never an untrusted raw object.
+
+This controlled test proves diagnostic identity, cap and privacy behavior,
+not actual native failure stage. Required Host build, existing native-host-close
+case, affected canonical types/lint and source-size checks run when execution
+is available, or in the ordinary candidate CI before final acceptance.
+There is no new suite, job, matrix, execution retry, timer/cap increase,
+provider pin, permission policy, native launch owner or product eligibility.
+Only root publishes after root and independent source review.
+The next ordinary original native run may distinguish deadline, invalid
+catalog, ownership/current refusal or transport/cleanup. No cause is claimed
+until that new observation actually exists; current Linux failures remain.

@@ -1780,6 +1780,8 @@ Also join the already-required selected source index and its exact published man
 The seven-file journey, four business inputs, 32 model-request cap, original physical cleanup/cold boundaries, default extraction and the declared CI recipe remain unchanged. Only the TEST observation helper and this one transitive inventory line change after publication of this clarification. Independent source review and the normal candidate-head compiler/native gates remain required; no execution PASS is transferred to the revised bytes.
 
 
+**Concurrent audit provenance (2026-11-13):** The appendices below retain the independently published additions from `f0d275e6ee8ed5072ec393a9c714f4b8f519e8c8` and base `e29dbde300ea73ec4e46e5f57f9e007ca5473552`. Their original section numbers, titles, source references and qualification limits are preserved; repeated numbers refer to the distinct titled audits, not to a replacement or a combined acceptance result.
+
 ## 23. Codex installer → exact captured source, with permitted protocol emulation (2026-11-13)
 
 ### R1 — concrete remaining functionality and exact source comparison
@@ -1846,3 +1848,326 @@ Observed local verification uses the pinned Node 24.21.0 and checked D archive. 
 The suite counts describe successive affected-source checks and are not summed as distinct cases. Original logs are retained beside the checkout (`integration-codex-0169-host.log`, `integration-codex-0169-main-host.log`, `integration-codex-installer-consumers.log`, `integration-codex-source-final.log`, `integration-codex-ipc-source-final.log`, `integration-codex-focused-typecheck.log`). Source changes are frozen for coordinator publication after these checks.
 
 Windows scoped source execution is a separate concrete remaining seam: `RuntimeSourceNativeVersion` and later source-selected launches need the original Main port plus an independently verified source admission. P08 §15 owns that work and its real Windows Node/C++ fixture receipts. This POSIX/emulated acceptance does not claim those Windows paths or paid-vendor execution passed. The supported-wrapper source capture is preserved so the P08 owner can connect the existing launcher without changing installer or profile authority.
+
+### §22.1 — original metadata callback evidence for the actual 0.169.0 candidate refusal
+
+**Status: PLAN ONLY / source 0.** This amendment leaves §23 reserved for the
+separate OpenCode V2 installation/selection work. It does not change Codex
+eligibility, the checked D artifact, provider configuration, the original
+candidate acceptance assertions, or any native invocation.
+
+**Observed failure.** On original F head
+`1160b575c4e43db045ab8726fd16d27bd611196a`,
+ordinary job `132024091308`, step 19
+completed the original initialize, model/list and config/read awaits, then
+`readCandidateCatalog` line 236 failed `2 !== 0` in the `unexpected` callback
+count. The original subtest took 878.113459 ms. Immutable original job log:
+F blob `aca5e82f3db016d24313f0e70e46dabf226d3b22`. The log shows no separate
+cleanup error in the AggregateError, but that alone is not a cleanup receipt.
+Artifact 14059882436 has ZIP SHA-256
+`567a2ff2695cc859d3259646f9d89d8828b97c13152a4cceda11bf569f27f764`;
+its member contents have not been read. No repeat run is authorized by this
+amendment.
+
+**Exact contract finding; no invented identities.** In consumed D
+`3b39a50b28319a3e91e0779493f0d64acb98d2e5`,
+[app-server.ts 223–242](https://github.com/agent-teams-ai/old-provider-implementations/blob/3b39a50b28319a3e91e0779493f0d64acb98d2e5/packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/app-server.ts#L223)
+(blob `612a2b847a4aab640819c5e4d40632e1af98e53f`) forwards unbound native
+notifications through `onEvent` as `unsupported_raw_event`, with optional
+thread/turn identity; only the separate account-login completion has its own
+private path. The callback therefore is not a conversation-only contract.
+The public event union is
+`session-types.ts` `58062e883ef8dca93687608b2cb661cf6961b0fd` +
+`contracts/codex-events.ts` `52c7dca32ecb7a86927e728811b3c608cf0e547d`.
+
+Official `openai/codex` tag `rust-v0.169.0` resolves through tag object
+`a41fe5b443652cbdbee57717fbb9fd78d8d8b32a` to commit
+`d32063f96c2dff1dc96af839b3952abb6acfeda4`.
+Its [app-server/lib.rs 1286–1310](https://github.com/openai/codex/blob/d32063f96c2dff1dc96af839b3952abb6acfeda4/codex-rs/app-server/src/lib.rs#L1286)
+(blob `7a2892b5984f815b1aaab59e584364b82f66e755`) sends
+`remoteControl/status/changed` on successful connection initialization after
+configuration warnings; the candidate's original initialize has no notification
+opt-out. [startup_warnings.rs](https://github.com/openai/codex/blob/d32063f96c2dff1dc96af839b3952abb6acfeda4/codex-rs/app-server/src/startup_warnings.rs)
+(blob `b2eec2f6b2b4d9c8865da4eac69b6db6bf754127`) sends `configWarning`
+and supports separate background `warning` notifications. These source facts
+disprove a general zero-callback metadata assumption. They do **not** identify
+both callbacks in this actual run or prove that an unknown notification is
+benign.
+
+The F callback currently increments a number and discards the event.
+The existing wire inspector also does not retain unsolicited notifications;
+candidate receipts retain outbound methods, approvals and selected replies,
+not those incoming event identities. More artifact readback cannot be assumed
+to reconstruct information this source never stored.
+
+**Smallest observation, same two existing TEST files.**
+
+| Existing path | Exact preimage on working parent 3c77393 | Planned delta |
+|---|---|---|
+| `packages/legacy-agent-host/tests/fixtures/native-codex-team/driver.ts` | `49b868c3275422887dc03e9b910ac54a326bdf03` | Retain a closed bounded projection from the original metadata `onEvent`, plus the original lexical metadata stage and completed-await flags; expose only a frozen snapshot to the existing receipt owner. |
+| `packages/legacy-agent-host/tests/native-codex-team.native.ts` | `3e9677bd30d74967763358a871ff482baf44b639` | Add that snapshot to the existing candidate receipt and one bounded failure-only summary after the original cleanup and successful receipt write. |
+
+1. Install the observation before the original client is initialized. Keep
+   `unexpected += 1` and the existing `assert.equal(unexpected, 0)` unchanged.
+   The original initialize/list/config calls, their order, deadlines, failure
+   propagation, permission refusal, client.close and original child cleanup
+   remain byte-semantically unchanged. No new wire read, RPC, listener, signal,
+   timer, retry or process is introduced.
+2. Retain at most eight rows. Each row contains only the original lexical
+   stage (`initialize`, `model-list`, `config-read`, `assertions`, `closing`
+   or `closed`), the closed D normalized event type (all declared union
+   literals, otherwise `other`), a closed native method classification, and
+   two booleans for a valid nonempty original threadId/turnId being present.
+   No actual ID, native payload, command, argument, error/warning text, path,
+   endpoint, account or token is copied.
+3. The native method projection accepts only explicit fixed literals
+   `remoteControl/status/changed`, `configWarning`, `warning`,
+   `deprecationNotice`, `account/updated`, `account/rateLimits/updated`,
+   `mcpServer/startupStatus/updated`, `thread/started`, `turn/started`,
+   `turn/completed`, `item/started`, `item/completed`. Unknown values become
+   `other`; a normalized event without rawType uses `not-exposed`.
+   No string-prefix fallback or arbitrary method/error string is retained.
+   Own data descriptors prevent getters from becoming observation effects.
+4. Keep a separate saturating observed-count projection (0…9, where 9 means
+   at least nine) and an overflow flag; this never replaces or changes the
+   original assertion counter. Set each completed-await flag immediately
+   after that original await returns, before a later assertion can fail.
+   An incomplete/invalid diagnostic remains unknown and cannot change the
+   original test result.
+5. The native receipt reads the original metadata driver's snapshot, without
+   selecting another driver/process. The failure-only console line performs
+   a second closed projection and is at most 2048 UTF-8 bytes including LF.
+   Emit only after original cleanup and successful original receipt write;
+   keep original first failure, cleanup errors and their AggregateError order.
+   A diagnostic failure/overflow cannot throw in place of that original error.
+   Existing candidate success and default 0.162.0 paths gain no admission rule.
+6. A subsequent acceptance-rule correction requires the actual closed event
+   evidence and another reviewed plan. This cut neither ignores the observed
+   two events nor declares them configuration-only, and it cannot produce a
+   candidate PASS while the original zero assertion fails.
+
+**Review and validation.** Independently review the exact source delta for
+finite keys/enums, untouched count-zero oracle, no raw assertion dumps, and
+original cleanup/error ordering. Check existing Host TEST/tool type projects,
+targeted lint/source-size gates and the unchanged ordinary CI lane on the
+coherent candidate head. No new suite/job/matrix or timeout increase is needed
+for this passive two-file observation. Executor unavailability means no local
+execution claim; source-only publication is not test, native, permission,
+checkpoint, Stop or consumer-eligibility qualification.
+
+
+## 23. OpenCode V2: first Install, stock CLI update and healthy support Repair through the original UI
+
+**Status and authority.** Plan only; no production or TEST source has been changed for this section. The exact full preimage is P06 blob `922fda585a5d70c6b0c088a2b9e2969d843a92fc` (including §22.1). This closes the V2 install/source-selection part left explicit in §21. It does not qualify the Codex §22 candidate, POSIX execute-image race, or an unexecuted Desktop journey. Root remains the publisher. The intended first actual tuple is the existing Linux x64 source-selection Desktop lane, not a new runner, job or matrix.
+
+### 23.1. Observed old/current boundary and the smallest product change
+
+1. At the old frontend `4a0e06277fe216d9f82dbbede362668fe46622ee`, `src/main/ipc/openCodeRuntime.ts` blob `07bd3a4f5437ddbfc0cbbe1fe07c4f14f1c0590b` used the stock installer status. The old stock service blob `2c1c873c1198c515a03fe129374100121cc13e22` discovered override/app-managed/PATH CLI, ran its owned version check and projected optional support. A genuine PATH V2 CLI without support therefore exposed the existing Support Install action.
+2. Current `openCodeRuntime.ts` blob `d1acd9627413a871a2e20d1d2dd1f41e12fdfc12` first reads the selected Host status; only explicit native V1 null uses the stock source. `CapturedRuntimeProviderStatusClient.ts` blob `c48ffaedfe8328f31907eb470a87b6b03377423a`, 176–224, correctly reports a captured V2 engine even without an installed selecting CLI. In that case it has no `compatibleV2Version`, while the existing UI blob `77373e9c0e6ff3729acc4449c3fa9ff85467dd22`, 31–36, requires that field. The UI is byte-identical to the old component. Thus a captured CLI-less V2 engine can be usable while the ordinary PATH-A Support Install control is unreachable. Refresh is not a bootstrap substitute: current `CapturedOpenCodeRuntimeInstaller` requires a fully captured support installation before publishing its native selection.
+3. Do not replace the captured result with a stock status. In particular, `openCodeDashboardCatalogPolicy.ts` blob `3bbd44568d53de624570a447376144afa4d2ec6c`, 17, rejects top-level `v2Support:'required'`. Such replacement would hide a valid selected engine and violate §21's original-source rule.
+4. Limit production edits to three existing files: the shared runtime status DTO, the original IPC status composition and the existing V2 Install/Repair component. Add one optional, closed **display-only maintenance projection** to `OpenCodeRuntimeStatus`: a missing-CLI case with the exact compatible engine version, or an installed-CLI case with its CLI version, that same engine version and `support:'required'|'ready'`. The field is `v2Maintenance?: {kind:'missing'; engineVersion:string} | {kind:'installed'; cliVersion:string; engineVersion:string; support:'required'|'ready'}`. No path, descriptor grant, publication command, native permission or launch flag is added to this projection. The original top-level `installed/state/version/engineVersion/sourceRevision/v2Support` result remains unchanged.
+5. This field is an observation for the existing maintenance controls. Model/catalog, launch, Runtime admission, profile/schema eligibility and source publication do not consume it. Existing preload return plumbing and the renderer store already retain the whole typed status; they do not need a new IPC or store action. The unselected/explicit-V1 branches and the old default fresh V1 button remain unchanged.
+
+### 23.2. Original source-fenced maintenance discovery
+
+1. Keep the existing sender/foreground capture and `native.readOpenCodeRuntimeStatus()` first. Its missing evidence, thrown failure or changed context is still an IPC refusal; no stock success may replace it. Older adapters without the original engine/source-revision fields return their existing result without new maintenance claims.
+2. For a successful selected V2 result with its exact engine/revision, capture the existing private `CapturedRuntimeSources` from that same IPC sender. Read its current summary after the native read, because the existing native target capture may publish its first configuration. Require the returned revision to equal the native status revision and the same V2 engine. A real replacement/mismatched original summary refuses the request. A published CLI needs no extra bootstrap projection. No compatible original V2/configuration evidence means no maintenance observation, not a new source or fallback execution.
+3. Before stock discovery retain the full validated summary: sourceId, revision, profileId, configRevision, sourceKind, nativeGeneration, absence of cliVersion, engineVersion, configurationCurrent and preferencesDigest. Eligible bootstrap evidence requires the original V2 configuration to be current and the exact engine to be qualified for the current platform by the existing pinned compatibility helper.
+4. Call the existing stock `getReadinessStatus()` once. It resolves only installed readiness and does not wait for optional latest-registry metadata. It retains the existing override/app-managed/PATH priority, version cache, time limits and support-status checks. The stock version probe is `probeOpenCodeBinaryVersionCached` → `execCli(binary,['--version'])`; `openCodeVersionDiagnostics.ts` blob `b27f70c0492bcdc3e2646ea335d98f6ef58faaec` and `childProcess.ts` blob `7c01a042f49cc89c430b1d657c66acd59f0b76b7` retain the original ChildProcess/group/birth and existing timeout cleanup. This section adds no ambient launcher, shell command, version timeout or native ownership claim.
+5. After that await, including an optional discovery failure, read the same private source summary and check the original foreground again **outside the discovery catch**. Compare all retained original fields, never replace expectedRevision with a later one. Source/target/grant refusal is not an optional-registry/discovery failure. A concurrent publication or configuration/selection change must not return a maintenance result associated with the earlier engine.
+6. Only an actual stock `installed:false, source:'missing', state:'idle'` can produce the missing-CLI projection. A failed version check, broken override, unsupported/foreign generation or uncertain result cannot become “missing.” Only an actual installed V2 CLI whose existing pinned engine mapping and stock compatible engine both equal the original captured engine can produce the installed projection. A genuine missing-support status is allowed as `support:'required'` but its top-level idle/error state is not copied. A discovery exception or unqualified result leaves the successful captured engine result without maintenance fields.
+7. This read does not call publish/recover/refreshConfiguration/install. Its extra source reads use the existing original private port and original foreground checks. It does not select a PID, start a provider conversation or mutate a grant. The current version-only stock probe remains independently owned and bounded. The unresolved POSIX validate-path-to-spawn limitation from P09 is not solved or hidden here.
+8. Explicit Install still runs the current `CapturedOpenCodeRuntimeInstaller` (blob `35e58d04cbe1368a282a17d73876eb0a5ebb7625`) through composition `3c56cfb8c7074e1f6b31c9a7b29f008acda10155`. `captureOpenCodeNativeSelection.ts` blob `8a8e739cc6f99c01291e47412c96b73eeb5d5acf` captures the actual CLI and full support. Host `RuntimeSourceNativeVersion.ts` blob `0ec09130bf10bca87b64a13efc4aab5494b13d30` performs original native version/cleanup proof, and `RuntimeSourceIndex.ts` blob `397850fec1e4e25a24c29f77f10d357134609688` publishes the original bounded intent. None is changed by this section.
+
+### 23.3. Existing controls, fresh download and Repair meaning
+
+- A selected captured V2 engine with genuine stock-missing maintenance evidence exposes the existing V2 install button with `{generation:'v2'}`. This is the real first CLI download plus support acquisition. An unselected fresh frontend still shows its existing V1 default; this change does not promote a V1→V2 major migration.
+- A selected CLI-less V2 engine with genuine PATH A and missing support exposes the existing Support Install with exactly `{generation:'v2',supportOnly:true}`. Existing confirmation/action/store/source-publication paths remain authoritative. No preparatory support installation or direct source write in the TEST may substitute for this UI action.
+- After A/B is published, the existing captured CLI status/update metadata route continues to supply Update and the ordinary Support Repair dialog. The maintenance extension does not invent latest metadata or convert the engine's 2.1.4 label into CLI 2.0.21/2.3.0.
+- Healthy Repair confirms the existing dialog and executes the same support-only action. `OpenCodeV2SupportInstaller.ts` blob `7d62e5206b9a4cd726048cc05619f60df1caa2c8`, 174–176, first fully verifies the installed closure and returns it if healthy. It must not force a fresh instance. New immutable support installation remains the existing absent/corrupt route; no active closure is corrupted, removed or rewritten by the TEST.
+- The current disposable `lastSelection` cache reuses the original B publication only for exact same sourceId/current revision/full nativeSelection and original lookup receipt. The planned same-Main healthy Repair case must prove those equalities and the same B command/record; this is not a cross-cold dedup promise. The default failure/recovery behavior stays unchanged.
+- Because Ready B already exists before Repair, it is not completion evidence. Use the existing read-only renderer store's original install scope revision/loading state, original dialog disappearance and original current-source/support readback to observe completion of the one confirmation. No store setter, action monkeypatch, test callback in production or additional install request is introduced.
+
+### 23.4. Exact candidate inputs and original source records
+
+1. Use the already approved V2 selector pair from §21: genuine selecting CLI A `@opencode/cli@2.0.21`, stock latest candidate B `@opencode/cli@2.3.0`; engine stays `2.1.4`, Linux Bun stays `1.3.11`. Published registry metadata observed in blob `b69eb6b4243809e4964758b0275c86de484ac03a` distinguishes those CLI packages and their platform optional dependencies. That metadata is not native acceptance. Do not relabel an engine or V1 executable as the CLI candidate.
+2. Extend only the existing TEST input preparer and its bundled original stock selector adapter. The adapter's source inventory/build digest remains checked against the original source head. Add a finite V2 call shape beside the current V1 one, with exact qualified engine 2.1.4 and the existing Linux platform package. Do not introduce a generic semver/framework or modify product selection.
+3. Ordinary pinned package acquisition retains exact root/native package manifests, frozen package-lock integrity, native executable hashes and before/after bytes. Stage an independent exact B reference package for executable/hash comparison; the product UI must still perform its own stock B download and verification. No copied staged B or synthetic registry response may satisfy product acquisition.
+4. Resolve the actual stock candidate using the original selector and existing public metadata bounds: at most eight metadata reads, original 15-second read bound and 16 MiB cap. Expect exact B 2.3.0; different latest/tuple/layout is an explicit failed prerequisite, not silently repinned or treated as equivalent. Record actual native package integrity, tarball, manifest and executable hash before the UI test. Those native values are not yet claimed known by this plan.
+5. Reuse existing `prepare-opencode-v2-native.ts` delivery/Bun staging and `prepareDesktopOpenCodeV2Recipe` / `desktopOpenCodeV2ManagementProfile` for the captured initial engine, before first Team owner. The first engine is a verified actual graph, not an installed CLI/support receipt. In each fresh app namespace the app-managed CLI/support installation is absent until its genuine Install action. Preserve the normal private profile/descriptor freeze. Preserve the existing source-selection option, not the separate top-level `nativeOpenCodeV2` flag: `desktop-backend-fixture.ts` blob `c041f8662b8bd5db1665563edb76f5773fe4cb45`, 636–646, emits only `[null]` management scope for source selection. Before start assert exactly one original management descriptor entry with projectPath:null and the fixed source-management profile/config; do not add a project grant. The helper's internal V2 recipe reuse therefore does not create a fourth metadata scope.
+6. The same localhost model/original four business markers remain. Only the finite V2 recipe changes its original provider base URL to the existing `/host/v1` route before the first owner. The model, permission policy, request cap and four input identities do not gain a new response/retry mode.
+7. V2's ordinary first metadata capture calls `refreshCapturedRuntimeConfiguration` (blob `6af55c63ae61637f3cf15274a4ab4f23c15894aa`). With the fresh V2 recipe this legitimately publishes one original `intent:'configuration'` record before CLI installation. Verify that exact original configuration record/receipt, original grant, pinned Bun and absence of nativeCli. Do not transplant V1's empty-index assumption. Then require exactly one additional full CLI publication for Install A/B, with the correct previous revision, published command, native version, full original candidate and resourceHeld=false. The prior configuration/CLI records remain byte-identical; no arbitrary extra publications are accepted.
+8. A native V2 selection binds the selecting CLI separately from the executor: `candidate.nativeCli` must match actual installed A/B, while `candidate.executable` remains the original Bun and `candidate.embedded` is the actual full installed support 2.1.4. Existing Host capturePublication 299–318 preserves the original Bun and configuration while accepting the exact support/CLI selection. Record these independently.
+
+### 23.5. Two genuine UI namespaces in the existing bounded lane
+
+Use one explicit finite V2 mode of the existing `desktop-runtime-source-selection.ts` journey and existing native test. Preserve V1/coexistence behavior and their existing invocations. The V2 mode reuses the existing two namespaces, model and four markers rather than adding a duplicate harness.
+
+| Original phase | Required visible action and full original evidence |
+| --- | --- |
+| Fresh selected V2, no CLI/support | Read the usable original engine plus genuine missing maintenance result. Verify no app-managed CLI/support and the original configuration-only source record. Click the existing V2 Install once. Product stock download/full support verification publishes B 2.3.0; verify its actual app-managed manifest/SRI/native hash, exact original source command/revision and engine 2.1.4. |
+| Fresh-install B member | Ordinary Create/model choice and original `TEST_SOURCE_INSTALL_B` input consume that B recipe source. Actual native reply, Runtime input/operation, session/binding and physical executor evidence must agree. Original visible Stop confirms that member's release/absence before leaving the namespace. |
+| Separate PATH A without support | The original app PATH exposes genuine A 2.0.21, with no app-managed CLI/support. Status keeps the captured engine usable and shows Support Install. Click it once; full verification publishes exact PATH A. Only then ordinary Create/model choice and `TEST_SOURCE_PATH_A` launch A. No setup installation or Refresh substitutes for this first action. |
+| A stays active while B is installed | Existing visible Update A→B uses the original stock selector/download and publishes exactly the next B record. A's original launch/capture/recipeSources, Runtime/session/input, native birth and A source bytes stay unchanged/alive. B current selection alone does not prove any member uses B yet. |
+| Healthy support Repair | From the real dialog confirm exactly once. Observe original action completion, unchanged support instance/manifest/full closure/CLI B bytes, exact same B source command/revision and no new CLI publication. A remains the same original live member. The outcome is healthy verification, not a manufactured reinstall/new instance. |
+| Actual A continuation and Stop | Send only the existing `TEST_SOURCE_LIVE_A` input through A's Composer. Require the same original Runtime/session/binding/native birth and previous native history, unchanged first input and one actual response. Stop A through the original UI; release and original-birth absence precede any B member capture. |
+| Next launch uses B | Ordinary Create/new `TEST_SOURCE_UPDATE_B` consumes B's original full source reference, not a substituted current PID. Require a distinct new session/binding/native birth, actual response and exact B CLI selection with engine still 2.1.4. Stop B and confirm its original release/absence. |
+| Same-profile cold history | Quit/cleanup the original app, start the existing same-profile cold app, and read both original histories. Preserve source index/receipts, launch records, original session/input bytes and all native input counts. No install, Runtime open/input, source publication or fabricated Stop is admitted by readback. All original management resource debt must be released. |
+
+The TEST may read the original source/management/runtime files using the existing bounded same-file snapshot logic and retained schema/digest checks. It must not instantiate recovery writers, inject command receipts, preselect by editing the index, call hidden product install APIs, or treat metadata-only engine readiness as successful member execution.
+
+### 23.6. Physical process evidence, cleanup and unchanged bounds
+
+1. V1's selected CLI `serve --hostname ... --port ...` census cannot identify a V2 member. Exact `OpenCodeV2EmbeddedServer.ts` blob `a7447324a75e43f566c03eeaf03dc1af67c2b669`, 267–289, passes database/endpoint in private stdin and gives both metadata and member the same Bun/embedded-child argv. Successful catalog reads retain `ProviderManagementCoordinator.v2Hosts` (blob `8d2d656cc043d135fef925698363c4ec48e2eb48`, 630–657). A settled management receipt is not proof that a passive catalog Bun exited. The earlier single-unclassified-Bun proposal is explicitly rejected.
+2. Reuse `readDesktopNativeHostProcesses` from existing `desktop-native-stop-fixture.ts` blob `0b4a8973310038dc7a13750b9583c6d8a215bd83` to retain the original Host inside the already captured app group, including its exact Node/entry and birth. Add only an export of the **unchanged existing closed log parser** `readEvents` in `desktop-opencode-metadata-lineage.ts` blob `4a44b17258758dbcec0fa59c8ac9d16a78752d6b`. Its framing, own finite field set, 4 MiB accepted-log limit and 128-event checks remain unchanged. The existing parser checks size after `readFileSync`; this is not a new bounded-FD-read or allocation proof. No new product log, native observer, process selector or log stream is added.
+3. In the source-selection helper read the complete original Host event sequence once per existing bounded observation, validate its immutable prior prefix and every original ready/released identity **before** partitioning. Derive the only eligible profile hashes from the genuine configuration/A/B source records and original captured management identity; at most the three explicitly expected published records exist in the path namespace. Reject unknown profiles, unknown/duplicate/reused PIDs, cleanup-unknown and any dropped prior event. Do not gain three independent log budgets: the original complete event count/byte checks and retained receipt ledger remain global, with no reset when source changes.
+4. For each still-live exact original profile present in that validated full sequence, reuse `captureDesktopMetadataLineage` with that one profile and its retained prior lineage. A retired profile retains its earlier captured lineage and uses the existing `assertDesktopMetadataReleasedEvidence` zero-active/physical-absence path; never call the live-owner assertion with a silently dropped retired slice or weaken its active-size check. A fully retired profile without its original prior lineage remains unconfirmed. The existing helper's 1–2-profile bound stays unchanged. Each excluded live metadata process must have the exact original ready/current-owner chain, captured Host parent, Bun executable and still-live birth; on Linux additionally join the logged startIdentityHash to SHA256 of the observed original `pid:startTicks`. Retired/released rows never hide a live recycled process. Keep every original event/birth through source changes; do not reconstruct a new ready baseline from the current UI selection.
+5. Observe the original metadata lineage from the first original Host/configuration stage, before Install/Create. Around each later witness require unchanged full original source-index and management-command snapshots; all original command resource debt must be settled, but retained catalog owners are accounted separately. Genuine expected A/B publication extends the allowed source-record prefix only at its explicit observed action, never during a witness. Before the original Create, every direct Host Bun child must be accounted for by the validated live metadata identities: exactly zero unclassified children. After the actual original Runtime becomes ready, subtract only those proved identities and require exactly one remaining original Bun child. Any extra/unknown child remains a failed/unknown witness, not an ignorable background process.
+6. Join that remaining child's exact original birth with the same one expected Runtime/launch/capture source and actual original model response. Retain it unchanged for A continuation, and require its actual absence after original Stop before capturing B. The fixed endpoint and source/runtime evidence are separate joins; this is not a kernel socket-owner proof from argv. Production's existing embedded ready nonce/PID/startIdentity verification and custody remain unchanged. CLI version subprocesses are acquisition evidence, not a member oracle.
+7. Include Bun and all observed metadata births among the existing bounded original observations/file pins. At original Quit use the same retained ready→released chains and original physical absence, alongside the existing Runtime/source/management cleanup evidence. No newly discovered PID gains signal authority; no new read may manufacture a close receipt. Support completion readback uses the original installed manifest/instance and full existing verifier results. No post-check image immutability or POSIX race-free claim follows.
+8. Preserve existing absolute bounds: test timeout 900 seconds, existing CI job timeout 30 minutes, existing source model 32 requests/four business inputs, UI observation 90 seconds, 64 original process identities, 512 UI steps and original cleanup budgets. Reuse V2 recipe's already existing 120-second readiness/model limits; leave V1 limits unchanged. No timeout/cap increase, extra business retry, replacement input or new test framework.
+9. Amend the existing source-selection CI job with one explicit invocation of this same V2 mode and its bounded input/receipt artifacts. Keep the V1/source/coexistence invocations. The extra required proof must fit the unchanged existing job budget; exceeding it is a real failed gate, not permission to grow the budget or call partial progress PASS.
+10. The Linux CDP ownership guard and all existing source/native cleanup guards remain. A startup/metadata stall means the relevant UI/business phase was not qualified. Current V2 failures and candidate fixes from P07 remain separate evidence; this plan does not predict their cause or borrow D-only CI success.
+
+### 23.7. Frozen intended source scope and critical verification
+
+The following exact preimages were read from the current parent source tree (root composes later unrelated changes, especially its workflow). No new production/test module or public endpoint is needed.
+
+| Existing path | Exact preimage | Intended delta |
+| --- | --- | --- |
+| `src/shared/types/cliInstaller.ts` | `7ab31be0aa86d6e8a0cf6f94b5b3197f92f0c92e` | Optional closed display-only maintenance union on the existing runtime status. |
+| `src/main/ipc/openCodeRuntime.ts` | `d1acd9627413a871a2e20d1d2dd1f41e12fdfc12` | Successful original V2 status + one stock readiness observation, exact source/current fences, no native-error fallback. |
+| `src/features/opencode-runtime-installer/renderer/OpenCodeV2InstallAction.tsx` | `77373e9c0e6ff3729acc4449c3fa9ff85467dd22` | Existing explicit Install/Support Install/Repair controls consume the new maintenance projection; old defaults remain. |
+| `src/main/ipc/openCodeRuntime.test.ts` | `08fb5ea0ed7510ca8f6db2cf182fc1455680262e` | Extend original status cases for source/revision/current fencing, missing/required maintenance, native failure vs optional discovery failure and no publication. |
+| `test/renderer/components/cli/OpenCodeV2InstallAction.test.ts` | `5198ce30c1f9f050050a2f5a91148495ea59c30f` | Existing control cases prove selected-V2 missing download/support-only/healthy Repair payloads and unchanged fresh/V1 defaults. |
+| `src/renderer/components/dashboard/openCodeDashboardCatalogPolicy.test.ts` | `76acb4faae467c4edbb918c5ea0e21404b842ce6` | Extend existing ready/refusal cases: nested missing/required maintenance cannot disable valid original engine evidence or grant a failed engine readiness. Production gate unchanged. |
+| `scripts/legacy-agent-host/desktop-runtime-source-selection.ts` | `df7d6eef28abcfb17eca4133b69298ea959999b6` | Finite V2 branch of original two-namespace/four-input journey, original configuration baseline, healthy Repair and actual Bun observation. |
+| `scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts` | `4a44b17258758dbcec0fa59c8ac9d16a78752d6b` | Export the unchanged closed whole-log parser for the explicit source proof; existing lineage APIs and all limits stay unchanged. |
+| `scripts/legacy-agent-host/desktop-runtime-source-fixture.ts` | `0523b645076339840460e7947a3ac10fbd4b785c` | Explicit V2 source-selection recipe reuses existing verified V2 preparation before first owner. |
+| `scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts` | `26906648d1633d32a7b7945c9b03ac9f66ae5a81` | Finite V2 package/selector input evidence beside the original modes, no provider session. |
+| `packages/legacy-agent-host/tests/fixtures/native-opencode-install-selection.ts` | `fdc9941ebc4ec4ef98f927df70757b143a648c57` | Exact V2 typed selector call beside V1; same measured original pure implementation. |
+| `scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts` | `2e53102bdce1bba7f3b724d76f9c59f0866b6da2` | Dispatch the explicit V2 mode to the same test/helper under the same timeout. |
+| `.github/workflows/ci.yml` | `2f00c1be87037da32332ad42493c7130bb896dd5` (read parent variant; root owns latest composition) | Existing-lane input stage/invocation/closed receipt assertions/artifacts only; no job/matrix/budget changes. |
+
+**Critical cases, not a new suite.** Existing IPC cases must distinguish (a) actual PATH required support from native failure, (b) genuine stock missing from failed/broken override, (c) discovery rejection while the exact engine remains usable, (d) same foreground with source/config revision changed after stock await, and (e) rejected foreground after optional failure. Assert original top-level status unchanged, fixed native/status read counts and zero publish/install calls. Extend existing renderer cases to check exact payload and no accidental installed-V1/default major migration. In the existing catalog policy case, nested maintenance must not weaken or invert the original gate. No copied TEST result can replace the actual source/Host/UI journey.
+
+**Review and acceptance.** First review this exact plan and the three-path DTO/IPC/UI boundary with root and independent peers. After publication, implement only the declared connected scope, retain all per-file source caps (each changed production file and new helper logic below the existing 800-line limit), then freeze exact blobs/preimages. If a necessary extraction or extra path emerges, return a concrete plan refinement before that source edit; do not compress formatting or silently grow scope. Require normal build, Host/test/scripts/Main/renderer types as relevant, targeted existing tests/lint/source-size gates and the one ordinary coherent native/UI lane. Unavailable local execution remains explicitly unexecuted; normal CI supplies required execution before final acceptance. Qualification is the actual selected V2 initial Install/download → A active across B publication and healthy Repair → original A Stop → B next launch/Stop → cold history route. Source review, stock metadata, selector success, package installation, engine catalog or a direct provider test alone does not complete this parity.
+
+## 24. Original V1 source-input prerequisite: published root bin layout
+
+**Actual result, not a UI failure.** Parent head `1160b575c4e43db045ab8726fd16d27bd611196a`, job `132034324322`, installed exact `opencode-ai@1.19.4`, `opencode-linux-x64@1.19.4` and Corepack 0.36.0 with pnpm 11.22.0 and `--ignore-scripts --save-exact`. The platform executable passed the existing fixed SHA256 check. The earlier original V1/Host-V2 coexistence native test passed in 386521.54 ms at 18:10:50 UTC, and its 12 model cases passed. The next V1 source-selection input step failed at 18:10:51 in `pin()` → `realpath()` on the hard-coded `node_modules/opencode-ai/bin/opencode` (preparer line77). Its UI test did not start; the later missing source-selection receipt is a consequence. Full decoded original log is F blob `fdbfae9e53f3651d6a3ba3609e4898f302dcf8cd`. No native/CI rerun was used for this investigation.
+
+**Official layout evidence.** The official `anomalyco/opencode` tag `v1.19.4` resolves to commit `148842ef7cb1bc34192b3fff57d0f9721ab9c801`. Its workspace `packages/opencode/package.json` blob `39aa5a2946d7902b51efaa45b459e0b29fbe05d4` is private source metadata, not the published npm manifest. Exact `packages/opencode/script/publish.ts` blob `ac1cafff56f46e9611a9ff78aa05217d21a907ef`, 34–69, writes the published root file `bin/opencode.exe` and declares `bin.opencode = './bin/opencode.exe'` on all supported platforms. That published file initially reports that postinstall was not run. Exact `postinstall.mjs` blob `fa303b746b8c585561986f8399e4a038f1bd507c`, 27–29 and 146–170, selects the platform binary and copies it to that root `.exe` path. With the actual ignored scripts, that copy is not performed. The TEST already selects the separately installed platform executable as its real native input; it must not execute the uninitialized root bin.
+
+Primary immutable locators:
+- https://github.com/anomalyco/opencode/blob/148842ef7cb1bc34192b3fff57d0f9721ab9c801/packages/opencode/script/publish.ts
+- https://github.com/anomalyco/opencode/blob/148842ef7cb1bc34192b3fff57d0f9721ab9c801/packages/opencode/script/postinstall.mjs
+- https://github.com/anomalyco/opencode/blob/148842ef7cb1bc34192b3fff57d0f9721ab9c801/packages/opencode/package.json
+
+The source-backed cause is the preparer's assumption that the workspace launcher layout is the published npm layout. It matches the original ENOENT. The original installed root manifest/file contents are not available in the retained inline job log, so this plan does not claim to have inspected those runner bytes. The corrected prerequisite must validate them during the next ordinary run and fail on any mismatch.
+
+**One existing TEST file only.** Amend `scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts`, preimage `26906648d1633d32a7b7945c9b03ac9f66ae5a81`. In the existing V1 source-selection input branch, read the exact installed `opencode-ai@1.19.4` manifest already required by the preparer. Require the exact published bin map for `opencode` to `./bin/opencode.exe`; do not search for alternate launchers or guess a native path. Resolve its package root canonically, then pin that declared file using the same regular-file/size/SHA256 helper and require it to remain inside the original package root. Retain the existing `rootManifest` and `rootLauncher` evidence fields and every downstream before/after hash check. Document that this root-bin pin is unexecuted package-layout evidence; the independently pinned `opencode-linux-x64/bin/opencode` remains the only original A executable.
+
+**Preserved boundaries.** Keep exact package versions and root/native SRI, fixed native A SHA256, source/bundle selector digests, stock B1.19.5 qualification, manifest hash, package-lock pin, frozen input/readback checks, `--ignore-scripts`, all action IDs/budgets and cleanup unchanged. Do not enable or run postinstall, copy the native binary into the root package, replace the missing root proof with the native pin, add a broad fallback path, remove a pin, change product source selection, or report the unstarted UI phase as failed/passed business execution.
+
+**Review and validation.** Independently review the exact one-file manifest/bin/containment delta against the official publish source, then retain existing scripts types/lint/source-size checks and the unchanged ordinary source-selection lane. There is no new test suite, job, matrix, package acquisition or native experiment. Executor remains unavailable; source publication alone is not executed validation. This narrow repair should land before §23's later extension of the same preparer, whose immutable preimage must then incorporate this reviewed repair rather than restore the wrong hard-coded path.
+
+### 23.8. Place the finite source-lineage composition in its existing TEST helper
+
+The full source-selection journey preimage `df7d6eef28abcfb17eca4133b69298ea959999b6` already has 607 newline-terminated lines. Adding the required whole-log configuration/A/B partition alongside the V2 publication, Repair and member checks in that one file risks the unchanged 800-line cap. Preserve the exact §23 oracle; place only its source-specific metadata composition beside the existing lineage functions instead of compressing the journey or creating another module.
+
+Amend the existing declared `scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts`, preimage `4a44b17258758dbcec0fa59c8ac9d16a78752d6b`, beyond the originally planned parser export: add one finite TEST helper, `captureDesktopSourceMetadataLineage`, for this source-selection journey. It receives the same original Host fact, the only eligible profile hashes derived from the genuine configuration/A/B records (at most three), the original observed process facts and the previously retained whole lineage. It returns the retained per-profile lineages and exact live metadata births. A final original-Quit call additionally requires every observed profile to be retired; it cannot create cleanup evidence.
+
+The helper performs exactly one unchanged `readEvents` call per original observation. Validate the complete accepted log, existing 4 MiB/128-event limits, immutable global prior prefix, same original Host, all eligible profiles and global no-PID-reuse before any per-profile partition. Never reset or multiply a log/event budget by three. Keep the existing live `captureDesktopMetadataLineage` and retired `assertDesktopMetadataReleasedEvidence` APIs and their 1–2-profile bounds unchanged, invoking them with one original profile at a time. A retired profile requires its previously retained physical lineage; missing original lineage, unknown cleanup, foreign profile, replaced birth or surviving retired PID is still refusal. No arbitrary Bun child is filtered.
+
+The journey retains the Linux-only join against the actual original `pid:startTicks`, its source-index/management snapshot fences, the zero/one unclassified member assertions, and all original Runtime/source/input/Stop/cold-history checks. The helper neither reads new kernel/socket fields nor obtains process control, grant, install, source-publication or Runtime authority. This is only the planned read-only observation composition in an existing matching module. Existing parser framing, ordinary lineage callers, native effects, cases, timers, budgets and the approved 13-path inventory are unchanged. Keep both changed files under their existing source caps and independently review the exact wrapper/caller deltas before publication; source review alone does not qualify the native journey.
+
+## 25. Codex installation retention and captured-source publication — separate storage and selection phases
+
+**Status: PLAN ONLY; source0.** This appendix extends exact full P06 blob 260cabca3bc8874e9f144d6268e71a527416cf71, which preserves a53355fa83661ac3b18e763329b18a2a3cc03393 and the published §23.8 helper amendment. Root is the only publisher. Phase A below is the first, two-existing-file source cut after root and independent review; phase B is mandatory follow-through, but has **no source authorization** until its connected manifest, native eligibility evidence and acceptance accounting are amended and reviewed. No phase-A source or checks have run. Root has reported a restored executor; actual checks wait for the assigned isolated checkout and coordinated toolchain. Until those results, this work remains SOURCE_ONLY_UNEXECUTED. Neither a successful package download nor phase-A tests establish that the captured Host selected a new Codex runtime.
+
+### 25.1 Original facts and the precise missing behavior
+
+CodexRuntimeInstallerService.ts1efd89b69448ccc93d97328a990f0e194d70e5bc is byte-identical to the exact old frontend4a0e06277fe216d9f82dbbede362668fe46622ee. Its installInternal703–725 stages a verified package, then unconditionally removes versions/<platformVersion>/<vendorTarget> before renaming the staged directory into that fixed path. A second installation of the same version can therefore replace the original captured package A. This is source-proven stock behavior still lacking the retention integration; no observed active-process failure is claimed. writePackageFiles481–497 preserves the whole selected vendor closure and executable modes, including codex, rg and sandbox helpers; retaining only the principal executable would not preserve this behavior.
+
+The manifest at runtimes/codex/current.json is currently written with ordinary writeFile736–740. Its schemaVersion1 contains the absolute binaryPath, original root/platform versions, target, integrity and installedAt. The existing parser90–106 and resolver118–120 do not require the fixed directory layout. An immutable instance path therefore needs no manifest schema migration, public API change, symlink or rewritten captured profile.
+
+The source-publication gap is distinct. registerCodexRuntimeInstallerIpc.ts080627b6ac8f91b8af48d79725308dc56d8e8062 and shell codexRuntime.ts116bd3001be3f872d0f47da253394a75927c0485 call only the stock get/install/invalidate facade. They do not capture the original sender/source grant or publish a Host source receipt. P06 §21 already records this gap, and §§22/22.1 qualify/observe the genuine0.169 candidate without authorizing this consumer. Phase A will not silently close or bypass it.
+
+### 25.2 Preserve the two existing resolution contracts
+
+| Existing surface | Exact current behavior to retain |
+| --- | --- |
+| Stock installer status, service1efd89:515–536 | A usable managed manifest is reported before PATH discovery. If managed verification fails, the original PATH fallback and reported failure semantics remain. Registry unavailability remains optional status metadata. |
+| Actual legacy binary resolution, CodexBinaryResolver.ts0f9778298640bfd421531e501386e26be99d1cf4:runResolve and cache revalidation | A working process CODEX_CLI_PATH takes precedence, followed by a distinct working shell override, then a verified managed executable, then PATH. Preserve existing Windows PATHEXT/shim expansion, enriched environment, stale-override fallback, cached-positive/miss and launch-verification rules. |
+| Captured sessions, account operations and checkpoints | Their original executable/configuration/account/source references remain fixed. Installing B does not change A's profile, input, permission, auth intent, checkpoint bytes or cleanup owner. New foreground selection and retained original operations are different uses of the existing ports. |
+
+The stock installed-status object is not proof of the effective custom/override choice. Phase A edits neither resolver. Phase B must carry the original Main selection witnesses and preserve the existing priority; it may not infer override absence from sourceKind=captured, a binary name, a version string or current process.env read after an await. A real custom override must not be displaced merely because installation produced an app-managed package. Missing original selection provenance holds the original pointer rather than choosing an ambient fallback.
+
+### 25.3 Phase A — two-file immutable package storage
+
+1. Keep the existing metadata selection, platform package/SRI checks, streaming/unpacked caps, full extraction, executable modes and one original staged --version verification. Do not add another native process, change package/version selection, enable package postinstall, or alter any download/version/retry budget.
+2. Replace only the fixed publication destination with a fresh invocation-owned sibling instance, for example versions/<platformVersion>/<vendorTarget>-<randomUUID>. Reuse the existing randomUUID import and staging/rename helpers. The instance is new even for the same advertised version and identical package bytes. Do not put B inside A's original package directory, remove a prior destination, reuse a version-only identity, or mutate a PATH/custom package. The new UUID destination is not an intentional target for any earlier complete package. Ordinary rename is not a universal no-replace primitive and may replace an existing empty directory on some platforms; this change does not claim a new race-free namespace guarantee. Do not add a collision-repair path that deletes an observed destination.
+3. Preserve the complete extracted B closure under that instance before advertising it. Keep the original temporary-directory cleanup while it is still the invocation's unpublished staging directory. Once rename succeeds, clear tempDir as today: a later manifest failure must not delete B, which may already be referenced. No pruning, retention registry, reference-count service, new daemon or garbage-collection policy is introduced.
+4. Publish the unchanged manifest shape/text through existing atomicWriteAsync from the same @main/utils/atomicWrite barrel already used for renamePathWithRetry. Use its existing strict file synchronization and directory synchronization options; do not change the shared implementation, add an unlink-before-rename fallback, or create a second persistence abstraction. This establishes complete-file replacement through the existing helper, not a new claim that every package byte is power-loss durable.
+5. Preserve the original error/progress/result ordering. A pre-commit manifest failure leaves the old complete pointer and A bytes. A failure after the helper's actual rename, such as directory synchronization failure, can leave B visible: report the original failure, retain both complete packages, and do not claim rollback or confirmed non-publication. Do not delete B or rewrite the manifest back to A in a catch. Existing later status reads use the actual manifest; no automatic second install is spent.
+6. Existing schemaVersion1 manifests and old fixed-layout A directories remain readable. Do not migrate, rewrite, chmod or remove them. The same-version path-safety fix is useful independently of0.169 eligibility, but remains stock acquisition only until phase B.
+
+| Phase-A changed path | Exact preimage at workingbe270ccb | Authorized change |
+| --- | --- | --- |
+| src/features/codex-runtime-installer/main/infrastructure/CodexRuntimeInstallerService.ts | 1efd89b69448ccc93d97328a990f0e194d70e5bc | Fresh immutable destination and existing atomic manifest helper only; existing resolver/selection/status/public API unchanged. |
+| test/main/features/codex-runtime-installer/CodexRuntimeInstallerService.test.ts | a70c3cc04839bea8c230ee0bd7db5a1faa3804eb | Extend the existing verified-install and installed-runtime failure coverage with real TEST filesystem retention and publication-boundary assertions. No new suite/native invocation. |
+
+Read-only implementation anchors: src/main/utils/atomicWrite.ts b1dc835f72954f26e18838b44ae5e83d9fac1a15 re-exports atomicWriteAsync; packages/task-change-ledger/src/review/io/atomicPersistence.ts58e271064d25e302c57cf8d90bffc9393bc10670 performs temporary-file sync, rename and optional directory sync, and explicitly distinguishes post-rename errors. Its existing tests test/main/utils/atomicWrite.test.ts54af1cbde01d0a7ea3ab5dd7db66d30f67beedd1 remain a dependency gate, not a third edited path. Service is currently781 physical lines (782 newline-split entries); stay <=800 without compressing unrelated code or changing any baseline.
+
+### 25.4 Phase-A critical verification
+
+Extend the existing small verified-tar installation case, retaining its192MiB advertised-header boundary, to install two different complete TEST payloads with the same platform/version metadata. The test must use the real installer/extraction/manifest/filesystem path, preserve the first result and original bytes, and prove: A and B canonical executable paths differ; A principal/helper bytes and relevant executable modes remain unchanged; B contains its own full principal/helper payload; the normal manifest resolver selects B. The existing execCli stub remains explicitly synthetic; this is a filesystem regression test, not a retained native-process claim. The old implementation must fail the distinct-path/A-bytes assertions.
+
+Retain the existing registry-offline/PATH case and its original assertions. In the same existing suite, cover original managed A when package verification or atomic manifest publication fails. Inject faults at the actual TEST filesystem boundary, with no production fault parameter: before manifest rename, assert exact original complete manifest bytes and all A package bytes; after actual manifest rename but failed directory sync, allow only a complete A-or-B pointer consistent with the observed commit point, preserve both packages, retain state=failed/original error and do not spend another install. A post-rename case must not accidentally pass because an earlier failure already stopped the operation.
+
+Keep existing parser/legacy fixed-directory, PATH shell discovery, package integrity/path traversal and complete payload tests. Run the unchanged CodexBinaryResolver.test.ts1b832bd21cb985b68fb4a6532a0ca4408be413d5 priority/cache cases as a relevant regression gate; no resolver source/test changes are needed for A. Focused tests, canonical Main types, fast lint and the source-size guard remain required. With no executor, freeze/review source and let ordinary candidate CI execute these gates; never label an unexecuted source cut PASS at runtime.
+
+### 25.5 Phase B — original captured selection, not a second installer framework
+
+Before B source, publish a connected amendment with exact final paths/preimages after A and the currently checked dependency pin. Candidate native0.169 must first satisfy the existing §22 actual catalog/input/permission/Stop/cold proof; §22.1 notification diagnostics alone are insufficient. Current runtimeSourceQualification.ts3b6d4abafd37c0677f5e4b32334b958416975c98 admits Codex only when native version equals the seed protocolRevision, while runtimeProfile.ts a1daa87f33aceeae3fe81d9d91217d89ed12bb8d and management/profile.ts e1af7fe25cd74a1c2710713853eaae729b81ed1a retain their existing finite native contracts. Any change to this exact qualification/protocol mapping needs its own reviewed finite amendment. No arbitrary version range, false0.162 label, opaque checkpoint rewrite or silent downgrade is authorized here.
+
+The intended consumer is one Codex-specific application adapter in the existing feature, following the already present CapturedOpenCodeRuntimeInstaller35e58d04cbe1368a282a17d73876eb0a5ebb7625 ownership pattern, not a generalized installer framework. Capture the original event's sender/context/descriptor source grant before native acquisition. Read the original full source summary once, preserve the initial expectedRevision across all awaits, and retain an invocation-owned pending result before a duplicate can spend acquisition/publication. Recovery uses only the saved original command/candidate; do not replace it with today's installed file or current pointer.
+
+Reuse CapturedRuntimeSources0b3fe40f6cc29c2a4c53b10ad1d96aaea7b87a0e publish/lookup/recover and its owner/foreground guards. A new source publication requires canonical actual executable path, complete native identity/hash/version qualification and a published original receipt. Static discovery must not allocate a second legacy app-server or use a legacy --version resolver outside the original Host source-verification owner. Read-only rechecks fence the original selection; they do not supply a fresh expectedRevision. A lost response is resolved by that command's lookup/recover, never by another install or current/default adoption.
+
+Stock installer publish(status) emits ready progress before its IPC result today (1efd89:549–565/742–756). The B amendment must explicitly gate the captured branch's user-visible Ready/result on the source publication receipt, including that progress channel; suppressing only the IPC Ready would be incomplete. Acquisition progress can remain visible with its real meaning. The existing renderer installCodexRuntime action in cliInstallerSlice.ts3958bb219db5509e6c6433a006e5a0bfacb2791f:1590–1620 immediately invalidates/refetches after success: this must reconcile the same original publication, not create a second revision. GET/status remains observation, and a failed captured/native read never falls through to a legacy app-server.
+
+Existing generic Host consumers already provide the narrow destination: RuntimeSourceIndex397850fec1e4e25a24c29f77f10d357134609688 nativeSelection299–319, currentForRecipe594–611, resolveRecipe614–639 and managementProfile734–741 use the provider's original grant/source. DesktopBackendFeature e278f1894e408f54c483ad8ace2a5df9eecbd8ea:567–584 accepts codex; captureCurrentManagementTarget708–717 reads the selected source. New metadata/preflight/new Launch may use qualified B. Original A operation/login/Runtime/checkpoint references and package stay retained; source-pointer advancement is not revocation of an admitted A session.
+
+| B connection / existing test anchor, not source GO | Current exact preimage |
+| --- | --- |
+| src/main/ipc/agentBackend.ts, captureDesktopRuntimeSources593–605 currently literal opencode | f173a19a246418d0c4dd62fa513966993d52bb66 |
+| src/main/ipc/codexRuntime.ts | 116bd3001be3f872d0f47da253394a75927c0485 |
+| src/features/codex-runtime-installer/main/adapters/input/ipc/registerCodexRuntimeInstallerIpc.ts | 080627b6ac8f91b8af48d79725308dc56d8e8062 |
+| src/features/codex-runtime-installer/main/composition/createCodexRuntimeInstallerFeature.ts | 06c919fef1d2d63b411072f92a4a895fc556f15a |
+| src/features/codex-runtime-installer/main/index.ts | ecf3d3a2d15e66e40a6fa71f4c73f2f49da65f24 |
+| src/features/codex-runtime-installer/main/application/CapturedCodexRuntimeInstaller.ts | proposed new directly consumed adapter; exact responsibilities above |
+| src/features/codex-runtime-installer/main/infrastructure/captureCodexNativeSelection.ts | proposed new static original-selection adapter; no native owner |
+| test/features/agent-backend/desktopRuntimeSources.test.ts | f9899d88c28aa10f91887b470b56b8b23a33440c |
+| packages/legacy-agent-host/tests/runtime-source-selection.test.ts | 70269120d2929044b38141ef6ec2f4611a409f11 |
+| packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts | 5bb419c418c07f1d8050e47afb1131a1903ec5e3 |
+| test/features/runtime-provider-management/capturedCodexFeatures.test.ts | 93b251caf7f0a04fff04b3cb6339357875aba32b |
+
+The B amendment must close original custom/PATH/managed precedence, unavailable/changed foreground or owner after each await, publication conflict, lost ACK and cold original lookup, and no re-spend on immediate UI invalidation. Extend the existing critical cases; do not create a parallel authority registry or a broad new installer test framework. If original custom-choice witnesses cannot be recovered through the existing Main composition, report that exact missing join before code rather than treating a stock managed status as proof.
+
+### 25.6 Ordinary retained-A → selected-B Desktop follow-through
+
+The acceptance must use ordinary Desktop controls against fresh private TEST projects and real pinned native packages. Existing source anchors are the Settings Providers route and CliStatusBanner0d811b6e5c980876b7eaca5846f459bdd61fe895:654–665/1372–1397, the existing CodexRuntimeUpdateDialog9126b7b907e3828261b0b5a6cb140547754d02a9, and the existing native Codex Desktop family: desktop-codex-resume-fixture.ts e8b351deb3184237ae2f0d9f40a3b0aabd5c3b65, desktop-launch-ui-smoke.ts6b819a2ec7060ad1ec93cda49ecd9320f849e877, desktop-codex-cost-ui-proof.ts and the original physical/cold helpers. Later unrelated published changes, including §61 child variants, must be composed rather than overwritten.
+
+Required route: original ordinary Launch/input on qualified A; while A is retained, open the real Codex Update dialog and use its one install action; observe actual package verification and the original Host publication receipt for B; observe the existing metadata/model refresh against B; prove original A continues or settles its already admitted input and original Stop through its unchanged identity; ordinary fresh Launch on B must use B's new source/capture and real native effect; then the existing genuine Quit/Host/writer/child-absence boundary and cold read must retain the original A history/checkpoint/source bytes and current B selection. An A checkpoint is not silently resumed on B, and a new B session must not inherit A's native thread by a version/hash rewrite.
+
+Do not invent a healthy same-version Repair button: current Codex controls primarily expose missing-runtime Install and available-version Update, and completed Update dialog hides its action. Phase A proves same-version invocation safety through the existing installer API tests; ordinary UI acceptance uses the actual available Update route. A future explicit Repair UI claim requires its own original-control evidence. Valid custom override/PATH fallback cases remain the source-priority acceptance boundary; no TEST store assignment may force an otherwise hidden action or replace user selection.
+
+B's connected amendment must freeze one explicit mode in an already existing Codex Desktop lane, exact candidate/package hashes, native process/metadata custody, UI helper/fixture/inventory/CI preimages and one conserved input/request ledger before editing it. Preserve the existing default /cost, ONE→cold Resume→TWO and original permission/cleanup assertions; do not silently repurpose their counts or drop them to make room. Actual0.169 direct-D proof does not replace this Main/Host/UI route. No new job/matrix, timer/cap increase, native invocation, test-only mutation RPC or source eligibility change is authorized by this plan alone. A physically retained old executable, a clean model text test or a successful source receipt by itself is not the complete UI proof.
+
+### 25.7 Review, publication and limits of the claim
+
+Root and independent peer review the exact phase-A two-file candidate, its before/after filesystem assertions and the post-rename uncertainty behavior. Verify the full P06 prefix/readback, exact working-head preimages and existing size/type/lint/test gates. Root publishes normal reviewed commits; no active CI is cancelled or replaced. Phase A may proceed independently once authorized, while §§22/22.1 and B remain open.
+
+A complete fix requires immutable retained packages **and** the later qualified original-source consumer/ordinary Desktop acceptance. Archive/dependency consumption, native protocol qualification, source review, synthetic filesystem verification and real retained-A/B behavior are separate evidence. Current source-only work claims none of the pending executions.

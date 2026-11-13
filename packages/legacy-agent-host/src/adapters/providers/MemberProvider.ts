@@ -1,5 +1,5 @@
 import type { NativeAttachmentCapabilities } from '../../attachments/attachmentTypes.js';
-import type { ClaudeConfig } from '@agent-teams/provider-implementations/claude';
+import type { ClaudeConfig, ClaudeDriverHost } from '@agent-teams/provider-implementations/claude';
 import type {
   RegisteredProcessRootSource,
   RegisteredProcessCapture,
@@ -35,6 +35,7 @@ export interface MemberProviderContext {
   /** Team-fenced physical capture; original Runtime input is checked by the outer MCP wrapper. */
   canCaptureRegisteredProcess?(): boolean;
   readCheckpoint(reference: string, request: OpenConfig): Promise<unknown>;
+  readCheckpointSource?: NonNullable<ClaudeDriverHost['readCheckpointSource']>;
   onProgress(): void;
 }
 

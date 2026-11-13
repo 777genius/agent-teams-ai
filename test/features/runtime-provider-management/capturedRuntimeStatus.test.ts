@@ -297,7 +297,8 @@ it('current source status accepts its first captured configuration and fences a 
   expect(offline).not.toHaveProperty('latestVersion');
   expect(offline).not.toHaveProperty('updateAvailable');
   expect(console.warn).toHaveBeenCalledExactlyOnceWith(
-    '[OpenCodeRuntimeInstallerService]', 'Failed to resolve latest OpenCode version:',
+    '[OpenCodeRuntimeInstallerService]',
+    'Failed to resolve latest OpenCode version:',
     'TEST registry unavailable'
   );
   vi.mocked(console.warn).mockClear();
@@ -341,6 +342,12 @@ it('a published V1 selection supplies its original CLI version without an ambien
   resolveLatestOpenCodeVersion.mockRejectedValueOnce(new Error('TEST registry unavailable'));
   expect(await port.readOpenCodeRuntimeStatus!()).toEqual(ready);
   expect(f.request).toHaveBeenCalledTimes(2);
+  expect(console.warn).toHaveBeenCalledExactlyOnceWith(
+    '[OpenCodeRuntimeInstallerService]',
+    'Failed to resolve latest OpenCode version:',
+    'TEST registry unavailable'
+  );
+  vi.mocked(console.warn).mockClear();
 
   const override = createCapturedRuntimeProviderStatusClient({
     capture: f.capture,
@@ -366,12 +373,11 @@ it('a published V1 selection supplies its original CLI version without an ambien
     throw new Error('TEST registry unavailable after target revocation');
   });
   await expect(port.readOpenCodeRuntimeStatus!()).rejects.toThrow('Native status context changed');
-  expect(vi.mocked(console.warn).mock.calls).toEqual([
-    ['[OpenCodeRuntimeInstallerService]', 'Failed to resolve latest OpenCode version:',
-      'TEST registry unavailable'],
-    ['[OpenCodeRuntimeInstallerService]', 'Failed to resolve latest OpenCode version:',
-      'TEST registry unavailable after target revocation'],
-  ]);
+  expect(console.warn).toHaveBeenCalledExactlyOnceWith(
+    '[OpenCodeRuntimeInstallerService]',
+    'Failed to resolve latest OpenCode version:',
+    'TEST registry unavailable after target revocation'
+  );
   vi.mocked(console.warn).mockClear();
 });
 

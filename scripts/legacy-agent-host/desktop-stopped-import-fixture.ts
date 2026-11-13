@@ -62,7 +62,7 @@ export type CurrentNativeStoppedImportSeed = Pick<
   savedSettings: Partial<StoppedImportUiSeed['savedSettings']> &
     Pick<
       StoppedImportUiSeed['savedSettings'],
-      'cwd' | 'providerId' | 'model' | 'effort' | 'prompt' | 'skipPermissions'
+      'cwd' | 'providerId' | 'model' | 'prompt' | 'skipPermissions'
     >;
   priorRun: { path: string; sha256: string };
   sourceTask: Record<string, unknown>;

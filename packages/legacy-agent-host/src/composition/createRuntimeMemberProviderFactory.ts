@@ -11,6 +11,7 @@ import { runtimeDigest } from '../runtime/identity.js';
 import { captureMemberProviderAuthority } from './captureMemberProviderAuthority.js';
 import { captureNativeInputAuthority } from './captureNativeInputAuthority.js';
 import { createClaudeSubagents } from './createClaudeSubagents.js';
+import { createClaudeCheckpointSource } from './createClaudeCheckpointSource.js';
 import { createMemberEvidenceCapture } from './createMemberEvidenceCapture.js';
 import { createMemberProcessMcpPort } from './createMemberProcessMcpPort.js';
 import { assertRuntimeWorktree } from './runtimeWorktreeCapture.js';
@@ -65,6 +66,7 @@ export function createRuntimeMemberProviderFactory(options: {
     captureSource: MemberInputCapture
   ): TeamMcpNativeMemberActionPort;
   isSealed(): boolean;
+  assertWriter(): void;
   assertCurrent(entry: MemberEntry): void;
   captureInteractions(entry: MemberEntry): void;
   readRuntime: RuntimeOwner['readCapturedSession'];
@@ -100,6 +102,7 @@ export function createRuntimeMemberProviderFactory(options: {
         profileId: options.profileId,
         hostIncarnation: options.hostIncarnation,
         assertAllocation,
+        assertWriter: options.assertWriter,
         assertCurrent: () => options.assertCurrent(entry),
         readRuntime: () => options.readRuntime(entry.binding),
       });
@@ -227,6 +230,12 @@ export function createRuntimeMemberProviderFactory(options: {
           canAllocate: authority.canAllocate,
           canCaptureRegisteredProcess: authority.isCurrent,
           readCheckpoint: options.readCheckpoint,
+          ...(entry.profile.provider === 'claude' && request.checkpointRef !== undefined ? {
+            readCheckpointSource: createClaudeCheckpointSource({
+              entry, request, profileId: options.profileId, hostIncarnation: options.hostIncarnation,
+              readRuntime: options.readRuntime, assertCurrent: authority.assertCurrent, assertAllocation,
+            }),
+          } : {}),
           onProgress: () => options.onProgress(entry),
         });
         options.captureInteractions(entry);

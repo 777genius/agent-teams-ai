@@ -53,7 +53,7 @@ describe('OpenCode V2 installation offer', () => {
     }
   );
 
-  it('explains optional maintenance and requires confirmation before support-only repair', async () => {
+  it.each([false, true])('requires confirmation before support-only repair (maintenance=%s)', async (maintenance) => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.append(host);
@@ -81,7 +81,17 @@ describe('OpenCode V2 installation offer', () => {
       await act(async () =>
         root.render(
           createElement(OpenCodeV2InstallAction, {
-            status: {
+            status: maintenance ? {
+              installed: true,
+              version: '2.1.4',
+              engineVersion: '2.1.4',
+              sourceRevision: 'TEST original source',
+              source: 'captured-host',
+              state: 'ready',
+              v2Support: 'ready',
+              v2Maintenance: { kind: 'installed', cliVersion: '2.0.21',
+                engineVersion: '2.1.4', support: 'ready' },
+            } : {
               installed: true,
               version: '2.0.21',
               engineVersion: '2.1.4',
@@ -114,6 +124,50 @@ describe('OpenCode V2 installation offer', () => {
       );
       expect(onInstall).toHaveBeenCalledExactlyOnceWith({ generation: 'v2', supportOnly: true });
       expect(document.querySelector('[data-testid="opencode-v2-reinstall-dialog"]')).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('uses the existing download and support-only actions for original V2 maintenance', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const onInstall = vi.fn();
+    const status: OpenCodeRuntimeStatus = {
+      installed: true, version: '2.1.4', engineVersion: '2.1.4', source: 'captured-host',
+      sourceRevision: 'TEST original source', state: 'ready', v2Support: 'ready',
+    };
+    try {
+      for (const [index, support] of [false, true].entries()) {
+        const selected: OpenCodeRuntimeStatus = {
+          ...status,
+          v2Maintenance: support
+            ? { kind: 'installed', cliVersion: '2.0.21', engineVersion: '2.1.4', support: 'required' }
+            : { kind: 'missing', engineVersion: '2.1.4' },
+        };
+        await act(async () => root.render(
+          createElement(OpenCodeV2InstallAction, {
+            status: { ...selected, compatibleV2Version: '2.1.4' }, busy: false, onInstall,
+          })
+        ));
+        const button = host.querySelector<HTMLButtonElement>('button');
+        expect(button?.textContent).toContain(support
+          ? 'cliStatus.runtimeInstall.v2SupportInstall' : 'cliStatus.runtimeInstall.install');
+        expect(onInstall).toHaveBeenCalledTimes(index);
+        await act(async () => button?.click());
+        expect(onInstall).toHaveBeenCalledTimes(index + 1);
+        expect(onInstall).toHaveBeenLastCalledWith(support
+          ? { generation: 'v2', supportOnly: true } : { generation: 'v2' });
+        expect(render(selected, true)).toBe('');
+        expect(render({ ...selected, state: 'checking' })).toBe('');
+        expect(render({ ...selected, state: 'failed' })).toBe('');
+        expect(render({ ...selected, version: '1.19.4' })).toBe('');
+        expect(render({ ...selected, engineVersion: '2.9.9' })).toBe('');
+      }
     } finally {
       await act(async () => root.unmount());
       host.remove();

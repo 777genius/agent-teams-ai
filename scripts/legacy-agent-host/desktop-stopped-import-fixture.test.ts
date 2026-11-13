@@ -13,7 +13,7 @@ import {
   stoppedImportSourceBytes,
 } from './desktop-stopped-import-fixture.ts';
 
-const pnpmEntry = '/opt/homebrew/Cellar/node@24/24.18.0/lib/node_modules/corepack/dist/pnpm.js';
+const pnpmEntry = process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/Cellar/node@24/24.18.0/lib/node_modules/corepack/dist/pnpm.js';
 const repo = resolve(import.meta.dirname, '../..');
 const json = async (path: string) => JSON.parse(await readFile(path, 'utf8'));
 test(
@@ -159,7 +159,7 @@ test('import UI model proof permits finite exact preflight receipts while refusi
     unexpectedNoToolsRequests: [],
   };
   assert.doesNotThrow(() => assertStoppedImportModelChecks([receipt], model, selected));
-  const omittedSelection = { model: selected.model, effort: undefined };
+  const omittedSelection = { model: selected.model };
   const omittedReceipt = {
     commandId: receipt.commandId,
     kind: receipt.kind,

@@ -118,6 +118,7 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
         ? config
         : undefined,
     readCheckpoint: context.readCheckpoint,
+    ...(context.readCheckpointSource ? { readCheckpointSource: context.readCheckpointSource } : {}),
   });
   return {
     factory: {
