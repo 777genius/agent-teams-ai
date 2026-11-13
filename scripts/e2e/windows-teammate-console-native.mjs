@@ -34,7 +34,8 @@ async function invokeTool(name, command, args) {
     let settled = false;
     const child = spawn(command, args, {
       detached: false,
-      windowsHide: true,
+      // Intentionally omit windowsHide: reproduce default tool-child behavior.
+      // Forcing it true would hide the very Windows popup regression under test.
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     const finish = (error, receipt) => {
@@ -53,7 +54,13 @@ async function invokeTool(name, command, args) {
     child.once('error', (err) => finish(err));
     child.once('close', (code, signal) => {
       if (code !== 0) return finish(new Error(name + ' failed: ' + (signal || code) + ' ' + output));
-      finish(null, { name, pid: child.pid, exitCode: code, durationMs: Date.now() - started });
+      if (name === 'powershell' && !output.includes('HIDDEN-CONSOLE-VERIFIED')) {
+        return finish(new Error('Native PowerShell did not prove an inherited hidden console: ' + output));
+      }
+      finish(null, {
+        name, pid: child.pid, exitCode: code, durationMs: Date.now() - started,
+        ...(name === 'powershell' ? { inheritedConsoleHidden: true } : {}),
+      });
     });
   });
 }
@@ -63,11 +70,21 @@ async function runTeammateFixture() {
   process.on('message', (msg) => {
     if (msg?.type === 'stop') process.exit(0);
   });
+  const consoleVisibilityProbe = [
+    'Add-Type -TypeDefinition \'using System; using System.Runtime.InteropServices; ' +
+      'public static class NativeConsole { ' +
+      '[DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow(); ' +
+      '[DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h); }\'',
+    '$hwnd = [NativeConsole]::GetConsoleWindow()',
+    "if ($hwnd -eq [IntPtr]::Zero) { throw 'No inherited console handle' }",
+    "if ([NativeConsole]::IsWindowVisible($hwnd)) { throw 'Unexpected visible console window' }",
+    "Write-Output 'HIDDEN-CONSOLE-VERIFIED'",
+  ].join('; ');
   const calls = [
     ['cmd', 'cmd.exe', ['/d', '/s', '/c', 'echo windows-native-fixture']],
     ['git', 'git.exe', ['--version']],
     ['powershell', 'powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
-      "Write-Output 'windows-native-fixture'"]],
+      consoleVisibilityProbe]],
   ];
   for (const [name, command, args] of calls) {
     const receipt = await invokeTool(name, command, args);
@@ -131,6 +148,8 @@ async function runParent() {
     });
     assert.deepEqual(tools.map((x) => x.name), expected);
     assert.ok(tools.every((x) => Number.isSafeInteger(x.pid) && x.pid > 0 && x.exitCode === 0));
+    assert.ok(tools.some((x) => x.name === 'powershell' && x.inheritedConsoleHidden === true),
+      'Native child PowerShell console visibility was not verified');
     const evidence = {
       schemaVersion: 1,
       platform: process.platform,
@@ -139,6 +158,8 @@ async function runParent() {
       teammateExitCode: child.exitCode,
       teammateDetached: options.detached,
       teammateWindowsHide: options.windowsHide,
+      toolSpawnWindowsHideForced: false,
+      powershellInheritedConsoleHidden: true,
       calls: tools,
       durationMs: Date.now() - started,
       originalCliInvocations: 0,
