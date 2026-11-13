@@ -38,6 +38,24 @@ async function showReply(cdp: UiCdpPort, options: Options, proof: Row, text: str
   const { ui, step } = controls(cdp, options, proof);
   await ui.waitRead('document.body.innerText.replace(/\\s+/g," ").includes(' +
     desktopJsLiteral(text.replace(/\s+/g, ' ')) + ')', 'original Codex /cost report appears in the conversation');
+  const cardRead = (body: string) => `(() => {
+    const cards=[...document.querySelectorAll('article.activity-timeline-card')].filter(e=>
+      e.textContent.replace(/\\s+/g,' ').includes(${desktopJsLiteral(text.replace(/\s+/g, ' '))}));
+    if(cards.length!==1)return null;const card=cards[0];${body}
+  })()`;
+  options.assertOwnedRenderer();
+  const expanded = await cdp.evaluate(cardRead('return card.getAttribute("data-expanded");'));
+  assert.ok(expanded === 'true' || expanded === 'false', 'one exact original report card');
+  if (expanded === 'false') {
+    await ui.clickExpression(cardRead(`
+      if(card.getAttribute('data-expanded')!=='false')return null;
+      const e=card.firstElementChild;if(e?.getAttribute('role')!=='button')return null;
+      const r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);
+      return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))?{x,y,tag:e.tagName}:null;
+    `), 'expand exact original Codex /cost report once');
+    await ui.waitRead(cardRead('return card.getAttribute("data-expanded")==="true";'),
+      'original Codex /cost report card expanded');
+  }
   await revealDesktopReply(cdp, text, { assertOwnedRenderer: options.assertOwnedRenderer, step });
   const shot = record(await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true }));
   assert.equal(typeof shot.data, 'string');

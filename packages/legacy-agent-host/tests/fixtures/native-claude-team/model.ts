@@ -241,6 +241,7 @@ export async function startNativeTeamModel(
   const currentLegacyProbes: string[] = [];
   let currentLegacyTokenRequests = 0;
   let currentLegacyCatalogRequests = 0;
+  let currentLegacyPreconnectRequests = 0;
   let donorSavedCatalogRequests = 0;
   const unexpectedNoToolsRequests: {
     model?: string;
@@ -259,6 +260,20 @@ export async function startNativeTeamModel(
     if (originalDonorRead) pendingDonorReads++;
     if (originalLegacyRead) pendingLegacyReads++;
     void (async () => {
+      if (request.method === 'HEAD') {
+        assert.equal(failures.length, 0, 'oracle is sealed after its first protocol failure');
+        assert.ok(originalLegacyRead, 'preconnect belongs to the original current producer epoch');
+        assert.equal(request.url, '/');
+        assert.equal(request.headers.authorization, undefined);
+        assert.equal(request.headers['x-api-key'], undefined);
+        assert.equal(request.headers['transfer-encoding'], undefined);
+        assert.ok(request.headers['content-length'] === undefined || request.headers['content-length'] === '0');
+        for await (const chunk of request)
+          assert.equal(Buffer.from(chunk as Uint8Array).length, 0, 'bodyless original preconnect');
+        assert.ok(++currentLegacyPreconnectRequests <= 32, 'bounded original runtime preconnects');
+        response.writeHead(204); response.end();
+        return;
+      }
       if (request.url?.includes('count_tokens')) {
         if (originalLegacyRead)
           assert.ok(++currentLegacyTokenRequests <= 8, 'bounded original legacy token checks');
@@ -824,6 +839,7 @@ export async function startNativeTeamModel(
               probes: currentLegacyProbes,
               tokenRequests: currentLegacyTokenRequests,
               catalogRequests: currentLegacyCatalogRequests,
+              preconnectRequests: currentLegacyPreconnectRequests,
             });
           },
         }

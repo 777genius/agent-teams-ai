@@ -1246,3 +1246,136 @@ Peer сверяет отсутствие product изменений и маск�
 unknown callback, retained identity и no-repeat поведения остались.
 Targeted types/fast lint плюс штатный shard1 нужны отдельно; локальный
 контролируемый case не объявляет actual OS Trash или полный E2E PASS.
+
+## 27. Genuine current stopped source: exact original HEAD preconnect
+
+### Круг 1 — actual failure и точная исходная цепочка
+
+Parity 9ea802cc0f8c873c8349512cb010fe54e34fdd70, Main job131868952839:
+current stopped-import producer останавливается ещё при выборе Sonnet4.6,
+до actual source Create/Launch. Его original oracle запечатан ошибкой
+'HEAD' !== 'POST'. Artifact14037016852 проверен до разбора:
+ZIP SHA256 cd75a3609590e3a69fcb2bb5cccaa92683d228534e98638278cdb1dcc4630c85.
+Source frozen=true, original cleanup/captured/unmatched remaining=0
+не означают, что source turn/Stop/import были выполнены.
+
+Producer в desktop-stopped-import-prior-run.ts передаёт ровно model.url
+как ANTHROPIC_BASE_URL в закрытом TEST env; proxy/cloud/mTLS vars туда не
+попадают. runtime.lock.json фиксирует runtime0.0.158, sourceRef v0.0.158,
+source tree f5c69c2e9024ffc36a5db5eafe30f53539b52f62 и проверенный архив
+6fe171490df4a8888093bf4ecdd2c4a4cd2faa510152af870c4cf37e36443311.
+
+В exact runtime repo777genius/agent_teams_orchestrator:
+src/utils/apiPreconnect.ts blob6a8de649b3ff3918dd27b31a90a7678f8c92161a
+имеет module-local fired, установленный до запроса: максимум один fetch
+за процесс, method HEAD, base URL без добавленного пути, без auth/body,
+с собственным исходным 10s AbortSignal. src/entrypoints/init.ts
+e03a6a5b1d2792bb886030a4c6a5825dde069a48 вызывает его после настройки
+transport. src/main.tsx 1d5898a83dc2d9c59b9b1cbcad3c4b1c6a71a408,
+preAction вызывает init и для обычного -p. entrypoints/cli.tsx
+ce5308b112e1a0b36c73a139c0feb49ef8fc2561 отправляет --version,
+runtime status/model list/providers fast paths до полного main/init.
+Frontend CliProviderModelAvailabilityService запускает исходный CLI
+с PONG/-p/--max-turns1/--no-session-persistence; actual source запускается
+отдельно. Это объясняет запрос без нового business input. В artifact
+сохранён метод, но не URL: '/' здесь source-derived, не observed fact.
+
+### Круг 2 — только закрытый TEST oracle producer-этапа
+
+Изменить только packages/legacy-agent-host/tests/fixtures/
+native-claude-team/model.ts и его существующий model.test.ts.
+
+В existing handler обработать HEAD отдельной закрытой веткой до
+count_tokens/POST routing: originalLegacyRead=true из capture на входе,
+не saved donor/обычный Host; failures ещё пуст; request.url строго '/'.
+Отказать query/другим путям, auth header, transfer-encoding, ненулевому
+content-length или actual body. Ответ bodyless 204 только после
+завершения исходного пустого request; остальные методы/routes сохраняют
+прежний строгий контракт. Это не общий method whitelist/health endpoint.
+
+Отдельный currentLegacyPreconnectRequests <=32. Это консервативный
+верхний предел, согласованный с уже существующим максимумом32 original
+runtime births в captureDesktopNativeExecutable: exact runtime допускает
+один preconnect на процесс; cancelled preflights могут прогреть соединение,
+не дойдя до PONG. Это НЕ утверждение о фактически наблюдённом числе HEAD,
+не HTTP→PID authority и не разрешение32 native starts. Существующие <=8
+PONG, ровно1 source turn, <=8 catalog/token checks, runtime census,
+original deadlines и native inputs не изменять.
+
+Вернуть отдельный счётчик в frozen finishCurrentLegacySource receipt,
+который существующий producer уже сохраняет после genuine Quit/absence.
+Не смешивать его с model.probes/observations/sourceNativeInputs.
+Ветка использует тот же pendingLegacyReads и original captured epoch;
+finish закрывает admission один раз и ждёт исходные pending requests.
+Поздний HEAD после границы consumer запрещён.
+
+### Круг 3 — критические проверки и честный предел
+
+В существующем current-legacy model case проверить bodyless HEAD,
+его отдельный frozen count и неизменные PONG/turn/Host-probe counts.
+Негативные подслучаи на fresh local oracle проверяют wrong path/body,
+33-й HEAD и закрытый/non-producer epoch; отказ нельзя доказывать только
+после уже запечатавшей oracle другой ошибки. Без нового test framework
+или native process/input. Запустить этот existing model case/файл,
+Host script/test types и targeted lint. Actual Darwin source UI →
+original Stop/Quit/absence → import остаётся отдельным existing CI gate.
+Не менять runtime bytes, source pins, env traffic flags или timers,
+не объявлять прежний source failure исправленным до native gate.
+
+## 28. Codex /cost: reveal the exact collapsed original reply once
+
+### Круг 1 — actual completed intent, затем UI presentation failure
+
+Parity9ea job131868953433, artifact14037097532:
+ZIP SHA256 e3714ed9c7ce041c723c6fba53e68f6b7752f4e5396a8b6ad8d59acd569658ef.
+Original command323f6e74-4be8-451d-a8ea-66cde4c1b2f9 completed;
+canonical reply373edb3e-9f51-5c6b-a28d-da6f841467d1 сохранён в original
+ledger, public command.lookup completed, actual Stats10input/10output.
+Model requests8→8, probes2→2. Это initial /cost до cold Resume, а не
+failure resumed generation. Phase остаётся sent-once из-за viewport
+проверки showReply/revealDesktopReply, production effect не повторяется.
+
+Проверенный ui-failure.png показывает original report в двухстрочной
+collapsed card. ActivityItem.tsx выставляет data-expanded=false,
+render-ит CompactMarkdownPreview с line-clamp-2 и оставляет полный
+textContent; его первый child role=button вызывает существующий
+onToggleCollapse. Поэтому наличие полного document.body.innerText
+не доказывает полную геометрию. revealDesktopReply умеет только wheel
+или bounded wait; clipping самой карточки этим не снимается.
+Existing desktop-native-commands-ui-proof.ts уже использует штатный
+header click для native /cost, но его text-presence condition здесь
+не подходит: полный clipped text уже присутствует.
+
+### Круг 2 — один существующий UI-контрол точной карточки
+
+Изменить только scripts/legacy-agent-host/desktop-codex-cost-ui-proof.ts
+в showReply; shared revealDesktopReply и production renderer не менять.
+После existing exact normalized text wait читать original article по
+полному normalized reply text из проверенного receipt, а не по одному
+'/cost'/имени участника. Требовать ровно одну подходящую карточку и
+закрытое data-expanded=true|false; ambiguity/missing остаются refusal.
+При false использовать existing createDesktopUiControls.clickExpression
+на её firstElementChild с role=button: visible geometry, hit test,
+original captured renderer и stable target checks перед одним обычным
+mouse click. Затем existing passive wait подтверждает data-expanded=true
+для той же exact reply, и прежний revealDesktopReply проверяет полный
+текст внутри всех clipped ancestors. При true не кликать.
+
+Не использовать DOM.click/React setters, прямое изменение CSS/state,
+запись сообщения, command retry или повтор Send. Existing click/read
+budgets, original binding/receipt/input equality, counts, cold lookup
+и screenshot после успешной геометрии сохраняются. Тот же showReply
+применяется к retained original/cold и subsequent actual resumed report;
+не подменять identity/counters между ними.
+
+### Круг 3 — минимальная verification
+
+Проверить настоящий ActivityItem в существующем renderer case
+'uses a two-line clamped preview in compact mode': полный текст уже
+есть при collapsed, original header callback раскрывает его при
+обычном click, collapse override относится к тому же item.
+Допустимо узко дополнить этот existing case без новой suite/снимков
+и без подмены геометрии результатом headless DOM.
+Scripts types/targeted lint и existing ActivityItem tests проверяют
+контракт; физическая CDP geometry, original report screenshot и весь
+Codex cold Resume остаются pending existing Desktop CI.
