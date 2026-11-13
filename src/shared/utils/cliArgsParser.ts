@@ -230,7 +230,11 @@ function scanUserFlags(raw: string): {
     flags.push(option);
     // A required option with --option= (including quoted empty values)
     // supplies no value. Reject it before accepting Create/Launch/Validate.
-    if (equalsIndex !== -1 && token.length === equalsIndex + 1 && OPTIONS_WITH_REQUIRED_VALUE.has(option)) {
+    if (
+      equalsIndex !== -1 &&
+      token.length === equalsIndex + 1 &&
+      OPTIONS_WITH_REQUIRED_VALUE.has(option)
+    ) {
       missingValue = option;
     }
     // `--append-system-prompt "-review it"`: the CLI reads the next token as the
