@@ -29,36 +29,48 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
-## v2.18.7 (Preparing draft)
+## v2.18.7 (Published 2026-11-11)
 
 Target branch: `main`. Includes the verified published runtime `0.0.160`. Live team checks passed core scenarios on macOS and Linux with documented limitations; a complete successful live Windows team run remains unconfirmed. All release artifact, signing, notarization, and updater gates still apply.
 
 <!-- RELEASE_BODY_START v2.18.7 -->
 
-Create teams directly from the Teams page, organize work in a task table, and connect scheduled runs to board tasks. Provider settings and appearance controls are easier to manage.
+Simplified the Dashboard and improved team creation and launch. Added a tasks table, built-in Git, improved schedules, and fixed OpenCode teammates sometimes not replying. Customize local fonts, text size, app scaling, and portable JSON themes. Simplified the Team screen.
+
+<img width="1312" height="823" alt="image" src="https://github.com/user-attachments/assets/443ec4eb-f2ca-4b31-890c-c1a97b78bdea" />
+
+<img width="1312" height="823" alt="image" src="https://github.com/user-attachments/assets/e7f8ecdf-752e-44b7-b684-5dabed7f3ae1" />
+
+<img width="981" height="422" alt="image" src="https://github.com/user-attachments/assets/06093eac-8903-4edb-99ec-50240a8608c3" />
+
+<img width="1312" height="823" alt="image" src="https://github.com/user-attachments/assets/534b81e3-41e9-4af7-ace5-83091ca77e35" />
+
+<img width="832" height="742" alt="image" src="https://github.com/user-attachments/assets/4cd91e21-2974-4dba-8c51-14db289b5880" />
 
 ### What's New
 
-- Create teams from the Teams page, with confirmation before replacing a setup from a template.
-- View and manage tasks in a table alongside the board.
-- Opt into schedules that create linked board tasks and target individual members.
-- Customize local fonts, text size, app scaling, and portable JSON themes.
-- Manage provider connections in Settings and refresh provider status from model selectors.
+- Create teams from the Teams page; confirm templates before replacing an edited setup.
+- Sort tasks in a live table with selectable, resizable columns.
+- Schedule one agent or a whole team, with optional linked board tasks and avatar-based member selection.
+- Built-in Git handles app diffs, worktrees, and cloning without a separate Git installation.
+- Use OpenCode 2.x on Intel Macs.
+- Choose local UI fonts, text size, whole-app scaling, and portable JSON themes.
+
+### Improvements
+
+- Manage providers in Settings and refresh their models directly from the model selector.
+- Search time zones, preview scheduled runs, and open linked tasks from run history.
+- Settings use a sidebar; teammate controls appear on hover beside status badges.
+- Keep team creation and model selection usable at 200% zoom.
 
 ### Fixes
 
-- Keep OpenCode loading indicators visible until initial connection counts finish.
-- Deliver plain-text OpenCode teammate replies to the team lead.
-- Preserve Advanced CLI arguments and worktree settings when renaming teams.
-- Keep draft save indicators accurate while newer edits are still being saved.
-- Refresh Codex status after signing in.
-- Prevent repeated macOS developer-tools prompts when Git is needed.
-
-### macOS installation
-
-macOS 2.18.7 requires macOS 13 or later. macOS 12 users can keep using the existing signed 2.17.1 builds.
-
-If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.18.7 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
+- Fix silent OpenCode teammates and missing plain-text replies to the lead, including delivery after app restarts.
+- Keep OpenCode counts consistent across catalogs and show loaders until checks finish; refresh Codex after sign-in.
+- Preserve descriptions, Advanced CLI arguments, and worktree settings when copying or renaming teams; show draft saves accurately.
+- Validate cron schedules, avoid interrupting busy teammates or replaying old prompts, and distinguish dispatched, skipped, and completed runs.
+- Handle OpenCode project-access errors and macOS cloud folders; prevent Windows inbox-write failures.
+- Protect saved OpenCode credentials during simultaneous connection updates.
 
 ### Downloads
 
