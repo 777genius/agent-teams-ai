@@ -43,6 +43,10 @@ describe('HTTP team route parsers', () => {
       'app-managed flags'
     );
     // A genuinely user-safe flag (not app-managed) passes through untouched.
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs('--max-turns='),
+      'ends with --max-turns but no value'
+    );
     expect(assertOptionalExtraCliArgs('--max-turns=5')).toBe('--max-turns=5');
     expect(assertOptionalExtraCliArgs('--max-turns=5 --teammate-mode tmux')).toBe(
       '--max-turns=5 --teammate-mode tmux'

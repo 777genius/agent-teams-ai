@@ -7259,6 +7259,7 @@ describe('ipc teams handlers', () => {
       ['-rother-session', 'app-managed flags: -r'],
       ['--disallowed-tools x', 'app-managed flags: --disallowed-tools'],
       ['--max-turns', 'ends with --max-turns but no value'],
+      ['--max-turns=', 'ends with --max-turns but no value'],
     ] as const;
 
     it.each(blockedArgs)('rejects %s on team create', async (extraCliArgs, error) => {
