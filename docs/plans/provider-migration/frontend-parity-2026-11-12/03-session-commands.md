@@ -1762,3 +1762,36 @@ no-replay and source/cleanup guards. No extra input, RPC, filesystem read,
 poll, timeout, production file or model response is added. Require independent
 source review and the existing script type/native Desktop gates in normal CI.
 No local execution or native acceptance claim follows from this source edit.
+
+**R21 related-source audit — native extension replies use the same Team effect identity.**
+
+The bounded audit of the related native command and extension proofs finds
+the same predicate in `scripts/legacy-agent-host/desktop-native-extension-consumption-ui-proof.ts`
+(preimage `dffa4527a20724f784da00bf235bdb02e316b107`, line109).
+The exact model `b441400099351dca886ea0101c9a3714c12ebe60`, lines69–70,
+supplies `extensionReplyId(phase)` as the original MCP commandId and supplies
+no payload messageId. The original Team message therefore receives the
+canonical effectId from the already established R21 source chain.
+This is a source-proven oracle mismatch; the later extension journey has not
+been qualified by the failed native prerequisite.
+
+Change only this existing TEST file: import the canonical effectId helper,
+capture backendId/teamId as nonempty strings from its existing original
+`options.session.binding`, and derive the expected inbox messageId from
+that pair and the unchanged extensionReplyId(phase). Keep the original
+model command IDs and proof annotations unchanged. The same loop continues
+to require exactly one reply from alice with exact native text for each
+user-skill, project-skill and plugin invocation.
+
+Preserve all original input/outbox/runtime/command joins, three Composer
+sends, six native extension responses, captured source digests, visible
+reply checks, edit/uninstall behavior, cold new Query and original cleanup.
+The canonical identity helper is already in desktop-proof-sources, so no
+inventory addition is needed. Keep the existing Host-local cost output
+identity and its assertions unchanged; that route uses its own deliberately
+assigned native-command-output ID. No production changes, new requests,
+polling, budgets, fixtures or unit-test suite are needed.
+
+Root and an independent peer review this exact delta before source
+publication. Existing types and the original native extension Desktop gate
+remain mandatory; source review alone does not qualify native behavior.
