@@ -113,8 +113,12 @@ async function runParent() {
       child.on('message', (msg) => {
         if (msg?.type === 'tool') tools.push(msg);
         if (msg?.type === 'ready') {
+          if (msg.pid !== child.pid) {
+            terminateOwnedTree(child);
+            finish(new Error('teammate fixture identity mismatch'));
+            return;
+          }
           ready = true;
-          assert.equal(msg.pid, child.pid);
           child.send({ type: 'stop' });
         }
       });
