@@ -93,13 +93,17 @@ export function createWindowsTeamProcessCommands(context: WindowsProcessJournal)
     if (active.length > 1 || (capture && active.some(row => !same(row.capturedNative, capture))))
       return refuse('conflict');
   }
-  async function query(capture: WindowsServiceCapture, deadline: number): Promise<ProcessObservation> {
-    if (!aliveBudget(deadline)) return 'unknown';
+  async function queryEvidence(capture: WindowsServiceCapture, deadline: number): Promise<WindowsServiceOutcome> {
+    if (!aliveBudget(deadline)) return unknown;
     try {
       const result = await native.query(capture, deadline);
       return aliveBudget(deadline) && result.state === 'observed' && same(result.capture, capture)
-        ? result.observation : 'unknown';
-    } catch { return 'unknown'; }
+        ? result : unknown;
+    } catch { return unknown; }
+  }
+  async function query(capture: WindowsServiceCapture, deadline: number): Promise<ProcessObservation> {
+    const result = await queryEvidence(capture, deadline);
+    return result.state === 'observed' ? result.observation : 'unknown';
   }
   async function outcome(intent: WindowsServiceIntent, deadline: number,
     initial: boolean): Promise<WindowsServiceOutcome> {
@@ -138,7 +142,11 @@ export function createWindowsTeamProcessCommands(context: WindowsProcessJournal)
         // The original policy effect may already have happened. Never register again.
         const rows = registry.readStrict();
         const active = rows.filter(value => value.pid === registration.input.pid && !value.stoppedAt);
-        if (active.length > 1 || active.some(value => !same(value.capturedNative, capture))) return refuse('conflict');
+        if (active.length > 1 || active.some(value => value.capturedNative !== undefined &&
+            !same(value.capturedNative, capture))) return refuse('conflict');
+        // An interrupted policy write may leave metadata without the original attachment.
+        // It remains unknown: do not attach by PID, repeat register, or call it a foreign capture.
+        if (active.some(value => value.capturedNative === undefined)) return frozenReceipt(receipt);
         const matches = rows.filter(value => value.capturedByCommand === receipt.commandId &&
           same(value.capturedNative, capture) && policyInputMatches(value, receipt));
         if (matches.length !== 1) return frozenReceipt(receipt);
@@ -235,7 +243,135 @@ export function createWindowsTeamProcessCommands(context: WindowsProcessJournal)
     });
   }
 
+
+  /** Called only under the existing admin fence; public principal-bound lookup is unchanged. */
+  function naturalOriginal(capture: WindowsServiceCapture): ProcessCommandReceipt | undefined {
+    const receipts = context.processReceipts();
+    if (receipts.some(receipt => receipt.operation === 'terminate' &&
+        receipt.state.phase !== 'completed' && receipt.state.phase !== 'refused' &&
+        same(receipt.capture, capture))) return refuse('hold');
+    if (receipts.some(receipt => receipt.operation === 'terminate' &&
+        receipt.state.phase === 'completed' && receipt.state.native === 'observed-absent' &&
+        same(receipt.capture, capture))) return undefined; // Existing genuine Stop owns its settlement.
+    const registrations = receipts.filter(receipt => receipt.operation === 'register' &&
+      receipt.state.phase === 'completed' && receipt.state.native === 'not-requested' &&
+      receipt.nativeIntent?.command.operation === 'capture' && receipt.originalRegistration?.policyRequested &&
+      receipt.original && receipt.capture?.version === 5 && same(receipt.capture, capture));
+    const anchors = registrations.filter(receipt => receipt.nativeAbsence !== undefined);
+    if (anchors.length > 1 || !registrations.length) return refuse('hold');
+    const selected = anchors[0] ?? registrations.sort((left, right) =>
+      left.commandId < right.commandId ? -1 : left.commandId > right.commandId ? 1 : 0)[0]!;
+    return frozenReceipt(selected);
+  }
+  function assertNaturalOriginal(original: ProcessCommandReceipt, current: ProcessCommandReceipt): void {
+    if (current.commandId !== original.commandId || current.principalId !== original.principalId ||
+        current.requestDigest !== original.requestDigest || current.authorityRevision !== original.authorityRevision ||
+        !same(current.binding, original.binding) || !same(current.capture, original.capture) ||
+        !same(current.nativeIntent, original.nativeIntent) || !same(current.originalRegistration, original.originalRegistration) ||
+        !same(current.original, original.original)) return refuse('conflict');
+  }
+  async function settleNatural(original: ProcessCommandReceipt, deadline: number,
+    retryNoDispatch: WindowsServiceIntent | undefined): Promise<void> {
+    options.assertAsyncCurrent?.();
+    const capture = original.capture;
+    if (capture?.version !== 5) return refuse('hold');
+    let first: WindowsServiceIntent | undefined;
+    const selected = store.fenced(() => {
+      context.enter('admin');
+      const receipt = naturalOriginal(capture);
+      if (!receipt) return undefined;
+      assertNaturalOriginal(original, receipt);
+      if (!receipt.nativeAbsence) return refuse('hold');
+      const state = receipt.nativeAbsence.settlement;
+      if (state === 'settled' || !aliveBudget(deadline)) return undefined;
+      if (state === 'not-dispatched' &&
+          (!retryNoDispatch || !same(retryNoDispatch, receipt.nativeSettlement))) return undefined;
+      if (state === 'unprepared' || state === 'not-dispatched') {
+        first = native.prepareControl(capture, 'settle');
+        receipt.nativeSettlement = structuredClone(first);
+        receipt.nativeAbsence = { ...receipt.nativeAbsence, settlement: 'requested' };
+        context.persist(receipt); // Same original register, before the first native settle await.
+        options.invalidate();
+      }
+      return frozenReceipt(receipt);
+    });
+    if (!selected?.nativeSettlement || !aliveBudget(deadline)) return;
+    const result = await outcome(first ?? selected.nativeSettlement, deadline, !!first);
+    options.assertAsyncCurrent?.();
+    store.fenced(() => {
+      context.enter('admin');
+      const receipt = naturalOriginal(capture);
+      if (!receipt) return;
+      assertNaturalOriginal(selected, receipt);
+      if (!receipt.nativeAbsence) return refuse('hold');
+      if (!same(receipt.nativeSettlement, selected.nativeSettlement) ||
+          receipt.nativeAbsence.settlement === 'settled' || !aliveBudget(deadline)) return;
+      if (result.state === 'settled' && same(result.capture, capture)) {
+        receipt.nativeAbsence = { ...receipt.nativeAbsence, settlement: 'settled' };
+      } else if (result.state === 'not-dispatched' && receipt.nativeAbsence.settlement === 'requested') {
+        receipt.nativeAbsence = { ...receipt.nativeAbsence, settlement: 'not-dispatched' };
+      } else return;
+      context.persist(receipt); options.invalidate();
+    });
+  }
+  async function reconcileNatural(capture: WindowsServiceCapture, deadline: number): Promise<void> {
+    options.assertAsyncCurrent?.();
+    let original: ProcessCommandReceipt | undefined = store.fenced(() => {
+      context.enter('admin');
+      return aliveBudget(deadline) ? naturalOriginal(capture) : undefined;
+    });
+    if (!original) return;
+    // Only a call which entered after confirmed no-dispatch may admit a new settlement intent.
+    const retryNoDispatch = original.nativeAbsence?.settlement === 'not-dispatched'
+      ? original.nativeSettlement : undefined;
+    if (!original.nativeAbsence) {
+      const observed = await queryEvidence(capture, deadline);
+      options.assertAsyncCurrent?.();
+      const capturedOriginal = original;
+      original = store.fenced(() => {
+        context.enter('admin');
+        const receipt = naturalOriginal(capture);
+        if (!receipt) return undefined;
+        assertNaturalOriginal(capturedOriginal, receipt);
+        if (!aliveBudget(deadline)) return undefined;
+        if (!receipt.nativeAbsence) {
+          if (observed.state !== 'observed' || observed.observation !== 'absent' ||
+              !same(observed.capture, capture)) return undefined;
+          receipt.nativeAbsence = { schemaVersion: 1, kind: 'windows-service-absence-v1',
+            captureDigest: digest(capture), evidence: observed.evidence, settlement: 'unprepared' };
+          context.persist(receipt); options.invalidate();
+        }
+        return frozenReceipt(receipt);
+      });
+    }
+    if (original) await settleNatural(original, deadline, retryNoDispatch);
+  }
+
   return {
+    /** Private lifecycle maintenance, never a public command or a new PID capture. */
+    async reconcileNaturalAbsence(originalDeadline: number): Promise<void> {
+      const deadline = bounded(originalDeadline);
+      options.assertAsyncCurrent?.();
+      const captures = store.fenced(() => {
+        context.enter('admin');
+        const selected = new Map<string, WindowsServiceCapture>();
+        for (const row of context.visibleRows()) {
+          context.view(row);
+          if (row.capturedNative?.version === 5) selected.set(digest(row.capturedNative), row.capturedNative);
+        }
+        for (const receipt of context.processReceipts()) if (receipt.capture?.version === 5)
+          selected.set(digest(receipt.capture), receipt.capture);
+        options.assertCurrent();
+        return structuredClone([...selected.values()]);
+      });
+      let next = 0;
+      await Promise.all(Array.from({ length: Math.min(3, captures.length) }, async () => {
+        while (next < captures.length && aliveBudget(deadline))
+          await reconcileNatural(captures[next++]!, deadline);
+      }));
+      options.assertAsyncCurrent?.();
+      store.fenced(() => { context.enter('admin'); options.assertCurrent(); });
+    },
     async register(commandId: string, raw: ProcessRegisterInput, originalDeadline: number): Promise<ProcessCommandReceipt> {
       const deadline = bounded(originalDeadline);
       options.assertAsyncCurrent?.();

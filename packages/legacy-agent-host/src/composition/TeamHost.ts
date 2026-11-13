@@ -146,6 +146,7 @@ export function createTeamHost(
       runtime: () => runtime,
       importer: () => imports,
       ...(processCustody ? { processCustody } : {}),
+      ...(retainedWindowsLaunch ? { windows: retainedWindowsLaunch.registeredProcesses } : {}),
     });
     const workSync = createHostWorkSyncComposition({
       teamsBasePath: join(profile.owner.storageRoot, 'teams'),

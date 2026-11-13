@@ -459,8 +459,8 @@ test('process registration checks its own original Runtime input outside Team fe
     () => port.register('TEST-process-refused-capture', { pid: 1001, label: 'TEST-unproven' }),
     (error) => error instanceof TeamOwnerError && error.code === 'hold'
   );
-  assert.equal(port.lookup('TEST-process-refused-capture'), null);
-  assert.deepEqual(port.list(), [], 'Unproven capture cannot publish a process row');
+  assert.equal(await port.lookup('TEST-process-refused-capture'), null);
+  assert.deepEqual(await port.list(), [], 'Unproven capture cannot publish a process row');
   const unexpected = new Error('TEST-private-adapter-failure');
   captureFailure = unexpected;
   assert.throws(
@@ -468,15 +468,15 @@ test('process registration checks its own original Runtime input outside Team fe
     (error) => error === unexpected,
     'Unknown adapter failures are not recast as an expected HOLD'
   );
-  assert.equal(port.lookup('TEST-process-unexpected-capture'), null);
-  assert.deepEqual(port.list(), []);
+  assert.equal(await port.lookup('TEST-process-unexpected-capture'), null);
+  assert.deepEqual(await port.list(), []);
   captureFailure = undefined;
   const refusedCaptures = captures;
-  const receipt = port.register('TEST-process-own-register', { pid: 1001, label: 'TEST-owned' });
+  const receipt = await port.register('TEST-process-own-register', { pid: 1001, label: 'TEST-owned' });
   assert.equal(receipt.principalId, 'native-A');
   assert.equal(receipt.capture?.registrar.generation, entry.binding.generation);
   assert.equal(captures, refusedCaptures + 1);
-  port.register('TEST-process-own-register', { pid: 1001, label: 'TEST-owned' });
+  await port.register('TEST-process-own-register', { pid: 1001, label: 'TEST-owned' });
   assert.equal(captures, refusedCaptures + 1, 'Same original command only looks up the retained receipt');
   f.runtimeStore.fenced(entry.binding, (tx) => {
     const record = tx.get()!;
@@ -489,5 +489,5 @@ test('process registration checks its own original Runtime input outside Team fe
     /hold|forbidden/
   );
   assert.equal(captures, refusedCaptures + 1);
-  assert.equal(port.lookup('TEST-process-own-register')?.commandId, 'TEST-process-own-register');
+  assert.equal((await port.lookup('TEST-process-own-register'))?.commandId, 'TEST-process-own-register');
 });

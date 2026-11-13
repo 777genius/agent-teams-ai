@@ -1407,3 +1407,80 @@ full launch validator, Runtime read transaction и existing read alternatives;
 guard не зависел от project status даже при observation refusal.
 **R3:** независимый plan/source review и execution ещё требуются; среда
 недоступна, новые source bytes пока не созданы.
+
+## 23. R23: исходные current closures metadata-owner без повторных conjuncts
+
+### Круг 1 — actual evidence и точная граница вывода
+
+На exact `9ea802cc0f8c873c8349512cb010fe54e34fdd70` native V2 Linux
+job `131868949378` прошёл полный Session с 11 model requests, оригинальным
+cleanup и cold Resume. Отдельный model-probe затем завершил три реальные
+no-tool запроса, cancellation и отказ неизвестного variant, но
+`opencode-v2-model-probe.native.ts:352` получил `{ok:false,code:'held'}`
+на последующем `management.catalog`. Receipt сохранил cleanup=true и exit0;
+его неточная внутренняя причина не становится доказанным timeout.
+Artifact `14037505505`, ZIP SHA256
+`daba2ffff6a05c91d5594313f7d130e27ae53d11ccbe5c2305728e9b9993ef82`;
+model-probe receipt SHA256
+`6a768ccc0fc43c7058c878983114c2a0f7c82d87772d08c32a0028ac3adc17c6`.
+
+Существующие 10ms CPU projections первого Session Host показывают широкий
+nearest-stack category `team-writer-authority`, например Windows ARM
+135979223/186387141 us и Linux 16856115/33815857 us. Это разные платформы
+и фазы выполнения; category не выделяет metadata-owner, конкретную функцию
+или чистое OS CPU time. Эти данные не доказывают причину отказа catalog
+или ожидаемую экономию от следующего изменения.
+
+### Круг 2 — один private file, те же original guards
+
+Source `packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts`
+blob `b6745ac48217f15bc782508d31375073da92254a` сохранил два conjunct
+sites, аналогичных уже проверенным R19 ModelProbe:
+
+1. `catalogCredential` получает owner callback
+   `() => this.selectionCurrent() && this.configuration.isCurrent()`.
+   Передать вместо него `this.configuration.isCurrent`.
+2. `current()` возвращает `selectionCurrent() && configuration.isCurrent() &&
+   (catalogCredential?.isCurrent() ?? true)`. Возвращать
+   `catalogCredential?.isCurrent() ?? configuration.isCurrent()`.
+
+Эквивалентность основана на exact captured closures, не на кратковременном
+кэше. `captureOpenCodeV2Configuration` создан здесь с owner
+`() => this.selectionCurrent()`: unbound source, explicit key и ветка без
+source/key сохраняют эту проверку. R21 `isCurrent` обязательно проверяет
+original key witness, затем source либо owner fallback; scope/key
+`isCurrent` вызывает original owner до/после синхронного выбора auth,
+включая absent-file/directory. `captureOpenCodeV2SessionCredential`
+возвращает именно captured scope current; его supplied owner остаётся
+тем же configuration closure. При отсутствии catalogCredential
+(пассивный directory и retained key-operation owner) остаётся полный
+configuration current. ManagementHost не вызывает bindRunningSession;
+все original directory identity, source/config/key, seal/abort,
+override и captured profile guards остаются.
+
+Все места `assertCurrent`, signal/deadline проверки, before/after-await,
+native custody, password read, session/key effects, pending leases,
+exact metadata lifecycle и confirmed cleanup неизменны.
+Нельзя удалять проверку explicit config key, объединять проверки через await,
+сохранять результат current, вводить TTL или менять Team writer/namespace
+fence. Никаких изменений timeoutMs, original 30s metadata/120s Session budget,
+HTTP/native input counts, retry или data-source selection.
+
+### Круг 3 — узкая проверка и публикация
+
+До source root публикует append, независимый peer сверяет оба owner пути,
+включая absent credential, selected-provider catalog и retained key operation.
+Source scope — ровно две замены в одном existing private file.
+Проверки используют существующие configuration-source, credential-scope,
+model-probe и management-recovery cases: revoke, absent→present auth,
+explicit key conflict, original source drift, catalog serialization/seal,
+expiry и unknown cleanup. Новая suite, synthetic native success или
+benchmark не нужны. При обнаружении непокрытой ветки сначала согласовать
+один meaningful existing-case delta, не писать тест подсчёта implementation calls.
+
+Нужны actual Host build/test types, эти focused cases, lint/source cap.
+Следующий штатный native matrix сохраняет исходные сценарии и budgets.
+Source-equivalence PASS отдельно от execution PASS; успешная проверка
+closures не закрывает Windows input-cut/Darwin startup задержки и не
+объявляет Linux catalog timeout причиной. Прежде более широких оптимизаций
+Team authority нужны отдельные measured attribution и новый план.

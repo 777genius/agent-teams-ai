@@ -8,7 +8,7 @@ import type {
   TeamProcessRow,
 } from './registeredProcessContracts.js';
 import { isQualifiedDarwinBuild } from './qualifiedDarwinBuild.js';
-const hold = (): never => {
+const hold: () => never = () => {
   throw new Error('process:hold');
 };
 const text = (value: unknown, max = 256): value is string =>
@@ -137,6 +137,7 @@ export function processReceiptFingerprint(
     ...(row.nativeIntent ? { nativeIntent: row.nativeIntent } : {}),
     ...(row.originalRegistration ? { originalRegistration: row.originalRegistration } : {}),
     ...(row.nativeSettlement ? { nativeSettlement: row.nativeSettlement } : {}),
+    ...(row.nativeAbsence ? { nativeAbsence: row.nativeAbsence } : {}),
   });
 }
 export function processReceiptPhase(
@@ -240,7 +241,7 @@ function validateWindowsProcessReceipt(row: ProcessCommandReceipt, digest: (valu
   const intent = row.nativeIntent;
   const registration = row.originalRegistration;
   if (!intent) {
-    if (registration || row.nativeSettlement || row.capture?.version === 5) hold();
+    if (registration || row.nativeSettlement || row.nativeAbsence !== undefined || row.capture?.version === 5) hold();
     return;
   }
   if (!windowsServiceIntentSchema.safeParse(intent).success ||
@@ -269,10 +270,24 @@ function validateWindowsProcessReceipt(row: ProcessCommandReceipt, digest: (valu
         digest(command.capture) !== digest(row.capture) ||
         digest(serviceSource(intent)) !== digest(serviceSource(row.capture))) hold();
   }
+  if (row.nativeAbsence !== undefined) {
+    const absence = row.nativeAbsence;
+    if (!absence || Object.keys(absence).sort().join(',') !== 'captureDigest,evidence,kind,schemaVersion,settlement' ||
+        absence.schemaVersion !== 1 || absence.kind !== 'windows-service-absence-v1' ||
+        !['native-scope', 'retained-terminal', 'original-whole-job'].includes(absence.evidence) ||
+        !['unprepared', 'requested', 'not-dispatched', 'settled'].includes(absence.settlement) ||
+        row.operation !== 'register' || row.state.phase !== 'completed' || row.state.native !== 'not-requested' ||
+        !row.capture || row.capture.version !== 5 || absence.captureDigest !== digest(row.capture) ||
+        (absence.settlement === 'unprepared' ? row.nativeSettlement !== undefined : !row.nativeSettlement)) hold();
+  }
   if (row.nativeSettlement) {
     const settlement = row.nativeSettlement;
+    const terminated = row.operation === 'terminate' && row.state.phase === 'completed' &&
+      row.state.native === 'observed-absent';
+    const natural = row.operation === 'register' && row.nativeAbsence &&
+      row.nativeAbsence.settlement !== 'unprepared';
     if (!windowsServiceIntentSchema.safeParse(settlement).success || settlement.command.operation !== 'settle' ||
-        row.operation !== 'terminate' || row.state.phase !== 'completed' || row.state.native !== 'observed-absent' ||
+        (!terminated && !natural) ||
         !row.capture || row.capture.version !== 5 || digest(settlement.command.capture) !== digest(row.capture) ||
         digest(serviceSource(settlement)) !== digest(serviceSource(row.capture))) hold();
   }

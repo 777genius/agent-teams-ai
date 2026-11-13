@@ -100,8 +100,10 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
     observations?: ReadonlyMap<string, ProcessObservation>): ProcessObservation => {
     // A completed native exit observation remains true after an owner-local pidfd is gone.
     // Requested/accepted signals and metadata stops are never absence evidence.
-    const terminal = receipts.some(receipt => receipt.operation === 'terminate' &&
-      receipt.state.phase === 'completed' && receipt.state.native === 'observed-absent' &&
+    const terminal = receipts.some(receipt =>
+      ((receipt.operation === 'terminate' && receipt.state.phase === 'completed' &&
+        receipt.state.native === 'observed-absent') ||
+       (receipt.operation === 'register' && receipt.nativeAbsence !== undefined)) &&
       digest(receipt.capture) === digest(capture));
     if (terminal) return 'absent';
     // A synchronous Team snapshot has no native Windows result. Never send v5 to a POSIX adapter.
@@ -243,6 +245,12 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
         enter('admin');
         const receipts = processReceipts();
         if (receipts.some(row => row.phase !== 'completed' && row.phase !== 'rejected')) return refuse('hold');
+        const natural = new Set<string>();
+        for (const receipt of receipts) if (receipt.nativeAbsence) {
+          const key = digest(receipt.capture);
+          if (receipt.nativeAbsence.settlement !== 'settled' || natural.has(key)) return refuse('hold');
+          natural.add(key);
+        }
         const rows = registry.readStrict();
         if (rows.some(row => !row.capturedNative)) return refuse('hold');
         const captures = new Map<string, RegisteredProcessCapture>();

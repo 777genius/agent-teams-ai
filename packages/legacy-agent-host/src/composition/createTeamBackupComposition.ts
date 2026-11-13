@@ -2,6 +2,7 @@ import { pruneDeletedTeamBackups } from '../adapters/lifecycle/pruneDeletedTeamB
 import { createOwnerScopedTeamPurge, continueOwnerScopedTeamPurge } from '../adapters/lifecycle/OwnerScopedTeamPurge.js';
 import { createOwnerPurgeRequest } from '../adapters/lifecycle/ownerPurgeRequest.js';
 import { join } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { TeamOwnerError } from '../team/contracts.js';
 import { digest } from '../team/identity.js';
 import { createOwnerLifecycleIdentity } from '../adapters/lifecycle/createOwnerLifecycleIdentity.js';
@@ -28,7 +29,11 @@ export function createTeamBackupComposition(options: {
   /** Actual retained evidence/native/import owners; unavailable proof retains the backup. */
   assertBackupPrunable(teamName: string, identityId: string): void;
   importer?(): Pick<FileStoppedTeamImport, 'publication'> | undefined;
-  purge?: { assertReferencesReleased(teamId: string): void; onPurged(teamId: string): void };
+  purge?: {
+    prepareReferencesReleased?(teamId: string, originalDeadline: number): Promise<void>;
+    assertReferencesReleased(teamId: string): void;
+    onPurged(teamId: string): void;
+  };
 }) {
   const roots = options.directories;
   let initialized = false, initialization: Promise<void> | undefined;
@@ -133,6 +138,7 @@ export function createTeamBackupComposition(options: {
       });
     },
     async purge(teamId: string, commandId: string, expectedRevision: string) {
+      const deadline = performance.now() + 10000; // Before initialization/lookup, never renewed per scope.
       await initialize();
       const hooks = options.purge;
       if (!hooks) throw new TeamOwnerError('hold');
@@ -146,9 +152,12 @@ export function createTeamBackupComposition(options: {
         principalId: options.principalId, lifecycle: selected.team.owner.lifecycleContinuation(), coordinator,
         assertWriter: options.assertCurrent, authorizePurge: selected.assertWriter,
         assertReferencesReleased: () => hooks.assertReferencesReleased(teamId),
+        ...(hooks.prepareReferencesReleased ? {
+          prepareReferencesReleased: (originalDeadline: number) => hooks.prepareReferencesReleased!(teamId, originalDeadline),
+        } : {}),
         ...(selected.imported ? { importPublication: selected.imported } : {}),
         onPurged: () => hooks.onPurged(teamId) });
-      const result = await purge.purge(commandId, expectedRevision);
+      const result = await purge.purge(commandId, expectedRevision, deadline);
       return { kind: 'team_purge', commandId, transactionId: result.transactionId, phase: 'deleted' };
     },
     async lookupPurge(teamId: string, commandId: string, expectedRevision: string) {

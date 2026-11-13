@@ -103,6 +103,14 @@ export type ProcessStopState =
   | { phase: 'completed'; native: 'not-requested' }
   | { phase: 'completed'; native: 'observed-absent'; signalAccepted: boolean | 'unknown' }
   | { phase: 'refused'; native: 'not-requested' | 'refused' };
+/** Portable observation of the original registered Windows scope, never a Stop request. */
+export interface NaturalProcessAbsence {
+  schemaVersion: 1;
+  kind: 'windows-service-absence-v1';
+  captureDigest: string;
+  evidence: 'native-scope' | 'retained-terminal' | 'original-whole-job';
+  settlement: 'unprepared' | 'requested' | 'not-dispatched' | 'settled';
+}
 export interface ProcessCommandReceipt {
   schemaVersion: 1;
   family: 'process';
@@ -120,7 +128,9 @@ export interface ProcessCommandReceipt {
   /** Private original Main intent; its operationRef never becomes canonical physical identity. */
   nativeIntent?: WindowsServiceIntent;
   originalRegistration?: OriginalProcessRegistration;
-  /** Only after a durable original terminate absence; lookup never creates a replacement intent. */
+  /** Optional durable natural observation on the original completed register receipt only. */
+  nativeAbsence?: NaturalProcessAbsence;
+  /** After durable original absence; an unknown intent has lookup authority only. */
   nativeSettlement?: WindowsServiceIntent;
   phase: 'prepared' | 'held' | 'completed' | 'rejected';
   state: ProcessStopState;
