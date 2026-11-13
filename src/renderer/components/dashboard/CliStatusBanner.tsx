@@ -1429,7 +1429,7 @@ const InstalledBanner = ({
                     <button
                       data-testid={`runtime-manage-${provider.providerId}`}
                       onClick={() => onProviderManage(provider.providerId)}
-                      disabled={actionDisabled}
+                      disabled={isBusy || cliStatusLoading || !cliStatus.installed}
                       className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                       style={{
                         borderColor: 'var(--color-border)',
@@ -2139,7 +2139,7 @@ export const CliStatusBanner = ({
               initialRuntimeProviderId={manageRuntimeProviderId}
               initialRuntimeProviderAction={manageRuntimeProviderAction}
               providerStatusLoading={cliProviderStatusLoading}
-              disabled={isBusy || cliStatusLoading || !renderCliStatus.binaryPath}
+              disabled={isBusy || cliStatusLoading || !renderCliStatus.installed}
               codexRuntimeStatus={codexRuntimeStatus}
               codexRuntimeStatusLoading={codexRuntimeStatusLoading}
               onInstallCodexRuntime={() => installCodexRuntime()}
