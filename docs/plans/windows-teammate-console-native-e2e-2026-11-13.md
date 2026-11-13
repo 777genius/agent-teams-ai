@@ -12,7 +12,7 @@ Preserve the existing contributor fix in [#1185](https://github.com/777genius/ag
 
 1. GitHub compare against current main must contain only the four contributor files, plus this plan and narrowly scoped fixture/workflow; original contributor commit remains in ancestry.
 2. Changed-file tests, TS typecheck, CodeQL and required exact-HEAD CI pass. No queued, skipped, cancelled or partially successful job counts as proof of an applicable gate.
-3. A Windows GitHub-hosted runner must exercise actual native launch of a disposable teammate-shaped subprocess and repeated Bash-equivalent `cmd.exe`, Git and PowerShell child calls. Capture exact PID, original process identity, exit codes and bounded cleanup. Do not mutate user data or invoke real provider binaries.
+3. A Windows GitHub-hosted runner must exercise actual native launch of a disposable teammate-shaped subprocess and repeated Bash-equivalent `cmd.exe`, Git and PowerShell child calls. Capture exact PID, original process identity (verified native Win32 process command lines with unique marker), exit codes and bounded cleanup. Additionally force-kill a disposable app-like owner while a teammate and tool remain active; measure both original PIDs independently. A surviving descendant must be reported, not called a pass. Do not mutate user data or invoke real provider binaries.
 4. **Separate GUI/product acceptance before merge:** actual Windows Electron teammate tool calls produce no console flash, focus theft or unexpected taskbar window; importers also do not flash. Observe the original teammate and live tool descendants after normal Stop and forced app termination. If the interactive desktop is unavailable or grandchildren survive, report this explicitly; do not claim a pass from mock/fixture evidence.
 5. Only after required independent review and native GUI proof, merge the integration PR with expected-head CAS and verify post-merge CI on main. Do not separately merge the original fork PR.
 
@@ -21,7 +21,7 @@ Preserve the existing contributor fix in [#1185](https://github.com/777genius/ag
 | Item | Estimated changed LOC | Risk / confidence |
 | --- | ---: | --- |
 | Correct unsupported changelog wording | 2–4 | Low / 9 of 10 |
-| Add bounded native process fixture + CI entry | 90–170 | Medium / 7 of 10 |
+| Add bounded native process fixture + CI entry | 220–320 | Medium / 7 of 10 |
 | Preserve contributor fix and existing tests | 0 rewritten | Low / 9 of 10 |
 | Real Electron GUI/product observation | existing harness + manual evidence | High / 4 of 10 without an interactive Windows session |
 
