@@ -17,7 +17,6 @@ export const mixedConfiguredMembers = [
   {
     name: 'carol',
     providerId: 'opencode',
-    model: 'test-local/TEST-model',
     role: 'reviewer',
     workflow: 'TEST mixed opencode workflow: use only the supplied business input.',
   },
@@ -40,7 +39,7 @@ async function expand(cdp: UiCdpPort, ui: Controls, title: string, scope = '[rol
   await ui.waitRead(`${expansionState} === 'true'`, title + ' expanded after one click');
   assert.equal(await cdp.evaluate(expansionState), 'true');
 }
-async function replace(
+export async function replace(
   cdp: UiCdpPort,
   ui: Controls,
   selector: string,
@@ -68,7 +67,7 @@ async function replace(
     label + ' retained'
   );
 }
-async function checked(cdp: UiCdpPort, ui: Controls, selector: string, value: boolean) {
+export async function checked(cdp: UiCdpPort, ui: Controls, selector: string, value: boolean) {
   await ui.scrollTo(selector, selector);
   const expected = value ? 'checked' : 'unchecked';
   if (
@@ -162,6 +161,7 @@ export async function configureMixedCreateSettings(cdp: UiCdpPort, ui: Controls)
 export function assertMixedSavedSettings(
   state: Record<string, unknown>,
   workspace: string,
+  openCodeModel: string,
   description = mixedDescription
 ) {
   const settings = record(state.savedSettings);
@@ -178,11 +178,8 @@ export function assertMixedSavedSettings(
     color: 'blue',
   }))
     assert.equal(settings[name], value, 'saved ' + name);
-  assert.ok(
-    settings.allowExperimentalLocalModels === undefined ||
-      settings.allowExperimentalLocalModels === false,
-    'experimental local-model override remains disabled'
-  );
+  assert.ok(settings.allowExperimentalLocalModels === undefined ||
+    settings.allowExperimentalLocalModels === false, 'original experimental override remains disabled');
   assert.equal(settings.worktree, undefined, 'lead worktree remains unselected');
   assert.ok(
     settings.extraCliArgs === undefined || settings.extraCliArgs === '',
@@ -195,6 +192,8 @@ export function assertMixedSavedSettings(
       (row) => row.name === expected.name
     );
     assert(member);
+    if (expected.name === 'carol') assert.equal(record(member.settings).model, openCodeModel,
+      'saved Carol retains the original materialized Default A');
     for (const [key, value] of Object.entries(expected))
       if (key !== 'name')
         assert.deepEqual(record(member.settings)[key], value, expected.name + ' saved ' + key);
@@ -208,7 +207,11 @@ export function assertMixedSavedSettings(
 }
 
 /** Read original Launch controls and its original JSON editor; never inject renderer state. */
-export async function assertMixedLaunchHydration(cdp: UiCdpPort, ui: Controls) {
+export async function assertMixedLaunchHydration(
+  cdp: UiCdpPort,
+  ui: Controls,
+  openCodeModel: string
+) {
   // The original Launch form unmounts these controls while its optional section is closed.
   // Open it before inspecting the roster/lead on every first/reopened/stopped readback.
   await expand(cdp, ui, 'Optional launch settings');
@@ -263,6 +266,8 @@ export async function assertMixedLaunchHydration(cdp: UiCdpPort, ui: Controls) {
   for (const expected of mixedConfiguredMembers) {
     const actual = rows.map(record).find((row) => row.name === expected.name);
     assert(actual);
+    if (expected.name === 'carol') assert.equal(actual.model, openCodeModel,
+      'hydrated Carol retains the original materialized Default A');
     for (const [key, value] of Object.entries(expected))
       assert.deepEqual(actual[key], value, expected.name + ' hydrated ' + key);
   }

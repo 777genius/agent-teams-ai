@@ -17,6 +17,7 @@ export interface DesktopOpenCodeV2Selection {
   readonly engineDirectory: string;
   readonly modelUrl: string;
   readonly imageInput?: boolean;
+  readonly settingsProjectModel?: boolean;
   readonly endpoint: string;
   readonly managementEndpoint: string;
   readonly processCustody?: TeamHostProfile['processCustody'];
@@ -85,6 +86,13 @@ export async function prepareDesktopOpenCodeV2Recipe(options: {
       package: 'aisdk:@ai-sdk/openai-compatible',
       settings: { baseURL: `${selection.modelUrl}/v1`, apiKey: 'TEST-LOCALHOST-ONLY' },
       models: {
+        ...(selection.settingsProjectModel ? {
+          'TEST-project-model': {
+            name: 'TEST-project-model',
+            limit: { context: 98304, output: 1024 },
+            capabilities: { tools: true, input: ['text'], output: ['text'] },
+          },
+        } : {}),
         'TEST-model': {
           name: 'TEST-model',
           limit: { context: 200000, output: 2000 },

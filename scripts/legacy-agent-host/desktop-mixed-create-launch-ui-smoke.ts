@@ -4,6 +4,7 @@ import {
   mixedInputAccounting,
 } from './desktop-mixed-input-proof.ts';
 import { runDesktopMixedMemberRestartUiSmoke } from './desktop-mixed-member-restart-ui-smoke.ts';
+import { createMixedProviderSettingsProof } from './desktop-mixed-provider-settings.ts';
 import { runMixedEditTeamUi, mixedEditedDescription } from './desktop-mixed-edit-team-ui.ts';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { managementDigest } from '../../packages/legacy-agent-host/dist/management/identity.js';
@@ -99,7 +100,7 @@ async function failedColdProbeJournal(root: string, observedAt: number) {
         if (!/^team-probe-[a-f0-9]{64}$/.test(probe.profileId)) continue;
         const provider = probe.providerId === 'anthropic' ? 'claude'
           : probe.providerId === 'codex' ? 'codex'
-          : probe.providerId === 'test-local' ? 'opencode' : null;
+          : probe.providerId === 'test-local' || probe.providerId === 'local' ? 'opencode' : null;
         if (!provider) continue;
         assert.ok(rows.length < 64, 'bounded original TEST probe rows');
         const expiresInMs = probe.expiresAt - observedAt;
@@ -126,7 +127,8 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   options: {
     fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>>;
     models: DesktopMixedModels;
-    appGroup: number;
+    capturedGroup(): number;
+    restartSameProfile(handleId: string, afterOriginalQuit: () => Promise<void>): Promise<UiCdpPort>;
     evidence: Record<string, unknown>;
     assertOwnedRenderer(): void;
   }
@@ -138,7 +140,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     openCodeGeneration: models.openCodeGeneration,
     steps,
     scope:
-      'Original configured Create save-only3 members → original Edit description/Save/reload/reopen → original Launch hydration/close/reopen/preflights → one fresh3-member native capture → one original Launch lead prompt and2 Composer inputs/MCP/effects/replies → original mixed group/directed Bob input/three-provider ACK → original isolated Bob Restart/three-provider continuation → Stop/reload/Launch readback',
+      'Original Settings defaults/limits → configured Create save-only3 → Edit description/Save/cold-start/reopen → original Launch hydration/close/reopen/preflights → one fresh3-member native capture → one original Launch lead prompt and2 Composer inputs/MCP/effects/replies → original mixed group/directed Bob input/three-provider ACK → original isolated Bob Restart/three-provider continuation → Stop/reload/Launch readback',
     excluded: [
       'real credentials/projects/vendor inference',
       'immediate Create launch',
@@ -155,7 +157,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     for (const model of modelRows)
       assert.deepEqual(model.failures, [], 'native inference fixture remains valid');
   };
-  const ui = createDesktopUiControls(cdp, {
+  let ui = createDesktopUiControls(cdp, {
     assertOwnedRenderer: assertCurrent,
     step: (row) => steps.push({ monotonicMs: Math.round(performance.now()), ...row }),
   });
@@ -177,6 +179,8 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   const teamRoot = join(fixture.root, 'hoststore/teams', mixedDesktopTeamName);
   const ownerState = () => read(join(teamRoot, '.host-owner/state.json'));
   const workspace = join(fixture.root, 'workspace');
+  const settings = await createMixedProviderSettingsProof({ ...options, evidence: proof, assertCurrent });
+  await settings.runPrelude(cdp, ui);
   await openOriginalCreateForm(cdp, ui, workspace, mixedDesktopTeamName);
   await configureMixedCreateSettings(cdp, ui);
   await ui.scrollTo('[data-testid="create-team-page"] #launch-team', 'original Create save-only checkbox');
@@ -234,6 +238,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     `(() => {const rows=[...document.querySelectorAll('[data-testid="create-team-page"] [data-role="member-row"] input[aria-label^="Member "]')]; return rows.length===2&&rows[0].value==='bob'&&rows[1].value==='carol'})()`,
     'original form renders the two entered provider rows'
   );
+  await settings.configureMember(cdp, ui);
   await ui.scrollTo('[data-testid="create-team-page"] button', 'original save-only Create control', 'Create');
   await ui.click(
     '[data-testid="create-team-page"] button',
@@ -250,7 +255,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     (state) => Array.isArray(state.members) && state.members.length === 3,
     'three saved members'
   );
-  let configuredBeforeLaunch = assertMixedSavedSettings(saved, workspace);
+  let configuredBeforeLaunch = assertMixedSavedSettings(saved, workspace, settings.defaultModel);
   proof.configuredAfterCreate = configuredBeforeLaunch;
   const members = (saved.members as unknown[]).map(record);
   assert.deepEqual(
@@ -308,11 +313,21 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
       assert.ok(modelRows.every((model) => model.observations.length === 0));
     },
     step: (row) => steps.push(row),
+    restartSameProfile: async () => {
+      await settings.beforeCold();
+      const next = await options.restartSameProfile(String(handleId), settings.afterOriginalQuit);
+      await settings.afterCold();
+      return next;
+    },
   });
+  cdp = edited.cdp;
+  ui = createDesktopUiControls(cdp, { assertOwnedRenderer: assertCurrent,
+    step: (row) => steps.push({ monotonicMs: Math.round(performance.now()), ...row }) });
   proof.editTeam = edited.proof;
   configuredBeforeLaunch = assertMixedSavedSettings(
     edited.state,
     workspace,
+    settings.defaultModel,
     mixedEditedDescription
   );
   proof.configuredBeforeLaunch = configuredBeforeLaunch;
@@ -321,7 +336,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     `Boolean(document.querySelector('[role="dialog"]'))`,
     'original mixed Launch form'
   );
-  proof.firstLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
+  proof.firstLaunchHydration = await assertMixedLaunchHydration(cdp, ui, settings.defaultModel);
   await ui.scrollTo('[role="dialog"] > button', 'original hydrated Launch Close control', 'Close');
   await ui.click(
     '[role="dialog"] > button',
@@ -333,12 +348,14 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     'original Launch closed without allocation'
   );
   assert.deepEqual(
-    assertMixedSavedSettings(await ownerState(), workspace, mixedEditedDescription),
+    assertMixedSavedSettings(
+      await ownerState(), workspace, settings.defaultModel, mixedEditedDescription
+    ),
     configuredBeforeLaunch
   );
   assert.equal(((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0, 0);
   await ui.click('button', 'reopen original mixed Launch before Submit', 'Launch');
-  proof.reopenedLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
+  proof.reopenedLaunchHydration = await assertMixedLaunchHydration(cdp, ui, settings.defaultModel);
   // Preserve a bounded, credential-free timing trace for each original provider
   // preflight. All three native model checks and the original 90s deadline remain mandatory.
   const preflightStartedAt = performance.now();
@@ -359,7 +376,8 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
         return counts;
       },
       (counts) => counts.every((count, index) =>
-        count > probesBeforeLaunch[index]! && count <= (index === 0 ? 9 : 8)),
+        count > probesBeforeLaunch[index]! &&
+          count <= (index === 0 ? 9 : 8 + (index === 2 ? models.settingsProbes.expectedCount : 0))),
       'all3 selected namespaces have actual bounded model preflights'
     );
   } finally {
@@ -371,6 +389,8 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     0,
     'all3 scoped model preflights finish before the one runtime capture'
   );
+  await settings.assertNoExperimentalOverride(cdp);
+  settings.observeNative();
   await ui.scrollTo('[role="dialog"] button', 'original mixed Launch team control', 'Launch team');
   let capturedMetadataChild: ProcessFact | undefined;
   if (process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2') {
@@ -380,7 +400,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     );
     capturedMetadataChild = await poll(async () => {
       const table = processFacts();
-      const hosts = table.filter(value => value.groupId === options.appGroup &&
+      const hosts = table.filter(value => value.groupId === options.capturedGroup() &&
         command(value.pid) === `${fixture.node} ${fixture.hostEntry}`);
       assert.equal(hosts.length, 1);
       const children = table.filter(value => value.parentPid === hosts[0]!.pid);
@@ -394,7 +414,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   await startMixedProgressObservation(cdp);
   await ui.click(
     '[role="dialog"] button',
-    'submit original mixed Launch once without optional bypass',
+    'submit original mixed Launch once with successful captured readiness',
     'Launch team'
   );
   await ui.waitRead(
@@ -411,7 +431,9 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   assert.ok(Array.isArray(capture.members) && capture.members.length === 3);
   proof.capture = capture;
   assert.equal(record(state.savedSettings).allowExperimentalLocalModels, false);
-  const configuredAfterLaunch = assertMixedSavedSettings(state, workspace, mixedEditedDescription);
+  const configuredAfterLaunch = assertMixedSavedSettings(
+    state, workspace, settings.defaultModel, mixedEditedDescription
+  );
   assert.deepEqual(
     configuredAfterLaunch,
     {
@@ -421,7 +443,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
         allowExperimentalLocalModels: false,
       },
     },
-    'Launch retains configured settings and persists the explicitly disabled opt-in'
+    'Launch retains settings and the original disabled override'
   );
   let selectedBindings: string[] | undefined = undefined;
   const sessions = () =>
@@ -432,11 +454,12 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
           (!selectedBindings || selectedBindings.includes(runtimeDigest(row.binding)))
       )
     );
-  await poll(
+  const initialSessions = await poll(
     sessions,
     (rows) => rows.length === 3 && rows.every((row) => row.custody === 'owned'),
     'all3 original native sessions allocated'
   );
+  await settings.assertCapture(capture, initialSessions);
   await ui.waitRead(
     `/Team is ready\\.|Team launched/.test(document.body.innerText)`,
     'original UI aggregate native readiness/progress',
@@ -531,7 +554,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     root: fixture.root,
     launchId: capture.launchId,
     models,
-    appGroup: options.appGroup,
+    appGroup: options.capturedGroup(),
     node: fixture.node,
     hostEntry: fixture.hostEntry,
     ...(capturedMetadataChild ? { capturedMetadataChild } : {}),
@@ -539,6 +562,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     step: (value) => steps.push(value),
   });
   proof.isolatedMemberRestart = restarted;
+  settings.observeNative();
   selectedBindings = restarted.currentBindings.map((binding) => runtimeDigest(binding));
   const expectedObservations = [13, 15, 13];
   proof.progressDomObservations = await finishMixedProgressObservation(cdp);
@@ -640,7 +664,9 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     expectedObservations
   );
   assert.equal(record(after.savedSettings).allowExperimentalLocalModels, false);
-  const configuredAfterStop = assertMixedSavedSettings(after, workspace, mixedEditedDescription);
+  const configuredAfterStop = assertMixedSavedSettings(
+    after, workspace, settings.defaultModel, mixedEditedDescription
+  );
   assert.deepEqual(configuredAfterStop, configuredAfterLaunch);
   // Permit a single new TEST probe only after observing the original cold UI boundary.
   // This grants neither a new native business input nor a repeated Launch submission.
@@ -677,18 +703,23 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     { phase: 'cold-readback', requestedModel: 'claude-opus-4-6', requestedEffort: 'medium' },
   ]);
   assert.deepEqual(models.claude.failures, []);
+  await settings.assertNoExperimentalOverride(cdp);
   // The cold preflight replaces its status panel and moves the optional header.
   // Observe its original completed UI before the one settings click; never retry
   // a click that may already have reached a different control during hydration.
   await ui.waitRead(`(() => {
     const dialog=document.querySelector('[role="dialog"]');
-    return dialog?.textContent.includes('All selected providers are ready.') &&
+    return dialog && dialog.textContent.includes('All selected providers are ready.') &&
       [...dialog.querySelectorAll('button')].some(button=>
         button.textContent.trim()==='Launch team'&&!button.disabled);
   })()`, 'original cold Launch preflights settled before reading saved settings');
-  proof.stoppedReloadLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
+  proof.stoppedReloadLaunchHydration = await assertMixedLaunchHydration(
+    cdp, ui, settings.defaultModel
+  );
   assert.deepEqual(
-    assertMixedSavedSettings(await ownerState(), workspace, mixedEditedDescription),
+    assertMixedSavedSettings(
+      await ownerState(), workspace, settings.defaultModel, mixedEditedDescription
+    ),
     configuredAfterStop
   );
   assert.equal(((await ownerState()).runtimeCaptures as unknown[]).length, 1);
@@ -735,4 +766,5 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   proof.allSessionsAfterStop = allSessionsAfterStop;
   proof.stop = { children, releasedBeforeQuit: true };
   proof.status = 'PASS';
+  return { finishSettings: settings.finish };
 }

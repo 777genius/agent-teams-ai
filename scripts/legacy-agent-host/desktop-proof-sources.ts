@@ -38,6 +38,7 @@ const desktopProofBaseSources = [
   'scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-mixed-native-fixture.ts',
   'scripts/legacy-agent-host/desktop-mixed-dialog-settings.ts',
+  'scripts/legacy-agent-host/desktop-mixed-provider-settings.ts',
   'scripts/legacy-agent-host/desktop-mixed-create-launch-ui-smoke.ts',
   'packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts',
   'packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts',

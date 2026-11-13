@@ -12,6 +12,7 @@ import {
 import {
   startOpenCodeModel,
   CONTEXT_MARKER as openCodeContext,
+  type SettingsModelProbe,
 } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
 import { desktopBackendEnvironment, digest, fileDigest } from './desktop-backend-fixture.ts';
@@ -78,6 +79,15 @@ export function readMixedCapturedPrincipal(
 export async function startDesktopMixedModels(root: () => string, options: { nativeGeneration?: 'v2' } = {}) {
   assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1');
   let claudeProbePhase: 'native' | 'cold-readback' = 'native';
+  let settingsProbe: SettingsModelProbe | 'idle' | undefined = 'idle';
+  const settingsExpected: SettingsModelProbe[] = [
+    { step: 'global-default', model: 'TEST-model' },
+    { step: 'project-default', model: 'TEST-project-model' },
+    { step: 'project-test', model: 'TEST-project-model' },
+    ...(!options.nativeGeneration
+      ? [{ step: 'local-limits' as const, model: 'TEST-model' as const, outputTokens: 1536 }] : []),
+  ];
+  const settingsCompleted: SettingsModelProbe['step'][] = [];
   const claude = await startNativeTeamModel({
       mixedTaskNotifications: createMixedTaskNoticeReader(root, 'team-lead'),
     allowModelProbes: true,
@@ -104,12 +114,44 @@ export async function startDesktopMixedModels(root: () => string, options: { nat
       allowModelProbes: true,
       mixedGroups: true,
       principalId: () => readMixedCapturedPrincipal(root(), 'opencode'),
+      selectedModel: { id: 'TEST-model' },
+      settingsProbe: () => settingsProbe,
+      ...(!options.nativeGeneration ? { selectedBusinessOutputTokens: 1536 } : {}),
     });
     const selected = { claude, codex, opencode };
     let evidenceRoot: string | undefined;
     return {
       ...selected,
       openCodeGeneration: options.nativeGeneration ?? 'v1' as const,
+      openCodeProviderId: options.nativeGeneration ? 'test-local' as const : 'local' as const,
+      settingsProbes: {
+        expectedCount: settingsExpected.length,
+        begin(step: SettingsModelProbe['step']) {
+          const expected = settingsExpected[settingsCompleted.length];
+          assert.equal(expected?.step, step, 'one ordered original Settings intent');
+          assert.equal(settingsProbe, step === 'local-limits' ? undefined : 'idle');
+          settingsProbe = Object.freeze({ ...expected! });
+        },
+        finish(step: SettingsModelProbe['step']) {
+          assert.ok(settingsProbe && settingsProbe !== 'idle');
+          assert.equal(settingsProbe.step, step);
+          assert.deepEqual(selected.opencode.failures, []);
+          assert.equal(selected.opencode.probes.filter(probe => probe.settingsStep === step).length, 1);
+          settingsCompleted.push(step);
+          settingsProbe = step === 'local-limits' ? undefined : 'idle';
+        },
+        beginConfiguration() {
+          assert.deepEqual(settingsCompleted, ['global-default', 'project-default', 'project-test']);
+          assert.equal(settingsProbe, 'idle');
+          settingsProbe = undefined;
+        },
+        assertComplete() {
+          assert.equal(settingsProbe, undefined);
+          assert.deepEqual(settingsCompleted, settingsExpected.map(probe => probe.step));
+          assert.equal(selected.opencode.probes.filter(probe => probe.settingsStep !== undefined).length,
+            settingsExpected.length);
+        },
+      },
       beginColdReadbackProbes: () => {
         assert.equal(claudeProbePhase, 'native', 'one original cold readback phase');
         const nativeProbeCount = claude.probes.length;
@@ -191,6 +233,19 @@ export async function prepareDesktopMixedNativeFixture(
   assert.equal(options.models.openCodeGeneration, options.openCodeV2 ? 'v2' : 'v1',
     'the native oracle and selected engine must use the same protocol');
   assert.equal(profile.runtime!.providerTemplates!.length, 1);
+  // Metadata-only TEST rows feed the ordinary project picker before any app exists.
+  // These are neither native history nor an imported product corpus.
+  for (const name of ['workspace', 'workspace-other']) {
+    const cwd = join(base.root, name);
+    await mkdir(cwd, { recursive: true, mode: 0o700 });
+    const discovery = join(base.root, 'claude/projects', cwd.replace(/[/\\]/g, '-'));
+    await mkdir(discovery, { recursive: true, mode: 0o700 });
+    await writeFile(join(discovery, 'TEST-project-discovery-only.jsonl'),
+      JSON.stringify({ type: 'TEST-project-discovery-only', cwd }) + '\n',
+      { mode: 0o600, flag: 'wx' });
+    await mkdir(join(base.root, 'preferences', name), { recursive: true, mode: 0o700 });
+  }
+  await mkdir(join(base.root, 'preferences/global'), { recursive: true, mode: 0o700 });
   claude.nativeOptions = { ...claude.nativeOptions, settingSources: [] };
   assert.notEqual(options.openCodeManagementEndpoint, options.openCodeEndpoint);
   for (const value of [options.openCodeEndpoint, options.openCodeManagementEndpoint]) {
@@ -295,7 +350,7 @@ stream_max_retries = 0
     repo: join(import.meta.dirname, '../..'), root: base.root, node: base.node,
     selection: { ...options.openCodeV2, endpoint: options.openCodeEndpoint,
       managementEndpoint: options.openCodeManagementEndpoint,
-      modelUrl: options.models.opencode.url },
+      modelUrl: options.models.opencode.url, settingsProjectModel: true },
     identity: common('opencode'),
   }) : {
     ...common('opencode'),
@@ -309,9 +364,9 @@ stream_max_retries = 0
       OPENCODE_CONFIG_CONTENT: JSON.stringify({
         autoupdate: false,
         share: 'disabled',
-        enabled_providers: ['test-local'],
-        model: 'test-local/TEST-model',
-        small_model: 'test-local/TEST-model',
+        enabled_providers: ['local'],
+        model: 'local/TEST-model',
+        small_model: 'local/TEST-model',
         permission: { '*': 'deny', bash: 'allow' },
         agent: {
           title: { disable: true },
@@ -320,7 +375,7 @@ stream_max_retries = 0
         },
         compaction: { auto: false },
         provider: {
-          'test-local': {
+          local: {
             npm: '@ai-sdk/openai-compatible',
             name: 'TEST fixture',
             options: {
@@ -329,6 +384,7 @@ stream_max_retries = 0
             },
             models: {
               'TEST-model': { name: 'TEST-model', limit: { context: 200000, output: 2000 } },
+              'TEST-project-model': { name: 'TEST-project-model', limit: { context: 98304, output: 1024 } },
             },
           },
         },
@@ -340,7 +396,7 @@ stream_max_retries = 0
       NO_COLOR: '1',
     },
     nativeOptions: {
-      providerId: 'test-local',
+      providerId: 'local',
       agent: 'TEST-member',
       instructions: openCodeContext,
     },
@@ -384,12 +440,22 @@ stream_max_retries = 0
   ];
   for (const item of management) {
     profile.management!.push(item);
-    descriptor.management.push({
-      ...selected,
-      runtimeId: item.provider,
-      profileId: item.profileId,
-      configRevision: item.configRevision,
-    });
+    for (const projectPath of item.provider === 'opencode'
+      ? [null, join(base.root, 'workspace'), join(base.root, 'workspace-other')] : [null]) {
+      descriptor.management.push({
+        ...selected,
+        runtimeId: item.provider,
+        profileId: item.profileId,
+        configRevision: item.configRevision,
+        projectPath,
+        ...(item.provider === 'opencode' ? {
+          preferences: {
+            globalRoot: join(base.root, 'preferences/global'),
+            projectRoot: projectPath === null ? null : join(base.root, 'preferences', basename(projectPath)),
+          },
+        } : {}),
+      });
+    }
   }
   const profileBytes = JSON.stringify(profile);
   await writeFile(base.profilePath, profileBytes, { mode: 0o600 });
