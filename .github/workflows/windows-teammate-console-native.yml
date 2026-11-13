@@ -56,6 +56,8 @@ jobs:
     needs: windows-native
     runs-on: windows-latest
     timeout-minutes: 40
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -65,6 +67,12 @@ jobs:
           cache: pnpm
       - name: Install frozen dependencies for native Electron
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Ensure Electron installed before GUI startup
+        run: node ./scripts/ensure-electron-install.cjs --strict
+      - name: Stage pinned terminal runtime before GUI startup
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node ./scripts/ensure-terminal-platform-runtime.mjs
       - name: Probe real Electron Main OS console inheritance without a vendor
         env:
           TEAMS_CREATE_E2E_ARTIFACT_DIR: ${{ runner.temp }}/windows-console-electron
