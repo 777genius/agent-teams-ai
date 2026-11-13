@@ -1,0 +1,40 @@
+name: Windows teammate native console smoke
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/windows-teammate-console-native.yml'
+      - 'scripts/e2e/windows-teammate-console-native.mjs'
+      - 'src/main/utils/cliProcessDefaults.ts'
+      - 'src/main/utils/childProcess.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningMemberLifecycle.ts'
+      - 'src/features/token-usage/main/infrastructure/CliUsageImporters.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  windows-native:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: Run actual Windows teammate-shaped subprocess and tools
+        run: node scripts/e2e/windows-teammate-console-native.mjs
+      - name: Preserve native subprocess receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-console-native-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: ${{ runner.temp }}/windows-console-native-*.json
