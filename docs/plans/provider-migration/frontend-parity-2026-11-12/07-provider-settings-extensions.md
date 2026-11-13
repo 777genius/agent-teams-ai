@@ -1484,3 +1484,108 @@ Source-equivalence PASS отдельно от execution PASS; успешная �
 closures не закрывает Windows input-cut/Darwin startup задержки и не
 объявляет Linux catalog timeout причиной. Прежде более широких оптимизаций
 Team authority нужны отдельные measured attribution и новый план.
+
+## 24. R24: уточнить уже существующую CPU projection до выбора следующего product fix
+
+### Круг 1 — actual evidence и предел нынешней классификации
+
+R23 сохранил actual exact-9ea outcomes и их ограничения. Например, original
+Windows ARM Session Host дал 135979223 exclusive sampled us в
+`team-writer-authority` при sampledUs=186386897 и profileDurationUs=186387141;
+Linux — 16856115 при sampledUs=33815728 и profileDurationUs=33815857.
+Windows x64 projection
+`invalid-profile` остаётся unavailable, а не нулевой стоимостью. Эти samples
+не доказывают причину original startup/input/catalog отказа и не предсказывают
+эффект R21–R23; следующий coherent native head ещё требует штатной приёмки.
+
+На source base `e6191749318dbc8c2a609710cc60a6d2fb86aa65` classifier
+[passive-diagnostics.ts](https://github.com/777genius/agent-teams-ai/blob/e6191749318dbc8c2a609710cc60a6d2fb86aa65/packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts)
+(`fbca5e10af9881a1d2be2d0e46867e6dc3080b6b`) назначает эту широкую category
+по ближайшему allowlisted ancestor. Поэтому вложенные filesystem scans,
+проверки состояния и копирование binding попадают в один результат.
+Сначала нужна более точная закрытая projection того же profile; production
+guards, новый sampler и отдельный provider/benchmark run не нужны.
+
+Source проверен отдельно от timing: `TeamOwnerStore.fenced` валидирует
+namespace до/внутри original file fence; `TeamOwner.state` читает и проверяет
+original state, вызывает registration validation, existing roster recovery
+и current bindings всех members. `FileTeamRuntimeBindings.read` валидирует
+original launch/fingerprint/restore/member-action/preparation; `current`
+строит selection и клонирует всю result projection, включая prepared
+configuration. Один лишь факт, что caller использует binding, не разрешает
+выбросить остальные проверки или clone.
+
+### Круг 2 — два existing TEST paths, прежняя сумма и новый конечный разрез
+
+1. В existing `projectCpuProfile` **не менять** семь broad categories, их
+   matchers, nearest-ancestor precedence, exclusive/inclusive arithmetic,
+   sampled/unsampled totals или исходные validation predicates. Добавить
+   отдельный `teamWriterDetails`: fixed ordered array только из закрытых
+   family labels и целых sample/time totals. Он разбивает лишь samples,
+   чья прежняя exclusive category равна `team-writer-authority`.
+   Суммы detail samples/us обязаны точно равняться этой прежней строке;
+   inclusive broad columns сохраняют прежнее overlap и не складываются.
+2. Detail lookup использует exact source suffix + finite function name;
+   оба берутся только из уже прочитанного original frame. На stack tree
+   наследуется ближайшая известная detail family; unknown/native/inlined
+   frames не получают выдуманную функцию. Закрытая таблица:
+
+   | Detail family | Исходный source frame / значение |
+   | --- | --- |
+   | `namespace-fence` | `adapters/team/TeamOwnerStore.[jt]s`: `fenced`, `validateNamespace`; дочерние directory/tree/lock frames наследуют этот контекст |
+   | `team-state` | `team/TeamOwner.[jt]s`: `state`; residual включает read/projection и existing recovery, поэтому это **не** доказательство pure-validation CPU |
+   | `team-state-validation` | `team/TeamRuntimeRegistration.[jt]s` и `team/TeamRosterTransitions.[jt]s`: только `validate` |
+   | `launch-binding-read` | `adapters/team/FileTeamRuntimeBindings.[jt]s`: `read`, вместе с вызываемыми original validators |
+   | `launch-binding-current` | тот же exact file, `current`: current selection/result projection; не все функции с именем current |
+   | `launch-binding-clone` | exact Node `node:internal/worker/js_transferable` / `structuredClone` **только** когда ближайший retained detail context — original `FileTeamRuntimeBindings.current`; clone другого source/read/Team не получает этот label |
+   | `other-writer` | остаток original broad writer samples, включая неизвестные/непредставленные V8 frames |
+
+   Concrete source blobs: Store `17c422fbabf290e582dad1f48f973d85d42dc082`,
+   TeamOwner `cac55964ea60016be093ee14bd67c9ed6a420c3c`,
+   Registration `37268ad69e08c79c3b9da1b66a377a6d8df2a6e3`,
+   Roster `875fd7165c2ea4d39e8cc2e222d62807cdfa1cc5`,
+   Bindings `04cbb4bda9a4ecba22cfbd664e86de1c16e8733a`.
+   Pinned Node24.21 builtin source confirms its structuredClone wrapper calls
+   nativeStructuredClone. Это source match, не доказательство наличия такого
+   frame в следующем V8 profile: если он отсутствует, sample остаётся в
+   current/other bucket, а clone cost отдельно не заявляется.
+3. Новый разрез ограничен fixed seven rows. Frame names, URLs, paths, stacks,
+   arguments, IDs и raw CPU bytes не добавляются в receipt/log/artifacts.
+   Сохраняются original 10ms interval, только first original Host, чтение
+   после его exit, 16MiB cap, node/sample/tree/time validation, original
+   fd/path identity и обязательное raw unlink. Missing/malformed/oversized/
+   changed/discard-failed profiles остаются unavailable. Windows x64
+   `invalid-profile` не исправляется нормализацией; validation-reason
+   refinement в этот минимальный cut не входит.
+4. Native fixture caller, старт Host/children, HTTP/input counts, source
+   authority, writers, locks, deadlines, cleanup, CI matrix/workflow и
+   receipt status не меняются. Это measurement-only source, не разрешение
+   на memoization/TTL, удаление guards или перенос проверки через await.
+
+### Круг 3 — независимый review и original finite case
+
+До source root публикует append; peer проверяет exact matches, stack scope,
+broad-total conservation и что `state` не назван pure validation.
+Source scope только `tests/fixtures/native-opencode-team/passive-diagnostics.ts`
+и existing `tests/native-host-close.test.ts`
+(`7429312e29105f6db0949bef71c615eba9cba7bf`).
+
+В том же existing exit1/sampler case сохранить настоящий исходный Node child
+и прежние отказ/cleanup assertions. Добавить небольшой **synthetic** stack
+profile через existing bounded file reader: вложенные namespace/state/
+binding-read/clone branches, одноимённый foreign frame и sample вне writer.
+Проверить прежние broad totals, exact partition/conservation, unknown
+fallback, отсутствие raw private source text и обязательное удаление файла;
+малformed profile по-прежнему unavailable. Это проверка attribution/privacy,
+не новый sampler, timing benchmark, suite или simulated native success.
+
+Нужны existing four native-host-close cases, Host test types, targeted lint
+и source cap. Actual refined numbers получит только очередной штатный native
+matrix на exact coherent head; уже завершённые и текущие runs не повторяются
+и не отменяются. До этих новых original receipts оставляем bottleneck и
+любое более широкое product исправление открытыми.
+
+**R1:** сопоставлены actual broad receipts с точным classifier и source chain.
+**R2:** проверены nested validation/recovery/clone scopes и сохранение прежней
+арифметики; изменение ограничено passive projection. **R3:** независимый
+plan/source review и execution ещё требуются; новые source bytes не созданы.
