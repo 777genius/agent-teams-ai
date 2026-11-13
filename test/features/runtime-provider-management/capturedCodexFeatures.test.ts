@@ -81,6 +81,32 @@ it('reads captured account/catalog, strips no policy into auth/launch, and refus
 });
 
 it('cannot publish foreign, stale or secret-bearing metadata or retained global snapshots', async () => {
+  const nullable = fixture();
+  Object.assign(nullable.value, {
+    account: { type: 'chatgpt', email: null, planType: 'plus' },
+  });
+  expect(await nullable.accountFeature.getSnapshot()).toMatchObject({
+    managedAccount: { type: 'chatgpt', email: null, planType: 'plus' },
+    effectiveAuthMode: 'chatgpt',
+    appServerState: 'healthy',
+  });
+  for (const account of [
+    { type: 'chatgpt', planType: 'plus' },
+    ...[42, [], {}, '', 'TEST\0email', 'x'.repeat(1025)].map((email) => ({
+      type: 'chatgpt',
+      email,
+      planType: 'plus',
+    })),
+    { type: 'chatgpt', email: null, planType: 'plus', accessToken: 'TEST-secret' },
+  ]) {
+    const malformed = fixture();
+    Object.assign(malformed.value, { account });
+    const published = vi.fn();
+    const unsubscribe = malformed.accountFeature.subscribe(published);
+    await expect(malformed.accountFeature.getSnapshot()).rejects.toThrow('unavailable');
+    expect(published).not.toHaveBeenCalled();
+    unsubscribe();
+  }
   const f = fixture();
   f.value.configRevision = 'foreign';
   await expect(f.accountFeature.getSnapshot()).rejects.toThrow('unavailable');

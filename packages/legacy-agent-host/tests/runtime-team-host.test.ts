@@ -21,6 +21,7 @@ import type {
 import type { CommandReceipt } from '../dist/team/contracts.js';
 import type { TeamRosterConfiguration } from '../dist/team/rosterContracts.js';
 import type { RuntimeBinding } from '../dist/runtime/contracts.js';
+import type { TeamLaunchRecord } from '../dist/team-launch/contracts.js';
 import type {
   CloseReceipt,
   DriverFactory,
@@ -990,6 +991,8 @@ async function fixture(
     open?: Promise<Awaited<ReturnType<DriverFactory['open']>>>;
     unknownCleanup?: boolean;
     checkpointHistory?: boolean;
+    requireCheckpointSource?: boolean;
+    onCheckpointSource?(context: MemberProviderContext): void;
     onProvider?(context: MemberProviderContext): void;
     onCleanup?(): void;
     disposeTimeoutMs?: number;
@@ -1022,6 +1025,8 @@ async function fixture(
   let cleanupCalls = 0;
   let opens = 0;
   const restored: unknown[] = [];
+  const checkpointSources: NonNullable<ReturnType<NonNullable<MemberProviderContext['readCheckpointSource']>>>[] = [];
+  let handoffs = 0;
   const composition = {
     createProvider(context: MemberProviderContext): MemberProvider {
       contexts.push(context);
@@ -1038,14 +1043,25 @@ async function fixture(
         factory: {
           open: async () => {
             opens++;
-            if (context.request.checkpointRef)
+            if (context.request.checkpointRef) {
               restored.push(
                 await context.readCheckpoint(context.request.checkpointRef, context.request)
               );
+              if (options.requireCheckpointSource) {
+                // Controlled legacy-candidate boundary only; no synthetic proof is supplied.
+                options.onCheckpointSource?.(context);
+                const proof = context.readCheckpointSource?.(
+                  context.request.checkpointRef, context.request
+                );
+                assert.ok(proof, 'the actual composition must supply original source evidence');
+                checkpointSources.push(proof);
+              }
+            }
             const opened = await (options.open ?? {
               driver: session!,
               capabilities: [...context.request.requiredCapabilities],
             });
+            handoffs++;
             const source: Session = opened.driver;
             return {
               ...opened,
@@ -1139,6 +1155,8 @@ async function fixture(
   return {
     root,
     restored,
+    checkpointSources,
+    handoffs: () => handoffs,
     async restart(expectedCleanup: 'completed' | 'failed' = 'completed', afterClose?: () => void) {
       const closed = await host.dispose();
       assert.equal(closed.cleanup, expectedCleanup, 'explicit cold restart retains the original cleanup outcome');
@@ -2341,7 +2359,117 @@ test('launch options refuse allocated state and compile every selected provider 
 });
 
 test('selected checkpoint resumes through a new Host/generation, retains Team delivery ownership and fences stale controls', async (t) => {
-  const f = await fixture(t, { checkpointHistory: true });
+  let sourceChecks = 0;
+  const f = await fixture(t, {
+    checkpointHistory: true,
+    requireCheckpointSource: true,
+    onCheckpointSource(context) {
+      sourceChecks++;
+      const reference = context.request.checkpointRef!;
+      const read = context.readCheckpointSource;
+      assert.ok(read);
+      const source = () => read(reference, context.request);
+      const launchPath = join(f.root, 'teams/test-runtime-host/.host-owner/launches',
+        runtimeDigest('TEST-run') + '.json');
+      const original = readFileSync(launchPath, 'utf8');
+      const journal = JSON.parse(original) as TeamLaunchRecord;
+      const member = journal.members.find(item => item.memberId === 'alice-id')!;
+      const target = member.attempts.findIndex(item =>
+        item.attemptId === 'restore-' + runtimeDigest('TEST-resume-original'));
+      assert.ok(target >= 2, 'genuine original claim, selected Skip, then Restore');
+      const skip = journal.memberActions!.find(item => item.input.commandId === 'TEST-source-skip')!;
+      assert.equal(skip.phase, 'selected');
+      assert.equal(skip.input.action, 'skip');
+      assert.equal(member.attempts[target - 1]!.attemptId,
+        'action-' + runtimeDigest(skip.input.commandId));
+      const originalAttempt = member.attempts.find(item => item.attemptId === skip.sourceAttemptId)!;
+      assert.equal(originalAttempt.claimed, true);
+      assert.equal(originalAttempt.noAllocation, false);
+      const sourcePath = join(f.root, 'runtime-sessions',
+        runtimeDigest({ backendId: f.runtimeBinding.backendId, teamId: f.runtimeBinding.teamId,
+          memberId: f.runtimeBinding.memberId }), runtimeDigest(normalizeBinding(f.runtimeBinding)) + '.json');
+      const sourceBefore = readFileSync(sourcePath, 'utf8');
+      const payloadBefore = readFileSync(join(f.root, 'runtime-checkpoints', reference + '.json'));
+      const proof = source();
+      assert.ok(proof);
+      assert.equal(proof.reference, reference);
+      assert.deepEqual(proof.request, context.request);
+      assert.deepEqual(proof.originalExecutable, f.selected.runtime!.members[0]!.executable);
+      assert.deepEqual(proof.selectedExecutable, proof.originalExecutable);
+      assert.equal(f.handoffs(), 1, 'no restored provider handoff before source qualification');
+      const refusal = (mutate: (copy: TeamLaunchRecord) => void, reason: string) => {
+        const copy = structuredClone(journal);
+        mutate(copy);
+        try {
+          writeFileSync(launchPath, JSON.stringify(copy));
+          assert.throws(source, reason);
+        } finally {
+          writeFileSync(launchPath, original);
+        }
+        assert.equal(readFileSync(launchPath, 'utf8'), original);
+        assert.equal(f.handoffs(), 1);
+      };
+      refusal(copy => {
+        copy.members[0]!.attempts.find(item => item.attemptId === originalAttempt.attemptId)!.claimed = false;
+      }, 'an unclaimed historical predecessor cannot borrow a same-Host claim');
+      refusal(copy => {
+        copy.members[0]!.attempts.find(item => item.attemptId === originalAttempt.attemptId)!.hostIncarnation =
+          'TEST-unrelated-original-host';
+      }, 'a valid shape with a foreign original Host is not the source Runtime');
+      refusal(copy => {
+        copy.members[0]!.attempts.find(item => item.attemptId === originalAttempt.attemptId)!.startedAtMs = -1;
+      }, 'historical fields are validated even though the current attempt is well formed');
+      refusal(copy => {
+        const action = copy.memberActions!.find(item => item.input.commandId === skip.input.commandId)!;
+        action.sourceAttemptId = member.attempts[target]!.attemptId;
+        action.fingerprint = runtimeDigest({
+          input: action.input, actor: action.actor, noAllocation: action.noAllocation,
+          sourceAttemptId: action.sourceAttemptId, source: action.source, selected: action.selected,
+        });
+      }, 'even a valid action fingerprint cannot link Skip forward to this target');
+      refusal(copy => {
+        copy.restorations![0]!.member.restore!.sourceBinding.memberId = 'bob-id';
+      }, 'a foreign member cannot supply source lineage');
+      refusal(copy => {
+        copy.definition.members.find(item => item.memberId === 'alice-id')!.baseConfigurationDigest =
+          runtimeDigest({ ...f.selected.runtime!.members[0]!, executable: {
+            path: '/TEST/different-original-executable', sha256: 'd'.repeat(64),
+          } });
+        copy.fingerprint = runtimeDigest(copy.definition);
+      }, 'a changed original base executable digest cannot be substituted');
+      try {
+        rmSync(launchPath);
+        assert.throws(source, 'missing launch history never becomes original proof');
+      } finally {
+        writeFileSync(launchPath, original);
+      }
+      assert.throws(() => read('cp1-' + 'f'.repeat(64), context.request));
+      assert.throws(() => read(reference, { ...context.request, sessionId: 'TEST-foreign-request' }));
+      const executable = context.profile.executable;
+      try {
+        context.profile.executable = { ...executable, sha256: 'e'.repeat(64) };
+        assert.throws(source, 'changed selected executable is rejected before handoff');
+      } finally {
+        context.profile.executable = executable;
+      }
+      const statePath = join(f.root, 'teams/test-runtime-host/.host-owner/state.json');
+      const stateBefore = readFileSync(statePath, 'utf8');
+      const state = JSON.parse(stateBefore) as { grants: { principalId: string; revoked?: boolean }[] };
+      state.grants.find(item => item.principalId === context.profile.principalId)!.revoked = true;
+      try {
+        writeFileSync(statePath, JSON.stringify(state));
+        assert.throws(source, 'retained source evidence does not replace current authority');
+      } finally {
+        writeFileSync(statePath, stateBefore);
+      }
+      assert.deepEqual(source(), proof, 'exact original bytes restore the same source projection');
+      assert.equal(readFileSync(sourcePath, 'utf8'), sourceBefore);
+      assert.deepEqual(readFileSync(join(f.root, 'runtime-checkpoints', reference + '.json')), payloadBefore);
+      assert.equal(readFileSync(launchPath, 'utf8'), original);
+      assert.equal(f.session().submits.length, 0);
+      assert.equal(f.handoffs(), 1);
+    },
+  });
   const stats = async () => {
     const result = await f.rpc('team.activity.stats.read', { memberName: 'alice' }) as {
       ok: boolean; value: { stats: { generations: number; inputTokens: number; outputTokens: number;
@@ -2407,6 +2535,17 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
   })) as { ok: boolean; value: { status: string; reference: string } };
   assert.equal(captured.value.status, 'published');
   await f.rpc('runtime.stop', { memberId: 'alice-id' });
+  const skipScope = await f.rpc('team.launch.read', {}) as {
+    value: { launchId: string; rosterRevision: string };
+  };
+  const skip = { launchId: skipScope.value.launchId, rosterRevision: skipScope.value.rosterRevision,
+    memberId: 'alice-id', expectedGeneration: opened.value.generation, action: 'skip' };
+  for (const operation of ['prepare', 'execute']) {
+    const selected = await f.rpc('team.member.action.' + operation, skip,
+      { commandId: 'TEST-source-skip' }) as { ok: boolean };
+    assert.equal(selected.ok, true, JSON.stringify(selected));
+  }
+  assert.equal(f.opens(), 1, 'Skip retains the original binding without another provider');
   await f.restart();
   const before = (await f.rpc('team.launch.read', {})) as {
     ok: boolean;
@@ -2445,6 +2584,9 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
   const result = concurrent[0]!;
   assert.equal(result.ok, true, JSON.stringify(result));
   assert.equal(result.value.nativeReady, true);
+  assert.equal(sourceChecks, 1);
+  assert.equal(f.checkpointSources.length, 1);
+  assert.equal(f.handoffs(), 2, 'one original and one qualified restored handoff');
   assert.deepEqual(
     await f.rpc('team.execute', messageA, { commandId: 'TEST-original-A' }),
     receiptA,
@@ -2552,4 +2694,79 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
     'corrupt historical selection cannot authorize retired bindings'
   );
   assert.equal(f.opens(), 2, 'corrupt restore recovery performs no native allocation');
+  writeFileSync(journalPath, originalJournal);
+
+  // A separate controlled original, with no configuration override, demonstrates that
+  // a newly manufactured seed journal cannot qualify the retained opaque checkpoint.
+  const missingHistory = await fixture(t, { checkpointHistory: true, requireCheckpointSource: true });
+  const scope = await missingHistory.rpc('team.launch.read', {}) as {
+    value: { launchId: string; rosterRevision: string };
+  };
+  assert.equal((await missingHistory.rpc('team.launch.start', {
+    launchId: scope.value.launchId, rosterRevision: scope.value.rosterRevision,
+  }, { commandId: 'TEST-missing-history-launch' }) as { ok: boolean }).ok, true);
+  assert.equal((await missingHistory.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
+  await missingHistory.rpc('team.execute', {
+    operation: 'message.send', payload: { to: 'alice', text: 'TEST_ORIGINAL_MISSING_HISTORY' },
+  }, { commandId: 'TEST-missing-history-input' });
+  await eventually(() => missingHistory.session().submits.length === 1, 'original controlled input');
+  missingHistory.session().finish(0);
+  const originalRuntime = new FileRuntimeStore(missingHistory.root);
+  await eventually(() => originalRuntime.fenced(missingHistory.runtimeBinding,
+    tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'original controlled terminal');
+  const originalCheckpoint = await missingHistory.rpc('runtime.checkpoint', {
+    memberId: 'alice-id', checkpointId: 'TEST-missing-history-checkpoint',
+  }) as { ok: boolean; value: { status: string; reference: string } };
+  assert.equal(originalCheckpoint.ok, true);
+  assert.equal(originalCheckpoint.value.status, 'published');
+  await missingHistory.rpc('runtime.stop', { memberId: 'alice-id' });
+  const missingLaunchPath = join(missingHistory.root, 'teams/test-runtime-host/.host-owner/launches',
+    runtimeDigest('TEST-run') + '.json');
+  let originalLaunch = '';
+  let sourceBytes = '';
+  const sourcePath = join(missingHistory.root, 'runtime-sessions',
+    runtimeDigest({ backendId: missingHistory.runtimeBinding.backendId, teamId: missingHistory.runtimeBinding.teamId,
+      memberId: missingHistory.runtimeBinding.memberId }),
+    runtimeDigest(normalizeBinding(missingHistory.runtimeBinding)) + '.json');
+  const payloadPath = join(missingHistory.root, 'runtime-checkpoints', originalCheckpoint.value.reference + '.json');
+  const payloadBytes = readFileSync(payloadPath);
+  await missingHistory.restart('completed', () => {
+    originalLaunch = readFileSync(missingLaunchPath, 'utf8');
+    sourceBytes = readFileSync(sourcePath, 'utf8');
+    rmSync(missingLaunchPath); // Only after the original owner's real close.
+  });
+  const recreated = JSON.parse(readFileSync(missingLaunchPath, 'utf8')) as TeamLaunchRecord;
+  const oldClaim = (JSON.parse(originalLaunch) as TeamLaunchRecord).members[0]!.attempts[0]!;
+  const newSeed = recreated.members[0]!.attempts[0]!;
+  assert.equal(oldClaim.claimed, true);
+  assert.equal(newSeed.claimed, false);
+  assert.notEqual(newSeed.hostIncarnation, oldClaim.hostIncarnation);
+  const missingRestore = { memberId: 'alice-id', reference: originalCheckpoint.value.reference,
+    expectedGeneration: missingHistory.runtimeBinding.generation };
+  const denied = await missingHistory.rpc('runtime.restore', missingRestore,
+    { commandId: 'TEST-missing-history-restore' }) as {
+      ok: boolean; value: { generation: string; phase: string; nativeReady: boolean };
+    };
+  assert.equal(denied.ok, true, 'the original requested Runtime result remains observable');
+  assert.equal(denied.value.phase, 'held');
+  assert.equal(denied.value.nativeReady, false);
+  assert.equal(missingHistory.restored.length, 1, 'original payload was read before the source proof refused');
+  assert.equal(missingHistory.checkpointSources.length, 0);
+  assert.equal(missingHistory.handoffs(), 1, 'unclaimed replacement history cannot release a restored driver');
+  assert.equal(missingHistory.session().submits.length, 0);
+  const beforeSecondColdOpens = missingHistory.opens();
+  await missingHistory.restart('failed');
+  const stillHeld = await missingHistory.rpc('runtime.restore', missingRestore,
+    { commandId: 'TEST-missing-history-restore' }) as typeof denied;
+  assert.equal(stillHeld.ok, true);
+  assert.equal(stillHeld.value.phase, 'held');
+  assert.equal(stillHeld.value.nativeReady, false);
+  assert.equal(missingHistory.opens(), beforeSecondColdOpens, 'second cold startup cannot retry the failed allocation');
+  assert.equal(missingHistory.checkpointSources.length, 0);
+  assert.equal(missingHistory.handoffs(), 1);
+  assert.equal(readFileSync(sourcePath, 'utf8'), sourceBytes);
+  assert.deepEqual(readFileSync(payloadPath), payloadBytes);
+  assert.equal((await missingHistory.dispose()).cleanup, 'failed', 'unknown target remains genuine cleanup debt');
+  writeFileSync(missingLaunchPath, originalLaunch); // Restore the TEST fault without erasing the unknown Runtime.
+  assert.equal(readFileSync(missingLaunchPath, 'utf8'), originalLaunch);
 });

@@ -16,6 +16,7 @@ export interface DesktopOpenCodeSourceSelection {
   readonly endpoint: string;
   readonly managementEndpoint: string;
   readonly initial: 'missing' | 'path';
+  readonly v2?: Pick<DesktopOpenCodeV2Selection, 'bunPath' | 'bunSha256' | 'engineDirectory'>;
 }
 
 /** Complete TEST recipes before the first original Team owner is constructed. */
@@ -50,10 +51,15 @@ export async function prepareDesktopRuntimeProfile(input: {
     assert.equal(options.creation, true);
     assert.equal(profile.runtime, undefined);
     assert.equal(profile.management, undefined);
-    const member = await sourceRecipe(root, node, options.nativeOpenCodeSourceSelection, scope.teamId);
+    const selection = options.nativeOpenCodeSourceSelection;
+    const member = selection.v2
+      ? await sourceV2Recipe(repo, root, node, selection, scope.teamId)
+      : await sourceRecipe(root, node, selection, scope.teamId);
     // The sidebar seed is saved-only. A template does not assign Runtime delivery to it.
     profile.runtime = { members: [], providerTemplates: [member] };
-    profile.management = [openCodeManagementProfileSchema.parse({
+    profile.management = [selection.v2
+      ? desktopOpenCodeV2ManagementProfile(member, selection.managementEndpoint, 'TEST-opencode-source-management')
+      : openCodeManagementProfileSchema.parse({
       provider: 'opencode', profileId: 'TEST-opencode-source-management',
       configRevision: 'TEST-opencode-management', accountBinding: member.accountBinding,
       cwd: member.cwd, executable: member.executable, environment: member.environment,
@@ -61,6 +67,36 @@ export async function prepareDesktopRuntimeProfile(input: {
       timeoutMs: 15000, modelProbeTimeoutMs: 30000,
     })];
   }
+}
+
+async function sourceV2Recipe(repo: string, root: string, node: string,
+  selection: DesktopOpenCodeSourceSelection, teamId: string): Promise<OpenCodeMemberProfile> {
+  assert.ok(selection.v2);
+  assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
+  assert.equal(process.version, 'v24.21.0'); assert.equal(await realpath(process.execPath), node);
+  assert.equal(await realpath(selection.packageDirectory), selection.packageDirectory);
+  assert.equal(await realpath(selection.executable.path), selection.executable.path);
+  assert.ok(selection.executable.path.startsWith(selection.packageDirectory + sep));
+  assert.equal(createHash('sha256').update(await readFile(selection.executable.path)).digest('hex'),
+    selection.executable.sha256);
+  for (const name of ['@opencode/cli', '@opencode/cli-linux-x64']) {
+    const metadata = JSON.parse(await readFile(join(selection.packageDirectory, 'node_modules', name, 'package.json'), 'utf8'));
+    assert.equal(metadata.name, name); assert.equal(metadata.version, '2.0.21');
+  }
+  assert.equal(await realpath(join(selection.packageDirectory, 'node_modules/@opencode/cli-linux-x64/bin/opencode')),
+    selection.executable.path);
+  const member = await prepareDesktopOpenCodeV2Recipe({ repo, root, node,
+    selection: { ...selection.v2, modelUrl: selection.modelUrl, endpoint: selection.endpoint,
+      managementEndpoint: selection.managementEndpoint },
+    identity: { teamId, memberId: 'TEST-source-template', principalId: 'TEST-source-template-session',
+      sessionId: 'TEST-source-template', generation: 1, configRevision: 'TEST-source-config' },
+  });
+  assert.ok(member.embedded?.providerConfiguration);
+  member.embedded.providerConfiguration.settings = {
+    ...member.embedded.providerConfiguration.settings, baseURL: selection.modelUrl + '/host/v1',
+  };
+  runtimeProfileSchema.parse({ members: [], providerTemplates: [member] });
+  return member;
 }
 
 async function sourceRecipe(root: string, node: string, selection: DesktopOpenCodeSourceSelection,
