@@ -34,7 +34,7 @@ import type { IpcMainInvokeEvent } from 'electron';
 const posixIt = it.skipIf(process.platform === 'win32');
 
 /** Actual account IPC/Main → Host/D → controlled child. Electron UI/vendor login are separate gates. */
-async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', sameContext = false) {
+async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', sameContext = false, protocolRevision: '0.162.0' | '0.169.0' = '0.162.0') {
   const repo = resolve(import.meta.dirname, '../../..');
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-codex-login-main-')));
   for (const name of [
@@ -81,7 +81,7 @@ async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', 
     management: await Promise.all(
       ['a', 'b'].map(async (key) => ({
         provider: 'codex' as const,
-        protocolRevision: '0.162.0' as const,
+        protocolRevision,
         profileId: 'TEST-profile-' + key,
         configRevision: 'TEST-config-' + key,
         accountBinding: 'TEST-account-' + key,
@@ -92,6 +92,7 @@ async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', 
           HOME: join(root, key, 'home'),
           CODEX_HOME: join(root, key, 'codex'),
           TEST_LOGIN: scenario,
+          ...(protocolRevision === '0.169.0' ? { TEST_CODEX_0169: '1' } : {}),
           ...(key === 'a' ? { OPENAI_API_KEY: 'TEST-captured-private-key' } : {}),
         },
       }))
@@ -228,7 +229,7 @@ async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', 
 
 for (const mode of ['browser', 'device_code'] as const) {
   posixIt(`account IPC preserves ${mode} login, exact account readiness, private presentation and refresh/logout`, async () => {
-    const f = await fixture(mode === 'browser' ? 'early' : 'pending', mode === 'device_code');
+    const f = await fixture(mode === 'browser' ? 'early' : 'pending', mode === 'device_code', mode === 'browser' ? '0.169.0' : '0.162.0');
     try {
       const api = f.create();
       const snapshots: CodexAccountSnapshotDto[] = [];
@@ -277,7 +278,7 @@ for (const mode of ['browser', 'device_code'] as const) {
       await vi.waitFor(
         () =>
           expect(snapshots.at(-1)).toMatchObject({
-            managedAccount: { type: 'chatgpt', email: 'test@example.invalid' },
+            managedAccount: { type: 'chatgpt', email: mode === 'browser' ? null : 'test@example.invalid', planType: mode === 'browser' ? 'unknown' : 'plus' },
             login: { status: 'idle' },
             preferredAuthMode: 'api_key',
             effectiveAuthMode: 'api_key',
@@ -286,6 +287,9 @@ for (const mode of ['browser', 'device_code'] as const) {
         { timeout: 10_000 }
       );
       expect(snapshots.at(-1)!.login.authUrl).toBeUndefined();
+      expect(JSON.stringify(snapshots)).not.toMatch(/TEST-private-workspace|TEST-private-user/);
+      expect((await f.wire('a')).filter(row => row.method === 'initialize').every(row =>
+        (row.params?.capabilities as Record<string, unknown> | undefined)?.requiredHumanApproval === undefined)).toBe(true);
       expect(api.feature.getCachedSnapshot()).toBeNull();
       expect(snapshots.some((snapshot) => snapshot.login.status === 'starting')).toBe(true);
       expect(await f.store.pendingLogin()).toBeNull();

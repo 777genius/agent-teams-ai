@@ -635,6 +635,8 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     return runtimeMemberProfileSchema.parse({
       ...(recipe.provider === 'opencode'
         ? applyOpenCodeRuntimeSource(recipe, record.candidate) : structuredClone(recipe)),
+      ...(recipe.provider === 'codex' && record.candidate.nativeCli
+        ? { protocolRevision: record.candidate.nativeCli.version } : {}),
       executable: record.candidate.executable,
     });
   }
@@ -736,6 +738,8 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
     return providerManagementProfileSchema.parse({
       ...(seed.provider === 'opencode'
         ? applyOpenCodeRuntimeSource(seed, record.candidate) : structuredClone(seed)),
+      ...(seed.provider === 'codex' && record.candidate.nativeCli
+        ? { protocolRevision: record.candidate.nativeCli.version } : {}),
       profileId: selected.profileId,
       configRevision: selected.configRevision,
       executable: record.candidate.executable,

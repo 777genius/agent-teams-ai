@@ -147,7 +147,7 @@ export interface CodexMetadataSnapshot {
   };
   profileId: string;
   configRevision: string;
-  account: { type: 'apiKey' } | { type: 'chatgpt'; email: string; planType: string } | null;
+  account: { type: 'apiKey' } | { type: 'chatgpt'; email: string | null; planType: string } | null;
   apiKey?: {
     available: boolean;
     source: 'environment' | null;

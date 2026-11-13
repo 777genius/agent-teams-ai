@@ -145,9 +145,12 @@ lines.on('line', (line) => {
       account:
         process.env.TEST_CHATGPT ||
         (existsSync(loginAccount) && readFileSync(loginAccount, 'utf8') === 'true')
-          ? { type: 'chatgpt', email: 'test@example.invalid', planType: 'plus' }
+          ? process.env.TEST_CODEX_0169
+            ? { type: 'chatgpt', email: null, planType: 'sci_plus', workspaceName: 'TEST-private-workspace' }
+            : { type: 'chatgpt', email: 'test@example.invalid', planType: 'plus' }
           : null,
       requiresOpenaiAuth: true,
+      ...(process.env.TEST_CODEX_0169 ? { userId: 'TEST-private-user' } : {}),
     };
   else if (message.method === 'account/rateLimits/read')
     result = {

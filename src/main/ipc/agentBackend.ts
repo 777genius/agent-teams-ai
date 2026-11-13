@@ -592,7 +592,7 @@ export function getDesktopProviderStatusPort() {
 /** Private installer authority comes from the original desktop descriptor, never an IPC path. */
 export function captureDesktopRuntimeSources(
   event: IpcMainInvokeEvent,
-  runtimeId: 'opencode'
+  runtimeId: 'opencode' | 'codex'
 ): Promise<CapturedRuntimeSources> | undefined {
   const original = active;
   if (!original?.selected) return undefined;

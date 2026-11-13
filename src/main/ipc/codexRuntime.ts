@@ -4,6 +4,7 @@ import {
   removeCodexRuntimeInstallerIpc,
 } from '@features/codex-runtime-installer/main';
 import { createLogger } from '@shared/utils/logger';
+import { captureDesktopRuntimeSources } from './agentBackend';
 
 import type { BrowserWindow, IpcMain } from 'electron';
 
@@ -11,7 +12,9 @@ const logger = createLogger('IPC:codexRuntime');
 const codexRuntimeInstallerFeature = createCodexRuntimeInstallerFeature();
 
 export function registerCodexRuntimeHandlers(ipcMain: IpcMain): void {
-  registerCodexRuntimeInstallerIpc(ipcMain, codexRuntimeInstallerFeature);
+  registerCodexRuntimeInstallerIpc(ipcMain, codexRuntimeInstallerFeature, (event) =>
+    captureDesktopRuntimeSources(event, 'codex')
+  );
   logger.info('Codex runtime handlers registered');
 }
 

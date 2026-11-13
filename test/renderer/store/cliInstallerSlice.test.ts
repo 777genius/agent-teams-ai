@@ -1970,6 +1970,32 @@ describe('cliInstallerSlice', () => {
   });
 
   describe('Codex runtime status invalidation', () => {
+    it('keeps an installed but unselected runtime failed without reporting success or refreshing another source', async () => {
+      const status: CodexRuntimeStatus = {
+        installed: true, source: 'app-managed', version: '0.169.0', latestVersion: '0.169.0',
+        updateAvailable: false, state: 'failed', error: 'Host selection was not confirmed',
+        progress: { phase: 'failed', detail: 'Host selection was not confirmed' },
+      };
+      vi.mocked(api.codexRuntime.install).mockResolvedValue(status);
+      await useStore.getState().installCodexRuntime();
+      expect(useStore.getState().codexRuntimeStatus).toEqual(status);
+      expect(useStore.getState().codexRuntimeStatusLoading).toBe(false);
+      expect(api.codexRuntime.invalidateStatus).not.toHaveBeenCalled();
+      expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
+      expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith('runtime_setup:install_end',
+        expect.objectContaining({ runtime: 'codex', success: false, source: 'app-managed' }));
+    });
+
+    it('a rejected original install leaves the update dialog retryable rather than permanently checking', async () => {
+      vi.mocked(api.codexRuntime.install).mockRejectedValue(new Error('Original context changed'));
+      await useStore.getState().installCodexRuntime();
+      expect(useStore.getState()).toMatchObject({
+        codexRuntimeStatusLoading: false, codexRuntimeError: 'Original context changed',
+        codexRuntimeStatus: { state: 'failed', progress: { phase: 'failed' } },
+      });
+      expect(api.codexRuntime.invalidateStatus).not.toHaveBeenCalled();
+    });
+
     it('retires a pending native read and publishes only the status fetched after invalidation', async () => {
       const pendingOld = createDeferredValue<CodexRuntimeStatus>();
       const pendingFresh = createDeferredValue<CodexRuntimeStatus>();

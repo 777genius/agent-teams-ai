@@ -1,4 +1,5 @@
 import { ManagementCommandError } from '../management/commandRecords.js';
+import { codexManagementProfileSchema } from '../management/profile.js';
 import type { ProviderManagementProfile } from '../management/profile.js';
 import type { RuntimeSourceCandidate, RuntimeSourceRefusal } from './runtimeSourceContracts.js';
 
@@ -34,7 +35,8 @@ export function assertRuntimeSourceNativePolicy(
   } else {
     if (cli.generation !== undefined)
       throw new RuntimeSourceAdmissionError('generation-change-unqualified');
-    if (seed.provider === 'codex' && cli.version !== seed.protocolRevision) unqualified();
+    if (seed.provider === 'codex' &&
+        !codexManagementProfileSchema.shape.protocolRevision.safeParse(cli.version).success) unqualified();
     // Claude CLI compatibility is proven against the original seed's actual version below;
     // its SDK revision is deliberately not used as a CLI version.
   }

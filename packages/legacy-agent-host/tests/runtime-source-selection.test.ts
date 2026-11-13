@@ -23,7 +23,7 @@ import type {
 import type { TeamRosterConfiguration } from '../dist/team/rosterContracts.js';
 import type { TestContext } from 'node:test';
 
-function fixture() {
+function fixture(runtimeId: 'claude' | 'codex' = 'claude') {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-runtime-source-')));
   mkdirSync(join(root, '.claude'), { mode: 0o700 });
   const bytes = '#!/bin/sh\nprintf TEST-source-fixture\n';
@@ -111,13 +111,25 @@ function fixture() {
       },
     ],
   };
+  if (runtimeId === 'codex') {
+    profile.management = [{ provider: 'codex', protocolRevision: '0.162.0', profileId: 'TEST-management',
+      configRevision: 'TEST-config', accountBinding: 'TEST-account', cwd: root,
+      environment: { ...environment, CODEX_HOME: root }, executable: original, timeoutMs: 1000 }];
+    const member = profile.runtime!.members[0]!;
+    profile.runtime = { members: [{ provider: 'codex', protocolRevision: '0.162.0',
+      teamId: member.teamId, memberId: member.memberId, principalId: member.principalId,
+      sessionId: member.sessionId, generation: member.generation, configRevision: member.configRevision,
+      model: member.model, accountBinding: member.accountBinding, cwd: root,
+      environment: { ...environment, CODEX_HOME: root }, executable: original, limits: member.limits,
+      nativeOptions: { approvalPolicy: 'on-request', sandbox: 'read-only' } }] };
+  }
   const grant: RuntimeSourceGrant = {
     targetId: 'c'.repeat(64),
     ownerId: profile.owner.ownerId,
     ownerRevision: profile.owner.revision,
     contextId: 'TEST-desktop-context',
     projectPath: root,
-    runtimeId: 'claude',
+    runtimeId,
     profileId: 'TEST-management',
     configRevision: 'TEST-config',
     teamScopes: [
@@ -143,8 +155,8 @@ function fixture() {
   };
 }
 
-function leased(t: TestContext) {
-  const f = fixture();
+function leased(t: TestContext, runtimeId: 'claude' | 'codex' = 'claude') {
+  const f = fixture(runtimeId);
   let lease = acquireProfileWriterLease(f.root);
   t.after(() => {
     lease.release();
@@ -152,7 +164,10 @@ function leased(t: TestContext) {
   });
   const open = () => {
     const captured = lease;
-    return new RuntimeSourceIndex(f.profile, () => captured.assertCurrent());
+    return new RuntimeSourceIndex(f.profile, () => captured.assertCurrent(), runtimeId === 'codex' ? {
+      // This compiler/replay lane controls only the version process port; Main's sibling test owns a real TEST child.
+      createNativeCheck: (_seed, candidate) => ({ run: async () => ({ nativeVersion: candidate.nativeCli!.version }), close: async () => true }),
+    } : {});
   };
   let index = open();
   return {
@@ -167,6 +182,42 @@ function leased(t: TestContext) {
     },
   };
 }
+
+test('Codex 0.169 publication changes only next captures while 0.162 seed and retained recipes remain exact across restart', async t => {
+  const f = leased(t, 'codex');
+  const capture = (id: string) => captureRuntimeSource(f.profile, f.team, id, 'TEST-roster', f.roster, { deferMcp: true, sources: f.index });
+  const seed = capture('TEST-codex-seed'), seedBytes = JSON.stringify(seed);
+  const first = await f.index.publish({ grant: f.grant, commandId: 'TEST-codex-A',
+    expectedRevision: f.index.current({ grant: f.grant }).revision,
+    nativeSelection: { sourceKind: 'app-managed', nativeCli: { executable: f.original, version: '0.162.0' } },
+  }, () => {});
+  assert.equal(first.phase, 'published');
+  const retained = capture('TEST-codex-retained-A'), retainedBytes = JSON.stringify(retained);
+  const recordA = JSON.parse(readFileSync(join(f.root, 'runtime-sources/index.json'), 'utf8')).records[0];
+  const receiptA = JSON.stringify(new FileManagementCommandStore(f.root).read('TEST-codex-A'));
+  const next = await f.index.publish({ grant: f.grant, commandId: 'TEST-codex-B', expectedRevision: first.selection!.revision,
+    nativeSelection: { sourceKind: 'app-managed', nativeCli: { executable: f.replacement, version: '0.169.0' } },
+  }, () => {});
+  assert.equal(next.phase, 'published');
+  const selected = capture('TEST-codex-next-B');
+  f.restart();
+  for (const [source, version, executable] of [[seed, '0.162.0', f.original], [retained, '0.162.0', f.original], [selected, '0.169.0', f.replacement]] as const) {
+    const profile = compileRuntimeCapture(f.profile, f.team, source, 'model-preflight', f.index).profiles[0]!;
+    assert.equal(profile.provider, 'codex');
+    if (profile.provider !== 'codex') assert.fail('Codex recipe required');
+    assert.equal(profile.protocolRevision, version);
+    assert.deepEqual(profile.executable, executable);
+  }
+  assert.equal(JSON.stringify(seed), seedBytes);
+  assert.equal(JSON.stringify(retained), retainedBytes);
+  assert.deepEqual(JSON.parse(readFileSync(join(f.root, 'runtime-sources/index.json'), 'utf8')).records[0], recordA);
+  assert.equal(JSON.stringify(new FileManagementCommandStore(f.root).read('TEST-codex-A')), receiptA);
+  assert.deepEqual(f.index.retainedManagementProfiles().map(profile => profile.provider === 'codex' && profile.protocolRevision), ['0.162.0', '0.169.0']);
+  await assert.rejects(f.index.publish({ grant: f.grant, commandId: 'TEST-codex-future', expectedRevision: next.selection!.revision,
+    nativeSelection: { sourceKind: 'app-managed', nativeCli: { executable: f.replacement, version: '0.170.0' } },
+  }, () => assert.fail('unqualified future version cannot be admitted')), { reason: 'unqualified-version' });
+  assert.deepEqual(f.index.current({ grant: f.grant }), next.selection);
+});
 
 test('publication pins new captures while seed and retained captures replay unchanged after a cold restart', async (t) => {
   const f = leased(t), firstScope = f.grant.teamScopes[0]!;

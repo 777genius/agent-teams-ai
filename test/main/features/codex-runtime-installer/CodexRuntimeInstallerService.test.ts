@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { chmod, mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -41,6 +41,7 @@ import {
   verifyCodexRuntimePackageIntegrity,
 } from '@features/codex-runtime-installer/main';
 import { setAppDataBasePath } from '@main/utils/pathDecoder';
+import { CodexRuntimeInstallerService } from '../../../../src/features/codex-runtime-installer/main/infrastructure/CodexRuntimeInstallerService';
 
 let tempRoot: string | null = null;
 const originalPath = process.env.PATH;
@@ -171,6 +172,40 @@ describe('CodexRuntimeInstallerService resolver', () => {
     expect(getReader).not.toHaveBeenCalled();
     expect(execCliMock).not.toHaveBeenCalled();
     expect(resolveAppManagedCodexRuntimeBinaryPath()).toBeNull();
+  });
+
+  it('same-version repair preserves retained files and reports ready only after original Host acceptance', async () => {
+    const selected = getCodexRuntimePlatformCandidates()[0];
+    const binaryName = process.platform === 'win32' ? 'codex.exe' : 'codex';
+    const stage = (bytes: string) => {
+      const tarball = createTarball([{ name: `package/vendor/${selected.vendorTarget}/codex/${binaryName}`, data: bytes }]);
+      stubPackageDownload(new Response(new Uint8Array(tarball)), tarball);
+    };
+    const service = new CodexRuntimeInstallerService();
+    stage('TEST retained A');
+    const original = await service.install();
+    const reached = Promise.withResolvers<void>(), receipt = Promise.withResolvers<void>();
+    stage('TEST installed B');
+    const installing = service.install(async (status) => {
+      reached.resolve();
+      await receipt.promise;
+      return status;
+    });
+    await reached.promise;
+    expect((await service.getStatus()).state).toBe('installing');
+    expect((await service.getStatus()).progress?.phase).not.toBe('ready');
+    const candidate = resolveAppManagedCodexRuntimeBinaryPath()!;
+    expect(candidate).not.toBe(original.binaryPath);
+    expect(await readFile(original.binaryPath!, 'utf8')).toBe('TEST retained A');
+    expect(await readFile(candidate, 'utf8')).toBe('TEST installed B');
+    receipt.resolve();
+    expect(await installing).toMatchObject({ installed: true, state: 'ready', binaryPath: candidate });
+    stage('TEST installed C');
+    const rejected = await service.install(async () => { throw new Error('TEST original publication unknown'); });
+    expect(rejected).toMatchObject({ installed: true, state: 'failed', progress: { phase: 'failed' }, error: 'TEST original publication unknown' });
+    expect(await readFile(rejected.binaryPath!, 'utf8')).toBe('TEST installed C');
+    expect(await readFile(candidate, 'utf8')).toBe('TEST installed B');
+    expect(await readFile(original.binaryPath!, 'utf8')).toBe('TEST retained A');
   });
 
   it.each([undefined, '1'])(

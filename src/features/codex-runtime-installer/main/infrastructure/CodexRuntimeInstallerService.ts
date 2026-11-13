@@ -281,6 +281,7 @@ async function resolveLatestCodexVersion(): Promise<string | null> {
 export interface CodexRuntimeInstallerServiceDependencies {
   resolveLatestVersion?: () => Promise<string | null>;
 }
+type AcceptCodexRuntimeInstallation = (status: CodexRuntimeStatus) => Promise<CodexRuntimeStatus>;
 
 export function verifyCodexRuntimePackageIntegrity(buffer: Buffer, integrity: string): void {
   const match = /^sha512-([A-Za-z0-9+/=]+)$/.exec(integrity.trim());
@@ -500,6 +501,7 @@ async function writePackageFiles(
 export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
   private mainWindow: BrowserWindow | null = null;
   private installPromise: Promise<CodexRuntimeStatus> | null = null;
+  private installAcceptance: AcceptCodexRuntimeInstallation | undefined;
   private latestStatus: CodexRuntimeStatus | null = null;
 
   constructor(private readonly dependencies: CodexRuntimeInstallerServiceDependencies = {}) {}
@@ -510,6 +512,11 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
 
   invalidateStatusCache(): void {
     this.latestStatus = null;
+  }
+
+  async getReadinessStatus(): Promise<CodexRuntimeStatus> {
+    const managed = await this.getAppManagedStatus();
+    return managed.installed ? managed : this.getPathStatus();
   }
 
   async getStatus(): Promise<CodexRuntimeStatus> {
@@ -536,12 +543,16 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
     return versionAwareStatus;
   }
 
-  async install(): Promise<CodexRuntimeStatus> {
+  async install(accept?: AcceptCodexRuntimeInstallation): Promise<CodexRuntimeStatus> {
     if (this.installPromise) {
+      if (this.installAcceptance !== accept)
+        throw new Error('Another Codex installation is in progress.');
       return this.installPromise;
     }
-    this.installPromise = this.installInternal().finally(() => {
+    this.installAcceptance = accept;
+    this.installPromise = this.installInternal(accept).finally(() => {
       this.installPromise = null;
+      this.installAcceptance = undefined;
     });
     return this.installPromise;
   }
@@ -664,8 +675,11 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
     }
   }
 
-  private async installInternal(): Promise<CodexRuntimeStatus> {
+  private async installInternal(
+    accept?: AcceptCodexRuntimeInstallation
+  ): Promise<CodexRuntimeStatus> {
     let tempDir: string | null = null;
+    let installedStatus: CodexRuntimeStatus | undefined;
     const previousStatus = this.latestStatus?.installed ? this.latestStatus : null;
     try {
       this.publishProgress({ phase: 'checking', detail: 'Resolving latest Codex package...' });
@@ -700,17 +714,17 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
       const files = extractCodexRuntimePackageFilesFromTarball(tarball, selected.vendorTarget);
       const binaryRelativePath = resolveCodexRuntimeBinaryRelativePath(files);
       const runtimeRoot = getRuntimeRootPath();
-      tempDir = path.join(runtimeRoot, `installing-${process.pid}-${randomUUID()}`);
+      await fsp.mkdir(runtimeRoot, { recursive: true });
+      tempDir = await fsp.mkdtemp(path.join(runtimeRoot, 'installing-'));
       const versionDir = path.join(
         runtimeRoot,
         'versions',
         platformMetadata.version!,
-        selected.vendorTarget
+        selected.vendorTarget,
+        randomUUID()
       );
       const binaryPath = path.join(versionDir, binaryRelativePath);
 
-      await fsp.rm(tempDir, { recursive: true, force: true });
-      await fsp.mkdir(tempDir, { recursive: true });
       await writePackageFiles(tempDir, files);
 
       this.publishProgress({ phase: 'installing', detail: 'Verifying Codex binary...' });
@@ -720,7 +734,7 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
         windowsHide: true,
       });
 
-      await fsp.rm(versionDir, { recursive: true, force: true });
+      // Retained Host recipes keep their exact executable and vendor closure across repairs.
       await fsp.mkdir(path.dirname(versionDir), { recursive: true });
       await renamePathWithRetry(tempDir, versionDir);
       tempDir = null;
@@ -753,19 +767,22 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
           detail: `Installed Codex ${stdout.trim() || manifest.platformVersion}`,
         },
       };
-      this.publish(status);
-      return status;
+      installedStatus = status;
+      const accepted = accept ? await accept(status) : status;
+      this.publish(accepted);
+      return accepted;
     } catch (error) {
       if (tempDir) {
         await fsp.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
       }
       const status: CodexRuntimeStatus = {
-        ...(previousStatus ?? {
-          installed: false,
-          latestVersion: null,
-          updateAvailable: false,
-          source: 'missing' as const,
-        }),
+        ...(installedStatus ??
+          previousStatus ?? {
+            installed: false,
+            latestVersion: null,
+            updateAvailable: false,
+            source: 'missing' as const,
+          }),
         state: 'failed',
         error: getErrorMessage(error),
         progress: {

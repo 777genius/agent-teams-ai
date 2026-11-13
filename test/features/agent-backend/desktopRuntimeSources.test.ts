@@ -11,11 +11,17 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { DesktopBackendFeature } from '../../../src/features/agent-backend/main/composition/DesktopBackendFeature';
 import { CapturedOpenCodeRuntimeInstaller } from '../../../src/features/opencode-runtime-installer/main/application/CapturedOpenCodeRuntimeInstaller';
 import { captureOpenCodeNativeSelection } from '../../../src/features/opencode-runtime-installer/main/infrastructure/captureOpenCodeNativeSelection';
+import { CapturedCodexRuntimeInstaller } from '../../../src/features/codex-runtime-installer/main/application/CapturedCodexRuntimeInstaller';
+import { captureCodexNativeSelection } from '../../../src/features/codex-runtime-installer/main/infrastructure/captureCodexNativeSelection';
+import { registerCodexRuntimeInstallerIpc } from '../../../src/features/codex-runtime-installer/main/adapters/input/ipc/registerCodexRuntimeInstallerIpc';
+import { CODEX_RUNTIME_GET_STATUS, CODEX_RUNTIME_INSTALL } from '@features/codex-runtime-installer/contracts';
 
 import type { ProviderManagementOperation } from '../../../src/features/agent-backend/main/infrastructure/CapturedProviderManagement';
 import type { DesktopBackendDescriptor } from '../../../src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor';
 import type { TeamHostProfile } from '@agent-teams/legacy-agent-host/team-host';
 import type { OpenCodeRuntimeStatus } from '@shared/types';
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
+import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 const roots: string[] = [],
   features: DesktopBackendFeature[] = [];
@@ -25,7 +31,7 @@ afterEach(async () => {
 });
 const digest = (bytes: string | Buffer) => createHash('sha256').update(bytes).digest('hex');
 
-async function fixture(runtimeId: 'claude' | 'opencode' = 'claude', withPreferences = false, aliases = 0,
+async function fixture(runtimeId: 'claude' | 'codex' | 'opencode' = 'claude', withPreferences = false, aliases = 0,
   interruptPrepared = false) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-desktop-sources-')));
   roots.push(root);
@@ -57,7 +63,7 @@ void server.closed.then(() => process.exit(0));`;
   const bytes =
     runtimeId === 'claude'
       ? '#!/bin/sh\nprintf "2.1.34 (Claude Code)\\n"\n'
-      : '#!/bin/sh\nprintf "1.19.4\\n"\n';
+      : runtimeId === 'codex' ? '#!/bin/sh\nprintf "codex-cli 0.162.0\\n"\n' : '#!/bin/sh\nprintf "1.19.4\\n"\n';
   const original = { path: join(root, 'TEST-cli-seed'), sha256: digest(bytes) };
   const replacement = { path: join(root, 'TEST-cli-repaired'), sha256: digest(bytes) };
   for (const executable of [original, replacement])
@@ -133,6 +139,11 @@ void server.closed.then(() => process.exit(0));`;
         timeoutMs: 1000,
       },
     ];
+  if (runtimeId === 'codex') profile.management = [{
+    provider: 'codex', protocolRevision: '0.162.0', profileId: 'TEST-management', configRevision: 'TEST-config',
+    accountBinding: 'TEST-account', cwd: root, executable: original,
+    environment: { HOME: root, CODEX_HOME: root, PATH: '/usr/bin:/bin' }, timeoutMs: 1000,
+  }];
   await writeFile(profileFile, JSON.stringify(profile), { mode: 0o600 });
   const binding = {
     runtimeId,
@@ -340,6 +351,85 @@ it.skipIf(process.platform === 'win32')(
   20000
 );
 
+it.skipIf(process.platform === 'win32')('Codex installer IPC publishes verified 0.169 from a 0.162 seed, reconciles its ACK and retains old management after restart', async () => {
+  const f = await fixture('codex'), desktop = f.open();
+  const oldTarget = await desktop.captureProviderManagement('TEST-context', f.root, undefined, 'codex');
+  const sources = await desktop.captureRuntimeSources('TEST-context', f.root, 'codex');
+  const binaryPath = join(f.root, 'TEST-installed-codex'), marker = join(f.root, 'TEST-codex-version-reads');
+  await writeFile(binaryPath, `#!/bin/sh\nprintf "codex-cli 0.169.0\\n"\nprintf x >> '${marker}'\n`, { mode: 0o700 });
+  const physical: CodexRuntimeStatus = { installed: true, state: 'ready', source: 'app-managed',
+    version: 'codex-cli 0.169.0', latestVersion: '0.169.0', updateAvailable: false, binaryPath };
+  const install = vi.fn(async (accept: (status: CodexRuntimeStatus) => Promise<CodexRuntimeStatus>) => accept(physical));
+  const service = new CapturedCodexRuntimeInstaller({ native: { install, getReadinessStatus: async () => physical }, captureSelection: captureCodexNativeSelection });
+  let commandId = '';
+  const captured = { ...sources, publish: async (input: Parameters<typeof sources.publish>[0]) => {
+    commandId = input.commandId;
+    await sources.publish(input);
+    throw new Error('TEST original publication ACK lost');
+  } };
+  const handlers = new Map<string, (event: IpcMainInvokeEvent) => Promise<{ success: boolean; data?: CodexRuntimeStatus; error?: string }>>();
+  const event = {} as IpcMainInvokeEvent;
+  let authorized = true;
+  registerCodexRuntimeInstallerIpc({ handle: (channel: string, handler: Parameters<IpcMain['handle']>[1]) => handlers.set(channel, handler) } as unknown as IpcMain, {
+    getStatus: async () => physical,
+    install: selected => { expect(selected).toBeDefined(); return service.install(selected!); },
+    invalidateStatus: async selected => { expect(selected).toBeDefined(); await service.selectInstalled(selected!); },
+    setMainWindow() {},
+  }, () => { if (!authorized) throw new Error('TEST unauthorized original sender'); return Promise.resolve(captured); });
+  expect((await handlers.get(CODEX_RUNTIME_GET_STATUS)!(event)).data).toEqual(physical);
+  expect(commandId).toBe('');
+  expect(install).not.toHaveBeenCalled();
+  const reply = await handlers.get(CODEX_RUNTIME_INSTALL)!(event);
+  expect(reply.success).toBe(true);
+  const completed = reply.data!;
+  expect(completed).toMatchObject({ installed: true, state: 'ready', version: '0.169.0', progress: { phase: 'ready', percent: 100 } });
+  const published = (await sources.lookup(commandId))!;
+  expect(await sources.current()).toEqual(published.selection);
+  expect(published.selection?.cliVersion).toBe('0.169.0');
+  expect(await service.selectInstalled(sources)).toEqual(completed);
+  expect(install).toHaveBeenCalledTimes(1);
+  authorized = false;
+  expect(await handlers.get(CODEX_RUNTIME_INSTALL)!(event)).toMatchObject({ success: false, error: 'TEST unauthorized original sender' });
+  expect(install).toHaveBeenCalledTimes(1);
+  expect(await readFile(marker, 'utf8')).toBe('x');
+  expect((await desktop.captureProviderManagement('TEST-context', f.root, undefined, 'codex')).targetId).not.toBe(oldTarget.targetId);
+  const later = await sources.publish({ commandId: 'TEST-later-independent-selection', expectedRevision: published.selection!.revision,
+    nativeSelection: { sourceKind: 'path', nativeCli: { executable: f.original, version: '0.162.0' } } });
+  expect(await service.selectInstalled(sources)).toMatchObject({ installed: true, state: 'failed' });
+  expect(await sources.current()).toEqual(later.selection);
+  expect(await sources.lookup(commandId)).toEqual(published);
+  await desktop.shutdown();
+  const restarted = f.open();
+  expect((await restarted.restoreProviderManagement('TEST-context', oldTarget.targetId)).profileId).toBe(oldTarget.profileId);
+  expect(await (await restarted.captureRuntimeSources('TEST-context', f.root, 'codex')).current()).toEqual(later.selection);
+}, 20000);
+
+for (const refusal of ['foreground-changed', 'unqualified-version'] as const)
+  it.skipIf(process.platform === 'win32')(`Codex ${refusal} leaves the installed bytes visible without a ready publication`, async () => {
+    const f = await fixture('codex'), desktop = f.open();
+    let current = true;
+    const sources = await desktop.captureRuntimeSources('TEST-context', f.root, 'codex', { isCurrent: () => current });
+    const original = await sources.current();
+    const version = refusal === 'unqualified-version' ? '0.170.0' : '0.169.0';
+    const binaryPath = join(f.root, 'TEST-unselected-codex');
+    await writeFile(binaryPath, `#!/bin/sh\nprintf "codex-cli ${version}\\n"\n`, { mode: 0o700 });
+    const physical: CodexRuntimeStatus = { installed: true, state: 'ready', source: 'app-managed', version,
+      latestVersion: version, updateAvailable: false, binaryPath };
+    const service = new CapturedCodexRuntimeInstaller({ native: {
+      getReadinessStatus: async () => physical,
+      install: async accept => { if (refusal === 'foreground-changed') current = false; return accept(physical); },
+    }, captureSelection: captureCodexNativeSelection });
+    const status = await service.install(sources);
+    expect(status).toMatchObject({ installed: true, version, binaryPath, state: 'failed', progress: { phase: 'failed' } });
+    expect(status.error).toContain('Host selection was not confirmed');
+    current = true;
+    expect(await sources.current()).toEqual(original);
+    if (refusal === 'unqualified-version') {
+      expect(status.error).toContain('unqualified-version');
+      expect(await sources.recover()).toBeNull();
+    }
+  }, 20000);
+
 it.skipIf(process.platform === 'win32')(
   'installer lost ACK reports its original publication even when a later selection is current',
   async () => {
@@ -404,15 +494,16 @@ it.skipIf(process.platform === 'win32')(
   20000
 );
 
-it.skipIf(process.platform === 'win32')(
-  'restarted installer resumes the Host snapshot before any new acquisition',
+for (const runtimeId of ['opencode', 'codex'] as const) it.skipIf(process.platform === 'win32')(
+  `restarted ${runtimeId} installer resumes the Host snapshot before any new acquisition`,
   async () => {
-    const f = await fixture('opencode', false, 0, true),
+    const f = await fixture(runtimeId, false, 0, true),
       desktop = f.open();
-    const sources = await desktop.captureRuntimeSources('TEST-context', f.root, 'opencode');
+    const sources = await desktop.captureRuntimeSources('TEST-context', f.root, runtimeId);
     const original = await sources.current(),
       binaryPath = join(f.root, 'TEST-interrupted-selection');
-    const bytes = '#!/bin/sh\nprintf "1.19.5\\n"\n';
+    const version = runtimeId === 'codex' ? '0.169.0' : '1.19.5';
+    const bytes = `#!/bin/sh\nprintf "${runtimeId === 'codex' ? 'codex-cli ' : ''}${version}\\n"\n`;
     await writeFile(binaryPath, bytes, { mode: 0o700 });
     await expect(
       sources.publish({
@@ -422,31 +513,33 @@ it.skipIf(process.platform === 'win32')(
           sourceKind: 'app-managed',
           nativeCli: {
             executable: { path: binaryPath, sha256: digest(bytes) },
-            version: '1.19.5',
-            generation: 'v1',
+            version,
+            ...(runtimeId === 'opencode' ? { generation: 'v1' as const } : {}),
           },
         },
       })
     ).rejects.toThrow();
     expect((await sources.lookup('TEST-original-install'))?.phase).toBe('prepared');
     await desktop.shutdown();
-    const install = vi.fn(async (): Promise<OpenCodeRuntimeStatus> => {
+    const install = vi.fn(async (): Promise<never> => {
       throw new Error('New acquisition forbidden');
     });
-    const service = new CapturedOpenCodeRuntimeInstaller({
+    const dependencies = {
       native: { install, getReadinessStatus: install },
       captureSelection: async () => {
         throw new Error('Original candidate must come from Host');
       },
-    });
+    };
     const restartedSources = await f
       .open()
-      .captureRuntimeSources('TEST-context', f.root, 'opencode');
-    const status = await service.install(restartedSources, { generation: 'v1' });
-    expect(status).toMatchObject({ state: 'ready', version: '1.19.5' });
+      .captureRuntimeSources('TEST-context', f.root, runtimeId);
+    const status = runtimeId === 'codex'
+      ? await new CapturedCodexRuntimeInstaller(dependencies).install(restartedSources)
+      : await new CapturedOpenCodeRuntimeInstaller(dependencies).install(restartedSources, { generation: 'v1' });
+    expect(status).toMatchObject({ state: 'ready', version });
     expect(install).not.toHaveBeenCalled();
     expect((await restartedSources.lookup('TEST-original-install'))?.selection?.revision).toBe(
-      status.sourceRevision
+      (await restartedSources.current()).revision
     );
   },
   20000
