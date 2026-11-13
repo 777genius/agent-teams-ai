@@ -3644,3 +3644,39 @@ Retain all original source/archive/compiled-module pins, original old Host ONE i
 ### Review 3 — exact existing cold E2E
 
 Root publishes this plan before source. A peer checks the two finite journal-structure branches against exact old source and confirms reconstruction is metadata-only and follows original identity. No new unit suite or additional native journey is needed. Existing Host/script types and the original old1d-to-current cold selected Resume job remain the qualification gates. Source review does not establish which actual field caused the old digest mismatch or qualify Resume; the next ordinary exact-head E2E must still pass every original byte/owner/cleanup/input assertion.
+
+## 68. Original current-frontend stopped producer: retain bounded catalog-read timing
+
+### Review 1 — actual evidence, with no guessed production fix
+
+Parent e29dbde300ea73ec4e46e5f57f9e007ca5473552 run43497088359/job132132912556 fails the original stopped-producer oracle at desktop-stopped-import-prior-run.ts199 while the original Optional launch settings control is being opened. The closed diagnostic establishes at least9 catalog GETs against the unchanged8 cap, zero business inputs and zero model probes,20 captured native children, frozen source and successful original cleanup. It does not identify the caller or prove a frontend retry loop. §63's bodyless preconnect correction did not by itself resolve this separate catalog failure.
+
+captureCurrentStoppedSourceInputs7ec419 confirms this producer executes the actual current checkout and its pinned ordinary runtime0.0.158, with no Host descriptor. It is distinct from donor4a and the old1d checkpoint producer. Current useTeamModelProviderStatus fca15, cliInstallerSlice3958 and ClaudeMultimodelBridgeService68e89 show project-prefetch, original epoch/in-flight joins and summary/catalog hydration, but the retained log does not yet distinguish duplicate view reads, an unhealthy episode, source-scope changes or expiration. Do not add a guessed cache, suppress a real readiness check, replace explicit model selection with a default, or alter the frozen native payload.
+
+### Review 2 — only original observations, no new work or authority
+
+Expose the existing currentLegacyCatalogRequests scalar through a read-only TEST getter from the already-created model fixture. It returns its original counter; it cannot reset the counter, create an epoch, perform a request, or change response/failure behavior. Keep the exact8 catalog cap, first-failure seal, method/path/key checks, bodyless HEAD32, token/probe/business budgets and all original responses unchanged.
+
+At the existing desktop UI step callback retain the already-known phase and that scalar alongside the existing step. Do not add a new CDP read, listener, timer, native command, retry or user action. On the original failure, project at most the existing13 literal producer phases into first/last observed catalog counts, plus the current count. Keep only finite0..9 counts; malformed observations are unknown, not success. The existing structured assertion frames and catalog/native/probe/cleanup fields remain. Never print original selector, label, DOM text, argv, environment, HTTP headers/body, paths, process identities or raw errors in this diagnostic.
+
+Move the existing small failure projection into the already-used stopped-import fixture module to keep the800-line prior-run file below its unchanged cap. The helper is a pure projection of existing observations. It does not perform discovery or cleanup and cannot change the outcome. The existing4096-byte closed diagnostic ceiling, original throw/finally, source-freeze, actual Stop/Quit/absence and consumer acceptance remain.
+
+| Path | Exact preimage | Change |
+| --- | --- | --- |
+| packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts | 009a990eb188b4eb54b1d8486a0adcaa7a48b25e | Read-only getter for the existing original catalog scalar only. |
+| scripts/legacy-agent-host/desktop-stopped-import-prior-run.ts | e8790566e5a1eebdeef005234d657e0824d0a84b | Enrich existing UI step observation; call pure failure projection, retaining the same original failure and cleanup. |
+| scripts/legacy-agent-host/desktop-stopped-import-fixture.ts | 7ec419a5803e29b9b03fe4bda3b37243af3db0a8 | Existing module owns the bounded pure closed projection; no new framework/module. |
+
+### Review 3 — qualification boundary
+
+Root publishes this plan before source and obtains independent review of the narrow getter/projection and unchanged oracle. Reuse the existing source-size/types and ordinary stopped-import E2E; no new unit suite, native journey or diagnostic-only rerun. The observation change travels with the next coherent reviewed repair cut after active CI completes. Its output is diagnostic evidence, never PASS or evidence that catalog requests are legitimate. Use the actual phase/count observations and retained original source to choose any subsequent product correction under a separate reviewed plan. The producer and full Host-import E2E remain incomplete until their unchanged assertions actually pass.
+
+### 66.10. Retained legacy-A startup preserves the original absent descriptor choice
+
+The delivery audit found an existing finite branch, not a new product mode: desktop-retained-opencode-coexistence.native.tsa6406ec's original epoch0 deliberately removes both Host descriptor environment fields while keeping the same actual Main frontend and retained V1 A. The later Host epoch and both source-selection journeys use the captured descriptor. Selecting the descriptor-isolation helper only when a Host descriptor is present would reject the original legacy-A half or leave its Main children unisolated.
+
+Clarify §66.5: capture the original **nullable descriptor pair** together with the explicit helper pin. Exactly both descriptor fields absent is a legitimate original composition choice for this retained legacy-A epoch. Exactly both present preserves the original Host descriptor choice and its existing validation; a partial pair is refused. Bind the original pair's exact values before the first asynchronous effect and require the same choice during initialization/re-entry. Do not infer the pair from a later boolean, current Host, UI state or changed environment.
+
+This does not activate a helper by default. Its separate manifest/hash pair must still be explicitly present, valid, immutable for the original Main composition and verified before every selected child allocation. Once requested, failure remains refusal with original custody; an absent Host descriptor is not permission to fall back to a direct unisolated launch or clear the helper pins. No Host profile, digest, checkpoint, source selection, renderer API or legacy runtime binary changes.
+
+Only the already-declared linuxChildLaunchSelection.ts and its agentBackend.ts initialization call need this precision; the original retained runner's intentional descriptor removal is preserved. Existing selection/child tests must distinguish absent-both, present-both, partial pair, drift and unchanged unselected startup. The same original retained V1-A → Host-V2 controls and the two source-selection journeys remain the actual gates, with no added journey, business input, budget or timeout.
