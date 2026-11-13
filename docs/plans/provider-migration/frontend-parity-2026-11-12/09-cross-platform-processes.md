@@ -2482,3 +2482,31 @@ the actual OS-build-bound proof remains required.
 the sandbox's EPERM is kept distinct from a failed or successful operating-system primitive.
 **R3:** independent plan review must verify the after-check mutation, original-child cleanup
 and existing-job scope before the TEST slice. Production/thread closure remains pending.
+
+## 51. Actual689 Windows Main-route refusal: bounded TEST evidence
+
+Run `43407471332` completed both Windows jobs `131825241907` (x64) and
+`131825242028` (ARM64) with step16 failure at the first ordinary `runtime.open`.
+Artifacts `14027448985`/`14028393083` contain `main-retained-graceful.json`:
+phase `native-open`, all five successful-operation counters zero, model requests zero,
+cleanup true. Both direct native vendor receipts passed original scoped Stop and
+same-Session continuation, but do not qualify the ordinary Main/Host route.
+The current rpc assertion discards the returned finite code/outcome. Its counters
+increment only after a successful private call, so zero is not proof of no attempted effect.
+
+Change only the existing `nativeRetainedHostGate.ts` TEST observer. Retain the first
+failed method from its existing closed route set, allowlisted code/outcome and separate
+bounded attempted-private-operation counters; preserve all original success counters
+and assertions. After that original refusal, make at most one read-only `runtime.read`
+for the same member/binding, without calling the failing route again. Project only
+closed phase/custody/diagnostic classifications and boolean readiness/attachment/seal.
+Bound this diagnostic by the lesser of one second and the unspent original45s request
+deadline; if unavailable, record unknown and continue original cleanup. The original
+assertion/error remains the failure, even if this read fails.
+
+No stderr, error.message, arbitrary payload, profile path, argv, environment or private
+native identity is retained. Do not change product guards, SDK input, success criteria,
+retry behavior, runner or time budgets. Use the next necessary native source cut;
+current Linux jobs continue normally. R1: exact original receipts and rpc/counter source
+checked. R2: independent finite-projection review before source. Actual cause is still
+unproven; a pre-open rejection must not be repaired by guessing from success counters.
