@@ -10,6 +10,7 @@ import { test } from 'node:test';
 import { fileHash, startHost, tick } from './fixtures/native-host.ts';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
+import type { RuntimeSourceGrant, RuntimeSourcePublication, RuntimeSourceSummary } from '../dist/composition/runtimeSourceContracts.js';
 import type {
   ProviderCredentialReceipt, ProviderManagementCatalog, ProviderModelProbeSnapshot,
 } from '../dist/management/contracts.js';
@@ -171,7 +172,7 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
       host = undefined;
       for (const pid of nativePids) assert.throws(() => process.kill(-pid, 0), { code: 'ESRCH' });
     };
-    const target = { profileId: 'TEST-management', configRevision: 'TEST-config' };
+    let target = { profileId: 'TEST-management', configRevision: 'TEST-config' };
     const directory = async () => value<ProviderManagementCatalog>(await host!.rpc('management.catalog', target));
     const selected = (catalog: ProviderManagementCatalog) => {
       const found = catalog.providers.find(row => row.providerId === 'TEST-local');
@@ -179,8 +180,8 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
       for (const key of [selectedKey, rejectedKey, foreignKey]) assert.equal(JSON.stringify(catalog).includes(key), false);
       return found;
     };
-    const pending = { ...target, providerId: 'TEST-local' };
-    const connect = { ...pending, commandId: 'TEST-key-connect', kind: 'credential.set', key: selectedKey };
+    let pending = { ...target, providerId: 'TEST-local' };
+    let connect = { ...pending, commandId: 'TEST-key-connect', kind: 'credential.set', key: selectedKey };
     await start();
     const before = await directory();
     assert.deepEqual(before.runtime, { generation: 'v2', version: '2.1.4' });
@@ -200,9 +201,28 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
     const rejectedCatalog = selected(await directory());
     assert.equal(rejectedCatalog.configured, true);
     assert.equal(rejectedCatalog.connected, false);
+    const grant: RuntimeSourceGrant = { targetId: 'c'.repeat(64), ownerId: profile.owner.ownerId,
+      ownerRevision: profile.owner.revision, contextId: 'TEST-context', projectPath: join(root, 'workspace'),
+      runtimeId: 'opencode', ...target, teamScopes: [] };
+    const current = value<RuntimeSourceSummary>(await host!.rpc('runtime.source.current', { grant }));
+    const published = value<RuntimeSourcePublication>(await host!.rpc('runtime.source.publish', {
+      grant, commandId: 'TEST-new-runtime-source', expectedRevision: current.revision,
+      candidate: { sourceKind: 'captured', executable: profile.management![0]!.executable },
+    }));
+    assert.equal(published.phase, 'published');
+    assert.ok(published.selection);
+    assert.notEqual(published.selection.profileId, target.profileId);
+    target = { profileId: published.selection.profileId, configRevision: published.selection.configRevision };
+    pending = { ...target, providerId: 'TEST-local' };
+    connect = { ...connect, ...target };
+    assert.equal(selected(await directory()).connected, false, 'a source revision cannot inherit old model verification');
+    assert.equal(requests.length, 1, 'source publication and passive read do not verify a model');
     await observeNative();
     await stop();
     await start();
+    assert.deepEqual(value(await host!.rpc('management.credential.lookup', {
+      commandId: rejected.commandId, profileId: rejected.profileId, configRevision: rejected.configRevision,
+    })), rejectedReceipt, 'cold source recovery retains the immutable original rejected target');
     // A confirmed owned publication + qualified failed terminal admits an
     // explicit corrected key. This cannot authorize overwriting a foreign key.
     // Drop the original application acknowledgement; reconciliation uses its exact intent only.
@@ -218,6 +238,7 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
       ...foreign, 'TEST-local': { type: 'api', key: selectedKey } });
     steps.push('native_key_one_verification_original_receipt_after_lost_ack');
     steps.push('native_401_saved_unverified_then_cold_explicit_corrected_key_succeeds');
+    steps.push('runtime_source_revision_preserves_original_rejected_key_replacement_authority');
     await stop();
     await start();
     assert.deepEqual(value(await host!.rpc('management.credential.resume', connect)), original);

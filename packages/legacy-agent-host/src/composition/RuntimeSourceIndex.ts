@@ -365,8 +365,9 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       if (!saved || saved.kind !== 'runtime.source') fail('held');
       receipt = saved;
     }
+    const assertCurrent = () => { this.assertWriter(); if (this.sealed) fail('held'); };
     try {
-      await verifyRuntimeSourceCandidate(seed, input.candidate);
+      await verifyRuntimeSourceCandidate(seed, input.candidate, assertCurrent);
     } catch (error) {
       if (receipt.resourceHeld || !['prepared', 'verified'].includes(receipt.phase)) throw error;
       (this.options.assertCleanupWriter ?? this.assertWriter)();
@@ -382,15 +383,18 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
         phase: 'held',
         ...(receipt.reason ? { reason: receipt.reason } : {}),
       };
-    this.assertWriter();
-    if (this.sealed) fail('held');
+    assertCurrent();
+    const checks: Awaited<ReturnType<typeof verifyRuntimeSourceExecutable>>[] = [];
     try {
-      verifyRuntimeSourceExecutable(input.candidate.executable);
+      checks.push(await verifyRuntimeSourceExecutable(input.candidate.executable, assertCurrent));
       if (input.candidate.nativeCli)
-        verifyRuntimeSourceExecutable(input.candidate.nativeCli.executable);
+        checks.push(await verifyRuntimeSourceExecutable(input.candidate.nativeCli.executable, assertCurrent));
+      for (const check of checks) check.assertCurrent();
       if (input.candidate.openCodeConfiguration)
         captureOpenCodeConfigurationSource(seed, input.candidate.openCodeConfiguration);
     } catch (error) {
+      for (const check of checks) check.close();
+      (this.options.assertCleanupWriter ?? this.assertWriter)();
       const reason = error instanceof OpenCodeConfigurationError ? error.reason : 'source-changed';
       this.commands.write({
         ...receipt,
@@ -400,17 +404,22 @@ export class RuntimeSourceIndex implements RuntimeRecipeSources {
       });
       throw new RuntimeSourceAdmissionError(reason);
     }
-    const known = this.lookup({ grant: input.grant, commandId: input.commandId });
-    if (known?.phase === 'published') return known;
-    // Admission preserves original auth/config bindings and cannot replace a previously admitted profile ID.
-    admit(managementProfile);
-    this.store.publish(record, this.seedRevision(input.grant, seed));
-    this.commands.write({ ...receipt, phase: 'published' });
-    return {
-      commandId: input.commandId,
-      phase: 'published',
-      selection: this.summary(input.grant, seed, record),
-    };
+    try {
+      const known = this.lookup({ grant: input.grant, commandId: input.commandId });
+      if (known?.phase === 'published') return known;
+      // No await separates original fd/path checks from the existing atomic publication.
+      // Admission preserves auth/config bindings and cannot replace an admitted profile ID.
+      admit(managementProfile);
+      this.store.publish(record, this.seedRevision(input.grant, seed));
+      this.commands.write({ ...receipt, phase: 'published' });
+      return {
+        commandId: input.commandId,
+        phase: 'published',
+        selection: this.summary(input.grant, seed, record),
+      };
+    } finally {
+      for (const check of checks) check.close();
+    }
   }
 
   private assertSourceReleased(sourceId: string, commandId: string): void {

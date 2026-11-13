@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -166,6 +167,64 @@ async function interruptPrepared(t: TestContext, index: RuntimeSourceIndex, inpu
       /TEST-interrupted-after-prepared/);
   } finally { fault.mock.restore(); }
 }
+
+test('source hashing yields to original Host control and rejects a replaced pathname before publication', {
+  skip: process.platform === 'win32' ? 'POSIX file replacement fixture' : false,
+}, async t => {
+  for (const scenario of ['seal', 'replace'] as const) {
+    const f = fixture(t), input = f.input('TEST-async-' + scenario);
+    const path = input.candidate.executable.path;
+    const bytes = Buffer.concat([readFileSync(path), Buffer.from('#' + 'x'.repeat(2 * 1024 * 1024) + '\n')]);
+    writeFileSync(path, bytes, { mode: 0o700 });
+    input.candidate.executable = { path, sha256: createHash('sha256').update(bytes).digest('hex') };
+    input.candidate.nativeCli!.executable = input.candidate.executable;
+    let nativeRuns = 0, admitted = false, controlled = false, controlError: unknown;
+    const control = () => {
+      try {
+        controlled = true;
+        if (scenario === 'seal') index.seal();
+        else {
+          renameSync(path, path + '.original');
+          writeFileSync(path, bytes, { mode: 0o700 });
+        }
+      } catch (error) { controlError = error; }
+    };
+    const index = new RuntimeSourceIndex(f.profile, f.assertWriter, {
+      assertCleanupWriter: f.assertWriter,
+      createNativeCheck: () => ({
+        run: async () => {
+          nativeRuns++;
+          if (scenario === 'replace') setImmediate(control);
+          return { nativeVersion: input.candidate.nativeCli!.version };
+        },
+        close: async () => true,
+      }),
+    });
+    if (scenario === 'seal') setImmediate(control);
+    try {
+      const outcome = await index.publish(input, () => { admitted = true; }).then(
+        result => ({ result, error: undefined }),
+        (error: unknown) => ({ result: undefined, error })
+      );
+      assert.equal(controlError, undefined);
+      assert.equal(controlled, true, 'original control runs before the source can publish');
+      assert.ok(outcome.error instanceof Error && 'reason' in outcome.error);
+      assert.equal(outcome.error.reason, 'source-changed');
+      assert.equal(admitted, false);
+      assert.equal(nativeRuns, scenario === 'seal' ? 0 : 1);
+      assert.equal(index.current({ grant: f.grant }).revision, input.expectedRevision);
+      const original = f.store.read(input.commandId)!;
+      assert.equal(original.phase, 'held');
+      assert.equal(original.resourceHeld, false);
+      const cold = new RuntimeSourceIndex(f.profile, f.assertWriter, {
+        createNativeCheck: () => assert.fail('refusal replay cannot allocate a new verifier'),
+      });
+      assert.equal((await cold.publish(input, () => assert.fail('refusal replay cannot admit'))).phase, 'held');
+      assert.deepEqual(f.store.read(input.commandId), original);
+      await cold.close();
+    } finally { await index.close(); }
+  }
+});
 
 test('V1 preferences publish once, retain lost-ACK A and apply only the actual selected model limits', async (t) => {
   const f = fixture(t, 'opencode');

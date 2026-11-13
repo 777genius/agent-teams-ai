@@ -446,10 +446,32 @@ export class ProviderManagementCoordinator {
 
   /** Private authorization from this owner's rejected publication, never a caller-supplied overwrite flag. */
   private replaceableV2Auth(profile: OpenCodeManagementProfile, providerId: string, currentCommandId?: string): string | undefined {
-    const { latest, pending } = this.v2CredentialState(profile, providerId, currentCommandId);
-    return !pending && latest?.terminalRejection === true && !latest.resourceHeld &&
-      latest.openCodeV2?.phase === 'probe-completed' && latest.openCodeV2.verification?.ok === false
-      ? latest.openCodeV2.authDigest : undefined;
+    this.assertCurrent();
+    const target = this.credentialTarget(profile);
+    let latest: StoredCredentialCommand | undefined;
+    for (const row of this.store.list()) {
+      if ((row.kind !== 'credential.set' && row.kind !== 'credential.forget' && row.kind !== 'credential.refresh') ||
+          row.providerId !== providerId || row.resourceId !== target.resourceId || row.commandId === currentCommandId) continue;
+      const original = this.profiles.get(row.profileId);
+      if (!original || original.configRevision !== row.configRevision) throw new ManagementCommandError('held');
+      assertManagementTarget(row, this.credentialTarget(original));
+      // A source revision cannot turn an unknown original intent into a new Connect, even with the same key.
+      if (row.resourceHeld || row.phase !== 'completed' && row.terminalRejection !== true)
+        throw new ManagementCommandError('conflict');
+      // A confirmed rejection before publication changes neither key nor the previous publication's authority.
+      if (row.phase !== 'completed' && !row.openCodeV2?.authDigest) continue;
+      if (row.finishedAtMs === undefined) throw new ManagementCommandError('held');
+      if (latest?.finishedAtMs === row.finishedAtMs) throw new ManagementCommandError('held');
+      if (!latest || row.finishedAtMs > latest.finishedAtMs!) latest = row;
+    }
+    if (latest?.kind !== 'credential.set' || latest.terminalRejection !== true || latest.resourceHeld ||
+        latest.openCodeV2?.phase !== 'probe-completed' || latest.openCodeV2.verification?.ok !== false ||
+        this.profiles.get(latest.profileId)?.nativeGeneration !== 'v2') return undefined;
+    const auth = new OpenCodeV2CredentialScope(profile, providerId, () => {
+      this.assertCurrent(); return true;
+    }).capture();
+    // The existing digest binds account/provider, both captured roots, auth directories and the selected key.
+    return auth.present && auth.digest === latest.openCodeV2.authDigest ? auth.digest : undefined;
   }
 
   private connectedV2(profile: OpenCodeManagementProfile, providerId: string, authDigest: string): boolean {

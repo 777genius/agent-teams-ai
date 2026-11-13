@@ -541,6 +541,7 @@ jobs:
                 'passive_all_provider_directory_without_import_or_inference',
                 'native_key_one_verification_original_receipt_after_lost_ack',
                 'native_401_saved_unverified_then_cold_explicit_corrected_key_succeeds',
+                'runtime_source_revision_preserves_original_rejected_key_replacement_authority',
                 'cold_directory_and_explicit_check_reuse_saved_selected_key',
                 'cold_unverified_original_intent_blocks_changed_key_and_new_id_without_replay',
                 'selected_native_db_only_foreign_auth_preserved_secret_free_receipts',
