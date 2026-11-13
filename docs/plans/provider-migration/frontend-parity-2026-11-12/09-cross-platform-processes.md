@@ -2346,3 +2346,179 @@ R3: existing C++ build and original native gates on the next necessary source
 head; a Linux TypeScript/test pass cannot substitute for MSVC. Current ARM/Linux
 jobs continue normally; do not cancel or rerun them for this correction. ABI job
 `131814506670` already passed, but it is not Windows product qualification.
+
+### Existing Main retirement and prepared registration payload
+
+Source at `689dddb`, `RetainedWindowsCustody.retire`, currently removes released
+allocations beyond64; their service-operation references would disappear with them.
+Keep unresolved service intents at that same allocation. A released allocation is
+evictable only after its original service effects and registered scopes have settled;
+a logical timeout, missing ACK, metadata removal or Host loss does not qualify it.
+Do not detach the original late-reply callback while that debt remains retained.
+
+Preserve both existing capacity components: at most256 active allocations and at most
+320 total retained allocations (the existing256 active plus64 terminal allowance).
+Before a new allocation, retire only eligible settled released entries; when retained
+debt fills this bound, refuse new allocation before creating a pending/native effect.
+Original lookup, query, Stop, drain, release, settlement and Main Quit keep their
+existing control route and reserve. No additional owner, PID fallback or journal is
+introduced. Whole-Job evidence may close only an already proven scope of that exact
+Main allocation; an unknown capture without its original scope reply remains unknown.
+
+`TeamProcessCommands.register` retains only `requestDigest` before its current native
+capture; label/port/url/command enter `original` only after the registry write. The
+async Windows path therefore stores a closed original registration-input projection
+beside its prepared native intent in the existing receipt, using the existing field
+limits. Both optional projections enter the fingerprint only when present; legacy
+receipts remain unchanged. Lookup may complete only that recorded request after the
+original grant/registrar/source and current rows are checked again. Missing historical
+payload never authorizes a fresh capture or reconstructed registration.
+
+R1: exact retirement and register sources checked. R2: independent review before
+source. Extend the existing retained-owner/process-command cases for exhausted
+retained debt, original late ACK and journal-before-await; no separate test suite.
+
+## 50. §47: actual POSIX counterexamples and the next native proof
+
+**Scope:** first qualify a native launch boundary; do not change production `CapturedProcess`,
+source publication, executable formats, trust policy or ordinary installed/custom behavior yet.
+The unresolved thread remains `PRRT_kwDORVTEtM622qol`. Source context is parity
+`d35ef8256a9f24294b2fe50e8290ccb9841d9eb1`; its pathname launch retains the §47 gap.
+
+### Actual isolated evidence, kept separate from source reasoning
+
+Immutable evidence manifest: `a0bdd614cee5aafc94a9637c6cb25faa21319c2e`.
+Both probes used only fresh TEST files, UID1000, Linux6.18.57 x86_64, glibc2.41 and
+cc14.2.0. They changed no repository code, permissions policy, container setting or provider data.
+
+- FD compatibility/counterexample receipt `12029689683fc3153657ccfb12eea7d7055c167e`,
+  SHA256 `aca0da0d271d1e73d6bad0de6dd046f01176a9ee39a077be90e07a64005c941e`,
+  completed ten controlled cases. Pathname replacement after capture executed TEST B.
+  FD execution survived rename and executed A, but rewriting that same retained inode before
+  exec executed B, including its constructor. An open writer caused ETXTBSY at native exec;
+  closing the writer after changing bytes allowed B. The latter is not protected by retaining an FD.
+- The native FD positive case preserved explicit argv0/arguments/environment/cwd, a sibling
+  asset and a shared library loaded through `$ORIGIN`; `AT_EXECFN` nevertheless changed.
+  Script FD execution with CLOEXEC failed with ENOENT. Without CLOEXEC it changed `$0` to
+  an FD path, and the same-inode script rewrite executed B. These are concrete compatibility
+  and safety counterexamples, not permission to disable scripts or drop original provenance.
+- Pre-user-stop receipt `6425eb1b9dca10995022caff543de1ab6ff859ac`, SHA256
+  `1a0e6eeca1d195313590f6c86eccf036e7f2822f2ca210cfdcd3c664777ae542`,
+  is **UNAVAILABLE**: the original child received PTRACE_TRACEME EPERM before exec.
+  No selected payload instruction ran; the original child was reaped and its group absent.
+  The first probe attempt had an unclassified initial-stop assertion; the retained receipt
+  comes from its corrected classification, not a successful protected launch. Do not infer
+  whether seccomp, ptrace policy or another restriction supplied EPERM, and do not change it.
+- Every completed counterexample reaped its original child and observed original group absence.
+  These observations do not qualify a Linux protected launch or any Darwin execution.
+
+### Minimal practical candidate to prove
+
+Prefer an **original-path launch stopped before selected user-space instructions** over replacing
+the installed executable location. This preserves argv0, loader/resource lookup and provenance
+if the operating system can prove the selected image and stabilize its bytes. A final pathname
+hash followed by resume is not such a proof.
+
+1. Linux: a direct original child uses PTRACE_O_TRACEEXEC, and the original parent handles the
+   exact PTRACE_EVENT_EXEC before the loader or executable runs. At that stop, open the
+   kernel-selected `/proc/<original-child>/exe`, compare its original dev/inode and complete SHA,
+   retain the original birth/session/group and exercise write denial on the same inode.
+   Use pathname exec with the original argv/env/cwd; FD exec is only a negative/control case.
+   Refuse replacement before any TEST library/executable constructor instruction. A writer
+   already open at exec and a write attempted after the final image check are separate cases.
+   Ptrace EPERM remains unavailable; no capability, sysctl, container or setuid workaround.
+2. Darwin: use POSIX_SPAWN_START_SUSPENDED on the direct original child, with the existing
+   audit-token/parent/birth/session and dynamic SecCode guest validation approach. The proof
+   must first establish that these observations are available while the child has not executed
+   user code. Separately attempt same-inode mutation after the final successful image check
+   but before resume. A signed-image comparison alone must not be called byte stability.
+   Record actual kernel image, signature enforcement, rename/in-place outcome and first
+   instruction markers on both existing Darwin architectures. No new entitlement or CS flag.
+3. Keep a native binary plus interpreter-script control. The kernel image of a script may be
+   its interpreter; validating that interpreter cannot silently validate the selected script body.
+   Preserve `$0`, relative assets, explicit arguments/environment and original source identity.
+   A native-only positive result does not close custom/script parity. No silent pathname fallback,
+   copied-executable fallback, new group/mode refusal or signature requirement is authorized.
+
+The Linux source basis is [exec.c at v6.18](https://github.com/torvalds/linux/blob/v6.18/fs/exec.c)
+(blob `4298e7e08d5d78ea327c10e9e962780b3d976e1a`) and
+[PTRACE_O_TRACEEXEC semantics](https://man7.org/linux/man-pages/man2/ptrace.2.html):
+the source denies writes to the opened native executable and reports the exec stop before
+return to user space. This is a candidate argument, not execution evidence in the blocked sandbox.
+Apple's inspected [kern_exec.c](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_exec.c)
+blob `47420f9f8f620233f112e87a51ed8f576caa3546` has the old v_writecount/ETXTBSY
+check under `#if 0`; do not transfer Linux write-denial semantics to Darwin.
+Its [vfs_subr.c](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/vfs/vfs_subr.c)
+blob `77a16c1a21ed3af64fd686231374e824eb6bb3f7` requires the private
+`com.apple.private.vfs.file-leases` entitlement for F_SETLEASE. That is excluded, not a fallback.
+These Apple source observations are not a claim about every qualified runner's exact kernel;
+the actual OS-build-bound proof remains required.
+
+### Smallest next repository slice and acceptance
+
+- TEST only: extend the existing `registered-process-executable.native.ts` qualification and a
+  narrowly scoped native TEST actor for the original-path cases above. Run in the already
+  existing Linux/Darwin `embedded-v2-native-host` jobs of
+  `.github/workflows/opencode-v2-stage1-preflight.yml`; retain the existing Darwin custody
+  scenario, source/artifact binding and all provider journeys. No new runner/matrix or SDK input.
+- A new TEST C helper is permitted only if needed to perform these platform calls before any
+  selected instruction; it is compiled into the private fixture directory and is never staged
+  as a product artifact. It is not a production launch port, broker or generic framework.
+- Keep the existing outer native-test/job budgets. Bound every original child, output and receipt;
+  retain the original returned child and reaping state for cleanup, never signal a reaped PID or
+  adopt a later numeric PID. Scope receipts to TEST values, source/binary hashes and closed facts.
+  An unavailable primitive or missing pre-execution observation is incomplete, not a skipped PASS.
+- Before proposing production integration, require normal launch with original resources and
+  zero replacement instructions for rename and in-place adversaries, including the mutation
+  after the last successful image check. Then qualify the unchanged installed runtime paths
+  and custom-wrapper semantics under the same primitive. No postspawn kill can substitute.
+- Node's current ChildProcess API does not expose this stop boundary. A proof must not fabricate
+  a ChildProcess around a PID or call the existing postspawn custody result pre-execution proof.
+  Choose any smallest existing private-adapter/facade integration only in a subsequent reviewed
+  amendment after actual platform results; no second owner or journal is pre-authorized.
+
+**R1:** the full review thread, current callers and §47 source contracts were reread.
+**R2:** actual same-inode/script counterexamples exclude FD-only and path-copy shortcuts;
+the sandbox's EPERM is kept distinct from a failed or successful operating-system primitive.
+**R3:** independent plan review must verify the after-check mutation, original-child cleanup
+and existing-job scope before the TEST slice. Production/thread closure remains pending.
+
+## 51. Actual689 Windows Main-route refusal: bounded TEST evidence
+
+Run `43407471332` completed both Windows jobs `131825241907` (x64) and
+`131825242028` (ARM64) with step16 failure at the first ordinary `runtime.open`.
+Artifacts `14027448985`/`14028393083` contain `main-retained-graceful.json`:
+phase `native-open`, all five successful-operation counters zero, model requests zero,
+cleanup true. Both direct native vendor receipts passed original scoped Stop and
+same-Session continuation, but do not qualify the ordinary Main/Host route.
+The current rpc assertion discards the returned finite code/outcome. Its counters
+increment only after a successful private call, so zero is not proof of no attempted effect.
+
+Change only the existing `nativeRetainedHostGate.ts` TEST observer. Retain the first
+failed method from its existing closed route set, allowlisted code/outcome and separate
+bounded attempted-private-operation counters; preserve all original success counters
+and assertions. After that original refusal, make at most one read-only `runtime.read`
+for the same member/binding, without calling the failing route again. Project only
+closed phase/custody/diagnostic classifications and boolean readiness/attachment/seal.
+Bound this diagnostic by the lesser of one second and the unspent original45s request
+deadline; if unavailable, record unknown and continue original cleanup. The original
+assertion/error remains the failure, even if this read fails.
+
+No stderr, error.message, arbitrary payload, profile path, argv, environment or private
+native identity is retained. Do not change product guards, SDK input, success criteria,
+retry behavior, runner or time budgets. Use the next necessary native source cut;
+current Linux jobs continue normally. R1: exact original receipts and rpc/counter source
+checked. R2: independent finite-projection review before source. Actual cause is still
+unproven; a pre-open rejection must not be repaired by guessing from success counters.
+
+### §50 review clarification: compiler-default and ad-hoc TEST artifacts
+
+Keep the compiler-default native binary and library as an independently recorded case. On Darwin,
+a second case may sign only fresh private TEST payload/library copies with ordinary ad-hoc signing
+(`codesign --sign -`), before capturing their original bytes. No entitlement, hardened-runtime,
+kill/hard option, provider-file change or permission change is allowed. Record compiler-default
+and ad-hoc inputs/digests and outcomes separately; never overwrite the former with the latter.
+Unavailable dynamic validation of an unsigned original is an incomplete original case, not a
+negative image match or a reason to omit that format. Even a successful signed-native proof does
+not qualify compiler-default/unsigned executables, scripts, installed/custom runtimes or product
+activation. Keep the same existing native test/job budgets, matrix and original-child cleanup.

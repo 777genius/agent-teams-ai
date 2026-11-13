@@ -85,8 +85,11 @@ export function captureOpenCodeV2Configuration(
     if (settings.apiKey !== undefined && settings.apiKey !== prepared.apiKey) invalid();
   }
   let bound = false;
-  const isCurrent = () =>
-    ownerCurrent() && (key?.isCurrent() ?? true) && (bound || (source?.isCurrent() ?? true));
+  const isCurrent = () => {
+    if (key && !key.isCurrent()) return false;
+    if (!bound && source) return source.isCurrent();
+    return key !== undefined || ownerCurrent();
+  };
   const check = () => {
     if (!isCurrent()) throw new OpenCodeConfigurationError('configuration-changed');
   };

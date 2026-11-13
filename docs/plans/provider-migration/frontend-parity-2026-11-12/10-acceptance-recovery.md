@@ -955,3 +955,50 @@ valid saved params рядом с corrupt entry, а §18 cases проверяют
 обычный Launch и newer-attempt cleanup. Повторить затронутый existing renderer
 file, types и прежний source-size guard после переноса. Исходный 530 PASS
 относится к pre-extraction bytes; отдельного native input или CI job не добавлять.
+
+
+## 20. Actual donor catalogue request keeps its original source epoch
+
+### Round1 — exact evidence and source
+
+On d35, saved-only job131818772468/artifact14027459003 now passed the single
+name insertion and failed waiting for Sonnet4.6. The unchanged donor source
+remained frozen. Its model receipt records GET rejected by the POST assertion,
+with zero inference requests; the original URL was not retained, so its exact
+bytes are not claimed as observed.
+
+Pinned donor runtime source
+[anthropicCatalog.ts](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/runtimeBackends/anthropicCatalog.ts)
+blob `adec3f0b3655f691c0efa87ae0910e7e7625a707` defines limit1000 and calls
+Axios GET `/v1/models` with that sole query parameter. Its configured localhost
+compatible branch returns an empty degraded catalogue on refusal. The shared
+frontend key verifier (same blob `2a4c10b94594c51b42ad1bbd6140b6248de7473d`
+in donor/current frontend) separately requests the exact no-query path.
+This source chain explains the missing catalogue without changing the donor UI.
+
+### Round2 — two finite request forms, original authority
+
+In existing native Claude TEST model, permit only GET `/v1/models` and
+GET `/v1/models?limit=1000` while exactly one original producer epoch is open.
+For donorSavedProbes require its existing `TEST-donor-saved-only-key`; for
+currentLegacySource require its existing `TEST-current-legacy-only-key`.
+Keep at most8 catalogue requests for that producer, the exact finite two-model
+response, no pagination, and the existing first-failure seal. Other methods,
+paths, queries and keys remain rejected. This adds the original donor catalogue
+read, never a model input, a native tool, or a successful account claim.
+
+The mutually exclusive epochs already have pending-read counters and close
+barriers. Keep them and all original POST/PONG/business-input limits unchanged;
+after ordinary producer Quit/absence and epoch close, neither catalogue route
+may reopen. Do not alter application provider selection, catalogues, permissions,
+UI selectors, time bounds or donor bytes.
+
+### Round3 — essential checks and real acceptance
+
+Extend the existing current-legacy oracle case with the query form, and add one
+small actual-HTTP donor-epoch case in the same existing test file: finite list,
+original PONG, close, then catalogue refusal with no native business turn.
+Run that existing file and Host-script types. Independent source review checks
+the two exact URLs and producer-specific keys before publishing the source cut.
+The existing saved-only Desktop donor/import/cold-readback gate remains required;
+the prior INCOMPLETE run is never relabelled as a success.

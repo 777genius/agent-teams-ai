@@ -82,7 +82,11 @@ test('captured directories, symlinks and revoked owner cannot change the credent
     if (mode === 'symlink') {
       renameSync(f.file, f.file + '-original'); symlinkSync(f.file + '-original', f.file);
     }
-    if (mode === 'revoked') f.revoke();
+    if (mode === 'revoked') {
+      assert.deepEqual(scope.providerIds(), []);
+      f.revoke();
+      assert.throws(() => scope.providerIds(), { code: 'held' });
+    }
     assert.equal(pending.before.isCurrent(), false, mode);
     assert.throws(() => pending.publish(), { code: 'held' }, mode);
     assert.equal(readFileSync(f.file, 'utf8'), '{}');
