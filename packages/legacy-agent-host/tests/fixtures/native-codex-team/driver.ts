@@ -12,6 +12,57 @@ import type { ChildProcess } from 'node:child_process';
 
 const tick = () => new Promise<void>(resolve => setTimeout(resolve, 20));
 
+const metadataStages = ['initialize', 'model-list', 'config-read', 'assertions', 'closing', 'closed'] as const;
+const metadataTypes = ['thread_started', 'turn_started', 'assistant_text', 'tool_call_started',
+  'tool_call_completed', 'usage_updated', 'turn_completed', 'turn_failed', 'turn_interrupted',
+  'warning', 'unsupported_raw_event', 'other'] as const;
+const metadataMethods = ['remoteControl/status/changed', 'configWarning', 'warning', 'deprecationNotice',
+  'account/updated', 'account/rateLimits/updated', 'mcpServer/startupStatus/updated', 'thread/started',
+  'turn/started', 'turn/completed', 'item/started', 'item/completed', 'other', 'not-exposed'] as const;
+type MetadataStage = (typeof metadataStages)[number];
+type MetadataRow = Readonly<{ stage: MetadataStage; type: (typeof metadataTypes)[number];
+  method: (typeof metadataMethods)[number]; thread: boolean; turn: boolean }>;
+type MetadataObservation = { stage: MetadataStage; count: number; overflow: boolean; invalid: boolean;
+  completed: { initialize: boolean; modelList: boolean; configRead: boolean }; events: MetadataRow[] };
+function metadataOwn(value: unknown, key: string): unknown {
+  if (!value || typeof value !== 'object') return undefined;
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    return descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : undefined;
+  } catch { return undefined; }
+}
+const metadataLiteral = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
+  allowed.find(item => item === value) ?? fallback;
+
+/** TEST-only closed projection. No event payload, native text, identifier or getter escapes. */
+export function projectCodexMetadataObservation(value: unknown) {
+  try {
+    if (metadataOwn(value, 'invalid') === true) return null;
+    const count = metadataOwn(value, 'count'), overflow = metadataOwn(value, 'overflow');
+    const events = metadataOwn(value, 'events'), completed = metadataOwn(value, 'completed');
+    const stage = metadataOwn(value, 'stage'), length = metadataOwn(events, 'length');
+    if (!metadataStages.some(item => item === stage) || typeof count !== 'number' ||
+        !Number.isSafeInteger(count) || count < 0 || count > 9 || typeof overflow !== 'boolean' ||
+        overflow !== (count === 9) || !Array.isArray(events) || length !== Math.min(count, 8)) return null;
+    const initialize = metadataOwn(completed, 'initialize'), modelList = metadataOwn(completed, 'modelList'),
+      configRead = metadataOwn(completed, 'configRead');
+    if (typeof initialize !== 'boolean' || typeof modelList !== 'boolean' || typeof configRead !== 'boolean')
+      return null;
+    const projected: MetadataRow[] = [];
+    for (let index = 0; index < Math.min(count, 8); index++) {
+      const row = metadataOwn(events, String(index)), phase = metadataOwn(row, 'stage');
+      if (!metadataStages.some(item => item === phase)) return null;
+      const thread = metadataOwn(row, 'thread'), turn = metadataOwn(row, 'turn');
+      if (typeof thread !== 'boolean' || typeof turn !== 'boolean') return null;
+      projected.push(Object.freeze({ stage: metadataLiteral(phase, metadataStages, 'initialize'),
+        type: metadataLiteral(metadataOwn(row, 'type'), metadataTypes, 'other'),
+        method: metadataLiteral(metadataOwn(row, 'method'), metadataMethods, 'other'), thread, turn }));
+    }
+    return Object.freeze({ stage: metadataLiteral(stage, metadataStages, 'initialize'), count, overflow,
+      completed: Object.freeze({ initialize, modelList, configRead }), events: Object.freeze(projected) });
+  } catch { return null; }
+}
+
 export async function cleanupCapturedCodexChild(child: ChildProcess): Promise<void> {
   const alive = () => child.pid !== undefined && child.exitCode === null && child.signalCode === null;
   child.stdin?.end();
@@ -219,19 +270,41 @@ ${REQUIRED_TOOLS.map(name => `[mcp_servers.team.tools.${name}]\napproval_mode = 
     return !alive();
   };
   let rpcOwner: 'none' | 'metadata' | 'session' = 'none';
+  let metadataObservation: MetadataObservation | undefined;
   const readCandidateCatalog = async () => {
     assert.equal(candidate?.phase, 'catalog');
     assert.equal(rpcOwner, 'none', 'one original stdio RPC owner');
     rpcOwner = 'metadata';
     let unexpected = 0, failed = false;
+    const observation: MetadataObservation = { stage: 'initialize', count: 0, overflow: false, invalid: false,
+      completed: { initialize: false, modelList: false, configRead: false }, events: [] };
+    metadataObservation = observation;
     const client = new CodexAppServerClient({ transport,
       limits: { requestTimeoutMs: remaining() }, maxThreads: 1, maxQueuedTurns: 1,
-      onEvent: () => { unexpected += 1; },
+      onEvent: original => {
+        unexpected += 1;
+        try {
+          observation.count = Math.min(9, observation.count + 1);
+          observation.overflow = observation.count === 9;
+          if (observation.events.length >= 8) return;
+          const event = metadataOwn(original, 'event'), type = metadataOwn(event, 'type');
+          const thread = metadataOwn(original, 'threadId'), turn = metadataOwn(original, 'turnId');
+          observation.events.push(Object.freeze({ stage: observation.stage,
+            type: metadataLiteral(type, metadataTypes, 'other'),
+            method: type === 'unsupported_raw_event'
+              ? metadataLiteral(metadataOwn(event, 'rawType'), metadataMethods, 'other') : 'not-exposed',
+            thread: typeof thread === 'string' && thread.length > 0,
+            turn: typeof turn === 'string' && turn.length > 0 }));
+        } catch { observation.invalid = true; }
+      },
       requestApproval: async () => { throw new Error('TEST metadata must not request permission'); } });
     try {
       await client.initialize(config.initialize);
+      observation.completed.initialize = true; observation.stage = 'model-list';
       const page = await client.listModels({ limit: 100, includeHidden: false }, AbortSignal.timeout(remaining()));
+      observation.completed.modelList = true; observation.stage = 'config-read';
       const selection = await client.readModelConfiguration({ cwd: workspace }, AbortSignal.timeout(remaining()));
+      observation.completed.configRead = true; observation.stage = 'assertions';
       remaining();
       assert.equal(unexpected, 0);
       assert.equal(candidateWire.approvals.length, 0);
@@ -242,8 +315,10 @@ ${REQUIRED_TOOLS.map(name => `[mcp_servers.team.tools.${name}]\napproval_mode = 
       failed = true;
       throw error;
     } finally {
+      observation.stage = 'closing';
       client.close();
       const stopped = await confirmStopped();
+      observation.stage = 'closed';
       if (!failed) assert.equal(stopped, true, 'original metadata child exit before C1');
     }
   };
@@ -293,6 +368,7 @@ ${REQUIRED_TOOLS.map(name => `[mcp_servers.team.tools.${name}]\napproval_mode = 
     return { driver, capabilities: opened.capabilities };
   } };
   return { factory, config, facts, events, submitted, candidateWire, readCandidateCatalog,
+    metadataObservation: () => projectCodexMetadataObservation(metadataObservation),
     configSha256: digest(configText),
     canDispatch: () => ready && alive() && options.currentBinding(),
     childFacts: () => [{ pid: child.pid, exitCode: child.exitCode, signalCode: child.signalCode }],

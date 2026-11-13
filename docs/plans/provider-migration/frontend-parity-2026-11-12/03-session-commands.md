@@ -1795,3 +1795,30 @@ polling, budgets, fixtures or unit-test suite are needed.
 Root and an independent peer review this exact delta before source
 publication. Existing types and the original native extension Desktop gate
 remain mandatory; source review alone does not qualify native behavior.
+
+
+### R22 — show the complete original /cost reply in its own rendered message row
+
+#### Review 1 — actual failure and the overly narrow TEST oracle
+
+Parent1160 native-command Desktop job132024091196 now reaches the original cost() UI proof. Immutable log3e9ca58984b86f8ba8c13f7cfb4b0dbca12deade reports revealDesktopReply at32, called from desktop-native-commands-ui-proof at282/294. The preceding existing assertions have matched the original input/operation, exact local-command output message, native text event and unchanged model-request count; the original UI wait has found the complete whitespace-normalized output in document.body.innerText. The visibility helper then finds no individual text node whose trimmed text is exactly the unnormalized full display string. This identifies a TEST representation mismatch; it does not identify whether trailing whitespace, line wrapping or multiple rendered nodes caused this instance.
+
+The source of the actual local output ID remains the existing native-command-output digest, not the MCP message effect-ID path corrected by R21. Do not change that identity, native command behavior, output text, counts or receipt.
+
+#### Review 2 — exact existing message identity, complete rendered text and geometry
+
+Only scripts/legacy-agent-host/desktop-native-commands-ui-proof.ts6991ce34a7693c7f1d5b25c60c79524b6bd592bd and scripts/legacy-agent-host/desktop-reply-visibility.tsbab122c2eaa6871fa5784ae0f390c7dd767dc011 change. Both are already captured by the existing proof source inventory; no new helper file, product code, suite or inventory bypass is needed.
+
+The actual renderer already exposes the message identity: ActivityTimeline40c3a64c uses toMessageKey at437–440 for a message row and writes data-timeline-row-key at805–806/836–837. toMessageKeye73a831d returns a nonempty original message.messageId unchanged. Scope /cost's existing visible-text predicate and expansion click to exactly one such row for its already-validated commandId. A prior /cost output or another message cannot satisfy the current command's proof. Keep the same original click, focused owner guard and current waitRead budget.
+
+Add one optional original messageId to the existing revealDesktopReply options and supply it only for /cost. In this scoped route, read the existing row's rendered descendants and find one smallest rendered content element whose complete innerText, after the same whitespace normalization and trim, equals the complete normalized native display string. Require uniqueness; do not accept a substring or body-wide occurrence. Bound this scoped scan to256 existing descendants and at most64 nonempty range rectangles. Missing/ambiguous/oversized content is unconfirmed, never successful.
+
+Use DOM Ranges for each text node inside the matched content to verify the whole reply: every nonempty rectangle must be inside the viewport and all applicable clipping ancestors, walking from that text node's own parent element through the row to the viewport, with its center hit belonging to the matched content. This includes nested overflow clips inside the matched content. Retain the existing real wheel-only reveal and renderer ownership checks; the complete content must fit and become visible. Compute the needed wheel movement from the full reply bounds, retaining the original ±600 limit. All existing unscoped single-text reply callers keep their previous behavior.
+
+The same original12 observation attempts and150ms intervals bound this scoped route. A transient missing row/content may consume an existing read-only attempt; it cannot dispatch another cost/compact/review command, repeat the expansion click, modify DOM/CSS, access React internals, or increase any wait/count. No action is successful merely because the backend inbox contains the reply. The existing step/receipt retains the actual geometry and original message identity.
+
+#### Review 3 — exact same native/UI acceptance
+
+Independent review must verify the renderer identity derivation, full-text equality, clipping/hit checks and preservation of all existing source guards and command effects. Retain both original /cost commands, the single /compact, subsequent conversation and review paths, original model/input counts, selected command IDs, Stop/cold/cleanup semantics and strict final receipts. Do not add broad unit cases that mirror the selector.
+
+Run existing source/script typing/lint and the same required native-command Desktop invocation in normal coherent CI. The current failure at the first cost observation does not qualify the later compact/review UI path. Any initial source publication remains SOURCE_ONLY_UNEXECUTED until those gates actually execute. Root publishes this plan before source, immediately pushes each commit, and makes no main/upward merge here.

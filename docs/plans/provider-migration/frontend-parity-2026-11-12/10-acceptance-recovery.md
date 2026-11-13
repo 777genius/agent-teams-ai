@@ -1416,3 +1416,30 @@ Keep every original status/version/source-revision assertion and all native/sour
 ### Review 3 — existing failed gate supplies validation
 
 No new test, fixture, helper, suite, timer, dependency or production change is needed. Independent source review precedes the one-file candidate. Run the same targeted existing file and normal root shard/types/lint through available execution or the ordinary exact-head CI before acceptance. Source publication is SOURCE_ONLY_UNEXECUTED until those checks actually pass. Root commits/pushes the reviewed plan first and immediately pushes each later source commit; no main/upward merge is included.
+
+## §31 — Settings entry-read oracle in the existing V2 Test case (PLAN ONLY)
+
+### Review 1 — actual failure and exact source cause
+
+Native source12d54316c69326fd3d405459ebf77062d818324f shard4 job132021060766 failed the existing case “updates a V2 Test proof in the dialog without advertising a credential or team launch”. Its expected zero status calls conflicts with one original scoped `opencode` read with `checkReason:"launch_preflight"`; this is an entry-read observation, not evidence of native model execution or a Team launch.
+
+The exact test preimage is test/renderer/components/settings/CliStatusSection.test.tsx blob2565b8c5d4df331f51cf1d59879b38e35d4b87ad, case267–325. It renders the section, opens Manage, then incorrectly asserts zero calls at296 and one total at324. This preimage is also unchanged on working parent3c77393bf3ac477296da61d5e84bfe22e707b028.
+
+CliStatusSection.tsx ce0a93347e54e2dcbb6480ef7ba171b371f16f9f:189–194 delegates the same project snapshot to useSettingsCliStatus.ts c06322ba9fa8579d3e280e035545e2dbec53afc2. That hook calls useOpenCodeDashboardStatus.ts8e6e603a9ace5cdf536f91f47a2503ca70336d50. Its effect at231–250 reads once on entry to the current project/revision, including when a cached supported model-only snapshot exists. It uses `{silent:true,checkReason:"launch_preflight",projectPath:"/TEST/A"}` in this case.
+
+The Dashboard hook is byte-identical at original frontend4a0e06277fe216d9f82dbbede362668fe46622ee and source12d. Manage's actual handler atce0a:285–288 only changes selected provider/dialog state. The explicit dialog refresh at252–263 invalidates status and requests the selected provider with its supplied reason/project. There is no basis here for changing product refresh behavior, suppressing the original entry read, or attributing an auth/Team launch effect to Manage.
+
+### Review 2 — one existing TEST case, with separate exact call boundaries
+
+Only change test/renderer/components/settings/CliStatusSection.test.tsx, preserving the same existing case and all surrounding cases:
+
+1. Immediately after the original render, assert exactly one fetch with provider `opencode` and the original `silent:true/launch_preflight/projectPath:"/TEST/A"` arguments.
+2. Keep the single original Manage click and dialog assertions. Replace the zero-call oracle with exactly one total call, proving Manage adds no status read.
+3. Keep the original mocked verified-model update and the single explicit dialog `onRefreshProvider("opencode","provider_change")`. Require exactly two total calls and the exact second arguments `{checkReason:"provider_change",projectPath:"/TEST/A"}`.
+4. Preserve the verified proof/requiresExecutionProof checks, authenticated=false, teamLaunch=false, disconnected header, project isolation, disabled/loading/missing controls and no unrelated effects. The call-count correction cannot promote the synthetic status update into native execution evidence.
+
+Do not clear the fetch history, mock the Dashboard hook, change its effect, add a new case, broaden acceptable arguments, or change any product/auth/Launch code. Both original calls remain individually falsifiable.
+
+### Review 3 — gates and ownership
+
+Root publishes this append before the source edit. Independent review compares the exact one-file diff; no new test suite, timer, input, fixture, workflow or dependency is needed. The same existing CliStatusSection file and normal renderer shard/types/lint are the execution gates. With the executor unavailable, the candidate remains SOURCE_ONLY_UNEXECUTED until an actual available gate runs. Root remains sole publisher; this narrow TEST correction does not alter P05 §15 diagnostics or the separate §16 local-readiness parity work.
