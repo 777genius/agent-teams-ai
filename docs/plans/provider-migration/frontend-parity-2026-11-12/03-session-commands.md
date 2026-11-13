@@ -620,3 +620,38 @@ cost при продолжении одной session. До source review и act
 
 R10 является планом следующего среза. R9 fix и существующие receipts не объявляют эту
 историю завершённой; готовность фиксируется только после implementation review и проверок.
+
+
+### R11 — implementation и локальная проверка R9/R10, 2026-11-13
+
+- Source-круг закрыт: `runtimeActivitySources.ts` проецирует только existing validated
+  `readRestorations()` / `memberActions().read()` и связывает current endpoint с exact
+  selected profile/base/configuration. Historical binding разрешён только для read
+  в той же цепочке; original admit/dispatch/control остаются прежними.
+- Architecture-круг закрыт: новый registry, Runtime entry, storage writer и RPC не добавлены.
+  Aggregate Stats/logs сохраняет весь retained launch; Codex `/cost` обрывает predecessor
+  traversal на fresh Restart. Публичные DTO и сохранённые command snapshots прежние.
+- USD: optional external Claude executable не доказывает version semantics по одной
+  SDK revision. Поэтому resumed cumulative USD остаётся unknown с gap, без нового
+  pricing/qualification API. Снижающийся cumulative total и partial/gap также не дают цену.
+- Найден и исправлен реальный R9 cold edge: captured cleanup создаёт `config: null`,
+  empty-input Runtime sentinel даже для никогда не открытого recipe
+  (`RuntimeOwner.stopCapturedSession` → `emptySession`). Такой detached sentinel
+  не считается activity. Реальный open/restore пишет config **до allocation**, поэтому
+  открытая пустая session остаётся видимой; история inputs никогда не удаляется фильтром.
+- Исправлен oracle R9: actual RPC возвращает `value.stats`. Existing capture/cold case
+  теперь даёт ровно одну actual generation и 17/9 tokens. Existing Resume case даёт
+  17/9 → 24/12 после второго original input и сохраняет результат после cold read.
+  Existing Codex command case проверяет new `/cost` 24/12 после cold Resume, unknown
+  после fresh Restart, aggregate Stats трёх действительно открытых generations и
+  неизменность первого receipt/output. Foreign/corrupt lineage отказывает.
+- Локально: Host build, Host test types и Desktop scripts types **PASS**; весь existing
+  `runtime-team-host.test.ts` **29/29 PASS**. Новая unit suite не создавалась.
+- Existing actual Codex Desktop Resume journey расширен: readonly Stats до второго
+  turn; после уже существующего второго turn — один visible Composer `/cost`.
+  Expected totals проверяются независимо как прежний snapshot + actual current-input
+  usage journal. Дополнительных native prompts для Stats/command нет; старый reply
+  сравнивается по original snapshot/bytes.
+
+**Оставшийся gate:** independent review source и exact-head native/Desktop CI ещё pending.
+Локальные composition fixtures/typecheck не являются native или Desktop PASS.

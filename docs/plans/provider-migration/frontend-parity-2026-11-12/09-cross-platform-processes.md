@@ -1156,9 +1156,9 @@ Reviewed draft `841cda775caf1f7618dea59e89267d85c888d158` добавляет gua
 Основание: [официальная Linux v6.1 syscall table](https://github.com/torvalds/linux/blob/v6.1/arch/x86/entry/syscalls/syscall_64.tbl),
 exact blob `c84d12608cd2de9e45f6cc166169cf70ecbf7518`.
 Это не symbol-version hack, не расширение product tuple и не объявление ABI/native PASS.
-На момент этой записи Linux pidfs job `131676600318` ещё queued; его не отменяем и не перезапускаем.
-Локальный executor восстановлен; focused validation следующего среза ещё выполняется,
-поэтому прежняя запись §31 об отсутствии compile относится к моменту первоначального source review.
+Linux pidfs job `131676600318` перешёл в in_progress (шаг5); его не отменяем и не перезапускаем.
+Локальный executor восстановлен; прежняя запись §31 об отсутствии compile относится к моменту
+первоначального source review. Новые фактические результаты приведены ниже и не заменяют native CI.
 
 Официальный f418 Linux artifact `14007732210` извлечён после восстановления executor:
 ZIP 1,867,526 bytes, SHA256 `32c0294d8c9406998a48a5cf033a0a01b292d28ad0f06e7510ae38923b916649`.
@@ -1167,3 +1167,50 @@ ZIP 1,867,526 bytes, SHA256 `32c0294d8c9406998a48a5cf033a0a01b292d28ad0f06e7510a
 Причина двух holders ещё проверяется; повторные строки, inherited descriptor или посторонний listener
 не считаются доказанными без соответствующего наблюдения. Original primary/neighbor/root cleanup — PASS;
 это не cold UI/Processes/packaged PASS и не основание ослаблять CDP ownership assertion.
+
+### Локальная проверка восстановленного следующего среза
+
+Pinned pnpm11.22.0 frozen install завершён; Host build, owned protocol typecheck,
+legacy-host scripts typecheck, existing protocol tests **45/45**, source-size guard и diff check — PASS.
+Первый protocol typecheck обнаружил четыре отсутствующие finite phase labels:
+`service-capture`, `service-query-lifetime`, `service-effect-retirement`, `expired-service-stop`.
+В прежнем `tools/owned-process-broker/nativeGateDiagnostics.ts` добавлены только четыре union literals:
+preimage `4f3e90d2b7643a7d94fdfe8c204a0f90e0bee71c` →
+draft `1717e066d2c2fe7e608ee22f308aa884556afa00`.
+Это обязательный **седьмой wire файл**; без него первоначальные шесть файлов не компилировались.
+Runtime handlers, native guards, data projection и budgets этим исправлением не меняются.
+
+Existing `qualifyLinuxProcessNative.ts` на Node24.21.0 с C draft `841cda775caf1f7618dea59e89267d85c888d158`
+прошёл genuine automatic v3 и forced warm v4: completed=true, cleaned=true.
+Original target Stop выполнен один раз, соседний service жив; changed session отказывается.
+Отдельный настоящий live worker после выхода thread leader наблюдается как unknown и не получает signal.
+V3 cold original read/Stop доказан в этом kernel; warm v4 в новом owner остаётся unknown/refused,
+как требует retained-handle lifetime. Это не Windows и не older-kernel cold proof.
+Локальный artifact имеет libc minimum2.33; glibc2.28 supply/load всё ещё ждёт исправленный CI gate.
+Manifest SHA256 `e08f7ea208b6bd1e25c850c6c2f2d2c60869053d9191e9c1fabec75145e178f5`,
+binary SHA256 `01f7cf27c7ae2615e7ef9c0e999f2066d24b3e5479cc2a915215ce257cdbe57e`.
+Windows MSVC compilation, typed scoped native scenario, actual vendor journey и cold UI/packaged
+по-прежнему pending: Linux и source checks не заменяют эти проверки.
+
+## 33. Следующая диагностика original CDP holders без изменения guard
+
+Exact 9d Linux artifact `14010465062` (ZIP SHA256
+`7a3704cc12750be90ba346ce0872e963118f1affe93e3385cbd0b647dce49148`)
+снова содержит `one CDP listener: 2 !== 1`, до UI operations. Native Node26/Host24/Electron
+и actual SDK register/Stop — PASS; cold UI и packaged не пройдены.
+Одна локальная bounded пустая TEST Electron44.10.1 репродукция дала один PID/FD;
+original exit0 и пустая captured group подтверждены. Она не воспроизводит CI defect и не является qualification.
+
+До следующего native push расширить **тот же исходный Linux lsof read**, не делать racy follow-up после assert:
+existing captured TEST PID group + selected CDP port + LISTEN filter, прежний timeout и maxBuffer.
+Machine fields дают PID, FD, family, inode/device если доступны, finite local endpoint/state.
+Парсер ограничивает retained diagnostic records16; unique PID count вычисляется по полному исходному output.
+Несколько descriptors одного PID сохраняют прежнюю семантику; два PID всегда отказываются, даже если inode совпал.
+Никакой socket/PID adoption, signal, retry или смены listener не добавляется; Darwin `-t` путь прежний.
+
+В existing `desktop-backend-observations.ts` private error→facts WeakMap связывает finite projection с той же
+исходной assertion, а existing `desktop-backend-smoke.ts` catch сохраняет только эти facts в TEST receipt.
+Нет argv, env, произвольного filename или raw lsof output в projection. Отсутствующий inode явно unknown,
+а socket device не объявляется доказанной стабильной identity. Исходная ошибка/cleanup остаются прежними.
+Один critical case в existing observations tests проверяет две holder identities и privacy; новой suite нет.
+Затем actual next Linux CI должен дать оригинальные descriptor facts. Только по ним выбирается исправление.

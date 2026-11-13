@@ -348,6 +348,12 @@ donor frontend — [`4a0e06277fe216d9f82dbbede362668fe46622ee`](https://github.c
    immutable отдельный counter. Поздний PONG отвергается. Нынешний Host OK/no-tools
    path и его отдельный максимум 8 не меняются; donor checks не выдаются за Host
    management receipts или native history.
+   Donor `execCli` на POSIX создаёт detached process group: отсутствие app PGID
+   не подтверждает завершение model probe. Existing read-only OS oracle фиксирует
+   original selected TEST runtime executable, ancestry к original app и birth до
+   Quit. Перед consumer обязательны отсутствие всех captured original identities
+   и отсутствие unmatched children этого unique executable. PID/path не дают
+   полномочий на cleanup; новые сигналы, повторные probe и process adoption запрещены.
 5. Включить уже подготовленный Host descriptor и продолжить existing import UI:
    original Team Detail → Launch → Main import → captured Host dialog → close,
    renderer reload и lookup original import. Проверять actual saved settings/roster,
