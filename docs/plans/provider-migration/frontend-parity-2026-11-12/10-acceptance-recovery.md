@@ -1002,3 +1002,53 @@ Run that existing file and Host-script types. Independent source review checks
 the two exact URLs and producer-specific keys before publishing the source cut.
 The existing saved-only Desktop donor/import/cold-readback gate remains required;
 the prior INCOMPLETE run is never relabelled as a success.
+
+## 21. Mixed cold Launch: finite evidence at the original failed boundary
+
+### Round1 — separate the observed failure from a proposed cause
+
+On d35 both original mixed Desktop jobs131818772113 (V1) and131818772401
+(V2) completed the native three-provider journey and Stop, then failed the
+same cold Launch assertion: Claude probe baseline8, observed8, no new probe.
+The V1 retained artifact shows one newly running OpenCode probe journal entry
+with held resources and no model-oracle rejection. This is not evidence that
+no work was admitted. It does not prove a queue deadlock or identify the native
+operation that stopped progressing. The V2 synchronous guard correction in
+P07 cannot by itself explain the same V1 result.
+
+Source review confirms Host work handlers run concurrently, model-probe start
+returns after journal admission, and Main routing has no per-Team serial queue.
+The existing cold check still requires one fresh Claude probe and all original
+UI/readback assertions. Neither its90s deadline nor the fixture input allowance
+is changed; a prior successful probe cannot be relabelled as cold acceptance.
+
+### Round2 — one failure-only TEST projection
+
+Extend only `desktop-mixed-create-launch-ui-smoke.ts` at its existing cold
+preflight catch. Keep the original error and cleanup. Read the original TEST
+`hoststore/management-commands` namespace once; this is a diagnostic snapshot,
+not an atomic observation, authorization, recovery, or an alternate journal.
+
+- Bound directory entries to256 and retained model-probe rows to64. Open
+  regular JSON files with no-follow and read at most64KiB plus one byte;
+  oversize, malformed, replaced or unreadable data yields a closed
+  `unavailable` diagnostic, never proof of absence.
+- Keep only existing Team-probe records and the three fixed TEST provider IDs.
+  Project the file's SHA-shaped opaque name, provider, finite phase, boolean
+  resourceHeld/ok and integer expiry relative to the original failure time.
+  Never serialize raw records, paths, environments, credentials, error text,
+  model content or arbitrary provider values.
+- Add the existing three model-oracle probe counts to the same original
+  failure log/receipt. No new RPC, process census, CDP input, signal, native
+  request, retry, selected profile change or attempt is introduced.
+- No reads occur on the success path or before the original failed assertion.
+  A diagnostic failure remains distinguishable from an empty original journal.
+
+### Round3 — review and delivery
+
+Review the bounded read and strict output projection independently, then run
+the existing script type gate and both original mixed Desktop jobs on the
+next required exact source cut. No extra unit suite or CI job is added for
+this read-only failure metadata. Keep d35 INCOMPLETE and use the next actual
+journal/native evidence to choose the production correction; do not adjust
+guards, accept cached checks, or increase deadlines on a timing hypothesis.
