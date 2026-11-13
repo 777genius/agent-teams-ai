@@ -540,7 +540,20 @@ sources, тогда как старый TEST witness требовал один. 
 
 **Review 3 — ownership.** Root отклонил вывод «два source records → два процесса» без PID/owner
 correlation. Catalog correction прошёл Host build, test types и4 focused Node24 checks, включая
-seal во время awaited old-owner close. Desktop count/cleanup correction и actual E2E остаются открытыми.
+seal во время awaited old-owner close. Actual Desktop E2E остаётся открытым.
+
+**Review 4 — original source/child correlation.** TEST witness сначала выполняет существующий
+read-only global loadModels(null), сохраняет единственный original child с birth identity и
+реальный derived profileId из current RuntimeSourceIndex. После обычного project catalog/preflight
+сохраняется тот же global child и ровно один новый project child; оба связаны с exact source revision.
+Нет открытого Runtime, held probe или изменения прежних closed session records. Cold cleanup
+проверяет каждый исходный child, а mixed/passive сохраняют прежний exact-one сценарий.
+
+Root review отдельно исправил повторный baseline после Page.reload: обычный renderer reload
+должен сохранить оба original owners, а новая global capture допустима только после настоящей
+cold Resume границы. Platform independently проверил source/child и passive cleanup guards.
+Эти TEST изменения прошли source review; fresh types, focused existing lifecycle checks и
+actual UI/native results для нового cut ещё необходимы. Expected count сам по себе не proof.
 
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts

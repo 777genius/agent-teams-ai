@@ -28,7 +28,7 @@ import type {
   CodexAccountSnapshotDto,
 } from '../../../src/features/codex-account/contracts';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
-import type { IpcMain, IpcMainInvokeEvent } from 'electron';
+import type { IpcMainInvokeEvent } from 'electron';
 
 /** Actual account IPC/Main → Host/D → controlled child. Electron UI/vendor login are separate gates. */
 async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', sameContext = false) {
@@ -153,7 +153,11 @@ async function fixture(scenario: 'early' | 'pending' | 'rejected-then-pending', 
       (event: IpcMainInvokeEvent, input?: unknown) => Promise<CodexAccountSnapshotDto>
     >();
     registerCodexAccountIpc(
-      { handle: (channel, handler) => handlers.set(channel, handler) } as IpcMain,
+      {
+        handle: (channel, handler) => {
+          handlers.set(channel, handler);
+        },
+      },
       features.accountFeature
     );
     return {

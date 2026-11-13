@@ -134,6 +134,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   let originalFailure: unknown;
   let lastInputProgress: ReturnType<typeof nativeInputProgress> | undefined;
   let inputReadCount = 0;
+  // Observation times from the existing read loop, not exact native request timestamps.
+  const modelProgress: { elapsedMs: number; requests: number }[] = [];
   let originalOpenElapsedMs: number | undefined;
   let originalLaunchProgress: ReturnType<typeof nativeLaunchProgress> | undefined;
   const passive = !packaged
@@ -289,6 +291,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     const deadline = Date.now() + 90_000;
     while (Date.now() < deadline) {
       assert.deepEqual(model.failures, []);
+      if (modelProgress.length < 16 && modelProgress.at(-1)?.requests !== model.observations.length)
+        modelProgress.push({ elapsedMs: elapsedMs(), requests: model.observations.length });
       const result: Record<string, unknown> = await host.rpc('runtime.read', envelope('TEST-read', { memberId: 'carol-id' }));
       assert.equal(result.ok, true);
       const state = record(result.value);
@@ -414,7 +418,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
           ['ERR_ASSERTION', 'ABORT_ERR', 'EPIPE', 'ECONNRESET', 'ETIMEDOUT'].includes(originalFailure.code)
             ? originalFailure.code : null,
         hosts: hosts.map(({ exitCode, signalCode, stdoutValid }) => ({ exitCode, signalCode, stdoutValid })),
-        modelOrigin: 'localhost-scripted', modelRequests: model?.observations.length ?? 0,
+        modelOrigin: 'localhost-scripted', modelRequests: model?.observations.length ?? 0, modelProgress,
         modelFailures: model?.failures ?? [], vendorAuthQualified: false,
         desktopQualified: false, releaseQualified: false,
       };

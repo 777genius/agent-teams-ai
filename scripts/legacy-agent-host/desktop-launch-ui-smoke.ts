@@ -3,7 +3,7 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileDigest } from './desktop-backend-fixture.ts';
-import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fixture.ts';
+import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren, captureDesktopOpenCodeGlobalMetadata, captureDesktopOpenCodeProjectMetadata } from './desktop-native-stop-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
@@ -192,6 +192,9 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step });
     proof.coldStartupBeforeFirstLaunch = true;
   }
+  const globalMetadata = opencode
+    ? await captureDesktopOpenCodeGlobalMetadata(cdp, fixture, options.capturedGroup(), options.assertOwnedRenderer) : undefined;
+  if (globalMetadata) proof.originalGlobalMetadata = globalMetadata;
   await ui.observeInput();
   await ui.clickSidebar(options.seed.subject);
   await ui.click('button', 'open original Launch dialog', 'Launch');
@@ -238,9 +241,9 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   let originalMetadata: ReturnType<typeof readDesktopNativeHostProcesses> | undefined;
   if (opencode) {
     await ui.waitRead(`[...document.querySelectorAll('[role="dialog"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)`, 'original preflight completes before any runtime allocation');
-    originalMetadata = await poll(async () => readDesktopNativeHostProcesses(fixture, options.capturedGroup()),
-      row => row.children.length === 1, 'one original metadata child before Launch');
-    assert.equal(originalMetadata.children[0]!.command, process.env.OPENCODE_V2_EMBEDDED_BUN);
+    assert.ok(globalMetadata);
+    const selected = await captureDesktopOpenCodeProjectMetadata(fixture, options.capturedGroup(), globalMetadata);
+    originalMetadata = selected.captured; proof.metadataSources = selected.metadataSources;
     assert.equal(((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0, 0);
     proof.originalMetadataBeforeLaunch = originalMetadata;
   }
@@ -384,6 +387,14 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     await cdp.send('Page.reload', { ignoreCache: false });
     await ui.waitRead(`performance.timeOrigin!==${JSON.stringify(beforeReload)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`, 'reloaded real renderer');
   }
+  const resumeGlobalMetadata = opencode && options.restartSameProfile && !extensions && evidence.mode === 'native-resume-ui'
+    ? await captureDesktopOpenCodeGlobalMetadata(cdp, fixture, options.capturedGroup(), options.assertOwnedRenderer) : undefined;
+  if (opencode && !resumeGlobalMetadata) {
+    assert.ok(originalMetadata, 'renderer reload retains the original metadata owners');
+    const retained = readDesktopNativeHostProcesses(fixture, options.capturedGroup());
+    separateDesktopOpenCodeRuntimeChildren(originalMetadata, retained, 0);
+    proof.metadataAfterRendererReload = retained;
+  }
   await ui.observeInput();
   if (!(await cdp.evaluate(`Boolean(document.querySelector('.kanban-task-card'))`)))
     await ui.clickSidebar(options.seed.subject);
@@ -400,7 +411,8 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   if (options.restartSameProfile && !extensions) proof.settingsRetainedAfterColdStartup = true;
   else proof.settingsRetainedAfterReload = true;
   if (evidence.mode === 'native-resume-ui')
-    await runDesktopResumeUiSmoke(cdp, { ...options, model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession: sessions[0]! });
+    await runDesktopResumeUiSmoke(cdp, { ...options, model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession: sessions[0]!,
+      ...(resumeGlobalMetadata ? { metadataGlobal: resumeGlobalMetadata } : {}) });
   if (evidence.mode === 'native-relaunch-ui' || extensions) {
     assert.ok(options.model && !codex);
     await runDesktopRelaunchUiSmoke(cdp, { ...options, model: options.model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession });

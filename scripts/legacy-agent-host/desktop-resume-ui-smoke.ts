@@ -5,7 +5,7 @@ import { performance } from 'node:perf_hooks';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts';
-import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fixture.ts';
+import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren, captureDesktopOpenCodeGlobalMetadata, captureDesktopOpenCodeProjectMetadata } from './desktop-native-stop-fixture.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { verifyDesktopCodexCostAfterColdResume } from './desktop-codex-cost-ui-proof.ts';
@@ -36,6 +36,7 @@ export async function codexRuntimeEndpointHash(fixture: Awaited<ReturnType<typeo
 
 /** Starts only after the real Launch/Stop/reload/reopen-prefill proof. No setup effect APIs. */
 export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
+  metadataGlobal?: Awaited<ReturnType<typeof captureDesktopOpenCodeGlobalMetadata>>;
   fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>;
   evidence: Record<string, unknown>;
   model: Awaited<ReturnType<typeof startNativeTeamModel>> | Awaited<ReturnType<typeof startCodexModel>> | Awaited<ReturnType<typeof startOpenCodeModel>>;
@@ -146,9 +147,10 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   await ui.scrollTo('[role="dialog"] button', 'visible original Resume submit', 'Resume selected checkpoints');
   let originalMetadata: ReturnType<typeof readDesktopNativeHostProcesses> | undefined;
   if (opencode) {
-    originalMetadata = await poll(async () => readDesktopNativeHostProcesses(fixture, options.capturedGroup()),
-      row => row.children.length === 1, 'cold Host metadata child before Resume allocation');
-    assert.equal(originalMetadata.children[0]!.command, process.env.OPENCODE_V2_EMBEDDED_BUN);
+    assert.ok(options.metadataGlobal);
+    proof.originalGlobalMetadata = options.metadataGlobal;
+    const selected = await captureDesktopOpenCodeProjectMetadata(fixture, options.capturedGroup(), options.metadataGlobal);
+    originalMetadata = selected.captured; proof.metadataSources = selected.metadataSources;
     proof.originalMetadataBeforeResume = originalMetadata;
   }
   proof.recoveryReferences = { launchId: firstCapture.launchId, rosterRevision: sourceLaunch.rosterRevision,

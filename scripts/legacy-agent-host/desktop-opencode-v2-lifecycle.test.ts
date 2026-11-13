@@ -10,6 +10,12 @@ import { separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fi
 import { assertCapturedDesktopMetadataAbsent, assertFirstResumeMetadataAbsent, assertColdOpenCodeRuntimeRecords } from './desktop-opencode-v2-cold-metadata.ts';
 
 const messageId = '11111111-2222-4333-8444-555555555555';
+const metadataSources = (captured: { children: readonly unknown[] }) => [
+  { sourceId: 'a'.repeat(64), revision: 'b'.repeat(64), profileId: 'runtime-source:' + 'b'.repeat(64),
+    configRevision: 'runtime-source:' + 'b'.repeat(64), scope: 'global', projectPath: null, process: captured.children[0] },
+  { sourceId: 'c'.repeat(64), revision: 'd'.repeat(64), profileId: 'runtime-source:' + 'd'.repeat(64),
+    configRevision: 'runtime-source:' + 'd'.repeat(64), scope: 'project', projectPath: '/TEST/workspace', process: captured.children[1] },
+];
 const tools = ['shell', ...REQUIRED_TOOLS.map(name => 'agent-teams_' + name)]
   .map(name => ({ type: 'function', function: { name, parameters: { type: 'object' } } }));
 const user = (turn: string) => ({ role: 'user', content: `${JSON.stringify({ messageId, text: turn })}\n` +
@@ -33,6 +39,12 @@ test('V2 lifecycle retains the pre-Launch metadata birth identity and refuses re
     { host: { ...host, birth: 'TEST-replaced-host' }, children: [metadata, runtime] }, 1));
   assert.throws(() => separateDesktopOpenCodeRuntimeChildren(original,
     { host, children: [metadata, runtime, { ...runtime, pid: 13 }] }, 1));
+  const project = { ...metadata, pid: 13, groupId: 13, birth: 'TEST-project-metadata' };
+  const scoped = { host, children: [metadata, project] };
+  assert.deepEqual(separateDesktopOpenCodeRuntimeChildren(scoped, { host, children: [metadata, runtime, project] }, 1), [runtime]);
+  assert.throws(() => separateDesktopOpenCodeRuntimeChildren(scoped, { host, children: [metadata, runtime] }, 1));
+  assert.throws(() => separateDesktopOpenCodeRuntimeChildren(scoped,
+    { host, children: [metadata, runtime, { ...project, birth: 'TEST-replaced-project' }] }, 1));
 });
 
 test('cold metadata reads accept only original completed PNG inputs and no extra Runtime', () => {
@@ -138,10 +150,10 @@ test('V2 mixed cleanup requires its pre-Launch observation while V1 proof stays 
 test('every hot V2 flow requires its own captured metadata child absent before fallback cleanup', () => {
   const host = { pid: 10, parentPid: 1, groupId: 9, birth: 'TEST-host-birth', command: '/TEST/node' };
   const child = { pid: 11, parentPid: 10, groupId: 11, birth: 'TEST-metadata-birth', command: '/TEST/bun' };
-  const captured = { host, children: [child] };
+  const captured = { host, children: [child, { ...child, pid: 12, groupId: 12, birth: 'TEST-project-metadata' }] };
   const flows = [
     { mode: 'native-review-ui', key: 'nativeReviewUiProof', capture: 'originalMetadataBeforeLaunch',
-      proof: { status: 'PASS', provider: 'opencode-v2', originalMetadataBeforeLaunch: captured, stop: { metadata: child } } },
+      proof: { status: 'PASS', provider: 'opencode-v2', originalMetadataBeforeLaunch: captured, stop: { metadata: captured.children } } },
     { mode: 'native-launch-ui', key: 'launchDialogProof', capture: 'originalMetadataBeforeLaunch',
       proof: { status: 'PASS', provider: 'opencode', originalMetadataBeforeLaunch: captured, metadataAfterStop: captured } },
     ...['native-stop-ui', 'native-conversation-ui', 'native-quit-ui'].flatMap(mode =>
@@ -151,14 +163,23 @@ test('every hot V2 flow requires its own captured metadata child absent before f
   ];
   for (const flow of flows) {
     const source: Record<string, unknown> = { mode: flow.mode, nativeProvider: 'opencode', nativeGeneration: 'v2',
-      hostChild: { pid: 10, ppid: 1, pgid: 9 }, [flow.key]: flow.proof };
-    for (const current of [{ pid: 11, ppid: 10, pgid: 11 }, { pid: 11, ppid: 1, pgid: 11 }, { pid: 11, ppid: 99, pgid: 99 }]) {
+      hostChild: { pid: 10, ppid: 1, pgid: 9 }, [flow.key]: { ...flow.proof, metadataSources: metadataSources(captured) } };
+    for (const current of [11, 12].flatMap(pid => [{ pid, ppid: 10, pgid: pid }, { pid, ppid: 1, pgid: pid }, { pid, ppid: 99, pgid: 99 }])) {
       const evidence = structuredClone(source), proof = evidence[flow.key] as Record<string, unknown>;
       assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [current]), /metadata child/);
       assert.equal(proof.metadataAbsentBeforeHarnessCleanup, undefined);
     }
     for (const change of [
       (evidence: Record<string, unknown>) => { delete (evidence[flow.key] as Record<string, unknown>)[flow.capture]; },
+      (evidence: Record<string, unknown>) => { delete (evidence[flow.key] as Record<string, unknown>).metadataSources; },
+      (evidence: Record<string, unknown>) => {
+        const sources = (evidence[flow.key] as Record<string, unknown>).metadataSources as Record<string, unknown>[];
+        sources[1]!.profileId = sources[0]!.profileId;
+      },
+      (evidence: Record<string, unknown>) => {
+        const sources = (evidence[flow.key] as Record<string, unknown>).metadataSources as Record<string, unknown>[];
+        sources[1]!.process = { ...(sources[1]!.process as object), birth: 'TEST-replaced-owner' };
+      },
       (evidence: Record<string, unknown>) => { delete evidence.nativeGeneration; },
       (evidence: Record<string, unknown>) => { evidence.nativeProvider = 'claude'; },
       (evidence: Record<string, unknown>) => { evidence.hostChild = { pid: 99, ppid: 1, pgid: 9 }; },
@@ -178,17 +199,18 @@ test('every hot V2 flow requires its own captured metadata child absent before f
 test('cold Resume records first metadata absence before the second spawn and binds the second epoch separately', () => {
   const capture = (pid: number) => ({
     host: { pid, parentPid: 1, groupId: pid - 1, birth: 'TEST-host-' + pid, command: '/TEST/node' },
-    children: [{ pid: pid + 1, parentPid: pid, groupId: pid + 1, birth: 'TEST-metadata-' + pid, command: '/TEST/bun' }],
+    children: [1, 2].map(offset => ({ pid: pid + offset, parentPid: pid, groupId: pid + offset,
+      birth: 'TEST-metadata-' + (pid + offset), command: '/TEST/bun' })),
   });
   const first = capture(10), second = capture(20);
   const launch: Record<string, unknown> = { provider: 'opencode', status: 'INCOMPLETE', stop: { releasedBeforeQuit: true },
-    originalMetadataBeforeLaunch: first, metadataAfterStop: first };
+    originalMetadataBeforeLaunch: first, metadataAfterStop: first, metadataSources: metadataSources(first) };
   const boundary: Record<string, unknown> = { provider: 'opencode', status: 'INCOMPLETE',
     firstEpoch: { host: { pid: 10, ppid: 1, pgid: 9 } },
     firstCleanup: { appExitCode: 0, appSignalCode: null, remaining: [], capturedHostAbsent: true, writerLockReleased: true } };
   const evidence: Record<string, unknown> = { mode: 'native-resume-ui', nativeProvider: 'opencode', nativeGeneration: 'v2',
     launchDialogProof: launch, coldResumeBoundary: boundary };
-  for (const current of [{ pid: 11, ppid: 10, pgid: 11 }, { pid: 11, ppid: 1, pgid: 11 }, { pid: 11, ppid: 99, pgid: 99 }]) {
+  for (const current of [11, 12].flatMap(pid => [{ pid, ppid: 10, pgid: pid }, { pid, ppid: 1, pgid: pid }, { pid, ppid: 99, pgid: 99 }])) {
     assert.throws(() => assertFirstResumeMetadataAbsent(evidence, [current]), /first Resume metadata child/);
     assert.equal(boundary.firstMetadataAbsentBeforeSecondSpawn, undefined);
   }
@@ -203,9 +225,9 @@ test('cold Resume records first metadata absence before the second spawn and bin
   boundary.secondEpoch = { host: { pid: 20, ppid: 1, pgid: 19 } };
   evidence.hostChild = { pid: 20, ppid: 1, pgid: 19 };
   const resume: Record<string, unknown> = { provider: 'opencode', status: 'PASS',
-    originalMetadataBeforeResume: second, metadataAfterSecondStop: second };
+    originalMetadataBeforeResume: second, metadataAfterSecondStop: second, metadataSources: metadataSources(second) };
   evidence.resumeDialogProof = resume;
-  for (const current of [{ pid: 21, ppid: 20, pgid: 21 }, { pid: 21, ppid: 1, pgid: 21 }, { pid: 21, ppid: 99, pgid: 99 }]) {
+  for (const current of [21, 22].flatMap(pid => [{ pid, ppid: 20, pgid: pid }, { pid, ppid: 1, pgid: pid }, { pid, ppid: 99, pgid: 99 }])) {
     assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [current]), /second Resume metadata child/);
     assert.equal(resume.metadataAbsentBeforeHarnessCleanup, undefined);
   }

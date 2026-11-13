@@ -6,6 +6,7 @@ import { HostScheduledRuns } from './HostScheduledRuns.js';
 import { envelopeSchema, equalFields, json } from './teamHostEnvelope.js';
 import { scheduledRunInputSchema, scheduledRunKeySchema } from './scheduledRunContracts.js';
 import type { HostMethod } from '../index.js';
+import type { JsonValue } from '../contracts.js';
 import type { HostedTeam } from './MemberEntry.js';
 
 /** Main-only schedule facade. No renderer generic-operation or MCP registration. */
@@ -16,7 +17,7 @@ export function createHostScheduledRunComposition(options: ConstructorParameters
   for (const operation of ['start', 'read', 'cancel'] as const)
     methods[`schedule.run.${operation}`] = {
       lane: operation === 'start' ? 'work' : 'control',
-      async handle(raw) {
+      async handle(raw): Promise<JsonValue> {
         try {
           options.assertWriter();
           const input = envelopeSchema.parse(raw), team = options.teams.get(input.binding.scope.teamId);
