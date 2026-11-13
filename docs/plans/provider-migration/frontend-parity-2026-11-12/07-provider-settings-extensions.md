@@ -525,15 +525,22 @@ sources, тогда как старый TEST witness требовал один. 
 2. **Сохранить deadlines.** Deadline фиксируется при приёме request, ожидание предыдущего read входит
    в него; native read получает только оставшийся срок. Истёкший queued request не стартует child.
    Не увеличивать Host/UI/CI timers и не возвращать stale catalog как fresh.
-3. **Исправить TEST identity witness.** Existing Desktop capture различает исходные global/project
-   metadata owners и один будущий Runtime. Зафиксировать точный конечный набор metadata identities
-   до allocation, затем проверять каждую original birth identity и отсутствие extra children.
-   Cold/Stop verifier обязан проверять исчезновение всех исходных children, не только первого.
-   Прежний mixed fixture с одним management scope сохраняет свой exact-one proof.
+3. **Сначала подтвердить происхождение metadata children.** Два опубликованных global/project
+   sources ещё не доказывают наличие двух независимых native owners: descriptor использует один
+   management profile. Сопоставить оба original spawn/capture с catalog/model-probe ownership и
+   проверить результат после исправления concurrent reads. Если второй child — неосвобождённый
+   прежний owner, исправить его lifecycle; увеличивать expected count для принятия утечки нельзя.
+   Только подтверждённый набор original birth identities допускается в hot/cold cleanup witness.
+   Прежний mixed/passive fixture с одним owner сохраняет exact-one proof. Подготовленный TEST
+   metadata cut удерживается до этой проверки; production catalog correction от него независим.
 4. **Одна необходимая regression.** Расширить existing management recovery test overlap status/directory:
    завершение первого read предшествует close, оба результата относятся к исходному profile;
    rejected predecessor не запрещает следующий допустимый read, seal не выделяет новый child.
    Actual Desktop Resume/Quit продолжаются штатным CI; отсутствующий native результат остаётся открытым.
+
+**Review 3 — ownership.** Root отклонил вывод «два source records → два процесса» без PID/owner
+correlation. Catalog correction прошёл Host build, test types и4 focused Node24 checks, включая
+seal во время awaited old-owner close. Desktop count/cleanup correction и actual E2E остаются открытыми.
 
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts
