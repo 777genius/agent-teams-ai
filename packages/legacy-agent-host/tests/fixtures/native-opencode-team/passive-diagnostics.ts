@@ -7,9 +7,10 @@ import type { ChildProcess } from 'node:child_process';
 
 const prefix = 'TEST_OPENCODE_V2_DIAGNOSTIC ';
 const maximum = 256;
+const maximumTraceBytes = 64 * 1024, maximumLineBytes = 512, reservedLineBytes = maximumLineBytes + 1;
 const events = ['child-spawn', 'child-ready', 'child-failed', 'child-exit', 'child-output-limit',
   'child-input-ended', 'host-input-ended', 'request', 'request-send-headers', 'request-body-sent',
-  'response', 'response-end', 'request-error', 'read-cut-failed', 'trace-limit'] as const;
+  'response', 'response-end', 'request-error', 'read-cut-failed', 'metadata-read-failed', 'trace-limit'] as const;
 const routes = ['info', 'session-create', 'session-read', 'instructions', 'permissions', 'plugins',
   'mcp', 'log', 'prompt', 'provider-catalog', 'model-catalog', 'model-default', 'integration-read',
   'integration-connect', 'credential-remove', 'other-api'] as const;
@@ -48,31 +49,73 @@ function projectReadCutFailure(value: unknown) {
   } catch { return undefined; }
 }
 
+const metadataReadStages = ['admission', 'native-client', 'identity', 'plugins', 'permissions', 'mcp',
+  'credential', 'directory', 'activation-wait', 'current', 'projection', 'dispose', 'result-current'] as const;
+const metadataReadReasons = ['held', 'conflict', 'invalid', 'busy', 'deadline', 'cleanup_unknown',
+  'transport_failure', 'authority_mismatch', 'disposed', 'http_failure', 'media_type', 'body_limit',
+  'frame_limit', 'invalid_response', 'invalid_native_catalog', 'native_catalog_binding_mismatch',
+  'capabilities_pending', 'unqualified_version', 'ABORT_ERR', 'unknown'] as const;
+
+/** Original metadata read failure only; null abort observation is limited to pre-signal admission. */
+function projectMetadataReadFailure(value: unknown) {
+  try {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const own = (key: string): unknown => {
+      const field = Object.getOwnPropertyDescriptor(value, key);
+      return field && 'value' in field ? field.value as unknown : undefined;
+    };
+    const stage = choice(own('stage'), metadataReadStages), reason = choice(own('reason'), metadataReadReasons);
+    const elapsedMs = integer(own('elapsedMs')), deadlineExpired = own('deadlineExpired'), aborted = own('aborted');
+    if (!stage || !reason || elapsedMs === null || typeof deadlineExpired !== 'boolean' ||
+        !(typeof aborted === 'boolean' || aborted === null && stage === 'admission')) return undefined;
+    return { stage, reason, elapsedMs, deadlineExpired, aborted };
+  } catch { return undefined; }
+}
+
 /** Project again at the receipt boundary; native text/IDs/credentials are never retained. */
 export function createPassiveNativeDiagnosticCapture() {
   const entries: Record<string, unknown>[] = [];
-  let pending = '';
+  let pending = '', ordinary = 0, bytes = 0, metadataObserved = false, limitObserved = false, limited = false;
+  // These counters belong to this one original capture, including all of its Host epochs.
   return {
     entries,
+    get limited() { return limited; },
     accept(chunk: Buffer, epoch: number) {
-      if (entries.length >= maximum + 1 || chunk.length + Buffer.byteLength(pending) > 64 * 1024) { pending = ''; return; }
+      if (chunk.length + Buffer.byteLength(pending) > maximumTraceBytes) { pending = ''; limited = true; return; }
       pending += chunk.toString('utf8');
       for (let end = pending.indexOf('\n'); end >= 0; end = pending.indexOf('\n')) {
         const line = pending.slice(0, end); pending = pending.slice(end + 1);
-        if (!line.startsWith(prefix) || line.length > 512 || entries.length >= maximum + 1) continue;
+        if (!line.startsWith(prefix) || Buffer.byteLength(line) > maximumLineBytes) continue;
         try {
           const value = record(JSON.parse(line.slice(prefix.length)) as unknown);
           const event = choice(value.event, events), atMs = integer(value.atMs);
           if (!event || atMs === null) continue;
           const failedCut = event === 'read-cut-failed' ? projectReadCutFailure(value) : undefined;
-          if (event === 'read-cut-failed' && !failedCut) continue;
-          entries.push({ epoch, event, atMs, child: integer(value.child, 5), request: integer(value.request, 4096),
+          const failedMetadata = event === 'metadata-read-failed' ? projectMetadataReadFailure(value) : undefined;
+          if (event === 'read-cut-failed' && !failedCut || event === 'metadata-read-failed' && !failedMetadata) continue;
+          const failure = failedMetadata ?? failedCut;
+          const entry = { epoch, event, atMs, child: integer(value.child, 5), request: integer(value.request, 4096),
             route: choice(value.route, routes), method: choice(value.method, ['GET', 'POST', 'PUT', 'DELETE']),
-            durationMs: failedCut?.elapsedMs ?? integer(value.durationMs), status: integer(value.status, 599),
+            durationMs: failure?.elapsedMs ?? integer(value.durationMs), status: integer(value.status, 599),
             contentEncoding: choice(value.contentEncoding, contentEncodings),
-            stage: failedCut?.stage ?? choice(value.stage, stages), code: failedCut?.reason ?? choice(value.code, codes),
+            stage: failure?.stage ?? choice(value.stage, stages), code: failure?.reason ?? choice(value.code, codes),
             exitCode: integer(value.exitCode, 255), signal: choice(value.signal, signals),
-            ...(failedCut ? { deadlineExpired: failedCut.deadlineExpired, aborted: failedCut.aborted } : {}) });
+            ...(failure ? { deadlineExpired: failure.deadlineExpired, aborted: failure.aborted } : {}) };
+          const size = Buffer.byteLength(JSON.stringify(entry)) + 1;
+          if (size > reservedLineBytes) continue;
+          if (failedMetadata) {
+            if (metadataObserved || bytes + size > maximumTraceBytes - (limitObserved ? 0 : reservedLineBytes)) continue;
+            metadataObserved = true;
+          } else if (event === 'trace-limit') {
+            if (limitObserved || bytes + size > maximumTraceBytes - (metadataObserved ? 0 : reservedLineBytes)) continue;
+            limitObserved = true; limited = true;
+          } else {
+            const reserve = (metadataObserved ? 0 : reservedLineBytes) + (limitObserved ? 0 : reservedLineBytes);
+            if (ordinary >= maximum - 1 || bytes + size > maximumTraceBytes - reserve) { limited = true; continue; }
+            ordinary++;
+          }
+          bytes += size;
+          entries.push(entry);
         } catch { /* Other Host diagnostics are deliberately not retained. */ }
       }
     },
@@ -281,12 +324,23 @@ function responseContentEncoding(headers: unknown): typeof contentEncodings[numb
 
 function observeOriginalHost(): void {
   const started = performance.now();
-  let emitted = 0, children = 0, requests = 0;
+  let ordinary = 0, emittedBytes = 0, children = 0, requests = 0, metadataObserved = false, limited = false;
   const elapsed = () => Math.max(0, Math.round(performance.now() - started));
+  const line = (value: Record<string, unknown>) => prefix + JSON.stringify({ atMs: elapsed(), ...value }) + '\n';
+  const write = (value: string) => { emittedBytes += Buffer.byteLength(value); process.stderr.write(value); };
   const emit = (value: Record<string, unknown>) => {
-    if (emitted > maximum) return;
-    process.stderr.write(prefix + JSON.stringify({ atMs: elapsed(),
-      ...(emitted++ === maximum ? { event: 'trace-limit' } : value) }) + '\n');
+    const frame = line(value), size = Buffer.byteLength(frame);
+    if (size > reservedLineBytes) return;
+    if (value.event === 'metadata-read-failed') {
+      if (metadataObserved || emittedBytes + size > maximumTraceBytes - (limited ? 0 : reservedLineBytes)) return;
+      metadataObserved = true; write(frame); return;
+    }
+    if (limited) return;
+    const reserve = (metadataObserved ? 0 : reservedLineBytes) + reservedLineBytes;
+    if (ordinary >= maximum - 1 || emittedBytes + size > maximumTraceBytes - reserve) {
+      limited = true; write(line({ event: 'trace-limit' })); return;
+    }
+    ordinary++; write(frame);
   };
   process.stdin.once('end', () => emit({ event: 'host-input-ended' }));
   channel('agent-teams:opencode-v2:read-cut-failed').subscribe(message => {
@@ -294,6 +348,12 @@ function observeOriginalHost(): void {
       const failure = projectReadCutFailure(message);
       if (failure) emit({ event: 'read-cut-failed', ...failure });
     } catch { /* A passive TEST subscriber cannot replace native failure/cleanup. */ }
+  });
+  channel('agent-teams:opencode-v2:metadata-read-failed').subscribe(message => {
+    try {
+      const failure = projectMetadataReadFailure(message);
+      if (failure) emit({ event: 'metadata-read-failed', ...failure });
+    } catch { /* A passive TEST subscriber cannot replace original metadata failure/cleanup. */ }
   });
   const childEntry = fileURLToPath(new URL('../../../dist/adapters/providers/OpenCodeV2EmbeddedChild.js', import.meta.url));
   channel('child_process').subscribe(message => {
