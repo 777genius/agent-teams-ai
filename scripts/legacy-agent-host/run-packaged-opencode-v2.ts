@@ -9,6 +9,28 @@ import { readPackagedOpenCodeV2, renameCapturedPackagedBundle } from './packaged
 import { nativeHostEnvironment, writeNativeFailureReceipt } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
 import { assertNativeV1Source } from '../../packages/legacy-agent-host/tests/opencode-v1-version-source.ts';
 
+type CleanupStage = 'preparation' | 'original-exit' | 'receipt-read' | 'receipt-binding' |
+  'native-cleanup' | 'scenario-checks' | 'source-restore' | 'legacy-restore' |
+  'bundle-restore' | 'source-verify' | 'temporary-cleanup';
+type CleanupCode = 'EPERM' | 'EACCES' | 'EBUSY' | 'ENOENT' | 'ENOTEMPTY' |
+  'EEXIST' | 'EXDEV' | 'ERR_ASSERTION' | 'unknown';
+interface CleanupFailure { stage: CleanupStage; code: CleanupCode }
+
+/** Facts from the original error only; diagnostic projection must not invoke a getter or throw. */
+function cleanupFailure(stage: CleanupStage, error: unknown): CleanupFailure {
+  try {
+    if (error !== null && (typeof error === 'object' || typeof error === 'function')) {
+      const descriptor = Object.getOwnPropertyDescriptor(error, 'code');
+      const code: unknown = descriptor && 'value' in descriptor ? descriptor.value : undefined;
+      switch (code) {
+        case 'EPERM': case 'EACCES': case 'EBUSY': case 'ENOENT': case 'ENOTEMPTY':
+        case 'EEXIST': case 'EXDEV': case 'ERR_ASSERTION': return { stage, code };
+      }
+    }
+  } catch { /* A diagnostic cannot replace the original failure. */ }
+  return { stage, code: 'unknown' };
+}
+
 const repo = await realpath(resolve(import.meta.dirname, '../..'));
 const [bundleArgument, requestedPlatform, ...extra] = process.argv.slice(2);
 assert.ok(bundleArgument && requestedPlatform && extra.length === 0);
@@ -35,9 +57,16 @@ const nativeReceiptPath = receiptPath.replace(/\.json$/, '') + '-native.json';
 let sourceMoved = false, bundleMoved = false, bundleCopied = false, legacyMoved = false;
 let passed = false, nativeStarted = false, nativeCleanupConfirmed = false, originalFailure: unknown;
 const cleanupErrors: unknown[] = [];
+let observedStage: CleanupStage = 'preparation';
+const cleanupObservation: {
+  originalExitObserved: boolean; nativeReceiptParsed: boolean; nativeReceiptBound: boolean;
+  nativeCleanupConfirmed: boolean; firstFailure: CleanupFailure | null;
+  firstRestorationFailure: CleanupFailure | null;
+} = { originalExitObserved: false, nativeReceiptParsed: false, nativeReceiptBound: false,
+  nativeCleanupConfirmed: false, firstFailure: null, firstRestorationFailure: null };
 const receipt: Record<string, unknown> = { kind: 'TEST_PACKAGED_V2_QUALIFICATION', status: 'HOLD',
   sourceHead, platform: requestedPlatform, cleanup: false, phase: 'relocation',
-  desktopJourneyQualified: false, vendorAuthQualified: false, releaseQualified: false };
+  desktopJourneyQualified: false, vendorAuthQualified: false, releaseQualified: false, cleanupObservation };
 try {
   let originalAppAsarSha256: string | undefined;
   if (process.platform === 'win32') {
@@ -91,7 +120,10 @@ try {
   child.stdin.on('error', () => { /* The original exit and receipt remain decisive. */ });
   const exited = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((done, reject) => {
     child.once('error', reject);
-    child.once('exit', (code, signal) => done({ code, signal }));
+    child.once('exit', (code, signal) => {
+      cleanupObservation.originalExitObserved = true;
+      done({ code, signal });
+    });
   });
   const waitExit = async (timeoutMs: number) => {
     let timer: NodeJS.Timeout | undefined;
@@ -99,6 +131,7 @@ try {
       timer = setTimeout(() => done(undefined), timeoutMs);
     })]); } finally { clearTimeout(timer); }
   };
+  observedStage = 'original-exit';
   let outcome = await waitExit(480_000);
   const timedOut = outcome === undefined;
   if (timedOut) {
@@ -113,17 +146,25 @@ try {
     throw new Error('TEST packaged original Host cleanup remains unknown after cancellation');
   }
   receipt.nativeExit = outcome;
+  observedStage = 'receipt-read';
   const native = JSON.parse(await readFile(nativeReceiptPath, 'utf8'));
+  cleanupObservation.nativeReceiptParsed = true;
+  observedStage = 'receipt-binding';
   assert.equal(native.kind, 'TEST_PACKAGED_NATIVE_V2_HOST');
   assert.equal(native.sourceHead, sourceHead); assert.equal(native.platform, requestedPlatform);
   assert.equal(native.packaged.appAsarSha256, capture.appAsarSha256);
   assert.equal(native.packaged.candidateManifestSha256, capture.manifestSha256);
   assert.equal(native.packaged.harnessSha256, captured.manifest.harnessSha256);
+  cleanupObservation.nativeReceiptBound = true;
+  observedStage = 'native-cleanup';
   assert.equal(native.cleanup, true);
   assert.ok(Array.isArray(native.hosts) && native.hosts.every((host: Record<string, unknown>) =>
     host.exitCode === 0 && host.signalCode === null && host.stdoutValid === true));
   nativeCleanupConfirmed = true;
+  cleanupObservation.nativeCleanupConfirmed = true;
+  observedStage = 'receipt-read';
   receipt.nativeReceiptSha256 = await candidateDigest(nativeReceiptPath);
+  observedStage = 'scenario-checks';
   assert.equal(timedOut, false, 'a cancelled scenario cannot qualify the candidate');
   assert.deepEqual(outcome, { code: 0, signal: null });
   assert.equal(native.status, 'PASS');
@@ -134,7 +175,10 @@ try {
   receipt.sourceCheckoutUnavailable = true;
   receipt.legacyRuntimeUnavailable = true;
   passed = true;
-} catch (error) { originalFailure = error; }
+} catch (error) {
+  originalFailure = error;
+  cleanupObservation.firstFailure = cleanupFailure(observedStage, error);
+}
 finally {
   // Scenario failure may restore only after the retained original Host attests
   // cleanup. UNKNOWN leaves these isolated TEST inputs in place for diagnosis.
@@ -146,23 +190,38 @@ finally {
   }
   if (canRestore && sourceMoved) {
     try { await rename(hiddenSource, repo); sourceMoved = false; }
-    catch (error) { cleanupErrors.push(error); }
+    catch (error) {
+      cleanupErrors.push(error);
+      cleanupObservation.firstRestorationFailure ??= cleanupFailure('source-restore', error);
+    }
   }
   if (canRestore && legacyMoved) {
     try { await rename(retainedLegacy, join(resources, 'runtime')); legacyMoved = false; }
-    catch (error) { cleanupErrors.push(error); }
+    catch (error) {
+      cleanupErrors.push(error);
+      cleanupObservation.firstRestorationFailure ??= cleanupFailure('legacy-restore', error);
+    }
   }
   if (canRestore && bundleMoved && !sourceMoved) {
     try { await rename(relocatedBundle, originalBundle); bundleMoved = false; }
-    catch (error) { cleanupErrors.push(error); }
+    catch (error) {
+      cleanupErrors.push(error);
+      cleanupObservation.firstRestorationFailure ??= cleanupFailure('bundle-restore', error);
+    }
   }
   if (!sourceMoved) {
     try { assertNativeV1Source(repo, sourceHead); }
-    catch (error) { cleanupErrors.push(error); }
+    catch (error) {
+      cleanupErrors.push(error);
+      cleanupObservation.firstRestorationFailure ??= cleanupFailure('source-verify', error);
+    }
   }
   if (passed && cleanupErrors.length === 0 && !legacyMoved && !bundleMoved) {
     try { await rm(root, { recursive: true, force: true }); bundleCopied = false; }
-    catch (error) { cleanupErrors.push(error); }
+    catch (error) {
+      cleanupErrors.push(error);
+      cleanupObservation.firstRestorationFailure ??= cleanupFailure('temporary-cleanup', error);
+    }
   }
   receipt.cleanup = (!nativeStarted || nativeCleanupConfirmed) && cleanupErrors.length === 0 &&
     !sourceMoved && !legacyMoved && !bundleMoved && (!passed || !bundleCopied);
