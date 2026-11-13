@@ -34,6 +34,18 @@ try {
   assert.equal(binary.sha256, '538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7');
   const corepack = await pin(join(packages, 'node_modules/corepack/dist/pnpm.js'));
   if (sourceSelection) {
+    const rootPackage = await realpath(join(packages, 'node_modules/opencode-ai'));
+    const rootMetadata = await readJson(join(rootPackage, 'package.json'));
+    assert.equal(rootMetadata.name, 'opencode-ai');
+    assert.equal(rootMetadata.version, '1.19.4');
+    const bins = rootMetadata.bin;
+    assert.ok(bins && typeof bins === 'object' && !Array.isArray(bins), 'original published bin map');
+    const rootBin = (bins as Record<string, unknown>).opencode;
+    assert.ok(Object.keys(bins).length === 1 && Object.hasOwn(bins, 'opencode') &&
+      rootBin === './bin/opencode.exe', 'exact original published opencode bin');
+    // Unexecuted package-layout evidence; the platform executable remains the original A input.
+    const rootLauncher = await pin(join(rootPackage, rootBin));
+    assert.equal(rootLauncher.path, join(rootPackage, rootBin), 'original bin stays in its canonical package');
     const { parse } = await import('yaml');
     const { loadNativeV1InstallSelector } = await import('../../packages/legacy-agent-host/tests/fixtures/native-opencode-install-selection.ts');
     const lockPin = await pin(join(packages, 'pnpm-lock.yaml'));
@@ -74,7 +86,7 @@ try {
     evidence.v1 = { version: '1.19.4', ...binary, packageDirectory: packages,
       nativeIntegrity, rootIntegrity,
       rootManifest: await pin(join(packages, 'node_modules/opencode-ai/package.json')),
-      rootLauncher: await pin(join(packages, 'node_modules/opencode-ai/bin/opencode')),
+      rootLauncher,
       nativeManifest: await pin(join(packages, 'node_modules/opencode-linux-x64/package.json')) };
     evidence.packageLock = lockPin;
     evidence.corepack = { version: '0.36.0', ...corepack };
