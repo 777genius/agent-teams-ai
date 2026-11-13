@@ -116,6 +116,7 @@ export interface CaptureFileUpdateScenario {
 }
 export async function startCodexModel(
   options: {
+    candidate169?: { selectedModel(): string };
     nativeMessageImage?: boolean;
     mixedGroups?: boolean;
     mixedTaskNotifications?: MixedTaskNoticeReader;
@@ -131,6 +132,7 @@ export async function startCodexModel(
   } = {}
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate), 'one bounded fixture scenario');
+  if (options.candidate169) assert.deepEqual(Object.keys(options), ['candidate169'], 'one explicit candidate scenario');
   if (options.memberName || options.uiGeneratedMessageIds || options.captureHistoryMarkers)
     assert.ok(
       !options.mixedGroups &&
@@ -174,6 +176,7 @@ export async function startCodexModel(
   const issued = new Map<string, RecordValue>();
   const requests: ReturnType<typeof retainUiRequest>[] = [];
   let taskId: string | undefined;
+  let candidateFinalHeld = false;
   const server = createServer((request, response) => {
     void (async () => {
       assert.equal(failures.length, 0, 'oracle seals after its first protocol failure');
@@ -203,6 +206,11 @@ export async function startCodexModel(
       if (!options.mixedTaskNotifications)
         assert.ok(observations.length < (options.peerMessaging ? 48 : 16));
       const body = record(JSON.parse(raw.toString('utf8')) as unknown);
+      if (options.candidate169) {
+        const selected = options.candidate169.selectedModel();
+        assert.ok(selected.length > 0, 'actual catalog selected before inference');
+        assert.equal(body.model, selected, 'actual inference consumes the original native model selection');
+      }
       const input = (Array.isArray(body.input) ? body.input : []).map(record);
       const palette = options.uiGeneratedMessageIds ? uiPalette(body) : undefined;
       if (
@@ -315,7 +323,7 @@ export async function startCodexModel(
                 : input.filter((item) => item.type === 'function_call_output').at(-1)?.output
             );
       if (
-        (options.mixedTaskNotifications || options.uiGeneratedMessageIds) &&
+        (options.mixedTaskNotifications || options.uiGeneratedMessageIds || options.candidate169) &&
         /_TEAM_(ONE|TWO)$/.test(turn)
       )
         assert.ok(
@@ -404,6 +412,13 @@ export async function startCodexModel(
             palette.exec !== undefined,
             turn === 'CODEX_TEAM_ONE' ? 7 : 0
           ) !== 0;
+      if (options.candidate169 &&
+          ((turn === 'CODEX_TEAM_ONE' && step === 4) || (turn === 'CODEX_TEAM_TWO' && step === 1)))
+        toolResultError = commandExit(input.filter(item => item.type === 'function_call_output').at(-1)?.output,
+          false, turn === 'CODEX_TEAM_ONE' ? 7 : 0) !== 0;
+      if (options.candidate169 && turn === 'CODEX_TEAM_TWO')
+        assert.deepEqual(originalCallIds(input), Array.from({ length: 7 }, (_, index) => 'native_CODEX_TEAM_ONE_' + index),
+          'genuine cold thread retains every original ONE tool and output');
       if (mixedGroup && step > 0) {
         const last = input.filter((item) => item.type === 'function_call_output').at(-1);
         assertMixedGroupReceipt(
@@ -457,7 +472,8 @@ export async function startCodexModel(
               ...(incomingMessageId === undefined ? {} : { incomingMessageId }),
             }
           : {}),
-        ...(options.captureHistoryMarkers
+        ...(options.candidate169 ? { requestedModel: String(body.model), toolResultError } : {}),
+        ...(options.captureHistoryMarkers || options.candidate169
           ? {
               priorNativeToolIds: palette
                 ? originalCallIds(input)
@@ -488,6 +504,8 @@ export async function startCodexModel(
           name: 'exec_command',
           input: {
             cmd: "printf 'ONE\\n' >> native-effect.txt; exit 7",
+            ...(options.candidate169 ? { sandbox_permissions: 'require_escalated',
+              justification: 'TEST one-shot original command approval before the ONE effect' } : {}),
             yield_time_ms: 1000,
             max_output_tokens: 500,
           },
@@ -602,6 +620,12 @@ export async function startCodexModel(
         assert.equal(issued.has(String(output.call_id)), false);
         issued.set(String(output.call_id), output);
       }
+      if (options.candidate169 && turn === 'CODEX_TEAM_TWO' && step === 2) {
+        assert.equal(action, undefined);
+        assert.equal(candidateFinalHeld, false, 'only the original final HTTP response is held');
+        candidateFinalHeld = true;
+        return;
+      }
       const id = `TEST-codex-response-${observations.length + notificationObservations.length}`;
       const events = [
         { type: 'response.created', response: { id } },
@@ -637,6 +661,7 @@ export async function startCodexModel(
   return {
     url: `http://127.0.0.1:${address.port}`,
     observations,
+    candidateFinalHeld: () => candidateFinalHeld,
     ...(options.mixedTaskNotifications ? { notificationObservations } : {}),
     probes,
     failures,

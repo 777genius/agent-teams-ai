@@ -1084,6 +1084,113 @@ jobs:
       - name: Require qualified product custody before original Desktop V2 Launch
         if: matrix.opencode_generation == 'v2'
         run: test "$OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED" = 1
+      - name: Qualify public D Codex 0.169.0 before ordinary Codex Desktop Resume
+        if: ${{ matrix.variant == 'native-codex-resume-ui' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          umask 077
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          candidate_stage="$STAGE1_INPUTS/codex-0.169.0"
+          mkdir "$candidate_stage"
+          gh release download rust-v0.169.0 --repo openai/codex --pattern codex-npm-darwin-arm64-0.169.0.tgz --dir "$candidate_stage"
+          archive="$candidate_stage/codex-npm-darwin-arm64-0.169.0.tgz"
+          test "$(stat -f %z "$archive")" = 153831622
+          printf '%s  %s\n' d67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d "$archive" | shasum -a 256 -c -
+          tar -xzf "$archive" -C "$candidate_stage"
+          CODEX_CANDIDATE_STAGE="$candidate_stage" "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { createReadStream } from 'node:fs';
+          import { lstat, readdir, realpath, writeFile } from 'node:fs/promises';
+          import { join } from 'node:path';
+          import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+          const provider = await readNativeProviderArtifact(process.cwd());
+          assert.deepEqual(provider, {
+            path: 'vendor/provider-migration/claude-review-3b39a50b/agent-teams-provider-implementations-0.0.0.tgz',
+            sha256: 'f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2',
+          });
+          await verifyNativeProviderArtifact(process.cwd(), provider);
+          const stage = process.env.CODEX_CANDIDATE_STAGE;
+          assert.equal(await realpath(stage), stage);
+          const files = []; let visited = 0, total = 0;
+          const walk = async path => {
+            assert.ok(++visited <= 1024 && path.split('/').length <= 16);
+            const full = join(stage, path), info = await lstat(full);
+            assert.equal(await realpath(full), full);
+            if (info.isDirectory()) {
+              for (const name of (await readdir(full)).sort()) await walk(path + '/' + name);
+              return;
+            }
+            assert.ok(info.isFile() && info.nlink === 1 && files.length < 512);
+            assert.equal(info.mode & 0o7000, 0);
+            assert.ok(info.size <= 1024 ** 3 && (total += info.size) <= 2 * 1024 ** 3);
+            const digest = createHash('sha256');
+            for await (const bytes of createReadStream(full)) digest.update(bytes);
+            files.push({ path, bytes: info.size, mode: info.mode & 0o777, sha256: digest.digest('hex') });
+          };
+          await walk('package');
+          files.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
+          await writeFile(join(stage, 'input-pins.json'), JSON.stringify({
+            kind: 'TEST_CODEX_CANDIDATE_INPUTS_V1', version: '0.169.0', target: 'aarch64-apple-darwin',
+            archive: { name: 'codex-npm-darwin-arm64-0.169.0.tgz', bytes: 153831622,
+              sha256: 'd67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d' },
+            files,
+          }, null, 2), { mode: 0o600, flag: 'wx' });
+          NODE
+          LEGACY_CODEX_TEAM_GO=1 \
+          LEGACY_CODEX_CANDIDATE_VERSION=0.169.0 \
+          LEGACY_CODEX_CANDIDATE_INPUTS="$candidate_stage/input-pins.json" \
+          LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/claude-review-3b39a50b/agent-teams-provider-implementations-0.0.0.tgz \
+          LEGACY_NATIVE_PROVIDER_SHA256=f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2 \
+          "$selected_node" --test packages/legacy-agent-host/tests/native-codex-team.native.ts 2>&1 | tee "$RUNNER_TEMP/stage1-codex-0169-candidate.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-codex-0169-candidate.log'), 'utf8');
+          assert.ok(Buffer.byteLength(log) <= 8 * 1024 * 1024);
+          const entries = [...log.matchAll(/\{"status":"(?:PASS|INCOMPLETE)","scope":"codex-0\.169\.0-candidate","receipt":"(\/private\/tmp\/TEST-native-codex-team-[^"\s]+\/receipt\.json)"\}/g)];
+          assert.equal(entries.length, 1, 'one original candidate invocation');
+          const path = realpathSync(entries[0][1]), receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(receipt.status, 'PASS'); assert.equal(receipt.cleanup, true);
+          assert.equal(receipt.nativeVersion, 'codex-cli 0.169.0');
+          assert.equal(receipt.scope, 'public-D Codex 0.169.0 candidate Darwin ARM64');
+          assert.equal(receipt.artifacts.provider.sha256, 'f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2');
+          assert.equal(receipt.artifacts.node.version, 'v24.21.0');
+          assert.equal(receipt.artifacts.inputs.archive.sha256, 'd67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d');
+          assert.equal(receipt.catalog.originalChildExited, true);
+          assert.ok(receipt.catalog.page.data.some(row => row.model === receipt.selectedModel && !row.hidden && row.inputModalities.includes('text')));
+          assert.equal(receipt.permission.effectBefore, 'absent'); assert.equal(receipt.permission.allowed, true);
+          assert.equal(receipt.permission.native.kind, 'command'); assert.equal(receipt.checkpointReads, 1);
+          assert.deepEqual(receipt.interruption, { ok: true, value: { requested: true, terminal: 'unconfirmed' } });
+          assert.deepEqual(receipt.closes, [
+            { logicallyClosed: true, cleanup: 'confirmed' }, { logicallyClosed: true, cleanup: 'confirmed' },
+          ]);
+          assert.deepEqual(receipt.native.map(row => row.role), ['metadata', 'C1', 'C2']);
+          const [metadata, c1, c2] = receipt.native;
+          assert.deepEqual(metadata.inputs, []); assert.equal(metadata.wire.approvals.length, 0);
+          assert.equal(c1.inputs.length, 1); assert.equal(c2.inputs.length, 1);
+          assert.equal(c1.wire.approvals.length, 1); assert.equal(c2.wire.approvals.length, 0);
+          assert.deepEqual([c1.terminals[0].outcome, c2.terminals[0].outcome], ['succeeded', 'cancelled']);
+          assert.equal(c1.facts.threadId, c2.facts.threadId);
+          assert.equal(c1.facts.threadId, receipt.checkpoint.nativeThreadId);
+          assert.equal(c1.configSha256, c2.configSha256);
+          assert.equal(c1.facts.sentMethods.filter(method => method === 'thread/start').length, 1);
+          assert.equal(c2.facts.sentMethods.filter(method => method === 'thread/resume').length, 1);
+          assert.equal(c2.facts.sentMethods.includes('thread/start'), false);
+          assert.equal(receipt.modelObservations.length, 11); assert.deepEqual(receipt.modelFailures, []);
+          assert.ok(receipt.modelObservations.every(row => row.requestedModel === receipt.selectedModel));
+          assert.equal(receipt.businessReceipts.length, 2);
+          assert.ok(receipt.native.every(row => row.children.length === 1 &&
+            row.children.every(child => child.exitCode !== null || child.signalCode !== null)));
+          assert.ok(receipt.excluded.includes('Host/source eligibility'));
+          writeFileSync(join(process.env.RUNNER_TEMP, 'stage1-codex-0169-candidate-inputs.json'), JSON.stringify({
+            receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
+            scope: receipt.scope, artifacts: receipt.artifacts,
+          }, null, 2));
+          NODE
       - name: Check existing UI fixtures and run original Desktop controls once
         run: |
           set -euo pipefail
@@ -1690,6 +1797,11 @@ jobs:
             ${{ runner.temp }}/stage1-setup-${{ matrix.variant || matrix.mode }}.log
             ${{ runner.temp }}/stage1-native-restore.log
             ${{ runner.temp }}/stage1-native-restore-inputs.json
+            ${{ runner.temp }}/stage1-codex-0169-candidate.log
+            ${{ runner.temp }}/stage1-codex-0169-candidate-inputs.json
+            /private/tmp/TEST-stage1-inputs-*/codex-0.169.0/input-pins.json
+            /private/tmp/TEST-native-codex-team-*/receipt.json
+            /private/tmp/TEST-native-codex-team-*/candidate-checkpoint.json
             ${{ runner.temp }}/stage1-native-commands.log
             ${{ runner.temp }}/stage1-native-commands-inputs.json
             ${{ runner.temp }}/stage1-desktop-native-commands.log
