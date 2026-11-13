@@ -1589,3 +1589,103 @@ matrix на exact coherent head; уже завершённые и текущие
 **R2:** проверены nested validation/recovery/clone scopes и сохранение прежней
 арифметики; изменение ограничено passive projection. **R3:** независимый
 plan/source review и execution ещё требуются; новые source bytes не созданы.
+
+## Review 25 — исходный model-probe catalog: закрытые passive события до следующего исправления
+
+### Круг 1 — наблюдённый отказ и проверенная граница исходников
+
+Original clean-head `e6191749318dbc8c2a609710cc60a6d2fb86aa65`
+`opencode-v2-model-probe.native.ts` завершился INCOMPLETE: первый
+`management.catalog` в строке 352 вернул `{ok:false,code:"held"}`.
+74.307 s — длительность всего test case, **не** измерение catalog.
+До него фактически прошли три no-tool запроса (global A, project B/high,
+original cancelled probe), отказ неизвестного variant без model input;
+original Host exit=0 и cleanup=true. Receipt blob
+`ae99d0353a1d9d384b9be13dee8def98fe33ed19`,
+SHA256 `a4397d6aa99bf43eda7753975a2d3ecbc279a2672429e849c6d44954df72dbcf`;
+исходный log blob `8c8ade529fec6b4ca236319a43841a33fe715ef1`.
+Это воспроизводит границу actual 9ea Linux failure, но не доказывает
+одинаковую внутреннюю причину. R23 входит в e619 и **не устранил этот
+наблюдаемый отказ**; source equivalence и performance/causality — разные выводы.
+
+Source chain проверен на этих bytes: первый coordinator catalog read
+создаёт original metadata owner, затем `OpenCodeV2ManagementHost.read`
+проверяет current/config/auth/custody, запускает child, читает identity,
+plugins/permissions/MCP, готовит credential и ждёт directory activation.
+Несколько разных отказов дают тот же closed `held`; receipt не содержит
+маршрутов или native stage, потому что этот fixture не подключает уже
+существующие `testImports/onDiagnostic`. Ни repeated custody hashing,
+ни metadata activation, ни timeout пока не установлены как причина.
+Production guards и исходные 30 s catalog / 60 s probe budgets не меняются.
+
+Отдельная точная граница: `selectOpenCodeV2ManagementModel` переносит
+`effort`, management schema допускает string `max`; declared variant
+проверяется `attestOpenCodeV2ModelSelection` только **после**
+`server.start` и credential preparation. Поэтому отсутствие четвёртого
+model request не доказывает отсутствие четвёртого child. Существующий
+`nativeProcessCount:3` считает census только трёх inference cases.
+Исходный flow допускает 3 probe children + 1 refused-variant child +
+1 metadata child. Это source-derived предел пяти, а не утверждение,
+что все пять уже наблюдались в утраченном stderr.
+
+### Круг 2 — минимальная диагностика тех же originals
+
+1. В existing model-probe fixture подключить тот же
+   `fixtures/native-opencode-team/passive-diagnostics.ts`, что уже используется
+   original embedded Session test: один receipt collector, явный
+   `--import` через `startHost.testImports`, `onDiagnostic` с номером
+   исходной Host incarnation. Первый и уже существующий cold Host сохраняют
+   прежний start/close flow. CPU sampling не включать.
+2. В observer и receipt decoder заменить только child ordinal bound 4 на 5,
+   по проверенному выше actual scenario source. Сохраняются 256 events плюс
+   original trace-limit marker, 4096 request bound, 512-char line, 64 KiB
+   pending/child-output bounds, exact EmbeddedChild entry filter и прежние
+   closed event/route/stage/method/status/code fields. Ни provider inputs,
+   ни child allocation caps production этим не меняются. Если trace-limit
+   достигнут, это частичная диагностика; отсутствие позднего события не
+   выдаётся за отсутствие child/effect или доказанную причину.
+3. Добавить только `passiveNativeDiagnostics` в existing success/failure
+   receipt **после прежнего cleanup**. Сохраняются original thrown error,
+   status, cleanup, requests, nativeProcessCount и hosts meanings. Не хранить
+   raw stderr, native IDs, URLs, headers, body, paths, keys, command text
+   либо CPU profile; transient raw chunks проходят прежнюю closed projection.
+   Нет новых RPC, endpoint probes, proc reads/census, процессов, model inputs,
+   повторных effects, timers, wait loops, workflow/job/runner или sampler.
+4. Диагностика различает original child spawn/ready/failure stage/exit и
+   последовательность уже состоявшихся HTTP routes/responses/errors.
+   Даже успешный последний response не доказывает конкретный последующий
+   guard failure: следующий product plan требует фактических новых closed
+   observations, а не предположения о задержке.
+
+Source base `6405e93f4a8db67ceab835ddcee23ed6a829b7fe`; **ровно три existing
+TEST paths**:
+- `packages/legacy-agent-host/tests/opencode-v2-model-probe.native.ts`,
+  preimage `fa3c35f86c975e7cf7125503456ae1eb6ae824a1`;
+- `packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts`,
+  preimage `2c186e5c4e2035bf2675ed16015feb0a4019e4e1`;
+- `packages/legacy-agent-host/tests/native-host-close.test.ts`,
+  preimage `19a5ae5f38779fb628ab552b0f983b9cc401733e`.
+
+### Круг 3 — original assertions и проверка projection
+
+В том же existing failed-original-child/diagnostic case добавить небольшой
+synthetic decoder input: child 5 сохраняется, выход за finite bound не
+получает новый ordinal, split chunks собираются, неизвестные raw поля/
+native text не попадают в output. Это decoder/privacy assertion, не fake
+пятый native child и не новая suite; настоящий finite Node child и все
+четыре existing cleanup/CPU cases сохраняются. R24 broad/detail totals,
+validation/raw discard и все CPU bytes остаются неизменными.
+
+Перед source — root publication и independent peer. После source — exact
+diff/readback, existing four cases, Host test types, targeted lint/cap.
+Native выполнение — только original unchanged scenario на следующем
+coherent qualified head под управлением root/штатного CI; не новый
+benchmark, повтор provider flow ради числа тестов или rerun текущего CI.
+Следующая receipt должна честно сохранять исходный failure даже при
+missing/truncated diagnostic. Ни catalog PASS, ни ускорение, ни полная
+platform/desktop qualification этим append не объявляются.
+
+**R1:** проверены original receipt/hash, fixture flow и неоднозначность held.
+**R2:** проверены post-spawn variant attestation и необходимый finite5
+observer bound; остальные budgets/authority не меняются. **R3:** peer/source
+review и новое исполнение ещё требуются; production и TEST source не изменены.
