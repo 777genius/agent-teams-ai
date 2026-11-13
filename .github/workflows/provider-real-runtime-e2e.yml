@@ -101,6 +101,17 @@ jobs:
         run: node scripts/e2e/provider-real-runtime-e2e.ts
       - name: Install desktop Electron test dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      # Keep the Windows desktop preflight identical to the passing 3-OS
+      # native Teams Create harness. Do not make CDP readiness wait for a
+      # cold Electron install or terminal-platform runtime publication.
+      - name: Ensure Electron installed before Windows UI startup
+        if: runner.os == 'Windows'
+        run: node ./scripts/ensure-electron-install.cjs --strict
+      - name: Stage pinned terminal platform runtime on Windows
+        if: runner.os == 'Windows'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node ./scripts/ensure-terminal-platform-runtime.mjs
       - name: Verify isolated desktop harness guardrails
         run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs
       - name: Verify real pinned runtime through Linux Electron IPC and UI
