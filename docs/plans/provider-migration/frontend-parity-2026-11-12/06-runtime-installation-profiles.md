@@ -1025,3 +1025,83 @@ malformed original registration/pending state и seed evidence как hold;
 focused existing Host recovery/authority cases на exact исправленных bytes.
 Среда сейчас недоступна: plan/source review не означает execution PASS;
 исходный CI FAIL сохранён, таймауты и assertions не ослабляются.
+
+### §19 presence refinement: pending product projection не является native history
+
+Root review candidate `66226a77a60fdf122d3f6ef19ddaa0bcda80eaca` выявил две
+лишние positive-причины. `TeamRosterTransitions.ts:235–259` сохраняет
+`rosterProjection` при любом changed saved roster/settings и затем применяет
+только original config projection. Pure product Edit без Runtime может
+законно оставить эту промежуточную запись. Она сама не включает Coordinator:
+existing product recovery и его actor/error проверки остаются прежними.
+
+`TeamLifecycleTransitions.ts:51–61` ставит `cleanupPending` для любого
+trash, даже когда original `targets` и `runtimeBindings` пусты.
+`createHostTeamLifecycleComposition.ts:91–94` уже различает эти случаи:
+без Runtime original cleanup допускается только при двух пустых массивах.
+Сам pending marker не является evidence native allocation.
+
+Поэтому presence reader использует original lifecycle receipt по единственному
+`cleanupCommandId` через existing `teamCommandPath` и
+`validateTeamLifecycleReceipt`; проверяет exact command/Team binding,
+trash operation и completed business decision. Nonempty original targets
+или runtimeBindings сохраняют необходимость strict Runtime path; missing,
+malformed, foreign или незавершённая decision остаётся hold. Никакого
+lookup/replay/settleCleanup, обновления grants/marker или нового journal нет.
+Пустые validated arrays не являются новым release proof: lifecycle owner
+сохраняет исходный pending receipt и прежние cleanup правила.
+
+Member/name grammar и пределы256/1024 совпадают с bootstrap definition,
+`safeSegment` и `TeamRosterTransitions.validate`; lifecycle поля ровно
+`deletedAt?`, `cleanupCommandId`, `cleanupPending` из original contract.
+`runtimeNeverLaunched` semantics не меняются, old absent marker не
+превращается в новое global-startup ограничение. Existing focused cases
+сохраняют grants:[], revoked public reads и unknown custody; добавить
+проверку product-only pending projection/empty cleanup без native effects,
+с original bytes и отказом при повреждённом retained receipt. Новых suites,
+timeouts или pass-claims нет; execution ждёт восстановления среды.
+
+### §20. Actual Host suite: namespace admission and the captured-source test seam
+
+**Round1 — actual d35 evidence.** Job131824838303 completed the existing Host
+build/types and then failed two of its Host tests. The cross-Team binding case
+constructs a partial Coordinator with Object.create; it has no captures owner,
+so the new source-availability guard throws TypeError before the intended
+binding checks. Separately, the orphan-Task namespace case observed newly
+created management/runtime-source directories after rejected Host admission.
+The latter is a production initialization regression; preserve the original
+no-persistent-additions expectation and the transient-lease release check.
+
+**Round2 — narrow correction before allocation.**
+`createHostProviderManagementComposition` currently constructs
+`RuntimeSourceIndex` unconditionally. Its two store constructors create the
+fixed `runtime-sources` and `management-commands` namespaces even when the
+profile has no management sources or retained history. Construct this owner
+only when current management profiles exist or either original fixed namespace
+exists under the captured profile writer. Check both namespace paths; only
+ENOENT proves absence. Present unsafe or corrupt state and other I/O failures
+still reach the existing strict validation/hold path. No directory scan,
+fallback source, cleanup deletion, lazy generic store or Host initialization
+reordering is introduced.
+
+With no current management profiles and neither namespace, use the existing
+empty retained-profile/command result and undefined sources. Continue deriving
+management profiles from current runtime members/templates exactly as before.
+An existing source index, even after removal of the current seed or command
+namespace, must still be validated; retained publications, orphan receipts and
+unknown cleanup debt are never ignored. Existing source restore/close owners
+and current-source authority stay unchanged.
+
+In the existing cross-Team test only, provide its missing controlled captures
+dependency. It validates the exact Team and can refuse a retained unavailable
+source. Preserve all property-order, stale-generation, immutable-copy and
+revoked-member assertions; add one source-refusal assertion proving that this
+guard runs before reading a session. Do not weaken the production guard or add
+an optional no-op path.
+
+**Round3 — acceptance.** Run the original namespace/cross-Team Host files,
+existing runtime-source history/restore cases and Main publication cases,
+then the full current Host gate on the corrected exact source. No new suite,
+native input, runner, budget or relaxed assertion. Source review is separate
+from execution; the original d35 failures remain failures until these checks
+succeed.
