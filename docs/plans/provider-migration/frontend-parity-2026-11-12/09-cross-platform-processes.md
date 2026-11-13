@@ -544,6 +544,11 @@ original-process signal/exit: [pidfd_open](https://man7.org/linux/man-pages/man2
 
 ## 22. Узкий warm owner cut: implementation и реальные локальные receipts
 
+**Уточнение доставки, 13 ноября:** перечисленные ниже локальные результаты относятся к первоначальному неопубликованному
+warm cut. После потери локальной execution-среды его полный patch недоступен; опубликованный child `a920ceca` ещё не содержит
+эту реализацию. Восстановление по §20 выполняется как новый source cut от текущего Git, с отдельными review/compile/native
+результатами. Совпадение с прежним patch, binarySHA и PASS не предполагается; воспроизводимые ABI actors сохранены отдельно.
+
 - Один native source теперь отдаёт actual pidfd/pidfs capabilities. Durable v3 остаётся предпочтительным; без pidfs выбирается
   private v4 `owner-pidfd-v1`. Оpaque N-API objects удерживают original descriptors в существующем Host owner; cold Host
   не принимает serialized capture key. Нет PID-only сигнала, повторного adoption, daemon или второго receipt journal.
@@ -660,6 +665,52 @@ Automatic cold settlement после потери владельца остаё�
 terminal outcome в существующем owner/lifetime, без второго journal, named-Job adoption или PID-only fallback.
 Просто дублировать Job handle в Main нельзя: дополнительный handle меняет kill-on-last-close lifetime.
 До этого gate Windows cold recovery и M19 целиком **не считаются выполненными**.
+
+### Уточнение cold scope после независимого source review
+
+- В baseline [processStore](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/agent-teams-controller/src/internal/processStore.js)
+  читает прежние rows из `processes.json`; list проверяет PID. UI Stop проходит через
+  [TeamDataService.killProcess](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/TeamDataService.ts)
+  в [killProcessByPid](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/utils/processKill.ts),
+  где Windows вызывает `taskkill /T /F /PID` без durable process incarnation.
+  [ProcessesSection](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/ProcessesSection.tsx)
+  показывает running/Stop при `isTeamAlive && !stoppedAt`. История, состояние и Stop сохраняются; отсутствие в legacy
+  надёжной custody не разрешает объявить живые ранее поддержанные services вечной read-only историей.
+- [Stage1 §8](../stage-1-contracts.md#фоновые-services-отличаются-от-teammate-runtime) и
+  [controlled cold acceptance](../m19-controlled-cold-ui-acceptance.md) отдельно требуют положительный путь
+  register/list → Host restart → UI Stop **живого original**. Already-absent history не заменяет этот proof.
+  P09 §4.4 допускает фактическую Windows kill-on-close остановку при Host crash; эта отдельная история доказывает
+  absence/readback, а не cold survival. Ни один результат нельзя распространить на весь M19 без его собственных gates.
+- В [current CapturedHostClient](https://github.com/777genius/agent-teams-ai/blob/a920ceca8a199ee21f8d7780e003bd23a387b590/src/features/agent-backend/main/infrastructure/CapturedHostClient.ts)
+  Main удерживает исходный ChildProcess, но shutdown всегда возвращает `providerCustody:'unresolved'`.
+  [BackendOwnerRouter](https://github.com/777genius/agent-teams-ai/blob/a920ceca8a199ee21f8d7780e003bd23a387b590/src/features/agent-backend/main/application/BackendOwnerRouter.ts)
+  запрещает duplicate owner/storageRoot, seals закрытого owner и не умеет автоматически заменить его client.
+  Новый router restart, второй supervisor или тестовый обход sealed owner ради cold PASS не добавляются.
+
+**Отклонённое доказательство:** named Job + `OpenJobObject/ERROR_FILE_NOT_FOUND` после смерти broker.
+[Microsoft object lifetime](https://learn.microsoft.com/en-us/windows-hardware/drivers/kernel/life-cycle-of-an-object)
+позволяет убрать имя temporary kernel object при handle count0 раньше исчезновения оставшихся pointer references.
+Следовательно, исчезнувшее имя не доказывает отсутствия original children; PID/FILETIME/RootExit этого не исправляют.
+
+**Отдельный возможный cleanup cut, пока не product решение cold:** existing Main client может запускать Node Host
+как atomic root внешнего Job через те же `createWindowsOwnedLaunchPort/OwnedProcessFacade`. Original pending capability
+удерживается до await; authority устанавливается внутри `prepared.resume` до stdin. Provider brokers и их Jobs остаются
+вложенными, их HANDLE не дублируется в Main, kill-on-last-close lifetime provider Job не меняется.
+Завершение допускается только по original Host-root exit + fresh outer Job ActiveProcesses0 + drain/release.
+Это общий cleanup старого Host epoch после его завершения, никогда не Stop отдельного service при живом Host.
+
+Такой cut сам по себе не передаёт native authority новому Main/Host, не завершает process command receipt и не разрешает
+новый live UI Stop. Если позже он понадобится для recovery, private Host epoch должен быть записан в исходный Windows
+capture до effect; original opaque terminal proof связывается с полным capture и тем же existing command owner.
+Main не пишет Host journal напрямую; PID, renderer payload, сериализованный `confirmed:true` или новая generation
+не заменяют proof. Его перенос/settlement остаётся отдельным review gate; новый receipt journal не создаётся.
+При полном Main crash исходная capability теряется: outer Job containment нельзя объявить durable cold proof.
+
+Следующий source шаг остаётся ограниченным §24.2–4: после actual vendor PASS — warm service capture/query/scoped Stop
+в текущем broker/Host owner и безопасная async граница existing Team fence. Outer Host cleanup можно принять независимо
+только с native nested-Job/Host-death/foreign-survival evidence; он не предпосылка warm регистрации и не закрывает cold gate.
+**R10 finding/fix:** исключены named-Job absence и автоматический router restart; baseline, positive cold Stop,
+Windows crash→absence и outer cleanup теперь имеют разные доказуемые границы без сокращения прежних возможностей.
 
 **R9 findings:** выявлены V2 bypass, sync fence/async broker boundary и отсутствие cold subtree proof. Все три внесены в план;
 product source не менялся. Оценка после TEST reuse:600–950 production LOC,350–600 native/E2E LOC; cold lifetime решение сверх
