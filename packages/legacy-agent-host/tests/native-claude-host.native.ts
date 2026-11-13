@@ -381,7 +381,12 @@ test('standalone Host applies selected model/effort to actual native requests an
       }
       assert.equal(terminal, true, 'bounded native input reaches durable terminal');
       assert.deepEqual(await current.rpc('team.execute', command(label)), receipt);
-      assert.equal((await current.rpc('runtime.dispatch', envelope('TEST-resume', { memberId: 'alice-id' }))).ok, true);
+      const dispatched = await current.rpc('runtime.dispatch', envelope('TEST-resume', {
+        memberId: 'alice-id', expectedGeneration: finalRuntime.generation,
+      }));
+      assert.equal(dispatched.ok, true, JSON.stringify({
+        ok: dispatched.ok, code: dispatched.code, outcome: dispatched.outcome,
+      }));
 
       if (donor && label === 'ONE') {
         const settledDeadline = deadline; // The original ONE input budget also bounds this read-only settlement.
@@ -457,7 +462,9 @@ test('standalone Host applies selected model/effort to actual native requests an
         item.priorNativeToolIds?.includes('native_NATIVE_TEAM_ONE_0')), 'Actual cold old-owner TWO contains the original native history');
       await donorCheckpoint.verify(); oldRestoredHistory = true;
     }
-    const stopped = await current.rpc('runtime.stop', envelope('TEST-stop', { memberId: 'alice-id' }));
+    const stopped = await current.rpc('runtime.stop', envelope('TEST-stop', {
+      memberId: 'alice-id', expectedGeneration: finalRuntime.generation,
+    }));
     assert.equal(stopped.ok, true); finalRuntime = record(stopped.value);
     assert.equal(finalRuntime.phase, 'closed'); assert.equal(finalRuntime.custody, 'released');
     await current.close(); hosts.push(current.facts()); current = undefined;
@@ -475,7 +482,9 @@ test('standalone Host applies selected model/effort to actual native requests an
     assert.equal((record(recovered.value).inputs as unknown[]).length, donor ? 1 : 2);
     if (donor) assert.equal((sourceRuntime!.inputs as unknown[]).length, 1);
     assert.deepEqual(await pdf.readNativeMessagePdf(current, envelope, receipts[1]!), pdfProof);
-    assert.equal((await current.rpc('runtime.dispatch', envelope('TEST-recover-outbox', { memberId: 'alice-id' }))).ok, true);
+    assert.equal((await current.rpc('runtime.dispatch', envelope('TEST-recover-outbox', {
+      memberId: 'alice-id', expectedGeneration: record(recovered.value).generation,
+    }))).ok, true);
     await current.close(); hosts.push(current.facts()); current = undefined;
     assert.equal(model.observations.length, requestsBeforeRestart, 'recovered receipts/outbox never launch or resubmit native inputs');
     assert.equal(await readFile(join(root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\nTWO\n');

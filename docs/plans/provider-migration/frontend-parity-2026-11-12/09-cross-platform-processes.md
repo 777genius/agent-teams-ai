@@ -2331,3 +2331,18 @@ an unstaged TEST helper does not replace that proof. No new test framework, runn
 **R1:** the late-frame loss, explicit capability hash projection and whole-release boundary are
 confirmed in exact `dfcea017` source. This is a design refinement only; source/compile/native
 acceptance of this next layer is pending. B1/native-selector source reviews remain separate.
+
+### Actual798 native build follow-up — product callback parameter
+
+Run `43404243605`, Windows x64 job `131814506262`, failed in step9 before native
+scenarios. MSVC reports C4459/C2220 at `broker.cpp:45`: the new product-only
+`service_runtime::run` parameter `root` hides the original broker's global
+`root` at line26. Keep warnings-as-errors and every native guard. Rename only
+that parameter to `originalRoot` and its one forwarded argument; the same
+original HANDLE, shared debug loop, target selection and budgets remain unchanged.
+
+R1: exact compiler log and source agree. R2: independent two-line source review.
+R3: existing C++ build and original native gates on the next necessary source
+head; a Linux TypeScript/test pass cannot substitute for MSVC. Current ARM/Linux
+jobs continue normally; do not cancel or rerun them for this correction. ABI job
+`131814506670` already passed, but it is not Windows product qualification.

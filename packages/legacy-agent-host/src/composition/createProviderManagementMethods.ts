@@ -63,6 +63,9 @@ export function createProviderManagementMethods(
         async handle(raw): Promise<JsonValue> {
           try {
             if (isSealed()) throw new OpenCodeManagementError('unavailable');
+            // Pure original readbacks already project pending cold operations as held.
+            if (operation !== 'probe.read' && operation !== 'oauth.read')
+              management.assertTargetAvailable(raw);
             return { ok: true, value: JSON.parse(JSON.stringify(await action(raw))) as JsonValue };
           } catch (error) {
             return {

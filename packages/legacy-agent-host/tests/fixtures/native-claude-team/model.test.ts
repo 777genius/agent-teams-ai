@@ -91,6 +91,9 @@ test('current legacy source has one text turn and closes before ordinary Host pr
     reply: 'TEST_SOURCE_REPLY',
   };
   const model = await startNativeTeamModel({ allowModelProbes: true, currentLegacySource: source });
+  const catalog = () => fetch(model.url + '/v1/models', {
+    headers: { 'x-api-key': 'TEST-current-legacy-only-key' },
+  });
   const post = (content: string, tools: unknown[] = []) =>
     fetch(model.url + '/v1/messages', {
       method: 'POST',
@@ -105,6 +108,11 @@ test('current legacy source has one text turn and closes before ordinary Host pr
     'You are "team-lead", the team lead.\n- Your team is "test-legacy".\n\nUser instructions:\n' +
     source.prompt;
   try {
+    const listed = await catalog();
+    assert.equal(listed.status, 200);
+    const listing = await listed.json() as { data: { id: string }[]; has_more: boolean };
+    assert.deepEqual(listing.data.map(row => row.id), ['claude-sonnet-4-6', 'claude-opus-4-6']);
+    assert.equal(listing.has_more, false);
     assert.equal((await post('Output only the single word PONG.', [{ name: 'Bash' }])).status, 200);
     const response = await post(prompt, [{ name: 'Bash' }]);
     assert.equal(response.status, 200);
@@ -116,6 +124,7 @@ test('current legacy source has one text turn and closes before ordinary Host pr
     const frozen = await model.finishCurrentLegacySource!();
     assert.equal(frozen.turns.length, 1);
     assert.equal(frozen.probes.length, 1);
+    assert.equal(frozen.catalogRequests, 1);
     assert.equal(
       (await post('Reply only OK. Do not use tools, access files or run commands.')).status,
       200
@@ -127,6 +136,7 @@ test('current legacy source has one text turn and closes before ordinary Host pr
       400,
       'the old source cannot submit after the consumer boundary'
     );
+    assert.equal((await catalog()).status, 400, 'closed/failed source never reopens for a catalog read');
     assert.deepEqual(model.currentLegacyTurns, frozen.turns);
   } finally {
     await model.close();

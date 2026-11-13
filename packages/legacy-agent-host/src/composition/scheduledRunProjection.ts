@@ -40,8 +40,8 @@ export function projectScheduledRun(capture: ScheduledRunCapture, record: Runtim
     lines.push(line); bytes += Buffer.byteLength(line) + 1;
   }
   const text = activity.latest.text.flatMap(event => typeof event.data.text === 'string' ? [event.data.text] : []).join('\n');
-  const lastTime = activity.events.at(-1)?.observedAt;
-  const durationMs = lastTime ? Math.max(0, Date.parse(lastTime) - Date.parse(capture.capturedAt)) : 0;
+  const elapsed = Date.parse(activity.lastObservedAt ?? '') - Date.parse(capture.capturedAt);
+  const durationKnown = Number.isFinite(elapsed), durationMs = durationKnown ? Math.max(0, elapsed) : 0;
   const usage = activity.latest.usage.find(event => event.operationRef === terminal?.operationRef)?.data;
   if (terminal?.phase === 'terminal') lines.push(JSON.stringify({ type: 'result',
     subtype: terminal.terminal === 'succeeded' ? 'success' : 'error_during_execution',
@@ -54,7 +54,7 @@ export function projectScheduledRun(capture: ScheduledRunCapture, record: Runtim
   return { runId: capture.input.runId, phase, cleanup: 'confirmed', result: {
     exitCode: terminal?.phase === 'terminal' ? terminal.terminal === 'succeeded' ? 0 : 1 : null,
     stdout: lines.join('\n'),
-    stderr: activity.gap || truncated ? 'Some retained runtime log entries are unavailable.' : '',
+    stderr: activity.gap || truncated || !durationKnown ? 'Some retained runtime log entries are unavailable.' : '',
     summary: (text || (terminal?.phase === 'terminal' ? `Scheduled run ${terminal.terminal}` :
       'Scheduled run stopped without a confirmed model result')).slice(0, 500),
     durationMs,

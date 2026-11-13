@@ -254,6 +254,71 @@ test('publication pins new captures while seed and retained captures replay unch
   assert.throws(() => f.restart(), { code: 'held' }, 'missing published index cannot fall back to the seed after restart');
 });
 
+test('cold source history isolates an unavailable seed without falling through its selected project scope', async (t) => {
+  const f = leased(t);
+  const originalSeed = structuredClone(f.profile.management![0]!);
+  const original = await f.index.publish({
+    grant: f.grant, commandId: 'TEST-retained-A',
+    expectedRevision: f.index.current({ grant: f.grant }).revision, candidate: f.candidate,
+  }, () => {});
+  assert.equal(original.phase, 'published');
+  const originalReceipt = JSON.stringify(new FileManagementCommandStore(f.root).read(original.commandId));
+  const originalRecord = JSON.parse(readFileSync(join(f.root, 'runtime-sources', 'index.json'), 'utf8')).records[0];
+  const other = structuredClone(f.profile.teams[0]!);
+  other.binding = { ...other.binding, teamId: 'TEST-valid-B', teamName: 'test-valid-source-b' };
+  other.scope = { ...other.scope, teamId: other.binding.teamId };
+  f.profile.teams.push(other);
+  const otherSeed = { ...originalSeed, profileId: 'TEST-management-B', configRevision: 'TEST-config-B' };
+  f.profile.management!.push(otherSeed);
+  const globalGrant = { ...f.grant, targetId: 'e'.repeat(64), projectPath: null,
+    profileId: otherSeed.profileId, configRevision: otherSeed.configRevision };
+  const global = await f.index.publish({
+    grant: globalGrant, commandId: 'TEST-valid-global',
+    expectedRevision: f.index.current({ grant: globalGrant }).revision, candidate: f.candidate,
+  }, () => {});
+  assert.equal(global.phase, 'published');
+  f.profile.management = [otherSeed];
+  const retainedBytes = readFileSync(join(f.root, 'runtime-sources', 'index.json'), 'utf8');
+  f.restart();
+  assert.deepEqual(f.index.current({ grant: globalGrant }), global.selection);
+  const state = f.index.retainedManagementState();
+  assert.deepEqual(state.unavailable, [{
+    profileId: original.selection!.profileId, configRevision: original.selection!.configRevision,
+  }]);
+  assert.equal(state.profiles.length, 1);
+  assert.throws(() => f.index.lookup({ grant: f.grant, commandId: original.commandId }), { code: 'conflict' });
+  assert.throws(() => f.index.currentForRecipe(f.team.definition.scope, f.root,
+    f.profile.runtime!.members[0]!), { code: 'held' }, 'selected project A cannot fall through to valid global B');
+  assert.throws(() => captureRuntimeSource(f.profile, f.team, 'TEST-no-fallback', 'TEST-roster', f.roster,
+    { deferMcp: true, sources: f.index }), { code: 'held' });
+  assert.equal(readFileSync(join(f.root, 'runtime-sources', 'index.json'), 'utf8'), retainedBytes);
+
+  const grantB = { ...f.grant, targetId: 'f'.repeat(64), profileId: otherSeed.profileId,
+    configRevision: otherSeed.configRevision, teamScopes: [{
+      teamId: other.scope.teamId, projectId: other.scope.projectId, workspaceId: other.scope.workspaceId,
+    }] };
+  const valid = await f.index.publish({
+    grant: grantB, commandId: 'TEST-valid-B-publication',
+    expectedRevision: f.index.current({ grant: grantB }).revision, candidate: f.candidate,
+  }, () => {});
+  assert.equal(valid.phase, 'published');
+  assert.deepEqual(f.index.lookup({ grant: grantB, commandId: valid.commandId }), valid);
+  assert.deepEqual(JSON.parse(readFileSync(join(f.root, 'runtime-sources', 'index.json'), 'utf8')).records[0],
+    originalRecord);
+  assert.equal(JSON.stringify(new FileManagementCommandStore(f.root).read(original.commandId)), originalReceipt);
+  f.profile.management!.unshift(originalSeed);
+  f.restart();
+  assert.deepEqual(f.index.lookup({ grant: f.grant, commandId: original.commandId }), original);
+  assert.deepEqual(f.index.resolveRecipe({ sourceId: f.grant.targetId, revision: original.selection!.revision },
+    f.team.definition.scope, f.root, f.profile.runtime!.members[0]!).executable, f.replacement);
+
+  f.profile.management = [otherSeed];
+  const corrupt = JSON.parse(readFileSync(join(f.root, 'runtime-sources', 'index.json'), 'utf8'));
+  corrupt.records[0].previousRevision = '0'.repeat(64);
+  writeFileSync(join(f.root, 'runtime-sources', 'index.json'), JSON.stringify(corrupt));
+  assert.throws(() => f.restart(), { code: 'held' }, 'unavailable seed never hides corrupt original history');
+});
+
 test('member project source is captured before preparation and retained through cold compile', async (t) => {
   const f = leased(t), workerCwd = join(f.root, 'TEST-worker-project');
   mkdirSync(workerCwd);
@@ -476,4 +541,15 @@ test('private Host RPC publishes and restores sources and admits existing Skills
     await rpc('runtime.source.lookup', { grant, commandId: 'TEST-private-publish' }),
     published
   );
+  const originalIndex = readFileSync(join(f.root, 'runtime-sources', 'index.json'), 'utf8');
+  assert.equal((await host.dispose()).cleanup, 'completed');
+  delete profile.management;
+  start();
+  const retainedHandshake = await rpc<{ capabilities: string[] }>('host.handshake', { protocolVersion: 1 });
+  assert.ok(retainedHandshake.capabilities.includes('runtime.sources'), 'original history remains addressable without a seed');
+  assert.deepEqual(await rpc('management.skills.capture', {
+    profileId: selected.profileId, configRevision: selected.configRevision, scope: 'project', rootKind: 'claude',
+  }), { ok: false, code: 'held' }, 'unavailable original target cannot look like a fresh missing profile');
+  assert.equal((await host.dispose()).cleanup, 'completed', 'settled original source owes no native cleanup');
+  assert.equal(readFileSync(join(f.root, 'runtime-sources', 'index.json'), 'utf8'), originalIndex);
 });

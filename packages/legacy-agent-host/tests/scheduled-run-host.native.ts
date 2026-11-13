@@ -220,8 +220,11 @@ stream_max_retries = 0
       if (applicationReplyLoss)
         assert.deepEqual(await originalScheduledInput(root, first.runId), applicationReplyLoss.original);
       assert.equal(completed.result?.exitCode, 0); assert.match(completed.result!.stdout, /TEST_SCHEDULE_DONE/);
-      const blocks = completed.result!.stdout.split('\n').flatMap(line => {
-        const row = object(JSON.parse(line));
+      assert.ok(Number.isFinite(completed.result!.durationMs) && completed.result!.durationMs > 0);
+      const logRows = completed.result!.stdout.split('\n').map(line => object(JSON.parse(line)));
+      assert.deepEqual(logRows.filter(row => row.type === 'result').map(row => row.duration_ms),
+        [completed.result!.durationMs]);
+      const blocks = logRows.flatMap(row => {
         if (row.message === undefined) return [];
         const content = object(row.message).content;
         assert.ok(Array.isArray(content)); return content.map(object);

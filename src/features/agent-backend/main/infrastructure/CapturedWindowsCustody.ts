@@ -79,7 +79,7 @@ export function captureMainWindowsCustody(
       if ((await realpath(spec.cwd)) !== spec.cwd || !(await stat(spec.cwd)).isDirectory())
         unavailable();
       await verifyFile(broker.path, broker.sha256, true);
-      verifyStagedBroker(broker.path, broker.arch);
+      verifyStagedBroker(broker.path, broker.arch, broker.capability ?? 'whole-job-v1');
       await verifyFile(spec.executable, executableSha256, false);
       readCapturedProfile(path, sha256);
     },

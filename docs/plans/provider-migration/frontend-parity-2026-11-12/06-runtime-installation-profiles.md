@@ -688,3 +688,267 @@ producer не объявляется прошедшим из-за этой ре�
 между прежними local checks и новым candidate. §18 original authority/receipt
 representations неизменны; source Index774, helper50 и Main feature778 lines.
 Новые owners/journals, unit suites, timeout increases и skip не добавлены.
+
+## 19. Старый source не должен останавливать весь Host (review1186/12)
+
+Основание — актуальный source `3db75ad8`, а не предположение по review.
+В `RuntimeSourceIndex.ts:719–774` каждый retained record проходит `seed()`
+против **нынешнего** private profile; constructor вызывает этот read, а
+`retainedManagementProfiles()` немедленно строит все старые profiles.
+Изменение owner revision, удалённый Team scope или отсутствующий management seed
+одного record поэтому препятствуют загрузке всех остальных sources.
+`RuntimeTeamCaptures.restore():56–62,312–328` затем eager-compile всех captures,
+а `RuntimeTeamCoordinator.ts:111–123,270–309` успевает установить seed entries
+до этого восстановления. Исправление одного constructor недостаточно.
+
+Прежний пользовательский смысл [M1–M3, S3–S7] сохраняется: выбор следующего
+runtime не переназначает старый запуск; повреждение/недоступность его исходного
+профиля не должны менять выбор другой команды. Этот срез не вводит bootstrap
+migration, восстановление private env по digest или adoption старого процесса.
+Исходный review thread: `PRRT_kwDORVTEtM622S1n`.
+§17 recovery и §18 original grant representation остаются обязательными.
+
+### Круг1 — целостность истории отдельно от права её исполнить
+
+1. В existing source owner отделить полный structural history read от проверки
+   current eligibility конкретного source. Ни records, ни current pointers не
+   фильтровать из сохранённого index и не перезаписывать. Существующие file bounds,
+   no-follow/identity, schema/digest, unique identities, revision formula,
+   target chain и pointer equality проверяются **для всех** records, как прежде.
+   Corrupt/missing journal, несогласованные fingerprint/command/source/resource/
+   profile/config/provider, broken chain и чужой snapshot по-прежнему held,
+   а не «устаревший seed».
+2. Связать original receipt с record и его original grant без подстановки нового
+   private seed. Первый previousRevision должен равняться original
+   `selectionDigest`; следующие records сохраняют ту же raw grant representation
+   и тот же исходный selectionDigest. Original publicationJson, когда он имеется,
+   проходит прежние payload/fingerprint/revision проверки против самого receipt.
+   Уже поддержанные records без snapshot не переписывать и не отвергать только
+   из-за отсутствия нового поля; unfinished recovery без нужного snapshot
+   остаётся held. Recorded selectionDigest в этом чтении — **ссылка истории**,
+   не доказательство существования/пригодности private recipe.
+3. Перед возвратом runnable management profile, current source, probe, новым
+   capture, publication/recovery или resolve original reference отдельно выполнить
+   прежние current owner/scope/seed checks, recompute exact
+   `runtimeDigest({ grant, seed })`, qualification и native identity checks.
+   Только конкретное отсутствие/несовпадение current seed/authority после
+   structural validation получает private typed unavailable outcome.
+   Arbitrary exception, I/O, malformed candidate или повреждённый receipt
+   таким outcome не становятся. Никакого «если нет old seed, взять новый».
+4. `retainedManagementProfiles()` допускает в existing management registry только
+   eligible exact profiles; history всё равно остаётся полностью проверенной.
+   Original pending/unknown management commands и resource fences сохраняются
+   под исходными IDs, включая случаи, когда соответствующий profile недоступен.
+   Не запускать новое исполнение/cancel по другому profile и не освобождать fence
+   из-за фильтрации runnable profiles. Composition должна учитывать retained
+   source history и когда current management seed больше не задан.
+5. Для recipe selection сначала определить original matching scope/runtime/path
+   и его project/global specificity, затем проверить eligibility выбранного
+   source. Selected unavailable project source не разрешает fallback на global
+   или seed; original explicit reference всегда разрешается только в его record.
+   Bare seed допустим лишь при настоящем отсутствии matching retained selection.
+   Existing ambiguity остаётся held; unrelated scopes/providers не блокируются.
+   Историческая scope matching не выдаёт нынешнее право: current authority
+   проверяется отдельно непосредственно перед использованием.
+6. Реальное добавление/удаление scope не эквивалентно aliases §18. В этом срезе
+   targetId/fingerprint и scope-set authority не меняются: несовместимый original
+   target остаётся локально held/conflict. Не объявлять это автоматической
+   поддержкой изменения descriptor grants. Другая eligible explicit selection
+   в другом original target должна работать без переписывания старой chain.
+
+### Круг2 — восстановление Team и исходный cleanup debt
+
+7. В existing `RuntimeTeamCaptures` сделать предварительный restore pass по Team
+   **до** публикации seed/retained entries в runnable maps Coordinator. Сначала
+   проверить сохранённый launch record/source, completed worktree source и
+   registration; `runtimeCaptureRegistration()` вычисляет original bindings
+   без private seed. Затем compile eligible original recipes прежним способом.
+   Все структурные/registration ошибки остаются fail-closed.
+8. Если именно typed source-unavailable не даёт восстановить capture, удержать
+   эту Team в private in-memory restore state. Не устанавливать для неё seed
+   fallback, fake profile, empty Runtime record или новый launch owner.
+   Для минимального среза Team остаётся целиком held; частичное включение её
+   членов/старых captures и автоматическая миграция здесь не требуются.
+   Другие полностью проверенные Teams устанавливаются штатно.
+   Team definitions, messages/tasks, captures, binding selections, checkpoints
+   и old handles не удаляются и не переименовываются.
+9. Existing Team entry points для model proof, capture/start/retry/Resume,
+   member input, roster mutation и runtime activity обязаны увидеть этот
+   unavailable state; отсутствие runnable entry не становится seed preflight,
+   «нет истории», zero-cost/empty activity или разрешением нового запуска.
+   Обычное чтение Team/history через прежнего Team owner остаётся доступным.
+   Guard повторяется после async boundary; текущие running/eligible owners и
+   их физический cleanup не переключаются на новый source.
+10. Quarantine **не доказывает cleanup**. Current `RuntimeTeamCoordinator.close()`
+    проверяет только installed entries; простое skip создало бы false complete.
+    Retain только original launch/binding references в existing restore owner,
+    без второго registry/journal. Для shutdown/cleanup aggregate читать исходные
+    validated launch attempts/member actions и `FileRuntimeStore.fenced().siblings()`
+    по exact backend/team/member: он уже проверяет все generations/run bindings
+    этой записи. Все referenced original bindings остаются учтёнными, даже если
+    compile их private recipe недоступен.
+11. Closed/released original records с завершёнными inputs/interactions и без
+    pending original effect допускают лишь подтверждение уже завершённого cleanup.
+    Missing record при claimed attempt, pending admission/selection, unknown
+    custody, malformed sibling либо отсутствие достаточной original evidence
+    оставляют cleanup held. Never-started отсутствие допустимо только вместе
+    с полным original unclaimed/no-admission доказательством.
+    Не вызывать `stopCapturedSession()` ради получения отсутствующей записи:
+    его текущий trusted cleanup path способен создать empty record.
+    Существующие live owned ports продолжают собственный cleanup; чтение файлов
+    не создаёт signal rights, adoption или новую возможность физически остановить
+    чужой/потерянный процесс. Main-held original cleanup handles сохраняются.
+12. Если восстановлен **тот же** исходный private profile/authority, ordinary
+    cold restore снова проверяет и использует прежние identities/bytes.
+    Появление только нового seed не считается восстановлением старого.
+    Нового unavailable journal, migration command, background repair или GC нет.
+
+### Круг3 — минимальные source seams и проверки
+
+- History/current-eligibility split живёт в existing `RuntimeSourceIndex` и
+  `runtimeSourceGrantAuthority`; чистый original history validator при
+  необходимости вынести туда из Index, сохранив cap800 (сейчас774).
+  Private typed outcome проходит через existing `runtimeSourceContracts` /
+  `runtimeCaptureSource`, без нового renderer RPC и раскрытия private profile.
+- Restore/debt pass остаётся у `RuntimeTeamCaptures`; текущие
+  `validateLaunchRecord`, original registration и FileRuntimeStore читаются
+  повторно, не создаётся альтернативный validator/owner. Coordinator сейчас796:
+  вынести связанный existing restore/install fragment, если нужно для cap800,
+  а не сжимать код и не поднимать лимит. Management composition изменяется
+  только для разделения retained history и executable profiles.
+- В existing source-selection integration расширить cold case: original A
+  опубликован; затем current profile теряет его seed/scope/revision, а B
+  имеет другой valid target. Host конструируется, B current/publication
+  работают, A original lookup/resolve остаются held. Байты index/receipts A
+  неизменны. Missing/corrupt receipt/chain всё ещё останавливает проверку;
+  stale project source не выбирает global/seed.
+- В existing real Team/Runtime composition case сохранить capture A и valid
+  Team B, выполнить cold reconstruction с unavailable A: B проходит обычный
+  controlled capture/start/input, A не вызывает provider allocation и не
+  получает seed fallback. Проверить исходную pending/claimed/missing debt:
+  close held; отдельно genuine original released/settled state даёт только
+  cleanup completion. Original A history/opaque/checkpoint bytes неизменны.
+  Возврат exact old seed повторно читает A, не создаёт replacement run.
+- Это controlled ownership/recovery cases, не native upgrade corpus. Использовать
+  existing integration files, без mapper unit suite/новой CI matrix/таймаутов.
+  Host build/testtypes, затронутые existing cases, focused Main contracts,
+  lint/cap и independent source review; actual Desktop/provider gates — только
+  на опубликованном exact head через прежний CI.
+
+Первый self-review выявил два скрытых fallback: eager seed installation перед
+restore и отсутствие skipped Team в shutdown aggregate. Оба включены выше;
+нельзя закрыть review12 одним catch в constructor. Peer design review (Account)
+подтвердил separation history/authority, all-original debt и запрет seed fallback.
+Исходный review отдельно упоминает изменение множества scopes; этот срез
+не ослабляет отказ такой смены и не смешивает её с уже исправленной aliases
+эквивалентностью. Source ещё не изменён; выполнение новых gates не заявляется.
+
+### §19 restore clarification: retained captures без source reference
+
+Retained capture может ссылаться на original bare seed без recipeSources. Только
+после structural launch/source/registration validation restore pass может
+классифицировать exact отсутствие current private recipe либо несовпадение
+saved recipeDigest как typed unavailable для этой Team. Early reference-eligibility
+check предшествует private template resolution, чтобы отсутствие template не
+обходило этот путь. Fresh capture не меняет свои refusal semantics; ambiguous/
+malformed templates, schema/record/I/O ошибки не превращаются в unavailable.
+Новый seed не подставляется вместо старого; его private bytes не реконструируются.
+
+### §19 preflight retained native additions
+
+`restoreNativeRuntimeEntries.ts:21–64` также eager-compile сохранённых additions
+внутри `installLaunch`. Ранний restore pass проверяет их original launch/creation
+receipt и selection binding до публикации runnable maps, используя временную
+проекцию тех же existing entries. Только restore-only exact missing private
+recipe или несовпадение сохранённого recipeDigest получает тот же unavailable;
+malformed/ambiguous capture, receipt/registration/I/O ошибки остаются global hold.
+Fresh native member capture не меняется. Никакого второго registry, исправления
+старых digest или нового launch owner для недоступной Team не создаётся.
+
+### §19 отсутствие current runtime в composition
+
+`TeamHost.ts:256–266` раньше создавал Coordinator только при profile.runtime.
+Existing RuntimeTeamCaptures получает узкий readonly predicate original capture
+registration или original seed launch file по известной Team/run identity.
+Только наличие такой истории включает обычный restore/debt pass при отсутствии
+current runtime; malformed/unsafe file и I/O не скрываются как «истории нет».
+Host без runtime и без retained истории сохраняет прежний путь. Seed/recipe не
+подставляется; original Runtime/custody и Main-held cleanup остаются прежними.
+
+### §19 MCP artifacts: original bytes до current base eligibility
+
+Independent source review нашёл ещё одну current/history связь:
+`capturedRuntimeMcpRecipes.ts:128–145` проверяет original artifact и
+`runtimeDigest(base)` одним generic refusal. Поэтому `runtimeCaptureSource`
+и `compileNativeMemberRuntimeCapture` не достигают restore-only unavailable
+при изменении private child/template, даже когда original MCP reference цел.
+
+Existing bounded/no-follow artifact reader разделяет две проверки. Сначала
+полностью проверить original command/member/reference digest, schema и доступные
+без private seed provider/overlay constraints; missing/corrupt artifact остаётся
+generic hold. Этот structural pass охватывает все retained capture/native-addition
+MCP references до первого current seed/source eligibility отказа, чтобы недоступный
+template не скрывал повреждённую сохранённую запись. Ни catalog IO, ни новый
+artifact/registry, ни изменение original bytes для него не нужны.
+
+Затем load/reconstruct по-прежнему сравнивает exact current base digest и прежние
+provider/cwd/profile constraints. Только restore path после original validation
+классифицирует доказанное несовпадение current base как RuntimeSourceUnavailable.
+Fresh capture/retry и ошибки reconstruction не получают такого исключения;
+unknown/malformed protocol-specific state не превращается в разрешение исполнения.
+Ранний исходный artifact pass не выдаёт runnable recipe или cleanup authority.
+
+В existing MCP/Team integration case сохранить реальные capture artifacts,
+изменить только current template, проверить локальное held этой Team и работу
+другой; missing/corrupt artifact при том же unavailable seed должен оставаться
+общим отказом. Контроль unchanged artifacts/receipts и исходного cleanup debt
+сохраняется. Это уточнение найденного seam; source/CI PASS пока не заявляется.
+
+### §19 проверка cold replay: повторное trusted admission точного probe profile
+
+Первый фактический focused Node24.21 прогон materialized §19/R19 среза дал
+58/61 PASS. Два отказа были ошибками TEST oracle: имя Runtime-файла должно
+использовать `runtimeDigest(normalizeBinding(binding))`, как FileRuntimeStore;
+Host onDispose rejection даёт `cleanup: failed`, сохраняя unknown native custody.
+Исправляются только эти ожидания в existing composition case, без ослабления
+original debt, payload или custody assertions.
+
+Следующий прогон той же новой unavailable-history case также показал, что
+`roster.replace members:[]` повторяет исходный пустой roster и штатно является
+no-op. Existing mutation assertion использует реальное добавление TEST bob,
+сохраняя строгое ожидание hold и неизменность исходных bytes/grants. Production
+no-op semantics не меняются; это уточнение oracle, не новый обход mutation gate.
+
+Третий отказ — source regression в candidate ProviderManagementCoordinator
+`edec81ca6fec37cf997677060c731169fba5c84a`. Existing stopped fresh capture case
+успешно завершает original model probe, закрывает Host, затем тот же cold
+`team.launch.probe.start` возвращает hold. Read-only debugger в отдельной TEST
+копии сохранил исходный FAIL и показал actual chain
+`assertTargetAvailable → target → ModelProbeOwner.start → executeTeamModelProbe`.
+Production методы, guard и результат не подменялись; Runtime/generation mismatch
+этим отказом не подтверждается.
+
+**Круг1 — причина.** Constructor отмечает retained command target недоступным,
+если его profile отсутствует в начальном списке management/seed profiles.
+Dynamic Team probe profile штатно восстанавливается позже из current captured
+Team. `executeTeamModelProbe` проводит original roster/control/selection/current
+проверки и вызывает private `admitTeamProbeProfile`, но отметка unavailable
+сохраняется даже после успешного exact admission.
+
+**Круг2 — минимальная коррекция.** После полного успешного private admission
+и existing same-profile digest check удалить только marker exact
+`{profileId, configRevision}` из existing unavailableTargets. Снятие marker
+не берёт profile из journal или RPC и не восстанавливает его из нового seed.
+Если current authority/recipe недоступны, private admission не произойдёт;
+конфликт/ошибка admission сохраняет marker. Pending/unknown command rows,
+resource fence, original receipt и physical target digest не меняются.
+Последующие ModelProbeOwner.select/assertManagementTarget/current проверки
+по-прежнему обязательны до replay или нового native effect.
+
+**Круг3 — проверка.** Повторно использовать существующий stopped fresh capture
+cold replay case: original completed receipt возвращается без второго run,
+новый explicit intent запускает один новый probe. Существующие unavailable
+management/debt cases должны оставаться held и сохранять исходные bytes/fences.
+Новых suites, RPC, owners, таймаутов или native budget нет. Source peer review,
+Host build/types и focused existing tests обязательны на exact corrected bytes;
+actual Desktop/native gates отдельно, timing улучшение здесь не заявляется.

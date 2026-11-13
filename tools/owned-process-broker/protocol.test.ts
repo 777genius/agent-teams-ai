@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { encodeServiceCaptureCurrent } from '@agent-teams/legacy-agent-host/owned-process';
+import { encodeServiceCaptureCurrent, nativeProcessProfileSchema, windowsBrokerReference } from '@agent-teams/legacy-agent-host/owned-process';
 
 import {
   encodeFrame,
@@ -166,6 +166,28 @@ function wirePeer(
       p.writeBigUInt64LE(0x1234n, 10);
       p.writeUInt32LE(dispatchError, 18);
       send(Op.stopped, request.requestId, p);
+    },
+    serviceIdentity(request: Frame, key = 1n, birth = 0x4567n) {
+      if (request.opcode !== Op.serviceCaptureCurrent && request.opcode !== Op.serviceSettle)
+        throw new Error('Expected original capture/settle');
+      const payload = Buffer.alloc(16);
+      payload.writeBigUInt64LE(key); payload.writeBigUInt64LE(birth, 8);
+      send(request.opcode === Op.serviceSettle ? Op.serviceSettled : Op.serviceCaptured,
+        request.requestId, payload);
+    },
+    serviceFacts(request: Frame, key = 1n, birth = 0x4567n, active = 0) {
+      if (request.opcode !== Op.serviceStop && request.opcode !== Op.serviceQuery)
+        throw new Error('Expected original Stop/query');
+      const payload = Buffer.alloc(33);
+      payload.writeBigUInt64LE(key); payload.writeBigUInt64LE(birth, 8);
+      payload[16] = active === 0 ? 1 : 0;
+      payload.writeUInt32LE(active, 17); payload.writeUInt32LE(active ? 0 : 7, 21);
+      send(request.opcode === Op.serviceStop ? Op.serviceStopped : Op.serviceObserved,
+        request.requestId, payload);
+    },
+    serviceRefused(request: Frame) {
+      const payload = Buffer.alloc(5); payload[0] = 2; payload.writeUInt32LE(1168, 1);
+      send(Op.serviceRefused, request.requestId, payload);
     },
     root() {
       const p = Buffer.alloc(12);
@@ -501,6 +523,115 @@ describe('bounded owned process protocol', () => {
       peer.stopped();
       expect((await afterReply).kind).toBe('confirmed');
       expect(await pending.stop(lost)).toBe(lostOutcome);
+    } finally { pending.abandonControl(owner); vi.restoreAllMocks(); vi.useRealTimers(); }
+  });
+  it('retains late original service replies without rewriting timeout or whole-root evidence', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    let clock = 1000;
+    vi.spyOn(performance, 'now').mockImplementation(() => clock);
+    const peer = wirePeer();
+    const port = createWindowsOwnedLaunchPort(
+      'C:\\sandbox\\owned-process-broker.exe', 'job-membership', peer.factory, 'service-scopes-v1');
+    const pending = port.allocate(owner);
+    try {
+      const preparation = await port.prepare(pending, spec);
+      if (preparation.kind !== 'prepared') throw new Error(preparation.reason);
+      const services = preparation.process.services;
+      if (!services) throw new Error('Expected explicit scoped capability');
+      const rootExits: number[] = [];
+      preparation.process.observeRootExit(exit => rootExits.push(exit.code));
+      const resuming = preparation.process.resume(owner, () => Promise.resolve());
+      await Promise.resolve(); peer.resumed(); await resuming;
+      const capture = services.allocate({ operation: 'capture', pid: 500 });
+      expect(capture.snapshot()).toEqual({ phase: 'prepared' });
+      expect(peer.requests.filter(frame => frame.opcode === Op.serviceCaptureCurrent)).toHaveLength(0);
+      const initial = capture.run(1010), originalRequest = peer.requests.at(-1)!;
+      expect(originalRequest.opcode).toBe(Op.serviceCaptureCurrent);
+      expect(capture.snapshot()).toMatchObject({ phase: 'requested', wireId: originalRequest.requestId.toString() });
+      clock = 1011; // Native reply arrives after the deadline, before the delayed JS timer executes.
+      peer.serviceIdentity(originalRequest);
+      const unknown = await initial;
+      expect(unknown).toEqual({ state: 'unknown' });
+      expect(capture.run(1010)).toBe(initial);
+      expect(await capture.run(1010)).toBe(unknown);
+      expect(() => capture.run(2010)).toThrow('Conflicting original service deadline');
+      const captured = capture.snapshot().result;
+      if (captured?.state !== 'captured') throw new Error('Expected original late capture evidence');
+      expect(capture.snapshot()).toMatchObject({ phase: 'settled', wireId: originalRequest.requestId.toString() });
+      const stopping = services.allocate({ operation: 'stop', identity: captured.identity });
+      const firstStop = stopping.run(1021), stopRequest = peer.requests.at(-1)!;
+      expect(stopRequest.opcode).toBe(Op.serviceStop);
+      expect(stopRequest.payload.readUInt32LE(8)).toBe(10);
+      clock = 1022; await vi.advanceTimersByTimeAsync(11);
+      const stoppedUnknown = await firstStop;
+      expect(stoppedUnknown).toEqual({ state: 'unknown' });
+      expect(stopping.snapshot()).toMatchObject({ phase: 'requested', result: { state: 'unknown' } });
+      clock = 61022; await vi.advanceTimersByTimeAsync(60000);
+      peer.serviceFacts(stopRequest); // The exact native waiter still owns this late ACK after its public timeout.
+      await vi.advanceTimersByTimeAsync(0);
+      expect(stopping.snapshot()).toMatchObject({ phase: 'settled', result: {
+        state: 'stopped', facts: { ...captured.identity, rootExited: true, activeProcesses: 0 } } });
+      expect(await stopping.run(1021)).toBe(stoppedUnknown);
+      expect(peer.requests.filter(frame => frame.opcode === Op.serviceStop)).toHaveLength(1);
+      const settling = services.allocate({ operation: 'settle', identity: captured.identity });
+      const settled = settling.run(62022), settleRequest = peer.requests.at(-1)!;
+      peer.serviceIdentity(settleRequest);
+      expect(await settled).toEqual({ state: 'settled', identity: captured.identity });
+      expect(await capture.run(1010)).toBe(unknown);
+      expect(capture.snapshot().result).toBe(captured);
+      const refused = services.query(captured.identity, 62022), refusedRequest = peer.requests.at(-1)!;
+      peer.serviceRefused(refusedRequest);
+      expect(await refused).toEqual({ state: 'refused', reason: 2, nativeCode: 1168 });
+      const mismatched = services.query(captured.identity, 62022), badRequest = peer.requests.at(-1)!;
+      peer.serviceFacts(badRequest, 2n);
+      expect(await mismatched).toEqual({ state: 'unknown' });
+      expect(rootExits).toEqual([]);
+      expect(peer.requests.some(frame => frame.opcode === Op.stop || frame.opcode === Op.release)).toBe(false);
+      expect((await pending.stop({ expectedOwner: owner, attemptId: 'after-invalid-service',
+        mode: 'force', deadlineMs: 62022 })).kind).toBe('unknown');
+      expect(await stopping.run(1021)).toBe(stoppedUnknown);
+    } finally { pending.abandonControl(owner); vi.restoreAllMocks(); vi.useRealTimers(); }
+  });
+  it('bounds service admission while preserving the original whole-provider cleanup slot', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    let clock = 1000;
+    vi.spyOn(performance, 'now').mockImplementation(() => clock);
+    const peer = wirePeer();
+    const port = createWindowsOwnedLaunchPort(
+      'C:\\sandbox\\owned-process-broker.exe', 'job-membership', peer.factory, 'service-scopes-v1');
+    const pending = port.allocate(owner);
+    try {
+      const preparation = await port.prepare(pending, spec);
+      if (preparation.kind !== 'prepared') throw new Error(preparation.reason);
+      const services = preparation.process.services;
+      if (!services) throw new Error('Expected explicit scoped capability');
+      const resuming = preparation.process.resume(owner, () => Promise.resolve());
+      await Promise.resolve(); peer.resumed(); await resuming;
+      const held = [500, 501, 502].map(pid => services.allocate({ operation: 'capture', pid }));
+      const results = held.map(operation => operation.run(2000));
+      const queued = services.allocate({ operation: 'capture', pid: 503 });
+      const expired = queued.run(1010);
+      expect(peer.requests.filter(frame => frame.opcode === Op.serviceCaptureCurrent)).toHaveLength(3);
+      expect(queued.snapshot()).toEqual({ phase: 'queued' });
+      clock = 1011; await vi.advanceTimersByTimeAsync(11);
+      expect(await expired).toEqual({ state: 'not-dispatched', reason: 'deadline' });
+      expect(queued.snapshot()).not.toHaveProperty('wireId');
+      const cleanup = pending.stop({ expectedOwner: owner, attemptId: 'original-whole-cleanup',
+        mode: 'force', deadlineMs: 2011 });
+      expect(peer.requests.filter(frame => frame.opcode === Op.stop)).toHaveLength(1);
+      peer.stopped();
+      const outcome = await cleanup;
+      if (outcome.kind !== 'confirmed') throw new Error('Expected original synthetic whole-Job receipt');
+      expect(await services.allocate({ operation: 'capture', pid: 504 }).run(2011))
+        .toEqual({ state: 'not-dispatched', reason: 'admission' });
+      expect(peer.requests.filter(frame => frame.opcode === Op.serviceCaptureCurrent)).toHaveLength(3);
+      preparation.process.stdout.resume(); preparation.process.stderr.resume();
+      peer.stdout.end(); peer.stderr.end();
+      expect((await pending.drain(2011)).kind).toBe('complete');
+      await pending.release(outcome.receipt, 'job-membership');
+      expect(await Promise.all(results)).toEqual([{ state: 'unknown' }, { state: 'unknown' }, { state: 'unknown' }]);
+      expect(peer.requests.filter(frame => frame.opcode === Op.release)).toHaveLength(1);
+      for (const operation of held) expect(operation.snapshot().result).toEqual({ state: 'unknown' });
     } finally { pending.abandonControl(owner); vi.restoreAllMocks(); vi.useRealTimers(); }
   });
   it('a failed native dispatch stays unknown despite a valid root witness and zero membership', async () => {
@@ -939,6 +1070,17 @@ describe('bounded owned process protocol', () => {
       write();
       expect(() => verifyStagedBroker(path, 'x64', 'service-scopes-v1')).toThrow('manifest');
       const scoped = { ...manifest, schema: 2, capability: 'service-scopes-v1' };
+      const selection = { path: 'C:\\TEST\\owned-process-broker.exe',
+        sha256: manifest.sha256, arch: 'x64', protocol: 1 } as const;
+      const brokerSchema = nativeProcessProfileSchema.shape.windowsBroker.unwrap();
+      expect(brokerSchema.parse(selection)).toEqual(selection);
+      const oldReference = createHash('sha256').update(JSON.stringify(selection)).digest('hex');
+      expect(windowsBrokerReference(selection)).toBe(oldReference);
+      const selectedScoped = brokerSchema.parse({ ...selection, capability: 'service-scopes-v1' });
+      expect(windowsBrokerReference(selectedScoped)).not.toBe(oldReference);
+      expect(windowsBrokerReference(selectedScoped)).toBe(
+        createHash('sha256').update(JSON.stringify(selectedScoped)).digest('hex'));
+      expect(() => brokerSchema.parse({ ...selection, capability: 'test-debug-service' })).toThrow();
       write(scoped);
       expect(() => verifyStagedBroker(path, 'x64')).toThrow('manifest'); // No implicit consumer activation.
       verifyStagedBroker(path, 'x64', 'service-scopes-v1');

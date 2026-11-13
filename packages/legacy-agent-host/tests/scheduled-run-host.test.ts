@@ -5,6 +5,9 @@ import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
+import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
+import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
+import { readScheduledRunCapture } from '../dist/composition/scheduledRunCapture.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { ScheduledRunInput, ScheduledRunSnapshot } from '../dist/composition/scheduledRunContracts.js';
 import type { ScheduledRunProviderContext } from '../dist/adapters/providers/ScheduledRunProvider.js';
@@ -177,10 +180,18 @@ test('finite Host run keeps scheduled choices, one input and original outcome ac
   assert.equal(terminal?.result?.summary, 'TEST finite model result');
   assert.match(terminal!.result!.stdout, /"type":"assistant"/u);
   assert.match(terminal!.result!.stdout, /"total_cost_usd":0.01/u);
-  const blocks = terminal!.result!.stdout.split('\n').flatMap(line => {
-    const row = JSON.parse(line) as { message?: { content?: Record<string, unknown>[] } };
-    return row.message?.content ?? [];
-  });
+  const capture = readScheduledRunCapture(
+    new TeamOwnerStore(f.root, f.profile.teams[0]!.binding.teamName), request.runId);
+  const runtimeStore = new FileRuntimeStore(f.root);
+  const lastTime = runtimeStore.fenced(context.binding, () =>
+    runtimeStore.readActivity(context.binding)?.events.at(-1)?.observedAt);
+  assert.ok(capture && lastTime);
+  const durationMs = Math.max(0, Date.parse(lastTime) - Date.parse(capture.capturedAt));
+  assert.equal(terminal!.result!.durationMs, durationMs);
+  const logRows = terminal!.result!.stdout.split('\n').map(line =>
+    JSON.parse(line) as { type?: string; duration_ms?: number; message?: { content?: Record<string, unknown>[] } });
+  assert.deepEqual(logRows.filter(row => row.type === 'result').map(row => row.duration_ms), [durationMs]);
+  const blocks = logRows.flatMap(row => row.message?.content ?? []);
   assert.deepEqual(blocks.filter(block => ['tool_use', 'tool_result'].includes(String(block.type))), [
     { type: 'tool_use', id: 'TEST-scheduled-tool', name: 'Bash', input: { command: 'TEST command' } },
     { type: 'tool_result', tool_use_id: 'TEST-scheduled-tool', content: 'TEST tool result', is_error: false },

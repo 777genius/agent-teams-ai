@@ -74,6 +74,8 @@ export interface RuntimeActivityFeed {
   gap?: RuntimeActivityGap;
 }
 export interface RuntimeActivitySnapshot extends RuntimeActivityFeed {
+  /** Final retained Host observation time for internal projections, not outcome/custody proof. */
+  lastObservedAt?: string;
   state: RuntimeActivityState | null;
   latest: {
     text: RuntimeActivityEvent[];

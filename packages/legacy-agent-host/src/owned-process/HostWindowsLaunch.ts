@@ -38,6 +38,7 @@ export function windowsBrokerReference(
         sha256: broker.sha256,
         arch: broker.arch,
         protocol: broker.protocol,
+        ...(broker.capability === undefined ? {} : { capability: broker.capability }),
       })
     )
     .digest('hex');

@@ -8,6 +8,7 @@ import { FileManagementCommandStore } from '../dist/adapters/providers/FileManag
 import { CredentialCommandOwner } from '../dist/management/CredentialCommandOwner.js';
 import { ManagementResourceFence } from '../dist/management/ManagementResourceFence.js';
 import { ModelProbeOwner } from '../dist/management/ModelProbeOwner.js';
+import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
 import type { ManagementCommandStore } from '../src/management/commandRecords.ts';
 
 function deferred<T>() {
@@ -212,6 +213,18 @@ test('cold pending probe is held and never reruns inference; unknown physical cl
     { code: 'held' }
   );
   await assert.rejects(f.owner.close(), { code: 'held' });
+  const original = JSON.stringify(f.base.read(start.commandId));
+  const withoutProfile = new ProviderManagementCoordinator([], () => {}, f.root);
+  assert.equal(withoutProfile.probes.read(lookup)?.phase, 'held',
+    'original unknown probe stays discoverable after its runnable profile is removed');
+  assert.throws(() => withoutProfile.assertTargetAvailable(lookup), { code: 'held' });
+  assert.throws(() => withoutProfile.probes.start({ ...start, commandId: 'TEST-unavailable-fresh' }),
+    { code: 'held' });
+  assert.equal(f.base.read('TEST-unavailable-fresh'), undefined);
+  await assert.rejects(withoutProfile.close(), { code: 'held' },
+    'filtered profile does not erase the original resource fence or cleanup debt');
+  assert.equal(JSON.stringify(f.base.read(start.commandId)), original);
+  assert.equal(f.runs(), 1);
 });
 
 test('explicit cancellation settles held observations only after native custody is released', async (t) => {

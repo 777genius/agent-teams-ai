@@ -268,7 +268,8 @@ export class RetainedWindowsCustody implements HostCustodyOwner {
         unavailable();
       const selection = Object.freeze({ ...this.options.selectBroker(call.brokerRef) });
       const port =
-        this.options.createPort?.(selection) ?? createWindowsOwnedLaunchPort(selection.path);
+        this.options.createPort?.(selection) ?? createWindowsOwnedLaunchPort(
+          selection.path, 'job-membership', undefined, selection.capability ?? 'whole-job-v1');
       const pending = port.allocate(Object.freeze({ ...call.owner }));
       const allocation: Allocation = {
         call: structuredClone(call),

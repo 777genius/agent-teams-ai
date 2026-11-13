@@ -15,10 +15,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { TeamLaunchError } from '../dist/team-launch/contracts.js';
+import { RuntimeSourceUnavailable } from '../dist/composition/runtimeSourceGrantAuthority.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import {
   prepareCapturedRuntimeMcpRecipes,
   loadCapturedRuntimeMcpRecipe,
+  validateCapturedRuntimeMcpRecipe,
   capturedRuntimeMcpReferencesSchema,
 } from '../dist/composition/capturedRuntimeMcpRecipes.js';
 import { capturedMcpSourceCurrent } from '../dist/mcp-catalog/capturedSource.js';
@@ -342,6 +344,11 @@ test('changed original profile, missing or changed artifact and mismatching refe
       ),
     isHeld
   );
+  validateCapturedRuntimeMcpRecipe(f.store, 'TEST-command', ref, f.profile.cwd);
+  assert.throws(() => loadCapturedRuntimeMcpRecipe(
+    f.store, 'TEST-command', { ...f.profile, model: 'TEST-changed' }, ref, true
+  ), RuntimeSourceUnavailable, 'only restore may isolate a proven original/current base mismatch');
+  assert.equal(readFileSync(f.file, 'utf8'), original);
   assert.throws(
     () =>
       loadCapturedRuntimeMcpRecipe(f.store, 'TEST-command', f.profile, {
@@ -350,6 +357,9 @@ test('changed original profile, missing or changed artifact and mismatching refe
       }),
     isHeld
   );
+  assert.throws(() => loadCapturedRuntimeMcpRecipe(
+    f.store, 'TEST-command', { ...f.profile, model: 'TEST-changed' }, { ...ref, digest: 'c'.repeat(64) }, true
+  ), isHeld, 'a changed current base cannot hide a foreign original reference');
   const corrupt = JSON.parse(original);
   corrupt.overlay.capturedMcpCatalog.digest = 'd'.repeat(64);
   writeFileSync(f.file, JSON.stringify(corrupt));
@@ -357,11 +367,19 @@ test('changed original profile, missing or changed artifact and mismatching refe
     () => loadCapturedRuntimeMcpRecipe(f.store, 'TEST-command', f.profile, ref),
     isHeld
   );
+  assert.throws(() => validateCapturedRuntimeMcpRecipe(f.store, 'TEST-command', ref, f.profile.cwd), isHeld);
+  assert.throws(() => loadCapturedRuntimeMcpRecipe(
+    f.store, 'TEST-command', { ...f.profile, model: 'TEST-changed' }, ref, true
+  ), isHeld, 'corrupt original bytes stay generic hold before unavailable classification');
   unlinkSync(f.file);
   assert.throws(
     () => loadCapturedRuntimeMcpRecipe(f.store, 'TEST-command', f.profile, ref),
     isHeld
   );
+  assert.throws(() => validateCapturedRuntimeMcpRecipe(f.store, 'TEST-command', ref, f.profile.cwd), isHeld);
+  assert.throws(() => loadCapturedRuntimeMcpRecipe(
+    f.store, 'TEST-command', { ...f.profile, model: 'TEST-changed' }, ref, true
+  ), isHeld, 'missing original bytes never permit isolated history to masquerade as valid');
   assert.deepEqual(readdirSync(join(f.store.directory, 'launches/mcp-recipes')), []);
 });
 

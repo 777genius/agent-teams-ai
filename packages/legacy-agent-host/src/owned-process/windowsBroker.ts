@@ -5,6 +5,8 @@ import { performance } from 'node:perf_hooks';
 import { Duplex, Readable, Writable } from 'node:stream';
 
 import { verifyStagedBroker } from './brokerArtifact.js';
+import { creationFromByte, facts, nativeExitCategories, type StopFacts } from './brokerEvidence.js';
+import { WindowsServiceOperations, type OwnedServicePort } from './WindowsServiceOperations.js';
 import {
   encodeFrame,
   encodeLaunch,
@@ -20,7 +22,6 @@ import {
   type ControlPhase,
   type Coverage,
   type Creation,
-  type NativeExitCategory,
   type OwnedLaunchPort,
   type Preparation,
   type PreparedOwnedProcess,
@@ -37,40 +38,17 @@ import { BrokerReleaseConfirmation } from './releaseConfirmation.js';
 
 export { verifyStagedBroker } from './brokerArtifact.js';
 
-const nativeExitCategories: readonly NativeExitCategory[] = [
-  'owner-eof',
-  'bootstrap',
-  'read',
-  'write',
-  'write-deadline',
-  'protocol',
-  'cancel-undrained',
-  'pending-read-barrier',
-];
-const creations: readonly Creation[] = [
-  'known-not-created',
-  'contained-suspended',
-  'running',
-  'uncertain',
-];
 interface Waiter {
   opcode: number;
   observation: RequestObservation;
   resolve: (frame: Frame) => void;
   reject: (error: Error) => void;
-  received?: () => void;
+  received?: (frame: Frame) => void;
+  service?: boolean;
 }
 interface RequestObservation {
   phase: ControlPhase;
   writeCompleted: boolean;
-}
-interface StopFacts {
-  creation: Creation;
-  rootExited: boolean;
-  active: number;
-  dispatchError: number;
-  queryError: number;
-  payload: Buffer;
 }
 interface StopOperation {
   deadline: number;
@@ -83,24 +61,6 @@ const remaining = (deadline: number): number =>
 function validDeadline(value: number): void {
   if (!Number.isFinite(value) || value > performance.now() + 60000)
     throw new Error('Invalid deadline');
-}
-function facts(frame: Frame): StopFacts {
-  if (frame.payload.length !== 26 || frame.payload.readUInt8(1) > 1) {
-    throw new Error('Invalid Stop evidence');
-  }
-  return {
-    creation: creationFromByte(frame.payload.readUInt8(0)),
-    rootExited: frame.payload.readUInt8(1) === 1,
-    active: frame.payload.readUInt32LE(2),
-    dispatchError: frame.payload.readUInt32LE(18),
-    queryError: frame.payload.readUInt32LE(22),
-    payload: frame.payload,
-  };
-}
-function creationFromByte(value: number): Creation {
-  const creation = creations[value];
-  if (creation === undefined) throw new Error('Invalid creation fact');
-  return creation;
 }
 /** Trusted composition seam: private broker transport only, never a provider ChildProcess. */
 export interface BrokerTransport {
@@ -137,24 +97,25 @@ export function connectPrivateBroker(path: string): BrokerTransport {
     },
   };
 }
-const nativeTransport: BrokerTransportFactory = {
+const nativeTransport = (capability: 'whole-job-v1' | 'service-scopes-v1'): BrokerTransportFactory => ({
   available: (path) => {
     if (process.platform !== 'win32' || !win32.isAbsolute(path)) return false;
     try {
-      verifyStagedBroker(path, process.arch);
+      verifyStagedBroker(path, process.arch, capability);
       return true;
     } catch {
       return false;
     }
   },
   connect: connectPrivateBroker,
-};
+});
 
 class WindowsCapability implements PreparedOwnedProcess {
   readonly owner: ProcessOwner;
   private child?: BrokerTransport;
   private control?: Duplex;
   private readonly decoder: FrameDecoder;
+  private readonly serviceOperations: WindowsServiceOperations | undefined;
   private nextId = 1n;
   private readonly waiters = new Map<bigint, Waiter>();
   private readonly receipts = new WeakSet<TreeReceipt>();
@@ -187,7 +148,8 @@ class WindowsCapability implements PreparedOwnedProcess {
     owner: ProcessOwner,
     private readonly brokerPath: string,
     private readonly requiredCoverage: Coverage,
-    private readonly transportFactory: BrokerTransportFactory
+    private readonly transportFactory: BrokerTransportFactory,
+    capability: 'whole-job-v1' | 'service-scopes-v1'
   ) {
     generationBytes(owner.processGeneration);
     for (const value of Object.values(owner)) {
@@ -195,7 +157,24 @@ class WindowsCapability implements PreparedOwnedProcess {
     }
     this.owner = Object.freeze({ ...owner });
     this.decoder = new FrameDecoder(this.owner.processGeneration);
+    this.serviceOperations = capability === 'service-scopes-v1' ? new WindowsServiceOperations({
+      captureAllowed: () => this.creation === 'running' && !this.sealed && !this.transportFailure,
+      invalidReply: () => this.fail('Invalid original service reply'),
+      send: (opcode, response, payload, received, admitted, failed) => {
+        if (!this.control || this.transportFailure || this.released || this.nextId > 0xffffffffffffffffn) {
+          this.serviceOperations?.close();
+          return false;
+        }
+        if (this.waiters.size >= 4) return false;
+        // Logical service deadlines live with their original operation. The bounded native waiter
+        // retains a later validated ACK, exactly like the existing whole-provider Stop waiter.
+        void this.request(opcode, response, payload, performance.now() + 60000,
+          received, { admitted }).catch(failed);
+        return true;
+      },
+    }) : undefined;
   }
+  get services(): OwnedServicePort | undefined { return this.serviceOperations; }
   get root(): Readonly<{ pid: number; birth: string }> {
     if (!this.rootIdentity) throw new Error('Target not prepared');
     return this.rootIdentity;
@@ -249,6 +228,7 @@ class WindowsCapability implements PreparedOwnedProcess {
     if (this.transportFailure) return;
     this.recordCause(cause, observation);
     this.transportFailure = reason;
+    this.serviceOperations?.close();
     this.releaseConfirmation.fail(reason);
     this.sealed = true;
     if (this.started && !this.rootIdentity) this.creation = 'uncertain';
@@ -278,7 +258,8 @@ class WindowsCapability implements PreparedOwnedProcess {
       return;
     }
     const waiter = this.waiters.get(frame.requestId);
-    if (!waiter || (frame.opcode !== waiter.opcode && frame.opcode !== Op.failed)) {
+    if (!waiter || (frame.opcode !== waiter.opcode && frame.opcode !== Op.failed &&
+      !(waiter.service && frame.opcode === Op.serviceRefused))) {
       throw new Error('Unexpected broker response');
     }
     this.waiters.delete(frame.requestId);
@@ -313,14 +294,16 @@ class WindowsCapability implements PreparedOwnedProcess {
       this.recordCause('native-failed', waiter.observation);
       waiter.reject(new Error(`Broker operation failed (${frame.payload.readUInt32LE(1)})`));
     } else waiter.resolve(frame);
-    waiter.received?.(); // Only a validated wire reply, even after its public deadline expired.
+    waiter.received?.(frame); // Only a validated original reply, even after its public deadline expired.
+    this.serviceOperations?.wake();
   }
   private request(
     opcode: number,
     response: number,
     payload: Buffer,
     deadline: number,
-    received?: () => void
+    received?: (frame: Frame) => void,
+    service?: { admitted(id: bigint): void }
   ): Promise<Frame> {
     if (
       !this.control ||
@@ -339,7 +322,7 @@ class WindowsCapability implements PreparedOwnedProcess {
             ? 'resume'
             : opcode === Op.stop
               ? 'stop'
-              : 'release',
+              : service ? 'service' : 'release',
       writeCompleted: false,
     };
     this.latestRequest = observation;
@@ -356,6 +339,7 @@ class WindowsCapability implements PreparedOwnedProcess {
         opcode: response,
         observation,
         ...(received ? { received } : {}),
+        ...(service ? { service: true } : {}),
         resolve: (frame) => {
           clearTimeout(timer);
           if (!settled) resolve(frame);
@@ -365,6 +349,7 @@ class WindowsCapability implements PreparedOwnedProcess {
           if (!settled) reject(error);
         },
       });
+      service?.admitted(id); // Original service operation retained before its first native write.
       const bytes = encodeFrame({
         opcode,
         requestId: id,
@@ -725,6 +710,7 @@ class WindowsCapability implements PreparedOwnedProcess {
       }
     }
     this.released = true;
+    this.serviceOperations?.close();
     this.control?.end();
     this.child?.stdin?.destroy();
   }
@@ -742,8 +728,12 @@ class WindowsCapability implements PreparedOwnedProcess {
 export function createWindowsOwnedLaunchPort(
   brokerPath: string,
   requiredCoverage: Coverage = 'job-membership',
-  transportFactory: BrokerTransportFactory = nativeTransport
+  transportFactory?: BrokerTransportFactory,
+  brokerCapability: 'whole-job-v1' | 'service-scopes-v1' = 'whole-job-v1'
 ): OwnedLaunchPort {
+  if (brokerCapability !== 'whole-job-v1' && brokerCapability !== 'service-scopes-v1')
+    throw new Error('Unsupported original broker capability');
+  const selectedTransport = transportFactory ?? nativeTransport(brokerCapability);
   const capabilities = new WeakSet<WindowsCapability>();
   return {
     allocate(owner) {
@@ -751,7 +741,8 @@ export function createWindowsOwnedLaunchPort(
         owner,
         brokerPath,
         requiredCoverage,
-        transportFactory
+        selectedTransport,
+        brokerCapability
       );
       capabilities.add(capability);
       return capability;

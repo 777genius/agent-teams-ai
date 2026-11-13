@@ -42,8 +42,8 @@ namespace service_runtime {
 // Query/Stop/release need no new scope allocation, even when this budget is full.
 constexpr size_t ProductScopeLimit=4096;
 owned_service::Scopes scopes{ProductScopeLimit};
-bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::timed_mutex>& lock) {
-  return owned_service::runDebugLoop(rootPid,root,outer,lock,scopes);
+bool run(DWORD rootPid,HANDLE originalRoot,HANDLE outer,std::unique_lock<std::timed_mutex>& lock) {
+  return owned_service::runDebugLoop(rootPid,originalRoot,outer,lock,scopes);
 }
 }
 #endif

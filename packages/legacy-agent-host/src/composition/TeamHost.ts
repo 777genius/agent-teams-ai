@@ -36,6 +36,7 @@ import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { runtimeProfileSchema } from './runtimeProfile.js';
 import { RuntimeTeamCoordinator } from './RuntimeTeamCoordinator.js';
+import { hasRetainedTeamRuntime } from './RuntimeTeamCaptures.js';
 import { providerManagementProfileSchema } from '../management/profile.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { assertAccountNamespaces } from './assertAccountNamespaces.js';
@@ -257,14 +258,14 @@ export function createTeamHost(
     // Saved configuration survives a stale private runtime descriptor. Product
     // APIs remain usable; native allocation requires a fresh explicit capture.
     const runtimeTeams = teams;
-    if (profile.runtime)
+    if (profile.runtime || hasRetainedTeamRuntime(profile, teams))
       runtime = new RuntimeTeamCoordinator({
         profile: {
           ...profile,
-          runtime: {
+          ...(profile.runtime ? { runtime: {
             ...profile.runtime,
             members: profile.runtime.members.filter((member) => teams.has(member.teamId)),
-          },
+          } } : {}),
         },
         teams: runtimeTeams,
         ...(sources ? { sources } : {}),

@@ -1,5 +1,15 @@
 import type { Readable, Writable } from 'node:stream';
 
+import type { OwnedServicePort } from './WindowsServiceOperations.js';
+
+export type {
+  OwnedServiceCommand,
+  OwnedServicePort,
+  OwnedServiceResult,
+  OwnedServiceSnapshot,
+  PendingServiceOperation,
+} from './WindowsServiceOperations.js';
+
 export type ProcessOwner = Readonly<{
   teamIncarnation: string;
   runId: string;
@@ -53,7 +63,7 @@ export type ControlCause =
   | 'broker-exit'
   | 'owner-abandoned'
   | 'release-unavailable';
-export type ControlPhase = 'idle' | 'prepare' | 'resume' | 'stop' | 'release';
+export type ControlPhase = 'idle' | 'prepare' | 'resume' | 'stop' | 'release' | 'service';
 export type NativeExitCategory =
   | 'owner-eof'
   | 'bootstrap'
@@ -85,6 +95,8 @@ export interface PendingOwnedProcess {
   release(receipt: TreeReceipt, requiredCoverage: Coverage): Promise<void>;
 }
 export interface PreparedOwnedProcess extends PendingOwnedProcess {
+  /** Present only for an explicitly verified service-scopes-v1 broker. */
+  readonly services?: OwnedServicePort | undefined;
   readonly root: Readonly<{ pid: number; birth: string }>;
   readonly stdin: Writable;
   readonly stdout: Readable;

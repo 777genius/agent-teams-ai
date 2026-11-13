@@ -44,6 +44,8 @@ export class WindowsCapturedProcess {
   constructor(profile: NativeProcessProfile, private readonly current: () => boolean,
     private readonly verifyTarget: () => void, retainedPort?: OwnedLaunchPort) {
     this.profile = structuredClone(profile);
+    if (this.profile.windowsBroker?.capability && !retainedPort)
+      throw new Error('Scoped Windows custody requires the original Main owner');
     this.verifyBroker();
     this.port = retainedPort ?? createWindowsOwnedLaunchPort(this.profile.windowsBroker!.path);
   }
@@ -56,7 +58,7 @@ export class WindowsCapturedProcess {
     const before = lstatSync(broker.path, { bigint: true });
     if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > 16n * 1024n * 1024n ||
       realpathSync(broker.path) !== broker.path) throw new Error('Windows native custody unavailable');
-    verifyStagedBroker(broker.path, broker.arch);
+    verifyStagedBroker(broker.path, broker.arch, broker.capability ?? 'whole-job-v1');
     if (createHash('sha256').update(readFileSync(broker.path)).digest('hex') !== broker.sha256)
       throw new Error('Windows native custody unavailable');
     const after = lstatSync(broker.path, { bigint: true });

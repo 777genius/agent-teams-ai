@@ -192,6 +192,7 @@ export async function produceDesktopDonorSavedTeam(options: {
         key: 'a',
         code: 'KeyA',
         modifiers: 4,
+        commands: ['selectAll'],
       });
       await renderer.send('Input.dispatchKeyEvent', {
         type: 'keyUp',
@@ -199,6 +200,15 @@ export async function produceDesktopDonorSavedTeam(options: {
         code: 'KeyA',
         modifiers: 4,
       });
+      assert.equal(
+        await renderer.evaluate(
+          '(() => {const e=document.querySelector(' + literal(selector) + ');return ' +
+          '(e instanceof HTMLInputElement||e instanceof HTMLTextAreaElement)&&' +
+          'document.activeElement===e&&e.selectionStart===0&&e.selectionEnd===e.value.length;})()'
+        ),
+        true,
+        label + ': original field is focused and fully selected before the one insertion'
+      );
       await renderer.send('Input.insertText', { text });
       await ui.waitRead(
         'document.querySelector(' + literal(selector) + ')?.value===' + literal(text),
