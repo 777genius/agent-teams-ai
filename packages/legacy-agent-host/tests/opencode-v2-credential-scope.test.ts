@@ -228,7 +228,8 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
             connections: connected ? [{ type: 'credential', id: 'cred_TEST', method: 'key' }] : [] };
         }
         response.writeHead(200, { 'content-type': 'application/json' });
-        response.end(JSON.stringify({ location: { directory: f.root }, data }));
+        response.end(JSON.stringify(url.pathname === '/api/permission/saved'
+          ? { data } : { location: { directory: f.root }, data }));
       })().catch(error => {
         failures.push(error);
         if (!response.headersSent) response.writeHead(500);
@@ -264,7 +265,7 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         };
         let client: ReturnType<typeof createOpenCodeV2OwnedSessionClient> | undefined;
         let disposals = 0, admissions = 0;
-        const replacement = t.mock.method(admitted, 'nativeClient', async (signal, deadline) => {
+        const replacement = t.mock.method(admitted, 'nativeClient', async (signal: AbortSignal, deadline: number) => {
           admissions++; assert.equal(admissions, 1);
           admitted.assertCurrent(signal);
           const config: Config = { endpoint, directory: f.root, version: '2.1.4', signal, deadline,
