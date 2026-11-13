@@ -399,4 +399,3 @@ Runtime и persistence barrier; новая очередь и unit-матрица
 safe unopened Host member и task-first history после explicit rebind. Для них сначала
 сверить original atomic mutation/admission seams и сохранённые target receipts;
 нельзя игнорировать старую незавершённую task ради зелёной проверки.
-

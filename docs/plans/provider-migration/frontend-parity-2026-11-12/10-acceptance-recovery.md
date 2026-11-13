@@ -673,4 +673,3 @@ PR1186 `PRRT_kwDORVTEtM622S1B`: NUL отвергается поздним Team t
 Круг source: поздняя ошибка сопоставлена с точкой publication.
 Круг architecture: локальные проверки на существующих границах; новые DTO/ledger не нужны.
 После независимого review — targeted existing Launch integration и exact-head CI.
-

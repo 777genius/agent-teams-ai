@@ -675,4 +675,3 @@ PR1186 `PRRT_kwDORVTEtM625QoJ` указывает на overlapping whitespace re
 Source-круг: parser consumers читают только `name/raw`; arguments API не меняется.
 Architecture-круг: один bounded regex, без dependency или command framework.
 Независимое source review и existing command tests обязательны до source publication.
-
