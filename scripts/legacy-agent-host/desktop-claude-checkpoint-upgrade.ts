@@ -276,7 +276,7 @@ export async function prepareDesktopClaudeCheckpointUpgrade(repo: string, pnpm: 
       validateLaunchRecord(journal, journal.fingerprint, journal.definition.members.length);
       assert.equal(journal.definition.members.length, 1);
       assertSame(journal.definition.rosterScope, oldProfile.teams[0]!.scope);
-      let base = seed;
+      let base: NonNullable<typeof oldProfile.runtime>['members'][number] = seed;
       if (journal.definition.capture !== undefined) {
         const { runtimeCaptureSourceSchema, compileRuntimeCapture } = await import(
           pathToFileURL(join(oldHost, 'dist/composition/runtimeCaptureSource.js')).href
