@@ -288,7 +288,7 @@ auth paths сохранены в parity `1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c
 - Новый [CapturedCodexLogin](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/src/features/runtime-provider-management/main/adapters/output/CapturedCodexLogin.ts)
   уже удерживает original target, commandId, private intent и Host receipt.
   Исправления остаются в этом owner, без второго OAuth engine.
-- [createCapturedCodexFeatures](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/src/features/runtime-provider-management/main/composition/createCapturedCodexFeatures.ts)
+- [createCapturedCodexFeatures](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/src/features/runtime-provider-management/main/adapters/output/createCapturedCodexFeatures.ts)
   сохраняет прежние account/quota/readiness DTO;
   [CapturedCodexAuthCommands](https://github.com/777genius/agent-teams-ai/blob/1bfccb9d1b2b695264ccd4f890eafa7ecfeb84c0/src/features/runtime-provider-management/main/adapters/output/CapturedCodexAuthCommands.ts)
   владеет existing credential intent/recovery.
