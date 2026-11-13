@@ -115,16 +115,25 @@ export function projectReadinessProbeReceipt(
       Object.keys(b).every((key) => b[key as keyof typeof b] === other[key as keyof typeof other])
     );
   };
-  if (!matches(state.binding) || !Array.isArray(state.members) || state.members.length !== 1)
-    return null;
-  const member = row(state.members[0]);
-  if (
-    member.memberId !== 'probe' ||
-    member.originalSessionId !== probe.sessionID ||
-    member.selectedModel !== selectedModel
-  )
-    return null;
   const failure = failures.find((value) => value === probe.failure) ?? null;
+  const members = Array.isArray(state.members) ? state.members : [];
+  const member = row(members[0]);
+  const boundRunState =
+    matches(state.binding) &&
+    members.length === 1 &&
+    member.memberId === 'probe' &&
+    member.originalSessionId === probe.sessionID &&
+    member.selectedModel === selectedModel;
+  // The SDK can write a terminal no-start probe before creating a run directory.
+  // Preserve only its closed failure classification, never a model/run/cleanup proof.
+  const noStartWithoutRunState =
+    failure === 'native_owner_not_started' &&
+    probe.submitted === false &&
+    probe.retired === true &&
+    probe.proof === null &&
+    Object.keys(state).length === 0 &&
+    Object.keys(stop).length === 0;
+  if (!boundRunState && !noStartWithoutRunState) return null;
   if (
     failure &&
     (probe.proof !== null ||
@@ -155,8 +164,8 @@ export function projectReadinessProbeReceipt(
     sourceKey,
     scope: 'isolated_TEST_selected_model_readiness_probe_not_team_bootstrap' as const,
     authority: 'observation_only' as const,
-    bindingMatched: true as const,
-    selectedModelMatched: true as const,
+    bindingMatched: boundRunState,
+    selectedModelMatched: boundRunState,
     submitted: probe.submitted,
     retired: probe.retired,
     proofPresent: probe.proof !== null,

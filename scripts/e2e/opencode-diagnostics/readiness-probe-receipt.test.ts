@@ -140,6 +140,48 @@ test('owner initialization wire status is closed and never labeled as external i
   );
 });
 
+test('disk capture retains a closed no-start failure without inventing run or model evidence', async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-oc-no-start-')));
+  const dataRoot = path.join(root, 'runtime-data');
+  const probeDir = path.join(dataRoot, 'opencode/v2/execution-probes', sourceKey);
+  const noStart = {
+    ...probe,
+    submitted: false,
+    retired: true,
+    failure: 'native_owner_not_started',
+  };
+  try {
+    await mkdir(probeDir, { recursive: true });
+    await writeFile(path.join(probeDir, 'probe.json'), JSON.stringify(noStart));
+    const capture = await readReadinessProbeReceipts(root, dataRoot, model);
+    assert.equal(capture.observation, 'read');
+    assert.equal(capture.candidates, 1);
+    assert.equal(capture.unmatchedOrUnavailable, 0);
+    assert.equal(capture.receipts.length, 1);
+    const receipt = capture.receipts[0];
+    assert.equal(receipt.classification, 'readiness_owner_not_submitted');
+    assert.equal(receipt.failure, 'native_owner_not_started');
+    assert.equal(receipt.authority, 'observation_only');
+    assert.equal(receipt.bindingMatched, false);
+    assert.equal(receipt.selectedModelMatched, false);
+    assert.equal(receipt.runState, null);
+    assert.equal(receipt.stopState, null);
+    assert.deepEqual(receipt.cleanup, {
+      scopeClosed: false,
+      processRetired: false,
+      descendantsRetired: false,
+    });
+    assert.equal(
+      projectReadinessProbeReceipt(sourceKey, { ...noStart, submitted: true }, null, null, model),
+      null
+    );
+    assert.equal(projectReadinessProbeReceipt(sourceKey, probe, null, null, model), null);
+    assert(!JSON.stringify(receipt).includes('DO_NOT_COPY_SECRET'));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('disk capture reads the separate probe binding and refuses a symlinked namespace', async () => {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-oc-probe-receipt-')));
   const dataRoot = path.join(root, 'runtime-data');
