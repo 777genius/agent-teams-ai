@@ -795,3 +795,39 @@ re-enters owner checks both before and after successful reads; missing files hav
 different count, so no constant call count is imposed on native execution. Review 3
 (Root): measure the same actual finite Host first; upload only the closed aggregate,
 keep raw profiles private, and leave production checks unchanged until attribution.
+
+## R15 — cold V2 readback сохраняет подтверждённую metadata lineage
+
+Факт: PR1186 head `522c80d168d698fc6842ee649cc4822406cd2632`, job
+`131717484578` / run `43373956602`: native active-input Quit завершился PASS,
+но второй app readback INCOMPLETE. Original artifact `14013109806`,
+ZIP SHA256 `d7dd3e617499c752091a911d72431935be71bc38f14a5f1aeff9a6aaadc55065`.
+Cold helper сохранил provider-metadata child7327, затем UI сменил metadata mode;
+legacy passive check требовал вечного существования прежнего PID. Нельзя
+исправлять это принятием произвольного нового child или удалением проверки.
+
+1. После **того же единственного** existing cold loadModels получить actual selected
+   global source/profile из existing runtime-source index и наблюдать его через
+   уже реализованный `captureMetadataObservation/readDesktopMetadataLineage`.
+   Выделить лишь маленький read-only wrapper в existing desktop-native-stop-fixture.
+   Не повторять catalog RPC и не создавать новую native operation.
+2. Cold assertNoRuntimeChildren обновляет captured observation по exact Host birth,
+   прежним profile hashes и непрерывной original lineage. Successor допустим только
+   после exact previous ready→released и physical absence прежнего PID, с собственной
+   подтверждённой birth; unknown cleanup/foreign profile/PID reuse отказываются.
+   Existing Runtime records, source/profile/executable digests остаются неизменными,
+   zero Runtime allocation и один active metadata owner сохраняются.
+3. В cold evidence сохранить original capture и latest validated readback capture.
+   Ordinary Quit затем должен подтвердить release **всех** исходных и successor
+   metadata identities из этой lineage, до harness cleanup. Применить existing
+   bounded log-drain/absence machinery к cold metadata branch; hot paths сохраняются.
+4. Расширить existing V2 lifecycle case именно cold transition/cleanup:
+   confirmed retired original + exact successor допускаются; missing release,
+   чужой active child, reused PID или оставшийся successor после Quit отказываются.
+   Это проверка correlation; actual пяти cold Desktop jobs остаётся отдельным gate.
+   Не увеличивать timeouts, не повторять native input/metadata calls ради PASS.
+
+Source-круг нашёл несовпадение old passive cold path с уже production-supported
+global/provider metadata handoff. Второй круг сохраняет original-owner proof,
+zero-runtime invariant и cleanup всех поколений. Следующий шаг — independent
+diff review, existing scripts types/tests и штатный exact-head Desktop CI.
