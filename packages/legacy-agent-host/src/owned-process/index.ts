@@ -11,3 +11,8 @@ export type { BrokerTransport, BrokerTransportFactory } from './windowsBroker.js
 export { OwnedProcessFacade } from './processFacade.js';
 export type { ObservableNativeProcess, OwnedProcessFacadeOptions } from './processFacade.js';
 export * from './hostCustody.js';
+export { RetainedWindowsCustody } from './RetainedWindowsCustody.js';
+export { windowsBrokerReference } from './HostWindowsLaunch.js';
+export { readCapturedProfile } from './readCapturedProfile.js';
+export { nativeProcessProfileSchema } from '../composition/nativeProcessProfile.js';
+export type { NativeProcessProfile } from '../composition/nativeProcessProfile.js';

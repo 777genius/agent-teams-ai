@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { OpenCodeV2ManagementHost } from '../dist/adapters/providers/OpenCodeV2ManagementHost.js';
+import { OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
+import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
+import { CredentialCommandOwner } from '../dist/management/CredentialCommandOwner.js';
+import { managementDigest } from '../dist/management/identity.js';
 import { openCodeManagementProfileSchema } from '../dist/management/profile.js';
 
 function testProfile(root: string) {
@@ -20,6 +24,80 @@ function testProfile(root: string) {
       directory: join(root, 'engine'), manifestSha256: 'b'.repeat(64), externalDirectory: 'deny' },
   });
 }
+
+test('only the same account rejected publication admits corrected Connect across source revisions', async t => {
+  let admissions = 0;
+  t.mock.method(OpenCodeV2ManagementHost.prototype, 'keyOperation', async () => {
+    admissions++;
+    throw new Error('TEST ends at original native admission; no native connection is simulated');
+  });
+  for (const scenario of ['same-account', 'account-changed', 'home-changed', 'key-changed', 'later-success', 'unknown'] as const) {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-key-revision-')));
+    const profile = testProfile(root), store = new FileManagementCommandStore(root);
+    const directories = Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME'].map(key => {
+      const path = profile.environment[key]!, stat = statSync(path);
+      return [key, { path, dev: stat.dev, ino: stat.ino }];
+    }));
+    const target = { profileId: profile.profileId, configRevision: profile.configRevision,
+      selectionDigest: managementDigest({ profile, directories }), resourceId: managementDigest(directories.XDG_DATA_HOME) };
+    let accepted = false;
+    // Controlled native progress goes through the real command owner, validator, private auth publication and journal.
+    const originalOwner = new CredentialCommandOwner({ store, assertCurrent() {},
+      select: () => target,
+      async perform(command, _target, progress) {
+        if (command.kind !== 'credential.set') throw new Error('TEST only sets its own key');
+        const scope = new OpenCodeV2CredentialScope(profile, command.providerId, () => true);
+        const publication = scope.prepare(command.key);
+        const base = { integrationId: 'TEST-integration', nativeNamespace: managementDigest({ profile, commandId: command.commandId }),
+          beforeAuthDigest: publication.before.digest };
+        progress({ ...base, phase: 'key-intent' });
+        const connected = { ...base, credentialId: 'cred_TEST' };
+        progress({ ...connected, phase: 'key-connected' });
+        const published = { ...connected, authDigest: publication.publish().digest };
+        progress({ ...published, phase: 'key-published' });
+        const verification = { commandId: 'TEST-verify-' + command.commandId, modelId: 'TEST-provider/TEST-model' };
+        progress({ ...published, phase: 'probe-intent', verification });
+        progress({ ...published, phase: 'probe-completed', verification: { ...verification, ok: accepted } });
+        return { ok: accepted, settled: true, ...(!accepted && scenario !== 'unknown' ? { rejected: true } : {}) };
+      },
+    });
+    const originalCommand = { profileId: profile.profileId, configRevision: profile.configRevision,
+      providerId: 'TEST-provider', commandId: 'TEST-rejected', kind: 'credential.set' as const, key: 'TEST-rejected-key' };
+    const originalReceipt = await originalOwner.execute(originalCommand);
+    const originalRecord = store.read(originalCommand.commandId);
+    const selected = { ...profile, profileId: 'runtime-source:' + 'c'.repeat(64), configRevision: 'c'.repeat(64) };
+    if (scenario === 'account-changed') selected.accountBinding = 'TEST-other-account';
+    if (scenario === 'home-changed') {
+      const home = join(root, 'TEST-other-home'); mkdirSync(home, { mode: 0o700 });
+      selected.environment = { ...profile.environment, HOME: home };
+    }
+    if (scenario === 'key-changed') writeFileSync(join(root, 'opencode/auth.json'),
+      JSON.stringify({ 'TEST-provider': { type: 'api', key: 'TEST-independent-key' } }), { mode: 0o600 });
+    if (scenario === 'later-success') {
+      accepted = true;
+      assert.equal((await originalOwner.execute({ ...originalCommand, commandId: 'TEST-later-success' })).phase, 'completed');
+    }
+    // A cold Coordinator restores the original retained profile alongside the newly selected source profile.
+    const owner = new ProviderManagementCoordinator([profile, selected], () => {}, root);
+    admissions = 0;
+    try {
+      const command = { ...originalCommand, profileId: selected.profileId, configRevision: selected.configRevision,
+        commandId: 'TEST-new-explicit-connect', key: scenario === 'unknown' ? originalCommand.key : 'TEST-corrected-key' };
+      if (scenario === 'same-account') {
+        assert.equal((await owner.credentials.execute(command)).phase, 'held', 'TEST stops before any native effect');
+        assert.equal(admissions, 1, 'both validation and effect admission preserve original rejection authority');
+      } else {
+        await assert.rejects(owner.credentials.execute(command), { code: scenario === 'unknown' ? 'conflict' : 'held' });
+        assert.equal(admissions, 0, scenario);
+      }
+      assert.deepEqual(owner.credentials.lookup({ profileId: profile.profileId, configRevision: profile.configRevision,
+        commandId: originalCommand.commandId }), originalReceipt);
+      assert.deepEqual(store.read(originalCommand.commandId), originalRecord, 'new source never rewrites the original receipt');
+      assert.equal(new OpenCodeV2CredentialScope(profile, originalCommand.providerId, () => true).capture().readKey(),
+        scenario === 'key-changed' ? 'TEST-independent-key' : originalCommand.key);
+    } finally { await owner.close(); rmSync(root, { recursive: true, force: true }); }
+  }
+});
 
 test('overlapping V2 status and directory reads preserve the active owner and original deadlines', async t => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-catalog-overlap-')));

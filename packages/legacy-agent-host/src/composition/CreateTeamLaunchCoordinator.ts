@@ -21,6 +21,8 @@ import {
 
 /** Coordinates existing owners. Probe, registry, roster and launch retain their original journals. */
 export class CreateTeamLaunchCoordinator {
+  private readonly submitting = new Set<string>();
+
   constructor(
     private readonly options: {
       profile: TeamHostProfile;
@@ -216,10 +218,15 @@ export class CreateTeamLaunchCoordinator {
 
   /** Read-only original admission, before considering renewal or a finite proof's expiry. */
   lookup(commandId: string, raw: unknown): CreateTeamLaunchSubmitResult | null {
+    return this.readOriginal(commandId, raw);
+  }
+
+  private readOriginal(commandId: string, raw: unknown, continueCapture = false): CreateTeamLaunchSubmitResult | null {
     this.options.assertCurrent();
     const input = createTeamLaunchPreparationInputSchema.parse(raw);
     if (!this.options.profile.creation?.contextIds.includes(input.draft.contextId))
       throw new TeamLaunchError('forbidden', 'creation-context');
+    if (this.submitting.has(commandId)) throw new TeamLaunchError('hold', 'creation-pending');
     const creation = this.options.registry.lookup(commandId, input.draft.contextId, input.draft);
     if (!creation) return null;
     if (creation.phase !== 'published') throw new TeamLaunchError('hold', 'creation-pending');
@@ -229,18 +236,22 @@ export class CreateTeamLaunchCoordinator {
     const registered = team.owner
       .runtimeCaptures(this.options.profile.principalId)
       .find((row) => row.commandId === ids.capture);
-    if (!registered) return null;
-    const launch = this.options.runtime.readLaunchAdmission(
+    if (!registered) {
+      if (continueCapture) return null;
+      throw new TeamLaunchError('hold', 'creation-capture-pending');
+    }
+    const result = this.options.runtime.readLaunchAdmission(
       creation.record.teamId,
       registered.launchId,
       ids.start
     );
-    return launch ? { creation, launch } : null;
+    return { creation, ...result };
   }
 
   async submit(commandId: string, raw: unknown): Promise<CreateTeamLaunchSubmitResult> {
-    const prior = this.lookup(commandId, raw);
+    const prior = this.readOriginal(commandId, raw, true);
     const ids = this.children(commandId);
+    if (prior?.partialCreated) return prior;
     if (prior) {
       // Resume the same admitted prompt/start command only; claimed native attempts cannot open twice.
       const launch = await this.options.runtime.executeLaunch(
@@ -257,6 +268,16 @@ export class CreateTeamLaunchCoordinator {
         launch,
       });
     }
+    this.submitting.add(commandId);
+    try {
+      return await this.submitNew(commandId, raw);
+    } finally {
+      this.submitting.delete(commandId);
+    }
+  }
+
+  private async submitNew(commandId: string, raw: unknown): Promise<CreateTeamLaunchSubmitResult> {
+    const ids = this.children(commandId);
     const selected = this.capture(raw),
       { input } = selected;
     const prepared = await this.prepare('read', input);

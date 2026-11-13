@@ -154,8 +154,10 @@ async function qualifyOriginalNativeRegistration(
   const custody = createProcessCustody(profile.processCustody);
   assert.ok(custody);
   assert.ok(profile.processCustody);
+  const selection = profile.processCustody;
+  assert.ok(!('kind' in selection), 'This original pidfs/Darwin gate requires its native artifact');
   const rootOracle = createDesktopProcessRootOracle({ node: fixture.node,
-    capture: primary.capturedNative, selection: profile.processCustody,
+    capture: primary.capturedNative, selection,
     observe: capture => custody.observe(capture) });
   const { rootCapture } = rootOracle;
   assert.equal(rootOracle.observe(Date.now() + 5000), 'same-live', 'original SDK root before any Stop or crash');
@@ -176,7 +178,7 @@ async function qualifyOriginalNativeRegistration(
     [
       ...oraclePaths.map((path) => resolve(import.meta.dirname, '../..', path)),
       ...['manifest.json', 'registered-process.node', ...(linux ? [] : ['registered-process-darwin.c'])].map((name) =>
-        join(profile.processCustody!.directory, name)
+        join(selection.directory, name)
       ),
     ].map(async (path) => ({ path, sha256: await fileDigest(path) }))
   );

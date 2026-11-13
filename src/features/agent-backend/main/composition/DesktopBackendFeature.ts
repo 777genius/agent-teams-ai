@@ -25,6 +25,7 @@ import { CapturedRosterCommands } from '../infrastructure/CapturedRosterCommands
 import { captureRuntimeSources } from '../infrastructure/CapturedRuntimeSources';
 import { CapturedScheduledRuns } from '../infrastructure/CapturedScheduledRuns';
 import { CapturedTeamRegistry } from '../infrastructure/CapturedTeamRegistry';
+import { captureMainWindowsCustody } from '../infrastructure/CapturedWindowsCustody';
 import { FileHandleBindingStore } from '../infrastructure/FileHandleBindingStore';
 import { loadDesktopBackendDescriptor } from '../infrastructure/loadDesktopBackendDescriptor';
 import { readCapturedTeamRetirements } from '../infrastructure/readCapturedTeamRetirements';
@@ -150,11 +151,13 @@ export class DesktopBackendFeature {
       this.router = router;
       phase = 'owner-registration';
       for (const owner of descriptor.owners) {
+        const nativeCustody = captureMainWindowsCustody(owner.profile);
         const captured = {
           ownerId: owner.ownerId,
           revision: owner.revision,
           storageRoot: owner.storageRoot,
-          client: new CapturedHostClient(owner.profile),
+          client: new CapturedHostClient(owner.profile, nativeCustody),
+          ...(nativeCustody ? { nativeCustody } : {}),
         };
         router.registerOwner(captured);
         this.clients.set(ownerKey(owner), captured);
@@ -197,6 +200,7 @@ export class DesktopBackendFeature {
         /* Diagnostics cannot alter the original failed admission. */
       }
       await this.router?.shutdown();
+      await this.closeNativeOwners();
     }
   }
 
@@ -732,17 +736,17 @@ export class DesktopBackendFeature {
     if (this.sealed || this.clients.get(ownerKey(selected.owner)) !== owner)
       throw new BackendRoutingError('unavailable');
     if (!handshake.capabilities.includes('runtime.sources')) return undefined;
-    const teamScopes = (this.descriptor?.handles ?? [])
+    const teamScopes = [...new Map((this.descriptor?.handles ?? [])
       .filter(
         (entry) =>
           entry.contextId === selected.contextId &&
           ownerKey(entry.owner) === ownerKey(selected.owner)
       )
-      .map(({ scope }) => ({
+      .map(({ scope }) => [JSON.stringify([scope.teamId, scope.projectId, scope.workspaceId]), {
         teamId: scope.teamId,
         projectId: scope.projectId,
         workspaceId: scope.workspaceId,
-      }));
+      }] as const)).values()];
     return captureRuntimeSources({
       grant: {
         targetId: this.managementTargetId(selected),
@@ -773,6 +777,14 @@ export class DesktopBackendFeature {
   shutdown(): ReturnType<BackendOwnerRouter['shutdown']> {
     this.sealed = true;
     this.state = 'shutting-down';
-    return this.router?.shutdown() ?? Promise.resolve([]);
+    return (this.router?.shutdown() ?? Promise.resolve([])).then(async results => {
+      await this.closeNativeOwners();
+      return results;
+    });
+  }
+
+  private async closeNativeOwners(): Promise<void> {
+    const outcomes = await Promise.all([...this.clients.values()].map(owner => owner.nativeCustody?.close() ?? true));
+    if (outcomes.some(value => !value)) throw new BackendRoutingError('hold');
   }
 }

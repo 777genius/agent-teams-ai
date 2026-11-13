@@ -252,7 +252,7 @@ test('seal during catalog disposal cannot call the original attachment byte reso
       {} as Parameters<NonNullable<MemberProviderContext['attachments']>['resolve']>[0],
       new AbortController().signal
     );
-  const rejected = expect(pending).rejects.toThrow('OpenCode V2 embedded session unavailable');
+  const rejected = expect(pending).rejects.toMatchObject({ name: 'AbortError' });
   await held.entered;
   f.provider.seal();
   held.release();

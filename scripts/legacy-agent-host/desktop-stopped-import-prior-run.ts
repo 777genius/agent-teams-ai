@@ -513,11 +513,12 @@ export async function produceDesktopCurrentStoppedTeam(options: {
       packedRelaunchMode: false,
     });
     proof.cleanup = cleanup;
-    proof.nativeChildrenAfterCleanup = {
+    const nativeChildrenAfterCleanup = {
       captured: native.captured(),
       remaining: native.remaining(),
       unmatched: selectedDesktopRuntime(inputs.runtime.path),
     };
+    proof.nativeChildrenAfterCleanup = nativeChildrenAfterCleanup;
     if (
       native.remaining().length ||
       selectedDesktopRuntime(inputs.runtime.path).length ||
@@ -541,7 +542,17 @@ export async function produceDesktopCurrentStoppedTeam(options: {
     assert.equal(
       proof.status,
       'PASS',
-      'current source finished original Stop, Quit, absence and frozen input'
+      'current source finished original Stop, Quit, absence and frozen input: ' +
+        JSON.stringify({
+          failure: typeof proof.failure === 'string' ? proof.failure.slice(0, 1000) : null,
+          freezeFailure:
+            typeof proof.freezeFailure === 'string' ? proof.freezeFailure.slice(0, 1000) : null,
+          sourceFrozen: proof.sourceFrozen === true,
+          cleanupFailed: cleanup.cleanupFailure !== undefined,
+          cleanupRemaining: cleanup.remaining?.length ?? null,
+          capturedNativeRemaining: nativeChildrenAfterCleanup.remaining.length,
+          unmatchedSelected: nativeChildrenAfterCleanup.unmatched.length,
+        })
     );
   }
   assert.ok(seed);

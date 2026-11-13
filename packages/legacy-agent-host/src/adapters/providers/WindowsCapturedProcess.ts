@@ -8,7 +8,7 @@ import { OwnedProcessFacade } from '../../owned-process/processFacade.js';
 import { isCanonicalNativePath } from '../../owned-process/nativePath.js';
 
 import type { NativeProcessProfile } from '../../composition/nativeProcessProfile.js';
-import type { PendingOwnedProcess, PreparedOwnedProcess, ProcessOwner, ResolvedLaunchSpec } from '../../owned-process/contract.js';
+import type { OwnedLaunchPort, PendingOwnedProcess, PreparedOwnedProcess, ProcessOwner, ResolvedLaunchSpec } from '../../owned-process/contract.js';
 import type { CapturedProcessLaunch } from './CapturedProcess.js';
 
 /** CreateProcessW argv quoting. No cmd.exe, PATH resolution or shell metacharacter expansion. */
@@ -42,10 +42,10 @@ export class WindowsCapturedProcess {
   private sealed = false;
 
   constructor(profile: NativeProcessProfile, private readonly current: () => boolean,
-    private readonly verifyTarget: () => void) {
+    private readonly verifyTarget: () => void, retainedPort?: OwnedLaunchPort) {
     this.profile = structuredClone(profile);
     this.verifyBroker();
-    this.port = createWindowsOwnedLaunchPort(this.profile.windowsBroker!.path);
+    this.port = retainedPort ?? createWindowsOwnedLaunchPort(this.profile.windowsBroker!.path);
   }
 
   private verifyBroker(): void {

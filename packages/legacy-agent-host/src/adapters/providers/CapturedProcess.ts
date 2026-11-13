@@ -11,6 +11,7 @@ import { WindowsCapturedProcess } from './WindowsCapturedProcess.js';
 
 import type { NativeProcessProfile } from '../../composition/nativeProcessProfile.js';
 import type { ObservableNativeProcess } from '../../owned-process/processFacade.js';
+import type { OwnedLaunchPort } from '../../owned-process/contract.js';
 
 /** Process custody needs native selection only, independent of a Team member/session. */
 export type CapturedProcessProfile = NativeProcessProfile & {
@@ -71,7 +72,8 @@ export class CapturedProcess implements CapturedProcessPort {
     private readonly canAllocate: () => boolean = () => true,
     private readonly processCustody?: RegisteredProcessRootSource,
     private readonly canCaptureRegisteredProcess: () => boolean = canAllocate,
-    private readonly processTreeSource?: CapturedProcessTreeSource
+    private readonly processTreeSource?: CapturedProcessTreeSource,
+    retainedWindowsPort?: OwnedLaunchPort
   ) {
     this.profile = { provider: profile.provider, cwd: profile.cwd,
       environment: { ...profile.environment }, executable: { ...profile.executable },
@@ -81,7 +83,7 @@ export class CapturedProcess implements CapturedProcessPort {
     this.windows = process.platform === 'win32' && !processTreeSource
       ? new WindowsCapturedProcess(this.profile, () => !this.sealed && this.canAllocate(), () => {
           this.verifyExecutable(); this.verifyDirectories();
-        })
+        }, retainedWindowsPort)
       : undefined;
   }
 

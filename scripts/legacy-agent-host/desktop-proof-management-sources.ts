@@ -219,4 +219,8 @@ export const desktopProofManagementSources = [
   'scripts/legacy-agent-host/qualify-linux-process-sdk.ts',
   'scripts/legacy-agent-host/qualify-linux-process-cold-ui.ts',
   'scripts/legacy-agent-host/qualify-linux-process-packed.ts',
+  'src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts',
+  'packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts',
+  'packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts',
+  'packages/legacy-agent-host/src/owned-process/readCapturedProfile.ts',
 ] as const;

@@ -286,7 +286,7 @@ export class TeamOwner {
   }
 
   /** Trusted continuation of prepared Task facts and saved Host replies. */
-  resumeTaskCommands(runtime?: TeamRuntimeDeliveryPort) {
+  async resumeTaskCommands(runtime?: TeamRuntimeDeliveryPort) {
     resumeHostCostCommands(this.store, receipt => this.execute(receipt.principalId, receipt.command));
     return this.taskRecovery.resume(runtime);
   }

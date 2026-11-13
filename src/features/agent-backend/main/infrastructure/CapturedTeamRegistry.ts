@@ -159,14 +159,8 @@ export class CapturedTeamRegistry {
     try {
       value = await this.request('team.creation.submit', commandId, captured, guard);
     } catch (error) {
-      if (error instanceof TeamCreationRefusal) {
-        // A later launch refusal may follow registry publication. Only original
-        // owner-confirmed absence proves that editing this Create is safe.
-        const creation = await this.lookup(commandId, captured.draft, guard);
-        if (creation !== null) throw new BackendRoutingError('hold', 'unknown');
-        throw error;
-      }
-      // Transport uncertainty permits only one original read, never a replacement submit.
+      // One original read can recover a completed capture without claiming native admission.
+      // A published Team with an incomplete/in-flight capture remains held at this owner.
       value = await this.request('team.creation.lookup', commandId, captured, guard);
       if (value === null) throw error;
     }

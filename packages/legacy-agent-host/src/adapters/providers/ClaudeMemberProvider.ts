@@ -35,7 +35,10 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
     context.processCustody,
     () =>
       (context.canCaptureRegisteredProcess?.() ?? context.canAllocate()) &&
-      capturedMcpSourceCurrent(profile)
+      capturedMcpSourceCurrent(profile),
+    undefined,
+    context.retainedWindowsLaunch?.port(profile,
+      () => context.canAllocate() && capturedMcpSourceCurrent(profile))
   );
   let ready = false;
   let sealed = false;

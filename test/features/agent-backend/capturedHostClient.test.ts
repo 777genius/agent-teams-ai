@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { RetainedWindowsCustody } from '@agent-teams/legacy-agent-host/owned-process';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { assertDesktopMetadataLineageReleased, desktopMetadataProfileHash,
@@ -15,10 +16,22 @@ import {
   createCapturedHostClient,
   type SelectedHostProfile,
 } from '../../../src/features/agent-backend/main';
+import { capturedHostProfileDigest } from '../../../src/features/agent-backend/main/infrastructure/selectedHostProfile';
 import { formatPersistentLogMessage, installPersistentAppLog } from '../../../src/main/utils/persistentAppLog';
 import { addLogSink } from '../../../src/shared/utils/logger';
 
+import {
+  retainedNativeHostSource,
+  retainedNativeInputCompletionGate,
+  retainedNativeInputPressureHostSource,
+  retainedNativePayloadDigest,
+  retainedNativePressureHostSource,
+  retainedNativePressurePrimitive,
+  retainedNativePrimitive,
+} from './fixtures/retainedNativeCustody';
+
 import type {
+  HostCustodyBinding,
   HostCustodyHint,
   HostCustodyOwner,
   HostCustodyResult,
@@ -127,6 +140,119 @@ function client(profile: SelectedHostProfile, owner?: HostCustodyOwner): Capture
 }
 
 describe('captured legacy host client over real subprocess stdio', () => {
+  it.each(['graceful', 'crash'] as const)('retains Main launch/stdio/receipt ownership across %s Host close', async mode => {
+    const profile = { ...await fixture(retainedNativeHostSource(serverUrl), 'raw'), requestTimeoutMs: 3000 };
+    const primitive = retainedNativePrimitive();
+    let current = true, verified = 0;
+    const owner = new RetainedWindowsCustody({ profileId: profile.profileId,
+      profileDigest: capturedHostProfileDigest(profile),
+      selectBroker: () => ({ path:'C:\\TEST\\owned-process-broker.exe', sha256:'2'.repeat(64), arch:'x64', protocol:1 }),
+      async verifyLaunch() { expect(current).toBe(true); verified++; },
+      createPort: () => primitive.port });
+    const original = client(profile, owner);
+    try {
+      await original.start();
+      expect(await original.request('launch')).toEqual({ bytes:131072, sha256:retainedNativePayloadDigest });
+      expect(verified).toBe(2);
+      expect(Buffer.concat(primitive.writes).byteLength).toBe(131072);
+      primitive.rootExit();
+      await expect.poll(() => original.request('state')).toEqual({ exitCode:0, stdoutEnded:false });
+      expect(primitive.calls.stopped).toBe(0);
+      if (mode === 'crash') {
+        await expect(original.request('crash')).rejects.toMatchObject({ outcome:'unknown' });
+        expect((await original.shutdown()).childExit).toBe('confirmed');
+        expect(primitive.calls.stopped).toBe(0);
+        current = false; // Changed source cannot discard the retained original cleanup authority.
+      } else {
+        expect((await original.shutdown()).childExit).toBe('confirmed');
+        expect(primitive.calls.stopped).toBe(1);
+        expect(primitive.calls.released).toBe(1);
+      }
+      expect(await owner.close()).toBe(true);
+      expect(primitive.calls).toEqual({ allocated:1, prepared:1, resumed:1, stopped:1, released:1 });
+    } finally { await original.shutdown(); await owner.close(); }
+  });
+
+  it.each(['graceful', 'expired'] as const)('queues multi-member launch and %s cleanup without caching capacity refusals', async mode => {
+    const profile = { ...await fixture(retainedNativePressureHostSource(serverUrl), 'raw'),
+      requestTimeoutMs: 3000 };
+    const primitive = retainedNativePressurePrimitive();
+    const owner = new RetainedWindowsCustody({ profileId: profile.profileId,
+      profileDigest: capturedHostProfileDigest(profile),
+      selectBroker: () => ({ path:'C:\\TEST\\owned-process-broker.exe', sha256:'2'.repeat(64), arch:'x64', protocol:1 }),
+      async verifyLaunch() {}, createPort: () => primitive.port });
+    const original = client(profile, owner);
+    try {
+      await original.start();
+      const launching = original.request('launch');
+      await Promise.race([primitive.workFull, launching.then(() => {
+        throw new Error('TEST launch crossed an unreleased preparation barrier');
+      })]);
+      expect(primitive.calls.prepared).toBe(24);
+      primitive.releaseWork();
+      expect(await launching).toBe(48);
+      expect(primitive.calls).toMatchObject({ allocated:48, prepared:48, resumed:48, written:48 });
+      const closing = mode === 'graceful' ? original.shutdown()
+        : original.request('holdCloses', undefined, { control:true });
+      await Promise.race([primitive.controlFull, closing.then(() => {
+        throw new Error('TEST close crossed an unreleased original Stop barrier');
+      })]);
+      expect(primitive.calls.stopped).toBe(32);
+      if (mode === 'expired') {
+        expect(await original.request('expireOne', undefined, { control:true })).toBe('unknown');
+        expect(primitive.calls.stopped, 'Expired queued Stop never reached the original primitive').toBe(32);
+      }
+      primitive.releaseControl();
+      if (mode === 'expired') {
+        expect(await closing).toBe(32);
+        expect(await original.request('finishExplicit', undefined, { control:true }))
+          .toEqual({ count:48, originalExpired:'unknown' });
+      }
+      expect((await original.shutdown()).childExit).toBe('confirmed');
+      expect(await owner.close()).toBe(true);
+      expect(primitive.calls).toEqual({ allocated:48, prepared:48, resumed:48,
+        written:48, stopped:48, released:48 });
+    } finally {
+      primitive.releaseWork(); primitive.releaseControl();
+      await original.shutdown(); await owner.close();
+    }
+  });
+
+  it.each([false, true])('holds Main reply bytes before native effect, expiry=%s', async expire => {
+    const profile = { ...await fixture(retainedNativeInputPressureHostSource(serverUrl), 'raw'),
+      requestTimeoutMs:3000 };
+    let effects = 0, controls = 0, binding: HostCustodyBinding | undefined;
+    const owner: HostCustodyOwner = { mainEpoch:'TEST-main-input', attach(context) {
+      binding = context.binding;
+      return { onReadable:()=>()=>{}, handle(call) {
+        if (call.operation === 'write') { effects++; return {operation:'write',state:'completed'}; }
+        if (call.operation === 'observe') { controls++; return {operation:'observe',root:'running'}; }
+        throw new Error('TEST unexpected native effect');
+      } };
+    } };
+    const transport = client(profile, owner); await transport.start();
+    const gate = retainedNativeInputCompletionGate(transport);
+    try {
+      const requested = transport.request('TEST.blocked-native', {expire,payload:'x'.repeat(1024*1024-2048)});
+      await Promise.race([gate.blocked, requested.then(()=>{ throw new Error('TEST missing original write barrier'); })]);
+      await Promise.race([gate.queued, requested.then(()=>{ throw new Error('TEST native call never reached Main admission'); })]);
+      if (expire) expect(await requested).toMatchObject({status:expect.stringMatching(/^(unknown|refused)$/u)});
+      expect(effects).toBe(0);
+      expect(await transport.request('TEST.control', undefined, {control:true}))
+        .toMatchObject({status:'completed',value:{operation:'observe'}});
+      expect(controls).toBe(1); expect(effects).toBe(0);
+      gate.release();
+      if (!expire) expect(await requested).toEqual({status:'completed',value:{operation:'write',state:'completed'}});
+      expect(effects).toBe(expire?0:1);
+      if (!expire) {
+        if (!binding) throw new Error('TEST original binding missing');
+        await expect(transport.request('TEST.missing-budget', {binding}, {control:true}))
+          .rejects.toMatchObject({code:'protocol-error',outcome:'unknown'});
+        expect(effects, 'An incompatible private envelope cannot start another effect').toBe(1);
+      }
+    } finally { gate.restore(); await transport.shutdown(); }
+  });
+
   it('keeps the original TEST physical owner across Host loss, without replaying an unacknowledged write', async () => {
     const profile = await fixture(
       `
@@ -327,10 +453,8 @@ describe('captured legacy host client over real subprocess stdio', () => {
       pressure: { lane:'work', handle: async () => {
         const work = Array.from({length:24}, (_, i) => server.nativeCustody.request({operation:'read', capability:'TEST-held-' + i, stream:'stdout'}));
         const overflow = server.nativeCustody.request({operation:'read', capability:'TEST-overflow', stream:'stdout'});
-        globalThis.TEST_pressureReady = new Promise(resolve => { for (const task of work) task.then(reply => { if (reply.status === 'refused') resolve(true); }); });
         return {work: await Promise.all(work), overflow: await overflow};
       } },
-      pressureReady: {lane:'control', handle: () => globalThis.TEST_pressureReady},
       nativeStop: {lane:'control', handle: () => server.nativeCustody.request({operation:'stop', capability:'TEST-original', attemptRef:'TEST-control', budgetMs:1000})},
     `,
       'server',
@@ -338,7 +462,8 @@ describe('captured legacy host client over real subprocess stdio', () => {
     );
     const held: ((value: HostCustodyResult) => void)[] = [];
     const order: string[] = [];
-    let stoppedWith = 0;
+    let stoppedWith = 0, workReleased = false, workAdmitted!: () => void;
+    const ready = new Promise<void>(resolve => { workAdmitted = resolve; });
     const owner: HostCustodyOwner = {
       mainEpoch: 'TEST-main-pressure',
       attach: () => ({
@@ -356,10 +481,14 @@ describe('captured legacy host client over real subprocess stdio', () => {
             order.push('end');
             return { operation: 'end', state: 'completed' };
           }
-          if (call.operation === 'read')
-            return new Promise<HostCustodyResult>((resolve) => held.push(resolve));
+          if (call.operation === 'read') {
+            if (workReleased) return { operation: 'read', state: 'empty', bytes: '', more: false };
+            return new Promise<HostCustodyResult>(resolve => {
+              held.push(resolve); if (held.length === 3) workAdmitted();
+            });
+          }
           if (call.operation !== 'stop') throw new Error('Unexpected TEST operation');
-          stoppedWith = held.length;
+          stoppedWith = held.length; workReleased = true;
           for (const release of held)
             release({ operation: 'read', state: 'empty', bytes: '', more: false });
           return { operation: 'stop', state: 'unknown' };
@@ -372,17 +501,16 @@ describe('captured legacy host client over real subprocess stdio', () => {
     expect(order).toEqual(['write:1', 'observe', 'write:2', 'end']);
     expect(interleaved.map((reply) => reply.status)).toEqual(Array(4).fill('completed'));
     const pressure = transport.request('pressure');
-    expect(await transport.request('pressureReady', undefined, { control: true })).toBe(true);
+    await Promise.race([ready, pressure.then(() => { throw new Error('TEST pressure finished before its original barrier'); })]);
     const stop = await transport.request('nativeStop', undefined, { control: true });
     const result = (await pressure) as { work: { status: string }[]; overflow: unknown };
     expect(stoppedWith).toBeGreaterThan(0);
     expect(
       stoppedWith,
-      'Byte reservation refused work before all request slots were consumed'
+      'Original byte reservation holds further work before native effect'
     ).toBeLessThan(24);
-    expect(result.overflow).toEqual({ status: 'refused' });
-    expect(result.work.filter((reply) => reply.status === 'completed')).toHaveLength(stoppedWith);
-    expect(result.work.some((reply) => reply.status === 'refused')).toBe(true);
+    expect(result.overflow).toEqual({ status: 'completed', value: { operation: 'read', state: 'empty', bytes: '', more: false } });
+    expect(result.work.filter((reply) => reply.status === 'completed')).toHaveLength(24);
     expect(stop).toEqual({ status: 'completed', value: { operation: 'stop', state: 'unknown' } });
     expect(transport.takeNotifications().notifications).toEqual([]);
   });

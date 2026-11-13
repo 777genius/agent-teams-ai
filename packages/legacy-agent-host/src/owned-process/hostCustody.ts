@@ -1,17 +1,29 @@
 /** Closed private Main/Host custody transport. This module grants no native process authority. */
+import { performance } from 'node:perf_hooks';
 import { z } from 'zod';
+
+import { MAX_LAUNCH_BYTES } from './codec.js';
 
 import type { HostLimits, RpcRequest } from '../contracts.js';
 
 export const HOST_CUSTODY_METHOD = 'host.native-custody';
 export const HOST_CUSTODY_BIND_METHOD = 'host.native-custody.bind';
 export const HOST_CUSTODY_READY_METHOD = 'host.native-custody.ready';
+export const HOST_CUSTODY_SHUTDOWN_METHOD = 'host.native-custody.prepare-shutdown';
 export const HOST_CUSTODY_CAPABILITY = 'transport.native-custody-v1';
 export const HOST_CUSTODY_CHUNK_BYTES = 16 * 1024;
 export const HOST_CUSTODY_FRAME_BYTES = 32 * 1024;
 const MAX_SEQUENCE = (1n << 64n) - 1n;
 const ref = z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/);
 const stream = z.enum(['stdout', 'stderr']);
+const hash = z.string().regex(/^[a-f0-9]{64}$/);
+const root = z.object({ pid: z.number().int().min(1).max(0x7fffffff), birth: z.string().regex(/^[a-f0-9]{16}$/) }).strict();
+const owner = z.object({ teamIncarnation: ref, runId: ref, laneId: ref,
+  processGeneration: z.string().uuid() }).strict();
+const treeReceipt = z.object({ owner, attemptId: ref, coverage: z.enum(['job-membership', 'no-local-dispatch']),
+  rootExited: z.boolean(), proofDigest: hash }).strict();
+/** Existing native preparation15s plus resume5s, including the bounded transport staging. */
+export const HOST_CUSTODY_LAUNCH_MS = 20_000;
 const bytes = z
   .string()
   .max(4 * Math.ceil(HOST_CUSTODY_CHUNK_BYTES / 3))
@@ -29,6 +41,13 @@ export const hostCustodyBindingSchema = z
 export type HostCustodyBinding = z.infer<typeof hostCustodyBindingSchema>;
 
 const callSchema = z.discriminatedUnion('operation', [
+  z.object({ operation: z.literal('allocate'), capability: ref, owner, brokerRef: hash,
+    executableSha256: hash, launchSha256: hash, launchBytes: z.number().int().min(1).max(MAX_LAUNCH_BYTES),
+    budgetMs: z.number().int().min(0).max(HOST_CUSTODY_LAUNCH_MS) }).strict(),
+  z.object({ operation: z.literal('launch-chunk'), capability: ref, offset: z.number().int().min(0).max(MAX_LAUNCH_BYTES), bytes }).strict(),
+  z.object({ operation: z.literal('launch-commit'), capability: ref }).strict(),
+  z.object({ operation: z.literal('prepare'), capability: ref }).strict(),
+  z.object({ operation: z.literal('resume'), capability: ref }).strict(),
   z.object({ operation: z.literal('read'), capability: ref, stream }).strict(),
   z.object({ operation: z.literal('write'), capability: ref, bytes }).strict(),
   z.object({ operation: z.literal('end'), capability: ref }).strict(),
@@ -42,9 +61,15 @@ const callSchema = z.discriminatedUnion('operation', [
     })
     .strict(),
   z.object({ operation: z.literal('release'), capability: ref, receiptRef: ref }).strict(),
+  z.object({ operation: z.literal('drain'), capability: ref, budgetMs: z.number().int().min(0).max(3000) }).strict(),
 ]);
 export type HostCustodyCall = z.infer<typeof callSchema>;
 const resultSchema = z.discriminatedUnion('operation', [
+  z.object({ operation: z.literal('allocate'), state: z.literal('allocated') }).strict(),
+  z.object({ operation: z.literal('launch-chunk'), offset: z.number().int().min(0).max(MAX_LAUNCH_BYTES) }).strict(),
+  z.object({ operation: z.literal('launch-commit'), state: z.literal('committed') }).strict(),
+  z.object({ operation: z.literal('prepare'), root }).strict(),
+  z.object({ operation: z.literal('resume'), state: z.literal('running') }).strict(),
   z
     .object({
       operation: z.literal('read'),
@@ -60,17 +85,21 @@ const resultSchema = z.discriminatedUnion('operation', [
   z.object({ operation: z.literal('end'), state: z.literal('completed') }).strict(),
   // Root exit is deliberately not a tree-cleanup receipt.
   z
-    .object({ operation: z.literal('observe'), root: z.enum(['running', 'exited', 'unknown']) })
+    .object({ operation: z.literal('observe'), root: z.enum(['running', 'exited', 'unknown']),
+      exit: z.object({ code: z.number().int().min(0).max(0xffffffff), birth: root.shape.birth }).strict().optional(),
+      transportFailed: z.boolean().optional() })
     .strict(),
   z
     .object({
       operation: z.literal('stop'),
       state: z.enum(['confirmed', 'unknown']),
       receiptRef: ref.optional(),
+      receipt: treeReceipt.optional(),
     })
     .strict()
     .refine((value) => (value.state === 'confirmed') === (value.receiptRef !== undefined)),
   z.object({ operation: z.literal('release'), state: z.enum(['released', 'unknown']) }).strict(),
+  z.object({ operation: z.literal('drain'), state: z.enum(['complete', 'incomplete']) }).strict(),
 ]);
 export type HostCustodyResult = z.infer<typeof resultSchema>;
 const replySchema = z.discriminatedUnion('status', [
@@ -84,7 +113,8 @@ export const hostCustodyRequestSchema = z
     jsonrpc: z.literal('2.0'),
     id: z.string(),
     method: z.literal(HOST_CUSTODY_METHOD),
-    params: z.object({ binding: hostCustodyBindingSchema, call: callSchema }).strict(),
+    params: z.object({ binding: hostCustodyBindingSchema, call: callSchema,
+      remainingMs: z.number().int().min(1).max(30_000) }).strict(),
   })
   .strict();
 const responseSchema = z
@@ -94,7 +124,7 @@ const responseSchema = z
     result: z.object({ binding: hostCustodyBindingSchema, reply: replySchema }).strict(),
   })
   .strict();
-export const hostCustodyHintSchema = z.object({ capability: ref, stream }).strict();
+export const hostCustodyHintSchema = z.object({ capability: ref, stream: z.enum(['stdout', 'stderr', 'state']) }).strict();
 export type HostCustodyHint = z.infer<typeof hostCustodyHintSchema>;
 const readySchema = z
   .object({
@@ -121,7 +151,11 @@ export interface HostCustodyPort {
   /** Recheck the attached epoch before dispatch after every await. Keep admitted effects after signal abort. */
   handle(call: HostCustodyCall): HostCustodyResult | Promise<HostCustodyResult>;
   /** Replay current buffered-readable/EOF state on subscription, then report new readiness. */
-  onReadable(observer: (hint: HostCustodyHint) => void): () => void;
+  onReadable(observer: (hint: HostCustodyHint) => boolean): () => void;
+  /** Reconsider already-buffered readiness after the shared transport regains capacity. */
+  resumeReadable?(): void;
+  /** Graceful cleanup keeps original controls/reads; no new input or allocation is admitted. */
+  sealInput?(): void;
 }
 export function sameHostCustodyBinding(a: HostCustodyBinding, b: HostCustodyBinding): boolean {
   return (
@@ -130,8 +164,15 @@ export function sameHostCustodyBinding(a: HostCustodyBinding, b: HostCustodyBind
     a.profileDigest === b.profileDigest
   );
 }
-export function hostCustodyControl(call: HostCustodyCall): boolean {
-  return call.operation !== 'read' && call.operation !== 'write' && call.operation !== 'end';
+export function hostCustodyControl(call: Pick<HostCustodyCall, 'operation'>): boolean {
+  return ['observe', 'stop', 'drain', 'release'].includes(call.operation);
+}
+export function hostCustodyCleanup(call: Pick<HostCustodyCall, 'operation'>): boolean {
+  return ['read', 'observe', 'stop', 'drain', 'release'].includes(call.operation);
+}
+export function hostCustodyHintKey(call: HostCustodyCall): string | undefined {
+  return call.operation === 'read' ? `${call.capability}:${call.stream}`
+    : call.operation === 'observe' ? `${call.capability}:state` : undefined;
 }
 export function hostCustodySequence(
   id: string,
@@ -155,11 +196,22 @@ export function validateHostCustodyResult(
   return result.data;
 }
 
+interface NativeAdmission {
+  readonly operation: HostCustodyCall['operation'];
+  readonly build: () => HostCustodyCall;
+  readonly deadline: number;
+  readonly timer: ReturnType<typeof setTimeout>;
+  finish(reply: HostCustodyReply): void;
+}
+
 /** Only the closed operation family is available. There is no arbitrary reverse RPC method. */
 export class HostCustodyClient {
   private binding?: HostCustodyBinding;
   private sealed = false;
+  private inputSealed = false;
   private next = 1n;
+  private admitting = false;
+  private readonly admissions: { work: NativeAdmission[]; control: NativeAdmission[] } = { work: [], control: [] };
   private readonly pending = new Map<
     string,
     {
@@ -177,6 +229,7 @@ export class HostCustodyClient {
       limits: HostLimits;
       timeoutMs: number;
       send(frame: RpcRequest, control: boolean): boolean;
+      canSend?(control: boolean): boolean;
     }
   ) {
     if (
@@ -200,35 +253,106 @@ export class HostCustodyClient {
     return true;
   }
 
-  request(value: HostCustodyCall): Promise<HostCustodyReply> {
+  matchesBinding(value: unknown): boolean {
+    const parsed = hostCustodyBindingSchema.safeParse(value);
+    return !this.sealed && !!this.binding && parsed.success &&
+      sameHostCustodyBinding(this.binding, parsed.data);
+  }
+
+  request(value: HostCustodyCall, deadlineMs?: number): Promise<HostCustodyReply> {
     const parsed = callSchema.safeParse(value);
-    if (this.sealed || !this.binding || !parsed.success || this.next > MAX_SEQUENCE)
+    return parsed.success
+      ? this.requestWhenReady(parsed.data.operation, () => parsed.data, deadlineMs)
+      : Promise.resolve({ status: 'refused' });
+  }
+
+  /** Only references wait here. Payloads and wire IDs are created once at actual admission. */
+  requestWhenReady(
+    operation: HostCustodyCall['operation'],
+    build: () => HostCustodyCall,
+    deadlineMs?: number
+  ): Promise<HostCustodyReply> {
+    const now = performance.now();
+    const deadline = Math.min(deadlineMs ?? now + this.options.timeoutMs, now + this.options.timeoutMs);
+    const queued = this.admissions.control.length + this.admissions.work.length;
+    if (this.sealed || !this.binding || this.next > MAX_SEQUENCE ||
+      (this.inputSealed && !hostCustodyCleanup({ operation })) ||
+      !Number.isFinite(deadline) || deadline <= now || queued + this.pending.size >= 6 * 256)
       return Promise.resolve({ status: 'refused' });
-    const call = parsed.data;
+    const lane = hostCustodyControl({ operation }) ? this.admissions.control : this.admissions.work;
+    return new Promise((resolve) => {
+      let settled = false;
+      const admission: NativeAdmission = {
+        operation, build, deadline,
+        timer: setTimeout(() => admission.finish({ status: 'refused' }), deadline - now),
+        finish: (reply) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(admission.timer);
+          const index = lane.indexOf(admission);
+          if (index >= 0) lane.splice(index, 1);
+          resolve(reply);
+          this.resumeAdmission();
+        },
+      };
+      lane.push(admission);
+      this.resumeAdmission();
+    });
+  }
+
+  /** Called when the original output write frees shared bytes, or a reply frees a request slot. */
+  resumeAdmission(): void {
+    if (this.admitting || this.sealed) return;
+    this.admitting = true;
+    try {
+      for (;;) {
+        const lane = this.admissions.control.length ? this.admissions.control : this.admissions.work;
+        const admission = lane[0];
+        if (!admission) return;
+        const control = hostCustodyControl(admission);
+        const capacity = this.options.limits.maxPendingRequests -
+          (control ? 0 : this.options.limits.reservedControlRequests);
+        if (admission.deadline <= performance.now() ||
+          (this.inputSealed && !hostCustodyCleanup(admission))) {
+          admission.finish({ status: 'refused' });
+          continue;
+        }
+        if (this.pending.size >= capacity || this.options.canSend?.(control) === false) return;
+        lane.shift();
+        clearTimeout(admission.timer);
+        let parsed: ReturnType<typeof callSchema.safeParse>;
+        try { parsed = callSchema.safeParse(admission.build()); }
+        catch { admission.finish({ status: 'refused' }); continue; }
+        if (!parsed.success || parsed.data.operation !== admission.operation) {
+          admission.finish({ status: 'refused' }); continue;
+        }
+        // dispatch rechecks the original deadline after the lazy builder, without extending it.
+        void this.dispatch(parsed.data, admission.deadline).then(admission.finish);
+      }
+    } finally { this.admitting = false; }
+  }
+
+  private dispatch(call: HostCustodyCall, deadline: number): Promise<HostCustodyReply> {
+    if (this.sealed || !this.binding || this.next > MAX_SEQUENCE ||
+      (this.inputSealed && !hostCustodyCleanup(call)))
+      return Promise.resolve({ status: 'refused' });
+    const remaining = Math.floor(deadline - performance.now());
+    if (!Number.isFinite(remaining) || remaining <= 0) return Promise.resolve({ status: 'refused' });
     const control = hostCustodyControl(call);
-    const { limits } = this.options;
-    const capacity = limits.maxPendingRequests - (control ? 0 : limits.reservedControlRequests);
-    if (this.pending.size >= capacity) return Promise.resolve({ status: 'refused' });
-    if (
-      call.operation === 'read' &&
-      [...this.pending.values()].some(
-        ({ call: other }) =>
-          other.operation === 'read' &&
-          other.capability === call.capability &&
-          other.stream === call.stream
-      )
-    )
+    if (call.operation === 'read' && [...this.pending.values()].some(({ call: other }) =>
+      other.operation === 'read' && other.capability === call.capability && other.stream === call.stream))
       return Promise.resolve({ status: 'refused' });
     const id = `custody:${this.binding.hostIncarnation}:${control ? 'control' : 'work'}:${this.next++}`;
-    const hintKey = call.operation === 'read' ? `${call.capability}:${call.stream}` : undefined;
+    const hintKey = hostCustodyHintKey(call);
     const admittedHint = hintKey ? this.hints.get(hintKey) : undefined;
     const frame: RpcRequest = {
-      jsonrpc: '2.0',
-      id,
-      method: HOST_CUSTODY_METHOD,
-      params: { binding: this.binding, call },
+      jsonrpc: '2.0', id, method: HOST_CUSTODY_METHOD, params: { binding: this.binding, call, remainingMs: remaining },
     };
     return new Promise((resolve) => {
+      let returned = false;
+      const settle = (reply: HostCustodyReply) => {
+        if (!returned) { returned = true; resolve(reply); }
+      };
       const finish = (reply: HostCustodyReply) => {
         const pending = this.pending.get(id);
         if (!pending) return;
@@ -236,11 +360,17 @@ export class HostCustodyClient {
         this.pending.delete(id);
         if (reply.status === 'completed' && hintKey && this.hints.get(hintKey) === admittedHint)
           this.hints.delete(hintKey);
-        resolve(reply);
+        if (reply.status === 'completed' && reply.value.operation === 'release' && reply.value.state === 'released')
+          for (const key of this.hints.keys()) if (key.startsWith(`${call.capability}:`)) this.hints.delete(key);
+        settle(reply);
+        this.resumeAdmission();
       };
-      const timer = setTimeout(() => finish({ status: 'unknown' }), this.options.timeoutMs);
+      // A caller timeout is not an ACK: retain its slot, ID and marker until the original reply.
+      const expire = () => settle({ status: 'unknown' });
+      const timer = setTimeout(expire, remaining);
       this.pending.set(id, { call, finish, timer });
-      if (!this.options.send(frame, control)) finish({ status: 'unknown' });
+      try { if (!this.options.send(frame, control)) finish({ status: 'refused' }); }
+      catch { expire(); }
     });
   }
 
@@ -300,7 +430,16 @@ export class HostCustodyClient {
     if (this.sealed) return;
     this.sealed = true;
     for (const pending of this.pending.values()) pending.finish({ status: 'unknown' });
+    for (const admission of [...this.admissions.control, ...this.admissions.work])
+      admission.finish({ status: 'refused' });
     this.observers.clear();
     this.hints.clear();
+  }
+
+  sealInput(): void {
+    this.inputSealed = true;
+    for (const admission of [...this.admissions.control, ...this.admissions.work])
+      if (!hostCustodyCleanup(admission)) admission.finish({ status: 'refused' });
+    this.resumeAdmission();
   }
 }

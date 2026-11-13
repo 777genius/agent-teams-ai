@@ -4,7 +4,7 @@ import { TeamLaunchError } from '../team-launch/contracts.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { effectId } from '../team/identity.js';
 import { assertRuntimeWorktree } from './runtimeWorktreeCapture.js';
-import { assertCapturedRosterCurrent } from './teamRoster.js';
+import { assertCapturedRosterCurrent, isUnstartedCaptureEditable } from './teamRoster.js';
 import {
   modelConfigurationFromLaunch,
   readSavedTeamModelConfiguration,
@@ -69,7 +69,11 @@ export function executeRuntimeLaunch(
   options.assertCurrent();
   if (operation === 'model.configuration.read') {
     z.object({}).strict().parse(raw);
-    if (options.hasCurrentCapture(teamId))
+    const prospective = () => isUnstartedCaptureEditable({
+      team: options.capturedTeams.get(teamId), launch: options.launches.get(teamId),
+      retainedLaunches: options.retainedLaunches, entries: [...options.entries.values()], runtime: options.runtime,
+    });
+    if (options.hasCurrentCapture(teamId) && !prospective())
       return modelConfigurationFromLaunch(
         executeRuntimeLaunch(options, teamId, 'configuration.read', commandId, {})
       );
@@ -82,6 +86,9 @@ export function executeRuntimeLaunch(
       assertCurrent: () => {
         options.assertCurrent();
         if (options.isSealed()) throw new TeamLaunchError('hold', 'sealed');
+      },
+      assertRuntimeHistory: () => {
+        if (!prospective()) throw new TeamLaunchError('hold', 'saved-model-runtime-history');
       },
     });
   }

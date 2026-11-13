@@ -5,7 +5,7 @@ import {
   fstatSync,
   lstatSync,
   openSync,
-  readFileSync,
+  read,
   realpathSync,
 } from 'node:fs';
 import { verifyOpenCodeV2EmbeddedGraph } from '../adapters/providers/OpenCodeV2EmbeddedGraph.js';
@@ -52,8 +52,10 @@ export function assertRuntimeSourceQualification(
 /** Qualification precedes any native allocation; the whole immutable engine delivery remains pinned. */
 export async function verifyRuntimeSourceCandidate(
   seed: ProviderManagementProfile,
-  candidate: RuntimeSourceCandidate
+  candidate: RuntimeSourceCandidate,
+  assertCurrent: () => void
 ): Promise<void> {
+  assertCurrent();
   assertRuntimeSourceQualification(seed, candidate);
   const configuration = candidate.openCodeConfiguration
     ? captureOpenCodeConfigurationSource(seed, candidate.openCodeConfiguration) : undefined;
@@ -65,20 +67,30 @@ export async function verifyRuntimeSourceCandidate(
       ?? selected ?? seed.nativeModel;
     selectOpenCodeV2ProviderConfiguration(config, effective!, seed.environment);
   }
-  verifyRuntimeSourceExecutable(candidate.executable);
-  if (candidate.nativeCli && candidate.nativeCli.executable.path !== candidate.executable.path)
-    verifyRuntimeSourceExecutable(candidate.nativeCli.executable);
-  const embedded = seed.provider === 'opencode' ? seed.embedded : undefined;
-  if (embedded) await verifyOpenCodeV2EmbeddedGraph(candidate.embedded ?? embedded);
-  if (configuration && !configuration.isCurrent())
-    throw new OpenCodeConfigurationError('configuration-changed');
+  const checks: Awaited<ReturnType<typeof verifyRuntimeSourceExecutable>>[] = [];
+  try {
+    checks.push(await verifyRuntimeSourceExecutable(candidate.executable, assertCurrent));
+    if (candidate.nativeCli && candidate.nativeCli.executable.path !== candidate.executable.path)
+      checks.push(await verifyRuntimeSourceExecutable(candidate.nativeCli.executable, assertCurrent));
+    const embedded = seed.provider === 'opencode' ? seed.embedded : undefined;
+    if (embedded) await verifyOpenCodeV2EmbeddedGraph(candidate.embedded ?? embedded);
+    for (const check of checks) check.assertCurrent();
+    if (configuration && !configuration.isCurrent())
+      throw new OpenCodeConfigurationError('configuration-changed');
+  } finally {
+    for (const check of checks) check.close();
+  }
 }
 
-/** Exact bytes, measured on the original descriptor before and after the read. */
-export function verifyRuntimeSourceExecutable(executable: { path: string; sha256: string }): void {
+/** Bounded reads retain the original descriptor until the caller's synchronous acceptance. */
+export async function verifyRuntimeSourceExecutable(
+  executable: { path: string; sha256: string },
+  assertOwnerCurrent: () => void
+): Promise<{ assertCurrent(): void; close(): void }> {
   const held = (): never => {
     throw new ManagementCommandError('held');
   };
+  assertOwnerCurrent();
   const path = executable.path;
   if (realpathSync(path) !== path) held();
   const before = lstatSync(path, { bigint: true });
@@ -90,22 +102,42 @@ export function verifyRuntimeSourceExecutable(executable: { path: string; sha256
   )
     held();
   const fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  let closed = false;
+  const close = () => {
+    if (!closed) {
+      closed = true;
+      closeSync(fd);
+    }
+  };
+  const assertCurrent = () => {
+    assertOwnerCurrent();
+    if (closed || realpathSync(path) !== path) held();
+    for (const after of [fstatSync(fd, { bigint: true }), lstatSync(path, { bigint: true })]) {
+      if (!after.isFile() || after.isSymbolicLink() || before.dev !== after.dev || before.ino !== after.ino ||
+          before.size !== after.size || before.mode !== after.mode || before.mtimeNs !== after.mtimeNs ||
+          before.ctimeNs !== after.ctimeNs) held();
+    }
+  };
   try {
-    const opened = fstatSync(fd, { bigint: true });
-    if (opened.dev !== before.dev || opened.ino !== before.ino) held();
-    const bytes = readFileSync(fd),
-      after = lstatSync(path, { bigint: true });
-    if (
-      before.dev !== after.dev ||
-      before.ino !== after.ino ||
-      before.size !== after.size ||
-      before.mtimeNs !== after.mtimeNs ||
-      before.ctimeNs !== after.ctimeNs ||
-      BigInt(bytes.length) !== before.size ||
-      createHash('sha256').update(bytes).digest('hex') !== executable.sha256
-    )
-      held();
-  } finally {
-    closeSync(fd);
+    assertCurrent();
+    const hash = createHash('sha256'), buffer = Buffer.allocUnsafe(64 * 1024), size = Number(before.size);
+    let position = 0;
+    while (position < size) {
+      assertOwnerCurrent();
+      const count = await new Promise<number>((resolve, reject) => {
+        read(fd, buffer, 0, Math.min(buffer.length, size - position), position,
+          (error, bytesRead) => error ? reject(error) : resolve(bytesRead));
+      });
+      assertOwnerCurrent();
+      if (count <= 0 || count > size - position) held();
+      hash.update(buffer.subarray(0, count));
+      position += count;
+    }
+    assertCurrent();
+    if (hash.digest('hex') !== executable.sha256) held();
+    return { assertCurrent, close };
+  } catch (error) {
+    close();
+    throw error;
   }
 }

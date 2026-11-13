@@ -258,6 +258,17 @@ test('private custody hints are reliable/sticky and an old epoch reply cannot fi
   f.input.write(ready);
   await tick();
   assert.equal(hints, 2, 'Confirmed read permits the next reliable hint');
+  const expiredRead = f.server.nativeCustody!.request(
+    { operation: 'read', capability: 'TEST-original', stream: 'stdout' }, performance.now() + 20);
+  await tick();
+  const expiredId = f.frames.filter(frame => typeof frame.id === 'string' && frame.id.startsWith('custody:')).at(-1)!.id;
+  assert.deepEqual(await expiredRead, { status: 'unknown' });
+  f.input.write(JSON.stringify({ jsonrpc: '2.0', id: expiredId, result }) + '\n');
+  await tick();
+  assert.deepEqual(await expiredRead, { status: 'unknown' }, 'Late ACK never rewrites the original caller outcome');
+  f.input.write(ready);
+  await tick();
+  assert.equal(hints, 3, 'Exact late ACK retires its original hint marker before new readiness');
   const pending = f.server.nativeCustody!.request({
     operation: 'write',
     capability: 'TEST-original',
@@ -310,15 +321,104 @@ test('private stream frames leave byte capacity for control and yield the next f
     'stop',
     'Control precedes queued private stream work'
   );
+  const binding = { mainEpoch: 'TEST-main', hostIncarnation: server.handshake.hostIncarnation,
+    profileDigest: 'b'.repeat(64) };
+  const answered = new Set<string>();
+  const answerWork = (frame: Record<string, unknown>) => {
+    const original = frame as { id: string; params: { call: { operation: string } } };
+    assert.equal(original.params.call.operation, 'write');
+    assert.equal(answered.has(original.id), false);
+    answered.add(original.id);
+    input.write(JSON.stringify({ jsonrpc: '2.0', id: original.id,
+      result: { binding, reply: { status: 'completed', value: { operation: 'write', state: 'completed' } } } }) + '\n');
+  };
+  answerWork(output.frames[before]!);
+  for (let index = 1; index < 24; index++) {
+    await output.release();
+    answerWork(output.frames.at(-1)!);
+  }
+  assert.equal(answered.size, 24, 'Every original queued payload eventually crosses once');
+  assert.ok((await Promise.all(work)).every(reply => reply.status === 'completed'));
   await server.dispose();
-  assert.deepEqual(
-    await stop,
-    { status: 'unknown' },
-    'Frame dispatch alone is never native Stop proof'
-  );
-  const results = await Promise.all(work);
-  assert.equal(results.length, 24);
-  assert.ok(results.every((reply) => reply.status === 'unknown'));
+  assert.deepEqual(await stop, { status: 'unknown' },
+    'A dispatched Stop with no native reply remains unknown despite stream progress');
+});
+
+test('private admission waits for original slots in both lanes and never dispatches expired or sealed work', async () => {
+  const f = fixture({ nativeCustody: { timeoutMs: 1000 } });
+  await handshake(f.input);
+  const binding = { mainEpoch: 'TEST-queued-main',
+    hostIncarnation: f.server.handshake.hostIncarnation, profileDigest: 'c'.repeat(64) };
+  f.input.write(request(2, HOST_CUSTODY_BIND_METHOD, binding));
+  await tick();
+  const wire = () => f.frames.filter(frame => typeof frame.id === 'string' && frame.id.startsWith('custody:')) as
+    { id: string; params: { call: { operation: string; capability: string } } }[];
+  let builtWork = 0, builtControl = 0;
+  const work = Array.from({ length: 40 }, (_, index) =>
+    f.server.nativeCustody!.requestWhenReady('write', () => {
+      builtWork++; return { operation: 'write', capability: `TEST-work-${index}`, bytes: 'YQ==' };
+    }));
+  assert.equal(builtWork, 24, 'Only admitted frames materialize their original bytes');
+  const controls = Array.from({ length: 40 }, (_, index) =>
+    f.server.nativeCustody!.requestWhenReady('stop', () => {
+      builtControl++; return { operation: 'stop', capability: `TEST-control-${index}`,
+        attemptRef: `TEST-stop-${index}`, budgetMs: 1000 };
+    }));
+  assert.equal(builtControl, 8, 'The original eight reserved slots remain available');
+  await tick();
+  const replied = new Set<string>();
+  const answer = (frame: ReturnType<typeof wire>[number]) => {
+    assert.equal(replied.has(frame.id), false);
+    replied.add(frame.id);
+    const value = frame.params.call.operation === 'write'
+      ? { operation: 'write', state: 'completed' }
+      : { operation: 'stop', state: 'unknown' };
+    f.input.write(JSON.stringify({ jsonrpc: '2.0', id: frame.id,
+      result: { binding, reply: { status: 'completed', value } } }) + '\n');
+  };
+  answer(wire()[0]!);
+  await tick();
+  assert.equal(builtControl, 9, 'A freed work slot admits original queued control first');
+  assert.equal(builtWork, 24);
+  for (let rounds = 0; replied.size < 80 && rounds < 80; rounds++) {
+    const available = wire().filter(frame => !replied.has(frame.id));
+    assert.ok(available.length, 'Each barrier releases previously dispatched original requests');
+    for (const frame of available) answer(frame);
+    await tick();
+  }
+  assert.equal(replied.size, 80);
+  assert.equal(new Set(wire().map(frame => frame.params.call.capability)).size, 80);
+  assert.equal(builtWork, 40); assert.equal(builtControl, 40);
+  assert.ok((await Promise.all([...work, ...controls])).every(reply => reply.status === 'completed'));
+
+  const heldDeadline = performance.now() + 20;
+  const held = Array.from({ length: 24 }, (_, index) =>
+    f.server.nativeCustody!.request({ operation: 'write', capability: `TEST-held-${index}`, bytes: 'Yg==' }, heldDeadline));
+  let expiredBuilt = 0, sealedBuilt = 0, afterLateBuilt = 0;
+  const expired = f.server.nativeCustody!.requestWhenReady('write', () => {
+    expiredBuilt++; return { operation: 'write', capability: 'TEST-expired', bytes: 'Yw==' };
+  }, heldDeadline + 20);
+  assert.deepEqual(await expired, { status: 'refused' });
+  assert.equal(expiredBuilt, 0, 'The original queue deadline precedes any payload or wire ID');
+  assert.ok((await Promise.all(held)).every(reply => reply.status === 'unknown'));
+  const afterLate = f.server.nativeCustody!.requestWhenReady('write', () => {
+    afterLateBuilt++; return { operation: 'write', capability: 'TEST-after-late', bytes: 'ZQ==' };
+  });
+  assert.equal(afterLateBuilt, 0, 'Caller timeouts do not free original wire slots');
+  answer(wire().find(frame => frame.params.call.capability === 'TEST-held-0')!);
+  await tick();
+  assert.equal(afterLateBuilt, 1, 'Only the original ACK releases a slot for a new request');
+  assert.deepEqual(await held[0], { status: 'unknown' });
+
+  const queued = f.server.nativeCustody!.requestWhenReady('write', () => {
+    sealedBuilt++; return { operation: 'write', capability: 'TEST-sealed', bytes: 'ZA==' };
+  });
+  await f.server.dispose();
+  assert.deepEqual(await queued, { status: 'refused' });
+  assert.equal(sealedBuilt, 0);
+  assert.deepEqual(await afterLate, { status: 'unknown' });
+  assert.ok((await Promise.all(held)).every(reply => reply.status === 'unknown'),
+    'Already dispatched requests retain unknown outcomes on EOF, with no replay');
 });
 
 test('slow data consumer receives an explicit gap and control overtakes queued data', async () => {

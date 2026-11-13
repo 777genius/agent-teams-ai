@@ -26,8 +26,12 @@ test('Linux CDP diagnostics retain the original bounded descriptor read without 
   const statReads = new Map<number, number>(), opened = new Map<number, string>();
   const procReads: string[] = [];
   let nextFd = 9000;
+  let comparison: 'off' | 'exact' | 'other-argv' | 'missing-flags' | 'duplicate-flags' | 'reused-birth' | 'changed-socket' = 'off';
+  let comparing = false;
+  const links = new Map<number, number>();
+  const fixture = { node: '/PRIVATE_FIXED/node', hostEntry: '/PRIVATE_FIXED/cli.js' };
   t.mock.method(fs, 'openSync', (path: string) => {
-    assert.match(path, /^\/proc\/(4100|4101)\/(stat|cmdline)$/u);
+    assert.match(path, /^\/proc\/(4100|4101)\/(stat|cmdline|fdinfo\/61)$/u);
     const fd = nextFd++; opened.set(fd, path); return fd;
   });
   t.mock.method(fs, 'readSync', (fd: number, buffer: Buffer, offset: number, length: number, position: number) => {
@@ -40,16 +44,29 @@ test('Linux CDP diagnostics retain the original bounded descriptor read without 
       if (pid === 4101 && count === 3 && change === 'vanished') throw new Error('PRIVATE_VANISHED');
       const stat = Array<string>(20).fill('0');
       stat[0] = 'S'; stat[1] = String(pid === 4100 ? 4000 : 4100); stat[2] = '4100';
-      stat[19] = pid === 4101 && count === 3 && change === 'replaced' ? '200' : '100';
+      stat[19] = pid === 4101 && ((count === 3 && change === 'replaced') ||
+        (comparing && comparison === 'reused-birth' && count >= 5)) ? '200' : '100';
       value = `${pid} (PRIVATE_COMM_MUST_NOT_LEAK) ${stat.join(' ')}\n`;
+    } else if (path.includes('/fdinfo/')) {
+      value = comparison === 'missing-flags' ? 'pos:\t0\n' :
+        comparison === 'duplicate-flags' ? 'flags:\t02002\nflags:\t02002002\n' :
+        `flags:\t${pid === 4100 ? '02002002' : '02002'}\n`;
+    } else if (comparison !== 'off' && pid === 4101) {
+      value = fixture.node + '\0' + fixture.hostEntry + '\0' +
+        (comparison === 'other-argv' ? '--PRIVATE_EXTRA\0' : '');
     } else value = '/PRIVATE_EXECUTABLE/electron\0' +
       (pid === 4101 ? '--type=zygote\0' : '') + '--PRIVATE_ARGUMENT_MUST_NOT_LEAK\0';
     return Buffer.from(value).copy(buffer, offset, 0, length);
   });
   t.mock.method(fs, 'closeSync', (fd: number) => { assert.ok(opened.delete(fd)); });
   t.mock.method(fs, 'readlinkSync', (path: string) => {
-    assert.match(path, /^\/proc\/(4100|4101)\/fd\/61$/u);
-    procReads.push(path); return 'socket:[45678]';
+    assert.match(path, /^\/proc\/(4100|4101)\/(fd\/61|exe)$/u);
+    procReads.push(path);
+    const pid = Number(path.split('/')[2]);
+    if (path.endsWith('/exe')) return pid === 4101 ? fixture.node : '/PRIVATE_EXECUTABLE/electron';
+    const count = (links.get(pid) ?? 0) + 1; links.set(pid, count);
+    return comparing && pid === 4101 && comparison === 'changed-socket' && count >= 3
+      ? 'socket:[99999]' : 'socket:[45678]';
   });
   t.mock.method(childProcess, 'execFileSync', (file: string, args: readonly string[]) => {
     if (file === '/bin/ps') return '4100 4000 4100\n4101 4100 4100\n';
@@ -103,6 +120,39 @@ test('Linux CDP diagnostics retain the original bounded descriptor read without 
     assert.equal(JSON.stringify(retained).includes('PRIVATE_'), false, 'raw argv, comm, paths and errors stay private');
     assert.deepEqual(procReads.slice(0, 2), ['/proc/4100/stat', '/proc/4101/stat']);
     assert.equal(opened.size, 0, 'all diagnostic file descriptors close, including vanished birth');
+  }
+  for (const variant of ['exact', 'other-argv', 'missing-flags', 'duplicate-flags', 'reused-birth', 'changed-socket'] as const) {
+    comparison = variant; comparing = false; change = 'none';
+    statReads.clear(); links.clear(); procReads.length = 0;
+    let failure: unknown;
+    try { assertOwnedCdpListener(4100); } catch (error) { failure = error; }
+    assert.ok(failure instanceof assert.AssertionError);
+    const originalFacts = readOwnedCdpListenerFailure(failure)!;
+    const originalBytes = JSON.stringify(originalFacts), censusReads = reads;
+    comparing = true;
+    const projected = readOwnedCdpListenerFailure(failure, fixture)!;
+    assert.equal(projected.holderCount, 2);
+    const child = projected.fixtureCorrelation![1]!;
+    const unknown = variant === 'reused-birth' || variant === 'changed-socket';
+    assert.deepEqual(child, {
+      pid: 4101, fd: '61', scope: 'after-failed-census', atomic: false,
+      birth: unknown ? 'unknown' : 'same', socket: unknown ? 'unknown' : 'same-as-supplemental',
+      fixtureHostArgv: unknown ? null : variant !== 'other-argv',
+      fixtureNodeExecutable: unknown ? null : true,
+      closeOnExec: unknown || variant === 'missing-flags' || variant === 'duplicate-flags' ? null : false,
+    });
+    assert.equal(projected.fixtureCorrelation![0]!.fixtureHostArgv, false);
+    assert.equal(projected.fixtureCorrelation![0]!.fixtureNodeExecutable, false);
+    if (variant === 'exact') assert.equal(projected.fixtureCorrelation![0]!.closeOnExec, true);
+    const comparedReads = procReads.length;
+    assert.equal(readOwnedCdpListenerFailure(failure, fixture), projected, 'one correlation per original error');
+    assert.equal(procReads.length, comparedReads);
+    assert.equal(reads, censusReads, 'fixture comparison never repeats lsof or ps');
+    assert.equal(readOwnedCdpListenerFailure(failure), originalFacts);
+    assert.equal(JSON.stringify(originalFacts), originalBytes, 'original failed census stays byte-identical');
+    assert.equal(JSON.stringify(projected).includes('PRIVATE_'), false);
+    assert.equal(opened.size, 0);
+    assert.match(failure.message, /one CDP listener/u);
   }
 });
 

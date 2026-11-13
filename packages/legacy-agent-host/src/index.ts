@@ -11,6 +11,7 @@ import {
   HOST_CUSTODY_BIND_METHOD,
   HOST_CUSTODY_CAPABILITY,
   HOST_CUSTODY_FRAME_BYTES,
+  HOST_CUSTODY_SHUTDOWN_METHOD,
   HostCustodyClient,
 } from './owned-process/hostCustody.js';
 
@@ -50,7 +51,7 @@ export interface HostServerOptions {
   limits?: Partial<HostLimits>;
   reviewTransport?: HostReviewTransportProfile;
   methods?: Readonly<Record<string, HostMethod>>;
-  /** Trusted opt-in for the closed private owner port; the ordinary CLI leaves this absent. */
+  /** Trusted captured opt-in for the closed private owner port. */
   nativeCustody?: { timeoutMs: number };
   /** Synchronous work seal, before any abort/cleanup await, including pending allocations. */
   onSeal?(): void;
@@ -106,6 +107,9 @@ export function createHostServer(options: HostServerOptions): HostServer {
   let workCount = 0;
   let handshaken = false;
   let closing = false;
+  let quiescing = false;
+  let sealFailed = false;
+  let cleanup: Promise<HostCloseResult['cleanup']> | undefined;
   let finish!: (result: HostCloseResult) => void;
   const closed = new Promise<HostCloseResult>((resolve) => {
     finish = resolve;
@@ -113,13 +117,14 @@ export function createHostServer(options: HostServerOptions): HostServer {
   const fail = (reason: HostCloseReason): void => {
     void dispose(reason);
   };
-  const output = new HostOutput(options.output, limits, fail);
-  const nativeCustody = options.nativeCustody
+  const output: HostOutput = new HostOutput(options.output, limits, fail, () => nativeCustody?.resumeAdmission());
+  const nativeCustody: HostCustodyClient | undefined = options.nativeCustody
     ? new HostCustodyClient({
         hostIncarnation: handshake.hostIncarnation,
         limits,
         timeoutMs: options.nativeCustody.timeoutMs,
         send: (frame, control) => output.sendPrivate(frame, control, HOST_CUSTODY_FRAME_BYTES),
+        canSend: (control) => output.canSendPrivate(control, HOST_CUSTODY_FRAME_BYTES),
       })
     : undefined;
   const decoder = new BoundedLineDecoder(limits.maxFrameBytes, receive, fail);
@@ -148,6 +153,10 @@ export function createHostServer(options: HostServerOptions): HostServer {
       return;
     }
     const request = value;
+    if (quiescing && request.method !== HOST_CUSTODY_SHUTDOWN_METHOD) {
+      sendError(request.id, -32002, 'Host closing');
+      return;
+    }
     if (Buffer.byteLength(frame) > hostMethodFrameLimit(request.method, options.reviewTransport)) {
       sendError(request.id, -32602, 'Method frame too large');
       return;
@@ -189,6 +198,12 @@ export function createHostServer(options: HostServerOptions): HostServer {
             return { bound: true };
           },
         };
+      } else if (request.method === HOST_CUSTODY_SHUTDOWN_METHOD && nativeCustody) {
+        method = { lane: 'control', async handle(params) {
+          if (!nativeCustody.matchesBinding(params))
+            throw new HostRpcError(-32010, 'Native binding refused');
+          return { prepared: true, cleanup: await prepareCleanup('disposed') };
+        } };
       } else if (Object.hasOwn(options.methods ?? {}, request.method))
         method = options.methods?.[request.method];
     }
@@ -255,38 +270,38 @@ export function createHostServer(options: HostServerOptions): HostServer {
     fail('output_error');
   }
 
-  function dispose(reason: HostCloseReason = 'disposed'): Promise<HostCloseResult> {
-    if (closing) return closed;
-    closing = true;
-    nativeCustody?.seal();
-    let sealFailed = false;
-    try {
-      options.onSeal?.();
-    } catch {
-      sealFailed = true;
-    }
-    decoder.stop();
-    options.input.off('data', onData).off('end', onEnd).off('error', onInputError);
-    options.input.pause();
-    output.stop();
+  function prepareCleanup(reason: HostCloseReason): Promise<HostCloseResult['cleanup']> {
+    if (cleanup) return cleanup;
+    let complete!: (status: HostCloseResult['cleanup']) => void;
+    cleanup = new Promise(resolve => { complete = resolve; });
+    quiescing = true;
+    nativeCustody?.sealInput();
+    try { options.onSeal?.(); } catch { sealFailed = true; }
     abort.abort(reason);
-    options.input.destroy();
-    options.output.destroy();
     let timer: ReturnType<typeof setTimeout>;
     const timeout = new Promise<HostCloseResult['cleanup']>((resolve) => {
       timer = setTimeout(() => resolve('timeout'), limits.disposeTimeoutMs);
     });
-    const cleanup = Promise.resolve()
-      .then(async () => {
-        await options.onDispose?.(reason);
-        if (sealFailed) throw new Error('Seal failed');
-      })
-      .then(
-        () => 'completed' as const,
-        () => 'failed' as const
-      );
-    void Promise.race([cleanup, timeout]).then((status) => {
-      clearTimeout(timer);
+    const original = Promise.resolve().then(async () => {
+      await options.onDispose?.(reason);
+      if (sealFailed) throw new Error('Seal failed');
+    }).then(() => 'completed' as const, () => 'failed' as const);
+    void Promise.race([original, timeout]).then(status => { clearTimeout(timer); complete(status); });
+    return cleanup; // One original budget and callback, including later EOF/failure disposal.
+  }
+
+  function dispose(reason: HostCloseReason = 'disposed'): Promise<HostCloseResult> {
+    if (closing) return closed;
+    closing = true;
+    nativeCustody?.seal();
+    const originalCleanup = prepareCleanup(reason);
+    decoder.stop();
+    options.input.off('data', onData).off('end', onEnd).off('error', onInputError);
+    options.input.pause();
+    output.stop();
+    options.input.destroy();
+    options.output.destroy();
+    void originalCleanup.then((status) => {
       finish({ reason, cleanup: status });
     });
     return closed;

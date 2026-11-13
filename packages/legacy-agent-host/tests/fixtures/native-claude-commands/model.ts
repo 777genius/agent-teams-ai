@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import {
+  assertCapturedCommandSystem,
+  assertNativeReviewExpansion,
   COMMAND_ARGS,
   COMPACT_AUTHORIZATION,
   PROJECT_COMMAND_BODY,
@@ -69,17 +71,13 @@ export function nativeCommandUiScript(
         assert.ok(count < 2, 'no duplicate native command request');
         if (phase === 'review') {
           assert.equal(project, 2);
-          assert.ok(
-            serialized.includes('You are an expert code reviewer.'),
-            'native builtin review expands its prompt'
-          );
-          assert.ok(serialized.includes(`PR number: ${REVIEW_ARGS}`));
+          assertNativeReviewExpansion(body);
         } else assert.ok(serialized.includes(PROJECT_COMMAND_BODY));
         assert.ok(
           serialized.includes(phase === 'review' ? REVIEW_ARGS : COMMAND_ARGS),
           'actual native command expands its original Composer arguments'
         );
-        assert.ok(JSON.stringify(body.system).includes('TEST_CAPTURED_ALICE_ROLE_CONTEXT_V1'));
+        assertCapturedCommandSystem(body, phase);
         assert.ok(
           tools.includes('mcp__team__message_send'),
           'the native command retains its captured Team tool'

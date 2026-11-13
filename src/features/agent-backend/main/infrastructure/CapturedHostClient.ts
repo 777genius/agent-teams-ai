@@ -22,11 +22,14 @@ import {
   HOST_CUSTODY_FRAME_BYTES,
   HOST_CUSTODY_METHOD,
   HOST_CUSTODY_READY_METHOD,
+  HOST_CUSTODY_SHUTDOWN_METHOD,
   type HostCustodyBinding,
   hostCustodyBindingSchema,
   type HostCustodyCall,
+  hostCustodyCleanup,
   hostCustodyControl,
   type HostCustodyHint,
+  hostCustodyHintKey,
   hostCustodyHintSchema,
   type HostCustodyOwner,
   type HostCustodyPort,
@@ -40,6 +43,7 @@ import { createLogger } from '@shared/utils/logger';
 
 import { decodeClaudeCloseDiagnostics } from './decodeClaudeCloseDiagnostics';
 import {
+  capturedHostProfileDigest,
   captureHostProfile,
   HostClientError,
   type SelectedHostProfile,
@@ -76,6 +80,15 @@ export const observeCapturedHostStartup = (
   }
 };
 
+interface NativeRequest {
+  call: HostCustodyCall;
+  deadline: number;
+  reserved: boolean;
+  timer?: ReturnType<typeof setTimeout> | undefined;
+  reply?: HostCustodyReply | undefined;
+  admittedHint?: { hint: HostCustodyHint; sent: boolean } | undefined;
+}
+
 interface PendingRequest {
   maxFrameBytes: number;
   resolve: (value: JsonValue) => void;
@@ -100,6 +113,7 @@ export class CapturedHostClient {
   private startPromise?: Promise<HostHandshake>;
   private shutdownPromise?: Promise<CapturedHostShutdown>;
   private sealed = false;
+  private quiescing = false;
   private ready = false;
   private exited = false;
   private exitPromise?: Promise<void>;
@@ -119,7 +133,8 @@ export class CapturedHostClient {
   private nativeUnsubscribe?: () => void;
   // HostOutput preserves FIFO within each lane while control can overtake queued work.
   private readonly nativeHighWatermark = { work: 0n, control: 0n };
-  private readonly nativePending = new Map<string, HostCustodyCall>();
+  private readonly nativePending = new Map<string, NativeRequest>();
+  private nativePumping = false;
   private readonly nativeHints = new Map<string, { hint: HostCustodyHint; sent: boolean }>();
   private diagnosticTail = Buffer.alloc(0);
   private readonly retainCloseDiagnostic = decodeClaudeCloseDiagnostics(
@@ -148,7 +163,7 @@ export class CapturedHostClient {
   }
 
   start(): Promise<HostHandshake> {
-    if (this.sealed) return Promise.reject(new HostClientError('shutting-down', 'not-dispatched'));
+    if (this.sealed || this.quiescing) return Promise.reject(new HostClientError('shutting-down', 'not-dispatched'));
     this.startPromise ??= this.open();
     return this.startPromise;
   }
@@ -158,7 +173,7 @@ export class CapturedHostClient {
       observeCapturedHostStartup('profile-validation-start');
       await validateHostProfile(this.profile);
       observeCapturedHostStartup('profile-validation-complete');
-      if (this.sealed) throw new HostClientError('shutting-down', 'not-dispatched');
+      if (this.sealed || this.quiescing) throw new HostClientError('shutting-down', 'not-dispatched');
       const child = spawn(this.profile.nodeExecutable, [this.profile.hostEntry], {
         cwd: this.profile.cwd,
         env: { ...this.profile.env },
@@ -195,7 +210,7 @@ export class CapturedHostClient {
       );
       const handshake = this.validateHandshake(result);
       if (this.nativeOwner) await this.bindNative(handshake);
-      if (this.sealed) throw new HostClientError('shutting-down', 'not-dispatched');
+      if (this.sealed || this.quiescing) throw new HostClientError('shutting-down', 'not-dispatched');
       this.ready = true;
       observeCapturedHostStartup('ready');
       return handshake;
@@ -247,9 +262,9 @@ export class CapturedHostClient {
   ): Promise<JsonValue> {
     if (method.startsWith(HOST_CUSTODY_METHOD))
       return Promise.reject(new HostClientError('protocol-error', 'not-dispatched'));
-    if (!this.ready || this.sealed) {
+    if (!this.ready || this.sealed || this.quiescing) {
       return Promise.reject(
-        new HostClientError(this.sealed ? 'shutting-down' : 'transport-closed', 'not-dispatched')
+        new HostClientError(this.sealed || this.quiescing ? 'shutting-down' : 'transport-closed', 'not-dispatched')
       );
     }
     return this.send(method, params, options.control ?? false, this.profile.requestTimeoutMs);
@@ -262,7 +277,8 @@ export class CapturedHostClient {
     timeoutMs: number
   ): Promise<JsonValue> {
     const child = this.child;
-    if (this.sealed || !child || this.exited || child.stdin.destroyed) {
+    if (this.sealed || (this.quiescing && method !== HOST_CUSTODY_SHUTDOWN_METHOD) ||
+      !child || this.exited || child.stdin.destroyed) {
       return Promise.reject(new HostClientError('transport-closed', 'not-dispatched'));
     }
     const capacity = control
@@ -325,15 +341,15 @@ export class CapturedHostClient {
     });
   }
 
-  private canWrite(bytes: number, control: boolean): boolean {
+  private canWrite(bytes: number, control: boolean, consumeReservation = false): boolean {
     const count =
       this.limits.maxPriorityMessages - (control ? 0 : this.limits.reservedControlRequests);
     const budget = this.limits.maxPriorityBytes - (control ? 0 : this.limits.maxFrameBytes);
-    // Reserve each admitted reverse reply before the owner can consume bytes or perform an effect.
-    return (
-      this.writeCount + this.nativePending.size < count &&
-      this.writeBytes + this.nativePending.size * (HOST_CUSTODY_FRAME_BYTES + 1) + bytes <= budget
-    );
+    // Waiting calls reserve no bytes. Exchange one admitted reply reservation into its original frame.
+    const reserved = [...this.nativePending.values()].filter(entry => entry.reserved).length -
+      Number(consumeReservation);
+    return this.writeCount + reserved < count &&
+      this.writeBytes + reserved * (HOST_CUSTODY_FRAME_BYTES + 1) + bytes <= budget;
   }
 
   private writeFrame(frame: Buffer, control: boolean): boolean {
@@ -362,7 +378,7 @@ export class CapturedHostClient {
       this.writeBytes -= frame.length;
       this.writeCount--;
       if (error) this.fail(new HostClientError('transport-closed', 'unknown'));
-      else this.pumpNativeHints();
+      else this.pumpNative();
     };
     try {
       child.stdin.write(frame, finish);
@@ -377,22 +393,7 @@ export class CapturedHostClient {
     const owner = this.nativeOwner;
     if (!owner || !this.exitPromise || !handshake.capabilities.includes(HOST_CUSTODY_CAPABILITY))
       throw new HostClientError('profile-mismatch', 'unknown');
-    const {
-      env,
-      startupTimeoutMs: _startup,
-      requestTimeoutMs: _request,
-      writeTimeoutMs: _write,
-      shutdownTimeoutMs: _shutdown,
-      ...source
-    } = this.profile;
-    const profileDigest = createHash('sha256')
-      .update(
-        JSON.stringify({
-          ...source,
-          env: Object.entries(env).sort(([a], [b]) => a.localeCompare(b)),
-        })
-      )
-      .digest('hex');
+    const profileDigest = capturedHostProfileDigest(this.profile);
     const binding = hostCustodyBindingSchema.parse({
       mainEpoch: owner.mainEpoch,
       hostIncarnation: handshake.hostIncarnation,
@@ -416,29 +417,32 @@ export class CapturedHostClient {
     this.nativeUnsubscribe = this.nativePort.onReadable((hint) => this.queueNativeHint(hint));
   }
 
-  private queueNativeHint(value: HostCustodyHint): void {
-    if (this.sealed) return;
+  private queueNativeHint(value: HostCustodyHint): boolean {
+    if (this.sealed) return false;
     const parsed = hostCustodyHintSchema.safeParse(value);
     if (!parsed.success) {
       this.fail(new HostClientError('protocol-error', 'unknown'));
-      return;
+      return false;
     }
     const hint = parsed.data;
     const key = `${hint.capability}:${hint.stream}`;
     const previous = this.nativeHints.get(key);
     if (!previous) {
-      if (this.nativeHints.size >= this.limits.maxPendingRequests) {
-        this.fail(new HostClientError('capacity-exceeded', 'unknown'));
-        return;
+      const capacity = this.limits.maxPendingRequests -
+        (hint.stream === 'state' ? 0 : this.limits.reservedControlRequests);
+      if (this.nativeHints.size >= capacity) {
+        return false; // Original owner keeps this readiness pending until shared capacity is free.
       }
     }
     this.nativeHints.set(key, { hint, sent: previous?.sent ?? false });
     this.pumpNativeHints();
+    return true;
   }
 
   private pumpNativeHints(): void {
-    if (this.sealed || !this.nativeBinding) return;
-    for (const hint of this.nativeHints.values()) {
+    if (this.sealed || this.nativePumping || !this.nativeBinding) return;
+    for (const hint of [...this.nativeHints.values()].sort((a, b) =>
+      Number(b.hint.stream === 'state') - Number(a.hint.stream === 'state'))) {
       if (hint.sent) continue;
       const frame = Buffer.from(
         JSON.stringify({
@@ -447,9 +451,10 @@ export class CapturedHostClient {
           params: { binding: this.nativeBinding, hint: hint.hint },
         }) + '\n'
       );
-      if (!this.canWrite(frame.length, false)) return;
+      const control = hint.hint.stream === 'state';
+      if (!this.canWrite(frame.length, control)) return;
       hint.sent = true;
-      if (!this.writeFrame(frame, false)) {
+      if (!this.writeFrame(frame, control)) {
         this.fail(new HostClientError('transport-closed', 'unknown'));
         return;
       }
@@ -457,78 +462,107 @@ export class CapturedHostClient {
   }
 
   private receiveNative(value: unknown, frameBytes: number): void {
-    const parsed = hostCustodyRequestSchema.safeParse(value);
-    const binding = this.nativeBinding,
-      port = this.nativePort;
-    if (
-      !parsed.success ||
-      frameBytes > HOST_CUSTODY_FRAME_BYTES ||
-      !binding ||
-      !port ||
-      !sameHostCustodyBinding(parsed.data.params.binding, binding)
-    )
-      throw new Error('Native request');
-    const {
-      id,
-      params: { call },
-    } = parsed.data;
+    const receivedAt = performance.now(), parsed = hostCustodyRequestSchema.safeParse(value);
+    const binding = this.nativeBinding, port = this.nativePort;
+    if (!parsed.success || frameBytes > HOST_CUSTODY_FRAME_BYTES || !binding || !port ||
+      !sameHostCustodyBinding(parsed.data.params.binding, binding)) throw new Error('Native request');
+    const { id, params: { call, remainingMs } } = parsed.data;
     const control = hostCustodyControl(call);
     const sequence = hostCustodySequence(id, binding.hostIncarnation, control);
     if (sequence === undefined) throw new Error('Native request ID');
     const lane = control ? 'control' : 'work';
-    if (sequence <= this.nativeHighWatermark[lane]) {
-      this.replyNative(id, { status: 'unknown' });
-      return;
-    }
+    if (sequence <= this.nativeHighWatermark[lane]) { this.replyNative(id, { status: 'unknown' }); return; }
     this.nativeHighWatermark[lane] = sequence;
-    const capacity =
-      this.limits.maxPendingRequests - (control ? 0 : this.limits.reservedControlRequests);
-    if (
-      this.nativePending.size >= capacity ||
-      !this.canWrite(HOST_CUSTODY_FRAME_BYTES + 1, control) ||
-      (call.operation === 'read' &&
-        [...this.nativePending.values()].some(
-          (other) =>
-            other.operation === 'read' &&
-            other.capability === call.capability &&
-            other.stream === call.stream
-        ))
-    ) {
-      this.replyNative(id, { status: 'refused' });
-      return;
+    const capacity = this.limits.maxPendingRequests - (control ? 0 : this.limits.reservedControlRequests);
+    if (this.nativePending.size >= capacity || (call.operation === 'read' &&
+      [...this.nativePending.values()].some(({ call: other }) =>
+        other.operation === 'read' && other.capability === call.capability && other.stream === call.stream))) {
+      this.replyNative(id, { status: 'refused' }); return;
     }
-    this.nativePending.set(id, call);
-    void this.executeNative(id, call, port);
+    const entry: NativeRequest = { call, deadline: receivedAt + remainingMs, reserved: false };
+    this.nativePending.set(id, entry);
+    entry.timer = setTimeout(() => {
+      if (this.nativePending.get(id) === entry && !entry.reserved && !entry.reply) {
+        entry.reply = { status: 'refused' }; this.pumpNative();
+      }
+    }, Math.max(0, entry.deadline - performance.now()));
+    this.pumpNative();
   }
 
-  private async executeNative(
-    id: string,
-    call: HostCustodyCall,
-    port: HostCustodyPort
-  ): Promise<void> {
-    const hintKey = call.operation === 'read' ? `${call.capability}:${call.stream}` : undefined;
-    const admittedHint = hintKey ? this.nativeHints.get(hintKey) : undefined;
-    let reply: HostCustodyReply;
+  /** One bounded original request map; replies own their reservation until actual output exchange. */
+  private pumpNative(): void {
+    if (this.sealed || this.nativePumping) return;
+    this.nativePumping = true;
     try {
-      reply = {
-        status: 'completed',
-        value: validateHostCustodyResult(call, await port.handle(call)),
-      };
-    } catch {
-      reply = { status: 'unknown' };
+      for (;;) {
+        let progress = false;
+        for (const [id, entry] of this.nativePending) {
+          if (!entry.reserved && !entry.reply &&
+            (entry.deadline <= performance.now() || (this.quiescing && !hostCustodyCleanup(entry.call))))
+            entry.reply = { status: 'refused' };
+          if (!entry.reply) continue;
+          const frame = Buffer.from(JSON.stringify({ jsonrpc: '2.0', id,
+            result: { binding: this.nativeBinding, reply: entry.reply } }) + '\n');
+          if (frame.length - 1 > HOST_CUSTODY_FRAME_BYTES) throw new Error('Native reply frame');
+          if (!this.canWrite(frame.length, true, entry.reserved)) continue;
+          this.nativePending.delete(id); if (entry.timer) clearTimeout(entry.timer);
+          this.finishNativeHint(entry);
+          if (!this.writeFrame(frame, true)) throw new Error('Native reply unavailable');
+          const read = entry.reply.status === 'completed' && entry.reply.value.operation === 'read'
+            ? entry.reply.value : undefined;
+          if (entry.call.operation === 'read' && read?.more)
+            this.queueNativeHint({ capability: entry.call.capability, stream: entry.call.stream });
+          progress = true;
+        }
+        for (const control of [true, false]) {
+          for (const [id, entry] of this.nativePending) {
+            if (entry.reserved || entry.reply || hostCustodyControl(entry.call) !== control) continue;
+            if (!this.canWrite(HOST_CUSTODY_FRAME_BYTES + 1, control)) break;
+            const reserved = [...this.nativePending.values()].filter(value => value.reserved).length;
+            if (reserved >= this.limits.maxPendingRequests - (control ? 0 : this.limits.reservedControlRequests)) break;
+            if (entry.deadline <= performance.now() || (this.quiescing && !hostCustodyCleanup(entry.call))) {
+              entry.reply = { status: 'refused' }; progress = true; continue;
+            }
+            entry.reserved = true; if (entry.timer) clearTimeout(entry.timer);
+            const key = hostCustodyHintKey(entry.call);
+            entry.admittedHint = key ? this.nativeHints.get(key) : undefined;
+            void this.executeNative(id, entry, this.nativePort!);
+            progress = true;
+          }
+        }
+        if (!progress) break;
+      }
+    } catch { this.fail(new HostClientError('transport-closed', 'unknown')); }
+    finally {
+      this.nativePumping = false;
+      if (!this.sealed) { this.pumpNativeHints(); this.nativePort?.resumeReadable?.(); }
     }
-    if (this.sealed || !this.nativePending.delete(id)) return;
-    const read =
-      reply.status === 'completed' && reply.value.operation === 'read' ? reply.value : undefined;
-    if (hintKey && read) {
-      const current = this.nativeHints.get(hintKey);
-      if (current === admittedHint) this.nativeHints.delete(hintKey);
-      else if (current) current.sent = false; // New readiness must follow this read's reply.
+  }
+
+  private async executeNative(id: string, entry: NativeRequest, port: HostCustodyPort): Promise<void> {
+    const remaining = Math.floor(entry.deadline - performance.now());
+    if (remaining <= 0) { entry.reply = { status: 'refused' }; this.pumpNative(); return; }
+    const original = entry.call;
+    const call: HostCustodyCall = 'budgetMs' in original ? { ...original,
+      budgetMs: Math.min(original.budgetMs, remaining) } : original;
+    let reply: HostCustodyReply;
+    try { reply = { status: 'completed', value: validateHostCustodyResult(call, await port.handle(call)) }; }
+    catch { reply = { status: 'unknown' }; }
+    if (this.sealed || this.nativePending.get(id) !== entry) return;
+    entry.reply = reply;
+    this.pumpNative();
+  }
+
+  private finishNativeHint(entry: NativeRequest): void {
+    if (entry.reply?.status !== 'completed') return;
+    const key = hostCustodyHintKey(entry.call);
+    if (key) {
+      const current = this.nativeHints.get(key);
+      if (current === entry.admittedHint) this.nativeHints.delete(key);
+      else if (current) current.sent = false;
     }
-    this.replyNative(id, reply);
-    if (call.operation === 'read' && read?.more)
-      this.queueNativeHint({ capability: call.capability, stream: call.stream });
-    this.pumpNativeHints();
+    if (entry.reply.value.operation === 'release' && entry.reply.value.state === 'released')
+      for (const key of this.nativeHints.keys()) if (key.startsWith(`${entry.call.capability}:`)) this.nativeHints.delete(key);
   }
 
   private replyNative(id: string, reply: HostCustodyReply): void {
@@ -544,6 +578,7 @@ export class CapturedHostClient {
     this.nativeAbort.abort();
     const unsubscribe = this.nativeUnsubscribe;
     this.nativeUnsubscribe = undefined;
+    for (const entry of this.nativePending.values()) if (entry.timer) clearTimeout(entry.timer);
     this.nativePending.clear();
     this.nativeHints.clear();
     try {
@@ -672,15 +707,17 @@ export class CapturedHostClient {
   }
 
   shutdown(): Promise<CapturedHostShutdown> {
-    this.sealed = true; // Synchronous fence prevents late validation/startup from allocating.
-    this.sealNative();
+    this.quiescing = true; // Public/launch/input fence; original cleanup keeps its private channel.
+    this.nativePort?.sealInput?.();
+    this.pumpNative();
     this.ready = false;
     this.shutdownPromise ??= this.dispose();
     return this.shutdownPromise;
   }
 
-  private async waitForExit(timeoutMs = this.profile.shutdownTimeoutMs): Promise<boolean> {
+  private async waitForExit(timeoutMs: number): Promise<boolean> {
     if (!this.child || this.exited) return true;
+    if (timeoutMs <= 0) return false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     await Promise.race([
       this.exitPromise,
@@ -702,20 +739,33 @@ export class CapturedHostClient {
     this.pending.clear();
     const child = this.child;
     if (child && !this.exited) {
-      child.stdin.end();
       // Enclose the captured Host's advertised finite disposal budget before escalating.
       const gracefulTimeoutMs = Math.max(
         this.profile.shutdownTimeoutMs,
         this.limits.disposeTimeoutMs + 1000
       );
-      if (!(await this.waitForExit(gracefulTimeoutMs))) {
+      const graceEnd = performance.now() + gracefulTimeoutMs;
+      const termEnd = graceEnd + this.profile.shutdownTimeoutMs;
+      const killEnd = termEnd + this.profile.shutdownTimeoutMs;
+      if (!this.sealed && this.nativeBinding && this.nativePort) {
+        try {
+          const ack = await this.send(HOST_CUSTODY_SHUTDOWN_METHOD, this.nativeBinding, true,
+            Math.max(1, graceEnd - performance.now()));
+          if (!isRecord(ack) || ack.prepared !== true ||
+            !['completed', 'failed', 'timeout'].includes(String(ack.cleanup)))
+            throw new Error('Invalid private disposal receipt');
+        } catch { /* Unknown cleanup stays with the original Main owner. */ }
+      }
+      this.sealed = true; this.sealNative(); child.stdin.end();
+      if (!(await this.waitForExit(graceEnd - performance.now()))) {
         child.kill('SIGTERM');
-        if (!(await this.waitForExit())) {
+        if (!(await this.waitForExit(termEnd - performance.now()))) {
           child.kill('SIGKILL');
-          await this.waitForExit();
+          await this.waitForExit(killEnd - performance.now());
         }
       }
     }
+    this.sealed = true; this.sealNative();
     return {
       childExit: !this.child || this.exited ? 'confirmed' : 'unknown',
       providerCustody: 'unresolved',

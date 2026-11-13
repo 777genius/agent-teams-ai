@@ -680,3 +680,165 @@ Existing foreign-cost case при исполнении оказался оста
 он меняет commandId, оставляя старый payload.messageId. Исправить только oracle, связав
 оба ID с одной original попыткой; проверка чужой generation должна дойти до hold,
 а production запрет несовпадающих message/command IDs остаётся прежним.
+
+### R13 — builtin /review в закреплённом Claude SDK 0.3.305
+
+**План до source.** На parity `522c80d168d698fc6842ee649cc4822406cd2632`
+actual Create job [131717484659](https://github.com/777genius/agent-teams-ai/actions/runs/43373956602/job/131717484659)
+отказал в `native-claude-compaction.native.ts` до Desktop UI:
+`native builtin review expands its prompt`. Artifact `14014049387`,
+ZIP SHA256 `b73b8e25fa91c9d57a639cd127b94e46f37f86fd750b097e2e75bc9dd8eaacc7`.
+Оба TEST oracle — `fixtures/native-claude-compaction/model.ts` и
+`fixtures/native-claude-commands/model.ts` — требуют прежние expert-reviewer/PR-number
+строки. Эти строки отсутствуют в actual pinned native CLI; изменение product
+command parser или D dispatch по этому отказу не обосновано.
+
+#### Источник нового критерия
+
+В отдельном изолированном TEST Linux scope прочитан первый настоящий model request
+через установленный SDK `0.3.305`, native CLI `2.1.305`, Node `24.21.0`.
+Native executable SHA256
+`86cb722ab68348877dba7971e4d0c659919e05e6228c05e006e83da320e656ef`.
+Два конечных original query — Sonnet4.6 и Opus4.6 — передали ровно один исходный
+`/review TEST_NATIVE_P03_EXACT_REVIEW_ARGUMENTS` каждый. В обоих expanded user
+blocks присутствуют exact target header и heading сбора diff; основной recipe
+одинаков. Только localhost модель возвращала конечный текст, инструментов не было.
+Для каждого query: один model request, SDK result success, original child exit0,
+HTTP server закрыт, private TEST root удалён. Это inspection native recipe на Linux,
+не Host, vendor-auth, Darwin или Desktop qualification.
+
+#### Минимальный correction
+
+1. В двух existing TEST model scripts заменить только устаревший review-prompt
+   predicate. Требовать actual expansion в **одном user text message**:
+   exact ``Review target: `TEST_NATIVE_P03_EXACT_REVIEW_ARGUMENTS` `` и
+   `## Phase 0 — Gather the diff`. Bare slash input, generic review prose,
+   неправильные args и совпадение только в system/tool text не доказывают expansion.
+   Для второго model request искать retained original user message в той же history:
+   latest user там законно является tool_result.
+2. Если predicate переиспользуется, оставить маленький TEST helper в existing
+   compaction model, откуда commands model уже импортирует constants. Не добавлять
+   dependency, recipe parser, полный proprietary prompt snapshot или версионный
+   allowlist/fallback на старые фразы.
+3. Сохранить exact selected model, captured role/system context, original args,
+   marked slash command receipt, MCP tool/reply IDs и text, два requests на command,
+   compaction/current-context checks, original process ownership, cleanup и budgets.
+   Production SDK/Host/D code и native effect sequence не меняются.
+4. Расширить только existing critical model test: raw slash, wrong target,
+   отсутствующий diff heading, system-only совпадение отказываются; observed minimal
+   recipe в actual user history принимается. Existing tool_result/role/tool-count
+   assertions остаются. Отдельная unit suite на шаблон не нужна.
+5. После независимого source review проверить existing compaction model tests,
+   Host test types и scripts types. Далее штатный exact-head Create/Commands
+   native/Desktop CI должен пройти всю прежнюю цепь; локальный recipe inspection
+   и обновлённый TEST oracle не являются полным e2e PASS.
+
+**Круг1 — факты:** сопоставлены actual Darwin failure и два bounded native Linux
+request на тех же SDK/CLI/model revisions. **Круг2 — минимальность:** меняется
+только сломанный predicate, причём совпадение ограничено одним user message;
+сильные product/ownership/effect guards сохраняются. **Круг3:** independent review
+плана, commit+push перед source, затем independent diff review и existing gates.
+
+Independent plan review (Account) — PASS: оба original local receipts/model bodies
+проверены, anchors находятся в user text; wrong target, raw slash и system-only
+match не дают acceptance. До source отдельно воспроизведено, что прежний oracle
+отказывает на обоих actual pinned request bodies с тем же review-expansion assertion.
+
+R13 source3 independent review (Account) — PASS. Existing two critical model
+cases PASS; Host test types, scripts types, fast lint и diff check PASS.
+Corrected shared predicate также принял **неизменённые** оба actual local
+recorded request bodies, которые до исправления отвергал прежний predicate.
+Raw slash/wrong target/missing heading/system-only/assistant/split-message cases
+по-прежнему отказываются. Production files0; native/Desktop acceptance pending.
+
+
+### R14 — actual CI: восстановление Promise-контракта и unopened activity oracle
+
+Qualification head `7563eb067b9196ca416a56228f9c7e38a2455a17`, parent
+`64c33f663ba48f34352b927a5d4a88fb2ec04b12`,
+[run43377998027](https://github.com/777genius/agent-teams-ai/actions/runs/43377998027):
+Host job131741574632 падает в existing `team-code-review.test.ts:317` с
+`Team operation hold`; Main job131741574659 — в `hostActivityRouting.test.ts:196`
+с generation1 против actual null. Сверка с exact current
+`3db75ad8b323bede28d92c99c6d8eb1defb50f1b` подтверждает, что оба source seam ещё
+не изменены. Это две разные причины, не повод ослаблять recovery/authority.
+
+**Круг1 — причинная граница и минимальный source.**
+
+1. `TeamOwner.resumeTaskCommands`289–291 добавил synchronous
+   `resumeHostCostCommands` перед existing `TaskRecovery.resume`.
+   `resumeHostCostCommands`261–263 валидирует все command families; отказ
+   `validateCommandEntry`138–139 теперь может выйти до возврата Promise.
+   Existing `TaskRecovery.run`267–275 выполнял тот же отказ внутри async operation.
+   Пометить **только** existing owner method как async: scan и исходный Task
+   continuation остаются в прежнем порядке/owner fence; unknown family по-прежнему
+   даёт HOLD, но через прежний Promise-контракт. Не ловить/пропускать receipt,
+   не запускать заново review mutation, не менять fingerprint/phase.
+2. R9/R10 intentionally исключают никогда не открытые configured recipes:
+   `readTeamActivity`74–77 проверяет unattached + отсутствующий record либо
+   config=null/inputs=[], а empty projection189–205 имеет generation=null.
+   В existing `hostActivityRouting`194–225 provider ни разу не открывается.
+   Исправить ровно его stale expectations на generation=null и generations=0;
+   сохранить null reported usage/cost, пустые events и явный retained-activity gap.
+   Existing `contexts=[]` продолжает проверять отсутствие allocation.
+
+**Круг2 — falsification и приёмка.**
+
+Existing `team-code-review` pending case должен сначала вернуть пустой Task
+continuation, сохранить original interrupted file/unknown review receipt,
+затем после намеренного unknown-family изменения вернуть rejected Promise/HOLD.
+Его `assert.rejects(originalMethod())` не переводить в catch, который скрывает
+синхронную регрессию. Нужны existing focused Host case/types и Main activity case;
+R9/R10 opened-empty/retained-history cases остаются прежними. Новая unit suite,
+runtime generation или native input не нужны.
+
+Source peer review проверяет, что async меняет лишь способ выдачи ошибки, а
+activity oracle не скрывает реально открытый пустой runtime. После root commit+push
+обычные CI jobs должны выполнить эти cases на новом source. Executor сейчас
+недоступен; этот план и immutable source readback не являются executed PASS.
+
+
+### R15 — actual builtin /review: установить расположение захваченного контекста
+
+Exact current3db, Create job131757637356,
+[run43386943005](https://github.com/777genius/agent-teams-ai/actions/runs/43386943005),
+artifact14020313358 (ZIP SHA256
+`94f5a311a16c30d37ffa31e34334a728f32044a82a98df723b32a3130d2c0a86`):
+existing compaction/native-command journey прошёл project/user commands, затем
+первый `/review` send на764 отказался с
+`named native command keeps captured team system configuration`.
+R13 exact review expansion уже принят; отсутствует отдельное доказательство,
+где native положил захваченный marker. Прежние local Sonnet/Opus request bodies
+после потери среды недоступны, а сохранённая сводка доказывает только user review
+anchors. Их нельзя использовать как разрешение ослабить system predicate.
+
+**Круг1 — измерить тот же original failed request.** В existing
+`fixtures/native-claude-compaction/model.ts` вынести уже существующий strict
+body.system marker check в маленький TEST helper; вызвать его в двух прежних
+command-model helpers через existing import. Accepted requests сохраняют прежнее
+условие: marker обязан быть в serialized body.system. Никакой user/assistant/
+tool-result fallback не вводится.
+
+Только при исходном отказе добавить к его existing assertion message закрытый
+JSON projection того же body: фиксированная command phase, body/system SHA256,
+system shape и число marker-bearing blocks по закрытым role/type категориям.
+Не более16 role/type counters; whole projection не более2KiB, исходный body
+уже ограничен existing2MiB guard. Не печатать тексты, произвольные role/type names,
+tool input/results, paths, endpoints, headers, environment или request dump.
+System absence остаётся refusal. Existing modelFailures и обычный CI log/receipt
+уже сохраняют exception message, поэтому новый artifact schema/channel не нужен.
+
+**Круг2 — falsification без native расходов.** В existing model.test добавить
+один critical case: marker только вне system по-прежнему отвергается; failure
+facts называют только закрытую role/type категорию и SHA/counts. Проверить
+projection bound и отсутствие deliberately unique TEST raw text. Обычный
+system-positive путь, exact review target/user anchors, native MCP result/cause,
+model selection, original IDs, ten-request bound и cleanup не меняются.
+Не добавлять replay, prompt, unit suite или новую CI row.
+
+**Круг3 — вывод только из факта.** Independent source review и existing model
+tests/types, затем следующий уже необходимый exact-head native Create gate.
+Source пока не исполнен; после actual projection отдельно определить:
+действительно ли context перенесён в другой доверенный native frame или потерян,
+и как это соотносится с прежним frontend. Диагностика не закрывает parity и не
+превращает missing captured configuration в успешный native command.

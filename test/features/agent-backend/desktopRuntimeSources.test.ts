@@ -25,7 +25,8 @@ afterEach(async () => {
 });
 const digest = (bytes: string | Buffer) => createHash('sha256').update(bytes).digest('hex');
 
-async function fixture(runtimeId: 'claude' | 'opencode' = 'claude', withPreferences = false) {
+async function fixture(runtimeId: 'claude' | 'opencode' = 'claude', withPreferences = false, aliases = 0,
+  interruptPrepared = false) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-desktop-sources-')));
   roots.push(root);
   await mkdir(join(root, '.claude'), { mode: 0o700 });
@@ -38,8 +39,18 @@ async function fixture(runtimeId: 'claude' | 'opencode' = 'claude', withPreferen
   const hostUrl = pathToFileURL(
     join(process.cwd(), 'packages/legacy-agent-host/dist/composition/TeamHost.js')
   ).href;
+  const commandStoreUrl = pathToFileURL(
+    join(process.cwd(), 'packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js')
+  ).href;
   const source = `import { readFileSync } from 'node:fs';
 import { createTeamHost } from ${JSON.stringify(hostUrl)};
+${interruptPrepared ? `import { FileManagementCommandStore } from ${JSON.stringify(commandStoreUrl)};
+const originalWrite = FileManagementCommandStore.prototype.write;
+FileManagementCommandStore.prototype.write = function(record) {
+  originalWrite.call(this, record);
+  if (record.kind === 'runtime.source' && record.commandId === 'TEST-original-install' && record.phase === 'prepared')
+    throw new Error('TEST interruption after original durable prepared intent');
+};` : ''}
 const server = createTeamHost(JSON.parse(readFileSync(${JSON.stringify(profileFile)}, 'utf8')), { input: process.stdin, output: process.stdout });
 void server.closed.then(() => process.exit(0));`;
   await writeFile(hostEntry, source, { mode: 0o600 });
@@ -74,10 +85,13 @@ void server.closed.then(() => process.exit(0));`;
       shutdownTimeoutMs: 3000,
     },
   };
+  const scope = { teamId: 'TEST-source-team', projectId: 'TEST-project', workspaceId: 'TEST-workspace',
+    runId: 'TEST-run', memberId: 'TEST-human', generation: '0' };
   const profile: TeamHostProfile = {
     schemaVersion: 1,
     principalId: 'TEST-human',
-    teams: [],
+    teams: aliases ? [{ binding: { backendId: owner.ownerId, teamId: scope.teamId, teamName: 'source-team' },
+      scope, members: [{ memberId: 'lead', name: 'captain', role: 'lead' }], grants: [] }] : [],
     ...(withPreferences ? { creation: { contextIds: ['TEST-context'] } } : {}),
     owner: {
       ownerId: owner.ownerId,
@@ -133,7 +147,9 @@ void server.closed.then(() => process.exit(0));`;
     schemaVersion: 1,
     defaultOwner: binding.owner,
     owners: [owner],
-    handles: [],
+    handles: Array.from({ length: aliases }, (_, index) => ({ handleId: `TEST-source-alias-${index}`,
+      owner: binding.owner, contextId: binding.contextId, label: 'Source Team',
+      members: [{ memberId: 'lead', label: 'captain' }], scope })),
     ...(withPreferences ? { creation: { owner: binding.owner, contextIds: ['TEST-context'] } } : {}),
     management: [binding],
   };
@@ -194,7 +210,7 @@ it('first launch preparation captures stored preferences through the real Main/H
 }, 20000);
 
 it('real Main/Host publication preserves legacy target bytes and restores every retained target after restart', async () => {
-  const f = await fixture(),
+  const f = await fixture('claude', false, 257),
     desktop = f.open();
   const seed = await desktop.captureProviderManagement('TEST-context', f.root, undefined, 'claude');
   expect(seed.targetId).toBe(digest(JSON.stringify({ selected: f.binding, owner: f.owner })));
@@ -206,6 +222,10 @@ it('real Main/Host publication preserves legacy target bytes and restores every 
     expectedRevision: original.revision,
     candidate: { sourceKind: 'app-managed', executable: f.replacement },
   });
+  const sourceIndex = JSON.parse(await readFile(join(f.root, 'runtime-sources/index.json'), 'utf8'));
+  expect(sourceIndex.records[0].grant.teamScopes).toEqual([
+    { teamId: 'TEST-source-team', projectId: 'TEST-project', workspaceId: 'TEST-workspace' },
+  ]);
   const selected = await desktop.captureProviderManagement(
     'TEST-context',
     f.root,
@@ -387,12 +407,13 @@ it.skipIf(process.platform === 'win32')(
 it.skipIf(process.platform === 'win32')(
   'restarted installer resumes the Host snapshot before any new acquisition',
   async () => {
-    const f = await fixture('opencode'),
+    const f = await fixture('opencode', false, 0, true),
       desktop = f.open();
     const sources = await desktop.captureRuntimeSources('TEST-context', f.root, 'opencode');
     const original = await sources.current(),
       binaryPath = join(f.root, 'TEST-interrupted-selection');
     const bytes = '#!/bin/sh\nprintf "1.19.5\\n"\n';
+    await writeFile(binaryPath, bytes, { mode: 0o700 });
     await expect(
       sources.publish({
         commandId: 'TEST-original-install',
@@ -409,7 +430,6 @@ it.skipIf(process.platform === 'win32')(
     ).rejects.toThrow();
     expect((await sources.lookup('TEST-original-install'))?.phase).toBe('prepared');
     await desktop.shutdown();
-    await writeFile(binaryPath, bytes, { mode: 0o700 });
     const install = vi.fn(async (): Promise<OpenCodeRuntimeStatus> => {
       throw new Error('New acquisition forbidden');
     });

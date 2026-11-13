@@ -13,10 +13,13 @@ import type { ToolEvidenceCapture } from '../../evidence/captureContracts.js';
 import type { CodexEvidenceCapture } from '../../evidence/codexCaptureContracts.js';
 import type { OpenCodeEvidenceCapture } from '../../evidence/opencodeCaptureContracts.js';
 import type { NativeSessionCommandCapability } from '../../team/nativeSessionCommand.js';
+import type { HostWindowsLaunch } from '../../owned-process/HostWindowsLaunch.js';
 
 export interface MemberProviderContext {
   profile: RuntimeMemberProfile;
   processCustody?: RegisteredProcessRootSource;
+  /** Private original Main launch capability, initially qualified for ordinary Claude only. */
+  retainedWindowsLaunch?: HostWindowsLaunch;
   request: OpenConfig;
   endpoint: TeamMcpEndpoint;
   connection: TeamMcpConnection;

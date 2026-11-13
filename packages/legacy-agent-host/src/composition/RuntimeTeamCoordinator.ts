@@ -28,6 +28,7 @@ import { prepareNativeSessionCommand, nativeSessionCommandAuthorized } from './n
 import { publishNativeCommandOutput } from './publishNativeCommandOutput.js';
 import { projectRuntimeMember } from './projectRuntimeMember.js';
 import type { ProcessCustody } from './processCustody.js';
+import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 import type { TeamMcpCrossTeamPort } from '../mcp/nativeCrossTeamContracts.js';
 import { readHostTeamActivity } from './readHostTeamActivity.js';
 import { readRuntimeActivitySources, readEntryActivitySources, isRetainedActivityBinding } from './runtimeActivitySources.js';
@@ -40,7 +41,7 @@ import { runtimeCaptureSourceSchema, runtimeCaptureSourceSelections } from './ru
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import { ToolEvidenceWindows } from '../evidence/ToolEvidenceWindows.js';
 import { captureTeamModelProbeSelection, isCurrentCapturedTeam } from './savedTeamModelProbe.js';
-import { assertCapturedRosterCurrent, assertRosterEditable } from './teamRoster.js';
+import { assertCapturedRosterCurrent, assertRosterEditable, readCreatedLaunchAdmission } from './teamRoster.js';
 import type { TeamModelProbeSelection } from './teamLaunchModelProbe.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
@@ -91,6 +92,7 @@ export class RuntimeTeamCoordinator {
       teams: ReadonlyMap<string, HostedTeam>;
       assertWriter(): void;
       processCustody?: ProcessCustody;
+      retainedWindowsLaunch?: HostWindowsLaunch;
       workSync?: ReturnType<typeof createHostWorkSyncComposition>;
       nativeMemberModelPreflight?: NativeMemberModelPreflight;
       groups?(
@@ -141,6 +143,7 @@ export class RuntimeTeamCoordinator {
         hostIncarnation: this.hostIncarnation,
         windows: this.evidenceWindows,
         ...(options.processCustody ? { processCustody: options.processCustody } : {}),
+        ...(options.retainedWindowsLaunch ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
         ...(options.createProvider ? { createProvider: options.createProvider } : {}),
         groups: (entry, capture, current) => options.groups?.(entry, capture, current),
         crossTeam: (entry, isCurrent) =>
@@ -359,7 +362,8 @@ export class RuntimeTeamCoordinator {
     if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
     const selected = this.retainedLaunches.get(runtimeDigest({ teamId, launchId }));
     if (!selected) throw new TeamLaunchError('hold', 'capture-unavailable');
-    return selected.launch.readOriginalStart(commandId);
+    return readCreatedLaunchAdmission({ selected, commandId, runtime: this.runtime,
+      entries: [...this.entries.values()] });
   }
 
   private async trackOpening<T>(pending: Promise<T>): Promise<T> {
@@ -454,6 +458,8 @@ export class RuntimeTeamCoordinator {
       capturedTeam: this.capturedTeams.get(teamId),
       launch: this.launches.get(teamId),
       entries: [...this.entries.values()],
+      runtime: this.runtime,
+      retainedLaunches: this.retainedLaunches,
       input,
       action,
       assertCurrent: () => {

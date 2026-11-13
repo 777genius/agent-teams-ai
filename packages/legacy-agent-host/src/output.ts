@@ -23,7 +23,8 @@ export class HostOutput {
   constructor(
     private readonly output: Writable,
     private readonly limits: HostLimits,
-    private readonly fail: (reason: HostCloseReason) => void
+    private readonly fail: (reason: HostCloseReason) => void,
+    private readonly privateCapacity?: () => void
   ) {}
 
   sendPriority(
@@ -44,6 +45,15 @@ export class HostOutput {
     this.priorityBytes += frame.length;
     this.pump();
     return true;
+  }
+
+  /** Conservative admission for one private frame; the following send is synchronous. */
+  canSendPrivate(control: boolean, maxFrameBytes: number): boolean {
+    const count = this.limits.maxPriorityMessages -
+      (control ? 0 : this.limits.reservedControlRequests);
+    const budget = this.limits.maxPriorityBytes - (control ? 0 : this.limits.maxFrameBytes);
+    const bytes = Math.min(maxFrameBytes, this.limits.maxFrameBytes) + 1;
+    return !this.stopped && this.priority.length < count && this.priorityBytes + bytes <= budget;
   }
 
   /** Private work shares the existing priority budget and leaves the original control reserve. */
@@ -131,7 +141,10 @@ export class HostOutput {
         this.writing = false;
         if (this.stopped) return;
         if (error) this.fail('output_error');
-        else this.pump();
+        else {
+          this.pump();
+          this.privateCapacity?.();
+        }
       });
     } catch {
       this.fail('output_error');

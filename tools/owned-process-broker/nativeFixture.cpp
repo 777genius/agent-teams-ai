@@ -32,7 +32,7 @@ int wmain(int argc,wchar_t** argv) {
     if(GetEnvironmentVariableW(L"OWNED_PROCESS_VENDOR_TEST_GO",go,2)!=1||go[0]!=L'1'||
       !IsProcessInJob(GetCurrentProcess(),nullptr,&inJob)||!inJob) return 51;
     mode=mode.substr(7);
-    if(mode!=L"tree"&&mode!=L"branch"&&mode!=L"leaf"&&mode!=L"sentinel"&&mode!=L"wait-gated") return 52;
+    if(mode!=L"tree"&&mode!=L"branch"&&mode!=L"leaf"&&mode!=L"sentinel"&&mode!=L"wait-gated"&&mode!=L"query-wait-gated") return 52;
   }
   if(mode==L"tree"||mode==L"root-first"||mode==L"root-first-gated"||mode==L"service-pair"||mode==L"service-first"||mode==L"flood"||mode==L"breakaway"||mode==L"stdio"||mode==L"selection") {
     // The target-only first observable effect precedes child creation/output/scenario work.
@@ -44,14 +44,29 @@ int wmain(int argc,wchar_t** argv) {
     DWORD count=0; auto written=WriteFile(marker,nonce,sizeof(nonce),&count,nullptr);
     CloseHandle(marker); if(!written||count!=sizeof(nonce)) return 34;
   }
-  if(mode==L"wait"||mode==L"wait-gated") {
+  if(mode==L"wait"||mode==L"wait-gated"||mode==L"query-wait-gated") {
+    if(mode==L"query-wait-gated"&&!vendorHeld) return 54;
     if(argc!=4) return 23;
     DWORD pid=static_cast<DWORD>(wcstoul(argv[2],nullptr,10));
     uint64_t expected=_wcstoui64(argv[3],nullptr,16);
     HANDLE process=OpenProcess(SYNCHRONIZE|PROCESS_QUERY_LIMITED_INFORMATION,FALSE,pid);
     if(!process||birth(process)!=expected) return 24;
     std::puts("captured"); std::fflush(stdout);
-    if(mode==L"wait-gated") {
+    if(mode==L"query-wait-gated") {
+      unsigned queries=0;
+      for(;;) {
+        char command; DWORD count=0;
+        if(!ReadFile(GetStdHandle(STD_INPUT_HANDLE),&command,1,&count,nullptr)||count!=1) {
+          CloseHandle(process); return 55;
+        }
+        if(command=='W') break;
+        if(command!='Q'||++queries>4) { CloseHandle(process); return 56; }
+        // Same HANDLE captured before the provider's first resume. No PID reopen or signal.
+        const auto state=WaitForSingleObject(process,0);
+        if(state!=WAIT_TIMEOUT&&state!=WAIT_OBJECT_0) { CloseHandle(process); return 57; }
+        std::puts(state==WAIT_TIMEOUT?"alive":"absent"); std::fflush(stdout);
+      }
+    } else if(mode==L"wait-gated") {
       char ack; DWORD count=0;
       if(!ReadFile(GetStdHandle(STD_INPUT_HANDLE),&ack,1,&count,nullptr)||count!=1||ack!='1') return 47;
     }

@@ -10,6 +10,8 @@ import {
   readDesktopNativeStopSessions,
   separateDesktopOpenCodeRuntimeChildren,
   assertDesktopOpenCodeMetadataSources,
+  captureDesktopOpenCodeColdMetadata,
+  observeDesktopOpenCodeMetadata,
 } from './desktop-native-stop-fixture.ts';
 import { checkpoint } from './desktop-resume-records.ts';
 import { assertDesktopMetadataLineageReleased, assertDesktopMetadataLineageRetained,
@@ -68,7 +70,7 @@ function hasHotOpenCodeV2Metadata(evidence: Row): boolean {
 
 
 function retainedMetadata(proof: Row): DesktopNativeHostSnapshot {
-  const values = ['originalMetadataBeforeLaunch', 'originalMetadataBeforeResume', 'metadataBeforeLaunch',
+  const values = ['captured', 'originalMetadataBeforeLaunch', 'originalMetadataBeforeResume', 'metadataBeforeLaunch',
     'metadataAtRuntimeObservation', 'metadataAfterStop', 'metadataAfterSecondStop',
     'metadataAfterRendererReload', 'metadataAfterReadback'].flatMap(key =>
       proof[key] === undefined ? [] : [{ key, value: row(proof[key]) as unknown as DesktopNativeHostSnapshot }]);
@@ -95,9 +97,11 @@ function assertMetadataClosed(proof: Row, observed: readonly { pid: number }[]):
 
 /** Wait only for the existing private log drain; no RPC, allocation, replay or native signal. */
 export async function observeDesktopMetadataClose(root: string, evidence: Row, firstResume = false): Promise<void> {
-  if (!['native-review-ui', 'native-stop-ui', 'native-conversation-ui', 'native-quit-ui',
-    'native-launch-ui', 'native-resume-ui'].includes(String(evidence.mode)) || !hasHotOpenCodeV2Metadata(evidence)) return;
-  const proof = firstResume || evidence.mode === 'native-launch-ui' ? row(evidence.launchDialogProof) :
+  const cold = evidence.coldOpenCodeMetadata !== undefined;
+  if (!cold && (!['native-review-ui', 'native-stop-ui', 'native-conversation-ui', 'native-quit-ui',
+    'native-launch-ui', 'native-resume-ui'].includes(String(evidence.mode)) || !hasHotOpenCodeV2Metadata(evidence))) return;
+  const proof = cold ? row(evidence.coldOpenCodeMetadata) :
+    firstResume || evidence.mode === 'native-launch-ui' ? row(evidence.launchDialogProof) :
     evidence.mode === 'native-resume-ui' ? row(evidence.resumeDialogProof) :
     evidence.mode === 'native-review-ui' ? row(evidence.nativeReviewUiProof) : row(evidence.nativeSetup);
   const captured = retainedMetadata(proof), deadline = Date.now() + 5000;
@@ -215,6 +219,8 @@ export function assertCapturedDesktopMetadataAbsent(
   assert.equal(proof.metadataProcessCount, 1);
   assertOriginalMetadataAbsent(captured, evidence.hostChild, observed ?? processTable(),
     'the original captured metadata child is absent after guarded Quit, before harness cleanup', 1);
+  assert.ok(proof.metadataAfterReadback, 'the latest cold metadata lineage is retained');
+  assertMetadataClosed(proof, observed ?? processTable());
   proof.metadataAbsentBeforeHarnessCleanup = true;
 }
 
@@ -362,32 +368,9 @@ export async function captureDesktopOpenCodeV2ColdMetadata(
       Array.isArray(declared.declaredInputModalities) &&
       declared.declaredInputModalities.includes('text')
   );
-  const captured = readDesktopNativeHostProcesses(options, options.group);
-  assert.deepEqual(captured.host, before.host);
-  assert.equal(captured.children.length, 1, 'one original metadata child, no Runtime child');
+  const { captured, source: metadataSource } = await captureDesktopOpenCodeColdMetadata(options, options.group, before);
   assert.equal(captured.children[0]!.command, executablePath);
-  if (before.children.length) assert.deepEqual(captured.children, before.children);
-  const assertNoRuntimeChildren = async () => {
-    options.assertOwnedRenderer();
-    assert.equal(await fileDigest(sourcePath), sourceSha256);
-    assert.equal(await fileDigest(profilePath), profileSha256);
-    assert.equal(await realpath(executablePath), executablePath);
-    assert.equal(await fileDigest(executablePath), executableSha256);
-    const current = await readDesktopNativeStopSessions(options.root);
-    assertColdOpenCodeRuntimeRecords(source, profile, current);
-    assert.deepEqual(
-      current,
-      sessions,
-      'metadata/UI reads preserve every original Runtime byte projection'
-    );
-    separateDesktopOpenCodeRuntimeChildren(
-      captured,
-      readDesktopNativeHostProcesses(options, options.group),
-      0
-    );
-  };
-  await assertNoRuntimeChildren();
-  options.evidence.coldOpenCodeMetadata = {
+  const proof: Row = {
     phase: 'captured-before-ui',
     sourceSha256,
     profileSha256,
@@ -396,7 +379,31 @@ export async function captureDesktopOpenCodeV2ColdMetadata(
     modelId: model.modelId,
     metadataProcessCount: 1,
     nativeRuntimeAllocations: 0,
+    metadataSource,
+    before,
     captured,
+    metadataAfterReadback: captured,
   };
+  options.evidence.coldOpenCodeMetadata = proof;
+  let latest = captured;
+  const assertNoRuntimeChildren = async () => {
+    options.assertOwnedRenderer();
+    assert.equal(await fileDigest(sourcePath), sourceSha256);
+    assert.equal(await fileDigest(profilePath), profileSha256);
+    assert.equal(await realpath(executablePath), executablePath);
+    assert.equal(await fileDigest(executablePath), executableSha256);
+    const { captured: currentMetadata } = await observeDesktopOpenCodeMetadata(options, options.group, latest, 0);
+    const current = await readDesktopNativeStopSessions(options.root);
+    assertColdOpenCodeRuntimeRecords(source, profile, current);
+    assert.deepEqual(
+      current,
+      sessions,
+      'metadata/UI reads preserve every original Runtime byte projection'
+    );
+    separateDesktopOpenCodeRuntimeChildren(captured, currentMetadata, 0);
+    latest = currentMetadata;
+    proof.metadataAfterReadback = currentMetadata;
+  };
+  await assertNoRuntimeChildren();
   return { metadataProcessCount: 1, hostPid: captured.host.pid, assertNoRuntimeChildren };
 }

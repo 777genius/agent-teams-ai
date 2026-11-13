@@ -164,6 +164,30 @@ export function encodeLaunch(spec: ResolvedLaunchSpec): Buffer {
   return payload;
 }
 
+/** Decode only the existing bounded launch format; re-encoding checks every native field rule. */
+export function decodeLaunch(payload: Buffer): ResolvedLaunchSpec {
+  if (payload.length > MAX_LAUNCH_BYTES) throw new Error('Launch payload exceeds limit');
+  let offset = 0;
+  const integer = () => {
+    if (offset + 4 > payload.length) throw new Error('Truncated launch');
+    const value = payload.readUInt32LE(offset); offset += 4; return value;
+  };
+  const string = () => {
+    const length = integer();
+    if (length % 2 || length > 65534 || offset + length > payload.length)
+      throw new Error('Invalid launch string');
+    const value = payload.toString('utf16le', offset, offset + length); offset += length;
+    return value;
+  };
+  const executable = string(), commandLine = string(), cwd = string(), count = integer();
+  if (count > 4096) throw new Error('Invalid launch environment');
+  const environment = Array.from({ length: count }, string);
+  if (offset !== payload.length) throw new Error('Unexpected launch bytes');
+  const spec = Object.freeze({ executable, commandLine, cwd, environment: Object.freeze(environment) });
+  if (!encodeLaunch(spec).equals(payload)) throw new Error('Noncanonical launch bytes');
+  return spec;
+}
+
 /** Private original-scope wire facts. These values are not native authority or a TreeReceipt. */
 export type ServiceScopeIdentity = Readonly<{ key: string; birth: string }>;
 export type ServiceScopeFacts = ServiceScopeIdentity & Readonly<{

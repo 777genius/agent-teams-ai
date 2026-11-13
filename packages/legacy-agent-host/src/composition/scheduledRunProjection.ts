@@ -22,7 +22,7 @@ export function projectScheduledRun(capture: ScheduledRunCapture, record: Runtim
     children.set(key, { ...event, data: { ...fact, kind: String(fact.kind) }, agentId: childId });
   }
   const events: (RuntimeActivityEvent & { agentId?: string })[] = [...activity.latest.text,
-    ...activity.events.filter(event => event.data.kind === 'tool' || event.data.kind === 'tool-result'),
+    ...activity.latest.tools,
     ...children.values()];
   events.sort((a, b) => a.sequence - b.sequence);
   const lines: string[] = [];

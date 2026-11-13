@@ -225,10 +225,60 @@ interface CdpListenerFacts {
   truncated: boolean;
   files: CdpListenerFile[];
 }
+interface CdpFixtureCorrelation {
+  pid: number; fd: string; scope: 'after-failed-census'; atomic: false;
+  birth: 'same' | 'unknown'; socket: 'same-as-supplemental' | 'unknown';
+  fixtureHostArgv: boolean | null; fixtureNodeExecutable: boolean | null;
+  closeOnExec: boolean | null;
+}
+type CdpFixtureSelection = { node: string; hostEntry: string };
 const cdpListenerFailures = new WeakMap<Error, CdpListenerFacts>();
-/** Original failed lsof facts; any later proc observation is explicitly non-atomic and diagnostic. */
-export function readOwnedCdpListenerFailure(value: unknown): CdpListenerFacts | undefined {
-  return value instanceof Error ? cdpListenerFailures.get(value) : undefined;
+const cdpFixtureFailures = new WeakMap<Error, CdpListenerFacts & {
+  fixtureCorrelation: CdpFixtureCorrelation[];
+}>();
+
+/** Path comparison only: never executable attestation, socket admission or signal authority. */
+function correlateCdpFixture(file: CdpListenerFile, fixture: CdpFixtureSelection): CdpFixtureCorrelation {
+  const unknown: CdpFixtureCorrelation = { pid: file.pid, fd: file.fd,
+    scope: 'after-failed-census', atomic: false, birth: 'unknown', socket: 'unknown',
+    fixtureHostArgv: null, fixtureNodeExecutable: null, closeOnExec: null };
+  const original = file.afterCensus;
+  if (original?.birth !== 'same' || !original.socketInode) return unknown;
+  const sameBirth = (value: ProcBirth | undefined) => value !== undefined &&
+    value.startTicks === original.startTicks && value.pgid === original.pgid && value.ppid === original.ppid;
+  try {
+    if (!sameBirth(readProcBirth(file.pid))) return unknown;
+    const socket = `socket:[${original.socketInode}]`;
+    const path = `/proc/${file.pid}/fd/${file.fd}`;
+    if (readlinkSync(path) !== socket) return unknown;
+    const argv = boundedProcText(`/proc/${file.pid}/cmdline`);
+    const executable = readlinkSync(`/proc/${file.pid}/exe`);
+    const info = boundedProcText(`/proc/${file.pid}/fdinfo/${file.fd}`);
+    const flags = info?.split('\n').filter(line => line.startsWith('flags:')) ?? [];
+    const octal = flags.length === 1 ? /^flags:\t(0[0-7]{1,10})$/u.exec(flags[0]!)?.[1] : undefined;
+    const numeric = octal === undefined ? undefined : BigInt('0o' + octal);
+    const closeOnExec = numeric === undefined || numeric > 0xffffffffn
+      ? null : (numeric & 0o2000000n) !== 0n;
+    const fixtureHostArgv = argv?.endsWith('\0')
+      ? argv === fixture.node + '\0' + fixture.hostEntry + '\0' : null;
+    if (readlinkSync(path) !== socket || !sameBirth(readProcBirth(file.pid))) return unknown;
+    return { ...unknown, birth: 'same', socket: 'same-as-supplemental',
+      fixtureHostArgv, fixtureNodeExecutable: executable === fixture.node, closeOnExec };
+  } catch { return unknown; }
+}
+
+/** Original error facts plus, at most once, a separately labelled comparison to captured TEST paths. */
+export function readOwnedCdpListenerFailure(
+  value: unknown, fixture?: CdpFixtureSelection
+): (CdpListenerFacts & { fixtureCorrelation?: CdpFixtureCorrelation[] }) | undefined {
+  if (!(value instanceof Error)) return undefined;
+  const facts = cdpListenerFailures.get(value);
+  if (!facts || !fixture) return facts;
+  const previous = cdpFixtureFailures.get(value);
+  if (previous) return previous;
+  const projected = { ...facts, fixtureCorrelation: facts.files.map(file => correlateCdpFixture(file, fixture)) };
+  cdpFixtureFailures.set(value, projected);
+  return projected;
 }
 function parseLinuxCdpListeners(output: string): { listeners: number[]; facts: CdpListenerFacts } {
   const pids = new Set<number>(), withFiles = new Set<number>();

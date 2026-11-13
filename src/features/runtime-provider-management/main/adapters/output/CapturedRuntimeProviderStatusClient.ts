@@ -168,8 +168,9 @@ export function createCapturedRuntimeProviderStatusClient(
     async readOpenCodeRuntimeStatus() {
       const current = deps.captureGuard?.() ?? (() => true);
       const sources = await deps.captureSources?.();
-      const selection = await sources?.current();
       const target = await deps.capture(null);
+      // The original capture may publish its first configuration before selecting the target.
+      const selection = await sources?.current();
       const runtime = parseManagementRuntime(await target.request('catalog', {}), target);
       if (!target.isCurrent() || !current()) throw new Error('Native status context changed');
       if (

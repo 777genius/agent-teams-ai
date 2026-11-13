@@ -7,6 +7,8 @@ on:
       - '.github/workflows/sentry-owned-process-native.yml'
       - 'tools/owned-process-broker/**'
       - 'packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts'
+      - 'src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts'
+      - 'src/features/agent-backend/main/infrastructure/CapturedHostClient.ts'
       - 'src/main/utils/ownedProcess/**'
       - 'packages/legacy-agent-host/src/owned-process/**'
       - 'packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts'
@@ -341,6 +343,8 @@ jobs:
         run: |
           node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json
           if ($LASTEXITCODE -ne 0) { throw 'Owned protocol typecheck failed' }
+          node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json
+          if ($LASTEXITCODE -ne 0) { throw 'Original Main Host integration typecheck failed' }
           node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts
           if ($LASTEXITCODE -ne 0) { throw 'Owned protocol tests failed' }
       - name: Build native fixtures and stage only product broker
@@ -409,6 +413,24 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Actual vendor native controller gate failed' }
           node --input-type=module -e "import assert from 'node:assert/strict'; import fs from 'node:fs'; const r=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); assert.equal(r.kind,'TEST_WINDOWS_NATIVE_CLAUDE_SERVICE_SCOPE'); assert.equal(r.sourceHead,process.env.EXPECTED_SOURCE_SHA); assert.equal(r.platform,'win32-'+process.arch); assert.equal(r.nodeVersion,'v24.21.0'); assert.equal(r.status,'PASS'); assert.equal(r.cleanup,true); assert.equal(r.originalProviderJobReleased,true); assert.equal(r.oneOriginalSession,true); assert.equal(r.installedBeforeInput,true); assert.equal(r.scopedProof.activeProcesses,0); assert.equal(r.scopedProof.duplicateAckMatched,true); assert.deepEqual(r.nativeRequests,['native_background_tool','native_background_result','same_session_after_scoped_stop']); assert.deepEqual(r.nativeFailures,[]); assert.equal(r.registryQualified,false); assert.equal(r.coldOwnerQualified,false); assert.equal(r.vendorAuthQualified,false); assert.equal(r.desktopQualified,false); assert.equal(r.releaseQualified,false);" $receipt
           if ($LASTEXITCODE -ne 0) { throw 'Actual vendor exact receipt is incomplete' }
+      - name: Actual ordinary Claude Host with original Main custody through graceful close and crash
+        env:
+          OWNED_PROCESS_VENDOR_TEST_GO: '1'
+        run: |
+          $controller = "$env:NATIVE_BUILD\Release\owned-process-gate-controller.exe"
+          $node = (Get-Command node.exe -ErrorAction Stop).Source
+          $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
+          $tsconfig = Join-Path $PWD 'tsconfig.json'
+          $gate = Join-Path $PWD 'tools\owned-process-broker\nativeRetainedHostGate.ts'
+          $selection = "$env:NATIVE_VENDOR_INPUTS\selection.json"
+          $sha256 = (Get-FileHash -Algorithm SHA256 $selection).Hash.ToLowerInvariant()
+          foreach ($mode in @('graceful', 'crash')) {
+            $receipt = Join-Path $PWD ("native-evidence\main-retained-" + $mode + ".json")
+            & $controller $node $runner --tsconfig $tsconfig $gate "$env:NATIVE_STAGE\owned-process-broker.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" $selection $sha256 $receipt $mode 2>&1 | Tee-Object ("native-evidence/main-retained-" + $mode + ".log")
+            if ($LASTEXITCODE -ne 0) { throw 'Actual ordinary Host Main custody gate failed' }
+            node --input-type=module -e "import assert from 'node:assert/strict'; import fs from 'node:fs'; const r=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); assert.equal(r.kind,'TEST_WINDOWS_MAIN_RETAINED_CLAUDE'); assert.equal(r.sourceHead,process.env.EXPECTED_SOURCE_SHA); assert.equal(r.platform,'win32-'+process.arch); assert.equal(r.nodeVersion,'v24.21.0'); assert.equal(r.mode,process.argv[2]); assert.equal(r.status,'PASS'); assert.equal(r.cleanup,true); assert.equal(r.ordinaryHostConsumer,true); assert.equal(r.nativeTurn,true); assert.equal(r.retainedAfterCrash,r.mode==='crash'); assert.equal(r.originalHandleChecks.afterInput,'alive'); assert.equal(r.originalHandleChecks.afterHostLoss,r.mode==='crash'?'alive':null); assert.equal(r.originalHandleChecks.afterCleanup,'absent'); assert.equal(r.counts.allocate,1); assert.equal(r.counts.prepare,1); assert.equal(r.counts.resume,1); assert.equal(r.modelRequests,3); assert.equal(r.modelFailures,0); for(const field of ['registryQualified','hostRebindQualified','sdkColdConversationQualified','desktopQualified','releaseQualified']) assert.equal(r[field],false);" $receipt $mode
+            if ($LASTEXITCODE -ne 0) { throw 'Actual Main custody receipt is incomplete' }
+          }
       - name: Retain exact-source binary and independent controller evidence
         if: always()
         uses: actions/upload-artifact@v7.0.1
