@@ -952,3 +952,76 @@ management/debt cases должны оставаться held и сохранят
 Новых suites, RPC, owners, таймаутов или native budget нет. Source peer review,
 Host build/types и focused existing tests обязательны на exact corrected bytes;
 actual Desktop/native gates отдельно, timing улучшение здесь не заявляется.
+
+### §19 correction: runtime-presence проверка не требует прав чтения пустой Team
+
+**Факт CI.** На exact `d35ef8256a9f24294b2fe50e8290ccb9841d9eb1`
+job `131824838277` дал единственный FAIL из 6572 выполненных Main tests:
+`desktopRuntimeSources.test.ts`, case «real Main/Host publication preserves
+legacy target bytes and restores every retained target after restart».
+Получен `transport-closed (unknown)` до Host handshake; child stderr в этом
+job log не опубликован. Следующая причина установлена по exact source chain,
+не выдана за уже выполненный локальный reproduction.
+
+**Круг1 — контракт и причина.** Case вызывает `fixture('claude', false, 257)`:
+одна static Team имеет `grants: []`, current `profile.runtime` отсутствует.
+`readProfile.ts` применяет `teamHostProfileSchema`; общая
+`hostedTeamDefinitionSchema` разрешает такую Team. `TeamHost.attachTeam`
+читает roster при dynamic attach, но намеренно не требует actor read для
+static definition. До §19 отсутствие runtime сохраняло product/management
+Host без Coordinator. `TeamRegistry.restore` также отделяет inaccessible
+creation от остальных static Teams. Это допустимый профиль; добавление grant
+в fixture замаскировало бы production regression.
+
+Новый `TeamHost.ts:257 → hasRetainedTeamRuntime` вызывает
+`TeamRuntimeRegistration.all` через `runtimeCaptures(principalId)`.
+`all` требует actor read до проверки наличия registrations, поэтому пустая
+static Team останавливает весь Host. `TeamOwner.state` не является заменой
+для readonly presence: он вызывает `roster.recover` и проецирует runtime
+bindings. Existing revoked-read/replay tests сохраняют значение и обязательны.
+
+**Круг2 — минимальный composition-only predicate.**
+
+- В existing `TeamRuntimeRegistration` добавить приватный для trusted
+  composition boolean: под original TeamStore fence прочитать fixed
+  `state.json`, проверить ready/schema/original binding, существующие
+  registration fingerprints/limits и форму необходимых member/pending полей.
+  Только наличие validated captures, active/removed delivery или pending
+  исходного состояния требует runtime restore. Ошибки/неоднозначный долг
+  не превращаются в «истории нет». Не вызывать actor authorization,
+  `TeamOwner.state`, roster recovery или native операции.
+- Передать этот узкий boolean через existing TeamOwner composition surface,
+  не через connect/MCP/RPC. Existing `runtimeCapture/runtimeCaptures` и
+  все actor read/control/replay проверки остаются прежними.
+- `hasRetainedTeamRuntime` использует этот predicate плюс прежний exact
+  seed-launch file по original Team/run. Missing file означает только
+  отсутствие этого known record; unsafe/malformed/I/O не подавляются.
+  `RuntimeTeamCaptures.prepareRestore/restore` пропускают actor read
+  только для Team без current private member seed и без такой истории.
+  Это нужно и когда соседняя Team имеет retained Runtime и уже включает
+  общий Coordinator. Профили не подменяются, Team не удаляется из product map.
+- Presence не является authority или подтверждением cleanup. Семантика
+  `runtimeNeverLaunched` не меняется: отсутствие старого marker не создаёт
+  новое правило global hold для product-only startup, а наличие не
+  освобождает original custody. Реальные/неполные captures, deliveries,
+  pending lifecycle/seed records проходят прежний strict restore/debt path;
+  revoked actor не получает read. Все original bytes, fences, неизвестные
+  исходы и lifecycle/Main cleanup owners сохраняются.
+
+Source scope: existing `TeamRuntimeRegistration.ts`, `TeamOwner.ts`,
+`RuntimeTeamCaptures.ts`; никакого нового registry, journal, public DTO,
+fallback seed, scan чужих namespaces или изменения native budget.
+
+**Круг3 — проверка.** Сохранить original Main case с `grants: []`,
+257 aliases и всеми publication/restart assertions. В existing Host
+unavailable/unknown cleanup case добавить отдельную static Team без grants
+и без Runtime; доступная/retained Team должна по-прежнему пройти свои
+исходные операции, закрытие с genuine unknown custody — остаться failed.
+Public read пустой или revoked Team должен оставаться forbidden. Проверить
+malformed original registration/pending state и seed evidence как hold;
+никакого catch-forbidden или synthetic release. Новых suites/runners нет.
+
+После source peer review нужны build/types и original Main 5 cases +
+focused existing Host recovery/authority cases на exact исправленных bytes.
+Среда сейчас недоступна: plan/source review не означает execution PASS;
+исходный CI FAIL сохранён, таймауты и assertions не ослабляются.
