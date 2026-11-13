@@ -2841,3 +2841,117 @@ The §52 catalog intentionally marks the five process tools asynchronous; `mcp/t
 [Windows x64 job 131897760826](https://github.com/777genius/agent-teams-ai/actions/runs/43429091215/job/131897760826) at exact `2227a997542fd603aab2bc8410433dacfa4e83a8` passed the Host build and stopped in the first step8 command, `tsc --noEmit -p tools/owned-process-broker/tsconfig.json`. Its `*.ts` include takes the new `nativeRetainedServiceScenario.ts` as a protocol-project root, while only the original `nativeRetainedHostGate.ts` is excluded. The helper's Main type import therefore brings Main sources into the separate protocol-only options, producing 17 diagnostics (unchecked-index/union errors and absent React namespace). Native compilation and provider/ordinary Main/service gates did not execute on this job.
 
 Classify the helper with the same original Main gate: add its exact basename to the protocol project's existing exclude, and explicitly include it alongside the gate in `tsconfig.retained-host.json`. Keep every compiler option, protocol source include, workflow command and both mandatory typechecks unchanged. The retained-host project already reaches the helper transitively; local `--listFilesOnly` confirms the helper, gate and CapturedHostClient are checked there. Record that same closure after the correction, run both existing typechecks and the existing protocol suite. This adds no source suppression, runtime change, new test/matrix, budget or native qualification; the current run remains untouched.
+
+
+## 56. Actual Windows public Processes: scoped Stop and live same-Main Host rebind — plan before source
+
+### Круг 1 — граница недостающего доказательства и исходные API
+
+На exact live `2227a997542fd603aab2bc8410433dacfa4e83a8` native run `43429091215` завершился до actual Windows scenarios: обе Windows job остановились на §55.3 type-project closure, обе Linux job — на §55.2 async MCP test. Working `c0f708abb5a1e62d22c3f6add873a70f26aaa348` содержит опубликованные узкие исправления; local 29 existing process tests, 49 protocol/events tests и оба existing Windows type projects PASS не являются actual ordinary Windows qualification. Другие live 2227 workflows продолжаются штатно; ни отмена, ни rerun этим планом не разрешаются.
+
+§55 `natural-services` доказывает другой переход: normal primary exit, provider/neighbor alive до Trash, затем genuine whole-Team cleanup и same-Main cold purge. Он не доказывает selected public Stop при живом соседнем service либо cold Stop ещё живого original scope. Existing direct vendor/debug-broker PASS также не покрывает обычные Team MCP / public Processes routes. Добавить один explicit `scoped-services` TEST mode в существующий retained-Host gate, последовательно покрывающий оба оставшихся перехода. Существующие `graceful`, `crash`, `natural-services` сохраняют свои режимы, assertions и claims.
+
+Source anchors на exact working c0f:
+- [Existing retained Host gate](https://github.com/777genius/agent-teams-ai/blob/c0f708abb5a1e62d22c3f6add873a70f26aaa348/tools/owned-process-broker/nativeRetainedHostGate.ts): ordinary Claude runtime/open/input, original staged selection, Main owner, TEST crash marker, native witness и independent controller cleanup.
+- [Existing service scenario](https://github.com/777genius/agent-teams-ai/blob/c0f708abb5a1e62d22c3f6add873a70f26aaa348/tools/owned-process-broker/nativeRetainedServiceScenario.ts) и [finite process model](https://github.com/777genius/agent-teams-ai/blob/c0f708abb5a1e62d22c3f6add873a70f26aaa348/scripts/legacy-agent-host/desktop-native-process-model.ts): два original background tasks, actual MCP registration, strict command/receipt, same-Main successor, exact task-notification wrapper.
+- [Public process methods](https://github.com/777genius/agent-teams-ai/blob/c0f708abb5a1e62d22c3f6add873a70f26aaa348/packages/legacy-agent-host/src/process/createTeamProcessMethods.ts) и [Windows command journal](https://github.com/777genius/agent-teams-ai/blob/c0f708abb5a1e62d22c3f6add873a70f26aaa348/packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts): `team.process.list/terminate/lookup`, original 10 s operation deadline, full `processRef`, Human admin, persisted original Stop intent, native await outside the fence, same-capture completed absence and settlement.
+- [Host service port](https://github.com/777genius/agent-teams-ai/blob/c0f708abb5a1e62d22c3f6add873a70f26aaa348/packages/legacy-agent-host/src/owned-process/HostWindowsServices.ts) и [original Main owner](https://github.com/777genius/agent-teams-ai/blob/c0f708abb5a1e62d22c3f6add873a70f26aaa348/packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts): old serialized intent имеет lookup-only semantics; новый explicit Human Stop может mint original control intent только из полного retained capture; attach B требует same Main/profile digest и actual old attachment abort+exit. Service query/Stop/settle являются existing cleanup operations, не требуют старого SDK iterator.
+
+### Круг 2 — original authority, physical facts и последовательность
+
+1. **Один исходный provider и два actual registered services.** Только новый explicit mode выбирает существующий schema2 `service-scopes-v1` staged product artifact и original `alice-session/process.write` grant до первого launch. Default schema1 selections не меняются. Один ordinary Claude `runtime.open` и один original `team.execute/message.send` запускают существующие primary/neighbor background tasks. Actor остаётся прежним: тот же 300000 ms TTL, без `primaryCompletion:'natural-request'`, без новых сигналов, listener modes или resource limits.
+2. Сохранить четыре original model rounds. В step2 новый mode выдаёт ровно два индексированных MCP `process_register` tool blocks с разными фиксированными tool-use/command IDs и original primary/neighbor PID/nonce/port/url/label. Это требует узкой явной ветки существующего one-block emitter; существующие single-register modes не меняются. Step3 проверяет оба exact tool-use IDs, оба completed register receipts, разные `processRef`, conservative `unknown/canTerminate:false`, отсутствие лишнего/повторного результата. Не полагаться на `results.at(-1)` или порядок завершения параллельных MCP calls. Actual SDK исполнение двух blocks остаётся обязательным native gate, а не предположением.
+3. Existing Main port observer сохраняет **до ACK** оба original capture intents и полные v5 captures. Каждый связывается с original allocation capability/generation/root, same Main epoch/profile/source, original registrar и своим original service PID. Exactly two successful captures относятся к epoch A; subsequent operations сопоставляются по полному capture/key/birth, а не по PID. Из каждого successful native capture один раз открыть существующий independent TEST queryable witness на exact PID+birth, удержать его исходный HANDLE; это oracle, не product admission authority. Read-only original registration receipts должны совпасть с retained captures/intents/registrar и public processRefs.
+4. Fresh public `team.process.list` на том же original binding показывает оба original processRefs как `same-live/canTerminate:true`. Первый public Human `team.process.terminate` вызывается ровно один раз с original primary processRef и новым фиксированным Human commandId. Перед первым await production journal обязан удерживать свой original intent; observer сверяет original service-stop capture и последующее настоящее `stopped/absent` evidence. Public receipt должен закончить `operation:terminate, state.phase:completed, state.native:observed-absent` на том же commandId/full capture. Windows `signalAccepted:'unknown'` не заменять вымышленным `true`.
+5. **Warm selected Stop при живых provider и neighbor.** Original primary HANDLE после этого Stop — absent, neighbor HANDLE — alive, provider root HANDLE — alive. Fresh public list сохраняет primary identity с absent/canTerminate:false и neighbor с same-live/canTerminate:true. До этого checkpoint нет whole-provider Stop/release, Trash, Main.close или смены Host. Original unrelated sentinel жив. Только такой checkpoint разрешает claim `warmPublicScopedStopQualified`.
+6. **Утрата A с сохранением исходного Main.** После terminal bootstrap и принятого warm-primary notification использовать существующий TEST wrapper marker: original CLI сам завершается кодом91. Дождаться actual original Host exit и existing client seal/disposal; graceful shutdown до crash не использовать, поскольку он меняет исследуемый lifetime. Удалить только этот одноразовый TEST crash marker после подтверждённого выхода A и до B; executable/hostEntry/profile/source bytes остаются исходными. Не создавать новую native allocation и не применять PID kill/reopen. Fresh provider HANDLE observation после actual A exit должна оставаться alive.
+7. Создать ровно один новый `CapturedHostClient` на том же live physical Main, profile, storage, captured sources и broker selection; новый Host получает собственную epoch/writer только после old abort+exit. Через обычный public `team.process.list` B прочитать original neighbor processRef как same-live/canTerminate:true и primary как original absent row. Fresh neighbor HANDLE подтверждает alive после этого cold query. Нет `runtime.open`, нового message/input, launch/resume/write/end, service-capture или повторного register; отдельный TEST counter проверяет попытки, а не только successful replies.
+8. **Cold explicit scoped Stop.** Через B один раз вызвать public Human `team.process.terminate` с original neighbor processRef и отдельным фиксированным Human commandId. Это новое явно запрошенное control действие над прежним capture; оно не является replay старого command или новым capture по PID. Observer требует полный исходный neighbor capture и original Stop intent перед ACK; public completed/observed-absent receipt и actual neighbor HANDLE absent должны совпасть. Provider HANDLE остаётся alive после cold Stop. Только после этих фактов разрешается `sameMainColdPublicStopQualified`; отсутствие scope, transport EOF, timeout либо rootExit без scope evidence оставляет INCOMPLETE.
+9. Для обоих Stop разрешён лишь existing read-only `team.process.lookup` по тому же original Human commandId, если первый результат ещё requested, внутри того же original 10 s phase deadline. Никаких повторных terminate, новых effect IDs или бюджетов после unknown. Capture/Stop/settle observers сверяют original command/capture joins; settled scope не превращает новый PID lookup в recovery. Public lookup остаётся principal-bound.
+10. После cold checkpoint B закрывается через existing client shutdown; original Main.close должен подтвердить своё cleanup, original provider HANDLE стать absent, все original witnesses drained, unrelated sentinel оставаться alive. До этого cleanup оба scoped Stop доказаны отдельно от whole-Job termination. Existing finally сохраняет initial failure, original Main pending/handles и independent controller Job cleanup; отсутствие semantic success не мешает настоящему original cleanup.
+
+### Круг 3 — конечный oracle, нагрузка и точный source scope
+
+**HANDLE query budget остаётся прежним: максимум четыре Q на каждый original witness, затем прежний W/drain.** Primary: alive перед warm Stop, absent после него (2). Neighbor: alive до warm Stop, alive после warm Stop, alive после cold B query, absent после cold Stop (4). Provider: alive после warm Stop, alive после actual A exit, alive после cold Stop, absent после Main.close (4). Не добавлять hidden polls, повторное открытие HANDLE, inferred `alive` fields или увеличение native query mode. Новый receipt именует эти реальные phase-specific checks, не подменяет immediate-after-input и after-host-loss measurements старых режимов.
+
+**SDK notifications.** Для warm primary требуется завершённый acknowledgement исходного background task перед crash A. Дополнительное cold-neighbor notification возможно только от того же original provider, но не является условием доказательства нового SDK conversation: SDK iterator старого Host не восстанавливается. Любой допущенный notification должен иметь exact original taskId/toolUseId/outputFile wrapper и не повторяться; всего ≤2. Для forced Windows Stop normal closing/closed actor events не фабрикуются: допускается только честный bounded original listening/lifecycle prefix вместе с genuine same-role/full-capture public Stop evidence. Callback ожидания original Stop факта находится вне Stop implementation, поэтому public Stop не ждёт model reply и не образует deadlock. Нельзя использовать `originalWholeCleanup` как доказательство scoped Stop или принимать произвольный failed notification без исходного scope. Не наблюдённый cold notification не объявляется доставленным.
+
+**Exactly four existing TEST files:** `tools/owned-process-broker/nativeRetainedHostGate.ts`, `tools/owned-process-broker/nativeRetainedServiceScenario.ts`, `scripts/legacy-agent-host/desktop-native-process-model.ts`, `.github/workflows/sentry-owned-process-native.yml`. Scenario helper прямо используется original gate; новый orchestration module/owner, product API, journal, C mode, native witness type, test suite, actor change и capability auto-activation не нужны. Исходники остаются в прежних file-size caps; mechanical extraction допускается только отдельным review, а не форматным сжатием.
+
+В существующем Windows job добавить mode `scoped-services` рядом с existing `natural-services`, с отдельным original controller sandbox/receipt и тем же explicit schema2 stage. Одна дополнительная invocation покрывает **оба** public Stop перехода; нет новой matrix/job/runner или отдельного provider для каждого Stop. Оба x64/ARM64 должны пройти actual staged product/ordinary SDK/Team/public route. Сохранить startup10 s, request45 s, native turn35 s, per-process10 s, original Host-exit5 s, witness/drain limits, controller120 s и whole-job30 min; очереди и ожидание двух register blocks входят в исходный deadline. Не продлевать исходный controller attempt, не сбрасывать phase deadline при lookup и не увеличивать TTL.
+
+Приёмка exact next coherent head: existing Host build/type projects, scripts/protocol typecheck и targeted lint/source cap; existing protocol/tests только по затронутому риску; затем actual Windows native receipt со strict finite phase facts, exactly one allocation/prepare/resume, exactly two original captures, exactly two scoped Stop effects (primary A / neighbor B), same Main epoch, two observed Host incarnations, no B input/capture/launch and confirmed original cleanup. Любой extra effect, source/grant mismatch, unknown receipt/settlement либо invalid notification оставляет INCOMPLETE и сохраняет initial failure. `sdkColdConversationQualified`, `desktopQualified`, general provider/platform parity и `releaseQualified` остаются false: этот gate проверяет ordinary Team/public Processes contracts, а renderer clicks и packaged UI требуют своего existing acceptance. Никаких положительных native claims до actual receipts.
+
+## 57. POSIX TEST actor: минимальная переносимость после actual 2227 compile failures
+
+### Круг 1 — зафиксировать настоящий предел CI
+
+Exact live source `2227a997542fd603aab2bc8410433dacfa4e83a8`,
+[run43429091345](https://github.com/777genius/agent-teams-ai/actions/runs/43429091345):
+Linux job131897761669 и Darwin ARM job131897761474 завершили existing
+step24 до запуска POSIX native cases. В original Linux log GCC13 с
+`-Werror` отвергает игнорируемый результат write в C307/310 и read в318/324;
+Darwin compiler не видит `errSecSuccess` в214/215/216/218. Это ошибки
+компиляции TEST actor, не native отрицательный результат и не evidence,
+что прежний image/byte-stability guard прошёл или не прошёл.
+
+Source остаётся одним existing
+[fixtures/posix-exec-native.c](https://github.com/777genius/agent-teams-ai/blob/b13f668315b38182d6a0f47f10eef54cd43aaceb/packages/legacy-agent-host/tests/fixtures/posix-exec-native.c),
+preimage `65ae717da1a36dada1571191060df833c373caf1`.
+Оригинальный TS runner в registered-process-executable.native.ts354–365
+уже компилирует controller, sibling library и payload с
+`-std=c11 -Wall -Wextra -Werror -O2`, Security/CoreFoundation на Darwin.
+Параметры compiler, flags и CI budgets не ослабляются.
+
+### Круг 2 — ровно один TEST C path
+
+1. Darwin: явно подключить `Security/SecBase.h`, где Apple объявляет
+   `errSecSuccess = 0`
+   ([official SecBase.h](https://github.com/apple-oss-distributions/Security/blob/main/base/SecBase.h)).
+   Сохранить SecCode API, exact original audit token, no-network validity,
+   code-signing flags, сравнение original executable и все CF releases.
+   Не заменять код возврата произвольным числом и не обходить проверку
+   неподдерживаемого/неподписанного изображения.
+2. Linux child: зафиксированный errno ptrace/execve передать прежним
+   original error pipe одним write sizeof(int). Проверить возвращённый
+   byte count. Полный write сохраняет прежний exit111/112; failed/short
+   write завершает этот же original child отдельным finite failure113,
+   не продолжает exec/resume и не объявляет успешную доставку errno.
+   Не вводить повторный syscall loop, новый IPC/frame, signal или child.
+3. Linux parent: только после original waitpid и target_pid=0 прочитать
+   прежний pipe в local temporary integer. Публиковать execErrno лишь при
+   exact sizeof(int) и положительном errno; read error сохраняет его
+   errno, EOF/short/invalid report даёт EIO и execErrno=0. Частичные bytes
+   нельзя использовать как EPERM/ETXTBSY или отсутствие процесса. Два
+   одинаковых early-exit branches могут использовать один маленький
+   private Linux-only helper; writer helper также Linux-only, чтобы
+   Darwin/TEST_LIBRARY/TEST_PAYLOAD не получили unused-function warning.
+4. До read parent уже закрыл свою write end, а original child reaped;
+   новых ожиданий/таймеров нет. Все original PID slots, reap blocking,
+   cleanup, generation/identity, ptrace stop-before-user-space, suspended
+   Darwin launch, mutation-after-last-check, execve pathname/argv/env,
+   retained writer и marker proofs остаются. Никаких production adapters,
+   permission/capability workaround, signing-policy changes или новой
+   квалификации по факту компиляции.
+
+### Круг 3 — проверки и честный статус
+
+До source — root publication и независимый peer. Проверить точный one-file
+diff и readback. Локально разрешена только компиляция того же controller,
+library и payload с прежними strict flags; при необходимости воспроизвести
+Linux warn-unused-result на compile-only invocation с
+`_FORTIFY_SOURCE=2`, сохранив его и для final bytes. Не запускать повторный
+ptrace native scenario и не выдавать Linux compile за Darwin compile.
+
+Новая test suite/case, oracle, runner, retry, timeout или workflow не нужны.
+Existing compiler-default/ad-hoc/script/mutation cases следующего штатного
+CI остаются обязательными. Полный original errno получит прежний
+writer-open/ETXTBSY case; unknown/short pipe не может пройти этот oracle.
+Текущий2227 и прежний local EPERM receipt сохраняются неизменными. Source
+peer, local compiler и actual Linux/Darwin native outcomes отмечаются
+раздельно; original-path product activation этим исправлением не разрешается.
+
+**R1:** exact CI compiler diagnostics сопоставлены с четырьмя discarded I/O
+results и отсутствующим declaration header. **R2:** выбран fixed-size
+fail-closed original pipe без изменения custody/primitive. **R3:** peer,
+source и compile/native execution новой редакции ещё pending.

@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import {
   assertCapturedCommandSystem,
-  assertNativeReviewExpansion,
+  assertLegacyInlineReviewExpansion,
   contextCompactionScript,
   COMPACT_AUTHORIZATION,
   COMPACT_SEED,
@@ -71,6 +71,7 @@ test('native script rejects unrelated, stale, repeated or unexpanded inputs', ()
         prefix,
         originalContent: 'TURN ACTION MODE: ASK\n' + COMPACT_VERIFY,
       }),
+      reviewRead: { path: '/TEST-only/review.txt', content: 'TEST original Read bytes\n' },
     });
   assert.throws(() => model('seed').respond(request('unrelated'), []), /explicit original/);
   assert.throws(() => model('compact').respond(request(`ACK_${COMPACT_SEED}`), []), /authorized/);
@@ -98,25 +99,32 @@ test('native script rejects unrelated, stale, repeated or unexpanded inputs', ()
   duplicate.respond(request(COMPACT_SEED), []);
   assert.throws(() => duplicate.respond(request(COMPACT_SEED), []), /duplicate native/);
 
-  const target = `Review target: \`${REVIEW_ARGS}\``;
-  const diff = '## Phase 0 — Gather the diff';
-  const recipe = `${target}\n\n${diff}`;
+  const target = `\n      PR number: ${REVIEW_ARGS}\n`;
+  const diff = 'You are an expert code reviewer. Follow these steps:\n3. Run `gh pr diff <number>` to get the diff';
+  const recipe = `${diff}${target}`;
   for (const text of [`/review ${REVIEW_ARGS}`, target, `${diff}\n${REVIEW_ARGS}`,
-    `Review target: \`TEST-wrong-target\`\n${diff}`])
-    assert.throws(() => assertNativeReviewExpansion(request(text)), /native builtin review/);
-  assert.throws(() => assertNativeReviewExpansion({ ...request('/review ' + REVIEW_ARGS), system: recipe }),
-    /native builtin review/);
-  assert.throws(() => assertNativeReviewExpansion({ ...request(''), messages: [
+    `${diff}\n      PR number: TEST-wrong-target\n`, `Review target: \`${REVIEW_ARGS}\`\n## Phase 0 — Gather the diff`])
+    assert.throws(() => assertLegacyInlineReviewExpansion(request(text)), /legacy inline review/);
+  assert.throws(() => assertLegacyInlineReviewExpansion({ ...request('/review ' + REVIEW_ARGS), system: recipe }),
+    /legacy inline review/);
+  assert.throws(() => assertLegacyInlineReviewExpansion({ ...request(''), messages: [
     { role: 'assistant', content: recipe },
-  ] }), /native builtin review/);
-  assert.throws(() => assertNativeReviewExpansion({ ...request(''), messages: [
+  ] }), /legacy inline review/);
+  assert.throws(() => assertLegacyInlineReviewExpansion({ ...request(''), messages: [
     { role: 'user', content: target }, { role: 'user', content: diff },
-  ] }), /native builtin review/);
-  assertNativeReviewExpansion({ ...request(''), messages: [
+  ] }), /legacy inline review/);
+  assertLegacyInlineReviewExpansion({ ...request(''), messages: [
     { role: 'user', content: [{ type: 'text', text: recipe }] },
     { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'TEST-p03-review-tool', content: 'TEST-result' }] },
   ] });
-  assert.equal(model('review').respond(request(recipe), ['mcp__team__message_send']).type, 'tool_use');
+  const review = model('review'), tools = ['Read', 'mcp__team__message_send'];
+  assert.deepEqual(review.respond(request(recipe), tools), { type: 'tool_use', id: 'TEST-p03-review-read',
+    name: 'Read', input: { file_path: '/TEST-only/review.txt' } });
+  const resultRequest = (tool_use_id: string) => ({ ...request(recipe), messages: [
+    { role: 'user', content: recipe }, { role: 'user', content: [{ type: 'tool_result', tool_use_id, content: 'TEST original Read bytes' }] },
+  ] });
+  assert.throws(() => review.respond(resultRequest('TEST-foreign-tool'), tools));
+  assert.equal(review.respond(resultRequest('TEST-p03-review-read'), tools).name, 'mcp__team__message_send');
 });
 
 test('named command context refusal exposes only closed marker-location facts', () => {

@@ -26,6 +26,7 @@ export interface CompactionScenario {
   phase(): CompactionPhase;
   taskId(): string;
   preparedInput(): { prefix: string; originalContent: string };
+  reviewRead?: { path: string; content: string };
 }
 export interface CompactionRequest {
   phase: CompactionPhase;
@@ -35,6 +36,7 @@ export interface CompactionRequest {
   toolCount: number;
   preparedPrefixSha256?: string;
   preparedPayloadSha256?: string;
+  commandExecution?: 'legacy-inline-review-v1';
 }
 const userText = (message: Row) =>
   typeof message.content === 'string'
@@ -47,17 +49,18 @@ const userText = (message: Row) =>
           .join('\n')
       : '';
 
-/** The pinned native recipe must expand the exact target in one original user message. */
-export function assertNativeReviewExpansion(body: Row): void {
+/** Explicit old inline compatibility recipe, not successful execution of the newer native fork. */
+export function assertLegacyInlineReviewExpansion(body: Row): void {
   const messages = (Array.isArray(body.messages) ? body.messages : []).map(record);
   assert.ok(
     messages.some((message) => {
       if (message.role !== 'user') return false;
       const text = userText(message);
-      return text.includes(`Review target: \`${REVIEW_ARGS}\``) &&
-        text.includes('## Phase 0 — Gather the diff');
+      return text.includes('You are an expert code reviewer. Follow these steps:') &&
+        text.includes('3. Run `gh pr diff <number>` to get the diff') &&
+        text.includes(`\n      PR number: ${REVIEW_ARGS}\n`);
     }),
-    'native builtin review expands its exact target in original user context'
+    'legacy inline review expands its exact arguments in original user context'
   );
 }
 
@@ -123,14 +126,14 @@ export function contextCompactionScript(
     requests,
     respond(body: Row, tools: string[]): Row {
       assert.ok(
-        requests.length < 10,
-        'four context turns and three exact command/tool-result pairs'
+        requests.length < 11,
+        'four context turns, three exact command/tool-result pairs and one review Read result'
       );
       const phase = options.phase();
       const count = phases.get(phase) ?? 0;
       const command = phase === 'project-command' || phase === 'user-command' || phase === 'review';
       assert.ok(
-        count < (command ? 2 : 1),
+        count < (phase === 'review' ? 3 : command ? 2 : 1),
         'bounded phase: no duplicate native model spend for an original phase'
       );
       const messages = (Array.isArray(body.messages) ? body.messages : []).map(record);
@@ -193,7 +196,7 @@ export function contextCompactionScript(
           'represented epoch is not injected again'
         );
       } else {
-        if (phase === 'review') assertNativeReviewExpansion(body);
+        if (phase === 'review') assertLegacyInlineReviewExpansion(body);
         else
           assert.ok(
             serialized.includes(
@@ -209,7 +212,19 @@ export function contextCompactionScript(
           tools.includes('mcp__team__message_send'),
           'command retains the captured Team tool'
         );
-        if (count === 1) {
+        if (phase === 'review') {
+          assert.ok(options.reviewRead && tools.includes('Read'), 'one captured TEST Read is available');
+          if (count === 1) {
+            const result = (Array.isArray(latest.content) ? latest.content : []).map(record)
+              .find((block) => block.type === 'tool_result');
+            assert.ok(result);
+            assert.equal(result.tool_use_id, 'TEST-p03-review-read');
+            assert.notEqual(result.is_error, true);
+            assert.ok(JSON.stringify(result.content).includes(options.reviewRead.content.trim()),
+              'actual original Read returns the immutable TEST file marker');
+          }
+        }
+        if (count === (phase === 'review' ? 2 : 1)) {
           const result = (Array.isArray(latest.content) ? latest.content : [])
             .map(record)
             .find((block) => block.type === 'tool_result');
@@ -237,12 +252,18 @@ export function contextCompactionScript(
         bodySha256: sha(serialized),
         latestUserSha256: sha(text),
         toolCount: tools.length,
+        ...(phase === 'review' ? { commandExecution: 'legacy-inline-review-v1' as const } : {}),
         ...(prefix === undefined || payload === undefined
           ? {}
           : { preparedPrefixSha256: sha(prefix), preparedPayloadSha256: sha(payload) }),
       });
       phases.set(phase, count + 1);
-      if (command && count === 0)
+      if (phase === 'review' && count === 0) {
+        assert.ok(options.reviewRead);
+        return { type: 'tool_use', id: 'TEST-p03-review-read', name: 'Read',
+          input: { file_path: options.reviewRead.path } };
+      }
+      if (command && count === (phase === 'review' ? 1 : 0))
         return {
           type: 'tool_use',
           id: `TEST-p03-${phase}-tool`,

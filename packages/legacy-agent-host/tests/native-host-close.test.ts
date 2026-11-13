@@ -5,21 +5,50 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { closeNativeHostInput, startHost } from './fixtures/native-host.ts';
-import { readOriginalHostCpuProfile } from './fixtures/native-opencode-team/passive-diagnostics.ts';
+import { createPassiveNativeDiagnosticCapture, readOriginalHostCpuProfile } from './fixtures/native-opencode-team/passive-diagnostics.ts';
 
 test('a failed original Node child retains CPU evidence and bounded file refusals stay distinguishable', {
   timeout: 10000,
 }, async () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-host-cpu-exit1-')));
   const entry = join(root, 'TEST-exit1.mjs');
-  // Finite sampler consumer only: no provider, native Runtime or claimed vendor failure is simulated.
-  writeFileSync(entry, 'const end = Date.now() + 50; while (Date.now() < end) Math.sqrt(Date.now()); process.exit(1);\n', { mode: 0o600 });
+  const originalTrace = createPassiveNativeDiagnosticCapture();
+  // Synthetic channel publications only; no HTTP/provider/Runtime is invoked by this sole finite child.
+  writeFileSync(entry, `import { channel } from 'node:diagnostics_channel';
+const secret = 'TEST-private-undici-token';
+const publish = (name, request) => channel(name).publish({ request, headers: secret,
+  socket: { privatePath: ${JSON.stringify(root)} }, chunk: Buffer.from(secret) });
+for (const path of ['/api/plugin', '/api/model', '/api/info']) {
+  const request = { origin: 'http://127.0.0.1:65530', path: path + '?private=' + secret, method: 'GET' };
+  publish('undici:request:create', request);
+  for (const name of ['undici:client:sendHeaders', 'undici:request:bodySent']) {
+    publish(name, { ...request });
+    publish(name, request);
+    publish(name, request);
+  }
+}
+const end = Date.now() + 50; while (Date.now() < end) Math.sqrt(Date.now()); process.exit(1);
+`, { mode: 0o600 });
   const host = startHost({ node: process.execPath, entry, root, profile: join(root, 'TEST-profile.json'),
-    profileHash: 'a'.repeat(64), testCpuProfile: true });
+    profileHash: 'a'.repeat(64), testCpuProfile: true,
+    testImports: [new URL('./fixtures/native-opencode-team/passive-diagnostics.ts', import.meta.url).href],
+    onDiagnostic: chunk => originalTrace.accept(chunk, 1) });
+  const originalClose = once(host.child, 'close');
   try {
     const [code, signal] = await once(host.child, 'exit');
     assert.equal(code, 1); assert.equal(signal, null);
     await assert.rejects(host.close(), /Host exit zero confirms/);
+    await originalClose;
+    assert.deepEqual(originalTrace.entries.map(row => [row.event, row.request, row.route]), [
+      ['request', 1, 'plugins'], ['request-send-headers', 1, 'plugins'], ['request-body-sent', 1, 'plugins'],
+      ['request', 2, 'model-catalog'], ['request-send-headers', 2, 'model-catalog'], ['request-body-sent', 2, 'model-catalog'],
+      ['request', 3, 'info'],
+    ], 'same-object targeted phases appear once; foreign objects and untargeted phases are ignored');
+    assert.ok(originalTrace.entries.every(row => row.epoch === 1 && row.method === 'GET' &&
+      typeof row.atMs === 'number' && (row.event === 'request' ? row.durationMs === null :
+        typeof row.durationMs === 'number' && row.durationMs >= 0)));
+    assert.equal(JSON.stringify(originalTrace.entries).includes('TEST-private-undici-token'), false);
+    assert.equal(JSON.stringify(originalTrace.entries).includes(root), false);
     const path = host.testCpuProfilePath!;
     assert.equal(host.testCpuProfileIntervalUs, 10000);
     assert.ok(host.child.spawnargs.includes('--cpu-prof-interval=10000'));
@@ -94,6 +123,24 @@ test('a failed original Node child retains CPU evidence and bounded file refusal
     assert.equal(malformed.status, 'unavailable'); assert.equal(malformed.reason, 'invalid-profile');
     assert.equal('teamWriterDetails' in malformed, false);
     assert.equal(malformed.rawDiscarded, true); assert.equal(existsSync(path), false);
+
+    // Synthetic receipt decoding only: no additional native child or raw diagnostics are retained.
+    const passive = createPassiveNativeDiagnosticCapture(), prefix = 'TEST_OPENCODE_V2_DIAGNOSTIC ';
+    const secret = 'TEST-private-native-token';
+    const fifth = prefix + JSON.stringify({ event: 'child-ready', atMs: 7, child: 5,
+      raw: secret, path: root }) + '\n';
+    passive.accept(Buffer.from(fifth.slice(0, 23)), 1);
+    assert.equal(passive.entries.length, 0, 'a partial line does not invent an observation');
+    passive.accept(Buffer.from(fifth.slice(23)), 1);
+    passive.accept(Buffer.from(prefix + JSON.stringify({ event: 'child-exit', atMs: 9,
+      child: 6, exitCode: 0, unknownNativeField: secret }) + '\n' + secret + '\n'), 2);
+    assert.equal(passive.entries.length, 2);
+    assert.equal(passive.entries[0]!.child, 5, 'the source-derived metadata child remains observable');
+    assert.equal(passive.entries[0]!.epoch, 1);
+    assert.equal(passive.entries[1]!.child, null, 'an ordinal beyond the finite bound is not accepted');
+    assert.equal(passive.entries[1]!.epoch, 2);
+    assert.equal(JSON.stringify(passive.entries).includes(secret), false);
+    assert.equal(JSON.stringify(passive.entries).includes(root), false);
   } finally {
     if (host.child.exitCode === null && host.child.signalCode === null) await host.close().catch(() => {});
     rmSync(root, { recursive: true, force: true });

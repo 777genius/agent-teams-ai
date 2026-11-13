@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import {
   assertCapturedCommandSystem,
-  assertNativeReviewExpansion,
+  assertLegacyInlineReviewExpansion,
   COMMAND_ARGS,
   COMPACT_AUTHORIZATION,
   PROJECT_COMMAND_BODY,
@@ -30,6 +30,7 @@ export function nativeCommandUiScript(
     phase: Exclude<NativeCommandUiPhase, 'idle'>;
     bodySha256: string;
     requestedModel: string;
+    commandExecution?: 'legacy-inline-review-v1';
   }[] = [];
   let compact = 0,
     project = 0,
@@ -71,7 +72,7 @@ export function nativeCommandUiScript(
         assert.ok(count < 2, 'no duplicate native command request');
         if (phase === 'review') {
           assert.equal(project, 2);
-          assertNativeReviewExpansion(body);
+          assertLegacyInlineReviewExpansion(body);
         } else assert.ok(serialized.includes(PROJECT_COMMAND_BODY));
         assert.ok(
           serialized.includes(phase === 'review' ? REVIEW_ARGS : COMMAND_ARGS),
@@ -118,6 +119,7 @@ export function nativeCommandUiScript(
         phase,
         bodySha256: createHash('sha256').update(serialized).digest('hex'),
         requestedModel: String(body.model),
+        ...(phase === 'review' ? { commandExecution: 'legacy-inline-review-v1' as const } : {}),
       });
       return block;
     },
