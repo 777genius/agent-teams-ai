@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { copyFile, readFile, realpath, writeFile } from 'node:fs/promises';
+import { copyFile, lstat, readFile, realpath, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   prepareDesktopBackendFixture,
@@ -69,6 +69,7 @@ export async function prepareProcessFixture(
     nativeClaude: { path: string; sha256: string; modelUrl: string };
     processArtifact?: { directory: string; manifestSha256: string };
     candidateRuntime?: CandidateRuntimePaths;
+    controlledServicesOnly?: true;
   }
 ) {
   const processArtifact = options.processArtifact ?? PROCESS_ARTIFACT;
@@ -88,6 +89,13 @@ export async function prepareProcessFixture(
   const profile = JSON.parse(await readFile(fixture.profilePath, 'utf8')) as TeamHostProfile;
   profile.processCustody = { ...processArtifact };
   const team = profile.teams[0]!;
+  if (options.controlledServicesOnly) {
+    // Narrow the fresh fixture before its first owner seed, never erase retained Runtime history.
+    await assert.rejects(lstat(join(profile.owner.storageRoot, 'teams', team.binding.teamName, '.host-owner')),
+      { code: 'ENOENT' });
+    delete profile.runtime;
+    for (const member of team.members) delete member.delivery;
+  }
   for (const grant of team.grants)
     if (!grant.permissions.includes('process.write')) grant.permissions.push('process.write');
   const seed = {

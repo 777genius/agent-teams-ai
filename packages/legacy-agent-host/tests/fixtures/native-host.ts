@@ -6,10 +6,6 @@ import { readFile, readdir } from 'node:fs/promises';
 import { delimiter, dirname, isAbsolute, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { TEAM_HOST_DISPOSE_TIMEOUT_MS } from '../../src/contracts.ts';
-import {
-  runtimeSourcePublicationSchema,
-  runtimeSourceSummarySchema,
-} from '../../dist/composition/runtimeSourceContracts.js';
 
 export const fileHash = async (path: string) =>
   createHash('sha256')
@@ -298,6 +294,8 @@ export function startHost(options: {
         assert.ok(['published', 'unsupported', 'held'].includes(String(safe.status)));
         if (safe.status === 'published') assert.match(String(safe.reference), /^cp1-[a-f0-9]{64}$/);
       } else if (method.startsWith('runtime.source.') && result.ok === true) {
+        const { runtimeSourcePublicationSchema, runtimeSourceSummarySchema } =
+          await import('../../dist/composition/runtimeSourceContracts.js');
         switch (method) {
           case 'runtime.source.current':
             runtimeSourceSummarySchema.parse(result.value);

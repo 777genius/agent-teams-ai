@@ -198,6 +198,8 @@ export async function runDesktopDonorSavedImportUi(
   assert.equal(importedRecord.teamName, seed.teamName);
   const ownerPath = join(fixture.root, 'hoststore/teams', seed.teamName, '.host-owner/state.json');
   const owner = await readDonorJson(ownerPath);
+  assert.equal(Object.hasOwn(donorRow(owner.savedSettings), 'effort'), false,
+    'import preserves omitted donor effort');
   for (const [key, value] of Object.entries(seed.source.meta)) {
     if (key !== 'version' && key !== 'createdAt')
       assert.deepEqual(donorRow(owner.savedSettings)[key], value, 'actual saved setting: ' + key);

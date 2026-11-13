@@ -51,7 +51,8 @@ export async function waitForNativeProcessServices(
 export function qualifyNativeServiceCompletion(
   role: 'primary' | 'neighbor',
   service: Service,
-  lifecycle: Record<string, unknown>[]
+  lifecycle: Record<string, unknown>[],
+  mode?: 'windows-natural-services'
 ) {
   assert.equal(service.role, role);
   assert.ok(Number.isSafeInteger(service.pid) && service.pid > 1);
@@ -65,9 +66,10 @@ export function qualifyNativeServiceCompletion(
   );
   assert.equal(lifecycle[0]!.ttlMs, 300_000);
   const exitReason = lifecycle[1]!.reason;
-  assert.ok(exitReason === 'SIGTERM' || exitReason === 'natural-ttl');
+  if (mode === 'windows-natural-services' && role === 'primary') assert.equal(exitReason, 'natural-request');
+  else assert.ok(exitReason === 'SIGTERM' || exitReason === 'natural-ttl');
   assert.equal(lifecycle[2]!.reason, exitReason);
-  // Both pinned service handlers finish normally with process.exitCode=0.
+  // Each accepted normal completion path finishes with process.exitCode=0.
   return {
     status: 'completed',
     ending: 'completed (exit code 0)',
@@ -120,6 +122,8 @@ export async function startProcessModel(options: {
   bashCommand(): string;
   services(): Promise<{ primary: Service; neighbor: Service }>;
   serviceLifecycle(role: 'primary' | 'neighbor'): Promise<Record<string, unknown>[]>;
+  /** Explicit schema2 TEST mode; default POSIX receipts keep their original assertions. */
+  windowsNaturalServices?: { originalWholeCleanup(): Promise<void> };
 }): Promise<
   Model & {
     rawTurns: Record<string, unknown>[];
@@ -290,11 +294,33 @@ export async function startProcessModel(options: {
           originalServices,
           'original service identities were captured before registration'
         );
-        const completion = qualifyNativeServiceCompletion(
-          task.role,
-          originalServices[task.role],
-          await options.serviceLifecycle(task.role)
-        );
+        const lifecycle = await options.serviceLifecycle(task.role);
+        let completion: ReturnType<typeof qualifyNativeServiceCompletion>;
+        if (options.windowsNaturalServices && task.role === 'neighbor') {
+          await options.windowsNaturalServices.originalWholeCleanup();
+          const service = originalServices.neighbor;
+          assert.ok(lifecycle.length >= 1 && lifecycle.length <= 3);
+          assert.deepEqual(lifecycle.map(event => event.event), ['listening', 'closing', 'closed'].slice(0, lifecycle.length));
+          assert.ok(lifecycle.every(event => event.role === 'neighbor' && event.pid === service.pid));
+          assert.equal(lifecycle[0]!.ttlMs, 300_000);
+          if (lifecycle.length > 1) assert.equal(lifecycle[1]!.reason, 'SIGTERM');
+          if (lifecycle.length > 2) assert.equal(lifecycle[2]!.reason, 'SIGTERM');
+          // SDK0.3.305's closed task_notification status, joined to genuine original whole-Job cleanup.
+          // This is native notification evidence, not an independent neighbor HANDLE/exit-code claim.
+          const notification = /<status>(completed|failed|stopped)<\/status>\n<summary>Background command "Run one finite foreground TEST HTTP server as a native background task" ([^<\r\n]{1,96})<\/summary>/.exec(String(block.text));
+          assert.ok(notification);
+          const status = notification[1]!, ending = notification[2]!;
+          if (status === 'completed') assert.equal(ending, 'completed (exit code 0)');
+          else if (status === 'stopped') assert.equal(ending, 'was stopped');
+          else {
+            const exit = /^failed with exit code ([1-9][0-9]{0,9})$/.exec(ending);
+            assert.ok(exit && Number(exit[1]) <= 0xffffffff);
+          }
+          completion = { status, ending, servicePid: service.pid, exitReason: 'original-whole-job' };
+        } else {
+          completion = qualifyNativeServiceCompletion(task.role, originalServices[task.role], lifecycle,
+            options.windowsNaturalServices ? 'windows-natural-services' : undefined);
+        }
         const { status, ending } = completion;
         const expected = `${wrapper.prefix}<task-notification>\n<task-id>${task.taskId}</task-id>\n<tool-use-id>${task.toolUseId}</tool-use-id>\n<output-file>${task.outputFile}</output-file>\n<status>${status}</status>\n<summary>Background command "Run one finite foreground TEST HTTP server as a native background task" ${ending}</summary>\n</task-notification>${wrapper.suffix}`;
         assert.equal(
@@ -388,11 +414,11 @@ export async function startProcessModel(options: {
         assert.equal(receipt.commandId, PROCESS_REGISTER_ID);
         assert.equal(receipt.phase, 'completed');
         const result = record(receipt.result);
-        assert.equal(result.observation, 'same-live');
+        assert.equal(result.observation, options.windowsNaturalServices ? 'unknown' : 'same-live');
         assert.equal(
           result.canTerminate,
-          true,
-          'actual provider root permission/session qualification, no PID fallback'
+          !options.windowsNaturalServices,
+          'Windows initial receipt is conservative; the gate separately requires fresh native public list'
         );
         assert.match(String(result.processRef), /^p1:/);
       }
@@ -416,7 +442,9 @@ export async function startProcessModel(options: {
         step + 1,
         action
           ? { type: 'tool_use', id: `TEST_process_tool_${step}`, ...action }
-          : { type: 'text', text: 'TEST_NATIVE_REGISTERED_FOR_ORIGINAL_HUMAN_STOP' },
+          : { type: 'text', text: options.windowsNaturalServices
+              ? 'TEST_NATIVE_REGISTERED_FOR_NATURAL_COMPLETION'
+              : 'TEST_NATIVE_REGISTERED_FOR_ORIGINAL_HUMAN_STOP' },
         model
       );
     })().catch((error) => {

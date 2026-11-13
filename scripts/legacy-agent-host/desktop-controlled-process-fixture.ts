@@ -9,12 +9,11 @@ import { createFilesystemTeamOwner } from '../../packages/legacy-agent-host/dist
 import { createProcessCustody } from '../../packages/legacy-agent-host/dist/composition/processCustody.js';
 import { readPackagedLinuxProcessArtifact, readPackagedProcessArtifact } from '../../packages/legacy-agent-host/dist/process/readPackagedProcessArtifact.js';
 import { createControllerProcessPolicy } from '../../packages/legacy-agent-host/dist/process/ControllerProcessPolicy.js';
-import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
 import { digest as teamDigest } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import { TEAM_HOST_DISPOSE_TIMEOUT_MS } from '../../packages/legacy-agent-host/src/contracts.ts';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import type { RegisteredProcessCapture } from '../../packages/legacy-agent-host/dist/process/registeredProcessContracts.js';
-import { desktopBackendEnvironment, digest, fileDigest } from './desktop-backend-fixture.ts';
+import { fileDigest } from './desktop-backend-fixture.ts';
 import { prepareProcessFixture, probeProcessService, readProcessServices } from './desktop-native-process-fixture.ts';
 import { PROCESS_LABEL, qualifyNativeServiceCompletion } from './desktop-native-process-model.ts';
 import { desktopClaudeSha256 } from './desktop-claude-native-selection.ts';
@@ -95,22 +94,13 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
     sha256: row(JSON.parse(await readFile(manifest.path, 'utf8'))).sourceSha256 });
   if (!linux) assert.equal(artifactSource.sha256, 'a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5');
   assert.equal(await fileDigest(nativeSource), artifactSource.sha256);
-  const fixture = await prepareProcessFixture(repo, { pnpmEntry: pnpm, processArtifact: artifact,
+  const fixture = await prepareProcessFixture(repo, { pnpmEntry: pnpm, processArtifact: artifact, controlledServicesOnly: true,
     ...(candidate ? { candidateRuntime: candidate } : {}),
     nativeClaude: { ...claude, modelUrl: 'http://127.0.0.1:9' } });
   assert.equal(fixture.node, node.path); assert.equal(fixture.hostEntry, hostPin.path);
   const profile = JSON.parse(await readFile(fixture.profilePath, 'utf8')) as TeamHostProfile;
-  delete profile.runtime; // Controlled service authority is separate from teammate Runtime allocation.
-  const profileBytes = JSON.stringify(profile);
-  fixture.pins.profileSha256 = digest(profileBytes);
-  await writeFile(fixture.profilePath, profileBytes, { mode: 0o600 });
-  readTeamHostProfile(fixture.profilePath, fixture.pins.profileSha256);
-  const descriptor = JSON.parse(await readFile(fixture.descriptorPath, 'utf8')) as { owners: { profile: { env: Record<string, string> } }[] };
-  descriptor.owners[0]!.profile.env.LEGACY_AGENT_HOST_PROFILE_SHA256 = fixture.pins.profileSha256;
-  const descriptorBytes = JSON.stringify(descriptor);
-  fixture.pins.descriptorSha256 = digest(descriptorBytes);
-  await writeFile(fixture.descriptorPath, descriptorBytes, { mode: 0o600 });
-  fixture.appEnvironment = desktopBackendEnvironment(fixture.root, fixture.node, fixture.descriptorPath, fixture.pins.descriptorSha256);
+  assert.equal(profile.runtime, undefined);
+  assert.ok(profile.teams.every(team => team.members.every(member => member.delivery === undefined)));
   const rootScript = join(fixture.root, 'workspace/process-controlled-root.ts');
   await copyFile(join(import.meta.dirname, 'fixtures/process-controlled-root.ts'), rootScript);
   const pins = [capturePin, node, hostPin, claude, packageEntry, packagePin, library, manifest, binary, artifactSource,

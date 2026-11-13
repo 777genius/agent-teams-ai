@@ -21,6 +21,7 @@ import type { JsonValue } from '../../packages/legacy-agent-host/dist/contracts.
 import type { HostCustodyOwner } from '@agent-teams/legacy-agent-host/owned-process';
 import { capturedQueryableWitness, timeout } from './nativeGateContext';
 import { createNativeGateEvents } from './nativeGateEvents';
+import { prepareNativeRetainedServiceScenario } from './nativeRetainedServiceScenario';
 
 const hash = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
 const row = (value: unknown): Record<string, unknown> => {
@@ -53,9 +54,9 @@ interface Selection {
   executable: { path: string; sha256: string };
   bash: { path: string; sha256: string };
 }
-type Case = 'graceful' | 'crash';
+type Case = 'graceful' | 'crash' | 'natural-services';
 
-function prepareProfile(originalSandbox: string, broker: string, selected: Selection, url: string) {
+function prepareProfile(originalSandbox: string, broker: string, selected: Selection, url: string, mode: Case) {
   const root = realpathSync.native(originalSandbox);
   const systemRoot = process.env.SystemRoot;
   assert.ok(systemRoot && /^[a-z]:\\/i.test(systemRoot));
@@ -156,7 +157,7 @@ function prepareProfile(originalSandbox: string, broker: string, selected: Selec
           {
             principalId: 'alice-session',
             memberName: 'alice',
-            permissions: ['read', 'task.write', 'message.write'],
+            permissions: ['read', 'task.write', 'message.write', ...(mode === 'natural-services' ? ['process.write' as const] : [])],
           },
         ],
       },
@@ -176,7 +177,8 @@ function prepareProfile(originalSandbox: string, broker: string, selected: Selec
           accountBinding: 'TEST-localhost-only',
           environment,
           executable: selected.executable,
-          windowsBroker: { path: broker, sha256: hash(broker), arch: process.arch, protocol: 1 },
+          windowsBroker: { path: broker, sha256: hash(broker), arch: process.arch, protocol: 1,
+            ...(mode === 'natural-services' ? { capability: 'service-scopes-v1' as const } : {}) },
           nativeTools: ['Bash'],
           autoAllowedTools: ['Bash'],
           nativeOptions: {
@@ -273,14 +275,6 @@ export async function runNativeRetainedHostGate(
     assert.equal(hash(process.execPath), digests.node);
   };
   verify();
-  const model = await startNativeTeamModel({ requireVisibleReply: true });
-  let captured: ReturnType<typeof prepareProfile>;
-  let physical: NonNullable<ReturnType<typeof captureMainWindowsCustody>>;
-  try {
-    captured = prepareProfile(sandbox, broker, selected, model.url);
-    const original = captureMainWindowsCustody(captured.host);
-    assert.ok(original); physical = original;
-  } catch (error) { await model.close(); throw error; }
   const events = createNativeGateEvents(),
     children = new Set<ChildProcess>();
   const exits = new Map<ChildProcess, Promise<void>>();
@@ -293,6 +287,16 @@ export async function runNativeRetainedHostGate(
     void done.catch(() => undefined);
     exits.set(child, done);
   };
+  const serviceScenario = mode === 'natural-services'
+    ? await prepareNativeRetainedServiceScenario({ sandbox, fixture, track, events }) : undefined;
+  const model = serviceScenario?.model ?? await startNativeTeamModel({ requireVisibleReply: true });
+  let captured: ReturnType<typeof prepareProfile>;
+  let physical: NonNullable<ReturnType<typeof captureMainWindowsCustody>>;
+  try {
+    captured = prepareProfile(sandbox, broker, selected, model.url, mode);
+    const original = captureMainWindowsCustody(captured.host);
+    assert.ok(original); physical = original;
+  } catch (error) { await model.close(); throw error; }
   const counts = { allocate: 0, prepare: 0, resume: 0, stop: 0, release: 0 };
   const attempted = { allocate: 0, prepare: 0, resume: 0, stop: 0, release: 0 };
   let attemptsTruncated = false;
@@ -302,11 +306,17 @@ export async function runNativeRetainedHostGate(
   } = { afterInput: null, afterHostLoss: null, afterCleanup: null };
   let witness: Awaited<ReturnType<typeof capturedQueryableWitness>> | undefined,
     hostExited: Promise<void> | undefined;
+  let attachedHosts = 0, originalHostExited = false;
   const observedOwner: HostCustodyOwner = {
     mainEpoch: physical.mainEpoch,
     attach(context) {
-      assert.equal(hostExited, undefined, 'One actual original Host; no hidden successor');
+      if (serviceScenario) {
+        assert.ok(attachedHosts < 2 && (attachedHosts === 0 || originalHostExited),
+          'Only one explicit successor after original Host exit');
+      } else assert.equal(hostExited, undefined, 'One actual original Host; no hidden successor');
+      const epoch = ++attachedHosts;
       hostExited = context.hostExited;
+      if (epoch === 1) void context.hostExited.then(() => { originalHostExited = true; });
       const port = physical.attach(context);
       return {
         ...port,
@@ -317,6 +327,7 @@ export async function runNativeRetainedHostGate(
             else attempted[key]++;
           }
           const value = await port.handle(call);
+          await serviceScenario?.observeCustody(call, value, epoch);
           if (call.operation in counts) counts[call.operation as keyof typeof counts]++;
           if (value.operation === 'prepare') {
             assert.equal(witness, undefined, 'One actual ordinary native allocation');
@@ -333,7 +344,8 @@ export async function runNativeRetainedHostGate(
   const client = new CapturedHostClient(captured.host, observedOwner);
   const envelope = (commandId: string, payload: JsonValue): JsonValue => ({
     commandId,
-    binding: { owner: captured.profile.owner, scope: captured.profile.teams[0]!.scope },
+    binding: { schemaVersion: 1, handleId: 'TEST-original-main',
+      owner: captured.profile.owner, scope: captured.profile.teams[0]!.scope },
     payload,
   });
   let failedRpc: { method: string; code: string; outcome: string; read: Record<string, JsonValue> } | null = null;
@@ -397,69 +409,82 @@ export async function runNativeRetainedHostGate(
     assert.ok(witness);
     assert.equal(witness.process.exitCode, null);
     assert.deepEqual(counts, { allocate: 1, prepare: 1, resume: 1, stop: 0, release: 0 });
-    phase = 'native-turn';
-    const input = await rpc('team.execute', 'human-native-two', {
-      operation: 'message.send',
-      payload: {
-        to: 'alice',
-        text: 'NATIVE_TEAM_TWO',
-        messageId: 'human-native-two',
-        actionMode: 'do',
-      },
-    });
-    const inputId = row(input.effects).deliveryId;
-    assert.equal(typeof inputId, 'string');
-    const deadline = performance.now() + 35000;
-    while (!nativeTurn) {
-      assert.deepEqual(model.failures, []);
-      const state = await rpc('runtime.read', 'TEST-original-terminal-read', {
-        memberId: 'alice-id',
+    if (serviceScenario) {
+      phase = 'natural-services';
+      await serviceScenario.run({
+        client, profile: captured.profile, mainEpoch: physical.mainEpoch, providerWitness: witness,
+        originalHostExit() { assert.ok(hostExited); return hostExited; },
+        createSuccessor: () => new CapturedHostClient(captured.host, observedOwner),
       });
-      assert.ok(Array.isArray(state.inputs));
-      const original = state.inputs.map(row).find((item) => item.inputId === inputId);
-      if (original?.phase === 'terminal') {
-        assert.equal(original.terminal, 'succeeded');
-        nativeTurn = true;
-      } else {
-        assert.ok(performance.now() < deadline, 'Original native turn deadline');
-        await delay(25);
-      }
-    }
-    assert.equal(readFileSync(join(sandbox, 'workspace/native-effect.txt'), 'utf8'), 'TWO\n');
-    assert.deepEqual(
-      model.observations.map((item) => [item.turn, item.step]),
-      [
-        ['NATIVE_TEAM_TWO', 0],
-        ['NATIVE_TEAM_TWO', 1],
-        ['NATIVE_TEAM_TWO', 2],
-      ]
-    );
-    assert.ok(
-      model.observations.every((item) => item.contextEffective && item.visibleReplyContract)
-    );
-    assert.equal(model.probes.length, 0);
-    assert.deepEqual(model.failures, []);
-    originalHandleChecks.afterInput = await witness.observe();
-    assert.equal(originalHandleChecks.afterInput, 'alive');
-    assert.equal(sentinel.exitCode, null);
-    phase = mode;
-    if (mode === 'graceful') {
-      await client.shutdown();
-      assert.ok(counts.stop >= 1 && counts.stop <= 4);
-      assert.equal(counts.release, 1);
+      nativeTurn = true;
+      originalHandleChecks.afterInput = 'alive'; // Independently observed inside the same scenario.
+      originalHandleChecks.afterHostLoss = 'absent'; // After legitimate Trash, not a cold-survival claim.
+      assert.equal(attachedHosts, 2); assert.equal(sentinel.exitCode, null);
     } else {
-      assert.ok(hostExited);
-      writeFileSync(captured.crash, 'TEST original Host crash\n', { flag: 'wx' });
-      await timeout(hostExited, 5000);
-      await client.shutdown();
-      assert.equal(counts.stop, 0);
-      assert.equal(counts.release, 0);
-      originalHandleChecks.afterHostLoss = await witness.observe();
-      assert.equal(originalHandleChecks.afterHostLoss, 'alive',
-        'Fresh zero-time observation of the same original HANDLE after original Host exit');
-      retainedAfterCrash = true;
-      // Source refusal cannot take away cleanup through the original physical owner.
-      writeFileSync(captured.source, JSON.stringify({ TEST_CHANGED_SOURCE: true }));
+      phase = 'native-turn';
+      const input = await rpc('team.execute', 'human-native-two', {
+        operation: 'message.send',
+        payload: {
+          to: 'alice',
+          text: 'NATIVE_TEAM_TWO',
+          messageId: 'human-native-two',
+          actionMode: 'do',
+        },
+      });
+      const inputId = row(input.effects).deliveryId;
+      assert.equal(typeof inputId, 'string');
+      const deadline = performance.now() + 35000;
+      while (!nativeTurn) {
+        assert.deepEqual(model.failures, []);
+        const state = await rpc('runtime.read', 'TEST-original-terminal-read', {
+          memberId: 'alice-id',
+        });
+        assert.ok(Array.isArray(state.inputs));
+        const original = state.inputs.map(row).find((item) => item.inputId === inputId);
+        if (original?.phase === 'terminal') {
+          assert.equal(original.terminal, 'succeeded');
+          nativeTurn = true;
+        } else {
+          assert.ok(performance.now() < deadline, 'Original native turn deadline');
+          await delay(25);
+        }
+      }
+      assert.equal(readFileSync(join(sandbox, 'workspace/native-effect.txt'), 'utf8'), 'TWO\n');
+      assert.deepEqual(
+        model.observations.map((item) => [item.turn, item.step]),
+        [
+          ['NATIVE_TEAM_TWO', 0],
+          ['NATIVE_TEAM_TWO', 1],
+          ['NATIVE_TEAM_TWO', 2],
+        ]
+      );
+      assert.ok(
+        model.observations.every((item) => item.contextEffective && item.visibleReplyContract)
+      );
+      assert.equal(model.probes.length, 0);
+      assert.deepEqual(model.failures, []);
+      originalHandleChecks.afterInput = await witness.observe();
+      assert.equal(originalHandleChecks.afterInput, 'alive');
+      assert.equal(sentinel.exitCode, null);
+      phase = mode;
+      if (mode === 'graceful') {
+        await client.shutdown();
+        assert.ok(counts.stop >= 1 && counts.stop <= 4);
+        assert.equal(counts.release, 1);
+      } else {
+        assert.ok(hostExited);
+        writeFileSync(captured.crash, 'TEST original Host crash\n', { flag: 'wx' });
+        await timeout(hostExited, 5000);
+        await client.shutdown();
+        assert.equal(counts.stop, 0);
+        assert.equal(counts.release, 0);
+        originalHandleChecks.afterHostLoss = await witness.observe();
+        assert.equal(originalHandleChecks.afterHostLoss, 'alive',
+          'Fresh zero-time observation of the same original HANDLE after original Host exit');
+        retainedAfterCrash = true;
+        // Source refusal cannot take away cleanup through the original physical owner.
+        writeFileSync(captured.source, JSON.stringify({ TEST_CHANGED_SOURCE: true }));
+      }
     }
     phase = 'main-cleanup';
     assert.equal(await physical.close(), true);
@@ -472,6 +497,8 @@ export async function runNativeRetainedHostGate(
   } catch (error) {
     originalFailure = error;
   } finally {
+    try { await serviceScenario?.closeHost(); }
+    catch (error) { cleanupErrors.push(error); }
     try {
       await client.shutdown();
     } catch (error) {
@@ -482,6 +509,8 @@ export async function runNativeRetainedHostGate(
     } catch (error) {
       cleanupErrors.push(error);
     }
+    try { await serviceScenario?.drain(); }
+    catch (error) { cleanupErrors.push(error); }
     try {
       if (witness) assert.equal(await witness.wait(), 0);
     } catch (error) {
@@ -521,8 +550,9 @@ export async function runNativeRetainedHostGate(
           cleanup,
           modelRequests: model.observations.length,
           modelFailures: model.failures.length,
-          registryQualified: false,
-          hostRebindQualified: false,
+          registryQualified: serviceScenario?.evidence().registryQualified ?? false,
+          hostRebindQualified: serviceScenario?.evidence().coldPurgeCompleted ?? false,
+          ...(serviceScenario ? { naturalServices: serviceScenario.evidence(), naturalPhase: serviceScenario.phase() } : {}),
           sdkColdConversationQualified: false,
           desktopQualified: false,
           releaseQualified: false,
@@ -544,7 +574,7 @@ export async function runNativeRetainedHostGate(
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [broker, fixture, selection, sha256, receipt, mode, flag, sandbox] = process.argv.slice(2);
   assert.ok(broker && fixture && selection && sha256 && receipt && sandbox);
-  assert.ok(mode === 'graceful' || mode === 'crash');
+  assert.ok(mode === 'graceful' || mode === 'crash' || mode === 'natural-services');
   assert.equal(flag, '--controller-sandbox');
   await runNativeRetainedHostGate(
     realpathSync(broker),
