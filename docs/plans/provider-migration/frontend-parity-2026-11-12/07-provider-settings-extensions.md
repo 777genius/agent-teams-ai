@@ -647,3 +647,41 @@ Root review нашёл гонку повторного preflight при readback
 с resourceHeld=false и неизменность всех закрытых Runtime, прежде чем фиксировать count/PASS.
 Account independently reviewed final UI/oracle/cleanup. Types и actual native/Desktop run для этого
 cut ещё не выполнены: unavailable local executor, CI remains required. Новых unit suites нет.
+
+### R13 — V1 metadata endpoint после Save/Refresh: фактический регрессионный разбор
+
+Actual `capturedManagement.safe-e2e.test.ts` на `1628b70e` завершает сохранение all-projects
+default с `runtime-unhealthy`. Диагностика separate TEST native process подтвердила
+`EADDRINUSE`: `RuntimeSourceIndex.managementProfile` создаёт отдельные profile/revision для
+project/global и новой конфигурации, сохраняя seed endpoint; прежний metadata child ещё владеет
+этим портом. Ошибка возникает в первом `readCatalog` до нового `model.probe`, а не в model
+limit validation. Не менять ожидаемый saved view и не повышать таймауты.
+
+Минимальный порядок исправления в существующем V1 owner:
+
+1. В `ProviderManagementCoordinator` последовательно выполнять полную original V1 операцию
+   на одном captured endpoint, включая завершение предыдущего read. Использовать тот же
+   bounded promise-chain приём, что в existing V2 catalog read; V2 branch не менять.
+2. Перед работой нового derived profile проверить исходные target/current/deadline заново,
+   закрыть только прежний V1 host из existing owner map на этом endpoint и потребовать его
+   confirmed cleanup. Никакого поиска процесса по порту/PID, shared-process kill, port guess,
+   fallback/adoption или изменения captured account/config.
+3. Existing `ManagementResourceFence` сохраняет запрет закрывать чужой active OAuth/probe
+   между authorize и callback. Проверка допускается только для исходного command, которому
+   принадлежит reservation; metadata read не получает право прервать его. Unknown cleanup
+   оставляет исходный owner и блокирует замену. Cancel использует только свой captured host.
+4. Ожидание очереди входит в прежний deadline; отмена/revocation до allocation не создаёт child.
+   Ошибка предыдущей операции не отравляет всю очередь, но cleanup debt не теряется. Конструктор
+   и captured profile сами по себе процесса не создают; новые store/owner/scheduler не нужны.
+5. Переиспользовать actual IPC→Host→TEST process preferences scenario: global/project Save,
+   наследование/default, V1 limits, cancel и shutdown должны пройти с теми же утверждениями.
+   Добавить только узкую проверку overlapping metadata и чужой pending OAuth в existing
+   management integration suite, если этот boundary не покрыт текущим case.
+6. Отдельная stale oracle в `team-create-launch.test.ts`: после P05/P07 `foreign/TEST-open`
+   — это structured `providerId=foreign` и `model=TEST-open` по
+   `launchConfiguration.applyLaunchConfiguration` / `captureCreateTeamDraft`. Проверить обе
+   части, тот же private account и нулевые Team/native effects; production mapping не менять.
+
+Review 1: one-shot metadata close после каждого GET отклонён — он обрывает штатный shared
+OAuth owner и создаёт лишние процессы. Выбран переход только между original owners на одном
+endpoint с прежней authority/fence. Source fix, focused checks и actual результат ещё не выполнены.

@@ -424,3 +424,146 @@ gates и exact-head UI/native receipts с original cleanup, hashes, producer SHA
 runtime tuple и числом business inputs. Plan/source review не означает runtime PASS;
 launched donor import без release остаётся неподдержанным данным reader, а доступ
 к его сохранённой истории проверяется через прежний owner.
+
+
+## 10. Current frontend: actual solo Claude Stop → import → Host Launch
+
+Этот срез уточняет current-owner строку §9. Источник — тот же exact integration
+frontend с его штатным legacy Claude owner и runtime **0.0.158**; actual donor4a
+с runtime0.0.160 остаётся отдельной строкой. Ниже зафиксированы два source-review
+круга; native/Desktop результат пока не получен.
+
+### Исходный путь и минимальные изменения
+
+- [Current Create bootstrap][C10-create] сам сохраняет team/member metadata,
+  готовит deterministic bootstrap и запускает original CLI. Его
+  [первый prompt][C10-prompt] содержит точный team scope; solo roster пуст.
+  TEST не пишет config, launch state, session ID или native history.
+- [Original Stop][C10-stop] захватывает текущий tracked run до await.
+  [Publication][C10-publication] удерживает именно его child/session/owner,
+  а [release capture][C10-release] требует actual original CLI release и полный
+  solo census. [TeamLaunchStateStore][C10-store] публикует marker/freshness через
+  этот proof. Эти production owners для acceptance не менять.
+- Переиспользовать существующие `desktop-backend-smoke.ts`,
+  `desktop-stopped-import-prior-run.ts`, `desktop-stopped-import-fixture.ts`,
+  `desktop-stopped-import-ui-smoke.ts` и
+  [`desktop-stopped-import-launch-ui.ts`][C10-tail].
+  Producer — отдельная функция существующего prior-run helper, lifecycle — уже
+  имеющиеся `connectCapturedDesktopApp`/`cleanupCapturedDesktopApp` и UI controls.
+  Новые runner, registry, release writer, public API или общий migration framework
+  не нужны. В oversized smoke оставить вызов helper без роста orchestration.
+- Existing controlled TEST-child case и богатый synthetic attachment/reference
+  corpus сохранить как отдельные проверки. Нынешний native-launch matrix entry
+  заменить настоящим источником; `sourceNativeInputs: 0` больше не считается
+  успешной проверкой этой строки.
+
+### Порядок реализации и проверки
+
+1. **Подготовить обычный current runtime.** В existing
+   `stopped-import-native-launch` job использовать штатный
+   `scripts/dev-with-runtime.mjs --print-runtime-path` и
+   `scripts/lib/runtime-payload-cache.mjs`. Прочитать exact current
+   `runtime.lock.json`, проверить darwin-arm64 archive SHA, полный payload,
+   executable digest, Node/Electron и frontend commit/tree. Legacy orchestrator
+   не подменяется Host SDK binary или donor0.0.160. Новый workflow не нужен.
+
+2. **Один original app epoch до Host.** В том же disposable TEST
+   HOME/project/userData запустить current `dev:mcp` с explicit selected legacy
+   runtime и localhost inference. В этом environment нет Host descriptor.
+   Producer не использует consumer deny-all executable как Claude. Допустимы
+   пустые TEST каталоги, endpoint и config; product team/task/native records
+   создаёт только приложение. Consumer ещё не запущен.
+
+3. **Создать solo Team через UI и выполнить один turn.** Через existing Create
+   page выбрать Claude/Sonnet4.6, low effort, cwd внутри TEST root, пустой список
+   teammates, оставить Launch включённым и ввести exact finite TEST prompt.
+   Нажать Create один раз. Дождаться штатного deterministic bootstrap, actual
+   native request и видимого original reply. Прочитать actual team/run/session
+   binding, live original process и persisted launch freshness. Пустой response,
+   model-preflight PONG или один появившийся PID не квалифицируют business turn.
+
+4. **Минимальный finite oracle в прежнем actor.** Добавить opt-in current-legacy
+   phase к `startNativeTeamModel`, разрешённый только перед consumer epoch.
+   Он принимает exact submitted marker внутри штатной bootstrap оболочки,
+   проверяет правильный Team/solo context и отвечает одним text reply без tools.
+   Число business turns — ровно 1; model-preflight checks считаются отдельно и
+   используют фактический current `providerModelProbe.ts` prompt/limit.
+   Advertised tool catalog не означает tool execution. Не переносить Host-only
+   context/MCP receipt assertions на legacy native request и не ослаблять их.
+   После source Stop/Quit/absence закрыть phase один раз, дождаться уже принятых
+   reads в прежнем bounded budget; поздние requests отвергать. Host target
+   сохраняет прежние 8 ordinary requests и отдельные management probes.
+
+5. **Нажать original Stop и проверить публикацию.** Использовать existing
+   Team Detail Stop control, без private mutation API из CDP. До Stop
+   зафиксировать actual launch/session/root identity; после него требовать
+   original child absence и штатный `readLegacyNativeStopRelease` readback.
+   Target, stoppedRunId, native digest и owner incarnation должны соответствовать
+   прочитанному original run. TEST не вызывает capture/complete/markStopped,
+   не подставляет proof и не переписывает census. Если release отсутствует,
+   сохранить exact failing facts и разбирать original owner; не переводить
+   source в never-launched и не добавлять автоматический Stop retry.
+
+6. **Сохранить небольшой настоящий corpus.** После успешного Stop создать одну
+   saved Task через existing Create Task UI с запуском задачи выключенным;
+   это не создаёт второго native input. Прочитать actual ID/body из продукта.
+   Не добавлять придуманные comments, refs, attachments или history.
+   Выполнить ordinary Quit, подтвердить captured app group и original detached
+   native identities absent, затем снять bounded source hashes существующих
+   team/task/attachment roots. Отсутствующие roots записывать как absent, не
+   достраивать ради прежней fixture shape. Receipt содержит
+   `sourceKind: actual-current-native-solo`, actual settings/task/run/release
+   identities, model counters и source manifest. Source Task — доказательство
+   genuine UI saved data; native-history migration этим не объявляется.
+
+7. **Продолжить прежний consumer journey.** После полной source absence запустить
+   тот же current frontend с уже подготовленным Host descriptor в том же TEST
+   namespace. Original Team Detail → Launch → Main import → Host dialog.
+   Адаптировать existing seed/readback только на discriminated actual-source case:
+   exact saved settings, solo lead, настоящая Task, одна import publication,
+   canonical Host selection и неизменные source bytes. Synthetic TaskRef/
+   attachments assertions остаются в прежнем synthetic case; actual Task
+   сравнивается с собственным captured body без fixture-ID подстановки.
+   Закрыть dialog без Submit, reload, lookup той же import publication,
+   ноль target runtime input до явного Launch.
+
+8. **Сохранить existing native continuation.** Использовать
+   `runStoppedImportLaunchUi`: original Host Launch один раз, новый run/session,
+   отличный от source, прежний actual native task/tool-effect/reply oracle,
+   original Stop, released custody/absence и reload saved settings. Source Task
+   и manifest неизменны. Поменять только source preparation assertions и actual
+   importedTask input; не добавлять ещё один agent turn или Stop retry.
+
+9. **Проверить на прежнем gate.** Type/lint/source-closure и один existing
+   fixture/oracle critical case для новой phase boundary, без новой unit suite.
+   Exact-head existing macOS native-launch job требует producer PASS, 1 source
+   business turn, native original release, import/readback PASS, target native
+   Launch/Stop PASS и обе cleanup границы. Source/compiled inputs freeze —
+   до producer, между app epochs и после consumer. Failure receipt сохраняет
+   этап/finite counters/hashes без auth fields или ручного repair.
+   PASS этой строки не закрывает donor4a history/Review, Windows release
+   или historical Darwin capture gates.
+
+### Два review круга и принятые сокращения
+
+**Круг 1 — authority/source.** Проверен фактический путь Create → tracked run →
+original Stop → branded release. Отвергнут перенос existing Node-child setup:
+source records синтетические и `sourceNativeInputs=0`. Выбран один original app
+epoch без Host descriptor; runtime определяется current lock. Нового proof
+producer в production нет.
+
+**Круг 2 — объём и oracle.** Не воспроизводить весь synthetic task/reference/
+attachment corpus в native producer. Достаточно одной настоящей UI Task после
+Stop и неизменной source фиксации; богатый прежний fixture остаётся отдельным.
+Не создавать legacy MCP tool scenario ради release: один finite text turn
+подтверждает native путь, existing Host continuation уже проверяет tools/effects.
+Не дублировать app lifecycle, процессы, queues, Stop или retries. Parent/peer
+review плана, implementation и actual exact-head результат ещё обязательны.
+
+[C10-create]: https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/src/main/services/team/provisioning/TeamProvisioningCreateDeterministicSpawnFlow.ts
+[C10-prompt]: https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/src/main/services/team/provisioning/TeamProvisioningRosterPrompt.ts
+[C10-stop]: https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/src/main/services/team/provisioning/TeamProvisioningStopCleanupCompatibilityFacade.ts
+[C10-publication]: https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/src/main/services/team/provisioning/LegacyNativeStopPublication.ts
+[C10-release]: https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/src/main/services/team/provisioning/LegacyNativeStopRelease.ts
+[C10-store]: https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/src/main/services/team/TeamLaunchStateStore.ts
+[C10-tail]: https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/scripts/legacy-agent-host/desktop-stopped-import-launch-ui.ts

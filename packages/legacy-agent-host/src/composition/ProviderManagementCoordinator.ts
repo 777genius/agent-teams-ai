@@ -39,11 +39,13 @@ import type { StoredCredentialCommand } from '../management/commandRecords.js';
 export class ProviderManagementCoordinator {
   private readonly profiles = new Map<string, OpenCodeManagementProfile>();
   private readonly hosts = new Map<string, OpenCodeManagementHost>();
+  private readonly v1EndpointOperations = new Map<string, { tail: Promise<unknown>; pending: number }>();
   private readonly v2Hosts = new Map<string, OpenCodeV2ManagementHost>();
   private readonly v2CatalogReads = new Map<string, Promise<ProviderManagementCatalog>>();
   private readonly v2Keys = new Map<string, ReturnType<typeof createOpenCodeV2CredentialOperation>>();
   private readonly processCustody: RegisteredProcessRootSource | undefined;
   private readonly store: FileManagementCommandStore;
+  private readonly fence: ManagementResourceFence;
   private sealed = false;
   readonly codex: CodexManagementCoordinator;
   readonly claude: ClaudeManagementCoordinator;
@@ -87,7 +89,7 @@ export class ProviderManagementCoordinator {
       this.profiles.set(profile.profileId, profile);
     }
     const store = this.store = new FileManagementCommandStore(storageRoot);
-    const fence = new ManagementResourceFence(store.list());
+    const fence = this.fence = new ManagementResourceFence(store.list());
     this.skills = new SkillCoordinator(profiles, {
       store, fence, assertCurrent: () => this.assertCurrent(),
       managementTarget: (id, revision) => this.claude.has(id)
@@ -152,38 +154,44 @@ export class ProviderManagementCoordinator {
         if (this.codex.has(input.profileId)) return this.codex.prepareLogin(input);
         const profile = this.select(input.profileId, input.configRevision);
         if (profile.nativeGeneration === 'v2') throw new ManagementCommandError('invalid');
-        const host = this.getHost(profile);
         const timeoutMs = profile.oauthTimeoutMs ?? 17 * 60_000;
+        const deadline = Date.now() + timeoutMs;
+        let host: OpenCodeManagementHost | undefined;
         return {
           timeoutMs,
           authorize: (fields, signal) =>
-            host.run(
-              async (client) => {
-                const methods = (await client.getProviderAuth())[input.providerId];
-                if (!Array.isArray(methods) || methods[input.methodIndex]?.type !== 'oauth')
-                  throw new ManagementCommandError('invalid');
-                const value = await client.authorizeProviderOAuth(input.providerId, {
-                  method: input.methodIndex,
-                  ...(fields ? { inputs: fields } : {}),
-                });
-                return {
-                  authorizationUrl: value.url,
-                  completionMethod: value.method,
-                  instructions: value.instructions,
-                };
-              },
-              { signal, timeoutMs }
-            ),
-          complete: (code, signal) =>
-            host.run(
+            this.withV1Host(profile, { deadline, signal, commandId: input.operationId }, (selected, options) => {
+              host = selected;
+              return selected.run(
+                async (client) => {
+                  const methods = (await client.getProviderAuth())[input.providerId];
+                  if (!Array.isArray(methods) || methods[input.methodIndex]?.type !== 'oauth')
+                    throw new ManagementCommandError('invalid');
+                  const value = await client.authorizeProviderOAuth(input.providerId, {
+                    method: input.methodIndex,
+                    ...(fields ? { inputs: fields } : {}),
+                  });
+                  return {
+                    authorizationUrl: value.url,
+                    completionMethod: value.method,
+                    instructions: value.instructions,
+                  };
+                },
+                options
+              );
+            }),
+          complete: (code, signal) => {
+            if (!host) throw new ManagementCommandError('held');
+            return this.withV1Host(profile, { deadline, signal, commandId: input.operationId, originalHost: host }, (selected, options) => selected.run(
               (client) =>
                 client.completeProviderOAuth(input.providerId, {
                   method: input.methodIndex,
                   ...(code === undefined ? {} : { code }),
                 }),
-              { signal, timeoutMs }
-            ),
-          close: () => this.retireHost(profile.profileId, host),
+              options
+            ));
+          },
+          close: () => host ? this.retireHost(profile.profileId, host) : Promise.resolve(true),
         };
       },
       ...(options.onOAuthProgress ? { onProgress: options.onOAuthProgress } : {}),
@@ -219,8 +227,9 @@ export class ProviderManagementCoordinator {
             } catch { return false; }
           }, options.processCustody ? { processCustody: options.processCustody } : {});
         }
-        const host = this.getHost(profile);
         const timeoutMs = profile.modelProbeTimeoutMs ?? 90000;
+        const deadline = Date.now() + timeoutMs;
+        let host: OpenCodeManagementHost | undefined;
         const qualifiedModel = input.modelId.startsWith(input.providerId + '/')
           ? input.modelId : `${input.providerId}/${input.modelId}`;
         const limits = input.limits ?? selectedOpenCodeManagedLimits(profile.managedPreferences, qualifiedModel);
@@ -228,17 +237,20 @@ export class ProviderManagementCoordinator {
           return {
             timeoutMs,
             run: (signal) =>
-              host.probeModel(
-                {
-                  providerId: input.providerId,
-                  modelId: input.modelId,
-                  ...(profile.variant === undefined ? {} : { variant: profile.variant }),
-                },
-                signal,
-                timeoutMs,
-                isCurrent
-              ),
-            close: () => this.retireHost(profile.profileId, host),
+              this.withV1Host(profile, { deadline, signal, commandId: input.commandId, isCurrent }, (selected, options) => {
+                host = selected;
+                return selected.probeModel(
+                  {
+                    providerId: input.providerId,
+                    modelId: input.modelId,
+                    ...(profile.variant === undefined ? {} : { variant: profile.variant }),
+                  },
+                  options.signal,
+                  options.timeoutMs,
+                  isCurrent
+                );
+              }),
+            close: () => host ? this.retireHost(profile.profileId, host) : Promise.resolve(true),
           };
         // Construction allocates no process. Durable admission must precede native calls.
         const limited = this.createHost(
@@ -246,11 +258,12 @@ export class ProviderManagementCoordinator {
         );
         return {
           timeoutMs,
-          run: async (signal) => {
+          run: (signal) => this.withV1Host(profile, { deadline, signal, commandId: input.commandId, isCurrent }, async (selected, options) => {
+            host = selected;
             this.replacing.add(profile.profileId);
-            const catalog = await host.run(
+            const catalog = await selected.run(
               (client) => readOpenCodeCatalog(client, input, input.providerId),
-              { signal, timeoutMs }
+              options
             );
             if (!isCurrent()) throw new ManagementCommandError('held');
             const provider = catalog.providers.find((row) => row.providerId === input.providerId);
@@ -260,11 +273,12 @@ export class ProviderManagementCoordinator {
             if (
               !provider || (input.limits && !provider.configuredAuthless) ||
               !provider.models.some((row) => row.modelId === modelId) ||
-              !(await this.retireHost(profile.profileId, host))
+              !(await this.retireHost(profile.profileId, selected))
             )
               throw new ManagementCommandError('held');
-            signal.throwIfAborted();
+            options.signal.throwIfAborted();
             this.assertCurrent();
+            if (!isCurrent() || Date.now() >= deadline) throw new ManagementCommandError('held');
             this.hosts.set(profile.profileId, limited);
             return limited.probeModel(
               {
@@ -273,14 +287,14 @@ export class ProviderManagementCoordinator {
                 limits,
                 ...(profile.variant === undefined ? {} : { variant: profile.variant }),
               },
-              signal,
-              timeoutMs,
+              options.signal,
+              deadline - Date.now(),
               isCurrent
             );
-          },
+          }),
           close: async () => {
             const closed = await Promise.all([
-              this.retireHost(profile.profileId, host),
+              host ? this.retireHost(profile.profileId, host) : Promise.resolve(true),
               this.retireHost(profile.profileId, limited),
             ]);
             if (closed.every(Boolean)) this.replacing.delete(profile.profileId);
@@ -386,20 +400,24 @@ export class ProviderManagementCoordinator {
         this.v2Keys.delete(command.commandId);
       return result;
     }
-    const host = this.getHost(profile);
+    let host: OpenCodeManagementHost | undefined;
     try {
-      const ok = await host.run((client) =>
-        command.kind === 'credential.set'
-          ? client.setProviderAuth(command.providerId, {
-              type: 'api',
-              key: command.key,
-              ...(command.metadata ? { metadata: command.metadata } : {}),
-            })
-          : client.deleteProviderAuth(command.providerId)
-      );
+      const ok = await this.withV1Host(profile, { deadline: Date.now() + profile.timeoutMs, commandId: command.commandId }, (selected, options) => {
+        host = selected;
+        return selected.run(
+          (client) => command.kind === 'credential.set'
+            ? client.setProviderAuth(command.providerId, {
+                type: 'api',
+                key: command.key,
+                ...(command.metadata ? { metadata: command.metadata } : {}),
+              })
+            : client.deleteProviderAuth(command.providerId),
+          options
+        );
+      });
       return { ok: ok === true, settled: true };
     } catch {
-      const settled = await this.retireHost(profile.profileId, host);
+      const settled = host ? await this.retireHost(profile.profileId, host) : true;
       return { ok: false, settled };
     }
   }
@@ -449,6 +467,58 @@ export class ProviderManagementCoordinator {
     }
     if (clean && this.hosts.get(profileId) === host) this.hosts.delete(profileId);
     return clean;
+  }
+
+  /** Finish the previous original endpoint operation before any derived V1 owner can replace it. */
+  private async withV1Host<T>(
+    profile: OpenCodeManagementProfile,
+    operation: {
+      deadline: number; commandId?: string; signal?: AbortSignal;
+      originalHost?: OpenCodeManagementHost; isCurrent?: () => boolean;
+    },
+    action: (host: OpenCodeManagementHost, options: { signal: AbortSignal; timeoutMs: number }) => Promise<T>
+  ): Promise<T> {
+    const target = this.credentialTarget(profile);
+    const check = () => {
+      operation.signal?.throwIfAborted();
+      this.assertCurrent();
+      assertManagementTarget(target, this.credentialTarget(this.select(profile.profileId, profile.configRevision)));
+      if (Date.now() >= operation.deadline || operation.isCurrent?.() === false ||
+          operation.originalHost && this.hosts.get(profile.profileId) !== operation.originalHost)
+        throw new ManagementCommandError('held');
+    };
+    check();
+    const queue = this.v1EndpointOperations.get(profile.endpoint) ?? { tail: Promise.resolve(), pending: 0 };
+    // Native probes return admission before work completes; retain the existing RPC-sized bound here too.
+    if (queue.pending >= 32) throw new ManagementCommandError('busy');
+    const pending = queue.tail.catch(() => {}).then(async () => {
+      check();
+      // Read-only callers must not race an active operation's out-of-queue cancellation/close.
+      this.fence.assertAvailable(target.resourceId, operation.commandId);
+      for (const [profileId, host] of this.hosts) {
+        const previous = this.profiles.get(profileId);
+        if (profileId === profile.profileId || previous?.endpoint !== profile.endpoint) continue;
+        // The occupied host's own namespace matters even if the new profile uses another auth root.
+        this.fence.assertAvailable(this.credentialTarget(previous).resourceId, operation.commandId);
+        if (!await this.retireHost(profileId, host)) throw new ManagementCommandError('held');
+        check();
+      }
+      this.fence.assertAvailable(target.resourceId, operation.commandId);
+      const timeoutMs = operation.deadline - Date.now();
+      const timeout = AbortSignal.timeout(timeoutMs);
+      const signal = operation.signal ? AbortSignal.any([operation.signal, timeout]) : timeout;
+      const result = await action(this.getHost(profile), { signal, timeoutMs });
+      check();
+      return result;
+    });
+    queue.tail = pending;
+    queue.pending++;
+    this.v1EndpointOperations.set(profile.endpoint, queue);
+    try { return await pending; }
+    finally {
+      if (--queue.pending === 0 && this.v1EndpointOperations.get(profile.endpoint) === queue)
+        this.v1EndpointOperations.delete(profile.endpoint);
+    }
   }
 
   private getHost(profile: OpenCodeManagementProfile): OpenCodeManagementHost {
@@ -508,18 +578,15 @@ export class ProviderManagementCoordinator {
           this.v2CatalogReads.delete(profile.profileId);
       }
     }
-    const host = this.getHost(profile);
-    const result = await host.run((client) =>
-      readOpenCodeCatalog(
-        client,
-        {
-          profileId: input.profileId,
-          configRevision: input.configRevision,
-        },
-        input.providerId,
-        input.includeModels
-      )
-    );
+    const result = await this.withV1Host(profile, { deadline: Date.now() + profile.timeoutMs }, (host, options) => host.run(
+      (client) => readOpenCodeCatalog(
+          client,
+          { profileId: input.profileId, configRevision: input.configRevision },
+          input.providerId,
+          input.includeModels
+        ),
+      options
+    ));
     this.assertWriter();
     if (this.sealed) throw new OpenCodeManagementError('unavailable');
     return { ...result, runtime: { generation: 'v1' } };
