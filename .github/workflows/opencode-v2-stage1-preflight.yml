@@ -471,6 +471,14 @@ jobs:
           OPENCODE_V2_PERMISSION_LIFECYCLE_GO: '1'
           OPENCODE_V2_PERMISSION_LIFECYCLE_RECEIPT: ${{ github.workspace }}/opencode-v2-permission-lifecycle.json
         run: node --test packages/legacy-agent-host/tests/opencode-v2-permission-lifecycle.native.ts
+      - name: Exercise captured external MCP and app-only through the native Host
+        if: runner.os == 'Linux' && env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED == '1'
+        env:
+          OPENCODE_V2_CAPTURED_MCP_GO: '1'
+          OPENCODE_V2_CAPTURED_MCP_RECEIPT: ${{ github.workspace }}/opencode-v2-captured-mcp.json
+        run: |
+          node --check packages/legacy-agent-host/tests/fixtures/native-opencode-v2-mcp/server.mjs
+          node --test packages/legacy-agent-host/tests/opencode-v2-captured-mcp.native.ts
       - name: Require complete native management and permission evidence
         if: runner.os == 'Linux' && env.OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED == '1'
         run: |
@@ -481,6 +489,7 @@ jobs:
             ['opencode-v2-model-probe.json', 'TEST_NATIVE_V2_MODEL_PROBE'],
             ['opencode-v2-credentials.json', 'TEST_NATIVE_V2_CREDENTIAL'],
             ['opencode-v2-permission-lifecycle.json', 'TEST_NATIVE_V2_PERMISSION_LIFECYCLE'],
+            ['opencode-v2-captured-mcp.json', 'TEST_NATIVE_V2_CAPTURED_MCP'],
           ]) {
             const receipt = JSON.parse(readFileSync(path, 'utf8'));
             assert.equal(receipt.kind, kind);
@@ -497,6 +506,31 @@ jobs:
               ]);
               assert.ok(receipt.steps.includes('unlisted_variant_refused_without_model_request_and_owned_cleanup_confirmed'));
               assert.ok(receipt.steps.includes('published_global_and_project_sources_reached_native_body_headers_limits_and_default'));
+            }
+            if (kind === 'TEST_NATIVE_V2_CAPTURED_MCP') {
+              assert.equal(receipt.nodeVersion, 'v24.21.0');
+              assert.equal(receipt.version, '2.1.4');
+              assert.equal(receipt.manualPermissionBeforeEffect, true);
+              assert.equal(receipt.excludedProcessStarts, 0);
+              assert.equal(receipt.externalProcessStarts, 1);
+              assert.equal(receipt.externalToolCalls, 1);
+              assert.equal(receipt.externalProcessCloses, 1);
+              assert.deepEqual(receipt.modelFailures, []);
+              assert.deepEqual(receipt.modelRequests.map(row => [row.turn, row.step]), [
+                ['ALLOW', 0], ['ALLOW', 1], ['ALLOW', 2], ['APP_ONLY', 0], ['APP_ONLY', 1],
+              ]);
+              assert.equal(receipt.modelRequests[0].tool, 'TEST_selected_write_marker');
+              assert.ok(receipt.modelRequests.filter(row => row.tool?.endsWith('message_send')).length === 2);
+              assert.deepEqual(receipt.steps, [
+                'captured_allowlist_actual_tool_once_permission_original_result_and_cleanup',
+                'app_only_has_no_external_tool_or_process_and_preserves_team_reply',
+                'cold_original_receipts_and_readback_do_not_replay_native_or_external_tools',
+              ]);
+              assert.equal(receipt.hosts.length, 2);
+              assert.ok(receipt.hosts.every(row => row.exitCode === 0 && row.signalCode === null && row.stdoutValid));
+              assert.equal(receipt.vendorAuthQualified, false);
+              assert.equal(receipt.desktopQualified, false);
+              assert.equal(receipt.releaseQualified, false);
             }
             if (kind === 'TEST_NATIVE_V2_CREDENTIAL') {
               assert.equal(receipt.nativeCredentialCount, 3);
@@ -570,3 +604,4 @@ jobs:
             opencode-v2-model-probe.json
             opencode-v2-credentials.json
             opencode-v2-permission-lifecycle.json
+            opencode-v2-captured-mcp.json

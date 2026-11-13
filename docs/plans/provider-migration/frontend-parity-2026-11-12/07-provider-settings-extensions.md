@@ -354,6 +354,7 @@ P07 native config опубликован `6a2bb4b88bffbe001e16ff7fd27430f330b435
    prefixes, включая `agent-teams_extra` и `mcp__agent_teams__x`, а не только exact raw `team`/`agent-teams`;
    иначе выбранный внешний сервер мог бы получить автоматическое разрешение Team tool в manual режиме.
    `appOnly` даёт ровно controller без внешних конфигураций и разрешений.
+   Внешних servers максимум 255: вместе с единственным Team controller это native inventory budget 256.
 5. **Проверять настоящий native inventory.** `OpenCodeV2EmbeddedMemberProvider` сверяет точный набор имён
    всех ожидаемых connected servers и прежний original Team catalog receipt. Тот же source-current guard
    применяется до allocation/dispatch; изменение источника не заменяет конфигурацию running session.
@@ -365,6 +366,17 @@ P07 native config опубликован `6a2bb4b88bffbe001e16ff7fd27430f330b435
    выбранный server, appOnly не обнаруживает и не вызывает его, Team tools работают в обоих случаях.
    Реальный native lifecycle подтверждает cleanup. Existing Desktop member-policy controls затем сохраняют
    выбранную policy и выполняют тот же один native tool; API setup не выдаётся за UI acceptance.
+
+**R9 native gate после повторного review.** Один дополнительный шаг существующего Linux embedded job
+в `.github/workflows/opencode-v2-stage1-preflight.yml`, без новой matrix. Новый
+`packages/legacy-agent-host/tests/opencode-v2-captured-mcp.native.ts` переиспользует pinned Node/Bun/engine,
+`buildNativeV1Host`, `startHost` и production `captureRuntimeMcp`. Реальный stdio server
+`fixtures/native-opencode-v2-mcp/server.mjs` имеет один tool и исходную process identity.
+Два запуска членов: strictAllowlist + manual once (external effect и Team reply) и appOnly (только Team reply);
+lead recipe остаётся неоткрытым. Всего пять localhost inference requests. Проверить исходные receipts,
+точный native tool result, физическое завершение исходного MCP child, cold read/lookup без нового процесса
+или inference. CI требует отдельный полный receipt и сохраняет INCOMPLETE при ошибке/отмене; это ещё не
+Desktop member-policy acceptance и не vendor inference. Прежний 11-request native Host сценарий не меняется.
 
 **R9 проверка упрощения.** Остаются прежние catalog, launch artifact, member creation и permissions owners.
 Нет нового MCP registry, protocol version, plugin injection, middleware, renderer API или provider daemon.
