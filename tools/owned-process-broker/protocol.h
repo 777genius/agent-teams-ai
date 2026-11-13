@@ -14,7 +14,10 @@ namespace wire {
 constexpr uint16_t Version = 1;
 constexpr uint32_t LaunchLimit = 1024 * 1024, ControlLimit = 4096;
 enum Op : uint16_t { Launch=1, Resume=2, Stop=3, Release=4,
-  Prepared=101, Resumed=102, Stopped=103, Released=104, Failed=105, RootExit=106 };
+  ServiceCapture=5, ServiceQuery=6, ServiceStop=7, ServiceSettle=8,
+  Prepared=101, Resumed=102, Stopped=103, Released=104, Failed=105, RootExit=106,
+  ServiceCaptured=107, ServiceObserved=108, ServiceStopped=109, ServiceSettled=110, ServiceRefused=111 };
+enum ServiceRejection : uint8_t { Unqualified=1, Missing=2, Busy=3, Invalid=4, RetiredRequest=5, Unknown=6 };
 struct Frame { uint16_t op; uint64_t id; std::array<uint8_t,16> generation;
   std::vector<uint8_t> payload; };
 template<class T> T get(const uint8_t* p) { T v; std::memcpy(&v,p,sizeof(v)); return v; }
@@ -167,7 +170,7 @@ inline bool read(HANDLE pipe,Frame& frame,void (*pendingRead)()=nullptr) {
   if(!readExact(pipe,header.data(),32,pendingRead)) return false;
   uint32_t size=get<uint32_t>(header.data());
   frame.op=get<uint16_t>(header.data()+6);
-  if(get<uint16_t>(header.data()+4)!=Version||frame.op<Launch||frame.op>Release||
+  if(get<uint16_t>(header.data()+4)!=Version||frame.op<Launch||frame.op>ServiceSettle||
     size>(frame.op==Launch?LaunchLimit:ControlLimit)) throw std::runtime_error("header");
   frame.id=get<uint64_t>(header.data()+8);
   std::copy(header.begin()+16,header.end(),frame.generation.begin());

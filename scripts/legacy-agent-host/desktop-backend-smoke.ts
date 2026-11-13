@@ -66,6 +66,7 @@ import {
   portOccupied,
   processTable,
   projectDesktopHarnessFailure,
+  readOwnedCdpListenerFailure,
   selectedCdpPort,
 } from './desktop-backend-observations.ts';
 import type { ProcessIdentity } from './desktop-backend-observations.ts';
@@ -550,6 +551,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     evidence.status = 'PASS';
   } catch (error) {
     evidence.failureSource = projectDesktopHarnessFailure(error, repo, desktopProofSources);
+    const listenerFailure = readOwnedCdpListenerFailure(error);
+    if (listenerFailure) evidence.cdpListenerFailure = listenerFailure;
     evidence.failure =
       error instanceof Error ? error.message.slice(0, 4000) : 'unclassified harness failure';
     if (uiMode && cdp) {

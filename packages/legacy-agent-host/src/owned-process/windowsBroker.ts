@@ -376,7 +376,7 @@ class WindowsCapability implements PreparedOwnedProcess {
       this.transportFailure ||
       this.released ||
       this.waiters.size >= 4 ||
-      this.nextId > 1024n
+      this.nextId > 0xffffffffffffffffn
     ) {
       return Promise.reject(new Error('Broker transport unavailable'));
     }

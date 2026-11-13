@@ -4,6 +4,7 @@ import { EventEmitter } from 'node:events';
 import { createRequire, syncBuiltinESMExports } from 'node:module';
 import childProcess from 'node:child_process';
 import {
+  assertOwnedCdpListener,
   groupMembers,
   isCapturedOriginalNodeZombie,
   processTable,
@@ -11,8 +12,41 @@ import {
   observeExitedAppGroup,
   observeOriginalAppReap,
   readRendererBackendConnections,
+  readOwnedCdpListenerFailure,
   settledGroupMembers,
 } from './desktop-backend-observations.ts';
+
+test('Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder', { skip: process.platform !== 'linux' }, (t) => {
+  const fields = (fd: number) => `f${fd}\ntIPv4\nD0xabcd\ni12345\nPTCP\nTST=LISTEN\nnPRIVATE_PATH_MUST_NOT_LEAK\n`;
+  let output = 'p4100\n' + Array.from({ length: 17 }, (_, index) => fields(index + 1)).join('') + 'p4101\n' + fields(40);
+  let reads = 0;
+  t.mock.method(childProcess, 'execFileSync', (file: string, args: readonly string[]) => {
+    if (file === '/bin/ps') return '4100 4000 4100\n4101 4100 4100\n';
+    assert.equal(file, '/usr/bin/lsof');
+    assert.ok(args.includes('-FpfDtinPT') && args.includes('-Ts') && args.includes('-a'));
+    reads++;
+    return output;
+  });
+  t.mock.method(process, 'kill', () => assert.fail('a descriptor census never signals'));
+  syncBuiltinESMExports();
+  t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+  let original: unknown;
+  try { assertOwnedCdpListener(4100); } catch (error) { original = error; }
+  assert.ok(original instanceof assert.AssertionError);
+  assert.match(original.message, /one CDP listener/u);
+  assert.equal(reads, 1, 'failure projection does not perform a second racy census');
+  const facts = readOwnedCdpListenerFailure(original);
+  assert.ok(facts);
+  assert.equal(facts.holderCount, 2, 'a second PID past the retained16rows still refuses, even with the same inode');
+  assert.equal(facts.fileCount, 18); assert.equal(facts.files.length, 16); assert.equal(facts.truncated, true);
+  assert.equal(JSON.stringify(facts).includes('PRIVATE_PATH_MUST_NOT_LEAK'), false);
+  assert.equal(readOwnedCdpListenerFailure(new Error('unrelated')), undefined);
+  output = 'p4100\n' + fields(1) + fields(2);
+  assert.equal(assertOwnedCdpListener(4100), 4100, 'two descriptors of one original holder preserve the prior PID rule');
+  assert.equal(readOwnedCdpListenerFailure(original), facts, 'a later successful read does not replace the original failure');
+  output = 'p4100\n';
+  assert.throws(() => assertOwnedCdpListener(4100), /Positive original lsof descriptor census/u);
+});
 
 test('Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error', (t) => {
   let output = '1 0 1\n2 0 0\n4100 4000 4100\n';

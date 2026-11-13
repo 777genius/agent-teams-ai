@@ -9,12 +9,21 @@ export const Op = Object.freeze({
   resume: 2,
   stop: 3,
   release: 4,
+  serviceCapture: 5,
+  serviceQuery: 6,
+  serviceStop: 7,
+  serviceSettle: 8,
   prepared: 101,
   resumed: 102,
   stopped: 103,
   released: 104,
   failed: 105,
   rootExit: 106,
+  serviceCaptured: 107,
+  serviceObserved: 108,
+  serviceStopped: 109,
+  serviceSettled: 110,
+  serviceRefused: 111,
 });
 const operations = new Set<number>(Object.values(Op));
 export type Frame = Readonly<{
@@ -153,4 +162,67 @@ export function encodeLaunch(spec: ResolvedLaunchSpec): Buffer {
   ]);
   if (payload.length > MAX_LAUNCH_BYTES) throw new Error('Launch payload exceeds limit');
   return payload;
+}
+
+/** Private original-scope wire facts. These values are not native authority or a TreeReceipt. */
+export type ServiceScopeIdentity = Readonly<{ key: string; birth: string }>;
+export type ServiceScopeFacts = ServiceScopeIdentity & Readonly<{
+  rootExited: boolean;
+  activeProcesses: number;
+  exitCode: number;
+  queryError: number;
+  dispatchError: number;
+}>;
+export const ServiceRefusal = Object.freeze({
+  unqualified: 1, missing: 2, busy: 3, invalid: 4, retiredRequest: 5, unknown: 6,
+});
+function serviceUint64(value: string): bigint {
+  if (!/^[0-9a-f]{16}$/.test(value) || value === '0000000000000000')
+    throw new Error('Invalid original service identity');
+  return BigInt('0x' + value);
+}
+function serviceIdentity(payload: Buffer): ServiceScopeIdentity {
+  const key = payload.readBigUInt64LE(0).toString(16).padStart(16, '0');
+  const birth = payload.readBigUInt64LE(8).toString(16).padStart(16, '0');
+  serviceUint64(key); serviceUint64(birth);
+  return Object.freeze({ key, birth });
+}
+/** Caller supplies an already captured original birth, never a PID-only adoption request. */
+export function encodeServiceCapture(pid: number, birth: string): Buffer {
+  if (!Number.isInteger(pid) || pid <= 0 || pid > 0xffffffff)
+    throw new Error('Invalid service PID metadata');
+  const payload = Buffer.alloc(12);
+  payload.writeUInt32LE(pid); payload.writeBigUInt64LE(serviceUint64(birth), 4);
+  return payload;
+}
+export function encodeServiceScope(key: string): Buffer {
+  const payload = Buffer.alloc(8); payload.writeBigUInt64LE(serviceUint64(key));
+  return payload;
+}
+export function encodeServiceStop(key: string, budgetMs: number): Buffer {
+  if (!Number.isInteger(budgetMs) || budgetMs < 0 || budgetMs > 60000)
+    throw new Error('Invalid service Stop budget');
+  const payload = Buffer.alloc(12);
+  payload.writeBigUInt64LE(serviceUint64(key)); payload.writeUInt32LE(budgetMs, 8);
+  return payload;
+}
+export function decodeServiceIdentity(frame: Frame): ServiceScopeIdentity {
+  if ((frame.opcode !== Op.serviceCaptured && frame.opcode !== Op.serviceSettled) || frame.payload.length !== 16)
+    throw new Error('Invalid original service response');
+  return serviceIdentity(frame.payload);
+}
+export function decodeServiceFacts(frame: Frame): ServiceScopeFacts {
+  const p = frame.payload;
+  if ((frame.opcode !== Op.serviceObserved && frame.opcode !== Op.serviceStopped) ||
+      p.length !== 33 || p[16]! > 1)
+    throw new Error('Invalid original service observation');
+  return Object.freeze({ ...serviceIdentity(p), rootExited: p[16] === 1,
+    activeProcesses: p.readUInt32LE(17), exitCode: p.readUInt32LE(21),
+    queryError: p.readUInt32LE(25), dispatchError: p.readUInt32LE(29) });
+}
+export function decodeServiceRefusal(frame: Frame): Readonly<{ reason: number; nativeCode: number }> {
+  if (frame.opcode !== Op.serviceRefused || frame.payload.length !== 5 ||
+      !Object.values(ServiceRefusal).some(value => value === frame.payload[0]))
+    throw new Error('Invalid service refusal');
+  return Object.freeze({ reason: frame.payload[0]!, nativeCode: frame.payload.readUInt32LE(1) });
 }

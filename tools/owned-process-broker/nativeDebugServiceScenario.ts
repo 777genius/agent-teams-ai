@@ -3,7 +3,9 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { closeSync, existsSync, openSync, readFileSync, writeFileSync } from 'node:fs';
 import { Duplex } from 'node:stream';
 
-import { encodeFrame, encodeLaunch, FrameDecoder, Op } from '@agent-teams/legacy-agent-host/owned-process';
+import { decodeServiceFacts, decodeServiceIdentity, decodeServiceRefusal, encodeFrame, encodeLaunch,
+  encodeServiceCapture, encodeServiceScope, encodeServiceStop, FrameDecoder, Op, ServiceRefusal,
+} from '@agent-teams/legacy-agent-host/owned-process';
 import { capturedWitness, timeout, waitFor } from './nativeGateContext';
 import { createFixtureOutputCollector } from './nativeGateOutput';
 
@@ -51,9 +53,15 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
   const decoder = new FrameDecoder(identity.processGeneration);
   const replies = new Map<bigint, { opcode: number; resolve(frame: Frame): void }>();
   let lastId = 0n;
+  let rootExit: Frame | undefined;
+  const readRootExit = (): Frame | undefined => rootExit;
   pipe.on('error', events.guard(() => { throw new Error('TEST debug control failed'); }));
   pipe.on('data', events.guard((chunk: Buffer) => decoder.push(chunk, frame => {
-    if (frame.opcode === Op.rootExit) return;
+    if (frame.opcode === Op.rootExit) {
+      assert.equal(rootExit, undefined, 'One original provider exit event');
+      assert.equal(frame.requestId, 0n); assert.equal(frame.payload.length, 12);
+      rootExit = frame; return;
+    }
     const pending = replies.get(frame.requestId);
     assert.ok(pending, 'Reply belongs to an admitted exact request');
     assert.equal(frame.opcode, pending.opcode, 'TEST debug native response opcode');
@@ -102,44 +110,73 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
       writeFileSync(`${start.path}.branch-release`, start.nonce, { flag: 'wx' });
       assert.equal(await timeout(events.wait(serviceWitnesses[0]!.exit)), 0);
     }
-    const selected = Buffer.alloc(17);
-    selected.writeUInt32LE(10000); selected[4] = 2;
-    selected.writeUInt32LE(service.pid, 5); selected.writeBigUInt64LE(BigInt(`0x${service.birth}`), 9);
-    const wrong = Buffer.from(selected);
-    wrong.writeBigUInt64LE(BigInt(`0x${service.birth}`) ^ 1n, 9);
+    const capture = encodeServiceCapture(service.pid, service.birth);
+    const wrong = encodeServiceCapture(service.pid,
+      (BigInt('0x' + service.birth) ^ 1n).toString(16).padStart(16, '0'));
+    phase('service-capture');
+    assert.equal(decodeServiceRefusal(await request(Op.serviceCapture, Op.serviceRefused, wrong)).reason,
+      ServiceRefusal.missing, 'Wrong original identity has no native effect');
+    const captureId = lastId + 1n;
+    const selected = decodeServiceIdentity(await request(Op.serviceCapture, Op.serviceCaptured, capture));
+    assert.equal(selected.birth, service.birth);
+    assert.ok(BigInt('0x' + selected.key) > (mode === 'service-pair' ? 64n : 0n),
+      'scope keys never restart or alias after cumulative native retirement');
+    const key = encodeServiceScope(selected.key);
+    const observe = async () => {
+      const facts = decodeServiceFacts(await request(Op.serviceQuery, Op.serviceObserved, key));
+      assert.equal(facts.key, selected.key); assert.equal(facts.birth, service.birth);
+      assert.equal(facts.queryError, 0); assert.equal(facts.dispatchError, 0);
+      assert.ok(facts.activeProcesses > 0, 'Read-only query leaves the original subtree running');
+      return facts;
+    };
+    assert.equal((await observe()).rootExited, mode === 'service-first');
+    if (mode === 'service-pair') {
+      phase('service-query-lifetime');
+      const queryDeadline = Date.now() + 5000;
+      for (let index = 0; index < 1025; index++) {
+        assert.ok(Date.now() < queryDeadline, 'Bounded native query sequence');
+        await observe();
+      }
+      phase('service-effect-retirement');
+      for (let index = 0; index < 64; index++)
+        assert.deepEqual(decodeServiceIdentity(await request(Op.serviceCapture, Op.serviceCaptured, capture)), selected);
+      assert.equal(decodeServiceRefusal(await request(Op.serviceCapture, Op.serviceRefused, capture, captureId)).reason,
+        ServiceRefusal.retiredRequest, 'Evicted command ID is refused, never dispatched as a new registration');
+      await observe(); // Refusing an old request cannot abandon a healthy provider or its original scope.
+    }
+    phase('expired-service-stop');
+    const expired = decodeServiceFacts(await request(Op.serviceStop, Op.serviceStopped,
+      encodeServiceStop(selected.key, 0)));
+    assert.equal(expired.key, selected.key); assert.equal(expired.birth, service.birth);
+    assert.equal(expired.queryError, 258); // WAIT_TIMEOUT, no destructive dispatch after the admitted deadline.
+    assert.equal(expired.dispatchError, 0);
+    assert.ok(serviceWitnesses.slice(1).every(witness => witness.process.exitCode === null));
+    await observe();
     phase('stop');
-    await request(Op.stop, Op.failed, wrong); // Wrong original identity has no native effect.
     const stopId = lastId + 1n;
-    const stopped = await request(Op.stop, Op.stopped, selected);
-    assert.equal(stopped.payload.length, 26);
-    assert.equal(stopped.payload[1], 1);
-    assert.equal(stopped.payload.readUInt32LE(2), 0, 'Selected nested Job is genuinely empty');
-    assert.equal(stopped.payload.readBigUInt64LE(10), BigInt(`0x${service.birth}`));
-    assert.equal(stopped.payload.readUInt32LE(18), 0);
-    assert.equal(stopped.payload.readUInt32LE(22), 0);
+    const stop = encodeServiceStop(selected.key, 10000);
+    const stopped = await request(Op.serviceStop, Op.serviceStopped, stop);
+    const terminal = decodeServiceFacts(stopped);
+    assert.equal(terminal.key, selected.key); assert.equal(terminal.birth, service.birth);
+    assert.equal(terminal.rootExited, true);
+    assert.equal(terminal.activeProcesses, 0, 'Selected nested Job is genuinely empty');
+    assert.equal(terminal.queryError, 0); assert.equal(terminal.dispatchError, 0);
     phase('witness-exits');
     assert.deepEqual(await timeout(events.wait(Promise.all(serviceWitnesses.map(value => value.exit)))), [0, 0, 0]);
-    const retire = Buffer.from(selected);
-    retire.writeUInt32LE(0); retire[4] = 3;
-    const retired = await request(Op.stop, Op.stopped, retire);
-    assert.equal(retired.payload.length, 34);
-    assert.equal(retired.payload[0], 3);
-    assert.equal(retired.payload[1], 1);
-    assert.equal(retired.payload.readUInt32LE(2), 0);
-    assert.equal(retired.payload.readBigUInt64LE(10), BigInt(`0x${service.birth}`));
-    assert.equal(retired.payload.readUInt32LE(18), 0);
-    assert.equal(retired.payload.readUInt32LE(22), 0);
-    assert.ok(retired.payload.readBigUInt64LE(26) > (mode === 'service-pair' ? 64n : 0n),
-      'scope keys never restart or alias after cumulative native retirement');
-    assert.deepEqual((await request(Op.stop, Op.stopped, selected, stopId)).payload, stopped.payload,
+    assert.deepEqual(decodeServiceIdentity(await request(Op.serviceSettle, Op.serviceSettled, key)), selected);
+    assert.deepEqual((await request(Op.serviceStop, Op.serviceStopped, stop, stopId)).payload, stopped.payload,
       'original ACK remains replayable after its native scope retired, without recapture');
-    await request(Op.stop, Op.failed, selected); // New request cannot reacquire a retired PID/birth.
+    assert.equal(decodeServiceRefusal(await request(Op.serviceStop, Op.serviceRefused, stop)).reason,
+      ServiceRefusal.missing, 'A new Stop cannot reacquire a retired scope');
+    assert.equal(decodeServiceRefusal(await request(Op.serviceQuery, Op.serviceRefused, key)).reason,
+      ServiceRefusal.missing, 'Closed scope is unknown, not a new absence receipt');
     assert.equal(adjacent.process.exitCode, null, 'Other service original HANDLE remains unsignaled');
     assert.equal(root.process.exitCode, null, 'Provider original HANDLE remains unsignaled');
     assert.equal(sentinel.exitCode, null);
     stdin.write('TEST provider remains functional\n');
     await waitFor(() => text.includes('{"providerAlive":true}'), 3000, events);
   }
+  assert.equal(readRootExit(), undefined, 'Service replies cannot publish an exit for the surviving provider');
   phase('stop');
   const stopped = await request(Op.stop, Op.stopped, whole);
   assert.equal(stopped.payload[1], 1);
@@ -147,6 +184,10 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
   assert.equal(stopped.payload.readBigUInt64LE(10), BigInt(`0x${rootBirth}`));
   assert.equal(stopped.payload.readUInt32LE(18), 0);
   assert.equal(stopped.payload.readUInt32LE(22), 0);
+  await waitFor(() => readRootExit() !== undefined, 3000, events);
+  const originalExit = readRootExit(); assert.ok(originalExit);
+  assert.equal(originalExit.payload.readBigUInt64LE(4), BigInt('0x' + rootBirth));
+  assert.equal(originalExit.payload.readUInt32LE(0), stopped.payload.readUInt32LE(6));
   phase('witness-exits');
   assert.equal(await timeout(events.wait(root.exit)), 0);
   if (neighborExit) assert.equal(await timeout(events.wait(neighborExit)), 0);

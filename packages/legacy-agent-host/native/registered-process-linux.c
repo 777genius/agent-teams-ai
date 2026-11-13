@@ -22,8 +22,13 @@
 
 /* Private packaged Linux x64 adapter. Durable pidfs is preferred; the warm
  * path retains original pidfds. Neither uses PID/start ticks as signal authority. */
-#if !defined(__x86_64__)
+#if !defined(__x86_64__) || defined(__ILP32__)
 #error Only the existing Linux x64 product tuple is in scope
+#endif
+/* Linux x86-64 syscall ABI: older glibc headers may predate pidfd_open.
+ * arch/x86/entry/syscalls/syscall_64.tbl assigns 434; runtime probe still fails closed. */
+#ifndef SYS_pidfd_open
+#define SYS_pidfd_open 434
 #endif
 #define TRY(call) do { if ((call) != napi_ok) return fail(env, "napi", EIO); } while (0)
 #define MAX_ANCESTRY 16

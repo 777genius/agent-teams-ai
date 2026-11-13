@@ -184,8 +184,10 @@ public:
   }
 
   /** The existing broker frame cache owns attempt deduplication, not this record. */
-  Facts stop(Key key,DWORD budget) {
-    if(budget>60000) throw DWORD{ERROR_INVALID_PARAMETER};
+  Facts stop(Key key,DWORD budget,ULONGLONG admittedAt=GetTickCount64()) {
+    if(budget>60000||admittedAt>GetTickCount64()||admittedAt>UINT64_MAX-budget)
+      throw DWORD{ERROR_INVALID_PARAMETER};
+    const auto deadline=admittedAt+budget; // Queue/registry delay consumes the same admitted budget.
     std::shared_ptr<Scope> selected;
     {
       std::lock_guard<std::mutex> lock(mutex);
@@ -195,7 +197,6 @@ public:
       selected->stopping=true;
     }
     StopLease lease{*this,selected};
-    const auto deadline=GetTickCount64()+budget;
     Facts facts=observe(*selected);
     DWORD queryError=facts.queryError, dispatchError=0;
     if(!budget||GetTickCount64()>=deadline) {

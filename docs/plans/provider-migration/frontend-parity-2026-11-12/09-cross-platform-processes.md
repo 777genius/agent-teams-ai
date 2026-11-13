@@ -1063,3 +1063,154 @@ original-root/Job/witness cleanup proof. Затем тот же current Processe
 Actual SDK/Bun compatibility, writer handoff и lossless reverse transport остаются реальными gates;
 fixture-only broker retention не заменяет ни один из них. Review root + независимый peer обязателен до source;
 vendor PASS обязателен до product activation. Warm helper/wire из §26/§24.3 можно готовить независимо.
+
+## 31. Следующий §24.3 срез: scoped wire и bounded replay (source review, native pending)
+
+**Основа:** exact native head `55d95d83a181e66fcc17fa682d9602cf2819fb52`;
+обычный merge в `9d364968ea1c9f74b6ec9636604b9e4e0064849e` сохранил все шесть preimages.
+Ни этот Markdown, ни unattached source blobs не включают новую capability в продукт.
+Текущий native run `43361737432` относится к **9d3649**, без следующего wire среза.
+
+### Что меняется в существующем broker
+
+- Добавлены отдельные finite capture/query/Stop/settle opcodes и service responses.
+  Payload связывает non-reused scope key и original birth; lookup capture использует
+  exact retained PID + birth, без OpenProcess/adoption. Service facts не являются
+  `TreeReceipt` и не проходят через whole-provider `publishRoot`.
+- Native service handlers остаются только в прежней TEST debug сборке.
+  Обычный staged broker отвечает `unqualified`; product manifest/debug flag,
+  Host process integration и public UI в этом срезе не активируются.
+  Прежние TEST mode2/mode3 намеренно сохранены: actual vendor fixture пока использует
+  прежний TEST adapter. Его исход нельзя объявлять квалификацией нового typed wire.
+- У прежнего reply mutex один bounded effect history: максимум 4 unresolved effects
+  и 64 settled replies. Query не занимает replay history; pending unknown не вытесняется.
+  C lifetime frame limit 1024 убран, TS request ID идёт до uint64 max без reset;
+  существующий предел 4 TS waiters остаётся. Service workers ограничены 3, native работа
+  заканчивается до публикации ответа. Нового transport, journal или worker framework нет.
+- Identical pending/cached effect не dispatch-ится повторно. Evicted ID получает finite
+  retired/unknown refusal без нового effect и без abandon здорового провайдера.
+  Это **не** означает known-not-sent для прежней попытки: её effect мог завершиться.
+  Mismatched retained request/generation/corrupt frame сохраняет containment refusal.
+- Native Stop budget фиксируется при admission до worker. Узкий шестой hunk в
+  `serviceScopes.h` передаёт optional original monotonic admission time в прежний
+  `Scopes.stop`; очередь и ожидание registry потребляют тот же budget, перед
+  TerminateJobObject вновь проверяется deadline. Existing TEST callers сохраняют
+  собственный budget; query/settle не посылают signal.
+
+### Явные границы registration и lifetime
+
+Повторный `ServiceCapture` с новым request ID возвращает **тот же scope** и ставит
+прежний registration boolean. Это не несколько независимых native leases.
+Будущий product contract для нескольких logical registrations одной scope, late MCP
+registration и их settlement ещё должен быть согласован с existing Host registry/fence;
+нельзя снять чужую действующую регистрацию одной командой settle.
+Этот срез не добавляет owner-local terminal tombstones, durable natural-exit proof,
+Main retention/rebind (§30), WindowsRegisteredProcess или TeamProcessCommands изменения.
+
+### Проверка и следующие gates
+
+Существующий controlled native scenario, без новой suite, теперь проверяет 1025
+последовательных read-only queries, 64 дополнительных settled capture responses и
+retired original request ID; original scope/provider остаются живы. Также проверяются
+zero-budget Stop без signal, настоящий scoped Stop, settlement и replay исходного
+Stop ACK после retirement, отказ нового Stop/query по закрытому scope.
+Foreign/neighbor/provider witnesses и самостоятельный whole-provider cleanup сохранены.
+После замечания peer проверка потока ответов сохраняет единственный
+`rootExit`: до whole Stop его нет; затем проверяются original root birth и exitCode.
+Root exit, service absence и full provider cleanup по-прежнему разные факты.
+
+Root review всех 6 source файлов и независимый Profiles TS/conformance review — PASS;
+Независимый Account C lifetime/cleanup review — PASS. Exact preimages проверены по native tree,
+каждый draft blob прочитан обратно без различий. **Compile/native execution ещё не было**:
+executor недоступен, результат 9d не переносится на этот следующий срез.
+Native и TS changes с existing conformance fixture должны публиковаться вместе после
+review, затем получить собственные exact-head checks. Текущий 9d run не отменяется.
+После actual vendor PASS отдельно продолжаются manifest/capability/Host async-fence,
+registry/Processes UI, cold owner и packaged acceptance; этот source cut их не закрывает.
+
+| Path | Exact preimage | Reviewed draft blob |
+| --- | --- | --- |
+| `tools/owned-process-broker/protocol.h` | `98b2a2743863ab29598aa6306691332bc7144360` | `60f9ae497a0bc8f9cf9d7cc32c278bc6afbfe4a4` |
+| `tools/owned-process-broker/broker.cpp` | `b82e54077c41242027cbe6400f7240972074f460` | `50aaa950504f76d2c34fdfe71632f16238ca62a1` |
+| `tools/owned-process-broker/serviceScopes.h` | `6a4b39286bb4d0489aca8ec2aaf203015d404507` | `f837c905946282906d8ced5a5a260c0e43c26b2d` |
+| `packages/legacy-agent-host/src/owned-process/codec.ts` | `3f8268481f09b232c9f567f0fb1f64678d3877f0` | `ae5eded9c4f0520a65be73fa1bc8c92e135f3b91` |
+| `packages/legacy-agent-host/src/owned-process/windowsBroker.ts` | `2beae81680a9a4dd2e849e624a03b5321fa450b4` | `3684ca835d4ff592c261f553f2fdf9bce8972422` |
+| `tools/owned-process-broker/nativeDebugServiceScenario.ts` | `893f5ebe6fe3cc5d4294e26450f35e22db50c5e8` | `6cbc36e76cdf2c3ee80419c5098f7c4da8a55a77` |
+
+## 32. Actual 9d compile findings и извлечённая f418 cold UI причина
+
+Run [43361737432](https://github.com/777genius/agent-teams-ai/actions/runs/43361737432)
+проверяет exact `9d364968ea1c9f74b6ec9636604b9e4e0064849e`.
+Windows x64 job `131676600657` и ARM64 `131676600672` завершились failure на шаге9:
+MSVC /WX отклонил TEST lambda `broker.cpp:334` — локальный `birth` скрывает global birth
+(C4459/C2220). Поэтому этот запуск ещё не проверил native service/vendor поведение.
+Узкое исправление `e911cd6220f783304af506ae3a273bdc40252016` меняет только три использования
+локального имени на `serviceBirth`; новый wire broker `50aaa950504f76d2c34fdfe71632f16238ca62a1`
+содержит то же механическое исправление поверх reviewed `0d90199e7a1c04f82e01d40bbd289c6cd675d93b`.
+Таблица §31 указывает уже этот окончательный draft; native semantics и deadlines не изменены.
+
+Linux ABI job `131676600784` завершился failure на шаге7 **до** native artifact/load proof:
+старые headers штатного glibc2.28 toolchain не определяют `SYS_pidfd_open`.
+Reviewed draft `841cda775caf1f7618dea59e89267d85c888d158` добавляет guarded x86-64 syscall number434
+и явный отказ x32; runtime capability probes, pidfd lifetime и guards остаются прежними.
+Основание: [официальная Linux v6.1 syscall table](https://github.com/torvalds/linux/blob/v6.1/arch/x86/entry/syscalls/syscall_64.tbl),
+exact blob `c84d12608cd2de9e45f6cc166169cf70ecbf7518`.
+Это не symbol-version hack, не расширение product tuple и не объявление ABI/native PASS.
+Linux pidfs job `131676600318` перешёл в in_progress (шаг5); его не отменяем и не перезапускаем.
+Локальный executor восстановлен; прежняя запись §31 об отсутствии compile относится к моменту
+первоначального source review. Новые фактические результаты приведены ниже и не заменяют native CI.
+
+Официальный f418 Linux artifact `14007732210` извлечён после восстановления executor:
+ZIP 1,867,526 bytes, SHA256 `32c0294d8c9406998a48a5cf033a0a01b292d28ad0f06e7510ae38923b916649`.
+В `cold-ui/fixture/desktop-backend-receipt.json` исходная ошибка — `one CDP listener: 2 !== 1`.
+Первый listener и matching Main найдены за27.5s; повторная ownership проверка отказалась до UI operations.
+Причина двух holders ещё проверяется; повторные строки, inherited descriptor или посторонний listener
+не считаются доказанными без соответствующего наблюдения. Original primary/neighbor/root cleanup — PASS;
+это не cold UI/Processes/packaged PASS и не основание ослаблять CDP ownership assertion.
+
+### Локальная проверка восстановленного следующего среза
+
+Pinned pnpm11.22.0 frozen install завершён; Host build, owned protocol typecheck,
+legacy-host scripts typecheck, existing protocol tests **45/45**, source-size guard и diff check — PASS.
+Первый protocol typecheck обнаружил четыре отсутствующие finite phase labels:
+`service-capture`, `service-query-lifetime`, `service-effect-retirement`, `expired-service-stop`.
+В прежнем `tools/owned-process-broker/nativeGateDiagnostics.ts` добавлены только четыре union literals:
+preimage `4f3e90d2b7643a7d94fdfe8c204a0f90e0bee71c` →
+draft `1717e066d2c2fe7e608ee22f308aa884556afa00`.
+Это обязательный **седьмой wire файл**; без него первоначальные шесть файлов не компилировались.
+Runtime handlers, native guards, data projection и budgets этим исправлением не меняются.
+
+Existing `qualifyLinuxProcessNative.ts` на Node24.21.0 с C draft `841cda775caf1f7618dea59e89267d85c888d158`
+прошёл genuine automatic v3 и forced warm v4: completed=true, cleaned=true.
+Original target Stop выполнен один раз, соседний service жив; changed session отказывается.
+Отдельный настоящий live worker после выхода thread leader наблюдается как unknown и не получает signal.
+V3 cold original read/Stop доказан в этом kernel; warm v4 в новом owner остаётся unknown/refused,
+как требует retained-handle lifetime. Это не Windows и не older-kernel cold proof.
+Локальный artifact имеет libc minimum2.33; glibc2.28 supply/load всё ещё ждёт исправленный CI gate.
+Manifest SHA256 `e08f7ea208b6bd1e25c850c6c2f2d2c60869053d9191e9c1fabec75145e178f5`,
+binary SHA256 `01f7cf27c7ae2615e7ef9c0e999f2066d24b3e5479cc2a915215ce257cdbe57e`.
+Windows MSVC compilation, typed scoped native scenario, actual vendor journey и cold UI/packaged
+по-прежнему pending: Linux и source checks не заменяют эти проверки.
+
+## 33. Следующая диагностика original CDP holders без изменения guard
+
+Exact 9d Linux artifact `14010465062` (ZIP SHA256
+`7a3704cc12750be90ba346ce0872e963118f1affe93e3385cbd0b647dce49148`)
+снова содержит `one CDP listener: 2 !== 1`, до UI operations. Native Node26/Host24/Electron
+и actual SDK register/Stop — PASS; cold UI и packaged не пройдены.
+Одна локальная bounded пустая TEST Electron44.10.1 репродукция дала один PID/FD;
+original exit0 и пустая captured group подтверждены. Она не воспроизводит CI defect и не является qualification.
+
+До следующего native push расширить **тот же исходный Linux lsof read**, не делать racy follow-up после assert:
+existing captured TEST PID group + selected CDP port + LISTEN filter, прежний timeout и maxBuffer.
+Machine fields дают PID, FD, family, inode/device если доступны, finite local endpoint/state.
+Парсер ограничивает retained diagnostic records16; unique PID count вычисляется по полному исходному output.
+Несколько descriptors одного PID сохраняют прежнюю семантику; два PID всегда отказываются, даже если inode совпал.
+Никакой socket/PID adoption, signal, retry или смены listener не добавляется; Darwin `-t` путь прежний.
+
+В existing `desktop-backend-observations.ts` private error→facts WeakMap связывает finite projection с той же
+исходной assertion, а existing `desktop-backend-smoke.ts` catch сохраняет только эти facts в TEST receipt.
+Нет argv, env, произвольного filename или raw lsof output в projection. Отсутствующий inode явно unknown,
+а socket device не объявляется доказанной стабильной identity. Исходная ошибка/cleanup остаются прежними.
+Один critical case в existing observations tests проверяет две holder identities и privacy; новой suite нет.
+Затем actual next Linux CI должен дать оригинальные descriptor facts. Только по ним выбирается исправление.
