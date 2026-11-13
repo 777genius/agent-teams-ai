@@ -377,3 +377,82 @@ journeys. Старые CI запуски не отменять; новый оп�
   refusal-only metadata binaries. Для следующего шага нужен тот же captured configuration у UI
   mutation и настоящего нового native launch. `NativeExtensionCoordinator`/`SkillCoordinator`
   остаются владельцами; новый scanner и прямое редактирование native installation metadata запрещены.
+
+### R7 — Codex `/cost`: сохранённый ответ на основе actual usage, 2026-11-13
+
+Исходный source cut: `9be8497995ad77db387c71d7f6d0c667b62e455a`.
+R6 review source опубликован в `8e4229bcdfc522a108542d5071860ad137ee844e`;
+actual native/Desktop acceptance остаётся открытым. Следующий срез сохраняет local
+conversation output для Codex без нового native command API.
+
+#### Источник данных и границы
+
+- Old [cost handler](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/commands/cost/cost.ts)
+  исполнялся локально до Codex turn и читал общий process cost tracker.
+  [Cost formatter](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/cost-tracker.ts)
+  показывал USD, API/wall duration, code changes и model usage. Однако
+  [Codex projector](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/codexNative/transcriptProjector.ts)
+  накапливал actual usage отдельно; old USD/нулевые счётчики не доказывают native billing.
+- D [notification mapper](https://github.com/agent-teams-ai/old-provider-implementations/blob/04e40ea05f93ca6fd1b73010d680f579ff14a9d0/packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/notification-mapper.ts)
+  принимает `tokenUsage.last` как snapshot; [driver output](https://github.com/agent-teams-ai/old-provider-implementations/blob/04e40ea05f93ca6fd1b73010d680f579ff14a9d0/packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-output.ts)
+  передаёт input/output tokens, без USD и cache breakdown. Новый отчёт не рассчитывает цену
+  по прайсу и не выводит subscription/overage состояние другого провайдера.
+- Host [readTeamActivity / summarizeTeamActivity](https://github.com/777genius/agent-teams-ai/blob/9be8497995ad77db387c71d7f6d0c667b62e455a/packages/legacy-agent-host/src/composition/readTeamActivity.ts)
+  уже связывает usage с original input, оставляет последнее значение для session/input,
+  сохраняет gaps и неизвестные значения. Общий Stats агрегирует retained member history;
+  для `/cost` тот же reader ограничивается одним captured Codex binding.
+- [TeamLaunchSummary](https://github.com/777genius/agent-teams-ai/blob/9be8497995ad77db387c71d7f6d0c667b62e455a/packages/legacy-agent-host/src/team-launch/contracts.ts)
+  имеет original `startedAtMs`. Только matching launch даёт «Elapsed since this launch»;
+  отсутствие времени остаётся unknown. Это не API duration и не полный lifetime native thread.
+
+#### Минимальная реализация
+
+1. Добавить только ready/current Codex lead capability `cost` в существующий safe catalog.
+   Claude продолжает использовать actual same-Query native handler. Иные команды и провайдеры
+   не получают новый маршрут. Composer, user/lead, attachments/cross-team ограничения сохраняются.
+2. Сохранить wire `message.send` и существующий `nativeCommand:true` как explicit raw-format
+   marker. Host самостоятельно определяет exact Codex `/cost`; строка renderer не даёт authority.
+   Новый явный `hostCommand: cost` хранится только в private original receipt, а не становится
+   универсальным control SPI или новым публичным catalog discriminator.
+3. После проверки original command UUID/fingerprint и actor/binding внутри existing Team command
+   fence capture reported stats, matching launch identity и bounded reply. Snapshot и private marker
+   сохраняются вместе в original prepared CommandReceipt до первого product effect; uncertain write
+   recovery сначала читает этот receipt и не заменяет сохранённый snapshot новыми stats. Caller
+   не передаёт текст ответа, usage, provider identity или ready proof; новый journal не нужен.
+4. Узкий helper в existing Team message owner пишет исходную command row и derived reply через
+   тот же canonical writer с deterministic original command/binding IDs и exact readback.
+   Для этого private Host command не создаётся native outbox, Runtime input, Session.submit,
+   model request или fake native UUID. Native Claude reply correlation не меняется.
+5. Ответ явно обозначает captured session и retained activity. Показывать только reported input
+   и output tokens, «Price not reported by Codex», matching launch elapsed и наличие gaps.
+   Нет данных — понятное «not reported», а не ноль. Partial retention не объявляется полным
+   session total; API duration, cache breakdown, code changes и цены не угадываются. Любое ограничение
+   snapshot явно оставляет partial/gap; elapsed фиксируется один раз как finite nonnegative now-start.
+6. Completed lookup и восстановление частично записанного ответа используют сохранённые
+   snapshot/IDs/bytes. Они не перечитывают более новый usage и не обращаются к native engine.
+   Новая явная `/cost` имеет новый UUID и новый snapshot. Старые receipts без private marker
+   сохраняют прежнюю трактовку; новая generation не получает чужой незавершённый ответ.
+7. Основные точки: `nativeSessionCommandAdmission.ts`, `projectRuntimeMember.ts`,
+   `RuntimeTeamCoordinator.ts`, `TeamHost.ts`, `team/contracts.ts`,
+   `executeTeamCommand.ts`, `commitTeamMessage.ts` и один узкий helper.
+   Не расширять frozen большие файлы: admission/formatting/recovery вынести в helper,
+   оставаясь внутри существующих owners. D и generic Session contract не менять.
+
+#### Проверка и несколько кругов review
+
+- Source-круг: old local output нужно сохранить, но old global Claude counters не дают права
+  показывать Codex USD; read-only Stats становится единственным источником чисел.
+- Architecture-круг: новый публичный command kind и renderer routing исключены. Private marker
+  отделяет Host-derived output от native local output; original Team ledger сохраняет recovery.
+- Независимый круг (Profiles): использовать existing prepared→terminal protocol для fault между
+  command/reply; replay сохраняет elapsed/bytes, bounds не превращают partial в total.
+- Две критичные интеграции в existing Host tests: reported/partial/unknown usage без double count
+  и отказ stale/foreign generation; fault между command/reply write с original replay после
+  изменения usage, неизменными bytes/IDs и нулевым native dispatch. Новая unit suite не нужна.
+- В existing actual Codex native/Desktop journey после успешного turn выбрать `/cost` и проверить
+  visible reply, original receipt, reported token snapshot, unknown USD и неизменное количество
+  native inputs/model requests. Reload и cold original lookup не создают повторного ответа.
+  Использовать существующий model server, Launch/Stop, source freeze и physical cleanup.
+- Source checks и implementation receipt не заменяют actual remote CI. После публикации
+  проверять exact head штатно; P03 gate закрывается только подтверждённым native/Desktop
+  результатом, без нового runner, blind rerun или ослабления existing assertions.

@@ -618,8 +618,15 @@ x64 job131576684914 прошёл Node26/Electron/HostNode24; ARM/Linux ещё н
 
 ### Следующий минимальный срез и порядок
 
-1. Сначала existing **unstaged TEST** broker квалифицирует actual captured Claude/Codex/OpenCodeV1/BunV2 launch/tool paths
-   на Windows x64/ARM64. Переиспользовать finite native model/oracle: реальный provider создаёт два services из одного tool task;
+1. Сначала existing **unstaged TEST** broker квалифицирует actual captured provider launch/tool paths
+   на существующих qualified Windows tuples. [Current TEST pins](https://github.com/777genius/agent-teams-ai/blob/646147879b71490e307f6cfc694276903a750874/scripts/e2e/opencode-native-windows-pins.ts)
+   ограничивают V1 x64 и V2 x64/ARM64, но не определяют весь product support. Current frontend
+   `OpenCodeRuntimeInstallerService.ts`/`packageSelection.ts` выбирают native arm64 download, однако
+   `openCodeWindowsNpmBinaryDiscovery.ts` принимает explicit exe без arch-filter, а `generation.ts`
+   не исключает V1 по platform. Поэтому установленный x64 V1 на ARM64 через штатную emulation остаётся
+   отдельным parity gate; отсутствие native arm64 package не отменяет working installed path.
+   Broker primitive по-прежнему проверяется на обеих архитектурах.
+   Переиспользовать finite native model/oracle: реальный provider создаёт два services из одного tool task;
    выбранный service имеет child до registration и после неё; Stop сохраняет provider, соседний service и foreign witness.
    Проверить handshake, stdio, cancellation, native exceptions/debug detection и root-first exit. Это bounded gate, не новая SDK обёртка.
 2. После vendor proof перенести проверенное admission ядро из TEST header в небольшой helper **того же broker**.
