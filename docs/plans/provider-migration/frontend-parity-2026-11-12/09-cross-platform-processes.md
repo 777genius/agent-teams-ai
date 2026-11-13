@@ -2637,3 +2637,58 @@ receipt field с `policyRequested`, чтобы recovery не повторял н
 Natural registered-scope retirement и full Main cold lifetime явно не повышены до готовых.
 **R2:** Root и Account — bounded plan PASS; MCP sync projection gap закрыт явной source closure выше.
 **R3:** review новой реализации и actual native/old-format proof pending.
+
+
+### 52.4. Pure intent без вложенного Runtime fence
+
+Source review обнаружил дополнительную границу: [RemotePending.registrationSource@be779](https://github.com/777genius/agent-teams-ai/blob/be779ca99a5626b1ec81d1b9c223245d86d0b1d6/packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts)
+сейчас вызывает общий input guard, а ordinary Claude передаёт туда
+[canAllocate@be779](https://github.com/777genius/agent-teams-ai/blob/be779ca99a5626b1ec81d1b9c223245d86d0b1d6/packages/legacy-agent-host/src/composition/captureMemberProviderAuthority.ts),
+который читает Runtime. При mint pure capture intent внутри Team fence такой путь недопустим.
+
+В существующий private `HostWindowsLaunch.port`/original `RemotePending` добавить optional
+`captureCurrent`. Без него новая service capture отказывается; прежние launch/cleanup остаются
+доступными. Ordinary Claude передаёт уже существующий Team-only `canCaptureRegisteredProcess`
+(factory использует `authority.isCurrent`, а не `authority.canAllocate`); только
+`registrationSource` использует этот guard вместе
+с original sealed/resumed/exit/schema2 checks. Launch, prepare, resume и stdin оставляют прежний
+full current. Pure selector не выбирает root по PID и не выполняет native dispatch.
+Outer MCP wrapper продолжает проверять captured Runtime input вне Team fence до/после await;
+native service admission также повторно проверяет исходную Main capability/source.
+Расширить один существующий critical fixture, чтобы pure prepare не входил в Runtime guard,
+а revoked Team capture и обычный input по-прежнему отказывались. Нового owner/authority cache нет.
+
+
+### 52.5 — узкое исправление фактического CI lint
+
+Native branch head `689dddb61cedf0649379975735bac162c87c2836`, existing
+Main CI job `131841865959`, завершился четырьмя blocking lint errors.
+Это source gate, не результат native execution; прежние provider receipts
+и незакрытая Windows Team integration не меняют статус.
+
+**Круг 1 — точные причины.** В
+`src/features/agent-backend/main/composition/DesktopBackendFeature.ts`
+(blob `341f6a7e9307620f4f7868b9b2ed6ae86f6a8ed8`) existing closeNativeOwners
+передаёт Promise.all union Promise<boolean> | true, запрещённый
+@typescript-eslint/await-thenable. В
+`src/features/agent-backend/main/infrastructure/CapturedHostClient.ts`
+(blob `a987c4ec992bd8da5a1a7557991b2eca4a4f0954`) три NativeRequest optional
+fields одновременно используют ? и | undefined, запрещённые
+sonarjs/no-redundant-optional. Main tsconfig и feature test tsconfig не
+включают exactOptionalPropertyTypes; это не Host package interface.
+
+**Круг 2 — минимальные изменения.** Только fallback отсутствующего
+nativeCustody заменить на Promise.resolve(true), сохранив тот же
+параллельный close, same results.some и hold. У timer, reply и admittedHint
+удалить избыточное | undefined, сохранив optional fields и все присваивания,
+deadlines, transport, control reserve и wire schemas. Ни blanket lint fix,
+ни подавления rule, ни новых unit tests. Проверить diff этих двух paths
+и отсутствие пересечения с §52 implementation.
+
+**Круг 3 — независимая проверка.** Root публикует этот plan до source.
+Peer сверяет unchanged runtime semantics и actual relevant tsconfigs.
+Следующий обычный exact-head lint/features и types должен подтвердить
+исправление; пока новых execution результатов нет. Отдельный старый
+qualification job `131794213135` падает на SchedulerStopBarrier nested
+assignment: это уже исправлено в parent d35 и переносится штатным parent
+sync, без второго source edit.

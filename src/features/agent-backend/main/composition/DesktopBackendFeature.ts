@@ -784,7 +784,7 @@ export class DesktopBackendFeature {
   }
 
   private async closeNativeOwners(): Promise<void> {
-    const outcomes = await Promise.all([...this.clients.values()].map(owner => owner.nativeCustody?.close() ?? true));
+    const outcomes = await Promise.all([...this.clients.values()].map(owner => owner.nativeCustody?.close() ?? Promise.resolve(true)));
     if (outcomes.some(value => !value)) throw new BackendRoutingError('hold');
   }
 }

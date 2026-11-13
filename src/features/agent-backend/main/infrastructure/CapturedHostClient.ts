@@ -84,9 +84,9 @@ interface NativeRequest {
   call: HostCustodyCall;
   deadline: number;
   reserved: boolean;
-  timer?: ReturnType<typeof setTimeout> | undefined;
-  reply?: HostCustodyReply | undefined;
-  admittedHint?: { hint: HostCustodyHint; sent: boolean } | undefined;
+  timer?: ReturnType<typeof setTimeout>;
+  reply?: HostCustodyReply;
+  admittedHint?: { hint: HostCustodyHint; sent: boolean };
 }
 
 interface PendingRequest {
