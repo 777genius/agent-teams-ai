@@ -952,6 +952,27 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
   config.general.appLocale = 'zh-TW';
   await writeFile(configPath, JSON.stringify(config, null, 2) + '\n');
 
+  // A real task from the disposable on-disk team board is needed to inspect
+  // the translated task-detail dialog/tab. No provider or teammate is started.
+  const taskId = '77';
+  await json(path.join(fixture.claudeRoot, 'tasks', fixture.teamName, `${taskId}.json`), {
+    id: taskId,
+    displayId: taskId,
+    subject: 'TEST zh-TW task detail',
+    status: 'pending',
+    owner: 'team-lead',
+    createdBy: 'user',
+    createdAt: new Date().toISOString(),
+    projectPath: fixture.projectPath,
+    description: 'Disposable UI localization test. Do not run a model.',
+    prompt: 'No execution requested.',
+    blocks: [],
+    blockedBy: [],
+    related: [],
+    comments: [],
+    historyEvents: [],
+  });
+
   const started = await startApp(fixture);
   cdp = await CdpClient.connect(started.renderer.webSocketDebuggerUrl);
   await initializeTeams(cdp, fixture, { afterRestart: true });
@@ -1014,8 +1035,36 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
   assert.deepEqual(enteredValue.split(',').map(name => name.trim()), ['github', 'sentry'],
     'Native controlled MCP input did not retain two literal server IDs');
   await captureScreenshot(cdp, fixture, 'zh-tw-member-mcp-strict-allowlist');
+
+  log('inspect native zh-TW task detail dialog and separate task tab');
+  await cdp.evaluate(
+    `window.__agentTeamsDevStore.getState().openGlobalTaskDetail(${JSON.stringify(fixture.teamName)}, ${JSON.stringify(taskId)})`
+  );
+  await cdp.waitFor(
+    "document.querySelector('[role=dialog] [data-task-detail-open-tab]')?.textContent?.trim() === '在獨立分頁中開啟'",
+    'localized task detail dialog and open-tab action', 60_000
+  );
+  await captureScreenshot(cdp, fixture, 'zh-tw-task-detail-dialog');
+  await cdp.click("document.querySelector('[role=dialog] [data-task-detail-open-tab]')");
+  await cdp.waitFor(
+    `(() => { const s = window.__agentTeamsDevStore.getState(); return !s.globalTaskDetail &&
+      s.paneLayout.panes.some(p => p.tabs.some(t => t.id === p.activeTabId &&
+        t.taskDetail && t.teamName === ${JSON.stringify(fixture.teamName)})) &&
+      document.body?.innerText?.includes('TEST zh-TW task detail'); })()`,
+    'localized task detail displayed in separate native task tab', 60_000
+  );
+  await captureScreenshot(cdp, fixture, 'zh-tw-task-detail-tab');
+  const taskDetailUiEvidence = {
+    taskId,
+    locale: await cdp.evaluate('document.documentElement.lang'),
+    dialogOpenTabAction: '在獨立分頁中開啟',
+    dialogScreenshot: 'teams-create-zh-tw-task-detail-dialog.png',
+    tabScreenshot: 'teams-create-zh-tw-task-detail-tab.png',
+    nativeTaskTabVisible: true,
+  };
   return {
     locale: await cdp.evaluate('document.documentElement.lang'),
+    taskDetailUiEvidence,
     strictAllowlistVisible: true,
     placeholder: label.placeholder,
     parsedServerNames: enteredValue.split(',').map(name => name.trim()),
