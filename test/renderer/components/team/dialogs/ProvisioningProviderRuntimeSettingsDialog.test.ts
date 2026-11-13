@@ -13,7 +13,7 @@ const storeState = vi.hoisted(() => ({
   appConfig: null,
   bootstrapCliStatus: vi.fn(),
   cliProviderStatusLoading: {},
-  cliStatus: { binaryPath: '/test-fixtures/runtime' },
+  cliStatus: { installed: true, binaryPath: '/test-fixtures/runtime' as string | null },
   cliStatusLoading: false,
   codexRuntimeStatus: null,
   codexRuntimeStatusLoading: false,
@@ -26,6 +26,7 @@ const storeState = vi.hoisted(() => ({
 }));
 
 let runtimeDialogProps: RuntimeDialogProps | null = null;
+const terminalRender = vi.hoisted(() => vi.fn());
 
 vi.mock('@renderer/store', () => ({
   useStore: (selector: (state: typeof storeState) => unknown) => selector(storeState),
@@ -39,7 +40,10 @@ vi.mock('@renderer/components/runtime/ProviderRuntimeSettingsDialog', () => ({
 }));
 
 vi.mock('@renderer/components/terminal/TerminalModal', () => ({
-  TerminalModal: () => null,
+  TerminalModal: () => {
+    terminalRender();
+    return null;
+  },
 }));
 
 function deferred() {
@@ -59,6 +63,8 @@ describe('ProvisioningProviderRuntimeSettingsDialog connection refresh', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     runtimeDialogProps = null;
+    storeState.cliStatus = { installed: true, binaryPath: '/test-fixtures/runtime' };
+    storeState.cliStatusLoading = false;
     storeState.invalidateCliStatus.mockResolvedValue(undefined);
     storeState.fetchCliProviderStatus.mockResolvedValue(true);
     host = document.createElement('div');
@@ -77,7 +83,8 @@ describe('ProvisioningProviderRuntimeSettingsDialog connection refresh', () => {
 
   async function renderDialog(
     providerId: 'anthropic' | 'codex' | 'opencode',
-    onProviderRuntimeChanged = vi.fn()
+    onProviderRuntimeChanged = vi.fn(),
+    disabled = false
   ) {
     const { ProvisioningProviderRuntimeSettingsDialog } =
       await import('@renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog');
@@ -88,6 +95,7 @@ describe('ProvisioningProviderRuntimeSettingsDialog connection refresh', () => {
           onOpenProviderIdChange: vi.fn(),
           providers: [{ providerId }] as RuntimeDialogProps['providers'],
           projectPath: '/test-fixtures/project',
+          disabled,
           onProviderRuntimeChanged,
         })
       );
@@ -99,6 +107,7 @@ describe('ProvisioningProviderRuntimeSettingsDialog connection refresh', () => {
   it.each(['anthropic', 'codex', 'opencode'] as const)(
     'waits for main invalidation before checking the replacement %s connection',
     async (providerId) => {
+      storeState.cliStatus = { installed: true, binaryPath: null };
       const invalidation = deferred();
       const replacementStatus = deferred();
       storeState.invalidateCliStatus.mockReturnValue(invalidation.promise);
@@ -107,6 +116,12 @@ describe('ProvisioningProviderRuntimeSettingsDialog connection refresh', () => {
         return true;
       });
       const onProviderRuntimeChanged = await renderDialog(providerId);
+      expect(runtimeDialogProps).toMatchObject({
+        open: true,
+        initialProviderId: providerId,
+        projectPath: '/test-fixtures/project',
+        disabled: false,
+      });
 
       const refresh = runtimeDialogProps!.onRefreshProvider!(providerId, 'provider_change');
       expect(storeState.invalidateCliStatus).toHaveBeenCalledOnce();
@@ -128,6 +143,23 @@ describe('ProvisioningProviderRuntimeSettingsDialog connection refresh', () => {
 
       replacementStatus.resolve();
       await expect(refresh).resolves.toBe(true);
+      expect(onProviderRuntimeChanged).toHaveBeenCalledExactlyOnceWith(providerId);
+
+      await renderDialog(providerId, onProviderRuntimeChanged, true);
+      expect(runtimeDialogProps!.disabled).toBe(true);
+      storeState.cliStatusLoading = true;
+      await renderDialog(providerId, onProviderRuntimeChanged);
+      expect(runtimeDialogProps!.disabled).toBe(true);
+      storeState.cliStatusLoading = false;
+      storeState.cliStatus = { installed: false, binaryPath: null };
+      await renderDialog(providerId, onProviderRuntimeChanged);
+      expect(runtimeDialogProps!.disabled).toBe(true);
+      storeState.cliStatus = { installed: true, binaryPath: null };
+      await renderDialog(providerId, onProviderRuntimeChanged);
+      expect(runtimeDialogProps!.disabled).toBe(false);
+      await act(async () => runtimeDialogProps!.onRequestLogin!(providerId));
+      expect(terminalRender).not.toHaveBeenCalled();
+      expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
       expect(onProviderRuntimeChanged).toHaveBeenCalledExactlyOnceWith(providerId);
     }
   );
