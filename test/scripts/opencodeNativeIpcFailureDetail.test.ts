@@ -9,10 +9,10 @@ import { compileFunction, constants, runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
 
+import { readReadinessProbeReceipts } from '../../scripts/e2e/opencode-diagnostics/readiness-probe-receipt';
 import { projectIpcCausalFailure, safeIpcFailureDetail } from '../../scripts/e2e/opencode-native-desktop-host';
 import { electronTeamPort, nativeCommandMatch } from '../../scripts/e2e/opencode-native-team-port';
 import { serializedFunction } from '../../scripts/e2e/release-updater/serialized-function.mts';
-import { readReadinessProbeReceipts } from '../../scripts/e2e/opencode-diagnostics/readiness-probe-receipt';
 import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { createOpenCodeBridgeClientIdentity, createOpenCodeBridgeHandshakeFailure, OPEN_CODE_HANDSHAKE_MESSAGE_FAMILIES } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { formatOpenCodeStopCausalSuffix, projectOpenCodeStateChangingFailure, rememberOpenCodeHandshakeFailure } from '../../src/main/services/team/opencode/bridge/OpenCodeStateChangingCausalFailure';
