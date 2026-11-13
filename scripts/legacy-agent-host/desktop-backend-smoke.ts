@@ -743,7 +743,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     }
     await verifyDesktopNativeFreeze(nativeInputs, evidence);
     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
-    console.log(JSON.stringify({ status: evidence.status, receipt: receiptPath }));
+    console.log(JSON.stringify({ status: evidence.status, receipt: receiptPath,
+      ...(evidence.status !== 'PASS' && evidence.failureSource
+        ? { failureSource: evidence.failureSource } : {}),
+    }));
     if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
     if (controlledProcessMode) assert.equal(evidence.status, 'PASS', 'controlled process cold UI proof incomplete; original evidence retained');
     if (scheduleUiMode) assert.equal(evidence.status, 'PASS', 'original schedule UI proof incomplete; inspect its retained receipt');
