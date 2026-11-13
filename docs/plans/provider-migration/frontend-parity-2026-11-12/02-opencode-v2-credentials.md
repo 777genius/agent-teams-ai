@@ -530,3 +530,31 @@ Native journey включает обычную публикацию runtime sour
 Независимое source review Profiles и root — PASS. Сборка Host, test types, 17 credential tests,
 fast lint и source cap — PASS; совместная root-проверка credentials + async source selection: 37/37 PASS.
 Это source/controlled proof; новый actual native Host/Desktop результат должен дать штатный CI.
+
+## 2026-11-13: native directory with an implicit same-ID integration
+
+The allowed native 2.1.4 credential scenario on source `96bb78f` failed before
+any credential/model effect: the configured `TEST-local` provider was present,
+but Host returned `authMethods: []`. A separate read-only query through its
+original owned OpenCode metadata process confirmed that `/api/provider` omits
+`integrationID` for this configured provider while `/api/integration` declares
+the exact same `TEST-local` ID with a plain `key` method. The diagnostic closed
+the original owner and confirmed the original PID absent.
+
+Bounded correction, for independent review before implementation: preserve an
+explicit native integration ID; only when that field is absent, resolve the
+provider's exact ID against the same owned directory's integrations. Apply the
+same selection to passive directory projection, explicit key operations and
+captured session credentials. An explicit missing/different link must not fall
+back to another integration. No heuristic name matching, fabricated auth method,
+new credential store, or automatic key retry is introduced. The existing native
+plain-key check, original intent, account binding, byte limits and cleanup remain
+authoritative. Expected production delta: three selection expressions, under 20
+lines across two existing adapters.
+
+Acceptance uses the original failing native credential scenario: rejected key,
+explicit correction, source revision, lost ACK, cold lookup, later saved-key
+probe, retained unknown intent and preserved foreign auth. Its result is separate
+from emulator and Desktop evidence. The native model-probe scenario also needs
+its strict expected catalog to include the exact safe variant IDs added by P05;
+the observed low/medium/high and high sets must be compared exactly.

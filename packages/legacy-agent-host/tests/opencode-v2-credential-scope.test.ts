@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 
 import { OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
+import { captureOpenCodeV2SessionCredential } from '../dist/adapters/providers/OpenCodeV2SessionCredential.js';
 
 function fixture() {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-credential-scope-')));
@@ -91,4 +92,36 @@ test('captured directories, symlinks and revoked owner cannot change the credent
     assert.throws(() => pending.publish(), { code: 'held' }, mode);
     assert.equal(readFileSync(f.file, 'utf8'), '{}');
   }
+});
+
+
+test('an explicit missing native integration never redirects a captured key to a same-ID integration', async t => {
+  const f = fixture(); t.after(f.cleanup);
+  f.write({ 'TEST-provider': { type: 'api', key: 'TEST-captured-private-key' } });
+  const credential = captureOpenCodeV2SessionCredential({
+    environment: { HOME: f.home, XDG_DATA_HOME: f.data }, accountBinding: 'TEST-account',
+  }, 'TEST-provider', () => true);
+  let directoryReads = 0;
+  const owner = {
+    readCatalog: async () => ({ provider: { id: 'TEST-provider', name: 'TEST-provider',
+      activation: 'enabled', integrationId: 'TEST-explicit-missing' }, defaultModel: null, models: [] }),
+    readDirectory: async () => { directoryReads++; return {
+      providers: [], models: [], defaultModel: null,
+      integrations: [{ id: 'TEST-provider', name: 'TEST-provider', plainKey: true }],
+    }; },
+  } as unknown as Parameters<typeof credential.prepare>[1];
+  const requests: { method: string; path: string }[] = [];
+  await assert.rejects(credential.prepare({
+    endpoint: 'http://127.0.0.1:19332', directory: f.root, version: '2.1.4',
+    deadline: Date.now() + 5000, readPassword: () => 'TEST-owned-native-password',
+    fetchImpl: async input => {
+      assert.ok(input instanceof Request);
+      requests.push({ method: input.method, path: new URL(input.url).pathname });
+      return new Response('{}', { status: 404, headers: { 'content-type': 'application/json' } });
+    },
+  }, owner));
+  assert.equal(directoryReads, 0, 'an explicit link cannot be replaced by implicit ID matching');
+  assert.deepEqual(requests, [{ method: 'GET', path: '/api/integration/TEST-explicit-missing' }]);
+  assert.deepEqual(JSON.parse(readFileSync(f.file, 'utf8')),
+    { 'TEST-provider': { type: 'api', key: 'TEST-captured-private-key' } });
 });

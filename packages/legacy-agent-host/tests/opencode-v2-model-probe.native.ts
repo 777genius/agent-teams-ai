@@ -365,6 +365,7 @@ test(
         modelId, displayName: modelId, contextTokens: modelId.endsWith('-B') ? 64000 : 200000,
         outputTokens: modelId.endsWith('-B') ? 96 : 128,
         free: null, declaredInputModalities: ['text'],
+        variants: modelId.endsWith('-B') ? ['high'] : ['low', 'medium', 'high'],
       })));
       assert.equal(catalog.providers[0]!.connected, false, 'read-only inventory does not certify credentials');
       assert.equal(catalog.providers[0]!.configuredAuthless, true, 'captured loopback route requires a separate model probe');
