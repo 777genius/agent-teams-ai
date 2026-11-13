@@ -2149,3 +2149,64 @@ strict equality/isFile guards, deadlines, first-input admission и original clea
 Это TEST capture correction; runtime PASS для новых bytes ещё нет. Existing exact-head A gate должен
 дойти до ordinary native turn и исходных HANDLE observations в обоих режимах, без нового oracle/runner/таймера.
 Текущие ARM/Linux jobs продолжают штатно; новую проверку получит следующий необходимый source commit.
+
+## 47. POSIX verify → exec: подтверждённый разрыв и оставшееся доказательство
+
+Thread `PRRT_kwDORVTEtM622qol` остаётся открытым по actual source
+`235b01b489a4f428b72c7667b0c89061c82cab1b`. Это source audit; нового native запуска,
+исправления production или положительного safety outcome здесь нет.
+
+### Что именно подтверждено
+
+- `CapturedProcess.ts` (`b5c545e518ec91e7efa784ee2e494dfa0038644e`) проверяет pathname/SHA,
+  затем делает дополнительные directory reads и вызывает `spawn(request.command, request.args, ...)`.
+  Исходный executable descriptor до exec не удерживается. Поздний `captureRoot/readRootExecutable`
+  не исключает исполнение подменённого файла до этой проверки.
+- `RuntimeSourceNativeVersion.ts` (`0ec09130bf10bca87b64a13efc4aab5494b13d30`) использует тот же
+  CapturedProcess для `--version`; исправление P06 async hashing относится к publication admission.
+  Его descriptor закрывается в `verifyRuntimeSourceCandidate` и не является launch capability.
+- Exact [Node24.21 libuv process.c](https://github.com/nodejs/node/blob/v24.21.0/deps/uv/src/unix/process.c)
+  передаёт pathname в Linux `execvp` и Darwin `posix_spawn`. Повторный hash непосредственно перед
+  этим вызовом уменьшает окно, но не закрывает его. Профиль сейчас не ограничивает executable только ELF/Mach-O.
+
+### Исключённые короткие решения
+
+1. Не вводить blanket `mode & 022 === 0` или доверие всему GID текущего пользователя.
+   [Homebrew installer](https://github.com/Homebrew/install/blob/main/install.sh) штатно задаёт
+   `g+rwx`, на macOS обычно группе `admin`, на Linux основной группе пользователя.
+   Членство других пользователей не следует из owner UID/GID. Это потребовало бы новой trust policy
+   и могло бы сломать поддерживаемую installed/custom установку.
+2. Mode alone не доказывает macOS ACL; см. [Apple file-system ACL semantics](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemDetails/FileSystemDetails.html).
+   Sticky ancestors и writable executable требуют отдельных доводов; world-writable `/tmp` нельзя
+   просто принять или запретить без проверки исходного protected child.
+3. Linux fd execution не является автоматически переносимым на macOS. В current
+   [XNU devfs_fdesc_support.c](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/miscfs/devfs/devfs_fdesc_support.c)
+   `fdesc_open` обслуживает специальное дублирование fd, а `fdesc_read` возвращает ENOTSUP;
+   обычный `exec("/dev/fd/N")` не считать equivalent of Linux `/proc/self/fd/N`.
+   Удержание inode также само по себе не запрещает in-place запись в него.
+4. Не копировать одиночный executable в новый cache и не считать это прозрачной заменой:
+   argv0, interpreter scripts, executable-relative assets/dylibs и reported provenance должны сохраниться.
+   Postspawn pathname/hash, advisory lock или успешный `--version` не заменяют pre-execution proof.
+
+### Следующий узкий proof, до выбора product implementation
+
+- В существующем POSIX native TEST seam связать original captured file с реально выбранным kernel image,
+  сохраняя original process/session/group custody. Контролируемая замена pathname между verification и
+  allocation должна дать **ноль инструкций TEST replacement**, а не только поздний отказ/cleanup.
+  Отдельно различить rename replacement и in-place mutation; не выдавать одно за покрытие другого.
+- Linux candidate: запуск из исходного проверенного descriptor, если доказаны byte stability и сохранение
+  original argv/env/cwd/executable identity/relative resources. Никакого silent fallback к pathname.
+- Darwin candidate: существующий private native adapter и
+  [POSIX_SPAWN_START_SUSPENDED](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/posix_spawnattr_getflags.3.html)
+  позволяют рассмотреть проверку до user-space. Сам suspended state недостаточен:
+  нужны exact kernel-selected file/image, исходные birth/parent/session и проверенные bytes до resume.
+  Пока штатный original-image proof и совместимость с уже разрешёнными custom executables не установлены,
+  новый launch API/порт/административные entitlements не проектировать как готовое решение.
+- В выбранном existing gate сохранить native/installed/custom пути, все текущие аргументы и environment,
+  sibling resources, provenance, cancellation и исходное cleanup. Не менять executable identity contract,
+  не добавлять daemon, новый owner/journal или увеличенный deadline. Новый native результат нужен именно
+  для новых bytes; текущий source audit не разрешает production activation.
+
+**R1:** найдено конкретное pathname окно, отдельно от P06 publication fd/hash и postspawn custody.
+**R2:** исключены permission/group shortcuts, непереносимый fd alias и незаметная смена executable location.
+Решение остаётся pending proof; до его получения thread и этот native acceptance пункт не закрываются.
