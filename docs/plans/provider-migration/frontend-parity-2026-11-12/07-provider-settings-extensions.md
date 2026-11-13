@@ -1797,3 +1797,87 @@ head. Текущие CI не отменяются/не повторяются; u
 **R2:** выбран same-object passive join с прежними limits; native delivery
 не приписывается событию socket.write. **R3:** peer/source/execution pending;
 этот append не меняет source и не квалифицирует platform/SDK flow.
+
+
+## Review 27 — connect the existing native auth actions to every current frontend entry
+
+### R1 — actual route and missing wiring
+
+The P05 settings availability fixes deliberately did not claim that Login/Logout
+worked. A follow-up source audit found two missing consumers of the already
+implemented captured-Claude flow. At current Banner blob
+`c511a89d2b1af822a327221a5e9b523060d927a0`, generic Connect/Disconnect still
+set a legacy terminal request and require `cliStatus.binaryPath`.
+The actual Settings → Providers page renders this Banner. Provisioning's existing
+settings wrapper, blob `a8d39bdd1086ca8106393d2c4bdd3cfb5013da75`, likewise
+routes its dialog's Login request directly to that terminal.
+
+The working Section implementation is the reference:
+`CliStatusSection.tsx` blob `ce0a93347e54e2dcbb6480ef7ba171b371f16f9f`
+already uses `useProviderAuthenticationActions`
+(`e675e12f10451cfe240fb817a828dc3424e61728`) and passes
+`nativeClaudeAuthAction` into the same `ProviderRuntimeSettingsDialog`.
+The hook starts the original Main setup-form capture before awaiting logout
+confirmation, fences context changes, carries the original project/token and
+never falls back to a legacy terminal after a native capture failure. The
+existing dialog/header/panel then owns the actual captured authentication flow.
+
+Three Codex dashboard controls (copy login link, device-code login and
+generate/open browser link) call the existing Codex account hook or open its
+returned URL. They nevertheless share the legacy binary-path predicate.
+OpenCode's existing Atlas connection action opens the existing settings dialog
+and has the same unnecessary predicate. Neither route launches that legacy command.
+
+### R2 — narrow wiring; no new authentication owner
+
+1. Reuse the existing authentication hook in Banner and provisioning. Only a
+   provider with the existing `nativeAuthManagement === 'claude'` marker routes
+   to the captured-Claude action; ordinary legacy providers keep their terminal
+   route. Store/pass the typed original native action to the existing dialog,
+   and clear it when that dialog closes. Preserve the original provider/project,
+   confirmation, context fence, error display and native cleanup owner.
+2. In Banner, captured-Claude Connect/Disconnect uses confirmed installed Host
+   availability with the existing busy/global-loading gates. A legacy provider
+   still needs its legacy command path. No generic permission to run arbitrary
+   commands is introduced. The three native Codex controls and settings-only
+   Atlas action use installed/busy/loading availability plus their original
+   Codex operation state; they no longer require an unrelated legacy path.
+   Their visibility, native readiness/authentication and target admission remain
+   owned by the current account/status APIs.
+3. Reuse the existing `ProviderAuthenticationTerminal` for Banner's legacy
+   provider terminal. Preserve Banner's existing by-provider-ID fallback in that
+   shared helper using the existing `getProviderTerminalCommandById`.
+   Keep the real command-path guard, args/env, once-only close/recheck behavior
+   and current translated presentation. This removes the duplicated terminal
+   projection/body and allows the Banner to stay below its frozen2835-line cap.
+   The separate ordinary single-runtime terminal remains unchanged.
+4. Provisioning retains its current terminal body and settings refresh behavior.
+   The new captured-Claude action uses the existing dialog/header/panel. There
+   is no new browser launcher, API/IPC method, token store, native query, timer,
+   auth state machine or generic provider abstraction.
+
+Exact source boundary: the two wrappers above plus
+`src/renderer/components/runtime/ProviderAuthenticationTerminal.tsx`
+(preimage `160f40e95b252bf4a64e69db78c69013d846ca56`).
+Do not modify the shared authentication hook, Main/Host ownership, provider status
+projection, product flags, generated artifacts or source-size baseline.
+
+### R3 — focused existing coverage and actual acceptance
+
+Extend existing `test/renderer/components/cli/CliStatusVisibility.test.ts`
+from `34c7e0ec09c3fa5d1178e1de5027055071dc9acb` and
+`test/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.test.ts`
+from `deb9aac5af8538033589d9cb52650583cdb44ab5`.
+Keep the P05/P06 cases byte-preserved. Exercise actual captured-Claude Connect
+(and confirmed Disconnect) with installed/null-path status, original setup-form
+project/token, no legacy terminal, capture-error refusal and close reset.
+The existing legacy login/close test remains. Extend the existing Codex reconnect
+case with null-path status and real click/disabled-state assertions. The
+provisioning case must show its original request reaches the same captured
+action without premature status refresh or an authentication-success claim.
+
+Run the existing focused Renderer tests, canonical types, lint and source-size
+guard when execution is available. These route checks do not simulate completed
+vendor OAuth and cannot replace the existing native/account/Desktop acceptance.
+No new test suite, login retry, CI job/matrix, timeout or model input is added.
+Root publishes this amendment after independent review and before source edits.
