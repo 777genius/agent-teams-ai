@@ -600,3 +600,8 @@ Source review нашло два дополнительных окна; исхо�
 - Дополнить existing real Json delete case delayed write/read ordering и отказом
   stale mustExist update; сохранить failed-persistence test. Original token guards
   остаются нужны для provider admission, serialization их не заменяет.
+
+- Последний failure-проход: metadata mutations требуют читаемый исходный JSON;
+  read-only UI сохраняет прежний graceful fallback, но parse/I/O error при save/delete
+  не трактуется как пустой store и не вызывает onCommitted. Existing corrupt-JSON
+  case проверяет сохранение bytes/отсутствие callback, concurrent-save case — все5 записей.
