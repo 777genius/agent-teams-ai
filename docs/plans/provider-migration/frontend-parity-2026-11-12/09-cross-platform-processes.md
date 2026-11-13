@@ -1972,3 +1972,50 @@ Self-review: §33/35 факты не переименованы в PASS; raw pat
 - Existing48-member launch/graceful close, byte-pressure, EOF/old epoch, lost-ACK/no-replay и §34 order/readiness cases остаются обязательными. Build/types/actual subprocess и Windows §38/40 выполняются на окончательном source; прежние A30/§42 source review не подменяют эти результаты.
 
 Independent plan review: root и Profiles — PASS; новые source/execution results пока отсутствуют.
+
+
+## §41 follow-up — ограничить output во время original donor gate
+
+**Найдено при root review qualification merge, до новой execution claim.**
+В опубликованном §41 workflow `a84f5236f33261d12cc0dea3450a40da02a34e87`
+`spawnSync` направляет stdout/stderr прямо в fd; проверка файла≤8MiB
+выполняется только после выхода. Она не ограничивает writer во время работы.
+Предыдущий source review это пропустил. Genuine corpus/old→old/current-D
+acceptance по-прежнему требуют actual CI, исправление ниже их не подменяет.
+
+### Круг1 — ровно existing workflow seam
+
+1. В `Qualify genuine old checkpoint and strict current D refusal before
+   Desktop Resume` заменить только direct-file stdio на
+   `['ignore', 'pipe', 'pipe']` и `maxBuffer: 8 * 1024 * 1024`.
+   Путь Node, original argv, cwd, environment pins, old1d/current source
+   equality, dependency/archive hashes и сам native test не меняются.
+2. После original `spawnSync` взять его фактические stdout/stderr Buffers,
+   определить captured byte count и сохранить не более8MiB combined bytes
+   по прежнему artifact path, **до** assertion по overflow/error/status.
+   Консоль получает только эти bounded bytes. Так original partial output
+   сохраняется и при native/child failure; post-exit stat больше не выдаётся
+   за действующий output limit. Это тот же простой bounded-buffer приём,
+   который уже используется qualification13 scheduled-native prerequisite.
+   Не добавлять streaming collector, новый helper/framework или второй child.
+3. После сохранения partial bytes требовать captured combined size≤8MiB,
+   отсутствие `run.error` и status0; только затем разбирать единственный
+   actual receipt и проверять прежние corpus, no-allocation, original history,
+   source freeze и `cleanupConfirmed` assertions. Частичный/truncated log,
+   maxBuffer termination, отсутствие receipt/child close не доказывают cleanup.
+   Не синтезировать INCOMPLETE receipt, release или подтверждение остановки.
+
+### Круг2 — бюджеты и falsification
+
+Existing native test180s, provider45s и job45min остаются прежними.
+В этом узком correction не вводить новый внешний timeout и не увеличивать
+существующие бюджеты: дополнительный kill ровно на180s мог бы оборвать
+уже предусмотренный original finally/Host close. При output-limit error
+gate остаётся failed/cleanup-unqualified; никакого native rerun или signal
+по заново найденному PID. Сохранённый log не заменяет original custody proof.
+
+Source peer проверяет точный diff одного workflow step: никакой потери
+qualification13 policy/Node guards при последующем merge, bounded allocation
+и запись partial log до error assertion. Использовать существующую CI
+проверку workflow и следующий уже необходимый native-resume row; не добавлять
+новую suite/runner/model input. Исполнение correction пока pending.
