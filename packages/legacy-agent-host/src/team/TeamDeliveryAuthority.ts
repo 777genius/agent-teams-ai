@@ -32,8 +32,13 @@ export function createTeamDeliveryAuthority(options: {
   function runtimeAccess(
     principalId: string,
     binding: RuntimeMemberBinding,
-    action: 'read' | 'control'
+    action: 'read' | 'control' | 'provider'
   ): boolean {
+    if (action === 'provider') {
+      return options.store.fenced(() =>
+        memberAuthorized(binding, 'admit') && runtimeAccess(principalId, binding, 'control')
+      );
+    }
     return options.store.fenced(() => {
       try {
         const grant = options.authorize(principalId, 'read');
