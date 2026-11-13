@@ -1,5 +1,7 @@
 import { performance } from 'node:perf_hooks';
 
+import { ServiceRefusal } from '../owned-process/codec.js';
+
 import { serviceSource } from '../owned-process/retainedServiceContracts.js';
 import type { WindowsServiceCapture, WindowsServiceIntent, WindowsServiceOutcome } from '../owned-process/retainedServiceContracts.js';
 import type { ProcessTeamOwnerContext } from './TeamProcessCommands.js';
@@ -31,6 +33,7 @@ const refuse = (code: 'hold' | 'conflict' | 'forbidden' | 'invalid'): never => {
   throw new Error('process:' + code);
 };
 const unknown: WindowsServiceOutcome = Object.freeze({ state: 'unknown' });
+const ERROR_NOT_FOUND = 1168; // Windows WinError.h: the original capture's keyed record is missing.
 
 /** Native awaits always leave the Team fence; re-entry validates the same stored command. */
 export function createWindowsTeamProcessCommands(context: WindowsProcessJournal) {
@@ -121,6 +124,13 @@ export function createWindowsTeamProcessCommands(context: WindowsProcessJournal)
       if (intent.command.operation !== 'capture') return refuse('hold');
       if (result.state === 'not-dispatched' && !receipt.capture && !registration.policyRequested) {
         receipt.state = { phase: 'refused', native: 'not-requested' };
+        context.persist(receipt);
+        options.invalidate();
+        return frozenReceipt(receipt);
+      }
+      if (result.state === 'refused' && result.reason === ServiceRefusal.missing &&
+          result.nativeCode === ERROR_NOT_FOUND && !receipt.capture && !registration.policyRequested) {
+        receipt.state = { phase: 'refused', native: 'refused' };
         context.persist(receipt);
         options.invalidate();
         return frozenReceipt(receipt);
