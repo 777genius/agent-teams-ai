@@ -214,7 +214,7 @@ export async function verifyCapturedDesktopBinding(options: {
     assert.deepEqual(connections.bindings.map(value => object(object(value).handle).handleId).sort(),
       [fixture.handleId, handleId].sort(), 'exact original fixture and created Team handles');
     for (const retained of original) {
-      const matches = connections.bindings.filter(value =>
+      const matches: unknown[] = connections.bindings.filter(value =>
         object(object(value).handle).handleId === object(retained.handle).handleId);
       assert.equal(matches.length, 1); assert.deepEqual(matches[0], retained);
     }

@@ -1379,3 +1379,22 @@ budgets, original binding/receipt/input equality, counts, cold lookup
 Scripts types/targeted lint и existing ActivityItem tests проверяют
 контракт; физическая CDP geometry, original report screenshot и весь
 Codex cold Resume остаются pending existing Desktop CI.
+
+## 29. Original scripts type gate: preserve inferred environment and retained binding types
+
+### Round 1 — observed compiler failures
+
+At exact native PR head `12d54316c69326fd3d405459ebf77062d818324f`, Sentry run43457244611 Linux jobs131994498951 and131994499714 stop in the existing scripts typecheck before native execution. Both report TS2339 on `env.HOME` in candidate-runtime-paths.test.ts:225 and TS7022 on `matches` in desktop-captured-app.ts:217. The first job's complete original log is `743c269fa9af35f8ebc1ee364fa861dc07707dc3`; the ABI job's is `0cfbc573533e1a4c421a8894996a1e77a52ad902`. The adjacent Windows x64/ARM64 owned-native jobs completed successfully; that does not qualify the Linux jobs.
+
+The existing extracted desktopBackendEnvironment explicitly returns Record<string,string>. Spreading that indexed map into a literal with PATH does not retain an inferred HOME property for the test's unchanged assertion. The saved-Team cold readback's local filtered array also needs an explicit type under the actual scripts compiler. These are observed type-gate defects, not a reason to change runtime environment or binding acceptance.
+
+### Round 2 — two existing annotations only
+
+- In `scripts/legacy-agent-host/candidate-runtime-paths.test.ts`, annotate the existing `env` literal as `Record<string, string>`. Keep its exact spread, PATH value, HOME assertion, original spawn calls and all sentinels unchanged. Parent/qualification preimage is `75a5a445feb8685e219bd1eaf49906f6bff20502`; native preimage is `4bd2371fd5ba76b48ede3756d029b73cb5181a64`. Preserve the native branch's separate pinned-Node setup byte-for-byte.
+- In `scripts/legacy-agent-host/desktop-captured-app.ts`, preimage `91f5dda668a42e7beb0fdb03636cf666b4f2903b` on all three working branches, annotate the existing `matches` filtered result as `unknown[]`. Keep the original binding predicate, exact-one assertion, full deep comparison, handles and cold startup unchanged.
+
+These annotations do not emit runtime code, suppress an error, weaken an assertion or introduce a cast. No production change, extra test, suite, action, read, timer, budget, dependency or source-cap change belongs to this correction.
+
+### Round 3 — peer review and original validation
+
+Root and an independent peer check the two exact annotations and branch-specific preimages before source publication. The existing scripts typecheck and original affected CI lanes must pass on the new coherent head. The executor is currently unavailable; source review is not a compiler/native PASS. Publish the reviewed correction normally without cancelling or rerunning the still-active native matrix.
