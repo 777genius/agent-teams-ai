@@ -936,6 +936,78 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
   return { scheduleLabel, scheduleId: scheduled.id, createdAndDeleted: true };
 }
 
+/**
+ * Real Electron zh-TW acceptance after the English create/launch/schedules
+ * scenarios. Use a fresh startup with a persisted locale setting, then exercise
+ * the actual member-row MCP selector, input, and screenshot through CDP.
+ * Never invoke a model or relax the normal create-page assertions.
+ */
+async function exerciseTraditionalChineseMcpUi(fixture, log) {
+  log('restart isolated native Electron in zh-TW for member MCP UI qualification');
+  await cleanup({ ...fixture, root: null });
+  const configPath = path.join(fixture.claudeRoot, 'agent-teams-config.json');
+  const config = JSON.parse(await readFile(configPath, 'utf8'));
+  assert(config.general && typeof config.general === 'object',
+    'Persistent native app config missing general settings');
+  config.general.appLocale = 'zh-TW';
+  await writeFile(configPath, JSON.stringify(config, null, 2) + '\n');
+
+  const started = await startApp(fixture);
+  cdp = await CdpClient.connect(started.renderer.webSocketDebuggerUrl);
+  await initializeTeams(cdp, fixture, { afterRestart: true });
+  await cdp.waitFor("document.documentElement.lang === 'zh-TW'",
+    'persisted Traditional Chinese locale in real renderer', 45_000);
+
+  await cdp.evaluate('window.__agentTeamsDevStore.getState().openTeamsCreationPage()');
+  await cdp.waitFor("document.querySelector('[data-testid=create-team-page] #team-name')",
+    'native zh-TW create-team page', 45_000);
+  const add = "document.querySelector('[data-testid=create-team-page] button[aria-label=\"新增成員\"]')";
+  await cdp.click(add);
+  const row = '[data-testid=create-team-page] [data-role=member-row]';
+  await cdp.waitFor(`document.querySelector(${JSON.stringify(row)})`,
+    'member row created through translated UI');
+  const mcpToggle = `Array.from(document.querySelectorAll(${JSON.stringify(row + ' button')}))
+    .find(button => button.getAttribute('aria-label')?.includes('MCP')
+      && !button.disabled && button.getBoundingClientRect().width > 0)`;
+  await cdp.click(mcpToggle);
+
+  const mode = `${row} [id$="-mcp-mode"]`;
+  await cdp.click(`document.querySelector(${JSON.stringify(mode)})`);
+  const strict = "Array.from(document.querySelectorAll('[role=option]'))" +
+    ".find(option => option.textContent?.includes('嚴格的許可名單'))";
+  await cdp.click(strict);
+
+  const servers = `${row} input[id$="-mcp-servers"]`;
+  await cdp.waitFor(
+    `document.querySelector(${JSON.stringify(servers)})?.placeholder === 'github, sentry'`,
+    'literal MCP server IDs and ASCII separator in rendered placeholder'
+  );
+  const label = await cdp.evaluate(`(() => {
+    const input = document.querySelector(${JSON.stringify(servers)});
+    const associated = input && document.querySelector('label[for="' + input.id + '"]');
+    return { label: associated?.textContent?.trim() ?? null,
+      placeholder: input?.placeholder ?? null };
+  })()`);
+  assert.equal(label.label, '伺服器名稱', 'Traditional Chinese MCP label not rendered');
+  assert.equal(label.placeholder, 'github, sentry', 'MCP IDs localized into invalid names');
+
+  await cdp.fill(servers, 'github, sentry');
+  await cdp.click("document.querySelector('[data-testid=create-team-page] #team-name')");
+  await cdp.waitFor(
+    `document.querySelector(${JSON.stringify(servers)})?.value === 'github, sentry'`,
+    'controlled strict allowlist input retains two actual server IDs'
+  );
+  await captureScreenshot(cdp, fixture, 'zh-tw-member-mcp-strict-allowlist');
+  return {
+    locale: await cdp.evaluate('document.documentElement.lang'),
+    strictAllowlistVisible: true,
+    placeholder: label.placeholder,
+    parsedServerNames: label.placeholder.split(',').map(name => name.trim()),
+    screenshot: 'teams-create-zh-tw-member-mcp-strict-allowlist.png',
+    controlEditedThroughNativeCdp: true,
+  };
+}
+
 async function main() {
   const fixture = await seedFixture();
   const unique = `create-page-e2e-${randomUUID().slice(0, 8)}`;
@@ -1671,10 +1743,12 @@ async function main() {
     await captureScreenshot(cdp, fixture, 'organization-created');
 
     const scheduleUiEvidence = await exerciseScheduleUx(cdp, fixture, log, started.inspectorWebSocketDebuggerUrl);
+    const zhTwMcpUiEvidence = await exerciseTraditionalChineseMcpUi(fixture, log);
 
     const results = {
       success: true,
       scheduleUiEvidence,
+      zhTwMcpUiEvidence,
       unique,
       retainedAcrossBack: true,
       retainedAcrossTabSwitch: true,
