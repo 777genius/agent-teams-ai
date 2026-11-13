@@ -76,14 +76,11 @@ function nativeV2Profile() {
   };
 }
 
-// The existing V1 capture stays POSIX-only even on Windows.
+// V1 and V2 fixtures use this Host's native OS; generation rules remain distinct.
 function v1Profile() {
   return {
     ...v2Profile(), nativeGeneration: undefined, protocolRevision: '1.19.4' as const,
-    nativeSessionId: undefined, cwd: '/TEST-only-opencode-v2',
-    environment: Object.fromEntries(['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME']
-      .map(key => [key, '/TEST-only-opencode-v2/' + key])),
-    executable: { path: '/TEST-only-opencode-v2/native-engine', sha256: 'a'.repeat(64) },
+    nativeSessionId: undefined,
   };
 }
 
@@ -726,10 +723,10 @@ test('V2 profile is explicit and cannot inherit V1 plugin, auto-permission, argv
   assert.equal(runtimeProfileSchema.safeParse({ members: [
     { ...v1Profile(),
       environment: { ...v1Profile().environment, OPENCODE_BIN_PATH: '/TEST-only-V1-legacy-path' } },
-  ] }).success, true, 'unchanged V1 default remains valid');
+  ] }).success, true, 'V1 generation and environment rules remain valid with current-OS paths');
 });
 
-test('native V2 captures canonical OS paths without widening legacy V1 paths', () => {
+test('native profiles use their own OS while V2 keeps canonical path checks', () => {
   const base = v2Profile();
   const windows = process.platform === 'win32';
   const winSep = String.fromCharCode(92);
@@ -756,14 +753,11 @@ test('native V2 captures canonical OS paths without widening legacy V1 paths', (
     'V2 must reject noncanonical native namespace paths');
   const legacy = { ...selected, nativeGeneration: undefined, protocolRevision: '1.19.4',
     nativeSessionId: undefined };
-  if (windows) {
-    assert.equal(runtimeProfileSchema.safeParse({ members: [legacy] }).success, false,
-      'do not expand legacy V1 path policy for Windows');
-    const v1Posix = v1Profile();
-    assert.equal(runtimeProfileSchema.safeParse({ members: [v1Posix] }).success, true);
-  } else {
-    assert.equal(runtimeProfileSchema.safeParse({ members: [legacy] }).success, true);
-  }
+  assert.equal(runtimeProfileSchema.safeParse({ members: [legacy] }).success, true,
+    'V1 admits this Host native path before executable and custody qualification');
+  const foreignRoot = windows ? '/TEST-owned-v1' : 'C:' + winSep + 'TEST-owned-v1';
+  assert.equal(runtimeProfileSchema.safeParse({ members: [{ ...legacy, cwd: foreignRoot }] }).success, false,
+    'V1 cannot borrow the other OS path form');
 });
 
 test('corrected private V2 driver accepts canonical Windows TEST profile after captured owner proof', async () => {

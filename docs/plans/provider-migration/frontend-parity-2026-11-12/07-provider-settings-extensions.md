@@ -354,6 +354,7 @@ P07 native config опубликован `6a2bb4b88bffbe001e16ff7fd27430f330b435
    prefixes, включая `agent-teams_extra` и `mcp__agent_teams__x`, а не только exact raw `team`/`agent-teams`;
    иначе выбранный внешний сервер мог бы получить автоматическое разрешение Team tool в manual режиме.
    `appOnly` даёт ровно controller без внешних конфигураций и разрешений.
+   Внешних servers максимум 255: вместе с единственным Team controller это native inventory budget 256.
 5. **Проверять настоящий native inventory.** `OpenCodeV2EmbeddedMemberProvider` сверяет точный набор имён
    всех ожидаемых connected servers и прежний original Team catalog receipt. Тот же source-current guard
    применяется до allocation/dispatch; изменение источника не заменяет конфигурацию running session.
@@ -365,6 +366,17 @@ P07 native config опубликован `6a2bb4b88bffbe001e16ff7fd27430f330b435
    выбранный server, appOnly не обнаруживает и не вызывает его, Team tools работают в обоих случаях.
    Реальный native lifecycle подтверждает cleanup. Existing Desktop member-policy controls затем сохраняют
    выбранную policy и выполняют тот же один native tool; API setup не выдаётся за UI acceptance.
+
+**R9 native gate после повторного review.** Один дополнительный шаг существующего Linux embedded job
+в `.github/workflows/opencode-v2-stage1-preflight.yml`, без новой matrix. Новый
+`packages/legacy-agent-host/tests/opencode-v2-captured-mcp.native.ts` переиспользует pinned Node/Bun/engine,
+`buildNativeV1Host`, `startHost` и production `captureRuntimeMcp`. Реальный stdio server
+`fixtures/native-opencode-v2-mcp/server.mjs` имеет один tool и исходную process identity.
+Два запуска членов: strictAllowlist + manual once (external effect и Team reply) и appOnly (только Team reply);
+lead recipe остаётся неоткрытым. Всего пять localhost inference requests. Проверить исходные receipts,
+точный native tool result, физическое завершение исходного MCP child, cold read/lookup без нового процесса
+или inference. CI требует отдельный полный receipt и сохраняет INCOMPLETE при ошибке/отмене; это ещё не
+Desktop member-policy acceptance и не vendor inference. Прежний 11-request native Host сценарий не меняется.
 
 **R9 проверка упрощения.** Остаются прежние catalog, launch artifact, member creation и permissions owners.
 Нет нового MCP registry, protocol version, plugin injection, middleware, renderer API или provider daemon.
@@ -445,6 +457,104 @@ ref и исправляется в существующем owner, а не об�
 **Независимый review:** уточнено различие same-namespace и нового runtime capture, а также происхождение
 plugin body witness из original installed inventory. Эти уточнения внесены до implementation.
 
+## R11 — Desktop acceptance выбранного MCP и appOnly
+
+**Точный оставшийся gap R9 / 07-G3.** Native Linux receipt ещё не проверяет сохранение policy
+настоящими controls. [M1] и [M2] на donor `4a0e062` совпадают с текущими файлами:
+`inheritLead`, `inheritScopes`, `strictAllowlist`, `appOnly`, scopes и allowlist должны сохраниться.
+В `captureRuntimeMcp.ts` lead использует общий catalog независимо от member policy; поэтому этот
+сценарий проверяет настоящих teammates, а не назначает policy единственному lead.
+
+1. **Один existing Launch variant, один запуск.** Добавить TEST flag к `native-launch-ui`,
+   несовместимый с schedule/commands/extensions variants. Переиспользовать pinned V2 fixture
+   и штатные seed/profile owners: один lead без external catalog, два teammates с одним исходным
+   TEST catalog. Catalog содержит `TEST.selected` и `TEST.excluded`; исходные recipes и namespace
+   фиксируются до spawn. Initial prompt оставить пустым через обычное поле Launch, чтобы lead
+   не создавал inference. Metadata/probe requests учитывать отдельно от пяти ordinary model requests.
+2. **Сохранить policy через UI.** В `LaunchTeamDialog` открыть MCP controls конкретных member rows.
+   Первому выбрать `strictAllowlist`, user=true/project=false/local=false и вписать `TEST.selected`;
+   второму выбрать `appOnly`. Проверить фактические значения controls, выполнить один Launch после
+   штатного preflight, затем прочитать original captured roster/settings и сопоставить точным member IDs.
+   Не применять policy через CDP API, JSON editor или правку durable files после запуска.
+3. **Проверить native поведение.** Переиспользовать finite oracle и stdio actor из
+   `tests/fixtures/native-opencode-v2-mcp/`: три запроса у selected member, два у appOnly.
+   Через обычный Composer отправить каждому один исходный input. Selected inventory содержит только
+   `TEST_selected_write_marker`; appOnly не содержит ни одного внешнего tool. Для manual permission
+   нажать original Allow once, проверив отсутствие эффекта до ответа. Реальный actor создаёт один
+   nonce-bound файл, его instance ID приходит в native result. Оба участника посылают реальный Team MCP
+   reply; exact command/input/outbox receipts и видимый текст должны совпасть.
+4. **Сохранить original scope и cleanup.** Oracle получает original captured principal каждого
+   teammate через узкий callback; нынешние native-gate defaults не меняются. Actor на Darwin использует
+   existing read-only `processFacts` для original birth identity; Linux startTicks proof сохраняется.
+   Это наблюдение не даёт права сигналить процесс. Host остаётся единственным custody owner.
+   `TEST.excluded` никогда не стартует, selected actor стартует и выполняет tool ровно один раз.
+   После UI Stop все три Runtime sessions sealed/released, исходный actor физически отсутствует.
+   Повторно открыть Launch и проверить сохранённые policy/scopes/allowlist, затем закрыть без запуска;
+   original receipts и число model/effect events не меняются.
+5. **Подключить существующий CI.** Один follow-up step в уже существующем
+   `native-mixed-v2-create-launch-ui` job использует его Node/Bun/engine/custody preparation;
+   отдельной matrix, runner, production API или новой protocol version нет. TEST helper содержит
+   только этот journey; общие single-member Resume/11-request assertions не ослабляются.
+   Source closure и receipt verifier требуют обе policy, пять requests, один once approval/effect,
+   два Team replies, original input IDs и cleanup. Отсутствующий блок остаётся INCOMPLETE.
+6. **Проверить перед закрытием.** Focused scripts/Host types, затем actual Desktop на exact HEAD.
+   Не добавлять mapper unit suites, не увеличивать timers и не считать source review выполненным e2e.
+   Найденный production mismatch сначала исправить в существующем capture/permission owner.
+   Existing native R9 и остальные MCP modes остаются отдельными уже определёнными gates.
+
+**Review 1 — parity.** Сохранены donor controls и per-member semantics, actual UI save связывается с
+native tool/effect. **Review 2 — упрощение.** Два teammates в одном Launch заменяют два relaunch;
+existing actor/oracle, Composer и Stop переиспользуются. Lead не получает external source и не
+маскирует appOnly. Пункт 07-G3 остаётся открытым до успешного Desktop receipt.
+
+## R12 — исправить два выявленных V2 Desktop lifecycle несоответствия
+
+Actual e2af run `43338183806`: Resume `131599600965` показывает единственную TEST-model,
+но disabled с `Provider management outcome unavailable`; менять selector или обходить ready gate нельзя.
+В `ProviderManagementCoordinator.catalog` status (`includeModels: true`) и directory (`{}`)
+выбирают разные native catalog modes одного profile; concurrent request может закрыть child предыдущего
+read. Active Quit `131599601058` отдельно наблюдает два metadata children после публикации global/project
+sources, тогда как старый TEST witness требовал один. Source index обоих artifacts содержит эти два scopes.
+
+1. **Согласовать reads у existing owner.** Последовательно выполнять весь V2 catalog участок
+   matches → close/create → read для одного original profile, сохраняя независимость разных profiles.
+   Завершить старый read до замены его child; следующий request повторно проверяет exact profile/revision
+   и authority. Ошибка не отравляет последующие reads; seal/revocation остаётся немедленным и запрещает
+   queued allocation. Это bounded in-memory sequencing существующего owner, без второго pool,
+   scheduler, journal или повторного запроса после неизвестного результата.
+2. **Сохранить deadlines.** Deadline фиксируется при приёме request, ожидание предыдущего read входит
+   в него; native read получает только оставшийся срок. Истёкший queued request не стартует child.
+   Не увеличивать Host/UI/CI timers и не возвращать stale catalog как fresh.
+3. **Сначала подтвердить происхождение metadata children.** Два опубликованных global/project
+   sources ещё не доказывают наличие двух независимых native owners: descriptor использует один
+   management profile. Сопоставить оба original spawn/capture с catalog/model-probe ownership и
+   проверить результат после исправления concurrent reads. Если второй child — неосвобождённый
+   прежний owner, исправить его lifecycle; увеличивать expected count для принятия утечки нельзя.
+   Только подтверждённый набор original birth identities допускается в hot/cold cleanup witness.
+   Прежний mixed/passive fixture с одним owner сохраняет exact-one proof. Подготовленный TEST
+   metadata cut удерживается до этой проверки; production catalog correction от него независим.
+4. **Одна необходимая regression.** Расширить existing management recovery test overlap status/directory:
+   завершение первого read предшествует close, оба результата относятся к исходному profile;
+   rejected predecessor не запрещает следующий допустимый read, seal не выделяет новый child.
+   Actual Desktop Resume/Quit продолжаются штатным CI; отсутствующий native результат остаётся открытым.
+
+**Review 3 — ownership.** Root отклонил вывод «два source records → два процесса» без PID/owner
+correlation. Catalog correction прошёл Host build, test types и4 focused Node24 checks, включая
+seal во время awaited old-owner close. Actual Desktop E2E остаётся открытым.
+
+**Review 4 — original source/child correlation.** TEST witness сначала выполняет существующий
+read-only global loadModels(null), сохраняет единственный original child с birth identity и
+реальный derived profileId из current RuntimeSourceIndex. После обычного project catalog/preflight
+сохраняется тот же global child и ровно один новый project child; оба связаны с exact source revision.
+Нет открытого Runtime, held probe или изменения прежних closed session records. Cold cleanup
+проверяет каждый исходный child, а mixed/passive сохраняют прежний exact-one сценарий.
+
+Root review отдельно исправил повторный baseline после Page.reload: обычный renderer reload
+должен сохранить оба original owners, а новая global capture допустима только после настоящей
+cold Resume границы. Platform independently проверил source/child и passive cleanup guards.
+Эти TEST изменения прошли source review; fresh types, focused existing lifecycle checks и
+actual UI/native results для нового cut ещё необходимы. Expected count сам по себе не proof.
+
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts
 [M3]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/extensions/ExtensionStoreView.tsx
@@ -464,3 +574,36 @@ plugin body witness из original installed inventory. Эти уточнения
 [R6]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/OpenCodeManagedPreferences.ts
 [R7]: https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/opencode/OpenCodeManagedDefaultSelection.ts
 [S7]: https://github.com/777genius/agent-teams-ai/blob/6a2bb4b88bffbe001e16ff7fd27430f330b43517/src/features/runtime-provider-management/main/infrastructure/FileManagedProviderPreferences.ts
+
+#### R10 повторный review связанного native/Desktop cut
+
+Связанный сценарий использует прежние Install, Create/Review/Apply, Edit, Composer, Launch, Stop
+и Uninstall. TEST inference проверяет фактический expanded body, аргументы и original Team reply;
+source body не подставляется в product prompt. Cold startup перед первым Launch сохраняет четыре
+исходных management receipts, а новый Query после Uninstall сохраняет user/project skills и уже
+не предлагает удалённый plugin.
+
+При независимом review сохранены прежние Resume checks и немедленное владение каждым новым
+ChildProcess у caller. Обе cold границы получают явный secondCleanup. До первого Launch
+проверяется отсутствие открытой Runtime session/input и inference; штатный краткий metadata
+process не объявляется нарушением. После первого Quit группа должна быть физически пуста,
+Host отсутствовать, writer lock освобождён до второго spawn.
+
+Source review также исправил ошибку hash helper: namespace — объект, поэтому применяется
+существующий canonical runtimeDigest, а не byte-only digest. Удалены дублирующие механизмы;
+общий cold callback вынесен в существующий desktop-captured-app, уменьшая общий runner.
+Source closure включает новые helpers и ранее добавленные Host cost/V2 MCP adapters.
+Compile, настоящий UI/native запуск и exact-head CI остаются необходимыми gates.
+
+#### R11 source review connected acceptance
+
+Connected TEST cut использует existing native-launch-ui и один follow-up шаг existing mixed-V2 job.
+Native oracle принимает пять ordinary requests и отдельные bounded no-tool probes; policy settings,
+исходный actor birth/ancestor, единственный external effect и original Team replies связаны с receipts.
+После Stop проверяются три released Runtime, отсутствие original actor и сохранённые source owners.
+
+Root review нашёл гонку повторного preflight при readback. Сценарий теперь дожидается readiness
+через существующий control, закрывает dialog, затем проверяет completed/cancelled original probes
+с resourceHeld=false и неизменность всех закрытых Runtime, прежде чем фиксировать count/PASS.
+Account independently reviewed final UI/oracle/cleanup. Types и actual native/Desktop run для этого
+cut ещё не выполнены: unavailable local executor, CI remains required. Новых unit suites нет.

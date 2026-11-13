@@ -20,6 +20,7 @@ import { contextCompactionScript } from '../native-claude-compaction/model.ts';
 import type { CompactionScenario } from '../native-claude-compaction/model.ts';
 import { nativeScheduleScript, type NativeScheduleScenario } from '../native-claude-schedules/model.ts';
 import { nativeCommandUiScript, type NativeCommandUiScenario } from '../native-claude-commands/model.ts';
+import { nativeExtensionUiScript, type NativeExtensionUiScenario } from '../native-claude-extensions/model.ts';
 import { nativeMemberCreationScript } from './member-creation.ts';
 import type { NativeMemberCreationScenario } from './member-creation.ts';
 import { ordinarySubagentScript } from '../native-claude-subagent/model.ts';
@@ -154,6 +155,7 @@ export async function startNativeTeamModel(
     contextCompaction?: CompactionScenario;
     nativeSchedules?: NativeScheduleScenario;
     nativeCommands?: NativeCommandUiScenario;
+    nativeExtensions?: NativeExtensionUiScenario;
     nativeMemberCreation?: NativeMemberCreationScenario;
     requireVisibleReply?: boolean;
     /** TEST Quit proof: hold one real first-turn inference until its client is closed. */
@@ -184,9 +186,13 @@ export async function startNativeTeamModel(
   const schedules = options.nativeSchedules
     ? nativeScheduleScript(options.nativeSchedules, nativeToolReceipt)
     : undefined;
-  assert.ok(!(options.nativeCommands && options.nativeSchedules), 'one finite native UI scenario');
+  assert.ok([options.nativeCommands, options.nativeSchedules, options.nativeExtensions].filter(Boolean).length <= 1,
+    'one finite native UI scenario');
   const commands = options.nativeCommands
     ? nativeCommandUiScript(options.nativeCommands, nativeToolReceipt)
+    : undefined;
+  const extensions = options.nativeExtensions
+    ? nativeExtensionUiScript(options.nativeExtensions, nativeToolReceipt)
     : undefined;
   const ordinary = options.ordinarySubagents
     ? ordinarySubagentScript(
@@ -259,6 +265,11 @@ export async function startNativeTeamModel(
       const commandBlock = commands?.respond(body, tools);
       if (commandBlock) {
         emitResponse(response, ++sequence, commandBlock, String(body.model));
+        return;
+      }
+      const extensionBlock = extensions?.respond(body, tools);
+      if (extensionBlock) {
+        emitResponse(response, ++sequence, extensionBlock, String(body.model));
         return;
       }
       if (compaction) {
@@ -652,6 +663,7 @@ export async function startNativeTeamModel(
     compactionRequests: compaction?.requests ?? [],
     ...(schedules ? { scheduleRequests: schedules.requests } : {}),
     ...(commands ? { commandRequests: commands.requests } : {}),
+    ...(extensions ? { extensionRequests: extensions.requests } : {}),
     get compactionTokenRequests() {
       return compactionTokenRequests;
     },

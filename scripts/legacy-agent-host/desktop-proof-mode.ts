@@ -5,6 +5,8 @@ import assert from 'node:assert/strict';
 import { nativeProcessReadbackAction } from './desktop-native-process-readback.ts';
 import { desktopScheduleScenario } from './desktop-schedule-fixture.ts';
 import { desktopNativeCommandScenario } from './desktop-native-commands-fixture.ts';
+import { desktopNativeExtensionScenario } from './desktop-native-extension-consumption-fixture.ts';
+import { startDesktopCapturedMcpModel } from './desktop-opencode-v2-mcp-fixture.ts';
 import { startProcessModel } from './desktop-native-process-model.ts';
 import { readProcessServices } from './desktop-native-process-fixture.ts';
 import { startDesktopMixedModels } from './desktop-mixed-native-fixture.ts';
@@ -70,6 +72,17 @@ export async function prepareDesktopProofMode(
   if (commandsUiMode) {
     assert.equal(mode, 'native-launch-ui', 'commands proof extends the existing Launch mode');
     assert.equal(scheduleUiMode, false, 'one finite UI variant');
+  }
+  const extensionsUiMode = process.env.LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI === '1';
+  if (extensionsUiMode) {
+    assert.equal(mode, 'native-launch-ui', 'extension consumption extends the original Launch mode');
+    assert.ok(!scheduleUiMode && !commandsUiMode, 'one finite UI variant');
+  }
+  const capturedMcpUiMode = process.env.LEGACY_DESKTOP_OPENCODE_MCP_UI === '1';
+  if (capturedMcpUiMode) {
+    assert.equal(mode, 'native-launch-ui');
+    assert.equal(process.env.LEGACY_DESKTOP_OPENCODE_GENERATION, 'v2');
+    assert.ok(!scheduleUiMode && !commandsUiMode && !extensionsUiMode, 'one finite UI variant');
   }
   const processUiMode = mode === 'native-process-ui';
   const controlledProcessMode = mode === 'process-cold-ui';
@@ -155,7 +168,7 @@ export async function prepareDesktopProofMode(
       'native-conversation-ui',
       'attachment scenario extends existing native conversation only'
     );
-  const relaunchMode = mode === 'native-relaunch-ui';
+  const relaunchMode = mode === 'native-relaunch-ui' || extensionsUiMode;
   const resumeMode = mode === 'native-resume-ui';
   const resumeProvider = process.env.LEGACY_DESKTOP_RESUME_PROVIDER;
   assert.ok(resumeProvider === undefined || resumeProvider === '' || resumeProvider === 'codex' || resumeProvider === 'opencode', 'explicit supported Resume provider');
@@ -189,7 +202,7 @@ export async function prepareDesktopProofMode(
   assert.ok(openCodeGeneration === undefined || openCodeGeneration === '' || openCodeGeneration === 'v2',
     'explicit known Desktop OpenCode generation');
   const openCodeLifecycleMode = openCodeGeneration === 'v2' &&
-    ['native-resume-ui', 'native-stop-ui', 'native-quit-ui', 'native-quit-readback-ui', 'native-review-ui', 'native-review-readback-ui', 'native-conversation-ui', 'native-readback-ui'].includes(mode);
+    (capturedMcpUiMode || ['native-resume-ui', 'native-stop-ui', 'native-quit-ui', 'native-quit-readback-ui', 'native-review-ui', 'native-review-readback-ui', 'native-conversation-ui', 'native-readback-ui'].includes(mode));
   const openCodeReviewMode = openCodeGeneration === 'v2' && nativeReviewMode;
   if (openCodeReviewMode) assert.equal(nativeReviewContinuationMode, false);
   if (openCodeLifecycleMode && conversationMode) assert.ok(chatAttachments && !groupChats,
@@ -271,7 +284,8 @@ export async function prepareDesktopProofMode(
       return member.principalId;
     },
   }) : undefined;
-  const openCodeLifecycleModel = openCodeLifecycleMode && !openCodeReviewMode && !readbackMode ? await startOpenCodeModel({
+  const capturedMcpModel = capturedMcpUiMode ? await startDesktopCapturedMcpModel(fixtureRoot) : undefined;
+  const openCodeLifecycleModel = openCodeLifecycleMode && !capturedMcpUiMode && !openCodeReviewMode && !readbackMode ? await startOpenCodeModel({
     nativeGeneration: 'v2', memberName: 'alice', uiGeneratedMessageIds: true,
     nativeMessageImage: conversationMode && chatAttachments,
     captureHistoryMarkers: resumeMode, allowModelProbes: resumeMode,
@@ -387,6 +401,7 @@ export async function prepareDesktopProofMode(
                     allowModelProbes: true,
                     ...(scheduleUiMode ? { nativeSchedules: desktopScheduleScenario(fixtureRoot) } : {}),
                     ...(commandsUiMode ? { nativeCommands: desktopNativeCommandScenario(fixtureRoot) } : {}),
+                    ...(extensionsUiMode ? { nativeExtensions: desktopNativeExtensionScenario(fixtureRoot) } : {}),
                     ...(nativeMemberCreation ? { nativeMemberCreation } : {}),
                     ...(resumeMode
                       ? { uiGeneratedMessageIds: true, captureHistoryMarkers: true }
@@ -460,6 +475,9 @@ export async function prepareDesktopProofMode(
   return {
     mixedMode,
     mixedModels,
+    extensionsUiMode,
+    capturedMcpUiMode,
+    capturedMcpModel,
     processUiMode,
     controlledProcessMode,
     processReadbackMode,

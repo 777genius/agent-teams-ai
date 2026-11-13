@@ -7,7 +7,7 @@ import { digest } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { captureReadiness } from './desktop-launch-ui-smoke.ts';
 import { readNativeReviewSeed } from './desktop-native-review-fixture.ts';
-import { readDesktopNativeHostProcesses, readDesktopNativeStopSessions, separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fixture.ts';
+import { readDesktopNativeHostProcesses, readDesktopNativeStopSessions, separateDesktopOpenCodeRuntimeChildren, captureDesktopOpenCodeGlobalMetadata, captureDesktopOpenCodeProjectMetadata } from './desktop-native-stop-fixture.ts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import { createDesktopReviewHunkControls, readDesktopReviewDecisions } from './desktop-review-hunk-controls.ts';
 import { V2_REVIEW_BOOTSTRAP, V2_REVIEW_SUBJECT, V2_REVIEW_TOOL_PREFIX } from './desktop-opencode-v2-review-model.ts';
@@ -58,6 +58,8 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
   };
   const team = join(fixture.root, 'hoststore/teams/test-desktop-backend');
   const owner = () => json(join(team, '.host-owner/state.json'));
+  const globalMetadata = await captureDesktopOpenCodeGlobalMetadata(cdp, fixture, options.group, options.assertOwnedRenderer);
+  proof.originalGlobalMetadata = globalMetadata;
   await ui.observeInput(); await ui.clickSidebar(fixture.uiSeed.subject);
   await ui.click('button', 'original saved V2 Team Launch', 'Launch'); options.observeOwnedHost();
   const optional = record(await ui.waitRead(`(() => {
@@ -84,7 +86,8 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
     'original captured V2 readiness permits Launch', 120_000);
   assert.ok(model.probes.length > 0 && model.probes.every(row => row.tools === 0));
   assert.equal(model.observations.length, 0, 'preflight never dispatches the business prompt');
-  const metadata = readDesktopNativeHostProcesses(fixture, options.group); assert.equal(metadata.children.length, 1);
+  const selected = await captureDesktopOpenCodeProjectMetadata(fixture, options.group, globalMetadata);
+  const metadata = selected.captured; proof.metadataSources = selected.metadataSources;
   proof.originalMetadataBeforeLaunch = metadata;
   await captureReadiness(cdp, fixture.handleId, proof, options.assertOwnedRenderer, 'before-original-submit');
   await ui.scrollTo('[role="dialog"] button', 'original V2 Launch team ready', 'Launch team');
@@ -146,7 +149,7 @@ export async function runDesktopOpenCodeV2ReviewUiSmoke(cdp: UiCdpPort, options:
   await poll(async () => readDesktopNativeHostProcesses(fixture, options.group), state => !state.children.some(row => row.pid === children[0]!.pid), 'original runtime physically absent');
   separateDesktopOpenCodeRuntimeChildren(metadata, readDesktopNativeHostProcesses(fixture, options.group), 0);
   Object.assign(proof, { taskId, capture, runtime: stopped[0], originalRuntimeInput, events,
-    stop: { children, metadata: metadata.children[0], releasedBeforeReview: true } });
+    stop: { children, metadata: metadata.children, releasedBeforeReview: true } });
   const review = createDesktopReviewHunkControls(cdp, { taskId, subject: V2_REVIEW_SUBJECT,
     fileLabel: 'native-review.ts', assertOwnedRenderer: options.assertOwnedRenderer, step });
   await review.openChanges(); await review.hoverLine('const first = 2;');

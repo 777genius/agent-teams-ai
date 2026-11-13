@@ -82,6 +82,8 @@ test(
     try {
       const ready = await server.start();
       assert.equal(ready.endpoint, endpoint);
+      assert.equal(server.isOriginalLive(ready), true);
+      assert.equal(server.isOriginalLive({ ...ready }), false, 'only the nonce-checked original ready object is accepted');
       assert.deepEqual(await server.start(), ready, 'startup is not repeated');
       const unauthorized = await fetch(`${ready.endpoint}/api/session`);
       assert.equal(unauthorized.status, 401);
@@ -114,6 +116,7 @@ test(
       assert.equal((await stat(path.join(folder('data'), 'engine.sqlite'))).isFile(), true);
       cleanup = await server.stopOwned();
       assert.equal(cleanup, true);
+      assert.equal(server.isOriginalLive(ready), false, 'Stop revokes the original read-only lifetime capture');
       assert.equal(await server.confirmStopped(), true);
       assert.equal(await server.readNativeCustody(new AbortController().signal), undefined);
       assert.throws(() => process.kill(-ready.pid, 0), { code: 'ESRCH' });

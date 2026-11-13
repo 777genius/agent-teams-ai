@@ -12,7 +12,8 @@ import { formatTeamMessage } from '../dist/team/formatTeamMessage.js';
 import { deliveryIdentity } from '../dist/team/DeliveryRecovery.js';
 import { deliveryFingerprint } from '../dist/runtime/identity.js';
 import { publishNativeCommandOutput } from '../dist/composition/publishNativeCommandOutput.js';
-import { assertNativeSessionCommand } from '../dist/composition/nativeSessionCommandAdmission.js';
+import { assertNativeSessionCommand, nativeSessionCommandAuthorized } from '../dist/composition/nativeSessionCommandAdmission.js';
+import { captureHostCostCommand } from '../dist/team/hostCostCommand.js';
 
 import type { FilesystemTeamOwnerOptions } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import type { TeamCommand } from '../dist/team/contracts.js';
@@ -160,9 +161,11 @@ test('native local output uses original input and the existing reply ledger acro
     team: { definition: { binding: f.options.binding }, owner: f.owner, connection: f.human },
     provider: { isReady: () => true, sessionCommands: () => [{ name: 'cost', description: 'TEST cost' }] } } as unknown as MemberEntry;
   assert.doesNotThrow(() => assertNativeSessionCommand({ team: entry.team, entries: [entry], runtime, isCurrent: () => true }, command));
-  assert.throws(() => assertNativeSessionCommand({ team: entry.team,
-    entries: [{ ...entry, profile: { ...entry.profile, provider: 'codex' } } as MemberEntry], runtime, isCurrent: () => true }, command),
-    (error) => error instanceof TeamOwnerError && error.code === 'invalid');
+  const codex = { ...entry, profile: { ...entry.profile, provider: 'codex' } } as MemberEntry;
+  assert.doesNotThrow(() => assertNativeSessionCommand({ team: entry.team,
+    entries: [codex], runtime, isCurrent: () => true }, command));
+  assert.equal(nativeSessionCommandAuthorized(codex, intent), false,
+    'a retained native outbox cannot be reclassified as a local Codex report');
   const userInbox = () => {
     try { return JSON.parse(readFileSync(join(f.root, 'teams/test-team/inboxes/user.json'), 'utf8')) as { text: string; summary: string }[]; }
     catch { return []; }
@@ -188,6 +191,74 @@ test('native local output uses original input and the existing reply ledger acro
   publishNativeCommandOutput(entry, runtime);
   assert.deepEqual(userInbox().map(({ text, summary }) => ({ text, summary })), [{ text: 'TEST actual subscription usage', summary: '/cost' }]);
   assert.equal(entry.team.connection.pendingDeliveries().length, 1, 'reply recovery never submits another native command');
+});
+
+
+test('prepared Host cost recovers the original partial reply after a fault without recapture or native outbox', async (t) => {
+  const f = fixture(t, false, 'lead');
+  const { teamName: _teamName, ...binding } = f.options.members[0]!.delivery!;
+  const command: Extract<TeamCommand, { operation: 'message.send' }> = {
+    commandId: f.command.commandId, operation: 'message.send',
+    payload: { to: 'alice', text: '/cost', messageId: f.command.commandId, nativeCommand: true },
+  };
+  let captures = 0, inputTokens = 11, now = 10_000;
+  const prepare = () => {
+    captures++;
+    return captureHostCostCommand({ binding,
+      stats: { inputTokens, outputTokens: 7, gaps: ['earlier activity is not retained'] },
+      launch: { launchId: binding.runId, startedAtMs: 1000 }, now });
+  };
+  assert.throws(() => f.owner.connect('native-alice').execute(command, prepare), { code: 'forbidden' });
+  assert.equal(captures, 0, 'actor authorization precedes capture');
+  assert.throws(() => f.human.execute({ ...command, commandId: 'TEST-foreign-cost' },
+    () => captureHostCostCommand({ binding: { ...binding, generation: 'foreign' },
+      stats: { inputTokens: 900, outputTokens: 800, gaps: [] }, now })), { code: 'hold' });
+  assert.equal(f.human.lookup('TEST-foreign-cost'), undefined);
+  const store = f.options.store!, originalRead = store.read.bind(store);
+  let loseReply = true;
+  t.mock.method(store, 'read', <T>(name: string): T | undefined => {
+    if (loseReply && name.startsWith('outbox/')) {
+      loseReply = false;
+      throw new Error('TEST fault after command row and before derived reply');
+    }
+    return originalRead<T>(name);
+  });
+  assert.throws(() => f.human.execute(command, prepare), { code: 'hold' });
+  assert.equal(f.inbox().length, 1, 'original command row was durably written before the fault');
+  const saved = f.human.lookup(command.commandId, command)!;
+  assert.equal(saved.phase, 'held');
+  assert.equal(captures, 1);
+  assert.match(saved.hostCommand!.text, /Input tokens reported: 11/u);
+  assert.match(saved.hostCommand!.text, /Elapsed since this launch: 9s/u);
+  assert.match(saved.hostCommand!.text, /not a full session total/u);
+  inputTokens = 999; now = 99_000;
+  const restartedOwner = createFilesystemTeamOwner({ ...f.options,
+    store: new TeamOwnerStore(f.root, 'test-team') });
+  await restartedOwner.resumeTaskCommands();
+  const restarted = restartedOwner.connect('human');
+  const completed = restarted.lookup(command.commandId, command)!;
+  assert.equal(completed.phase, 'completed');
+  assert.deepEqual(completed.hostCommand, saved.hostCommand);
+  const userPath = join(f.root, 'teams/test-team/inboxes/user.json');
+  const bytes = readFileSync(userPath, 'utf8');
+  const rows = JSON.parse(bytes) as { text: string; messageId: string }[];
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]!.text, saved.hostCommand!.text);
+  assert.deepEqual(restarted.execute(command, prepare), completed);
+  await restartedOwner.resumeTaskCommands();
+  assert.equal(captures, 1, 'replay and automatic recovery do not reread newer usage or time');
+  assert.equal(readFileSync(userPath, 'utf8'), bytes);
+  assert.equal(f.inbox().length, 1);
+  assert.deepEqual(restarted.pendingDeliveries(), []);
+  const next: TeamCommand = { ...command, commandId: 'TEST-new-cost',
+    payload: { ...command.payload, messageId: 'TEST-new-cost' } };
+  const fresh = restarted.execute(next, prepare);
+  assert.equal(captures, 2, 'a new explicit UUID captures current usage');
+  assert.match(fresh.hostCommand!.text, /Input tokens reported: 999/u);
+  const after = JSON.parse(readFileSync(userPath, 'utf8')) as { messageId: string }[];
+  assert.equal(after.length, 2);
+  assert.notEqual(after[0]!.messageId, after[1]!.messageId);
+  assert.deepEqual(restarted.pendingDeliveries(), []);
 });
 
 test('lost inbox/outbox response recovers exact prepared ID once and keeps current actor authorization', (t) => {

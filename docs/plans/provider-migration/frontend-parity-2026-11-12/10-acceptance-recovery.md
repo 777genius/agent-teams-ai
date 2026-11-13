@@ -256,3 +256,31 @@ R3 reviewer интеграции: `/root/estimate_account_commands`; reviewed pl
 Основания CI: [actual jobs/needs](https://github.com/777genius/agent-teams-ai/blob/cda065d869ccffb5930ed2a817b3e0654b00bb31/.github/workflows/ci.yml),
 [dispatch scope](https://github.com/777genius/agent-teams-ai/blob/cda065d869ccffb5930ed2a817b3e0654b00bb31/scripts/ci/ci-change-scope.mts),
 [portable lifecycle donor](https://github.com/777genius/agent-teams-ai/blob/cda065d869ccffb5930ed2a817b3e0654b00bb31/scripts/e2e/teams-create-page-desktop.mjs).
+
+## 8. Точечные исправления qualification, 2026-11-13
+
+Full-root typecheck на `61bcc71785bc23aeabb3a9a288fdb6a001c6ac16`
+([job131636340469](https://github.com/777genius/agent-teams-ai/actions/runs/43349349197/job/131636340469))
+нашёл два type-boundary дефекта: inferred optional undefined в schedule Host reply и cast неполного
+Electron IPC test port. Исправление задаёт прежний JsonValue return явно и сужает registration port
+до уже используемого `Pick<IpcMain, 'handle'>`; runtime behavior и existing tests не меняются.
+Независимое source review выполнено; свежий compiler result пока не получен из-за недоступного executor.
+
+Для V2 native failures существующий bounded passive trace дополняется завершением finite log body,
+безопасным enum content encoding и изменением количества TEST model requests. Он не пишет native
+bytes/headers/credentials, не отправляет дополнительные запросы и не увеличивает deadlines.
+Прежний diagnostic receipt не является доказательством причины задержки или прохождения E2E.
+
+Windows static V1 cases используют прежнюю actual-OS policy nativeProcessProfile: TEST paths теперь
+соответствуют текущему Host, а foreign-OS cwd по-прежнему отвергается. Production policy не изменена.
+
+[Lint job131606204662](https://github.com/777genius/agent-teams-ai/actions/runs/43335609196/job/131606204662)
+на qualification head `b54390e9844a4f868c6f460905c4d9664e1340e8` обнаружил два локальных
+дефекта: лишний non-null assertion в schedule lead и вложенное присваивание promise
+при подготовке OpenCode sources. Исправления сохраняют прежний выбор и один shared promise.
+[Test shard4](https://github.com/777genius/agent-teams-ai/actions/runs/43335609196/job/131606204703)
+нашёл3 устаревших V2 test fixtures (обязательный HOME/catalog/ready contract) и4 Codex login
+failures: fixture выбирал Node26 через process.execPath, хотя CI уже подготовил Node24.21
+в AGENT_BACKEND_TEST_NODE. Используется этот существующий captured runtime; Host version guard
+сохранён. Исправление3 V2 сценариев идёт вместе с P02 R5, новые unit cases ради этих repairs
+не добавлены. Это source-reviewed cut; новые exact-head lint/tests/native результаты ещё ожидаются.

@@ -5,9 +5,10 @@ import { performance } from 'node:perf_hooks';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts';
-import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fixture.ts';
+import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren, captureDesktopOpenCodeGlobalMetadata, captureDesktopOpenCodeProjectMetadata } from './desktop-native-stop-fixture.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
+import { verifyDesktopCodexCostAfterColdResume } from './desktop-codex-cost-ui-proof.ts';
 import { checkpoint, digest, json, jsonDigest, originalHistoryMarker, record, rows } from './desktop-resume-records.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
@@ -35,6 +36,7 @@ export async function codexRuntimeEndpointHash(fixture: Awaited<ReturnType<typeo
 
 /** Starts only after the real Launch/Stop/reload/reopen-prefill proof. No setup effect APIs. */
 export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
+  metadataGlobal?: Awaited<ReturnType<typeof captureDesktopOpenCodeGlobalMetadata>>;
   fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>;
   evidence: Record<string, unknown>;
   model: Awaited<ReturnType<typeof startNativeTeamModel>> | Awaited<ReturnType<typeof startCodexModel>> | Awaited<ReturnType<typeof startOpenCodeModel>>;
@@ -145,9 +147,10 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   await ui.scrollTo('[role="dialog"] button', 'visible original Resume submit', 'Resume selected checkpoints');
   let originalMetadata: ReturnType<typeof readDesktopNativeHostProcesses> | undefined;
   if (opencode) {
-    originalMetadata = await poll(async () => readDesktopNativeHostProcesses(fixture, options.capturedGroup()),
-      row => row.children.length === 1, 'cold Host metadata child before Resume allocation');
-    assert.equal(originalMetadata.children[0]!.command, process.env.OPENCODE_V2_EMBEDDED_BUN);
+    assert.ok(options.metadataGlobal);
+    proof.originalGlobalMetadata = options.metadataGlobal;
+    const selected = await captureDesktopOpenCodeProjectMetadata(fixture, options.capturedGroup(), options.metadataGlobal);
+    originalMetadata = selected.captured; proof.metadataSources = selected.metadataSources;
     proof.originalMetadataBeforeResume = originalMetadata;
   }
   proof.recoveryReferences = { launchId: firstCapture.launchId, rosterRevision: sourceLaunch.rosterRevision,
@@ -201,6 +204,10 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   if (!(await cdp.evaluate(`Boolean(document.querySelector('.message-composer-flat-layout textarea'))`)))
     await ui.click('button[aria-label^="alice,"]', 'open original alice chat after Resume');
   await ui.waitRead(`document.body.innerText.includes(${JSON.stringify(firstReply)})`, 'original native reply retained after Resume');
+  if (codex) await verifyDesktopCodexCostAfterColdResume(cdp, {
+    root: fixture.root, handleId: fixture.handleId, session: active, model, evidence,
+    assertOwnedRenderer: options.assertOwnedRenderer,
+  });
   await ui.click('.message-composer-flat-layout textarea', 'focus existing MessageComposer');
   await cdp.send('Input.insertText', { text: secondPrompt });
   await ui.waitRead(`document.querySelector('.message-composer-flat-layout textarea')?.value===${JSON.stringify(secondPrompt)}`, 'deliberate second message retained');

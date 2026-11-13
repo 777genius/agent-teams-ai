@@ -3,12 +3,16 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileDigest } from './desktop-backend-fixture.ts';
-import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fixture.ts';
+import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren, captureDesktopOpenCodeGlobalMetadata, captureDesktopOpenCodeProjectMetadata } from './desktop-native-stop-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { runDesktopRelaunchUiSmoke } from './desktop-relaunch-ui-smoke.ts';
 import { runDesktopNativeCommandsUiProof } from './desktop-native-commands-ui-proof.ts';
+import { runDesktopCodexCostUiProof } from './desktop-codex-cost-ui-proof.ts';
+import { prepareDesktopNativeExtensionSkillsUi } from './desktop-native-extension-skills-ui.ts';
+import { runDesktopNativeExtensionCommandsUi } from './desktop-native-extension-consumption-ui-proof.ts';
+import { runDesktopNativeExtensionsUiSmoke } from './desktop-native-extensions-ui-smoke.ts';
 import { codexRuntimeEndpointHash, runDesktopResumeUiSmoke } from './desktop-resume-ui-smoke.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
@@ -128,11 +132,14 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   openCodeModel?: Awaited<ReturnType<typeof startOpenCodeModel>>;
   assertOwnedRenderer(): void;
   capturedGroup(): number;
-  restartAfterStop?(): Promise<UiCdpPort>;
+  restartSameProfile?(): Promise<UiCdpPort>;
 }): Promise<void> {
   const { fixture, evidence } = options;
   const model = options.openCodeModel ?? options.codexResumeModel ?? options.model;
   assert.ok(model);
+  const extensions = process.env.LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI === '1';
+  if (extensions) assert.ok(options.model && !fixture.codexResume && !fixture.openCodeV2 &&
+    evidence.mode === 'native-launch-ui' && options.restartSameProfile);
   const codex = fixture.codexResume;
   const opencode = fixture.openCodeV2;
   assert.equal(Boolean(codex), Boolean(options.codexResumeModel));
@@ -176,6 +183,18 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
       await ui.click(`[role="dialog"] button[aria-controls=${JSON.stringify(value.id)}]`, 'expand original launch settings');
     await ui.waitRead(`Boolean(document.querySelector('[role="dialog"] #dialog-prompt'))`, 'original prompt field');
   };
+  if (extensions) {
+    assert.equal(model.observations.length, 0);
+    await prepareDesktopNativeExtensionSkillsUi(cdp, {
+      root: fixture.root, seed: options.seed, evidence, assertOwnedRenderer: options.assertOwnedRenderer,
+    });
+    cdp = await options.restartSameProfile!();
+    ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step });
+    proof.coldStartupBeforeFirstLaunch = true;
+  }
+  const globalMetadata = opencode
+    ? await captureDesktopOpenCodeGlobalMetadata(cdp, fixture, options.capturedGroup(), options.assertOwnedRenderer) : undefined;
+  if (globalMetadata) proof.originalGlobalMetadata = globalMetadata;
   await ui.observeInput();
   await ui.clickSidebar(options.seed.subject);
   await ui.click('button', 'open original Launch dialog', 'Launch');
@@ -222,9 +241,9 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   let originalMetadata: ReturnType<typeof readDesktopNativeHostProcesses> | undefined;
   if (opencode) {
     await ui.waitRead(`[...document.querySelectorAll('[role="dialog"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)`, 'original preflight completes before any runtime allocation');
-    originalMetadata = await poll(async () => readDesktopNativeHostProcesses(fixture, options.capturedGroup()),
-      row => row.children.length === 1, 'one original metadata child before Launch');
-    assert.equal(originalMetadata.children[0]!.command, process.env.OPENCODE_V2_EMBEDDED_BUN);
+    assert.ok(globalMetadata);
+    const selected = await captureDesktopOpenCodeProjectMetadata(fixture, options.capturedGroup(), globalMetadata);
+    originalMetadata = selected.captured; proof.metadataSources = selected.metadataSources;
     assert.equal(((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0, 0);
     proof.originalMetadataBeforeLaunch = originalMetadata;
   }
@@ -278,6 +297,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     'one prompt reaches actual native terminal without duplicate input'
   );
   proof.nativeSessionBeforeStop = sessions[0];
+  let firstSession = sessions[0]!;
   assert.equal(model.observations.length, 8);
   assert.ok(model.probes.length >= 1 && model.probes.length <= 8);
   assert.ok(model.observations.every(row => row.requestedModel === (opencode?.modelId ?? selectedModel) &&
@@ -317,6 +337,19 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
       evidence, assertOwnedRenderer: options.assertOwnedRenderer,
     });
   }
+  if (extensions) {
+    assert.ok(options.model?.extensionRequests);
+    firstSession = await runDesktopNativeExtensionCommandsUi(cdp, {
+      root: fixture.root, session: firstSession,
+      model: { ...options.model, extensionRequests: options.model.extensionRequests },
+      evidence, assertOwnedRenderer: options.assertOwnedRenderer,
+    });
+    proof.nativeSessionAfterExtensionCommands = firstSession;
+  }
+  if (codex) await runDesktopCodexCostUiProof(cdp, {
+    root: fixture.root, handleId: fixture.handleId, session: sessions[0]!, model, evidence,
+    assertOwnedRenderer: options.assertOwnedRenderer,
+  });
   const hostRows = processTable().filter(row => row.pgid === options.capturedGroup() && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
   assert.equal(hostRows.length, 1, 'only this TEST Host executable may be selected');
   const hostPid = hostRows[0]!.pid;
@@ -341,15 +374,26 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     proof.metadataAfterStop = remaining;
   }
   proof.stop = { nativeChildren: children, releasedBeforeQuit: true };
-  if (options.restartAfterStop) {
+  if (extensions) await runDesktopNativeExtensionsUiSmoke(cdp, {
+    root: fixture.root, evidence, assertOwnedRenderer: options.assertOwnedRenderer, pluginPhase: 'uninstall',
+  });
+  if (options.restartSameProfile && !extensions) {
     assert.equal(evidence.mode, 'native-resume-ui', 'cold boundary belongs only to explicit Resume proof');
-    cdp = await options.restartAfterStop();
+    cdp = await options.restartSameProfile();
     ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step });
     await ui.waitRead(`Boolean(window.electronAPI)&&!document.getElementById('splash')`, 'cold same-profile real renderer');
   } else {
     const beforeReload = await cdp.evaluate('performance.timeOrigin');
     await cdp.send('Page.reload', { ignoreCache: false });
     await ui.waitRead(`performance.timeOrigin!==${JSON.stringify(beforeReload)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`, 'reloaded real renderer');
+  }
+  const resumeGlobalMetadata = opencode && options.restartSameProfile && !extensions && evidence.mode === 'native-resume-ui'
+    ? await captureDesktopOpenCodeGlobalMetadata(cdp, fixture, options.capturedGroup(), options.assertOwnedRenderer) : undefined;
+  if (opencode && !resumeGlobalMetadata) {
+    assert.ok(originalMetadata, 'renderer reload retains the original metadata owners');
+    const retained = readDesktopNativeHostProcesses(fixture, options.capturedGroup());
+    separateDesktopOpenCodeRuntimeChildren(originalMetadata, retained, 0);
+    proof.metadataAfterRendererReload = retained;
   }
   await ui.observeInput();
   if (!(await cdp.evaluate(`Boolean(document.querySelector('.kanban-task-card'))`)))
@@ -364,12 +408,13 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   assert.deepEqual(model.failures, []);
   proof.status = 'PASS';
   proof.probes = model.probes;
-  if (options.restartAfterStop) proof.settingsRetainedAfterColdStartup = true;
+  if (options.restartSameProfile && !extensions) proof.settingsRetainedAfterColdStartup = true;
   else proof.settingsRetainedAfterReload = true;
   if (evidence.mode === 'native-resume-ui')
-    await runDesktopResumeUiSmoke(cdp, { ...options, model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession: sessions[0]! });
-  if (evidence.mode === 'native-relaunch-ui') {
+    await runDesktopResumeUiSmoke(cdp, { ...options, model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession: sessions[0]!,
+      ...(resumeGlobalMetadata ? { metadataGlobal: resumeGlobalMetadata } : {}) });
+  if (evidence.mode === 'native-relaunch-ui' || extensions) {
     assert.ok(options.model && !codex);
-    await runDesktopRelaunchUiSmoke(cdp, { ...options, model: options.model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession: sessions[0]! });
+    await runDesktopRelaunchUiSmoke(cdp, { ...options, model: options.model, firstCapture: capture, savedSettings: saved, nativeTask: nativeTask!, firstSession });
   }
 }

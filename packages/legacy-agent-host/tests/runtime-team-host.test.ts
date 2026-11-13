@@ -7,6 +7,7 @@ import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
 
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
+import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import { ClaudeManagementCoordinator } from '../dist/composition/ClaudeManagementCoordinator.js';
@@ -1487,11 +1488,12 @@ test(
 );
 
 test(
-  'Codex Host selection uses its actual public capability vocabulary and keeps private config off RPC',
+  'Codex Host cost reports retained usage once without native dispatch or private snapshot leakage',
   { timeout: 10000 },
   async (t) => {
     const f = await fixture(t, {
       changeProfile(selected) {
+        selected.teams[0]!.members[0]!.role = 'lead';
         const member = selected.runtime!.members[0]!;
         if (member.provider !== 'claude') throw new Error('Expected Claude fixture');
         const {
@@ -1512,10 +1514,35 @@ test(
     });
     const opened = (await f.rpc('runtime.open', { memberId: 'alice-id' })) as {
       ok: boolean;
-      value: { nativeReady: boolean };
+      value: { nativeReady: boolean; sessionCommands: { name: string; description: string }[] };
     };
     assert.equal(opened.ok, true);
     assert.equal(opened.value.nativeReady, true);
+    assert.deepEqual(opened.value.sessionCommands.map(command => command.name), ['cost']);
+    const cost = { operation: 'message.send', payload: { to: 'alice', text: '/cost',
+      messageId: 'TEST-cost-unknown', nativeCommand: true as const } };
+    const unknown = await f.rpc('team.execute', cost, { commandId: 'TEST-cost-unknown' }) as {
+      ok: boolean; value: CommandReceipt;
+    };
+    assert.equal(unknown.ok, true);
+    assert.equal(unknown.value.phase, 'completed');
+    assert.equal(unknown.value.hostCommand, undefined, 'private prepared facts never cross RPC');
+    const inboxPath = join(f.root, 'teams/test-runtime-host/inboxes/user.json');
+    const replies = () => JSON.parse(readFileSync(inboxPath, 'utf8')) as {
+      messageId: string; text: string; from: string; summary: string;
+    }[];
+    assert.match(replies()[0]!.text, /Input tokens reported: not reported/u);
+    assert.match(replies()[0]!.text, /Output tokens reported: not reported/u);
+    assert.match(replies()[0]!.text, /not a full session total/u);
+    assert.match(replies()[0]!.text, /Price: not reported by Codex/u);
+    assert.equal(f.session().submits.length, 0);
+    for (const payload of [
+      { ...cost.payload, text: '/cost arguments-are-not-a-native-prompt' },
+      { ...cost.payload, to: 'bob' },
+    ]) {
+      const denied = await f.rpc('team.execute', { operation: 'message.send', payload });
+      assert.deepEqual(denied, { ok: false, code: 'invalid', outcome: 'rejected' });
+    }
     assert.deepEqual(f.contexts[0]!.request.requiredCapabilities, ['text', 'tools']);
     assert.equal(f.contexts[0]!.profile.provider, 'codex');
     await f.rpc('team.execute', {
@@ -1526,14 +1553,51 @@ test(
       () => f.session().submits.length === 1,
       'captured Codex selection must receive exactly one input'
     );
+    const original = f.session().submits[0]!;
+    const source = { sessionRef: f.session().sessionRef,
+      inputId: original.inputId, operationRef: original.operationRef };
+    f.session().emit({ ...source, kind: 'usage', inputTokens: 11, outputTokens: 5 });
+    f.session().emit({ ...source, kind: 'usage', inputTokens: 17, outputTokens: 9 });
     f.session().finish(0);
-    await tick();
+    await eventually(() => new FileRuntimeStore(f.root).fenced(f.runtimeBinding,
+      tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'reported original usage must persist');
+    const reportedCommand = { ...cost, payload: { ...cost.payload, messageId: 'TEST-cost-reported' } };
+    const reported = await f.rpc('team.execute', reportedCommand, { commandId: 'TEST-cost-reported' }) as {
+      ok: boolean; value: CommandReceipt;
+    };
+    assert.equal(reported.ok, true);
+    const bytes = readFileSync(inboxPath, 'utf8');
+    assert.equal(replies().length, 2);
+    assert.equal(replies()[1]!.from, 'alice');
+    assert.equal(replies()[1]!.summary, '/cost');
+    assert.match(replies()[1]!.text, /Input tokens reported: 17/u);
+    assert.match(replies()[1]!.text, /Output tokens reported: 9/u);
+    assert.doesNotMatch(replies()[1]!.text, /\$|API duration/u);
+    assert.deepEqual(await f.rpc('team.execute', reportedCommand, { commandId: 'TEST-cost-reported' }), reported);
+    assert.deepEqual(await f.rpc('team.lookup', {}, { commandId: 'TEST-cost-reported' }), reported);
+    assert.equal(readFileSync(inboxPath, 'utf8'), bytes, 'original lookup and replay cannot publish again');
+    const ownerStore = new TeamOwnerStore(f.root, 'test-runtime-host');
+    const outbox = ownerStore.fenced(() => ownerStore.list<{ commandId: string }>('outbox'));
+    assert.equal(outbox.length, 1, 'only the ordinary message has a Runtime delivery');
+    assert.ok(outbox.every(entry => !entry.commandId.startsWith('TEST-cost-')));
+    const state = await f.rpc('runtime.read', { memberId: 'alice-id' }) as { value: { inputs: unknown[] } };
+    assert.equal(state.value.inputs.length, 1);
+    assert.equal(f.session().submits.length, 1);
     const stopped = (await f.rpc('runtime.stop', { memberId: 'alice-id' })) as {
-      value: { phase: string; custody: string };
+      value: { phase: string; custody: string; sessionCommands?: unknown };
     };
     assert.equal(stopped.value.phase, 'closed');
     assert.equal(stopped.value.custody, 'released');
-    const publicBytes = JSON.stringify(f.frames);
+    assert.equal(stopped.value.sessionCommands, undefined);
+    assert.deepEqual(await f.rpc('team.execute', { ...cost,
+      payload: { ...cost.payload, messageId: 'TEST-cost-stale' } }, { commandId: 'TEST-cost-stale' }),
+      { ok: false, code: 'invalid', outcome: 'rejected' });
+    const warmFrames = JSON.stringify(f.frames);
+    await f.restart();
+    assert.deepEqual(await f.rpc('team.lookup', {}, { commandId: 'TEST-cost-reported' }), reported);
+    assert.equal(readFileSync(inboxPath, 'utf8'), bytes, 'cold lookup keeps original output bytes');
+    assert.equal(f.opens(), 1);
+    const publicBytes = warmFrames + JSON.stringify(f.frames);
     for (const secret of [
       'PRIVATE-environment-token',
       'PRIVATE-account',

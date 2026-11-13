@@ -163,6 +163,8 @@ export interface PreparedEffects {
 }
 
 export interface CommandReceipt {
+  /** Private prepared Host output; never accepted in a public command or native delivery. */
+  hostCommand?: import('./hostCostCommand.js').HostCostCommand;
   group?: CapturedGroupIntent;
   /** Private Host pair admission; ordinary commands never accept this field. */
   crossTeam?: CapturedCrossTeamIntent;

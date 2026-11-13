@@ -9,6 +9,7 @@ import {
   readDesktopNativeHostProcesses,
   readDesktopNativeStopSessions,
   separateDesktopOpenCodeRuntimeChildren,
+  assertDesktopOpenCodeMetadataSources,
 } from './desktop-native-stop-fixture.ts';
 import { checkpoint } from './desktop-resume-records.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
@@ -24,22 +25,26 @@ function assertOriginalMetadataAbsent(
   value: unknown,
   selected: unknown,
   observed: ReturnType<typeof processTable>,
-  label: string
-): Row {
+  label: string,
+  expectedChildren: 1 | 2 = 2
+): Row[] {
   const captured = row(value), host = row(captured.host), selectedHost = row(selected);
   assert.ok(Number.isSafeInteger(host.pid) && Number(host.pid) > 1);
   assert.ok(typeof host.birth === 'string' && host.birth.length > 0);
   assert.equal(host.pid, selectedHost.pid);
   assert.equal(host.parentPid, selectedHost.ppid);
   assert.equal(host.groupId, selectedHost.pgid);
-  assert.ok(Array.isArray(captured.children) && captured.children.length === 1);
-  const child = row(captured.children[0]);
-  assert.ok(Number.isSafeInteger(child.pid) && Number(child.pid) > 1);
-  assert.notEqual(child.pid, host.pid);
-  assert.equal(child.parentPid, host.pid);
-  assert.ok(typeof child.birth === 'string' && child.birth.length > 0);
-  assert.equal(observed.some(current => current.pid === child.pid), false, label);
-  return child;
+  assert.ok(Array.isArray(captured.children) && captured.children.length === expectedChildren);
+  const children = captured.children.map(row);
+  assert.equal(new Set(children.map(child => child.pid)).size, expectedChildren);
+  for (const child of children) {
+    assert.ok(Number.isSafeInteger(child.pid) && Number(child.pid) > 1);
+    assert.notEqual(child.pid, host.pid);
+    assert.equal(child.parentPid, host.pid);
+    assert.ok(typeof child.birth === 'string' && child.birth.length > 0);
+    assert.equal(observed.some(current => current.pid === child.pid), false, label);
+  }
+  return children;
 }
 
 function hasHotOpenCodeV2Metadata(evidence: Row): boolean {
@@ -72,6 +77,7 @@ export function assertFirstResumeMetadataAbsent(
   assert.equal(launch.status, 'INCOMPLETE', 'the original Launch proof is waiting for cold startup');
   assert.equal(row(launch.stop).releasedBeforeQuit, true);
   assert.deepEqual(launch.metadataAfterStop, launch.originalMetadataBeforeLaunch);
+  assertDesktopOpenCodeMetadataSources(launch.metadataSources, launch.originalMetadataBeforeLaunch);
   const cleanup = row(boundary.firstCleanup);
   assert.equal(cleanup.appExitCode, 0); assert.equal(cleanup.appSignalCode, null);
   assert.deepEqual(cleanup.remaining, []);
@@ -91,6 +97,7 @@ export function assertCapturedDesktopMetadataAbsent(
     const table = observed ?? processTable();
     if (evidence.mode === 'native-review-ui') {
       const proof = row(evidence.nativeReviewUiProof);
+      assertDesktopOpenCodeMetadataSources(proof.metadataSources, proof.originalMetadataBeforeLaunch);
       assert.equal(proof.provider, 'opencode-v2'); assert.equal(proof.status, 'PASS');
       const child = assertOriginalMetadataAbsent(proof.originalMetadataBeforeLaunch, evidence.hostChild,
         table, 'the hot Review metadata child is absent before harness cleanup');
@@ -98,6 +105,9 @@ export function assertCapturedDesktopMetadataAbsent(
       proof.metadataAbsentBeforeHarnessCleanup = true;
     } else if (evidence.mode === 'native-resume-ui') {
       const boundary = row(evidence.coldResumeBoundary), proof = row(evidence.resumeDialogProof);
+      assertDesktopOpenCodeMetadataSources(proof.metadataSources, proof.originalMetadataBeforeResume);
+      assertDesktopOpenCodeMetadataSources(row(evidence.launchDialogProof).metadataSources,
+        row(evidence.launchDialogProof).originalMetadataBeforeLaunch);
       assert.equal(boundary.provider, 'opencode'); assert.equal(boundary.status, 'PASS');
       assert.equal(boundary.firstMetadataAbsentBeforeSecondSpawn, true);
       assert.equal(row(evidence.launchDialogProof).status, 'PASS');
@@ -112,6 +122,7 @@ export function assertCapturedDesktopMetadataAbsent(
       proof.metadataAbsentBeforeHarnessCleanup = true;
     } else if (evidence.mode === 'native-launch-ui') {
       const proof = row(evidence.launchDialogProof);
+      assertDesktopOpenCodeMetadataSources(proof.metadataSources, proof.originalMetadataBeforeLaunch);
       assert.equal(proof.provider, 'opencode'); assert.equal(proof.status, 'PASS');
       assert.deepEqual(proof.metadataAfterStop, proof.originalMetadataBeforeLaunch);
       assertOriginalMetadataAbsent(proof.originalMetadataBeforeLaunch, evidence.hostChild, table,
@@ -119,6 +130,7 @@ export function assertCapturedDesktopMetadataAbsent(
       proof.metadataAbsentBeforeHarnessCleanup = true;
     } else {
       const proof = row(evidence.nativeSetup);
+      assertDesktopOpenCodeMetadataSources(proof.metadataSources, proof.metadataBeforeLaunch);
       assert.ok(proof.status === 'ready' || proof.status === 'opening');
       assertOriginalMetadataAbsent(proof.metadataBeforeLaunch, evidence.hostChild, table,
         'the original native setup metadata child is absent before harness cleanup');
@@ -141,7 +153,7 @@ export function assertCapturedDesktopMetadataAbsent(
       assert.deepEqual(mixed.managementChildBeforeStop, child);
       assert.deepEqual(mixed.managementChildAfterStop, child);
       assertOriginalMetadataAbsent({ host, children: [child] }, evidence.hostChild,
-        observed ?? processTable(), 'the original mixed metadata child is absent after guarded Quit, before harness cleanup');
+        observed ?? processTable(), 'the original mixed metadata child is absent after guarded Quit, before harness cleanup', 1);
       mixed.managementChildAbsentBeforeHarnessCleanup = true;
     }
   }
@@ -150,7 +162,7 @@ export function assertCapturedDesktopMetadataAbsent(
     captured = row(proof.captured);
   assert.equal(proof.metadataProcessCount, 1);
   assertOriginalMetadataAbsent(captured, evidence.hostChild, observed ?? processTable(),
-    'the original captured metadata child is absent after guarded Quit, before harness cleanup');
+    'the original captured metadata child is absent after guarded Quit, before harness cleanup', 1);
   proof.metadataAbsentBeforeHarnessCleanup = true;
 }
 

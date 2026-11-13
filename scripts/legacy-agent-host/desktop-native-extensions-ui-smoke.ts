@@ -29,6 +29,8 @@ export async function runDesktopNativeExtensionsUiSmoke(
     root: string;
     evidence: Record<string, unknown>;
     assertOwnedRenderer(): void;
+    /** R10 reuses only the original plugin phase; MCP/negative proof remains in the ordinary mode. */
+    pluginPhase?: "install" | "uninstall";
   },
 ) {
   const selected = JSON.parse(
@@ -57,7 +59,8 @@ export async function runDesktopNativeExtensionsUiSmoke(
     ],
     steps,
   };
-  options.evidence.nativeExtensionsUi = proof;
+  options.evidence[options.pluginPhase ? "nativeExtension" + (options.pluginPhase === "install" ? "Install" : "Uninstall") + "Ui" : "nativeExtensionsUi"] = proof;
+  if (options.pluginPhase) proof.scope = "Original Plugins panel: one " + options.pluginPhase + " through the captured native CLI";
   const screenshots: string[] = [];
   proof.screenshots = screenshots;
   const screenshot = async (name: string) => {
@@ -173,7 +176,7 @@ export async function runDesktopNativeExtensionsUiSmoke(
       throw error;
     }
   };
-  assert.equal(await enabled(), false);
+  assert.equal(await enabled(), options.pluginPhase === "uninstall");
   assert.equal(await configured(), undefined);
   await click(
     'button[aria-label="More actions"]',
@@ -187,6 +190,7 @@ export async function runDesktopNativeExtensionsUiSmoke(
     "Extensions",
   );
   await click("button", "open Extensions from Settings", "Extensions");
+  await click('[role="tab"]', "open original Plugins tab", "Plugins");
   await ui.waitRead(
     `Boolean(document.querySelector('input[placeholder="Search plugins..."]'))`,
     "original Plugins panel",
@@ -209,6 +213,24 @@ export async function runDesktopNativeExtensionsUiSmoke(
   })()`);
   assert.equal(record(proof.publicPluginCatalog).pluginId, extensionPlugin);
   assert.equal(record(proof.publicPluginCatalog).source, "official");
+  const completePluginPhase = async (count: number) => {
+    const directory = join(options.root, "hoststore", "management-commands");
+    const rows = await Promise.all((await readdir(directory))
+      .filter(name => /^[a-f0-9]{64}\.json$/u.test(name))
+      .map(name => json(join(directory, name))));
+    const mutations = rows.filter(row => row.kind === "extension.mutation");
+    assert.equal(mutations.length, count, "one original record per UI plugin action");
+    assert.equal(new Set(mutations.map(row => row.commandId)).size, count);
+    assert.ok(mutations.every(row => row.phase === "completed" &&
+      row.profileId === selected.profile.profileId));
+    assert.equal(await fileDigest(selected.neighborPath), selected.neighborSha256);
+    proof.completedOriginalCommandIds = mutations.map(row => row.commandId);
+    proof.neighborUnchanged = true; proof.status = "PASS";
+  };
+  if (options.pluginPhase !== "uninstall") {
+  if (selected.runtimeNamespaceSha256) await ui.waitRead(
+    `[...document.querySelectorAll('[role="dialog"] [role="combobox"]')].some(e=>e.textContent.trim()==='User (global)')`,
+    "original user plugin scope in the captured project");
   await ui.waitRead(`window.__agentTeamsDevStore?.getState().cliStatus?.providers?.some(p=>p.providerId==='anthropic'&&p.authenticated===true)`, "original native API-key status permits plugin install");
   proof.installReadiness = await cdp.evaluate(stateExpression);
   await click(
@@ -237,6 +259,12 @@ export async function runDesktopNativeExtensionsUiSmoke(
   );
   proof.nativePluginListObserved = true;
   await screenshot("native-extensions-plugin-installed.png");
+  if (options.pluginPhase === "install") {
+    await click('[role="dialog"] button', "close original Plugin detail", "Close");
+    await completePluginPhase(1);
+    return;
+  }
+  }
   await click(
     '[role="dialog"] button',
     "native plugin uninstall once",
@@ -255,6 +283,11 @@ export async function runDesktopNativeExtensionsUiSmoke(
     "close original Plugin detail",
     "Close",
   );
+  if (options.pluginPhase === "uninstall") {
+    await screenshot("native-extensions-plugin-uninstalled.png");
+    await completePluginPhase(2);
+    return;
+  }
   await click(
     '[role="tab"]',
     "open original MCP Servers tab",

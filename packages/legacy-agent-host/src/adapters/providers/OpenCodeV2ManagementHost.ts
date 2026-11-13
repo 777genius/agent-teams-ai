@@ -173,9 +173,10 @@ export class OpenCodeV2ManagementHost {
     }) };
   }
 
-  private async read(providerId: string | undefined, includeModels: boolean): Promise<ProviderManagementCatalog> {
-    const signal = AbortSignal.any([this.abort.signal, AbortSignal.timeout(this.profile.timeoutMs)]);
-    const deadline = Date.now() + this.profile.timeoutMs;
+  private async read(providerId: string | undefined, includeModels: boolean, deadline: number): Promise<ProviderManagementCatalog> {
+    const remaining = Math.min(this.profile.timeoutMs, deadline - Date.now());
+    if (!Number.isSafeInteger(remaining) || remaining <= 0) return held();
+    const signal = AbortSignal.any([this.abort.signal, AbortSignal.timeout(remaining)]);
     const { client, config, ready } = await this.nativeClient(signal, deadline);
     const selected = this.profile.nativeModel!;
     let result: ProviderManagementCatalog | undefined, failure: unknown, failed = false;
@@ -255,8 +256,8 @@ export class OpenCodeV2ManagementHost {
     return result!;
   }
 
-  catalog(providerId?: string, includeModels = false): Promise<ProviderManagementCatalog> {
-    return this.tracked(() => this.read(providerId, includeModels));
+  catalog(providerId?: string, includeModels = false, deadline = Date.now() + this.profile.timeoutMs): Promise<ProviderManagementCatalog> {
+    return this.tracked(() => this.read(providerId, includeModels, deadline));
   }
 
   /** One retained native credential database under the existing durable command/fence. */
