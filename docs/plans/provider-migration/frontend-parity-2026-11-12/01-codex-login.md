@@ -238,3 +238,37 @@ regression в parity, затем штатно синхронизировать q
 Не менять login UI/protocol, native identities, deadlines или критерии cleanup.
 Actual login Desktop и завершение vendor authentication остаются отдельными
 незакрытыми проверками; source correction не считается их выполнением.
+
+
+### R5 — оставшийся actual login gate после census correction, 2026-11-13
+
+Повторно прочитаны exact qualification head `b54390e9844a4f868c6f460905c4d9664e1340e8`,
+`desktop-codex-login-ui-proof.ts` (`c64813ba`), TEST opener
+`desktop-codex-login-fixture.ts` (`5d988c5e`) и existing
+`codex-login-desktop` job. Предыдущий PGID0 отказ не достиг UI; оснований
+менять login product code по этому результату нет.
+
+1. Штатно синхронизировать Ready PR1187 с текущей parity веткой, разрешить actual
+   source conflicts и запустить прежний job на итоговом exact HEAD. Он должен
+   сохранить native Codex0.162.0 checksum, private TEST roots, source freeze,
+   original Quit/cleanup и оба режима; queued/skipped не заменяют PASS.
+2. Existing actual journey уже делает browser/device start → native pending,
+   Copy acknowledgment, один explicit Electron→TEST OS opener с digest исходного
+   URL, закрытие/открытие Settings dialog без второго start и original Cancel.
+   Затем проверяет signed-out readback, cleared private fields, released original
+   namespace, отсутствие logout и trusted UI clicks. Новый тестовый framework или
+   дополнительные native inputs для этих проверок не нужны.
+3. Early/foreign/null completion, cancel-before-login, lost start reply,
+   Main recreation/context switch, original target, wrong-account, refresh/logout
+   serialization и задержанная cleanup confirmation проверяются existing Host/D/TEST
+   process и Main safe-E2E. Их final-pin проверки остаются обязательными; новые
+   unit tests на каждую ветку не добавляются.
+4. Этот actual UI job **не завершает vendor authentication**. Browser/device success
+   с dedicated authorized TEST account, exact native completion, исходным ChatGPT
+   account/quota/readiness readback и подтверждённой cleanup остаются отдельной
+   квалификацией. TEST child completion, показанный код и успешная отмена не
+   подтверждают её. Пользовательский HOME или существующие личные credentials
+   не являются заменой выделенного test account.
+
+Source scope review — PASS. Actual Linux login UI и native authenticated completion
+пока pending; новый код login на основании census-only отказа не требуется.
