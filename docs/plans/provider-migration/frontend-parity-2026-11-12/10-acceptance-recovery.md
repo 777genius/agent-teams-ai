@@ -1398,3 +1398,21 @@ These annotations do not emit runtime code, suppress an error, weaken an asserti
 ### Round 3 — peer review and original validation
 
 Root and an independent peer check the two exact annotations and branch-specific preimages before source publication. The existing scripts typecheck and original affected CI lanes must pass on the new coherent head. The executor is currently unavailable; source review is not a compiler/native PASS. Publish the reviewed correction normally without cancelling or rerunning the still-active native matrix.
+
+## 30. Existing offline-runtime tests must assert their intentional warnings
+
+### Review 1 — actual root-shard failure and unchanged product behavior
+
+Native12d run43457244582/job132021060689 fails two existing capturedRuntimeStatus cases; immutable logd86d080fc7ed5bfd76bfb97bf487578b743f808e identifies only unexpected console.warn calls from deliberately rejected latest-version lookups. The authoritative captured runtime/source assertions themselves are not reported as failures. The test preimage is3e7c1cc51997a2abff25428d06f77c2390eb03bb, identical in all three working branches.
+
+Production openCodeRuntimeLatestVersion.tsc39d060b6651cd6d2253b9ea4bb73a8e02e2c418 deliberately logs the failed optional registry lookup, then retains the already-known runtime status. Logger88bb1d9c1fe670370e86a8945654f8b79b2a572d emits the namespace and original message/error arguments to console.warn. Global test/setupe24e03f9e2b9f7b9bdc3720212713c4106c64a1c correctly rejects unacknowledged warnings.
+
+### Review 2 — one existing test file and three exact acknowledgements
+
+Only change test/features/runtime-provider-management/capturedRuntimeStatus.test.ts. In the original V2 offline case and the two original V1 failure/revocation paths, assert exactly one console.warn call with the existing namespace, fixed warning text and exact injected TEST error message. Clear the existing mocked console.warn call history only after that exact assertion passes, using the repository's existing vi.mocked(console.warn).mockClear pattern.
+
+Keep every original status/version/source-revision assertion and all native/source revocation guards. An extra or different warning must fail before the clear; later unrelated warnings still fail in the unchanged global afterEach. Do not silence production logging, add a global allowlist, replace the logger, or suppress an unverified warning.
+
+### Review 3 — existing failed gate supplies validation
+
+No new test, fixture, helper, suite, timer, dependency or production change is needed. Independent source review precedes the one-file candidate. Run the same targeted existing file and normal root shard/types/lint through available execution or the ordinary exact-head CI before acceptance. Source publication is SOURCE_ONLY_UNEXECUTED until those checks actually pass. Root commits/pushes the reviewed plan first and immediately pushes each later source commit; no main/upward merge is included.
