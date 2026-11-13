@@ -3680,3 +3680,33 @@ Clarify §66.5: capture the original **nullable descriptor pair** together with 
 This does not activate a helper by default. Its separate manifest/hash pair must still be explicitly present, valid, immutable for the original Main composition and verified before every selected child allocation. Once requested, failure remains refusal with original custody; an absent Host descriptor is not permission to fall back to a direct unisolated launch or clear the helper pins. No Host profile, digest, checkpoint, source selection, renderer API or legacy runtime binary changes.
 
 Only the already-declared linuxChildLaunchSelection.ts and its agentBackend.ts initialization call need this precision; the original retained runner's intentional descriptor removal is preserved. Existing selection/child tests must distinguish absent-both, present-both, partial pair, drift and unchanged unselected startup. The same original retained V1-A → Host-V2 controls and the two source-selection journeys remain the actual gates, with no added journey, business input, budget or timeout.
+
+
+### 66.11. Standalone SDK baseline and selected Main acceptance
+
+The existing `qualify-linux-process-sdk.ts` (865401e9e925d34d97c792a62fa345a9d85f0f80) instantiates `CapturedHostClient` in an ordinary Node process; it does not call Main's `registerDesktopAgentBackend` or install Main's helper selection. Passing the retained TEST helper pin through its workflow is not evidence that this standalone SDK allocation used the helper. Keep that original SDK custody/Stop scenario unchanged as the unselected baseline. The selected helper's actual Main builder, version, shell and Host chain is qualified by the existing cold Electron, packaged cold Electron and retained OpenCode UI lanes, together with the existing Node/Electron native helper proof. No SDK qualifier path, activation mechanism or extra input is added. Preserve the original SDK receipt and require all downstream original UI receipts independently.
+
+
+## 69. Saved effort and native Claude default are different assertions
+
+### Review 1 — exact failing boundary and original selection
+
+Parent e29dbde300ea73ec4e46e5f57f9e007ca5473552 / CI43497088359 / job132132912621 fails at desktop-stopped-import-ui-smoke.ts60: the genuine no-tool request contains requestedEffort='high', while the imported donor setting is absent. The earlier checks of every completed management receipt, including row.effort===undefined, have already passed. This is not evidence that import wrote an explicit effort. Keep the existing persisted-owner omission, source-byte, receipt-selection and no-native-Team-input assertions.
+
+The donor fixture80c2794255b280c411c0a09c752f6e5d1ca50187 selects exact claude-sonnet-4-6 and requires omitted saved effort. Current fixture21497c9884e85c7cd34d682d07fe923781b1de8e supplies a clean private native account/environment with no effort override. D model-probe57fdf89754d1592511a9acf264859282e9745d4f passes an SDK effort option only when the captured request contains it; Host teamLaunchModelProbe6ae19ee22a00c21fd748f5a4d6b283bfaa0702f5 likewise preserves omission. The CI setup pins @anthropic-ai/claude-agent-sdk0.3.305 and the Darwin ARM native executable ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f before this journey. Native wire defaulting does not mutate those saved choices.
+
+Official references, read2026-11-13: [Claude Code effort selection](https://code.claude.com/docs/en/model-config#adjust-effort-level) states that unset configuration falls through to the model default; [Sonnet4.6 effort](https://platform.claude.com/docs/en/build-with-claude/effort) identifies high as that model's default. These current documents corroborate the exact pinned native observation; they are not qualification for another native version, account or model. No API call, native input or version upgrade is added to discover a default.
+
+### Review 2 — finite TEST correction with saved-state checks retained
+
+Add one pure helper in the existing desktop-stopped-import-fixture.ts. An explicit selected effort must remain exactly that value. Only omitted effort for the exact already-pinned claude-sonnet-4-6 fixture maps to expected native wire effort high; an omitted value for any other model fails instead of receiving a generic default. This is an expected-output assertion, never a saved-setting normalizer, product policy or value derived from the observed request.
+
+Use that helper for the existing model.probes[].requestedEffort assertion in desktop-stopped-import-ui-smoke.ts and the original business observation in desktop-stopped-import-launch-ui.ts. Keep management row.effort compared directly to the saved selection, and keep all owner/import/source checks directly compared to the untouched donor bytes. The same shared preflight helper covers the actual donor saved-only consumer and the actual-current stopped source; the latter's separate producer/catalog failure remains open. Synthetic fixtures with explicit low remain unchanged.
+
+Extend the existing single model-proof case in desktop-stopped-import-fixture.test.ts: omitted saved/receipt effort with the exact expected native high passes; a receipt rewritten to high, wire omission/wrong effort, unsupported default model, explicit-selection mismatch, held/cancelled/duplicate/over-budget checks and any Team input still fail. No new test suite, native request, capture, job, timing allowance or looser set of accepted wire values.
+
+Exact four source paths, all under scripts/legacy-agent-host/: desktop-stopped-import-fixture.ts69d65c32aa4254900bbefa1826fbb5fedf9ab3e5; desktop-stopped-import-ui-smoke.tsd8547bfc505a7b81fd368cbabec661e4d539d6f4; desktop-stopped-import-launch-ui.ts95e2f90cf84f8a25a43486113433a684ecdcf32c; desktop-stopped-import-fixture.test.ts70dc7fb47c650111c6686131a4bb30ec18793195. No donor checkout or production file changes.
+
+### Review 3 — acceptance remains the original journeys
+
+Publish this plan first, review the exact four-file delta independently, then publish the coherent source. Require existing types/source-size and the focused original test plus actual unchanged donor import/reload/no-allocation and stopped-source fresh Host Launch/Stop/reload on the corrected head. Missing saved effort must remain absent after import and reopening, and the original native request counts, no-tools boundaries, selected model, manual permission, effects, physical cleanup and cold replay refusal remain exact. Source review is not a native PASS; the earlier producer/catalog issue must still be resolved before the stopped-source journey can pass.
