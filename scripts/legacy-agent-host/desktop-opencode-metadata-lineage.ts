@@ -226,3 +226,74 @@ export function assertDesktopMetadataReleasedEvidence(original: DesktopNativeHos
   for (const pid of state.originals.keys())
     assert.equal(observed.some(row => row.pid === pid), false, 'every original metadata PID is absent before harness cleanup');
 }
+
+export interface DesktopSourceMetadataLineage {
+  readonly host: ProcessFact;
+  readonly profileHashes: readonly string[];
+  readonly events: readonly DesktopMetadataEvent[];
+  readonly partitions: readonly DesktopMetadataLineage[];
+  readonly live: readonly ProcessFact[];
+}
+
+/** One whole-log budget for the original configuration/A/B source journey. */
+export function captureDesktopSourceMetadataLineage(options: {
+  root: string;
+  host: ProcessFact;
+  profileHashes: readonly string[];
+  observed: readonly ProcessFact[];
+  executable: string;
+  original?: DesktopSourceMetadataLineage;
+  released?: boolean;
+}): DesktopSourceMetadataLineage {
+  const { host, profileHashes, observed, original } = options;
+  assert.ok(profileHashes.length >= 1 && profileHashes.length <= 3);
+  assert.equal(new Set(profileHashes).size, profileHashes.length);
+  assert.ok(profileHashes.every(hash));
+  const events = readEvents(options.root, host.pid);
+  if (original) {
+    assert.deepEqual(host, original.host, 'same original source-selection Host');
+    assert.deepEqual(profileHashes.slice(0, original.profileHashes.length), original.profileHashes);
+    assert.deepEqual(events.slice(0, original.events.length), original.events,
+      'one immutable whole-log prefix before any profile partition');
+  }
+  const originals = new Map<number, DesktopMetadataEvent>(), active = new Map<string, DesktopMetadataEvent>();
+  for (const event of events) {
+    assert.equal(event.hostPid, host.pid);
+    assert.ok(profileHashes.includes(event.profileHash), 'only original configuration/A/B source scopes');
+    assert.notEqual(event.pid, host.pid);
+    if (event.stage === 'ready') {
+      assert.ok(!originals.has(event.pid), 'no PID reuse across any original source profile');
+      assert.ok(!active.has(event.profileHash), 'one live metadata owner per source profile');
+      originals.set(event.pid, event); active.set(event.profileHash, event);
+    } else {
+      const ready = originals.get(event.pid);
+      assert.ok(ready, 'original ready precedes its close');
+      assert.deepEqual(identity(event), identity(ready));
+      assert.equal(active.get(event.profileHash), ready);
+      assert.equal(event.stage, 'released', 'unknown cleanup cannot retire metadata');
+      active.delete(event.profileHash);
+    }
+  }
+  const partitions: DesktopMetadataLineage[] = [], live: ProcessFact[] = [];
+  for (const profileHash of profileHashes) {
+    const subset = events.filter(event => event.profileHash === profileHash);
+    if (subset.length === 0) continue;
+    const before = original?.partitions.find(value => value.profileHashes[0] === profileHash);
+    const ready = active.get(profileHash);
+    let result: DesktopMetadataLineage;
+    if (ready) {
+      result = captureDesktopMetadataLineage({ events: subset, host, profileHashes: [profileHash],
+        observed, executable: options.executable, ...(before ? { original: before } : {}) });
+      const birth = result.births.find(value => value.pid === ready.pid); assert.ok(birth);
+      live.push({ ...birth });
+    } else {
+      assert.ok(before, 'a retired profile needs its previously retained physical lineage');
+      result = { profileHashes: [profileHash], events: subset, births: before.births };
+      assertDesktopMetadataReleasedEvidence({ host, children: [], metadataLineage: before }, result, observed);
+    }
+    partitions.push(result);
+  }
+  if (options.released) assert.equal(live.length, 0, 'original Quit released all observed metadata owners');
+  return { host: { ...host }, profileHashes: [...profileHashes], events: events.map(value => ({ ...value })),
+    partitions, live };
+}
