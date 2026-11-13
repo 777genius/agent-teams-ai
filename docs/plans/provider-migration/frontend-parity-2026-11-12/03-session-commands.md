@@ -1635,3 +1635,21 @@ correlation не подтвердятся, compatibility остаётся нез
 первом draft7552. Он заменён source-qualified canonical `code-review` +
 `review` alias через прежний resolver; presentation annotation сделана
 invocation-specific. Старый draft не является разрешением на implementation.
+
+
+**R20 — closure of the existing required CI receipt assertions (plan before workflow edit).**
+
+The already-required `.github/workflows/ci.yml` native command gate must consume
+this same explicit compatibility receipt: `proofs.legacyInlineReview`,
+`execution: legacy-inline-review-v1`, original `/review` arguments/input and
+one original permission record bound to the captured generation/session/operation
+plus the actual Read-result event. Require three review model requests and eleven
+requests in the whole existing journey, reflecting exactly the single additional
+Read/tool-result round already authorized above. Keep the eight original command
+receipts, one actual Team reply, cold no-allocation/no-replay, source pins and
+physical cleanup assertions. No new user input, job, runner or timeout is added.
+The existing Desktop command gate keeps its five requests and exact IDs; its two
+review request rows must carry the same explicit compatibility execution marker.
+It does not claim the newer SDK fork or the native Read permission scenario as a
+Desktop proof. Root makes these narrow workflow assertion changes with the
+coherent reviewed D archive/pin; every other gate and budget remains unchanged.
