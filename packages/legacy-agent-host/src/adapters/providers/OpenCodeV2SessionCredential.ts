@@ -34,8 +34,8 @@ export function captureOpenCodeV2SessionCredential(
     if (restored && restored.credential?.scopeDigest !== captured.digest) return held();
     const catalog = await owner.readCatalog(providerId);
     check();
-    const integrationId = catalog.provider ? catalog.provider.integrationId
-      : (await owner.readDirectory()).integrations.find(row => row.id === providerId)?.id;
+    const integrationId = catalog.provider?.integrationId ??
+      (await owner.readDirectory()).integrations.find(row => row.id === providerId)?.id;
     if (!integrationId) return held();
     const key = createOpenCodeV2CredentialClient({ ...config, version: '2.1.4', integrationId });
     let witness: Witness, failure: unknown, failed = false;

@@ -3419,3 +3419,56 @@ Use pinned pnpm11.22.0 to generate the new file resolution in one temporary, pri
 Read pnpm's generated file record and independently compare its integrity to SHA512 of the exact177100 TGZ bytes. Transfer only that generated integrity and the checked locator into the existing full lock: the five original3b39 path occurrences and one original integrity scalar. Preserve all transitive package/snapshot values and the existing supports-color peer identity byte-for-byte. Require exact old-lock SHA before editing; reversing only these declared scalar substitutions must recover the complete original lock. Any metadata, peer, dependency or additional lock change refuses this narrow operation and needs investigation.
 
 The full repository must then pass its ordinary frozen-lockfile install with all original policies/hooks, and the unchanged installed-provider/archive equality verifier. No partial node_modules execution or synthetic successful install receipt is permitted. This is a bounded pnpm-generated lock update for byte-identical dependency metadata; it does not waive compilation, meaningful tests or any native/Desktop gate. Root and an independent peer review the exact generated record and minimal lock diff before source publication.
+
+## 65. Preserve native 2.1.4 implicit integration identity during captured credential preparation
+
+This is a bounded P09/P05 catalog correction after the actual qualification591 Linux failure. The exact P09 prefix is 90c0cdf7ea7e4b8c10291913c0a4ab4eba475f50. Only the existing credential selector and one existing focused test file are in scope. It does not change P05 §16's private purpose, readiness protocol or source authorization.
+
+### First review — observed failure and exact source distinction
+
+Original job132057339187 on source5912c66f915b1feb9e78c7ec7c97e9d882788583 passed the existing embedded native lifecycle, then failed the first model-probe catalog assertion. Its retained R29 line reports unknownProbeCancelled=true, catalogAttempted=true, catalogCompleted=true, catalogPhase=first-call, catalogReply=held, modelRequests=3, cleanup=true, traceLimited=true, and metadataFailure={epoch:1,stage:credential,code:held,elapsedMs:8679,deadlineExpired:false,aborted:false}. The original log was read through the official job-log endpoint. This is an actual completed refusal with confirmed fixture cleanup, not evidence of a timeout or a still-running catalog RPC.
+
+The diagnostic records the outer credential stage, not the exact failing branch. Current/auth/config revocation and original process-custody loss can also raise held there. The following source defect therefore explains a supported failing input and is consistent with this run; the actual branch and native repair remain unqualified until the unchanged real gate executes. The prior successful/cancelled probes and unknown-variant cancellation are preserved as separate original outcomes. No failure is assigned to the cancellation merely because it preceded the catalog.
+
+Primary source is the official anomalyco/opencode tag v2.1.4, resolved through GitHub to commit68bc26b7da1990ce10ffecfbc1e09eb13aa5d824:
+
+| Exact primary path / blob | Relevant native behavior |
+| --- | --- |
+| packages/core/src/config/plugin/provider.ts / 21a1a87edb84544120c69b58ac5bbdf9188bc562, lines23–42 and54–76 | A configured provider gets a same-ID integration and a plain-key method if absent. The configured provider is enabled; this transform does not add integrationID to its provider row. |
+| packages/schema/src/provider.ts / 6306eb374d91b4c45768ed76cd3fbda33d2378d1 | integrationID is optional; Info.empty(id) omits it. |
+| packages/core/src/provider.ts / b4f88d649d1b8e34434b715fe05e61a4c754b52b, lines448–469 | Native availability resolves the integration using provider.integrationID ?? provider.id, then respects provider activation and original connections. |
+| packages/server/src/handlers/provider.ts / ab9c2201a5eea69a943b47cf871aec49ada22e14, lines12–15 | The public provider-list handler returns that native available-provider projection. |
+| packages/core/src/aisdk-native.ts / 9bbbbd66a463ece24411b61fda8579d76d99e15e, lines24–54 | The configured AI SDK package translation changes package/options/model fields; it does not manufacture an integrationID. |
+
+Primary links: https://github.com/anomalyco/opencode/blob/68bc26b7da1990ce10ffecfbc1e09eb13aa5d824/packages/core/src/config/plugin/provider.ts and https://github.com/anomalyco/opencode/blob/68bc26b7da1990ce10ffecfbc1e09eb13aa5d824/packages/core/src/provider.ts. F's original runtime.lock pins engine2.1.4; the official tag source explains its declared contract. This read is not a new measurement of the original runner's installed engine bytes.
+
+F OpenCodeV2SessionCredential.ts8a2a46db5175467a7e152bce2415f2a9f89ffd47 lines35–39 currently chooses catalog.provider ? catalog.provider.integrationId : same-ID-directory-integration. Thus a valid already-present configured provider without the optional explicit integrationId refuses, whereas an absent provider can use the original same-ID fallback. D's original native catalog projector preserves an absent integrationID as absent; it does not invent a relation. This defect is independent of any inference about when the original runner's native inventory became available.
+
+### Second review — minimal selector and retained authority
+
+Keep the original selected providerId, captured credential scope, catalog read and post-read current check. Retain a present native catalog.provider.integrationId as the selected explicit reference. Only when that explicit reference is absent, consult the same original owner's readDirectory and accept the entry whose native integration id exactly equals the original providerId. Preserve the existing held result when no such entry exists.
+
+Use the existing pinned D directory decoder: it already validates the original location, finite row bounds and unique native integration IDs. No name/description similarity, first-row selection, ambient provider, remembered connection or generated integration is admitted. A foreign-only directory, wrong location, duplicate native IDs or missing integration cannot authorize a key POST.
+
+An explicit native integration reference is never replaced by the implicit fallback after its own read/connect fails. A legitimate explicit integration ID may differ from providerId; the original native reference remains authoritative and the existing key client still checks that exact ID/location. A missing or foreign readback for that explicit reference remains a refusal; a same-ID directory entry must not rescue it. Preserve original error types rather than translating every native refusal into held.
+
+All subsequent operations are unchanged: captured.readKey, the existing same-account/source/config guards, the actual key client's empty-before/plain-key check, one original connect attempt and exact credential readback, disposal, final current check, and the memoized preparation Promise. No new transport option, permission, credential journal, publication, session, prompt, timer, polling loop or automatic retry is introduced. The fallback is a finite existing read route under the same native owner, custody checks, abort signal and absolute deadline. Metadata and model-probe callers share this correction; it does not bypass their original authority or start P05 §16B.
+
+### Exact two-file source scope
+
+| Existing F path / exact preimage | Planned change |
+| --- | --- |
+| packages/legacy-agent-host/src/adapters/providers/OpenCodeV2SessionCredential.ts / 8a2a46db5175467a7e152bce2415f2a9f89ffd47 | Select the explicit integrationId when present; otherwise use the existing exact same-ID directory fallback. Preserve every original check/await/dispose/once boundary. |
+| packages/legacy-agent-host/tests/opencode-v2-credential-scope.test.ts / 1e1ff69f27fb937eab506d8590c6368393d735e1 | Extend the existing credential publication/rollback case with the session-credential selector and actual pinned owned/key clients against a finite TEST loopback peer. Keep the existing source-file/foreign-key/rollback assertions. |
+
+Both preimages were reread at current working parent2249be257b28e1b3aaf7fdb5a1cc70fb7d115d13 and match the actual591 source. The TEST peer supplies only synthetic native envelopes and TEST keys; this is a protocol/selector regression, not a native-engine or authentication qualification. It does not replace the captured process/native gate.
+
+The existing case must distinguish: (1) present configured provider with omitted integrationId plus exact same-ID integration succeeds; (2) absent provider retains its prior exact fallback behavior; (3) a valid explicit native reference remains authoritative without a directory fallback; (4) missing and foreign-only implicit integrations refuse before any key POST; (5) a wrong-scope or wrong-ID explicit readback refuses without falling back to an available same-ID row. Retain exact original location/request accounting and one connect per accepted original preparation; repeated prepare calls return the original Promise and do not repeat reads or POST. The real original auth.json bytes remain unchanged by native preparation. Use normal client disposal and TEST listener cleanup, no module/global fetch monkeypatch or vendor/source rewrite.
+
+### Third review — checks and actual acceptance
+
+After plan publication, prepare only these two source candidates, obtain independent source review and send exact preimages/final blobs/readbacks to root. Root alone publishes/consumes the coherent dependency cut. The earlier D68 change does not repair this F selector and its successful checks are not transferred to this change.
+
+Run the existing credential-scope test file, Host build/test types, relevant fast lint and source-size/diff guards when the authorized setup slot and complete ordinary installation are available. If execution is unavailable, keep the candidate explicitly source-only and let ordinary candidate CI perform required checks; do not use partial node_modules or substitute declarations. Preserve prior install137 outcomes and original native failure.
+
+The next already-required existing opencode-v2-model-probe.native.ts gate must complete its original catalog/model/default/variant assertions, repeated metadata reads, model request accounting and physical cleanup with unchanged budgets and inputs. No new native experiment, job, matrix, cap increase or timeout is authorized here. Only that observed result can qualify the native catalog path; source review alone cannot identify the original held branch or mark frontend/Team readiness complete.
