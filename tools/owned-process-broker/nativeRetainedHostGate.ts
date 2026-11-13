@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, delimiter, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { performance } from 'node:perf_hooks';
@@ -54,10 +54,11 @@ interface Selection {
   executable: { path: string; sha256: string };
   bash: { path: string; sha256: string };
 }
-type Case = 'graceful' | 'crash' | 'natural-services';
+type Case = 'graceful' | 'crash' | 'natural-services' | 'scoped-services';
 
 function prepareProfile(originalSandbox: string, broker: string, selected: Selection, url: string, mode: Case) {
   const root = realpathSync.native(originalSandbox);
+  const services = mode === 'natural-services' || mode === 'scoped-services';
   const systemRoot = process.env.SystemRoot;
   assert.ok(systemRoot && /^[a-z]:\\/i.test(systemRoot));
   for (const name of ['home', 'tmp', 'config', 'workspace', 'appdata', 'localdata', 'storage'])
@@ -157,7 +158,7 @@ function prepareProfile(originalSandbox: string, broker: string, selected: Selec
           {
             principalId: 'alice-session',
             memberName: 'alice',
-            permissions: ['read', 'task.write', 'message.write', ...(mode === 'natural-services' ? ['process.write' as const] : [])],
+            permissions: ['read', 'task.write', 'message.write', ...(services ? ['process.write' as const] : [])],
           },
         ],
       },
@@ -178,7 +179,7 @@ function prepareProfile(originalSandbox: string, broker: string, selected: Selec
           environment,
           executable: selected.executable,
           windowsBroker: { path: broker, sha256: hash(broker), arch: process.arch, protocol: 1,
-            ...(mode === 'natural-services' ? { capability: 'service-scopes-v1' as const } : {}) },
+            ...(services ? { capability: 'service-scopes-v1' as const } : {}) },
           nativeTools: ['Bash'],
           autoAllowedTools: ['Bash'],
           nativeOptions: {
@@ -287,8 +288,8 @@ export async function runNativeRetainedHostGate(
     void done.catch(() => undefined);
     exits.set(child, done);
   };
-  const serviceScenario = mode === 'natural-services'
-    ? await prepareNativeRetainedServiceScenario({ sandbox, fixture, track, events }) : undefined;
+  const serviceScenario = mode === 'natural-services' || mode === 'scoped-services'
+    ? await prepareNativeRetainedServiceScenario({ sandbox, fixture, track, events, mode }) : undefined;
   const model = serviceScenario?.model ?? await startNativeTeamModel({ requireVisibleReply: true });
   let captured: ReturnType<typeof prepareProfile>;
   let physical: NonNullable<ReturnType<typeof captureMainWindowsCustody>>;
@@ -326,6 +327,7 @@ export async function runNativeRetainedHostGate(
             if (attempted[key] >= 64) attemptsTruncated = true;
             else attempted[key]++;
           }
+          serviceScenario?.observeAttempt(call, epoch);
           const value = await port.handle(call);
           await serviceScenario?.observeCustody(call, value, epoch);
           if (call.operation in counts) counts[call.operation as keyof typeof counts]++;
@@ -410,15 +412,31 @@ export async function runNativeRetainedHostGate(
     assert.equal(witness.process.exitCode, null);
     assert.deepEqual(counts, { allocate: 1, prepare: 1, resume: 1, stop: 0, release: 0 });
     if (serviceScenario) {
-      phase = 'natural-services';
+      phase = mode;
       await serviceScenario.run({
         client, profile: captured.profile, mainEpoch: physical.mainEpoch, providerWitness: witness,
         originalHostExit() { assert.ok(hostExited); return hostExited; },
         createSuccessor: () => new CapturedHostClient(captured.host, observedOwner),
+        async crashOriginalHost() {
+          assert.equal(mode, 'scoped-services'); assert.ok(hostExited);
+          const originalExit = hostExited;
+          assert.equal(counts.stop, 0); assert.equal(counts.release, 0);
+          writeFileSync(captured.crash, 'TEST original Host crash\n', { flag: 'wx' });
+          await timeout(originalExit, 5000);
+          await client.shutdown();
+          assert.equal(counts.stop, 0); assert.equal(counts.release, 0);
+          unlinkSync(captured.crash); // Only after A exit; B uses the same captured entry/profile bytes.
+        },
       });
       nativeTurn = true;
-      originalHandleChecks.afterInput = 'alive'; // Independently observed inside the same scenario.
-      originalHandleChecks.afterHostLoss = 'absent'; // After legitimate Trash, not a cold-survival claim.
+      if (mode === 'natural-services') {
+        originalHandleChecks.afterInput = 'alive'; // Independently observed inside the same scenario.
+        originalHandleChecks.afterHostLoss = 'absent'; // After legitimate Trash, not a cold-survival claim.
+      } else {
+        // The scoped helper uses exactly three fresh provider queries before the common final query.
+        assert.equal(serviceScenario.scopedEvidence().providerAliveAfterHostLoss, true);
+        originalHandleChecks.afterHostLoss = 'alive'; retainedAfterCrash = true;
+      }
       assert.equal(attachedHosts, 2); assert.equal(sentinel.exitCode, null);
     } else {
       phase = 'native-turn';
@@ -550,9 +568,14 @@ export async function runNativeRetainedHostGate(
           cleanup,
           modelRequests: model.observations.length,
           modelFailures: model.failures.length,
-          registryQualified: serviceScenario?.evidence().registryQualified ?? false,
-          hostRebindQualified: serviceScenario?.evidence().coldPurgeCompleted ?? false,
-          ...(serviceScenario ? { naturalServices: serviceScenario.evidence(), naturalPhase: serviceScenario.phase() } : {}),
+          registryQualified: mode === 'scoped-services' ? serviceScenario!.scopedEvidence().dualRegistrations
+            : serviceScenario?.evidence().registryQualified ?? false,
+          hostRebindQualified: mode === 'scoped-services' ? serviceScenario!.scopedEvidence().sameMainColdPublicStopQualified
+            : serviceScenario?.evidence().coldPurgeCompleted ?? false,
+          ...(mode === 'natural-services' && serviceScenario
+            ? { naturalServices: serviceScenario.evidence(), naturalPhase: serviceScenario.phase() } : {}),
+          ...(mode === 'scoped-services' && serviceScenario
+            ? { scopedServices: serviceScenario.scopedEvidence(), scopedPhase: serviceScenario.phase() } : {}),
           sdkColdConversationQualified: false,
           desktopQualified: false,
           releaseQualified: false,
@@ -574,7 +597,7 @@ export async function runNativeRetainedHostGate(
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [broker, fixture, selection, sha256, receipt, mode, flag, sandbox] = process.argv.slice(2);
   assert.ok(broker && fixture && selection && sha256 && receipt && sandbox);
-  assert.ok(mode === 'graceful' || mode === 'crash' || mode === 'natural-services');
+  assert.ok(mode === 'graceful' || mode === 'crash' || mode === 'natural-services' || mode === 'scoped-services');
   assert.equal(flag, '--controller-sandbox');
   await runNativeRetainedHostGate(
     realpathSync(broker),

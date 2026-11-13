@@ -1,4 +1,4 @@
-/** TEST ordinary Team MCP registration/natural exit/cold purge through one retained Main owner. */
+/** TEST ordinary Team MCP natural exit and scoped Stop through one retained Main owner. */
 import assert from 'node:assert/strict';
 import type { ChildProcess } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
@@ -14,7 +14,8 @@ import { validateProcessReceipt } from '../../packages/legacy-agent-host/dist/pr
 import { digest } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import type { HostCustodyCall, HostCustodyResult } from '@agent-teams/legacy-agent-host/owned-process';
 import type { WindowsServiceCapture, WindowsServiceIntent } from '../../packages/legacy-agent-host/dist/owned-process/retainedServiceContracts.js';
-import { PROCESS_BOOTSTRAP, PROCESS_REGISTER_ID, PROCESS_LABEL, startProcessModel,
+import { PROCESS_BOOTSTRAP, PROCESS_REGISTER_ID, PROCESS_LABEL, PROCESS_NEIGHBOR_REGISTER_ID,
+  PROCESS_NEIGHBOR_LABEL, startProcessModel,
   type Service } from '../../scripts/legacy-agent-host/desktop-native-process-model.ts';
 import { capturedQueryableWitness, timeout } from './nativeGateContext';
 import type { NativeGateEvents } from './nativeGateEvents';
@@ -36,15 +37,29 @@ const json = (path: string) => {
   return object(JSON.parse(bytes.toString('utf8')));
 };
 type Witness = Awaited<ReturnType<typeof capturedQueryableWitness>>;
+type Role = 'primary' | 'neighbor';
+interface ScenarioRun {
+  client: CapturedHostClient; profile: TeamHostProfile; mainEpoch: string;
+  providerWitness: Witness; originalHostExit(): Promise<void>;
+  createSuccessor(): CapturedHostClient; crashOriginalHost(): Promise<void>;
+}
+interface ScopedStop {
+  commandId: string; processRef: string; deadline: number;
+  intent?: WindowsServiceIntent; settlement?: WindowsServiceIntent;
+  nativeStopped: boolean; settled: boolean; publicCompleted: boolean;
+  ready: Promise<void>; finish(): void;
+}
 
 export async function prepareNativeRetainedServiceScenario(options: {
   sandbox: string; fixture: string; track(child: ChildProcess): void; events: NativeGateEvents;
+  mode: 'natural-services' | 'scoped-services';
 }) {
+  const scoped = options.mode === 'scoped-services';
   const root = join(realpathSync.native(options.sandbox), 'TEST-desktop-backend-natural-' + randomUUID());
   mkdirSync(root); mkdirSync(join(root, 'workspace'));
   const roles = { primary: { nonce: 'TEST-' + randomUUID() }, neighbor: { nonce: 'TEST-' + randomUUID() } };
   const seed = { schemaVersion: 1, node: realpathSync.native(process.execPath), roles,
-    ttlMs: 300000, primaryCompletion: 'natural-request' };
+    ttlMs: 300000, ...(!scoped ? { primaryCompletion: 'natural-request' } : {}) };
   const seedPath = join(root, 'process-ui-seed.json');
   const seedBytes = Buffer.from(JSON.stringify(seed));
   writeFileSync(seedPath, seedBytes, { flag: 'wx' });
@@ -75,22 +90,33 @@ export async function prepareNativeRetainedServiceScenario(options: {
   let cleanupRequested = false, cleanupDeadline = 0, wholeConfirmed = false, released = false;
   let confirmWhole!: () => void;
   const whole = new Promise<void>(resolve => { confirmWhole = resolve; });
+  const captures = new Map<Role, { capture: WindowsServiceCapture; intent: WindowsServiceIntent; witness: Witness }>();
+  const stops = new Map<Role, ScopedStop>();
   const model = await startProcessModel({
     bashCommand: () => quote(seed.node) + ' ' + quote(actor) + ' ' + quote(root),
     services: readServices, serviceLifecycle: lifecycle,
-    windowsNaturalServices: {
+    ...(scoped ? { windowsScopedServices: {
+      async originalScopedStop(role: Role) {
+        const original = stops.get(role);
+        assert.ok(original, 'Notification requires the original explicit public Stop');
+        if (!original.publicCompleted) await timeout(original.ready, remaining(original.deadline));
+        assert.ok(original.publicCompleted && original.nativeStopped && original.settled,
+          'Notification follows genuine same-scope public Stop and settlement');
+      },
+    } } : { windowsNaturalServices: {
       async originalWholeCleanup() {
         assert.ok(cleanupRequested, 'Neighbor completion cannot precede original Human Trash');
         await timeout(whole, Math.min(10000, remaining(cleanupDeadline)));
         assert.equal(wholeConfirmed, true);
       },
-    },
+    } }),
   });
   let allocation: Extract<HostCustodyCall, { operation: 'allocate' }> | undefined;
   let providerRoot: Extract<HostCustodyResult, { operation: 'prepare' }>['root'] | undefined;
   let capture: WindowsServiceCapture | undefined, captureIntent: WindowsServiceIntent | undefined;
   let primaryWitness: Witness | undefined, successor: CapturedHostClient | undefined;
   const serviceCounts = { capture: 0, stop: 0, query: 0, settle: 0, lookup: 0, coldQuery: 0, coldSettle: 0 };
+  const serviceAttempts = { capture: 0, stop: 0, query: 0, settle: 0, lookup: 0 };
   const proof = {
     registryQualified: false, initialRegisterConservative: false,
     liveListBeforeNatural: false, naturalPrimaryAbsent: false, primaryNativeCompletion: false,
@@ -99,9 +125,76 @@ export async function prepareNativeRetainedServiceScenario(options: {
     secondHostNativeAllocations: 0, secondHostInputWrites: 0,
     neighborIndependentHandle: false, durableFieldsQualifiedByThisGate: false,
   };
+  const scopedProof = {
+    dualRegistrations: false, initialRegisterConservative: false, initialLiveList: false,
+    warmPublicScopedStopQualified: false, primaryAbsentAfterWarm: false,
+    neighborAliveAfterWarm: false, providerAliveAfterWarm: false,
+    providerAliveAfterHostLoss: false, sameMainHostRebind: false, neighborAliveAfterColdQuery: false,
+    sameMainColdPublicStopQualified: false, neighborAbsentAfterCold: false, providerAliveAfterCold: false,
+    secondHostNativeAllocations: 0, secondHostInputWrites: 0, secondHostCaptureAttempts: 0,
+    primaryNotificationAcknowledged: false,
+  };
   let phase = 'prepared';
-  const observeCustody = async (call: HostCustodyCall, value: HostCustodyResult, epoch: number) => {
+  const observeAttempt = (call: HostCustodyCall, epoch: number) => {
+    if (!scoped) return;
+    if (call.operation.startsWith('service-')) {
+      const key = call.operation.slice(8) as keyof typeof serviceAttempts;
+      assert.ok(key in serviceAttempts);
+      serviceAttempts[key]++;
+      assert.ok(serviceAttempts[key] <= (key === 'capture' || key === 'stop' || key === 'settle' ? 2 : 64),
+        'Finite original service requests, counted before dispatch');
+    }
     if (epoch === 2) {
+      if (call.operation === 'allocate') scopedProof.secondHostNativeAllocations++;
+      if (call.operation === 'write') scopedProof.secondHostInputWrites++;
+      if (call.operation === 'service-capture') scopedProof.secondHostCaptureAttempts++;
+      assert.ok(!['allocate', 'launch-chunk', 'launch-commit', 'prepare', 'resume', 'write', 'end',
+        'service-capture'].includes(call.operation), 'Successor cannot allocate, capture or send native input');
+    }
+    if (call.operation === 'stop' || call.operation === 'release')
+      assert.ok(cleanupRequested, 'Both scoped Stop checkpoints precede whole-provider cleanup');
+  };
+  const capturedRole = (value: WindowsServiceCapture): Role => {
+    const role = (['primary', 'neighbor'] as const).find(role => captures.get(role)?.capture.target.key === value.target.key);
+    assert.ok(role); assert.deepEqual(value, captures.get(role)!.capture); return role;
+  };
+  const observeScopedControl = (call: HostCustodyCall, value: HostCustodyResult, epoch: number) => {
+    assert.equal(value.operation, call.operation);
+    if (call.operation === 'service-query') {
+      serviceCounts.query++; if (epoch === 2) serviceCounts.coldQuery++;
+      capturedRole(call.capture);
+      assert.equal(value.operation, 'service-query');
+      if (value.operation === 'service-query' && value.outcome.state === 'observed')
+        assert.deepEqual(value.outcome.capture, call.capture);
+      return;
+    }
+    assert.ok(call.operation === 'service-stop' || call.operation === 'service-settle' || call.operation === 'service-lookup');
+    assert.ok(call.intent.command.operation !== 'capture');
+    const role = capturedRole(call.intent.command.capture), original = stops.get(role);
+    assert.ok(original); assert.equal(epoch, role === 'primary' ? 1 : 2);
+    if (call.operation === 'service-stop') {
+      serviceCounts.stop++; assert.equal(original.intent, undefined);
+      assert.equal(call.intent.command.operation, 'stop'); original.intent = structuredClone(call.intent);
+    } else if (call.operation === 'service-settle') {
+      serviceCounts.settle++; if (epoch === 2) serviceCounts.coldSettle++;
+      assert.ok(original.nativeStopped); assert.equal(original.settlement, undefined);
+      assert.equal(call.intent.command.operation, 'settle'); original.settlement = structuredClone(call.intent);
+    } else {
+      serviceCounts.lookup++;
+      assert.deepEqual(call.intent, call.intent.command.operation === 'stop' ? original.intent : original.settlement);
+    }
+    assert.ok('outcome' in value);
+    if (value.outcome.state === 'stopped') {
+      assert.equal(call.intent.command.operation, 'stop'); assert.equal(value.outcome.observation, 'absent');
+      assert.equal(value.outcome.evidence, 'native-scope');
+      assert.deepEqual(value.outcome.capture, captures.get(role)!.capture); original.nativeStopped = true;
+    } else if (value.outcome.state === 'settled') {
+      assert.equal(call.intent.command.operation, 'settle');
+      assert.deepEqual(value.outcome.capture, captures.get(role)!.capture); original.settled = true;
+    }
+  };
+  const observeCustody = async (call: HostCustodyCall, value: HostCustodyResult, epoch: number) => {
+    if (!scoped && epoch === 2) {
       if (call.operation === 'allocate') proof.secondHostNativeAllocations++;
       if (call.operation === 'write') proof.secondHostInputWrites++;
       assert.ok(!['allocate', 'launch-chunk', 'launch-commit', 'prepare', 'resume', 'write', 'end',
@@ -115,25 +208,30 @@ export async function prepareNativeRetainedServiceScenario(options: {
     }
     if (call.operation === 'service-capture') {
       serviceCounts.capture++;
-      assert.equal(serviceCounts.capture, 1); assert.equal(epoch, 1);
+      assert.ok(serviceCounts.capture <= (scoped ? 2 : 1)); assert.equal(epoch, 1);
       assert.equal(value.operation, 'service-capture');
       if (value.operation !== 'service-capture') throw new Error('Original service capture reply mismatch');
       assert.equal(value.outcome.state, 'captured');
       if (value.outcome.state !== 'captured') throw new Error('Original service capture unavailable');
       assert.ok(allocation && providerRoot);
-      capture = structuredClone(value.outcome.capture); captureIntent = structuredClone(call.intent);
-      assert.equal(capture.providerCapability, allocation.capability);
-      assert.equal(capture.providerGeneration, allocation.owner.processGeneration);
-      assert.deepEqual(capture.root, providerRoot);
+      const originalCapture = structuredClone(value.outcome.capture);
+      assert.equal(originalCapture.providerCapability, allocation.capability);
+      assert.equal(originalCapture.providerGeneration, allocation.owner.processGeneration);
+      assert.deepEqual(originalCapture.root, providerRoot);
       const services = await readServices();
-      assert.equal(capture.target.pid, services.primary.pid);
-      primaryWitness = await capturedQueryableWitness(options.fixture, capture.target.pid,
-        capture.target.birth, options.track, options.events);
+      const role = scoped && originalCapture.target.pid === services.neighbor.pid ? 'neighbor' : 'primary';
+      assert.equal(originalCapture.target.pid, services[role].pid); assert.equal(captures.has(role), false);
+      const originalWitness = await capturedQueryableWitness(options.fixture, originalCapture.target.pid,
+        originalCapture.target.birth, options.track, options.events);
+      captures.set(role, { capture: originalCapture, intent: structuredClone(call.intent), witness: originalWitness });
+      if (role === 'primary') { capture = originalCapture; captureIntent = structuredClone(call.intent); primaryWitness = originalWitness; }
     }
-    if (call.operation === 'service-stop') {
+    if (scoped && ['service-stop', 'service-settle', 'service-lookup', 'service-query'].includes(call.operation)) {
+      observeScopedControl(call, value, epoch);
+    } else if (call.operation === 'service-stop') {
       serviceCounts.stop++; throw new Error('Natural service proof cannot synthesize Stop');
     }
-    if (call.operation === 'service-query') {
+    if (!scoped && call.operation === 'service-query') {
       serviceCounts.query++; if (epoch === 2) serviceCounts.coldQuery++;
       assert.ok(capture); assert.deepEqual(call.capture, capture);
       assert.equal(value.operation, 'service-query');
@@ -142,7 +240,7 @@ export async function prepareNativeRetainedServiceScenario(options: {
         if (value.outcome.state === 'observed') assert.deepEqual(value.outcome.capture, capture);
       }
     }
-    if (call.operation === 'service-settle' || call.operation === 'service-lookup') {
+    if (!scoped && (call.operation === 'service-settle' || call.operation === 'service-lookup')) {
       if (call.operation === 'service-settle') { serviceCounts.settle++; if (epoch === 2) serviceCounts.coldSettle++; }
       else serviceCounts.lookup++;
       assert.ok(capture && call.intent.command.operation === 'settle');
@@ -174,19 +272,17 @@ export async function prepareNativeRetainedServiceScenario(options: {
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { role: service.role, nonce: service.nonce, pid: service.pid });
   };
-  async function run(options: {
-    client: CapturedHostClient; profile: TeamHostProfile; mainEpoch: string;
-    providerWitness: Witness; originalHostExit(): Promise<void>;
-    createSuccessor(): CapturedHostClient;
-  }) {
+  async function run(options: ScenarioRun) {
     const team = options.profile.teams[0]!;
     const request = async (client: CapturedHostClient, method: string, commandId: string,
       payload: JsonValue, deadline = performance.now() + 45000): Promise<unknown> => {
+      const budget = remaining(deadline);
       const result = object(await timeout(client.request(method, {
         commandId, binding: { schemaVersion: 1, handleId: 'TEST-natural-process',
           owner: options.profile.owner, scope: team.scope }, payload,
-      }, { control: ['runtime.read', 'team.process.list', 'team.lifecycle.read'].includes(method) }),
-      remaining(deadline)));
+      }, { control: method === 'runtime.read' || method.startsWith('team.process.') || method === 'team.lifecycle.read' }),
+      budget));
+      remaining(deadline); // A delayed timeout callback cannot qualify a late public reply.
       assert.equal(result.ok, true, 'Original natural-service Host route succeeded');
       return result.value;
     };
@@ -211,6 +307,130 @@ export async function prepareNativeRetainedServiceScenario(options: {
     assert.equal(model.probes.length, 0);
     assert.ok(capture && captureIntent && primaryWitness);
     assert.equal(capture.mainEpoch, options.mainEpoch);
+    if (scoped) {
+      assert.equal(captures.size, 2);
+      const currentViews = new Map<Role, Record<string, unknown>>();
+      const receipt = (commandId: string) => validateProcessReceipt(json(join(options.profile.owner.storageRoot,
+        'teams', team.binding.teamName, '.host-owner', 'commands', digest(commandId) + '.json')) as unknown as ProcessCommandReceipt, digest);
+      for (const role of ['primary', 'neighbor'] as const) {
+        const original = captures.get(role)!;
+        assert.equal(original.capture.mainEpoch, options.mainEpoch);
+        const registered = receipt(role === 'primary' ? PROCESS_REGISTER_ID : PROCESS_NEIGHBOR_REGISTER_ID);
+        assert.equal(registered.operation, 'register'); assert.equal(registered.phase, 'completed');
+        assert.equal(registered.principalId, 'alice-session');
+        assert.deepEqual(registered.capture, original.capture); assert.deepEqual(registered.nativeIntent, original.intent);
+        assert.equal(registered.nativeAbsence, undefined);
+        const view = object(registered.result);
+        assert.equal(view.observation, 'unknown'); assert.equal(view.canTerminate, false);
+        assert.equal(view.pid, original.capture.target.pid);
+        assert.equal(view.label, role === 'primary' ? PROCESS_LABEL : PROCESS_NEIGHBOR_LABEL);
+        currentViews.set(role, structuredClone(view));
+      }
+      assert.notEqual(currentViews.get('primary')!.processRef, currentViews.get('neighbor')!.processRef);
+      assert.notEqual(captures.get('primary')!.capture.target.key, captures.get('neighbor')!.capture.target.key);
+      scopedProof.dualRegistrations = true; scopedProof.initialRegisterConservative = true;
+      const list = async (client: CapturedHostClient, stage: string,
+        expected: { primary: 'same-live' | 'absent'; neighbor: 'same-live' | 'absent' }, deadline: number) => {
+        const result = await request(client, 'team.process.list', 'TEST-scoped-list-' + stage, {}, deadline);
+        assert.ok(Array.isArray(result) && result.length === 2);
+        const rows = result.map(object);
+        for (const role of ['primary', 'neighbor'] as const) {
+          const original = currentViews.get(role)!, matching = rows.filter(row => row.id === original.id);
+          assert.equal(matching.length, 1); const row = matching[0]!;
+          assert.equal(row.pid, original.pid); assert.equal(row.label, original.label);
+          assert.equal(row.processRef, original.processRef);
+          assert.equal(row.observation, expected[role]); assert.equal(row.canTerminate, expected[role] === 'same-live');
+        }
+      };
+      const terminate = async (client: CapturedHostClient, role: Role, deadline: number) => {
+        const commandId = 'TEST-public-scoped-stop-' + role, before = currentViews.get(role)!;
+        assert.equal(stops.has(role), false); remaining(deadline);
+        let finish!: () => void;
+        const original: ScopedStop = { commandId, processRef: String(before.processRef), deadline,
+          nativeStopped: false, settled: false, publicCompleted: false,
+          ready: new Promise<void>(resolve => { finish = resolve; }), finish: () => finish() };
+        stops.set(role, original); // One original public command before dispatch; not a native owner.
+        let result = object(await request(client, 'team.process.terminate', commandId,
+          { processRef: original.processRef }, deadline));
+        for (;;) {
+          assert.equal(result.commandId, commandId); assert.equal(result.operation, 'terminate');
+          assert.equal(result.originalProcessRef, original.processRef);
+          const state = object(result.state);
+          if (result.phase === 'completed' && state.phase === 'completed' && state.native === 'observed-absent' &&
+            original.nativeStopped && original.settled) break;
+          assert.ok(result.phase === 'requested' || result.phase === 'completed');
+          await delay(Math.min(25, remaining(deadline)));
+          result = object(await request(client, 'team.process.lookup', 'TEST-scoped-lookup-' + role,
+            { originalCommandId: commandId }, deadline));
+        }
+        assert.equal(object(result.state).signalAccepted, 'unknown');
+        const originalCapture = captures.get(role)!.capture, retained = receipt(commandId);
+        assert.equal(retained.principalId, 'human'); assert.equal(retained.processRef, original.processRef);
+        assert.deepEqual(retained.capture, originalCapture);
+        assert.deepEqual(retained.original?.capturedNative, originalCapture);
+        assert.equal(retained.original?.id, before.id);
+        assert.deepEqual(retained.nativeIntent, original.intent);
+        assert.deepEqual(retained.nativeSettlement, original.settlement);
+        const after = object(result.result);
+        assert.equal(after.id, before.id); assert.equal(after.pid, before.pid);
+        assert.equal(after.observation, 'absent'); assert.equal(after.canTerminate, false);
+        assert.equal(typeof after.stoppedAt, 'string'); assert.notEqual(after.processRef, original.processRef);
+        currentViews.set(role, structuredClone(after)); // stoppedAt changes the row digest; old receipt ref stays immutable.
+        original.publicCompleted = true; original.finish();
+      };
+      const primary = captures.get('primary')!.witness, neighbor = captures.get('neighbor')!.witness;
+      const warmDeadline = performance.now() + 10000;
+      phase = 'warm-public-scoped-stop';
+      await list(options.client, 'initial', { primary: 'same-live', neighbor: 'same-live' }, warmDeadline);
+      scopedProof.initialLiveList = true;
+      assert.equal(await timeout(primary.observe(), remaining(warmDeadline)), 'alive');
+      assert.equal(await timeout(neighbor.observe(), remaining(warmDeadline)), 'alive');
+      await terminate(options.client, 'primary', warmDeadline);
+      assert.equal(await timeout(primary.observe(), remaining(warmDeadline)), 'absent');
+      scopedProof.primaryAbsentAfterWarm = true;
+      assert.equal(await timeout(primary.wait(), remaining(warmDeadline)), 0);
+      assert.equal(await timeout(neighbor.observe(), remaining(warmDeadline)), 'alive');
+      scopedProof.neighborAliveAfterWarm = true;
+      assert.equal(await timeout(options.providerWitness.observe(), remaining(warmDeadline)), 'alive');
+      scopedProof.providerAliveAfterWarm = true;
+      await list(options.client, 'after-primary', { primary: 'absent', neighbor: 'same-live' }, warmDeadline);
+      while (!model.notificationAcks.some(ack => ack.role === 'primary' && ack.responseFinished)) {
+        assert.deepEqual(model.failures, []); await delay(Math.min(25, remaining(warmDeadline)));
+      }
+      assert.equal(model.notificationAcks.filter(ack => ack.role === 'primary').length, 1);
+      assert.equal(model.notificationAcks.find(ack => ack.role === 'primary')!.exitReason, 'original-service-scope');
+      scopedProof.primaryNotificationAcknowledged = true; scopedProof.warmPublicScopedStopQualified = true;
+      phase = 'original-host-loss';
+      await options.crashOriginalHost();
+      assert.equal(await options.providerWitness.observe(), 'alive');
+      scopedProof.providerAliveAfterHostLoss = true;
+      phase = 'cold-public-scoped-stop';
+      successor = options.createSuccessor(); await successor.start(); scopedProof.sameMainHostRebind = true;
+      const coldDeadline = performance.now() + 10000;
+      await list(successor, 'cold-original', { primary: 'absent', neighbor: 'same-live' }, coldDeadline);
+      assert.equal(await timeout(neighbor.observe(), remaining(coldDeadline)), 'alive');
+      scopedProof.neighborAliveAfterColdQuery = true;
+      await terminate(successor, 'neighbor', coldDeadline);
+      assert.equal(await timeout(neighbor.observe(), remaining(coldDeadline)), 'absent');
+      scopedProof.neighborAbsentAfterCold = true;
+      assert.equal(await timeout(neighbor.wait(), remaining(coldDeadline)), 0);
+      assert.equal(await timeout(options.providerWitness.observe(), remaining(coldDeadline)), 'alive');
+      scopedProof.providerAliveAfterCold = true;
+      await list(successor, 'after-neighbor', { primary: 'absent', neighbor: 'absent' }, coldDeadline);
+      assert.equal(serviceCounts.capture, 2); assert.equal(serviceCounts.stop, 2); assert.equal(serviceCounts.settle, 2);
+      assert.deepEqual(serviceAttempts, { capture: 2, stop: 2, settle: 2,
+        query: serviceCounts.query, lookup: serviceCounts.lookup });
+      assert.equal(serviceCounts.coldSettle, 1);
+      assert.equal(scopedProof.secondHostNativeAllocations, 0); assert.equal(scopedProof.secondHostInputWrites, 0);
+      assert.equal(scopedProof.secondHostCaptureAttempts, 0);
+      assert.deepEqual(model.failures, []); assert.equal(model.observations.length, 4);
+      scopedProof.sameMainColdPublicStopQualified = true;
+      cleanupRequested = true;
+      assert.equal((await successor.shutdown()).childExit, 'confirmed');
+      assert.equal(sha(readFileSync(seedPath)), sha(seedBytes));
+      assert.equal(sha(readFileSync(actor)), sha(actorBytes)); assert.equal(sha(readFileSync(actorSource)), sha(actorBytes));
+      phase = 'completed'; return;
+    }
     const originalReceipt = validateProcessReceipt(json(join(options.profile.owner.storageRoot,
       'teams', team.binding.teamName, '.host-owner', 'commands', digest(PROCESS_REGISTER_ID) + '.json')) as unknown as ProcessCommandReceipt, digest);
     assert.equal(originalReceipt.commandId, PROCESS_REGISTER_ID);
@@ -289,11 +509,16 @@ export async function prepareNativeRetainedServiceScenario(options: {
     assert.equal(sha(readFileSync(actorSource)), sha(actorBytes));
     phase = 'completed';
   }
-  return { model, observeCustody, run,
+  return { model, observeAttempt, observeCustody, run,
     phase: () => phase,
     evidence: () => ({ ...proof, serviceCounts: { ...serviceCounts }, wholeConfirmed, released,
       actorSha256: sha(actorBytes), nativeNotificationCount: model.notificationAcks.length }),
-    closeHost: async () => { if (successor) await successor.shutdown(); },
-    drain: async () => { if (primaryWitness) assert.equal(await primaryWitness.wait(), 0); },
+    scopedEvidence: () => ({ ...scopedProof, serviceCounts: { ...serviceCounts }, serviceAttempts: { ...serviceAttempts },
+      actorSha256: sha(actorBytes), nativeNotificationCount: model.notificationAcks.length }),
+    closeHost: async () => { if (scoped) cleanupRequested = true; if (successor) await successor.shutdown(); },
+    drain: async () => {
+      if (scoped) for (const original of captures.values()) assert.equal(await original.witness.wait(), 0);
+      else if (primaryWitness) assert.equal(await primaryWitness.wait(), 0);
+    },
   };
 }

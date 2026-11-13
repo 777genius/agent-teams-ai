@@ -1635,3 +1635,40 @@ correlation не подтвердятся, compatibility остаётся нез
 первом draft7552. Он заменён source-qualified canonical `code-review` +
 `review` alias через прежний resolver; presentation annotation сделана
 invocation-specific. Старый draft не является разрешением на implementation.
+
+
+**R20 — closure of the existing required CI receipt assertions (plan before workflow edit).**
+
+The already-required `.github/workflows/ci.yml` native command gate must consume
+this same explicit compatibility receipt: `proofs.legacyInlineReview`,
+`execution: legacy-inline-review-v1`, original `/review` arguments/input and
+one original permission record bound to the captured generation/session/operation
+plus the actual Read-result event. Require three review model requests and eleven
+requests in the whole existing journey, reflecting exactly the single additional
+Read/tool-result round already authorized above. Keep the eight original command
+receipts, one actual Team reply, cold no-allocation/no-replay, source pins and
+physical cleanup assertions. No new user input, job, runner or timeout is added.
+The existing Desktop command gate keeps its five requests and exact IDs; its two
+review request rows must carry the same explicit compatibility execution marker.
+It does not claim the newer SDK fork or the native Read permission scenario as a
+Desktop proof. Root makes these narrow workflow assertion changes with the
+coherent reviewed D archive/pin; every other gate and budget remains unchanged.
+
+
+**R20 checked archive pin — retain the identical dependency graph.**
+
+Official CI `43434455869` passed both exact Node jobs (`131915856553`,
+`131915855999`); checked artifact `14043230900` was downloaded with its
+original ZIP SHA256 `16448ae2767af90e3738cf23806347f8ae7364499e4c9da7923b831b18d8b92e`.
+Its provider bytes match the independent local packed-consumer output.
+Old f4 and new 3b39 package/package.json bytes are identical, SHA256
+`ea236ac5ff4c43d5fa7628ee7615022c23b0fcd9a4fe3594e63f137971245e50`;
+the SPI archive is also unchanged. No dependency version or resolution graph changed.
+Two local resolver invocations ended with exit137 before writing the lockfile,
+including a scoped, cached attempt with lower heap and network concurrency.
+Update only the five occurrences of this local tarball path and its one
+verified SHA512 integrity value in the existing lockfile. Then require a normal
+full frozen-lockfile install with supply-chain/integrity checks preserved, followed
+by the coherent Host build/types and focused existing checks. No trust-policy,
+integrity, dependency, native runtime or CI limit is relaxed. This is a source
+and packed-consumer pin; native Host/Desktop results remain separate.

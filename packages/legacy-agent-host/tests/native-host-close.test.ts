@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { closeNativeHostInput, startHost } from './fixtures/native-host.ts';
-import { readOriginalHostCpuProfile } from './fixtures/native-opencode-team/passive-diagnostics.ts';
+import { createPassiveNativeDiagnosticCapture, readOriginalHostCpuProfile } from './fixtures/native-opencode-team/passive-diagnostics.ts';
 
 test('a failed original Node child retains CPU evidence and bounded file refusals stay distinguishable', {
   timeout: 10000,
@@ -94,6 +94,24 @@ test('a failed original Node child retains CPU evidence and bounded file refusal
     assert.equal(malformed.status, 'unavailable'); assert.equal(malformed.reason, 'invalid-profile');
     assert.equal('teamWriterDetails' in malformed, false);
     assert.equal(malformed.rawDiscarded, true); assert.equal(existsSync(path), false);
+
+    // Synthetic receipt decoding only: no additional native child or raw diagnostics are retained.
+    const passive = createPassiveNativeDiagnosticCapture(), prefix = 'TEST_OPENCODE_V2_DIAGNOSTIC ';
+    const secret = 'TEST-private-native-token';
+    const fifth = prefix + JSON.stringify({ event: 'child-ready', atMs: 7, child: 5,
+      raw: secret, path: root }) + '\n';
+    passive.accept(Buffer.from(fifth.slice(0, 23)), 1);
+    assert.equal(passive.entries.length, 0, 'a partial line does not invent an observation');
+    passive.accept(Buffer.from(fifth.slice(23)), 1);
+    passive.accept(Buffer.from(prefix + JSON.stringify({ event: 'child-exit', atMs: 9,
+      child: 6, exitCode: 0, unknownNativeField: secret }) + '\n' + secret + '\n'), 2);
+    assert.equal(passive.entries.length, 2);
+    assert.equal(passive.entries[0]!.child, 5, 'the source-derived metadata child remains observable');
+    assert.equal(passive.entries[0]!.epoch, 1);
+    assert.equal(passive.entries[1]!.child, null, 'an ordinal beyond the finite bound is not accepted');
+    assert.equal(passive.entries[1]!.epoch, 2);
+    assert.equal(JSON.stringify(passive.entries).includes(secret), false);
+    assert.equal(JSON.stringify(passive.entries).includes(root), false);
   } finally {
     if (host.child.exitCode === null && host.child.signalCode === null) await host.close().catch(() => {});
     rmSync(root, { recursive: true, force: true });

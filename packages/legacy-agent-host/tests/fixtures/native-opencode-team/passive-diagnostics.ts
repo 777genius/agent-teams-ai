@@ -40,7 +40,7 @@ export function createPassiveNativeDiagnosticCapture() {
           const value = record(JSON.parse(line.slice(prefix.length)) as unknown);
           const event = choice(value.event, events), atMs = integer(value.atMs);
           if (!event || atMs === null) continue;
-          entries.push({ epoch, event, atMs, child: integer(value.child, 4), request: integer(value.request, 4096),
+          entries.push({ epoch, event, atMs, child: integer(value.child, 5), request: integer(value.request, 4096),
             route: choice(value.route, routes), method: choice(value.method, ['GET', 'POST', 'PUT', 'DELETE']),
             durationMs: integer(value.durationMs), status: integer(value.status, 599),
             contentEncoding: choice(value.contentEncoding, contentEncodings),
@@ -266,7 +266,7 @@ function observeOriginalHost(): void {
   channel('child_process').subscribe(message => {
     const child = record(message).process as ChildProcess | undefined;
     child?.once('spawn', () => {
-      if (child.spawnargs.at(-1) !== childEntry || children >= 4) return;
+      if (child.spawnargs.at(-1) !== childEntry || children >= 5) return;
       const selected = ++children;
       emit({ event: 'child-spawn', child: selected });
       child.stdin?.once('finish', () => emit({ event: 'child-input-ended', child: selected }));

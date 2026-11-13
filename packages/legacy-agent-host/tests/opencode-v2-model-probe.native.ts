@@ -7,6 +7,7 @@ import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 
 import { fileHash, startHost, tick } from './fixtures/native-host.ts';
+import { createPassiveNativeDiagnosticCapture } from './fixtures/native-opencode-team/passive-diagnostics.ts';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { ProviderManagementCatalog, ProviderModelProbeSnapshot } from '../dist/management/contracts.js';
@@ -54,6 +55,8 @@ test(
     const nativePids: number[] = [];
     const steps: string[] = [];
     const hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
+    const passive = createPassiveNativeDiagnosticCapture();
+    let hostEpoch = 0;
     let host: ReturnType<typeof startHost> | undefined;
     let originalFailure: unknown,
       passed = false,
@@ -208,7 +211,12 @@ test(
       const profilePath = join(root, 'profile.json');
       await writeFile(profilePath, JSON.stringify(profile), { mode: 0o600 });
       const profileHash = await fileHash(profilePath);
-      const start = () => startHost({ node, entry, root, profile: profilePath, profileHash });
+      const start = () => {
+        const epoch = ++hostEpoch;
+        return startHost({ node, entry, root, profile: profilePath, profileHash,
+          testImports: [new URL('./fixtures/native-opencode-team/passive-diagnostics.ts', import.meta.url).href],
+          onDiagnostic: (chunk: Buffer) => passive.accept(chunk, epoch) });
+      };
       host = start();
       await host.rpc('host.handshake', { protocolVersion: 1 });
       const capture = async (scope: 'global' | 'project') => {
@@ -454,6 +462,7 @@ test(
                 signalCode,
                 stdoutValid,
               })),
+              passiveNativeDiagnostics: passive.entries,
               vendorAuthQualified: false,
               desktopQualified: false,
               releaseQualified: false,
