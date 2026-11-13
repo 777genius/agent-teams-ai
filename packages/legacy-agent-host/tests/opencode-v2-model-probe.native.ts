@@ -62,6 +62,12 @@ test(
       passed = false,
       cleanup = false;
     const cleanupErrors: unknown[] = [];
+    let unknownProbeCancelled = false, catalogAttempted = false, catalogCompleted = false;
+    let catalogPhase: 'not-started' | 'first-call' | 'first-assertions' | 'repeat-call' | 'complete' = 'not-started';
+    let catalogReply = 'unavailable';
+    const catalogCode = (reply: Record<string, unknown>): string => reply.ok === true ? 'ok'
+      : typeof reply.code === 'string' && ['held', 'conflict', 'invalid', 'busy', 'forbidden', 'not_found'].includes(reply.code)
+        ? reply.code : 'unknown';
     const selectedRuntimeEndpoint = createServer((_request, response) => {
       failures.push('TEST_catalog_used_selected_runtime_endpoint');
       response.writeHead(409); response.end();
@@ -354,10 +360,16 @@ test(
       assert.equal(value<ProviderModelProbeSnapshot>(await host.rpc('management.probe.read', refusedLookup)).ok, false);
       assert.equal(requests.length, 3, 'unlisted native variant is refused before session input');
       assert.equal(value<ProviderModelProbeSnapshot>(await host.rpc('management.probe.cancel', refusedLookup)).phase, 'cancelled');
+      unknownProbeCancelled = true;
       steps.push('unlisted_variant_refused_without_model_request_and_owned_cleanup_confirmed');
       const catalogInput = { profileId: base.profileId, configRevision: base.configRevision,
         providerId: base.providerId };
-      const catalog = value<ProviderManagementCatalog>(await host.rpc('management.catalog', catalogInput));
+      catalogAttempted = true; catalogPhase = 'first-call';
+      const firstCatalogReply = await host.rpc('management.catalog', catalogInput);
+      catalogCompleted = true;
+      catalogReply = catalogCode(firstCatalogReply);
+      const catalog = value<ProviderManagementCatalog>(firstCatalogReply);
+      catalogPhase = 'first-assertions';
       assert.deepEqual(catalog.runtime, { generation: 'v2', version: '2.1.4' });
       assert.equal(catalog.configuredDefaultModelId, 'TEST-local/TEST-model-B');
       assert.equal(catalog.providers.length, 1);
@@ -370,7 +382,11 @@ test(
       assert.equal(catalog.providers[0]!.configuredAuthless, true, 'captured loopback route requires a separate model probe');
       assert.deepEqual(catalog.providers[0]!.authMethods, ['api']);
       assert.ok(!JSON.stringify(catalog).includes('TEST-LOCALHOST-ONLY'));
-      assert.deepEqual(value(await host.rpc('management.catalog', catalogInput)), catalog);
+      catalogPhase = 'repeat-call'; catalogReply = 'unavailable';
+      const repeatedCatalogReply = await host.rpc('management.catalog', catalogInput);
+      catalogReply = catalogCode(repeatedCatalogReply);
+      assert.deepEqual(value(repeatedCatalogReply), catalog);
+      catalogPhase = 'complete';
       assert.equal(requests.length, 3, 'metadata reads do not execute a model request');
       steps.push('published_global_and_project_sources_reached_native_body_headers_limits_and_default');
       const metadataChildren: number[] = [];
@@ -474,6 +490,18 @@ test(
         );
       } catch (error) {
         cleanupErrors.push(error);
+      }
+      if (originalFailure || cleanupErrors.length) {
+        try {
+          const failure = passive.entries.find(row => row.event === 'metadata-read-failed');
+          // Already twice-projected fixed fields only; never print the original error/receipt/entry.
+          const line = JSON.stringify({ kind: 'TEST_NATIVE_V2_CATALOG_FAILURE', diagnosticOnly: true, sourceHead,
+            unknownProbeCancelled, catalogAttempted, catalogCompleted, catalogPhase, catalogReply,
+            modelRequests: requests.length, cleanup, traceLimited: passive.limited,
+            metadataFailure: failure ? { epoch: failure.epoch, stage: failure.stage, code: failure.code,
+              elapsedMs: failure.durationMs, deadlineExpired: failure.deadlineExpired, aborted: failure.aborted } : null });
+          if (Buffer.byteLength(line) <= 2048) console.log(line);
+        } catch { /* Best-effort evidence never replaces the original failure or cleanup outcome. */ }
       }
     }
     if (originalFailure && cleanupErrors.length)

@@ -1,6 +1,8 @@
+import { channel } from 'node:diagnostics_channel';
 import { lstatSync, realpathSync } from 'node:fs';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { createOpenCodeV2OwnedSessionClient, createOpenCodeV2CredentialClient } from '@agent-teams/provider-implementations/opencode';
@@ -20,6 +22,28 @@ import { createOpenCodeMetadataDiagnostic } from './createClaudeCloseDiagnostic.
 import type { ProviderManagementCatalog } from '../../management/contracts.js';
 import type { OpenCodeManagementProfile } from '../../management/profile.js';
 import type { RegisteredProcessRootSource } from '../../process/registeredProcessContracts.js';
+
+const metadataReadFailure = channel('agent-teams:opencode-v2:metadata-read-failed');
+type MetadataReadStage = 'admission' | 'native-client' | 'identity' | 'plugins' | 'permissions' | 'mcp'
+  | 'credential' | 'directory' | 'activation-wait' | 'current' | 'projection' | 'dispose' | 'result-current';
+const metadataFailureReasons = new Set(['held', 'conflict', 'invalid', 'busy', 'deadline', 'cleanup_unknown',
+  'transport_failure', 'authority_mismatch', 'disposed', 'http_failure', 'media_type', 'body_limit',
+  'frame_limit', 'invalid_response', 'invalid_native_catalog', 'native_catalog_binding_mismatch',
+  'capabilities_pending', 'unqualified_version', 'ABORT_ERR']);
+/** Diagnostic data only: never execute error accessors or inspect raw messages/cause chains. */
+function metadataFailureReason(error: unknown): string {
+  try {
+    const own = (value: unknown, key: string): unknown => {
+      if (!value || typeof value !== 'object') return undefined;
+      const field = Object.getOwnPropertyDescriptor(value, key);
+      return field && 'value' in field ? field.value as unknown : undefined;
+    };
+    const cause = own(error, 'name') === 'ClientError' && own(error, 'reason') === 'Transport'
+      ? own(error, 'cause') : undefined;
+    const code = own(error, 'code') ?? own(cause, 'code');
+    return typeof code === 'string' && metadataFailureReasons.has(code) ? code : 'unknown';
+  } catch { return 'unknown'; }
+}
 
 const held = (): never => { throw new OpenCodeManagementError('held'); };
 type Identity = { dev: bigint; ino: bigint };
@@ -179,72 +203,103 @@ export class OpenCodeV2ManagementHost {
   }
 
   private async read(providerId: string | undefined, includeModels: boolean, deadline: number): Promise<ProviderManagementCatalog> {
-    const remaining = Math.min(this.profile.timeoutMs, deadline - Date.now());
-    if (!Number.isSafeInteger(remaining) || remaining <= 0) return held();
-    const signal = AbortSignal.any([this.abort.signal, AbortSignal.timeout(remaining)]);
-    const { client, config, ready } = await this.nativeClient(signal, deadline);
-    const selected = this.profile.nativeModel!;
-    let result: ProviderManagementCatalog | undefined, failure: unknown, failed = false;
+    const started = performance.now();
+    let stage: MetadataReadStage = 'admission', signal: AbortSignal | undefined, observed = false;
+    const observeFailure = (error: unknown): void => {
+      if (observed) return;
+      observed = true;
+      try {
+        if (!metadataReadFailure.hasSubscribers) return;
+        const elapsedMs = Math.max(0, Math.round(performance.now() - started));
+        if (!Number.isSafeInteger(elapsedMs) || elapsedMs > 3_600_000) return;
+        metadataReadFailure.publish(Object.freeze({ stage, reason: metadataFailureReason(error), elapsedMs,
+          deadlineExpired: Date.now() >= deadline, aborted: signal?.aborted ?? null }));
+      } catch { /* Observation cannot replace the original failure or determine cleanup. */ }
+    };
+    // The original nativeClient await stays outside the original client/dispose try.
     try {
-      const identity = await client.identity();
-      if (identity.pid !== ready.pid || identity.version !== '2.1.4' || !(await client.builtinPluginsOnly()) ||
-          !(await client.savedPermissionsEmpty()) || (await client.readMcp()).length !== 0) held();
-      await this.catalogCredential?.prepare(config, client);
-      let catalog = await client.readDirectory();
-      // Await metadata activation inside the original deadline; never warm it with a prompt.
-      while (!catalog.providers.length && !catalog.integrations.length && !signal.aborted) {
-        await delay(50, undefined, { signal });
-        catalog = await client.readDirectory();
+      const remaining = Math.min(this.profile.timeoutMs, deadline - Date.now());
+      if (!Number.isSafeInteger(remaining) || remaining <= 0) return held();
+      signal = AbortSignal.any([this.abort.signal, AbortSignal.timeout(remaining)]);
+      stage = 'native-client';
+      const { client, config, ready } = await this.nativeClient(signal, deadline);
+      const selected = this.profile.nativeModel!;
+      let result: ProviderManagementCatalog | undefined, failure: unknown, failed = false;
+      try {
+        stage = 'identity';
+        const identity = await client.identity();
+        if (identity.pid !== ready.pid || identity.version !== '2.1.4') held();
+        stage = 'plugins';
+        if (!(await client.builtinPluginsOnly())) held();
+        stage = 'permissions';
+        if (!(await client.savedPermissionsEmpty())) held();
+        stage = 'mcp';
+        if ((await client.readMcp()).length !== 0) held();
+        stage = 'credential';
+        await this.catalogCredential?.prepare(config, client);
+        stage = 'directory';
+        let catalog = await client.readDirectory();
+        // Await metadata activation inside the original deadline; never warm it with a prompt.
+        while (!catalog.providers.length && !catalog.integrations.length && !signal.aborted) {
+          stage = 'activation-wait';
+          await delay(50, undefined, { signal });
+          stage = 'directory';
+          catalog = await client.readDirectory();
+        }
+        stage = 'current';
+        this.assertCurrent(signal);
+        stage = 'projection';
+        const providers = new Map(catalog.providers.map(row => [row.id, row]));
+        const integrations = new Map(catalog.integrations.map(row => [row.id, row]));
+        const ids = new Set([...providers.keys(), ...integrations.keys()]);
+        const sources = new Set(new OpenCodeV2CredentialScope(this.profile, selected.providerId,
+          () => this.current()).providerIds());
+        result = {
+          profileId: this.profile.profileId, configRevision: this.profile.configRevision,
+          runtime: { generation: 'v2', version: identity.version },
+          configuredDefaultModelId: catalog.defaultModel
+            ? catalog.defaultModel.providerId + '/' + catalog.defaultModel.modelId : null,
+          providers: [...ids].filter(id => (providerId === undefined || providerId === id) &&
+            !['kimi-for-coding', 'kiro', 'cursor-acp'].includes(id) &&
+            (!['exa', 'tavily'].includes(id) || providers.get(id)?.integrationId)).map(id => {
+            const provider = providers.get(id);
+            const integration = integrations.get(provider ? provider.integrationId ?? '' : id);
+            const models = catalog.models.filter(model => model.providerId === id && model.enabled);
+            const configuration = id === this.configuredProviderId ? this.configuration.configuration : undefined;
+            const configuredAuthless = !!configuration && isConfiguredAuthless({ id,
+              npm: ['aisdk:@ai-sdk/openai-compatible', '@opencode/ai/providers/openai-compatible']
+                .includes(String(configuration.package)) ? '@ai-sdk/openai-compatible' : undefined,
+              options: configuration.settings,
+            });
+            const source = sources.has(id) ? new OpenCodeV2CredentialScope(this.profile, id,
+              () => this.current()).capture() : undefined;
+            return {
+              providerId: id, displayName: integration?.name ?? provider?.name ?? id,
+              source: source ? 'api' as const : configuration ? 'config' as const : null,
+              // Passive directory does not import keys or infer authentication from inventory.
+              connected: !!source && this.options.connected?.(id, source.digest) === true,
+              configured: source !== undefined || configuration !== undefined, configuredAuthless,
+              defaultModelId: catalog.defaultModel?.providerId === id ? catalog.defaultModel.modelId : null,
+              modelCount: models.length,
+              models: providerId === undefined && !includeModels ? [] : models.map(model => ({
+                modelId: model.id, displayName: model.name, contextTokens: model.contextTokens,
+                outputTokens: model.outputTokens, free: null, declaredInputModalities: model.inputModalities,
+              })),
+              authMethods: integration?.plainKey ? ['api' as const] : [],
+            };
+          }),
+        };
+      } catch (error) { failed = true; failure = error; observeFailure(error); }
+      stage = 'dispose';
+      for (const wire of [client]) {
+        try { await wire?.dispose(); }
+        catch (error) { this.cleanupUnknown = true; if (!failed) { failed = true; failure = error; observeFailure(error); } }
       }
+      if (failed) throw failure;
+      stage = 'result-current';
       this.assertCurrent(signal);
-      const providers = new Map(catalog.providers.map(row => [row.id, row]));
-      const integrations = new Map(catalog.integrations.map(row => [row.id, row]));
-      const ids = new Set([...providers.keys(), ...integrations.keys()]);
-      const sources = new Set(new OpenCodeV2CredentialScope(this.profile, selected.providerId,
-        () => this.current()).providerIds());
-      result = {
-        profileId: this.profile.profileId, configRevision: this.profile.configRevision,
-        runtime: { generation: 'v2', version: identity.version },
-        configuredDefaultModelId: catalog.defaultModel
-          ? catalog.defaultModel.providerId + '/' + catalog.defaultModel.modelId : null,
-        providers: [...ids].filter(id => (providerId === undefined || providerId === id) &&
-          !['kimi-for-coding', 'kiro', 'cursor-acp'].includes(id) &&
-          (!['exa', 'tavily'].includes(id) || providers.get(id)?.integrationId)).map(id => {
-          const provider = providers.get(id);
-          const integration = integrations.get(provider ? provider.integrationId ?? '' : id);
-          const models = catalog.models.filter(model => model.providerId === id && model.enabled);
-          const configuration = id === this.configuredProviderId ? this.configuration.configuration : undefined;
-          const configuredAuthless = !!configuration && isConfiguredAuthless({ id,
-            npm: ['aisdk:@ai-sdk/openai-compatible', '@opencode/ai/providers/openai-compatible']
-              .includes(String(configuration.package)) ? '@ai-sdk/openai-compatible' : undefined,
-            options: configuration.settings,
-          });
-          const source = sources.has(id) ? new OpenCodeV2CredentialScope(this.profile, id,
-            () => this.current()).capture() : undefined;
-          return {
-            providerId: id, displayName: integration?.name ?? provider?.name ?? id,
-            source: source ? 'api' as const : configuration ? 'config' as const : null,
-            // Passive directory does not import keys or infer authentication from inventory.
-            connected: !!source && this.options.connected?.(id, source.digest) === true,
-            configured: source !== undefined || configuration !== undefined, configuredAuthless,
-            defaultModelId: catalog.defaultModel?.providerId === id ? catalog.defaultModel.modelId : null,
-            modelCount: models.length,
-            models: providerId === undefined && !includeModels ? [] : models.map(model => ({
-              modelId: model.id, displayName: model.name, contextTokens: model.contextTokens,
-              outputTokens: model.outputTokens, free: null, declaredInputModalities: model.inputModalities,
-            })),
-            authMethods: integration?.plainKey ? ['api' as const] : [],
-          };
-        }),
-      };
-    } catch (error) { failed = true; failure = error; }
-    for (const wire of [client]) {
-      try { await wire?.dispose(); }
-      catch (error) { this.cleanupUnknown = true; if (!failed) { failed = true; failure = error; } }
-    }
-    if (failed) throw failure;
-    this.assertCurrent(signal);
-    return result!;
+      return result!;
+    } catch (error) { observeFailure(error); throw error; }
   }
 
   private async tracked<T>(operation: () => Promise<T>): Promise<T> {
