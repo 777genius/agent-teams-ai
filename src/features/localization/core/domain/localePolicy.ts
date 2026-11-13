@@ -36,8 +36,21 @@ export function resolveAppLocale(input: LocaleResolutionInput): ResolvedAppLocal
     return supportedLocales.includes(preference) ? preference : fallbackLocale;
   }
 
-  const primarySystemLocale = extractPrimaryLocaleSubtag(input.systemLocale);
-  return isResolvedAppLocale(primarySystemLocale) && supportedLocales.includes(primarySystemLocale)
-    ? primarySystemLocale
+  const systemAppLocale = isTraditionalChineseLocale(input.systemLocale)
+    ? 'zh-TW'
+    : extractPrimaryLocaleSubtag(input.systemLocale);
+  return isResolvedAppLocale(systemAppLocale) && supportedLocales.includes(systemAppLocale)
+    ? systemAppLocale
     : fallbackLocale;
+}
+
+const TRADITIONAL_CHINESE_REGIONS = new Set(['tw', 'hk', 'mo']);
+
+/** zh-TW, zh-HK, zh-MO and zh-Hant-* use Traditional script unless zh-Hans is explicit. */
+export function isTraditionalChineseLocale(locale: string | null | undefined): boolean {
+  const subtags = locale?.trim().replaceAll('_', '-').toLowerCase().split('-') ?? [];
+  if (subtags[0] !== 'zh' || subtags.includes('hans')) return false;
+  return subtags
+    .slice(1)
+    .some((subtag) => subtag === 'hant' || TRADITIONAL_CHINESE_REGIONS.has(subtag));
 }

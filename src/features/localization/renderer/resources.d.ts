@@ -419,7 +419,8 @@ export default interface Resources {
         "uk": "Ukrainian",
         "ur": "Urdu",
         "vi": "Vietnamese",
-        "zh": "Chinese"
+        "zh": "Chinese",
+        "zh-TW": "Traditional Chinese"
       },
       "searchPlaceholder": "Search language...",
       "selectPlaceholder": "Select app language...",
@@ -2645,6 +2646,35 @@ export default interface Resources {
           "description": "Automatically expand each response turn when opening a transcript or receiving a new message",
           "label": "Expand AI responses by default"
         },
+        "customThemes": {
+          "description": "Use named JSON color palettes based on Dark or Light.",
+          "edit": "Edit JSON",
+          "editor": {
+            "cancel": "Cancel",
+            "conflict": "Themes changed in another tab. Your JSON draft is preserved; review it or explicitly overwrite the newer themes.",
+            "description": "Edit up to 8 named themes. Colors must be #RRGGBB; Save applies only valid JSON. Use an empty themes array to remove all themes.",
+            "invalidJson": "Invalid JSON syntax",
+            "invalidTheme": "Invalid theme palette. Check the fields, colors, and contrast.",
+            "overwrite": "Overwrite newer themes",
+            "save": "Save themes",
+            "title": "Edit custom themes (JSON)"
+          },
+          "label": "Custom themes",
+          "localOnly": "Themes, UI zoom and typography are saved only on this browser/device.",
+          "none": "Built-in theme"
+        },
+        "fontFamily": {
+          "apply": "Apply",
+          "description": "Choose a locally installed font for the interface. Editors and terminals keep their own fonts.",
+          "discover": "Find installed fonts",
+          "empty": "No installed fonts were found. Enter a font name manually.",
+          "label": "UI font",
+          "loaded": "Installed fonts added to the menu.",
+          "other": "Other font…",
+          "placeholder": "Installed font family",
+          "system": "System default",
+          "unavailable": "Font discovery is unavailable here. Enter a font name manually."
+        },
         "nativeTitleBar": {
           "description": "Use the default system window frame instead of the custom title bar",
           "label": "Use native title bar",
@@ -2653,6 +2683,11 @@ export default interface Resources {
             "message": "The app needs to restart to apply the title bar change. Restart now?",
             "title": "Restart required"
           }
+        },
+        "textSize": {
+          "description": "Change interface text without changing the overall UI zoom.",
+          "label": "Text size",
+          "reset": "Reset"
         },
         "theme": {
           "description": "Choose your preferred color theme",
@@ -2664,43 +2699,9 @@ export default interface Resources {
           }
         },
         "title": "Appearance",
-        "customThemes": {
-          "label": "Custom themes",
-          "description": "Use named JSON color palettes based on Dark or Light.",
-          "none": "Built-in theme",
-          "edit": "Edit JSON",
-          "localOnly": "Themes, UI zoom and typography are saved only on this browser/device.",
-          "editor": {
-            "title": "Edit custom themes (JSON)",
-            "description": "Edit up to 8 named themes. Colors must be #RRGGBB; Save applies only valid JSON. Use an empty themes array to remove all themes.",
-            "cancel": "Cancel",
-            "save": "Save themes",
-            "conflict": "Themes changed in another tab. Your JSON draft is preserved; review it or explicitly overwrite the newer themes.",
-            "overwrite": "Overwrite newer themes",
-            "invalidJson": "Invalid JSON syntax",
-            "invalidTheme": "Invalid theme palette. Check the fields, colors, and contrast."
-          }
-        },
         "uiScale": {
-          "label": "Interface scale",
           "description": "Scale the entire app without changing the operating system or browser zoom.",
-          "reset": "Reset"
-        },
-        "fontFamily": {
-          "label": "UI font",
-          "description": "Choose a locally installed font for the interface. Editors and terminals keep their own fonts.",
-          "system": "System default",
-          "other": "Other font…",
-          "placeholder": "Installed font family",
-          "apply": "Apply",
-          "discover": "Find installed fonts",
-          "loaded": "Installed fonts added to the menu.",
-          "unavailable": "Font discovery is unavailable here. Enter a font name manually.",
-          "empty": "No installed fonts were found. Enter a font name manually."
-        },
-        "textSize": {
-          "label": "Text size",
-          "description": "Change interface text without changing the overall UI zoom.",
+          "label": "Interface scale",
           "reset": "Reset"
         }
       },
@@ -3491,12 +3492,16 @@ export default interface Resources {
         "emptyRecommended": "No recommended models found.",
         "emptyRecommendedFree": "No recommended free models found.",
         "freeOnly": "Free only",
+        "freeQuotaReached": "OpenRouter’s daily limit for free models has been reached.",
         "launchableDescription": "Known routes from OpenCode config, free built-in models, and the current default. Local routes need a successful test before they are ready for team launches.",
         "launchableTitle": "OpenCode model routes",
         "loaded": "Loaded {{loaded}} of {{total}}",
         "loadingRoutes": "Loading OpenCode model routes...",
         "noRoutesMatch": "No OpenCode model routes match \"{{query}}\".",
         "noneReported": "No OpenCode model routes were reported yet. Configure a local route in OpenCode or use the Providers tab to inspect catalog providers.",
+        "paidRetryNotice": "If the daily free-model limit is reached, this test will automatically retry once with gpt-oss-20b. That request uses your OpenRouter balance.",
+        "paidRetryResult": "Paid retry with gpt-oss-20b",
+        "paidRetryRunning": "Free-model limit reached. Testing gpt-oss-20b using your OpenRouter balance…",
         "recommendedOnly": "Recommended only",
         "routeUnavailableAuth": "This provider requires authentication before this model can be used.",
         "routeUnavailableFailed": "This model route failed its last execution test.",
@@ -3514,10 +3519,6 @@ export default interface Resources {
         "testCancelUnsupported": "Stopping tests is not supported by this runtime.",
         "testCancelled": "Test stopped.",
         "testInProgress": "Model test is already running.",
-        "freeQuotaReached": "OpenRouter’s daily limit for free models has been reached.",
-        "paidRetryNotice": "If the daily free-model limit is reached, this test will automatically retry once with gpt-oss-20b. That request uses your OpenRouter balance.",
-        "paidRetryRunning": "Free-model limit reached. Testing gpt-oss-20b using your OpenRouter balance…",
-        "paidRetryResult": "Paid retry with gpt-oss-20b",
         "testingElapsed": "Waiting for test result... {{seconds}}s",
         "useInTeamPicker": "Save for team picker",
         "validationContextRequired": "Select a validation context above to enable Test and Set default. Saving for team picker only stores the route for new teams."
@@ -4457,7 +4458,7 @@ export default interface Resources {
       "taskRequired": "Enter a request to copy a prompt. Currently supports creating saved drafts only.",
       "taskTooLong": "Native runs support requests up to {{limit}} characters. Shorten the request to run it.",
       "templatesTitle": "Available team templates (reference)",
-      "title": "Manage teams with a prompt",
+      "title": "Manage with a prompt",
       "trashAvailable": "Reversible trash for draft/stopped teams is available."
     },
     "kanban": {
@@ -4547,7 +4548,7 @@ export default interface Resources {
         "start": "Start",
         "taskLogsActive": "Task logs active"
       },
-      "title": "Kanban",
+      "title": "Tasks",
       "trash": {
         "close": "Close",
         "deleted": "Deleted",
@@ -5280,13 +5281,13 @@ export default interface Resources {
           "skipped": "skipped",
           "unknown": "unknown"
         },
+        "deliveryUnconfirmed": "Delivery not confirmed for {{names}}",
         "description": "Choose at least two agents. You are included automatically.",
         "mentions": "{{count}} mentions of you",
         "message": "Message this group",
         "minimum": "Select at least two agents.",
         "name": "Chat name",
         "recipient": "To {{name}}",
-        "deliveryUnconfirmed": "Delivery not confirmed for {{names}}",
         "recipientRestartHint": "{{name}} must be running a compatible runtime before sending.",
         "restartHint": "All participants must be running a compatible runtime before sending.",
         "restore": "Restore chat",
@@ -5484,7 +5485,7 @@ export default interface Resources {
       "openCodeDefaultUnavailable": "OpenCode has no usable default model for this project. Choose a model explicitly.",
       "openCodeSelectedRouteUnavailable": "This model is not available from its provider right now. Pick another model, or reconnect the provider and refresh.",
       "openCodeStatus": {
-        "authRequiredModels": "Models requiring a provider connection: {{count}}. They are hidden from the choices by default.",
+        "authRequiredModels": "{{count}} OpenCode catalog models require an account or API key for their provider. They are hidden until connected; showing them does not make them usable.",
         "badges": {
           "check": "Check",
           "free": "Free",
@@ -5493,7 +5494,7 @@ export default interface Resources {
           "setup": "Setup"
         },
         "freeModelsAvailableTitle": "Free models are in OpenCode Zen",
-        "hideAuthRequired": "Hide these models",
+        "hideAuthRequired": "Hide unavailable models",
         "loadingRuntime": "OpenCode runtime status is still loading.",
         "messages": {
           "checking": "The app is still checking the OpenCode runtime. Wait for provider status to finish, then try again.",
@@ -5510,7 +5511,7 @@ export default interface Resources {
         "providerNotConnectedTitle": "OpenCode provider is not connected",
         "readyMessage": "OpenCode passed provider readiness. Select it to use OpenCode models for this team.",
         "readyTitle": "OpenCode is ready",
-        "showAuthRequired": "Show these models",
+        "showAuthRequired": "Show unavailable models",
         "summary": {
           "checking": "OpenCode status: checking runtime",
           "projectFolderMissing": "OpenCode status: project folder not found",
@@ -6434,6 +6435,7 @@ export default interface Resources {
         "expression": "Cron expression",
         "highFrequencyWarning": "High frequency schedule (less than 5 min interval)",
         "nextRuns": "Next runs:",
+        "noTimezones": "No matching timezones",
         "presets": {
           "dailyAtNine": "Daily at 9am",
           "everyHour": "Every hour",
@@ -6442,7 +6444,6 @@ export default interface Resources {
           "mondayAtNine": "Monday at 9am",
           "weekdaysAtNine": "Weekdays at 9am"
         },
-        "noTimezones": "No matching timezones",
         "searchTimezone": "Search timezones...",
         "selectTimezone": "Select timezone",
         "timezone": "Timezone",
@@ -6867,6 +6868,9 @@ export default interface Resources {
       "warningUnsafeTaskCall": "Could not safely rewrite Task call: {{call}}"
     },
     "templates": {
+      "confirmAction": "Apply template",
+      "confirmMessage": "This will replace your teammates, instructions and team settings with the template’s values.",
+      "confirmTitle": "Apply team template?",
       "descriptions": {
         "content": "Create clear articles, newsletters, educational content and scripts.",
         "customer-support": "Resolve customer questions and turn recurring issues into useful help content.",
