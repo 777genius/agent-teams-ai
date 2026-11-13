@@ -2637,3 +2637,23 @@ receipt field с `policyRequested`, чтобы recovery не повторял н
 Natural registered-scope retirement и full Main cold lifetime явно не повышены до готовых.
 **R2:** Root и Account — bounded plan PASS; MCP sync projection gap закрыт явной source closure выше.
 **R3:** review новой реализации и actual native/old-format proof pending.
+
+
+### 52.4. Pure intent без вложенного Runtime fence
+
+Source review обнаружил дополнительную границу: [RemotePending.registrationSource@be779](https://github.com/777genius/agent-teams-ai/blob/be779ca99a5626b1ec81d1b9c223245d86d0b1d6/packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts)
+сейчас вызывает общий input guard, а ordinary Claude передаёт туда
+[canAllocate@be779](https://github.com/777genius/agent-teams-ai/blob/be779ca99a5626b1ec81d1b9c223245d86d0b1d6/packages/legacy-agent-host/src/composition/captureMemberProviderAuthority.ts),
+который читает Runtime. При mint pure capture intent внутри Team fence такой путь недопустим.
+
+В существующий private `HostWindowsLaunch.port`/original `RemotePending` добавить optional
+`captureCurrent`. Без него новая service capture отказывается; прежние launch/cleanup остаются
+доступными. Ordinary Claude передаёт уже существующий Team-only `canCaptureRegisteredProcess`
+(factory использует `authority.isCurrent`, а не `authority.canAllocate`); только
+`registrationSource` использует этот guard вместе
+с original sealed/resumed/exit/schema2 checks. Launch, prepare, resume и stdin оставляют прежний
+full current. Pure selector не выбирает root по PID и не выполняет native dispatch.
+Outer MCP wrapper продолжает проверять captured Runtime input вне Team fence до/после await;
+native service admission также повторно проверяет исходную Main capability/source.
+Расширить один существующий critical fixture, чтобы pure prepare не входил в Runtime guard,
+а revoked Team capture и обычный input по-прежнему отказывались. Нового owner/authority cache нет.
