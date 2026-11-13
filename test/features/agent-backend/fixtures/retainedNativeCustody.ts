@@ -1,11 +1,17 @@
 import { ChildProcess } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { PassThrough, Writable } from 'node:stream';
 
+import { encodeLaunch, RetainedWindowsCustody, windowsBrokerReference } from '@agent-teams/legacy-agent-host/owned-process';
 import { expect } from 'vitest';
 
 import type {
+  HostCustodyCall,
+  HostCustodyResult,
   OwnedLaunchPort,
+  OwnedServicePort,
+  OwnedServiceResult,
+  PendingServiceOperation,
   PendingOwnedProcess,
   PreparedOwnedProcess,
   RootExit,
@@ -13,7 +19,11 @@ import type {
 } from '@agent-teams/legacy-agent-host/owned-process';
 
 /** A synthetic primitive for transport/lifetime assertions only. No OS/Job proof is claimed. */
-export function retainedNativePrimitive() {
+export function retainedNativePrimitive(options: {
+  services?: OwnedServicePort;
+  coverage?: 'job-membership' | 'no-local-dispatch';
+  onRelease?(): void;
+} = {}) {
   const calls = { allocated: 0, prepared: 0, resumed: 0, stopped: 0, released: 0 };
   const writes: Buffer[] = [];
   const stdout = new PassThrough({ highWaterMark: 64 * 1024 });
@@ -26,6 +36,7 @@ export function retainedNativePrimitive() {
       expect(calls.allocated++).toBe(0);
       original = {
         owner,
+        ...(options.services ? { services: options.services } : {}),
         root: { pid: 4141, birth: 'a'.repeat(16) },
         stdout,
         stderr,
@@ -62,8 +73,8 @@ export function retainedNativePrimitive() {
           const receipt: TreeReceipt = Object.freeze({
             owner,
             attemptId: request.attemptId,
-            coverage: 'no-local-dispatch',
-            rootExited: false,
+            coverage: options.coverage ?? 'no-local-dispatch',
+            rootExited: options.coverage === 'job-membership',
             proofDigest: 'd'.repeat(64),
           });
           receipts.add(receipt);
@@ -76,6 +87,7 @@ export function retainedNativePrimitive() {
           expect(receipts.has(receipt)).toBe(true);
           expect(coverage).toBe('job-membership');
           calls.released++;
+          options.onRelease?.();
         },
       };
       return original;
@@ -160,7 +172,7 @@ export const retainedNativePayloadDigest = createHash('sha256')
   .digest('hex');
 
 /** Same explicit synthetic owner, with barriers exposing the existing 24/32 transport limits. */
-export function retainedNativePressurePrimitive() {
+export function retainedNativePressurePrimitive(options: { services?: OwnedServicePort } = {}) {
   const calls = { allocated: 0, prepared: 0, resumed: 0, written: 0, stopped: 0, released: 0 };
   const originals = new Map<PendingOwnedProcess, PreparedOwnedProcess>();
   let markWork!: () => void, markControl!: () => void;
@@ -175,6 +187,7 @@ export function retainedNativePressurePrimitive() {
       const stdout = new PassThrough(), stderr = new PassThrough();
       let resumed = false, released = false;
       const original: PreparedOwnedProcess = {
+        ...(options.services ? { services: options.services } : {}),
         owner, root: { pid: 4100 + index, birth: index.toString(16).padStart(16, '0') },
         stdout, stderr,
         stdin: new Writable({ write(bytes: Buffer, _encoding, done) {
@@ -351,4 +364,229 @@ export function retainedNativeInputPressureHostSource(serverUrl: string): string
       }});
     void server.closed.then(()=>process.exit(0));
   `;
+}
+
+/** Explicit synthetic native replies; only the transport/retained-reference behavior is tested. */
+export function retainedServicePrimitive() {
+  const identity = Object.freeze({ key: '1'.repeat(16), birth: '2'.repeat(16) });
+  const calls = { capture: 0, query: 0, stop: 0, settle: 0 };
+  let absent = false, transportClosed = false;
+  let lateCapture: (() => void) | undefined;
+  const facts = () => Object.freeze({ ...identity, rootExited: absent,
+    activeProcesses: absent ? 0 : 1, exitCode: absent ? 0 : 259, queryError: 0, dispatchError: 0 });
+  const port: OwnedServicePort = {
+    allocate(command) {
+      let phase: 'prepared' | 'requested' | 'settled' = 'prepared';
+      let result: OwnedServiceResult | undefined;
+      let initial: Promise<OwnedServiceResult> | undefined;
+      const pending: PendingServiceOperation = {
+        command,
+        run(deadline) {
+          if (initial) return initial;
+          phase = 'requested';
+          initial = (async () => {
+            if (command.operation === 'capture') {
+              expect(command.pid).toBe(7777);
+              const first = ++calls.capture === 1;
+              if (first) {
+                lateCapture = () => {
+                  result = Object.freeze({ state: 'captured', identity });
+                  phase = 'settled';
+                };
+                expect(deadline).toBeGreaterThan(performance.now());
+                // Synthetic initial unknown; the original reply remains held until replyCapture.
+                return Object.freeze({ state: 'unknown' as const });
+              }
+              result = Object.freeze({ state: 'captured', identity });
+            } else {
+              expect(command.identity).toMatchObject(identity);
+              if (command.operation === 'stop') {
+                calls.stop++; absent = true;
+                result = Object.freeze({ state: 'stopped', facts: facts() });
+              } else {
+                expect(absent).toBe(true); calls.settle++;
+                result = Object.freeze({ state: 'settled', identity });
+              }
+            }
+            phase = 'settled';
+            if (!result) throw new Error('TEST original service result missing');
+            return result;
+          })();
+          return initial;
+        },
+        snapshot: () => ({ phase, ...(result ? { result } : {}) }),
+      };
+      return pending;
+    },
+    async query(original) {
+      expect(original).toMatchObject(identity);
+      calls.query++;
+      return transportClosed ? { state: 'unknown' }
+        : { state: 'observed', facts: facts() };
+    },
+  };
+  return { port, calls,
+    replyCapture() {
+      if (!lateCapture) throw new Error('TEST original pending capture missing');
+      lateCapture();
+    },
+    closeTransport() { transportClosed = true; },
+  };
+}
+
+export function retainedServiceHostSource(serverUrl: string): string {
+  const launch = new URL('owned-process/HostWindowsLaunch.js', serverUrl).href;
+  return `
+    import assert from 'node:assert/strict';
+    import { randomUUID } from 'node:crypto';
+    import { createHostServer } from ${JSON.stringify(serverUrl)};
+    import { HostWindowsLaunch } from ${JSON.stringify(launch)};
+    let sealed = false, pending, firstIntent, firstDeadline;
+    const bridge = new HostWindowsLaunch(() => server.nativeCustody);
+    const profile = { cwd:'C:\\\\TEST', executable:{path:'C:\\\\TEST\\\\claude.exe',sha256:'1'.repeat(64)},
+      environment:{}, windowsBroker:{path:'C:\\\\TEST\\\\owned-process-broker.exe',
+        sha256:'2'.repeat(64),arch:'x64',protocol:1,capability:'service-scopes-v1'} };
+    const port = bridge.port(profile, () => !sealed);
+    const registrar = {backendId:'TEST-backend',teamId:'TEST-team',runId:'TEST-run',
+      memberId:'TEST-member',generation:'TEST-generation'};
+    const services = bridge.registeredProcesses;
+    const server = createHostServer({input:process.stdin,output:process.stdout,buildId:'TEST-host-v1',
+      nativeCustody:{timeoutMs:2000}, onSeal(){ sealed=true; },
+      methods:{
+        launch:{lane:'work',async handle(){
+          assert.equal(pending,undefined);
+          pending=port.allocate({teamIncarnation:'TEST-team',runId:'TEST-run',
+            laneId:'TEST-member',processGeneration:randomUUID()});
+          const prepared=await port.prepare(pending,{executable:profile.executable.path,cwd:profile.cwd,
+            commandLine:'TEST-bounded-argv',environment:Array.from({length:16},
+              (_,i)=>'TEST_ENV_'+i+'='+'x'.repeat(8192))});
+          assert.equal(prepared.kind,'prepared');
+          prepared.process.stdout.resume(); prepared.process.stderr.resume();
+          await prepared.process.resume(pending.owner,async()=>{});
+          return true;
+        }},
+        capture:{lane:'work',async handle(){
+          firstIntent=services.prepareCapture(pending,7777,registrar);
+          firstDeadline=performance.now()+60;
+          return {intent:firstIntent,initial:await services.run(firstIntent,firstDeadline)};
+        }},
+        repeat:{lane:'control',handle:()=>services.run(firstIntent,firstDeadline)},
+        lookup:{lane:'control',handle:intent=>services.lookup(intent,performance.now()+1000)},
+        serializedRun:{lane:'control',handle:intent=>services.run(intent,performance.now()+1000)},
+        query:{lane:'control',handle:capture=>services.query(capture,performance.now()+1000)},
+        stop:{lane:'control',async handle(capture){
+          const intent=services.prepareControl(capture,'stop');
+          return {intent,initial:await services.run(intent,performance.now()+1000)};
+        }},
+        settle:{lane:'control',handle:capture=>
+          services.run(services.prepareControl(capture,'settle'),performance.now()+1000)},
+        providerStop:{lane:'control',async handle(){
+          const stopped=await pending.stop({expectedOwner:pending.owner,attemptId:'TEST-whole-stop',
+            mode:'force',deadlineMs:performance.now()+1000});
+          assert.equal(stopped.kind,'confirmed');
+          await pending.drain(performance.now()+500);
+          await pending.release(stopped.receipt,'job-membership');
+          return stopped.kind;
+        }},
+        crash:{lane:'control',handle:()=>process.exit(91)}
+      }});
+    void server.closed.then(()=>process.exit(0));
+  `;
+}
+
+/** Bound existing Main allocation retention, without creating another physical owner or process. */
+export async function assertRetainedServiceCapacity(): Promise<void> {
+  let effects = 0;
+  const service: OwnedServicePort = {
+    allocate(command) {
+      return {
+        command,
+        async run() { effects++; throw new Error('TEST held admission must not dispatch'); },
+        snapshot: () => ({ phase: 'prepared' }),
+      };
+    },
+    async query() { return { state: 'unknown' }; },
+  };
+  const primitive = retainedNativePressurePrimitive({ services: service });
+  primitive.releaseWork(); primitive.releaseControl();
+  const verifies = new Map<string, number>(), held = new Map<string, () => void>();
+  const selection = { path: 'C:\\TEST\\owned-process-broker.exe', sha256: '2'.repeat(64),
+    arch: 'x64', protocol: 1, capability: 'service-scopes-v1' } as const;
+  const owner = new RetainedWindowsCustody({
+    profileId: 'TEST-retention', profileDigest: '3'.repeat(64), selectBroker: () => selection,
+    async verifyLaunch(spec) {
+      const count = (verifies.get(spec.commandLine) ?? 0) + 1;
+      verifies.set(spec.commandLine, count);
+      if (count === 3) await new Promise<void>(resolve => held.set(spec.commandLine, resolve));
+    },
+    createPort: () => primitive.port,
+  });
+  const controller = new AbortController();
+  const attached = owner.attach({ profileId: 'TEST-retention', signal: controller.signal,
+    binding: { mainEpoch: owner.mainEpoch, profileDigest: '3'.repeat(64), hostIncarnation: 'TEST-original' },
+    hostExited: new Promise<void>(() => {}) });
+  const captured: { intent: Extract<HostCustodyCall, { operation: 'service-capture' }>['intent'];
+    result: Promise<HostCustodyResult> }[] = [];
+  const makeAllocation = (index: number) => {
+    const capability = 'TEST-retained-' + index;
+    const processOwner = { teamIncarnation: 'TEST-team', runId: 'TEST-run', laneId: capability,
+      processGeneration: randomUUID() };
+    const bytes = encodeLaunch({ executable: 'C:\\TEST\\claude.exe', cwd: 'C:\\TEST',
+      commandLine: capability, environment: [] });
+    const call: Extract<HostCustodyCall, { operation: 'allocate' }> = {
+      operation: 'allocate', capability, owner: processOwner, brokerRef: windowsBrokerReference(selection),
+      executableSha256: '1'.repeat(64), launchSha256: createHash('sha256').update(bytes).digest('hex'),
+      launchBytes: bytes.length, budgetMs: 20_000,
+    };
+    return { capability, processOwner, bytes, call };
+  };
+  try {
+    for (let index = 0; index < 320; index++) {
+      const original = makeAllocation(index);
+      await attached.handle(original.call);
+      await attached.handle({ operation: 'launch-chunk', capability: original.capability,
+        offset: 0, bytes: original.bytes.toString('base64') });
+      await attached.handle({ operation: 'launch-commit', capability: original.capability });
+      const prepared = await attached.handle({ operation: 'prepare', capability: original.capability });
+      if (prepared.operation !== 'prepare') throw new Error('TEST original root missing');
+      await attached.handle({ operation: 'resume', capability: original.capability });
+      const intent: Extract<HostCustodyCall, { operation: 'service-capture' }>['intent'] = {
+        mainEpoch: owner.mainEpoch, providerCapability: original.capability,
+        providerGeneration: original.processOwner.processGeneration, root: prepared.root,
+        operationRef: 'TEST-original-capture-' + index,
+        command: { operation: 'capture', pid: 7777,
+          registrar: { backendId: 'TEST-backend', teamId: 'TEST-team', runId: 'TEST-run',
+            memberId: original.capability, generation: 'TEST-generation' } },
+      };
+      const result = Promise.resolve(attached.handle({ operation: 'service-capture',
+        capability: original.capability, intent, budgetMs: 30_000 }));
+      captured.push({ intent, result });
+      expect(held.has(original.capability)).toBe(true);
+      const stopped = await attached.handle({ operation: 'stop', capability: original.capability,
+        attemptRef: 'TEST-whole-' + index, budgetMs: 1000 });
+      if (stopped.operation !== 'stop' || stopped.state !== 'confirmed' || !stopped.receiptRef)
+        throw new Error('TEST original Stop receipt missing');
+      await attached.handle({ operation: 'release', capability: original.capability,
+        receiptRef: stopped.receiptRef });
+    }
+    expect(primitive.calls).toMatchObject({ allocated: 320, released: 320 });
+    expect(effects).toBe(0);
+    await expect(attached.handle(makeAllocation(320).call)).rejects.toThrow();
+    expect(primitive.calls.allocated).toBe(320);
+    const first = captured[0]!;
+    expect(await attached.handle({ operation: 'service-lookup',
+      capability: first.intent.providerCapability, intent: first.intent }))
+      .toEqual({ operation: 'service-lookup', outcome: { state: 'unknown' } });
+    held.get('TEST-retained-0')!();
+    expect(await first.result).toEqual({ operation: 'service-capture',
+      outcome: { state: 'not-dispatched', reason: 'admission' } });
+    await attached.handle(makeAllocation(321).call);
+    expect(primitive.calls.allocated).toBe(321);
+    expect(effects).toBe(0);
+  } finally {
+    for (const release of held.values()) release();
+    await Promise.all(captured.map(value => value.result));
+    expect(await owner.close()).toBe(true);
+    controller.abort();
+  }
 }

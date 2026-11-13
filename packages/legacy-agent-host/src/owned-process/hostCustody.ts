@@ -3,6 +3,8 @@ import { performance } from 'node:perf_hooks';
 import { z } from 'zod';
 
 import { MAX_LAUNCH_BYTES } from './codec.js';
+import { hostServiceCallSchemas, hostServiceResultSchemas, isHostServiceCall,
+  validateServiceOutcome } from './retainedServiceContracts.js';
 
 import type { HostLimits, RpcRequest } from '../contracts.js';
 
@@ -41,6 +43,7 @@ export const hostCustodyBindingSchema = z
 export type HostCustodyBinding = z.infer<typeof hostCustodyBindingSchema>;
 
 const callSchema = z.discriminatedUnion('operation', [
+  ...hostServiceCallSchemas,
   z.object({ operation: z.literal('allocate'), capability: ref, owner, brokerRef: hash,
     executableSha256: hash, launchSha256: hash, launchBytes: z.number().int().min(1).max(MAX_LAUNCH_BYTES),
     budgetMs: z.number().int().min(0).max(HOST_CUSTODY_LAUNCH_MS) }).strict(),
@@ -65,6 +68,7 @@ const callSchema = z.discriminatedUnion('operation', [
 ]);
 export type HostCustodyCall = z.infer<typeof callSchema>;
 const resultSchema = z.discriminatedUnion('operation', [
+  ...hostServiceResultSchemas,
   z.object({ operation: z.literal('allocate'), state: z.literal('allocated') }).strict(),
   z.object({ operation: z.literal('launch-chunk'), offset: z.number().int().min(0).max(MAX_LAUNCH_BYTES) }).strict(),
   z.object({ operation: z.literal('launch-commit'), state: z.literal('committed') }).strict(),
@@ -165,10 +169,12 @@ export function sameHostCustodyBinding(a: HostCustodyBinding, b: HostCustodyBind
   );
 }
 export function hostCustodyControl(call: Pick<HostCustodyCall, 'operation'>): boolean {
-  return ['observe', 'stop', 'drain', 'release'].includes(call.operation);
+  return ['observe', 'stop', 'drain', 'release', 'service-query', 'service-stop',
+    'service-settle', 'service-lookup'].includes(call.operation);
 }
 export function hostCustodyCleanup(call: Pick<HostCustodyCall, 'operation'>): boolean {
-  return ['read', 'observe', 'stop', 'drain', 'release'].includes(call.operation);
+  return ['read', 'observe', 'stop', 'drain', 'release', 'service-query', 'service-stop',
+    'service-settle', 'service-lookup'].includes(call.operation);
 }
 export function hostCustodyHintKey(call: HostCustodyCall): string | undefined {
   return call.operation === 'read' ? `${call.capability}:${call.stream}`
@@ -193,6 +199,10 @@ export function validateHostCustodyResult(
   const result = resultSchema.safeParse(value);
   if (!result.success || result.data.operation !== call.operation)
     throw new Error('Invalid private custody result');
+  if (isHostServiceCall(call)) {
+    if (!('outcome' in result.data)) throw new Error('Invalid private service result');
+    validateServiceOutcome(call, result.data.outcome);
+  }
   return result.data;
 }
 
@@ -257,6 +267,12 @@ export class HostCustodyClient {
     const parsed = hostCustodyBindingSchema.safeParse(value);
     return !this.sealed && !!this.binding && parsed.success &&
       sameHostCustodyBinding(this.binding, parsed.data);
+  }
+
+  /** Private immutable metadata only; native authority stays with the original Main owner. */
+  originalBinding(): Readonly<HostCustodyBinding> {
+    if (this.sealed || !this.binding) throw new Error('Original private custody binding unavailable');
+    return this.binding;
   }
 
   request(value: HostCustodyCall, deadlineMs?: number): Promise<HostCustodyReply> {

@@ -5,8 +5,10 @@ import { Readable, Writable } from 'node:stream';
 import { encodeLaunch } from './codec.js';
 import { sameOwner } from './contract.js';
 import { HOST_CUSTODY_CHUNK_BYTES, HOST_CUSTODY_LAUNCH_MS } from './hostCustody.js';
+import { HostWindowsServices } from './HostWindowsServices.js';
 
 import type { NativeProcessProfile } from '../composition/nativeProcessProfile.js';
+import type { WindowsRegisteredProcessPort, WindowsServiceSource } from './retainedServiceContracts.js';
 import type {
   HostCustodyCall,
   HostCustodyClient,
@@ -47,14 +49,28 @@ function unavailable(): never {
   throw new Error('Original Main custody unavailable');
 }
 
+export interface RetainedWindowsLaunchPort extends OwnedLaunchPort {
+  readonly registeredProcesses: WindowsRegisteredProcessPort;
+}
+
 /** One private Host bridge; one readiness subscription and one bounded original preparation queue. */
 export class HostWindowsLaunch {
+  readonly registeredProcesses: WindowsRegisteredProcessPort;
   private readonly allocations = new Map<string, RemotePending>();
   private tail: Promise<void> = Promise.resolve();
   private queued = 0;
   private subscribed: HostCustodyClient | undefined;
 
-  constructor(private readonly client: () => HostCustodyClient | undefined) {}
+  constructor(private readonly client: () => HostCustodyClient | undefined) {
+    this.registeredProcesses = new HostWindowsServices({
+      client: () => this.connected(),
+      captureSource: original => {
+        if (!(original instanceof RemotePending) || this.allocations.get(original.key) !== original)
+          unavailable();
+        return original.registrationSource(this.connected().originalBinding().mainEpoch);
+      },
+    });
+  }
 
   private connected(): HostCustodyClient {
     const client = this.client() ?? unavailable();
@@ -74,11 +90,12 @@ export class HostWindowsLaunch {
     return reply.value;
   }
 
-  port(profile: NativeProcessProfile, current: () => boolean): OwnedLaunchPort {
+  port(profile: NativeProcessProfile, current: () => boolean): RetainedWindowsLaunchPort {
     const selected = structuredClone(profile);
     if (!selected.windowsBroker) unavailable();
     const originals = new WeakSet<RemotePending>();
     return {
+      registeredProcesses: this.registeredProcesses,
       allocate: (owner) => {
         if (this.allocations.size >= 256) unavailable();
         const pending = new RemotePending(this, selected, Object.freeze({ ...owner }), current);
@@ -218,6 +235,14 @@ class RemotePending implements PreparedOwnedProcess {
 
   get root(): PreparedOwnedProcess['root'] {
     return this.rootIdentity ?? unavailable();
+  }
+
+  registrationSource(mainEpoch: string): WindowsServiceSource {
+    this.assertInput();
+    if (!this.resumed || this.exit || this.profile.windowsBroker?.capability !== 'service-scopes-v1')
+      unavailable();
+    return { mainEpoch, providerCapability: this.key, providerGeneration: this.owner.processGeneration,
+      root: { ...this.root } };
   }
   diagnostics(): ControlDiagnostics {
     return { writeCompleted: false };

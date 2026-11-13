@@ -4,6 +4,8 @@ import { performance } from 'node:perf_hooks';
 import { decodeLaunch } from './codec.js';
 import { createWindowsOwnedLaunchPort } from './windowsBroker.js';
 import { HOST_CUSTODY_CHUNK_BYTES, hostCustodyCleanup } from './hostCustody.js';
+import { RetainedWindowsServices } from './RetainedWindowsServices.js';
+import { isHostServiceCall } from './retainedServiceContracts.js';
 
 import type { Readable } from 'node:stream';
 import type { NativeProcessProfile } from '../composition/nativeProcessProfile.js';
@@ -46,6 +48,8 @@ interface Allocation {
   loaded: number;
   spec?: ResolvedLaunchSpec;
   prepared?: PreparedOwnedProcess;
+  services?: RetainedWindowsServices;
+  wholeJobReceipt?: TreeReceipt;
   preparation?: Promise<void>;
   resumption?: Promise<void>;
   running: boolean;
@@ -227,6 +231,20 @@ export class RetainedWindowsCustody implements HostCustodyOwner {
     const result = await allocation.port.prepare(allocation.pending, spec);
     if (result.kind !== 'prepared') unavailable();
     allocation.prepared = result.process;
+    if (allocation.selection.capability === 'service-scopes-v1') {
+      if (!result.process.services) unavailable();
+      allocation.services = new RetainedWindowsServices({
+        source: { mainEpoch: this.mainEpoch, providerCapability: allocation.call.capability,
+          providerGeneration: allocation.pending.owner.processGeneration, root: result.process.root },
+        owner: allocation.pending.owner,
+        port: result.process.services,
+        wholeProof: () => allocation.wholeJobReceipt && allocation.prepared ? {
+          mainEpoch: this.mainEpoch, capability: allocation.call.capability,
+          generation: allocation.pending.owner.processGeneration, root: allocation.prepared.root,
+          receipt: allocation.wholeJobReceipt, released: allocation.released,
+        } : undefined,
+      });
+    }
     allocation.subscriptions.push(
       result.process.observeRootExit((exit) => {
         allocation.exit = Object.freeze({ ...exit });
@@ -259,11 +277,13 @@ export class RetainedWindowsCustody implements HostCustodyOwner {
     this.assertAttached(attached);
     if (!hostCustodyCleanup(call)) this.input(attached);
     if (call.operation === 'allocate') {
+      this.trimReleased();
       if (
         !call.budgetMs ||
         this.staging ||
         this.allocations.has(call.capability) ||
-        [...this.allocations.values()].filter((value) => !value.released).length >= 256
+        [...this.allocations.values()].filter((value) => !value.released).length >= 256 ||
+        this.allocations.size >= 320
       )
         unavailable();
       const selection = Object.freeze({ ...this.options.selectBroker(call.brokerRef) });
@@ -296,6 +316,19 @@ export class RetainedWindowsCustody implements HostCustodyOwner {
     }
     const allocation = this.allocation(call.capability);
     if (!hostCustodyCleanup(call)) this.input(attached, allocation);
+    if (isHostServiceCall(call)) {
+      const services = allocation.services ?? unavailable();
+      return services.handle(call, async () => {
+        const current = () => {
+          this.input(attached, allocation);
+          if (!allocation.running || allocation.exit || allocation.transportFailed || !allocation.spec)
+            unavailable();
+        };
+        current();
+        await this.options.verifyLaunch(allocation.spec!, allocation.call.executableSha256, allocation.selection);
+        current();
+      });
+    }
     switch (call.operation) {
       case 'launch-chunk': {
         const bytes = Buffer.from(call.bytes, 'base64');
@@ -387,6 +420,7 @@ export class RetainedWindowsCustody implements HostCustodyOwner {
         }
         const outcome = await retained.outcome;
         if (outcome.kind !== 'confirmed') return { operation: call.operation, state: 'unknown' };
+        if (outcome.receipt.coverage === 'job-membership') allocation.wholeJobReceipt = outcome.receipt;
         if (!retained.receiptRef) {
           retained.receiptRef = randomUUID();
           allocation.receipts.set(retained.receiptRef, outcome.receipt);
@@ -433,9 +467,18 @@ export class RetainedWindowsCustody implements HostCustodyOwner {
     clearTimeout(allocation.timer);
     this.dropStaging(allocation);
     for (const unsubscribe of allocation.subscriptions.splice(0)) unsubscribe();
+    this.trimReleased();
+  }
+
+  private trimReleased(): void {
     const terminal = [...this.allocations.values()].filter((value) => value.released);
-    for (const old of terminal.slice(0, Math.max(0, terminal.length - 64)))
-      this.allocations.delete(old.call.capability); // Retired random keys can only become unknown, never rebound.
+    let excess = terminal.length - 64;
+    for (const old of terminal) {
+      if (excess <= 0) break;
+      if (old.services && !old.services.retirable()) continue;
+      this.allocations.delete(old.call.capability);
+      excess--;
+    }
   }
 
   /** Called by the original Main on Quit; independent of availability or identity of a replacement Host. */
@@ -452,6 +495,7 @@ export class RetainedWindowsCustody implements HostCustodyOwner {
             deadlineMs: performance.now() + 10000,
           });
           if (outcome.kind !== 'confirmed') return false;
+          if (outcome.receipt.coverage === 'job-membership') allocation.wholeJobReceipt = outcome.receipt;
           await allocation.pending.drain(performance.now() + 3000);
           await allocation.pending.release(outcome.receipt, 'job-membership');
           this.retire(allocation);

@@ -21,6 +21,7 @@ import { formatPersistentLogMessage, installPersistentAppLog } from '../../../sr
 import { addLogSink } from '../../../src/shared/utils/logger';
 
 import {
+  assertRetainedServiceCapacity,
   retainedNativeHostSource,
   retainedNativeInputCompletionGate,
   retainedNativeInputPressureHostSource,
@@ -28,8 +29,11 @@ import {
   retainedNativePressureHostSource,
   retainedNativePressurePrimitive,
   retainedNativePrimitive,
+  retainedServiceHostSource,
+  retainedServicePrimitive,
 } from './fixtures/retainedNativeCustody';
 
+import type { JsonValue } from '@agent-teams/legacy-agent-host';
 import type {
   HostCustodyBinding,
   HostCustodyHint,
@@ -140,6 +144,98 @@ function client(profile: SelectedHostProfile, owner?: HostCustodyOwner): Capture
 }
 
 describe('captured legacy host client over real subprocess stdio', () => {
+
+  it('retains unresolved service admission beyond the released cache and refuses before capacity effect',
+    assertRetainedServiceCapacity);
+
+  it('keeps the original service intent and scope through late ACK and a successor Host', async () => {
+    const profile = { ...await fixture(retainedServiceHostSource(serverUrl), 'raw'), requestTimeoutMs: 3000 };
+    const service = retainedServicePrimitive();
+    const primitive = retainedNativePrimitive({ services: service.port });
+    let current = true;
+    const owner = new RetainedWindowsCustody({
+      profileId: profile.profileId, profileDigest: capturedHostProfileDigest(profile),
+      selectBroker: () => ({ path: 'C:\\TEST\\owned-process-broker.exe', sha256: '2'.repeat(64),
+        arch: 'x64', protocol: 1, capability: 'service-scopes-v1' }),
+      async verifyLaunch() { expect(current).toBe(true); },
+      createPort: () => primitive.port,
+    });
+    const original = client(profile, owner);
+    let successor: CapturedHostClient | undefined;
+    try {
+      await original.start();
+      expect(await original.request('launch')).toBe(true);
+      const first = await original.request('capture') as { intent: JsonValue; initial: JsonValue };
+      expect(first.initial).toEqual({ state: 'unknown' });
+      expect(service.calls.capture).toBe(1);
+      service.replyCapture();
+      expect(await original.request('repeat')).toEqual({ state: 'unknown' });
+      const captured = await original.request('lookup', first.intent) as { state: string; capture: JsonValue };
+      expect(captured.state).toBe('captured');
+      expect(await original.request('query', captured.capture))
+        .toMatchObject({ state: 'observed', observation: 'same-live' });
+      await expect(original.request('crash')).rejects.toMatchObject({ outcome: 'unknown' });
+      expect((await original.shutdown()).childExit).toBe('confirmed');
+      expect(primitive.calls.stopped).toBe(0);
+      current = false; // Changed source cannot discard original capture/control authority.
+      successor = client(profile, owner);
+      await successor.start();
+      expect(await successor.request('serializedRun', first.intent)).toEqual({ state: 'unknown' });
+      expect(await successor.request('lookup', first.intent)).toEqual(captured);
+      const stopped = await successor.request('stop', captured.capture) as { intent: JsonValue; initial: JsonValue };
+      expect(stopped.initial).toMatchObject({ state: 'stopped', observation: 'absent', evidence: 'native-scope' });
+      expect(await successor.request('lookup', stopped.intent)).toEqual(stopped.initial);
+      expect(await successor.request('query', captured.capture))
+        .toMatchObject({ state: 'observed', observation: 'absent', evidence: 'retained-terminal' });
+      expect(await successor.request('settle', captured.capture)).toMatchObject({ state: 'settled' });
+      expect(await successor.request('query', captured.capture))
+        .toMatchObject({ state: 'observed', observation: 'absent', evidence: 'retained-terminal' });
+      expect(service.calls).toEqual({ capture: 1, query: 1, stop: 1, settle: 1 });
+      expect(primitive.calls).toMatchObject({ stopped: 0, released: 0 });
+      expect(await owner.close()).toBe(true);
+      expect(primitive.calls).toMatchObject({ stopped: 1, released: 1 });
+    } finally {
+      await original.shutdown(); await successor?.shutdown(); await owner.close();
+    }
+  });
+
+  it.each(['job-membership', 'no-local-dispatch'] as const)(
+    'derives retained service absence only from the original whole-Job proof: %s',
+    async coverage => {
+      const profile = { ...await fixture(retainedServiceHostSource(serverUrl), 'raw'), requestTimeoutMs: 3000 };
+      const service = retainedServicePrimitive();
+      const primitive = retainedNativePrimitive({ services: service.port, coverage,
+        onRelease: () => service.closeTransport() });
+      const owner = new RetainedWindowsCustody({
+        profileId: profile.profileId, profileDigest: capturedHostProfileDigest(profile),
+        selectBroker: () => ({ path: 'C:\\TEST\\owned-process-broker.exe', sha256: '2'.repeat(64),
+          arch: 'x64', protocol: 1, capability: 'service-scopes-v1' }),
+        async verifyLaunch() {}, createPort: () => primitive.port,
+      });
+      const original = client(profile, owner);
+      try {
+        await original.start(); expect(await original.request('launch')).toBe(true);
+        const first = await original.request('capture') as { intent: JsonValue };
+        service.replyCapture();
+        const captured = await original.request('lookup', first.intent) as { capture: Record<string, JsonValue> };
+        expect(await original.request('providerStop')).toBe('confirmed');
+        const wrong = { ...captured.capture, root: { pid: 4141, birth: 'f'.repeat(16) } };
+        expect(await original.request('query', wrong)).toEqual({ state: 'unknown' });
+        const observed = await original.request('query', captured.capture);
+        if (coverage === 'job-membership') {
+          expect(observed).toMatchObject({ state: 'observed', observation: 'absent', evidence: 'original-whole-job' });
+          expect(await original.request('settle', captured.capture)).toMatchObject({ state: 'settled' });
+          expect(service.calls.query).toBe(0);
+          expect(service.calls.settle).toBe(0);
+        } else {
+          expect(observed).toEqual({ state: 'unknown' });
+          expect(service.calls.query).toBe(1);
+        }
+        expect(primitive.calls).toMatchObject({ stopped: 1, released: 1 });
+      } finally { await original.shutdown(); await owner.close(); }
+    }
+  );
+
   it.each(['graceful', 'crash'] as const)('retains Main launch/stdio/receipt ownership across %s Host close', async mode => {
     const profile = { ...await fixture(retainedNativeHostSource(serverUrl), 'raw'), requestTimeoutMs: 3000 };
     const primitive = retainedNativePrimitive();

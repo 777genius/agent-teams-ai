@@ -589,6 +589,14 @@ jobs:
             if (process.platform === 'win32') assert.match(r.digests.windowsShell, /^[a-f0-9]{64}$/);
             }
           "
+      - name: Observe POSIX original-path exec and explicit mutation counterexamples
+        if: always() && runner.os != 'Windows'
+        env:
+          OPENCODE_V2_POSIX_EXEC_GO: '1'
+          OPENCODE_V2_POSIX_EXEC_RECEIPT: ${{ github.workspace }}/opencode-v2-posix-exec.json
+          # This independent TEST syscall proof admits no production tuple or module mock.
+          OPENCODE_V2_EMBEDDED_DARWIN_CANDIDATE_BUILD: ''
+        run: node --test --test-name-pattern='^POSIX original-path' packages/legacy-agent-host/tests/registered-process-executable.native.ts
       - name: Preserve exact native evidence or candidate HOLD
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -606,3 +614,4 @@ jobs:
             opencode-v2-credentials.json
             opencode-v2-permission-lifecycle.json
             opencode-v2-captured-mcp.json
+            opencode-v2-posix-exec.json

@@ -27,6 +27,23 @@ const row = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value as Record<string, unknown>;
 };
+const closed = (value: unknown, allowed: readonly string[]): string =>
+  allowed.find(item => item === value) ?? 'other';
+function failureRead(value: unknown): Record<string, JsonValue> {
+  const reply = row(value);
+  if (reply.ok !== true) return { status: 'refused',
+    code: closed(reply.code, ['invalid', 'conflict', 'forbidden', 'hold', 'busy']),
+    outcome: closed(reply.outcome, ['unknown', 'rejected']) };
+  const state = row(reply.value);
+  return { status: 'completed',
+    phase: closed(state.phase, ['unopened', 'opening', 'allocated', 'closing', 'closed', 'held']),
+    custody: closed(state.custody, ['owned', 'released', 'unknown']),
+    diagnostic: state.diagnostic === undefined ? 'absent' : closed(state.diagnostic,
+      ['open-unknown', 'observe-ended', 'observe-failed', 'readiness-unavailable', 'close-unknown']),
+    nativeReady: typeof state.nativeReady === 'boolean' ? state.nativeReady : null,
+    attached: typeof state.attached === 'boolean' ? state.attached : null,
+    sealed: typeof state.sealed === 'boolean' ? state.sealed : null };
+}
 interface Selection {
   schemaVersion: number;
   testOnly: boolean;
@@ -277,6 +294,8 @@ export async function runNativeRetainedHostGate(
     exits.set(child, done);
   };
   const counts = { allocate: 0, prepare: 0, resume: 0, stop: 0, release: 0 };
+  const attempted = { allocate: 0, prepare: 0, resume: 0, stop: 0, release: 0 };
+  let attemptsTruncated = false;
   const originalHandleChecks: {
     afterInput: 'alive' | 'absent' | null; afterHostLoss: 'alive' | 'absent' | null;
     afterCleanup: 'alive' | 'absent' | null;
@@ -292,6 +311,11 @@ export async function runNativeRetainedHostGate(
       return {
         ...port,
         async handle(call) {
+          if (call.operation in attempted) {
+            const key = call.operation as keyof typeof attempted;
+            if (attempted[key] >= 64) attemptsTruncated = true;
+            else attempted[key]++;
+          }
           const value = await port.handle(call);
           if (call.operation in counts) counts[call.operation as keyof typeof counts]++;
           if (value.operation === 'prepare') {
@@ -312,13 +336,32 @@ export async function runNativeRetainedHostGate(
     binding: { owner: captured.profile.owner, scope: captured.profile.teams[0]!.scope },
     payload,
   });
+  let failedRpc: { method: string; code: string; outcome: string; read: Record<string, JsonValue> } | null = null;
   const rpc = async (method: string, commandId: string, payload: JsonValue) => {
+    const deadline = performance.now() + captured.host.requestTimeoutMs;
     const result = row(
       await client.request(method, envelope(commandId, payload), {
         control: method === 'runtime.read',
       })
     );
-    assert.equal(result.ok, true, 'Actual original Host route succeeded');
+    try { assert.equal(result.ok, true, 'Actual original Host route succeeded'); }
+    catch (error) {
+      if (!failedRpc) {
+        failedRpc = { method: closed(method, ['runtime.open', 'runtime.read', 'team.execute']),
+          code: closed(result.code, ['invalid', 'conflict', 'forbidden', 'hold', 'busy']),
+          outcome: closed(result.outcome, ['unknown', 'rejected']), read: { status: 'unavailable' } };
+        const remaining = Math.min(1000, Math.floor(deadline - performance.now()));
+        if (method === 'runtime.read') {
+          failedRpc.read = failureRead(result);
+        } else if (remaining > 0) {
+          try {
+            failedRpc.read = failureRead(await timeout(client.request('runtime.read',
+              envelope('TEST-original-failure-read', { memberId: 'alice-id' }), { control: true }), remaining));
+          } catch { /* The original refusal/error remains the failure; this read is diagnostic only. */ }
+        }
+      }
+      throw error;
+    }
     return row(result.value);
   };
   let phase = 'starting',
@@ -472,6 +515,9 @@ export async function runNativeRetainedHostGate(
           retainedAfterCrash,
           originalHandleChecks,
           counts,
+          attempted,
+          attemptsTruncated,
+          failedRpc,
           cleanup,
           modelRequests: model.observations.length,
           modelFailures: model.failures.length,
