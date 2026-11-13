@@ -457,6 +457,56 @@ ref и исправляется в существующем owner, а не об�
 **Независимый review:** уточнено различие same-namespace и нового runtime capture, а также происхождение
 plugin body witness из original installed inventory. Эти уточнения внесены до implementation.
 
+## R11 — Desktop acceptance выбранного MCP и appOnly
+
+**Точный оставшийся gap R9 / 07-G3.** Native Linux receipt ещё не проверяет сохранение policy
+настоящими controls. [M1] и [M2] на donor `4a0e062` совпадают с текущими файлами:
+`inheritLead`, `inheritScopes`, `strictAllowlist`, `appOnly`, scopes и allowlist должны сохраниться.
+В `captureRuntimeMcp.ts` lead использует общий catalog независимо от member policy; поэтому этот
+сценарий проверяет настоящих teammates, а не назначает policy единственному lead.
+
+1. **Один existing Launch variant, один запуск.** Добавить TEST flag к `native-launch-ui`,
+   несовместимый с schedule/commands/extensions variants. Переиспользовать pinned V2 fixture
+   и штатные seed/profile owners: один lead без external catalog, два teammates с одним исходным
+   TEST catalog. Catalog содержит `TEST.selected` и `TEST.excluded`; исходные recipes и namespace
+   фиксируются до spawn. Initial prompt оставить пустым через обычное поле Launch, чтобы lead
+   не создавал inference. Metadata/probe requests учитывать отдельно от пяти ordinary model requests.
+2. **Сохранить policy через UI.** В `LaunchTeamDialog` открыть MCP controls конкретных member rows.
+   Первому выбрать `strictAllowlist`, user=true/project=false/local=false и вписать `TEST.selected`;
+   второму выбрать `appOnly`. Проверить фактические значения controls, выполнить один Launch после
+   штатного preflight, затем прочитать original captured roster/settings и сопоставить точным member IDs.
+   Не применять policy через CDP API, JSON editor или правку durable files после запуска.
+3. **Проверить native поведение.** Переиспользовать finite oracle и stdio actor из
+   `tests/fixtures/native-opencode-v2-mcp/`: три запроса у selected member, два у appOnly.
+   Через обычный Composer отправить каждому один исходный input. Selected inventory содержит только
+   `TEST_selected_write_marker`; appOnly не содержит ни одного внешнего tool. Для manual permission
+   нажать original Allow once, проверив отсутствие эффекта до ответа. Реальный actor создаёт один
+   nonce-bound файл, его instance ID приходит в native result. Оба участника посылают реальный Team MCP
+   reply; exact command/input/outbox receipts и видимый текст должны совпасть.
+4. **Сохранить original scope и cleanup.** Oracle получает original captured principal каждого
+   teammate через узкий callback; нынешние native-gate defaults не меняются. Actor на Darwin использует
+   existing read-only `processFacts` для original birth identity; Linux startTicks proof сохраняется.
+   Это наблюдение не даёт права сигналить процесс. Host остаётся единственным custody owner.
+   `TEST.excluded` никогда не стартует, selected actor стартует и выполняет tool ровно один раз.
+   После UI Stop все три Runtime sessions sealed/released, исходный actor физически отсутствует.
+   Повторно открыть Launch и проверить сохранённые policy/scopes/allowlist, затем закрыть без запуска;
+   original receipts и число model/effect events не меняются.
+5. **Подключить существующий CI.** Один follow-up step в уже существующем
+   `native-mixed-v2-create-launch-ui` job использует его Node/Bun/engine/custody preparation;
+   отдельной matrix, runner, production API или новой protocol version нет. TEST helper содержит
+   только этот journey; общие single-member Resume/11-request assertions не ослабляются.
+   Source closure и receipt verifier требуют обе policy, пять requests, один once approval/effect,
+   два Team replies, original input IDs и cleanup. Отсутствующий блок остаётся INCOMPLETE.
+6. **Проверить перед закрытием.** Focused scripts/Host types, затем actual Desktop на exact HEAD.
+   Не добавлять mapper unit suites, не увеличивать timers и не считать source review выполненным e2e.
+   Найденный production mismatch сначала исправить в существующем capture/permission owner.
+   Existing native R9 и остальные MCP modes остаются отдельными уже определёнными gates.
+
+**Review 1 — parity.** Сохранены donor controls и per-member semantics, actual UI save связывается с
+native tool/effect. **Review 2 — упрощение.** Два teammates в одном Launch заменяют два relaunch;
+existing actor/oracle, Composer и Stop переиспользуются. Lead не получает external source и не
+маскирует appOnly. Пункт 07-G3 остаётся открытым до успешного Desktop receipt.
+
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts
 [M3]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/extensions/ExtensionStoreView.tsx
