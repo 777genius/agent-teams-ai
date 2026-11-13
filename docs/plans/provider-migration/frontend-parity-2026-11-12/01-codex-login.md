@@ -372,9 +372,9 @@ Thread `PRRT_kwDORVTEtM625cCn`: POSIX group/other mode check сейчас при
   Для file read добавить same-original-file lstat→open/fstat→read→fstat/lstat
   identity/type/size/mtime сверку, как в existing credential scope. Symlink/replaced
   path не принимается даже там, где O_NOFOLLOW отсутствует.
-- В existing contextId validator исправить escaped character class: запрещать
-  реальные NUL/CR/LF, сохраняя обычные буквы n/r и цифру 0. Existing original-context
-  recovery case уже проверяет этот путь; новый parser/framework не нужен.
+- Byte-exact проверка existing contextId validator подтвердила: реальные NUL/CR/LF
+  уже запрещены, ordinary n/r/0 разрешены. Повторно escaped отображение не является
+  source defect; validator сохраняется, existing original-context case остаётся.
 - Не добавлять ACL broker, private path в IPC или ослабление POSIX permissions.
   Windows directory получает обычные inherited app userData ACL; mode bits не
   объявляются доказательством этих ACL.

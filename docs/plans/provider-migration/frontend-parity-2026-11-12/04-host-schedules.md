@@ -395,6 +395,11 @@ ephemeral transcript и original cleanup/source freeze проверены тем
 Runtime и persistence barrier; новая очередь и unit-матрица не нужны.
 Следующий круг — независимое ревью diff и targeted existing tests, затем exact-head CI.
 
+При выполнении targeted cases разделены два свидетельства: Runtime close/custody и
+дополнительный physical provider cleanup. Recovery case удерживает unresolved только
+во втором, при уже confirmed Runtime; иначе ожидаемый confirmed был бы ложным.
+Прежний case с неизвестными обеими границами остаётся и обязан завершать close с failure.
+
 **Отдельно остаются открытыми** delete-vs-admission, task start после смены legacy run,
 safe unopened Host member и task-first history после explicit rebind. Для них сначала
 сверить original atomic mutation/admission seams и сохранённые target receipts;
