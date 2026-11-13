@@ -96,6 +96,7 @@ export class TeamOwner {
   /** Trusted composition only; never exposed on connect/MCP. */
   readonly contextReminders: TeamContextReminders;
   readonly nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent'>;
+  readonly hasRetainedRuntime = () => this.runtimeRegistration.hasRetained();
   private readonly commandAccess: ReturnType<typeof createTeamCommandAccess>;
   private readonly productChanges = new TeamProductChanges();
   /** Volatile key: continuation cursors expire on owner recreation. */

@@ -91,7 +91,7 @@ test('current legacy source has one text turn and closes before ordinary Host pr
     reply: 'TEST_SOURCE_REPLY',
   };
   const model = await startNativeTeamModel({ allowModelProbes: true, currentLegacySource: source });
-  const catalog = () => fetch(model.url + '/v1/models', {
+  const catalog = (query = '') => fetch(model.url + '/v1/models' + query, {
     headers: { 'x-api-key': 'TEST-current-legacy-only-key' },
   });
   const post = (content: string, tools: unknown[] = []) =>
@@ -113,6 +113,7 @@ test('current legacy source has one text turn and closes before ordinary Host pr
     const listing = await listed.json() as { data: { id: string }[]; has_more: boolean };
     assert.deepEqual(listing.data.map(row => row.id), ['claude-sonnet-4-6', 'claude-opus-4-6']);
     assert.equal(listing.has_more, false);
+    assert.equal((await catalog('?limit=1000')).status, 200);
     assert.equal((await post('Output only the single word PONG.', [{ name: 'Bash' }])).status, 200);
     const response = await post(prompt, [{ name: 'Bash' }]);
     assert.equal(response.status, 200);
@@ -124,7 +125,7 @@ test('current legacy source has one text turn and closes before ordinary Host pr
     const frozen = await model.finishCurrentLegacySource!();
     assert.equal(frozen.turns.length, 1);
     assert.equal(frozen.probes.length, 1);
-    assert.equal(frozen.catalogRequests, 1);
+    assert.equal(frozen.catalogRequests, 2);
     assert.equal(
       (await post('Reply only OK. Do not use tools, access files or run commands.')).status,
       200
@@ -366,4 +367,38 @@ test('additive member oracle requires current roster once and retains exact acto
       tools
     )
   );
+});
+
+
+test('saved donor catalogue and PONG stay inside the original producer epoch', async () => {
+  const { startNativeTeamModel } = await import('./model.ts');
+  const model = await startNativeTeamModel({ donorSavedProbes: true });
+  const catalog = (query = '') => fetch(model.url + '/v1/models' + query, {
+    headers: { 'x-api-key': 'TEST-donor-saved-only-key' },
+  });
+  try {
+    assert.equal((await catalog()).status, 200);
+    const listed = await catalog('?limit=1000');
+    assert.equal(listed.status, 200);
+    const listing = await listed.json() as { data: { id: string }[]; has_more: boolean };
+    assert.deepEqual(listing.data.map(row => row.id), ['claude-sonnet-4-6', 'claude-opus-4-6']);
+    assert.equal(listing.has_more, false);
+    const probe = await fetch(model.url + '/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        messages: [{ role: 'user', content: 'Output only the single word PONG.' }],
+        tools: [],
+      }),
+    });
+    assert.equal(probe.status, 200);
+    assert.equal((await model.finishDonorSavedProbes!()).length, 1);
+    assert.deepEqual(model.observations, []);
+    assert.deepEqual(model.probes, []);
+    assert.equal((await catalog('?limit=1000')).status, 400);
+    await assert.rejects(model.finishDonorSavedProbes!(), /once/);
+  } finally {
+    await model.close();
+  }
 });

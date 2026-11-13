@@ -191,7 +191,9 @@ export function captureTeamModelProbe(options: {
   const admittedAuthority = authority();
   const assertSelection = () => {
     options.assertCurrent();
-    const current = launch.read(options.action === 'start' ? 'control' : 'read');
+    const current = launch.readModelProbeSelection(
+      options.action === 'start' ? 'control' : 'read'
+    );
     if (options.action === 'cancel') return;
     if (
       !input.draft &&
@@ -205,7 +207,7 @@ export function captureTeamModelProbe(options: {
     if (
       current.launchId !== input.launchId ||
       current.rosterRevision !== input.rosterRevision ||
-      (!input.draft && !current.members.some((row) => row.memberId === input.memberId)) ||
+      (!input.draft && !current.memberIds.includes(input.memberId)) ||
       runtimeDigest({ entry: entry?.profile, recipe: recipe() }) !== source ||
       runtimeDigest(authority()) !== runtimeDigest(admittedAuthority)
     )

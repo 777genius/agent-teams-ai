@@ -566,6 +566,12 @@ for (const point of ['state-admission', 'config-projection', 'state-completion']
     };
     assert.throws(() => f.human.replaceRoster(input), /TEST-write-observation-lost/);
     f.store.write = write;
+    const stateBeforePresence = readFileSync(join(f.store.directory, 'state.json'), 'utf8');
+    const configBeforePresence = f.config();
+    assert.equal(f.owner.hasRetainedRuntime(), false,
+      'a genuine pending product projection does not create native history');
+    assert.equal(readFileSync(join(f.store.directory, 'state.json'), 'utf8'), stateBeforePresence);
+    assert.equal(f.config(), configBeforePresence, 'presence must not apply pending roster recovery');
     const recovered = createOwner(f.options).connect('human');
     const saved = recovered.readRoster();
     const bytes = f.config();

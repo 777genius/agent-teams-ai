@@ -732,8 +732,28 @@ test('NDJSON unknown native cleanup keeps the saved roster and its original gran
     unknownCleanup: true,
     changeProfile: (profile) => {
       profile.teams[0]!.members[0]!.role = 'lead';
+      for (const kind of ['missing', 'revoked'] as const) {
+        const original = profile.teams[0]!;
+        const binding = { ...original.binding,
+          teamId: 'TEST-product-' + kind, teamName: 'test-product-' + kind };
+        profile.teams.push({
+          binding,
+          scope: { ...original.scope, teamId: binding.teamId, runId: 'TEST-product-run-' + kind },
+          members: [{ memberId: 'product-lead', name: 'product-lead', role: 'lead' }],
+          grants: kind === 'missing' ? [] : [{ principalId: profile.principalId,
+            memberName: 'user', permissions: ['read'], revoked: true }],
+        });
+      }
     },
   });
+  const assertProductReadRefused = async () => {
+    for (const team of f.selected.teams.slice(1))
+      assert.deepEqual(await f.rpc('team.snapshot', {}, {
+        binding: { ...f.binding, scope: team.scope },
+      }), { ok: false, code: 'forbidden', outcome: 'rejected' },
+      'composition presence does not grant actor read');
+  };
+  await assertProductReadRefused();
   const initial = (await f.rpc('team.roster.read', {})) as { value: TeamRosterConfiguration };
   await f.rpc('runtime.open', { memberId: 'alice-id' });
   await f.rpc('runtime.stop', { memberId: 'alice-id' });
@@ -760,7 +780,17 @@ test('NDJSON unknown native cleanup keeps the saved roster and its original gran
   assert.equal((await f.rpc('team.snapshot', {}) as { ok: boolean }).ok, true);
   assert.deepEqual(await f.rpc('runtime.open', { memberId: 'alice-id' }),
     { ok: false, code: 'hold', outcome: 'unknown' });
+  await assertProductReadRefused();
   assert.equal((await f.dispose()).cleanup, 'failed');
+  assert.equal(JSON.stringify(new FileRuntimeStore(f.root).fenced(f.runtimeBinding, tx => tx.get())), original);
+
+  // TEST corruption is introduced only after the original owner completed its cleanup attempt.
+  const privateState = join(f.root, 'teams', f.selected.teams[1]!.binding.teamName, '.host-owner', 'state.json');
+  const before = readFileSync(privateState, 'utf8');
+  await assert.rejects(f.restart('failed', () => {
+    writeFileSync(privateState, JSON.stringify({ ...JSON.parse(before), runtimeCaptures: [{}] }));
+  }), { code: 'hold' }, 'malformed original history cannot become an empty inaccessible Team');
+  assert.equal(f.opens(), 1);
   assert.equal(JSON.stringify(new FileRuntimeStore(f.root).fenced(f.runtimeBinding, tx => tx.get())), original);
 });
 function assertSameLaunch(actual: unknown, expected: unknown, message?: string): void {

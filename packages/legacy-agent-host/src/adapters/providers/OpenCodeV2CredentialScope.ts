@@ -60,6 +60,10 @@ export class OpenCodeV2CredentialScope {
 
   private check(): void {
     if (!this.isCurrent()) held();
+    this.checkRoots();
+  }
+
+  private checkRoots(): void {
     for (const [root, identity] of this.roots) {
       const stat = lstatSync(root);
       if (!stat.isDirectory() || stat.isSymbolicLink() || realpathSync(root) !== root ||
@@ -68,7 +72,7 @@ export class OpenCodeV2CredentialScope {
   }
 
   private read(root: string, parts: readonly string[]): { store: AuthStore; directories: Identity[] } {
-    this.check();
+    this.checkRoots();
     let directory = root;
     const directories: Identity[] = [];
     for (const part of parts.slice(0, -1)) {
@@ -105,7 +109,7 @@ export class OpenCodeV2CredentialScope {
           current.isSymbolicLink()) held();
       const value: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, length)));
       if (!record(value) || Object.keys(value).length > 4096) held();
-      this.check();
+      this.checkRoots();
       return { store: value, directories };
     } catch (error) {
       if (!observed && fd === undefined && (error as NodeJS.ErrnoException).code === 'ENOENT')
@@ -115,6 +119,7 @@ export class OpenCodeV2CredentialScope {
   }
 
   private selected() {
+    this.check();
     const primary = this.read(this.dataRoot, ['opencode', 'auth.json']);
     const value = Object.hasOwn(primary.store, this.providerId) ? primary.store[this.providerId] : null;
     // The old V1 native source is a conflict input, never a V2 publication destination.
@@ -125,10 +130,12 @@ export class OpenCodeV2CredentialScope {
     if (value !== null && (!record(value) || value.type !== 'api' || !keyValue(value.key) ||
         Object.keys(value).some(key => key !== 'type' && key !== 'key'))) held();
     const key = value === null ? undefined : (value as { key: string }).key;
-    return { ...primary, key, digest: managementDigest({
+    const selected = { ...primary, key, digest: managementDigest({
       accountBinding: this.profile.accountBinding, providerId: this.providerId,
       namespace: [...this.roots], directories: primary.directories, value,
     }) };
+    this.check();
+    return selected;
   }
 
   capture(): CapturedOpenCodeV2Key {
@@ -145,11 +152,14 @@ export class OpenCodeV2CredentialScope {
 
   /** Inventory of existing plain-key sources only; neither key bytes nor connection evidence. */
   providerIds(): readonly string[] {
-    return Object.entries(this.read(this.dataRoot, ['opencode', 'auth.json']).store)
+    this.check();
+    const ids = Object.entries(this.read(this.dataRoot, ['opencode', 'auth.json']).store)
       .filter(([id, value]) => /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u.test(id) &&
         record(value) && value.type === 'api' && keyValue(value.key) &&
         Object.keys(value).every(key => key === 'type' || key === 'key'))
       .map(([id]) => id);
+    this.check();
+    return ids;
   }
 
   /** A different key requires the Host's own confirmed rejected publication digest. */

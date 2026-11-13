@@ -6,6 +6,10 @@ import { readFile, readdir } from 'node:fs/promises';
 import { delimiter, dirname, isAbsolute, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { TEAM_HOST_DISPOSE_TIMEOUT_MS } from '../../src/contracts.ts';
+import {
+  runtimeSourcePublicationSchema,
+  runtimeSourceSummarySchema,
+} from '../../dist/composition/runtimeSourceContracts.js';
 
 export const fileHash = async (path: string) =>
   createHash('sha256')
@@ -293,6 +297,26 @@ export function startHost(options: {
         assert.equal(typeof safe.checkpointId, 'string');
         assert.ok(['published', 'unsupported', 'held'].includes(String(safe.status)));
         if (safe.status === 'published') assert.match(String(safe.reference), /^cp1-[a-f0-9]{64}$/);
+      } else if (method.startsWith('runtime.source.') && result.ok === true) {
+        switch (method) {
+          case 'runtime.source.current':
+            runtimeSourceSummarySchema.parse(result.value);
+            break;
+          case 'runtime.source.retained':
+            runtimeSourceSummarySchema.array().parse(result.value);
+            break;
+          case 'runtime.source.lookup':
+          case 'runtime.source.recover':
+            runtimeSourcePublicationSchema.nullable().parse(result.value);
+            break;
+          case 'runtime.source.publish':
+          case 'runtime.source.refreshConfiguration':
+            runtimeSourcePublicationSchema.parse(result.value);
+            break;
+          default:
+            assert.fail('Unknown runtime source RPC');
+        }
+        assert.equal(JSON.stringify(result.value).includes('Bearer '), false);
       } else if (method.startsWith('runtime.') && result.ok === true) {
         assertSafeRuntimeProjection(result.value);
       }
