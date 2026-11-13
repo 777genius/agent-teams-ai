@@ -1131,8 +1131,39 @@ registry/Processes UI, cold owner и packaged acceptance; этот source cut и
 | Path | Exact preimage | Reviewed draft blob |
 | --- | --- | --- |
 | `tools/owned-process-broker/protocol.h` | `98b2a2743863ab29598aa6306691332bc7144360` | `60f9ae497a0bc8f9cf9d7cc32c278bc6afbfe4a4` |
-| `tools/owned-process-broker/broker.cpp` | `b82e54077c41242027cbe6400f7240972074f460` | `0d90199e7a1c04f82e01d40bbd289c6cd675d93b` |
+| `tools/owned-process-broker/broker.cpp` | `b82e54077c41242027cbe6400f7240972074f460` | `50aaa950504f76d2c34fdfe71632f16238ca62a1` |
 | `tools/owned-process-broker/serviceScopes.h` | `6a4b39286bb4d0489aca8ec2aaf203015d404507` | `f837c905946282906d8ced5a5a260c0e43c26b2d` |
 | `packages/legacy-agent-host/src/owned-process/codec.ts` | `3f8268481f09b232c9f567f0fb1f64678d3877f0` | `ae5eded9c4f0520a65be73fa1bc8c92e135f3b91` |
 | `packages/legacy-agent-host/src/owned-process/windowsBroker.ts` | `2beae81680a9a4dd2e849e624a03b5321fa450b4` | `3684ca835d4ff592c261f553f2fdf9bce8972422` |
 | `tools/owned-process-broker/nativeDebugServiceScenario.ts` | `893f5ebe6fe3cc5d4294e26450f35e22db50c5e8` | `6cbc36e76cdf2c3ee80419c5098f7c4da8a55a77` |
+
+## 32. Actual 9d compile findings и извлечённая f418 cold UI причина
+
+Run [43361737432](https://github.com/777genius/agent-teams-ai/actions/runs/43361737432)
+проверяет exact `9d364968ea1c9f74b6ec9636604b9e4e0064849e`.
+Windows x64 job `131676600657` и ARM64 `131676600672` завершились failure на шаге9:
+MSVC /WX отклонил TEST lambda `broker.cpp:334` — локальный `birth` скрывает global birth
+(C4459/C2220). Поэтому этот запуск ещё не проверил native service/vendor поведение.
+Узкое исправление `e911cd6220f783304af506ae3a273bdc40252016` меняет только три использования
+локального имени на `serviceBirth`; новый wire broker `50aaa950504f76d2c34fdfe71632f16238ca62a1`
+содержит то же механическое исправление поверх reviewed `0d90199e7a1c04f82e01d40bbd289c6cd675d93b`.
+Таблица §31 указывает уже этот окончательный draft; native semantics и deadlines не изменены.
+
+Linux ABI job `131676600784` завершился failure на шаге7 **до** native artifact/load proof:
+старые headers штатного glibc2.28 toolchain не определяют `SYS_pidfd_open`.
+Reviewed draft `841cda775caf1f7618dea59e89267d85c888d158` добавляет guarded x86-64 syscall number434
+и явный отказ x32; runtime capability probes, pidfd lifetime и guards остаются прежними.
+Основание: [официальная Linux v6.1 syscall table](https://github.com/torvalds/linux/blob/v6.1/arch/x86/entry/syscalls/syscall_64.tbl),
+exact blob `c84d12608cd2de9e45f6cc166169cf70ecbf7518`.
+Это не symbol-version hack, не расширение product tuple и не объявление ABI/native PASS.
+На момент этой записи Linux pidfs job `131676600318` ещё queued; его не отменяем и не перезапускаем.
+Локальный executor восстановлен; focused validation следующего среза ещё выполняется,
+поэтому прежняя запись §31 об отсутствии compile относится к моменту первоначального source review.
+
+Официальный f418 Linux artifact `14007732210` извлечён после восстановления executor:
+ZIP 1,867,526 bytes, SHA256 `32c0294d8c9406998a48a5cf033a0a01b292d28ad0f06e7510ae38923b916649`.
+В `cold-ui/fixture/desktop-backend-receipt.json` исходная ошибка — `one CDP listener: 2 !== 1`.
+Первый listener и matching Main найдены за27.5s; повторная ownership проверка отказалась до UI operations.
+Причина двух holders ещё проверяется; повторные строки, inherited descriptor или посторонний listener
+не считаются доказанными без соответствующего наблюдения. Original primary/neighbor/root cleanup — PASS;
+это не cold UI/Processes/packaged PASS и не основание ослаблять CDP ownership assertion.
