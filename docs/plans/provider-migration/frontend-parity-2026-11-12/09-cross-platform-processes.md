@@ -3285,3 +3285,29 @@ New readonly TEST observations use fixed original paths and established bounds: 
 Root composes child-specific ci/smoke deltas without dropping qualification/native changes; no force or branch update by the implementation peer. Preserve each existing file cap, including TeamOwner800 and script800; use the one consumed helper for its coherent responsibility, with no baseline raise, cosmetic compression, new suite or generic framework.
 
 Acceptance remains pending until independent source reviews, exact D/archive/F type/focused checks and this ordinary native Desktop gate pass. On an unavailable executor, prepare immutable source/handoffs and use the next already-required normal CI; do not label source review as compilation or runtime success. Publish this plan before any of these source edits.
+
+## 62. Original POSIX actor failure: bounded case/stage observation
+
+### Review 1 — actual native-only failures
+
+The original native12d preflight run43457244534 completed. Linux job131994517305 passed the existing POSIX actor (immutable log559cbfa1d7ee0e64beb6ba4d59df43347946921b). Darwin x64 job131994517109 failed the actor's existing errno assertion at463 with13 rather than0 (log3b5000490a1c5c7fec4659d1e30b90348070b5f5). Darwin ARM job131994517191 failed at483 because the original mutation case retained LIB/BIN:A/MAIN:A markers (log6cabd9196bcb5da98d05500287ef60ba34e2896b). The complete per-case receipt is retained in the ordinary artifact but its members have not been read in this session. Do not assign a case label, native stage or cause from an assertion line alone.
+
+The passing Linux actor qualifies only that controlled fixture. Both Darwin failures remain real failures. No result closes the product pathname-to-exec gap or qualifies installed/custom executables and scripts.
+
+### Review 2 — one existing TEST file, original observation only
+
+Only native repair branch contains this actor. Its source path is packages/legacy-agent-host/tests/registered-process-executable.native.ts, preimage6108342759147bcb480e634ccad7877a0807adc9; the C controller882c986d13920db54720b4672dd6cfc55e361aaf remains unchanged. Parent and qualification receive this plan only, with no newly introduced actor or job.
+
+At the existing per-case assertion catch, retain a closed projection for the first original failing observation. It uses only that already decoded/validated fact, the locally enumerated case label, existing bounded marker list and controller-interruption boolean. Do not reread any file, call native code, start another child, examine the exception, or change failure selection. Preserve the original failure object and all later bounded cases.
+
+The fixed TEST_POSIX_EXEC_FAILURE row contains sourceHead, platform/arch, original case label and native stage; errno, execErrno and mutationAfterCheckErrno; original stopped-before-user, marker-absence, image-observed/matched, resumed and cleanup booleans; the existing marker names, exitCode/exitSignal and original controllerInterrupted. It omits PIDs, birth/inode identities, paths, arguments, environment, hashes of user material, raw stdout/stderr and exception text. The case/stage/marker values use only the existing finite vocabulary and numeric/boolean projections are validated. One line is at most2048 UTF-8 bytes including its newline. Invalid/missing diagnostic data yields an absent observation, never a replacement cause or PASS.
+
+Emit at most once, only after the existing cleanup and successful original receipt write, before the unchanged final rethrow. Contain observation/emission errors so they cannot mask the original failure. Original receipt-write failure keeps its original precedence; it does not justify another write or retrospective case inference. Retain the complete existing private receipt and all original assertions.
+
+### Review 3 — acceptance without another suite
+
+Do not change actor code, codesigning, compiler flags, enumerated cases, timeout120000, deadline100000, per-case budget20000, cleanup4000, runner permissions, workflow or fixture/product qualification flags. In particular no acceptance of Darwin markers, errno13 or a missing observation is added.
+
+Use independent source review, affected script/test type checking and the next already-required ordinary native candidate CI. The existing failing case itself must retain its original failure while supplying its closed case/stage row. No new unit suite or native replay is warranted for this diagnostic-only addition. Source review remains SOURCE_ONLY_UNEXECUTED until canonical checks execute; a cause or platform fix can be planned only from actual evidence.
+
+Root alone publishes the plan before this one-file source change, composes the native-only delta and immediately pushes every commit. No merge to main or upward merge is included.
