@@ -74,4 +74,41 @@ test('business replies stay owner-bound and duplicate input cannot become a stri
     assert.deepEqual([...model.markers], [marker]);
     assert.equal((await request(model.url, input(marker))).status, 500);
   } finally { await model.close(); }
+  const source = await startRetainedOpenCodeModel({ sourceSelection: true });
+  try {
+    const preflight = await request(source.url, input('Reply only OK. Do not use tools, access files or run commands.'),
+      '/host/v1/chat/completions');
+    assert.equal(preflight.status, 200);
+    assert.equal(JSON.parse(preflight.text).choices[0].message.content, 'OK');
+    for (const marker of ['TEST_SOURCE_INSTALL_B', 'TEST_SOURCE_PATH_A', 'TEST_SOURCE_LIVE_A', 'TEST_SOURCE_UPDATE_B'] as const) {
+      source.expectSourceInput(marker);
+      const body = marker === 'TEST_SOURCE_LIVE_A' ? { ...input(marker), messages: [
+        { role: 'user', content: 'TEST_SOURCE_PATH_A' }, { role: 'assistant', content: 'REPLY_TEST_SOURCE_PATH_A' },
+        { role: 'user', content: marker },
+      ] } : input(marker);
+      const result = await request(source.url, body, '/host/v1/chat/completions');
+      assert.equal(result.status, 200);
+      assert.equal(JSON.parse(result.text).choices[0].message.content, 'REPLY_' + marker);
+    }
+    assert.deepEqual(source.observations.map(row => row.marker),
+      [null, 'TEST_SOURCE_INSTALL_B', 'TEST_SOURCE_PATH_A', 'TEST_SOURCE_LIVE_A', 'TEST_SOURCE_UPDATE_B']);
+    assert.equal(source.observations[0]!.sourcePreflight, true);
+    assert.deepEqual(source.failures, []);
+  } finally { await source.close(); }
+  for (const invalid of ['foreign owner', 'unarmed input', 'stale history', 'wrong preflight', 'tool preflight'] as const) {
+    const source = await startRetainedOpenCodeModel({ sourceSelection: true });
+    try {
+      if (invalid === 'stale history') source.expectSourceInput('TEST_SOURCE_UPDATE_B');
+      const body = invalid === 'stale history' ? { ...input('TEST_SOURCE_UPDATE_B'), messages: [
+        { role: 'user', content: 'TEST_SOURCE_PATH_A' }, { role: 'assistant', content: 'REPLY_TEST_SOURCE_PATH_A' },
+        { role: 'user', content: 'TEST_SOURCE_UPDATE_B' },
+      ] } : invalid === 'unarmed input' ? input('TEST_SOURCE_PATH_A') :
+        invalid === 'tool preflight' ? { ...input('Reply only OK. Do not use tools, access files or run commands.'),
+          tools: [{ type: 'function', function: { name: 'shell' } }] } : input('Output only the single word PONG.');
+      assert.equal((await request(source.url, body, invalid === 'foreign owner'
+        ? '/legacy/v1/chat/completions' : '/host/v1/chat/completions')).status, 500);
+      assert.equal(source.observations.length, 0, 'the selected violation is the first refusal');
+      assert.equal(source.failures.length, 1);
+    } finally { await source.close(); }
+  }
 });
