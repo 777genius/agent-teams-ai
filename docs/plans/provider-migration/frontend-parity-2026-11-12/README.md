@@ -109,8 +109,9 @@ SHA. Отсутствие авторизации CLI не является по�
   same-live original не остаётся навсегда без доступного действия Stop.
 - Старые Darwin v1/v2 captures читаются прежним decoder без изменения bytes,
   digests и processRef; новая schema не является поводом мигрировать active records.
-- Соблюдать [архитектурный стандарт](../../../FEATURE_ARCHITECTURE_STANDARD.md)
-  и [guardrails](../../../../AGENT_CRITICAL_GUARDRAILS.md): TypeScript 7,
+- TypeScript 7 — по [AGENTS](../../../../AGENTS.md); соблюдать
+  [архитектурный стандарт](../../../FEATURE_ARCHITECTURE_STANDARD.md)
+  и [guardrails](../../../../AGENT_CRITICAL_GUARDRAILS.md):
   новые production-файлы не больше 800 строк, без повышения frozen caps,
   без whole-service casts, пустых feature-папок и новых фасадов наследования.
 
