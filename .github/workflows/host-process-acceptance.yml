@@ -1,0 +1,225 @@
+name: Host process fixture acceptance
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    paths:
+      - '.github/workflows/host-process-acceptance.yml'
+      - 'agent-teams-controller/**'
+      - 'packages/legacy-agent-host/**'
+      - 'packages/task-change-ledger/**'
+      - 'src/features/agent-backend/**'
+      - 'src/main/utils/ownedProcess/**'
+      - 'test/features/agent-backend/**'
+      - 'tools/owned-process-broker/**'
+      - 'scripts/build/buildOwnedProcessBroker.ts'
+      - 'scripts/ci/**'
+      - 'scripts/ensure-electron-install.cjs'
+      - 'vendor/provider-migration/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Draft-safe process fixtures have their own evidence; existing native-provider gates remain intact.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
+
+jobs:
+  process-fixtures:
+    name: Host process fixtures (${{ matrix.platform }})
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux-x64
+            arch: x64
+          - runner: macos-15
+            platform: darwin-arm64
+            arch: arm64
+          - runner: macos-15-intel
+            platform: darwin-x64
+            arch: x64
+          - runner: windows-2022
+            platform: win32-x64
+            arch: x64
+          - runner: windows-11-arm
+            platform: win32-arm64
+            arch: arm64
+    defaults:
+      run:
+        shell: bash
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      HOST_PROCESS_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      HOST_PROCESS_PLATFORM: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6.1.0
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Bind exact source and actual process tuple
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$HOST_PROCESS_SOURCE_HEAD"
+          node --input-type=module -e "import assert from 'node:assert/strict'; assert.equal(process.version,'v24.21.0'); assert.equal(process.platform+'-'+process.arch,process.env.HOST_PROCESS_PLATFORM)"
+          mkdir process-acceptance-evidence
+          git rev-parse HEAD > process-acceptance-evidence/source-head.txt
+      - name: Install frozen workspace without Desktop postinstall
+        run: node scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build existing controller and Host
+        run: |
+          set -euo pipefail
+          node node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json
+          node agent-teams-controller/scripts/build.mjs
+          node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json
+          node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json
+      - name: Verify process contracts and retained Main Host transport
+        run: |
+          set -euo pipefail
+          node --test packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log
+          node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log
+          node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log
+      - name: Verify original POSIX Node and shell lifecycle fixtures
+        if: runner.os != 'Windows'
+        run: |
+          set -euo pipefail
+          node --test packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts 2>&1 | tee process-acceptance-evidence/posix-lifecycle.log
+      - name: Prepare pinned Electron for native process fixtures
+        if: runner.os != 'macOS'
+        run: |
+          set -euo pipefail
+          node scripts/ensure-electron-install.cjs --strict
+          node --input-type=module -e "import assert from 'node:assert/strict'; import {createRequire} from 'node:module'; assert.equal(createRequire(import.meta.url)('electron/package.json').version,'44.10.1')"
+      - name: Qualify original Linux pidfs and retained pidfd under Host Node
+        if: runner.os == 'Linux'
+        env:
+          LEGACY_REGISTERED_PROCESS_NATIVE_GO: '1'
+        run: |
+          set -euo pipefail
+          headers=$(node -p "require('path').resolve(require('path').dirname(process.execPath),'../include/node')")
+          node packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts "$RUNNER_TEMP/TEST-process-node24-$GITHUB_RUN_ID" "$(command -v cc)" "$(command -v readelf)" "$headers" 2>&1 | tee process-acceptance-evidence/linux-node24.log
+          cp -R "$RUNNER_TEMP/TEST-process-node24-$GITHUB_RUN_ID" process-acceptance-evidence/linux-node24
+      - name: Qualify original Linux pidfs and retained pidfd under Electron Node
+        if: runner.os == 'Linux'
+        env:
+          LEGACY_REGISTERED_PROCESS_NATIVE_GO: '1'
+          ELECTRON_RUN_AS_NODE: '1'
+        run: |
+          set -euo pipefail
+          headers=$(node -p "require('path').resolve(require('path').dirname(process.execPath),'../include/node')")
+          node_modules/electron/dist/electron packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts "$RUNNER_TEMP/TEST-process-electron-$GITHUB_RUN_ID" "$(command -v cc)" "$(command -v readelf)" "$headers" 2>&1 | tee process-acceptance-evidence/linux-electron.log
+          cp -R "$RUNNER_TEMP/TEST-process-electron-$GITHUB_RUN_ID" process-acceptance-evidence/linux-electron
+      - name: Build original Windows product broker and C++ fixtures
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $build = Join-Path $env:RUNNER_TEMP 'TEST-process-build-${{ matrix.arch }}'
+          $stage = Join-Path $env:RUNNER_TEMP 'TEST-process-stage-${{ matrix.arch }}'
+          $cmake = (Get-Command cmake.exe -ErrorAction Stop).Source
+          node node_modules/tsx/dist/cli.mjs scripts/build/buildOwnedProcessBroker.ts '${{ matrix.arch }}' $build $stage $cmake
+          if ($LASTEXITCODE -ne 0) { throw 'Native fixture build or product staging failed' }
+          $staged = @(Get-ChildItem -File $stage | Select-Object -ExpandProperty Name)
+          if ((($staged | Sort-Object) -join ',') -ne 'manifest.json,owned-process-broker.exe') { throw 'Unexpected staged fixture' }
+          "HOST_PROCESS_NATIVE_BUILD=$build" >> $env:GITHUB_ENV
+          "HOST_PROCESS_NATIVE_STAGE=$stage" >> $env:GITHUB_ENV
+          Copy-Item "$stage\manifest.json" process-acceptance-evidence/windows-manifest.json
+          Get-ChildItem -File "$build\Release\*.exe" | Get-FileHash -Algorithm SHA256 | Format-List | Out-File process-acceptance-evidence/windows-binary-sha256.txt
+      - name: Qualify original Windows Job and control under Host Node
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $build = $env:HOST_PROCESS_NATIVE_BUILD
+          $controller = "$build\Release\owned-process-gate-controller.exe"
+          $node = (Get-Command node.exe -ErrorAction Stop).Source
+          $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
+          $gate = Join-Path $PWD 'tools\owned-process-broker\nativeGate.ts'
+          & $controller $node $runner $gate "$env:HOST_PROCESS_NATIVE_STAGE\owned-process-broker.exe" "$build\Release\owned-process-fixture.exe" "$build\Release\owned-process-broker-birth-failure.exe" "$build\Release\owned-process-broker-accounting-failure.exe" "$build\Release\owned-process-broker-release-delay.exe" "$build\Release\owned-process-broker-debug-service.exe" 2>&1 | Tee-Object process-acceptance-evidence/windows-node24.log
+          if ($LASTEXITCODE -ne 0) { throw 'Original Node fixture controller did not confirm cleanup' }
+      - name: Qualify original Windows Job and control under Electron Node
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          ELECTRON_RUN_AS_NODE: '1'
+        run: |
+          $build = $env:HOST_PROCESS_NATIVE_BUILD
+          $controller = "$build\Release\owned-process-gate-controller.exe"
+          $electron = Join-Path $PWD 'node_modules\electron\dist\electron.exe'
+          $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
+          $gate = Join-Path $PWD 'tools\owned-process-broker\nativeGate.ts'
+          & $controller $electron $runner $gate "$env:HOST_PROCESS_NATIVE_STAGE\owned-process-broker.exe" "$build\Release\owned-process-fixture.exe" "$build\Release\owned-process-broker-birth-failure.exe" "$build\Release\owned-process-broker-accounting-failure.exe" "$build\Release\owned-process-broker-release-delay.exe" "$build\Release\owned-process-broker-debug-service.exe" 2>&1 | Tee-Object process-acceptance-evidence/windows-electron.log
+          if ($LASTEXITCODE -ne 0) { throw 'Original Electron fixture controller did not confirm cleanup' }
+      - name: Require completed original platform receipts and unchanged source
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$HOST_PROCESS_SOURCE_HEAD"
+          git diff --exit-code
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const directory = 'process-acceptance-evidence';
+          const rows = name => readFileSync(join(directory, name), 'utf8').split('\n')
+            .filter(line => line.startsWith('{')).map(line => JSON.parse(line));
+          const native = [];
+          if (process.platform === 'linux') {
+            for (const name of ['linux-node24.log', 'linux-electron.log']) {
+              const completed = rows(name).filter(row => row.automaticAndWarm === true);
+              assert.equal(completed.length, 1, 'one original complete Linux invocation');
+              const receipt = completed[0];
+              assert.equal(receipt.completed, true); assert.equal(receipt.cleaned, true);
+              assert.match(receipt.binarySha256, /^[a-f0-9]{64}$/);
+              assert.match(receipt.manifestSha256, /^[a-f0-9]{64}$/);
+              native.push({ log: name, scope: 'original Linux pidfs and retained pidfd', receipt });
+            }
+          } else if (process.platform === 'win32') {
+            for (const name of ['windows-node24.log', 'windows-electron.log']) {
+              const facts = rows(name);
+              const gates = facts.filter(row => row.gate === 'owned-process-native-scenarios-only');
+              const controllers = facts.filter(row => row.gateController);
+              assert.equal(gates.length, 1); assert.equal(controllers.length, 1);
+              assert.equal(gates[0].platform, 'win32'); assert.equal(gates[0].arch, process.arch);
+              assert.ok(gates[0].results.includes('captured-provider-native-argv-env-cwd-and-stop'));
+              assert.ok(gates[0].results.includes('TEST-only-debug-service-prebirth-nested-job-feasibility'));
+              assert.deepEqual(controllers[0], { gateController: 'drained', rootExitCode: 0, activeProcesses: 0 });
+              native.push({ log: name, scope: 'original Windows Job, control and C++ fixture',
+                scenarios: gates[0].results, cleanup: controllers[0] });
+            }
+          } else assert.equal(process.platform, 'darwin');
+          writeFileSync(join(directory, 'scope.json'), JSON.stringify({
+            kind: 'TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE', status: 'PASS',
+            sourceHead: process.env.HOST_PROCESS_SOURCE_HEAD, platform: process.env.HOST_PROCESS_PLATFORM,
+            nodeVersion: process.version, controlledContracts: true, retainedMainTransport: true,
+            posixProcessGroups: process.platform !== 'win32', native,
+            nativeProviderRuntimeQualified: false, darwinNativeRegistrationQualified: false,
+            posixExecutableAdmissionQualified: false, desktopQualified: false, releaseQualified: false,
+          }, null, 2) + '\n');
+          NODE
+      - name: Preserve original process evidence including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: host-process-fixtures-${{ matrix.platform }}-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            process-acceptance-evidence/
+            ${{ runner.temp }}/TEST-process-node24-${{ github.run_id }}/
+            ${{ runner.temp }}/TEST-process-electron-${{ github.run_id }}/
+
+# Darwin covers real controlled POSIX lifecycle plus contract tests here. Its registered-token
+# native admission and the known POSIX executable mutation feasibility failure remain separate.
+# No vendor CLI, provider SDK gate, login, model server or production tuple admission runs here.
