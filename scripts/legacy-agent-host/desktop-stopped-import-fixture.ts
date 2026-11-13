@@ -2,11 +2,14 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 
 export const LEGACY_IMPORT_TEAM = 'test-stopped-legacy';
 export const LEGACY_IMPORT_LABEL = 'TEST never-launched legacy saved Team';
+export const CURRENT_LEGACY_SOURCE_PROMPT = 'TEST_CURRENT_LEGACY_SOLO_ONE';
+export const CURRENT_LEGACY_SOURCE_REPLY = 'REPLY_TEST_CURRENT_LEGACY_SOLO_ONE';
 export interface StoppedImportUiSeed {
   sourceKind?: 'captured-stopped-solo';
   priorRun?: { path: string; sha256: string };
@@ -51,6 +54,21 @@ export interface StoppedImportUiSeed {
   roots: string[];
   before: { path: string; sha256: string; sizeBytes: number }[];
 }
+export type CurrentNativeStoppedImportSeed = Pick<
+  StoppedImportUiSeed,
+  'teamName' | 'displayName' | 'sourceCardLabel' | 'taskId' | 'roots' | 'before'
+> & {
+  sourceKind: 'actual-current-native-solo';
+  savedSettings: Partial<StoppedImportUiSeed['savedSettings']> &
+    Pick<
+      StoppedImportUiSeed['savedSettings'],
+      'cwd' | 'providerId' | 'model' | 'effort' | 'prompt' | 'skipPermissions'
+    >;
+  priorRun: { path: string; sha256: string };
+  sourceTask: Record<string, unknown>;
+  absentRoots: string[];
+};
+export type DesktopStoppedImportSeed = StoppedImportUiSeed | CurrentNativeStoppedImportSeed;
 const digest = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 const json = async (path: string, value: unknown) =>
   writeFile(path, JSON.stringify(value, null, 2), { mode: 0o600, flag: 'wx' });
@@ -78,6 +96,78 @@ export async function stoppedImportSourceBytes(root: string, roots: readonly str
     }
   }
   return files.sort((a, b) => a.path.localeCompare(b.path));
+}
+
+/** The current checkout's ordinary runtime payload, separate from donor4a and the Host SDK. */
+export async function captureCurrentStoppedSourceInputs(directory: string, node: string) {
+  const row = (value: unknown): Record<string, unknown> => {
+    assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+    return value as Record<string, unknown>;
+  };
+  const read = async (path: string) => row(JSON.parse(await readFile(path, 'utf8')));
+  assert.equal(process.platform, 'darwin');
+  assert.equal(process.arch, 'arm64');
+  assert.equal(process.version, 'v24.21.0');
+  const root = await realpath(directory);
+  const git = (...args: string[]) =>
+    execFileSync('/usr/bin/git', ['-C', root, ...args], {
+      encoding: 'utf8',
+      timeout: 30_000,
+      maxBuffer: 1024 * 1024,
+    }).trim();
+  assert.equal(git('rev-parse', '--show-toplevel'), root);
+  assert.equal(
+    git('status', '--porcelain=v1', '--untracked-files=no'),
+    '',
+    'current source is frozen'
+  );
+  const fileDigest = async (path: string) => digest(await readFile(path));
+  const lock = await read(join(root, 'runtime.lock.json'));
+  assert.equal(lock.version, '0.0.158');
+  const asset = row(row(lock.assets)['darwin-arm64']);
+  assert.equal(asset.sha256, '6fe171490df4a8888093bf4ecdd2c4a4cd2faa510152af870c4cf37e36443311');
+  const cache = await realpath(process.env.LEGACY_DESKTOP_CURRENT_RUNTIME_CACHE!);
+  const payload = join(cache, '0.0.158/darwin-arm64/payload-v1');
+  const native = await realpath(join(payload, String(asset.binaryName)));
+  assert.equal(dirname(native), payload);
+  const validator = await import(
+    pathToFileURL(join(root, 'scripts/lib/runtime-payload-cache.mjs')).href
+  );
+  assert.equal(
+    await validator.isRuntimePayloadCacheValid(payload, asset.sha256, asset.binaryName),
+    true
+  );
+  const electronPackage = createRequire(join(root, 'package.json')).resolve(
+    'electron/package.json'
+  );
+  const relative = (await readFile(join(dirname(electronPackage), 'path.txt'), 'utf8')).trim();
+  assert.equal(relative, 'Electron.app/Contents/MacOS/Electron');
+  const electron = await realpath(join(dirname(electronPackage), 'dist', relative));
+  return {
+    root,
+    commit: git('rev-parse', 'HEAD'),
+    tree: git('rev-parse', 'HEAD^{tree}'),
+    files: await Promise.all(
+      ['package.json', 'pnpm-lock.yaml', 'runtime.lock.json'].map(async (path) => ({
+        path,
+        sha256: await fileDigest(join(root, path)),
+      }))
+    ),
+    node: { path: node, version: process.version, sha256: await fileDigest(node) },
+    electron: {
+      path: electron,
+      version: (await read(electronPackage)).version,
+      sha256: await fileDigest(electron),
+    },
+    runtime: {
+      path: native,
+      version: lock.version,
+      cliVersion: lock.cliVersion,
+      archiveSha256: asset.sha256,
+      sha256: await fileDigest(native),
+      cacheValidated: true,
+    },
+  };
 }
 
 /** Synthetic saved legacy records; optional prior-run setup uses actual captured TEST child Stop. */
@@ -292,22 +382,33 @@ export async function prepareDesktopStoppedImport(
   await json(join(root, 'stopped-import-ui-seed.json'), seed);
 }
 
-export async function readDesktopStoppedImportSeed(root: string): Promise<StoppedImportUiSeed> {
+export async function readDesktopStoppedImportSeed(
+  root: string
+): Promise<DesktopStoppedImportSeed> {
   const seed = JSON.parse(
     await readFile(join(root, 'stopped-import-ui-seed.json'), 'utf8')
-  ) as StoppedImportUiSeed;
+  ) as DesktopStoppedImportSeed;
   assert.equal(seed.teamName, LEGACY_IMPORT_TEAM);
-  assert.equal(
-    seed.sourceCardLabel,
-    seed.sourceKind === 'captured-stopped-solo' ? LEGACY_IMPORT_TEAM : seed.displayName
-  );
+  assert.equal(seed.sourceCardLabel, seed.sourceKind ? LEGACY_IMPORT_TEAM : seed.displayName);
   assert.equal(seed.savedSettings.cwd, join(root, 'workspace'));
-  assert.deepEqual(seed.roots, [
+  const roots = [
     join(root, 'claude/teams', LEGACY_IMPORT_TEAM),
     join(root, 'claude/tasks', LEGACY_IMPORT_TEAM),
     join(root, 'userData/data/attachments', LEGACY_IMPORT_TEAM),
     join(root, 'userData/data/task-attachments', LEGACY_IMPORT_TEAM),
-  ]);
+  ];
+  if (seed.sourceKind === 'actual-current-native-solo') {
+    assert.deepEqual(
+      seed.roots.filter((path) => !roots.includes(path)),
+      []
+    );
+    assert.ok(seed.roots.includes(roots[0]!) && seed.roots.includes(roots[1]!));
+    assert.deepEqual(
+      seed.absentRoots,
+      roots.filter((path) => !seed.roots.includes(path))
+    );
+    assert.equal(seed.sourceTask.id, seed.taskId);
+  } else assert.deepEqual(seed.roots, roots);
   return seed;
 }
 

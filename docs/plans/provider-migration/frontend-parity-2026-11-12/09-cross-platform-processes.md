@@ -1214,3 +1214,88 @@ Machine fields дают PID, FD, family, inode/device если доступны,
 а socket device не объявляется доказанной стабильной identity. Исходная ошибка/cleanup остаются прежними.
 Один critical case в existing observations tests проверяет две holder identities и privacy; новой suite нет.
 Затем actual next Linux CI должен дать оригинальные descriptor facts. Только по ним выбирается исправление.
+
+## 34. Actual dc16 gates и следующий закрытый Main↔Host custody срез
+
+Основа — native `dc16f3373edd5994c41fb30ff660b0dd6a2beecc`, run
+[43366664072](https://github.com/777genius/agent-teams-ai/actions/runs/43366664072).
+Linux ABI job `131692551805` — **SUCCESS**: один native artifact построен и загружен
+в offline glibc2.28 userspace, затем на actual older host kernel пройден automatic warm gate.
+Manifest SHA256 `56e833541798b7f1142e17e9e9e90408c18b2aa4a42eb79151069b7f9819958a`,
+binary SHA256 `f078213b34b9a8190251951a8d76e0cadb99400124ce29ddaa70a143a545b584`.
+Это supply/warm proof; он не превращает Host-local pidfd в cold capability после смерти owner.
+
+Windows x64 job `131692552110` и ARM64 job `131692552014`: compilation/types и genuine Node/Electron/Host24 gates — PASS;
+actual Claude vendor step15 — **FAILURE**. До исходного START deadline35s наблюдались
+model backgroundTool=1, backgroundResult=0, tool=1, interaction=1, result=0.
+Whole-provider cleanup и original Job release подтверждены. Тестовый observer сохраняет interaction,
+но не вызывает SPI `respondToInteraction`, поэтому genuine permission остаётся без ответа.
+Следующий узкий TEST fix разрешает не более одного запроса только с exact START input/operation,
+original session, kind=permission, tool=Bash и полным совпадением captured command/description/background input.
+Ответ `{ kind: 'permission', decision: 'allow' }` завершает только original pending interaction;
+settings/permission policy, product flags, deadlines и native custody не меняются.
+Другой запрос немедленно отказывается; ожидание результата не заменяется blanket auto-approval.
+Новый exact-head vendor run ещё требуется. На обеих Windows архитектурах наблюдался тот же original interaction; Linux pidfs текущего run продолжается штатно.
+
+### Следующий отдельный source срез по §30, до product activation
+
+Current `CapturedHostClient.receive` воспринимает любой id как обычный RPC reply;
+`createHostServer` принимает только requests, а data notifications допускают потерю и gap.
+Поэтому native stdio нельзя передавать через текущие generic notifications или считать
+добавление callback готовым Main retention. Нужен один закрытый private custody family
+на том же captured stdin/stdout с конкретным subprocess consumer уже в первом срезе.
+
+| Файл | Минимальное изменение |
+| --- | --- |
+| `packages/legacy-agent-host/src/owned-process/hostCustody.ts` (новый) | Закрытые operation/reply schemas и узкий Host endpoint; без generic RPC framework и свободного имени метода. |
+| `packages/legacy-agent-host/src/owned-process/index.ts` | Private export через уже существующий entry; browser-safe `contracts.ts` не получает native DTO. |
+| `packages/legacy-agent-host/src/index.ts` | Явная optional native binding, routing reverse replies/private readiness и seal текущего endpoint. Default CLI не активирует capability. |
+| `packages/legacy-agent-host/src/output.ts` | Reliable private frames в существующих bounded output budgets; native bytes не идут в lossy data lane. |
+| `src/features/agent-backend/main/infrastructure/CapturedHostClient.ts` | Reverse requests принимаются только от original captured Host child/epoch и заранее supplied private physical-owner port. |
+| `src/features/agent-backend/main/composition/createCapturedHostClient.ts` | Optional trusted port injection; lifetime physical owner не переносится внутрь per-Host client. |
+
+Первый consumer — TEST physical-owner port, удерживаемый независимо от обоих Host clients.
+Он даёт заранее captured opaque capability для bounded stream read/write/end и original observe/Stop/release;
+в этой версии нет native spawn, произвольных executable/argv/env, нового Job, daemon, socket или journal.
+Real Main owner, свежая graph/executable attestation, WindowsRegisteredProcess и async TeamProcessCommands
+остаются следующими отдельными integrations. TEST transport proof не квалифицирует их и не восстанавливает SDK turn.
+
+Ограничения wire/ownership:
+
+- Direction, original Main epoch, Host incarnation и exact pending entry отделяют reverse IDs от обычных RPC IDs.
+  Binding относится к captured profile/source и private capability; старый Host не может адресовать successor.
+  После seal EOF/timeout делает старое ожидание terminal unknown; late reply не завершает новую epoch,
+  native effect не повторяется. Timeout транспорта сам по себе не означает известное отсутствие dispatch.
+- Existing pending32/control reserve8 сохраняются в обоих направлениях; constants не повышаются.
+  Private frames делят прежние output/write byte budgets с ordinary traffic, а не получают ещё одну безлимитную очередь.
+  Work не занимает reserved control slots. Actual subprocess test обязан доказать Stop progress при stdio pressure.
+  Проверяется также заполненный work byte budget, а не только число pending slots.
+- Stdio передаётся bounded pull replies, максимум16KiB bytes за chunk; bytes не выводятся в notifications.
+  Private readiness hint без payload и с одной outstanding отметкой на stream позволяет не держать
+  24 long-poll requests на тихих процессах и не использовать busy polling. Hint не является native receipt.
+  Readiness/EOF обрабатываются до generic notifications; lossless byte order и original write callback обязательны.
+  Hint идёт только reliable private lane; outstanding mark снимается подтверждённым read/drain,
+  а не локальной попыткой отправки, иначе потерянный hint оставит stream навсегда в quiet состоянии.
+- Native deadline фиксируется original Main owner при admission; `performance.now()` разных процессов не сравнивается.
+  Host disappearance не уничтожает reference исходного cleanup owner. Detach/rebind, обычный Quit,
+  source drift и Main death сохраняют различные semantics §30; этот срез не меняет product shutdown.
+
+Добавить только critical cases в existing `test/features/agent-backend/capturedHostClient.test.ts`
+и `packages/legacy-agent-host/tests/transport.test.ts`: actual Host A/B subprocesses; bounded stream pressure
+при свободном control reserve; partial write/EOF → unknown без replay; old-epoch reply; private bytes
+не появляются в UI notifications; original TEST owner продолжает cleanup после закрытия Host A.
+Новых suites/runner нет. До source требуется root + peer review; затем focused build/types и эти existing tests.
+Actual Windows SDK/Bun, retained physical handles, writer handoff и cold Processes UI/packaged gates остаются обязательными.
+
+### Следующий native selector, не скрытая PID adoption
+
+Production register получает PID, тогда как уже проверяемый C `ServiceCapture` требует PID+birth.
+Минимальное последующее расширение — `Scopes.registerCurrent(pid)` под прежним registry mutex:
+`currentPids` → original retained record → consistent PID и живой original HANDLE (`WAIT_TIMEOUT`) → key+birth.
+Только CREATE_PROCESS_DEBUG_EVENT уже захваченного provider; нет OpenProcess, process-table lookup или нового scope.
+Это означает **текущий живой original child в момент первого atomic admission**; историческую incarnation,
+о которой caller помнил ранее, один PID не доказывает. Missing/retired/unknown отказываются без fallback.
+Actual retry сохраняет request ID/receipt/key в existing effect cache; новый ID нельзя назвать replay.
+Existing exact capture остаётся. После initial capture все query/Stop/settle идут только по original key;
+новый tombstone registry ради исторического PID lookup не вводится. Этот selector требует собственного native proof
+и пока не входит ни в первый transport cut, ни в product `RegisteredProcessCapture` union.

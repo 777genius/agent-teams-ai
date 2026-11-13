@@ -191,6 +191,26 @@ export function createDesktopUiControls(
   };
   const click = (selector: string, label: string, text?: string): Promise<void> =>
     clickExpression(target(selector, text), label, selector, text);
+  const hoverExpression = async (expression: string, label: string): Promise<void> => {
+    let previous: { x: number; y: number } | undefined, stable = 0;
+    // Canonical effects can settle before their renderer layout. Sample the
+    // original eligible target within one read deadline, then move only once.
+    const point = record(await waitRead(expression, label, 30_000, value => {
+      const row = value && typeof value === 'object' && !Array.isArray(value)
+        ? value as Record<string, unknown> : undefined;
+      if (!row || row.unavailableTarget === true || typeof row.x !== 'number' ||
+          typeof row.y !== 'number' || !Number.isFinite(row.x) || !Number.isFinite(row.y)) {
+        previous = undefined; stable = 0;
+        return false;
+      }
+      stable = previous?.x === row.x && previous?.y === row.y ? stable + 1 : 1;
+      previous = { x: row.x, y: row.y };
+      return stable >= 3;
+    }));
+    options.assertOwnedRenderer();
+    step({ action: 'mouseMoved', label, target: point });
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
+  };
   const scrollTo = async (
     selector: string, label: string, text?: string, maxWheelEvents = 12
   ): Promise<void> => {
@@ -304,5 +324,5 @@ export function createDesktopUiControls(
     });
     await click('[role="dialog"] button', 'Open team', 'Open team');
   };
-  return { observeInput, waitRead, click, clickExpression, clickSidebar, scrollTo };
+  return { observeInput, waitRead, click, clickExpression, clickSidebar, scrollTo, hoverExpression };
 }

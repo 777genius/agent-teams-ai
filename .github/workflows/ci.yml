@@ -757,7 +757,7 @@ jobs:
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
           import { spawnSync } from 'node:child_process';
-          import { closeSync, mkdtempSync, openSync, readFileSync, realpathSync, statSync } from 'node:fs';
+          import { mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
           import { join, resolve } from 'node:path';
           import { fileHash } from './packages/legacy-agent-host/tests/fixtures/native-host.ts';
           import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
@@ -769,20 +769,21 @@ jobs:
           const claude = realpathSync(resolve(sdkRoot, '../claude-agent-sdk-linux-x64/claude'));
           assert.equal(await fileHash(claude), '86cb722ab68348877dba7971e4d0c659919e05e6228c05e006e83da320e656ef');
           const output = mkdtempSync(join(process.env.RUNNER_TEMP, 'TEST-scheduled-native-evidence-'));
-          const logPath = join(output, 'native-schedules.log'), fd = openSync(logPath, 'w', 0o600);
-          let run;
-          try {
-            run = spawnSync(process.execPath, ['--test', 'packages/legacy-agent-host/tests/scheduled-run-host.native.ts'], {
-              cwd: repo, timeout: 650_000, stdio: ['ignore', fd, fd], env: { ...process.env,
+          const logPath = join(output, 'native-schedules.log'), maxOutputBytes = 8 * 1024 * 1024;
+          const run = spawnSync(process.execPath, ['--test', 'packages/legacy-agent-host/tests/scheduled-run-host.native.ts'], {
+              cwd: repo, timeout: 650_000, maxBuffer: maxOutputBytes, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env,
                 LEGACY_SCHEDULE_NATIVE_GO: '1', LEGACY_SCHEDULE_SOURCE_HEAD: process.env.CODEX_LOGIN_SOURCE_HEAD,
                 LEGACY_SCHEDULE_CLAUDE: claude, LEGACY_SCHEDULE_CODEX: process.env.LEGACY_DESKTOP_CODEX_PATH,
                 LEGACY_NATIVE_PROVIDER_ARTIFACT: realpathSync(selected.path), LEGACY_NATIVE_PROVIDER_SHA256: selected.sha256,
                 LEGACY_SCHEDULE_NATIVE_EVIDENCE: output,
               },
-            });
-          } finally { closeSync(fd); }
-          assert.ok(statSync(logPath).size <= 8 * 1024 * 1024, 'bounded original native schedule log');
-          console.log(readFileSync(logPath, 'utf8'));
+          });
+          const chunks = [run.stdout ?? Buffer.alloc(0), run.stderr ?? Buffer.alloc(0)];
+          const capturedBytes = chunks.reduce((bytes, chunk) => bytes + chunk.length, 0);
+          const log = Buffer.concat(chunks, Math.min(capturedBytes, maxOutputBytes));
+          writeFileSync(logPath, log, { mode: 0o600 });
+          console.log(log.toString('utf8'));
+          assert.ok(capturedBytes <= maxOutputBytes, 'original native schedule output exceeded its bound');
           assert.equal(run.error, undefined); assert.equal(run.status, 0);
           for (const provider of ['claude', 'codex']) {
             const receipt = JSON.parse(readFileSync(join(output, `${provider}-scheduled-native.json`), 'utf8'));
@@ -1037,6 +1038,16 @@ jobs:
             qualification: 'Source Desktop and localhost inference only; no installed/packed or vendor-auth claim',
           }, null, 2));
           NODE
+      - name: Prepare current frontend runtime for its original Stop and import
+        if: matrix.import_launch == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          selected_node="$GITHUB_WORKSPACE/resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node"
+          mkdir "$STAGE1_INPUTS/current-runtime"
+          CLAUDE_DEV_RUNTIME_CACHE_ROOT="$STAGE1_INPUTS/current-runtime" "$selected_node" scripts/dev-with-runtime.mjs --print-runtime-path
+          printf 'LEGACY_DESKTOP_CURRENT_RUNTIME_CACHE=%s\n' "$STAGE1_INPUTS/current-runtime" >> "$GITHUB_ENV"
       - name: Verify captured Claude commands and original native receipt recovery
         if: matrix.mode == 'native-create-ui' && !matrix.variant
         run: |
@@ -1246,11 +1257,30 @@ jobs:
             assert.equal(imported?.status, 'PASS');
             assert.equal(imported.noLaunchSubmit, false, 'import-only is not native Launch acceptance');
             assert.equal(imported.nativeLaunch?.status, 'PASS');
-            assert.equal(imported.nativeLaunch.sourcePreparation?.sourceNativeInputs, 0,
-              'source preparation never claims old provider inference');
+            const source = imported.nativeLaunch.sourcePreparation;
+            assert.equal(source?.sourceNativeInputs, 1, 'actual current frontend source input required');
+            assert.equal(source.status, 'PASS'); assert.equal(source.sourceKind, 'actual-current-native-solo');
+            assert.deepEqual(source, receipt.currentStoppedProducer);
+            assert.equal(source.producer.commit, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+            assert.equal(source.producer.runtime.version, '0.0.158');
+            assert.equal(source.producer.runtime.cacheValidated, true);
+            assert.equal(source.hostDescriptorPresent, false); assert.equal(source.sourceFrozen, true);
+            assert.deepEqual(source.ordinaryQuit, { requestedOnce: true, exitCode: 0, signalCode: null,
+              originalGroupAbsent: true, remaining: [], listenerAbsent: true });
+            assert.deepEqual(source.cleanup.remaining, []); assert.equal(source.cleanup.cleanupFailure, undefined);
+            for (const census of [source.nativeChildren, source.nativeChildrenAfterCleanup]) {
+              assert.ok(census.captured.length >= 1 && census.captured.length <= 32);
+              assert.deepEqual(census.remaining, []); assert.deepEqual(census.unmatched, []);
+            }
+            assert.equal(source.originalStopDiagnostics.canonicalNodeRead.canonicalReleaseCurrent, true);
+            assert.equal(source.originalStopDiagnostics.canonicalNodeRead.proofParseable, true);
+            assert.equal(source.proof.target.runId, source.sourceRunId);
+            assert.equal(source.proof.target.sessionId, source.sourceSessionId);
+            assert.equal(source.model.turns.length, 1);
+            assert.deepEqual(imported.importedTask, source.sourceTask);
             const seedBytes = readFileSync(join(dirname(path), 'stopped-import-ui-seed.json'));
             assert.equal(createHash('sha256').update(seedBytes).digest('hex'), imported.seedSha256);
-            assert.equal(JSON.parse(seedBytes.toString('utf8')).sourceKind, 'captured-stopped-solo');
+            assert.equal(JSON.parse(seedBytes.toString('utf8')).sourceKind, 'actual-current-native-solo');
           }
           console.log(JSON.stringify({ status: receipt.status, mode: receipt.mode,
             variant: process.env.STAGE1_VARIANT, receipt: path }));
@@ -1916,7 +1946,7 @@ jobs:
   # authenticated complete success. See docs/ci-qualification.md.
   full-qualification:
     name: Full qualification
-    needs: [plan, validate, test, lint, task-change-ledger-windows, focused, source, dmg-artwork, retained-opencode-coexistence]
+    needs: [plan, validate, test, lint, task-change-ledger-windows, focused, source, dmg-artwork, retained-opencode-coexistence, codex-login-desktop]
     if: always() && !cancelled()
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     steps:
@@ -1926,6 +1956,16 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
+      - name: Require selected Codex login and native schedule qualification
+        if: >-
+          needs.plan.outputs.metadata == 'false' &&
+          github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||
+           github.event.pull_request.head.ref == 'feat/provider-host-frontend-parity-20261112')
+        env:
+          CODEX_LOGIN_RESULT: ${{ needs.codex-login-desktop.result }}
+        run: test "$CODEX_LOGIN_RESULT" = success
       - name: Require selected retained V1 and Host V2 native Desktop qualification
         if: >-
           needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse == 'false' &&

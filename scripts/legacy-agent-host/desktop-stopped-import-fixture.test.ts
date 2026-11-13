@@ -25,6 +25,7 @@ test(
     for (const directory of ['home', 'tmp', 'workspace']) await mkdir(join(root, directory));
     await prepareDesktopStoppedImport(root, { priorRun: true, node: process.execPath });
     const seed = await readDesktopStoppedImportSeed(root);
+    assert.ok(seed.sourceKind !== 'actual-current-native-solo');
     assert.equal(seed.sourceKind, 'captured-stopped-solo');
     assert.ok(seed.priorRun);
     const preparation = await json(seed.priorRun.path);
@@ -60,6 +61,7 @@ test('stopped import UI fixture stages only never-launched legacy product data w
   });
   t.after(() => rm(fixture.root, { recursive: true, force: true }));
   const seed = await readDesktopStoppedImportSeed(fixture.root);
+  assert.ok(seed.sourceKind !== 'actual-current-native-solo');
   const descriptor = await json(fixture.descriptorPath);
   const profile = await json(fixture.profilePath);
   assert.equal(descriptor.creation.importAuthority.principalId, profile.principalId);

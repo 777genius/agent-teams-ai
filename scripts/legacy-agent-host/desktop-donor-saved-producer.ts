@@ -5,7 +5,12 @@ import { createWriteStream } from 'node:fs';
 import { chmod, copyFile, mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { connectCapturedDesktopApp, cleanupCapturedDesktopApp } from './desktop-captured-app.ts';
+import {
+  connectCapturedDesktopApp,
+  cleanupCapturedDesktopApp,
+  captureDesktopNativeExecutable,
+  selectedDesktopRuntime,
+} from './desktop-captured-app.ts';
 import type { DesktopCdpLibrary, DesktopCdpPort } from './desktop-captured-app.ts';
 import {
   assertOwnedCdpListener,
@@ -47,19 +52,7 @@ export async function produceDesktopDonorSavedTeam(options: {
     fixture.node
   );
   assert.equal(await portOccupied(), false, 'never attach donor to an existing renderer');
-  const selectedRuntime = () =>
-    execFileSync('/bin/ps', ['-ax', '-o', 'pid=,ppid=,pgid=,comm='], {
-      encoding: 'utf8',
-      timeout: 3000,
-    })
-      .trim()
-      .split('\n')
-      .flatMap((line) => {
-        const found = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(.+)$/.exec(line);
-        return found?.[4] === inputs.runtime.path
-          ? [{ pid: Number(found[1]), ppid: Number(found[2]), pgid: Number(found[3]) }]
-          : [];
-      });
+  const selectedRuntime = () => selectedDesktopRuntime(inputs.runtime.path);
   assert.deepEqual(selectedRuntime(), [], 'unique donor runtime has no previous process');
   const bin = join(fixture.root, 'donor-bin');
   await mkdir(bin, { mode: 0o700 });
@@ -151,53 +144,9 @@ export async function produceDesktopDonorSavedTeam(options: {
     appIdentity = '',
     quitRequested = false;
   let cdp: DesktopCdpPort | undefined, seed: DonorSavedSeed | undefined;
-  const nativeChildren = new Map<
-    string,
-    { pid: number; ppid: number; pgid: number; birth: string; ancestry: number[] }
-  >();
-  const birth = (pid: number): string | undefined => {
-    try {
-      return (
-        execFileSync('/bin/ps', ['-p', String(pid), '-o', 'lstart='], {
-          encoding: 'utf8',
-          timeout: 3000,
-        }).trim() || undefined
-      );
-    } catch (error) {
-      if (!processTable().some((entry) => entry.pid === pid)) return undefined;
-      throw error;
-    }
-  };
-  const observeOriginalNative = () => {
-    const table = processTable(),
-      roots = new Set(table.filter((entry) => entry.pgid === group).map((entry) => entry.pid));
-    for (const child of selectedRuntime()) {
-      const started = birth(child.pid);
-      if (!started) continue;
-      const key = String(child.pid) + ':' + started;
-      if (nativeChildren.has(key)) continue;
-      let parent = child.ppid;
-      const ancestry: number[] = [];
-      while (parent && !roots.has(parent) && ancestry.length < 64) {
-        ancestry.push(parent);
-        parent = table.find((entry) => entry.pid === parent)?.ppid ?? 0;
-      }
-      assert.ok(
-        roots.has(parent),
-        'new donor child must descend from the original app, never path-only adoption'
-      );
-      ancestry.push(parent);
-      assert.equal(birth(child.pid), started, 'same original child before and after ancestry read');
-      nativeChildren.set(key, { ...child, birth: started, ancestry });
-      assert.ok(nativeChildren.size <= 32, 'finite original donor runtime child census');
-    }
-  };
-  const remainingNative = () => {
-    const present = new Set(processTable().map((entry) => entry.pid));
-    return [...nativeChildren.values()].filter(
-      (child) => present.has(child.pid) && birth(child.pid) === child.birth
-    );
-  };
+  const nativeChildren = captureDesktopNativeExecutable(inputs.runtime.path, group);
+  const observeOriginalNative = () => nativeChildren.observe();
+  const remainingNative = () => nativeChildren.remaining();
   app.once('error', () => {
     spawnError = true;
   });
@@ -388,7 +337,7 @@ export async function produceDesktopDonorSavedTeam(options: {
     assert.equal(await portOccupied(), false);
     assert.deepEqual(remainingNative(), [], 'all captured detached donor births are absent');
     assert.deepEqual(selectedRuntime(), [], 'no unmatched selected donor runtime child remains');
-    proof.nativeChildren = { captured: [...nativeChildren.values()], remaining: [], unmatched: [] };
+    proof.nativeChildren = { captured: nativeChildren.captured(), remaining: [], unmatched: [] };
     proof.ordinaryQuit = {
       requestedOnce: true,
       exitCode: app.exitCode,
@@ -449,7 +398,7 @@ export async function produceDesktopDonorSavedTeam(options: {
     });
     proof.cleanup = cleanup;
     const nativeAfterCleanup = {
-      captured: [...nativeChildren.values()],
+      captured: nativeChildren.captured(),
       remaining: remainingNative(),
       unmatched: selectedRuntime(),
     };

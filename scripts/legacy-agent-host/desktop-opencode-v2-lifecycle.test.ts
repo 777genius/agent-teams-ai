@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -12,6 +13,7 @@ import type { DesktopNativeHostSnapshot, DesktopMetadataEvent } from './desktop-
 import { assertCapturedDesktopMetadataAbsent, assertFirstResumeMetadataAbsent, assertColdOpenCodeRuntimeRecords } from './desktop-opencode-v2-cold-metadata.ts';
 
 const messageId = '11111111-2222-4333-8444-555555555555';
+const nativeIdentityHash = (value: string) => createHash('sha256').update(value, 'utf8').digest('hex');
 const metadataSources = (captured: { children: readonly unknown[] }) => [
   { sourceId: 'a'.repeat(64), revision: 'b'.repeat(64), profileId: 'runtime-source:' + 'b'.repeat(64),
     configRevision: 'runtime-source:' + 'b'.repeat(64), scope: 'global', projectPath: null, process: captured.children[0] },
@@ -23,7 +25,7 @@ function tracedMetadata(captured: DesktopNativeHostSnapshot): DesktopNativeHostS
   const profileHashes = metadataSources(captured).map(desktopMetadataProfileHash);
   const events: DesktopMetadataEvent[] = captured.children.map((child, index) => ({
     hostPid: captured.host.pid, profileHash: profileHashes[index]!, mode: 'provider',
-    providerHash: 'e'.repeat(64), pid: child.pid, startIdentity: 'TEST-birth:' + child.pid, stage: 'ready',
+    providerHash: 'e'.repeat(64), pid: child.pid, startIdentityHash: nativeIdentityHash('TEST-birth:' + child.pid), stage: 'ready',
   }));
   return { ...captured, metadataLineage: captureDesktopMetadataLineage({ events, host: captured.host,
     profileHashes, observed: captured.children, executable: '/TEST/bun' }) };
@@ -67,7 +69,7 @@ test('V2 lifecycle retains the pre-Launch metadata birth identity and refuses re
   const initial = scoped.metadataLineage!;
   const released: DesktopMetadataEvent = { ...initial.events[0]!, stage: 'released' };
   const ready: DesktopMetadataEvent = { ...initial.events[0]!, mode: 'directory', providerHash: null,
-    pid: successor.pid, startIdentity: 'TEST-birth:14' };
+    pid: successor.pid, startIdentityHash: nativeIdentityHash('TEST-birth:14') };
   const events = [...initial.events, released, ready];
   const observe = (values: readonly DesktopMetadataEvent[], observed = [project, successor, runtime]) =>
     captureDesktopMetadataLineage({ events: values, host, profileHashes: initial.profileHashes,
@@ -77,6 +79,7 @@ test('V2 lifecycle retains the pre-Launch metadata birth identity and refuses re
   assert.deepEqual(next.metadataLineage.births.find(row => row.pid === metadata.pid), metadata);
   assert.throws(() => observe([...initial.events, ready]), /duplicate live/);
   assert.throws(() => observe([...initial.events, { ...released, stage: 'cleanup-unknown' }, ready]), /unknown cleanup/);
+  assert.throws(() => observe([...initial.events, { ...released, startIdentityHash: nativeIdentityHash('TEST-reused-native-birth') }, ready]));
   assert.throws(() => observe(events, [metadata, project, successor, runtime]), /physically absent/);
   assert.throws(() => observe([...initial.events, released, { ...ready, profileHash: 'f'.repeat(64) }]), /captured scope/);
   const closed = { ...next.metadataLineage, events: [...events,

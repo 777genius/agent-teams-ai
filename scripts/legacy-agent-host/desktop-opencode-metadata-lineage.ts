@@ -11,7 +11,7 @@ export interface DesktopMetadataEvent {
   readonly mode: 'directory' | 'provider';
   readonly providerHash: string | null;
   readonly pid: number;
-  readonly startIdentity: string;
+  readonly startIdentityHash: string;
   readonly stage: 'ready' | 'released' | 'cleanup-unknown';
 }
 export interface DesktopMetadataLineage {
@@ -32,7 +32,7 @@ const hash = (value: unknown): value is string => typeof value === 'string' && /
 export const desktopMetadataProfileHash = (value: { profileId: string; configRevision: string }): string =>
   createHash('sha256').update(JSON.stringify([value.profileId, value.configRevision])).digest('hex');
 const identity = (value: DesktopMetadataEvent) => [value.hostPid, value.profileHash, value.mode,
-  value.providerHash, value.pid, value.startIdentity];
+  value.providerHash, value.pid, value.startIdentityHash];
 
 /** Parse the existing private log only; this observation has no process/Host authority. */
 function readEvents(root: string, hostPid: number): DesktopMetadataEvent[] {
@@ -51,16 +51,16 @@ function readEvents(root: string, hostPid: number): DesktopMetadataEvent[] {
     assert.ok(match, 'closed metadata diagnostic framing');
     const value = object(JSON.parse(match[1]!));
     if (value.hostPid !== hostPid) continue;
-    assert.deepEqual(Object.keys(value).sort(), ['hostPid', 'mode', 'pid', 'profileHash', 'providerHash', 'stage', 'startIdentity']);
+    assert.deepEqual(Object.keys(value).sort(), ['hostPid', 'mode', 'pid', 'profileHash', 'providerHash', 'stage', 'startIdentityHash']);
     assert.ok(hash(value.profileHash));
     assert.ok(value.mode === 'directory' || value.mode === 'provider');
     assert.ok(value.providerHash === null || hash(value.providerHash));
     assert.equal(value.mode === 'directory', value.providerHash === null);
     assert.ok(typeof value.pid === 'number' && Number.isSafeInteger(value.pid) && value.pid > 1);
-    assert.ok(typeof value.startIdentity === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$/.test(value.startIdentity));
+    assert.ok(hash(value.startIdentityHash));
     assert.ok(value.stage === 'ready' || value.stage === 'released' || value.stage === 'cleanup-unknown');
     events.push({ hostPid, profileHash: value.profileHash, mode: value.mode, providerHash: value.providerHash,
-      pid: value.pid, startIdentity: value.startIdentity, stage: value.stage });
+      pid: value.pid, startIdentityHash: value.startIdentityHash, stage: value.stage });
   }
   assert.ok(events.length > 0 && events.length <= 128, 'finite original metadata lifecycle observations');
   return events;

@@ -587,9 +587,9 @@ export async function prepareDesktopBackendFixture(
     await prepareDesktopReviewLedger(root, uiSeed.taskId);
   }
   if (options.nativeReviewUi) await prepareNativeReviewWorkspace(root, options.nativeOpenCodeV2 ? 'opencode-v2' : 'claude');
-  if (options.stoppedImportUi && process.env.LEGACY_DESKTOP_DONOR_SAVED_ONLY !== '1')
+  if (options.stoppedImportUi && process.env.LEGACY_DESKTOP_DONOR_SAVED_ONLY !== '1' &&
+      process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH !== '1')
     await prepareDesktopStoppedImport(root, {
-      priorRun: process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1',
       node,
     });
   const profilePath = join(root, 'host-profile.json');
@@ -621,7 +621,7 @@ export async function prepareDesktopBackendFixture(
           ...(options.reviewUi || options.nativeReviewUi ? { reviewTransport: 'review-v1' } : {}),
           nodeExecutable: node,
           nodeVersion: options.candidateRuntime?.nodeVersion ??
-            (options.nativeOpenCodeV2 ? process.version : 'v24.21.0'),
+            (options.nativeOpenCodeV2 || process.platform === 'linux' ? process.version : 'v24.21.0'),
           nodeSha256,
           hostEntry,
           hostEntrySha256,

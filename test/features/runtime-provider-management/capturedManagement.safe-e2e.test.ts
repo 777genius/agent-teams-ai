@@ -567,6 +567,7 @@ it('actual IPC facade → captured Desktop owner → standalone Host → separat
         projectPath: join(root, 'workspace'),
       }
     );
+    expect(globalSaved.error).toBeUndefined();
     expect(globalSaved.view).toMatchObject({
       projectPath: null,
       defaultModel: 'TEST-api/TEST-model',

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { lstat, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileDigest } from './desktop-backend-fixture.ts';
@@ -79,7 +79,7 @@ export async function runDesktopStoppedImportUiSmoke(
   const { fixture, model } = options;
   const seed = await readDesktopStoppedImportSeed(fixture.root);
   const launchContinuation = process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1';
-  assert.equal(launchContinuation, seed.sourceKind === 'captured-stopped-solo');
+  assert.equal(launchContinuation, seed.sourceKind !== undefined);
   const steps: Record<string, unknown>[] = [];
   const step = (value: Record<string, unknown>) => {
     steps.push({ monotonicMs: Math.round(performance.now()), ...value });
@@ -89,11 +89,13 @@ export async function runDesktopStoppedImportUiSmoke(
     sourceKind: seed.sourceKind ?? 'never-launched-draft',
     steps,
     scope: launchContinuation
-      ? 'Original captured-stopped solo legacy Team import/readback followed by original native Launch/Stop/reload; source records synthetic, actual source process Stop and target SDK/CLI'
+      ? seed.sourceKind === 'actual-current-native-solo'
+        ? 'Actual current frontend solo Claude and original Stop, genuine saved UI Task; original import, fresh Host native Launch/Stop and reload'
+        : 'Original captured-stopped solo legacy Team import/readback followed by original native Launch/Stop/reload; source records synthetic, actual source process Stop and target SDK/CLI'
       : 'Original never-launched legacy Team Detail Launch → Main import → canonical Host dialog target; saved data, close without Submit, renderer reload and original import lookup',
     excluded: [
       ...(launchContinuation
-        ? ['old provider inference/history qualification', 'multi-member/OpenCode prior-run import']
+        ? ['donor4a native history qualification', 'multi-member/OpenCode prior-run import']
         : [
             'Previously launched/cold Claude or OpenCode import (HOLD; M16 remains open)',
             'Team Launch Submit',
@@ -308,51 +310,68 @@ export async function runDesktopStoppedImportUiSmoke(
   const snapshot = record(snapshotResult.value);
   const task = (snapshot.tasks as unknown[]).map(record).find((row) => row.id === seed.taskId);
   assert.ok(task);
-  assert.equal((task.comments as unknown[]).map(record)[0]!.id, 'TEST-legacy-comment');
-  const refs = (task.descriptionTaskRefs as unknown[]).map(record);
-  assert.equal(refs.find((ref) => ref.taskId === seed.linkedTaskId)!.teamName, seed.teamName);
-  assert.match(
-    String(refs.find((ref) => ref.taskId === seed.externalTaskId)!.teamName),
-    /^legacy-archive:[a-f0-9]{64}$/
-  );
-  assert.match(
-    String(refs.find((ref) => ref.taskId === seed.missingTaskId)!.teamName),
-    /^legacy-gap:[a-f0-9]{64}$/
-  );
+  let refs: Record<string, unknown>[] = [];
+  if (seed.sourceKind !== 'actual-current-native-solo') {
+    assert.equal((task.comments as unknown[]).map(record)[0]!.id, 'TEST-legacy-comment');
+    refs = (task.descriptionTaskRefs as unknown[]).map(record);
+    assert.equal(refs.find((ref) => ref.taskId === seed.linkedTaskId)!.teamName, seed.teamName);
+    assert.match(
+      String(refs.find((ref) => ref.taskId === seed.externalTaskId)!.teamName),
+      /^legacy-archive:[a-f0-9]{64}$/
+    );
+    assert.match(
+      String(refs.find((ref) => ref.taskId === seed.missingTaskId)!.teamName),
+      /^legacy-gap:[a-f0-9]{64}$/
+    );
+  }
   const teamRoot = join(fixture.root, 'hoststore/teams', seed.teamName);
   const productTask = await json(
     join(fixture.root, 'hoststore/tasks', seed.teamName, seed.taskId + '.json')
   );
-  assert.equal((productTask.attachments as unknown[]).map(record)[0]!.id, 'TEST-task-blob');
-  const importedBlob = String(record((productTask.attachments as unknown[])[0]).filePath);
-  assert.ok(importedBlob.startsWith(fixture.root + '/hoststore/'));
-  assert.equal(
-    await fileDigest(importedBlob),
-    await fileDigest(seed.blobPath),
-    'imported attachment retains exact original bytes'
-  );
+  let importedBlob: string | undefined;
+  if (seed.sourceKind === 'actual-current-native-solo') {
+    assert.deepEqual(
+      productTask,
+      seed.sourceTask,
+      'genuine source UI Task retains all original fields'
+    );
+  } else {
+    assert.equal((productTask.attachments as unknown[]).map(record)[0]!.id, 'TEST-task-blob');
+    importedBlob = String(record((productTask.attachments as unknown[])[0]).filePath);
+    assert.ok(importedBlob.startsWith(fixture.root + '/hoststore/'));
+    assert.equal(
+      await fileDigest(importedBlob),
+      await fileDigest(seed.blobPath),
+      'imported attachment retains exact original bytes'
+    );
+  }
   const owner = await json(join(teamRoot, '.host-owner/state.json'));
   for (const [key, value] of Object.entries(seed.savedSettings))
     assert.equal(record(owner.savedSettings)[key], value);
   assert.deepEqual(owner.runtimeCaptures ?? [], []);
   const origin = await json(join(teamRoot, '.host-owner/import/source.json'));
   const originRefs = (origin.references as unknown[]).map(record);
-  assert.ok(
-    originRefs.some(
-      (ref) =>
-        ref.taskId === seed.linkedTaskId &&
-        record(ref.target).kind === 'destination' &&
-        record(ref.target).handleId === handle.handleId
-    )
-  );
-  assert.ok(
-    originRefs.some(
-      (ref) => ref.taskId === seed.externalTaskId && record(ref.target).kind === 'archive'
-    )
-  );
-  assert.ok(
-    originRefs.some((ref) => ref.taskId === seed.missingTaskId && record(ref.target).kind === 'gap')
-  );
+  if (seed.sourceKind === 'actual-current-native-solo') assert.deepEqual(originRefs, []);
+  else {
+    assert.ok(
+      originRefs.some(
+        (ref) =>
+          ref.taskId === seed.linkedTaskId &&
+          record(ref.target).kind === 'destination' &&
+          record(ref.target).handleId === handle.handleId
+      )
+    );
+    assert.ok(
+      originRefs.some(
+        (ref) => ref.taskId === seed.externalTaskId && record(ref.target).kind === 'archive'
+      )
+    );
+    assert.ok(
+      originRefs.some(
+        (ref) => ref.taskId === seed.missingTaskId && record(ref.target).kind === 'gap'
+      )
+    );
+  }
   const screenshot = async (name: string) => {
     const value = record(
       await cdp.send('Page.captureScreenshot', {
@@ -373,7 +392,7 @@ export async function runDesktopStoppedImportUiSmoke(
   proof.snapshot = snapshot;
   proof.origin = origin;
   proof.importedTask = productTask;
-  proof.importedBlobSha256 = await fileDigest(importedBlob);
+  if (importedBlob) proof.importedBlobSha256 = await fileDigest(importedBlob);
   await closeDialog();
   const timeOrigin = await cdp.evaluate('performance.timeOrigin');
   step({ action: 'Page.reload', ignoreCache: false });
@@ -408,127 +427,143 @@ export async function runDesktopStoppedImportUiSmoke(
   );
   proof.reloadedDialogScreenshot = await screenshot('ui-original-stopped-import-reloaded.png');
   await closeDialog();
-  proof.attachmentsUi = await runDesktopStoppedImportAttachmentUi(cdp, {
-    fixtureRoot: fixture.root,
-    seed,
-    evidence: proof,
-    selection: String(lookup.selection),
-    handleId: String(handle.handleId),
-    snapshotTask: task,
-    openTeams,
-    screenshot,
-    step,
-    assertOwnedRenderer: options.assertOwnedRenderer,
-  });
-  options.assertOwnedRenderer();
-  const referenceContextId = await cdp.evaluate(
-    'window.__agentTeamsDevStore?.getState().activeContextId'
-  );
-  assert.equal(typeof referenceContextId, 'string');
-  assert.ok(referenceContextId);
-  const navigation: Record<string, unknown>[] = [];
-  proof.taskReferenceNavigation = navigation;
-  for (const [kind, id] of [
-    ['destination', seed.linkedTaskId],
-    ['archive', seed.externalTaskId],
-    ['gap', seed.missingTaskId],
-  ] as const) {
-    const ref = refs.find((ref) => ref.taskId === id)!;
-    const expectedOwner =
-      kind === 'destination'
-        ? String(lookup.selection)
-        : `${String(lookup.selection)}:source-${kind}:${encodeURIComponent(String(ref.teamName))}`;
+  if (seed.sourceKind !== 'actual-current-native-solo') {
+    proof.attachmentsUi = await runDesktopStoppedImportAttachmentUi(cdp, {
+      fixtureRoot: fixture.root,
+      seed,
+      evidence: proof,
+      selection: String(lookup.selection),
+      handleId: String(handle.handleId),
+      snapshotTask: task,
+      openTeams,
+      screenshot,
+      step,
+      assertOwnedRenderer: options.assertOwnedRenderer,
+    });
+    options.assertOwnedRenderer();
+    const referenceContextId = await cdp.evaluate(
+      'window.__agentTeamsDevStore?.getState().activeContextId'
+    );
+    assert.equal(typeof referenceContextId, 'string');
+    assert.ok(referenceContextId);
+    const navigation: Record<string, unknown>[] = [];
+    proof.taskReferenceNavigation = navigation;
+    for (const [kind, id] of [
+      ['destination', seed.linkedTaskId],
+      ['archive', seed.externalTaskId],
+      ['gap', seed.missingTaskId],
+    ] as const) {
+      const ref = refs.find((ref) => ref.taskId === id)!;
+      const expectedOwner =
+        kind === 'destination'
+          ? String(lookup.selection)
+          : `${String(lookup.selection)}:source-${kind}:${encodeURIComponent(String(ref.teamName))}`;
+      await openTeams();
+      const team = `.team-row-zebra-card[data-team-name=${JSON.stringify(lookup.selection)}]`;
+      await ui.scrollTo(team, 'captured imported TaskRef Team');
+      await ui.click(team, 'open captured imported TaskRef Team');
+      const taskCard = `.kanban-task-card[data-task-id=${JSON.stringify(seed.taskId)}] h5`;
+      await ui.scrollTo(taskCard, 'original imported Task description');
+      await ui.click(taskCard, 'open original imported Task description');
+      // The seeded description is the paragraph containing all three original refs.
+      const paragraph = `[role="dialog"] p:has(a[href^="task://${seed.externalTaskId}?"])`;
+      const link = `${paragraph} a[href^="task://${id}?"]`;
+      const renderedOwner = await ui.waitRead(
+        `(() => {const a=document.querySelector(${desktopJsLiteral(link)});if(!a)return null;return new URL(a.href).searchParams.get('team')??'';})()`,
+        'rendered TaskRef owner'
+      );
+      assert.equal(renderedOwner, expectedOwner);
+      await ui.scrollTo(link, 'original owner-qualified TaskRef');
+      await ui.click(link, `navigate original ${kind} TaskRef once`);
+      if (kind === 'destination') {
+        await ui.waitRead(
+          `!document.querySelector('[role="dialog"]')&&Boolean(document.querySelector('[data-task-id="${id}"].kanban-card-focus-pulse'))`,
+          'internal TaskRef reveals its imported destination'
+        );
+        const owner = record(
+          await ui.waitRead(
+            `(() => {const node=document.querySelector('.kanban-task-card[data-task-id="${id}"]');if(!node)return null;const key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));return (${readStoppedImportAttachmentOwner.toString()})(key?node[key]:null,${desktopJsLiteral(id)});})()`,
+            'internal TaskRef destination owner'
+          )
+        );
+        assert.deepEqual(owner, { teamName: expectedOwner, taskId: id, reference: null });
+        navigation.push({ kind, requestedTaskId: id, ...owner });
+      } else {
+        const owner = record(
+          await ui.waitRead(
+            `(() => {
+      if(document.querySelector('[role="dialog"]'))return null;
+      const state=window.__agentTeamsDevStore?.getState(),pane=state?.paneLayout.panes.find(p=>p.id===state.paneLayout.focusedPaneId);
+      const tab=pane?.tabs.find(t=>t.id===pane.activeTabId);
+      if(tab?.type!=='team'||tab.teamName!==${desktopJsLiteral(expectedOwner)}||tab.taskDetail?.taskId!==${desktopJsLiteral(id)}||tab.taskDetail.contextId!==${desktopJsLiteral(referenceContextId)}||state.activeContextId!==${desktopJsLiteral(referenceContextId)})return null;
+      const identity={contextId:tab.taskDetail.contextId,teamName:tab.teamName,taskId:tab.taskDetail.taskId};
+      const identityKey=JSON.stringify([identity.contextId,identity.teamName,identity.taskId]);
+      const entry=state.taskDetailById[identityKey],session=state.taskDetailSessionById[identityKey];
+      if(state.paneLayout.panes.length!==1)return null;
+      const selectedTabs=[...document.querySelectorAll('[role="tab"][aria-selected="true"]')].filter(e=>e.getClientRects().length);
+      if(selectedTabs.length!==1)return null;
+      const selectedTab=selectedTabs[0],close=selectedTab.querySelector('button[aria-label="Close tab"]');
+      if(!close?.getClientRects().length)return null;
+      const tabKey=Object.keys(selectedTab).find(key=>key.startsWith('__reactFiber$'));
+      let tabFiber=tabKey?selectedTab[tabKey]:null,capturedTab=false;
+      for(let depth=0;tabFiber&&depth<128;depth++,tabFiber=tabFiber.return){const p=tabFiber.memoizedProps;if(p?.tab?.id===tab.id&&p.isActive===true&&p.paneId===pane.id){capturedTab=true;break;}}
+      if(!capturedTab)return null;
+      if(!entry||entry.loading!==false||entry.full!==null||!['unavailable','missing'].includes(entry.phase)||JSON.stringify([entry.identity?.contextId,entry.identity?.teamName,entry.identity?.taskId])!==identityKey||session?.ownerSurfaceId!==tab.id)return null;
+      const nodes=[...document.querySelectorAll('main')].filter(e=>e.getClientRects().length&&e.querySelector('[role="alert"],[role="status"]'));
+      if(nodes.length!==1)return null;
+      const node=nodes[0],key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));
+      let fiber=key?node[key]:null,visiblePhase=null;
+      for(let depth=0;fiber&&depth<128;depth++,fiber=fiber.return){
+        const p=fiber.memoizedProps;
+        if(p?.phase===entry.phase&&typeof p.heading==='string')visiblePhase=p.phase;
+        if(p?.isActive===true&&p.surfaceId===tab.id&&JSON.stringify([p.identity?.contextId,p.identity?.teamName,p.identity?.taskId])===identityKey&&visiblePhase===entry.phase)
+          return {teamName:identity.teamName,taskId:null,identity,tabId:tab.id,ownerSurfaceId:session.ownerSurfaceId,phase:entry.phase};
+      }return null;
+    })()`,
+            'original captured source owner remains unavailable without local fallback'
+          )
+        );
+        assert.equal(owner.teamName, expectedOwner);
+        assert.equal(owner.taskId, null);
+        assert.deepEqual(owner.identity, {
+          contextId: referenceContextId,
+          teamName: expectedOwner,
+          taskId: id,
+        });
+        assert.equal(owner.ownerSurfaceId, owner.tabId);
+        navigation.push({
+          kind,
+          requestedTaskId: id,
+          ...owner,
+          outcome: 'unavailable at captured source owner',
+        });
+        await ui.click(
+          '[role="tab"][aria-selected="true"] button[aria-label="Close tab"]',
+          'close captured source-owner Task tab'
+        );
+        await ui.waitRead(
+          `(() => {const state=window.__agentTeamsDevStore?.getState();return state?.activeContextId===${desktopJsLiteral(referenceContextId)}&&state.paneLayout.panes.length===1&&!state.paneLayout.panes.some(p=>p.tabs.some(t=>t.id===${desktopJsLiteral(owner.tabId)}));})()`,
+          'captured source-owner Task tab removed'
+        );
+      }
+    }
+  } else {
     await openTeams();
     const team = `.team-row-zebra-card[data-team-name=${JSON.stringify(lookup.selection)}]`;
-    await ui.scrollTo(team, 'captured imported TaskRef Team');
-    await ui.click(team, 'open captured imported TaskRef Team');
-    const taskCard = `.kanban-task-card[data-task-id=${JSON.stringify(seed.taskId)}] h5`;
-    await ui.scrollTo(taskCard, 'original imported Task description');
-    await ui.click(taskCard, 'open original imported Task description');
-    // The seeded description is the paragraph containing all three original refs.
-    const paragraph = `[role="dialog"] p:has(a[href^="task://${seed.externalTaskId}?"])`;
-    const link = `${paragraph} a[href^="task://${id}?"]`;
-    const renderedOwner = await ui.waitRead(
-      `(() => {const a=document.querySelector(${desktopJsLiteral(link)});if(!a)return null;return new URL(a.href).searchParams.get('team')??'';})()`,
-      'rendered TaskRef owner'
+    await ui.scrollTo(team, 'genuine imported source Task Team');
+    await ui.click(team, 'open genuine imported source Task Team');
+    const card = `.kanban-task-card[data-task-id=${JSON.stringify(seed.taskId)}]`;
+    await ui.scrollTo(card, 'genuine imported source Task');
+    await ui.waitRead(
+      `document.querySelector(${desktopJsLiteral(card)})?.textContent.includes(${desktopJsLiteral(String(seed.sourceTask.subject))})`,
+      'genuine source Task visible after import and reload'
     );
-    assert.equal(renderedOwner, expectedOwner);
-    await ui.scrollTo(link, 'original owner-qualified TaskRef');
-    await ui.click(link, `navigate original ${kind} TaskRef once`);
-    if (kind === 'destination') {
-      await ui.waitRead(
-        `!document.querySelector('[role="dialog"]')&&Boolean(document.querySelector('[data-task-id="${id}"].kanban-card-focus-pulse'))`,
-        'internal TaskRef reveals its imported destination'
-      );
-      const owner = record(
-        await ui.waitRead(
-          `(() => {const node=document.querySelector('.kanban-task-card[data-task-id="${id}"]');if(!node)return null;const key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));return (${readStoppedImportAttachmentOwner.toString()})(key?node[key]:null,${desktopJsLiteral(id)});})()`,
-          'internal TaskRef destination owner'
-        )
-      );
-      assert.deepEqual(owner, { teamName: expectedOwner, taskId: id, reference: null });
-      navigation.push({ kind, requestedTaskId: id, ...owner });
-    } else {
-      const owner = record(
-        await ui.waitRead(
-          `(() => {
-    if(document.querySelector('[role="dialog"]'))return null;
-    const state=window.__agentTeamsDevStore?.getState(),pane=state?.paneLayout.panes.find(p=>p.id===state.paneLayout.focusedPaneId);
-    const tab=pane?.tabs.find(t=>t.id===pane.activeTabId);
-    if(tab?.type!=='team'||tab.teamName!==${desktopJsLiteral(expectedOwner)}||tab.taskDetail?.taskId!==${desktopJsLiteral(id)}||tab.taskDetail.contextId!==${desktopJsLiteral(referenceContextId)}||state.activeContextId!==${desktopJsLiteral(referenceContextId)})return null;
-    const identity={contextId:tab.taskDetail.contextId,teamName:tab.teamName,taskId:tab.taskDetail.taskId};
-    const identityKey=JSON.stringify([identity.contextId,identity.teamName,identity.taskId]);
-    const entry=state.taskDetailById[identityKey],session=state.taskDetailSessionById[identityKey];
-    if(state.paneLayout.panes.length!==1)return null;
-    const selectedTabs=[...document.querySelectorAll('[role="tab"][aria-selected="true"]')].filter(e=>e.getClientRects().length);
-    if(selectedTabs.length!==1)return null;
-    const selectedTab=selectedTabs[0],close=selectedTab.querySelector('button[aria-label="Close tab"]');
-    if(!close?.getClientRects().length)return null;
-    const tabKey=Object.keys(selectedTab).find(key=>key.startsWith('__reactFiber$'));
-    let tabFiber=tabKey?selectedTab[tabKey]:null,capturedTab=false;
-    for(let depth=0;tabFiber&&depth<128;depth++,tabFiber=tabFiber.return){const p=tabFiber.memoizedProps;if(p?.tab?.id===tab.id&&p.isActive===true&&p.paneId===pane.id){capturedTab=true;break;}}
-    if(!capturedTab)return null;
-    if(!entry||entry.loading!==false||entry.full!==null||!['unavailable','missing'].includes(entry.phase)||JSON.stringify([entry.identity?.contextId,entry.identity?.teamName,entry.identity?.taskId])!==identityKey||session?.ownerSurfaceId!==tab.id)return null;
-    const nodes=[...document.querySelectorAll('main')].filter(e=>e.getClientRects().length&&e.querySelector('[role="alert"],[role="status"]'));
-    if(nodes.length!==1)return null;
-    const node=nodes[0],key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));
-    let fiber=key?node[key]:null,visiblePhase=null;
-    for(let depth=0;fiber&&depth<128;depth++,fiber=fiber.return){
-      const p=fiber.memoizedProps;
-      if(p?.phase===entry.phase&&typeof p.heading==='string')visiblePhase=p.phase;
-      if(p?.isActive===true&&p.surfaceId===tab.id&&JSON.stringify([p.identity?.contextId,p.identity?.teamName,p.identity?.taskId])===identityKey&&visiblePhase===entry.phase)
-        return {teamName:identity.teamName,taskId:null,identity,tabId:tab.id,ownerSurfaceId:session.ownerSurfaceId,phase:entry.phase};
-    }return null;
-  })()`,
-          'original captured source owner remains unavailable without local fallback'
-        )
-      );
-      assert.equal(owner.teamName, expectedOwner);
-      assert.equal(owner.taskId, null);
-      assert.deepEqual(owner.identity, {
-        contextId: referenceContextId,
-        teamName: expectedOwner,
-        taskId: id,
-      });
-      assert.equal(owner.ownerSurfaceId, owner.tabId);
-      navigation.push({
-        kind,
-        requestedTaskId: id,
-        ...owner,
-        outcome: 'unavailable at captured source owner',
-      });
-      await ui.click(
-        '[role="tab"][aria-selected="true"] button[aria-label="Close tab"]',
-        'close captured source-owner Task tab'
-      );
-      await ui.waitRead(
-        `(() => {const state=window.__agentTeamsDevStore?.getState();return state?.activeContextId===${desktopJsLiteral(referenceContextId)}&&state.paneLayout.panes.length===1&&!state.paneLayout.panes.some(p=>p.tabs.some(t=>t.id===${desktopJsLiteral(owner.tabId)}));})()`,
-        'captured source-owner Task tab removed'
-      );
-    }
+    proof.sourceTaskScreenshot = await screenshot('ui-original-current-import-task.png');
   }
   const after = await stoppedImportSourceBytes(fixture.root, seed.roots);
   assert.deepEqual(after, seed.before, 'all original legacy file bytes remain unchanged');
+  if (seed.sourceKind === 'actual-current-native-solo')
+    for (const path of seed.absentRoots) await assert.rejects(lstat(path), { code: 'ENOENT' });
   const probeReceipts = await records(join(fixture.root, 'hoststore/management-commands'));
   assertStoppedImportModelChecks(probeReceipts, model, seed.savedSettings);
   const sessions = await readDesktopNativeStopSessions(fixture.root).catch(

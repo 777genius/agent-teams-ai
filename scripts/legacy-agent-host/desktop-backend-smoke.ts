@@ -45,6 +45,7 @@ import { runDesktopCreateUiSmoke } from './desktop-create-launch-ui-smoke.ts';
 import { runDesktopReviewUiSmoke } from './desktop-review-ui-smoke.ts';
 import { runDesktopStoppedImportUiSmoke } from './desktop-stopped-import-ui-smoke.ts';
 import { produceDesktopDonorSavedTeam } from './desktop-donor-saved-producer.ts';
+import { produceDesktopCurrentStoppedTeam } from './desktop-stopped-import-prior-run.ts';
 import { runDesktopDonorSavedImportUi } from './desktop-donor-saved-import-ui.ts';
 import { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
 import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
@@ -250,14 +251,15 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const receiptPath = join(fixture.root, artifacts.receipt);
   await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600, flag: 'wx' });
   console.log(JSON.stringify({ phase: 'prepared', receipt: receiptPath }));
-  if (donorSavedOnly) {
+  if (donorSavedOnly || (legacyImportMode && process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1')) {
     try {
       assert.ok(conversationModel);
-      await produceDesktopDonorSavedTeam({ fixture, model: conversationModel, cdpLibrary, evidence });
+      if (donorSavedOnly) await produceDesktopDonorSavedTeam({ fixture, model: conversationModel, cdpLibrary, evidence });
+      else await produceDesktopCurrentStoppedTeam({ repo, fixture, model: conversationModel, cdpLibrary, evidence });
       await verifyDesktopSourceFreeze(repo, desktopProofSources, selectedSourceHashes, evidence);
     } catch (error) {
       evidence.status = 'INCOMPLETE';
-      evidence.failure = error instanceof Error ? error.message.slice(0, 4000) : 'donor producer failed';
+      evidence.failure = error instanceof Error ? error.message.slice(0, 4000) : 'original source producer failed';
       await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
       throw error;
     }
