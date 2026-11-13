@@ -961,6 +961,11 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
   await cdp.evaluate('window.__agentTeamsDevStore.getState().openTeamsCreationPage()');
   await cdp.waitFor("document.querySelector('[data-testid=create-team-page] #team-name')",
     'native zh-TW create-team page', 45_000);
+  // A previous config-only draft may persist Solo team; use the real toggle to
+  // make the member roster visible instead of mutating component state directly.
+  const solo = "document.querySelector('[data-testid=create-team-page] #solo-team')";
+  if (await cdp.evaluate(`${solo}?.getAttribute('data-state') === 'checked'`))
+    await cdp.click(solo);
   const add = "document.querySelector('[data-testid=create-team-page] button[aria-label=\"新增成員\"]')";
   await cdp.click(add);
   const row = '[data-testid=create-team-page] [data-role=member-row]';
@@ -992,17 +997,21 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
   assert.equal(label.placeholder, 'github, sentry', 'MCP IDs localized into invalid names');
 
   await cdp.fill(servers, 'github, sentry');
-  await cdp.click("document.querySelector('[data-testid=create-team-page] #team-name')");
   await cdp.waitFor(
     `document.querySelector(${JSON.stringify(servers)})?.value === 'github, sentry'`,
     'controlled strict allowlist input retains two actual server IDs'
   );
+  const enteredValue = await cdp.evaluate(
+    `document.querySelector(${JSON.stringify(servers)}).value`
+  );
+  assert.deepEqual(enteredValue.split(',').map(name => name.trim()), ['github', 'sentry'],
+    'Native controlled MCP input did not retain two literal server IDs');
   await captureScreenshot(cdp, fixture, 'zh-tw-member-mcp-strict-allowlist');
   return {
     locale: await cdp.evaluate('document.documentElement.lang'),
     strictAllowlistVisible: true,
     placeholder: label.placeholder,
-    parsedServerNames: label.placeholder.split(',').map(name => name.trim()),
+    parsedServerNames: enteredValue.split(',').map(name => name.trim()),
     screenshot: 'teams-create-zh-tw-member-mcp-strict-allowlist.png',
     controlEditedThroughNativeCdp: true,
   };
