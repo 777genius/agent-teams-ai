@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { mkdir } from 'node:fs/promises';
 import { dirname, join, delimiter } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { createClaudeDriverFactory, type ClaudeConfig } from '@agent-teams/provider-implementations/claude';
 import type { Event, Session } from '@agent-teams/provider-session-contracts';
 import type { ServerResponse } from 'node:http';
@@ -17,6 +18,7 @@ export interface NativeWindowsClaudeObservation {
   start: { matchingOperation: number; matchingInput: number; text: number; result: number; succeeded: number };
   continuation: { matchingOperation: number; matchingInput: number; text: number; result: number; succeeded: number };
   observerFailed: boolean;
+  permissionReplies: number;
 }
 
 const record = (value: unknown): Record<string, unknown> =>
@@ -128,8 +130,9 @@ export async function runNativeWindowsClaude(options: {
   const model = await vendorModel({ command, nonce: options.nonce });
   const events: Event[] = [];
   let observation: Promise<void> | undefined, session: Session | undefined, observerFailure: unknown;
-  let originalFailure: unknown, cleanup = false;
+  let originalFailure: unknown, cleanup = false, permissionReplies = 0;
   let phase: NativeWindowsClaudeObservation['phase'] = 'opening';
+  const currentPhase = () => phase;
   const cleanupErrors: unknown[] = [];
   try {
     const config: ClaudeConfig = {
@@ -167,6 +170,19 @@ export async function runNativeWindowsClaude(options: {
       for await (const event of original.observe()) {
         assert.ok(events.length < 1000);
         events.push(event);
+        if (event.kind === 'interaction') {
+          assert.ok(permissionReplies === 0 && currentPhase() === 'start' &&
+            event.sessionRef === original.sessionRef && event.operationRef === 'TEST-vendor-START' &&
+            event.inputId === 'TEST-vendor-START-input', 'One original START permission only');
+          assert.ok(event.request.kind === 'permission', 'Only the captured TEST Bash permission');
+          assert.ok(event.request.tool === 'Bash' && isDeepStrictEqual(event.request.input, {
+            command, description: 'Start the isolated TEST service tree', run_in_background: true,
+          }), 'Permission input matches the exact captured TEST command');
+          const reply = await original.respondToInteraction(event.interactionRef,
+            { kind: 'permission', decision: 'allow' });
+          assert.equal(reply.ok, true, 'Original one-shot permission reply accepted');
+          permissionReplies++;
+        }
       }
     })().catch(error => { observerFailure = error; });
     assert.equal((await session.checkReadiness()).ok, true, 'Actual SDK readiness completed');
@@ -225,7 +241,7 @@ export async function runNativeWindowsClaude(options: {
         events: kinds, unknownKinds: events.length - Object.values(kinds).reduce((sum, value) => sum + value, 0),
         diagnostics: { unknownEvent, other: kinds.diagnostic - unknownEvent },
         start: count('START'), continuation: count('CONTINUE'),
-        observerFailed: observerFailure !== undefined });
+        observerFailed: observerFailure !== undefined, permissionReplies });
     } catch (error) { cleanupErrors.push(error); }
     try {
       if (session) {
