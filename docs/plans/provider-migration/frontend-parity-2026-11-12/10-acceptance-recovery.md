@@ -926,3 +926,32 @@ the one insertion. Run existing Host-script types, then the original saved-only
 donor/consumer E2E on the new exact head. Keep the prior run INCOMPLETE; require
 ordinary original Quit/absence, frozen corpus and consumer cold readback before
 counting this route as passed. No new unit suite or synthetic donor is needed.
+
+### §18 source-cap refinement: существующий loader параметров Launch
+
+Локальный integrated Main/renderer прогон завершился 530/530 PASS, но обычный
+source-size guard обнаружил `teamSlice.ts`5024 при сохранённом baseline5020:
+четыре новые строки unconfirmed guard превысили лимит. Этот gate остаётся
+обязательным; предыдущий PASS тестов не заменяет source-size проверку.
+
+Круг1 — существующая граница: `teamSlice.ts:1723–1753` содержит цельный
+`loadAllLaunchParams`, использующий только localStorage, private
+`LAUNCH_PARAMS_PREFIX` и `TeamLaunchParams`. Уже существующий
+`store/team/teamLaunchParams.ts` владеет теми же параметрами и их сохранением.
+Перенести туда loader и его prefix, экспортировать функцию и импортировать
+её в прежний блок teamSlice. Новый helper-файл/owner или общий abstraction
+не нужен; тело loader переносится без изменения ветвей и порядка чтений.
+
+Круг2 — поведения: вызов остаётся в прежней инициализации
+`launchParamsByTeam: loadAllLaunchParams()`; import не читает localStorage.
+Сохраняются best-effort отдельные corrupt-entry/storage catches, original keys
+и прежние данные. Unconfirmed guard остаётся непосредственно после Launch IPC
+до responseRunId/analytics/promotion/poll; attempt-fenced catch и вся
+launch/create логика не перемещаются. Не сжимать код, не удалять пустые строки
+ради счётчика и не менять baseline.
+
+Круг3 — без новых тестов: existing teamSlice case уже проверяет восстановление
+valid saved params рядом с corrupt entry, а §18 cases проверяют unconfirmed,
+обычный Launch и newer-attempt cleanup. Повторить затронутый existing renderer
+file, types и прежний source-size guard после переноса. Исходный 530 PASS
+относится к pre-extraction bytes; отдельного native input или CI job не добавлять.
