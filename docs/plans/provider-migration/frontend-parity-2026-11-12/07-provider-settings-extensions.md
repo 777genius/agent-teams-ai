@@ -2581,3 +2581,75 @@ controlled peer success cannot be transferred to native execution,
 user authentication, Desktop Connect or performance. The unchanged
 ordinary native and frontend gates remain the acceptance evidence.
 Root alone publishes after root and independent plan/source review.
+
+
+## Review 32 — keep the final provider admission and control checks under one original Team fence
+
+### R32.1. Original failure evidence and the limit of its attribution
+
+Read-only original evidence is `state/child1188-v2-original-receipts.json` (277732 bytes, SHA-256 `d5ca8cbba82e055e76fa1066baafa08d4be7ae101e0cd566ca7cce4fe5050ac0`), retained from native child head `8f28b801f513187b84b17f8748745dc563b6e43a`, run `43515484835`. The three original jobs are Darwin x64 `132196281665`, Windows x64 `132196281740`, and Windows ARM64 `132196281793`. Each receipt is INCOMPLETE, reaches original native Ready, retains an input without terminal, and confirms original cleanup. This plan does not reinterpret that cleanup as successful input completion.
+
+| Original job/platform | Open elapsed ms | Whole original Host sampled us | Namespace-fence exclusive sampled us | Model requests |
+| --- | ---: | ---: | ---: | ---: |
+| 132196281665 / Darwin x64 | 71472 | 164288506 | 113482386 | 8 |
+| 132196281740 / Windows x64 | 57951 | 151261690 | 100566138 | 4 |
+| 132196281793 / Windows ARM64 | 97944 | 193216889 | 125623596 | 0 |
+
+The input uses its original 90-second deadline. The CPU projection covers the original source Host including cleanup; its sampled time is neither isolated function self-time nor input-only CPU. R30's already-published finer directoryPath/tree/controller-lock/residual partition is absent from these original receipts and remains an ordinary new-CI observation gate. No claim that lock acquisition, directory traversal, sleep, provider latency or any one subfamily caused all three failures follows from the broad namespace total. A synthetic lock-count regression cannot qualify native performance.
+
+### R32.2. Exact source repetition and the existing private boundary
+
+Current `captureMemberProviderAuthority.ts` `0042153f6711b1f4ef35f95ed68e9daf85d533d1` lines 29–41 first invokes the original coordinator/current callback, then compares the captured Team object, binding, delivery, full profile, configuration and principal, and finally invokes `authorizeMemberBinding(binding, 'admit')` followed by `authorizeRuntimeAccess(originalPrincipal, binding, 'control')`. There is no await between these final two calls. Keep the coordinator/current call and every immutable comparison at their original position.
+
+The original coordinator `RuntimeTeamCoordinator.ts` `ad6d518e15f4d9ad7100cbea42e8707b00588e49` lines 751–760 checks the writer, captured availability, roster, endpoint lifetime and dispatch authority. It is outside this source cut. In particular, do not move a new Team lock ahead of `ProfileWriterLease.assertCurrent` or wrap the entire provider guard. The ordinary roster and dispatch guards are not removed or merged by R32.
+
+`TeamOwner.ts` `3ff23c20479bc4cf9579dd985cb3f3520a1cb9fa` lines 395–407 delegates the final checks to `TeamDeliveryAuthority.ts` `e0e9199961d62e86bbe025c1576aaa00c49a31f3`. The latter's `authorizeMember` at 64–69 fences the unchanged `memberAuthorized` predicate; `runtimeAccess` at 32–61 separately fences the original principal/grant/current-member check. A standalone successful pair therefore obtains and releases the same canonical Team lock twice.
+
+The new selector is the literal `'provider'`, confined to these two existing private class/helper signatures and the single original provider-authority call site. It is not a permission, public Runtime action, Team connection command, Host RPC, management operation, DTO or native Session action. The complete current production call-site search finds these class calls only in Host composition; every existing ordinary caller supplies `'read'`, `'control'`, or its already-narrowed read/control action. `TeamOwner.connect`, transport parsers, contracts, permission lists, captured records and fingerprints remain unchanged. No public caller can request the new branch through a widened wire schema.
+
+### R32.3. Exact bounded production change
+
+Add `'provider'` to the existing private `TeamOwner.authorizeRuntimeAccess` action union and the corresponding `TeamDeliveryAuthority.runtimeAccess` union. The TeamOwner delegation remains otherwise identical. Before the existing read/control body, the helper handles only this literal with the following finite synchronous composition:
+
+```ts
+if (action === 'provider') {
+  return options.store.fenced(() =>
+    memberAuthorized(binding, 'admit') && runtimeAccess(principalId, binding, 'control')
+  );
+}
+```
+
+The old read/control implementation below that branch must remain byte-identical. The recursive call uses only the fixed original `'control'` action, so this is one bounded nesting, not a retry or new dispatch. It calls the original `memberAuthorized` first and, only on success, the original `runtimeAccess(..., 'control')`. Both original fresh state/grant/selection reads, their short circuit, rejection conditions and exception propagation stay in use. Do not replace either with the other's boolean or add an authorization cache.
+
+Replace only the final admit/control pair in `captureMemberProviderAuthority.assertCurrent` with the single private `authorizeRuntimeAccess(original.principalId, entry.binding, 'provider')` call. All other captured identities, coordinator/writer checks, allocation/lifetime guards, checkpoints, original Runtime reads and every existing pre/post-await call remain unchanged.
+
+Reuse `TeamOwnerStore.fenced` `17c422fbabf290e582dad1f48f973d85d42dc082` exactly as it is. The outer fence performs its existing pre-lock and post-lock namespace validation. The nested original control fence still performs `validateNamespace()` before the same-store depth check and then uses the still-held original lock. Only the second acquire/release cycle disappears. For a standalone final pair, the existing protocol changes from two outer acquisitions/four validation visits to one outer acquisition plus one synchronous nested control visit/three validations; no code suppresses a validation or treats an old scan as current. Already-nested callers continue using their original outer lock.
+
+Do not use `withLaunchAuthority(read)` as a substitute: that would add a separate authorize/state/roster.recover operation before the original admit. Do not alter controller file-lock publication, owner tokens, cleanup, wait/retry policy, namespace traversal, per-await source/current checks, permissions, TTL, limits or deadlines. The original `finally` releases the one real lock on success, false, or exception. No lock or state snapshot survives an await or a completed guard.
+
+### R32.4. Four existing paths and exact preimages
+
+| Existing path | Exact preimage | Authorized delta |
+| --- | --- | --- |
+| `packages/legacy-agent-host/src/composition/captureMemberProviderAuthority.ts` | `0042153f6711b1f4ef35f95ed68e9daf85d533d1` | Replace only the final two authority calls with the finite private provider pair. |
+| `packages/legacy-agent-host/src/team/TeamOwner.ts` | `3ff23c20479bc4cf9579dd985cb3f3520a1cb9fa` | One existing action-union addition; retain the 800-line source cap and delegation. |
+| `packages/legacy-agent-host/src/team/TeamDeliveryAuthority.ts` | `e0e9199961d62e86bbe025c1576aaa00c49a31f3` | Same private union plus the bounded provider branch; old read/control body unchanged. |
+| `packages/legacy-agent-host/tests/member-provider-authority.test.ts` | `a0760de812af6c0b698c2be23a28269d22741d7d` | Extend only the existing restored-provider-authority case, retaining both existing case names and original assertions. |
+
+These four preimages are shared by the inspected current repair/native/qualification sources. Root rechecks each actual publication tree and preserves unrelated branch-specific bytes. No source, controller dependency, public contract, diagnostic projector or native fixture outside these four paths is authorized by this plan.
+
+### R32.5. Meaningful existing regression and ordinary validation
+
+Extend `restored provider authority binds the complete open request and keeps current fences` using its existing real filesystem Team owner and controlled Runtime record. Keep the original fixture, full checkpoint/open fingerprint, host-incarnation, config mutation, allocation-count and target-lifetime assertions. The fixture's controlled coordinator callback isolates the final provider pair; this must be labelled as a controlled authority/lock proof, not a real native latency result.
+
+Observe, without fabricating results, the original canonical authority lock token while the existing real Team store reads its state. A scoped pass-through observation may wrap the existing store read solely for this original Team; it must return the exact original result and leave errors unchanged. One successful original guard must reach both original member/grant reads under the same nonempty canonical lock token, and that lock must be absent after return. The next independent guard must obtain a new token rather than reuse the old token or permissions. Retain the existing original per-request comparisons; do not satisfy the test by mocking the authority booleans or introducing a production counter.
+
+Use the same existing case to distinguish an admitted member from a principal that cannot control that member, and to prove that original revocation/current-state changes are observed on a later guard. No Runtime open/input/native effect may follow either refusal. A failing original coordinator/current callback must precede all new pair lock/state work and preserve its original thrown value. Check release after refusal and retain original exception/finally and cross-store exclusion coverage from the unchanged `team-owner-store-fence.test.ts` (`f81e5d2a84ff76643e91bd36f8bab08fdb86f577`). Every test hook is scoped and restored; no new suite or test-only production API.
+
+After independent source review, root performs the ordinary coherent Host/ledger build, existing Host test types, the existing authority/fence cases and required normal CI. Do not repeat native inputs or create a benchmark/matrix for this slice. Source cap and diff checks remain required. Review must verify that the old read/control body and all non-pair provider guard bytes are unchanged, and that no public action/parser/schema was widened.
+
+### R32.6. Publication and acceptance boundaries
+
+This is plan-only until root publishes the reviewed appendix and authorizes the four-source cut. Root is the only publisher. Preserve the already-queued ordinary R30 baseline run; do not update an active head or rerun an old failure merely to obtain faster feedback.
+
+The source-level claim is limited to eliminating one repeated canonical acquisition for the final synchronous provider authority pair while retaining its original checks. The actual cause of the recorded namespace time, the amount attributable to this pair, Ready latency, and terminal completion remain unqualified until original R30 detail and the ordinary post-change native gate are read with their real platform/source/pin identities. Do not compare unlike lanes as a causal timing result. If the native gate still fails, retain its original input/receipt/cleanup and investigate that evidence without relaxing waits, permissions, unknown ownership or timeouts.
