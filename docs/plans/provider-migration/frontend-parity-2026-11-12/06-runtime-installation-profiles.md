@@ -545,3 +545,95 @@ stale seed/retained history, дедупликацию grant scopes или вос
 Donor references:
 [Create form](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/dialogs/CreateTeamDialog.tsx),
 [Create/Launch orchestration](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningCreateLaunchOrchestration.ts).
+
+## 18. Повторные descriptor handles не расширяют source grant — review 16
+
+План до source; thread `PRRT_kwDORVTEtM622S17`, parity
+`cd2406a1cd040cf451a504857ebd5c985579c3da`. `DesktopBackendFeature.captureSourceTarget`
+переносит каждый подходящий handle в `teamScopes`. Descriptor допускает512 handles,
+private grant —256 scopes. Несколько handles одной Team имеют одинаковую тройку
+team/project/workspace и не дают новых прав, но257 таких aliases блокируют capture.
+
+### Круг1 — совместимость исходных записей
+
+Main-only dedup недостаточен. `managementTargetId` зависит от selected+owner и
+не меняется от aliases; `RuntimeSourceIndex` включает **полную исходную** grant
+representation в seedRevision, publication revision/fingerprint, receipt selectionDigest
+и publicationJson. Существующие records/receipts могли сохранить повторные scopes.
+Нельзя переписать их, нормализовать при чтении schema или ослабить проверку старых hashes.
+
+1. В existing Main `captureSourceTarget` убрать только одинаковые тройки
+   `(teamId, projectId, workspaceId)`, сохранив первый порядок distinct triples.
+   Фильтр original context/owner сохраняется. Grant schema по-прежнему требует
+   максимум256 **distinct** scopes;257 реально разных не обрезаются и не принимаются.
+   targetId, owner/context/seed fields и descriptor512 bound не меняются.
+2. В Host boundary сопоставлять новый grant с **исходной сохранённой representation**
+   только при точном равенстве всех остальных fields и равенстве множеств троек.
+   Перестановка/повтор одного scope не меняют authority; добавление, удаление
+   scope, чужой owner/revision/context/path/runtime/profile/config по-прежнему conflict.
+   Incoming grant и original grant отдельно проходят прежний current seed/authority
+   validator. Это не решение отдельного stale-seed review12.
+3. Для lookup/replay конкретного command первым источником является его original
+   publicationJson, если он существует. До повторного использования проверить его
+   прежние command/source/resource/profile/config/provider, expectedRevision,
+   fingerprint, selectionDigest и revision против **его исходного grant+seed**.
+   После equivalence check использовать тот же original grant в existing algorithm.
+   Terminal rejected/no-allocation operation остаётся собственным receipt, даже если
+   позже опубликована другая операция; не превращать её в новый native effect.
+4. Для current/retained/new publication использовать original grant из полностью
+   валидированной existing source chain. Если первой index publication ещё нет,
+   единственная unfinished original operation с валидным publicationJson сохраняет
+   свою representation и исходный seed revision. Несколько unfinished operations,
+   отсутствие нужного snapshot либо повреждённый snapshot не разрешают догадку,
+   новый grant baseline или повтор native verification; прежний held остаётся held.
+   При отсутствии retained/unfinished authority новый grant сохраняется как получен.
+5. Применить binding последовательно к current, retained, lookup, recover,
+   refreshConfiguration и capturePublication, **до** вычисления новых fingerprints.
+   Existing raw journal validation, previous-revision chain, pointer CAS,
+   exact original request/candidate identity, native identity/cleanup, pending same-ID
+   coordination и immutable records сохраняются. При повторном вызове не читается
+   current UI selection вместо original scope.
+6. `RuntimeSourceIndex.ts` сейчас770 lines при cap800. Перенести существующий
+   чистый publicationSnapshot validator и маленькое scope-equivalence сравнение в
+   один узкий `runtimeSourceGrantAuthority.ts`; storage owner остаётся прежним.
+   Snapshot validator не получает новый journal, writer, cache или API.
+   Main dedup остаётся в existing capture method; новая generic grant migration,
+   schema transform, version registry и background repair не нужны.
+
+### Круг2 — конечные проверки
+
+- Existing real Main/Host source test: private descriptor с257 aliases одной
+  допустимой Team проходит source capture/current через настоящий Host subprocess;
+  полученный original grant содержит одну тройку. Foreign-context/owner handles
+  не попадают в неё. Отдельная existing-schema negative сохраняет отказ257 distinct.
+- Existing Host publication/cold test: сначала сохранить допустимый legacy grant
+  с duplicate scopes; затем new deduplicated/reordered equivalent grant читает тот
+  же current/retained и original lookup/replay. До/после read byte-for-byte сравнить
+  original index/receipt. Следующая новая publication продолжает исходную chain и
+  сохраняет её grant representation; original command не re-admit/re-execute.
+- Existing crash/recovery test дополнить потерей выполнения после durable prepared
+  snapshot **до первой index publication**, затем cold recover через deduplicated
+  grant. Сохраняются original commandId/fingerprint/selectionDigest/revision/
+  publicationJson; candidate не заменяется текущим selection. Existing lost-ACK
+  after pointer case остаётся. Corrupt/missing/ambiguous snapshot отказывает.
+- Existing scope-widening case дополнить удалением/добавлением реально другого
+  разрешённого scope: семантическое отличие не маскируется dedup. No new unit suite;
+  только реальные boundary/recovery assertions в existing integration files.
+- Host build/test types, focused Main types, existing affected integration files,
+  lint/cap и independent source review. Actual provider/Desktop flows остаются
+  штатным exact-head CI; controlled fixture не квалифицирует native inference.
+
+### Круг3 — границы решения
+
+Review12 (изменившийся bootstrap seed), review24 (verify→exec pathname race) и
+§17 Create recovery не входят в этот cut. Не ослаблять `seed()` и original chain
+validators ради прохождения нового alias case. Root публикует и проверяет этот
+план перед source; independent review должен отдельно проверить сохранность
+pre-first-publication recovery и отсутствие silent widening/old-hash rewriting.
+
+Independent plan review (Profiles) — PASS. Выбор source chain/unfinished intent
+ограничен тем же targetId; чужая source operation не задаёт эту representation.
+Published либо unfinished original command при наличии chain должен сохранить
+её **raw** original grant, не только эквивалентный set. Terminal held/no-resource
+receipt без собственного index record читается как его прежний отказ; он не
+меняет более позднюю chain и не разрешает новый native effect.
