@@ -744,3 +744,17 @@ Host activity/schedule cases, types и прежний native gate на опуб�
 source. R13 tool/cold-warning cut уже опубликован и не пересобирается этим
 исправлением. Текущий executor недоступен; source inspection/immutable
 readback не являются выполненным тестом или actual native PASS.
+
+## R15. Actual235 Main lint: keep scheduler admission assignment explicit
+
+Current job `131783882304` reports one blocking lint error at
+`src/main/services/schedule/SchedulerStopBarrier.ts:18`: the new per-schedule
+admission Set is assigned inside `Map.set`. Existing lifecycle semantics are
+already exercised; the correction separates `pending = new Set()` from
+`this.admissions.set(scheduleId, pending)` in the same synchronous branch.
+
+R1: retain the same Set identity, marker registration before action, cancellation
+and finally removal. R2: independent review of this single existing helper;
+no cleanup timeout, scheduling semantics, async boundary or authority changes.
+R3: run the existing SchedulerStopBarrier tests and lint this file; no new test
+or formatting pass. Required Main lint on the next source head remains mandatory.

@@ -888,3 +888,41 @@ pending, не публикует response run как running, не делает 
 Focused Main/renderer types и эти существующие cases, затем required validate
 того же source cut. Независимый source review обязателен. Этот compile/consumer
 fix не объясняет отдельный native /review marker loss и не закрывает его E2E.
+
+## 19. Saved donor Create: select the original field before inserting once
+
+Actual235 job `131780548921`, artifact `14023589292` (ZIP SHA256
+`b8d8dafd3926d56f21cebbb3e0b9c0969e1fb489e18c43c31e42867382ab07e7`),
+failed at `donor unique name retained`. Original donor source remained frozen;
+the generated TEST name is 29 valid characters. This failure happened before
+Create, ordinary Quit/corpus qualification or the consumer. The receipt does not
+retain the failed input value, so do not label a particular resulting value as observed.
+
+### R1 — existing editing protocol reference
+
+`desktop-donor-saved-producer.ts:186–206` sends the Meta+A key event without
+the explicit CDP `commands: ['selectAll']` used by the existing passed
+`desktop-create-config-ui-smoke.ts:222–229`,
+`desktop-stopped-import-launch-ui.ts:99–106` and mixed Create fill helper.
+The donor frontend supplies a suggested initial name in its controlled input;
+typing into that existing value requires selecting it first.
+
+### R2 — minimal TEST correction
+
+Add the same explicit editing command to the original single keyDown. Before
+the original single `Input.insertText`, read once that the exact original field
+is focused and its full value is selected (selectionStart zero and selectionEnd
+equal to its actual value length). Refuse before text mutation if that proof is
+absent. Retain the keyUp, the one text insertion and the existing exact retained
+value assertion. Do not set the DOM value, invoke React/store/IPC setters, retype,
+repeat clicks, replace the donor frontend or extend its existing deadline.
+The normal user-input route and original saved-team capture remain the acceptance proof.
+
+### R3 — verification
+
+Independent source review should compare the same CDP command in the existing
+working fill helpers, and ensure the extra evaluation is read-only and precedes
+the one insertion. Run existing Host-script types, then the original saved-only
+donor/consumer E2E on the new exact head. Keep the prior run INCOMPLETE; require
+ordinary original Quit/absence, frozen corpus and consumer cold readback before
+counting this route as passed. No new unit suite or synthetic donor is needed.
