@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { closeSync, constants, openSync, readlinkSync, readSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { createConnection } from 'node:net';
 import { basename, join } from 'node:path';
@@ -12,6 +13,18 @@ export interface ProcessIdentity {
 }
 export const selectedCdpPort = Number(process.env.LEGACY_DESKTOP_CDP_PORT ?? 9222);
 assert.ok(Number.isInteger(selectedCdpPort) && selectedCdpPort >= 1024 && selectedCdpPort <= 65535);
+/** Preserve explicit TEST admission before even probing the selected renderer port. */
+export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
+  assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1', 'root must authorize actual pnpm dev:mcp launch');
+  assert.ok(process.platform === 'darwin' ||
+    (process.platform === 'linux' && process.arch === 'x64' && linuxModeAllowed),
+    'Linux Desktop portability requires an explicitly bounded proof mode');
+  if (process.platform === 'linux') {
+    assert.match(process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '', /^:\d+$/u, 'explicit isolated TEST X display');
+    assert.ok(process.env.LEGACY_DESKTOP_TEST_XAUTHORITY, 'explicit TEST display authorization file');
+  }
+}
+
 /** Diagnostics only: no raw message, values, environment, causes or outside-source stack. */
 export function projectDesktopHarnessFailure(value: unknown, repository: string, sources: readonly string[]): {
   kind: 'assertion' | 'error' | 'unclassified'; frames: string[];
@@ -132,6 +145,77 @@ interface CdpListenerFile {
   device: string | null;
   endpoint: 'loopback-v4' | 'loopback-v6' | 'wildcard' | 'other' | 'unknown';
   state: 'LISTEN' | 'other' | 'unknown';
+  afterCensus?: CdpProcFacts;
+}
+type CdpRole = 'electron-main' | 'electron-renderer' | 'electron-zygote' | 'electron-gpu' |
+  'electron-utility' | 'electron-crashpad' | 'node' | 'unknown';
+interface ProcBirth { startTicks: string; ppid: number; pgid: number; }
+interface CdpProcFacts {
+  scope: 'after-original-census'; atomic: false; birth: 'same' | 'unknown';
+  startTicks: string | null; ppid: number | null; pgid: number | null;
+  role: CdpRole; socketInode: string | null;
+}
+/** Bounded TEST diagnostics; proc data never admits a listener or authorizes a signal. */
+function boundedProcText(path: string): string | undefined {
+  let fd: number | undefined;
+  try {
+    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const buffer = Buffer.alloc(4097);
+    const count = readSync(fd, buffer, 0, buffer.length, 0);
+    return count <= 4096 ? buffer.toString('utf8', 0, count) : undefined;
+  } catch { return undefined; }
+  finally { if (fd !== undefined) { try { closeSync(fd); } catch { /* Diagnostic only. */ } } }
+}
+function readProcBirth(pid: number): ProcBirth | undefined {
+  const value = boundedProcText(`/proc/${pid}/stat`);
+  if (!value?.startsWith(`${pid} (`) || !value.endsWith('\n')) return undefined;
+  const end = value.lastIndexOf(') ');
+  if (end < 0) return undefined;
+  const fields = value.slice(end + 2).trim().split(/\s+/u);
+  if (!/^[A-Za-z]$/u.test(fields[0] ?? '') || !/^\d{1,16}$/u.test(fields[1] ?? '') ||
+      !/^\d{1,16}$/u.test(fields[2] ?? '') || !/^\d{1,20}$/u.test(fields[19] ?? '')) return undefined;
+  const ppid = Number(fields[1]), pgid = Number(fields[2]);
+  return Number.isSafeInteger(ppid) && Number.isSafeInteger(pgid)
+    ? { ppid, pgid, startTicks: fields[19]! } : undefined;
+}
+function captureProcBirths(owned: readonly ProcessIdentity[]): Map<number, ProcBirth> {
+  const captured = new Map<number, ProcBirth>();
+  for (const row of owned.slice(0, 64)) {
+    const birth = readProcBirth(row.pid);
+    if (birth?.pgid === row.pgid && birth.ppid === row.ppid) captured.set(row.pid, birth);
+  }
+  return captured;
+}
+function readProcRole(pid: number): CdpRole {
+  const commandLine = boundedProcText(`/proc/${pid}/cmdline`);
+  if (!commandLine?.endsWith('\0')) return 'unknown';
+  const args = commandLine.split('\0'), executable = basename(args[0]!);
+  if (executable === 'node') return 'node';
+  if (executable === 'chrome_crashpad_handler') return 'electron-crashpad';
+  if (!['electron', 'agent-teams-ai', 'Agent Teams AI'].includes(executable)) return 'unknown';
+  const type = args.find(arg => arg.startsWith('--type='));
+  if (type === undefined) return 'electron-main';
+  if (type === '--type=renderer') return 'electron-renderer';
+  if (type === '--type=zygote') return 'electron-zygote';
+  if (type === '--type=gpu-process') return 'electron-gpu';
+  if (type === '--type=utility') return 'electron-utility';
+  return 'unknown';
+}
+function afterCdpCensus(file: CdpListenerFile, group: number, original?: ProcBirth): CdpProcFacts {
+  const unknown: CdpProcFacts = { scope: 'after-original-census', atomic: false, birth: 'unknown',
+    startTicks: null, ppid: null, pgid: null, role: 'unknown', socketInode: null };
+  if (!original) return unknown;
+  try {
+    const before = readProcBirth(file.pid);
+    if (!before || before.startTicks !== original.startTicks || before.pgid !== group) return unknown;
+    const target = readlinkSync(`/proc/${file.pid}/fd/${file.fd}`);
+    const inode = /^socket:\[(\d{1,20})\]$/u.exec(target)?.[1] ?? null;
+    const role = readProcRole(file.pid), after = readProcBirth(file.pid);
+    if (!after || after.startTicks !== original.startTicks || after.pgid !== group) return unknown;
+    // The fd may still have changed between the original lsof and this observation.
+    return { scope: 'after-original-census', atomic: false, birth: 'same', startTicks: after.startTicks,
+      ppid: after.ppid, pgid: after.pgid, role, socketInode: inode };
+  } catch { return unknown; }
 }
 interface CdpListenerFacts {
   scope: 'original-linux-lsof-test-cdp';
@@ -141,10 +225,67 @@ interface CdpListenerFacts {
   truncated: boolean;
   files: CdpListenerFile[];
 }
+interface CdpFixtureCorrelation {
+  pid: number; fd: string; scope: 'after-failed-census'; atomic: false;
+  birth: 'same' | 'unknown'; socket: 'same-as-supplemental' | 'unknown';
+  fixtureHostArgv: boolean | null; fixtureNodeExecutable: boolean | null;
+  fixtureMcpBuilderEntry: boolean | null;
+  closeOnExec: boolean | null;
+}
+type CdpFixtureSelection = { node: string; hostEntry: string; mcpBuilderEntry?: string };
 const cdpListenerFailures = new WeakMap<Error, CdpListenerFacts>();
-/** Facts belong to the original failed read, never a later PID/socket census. */
-export function readOwnedCdpListenerFailure(value: unknown): CdpListenerFacts | undefined {
-  return value instanceof Error ? cdpListenerFailures.get(value) : undefined;
+const cdpFixtureFailures = new WeakMap<Error, CdpListenerFacts & {
+  fixtureCorrelation: CdpFixtureCorrelation[];
+}>();
+
+/** Path comparison only: never executable attestation, socket admission or signal authority. */
+function correlateCdpFixture(file: CdpListenerFile, fixture: CdpFixtureSelection): CdpFixtureCorrelation {
+  const unknown: CdpFixtureCorrelation = { pid: file.pid, fd: file.fd,
+    scope: 'after-failed-census', atomic: false, birth: 'unknown', socket: 'unknown',
+    fixtureHostArgv: null, fixtureNodeExecutable: null, fixtureMcpBuilderEntry: null, closeOnExec: null };
+  const original = file.afterCensus;
+  if (original?.birth !== 'same' || !original.socketInode) return unknown;
+  const sameBirth = (value: ProcBirth | undefined) => value !== undefined &&
+    value.startTicks === original.startTicks && value.pgid === original.pgid && value.ppid === original.ppid;
+  try {
+    if (!sameBirth(readProcBirth(file.pid))) return unknown;
+    const socket = `socket:[${original.socketInode}]`;
+    const path = `/proc/${file.pid}/fd/${file.fd}`;
+    if (readlinkSync(path) !== socket) return unknown;
+    const argv = boundedProcText(`/proc/${file.pid}/cmdline`);
+    const executable = readlinkSync(`/proc/${file.pid}/exe`);
+    const info = boundedProcText(`/proc/${file.pid}/fdinfo/${file.fd}`);
+    const flags = info?.split('\n').filter(line => line.startsWith('flags:')) ?? [];
+    const octal = flags.length === 1 ? /^flags:\t(0[0-7]{1,10})$/u.exec(flags[0]!)?.[1] : undefined;
+    const numeric = octal === undefined ? undefined : BigInt('0o' + octal);
+    const closeOnExec = numeric === undefined || numeric > 0xffffffffn
+      ? null : (numeric & 0o2000000n) !== 0n;
+    const fixtureHostArgv = argv?.endsWith('\0')
+      ? argv === fixture.node + '\0' + fixture.hostEntry + '\0' : null;
+    const args = argv?.endsWith('\0') ? argv.slice(0, -1).split('\0') : undefined;
+    // Same captured entry/invocation shape only; output path and JS bytes are not attested.
+    const fixtureMcpBuilderEntry = !fixture.mcpBuilderEntry || !args ? null :
+      executable === fixture.node && args.length === 4 && args[0] === fixture.node &&
+      args[1] === fixture.mcpBuilderEntry && args[2] === '--out-dir' &&
+      Boolean(args[3]) && args[3] !== '--out-dir';
+    if (readlinkSync(path) !== socket || !sameBirth(readProcBirth(file.pid))) return unknown;
+    return { ...unknown, birth: 'same', socket: 'same-as-supplemental',
+      fixtureHostArgv, fixtureNodeExecutable: executable === fixture.node, fixtureMcpBuilderEntry, closeOnExec };
+  } catch { return unknown; }
+}
+
+/** Original error facts plus, at most once, a separately labelled comparison to captured TEST paths. */
+export function readOwnedCdpListenerFailure(
+  value: unknown, fixture?: CdpFixtureSelection
+): (CdpListenerFacts & { fixtureCorrelation?: CdpFixtureCorrelation[] }) | undefined {
+  if (!(value instanceof Error)) return undefined;
+  const facts = cdpListenerFailures.get(value);
+  if (!facts || !fixture) return facts;
+  const previous = cdpFixtureFailures.get(value);
+  if (previous) return previous;
+  const projected = { ...facts, fixtureCorrelation: facts.files.map(file => correlateCdpFixture(file, fixture)) };
+  cdpFixtureFailures.set(value, projected);
+  return projected;
 }
 function parseLinuxCdpListeners(output: string): { listeners: number[]; facts: CdpListenerFacts } {
   const pids = new Set<number>(), withFiles = new Set<number>();
@@ -192,6 +333,7 @@ export function assertOwnedCdpListener(group: number): number {
   // lsof scan for every UI read can time out under unrelated process load.
   const owned = groupMembers(group);
   assert.ok(owned.length > 0, 'captured TEST app group still exists');
+  const births = process.platform === 'linux' ? captureProcBirths(owned) : undefined;
   let output: string;
   try {
     output = execFileSync(
@@ -239,7 +381,12 @@ export function assertOwnedCdpListener(group: number): number {
     );
     return listener!;
   } catch (error) {
-    if (census && error instanceof Error) cdpListenerFailures.set(error, census.facts);
+    if (census && error instanceof Error) {
+      for (const file of census.facts.files) {
+        if (file.inode === null) file.afterCensus = afterCdpCensus(file, group, births?.get(file.pid));
+      }
+      cdpListenerFailures.set(error, census.facts);
+    }
     throw error;
   }
 }

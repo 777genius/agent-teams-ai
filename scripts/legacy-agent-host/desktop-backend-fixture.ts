@@ -21,6 +21,7 @@ export { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
 import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
 import { desktopCodexSha256, prepareDesktopCodexLoginOpener } from './desktop-codex-login-fixture.ts';
 export { desktopCodexSha256 } from './desktop-codex-login-fixture.ts';
+import { desktopClaudeSha256 } from './desktop-claude-native-selection.ts';
 import { DESKTOP_MCP_MEMBERS, prepareDesktopCapturedMcpRecipes } from './desktop-opencode-v2-mcp-fixture.ts';
 
 export const digest = (bytes: Uint8Array | string): string =>
@@ -235,8 +236,7 @@ export async function prepareDesktopBackendFixture(
     if (
       binary !== options.nativeClaude.path ||
       (await fileDigest(binary)) !== options.nativeClaude.sha256 ||
-      options.nativeClaude.sha256 !==
-        'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f'
+      options.nativeClaude.sha256 !== desktopClaudeSha256()
     )
       throw new Error('Unqualified TEST Claude executable');
     for (const directory of [

@@ -77,7 +77,7 @@ export async function prepareDesktopProofFixture(
   }
   if (options.controlledProcessMode) {
     assert.equal(mode, 'process-cold-ui');
-    return prepareControlledProcessFixture(repo, pnpm);
+    return prepareControlledProcessFixture(repo, pnpm, options.candidateRuntime);
   }
   if (mode === 'native-activity-readback-ui') {
     const { fixture, source } = await prepareDesktopCapturedActivityReadback(

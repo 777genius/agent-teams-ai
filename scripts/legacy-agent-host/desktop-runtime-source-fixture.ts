@@ -161,6 +161,7 @@ export function desktopBackendEnvironment(
       DISPLAY: process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '',
       XAUTHORITY: process.env.LEGACY_DESKTOP_TEST_XAUTHORITY ?? '',
     } : {}),
+    ...(process.env.LEGACY_DESKTOP_COREPACK_HOME ? { COREPACK_HOME: process.env.LEGACY_DESKTOP_COREPACK_HOME } : {}),
     NO_COLOR: '1',
     // A TEST HOME changes pnpm's store lookup. Report drift without installing
     // into the frozen worktree; the harness verifies its selected archive bytes.

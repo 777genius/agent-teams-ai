@@ -10,6 +10,7 @@ export async function captureDesktopCodexAccountInput(executable: string) {
   assert.equal(captured.sha256, desktopCodexSha256(), 'qualified account app-server input');
   return [captured];
 }
+import { readCapturedCandidateElectron } from './candidate-electron.ts';
 
 export async function captureDesktopSourceHashes(repo: string, sources: readonly string[]) {
   return Promise.all(
@@ -46,6 +47,22 @@ export async function verifyDesktopSourceFreeze(
   } catch (error) {
     evidence.sourceFreezeFailure =
       error instanceof Error ? error.message.slice(0, 1000) : 'source freeze unavailable';
+    evidence.status = 'INCOMPLETE';
+  }
+}
+
+/** Preserve the exact packed output check after UI/Stop/Quit cleanup. */
+export async function verifyDesktopPackedFreeze(
+  selected: { path: string; sha256: string },
+  before: Awaited<ReturnType<typeof readCapturedCandidateElectron>>,
+  evidence: Record<string, unknown>
+): Promise<void> {
+  try {
+    const after = await readCapturedCandidateElectron(selected);
+    assert.deepEqual(after, before, 'actual candidate resources remain exact after UI/Stop/Quit cleanup');
+    evidence.packedCandidateVerifiedAfterCleanup = true;
+  } catch (error) {
+    evidence.packedCandidateVerificationFailure = error instanceof Error ? error.message.slice(0, 1000) : 'candidate changed';
     evidence.status = 'INCOMPLETE';
   }
 }

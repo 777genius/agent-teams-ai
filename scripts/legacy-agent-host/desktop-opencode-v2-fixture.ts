@@ -61,6 +61,7 @@ export async function prepareDesktopOpenCodeV2Recipe(options: {
   );
   if (process.platform === 'darwin') {
     assert.ok(selection.processCustody, 'Darwin requires its exact packaged custody artifact');
+    assert.ok(!('kind' in selection.processCustody), 'Darwin requires its native artifact selection');
     const artifact = readPackagedProcessArtifact(selection.processCustody);
     assert.equal(
       createHash('sha256')

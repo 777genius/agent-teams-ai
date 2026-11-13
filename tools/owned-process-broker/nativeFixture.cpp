@@ -24,6 +24,16 @@ static PROCESS_INFORMATION child(const std::wstring& executable,const std::wstri
 int wmain(int argc,wchar_t** argv) {
   if(argc<2) return 22;
   std::wstring mode=argv[1];
+  const bool vendorHeld=mode.rfind(L"vendor-",0)==0;
+  if(vendorHeld) {
+    // TEST-only actors remain under the original controller's bounded outer Job.
+    // Normal nativeGate modes keep their existing finite lifetimes unchanged.
+    wchar_t go[2]{}; BOOL inJob=FALSE;
+    if(GetEnvironmentVariableW(L"OWNED_PROCESS_VENDOR_TEST_GO",go,2)!=1||go[0]!=L'1'||
+      !IsProcessInJob(GetCurrentProcess(),nullptr,&inJob)||!inJob) return 51;
+    mode=mode.substr(7);
+    if(mode!=L"tree"&&mode!=L"branch"&&mode!=L"leaf"&&mode!=L"sentinel"&&mode!=L"wait-gated"&&mode!=L"query-wait-gated") return 52;
+  }
   if(mode==L"tree"||mode==L"root-first"||mode==L"root-first-gated"||mode==L"service-pair"||mode==L"service-first"||mode==L"flood"||mode==L"breakaway"||mode==L"stdio"||mode==L"selection") {
     // The target-only first observable effect precedes child creation/output/scenario work.
     if((mode==L"selection"?argc!=7:argc!=4)||wcslen(argv[3])!=36) return 31;
@@ -34,22 +44,38 @@ int wmain(int argc,wchar_t** argv) {
     DWORD count=0; auto written=WriteFile(marker,nonce,sizeof(nonce),&count,nullptr);
     CloseHandle(marker); if(!written||count!=sizeof(nonce)) return 34;
   }
-  if(mode==L"wait"||mode==L"wait-gated") {
+  if(mode==L"wait"||mode==L"wait-gated"||mode==L"query-wait-gated") {
+    if(mode==L"query-wait-gated"&&!vendorHeld) return 54;
     if(argc!=4) return 23;
     DWORD pid=static_cast<DWORD>(wcstoul(argv[2],nullptr,10));
     uint64_t expected=_wcstoui64(argv[3],nullptr,16);
     HANDLE process=OpenProcess(SYNCHRONIZE|PROCESS_QUERY_LIMITED_INFORMATION,FALSE,pid);
     if(!process||birth(process)!=expected) return 24;
     std::puts("captured"); std::fflush(stdout);
-    if(mode==L"wait-gated") {
+    if(mode==L"query-wait-gated") {
+      unsigned queries=0;
+      for(;;) {
+        char command; DWORD count=0;
+        if(!ReadFile(GetStdHandle(STD_INPUT_HANDLE),&command,1,&count,nullptr)||count!=1) {
+          CloseHandle(process); return 55;
+        }
+        if(command=='W') break;
+        if(command!='Q'||++queries>4) { CloseHandle(process); return 56; }
+        // Same HANDLE captured before the provider's first resume. No PID reopen or signal.
+        const auto state=WaitForSingleObject(process,0);
+        if(state!=WAIT_TIMEOUT&&state!=WAIT_OBJECT_0) { CloseHandle(process); return 57; }
+        std::puts(state==WAIT_TIMEOUT?"alive":"absent"); std::fflush(stdout);
+      }
+    } else if(mode==L"wait-gated") {
       char ack; DWORD count=0;
       if(!ReadFile(GetStdHandle(STD_INPUT_HANDLE),&ack,1,&count,nullptr)||count!=1||ack!='1') return 47;
     }
-    auto result=WaitForSingleObject(process,15000); CloseHandle(process);
+    auto result=WaitForSingleObject(process,vendorHeld?INFINITE:15000); CloseHandle(process);
     return result==WAIT_OBJECT_0?0:25;
   }
-  if(mode==L"leaf") { Sleep(60000); return 0; }
-  if(mode==L"sentinel") { std::puts("sentinel"); std::fflush(stdout); Sleep(60000); return 0; }
+  if(mode==L"exit-fast") return 0;
+  if(mode==L"leaf") { Sleep(vendorHeld?INFINITE:60000); return 0; }
+  if(mode==L"sentinel") { std::puts("sentinel"); std::fflush(stdout); Sleep(vendorHeld?INFINITE:60000); return 0; }
   if(mode==L"selection") {
     if(std::wstring(argv[4])!=L""||std::wstring(argv[5])!=L"space quote \" slash\\ end\\"||
       std::wstring(argv[6])!=L"\u042f\u65e5") return 42;
@@ -118,9 +144,22 @@ int wmain(int argc,wchar_t** argv) {
   const bool branch=mode==L"branch"||mode==L"branch-first";
   if(!branch) std::printf("{\"root\":{\"pid\":%lu,\"birth\":\"%016llx\"}}\n",
     GetCurrentProcessId(),static_cast<unsigned long long>(birth(GetCurrentProcess())));
+  if(mode==L"service-pair") {
+    // Sequential original HANDLE exits exceed the debug registry's64 live cap.
+    // This is cumulative churn, never80 simultaneously owned live children.
+    for(DWORD index=0;index<80;++index) {
+      auto transient=child(executable,L"exit-fast");
+      DWORD code=MAXDWORD;
+      const bool exited=WaitForSingleObject(transient.hProcess,5000)==WAIT_OBJECT_0&&
+        GetExitCodeProcess(transient.hProcess,&code)!=FALSE;
+      if(!CloseHandle(transient.hProcess)||!exited||code!=0) return 53;
+    }
+    std::puts("{\"retiredChildren\":80}"); std::fflush(stdout);
+  }
   const std::wstring branchMode=mode==L"service-first"
-    ? L"branch-first \""+std::wstring(argv[2])+L".branch-release\"" : L"branch";
-  auto a=child(executable,branch?std::wstring(L"leaf"):branchMode), b=child(executable,L"leaf");
+    ? L"branch-first \""+std::wstring(argv[2])+L".branch-release\"" : (vendorHeld?L"vendor-branch":L"branch");
+  const std::wstring leafMode=vendorHeld?L"vendor-leaf":L"leaf";
+  auto a=child(executable,branch?leafMode:branchMode), b=child(executable,leafMode);
   std::printf("{\"children\":[{\"pid\":%lu,\"birth\":\"%016llx\"},{\"pid\":%lu,\"birth\":\"%016llx\"}],\"parent\":%lu}\n",
     a.dwProcessId,static_cast<unsigned long long>(birth(a.hProcess)),
     b.dwProcessId,static_cast<unsigned long long>(birth(b.hProcess)),GetCurrentProcessId());
@@ -148,5 +187,5 @@ int wmain(int argc,wchar_t** argv) {
     }
     return 46;
   }
-  Sleep(60000); return 0;
+  Sleep(vendorHeld?INFINITE:60000); return 0;
 }

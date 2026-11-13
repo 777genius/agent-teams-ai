@@ -129,7 +129,7 @@ test('real controller registry and existing command scanner cold-recover origina
   assert.deepEqual(registry(), []);
   assert.equal(f.signals(), 1);
 });
-test('actual bound MCP catalog preserves PID/id metadata semantics and excludes all OS termination tools', () => {
+test('actual bound MCP catalog preserves PID/id metadata semantics and excludes all OS termination tools', async () => {
   const f = fixture();
   const process = f.owner.processCommands('TEST-member', {
     native: f.native,
@@ -146,16 +146,16 @@ test('actual bound MCP catalog preserves PID/id metadata semantics and excludes 
   ])
     assert.ok(names.includes(name));
   assert.ok(!names.some((name) => name.includes('terminate') || name.includes('kill')));
-  const registered = tools.call('process_register', {
+  const registered = await tools.callAsync('process_register', {
     commandId: 'TEST-mcp-register',
     pid: 1001,
     label: 'TEST service',
   });
   assert.ok(!JSON.stringify(registered).includes('auditToken'));
-  tools.call('process_stop', { commandId: 'TEST-mcp-metadata-stop', pid: 1001 });
+  await tools.callAsync('process_stop', { commandId: 'TEST-mcp-metadata-stop', pid: 1001 });
   assert.equal(f.signals(), 0);
   assert.ok(process.list()[0]!.stoppedAt);
-  tools.call('process_unregister', { commandId: 'TEST-mcp-unregister', id: process.list()[0]!.id });
+  await tools.callAsync('process_unregister', { commandId: 'TEST-mcp-unregister', id: process.list()[0]!.id });
   assert.deepEqual(process.list(), []);
   assert.equal(f.signals(), 0);
 });

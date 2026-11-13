@@ -1,5 +1,9 @@
+import { createWindowsTeamProcessCommands } from './WindowsTeamProcessCommands.js';
 import type {
   ProcessCommandReceipt,
+  ProcessObservation,
+  ProcessRegisterInput,
+  WindowsProcessNative,
   ProcessMetadataSelector,
   RegisteredProcessCapture,
   RegisteredProcessNative,
@@ -13,13 +17,7 @@ import {
   validateProcessReceipt,
 } from './validateProcessRecords.js';
 
-export interface RegisterInput {
-  pid: number;
-  label: string;
-  port?: number;
-  url?: string;
-  command?: string;
-}
+export type RegisterInput = ProcessRegisterInput;
 export interface ProcessRegistryPolicy {
   readStrict(): TeamProcessRow[];
   register(input: RegisterInput & { from: string }): TeamProcessRow;
@@ -41,9 +39,12 @@ export interface ProcessTeamOwnerContext {
   /** Authenticated original MCP connection resolves exact current member delivery, never input.from. */
   registrar(): RegistrarBinding;
   native?: RegisteredProcessNative;
+  windows?: WindowsProcessNative;
   registry: ProcessRegistryPolicy;
   digest(value: unknown): string;
   assertCurrent(): void;
+  /** Full original Runtime/input guard; the async facet invokes it only outside this Team fence. */
+  assertAsyncCurrent?(): void;
   reserved(commandId: string): boolean;
   /** Existing listTeamCommandEntries, including all-family validation; never a second journal. */
   commandEntries(): readonly unknown[];
@@ -95,8 +96,23 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
       return refuse('hold');
     return row;
   };
+  const observeOriginal = (capture: RegisteredProcessCapture, receipts = processReceipts(),
+    observations?: ReadonlyMap<string, ProcessObservation>): ProcessObservation => {
+    // A completed native exit observation remains true after an owner-local pidfd is gone.
+    // Requested/accepted signals and metadata stops are never absence evidence.
+    const terminal = receipts.some(receipt =>
+      ((receipt.operation === 'terminate' && receipt.state.phase === 'completed' &&
+        receipt.state.native === 'observed-absent') ||
+       (receipt.operation === 'register' && receipt.nativeAbsence !== undefined)) &&
+      digest(receipt.capture) === digest(capture));
+    if (terminal) return 'absent';
+    // A synchronous Team snapshot has no native Windows result. Never send v5 to a POSIX adapter.
+    return capture.version === 5 ? observations?.get(digest(capture)) ?? 'unknown'
+      : options.native?.observe(capture) ?? 'unknown';
+  };
   const ref = (row: TeamProcessRow) => `p1:${row.id}:${digest({ binding: options.binding, row })}`;
-  const view = (row: TeamProcessRow, completing?: ProcessCommandReceipt): TeamProcessView => {
+  const view = (row: TeamProcessRow, completing?: ProcessCommandReceipt,
+    observations?: ReadonlyMap<string, ProcessObservation>): TeamProcessView => {
     const { capturedNative, capturedByCommand } = row;
     const metadata = {
       id: row.id,
@@ -125,18 +141,21 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
       )
         return refuse('hold');
     }
+    const receipts = capturedNative ? processReceipts() : [];
     const observation =
-      capturedNative && options.native
-        ? options.native.observe(capturedNative)
+      capturedNative
+        ? observeOriginal(capturedNative, receipts, observations)
         : row.stoppedAt
           ? 'metadata-stopped'
           : 'unknown';
     const unresolved = capturedNative
-      ? processReceipts().filter(
+      ? receipts.filter(
           (receipt) =>
             receipt.operation === 'terminate' &&
             receipt.state.phase === 'requested' &&
-            digest(receipt.capture?.target) === digest(capturedNative.target)
+            (capturedNative.version === 4 || capturedNative.version === 5
+              ? digest(receipt.capture) === digest(capturedNative)
+              : digest(receipt.capture?.target) === digest(capturedNative.target))
         )
       : [];
     if (unresolved.length > 1) return refuse('hold');
@@ -204,21 +223,41 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
     };
     return { replay: false as const, receipt };
   };
-  return {
+  const visibleRows = (): TeamProcessRow[] => {
+    const rows = registry.readStrict();
+    // Metadata unregister cannot hide an original uncertain native request from cold UI reads.
+    // This projects the immutable receipt only; it never recreates registry metadata or a target.
+    const retained = processReceipts().filter(
+      (receipt) =>
+        receipt.operation === 'terminate' &&
+        receipt.state.phase === 'requested' &&
+        receipt.original &&
+        !rows.some((row) => row.id === receipt.original!.id)
+    );
+    if (retained.length > 64 || rows.length + retained.length > 1024) return refuse('hold');
+
+    return [...rows, ...retained.map((receipt) => receipt.original!)];
+  };
+  const legacy = {
     /** Trusted lifecycle admission; metadata unregister cannot discard an original captured native target. */
     assertReleased(): void {
       store.fenced(() => {
         enter('admin');
         const receipts = processReceipts();
         if (receipts.some(row => row.phase !== 'completed' && row.phase !== 'rejected')) return refuse('hold');
+        const natural = new Set<string>();
+        for (const receipt of receipts) if (receipt.nativeAbsence) {
+          const key = digest(receipt.capture);
+          if (receipt.nativeAbsence.settlement !== 'settled' || natural.has(key)) return refuse('hold');
+          natural.add(key);
+        }
         const rows = registry.readStrict();
         if (rows.some(row => !row.capturedNative)) return refuse('hold');
         const captures = new Map<string, RegisteredProcessCapture>();
         for (const row of rows) { view(row); if (row.capturedNative) captures.set(digest(row.capturedNative), row.capturedNative); }
         for (const receipt of receipts) if (receipt.capture) captures.set(digest(receipt.capture), receipt.capture);
-        if (captures.size && !options.native) return refuse('hold');
         for (const capture of captures.values()) {
-          const observed = options.native!.observe(capture);
+          const observed = observeOriginal(capture, receipts);
           if (observed !== 'absent' && observed !== 'stale') return refuse('hold');
         }
         options.assertCurrent();
@@ -244,20 +283,7 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
     list(): TeamProcessView[] {
       return store.fenced(() => {
         enter('read');
-        const rows = registry.readStrict();
-        // Metadata unregister cannot hide an original uncertain native request from cold UI reads.
-        // This projects the immutable receipt only; it never recreates registry metadata or a target.
-        const retained = processReceipts().filter(
-          (receipt) =>
-            receipt.operation === 'terminate' &&
-            receipt.state.phase === 'requested' &&
-            receipt.original &&
-            !rows.some((row) => row.id === receipt.original!.id)
-        );
-        if (retained.length > 64 || rows.length + retained.length > 1024) return refuse('hold');
-        const result = [...rows, ...retained.map((receipt) => receipt.original!)].map((row) =>
-          view(row)
-        );
+        const result = visibleRows().map(row => view(row));
         options.assertCurrent();
         return result;
       });
@@ -372,7 +398,7 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
         if (admitted.replay) return structuredClone(admitted.receipt);
         const original = select(reference),
           capture = original.capturedNative;
-        if (!capture || !options.native || !view(original).canTerminate) return refuse('hold');
+        if (!capture || capture.version === 5 || !options.native || !view(original).canTerminate) return refuse('hold');
         const receipt: ProcessCommandReceipt = {
           ...admitted.receipt,
           processRef: reference,
@@ -407,7 +433,7 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
           receipt.state.phase === 'requested' &&
           receipt.capture &&
           receipt.original &&
-          options.native?.observe(receipt.capture) === 'absent'
+          observeOriginal(receipt.capture) === 'absent'
         ) {
           enter('admin');
           // Completion observes only the immutable original incarnation. Metadata changes
@@ -443,4 +469,9 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
       });
     },
   };
+  return { ...legacy, ...(options.windows ? { windows: createWindowsTeamProcessCommands({
+    options, native: options.windows, enter, admit, readReceipt, persist, processReceipts,
+    visibleRows, select, view, legacyRegister: legacy.register,
+    legacyLookup: legacy.lookup, legacyTerminate: legacy.terminate,
+  }) } : {}) };
 }

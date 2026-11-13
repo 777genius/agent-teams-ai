@@ -8,7 +8,9 @@ import { OwnedProcessFacade } from '../../owned-process/processFacade.js';
 import { isCanonicalNativePath } from '../../owned-process/nativePath.js';
 
 import type { NativeProcessProfile } from '../../composition/nativeProcessProfile.js';
-import type { PendingOwnedProcess, PreparedOwnedProcess, ProcessOwner, ResolvedLaunchSpec } from '../../owned-process/contract.js';
+import type { OwnedLaunchPort, PendingOwnedProcess, PreparedOwnedProcess, ProcessOwner, ResolvedLaunchSpec } from '../../owned-process/contract.js';
+import type { RegistrarBinding } from '../../process/registeredProcessContracts.js';
+import type { WindowsRegisteredProcessPort, WindowsServiceIntent } from '../../owned-process/retainedServiceContracts.js';
 import type { CapturedProcessLaunch } from './CapturedProcess.js';
 
 /** CreateProcessW argv quoting. No cmd.exe, PATH resolution or shell metacharacter expansion. */
@@ -39,13 +41,18 @@ export class WindowsCapturedProcess {
   private readonly incarnation = randomUUID();
   private readonly profile: NativeProcessProfile;
   private readonly port: ReturnType<typeof createWindowsOwnedLaunchPort>;
+  private readonly registeredProcesses: WindowsRegisteredProcessPort | undefined;
   private sealed = false;
 
   constructor(profile: NativeProcessProfile, private readonly current: () => boolean,
-    private readonly verifyTarget: () => void) {
+    private readonly verifyTarget: () => void,
+    retainedPort?: OwnedLaunchPort & { readonly registeredProcesses?: WindowsRegisteredProcessPort }) {
     this.profile = structuredClone(profile);
+    this.registeredProcesses = retainedPort?.registeredProcesses;
+    if (this.profile.windowsBroker?.capability && !retainedPort)
+      throw new Error('Scoped Windows custody requires the original Main owner');
     this.verifyBroker();
-    this.port = createWindowsOwnedLaunchPort(this.profile.windowsBroker!.path);
+    this.port = retainedPort ?? createWindowsOwnedLaunchPort(this.profile.windowsBroker!.path);
   }
 
   private verifyBroker(): void {
@@ -56,7 +63,7 @@ export class WindowsCapturedProcess {
     const before = lstatSync(broker.path, { bigint: true });
     if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > 16n * 1024n * 1024n ||
       realpathSync(broker.path) !== broker.path) throw new Error('Windows native custody unavailable');
-    verifyStagedBroker(broker.path, broker.arch);
+    verifyStagedBroker(broker.path, broker.arch, broker.capability ?? 'whole-job-v1');
     if (createHash('sha256').update(readFileSync(broker.path)).digest('hex') !== broker.sha256)
       throw new Error('Windows native custody unavailable');
     const after = lstatSync(broker.path, { bigint: true });
@@ -104,6 +111,18 @@ export class WindowsCapturedProcess {
     return child;
   }
 
+  /** Called under the Team fence after its captured source guard; no Runtime lookup or native IO. */
+  prepareRegisteredProcess(pid: number, registrar: RegistrarBinding): WindowsServiceIntent {
+    if (this.sealed || this.profile.windowsBroker?.capability !== 'service-scopes-v1' || !this.registeredProcesses)
+      throw new Error('process:hold');
+    this.verifyBroker(); this.verifyTarget();
+    const roots = [...this.allocations].filter(value => value.installed && value.prepared &&
+      !value.stopped && !value.cleanup && value.child?.exitCode === null);
+    if (roots.length !== 1) throw new Error('process:hold');
+    // The private port requires the original resume ACK and its Team-only capture guard.
+    return this.registeredProcesses.prepareCapture(roots[0]!.pending, pid, registrar);
+  }
+
   seal(): void { this.sealed = true; }
 
   isRunning(): boolean {
@@ -138,7 +157,7 @@ export class WindowsCapturedProcess {
         if (outcome.kind !== 'confirmed') return false;
         // Drain is separately bounded. An incomplete tail is never root/tree proof;
         // only the genuine Stop receipt and full release ACK/exit settle custody.
-        if (allocation.prepared) await allocation.prepared.drain(performance.now() + 3000);
+        await allocation.pending.drain(performance.now() + 3000);
         await allocation.pending.release(outcome.receipt, 'job-membership');
         allocation.stopped = true;
         return true;

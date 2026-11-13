@@ -28,6 +28,7 @@ import type { TeamMcpNativeMemberActionPort } from '../mcp/nativeMemberActionCon
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { MemberEntry } from './MemberEntry.js';
 import type { ProcessCustody } from './processCustody.js';
+import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 
 export type MemberInputCapture = (
   requireLead?: boolean
@@ -41,6 +42,7 @@ export function createRuntimeMemberProviderFactory(options: {
   hostIncarnation: string;
   windows: ToolEvidenceWindows;
   processCustody?: ProcessCustody;
+  retainedWindowsLaunch?: HostWindowsLaunch;
   createProvider?(context: MemberProviderContext): MemberProvider;
   groups?(
     entry: MemberEntry,
@@ -149,6 +151,8 @@ export function createRuntimeMemberProviderFactory(options: {
         process: createMemberProcessMcpPort({
           entry,
           ...(options.processCustody ? { native: options.processCustody } : {}),
+          ...(entry.profile.provider === 'claude' && entry.profile.windowsBroker?.capability === 'service-scopes-v1' && options.retainedWindowsLaunch
+            ? { windows: options.retainedWindowsLaunch.registeredProcesses } : {}),
           assertCurrent: authority.assertCurrent,
           assertAllocatedCurrent: authority.assertAllocatedCurrent,
           captureSource,
@@ -206,6 +210,8 @@ export function createRuntimeMemberProviderFactory(options: {
           endpoint,
           connection,
           ...(options.processCustody ? { processCustody: options.processCustody } : {}),
+          ...(entry.profile.provider === 'claude' && options.retainedWindowsLaunch
+            ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
           instructions: memberInitialInstructions(
             selected.name,
             selected.role,

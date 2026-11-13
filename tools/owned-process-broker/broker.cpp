@@ -12,8 +12,13 @@
 #include <mutex>
 #include <map>
 #include <thread>
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE) && defined(OWNED_PROCESS_SERVICE_SCOPES)
+#error Product service scopes cannot include the TEST debugger adapter
+#endif
 #ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
 #include "debugServiceTest.h"
+#elif defined(OWNED_PROCESS_SERVICE_SCOPES)
+#include "serviceDebugLoop.h"
 #endif
 
 namespace {
@@ -23,7 +28,26 @@ std::timed_mutex state;
 std::mutex repliesMutex;
 std::condition_variable repliesReady;
 std::deque<wire::Frame> replies;
-std::map<uint64_t,wire::Frame> cachedReplies;
+// One bounded effect history under repliesMutex; read-only queries never enter it.
+std::map<uint64_t,wire::Frame> cachedReplies, idempotentRequests;
+constexpr size_t PendingEffects=4, SettledReplies=64;
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE) || defined(OWNED_PROCESS_SERVICE_SCOPES)
+std::atomic<unsigned> serviceBusy{0}; // Three service workers leave the fourth wire slot for whole-Job cleanup.
+#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+namespace service_runtime=debug_service_test;
+#else
+namespace service_runtime {
+// Separate product bound: current Team rows are capped at 1024. Unregistered
+// descendants share this finite budget and retire only after original absence.
+// Query/Stop/release need no new scope allocation, even when this budget is full.
+constexpr size_t ProductScopeLimit=4096;
+owned_service::Scopes scopes{ProductScopeLimit};
+bool run(DWORD rootPid,HANDLE originalRoot,HANDLE outer,std::unique_lock<std::timed_mutex>& lock) {
+  return owned_service::runDebugLoop(rootPid,originalRoot,outer,lock,scopes);
+}
+}
+#endif
+#endif
 std::array<uint8_t,16> generation{};
 std::atomic<bool> sealed{false}, launched{false}, admissionDone{false}, stopBusy{false};
 std::atomic<bool> releaseAccepted{false};
@@ -54,9 +78,12 @@ wire::Frame confirmedStop{};
 void reply(uint16_t op,uint64_t id,const std::vector<uint8_t>& payload={}) {
   std::lock_guard<std::mutex> lock(repliesMutex);
   if(replies.size()>=8) abandon();
-  if(op==wire::Stopped||op==wire::Released||op==wire::Failed) {
-    if(cachedReplies.size()>=66&&!cachedReplies.count(id)) abandon();
+  if(idempotentRequests.count(id)) {
     cachedReplies[id]={op,id,generation,payload};
+    while(cachedReplies.size()>SettledReplies) {
+      const auto retired=cachedReplies.begin()->first;
+      cachedReplies.erase(retired); idempotentRequests.erase(retired);
+    }
   }
   replies.push_back({op,id,generation,payload}); repliesReady.notify_one();
 }
@@ -195,7 +222,7 @@ void admit(wire::Frame frame) {
     if(!sealed) {
       creation=Uncertain; // any interrupted admission is uncertain until positively returned
       DWORD flags=EXTENDED_STARTUPINFO_PRESENT|CREATE_SUSPENDED|CREATE_UNICODE_ENVIRONMENT|CREATE_NO_WINDOW;
-#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE) || defined(OWNED_PROCESS_SERVICE_SCOPES)
       flags|=DEBUG_PROCESS;
 #endif
       ok=CreateProcessW(spec.executable.c_str(),spec.command.data(),nullptr,nullptr,TRUE,
@@ -216,10 +243,10 @@ void admit(wire::Frame frame) {
     birthKnown=true; admissionDone=true;
     std::vector<uint8_t> p; wire::append(p,process.dwProcessId); wire::append(p,birth);
     reply(wire::Prepared,frame.id,p);
-#ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE) || defined(OWNED_PROCESS_SERVICE_SCOPES)
     // Preserve the existing admission worker as the creating/debugging thread.
     // The command reader, root watcher and Stop worker remain independent.
-    if(!debug_service_test::run(process.dwProcessId,root,job,lock)) abandon();
+    if(!service_runtime::run(process.dwProcessId,root,job,lock)) abandon();
 #endif
   } catch(DWORD error) {
     admissionDone=true; closeTargetCopies(); failure(frame.id,creation,error);
@@ -282,6 +309,92 @@ void stop(wire::Frame frame) {
     wire::append(p,DWORD{0}); wire::append(p,DWORD{WAIT_TIMEOUT}); stopBusy=false; reply(wire::Stopped,frame.id,p);
   }
 }
+
+bool serviceRequest(uint16_t op) {
+  return op>=wire::ServiceCapture&&op<=wire::ServiceCaptureCurrent;
+}
+bool effectRequest(uint16_t op) {
+  return op==wire::Stop||op==wire::Release||op==wire::ServiceCapture||
+    op==wire::ServiceStop||op==wire::ServiceSettle||op==wire::ServiceCaptureCurrent;
+}
+std::vector<uint8_t> refusalPayload(wire::ServiceRejection reason,DWORD code) {
+  std::vector<uint8_t> p; wire::append(p,static_cast<uint8_t>(reason)); wire::append(p,code); return p;
+}
+void serviceRefusal(uint64_t id,wire::ServiceRejection reason,DWORD code) {
+  reply(wire::ServiceRefused,id,refusalPayload(reason,code));
+}
+void staleRequest(const wire::Frame& frame) {
+  if(serviceRequest(frame.op)) serviceRefusal(frame.id,wire::RetiredRequest,ERROR_NOT_FOUND);
+  else failure(frame.id,Uncertain,ERROR_NOT_FOUND);
+}
+bool retainEffect(const wire::Frame& frame) {
+  std::lock_guard<std::mutex> lock(repliesMutex);
+  if(idempotentRequests.size()-cachedReplies.size()>=PendingEffects) return false;
+  idempotentRequests.emplace(frame.id,frame); return true;
+}
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE) || defined(OWNED_PROCESS_SERVICE_SCOPES)
+std::vector<uint8_t> serviceIdentity(const owned_service::Facts& facts) {
+  std::vector<uint8_t> p; wire::append(p,facts.key); wire::append(p,facts.birth); return p;
+}
+std::vector<uint8_t> serviceFacts(const owned_service::Facts& facts) {
+  auto p=serviceIdentity(facts); wire::append(p,static_cast<uint8_t>(facts.rootExited));
+  wire::append(p,facts.active); wire::append(p,facts.exitCode);
+  wire::append(p,facts.queryError); wire::append(p,facts.dispatchError); return p;
+}
+void serviceOperation(wire::Frame frame,ULONGLONG admittedAt) {
+  uint16_t response=wire::ServiceRefused;
+  std::vector<uint8_t> payload;
+  try {
+    auto& scopes=service_runtime::scopes;
+    if(frame.op==wire::ServiceCapture||frame.op==wire::ServiceCaptureCurrent) {
+      const auto pid=wire::get<DWORD>(frame.payload.data());
+      const auto key=frame.op==wire::ServiceCaptureCurrent?scopes.registerCurrent(pid):
+        scopes.registerExact(pid,wire::get<uint64_t>(frame.payload.data()+4));
+      payload=serviceIdentity(scopes.query(key)); response=wire::ServiceCaptured;
+    } else {
+      const auto key=wire::get<uint64_t>(frame.payload.data());
+      if(frame.op==wire::ServiceQuery) {
+        payload=serviceFacts(scopes.query(key)); response=wire::ServiceObserved;
+      } else if(frame.op==wire::ServiceStop) {
+        payload=serviceFacts(scopes.stop(key,wire::get<DWORD>(frame.payload.data()+8),admittedAt));
+        response=wire::ServiceStopped;
+      } else {
+        const auto facts=scopes.query(key);
+        if(!owned_service::absent(facts)) throw DWORD{ERROR_INVALID_STATE};
+        scopes.releaseRegistration(key);
+        payload=serviceIdentity(facts); response=wire::ServiceSettled;
+      }
+    }
+  } catch(DWORD error) {
+    const auto reason=error==ERROR_NOT_FOUND?wire::Missing:error==ERROR_BUSY?wire::Busy:
+      (error==ERROR_INVALID_STATE||error==ERROR_INVALID_DATA||error==ERROR_INVALID_PARAMETER)?wire::Invalid:wire::Unknown;
+    payload=refusalPayload(reason,error);
+  } catch(...) { payload=refusalPayload(wire::Unknown,ERROR_INVALID_DATA); }
+  --serviceBusy; // Native work ended before its reply becomes observable to the next requester.
+  reply(response,frame.id,payload);
+}
+#endif
+void admitService(wire::Frame frame) {
+  const auto admittedAt=GetTickCount64(); // Capture once, before an asynchronous worker may wait.
+  const size_t expected=frame.op==wire::ServiceCaptureCurrent?4:
+    (frame.op==wire::ServiceCapture||frame.op==wire::ServiceStop)?12:8;
+  if(frame.payload.size()!=expected||
+     (frame.op==wire::ServiceStop&&wire::get<DWORD>(frame.payload.data()+8)>60000)) {
+    serviceRefusal(frame.id,wire::Invalid,ERROR_INVALID_PARAMETER); return;
+  }
+#if defined(OWNED_PROCESS_TEST_DEBUG_SERVICE) || defined(OWNED_PROCESS_SERVICE_SCOPES)
+  if(!launched||!admissionDone||sealed) {
+    serviceRefusal(frame.id,wire::Invalid,ERROR_INVALID_STATE); return;
+  }
+  if(serviceBusy.fetch_add(1)>=3) {
+    --serviceBusy; serviceRefusal(frame.id,wire::Busy,ERROR_BUSY); return;
+  }
+  std::thread(serviceOperation,std::move(frame),admittedAt).detach();
+#else
+  (void)admittedAt;
+  serviceRefusal(frame.id,wire::Unqualified,ERROR_NOT_SUPPORTED);
+#endif
+}
 } // namespace
 
 int main() {
@@ -296,43 +409,53 @@ int main() {
   releaseContentionEnabled=GetEnvironmentVariableW(L"OWNED_PROCESS_TEST_RELEASE_CONTENTION",contentionFlag,2)==1&&contentionFlag[0]==L'1';
 #endif
   std::thread(writer).detach(); std::thread(watcher).detach();
-  uint64_t lastId=0; bool bound=false; size_t frames=0;
-  std::map<uint64_t,wire::Frame> idempotentRequests;
+  uint64_t lastId=0; bool bound=false;
   try {
     wire::Frame frame;
     while(wire::read(control,frame,pendingReadObserved)) {
-      if(++frames>1024||!frame.id) abandon();
+      if(!frame.id) abandon();
       if(!bound) { generation=frame.generation; bound=true; }
       if(frame.generation!=generation) abandon();
       if(frame.id<=lastId) {
-        auto previous=idempotentRequests.find(frame.id);
-        if(previous==idempotentRequests.end()||previous->second.op!=frame.op||
-          previous->second.payload!=frame.payload) abandon();
-        std::lock_guard<std::mutex> lock(repliesMutex);
-        auto cached=cachedReplies.find(frame.id);
-        if(cached!=cachedReplies.end()) {
-          if(replies.size()>=8) abandon();
-          replies.push_back(cached->second); repliesReady.notify_one();
+        bool retired=false;
+        {
+          std::lock_guard<std::mutex> lock(repliesMutex);
+          const auto previous=idempotentRequests.find(frame.id);
+          retired=previous==idempotentRequests.end();
+          if(!retired) {
+            if(previous->second.op!=frame.op||previous->second.payload!=frame.payload) abandon();
+            const auto cached=cachedReplies.find(frame.id);
+            if(cached!=cachedReplies.end()) {
+              if(replies.size()>=8) abandon();
+              replies.push_back(cached->second); repliesReady.notify_one();
+            }
+          }
         }
-        continue; // identical in-flight duplicate does not redispatch
+        if(retired) staleRequest(frame); // Never reinterpret an evicted ID as a new effect.
+        continue; // Identical pending/cached effect does not redispatch.
       }
       lastId=frame.id;
-      if(frame.op==wire::Stop||frame.op==wire::Release) {
-        if(idempotentRequests.size()>=65) abandon();
-        idempotentRequests.emplace(frame.id,frame);
+      if(effectRequest(frame.op)&&!retainEffect(frame)) {
+        if(serviceRequest(frame.op)) serviceRefusal(frame.id,wire::Busy,ERROR_BUSY);
+        else failure(frame.id,Uncertain,ERROR_BUSY);
+        continue; // Refuse before dispatch; unresolved effects are never evicted.
       }
+      if(serviceRequest(frame.op)) { admitService(std::move(frame)); continue; }
       if(frame.op==wire::Launch) {
         if(launched.exchange(true)) abandon();
         std::thread(admit,std::move(frame)).detach();
       } else if(frame.op==wire::Stop) {
 #ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
-        if(frame.payload.size()==17&&frame.payload[4]==2) {
+        if(frame.payload.size()==17&&(frame.payload[4]==2||frame.payload[4]==3)) {
           if(wire::get<DWORD>(frame.payload.data())>60000) abandon();
           std::thread([selected=std::move(frame)] {
             try {
-              reply(wire::Stopped,selected.id,debug_service_test::stop(
-                wire::get<DWORD>(selected.payload.data()+5),wire::get<uint64_t>(selected.payload.data()+9),
-                wire::get<DWORD>(selected.payload.data())));
+              const auto pid=wire::get<DWORD>(selected.payload.data()+5);
+              const auto serviceBirth=wire::get<uint64_t>(selected.payload.data()+9);
+              const auto budget=wire::get<DWORD>(selected.payload.data());
+              const auto result=selected.payload[4]==2?debug_service_test::stop(pid,serviceBirth,budget):
+                debug_service_test::retireExact(pid,serviceBirth,budget);
+              reply(wire::Stopped,selected.id,result);
             } catch(DWORD error) { failure(selected.id,Running,error); }
             catch(...) { failure(selected.id,Running,ERROR_INVALID_DATA); }
           }).detach();
