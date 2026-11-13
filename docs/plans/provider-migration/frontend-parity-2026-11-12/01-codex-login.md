@@ -423,3 +423,80 @@ Cancel не откатывает credentials и не вызывает logout. С
 held cross-target admission, transient retry и selection change во время await.
 Новый store, auth framework, retry timer и широкая unit suite не требуются.
 Следующий круг: независимое plan/diff review, затем targeted execution и exact-head CI.
+
+### R7 — closed failure facts для actual Linux login UI, 2026-11-13
+
+Исходный qualification head `9c545430f5837aa0c873819fe68df2d0a387b1e1`,
+[run 43396297854 / job 131794213065](https://github.com/777genius/agent-teams-ai/actions/runs/43396297854/job/131794213065):
+actual Claude/Codex schedule prerequisites прошли, затем Desktop завершился
+INCOMPLETE. Лог содержит лишь итоговое `Codex login UI proof incomplete`
+(`desktop-backend-smoke.ts:721`). Artifact `14029615937`,
+ZIP SHA256 `bc87f2e79b9bfafa8bdd6c07cff6aa8966353240463a7a043f52b00854f3ecf9`,
+сохранён штатным CI, но здесь не извлечён. Этот лог не устанавливает, что был
+выполнен Start, и не доказывает auth/account/CDP cause. R4, предыдущие login
+результаты и vendor-success gap из R5 не переоцениваются.
+
+#### Исходные seams и подтверждённый пробел наблюдения
+
+- [Smoke catch/finally](https://github.com/777genius/agent-teams-ai/blob/9c545430f5837aa0c873819fe68df2d0a387b1e1/scripts/legacy-agent-host/desktop-backend-smoke.ts)
+  (`c5bacaa8`): catch сохраняет original failure и existing original-read CDP
+  facts; finally пишет private receipt, выводит только status/path и затем
+  предъявляет generic login assertion. Поэтому публичный лог не различает
+  pre-journey отказ, частично выполненный login и неподтверждённый cleanup.
+- [Original login journey](https://github.com/777genius/agent-teams-ai/blob/9c545430f5837aa0c873819fe68df2d0a387b1e1/scripts/legacy-agent-host/desktop-codex-login-ui-proof.ts)
+  (`c64813ba`) уже публикует в этом же evidence proof до first read/input,
+  отдельный browser/device case до Start и milestones только после своих
+  проверок: Copy, TEST opener, reopen, original Cancel, clearing private fields.
+  [UI controls](https://github.com/777genius/agent-teams-ai/blob/9c545430f5837aa0c873819fe68df2d0a387b1e1/scripts/legacy-agent-host/desktop-ui-controls.ts)
+  (`c66034be`) записывают попытку ввода до dispatch: такой step не означает
+  подтверждённый effect и не идентифицирует последующую failed assertion.
+- [Initial account barrier](https://github.com/777genius/agent-teams-ai/blob/9c545430f5837aa0c873819fe68df2d0a387b1e1/scripts/legacy-agent-host/desktop-codex-account-proof.ts)
+  (`ba94c287`) сохраняет account snapshot. Сам account объект не является
+  допустимой log projection. `desktop-proof-mode.ts` (`82f1cc6f`) намеренно
+  исключает login из generic renderer failure screenshot/DOM collection:
+  эта privacy граница остаётся прежней.
+
+#### Минимальное изменение существующего TEST пути
+
+1. В existing `desktop-codex-login-ui-proof.ts` добавить чистую closed projection
+   уже удерживаемого evidence. Она ничего не читает из renderer, account facade,
+   journal, файлов или процесса и не разбирает/выводит raw error message.
+2. Явно выбрать только: наличие initial snapshot/proof/original failure;
+   original listener-failure presence и его finite holder count, если исходный
+   closed shape валиден; proof status; не более двух browser/device cases с
+   closed native status и существующими boolean milestones; original cleanup
+   presence, finite remaining count, captured Host observed/absent и наличие
+   cleanup failure. Account объект, auth URL/code, clipboard, DOM/selector/text,
+   PID/path, command/target identifiers и arbitrary extra fields не копировать.
+3. Для steps вывести capped count/overflow и только последнюю уже записанную
+   попытку: closed action плюс exact fixed-label → stage enum. Не сканировать
+   неограниченный массив и не выдавать эту stage за место ошибки/успешный Start.
+   Unknown label/type остаётся unknown. Отсутствующее подтверждение milestone
+   возвращает null, а не выдуманное false/«effect не выполнялся».
+4. В existing final console row `desktop-backend-smoke.ts` добавить эту projection
+   только при `mode === 'codex-login-ui'` и `status !== 'PASS'`, после прежнего
+   cleanup и записи receipt. Максимум 4 KiB сериализованного объекта, фиксированные
+   поля/enums, конечные counts с явным overflow/unknown. Невалидные/лишние поля
+   не должны бросать новую ошибку или скрывать исходный generic failure.
+   Private receipt и прежние final status/cleanup assertions сохранить.
+5. Не добавлять snapshot/RPC, новый input, login retry, opener call, screenshot,
+   таймер, deadline или workflow/job. Следующий уже необходимый exact-head
+   qualification job получает facts из того же original journey; старый 9c
+   результат остаётся INCOMPLETE до нового фактического результата.
+
+#### Проверка и круги review
+
+- Один critical case в existing `desktop-team-ui-smoke.test.ts`: передать
+  partial proof с TEST private sentinels внутри account/error/step target/extra
+  fields; проверить закрытый JSON без sentinels, null для отсутствующих
+  подтверждений, finite bound/overflow и отсутствие мутации original evidence.
+  Не моделировать успешный OAuth и не добавлять отдельную suite/matrix.
+- Проверить scripts types, targeted existing case, lint/source cap; actual login
+  квалифицируется прежним Linux Desktop gate, не результатом pure projector.
+- Круг 1, source: outer assertion действительно скрывает детали в публичном
+  логе, но private original receipt остаётся; product auth defect не установлен.
+- Круг 2, privacy/failure semantics: только existing retained facts, no raw
+  failure dump, attempted action отдельно от milestone и cleanup; generic
+  renderer collector остаётся запрещён login mode. Далее независимое plan/source
+  review и фактический exact-head CI. Здесь source implementation/исполнение ещё
+  не выполнялись.
