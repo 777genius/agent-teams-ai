@@ -1105,6 +1105,9 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
       "  const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http://localhost:'));",
       "  if (!win) throw new Error('Real Electron test BrowserWindow missing');",
       '  const mainFocusedBefore = win.isFocused();',
+      '  let mainBlurEvents = 0;',
+      '  const onMainBlur = () => { mainBlurEvents++; };',
+      "  win.on('blur', onMainBlur);",
       '  const child = spawn(' + JSON.stringify(nodeBinary) + ', [' +
         JSON.stringify(scriptPath) + ", '--teammate-fixture'], " +
         "{ detached: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });",
@@ -1112,6 +1115,7 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
       '    let settled = false, ready = false, stderr = ""; const tools = [];',
       '    const finish = (error, value) => {',
       '      if (settled) return; settled = true; clearTimeout(deadline);',
+      "      win.off('blur', onMainBlur);",
       "      if (error && child.pid && child.exitCode === null && child.signalCode === null) {",
       "        spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });",
       '      }',
@@ -1130,7 +1134,7 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
       "    child.once('close', (code, signal) => {",
       "      if (!ready || code !== 0) return finish(new Error('Native teammate failed: ' + (signal || code) + ' ' + stderr));",
       "      finish(null, { mainElectronPid: process.pid, teammatePid: child.pid,",
-      "        detached: false, windowsHide: true, mainFocusedBefore, mainFocusedAfter: win.isFocused(), tools });",
+      "        detached: false, windowsHide: true, mainFocusedBefore, mainFocusedAfter: win.isFocused(), mainBlurEvents, tools });",
       '    });',
       '  });',
       '})()',
@@ -1147,6 +1151,7 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
     const focusObservable = evidence.mainFocusedBefore === true && rendererFocusedBefore === true;
     if (focusObservable) {
       assert.equal(evidence.mainFocusedAfter, true, 'Electron app lost native focus during tool calls');
+      assert.equal(evidence.mainBlurEvents, 0, 'Electron app temporarily lost focus during tool calls');
       assert.equal(rendererFocusedAfter, true, 'Electron renderer lost focus during tool calls');
     }
     await captureScreenshot(client, fixture, 'windows-electron-console');
