@@ -2031,3 +2031,98 @@ Initializer, строгий listener guard, failure projection, число censu
 и byte-equality assertions остаются прежними. Новые tests и бюджеты не нужны.
 Это исправление compilation, не доказательство устранения Linux listener leak;
 следующий штатный native cut обязан повторно пройти types и actual gate.
+
+## 45. §38 B/C: явная native поставка и исходный prepared intent до await
+
+**Уточнение до следующего source, база P09 `37cd3b4dd32a9899f92dfecbb9ab3f3489ba8711`.**
+A/§40/42/44 и §43 опубликованы в native child `dfcea017fad525e24e53d775088a72d013a5b96d`;
+run `43394213408` только начался. Новый A source не получает native PASS от прежних vendor runs.
+B/C остаются отдельной ещё не включённой фичей; этот раздел не меняет §38 D и не обещает восстановление SDK iterator.
+
+### Проверенные границы текущего source
+
+- [`brokerArtifact.ts` на fe6](https://github.com/777genius/agent-teams-ai/blob/fe6eece10344cf1cd6f7dbc216c7eb19070c7c9e/packages/legacy-agent-host/src/owned-process/brokerArtifact.ts)
+  принимает ровно schema1/шесть полей и проверяет PE/digest. Это whole-Job delivery, не доказательство service scopes.
+  [`debugServiceTest.h`](https://github.com/777genius/agent-teams-ai/blob/fe6eece10344cf1cd6f7dbc216c7eb19070c7c9e/tools/owned-process-broker/debugServiceTest.h)
+  включает debugger и `Scopes{64}` только в TEST target; product manifest не должен объявить их по наличию opcodes.
+- [`TeamProcessCommands.admit/register`](https://github.com/777genius/agent-teams-ai/blob/fe6eece10344cf1cd6f7dbc216c7eb19070c7c9e/packages/legacy-agent-host/src/process/TeamProcessCommands.ts)
+  сейчас создаёт prepared object, но пишет его лишь **после** synchronous capture. Простое добавление await оставит
+  effect без durable original intent. Existing `commands/`, validator/fingerprint и Team fence остаются единственным owner.
+- [`registeredProcessContracts.ts`](https://github.com/777genius/agent-teams-ai/blob/fe6eece10344cf1cd6f7dbc216c7eb19070c7c9e/packages/legacy-agent-host/src/process/registeredProcessContracts.ts)
+  допускает только Darwin/Linux capture; synchronous `signal(capture)` не несёт original command/deadline.
+  A Windows allocation не добавляется в POSIX `processRoots`: нужен настоящий typed consumer исходной Main capability.
+
+### B1. Одна явно выбранная сборка с service scopes
+
+1. Выделить общий debug loop из `debugServiceTest.h` в небольшой helper рядом с `serviceScopes.h`.
+   Product compile capability отдельна от `OWNED_PROCESS_TEST_DEBUG_SERVICE`; TEST modes2/3, diagnostic FD4
+   и fault injection не входят в staged product binary. Один broker по-прежнему создаёт исходный provider и его Jobs;
+   второго daemon/debugger/owner не появляется. Failed scope admission не переключается на недоказанный no-debug режим.
+2. `CMakeLists.txt`, `scripts/build/buildOwnedProcessBroker.ts` и `brokerArtifact.ts` получают закрытый
+   schema2 manifest с единственной явной capability `service-scopes-v1`; schema1 остаётся только whole-Job.
+   Exact schema/PE/digest проверяются до launch, выбранная capability входит в private captured profile/selection.
+   Поле из renderer/имя файла/успешный неизвестный opcode не являются admission. Название executable можно сохранить
+   в отдельном штатном staging directory; за один launch выбирается ровно одна проверенная поставка.
+3. Подключение допускается сначала для ordinary Claude Windows x64/ARM64, с собственным actual staged-product gate.
+   Codex/V1/Bun, management и scheduled consumers не переключаются вслед за общим manifest reader.
+   Перед выбором product quota сопоставить текущие1024 Team rows и lifetime зарегистрированных originals с live-child
+   accounting; TEST limit64 не переносить молча. Явный конечный quota и отказ при исчерпании сохраняют original cleanup.
+4. В той же native `Scopes` добавить current-child selector: под mutex взять `currentPids→records`, проверить
+   retained HANDLE live и согласованность записи, вернуть original key/birth. Это только первый atomic current admission;
+   historical PID не доказывается. Effect получает место в existing request cache **до** lookup. Retry исходного intent
+   использует прежнюю запись/ответ; новый ID не превращается в replay. Query/Stop/settle далее работают только по scope key.
+
+### B2/C. Journal → один native effect → fence settlement
+
+1. В existing `ProcessCommandReceipt` добавить только закрытое private native-intent поле, достаточное для ссылки
+   на original capture/Stop request: operation, original provider capability/generation и стабильный operation reference.
+   Валидатор и fingerprint включают это поле; отсутствие поля в настоящих старых receipts остаётся прежним legacy path.
+   Это metadata ссылки в том же journal, не HANDLE, не новый target и не отдельный журнал/авторизационный registry.
+   Broker wire ID назначает и удерживает тот же Main physical owner; durable operation reference связывает его с командой.
+2. Register под синхронным fence делает enter/admit/replay, проверяет input/rows/registrar, сохраняет prepared intent
+   **до первого await и до отправки current-child capture**. Replay возвращает прежний receipt/lookup, не захватывает PID снова.
+   Native await идёт вне fence. По ответу повторно читаются exact receipt/fingerprint, grant revision, original registrar,
+   captured source и актуальные active PID rows; только затем разрешены policy register/attachOriginal.
+   Original capture evidence фиксируется прежде этих policy writes; отказ/утрата authority не выдаётся за отсутствие effect
+   и не лишает Main уже удержанной cleanup capability.
+3. Canonical Windows capture хранит same-Main owner epoch, provider generation/root identity, scope key/birth и registrar.
+   CommandId/requestId/time/новая Host incarnation не входят в physical digest. Повторная регистрация той же active row
+   возвращает тот же original capture; отдельные completed command receipts продолжают хранить каждый свой original result.
+   Новая capture version получает strict keys/limits в `validateProcessRecords.ts`, включая row PID consistency.
+4. Stop пишет requested-unknown + exact original capture + native-intent до синхронного enqueue, повторяет исходную
+   authority перед enqueue и ждёт ответ вне fence. Original deadline включает очередь; §44 remaining/wire debt сохраняются.
+   Timeout/Host loss не создают новый Stop ID. Lookup читает/reconciles именно original Main operation; потерянный capture
+   ACK не разрешает повторный current-child lookup, потерянный Stop ACK не разрешает повторный TerminateJobObject.
+   Existing broker допускает три service worker и четыре исходных wire waiter/pending effect; bounded admission
+   остаётся у того же physical capability, учитывает original deadline и оставляет место whole-provider cleanup.
+   Эти пределы не повышаются до32 Host slots; очередь не создаёт новый effect ID после unknown.
+   Native `dispatchError=0` само по себе не доказывает dispatch: уже пустой scope мог не получать signal.
+   Portable completed absence требует свежего original scope proof; accepted signal и metadata stop его не заменяют.
+5. `registered:boolean` остаётся lifetime физического scope. Settle разрешён после genuine absence и durable reconciliation
+   связанных pending receipts; metadata unregister/replacement registration не освобождают HANDLE. После settle original
+   completed observed-absent читается из прежнего journal, естественное завершение остаётся owner-local tombstone.
+   Missing key не означает absence и не допускает повторный capture. Bounded original operation replies остаются при том
+   же Main pending capability, без второго application journal.
+6. Точный TS cut: `owned-process/{contract,codec,windowsBroker,RetainedWindowsCustody,HostWindowsLaunch,hostCustody}.ts`,
+   private Windows capture adapter и existing `process/{registeredProcessContracts,validateProcessRecords,TeamProcessCommands}.ts`.
+   Затем только await propagation в `createTeamProcessMethods/createTeamProcessComposition/createMemberProcessMcpPort`,
+   `mcp/{contracts,processTools}` и lifecycle `assertReleased`. Team snapshot остаётся синхронной metadata projection;
+   реальные list/lookup/terminate ждут native read отдельно. POSIX custody/decoder и старые receipts не переписываются.
+
+### Конечная проверка именно этого cut
+
+Existing Windows vendor/Main gate использует **staged schema2 product broker**, обычную Claude factory и реальный Team
+`process_register`; проверяет canonical repeated registration, list → original operator Stop → scope absent при живых
+provider/neighbor/foreign witness и продолжение исходного Session. Existing process-command cases расширяются лишь
+для prepared-before-await, revoke/source change до commit, lost original capture/Stop ACK, metadata removal при pending Stop.
+Неизменённые replay, old receipt decode и async caller closure проходят прежние suites. Отдельной test framework нет.
+Same-Main Host rebind, остальные provider tuples и packaged Processes UI остаются §38 D/общей приёмкой.
+
+**R1 source critique:** исправлены неверные предположения «admit уже durable» и «TEST opcode означает product capability»;
+отдельно отмечены original operation reference, canonical capture и signal/absence distinction.
+**R2 Account:** B2/C authority/replay design PASS: prepared intent до await, original operation reference,
+canonical capture, повторный fence и cleanup custody сохранены. **R2 Profiles:** B1 delivery/attestation design PASS:
+schema1/schema2, exact staged PE/private selection, TEST isolation и конечные quota явно разделены.
+Root review pending; production source по §45 не изменён. Existing3 service worker/4 waiter не повышаются.
+
+R3 root: план source-reviewed; схема поставки и два исходных command fence сохраняются. Actual A/B native acceptance остаётся обязательной; B1 можно подготовить отдельным неактивным срезом без изменения текущего running A head.

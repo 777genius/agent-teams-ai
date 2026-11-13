@@ -874,3 +874,32 @@ registration или original seed launch file по известной Team/run i
 current runtime; malformed/unsafe file и I/O не скрываются как «истории нет».
 Host без runtime и без retained истории сохраняет прежний путь. Seed/recipe не
 подставляется; original Runtime/custody и Main-held cleanup остаются прежними.
+
+### §19 MCP artifacts: original bytes до current base eligibility
+
+Independent source review нашёл ещё одну current/history связь:
+`capturedRuntimeMcpRecipes.ts:128–145` проверяет original artifact и
+`runtimeDigest(base)` одним generic refusal. Поэтому `runtimeCaptureSource`
+и `compileNativeMemberRuntimeCapture` не достигают restore-only unavailable
+при изменении private child/template, даже когда original MCP reference цел.
+
+Existing bounded/no-follow artifact reader разделяет две проверки. Сначала
+полностью проверить original command/member/reference digest, schema и доступные
+без private seed provider/overlay constraints; missing/corrupt artifact остаётся
+generic hold. Этот structural pass охватывает все retained capture/native-addition
+MCP references до первого current seed/source eligibility отказа, чтобы недоступный
+template не скрывал повреждённую сохранённую запись. Ни catalog IO, ни новый
+artifact/registry, ни изменение original bytes для него не нужны.
+
+Затем load/reconstruct по-прежнему сравнивает exact current base digest и прежние
+provider/cwd/profile constraints. Только restore path после original validation
+классифицирует доказанное несовпадение current base как RuntimeSourceUnavailable.
+Fresh capture/retry и ошибки reconstruction не получают такого исключения;
+unknown/malformed protocol-specific state не превращается в разрешение исполнения.
+Ранний исходный artifact pass не выдаёт runnable recipe или cleanup authority.
+
+В existing MCP/Team integration case сохранить реальные capture artifacts,
+изменить только current template, проверить локальное held этой Team и работу
+другой; missing/corrupt artifact при том же unavailable seed должен оставаться
+общим отказом. Контроль unchanged artifacts/receipts и исходного cleanup debt
+сохраняется. Это уточнение найденного seam; source/CI PASS пока не заявляется.
