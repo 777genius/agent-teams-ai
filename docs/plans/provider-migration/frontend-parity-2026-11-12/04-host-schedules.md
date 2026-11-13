@@ -605,3 +605,13 @@ Source review нашло два дополнительных окна; исхо�
   read-only UI сохраняет прежний graceful fallback, но parse/I/O error при save/delete
   не трактуется как пустой store и не вызывает onCommitted. Existing corrupt-JSON
   case проверяет сохранение bytes/отсутствие callback, concurrent-save case — все5 записей.
+
+### Проверенный implementation cut R10–R12
+
+Изменения выполнены в existing Scheduler/JSON repository/Host adapter/TeamDataService.
+Root повторил75 existing schedule tests, включая real child Host context renewal,
+lost ACK/prune1 и Stop; после strict mutation read ещё17 JSON cases PASS.
+Account первоначально проверил239 existing scheduled admission/integration cases.
+Root focused strict Main types PASS; Profiles independently reviewed final four
+R12 production files и Account R10/R11 boundaries. Source cap848 снижен до847;
+whole-project и actual Desktop schedule CI ещё должны завершиться на published head.

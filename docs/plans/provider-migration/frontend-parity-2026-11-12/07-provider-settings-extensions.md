@@ -802,7 +802,8 @@ keep raw profiles private, and leave production checks unchanged until attributi
 `131717484578` / run `43373956602`: native active-input Quit завершился PASS,
 но второй app readback INCOMPLETE. Original artifact `14013109806`,
 ZIP SHA256 `d7dd3e617499c752091a911d72431935be71bc38f14a5f1aeff9a6aaadc55065`.
-Cold helper сохранил provider-metadata child7327, затем UI сменил metadata mode;
+Cold helper сохранил metadata child7327; поздний UI census уже не нашёл его.
+Смена metadata mode — объяснение из текущего source, требующее actual lineage evidence;
 legacy passive check требовал вечного существования прежнего PID. Нельзя
 исправлять это принятием произвольного нового child или удалением проверки.
 
