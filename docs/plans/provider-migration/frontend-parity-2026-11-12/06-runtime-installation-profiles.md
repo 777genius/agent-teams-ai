@@ -659,3 +659,32 @@ Cold restart восстанавливает тот же saved publication чер
 отдельно проверенной immutable held. Counts/budgets и existing native identity
 tests сохраняются. Root source-круг и negative baseline: старый built Host отказал
 в новых двух alias/recovery cases; rebuilt Host прошёл все20.
+
+### §17/§18 source cut: recovery и aliases
+
+§17 production/test candidate состоит из14 existing files. Account независимо
+перечитал Host core; root проверил все production deltas и три meaningful existing
+test deltas, включая concurrent original submit, cold partial read, actual model
+proof C и fresh launch C без старого B replay. §18 добавляет пять files (один
+маленький чистый validator extraction); Profiles и root source review — PASS.
+
+До отключения executor наблюдались: §17 Host12/12, Main/renderer35/35,
+targeted types/build/lint PASS; §18 Host20/20, real Main/Host5/5, Host testtypes,
+build и fast lint PASS. Старый built Host воспроизвёл оба alias/cold refusal.
+Основной Main recovery oracle теперь создаёт valid executable и прерывается
+только после настоящего durable prepared write; static missing-file refusal
+по-прежнему terminal held и не используется как crash simulation.
+
+Executor отключился до финальной фиксации всех local Git SHA. Source восстановлен
+из exact base `cd2406a1cd040cf451a504857ebd5c985579c3da` и записанных edits;
+все19 новых immutable blobs проверены полным GitHub readback. Четыре tracked §18
+prefixes и шесть §17 prefixes совпали с independently прочитанным local git diff
+до потери среды. Это не перенос прежнего execution PASS на новый commit:
+source review завершён, **точный опубликованный head ещё требует штатного CI**.
+Ни один native/Desktop gate, неизвестный outcome или неполный локальный native
+producer не объявляется прошедшим из-за этой реконструкции.
+
+§17 manifest `217ea431c595d51262766cd4f65b7c6d8517d6f8` сохраняет разницу
+между прежними local checks и новым candidate. §18 original authority/receipt
+representations неизменны; source Index774, helper50 и Main feature778 lines.
+Новые owners/journals, unit suites, timeout increases и skip не добавлены.
