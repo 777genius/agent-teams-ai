@@ -595,3 +595,65 @@ pidfs, но README не доказательство фактического jo
 
 Приёмка этого шага — три разных факта: measured ELF ABI≤2.28, genuine load в glibc2.28 userland и native warm capture/Stop на
 реальном host без pidfs. Container разделяет kernel host и подтверждает только первый/второй факты. До всех трёх receipts — pending.
+
+## 24. Windows после native feasibility: минимальная оставшаяся product работа
+
+**Read-only review перед source.** В [exact646 native run](https://github.com/777genius/agent-teams-ai/actions/runs/43331388215)
+x64 job131576684914 прошёл Node26/Electron/HostNode24; ARM/Linux ещё не завершены на момент записи.
+Ранее exact74 прошёл обе Windows архитектуры (§21). Это доказательство TEST retained HANDLE/nested Job, а не Windows M19.
+
+### Проверенные gaps в текущем source
+
+- [TEST debug scope](https://github.com/777genius/agent-teams-ai/blob/646147879b71490e307f6cfc694276903a750874/tools/owned-process-broker/debugServiceTest.h)
+  удерживает original event HANDLE и nested Job, но ограничен64 cumulative records, не имеет production retirement/query/capture API.
+  `OWNED_PROCESS_TEST_DEBUG_SERVICE` и private Stop mode2 не входят в staged product broker; их нельзя просто включить флагом.
+- [CapturedProcess](https://github.com/777genius/agent-teams-ai/blob/646147879b71490e307f6cfc694276903a750874/packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts)
+  на Windows запускает `WindowsCapturedProcess`, а `captureRegisteredProcess` ищет только обычные `processRoots`.
+  `processCustody.ts` выбирает Linux/Darwin; Windows registration/observe/signal backend ещё отсутствует.
+- [OpenCodeV2EmbeddedServer](https://github.com/777genius/agent-teams-ai/blob/646147879b71490e307f6cfc694276903a750874/packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts)
+  передаёт отдельный `processTreeSource`/`WindowsJobCustody` и обходит P08 broker. Его работающий whole-provider Job не покрывает
+  late service registration. Перевод на broker требует сохранить original Bun executable observation и private bootstrap-before-input.
+- `RegisteredProcessNative.capture/observe/signal`, `createMemberProcessMcpPort` и `TeamProcessCommands` синхронны;
+  `store.fenced` не может удерживаться через broker await. Purge также вызывает synchronous `assertReleased`.
+
+### Следующий минимальный срез и порядок
+
+1. Сначала existing **unstaged TEST** broker квалифицирует actual captured Claude/Codex/OpenCodeV1/BunV2 launch/tool paths
+   на Windows x64/ARM64. Переиспользовать finite native model/oracle: реальный provider создаёт два services из одного tool task;
+   выбранный service имеет child до registration и после неё; Stop сохраняет provider, соседний service и foreign witness.
+   Проверить handshake, stdio, cancellation, native exceptions/debug detection и root-first exit. Это bounded gate, не новая SDK обёртка.
+2. После vendor proof перенести проверенное admission ядро из TEST header в небольшой helper **того же broker**.
+   Один owner/generation и original HANDLE/Job остаются authority; PID/birth только ищут уже захваченный original record.
+   Отдельный scope key не переиспользуется. Retire unregistered record только после original root exit **и** Job ActiveProcesses=0;
+   registered/pending scope сохраняет exact terminal facts до existing command settlement. Не переносить TEST лимит64 cumulative
+   в долгоживущую сессию; bounded live records и accounting проверяются тем же native gate, без PPID scan/adopt fallback.
+3. В existing `protocol.h`/`owned-process/{codec,contract,windowsBroker}` добавить только finite service capture, read-only query
+   и scoped Stop. Capture возвращает original scope; query никогда не сигналит; Stop требует exact owner/scope и один attempt.
+   Отсутствие root при живых children — present, завершение требует root exit+zero nested Job count. Provider Stop остаётся отдельным.
+   Расширение wire/version и staged manifest проверяются вместе; новый daemon, package или второй protocol не создаётся.
+4. Подключить `WindowsRegisteredProcess` к `WindowsCapturedProcess`/`CapturedProcess` и current Host process composition.
+   Узкий async port допускает existing sync Darwin/Linux implementation. Prepare/request записывается под existing Team fence,
+   fence освобождается перед await; перед commit повторно проверяются тот же receipt/capture, registrar, current source и authority.
+   Это затрагивает `TeamProcessCommands`, `createTeamProcessMethods`, `createMemberProcessMcpPort` и lifecycle release call sites;
+   Promise нельзя выдавать за native accepted. `lookup` не повторяет Stop, unknown effect остаётся original requested intent.
+   Для synchronous purge допустим только уже сохранённый exact terminal proof; live query сначала завершается вне fence.
+5. V2 использует тот же broker только после квалификации actual Bun graph. Сохранить measured executable/root identity через
+   read-only original HANDLE evidence; не передавать observable facade в old `ChildProcess` capture и не открывать root по PID.
+   Existing V2 graph/config/bootstrap checks остаются. Затем пройти current Processes UI и packaged artifact на обеих архитектурах.
+
+### Cold owner: что ещё не доказано
+
+Current broker создаёт [unnamed, non-inheritable Jobs](https://github.com/777genius/agent-teams-ai/blob/646147879b71490e307f6cfc694276903a750874/tools/owned-process-broker/ownedJob.h)
+и завершает lifetime при control EOF. [Microsoft Job semantics](https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-createjobobjectw)
+описывают kill-on-last-close; это containment, а не сохранённое новым Host наблюдение original subtree.
+Поэтому PID/FILETIME исчезнувшего service root, RootExit или broker EOF сами по себе не дают cold `observed-absent` всех детей.
+Новый Host переиспользует existing **completed full-capture observed-absent receipt**; без него и original scope возвращает held.
+Warm lost ACK сверяется read-only с тем же удержанным scope, без нового signal; cold replay scope не реконструирует.
+Automatic cold settlement после потери владельца остаётся отдельным gate: сначала доказать штатное сохранение original
+terminal outcome в существующем owner/lifetime, без второго journal, named-Job adoption или PID-only fallback.
+Просто дублировать Job handle в Main нельзя: дополнительный handle меняет kill-on-last-close lifetime.
+До этого gate Windows cold recovery и M19 целиком **не считаются выполненными**.
+
+**R9 findings:** выявлены V2 bypass, sync fence/async broker boundary и отсутствие cold subtree proof. Все три внесены в план;
+product source не менялся. Оценка после TEST reuse:600–950 production LOC,350–600 native/E2E LOC; cold lifetime решение сверх
+этого диапазона не выдумано. Confidence6/10 до actual vendor proof. Unit только exact scope/receipt/identity и опасные wire bounds.
