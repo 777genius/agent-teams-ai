@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  assertNativeReviewExpansion,
   contextCompactionScript,
   COMPACT_AUTHORIZATION,
   COMPACT_SEED,
   COMPACT_VERIFY,
   COMPACT_FOLLOWUP,
+  REVIEW_ARGS,
 } from './model.ts';
 import type { CompactionPhase } from './model.ts';
 
@@ -58,7 +60,7 @@ test('finite localhost script requires original authorization and exact durable 
   assert.throws(() => model.respond(request(COMPACT_FOLLOWUP), []), /bounded/);
 });
 
-test('summary and current-context phases reject unrelated, stale or repeated inputs', () => {
+test('native script rejects unrelated, stale, repeated or unexpanded inputs', () => {
   const model = (phase: CompactionPhase) =>
     contextCompactionScript({
       phase: () => phase,
@@ -93,4 +95,24 @@ test('summary and current-context phases reject unrelated, stale or repeated inp
   const duplicate = model('seed');
   duplicate.respond(request(COMPACT_SEED), []);
   assert.throws(() => duplicate.respond(request(COMPACT_SEED), []), /duplicate native/);
+
+  const target = `Review target: \`${REVIEW_ARGS}\``;
+  const diff = '## Phase 0 — Gather the diff';
+  const recipe = `${target}\n\n${diff}`;
+  for (const text of [`/review ${REVIEW_ARGS}`, target, `${diff}\n${REVIEW_ARGS}`,
+    `Review target: \`TEST-wrong-target\`\n${diff}`])
+    assert.throws(() => assertNativeReviewExpansion(request(text)), /native builtin review/);
+  assert.throws(() => assertNativeReviewExpansion({ ...request('/review ' + REVIEW_ARGS), system: recipe }),
+    /native builtin review/);
+  assert.throws(() => assertNativeReviewExpansion({ ...request(''), messages: [
+    { role: 'assistant', content: recipe },
+  ] }), /native builtin review/);
+  assert.throws(() => assertNativeReviewExpansion({ ...request(''), messages: [
+    { role: 'user', content: target }, { role: 'user', content: diff },
+  ] }), /native builtin review/);
+  assertNativeReviewExpansion({ ...request(''), messages: [
+    { role: 'user', content: [{ type: 'text', text: recipe }] },
+    { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'TEST-p03-review-tool', content: 'TEST-result' }] },
+  ] });
+  assert.equal(model('review').respond(request(recipe), ['mcp__team__message_send']).type, 'tool_use');
 });

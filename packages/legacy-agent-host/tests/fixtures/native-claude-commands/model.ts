@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import {
+  assertNativeReviewExpansion,
   COMMAND_ARGS,
   COMPACT_AUTHORIZATION,
   PROJECT_COMMAND_BODY,
@@ -69,11 +70,7 @@ export function nativeCommandUiScript(
         assert.ok(count < 2, 'no duplicate native command request');
         if (phase === 'review') {
           assert.equal(project, 2);
-          assert.ok(
-            serialized.includes('You are an expert code reviewer.'),
-            'native builtin review expands its prompt'
-          );
-          assert.ok(serialized.includes(`PR number: ${REVIEW_ARGS}`));
+          assertNativeReviewExpansion(body);
         } else assert.ok(serialized.includes(PROJECT_COMMAND_BODY));
         assert.ok(
           serialized.includes(phase === 'review' ? REVIEW_ARGS : COMMAND_ARGS),

@@ -47,6 +47,20 @@ const userText = (message: Row) =>
           .join('\n')
       : '';
 
+/** The pinned native recipe must expand the exact target in one original user message. */
+export function assertNativeReviewExpansion(body: Row): void {
+  const messages = (Array.isArray(body.messages) ? body.messages : []).map(record);
+  assert.ok(
+    messages.some((message) => {
+      if (message.role !== 'user') return false;
+      const text = userText(message);
+      return text.includes(`Review target: \`${REVIEW_ARGS}\``) &&
+        text.includes('## Phase 0 — Gather the diff');
+    }),
+    'native builtin review expands its exact target in original user context'
+  );
+}
+
 /** Only Anthropic response text is scripted. Real SDK/native `/compact` must emit the boundary. */
 export function contextCompactionScript(
   options: CompactionScenario,
@@ -128,16 +142,8 @@ export function contextCompactionScript(
           'represented epoch is not injected again'
         );
       } else {
-        if (phase === 'review') {
-          assert.ok(
-            serialized.includes('You are an expert code reviewer.'),
-            'native builtin review expands its prompt'
-          );
-          assert.ok(
-            serialized.includes(`PR number: ${REVIEW_ARGS}`),
-            'native builtin review retains original args'
-          );
-        } else
+        if (phase === 'review') assertNativeReviewExpansion(body);
+        else
           assert.ok(
             serialized.includes(
               phase === 'project-command' ? PROJECT_COMMAND_BODY : USER_COMMAND_BODY
