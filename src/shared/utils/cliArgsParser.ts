@@ -171,7 +171,10 @@ export function findInvalidUserFlags(
 ): CliArgsValidationResult {
   const scan = scanUserFlags(raw);
   const { flags, missingValue } = scan;
-  const invalid = flags.filter((flag) => !knownFlags.has(flag));
+  // The installed CLI accepts these documented options, but some --help versions
+  // omit them. Validate must agree with desktop create/launch admission.
+  const acceptedHiddenFlags = new Set(['--max-turns', '--teammate-mode']);
+  const invalid = flags.filter((flag) => !knownFlags.has(flag) && !acceptedHiddenFlags.has(flag));
   const protectedFlags = protectedFlagsFromScan(scan);
   const invalidFlags = [...new Set([...invalid, ...protectedFlags])];
   return {

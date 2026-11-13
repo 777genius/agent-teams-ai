@@ -268,6 +268,17 @@ describe('findInvalidUserFlags', () => {
 describe('documented teammate mode override', () => {
   const known = new Set(['--teammate-mode', '--max-turns', '--append-system-prompt', '-p']);
 
+  it('accepts supported options missing from the CLI --help output without opening unknown flags', () => {
+    const incompleteHelp = new Set(['--append-system-prompt', '-p']);
+    expect(findInvalidUserFlags('--max-turns 5 --teammate-mode tmux', incompleteHelp).valid).toBe(true);
+    expect(findInvalidUserFlags('--teammate-mode bad', incompleteHelp).invalidFlags).toEqual([
+      '--teammate-mode',
+    ]);
+    expect(findInvalidUserFlags('--unknown-override', incompleteHelp).invalidFlags).toEqual([
+      '--unknown-override',
+    ]);
+  });
+
   it.each([
     '--teammate-mode tmux',
     '--teammate-mode=tmux',
