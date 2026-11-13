@@ -1,3 +1,5 @@
+import { lstatSync } from 'node:fs';
+import { join } from 'node:path';
 import { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { RuntimeSourceIndex } from './RuntimeSourceIndex.js';
 import { teamModelProbeProfile } from './teamLaunchModelProbe.js';
@@ -13,12 +15,32 @@ export function createHostProviderManagementComposition(
   processCustody?: RegisteredProcessRootSource,
   assertCleanupWriter = assertWriter
 ) {
-  // Retained source/command debt still exists after its current seed is removed.
-  const sources = new RuntimeSourceIndex(profile, assertWriter, {
-    assertCleanupWriter,
-    ...(processCustody ? { processCustody } : {}),
-  });
-  const retained = sources.retainedManagementState();
+  // Presence reads must not create stores before an unrelated Team namespace is admitted.
+  // Either retained namespace still requires strict validation after its current seed is removed.
+  assertWriter();
+  const needsSources =
+    Boolean(profile.management?.length) ||
+    ['runtime-sources', 'management-commands'].some((name) => {
+      try {
+        lstatSync(join(profile.owner.storageRoot, name));
+        return true;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+        throw error;
+      }
+    });
+  assertWriter();
+  const sources = needsSources
+    ? new RuntimeSourceIndex(profile, assertWriter, {
+        assertCleanupWriter,
+        ...(processCustody ? { processCustody } : {}),
+      })
+    : undefined;
+  const retained = sources?.retainedManagementState() ?? {
+    profiles: [],
+    unavailable: [],
+    hasCommands: false,
+  };
   const profiles = [
     ...(profile.management ?? []),
     ...retained.profiles,

@@ -57,11 +57,19 @@ test('active cross-Team replies preserve captured Runtime binding across propert
   };
   const entry = { binding };
   let reads = 0,
-    current = true;
+    current = true,
+    sourceAvailable = true;
+  const sourceUnavailable = new Error('TEST original Runtime source unavailable');
   // Exercise the public selection method with a controlled owned-session seam;
   // no constructor, endpoint, filesystem, provider or native process is created.
   const subject = Object.create(RuntimeTeamCoordinator.prototype) as RuntimeTeamCoordinator;
   Object.assign(subject, {
+    captures: {
+      assertAvailable(teamId: string) {
+        assert.equal(teamId, binding.teamId);
+        if (!sourceAvailable) throw sourceUnavailable;
+      },
+    },
     entries: new Map([[runtimeDigest(binding), entry]]),
     isCurrent: (candidate: unknown) => current && candidate === entry,
     runtime: {
@@ -90,4 +98,8 @@ test('active cross-Team replies preserve captured Runtime binding across propert
   current = false;
   assert.deepEqual(subject.crossTeamActiveInputs(reconstructed), []);
   assert.equal(reads, 2, 'revoked captured member remains unavailable');
+  current = true;
+  sourceAvailable = false;
+  assert.throws(() => subject.crossTeamActiveInputs(reconstructed), sourceUnavailable);
+  assert.equal(reads, 2, 'unavailable original source is refused before reading a session');
 });
