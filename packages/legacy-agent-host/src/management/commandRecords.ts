@@ -80,11 +80,50 @@ export const storedOAuthCommandSchema = z
   });
 export type StoredOAuthCommand = z.infer<typeof storedOAuthCommandSchema>;
 
+export const nativeLocalReadinessEvidenceSchema = z.object({
+  schemaVersion: z.literal(1),
+  ordinary: z.enum(['confirmed', 'unconfirmed']),
+  coordination: z.enum(['compatible', 'incompatible', 'unavailable', 'not-applicable']),
+  decision: z.enum(['allow', 'block']),
+  reasons: z.array(z.enum([
+    'ordinary-unconfirmed', 'model-missing', 'tools-unsupported', 'context-too-small',
+    'request-rejected', 'coordination-failed', 'coordination-unavailable',
+    'managed-configuration', 'metadata-unavailable', 'context-unknown',
+    'capabilities-unknown', 'not-applicable', 'provider-unavailable',
+    'small-model', 'context-below-recommended',
+  ])).max(8),
+  routeDigest: hash,
+  configurationDigest: hash,
+  accountDigest: hash,
+  metadata: z.object({
+    provider: z.enum(['ollama', 'lmstudio', 'llamacpp', 'custom']),
+    tools: z.boolean().nullable(),
+    modelListed: z.boolean().nullable(),
+    contextTokens: z.number().int().positive().safe().nullable(),
+    parameterCount: z.number().int().positive().safe().nullable(),
+    configuredContextTokens: z.number().int().positive().safe().nullable(),
+    trainedContextTokens: z.number().int().positive().safe().nullable(),
+    contextSource: z.enum(['ollama-loaded', 'local-metadata', 'unknown']),
+  }).strict(),
+}).strict().refine(value =>
+  new Set(value.reasons).size === value.reasons.length &&
+  (value.metadata.contextSource === 'unknown') === (value.metadata.contextTokens === null) &&
+  (value.decision !== 'allow' || value.ordinary === 'confirmed' &&
+    value.coordination !== 'incompatible' && value.metadata.tools !== false &&
+    value.metadata.modelListed !== false && !value.reasons.includes('provider-unavailable') &&
+    !value.reasons.includes('model-missing') &&
+    (value.metadata.contextTokens === null || value.metadata.contextTokens >= 16384)));
+export type NativeLocalReadinessEvidence = z.infer<typeof nativeLocalReadinessEvidenceSchema>;
+const storedLocalReadinessSchema = z.object({
+  context: hash, selectionDigest: hash, evidence: nativeLocalReadinessEvidenceSchema,
+}).strict();
+
 export const storedModelProbeSchema = z
   .object({
     ...common,
     kind: z.literal('model.probe'),
-    purpose: z.literal('native-local-coordination-v1').optional(),
+    purpose: z.enum(['native-local-coordination-v1', 'native-local-readiness-v1']).optional(),
+    readiness: storedLocalReadinessSchema.optional(),
     modelId: id,
     effort: z
       .enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'])
@@ -98,6 +137,12 @@ export const storedModelProbeSchema = z
   })
   .strict()
   .refine((value) => value.purpose === undefined || value.context !== undefined)
+  .refine(value => value.readiness === undefined || value.purpose === 'native-local-readiness-v1' &&
+    value.phase === 'completed' && !value.resourceHeld && value.readiness.context === value.context &&
+    value.readiness.selectionDigest === value.selectionDigest &&
+    value.ok === (value.readiness.evidence.decision === 'allow'))
+  .refine(value => value.purpose !== 'native-local-readiness-v1' || value.phase !== 'completed' ||
+    value.readiness !== undefined)
   .refine((value) =>
     value.phase === 'running'
       ? value.resourceHeld && !value.ok

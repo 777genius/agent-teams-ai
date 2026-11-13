@@ -1,20 +1,25 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync } from 'node:fs';
+import { ChildProcess } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
 
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { CredentialCommandOwner } from '../dist/management/CredentialCommandOwner.js';
 import { ManagementResourceFence } from '../dist/management/ManagementResourceFence.js';
-import { ModelProbeOwner, nativeCoordinationPurpose } from '../dist/management/ModelProbeOwner.js';
+import { ModelProbeOwner, nativeCoordinationPurpose, nativeLocalReadinessPurpose } from '../dist/management/ModelProbeOwner.js';
+import { OpenCodeManagementHost } from '../dist/adapters/providers/OpenCodeManagementHost.js';
+import { createOpenCodeLocalModelReadiness } from '../dist/adapters/providers/OpenCodeLocalModelReadiness.js';
 import { closeCoordinationByDeadline, OpenCodeCoordinationEndpoint, coordinationPrompt } from '../dist/adapters/providers/OpenCodeCoordinationEndpoint.js';
 import { runNativeCoordination } from '../dist/adapters/providers/OpenCodeCoordinationProbe.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { Event, Input, Session } from '@agent-teams/provider-session-contracts';
 import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
-import type { ManagementCommandStore } from '../src/management/commandRecords.ts';
+import type { ManagementCommandStore, NativeLocalReadinessEvidence } from '../src/management/commandRecords.ts';
+import type { OpenCodeManagementProfile } from '../src/management/profile.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -78,6 +83,7 @@ function fixture(
     cleanupFails?: boolean;
     failRun?: boolean;
     blockClose?: boolean;
+    readiness?: NativeLocalReadinessEvidence;
     store?: (base: ManagementCommandStore) => ManagementCommandStore;
   } = {}
 ) {
@@ -111,6 +117,7 @@ function fixture(
         purposes.push(purpose);
         return {
           timeoutMs: options.timeoutMs ?? 10000,
+          ...(options.readiness ? { readiness: () => structuredClone(options.readiness!) } : {}),
           async run(_signal: AbortSignal, deadline?: number) {
             assert.equal(base.read(start.commandId)?.phase, 'running');
             deadlines.push({ phase: 'run', deadline });
@@ -194,6 +201,8 @@ test('model probe claims before native work and returns original result without 
   assert.throws(() => historical.owner.readNativeCoordination({ ...lookup, context: historicalInput.context }),
     { code: 'conflict' }, 'same context text-only receipt still has the wrong purpose');
   assert.throws(() => historical.owner.startNativeCoordination(historicalInput, () => true), { code: 'conflict' });
+  assert.throws(() => historical.owner.readNativeReadiness({ ...lookup, context: historicalInput.context }), { code: 'conflict' });
+  assert.throws(() => historical.owner.startNativeReadiness(historicalInput, () => true), { code: 'conflict' });
   assert.equal(historical.runs(), 1); await historical.owner.close();
   const stronger = fixture();
   t.after(stronger.cleanup);
@@ -223,11 +232,51 @@ test('model probe claims before native work and returns original result without 
   assert.throws(() => stronger.owner.readNativeCoordination({ ...exact, context: 'f'.repeat(64) }), { code: 'conflict' });
   stronger.changeTarget();
   assert.throws(() => stronger.owner.readNativeCoordination(exact), { code: 'conflict' });
+  assert.throws(() => stronger.owner.readNativeReadiness(exact), { code: 'conflict' });
   await stronger.owner.close();
+  const compound = fixture({ readiness: syntheticReadinessEvidence() }); t.after(compound.cleanup);
+  assert.throws(() => compound.owner.start({ ...input, purpose: nativeLocalReadinessPurpose }));
+  assert.throws(() => compound.owner.start({ ...input, readiness: syntheticReadinessEvidence() }));
+  assert.throws(() => compound.owner.startNativeReadiness(start, () => true));
+  assert.equal(compound.runs(), 0);
+  const admitted = compound.owner.startNativeReadiness(input, () => true);
+  compound.owner.startNativeReadiness(input, () => true);
+  assert.equal(compound.runs(), 1);
+  assert.deepEqual(compound.purposes, [nativeLocalReadinessPurpose]);
+  assert.throws(() => compound.owner.readNativeReadiness(exact), { code: 'held' });
+  compound.result.resolve(true);
+  await until(() => compound.owner.read(lookup)?.phase === 'completed');
+  const receipt = compound.owner.readNativeReadiness(exact);
+  assert.equal(receipt?.readiness.evidence.decision, 'allow');
+  assert.equal(receipt?.readiness.context, context);
+  assert.equal(receipt?.readiness.selectionDigest, 'a'.repeat(64));
+  assert.equal(compound.base.read(start.commandId)?.resourceHeld, false);
+  assert.deepEqual(compound.deadlines, ['run', 'close'].map(phase => ({ phase, deadline: admitted.expiresAt })));
+  assert.deepEqual(compound.make().readNativeReadiness(exact), receipt);
+  assert.equal(compound.make().startNativeReadiness(input, () => true).ok, true);
+  assert.equal(compound.runs(), 1);
+  assert.throws(() => compound.owner.readNativeCoordination(exact), { code: 'conflict' });
+  assert.throws(() => compound.owner.readNativeReadiness({ ...exact, context: 'f'.repeat(64) }), { code: 'conflict' });
+  compound.changeTarget();
+  assert.throws(() => compound.owner.readNativeReadiness(exact), { code: 'conflict' });
+  await compound.owner.close();
+  const missing = fixture(); t.after(missing.cleanup);
+  missing.owner.startNativeReadiness(input, () => true); missing.result.resolve(true);
+  await until(() => missing.owner.read(lookup)?.phase === 'held');
+  assert.throws(() => missing.owner.readNativeReadiness(exact), { code: 'held' });
+  assert.equal(missing.base.read(start.commandId)?.resourceHeld, false);
+  await missing.owner.close();
   for (const mode of ['valid', 'text-json', 'second-first', 'wrong-nonce', 'duplicate',
     'duplicate-message', 'wrong-message', 'result-before-tool',
     'foreign-session', 'foreign-input', 'revoked', 'cancelled', 'foreign-token'] as const)
     await syntheticCoordination(mode);
+  for (const mode of ['compatible', 'configured-key', 'stored-key', 'effective-key', 'remote',
+    'native-authless', 'native-key', 'native-options-key', 'native-route-drift',
+    'native-builtin-alias', 'native-remote-alias', 'native-model-drift',
+    'tools-false', 'context-small', 'ollama-loaded', 'model-missing', 'inventory-unavailable',
+    'native-rejected', 'native-unavailable', 'native-missing', 'ordinary-failed',
+    'key-drift', 'source-drift', 'unclean', 'private-unapproved'] as const)
+    await syntheticLocalReadiness(mode);
 });
 
 test('cancel retains auth namespace until physical close and a late model response cannot publish success', async (t) => {
@@ -304,6 +353,18 @@ test('cold pending probe is held and never reruns inference; unknown physical cl
   assert.equal(reopened.startNativeCoordination(input, () => true).phase, 'held');
   assert.equal(stronger.runs(), 1);
   await assert.rejects(stronger.owner.close(), { code: 'held' });
+  const compound = fixture({ cleanupFails: true, readiness: syntheticReadinessEvidence() });
+  t.after(compound.cleanup);
+  compound.owner.startNativeReadiness(input, () => true);
+  const coldCompound = compound.make();
+  assert.equal(coldCompound.startNativeReadiness(input, () => true).phase, 'held');
+  assert.throws(() => coldCompound.readNativeReadiness({ ...lookup, context: input.context }), { code: 'held' });
+  assert.equal((await compound.owner.cancelContextual(input.commandId, input.context)).phase, 'held');
+  compound.result.resolve(true);
+  assert.equal(compound.base.read(input.commandId)?.resourceHeld, true);
+  assert.equal(coldCompound.startNativeReadiness(input, () => true).phase, 'held');
+  assert.equal(compound.runs(), 1);
+  await assert.rejects(compound.owner.close(), { code: 'held' });
 });
 
 test('explicit cancellation settles held observations only after native custody is released', async (t) => {
@@ -431,9 +492,11 @@ async function syntheticCoordination(mode: SyntheticCoordinationMode) {
   };
   try {
     await endpoint.start(deadline, abort.signal, () => current);
-    await client.connect(new StreamableHTTPClientTransport(new URL(endpoint.url), {
+    // Keep the SDK object: its sessionId getter allows undefined beyond the exact optional interface.
+    const transport: Omit<StreamableHTTPClientTransport, 'sessionId'> = new StreamableHTTPClientTransport(new URL(endpoint.url), {
       requestInit: { headers: { Authorization: 'Bearer ' + endpoint.bearerToken } },
-    }));
+    });
+    await client.connect(transport);
     const tools = await client.listTools();
     assert.deepEqual(tools.tools.map(tool => tool.name), ['task_briefing', 'message_send']);
     endpoint.bindSession('TEST-native-session');
@@ -510,5 +573,213 @@ async function syntheticCoordination(mode: SyntheticCoordinationMode) {
   } finally {
     await client.close();
     assert.equal(await endpoint.close(), true, 'original synthetic endpoint and requests are closed');
+  }
+}
+
+function syntheticReadinessEvidence(): NativeLocalReadinessEvidence {
+  return { schemaVersion: 1, ordinary: 'confirmed', coordination: 'compatible', decision: 'allow', reasons: [],
+    routeDigest: 'c'.repeat(64), configurationDigest: 'd'.repeat(64), accountDigest: 'e'.repeat(64),
+    metadata: { provider: 'custom', tools: null, modelListed: true, contextTokens: null,
+      parameterCount: null, configuredContextTokens: null, trainedContextTokens: null, contextSource: 'unknown' } };
+}
+
+class ReadinessChild extends ChildProcess {
+  override stdin = new PassThrough();
+  override stdout = new PassThrough();
+  override stderr = new PassThrough();
+  override stdio: [PassThrough, PassThrough, PassThrough, undefined, undefined] =
+    [this.stdin, this.stdout, this.stderr, undefined, undefined];
+}
+
+type LocalReadinessMode = 'compatible' | 'configured-key' | 'stored-key' | 'effective-key' | 'remote' |
+  'native-authless' | 'native-key' | 'native-options-key' | 'native-route-drift' |
+  'native-builtin-alias' | 'native-remote-alias' | 'native-model-drift' |
+  'tools-false' | 'context-small' | 'ollama-loaded' | 'model-missing' | 'inventory-unavailable' |
+  'native-rejected' | 'native-unavailable' | 'native-missing' | 'ordinary-failed' |
+  'key-drift' | 'source-drift' | 'unclean' | 'private-unapproved';
+
+/** Real captured config/auth files and the production policy; native phases are explicitly synthetic. */
+async function syntheticLocalReadiness(mode: LocalReadinessMode) {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-local-readiness-')));
+  const directory = (name: string) => { const path = join(root, name); mkdirSync(path, { mode: 0o700 }); return path; };
+  const cwd = directory('project'), home = directory('home'), configHome = directory('config'), data = directory('data');
+  const authDirectory = join(data, 'opencode'); mkdirSync(authDirectory, { mode: 0o700 });
+  const authPath = join(authDirectory, 'auth.json'), configPath = join(cwd, 'opencode.json');
+  const providerId = mode === 'tools-false' || mode === 'context-small' ? 'lmstudio'
+    : mode === 'ollama-loaded' ? 'ollama' : mode === 'native-builtin-alias' ? 'TEST-builtin' : 'local';
+  const url = ['remote', 'native-builtin-alias', 'native-remote-alias'].includes(mode)
+    ? 'https://example.invalid/v1' : mode === 'private-unapproved'
+    ? 'http://192.168.1.10:8181/v1' : 'http://127.0.0.1:8181/v1';
+  const provider = { npm: '@ai-sdk/openai-compatible',
+    options: { baseURL: url, ...(mode === 'configured-key' ? { apiKey: 'TEST-config-key' } : {}) },
+    models: { 'TEST-model': { name: 'TEST-model' } } };
+  const configuredProviders = mode === 'native-builtin-alias' ? {} : { [providerId]: provider };
+  writeFileSync(configPath, JSON.stringify({ provider: configuredProviders }), { mode: 0o600 });
+  writeFileSync(authPath, JSON.stringify(mode === 'stored-key'
+    ? { [providerId]: { type: 'api', key: 'TEST-stored-key' } } : {}), { mode: 0o600 });
+  const profile: OpenCodeManagementProfile = {
+    provider: 'opencode', profileId: start.profileId, configRevision: start.configRevision,
+    accountBinding: 'TEST-original-account', cwd, endpoint: 'http://127.0.0.1:8182',
+    timeoutMs: 5000, modelProbeTimeoutMs: 5000,
+    executable: { path: process.execPath, sha256: 'a'.repeat(64) },
+    environment: { HOME: home, XDG_CONFIG_HOME: configHome, XDG_DATA_HOME: data, XDG_CACHE_HOME: directory('cache') },
+  };
+  const input = { ...start, providerId, modelId: providerId + '/TEST-model', context: 'b'.repeat(64) };
+  let ordinaryRuns = 0, ordinaryCloses = 0, coordinationRuns = 0, coordinationCloses = 0;
+  const requests: string[] = [], sequence: string[] = [], nativeRequests: string[] = [];
+  const deadline = Date.now() + 5000;
+  const adapters: Parameters<typeof createOpenCodeLocalModelReadiness>[3] = {
+    ordinary(observe, current) {
+      assert.notEqual(mode, 'private-unapproved', 'original private approval refuses before native preparation');
+      if (['native-authless', 'native-key', 'native-options-key', 'native-route-drift',
+        'native-builtin-alias', 'native-remote-alias', 'native-model-drift'].includes(mode)) {
+        let running = false, sealed = false, nativeConfig: unknown;
+        const host = new OpenCodeManagementHost(profile, { canAllocate: current, isCurrent: current }, {
+          createProcess(captured, canAllocate) {
+            nativeConfig = { ...JSON.parse(captured.environment.OPENCODE_CONFIG_CONTENT!), provider: configuredProviders };
+            return { launch() {
+              assert.equal(canAllocate() && !sealed, true); assert.equal(running, false);
+              running = true; return new ReadinessChild();
+            }, seal() { sealed = true; }, isRunning: () => running, async confirmStopped() { running = false; return true; } };
+          },
+          async fetchImpl(value, init) {
+            const request = new Request(value, init), target = new URL(request.url);
+            assert.equal(target.origin, profile.endpoint); assert.equal(request.redirect, 'error');
+            assert.equal(request.headers.get('x-opencode-directory'), cwd);
+            nativeRequests.push(request.method + ' ' + target.pathname);
+            if (target.pathname === '/config') return Response.json(nativeConfig);
+            if (target.pathname === '/provider') return Response.json({ all: [{
+              id: providerId, ...(['native-key', 'native-builtin-alias'].includes(mode) ? { key: 'TEST-native-key' } : {}),
+              options: { ...provider.options,
+                ...(mode === 'native-options-key' ? { apiKey: 'TEST-native-key' } : {}),
+                ...(mode === 'native-route-drift' ? { baseURL: 'http://127.0.0.1:8183/v1' } : {}) },
+              models: { 'TEST-model': { api: { id: mode.endsWith('-alias') || mode === 'native-model-drift' ? 'TEST-base-model' : 'TEST-model',
+                npm: mode === 'native-builtin-alias' ? '@ai-sdk/anthropic' : provider.npm, url } } },
+            }] });
+            if (target.pathname === '/experimental/tool/ids') return Response.json(['bash']);
+            assert.equal(request.method, 'POST');
+            if (target.pathname === '/session') return Response.json({ id: 'ses_TESTreadiness' });
+            assert.equal(target.pathname, '/session/ses_TESTreadiness/message');
+            const body = await request.json();
+            assert.deepEqual(body.model, { providerID: providerId, modelID: 'TEST-model' });
+            assert.deepEqual(body.tools, { '*': false, bash: false });
+            return Response.json({ info: { sessionID: 'ses_TESTreadiness', role: 'assistant',
+              providerID: providerId, modelID: 'TEST-model', time: { completed: 1 } },
+              parts: [{ type: 'text', text: 'OK' }] });
+          },
+        });
+        return { timeoutMs: 5000, run(signal, originalDeadline) {
+          assert.equal(originalDeadline, deadline); assert.equal(++ordinaryRuns, 1); sequence.push('ordinary');
+          return host.probeModel(input, signal, 5000, current, { deadline, observeProvider: observe });
+        }, async close(originalDeadline) {
+          assert.equal(originalDeadline, deadline); ordinaryCloses++; sequence.push('ordinary-close'); return host.close();
+        } };
+      }
+      return { timeoutMs: 5000, async run(_signal, originalDeadline) {
+        assert.equal(originalDeadline, deadline); assert.equal(++ordinaryRuns, 1); assert.equal(current(), true);
+        sequence.push('ordinary');
+        observe({ ...provider, options: { ...provider.options,
+          ...(mode === 'effective-key' ? { apiKey: 'TEST-effective-key' } :
+            mode === 'stored-key' ? { apiKey: 'TEST-stored-key' } : {}) } });
+        if (mode === 'key-drift') writeFileSync(authPath,
+          JSON.stringify({ [providerId]: { type: 'api', key: 'TEST-new-key' } }), { mode: 0o600 });
+        if (mode === 'source-drift') writeFileSync(configPath, JSON.stringify({ provider: {} }), { mode: 0o600 });
+        return mode !== 'ordinary-failed';
+      }, async close(originalDeadline) {
+        assert.equal(originalDeadline, deadline); ordinaryCloses++; sequence.push('ordinary-close');
+        return mode !== 'unclean';
+      } };
+    },
+    coordination(selected, key, current) {
+      assert.equal(ordinaryRuns, 1); assert.ok(ordinaryCloses >= 1);
+      assert.equal(current(), true); assert.equal(key, undefined);
+      assert.deepEqual(selected, provider); assert.ok(requests.length > 0);
+      return { timeoutMs: 5000, async run(_signal, originalDeadline) {
+        assert.equal(originalDeadline, deadline); assert.equal(++coordinationRuns, 1);
+        sequence.push('coordination'); return mode !== 'native-rejected' && mode !== 'native-unavailable';
+      }, coordinationObservation: () => mode === 'native-missing' ? undefined
+        : mode === 'native-rejected' ? { status: 'incompatible', reason: 'request-rejected' }
+          : mode === 'native-unavailable' ? { status: 'unavailable', reason: 'native-rejected' }
+            : { status: 'compatible', reason: 'complete' },
+      async close(originalDeadline) {
+        assert.equal(originalDeadline, deadline); coordinationCloses++; sequence.push('coordination-close'); return true;
+      } };
+    },
+    async fetchImpl(target, init) {
+      assert.equal(ordinaryRuns, 1); assert.ok(ordinaryCloses >= 1);
+      assert.equal(new Headers(init?.headers).has('authorization'), false);
+      assert.equal(init?.redirect, 'error');
+      const path = new URL(String(target)).pathname; requests.push(path); sequence.push(path);
+      if (path === '/v1/models') {
+        assert.equal(init?.method, 'GET');
+        return Response.json({ data: [{ id: mode === 'model-missing' ? 'TEST-other' : 'TEST-model' }] },
+          { status: mode === 'inventory-unavailable' ? 503 : 200 });
+      }
+      if (path === '/api/v1/models') return Response.json({ models: [{ key: 'TEST-model',
+        loaded_instances: [{ id: 'TEST-model', config: { context_length: mode === 'context-small' ? 16383 : 65536 } }],
+        capabilities: { trained_for_tool_use: mode !== 'tools-false' } }] });
+      if (path === '/api/show') {
+        assert.equal(init?.method, 'POST'); assert.deepEqual(JSON.parse(String(init?.body)), { model: 'TEST-model' });
+        return Response.json({ capabilities: ['tools'], parameters: 'num_ctx 64000',
+          model_info: { 'TEST.context_length': 128000, 'TEST.parameter_count': 7_000_000_000 } });
+      }
+      assert.equal(path, '/api/ps'); assert.equal(coordinationRuns, 1); assert.equal(coordinationCloses, 1);
+      return Response.json({ models: [{ name: 'TEST-model:latest', context_length: 8192 }] });
+    },
+  };
+  let probe: ReturnType<typeof createOpenCodeLocalModelReadiness> | undefined;
+  try {
+    if (mode === 'private-unapproved') {
+      assert.throws(() => createOpenCodeLocalModelReadiness(profile, input, () => true, adapters), { code: 'held' });
+      assert.equal(ordinaryRuns, 0); return;
+    }
+    probe = createOpenCodeLocalModelReadiness(profile, input, () => true, adapters);
+    assert.equal(ordinaryRuns, 0); assert.equal(requests.length, 0);
+    const run = probe.run(new AbortController().signal, deadline);
+    assert.equal(probe.run(new AbortController().signal, deadline), run, 'one admitted purpose cannot repeat either phase');
+    if (mode === 'native-route-drift' || mode === 'native-model-drift') {
+      await assert.rejects(run, { code: 'unavailable' }); assert.equal(probe.readiness?.(), undefined);
+      assert.deepEqual(nativeRequests, ['GET /config', 'GET /config', 'GET /config', 'GET /provider']);
+      assert.equal(requests.length, 0); assert.equal(coordinationRuns, 0); return;
+    }
+    if (['key-drift', 'source-drift', 'unclean', 'native-missing'].includes(mode)) {
+      await assert.rejects(run, { code: 'held' }); assert.equal(probe.readiness?.(), undefined);
+      assert.equal(requests.length, mode === 'native-missing' ? 1 : 0); return;
+    }
+    const blocked = ['tools-false', 'context-small', 'ollama-loaded', 'model-missing',
+      'inventory-unavailable', 'native-rejected', 'ordinary-failed'].includes(mode);
+    assert.equal(await run, !blocked);
+    const evidence = probe.readiness?.(); assert.ok(evidence);
+    assert.equal(evidence.decision, blocked ? 'block' : 'allow');
+    assert.equal(ordinaryRuns, 1); assert.equal(ordinaryCloses, 1);
+    if (mode.startsWith('native-') && nativeRequests.length) assert.deepEqual(nativeRequests,
+      ['GET /config', 'GET /config', 'GET /config', 'GET /provider', 'GET /experimental/tool/ids',
+        'POST /session', 'POST /session/ses_TESTreadiness/message'], 'same original native reads and one ordinary input');
+    const nonApplicable = ['configured-key', 'stored-key', 'effective-key', 'native-key', 'native-options-key',
+      'remote', 'native-builtin-alias', 'native-remote-alias'].includes(mode);
+    if (nonApplicable) {
+      assert.equal(evidence.coordination, 'not-applicable');
+      assert.deepEqual(evidence.reasons, ['not-applicable']);
+      assert.equal(requests.length, 0); assert.equal(coordinationRuns, 0);
+    } else if (mode === 'native-unavailable') {
+      assert.equal(evidence.coordination, 'unavailable'); assert.ok(evidence.reasons.includes('coordination-unavailable'));
+      assert.equal(evidence.metadata.contextTokens, null); assert.equal(coordinationRuns, 1);
+    } else if (mode === 'native-rejected') {
+      assert.equal(evidence.coordination, 'incompatible'); assert.ok(evidence.reasons.includes('request-rejected'));
+    } else if (mode === 'ollama-loaded') {
+      assert.equal(evidence.metadata.contextTokens, 8192); assert.equal(evidence.metadata.contextSource, 'ollama-loaded');
+      assert.equal(evidence.metadata.configuredContextTokens, 64000); assert.equal(evidence.metadata.trainedContextTokens, 128000);
+      assert.ok(evidence.reasons.includes('context-too-small'));
+      assert.deepEqual(requests, ['/v1/models', '/api/show', '/api/ps']);
+    } else if (mode === 'compatible' || mode === 'native-authless') {
+      assert.equal(evidence.coordination, 'compatible'); assert.equal(coordinationRuns, 1);
+      assert.ok(sequence.indexOf('ordinary-close') < sequence.indexOf('/v1/models'));
+    } else assert.equal(coordinationRuns, 0, 'known refusal occurs before coordination allocation');
+    assert.equal(JSON.stringify(evidence).includes('TEST-stored-key'), false);
+    assert.equal(JSON.stringify(evidence).includes('TEST-effective-key'), false);
+    assert.equal(JSON.stringify(evidence).includes('TEST-native-key'), false);
+  } finally {
+    if (probe) assert.equal(await probe.close(deadline), mode !== 'unclean');
+    rmSync(root, { recursive: true, force: true });
   }
 }
