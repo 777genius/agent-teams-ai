@@ -109,7 +109,7 @@ export async function runDesktopNativeExtensionCommandsUi(cdp: UiCdpPort, option
     const outbox = record(await json(join(team, '.host-owner/outbox', inputId + '.json')));
     assert.equal(outbox.content, raw);
     assert.equal(outbox.messageId, receipt.commandId);
-    const replies = rows(await json(join(team, 'inboxes/user.json')))
+    const replies: Row[] = rows(await json(join(team, 'inboxes/user.json')))
       .filter(row => row.messageId === effectId('message', backendId, teamId, extensionReplyId(phase)));
     assert.equal(replies.length, 1);
     assert.equal(replies[0]!.from, 'alice');
