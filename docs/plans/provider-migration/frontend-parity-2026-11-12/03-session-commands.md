@@ -551,3 +551,72 @@ compiler/test/native/Desktop результаты этого correction ещё p
 сохранить original input attribution и не суммировать повторно native cumulative
 cost при продолжении одной session. До source review и actual acceptance это
 остаётся открытым несоответствием P03.
+
+### R10 — retained Stats и Codex `/cost` после Resume/Restart, 2026-11-13
+
+**Проблема.** R9 сохраняет отдельные captured Launch, но после Resume/Restart existing
+`RuntimeTeamCoordinator.rekey` удаляет predecessor из runtime registry. Его actual activity
+остаётся в исходном Runtime store, однако Stats и новый Codex `/cost` её не перечисляют.
+Возвращаем read-only историю через уже сохранённую цепочку выбора; runnable entries,
+новый journal, migration записей и новый RPC для этого не требуются.
+
+#### Авторитетный источник и минимальные изменения
+
+1. Узкий private helper рядом с `readTeamActivity.ts` получает captured current entry
+   и existing retained launch по точным `teamId/launchId`.
+   [TeamLaunchOwner.readRestorations/memberActions](https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts)
+   уже возвращают validated selections без opening/reconciliation. Не читать произвольные
+   файлы, не создавать второй индекс и не восстанавливать runnable `MemberEntry`.
+2. Построить конечную цепочку predecessor→selected из restore rows и только завершённых
+   `restart` actions. Pending/refused/skip не создают новую generation. Действующие
+   [validateLaunchRecord](https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/packages/legacy-agent-host/src/team-launch/validateLaunchRecord.ts)
+   и [validateMemberSelectionChain](https://github.com/777genius/agent-teams-ai/blob/1628b70e50533a80d2f9d5bc8ea6edcb08a19dda/packages/legacy-agent-host/src/team-launch/memberActions.ts)
+   проверяют fingerprint, один backend/team/run/member, отсутствие развилок/циклов,
+   порядок generations и неизменные base configuration/context. Дополнительно связать
+   последний selected binding/configuration digests с actual captured current entry.
+   Сохранить existing bounds: до 64 restores и 64 actions, общий read limit 256 sources
+   и существующие event/page/byte budgets. Несогласованный journal остаётся hold.
+3. Использовать эту проекцию в existing aggregate Stats/log reader и ограничить новый
+   Codex `/cost` только цепочкой его выбранного entry. Отдельные Launch и fresh Restart
+   остаются отдельными native sessions. Original bindings/input IDs/operation refs и
+   attribution берутся из прежних Runtime records; старые события не копируются в новую
+   generation. Повторный readonly запрос, reload и cold Host ничего не отправляют провайдеру.
+4. В existing Runtime read authorization разрешить отсутствующий registry binding только
+   при exact membership в той же validated projection и действующем human Team read grant.
+   Snapshot/feed по-прежнему проверяют authority до и внутри Runtime fence. Current grant
+   проверяется и после aggregate read. Admit/dispatch/control, current delivery,
+   provider creation и selection authority остаются прежними. Не давать историю по одному
+   совпадению member name, PID, session ID или caller-supplied digest.
+5. Usage сохраняет existing per-original-input deduplication. Не складывать одинаковый
+   cumulative USD повторно после продолжения той же native session.
+   [Официальное описание Claude SDK](https://code.claude.com/docs/en/agent-sdk/cost-tracking)
+   указывает, что resumed result включает прежние расходы session; последний reported
+   cumulative value заменяет предыдущие. Для этого private grouping соединяет только
+   validated Resume edges с подтверждённой provider semantics; fresh Restart/new Launch
+   образуют отдельные группы. Снижение total, missing/partial retention или неподтверждённая
+   семантика дают unknown и понятный gap, а не вычисленную цену. Codex USD по-прежнему
+   `not reported`; отдельный price table и native transcript parser не добавляются.
+6. Не менять публичные DTO и сохранённые `/cost` receipts. История вычисляется при новом
+   readonly query или новом explicit command. Recovery старой команды использует прежний
+   captured snapshot/elapsed/IDs/bytes, даже если после неё появились новые turns.
+
+#### Проверка и review
+
+- Source-круг: сравнить actual rekey и original validators; включать именно сохранённые
+  predecessor bindings, а не новую in-memory копию owner/registry.
+- Architecture-круг: reuse двух existing journal projections и Runtime activity owner;
+  отказаться от нового persistence API, registry, event migration и общей hierarchy.
+  Не расширять frozen большие файлы: вычисление цепочки остаётся в отдельном узком helper.
+- Независимый review перед публикацией source: current human authority, foreign bindings,
+  pending/corrupt edges, exact current config anchor и отсутствие native calls/второго journal.
+- Расширить две существующие критичные интеграции: реальный Host composition
+  Launch→turn→Resume→turn→fresh Restart→cold read проверяет retained input totals без дублей;
+  existing command/authority case проверяет новый `/cost`, сохранение старого receipt,
+  отказ revoked grant и foreign/corrupt lineage. Не добавлять набор unit tests на каждый helper.
+- В существующем actual Codex Desktop Resume journey сравнить Stats и visible `/cost`
+  до/после выбранного Resume и после reload, без дополнительных native model requests
+  ради самой статистики. Existing Stop/Quit/source-freeze/cleanup guards обязательны.
+  Source review, fixtures и локальная компиляция не заменяют exact-head native/Desktop CI.
+
+R10 является планом следующего среза. R9 fix и существующие receipts не объявляют эту
+историю завершённой; готовность фиксируется только после implementation review и проверок.
