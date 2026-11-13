@@ -69,6 +69,7 @@ import {
   groupMembers,
   portOccupied,
   processTable,
+  projectDesktopHarnessFailure,
   readOwnedCdpListenerFailure,
   selectedCdpPort,
 } from './desktop-backend-observations.ts';
@@ -575,6 +576,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     if (finishMixedSettings) await finishMixedSettings();
     evidence.status = 'PASS';
   } catch (error) {
+    evidence.failureSource = projectDesktopHarnessFailure(error, repo, desktopProofSources);
     const listenerFailure = readOwnedCdpListenerFailure(error);
     if (listenerFailure) evidence.cdpListenerFailure = listenerFailure;
     evidence.failure =
@@ -729,6 +731,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     await verifyDesktopNativeFreeze(nativeInputs, evidence);
     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
     console.log(JSON.stringify({ status: evidence.status, receipt: receiptPath,
+      ...(evidence.status !== 'PASS' && evidence.failureSource
+        ? { failureSource: evidence.failureSource } : {}),
       ...(mode === 'codex-login-ui' && evidence.status !== 'PASS'
         ? { loginFailure: projectDesktopCodexLoginFailure(evidence) } : {}),
     }));

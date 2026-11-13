@@ -3,6 +3,7 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
+import { effectId } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import {
   COMMAND_ARGS,
   COMPACT_AUTHORIZATION,
@@ -103,6 +104,9 @@ export async function runDesktopNativeCommandsUiProof(
   assert.match(root, /\/TEST-desktop-backend-[^/]+$/);
   const binding = record(options.session.binding),
     bindingKey = runtimeDigest(binding);
+  const { backendId, teamId } = binding;
+  assert.ok(typeof backendId === 'string' && backendId.length > 0);
+  assert.ok(typeof teamId === 'string' && teamId.length > 0);
   assert.equal(binding.memberId, 'alice-id');
   assert.equal(model.observations.length, 8, 'existing actual Launch has completed');
   assert.equal(model.commandRequests.length, 0);
@@ -329,7 +333,9 @@ export async function runDesktopNativeCommandsUiProof(
       mode: 0o600,
     });
     const original = await send(selected.name, selected.args);
-    const replies = (await inbox()).filter((row) => row.messageId === selected.replyId);
+    const replies = (await inbox()).filter(
+      (row) => row.messageId === effectId('message', backendId, teamId, selected.replyId)
+    );
     assert.equal(replies.length, 1);
     assert.equal(replies[0]!.text, selected.reply);
     await ui.waitRead(
