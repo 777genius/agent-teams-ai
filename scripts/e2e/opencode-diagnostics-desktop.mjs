@@ -669,10 +669,14 @@ if (mode === 'seed-packaged') {
             JSON.stringify(rendererBootstrap, null, 2) + '\n'
           );
         } catch (bootstrapDiagnosticError) {
-          await writeFile(
-            path.join(root, `navigation-failure-${scenario}-diagnostic-error.txt`),
-            String(bootstrapDiagnosticError).slice(0, 500)
-          );
+          try {
+            await writeFile(
+              path.join(root, `navigation-failure-${scenario}-diagnostic-error.txt`),
+              String(bootstrapDiagnosticError).slice(0, 500)
+            );
+          } catch {
+            // Diagnostics must never replace the original UI navigation failure.
+          }
         }
         // Preserve an actual screenshot if navigation cannot become visible.
         try {
