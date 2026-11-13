@@ -38,7 +38,7 @@ export function assertStoppedImportModelChecks(
     Awaited<ReturnType<typeof startNativeTeamModel>>,
     'probes' | 'observations' | 'failures' | 'unexpectedNoToolsRequests'
   >,
-  selected: { model: unknown; effort: unknown }
+  selected: { model: unknown; effort?: unknown }
 ): void {
   assert.ok(receipts.length >= 1 && receipts.length <= 8, 'finite canonical model check count');
   assert.equal(new Set(receipts.map((row) => row.commandId)).size, receipts.length);
@@ -348,6 +348,11 @@ export async function runDesktopStoppedImportUiSmoke(
   const owner = await json(join(teamRoot, '.host-owner/state.json'));
   for (const [key, value] of Object.entries(seed.savedSettings))
     assert.equal(record(owner.savedSettings)[key], value);
+  if (seed.sourceKind === 'actual-current-native-solo') {
+    assert.equal(Object.hasOwn(seed.savedSettings, 'effort'), false);
+    assert.equal(Object.hasOwn(record(owner.savedSettings), 'effort'), false);
+    assert.equal(record(owner.savedSettings).effort, undefined);
+  }
   assert.deepEqual(owner.runtimeCaptures ?? [], []);
   const origin = await json(join(teamRoot, '.host-owner/import/source.json'));
   const originRefs = (origin.references as unknown[]).map(record);

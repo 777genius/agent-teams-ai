@@ -148,10 +148,11 @@ test('current legacy source has one text turn and closes before ordinary Host pr
   } finally {
     await model.close();
   }
-  for (const mode of ['path', 'body', 'auth', 'overflow', 'ordinary', 'donor', 'closed'] as const) {
+  for (const mode of ['path', 'body', 'auth', 'overflow', 'ordinary', 'closed-donor', 'closed'] as const) {
     const refused = await startNativeTeamModel(mode === 'ordinary' ? {}
-      : mode === 'donor' ? { donorSavedProbes: true } : { currentLegacySource: source });
+      : mode === 'closed-donor' ? { donorSavedProbes: true } : { currentLegacySource: source });
     try {
+      if (mode === 'closed-donor') assert.deepEqual(await refused.finishDonorSavedProbes!(), []);
       if (mode === 'closed') {
         const original = await fetch(refused.url + '/v1/messages', {
           method: 'POST', headers: { 'content-type': 'application/json' },
@@ -413,6 +414,9 @@ test('saved donor catalogue and PONG stay inside the original producer epoch', a
     headers: { 'x-api-key': 'TEST-donor-saved-only-key' },
   });
   try {
+    const warmed = await fetch(model.url, { method: 'HEAD' });
+    assert.equal(warmed.status, 204);
+    assert.equal(await warmed.text(), '');
     assert.equal((await catalog()).status, 200);
     const listed = await catalog('?limit=1000');
     assert.equal(listed.status, 200);
@@ -436,5 +440,30 @@ test('saved donor catalogue and PONG stay inside the original producer epoch', a
     await assert.rejects(model.finishDonorSavedProbes!(), /once/);
   } finally {
     await model.close();
+  }
+  for (const mode of ['path', 'query', 'body', 'authorization', 'api-key', 'overflow', 'closed'] as const) {
+    const refused = await startNativeTeamModel({ donorSavedProbes: true });
+    const headers: Record<string, string> = {};
+    if (mode === 'authorization') headers.authorization = 'Bearer TEST-donor';
+    if (mode === 'api-key') headers['x-api-key'] = 'TEST-donor-saved-only-key';
+    try {
+      if (mode === 'closed') assert.deepEqual(await refused.finishDonorSavedProbes!(), []);
+      if (mode === 'overflow')
+        for (let count = 0; count < 32; count++)
+          assert.equal((await fetch(refused.url, { method: 'HEAD' })).status, 204);
+      const status = mode === 'body' ? await new Promise<number | undefined>((resolve, reject) => {
+        const outgoing = request(refused.url, { method: 'HEAD', headers: { 'content-length': '1' } }, response => {
+          response.resume(); response.once('end', () => resolve(response.statusCode));
+        });
+        outgoing.once('error', reject); outgoing.end('x');
+      }) : (await fetch(refused.url + (mode === 'path' ? '/v1/models' : mode === 'query' ? '?probe=1' : ''), {
+        method: 'HEAD', headers,
+      })).status;
+      assert.equal(status, 400, mode + ' donor HEAD is the first failure');
+      assert.equal(refused.failures.length, 1);
+      assert.deepEqual(refused.donorSavedProbes, []);
+      assert.deepEqual(refused.observations, []);
+      assert.deepEqual(refused.probes, []);
+    } finally { await refused.close(); }
   }
 });

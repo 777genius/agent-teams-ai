@@ -450,6 +450,11 @@ export async function produceDesktopDonorSavedTeam(options: {
       try {
         const observation = {
           diagnostic: 'donor-saved-producer',
+          firstModelFailure: model.failures.length === 0 ? null
+            : model.failures[0] === 'bounded original legacy catalog reads' ? 'catalogue-limit'
+              : model.failures[0] === 'preconnect belongs to the original producer epoch' ? 'preconnect-epoch'
+                : model.failures[0] === 'bounded original runtime preconnects' ? 'preconnect-limit'
+                  : 'unclassified',
           ...(failureObservation ?? { phase: 'cleanup-or-freeze', source: { kind: 'unclassified', frames: [] } }),
           sourceFrozen: proof.sourceFrozen === true, cleanupFailed: cleanup.cleanupFailure !== undefined,
           cleanupEmpty: cleanup.remaining === null ? null : cleanup.remaining.length === 0,
