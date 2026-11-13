@@ -623,3 +623,49 @@ test file; один original input, прежние budgets и все semantic as
 Не добавляются новая gesture abstraction, retry queue, generic framework,
 renderer state writes или отдельный CI job. Независимый source review и
 actual exact-head результат обязательны перед закрытием этой строки.
+
+
+## 12. Обязательный результат выбранного CI сценария и ограниченный native log
+
+Qualification PR1187: `PRRT_kwDORVTEtM622BTZ`, `PRRT_kwDORVTEtM624t0Y`.
+
+1. В `.github/workflows/ci.yml` включить `codex-login-desktop` в dependencies
+   `full-qualification`. Проверка требует именно success, когда исходный job
+   выбран своим существующим predicate (ready same-repository PR, parity head/base,
+   не metadata-only). Для остальных PR skipped остаётся допустимым.
+   Повторить ровно этот predicate в aggregate gate; не менять required branch
+   protections, job selection, timeouts или трактовку cancelled/failure.
+2. Existing finite native schedule step должен ограничивать output во время
+   выполнения, а не только проверять размер уже записанного файла.
+   Использовать встроенный bounded child-process capture с прежним timeout и
+   exact executable/arguments; ограниченный partial log сохранить даже при overflow.
+   Overflow/error/timeout проваливают step. Не вводить общий runner, не сигналить
+   чужие PID и не перенаправлять unlimited stdout/stderr в файл.
+3. Сверить существующие workflow validation/tests для selected/skipped/failure gate;
+   native schedule proof обязан остаться тем же. Exact-head native/Desktop CI
+   завершает приёмку, локальный YAML parse её не заменяет.
+
+Круг source: job predicate и aggregate needs сверены отдельно; действующий provider
+archive verifier уже читает actual package pin, старый archive не возвращается.
+Круг architecture: два изменения существующего workflow, без нового job/framework.
+Следующий круг — независимое review diff и существующие CI policy checks.
+
+## 13. Невалидный Launch prompt до durable intent
+
+PR1186 `PRRT_kwDORVTEtM622S1B`: NUL отвергается поздним Team text validator,
+но incoming Launch может сначала сохранить intent, который затем невозможно восстановить.
+
+1. Отвергать NUL в трёх существующих incoming boundaries:
+   Main `teamOperationValues.ts`, Host `executeTeamLaunch.ts` schema и
+   `TeamLaunchOwner.ts` до записи intent. Сохранить текущие trim/length правила.
+2. Не переписывать исторические launch records и не менять durable format.
+   Валидный повтор того же intent ID после отказа должен работать, потому что
+   invalid input не создал ни record, ни native allocation.
+3. Расширить existing Launch owner/RPC case одной NUL попыткой и valid retry;
+   проверить отсутствие native work и сохранённых данных при первом отказе.
+   Не создавать отдельный validator framework или набор tests на каждый символ.
+
+Круг source: поздняя ошибка сопоставлена с точкой publication.
+Круг architecture: локальные проверки на существующих границах; новые DTO/ledger не нужны.
+После независимого review — targeted existing Launch integration и exact-head CI.
+
