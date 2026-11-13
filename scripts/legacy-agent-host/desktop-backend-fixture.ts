@@ -15,7 +15,9 @@ import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/comp
 import { prepareNativeReviewWorkspace } from './desktop-native-review-fixture.ts';
 import { prepareDesktopReviewLedger } from './desktop-review-fixture.ts';
 import { prepareDesktopStoppedImport } from './desktop-stopped-import-fixture.ts';
-import { desktopOpenCodeV2ManagementProfile, prepareDesktopOpenCodeV2Recipe } from './desktop-opencode-v2-fixture.ts';
+import { desktopBackendEnvironment, desktopRuntimeSourceEnvironment, prepareDesktopRuntimeProfile } from './desktop-runtime-source-fixture.ts';
+import type { DesktopOpenCodeSourceSelection } from './desktop-runtime-source-fixture.ts';
+export { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
 import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
 import { DESKTOP_MCP_MEMBERS, prepareDesktopCapturedMcpRecipes } from './desktop-opencode-v2-mcp-fixture.ts';
 
@@ -69,14 +71,19 @@ export async function prepareDesktopBackendFixture(
     nativeCodex?: { path: string; sha256: string };
     nativeClaude?: { path: string; sha256: string; modelUrl?: string };
     nativeOpenCodeV2?: DesktopOpenCodeV2Selection;
+    nativeOpenCodeSourceSelection?: DesktopOpenCodeSourceSelection;
     capturedMcpNonce?: string;
   }
 ) {
   if (options.nativeOpenCodeV2 && (options.nativeClaude || options.nativeCodex || options.candidateRuntime || options.nativeGroupChats))
     throw new Error('Embedded V2 requires its explicit captured TEST fixture');
+  if (options.nativeOpenCodeSourceSelection && (options.nativeOpenCodeV2 || options.nativeClaude ||
+    options.nativeCodex || options.candidateRuntime || options.nativeGroupChats || options.launchDialog ||
+    options.nativeReviewUi || options.capturedMcpNonce || options.creation !== true))
+    throw new Error('Native source selection requires its original V1 Create fixture');
   const node =
     options.candidateRuntime?.nodeExecutable ??
-    (await realpath(options.nativeOpenCodeV2 ? process.execPath :
+    (await realpath(options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ? process.execPath :
       join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')));
   const hostEntry =
     options.candidateRuntime?.hostEntry ??
@@ -463,25 +470,8 @@ export async function prepareDesktopBackendFixture(
       },
     ];
   }
-  if (options.nativeOpenCodeV2) {
-    const member = await prepareDesktopOpenCodeV2Recipe({ repo, root, node,
-      selection: options.nativeOpenCodeV2,
-      identity: { teamId: scope.teamId, memberId: 'alice-id', principalId: 'alice-session',
-        sessionId: 'TEST-native-opencode-v2', generation: 1, configRevision: 'TEST-opencode-v2-config' },
-    });
-    const team = profile.teams[0]!;
-    team.members[0]!.delivery = { ...team.binding, runId: scope.runId,
-      memberId: member.memberId, generation: String(member.generation) };
-    team.grants.push({ principalId: member.principalId, memberName: 'alice',
-      permissions: ['read', 'task.write', 'message.write'] });
-    team.savedSettings = { cwd: member.cwd, providerId: 'opencode',
-      model: `${member.nativeOptions.providerId}/${member.model}`, skipPermissions: options.nativeReviewUi === true };
-    if (options.launchDialog) team.members[0]!.role = 'lead';
-    profile.runtime = { members: [member],
-      ...(options.creation ? { providerTemplates: [structuredClone(member)] } : {}) };
-    profile.management = [desktopOpenCodeV2ManagementProfile(member,
-      options.nativeOpenCodeV2.managementEndpoint, 'TEST-opencode-v2-management')];
-  }
+  if (options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection)
+    await prepareDesktopRuntimeProfile({ repo, root, node, profile, scope, options });
   if (options.capturedMcpNonce !== undefined) {
     if (!options.nativeOpenCodeV2 || !options.launchDialog || options.creation)
       throw new Error('Captured MCP requires the original V2 Launch fixture');
@@ -617,7 +607,7 @@ export async function prepareDesktopBackendFixture(
           ...(options.reviewUi || options.nativeReviewUi ? { reviewTransport: 'review-v1' } : {}),
           nodeExecutable: node,
           nodeVersion: options.candidateRuntime?.nodeVersion ??
-            (options.nativeOpenCodeV2 ? process.version : 'v24.21.0'),
+            (options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ? process.version : 'v24.21.0'),
           nodeSha256,
           hostEntry,
           hostEntrySha256,
@@ -641,17 +631,18 @@ export async function prepareDesktopBackendFixture(
         },
       },
     ],
-    ...(options.nativeCodex || options.launchDialog || options.nativeOpenCodeV2
+    ...(options.nativeCodex || options.launchDialog || options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection
       ? {
           management: (options.nativeOpenCodeV2 ? [null, join(root, 'workspace')] : [null]).map(
             (projectPath) => ({
-              runtimeId: options.nativeOpenCodeV2 ? 'opencode' : options.launchDialog ? 'claude' : 'codex',
+              runtimeId: options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ? 'opencode' : options.launchDialog ? 'claude' : 'codex',
               owner: ownerRef,
               contextId: 'local',
               projectPath,
-              profileId: options.nativeOpenCodeV2 ? 'TEST-opencode-v2-management' :
+              profileId: options.nativeOpenCodeSourceSelection ? 'TEST-opencode-source-management' :
+                options.nativeOpenCodeV2 ? 'TEST-opencode-v2-management' :
                 options.launchDialog ? 'TEST-claude-management' : 'TEST-codex-metadata',
-              configRevision: options.nativeOpenCodeV2 ? 'TEST-opencode-management' : options.launchDialog
+              configRevision: options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ? 'TEST-opencode-management' : options.launchDialog
                 ? 'TEST-claude-management-config'
                 : 'TEST-codex-config',
             })
@@ -699,13 +690,14 @@ process.stderr.write('TEST sentinel refuses native agent invocation\\n');process
     'gemini',
     'claude-multimodel',
     'terminal-daemon',
-  ])
+  ].filter(name => !options.nativeOpenCodeSourceSelection || name !== 'opencode'))
     await writeFile(join(root, 'bin', name), sentinelSource, { mode: 0o700 });
   // cliPathMerge prefers this selected TEST vendor directory even before the
   // shell environment cache is warm; keep cold discovery behind the same guard.
   const vendorBin = join(root, 'claude/local/node_modules/.bin');
   await mkdir(vendorBin, { recursive: true, mode: 0o700 });
-  for (const name of ['claude', 'codex', 'opencode', 'gemini', 'claude-multimodel'])
+  for (const name of ['claude', 'codex', 'opencode', 'gemini', 'claude-multimodel']
+    .filter(name => !options.nativeOpenCodeSourceSelection || name !== 'opencode'))
     await writeFile(join(vendorBin, name), sentinelSource, { mode: 0o700 });
   // Startup's shell environment resolver may otherwise source login files and
   // replace the isolated PATH/HOME. This TEST executable performs no shell eval.
@@ -737,54 +729,9 @@ process.stderr.write('TEST sentinel refuses native agent invocation\\n');process
     },
     descriptorPath,
     profilePath,
-    appEnvironment: desktopBackendEnvironment(root, node, descriptorPath, digest(descriptorBytes)),
+    appEnvironment: desktopRuntimeSourceEnvironment(
+      desktopBackendEnvironment(root, node, descriptorPath, digest(descriptorBytes)), root, node,
+      options.nativeOpenCodeSourceSelection),
   };
 }
 
-export function desktopBackendEnvironment(
-  root: string,
-  node: string,
-  descriptorPath: string,
-  descriptorSha256: string
-) {
-  return {
-    HOME: join(root, 'home'),
-    TMPDIR: join(root, 'tmp'),
-    XDG_CONFIG_HOME: join(root, 'config'),
-    // Chromium's macOS GetHomeDir uses NSHomeDirectory, not getenv(HOME).
-    // Apple's CFPlatform.c prioritizes this override before the passwd home.
-    CFFIXED_USER_HOME: join(root, 'home'),
-    MAC_CHROMIUM_TMPDIR: join(root, 'tmp'),
-    XDG_DATA_HOME: join(root, 'data'),
-    XDG_CACHE_HOME: join(root, 'cache'),
-    PATH: `${join(root, 'bin')}:${dirname(node)}:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin`,
-    SHELL: join(root, 'bin/shell-env'),
-    NODE_ENV: 'development',
-    NO_COLOR: '1',
-    // A TEST HOME changes pnpm's store lookup. Report drift without installing
-    // into the frozen worktree; the harness verifies its selected archive bytes.
-    pnpm_config_verify_deps_before_run: 'warn',
-    TERM: 'dumb',
-    AGENT_TEAMS_ELECTRON_USER_DATA_DIR: join(root, 'userData'),
-    AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: join(root, 'claude'),
-    CLAUDE_ROOT: join(root, 'claude'),
-    CLAUDE_CONFIG_DIR: join(root, 'claude'),
-    CODEX_HOME: join(root, 'config/codex'),
-    OPENCODE_CONFIG_DIR: join(root, 'config/opencode'),
-    AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH: descriptorPath,
-    AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256: descriptorSha256,
-    CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: join(root, 'bin/claude-multimodel'),
-    CLAUDE_CLI_PATH: join(root, 'bin/claude'),
-    CODEX_CLI_PATH: join(root, 'bin/codex'),
-    OPENCODE_CLI_PATH: join(root, 'bin/opencode'),
-    CLAUDE_TERMINAL_DAEMON_BINARY: join(root, 'bin/terminal-daemon'),
-    CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: join(root, 'bin/opencode'),
-    OPENCODE_BIN_PATH: join(root, 'bin/opencode'),
-    CLAUDE_DEV_RUNTIME_DISABLE_GH: '1',
-    CLAUDE_DEV_RUNTIME_CACHE_ROOT: join(root, 'cache/runtime'),
-    NODE_BINARY: node,
-    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
-    DISABLE_AUTOUPDATER: '1',
-    DISABLE_TELEMETRY: '1',
-  };
-}
