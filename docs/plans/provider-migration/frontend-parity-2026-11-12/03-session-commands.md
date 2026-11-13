@@ -519,3 +519,35 @@ SDK JS digest совпал с прежним qualified `c8d3e6cf…`; это dia
 разрешать их пользователю. **Review 2 — минимальность.** Исправляется существующий codec и один
 regression; нет новой discovery API, списка разрешённых внутренних commands или fallback dispatch.
 Compact, cost, review и scoped skills остаются открытыми до actual native/Desktop acceptance.
+
+### R9 — aggregate Stats после нового Launch, 2026-11-13
+
+На `1628b70e` [Codex Desktop Resume](https://github.com/777genius/agent-teams-ai/actions/runs/43356141566/job/131658636833)
+завершил первый native turn, затем отказал на read-only `team.activity.stats.read`
+до отправки `/cost`. Source audit выявил две связанные ошибки aggregate reader:
+он перечисляет оставшийся пустой configured recipe и проверяет каждую запись
+через current delivery, которая после captured Launch уже относится к другому run.
+
+Минимальный correction в `readTeamActivity.ts` пропускает только запись без
+Runtime record и attached session. Чтение фактических records использует прежнюю
+authority `RuntimeActivityCoordinator.snapshot/feed`: exact retained entry,
+current Team read grant и existing Runtime fence. Удаляется только дублирующий
+current-delivery guard aggregate reader; control/dispatch/restore authorization
+не меняется. Такой read path уже используется `resolveRuntimeControlEntry`;
+`RuntimeTeamCaptures.restore` валидирует source и binding всех retained captures.
+
+Existing real-composition test сохраняет один launch/input и проверяет reported
+usage после первого captured turn, после второго capture с новой delivery и после
+cold reconstruction. Пустой recipe не увеличивает generations. Existing revoked-read
+case дополнен Stats/logs: потеря current read grant по-прежнему запрещает ответ.
+Новая unit suite и новая native allocation не нужны. Root source review выполнен;
+compiler/test/native/Desktop результаты этого correction ещё pending.
+
+Отдельный оставшийся пункт — история generation после Resume/Restart:
+`RuntimeTeamCoordinator.rekey` удаляет predecessor entry, поэтому aggregate Stats
+не перечисляет прежнюю generation. Correction выше сохраняет отдельные launches,
+но не закрывает этот пункт. Следующий минимальный срез должен проецировать
+существующие validated restore/member-action journals без второго registry,
+сохранить original input attribution и не суммировать повторно native cumulative
+cost при продолжении одной session. До source review и actual acceptance это
+остаётся открытым несоответствием P03.

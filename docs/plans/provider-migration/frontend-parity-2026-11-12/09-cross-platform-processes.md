@@ -1120,7 +1120,7 @@ Foreign/neighbor/provider witnesses и самостоятельный whole-prov
 Root exit, service absence и full provider cleanup по-прежнему разные факты.
 
 Root review всех 6 source файлов и независимый Profiles TS/conformance review — PASS;
-Account C lifetime review ещё pending. Exact preimages проверены по native tree,
+Независимый Account C lifetime/cleanup review — PASS. Exact preimages проверены по native tree,
 каждый draft blob прочитан обратно без различий. **Compile/native execution ещё не было**:
 executor недоступен, результат 9d не переносится на этот следующий срез.
 Native и TS changes с existing conformance fixture должны публиковаться вместе после
