@@ -27,6 +27,15 @@ for (const path of ['/api/plugin', '/api/model', '/api/info']) {
     publish(name, request);
   }
 }
+const failedRead = channel('agent-teams:opencode-v2:read-cut-failed');
+const failure = { stage: 'after-session', reason: 'deadline', elapsedMs: 30001, deadlineExpired: true, aborted: false };
+failedRead.publish({ ...failure, error: secret, stack: secret, sessionId: secret, path: ${JSON.stringify(root)} });
+for (const invalid of [{ ...failure, reason: secret }, { ...failure, stage: secret },
+  { ...failure, elapsedMs: 60001 }, { ...failure, deadlineExpired: 'true' },
+  { ...failure, reason: 'mutable_native_readback' }]) failedRead.publish(invalid);
+let accessorCalls = 0;
+failedRead.publish(Object.defineProperty({ ...failure }, 'stage', { get() { accessorCalls++; return 'after-session'; } }));
+if (accessorCalls !== 0) process.exit(3);
 const end = Date.now() + 50; while (Date.now() < end) Math.sqrt(Date.now()); process.exit(1);
 `, { mode: 0o600 });
   const host = startHost({ node: process.execPath, entry, root, profile: join(root, 'TEST-profile.json'),
@@ -43,10 +52,16 @@ const end = Date.now() + 50; while (Date.now() < end) Math.sqrt(Date.now()); pro
       ['request', 1, 'plugins'], ['request-send-headers', 1, 'plugins'], ['request-body-sent', 1, 'plugins'],
       ['request', 2, 'model-catalog'], ['request-send-headers', 2, 'model-catalog'], ['request-body-sent', 2, 'model-catalog'],
       ['request', 3, 'info'],
+      ['read-cut-failed', null, null],
     ], 'same-object targeted phases appear once; foreign objects and untargeted phases are ignored');
-    assert.ok(originalTrace.entries.every(row => row.epoch === 1 && row.method === 'GET' &&
+    assert.ok(originalTrace.entries.filter(row => row.event !== 'read-cut-failed').every(row => row.epoch === 1 && row.method === 'GET' &&
       typeof row.atMs === 'number' && (row.event === 'request' ? row.durationMs === null :
         typeof row.durationMs === 'number' && row.durationMs >= 0)));
+    const readFailure = originalTrace.entries.find(row => row.event === 'read-cut-failed')!;
+    assert.deepEqual({ epoch: readFailure.epoch, stage: readFailure.stage, code: readFailure.code,
+      durationMs: readFailure.durationMs, deadlineExpired: readFailure.deadlineExpired, aborted: readFailure.aborted },
+    { epoch: 1, stage: 'after-session', code: 'deadline', durationMs: 30001, deadlineExpired: true, aborted: false });
+    assert.equal('error' in readFailure || 'stack' in readFailure || 'sessionId' in readFailure || 'path' in readFailure, false);
     assert.equal(JSON.stringify(originalTrace.entries).includes('TEST-private-undici-token'), false);
     assert.equal(JSON.stringify(originalTrace.entries).includes(root), false);
     const path = host.testCpuProfilePath!;
@@ -134,7 +149,9 @@ const end = Date.now() + 50; while (Date.now() < end) Math.sqrt(Date.now()); pro
     passive.accept(Buffer.from(fifth.slice(23)), 1);
     passive.accept(Buffer.from(prefix + JSON.stringify({ event: 'child-exit', atMs: 9,
       child: 6, exitCode: 0, unknownNativeField: secret }) + '\n' + secret + '\n'), 2);
-    assert.equal(passive.entries.length, 2);
+    passive.accept(Buffer.from(prefix + JSON.stringify({ event: 'read-cut-failed', atMs: 10,
+      stage: 'after-session', reason: secret, elapsedMs: 1, deadlineExpired: false, aborted: false }) + '\n'), 1);
+    assert.equal(passive.entries.length, 2, 'receipt projection independently rejects an arbitrary read failure reason');
     assert.equal(passive.entries[0]!.child, 5, 'the source-derived metadata child remains observable');
     assert.equal(passive.entries[0]!.epoch, 1);
     assert.equal(passive.entries[1]!.child, null, 'an ordinal beyond the finite bound is not accepted');
