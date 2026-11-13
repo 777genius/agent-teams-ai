@@ -56,7 +56,7 @@ async function fixture() {
   const profilePath = join(root, 'TEST-profile.json'), profileBytes = JSON.stringify(profile);
   await writeFile(profilePath, profileBytes, { mode: 0o600 });
   const ref = { ownerId: owner.ownerId, revision: owner.revision };
-  const descriptor: DesktopBackendDescriptor = {
+  let descriptor: DesktopBackendDescriptor = {
     schemaVersion: 1, defaultOwner: ref,
     owners: [{ ...ref, storageRoot: owner.storageRoot, profile: {
       nodeExecutable: executable, nodeVersion: execFileSync(executable, ['--version'], { env: {}, encoding: 'utf8' }).trim(),
@@ -70,7 +70,8 @@ async function fixture() {
       contextId: index ? 'TEST-B' : 'TEST-A', label: team.binding.teamName,
       members: [{ memberId: team.members[0]!.memberId, label: 'team-lead' }], scope: team.scope })),
   };
-  const descriptorPath = join(root, 'TEST-descriptor.json'), descriptorBytes = JSON.stringify(descriptor);
+  const descriptorPath = join(root, 'TEST-descriptor.json');
+  let descriptorBytes = JSON.stringify(descriptor);
   await writeFile(descriptorPath, descriptorBytes, { mode: 0o600 });
   let foreground = 'TEST-A';
   let feature: DesktopBackendFeature;
@@ -114,15 +115,27 @@ async function fixture() {
     }, { timeout: 8000 });
     return (await repository.getLatestRun(scheduleId))!;
   }
-  return { scheduler, repository, capture, input, snapshot, waitRun,
+  return { scheduler, repository, capture, input, snapshot, waitRun, host,
     switchForeground: (value: string) => { foreground = value; },
-    async restart() { await scheduler.stop(); await feature.shutdown(); open(); await scheduler.start(); },
+    async restart(contextId?: string) {
+      await scheduler.stop(); await feature.shutdown();
+      if (contextId) {
+        descriptor = { ...descriptor, handles: descriptor.handles.map((handle, index) =>
+          index === 0 ? { ...handle, contextId } : handle) };
+        foreground = contextId;
+        descriptorBytes = JSON.stringify(descriptor);
+        await writeFile(descriptorPath, descriptorBytes, { mode: 0o600 });
+      }
+      open(); await scheduler.start();
+    },
+    completeTask: (taskId: string) => feature.facade.invoke({ handle: { handleId: 'TEST-handle-0' },
+      operation: 'task.lifecycle', commandId: randomUUID(), payload: { taskId, action: 'complete' } }),
     roster: () => feature.facade.invoke({ handle: { handleId: 'TEST-handle-0' },
       operation: 'team.roster.read', commandId: randomUUID(), payload: {} }),
   };
 }
 
-it('carries a lost task-create acknowledgement through cold readback without a duplicate or foreground redirect', async () => {
+it('carries a lost task-create acknowledgement through cold context renewal until the original task completes', async () => {
   const f = await fixture();
   const schedule = await f.scheduler.createSchedule(f.input(), await f.capture());
   const original = CapturedHostClient.prototype.request;
@@ -148,7 +161,10 @@ it('carries a lost task-create acknowledgement through cold readback without a d
     tasks: [{ owner: 'team-lead', status: 'pending', subject: 'TEST scheduled work' }] } });
   expect(await f.snapshot('TEST-handle-1')).toMatchObject({ ok: true, value: { tasks: [] } });
   spy.mockRestore();
-  await f.restart();
+  await f.restart('TEST-A2');
+  const rebound = await f.scheduler.updateSchedule(schedule.id, { label: 'TEST renewed context' }, await f.capture());
+  expect(rebound.hostTarget).toEqual({ ...schedule.hostTarget, contextId: 'TEST-A2' });
+  f.switchForeground('TEST-B');
   await f.scheduler.triggerNow(schedule.id);
   const recovered = await f.waitRun(schedule.id, row => row.id !== first.id && row.status === 'skipped');
   expect(recovered.linkedTaskId).toBeTruthy();
@@ -160,6 +176,25 @@ it('carries a lost task-create acknowledgement through cold readback without a d
   expect(next.linkedTaskId).toBe(recovered.linkedTaskId);
   expect(await f.snapshot()).toMatchObject({ ok: true, value: { tasks: [expect.any(Object)] } });
   expect(await f.roster()).toMatchObject({ ok: true, value: { savedSettings: { prompt: 'TEST original saved instructions' } } });
+  const history = await f.host.create({ schedule: rebound, runId: 'TEST-history-read', getPreviousRuns: async () => [] });
+  for (const field of ['ownerResourceRef', 'teamResourceRef'] as const) {
+    await expect(history.resolvePreviousTask(schedule.teamName, { ...next,
+      hostTarget: { ...next.hostTarget!, [field]: 'TEST-foreign-resource' } }))
+      .rejects.toThrow('another captured team');
+  }
+  expect(await f.completeTask(next.linkedTaskId!)).toMatchObject({ ok: true, value: { phase: 'completed' } });
+  await vi.waitFor(() => f.scheduler.triggerNow(schedule.id));
+  const afterCompletion = await f.waitRun(schedule.id, row => row.id !== next.id && row.status === 'skipped');
+  expect(afterCompletion.linkedTaskId).toBeTruthy();
+  expect(afterCompletion.linkedTaskId).not.toBe(next.linkedTaskId);
+  const completed = await f.snapshot();
+  expect(completed).toMatchObject({ ok: true, value: { tasks: expect.arrayContaining([
+    expect.objectContaining({ id: next.linkedTaskId, status: 'completed' }),
+    expect.objectContaining({ id: afterCompletion.linkedTaskId, status: 'pending' }),
+  ]) } });
+  if (!completed.ok || !completed.value || !('tasks' in completed.value)) throw new Error('TEST task read unavailable');
+  expect(completed.value.tasks).toHaveLength(2);
+  expect(await f.snapshot('TEST-handle-1')).toMatchObject({ ok: true, value: { tasks: [] } });
 }, 20000);
 
 it('runs the actual cron against the captured team and keeps an unavailable launch quiet and recoverable', async () => {

@@ -77,20 +77,25 @@ Account plan передаёт существующий bound auth-resource refer
 Revision фиксирует auth source/namespace, не его изменяемые secret bytes: explicit login/logout сохраняют native semantics.
 Внешняя замена credential/config/executable файла проверяется соответствующим owner; она не разрешает silent rebind и не требует второго vault.
 Новый profileId привязывается к immutable revision и добавляется через existing private admission; старый ID не перезаписывается.
-Retained references вычисляются из existing captures/management receipts; отдельные refcount store, GC daemon и миграция journals не нужны.
+Текущая реализация сохраняет все опубликованные revisions и их app-managed artifact closures: pruning/GC опубликованных
+records/bytes не реализован. Поэтому capture до его durable записи также защищён этим консервативным retention.
+Если позднее появится pruning, его отдельный план обязан учитывать live in-flight captures до первого await наряду
+с existing captures/management receipts. Сейчас отдельные refcount store, GC daemon и миграция journals не нужны.
 
 ### Lifecycle операции
 
 1. **Select:** зафиксировать существующий source choice, provider/context, previous revision и command identity.
 2. **Prepare:** resolver/installer готовит candidate; app-controlled download ещё не является available profile.
 3. **Verify:** проверить native identity, engine qualification, paths/bytes и применимый account/config snapshot.
-4. **Publish:** сравнить previous revision, записать immutable candidate и атомарно сменить current pointer.
+4. **Publish:** сравнить previous revision; одной atomic index publication сохранить immutable candidate,
+   его original commandId/previousRevision и current pointer. Отдельный management ACK receipt записывается после этого.
 5. **Use:** новый probe/launch захватывает эту revision; старые binding и cancellation targets не меняются.
 6. **Recover:** по command identity прочитать published receipt/previous pointer и вернуть известный исход.
 
 Неизвестный native install outcome нельзя объявить failure или автоматически повторить как новый intent.
 Если publication проиграла более новому выбору, candidate остаётся невыбранным; UI предлагает refresh существующего состояния.
-Existing management receipt plumbing хранит publication command outcome; current pointer и receipt с одинаковым commandId сверяются при recovery.
+Existing management receipt plumbing хранит publication command outcome. При потере ACK `lookup` находит original
+commandId в сохранённой immutable index record и восстанавливает receipt; уже выбранный C не становится доказательством B.
 
 ## 5. Контракты и последовательность изменений
 
@@ -270,6 +275,58 @@ Hash/platform/malformed receipt suites переиспользовать; same-ve
 - R1 повторно проверил recovery/fingerprint, original sender guards, generation preservation и status/progress ordering. Извлечён только existing provider-status composition, чтобы `agentBackend.ts` остался ниже frozen 800-line cap; новый service/registry/transaction log не добавлен.
 - Source/identity recovery tests: **16/16 PASS**. Consumer suites: **110/110 PASS**, включая real Main→child Host→finite executable fixture, retained target после restart, lost ACK B/current C и восстановление prepared selection до нового acquisition. Focused canonical TypeScript, targeted lint и source-size guard — PASS.
 - Эти проверки не являются native inference настоящего provider или Desktop UI acceptance. Открыты реальные E1–E6, новая Claude/Codex qualification и V1↔V2 переход, полный config/model consumer P05/P07. Main merge/activation не выполнялись.
+
+## 15. Повторный source admission review — 2026-11-13
+
+Сверен exact frontend `522c80d168d698fc6842ee649cc4822406cd2632`; review #1186 indices
+2/3/11/25/31 рассматриваются по исходному коду, а не как готовые инструкции.
+
+### R1 — подтверждённые границы существующего lifecycle
+
+- `FileRuntimeSourceIndex.publish` уже атомарно сохраняет record с commandId/previousRevision и pointer;
+  `RuntimeSourceIndex.lookup` чинит потерянный ACK по original record, даже после публикации C.
+  Это уточнение §4, не новая transaction store и не изменение формата.
+- Index не удаляет опубликованные revisions. `OpenCodeRuntimeInstallerService` создаёт V2 version directory с новым UUID;
+  удаление temp/unpublished directory не является GC опубликованных bytes. Существующий installer отказывает
+  несовместимой замене сохранённого V1 directory. Текущий in-flight capture не зависит от отсутствующего pruning.
+- Исходный frontend задаёт cwd участника в saved member settings; текущий `runtimeCaptureCwd` уже определяет
+  member override и worktree precedence. Source pointer должен выбираться для того же effective cwd, что recipe.
+
+### R2 — три узких исправления до дальнейшей native приёмки
+
+1. **Member cwd.** В `runtimeCaptureSource.ts:captureRuntimeRecipeSources` вызвать existing `runtimeCaptureCwd`
+   для соответствующего roster member вместо общего `savedSettings.cwd`. Выбор всё ещё фиксируется до async preparation;
+   lead и member без override сохраняют прежний cwd, future worktree не становится новым current lookup при replay.
+   Тот же original member cwd передать в `recipes` → `resolveCapturedRuntimeRecipe`; иначе B reference сразу
+   проверяется как A и отвергается. Здесь helper получает saved settings без later worktree override: reference
+   выбирался до async подготовки, а конечный runtime cwd по-прежнему вычисляется с actual worktree targetPath.
+2. **Повторное подтверждение cleanup.** В `RuntimeSourceIndex.close` снимать только совпадающий rejected closing Promise,
+   сохраняя sealed admission, original native checks и durable unknown receipt. Следующий shutdown может повторно
+   наблюдать/закрыть те же handles; он не запускает native verifier заново и не принимает новый process по PID.
+   Успешно закрытые checks остаются удалёнными, успешный close остаётся idempotent.
+3. **Ошибка до native allocation.** Если static candidate verification после durable `prepared` не проходит
+   из-за отсутствующих/изменённых/нечитаемых bytes, сохранить исходный receipt как `held`, `resourceHeld:false`,
+   с существующим `source-changed` (или точным configuration reason), затем вернуть bounded admission error.
+   Запись требует существующей writer/cleanup authority. Не утверждать отсутствие process для verifying/unknown
+   receipt: прежняя recovery ветка обязана вернуть его held до этого этапа. Новый явный исправленный intent после
+   известного no-allocation refusal допустим; replay старого intent остаётся исходным отказом.
+
+### R3 — проверить результат без новой тестовой подсистемы
+
+- Расширить `runtime-source-selection.test.ts`: lead/project A и worker/effective project B фиксируют разные
+  правильные source references, cold compile сохраняет их. Existing lost-ACK B/current-C и scope refusal оставить.
+- В `runtime-source-native-identity.test.ts` расширить existing shutdown/unknown-cleanup сценарий: первое close
+  unconfirmed, второе подтверждает **тот же** check; run count остаётся один. Добавить no-allocation static failure
+  в существующий admission case: original terminal held, unchanged current, fresh repaired intent может завершиться.
+- Host build/types, focused integration и existing lint/source cap обязательны. Native/Desktop acceptance остаётся
+  отдельной проверкой exact HEAD; эти tests не выдаются за native provider inference.
+- Отдельно остаются design gaps review 9/12/13/16/24/30: interrupted Create recovery, stale seed history,
+  синхронное чтение большого executable, pathname verify→exec и auth replacement между source revisions.
+  Повторный проход обнаружил связь 16 с 12: blanket dedup `teamScopes` меняет digest ранее опубликованного grant
+  при том же targetId. Нельзя решать descriptor aliases изменением original record/fingerprint или повышением 256-scope
+  limit; совместимость retained grant требует отдельного узкого решения до такого source edit.
+  Этот срез не маскирует их, не вводит общий cache/owner/journal и не объявляет PR/планы полностью закрытыми.
+- Статус: авторские проходы R1/R2/R3 выполнены по коду; независимое review и source implementation впереди.
 
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/runtime/openCodeRuntimeBinaryEnv.ts

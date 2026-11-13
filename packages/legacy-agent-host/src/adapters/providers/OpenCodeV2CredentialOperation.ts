@@ -1,5 +1,6 @@
 import { ManagementCommandError } from '../../management/commandRecords.js';
 import { managementDigest } from '../../management/identity.js';
+import { selectOpenCodeV2ManagementModel } from '../../composition/openCodeV2ModelSelection.js';
 import { OpenCodeV2CredentialScope } from './OpenCodeV2CredentialScope.js';
 import { OpenCodeV2ManagementHost, openCodeV2KeyNamespace } from './OpenCodeV2ManagementHost.js';
 import { createOpenCodeV2ModelProbe } from './OpenCodeV2ModelProbe.js';
@@ -82,12 +83,8 @@ export function createOpenCodeV2CredentialOperation(
         modelId: command.providerId + '/' + selectedModel };
       saved = { ...saved!, phase: 'probe-intent', verification };
       progress(saved);
-      const { providerConfiguration, ...embedded } = profile.embedded!;
-      const probeProfile: OpenCodeManagementProfile = { ...profile,
-        nativeModel: { providerId: command.providerId, modelId: selectedModel },
-        embedded: { ...embedded,
-          ...(providerConfiguration && profile.nativeModel!.providerId === command.providerId ? { providerConfiguration } : {}) },
-      };
+      const probeProfile = selectOpenCodeV2ManagementModel(profile,
+        { providerId: command.providerId, modelId: verification.modelId });
       probe = createOpenCodeV2ModelProbe(probeProfile, { ...verification,
         profileId: profile.profileId, configRevision: profile.configRevision, providerId: command.providerId },
       current, options.processCustody ? { processCustody: options.processCustody } : {});

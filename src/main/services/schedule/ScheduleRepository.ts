@@ -11,8 +11,8 @@ export interface ScheduleRepository {
   listSchedules(): Promise<Schedule[]>;
   getSchedule(id: string): Promise<Schedule | null>;
   getSchedulesByTeam(teamName: string): Promise<Schedule[]>;
-  saveSchedule(schedule: Schedule): Promise<void>;
-  deleteSchedule(id: string): Promise<void>;
+  saveSchedule(schedule: Schedule, options?: { mustExist: true }): Promise<void>;
+  deleteSchedule(id: string, onCommitted?: () => void | Promise<void>): Promise<void>;
 
   listRuns(scheduleId: string, opts?: { limit?: number; offset?: number }): Promise<ScheduleRun[]>;
   getLatestRun(scheduleId: string): Promise<ScheduleRun | null>;

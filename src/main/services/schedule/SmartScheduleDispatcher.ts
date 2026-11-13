@@ -49,9 +49,11 @@ export interface SmartScheduleRuntimePort {
   startTaskByUser?(
     teamName: string,
     taskId: string,
-    admission?: { expectedOwner: string; expectedGeneration?: string; canStart: () => Promise<boolean> }
+    admission?: { expectedOwner: string; expectedRunId: string; expectedGeneration?: string;
+      isCurrent: () => boolean; canStart: () => Promise<boolean> }
   ): Promise<{ notifiedOwner: boolean }>;
-  attachMember(teamName: string, memberName: string): Promise<void>;
+  attachMember(teamName: string, memberName: string,
+    expected?: { runId: string; generation?: string }): Promise<void>;
   createTask(teamName: string, request: CreateTaskRequest,
     recipient?: { runId: string; generation?: string }): Promise<TeamTask>;
   launchTeam(request: TeamLaunchRequest): Promise<TeamLaunchResponse>;
@@ -448,7 +450,8 @@ export class SmartScheduleDispatcher {
         return skipped('Team stopped or changed before member attach');
       }
       if (isCancelled()) return skipped('Schedule was cancelled before member attach');
-      await this.runtime.attachMember(team, memberName);
+      await this.runtime.attachMember(team, memberName, { runId: runtime.runId,
+        ...(entry?.runtimeGeneration === undefined ? {} : { generation: entry.runtimeGeneration }) });
       const ready = await this.waitForMember(team, memberName, runtime.runId, isCancelled);
       if (!ready) return skipped(`Member "${memberName}" did not become ready`);
     }
@@ -527,7 +530,9 @@ export class SmartScheduleDispatcher {
     if (!this.runtime.startTaskByUser) return false;
     const result = await this.runtime.startTaskByUser(teamName, taskId, {
       expectedOwner: memberName,
+      expectedRunId,
       ...(expectedGeneration === undefined ? {} : { expectedGeneration }),
+      isCurrent: () => !isCancelled(),
       canStart: async () => {
         if (isCancelled() || (await this.runtime.isTeamBusy(teamName)) || !(await this.runtime.isTeamAlive(teamName))) {
           return false;
@@ -535,12 +540,9 @@ export class SmartScheduleDispatcher {
         const current = await this.runtime.getRuntime(teamName);
         return (
           !isCancelled() &&
-          !(await this.runtime.isTeamBusy(teamName)) &&
-          (await this.runtime.isTeamAlive(teamName)) &&
           current.runId === expectedRunId &&
           current.members[memberName]?.runtimeGeneration === expectedGeneration &&
-          readyMember(current.members[memberName]) &&
-          !isCancelled()
+          readyMember(current.members[memberName])
         );
       },
     });

@@ -53,11 +53,19 @@ export function createSchedulerService(
       }
     },
     startTaskByUser: (teamName, taskId, admission) =>
-      data.startTaskByUser(teamName, taskId, admission),
-    attachMember: (teamName, memberName) =>
-      apis.memberLifecycle.attachLiveRosterMember(teamName, memberName, {
-        reason: 'member_added',
+      data.startTaskByUser(teamName, taskId, admission && { ...admission,
+        isCurrent: () => admission.isCurrent() &&
+          apis.runtime.getCurrentRunId(teamName) === admission.expectedRunId &&
+          apis.runtime.isTeamAlive(teamName) && !provisioning.hasTeamOperationInProgress(teamName),
       }),
+    attachMember: (teamName, memberName, expected) => {
+      if (expected && (apis.runtime.getCurrentRunId(teamName) !== expected.runId ||
+        !apis.runtime.isTeamAlive(teamName) || provisioning.hasTeamOperationInProgress(teamName)))
+        throw new Error('Scheduled recipient changed before attach');
+      return apis.memberLifecycle.attachLiveRosterMember(teamName, memberName, {
+        reason: 'member_added',
+      });
+    },
     createTask: (teamName, request) => data.createTask(teamName, request),
     launchTeam: (request) => provisioning.launchTeam(request, () => undefined),
     runOneShot: (request) => executor.execute(request),
