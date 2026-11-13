@@ -35,8 +35,7 @@ export function captureMemberProviderAuthority(options: {
       runtimeDigest(entry.profile) !== original.profile ||
       runtimeDigest(entry.config) !== original.config ||
       entry.profile.principalId !== original.principalId ||
-      !entry.team.owner.authorizeMemberBinding(entry.binding, 'admit') ||
-      !entry.team.owner.authorizeRuntimeAccess(original.principalId, entry.binding, 'control')
+      !entry.team.owner.authorizeRuntimeAccess(original.principalId, entry.binding, 'provider')
     )
       throw new RuntimeOwnerError('forbidden');
   }
