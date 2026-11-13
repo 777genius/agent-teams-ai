@@ -198,6 +198,7 @@ export function desktopBackendEnvironment(
     ...(process.platform === 'linux' ? {
       DISPLAY: process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '',
       XAUTHORITY: process.env.LEGACY_DESKTOP_TEST_XAUTHORITY ?? '',
+      ...(process.env.LEGACY_DESKTOP_EMULATED_ONLY === '1' ? { LEGACY_DESKTOP_TEST_CHILD_TRACE: '1' } : {}),
     } : {}),
     ...(process.env.LEGACY_DESKTOP_COREPACK_HOME ? { COREPACK_HOME: process.env.LEGACY_DESKTOP_COREPACK_HOME } : {}),
     NO_COLOR: '1',

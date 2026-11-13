@@ -79,7 +79,7 @@ jobs:
           pnpm --filter @agent-teams/legacy-agent-host build
           pnpm --filter agent-teams-controller build
           pnpm --filter agent-teams-mcp build
-          node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+          node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts
       - name: Capture package-manager and Host inputs without vendor executables
         run: |
           set -euo pipefail

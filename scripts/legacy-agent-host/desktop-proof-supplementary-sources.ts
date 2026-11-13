@@ -1,5 +1,9 @@
 /** Existing finite process proof closure; spread at its original roster position. */
 export const desktopProofProcessSources = [
+  'src/main/bootstrapStandardOutput.ts',
+  'src/main/utils/unixProcessTable.ts',
+  'src/main/utils/testChildProcessTrace.ts',
+  'scripts/legacy-agent-host/test-child-process-trace.test.ts',
   'scripts/legacy-agent-host/desktop-native-process-model.ts',
   'scripts/legacy-agent-host/desktop-native-process-fixture.ts',
   'scripts/legacy-agent-host/desktop-native-process-host.ts',
