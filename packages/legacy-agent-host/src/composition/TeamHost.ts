@@ -414,13 +414,14 @@ export function createTeamHost(
             .parse(input.payload);
           const command = { ...payload, commandId: input.commandId } as TeamCommand;
           let receipt;
+          let prepareHostCost: Parameters<typeof connection.execute>[1];
           try {
             if (command.operation === 'message.send' && command.payload?.nativeCommand === true &&
               !connection.lookup(input.commandId, command)) {
               if (!runtime) throw new TeamOwnerError('invalid');
-              runtime.assertNativeMessage(selected.definition.binding.teamId, command);
+              prepareHostCost = runtime.assertNativeMessage(selected.definition.binding.teamId, command);
             }
-            receipt = connection.execute(command);
+            receipt = connection.execute(command, prepareHostCost);
           } catch (error) {
             if (
               !(error instanceof TeamOwnerError) ||

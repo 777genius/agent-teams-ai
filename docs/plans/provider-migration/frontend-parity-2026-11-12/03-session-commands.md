@@ -456,3 +456,16 @@ conversation output для Codex без нового native command API.
 - Source checks и implementation receipt не заменяют actual remote CI. После публикации
   проверять exact head штатно; P03 gate закрывается только подтверждённым native/Desktop
   результатом, без нового runner, blind rerun или ослабления existing assertions.
+
+#### R7 implementation: проверенный source cut
+
+Private cost snapshot теперь записывается в существующий prepared receipt, входит в fingerprint
+только у новых Host replies и удаляется из публичной RPC projection. Canonical message writer
+публикует deterministic ответ; отдельный native outbox не создаётся. Recovery переиспользует
+сохранённые usage, elapsed и IDs после частичной записи.
+
+Повторный source review прошёл по actor/current binding, старым fingerprints, private projection,
+original recovery и отсутствию native dispatch. Изменены только две существующие критичные интеграции:
+Host RPC usage/unknown/replay и сбой между command row и reply. Компиляция и выполнение этого cut
+ещё требуют CI: текущая локальная среда недоступна. Native/Desktop acceptance остаётся открытой;
+source review не заменяет результат E2E.
