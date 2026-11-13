@@ -113,11 +113,23 @@ export function captureDesktopMetadataLineage(options: {
   observed: readonly ProcessFact[];
   executable: string;
   original?: DesktopMetadataLineage;
+  initialBirths?: readonly ProcessFact[];
 }): DesktopMetadataLineage {
-  const { events, host, profileHashes, observed, original } = options;
+  const { events, host, profileHashes, observed, original, initialBirths } = options;
   const state = lifecycle(events, profileHashes, host.pid);
   assert.equal(state.active.size, profileHashes.length, 'every selected metadata scope has one live owner');
-  const births = (original?.births ?? []).map(row => ({ ...row }));
+  assert.ok(!original || initialBirths === undefined, 'initial physical births cannot replace an existing lineage');
+  if (initialBirths) {
+    assert.ok(initialBirths.length <= profileHashes.length);
+    assert.equal(new Set(initialBirths.map(row => row.pid)).size, initialBirths.length);
+    for (const before of initialBirths) {
+      assert.ok(state.originals.has(before.pid), 'each pre-read physical birth has its original ready observation');
+      assert.equal(before.parentPid, host.pid); assert.equal(before.groupId, before.pid);
+      assert.equal(before.command, options.executable);
+      assert.ok(typeof before.birth === 'string' && before.birth.length > 0);
+    }
+  }
+  const births = (original?.births ?? initialBirths ?? []).map(row => ({ ...row }));
   for (const [pid, event] of state.originals) {
     const physical = observed.filter(row => row.pid === pid);
     if (state.active.get(event.profileHash) === event) {
@@ -138,10 +150,12 @@ export function captureDesktopMetadataLineage(options: {
 }
 
 export function readDesktopMetadataLineage(root: string, captured: DesktopNativeHostSnapshot,
-  profileHashes: readonly string[], observed: readonly ProcessFact[], original?: DesktopMetadataLineage
+  profileHashes: readonly string[], observed: readonly ProcessFact[], original?: DesktopMetadataLineage,
+  initialBirths?: readonly ProcessFact[]
 ): DesktopMetadataLineage {
   return captureDesktopMetadataLineage({ events: readEvents(root, captured.host.pid), host: captured.host,
-    profileHashes, observed, executable: process.env.OPENCODE_V2_EMBEDDED_BUN!, ...(original ? { original } : {}) });
+    profileHashes, observed, executable: process.env.OPENCODE_V2_EMBEDDED_BUN!, ...(original ? { original } : {}),
+    ...(initialBirths ? { initialBirths } : {}) });
 }
 
 export function desktopActiveMetadata(captured: DesktopNativeHostSnapshot): ProcessFact[] {

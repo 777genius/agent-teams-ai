@@ -55,15 +55,22 @@ export function createPassiveNativeDiagnosticCapture() {
 const cpuCategories = ['configuration-read', 'credential-read', 'team-writer-authority',
   'custody-image', 'provider-transport', 'other', 'idle'] as const;
 type CpuCategory = typeof cpuCategories[number];
-type CpuUnavailable = 'not-started' | 'host-not-exited' | 'missing' | 'file-unavailable' |
-  'invalid-profile' | 'discard-failed';
+type CpuUnavailable = 'not-started' | 'host-not-exited' | 'missing' | 'stat-failed' | 'file-shape' |
+  'empty-profile' | 'profile-over-limit' | 'open-failed' | 'read-failed' | 'incomplete-read' |
+  'changed-file' | 'invalid-profile' | 'discard-failed';
+const maximumCpuBytes = 16 * 1024 * 1024;
+type CpuFileSize = {
+  /** Exact within the read limit; a capped lower bound when fileOverLimit is true. */
+  fileBytes?: number;
+  fileOverLimit?: boolean;
+};
 type CpuTotals = { category: CpuCategory; exclusiveSamples: number; exclusiveSampledUs: number;
   inclusiveSamples: number; inclusiveSampledUs: number };
-export type OriginalHostCpuProfile = { status: 'unavailable'; reason: CpuUnavailable; rawDiscarded: boolean } | {
+export type OriginalHostCpuProfile = CpuFileSize & ({ status: 'unavailable'; reason: CpuUnavailable; rawDiscarded: boolean } | {
   status: 'available'; rawDiscarded: boolean; defaultIntervalUs: 1000; profileDurationUs: number;
   sampledUs: number; unsampledUs: number; nodeCount: number; sampleCount: number;
   attribution: 'nearest-allowlisted-stack-frame'; categories: CpuTotals[];
-};
+});
 
 /** Closed source families only. No frame name, source URL, path or stack leaves this projection. */
 function cpuCategory(frame: Record<string, unknown>): number | undefined {
@@ -143,39 +150,56 @@ function projectCpuProfile(raw: unknown): OriginalHostCpuProfile {
 export async function readOriginalHostCpuProfile(path: string | undefined, originalExited: boolean): Promise<OriginalHostCpuProfile> {
   if (!path) return { status: 'unavailable', reason: 'not-started', rawDiscarded: true };
   if (!originalExited) return { status: 'unavailable', reason: 'host-not-exited', rawDiscarded: false };
-  let result: OriginalHostCpuProfile = { status: 'unavailable', reason: 'file-unavailable', rawDiscarded: false };
-  let reason: CpuUnavailable = 'file-unavailable';
+  let result: OriginalHostCpuProfile = { status: 'unavailable', reason: 'stat-failed', rawDiscarded: false };
+  let reason: CpuUnavailable = 'stat-failed';
+  const fileSize: CpuFileSize = {};
   try {
     const before = await lstat(path);
-    if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 || before.size < 1 ||
-        before.size > 16 * 1024 * 1024) throw new Error('Invalid TEST CPU file');
+    reason = 'file-shape';
+    if (!Number.isSafeInteger(before.size) || before.size < 0) throw new Error('Invalid TEST CPU size');
+    fileSize.fileBytes = Math.min(before.size, maximumCpuBytes + 1);
+    fileSize.fileOverLimit = before.size > maximumCpuBytes;
+    if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1) throw new Error('Invalid TEST CPU file');
+    reason = 'empty-profile';
+    if (before.size === 0) throw new Error('Empty TEST CPU file');
+    reason = 'profile-over-limit';
+    if (fileSize.fileOverLimit) throw new Error('Oversized TEST CPU file');
     const same = (after: typeof before) => after.isFile() && after.nlink === 1 &&
       after.dev === before.dev && after.ino === before.ino && after.size === before.size &&
       after.mtimeMs === before.mtimeMs && after.ctimeMs === before.ctimeMs;
+    reason = 'open-failed';
     const handle = await open(path, 'r');
     let bytes: Buffer;
+    let closeFailure: { error: unknown } | undefined;
     try {
+      reason = 'changed-file';
       if (!same(await handle.stat())) throw new Error('Changed TEST CPU file');
+      reason = 'read-failed';
       bytes = Buffer.alloc(before.size);
       let offset = 0;
       while (offset < bytes.length) {
+        reason = 'read-failed';
         const read = await handle.read(bytes, offset, bytes.length - offset, offset);
+        reason = 'incomplete-read';
         if (!read.bytesRead) throw new Error('Incomplete TEST CPU file');
         offset += read.bytesRead;
       }
+      reason = 'changed-file';
       if (!same(await handle.stat()) || !same(await lstat(path))) throw new Error('Changed TEST CPU file');
-    } finally { await handle.close(); }
+    } finally { await handle.close().catch((error: unknown) => { closeFailure = { error }; }); }
+    if (closeFailure) { reason = 'read-failed'; throw closeFailure.error; }
     reason = 'invalid-profile';
     result = projectCpuProfile(JSON.parse(bytes.toString('utf8')) as unknown);
   } catch (error) {
-    result = { status: 'unavailable', reason: record(error).code === 'ENOENT' ? 'missing' : reason, rawDiscarded: false };
+    result = { status: 'unavailable', reason: reason === 'stat-failed' && record(error).code === 'ENOENT'
+      ? 'missing' : reason, rawDiscarded: false };
   }
   try { await unlink(path); result.rawDiscarded = true; }
   catch (error) {
     if (record(error).code === 'ENOENT') result.rawDiscarded = true;
     else result = { status: 'unavailable', reason: 'discard-failed', rawDiscarded: false };
   }
-  return result;
+  return { ...result, ...fileSize };
 }
 
 /** Classify the pinned Undici Buffer-pair shape; no raw header value is retained. */

@@ -1547,3 +1547,16 @@ register replay/attachOriginal/metadata-unregister constraints проверен�
 согласованы с двумя точными исправлениями — unknown delivery в погибший Host и один deadline всей подготовки;
 они включены выше. Root подтвердил выбранные owner/stdio boundaries; final text передаётся на readback до source.
 Никакой product source из этого раздела пока не изменён и feature parity завершённой не объявляется.
+
+**A lifecycle amendment после чтения actual shutdown source.** `CapturedHostClient.shutdown` сейчас делает
+sealNative/stdin.end, а `HostServer.dispose` закрывает обе pipe/native client до `onDispose`; remote cleanup в Main
+через уже закрытый канал невозможен. Добавить ровно один private prepare-shutdown в прежнюю custody family:
+сначала exactly-once `onSeal` и запрет public/allocate/prepare/resume/write, затем exactly-once исходный `onDispose`,
+сохраняя private read/observe/Stop/drain/release по уже удержанным capabilities до original disposal ACK/EOF.
+Это не повторное admission по PID/current grant/profile. Один existing absolute shutdown deadline включает prepare,
+cleanup/ACK и последующее ожидание exit; per-phase/per-reply timeout его не продлевает. ACK и late replies остаются
+привязаны к исходному Host binding; старый A не закрывает epoch B. Failure path сразу seals transport и сохраняет
+Main physical owner; timeout/EOF не создаёт release/absence proof. Main Quit имеет независимый final cleanup исходных
+capabilities даже при недоступном Host. Точки source: существующие `index.ts`, `HostCustodyClient`,
+`CapturedHostClient.shutdown` и Main composition; generic lifecycle framework, второй journal и новый budget не нужны.
+Root подтвердил необходимость этой границы, Account подтвердил retained-owner/late-epoch ограничения до source.

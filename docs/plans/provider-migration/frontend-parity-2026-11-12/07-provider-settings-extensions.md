@@ -796,6 +796,43 @@ different count, so no constant call count is imposed on native execution. Revie
 (Root): measure the same actual finite Host first; upload only the closed aggregate,
 keep raw profiles private, and leave production checks unchanged until attribution.
 
+#### R14 follow-up — различать отказ чтения профиля до вывода о CPU
+
+Actual `522c80d168d698fc6842ee649cc4822406cd2632`, Darwin x64 job `131716085217`
+завершился с original Host exit1 и `originalHostCpu.status=unavailable`,
+`reason=file-unavailable`, `rawDiscarded=true`. Original open занял126906ms,
+весь fixture142430ms; 15 HTTP responses успешны, model requests0. Это не CPU attribution и не доказательство
+отсутствующего файла: current reader отдельно выдаёт `missing` для ENOENT, но
+`file-unavailable` объединяет size/type, open/read и fd/path identity refusals.
+
+1. В existing `native-opencode-team/passive-diagnostics.ts:readOriginalHostCpuProfile`
+   разделить только закрытые причины: stat/shape, empty/over-limit, open/read,
+   incomplete/changed-file, invalid profile и discard failure. При наличии stat
+   сохранить только bounded числовой size fact: min(original size,16MiB+1) с явным
+   признаком превышения, не выдавая clamp за точный размер. Ни paths, errors,
+   stack frames, profile bytes или произвольные filesystem metadata в receipt не добавляются.
+2. Сохранить прежний maximum16MiB, original regular-file/no-symlink/nlink check,
+   fd/path identity до/после, exact original path и обязательное удаление raw.
+   Oversized файл классифицировать до allocation/read; не увеличивать cap,
+   sampling interval, native/cleanup budget и не переносить CPU profiling в product.
+   `missing`, неполный profile и ошибка discard по-прежнему unavailable, не нулевые samples.
+3. В existing `native-host-close.test.ts` один finite pinned-Node case использует
+   тот же `startHost(...testCpuProfile:true)` и обычный `process.exit(1)` TEST child:
+   исходный nonzero exit остаётся failure, его реальный профиль можно прочесть и удалить.
+   В этом же bounded case проверить missing и empty/over-limit refusal без чтения
+   oversized bytes; artifact содержит только закрытый result. Новая suite/runner не нужна.
+4. Проверить types/lint и этот existing test; затем ждать следующий штатный native CI.
+   Пока actual reason/sample attribution неизвестны, не менять read composition,
+   freshness/custody checks или startup timeout по одной гипотезе.
+
+Круг1: точный receipt/source различает `file-unavailable` и ENOENT. Круг2:
+официальный Node24.21.0 `src/inspector_profiler.cc` (blob
+`559b4fd27d56abed0a9aaa7981e10fe12ebb0c2a`) пишет результат через `WriteFileSync`
+при завершении profiler. Локальный finite Node24.21.0 process.exit(1) действительно
+создал7822-byte profile; existing projector вернул available и удалил raw. Это
+подтверждение TEST exit1 path на Linux, не объяснение Darwin отказа. Круг3:
+independent plan review/root commit+push перед source; R15 и production не меняются.
+
 ## R15 — cold V2 readback сохраняет подтверждённую metadata lineage
 
 Факт: PR1186 head `522c80d168d698fc6842ee649cc4822406cd2632`, job

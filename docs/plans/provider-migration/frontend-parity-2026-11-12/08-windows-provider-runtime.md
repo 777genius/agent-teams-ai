@@ -1,7 +1,11 @@
 # 08. Windows: полноценный Host runtime для Claude, Codex и OpenCode V1
 
-Статус: план реализации; production-код не изменён. R1/R2 выполнены; R3 design-check и поправки внесены ниже.
-Native qualification остаётся pending; документ не объявляет готовый Windows runtime или завершённую приёмку.
+Статус: broker-backed Windows launch и интеграция `WindowsCapturedProcess` частично реализованы.
+Actual Claude SDK scoped Stop прошёл на Windows x64/ARM64: head `dde51b477db6a41fc4d69ab6fbe1e10f6db3e5e2`,
+run `43372037195`, jobs `131709784668`/`131709784742`. Это provider/subtree proof;
+Main-retained owner, обычные register/Processes, same-Main cold recovery и полная Desktop-приёмка ещё не завершены.
+Их следующий согласованный source cut описан в [09, §38](09-cross-platform-processes.md).
+Codex/OpenCode не получают qualification по Claude receipt; документ не объявляет Windows parity завершённой.
 Область: сохранение существующих Windows-возможностей приложения в Stage 1.
 Main не сливается; переключение основного backend и Stage 2 в эту работу не входят.
 

@@ -118,23 +118,57 @@ test('cold metadata reads accept only original completed PNG inputs and no extra
   assert.throws(() => assertColdOpenCodeRuntimeRecords(source, {}, [session, session]));
 });
 
-test('cold cleanup proves the captured detached metadata child absent before recording success', () => {
-  const original = { metadataProcessCount: 1, captured: {
-    host: { pid: 10, parentPid: 1, groupId: 10, birth: 'TEST-host-birth', command: '/TEST/node' },
-    children: [{ pid: 11, parentPid: 10, groupId: 11, birth: 'TEST-metadata-birth', command: '/TEST/bun' }],
-  } };
+test('cold metadata retains a child retired during the original read and proves every successor absent on Quit', () => {
+  const host = { pid: 10, parentPid: 1, groupId: 10, birth: 'TEST-host-birth', command: '/TEST/node' };
+  const child = { pid: 11, parentPid: 10, groupId: 11, birth: 'TEST-metadata-birth', command: '/TEST/bun' };
+  const successor = { ...child, pid: 12, groupId: 12, birth: 'TEST-successor-birth' };
+  const latest = { ...child, pid: 13, groupId: 13, birth: 'TEST-latest-birth' };
+  const ready: DesktopMetadataEvent = { hostPid: host.pid, profileHash: 'a'.repeat(64), mode: 'directory',
+    providerHash: null, pid: child.pid, startIdentityHash: nativeIdentityHash('TEST-native-11'), stage: 'ready' };
+  const nextReady: DesktopMetadataEvent = { ...ready, mode: 'provider', providerHash: 'b'.repeat(64),
+    pid: successor.pid, startIdentityHash: nativeIdentityHash('TEST-native-12') };
+  const lastReady: DesktopMetadataEvent = { ...ready, pid: latest.pid, startIdentityHash: nativeIdentityHash('TEST-native-13') };
+  const events: DesktopMetadataEvent[] = [ready, { ...ready, stage: 'released' }, nextReady];
+  const first = (values = events, observed = [successor], initialBirths = [child]) => captureDesktopMetadataLineage({
+    events: values, host, profileHashes: [ready.profileHash], observed, executable: child.command, initialBirths,
+  });
+  const captured = { host, children: [successor], metadataLineage: first() };
+  assert.deepEqual(captured.metadataLineage.births, [child, successor],
+    'the real pre-read birth is retained even when its exact release precedes the first lineage read');
+  assert.throws(() => first([nextReady]), /original ready/);
+  assert.throws(() => first([ready, nextReady]), /duplicate live/);
+  assert.throws(() => first([ready, { ...ready, stage: 'cleanup-unknown' }, nextReady]), /unknown cleanup/);
+  assert.throws(() => first([ready, { ...ready, stage: 'released', startIdentityHash: nativeIdentityHash('TEST-foreign') }, nextReady]));
+  assert.throws(() => first(events, [child, successor]), /physically absent/);
+  assert.throws(() => first([ready], [{ ...child, birth: 'TEST-reused-pid' }]), /birth/);
+  assert.throws(() => first([ready, { ...ready, stage: 'released' }, { ...nextReady, profileHash: 'c'.repeat(64) }]), /captured scope/);
+  const observedEvents: DesktopMetadataEvent[] = [...events, { ...nextReady, stage: 'released' }, lastReady];
+  const readback = { host, children: [latest], metadataLineage: captureDesktopMetadataLineage({
+    events: observedEvents, host, profileHashes: [ready.profileHash], observed: [latest], executable: child.command,
+    original: captured.metadataLineage,
+  }) };
+  assert.deepEqual(separateDesktopOpenCodeRuntimeChildren(captured, readback, 0), []);
+  assert.deepEqual(readback.metadataLineage.births, [child, successor, latest]);
+  const original = { metadataProcessCount: 1, before: { host, children: [child] }, captured,
+    metadataAfterReadback: readback, metadataAtHostClose: { ...readback.metadataLineage,
+      events: [...observedEvents, { ...lastReady, stage: 'released' as const }] } };
   const proof: Record<string, unknown> = structuredClone(original);
-  const evidence = { hostChild: { pid: 10, ppid: 1, pgid: 10 }, coldOpenCodeMetadata: proof };
-  assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [{ pid: 11, ppid: 10, pgid: 11 }]));
-  assert.equal(proof.metadataAbsentBeforeHarnessCleanup, undefined);
-  assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [{ pid: 11, ppid: 1, pgid: 11 }]));
-  assert.equal(proof.metadataAbsentBeforeHarnessCleanup, undefined, 'orphaning is not physical termination');
-  // A reused numeric PID is deliberately uncertain, never adopted or signalled.
-  assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [{ pid: 11, ppid: 99, pgid: 99 }]));
-  assert.equal(proof.metadataAbsentBeforeHarnessCleanup, undefined);
+  const evidence = { hostChild: { pid: host.pid, ppid: 1, pgid: 10 }, coldOpenCodeMetadata: proof };
+  for (const birth of [child, successor, latest]) {
+    assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [{ pid: birth.pid, ppid: host.pid, pgid: birth.pid }]));
+    assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [{ pid: birth.pid, ppid: 1, pgid: birth.pid }]));
+    assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [{ pid: birth.pid, ppid: 99, pgid: 99 }]));
+    assert.equal(proof.metadataAbsentBeforeHarnessCleanup, undefined, 'an orphan or reused PID never proves absence');
+  }
+  assert.throws(() => assertCapturedDesktopMetadataAbsent({ ...evidence,
+    coldOpenCodeMetadata: { ...original, metadataAtHostClose: readback.metadataLineage } }, []), /confirmed close/);
+  assert.throws(() => assertCapturedDesktopMetadataAbsent({ ...evidence,
+    coldOpenCodeMetadata: { ...original, metadataAfterReadback: { ...readback,
+      host: { ...host, birth: 'TEST-foreign-host' } } } }, []));
   assertCapturedDesktopMetadataAbsent(evidence, [{ pid: 42, ppid: 1, pgid: 42 }]);
   assert.equal(proof.metadataAbsentBeforeHarnessCleanup, true);
   assert.deepEqual(proof.captured, original.captured);
+  assert.deepEqual(proof.metadataAfterReadback, original.metadataAfterReadback);
   const absent: Record<string, unknown> = {};
   assertCapturedDesktopMetadataAbsent(absent, []);
   assert.deepEqual(absent, {});
