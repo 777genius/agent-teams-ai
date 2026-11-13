@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { verifyLinuxChildExecInput } from '../../src/main/utils/linuxChildLaunchSelection.ts';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, realpath } from 'node:fs/promises';
 import { basename, dirname, join, sep } from 'node:path';
@@ -92,8 +93,10 @@ async function sourceV2Recipe(repo: string, root: string, node: string,
       sessionId: 'TEST-source-template', generation: 1, configRevision: 'TEST-source-config' },
   });
   assert.ok(member.embedded?.providerConfiguration);
+  const settings = member.embedded.providerConfiguration.settings;
+  assert.ok(settings !== null && typeof settings === 'object' && !Array.isArray(settings));
   member.embedded.providerConfiguration.settings = {
-    ...member.embedded.providerConfiguration.settings, baseURL: selection.modelUrl + '/host/v1',
+    ...settings, baseURL: selection.modelUrl + '/host/v1',
   };
   runtimeProfileSchema.parse({ members: [], providerTemplates: [member] });
   return member;
@@ -174,11 +177,26 @@ export function desktopRuntimeSourceEnvironment(environment: Record<string, stri
   return result;
 }
 
+const linuxChildExecReference = Object.freeze({
+  manifestPath: process.env.LEGACY_LINUX_CHILD_EXEC_MANIFEST,
+  manifestSha256: process.env.LEGACY_LINUX_CHILD_EXEC_SHA256,
+});
+
+/** Separately pinned TEST launch input; it never enters a captured Host profile. */
+export function readDesktopLinuxChildExecInput() {
+  const { manifestPath, manifestSha256 } = linuxChildExecReference;
+  if (manifestPath === undefined && manifestSha256 === undefined) return undefined;
+  assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
+  assert.ok(manifestPath && manifestSha256);
+  return verifyLinuxChildExecInput({ manifestPath, manifestSha256 });
+}
+
 export function desktopBackendEnvironment(
   root: string,
   node: string,
   descriptorPath: string,
-  descriptorSha256: string
+  descriptorSha256: string,
+  linuxChildExec = readDesktopLinuxChildExecInput()
 ) {
   return {
     HOME: join(root, 'home'),
@@ -211,6 +229,8 @@ export function desktopBackendEnvironment(
     OPENCODE_CONFIG_DIR: join(root, 'config/opencode'),
     AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH: descriptorPath,
     AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256: descriptorSha256,
+    ...(linuxChildExec ? { AGENT_TEAMS_LINUX_CHILD_EXEC_MANIFEST: linuxChildExec.manifestPath,
+      AGENT_TEAMS_LINUX_CHILD_EXEC_SHA256: linuxChildExec.manifestSha256 } : {}),
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: join(root, 'bin/claude-multimodel'),
     CLAUDE_CLI_PATH: join(root, 'bin/claude'),
     CODEX_CLI_PATH: join(root, 'bin/codex'),

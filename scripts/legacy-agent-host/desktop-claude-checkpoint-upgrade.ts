@@ -90,7 +90,7 @@ export interface DesktopClaudeCheckpointUpgrade {
   readonly original: Fixture;
   readonly successor: Fixture;
   readonly proof: Evidence;
-  beforeQuit(source: Evidence, checkpoint: Awaited<ReturnType<typeof checkpoint>>): Promise<void>;
+  beforeQuit(source: Evidence, checkpointValue: Awaited<ReturnType<typeof checkpoint>>): Promise<void>;
   afterOriginalQuit(): Promise<Fixture>;
   afterColdDiscovery(): Promise<void>;
   finish(): Promise<void>;

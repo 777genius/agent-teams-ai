@@ -8,8 +8,15 @@ import {
   spawnCli,
 } from '@main/utils/childProcess';
 import * as child from 'child_process';
+import { PassThrough } from 'node:stream';
+import { createHash } from 'node:crypto';
+import {
+  execFileWithLinuxChildLaunch, observeLinuxChildLaunchFailure, spawnSyncWithLinuxChildLaunch,
+  spawnWithLinuxChildLaunch,
+} from '@main/utils/linuxChildLaunch';
+import * as launchSelection from '@main/utils/linuxChildLaunchSelection';
 import { EventEmitter } from 'events';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
@@ -42,6 +49,25 @@ function setPlatform(value: string) {
     configurable: true,
     writable: true,
   });
+}
+
+// Synthetic stdio exercises the real selected adapter; it is not a native exec proof.
+function selectedProcess(pid = 901) {
+  const input = new PassThrough(), output = new PassThrough(), errors = new PassThrough(), status = new PassThrough();
+  const process = Object.assign(new EventEmitter(), {
+    pid, stdin: input, stdout: output, stderr: errors, stdio: [input, output, errors, status],
+    exitCode: null as number | null, signalCode: null as NodeJS.Signals | null,
+    killed: false, kill: vi.fn(() => true),
+  });
+  return { process, status, child: process as unknown as child.ChildProcess };
+}
+function execStatus(errno = 2): Buffer {
+  const frame = Buffer.alloc(12);
+  frame.writeUInt32BE(0x41544c58, 0); frame[4] = 1; frame[5] = 3; frame.writeUInt32LE(errno, 8);
+  return frame;
+}
+async function settleSelectedStatus(): Promise<void> {
+  await new Promise<void>(resolve => setImmediate(resolve));
 }
 
 function reportProcessGoneForProbe(_pid: number, signal?: string | number): true {
@@ -387,7 +413,7 @@ describe('cli child process helpers', () => {
       expect(spawnMock.mock.calls[1][2]).not.toHaveProperty('shell');
     });
 
-    it('does not use shell when not on windows', () => {
+    it('does not use shell when not on windows', async () => {
       setPlatform('linux');
       const fake = createMockProcess<SpawnCliChild>();
       (child.spawn as unknown as Mock).mockReturnValue(fake);
@@ -400,6 +426,101 @@ describe('cli child process helpers', () => {
         })
       );
       expect(result).toBe(fake);
+
+      const selection = vi.spyOn(launchSelection, 'selectedLinuxChildExecutable').mockReturnValue('/TEST/helper');
+      try {
+        const original = selectedProcess();
+        (child.spawn as unknown as Mock).mockReturnValue(original.child);
+        const allocated = spawnWithLinuxChildLaunch('original-node', ['--version', 'one argument'], {
+          argv0: 'original-argv0', cwd: '/TEST/cwd', env: { PATH: '/original/bin' },
+          detached: true, stdio: ['ignore', 'pipe', 'inherit'],
+        });
+        expect(allocated).toBe(original.child);
+        expect(child.spawn).toHaveBeenLastCalledWith('/TEST/helper',
+          ['--linux-child-exec-v1', 'original-node', 'original-argv0', '--version', 'one argument'],
+          expect.objectContaining({ cwd: '/TEST/cwd', env: { PATH: '/original/bin' },
+            detached: true, stdio: ['ignore', 'pipe', 'inherit', 'pipe'], shell: false }));
+        const refusal = vi.fn();
+        observeLinuxChildLaunchFailure(allocated, refusal);
+        original.status.end(); await settleSelectedStatus();
+        expect(refusal).not.toHaveBeenCalled(); // Empty pipe is neither an error nor target readiness.
+        original.process.emit('close', 0, null);
+        const calls = vi.mocked(child.spawn).mock.calls.length;
+        expect(() => spawnWithLinuxChildLaunch('node', [], { stdio: ['pipe', 'pipe', 'pipe', 'pipe'] }))
+          .toThrow('Selected Linux child launch refused');
+        expect(() => spawnWithLinuxChildLaunch('node', [], { shell: true })).toThrow();
+        expect(child.spawn).toHaveBeenCalledTimes(calls);
+        const clock = vi.spyOn(performance, 'now').mockReturnValue(100);
+        selection.mockImplementation(() => { clock.mockReturnValue(111); return '/TEST/helper'; });
+        try {
+          expect(() => spawnWithLinuxChildLaunch('node', [], { timeout: 10 })).toThrow('deadline');
+          clock.mockReturnValue(100);
+          expect(() => execFileWithLinuxChildLaunch('node', [], {}, vi.fn(), 110)).toThrow('deadline');
+          clock.mockReturnValue(100);
+          expect(() => spawnSyncWithLinuxChildLaunch('node', [], { timeout: 10 })).toThrow('deadline');
+          expect(child.spawn).toHaveBeenCalledTimes(calls);
+        } finally { clock.mockRestore(); }
+      } finally { selection.mockRestore(); }
+
+      // Private-file validation uses synthetic ELF headers, never an executable.
+      if (typeof process.getuid === 'function') {
+        const originalArch = process.arch;
+        const root = realpathSync(mkdtempSync(path.join(tmpdir(), 'TEST-linux-child-selection-')));
+        const binary = path.join(root, 'linux-child-exec'), manifestPath = path.join(root, 'manifest.json');
+        const elf = Buffer.alloc(120);
+        elf.writeUInt32BE(0x7f454c46, 0); elf[4] = 2; elf[5] = 1; elf[6] = 1;
+        elf.writeUInt16LE(2, 16); elf.writeUInt16LE(62, 18); elf.writeBigUInt64LE(64n, 32);
+        elf.writeUInt16LE(64, 52); elf.writeUInt16LE(56, 54); elf.writeUInt16LE(1, 56); elf.writeUInt32LE(1, 64);
+        const hash = (bytes: string | Buffer) => createHash('sha256').update(bytes).digest('hex');
+        const manifest = JSON.stringify({ schemaVersion: 1, platform: 'linux', architecture: 'x64',
+          protocol: 'linux-child-exec-v1', kernelCapability: 'close-range-v1', binary: 'linux-child-exec',
+          binarySha256: hash(elf), sourceSha256: '1'.repeat(64), compilerSha256: '2'.repeat(64),
+          inspectorSha256: '3'.repeat(64), buildKernelRelease: 'TEST',
+          linkInputs: [{ file: '/TEST/compiler-input', sha256: '4'.repeat(64) }] });
+        try {
+          Object.defineProperty(process, 'arch', { configurable: true, value: 'x64' });
+          chmodSync(root, 0o700); writeFileSync(binary, elf, { mode: 0o500 });
+          writeFileSync(manifestPath, manifest, { mode: 0o600 });
+          vi.stubEnv('AGENT_TEAMS_LINUX_CHILD_EXEC_MANIFEST', manifestPath);
+          vi.stubEnv('AGENT_TEAMS_LINUX_CHILD_EXEC_SHA256', hash(manifest));
+          for (const hasDescriptor of [false, true]) {
+            vi.stubEnv('AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH', hasDescriptor ? '/TEST/original-descriptor' : undefined);
+            vi.stubEnv('AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256', hasDescriptor ? '5'.repeat(64) : undefined);
+            vi.resetModules();
+            const selected = await import('@main/utils/linuxChildLaunchSelection');
+            expect(() => selected.selectedLinuxChildExecutable()).toThrow('selection');
+            const captured = { ...process.env };
+            selected.initializeLinuxChildLaunch(captured);
+            expect(selected.selectedLinuxChildExecutable()).toBe(binary);
+            selected.initializeLinuxChildLaunch(captured);
+            expect(() => selected.initializeLinuxChildLaunch({ ...captured,
+              AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH: '/TEST/changed-descriptor',
+              AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256: '5'.repeat(64) })).toThrow('selection');
+          }
+          vi.stubEnv('AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH', '/TEST/partial');
+          vi.stubEnv('AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256', undefined);
+          vi.resetModules();
+          const partial = await import('@main/utils/linuxChildLaunchSelection');
+          expect(() => partial.initializeLinuxChildLaunch({ ...process.env })).toThrow('selection');
+          vi.stubEnv('AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH', undefined);
+          vi.resetModules();
+          const changed = await import('@main/utils/linuxChildLaunchSelection');
+          changed.initializeLinuxChildLaunch({ ...process.env });
+          chmodSync(binary, 0o700); writeFileSync(binary, Buffer.alloc(120)); chmodSync(binary, 0o500);
+          expect(() => changed.selectedLinuxChildExecutable()).toThrow('selection');
+          vi.stubEnv('AGENT_TEAMS_LINUX_CHILD_EXEC_MANIFEST', undefined);
+          vi.stubEnv('AGENT_TEAMS_LINUX_CHILD_EXEC_SHA256', undefined);
+          vi.resetModules();
+          const unselected = await import('@main/utils/linuxChildLaunchSelection');
+          expect(unselected.selectedLinuxChildExecutable()).toBeNull();
+          unselected.initializeLinuxChildLaunch({ ...process.env });
+          expect(unselected.selectedLinuxChildExecutable()).toBeNull();
+        } finally {
+          vi.unstubAllEnvs(); vi.resetModules();
+          Object.defineProperty(process, 'arch', { configurable: true, value: originalArch });
+          rmSync(root, { recursive: true, force: true });
+        }
+      }
     });
 
     it('kills tracked CLI processes on shutdown', () => {
@@ -817,6 +938,88 @@ describe('cli child process helpers', () => {
         stdout: '{"error":"bad"}',
         stderr: 'bun: not found',
       });
+
+      const selection = vi.spyOn(launchSelection, 'selectedLinuxChildExecutable').mockReturnValue('/TEST/helper');
+      try {
+        const original = selectedProcess();
+        vi.mocked(child.spawn).mockReturnValue(original.child);
+        const callback = vi.fn();
+        const allocationErrors = vi.fn(); original.process.on('error', allocationErrors);
+        const retained = execFileWithLinuxChildLaunch('/missing/original', ['captured-arg'],
+          { encoding: 'utf8', maxBuffer: 8, detached: true } as child.ExecFileOptions, callback);
+        expect(retained).toBe(original.child);
+        expect(vi.mocked(child.spawn).mock.calls.at(-1)?.[2]).not.toHaveProperty('detached');
+        original.status.end(execStatus()); await settleSelectedStatus();
+        expect(callback).not.toHaveBeenCalled();
+        expect(allocationErrors).not.toHaveBeenCalled(); // No invented Node error event.
+        expect(original.process.kill).toHaveBeenCalledOnce();
+        original.process.emit('close', 111, null);
+        expect(callback).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+          code: 'ENOENT', errno: -2, allocated: true, path: '/missing/original',
+          spawnargs: ['captured-arg'], syscall: 'execvp /missing/original',
+        }), '', '');
+
+        for (const frame of [Buffer.alloc(0), execStatus().subarray(0, 5), Buffer.concat([execStatus(), Buffer.from([1])])]) {
+          const unknown = selectedProcess(); vi.mocked(child.spawn).mockReturnValue(unknown.child);
+          const completed = vi.fn();
+          execFileWithLinuxChildLaunch('original-node', [], { encoding: 'buffer' }, completed);
+          unknown.status.end(frame); await settleSelectedStatus();
+          expect(completed).not.toHaveBeenCalled();
+          unknown.process.emit('close', null, 'SIGKILL');
+          expect(completed).toHaveBeenCalledOnce();
+          expect(completed.mock.calls[0][0]).toBeInstanceOf(Error);
+          expect(completed.mock.calls[0][0]).not.toHaveProperty('path');
+          expect(completed.mock.calls[0][1]).toEqual(Buffer.alloc(0));
+        }
+
+        for (const encoding of ['utf8', 'buffer'] as const) {
+          const success = selectedProcess(); vi.mocked(child.spawn).mockReturnValue(success.child);
+          const completed = vi.fn();
+          execFileWithLinuxChildLaunch('original-node', [], { encoding, maxBuffer: 4 }, completed);
+          success.process.stdout.write('four'); success.process.stderr.write('err');
+          success.status.end(); await settleSelectedStatus();
+          expect(completed).not.toHaveBeenCalled();
+          success.process.emit('close', 0, null);
+          expect(completed).toHaveBeenCalledExactlyOnceWith(null,
+            encoding === 'buffer' ? Buffer.from('four') : 'four',
+            encoding === 'buffer' ? Buffer.from('err') : 'err');
+        }
+        const overflow = selectedProcess(); vi.mocked(child.spawn).mockReturnValue(overflow.child);
+        const completed = vi.fn();
+        execFileWithLinuxChildLaunch('original-node', [], { encoding: 'buffer', maxBuffer: 4 }, completed);
+        overflow.process.stdout.write('five!'); expect(completed).not.toHaveBeenCalled();
+        overflow.status.end(); await settleSelectedStatus(); overflow.process.emit('close', null, 'SIGTERM');
+        expect(completed).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+          code: 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER',
+        }), Buffer.from('five'), Buffer.alloc(0));
+
+        // Sync private status never enlarges the original public allowance.
+        const sync = vi.mocked(child.spawnSync);
+        sync.mockReturnValue({ pid: 901, status: 0, signal: null, output:
+          [null, Buffer.from('four'), Buffer.from('err'), Buffer.alloc(0)],
+          stdout: Buffer.from('four'), stderr: Buffer.from('err') });
+        expect(spawnSyncWithLinuxChildLaunch('original-node', [], { encoding: 'utf8', maxBuffer: 7 }))
+          .toMatchObject({ pid: 901, status: 0, output: [null, 'four', 'err'], stdout: 'four', stderr: 'err' });
+        expect(sync.mock.calls.at(-1)?.[2]?.maxBuffer).toBe(19);
+        sync.mockReturnValue({ pid: 901, status: 111, signal: null, output:
+          [null, Buffer.from('four'), Buffer.alloc(0), execStatus()],
+          stdout: Buffer.from('four'), stderr: Buffer.alloc(0) });
+        expect(spawnSyncWithLinuxChildLaunch('/missing/original', ['captured-arg'], { maxBuffer: 4 }))
+          .toMatchObject({ pid: 901, status: 111, stdout: Buffer.from('four'),
+            error: { code: 'ENOENT', path: '/missing/original', spawnargs: ['captured-arg'] } });
+        sync.mockReturnValue({ pid: 901, status: 0, signal: null, output:
+          [null, Buffer.from('four'), Buffer.from('more'), Buffer.alloc(0)],
+          stdout: Buffer.from('four'), stderr: Buffer.from('more') });
+        const exceeded = spawnSyncWithLinuxChildLaunch('original-node', [], { maxBuffer: 5 });
+        expect(exceeded).toMatchObject({ pid: 901, status: 0, error: { code: 'ENOBUFS' },
+          stdout: Buffer.from('four'), stderr: Buffer.from('m') });
+        expect(exceeded.output).toHaveLength(3);
+        for (const maxBuffer of [0, Infinity]) {
+          const unlimited = spawnSyncWithLinuxChildLaunch('original-node', [], { maxBuffer });
+          expect(sync.mock.calls.at(-1)?.[2]?.maxBuffer).toBe(maxBuffer);
+          expect(unlimited.error).toBeUndefined(); expect(unlimited.stderr).toEqual(Buffer.from('more'));
+        }
+      } finally { selection.mockRestore(); }
     });
 
     it('kills the process tree before rejecting when maxBuffer is exceeded', async () => {
@@ -864,6 +1067,66 @@ describe('cli child process helpers', () => {
       } finally {
         killSpy.mockRestore();
       }
+
+      setPlatform('linux');
+      const selection = vi.spyOn(launchSelection, 'selectedLinuxChildExecutable').mockReturnValue('/TEST/helper');
+      const retained = selectedProcess(901);
+      const nativeKill = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
+      const fs = await import('fs');
+      const readFileSync = fs.readFileSync;
+      // The synthetic Linux census needs original start ticks as well as ps rows.
+      const stat = vi.spyOn(fs, 'readFileSync').mockImplementation((file, options) => {
+        const pid = typeof file === 'string' ? /^\/proc\/(901|902|903)\/stat$/.exec(file)?.[1] : undefined;
+        return pid ? `${pid} (TEST selected child) S ${Array(18).fill('0').join(' ')} ${pid}` :
+          readFileSync(file, options);
+      });
+      const table = Buffer.from(unixProcessTable([
+        { pid: 901, parentPid: 1, processGroupId: 100 },
+        { pid: 902, parentPid: 901, processGroupId: 100 },
+      ]));
+      vi.mocked(child.spawn).mockReturnValue(retained.child);
+      spawnSyncMock.mockReturnValue({ status: 0, signal: null, pid: 990,
+        output: [null, table, Buffer.alloc(0), Buffer.alloc(0)], stdout: table, stderr: Buffer.alloc(0) });
+      try {
+        let finished = false;
+        const result = execCli('/missing/original', ['--version']);
+        const rejected = expect(result).rejects.toMatchObject({ code: 'ENOENT', allocated: true,
+          processOutcomeUnknown: true, path: '/missing/original' });
+        void result.then(() => { finished = true; }, () => { finished = true; });
+        retained.status.end(execStatus()); await settleSelectedStatus();
+        expect(nativeKill.mock.calls.map(([pid]) => pid)).toEqual(expect.arrayContaining([901, 902]));
+        expect(retained.process.kill).not.toHaveBeenCalled();
+        expect(finished).toBe(false); // Original tree cleanup must start, but callback still awaits real close.
+        retained.process.exitCode = 111;
+        retained.process.emit('close', 111, null);
+        await rejected;
+        expect(finished).toBe(true);
+        expect(nativeKill.mock.calls.filter(([, signal]) => signal === 'SIGTERM')).toHaveLength(2);
+
+        vi.useFakeTimers();
+        try {
+          const stillAlive = selectedProcess(903);
+          vi.mocked(child.spawn).mockReturnValue(stillAlive.child);
+          const aliveTable = Buffer.from(unixProcessTable([{ pid: 903, parentPid: 1, processGroupId: 100 }]));
+          spawnSyncMock.mockReturnValue({ status: 0, signal: null, pid: 991,
+            output: [null, aliveTable, Buffer.alloc(0), Buffer.alloc(0)], stdout: aliveTable, stderr: Buffer.alloc(0) });
+          let finished = false;
+          const bounded = execCli('/missing/original', ['--version'], { timeout: 25 });
+          const failed = expect(bounded).rejects.toMatchObject({ killed: true,
+            message: 'Command timed out after 25ms: /missing/original --version',
+            processTerminationError: expect.any(String) });
+          void bounded.then(() => { finished = true; }, () => { finished = true; });
+          spawnSyncMock.mockImplementation(() => { throw new Error('Original census refused'); });
+          stillAlive.status.end(execStatus());
+          await vi.advanceTimersByTimeAsync(0);
+          expect(finished).toBe(false);
+          expect(stillAlive.process.kill).toHaveBeenCalled();
+          await vi.advanceTimersByTimeAsync(26);
+          await failed; expect(finished).toBe(true);
+          // No fabricated close is needed to settle the original unknown timeout.
+          stillAlive.process.emit('close', null, 'SIGTERM');
+        } finally { vi.useRealTimers(); }
+      } finally { stat.mockRestore(); nativeKill.mockRestore(); selection.mockRestore(); }
     });
 
     it('enforces independent stdout and stderr output limits', async () => {

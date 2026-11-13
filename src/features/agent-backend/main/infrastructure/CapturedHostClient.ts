@@ -1,4 +1,4 @@
-import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
+import { type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { TextDecoder } from 'node:util';
 
@@ -16,6 +16,7 @@ import {
   type RpcRequest,
   TEAM_HOST_DISPOSE_TIMEOUT_MS,
 } from '@agent-teams/legacy-agent-host/contracts';
+import { observeLinuxChildLaunchFailure, remainingLinuxChildLaunchTime, spawnWithLinuxChildLaunch } from '@main/utils/linuxChildLaunch';
 import { createLogger } from '@shared/utils/logger';
 
 import { decodeClaudeCloseDiagnostics } from './decodeClaudeCloseDiagnostics';
@@ -128,7 +129,7 @@ export class CapturedHostClient {
       await validateHostProfile(this.profile);
       observeCapturedHostStartup('profile-validation-complete');
       if (this.sealed) throw new HostClientError('shutting-down', 'not-dispatched');
-      const child = spawn(this.profile.nodeExecutable, [this.profile.hostEntry], {
+      const child = spawnWithLinuxChildLaunch(this.profile.nodeExecutable, [this.profile.hostEntry], {
         cwd: this.profile.cwd,
         env: { ...this.profile.env },
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -144,6 +145,7 @@ export class CapturedHostClient {
         });
       });
       child.once('error', () => this.fail(new HostClientError('transport-closed', 'unknown')));
+      observeLinuxChildLaunchFailure(child, () => this.fail(new HostClientError('transport-closed', 'unknown')));
       child.stdin.on('error', () => this.fail(new HostClientError('transport-closed', 'unknown')));
       child.stdout.on('error', () => this.fail(new HostClientError('transport-closed', 'unknown')));
       child.stdout.on('data', (chunk: Buffer) => this.decode(chunk));
@@ -156,11 +158,13 @@ export class CapturedHostClient {
         this.diagnosticTail = Buffer.concat([this.diagnosticTail, chunk]).subarray(-8192);
         this.retainCloseDiagnostic(chunk);
       });
+      const handshakeRemaining = remainingLinuxChildLaunchTime(child, this.profile.startupTimeoutMs);
+      if (handshakeRemaining <= 0) throw new HostClientError('request-timeout', 'unknown');
       const result = await this.send(
         'host.handshake',
         { protocolVersion: HOST_PROTOCOL_VERSION },
         true,
-        this.profile.startupTimeoutMs
+        handshakeRemaining
       );
       const handshake = this.validateHandshake(result);
       if (this.sealed) throw new HostClientError('shutting-down', 'not-dispatched');

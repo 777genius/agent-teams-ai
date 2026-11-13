@@ -13,6 +13,12 @@ export const desktopProofProcessSources = [
   'scripts/legacy-agent-host/fixtures/process-foreground-service.ts',
   'scripts/legacy-agent-host/fixtures/process-notification-wrapper.json',
   'scripts/legacy-agent-host/fixtures/process-bootstrap.ts',
+  'src/main/utils/linuxChildLaunchSelection.ts',
+  'src/main/utils/linuxChildLaunch.ts',
+  'src/main/utils/unixProcessTable.ts',
+  'src/main/services/team/AgentTeamsMcpHttpServer.ts',
+  'packages/legacy-agent-host/native/linux-child-exec.c',
+  'packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts',
 ];
 
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
