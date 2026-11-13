@@ -87,7 +87,7 @@ async function fixture(t: TestContext, options: { blockOpen?: boolean; unknown?:
     runtime: { members: [{ provider: 'claude', teamId: teamBinding.teamId, memberId: 'lead', principalId: 'lead-principal',
       sessionId: 'PRIVATE-team-session', generation: 1, configRevision: 'PRIVATE-recipe', cwd: root,
       model: 'PRIVATE-default-model', accountBinding: 'PRIVATE-account',
-      executable: { path: '/TEST/no-native-execution', sha256: 'c'.repeat(64) },
+      executable: { path: join(root, 'TEST-no-native-execution'), sha256: 'c'.repeat(64) },
       environment: { HOME: root, CLAUDE_CONFIG_DIR: root, PATH: '/TEST/no-native-execution', TEST_TOKEN: 'PRIVATE-token' },
       nativeTools: ['Bash', 'Read'], autoAllowedTools: [],
       limits: { queuedInputs: 1, inputBytes: 65536, outputBytes: 65536, outputEvents: 256, pendingInteractions: 1, timeoutMs: 10000 } }] } };
