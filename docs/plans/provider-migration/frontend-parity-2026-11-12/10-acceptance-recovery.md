@@ -1181,3 +1181,68 @@ acceptance still requires ordinary old Save, immutable actual files,
 ordinary current import/preflight, close/reload and original lookup.
 No production change, new suite, runner, dependency, capability or
 timeout is planned.
+
+## 25. Packaged cancellation: defer unused canonical source schemas
+
+### Круг 1 — exact failure
+
+На parity9ea packaged Linux job131881379726, Windows x64 job131881379799
+и Darwin ARM job131881380047 падают в трёх existing cancellation cases
+до TEST-injected-harness-failure. Tiny tracked TEST checkout импортирует
+native-host.ts только ради runner helpers. R20 добавил его eager import
+compiled composition/runtimeSourceContracts.js; этот намеренно маленький
+checkout не содержит Host dist и не запускает Host. Это import closure
+ошибка тестовой инфраструктуры, не результат packaged native journey.
+
+### Круг 2 — один TEST helper, прежняя строгая проверка
+
+В packages/legacy-agent-host/tests/fixtures/native-host.ts переместить
+тот же canonical schema import в существующую async rpc ветку успешного
+runtime.source ответа. Использовать awaited dynamic import с прежним
+literal path; те же summary/publication schemas и switch по всем method
+остаются обязательными до возврата ответа. Ошибка import/parse должна
+отклонить исходный rpc. Не копировать schemas, не подменять модуль,
+не ослаблять DTO или allowlist, не добавлять dependencies в tiny checkout.
+Существующий esbuild bundle включает literal dynamic import; отсутствие
+Host dist у runner-only клиента перестаёт мешать неиспользуемому пути.
+
+### Круг 3 — минимальная проверка
+
+Независимый peer проверяет async границу и все canonical parses. Затем
+original packaged-opencode-v2-inputs.test.ts под pinned Node24.21 должен
+дойти до своих исходных clean-error/timeout-clean/unknown assertions:
+source hidden, exact original cleanup and restoration/retention. Scripts
+types и существующий runtime source RPC case проверяют оставшийся путь.
+Никакого нового запуска provider, retry, timeout, source-isolation exception
+или дополнительной suite. Полный packaged matrix всё ещё обязателен.
+
+## 26. Skills composition: unresolved Trash must retain shutdown debt
+
+### Круг 1 — воспроизведённое несоответствие ожидания
+
+Actual parity9ea test shard1 job131875733988 имеет единственное падение
+в test/capturedSkills.test.ts:1054. Тот же existing composition case
+локально воспроизведён на Node26.12.1. Case намеренно только stage-ит
+оригинальный Trash, подтверждает held receipt, busy credentials и lookup
+без nativeTrash dispatch; OS callback и finishTrash никогда не выполняются.
+ProviderManagementCoordinator.close теперь правильно отказывает held,
+пока durable original row.resourceHeld=true. Успешный close здесь означал
+бы потерю неразрешённого долга. Не менять этот production guard.
+
+### Круг 2 — тот же existing case, явная исходная неопределённость
+
+Перед seal/close сохранить точные original journal row/bytes и проверить
+его skill.mutation/trash identity, original commandId, held public receipt
+и resourceHeld=true. В finally ожидать именно OpenCodeManagementError
+с code=held, затем сравнить исходный durable row/bytes без изменений.
+Не вызывать shell Trash/finishTrash, не выдавать fake nativeCompleted,
+не освобождать резерв и не поглощать произвольную ошибку. Остальные
+существующие assertions и finally cleanup тестового sandbox сохраняются.
+
+### Круг 3 — essential verification
+
+Peer сверяет отсутствие product изменений и маскировки прежних отказов.
+Прогнать весь существующий capturedSkills.test.ts, чтобы ordinary success,
+unknown callback, retained identity и no-repeat поведения остались.
+Targeted types/fast lint плюс штатный shard1 нужны отдельно; локальный
+контролируемый case не объявляет actual OS Trash или полный E2E PASS.
