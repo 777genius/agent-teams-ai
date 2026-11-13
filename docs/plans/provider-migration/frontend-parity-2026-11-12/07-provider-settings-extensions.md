@@ -507,6 +507,34 @@ native tool/effect. **Review 2 — упрощение.** Два teammates в о�
 existing actor/oracle, Composer и Stop переиспользуются. Lead не получает external source и не
 маскирует appOnly. Пункт 07-G3 остаётся открытым до успешного Desktop receipt.
 
+## R12 — исправить два выявленных V2 Desktop lifecycle несоответствия
+
+Actual e2af run `43338183806`: Resume `131599600965` показывает единственную TEST-model,
+но disabled с `Provider management outcome unavailable`; менять selector или обходить ready gate нельзя.
+В `ProviderManagementCoordinator.catalog` status (`includeModels: true`) и directory (`{}`)
+выбирают разные native catalog modes одного profile; concurrent request может закрыть child предыдущего
+read. Active Quit `131599601058` отдельно наблюдает два metadata children после публикации global/project
+sources, тогда как старый TEST witness требовал один. Source index обоих artifacts содержит эти два scopes.
+
+1. **Согласовать reads у existing owner.** Последовательно выполнять весь V2 catalog участок
+   matches → close/create → read для одного original profile, сохраняя независимость разных profiles.
+   Завершить старый read до замены его child; следующий request повторно проверяет exact profile/revision
+   и authority. Ошибка не отравляет последующие reads; seal/revocation остаётся немедленным и запрещает
+   queued allocation. Это bounded in-memory sequencing существующего owner, без второго pool,
+   scheduler, journal или повторного запроса после неизвестного результата.
+2. **Сохранить deadlines.** Deadline фиксируется при приёме request, ожидание предыдущего read входит
+   в него; native read получает только оставшийся срок. Истёкший queued request не стартует child.
+   Не увеличивать Host/UI/CI timers и не возвращать stale catalog как fresh.
+3. **Исправить TEST identity witness.** Existing Desktop capture различает исходные global/project
+   metadata owners и один будущий Runtime. Зафиксировать точный конечный набор metadata identities
+   до allocation, затем проверять каждую original birth identity и отсутствие extra children.
+   Cold/Stop verifier обязан проверять исчезновение всех исходных children, не только первого.
+   Прежний mixed fixture с одним management scope сохраняет свой exact-one proof.
+4. **Одна необходимая regression.** Расширить existing management recovery test overlap status/directory:
+   завершение первого read предшествует close, оба результата относятся к исходному profile;
+   rejected predecessor не запрещает следующий допустимый read, seal не выделяет новый child.
+   Actual Desktop Resume/Quit продолжаются штатным CI; отсутствующий native результат остаётся открытым.
+
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts
 [M3]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/extensions/ExtensionStoreView.tsx
