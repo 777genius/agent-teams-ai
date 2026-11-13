@@ -1567,6 +1567,71 @@ jobs:
             assert.equal(createHash('sha256').update(seedBytes).digest('hex'), imported.seedSha256);
             assert.equal(JSON.parse(seedBytes.toString('utf8')).sourceKind, 'actual-current-native-solo');
           }
+          if (phase === 'desktop' && expectedMode === 'native-mixed-create-launch-ui') {
+            const local = process.env.STAGE1_VARIANT !== 'native-mixed-v2-create-launch-ui';
+            const generation = local ? 'v1' : 'v2';
+            const modelA = (local ? 'local' : 'test-local') + '/TEST-model';
+            const p = receipt.mixedCreateLaunchProof, settings = p?.providerSettings;
+            assert.equal(p?.status, 'PASS'); assert.equal(p.openCodeGeneration, generation);
+            assert.equal(settings?.status, 'PASS'); assert.equal(settings.generation, generation);
+            const steps = ['global-default', 'project-default', 'project-test',
+              ...(local ? ['local-limits'] : [])];
+            assert.equal(settings.expectedSettingsRequests, steps.length);
+            assert.deepEqual(settings.settingsRequests.map(row => row.settingsStep), steps);
+            assert.deepEqual(settings.settingsRequests.map(row => row.requestedModel),
+              ['TEST-model', 'TEST-project-model', 'TEST-project-model', ...(local ? ['TEST-model'] : [])]);
+            assert.ok(settings.settingsRequests.every(row => row.requestedEffort === undefined));
+            if (local) assert.equal(settings.settingsRequests.at(-1).requestedOutputTokens, 1536);
+            const models = JSON.parse(readFileSync(join(dirname(path), 'mixed-models.json'), 'utf8'));
+            assert.equal(models.schemaVersion, 1); assert.equal(models.phase, 'before-model-close');
+            assert.equal(realpathSync(models.root), dirname(path));
+            for (const name of ['claude', 'codex', 'opencode']) {
+              assert.deepEqual(models.providers[name].failures, []);
+              assert.deepEqual(p.probes[name], models.providers[name].probes);
+            }
+            const native = models.providers.opencode;
+            assert.deepEqual(native.probes.filter(row => row.settingsStep !== undefined), settings.settingsRequests);
+            const ordinary = native.probes.filter(row => row.settingsStep === undefined);
+            assert.ok(ordinary.length > 0 && ordinary.length <= 8);
+            assert.equal(native.probes.length, steps.length + ordinary.length);
+            assert.equal(settings.businessRequests, native.observations.length);
+            assert.ok(native.observations.length > 0);
+            assert.ok(native.observations.every(row => row.requestedModel === 'TEST-model' &&
+              (!local || row.requestedOutputTokens === 1536)));
+            assert.equal(settings.defaultBeforeSave.selected, true);
+            assert.equal(settings.defaultBeforeSave.modelId, modelA);
+            assert.match(settings.defaultBeforeSave.globalPreferenceSha256, /^[a-f0-9]{64}$/);
+            assert.equal(settings.defaultBeforeSave.globalPreferenceSha256, settings.clearedProject.globalSha256);
+            assert.equal(settings.projectOverride.globalSha256, settings.clearedProject.globalSha256);
+            assert.equal(settings.clearedProject.otherProjectAbsent, true);
+            assert.equal(settings.clearedProject.visibleInheritedModel, modelA);
+            assert.deepEqual(settings.visibleLocalLimits, local ? { contextTokens: 65536, outputTokens: 1536 } : null);
+            assert.deepEqual(settings.experimentalOverride,
+              { requested: false, checkedControl: false, failedLocalOverrideQualified: false });
+            assert.equal(settings.nativeCapture.originalRuntimeBound, true);
+            assert.equal(settings.nativeCapture.launchId, p.capture.launchId);
+            assert.deepEqual(settings.nativeCapture.capturedPreferences, {
+              defaultModelId: modelA,
+              modelLimitOverrides: local ? { [modelA]: { contextTokens: 65536, outputTokens: 1536 } } : {},
+            });
+            assert.match(settings.nativeCapture.recordSha256, /^[a-f0-9]{64}$/);
+            assert.equal(settings.originalSettingsOwnersReleased, true);
+            assert.equal(settings.sameSettingsAfterCold, true);
+            assert.equal(settings.successorOwnersReleased, true);
+            const cold = receipt.coldSettingsBoundary;
+            assert.equal(cold.status, 'PASS'); assert.equal(cold.secondEpoch.status, 'PASS');
+            assert.equal(cold.originalSavedTeamBindings.length, 2);
+            assert.deepEqual(cold.originalSavedTeamBindings.map(row => row.members.length).sort(), [1, 3]);
+            assert.equal(cold.firstCleanup.writerLockReleased, true);
+            for (const cleanup of [cold.firstCleanup, cold.secondCleanup, receipt.cleanup]) {
+              assert.equal(cleanup.appExitCode, 0); assert.equal(cleanup.appSignalCode, null);
+              assert.equal(cleanup.capturedHostAbsent, true); assert.deepEqual(cleanup.remaining, []);
+              assert.equal(cleanup.cleanupFailure, undefined);
+            }
+            assert.equal(p.stop.releasedBeforeQuit, true);
+            assert.equal(receipt.sourceFreezeFailure, undefined);
+            assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
+          }
           console.log(JSON.stringify({ status: receipt.status, mode: receipt.mode,
             variant: process.env.STAGE1_VARIANT, receipt: path }));
           }

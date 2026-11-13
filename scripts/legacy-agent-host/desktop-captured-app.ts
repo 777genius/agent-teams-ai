@@ -178,6 +178,7 @@ export async function connectCapturedDesktopApp(options: {
 export async function verifyCapturedDesktopBinding(options: {
   cdp: DesktopCdpPort; mode: string; fixture: Fixture; evidence: Evidence; repo: string; packed: Packed;
   remainingStartupMs?: number;
+  savedTeamBindings?: { handleId: string; original: readonly Evidence[] };
 } & ({ group: number; assertOwnedRenderer?: never } | { group?: never; assertOwnedRenderer(): void })): Promise<void> {
   const { cdp, group, mode, fixture, evidence, repo, packed } = options;
   const assertCurrent = options.assertOwnedRenderer ?? (() => { assert.ok(group !== undefined); assertOwnedCdpListener(group); });
@@ -205,7 +206,21 @@ export async function verifyCapturedDesktopBinding(options: {
   assert.ok(connections, 'read-only backend discovery became available within its bound');
   assert.equal(connections.state, 'ready');
   assert.ok(Array.isArray(connections.bindings));
-  assert.equal(connections.bindings.length, ['task-board-cross-team-ui', 'cross-team-ui'].includes(mode) ? 3 : 1);
+  if (options.savedTeamBindings) {
+    assert.equal(mode, 'native-mixed-create-launch-ui');
+    const { handleId, original } = options.savedTeamBindings;
+    assert.notEqual(handleId, fixture.handleId);
+    assert.equal(original.length, 2);
+    assert.deepEqual(connections.bindings.map(value => object(object(value).handle).handleId).sort(),
+      [fixture.handleId, handleId].sort(), 'exact original fixture and created Team handles');
+    for (const retained of original) {
+      const matches = connections.bindings.filter(value =>
+        object(object(value).handle).handleId === object(retained.handle).handleId);
+      assert.equal(matches.length, 1); assert.deepEqual(matches[0], retained);
+    }
+  } else {
+    assert.equal(connections.bindings.length, ['task-board-cross-team-ui', 'cross-team-ui'].includes(mode) ? 3 : 1);
+  }
   const binding = object(connections.bindings.find((value) => object(object(value).handle).handleId === fixture.handleId));
   assert.deepEqual(binding.handle, { handleId: fixture.handleId });
   assert.deepEqual(Object.keys(binding).sort(), ['handle', 'label', 'members', 'ownerResourceRef', 'teamResourceRef']);
@@ -462,16 +477,27 @@ export async function restartCapturedDesktopApp(options: {
   evidence: Evidence; cdpLibrary: DesktopCdpLibrary;
   provider: 'claude' | 'codex' | 'opencode';
   model: { observations: readonly unknown[]; failures: readonly string[] };
-  boundary: 'resume-after-stop' | 'extensions-before-launch';
+  boundary: 'resume-after-stop' | 'extensions-before-launch' | 'settings-saved-before-launch';
+  createdHandleId?: string;
+  afterOriginalSettingsQuit?(): Promise<void>;
   markQuitRequested(): void;
   adoptRenderer(cdp: DesktopCdpPort | undefined, hostPid?: number): void;
   spawnNext(): { app: ChildProcess; group: number; identity: string; invocation: readonly string[];
     spawnError(): boolean };
 }): Promise<DesktopCdpPort> {
   const { app, cdp, group, fixture, repo, mode, evidence, provider, model, cdpLibrary } = options;
-  const initial = options.boundary === 'extensions-before-launch';
-  assert.equal(mode, initial ? 'native-launch-ui' : 'native-resume-ui');
-  if (initial) {
+  const settings = options.boundary === 'settings-saved-before-launch';
+  const extensions = options.boundary === 'extensions-before-launch';
+  const initial = extensions || settings;
+  assert.equal(mode, settings ? 'native-mixed-create-launch-ui' : initial ? 'native-launch-ui' : 'native-resume-ui');
+  if (settings) {
+    assert.ok(options.createdHandleId && options.afterOriginalSettingsQuit);
+    assert.notEqual(options.createdHandleId, fixture.handleId);
+  } else {
+    assert.equal(options.createdHandleId, undefined);
+    assert.equal(options.afterOriginalSettingsQuit, undefined);
+  }
+  if (extensions) {
     assert.equal(process.env.LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI, '1');
     assert.equal(provider, 'claude');
   }
@@ -480,12 +506,45 @@ export async function restartCapturedDesktopApp(options: {
   const originalHost = hosts[0]!;
   options.adoptRenderer(cdp, originalHost.pid);
   const proof: Evidence = { status: 'INCOMPLETE', provider,
-    scope: initial ? 'Guarded same-profile cold startup after extension/skill mutations, before any native Launch'
+    scope: settings ? 'Guarded same-profile cold startup after Settings and one saved Team, before native Launch'
+      : initial ? 'Guarded same-profile cold startup after extension/skill mutations, before any native Launch'
       : 'Guarded app Quit and captured same-profile cold startup before explicit Resume',
     firstEpoch: { app: evidence.app, startup: evidence.startup, startupOutcome: evidence.startupOutcome,
       rendererTarget: evidence.rendererTarget, compiledBundleHashesAfterStartup: evidence.compiledBundleHashesAfterStartup,
       discovery: evidence.discovery, homePathProof: evidence.homePathProof, host: originalHost } };
-  evidence[initial ? 'coldExtensionBoundary' : 'coldResumeBoundary'] = proof;
+  evidence[settings ? 'coldSettingsBoundary' : initial ? 'coldExtensionBoundary' : 'coldResumeBoundary'] = proof;
+  let savedTeamBindings: { handleId: string; original: readonly Evidence[] } | undefined;
+  if (settings) {
+    const observed = await readRendererBackendConnections(cdp);
+    assert.equal(observed.kind, 'read');
+    const selected = object(observed.kind === 'read' ? observed.value : undefined);
+    assert.equal(selected.state, 'ready');
+    assert.ok(Array.isArray(selected.bindings));
+    const bindings = selected.bindings.map(object);
+    assert.deepEqual(bindings.map(row => object(row.handle).handleId).sort(),
+      [fixture.handleId, options.createdHandleId!].sort());
+    for (const row of bindings) {
+      assert.deepEqual(Object.keys(row).sort(), ['handle', 'label', 'members', 'ownerResourceRef', 'teamResourceRef']);
+      assert.match(String(row.ownerResourceRef), /^[a-f0-9]{64}$/);
+      assert.match(String(row.teamResourceRef), /^[a-f0-9]{8}-[a-f0-9]{4}-5[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
+      assert.deepEqual(Object.keys(object(row.handle)), ['handleId']);
+      assert.equal(typeof row.label, 'string');
+      assert.ok(Array.isArray(row.members));
+      assert.equal(row.members.length, object(row.handle).handleId === fixture.handleId ? 1 : 3);
+      const memberIds = row.members.map(value => {
+        const member = object(value);
+        assert.deepEqual(Object.keys(member).sort(), ['label', 'memberId']);
+        assert.equal(typeof member.memberId, 'string');
+        assert.equal(typeof member.label, 'string');
+        return member.memberId;
+      });
+      assert.equal(new Set(memberIds).size, memberIds.length);
+    }
+    assert.equal(bindings[0]!.ownerResourceRef, bindings[1]!.ownerResourceRef);
+    assert.notEqual(bindings[0]!.teamResourceRef, bindings[1]!.teamResourceRef);
+    savedTeamBindings = { handleId: options.createdHandleId!, original: structuredClone(bindings) };
+    proof.originalSavedTeamBindings = savedTeamBindings.original;
+  }
   const readSessions = () => readDesktopNativeStopSessions(fixture.root).catch(
     (error: NodeJS.ErrnoException & { path?: string }) => {
       if (initial && error.code === 'ENOENT' && error.path === join(fixture.root, 'hoststore/runtime-sessions'))
@@ -527,9 +586,10 @@ export async function restartCapturedDesktopApp(options: {
     assert.ok(names.length <= 16);
     return Promise.all(names.map(async name => ({ name, sha256: await fileDigest(join(directory, name)) })));
   };
-  const originalMutations = initial ? await managementRecords() : undefined;
+  const originalMutations = extensions ? await managementRecords() : undefined;
   if (originalMutations) assert.equal(originalMutations.length, 4, 'one plugin install and three skill mutations');
-  const bundleDirectory = join(fixture.root, initial ? 'cold-extension-epoch1-bundles' : 'cold-resume-epoch1-bundles');
+  const bundleDirectory = join(fixture.root, settings ? 'cold-settings-epoch1-bundles'
+    : initial ? 'cold-extension-epoch1-bundles' : 'cold-resume-epoch1-bundles');
   const bundlePins = evidence.compiledBundleHashesAfterStartup;
   assert.ok(Array.isArray(bundlePins) && bundlePins.length > 0 && bundlePins.length <= 4096);
   for (const raw of bundlePins) {
@@ -582,6 +642,7 @@ export async function restartCapturedDesktopApp(options: {
     assert.equal(row.phase, 'closed'); assert.equal(row.custody, 'released'); assert.equal(row.sealed, true);
   }
   assert.equal(model.observations.length, initial ? 0 : 8, 'Quit cannot release a native input');
+  if (settings) await options.afterOriginalSettingsQuit!();
   await bounded(cdp.close(), 3000, 'disconnect original renderer');
   options.adoptRenderer(undefined);
   assert.equal(await portOccupied(), false);
@@ -598,7 +659,8 @@ export async function restartCapturedDesktopApp(options: {
   await attachRendererDiagnostics(connected.cdp, String(connected.target.url), second, {
     remainingMs: connected.startupBudgetMs - (performance.now() - connected.startupStarted),
     assertOwnedRenderer: () => assertOwnedCdpListener(next.group) });
-  await verifyCapturedDesktopBinding({ cdp: connected.cdp, group: next.group, mode, fixture, evidence: second, repo, packed: undefined });
+  await verifyCapturedDesktopBinding({ cdp: connected.cdp, group: next.group, mode, fixture, evidence: second,
+    repo, packed: undefined, ...(savedTeamBindings ? { savedTeamBindings } : {}) });
   const currentHosts = groupMembers(next.group).filter(row => command(row.pid) === fixture.node + ' ' + fixture.hostEntry);
   assert.equal(currentHosts.length, 1, 'one new standalone Host after cold discovery');
   assert.notEqual(currentHosts[0]!.pid, originalHost.pid);

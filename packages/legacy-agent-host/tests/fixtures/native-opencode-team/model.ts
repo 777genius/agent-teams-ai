@@ -42,6 +42,12 @@ export interface CaptureFileUpdateScenario {
   taskId(): string;
   phase(): 'assignment' | 'task-start';
 }
+export type SettingsModelProbe = {
+  step: 'global-default' | 'project-default' | 'project-test' | 'local-limits';
+  model: 'TEST-model' | 'TEST-project-model';
+  outputTokens?: number;
+};
+
 export async function startOpenCodeModel(
   options: {
     nativeGeneration?: 'v2';
@@ -52,6 +58,8 @@ export async function startOpenCodeModel(
     peerMessaging?: boolean;
     captureFileUpdate?: CaptureFileUpdateScenario;
     allowModelProbes?: boolean;
+    settingsProbe?: () => SettingsModelProbe | 'idle' | undefined;
+    selectedBusinessOutputTokens?: number;
     memberName?: 'alice' | 'carol';
     uiGeneratedMessageIds?: boolean;
     captureHistoryMarkers?: boolean;
@@ -76,7 +84,13 @@ export async function startOpenCodeModel(
       /\/TEST-native-opencode-capture-[^/]+\/workspace$/
     );
 
-  const probes: { requestedModel?: string; requestedEffort?: string }[] = [];
+  const probes: {
+    requestedModel?: string;
+    requestedEffort?: string;
+    requestedOutputTokens?: number;
+    settingsStep?: SettingsModelProbe['step'];
+  }[] = [];
+  const settingsSteps = new Set<SettingsModelProbe['step']>();
   const observations: {
     nativeImage?: ReturnType<typeof assertNativeMessageImage>;
     failedShellToolOutput?: ReturnType<typeof assertCaptureFailedShellOutput>;
@@ -118,7 +132,8 @@ export async function startOpenCodeModel(
         chunks.push(chunk);
       }
       const body = record(JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown);
-      if (options.selectedModel) {
+      const settingsProbe = options.settingsProbe?.();
+      if (options.selectedModel && !settingsProbe) {
         assert.equal(body.model, options.selectedModel.id, 'actual native request uses the selected model');
         assert.equal(body.reasoning_effort, options.selectedModel.effort,
           'actual native request applies the selected named variant');
@@ -139,8 +154,25 @@ export async function startOpenCodeModel(
         options.allowModelProbes &&
         isOpenCodeModelProbe(body, options.nativeGeneration ?? 'v1')
       ) {
-        assert.ok(probes.length < 8, 'bounded original-dialog model probes');
+        assert.notEqual(settingsProbe, 'idle', 'no unrequested Settings model probe');
+        if (settingsProbe && settingsProbe !== 'idle') {
+          assert.equal(settingsSteps.has(settingsProbe.step), false, 'one original Settings action');
+          assert.equal(body.model, settingsProbe.model, 'Settings action uses its selected model');
+          assert.equal(body.reasoning_effort, undefined);
+          if (settingsProbe.outputTokens !== undefined)
+            assert.equal(body.max_tokens, settingsProbe.outputTokens);
+          settingsSteps.add(settingsProbe.step);
+        } else {
+          assert.ok(
+            probes.filter((probe) => probe.settingsStep === undefined).length < 8,
+            'bounded original-dialog model probes'
+          );
+        }
         probes.push({
+          ...(settingsProbe && settingsProbe !== 'idle' ? {
+            settingsStep: settingsProbe.step,
+            ...(typeof body.max_tokens === 'number' ? { requestedOutputTokens: body.max_tokens } : {}),
+          } : {}),
           ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
           ...(typeof body.reasoning_effort === 'string'
             ? { requestedEffort: body.reasoning_effort }
@@ -161,6 +193,10 @@ export async function startOpenCodeModel(
         response.end('data: [DONE]\n\n');
         return;
       }
+      assert.equal(settingsProbe, undefined, 'no business input during Settings verification');
+      if (options.selectedBusinessOutputTokens !== undefined)
+        assert.equal(body.max_tokens, options.selectedBusinessOutputTokens,
+          'actual business request uses the saved local output limit');
       if (options.sharedSessionProbe) {
         const text = JSON.stringify(user.at(-1)?.content),
           turn = /TEST_SHARED_OPENCODE_(A1|B1|B2)/.exec(text)?.[0];
@@ -340,7 +376,8 @@ export async function startOpenCodeModel(
         priorTurn: JSON.stringify(messages).includes('OPENCODE_TEAM_ONE'),
         ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
         ...(typeof body.reasoning_effort === 'string' ? { requestedEffort: body.reasoning_effort } : {}),
-        ...(options.selectedOutputTokens === undefined ? {} : { requestedOutputTokens: Number(body.max_tokens) }),
+        ...(options.selectedOutputTokens === undefined && options.selectedBusinessOutputTokens === undefined
+          ? {} : { requestedOutputTokens: Number(body.max_tokens) }),
         ...(options.captureHistoryMarkers ? { priorNativeToolIds: messages.flatMap(message =>
           Array.isArray(message.tool_calls) ? message.tool_calls.map(record)
             .filter(call => typeof call.id === 'string' && /^TEST_OPENCODE_TEAM_ONE_[0-6]$/.test(call.id))
