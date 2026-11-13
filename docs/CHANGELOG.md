@@ -9,6 +9,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 ### Added
 
 - GPT-5.6 Sol, Terra, and Luna fallback selection for Codex teams, dynamic future-model efforts, and in-app Codex CLI updates.
+- Traditional Chinese (Taiwan, `zh-TW`) app language with Taiwan terminology. Traditional Chinese system locales (zh-TW, zh-HK, zh-MO, zh-Hant) select it automatically, missing keys fall back to English instead of Simplified Chinese, and cron schedule descriptions use cronstrue's `zh_TW`.
 
 ## [1.2.0] - 2026-03-31
 
