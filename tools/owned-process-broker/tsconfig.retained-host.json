@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": { "types": ["node", "react"], "noUnusedLocals": true, "noUnusedParameters": true },
-  "include": ["nativeRetainedHostGate.ts"],
+  "include": ["nativeRetainedHostGate.ts", "nativeRetainedServiceScenario.ts"],
   "exclude": ["node_modules"]
 }

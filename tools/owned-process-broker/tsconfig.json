@@ -2,5 +2,5 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": { "noUncheckedIndexedAccess": true, "noUnusedLocals": true, "noUnusedParameters": true },
   "include": ["*.ts", "../../src/main/utils/ownedProcess/*.ts", "../../scripts/build/buildOwnedProcessBroker.ts"],
-  "exclude": ["node_modules", "nativeRetainedHostGate.ts"]
+  "exclude": ["node_modules", "nativeRetainedHostGate.ts", "nativeRetainedServiceScenario.ts"]
 }
