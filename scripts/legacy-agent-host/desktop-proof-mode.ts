@@ -356,6 +356,7 @@ export async function prepareDesktopProofMode(
           : legacyImportMode
             ? await startNativeTeamModel({
                 allowModelProbes: true,
+                ...(process.env.LEGACY_DESKTOP_DONOR_SAVED_ONLY === '1' ? { donorSavedProbes: true } : {}),
                 ...(process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1'
                   ? {
                       memberName: 'team-lead' as const,

@@ -9,7 +9,7 @@ import { performance } from 'node:perf_hooks';
 import { isDeepStrictEqual } from 'node:util';
 import { checkpoint } from './desktop-resume-records.ts';
 import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
-import { assertFirstResumeMetadataAbsent } from './desktop-opencode-v2-cold-metadata.ts';
+import { assertFirstResumeMetadataAbsent, observeDesktopMetadataClose } from './desktop-opencode-v2-cold-metadata.ts';
 import { bounded } from './desktop-proof-bounds.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { assertOwnedCdpListener, command, processTable, selectedCdpPort, compiledBundleHashes, getTargets, portOccupied,
@@ -512,7 +512,10 @@ export async function restartCapturedDesktopApp(options: {
   assert.equal(app.signalCode, null);
   assert.deepEqual(remaining, [], 'no group cleanup fallback before cold startup');
   assert.equal(hostAbsent, true); assert.equal(writerReleased, true);
-  if (!initial) assertFirstResumeMetadataAbsent(evidence);
+  if (!initial) {
+    await observeDesktopMetadataClose(fixture.root, evidence, true);
+    assertFirstResumeMetadataAbsent(evidence);
+  }
   const postQuit = await readSessions();
   if (!initial) for (const original of before) {
     const matches = postQuit.filter(row => isDeepStrictEqual(row.binding, original.binding));

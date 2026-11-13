@@ -583,7 +583,7 @@ export async function prepareDesktopBackendFixture(
     await prepareDesktopReviewLedger(root, uiSeed.taskId);
   }
   if (options.nativeReviewUi) await prepareNativeReviewWorkspace(root, options.nativeOpenCodeV2 ? 'opencode-v2' : 'claude');
-  if (options.stoppedImportUi)
+  if (options.stoppedImportUi && process.env.LEGACY_DESKTOP_DONOR_SAVED_ONLY !== '1')
     await prepareDesktopStoppedImport(root, {
       priorRun: process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1',
       node,

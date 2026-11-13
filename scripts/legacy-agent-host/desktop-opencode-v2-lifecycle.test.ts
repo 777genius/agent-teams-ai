@@ -7,6 +7,8 @@ import { test } from 'node:test';
 import { CONTEXT_MARKER, REQUIRED_TOOLS, startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import { checkpoint, jsonDigest, originalHistoryMarker } from './desktop-resume-records.ts';
 import { separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fixture.ts';
+import { captureDesktopMetadataLineage, desktopMetadataProfileHash, assertDesktopMetadataReleasedEvidence } from './desktop-opencode-metadata-lineage.ts';
+import type { DesktopNativeHostSnapshot, DesktopMetadataEvent } from './desktop-opencode-metadata-lineage.ts';
 import { assertCapturedDesktopMetadataAbsent, assertFirstResumeMetadataAbsent, assertColdOpenCodeRuntimeRecords } from './desktop-opencode-v2-cold-metadata.ts';
 
 const messageId = '11111111-2222-4333-8444-555555555555';
@@ -16,6 +18,21 @@ const metadataSources = (captured: { children: readonly unknown[] }) => [
   { sourceId: 'c'.repeat(64), revision: 'd'.repeat(64), profileId: 'runtime-source:' + 'd'.repeat(64),
     configRevision: 'runtime-source:' + 'd'.repeat(64), scope: 'project', projectPath: '/TEST/workspace', process: captured.children[1] },
 ];
+// Constructed oracle inputs only; these do not claim real native/corpus acceptance.
+function tracedMetadata(captured: DesktopNativeHostSnapshot): DesktopNativeHostSnapshot {
+  const profileHashes = metadataSources(captured).map(desktopMetadataProfileHash);
+  const events: DesktopMetadataEvent[] = captured.children.map((child, index) => ({
+    hostPid: captured.host.pid, profileHash: profileHashes[index]!, mode: 'provider',
+    providerHash: 'e'.repeat(64), pid: child.pid, startIdentity: 'TEST-birth:' + child.pid, stage: 'ready',
+  }));
+  return { ...captured, metadataLineage: captureDesktopMetadataLineage({ events, host: captured.host,
+    profileHashes, observed: captured.children, executable: '/TEST/bun' }) };
+}
+function closedMetadata(captured: DesktopNativeHostSnapshot) {
+  assert.ok(captured.metadataLineage);
+  return { ...captured.metadataLineage, events: [...captured.metadataLineage.events,
+    ...captured.metadataLineage.events.map(row => ({ ...row, stage: 'released' as const }))] };
+}
 const tools = ['shell', ...REQUIRED_TOOLS.map(name => 'agent-teams_' + name)]
   .map(name => ({ type: 'function', function: { name, parameters: { type: 'object' } } }));
 const user = (turn: string) => ({ role: 'user', content: `${JSON.stringify({ messageId, text: turn })}\n` +
@@ -40,11 +57,33 @@ test('V2 lifecycle retains the pre-Launch metadata birth identity and refuses re
   assert.throws(() => separateDesktopOpenCodeRuntimeChildren(original,
     { host, children: [metadata, runtime, { ...runtime, pid: 13 }] }, 1));
   const project = { ...metadata, pid: 13, groupId: 13, birth: 'TEST-project-metadata' };
-  const scoped = { host, children: [metadata, project] };
-  assert.deepEqual(separateDesktopOpenCodeRuntimeChildren(scoped, { host, children: [metadata, runtime, project] }, 1), [runtime]);
-  assert.throws(() => separateDesktopOpenCodeRuntimeChildren(scoped, { host, children: [metadata, runtime] }, 1));
+  const scoped = tracedMetadata({ host, children: [metadata, project] });
+  assert.deepEqual(separateDesktopOpenCodeRuntimeChildren(scoped, { ...scoped, children: [metadata, runtime, project] }, 1), [runtime]);
+  assert.throws(() => separateDesktopOpenCodeRuntimeChildren(scoped, { ...scoped, children: [metadata, runtime] }, 1));
   assert.throws(() => separateDesktopOpenCodeRuntimeChildren(scoped,
-    { host, children: [metadata, runtime, { ...project, birth: 'TEST-replaced-project' }] }, 1));
+    { ...scoped, children: [metadata, runtime, { ...project, birth: 'TEST-replaced-project' }] }, 1));
+
+  const successor = { ...metadata, pid: 14, groupId: 14, birth: 'TEST-successor-metadata' };
+  const initial = scoped.metadataLineage!;
+  const released: DesktopMetadataEvent = { ...initial.events[0]!, stage: 'released' };
+  const ready: DesktopMetadataEvent = { ...initial.events[0]!, mode: 'directory', providerHash: null,
+    pid: successor.pid, startIdentity: 'TEST-birth:14' };
+  const events = [...initial.events, released, ready];
+  const observe = (values: readonly DesktopMetadataEvent[], observed = [project, successor, runtime]) =>
+    captureDesktopMetadataLineage({ events: values, host, profileHashes: initial.profileHashes,
+      observed, executable: '/TEST/bun', original: initial });
+  const next = { host, children: [project, successor, runtime], metadataLineage: observe(events) };
+  assert.deepEqual(separateDesktopOpenCodeRuntimeChildren(scoped, next, 1), [runtime]);
+  assert.deepEqual(next.metadataLineage.births.find(row => row.pid === metadata.pid), metadata);
+  assert.throws(() => observe([...initial.events, ready]), /duplicate live/);
+  assert.throws(() => observe([...initial.events, { ...released, stage: 'cleanup-unknown' }, ready]), /unknown cleanup/);
+  assert.throws(() => observe(events, [metadata, project, successor, runtime]), /physically absent/);
+  assert.throws(() => observe([...initial.events, released, { ...ready, profileHash: 'f'.repeat(64) }]), /captured scope/);
+  const closed = { ...next.metadataLineage, events: [...events,
+    { ...initial.events[1]!, stage: 'released' as const }, { ...ready, stage: 'released' as const }] };
+  assert.doesNotThrow(() => assertDesktopMetadataReleasedEvidence(next, closed, []));
+  assert.throws(() => assertDesktopMetadataReleasedEvidence(next, closed, [{ pid: metadata.pid }]), /metadata PID/);
+  assert.throws(() => assertDesktopMetadataReleasedEvidence(next, { ...closed, events: closed.events.slice(1) }, []));
 });
 
 test('cold metadata reads accept only original completed PNG inputs and no extra Runtime', () => {
@@ -150,10 +189,10 @@ test('V2 mixed cleanup requires its pre-Launch observation while V1 proof stays 
 test('every hot V2 flow requires its own captured metadata child absent before fallback cleanup', () => {
   const host = { pid: 10, parentPid: 1, groupId: 9, birth: 'TEST-host-birth', command: '/TEST/node' };
   const child = { pid: 11, parentPid: 10, groupId: 11, birth: 'TEST-metadata-birth', command: '/TEST/bun' };
-  const captured = { host, children: [child, { ...child, pid: 12, groupId: 12, birth: 'TEST-project-metadata' }] };
+  const captured = tracedMetadata({ host, children: [child, { ...child, pid: 12, groupId: 12, birth: 'TEST-project-metadata' }] });
   const flows = [
     { mode: 'native-review-ui', key: 'nativeReviewUiProof', capture: 'originalMetadataBeforeLaunch',
-      proof: { status: 'PASS', provider: 'opencode-v2', originalMetadataBeforeLaunch: captured, stop: { metadata: captured.children } } },
+      proof: { status: 'PASS', provider: 'opencode-v2', originalMetadataBeforeLaunch: captured, metadataAfterStop: captured, stop: { metadata: captured.children } } },
     { mode: 'native-launch-ui', key: 'launchDialogProof', capture: 'originalMetadataBeforeLaunch',
       proof: { status: 'PASS', provider: 'opencode', originalMetadataBeforeLaunch: captured, metadataAfterStop: captured } },
     ...['native-stop-ui', 'native-conversation-ui', 'native-quit-ui'].flatMap(mode =>
@@ -163,7 +202,7 @@ test('every hot V2 flow requires its own captured metadata child absent before f
   ];
   for (const flow of flows) {
     const source: Record<string, unknown> = { mode: flow.mode, nativeProvider: 'opencode', nativeGeneration: 'v2',
-      hostChild: { pid: 10, ppid: 1, pgid: 9 }, [flow.key]: { ...flow.proof, metadataSources: metadataSources(captured) } };
+      hostChild: { pid: 10, ppid: 1, pgid: 9 }, [flow.key]: { ...flow.proof, metadataSources: metadataSources(captured), metadataAtHostClose: closedMetadata(captured) } };
     for (const current of [11, 12].flatMap(pid => [{ pid, ppid: 10, pgid: pid }, { pid, ppid: 1, pgid: pid }, { pid, ppid: 99, pgid: 99 }])) {
       const evidence = structuredClone(source), proof = evidence[flow.key] as Record<string, unknown>;
       assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [current]), /metadata child/);
@@ -172,6 +211,7 @@ test('every hot V2 flow requires its own captured metadata child absent before f
     for (const change of [
       (evidence: Record<string, unknown>) => { delete (evidence[flow.key] as Record<string, unknown>)[flow.capture]; },
       (evidence: Record<string, unknown>) => { delete (evidence[flow.key] as Record<string, unknown>).metadataSources; },
+      (evidence: Record<string, unknown>) => { delete (evidence[flow.key] as Record<string, unknown>).metadataAtHostClose; },
       (evidence: Record<string, unknown>) => {
         const sources = (evidence[flow.key] as Record<string, unknown>).metadataSources as Record<string, unknown>[];
         sources[1]!.profileId = sources[0]!.profileId;
@@ -202,9 +242,9 @@ test('cold Resume records first metadata absence before the second spawn and bin
     children: [1, 2].map(offset => ({ pid: pid + offset, parentPid: pid, groupId: pid + offset,
       birth: 'TEST-metadata-' + (pid + offset), command: '/TEST/bun' })),
   });
-  const first = capture(10), second = capture(20);
+  const first = tracedMetadata(capture(10)), second = tracedMetadata(capture(20));
   const launch: Record<string, unknown> = { provider: 'opencode', status: 'INCOMPLETE', stop: { releasedBeforeQuit: true },
-    originalMetadataBeforeLaunch: first, metadataAfterStop: first, metadataSources: metadataSources(first) };
+    originalMetadataBeforeLaunch: first, metadataAfterStop: first, metadataSources: metadataSources(first), metadataAtHostClose: closedMetadata(first) };
   const boundary: Record<string, unknown> = { provider: 'opencode', status: 'INCOMPLETE',
     firstEpoch: { host: { pid: 10, ppid: 1, pgid: 9 } },
     firstCleanup: { appExitCode: 0, appSignalCode: null, remaining: [], capturedHostAbsent: true, writerLockReleased: true } };
@@ -225,7 +265,7 @@ test('cold Resume records first metadata absence before the second spawn and bin
   boundary.secondEpoch = { host: { pid: 20, ppid: 1, pgid: 19 } };
   evidence.hostChild = { pid: 20, ppid: 1, pgid: 19 };
   const resume: Record<string, unknown> = { provider: 'opencode', status: 'PASS',
-    originalMetadataBeforeResume: second, metadataAfterSecondStop: second, metadataSources: metadataSources(second) };
+    originalMetadataBeforeResume: second, metadataAfterSecondStop: second, metadataSources: metadataSources(second), metadataAtHostClose: closedMetadata(second) };
   evidence.resumeDialogProof = resume;
   for (const current of [21, 22].flatMap(pid => [{ pid, ppid: 20, pgid: pid }, { pid, ppid: 1, pgid: pid }, { pid, ppid: 99, pgid: 99 }])) {
     assert.throws(() => assertCapturedDesktopMetadataAbsent(evidence, [current]), /second Resume metadata child/);

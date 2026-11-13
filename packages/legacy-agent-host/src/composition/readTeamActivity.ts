@@ -3,7 +3,8 @@ import { deliveryFingerprint, runtimeDigest } from '../runtime/identity.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { projectRuntimeActivity } from './runtimeActivityProjection.js';
 import type { JsonValue } from '../contracts.js';
-import type { MemberEntry, HostedTeam } from './MemberEntry.js';
+import type { HostedTeam } from './MemberEntry.js';
+import type { RuntimeActivitySource } from './runtimeActivitySources.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { TaskStartCause } from '../team/TaskStartCause.js';
 import type { RuntimeDelivery } from '../runtime/contracts.js';
@@ -18,7 +19,7 @@ const query = z.union([z.object({ memberName: id }).strict(), z.object({ taskId:
 export interface TeamActivityReadOptions {
   team: HostedTeam;
   principalId: string;
-  entries: readonly Pick<MemberEntry, 'binding' | 'team'>[];
+  entries: readonly RuntimeActivitySource[];
   taskCause(intent: RuntimeDelivery): TaskStartCause | null;
   runtime: Pick<RuntimeOwner, 'readCapturedSession' | 'readActivitySnapshot' | 'readActivityFeed'>;
   assertCurrent(): void;
@@ -68,10 +69,14 @@ export function readTeamActivity(options: TeamActivityReadOptions, raw: unknown)
   let budget = 256 * 1024;
   for (const entry of sources) {
     options.assertCurrent();
-    if (!team.owner.authorizeRuntimeAccess(principalId, entry.binding, 'read'))
-      throw new RuntimeOwnerError('forbidden');
     const observed = runtime.readCapturedSession(entry.binding),
       record = observed.record;
+    // Cold recovery also persists empty, never-opened sentinels for configured recipes.
+    // Every native open/restore records its config before allocation, including empty sessions.
+    if (!observed.attached && (!record || (record.config === null && record.inputs.length === 0)))
+      continue;
+    // Snapshot/feed authorize this exact retained entry and the current Team reader.
+    // Current delivery can belong to a newer launch without revoking its history.
     const snapshot = runtime.readActivitySnapshot(entry.binding);
     const gaps = new Set<string>(snapshot.gap ? [snapshot.gap.reason] : []);
     const bound = new Map((record?.inputs ?? []).map((input) => [input.intent.inputId, input]));
@@ -199,13 +204,24 @@ export function readTeamActivity(options: TeamActivityReadOptions, raw: unknown)
 }
 
 /** Reported units only. Per-operation token snapshots are deduplicated; cumulative session cost is never summed per turn. */
-export function summarizeTeamActivity(memberName: string, logs: readonly ActivityLog[]) {
+export function summarizeTeamActivity(
+  memberName: string, logs: readonly ActivityLog[], sources: readonly RuntimeActivitySource[] = []
+) {
   const tools = new Map<string, string>(),
     messages = new Set<string>(),
     compactions = new Set<string>();
   const usage = new Map<string, Record<string, JsonValue>>(),
     costs = new Map<string, number>();
   const gaps = new Set(logs.flatMap((log) => log.gaps));
+  const scopes = new Map(sources.map(source => [
+    `host-activity-${runtimeDigest(source.binding)}`, source.costScope ?? runtimeDigest(source.binding),
+  ]));
+  const generationsByScope = new Map<string, number>();
+  for (const log of logs) if (log.generation !== null) {
+    const scope = scopes.get(log.sessionId) ?? log.sessionId;
+    generationsByScope.set(scope, (generationsByScope.get(scope) ?? 0) + 1);
+  }
+  const unqualifiedContinuation = [...generationsByScope.values()].some(count => count > 1);
   let unattributedUsage = false;
   for (const log of logs)
     for (const event of log.events) {
@@ -223,7 +239,12 @@ export function summarizeTeamActivity(memberName: string, logs: readonly Activit
           unattributedUsage = true;
           gaps.add('token usage has no retained input attribution');
         }
-        if (typeof data.cumulativeCostUsd === 'number') costs.set(scope, data.cumulativeCostUsd);
+        if (typeof data.cumulativeCostUsd === 'number') {
+          const prior = costs.get(scope);
+          if (prior !== undefined && data.cumulativeCostUsd < prior)
+            gaps.add('Reported cumulative cost decreased within the retained runtime activity.');
+          costs.set(scope, data.cumulativeCostUsd);
+        }
       }
     }
   const toolUsage: Record<string, number> = Object.create(null) as Record<string, number>;
@@ -235,6 +256,8 @@ export function summarizeTeamActivity(memberName: string, logs: readonly Activit
       ? [...usage.values()].reduce((total, value) => total + Number(value[field]), 0)
       : null;
   const generations = logs.filter((log) => log.generation !== null).length;
+  if (unqualifiedContinuation && costs.size)
+    gaps.add('Cumulative cost across resumed generations is not qualified for this captured runtime.');
   return {
     kind: 'host_activity_stats' as const,
     memberName,
@@ -246,7 +269,7 @@ export function summarizeTeamActivity(memberName: string, logs: readonly Activit
     inputTokens: tokens('inputTokens'),
     outputTokens: tokens('outputTokens'),
     costUsd:
-      generations > 0 && costs.size === generations
+      !unqualifiedContinuation && gaps.size === 0 && generations > 0 && costs.size === generations
         ? [...costs.values()].reduce((sum, cost) => sum + cost, 0)
         : null,
     gaps: [...gaps],

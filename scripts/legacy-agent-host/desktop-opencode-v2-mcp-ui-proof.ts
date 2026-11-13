@@ -8,7 +8,7 @@ import { mcpTurnText } from '../../packages/legacy-agent-host/tests/fixtures/nat
 import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
-import { readDesktopNativeHostProcesses, readDesktopNativeStopSessions,
+import { observeDesktopOpenCodeMetadata, readDesktopNativeStopSessions,
   captureDesktopOpenCodeGlobalMetadata, captureDesktopOpenCodeProjectMetadata } from './desktop-native-stop-fixture.ts';
 import { DESKTOP_MCP_MEMBERS, desktopCapturedMcpPaths, readDesktopCapturedMcpDescription,
   readDesktopCapturedMcpEvents } from './desktop-opencode-v2-mcp-fixture.ts';
@@ -178,11 +178,8 @@ export async function runDesktopCapturedMcpUiProof(cdp: UiCdpPort, options: {
   let currentSessions = await sessions(); assert.equal(currentSessions.length, 3);
   assert.ok(currentSessions.every(row => Array.isArray(row.inputs) && row.inputs.length === 0));
   assert.equal(model.requests.length, 0, 'empty Launch prompt performs no ordinary inference, including lead');
-  const physical = readDesktopNativeHostProcesses(fixture, group);
-  assert.deepEqual(physical.host, metadata.captured.host);
-  for (const child of metadata.captured.children)
-    assert.deepEqual(physical.children.find(row => row.pid === child.pid), child);
-  const nativeChildren = physical.children.filter(row => !metadata.captured.children.some(child => child.pid === row.pid));
+  const { captured: physical, runtime: nativeChildren } = await observeDesktopOpenCodeMetadata(fixture, group, metadata.captured, 3);
+  proof.metadataAtRuntimeObservation = physical;
   assert.equal(nativeChildren.length, 3); assert.ok(nativeChildren.every(row => row.command === process.env.OPENCODE_V2_EMBEDDED_BUN));
   const started = readDesktopCapturedMcpEvents(fixture.root).filter(row => row.event === 'started');
   assert.equal(started.length, 1); const originalActor = started[0]!;
@@ -266,8 +263,7 @@ export async function runDesktopCapturedMcpUiProof(cdp: UiCdpPort, options: {
     row.custody === 'released' && row.sealed === true), 'all original Runtime custody released');
   await poll(async () => processFacts(), values => [...nativeChildren, actor].every(child => !values.some(row => row.pid === child.pid)),
     'all original native and external actor PIDs absent');
-  const remaining = readDesktopNativeHostProcesses(fixture, group);
-  assert.deepEqual(remaining, metadata.captured, 'Stop leaves exactly the original metadata owners');
+  const remaining = (await observeDesktopOpenCodeMetadata(fixture, group, physical, 0)).captured;
   proof.metadataAfterStop = remaining;
   proof.stop = { nativeChildren, actor, releasedBeforeQuit: true, originalActorAbsentBeforeQuit: true };
   const beforeReadback = await owner(), requestsBefore = JSON.stringify(model.requests);
@@ -284,8 +280,7 @@ export async function runDesktopCapturedMcpUiProof(cdp: UiCdpPort, options: {
     values => values.every(row => row.resourceHeld === false &&
       (row.kind !== 'model.probe' || ['completed', 'cancelled'].includes(String(row.phase)))),
     'original readback probes finished native cleanup');
-  assert.deepEqual(readDesktopNativeHostProcesses(fixture, group), metadata.captured,
-    'readback retains exactly the original metadata owners');
+  proof.metadataAfterReadback = (await observeDesktopOpenCodeMetadata(fixture, group, remaining, 0)).captured;
   assert.equal(runtimeDigest(await readDesktopNativeStopSessions(fixture.root)), closedRuntimeDigest,
     'readback probes do not alter any closed Runtime');
   proof.readbackModelProbes = settledManagement.filter(row => row.kind === 'model.probe')

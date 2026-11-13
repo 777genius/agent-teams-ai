@@ -3,7 +3,7 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileDigest } from './desktop-backend-fixture.ts';
-import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren, captureDesktopOpenCodeGlobalMetadata, captureDesktopOpenCodeProjectMetadata } from './desktop-native-stop-fixture.ts';
+import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren, observeDesktopOpenCodeMetadata, captureDesktopOpenCodeGlobalMetadata, captureDesktopOpenCodeProjectMetadata } from './desktop-native-stop-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
@@ -238,14 +238,14 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   assert.equal(await cdp.evaluate(`document.querySelector('[role="dialog"] #dialog-skip-permissions')?.getAttribute('data-state')`), 'checked');
   // Do not click the optional preflight bypass: readiness must settle first.
   await ui.scrollTo('[role="dialog"] button', 'visible original Launch team control', 'Launch team');
-  let originalMetadata: ReturnType<typeof readDesktopNativeHostProcesses> | undefined;
+  let metadataObservation: ReturnType<typeof readDesktopNativeHostProcesses> | undefined;
   if (opencode) {
     await ui.waitRead(`[...document.querySelectorAll('[role="dialog"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)`, 'original preflight completes before any runtime allocation');
     assert.ok(globalMetadata);
     const selected = await captureDesktopOpenCodeProjectMetadata(fixture, options.capturedGroup(), globalMetadata);
-    originalMetadata = selected.captured; proof.metadataSources = selected.metadataSources;
+    metadataObservation = selected.captured; proof.metadataSources = selected.metadataSources;
     assert.equal(((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0, 0);
-    proof.originalMetadataBeforeLaunch = originalMetadata;
+    proof.originalMetadataBeforeLaunch = metadataObservation;
   }
   await captureReadiness(
     cdp,
@@ -353,9 +353,12 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   const hostRows = processTable().filter(row => row.pgid === options.capturedGroup() && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
   assert.equal(hostRows.length, 1, 'only this TEST Host executable may be selected');
   const hostPid = hostRows[0]!.pid;
-  const children = originalMetadata
-    ? separateDesktopOpenCodeRuntimeChildren(originalMetadata, readDesktopNativeHostProcesses(fixture, options.capturedGroup()), 1)
-    : processTable().filter(row => row.ppid === hostPid);
+  const nativeObservation = metadataObservation
+    ? await observeDesktopOpenCodeMetadata(fixture, options.capturedGroup(), metadataObservation, 1) : undefined;
+  if (nativeObservation) {
+    metadataObservation = nativeObservation.captured; proof.metadataAtRuntimeObservation = metadataObservation;
+  }
+  const children = nativeObservation?.runtime ?? processTable().filter(row => row.ppid === hostPid);
   assert.ok(children.length >= 1, 'actual native child present before Stop');
   if (codex) proof.codeModeHost = { status: 'capture-attempted' };
   const helper = codex ? await captureCodexCodeModeProcess(hostPid, codex.nativeInputs) : undefined;
@@ -368,9 +371,10 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     const rows = processTable(), observed = helper && observeCodexCodeModeProcess(helper);
     return { rows, helperAbsent: !observed || observed.state === 'absent' };
   }, value => value.helperAbsent && children.every(child => !value.rows.some(row => row.pid === child.pid)), 'captured native children and original helper physically absent');
-  if (originalMetadata) {
-    const remaining = readDesktopNativeHostProcesses(fixture, options.capturedGroup());
-    separateDesktopOpenCodeRuntimeChildren(originalMetadata, remaining, 0);
+  if (metadataObservation) {
+    const remaining = (await observeDesktopOpenCodeMetadata(fixture, options.capturedGroup(), metadataObservation, 0)).captured;
+    separateDesktopOpenCodeRuntimeChildren(metadataObservation, remaining, 0);
+    metadataObservation = remaining;
     proof.metadataAfterStop = remaining;
   }
   proof.stop = { nativeChildren: children, releasedBeforeQuit: true };
@@ -390,9 +394,10 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   const resumeGlobalMetadata = opencode && options.restartSameProfile && !extensions && evidence.mode === 'native-resume-ui'
     ? await captureDesktopOpenCodeGlobalMetadata(cdp, fixture, options.capturedGroup(), options.assertOwnedRenderer) : undefined;
   if (opencode && !resumeGlobalMetadata) {
-    assert.ok(originalMetadata, 'renderer reload retains the original metadata owners');
-    const retained = readDesktopNativeHostProcesses(fixture, options.capturedGroup());
-    separateDesktopOpenCodeRuntimeChildren(originalMetadata, retained, 0);
+    assert.ok(metadataObservation, 'renderer reload retains the original metadata owners');
+    const retained = (await observeDesktopOpenCodeMetadata(fixture, options.capturedGroup(), metadataObservation, 0)).captured;
+    separateDesktopOpenCodeRuntimeChildren(metadataObservation, retained, 0);
+    metadataObservation = retained;
     proof.metadataAfterRendererReload = retained;
   }
   await ui.observeInput();

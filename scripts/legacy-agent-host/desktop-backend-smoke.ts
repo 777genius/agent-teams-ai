@@ -23,7 +23,7 @@ import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { desktopProofEvidence } from './desktop-proof-evidence.ts';
 import { runDesktopNativeReview } from './desktop-native-review-compose.ts';
 import { desktopReadbackArtifacts, runDesktopNativeReadback } from './desktop-readback-fixture.ts';
-import { assertCapturedDesktopMetadataAbsent, captureDesktopOpenCodeV2ColdMetadata } from './desktop-opencode-v2-cold-metadata.ts';
+import { assertCapturedDesktopMetadataAbsent, observeDesktopMetadataClose, captureDesktopOpenCodeV2ColdMetadata } from './desktop-opencode-v2-cold-metadata.ts';
 import { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
 import { captureDesktopCodexNativeInputs, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
@@ -44,6 +44,8 @@ import { runDesktopCapturedMcpUiProof } from './desktop-opencode-v2-mcp-ui-proof
 import { runDesktopCreateUiSmoke } from './desktop-create-launch-ui-smoke.ts';
 import { runDesktopReviewUiSmoke } from './desktop-review-ui-smoke.ts';
 import { runDesktopStoppedImportUiSmoke } from './desktop-stopped-import-ui-smoke.ts';
+import { produceDesktopDonorSavedTeam } from './desktop-donor-saved-producer.ts';
+import { runDesktopDonorSavedImportUi } from './desktop-donor-saved-import-ui.ts';
 import { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
 import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
 import { spawn, execFileSync } from 'node:child_process';
@@ -114,6 +116,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const startupDiagnosticMode = mode === 'startup-diagnostic-ui';
   const questionUiMode = mode === 'codex-question-ui';
   const scheduleUiMode = process.env.LEGACY_DESKTOP_SCHEDULE_UI === '1';
+  const donorSavedOnly = process.env.LEGACY_DESKTOP_DONOR_SAVED_ONLY === '1';
   if (questionUiMode) questionModel = await startDesktopCodexQuestionModel();
   const packedCapturePath = process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH;
   const packed = packedCapturePath ? await readCapturedCandidateElectron({ path: packedCapturePath, sha256: process.env.LEGACY_DESKTOP_PACKED_CAPTURE_SHA256! }) : undefined;
@@ -121,6 +124,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   if (packed) assert.equal(mode, 'native-launch-ui', 'one bounded packed workflow reuses the original native Launch proof');
   if (packedRelaunchMode) assert.ok(packed, 'automatic app relaunch is an explicit captured packed scope');
   if (scheduleUiMode) assert.ok(mode === 'native-launch-ui' && !packed, 'original source schedule controls');
+  if (donorSavedOnly) assert.ok(mode === 'stopped-import-ui' && !packed && !process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH, 'one actual donor saved-only scope');
   if (process.env.LEGACY_DESKTOP_OPENCODE_MCP_UI === '1') assert.ok(!packed && !packedRelaunchMode, 'captured MCP uses the existing source Launch scope');
   const { mixedMode, extensionsUiMode, capturedMcpUiMode, capturedMcpModel: selectedCapturedMcpModel, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel, openCodeLifecycleMode, openCodeLifecycleModel: selectedOpenCodeModel, openCodeReviewModel: selectedOpenCodeReviewModel } =
     await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
@@ -204,6 +208,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   });
   if (capturedMcpUiMode) evidence.scope = 'Original Launch member MCP policies, selected external server and app-only isolation, actual native permission and tool effect, all-member Stop and saved UI readback; finite localhost inference only';
   if (scheduleUiMode) evidence.scope = 'Original Schedule controls, actual finite Claude and task-first native Bash/MCP, Stop, history and reload; localhost inference only';
+  if (donorSavedOnly) evidence.scope = 'Exact donor UI saves genuine settings/roster, ordinary Quit and absence, then current original import/dialog/reload; zero native business input';
   if (quitScenario === 'pending-open') {
     evidence.scope = 'Actual native provider open pending, zero inputs, guarded existing Quit API and physical cleanup; explicit TEST setup';
     evidence.excluded = (evidence.excluded as string[]).filter(value => value !== 'pending provider-open');
@@ -229,6 +234,18 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const receiptPath = join(fixture.root, artifacts.receipt);
   await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600, flag: 'wx' });
   console.log(JSON.stringify({ phase: 'prepared', receipt: receiptPath }));
+  if (donorSavedOnly) {
+    try {
+      assert.ok(conversationModel);
+      await produceDesktopDonorSavedTeam({ fixture, model: conversationModel, cdpLibrary, evidence });
+      await verifyDesktopSourceFreeze(repo, desktopProofSources, selectedSourceHashes, evidence);
+    } catch (error) {
+      evidence.status = 'INCOMPLETE';
+      evidence.failure = error instanceof Error ? error.message.slice(0, 4000) : 'donor producer failed';
+      await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
+      throw error;
+    }
+  }
   if (controlledProcess) {
     evidence.controlledProcessColdUi = controlledProcess.proof;
     await controlledProcess.start();
@@ -364,7 +381,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         readback: nativeReviewReadbackMode, continuation: nativeReviewContinuationMode, group, onHostObserved: pid => { hostPid = pid; }, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (legacyImportMode) {
       assert.ok(conversationModel);
-      await runDesktopStoppedImportUiSmoke(cdp, {
+      const importOptions = {
         fixture, evidence, model: conversationModel, electron,
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
         observeOwnedHost: () => {
@@ -373,7 +390,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
           hostPid = hosts[0]!.pid;
           evidence.hostChildAfterImport = { ...hosts[0], command: `${fixture.node} ${fixture.hostEntry}`, observedBeforeShutdown: true };
         },
-      });
+      };
+      if (donorSavedOnly) await runDesktopDonorSavedImportUi(cdp, importOptions);
+      else await runDesktopStoppedImportUiSmoke(cdp, importOptions);
     } else if (approvalUiMode) {
       assert.ok(fixture.uiSeed && conversationModel);
       await runDesktopApprovalUiSmoke(cdp, {root: fixture.root, seed: fixture.uiSeed, evidence, model: conversationModel,
@@ -547,6 +566,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       false,
       'captured standalone Host retired during guarded app Quit'
     );
+    await observeDesktopMetadataClose(fixture.root, evidence);
     assertCapturedDesktopMetadataAbsent(evidence);
     await verifyDesktopNativeQuitAfterShutdown(mode, fixture.root, evidence, nativeChildren, openCodeLifecycleModel ?? conversationModel, group);
     if (activitySource) await finalizeDesktopActivityReadback(evidence, activitySource, () => assert.equal(processTable().some(row => row.pid === hostPid), false));

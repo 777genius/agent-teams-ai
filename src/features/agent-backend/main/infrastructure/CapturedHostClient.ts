@@ -100,6 +100,10 @@ export class CapturedHostClient {
     },
     (observation) => {
       createLogger('Host:ClaudeManagement').diagnostic('Claude management stage', observation);
+    },
+    (observation) => {
+      if (this.child?.pid !== undefined)
+        createLogger('Host:OpenCodeMetadata').diagnostic('OpenCode metadata stage', { ...observation, hostPid: this.child.pid });
     }
   );
 

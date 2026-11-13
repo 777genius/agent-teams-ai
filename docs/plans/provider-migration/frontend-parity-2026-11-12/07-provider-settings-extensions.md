@@ -555,6 +555,46 @@ cold Resume границы. Platform independently проверил source/child
 Эти TEST изменения прошли source review; fresh types, focused existing lifecycle checks и
 actual UI/native results для нового cut ещё необходимы. Expected count сам по себе не proof.
 
+**Review 5 — штатная смена metadata mode и точный lifecycle witness.** Actual a76 run
+`43354049572`, Active Quit job `131651721320`, падает на сохранении global PID 6350:
+после успешного project read присутствуют два children, но прежний global уже отсутствует.
+`CapturedRuntimeProviderStatusClient.readOpenCodeRuntimeStatus` запрашивает directory `catalog({})`,
+а `loadModels` — provider catalog; `ProviderManagementCoordinator.readV2Catalog` после завершения
+старого read штатно закрывает несовпавший mode и создаёт следующий owner. Review 4 ошибочно
+требовал бессменный PID. Production lifecycle ради этого TEST ожидания не меняем.
+
+1. **Привязать наблюдение к original owner.** Existing global/project source projections сохраняют
+   один seed cwd/environment; случайные catalog namespaces и private endpoint не входят в
+   RuntimeSourceIndex. Поэтому cwd, число children, время появления или PID сами по себе не
+   определяют owner. В existing `OpenCodeV2ManagementHost` наблюдать только catalog ready и итог
+   original close: captured profile/config hash, закрытый directory/provider mode, hash provider
+   selection, original nonce-checked ready PID/startIdentity. Ready не переснимается по PID;
+   released означает уже подтверждённые `server.stopOwned()` и cleanup исходных namespaces.
+   Credential command owners сюда не входят; ошибка диагностического sink не влияет на результат.
+2. **Переиспользовать private diagnostic path.** Передать эти фиксированные bounded записи через
+   существующие Host stderr framing, `decodeClaudeCloseDiagnostics`, `CapturedHostClient` и
+   `logger.diagnostic` в existing `app-errors.ndjson`. Не добавлять RPC/public DTO, journal,
+   owner, сигнализацию, произвольный error/config/auth payload или чтение secret stdin/proc args.
+   Не повышать лимиты; максимум ready + один released/unknown на исходный catalog owner.
+3. **TEST проверяет всю цепочку.** Связать profile hashes с exact derived global/project source
+   records, а original ready — с captured Host и наблюдаемыми native birth facts. Сохранить
+   прежние original identities: штатная замена допустима только после confirmed original release
+   и физического отсутствия прежнего child; новый child обязан иметь собственный owner-ready
+   witness того же captured scope/mode. Ни текущий selector, ни новый count не заменяют эту связь.
+   На поздних UI/readback границах повторно проверять ту же накопленную цепочку; не создавать
+   replacement baseline и не считать metadata child Runtime. Все unaccounted children, duplicate
+   live owners, unknown close, source drift или missing evidence остаются failure.
+4. **Сохранить существующие границы.** Passive/mixed one-owner сценарии сохраняют exact original
+   birth/absence; ordinary renderer reload не создаёт новый Host baseline. Новый baseline разрешён
+   только после actual cold Host boundary. Existing closed Runtime digest, no held model probe,
+   zero metadata inference и original Runtime Stop/Quit cleanup остаются обязательными.
+5. **Проверка без расширения suite.** Дополнить existing bounded diagnostic decoder regression
+   проверкой original identity, finite stages, malformed/secret rejection и broken sink; existing
+   Desktop lifecycle test — законной released→ready сменой и отказом при missing release/лишнем
+   child. Затем actual прежние Active Quit, cold Resume и R11 UI gates на одном новом SHA.
+   Таймеры, assertions готовности и production admission не ослаблять. До исполнения это source
+   correction, а прежние Review 4 source checks не считать actual PASS.
+
 [M1]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/team/members/MemberMcpPolicyPanel.tsx
 [M2]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter.ts
 [M3]: https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/components/extensions/ExtensionStoreView.tsx
