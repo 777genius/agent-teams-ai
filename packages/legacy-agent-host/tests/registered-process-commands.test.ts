@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import { performance } from 'node:perf_hooks';
 import { createProcessMcpTools } from '../dist/mcp/processTools.js';
-import type { WindowsServiceCapture, WindowsServiceIntent, WindowsServiceOutcome } from '../dist/owned-process/retainedServiceContracts.js';
+import type { WindowsServiceCapture, WindowsServiceOutcome } from '../dist/owned-process/retainedServiceContracts.js';
 import { createTeamProcessCommands } from '../dist/process/TeamProcessCommands.js';
 import { createTeamProcessMethods } from '../dist/process/createTeamProcessMethods.js';
 import { processReceiptFingerprint } from '../dist/process/validateProcessRecords.js';
