@@ -344,6 +344,7 @@ test('POSIX original-path pre-user image gate keeps explicit mutation counterexa
     customExecutableQualified: false, scriptQualified: false,
   };
   let failure: unknown, cleanup = true, nativeQualified = true;
+  let actorFailure: Record<string, unknown> | undefined;
   try {
     await mkdir(env.HOME, { mode: 0o700 });
     const controller = join(root, 'controller');
@@ -491,8 +492,25 @@ test('POSIX original-path pre-user image gate keeps explicit mutation counterexa
         }
         observation.result = item.script && item.mode === 'script-negative' ? 'COUNTEREXAMPLE' : 'PASS';
       } catch (error) {
+        const firstFailure = failure === undefined || failure === null;
         failure ??= error;
         if (!item.script) nativeQualified = false;
+        if (firstFailure) {
+          try {
+            // Case labels are local finite constants; fact/markers passed the original closed decoder.
+            if (/^[a-f0-9]{40}$/.test(sourceHead) && ['x64', 'arm64'].includes(process.arch))
+              actorFailure = {
+                kind: 'TEST_POSIX_EXEC_FAILURE', sourceHead, platform: process.platform, arch: process.arch,
+                label, stage: fact.stage, errno: fact.errno, execErrno: fact.execErrno,
+                mutationAfterCheckErrno: fact.mutationAfterCheckErrno,
+                stoppedBeforeUser: fact.stoppedBeforeUser,
+                payloadMarkersAbsentBeforeGate: fact.payloadMarkersAbsentBeforeGate,
+                kernelImageObserved: fact.kernelImageObserved, imageMatched: fact.imageMatched,
+                resumed: fact.resumed, actorCleanup: fact.cleanup, markerLines: [...markerLines],
+                exitCode: fact.exitCode, exitSignal: fact.exitSignal, controllerInterrupted: result.interrupted,
+              };
+          } catch { /* Diagnostic projection cannot replace the first original assertion failure. */ }
+        }
         // Retain every bounded original observation; a failed primitive never becomes a skipped PASS.
       }
     }
@@ -511,6 +529,12 @@ test('POSIX original-path pre-user image gate keeps explicit mutation counterexa
     const serialized = JSON.stringify(evidence, null, 2) + '\n';
     assert.ok(Buffer.byteLength(serialized) <= 64 * 1024);
     await writeFile(receipt, serialized, { mode: 0o600, flag: 'wx' });
+  }
+  if (actorFailure) {
+    try {
+      const line = JSON.stringify({ ...actorFailure, cleanup }) + '\n';
+      if (Buffer.byteLength(line) <= 2048) process.stdout.write(line);
+    } catch { /* Original cleanup, receipt-write and assertion failure precedence stays unchanged. */ }
   }
   if (failure) throw failure;
   assert.equal(cleanup, true);
