@@ -13,6 +13,7 @@ import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
 import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-comment-input-target.ts';
 import { runDesktopTaskBoardAttachmentsUi } from './desktop-task-board-attachments-ui.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -697,4 +698,59 @@ test('original owner-qualified click rereads its full expression through unavail
   assert.deepEqual(dispatched.slice(1).map(({ x, y }) => ({ x, y })), [
     { x: 100, y: 100 }, { x: 100, y: 100 },
   ], 'only one press/release at the eligible original target');
+});
+
+test('login failure facts retain only bounded original attempts and confirmed milestones', () => {
+  const privateSentinel = 'TEST-private-account-URL-code-clipboard-selector-error';
+  const evidence = {
+    status: 'INCOMPLETE', failure: privateSentinel,
+    codexInitialAccount: { managedAccount: { token: privateSentinel }, appServerState: privateSentinel },
+    cdpListenerFailure: { scope: 'original-linux-lsof-test-cdp', holderCount: 2,
+      files: [{ pid: 123456, endpoint: privateSentinel }] },
+    codexLoginUi: { status: 'INCOMPLETE', privateFields: privateSentinel,
+      steps: [{ action: 'mouseClick', label: 'start one original browser login',
+        selector: privateSentinel, target: { text: privateSentinel } }],
+      cases: [{ mode: 'browser', status: 'INCOMPLETE', nativeStatus: 'pending',
+        copyAcknowledged: true, authUrl: privateSentinel, userCode: privateSentinel }] },
+    cleanup: { remaining: [{ pid: 123456, executable: privateSentinel }],
+      capturedHostObserved: true, capturedHostAbsent: false, cleanupFailure: privateSentinel },
+  };
+  const before = structuredClone(evidence);
+  const projection = projectDesktopCodexLoginFailure(evidence);
+  assert.equal(projection.initialSnapshotRecorded, true);
+  assert.equal(projection.proofRecorded, true);
+  assert.equal(projection.originalFailureRecorded, true);
+  assert.deepEqual(projection.listenerFailure, { recorded: true, count: 2, overflow: false });
+  assert.deepEqual(projection.steps, { count: 1, overflow: false,
+    lastAction: 'mouseClick', lastAttempt: 'browser-start' });
+  assert.deepEqual(projection.cases, { count: 1, overflow: false, items: [{
+    mode: 'browser', status: 'INCOMPLETE', nativeStatus: 'pending', copyAcknowledged: true,
+    externalOpenDispatched: null, reopenPreservedOriginal: null, cancelledOriginal: null, privateFieldsCleared: null,
+  }] });
+  assert.deepEqual(projection.cleanup, { recorded: true, count: 1, overflow: false,
+    capturedHostObserved: true, capturedHostAbsent: false, failureRecorded: true });
+  const serialized = JSON.stringify(projection);
+  assert.equal(serialized.includes(privateSentinel), false);
+  assert.equal(serialized.includes('123456'), false);
+  assert.ok(Buffer.byteLength(serialized) <= 4096);
+  assert.deepEqual(evidence, before, 'the original private receipt is unchanged');
+  const overflow = projectDesktopCodexLoginFailure({ ...evidence, codexLoginUi: {
+    steps: Array.from({ length: 257 }, () => ({ action: privateSentinel, label: privateSentinel })),
+    cases: [null, { mode: privateSentinel, nativeStatus: privateSentinel }, privateSentinel],
+  } });
+  assert.deepEqual(overflow.steps, { count: 256, overflow: true, lastAction: null, lastAttempt: null });
+  const unknownCase = { mode: null, status: null, nativeStatus: null, copyAcknowledged: null,
+    externalOpenDispatched: null, reopenPreservedOriginal: null, cancelledOriginal: null, privateFieldsCleared: null };
+  assert.deepEqual(overflow.cases, { count: 2, overflow: true, items: [unknownCase, unknownCase] });
+  assert.equal(JSON.stringify(overflow).includes(privateSentinel), false);
+  assert.ok(Buffer.byteLength(JSON.stringify(overflow)) <= 4096);
+  const malformed = projectDesktopCodexLoginFailure({ codexLoginUi: privateSentinel,
+    failure: { privateSentinel }, cleanup: { cleanupFailure: { privateSentinel } } });
+  assert.equal(malformed.proofRecorded, null);
+  assert.deepEqual(malformed.steps, { count: null, overflow: null, lastAction: null, lastAttempt: null });
+  assert.equal(malformed.originalFailureRecorded, null);
+  assert.deepEqual(malformed.cleanup, { recorded: true, count: null, overflow: null,
+    capturedHostObserved: null, capturedHostAbsent: null, failureRecorded: null });
+  assert.equal(JSON.stringify(malformed).includes(privateSentinel), false);
+  assert.equal(projectDesktopCodexLoginFailure({}).originalFailureRecorded, false);
 });

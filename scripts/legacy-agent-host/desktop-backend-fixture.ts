@@ -19,6 +19,8 @@ import { desktopBackendEnvironment, desktopRuntimeSourceEnvironment, prepareDesk
 import type { DesktopOpenCodeSourceSelection } from './desktop-runtime-source-fixture.ts';
 export { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
 import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
+import { desktopCodexSha256, prepareDesktopCodexLoginOpener } from './desktop-codex-login-fixture.ts';
+export { desktopCodexSha256 } from './desktop-codex-login-fixture.ts';
 import { DESKTOP_MCP_MEMBERS, prepareDesktopCapturedMcpRecipes } from './desktop-opencode-v2-mcp-fixture.ts';
 
 export const digest = (bytes: Uint8Array | string): string =>
@@ -62,6 +64,7 @@ export async function prepareDesktopBackendFixture(
     taskBoardGroup?: boolean;
     seedUiPreferences?: boolean;
     seedCodexApiKey?: boolean;
+    observeCodexLoginOpen?: boolean;
     launchDialog?: boolean;
     creation?: boolean;
     reviewUi?: boolean;
@@ -83,7 +86,7 @@ export async function prepareDesktopBackendFixture(
     throw new Error('Native source selection requires its original V1 Create fixture');
   const node =
     options.candidateRuntime?.nodeExecutable ??
-    (await realpath(options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ? process.execPath :
+    (await realpath(options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection || process.platform === 'linux' ? process.execPath :
       join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')));
   const hostEntry =
     options.candidateRuntime?.hostEntry ??
@@ -139,6 +142,8 @@ export async function prepareDesktopBackendFixture(
     ? "#!/bin/sh\nprintf 'TEST refuses package-manager execution in packed app\\n' >&2\nexit 78\n"
     : `#!/bin/sh\nexec ${quoteShellArgument(node)} ${quoteShellArgument(pnpmEntry)} "$@"\n`;
   await writeFile(join(root, 'bin/pnpm'), pnpmStubSource, { mode: 0o700 });
+  if (options.observeCodexLoginOpen)
+    await prepareDesktopCodexLoginOpener(root, desktopNodeScriptHeader(node));
   if (options.approvalUi) {
     for (const [name, content] of [
       ['approval-preview.txt', 'TEST_ORIGINAL_PRIVATE_BYTES\n'],
@@ -429,8 +434,7 @@ export async function prepareDesktopBackendFixture(
     if (
       binary !== options.nativeCodex.path ||
       (await fileDigest(binary)) !== options.nativeCodex.sha256 ||
-      options.nativeCodex.sha256 !==
-        '8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57'
+      options.nativeCodex.sha256 !== desktopCodexSha256()
     )
       throw new Error('Unqualified TEST Codex executable');
     await writeFile(
@@ -607,7 +611,7 @@ export async function prepareDesktopBackendFixture(
           ...(options.reviewUi || options.nativeReviewUi ? { reviewTransport: 'review-v1' } : {}),
           nodeExecutable: node,
           nodeVersion: options.candidateRuntime?.nodeVersion ??
-            (options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection ? process.version : 'v24.21.0'),
+            (options.nativeOpenCodeV2 || options.nativeOpenCodeSourceSelection || process.platform === 'linux' ? process.version : 'v24.21.0'),
           nodeSha256,
           hostEntry,
           hostEntrySha256,
@@ -734,4 +738,3 @@ process.stderr.write('TEST sentinel refuses native agent invocation\\n');process
       options.nativeOpenCodeSourceSelection),
   };
 }
-

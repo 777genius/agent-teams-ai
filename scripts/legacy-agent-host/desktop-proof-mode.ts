@@ -50,6 +50,7 @@ export async function prepareDesktopProofMode(
       'native-readback-ui',
       'codex-account-read',
       'codex-account-auth',
+      'codex-login-ui',
       'native-launch-ui',
       'native-relaunch-ui',
       'native-resume-ui',
@@ -183,6 +184,8 @@ export async function prepareDesktopProofMode(
   const createLaunchMode = mode === 'native-create-ui';
   const nativeStopMode =
     mode === 'native-stop-ui' || mode === 'native-quit-ui' || conversationMode || approvalUiMode;
+  // Codex login owns a separate real-control journey: the generic Team UI failure
+  // screenshot/DOM collector must never retain its private authorization fields.
   const uiMode =
     mode === 'native-extensions-ui' ||
     mode === 'skills-ui' ||

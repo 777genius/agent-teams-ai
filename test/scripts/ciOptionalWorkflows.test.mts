@@ -86,7 +86,7 @@ test('policy tests run before main CI planning, without dependency installation'
   assert.doesNotMatch(source, /Install dependencies/);
 });
 
-test('selected retained V1/Host V2 acceptance is required by the existing Full qualification', () => {
+test('selected native Desktop acceptance is required by the existing Full qualification', () => {
   const source = workflow('ci');
   const job = source.split('\n  retained-opencode-coexistence:\n')[1]?.split(/\n {2}[\w-]+:\n/)[0];
   const gate = source.split('\n  full-qualification:\n')[1];
@@ -120,4 +120,14 @@ test('selected retained V1/Host V2 acceptance is required by the existing Full q
   assert.match(sqlite, /require\('electron\/package\.json'\)\.version, '44\.10\.1'/);
   assert.match(sqlite, /pnpm exec electron-rebuild --module-dir \. --force --only better-sqlite3 --version 44\.10\.1/);
   assert.doesNotMatch(sqlite, /--input-type/, 'node-gyp file children cannot inherit a stdin-only Node input type');
+  const account = source.split('\n  codex-login-desktop:\n')[1]?.split(/\n {2}[\w-]+:\n/)[0];
+  const selectedAccount = account?.match(/\n {4}if: >-\n([\s\S]*?)\n {4}runs-on:/)?.[1].trim();
+  const requiredAccount = gate.match(/Require selected Codex login and native schedule qualification\n {8}if: >-\n([\s\S]*?)\n {8}env:/)?.[1].trim();
+  assert.ok(selectedAccount && requiredAccount);
+  assert.equal(selectedAccount.replace(/\s+/g, ' '), requiredAccount.replace(/\s+/g, ' '),
+    'every selected Codex login/native schedule run must succeed for the aggregate gate');
+  assert.match(gate, /needs: \[[^\]]*codex-login-desktop[^\]]*\]/);
+  assert.match(gate, /CODEX_LOGIN_RESULT: \$\{\{ needs\.codex-login-desktop\.result \}\}/);
+  assert.match(gate, /run: test "\$CODEX_LOGIN_RESULT" = success/);
+  assert.doesNotMatch(account!, /continue-on-error:/);
 });

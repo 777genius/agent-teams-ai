@@ -7,7 +7,7 @@ import { prepareDesktopCapturedActivityReadback } from './desktop-activity-readb
 import assert from 'node:assert/strict';
 import { prepareProcessFixture } from './desktop-native-process-fixture.ts';
 import { prepareDesktopCrossTeamUiFixture } from './desktop-cross-team-ui-smoke.ts';
-import { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
+import { prepareDesktopBackendFixture, desktopCodexSha256 } from './desktop-backend-fixture.ts';
 import { readSavedDesktopFixture } from './desktop-readback-fixture.ts';
 import { prepareDesktopCodexResumeFixture } from './desktop-codex-resume-fixture.ts';
 import { prepareControlledProcessFixture } from './desktop-controlled-process-fixture.ts';
@@ -136,6 +136,8 @@ export async function prepareDesktopProofFixture(
         }
       : {}),
     seedUiTask: options.uiMode && !options.codexResumeMode,
+    seedUiPreferences: mode === 'codex-login-ui',
+    observeCodexLoginOpen: mode === 'codex-login-ui',
     ...(['task-board-ui', 'task-board-cross-team-ui'].includes(mode)
       ? { taskBoardGroup: true }
       : {}),
@@ -159,7 +161,7 @@ export async function prepareDesktopProofFixture(
       ? {
           nativeCodex: {
             path: process.env.LEGACY_DESKTOP_CODEX_PATH,
-            sha256: '8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57',
+            sha256: desktopCodexSha256(),
           },
         }
       : {}),
