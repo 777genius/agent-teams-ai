@@ -1110,3 +1110,74 @@ workflow, native invocation или увеличенного budget нет; sourc
 ### Круг 3 — проверка
 
 Независимо проверить порядок: base fixture с `seedUiTask:false` ещё не создаёт Team owner; controlled narrowing precedes seed/persistence; обычный native mode сохраняет delivery и runtime. Выполнить pinned Host build, existing relevant presence tests и scripts typecheck; исходный Darwin ARM controlled cold UI должен пройти на новом normal CI. Linux checks не подменяют native Darwin proof. Новая unit suite для fixture не нужна; ключевой behavioral oracle уже находится в исходном e2e.
+
+
+## 24. Genuine saved donor: preserve the compatible catalogue's omitted effort
+
+### Round 1 — actual failure and original feature contract
+
+The verified 9ea donor artifact 14032984581 (original TEST scope 2Y4MTI)
+remains INCOMPLETE: after selecting the Sonnet 4.6 option the existing
+producer timed out waiting for `donor Low effort`. Original cleanup and
+source-freeze observations are retained. This is not evidence that a Low
+choice was supported or that any saved Team was produced.
+
+The pinned producer deliberately uses its captured localhost
+`ANTHROPIC_BASE_URL`. In runtime0.0.160 source
+[`anthropicCatalog.ts`](https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/runtimeBackends/anthropicCatalog.ts),
+`buildAnthropicCompatibleRuntimeModelCatalogFromApiModels` unconditionally
+returns `supportedReasoningEfforts:[]`, `defaultReasoningEffort:null`
+and `supportsFastMode:false` for those API models. Adding invented
+capabilities to the existing GET response would not enable Low.
+
+Exact donor4a
+[`teamEffortOptions.ts`](https://github.com/777genius/agent-teams-ai/blob/4a0e06277fe216d9f82dbbede362668fe46622ee/src/renderer/utils/teamEffortOptions.ts)
+honours that selected catalogue entry; `LeadModelRow` gives the original
+control id `lead-effort`, and `EffortLevelSelector` renders one disabled
+`Not supported` button. `CreateTeamDialog` maps the empty supported
+selection to undefined. `TeamMetaStore.serializeMeta` and the existing
+JSON serializer omit undefined effort. No production default or native
+model capability is inferred from the TEST server's model name.
+
+### Round 2 — the existing genuine journey follows that contract
+
+1. In `desktop-donor-saved-producer.ts`, replace only the two impossible
+   Low UI operations with the existing bounded read-only `waitRead`:
+   the exact original Create page's `#lead-effort` must be an actual
+   disabled button with text `Not supported`. Keep the same Sonnet
+   selection and subsequent ordinary Add member/Save actions. Do not
+   click another effort, synthesize state, alter the donor checkout,
+   catalogue, settings, CLI or saved source. No new request/input, retry
+   or timer is introduced.
+2. In `desktop-donor-saved-fixture.ts`, require
+   `Object.hasOwn(meta,'effort') === false` instead of Low. All other
+   expected original settings/roster, saved-only classification, exact
+   file hashes, no-native-history and original cleanup checks remain.
+   The corpus is captured from genuine saved bytes without rewriting.
+3. In `desktop-donor-saved-import-ui.ts`, explicitly require the same
+   omitted effort in imported `owner.savedSettings`, in addition to
+   existing exact saved-field/member comparisons. The current captured
+   Claude recipe has no explicit effort; existing saved-model compilation
+   and `assertStoppedImportModelChecks` therefore continue to require the
+   original undefined effort in both durable probe receipts and actual
+   request observations. Do not accept Low/default aliases or silently
+   normalize a later unexpected request.
+4. Extend only the existing stopped-import model-check case to exercise
+   this undefined selection and reject an unexpected explicit effort.
+   Preserve its current Low coverage and the separate synthetic rich
+   saved-settings corpus. This genuine compatible-catalogue case does
+   not qualify a nondefault effort on an old native catalogue that
+   advertises it; those are distinct acceptance claims.
+
+### Round 3 — review, essential verification and actual acceptance
+
+Review the exact original catalogue/UI/serialization chain and the narrow
+three TEST-source changes independently. Run the existing script type
+gate and stopped-import fixture case, then use the next already required
+saved-donor Desktop gate with its original source pins, finite probe
+counts, no-tools model checks and cleanup budgets. A source-derived
+correction or controlled case is not genuine donor PASS. Successful
+acceptance still requires ordinary old Save, immutable actual files,
+ordinary current import/preflight, close/reload and original lookup.
+No production change, new suite, runner, dependency, capability or
+timeout is planned.
