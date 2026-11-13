@@ -2310,8 +2310,8 @@ describe('CLI status visibility during completed install state', () => {
   });
 
   it.each([
-    ['1.17.18', '1.18.32'],
-    ['2.1.3', '2.1.4'],
+    ['1.19.4', '1.19.5'],
+    ['2.0.21', '2.3.0'],
   ])(
     'retains usable OpenCode %s and shows a failed native update before retrying %s',
     async (version, latestVersion) => {
@@ -2319,11 +2319,13 @@ describe('CLI status visibility during completed install state', () => {
       storeState.cliInstallerState = 'idle';
       storeState.openCodeRuntimeStatus = {
         installed: true,
-        binaryPath: '/app-data/runtimes/opencode/opencode',
         version,
-        latestVersion,
-        ...(version.startsWith('2.') && { v2Support: 'ready' as const }),
-        updateAvailable: true,
+        ...(version.startsWith('2.') && {
+          v2Support: 'ready' as const,
+          engineVersion: '2.1.4',
+          compatibleV2Version: '2.1.4',
+        }),
+        sourceRevision: 'a'.repeat(64),
         source: 'app-managed',
         state: 'ready',
       };
@@ -2350,7 +2352,24 @@ describe('CLI status visibility during completed install state', () => {
       const root = createRoot(host);
       try {
         act(() => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
+        expect(host.textContent).toContain('Connected');
+        expect(
+          Array.from(host.querySelectorAll('button')).some((button) =>
+            button.textContent?.includes('Update')
+          )
+        ).toBe(false);
+        storeState.openCodeRuntimeStatus = {
+          ...storeState.openCodeRuntimeStatus,
+          latestVersion,
+          updateAvailable: true,
+        };
+        act(() => root.render(React.createElement(CliStatusBanner, { isDashboardActive: true })));
         expect(host.textContent).toContain(`v${version} → v${latestVersion}`);
+        const update = Array.from(host.querySelectorAll('button')).find((button) =>
+          button.textContent?.includes('Update')
+        );
+        expect(update).toBeDefined();
+        expect(update?.disabled).toBe(false);
 
         storeState.openCodeRuntimeStatus = {
           ...storeState.openCodeRuntimeStatus,

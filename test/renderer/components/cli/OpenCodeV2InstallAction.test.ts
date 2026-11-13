@@ -66,6 +66,25 @@ describe('OpenCode V2 installation offer', () => {
             status: {
               installed: true,
               version: '2.1.4',
+              engineVersion: '2.1.4',
+              source: 'captured-host',
+              state: 'ready',
+              v2Support: 'ready',
+            },
+            busy: false,
+            onInstall,
+          })
+        )
+      );
+      expect(host.querySelector('button')).toBeNull();
+      expect(onInstall).not.toHaveBeenCalled();
+      await act(async () =>
+        root.render(
+          createElement(OpenCodeV2InstallAction, {
+            status: {
+              installed: true,
+              version: '2.0.21',
+              engineVersion: '2.1.4',
               source: 'override',
               state: 'ready',
               v2Support: 'ready',
