@@ -2421,3 +2421,163 @@ before acceptance. With execution unavailable, source publication remains
 SOURCE_ONLY_UNEXECUTED and those checks run in ordinary CI, without changing
 budgets or retrying the original jobs. Root alone publishes after root
 and independent plan/source review.
+
+
+## Review 31 — bind the V2 management catalog and key operation to the native optional integration ID
+
+### R1 — exact failure, native contract, and the baseline limit
+
+The original Linux V2 preflight at F
+`e29dbde300ea73ec4e46e5f57f9e007ca5473552`, job
+`132132912845`,
+failed at `opencode-v2-model-probe.native.ts:383`: the first catalog RPC
+completed with an `ok` reply, then `authMethods: []` differed from
+the unchanged `['api']` assertion. Its preceding version, default,
+model details, `connected: false`, and `configuredAuthless: true`
+assertions passed. The original closed failure row records
+`unknownProbeCancelled: true`, `catalogCompleted: true`,
+`catalogPhase: first-assertions`, three model requests, and
+`cleanup: true`. This is separate from the earlier held catalog RPC.
+The log does not retain the raw provider/integration response bodies;
+the source finding below must not be called an inspected raw response
+or a successful corrected native run.
+
+Exact F `OpenCodeV2ManagementHost.ts` blob
+`0a78ee125848aee947b409d2e6a3253be4a5ecab` loses an allowed relationship
+in two places. Catalog projection selects
+`integrations.get(provider ? provider.integrationId ?? '' : id)`.
+A present provider with no explicit ID therefore cannot use a genuine
+same-ID integration from that very directory. The original
+`keyOperation` similarly chooses only `provider.integrationId`
+when a provider exists, and returns held before its original callback.
+The existing frontend projection
+`capturedManagementCatalog.ts` `d462486c7914ff325a7fe24466f224d55200458b`
+uses actual `authMethods` to enable Connect/API-key setup; it does
+not synthesize an API-key capability from `configuredAuthless`.
+
+Primary native source is official
+[anomalyco/opencode@68bc26b7da1990ce10ffecfbc1e09eb13aa5d824](https://github.com/anomalyco/opencode/tree/68bc26b7da1990ce10ffecfbc1e09eb13aa5d824),
+the published 2.1.4 tag source, not a newly measured installed bundle.
+`packages/schema/src/provider.ts` `6306eb374d91b4c45768ed76cd3fbda33d2378d1`
+declares optional `integrationID`; its empty provider omits that field.
+`packages/core/src/config/plugin/provider.ts`
+`21a1a87edb84544120c69b58ac5bbdf9188bc562` creates a same-ID integration
+with a genuine key method when that configured integration is absent.
+`packages/core/src/provider.ts`
+`b4f88d649d1b8e34434b715fe05e61a4c754b52b:459` resolves
+`record.provider.integrationID ?? Integration.ID.make(record.provider.id)`.
+`packages/server/src/handlers/provider.ts`
+`ab9c2201a5eea69a943b47cf871aec49ada22e14` returns those available records.
+
+The consumed D68 source is
+`agent-teams-ai/old-provider-implementations@68dca527b779ebb82923f30d7b08441085d8b579`,
+checked archive SHA-256
+`07241cca756e69aa6001df41d6a7408aad5d8ab4c8277f9d70f35d0d66736c73`.
+Its `v2-owned-catalog.ts` `900929ed38ea49605f07a8ca3dca7c75bc5a4c09`
+omits the projected ID only for native `undefined`; a present ID must
+be a nonempty string of at most 2048 characters with no control characters.
+Null, empty, numeric, and malformed values refuse as
+`invalid_native_catalog`. `v2-owned-directory.ts`
+`ec430bf1bfbdba10e6dddd3e2560a9c2de5e6b02` retains the exact location,
+unique provider/integration IDs and the original four finite GETs;
+`plainKey` is true only for an actual `key` method with no form.
+`v2-credential-client.ts`
+`7cc07068845c4fc2ec995ac599e74fe8a0b32103` then verifies the selected
+integration ID and directory again before any key POST and verifies
+the original empty-before/single-after credential ownership.
+
+The older frontend/runtime is not evidence that this exact implicit-ID
+case previously succeeded. Old F `4a0e06277fe216d9f82dbbede362668fe46622ee`
+consumed runtime `e13edcd3d4ffbecc0272ae30195cc6b15b710ee7`;
+its `OpenCodeV2ProviderDirectory.ts` `825f53115b899ea2cfc4f7e50266aa07058c487f`
+used the same empty lookup, and test `bc86ea6c58a006b51d5d223349ff190235c70ff4`
+explicitly refused a null relationship even beside a same-ID integration.
+This change aligns the current qualified 2.1.4 decoder/management consumer
+with native optional-ID semantics while preserving explicit aliases,
+unsupported integration forms and the existing native/UI acceptance gates.
+
+### R2 — two existing source paths; no additional owner or API
+
+Both preimages below were read back unchanged at current F
+`2f6f3db0c6685dda535dfe866f7264249129ecab` before this plan.
+
+| Existing path | Exact preimage | Bounded change |
+| --- | --- | --- |
+| `packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts` | `0a78ee125848aee947b409d2e6a3253be4a5ecab` | Correct only catalog projection and the original keyOperation integration selection. |
+| `packages/legacy-agent-host/tests/opencode-v2-credential-scope.test.ts` | `83c106fb12267e57a7023cfce788277ffa780e5a` | Extend the existing first critical case with controlled original Host/client protocol subscopes. |
+
+Catalog uses an explicit decoded `integrationId` unchanged when present.
+Only when that field is truly absent may it look up the provider's exact
+ID in the already-read integrations map. It advertises `api` only when
+that actual row reports `plainKey: true`. Missing rows, unrelated rows,
+key forms and other authentication methods do not acquire an API-key
+capability. Existing integration-only directory entries retain their
+original behavior.
+
+The original keyOperation applies the same optional-ID distinction.
+A present decoded native ID remains authoritative even when different
+from the provider ID; failed or absent explicit target evidence cannot
+fall back to a same-ID row. Only the absent-ID branch may select a
+genuine same-ID row from the original decoded directory. Keep the
+existing excluded integration IDs and catalog filters exactly in their
+current branches. Preserve the original retained command ID, native
+identity, plugins, permissions, MCP, source/current checks, original
+signal/deadline, original credential client, callback, disposal order,
+cleanup-unknown precedence and command journal. No additional GET,
+POST, prompt, retry, selector refresh, mutation, timeout or allowance
+is introduced by either production change.
+
+No D decoder, schema, renderer, IPC, key store, native fixture, workflow,
+package pin or provider eligibility changes are in this scope. In
+particular the original native `authMethods: ['api']` assertion in
+`opencode-v2-model-probe.native.ts` `d07280188edc39526a1852b895084eb179740a3c`
+is unchanged. P05's separate authless readiness fixture does not
+replace this catalog/key capability requirement.
+
+### R3 — meaningful existing coverage and unchanged acceptance
+
+Retain all existing credential-scope cases, including their original
+SessionCredential finite peer modes, source auth bytes and no-replay
+assertions. Extend only the first case with explicitly synthetic
+management protocol subscopes. Construct the real Host with a validated
+TEST profile and the original captured filesystem/current checks;
+replace only that instance's existing private `nativeClient`
+launch/custody admission boundary. Return real pinned owned-session
+and credential clients connected to the finite TEST HTTP peer.
+There is no new production injection/export or synthetic native
+qualification, and catalog/keyOperation themselves are not mocked.
+
+Each explicit catalog or key operation owns its original client,
+signal and deadline; never refresh a failed operation or reuse a
+closed Host as a retry. The peer verifies original location and
+authorization, a bounded request body, exact route/method ordering,
+and a finite operation ledger. A catalog needs only its four original
+identity/plugin/permission/MCP observations plus the existing four
+directory GETs; a successful key operation adds the existing
+integration read, one original key POST and its readback. Failed
+selection cannot POST. Existing peer limits and production budgets
+are not raised, and each new explicit controlled operation is joined
+and disposed before its peer closes.
+
+The added assertions distinguish: a configured provider with an
+absent ID plus a real same-ID plain-key integration; an explicit
+different-ID alias with a distracting same-ID row; a dangling/foreign
+explicit target which must not fall back; absent/unrelated integration
+rows; a genuine key method with a form; malformed null/empty/numeric
+native IDs rejected by the real decoder; and the existing excluded-ID
+policy. Positive catalog evidence must still leave `connected`
+unproved. A successful key callback must retain the exact selected
+integration, perform exactly one original POST, and return its genuine
+client readback. All refusal subscopes require zero POST and unchanged
+source auth bytes. The old selector must fail at least the absent-ID
+catalog and original key-operation assertions, so this is not a
+test that merely restates the new expression.
+
+Host build, the affected existing critical suite, canonical Host/test
+types, lint and source-size checks remain required before acceptance.
+Root coordinates the available execution slot; no independent native
+rerun or CI cancellation is authorized by this plan. Source review or
+controlled peer success cannot be transferred to native execution,
+user authentication, Desktop Connect or performance. The unchanged
+ordinary native and frontend gates remain the acceptance evidence.
+Root alone publishes after root and independent plan/source review.
