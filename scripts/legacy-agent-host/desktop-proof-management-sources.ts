@@ -15,6 +15,8 @@ export const desktopProofManagementSources = [
   'packages/legacy-agent-host/tests/fixtures/native-claude-commands/model.ts',
   'scripts/legacy-agent-host/desktop-native-commands-fixture.ts',
   'scripts/legacy-agent-host/desktop-native-commands-ui-proof.ts',
+  'scripts/legacy-agent-host/desktop-codex-cost-ui-proof.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-host-cost.ts',
   'src/shared/utils/contentSanitizer.ts',
   'src/renderer/utils/skillCommandSuggestions.ts',
   'packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts',

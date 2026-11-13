@@ -9,6 +9,7 @@ import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { runDesktopRelaunchUiSmoke } from './desktop-relaunch-ui-smoke.ts';
 import { runDesktopNativeCommandsUiProof } from './desktop-native-commands-ui-proof.ts';
+import { runDesktopCodexCostUiProof } from './desktop-codex-cost-ui-proof.ts';
 import { prepareDesktopNativeExtensionSkillsUi } from './desktop-native-extension-skills-ui.ts';
 import { runDesktopNativeExtensionCommandsUi } from './desktop-native-extension-consumption-ui-proof.ts';
 import { runDesktopNativeExtensionsUiSmoke } from './desktop-native-extensions-ui-smoke.ts';
@@ -342,6 +343,10 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     });
     proof.nativeSessionAfterExtensionCommands = firstSession;
   }
+  if (codex) await runDesktopCodexCostUiProof(cdp, {
+    root: fixture.root, handleId: fixture.handleId, session: sessions[0]!, model, evidence,
+    assertOwnedRenderer: options.assertOwnedRenderer,
+  });
   const hostRows = processTable().filter(row => row.pgid === options.capturedGroup() && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
   assert.equal(hostRows.length, 1, 'only this TEST Host executable may be selected');
   const hostPid = hostRows[0]!.pid;

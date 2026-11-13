@@ -469,3 +469,21 @@ original recovery и отсутствию native dispatch. Изменены то
 Host RPC usage/unknown/replay и сбой между command row и reply. Компиляция и выполнение этого cut
 ещё требуют CI: текущая локальная среда недоступна. Native/Desktop acceptance остаётся открытой;
 source review не заменяет результат E2E.
+
+#### R7 actual native/Desktop acceptance cut
+
+В existing native Codex scenario настоящий D/native runtime выполняет прежние11 model requests.
+После последнего turn Host получает одну explicit `/cost`; helper читает фактически записанные
+private snapshot/receipt и canonical reply, сравнивает reported tokens с existing Stats.
+Повтор исходного command и cold Host lookup сохраняют bytes/elapsed/IDs; Runtime inputs,
+native outbox и число model requests не увеличиваются.
+
+Existing Codex Desktop Resume journey выполняет выбор `/cost` через настоящий Composer после
+первых8 model requests, показывает ответ и сохраняет screenshot. После штатных Stop/Quit,
+нового app/Host и Resume проверяются прежний отчёт и receipt до второго prompt. Только
+technical generation меняется; исходная session history и cost snapshot неизменны.
+Новые runner/mode/unit suites не добавлены; два helper входят в существующий source freeze.
+
+Независимый review Profiles и root source review пройдены. Root дополнительно сделал сравнение
+чисел точными строками, чтобы expected1 не принимал prefix11. Compile/native/Desktop результаты
+нового cut ещё pending; наличие сценария и source review не объявляются E2E PASS.

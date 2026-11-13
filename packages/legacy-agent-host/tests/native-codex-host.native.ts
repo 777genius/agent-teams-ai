@@ -11,6 +11,8 @@ import { test } from 'node:test';
 
 import { CONTEXT_MARKER, record, startCodexModel } from './fixtures/native-codex-team/model.ts';
 import { fileHash, tick, treeHash, startHost } from './fixtures/native-host.ts';
+import { readNativeHostCostProof } from './fixtures/native-host-cost.ts';
+import type { NativeHostCostProof } from './fixtures/native-host-cost.ts';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 
 const hash = (bytes: Uint8Array | string) => createHash('sha256').update(bytes).digest('hex');
@@ -42,6 +44,7 @@ test(
       fixtureSources: {
         test: await fileHash(import.meta.filename),
         model: await fileHash(join(import.meta.dirname, 'fixtures/native-codex-team/model.ts')),
+        cost: await fileHash(join(import.meta.dirname, 'fixtures/native-host-cost.ts')),
         image: await fileHash(join(import.meta.dirname, 'fixtures/native-message-image.ts')),
         png: await fileHash(
           join(import.meta.dirname, 'fixtures/native-claude-team/chat-attachments.ts')
@@ -129,6 +132,9 @@ stream_max_retries = 0
     let activity: Record<string, unknown> = {};
     let activityAfterRestart: Record<string, unknown> = {};
     let imageProof: Awaited<ReturnType<typeof readNativeMessageImage>> | undefined;
+    let costProof: NativeHostCostProof | undefined;
+    let costPublicReceipt: Record<string, unknown> | undefined;
+    let costRetainedAfterRestart = false;
     let passed = false;
     try {
       const namespace = basename(root);
@@ -164,7 +170,7 @@ stream_max_retries = 0
           {
             scope,
             binding: teamBinding,
-            members: [{ memberId: 'bob-id', name: 'bob', role: 'member', delivery }],
+            members: [{ memberId: 'bob-id', name: 'bob', role: 'lead', delivery }],
             grants: [
               {
                 principalId: 'human',
@@ -253,6 +259,7 @@ stream_max_retries = 0
         true,
         'actual D native mandatory MCP discovery'
       );
+      assert.deepEqual((record(opened.value).sessionCommands as unknown[]).map(record).map(row => row.name), ['cost']);
       imageReference = await uploadNativeMessageImage(current, envelope, 'bob');
       for (const label of ['ONE', 'TWO']) {
         const receipt = await current.rpc('team.execute', command(label));
@@ -353,6 +360,32 @@ stream_max_retries = 0
         assert.ok(inputs.has(event.inputId), 'activity keeps exact business input attribution');
       const activityCursor = activity.cursor;
       assert.equal(typeof activityCursor, 'string');
+      const statsReply = await current.rpc('team.activity.stats.read',
+        envelope('TEST-cost-stats', { memberName: 'bob' }));
+      assert.equal(statsReply.ok, true);
+      const costStats = record(record(statsReply.value).stats);
+      const costCommandId = 'TEST-native-host-cost';
+      const costCommand = envelope(costCommandId, { operation: 'message.send',
+        payload: { to: 'bob', text: '/cost', nativeCommand: true, messageId: costCommandId } });
+      const inputsBeforeCost = structuredClone(finalRuntime.inputs);
+      costPublicReceipt = await current.rpc('team.execute', costCommand);
+      assert.equal(costPublicReceipt.ok, true);
+      assert.equal(record(costPublicReceipt.value).phase, 'completed');
+      assert.equal(record(costPublicReceipt.value).hostCommand, undefined, 'private snapshot never crosses Host RPC');
+      assert.equal(record(record(costPublicReceipt.value).result).deliveryId, undefined);
+      const costRead = { teamRoot: join(root, 'store/teams/test-native-team'),
+        commandId: costCommandId, memberName: 'bob', principalId: 'human',
+        binding: { backendId: owner.ownerId, teamId: scope.teamId, runId: scope.runId,
+          memberId: 'bob-id', generation: '1' }, stats: costStats };
+      costProof = await readNativeHostCostProof(costRead);
+      assert.equal(costProof.snapshot.partial, (costStats.gaps as unknown[]).length > 0);
+      assert.deepEqual(await current.rpc('team.lookup', costCommand), costPublicReceipt);
+      assert.deepEqual(await current.rpc('team.execute', costCommand), costPublicReceipt);
+      const afterCost = await current.rpc('runtime.read', envelope('TEST-cost-runtime', { memberId: 'bob-id' }));
+      assert.equal(afterCost.ok, true);
+      assert.deepEqual(record(afterCost.value).inputs, inputsBeforeCost, 'Host /cost never reaches Session.submit');
+      assert.equal(model.observations.length, 11, 'local report issues no native inference request');
+      assert.deepEqual(model.failures, []);
       const stopped = await current.rpc(
         'runtime.stop',
         envelope('TEST-stop', { memberId: 'bob-id' })
@@ -371,6 +404,11 @@ stream_max_retries = 0
         assert.deepEqual(await current.rpc('team.lookup', command(label)), receipts[index]);
         assert.deepEqual(await current.rpc('team.execute', command(label)), receipts[index]);
       }
+      assert.deepEqual(await current.rpc('team.lookup', costCommand), costPublicReceipt);
+      assert.deepEqual(await current.rpc('team.execute', costCommand), costPublicReceipt);
+      assert.deepEqual(await readNativeHostCostProof(costRead), costProof,
+        'cold lookup/recovery preserves original units, elapsed time, reply and identity');
+      costRetainedAfterRestart = true;
       const recovered = await current.rpc(
         'runtime.read',
         envelope('TEST-recovered', { memberId: 'bob-id' })
@@ -430,6 +468,7 @@ stream_max_retries = 0
               cleanupConfirmed,
               businessReceipts: receipts,
               imageProof,
+              hostCost: { proof: costProof, publicReceipt: costPublicReceipt, retainedAfterRestart: costRetainedAfterRestart },
               runtime: finalRuntime,
               activity,
               activityAfterRestart,

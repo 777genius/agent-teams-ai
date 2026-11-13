@@ -8,6 +8,7 @@ import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../
 import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fixture.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
+import { verifyDesktopCodexCostAfterColdResume } from './desktop-codex-cost-ui-proof.ts';
 import { checkpoint, digest, json, jsonDigest, originalHistoryMarker, record, rows } from './desktop-resume-records.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
@@ -201,6 +202,10 @@ export async function runDesktopResumeUiSmoke(cdp: UiCdpPort, options: {
   if (!(await cdp.evaluate(`Boolean(document.querySelector('.message-composer-flat-layout textarea'))`)))
     await ui.click('button[aria-label^="alice,"]', 'open original alice chat after Resume');
   await ui.waitRead(`document.body.innerText.includes(${JSON.stringify(firstReply)})`, 'original native reply retained after Resume');
+  if (codex) await verifyDesktopCodexCostAfterColdResume(cdp, {
+    root: fixture.root, handleId: fixture.handleId, session: active, model, evidence,
+    assertOwnedRenderer: options.assertOwnedRenderer,
+  });
   await ui.click('.message-composer-flat-layout textarea', 'focus existing MessageComposer');
   await cdp.send('Input.insertText', { text: secondPrompt });
   await ui.waitRead(`document.querySelector('.message-composer-flat-layout textarea')?.value===${JSON.stringify(secondPrompt)}`, 'deliberate second message retained');
