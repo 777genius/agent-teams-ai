@@ -27,6 +27,11 @@ const storeState = vi.hoisted(() => ({
 
 let runtimeDialogProps: RuntimeDialogProps | null = null;
 const terminalRender = vi.hoisted(() => vi.fn());
+const loadNativeClaudeSetupForm = vi.hoisted(() => vi.fn());
+
+vi.mock('@renderer/api', () => ({
+  api: { runtimeProviderManagement: { loadSetupForm: loadNativeClaudeSetupForm } },
+}));
 
 vi.mock('@renderer/store', () => ({
   useStore: (selector: (state: typeof storeState) => unknown) => selector(storeState),
@@ -63,6 +68,7 @@ describe('ProvisioningProviderRuntimeSettingsDialog connection refresh', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     runtimeDialogProps = null;
+    loadNativeClaudeSetupForm.mockReset();
     storeState.cliStatus = { installed: true, binaryPath: '/test-fixtures/runtime' };
     storeState.cliStatusLoading = false;
     storeState.invalidateCliStatus.mockResolvedValue(undefined);
@@ -84,7 +90,8 @@ describe('ProvisioningProviderRuntimeSettingsDialog connection refresh', () => {
   async function renderDialog(
     providerId: 'anthropic' | 'codex' | 'opencode',
     onProviderRuntimeChanged = vi.fn(),
-    disabled = false
+    disabled = false,
+    providerOverrides: Partial<RuntimeDialogProps['providers'][number]> = {}
   ) {
     const { ProvisioningProviderRuntimeSettingsDialog } =
       await import('@renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog');
@@ -93,7 +100,7 @@ describe('ProvisioningProviderRuntimeSettingsDialog connection refresh', () => {
         React.createElement(ProvisioningProviderRuntimeSettingsDialog, {
           openProviderId: providerId,
           onOpenProviderIdChange: vi.fn(),
-          providers: [{ providerId }] as RuntimeDialogProps['providers'],
+          providers: [{ providerId, ...providerOverrides }] as RuntimeDialogProps['providers'],
           projectPath: '/test-fixtures/project',
           disabled,
           onProviderRuntimeChanged,
@@ -163,6 +170,38 @@ describe('ProvisioningProviderRuntimeSettingsDialog connection refresh', () => {
       expect(onProviderRuntimeChanged).toHaveBeenCalledExactlyOnceWith(providerId);
     }
   );
+
+  it('keeps captured Claude login on the original provisioning project without opening a terminal', async () => {
+    storeState.cliStatus = { installed: true, binaryPath: null };
+    loadNativeClaudeSetupForm.mockResolvedValue({
+      setupForm: { connectionContextToken: 'TEST-provisioning-account' },
+    });
+    const onProviderRuntimeChanged = await renderDialog('anthropic', vi.fn(), false, {
+      nativeAuthManagement: 'claude',
+    });
+    await act(async () => {
+      runtimeDialogProps!.onRequestLogin!('anthropic');
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => {
+      expect(runtimeDialogProps!.nativeClaudeAuthAction).toEqual({
+        action: 'login',
+        projectPath: '/test-fixtures/project',
+        connectionContextToken: 'TEST-provisioning-account',
+      });
+    });
+    expect(loadNativeClaudeSetupForm).toHaveBeenCalledExactlyOnceWith({
+      runtimeId: 'claude', providerId: 'anthropic', projectPath: '/test-fixtures/project',
+    });
+    expect(terminalRender).not.toHaveBeenCalled();
+    expect(storeState.fetchCliProviderStatus).not.toHaveBeenCalled();
+    expect(onProviderRuntimeChanged).not.toHaveBeenCalled();
+    await act(async () => {
+      runtimeDialogProps!.onOpenChange(false);
+      await Promise.resolve();
+    });
+    expect(runtimeDialogProps!.nativeClaudeAuthAction).toBeNull();
+  });
 
   it('does not check or announce a replacement connection if main invalidation fails', async () => {
     const failure = new Error('Main provider status invalidation failed');
