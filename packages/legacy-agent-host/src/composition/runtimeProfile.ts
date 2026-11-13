@@ -234,9 +234,8 @@ export const runtimeProfileSchema = z
            member.embedded === undefined && !!member.nativeSessionId)) &&
           !hasUntrustedOpenCodeBinaryOverride(member.environment) &&
           member.mcpPolicyPlugin === undefined &&
-          member.capturedMcpServers === undefined &&
-          member.capturedMcpSource === undefined &&
-          member.mcpCatalogSource === undefined &&
+          (member.embedded !== undefined || (member.capturedMcpServers === undefined &&
+            member.capturedMcpSource === undefined && member.mcpCatalogSource === undefined)) &&
           (member.embedded !== undefined || member.nativeOptions.toolApprovalMode === undefined) &&
           (member.extraArgs?.length ?? 0) === 0
         : member.embedded === undefined &&

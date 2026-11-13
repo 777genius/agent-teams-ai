@@ -11,6 +11,7 @@ import { attestOpenCodeV2ModelSelection } from './OpenCodeV2ModelSelection.js';
 import { captureOpenCodeV2SessionCredential } from './OpenCodeV2SessionCredential.js';
 import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
 import { runtimeDigest } from '../../runtime/identity.js';
+import { capturedMcpSourceCurrent } from '../../mcp-catalog/capturedSource.js';
 import { hasUntrustedOpenCodeBinaryOverride } from '../../composition/openCodeV2Environment.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 import type { OpenCodeV2OwnedSession } from './OpenCodeV2OwnedSession.js';
@@ -30,7 +31,6 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
       selected.protocolRevision !== '2.1.4' || !selected.embedded ||
       hasUntrustedOpenCodeBinaryOverride(selected.environment) ||
       hasUntrustedOpenCodeBinaryOverride(process.env) || selected.mcpPolicyPlugin ||
-      selected.capturedMcpServers || selected.capturedMcpSource || selected.mcpCatalogSource ||
       (selected.extraArgs?.length ?? 0) !== 0) return unavailable();
   const profile = selected, embedded = selected.embedded;
   const capturedRequest = runtimeDigest(context.request), capturedProfile = runtimeDigest(context.profile);
@@ -46,10 +46,11 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
   const contextCurrent = () => !sealed && !cleanupUnknown && !abort.signal.aborted && context.isCurrent() &&
     runtimeDigest(context.request) === capturedRequest && runtimeDigest(context.profile) === capturedProfile &&
     runtimeDigest(context.endpoint.binding) === capturedEndpoint && context.instructions === instructions &&
-    !hasUntrustedOpenCodeBinaryOverride(process.env);
+    !hasUntrustedOpenCodeBinaryOverride(process.env) && capturedMcpSourceCurrent(profile);
   const configuration = captureOpenCodeV2Configuration(profile,
     { providerId: profile.nativeOptions.providerId, modelId: profile.model }, contextCurrent);
-  const { config, selection, requiredToolNames } = openCodeV2EmbeddedConfig(context, configuration.configuration);
+  const { config, selection, requiredToolNames, requiredServerNames } =
+    openCodeV2EmbeddedConfig(context, configuration.configuration);
   const credential = captureOpenCodeV2SessionCredential(profile, profile.nativeOptions.providerId,
     () => contextCurrent() && configuration.isCurrent());
   const current = () => contextCurrent() && configuration.isCurrent() && credential.isCurrent();
@@ -181,7 +182,8 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
               !await client.builtinPluginsOnly()) return false;
           const mcp = await client.readMcp();
           const receipt = context.endpoint.getCatalogReceipt?.();
-          return mcp.length === 1 && mcp[0]?.name === 'agent-teams' && mcp[0].status === 'connected' &&
+          return mcp.every(row => row.status === 'connected') &&
+            isDeepStrictEqual(mcp.map(row => row.name).sort(), requiredServerNames) &&
             receipt !== undefined && receipt.sequence > 0 &&
             runtimeDigest(receipt.binding) === capturedEndpoint &&
             runtimeDigest([...receipt.toolNames].sort()) === runtimeDigest(requiredToolNames);
