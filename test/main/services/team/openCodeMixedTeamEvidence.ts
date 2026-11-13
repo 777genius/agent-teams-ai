@@ -80,8 +80,8 @@ export function assertTranscriptSession(transcript: unknown, sessionId: unknown)
 }
 
 type ToolEvidence = ReturnType<typeof successfulTools>[number];
-export function isTeamTool(tool: ToolEvidence, name: 'task_complete' | 'message_send'): boolean {
-  return [name, `agent-teams_${name}`, `agent_teams_${name}`, `mcp__agent-teams__${name}`].includes(
+export function isTeamTool(tool: ToolEvidence, name: 'task_complete' | 'task_add_comment' | 'message_send'): boolean {
+  return [name, `agent-teams.${name}`, `agent-teams_${name}`, `agent_teams_${name}`, `mcp__agent-teams__${name}`].includes(
     tool.name
   );
 }
@@ -97,6 +97,22 @@ export function hasTaskCompletion(
       tool.input.teamName === teamName &&
       tool.input.taskId === taskId &&
       tool.input.actor === actor
+  );
+}
+export function hasTaskComment(
+  tools: ToolEvidence[],
+  teamName: string,
+  taskId: string,
+  from: string,
+  text: string
+) {
+  return tools.some(
+    (tool) =>
+      isTeamTool(tool, 'task_add_comment') &&
+      tool.input.teamName === teamName &&
+      tool.input.taskId === taskId &&
+      tool.input.from === from &&
+      tool.input.text === text
   );
 }
 export function hasMessage(

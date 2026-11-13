@@ -36,6 +36,7 @@ import {
   hasExecution,
   hasMessage,
   hasTaskCompletion,
+  hasTaskComment,
   relayMetadata,
   successfulTools,
 } from './openCodeMixedTeamEvidence';
@@ -45,6 +46,7 @@ import {
   hasV2CommandInvocationWithOuterMarker,
   hasV2Message,
   hasV2TaskCompletion,
+  hasV2TaskComment,
   readV2TeamInvocationEvidence,
 } from './openCodeV2TeamEvidence';
 
@@ -291,8 +293,39 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         });
         assertTranscriptModel(leadTranscript, model);
         assertTranscriptSession(leadTranscript, leadRuntime.runtimeSessionId);
-        proof.leadAssignedTask = { id: leadTaskId, owner: 'alice', createdBy: 'team-lead',
-          completed: true, ownerCommentConfirmed: true };
+        // Actor/from fields in the board are caller-controlled. Require matching
+        // completed tool invocations in Alice's original bound runtime, not only
+        // rows that the lead could write while impersonating Alice.
+        const assignedTaskId = leadTaskId;
+        if (!assignedTaskId) throw new Error('Lead-assigned task ID unavailable');
+        const assignedTask = (await reader.getTasks(teamName)).find(
+          (task) => task.id === assignedTaskId
+        );
+        const aliceAssignedTranscript = await getRuntimeTranscript({
+          bridgeClient, teamName, memberName: 'alice', projectPath,
+          originalBinding: transcriptBinding(runId, snapshot, 'alice'),
+        });
+        assertTranscriptModel(aliceAssignedTranscript, model);
+        assertTranscriptSession(aliceAssignedTranscript, snapshot.members.alice.runtimeSessionId);
+        const aliceV2Evidence =
+          classifyTeamTranscriptGeneration(aliceAssignedTranscript) === 'v2'
+            ? readV2TeamInvocationEvidence(aliceAssignedTranscript, {
+                teamName, memberName: 'alice', selectedModel: model,
+                ...transcriptBinding(runId, snapshot, 'alice'),
+              })
+            : null;
+        const aliceV1Calls = aliceV2Evidence ? [] : successfulTools(aliceAssignedTranscript);
+        expect(
+          aliceV2Evidence
+            ? hasV2TaskCompletion(aliceV2Evidence, { taskId: assignedTaskId }, assignedTask) &&
+              hasV2TaskComment(aliceV2Evidence, {
+                taskId: assignedTaskId, text: leadMarker,
+              }, assignedTask)
+            : hasTaskCompletion(aliceV1Calls, teamName, assignedTaskId, 'alice') &&
+              hasTaskComment(aliceV1Calls, teamName, assignedTaskId, 'alice', leadMarker)
+        ).toBe(true);
+        proof.leadAssignedTask = { id: assignedTaskId, owner: 'alice', createdBy: 'team-lead',
+          completed: true, ownerCommentConfirmed: true, aliceRuntimeProof: true };
 
         const aliceNonce = randomUUID();
         const bobNonce = randomUUID();
