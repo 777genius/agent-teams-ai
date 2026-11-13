@@ -1,6 +1,63 @@
 # Завершение frontend parity: 13 ноября 2026
 
-## Актуальный проверенный срез: `e7c6f4b1`
+## Следующий проверенный срез поверх `28bc9ef4`
+
+Полная P08 phase 2 опубликована в `28bc9ef4705c68649256ca236985c5b222e3e1e5`
+(tree `45f7550986499a612371a9e2eea4fadc4515bcb4`). Приватная исходная
+ассоциация runtime проходит через Main, Host, management, Team, schedules и
+model preflight. Она не сохраняется в enumerable recipe, не выводится из
+profile digest и не позволяет другому Team заимствовать исходное разрешение.
+Контрольные результаты этого среза: 78 Host, 14 queue и 20 Main checks PASS.
+Это пересекающиеся группы, а не общий счётчик frontend coverage.
+
+Следующий срез включает три независимо рассмотренных изменения:
+
+| Изменение | Фактически выполненная проверка | Ещё требуется |
+| --- | --- | --- |
+| Checked provider `97690540` | Исходный CI провайдера: 525 source tests и два packed consumers на каждой из двух Node; frontend Host build и 43 существующих Codex finite-peer tests PASS, 0 skips | Frozen-install CI и новый точный frontend E2E |
+| Закрытая синхронная проверка Team authority | Host/ledger и Host test types PASS; 12 критических filesystem checks и исходная группа 75 checks PASS, 0 skips; объединённые CPU + provider bytes дополнительно прошли 38 authority/runtime checks | Исходный Windows OpenCode E2E с прежними readiness/terminal budgets |
+| Lazy-start TEST barrier | Исходная группа Desktop backend: 13 PASS, 0 skips; fixture требует реального `createHostServer`, прежде чем принять результат | Новый CI на текущем source |
+
+На одном и том же реальном filesystem fixture число вызовов изменилось с
+1 lock / 6 namespace validations / 7 state reads до 1 / 3 / 1. Следующая
+проверка снова читает полное состояние; grants, lifecycle, отдельные
+`workAllowed` cuts и финальная namespace validation сохранены. Это измерение
+вызовов, а не обещание ускорения Windows или доказательство native cleanup.
+
+Оригинальный provider archive имеет SHA-256
+`73dbbfba5e8fed6719ccdeaae499a47284b72ac831c33a2c7206fbf2799f77b8`.
+Он скопирован из checked artifact без пересборки; contracts, Claude и OpenCode
+bytes не изменились. Отдельная OpenCode матрица провайдера прошла 53 jobs,
+но её SPI receipts по-прежнему содержат `qualified: false`, а packed receipt
+не квалифицирует native Host или packaged Electron.
+
+На точном `28bc9ef4` Darwin x64 process job `132204573711` прошла:
+134 Host checks (ещё 2 Linux-only skips), 49 protocol, 63 Main и 23 POSIX
+lifecycle checks. Windows ARM64 дошёл до исходного launcher fixture, где
+получен exit 1 вместо 0; provider scenarios не достигнуты. Этот результат
+сохранён как INCOMPLETE с cleanup true, а не назван успешным Windows E2E.
+
+Семь независимых Electron UI lanes опубликованы с исходными строгими
+assertions. Их queued/running состояние не считается PASS. Новый пассивный
+TEST observer прошёл 5 regressions, но сам по себе не устанавливает причину
+второго CDP holder в прежнем e7 management failure. Исторические успешные
+Team/Taskboard screenshots и неуспешный management receipt сохранены.
+
+Полный локальный `pnpm typecheck` на `28bc9ef4` завершился exit 137 после
+успешной Host/ledger сборки, без итогового результата frontend compiler.
+Результат не заменяется частичными types. Повтор с поддерживаемым
+`--singleThreaded` на объединённом срезе тоже был убит SIGKILL через 168,2 с
+на первом проекте, до итогового результата: последний наблюдаемый RSS —
+2,24 GiB, пик — 2,28 GiB. Все восемь проектов были запланированы, но следующие
+семь не запускались после отказа первого. Полные types остаются открытыми;
+локальные повторения в этом окружении прекращены. Реальные Codex и Claude
+Code не запускались. PR #1192
+остаётся Draft; main, release, Stage 2 и default activation не изменяются.
+
+Ниже сохранён предыдущий проверенный срез и история: его provider pin,
+CI состояния и результаты относятся к указанным старым SHA.
+
+## Предыдущий проверенный срез: `e7c6f4b1`
 
 [Draft PR #1192](https://github.com/777genius/agent-teams-ai/pull/1192) содержит
 исправления этой работы и согласован с новым HEAD базового #1186

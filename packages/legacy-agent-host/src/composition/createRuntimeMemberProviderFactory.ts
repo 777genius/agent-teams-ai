@@ -70,6 +70,7 @@ export function createRuntimeMemberProviderFactory(options: {
   isSealed(): boolean;
   assertWriter(): void;
   assertCurrent(entry: MemberEntry): void;
+  assertProviderAuthority?(entry: MemberEntry): 'current' | 'roster-not-applicable';
   captureInteractions(entry: MemberEntry): void;
   readRuntime: RuntimeOwner['readCapturedSession'];
   readCheckpoint: RuntimeOwner['readCheckpoint'];
@@ -105,6 +106,8 @@ export function createRuntimeMemberProviderFactory(options: {
         hostIncarnation: options.hostIncarnation,
         assertAllocation,
         assertWriter: options.assertWriter,
+        ...(options.assertProviderAuthority
+          ? { assertProviderAuthority: () => options.assertProviderAuthority!(entry) } : {}),
         assertCurrent: () => options.assertCurrent(entry),
         readRuntime: () => options.readRuntime(entry.binding),
       });

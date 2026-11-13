@@ -80,12 +80,12 @@ async function fixture(blockStartup = false): Promise<{
   for (const ownerId of ['A', 'B']) {
     const storageRoot = await root();
     const hostEntry = join(storageRoot, 'host.mts');
-    const source = `import { createHostServer } from ${JSON.stringify(serverUrl)};
-      import { writeFileSync, appendFileSync, existsSync } from 'node:fs';
+    const source = `import { writeFileSync, appendFileSync, existsSync } from 'node:fs';
       writeFileSync(${JSON.stringify(join(storageRoot, 'started'))}, 'started');
       if (${blockStartup}) await new Promise(resolve=>{
         const timer=setInterval(()=>{if(existsSync(${JSON.stringify(join(storageRoot, 'release-startup'))})){clearInterval(timer);resolve();}},10);
       });
+      const { createHostServer } = await import(${JSON.stringify(serverUrl)});
       const server = createHostServer({ input: process.stdin, output: process.stdout, buildId:'TEST-desktop-v1', methods: {
         'team.execute': { lane:'work', handle: (request) => {
           appendFileSync(${JSON.stringify(join(storageRoot, 'effects'))}, request.commandId+'\\n');
@@ -102,6 +102,7 @@ async function fixture(blockStartup = false): Promise<{
           appendFileSync(${JSON.stringify(join(storageRoot, 'management-effects'))},JSON.stringify({profileId:request.profileId,configRevision:request.configRevision})+${JSON.stringify('\n')});
           return {ok:true,value:{profileId:request.profileId,configRevision:request.configRevision,providers:[]}};
         }} }});
+      writeFileSync(${JSON.stringify(join(storageRoot, 'host-created'))}, server.handshake.buildId);
       void server.closed.then(()=>process.exit(0));`;
     await writeFile(hostEntry, source);
     owners.push({
@@ -611,6 +612,9 @@ it('rechecks captured context after lazy host startup before dispatching a finit
   current = false;
   await writeFile(join(setup.descriptor.owners[0].storageRoot, 'release-startup'), 'release');
   expect(await pending).toEqual({ ok: false, code: 'forbidden', outcome: 'not-dispatched' });
+  expect(
+    await readFile(join(setup.descriptor.owners[0].storageRoot, 'host-created'), 'utf8')
+  ).toBe('TEST-desktop-v1');
   await expect(
     access(join(setup.descriptor.owners[0].storageRoot, 'effects'))
   ).rejects.toMatchObject({ code: 'ENOENT' });

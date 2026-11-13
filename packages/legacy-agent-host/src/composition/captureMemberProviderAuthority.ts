@@ -13,6 +13,8 @@ export function captureMemberProviderAuthority(options: {
   assertAllocation?: () => void;
   /** Original writer lease, required by the production factory before sharing a Team fence. */
   assertWriter?(): void;
+  /** Closed Team operation; a denied/corrupt source must throw, never return legacy applicability. */
+  assertProviderAuthority?(): 'current' | 'roster-not-applicable';
   assertCurrent(): void;
   readRuntime(): { record: RuntimeSessionRecord | undefined; attached: boolean };
 }) {
@@ -27,16 +29,22 @@ export function captureMemberProviderAuthority(options: {
     principalId: entry.profile.principalId,
     fingerprint: runtimeDigest({ profileId: options.profileId, config: options.request }),
   };
-  // No Runtime lookup here: called inside Runtime/Team fences as well as native callbacks.
-  function checkCurrent() {
-    options.assertCurrent();
+  function assertOriginal() {
     if (
       entry.team !== original.team ||
       runtimeDigest(entry.binding) !== original.binding ||
       runtimeDigest(entry.delivery) !== original.delivery ||
       runtimeDigest(entry.profile) !== original.profile ||
       runtimeDigest(entry.config) !== original.config ||
-      entry.profile.principalId !== original.principalId ||
+      entry.profile.principalId !== original.principalId
+    )
+      throw new RuntimeOwnerError('forbidden');
+  }
+  // No Runtime lookup here: called inside Runtime/Team fences as well as native callbacks.
+  function checkCurrent() {
+    options.assertCurrent();
+    assertOriginal();
+    if (
       !entry.team.owner.authorizeMemberBinding(entry.binding, 'admit') ||
       !entry.team.owner.authorizeRuntimeAccess(original.principalId, entry.binding, 'control')
     )
@@ -49,6 +57,12 @@ export function captureMemberProviderAuthority(options: {
     if (!assertWriter) return checkCurrent();
     // A replaced store root must be refused before even publishing a lock there.
     assertWriter();
+    if (options.assertProviderAuthority) {
+      assertOriginal();
+      const authority = options.assertProviderAuthority();
+      if (authority === 'current') return;
+      if (authority !== 'roster-not-applicable') throw new RuntimeOwnerError('forbidden');
+    }
     // This callback is synchronous. Nested namespace checks and policy reads stay
     // current; only the original cross-process lock acquisition is shared.
     original.team.owner.withLaunchAuthority(original.principalId, 'read', checkCurrent);

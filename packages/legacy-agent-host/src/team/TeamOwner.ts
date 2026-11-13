@@ -27,7 +27,7 @@ import { projectCrossTeamMessages } from '../cross-team/projectCrossTeamMessages
 import { ordinarySubagentAllowed } from './ordinarySubagentPolicy.js';
 import { lookupRetainedTaskStartCause } from './lookupRetainedTaskStartCause.js';
 import { readCrossTeamReplyHints } from './readCrossTeamReplyHints.js';
-import { createTeamDeliveryAuthority } from './TeamDeliveryAuthority.js';
+import { authorizeTeamGrant, createTeamDeliveryAuthority } from './TeamDeliveryAuthority.js';
 import { crossTeamTargetCommand } from '../cross-team/crossTeamInbound.js';
 import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
 import { lookupEvidenceCause } from './lookupEvidenceCause.js';
@@ -272,12 +272,19 @@ export class TeamOwner {
     members: readonly Pick<TeamMember, 'memberId' | 'name' | 'role' | 'settings'>[],
     savedSettings?: TeamSavedSettings
   ): boolean {
+    return this.roster.matchesCaptured(members, savedSettings);
+  }
+
+  /** Closed trusted provider check; no callback, retained state or Runtime lookup escapes. */
+  capturedProviderAuthority(principalId: string, binding: RuntimeMemberBinding, expectedRevision: string,
+    expected: Pick<TeamMember, 'memberId' | 'name' | 'role' | 'settings' | 'delivery'> | undefined,
+    savedSettings?: TeamSavedSettings): 'current' | 'roster-not-applicable' {
     return this.store.fenced(() => {
-      const state = this.state();
-      return (
-        teamRosterRevision(state.members, state.rosterVersion, state.savedSettings) ===
-        teamRosterRevision(members, 0, savedSettings)
-      );
+      const state = this.state(), grant = authorizeTeamGrant(state, this.store, principalId, 'read');
+      if (!this.deliveryAuthority.providerAuthorized(state, grant, binding)) throw new TeamOwnerError('forbidden');
+      const current = this.roster.capturedMemberCurrentInState(state, expectedRevision, expected, savedSettings);
+      // Recovery and policy reads precede this original nested namespace revalidation.
+      return this.store.fenced(() => current ? 'current' : 'roster-not-applicable');
     });
   }
 
@@ -537,13 +544,7 @@ export class TeamOwner {
   }
 
   private authorize(principalId: string, permission: TeamGrant['permissions'][number]): TeamGrant {
-    const state = this.state();
-    if (permission === 'task.write' || permission === 'message.write')
-      assertTeamExecutionAllowed(state, this.store);
-    const grant = state.grants.find((entry) => entry.principalId === principalId);
-    if (!grant || grant.revoked || !grant.permissions.includes(permission))
-      throw new TeamOwnerError('forbidden');
-    return grant;
+    return authorizeTeamGrant(this.state(), this.store, principalId, permission);
   }
 
   private taskAuthorityCurrent(receipt: CommandReceipt): boolean {
@@ -704,8 +705,6 @@ export class TeamOwner {
       return json(this.productChanges.read(principalId, revision, cursor));
     });
   }
-
-
   /** The existing Owner supplies grant, inbox records and the filesystem fence. */
   private readMessagesPage(
     principalId: string,

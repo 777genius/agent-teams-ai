@@ -42,7 +42,7 @@ import { runtimeCaptureSourceSchema, runtimeCaptureSourceSelections } from './ru
 import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
 import { ToolEvidenceWindows } from '../evidence/ToolEvidenceWindows.js';
 import { captureTeamModelProbeSelection, isCurrentCapturedTeam } from './savedTeamModelProbe.js';
-import { assertCapturedRosterCurrent, assertRosterEditable, readCreatedLaunchAdmission } from './teamRoster.js';
+import { assertCapturedRosterCurrent, assertRosterEditable, readCapturedProviderAuthority, readCreatedLaunchAdmission } from './teamRoster.js';
 import type { TeamModelProbeSelection } from './teamLaunchModelProbe.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
@@ -157,6 +157,7 @@ export class RuntimeTeamCoordinator {
       driverFactory: createRuntimeMemberProviderFactory({
         entries: this.entries,
         assertWriter: () => options.assertWriter(),
+        assertProviderAuthority: entry => this.assertProviderAuthority(entry),
         captureProcessOrigin: entry => captureMemberProcessOrigin(options.profile, entry, options.sources),
         storageRoot: options.profile.owner.storageRoot,
         profileId: options.profile.owner.profileId,
@@ -763,6 +764,14 @@ export class RuntimeTeamCoordinator {
       !entry.team.owner.authorizeMemberBinding(entry.binding, 'dispatch')
     )
       throw new RuntimeOwnerError('forbidden');
+  }
+  private assertProviderAuthority(entry: MemberEntry): 'current' | 'roster-not-applicable' {
+    this.options.assertWriter();
+    this.captures.assertAvailable(entry.binding.teamId);
+    if (this.sealed ||
+      (entry.endpointExpiresAtMs !== undefined && Date.now() >= entry.endpointExpiresAtMs))
+      throw new RuntimeOwnerError('forbidden');
+    return readCapturedProviderAuthority(entry.team, entry.profile.principalId, entry.binding);
   }
   private async closeEndpoint(entry: MemberEntry): Promise<void> {
     entry.endpoint?.revoke();

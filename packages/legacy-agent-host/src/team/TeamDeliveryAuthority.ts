@@ -1,5 +1,6 @@
 import { assertGroupOriginal } from '../group-chats/groupDelivery.js';
-import { teamExecutionAllowed } from './teamLifecycleAdmission.js';
+import { assertTeamExecutionAllowed, teamExecutionAllowed } from './teamLifecycleAdmission.js';
+import { TeamOwnerError } from './contracts.js';
 import { digest, safeSegment } from './identity.js';
 import { deliveryIdentity, memberBinding } from './DeliveryRecovery.js';
 import { readProductCommand } from './commandEntries.js';
@@ -16,6 +17,22 @@ import type {
   DeliveryIntent,
 } from './contracts.js';
 import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
+
+/** The same grant policy for an ordinary fresh read and a closed same-state authority read. */
+export function authorizeTeamGrant(
+  state: OwnerState,
+  store: TeamStore,
+  principalId: string,
+  permission: TeamGrant['permissions'][number]
+): TeamGrant {
+  if (permission === 'task.write' || permission === 'message.write')
+    assertTeamExecutionAllowed(state, store);
+  const grant = state.grants.find((entry) => entry.principalId === principalId);
+  if (!grant || grant.revoked || !grant.permissions.includes(permission))
+    throw new TeamOwnerError('forbidden');
+  return grant;
+}
+
 /** Current Team delivery authority, shared unchanged by live admission and evidence attribution. */
 export function createTeamDeliveryAuthority(options: {
   binding: TeamBinding;
@@ -37,27 +54,33 @@ export function createTeamDeliveryAuthority(options: {
     return options.store.fenced(() => {
       try {
         const grant = options.authorize(principalId, 'read');
-        const member = options
-          .state()
-          .members.find(
-            (candidate) =>
-              candidate.delivery &&
-              (digest(memberBinding(candidate.delivery)) === digest(memberBinding(binding)) ||
-                (action === 'read' &&
-                  options.runtimeBindings?.retained(memberBinding(candidate.delivery), binding)))
-          );
-        if (!member) return false;
-        return (
-          action === 'read' ||
-          grant.permissions.includes('admin') ||
-          (member?.name === grant.memberName &&
-            (grant.permissions.includes('task.write') ||
-              grant.permissions.includes('message.write')))
-        );
+        return runtimeAccessInState(options.state(), grant, binding, action);
       } catch {
         return false;
       }
     });
+  }
+
+  function runtimeAccessInState(
+    state: OwnerState,
+    grant: TeamGrant,
+    binding: RuntimeMemberBinding,
+    action: 'read' | 'control'
+  ): boolean {
+    const member = state.members.find(
+      (candidate) =>
+        candidate.delivery &&
+        (digest(memberBinding(candidate.delivery)) === digest(memberBinding(binding)) ||
+          (action === 'read' &&
+            options.runtimeBindings?.retained(memberBinding(candidate.delivery), binding)))
+    );
+    if (!member) return false;
+    return (
+      action === 'read' ||
+      grant.permissions.includes('admin') ||
+      (member.name === grant.memberName &&
+        (grant.permissions.includes('task.write') || grant.permissions.includes('message.write')))
+    );
   }
 
   /** Synchronous Runtime-fence callback; callers separately authenticate user/admin control. */
@@ -104,7 +127,18 @@ export function createTeamDeliveryAuthority(options: {
     action: 'read' | 'admit' | 'dispatch' | 'control'
   ): boolean {
     try {
-      const state = options.state();
+      return memberAuthorizedInState(options.state(), binding, action);
+    } catch {
+      return false;
+    }
+  }
+
+  function memberAuthorizedInState(
+    state: OwnerState,
+    binding: RuntimeMemberBinding,
+    action: 'read' | 'admit' | 'dispatch' | 'control'
+  ): boolean {
+    try {
       if (
         (action === 'admit' || action === 'dispatch') &&
         !teamExecutionAllowed(state, options.store)
@@ -207,6 +241,11 @@ export function createTeamDeliveryAuthority(options: {
     runtimeAccess,
     authorizeMember,
     authorizeIntent,
+    /** Only TeamOwner's closed synchronous operation supplies this fresh full state. */
+    providerAuthorized: (state: OwnerState, grant: TeamGrant, binding: RuntimeMemberBinding) =>
+      memberAuthorizedInState(state, binding, 'dispatch') &&
+      memberAuthorizedInState(state, binding, 'admit') &&
+      runtimeAccessInState(state, grant, binding, 'control'),
     crossTeamOriginalAuthorized,
     deliveryAuthorized: (intent: DeliveryIntent) =>
       options.store.fenced(() => deliveryAuthorized(intent)),
