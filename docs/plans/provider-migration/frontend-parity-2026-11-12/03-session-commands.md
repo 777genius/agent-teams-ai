@@ -1733,3 +1733,32 @@ Root and independent peer review the narrow source delta. Existing coherent
 Host test types and the original native command/Desktop gates remain required;
 the unavailable executor supplies no new execution claim. No new test suite or
 native rerun is introduced for this one expected-ID correction.
+
+**R21 follow-up — the same identity mismatch in the existing Desktop command proof.**
+
+The source audit also finds this exact predicate in
+`scripts/legacy-agent-host/desktop-native-commands-ui-proof.ts`
+(preimage `30d0eb3593afb9521c5332ced933a24c819a43b9`, lines314–334).
+Both scripted project-command and review rows use `selected.replyId` as the
+`message_send.commandId` in the existing model helper
+`02068faa82100f8ec765cfb5d192bc8e3e0f2d3b`, lines86–99; neither supplies
+a payload messageId. A successful native reply therefore has the same stable
+Team effect ID described above, not the command-ID literal. This is a proven
+source mismatch in the next Desktop gate, not an observed Desktop result from
+the failed job, which stopped in the earlier native prerequisite.
+
+In this one existing TEST file, import the existing canonical `effectId` helper
+beside its existing Runtime identity import. Read backendId/teamId only from
+the already captured `options.session.binding`, with explicit nonempty string
+assertions before use; do not substitute ambient, default or newly selected
+identities. The single existing loop filter must compare against
+`effectId('message', backendId, teamId, selected.replyId)`. The original
+selected.replyId/model commandId remains unchanged, including its original
+receipt annotation; it is not relabelled as a native message effect ID.
+
+Preserve exact one-row/text, original Composer input/command/receipt,
+main terminal, viewport/reveal, five model requests, reload byte equality,
+no-replay and source/cleanup guards. No extra input, RPC, filesystem read,
+poll, timeout, production file or model response is added. Require independent
+source review and the existing script type/native Desktop gates in normal CI.
+No local execution or native acceptance claim follows from this source edit.
