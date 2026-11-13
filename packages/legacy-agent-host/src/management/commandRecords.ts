@@ -84,6 +84,7 @@ export const storedModelProbeSchema = z
   .object({
     ...common,
     kind: z.literal('model.probe'),
+    purpose: z.literal('native-local-coordination-v1').optional(),
     modelId: id,
     effort: z
       .enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'])
@@ -96,6 +97,7 @@ export const storedModelProbeSchema = z
     ok: z.boolean(),
   })
   .strict()
+  .refine((value) => value.purpose === undefined || value.context !== undefined)
   .refine((value) =>
     value.phase === 'running'
       ? value.resourceHeld && !value.ok
