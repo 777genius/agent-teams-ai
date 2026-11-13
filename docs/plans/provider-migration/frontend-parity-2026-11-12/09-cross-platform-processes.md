@@ -2955,3 +2955,61 @@ peer, local compiler и actual Linux/Darwin native outcomes отмечаются
 results и отсутствующим declaration header. **R2:** выбран fixed-size
 fail-closed original pipe без изменения custody/primitive. **R3:** peer,
 source и compile/native execution новой редакции ещё pending.
+
+
+## 58. Genuine old Claude corpus qualified; keep the current archive pin coherent
+
+**Actual evidence.** Parity head `9ea802cc0f8c873c8349512cb010fe54e34fdd70`,
+[run43420487453, job131868952891](https://github.com/777genius/agent-teams-ai/actions/runs/43420487453/job/131868952891)
+completed the existing genuine-old-checkpoint step successfully on 2026-11-13.
+The assertion result is `CORPUS_QUALIFIED_CURRENT_D_REFUSED`: the unchanged
+1d0 donor produced the original checkpoint, resumed its native history through
+the old owner and completed both original inputs with confirmed cleanup.
+The current public D at that head refused the same checkpoint before all native
+allocation/backing/probe callbacks. The job also checked eleven original model
+observations, exact source/dist/archive/native identities and unchanged frozen
+checkpoint/profile/launch/native-prefix digests. Compiled old/current entry
+equality was true. This is a qualified old corpus and strict refusal; it does not
+establish the ordinary current Main owner route or positive old-to-current Resume.
+
+Artifact14036966833 has archive SHA256
+`a3e16a7cd4f0100d41de2e8c24bac7655cd7e225bdbe54fbd3623c37ecd1a4ab`.
+The job log and exact assertion source were read. The downloaded archive's
+contained payload has not been independently unpacked in the currently
+unavailable executor; no claim of that additional inspection is made.
+
+### R1 — narrow integration mismatch found before the next run
+
+R20 already changed the owning package dependency to the checked immutable
+`claude-review-3b39a50b` archive, SHA256
+`f2514f0bec64a2da36511595fe2d6c67d9cbaa6e0da865a65375c2d7c7fe39a2`.
+Two existing TEST assertions still demand the previous current archive
+`73c7034aef1283ee694114d2a31d12383370286b45c18120958ca0edef789957`:
+`CURRENT_SHA256` in `packages/legacy-agent-host/tests/native-claude-host.native.ts`
+(preimage `9d1edf7a60d7ceb6494a0df0ed53fc880d90d6a9`) and the matching current-provider
+assertion in the existing genuine-corpus step of `.github/workflows/ci.yml`
+(parent preimage `0eab99cf8121dec4de96678b9fa1679eba27b4d3`).
+The queued 7ce run has not reached this step; this mismatch is established from
+its exact source, not presented as an observed CI failure.
+
+### R2 — smallest correction and preservation
+
+Replace exactly these two current archive literals with the checked 3b39 digest.
+Keep the explicit equality, original donor commit/archive/contracts/native pins,
+strict current-D refusal, immutable corpus checks, zero-allocation assertions,
+both original inputs, eleven requests, cleanup, job conditions and budgets.
+No provider code, checkpoint hash algorithm, opaque payload, owner binding,
+installed archive or dependency lock changes belong to this correction.
+Root composes the workflow edit separately into the qualification child so its
+existing child-only CI obligations remain byte-preserved.
+
+### R3 — verification and remaining compatibility work
+
+Independent review checks both literal replacements against the already
+verified immutable package receipt and the exact current package dependency.
+No new unit test is useful for this pin-only correction. The existing canonical
+Host-script typecheck and genuine corpus/current Desktop Resume CI on the
+updated head remain required. The previous 9ea success does not qualify 3b39.
+The §39 compatibility rule and ordinary current-Main transition remain open;
+no boolean legacy-hash escape, checkpoint rewrite or automatic migration is
+authorized by this evidence. Publish this amendment before either source edit.
