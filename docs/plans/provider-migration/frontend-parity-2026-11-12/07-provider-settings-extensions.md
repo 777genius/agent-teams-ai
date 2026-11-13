@@ -1881,3 +1881,196 @@ guard when execution is available. These route checks do not simulate completed
 vendor OAuth and cannot replace the existing native/account/Desktop acceptance.
 No new test suite, login retry, CI job/matrix, timeout or model input is added.
 Root publishes this amendment after independent review and before source edits.
+
+
+## Review 28 — bounded parallel final observations and original V2 read-failure evidence
+
+### R1 — exact failures and the limited causal claim
+
+The original parity head is 7ce224d148205867d46fd2ca980a48e1b9e8c48b,
+V2 preflight run 43440481760. The source Host embedded journey failed at
+opencode-v2-embedded-host.native.ts:321 in Windows x64 job 131936500078,
+Darwin x64 job 131936500162 and Windows ARM64 job 131936500721.
+Each original receipt proves native readiness/context applied, exactly four
+model requests and no model-fixture failures. The fourth response is the
+original shell action after task create/assign/start; neither a second input
+nor a replacement model request is authorized by these failures.
+
+Windows x64 and Darwin x64 subsequently expose observe-ended, input unknown
+and nativeReady=false. Their passive streams reach the first turn's
+session/log/message-pages/log/session sequence, then the original child stdin
+closes before the Host stdin closes. Windows ARM64 instead reaches only the
+first session/log observations before its outer original 90-second input wait
+expires; its last snapshot remains nativeReady=true, input consumed and no
+interaction. Host EOF then precedes its child EOF/exit0. Darwin ARM64 job
+131936500457 passes the same embedded journey; its total 262613 ms is not a
+per-phase measurement or proof that the other failures have one cause.
+
+D gives one 30-second deadline to the whole finite native cut. The x64 timings
+are consistent with that first read exhausting its budget before permission
+observation, but the original receipts omit the exact internal read-failure
+code. This remains an inference. The CPU projection covers the whole original
+Host including cleanup and does not establish which guard caused one failure.
+Immutable triage summary b8f798e2eec7fd266afb66f1865cb5ecc988cdf1 retains the
+four original log blobs and serialized receipt hashes.
+
+Linux job 131936500382 passes embedded execution and fails model-probe catalog
+line360 after the unknown variant was refused/cancelled. Its new metadata
+owner is independent and outside this sequencing change. Successful metadata
+HTTP200 observations in the three embedded receipts do not supply the missing
+Linux catalog receipt or explain its held result. Its original artifact
+14049208353 is downloaded but not extracted while the executor is unavailable.
+
+### R2 — exact four-file scope and retained admission
+
+D repository agent-teams-ai/old-provider-implementations is based on
+3b39a50b28319a3e91e0779493f0d64acb98d2e5. F preimages below are unchanged from
+7ce224d148205867d46fd2ca980a48e1b9e8c48b at the current candidate publication.
+
+| Repository and path | Exact preimage | Planned delta |
+| --- | --- | --- |
+| D packages/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.ts | 82cb9edd7ab3ca966ec0fcdeeadeb9e773685853 | Parallel final pair with original cleanup; closed failure-only diagnostic |
+| D packages/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-native-cut.test.ts | 4e16b541c355700202332e6d4d04119c3843712a | Existing finite HTTP, changed-history and cancellation cases |
+| F packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts | e2e8dd4c341a0a41a4fb2c841e2c8e80a8949ab4 | Subscribe/project one private fixed read-failure event into the same original receipt |
+| F packages/legacy-agent-host/tests/native-host-close.test.ts | 365a1024743547886f52090b245c51501f3f432f | Extend the existing sole finite synthetic child/privacy case |
+
+Read-only D anchors: v2-driver-backend.ts 942e3ecca79bec1bf0b0009427703fa54dbe8140;
+driver-session.ts 414227660d319ae09e3d5095e54bbbad2ef57061;
+v2-turn-projection.ts f1620b146f4ea02f807aed3c3ea32c5f503a44ae;
+v2-session-control.ts d1afd3c30bf2f36bbbce3cfcce323de55e9487a0;
+v2-bounded-await.ts 86c04808f56a21ecf67d7ae9582e360233f49bde.
+F OpenCodeV2MemberProvider.ts 89f2eb8711025416f7afd07727ed62fcd4ad3dad
+retains original observer cleanup. RuntimeOwner's observe-ended projection
+and public Runtime/IPC/status contracts are unchanged.
+
+The first session GET/decode remains strictly before the first log GET.
+The existing foreign-workspace/flat-envelope case explicitly requires exactly
+one request, zero log reads and zero message pages on that refusal. Therefore
+the suggested parallel before-session/before-log pair is rejected: it would
+move log access ahead of the established binding validation.
+
+Retain this order:
+1. Validate/snapshot original supplied binding and input; create the same
+   single 30-second cut deadline and shared physical-byte ledger.
+2. Read and validate the initial session, then the initial full log.
+3. Read every original message page serially, using the original pin-specific
+   first-page order and exact returned cursor chain through its terminal page.
+4. Only after complete pagination start the existing final log and final
+   session reads together, with at most two reads outstanding.
+5. Join both results and run both existing complete canonical comparisons
+   against the before-log/before-session snapshots before returning any cut.
+   Neither final result independently authorizes publication.
+
+This removes one proven serial dependency. It does not reduce current,
+credential or custody checks, skip history, cache mutable selection, create a
+new owner/transport, or resolve the Windows ARM64 initial-read delay.
+All original HTTP/media/location/session checks, 8 MiB response and 32 MiB
+aggregate physical-byte bounds, chunk bounds, eight pages, 1600 messages and
+4096-event projection limit remain. The deadline is not renewed per sibling,
+page, retry or cleanup.
+
+A cut-local abort scope joins the final siblings to the same original signal.
+A first rejection or revocation aborts its sibling and joins both bounded
+original read promises through allSettled before returning failure.
+Already-started underlying transport/body custody retains existing cancellation,
+late-response disposal and UNKNOWN semantics. Late sibling success cannot
+replace the original refusal; unconfirmed sibling cleanup cannot become clean
+invalidity/completed evidence. A cleanup-unknown result takes precedence over
+a merely invalid snapshot. The same byte ledger accounts for both bodies.
+There is no detached read, successor-epoch delivery or added cleanup allowance.
+
+PendingPermissions stays after a complete qualified turn. Its source names an
+assistant message and tool ID, not independently the submitted input. Emitting
+an interaction therefore still requires full original delivery interval,
+input/attachment match, assistant lineage and running-tool join. There is no
+early permission emit/prefetch, implicit grant, always-rule, extra prompt,
+second input or unknown-to-success fallback. Changed cuts use only existing
+bounded observation behavior, never effect replay.
+
+### R3 — explicit failure-only observation, without control policy
+
+Current D driver-session catches a failed original read and seals unknown;
+F's existing child/Undici observer cannot recover the discarded inner stage.
+The same D native-cut file may publish one fixed private diagnostics_channel
+event for a terminal failed cut. It does not publish on success or the ordinary
+mutable_native_readback path that the existing driver treats as a pending
+observation. The channel is an observation only, not a public Session method,
+Runtime event, injectable callback, return status or authority/recovery input.
+
+The payload consists only of:
+- a closed stage selected at the original call site: initial session, initial
+  log, message pagination, final log, final session, comparison or admission;
+- a closed reason projected from known internal failure codes, including
+  deadline, cleanup unknown, invalid response/binding/envelope/transcript,
+  existing byte/frame limits and an unknown fallback;
+- capped elapsed milliseconds and literal deadlineExpired/aborted booleans.
+
+Capture these facts at the original failure point before error translation,
+self-abort or cleanup can confuse their meaning. Concurrent final failures keep
+their own lexical stage; a mutable shared last-stage variable is insufficient.
+After both original final promises are joined, publish only the selected
+terminal failure projection, then preserve the existing outward error/UNKNOWN
+semantics. DeadlineExpired is a measured comparison with the original cut
+deadline, not an assertion that every failure after that time was caused by it.
+
+No original error object, raw message, cause, stack, session/input/tool ID,
+URL/path, body, header, credential or native payload enters the channel.
+Construct a fixed primitive projection; never spread an error or source object.
+No subscriber means no receipt publication. The TEST subscriber must remain
+non-throwing and reject invalid/accessor-shaped data; diagnostics must not
+execute native work or replace the original failure/cleanup.
+
+The existing F preload subscribes within its original source-Host setup and
+projects the fixed event into the same TEST_OPENCODE_V2_DIAGNOSTIC stream.
+The receipt parser projects it again. Retain the existing 256-event plus
+trace-limit allowance, 512-byte row bound, 64 KiB input buffer and captured
+Host epoch. The new event consumes that same cap; no separate telemetry store,
+raw log, new runner/job/matrix, timing budget or inference request is added.
+A synthetic channel publication is only a privacy/format check; the next
+ordinary candidate run must supply any actual native failure observation.
+
+Primary platform source for this observation is Node v24.21.0
+https://github.com/nodejs/node/blob/v24.21.0/lib/diagnostics_channel.js .
+Inactive channel publish is a no-op; active subscribers execute synchronously.
+Because subscriber exceptions are not an authority-safe error channel, the
+existing TEST observer collects bounded data without assertions/throws inside
+its callback. No Node-level channel error handling is altered.
+
+### R4 — existing critical coverage and honest acceptance
+
+Extend the existing successful finite-HTTP case with a deterministic final
+pair barrier: the final log is not released until the final session read has
+actually started. Assert both start after the last message page, total requests
+remain the original six, and full cut/provider facts remain unchanged.
+This is controlled concurrency proof, not a sleep-based latency threshold.
+
+Preserve the exact one-GET foreign/flat initial refusal. Extend changed-history
+coverage to complete the final sibling independently and still reject any
+changed log/session without publishing a partial result. Extend existing
+cancellation/late-response coverage to prove failing/revoked final siblings
+settle under the original signal, readers are cancelled/released where
+observable, and unconfirmed late fetches remain UNKNOWN. Within these cases,
+check one closed terminal diagnostic and zero events for ordinary mutable-cut
+observation; raw injected payloads remain absent.
+
+Extend the existing sole failed-Node-child case with explicitly synthetic
+private channel records: valid fixed fields survive, unknown fields/IDs/raw
+token/path/stack and invalid primitive shapes do not, and the original exit1,
+CPU evidence, all R26 observations and close/cleanup assertions remain.
+No new test suite or normal-test real provider is introduced.
+
+Obtain root and independent plan review before source. After implementation
+run existing D native-cut, driver-native, driver-session and factory coverage
+plus normal pnpm check under the repository's exact Node/PNPM pins. Run F's
+existing native-host-close case and canonical affected type/lint gates.
+If the executor is unavailable, required checks stay pending and run in normal
+candidate CI before final acceptance/upward merge; source-only publication is
+not a PASS. No required guard/test is waived.
+
+Only root publishes reviewed source and any later verified D archive consumer
+update. Installed D dist must match its checked archive through the existing
+artifact verifier before F's ordinary native gate qualifies the candidate.
+Keep existing matrix, per-gate budgets, model counts, original child/capture
+identities, permission/interrupt/checkpoint/cleanup and failure assertions.
+Source review and controlled concurrency do not establish native success;
+current actual failures remain until coherent-head execution supplies proof.

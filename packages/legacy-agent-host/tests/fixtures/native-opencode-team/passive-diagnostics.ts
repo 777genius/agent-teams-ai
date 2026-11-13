@@ -9,7 +9,7 @@ const prefix = 'TEST_OPENCODE_V2_DIAGNOSTIC ';
 const maximum = 256;
 const events = ['child-spawn', 'child-ready', 'child-failed', 'child-exit', 'child-output-limit',
   'child-input-ended', 'host-input-ended', 'request', 'request-send-headers', 'request-body-sent',
-  'response', 'response-end', 'request-error', 'trace-limit'] as const;
+  'response', 'response-end', 'request-error', 'read-cut-failed', 'trace-limit'] as const;
 const routes = ['info', 'session-create', 'session-read', 'instructions', 'permissions', 'plugins',
   'mcp', 'log', 'prompt', 'provider-catalog', 'model-catalog', 'model-default', 'integration-read',
   'integration-connect', 'credential-remove', 'other-api'] as const;
@@ -24,6 +24,29 @@ const choice = <T extends string>(value: unknown, allowed: readonly T[]): T | nu
   typeof value === 'string' && allowed.includes(value as T) ? value as T : null;
 const integer = (value: unknown, max = 3_600_000): number | null =>
   typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= max ? value : null;
+
+const readCutStages = ['before-session', 'before-log', 'messages', 'after-log', 'after-session', 'comparison'] as const;
+const readCutReasons = ['deadline', 'cleanup_unknown', 'native_read_cleanup_unknown', 'invalid_native_read_response',
+  'invalid_native_read_json', 'native_session_binding_mismatch', 'invalid_native_envelope', 'invalid_native_page',
+  'invalid_native_model', 'invalid_native_position', 'invalid_native_identity', 'incomplete_native_log',
+  'incomplete_native_transcript', 'native_cut_byte_budget', 'frame_limit', 'body_limit', 'transport_failure',
+  'authority_mismatch', 'disposed', 'media_type', 'http_failure', 'unknown'] as const;
+
+/** The private D channel carries only fixed data; never execute a diagnostic getter. */
+function projectReadCutFailure(value: unknown) {
+  try {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const own = (key: string): unknown => {
+      const field = Object.getOwnPropertyDescriptor(value, key);
+      return field && 'value' in field ? field.value : undefined;
+    };
+    const stage = choice(own('stage'), readCutStages), reason = choice(own('reason'), readCutReasons);
+    const elapsedMs = integer(own('elapsedMs'), 60_000), deadlineExpired = own('deadlineExpired'), aborted = own('aborted');
+    if (!stage || !reason || elapsedMs === null || typeof deadlineExpired !== 'boolean' || typeof aborted !== 'boolean')
+      return undefined;
+    return { stage, reason, elapsedMs, deadlineExpired, aborted };
+  } catch { return undefined; }
+}
 
 /** Project again at the receipt boundary; native text/IDs/credentials are never retained. */
 export function createPassiveNativeDiagnosticCapture() {
@@ -41,12 +64,15 @@ export function createPassiveNativeDiagnosticCapture() {
           const value = record(JSON.parse(line.slice(prefix.length)) as unknown);
           const event = choice(value.event, events), atMs = integer(value.atMs);
           if (!event || atMs === null) continue;
+          const failedCut = event === 'read-cut-failed' ? projectReadCutFailure(value) : undefined;
+          if (event === 'read-cut-failed' && !failedCut) continue;
           entries.push({ epoch, event, atMs, child: integer(value.child, 5), request: integer(value.request, 4096),
             route: choice(value.route, routes), method: choice(value.method, ['GET', 'POST', 'PUT', 'DELETE']),
-            durationMs: integer(value.durationMs), status: integer(value.status, 599),
+            durationMs: failedCut?.elapsedMs ?? integer(value.durationMs), status: integer(value.status, 599),
             contentEncoding: choice(value.contentEncoding, contentEncodings),
-            stage: choice(value.stage, stages), code: choice(value.code, codes),
-            exitCode: integer(value.exitCode, 255), signal: choice(value.signal, signals) });
+            stage: failedCut?.stage ?? choice(value.stage, stages), code: failedCut?.reason ?? choice(value.code, codes),
+            exitCode: integer(value.exitCode, 255), signal: choice(value.signal, signals),
+            ...(failedCut ? { deadlineExpired: failedCut.deadlineExpired, aborted: failedCut.aborted } : {}) });
         } catch { /* Other Host diagnostics are deliberately not retained. */ }
       }
     },
@@ -263,6 +289,12 @@ function observeOriginalHost(): void {
       ...(emitted++ === maximum ? { event: 'trace-limit' } : value) }) + '\n');
   };
   process.stdin.once('end', () => emit({ event: 'host-input-ended' }));
+  channel('agent-teams:opencode-v2:read-cut-failed').subscribe(message => {
+    try {
+      const failure = projectReadCutFailure(message);
+      if (failure) emit({ event: 'read-cut-failed', ...failure });
+    } catch { /* A passive TEST subscriber cannot replace native failure/cleanup. */ }
+  });
   const childEntry = fileURLToPath(new URL('../../../dist/adapters/providers/OpenCodeV2EmbeddedChild.js', import.meta.url));
   channel('child_process').subscribe(message => {
     const child = record(message).process as ChildProcess | undefined;
