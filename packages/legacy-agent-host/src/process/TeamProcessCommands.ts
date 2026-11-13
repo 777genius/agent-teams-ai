@@ -95,6 +95,14 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
       return refuse('hold');
     return row;
   };
+  const observeOriginal = (capture: RegisteredProcessCapture, receipts = processReceipts()) => {
+    // A completed native exit observation remains true after an owner-local pidfd is gone.
+    // Requested/accepted signals and metadata stops are never absence evidence.
+    const terminal = receipts.some(receipt => receipt.operation === 'terminate' &&
+      receipt.state.phase === 'completed' && receipt.state.native === 'observed-absent' &&
+      digest(receipt.capture) === digest(capture));
+    return terminal ? 'absent' : options.native?.observe(capture) ?? 'unknown';
+  };
   const ref = (row: TeamProcessRow) => `p1:${row.id}:${digest({ binding: options.binding, row })}`;
   const view = (row: TeamProcessRow, completing?: ProcessCommandReceipt): TeamProcessView => {
     const { capturedNative, capturedByCommand } = row;
@@ -125,18 +133,21 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
       )
         return refuse('hold');
     }
+    const receipts = capturedNative ? processReceipts() : [];
     const observation =
-      capturedNative && options.native
-        ? options.native.observe(capturedNative)
+      capturedNative
+        ? observeOriginal(capturedNative, receipts)
         : row.stoppedAt
           ? 'metadata-stopped'
           : 'unknown';
     const unresolved = capturedNative
-      ? processReceipts().filter(
+      ? receipts.filter(
           (receipt) =>
             receipt.operation === 'terminate' &&
             receipt.state.phase === 'requested' &&
-            digest(receipt.capture?.target) === digest(capturedNative.target)
+            (capturedNative.version === 4
+              ? digest(receipt.capture) === digest(capturedNative)
+              : digest(receipt.capture?.target) === digest(capturedNative.target))
         )
       : [];
     if (unresolved.length > 1) return refuse('hold');
@@ -216,9 +227,8 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
         const captures = new Map<string, RegisteredProcessCapture>();
         for (const row of rows) { view(row); if (row.capturedNative) captures.set(digest(row.capturedNative), row.capturedNative); }
         for (const receipt of receipts) if (receipt.capture) captures.set(digest(receipt.capture), receipt.capture);
-        if (captures.size && !options.native) return refuse('hold');
         for (const capture of captures.values()) {
-          const observed = options.native!.observe(capture);
+          const observed = observeOriginal(capture, receipts);
           if (observed !== 'absent' && observed !== 'stale') return refuse('hold');
         }
         options.assertCurrent();
@@ -407,7 +417,7 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
           receipt.state.phase === 'requested' &&
           receipt.capture &&
           receipt.original &&
-          options.native?.observe(receipt.capture) === 'absent'
+          observeOriginal(receipt.capture) === 'absent'
         ) {
           enter('admin');
           // Completion observes only the immutable original incarnation. Metadata changes

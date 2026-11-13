@@ -62,7 +62,7 @@ export function buildLinuxProcessNativeArtifact(input: {
   });
   validate();
   const manifest = { schemaVersion: 1, abi: 'napi-8', platform: 'linux', architecture: 'x64',
-    kernelCapability: 'pidfs-inode64-v1', buildKernelRelease: release(),
+    kernelCapability: 'pidfd-live-v1', buildKernelRelease: release(),
     libc: { family: 'glibc', minimumVersion: requiredVersions.at(-1)! }, library: 'registered-process.node',
     sourceSha256: input.sourceSha256, binarySha256: hash(library), compilerSha256: input.compilerSha256,
     inspectorSha256: input.inspectorSha256, headers: input.headers };

@@ -58,6 +58,7 @@ int wmain(int argc,wchar_t** argv) {
     auto result=WaitForSingleObject(process,vendorHeld?INFINITE:15000); CloseHandle(process);
     return result==WAIT_OBJECT_0?0:25;
   }
+  if(mode==L"exit-fast") return 0;
   if(mode==L"leaf") { Sleep(vendorHeld?INFINITE:60000); return 0; }
   if(mode==L"sentinel") { std::puts("sentinel"); std::fflush(stdout); Sleep(vendorHeld?INFINITE:60000); return 0; }
   if(mode==L"selection") {
@@ -128,6 +129,18 @@ int wmain(int argc,wchar_t** argv) {
   const bool branch=mode==L"branch"||mode==L"branch-first";
   if(!branch) std::printf("{\"root\":{\"pid\":%lu,\"birth\":\"%016llx\"}}\n",
     GetCurrentProcessId(),static_cast<unsigned long long>(birth(GetCurrentProcess())));
+  if(mode==L"service-pair") {
+    // Sequential original HANDLE exits exceed the debug registry's64 live cap.
+    // This is cumulative churn, never80 simultaneously owned live children.
+    for(DWORD index=0;index<80;++index) {
+      auto transient=child(executable,L"exit-fast");
+      DWORD code=MAXDWORD;
+      const bool exited=WaitForSingleObject(transient.hProcess,5000)==WAIT_OBJECT_0&&
+        GetExitCodeProcess(transient.hProcess,&code)!=FALSE;
+      if(!CloseHandle(transient.hProcess)||!exited||code!=0) return 53;
+    }
+    std::puts("{\"retiredChildren\":80}"); std::fflush(stdout);
+  }
   const std::wstring branchMode=mode==L"service-first"
     ? L"branch-first \""+std::wstring(argv[2])+L".branch-release\"" : (vendorHeld?L"vendor-branch":L"branch");
   const std::wstring leafMode=vendorHeld?L"vendor-leaf":L"leaf";

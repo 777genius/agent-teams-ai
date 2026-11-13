@@ -1,6 +1,7 @@
 import type {
   DarwinProcessIdentity,
   LinuxProcessIdentity,
+  LinuxWarmProcessIdentity,
   ProcessCommandReceipt,
   RegisteredProcessCapture,
   TeamProcessRow,
@@ -27,24 +28,41 @@ function identity(value: DarwinProcessIdentity) {
   )
     hold();
 }
-function linuxIdentity(value: LinuxProcessIdentity) {
+function linuxIdentity(value: LinuxProcessIdentity | LinuxWarmProcessIdentity, durable = true) {
   const decimal = (part: unknown) => typeof part === 'string' && /^[1-9]\d{0,19}$/.test(part) &&
     BigInt(part) <= 0xffffffffffffffffn;
   if (!value || !Number.isSafeInteger(value.pid) || value.pid <= 1 || value.pid > 0x7fffffff ||
       !Number.isSafeInteger(value.sessionId) || value.sessionId <= 1 || value.sessionId > 0x7fffffff ||
-      !decimal(value.pidfdId) || !decimal(value.pidNamespaceId) ||
+      (durable ? !('pidfdId' in value) || !decimal(value.pidfdId) : 'pidfdId' in value) ||
+      !decimal(value.pidNamespaceId) ||
       !text(value.bootId) || !/^[a-f0-9-]{36}$/i.test(value.bootId)) hold();
 }
 export function validateProcessCapture(capture: RegisteredProcessCapture): void {
   if (
     !capture ||
-    (capture.version !== 1 && capture.version !== 2 && capture.version !== 3) ||
+    (capture.version !== 1 && capture.version !== 2 && capture.version !== 3 && capture.version !== 4) ||
     !capture.registrar ||
     !['backendId', 'teamId', 'runId', 'memberId', 'generation'].every((key) =>
       text(capture.registrar[key as keyof typeof capture.registrar])
     )
   )
     hold();
+  if (capture.version === 4) {
+    const uuid = (value: unknown) => typeof value === 'string' &&
+      /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value);
+    if (capture.platform !== 'linux' || capture.admission !== 'owner-pidfd-v1' ||
+        !uuid(capture.ownerInstance) || !uuid(capture.captureKey) ||
+        Object.keys(capture.registrar).sort().join(',') !== 'backendId,generation,memberId,runId,teamId' ||
+        Object.keys(capture).sort().join(',') !==
+          'admission,captureKey,ownerInstance,platform,registrar,root,target,version') hold();
+    linuxIdentity(capture.root, false); linuxIdentity(capture.target, false);
+    for (const identity of [capture.root, capture.target])
+      if (Object.keys(identity).sort().join(',') !== 'bootId,pid,pidNamespaceId,sessionId') hold();
+    if (capture.root.sessionId !== capture.root.pid || capture.root.pid === capture.target.pid ||
+        capture.root.bootId !== capture.target.bootId ||
+        capture.root.pidNamespaceId !== capture.target.pidNamespaceId) hold();
+    return;
+  }
   if (capture.version === 3) {
     if (capture.platform !== 'linux') hold();
     linuxIdentity(capture.root); linuxIdentity(capture.target);
@@ -92,7 +110,8 @@ export function validateProcessRow(row: TeamProcessRow): TeamProcessRow {
     const capture = row.capturedNative;
     if (!capture || !text(row.capturedByCommand)) return hold();
     validateProcessCapture(capture);
-    if ((capture.version === 3 ? capture.target.pid : capture.target.auditToken[5]) !== row.pid) hold();
+    const pid = capture.version === 3 || capture.version === 4 ? capture.target.pid : capture.target.auditToken[5];
+    if (pid !== row.pid) hold();
   }
   return row;
 }

@@ -87,6 +87,8 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
     await request(Op.resume, Op.resumed, Buffer.alloc(0));
     phase('child-lines');
     await waitFor(() => output.children.length === 4 && output.childrenOf(rootPid).length === 2, 10000, events);
+    if (mode === 'service-pair') assert.ok(text.includes('{"retiredChildren":80}'),
+      'actual cumulative child churn exceeded64 without exhausting live scope custody');
     const [service, neighbor] = output.childrenOf(rootPid);
     assert.ok(service && neighbor);
     assert.equal(output.childrenOf(service.pid).length, 2, 'Selected service already has descendants before registration');
@@ -115,10 +117,23 @@ export async function nativeDebugServiceScenario(context: GateContext, debugBrok
     assert.equal(stopped.payload.readBigUInt64LE(10), BigInt(`0x${service.birth}`));
     assert.equal(stopped.payload.readUInt32LE(18), 0);
     assert.equal(stopped.payload.readUInt32LE(22), 0);
-    assert.deepEqual((await request(Op.stop, Op.stopped, selected, stopId)).payload, stopped.payload,
-      'Lost ACK replay returns the exact original response without new native dispatch');
     phase('witness-exits');
     assert.deepEqual(await timeout(events.wait(Promise.all(serviceWitnesses.map(value => value.exit)))), [0, 0, 0]);
+    const retire = Buffer.from(selected);
+    retire.writeUInt32LE(0); retire[4] = 3;
+    const retired = await request(Op.stop, Op.stopped, retire);
+    assert.equal(retired.payload.length, 34);
+    assert.equal(retired.payload[0], 3);
+    assert.equal(retired.payload[1], 1);
+    assert.equal(retired.payload.readUInt32LE(2), 0);
+    assert.equal(retired.payload.readBigUInt64LE(10), BigInt(`0x${service.birth}`));
+    assert.equal(retired.payload.readUInt32LE(18), 0);
+    assert.equal(retired.payload.readUInt32LE(22), 0);
+    assert.ok(retired.payload.readBigUInt64LE(26) > (mode === 'service-pair' ? 64n : 0n),
+      'scope keys never restart or alias after cumulative native retirement');
+    assert.deepEqual((await request(Op.stop, Op.stopped, selected, stopId)).payload, stopped.payload,
+      'original ACK remains replayable after its native scope retired, without recapture');
+    await request(Op.stop, Op.failed, selected); // New request cannot reacquire a retired PID/birth.
     assert.equal(adjacent.process.exitCode, null, 'Other service original HANDLE remains unsignaled');
     assert.equal(root.process.exitCode, null, 'Provider original HANDLE remains unsignaled');
     assert.equal(sentinel.exitCode, null);

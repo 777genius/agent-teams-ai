@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { closeSync, openSync } from 'node:fs';
-import { cp, lstat, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { closeSync, constants, openSync } from 'node:fs';
+import { cp, lstat, mkdir, open, readFile, realpath, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { treeHash } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
@@ -25,6 +25,36 @@ async function pinned(value: unknown, maximum = 512 * 1024 * 1024) {
   assert.ok(info.isFile() && !info.isSymbolicLink() && info.size > 0 && info.size <= maximum);
   assert.equal(await realpath(path), path); assert.equal(await fileDigest(path), sha256);
   return { path, sha256 };
+}
+
+
+/** Failure-only source coordinates from the original TEST receipt; never raw child output. */
+async function failureSource(fixtureRoot: string | undefined, output: string) {
+  const unavailable = { kind: 'unavailable' as const, frames: [] };
+  if (!fixtureRoot || !fixtureRoot.startsWith(join(output, 'tmp') + '/') ||
+    !/^TEST-desktop-backend-[A-Za-z0-9]+$/u.test(fixtureRoot.slice(fixtureRoot.lastIndexOf('/') + 1))) return unavailable;
+  let file: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    if (await realpath(fixtureRoot) !== fixtureRoot) return unavailable;
+    file = await open(join(fixtureRoot, 'desktop-backend-receipt.json'), constants.O_RDONLY | constants.O_NOFOLLOW);
+    const info = await file.stat();
+    if (!info.isFile() || info.nlink !== 1 || info.size < 1 || info.size > 8 * 1024 * 1024) return unavailable;
+    const bytes = Buffer.alloc(info.size);
+    if ((await file.read(bytes, 0, bytes.length, 0)).bytesRead !== bytes.length) return unavailable;
+    const receipt = row(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)));
+    if (receipt.mode !== 'process-cold-ui') return unavailable;
+    const source = row(receipt.failureSource), kind = text(source.kind);
+    if (!['assertion', 'error', 'unclassified'].includes(kind) ||
+      !Array.isArray(source.frames) || source.frames.length > 6) return unavailable;
+    const frames = source.frames.map(value => {
+      const frame = text(value), match = /^(.+):([1-9]\d{0,5}):([1-9]\d{0,5})$/u.exec(frame);
+      assert.ok(match && /^(?:scripts\/legacy-agent-host\/|packages\/legacy-agent-host\/(?:src|dist|tests)\/)[A-Za-z0-9._/-]+\.(?:[cm]?[jt]s)$/u.test(match[1]!) &&
+        !match[1]!.split('/').some(part => part === '.' || part === '..') && desktopProofSources.includes(match[1]!));
+      return frame;
+    });
+    return { kind, frames };
+  } catch { return unavailable; }
+  finally { await file?.close().catch(() => undefined); }
 }
 
 /** Real cold Host/ProcessesSection positive Stop, separate from the completed genuine SDK window. */
@@ -176,6 +206,7 @@ export async function qualifyLinuxProcessColdUi(input: {
     proof.packagedClaim = packed !== undefined && !failure;
     proof.log = { path: logPath, sha256: await fileDigest(logPath) };
     await writeFile(receiptPath, JSON.stringify(proof, null, 2), { mode: 0o600 });
+    if (failure) console.error(JSON.stringify({ kind: 'TEST_LINUX_COLD_UI_FAILURE', source: await failureSource(fixtureRoot, output) }));
     console.log(JSON.stringify({ root: output, receipt: receiptPath, status: proof.status }));
   }
   if (failure) throw failure;

@@ -17,6 +17,9 @@ on:
       - 'packages/legacy-agent-host/native/registered-process-linux.c'
       - 'packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts'
       - 'packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts'
+      - 'packages/legacy-agent-host/scripts/qualifyLinuxProcessAbi.ts'
+      - 'packages/legacy-agent-host/scripts/qualifyLinuxProcessAbiHost.ts'
+      - 'tsconfig.legacy-agent-host-scripts.json'
       - 'packages/legacy-agent-host/tests/registered-process-linux.native.mjs'
       - 'packages/legacy-agent-host/tests/fixtures/registered-process-actor.c'
       - 'packages/legacy-agent-host/tests/fixtures/registered-process-parent.ts'
@@ -231,9 +234,65 @@ jobs:
         uses: actions/upload-artifact@v7.0.1
         with:
           name: registered-linux-x64-${{ github.event.pull_request.head.sha || github.sha }}
-          path: native-evidence
+          path: |
+            native-evidence
+            /tmp/TEST-linux-pidfd-*/proof.ndjson
+            /tmp/TEST-linux-pidfd-*/original-capture.json
           if-no-files-found: error
           retention-days: 14
+  linux-abi:
+    if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
+    name: registered ABI (linux x64 glibc2.28 and older kernel)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    env:
+      EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: pnpm/action-setup@v6.1.0
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Bind source and build existing Host contracts
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          mkdir -p native-abi-evidence
+          git rev-parse HEAD > native-abi-evidence/source-sha.txt
+          node ./scripts/ci/install-dependencies-with-retry.mjs
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm typecheck:legacy-host-scripts
+          node --test packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24.21.0
+      - name: Same native artifact in glibc2.28 and actual older kernel
+        env:
+          LEGACY_REGISTERED_PROCESS_NATIVE_GO: '1'
+        run: |
+          set -euo pipefail
+          node packages/legacy-agent-host/scripts/qualifyLinuxProcessAbiHost.ts "$RUNNER_TEMP/TEST-linux-abi-$GITHUB_RUN_ID" 2>&1 | tee native-abi-evidence/qualification.log
+      - name: Retain resolved image and original ABI receipts
+        if: always()
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/TEST-linux-abi-$GITHUB_RUN_ID"
+          if test -d "$output"; then cp -R "$output" native-abi-evidence/abi; fi
+      - name: Retain exact-source ABI and automatic warm evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: registered-linux-abi-x64-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            native-abi-evidence
+            /tmp/TEST-linux-pidfd-*/proof.ndjson
+            /tmp/TEST-linux-pidfd-*/original-capture.json
+          if-no-files-found: error
+          retention-days: 14
+
   native:
     if: (github.event_name != 'pull_request' || github.event.pull_request.draft != true) && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
     name: owned native (${{ matrix.arch }})

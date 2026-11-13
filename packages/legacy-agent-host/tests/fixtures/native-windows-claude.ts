@@ -7,6 +7,18 @@ import { createClaudeDriverFactory, type ClaudeConfig } from '@agent-teams/provi
 import type { Event, Session } from '@agent-teams/provider-session-contracts';
 import type { ServerResponse } from 'node:http';
 
+export interface NativeWindowsClaudeObservation {
+  phase: 'opening' | 'observing' | 'ready' | 'start' | 'background' | 'continuation' | 'completed';
+  model: { backgroundTool: number; backgroundResult: number; continuation: number;
+    tokenRequests: number; failures: number };
+  events: Record<Event['kind'], number>;
+  unknownKinds: number;
+  diagnostics: { unknownEvent: number; other: number };
+  start: { matchingOperation: number; matchingInput: number; text: number; result: number; succeeded: number };
+  continuation: { matchingOperation: number; matchingInput: number; text: number; result: number; succeeded: number };
+  observerFailed: boolean;
+}
+
 const record = (value: unknown): Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const quote = (value: string) => "'" + value.replaceAll("'", "'\"'\"'") + "'";
@@ -91,7 +103,7 @@ async function vendorModel(options: { command: string; nonce: string }) {
     server.once('error', reject); server.listen(0, '127.0.0.1', done);
   });
   const address = server.address(); assert.ok(address && typeof address !== 'string');
-  return { url: 'http://127.0.0.1:' + address.port, requests, failures,
+  return { url: 'http://127.0.0.1:' + address.port, requests, failures, tokenRequests: () => counts,
     async close() {
       server.closeAllConnections();
       await new Promise<void>((done, reject) => server.close(error => error ? reject(error) : done()));
@@ -103,6 +115,7 @@ export async function runNativeWindowsClaude(options: {
   fixture: string; marker: string; output: string; nonce: string;
   custody: ClaudeConfig['custody'];
   afterBackground(): Promise<void>;
+  observe(snapshot: NativeWindowsClaudeObservation): void;
 }) {
   assert.equal(process.platform, 'win32');
   const systemRoot = process.env.SystemRoot!;
@@ -116,6 +129,7 @@ export async function runNativeWindowsClaude(options: {
   const events: Event[] = [];
   let observation: Promise<void> | undefined, session: Session | undefined, observerFailure: unknown;
   let originalFailure: unknown, cleanup = false;
+  let phase: NativeWindowsClaudeObservation['phase'] = 'opening';
   const cleanupErrors: unknown[] = [];
   try {
     const config: ClaudeConfig = {
@@ -148,6 +162,7 @@ export async function runNativeWindowsClaude(options: {
       sessionId: config.sessionRef, generation: 1, configRevision: config.configRevision,
       requiredCapabilities: ['session.conversation'] })).driver;
     const original = session;
+    phase = 'observing';
     observation = (async () => {
       for await (const event of original.observe()) {
         assert.ok(events.length < 1000);
@@ -155,10 +170,12 @@ export async function runNativeWindowsClaude(options: {
       }
     })().catch(error => { observerFailure = error; });
     assert.equal((await session.checkReadiness()).ok, true, 'Actual SDK readiness completed');
+    phase = 'ready';
     for (const [label, expected] of [
       ['START', 'TEST_WINDOWS_VENDOR_STARTED'], ['CONTINUE', 'TEST_WINDOWS_VENDOR_CONTINUED'],
     ] as const) {
       const operationRef = 'TEST-vendor-' + label, inputId = operationRef + '-input';
+      phase = label === 'START' ? 'start' : 'continuation';
       assert.equal((await session.submit({ inputId, operationRef,
         content: 'TEST_WINDOWS_VENDOR_' + label + ':' + options.nonce })).ok, true);
       const deadline = Date.now() + (label === 'START' ? 35_000 : 7000);
@@ -175,11 +192,41 @@ export async function runNativeWindowsClaude(options: {
         assert.ok(Date.now() < deadline, 'Bounded genuine SDK result');
         await new Promise<void>(done => setTimeout(done, 20));
       }
-      if (label === 'START') await options.afterBackground();
+      if (label === 'START') { phase = 'background'; await options.afterBackground(); }
     }
     assert.deepEqual(model.requests, ['native_background_tool', 'native_background_result', 'same_session_after_scoped_stop']);
+    phase = 'completed';
   } catch (error) { originalFailure = error; }
   finally {
+    // Capture the failure boundary before close can add cancellation/result events.
+    // Only finite counters leave this TEST fixture; payload, paths, IDs and error text stay private.
+    try {
+      const kinds: Record<Event['kind'], number> = {
+        compaction: 0, text: 0, tool: 0, 'tool-result': 0, usage: 0, result: 0, interaction: 0, diagnostic: 0,
+      };
+      for (const kind of Object.keys(kinds) as Event['kind'][])
+        kinds[kind] = events.filter(event => event.kind === kind).length;
+      const count = (label: 'START' | 'CONTINUE') => {
+        const operationRef = 'TEST-vendor-' + label;
+        const matching = events.filter(event => event.operationRef === operationRef);
+        return { matchingOperation: matching.length,
+          matchingInput: events.filter(event => event.inputId === operationRef + '-input').length,
+          text: matching.filter(event => event.kind === 'text').length,
+          result: matching.filter(event => event.kind === 'result').length,
+          succeeded: matching.filter(event => event.kind === 'result' && event.outcome === 'succeeded').length };
+      };
+      const unknownEvent = events.filter(event => event.kind === 'diagnostic' &&
+        event.code === 'unknown-event').length;
+      options.observe({ phase,
+        model: { backgroundTool: model.requests.filter(value => value === 'native_background_tool').length,
+          backgroundResult: model.requests.filter(value => value === 'native_background_result').length,
+          continuation: model.requests.filter(value => value === 'same_session_after_scoped_stop').length,
+          tokenRequests: model.tokenRequests(), failures: model.failures.length },
+        events: kinds, unknownKinds: events.length - Object.values(kinds).reduce((sum, value) => sum + value, 0),
+        diagnostics: { unknownEvent, other: kinds.diagnostic - unknownEvent },
+        start: count('START'), continuation: count('CONTINUE'),
+        observerFailed: observerFailure !== undefined });
+    } catch (error) { cleanupErrors.push(error); }
     try {
       if (session) {
         const closed = await session.close();

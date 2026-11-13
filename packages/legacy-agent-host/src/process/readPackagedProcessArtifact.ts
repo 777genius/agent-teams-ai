@@ -54,14 +54,17 @@ export function readPackagedProcessArtifact(selected: PackagedProcessArtifactSel
   if (!isQualifiedDarwinBuild(artifact.row.osBuild)) return unavailable();
   return { path: artifact.path, sha256: artifact.sha256, osBuild: artifact.row.osBuild };
 }
-export function readPackagedLinuxProcessArtifact(selected: PackagedProcessArtifactSelection) {
+export function readPackagedLinuxProcessArtifact(selected: PackagedProcessArtifactSelection): {
+  path: string; sha256: string; kernelCapability: 'pidfs-inode64-v1' | 'pidfd-live-v1';
+  libc: { family: 'glibc'; minimumVersion: string };
+} {
   const artifact = readManifest(selected, 'linux');
-  const libc = artifact.row.libc;
-  if (process.arch !== 'x64' || artifact.row.kernelCapability !== 'pidfs-inode64-v1' ||
+  const libc = artifact.row.libc, kernelCapability = artifact.row.kernelCapability;
+  if (process.arch !== 'x64' || (kernelCapability !== 'pidfs-inode64-v1' && kernelCapability !== 'pidfd-live-v1') ||
       !libc || typeof libc !== 'object' || !('family' in libc) || libc.family !== 'glibc' ||
       !('minimumVersion' in libc) || typeof libc.minimumVersion !== 'string' ||
       !/^\d{1,2}\.\d{1,3}(?:\.\d{1,3})?$/.test(libc.minimumVersion)) return unavailable();
   return { path: artifact.path, sha256: artifact.sha256,
-    kernelCapability: 'pidfs-inode64-v1' as const,
+    kernelCapability,
     libc: { family: 'glibc' as const, minimumVersion: libc.minimumVersion } };
 }

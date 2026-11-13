@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { createWindowsOwnedLaunchPort, OwnedProcessFacade } from '@agent-teams/legacy-agent-host/owned-process';
 import type { PendingOwnedProcess, PreparedOwnedProcess, ProcessOwner } from '@agent-teams/legacy-agent-host/owned-process';
 import { windowsLaunchSpec } from '../../packages/legacy-agent-host/dist/adapters/providers/WindowsCapturedProcess.js';
-import { runNativeWindowsClaude } from '../../packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts';
+import { runNativeWindowsClaude, type NativeWindowsClaudeObservation } from '../../packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts';
 import { verifyBrokerArchitecture } from '../../scripts/build/buildOwnedProcessBroker';
 import { brokerReleased, capturedWitness, timeout, waitFor } from './nativeGateContext';
 import { createNativeGateEvents } from './nativeGateEvents';
@@ -83,6 +83,7 @@ export async function runNativeVendorGate(debugBroker: string, fixture: string,
   const marker = join(sandbox, 'native-service.started'), outputPath = join(sandbox, 'native-service.jsonl');
   const witnesses: Awaited<ReturnType<typeof capturedWitness>>[] = [];
   let nativeProof: Awaited<ReturnType<typeof runNativeWindowsClaude>> | undefined;
+  let nativeObservation: NativeWindowsClaudeObservation | undefined;
   let scopedProof: Awaited<ReturnType<typeof tap.stopService>> | undefined;
   let originalFailure: unknown, passed = false, cleanup = false;
   const cleanupErrors: unknown[] = [];
@@ -95,6 +96,7 @@ export async function runNativeVendorGate(debugBroker: string, fixture: string,
     phase('actual-sdk-open');
     nativeProof = await runNativeWindowsClaude({ root: sandbox,
       executable: selected.executable.path, bash: selected.bash.path, fixture, marker, output: outputPath, nonce,
+      observe: snapshot => { nativeObservation = snapshot; },
       custody: {
         launch(request) {
           assert.equal(launched++, 0, 'One original native session; no invisible SDK restart');
@@ -180,15 +182,18 @@ export async function runNativeVendorGate(debugBroker: string, fixture: string,
       sourceHead: process.env.EXPECTED_SOURCE_SHA, platform: 'win32-' + process.arch, nodeVersion: process.version,
       status: passed && cleanup && originalFailure === undefined ? 'PASS' : 'INCOMPLETE',
       digests, nativePackageVersion: selected.version, officialArchiveIntegrity: selected.integrity,
-      nativeRequests: nativeProof?.requests ?? [], nativeFailures: nativeProof?.failures ?? [],
+      nativeRequests: nativeProof?.requests ?? [], nativeFailures: nativeProof?.failures ?? [], nativeObservation,
       oneOriginalSession: launched === 1, installedBeforeInput, scopedProof, cleanup,
       originalProviderJobReleased: cleanupProof,
       vendorAuthQualified: false, registryQualified: false, coldOwnerQualified: false,
       desktopQualified: false, releaseQualified: false }, null, 2) + '\n', { flag: 'wx' });
   }
-  if (originalFailure !== undefined || cleanupErrors.length)
+  if (originalFailure !== undefined || cleanupErrors.length) {
+    console.error(JSON.stringify({ kind: 'TEST_WINDOWS_NATIVE_VENDOR_FAILURE', observation: nativeObservation ?? null,
+      cleanup, originalProviderJobReleased: cleanupProof }));
     throw new AggregateError([...(originalFailure === undefined ? [] : [originalFailure]), ...cleanupErrors],
       'Native Windows vendor gate failed; original evidence retained');
+  }
   assert.ok(passed && cleanup);
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

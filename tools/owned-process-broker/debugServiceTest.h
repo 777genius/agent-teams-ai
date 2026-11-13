@@ -1,102 +1,22 @@
 #pragma once
 // Native feasibility only. This file is compiled into an unstaged TEST binary,
 // never into the product broker. No attach-by-PID, API fallback or SDK claim.
-#include "ownedJob.h"
+#include "serviceScopes.h"
 #include "protocol.h"
 #include <io.h>
-#include <map>
-#include <mutex>
-#include <set>
 
 namespace debug_service_test {
-struct Service {
-  HANDLE process=nullptr, job=nullptr;
-  uint64_t birth=0;
-  bool terminationRequested=false;
-  DWORD dispatchError=0;
-};
-inline std::mutex recordsMutex;
-inline std::map<DWORD,Service> records;
-// One bounded TEST diagnostic record, on a private regular-file fd. It never
-// holds target stdio open and is not a command or a production wire receipt.
-enum class Stage : DWORD { RetainRoot=1, RetainJob, Wait, RootIdentity, RetainChild,
-  ChildIdentity, OuterMembership, CreateJob, AssignJob, VerifyJob, ImageClose,
-  DllClose, Rip, Continue, JobClose, RootClose };
+using owned_service::Stage;
+using owned_service::duplicate;
+using owned_service::sameObject;
+inline owned_service::Scopes scopes{64};
+// One bounded TEST diagnostic record, never a command or production wire receipt.
 inline void failure(Stage stage,DWORD error,const DEBUG_EVENT& event={}) noexcept {
   const DWORD record[4]={static_cast<DWORD>(stage),error,event.dwDebugEventCode,event.dwProcessId};
   const auto file=reinterpret_cast<HANDLE>(_get_osfhandle(4));
   if(file==INVALID_HANDLE_VALUE||GetFileType(file)!=FILE_TYPE_DISK) return;
   DWORD written=0;
   WriteFile(file,record,sizeof(record),&written,nullptr); // best effort; exit remains failure
-}
-
-inline uint64_t birthOf(HANDLE process) {
-  FILETIME created{},exit{},kernel{},user{};
-  if(!GetProcessTimes(process,&created,&exit,&kernel,&user)) throw GetLastError();
-  return (static_cast<uint64_t>(created.dwHighDateTime)<<32)|created.dwLowDateTime;
-}
-inline HANDLE duplicate(HANDLE original) {
-  HANDLE retained=nullptr;
-  if(!DuplicateHandle(GetCurrentProcess(),original,GetCurrentProcess(),&retained,
-    0,FALSE,DUPLICATE_SAME_ACCESS)) throw GetLastError();
-  return retained;
-}
-inline HANDLE retainProcess(HANDLE original) {
-  HANDLE retained=nullptr;
-  // A debug event promises memory access, not Job assignment/query/wait rights.
-  // Ask Windows for the exact needed access on the SAME original object. A
-  // denied request fails admission; it never falls back to reopening a PID.
-  constexpr DWORD access=PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE|
-    PROCESS_SET_QUOTA|PROCESS_TERMINATE;
-  if(!DuplicateHandle(GetCurrentProcess(),original,GetCurrentProcess(),&retained,
-    access,FALSE,0)) throw GetLastError();
-  return retained;
-}
-inline bool sameObject(HANDLE first,HANDLE second) {
-  // The SDK used by the native runners omits KernelBase.lib. Resolve the same
-  // documented export from the already loaded system DLL; never load a path or
-  // substitute a PID comparison. Missing support remains an admission failure.
-  static const auto compare=[] {
-    const auto module=GetModuleHandleW(L"KernelBase.dll");
-    if(!module) throw GetLastError();
-    const auto address=GetProcAddress(module,"CompareObjectHandles");
-    if(!address) throw GetLastError();
-    return reinterpret_cast<decltype(&CompareObjectHandles)>(address);
-  }();
-  return compare(first,second)!=FALSE;
-}
-inline void capture(const DEBUG_EVENT& event,HANDLE outer,Stage& stage) {
-  const HANDLE original=event.u.CreateProcessInfo.hProcess;
-  if(!original) throw DWORD{ERROR_INVALID_HANDLE};
-  std::lock_guard<std::mutex> lock(recordsMutex);
-  if(records.size()>=64||records.count(event.dwProcessId)) throw DWORD{ERROR_INVALID_DATA};
-  Service selected;
-  try {
-    // This exact handle came from the kernel create event, before user-mode code.
-    // Duplicate because ContinueDebugEvent closes the system-owned handle on exit.
-    stage=Stage::RetainChild; selected.process=retainProcess(original);
-    stage=Stage::ChildIdentity;
-    const DWORD pid=GetProcessId(selected.process);
-    if(!pid) throw GetLastError();
-    if(pid!=event.dwProcessId||!sameObject(original,selected.process))
-      throw DWORD{ERROR_INVALID_DATA};
-    selected.birth=birthOf(selected.process);
-    stage=Stage::OuterMembership; BOOL member=FALSE;
-    if(!IsProcessInJob(selected.process,outer,&member)) throw GetLastError();
-    if(!member) throw DWORD{ERROR_INVALID_DATA};
-    stage=Stage::CreateJob;
-    selected.job=owned_job::create();
-    stage=Stage::AssignJob;
-    if(!AssignProcessToJobObject(selected.job,selected.process)) throw GetLastError();
-    stage=Stage::VerifyJob;
-    if(!IsProcessInJob(selected.process,selected.job,&member)) throw GetLastError();
-    if(!member) throw DWORD{ERROR_INVALID_DATA};
-    records.emplace(event.dwProcessId,selected);
-  } catch(...) {
-    if(selected.job) CloseHandle(selected.job);
-    if(selected.process) CloseHandle(selected.process);
-    throw;
-  }
 }
 
 /** Called on the same existing admission thread that invoked CreateProcessW. */
@@ -110,7 +30,7 @@ inline bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::tim
   catch(...) { failure(stage,ERROR_INVALID_DATA); if(observedRoot) CloseHandle(observedRoot); return false; }
   stateLock.unlock();
   bool ok=true;
-  std::set<DWORD> initialBreakpoints;
+  bool rootInitialBreakpoint=false;
   for(;;) {
     DEBUG_EVENT event{};
     if(!WaitForDebugEvent(&event,100)) {
@@ -119,18 +39,22 @@ inline bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::tim
       if(WaitForSingleObject(observedRoot,0)==WAIT_OBJECT_0&&
         QueryInformationJobObject(observedOuter,JobObjectBasicAccountingInformation,
           &accounting,sizeof(accounting),nullptr)&&accounting.ActiveProcesses==0) break;
-      if(error==ERROR_SEM_TIMEOUT) continue;
+      if(error==ERROR_SEM_TIMEOUT) {
+        try { stage=Stage::Retire; scopes.retire(); }
+        catch(DWORD failureCode) { failure(stage,failureCode,event); ok=false; }
+        catch(...) { failure(stage,ERROR_INVALID_DATA,event); ok=false; }
+        if(ok) continue;
+        break;
+      }
       failure(Stage::Wait,error,event); ok=false; break;
     }
     DWORD continuation=DBG_CONTINUE;
     try {
       if(event.dwDebugEventCode==CREATE_PROCESS_DEBUG_EVENT) {
-        if(event.dwProcessId==rootPid) {
-          stage=Stage::RootIdentity;
-          // Kernel object equality needs no assumed query rights on debug handles.
-          if(!sameObject(event.u.CreateProcessInfo.hProcess,observedRoot))
-            throw DWORD{ERROR_INVALID_DATA};
-        } else capture(event,observedOuter,stage);
+        stage=Stage::RootIdentity;
+        if(sameObject(event.u.CreateProcessInfo.hProcess,observedRoot)) {
+          if(event.dwProcessId!=rootPid) throw DWORD{ERROR_INVALID_DATA};
+        } else scopes.capture(event,observedRoot,observedOuter,stage);
         stage=Stage::ImageClose;
         if(event.u.CreateProcessInfo.hFile&&!CloseHandle(event.u.CreateProcessInfo.hFile))
           throw GetLastError();
@@ -140,8 +64,14 @@ inline bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::tim
       } else if(event.dwDebugEventCode==EXCEPTION_DEBUG_EVENT) {
         // Feasibility fixture only: ordinary initial loader breakpoint is handled;
         // every other exception remains the native application's exception.
-        const bool initial=event.u.Exception.ExceptionRecord.ExceptionCode==EXCEPTION_BREAKPOINT&&
-          initialBreakpoints.insert(event.dwProcessId).second;
+        bool initial=false;
+        if(event.u.Exception.ExceptionRecord.ExceptionCode==EXCEPTION_BREAKPOINT) {
+          const DWORD rootState=WaitForSingleObject(observedRoot,0);
+          if(rootState==WAIT_FAILED) throw GetLastError();
+          if(event.dwProcessId==rootPid&&rootState==WAIT_TIMEOUT) {
+            initial=!rootInitialBreakpoint; rootInitialBreakpoint=true;
+          } else initial=scopes.firstBreakpoint(event.dwProcessId);
+        }
         if(!initial) continuation=DBG_EXCEPTION_NOT_HANDLED;
       } else if(event.dwDebugEventCode==RIP_EVENT) { stage=Stage::Rip; throw event.u.RipInfo.dwError; }
     } catch(DWORD error) { failure(stage,error,event); ok=false; }
@@ -152,49 +82,44 @@ inline bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::tim
       if(ok) failure(Stage::Continue,GetLastError(),event);
       ok=false;
     }
+    if(ok) {
+      try { stage=Stage::Retire; scopes.retire(); }
+      catch(DWORD error) { failure(stage,error,event); ok=false; }
+      catch(...) { failure(stage,ERROR_INVALID_DATA,event); ok=false; }
+    }
     if(!ok) break;
   }
   if(!CloseHandle(observedOuter)) { if(ok) failure(Stage::JobClose,GetLastError()); ok=false; }
   if(!CloseHandle(observedRoot)) { if(ok) failure(Stage::RootClose,GetLastError()); ok=false; }
-  // The bounded retained originals are closed by broker process teardown after
-  // its genuine whole-provider release. Production retirement is not claimed.
+  // Registered originals remain pinned until existing command settlement or
+  // broker teardown; unregistered empty scopes retire after actual EXIT.
   return ok;
 }
 
-/** Private TEST mode 2: target a retained original nested Job, never a whole provider. */
+/** Private TEST mode 2: register the exact retained original, then use only its scope. */
 inline std::vector<uint8_t> stop(DWORD pid,uint64_t expectedBirth,DWORD budget) {
-  Service selected;
-  {
-    std::lock_guard<std::mutex> lock(recordsMutex);
-    const auto found=records.find(pid);
-    if(found==records.end()||found->second.birth!=expectedBirth) throw DWORD{ERROR_NOT_FOUND};
-    if(!found->second.terminationRequested) {
-      found->second.terminationRequested=true;
-      if(!TerminateJobObject(found->second.job,1)) found->second.dispatchError=GetLastError();
-    }
-    selected=found->second;
-  }
-  const auto deadline=GetTickCount64()+budget;
-  DWORD active=MAXDWORD,queryError=0,exitCode=0;
-  bool exited=false;
-  do {
-    const DWORD waited=WaitForSingleObject(selected.process,0);
-    if(waited==WAIT_OBJECT_0) {
-      exited=true;
-      if(!GetExitCodeProcess(selected.process,&exitCode)&&!queryError) queryError=GetLastError();
-    } else if(waited!=WAIT_TIMEOUT&&!queryError) queryError=GetLastError();
-    JOBOBJECT_BASIC_ACCOUNTING_INFORMATION accounting{};
-    if(!QueryInformationJobObject(selected.job,JobObjectBasicAccountingInformation,
-      &accounting,sizeof(accounting),nullptr)) { if(!queryError) queryError=GetLastError(); }
-    else active=accounting.ActiveProcesses;
-    if(exited&&active==0) break;
-    Sleep(5);
-  } while(GetTickCount64()<deadline);
-  if((!exited||active!=0)&&!queryError) queryError=WAIT_TIMEOUT;
+  const auto key=scopes.registerExact(pid,expectedBirth);
+  const auto facts=scopes.stop(key,budget);
   std::vector<uint8_t> payload;
-  wire::append(payload,uint8_t{2}); wire::append(payload,static_cast<uint8_t>(exited));
-  wire::append(payload,active); wire::append(payload,exitCode); wire::append(payload,selected.birth);
-  wire::append(payload,selected.dispatchError); wire::append(payload,queryError);
+  wire::append(payload,uint8_t{2}); wire::append(payload,static_cast<uint8_t>(facts.rootExited));
+  wire::append(payload,facts.active); wire::append(payload,facts.exitCode); wire::append(payload,facts.birth);
+  wire::append(payload,facts.dispatchError); wire::append(payload,facts.queryError);
+  return payload;
+}
+
+/** Private TEST mode 3: prove terminal retirement; never terminate any process. */
+inline std::vector<uint8_t> retireExact(DWORD pid,uint64_t expectedBirth,DWORD budget) {
+  if(budget) throw DWORD{ERROR_INVALID_PARAMETER};
+  const auto key=scopes.registerExact(pid,expectedBirth);
+  const auto facts=scopes.query(key);
+  if(!owned_service::absent(facts)) throw DWORD{ERROR_INVALID_STATE};
+  scopes.releaseRegistration(key);
+  try { (void)scopes.query(key); throw DWORD{ERROR_INVALID_STATE}; }
+  catch(DWORD error) { if(error!=ERROR_NOT_FOUND) throw; }
+  std::vector<uint8_t> payload;
+  wire::append(payload,uint8_t{3}); wire::append(payload,static_cast<uint8_t>(facts.rootExited));
+  wire::append(payload,facts.active); wire::append(payload,facts.exitCode); wire::append(payload,facts.birth);
+  wire::append(payload,DWORD{0}); wire::append(payload,facts.queryError); wire::append(payload,key);
   return payload;
 }
 } // namespace debug_service_test

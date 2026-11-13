@@ -25,20 +25,30 @@ const artifact = buildLinuxProcessNativeArtifact({ compiler, compilerSha256: has
     .map(file => ({ file, sha256: hash(join(headersRoot, file)) })),
   source, sourceSha256: hash(source), outputDirectory: join(output, 'artifact') });
 const actor = join(output, 'registered-process-actor');
-execFileSync(compiler, ['-D_GNU_SOURCE', '-std=c11', '-Wall', '-Wextra', '-Werror',
+execFileSync(compiler, ['-D_GNU_SOURCE', '-std=c11', '-Wall', '-Wextra', '-Werror', '-pthread',
   join(packageRoot, 'tests/fixtures/registered-process-actor.c'), '-o', actor],
 { timeout: 30_000, maxBuffer: 1024 * 1024 });
 assert.equal(hash(compiler), artifact.manifest.compilerSha256);
 const selection = { directory: artifact.directory, manifestSha256: artifact.manifestSha256, actor };
 writeFileSync(join(output, 'selection.json'), JSON.stringify(selection, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
-const stdout = execFileSync(process.execPath, [join(packageRoot, 'tests/registered-process-linux.native.mjs'),
-  artifact.directory, artifact.manifestSha256, actor],
-{ encoding: 'utf8', timeout: 45_000, maxBuffer: 2 * 1024 * 1024 });
-writeFileSync(join(output, 'native.log'), stdout, { mode: 0o600, flag: 'wx' });
-const proof = JSON.parse(stdout.trim()) as { workspace: string; completed: boolean; cleaned: boolean };
-assert.match(proof.workspace, /^\/tmp\/TEST-linux-pidfd-[A-Za-z0-9]+$/);
-assert.equal(proof.completed, true); assert.equal(proof.cleaned, true);
-copyFileSync(join(proof.workspace, 'proof.ndjson'), join(output, 'proof.ndjson'));
-console.log(JSON.stringify({ ...selection, completed: true, cleaned: true,
+for (const mode of ['automatic', 'warm'] as const) {
+  const stdout = execFileSync(process.execPath, [join(packageRoot, 'tests/registered-process-linux.native.mjs'),
+    artifact.directory, artifact.manifestSha256, actor, ...(mode === 'warm' ? ['warm'] : [])],
+  { encoding: 'utf8', timeout: 45_000, maxBuffer: 2 * 1024 * 1024 });
+  const prefix = mode === 'warm' ? 'warm-' : '';
+  writeFileSync(join(output, prefix + 'native.log'), stdout, { mode: 0o600, flag: 'wx' });
+  const proof = JSON.parse(stdout.trim()) as { workspace: string; completed: boolean; cleaned: boolean };
+  assert.match(proof.workspace, /^\/tmp\/TEST-linux-pidfd-[A-Za-z0-9]+$/);
+  assert.equal(proof.completed, true); assert.equal(proof.cleaned, true);
+  const facts = readFileSync(join(proof.workspace, 'proof.ndjson'), 'utf8').trim().split('\n')
+    .map(line => JSON.parse(line) as Record<string, unknown>);
+  const proved = facts.find(fact => fact.phase === 'proved');
+  assert.ok(proved && (proved.captureVersion === 3 || proved.captureVersion === 4));
+  if (mode === 'warm') assert.equal(proved.captureVersion, 4);
+  assert.ok(facts.some(fact => fact.phase === 'live-worker-after-thread-leader-exit' &&
+    fact.observation === 'unknown' && fact.signal === 'refused' && fact.workerClosed === false));
+  copyFileSync(join(proof.workspace, 'proof.ndjson'), join(output, prefix + 'proof.ndjson'));
+}
+console.log(JSON.stringify({ ...selection, completed: true, cleaned: true, automaticAndWarm: true,
   binarySha256: artifact.manifest.binarySha256, libc: artifact.manifest.libc,
-  scope: 'Linux pidfs native/Host composition proof; SDK, Desktop and older kernels remain separate' }));
+  scope: 'Linux automatic custody and retained pidfd native/Host proof; SDK, Desktop and older ABI remain separate' }));

@@ -18,6 +18,7 @@ export function createDesktopProcessRootOracle(input: {
 }) {
   validateProcessCapture(input.capture);
   const original = structuredClone(input.capture);
+  assert.ok(original.version !== 4, 'Cold original-root oracle requires durable kernel identity');
   if (original.version !== 3) {
     const rootCapture: RegisteredProcessCapture = { ...original, target: structuredClone(original.root) };
     return { rootCapture, rootIdentity: original.root, observe: () => input.observe(rootCapture) };

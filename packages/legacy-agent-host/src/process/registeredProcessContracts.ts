@@ -33,7 +33,20 @@ export interface LinuxRegisteredProcessCapture {
   root: LinuxProcessIdentity;
   target: LinuxProcessIdentity;
 }
-export type RegisteredProcessCapture = DarwinRegisteredProcessCapture | LinuxRegisteredProcessCapture;
+/** Warm-only identity: serialization is metadata, never authority to reopen a PID. */
+export type LinuxWarmProcessIdentity = Omit<LinuxProcessIdentity, 'pidfdId'>;
+export interface LinuxWarmRegisteredProcessCapture {
+  version: 4;
+  platform: 'linux';
+  admission: 'owner-pidfd-v1';
+  ownerInstance: string;
+  captureKey: string;
+  registrar: RegistrarBinding;
+  root: LinuxWarmProcessIdentity;
+  target: LinuxWarmProcessIdentity;
+}
+export type RegisteredProcessCapture =
+  | DarwinRegisteredProcessCapture | LinuxRegisteredProcessCapture | LinuxWarmRegisteredProcessCapture;
 export type ProcessObservation = 'same-live' | 'absent' | 'stale' | 'unknown';
 export interface RegisteredProcessNative {
   capture(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture;

@@ -257,6 +257,7 @@ export async function prepareControlledProcessFixture(repo: string, pnpm: string
       } finally { lease.release(); }
       const canonical = createControllerProcessPolicy(registry).readStrict(); assert.equal(canonical.length, 1);
       primaryCapture = canonical[0]!.capturedNative; assert.ok(primaryCapture);
+      assert.ok(primaryCapture.version !== 4, 'Cold Processes fixture requires durable original identity');
       if (primaryCapture.version === 3) {
         assert.equal(linux, true);
         // Original live ChildProcess + kernel executable evidence; never a root-as-service signal capture.

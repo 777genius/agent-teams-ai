@@ -2,13 +2,17 @@ import { ChildProcess } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync, realpathSync } from 'node:fs';
 import { loadProcessNativeArtifact } from './loadProcessNativeArtifact.js';
+import { createLinuxWarmProcess, linuxWarmIdentity } from './LinuxWarmProcess.js';
+import { runtimeDigest } from '../runtime/identity.js';
 import { validateProcessCapture } from './validateProcessRecords.js';
+import type { LinuxWarmNativeApi } from './LinuxWarmProcess.js';
 
 import type { LinuxProcessIdentity, LinuxRegisteredProcessCapture, ProcessObservation,
   RegistrarBinding, RegisteredProcessCapture } from './registeredProcessContracts.js';
 
-interface NativeApi {
-  kernelIdentity(): { kernelRelease: string; machine: string; glibcVersion: string };
+interface NativeApi extends LinuxWarmNativeApi {
+  kernelIdentity(): { kernelRelease: string; machine: string; glibcVersion: string;
+    pidfd?: boolean; pidfs?: boolean };
   captureRoot(pid: number): unknown;
   captureDescendant(root: LinuxProcessIdentity, pid: number): unknown;
   readRootExecutable(root: LinuxProcessIdentity): unknown;
@@ -28,23 +32,19 @@ function identity(value: unknown): LinuxProcessIdentity {
   return { pid: row.pid, sessionId: row.sessionId, pidfdId: row.pidfdId,
     pidNamespaceId: row.pidNamespaceId, bootId: row.bootId };
 }
-const same = (a: LinuxProcessIdentity, b: LinuxProcessIdentity) => a.pid === b.pid &&
-  a.pidfdId === b.pidfdId && a.pidNamespaceId === b.pidNamespaceId &&
-  a.bootId === b.bootId && a.sessionId === b.sessionId;
-
-/** Stable pidfs inode capability is checked by the kernel, never guessed from a release string. */
+/** Actual kernel capability selects durable pidfs or retained original pidfds; never a release guess. */
 export function createQualifiedLinuxProcessApi(artifact: {
   path: string;
   sha256: string;
-  kernelCapability: 'pidfs-inode64-v1';
+  kernelCapability: 'pidfs-inode64-v1' | 'pidfd-live-v1';
   libc: { family: 'glibc'; minimumVersion: string };
 }) {
   if (process.platform !== 'linux' || process.arch !== 'x64' ||
-      artifact.kernelCapability !== 'pidfs-inode64-v1' || artifact.libc.family !== 'glibc' ||
+      !['pidfs-inode64-v1', 'pidfd-live-v1'].includes(artifact.kernelCapability) || artifact.libc.family !== 'glibc' ||
       !/^\d{1,2}\.\d{1,3}(?:\.\d{1,3})?$/.test(artifact.libc.minimumVersion)) return hold();
   const minimumVersion = artifact.libc.minimumVersion;
   const { native, assertBinary } = loadProcessNativeArtifact<NativeApi>(artifact);
-  const assertCurrent = () => {
+  const readKernel = () => {
     assertBinary();
     const kernel = native.kernelIdentity();
     if (kernel.machine !== 'x86_64' || !/^[A-Za-z0-9._+-]{1,128}$/.test(kernel.kernelRelease) ||
@@ -55,16 +55,33 @@ export function createQualifiedLinuxProcessApi(artifact: {
       if (observed < minimum) hold();
       if (observed > minimum) break;
     }
+    // Older selected manifests used a native probe that succeeded only on pidfs.
+    if (artifact.kernelCapability === 'pidfs-inode64-v1' &&
+        kernel.pidfd === undefined && kernel.pidfs === undefined) return { pidfd: true, pidfs: true };
+    if (typeof kernel.pidfd !== 'boolean' || typeof kernel.pidfs !== 'boolean' ||
+        (kernel.pidfs && !kernel.pidfd)) return hold();
+    return { pidfd: kernel.pidfd, pidfs: kernel.pidfs };
   };
+  const capability = readKernel();
+  if (!capability.pidfd || (artifact.kernelCapability === 'pidfs-inode64-v1' && !capability.pidfs))
+    return undefined;
+  const assertCurrent = () => {
+    const observed = readKernel();
+    if (observed.pidfd !== capability.pidfd || observed.pidfs !== capability.pidfs) hold();
+  };
+  if (!capability.pidfs && ['captureWarmRoot', 'captureWarmDescendant', 'readWarmRootExecutable',
+    'observeWarm', 'signalWarm', 'closeWarm'].some(name =>
+      typeof native[name as keyof LinuxWarmNativeApi] !== 'function')) return hold();
+  const warm = capability.pidfs ? undefined : createLinuxWarmProcess(native, assertCurrent);
   const original = (capture: RegisteredProcessCapture) => {
     validateProcessCapture(capture);
     if (capture.version !== 3 || capture.platform !== 'linux') return hold();
     return identity(capture.target);
   };
   const roots = new WeakMap<ChildProcess, { root: LinuxProcessIdentity; current(): boolean }>();
-  assertCurrent();
   return {
     captureRoot(child: ChildProcess, current: () => boolean) {
+      if (warm) return warm.captureRoot(child, current);
       if (!(child instanceof ChildProcess) || roots.has(child) || !child.pid || !current() ||
           child.exitCode !== null || child.signalCode !== null) return hold();
       assertCurrent();
@@ -88,13 +105,17 @@ export function createQualifiedLinuxProcessApi(artifact: {
       };
     },
     readRootExecutable(child: ChildProcess, executable: { path: string; sha256: string }) {
-      const selected = roots.get(child);
+      const durable = roots.get(child);
+      const selected = warm ? warm.rootEvidence(child) : durable && { ...durable,
+        startIdentity: `${durable.root.bootId}:${durable.root.pidNamespaceId}:${durable.root.pidfdId}`,
+        measure: () => native.readRootExecutable(durable.root) };
       if (!selected?.current() || !/^[a-f0-9]{64}$/.test(executable.sha256)) return hold();
       const measure = () => {
         assertCurrent();
         if (!selected.current()) return hold();
-        const value = native.readRootExecutable(selected.root);
-        if (!same(identity(value), selected.root) || !value || typeof value !== 'object' ||
+        const value = selected.measure();
+        if (runtimeDigest(warm ? linuxWarmIdentity(value) : identity(value)) !== runtimeDigest(selected.root) ||
+            !value || typeof value !== 'object' ||
             !('executablePath' in value) || value.executablePath !== executable.path ||
             !('executableDevice' in value) || typeof value.executableDevice !== 'string' ||
             !/^[0-9]{1,20}$/.test(value.executableDevice) ||
@@ -119,11 +140,13 @@ export function createQualifiedLinuxProcessApi(artifact: {
           before.size !== after.size || before.mtimeNs !== after.mtimeNs || before.ctimeNs !== after.ctimeNs ||
           nativeImage.device !== measuredAfter.device || nativeImage.inode !== measuredAfter.inode) return hold();
       return { executablePath: executable.path, executableSha256: digest, pid: selected.root.pid,
-        startIdentity: `${selected.root.bootId}:${selected.root.pidNamespaceId}:${selected.root.pidfdId}` };
+        startIdentity: selected.startIdentity };
     },
     observe(capture: RegisteredProcessCapture): ProcessObservation {
       try {
         assertCurrent();
+        if (capture.version === 4) return warm ? warm.observe(capture) : 'unknown';
+        if (warm) return 'unknown';
         const observed = native.observeOriginal(original(capture));
         return ['same-live', 'absent', 'stale', 'unknown'].includes(observed)
           ? observed as ProcessObservation : 'unknown';
@@ -131,6 +154,8 @@ export function createQualifiedLinuxProcessApi(artifact: {
     },
     signal(capture: RegisteredProcessCapture): 'accepted' | 'refused' {
       assertCurrent();
+      if (capture.version === 4) return warm ? warm.signal(capture) : 'refused';
+      if (warm) return 'refused';
       return native.signalOriginal(original(capture)) === 0 ? 'accepted' : 'refused';
     },
   };

@@ -3,6 +3,9 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { release } from 'node:os';
 import { createProcessCustody } from '../dist/composition/processCustody.js';
+import { createLinuxWarmProcess } from '../dist/process/LinuxWarmProcess.js';
+import { loadProcessNativeArtifact } from '../dist/process/loadProcessNativeArtifact.js';
+import { readPackagedLinuxProcessArtifact } from '../dist/process/readPackagedProcessArtifact.js';
 import { mkdtemp, realpath, readFile, writeFile, appendFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -14,13 +17,17 @@ const library = join(artifactDirectory, 'registered-process.node');
 assert.equal(process.env.LEGACY_REGISTERED_PROCESS_NATIVE_GO, '1');
 assert.throws(() => createProcessCustody({ directory: artifactDirectory, manifestSha256: '0'.repeat(64) }),
   /artifact unavailable/, 'Wrong manifest never loads a native custody implementation');
-const api = createProcessCustody({ directory: artifactDirectory, manifestSha256 });
+// TEST exercises retained descriptors on modern kernels too; product selection has no override.
+const explicitWarm = command === 'warm' || command === 'cold-warm';
+const artifact = { directory: artifactDirectory, manifestSha256 };
+const loaded = explicitWarm ? loadProcessNativeArtifact(readPackagedLinuxProcessArtifact(artifact)) : undefined;
+const api = loaded ? createLinuxWarmProcess(loaded.native, loaded.assertBinary) : createProcessCustody(artifact);
 assert.ok(api);
 assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
-if (command === 'cold') {
+if (command === 'cold' || command === 'cold-warm') {
   const capture = JSON.parse(await readFile(savedCapture, 'utf8'));
   const before = api.observe(capture);
-  assert.equal(before, 'same-live');
+  assert.equal(before, capture.version === 4 ? 'unknown' : 'same-live');
   const result = operation === 'signal' ? api.signal(capture) : undefined;
   console.log(JSON.stringify({ before, result, workerPid: process.pid }));
 } else {
@@ -49,8 +56,10 @@ if (command === 'cold') {
     void closed.catch(() => undefined);
     roots.push({ name, child, closed });
     const source = api.captureRoot(child, () => child.exitCode === null && child.signalCode === null);
-    const image = api.readRootExecutable(child, executable);
-    assert.equal(image.executablePath, executable.path); assert.equal(image.executableSha256, executable.sha256);
+    const image = 'readRootExecutable' in api ? api.readRootExecutable(child, executable)
+      : api.rootEvidence(child).measure();
+    assert.equal(image.executablePath, executable.path);
+    if ('executableSha256' in image) assert.equal(image.executableSha256, executable.sha256);
     assert.equal(image.pid, child.pid);
     child.stderr.on('data', () => {});
     const pid = await new Promise((resolve, reject) => {
@@ -62,10 +71,12 @@ if (command === 'cold') {
       });
     });
     const capture = source.capture(pid, registrar); capsules.push(capture);
+    assert.deepEqual(source.capture(pid, registrar), capture, 'Original live duplicate keeps one capture identity');
     return { name, child, closed, pid, root: capture.root, capture, source };
   };
   const worker = (capturePath, operation) => new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [import.meta.filename, artifactDirectory, manifestSha256, actorPath, 'cold', capturePath, operation],
+    const child = spawn(process.execPath, [import.meta.filename, artifactDirectory, manifestSha256, actorPath,
+      explicitWarm ? 'cold-warm' : 'cold', capturePath, operation],
       { stdio: ['ignore', 'pipe', 'pipe'] });
     let output = '', errors = '';
     child.stdout.on('data', bytes => { output += bytes; });
@@ -73,19 +84,27 @@ if (command === 'cold') {
     child.once('error', reject);
     child.once('close', code => code === 0 ? resolve(JSON.parse(output)) : reject(new Error(errors)));
   });
-  await log({ phase: 'start', scope: 'TEST Host composition/native pidfs proof; actual SDK and Desktop remain separate',
+  await log({ phase: 'start', scope: 'TEST original process custody; actual SDK and Desktop remain separate',
+    selection: explicitWarm ? 'TEST internal warm owner' : 'Host automatic kernel capability',
     kernel: { release: release(), platform: process.platform, arch: process.arch }, versions: process.versions, artifactSha256 });
   let completed = false;
   try {
     const same = await start('same', 'same'), owned = await start('owned', 'cross');
     const peer = await start('peer', 'cross'), drift = await start('drift', 'cross');
+    const leader = await start('leader', 'cross');
+    const warm = owned.capture.version === 4;
+    assert.equal(warm || owned.capture.version === 3, true);
     assert.equal(same.capture.target.sessionId, same.root.sessionId);
     assert.notEqual(owned.capture.target.sessionId, owned.root.sessionId);
     assert.throws(() => owned.source.capture(peer.pid, registrar));
-    const wrong = { ...owned.capture, target: { ...owned.capture.target, pidfdId: (BigInt(owned.capture.target.pidfdId) + 1n).toString() } };
-    assert.equal(api.observe(wrong), 'stale'); assert.throws(() => api.signal(wrong));
+    const wrong = warm ? { ...owned.capture, captureKey: '33333333-3333-4333-8333-333333333333' }
+      : { ...owned.capture, target: { ...owned.capture.target, pidfdId: (BigInt(owned.capture.target.pidfdId) + 1n).toString() } };
+    assert.equal(api.observe(wrong), warm ? 'unknown' : 'stale');
+    if (warm) assert.equal(api.signal(wrong), 'refused'); else assert.throws(() => api.signal(wrong));
     const wrongNamespace = { ...owned.capture, target: { ...owned.capture.target, pidNamespaceId: (BigInt(owned.capture.target.pidNamespaceId) + 1n).toString() } };
-    assert.equal(api.observe(wrongNamespace), 'unknown'); assert.throws(() => api.signal(wrongNamespace));
+    if (explicitWarm) assert.throws(() => api.observe(wrongNamespace));
+    else assert.equal(api.observe(wrongNamespace), 'unknown');
+    assert.throws(() => api.signal(wrongNamespace));
     assert.equal(api.observe(owned.capture), 'same-live');
     await log({ phase: 'ownership-and-identity-negatives', same: same.capture, owned: owned.capture,
       peer: peer.capture, scope: 'No forced numeric PID churn; exact inode/namespace mismatch refused' });
@@ -99,9 +118,11 @@ if (command === 'cold') {
     const originalBytes = JSON.stringify(owned.capture);
     await writeFile(capturePath, originalBytes, { mode: 0o600, flag: 'wx' });
     const coldRead = await worker(capturePath, 'observe');
-    assert.equal(coldRead.before, 'same-live');
+    assert.equal(coldRead.before, warm ? 'unknown' : 'same-live');
     await log({ phase: 'requested-before-native', original: owned.capture });
-    const coldSignal = await worker(capturePath, 'signal'); assert.equal(coldSignal.result, 'accepted');
+    const coldSignal = await worker(capturePath, 'signal');
+    assert.equal(coldSignal.result, warm ? 'refused' : 'accepted');
+    if (warm) assert.equal(api.signal(owned.capture), 'accepted', 'Only the retained original owner can signal');
     await until(async () => api.observe(owned.capture) === 'absent');
     await until(() => exists(join(workspace, 'owned.closed')));
     assert.equal(JSON.parse(await readFile(join(workspace, 'owned.closed'), 'utf8')).reason, 'SIGTERM');
@@ -109,14 +130,23 @@ if (command === 'cold') {
     assert.equal(api.observe(peer.capture), 'same-live');
     assert.equal(api.observe(same.capture), 'same-live');
     const replacementSelector = { ...owned.capture, target: { ...owned.capture.target, pid: peer.pid } };
-    assert.equal(api.observe(replacementSelector), 'stale');
-    assert.throws(() => api.signal(replacementSelector));
+    assert.equal(api.observe(replacementSelector), warm ? 'unknown' : 'stale');
+    if (warm) assert.equal(api.signal(replacementSelector), 'refused');
+    else assert.throws(() => api.signal(replacementSelector));
     assert.equal(api.observe(peer.capture), 'same-live');
     await writeFile(join(workspace, 'drift.drift'), '', { flag: 'wx' });
     await until(() => exists(join(workspace, 'drift.did-drift')));
     assert.equal(api.observe(drift.capture), 'unknown');
     assert.throws(() => api.signal(drift.capture));
-    await log({ phase: 'proved', coldRead, coldSignal, originalTarget: 'absent', neighbor: 'same-live',
+    await writeFile(join(workspace, 'leader.thread-exit'), '', { flag: 'wx' });
+    await until(() => api.observe(leader.capture) === 'unknown');
+    assert.equal(await exists(join(workspace, 'leader.closed')), false, 'The original worker is still alive');
+    assert.throws(() => api.signal(leader.capture), 'A dead thread-group leader is not whole-process exit proof');
+    assert.equal(await exists(join(workspace, 'leader.closed')), false);
+    await log({ phase: 'live-worker-after-thread-leader-exit', original: leader.capture,
+      observation: 'unknown', signal: 'refused', workerClosed: false });
+    await log({ phase: 'proved', captureVersion: owned.capture.version, coldRead, coldSignal,
+      originalTarget: 'absent', neighbor: 'same-live',
       sameSession: 'same-live', changedSession: 'unknown', nativeSignalCalls: 1 });
     completed = true;
   } finally {

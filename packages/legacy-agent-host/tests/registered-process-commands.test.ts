@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import { createTeamProcessCommands } from '../dist/process/TeamProcessCommands.js';
 import { createTeamProcessMethods } from '../dist/process/createTeamProcessMethods.js';
+import { processReceiptFingerprint } from '../dist/process/validateProcessRecords.js';
 import type {
   ProcessCommandReceipt,
   RegisteredProcessCapture,
@@ -16,7 +17,7 @@ const stable = (value: unknown): string =>
       : row
   );
 const digest = (value: unknown) => createHash('sha256').update(stable(value)).digest('hex');
-function fixture(ancestry = false) {
+function fixture(ancestry: boolean | 'linux-warm' = false) {
   const files = new Map<string, unknown>();
   let rows: TeamProcessRow[] = [],
     signals = 0,
@@ -49,7 +50,13 @@ function fixture(ancestry = false) {
       osBuild: '24G90',
     },
   };
-  if (ancestry) capture = {
+  if (ancestry === 'linux-warm') capture = {
+    version: 4, platform: 'linux', admission: 'owner-pidfd-v1', registrar,
+    ownerInstance: '11111111-1111-4111-8111-111111111111', captureKey: '22222222-2222-4222-8222-222222222222',
+    root: { pid: 1000, sessionId: 1000, pidNamespaceId: '4026531836', bootId: capture.root.bootId },
+    target: { pid: 1001, sessionId: 2000, pidNamespaceId: '4026531836', bootId: capture.root.bootId },
+  };
+  else if (ancestry) capture = {
     ...capture, version: 2, admission: 'live-ancestry-v1', target: { ...capture.target, sessionId: 2000 },
   };
   const options = {
@@ -145,6 +152,10 @@ function fixture(ancestry = false) {
   return {
     commands,
     cold: () => createTeamProcessCommands(options),
+    coldUnavailable: () => {
+      const { native: _native, ...coldOptions } = options;
+      return createTeamProcessCommands(coldOptions);
+    },
     rows: () => rows,
     signals: () => signals,
     captures: () => captures,
@@ -292,4 +303,33 @@ test('explicit live-ancestry receipt cold-reads original target; same-token SID 
   assert.equal(f.captures(), 1, 'Cold lookup cannot expand admission using a fresh lineage walk');
   assert.equal(f.signals(), 0);
   f.absent(); cold.assertReleased();
+});
+
+test('cold warm history requires completed absence of the full original capture, never a signal or another owner', () => {
+  const f = fixture('linux-warm');
+  f.commands.register('TEST-register', { pid: 1001, label: 'TEST original service' });
+  const row = f.commands.list()[0]!;
+  f.commands.terminate('TEST-stop', row.processRef);
+  const cold = f.coldUnavailable();
+  assert.equal(cold.list()[0]!.observation, 'unknown');
+  assert.equal(cold.lookup('TEST-stop')!.state.phase, 'requested');
+  assert.throws(() => cold.assertReleased(), /hold/);
+  f.commands.metadata('TEST-metadata', 'metadata-stop', { processRef: row.processRef });
+  assert.equal(cold.list()[0]!.observation, 'unknown');
+  f.absent();
+  const completed = f.commands.lookup('TEST-stop')!;
+  assert.equal(completed.state.native, 'observed-absent');
+  assert.equal(cold.list()[0]!.observation, 'absent');
+  assert.equal(cold.list()[0]!.canTerminate, false);
+  cold.assertReleased();
+  assert.ok(completed.capture?.version === 4 && completed.original);
+  const foreign = structuredClone(completed);
+  assert.ok(foreign.capture?.version === 4 && foreign.original);
+  foreign.capture.ownerInstance = '33333333-3333-4333-8333-333333333333';
+  foreign.original.capturedNative = structuredClone(foreign.capture);
+  foreign.fingerprint = processReceiptFingerprint(foreign, digest);
+  f.files.set('commands/' + digest('TEST-stop') + '.json', foreign);
+  assert.equal(cold.list()[0]!.observation, 'unknown', 'Same PID and metadata cannot borrow another owner exit');
+  assert.throws(() => cold.assertReleased(), /hold/);
+  assert.equal(f.captures(), 1); assert.equal(f.signals(), 1);
 });

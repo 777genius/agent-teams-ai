@@ -326,13 +326,16 @@ int main() {
         std::thread(admit,std::move(frame)).detach();
       } else if(frame.op==wire::Stop) {
 #ifdef OWNED_PROCESS_TEST_DEBUG_SERVICE
-        if(frame.payload.size()==17&&frame.payload[4]==2) {
+        if(frame.payload.size()==17&&(frame.payload[4]==2||frame.payload[4]==3)) {
           if(wire::get<DWORD>(frame.payload.data())>60000) abandon();
           std::thread([selected=std::move(frame)] {
             try {
-              reply(wire::Stopped,selected.id,debug_service_test::stop(
-                wire::get<DWORD>(selected.payload.data()+5),wire::get<uint64_t>(selected.payload.data()+9),
-                wire::get<DWORD>(selected.payload.data())));
+              const auto pid=wire::get<DWORD>(selected.payload.data()+5);
+              const auto birth=wire::get<uint64_t>(selected.payload.data()+9);
+              const auto budget=wire::get<DWORD>(selected.payload.data());
+              const auto result=selected.payload[4]==2?debug_service_test::stop(pid,birth,budget):
+                debug_service_test::retireExact(pid,birth,budget);
+              reply(wire::Stopped,selected.id,result);
             } catch(DWORD error) { failure(selected.id,Running,error); }
             catch(...) { failure(selected.id,Running,ERROR_INVALID_DATA); }
           }).detach();
