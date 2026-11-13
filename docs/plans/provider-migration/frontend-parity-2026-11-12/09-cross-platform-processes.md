@@ -938,7 +938,13 @@ Windows x64 job131647594264 и ARM64 job131647594608 прошли подгото
 Actual SDK открывается, readiness и submit ACK завершаются, но START не получает matching result за прежние35s.
 Scoped Stop и continuation ещё не достигнуты. Submit ACK не равен native provider acceptance. Independent
 controller после failure подтвердил activeProcesses0; это cleanup, не успешный vendor service scenario.
-Linux job131647594499 на момент этой записи ещё queued; его результат не выдумывается и run не перезапускается.
+Linux [job131647594499](https://github.com/777genius/agent-teams-ai/actions/runs/43352783873/job/131647594499)
+завершён: genuine Node26/Node24/Electron native steps6/8/9 PASS; step11 actual Claude SDK → background Bash →
+MCP register → selected Human Stop → ordinary owner close PASS, source freeze PASS. Step12 cold Host Processes UI
+снова завершился wrapper exit1 после44s; inner cause ещё скрыта в private receipt, packed steps13/14 skipped.
+Official evidence сохранено в artifact `14007732210` (1,867,526 bytes); ZIP получен, но ещё не извлечён при
+unavailable executor. Отказ не приписывается прежнему parser и не заменяется предположением; §28 safe diagnostics
+входят в следующий source cut. Run завершён и не перезапускается.
 
 Existing Windows TEST fixture теперь снимает закрытый snapshot до teardown: fixed phase, model HTTP counters,
 8 SPI event kind counts и correlation counts для2 исходных operations. Только enum/count/boolean попадают
