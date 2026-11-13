@@ -796,3 +796,49 @@ Source peer review проверяет, что async меняет лишь спо
 activity oracle не скрывает реально открытый пустой runtime. После root commit+push
 обычные CI jobs должны выполнить эти cases на новом source. Executor сейчас
 недоступен; этот план и immutable source readback не являются executed PASS.
+
+
+### R15 — actual builtin /review: установить расположение захваченного контекста
+
+Exact current3db, Create job131757637356,
+[run43386943005](https://github.com/777genius/agent-teams-ai/actions/runs/43386943005),
+artifact14020313358 (ZIP SHA256
+`94f5a311a16c30d37ffa31e34334a728f32044a82a98df723b32a3130d2c0a86`):
+existing compaction/native-command journey прошёл project/user commands, затем
+первый `/review` send на764 отказался с
+`named native command keeps captured team system configuration`.
+R13 exact review expansion уже принят; отсутствует отдельное доказательство,
+где native положил захваченный marker. Прежние local Sonnet/Opus request bodies
+после потери среды недоступны, а сохранённая сводка доказывает только user review
+anchors. Их нельзя использовать как разрешение ослабить system predicate.
+
+**Круг1 — измерить тот же original failed request.** В existing
+`fixtures/native-claude-compaction/model.ts` вынести уже существующий strict
+body.system marker check в маленький TEST helper; вызвать его в двух прежних
+command-model helpers через existing import. Accepted requests сохраняют прежнее
+условие: marker обязан быть в serialized body.system. Никакой user/assistant/
+tool-result fallback не вводится.
+
+Только при исходном отказе добавить к его existing assertion message закрытый
+JSON projection того же body: фиксированная command phase, body/system SHA256,
+system shape и число marker-bearing blocks по закрытым role/type категориям.
+Не более16 role/type counters; whole projection не более2KiB, исходный body
+уже ограничен existing2MiB guard. Не печатать тексты, произвольные role/type names,
+tool input/results, paths, endpoints, headers, environment или request dump.
+System absence остаётся refusal. Existing modelFailures и обычный CI log/receipt
+уже сохраняют exception message, поэтому новый artifact schema/channel не нужен.
+
+**Круг2 — falsification без native расходов.** В existing model.test добавить
+один critical case: marker только вне system по-прежнему отвергается; failure
+facts называют только закрытую role/type категорию и SHA/counts. Проверить
+projection bound и отсутствие deliberately unique TEST raw text. Обычный
+system-positive путь, exact review target/user anchors, native MCP result/cause,
+model selection, original IDs, ten-request bound и cleanup не меняются.
+Не добавлять replay, prompt, unit suite или новую CI row.
+
+**Круг3 — вывод только из факта.** Independent source review и existing model
+tests/types, затем следующий уже необходимый exact-head native Create gate.
+Source пока не исполнен; после actual projection отдельно определить:
+действительно ли context перенесён в другой доверенный native frame или потерян,
+и как это соотносится с прежним frontend. Диагностика не закрывает parity и не
+превращает missing captured configuration в успешный native command.
