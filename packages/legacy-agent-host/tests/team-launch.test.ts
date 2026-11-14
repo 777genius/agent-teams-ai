@@ -416,7 +416,19 @@ test('ambiguous preparation publication allocates nothing and the original inten
     f.store.write = write;
   }
   assert.equal(f.opens.size, 0, 'no factory effect follows uncertain configuration publication');
+  const held = (error: unknown): boolean => error instanceof TeamLaunchError && error.code === 'hold';
+  const recordName = `launches/${runtimeDigest('TEST-run')}.json`;
+  const ambiguousBytes = await readFile(join(f.store.directory, recordName), 'utf8');
+  assert.throws(() => first.launch.read(), held, 'ordinary read cannot adopt an unacknowledged selection');
+  assert.throws(() => first.launch.prepare(input), held, 'ordinary replay cannot replace the pending witness');
+  assert.throws(() => first.launch.start(input.commandId, launchPreparationFingerprint(input)), held);
+  assert.equal(f.opens.size, 0);
+  assert.equal(await readFile(join(f.store.directory, recordName), 'utf8'), ambiguousBytes);
   first.launch.seal();
+  assert.equal(await readFile(join(f.store.directory, recordName), 'utf8'), ambiguousBytes,
+    'sealing the original no-readiness record does not repair or republish it');
+  assert.throws(() => first.launch.read(), held, 'cleanup does not adopt the selection for ordinary reads');
+  assert.throws(() => first.launch.start(input.commandId, launchPreparationFingerprint(input)), held);
   const record = f.store.read<TeamLaunchRecord>(`launches/${runtimeDigest('TEST-run')}.json`)!;
   Object.assign(f.definition, record.definition);
   const recovered = f.make('host-after-publication');
@@ -429,6 +441,64 @@ test('ambiguous preparation publication allocates nothing and the original inten
   assert.throws(() => recovered.launch.prepare(input), /forbidden/, 'replay still requires current authority');
   recovered.launch.seal();
   await recovered.runtime.stopCapturedSession(binding('A'));
+
+  for (const boundary of ['before-write', 'foreign-definition', 'malformed-record'] as const) {
+    const scoped = await setup(t, ['A']);
+    scoped.definition.members[0]!.baseConfigurationDigest = 'a'.repeat(64);
+    scoped.definition.members[0]!.runtimeGeneration = 1;
+    const original = scoped.make();
+    const request = { ...input, sourceRosterRevision: original.launch.read().rosterRevision };
+    const path = join(scoped.store.directory, recordName);
+    const beforeBytes = await readFile(path, 'utf8');
+    const originalWrite = scoped.store.write.bind(scoped.store);
+    let publicationAttempts = 0;
+    scoped.store.write = (name, value) => {
+      const preparing = !!(value as TeamLaunchRecord).preparation;
+      if (preparing) publicationAttempts++;
+      if (preparing && boundary === 'before-write') throw new Error('TEST-before-write');
+      originalWrite(name, value);
+      if (preparing) throw new Error('TEST-fsync-observation-lost');
+    };
+    try {
+      assert.throws(() => original.launch.prepare(request),
+        boundary === 'before-write' ? /TEST-before-write/ : /TEST-fsync-observation-lost/);
+      if (boundary === 'before-write') {
+        assert.equal(original.launch.read().expected, 1, 'the unchanged original record remains readable');
+        assert.throws(() => original.launch.prepare(request), /TEST-before-write/,
+          'the original ordinary retry still reaches its original write boundary');
+        assert.equal(publicationAttempts, 2);
+      }
+    } finally {
+      scoped.store.write = originalWrite;
+    }
+    assert.equal(scoped.opens.size, 0);
+    if (boundary === 'before-write') {
+      assert.equal(await readFile(path, 'utf8'), beforeBytes);
+      original.launch.seal();
+      assert.equal(await readFile(path, 'utf8'), beforeBytes, 'sealing prefers the unchanged original tuple');
+      assert.throws(() => original.launch.start(request.commandId), held);
+      continue;
+    }
+    const changed = scoped.store.read<TeamLaunchRecord>(recordName)!;
+    if (boundary === 'foreign-definition') {
+      const member = changed.definition.members[0]!;
+      assert.ok(member.binding);
+      member.binding = { ...member.binding, teamId: 'TEST-foreign-team' };
+      changed.definition.rosterRevision = runtimeDigest({
+        scope: changed.definition.rosterScope ?? changed.definition.launchId,
+        members: changed.definition.members,
+      });
+      changed.fingerprint = runtimeDigest(changed.definition);
+    } else {
+      changed.members[0]!.attempts = [];
+    }
+    originalWrite(recordName, changed);
+    const invalidBytes = await readFile(path, 'utf8');
+    assert.throws(() => original.launch.seal(), held, 'only a fully validated original expected tuple may retire');
+    assert.equal(await readFile(path, 'utf8'), invalidBytes, 'a refused record is never repaired');
+    assert.throws(() => original.launch.start(request.commandId), held, 'ingress remains sealed after refusal');
+    assert.equal(scoped.opens.size, 0);
+  }
 });
 
 test('whole expected roster persists before allocation; partial launch and scoped no-allocation retry preserve healthy/pending members', async (t) => {
