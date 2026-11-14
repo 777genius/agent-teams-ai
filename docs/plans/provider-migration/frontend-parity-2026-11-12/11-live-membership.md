@@ -430,3 +430,42 @@ The canonical Host test compiler on parent working head `49aee56d7a31caa58da7123
 Only that existing test file, common preimage `2b11a5f7edd046ec9beb1631141ac1147380c262`, is writable. In `actual capture persists worktree intent before Git, then captures real target MCP and native cwd`, retain `original.definition.capture` in a local `originalCapture`, assert explicitly that it is not `undefined`, and use that same narrowed value in the original `capturedTeam` literal. Both existing consumers continue to receive that one object. Accept existing JSON values, including null; the new assertion excludes only the absent value. Do not synthesize a capture, substitute the current definition, add a cast/non-null assertion, widen production types or omit the required capture.
 
 Preserve all eight existing cases and every original assertion, Git/worktree action, cold restart, input/allocator count, pending continuation, original deadline and cleanup. This is no new suite or production behavior. Root publishes the independently reviewed plan before source, then freezes the three-line construction change and verifies its exact inverse against the preimage. Run the original Host test typecheck and this existing eight-case file in the serial check slot. Source review is not execution evidence; original Desktop/native acceptance stays outstanding. No active CI head, workflow or source-size cap changes.
+
+# P11 §17 — Preserve the retained live-generation control refusal in the original Host case
+
+Status: PLAN ONLY; no source edits or execution under this amendment. The one failing assertion below has a source-established response contract. This amendment changes only the existing TEST oracle and strengthens its physical no-effect check; it does not change Runtime lookup, Team permissions, generation selection or live membership behavior.
+
+## 17.1 Actual failure and exact retained identity
+
+The root-owned full Host suite on parent `13abb52436446b64900a819f8d9b3b1cc94112cc` completed with 1,231 tests: 1,226 passed, three failed and two existing skips, duration 348,500.983 ms. The original local log is `state/batch2-local/host-existing-suite.log`, 148,960 bytes, Git blob digest `f9efe913e6e74d96373a0ffaa60243fd1bcbf3e7`, SHA-256 `c060faeb00ca54f7054fb611c6d685670795f34f86f56aa4321ef0c70b645bfc`. The separate Create and ambiguous-publication failures are outside this amendment.
+
+The existing case `NDJSON roster replacement refuses live allocation, then saves only after confirmed stop` reaches its original Add, target input, Remove and Restore. The stale `runtime.stop` at line 848 still sends the exact target member ID and original removed generation. It returns `{ ok: false, code: 'forbidden', outcome: 'rejected' }`; the test expects the same refused shape with `code: 'conflict'`. This is not evidence that the stale command touched either provider.
+
+## 17.2 Source-backed response contract
+
+The following unchanged production chain explains the actual result:
+
+| Source | Exact blob | Relevant behavior |
+| --- | --- | --- |
+| `packages/legacy-agent-host/src/composition/executeLiveRosterMembership.ts` | `267b4a9e5fa19d3a339a55cfc317741f90d76e9d` | Remove retains the exact removed wrapper for the original lifecycle/offline custody walk. Restore inserts the fresh binding into the global entry map and replaces the selected retained member wrapper without deleting the old global binding. |
+| `packages/legacy-agent-host/src/composition/resolveRuntimeControlEntry.ts` | `cc527f6c765f4d829c386011c610bb0bf0358bf8` | An explicit old generation matches that still-retained entry. The original writer and control-authority check runs before the later generation conflict branch. A denied control check returns `forbidden`. |
+| `packages/legacy-agent-host/src/team/TeamDeliveryAuthority.ts` | `aa43ff4bd83f0f1c70fe1f547a727a6697179d8e` | Control requires an exact current delivery binding in Team state. The retained historical-binding relation is accepted only for the read action. A retained old generation therefore cannot acquire current control, even for the original otherwise-authorized operator. |
+| `packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts` | `d3d70a37011dd05307776707408135533b9de3f8` | The distinct checkpoint-restore `rekey` deletes the old entry before adding its successor. Its stale old-generation request consequently remains a no-match `conflict`, unlike live membership's retained historical wrapper. |
+
+The existing live case already proves the old provider was closed exactly once by Remove, its custody was released, Restore selected a fresh generation/principal/session, and the restored provider has no close call after the stale Stop. The corrected expectation follows the existing retained-entry authority order. Do not force the resolver to hide the retained entry, reorder authority, restore an old grant or generalize all stale requests to one error code.
+
+## 17.3 Finite source scope and exact test change
+
+The sole writable path is `packages/legacy-agent-host/tests/runtime-team-host.test.ts`, preimage `e04481c09dfb07a19edf605ae6110796f2fd755f` (2,978 physical lines). That exact blob was independently checked at parent `13abb52436446b64900a819f8d9b3b1cc94112cc`, native `3c5b397c59498141df2b8586846f0bd593162ac4` and qualification `ea6de40703b40ffada38da4a7c0623514a7341d4`. Recheck the current per-variant preimage before publication and preserve any separately reviewed initial-admission case delta.
+
+Inside only the existing live case:
+
+1. Keep the original stale Stop method, payload, exact old generation, `ok: false` and `outcome: 'rejected'`; change only its expected code to `forbidden`, with a short static explanation that this exact historical wrapper remains read/lifecycle-only.
+2. Preserve the existing restored-provider `closeCalls === 0` assertion.
+3. After the same refused Stop, assert `firstDriver.closeCalls === 1` to prove the stale request did not close the already released old provider again.
+
+Preserve every original case name (17 literal declarations), all other assertion lines, original checkpoint `conflict` expectations, current peer identity/configuration/custody assertions, Add/Remove/Restore operations, input and allocation counts, cold lookup and duplicate no-replay checks, timers, budgets and cleanup. No new fixture, RPC, native/model operation, observer, retry, suite or production path is needed. Existing source-size policy is unchanged.
+
+## 17.4 Review and qualification
+
+Freeze the one-file diff and full before/after blobs after plan publication, verify that the inverse removes only the stated expectation/comment/old-close assertion, and obtain independent source review. The root runs the existing affected Host case through the repository's ordinary test command in its serialized slot, then the already required ordinary CI. A source review or a synthetic test success does not qualify native live membership or any separate Create/initial-admission behavior. The other failures retain their own plans and gates.
