@@ -1,0 +1,42 @@
+name: Native prompt suggestions - Host ownership TEST E2E
+
+on:
+  pull_request:
+    paths:
+      - "packages/legacy-agent-host/src/composition/createCapturedPromptSuggestionBinding.ts"
+      - "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts"
+      - "packages/legacy-agent-host/tests/native-prompt-suggestions-binding.test.ts"
+      - ".github/workflows/native-prompt-suggestions-host.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-suggestion-host-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  captured-original-host:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Frozen workspace and exact original Host build
+        run: |
+          set -euo pipefail
+          node scripts/ci/install-dependencies-with-retry.mjs
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm --filter @agent-teams/legacy-agent-host typecheck:test
+      - name: Prove candidate after SDK result before durable settlement, same-native identity, no stale turn
+        run: |
+          set -euo pipefail
+          node --test packages/legacy-agent-host/tests/native-prompt-suggestions-binding.test.ts
