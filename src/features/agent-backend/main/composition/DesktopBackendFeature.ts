@@ -17,8 +17,8 @@ import {
 import { BackendOwnerRouter } from '../application/BackendOwnerRouter';
 import { createCapturedHostBackup } from '../application/createCapturedHostBackup';
 import { prepareCreatedHostTeam } from '../application/createdHostTeam';
-import { prepareCapturedTeamModels } from '../application/prepareCapturedTeamModels';
 import { ForegroundModelChecks } from '../application/ForegroundModelChecks';
+import { prepareCapturedTeamModels } from '../application/prepareCapturedTeamModels';
 import { refreshCapturedRuntimeConfiguration } from '../application/refreshCapturedRuntimeConfiguration';
 import { CapturedHostClient } from '../infrastructure/CapturedHostClient';
 import { captureCreatedTeamConversation, requestWithLocalModelReadiness } from '../infrastructure/CapturedLocalModelReadiness';
@@ -41,8 +41,8 @@ import type {
   HandleBindingStore,
 } from '../application/backendBinding';
 import type { CapturedBackendOwner } from '../application/BackendOwnerRouter';
-import type { TeamModelProbeIntents } from '../application/TeamModelProbeIntents';
 import type { CapturedTeamModelRequest } from '../application/prepareCapturedTeamModels';
+import type { TeamModelProbeIntents } from '../application/TeamModelProbeIntents';
 import type { CapturedProviderManagement } from '../infrastructure/CapturedProviderManagement';
 import type {
   DesktopBackendDescriptor,

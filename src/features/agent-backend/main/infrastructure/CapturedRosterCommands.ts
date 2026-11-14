@@ -53,7 +53,7 @@ export class CapturedRosterCommands {
     current();
     const retained = records.filter((record) => record.commandId === commandId);
     if (retained.length !== 1) throw uncertain();
-    return this.original(retained[0]!, handleId);
+    return this.original(retained[0], handleId);
   }
 
   invoke(

@@ -26,6 +26,7 @@ import { test } from 'node:test';
 import { CONTEXT_MARKER, startOpenCodeModel } from './fixtures/native-opencode-team/model.ts';
 import { record } from './fixtures/native-claude-team/model.ts';
 import { fileHash, tick, treeHash, startHost } from './fixtures/native-host.ts';
+import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 
 const hash = (bytes: Uint8Array | string) => createHash('sha256').update(bytes).digest('hex');
@@ -275,6 +276,10 @@ test(
           ],
         },
       };
+      const initialOpen = { commandId: 'TEST-open', payload: { memberId: 'carol-id' } };
+      profile.runtime!.initialModelAdmissions = [captureInitialRuntimeModelAdmission(profile, {
+        method: 'runtime.open', teamId: scope.teamId, ...initialOpen,
+      })];
       const profilePath = join(root, 'profile.json');
       const profileBytes = JSON.stringify(profile);
       await writeFile(profilePath, profileBytes, { mode: 0o600 });
@@ -304,7 +309,7 @@ test(
       assert.ok((handshake.capabilities as string[]).includes('runtime.member-session'));
       const opened = await current.rpc(
         'runtime.open',
-        envelope('TEST-open', { memberId: 'carol-id' })
+        envelope(initialOpen.commandId, initialOpen.payload)
       );
       openingReply = opened;
       assert.equal(opened.ok, true);

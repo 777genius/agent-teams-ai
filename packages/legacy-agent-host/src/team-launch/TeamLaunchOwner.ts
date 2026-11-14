@@ -43,6 +43,7 @@ import type {
 export class TeamLaunchOwner {
   private readonly path: string;
   private fingerprint: string;
+  private pendingPublication: Readonly<{ fingerprint: string; memberCount: number }> | undefined;
   private readonly active = new Map<string, Promise<void>>();
   private readonly deadlines = new Map<string, ReturnType<typeof setTimeout>>();
   private sealed = false;
@@ -114,12 +115,12 @@ export class TeamLaunchOwner {
   seal(): void {
     this.sealed = true;
     this.liveReadinessCapture = undefined;
-    this.options.store.fenced(() => {
-      const record = this.load();
-      if (record.readiness) this.write(retireLaunchReadiness(record));
-    });
     for (const timer of this.deadlines.values()) clearTimeout(timer);
     this.deadlines.clear();
+    this.options.store.fenced(() => {
+      const record = this.load(true);
+      if (record.readiness) this.write(retireLaunchReadiness(record));
+    });
   }
 
   readModelReadinessCapture(input: LocalModelReadinessCapture) {
@@ -761,20 +762,25 @@ export class TeamLaunchOwner {
     if (!attempt) throw new TeamLaunchError('hold', 'attempt-corrupt');
     return attempt;
   }
-  private load(): TeamLaunchRecord {
+  private load(sealing = false): TeamLaunchRecord {
     const record = this.options.store.read<TeamLaunchRecord>(this.path);
     if (!record) throw new TeamLaunchError('hold', 'record-missing');
-    this.validate(record);
+    this.validate(record, sealing);
     return record;
   }
-  private validate(record: TeamLaunchRecord): void {
-    validateLaunchRecord(liveRosterValidationRecord(record), this.fingerprint, this.options.definition.members.length);
+  private validate(record: TeamLaunchRecord, sealing = false): void {
+    const pending = sealing && record.fingerprint !== this.fingerprint &&
+      record.fingerprint === this.pendingPublication?.fingerprint ? this.pendingPublication : undefined;
+    validateLaunchRecord(liveRosterValidationRecord(record), pending?.fingerprint ?? this.fingerprint,
+      pending?.memberCount ?? this.options.definition.members.length);
     validateNativeLaunchAdditions(record);
   }
   private publishSelection(record: TeamLaunchRecord): void {
+    this.pendingPublication = { fingerprint: record.fingerprint, memberCount: record.definition.members.length };
     this.write(record);
     this.options.definition = structuredClone(record.definition);
     this.fingerprint = record.fingerprint;
+    this.pendingPublication = undefined;
   }
   private write(record: TeamLaunchRecord): void {
     if (Buffer.byteLength(JSON.stringify(record)) > 1024 * 1024)

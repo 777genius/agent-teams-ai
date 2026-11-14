@@ -61,8 +61,8 @@ export function createRuntimeTeamLaunch(options: {
       assertModelReadiness(memberId) {
         const entry = entries.find(candidate => candidate.profile.memberId === memberId);
         if (!entry || entry.profile.provider !== 'opencode') return;
-        if (!options.modelReadiness) throw new RuntimeOwnerError('hold');
-        inspectMemberModelReadiness({ management: options.modelReadiness, launch, entry,
+        inspectMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
+          launch, entry, hostIncarnation: options.hostIncarnation,
           assertCurrent: () => {
             options.assertWriter();
             if (options.isSealed() || !options.isCurrent(entry)) throw new RuntimeOwnerError('hold');
