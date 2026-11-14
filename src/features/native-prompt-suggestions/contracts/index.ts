@@ -14,6 +14,8 @@ export interface NativeNextPromptIdentity {
 
 export interface NativeNextPromptCandidate extends NativeNextPromptIdentity {
   readonly suggestionId: string;
+  readonly memberName: string;
+  readonly messageId: string;
   readonly provider: NativeNextPromptProvider;
   /** Verified original successful Host input; not a UI run ordinal. */
   readonly operationRef: string;
@@ -23,6 +25,8 @@ export interface NativeNextPromptCandidate extends NativeNextPromptIdentity {
 
 export interface NativeNextPromptViewContext extends NativeNextPromptIdentity {
   readonly provider: NativeNextPromptProvider | 'unsupported';
+  /** Canonical latest outbound human DM message, not a UI run ordinal. */
+  readonly latestDirectMessageId: string | null;
   readonly latestExecutedOperationRef: string | null;
   readonly latestCompletedTurnRef: string | null;
   readonly userEnabled: boolean;
