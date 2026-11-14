@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmod, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { chmod, lstat, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -304,6 +304,21 @@ test(
       { executable: 'codex', allowed: false, argc: 1, command: 'app-server', flags: [] },
       { executable: 'codex', allowed: true, argc: 1, command: null, flags: ['--version'] },
     ]);
+    const originalSentinels = await Promise.all(donorPackageManager.sentinels.map(async value => ({
+      ...value, bytes: await readFile(value.path), stat: await lstat(value.path, { bigint: true }),
+    })));
+    assert.deepEqual(originalSentinels.map(value => value.path), [join(donorBin, 'codex'), join(donorVendor, 'codex')]);
+    const heldVendor = donorPackageManager.sentinels.find(value => value.path === join(donorVendor, 'codex'));
+    assert.ok(heldVendor);
+    await donorPackageManager.parkCodexSentinels();
+    for (const value of originalSentinels) {
+      await assert.rejects(lstat(value.path), { code: 'ENOENT' });
+      assert.deepEqual(await readFile(value.parkedPath), value.bytes);
+      const held = await lstat(value.parkedPath, { bigint: true });
+      assert.equal(held.isFile(), true); assert.equal(held.isSymbolicLink(), false); assert.equal(held.nlink, 1n);
+      assert.equal(held.dev, value.stat.dev); assert.equal(held.ino, value.stat.ino);
+      assert.equal(Number(held.mode & 0o7777n), value.mode);
+    }
     const originalArgs = ['exec', 'electron-vite', 'dev', ...args];
     const invokeDonorShim = (environment = donorEnv) => spawnSync(join(donorPackageManager.bin, 'pnpm'), originalArgs,
       { cwd: donorRoot, env: environment, encoding: 'utf8', timeout: 5000 });
@@ -315,7 +330,7 @@ test(
       if (failure === 'foreign') await writeFile(foreign,
         desktopNodeScriptHeader(spacedNode) + "import {writeFileSync} from 'node:fs';\nwriteFileSync(" +
         JSON.stringify(foreignEffect) + ",'TEST unexpected invocation');\n", { mode: 0o700 });
-      if (failure === 'pin') await writeFile(join(donorVendor, 'codex'), donorSentinel + '// TEST changed pin\n');
+      if (failure === 'pin') await writeFile(heldVendor.parkedPath, donorSentinel + '// TEST changed pin\n');
       if (failure === 'managed') await writeFile(managed, '{}', { mode: 0o600 });
       const refused = invokeDonorShim(failure === 'override' ? { ...donorEnv, CODEX_CLI_PATH: foreign } : donorEnv);
       assert.equal(refused.error, undefined); assert.notEqual(refused.status, 0, failure);
@@ -326,7 +341,7 @@ test(
       await assert.rejects(readFile(foreignEffect), { code: 'ENOENT' });
       await assert.rejects(readFile(donorPackageManager.receiptPath), { code: 'ENOENT' });
       if (failure === 'foreign') await rm(foreign);
-      if (failure === 'pin') await writeFile(join(donorVendor, 'codex'), donorSentinel);
+      if (failure === 'pin') await writeFile(heldVendor.parkedPath, donorSentinel);
       if (failure === 'managed') await rm(managed);
     }
     const copiedShim = await readFile(join(donorPackageManager.bin, 'pnpm'), 'utf8');
@@ -337,12 +352,33 @@ test(
     const availability = JSON.parse(await readFile(donorPackageManager.receiptPath, 'utf8'));
     assert.equal(availability.kind, 'donor-saved-codex-unavailable');
     assert.deepEqual(availability.invocation, originalArgs);
+    assert.deepEqual(availability.sentinels, donorPackageManager.sentinels);
+    assert.ok(availability.observations.every((row: { kind: string }) => row.kind === 'absent'));
+    for (const value of originalSentinels)
+      assert.ok(availability.observations.some((row: { path: string; kind: string }) =>
+        row.path === value.path && row.kind === 'absent'));
     assert.ok(availability.observations.some((row: { path: string; kind: string }) =>
       row.path === foreign && row.kind === 'absent'));
     const duplicate = invokeDonorShim();
     assert.equal(duplicate.error, undefined); assert.notEqual(duplicate.status, 0);
     assert.match(duplicate.stderr, /EEXIST/);
     assert.equal((await readFile(originalCalls, 'utf8')).trim().split('\n').length, 1);
+
+    const replacement = originalSentinels[0]!;
+    await writeFile(replacement.path, 'TEST foreign original replacement', { mode: 0o600, flag: 'wx' });
+    await assert.rejects(donorPackageManager.restoreCodexSentinels(), /Never overwrite a replacement donor Codex candidate/);
+    assert.equal(await readFile(replacement.path, 'utf8'), 'TEST foreign original replacement');
+    for (const value of originalSentinels) assert.deepEqual(await readFile(value.parkedPath), value.bytes);
+    await rm(replacement.path); // Remove only this test's known replacement after proving refusal.
+    assert.deepEqual(await donorPackageManager.restoreCodexSentinels(), donorPackageManager.sentinels);
+    for (const value of originalSentinels) {
+      assert.deepEqual(await readFile(value.path), value.bytes);
+      const restored = await lstat(value.path, { bigint: true });
+      assert.equal(restored.isFile(), true); assert.equal(restored.isSymbolicLink(), false); assert.equal(restored.nlink, 1n);
+      assert.equal(restored.dev, value.stat.dev); assert.equal(restored.ino, value.stat.ino);
+      assert.equal(Number(restored.mode & 0o7777n), value.mode);
+      await assert.rejects(readFile(value.parkedPath), { code: 'ENOENT' });
+    }
 
     assert.match(packed.rendererUrl, /^file:/);
     assert.ok(packed.rendererUrl.includes('App%20Bundle.app'));
