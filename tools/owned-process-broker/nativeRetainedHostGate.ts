@@ -373,7 +373,7 @@ export async function runNativeRetainedHostGate(
     const result = row(
       await client.request(method, envelope(commandId, payload), {
         control: method === 'runtime.read',
-        ...(originalDeadline === undefined ? {} : { remainingMs: Math.floor(deadline - performance.now()) }),
+        ...(originalDeadline === undefined ? {} : { remainingMs: () => Math.floor(deadline - performance.now()) }),
       })
     );
     if (originalDeadline !== undefined) assert.ok(performance.now() < deadline, 'Original opening reply is current');

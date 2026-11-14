@@ -8,8 +8,8 @@ import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { setTimeout as delay } from 'node:timers/promises';
-import { decodeCodexConfiguredMcpCatalog, codexMcpPolicyArgs,
-  captureCodexMcpPolicy } from '@agent-teams/provider-implementations/codex';
+import { captureCodexConfiguredMcpCatalog, codexMcpPolicyArgs,
+  captureCodexMcpPolicy } from '../../packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/codex.js';
 import { startCodexModel, codexToolReceipt, CONTEXT_MARKER as CODEX_CONTEXT,
   type RetainedProcessScenario } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
 import { startOpenCodeModel, CONTEXT_MARKER as OPENCODE_CONTEXT } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
@@ -147,7 +147,11 @@ export async function prepareRetainedProviderFixture(options: {
     quote(options.root) + ' ' + role + ' < /dev/null > ' + quote(join(workspace, 'process-' + role + '.stdout')) +
     ' 2> ' + quote(join(workspace, 'process-' + role + '.stderr')) + ' &';
   const command = shell('primary') + '\n' + shell('neighbor') + '\nprintf ' + quote(marker + '\n');
-  const member = () => { assert.ok(selectedMember && selectedProfile); return selectedMember; };
+  const member = () => {
+    assert.ok(selectedMember && selectedProfile);
+    assert.ok(selectedMember.provider === 'codex' || selectedMember.provider === 'opencode');
+    return selectedMember;
+  };
   const assertRecipe = () => {
     assert.equal(managementDigest(member()), recipeDigest);
     if (configPath) assert.equal(hash(readFileSync(configPath)), configSha);
@@ -183,6 +187,7 @@ export async function prepareRetainedProviderFixture(options: {
         assert.equal(roots.size, options.provider === 'codex' ? 7 : 2);
         assert.ok(memberRow().resumed && memberRow().witness);
         assert.equal(memberRow().witness!.process.exitCode, null);
+        assert.ok(memberTools);
         assert.ok(memberTools?.includes('process_register') && memberMcpUrl);
         for (const name of memberTools) originalNativeName(name, input.tools);
       } else {
@@ -271,7 +276,7 @@ export async function prepareRetainedProviderFixture(options: {
       configPath = join(env.CODEX_HOME, 'config.toml'); writeFileSync(configPath, lines.join('\n') + '\n', { flag: 'wx' });
       configSha = hash(readFileSync(configPath));
       selectedMember = { ...common, provider: 'codex', protocolRevision: '0.162.0', model: 'mock-model', environment: env,
-        capturedMcpServers: {}, capturedMcpCatalog: decodeCodexConfiguredMcpCatalog('[]'),
+        capturedMcpServers: {}, capturedMcpCatalog: captureCodexConfiguredMcpCatalog({ digest: hash('[]'), servers: [] }),
         nativeOptions: { approvalPolicy: 'never', sandbox: 'workspace-write', modelProvider: 'TEST_fixture',
           developerInstructions: CODEX_CONTEXT + '. You are alice working only in ' + workspace + '.' } };
     } else {
@@ -434,7 +439,7 @@ export async function prepareRetainedProviderFixture(options: {
   async function prelude(client: CapturedHostClient, deadline: number) {
     assertRecipe(); assert.equal(managementComplete, false); const profile = teamModelProbeProfile(member());
     const request = async (method: string, payload: Record<string, string | boolean>, control = false) => {
-      const value = object(await client.request(method, payload, { control, remainingMs: remaining(deadline) }));
+      const value = object(await client.request(method, payload, { control, remainingMs: () => remaining(deadline) }));
       remaining(deadline); assert.equal(value.ok, true, 'Original standalone management request'); return object(value.value);
     };
     if (options.provider === 'codex') {
