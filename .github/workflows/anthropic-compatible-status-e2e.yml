@@ -106,6 +106,8 @@ jobs:
         run: node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.desktop-e2e.json
       - name: Prove inherited default through released bundled runtime and native save
         shell: pwsh
+        env:
+          AGENT_TEAMS_E2E_PRODUCT_PROBE: '1'
         run: |
           $env:TMPDIR = $env:RUNNER_TEMP
           $env:TEMP = $env:RUNNER_TEMP
