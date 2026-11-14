@@ -26,7 +26,8 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           ref: feat/native-prompt-suggestions-stage1-20261114
-          persist-credentials: true
+          # No writable checkout credentials while executing dependency code.
+          persist-credentials: false
           fetch-depth: 1
 
       - name: Checkout frozen public provider source at original source-qualified commit
@@ -84,6 +85,9 @@ jobs:
           git diff --check
 
       - name: Commit and push exact tested artifact to isolated feature branch
+        env:
+          # Created only for this final step, after all provider code finished.
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
@@ -95,4 +99,10 @@ jobs:
           git diff --cached --check
           git diff --cached --quiet && exit 0
           git commit -m 'chore(native-suggestions): pin exact CI-qualified provider artifact'
-          git push origin HEAD:refs/heads/feat/native-prompt-suggestions-stage1-20261114
+          # Inject authorization only into the final git process; never store
+          # a write-capable token in the checkout provider code can inspect.
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          GIT_CONFIG_COUNT=1 \
+            GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \
+            GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth" \
+            git push origin HEAD:refs/heads/feat/native-prompt-suggestions-stage1-20261114
