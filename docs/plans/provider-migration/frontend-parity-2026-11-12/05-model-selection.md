@@ -1568,3 +1568,47 @@ Actual acceptance still requires the original packaged and source-native jobs on
 ### 23.5 Review and publication
 
 R1 traced the original failure to the nested Runtime lookup and rejected a new mutable setup-complete latch in favor of the existing authority split. Independent review must verify every native allocation callsite still reaches `canAllocate`, the two factory variants preserve all unrelated bytes, and the same original case fails before and passes after the correction. Root publishes this exact appendix before source edits, commits and immediately pushes each reviewed cut, and leaves active live CI heads unchanged until their current runs finish.
+
+
+## 24. Compare the original OpenCode model with its single same-provider qualification
+
+### 24.1 Original Linux failure and exact source join
+
+Original Linux x64 job132409199617 executed qualification checkout `0e88cb3d18ac710148230bd2dfe5b5f45b22a248`, confirmed by checkout/git-log and SOURCE_HEAD. Its existing V2 coordination stage passed with the original four model requests, one metadata request and clean release. The immediately following original `runtime.open` returned hold/unknown in63ms, before any claim or business native allocation: launch remained not-started/claimed=false, business modelRequests=0, Host exit0 and cleanup=true. The original receipt was still before its retained expiry. This is separate from §23's post-Open dispatch failure and from other platform startup failures. Evidence `2e66f0b8c4b06dde6a041c81058ccc946f4ee2e0` retains the original embedded receipt and source/checkout references; its full log is the existing bundle `39d4101b6f14e8d3322b658b24c5c127535798b9`, key `batch3StaticLog132409199617`. No rerun or artifact-name inference is used.
+
+The unchanged producer `tests/fixtures/native-opencode-team/coordination-probe.ts` `691b2e24a5dd5242dabf8192c256ae77121e28fa` constructs the original ModelProbeInput with providerId=`TEST-local` and modelId=`TEST-local/TEST-model-B`. The exact member profile in native fixture `8a59626e2b0cedc31a1212009530c99e8f2c806c` retains model=`TEST-model-B` and variant=high. `ModelProbeOwner.ts` `b30cf0d7b41251d99933d66c0a0fc5185e9170d9` correctly stores the original input unchanged, including its fingerprint. `initialRuntimeModelAdmission.ts` `e709df02ff4ce926c6d1721b5549024f6c945949` validates the original initial action/scope and then calls `capturePreparedModelReference` before attaching that proof.
+
+The consumer currently accepts raw equality or constructs `original.providerId + '/' + original.modelId`. For this real input, its second comparison becomes `TEST-local/TEST-local/TEST-model-B` against `TEST-model-B`; both alternatives refuse. The same reversed comparison appears in `captureNativeRestartReadiness` for the already retained source. The account reader in this same module already removes at most one exact `providerId + '/'` prefix for its native model lookup. The correction belongs at these model comparisons, without rewriting the original probe or native producer.
+
+### 24.2 Two existing writable paths
+
+| Path | Parent, native and qualification preimage |
+| --- | --- |
+| `packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts` | `676d65fcbeb19def4b7bd6adb5509e7f03a551ca` |
+| `packages/legacy-agent-host/tests/saved-team-model-probe.test.ts` | `28fc6c648d5c68478c0190ffbb4edaf0f2e41fd8` |
+
+All six preimages were read at parent `00a9c75bf104224a1fe3cb681dcc1cd4f063091a`, native `4a6d28301cce364a55f071314e9da02d4fee5721` and qualification `2d8295fd7e76d388ad2aed8cc37186370fdc8f41`. They are byte-identical across the three branches. There is no shared write path with root's §23 factory/runtime-team-host correction. No native fixture, ModelProbeOwner/store/schema, source roster, public DTO, dependency, workflow or deadline is writable in this appendix.
+
+### 24.3 One exact prefix, unchanged proof
+
+Use a private comparison in the existing composition module which removes at most one leading `providerId + '/'` from each compared model identifier, then compares the remaining strings exactly. Its providerId is the already required exact original provider; it cannot be selected from an arbitrary model basename. Use that same rule in `capturePreparedModelReference` and `captureNativeRestartReadiness`. The existing account reader's identical one-prefix extraction may call the small private function so the three local uses share one spelling; its behavior must remain identical.
+
+Bare `model` and singly qualified `provider/model` under the same original provider are the two supported representations. Do not strip a foreign provider, repeatedly remove prefixes, split on the final slash, trim, lowercase, look up a default or select another model. In particular, an original foreign-provider string or `provider/provider/model` must not match the retained bare `model`. No model normalization is persisted: the original ModelProbeInput, stored modelId/fingerprint, scope/mechanism/selection digests, reference/preparation digest, consumer, account witness and original producer bytes remain exact.
+
+Keep all existing provider, effort, profile/mechanism, command/context, immutable initial provenance and initial-attempt CAS checks. Preserve the original source/approval/account/native-file witness inspections, same current target, original expiry/cutoff, completed/ok/clean-release requirements and exact source lineage. Fresh initial attachment still requires its original scoped receipt. Native Restart still reads source provenance for its separately authorized original action; this comparison cannot turn historical provenance into fresh readiness. The separate manual-key original-input assertion in `captureOpenCodeProbeAccount` is unchanged; this appendix does not broaden that credential contract.
+
+### 24.4 One meaningful existing-case regression
+
+Extend only the existing case `Team probe read rejects completed evidence after physical config-directory replacement while exact contextual cleanup remains addressable`. Its existing private-file/initial-admission sequence already uses the real ModelProbeOwner store, capturePreparedModelReference, cold reader, initial scope/attachment, consumed account assertion and captureNativeRestartReadiness. Preserve every original case declaration and all existing assertions, synthetic-native qualification label, modes, probe count and1000ms cutoffs.
+
+In its existing `initial` mode only, admit the original probe with the producer's singly qualified modelId while keeping the original member profile bare. Other existing modes retain their bare representation. Assert that the stored modelId, fingerprint/scope and receipt remain unchanged through capture, cold inspection, original initial attachment/replay, consumption and the existing native-Restart source inspection. This changes no probe count: nativeCalls must remain one.
+
+Using that same controlled completed record, temporarily substitute a foreign-provider model string and a twice-prefixed model string, one at a time, and require both capturePreparedModelReference and captureNativeRestartReadiness to refuse. Restore the exact original record in finally before proceeding. These are negative reads of the same existing controlled source, not new successful probes or fabricated native evidence. Keep the existing foreign scope, expired/held/unscoped, another actor, key drift and no replacement-native assertions.
+
+Root first runs this amended original case against the old helper and retains the actual refusal of the legitimate qualified input. After the correction, root runs the same case and the original saved-team-model-probe/runtime-team-host files on the coherent §23 source, with applicable build/types/source guards. No new test case, native experiment, wait, inference, polling, request ceiling or acceptance weakening is authorized.
+
+### 24.5 Review, publication and remaining native acceptance
+
+R1 traced the original producer/store/consumer mismatch and rejected changing the original native request or stripping arbitrary model basenames. R2 checks both consumers, the exact account-reader extraction, the complete original proof/currentness joins and the real existing-case path. Independent plan review precedes source GO. Freeze both full sources and exact forward/inverse diffs, preserving all three branch variants and the production800-line cap. Root commits and immediately pushes the reviewed plan/source and owns all execution gates.
+
+Controlled before/after PASS establishes this model-comparison correction only. The original Linux V2 job still must pass on the next ordinary eligible reviewed head with its existing four-request coordination proof, one metadata request, original business/Stop/cleanup sequence and unchanged assertions. Other platform failures remain separate until their actual causes and original results are checked.
