@@ -19,3 +19,10 @@ Unsupported or stale candidates render nothing.
 
 Consumer contract/UX plan: docs/plans/provider-migration/
 native-prompt-suggestions-consumer-2026-11-14.md.
+
+Security HOLD (HTTP): the existing `/api/events` stream is a process-wide,
+unauthenticated broadcast. Main intentionally does **not** send native prompt
+suggestion text to this SSE endpoint, even when a browser subscribes to the
+feature channel. Electron IPC is scoped to the currently authorized renderer.
+Do not re-enable HTTP publication until a per-owner/context authenticated SSE
+route (including disconnect/revocation isolation) has actual E2E evidence.
