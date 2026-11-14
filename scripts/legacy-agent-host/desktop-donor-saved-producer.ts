@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
-import { chmod, copyFile, mkdir, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import {
@@ -375,6 +375,24 @@ export async function produceDesktopDonorSavedTeam(options: {
     const donorProbes = await finishDonor();
     assert.ok(donorProbes.length <= 8, 'finite original read-only model checks only');
     assert.deepEqual(model.probes, [], 'current Host has not started in the donor epoch');
+    const sentinelBefore = await lstat(fixture.sentinelLog, { bigint: true });
+    assert.ok(sentinelBefore.isFile() && !sentinelBefore.isSymbolicLink() &&
+      sentinelBefore.size > 0n && sentinelBefore.size <= 64n * 1024n,
+      'bounded original donor sentinel log before current Main');
+    const sentinelBytes = await readFile(fixture.sentinelLog);
+    const sentinelAfter = await lstat(fixture.sentinelLog, { bigint: true });
+    assert.ok(sentinelAfter.isFile() && !sentinelAfter.isSymbolicLink());
+    for (const key of ['dev', 'ino', 'size', 'mtimeNs', 'ctimeNs'] as const)
+      assert.equal(sentinelAfter[key], sentinelBefore[key], 'original sentinel log unchanged during read');
+    assert.equal(BigInt(sentinelBytes.length), sentinelBefore.size);
+    const sentinelText = sentinelBytes.toString('utf8');
+    assert.ok(Buffer.from(sentinelText).equals(sentinelBytes), 'original log is complete UTF-8');
+    assert.ok(sentinelText.endsWith('\n'), 'original log contains complete newline-delimited records');
+    const sentinelRows = sentinelText.slice(0, -1).split('\n').map(line => donorRow(JSON.parse(line)));
+    proof.sentinelBeforeConsumer = {
+      bytes: sentinelBytes.length, sha256: createHash('sha256').update(sentinelBytes).digest('hex'),
+      count: sentinelRows.length, invocations: sentinelRows,
+    };
     phase = 'source-capture';
     const source = await captureDonorSavedCorpus(fixture.root, teamName);
     seed = {
