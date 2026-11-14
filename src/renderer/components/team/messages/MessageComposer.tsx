@@ -641,11 +641,6 @@ const MemberMessageComposer = ({
     }
     return latest?.messageId ?? null;
   }, [conversationMessages, effectiveRecipient]);
-  const selectedProviderId =
-    normalizeOptionalTeamProviderId(selectedMember?.laneOwnerProviderId ?? selectedMember?.providerId) ??
-    inferTeamProviderIdFromModel(selectedMember?.model);
-  const suggestionProvider = selectedProviderId === 'anthropic' ? 'claude'
-    : selectedProviderId === 'codex' ? 'codex' : 'unsupported';
   const insertNativeSuggestion = useCallback((text: string) => {
     draft.setText(text);
     focusComposerTextarea();
@@ -654,7 +649,6 @@ const MemberMessageComposer = ({
     teamName,
     recipient: effectiveRecipient,
     memberId: selectedMember?.runtimeOwner === 'captured-host' ? selectedMember.hostMemberId : undefined,
-    provider: suggestionProvider,
     latestDirectMessageId,
     editable: draft.address.target.kind === 'direct' && !groupChatSelected &&
       !isCrossTeam && !!isTeamAlive && !sending && !isContextSwitching &&
