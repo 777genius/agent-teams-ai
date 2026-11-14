@@ -67,11 +67,11 @@ export function createInstallFailureTracker() {
   };
 }
 
-function runInstall() {
+function runInstall(installArgs) {
   return new Promise((resolve, reject) => {
     const child = spawn(
       process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
-      ['install', '--frozen-lockfile'],
+      installArgs,
       {
         env: process.env,
         shell: process.platform === 'win32',
@@ -99,8 +99,13 @@ function runInstall() {
 }
 
 async function main() {
+  const options = process.argv.slice(2);
+  if (options.length > 1 || options.length === 1 && options[0] !== '--child-concurrency=1') {
+    throw new TypeError('Unsupported frozen-install option');
+  }
+  const installArgs = ['install', '--frozen-lockfile', ...options];
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-    const result = await runInstall();
+    const result = await runInstall(installArgs);
     if (result.code === 0) return;
 
     const canRetry =

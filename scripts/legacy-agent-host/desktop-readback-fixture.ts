@@ -10,6 +10,7 @@ import { readFile, readdir, realpath } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { desktopBackendEnvironment, fileDigest } from './desktop-backend-fixture.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
+import { readDesktopLinuxChildExecInput } from './desktop-runtime-source-fixture.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
@@ -98,6 +99,9 @@ export async function readSavedDesktopFixture(
   assert.equal(await fileDigest(receipt), receiptSha256);
   const saved = record(JSON.parse(await readFile(receipt, 'utf8')));
   assert.equal(saved.root, root);
+  const linuxChildExec = readDesktopLinuxChildExecInput();
+  assert.deepEqual(saved.linuxChildExecInput, linuxChildExec, 'readback retains its original Linux launch input');
+  if (linuxChildExec) assert.equal(saved.linuxChildExecInputVerifiedAfterCleanup, true);
   if (options.openCodeGeneration === 'v2') {
     assert.equal(saved.nativeProvider, 'opencode', 'V2 readback must retain its original native provider');
     assert.equal(saved.nativeGeneration, 'v2');
@@ -179,6 +183,7 @@ export async function readSavedDesktopFixture(
     profilePath,
     handleId,
     pins,
+    ...(linuxChildExec ? { linuxChildExec } : {}),
     sentinelLog: join(root, 'sentinel-invocations.ndjson'),
     uiSeed: {
       taskId,
@@ -186,7 +191,7 @@ export async function readSavedDesktopFixture(
       commandId: options.nativeProcess ? 'TEST-process-ui-seed' : 'TEST-ui-offline-seed',
     },
     packageManager: saved.packageManager as Fixture['packageManager'],
-    appEnvironment: desktopBackendEnvironment(root, node, descriptorPath, pins.descriptorSha256),
+    appEnvironment: desktopBackendEnvironment(root, node, descriptorPath, pins.descriptorSha256, linuxChildExec),
   };
 }
 export async function runDesktopNativeReadback(

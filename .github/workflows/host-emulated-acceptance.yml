@@ -73,7 +73,7 @@ jobs:
       - name: Install frozen workspace and Electron
         run: |
           set -euo pipefail
-          node scripts/ci/install-dependencies-with-retry.mjs
+          node scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1
           node scripts/ensure-electron-install.cjs --strict
           node -e "require('node:assert/strict').equal(require('electron/package.json').version, '44.10.1')"
           pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1
@@ -85,6 +85,7 @@ jobs:
           pnpm --filter agent-teams-controller build
           pnpm --filter agent-teams-mcp build
           node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts
+          node --test test/scripts/installDependenciesWithRetry.test.mjs
       - name: Capture package-manager and Host inputs without vendor executables
         id: inputs
         run: |
@@ -94,11 +95,15 @@ jobs:
           printf '{"private":true}\n' > "$selected_inputs/corepack/package.json"
           pnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
           COREPACK_HOME="$selected_inputs/cache" node "$selected_inputs/corepack/node_modules/corepack/dist/pnpm.js" --version
+          LEGACY_LINUX_CHILD_EXEC_GO=1 node packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts \
+            --linux-child-exec "$selected_inputs/linux-child-exec" "$(command -v cc)" "$(command -v readelf)" \
+            > "$RUNNER_TEMP/host-emulated-linux-child-exec-selection.json"
           HOST_EMULATED_INPUTS="$selected_inputs" node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
           import { createHash } from 'node:crypto';
           import { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
           import { captureLinuxNodeExecArtifact } from './src/main/utils/linuxNodeExecArtifact.ts';
+          import { verifyLinuxChildExecInput } from './src/main/utils/linuxChildLaunchSelection.ts';
           import { join } from 'node:path';
           const sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');
           const selected = process.env.HOST_EMULATED_INPUTS;
@@ -106,6 +111,14 @@ jobs:
           assert.equal(JSON.parse(readFileSync(join(corepack, 'package.json'), 'utf8')).version, '0.36.0');
           const pnpm = join(corepack, 'dist/pnpm.js');
           const processLauncher = captureLinuxNodeExecArtifact(realpathSync('resources/process-launch/linux-x64'));
+          const pin = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-linux-child-exec-selection.json'), 'utf8'));
+          assert.deepEqual(Object.keys(pin).sort(), ['binarySha256', 'manifestPath', 'manifestSha256']);
+          assert.equal(pin.manifestPath, join(selected, 'linux-child-exec/manifest.json'));
+          assert.ok(!/[\r\n]/.test(pin.manifestPath));
+          const linuxChildExec = verifyLinuxChildExecInput(pin);
+          assert.deepEqual(linuxChildExec, pin);
+          assert.equal(JSON.parse(readFileSync(pin.manifestPath, 'utf8')).sourceSha256,
+            sha('packages/legacy-agent-host/native/linux-child-exec.c'));
           const values = {
             LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
             LEGACY_DESKTOP_COREPACK_HOME: join(selected, 'cache'),
@@ -114,11 +127,13 @@ jobs:
             LEGACY_DESKTOP_PNPM_PATH: pnpm, LEGACY_DESKTOP_PNPM_SHA256: sha(pnpm),
             LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: sha(join(corepack, 'package.json')),
             LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: sha(join(corepack, 'dist/lib/corepack.cjs')),
+            LEGACY_LINUX_CHILD_EXEC_MANIFEST: linuxChildExec.manifestPath,
+            LEGACY_LINUX_CHILD_EXEC_SHA256: linuxChildExec.manifestSha256,
           };
           for (const [key, value] of Object.entries(values)) appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
           writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), JSON.stringify({
             sourceHead: process.env.HOST_EMULATED_SOURCE_HEAD, platform: process.platform,
-            architecture: process.arch, nativeProviders: 'forbidden', values,
+            architecture: process.arch, nativeProviders: 'forbidden', values, linuxChildExec,
             processLauncher: { manifestSha256: processLauncher.manifestSha256, binarySha256: processLauncher.binarySha256 },
           }, null, 2), { mode: 0o600 });
           NODE
@@ -211,11 +226,16 @@ jobs:
           import { createHash } from 'node:crypto';
           import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
           import { captureLinuxNodeExecArtifact } from './src/main/utils/linuxNodeExecArtifact.ts';
+          import { verifyLinuxChildExecInput } from './src/main/utils/linuxChildLaunchSelection.ts';
           import { basename, dirname, join } from 'node:path';
           const inputs = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), 'utf8'));
           const processLauncher = captureLinuxNodeExecArtifact(realpathSync('resources/process-launch/linux-x64'));
           assert.equal(processLauncher.manifestSha256, inputs.processLauncher.manifestSha256);
           assert.equal(processLauncher.binarySha256, inputs.processLauncher.binarySha256);
+          const linuxChildExec = verifyLinuxChildExecInput(inputs.linuxChildExec);
+          assert.deepEqual(linuxChildExec, inputs.linuxChildExec);
+          assert.equal(inputs.values.LEGACY_LINUX_CHILD_EXEC_MANIFEST, linuxChildExec.manifestPath);
+          assert.equal(inputs.values.LEGACY_LINUX_CHILD_EXEC_SHA256, linuxChildExec.manifestSha256);
           const modesByLane = {
             team: ['team-ui'],
             taskboard: ['task-board-ui'],
@@ -239,6 +259,8 @@ jobs:
             assert.equal(receipt.status, 'PASS'); assert.equal(receipt.mode, mode);
             assert.equal(receipt.source.head, process.env.HOST_EMULATED_SOURCE_HEAD);
             assert.equal(receipt.source.dirty, false);
+            assert.deepEqual(receipt.linuxChildExecInput, linuxChildExec);
+            assert.equal(receipt.linuxChildExecInputVerifiedAfterCleanup, true);
             const runtimeProvider = { 'emulated-codex-runtime-ui': 'codex', 'emulated-claude-runtime-ui': 'claude', 'emulated-opencode-runtime-ui': 'opencode' }[mode];
             const runtime = runtimeProvider !== undefined;
             assert.deepEqual(receipt.emulation, { only: true, runtimeConfigured: runtime,
@@ -335,6 +357,8 @@ jobs:
           path: |
             ${{ runner.temp }}/host-emulated-*.json
             ${{ runner.temp }}/host-emulated-*.log
+            ${{ runner.temp }}/TEST-emulated-ui-inputs-*/linux-child-exec/manifest.json
+            ${{ runner.temp }}/TEST-emulated-ui-inputs-*/linux-child-exec/linux-child-exec
             ${{ runner.temp }}/TEST-desktop-backend-*/desktop-backend-receipt.json
             ${{ runner.temp }}/TEST-desktop-backend-*/desktop-app.log
             ${{ runner.temp }}/TEST-desktop-backend-*/desktop-review-readback-receipt.json
