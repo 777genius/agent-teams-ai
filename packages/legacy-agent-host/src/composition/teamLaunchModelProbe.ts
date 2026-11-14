@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { captureReadinessPreparation, originalReadinessSubset } from '../adapters/providers/OpenCodeReadinessOrigin.js';
 import type { LocalModelReadinessPreparation } from '../management/commandRecords.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
+import { actualCaptureReadinessCommandId, modelReadinessMechanismDigest } from '../team-launch/launchReadiness.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { isNativeProfilePath } from './nativeProcessProfile.js';
 import {
@@ -218,6 +219,11 @@ export function captureTeamModelProbe(options: {
   assertSelection();
   return {
     profile: teamModelProbeProfile(profile.provider === 'claude' ? selected : profile),
+    provenance: { teamBindingDigest: runtimeDigest(options.team.definition.binding),
+      selectionDigest: runtimeDigest(input), sourceRevision: input.launchId, rosterRevision: input.rosterRevision,
+      destinationKeys: [runtimeDigest(input.draft?.target ?? { launchId: input.launchId, memberId: input.memberId })] },
+    readinessCapture: !input.draft && profile.provider === 'opencode' ? launch.readModelReadinessAdmission() : undefined,
+    assertReadinessCapture: () => launch.assertModelReadinessCapture(input.memberId),
     context: input.draft
       ? teamModelProbeContext(options.team.definition.binding.teamId, input)
       : runtimeDigest({
@@ -277,6 +283,8 @@ export async function executeTeamModelProbe(options: {
     profileId: captured.profile.profileId,
     configRevision: captured.profile.configRevision,
   };
+  const retained = captured.profile.provider === 'opencode' && options.action === 'start' && owner.read(identity)
+    ? owner.readRetainedProbe(options.commandId, captured.context) : undefined;
   const prepared = options.action === 'start' && options.readiness ? captureReadinessPreparation(
     options.readiness.preparation, {
       kind: 'team', owner: options.readiness.owner,
@@ -289,7 +297,27 @@ export async function executeTeamModelProbe(options: {
     }
   ) : undefined;
   if (prepared && captured.profile.provider !== 'opencode') throw new TeamLaunchError('invalid', 'probe-origin');
+  const capture = captured.readinessCapture;
+  const parent = capture && options.commandId ===
+    actualCaptureReadinessCommandId(capture.preparationId, capture.commandId, input.memberId) ? capture : undefined;
+  if (parent && options.action === 'start') {
+    const target = parent.targets.find(row => row.memberId === input.memberId);
+    if (!prepared || parent.phase !== 'captured' || !target || target.retired || target.originalWorkspace === captured.profile.cwd ||
+        options.commandId !== actualCaptureReadinessCommandId(parent.preparationId, parent.commandId, input.memberId) ||
+        Date.now() >= parent.cutoff)
+      throw new TeamLaunchError('hold', 'probe-capture-continuation');
+    if (!captured.assertReadinessCapture) throw new TeamLaunchError('hold', 'probe-capture-continuation');
+    captured.assertReadinessCapture();
+    prepared.anchor.expiresAt = Math.min(prepared.anchor.expiresAt, parent.cutoff);
+  }
   const origin = prepared ? originalReadinessSubset(prepared.origin, captured.profile.cwd, captured.providerId) : undefined;
+  const privateScope = captured.profile.provider === 'opencode' && (!retained || retained.readinessScope) ? {
+    schemaVersion: 1 as const, kind: 'team' as const, ...captured.provenance,
+    actionDigest: runtimeDigest({ commandId: options.commandId, context: captured.context }),
+    mechanismDigest: modelReadinessMechanismDigest(captured.profile), workspace: captured.profile.cwd,
+    cutoff: retained?.readinessScope?.cutoff ?? Math.min(prepared?.anchor.expiresAt ?? admittedAt + (captured.profile.modelProbeTimeoutMs ?? 90000),
+      parent?.cutoff ?? Infinity),
+  } : undefined;
   const value =
     options.action === 'start'
       ? owner.startPrepared(
@@ -301,8 +329,12 @@ export async function executeTeamModelProbe(options: {
             ...(captured.modelContext === undefined ? {} : { modelContext: captured.modelContext }),
             context: captured.context,
           },
-          captured.isCurrent,
-          prepared && origin ? { anchor: prepared.anchor, origin } : undefined
+          () => {
+            if (parent) captured.assertReadinessCapture!();
+            return captured.isCurrent();
+          },
+          prepared && origin ? { anchor: prepared.anchor, origin } : undefined,
+          privateScope
         )
       : options.action === 'cancel'
         ? await owner.cancel(identity)

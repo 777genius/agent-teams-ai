@@ -86,6 +86,7 @@ export function useLaunchDialogRosterSubmission(
         clearContext: _clear,
         command: _command,
         savedRosterCommandId: _sourceCommand,
+        modelPreparation: _modelPreparation,
         ...choices
       } = request;
       // A renewed model preflight cannot replace an uncertain roster intent.

@@ -16,6 +16,9 @@ import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/O
 import { captureOpenCodeV2Configuration } from '../dist/adapters/providers/OpenCodeV2CapturedConfiguration.js';
 import { captureOpenCodeV2SessionCredential } from '../dist/adapters/providers/OpenCodeV2SessionCredential.js';
 import { OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
+import { AcceptedOpenCodeV2FileKey, DeferredOpenCodeV2FileKey, createOpenCodeV2FileMaterialization,
+  openCodeV2NativeFileWitnessSchema, openCodeV2SelectedSourceReference, selectedFilePaths,
+} from '../dist/adapters/providers/OpenCodeV2SelectedFileKey.js';
 import type { OpenCodeManagementProfile } from '../dist/management/profile.js';
 import {
   mapOpenCodeV2SelectedModel,
@@ -198,6 +201,7 @@ test('captured OpenCode config keeps donor precedence and stores only original s
     const declaration = { provider: { [selection.providerId]: { npm: '@ai-sdk/openai-compatible',
       options: { baseURL: 'http://127.0.0.1:12345/v1', apiKey: mode === 'env' ? '{env:TEST_KEY}' : reference } } } };
     const environment = { ...v.input.environment, XDG_DATA_HOME: dataRoot, TEST_KEY: keyValue,
+      ...(mode === 'manual' || mode === 'relative' ? { USERPROFILE: v.home } : {}),
       ...(mode === 'inline' ? { OPENCODE_CONFIG_CONTENT: JSON.stringify(declaration) } : {}) };
     if (mode !== 'inline') v.write(leaf, declaration);
     const keyProfile = { ...profile, ...v.input, environment, embedded: { ...profile.embedded! } };
@@ -207,6 +211,14 @@ test('captured OpenCode config keeps donor precedence and stores only original s
       ...(mode === 'legacy' || mode === 'env' ? { [selection.providerId]: {
         type: 'api', key: mode === 'env' ? keyValue : 'TEST-different-primary' } } : {}) });
     const authBytes = readFileSync(authPath);
+    if (mode === 'manual' || mode === 'relative') {
+      const deferred = captureOpenCodeV2Configuration(keyProfile, selection, () => true);
+      assert.ok(deferred.selectedFile, 'the original manual leaf is deferred without reading its missing file');
+      assert.equal(deferred.key, undefined); assert.equal(deferred.selectedFile.isCurrent(), true);
+      assert.equal(Object.hasOwn(deferred.selectedFile, 'readKey'), false);
+      assert.deepEqual(readFileSync(authPath), authBytes);
+      continue;
+    }
     const accepted = mode === 'absolute' || mode === 'legacy' || mode === 'env';
     if (!accepted) {
       assert.throws(() => captureOpenCodeV2Configuration(keyProfile, selection, () => true), { code: 'held' }, mode);
@@ -246,6 +258,100 @@ test('captured OpenCode config keeps donor precedence and stores only original s
       assert.equal(actual.isCurrent(), false, 'binding never discards the original file witness');
     }
     assert.deepEqual(readFileSync(authPath), authBytes);
+  }
+
+  // This is the private file witness with an explicitly synthetic issuer/materializer call.
+  // The existing native cases separately qualify ConfigVariable and the real HTTP owner.
+  for (const mode of ['absolute', 'home', 'relative', 'composite', 'inline', 'environment', 'hardlink',
+    ...(process.platform === 'win32' ? [] : ['symlink'])]) {
+    const v = fixture(t), leaf = join(v.project, 'opencode.jsonc'), dataRoot = join(v.root, 'data');
+    mkdirSync(dataRoot, { mode: 0o700 });
+    const first = join(v.root, 'absolute.key'), second = join(v.home, 'home.key'), third = join(v.project, 'relative.key');
+    writeFileSync(first, ' TEST-\n', { mode: 0o600 });
+    writeFileSync(second, ' original-\n', { mode: 0o600 });
+    writeFileSync(third, ' manual\n', { mode: 0o600 });
+    let selectedPath = first;
+    if (mode === 'hardlink') { selectedPath = join(v.root, 'linked.key'); linkSync(first, selectedPath); }
+    if (mode === 'symlink') { selectedPath = join(v.root, 'symbolic.key'); symlinkSync(first, selectedPath); }
+    const raw = mode === 'home' ? '{file:~/home.key}' : mode === 'relative' ? '{file:relative.key}'
+      : mode === 'composite' ? '{file:' + first + '}{file:~/home.key}{file:relative.key}'
+        : mode === 'environment' ? '{file:{env:TEST_DIRECTORY}/relative.key}' : '{file:' + selectedPath + '}';
+    const declaration = { provider: { [selection.providerId]: { npm: '@ai-sdk/openai-compatible',
+      options: { baseURL: 'http://127.0.0.1:12345/v1', apiKey: raw } } } };
+    const environment = { ...v.input.environment, USERPROFILE: v.home, XDG_DATA_HOME: dataRoot,
+      TEST_DIRECTORY: v.project, ...(mode === 'inline' ? { OPENCODE_CONFIG_CONTENT: JSON.stringify(declaration) } : {}) };
+    if (mode !== 'inline') v.write(leaf, declaration);
+    const manualProfile = { ...profile, ...v.input, environment, embedded: { ...profile.embedded! } };
+    manualProfile.embedded.configurationSource = captureOpenCodeConfigurationSource(manualProfile).reference;
+    let ownerCurrent = true;
+    const original = captureOpenCodeV2Configuration(manualProfile, selection, () => ownerCurrent), deferred = original.selectedFile;
+    assert.ok(deferred); assert.equal(original.key, undefined);
+    assert.equal(DeferredOpenCodeV2FileKey.is({ ...deferred }), false);
+    const translatedSettings = original.configuration?.settings;
+    assert.ok(translatedSettings && typeof translatedSettings === 'object' && !Array.isArray(translatedSettings));
+    assert.equal(Object.hasOwn(translatedSettings, 'apiKey'), false);
+    assert.throws(() => captureOpenCodeV2SessionCredential(manualProfile, selection.providerId,
+      () => original.isCurrent(), undefined, deferred), { code: 'held' });
+    assert.throws(() => captureOpenCodeV2SessionCredential({ ...manualProfile, accountBinding: 'TEST-foreign' },
+      selection.providerId, original.isCurrent, undefined, deferred), { code: 'held' });
+    const materializer = createOpenCodeV2FileMaterialization(deferred.descriptor, () => assert.equal(ownerCurrent, true));
+    const paths = selectedFilePaths(deferred.descriptor);
+    const value = paths.map(path => materializer.readFileString(path).trim()).join('');
+    assert.equal(materializer.materializedKey(value), value);
+    const issuer = { nonce: 'd'.repeat(64), pid: process.pid, integrationId: selection.providerId,
+      reference: openCodeV2SelectedSourceReference(deferred.descriptor, 'd'.repeat(64), selection.providerId, 'fresh') };
+    const encoded = materializer.issue(value, issuer), accepted = AcceptedOpenCodeV2FileKey.accept(deferred, encoded, issuer, () => true);
+    assert.equal(openCodeV2NativeFileWitnessSchema.safeParse(encoded).success, true);
+    assert.equal(AcceptedOpenCodeV2FileKey.matches({ ...accepted }, deferred), false);
+    assert.equal(AcceptedOpenCodeV2FileKey.matches(accepted, deferred), true);
+    assert.equal(JSON.stringify(JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'))).includes(JSON.stringify(value)), false);
+    assert.equal(accepted.filesCurrent(), true);
+    assert.throws(() => AcceptedOpenCodeV2FileKey.accept(deferred, encoded, { ...issuer, nonce: 'e'.repeat(64) }, () => true));
+    assert.throws(() => AcceptedOpenCodeV2FileKey.accept(deferred, encoded, issuer, () => false));
+    let retainedChecks = 0;
+    assert.equal(AcceptedOpenCodeV2FileKey.retained(deferred, encoded, () => { retainedChecks++; }).scopeDigest, accepted.scopeDigest);
+    assert.equal(retainedChecks, 2);
+    assert.throws(() => AcceptedOpenCodeV2FileKey.retained(deferred, encoded, () => { throw Error('TEST unreleased original probe'); }));
+    const cold = captureOpenCodeV2Configuration(manualProfile, selection, () => true);
+    assert.ok(cold.selectedFile); assert.equal(cold.selectedFile.descriptor.digest, deferred.descriptor.digest);
+    assert.equal(AcceptedOpenCodeV2FileKey.retained(cold.selectedFile, encoded, () => {}).scopeDigest, accepted.scopeDigest);
+    for (const invalid of ['', encoded + '=', 'a'.repeat(65537), Buffer.from(JSON.stringify({ ...JSON.parse(
+      Buffer.from(encoded, 'base64url').toString('utf8')), extra: true })).toString('base64url')])
+      assert.equal(openCodeV2NativeFileWitnessSchema.safeParse(invalid).success, false);
+    ownerCurrent = false;
+    assert.equal(deferred.isCurrent(), false);
+    assert.equal(accepted.filesCurrent(), true, 'post-close file hashing is independent of a revoked native owner');
+    ownerCurrent = true;
+    writeFileSync(mode === 'home' ? second : mode === 'relative' || mode === 'environment' ? third : first,
+      'TEST-changed-private-key', { mode: 0o600 });
+    assert.equal(accepted.filesCurrent(), false, 'same spelling cannot borrow changed file bytes or identity');
+    assert.throws(() => AcceptedOpenCodeV2FileKey.retained(deferred, encoded, () => {}));
+  }
+  for (const mode of ['missing', 'empty', 'oversize', 'utf8', 'directory', 'env-file', 'malformed']) {
+    const v = fixture(t), leaf = join(v.project, 'opencode.jsonc'), dataRoot = join(v.root, 'data'), file = join(v.root, 'manual.key');
+    mkdirSync(dataRoot, { mode: 0o700 });
+    if (mode === 'directory') mkdirSync(file);
+    else if (mode !== 'missing') writeFileSync(file, mode === 'empty' ? ' \n' : mode === 'oversize'
+      ? Buffer.alloc(65537, 65) : mode === 'utf8' ? Buffer.from([0xff]) : 'TEST-original', { mode: 0o600 });
+    const raw = mode === 'env-file' ? '{env:TEST_KEY}' : '{file:' + file + (mode === 'malformed' ? '' : '}');
+    v.write(leaf, { provider: { [selection.providerId]: { options: { apiKey: raw } } } });
+    const manualProfile = { ...profile, ...v.input,
+      environment: { ...v.input.environment, USERPROFILE: v.home, XDG_DATA_HOME: dataRoot, TEST_KEY: '{file:' + file + '}' },
+      embedded: { ...profile.embedded! } };
+    manualProfile.embedded.configurationSource = captureOpenCodeConfigurationSource(manualProfile).reference;
+    if (mode === 'env-file' || mode === 'malformed') {
+      assert.throws(() => captureOpenCodeV2Configuration(manualProfile, selection, () => true)); continue;
+    }
+    const deferred = captureOpenCodeV2Configuration(manualProfile, selection, () => true).selectedFile;
+    assert.ok(deferred, 'file contents are not read by parent capture');
+    const materializer = createOpenCodeV2FileMaterialization(deferred.descriptor, () => {});
+    if (mode === 'empty') {
+      const value = materializer.readFileString(selectedFilePaths(deferred.descriptor)[0]!).trim();
+      assert.throws(() => materializer.materializedKey(value));
+    } else {
+      assert.throws(() => materializer.readFileString(selectedFilePaths(deferred.descriptor)[0]!));
+      assert.throws(() => materializer.materializedKey('TEST-fallback'), 'a caught native read error cannot turn into key success');
+    }
   }
 });
 

@@ -7,6 +7,7 @@ import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
 
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
+import { FileTeamRuntimeBindings } from '../dist/adapters/team/FileTeamRuntimeBindings.js';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
 import { normalizeBinding, runtimeDigest } from '../dist/runtime/identity.js';
@@ -22,6 +23,7 @@ import type { CommandReceipt } from '../dist/team/contracts.js';
 import type { TeamRosterConfiguration } from '../dist/team/rosterContracts.js';
 import type { RuntimeBinding } from '../dist/runtime/contracts.js';
 import type { TeamLaunchRecord } from '../dist/team-launch/contracts.js';
+import type { LiveRosterResponse, LiveRosterPrivateInput } from '../dist/team/liveRosterMembership.js';
 import type {
   CloseReceipt,
   DriverFactory,
@@ -104,6 +106,9 @@ test('mixed Host boots V2 Session SPI profile without invoking V1 management reg
   const opened = await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean };
   assert.equal(opened.ok, true, 'unrelated Claude runtime remains operable');
   assert.equal(f.opens(), 1, 'only the explicitly opened Claude TEST provider is allocated');
+  const unprepared = await f.rpc('runtime.open', { memberId: 'bob-id', expectedGeneration: '1' }) as { ok: boolean };
+  assert.equal(unprepared.ok, false, 'old external V2 capture cannot invent a retained allocation proof');
+  assert.equal(f.opens(), 1, 'missing original preparation refuses before the OpenCode provider factory');
 });
 
 test('two captured teams may share an original run ID without sharing launch ownership', async (t) => {
@@ -726,6 +731,137 @@ test('NDJSON roster replacement refuses live allocation, then saves only after c
     'TEST-new-model'
   );
   assert.equal(f.opens(), 1);
+
+  const live = await fixture(t, {
+    independentProviders: true,
+    changeProfile(selected) {
+      const team = selected.teams[0]!, original = selected.runtime!.members[0]!;
+      original.capturedMcpServers = {}; // Original empty allowlist is captured before the live owner.
+      team.members[0]!.role = 'lead';
+      team.savedSettings = { cwd: original.cwd, providerId: 'anthropic' };
+      team.members[1]!.delivery = { ...team.members[0]!.delivery!, memberId: 'bob-id' };
+      team.grants.push({ principalId: 'TEST-bob-session', memberName: 'bob',
+        permissions: ['read', 'task.write', 'message.write'] });
+      selected.runtime!.members.push({ ...structuredClone(original), memberId: 'bob-id',
+        principalId: 'TEST-bob-session', sessionId: 'TEST-bob-session' });
+      selected.runtime!.providerTemplates = [structuredClone(original)];
+    },
+  });
+  for (const memberId of ['alice-id', 'bob-id'])
+    assert.equal((await live.rpc('runtime.open', { memberId }) as { ok: boolean }).ok, true);
+  const originalPeers = live.contexts.map(context => ({ binding: normalizeBinding(context.endpoint.binding),
+    config: structuredClone(context.request), profile: structuredClone(context.profile) }));
+  const roster = async () => (await live.rpc('team.roster.read', {}) as { value: TeamRosterConfiguration }).value;
+  const first = await roster(), initialOpens = live.opens();
+  const member = { name: 'charlie', model: 'TEST-live-model', role: 'TEST reviewer', workflow: 'TEST live workflow' };
+  const replacement = (value: TeamRosterConfiguration, include: boolean) => ({ expectedRevision: value.revision,
+    members: [...value.members.filter(row => row.role !== 'lead' && row.name !== member.name)
+      .map(row => ({ name: row.name, ...row.settings })), ...(include ? [member] : [])] });
+  const command = async (commandId: string, payload: unknown, liveRoster: LiveRosterPrivateInput) =>
+    await live.rpc(liveRoster.phase === 'read' ? 'team.roster.lookup' : 'team.roster.replace',
+      liveRoster.phase === 'read' ? { expected: payload } : payload, { commandId, liveRoster }) as LiveRosterResponse;
+  const addPayload = replacement(first, true), addId = 'TEST-live-add';
+  const captured = await command(addId, addPayload, { phase: 'capture', remainingMs: 100_000 });
+  assert.ok(captured.ok && 'liveRosterCapture' in captured);
+  assert.equal(live.opens(), initialOpens, 'actual target capture precedes every new provider allocation');
+  assert.deepEqual(await roster(), first);
+  const originalStore = new TeamOwnerStore(live.root, live.selected.teams[0]!.binding.teamName);
+  const originalLaunchPath = join(originalStore.directory, 'launches',
+    runtimeDigest(captured.liveRosterCapture.launchId) + '.json');
+  const capturedBytes = readFileSync(originalLaunchPath, 'utf8');
+  const capturedRecord = JSON.parse(capturedBytes) as TeamLaunchRecord;
+  const capturedMember = capturedRecord.liveMembership!.find(value => value.intent.commandId === addId)!.selected!;
+  const capturedBinding = normalizeBinding(capturedMember.binding!);
+  const originalBindings = new FileTeamRuntimeBindings(originalStore);
+  assert.deepEqual(originalBindings.current(capturedBinding), {
+    binding: capturedBinding, skipped: false, workAllowed: false, generation: capturedMember.runtimeGeneration,
+    configurationDigest: capturedMember.configurationDigest, baseConfigurationDigest: capturedMember.baseConfigurationDigest,
+  });
+  for (const key of ['backendId', 'teamId', 'generation'] as const)
+    assert.throws(() => originalBindings.current({ ...capturedBinding, [key]: 'TEST-foreign' }), { code: 'hold' });
+  assert.throws(() => originalBindings.current(capturedBinding, 'cp1-' + 'a'.repeat(64)), { code: 'hold' });
+  assert.equal(readFileSync(originalLaunchPath, 'utf8'), capturedBytes);
+  assert.equal(live.opens(), initialOpens, 'captured metadata reads confer no factory authority');
+  const pending = await command(addId, addPayload, { phase: 'capture', remainingMs: 100_000 });
+  assert.ok(pending.ok && 'liveRosterPending' in pending);
+  assert.deepEqual(await command(addId, addPayload, { phase: 'continue', captureDigest: 'f'.repeat(64), remainingMs: 100_000 }), pending);
+  const accepted = await command(addId, addPayload, { phase: 'continue',
+    captureDigest: captured.liveRosterCapture.captureDigest, remainingMs: 100_000 });
+  if (!(accepted.ok && 'value' in accepted)) {
+    const directory = join(live.root, 'teams', live.selected.teams[0]!.binding.teamName, '.host-owner');
+    const originalState = JSON.parse(readFileSync(join(directory, 'state.json'), 'utf8'));
+    const originalLaunch = JSON.parse(readFileSync(join(directory, 'launches',
+      runtimeDigest(captured.liveRosterCapture.launchId) + '.json'), 'utf8'));
+    const decision = originalState.rosterCommands.find((value: { commandId: string }) => value.commandId === addId)?.liveMembership;
+    const selection = originalLaunch.liveMembership?.find((value: { intent: { commandId: string } }) => value.intent.commandId === addId);
+    const target = originalLaunch.members.find((value: { memberId: string }) => value.memberId === captured.liveRosterCapture.target.memberId);
+    const attempt = target?.attempts.at(-1);
+    t.diagnostic(JSON.stringify({ liveAdd: { response: accepted, opens: live.opens(), providers: live.contexts.length,
+      ownerPhase: decision?.phase, publication: !!decision?.publication, compensation: !!decision?.compensation,
+      rejection: decision?.rejection, launchPhase: selection?.phase, targetAttempt: attempt && {
+        status: attempt.status, reason: attempt.reason, claimed: attempt.claimed, nativeReady: attempt.nativeReady,
+        contextApplied: attempt.contextApplied, usable: attempt.usable } } }));
+  }
+  assert.ok(accepted.ok && 'value' in accepted, JSON.stringify(accepted));
+  assert.equal(originalBindings.current(capturedBinding)!.workAllowed, true);
+  assert.equal(live.opens(), initialOpens + 1);
+  assert.deepEqual(await command(addId, addPayload, { phase: 'continue',
+    captureDigest: captured.liveRosterCapture.captureDigest, remainingMs: 100_000 }), accepted);
+  const added = await roster(), target = added.members.find(row => row.name === member.name)!;
+  assert.equal(target.memberId, captured.liveRosterCapture.target.memberId);
+  const firstTarget = live.contexts.at(-1)!, oldBinding = normalizeBinding(firstTarget.endpoint.binding);
+  const firstDriver = live.session();
+  assert.equal(firstTarget.profile.model, member.model);
+  await live.rpc('team.execute', { operation: 'message.send', payload: { to: member.name, text: 'TEST live target input' } });
+  await eventually(() => firstDriver.submits.length === 1, 'only the new target consumes its original input');
+  firstDriver.finish(0);
+  const store = new FileRuntimeStore(live.root);
+  await eventually(() => store.fenced(oldBinding, tx => tx.get()?.inputs[0]?.phase === 'terminal'), 'target input is terminal before Remove');
+  const removed = await command('TEST-live-remove', replacement(added, false), { phase: 'capture', remainingMs: 100_000 });
+  assert.ok(removed.ok && 'value' in removed);
+  const afterRemove = await roster();
+  assert.equal(afterRemove.members.some(row => row.memberId === target.memberId), false);
+  assert.equal(afterRemove.removedMembers.find(row => row.name === member.name)?.memberId, target.memberId);
+  assert.equal(firstDriver.closeCalls, 1);
+  assert.equal(store.fenced(oldBinding, tx => tx.get()?.custody), 'released');
+  assert.equal(live.opens(), initialOpens + 1, 'Remove allocates no replacement');
+  const configuration = await live.rpc('team.launch.configuration.read', {}) as {
+    value: { members: { memberId: string; selected: unknown }[] } };
+  assert.equal(configuration.value.members.find(row => row.memberId === target.memberId)?.selected, null);
+  assert.equal(configuration.value.members.length, 3, 'historical row is retained without a runnable selection');
+  for (const peer of originalPeers)
+    assert.ok(configuration.value.members.find(row => row.memberId === peer.binding.memberId)?.selected,
+      'an allocated original peer retains its current selectable configuration');
+  const restorePayload = replacement(afterRemove, true), restoreId = 'TEST-live-restore';
+  const restoreCapture = await command(restoreId, restorePayload, { phase: 'capture', remainingMs: 100_000 });
+  assert.ok(restoreCapture.ok && 'liveRosterCapture' in restoreCapture);
+  const restored = await command(restoreId, restorePayload, { phase: 'continue',
+    captureDigest: restoreCapture.liveRosterCapture.captureDigest, remainingMs: 100_000 });
+  assert.ok(restored.ok && 'value' in restored);
+  assert.equal(live.opens(), initialOpens + 2);
+  const restoredTarget = live.contexts.at(-1)!, newBinding = normalizeBinding(restoredTarget.endpoint.binding);
+  assert.equal(newBinding.memberId, oldBinding.memberId);
+  assert.notEqual(newBinding.generation, oldBinding.generation);
+  assert.notEqual(restoredTarget.profile.principalId, firstTarget.profile.principalId);
+  assert.notEqual(restoredTarget.profile.sessionId, firstTarget.profile.sessionId);
+  assert.ok(restoredTarget.profile.generation > firstTarget.profile.generation);
+  assert.deepEqual(await live.rpc('runtime.stop', { memberId: target.memberId, expectedGeneration: oldBinding.generation }),
+    { ok: false, code: 'conflict', outcome: 'rejected' });
+  assert.equal(live.session().closeCalls, 0, 'stale target authority cannot close the restored generation');
+  for (const [index, peer] of originalPeers.entries()) {
+    assert.deepEqual(live.contexts[index]!.request, peer.config);
+    assert.deepEqual(live.contexts[index]!.profile, peer.profile);
+    assert.equal(store.fenced(peer.binding, tx => tx.get()?.phase), 'allocated');
+    assert.equal(live.sessions[index]!.closeCalls, 0, 'live membership leaves every original peer attached');
+  }
+  const finalRoster = await roster();
+  await live.restart();
+  assert.deepEqual(await command(addId, addPayload, { phase: 'read' }), accepted);
+  assert.deepEqual(await command(restoreId, restorePayload, { phase: 'read' }), restored);
+  assert.deepEqual(await command(restoreId, restorePayload, { phase: 'continue',
+    captureDigest: restoreCapture.liveRosterCapture.captureDigest, remainingMs: 100_000 }), restored);
+  assert.deepEqual(await roster(), finalRoster);
+  assert.equal(live.opens(), initialOpens + 2, 'cold retained outcomes cannot repeat native attachment');
 });
 
 test('NDJSON unknown native cleanup keeps the saved roster and its original grants bound', async (t) => {
@@ -793,6 +929,40 @@ test('NDJSON unknown native cleanup keeps the saved roster and its original gran
   }), { code: 'hold' }, 'malformed original history cannot become an empty inaccessible Team');
   assert.equal(f.opens(), 1);
   assert.equal(JSON.stringify(new FileRuntimeStore(f.root).fenced(f.runtimeBinding, tx => tx.get())), original);
+
+  const retained = await fixture(t, { independentProviders: true, changeProfile(selected) {
+    const team = selected.teams[0]!, base = selected.runtime!.members[0]!;
+    team.members[0]!.role = 'lead';
+    team.savedSettings = { cwd: base.cwd, providerId: 'anthropic' };
+    team.members[1]!.delivery = { ...team.members[0]!.delivery!, memberId: 'bob-id' };
+    team.grants.push({ principalId: 'TEST-retained-bob', memberName: 'bob', permissions: ['read', 'task.write', 'message.write'] });
+    selected.runtime!.members.push({ ...structuredClone(base), memberId: 'bob-id', principalId: 'TEST-retained-bob', sessionId: 'TEST-retained-bob' });
+  } });
+  for (const memberId of ['alice-id', 'bob-id'])
+    assert.equal((await retained.rpc('runtime.open', { memberId }) as { ok: boolean }).ok, true);
+  const beforeRemove = await retained.rpc('team.roster.read', {}) as { value: TeamRosterConfiguration };
+  const targetDriver = retained.sessions[1]!, targetBinding = normalizeBinding(retained.contexts[1]!.endpoint.binding);
+  targetDriver.cleanup = 'unknown';
+  assert.equal((await retained.rpc('runtime.stop', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);
+  const removePayload = { expectedRevision: beforeRemove.value.revision, members: [] };
+  const unknown = await retained.rpc('team.roster.replace', removePayload, { commandId: 'TEST-retained-remove',
+    liveRoster: { phase: 'capture', remainingMs: 100_000 } }) as LiveRosterResponse;
+  assert.ok(unknown.ok && 'liveRosterPending' in unknown);
+  assert.equal(unknown.liveRosterPending.phase, 'held');
+  assert.equal(targetDriver.closeCalls, 1, 'an inactive lead cannot bypass the retained target cleanup');
+  assert.equal(new FileRuntimeStore(retained.root).fenced(targetBinding, tx => tx.get()?.custody), 'unknown');
+  assert.deepEqual(await retained.rpc('team.roster.read', {}), beforeRemove);
+  assert.deepEqual(await retained.rpc('team.roster.lookup', { expected: removePayload }, {
+    commandId: 'TEST-retained-remove', liveRoster: { phase: 'read' } }), unknown);
+  assert.deepEqual(await retained.rpc('team.roster.replace', removePayload, {
+    commandId: 'TEST-retained-remove', liveRoster: { phase: 'capture', remainingMs: 100_000 } }), unknown);
+  assert.equal(targetDriver.closeCalls, 1, 'retained failure is not a second Stop admission');
+  assert.equal(retained.opens(), 2);
+  await retained.restart('failed');
+  assert.deepEqual(await retained.rpc('team.roster.lookup', { expected: removePayload }, {
+    commandId: 'TEST-retained-remove', liveRoster: { phase: 'read' } }), unknown);
+  assert.deepEqual(await retained.rpc('team.roster.read', {}), beforeRemove);
+  assert.equal(retained.opens(), 2, 'cold failed cleanup cannot create another provider');
 });
 function assertSameLaunch(actual: unknown, expected: unknown, message?: string): void {
   const next = actual as { ok: boolean; value: { observedAtMs: number } };
@@ -990,6 +1160,7 @@ async function fixture(
     changeProfile?(selected: TeamHostProfile): void;
     open?: Promise<Awaited<ReturnType<DriverFactory['open']>>>;
     unknownCleanup?: boolean;
+    independentProviders?: boolean;
     checkpointHistory?: boolean;
     requireCheckpointSource?: boolean;
     onCheckpointSource?(context: MemberProviderContext): void;
@@ -1019,6 +1190,7 @@ async function fixture(
   };
   output.on('data', receive);
   const contexts: MemberProviderContext[] = [];
+  const sessions: ControlledSession[] = [];
   let session: ControlledSession | undefined;
   let sealed = false;
   let ready = false;
@@ -1032,7 +1204,9 @@ async function fixture(
       contexts.push(context);
       options.onProvider?.(context);
       session = new ControlledSession(context.onProgress);
+      sessions.push(session);
       const capturedSession = session;
+      const independent = options.independentProviders ? { ready: false, sealed: false } : undefined;
       if (options.checkpointHistory)
         session.checkpoint = () => ({
           ok: true,
@@ -1058,7 +1232,7 @@ async function fixture(
               }
             }
             const opened = await (options.open ?? {
-              driver: session!,
+              driver: independent ? capturedSession : session!,
               capabilities: [...context.request.requiredCapabilities],
             });
             handoffs++;
@@ -1074,20 +1248,22 @@ async function fixture(
                 checkpoint: () => source.checkpoint(),
                 close: async () => {
                   ready = false;
+                  if (independent) independent.ready = false;
                   return source.close();
                 },
                 checkReadiness: async () => {
                   const proof = await source.checkReadiness();
                   ready = proof.ok;
+                  if (independent) independent.ready = proof.ok;
                   return proof;
                 },
               },
             };
           },
         },
-        isReady: () => ready && !sealed && context.isCurrent(),
+        isReady: () => (independent ? independent.ready && !independent.sealed : ready && !sealed) && context.isCurrent(),
         initialContextEvidence: () =>
-          ready && !sealed && context.isCurrent()
+          (independent ? independent.ready && !independent.sealed : ready && !sealed) && context.isCurrent()
             ? {
                 kind: 'native-configuration',
                 contextDigest: initialContextDigest(context.instructions),
@@ -1097,6 +1273,7 @@ async function fixture(
             : undefined,
         seal: () => {
           sealed = true;
+          if (independent) independent.sealed = true;
         },
         cleanup: async () => {
           cleanupCalls++;
@@ -1180,6 +1357,7 @@ async function fixture(
     host,
     dispose: () => host.dispose(),
     contexts,
+    sessions,
     frames,
     send,
     answer,

@@ -94,6 +94,14 @@ function fixture() {
     failComplete: () => {
       vi.spyOn(ledger, 'markCompleted').mockRejectedValueOnce(new Error('TEST completion lost'));
     },
+    afterScopeRead: (next: () => void) => {
+      const original = runner.readScope.bind(runner);
+      return vi.spyOn(runner, 'readScope').mockImplementationOnce(async (...args) => {
+        const records = await original(...args);
+        next();
+        return records;
+      });
+    },
   };
 }
 
@@ -138,6 +146,24 @@ it('reconciles only the original owner command and expected payload before allow
   const f = fixture();
   await expect(f.commands().invoke(replacement, undefined, f.dispatch)).rejects.toThrow();
   f.reopen();
+  const before = f.dispatch.mock.calls.length;
+  const commands = f.commands();
+  const intent = await commands.readOriginalIntent(
+    replacement.handle.handleId,
+    replacement.commandId
+  );
+  expect(intent).toEqual(replacement);
+  intent.payload.members.push({ name: 'TEST-mutated-view' });
+  await expect(
+    commands.readOriginalIntent(replacement.handle.handleId, replacement.commandId)
+  ).resolves.toEqual(replacement);
+  await expect(
+    commands.readOriginalIntent(replacement.handle.handleId, 'another-command')
+  ).rejects.toMatchObject({ code: 'hold' });
+  await expect(
+    commands.readOriginalIntent('another-handle', replacement.commandId)
+  ).rejects.toMatchObject({ code: 'hold' });
+  expect(f.dispatch).toHaveBeenCalledTimes(before);
   f.lookup({ ok: true, value: receipt });
   await expect(f.commands().invoke(read, undefined, f.dispatch)).resolves.toMatchObject({
     ok: true,
@@ -197,6 +223,25 @@ it('does not disclose a late lookup after the captured actor is revoked', async 
   await expect(
     f.commands().invoke(read, { isCurrent: () => current }, f.dispatch)
   ).rejects.toMatchObject({ code: 'forbidden' });
+  current = true;
+  const before = f.dispatch.mock.calls.length;
+  const scopeRead = f.afterScopeRead(() => {
+    current = false;
+  });
+  try {
+    await expect(
+      f.commands().readOriginalIntent(replacement.handle.handleId, replacement.commandId, {
+        isCurrent: () => current,
+      })
+    ).rejects.toMatchObject({ code: 'forbidden' });
+    expect(scopeRead).toHaveBeenCalledExactlyOnceWith(
+      'captured-team-roster',
+      replacement.handle.handleId
+    );
+    expect(f.dispatch).toHaveBeenCalledTimes(before);
+  } finally {
+    scopeRead.mockRestore();
+  }
 });
 
 it('keeps reads available without the ledger but refuses roster mutations before dispatch', async () => {
@@ -209,6 +254,9 @@ it('keeps reads available without the ledger but refuses roster mutations before
   await expect(commands.invoke(replacement, undefined, dispatch)).rejects.toMatchObject({
     code: 'unavailable',
   });
+  await expect(
+    commands.readOriginalIntent(replacement.handle.handleId, replacement.commandId)
+  ).rejects.toMatchObject({ code: 'unavailable' });
   expect(dispatch).toHaveBeenCalledTimes(1);
 });
 
@@ -235,4 +283,25 @@ it('does not retain a typed pre-admission refusal as debt after reopen', async (
   expect(
     f.dispatch.mock.calls.filter(([request]) => request.operation === 'team.roster.lookup')
   ).toHaveLength(0);
+
+  for (const lostCompletion of [false, true]) {
+    const settled = fixture();
+    const rejection = { ok: false as const, code: 'conflict' as const, outcome: 'rejected' as const };
+    settled.dispatch.mockResolvedValueOnce(rejection);
+    if (lostCompletion) settled.failComplete();
+    const original = settled.commands().invoke(replacement, undefined, settled.dispatch);
+    if (lostCompletion) await expect(original).rejects.toMatchObject({ code: 'hold' });
+    else await expect(original).resolves.toEqual(rejection);
+    settled.reopen();
+    settled.lookup(rejection);
+    await expect(settled.commands().invoke(replacement, undefined, settled.dispatch)).resolves.toEqual(rejection);
+    await expect(settled.commands().invoke(read, undefined, settled.dispatch)).resolves.toMatchObject({ ok: true });
+    expect(settled.dispatch.mock.calls.filter(([request]) => request.operation === 'team.roster.replace')).toHaveLength(1);
+    for (const [request] of settled.dispatch.mock.calls.filter(([request]) => request.operation === 'team.roster.lookup'))
+      expect(request).toEqual({ handle: replacement.handle, commandId: replacement.commandId,
+        operation: 'team.roster.lookup', payload: { expected: replacement.payload } });
+    settled.lookup({ ok: false, code: 'forbidden', outcome: 'not-dispatched' });
+    await expect(settled.commands().invoke(replacement, undefined, settled.dispatch)).rejects.toThrow();
+    expect(settled.dispatch.mock.calls.filter(([request]) => request.operation === 'team.roster.replace')).toHaveLength(1);
+  }
 });

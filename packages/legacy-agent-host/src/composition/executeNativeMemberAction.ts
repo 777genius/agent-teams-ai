@@ -13,6 +13,7 @@ import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { NativeLaunchRetryAuthority } from '../team-launch/launchRetry.js';
+import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 const id = z
   .string()
   .min(1)
@@ -44,6 +45,7 @@ export async function executeNativeMemberAction(
     entries: Map<string, MemberEntry>;
     runtime: RuntimeOwner;
     source: ReturnType<typeof captureNativeInputAuthority>;
+    modelReadiness?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget' | 'admitTeamProbeProfile'>;
     assertCurrent(): void;
     isSealed(): boolean;
   },
@@ -55,16 +57,14 @@ export async function executeNativeMemberAction(
   if (parsed.launchId !== options.source.team.source.runId)
     throw new RuntimeOwnerError('forbidden');
   const { team, launch, source, runtime } = options;
-  const admission = captureNativeMemberActionAdmission({ ...options, memberId: parsed.memberId });
+  let admission = captureNativeMemberActionAdmission({ ...options, memberId: parsed.memberId });
   const actions = admission.actions,
     actor = admission.journalAuthority.captureActor();
   const own = (row: NonNullable<ReturnType<typeof actions.lookup>>) => {
     if (runtimeDigest(row.actor) !== runtimeDigest(actor)) throw new RuntimeOwnerError('forbidden');
     return row;
   };
-  const entry = [...options.entries.values()].find(
-    (e) => e.team === team && e.binding.memberId === parsed.memberId
-  );
+  let entry: MemberEntry | undefined;
   const target = () => {
     if (!entry) throw new RuntimeOwnerError('hold');
     return admission.captureTarget(entry);
@@ -113,8 +113,19 @@ export async function executeNativeMemberAction(
     assertReadCurrent();
     return result;
   }
+  const selected = actions.source(parsed.memberId);
+  entry = selected.binding ? options.entries.get(runtimeDigest(selected.binding)) : undefined;
+  if (entry) {
+    if (entry.team.owner !== team.owner ||
+        runtimeDigest(entry.team.definition.binding) !== runtimeDigest(team.definition.binding) ||
+        entry.binding.runId !== parsed.launchId || entry.profile.memberId !== parsed.memberId ||
+        selected.configurationDigest !== runtimeDigest(entry.profile) ||
+        selected.baseConfigurationDigest !== runtimeDigest(entry.baseProfile))
+      throw new RuntimeOwnerError('forbidden');
+    admission = captureNativeMemberActionAdmission({ ...options, team: entry.team, memberId: parsed.memberId });
+  }
   admission.assertCurrent();
-  assertCapturedRosterCurrent(team, source.team.principalId);
+  assertCapturedRosterCurrent(entry?.team ?? team, source.team.principalId);
   if (operation === 'retry') {
     if (actions.lookup(commandId)) throw new RuntimeOwnerError('conflict');
     const retry = parsed as {
@@ -161,6 +172,7 @@ export async function executeNativeMemberAction(
           entry,
           launch,
           runtime,
+          ...(options.modelReadiness ? { modelReadiness: options.modelReadiness } : {}),
           principalId: source.team.principalId,
           admission,
           assertWriter: options.assertCurrent,

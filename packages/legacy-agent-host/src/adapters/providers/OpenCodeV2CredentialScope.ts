@@ -8,6 +8,7 @@ import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { selectOpenCodeV2ConfigurationKey } from '../../composition/openCodeSelectedProviderConfiguration.js';
 import { ManagementCommandError } from '../../management/commandRecords.js';
 import { managementDigest } from '../../management/identity.js';
+import { DeferredOpenCodeV2FileKey, isOpenCodeV2ManagedFileSpelling } from './OpenCodeV2SelectedFileKey.js';
 import type { OpenCodeManagementProfile } from '../../management/profile.js';
 import type { BigIntStats } from 'node:fs';
 import type { captureOpenCodeConfigurationSource, OpenCodeConfigurationKeyOrigin } from './OpenCodeConfigurationSource.js';
@@ -70,6 +71,9 @@ export const bindOpenCodeV2ConfigurationKey = (key: CapturedOpenCodeV2Key, owner
 export const isOpenCodeV2ConfigurationKey = (
   key: unknown, profile: KeyProfile, providerId: string, owner: () => boolean,
 ) => CapturedKey.accepts(key, profile, providerId, owner);
+export const isOpenCodeV2DeferredConfigurationKey = (
+  key: unknown, profile: KeyProfile, providerId: string, owner: () => boolean,
+) => DeferredOpenCodeV2FileKey.accepts(key, namespace(profile, providerId), owner);
 
 const statIdentity = (stat: BigIntStats) => [stat.dev, stat.ino, stat.mode, stat.uid, stat.nlink,
   stat.size, stat.mtimeNs, stat.ctimeNs].map(value => value.toString());
@@ -188,6 +192,22 @@ export class OpenCodeV2CredentialScope {
     };
     return new CapturedKey(namespace(this.profile, this.providerId), original.digest,
       original.key !== undefined, isCurrent, () => original.key);
+  }
+
+  /** Manual files are resolved by the same native owner later, never by this parent capture. */
+  captureDeferredConfiguration(source: ReturnType<typeof captureOpenCodeConfigurationSource>,
+    modelId: string, cwd: string): DeferredOpenCodeV2FileKey | undefined {
+    if (!source.isCurrent()) held();
+    const origin = source.selectedKeyOrigin(this.providerId);
+    if (!origin || typeof origin.value !== 'string' || !origin.value.includes('{file:') ||
+        isOpenCodeV2ManagedFileSpelling(origin.value, this.home)) return undefined;
+    const auth = this.capture();
+    const home = process.platform === 'win32' ? this.profile.environment.USERPROFILE : this.home;
+    if (!home || !isAbsolute(home) || !source.isCurrent()) held();
+    return DeferredOpenCodeV2FileKey.capture({ sourceDigest: source.digest,
+      namespaceDigest: namespace(this.profile, this.providerId), authDigest: auth.digest,
+      origin, providerId: this.providerId, modelId, cwd, home, environment: this.profile.environment,
+      isCurrent: auth.isCurrent });
   }
 
   /** Exact selected config key, without publishing or replacing any auth.json entry. */

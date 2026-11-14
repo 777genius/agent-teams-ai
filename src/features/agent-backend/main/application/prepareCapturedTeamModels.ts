@@ -41,7 +41,7 @@ const unavailable = (message: string): TeamProvisioningPrepareResult => ({
   ready: false,
   message,
 });
-function commandId(handle: BackendHandle, selection: BackendLaunchModelSelection): string {
+export function capturedTeamModelProbeRootId(handle: BackendHandle, selection: BackendLaunchModelSelection): string {
   // This is a single check of one captured launch selection, including across reload.
   // The Host's existing durable probe journal owns all outcomes. No second journal.
   return `team-preflight-${createHash('sha256')
@@ -334,7 +334,7 @@ export async function prepareCapturedTeamModels(options: {
       return unavailable('Some selected model checks have no Team member destination.');
     for (const selection of selected) {
       if (!alive()) throw new Error('Team context changed.');
-      const rootId = commandId(handle, selection);
+      const rootId = capturedTeamModelProbeRootId(handle, selection);
       const retained =
         request.preparationId && options.intents
           ? await options.intents.read(rootId, request.preparationId)
@@ -446,6 +446,7 @@ export async function prepareCapturedTeamModels(options: {
                 limitContext: request.limitContext,
               }),
               expiresAt: Math.min(...completed.map((probe) => probe.expiresAt)),
+              selections: structuredClone(selected),
             },
           }
         : {}),

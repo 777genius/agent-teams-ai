@@ -1,17 +1,20 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   existsSync,
   readFileSync,
+  readdirSync,
   writeFileSync,
   mkdirSync,
   mkdtempSync,
   realpathSync,
   renameSync,
   rmSync,
+  lstatSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname, parse as parsePath, sep } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { createInterface } from 'node:readline';
 import { test } from 'node:test';
@@ -24,6 +27,11 @@ import { captureCreateTeamDraft } from '../dist/composition/captureCreateTeamDra
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
 import { CreateTeamLaunchCoordinator } from '../dist/composition/CreateTeamLaunchCoordinator.js';
 import { ClaudeManagementCoordinator } from '../dist/composition/ClaudeManagementCoordinator.js';
+import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
+import { createOpenCodeLocalModelReadiness } from '../dist/adapters/providers/OpenCodeLocalModelReadiness.js';
+import { captureOpenCodeReadinessOrigin } from '../dist/adapters/providers/OpenCodeReadinessOrigin.js';
+import { executeTeamModelProbe } from '../dist/composition/teamLaunchModelProbe.js';
+import { actualCaptureReadinessCommandId } from '../dist/team-launch/launchReadiness.js';
 import { RuntimeTeamCoordinator } from '../dist/composition/RuntimeTeamCoordinator.js';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
 import { ModelProbeOwner } from '../dist/management/ModelProbeOwner.js';
@@ -35,10 +43,41 @@ import { runtimeSourceSelectionFixture } from './fixtures/runtime-source-selecti
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { HostedTeam } from '../dist/composition/MemberEntry.js';
 import type { CreateTeamLaunchPreparationInput } from '../dist/team-registry/createLaunchContracts.js';
+import type { TeamLaunchRecord, TeamLaunchSummary } from '../dist/team-launch/contracts.js';
+import type { RuntimeSessionRecord } from '../dist/runtime/contracts.js';
 import type { Session } from '@agent-teams/provider-session-contracts';
+import type { ProviderManagementProfile } from '../dist/management/profile.js';
+import type { LocalModelReadinessPreparation, ReadinessSourceReference } from '../dist/management/commandRecords.js';
 
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
-function fixture(withSources = false) {
+
+// Complete TEST file references, computed independently of the bounded production reader.
+function readinessReference(path: string, root: string): ReadinessSourceReference {
+  const directories: unknown[] = [];
+  let directory = parsePath(path).root;
+  for (const part of ['', ...dirname(path).slice(directory.length).split(sep).filter(Boolean)]) {
+    if (part) directory = join(directory, part);
+    let stat;
+    try { stat = lstatSync(directory); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      return { path, root, present: false, digest: digest({ path, root, directories, missing: directory }) };
+    }
+    directories.push([directory, stat.dev, stat.ino, stat.mode, stat.uid]);
+  }
+  let stat;
+  try { stat = lstatSync(path); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    return { path, root, present: false, digest: digest({ path, root, directories, missing: path }) };
+  }
+  return { path, root, present: true, digest: digest({ path, root, directories,
+    file: [stat.dev, stat.ino, stat.mode, stat.uid, stat.size, stat.mtimeMs, stat.ctimeMs, stat.nlink],
+    bytes: createHash('sha256').update(readFileSync(path)).digest('hex'),
+  }) };
+}
+
+function fixture(withSources = false, provider: 'claude' | 'opencode' = 'claude', worktree = false) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-create-launch-')));
   for (const name of ['project', 'home', 'config']) mkdirSync(join(root, name));
   const profile: TeamHostProfile = {
@@ -90,6 +129,29 @@ function fixture(withSources = false) {
       ],
     },
   };
+  if (provider === 'opencode') {
+    const template = profile.runtime!.providerTemplates![0]!;
+    if (template.provider !== 'claude') assert.fail('expected original TEST Claude template');
+    const { nativeTools: _tools, autoAllowedTools: _allowed, ...base } = template;
+    profile.runtime!.providerTemplates = [runtimeMemberProfileSchema.parse({ ...base,
+      provider, protocolRevision: '1.19.4', endpoint: 'http://127.0.0.1:19189',
+      mcpPolicyPlugin: testPolicyPlugin(root), accountBinding: 'TEST-opencode-account',
+      nativeOptions: { providerId: 'test-local', agent: 'build', variant: 'medium' },
+      environment: { HOME: join(root, 'home'), XDG_CONFIG_HOME: join(root, 'config'),
+        XDG_DATA_HOME: join(root, 'config'), XDG_CACHE_HOME: join(root, 'config') },
+    })];
+    writeFileSync(join(root, 'project', 'opencode.json'), JSON.stringify({ provider: {
+      'test-local': { npm: '@ai-sdk/openai-compatible', options: { baseURL: 'https://example.test/v1', apiKey: 'TEST-only-key' } },
+    } }));
+  }
+  if (worktree) {
+    const git = (...args: string[]) => execFileSync('git', ['-C', join(root, 'project'), ...args], { stdio: 'pipe' });
+    git('init', '-b', 'main');
+    git('config', 'user.name', 'TEST');
+    git('config', 'user.email', 'test@example.invalid');
+    git('add', '.');
+    git('commit', '-m', 'TEST captured OpenCode configuration');
+  }
   let current = true,
     opens = 0,
     spends = 0;
@@ -98,6 +160,9 @@ function fixture(withSources = false) {
   };
   const sources = withSources ? runtimeSourceSelectionFixture(profile, assertCurrent) : undefined;
   const openedExecutables: string[] = [], probeProfiles: string[] = [];
+  const allocatedMembers = new Map<string, number>();
+  let resolveAllocated!: () => void;
+  const allocated = new Promise<void>(resolve => { resolveAllocated = resolve; });
   const teams = new Map<string, HostedTeam>();
   const registry = new TeamRegistry({
     ownerId: profile.owner.ownerId,
@@ -144,6 +209,7 @@ function fixture(withSources = false) {
   const createRuntime = () =>
     new RuntimeTeamCoordinator({
       profile,
+      modelReadiness,
       ...(sources ? { sources: sources.index } : {}),
       teams,
       assertWriter: assertCurrent,
@@ -166,7 +232,12 @@ function fixture(withSources = false) {
             code: 'unsupported',
           }),
           interrupt: async () => ({ ok: false, code: 'unsupported' }),
-          checkReadiness: async () => ({ ok: true, value: undefined }),
+          checkReadiness: async () => {
+            if (!allocatedMembers.has(context.profile.memberId))
+              allocatedMembers.set(context.profile.memberId, Date.now());
+            if (allocatedMembers.size === 2) resolveAllocated();
+            return { ok: true, value: undefined };
+          },
           checkpoint: () => ({ ok: false, code: 'unsupported' }),
           close: async () => {
             ended();
@@ -186,25 +257,59 @@ function fixture(withSources = false) {
         };
       },
     });
-  let runtime = createRuntime();
+  let runtime: RuntimeTeamCoordinator;
   const claude = new ClaudeManagementCoordinator([], assertCurrent);
+  const targets = new ProviderManagementCoordinator([], assertCurrent, root);
+  const profiles = new Map<string, ProviderManagementProfile>();
   const store = new FileManagementCommandStore(root);
   const pending: Array<(ok: boolean) => void> = [];
   const probes = new ModelProbeOwner({
     store,
     fence: new ManagementResourceFence(store.list()),
     assertWriter: assertCurrent,
-    select: (id, revision) => claude.target(id, revision),
-    prepare: (input) => ({
+    select: (id, revision) => {
+      const selected = profiles.get(id);
+      return selected?.provider === 'opencode' ? targets.readinessTarget(selected) : claude.target(id, revision);
+    },
+    readinessOriginCurrent(origin, input, isCurrent = () => true) {
+      const selected = profiles.get(input.profileId);
+      return selected?.provider === 'opencode' &&
+        captureOpenCodeReadinessOrigin(origin, selected, input.providerId, isCurrent).isCurrent();
+    },
+    prepare: (input, current, purpose, origin) => {
+      const ordinary = {
       timeoutMs: 90000,
       run: () => {
         spends++;
         probeProfiles.push(input.profileId);
-        return new Promise((resolve) => pending.push(resolve));
+        return new Promise<boolean>((resolve) => pending.push(resolve));
       },
       close: async () => true,
-    }),
+      };
+      const selected = profiles.get(input.profileId);
+      if (selected?.provider !== 'opencode') return ordinary;
+      assert.equal(purpose, 'native-local-readiness-v1');
+      assert.ok(origin);
+      return createOpenCodeLocalModelReadiness(selected, input, current, {
+        ordinary(observe) { return { ...ordinary, async run() {
+          observe({ id: input.providerId, npm: '@ai-sdk/openai-compatible',
+            options: { baseURL: 'https://example.test/v1', apiKey: 'TEST-only-key' } });
+          return ordinary.run();
+        } }; },
+        coordination() { assert.fail('keyed TEST source cannot start an authless coordination probe'); },
+        fetchImpl: async () => { assert.fail('keyed TEST source cannot discover metadata'); },
+      }, origin);
+    },
   });
+  const modelReadiness = { probes, readinessTarget: targets.readinessTarget.bind(targets),
+    admitTeamProbeProfile(value: ProviderManagementProfile) {
+      profiles.set(value.profileId, structuredClone(value));
+      if (value.provider === 'claude') claude.admitProbeProfile(value);
+      else if (value.provider === 'opencode') targets.admitTeamProbeProfile(value);
+      else assert.fail('TEST-fixture-provider');
+    },
+  };
+  runtime = createRuntime();
   const createCoordinator = () =>
     new CreateTeamLaunchCoordinator({
       profile,
@@ -213,13 +318,7 @@ function fixture(withSources = false) {
       runtime,
       assertCurrent,
       team: (id) => teams.get(id),
-      management: {
-        probes,
-        admitTeamProbeProfile: (value) => {
-          if (value.provider !== 'claude') assert.fail('TEST-Claude-only-fixture');
-          claude.admitProbeProfile(value);
-        },
-      },
+      management: modelReadiness,
     });
   let coordinator = createCoordinator();
   const input: CreateTeamLaunchPreparationInput = {
@@ -238,6 +337,14 @@ function fixture(withSources = false) {
       members: [{ name: 'worker', memberSettings: { role: 'TEST role' } }],
     },
   };
+  if (provider === 'opencode') {
+    input.draft.savedSettings.providerId = 'opencode';
+    input.draft.savedSettings.model = 'test-local/TEST-model';
+  }
+  if (worktree) {
+    input.draft.savedSettings.worktree = 'test-b2-worktree';
+    input.draft.members[0]!.memberSettings.isolation = 'worktree';
+  }
   return {
     root,
     profile,
@@ -256,8 +363,41 @@ function fixture(withSources = false) {
     store,
     probes,
     claude,
+    modelReadiness,
+    origin(actual?: { workspace: string; commandId: string; selection: unknown }): LocalModelReadinessPreparation | undefined {
+      if (provider !== 'opencode') return undefined;
+      const workspace = actual?.workspace ?? join(root, 'project'), selectedPath = join(workspace, 'opencode.json');
+      return { remainingMs: 90000, origin: { schemaVersion: 1, kind: actual ? 'team' : 'create',
+        ownerDigest: digest(profile.owner), contextId: input.draft.contextId,
+        commandId: actual?.commandId ?? input.preparationId, selectionDigest: digest(actual?.selection ?? input),
+        workspaces: [{ path: workspace, project: { selectedPath, invalid: false,
+          sources: ['opencode.json', 'opencode.jsonc', '.opencode/opencode.json', '.opencode/opencode.jsonc']
+            .map(name => readinessReference(join(workspace, name), workspace)),
+          providers: [{ providerId: 'test-local', baseUrl: 'https://example.test/v1', preset: 'custom', hasConfiguredApiKey: true }],
+        }, global: { notConsulted: 'project-precedence' } }], approval: { notConsulted: 'no-private-target' },
+      } };
+    },
     opens: () => opens,
     spends: () => spends,
+    async waitForOriginalAllocation(members: TeamLaunchSummary['members']) {
+      const expected = members.map(({ memberId, attempt }) => ({ memberId, deadline: attempt.deadlineMs }));
+      assert.equal(expected.length, 2);
+      assert.equal(new Set(expected.map(row => row.memberId)).size, 2);
+      assert.ok(expected.every(row => Number.isSafeInteger(row.deadline) && row.deadline > 0));
+      const cutoff = Math.min(...expected.map(row => row.deadline));
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([allocated, new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => reject(new Error('Original Create allocation deadline expired')),
+            Math.max(0, cutoff - Date.now()));
+        })]);
+        assert.deepEqual([...allocatedMembers.keys()].sort(), expected.map(row => row.memberId).sort());
+        for (const { memberId } of expected)
+          assert.ok(allocatedMembers.get(memberId)! < cutoff, 'allocation must precede the original minimum deadline');
+      } finally {
+        if (timer !== undefined) clearTimeout(timer);
+      }
+    },
     async green() {
       pending.shift()!(true);
       await tick();
@@ -273,6 +413,7 @@ function fixture(withSources = false) {
     async close() {
       current = true;
       await probes.close();
+      await targets.close();
       await runtime.close();
       rmSync(root, { recursive: true, force: true });
     },
@@ -544,42 +685,171 @@ test('cancelled original proof is retained and a new preparation renews without 
 });
 
 // Renewal changing registry identity, duplicate starts/prompts, or old expired proof blocking original read makes this red.
-test('submit uses original registry/roster/capture/start receipts and recovers same-ID admission after proof expiry', async () => {
-  const f = fixture();
-  try {
-    assert.equal(f.coordinator.lookup('TEST-create', f.input), null);
-    await f.coordinator.prepare('start', f.input);
-    await f.green();
-    const result = await f.coordinator.submit('TEST-create', f.input);
-    assert.equal(result.creation.phase, 'published');
-    await tick();
-    assert.equal(f.opens(), 2);
-    const team = f.teams.get(result.creation.record.teamId)!;
-    assert.equal(team.owner.runtimeCaptures(f.profile.principalId).length, 1);
-    assert.equal((team.connection.readSnapshot() as { messages: unknown[] }).messages.length, 1);
-    const probe = [...f.store.list()][0]!;
-    if (probe.kind !== 'model.probe') throw new Error('Expected probe');
-    f.store.write({ ...probe, expiresAt: Date.now() - 1 });
-    f.profile.owner.revision = 'TEST-next-host-revision';
-    await f.restart();
-    const renewal = { ...f.input, preparationId: 'TEST-renewal-no-probe' };
-    const original = f.coordinator.lookup('TEST-create', renewal)!;
-    assert.equal(original.creation.record.teamId, result.creation.record.teamId);
-    const duplicate = await f.coordinator.submit('TEST-create', renewal);
-    assert.equal(duplicate.launch.launchId, result.launch.launchId);
-    await tick();
-    assert.equal(f.opens(), 2);
-    assert.equal(f.spends(), 1);
-    assert.equal((team.connection.readSnapshot() as { messages: unknown[] }).messages.length, 1);
-    const altered = structuredClone(renewal);
-    altered.draft.savedSettings.prompt = 'TEST changed';
-    assert.throws(() => f.coordinator.lookup('TEST-create', altered));
-    await assert.rejects(f.coordinator.submit('TEST-create', altered));
-    assert.equal(f.registry.list('TEST-context').teams.length, 1);
-    f.invalidate();
-    assert.throws(() => f.coordinator.lookup('TEST-create', f.input));
-  } finally {
-    await f.close();
+test('submit uses original registry/roster/capture/start receipts and recovers same-ID admission after proof expiry', async (t) => {
+  for (const { provider, worktree } of [
+    { provider: 'claude', worktree: false },
+    { provider: 'opencode', worktree: false },
+    { provider: 'opencode', worktree: true },
+  ] as const) {
+    const f = fixture(false, provider, worktree);
+    const preparationProbeCount = provider === 'opencode' ? 2 : 1;
+    try {
+      assert.equal(f.coordinator.lookup('TEST-create', f.input), null);
+      const first = await f.coordinator.prepare('start', f.input, f.origin());
+      await f.green();
+      if (provider === 'opencode') {
+        const next = await f.coordinator.prepare('start', f.input, f.origin());
+        assert.equal(next.probes[0]!.commandId, first.probes[0]!.commandId);
+        assert.equal(next.probes[0]!.phase, 'completed');
+        assert.equal(next.probes[1]!.phase, 'running');
+        assert.notEqual(next.probes[0]!.commandId, next.probes[1]!.commandId,
+          'the original worker role retains its distinct full native recipe');
+        assert.ok(next.probes[1]!.expiresAt <= first.probes[0]!.expiresAt,
+          'the next original group cannot renew the first preparation cutoff');
+        await f.green();
+      }
+      const prepared = await f.coordinator.prepare('read', f.input);
+      assert.equal(prepared.ready, true);
+      const captured = provider === 'opencode'
+        ? await f.coordinator.capture('TEST-create', f.input, 90000) : undefined;
+      if (captured) {
+        assert.equal(captured.partialCreated, true);
+        assert.equal(f.opens(), 0, 'materializing the original capture cannot allocate a Session');
+        assert.equal(f.spends(), preparationProbeCount, 'capture retains both original recipes without another model input');
+      }
+      if (worktree) {
+        assert.ok(captured);
+        const teamId = captured.creation.record.teamId, team = f.teams.get(teamId)!;
+        const expected = { launchId: captured.launch.launchId, rosterRevision: captured.launch.rosterRevision };
+        const view = f.runtime.readModelReadinessCapture(teamId, expected)!;
+        assert.equal(view.targets.length, 2);
+        const records = new TeamOwnerStore(f.root, captured.creation.record.teamName);
+        const path = `launches/${digest(captured.launch.launchId)}.json`;
+        const before = records.read<TeamLaunchRecord>(path)!;
+        assert.equal(before.readiness?.groups.length, preparationProbeCount, 'each original project recipe retains its own preparation');
+        const cutoff = before.readiness!.capture!.cutoff;
+        const configuration = f.runtime.executeLaunch(teamId, 'configuration.read', 'TEST-actual-read',
+          { launchId: expected.launchId }) as {
+          members: Array<{ memberId: string; selected: { workspace: string; model: string; effort?: string } | null }>;
+        };
+        for (const target of view.targets) {
+          const selected = configuration.members.find(row => row.memberId === target.memberId)!.selected!;
+          assert.notEqual(selected.workspace, target.originalWorkspace);
+          assert.equal(target.originalWorkspace, join(f.root, 'project'));
+          const commandId = actualCaptureReadinessCommandId(view.preparationId, view.captureCommandId, target.memberId);
+          const payload = { ...expected, memberId: target.memberId, model: selected.model,
+            ...(selected.effort === undefined ? {} : { effort: selected.effort }) };
+          const handleId = 'TEST-create-worktree', scope = team.definition.scope;
+          const spent = f.spends();
+          await assert.rejects(executeTeamModelProbe({ runtime: f.runtime, management: f.modelReadiness, teamId,
+            commandId, payload, action: 'start', readiness: { owner: f.profile.owner, handleId, scope,
+              preparation: f.origin({ workspace: target.originalWorkspace, commandId,
+                selection: { handleId, scope, payload } })! } }));
+          assert.equal(f.spends(), spent, 'original project policy cannot authorize the actual worktree');
+          await executeTeamModelProbe({ runtime: f.runtime, management: f.modelReadiness, teamId,
+            commandId, payload, action: 'start', readiness: { owner: f.profile.owner, handleId, scope,
+              preparation: f.origin({ workspace: selected.workspace, commandId, selection: { handleId, scope, payload } })! } });
+          await f.green();
+          const child = f.store.read(commandId);
+          assert.ok(child?.kind === 'model.probe');
+          assert.equal(child.readiness?.evidence.decision, 'allow');
+          assert.equal(child.readinessScope?.workspace, selected.workspace);
+          assert.ok(child.expiresAt <= cutoff);
+          assert.equal(f.opens(), 0, 'actual-cwd proof precedes the original allocation');
+        }
+        assert.equal(records.read<TeamLaunchRecord>(path)!.readiness!.capture!.cutoff, cutoff);
+      }
+      const result = await f.coordinator.submit('TEST-create', f.input, captured && {
+        launchId: captured.launch.launchId, rosterRevision: captured.launch.rosterRevision,
+      });
+      assert.equal(result.creation.phase, 'published');
+      if (worktree) await f.waitForOriginalAllocation(result.launch.members);
+      await tick();
+      assert.equal(f.opens(), 2);
+      const team = f.teams.get(result.creation.record.teamId)!;
+      assert.equal(team.owner.runtimeCaptures(f.profile.principalId).length, 1);
+      assert.equal((team.connection.readSnapshot() as { messages: unknown[] }).messages.length, 1);
+      const originalProbes = [...f.store.list()].filter(row => row.kind === 'model.probe')
+        .filter(row => provider !== 'opencode' || row.readinessScope?.kind === 'create');
+      assert.equal(originalProbes.length, preparationProbeCount);
+      const probe = originalProbes[0]!;
+      if (probe.kind !== 'model.probe') throw new Error('Expected probe');
+      if (provider === 'opencode') {
+        for (const original of originalProbes) {
+          assert.equal(original.readiness?.evidence.decision, 'allow');
+          assert.equal(original.readiness?.evidence.ordinary, 'confirmed');
+          assert.equal(original.resourceHeld, false);
+        }
+        const record = new TeamOwnerStore(f.root, result.creation.record.teamName)
+          .read<TeamLaunchRecord>(`launches/${digest(result.launch.launchId)}.json`)!;
+        assert.deepEqual(record.readiness?.consumers.map(row => row.disposition), ['consumed', 'consumed']);
+        if (worktree) {
+          assert.equal(record.readiness!.groups.length, 2, 'only the two used actual-cwd references occupy destination slots');
+          assert.ok(record.readiness!.groups.every(row => !originalProbes.some(probe => row.commandId === probe.commandId)));
+          assert.ok(record.readiness!.consumers.every(row => row.groupCommandId ===
+            actualCaptureReadinessCommandId(record.readiness!.capture!.preparationId,
+              record.readiness!.capture!.commandId, row.memberId)));
+          for (const original of originalProbes) assert.equal(f.store.read(original.commandId)!.fingerprint, original.fingerprint,
+            'replacing an unused parent reference preserves the original probe record');
+        } else for (const consumer of record.readiness!.consumers) {
+          const member = team.definition.members.find(row => row.memberId === consumer.memberId);
+          assert.ok(member);
+          const original = prepared.probes.find(row => row.memberName === member.name);
+          assert.ok(original);
+          assert.equal(consumer.groupCommandId, original.commandId);
+        }
+      }
+      for (const original of f.store.list()) {
+        if (original.kind === 'model.probe') f.store.write({ ...original, expiresAt: Date.now() - 1 });
+      }
+      f.profile.owner.revision = 'TEST-next-host-revision';
+      await f.restart();
+      const renewal = { ...f.input, preparationId: 'TEST-renewal-no-probe' };
+      const original = f.coordinator.lookup('TEST-create', renewal)!;
+      assert.equal(original.creation.record.teamId, result.creation.record.teamId);
+      const duplicate = await f.coordinator.submit('TEST-create', renewal);
+      assert.equal(duplicate.launch.launchId, result.launch.launchId);
+      await tick();
+      assert.equal(f.opens(), 2);
+      assert.equal(f.spends(), preparationProbeCount + (worktree ? 2 : 0));
+      assert.equal((team.connection.readSnapshot() as { messages: unknown[] }).messages.length, 1);
+      const altered = structuredClone(renewal);
+      altered.draft.savedSettings.prompt = 'TEST changed';
+      assert.throws(() => f.coordinator.lookup('TEST-create', altered));
+      await assert.rejects(f.coordinator.submit('TEST-create', altered));
+      assert.equal(f.registry.list('TEST-context').teams.length, 1);
+      f.invalidate();
+      assert.throws(() => f.coordinator.lookup('TEST-create', f.input));
+    } catch (error) {
+      t.diagnostic(JSON.stringify({ provider, worktree, opens: f.opens(), spends: f.spends(),
+        ownerRevision: f.profile.owner.revision,
+        originalFailure: error instanceof Error ? error.stack : String(error) }));
+      try {
+        const runtimeRoot = join(f.root, 'runtime-sessions');
+        const runtimeRecords = readdirSync(runtimeRoot).flatMap(member =>
+          readdirSync(join(runtimeRoot, member)).filter(file => file.endsWith('.json'))
+            .map(file => JSON.parse(readFileSync(join(runtimeRoot, member, file), 'utf8')) as RuntimeSessionRecord));
+        const launches = [...f.teams.values()].flatMap(team => {
+          const directory = join(f.root, 'teams', team.definition.binding.teamName, '.host-owner', 'launches');
+          return existsSync(directory) ? readdirSync(directory).filter(file => file.endsWith('.json'))
+            .map(file => JSON.parse(readFileSync(join(directory, file), 'utf8')) as TeamLaunchRecord) : [];
+        });
+        t.diagnostic(JSON.stringify({ probes: [...f.store.list()].filter(row => row.kind === 'model.probe')
+          .map(({ commandId, fingerprint, phase, ok, resourceHeld, expiresAt, readinessScope, readinessRetired }) =>
+            ({ commandId, fingerprint, phase, ok, resourceHeld, expiresAt, readinessScope, readinessRetired })),
+          runtime: runtimeRecords.map(({ binding, profileId, hostIncarnation, phase, custody, sealed, nativeReady,
+            closeClaimed, diagnostic, inputs }) => ({ binding, profileId, hostIncarnation, phase, custody,
+            sealed, nativeReady, closeClaimed, diagnostic,
+            inputs: inputs.map(({ operationRef, phase }) => ({ operationRef, phase })) })),
+          launches: launches.map(({ definition, startCommandId, readiness, members }) =>
+            ({ launchId: definition.launchId, startCommandId, readiness, members })) }));
+      } catch (snapshotError) {
+        t.diagnostic(`Original failure snapshot unavailable: ${String(snapshotError)}`);
+      }
+      throw error;
+    } finally {
+      await f.close();
+    }
   }
 });
 

@@ -17,6 +17,8 @@ export interface MemberTransitionTarget {
   /** TeamLifecycleTransitions guard; restart only, cleanup/read remain usable while trashed. */
   assertNewWorkAllowed(): void;
   verifyNewWorkAllowed?(): Promise<void>;
+  /** Exact original action proof after source closure, before successor publication or claim. */
+  prepareSelected?(): Promise<void>;
   /** Original provider cleanup/endpoint revoke only, not current-member lookup after await. */
   retireOriginal(): Promise<boolean>;
   /** SDK-free endpoint retirement only when no Runtime allocation was proved. */
@@ -51,6 +53,27 @@ export function transitionRuntimeMember(target: MemberTransitionTarget) {
   };
   void pending.then(clear, clear);
   return pending;
+}
+/** Original captured-target closure only; callers retain admission and successor publication. */
+export async function closeRuntimeMember(target: Pick<MemberTransitionTarget,
+  'runtime' | 'sourceBinding' | 'assertOriginalAuthority' | 'retireOriginal'>): Promise<() => boolean> {
+  const { runtime, sourceBinding } = target;
+  // stopSession synchronously seals only this original Runtime before its first cleanup await.
+  await runtime.stopSession(sourceBinding, target.assertOriginalAuthority);
+  target.assertOriginalAuthority();
+  const closed = () => {
+    const observed = runtime.readSession(sourceBinding);
+    return (
+      observed.record?.phase === 'closed' &&
+      observed.record.custody === 'released' &&
+      !observed.attached
+    );
+  };
+  if (!closed()) throw new RuntimeOwnerError('hold');
+  // D cleanup and endpoint closure may fail even after logical stop; publication must wait for both.
+  if (!(await target.retireOriginal())) throw new RuntimeOwnerError('hold');
+  target.assertOriginalAuthority();
+  return closed;
 }
 async function execute(target: MemberTransitionTarget) {
   const { input, actions, runtime, sourceBinding } = target;
@@ -108,24 +131,12 @@ async function execute(target: MemberTransitionTarget) {
   }
   const admitted = actions.request(input.commandId);
   if (!admitted.created) return admitted.record;
-  // stopSession synchronously seals only this original Runtime before its first cleanup await.
-  await runtime.stopSession(sourceBinding, target.assertOriginalAuthority);
-  target.assertOriginalAuthority();
-  const closed = () => {
-    const observed = runtime.readSession(sourceBinding);
-    return (
-      observed.record?.phase === 'closed' &&
-      observed.record.custody === 'released' &&
-      !observed.attached
-    );
-  };
-  if (!closed()) throw new RuntimeOwnerError('hold');
-  // D cleanup and endpoint closure may fail even after logical stop; publication must wait for both.
-  if (!(await target.retireOriginal())) throw new RuntimeOwnerError('hold');
-  target.assertOriginalAuthority();
+  const closed = await closeRuntimeMember(target);
   if (input.action === 'restart') {
     target.assertNewWorkAllowed();
     await target.verifyNewWorkAllowed?.();
+    target.assertOriginalAuthority();
+    await target.prepareSelected?.();
     target.assertOriginalAuthority();
   }
   actions.closed(input.commandId, closed);

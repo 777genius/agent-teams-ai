@@ -222,7 +222,8 @@ export function selectOpenCodeV2ConfigurationKey(
 ): { apiKey?: string; apiKeyFile?: string } {
   if (raw === undefined) return {};
   if (typeof raw === 'string' && raw.includes('{file:')) {
-    if (!/^\{file:[^{}\x00-\x1f\x7f]+\}$/u.test(raw) || raw.length > 8192) invalid();
+    if (Buffer.byteLength(raw) > 64 * 1024 || /[\x00-\x1f\x7f]/u.test(raw) ||
+        [...raw.matchAll(/\{file:/gu)].length > 32) invalid();
     return { apiKeyFile: raw };
   }
   const value = environmentValues(raw, environment);
