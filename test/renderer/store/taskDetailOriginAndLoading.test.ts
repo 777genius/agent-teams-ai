@@ -42,7 +42,7 @@ const apiMock = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@renderer/api', () => ({ api: apiMock }));
+vi.mock('@renderer/api', () => ({ isElectronMode: () => false, api: apiMock }));
 
 function snapshot(projectPath: string, taskId = 'X'): TeamViewSnapshot {
   return {
