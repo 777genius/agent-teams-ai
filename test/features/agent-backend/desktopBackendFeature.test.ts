@@ -1,7 +1,18 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { access, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import {
+  access,
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -38,6 +49,20 @@ import type {
 } from '../../../src/features/agent-backend/main';
 import type { LocalModelReadinessContext } from '../../../src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
+
+const windowsFiles = vi.hoisted(() => ({ enabled: false }));
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    constants: {
+      ...actual.constants,
+      get O_NOFOLLOW() {
+        return windowsFiles.enabled ? 0 : actual.constants.O_NOFOLLOW;
+      },
+    },
+  };
+});
 
 const roots: string[] = [];
 const features: DesktopBackendFeature[] = [];
@@ -703,23 +728,44 @@ it('captures only the explicit supported review transport profile from a private
 it('rejects digest mismatch, symlink/noncanonical path and oversized private descriptor safely', async () => {
   const setup = await fixture();
   const selection = await selected(setup.descriptor);
-  await expect(
-    loadDesktopBackendDescriptor({ ...selection, sha256: '0'.repeat(64) })
-  ).rejects.toMatchObject({ code: 'hold' });
-  const alias = join(await root(), 'alias.json');
-  await symlink(selection.path, alias);
-  await expect(loadDesktopBackendDescriptor({ ...selection, path: alias })).rejects.toMatchObject({
-    code: 'hold',
-  });
-  const oversized = await selected('x'.repeat(256 * 1024));
-  await expect(loadDesktopBackendDescriptor(oversized)).rejects.toMatchObject({ code: 'hold' });
-  const malformed = await selected({
-    ...setup.descriptor,
-    owners: [{ ...setup.descriptor.owners[0], profile: { injected: 'TEST-secret-token' } }],
-  });
-  const desktop = feature({ descriptor: malformed, bindingDirectory: setup.bindingDirectory });
-  await desktop.initialize();
-  expect(desktop.listBindings('context-A')).toEqual({ state: 'hold', bindings: [] });
+  const originalPlatform = process.platform;
+  try {
+    await chmod(selection.path, 0o666);
+    Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+    await expect(loadDesktopBackendDescriptor(selection)).rejects.toMatchObject({ code: 'hold' });
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    windowsFiles.enabled = true;
+    expect(constants.O_NOFOLLOW).toBe(0);
+    expect((await loadDesktopBackendDescriptor(selection)).defaultOwner).toEqual(
+      setup.descriptor.defaultOwner
+    );
+    await chmod(selection.path, 0o444);
+    expect((await loadDesktopBackendDescriptor(selection)).defaultOwner).toEqual(
+      setup.descriptor.defaultOwner
+    );
+    await chmod(selection.path, 0o600);
+    await expect(
+      loadDesktopBackendDescriptor({ ...selection, sha256: '0'.repeat(64) })
+    ).rejects.toMatchObject({ code: 'hold' });
+    const alias = join(await root(), 'alias.json');
+    await symlink(selection.path, alias);
+    await expect(loadDesktopBackendDescriptor({ ...selection, path: alias })).rejects.toMatchObject({
+      code: 'hold',
+    });
+    const oversized = await selected('x'.repeat(256 * 1024));
+    await expect(loadDesktopBackendDescriptor(oversized)).rejects.toMatchObject({ code: 'hold' });
+    const malformed = await selected({
+      ...setup.descriptor,
+      owners: [{ ...setup.descriptor.owners[0], profile: { injected: 'TEST-secret-token' } }],
+    });
+    const desktop = feature({ descriptor: malformed, bindingDirectory: setup.bindingDirectory });
+    await desktop.initialize();
+    expect(desktop.listBindings('context-A')).toEqual({ state: 'hold', bindings: [] });
+  } finally {
+    windowsFiles.enabled = false;
+    Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
+    await chmod(selection.path, 0o600);
+  }
 });
 
 it('cannot expose or dispatch handles after shutdown races a pending durable binding read', async () => {

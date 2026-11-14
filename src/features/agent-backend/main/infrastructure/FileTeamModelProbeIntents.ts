@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { constants } from 'node:fs';
-import { mkdir, open, stat } from 'node:fs/promises';
+import { constants, type Stats } from 'node:fs';
+import { lstat, mkdir, open, realpath, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import { atomicCreateAsync, syncDirectoryDurably } from '@main/utils/atomicWrite';
@@ -48,12 +48,31 @@ export class FileTeamModelProbeIntents implements TeamModelProbeIntents {
   private async lookup(rootId: string, kind: Kind, key: string): Promise<string | null> {
     const { directory, path } = this.location(rootId, kind, key);
     let opened = false;
+    let windowsOriginal: Stats | undefined;
     try {
+      if (process.platform === 'win32') {
+        windowsOriginal = await lstat(path);
+        if (
+          !windowsOriginal.isFile() ||
+          windowsOriginal.isSymbolicLink() ||
+          (await realpath(path)) !== path
+        )
+          throw new Error('Invalid model intent');
+      }
       const file = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
       opened = true;
       try {
         const before = await file.stat();
-        if (!before.isFile() || before.size > 4096 || (before.mode & 0o077) !== 0)
+        if (
+          !before.isFile() ||
+          before.size > 4096 ||
+          (process.platform !== 'win32' && (before.mode & 0o077) !== 0) ||
+          (windowsOriginal &&
+            (before.dev !== windowsOriginal.dev ||
+              before.ino !== windowsOriginal.ino ||
+              before.size !== windowsOriginal.size ||
+              before.mtimeMs !== windowsOriginal.mtimeMs))
+        )
           throw new Error('Invalid model intent');
         const bytes = Buffer.alloc(4097);
         let length = 0;
@@ -65,6 +84,19 @@ export class FileTeamModelProbeIntents implements TeamModelProbeIntents {
         const after = await file.stat();
         if (length > 4096 || before.size !== after.size || before.mtimeMs !== after.mtimeMs)
           throw new Error('Invalid model intent');
+        if (windowsOriginal) {
+          const current = await lstat(path);
+          if (
+            !current.isFile() ||
+            current.isSymbolicLink() ||
+            current.dev !== windowsOriginal.dev ||
+            current.ino !== windowsOriginal.ino ||
+            current.size !== windowsOriginal.size ||
+            current.mtimeMs !== windowsOriginal.mtimeMs ||
+            (await realpath(path)) !== path
+          )
+            throw new Error('Invalid model intent');
+        }
         const raw = JSON.parse(
           new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, length))
         ) as Record<string, unknown>;
@@ -92,7 +124,8 @@ export class FileTeamModelProbeIntents implements TeamModelProbeIntents {
         await file.close();
       }
     } catch (error) {
-      if (!opened && (error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      if (!opened && !windowsOriginal && (error as NodeJS.ErrnoException).code === 'ENOENT')
+        return null;
       throw new Error('Model intent unavailable');
     }
   }
