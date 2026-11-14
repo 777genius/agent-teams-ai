@@ -91,7 +91,7 @@
 </td>
 <td width="50%">
   <a href="docs/screenshots/6.png">
-    <img src="docs/screenshots/previews/6.webp" alt="Team notification settings and built-in triggers" width="100%" loading="lazy" />
+    <img src="docs/screenshots/previews/6.webp" alt="Notification settings and automatic agent recovery" width="100%" loading="lazy" />
   </a>
 </td>
 </tr>

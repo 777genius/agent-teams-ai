@@ -98,8 +98,8 @@ export const screenshots: Screenshot[] = [
   {
     path: 'screenshots/6.png',
     previewPath: 'screenshots/previews/6.webp',
-    alt: 'Responsive team notification settings and built-in triggers',
-    ruAlt: 'Адаптивные настройки уведомлений команды и встроенные триггеры',
+    alt: 'Notification settings and automatic agent recovery',
+    ruAlt: 'Настройки уведомлений и автоматического восстановления агентов',
     width: 1500,
     height: 900,
   },
