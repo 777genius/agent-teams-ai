@@ -12,7 +12,7 @@ import { captureManagedProviderRuntimePreferences } from '../../../src/features/
 import type { CapturedProviderManagement } from '../../../src/features/agent-backend/main';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
-async function fixture(configuredAuthless = false, summaryModels = false) {
+async function fixture(configuredAuthless = false, summaryModels = false, withPreferences = true) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-captured-defaults-')));
   const projectRoot = join(root, 'project'),
     globalRoot = join(root, 'global');
@@ -29,7 +29,7 @@ async function fixture(configuredAuthless = false, summaryModels = false) {
     targetId: 'a'.repeat(64),
     profileId: 'TEST-profile',
     configRevision: 'TEST-v1',
-    preferences: { projectRoot, globalRoot },
+    ...(withPreferences ? { preferences: { projectRoot, globalRoot } } : {}),
     isCurrent: () => current,
     async refreshConfiguration() {
       calls.push('source.refresh');
@@ -163,8 +163,7 @@ it('global default explicitly selects the global binding and project clear revea
     defaultModel: input.modelId,
     defaultModelSource: 'all_projects',
   });
-  const absent = await fixture();
-  delete absent.target.preferences;
+  const absent = await fixture(false, false, false);
   const unavailable = await absent.port.loadView(input);
   expect(supportsScopedDefaultModelInheritance(unavailable.view ?? null)).toBe(false);
   expect(unavailable.view).not.toHaveProperty('configuredModels');
