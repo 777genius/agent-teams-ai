@@ -80,6 +80,60 @@ export const storedOAuthCommandSchema = z
   });
 export type StoredOAuthCommand = z.infer<typeof storedOAuthCommandSchema>;
 
+
+const originPath = z.string().min(1).max(8192).refine(value => !/[\0\r\n]/u.test(value));
+export const readinessSourceReferenceSchema = z.object({
+  root: originPath, path: originPath, present: z.boolean(), digest: hash,
+}).strict();
+const readinessProviderPolicySchema = z.object({
+  providerId: z.string().regex(/^[a-z0-9][a-z0-9._-]{0,63}$/),
+  baseUrl: z.string().min(1).max(2048),
+  preset: z.enum(['ollama', 'lm-studio', 'atomic-chat', 'llama.cpp', 'custom']),
+  hasConfiguredApiKey: z.boolean(),
+}).strict();
+const readinessPolicyScopeFields = {
+  sources: z.array(readinessSourceReferenceSchema).min(2).max(4),
+  providers: z.array(readinessProviderPolicySchema).max(256),
+};
+const readinessPolicyScopeSchema = z.union([
+  z.object({ ...readinessPolicyScopeFields, selectedPath: originPath, invalid: z.boolean() }).strict(),
+  z.object({ ...readinessPolicyScopeFields, selectedPath: z.null(), invalid: z.literal(true),
+    selectorFailure: z.enum(['config-conflict', 'config-invalid', 'project-required']),
+    providers: z.array(readinessProviderPolicySchema).max(0),
+  }).strict(),
+]).refine(value => new Set(value.sources.map(row => row.path)).size === value.sources.length &&
+  new Set(value.providers.map(row => row.providerId)).size === value.providers.length &&
+  (!value.invalid || value.providers.length === 0));
+export const localModelReadinessOriginSchema = z.object({
+  schemaVersion: z.literal(1), kind: z.enum(['create', 'team']),
+  ownerDigest: hash, contextId: id, commandId: id, selectionDigest: hash,
+  workspaces: z.array(z.object({
+    path: originPath, project: readinessPolicyScopeSchema, global: readinessPolicyScopeSchema,
+  }).strict()).min(1).max(256),
+  approval: z.object({
+    source: readinessSourceReferenceSchema,
+    approved: z.array(z.object({
+      configPath: originPath, providerId: id, baseUrl: z.string().min(1).max(2048),
+    }).strict()).max(256),
+  }).strict(),
+}).strict().refine(value => new Set(value.workspaces.map(row => row.path)).size === value.workspaces.length &&
+  value.workspaces.every(row => row.project.sources.length === 4 && row.global.sources.length === 2) &&
+  value.workspaces.reduce((count, row) => count + row.project.providers.length + row.global.providers.length, 0) <= 256 &&
+  Buffer.byteLength(JSON.stringify(value)) <= 256 * 1024);
+export type LocalModelReadinessOrigin = z.infer<typeof localModelReadinessOriginSchema>;
+export type ReadinessSourceReference = z.infer<typeof readinessSourceReferenceSchema>;
+export const localModelReadinessPreparationSchema = z.object({
+  origin: localModelReadinessOriginSchema,
+  remainingMs: z.number().int().min(1).max(100000),
+}).strict();
+export type LocalModelReadinessPreparation = z.infer<typeof localModelReadinessPreparationSchema>;
+
+const readinessPreparationAnchorSchema = z.object({
+  originDigest: hash, ownerDigest: hash, contextId: id, commandId: id, selectionDigest: hash,
+  anchorCommandId: id, expiresAt: z.number().int().positive().safe(),
+}).strict();
+export type ReadinessPreparationAnchor = z.infer<typeof readinessPreparationAnchorSchema>;
+
 export const nativeLocalReadinessEvidenceSchema = z.object({
   schemaVersion: z.literal(1),
   ordinary: z.enum(['confirmed', 'unconfirmed']),
@@ -124,6 +178,8 @@ export const storedModelProbeSchema = z
     kind: z.literal('model.probe'),
     purpose: z.enum(['native-local-coordination-v1', 'native-local-readiness-v1']).optional(),
     readiness: storedLocalReadinessSchema.optional(),
+    localModelReadinessOrigin: localModelReadinessOriginSchema.optional(),
+    localModelReadinessPreparation: readinessPreparationAnchorSchema.optional(),
     modelId: id,
     effort: z
       .enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'])
@@ -137,6 +193,13 @@ export const storedModelProbeSchema = z
   })
   .strict()
   .refine((value) => value.purpose === undefined || value.context !== undefined)
+  .refine(value => value.localModelReadinessOrigin === undefined ||
+    value.purpose === 'native-local-readiness-v1' && value.localModelReadinessPreparation !== undefined &&
+    value.localModelReadinessOrigin.ownerDigest === value.localModelReadinessPreparation.ownerDigest &&
+    value.localModelReadinessOrigin.contextId === value.localModelReadinessPreparation.contextId &&
+    value.localModelReadinessOrigin.commandId === value.localModelReadinessPreparation.commandId &&
+    value.localModelReadinessOrigin.selectionDigest === value.localModelReadinessPreparation.selectionDigest &&
+    Buffer.byteLength(JSON.stringify(value.localModelReadinessOrigin)) <= 64 * 1024)
   .refine(value => value.readiness === undefined || value.purpose === 'native-local-readiness-v1' &&
     value.phase === 'completed' && !value.resourceHeld && value.readiness.context === value.context &&
     value.readiness.selectionDigest === value.selectionDigest &&

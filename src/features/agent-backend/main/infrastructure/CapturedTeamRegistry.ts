@@ -18,8 +18,10 @@ import {
 } from '../application/backendBinding';
 
 import { type CapturedHostClient, observeCapturedHostStartup } from './CapturedHostClient';
+import { readinessPreparationWire, readinessRemaining } from './CapturedLocalModelReadiness';
 
 import type { BackendOwnerBinding, BackendRequestGuard } from '../application/backendBinding';
+import type { CapturedReadinessOrigin } from './CapturedLocalModelReadiness';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 import type {
   CreateTeamRegistryPayload,
@@ -49,14 +51,18 @@ export class CapturedTeamRegistry {
       | 'team.creation.lookup',
     commandId: string,
     payload: unknown,
-    guard?: BackendRequestGuard
+    guard?: BackendRequestGuard,
+    readiness?: CapturedReadinessOrigin
   ) {
     const captured = captureBackendPayload(payload);
+    const origin = readiness ? { ...readiness, origin: structuredClone(readiness.origin) } : undefined;
+    if (origin && method !== 'team.creation.prepare') throw new BackendRoutingError('invalid-binding');
     this.current(guard);
     if (method === 'team.registry.list') observeCapturedHostStartup('owner-start', 'registry-list');
     await this.options.start();
     if (method === 'team.registry.list')
       observeCapturedHostStartup('owner-started', 'registry-list');
+    const wire = origin ? readinessPreparationWire(origin) : undefined;
     this.current(guard);
     if (method === 'team.registry.list') observeCapturedHostStartup('read-start', 'registry-list');
     const result = await this.options.client.request(
@@ -65,7 +71,7 @@ export class CapturedTeamRegistry {
         owner: this.options.owner as unknown as JsonValue,
         commandId,
         payload: captured,
-      },
+        ...(wire ? { localModelReadinessOrigin: wire as unknown as JsonValue } : {}),      },
       {
         control: ![
           'team.registry.create',
@@ -77,6 +83,7 @@ export class CapturedTeamRegistry {
     if (method === 'team.registry.list')
       observeCapturedHostStartup('read-complete', 'registry-list');
     this.current(guard, 'unknown');
+    if (origin) readinessRemaining(origin.budget, 'unknown');
     if (
       (method === 'team.registry.create' || method === 'team.creation.submit') &&
       result &&
@@ -141,11 +148,12 @@ export class CapturedTeamRegistry {
   async prepareCreation(
     action: 'prepare' | 'probe.read' | 'probe.cancel',
     input: CreateTeamLaunchPreparationInput,
-    guard?: BackendRequestGuard
+    guard?: BackendRequestGuard,
+    readiness?: CapturedReadinessOrigin
   ) {
     const captured = createTeamLaunchPreparationInputSchema.parse(structuredClone(input));
     return createTeamLaunchPreparationSnapshotSchema.parse(
-      await this.request(`team.creation.${action}`, captured.preparationId, captured, guard)
+      await this.request(`team.creation.${action}`, captured.preparationId, captured, guard, readiness)
     );
   }
 

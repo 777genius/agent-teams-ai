@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { access, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -21,6 +21,9 @@ import {
   registerBackendConnectionsHttp,
   registerBackendConnectionsIpc,
 } from '../../../src/features/agent-backend/main';
+import { JsonLocalProviderPrivateNetworkApprovalStore } from '../../../src/features/runtime-provider-management/main';
+import { setAppDataBasePath } from '../../../src/main/utils/pathDecoder';
+import { clearShellEnvCache } from '../../../src/main/utils/shellEnv';
 
 import type {
   BackendConnectionSnapshot,
@@ -33,6 +36,7 @@ import type {
   SelectedHostProfile,
 } from '../../../src/features/agent-backend/main';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
+import type { LocalModelReadinessContext } from '../../../src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness';
 
 const roots: string[] = [];
 const features: DesktopBackendFeature[] = [];
@@ -98,6 +102,24 @@ async function fixture(blockStartup = false): Promise<{
             toMember:'lead',phase:'completed',deduplicated:false}};
         }},
         'team.lifecycle.retired.read': { lane:'control', handle: () => ({ok:true,value:{teamIds:[]}}) },
+        'team.launch.configuration.read': { lane:'control', handle: (request) => {
+          appendFileSync(${JSON.stringify(join(storageRoot, 'launch-reads'))}, request.commandId+'\\n');
+          return {ok:true,value:{launch:{launchId:request.payload.launchId,rosterRevision:'roster-1',
+            status:'pending',ready:0,expected:1,retryCapability:'same-binding-no-allocation-only',
+            members:[{memberId:'member-1',binding:null,attempt:{attemptId:'attempt-1',status:'not-started',
+              nativeReady:false,usable:false,controlAvailable:false,noAllocation:true,reason:'not-started'}}]},
+            members:[{memberId:'member-1',label:'Worker',role:'lead',selected:{provider:'opencode',
+              workspace:${JSON.stringify(storageRoot)},model:'home-server/TEST-model',capabilities:['model']}}]}};
+        }},
+        'team.launch.probe.start': { lane:'work', handle: (request) => {
+          appendFileSync(${JSON.stringify(join(storageRoot, 'probe-requests'))}, JSON.stringify(request)+'\\n');
+          return {ok:true,value:{...request.payload,commandId:request.commandId,phase:'completed',ok:true,
+            expiresAt:Date.now()+90000}};
+        }},
+        'team.creation.prepare': { lane:'work', handle: (request) => ({ok:true,value:{
+          preparationId:request.payload.preparationId,draftDigest:'a'.repeat(64),ready:true,
+          probes:[{memberName:'team-lead',commandId:request.commandId,model:'TEST-model',
+            phase:'completed',ok:true,expiresAt:Date.now()+90000}]}}) },
         'management.catalog': {lane:'work', handle:(request)=>{
           appendFileSync(${JSON.stringify(join(storageRoot, 'management-effects'))},JSON.stringify({profileId:request.profileId,configRevision:request.configRevision})+${JSON.stringify('\n')});
           return {ok:true,value:{profileId:request.profileId,configRevision:request.configRevision,providers:[]}};
@@ -354,7 +376,9 @@ it('routes paired facade sends through the original captured owner with both imm
 it('uses two lazily captured subprocess hosts and captured context grants for finite IPC operations', async () => {
   const setup = await fixture();
   const desktop = feature({
-    descriptor: await selected(setup.descriptor),
+    descriptor: await selected({ ...setup.descriptor, creation: {
+      owner: { ownerId: 'A', revision: 'v1' }, contextIds: ['context-A'],
+    } }),
     bindingDirectory: setup.bindingDirectory,
   });
   await desktop.initialize();
@@ -397,6 +421,100 @@ it('uses two lazily captured subprocess hosts and captured context grants for fi
   expect(await readFile(join(setup.descriptor.owners[1].storageRoot, 'effects'), 'utf8')).toBe(
     'command-B\n'
   );
+
+  const originalHome = process.env.HOME, originalUserProfile = process.env.USERPROFILE;
+  const originalXdg = process.env.XDG_CONFIG_HOME;
+  const home = await root(), workspace = setup.descriptor.owners[0].storageRoot;
+  vi.stubEnv('HOME', home);
+  vi.stubEnv('USERPROFILE', home);
+  vi.stubEnv('XDG_CONFIG_HOME', join(home, '.config'));
+  setAppDataBasePath(home);
+  clearShellEnvCache();
+  try {
+    const configPath = join(workspace, '.opencode', 'opencode.jsonc');
+    await mkdir(join(workspace, '.opencode'));
+    await writeFile(configPath, JSON.stringify({ provider: { 'home-server': {
+      npm: '@ai-sdk/openai-compatible', options: {
+        baseURL: 'http://192.168.1.20:8080/v1', apiKey: '{file:/TEST-not-read/secret}',
+      },
+    } } }));
+    await new JsonLocalProviderPrivateNetworkApprovalStore().approve({
+      configPath, providerId: 'home-server', baseUrl: 'http://192.168.1.20:8080/v1',
+    });
+    const probe: BackendOperationRequest = {
+      handle: { handleId: 'opaque-A' }, commandId: 'original-probe', operation: 'team.launch.probe.start',
+      payload: { launchId: 'launch-1', rosterRevision: 'roster-1', memberId: 'member-1',
+        model: 'home-server/TEST-model' },
+    };
+    currentContext = 'context-A';
+    expect(await invoke(trusted, { ...probe, localModelReadinessOrigin: { schemaVersion: 1 } }))
+      .toEqual({ ok: false, code: 'invalid', outcome: 'not-dispatched' });
+    await expect(access(join(workspace, 'probe-requests'))).rejects.toMatchObject({ code: 'ENOENT' });
+    const deadline = performance.now() + 90000;
+    expect(await desktop.facade.invoke(probe, {
+      isCurrent: () => currentContext === 'context-A',
+    }, { remainingMs: () => deadline - performance.now() })).toMatchObject({
+      ok: true, value: { commandId: 'original-probe', phase: 'completed', ok: true },
+    });
+    const raw = await readFile(join(workspace, 'probe-requests'), 'utf8');
+    const wire = JSON.parse(raw) as { binding: { scope: { projectId: string } };
+      localModelReadinessOrigin: { remainingMs: number; origin: { contextId: string;
+        workspaces: { path: string; project: { selectedPath: string; sources: unknown[];
+          providers: { hasConfiguredApiKey: boolean }[] }; global: { sources: unknown[] } }[];
+        approval: { approved: unknown[] } } } };
+    expect(wire.binding.scope.projectId).toBe('project-1');
+    expect(wire.localModelReadinessOrigin.origin.contextId).toBe('context-A');
+    expect(wire.localModelReadinessOrigin.remainingMs).toBeGreaterThan(0);
+    expect(wire.localModelReadinessOrigin.remainingMs).toBeLessThan(90000);
+    expect(wire.localModelReadinessOrigin.origin.workspaces).toMatchObject([{
+      path: workspace, project: { selectedPath: configPath, sources: expect.any(Array),
+        providers: [{ hasConfiguredApiKey: true }] },
+    }]);
+    expect(wire.localModelReadinessOrigin.origin.workspaces[0].project.sources).toHaveLength(4);
+    expect(wire.localModelReadinessOrigin.origin.workspaces[0].global.sources).toHaveLength(2);
+    expect(wire.localModelReadinessOrigin.origin.approval.approved).toEqual([{
+      configPath, providerId: 'home-server', baseUrl: 'http://192.168.1.20:8080/v1',
+    }]);
+    expect(raw).not.toContain('{file:');
+    expect(raw).not.toContain('TEST-secret-token');
+    expect(await readFile(join(workspace, 'launch-reads'), 'utf8')).toBe('original-probe:origin\n');
+
+    const view: NonNullable<LocalModelReadinessContext['view']> = {
+      launch: { launchId: 'launch-1', rosterRevision: 'roster-1' },
+      members: [{ memberId: 'member-1', label: 'Worker', role: 'lead', selected: {
+        provider: 'opencode', workspace, model: 'home-server/TEST-model', capabilities: ['model'],
+      } }],
+    };
+    vi.stubEnv('XDG_CONFIG_HOME', join(home, 'different-original-config-root'));
+    const saved = desktop.facade.invoke({ ...probe, commandId: 'saved-probe' }, undefined,
+      { view, remainingMs: () => deadline - performance.now() });
+    view.members[0].selected!.workspace = join(home, 'changed-after-capture');
+    expect(await saved).toMatchObject({ ok: true, value: { commandId: 'saved-probe', ok: true } });
+    expect(await readFile(join(workspace, 'launch-reads'), 'utf8')).toBe('original-probe:origin\n');
+    const savedWire = JSON.parse((await readFile(join(workspace, 'probe-requests'), 'utf8'))
+      .trim().split('\n')[1]);
+    expect(savedWire.localModelReadinessOrigin.origin.workspaces[0].global).toMatchObject({
+      selectedPath: null, selectorFailure: 'config-conflict', invalid: true, providers: [],
+    });
+    const approvalCapture = vi.spyOn(JsonLocalProviderPrivateNetworkApprovalStore.prototype, 'capture');
+    try {
+      view.members[0].selected!.provider = 'claude';
+      view.members[0].selected!.workspace = workspace;
+      expect(await desktop.facade.invoke({ ...probe, commandId: 'claude-probe' }, undefined,
+        { view, remainingMs: () => deadline - performance.now() })).toMatchObject({ ok: true });
+      const creation = await desktop.captureTeamCreation('context-A', { isCurrent: () => true });
+      expect(await creation.prepare('prepare', { preparationId: 'claude-create', draft: {
+        contextId: 'context-A', teamName: 'TEST-team', savedSettings: { cwd: workspace, providerId: 'anthropic' }, members: [],
+      } })).toMatchObject({ preparationId: 'claude-create', ready: true });
+      expect(approvalCapture).not.toHaveBeenCalled();
+    } finally { approvalCapture.mockRestore(); }
+  } finally {
+    vi.stubEnv('HOME', originalHome);
+    vi.stubEnv('USERPROFILE', originalUserProfile);
+    vi.stubEnv('XDG_CONFIG_HOME', originalXdg);
+    setAppDataBasePath(null);
+    clearShellEnvCache();
+  }
 });
 
 it('captures only the explicit supported review transport profile from a private descriptor', async () => {

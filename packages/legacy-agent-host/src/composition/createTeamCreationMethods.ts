@@ -5,6 +5,7 @@ import { TeamLaunchError } from '../team-launch/contracts.js';
 import { TeamOwnerError } from '../team/contracts.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { ManagementCommandError } from '../management/commandRecords.js';
+import type { LocalModelReadinessPreparation } from '../management/commandRecords.js';
 import type { HostMethod } from '../index.js';
 import type { JsonValue } from '../contracts.js';
 import type { CreateTeamLaunchCoordinator } from './CreateTeamLaunchCoordinator.js';
@@ -13,6 +14,7 @@ type CreationSelection = {
   coordinator: Pick<CreateTeamLaunchCoordinator, 'prepare' | 'submit' | 'lookup'>;
   commandId: string;
   payload: unknown;
+  localModelReadinessOrigin?: LocalModelReadinessPreparation;
 };
 
 function json(value: unknown): JsonValue {
@@ -21,7 +23,7 @@ function json(value: unknown): JsonValue {
 
 /** Finite creation routes keep the Host's captured-envelope admission and original coordinator. */
 export function createTeamCreationMethods(options: {
-  select(raw: unknown): CreationSelection;
+  select(raw: unknown, preparation: boolean): CreationSelection;
 }): Record<string, HostMethod> {
   const methods: Record<string, HostMethod> = {};
   for (const operation of ['prepare', 'probe.read', 'probe.cancel', 'submit', 'lookup'] as const) {
@@ -32,7 +34,7 @@ export function createTeamCreationMethods(options: {
           : 'work',
       async handle(raw): Promise<JsonValue> {
         try {
-          const { coordinator, commandId, payload } = options.select(raw);
+          const { coordinator, commandId, payload, localModelReadinessOrigin } = options.select(raw, operation === 'prepare');
           const value =
             operation === 'submit'
               ? await coordinator.submit(commandId, payload)
@@ -44,7 +46,8 @@ export function createTeamCreationMethods(options: {
                       : operation === 'probe.read'
                         ? 'read'
                         : 'cancel',
-                    payload
+                    payload,
+                    localModelReadinessOrigin
                   );
           return { ok: true, value: json(value) };
         } catch (error) {

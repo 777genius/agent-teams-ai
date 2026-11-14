@@ -1,5 +1,6 @@
 import { isAbsolute, resolve } from 'node:path';
 
+import { readinessPreparationWire, readinessRemaining } from '../infrastructure/CapturedLocalModelReadiness';
 import { HostClientError } from '../infrastructure/selectedHostProfile';
 
 import {
@@ -17,6 +18,7 @@ import type {
   CapturedHostClient,
   CapturedHostShutdown,
 } from '../infrastructure/CapturedHostClient';
+import type { CapturedReadinessOrigin, LocalModelReadinessContext } from '../infrastructure/CapturedLocalModelReadiness';
 import type {
   BackendHandle,
   BackendOwnerBinding,
@@ -49,6 +51,8 @@ export interface BoundBackendCommand {
   readonly payload: JsonValue;
   readonly control?: boolean;
   readonly guard?: BackendRequestGuard;
+  readonly localModelReadinessContext?: LocalModelReadinessContext;
+  readonly localModelReadinessOrigin?: CapturedReadinessOrigin;
 }
 
 /** Routing is independent of Team policy and never owns command outcomes or retries. */
@@ -144,19 +148,27 @@ export class BackendOwnerRouter {
     assertIdentity(command.method);
     const payload = captureBackendPayload(command.payload, command.method);
     const { commandId, method, control, guard } = command;
+    const readiness = command.localModelReadinessOrigin ? {
+      origin: structuredClone(command.localModelReadinessOrigin.origin),
+      budget: command.localModelReadinessOrigin.budget,
+    } : undefined;
+    if (readiness && method !== 'team.launch.probe.start') throw new BackendRoutingError('invalid-binding');
     const binding = await this.readBinding(handle.handleId);
     if (!binding) throw new BackendRoutingError('hold');
     // Recheck after every asynchronous boundary; shutdown cannot be bypassed by a late read.
     const owner = this.resolveOwner(binding);
+    const origin = readiness ? readinessPreparationWire(readiness) : undefined;
     // No await may separate this guard from the captured client's synchronous wire send.
     assertBackendRequestGuard(guard);
     try {
       const response = await owner.client.request(
         method,
-        { commandId, binding: binding as unknown as JsonValue, payload },
+        { commandId, binding: binding as unknown as JsonValue, payload,
+          ...(origin ? { localModelReadinessOrigin: origin as unknown as JsonValue } : {}) },
         { control }
       );
       assertBackendRequestGuard(guard, 'unknown');
+      if (readiness) readinessRemaining(readiness.budget, 'unknown');
       return response;
     } catch (error) {
       assertBackendRequestGuard(guard, 'unknown');

@@ -412,12 +412,12 @@ export async function prepareDesktopCapturedTeam(
             original.userDataPath
           ),
           backend: {
-            invoke: (input) =>
+            invoke: (input, readiness) =>
               original.feature.facade.invoke(
                 input,
                 // Only cleanup may outlive foreground authority; it still addresses
                 // the original authorized descriptor/handle and original probe ID.
-                input.operation === 'team.launch.probe.cancel' ? undefined : { isCurrent }
+                input.operation === 'team.launch.probe.cancel' ? undefined : { isCurrent }, readiness
               ),
           },
         });
