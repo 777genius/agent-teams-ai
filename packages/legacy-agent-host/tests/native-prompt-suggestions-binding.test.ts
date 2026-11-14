@@ -163,7 +163,11 @@ test('foreign native provider/session, wrong terminal and detached owner never p
 test('private captured Runtime proof refuses substituted operation, revoked custody or executed successor', () => {
   const x = harness();
   x.terminal();
-  const record = {
+  const record: typeof x.snapshot.record & {
+    hostIncarnation: string;
+    custody: string;
+    control?: { inputId: string; operationRef: string; phase: string };
+  } = {
     ...x.snapshot.record,
     hostIncarnation: 'TEST-host-incarnation',
     custody: 'owned',
@@ -199,7 +203,7 @@ test('private captured Runtime proof refuses substituted operation, revoked cust
   record.config.tenantId = 'TEST-tenant-A';
   record.control = { inputId: candidate.inputId, operationRef: candidate.operationRef, phase: 'pending' };
   assert.equal(matches(), false, 'an in-flight native interrupt revokes old insertion authority');
-  delete (record as {control?: unknown}).control;
+  delete record.control;
   x.setHuman(false);
   assert.equal(matches(), false, 'revoked canonical human DM provenance fails closed');
   x.setHuman(true);
