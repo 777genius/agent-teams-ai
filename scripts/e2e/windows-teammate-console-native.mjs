@@ -16,15 +16,26 @@ const CALL_TIMEOUT_MS = 20_000;
 const RUN_TIMEOUT_MS = 90_000;
 const expected = ['cmd', 'git', 'powershell'];
 
-function terminateOwnedTree(child) {
+function terminateOwnedTree(child, marker) {
   if (!child?.pid || child.exitCode !== null || child.signalCode !== null) return;
-  // Only the still-live child created by this fixture. Never scan for or kill unrelated PIDs.
+  if (!marker) {
+    // Tool subcommands have no marker: only terminate the original process
+    // handle. Never tree-kill an unverified or potentially reused numeric PID.
+    child.kill('SIGKILL');
+    return;
+  }
+  // Re-read the unique command-line identity before using PID-scoped taskkill.
+  // A reused or retired PID grants no authority over the replacement process.
+  if (!originalProcessAlive(child.pid, marker)) return;
   const result = spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], {
     windowsHide: true,
     timeout: 8_000,
     stdio: 'ignore',
   });
-  if (result.error) child.kill();
+  if (result.error || result.status !== 0) {
+    child.kill('SIGKILL');
+    throw new Error('Verified fixture process-tree cleanup failed');
+  }
 }
 
 async function invokeTool(name, command, args) {
@@ -106,6 +117,7 @@ async function runTeammateFixture() {
 async function runParent() {
   assert.equal(process.platform, 'win32', 'Windows real-process proof requires win32');
   const scratch = await fs.mkdtemp(path.join(os.tmpdir(), 'windows-console-native-'));
+  const marker = 'native-custody-' + randomUUID();
   let child;
   try {
     const options = withCliProcessDefaults({
@@ -120,7 +132,7 @@ async function runParent() {
     const tools = [];
     let ready = false;
     let stderr = '';
-    child = spawn(process.execPath, [file, '--teammate-fixture'], options);
+    child = spawn(process.execPath, [file, '--teammate-fixture', marker], options);
     child.stderr?.on('data', (b) => { stderr = (stderr + b.toString()).slice(-4000); });
     await new Promise((resolve, reject) => {
       let settled = false;
@@ -132,14 +144,14 @@ async function runParent() {
         else resolve();
       };
       const timer = setTimeout(() => {
-        terminateOwnedTree(child);
+        terminateOwnedTree(child, marker);
         finish(new Error('teammate fixture timed out: ' + stderr));
       }, RUN_TIMEOUT_MS);
       child.on('message', (msg) => {
         if (msg?.type === 'tool') tools.push(msg);
         if (msg?.type === 'ready') {
           if (msg.pid !== child.pid) {
-            terminateOwnedTree(child);
+            terminateOwnedTree(child, marker);
             finish(new Error('teammate fixture identity mismatch'));
             return;
           }
@@ -184,7 +196,7 @@ async function runParent() {
     await fs.writeFile(report, JSON.stringify(evidence, null, 2) + '\n', { flag: 'wx' });
     process.stdout.write(JSON.stringify({ report, ...evidence }) + '\n');
   } finally {
-    terminateOwnedTree(child);
+    terminateOwnedTree(child, marker);
     await fs.rm(scratch, { recursive: true, force: true });
   }
 }
@@ -310,7 +322,7 @@ async function runCustodyProbe() {
     assert.equal(toolStillAlive, false,
       'Original tool descendant survived app force-kill in native Windows process fixture');
   } finally {
-    terminateOwnedTree(app);
+    terminateOwnedTree(app, marker);
     // Cleanup must attempt *both* original PIDs even if the first lookup/kill fails.
     const cleanupErrors = [];
     for (const pid of [matePid, toolPid]) {
