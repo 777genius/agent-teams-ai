@@ -1,6 +1,7 @@
 /** TEST-only key connection through the actual 2.1.4 engine and Host credential ledger. */
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { constants } from 'node:fs';
 import { createServer } from 'node:http';
 import { mkdir, mkdtemp, open, readFile, realpath, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -13,6 +14,7 @@ import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-so
 import { applyOpenCodeRuntimeSource } from '../dist/composition/applyOpenCodeRuntimeSource.js';
 import { selectOpenCodeV2ManagementModel } from '../dist/composition/openCodeV2ModelSelection.js';
 import { managementDigest } from '../dist/management/identity.js';
+import { storedCredentialCommandSchema } from '../dist/management/commandRecords.js';
 import { openCodeManagementProfileSchema } from '../dist/management/profile.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { RuntimeSourceCandidate, RuntimeSourceGrant, RuntimeSourcePublication, RuntimeSourceSummary } from '../dist/composition/runtimeSourceContracts.js';
@@ -91,6 +93,9 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
   const hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
   const nativePids = new Set<number>();
   let host: ReturnType<typeof startHost> | undefined, originalFailure: unknown;
+  let failedHost: ReturnType<ReturnType<typeof startHost>['facts']> | undefined;
+  let timeoutIntent: Readonly<{ commandId: string; profileId: string; configRevision: string;
+    providerId: string; fingerprint: string }> | undefined;
   let passed = false, cleanup = false, nativeCredentialCount = 0;
   const cleanupErrors: unknown[] = [];
   const metadataPrefix = 'legacy-agent-host: opencode-metadata ';
@@ -136,6 +141,43 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
       owner.released = true;
     }
   }
+
+  async function inspectTimeoutIntent() {
+    if (!timeoutIntent) return { status: 'not-reached' as const };
+    if (!failedHost || failedHost.exitCode === null && failedHost.signalCode === null)
+      return { status: 'host-not-exited' as const };
+    try {
+      const file = await open(join(root, 'store/management-commands',
+        managementDigest(timeoutIntent.commandId) + '.json'), constants.O_RDONLY | constants.O_NOFOLLOW);
+      try {
+        const before = await file.stat({ bigint: true });
+        assert.ok(before.isFile() && before.size <= 65536n && (before.mode & 0o077n) === 0n);
+        const buffer = Buffer.alloc(65537);
+        let length = 0, count = 0;
+        do {
+          count = (await file.read(buffer, length, buffer.length - length, null)).bytesRead;
+          length += count;
+        } while (count && length < buffer.length);
+        const after = await file.stat({ bigint: true });
+        assert.ok(length <= 65536 && BigInt(length) === before.size && before.dev === after.dev &&
+          before.ino === after.ino && before.size === after.size &&
+          before.mtimeNs === after.mtimeNs && before.ctimeNs === after.ctimeNs);
+        const raw: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(0, length)));
+        assert.ok(raw && typeof raw === 'object' && !Array.isArray(raw));
+        const { digest, ...body } = raw as Record<string, unknown>;
+        assert.equal(digest, managementDigest(body));
+        const retained = storedCredentialCommandSchema.parse(body);
+        assert.equal(retained.kind, 'credential.set');
+        for (const key of ['commandId', 'profileId', 'configRevision', 'providerId', 'fingerprint'] as const)
+          assert.equal(retained[key], timeoutIntent[key]);
+        return { status: 'observed' as const, phase: retained.phase, resourceHeld: retained.resourceHeld,
+          nativePhase: retained.openCodeV2?.phase ?? null,
+          verificationPresent: retained.openCodeV2?.verification !== undefined,
+          verificationOk: retained.openCodeV2?.verification?.ok ?? null };
+      } finally { await file.close(); }
+    } catch { return { status: 'unavailable' as const }; }
+  }
+
   function diagnostic(original: HostEpoch, chunk: Buffer): void {
     if (metadataFailure) return;
     try {
@@ -535,6 +577,9 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
     // A fresh explicit intent may follow completion, even for the same key.
     // A timed-out verification retains that new intent across restart.
     const unverified = { ...connect, commandId: 'TEST-unverified-connect' };
+    timeoutIntent = Object.freeze({ commandId: unverified.commandId, profileId: unverified.profileId,
+      configRevision: unverified.configRevision, providerId: unverified.providerId,
+      fingerprint: managementDigest(unverified) });
     beginProbe(unverified, 'connect', []);
     const retained = value<ProviderCredentialReceipt>(await host!.rpc('management.credential', unverified));
     assert.equal(retained.phase, 'held');
@@ -596,7 +641,9 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
     passed = true;
   } catch (error) { originalFailure = error; }
   finally {
-    if (host) try { await host.close(); hosts.push(host.facts()); } catch (error) { cleanupErrors.push(error); }
+    if (host) try { await host.close(); hosts.push(host.facts()); } catch (error) {
+      cleanupErrors.push(error); failedHost = host.facts();
+    }
     model.closeAllConnections();
     await new Promise<void>(done => model.close(() => done()));
     for (const pid of nativePids) try {
@@ -604,6 +651,7 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
     } catch (error) { cleanupErrors.push(error); }
     if (failures.length) originalFailure ??= Error('TEST native key oracle refused request');
     if (metadataFailure) originalFailure ??= metadataFailure;
+    const timeoutJournal = failedHost ? await inspectTimeoutIntent() : undefined;
     cleanup = cleanupErrors.length === 0;
     if (cleanup) try { await rm(root, { recursive: true, force: true }); }
     catch (error) { cleanup = false; cleanupErrors.push(error); }
@@ -612,6 +660,9 @@ test('native V2 rejects a wrong key, accepts its explicit correction and retains
         status: passed && cleanup && !originalFailure ? 'PASS' : 'INCOMPLETE', cleanup, version: '2.1.4',
         digests, steps, requests, nativeCredentialCount, nativeProcessCount: nativePids.size,
         hosts: hosts.map(({ exitCode, signalCode, stdoutValid }) => ({ exitCode, signalCode, stdoutValid })),
+        ...(failedHost ? { closeFailure: { epoch: epoch?.id ?? null, pid: failedHost.pid ?? null,
+          exitCode: failedHost.exitCode, signalCode: failedHost.signalCode,
+          stdoutValid: failedHost.stdoutValid, diagnosticBytes: failedHost.diagnosticBytes }, timeoutJournal } : {}),
         vendorAuthQualified: false, desktopQualified: false, releaseQualified: false }, null, 2) + '\n', { mode: 0o600 });
     } catch (error) { cleanupErrors.push(error); }
   }
