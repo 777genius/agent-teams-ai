@@ -215,3 +215,8 @@ First try the existing ceilings8/16 for that separate finite case. If exact arit
 5. Publish working source with accurate source-only/checked status and ordinary CI. No main merge or live ref advance is performed by this agent. Feature completion requires both connected implementation and the actual case; pending native proof is stated as such.
 
 No OS permission, process capture, executable-identity, provider readiness or strict cleanup oracle is weakened by this plan. It does not close the separate POSIX §75 gap or infer the cause of any earlier mixed UI timeout.
+
+
+## Scope correction: expose the existing roster transition through TeamOwner
+
+Add exactly one existing write path: `packages/legacy-agent-host/src/team/TeamOwner.ts`, parent/native/qualification preimage `42345e89da5ad5533c39d7f258a67e531207da3c`. This file was a readonly B2 dependency, not one of its write paths. Extend the existing private `nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent'>` by adding only `'liveMembership'`. The existing `this.nativeRoster = this.roster` assignment remains unchanged: the same Team owner, fence, state and transition instance are used. No new method implementation, public API, runtime owner, storage, timer or line-count allowance is added here. Platform identified the exact type-only seam; Profiles independently checked the scope and root verified both existing lines and the common preimage. Profiles includes the one-line delta in its shared base; root composes it once with the reviewed membership implementation and existing checks.
