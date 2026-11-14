@@ -34,6 +34,7 @@ import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { runtimeProfileSchema } from './runtimeProfile.js';
 import { RuntimeTeamCoordinator } from './RuntimeTeamCoordinator.js';
+import type { CapturedPromptSuggestionNotice } from './createCapturedPromptSuggestionBinding.js';
 import { hasRetainedTeamRuntime } from './RuntimeTeamCaptures.js';
 import { providerManagementProfileSchema } from '../management/profile.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
@@ -61,6 +62,8 @@ export const teamHostProfileSchema = z
     owner: hostOwnerSchema,
     principalId: id,
     reviewTransport: z.literal('review-v1').optional(),
+    /** Default off, captured per native Query/session; never auto-restarts a teammate. */
+    promptSuggestions: z.object({ enabled: z.boolean() }).strict().optional(),
     runtime: runtimeProfileSchema.optional(),
     processCustody: processCustodyProfileSchema.optional(),
     management: z.array(providerManagementProfileSchema).max(16).optional(),
@@ -96,6 +99,7 @@ export function createTeamHost(
   let management: ProviderManagementCoordinator | undefined;
   let scheduledRuns: ReturnType<typeof createHostScheduledRunComposition> | undefined;
   let emitOAuthProgress: ((snapshot: ProviderOAuthSnapshot) => void) | undefined;
+  let emitPromptSuggestion: ((notice: CapturedPromptSuggestionNotice) => void) | undefined;
   try {
     const processCustody = createProcessCustody(profile.processCustody);
     const providerManagement = createHostProviderManagementComposition(profile, () => {
@@ -278,6 +282,10 @@ export function createTeamHost(
         crossTeam: (team, principal, binding, current) =>
           crossTeam.memberPort(team, principal, binding, current),
         assertWriter: () => lease.assertCurrent(),
+        ...(profile.promptSuggestions?.enabled === true
+          ? { promptSuggestionsEnabled: true, onPromptSuggestion: (notice: CapturedPromptSuggestionNotice) =>
+              emitPromptSuggestion?.(notice) }
+          : {}),
         ...(composition ? { createProvider: composition.createProvider } : {}),
       });
     const creationLaunch =
@@ -758,6 +766,11 @@ export function createTeamHost(
     });
     emitOAuthProgress = (snapshot) => {
       if (!sealed) server.notifyData('management.oauth.progress', json(snapshot));
+    };
+    emitPromptSuggestion = (notice) => {
+      // Auxiliary, bounded, best-effort notification; never changes Team/Runtime result.
+      if (!sealed && profile.promptSuggestions?.enabled === true)
+        server.notifyData('runtime.prompt-suggestion.updated', json(notice));
     };
     runtime?.kick(); // Resume original durable obligations on startup, without opening/adopting native sessions.
     return server;
