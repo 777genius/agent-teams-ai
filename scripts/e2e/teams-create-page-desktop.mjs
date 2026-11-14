@@ -1160,8 +1160,9 @@ async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture
       '  });',
       '})()',
     ].join('\n');
-    // 25s fixture deadline + up to 30s verified tree cleanup + 10s margin.
-    const evidence = await inspector.evaluate(expression, 65_000);
+    // This one evaluation may spend 25s in the child, followed by 30s of
+    // marker-verified cleanup. Other CDP calls retain their 30s default.
+    const evidence = await inspector.evaluate(expression, 70_000);
     assert.equal(evidence.detached, false);
     assert.equal(evidence.windowsHide, true);
     assert.ok(evidence.mainElectronPid > 0 && evidence.teammatePid > 0);
