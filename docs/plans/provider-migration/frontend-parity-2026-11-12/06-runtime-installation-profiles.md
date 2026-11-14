@@ -2803,3 +2803,49 @@ Extend only existing cases in the two TEST files. Retain all old names and asser
 In the existing first-install UI case, prove exact V1 label/visibility for successful captured V1 plus genuine missing stock, unchanged native usability, and refusal to gain a new V1 maintenance reason from foreign/unknown/failed tuples, without removing their existing retry/install behavior; retain original fresh/default and V2 expectations. No model/native execution or new case is added.
 
 Keep every source cap. The existing 799-physical-line driver changes only its same expressions/predicates and stays within 800 without packing, unrelated deletions or extraction for cap alone. Other six paths have ample headroom. Freeze complete sources/diffs with forward/inverse and all three current preimages before peer. Root alone runs relevant focused tests, types/lint/source guards and next ordinary source-selection job. Actual V1/V2 Desktop receipts remain necessary; source/controlled PASS cannot establish first Install, native continuation, cleanup or cold qualification. The observed timeout and other open native failures remain failed until their own original successful evidence.
+
+
+## 33. Retain bounded original legacy status-invocation evidence for current-stopped catalogue9
+
+**PLAN ONLY; SOURCE ZERO until independent review, publication and explicit root GO.** Exact prefix is P06 ae472a677895d10e49812ab08ddaeadafda2d270. This is a diagnostic cut, not a catalogue-budget change or a causal repair. Root owns canonical application, checks, publication and original CI.
+
+### 33.1. Established failure and missing attribution
+
+Bounded disposition329d5dba69722c3ffcf4b175499a839e88909b7f binds original parent def734338f13bcc3209e78079a0cedbc48f05a5b, run43622192438/job132530121934, raw log94dfd98950702d4b6691cfc0f4333a295f9e021b, and original artifact14125688465 (104560 bytes; SHA256 15a0e8d9299ce80c5261fb62803742a1da5320a0f5702ea3f5715033f83ddd85). The original current-stopped producer fails at catalogue request9 against unchanged limit8. Recorded phase counts are create-form0→1, model-selection1→7 and launch-settings7→7 before failure. Business/probe counts are zero; 20 native children are captured without census overflow, source freeze and physical cleanup succeed. The receipt does not identify the status caller or native command responsible for each GET.
+
+The actual selector already contains the scoped Anthropic/global-hydration correction. Concurrent supported project/global routes and the three later shutdown-cancel messages do not establish the ninth request's initiator. Do not repeat that old fix, increase8, add a cache, skip a legitimate status read or infer a model-probe cause.
+
+### 33.2. Observe the existing deduplicated command boundary
+
+Use the existing private ClaudeMultimodelBridgeService.getProviderStatusFromRuntimeStatusCommand boundary (68e89e584395a022fa4e7b4d7017a7f3a397f154, 1222–1248). Its caller performs the original in-flight deduplication at1264–1333. After the existing execution-context resolution and construction of the unchanged command/timeout, immediately before the original readRuntimeStatusCommand call, synchronously retain a closed observation of that invocation. No new await, clock, native/HTTP/FS/CDP read, action, refresh or retry is introduced.
+
+The original normalized requested project input must be captured where it already feeds resolveRuntimeStatusExecutionContext. Classify project scope from that actual input, never from raw paths or only projectArgs.length: the existing context helper4e4b43dcaf54bd118965e4e97402f22bcc2b5fa3 passes Anthropic project scope through cwd while leaving projectArgs empty. Preserve every original execution option, argv value, timeout, parser, default, currentness check, result and exception. Existing provider fallback and catalog-hydration behavior remain unchanged.
+
+A private module-local diagnostic counter has no authority or caching role. Only when both NODE_ENV==='development' and the existing TEST switch LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH==='1' hold, emit the literal prefix TEST_CURRENT_STOPPED_RUNTIME_STATUS followed by one closed JSON record and newline through existing process.stderr. The current producer already checks this same switch at entry; add exactly one literal passing it into that producer's existing closed app environment. Other launch environments and ordinary default behavior are unchanged.
+
+Retain at most32 invocation records per loaded Main module, each containing only sequence1..32, overflow:false, provider from anthropic/codex/gemini/opencode/unknown, summary boolean and projectScoped boolean. The next eligible invocation may emit one terminal closed record {sequence:33,overflow:true}; all later calls are silent. Increment/mark before attempting the write, so a failed diagnostic write is not retried. Contain synchronous diagnostic failures without changing the original command or result. No raw path, argv, project/team/session/source ID, credentials, configuration, model name, error text, status payload, time or elapsed value is retained.
+
+This is explicitly a new, bounded TEST-only diagnostic write. It reuses the original Main stderr pipe already connected to desktop-current-stopped-app.log (producer169–170); no new file, collector, stream, listener, IPC, CDP request or upload step is needed. Do not wait for diagnostic delivery or backpressure and do not make missing/truncated output a PASS. The original failure and cleanup remain authoritative.
+
+### 33.3. Exact scope, caps and controlled checks
+
+Only four existing paths may change:
+
+| Path | Exact preimage | Change |
+| --- | --- | --- |
+| src/main/services/runtime/ClaudeMultimodelBridgeService.ts | 68e89e584395a022fa4e7b4d7017a7f3a397f154 | Private closed TEST reporter/counter and one original deduplicated invocation observation. |
+| test/main/services/runtime/ClaudeMultimodelBridgeService.test.ts | 60f157acb2372b70db583b177e222c75d820b5a9 | Extend only existing full-reply/entrypoint and coalescing cases. |
+| scripts/legacy-agent-host/desktop-stopped-import-prior-run.ts | 8a743d65e4c2a87975f07e27021ede576f36443a | One existing TEST flag literal in the closed app environment. |
+| scripts/legacy-agent-host/desktop-proof-integrated-sources.ts | da932d4d982c95bd3f541ada1138d4fea58da4f4 | Sequential §32 successor; add only the two absent changed Main/TEST path literals above. |
+
+The producer stays800 physical lines from799. The bridge stays within its existing2010 cap (current1950), without compression, deletion or extraction solely for a cap. The existing test file is excluded by the original source-size policy; do not change that policy. The roster retains every old literal, including all three §32 additions. No new repository file, pinned native artifact/tool input, model oracle, workflow or fixture lifecycle is in scope. The single declared TEST environment flag is the only added environment entry.
+
+Extend the original parameterized full-reply/entrypoint case to verify the closed observation against its already-issued summary/full and global/project calls, including the disabled/default gate, without adding actual CLI calls. Extend the original concurrent coalescing case so its two existing callers still cause one native mock invocation and one observation attempt; make only the exact diagnostic-prefix write throw there and retain all original successful-result assertions. Restore only the test-owned flag/write spy in finally. Keep all50 existing literal case declarations and199 original expect-containing lines, the original command arguments/counts/results/deadlines and existing mocks. No new case, broad permutation matrix, native execution or benchmark is needed.
+
+Freeze complete sources/diffs, current three-ref preimages, exact inverses and source caps for independent peer. Root alone runs the existing focused cases, relevant type/lint/source guards and next ordinary current-stopped job.
+
+### 33.4. What the new evidence can and cannot establish
+
+Each regular marker identifies one deduplicated Main runtime-status invocation reaching the original read wrapper, not proof of successful spawn, a particular renderer component, a one-to-one HTTP GET mapping or complete source causality. Legacy auth/model-list fallback calls outside this boundary are not counted. Sequence is local to the loaded Main module; the existing captured app/compiled-bundle/source/cleanup evidence remains necessary. Missing output, a failed write, truncation or the overflow marker leaves attribution incomplete.
+
+Use the next original log together with its unchanged catalogue counter/phase receipt to decide whether a causal product plan is justified. The existing8-request limit, all assertions, original action order, budgets, timers, provider/backend choices, model/business counts and physical cleanup are unchanged. A successful diagnostic deployment alone does not qualify the failed journey.
