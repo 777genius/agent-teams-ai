@@ -1,4 +1,5 @@
 import { runDesktopNativeGroupUiSmoke } from './desktop-native-group-ui-smoke.ts';
+import { qualifyNativeNextPromptUiStep } from './desktop-native-next-prompt-ui.ts';
 import { prepareNativeChatAttachments } from './desktop-native-chat-attachments-ui.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import assert from 'node:assert/strict';
@@ -50,6 +51,17 @@ export async function runDesktopComposerUiSmoke(
   }
   const openCode = options.openCodeModel !== undefined;
   const model = options.openCodeModel ?? options.model!;
+  const nativeNextPromptUi = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI === '1';
+  if (nativeNextPromptUi) {
+    assert.ok(!openCode && options.model?.suggestionRequests,
+      'original TEST Claude SDK must supply the actual follow-up model oracle');
+    options.evidence.nativeNextPromptUi = {
+      status: 'INCOMPLETE',
+      scope: 'original captured Host -> actual Claude SDK -> Main IPC -> physical Electron Composer',
+      screenshots: [],
+      excluded: ['paid vendor authentication', 'Codex native 0.169', 'unscoped HTTP SSE'],
+    };
+  }
   const steps: Record<string, unknown>[] = [];
   const step = (value: Record<string, unknown>) => {
     steps.push({ monotonicMs: Math.round(performance.now()), ...value });
@@ -88,7 +100,10 @@ export async function runDesktopComposerUiSmoke(
     ['NATIVE_TEAM_ONE', 'REPLY_NATIVE_ONE'],
     ['NATIVE_TEAM_TWO', 'REPLY_NATIVE_TWO'],
   ] as const;
-  for (const [turn, reply] of turns) {
+  const selectedTurns = nativeNextPromptUi
+    ? [...turns, ['NATIVE_TEAM_THREE', 'REPLY_NATIVE_THREE'] as const]
+    : turns;
+  for (const [turn, reply] of selectedTurns) {
     await ui.click('.message-composer-flat-layout textarea', 'focus ordinary Composer');
     await cdp.send('Input.insertText', { text: turn });
     await ui.waitRead(
@@ -199,6 +214,24 @@ export async function runDesktopComposerUiSmoke(
       commandId: id,
       observations: observations.length,
     });
+    if (nativeNextPromptUi) {
+      assert.ok(
+        turn === 'NATIVE_TEAM_ONE' || turn === 'NATIVE_TEAM_TWO' ||
+          turn === 'NATIVE_TEAM_THREE',
+        'original Claude native conversation only',
+      );
+      await qualifyNativeNextPromptUiStep(cdp, ui, {
+        root: options.root,
+        turn,
+        expectedHumanInputs: incomingIds.length,
+        originalHumanSendCount: async () => (await rows(commands)).filter(row =>
+          row.principalId === 'TEST-human' && record(row.command).operation === 'message.send'
+        ).length,
+        modelSampleCount: () => options.model?.suggestionRequests?.length ?? -1,
+        step,
+        evidence: options.evidence,
+      });
+    }
   }
   const until = Date.now() + 15_000;
   let sessions = await readDesktopNativeStopSessions(options.root);
@@ -270,6 +303,18 @@ export async function runDesktopComposerUiSmoke(
   assert.deepEqual(model.failures, []);
   assert.ok(model.observations.every((item) => item.requestedModel === (openCode ? 'TEST-model' : 'claude-opus-4-6')));
   if (options.model) assert.ok(options.model.observations.every((item) => item.requestedEffort === 'medium'));
+  if (nativeNextPromptUi) {
+    const proof = record(options.evidence.nativeNextPromptUi);
+    assert.equal(options.model?.suggestionRequests?.length, 3,
+      'three original user turns create three separate native model suggestions');
+    assert.equal(Array.isArray(proof.screenshots) ? proof.screenshots.length : 0, 3,
+      'each actual Electron row has a screenshot');
+    options.evidence.nativeNextPromptUi = {
+      ...proof, status: 'PASS', originalHumanInputs: inputIds.length,
+      nativeSdkSamples: options.model!.suggestionRequests!.length,
+      noAutoSend: true, originalNativeCustodyReleased: true,
+    };
+  }
   options.evidence.conversationUiProof = {
     ...record(options.evidence.conversationUiProof),
     status: 'PASS',

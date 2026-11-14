@@ -171,6 +171,8 @@ export async function startNativeTeamModel(
     holdInitialTurnResponse?: boolean;
     peerMessaging?: boolean;
     uiGeneratedMessageIds?: boolean;
+    /** Only the original selected Electron native-followup fixture enables this. */
+    nativeNextPromptUi?: boolean;
     /** TEST-only original native tool-use IDs observed in actual model request history. */
     captureHistoryMarkers?: boolean;
     allowModelProbes?: boolean;
@@ -186,6 +188,9 @@ export async function startNativeTeamModel(
     memberName?: 'alice' | 'team-lead';
   } = {}
 ) {
+  if (options.nativeNextPromptUi) assert.ok(options.requireVisibleReply && options.uiGeneratedMessageIds &&
+    !options.groupChats && !options.chatAttachments && !options.mixedGroups && !options.peerMessaging,
+    'one isolated original native suggestion UI oracle');
   const nativeMember = options.nativeMemberCreation
     ? nativeMemberCreationScript(options.nativeMemberCreation, nativeToolReceipt)
     : undefined;
@@ -217,6 +222,7 @@ export async function startNativeTeamModel(
       )
     : undefined;
   const observations: Observation[] = [];
+  const suggestionRequests: Array<{ turn: string; step: number; inheritedHumanContext: boolean }> = [];
   const notificationObservations: (Observation & { notice: ObservedMixedTaskNotice })[] = [];
   const probes: {
     requestedModel?: string;
@@ -569,7 +575,7 @@ export async function startNativeTeamModel(
                 .map((block) => block.text)
                 .join('\n');
         const group = options.mixedGroups ? readMixedGroupTurn(text, 'team-lead') : undefined;
-        const match = /NATIVE_TEAM_(ONE|TWO)/.exec(text);
+        const match = /NATIVE_TEAM_(ONE|TWO|THREE)/.exec(text);
         const peer = options.peerMessaging ? nativePeerTurn(text, 'alice') : undefined;
         if (options.mixedTaskNotifications) {
           const currentText = text;
@@ -593,6 +599,25 @@ export async function startNativeTeamModel(
       }
       assert.ok(turn, 'request is tied to a deliberate TEST input');
       const step = counters.get(turn) ?? 0;
+      // Native SDK suggestions are separate localhost inference after the
+      // original finished source turn, never another business tool or user
+      // input. The counters are advanced only by real source actions.
+      if (options.nativeNextPromptUi &&
+          ['NATIVE_TEAM_ONE', 'NATIVE_TEAM_TWO', 'NATIVE_TEAM_THREE'].includes(turn)) {
+        const complete = turn === 'NATIVE_TEAM_ONE' ? 8 : turn === 'NATIVE_TEAM_TWO' ? 3 : 2;
+        if (step >= complete) {
+          assert.equal(step, complete, 'native suggestion may not replay an original business turn');
+          const source = JSON.stringify(messages);
+          assert.ok(source.includes('NATIVE_TEAM_ONE'), 'native followup inherits original user context');
+          assert.ok(source.includes(turn), 'native followup is attached to current source turn');
+          suggestionRequests.push({ turn, step, inheritedHumanContext: true });
+          assert.ok(suggestionRequests.length <= 3, 'exactly one auxiliary sample per native turn');
+          emitResponse(response, ++sequence,
+            { type: 'text', text: 'TEST_NEXT_PROMPT_' + turn },
+            typeof body.model === 'string' ? body.model : undefined);
+          return;
+        }
+      }
       if (options.mixedTaskNotifications && /_TEAM_(ONE|TWO)$/.test(turn))
         assert.ok(
           step <= (turn.endsWith('_ONE') ? 7 : 2),
@@ -765,9 +790,14 @@ export async function startNativeTeamModel(
           input: { commandId: 'native-reply-two', to: 'user', text: 'REPLY_NATIVE_TWO' },
         },
       ];
+      const three: { name: string; input: RecordValue }[] = [{
+        name: 'message_send',
+        input: { commandId: 'native-reply-three', to: 'user', text: 'REPLY_NATIVE_THREE' },
+      }];
       const action = notice
         ? undefined
-        : (groupActions ?? peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one : two))[step];
+        : (groupActions ?? peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one :
+          turn === 'NATIVE_TEAM_THREE' && options.nativeNextPromptUi ? three : two))[step];
       if (!action) {
         counters.set(turn, step + 1);
         emitResponse(
@@ -819,6 +849,7 @@ export async function startNativeTeamModel(
       return compactionTokenRequests;
     },
     observations,
+    ...(options.nativeNextPromptUi ? { suggestionRequests } : {}),
     ...(options.mixedTaskNotifications ? { notificationObservations } : {}),
     ...(nativeMember ? { nativeMemberObservations: nativeMember.observations } : {}),
     ...(groupChats ? { groupRequests: groupChats.requests } : {}),

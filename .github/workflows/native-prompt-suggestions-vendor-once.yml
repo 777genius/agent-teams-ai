@@ -260,3 +260,147 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
           path: native-prompt-suggestions-host-receipt.json
+
+  captured-original-electron-after-pin:
+    needs: stage-exact-archive
+    permissions:
+      contents: read
+    runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
+    timeout-minutes: 50
+    env:
+      TMPDIR: /private/tmp
+      LEGACY_DESKTOP_BACKEND_GO: "1"
+      LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI: "1"
+      LEGACY_DESKTOP_PROOF_MODE: native-conversation-ui
+    steps:
+      - name: Checkout only the published source-qualified consumer commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.stage-exact-archive.outputs.pinned_sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Assert macOS ARM64 and exact provider archive before native setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = arm64
+          test "$(git rev-parse HEAD)" = '${{ needs.stage-exact-archive.outputs.pinned_sha }}'
+          archive=vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz
+          echo "c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  $archive" | shasum -a 256 -c -
+          test -f vendor/provider-migration/native-prompt-suggestions-74991c21/source-receipt.json
+      - name: Reuse exact pinned macOS standalone Node archive
+        uses: actions/cache@v5
+        with:
+          path: .legacy-host-download/node-v24.21.0-darwin-arm64.tar.gz
+          key: legacy-host-node-darwin-arm64-24.21.0-bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057
+      - name: Stage verified standalone Node used by the original captured Host
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci/prefill-legacy-host-macos-node.mts
+          node scripts/legacy-agent-host/stage-node.ts --platform darwin-arm64
+      - name: Install frozen Electron/Host workspace and build original components
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci/install-dependencies-with-retry.mjs
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm --filter agent-teams-controller build
+          pnpm --filter agent-teams-mcp build
+      - name: Prepare fixed original Corepack, native SDK, and source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          selected="$(mktemp -d /private/tmp/TEST-native-next-prompt-electron-XXXXXX)"
+          mkdir "$selected/corepack"
+          printf '{"private":true}\n' > "$selected/corepack/package.json"
+          pnpm --dir "$selected/corepack" add --ignore-scripts --save-exact corepack@0.36.0
+          SELECTED_NATIVE_INPUTS="$selected" node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
+          import { join, resolve } from 'node:path';
+          const sha = p => createHash('sha256').update(readFileSync(p)).digest('hex');
+          const input = process.env.SELECTED_NATIVE_INPUTS;
+          const provider = realpathSync('packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations');
+          const sdk = realpathSync(resolve(provider, '../../@anthropic-ai/claude-agent-sdk'));
+          assert.equal(JSON.parse(readFileSync(join(sdk, 'package.json'), 'utf8')).version, '0.3.305');
+          const claude = realpathSync(resolve(sdk, '../claude-agent-sdk-darwin-arm64/claude'));
+          assert.equal(sha(claude), 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f');
+          const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');
+          const host = realpathSync('packages/legacy-agent-host/dist/cli.js');
+          const corepack = realpathSync(join(input, 'corepack/node_modules/corepack'));
+          const pnpm = join(corepack, 'dist/pnpm.js');
+          const env = {
+            LEGACY_DESKTOP_CLAUDE_PATH: claude,
+            LEGACY_DESKTOP_NODE_SHA256: sha(node),
+            LEGACY_DESKTOP_HOST_ENTRY_SHA256: sha(host),
+            LEGACY_DESKTOP_PNPM_PATH: pnpm,
+            LEGACY_DESKTOP_PNPM_SHA256: sha(pnpm),
+            LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: sha(join(corepack, 'package.json')),
+            LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: sha(join(corepack, 'dist/lib/corepack.cjs')),
+          };
+          for (const [name, value] of Object.entries(env)) {
+            assert.ok(typeof value === 'string' && !/[\r\n]/.test(value));
+            appendFileSync(process.env.GITHUB_ENV, name + '=' + value + '\n');
+          }
+          JS
+      - name: Real native Claude SDK through original captured Host and Electron Composer
+        shell: bash
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 |
+            tee "$RUNNER_TEMP/native-next-prompt-electron-ui.log"
+      - name: Independently check actual Electron proof and collect synthetic screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { copyFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'native-next-prompt-electron-ui.log'), 'utf8');
+          assert.ok(Buffer.byteLength(log) < 8 * 1024 * 1024);
+          const matches = [...log.matchAll(/\{"status":"PASS","receipt":"([^"]+)"\}/g)];
+          assert.equal(matches.length, 1, 'one original Electron UI PASS receipt');
+          const path = realpathSync(matches[0][1]);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/[^/]+\.json$/);
+          const r = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(r.status, 'PASS');
+          assert.equal(r.conversationUiProof?.status, 'PASS');
+          const ui = r.nativeNextPromptUi;
+          assert.equal(ui?.status, 'PASS');
+          assert.equal(ui?.originalHumanInputs, 3);
+          assert.equal(ui?.nativeSdkSamples, 3);
+          assert.equal(ui?.noAutoSend, true);
+          assert.equal(ui?.originalNativeCustodyReleased, true);
+          assert.equal(ui?.screenshots?.length, 3);
+          for (const [index, shot] of ui.screenshots.entries()) {
+            const png = realpathSync(shot.path);
+            assert.ok(png.startsWith('/private/tmp/TEST-desktop-backend-'));
+            const bytes = readFileSync(png);
+            assert.ok(bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])));
+            assert.equal(createHash('sha256').update(bytes).digest('hex'), shot.sha256);
+            copyFileSync(png, join(process.env.RUNNER_TEMP, 'native-next-prompt-' + index + '.png'));
+          }
+          writeFileSync(join(process.env.RUNNER_TEMP, 'native-next-prompt-electron-evidence.json'),
+            JSON.stringify({source:process.env.GITHUB_SHA, receipt:r}, null, 2));
+          JS
+      - name: Retain actual Electron screenshots, receipt and setup diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-next-prompt-electron-${{ needs.stage-exact-archive.outputs.pinned_sha }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/native-next-prompt-electron-ui.log
+            ${{ runner.temp }}/native-next-prompt-electron-evidence.json
+            ${{ runner.temp }}/native-next-prompt-*.png
