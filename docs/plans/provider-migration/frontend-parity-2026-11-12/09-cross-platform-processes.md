@@ -5377,3 +5377,57 @@ The original single case and all126 assertion-containing lines remain. Keep the 
 Source remains zero until independent review, publication and root SOURCE GO. Review must verify every original await/check/return and memoization boundary, passive default preservation, one failure publication, immutable pending-work snapshot and closed projections. Root may use bounded data-only controls with synthetic channel records/trace pressure and existing test cases to verify malformed/accessor/secret refusal, limits, success silence and preservation of the original false result; no new test suite or native campaign is required. Root owns existing types/build/caps and the next original native job.
 
 The current Linux failure remains OPEN. The next original receipt must distinguish the observed cleanup branch before any behavioral repair is proposed. A sibling PASS or a diagnostic-control PASS does not settle this failure, and observation loss cannot be converted to confirmed cleanup.
+
+## 110. Remove one duplicate member predicate inside the existing provider authority fence
+
+### 110.1. Actual failed boundary, without a spawn-time inference
+
+The ordinary qualification Host test job 132545304448 failed its original Create/OpenCode/worktree case on actual checkout `7d02b0e8d7d3f6c6ec9125e31bb69187529c07fa` (the merge of qualification 8e322e9128bcb42e5b6c5547eb3ac26b82614500 into parent def734338f13bcc3209e78079a0cedbc48f05a5b). The original full log is `ec9dc56a938056b0fdb0a78725674ec037da160f`; checkout/final Git identity are at lines 117/144/147, failure and the retained diagnostics at 1883–1885. The suite reports 1231 tests, 1228 pass, one fail and two original skips. Both controlled providers opened and all four original model probes completed successfully with resourceHeld=false.
+
+The original lead was claimed at 1794685562928 with deadline 1794685563928; its first allocation observation was 1794685563560 (632 ms after claim,368 ms before its cutoff). The worker was claimed at 1794685563008 with deadline 1794685564008; its observation was 1794685564047 (1039 ms after claim,39 ms after cutoff). These observations are the existing controlled driver's first checkReadiness callback **after** Runtime publishes allocated custody. They are not native spawn timestamps. The raw log cannot attribute39 ms to one function, distinguish scheduling from synchronous work inside that interval, or establish that a provider was first opened after expiry.
+
+Evidence `cfd3ad907516659a45f80e32c967ec1d8c97c770` preserves the compact timeline, original-source/current-source joins and exact chain. Factory 733d5cff, authority e6dc0dea, Coordinator 31c7eab1, TeamDeliveryAuthority aa43ff4b, RuntimeOwner 78480309, launch owner 8732bd11, worktree guard d2466a7e and test cda90ace match that actual checkout. Current readiness 24de03c9 differs from actual 89c3d125 only by the independently published §33 ordinary product-revision bridge; the Create/account/allocation chain is unchanged. No new run or failed-window profiler was used.
+
+### 110.2. Original claim-to-allocation sequence
+
+TeamLaunchOwner.startMember performs its original preclaim readiness/authority checks, writes the claimed attempt and original startedAt/deadline, and schedules the same Promise continuation. The continuation retains its original control authority through createRuntimeTeamLaunch into RuntimeOwner.open. Runtime writes the original opening record under its fence and enters the existing provider factory.
+
+The factory captures the exact immutable entry, checks authority, awaits the same owned-worktree inspection, checks authority/allocation again and consumes the original model-readiness reference. It then awaits the original MCP endpoint listening, repeats the current authority/readiness checks, creates and opens the original provider. Runtime attaches that actual driver, publishes allocated custody with its original authority check, and only then invokes the original checkReadiness observation used by this test.
+
+Every worktree check, source/account/policy inspection, readiness reference/cutoff, MCP endpoint, factory, original await and Runtime publication stays in this order. The attempt timer continues to request the original launch refresh; this plan neither changes its meaning nor adds an expiry refusal and calls that a two-open fix. It leaves all original clocks/deadlines and the strict observation oracle unchanged.
+
+### 110.3. Concrete duplicate and the retained final authority
+
+There is one redundant member-admission predicate in each composed provider-current check:
+
+1. The existing Coordinator callback enters captureMemberProviderAuthority, whose original prelude checks writer/capture availability.
+2. TeamOwner.authorizeRuntimeAccess(...,'provider',callback) enters the original Team store fence. Its callback performs the existing Coordinator writer, capture, captured-roster, sealed-state and endpoint-expiry checks, including authorizeMemberBinding(binding,'dispatch').
+3. The callback finishes the existing captured Team/binding/delivery/profile/config/principal identity comparisons.
+4. Still under that same fence, the unchanged original final pair evaluates memberAuthorized(binding,'admit') and then runtimeAccess(principal,binding,'control').
+
+TeamDeliveryAuthority.ts:110–145 uses identical logic for admit and dispatch: execution/lifecycle allowance, exact current member binding, current selected workAllowed and the nonrevoked member's read plus work permission. The final principal-control check is a separate requirement and must stay. Between the duplicate dispatch predicate and retained admit/control pair are only synchronous identity comparisons and returns: no await, provider/native/resource operation, journal publication or other effect can use an intermediate successful result.
+
+Do not describe TeamOwner.state as globally pure: its existing roster recovery can finish an already-decided projection. That mechanism is unchanged. Earlier retained roster checks and the final admit/control pair still perform the original fresh state/selection validation under the same fence; no cached state, green boolean or authority token replaces those reads. The change removes only the duplicate predicate invocation, not any predicate field or final gate.
+
+### 110.4. Exactly two existing writable paths
+
+| Path | Parent / qualification preimage | Native preimage |
+| --- | --- | --- |
+| packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts | 31c7eab1b5db7e78b975c96d55312296382bd08d | ab6c2238847c28ec90299f0e726f8f8f34188b9d |
+| packages/legacy-agent-host/tests/runtime-team-host.test.ts | 22f09edc842688c74d871c1ffc02ca5ae4aebc0f | same |
+
+All six preimages were read at parent 22f9782805e33f2f528830dfc9384d81ddd79b48, native df76ffb435805454a407a08a2d6265729e866c40 and qualification aa98ede9caf53b5d85ab0b677a9b974fe7beff20. Root rechecks currentness before publication. The production variants are 797 and 800 physical lines; preserve their existing line counts and all Windows-only bytes without compression, deleting guards or extracting a module for the cap.
+
+Use one private, default-false enclosure argument on the existing Coordinator.assertCurrent. Only the existing provider-factory callback passes true, because its sole downstream use is captureMemberProviderAuthority's callback inside the unchanged original provider fence. In that one invocation, omit the duplicate authorizeMemberBinding(...,'dispatch') expression; retain all preceding writer/capture/roster/lifecycle/expiry conditions. Every other caller, including isCurrent, launch, dispatch, native actions and delivery settlement, keeps the full original default check. Do not pass the enclosure argument through the factory API, IPC, profile, source schema, Runtime record, readiness reference or any public port. Do not create a general authority mode.
+
+The final TeamDeliveryAuthority provider admission/control pair stays byte-identical at its original location, as do captureMemberProviderAuthority and createRuntimeMemberProviderFactory. No shared authority, filesystem-fence, worktree, readiness, native provider, clock, source-roster, workflow or dependency path is writable.
+
+### 110.5. One meaningful existing-case extension and unchanged acceptance
+
+Extend only the existing runtime-team-host case “runtime projections redact private provider identities; missing human control and revoked member grants refuse allocation.” Keep its successful original Open, privacy assertions, missing-human-control/refused-member variants and every old assertion. From that same real open, retain the original provider context; verify its current guard accepts the unchanged fixture. Revoke the exact original member grant in the fixture's actual persisted Team state under the existing store fence, then release that fence before invoking the retained callbacks. Verify currentness and canAllocate both refuse and no additional provider is created. Restore the exact original state bytes in finally so the original cleanup remains meaningful. Use the existing fixture/store/imports and no new authority mock, synthetic success or test declaration.
+
+Keep the existing member-provider-authority cases and their final admission-versus-principal-control/revocation, immutable identity, fresh-fence and no-Runtime-reentry assertions. This is not a callback-count benchmark. The entire team-create-launch.test.ts (`cda90acefb509bbc43fa4205da18f50fc35ee2dd`) remains byte-identical: same three variants, two genuine controlled opens, four original released probes for the worktree variant, exact member IDs, recorded checkReadiness timestamps, original per-attempt 1000 ms deadlines, maximum-deadline wait, strict individual timestamp inequality and cleanup.
+
+After independent source review, root runs the existing authority/refusal scopes, original Create case/file, normal Host build/types/source gates and the unchanged complete serialized Host suite. The complete ordinary suite must pass while preserving those two timely opens; source review or an isolated PASS does not close the original failure. This is a source-backed elimination of duplicate work, with no guaranteed millisecond saving. If the original full failure persists, retain its new actual evidence before selecting another cut; no retry-until-green, timer increase, synthetic clock, cache, earlier timestamp, skipped provider or weakened oracle is authorized.
+
+Freeze the full two-file/variant diffs, exact forward/inverse checks, all current preimages, old case/assertion preservation and the private callback's closed call graph. Source remains zero until this appendix is published and root grants SOURCE GO.
