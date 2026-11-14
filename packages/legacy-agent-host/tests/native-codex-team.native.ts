@@ -155,7 +155,7 @@ test(
       assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
       assert.equal(process.version, 'v24.21.0');
       assert.equal(expectedProviderSha, nativeSuggestions
-        ? 'c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a'
+        ? '26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c'
         : '91350f829b72f83e613505bb444ff0d9ef98fb0835e3e438b918bbea8d930f94');
       await runCodexCandidate({ root, selectedNode, providerArtifact, deadline: candidateDeadline,
         owner, delivery, endpoint, model, selectModel: value => { candidateModel = value; },
