@@ -73,8 +73,9 @@ export async function proveWindowsProductTeam(input: ProductInput) {
     const request = {
       teamName: name, cwd: project, providerId: 'anthropic',
       model: configuredDefault, skipPermissions: true, syncModelsWithLead: true,
-      prompt: 'Owned sandbox only. ' + marker +
-        '. Do not modify files or invoke tools. Reply READY.',
+      // The message nonce is intentionally absent from launch/lead prompts:
+      // only the worker's later physical inbox message may carry it.
+      prompt: 'Owned sandbox only. Do not modify files or invoke tools. Reply READY.',
       members: [{name: 'worker', role: 'Native Windows process acceptance',
         providerId: 'anthropic', model: configuredDefault}],
     };
