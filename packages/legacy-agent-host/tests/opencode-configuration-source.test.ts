@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { linkSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import fs, { fstatSync, linkSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, parse as parsePath, sep } from 'node:path';
 import { test } from 'node:test';
@@ -12,6 +13,7 @@ import { ModelProbeOwner } from '../dist/management/ModelProbeOwner.js';
 import { ManagementResourceFence } from '../dist/management/ManagementResourceFence.js';
 import { managementDigest } from '../dist/management/identity.js';
 import type { LocalModelReadinessOrigin, ReadinessSourceReference } from '../dist/management/commandRecords.js';
+import { ManagementCommandError } from '../dist/management/commandRecords.js';
 import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
 import { captureOpenCodeV2Configuration } from '../dist/adapters/providers/OpenCodeV2CapturedConfiguration.js';
 import { captureOpenCodeV2SessionCredential } from '../dist/adapters/providers/OpenCodeV2SessionCredential.js';
@@ -504,6 +506,46 @@ test('original Main source, exact approval and whole-command commitment survive 
   f.write(approvals, { schemaVersion: 1, approvals: [tuple] });
   assert.equal(readOpenCodeReadinessSource(readinessReference(approvals, parsePath(approvals).root),
     131072, () => {}), readFileSync(approvals, 'utf8'), 'filesystem root retains its single separator');
+  const observedSource = readinessReference(approvals, f.root);
+  const missingSource = readinessReference(join(f.root, 'missing-approvals.json'), f.root);
+  let ownerCurrent = false, filesystemObservations = 0;
+  let invalidateDuringRead = false, invalidateDuringMissing = false, observedFd: number | undefined;
+  const current = () => { if (!ownerCurrent) throw new ManagementCommandError('held'); };
+  const originalLstat = fs.lstatSync, originalRead = fs.readSync;
+  const statObservation = t.mock.method(fs, 'lstatSync', ((...args: Parameters<typeof fs.lstatSync>) => {
+    filesystemObservations++;
+    try { return Reflect.apply(originalLstat, fs, args) as ReturnType<typeof fs.lstatSync>; }
+    finally { if (invalidateDuringMissing && args[0] === missingSource.path) ownerCurrent = false; }
+  }) as typeof fs.lstatSync);
+  const readObservation = t.mock.method(fs, 'readSync', ((...args: Parameters<typeof fs.readSync>) => {
+    const count = Reflect.apply(originalRead, fs, args) as number;
+    if (invalidateDuringRead) { observedFd = args[0]; ownerCurrent = false; }
+    return count;
+  }) as typeof fs.readSync);
+  try {
+    syncBuiltinESMExports();
+    assert.throws(() => readOpenCodeReadinessSource(observedSource, 131072, current), { code: 'held' });
+    assert.equal(filesystemObservations, 0, 'a stale owner cannot begin a filesystem observation');
+    ownerCurrent = true;
+    invalidateDuringRead = true;
+    assert.throws(() => readOpenCodeReadinessSource(observedSource, 131072, current), { code: 'held' },
+      'authority lost during the real read cannot return its bytes');
+    assert.notEqual(observedFd, undefined);
+    assert.throws(() => fstatSync(observedFd!), { code: 'EBADF' }, 'refusal closes the actual descriptor');
+    invalidateDuringRead = false;
+    ownerCurrent = true;
+    assert.equal(readOpenCodeReadinessSource(observedSource, 131072, current), readFileSync(approvals, 'utf8'));
+    invalidateDuringMissing = true;
+    assert.throws(() => readOpenCodeReadinessSource(missingSource, 131072, current), { code: 'held' },
+      'authority lost during missing-source observation cannot return clean absence');
+    invalidateDuringMissing = false;
+    ownerCurrent = true;
+    assert.equal(readOpenCodeReadinessSource(missingSource, 131072, current), null);
+  } finally {
+    readObservation.mock.restore();
+    statObservation.mock.restore();
+    syncBuiltinESMExports();
+  }
   const otherPolicies = Array.from({ length: 96 }, (_, index) => ({ providerId: 'test-' + index,
     baseUrl: 'https://example.test/' + 'x'.repeat(900) + '/v1', preset: 'custom' as const, hasConfiguredApiKey: false }));
   f.write(join(second, 'opencode.json'), { provider: Object.fromEntries(otherPolicies.map(row => [row.providerId,
