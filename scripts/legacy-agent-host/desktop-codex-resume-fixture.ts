@@ -5,7 +5,7 @@ import { lstat, mkdir, readFile, readdir, readlink, realpath, symlink, writeFile
 import { basename, dirname, join } from 'node:path';
 import { CapturedProcess, type CapturedProcessPort, type CapturedProcessProfile } from '../../packages/legacy-agent-host/dist/adapters/providers/CapturedProcess.js';
 import { captureDesktopNativeExecutable, selectedDesktopRuntime } from './desktop-captured-app.ts';
-import { processTable } from './desktop-backend-observations.ts';
+import { processTable, projectDesktopHarnessFailure } from './desktop-backend-observations.ts';
 import { CodexManagementHost } from '../../packages/legacy-agent-host/dist/adapters/providers/CodexManagementHost.js';
 import { readCodexMcpCatalog } from '../../packages/legacy-agent-host/dist/adapters/providers/readCodexMcpCatalog.js';
 import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
@@ -115,8 +115,28 @@ stream_max_retries = 0
     const census = captureDesktopNativeExecutable(options.executable, runner[0]!.pgid);
     assert.deepEqual(selectedDesktopRuntime(options.executable), [], 'no prior native child is adopted');
     const ports: { custody: CapturedProcess; close(): Promise<boolean>; launches: number }[] = [];
+    type Phase = 'action' | 'launch' | 'census' | 'match' | 'birth' | 'group' |
+      'cleanup-close' | 'port-count' | 'launch-count' | 'census-count' | 'remaining' | 'global-absence';
+    let phase: Phase = 'action';
+    let observedChild: ReturnType<CapturedProcess['launch']> | undefined;
+    const failure = (error: unknown) => {
+      let returned: boolean | 'unavailable' = 'unavailable';
+      let positivePid: boolean | 'unavailable' = 'unavailable';
+      let terminal: 'pending' | 'exit-zero' | 'exit-nonzero' | 'signal' | 'unavailable' = 'unavailable';
+      try {
+        returned = observedChild !== undefined;
+        positivePid = typeof observedChild?.pid === 'number' && Number.isSafeInteger(observedChild.pid) && observedChild.pid > 0;
+        if (observedChild) terminal = observedChild.signalCode !== null ? 'signal' :
+          observedChild.exitCode === null ? 'pending' : observedChild.exitCode === 0 ? 'exit-zero' : 'exit-nonzero';
+      } catch { /* Diagnostic values cannot replace the original error. */ }
+      return { error, phase, returned, positivePid, terminal };
+    };
+    let firstFailure: ReturnType<typeof failure> | undefined;
+    let cleanupFailure: ReturnType<typeof failure> | undefined;
+    let cleanup: 'confirmed' | 'unconfirmed' | 'unavailable' = 'unavailable';
+    let value!: T;
     try {
-      return await action((selected, current) => {
+      value = await action((selected, current) => {
         assert.deepEqual(selected.executable, { path: options.executable, sha256: CODEX_SHA256 });
         const custody = new CapturedProcess(selected, current);
         let closing: Promise<boolean> | undefined;
@@ -124,30 +144,80 @@ stream_max_retries = 0
         ports.push(port);
         return {
           launch(request) {
-            const child = custody.launch(request); port.launches++;
+            phase = 'launch';
+            let child: ReturnType<CapturedProcess['launch']>;
             try {
+              child = custody.launch(request); port.launches++;
+              observedChild = child;
+            } catch (error) { firstFailure ??= failure(error); throw error; }
+            try {
+              phase = 'census';
               census.observe();
+              phase = 'match';
               const found = census.captured().filter(row => row.pid === child.pid);
               assert.equal(found.length, 1, 'same returned native child, observed before caller input');
+              phase = 'birth';
               assert.ok(found[0]!.birth && found[0]!.ancestry.length > 0);
+              phase = 'group';
               assert.equal(found[0]!.pgid, child.pid);
-            } catch (error) { custody.seal(); void port.close().catch(() => {}); throw error; }
+            } catch (error) {
+              firstFailure ??= failure(error);
+              custody.seal(); void port.close().catch(() => {}); throw error;
+            }
+            phase = 'action';
             return child;
           },
           seal: () => custody.seal(), isRunning: () => custody.isRunning(), confirmStopped: port.close,
         };
       });
+    } catch (error) {
+      firstFailure ??= failure(error);
     } finally {
-      for (const port of ports) port.custody.seal();
-      const settled = await Promise.allSettled(ports.map(port => port.close()));
-      assert.ok(settled.every(value => value.status === 'fulfilled' && value.value === true),
-        'same original disposal must establish cleanup, including observer failure');
-      assert.equal(ports.length, 1); assert.equal(ports[0]!.launches, 1);
-      assert.equal(census.captured().length, 1);
-      assert.deepEqual(census.remaining(), []);
-      assert.deepEqual(selectedDesktopRuntime(options.executable), []);
-      preApp.push({ purpose, children: census.captured(), cleanup: true });
+      try {
+        phase = 'cleanup-close';
+        for (const port of ports) port.custody.seal();
+        const settled = await Promise.allSettled(ports.map(port => port.close()));
+        cleanup = settled.every(result => result.status === 'fulfilled' && result.value === true)
+          ? 'confirmed' : 'unconfirmed';
+        assert.ok(settled.every(value => value.status === 'fulfilled' && value.value === true),
+          'same original disposal must establish cleanup, including observer failure');
+        phase = 'port-count';
+        assert.equal(ports.length, 1);
+        phase = 'launch-count';
+        assert.equal(ports[0]!.launches, 1);
+        phase = 'census-count';
+        assert.equal(census.captured().length, 1);
+        phase = 'remaining';
+        assert.deepEqual(census.remaining(), []);
+        phase = 'global-absence';
+        assert.deepEqual(selectedDesktopRuntime(options.executable), []);
+        preApp.push({ purpose, children: census.captured(), cleanup: true });
+      } catch (error) { cleanupFailure = failure(error); }
     }
+    if (firstFailure || cleanupFailure) {
+      try {
+        const count = (amount: number) => amount === 0 ? 0 : amount === 1 ? 1 : 'multiple';
+        const sources = ['scripts/legacy-agent-host/desktop-codex-resume-fixture.ts',
+          'packages/legacy-agent-host/dist/adapters/providers/CapturedProcess.js',
+          'packages/legacy-agent-host/dist/adapters/providers/readCodexMcpCatalog.js'];
+        const project = (retained: ReturnType<typeof failure> | undefined) => retained ? {
+          phase: retained.phase, returned: retained.returned, positivePid: retained.positivePid,
+          terminal: retained.terminal,
+          failure: projectDesktopHarnessFailure(retained.error, dirname(dirname(import.meta.dirname)), sources),
+        } : null;
+        const line = JSON.stringify({ kind: 'C10_PRE_APP_FAILURE', purpose,
+          ports: count(ports.length), launches: ports.length === 1 ? count(ports[0]!.launches) :
+            ports.length === 0 ? 0 : 'multiple',
+          captured: count(census.captured().length), cleanup,
+          first: project(firstFailure), cleanupFailure: project(cleanupFailure) });
+        console.error(Buffer.byteLength(line, 'utf8') <= 4096 ? line :
+          JSON.stringify({ kind: 'C10_PRE_APP_FAILURE', purpose, unavailable: true }));
+      } catch { /* Failure-only diagnostics cannot replace either original failure. */ }
+      if (firstFailure && cleanupFailure)
+        throw new AggregateError([firstFailure.error, cleanupFailure.error], 'C10 pre-App observation and cleanup failed');
+      throw (firstFailure ?? cleanupFailure)!.error;
+    }
+    return value;
   };
   const isCurrent = () => { try { assertCurrent(); return true; } catch { return false; } };
   const catalog = candidate

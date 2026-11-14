@@ -284,9 +284,9 @@ export async function createMixedProviderSettingsProof(options: {
     await ui.scrollTo(target, label);
     await ui.click(target, label);
     const header = '[role="dialog"] [data-testid=' +
-      JSON.stringify('runtime-provider-row-' + models.openCodeProviderId + '-header') + ']';
+      JSON.stringify('runtime-provider-directory-row-' + models.openCodeProviderId + '-header') + ']';
     const content = '[role="dialog"] [data-testid=' +
-      JSON.stringify('runtime-provider-row-' + models.openCodeProviderId + '-content') + ']';
+      JSON.stringify('runtime-provider-directory-row-' + models.openCodeProviderId + '-content') + ']';
     if (!(await cdp.evaluate(`Boolean(document.querySelector(${desktopJsLiteral(content)}))`))) {
       await ui.scrollTo(header, 'original configured provider');
       await ui.click(header, 'expand original configured provider');
