@@ -29,43 +29,39 @@ jobs:
           persist-credentials: true
           fetch-depth: 1
 
-      - name: Download and verify exact original provider CI artifact
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          tmp="$(mktemp -d)"
-          trap 'rm -rf "$tmp"' EXIT
-          url="https://api.github.com/repos/agent-teams-ai/old-provider-implementations/actions/artifacts/14118487243/zip"
-          if ! curl --fail --silent --show-error --location \
-                -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-                "$url" --output "$tmp/provider.zip"; then
-            curl --fail --silent --show-error --location \
-              -H "Accept: application/vnd.github+json" \
-              "$url" --output "$tmp/provider.zip"
-          fi
-          echo '7abb51947aa7c35b32636648107dbf9bdf74574faf277b8150433610109a523e  '"$tmp"'/provider.zip' | sha256sum --check
-          unzip -q "$tmp/provider.zip" -d "$tmp/extracted"
-          echo 'c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  '"$tmp"'/extracted/agent-teams-provider-implementations-0.0.0.tgz' | sha256sum --check
-          echo 'aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db  '"$tmp"'/extracted/agent-teams-provider-session-contracts-0.0.0.tgz' | sha256sum --check
-          python3 - "$tmp/extracted/receipt.json" <<'PY'
-          import json,sys
-          r=json.load(open(sys.argv[1]))
-          assert r['schemaVersion']==1
-          assert r['sourceCommit']=='74991c21a64f44a268bdb1d769b4a580b33a4853'
-          assert r['nativeHostQualified'] is False
-          assert r['packagedElectronQualified'] is False
-          assert r['qualification']=='source-and-packed-consumer-only'
-          PY
-          tar -tzf "$tmp/extracted/agent-teams-provider-implementations-0.0.0.tgz" | grep -q '^package/dist/prompt-suggestions.js$'
-          dest='vendor/provider-migration/native-prompt-suggestions-74991c21'
-          mkdir -p "$dest"
-          cp "$tmp/extracted/agent-teams-provider-implementations-0.0.0.tgz" "$dest/"
-
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+      - name: Checkout frozen public provider source at original source-qualified commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: agent-teams-ai/old-provider-implementations
+          ref: 74991c21a64f44a268bdb1d769b4a580b33a4853
+          path: .provider-native-74991c21
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24.21.0
           package-manager-cache: false
+
+      - name: Reproduce original checked provider archive locally (public source, no cross-repo token)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C .provider-native-74991c21 rev-parse HEAD)" = 74991c21a64f44a268bdb1d769b4a580b33a4853
+          (
+            cd .provider-native-74991c21
+            corepack enable
+            test "$(corepack pnpm --version)" = 11.18.0
+            corepack pnpm install --frozen-lockfile --ignore-scripts
+            AGENT_TEAMS_PROVIDER_PACK_TEST_RETAIN_DIR="$PWD/.checked" corepack pnpm check
+          )
+          root=.provider-native-74991c21/.checked
+          test -f "$root/agent-teams-provider-implementations-0.0.0.tgz"
+          test -f "$root/agent-teams-provider-session-contracts-0.0.0.tgz"
+          echo "c251d13ff4b48ec113d7ede964b7075312b42176f8ae46eebcd04a60d86b9e6a  $root/agent-teams-provider-implementations-0.0.0.tgz" | sha256sum --check
+          echo "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db  $root/agent-teams-provider-session-contracts-0.0.0.tgz" | sha256sum --check
+          tar -tzf "$root/agent-teams-provider-implementations-0.0.0.tgz" | grep -q '^package/dist/prompt-suggestions.js$'
+          dest=vendor/provider-migration/native-prompt-suggestions-74991c21
+          mkdir -p "$dest"
+          cp "$root/agent-teams-provider-implementations-0.0.0.tgz" "$dest/"
 
       - name: Update one package selector and frozen lockfile
         run: |
