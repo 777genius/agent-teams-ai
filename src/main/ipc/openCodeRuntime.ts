@@ -1,4 +1,5 @@
 import {
+  classifyNativeVersion,
   getLatestQualifiedOpenCodeV2Version,
   getOpenCodeV2EngineVersion,
 } from '@features/opencode-compatibility';
@@ -71,7 +72,9 @@ async function handleGetStatus(
       return { success: false, error: 'Native runtime status could not be confirmed' };
     const status = captured;
     if (!current()) return { success: false, error: 'Native runtime status context changed' };
-    const result = await withV2Maintenance(_event, current, status);
+    const result = await (status.nativeGeneration === 'v1'
+      ? withV1Maintenance(_event, current, status)
+      : withV2Maintenance(_event, current, status));
     if (!current()) return { success: false, error: 'Native runtime status context changed' };
     return { success: true, data: result };
   } catch (error) {
@@ -79,6 +82,94 @@ async function handleGetStatus(
     logger.error('Error in openCodeRuntime:getStatus:', message);
     return { success: false, error: message };
   }
+}
+
+/** Stock maintenance cannot replace the independently successful captured V1 runtime. */
+async function withV1Maintenance(
+  event: IpcMainInvokeEvent,
+  current: () => boolean,
+  status: OpenCodeRuntimeStatus
+): Promise<OpenCodeRuntimeStatus> {
+  if (
+    !status.installed ||
+    status.state !== 'ready' ||
+    status.source !== 'captured-host' ||
+    status.nativeGeneration !== 'v1' ||
+    !status.sourceRevision ||
+    status.version !== undefined ||
+    status.engineVersion !== undefined ||
+    status.v2Support !== undefined ||
+    status.compatibleV2Version !== undefined ||
+    status.v2Maintenance !== undefined
+  )
+    return status;
+  const sources = await captureDesktopRuntimeSources(event, 'opencode');
+  if (!current()) throw new Error('Native runtime status context changed');
+  if (!sources) return status;
+  const original = await sources.current();
+  if (!current()) throw new Error('Native runtime status context changed');
+  if (
+    original.revision !== status.sourceRevision ||
+    original.nativeGeneration !== 'v1' ||
+    original.cliVersion !== undefined ||
+    original.engineVersion !== undefined ||
+    !['captured', 'bundled'].includes(original.sourceKind)
+  )
+    throw new Error('Native runtime selection changed');
+  const identity = (selection: typeof original) => [
+    selection.sourceId,
+    selection.revision,
+    selection.profileId,
+    selection.configRevision,
+    selection.sourceKind,
+    selection.nativeGeneration,
+    selection.cliVersion,
+    selection.nativeExecutableDigest,
+    selection.engineVersion,
+    selection.configurationCurrent,
+    selection.preferencesDigest,
+  ];
+  const retained = identity(original);
+  let stock: OpenCodeRuntimeStatus | undefined;
+  try {
+    stock = await requireService().getReadinessStatus();
+  } catch {
+    // Optional stock discovery cannot change the captured native readiness.
+  }
+  const observed = identity(await sources.current());
+  if (!current()) throw new Error('Native runtime status context changed');
+  if (observed.some((value, index) => value !== retained[index]))
+    throw new Error('Native runtime selection changed');
+  if (
+    stock?.installed === false &&
+    stock.source === 'missing' &&
+    stock.state === 'idle' &&
+    !stock.ignoredOverride
+  )
+    return {
+      ...status,
+      v1Maintenance: { installed: false, source: 'missing', state: 'idle' },
+    };
+  if (
+    stock?.installed === true &&
+    stock.state === 'ready' &&
+    (stock.source === 'app-managed' || stock.source === 'path' || stock.source === 'override') &&
+    typeof stock.version === 'string' &&
+    !stock.ignoredOverride
+  ) {
+    const native = classifyNativeVersion(stock.version);
+    if (native.kind === 'recognized' && native.generation === 'v1')
+      return {
+        ...status,
+        v1Maintenance: {
+          installed: true,
+          source: stock.source,
+          state: 'ready',
+          version: stock.version,
+        },
+      };
+  }
+  return status;
 }
 
 /** Optional maintenance is observed beside the same original engine, never as its replacement. */

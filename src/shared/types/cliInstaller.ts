@@ -497,6 +497,15 @@ export interface OpenCodeRuntimeStatus {
   v2Support?: 'ready' | 'required';
   /** Exact newest V2 qualified by the pinned runtime for this native platform. */
   compatibleV2Version?: string | null;
+  /** Display-only installed-CLI facts beside the original captured V1 runtime. */
+  v1Maintenance?:
+    | { installed: false; source: 'missing'; state: 'idle' }
+    | {
+        installed: true;
+        source: 'app-managed' | 'path' | 'override';
+        state: 'ready';
+        version: string;
+      };
   /** Display-only CLI maintenance; never replaces readiness of the captured engine. */
   v2Maintenance?:
     | { kind: 'missing'; engineVersion: string }
