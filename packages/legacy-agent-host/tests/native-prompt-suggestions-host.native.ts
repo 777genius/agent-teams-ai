@@ -228,12 +228,18 @@ test('original captured Host forwards native Claude follow-up for the exact huma
       localhostModelCalls:bodies.length,allModelCallsContainOriginalHuman:bodies.every(x=>x.inputHasHuman),
       vendorAuth:false,environment:process.platform+'-'+process.arch,nativeCustody:'released'};
   }finally{
-    try{await host?.close()}catch{}
+    let closeError: unknown;
+    try{await host?.close()}catch(error){closeError=error}
+    // Never upload a PASS receipt if the original Host's native cleanup failed.
+    if(closeError && receipt.passed===true)
+      receipt={...receipt,passed:false,nativeCustody:'unverified',
+        cleanupError:closeError instanceof Error?closeError.message:'Host cleanup failed'};
     try{server?.closeAllConnections();await new Promise<void>(resolve=>server?.close(()=>resolve())??resolve())}catch{}
     await writeFile(join(root,'receipt.json'),JSON.stringify(receipt,null,2),{mode:0o600});
     if (process.env.NATIVE_SUGGESTIONS_HOST_RECEIPT)
       await writeFile(process.env.NATIVE_SUGGESTIONS_HOST_RECEIPT,JSON.stringify(receipt,null,2)+'\n',{mode:0o600});
     t.diagnostic(JSON.stringify(receipt));
     await rm(root,{recursive:true,force:true});
+    if(closeError)throw closeError;
   }
 });
