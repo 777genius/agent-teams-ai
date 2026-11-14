@@ -4864,3 +4864,77 @@ Plan before source. Original native CI run43594548748, job132449753971, headc047
 The sole writable file has exact preimage37aadfb9c291f5ddb0803e50b664c5b48dc58066 on parent, native and qualification repairs. Replace only the source string of `import type { CapturedCodexManagedManifest }` with `@features/codex-runtime-installer/main`. The existing public entry already exports this identical type. Preserve the partial runtime mock's original private `importActual` target, every fixture, case, assertion, timeout and production source byte. Do not widen a lint exception, export a new API, change strict options or alter tests to accept a different result.
 
 Root and an independent peer first verify the public export and this one-line write scope, then publish this appendix. After SOURCE GO, freeze the exact one-line forward/inverse diff and run the original `lint:ci:files` configuration against this original TEST file. No new unit test is needed: the change erases at runtime and the existing execution assertions are byte-identical. Keep the ordinary full Main lint and compiler CI gates mandatory; a bounded local lint result is not whole-repository or native qualification. Commit and immediately push each reviewed repair ref; do not advance live PR heads while original CI is active.
+
+## 95. Connect the original configured Quit/Composer Launch to its exact fixture role and one OpenCode preparation
+
+### 95.1 Original evidence and unchanged production authority
+
+Read-only packet `b32566be77052151206877eb1d174ac118e94f9a` retains the original batch4 jobs, full logs, artifact hashes and source joins. They executed `09fefda4c255fa172a52b89b2815d18085c79afc`; `889325183907aa17e91c8fb992afa086cab9c621` is the artifact merge label only. Claude active/pending Quit jobs132446133176/132446133267 and V2 active/pending jobs132446133073/132446133211 stop at the existing configured Launch response: the fixture contains only Alice with role member, while the mandatory Main configuration projection requires one lead. No model request or native allocation is accepted at that failure.
+
+PNG Composer job132446133228 already has Alice as lead. It reaches a rejected model request, with the oracle failure “native request retains deliberate TEST business input”; no business/probe observation is accepted. The exact Main `CapturedLocalModelReadiness` aggregate branch (blob `7d916d7e2b1edfe07d814184b1fbcf6b5bb553b3`) and Host `prepareTeamModelReadiness` (`d51831e769c6dc1906e60eeffc3dc20178aee1c6`) require one ordinary preparation for this original configured OpenCode Launch. The current lifecycle oracle enables ordinary probes only for Resume. The rejected HTTP body is not retained; this is a source-backed connected diagnosis, not a reconstructed wire observation.
+
+Repair the two TEST joins together. Keep the production one-lead projector, Main origin/currentness, exact action/target/account/source, original Host receipt/released cleanup and allocation guards unchanged. Do not activate resumeMode, introduce a native bootstrap exemption, seed a successful proof or call another preparation owner.
+
+### 95.2 Finite existing scope and sequential preimages
+
+Only these nine existing TEST paths may change. No workflow, production file, new helper path, dependency, native case, timeout or source-size baseline is added. The mode and runner preimages are the already frozen C10 successors; root publishes/composes that cut first. All other rows were read from the current three source variants. Preserve W01 native-only behavior and every unrelated qualification/native delta.
+
+| Existing path | Parent | Native | Qualification |
+| --- | --- | --- | --- |
+| `scripts/legacy-agent-host/desktop-backend-fixture.ts` | `2455282769cf3f129ae539ef034f9ed37964c3cc` | `2845e09bd38161818d358f7648a0b870a4f92bb5` | `3ae0c010b11c554996d825f6cef3b4b73ef2d121` |
+| `scripts/legacy-agent-host/desktop-proof-fixture.ts` | `235639b475ebb8688756f0380df5d87d398e5bbf` | `998652fcaf71261cb838af38014278e0c02650a0` | `a9733fc656085a2dd478e04aad1c989e29e01987` |
+| `scripts/legacy-agent-host/desktop-proof-mode.ts` | `9969cd67757a5ece3d4a2ede60fabe1006738b27` | `9969cd67757a5ece3d4a2ede60fabe1006738b27` | `b51acd4dda16537f460bc3ae9aef4f1f3d1c57e1` |
+| `scripts/legacy-agent-host/desktop-backend-smoke.ts` | `ac98687de5b410d9eca287e91ce492eb1fe42675` | `6f58f8e2ae8675489e67d5b1d62b55ef7a6b90d3` | `0a40bfbf284e2f4a94e9cf564b89b951559bf16f` |
+| `scripts/legacy-agent-host/desktop-native-stop-fixture.ts` | `0b4a8973310038dc7a13750b9583c6d8a215bd83` | `0b4a8973310038dc7a13750b9583c6d8a215bd83` | `0b4a8973310038dc7a13750b9583c6d8a215bd83` |
+| `packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts` | `3204ac6ac5ead2ba6b1621f9ad7d30b041bd1902` | `f49a5b22f1cb58c7a23e560061019b5fa8fd0940` | `3204ac6ac5ead2ba6b1621f9ad7d30b041bd1902` |
+| `packages/legacy-agent-host/tests/fixtures/native-opencode-team/model-probe.ts` | `90e2b904d8cedeb9e63becbd7e81ed71e7382c26` | `90e2b904d8cedeb9e63becbd7e81ed71e7382c26` | `90e2b904d8cedeb9e63becbd7e81ed71e7382c26` |
+| `packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.test.ts` | `e09e08f1a57a3213d3bb43d46f7fd3d32c17cdb7` | `e09e08f1a57a3213d3bb43d46f7fd3d32c17cdb7` | `e09e08f1a57a3213d3bb43d46f7fd3d32c17cdb7` |
+| `scripts/legacy-agent-host/desktop-opencode-v2-fixture.test.ts` | `e7dd31bff029300b478be3086b960764908ee088` | `e7dd31bff029300b478be3086b960764908ee088` | `e7dd31bff029300b478be3086b960764908ee088` |
+
+The existing source rosters already include model, model-probe, fixture and stop helper; no dangling or new roster entry is needed. Existing `desktop-launch-ui-smoke.ts` C10 successor `f22c23b06e7701cbfccb527d1ccf594a5fa8379d` is read-only.
+
+### 95.3 Genuine fixture topology and one original Main action
+
+Add one private TEST setup option to `prepareDesktopBackendFixture`, passed only from the already selected `nativeStopMode` in `desktop-proof-fixture`. It marks the existing Alice row as lead before profile serialization/hash/descriptor pinning. Preserve Alice/member IDs, existing principals/grants, generations, executable/configuration, role-context marker, saved fields, child recipes and any Bob member. This does not enable launchDialog or change its defaults/management/creation branches. The original group/attachment lead remains lead; unrelated fixture modes retain their exact old role expression.
+
+The V2 lifecycle mode adds an explicit configured-launch-preparation option only when it will call the existing `prepareDesktopNativeStop` setup. Resume and other oracle options retain their old values. Replace that helper's private provider-only OpenCode argument with a finite OpenCode model port on the same existing caller expression, so the selected provider and its preparation window are connected. Missing model/port for the positive OpenCode arm refuses before the original action; it cannot silently select Claude.
+
+The setup still performs the same original launch read, native global/project catalog reads and exact configuration. Immediately around its sole `team.launch.start` / `TEST-explicit-sandbox-setup-launch`, arm the returned `configuredLaunchPreparation` for that literal original command and unchanged selected launch/roster/member/model. The command ID attributes the TEST window; the native HTTP request is not claimed to echo it. Preserve the existing response evidence and assert `start.ok` first; on success additionally require one consumed preparation and the same model probe ledger entry. A finally disarm has no timer/effect and must not mask an original failure. No new Main IPC, separate probe.start, polling loop, retry or setup replay is introduced.
+
+### 95.4 Existing no-tools protocol owner and closed oracle window
+
+The existing `native-opencode-team/model-probe.ts` already owns exact ordinary-probe recognition, including the single pinned V2 trailing MAX_STEPS message. Extend this same protocol owner with the finite configured-launch window and its existing ordinary SSE reply. Move only the current ordinary reply block from model.ts into a typed reply function here: preserve request model/fallback, probe-count response ID, created timestamp, both exact chunks, status/content type and DONE/end order. Mechanical inverse must reconstruct the original reply body, accounting only for its explicit body/response/probe-count parameters. Coordination, W01 and business response codecs remain in their current branches. This cohesive classification/window/reply boundary owns the new preparation behavior; it is not a layout-only extraction.
+
+The positive configured option is V2 only and cannot combine with allowModelProbes, Settings, live-membership, coordination, shared-session, retained-process or other specialized probe modes. Preserve the ordinary lifecycle's original member/principal, image and held-response options. The closed window starts idle, arms once for the exact original setup command, and accepts exactly one original no-tools prompt at the existing route with TEST-model and the original TEST Bearer key, only while probes=0 and business=0. Wrong shape/route/model/key, unarmed, duplicate, rearmed, business-before-preparation or post-disarm probe fails through the existing sealed failure path. The exact V2 suffix rule is reused, not widened to arbitrary assistant text. After successful consumption and disarm, the existing business oracle handles the deliberate input unchanged. Neither cold reads nor a later action can rearm this window.
+
+Keep the global ordinary probe ceiling8 and business ceiling16. Preserve the native model's complete W01 branch and file cap800 through the semantic protocol extraction; no line packing or baseline increase is permitted.
+
+### 95.5 Explicit request arithmetic and original clocks
+
+| Original lane | Preparation HTTP requests | Business HTTP requests | Required total |
+| --- | --- | --- | --- |
+| Claude active Quit | unchanged0 | unchanged1 held original request; second Runtime input stays queued | 1 |
+| Claude pending-open Quit | unchanged0 | unchanged0 | 0 |
+| V2 active-input Quit | exactly1 (delta+1 against previously allowed0) | unchanged1 held; second Runtime input stays queued | 2 |
+| V2 pending-open Quit | exactly1 (delta+1) | unchanged0 | 1 |
+| V2 PNG Composer | exactly1 (delta+1) | unchanged original ONE8 plus TWO3 | 12 |
+
+Metadata reads add no inference. This is one already-required production preparation, not an extra business input. Keep the model HTTP15000ms, provider/management120000ms, selected V2 client180000ms and original Main budget `min(100000, selected requestTimeoutMs)`; Host preparation remains bounded by that remaining original Main cutoff and its captured modelProbeTimeoutMs. Keep the existing post-Start readiness waits (V2180000/Claude45000), input/Quit/Stop/cold deadlines and process observations unchanged. The TEST window adds no clock, renewal or capacity. Cold acceptance retains the same exact business/probe counts and zero automatic input; its original assertions are not waived.
+
+### 95.6 Existing-case verification and freeze
+
+Extend only the existing first model-oracle case with finite synthetic subscopes for the exact V2 configured preparation and refusal boundaries (unarmed/duplicate/rearm/wrong model/key/suffix, business before completion); preserve all original names, assertions and request loops. A passing single preparation uses the original SSE codec and does not add a native campaign. In the existing V2 descriptor composition case, construct the explicit file-only setup fixture and check the genuine lead plus unchanged member/management/descriptor identity and pins; its original launchDialog fixture assertions remain. No Corepack/Electron/model native process is added by that test.
+
+Freeze all three variants and exact inverse checks, including the moved reply body and all C10/W01 preimages. Independent peer and root publication precede source. Root owns the existing controlled cases, strict script/Host types and source-size gates, then ordinary original Desktop jobs. Source review alone does not qualify Quit, PNG, native custody or cold readback. The separate Resume/Review saved-roster transfer, prior-run heap and donor drain findings remain outside this cut.
+
+## 96. Preserve the captured Darwin ARM source build heap in the current stopped-import producer
+
+Original batch4 job132446133160 executed `09fefda4c255fa172a52b89b2815d18085c79afc`. Its retained packet `b32566be77052151206877eb1d174ac118e94f9a`, raw job log `38ffdf47737da97c4f73b57174cc82e6e9c860fb` and artifact14114885541 identify a failure in `desktop-current-stopped-app.log`: the current source App builder reaches approximately2053MiB and terminates with V8 heap exhaustion/SIGABRT before App startup, the original native turn or import. The artifact ZIP is98776bytes, SHA256 `f0d9b8842434e500e029db93a0b80b960ee728b32a1ba0613d7c9c52dd7beac8`. Native observations and input/metadata counters are empty, and cleanup reports no remaining process; neither the native journey nor import is qualified by this failed run.
+
+The §92 common builder correction does not reach this path. `produceDesktopCurrentStoppedTeam` constructs a separate literal child environment rather than inheriting the common source fixture environment. Its original `captureCurrentStoppedSourceInputs` already positively asserts Darwin, arm64 and Node24.21.0, validates the current frozen source and selected runtime, and returns before that child environment is assembled. The producer additionally requires the original stopped-import-launch mode and rejects donor-saved-only. This is the same bounded current-source build boundary, not the historical donor producer or a general runtime setting.
+
+The sole writable path is `scripts/legacy-agent-host/desktop-stopped-import-prior-run.ts`, preimage `41270638b4c552e5f535ff966506fbfaa1e6b13a` in parent, native and qualification. Add exactly `NODE_OPTIONS: '--max-old-space-size=8192'` to that existing literal environment after its original tuple/source admission. The unconditional literal is scoped by the already mandatory Darwin ARM assertions; do not create a second platform selector or copy an ambient NODE_OPTIONS value. Read-only source witness `scripts/legacy-agent-host/desktop-stopped-import-fixture.ts` is `b69f6132475fd33ab6d9c6d6b7d7ff4acf97e881`.
+
+Preserve every other environment field, original Node→Corepack→dev:mcp invocation, source/runtime hash, executable selector, no-Host-descriptor assertion, existing UI/native sequence, sentinel census and cleanup. Do not modify the common builder, old donor, workflow, dependencies, test cases, process/HTTP counts, deadlines, source-size baseline or acceptance assertions. The fixed8192 value matches the already reviewed common builder; this cut does not retry allocation with progressively larger heaps.
+
+Freeze the one source hunk with an exact inverse for all three variants, then obtain independent source review and root publication. Root runs the existing script/type/source guards and the original stopped-import Desktop lane; no new case or native campaign is added. Static review establishes only the connected environment correction. Actual source build, one original native turn, original Stop/Quit, import and cold acceptance remain required. The saved-donor drain observation and §95/§29 failures are separate and are not claimed fixed.
