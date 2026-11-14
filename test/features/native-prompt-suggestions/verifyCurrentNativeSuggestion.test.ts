@@ -21,7 +21,7 @@ function fixture() {
   const state = {
     memberId: candidate.memberId, generation: candidate.generation,
     phase: 'allocated', custody: 'owned', nativeReady: true,
-    attached: true, sealed: false, inputs: [original],
+    attached: true, sealed: false, nativePromptCurrent: true, inputs: [original],
   };
   const getConnections = vi.fn(async () => ({
     state: 'ready' as const,
@@ -41,7 +41,10 @@ describe('native suggestion acceptance-time captured Runtime read', () => {
       handle: { handleId: 'TEST-handle-A' },
       commandId: expect.any(String),
       operation: 'runtime.read',
-      payload: { memberId: candidate.memberId, expectedGeneration: candidate.generation },
+      payload: {
+        memberId: candidate.memberId, expectedGeneration: candidate.generation,
+        nativePromptProof: { inputId: candidate.inputId, operationRef: candidate.operationRef },
+      },
     });
     expect(x.getConnections).toHaveBeenCalledTimes(2);
   });
@@ -60,6 +63,22 @@ describe('native suggestion acceptance-time captured Runtime read', () => {
     expect(await verifyCurrentNativeSuggestion(candidate, x.backend)).toBe(false);
     x.state.inputs = [original, { inputId: 'TEST-unexecuted', phase: 'admitted', terminal: 'succeeded' }];
     expect(await verifyCurrentNativeSuggestion(candidate, x.backend)).toBe(true);
+  });
+
+  it('fails closed without independent matching original Host operation proof', async () => {
+    const x = fixture();
+    x.state.nativePromptCurrent = false;
+    expect(await verifyCurrentNativeSuggestion(candidate, x.backend)).toBe(false);
+    x.state.nativePromptCurrent = true;
+    expect(await verifyCurrentNativeSuggestion({ ...candidate, operationRef: '' }, x.backend)).toBe(false);
+    expect(await verifyCurrentNativeSuggestion({ ...candidate, operationRef: 'TEST-foreign-operation' }, x.backend)).toBe(true);
+    // The fake backend accepts any request; only the original Host can vouch
+    // for the exact operation. The wire contract must carry the changed proof.
+    expect(x.invoke).toHaveBeenLastCalledWith(expect.objectContaining({
+      payload: expect.objectContaining({
+        nativePromptProof: { inputId: candidate.inputId, operationRef: 'TEST-foreign-operation' },
+      }),
+    }));
   });
 
   it('refuses changed backend selection, failing read, malformed and unsupported candidates', async () => {
