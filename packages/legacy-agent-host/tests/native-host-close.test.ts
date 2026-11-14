@@ -157,13 +157,85 @@ process.stderr.write('', () => process.exit(1));
       { family: 'other-writer', exclusiveSamples: 2, exclusiveSampledUs: 150 },
     ]);
     assert.equal(projected.teamWriterDetails.reduce((sum, row) => sum + row.exclusiveSampledUs, 0), 360);
+    assert.deepEqual(projected.teamWriterCallers.rows, ['node-timer', 'v2-request-admission', 'v2-request-password',
+      'v2-read-snapshot', 'runtime-session-read', 'provider-attestation-wait', 'unclassified'].map(caller => ({
+      caller, exclusiveSamples: caller === 'unclassified' ? 8 : 0,
+      exclusiveSampledUs: caller === 'unclassified' ? 360 : 0,
+      namespaceSamples: caller === 'unclassified' ? 1 : 0, namespaceSampledUs: caller === 'unclassified' ? 10 : 0,
+    })), 'all fixed zero rows remain; non-writer exclusive samples never enter caller totals');
     assert.equal(JSON.stringify(projected).includes(root), false);
     assert.equal(JSON.stringify(projected).includes('TEST-private-cpu-token'), false);
     assert.equal(projected.rawDiscarded, true); assert.equal(existsSync(path), false);
+
+    // Only original sampled ancestry identifies a caller; shared inner guards cannot replace it.
+    const passwordFrame = frame('adapters/providers/OpenCodeV2MemberProvider.js', 'readPassword');
+    const callerCases = [
+      { caller: 'node-timer', frames: [{ url: 'node:internal/timers', functionName: 'processTimers' }, passwordFrame] },
+      { caller: 'node-timer', frames: [{ url: 'node:internal/timers', functionName: 'listOnTimeout' }] },
+      { caller: 'v2-request-admission', frames: [frame('adapters/providers/OpenCodeV2RequestAdmission.js', 'beforeRequest')] },
+      { caller: 'v2-request-admission', frames: [frame('features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.js', 'acquire')] },
+      { caller: 'v2-request-password', frames: [passwordFrame] },
+      { caller: 'v2-request-password', frames: [{ ...frame('adapters/providers/OpenCodeV2EmbeddedMemberProvider.ts', 'readPassword'),
+        url: frame('adapters/providers/OpenCodeV2EmbeddedMemberProvider.ts', 'readPassword').url.replaceAll('/', '\\') }] },
+      { caller: 'v2-request-password', frames: [frame('features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.js', 'requestHeaders')] },
+      ...['read', 'attest', 'checkLease', 'beforeRequest', 'readPassword', 'fetchImpl'].map(functionName => ({
+        caller: 'v2-read-snapshot', frames: [frame('adapters/providers/OpenCodeV2ReadOnlySnapshot.js', functionName), passwordFrame],
+      })),
+      { caller: 'runtime-session-read', frames: [frame('runtime/RuntimeOwner.ts', 'readSession')] },
+      { caller: 'provider-attestation-wait', frames: [frame('adapters/providers/OpenCodeV2MemberProvider.js', 'waitForAttestation')] },
+      { caller: 'unclassified', frames: [] }, // An async boundary may omit the initiating caller.
+      { caller: 'unclassified', frames: [frame('foreign/OpenCodeV2MemberProvider.js', 'readPassword')] },
+      { caller: 'unclassified', frames: [frame('adapters/providers/OpenCodeV2MemberProvider.js', 'unknown')] },
+      { caller: 'unclassified', frames: [frame('adapters/providers/OpenCodeV2MemberProvider.js?private', 'readPassword')] },
+      { caller: 'unclassified', frames: [frame('node:internal/timers', 'processTimers')] },
+    ];
+    const callerNodes: { id: number; callFrame: { url: string; functionName: string }; children: number[] }[] = [
+      { id: 1, callFrame: { url: '', functionName: '(root)' }, children: [] },
+    ];
+    const callerSamples: number[] = [], callerDeltas: number[] = [];
+    for (const [index, selected] of callerCases.entries()) {
+      let parent = callerNodes[0]!;
+      for (const callFrame of [...selected.frames,
+        frame('composition/captureMemberProviderAuthority.js', 'assertCurrent'),
+        frame('adapters/team/TeamOwnerStore.js', 'fenced'), frame('team/TeamOwner.js', 'state')]) {
+        const next = { id: callerNodes.length + 1, callFrame, children: [] as number[] };
+        parent.children.push(next.id); callerNodes.push(next); parent = next;
+      }
+      callerSamples.push(parent.id - 1, parent.id);
+      callerDeltas.push(10 * (index + 1), 3 * (index + 1));
+    }
+    writeFileSync(path, JSON.stringify({ startTime: 100, endTime: 100_000,
+      nodes: callerNodes, samples: callerSamples, timeDeltas: callerDeltas }), { mode: 0o600 });
+    const callerProjection = await readOriginalHostCpuProfile(path, true, 10000);
+    assert.equal(callerProjection.status, 'available');
+    assert.equal(callerProjection.teamWriterCallers.attribution, 'outermost-allowlisted-caller-on-sampled-stack');
+    const expectedCallers = ['node-timer', 'v2-request-admission', 'v2-request-password', 'v2-read-snapshot',
+      'runtime-session-read', 'provider-attestation-wait', 'unclassified'].map(caller => {
+      const weights = callerCases.flatMap((row, index) => row.caller === caller ? [index + 1] : []);
+      const total = weights.reduce((sum, weight) => sum + weight, 0);
+      return { caller, exclusiveSamples: 2 * weights.length, exclusiveSampledUs: 13 * total,
+        namespaceSamples: weights.length, namespaceSampledUs: 10 * total };
+    });
+    assert.deepEqual(callerProjection.teamWriterCallers.rows, expectedCallers,
+      'outer origins survive inner wrappers and never leak into sibling or unknown stacks');
+    const writer = callerProjection.categories.find(row => row.category === 'team-writer-authority')!;
+    const namespace = callerProjection.teamWriterDetails.find(row => row.family === 'namespace-fence')!;
+    for (const [key, original] of [['exclusiveSamples', writer.exclusiveSamples],
+      ['exclusiveSampledUs', writer.exclusiveSampledUs], ['namespaceSamples', namespace.exclusiveSamples],
+      ['namespaceSampledUs', namespace.exclusiveSampledUs]] as const)
+      assert.equal(callerProjection.teamWriterCallers.rows.reduce((sum, row) => sum + row[key], 0), original);
+    assert.equal(writer.exclusiveSampledUs, callerProjection.sampledUs);
+    assert.ok(callerProjection.teamWriterCallers.rows.every(row =>
+      Object.values(row).filter(value => typeof value === 'number').every(value => Number.isSafeInteger(value) && value >= 0)));
+    for (const privateValue of [root, 'TEST-private-cpu-token', 'readPassword', 'processTimers'])
+      assert.equal(JSON.stringify(callerProjection).includes(privateValue), false);
+    assert.equal(callerProjection.rawDiscarded, true); assert.equal(existsSync(path), false);
+
     writeFileSync(path, JSON.stringify({ ...profile, samples: [99], timeDeltas: [1] }), { mode: 0o600 });
     const malformed = await readOriginalHostCpuProfile(path, true, 10000);
     assert.equal(malformed.status, 'unavailable'); assert.equal(malformed.reason, 'invalid-profile');
     assert.equal('teamWriterDetails' in malformed, false);
+    assert.equal('teamWriterCallers' in malformed, false);
     assert.equal(malformed.rawDiscarded, true); assert.equal(existsSync(path), false);
 
     // Synthetic receipt decoding only: no additional native child or raw diagnostics are retained.

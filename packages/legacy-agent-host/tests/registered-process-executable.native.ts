@@ -239,6 +239,7 @@ type PosixExecObservation = {
   resumed: boolean;
   mutationAfterCheckErrno: number;
   codeSigningFlags: number;
+  codeSigningError: number;
   originalPid: number;
   originalBirth: string;
   originalDev: string;
@@ -265,13 +266,19 @@ function readPosixExecObservation(bytes: string): PosixExecObservation {
     'originalPid', 'exitCode', 'exitSignal'];
   const identities = ['originalBirth', 'originalDev', 'originalIno', 'kernelDev', 'kernelIno'];
   const hashes = ['originalSha256', 'kernelSha256'];
-  assert.deepEqual(Object.keys(row).sort(), ['stage', ...booleans, ...numbers, ...identities, ...hashes].sort());
+  assert.deepEqual(Object.keys(row).sort(), ['stage', 'codeSigningError', ...booleans, ...numbers, ...identities, ...hashes].sort());
   for (const key of booleans) assert.equal(typeof row[key], 'boolean');
   for (const key of numbers) assert.ok(Number.isSafeInteger(row[key]) && Number(row[key]) >= -1);
+  assert.ok(Number.isSafeInteger(row.codeSigningError) &&
+    Number(row.codeSigningError) >= -2_147_483_648 && Number(row.codeSigningError) <= 2_147_483_647);
   for (const key of identities) { assert.equal(typeof row[key], 'string'); assert.match(String(row[key]), /^\d{1,20}$/); }
   for (const key of hashes) { assert.equal(typeof row[key], 'string'); assert.match(String(row[key]), /^(?:[a-f0-9]{64})?$/); }
   assert.ok(['capture', 'pre-exec-mutation', 'spawn', 'spawn-suspended', 'trace-initial',
     'trace-exec', 'plain-exit', 'original-identity', 'kernel-image', 'rejected-image',
+    'kernel-image-audit-path', 'kernel-image-token', 'kernel-image-attributes', 'kernel-image-guest',
+    'kernel-image-validity', 'kernel-image-executable-path', 'kernel-image-path-representation',
+    'kernel-image-path-match', 'kernel-image-signing-information', 'kernel-image-signing-status',
+    'kernel-image-open', 'kernel-image-stat', 'kernel-image-hash', 'kernel-image-identity',
     'resume', 'exit'].includes(String(row.stage)));
   return value as PosixExecObservation;
 }

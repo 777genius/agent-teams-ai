@@ -202,21 +202,34 @@ static int identity_of(pid_t pid, struct identity *out) {
 #endif
   return out->ppid == getpid() && out->pgid == pid && out->sid == pid && out->birth ? 0 : EACCES;
 }
-static int original_image(const struct identity *original, char path[PATH_MAX], unsigned *cs_flags) {
+static int original_image(const struct identity *original, char path[PATH_MAX], unsigned *cs_flags,
+    const char **stage, int32_t *code_signing_error) {
 #ifdef __APPLE__
   CFDataRef token = NULL; CFDictionaryRef attributes = NULL, signing = NULL;
   SecCodeRef guest = NULL; CFURLRef executable = NULL; int error = EACCES;
   char signed_path[PATH_MAX] = {0};
+  *stage = "kernel-image-audit-path";
   if (proc_pidpath_audittoken((audit_token_t *)&original->token, path, PATH_MAX) <= 0) return EACCES;
+  *stage = "kernel-image-token";
   token = CFDataCreate(kCFAllocatorDefault, (const UInt8 *)&original->token, sizeof(original->token));
   if (!token) goto done;
   const void *keys[] = {kSecGuestAttributeAudit}, *values[] = {token};
+  *stage = "kernel-image-attributes";
   attributes = CFDictionaryCreate(kCFAllocatorDefault, keys, values, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-  if (!attributes || SecCodeCopyGuestWithAttributes(NULL, attributes, kSecCSDefaultFlags, &guest) != errSecSuccess ||
-      SecCodeCheckValidity(guest, kSecCSNoNetworkAccess, NULL) != errSecSuccess ||
-      SecCodeCopyPath((SecStaticCodeRef)guest, kSecCSDefaultFlags, &executable) != errSecSuccess ||
-      !CFURLGetFileSystemRepresentation(executable, 1, (UInt8 *)signed_path, sizeof(signed_path)) || strcmp(path, signed_path)) goto done;
-  if (SecCodeCopySigningInformation((SecStaticCodeRef)guest, kSecCSDynamicInformation, &signing) != errSecSuccess) goto done;
+  if (!attributes) goto done;
+  *stage = "kernel-image-guest";
+  if ((*code_signing_error = (int32_t)SecCodeCopyGuestWithAttributes(NULL, attributes, kSecCSDefaultFlags, &guest)) != errSecSuccess) goto done;
+  *stage = "kernel-image-validity";
+  if ((*code_signing_error = (int32_t)SecCodeCheckValidity(guest, kSecCSNoNetworkAccess, NULL)) != errSecSuccess) goto done;
+  *stage = "kernel-image-executable-path";
+  if ((*code_signing_error = (int32_t)SecCodeCopyPath((SecStaticCodeRef)guest, kSecCSDefaultFlags, &executable)) != errSecSuccess) goto done;
+  *stage = "kernel-image-path-representation";
+  if (!CFURLGetFileSystemRepresentation(executable, 1, (UInt8 *)signed_path, sizeof(signed_path))) goto done;
+  *stage = "kernel-image-path-match";
+  if (strcmp(path, signed_path)) goto done;
+  *stage = "kernel-image-signing-information";
+  if ((*code_signing_error = (int32_t)SecCodeCopySigningInformation((SecStaticCodeRef)guest, kSecCSDynamicInformation, &signing)) != errSecSuccess) goto done;
+  *stage = "kernel-image-signing-status";
   CFNumberRef status = CFDictionaryGetValue(signing, kSecCodeInfoStatus);
   if (!status || CFGetTypeID(status) != CFNumberGetTypeID() || !CFNumberGetValue(status, kCFNumberIntType, cs_flags)) goto done;
   error = 0;
@@ -228,7 +241,7 @@ done:
   if (token) CFRelease(token);
   return error;
 #else
-  (void)cs_flags;
+  (void)cs_flags; (void)stage; (void)code_signing_error;
   (void)snprintf(path, PATH_MAX, "/proc/%d/exe", (int)original->pid);
   return 0;
 #endif
@@ -282,7 +295,7 @@ int main(int argc, char **argv) {
   const char *stage = "capture"; int error = 0, mutation_error = -1, exec_error = 0;
   int retained = -1, image_fd = -1, writer = -1, output = -1, errors[2] = {-1,-1};
   int spawned = 0, stopped = 0, resumed = 0, matched = 0, absent_before = 0, image_observed = 0;
-  unsigned cs_flags = 0; pid_t original_pid = 0;
+  unsigned cs_flags = 0; int32_t code_signing_error = 0; pid_t original_pid = 0;
   char original_hash[65] = {0}, kernel_hash[65] = {0}, image_path[PATH_MAX] = {0};
   struct stat captured_stat, image_stat; memset(&captured_stat,0,sizeof(captured_stat)); memset(&image_stat,0,sizeof(image_stat));
   struct identity before, after; memset(&before,0,sizeof(before));
@@ -354,10 +367,15 @@ int main(int argc, char **argv) {
   absent_before=access(marker_path,F_OK)!=0 && errno==ENOENT;
   if(!absent_before){error=EPROTO;goto finish;}
   stage="kernel-image";
-  if((error=original_image(&before,image_path,&cs_flags))) goto finish;
+  if((error=original_image(&before,image_path,&cs_flags,&stage,&code_signing_error))) goto finish;
+  stage="kernel-image-open";
   image_fd=open(image_path,O_RDONLY|O_CLOEXEC);
-  if(image_fd<0 || fstat(image_fd,&image_stat)){error=errno;goto finish;}
+  if(image_fd<0){error=errno;goto finish;}
+  stage="kernel-image-stat";
+  if(fstat(image_fd,&image_stat)){error=errno;goto finish;}
+  stage="kernel-image-hash";
   if((error=hash_fd(image_fd,kernel_hash))) goto finish;
+  stage="kernel-image-identity";
   if((error=identity_of(original_pid,&after))) goto finish;
   if(memcmp(&before,&after,sizeof(before))){error=ESTALE;goto finish;}
   image_observed=1;
@@ -386,8 +404,8 @@ finish:
   if(errors[1]>=0)(void)close(errors[1]);
   int group_absent=original_pid>1 && kill(-original_pid,0)<0 && errno==ESRCH;
   int cleanup=hash_pid==0 && target_pid==0 && (original_pid==0 || (target_reaped && group_absent));
-  printf("{\"stage\":\"%s\",\"errno\":%d,\"execErrno\":%d,\"stoppedBeforeUser\":%s,\"payloadMarkersAbsentBeforeGate\":%s,\"kernelImageObserved\":%s,\"imageMatched\":%s,\"resumed\":%s,\"mutationAfterCheckErrno\":%d,\"codeSigningFlags\":%u,\"originalPid\":%d,\"originalBirth\":\"%" PRIu64 "\",\"originalDev\":\"%" PRIu64 "\",\"originalIno\":\"%" PRIu64 "\",\"kernelDev\":\"%" PRIu64 "\",\"kernelIno\":\"%" PRIu64 "\",\"originalSha256\":\"%s\",\"kernelSha256\":\"%s\",\"exitCode\":%d,\"exitSignal\":%d,\"originalReaped\":%s,\"originalGroupAbsent\":%s,\"cleanup\":%s}\n",
-    stage,error,exec_error,stopped?"true":"false",absent_before?"true":"false",image_observed?"true":"false",matched?"true":"false",resumed?"true":"false",mutation_error,cs_flags,(int)original_pid,before.birth,(uint64_t)captured_stat.st_dev,(uint64_t)captured_stat.st_ino,(uint64_t)image_stat.st_dev,(uint64_t)image_stat.st_ino,original_hash,kernel_hash,
+  printf("{\"stage\":\"%s\",\"errno\":%d,\"execErrno\":%d,\"stoppedBeforeUser\":%s,\"payloadMarkersAbsentBeforeGate\":%s,\"kernelImageObserved\":%s,\"imageMatched\":%s,\"resumed\":%s,\"mutationAfterCheckErrno\":%d,\"codeSigningFlags\":%u,\"codeSigningError\":%" PRId32 ",\"originalPid\":%d,\"originalBirth\":\"%" PRIu64 "\",\"originalDev\":\"%" PRIu64 "\",\"originalIno\":\"%" PRIu64 "\",\"kernelDev\":\"%" PRIu64 "\",\"kernelIno\":\"%" PRIu64 "\",\"originalSha256\":\"%s\",\"kernelSha256\":\"%s\",\"exitCode\":%d,\"exitSignal\":%d,\"originalReaped\":%s,\"originalGroupAbsent\":%s,\"cleanup\":%s}\n",
+    stage,error,exec_error,stopped?"true":"false",absent_before?"true":"false",image_observed?"true":"false",matched?"true":"false",resumed?"true":"false",mutation_error,cs_flags,code_signing_error,(int)original_pid,before.birth,(uint64_t)captured_stat.st_dev,(uint64_t)captured_stat.st_ino,(uint64_t)image_stat.st_dev,(uint64_t)image_stat.st_ino,original_hash,kernel_hash,
     target_reaped && WIFEXITED(target_status)?WEXITSTATUS(target_status):-1,target_reaped && WIFSIGNALED(target_status)?WTERMSIG(target_status):0,target_reaped?"true":"false",group_absent?"true":"false",cleanup?"true":"false");
   return cleanup?0:3;
 }

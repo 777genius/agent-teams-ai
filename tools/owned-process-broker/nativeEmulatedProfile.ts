@@ -22,9 +22,10 @@ async function reservePort(): Promise<number> {
 /** Every executable is this checkout's Node or C++ actor; no runtime installation/discovery. */
 export async function prepareEmulatedProfile(sandbox: string, broker: string, actor: string,
   provider: 'codex' | 'opencode') {
-  const root = join(sandbox, `TEST ${provider} Я`); mkdirSync(root);
+  const selectedRoot = join(sandbox, `TEST ${provider} Я`); mkdirSync(selectedRoot);
+  const root = realpathSync.native(selectedRoot);
   for (const name of ['home', 'tmp', 'config', 'data', 'cache', 'workspace', 'storage']) mkdirSync(join(root, name));
-  const node = realpathSync(process.execPath), systemRoot = process.env.SystemRoot;
+  const node = realpathSync.native(process.execPath), systemRoot = process.env.SystemRoot;
   assert.ok(systemRoot && /^[A-Za-z]:\\/.test(systemRoot));
   const peer = realpathSync(fileURLToPath(new URL('./fixtures/providerPeer.mjs', import.meta.url)));
   const wrapper = join(root, `TEST ${provider}.cmd`), effects = join(root, 'effects.ndjson');
@@ -71,7 +72,7 @@ export async function prepareEmulatedProfile(sandbox: string, broker: string, ac
     runtime: { members: [member] } };
   const source = join(root, 'TEST-profile.json'); writeFileSync(source, JSON.stringify(profile), { flag: 'wx' });
   const host: SelectedHostProfile = { profileId, nodeExecutable: node, nodeVersion: process.version,
-    nodeSha256: profile.owner.nodeSha256, hostEntry: realpathSync(hostEntry), hostEntrySha256: profile.owner.hostEntrySha256,
+    nodeSha256: profile.owner.nodeSha256, hostEntry: realpathSync.native(hostEntry), hostEntrySha256: profile.owner.hostEntrySha256,
     expectedBuildId: profile.owner.buildId, cwd: root,
     env: { ...environment, LEGACY_AGENT_HOST_PROFILE_PATH: source, LEGACY_AGENT_HOST_PROFILE_SHA256: fileHash(source) },
     startupTimeoutMs: 10000, requestTimeoutMs: 15000, writeTimeoutMs: 5000, shutdownTimeoutMs: 1000 };

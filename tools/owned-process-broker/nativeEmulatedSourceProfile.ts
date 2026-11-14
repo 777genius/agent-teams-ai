@@ -30,12 +30,13 @@ export async function prepareEmulatedSourceProfile(sandbox: string, broker: stri
   provider: EmulatedSourceProvider) {
   assert.equal(process.platform, 'win32');
   assert.ok(process.arch === 'x64' || process.arch === 'arm64');
-  const root = join(sandbox, `TEST-desktop-backend-${provider}${randomUUID().replaceAll('-', '')}`);
-  mkdirSync(root); assert.equal(realpathSync(root), root);
+  const selectedRoot = join(sandbox, `TEST-desktop-backend-${provider}${randomUUID().replaceAll('-', '')}`);
+  mkdirSync(selectedRoot);
+  const root = realpathSync.native(selectedRoot);
   for (const name of ['workspace', 'storage', 'bin', 'host-home', 'host-tmp']) mkdirSync(join(root, name));
   const workspace = join(root, 'workspace'), peerRoot = join(root, `TEST-peer-${provider}-scope`);
   for (const name of ['', 'home', 'tmp', 'config', 'data', 'cache']) mkdirSync(join(peerRoot, name));
-  const node = realpathSync(process.execPath), systemRoot = process.env.SystemRoot;
+  const node = realpathSync.native(process.execPath), systemRoot = process.env.SystemRoot;
   assert.ok(systemRoot && /^[A-Za-z]:\\/.test(systemRoot));
   const peerNames = provider === 'claude' ? ['claudeProviderPeer.mjs'] : ['providerPeer.mjs', 'providerDesktopPeer.mjs'];
   const helpers = peerNames.map(name => {
@@ -52,7 +53,7 @@ export async function prepareEmulatedSourceProfile(sandbox: string, broker: stri
       : provider === 'claude' ? `${versions[source]} (Claude Code)` : versions[source];
     const code = `import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';import {appendFileSync,readFileSync,realpathSync} from 'node:fs';
-assert.equal(realpathSync(process.execPath),${JSON.stringify(node)});
+assert.equal(realpathSync.native(process.execPath),${JSON.stringify(node)});
 assert.equal(createHash('sha256').update(readFileSync(process.execPath)).digest('hex'),${JSON.stringify(fileHash(node))});
 const argv=process.argv.slice(2);
 const fact={provider:${JSON.stringify(provider)},source:${JSON.stringify(source)},pid:process.pid,parentPid:process.ppid};
@@ -145,7 +146,7 @@ if(argv.length===1&&argv[0]==='--version'){
   writeFileSync(profilePath, JSON.stringify(profile), { mode: 0o600, flag: 'wx' });
   readTeamHostProfile(profilePath, fileHash(profilePath));
   const host: SelectedHostProfile = { profileId: profile.owner.profileId, nodeExecutable: node, nodeVersion: process.version,
-    nodeSha256: fileHash(node), hostEntry, hostEntrySha256: fileHash(hostEntry), expectedBuildId: profile.owner.buildId,
+    nodeSha256: fileHash(node), hostEntry: realpathSync.native(hostEntry), hostEntrySha256: fileHash(hostEntry), expectedBuildId: profile.owner.buildId,
     cwd: root, env: { HOME: join(root, 'host-home'), TMPDIR: join(root, 'host-tmp'), TEMP: join(root, 'host-tmp'),
       TMP: join(root, 'host-tmp'), SystemRoot: systemRoot, PATH: [dirname(node), join(systemRoot, 'System32')].join(';'),
       LEGACY_AGENT_HOST_PROFILE_PATH: profilePath, LEGACY_AGENT_HOST_PROFILE_SHA256: fileHash(profilePath) },
