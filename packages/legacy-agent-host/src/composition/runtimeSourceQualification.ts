@@ -8,6 +8,13 @@ export class RuntimeSourceAdmissionError extends ManagementCommandError {
   }
 }
 
+/** Exact native protocols only; 0.169.0 has been qualified on Darwin ARM64. */
+export function qualifiedCodexProtocolRevision(version: string): '0.162.0' | '0.169.0' {
+  if (version === '0.162.0') return version;
+  if (version === '0.169.0' && process.platform === 'darwin' && process.arch === 'arm64') return version;
+  throw new RuntimeSourceAdmissionError('unqualified-version');
+}
+
 /** Existing four provider routes only. Identity does not qualify a new native protocol. */
 export function assertRuntimeSourceNativePolicy(
   seed: ProviderManagementProfile,
@@ -34,7 +41,7 @@ export function assertRuntimeSourceNativePolicy(
   } else {
     if (cli.generation !== undefined)
       throw new RuntimeSourceAdmissionError('generation-change-unqualified');
-    if (seed.provider === 'codex' && cli.version !== seed.protocolRevision) unqualified();
+    if (seed.provider === 'codex') qualifiedCodexProtocolRevision(cli.version);
     // Claude CLI compatibility is proven against the original seed's actual version below;
     // its SDK revision is deliberately not used as a CLI version.
   }
