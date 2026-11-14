@@ -100,6 +100,28 @@ test('Codex candidate retains native turn identity and a cancelled never-run UI 
   assert.equal(x.notices.length, 1);
 });
 
+test('Codex requires a real bounded native turn and every provider output is bounded before Host publication', () => {
+  const codex = harness('codex');
+  codex.terminal();
+  codex.source.offer({ ...candidate, provider: 'codex' });
+  codex.source.offer({ ...candidate, provider: 'codex', nativeTurnRef: '' });
+  codex.source.offer({ ...candidate, provider: 'codex', nativeTurnRef: 'X'.repeat(257) });
+  assert.equal(codex.notices.length, 0, 'Host operation must never stand in for a native Codex turn');
+  codex.source.offer({ ...candidate, provider: 'codex', nativeTurnRef: 'TEST-native-turn-1' });
+  assert.equal(codex.notices.length, 1);
+  assert.equal(codex.notices[0]!.completedTurnRef, 'TEST-native-turn-1');
+
+  const claude = harness();
+  claude.terminal();
+  claude.source.offer({ ...candidate, nativeSessionRef: 'TEST-\\u0000-invalid' });
+  claude.source.offer({ ...candidate, text: 'X'.repeat(513) });
+  claude.source.offer({ ...candidate, text: 'é'.repeat(257) });
+  claude.source.offer({ ...candidate, text: 'TEST\\nmultiple lines' });
+  assert.equal(claude.notices.length, 0, 'reject native controls and over-budget UTF-8 before RPC publication');
+  claude.source.offer(candidate);
+  assert.equal(claude.notices.length, 1, 'valid Claude post-result candidate still publishes');
+});
+
 test('later executed turn, changed generation or revoked human source fails closed', () => {
   const x = harness();
   x.source.offer(candidate);
