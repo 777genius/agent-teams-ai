@@ -223,9 +223,61 @@ export async function prepareDesktopNativeStop(options: {
   return { hostPid, nativeChildren };
 }
 
+/** Closed diagnostic projection of one already completed Runtime file read. */
+function runtimeReadObservation(sessions: Record<string, unknown>[], runId: string) {
+  const source = 'last-successful-runtime-file-read' as const;
+  try {
+    const row = (value: unknown): Record<string, unknown> | undefined =>
+      value && typeof value === 'object' && !Array.isArray(value)
+        ? value as Record<string, unknown> : undefined;
+    const choice = <T extends string>(value: unknown, allowed: readonly T[]): T | 'unavailable' =>
+      allowed.find(item => item === value) ?? 'unavailable';
+    const bool = (value: unknown) => typeof value === 'boolean' ? value : 'unavailable' as const;
+    const matching: Record<string, unknown>[] = [];
+    let unknownBindings = 0;
+    for (const session of sessions) {
+      const observedRun = row(session.binding)?.runId;
+      if (typeof observedRun !== 'string' || !observedRun) unknownBindings++;
+      else if (observedRun === runId) matching.push(session);
+    }
+    const selected = matching.length === 1 ? matching[0] : undefined;
+    const rawInputs = selected?.inputs;
+    const inputs: readonly unknown[] | undefined = Array.isArray(rawInputs) ? rawInputs : undefined;
+    return {
+      source,
+      status: 'observed' as const,
+      matchingRecords: matching.length,
+      unknownBindings,
+      session: selected ? {
+        phase: choice(selected.phase, ['unopened', 'opening', 'allocated', 'closing', 'closed', 'held'] as const),
+        custody: choice(selected.custody, ['owned', 'released', 'unknown'] as const),
+        nativeReady: bool(selected.nativeReady),
+        sealed: bool(selected.sealed),
+        diagnostic: selected.diagnostic === undefined ? null : choice(selected.diagnostic,
+          ['open-unknown', 'observe-ended', 'observe-failed', 'readiness-unavailable', 'close-unknown'] as const),
+        inputCount: inputs?.length ?? null,
+        inputs: inputs ? inputs.slice(0, 4).map(value => {
+          const input = row(value);
+          return {
+            phase: choice(input?.phase,
+              ['admitted', 'claimed', 'consumed', 'terminal', 'cancelled', 'rejected', 'not-sent', 'unknown'] as const),
+            terminal: input && input.terminal === undefined ? null :
+              choice(input?.terminal, ['succeeded', 'failed', 'cancelled'] as const),
+          };
+        }) : 'unavailable' as const,
+        inputOverflow: inputs ? inputs.length > 4 : null,
+      } : null,
+    };
+  } catch {
+    return { source, status: 'unavailable' as const, matchingRecords: null,
+      unknownBindings: null, session: null };
+  }
+}
+
 /** Read only the actual two-level Runtime store; no Host/RPC/native continuation. */
 export async function readDesktopNativeStopSessions(
-  root: string
+  root: string,
+  observation?: { runId: string; report(value: ReturnType<typeof runtimeReadObservation>): void }
 ): Promise<Record<string, unknown>[]> {
   const directory = join(root, 'hoststore/runtime-sessions');
   const namespaces = await readdir(directory, { withFileTypes: true });
@@ -255,6 +307,13 @@ export async function readDesktopNativeStopSessions(
     assert.deepEqual(unknown, [], 'Unexpected Runtime namespace entries');
     for (const file of files)
       sessions.push(object(JSON.parse(await readFile(join(selected, file.name), 'utf8'))));
+  }
+  if (observation) {
+    try {
+      observation.report(runtimeReadObservation(sessions, observation.runId));
+    } catch {
+      // A diagnostic observer cannot change the original read result.
+    }
   }
   return sessions;
 }
