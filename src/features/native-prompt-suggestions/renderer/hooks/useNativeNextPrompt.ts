@@ -34,12 +34,13 @@ export function useNativeNextPrompt(input: {
   }, [input.teamName, input.recipient, input.memberId]);
 
   useEffect(() => {
-    // A new direct human message is a new revision and may get a new offer.
+    // A newer human message resets the dismissal for the previous message.
+    // Do not discard an early offer for the NEW message while its inbox
+    // readback is still catching up: the pure display guard hides it until
+    // the exact messageId becomes the latest.
     if (invalidatedMessageIdRef.current !== input.latestDirectMessageId)
       invalidatedMessageIdRef.current = null;
-    if (candidate && candidate.messageId !== input.latestDirectMessageId)
-      setCandidate(null);
-  }, [input.latestDirectMessageId, candidate]);
+  }, [input.latestDirectMessageId]);
 
   useEffect(() => {
     if (!input.editable) {
