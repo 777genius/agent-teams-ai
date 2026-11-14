@@ -805,7 +805,7 @@ export interface OpenCodeRuntimeDeliveryUserVisibleImpact {
 }
 export type {
   ProcessStopSelection as CapturedTeamProcessStop,
-} from '@features/agent-backend/contracts/processes';
+} from '@features/agent-backend/contracts';
 export interface TeamProcess {
   processRef?: string;
   observation?: 'same-live' | 'absent' | 'stale' | 'unknown' | 'metadata-stopped';
