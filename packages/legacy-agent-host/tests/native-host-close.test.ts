@@ -163,6 +163,12 @@ process.stderr.write('', () => process.exit(1));
       exclusiveSampledUs: caller === 'unclassified' ? 360 : 0,
       namespaceSamples: caller === 'unclassified' ? 1 : 0, namespaceSampledUs: caller === 'unclassified' ? 10 : 0,
     })), 'all fixed zero rows remain; non-writer exclusive samples never enter caller totals');
+    assert.deepEqual(projected.namespaceFenceDetails, [
+      { family: 'directoryPath', exclusiveSamples: 0, exclusiveSampledUs: 0 },
+      { family: 'tree', exclusiveSamples: 0, exclusiveSampledUs: 0 },
+      { family: 'controller-lock', exclusiveSamples: 0, exclusiveSampledUs: 0 },
+      { family: 'residual', exclusiveSamples: 1, exclusiveSampledUs: 10 },
+    ]);
     assert.equal(JSON.stringify(projected).includes(root), false);
     assert.equal(JSON.stringify(projected).includes('TEST-private-cpu-token'), false);
     assert.equal(projected.rawDiscarded, true); assert.equal(existsSync(path), false);
@@ -219,10 +225,10 @@ process.stderr.write('', () => process.exit(1));
     assert.deepEqual(callerProjection.teamWriterCallers.rows, expectedCallers,
       'outer origins survive inner wrappers and never leak into sibling or unknown stacks');
     const writer = callerProjection.categories.find(row => row.category === 'team-writer-authority')!;
-    const namespace = callerProjection.teamWriterDetails.find(row => row.family === 'namespace-fence')!;
+    const callerNamespace = callerProjection.teamWriterDetails.find(row => row.family === 'namespace-fence')!;
     for (const [key, original] of [['exclusiveSamples', writer.exclusiveSamples],
-      ['exclusiveSampledUs', writer.exclusiveSampledUs], ['namespaceSamples', namespace.exclusiveSamples],
-      ['namespaceSampledUs', namespace.exclusiveSampledUs]] as const)
+      ['exclusiveSampledUs', writer.exclusiveSampledUs], ['namespaceSamples', callerNamespace.exclusiveSamples],
+      ['namespaceSampledUs', callerNamespace.exclusiveSampledUs]] as const)
       assert.equal(callerProjection.teamWriterCallers.rows.reduce((sum, row) => sum + row[key], 0), original);
     assert.equal(writer.exclusiveSampledUs, callerProjection.sampledUs);
     assert.ok(callerProjection.teamWriterCallers.rows.every(row =>
@@ -231,11 +237,77 @@ process.stderr.write('', () => process.exit(1));
       assert.equal(JSON.stringify(callerProjection).includes(privateValue), false);
     assert.equal(callerProjection.rawDiscarded, true); assert.equal(existsSync(path), false);
 
+    // Same reader/child: controlled namespace stacks, never a claimed native distribution.
+    const namespaceProfile = { ...profile, nodes: [
+      { id: 1, callFrame: { url: '', functionName: '(root)' }, children: [2, 40, 42] },
+      { id: 2, callFrame: frame('composition/captureMemberProviderAuthority.js', 'assertCurrent'), children: [3] },
+      { id: 3, callFrame: frame('adapters/team/TeamOwnerStore.js', 'fenced'), children: [4, 6, 9, 18, 19, 20, 21, 22] },
+      { id: 4, callFrame: frame('adapters/team/TeamOwnerStore.js', 'directoryPath'), children: [5, 28, 34, 36] },
+      { id: 5, callFrame: frame('node-fs.js', 'lstatSync'), children: [] },
+      { id: 6, callFrame: frame('adapters/team/TeamOwnerStore.js', 'tree'), children: [7] },
+      { id: 7, callFrame: frame('adapters/team/TeamOwnerStore.js', 'tree'), children: [8] },
+      { id: 8, callFrame: frame('node-fs.js', 'readdirSync'), children: [] },
+      { id: 9, callFrame: frame('agent-teams-controller/src/internal/fileLock.js', 'withFileLockSync'), children: [10, 13, 14] },
+      { id: 10, callFrame: frame('agent-teams-controller/src/internal/fileLock.js', 'acquireFileLockSync'), children: [11, 15, 23, 30] },
+      { id: 11, callFrame: frame('agent-teams-controller/src/internal/fileLock.js', 'sleepSync'), children: [12] },
+      { id: 12, callFrame: frame('node-internal.js', 'TEST-private-function-token'), children: [] },
+      { id: 13, callFrame: frame('agent-teams-controller\\dist\\internal\\fileLock.js', 'releaseLock'), children: [] },
+      { id: 14, callFrame: frame('protected-action.js', ''), children: [] },
+      { id: 15, callFrame: frame('adapters/team/TeamOwnerStore.js', 'validateNamespace'), children: [16] },
+      { id: 16, callFrame: frame('unknown-helper.js', ''), children: [] },
+      { id: 18, callFrame: frame('foreign/src/internal/fileLock.js', 'sleepSync'), children: [] },
+      { id: 19, callFrame: frame('host/packages/0007/src/internal/fileLock.js', 'releaseLock'), children: [] },
+      { id: 20, callFrame: frame('adapters/team/TeamOwnerStore.js', ''), children: [] },
+      { id: 21, callFrame: frame('foreign/TeamOwnerStore.js', 'directoryPath'), children: [] },
+      { id: 22, callFrame: frame('agent-teams-controller/src/internal/fileLock.js', 'withFileLockSyncExtra'), children: [] },
+      { id: 23, callFrame: frame('agent-teams-controller/src/internal/fileLock.js', 'withFileLockSync'), children: [24] },
+      { id: 24, callFrame: frame('protected-action.js', ''), children: [] },
+      { id: 28, callFrame: frame('adapters/team/TeamOwnerStore.js', 'fenced'), children: [29] },
+      { id: 29, callFrame: frame('unknown-helper.js', ''), children: [] },
+      { id: 30, callFrame: frame('agent-teams-controller/src/internal/fileLock.js', 'withFileLock'), children: [31] },
+      { id: 31, callFrame: frame('protected-action.js', ''), children: [] },
+      { id: 34, callFrame: frame('team/TeamOwner.js', 'state'), children: [35] },
+      { id: 35, callFrame: frame('agent-teams-controller/src/internal/fileLock.js', 'sleepSync'), children: [] },
+      { id: 36, callFrame: frame('adapters/providers/OpenCodeV2CredentialScope.js', 'selected'), children: [37, 38] },
+      { id: 37, callFrame: frame('node-fs.js', 'lstatSync'), children: [] },
+      { id: 38, callFrame: frame('composition/captureMemberProviderAuthority.js', 'assertCurrent'), children: [39] },
+      { id: 39, callFrame: frame('unknown-helper.js', ''), children: [] },
+      { id: 40, callFrame: frame('agent-teams-controller/src/internal/fileLock.js', 'acquireFileLockSync'), children: [41] },
+      { id: 41, callFrame: frame('agent-teams-controller/src/internal/fileLock.js', 'sleepSync'), children: [] },
+      { id: 42, callFrame: frame('composition/captureMemberProviderAuthority.js', 'assertCurrent'), children: [43] },
+      { id: 43, callFrame: frame('agent-teams-controller/src/internal/fileLock.js', 'sleepSync'), children: [] },
+    ], samples: [5, 8, 12, 13, 14, 16, 18, 19, 20, 21, 22, 24, 31, 29, 35, 37, 39, 41, 43],
+    timeDeltas: [11, 13, 17, 29, 23, 53, 31, 37, 41, 43, 47, 83, 89, 59, 61, 67, 71, 73, 79] };
+    writeFileSync(path, JSON.stringify(namespaceProfile), { mode: 0o600 });
+    const refined = await readOriginalHostCpuProfile(path, true, 10000);
+    assert.equal(refined.status, 'available');
+    assert.equal(refined.sampledUs, 927); assert.equal(refined.unsampledUs, 73);
+    assert.deepEqual(refined.namespaceFenceDetails, [
+      { family: 'directoryPath', exclusiveSamples: 1, exclusiveSampledUs: 11 },
+      { family: 'tree', exclusiveSamples: 1, exclusiveSampledUs: 13 },
+      { family: 'controller-lock', exclusiveSamples: 2, exclusiveSampledUs: 46 },
+      { family: 'residual', exclusiveSamples: 11, exclusiveSampledUs: 577 },
+    ]);
+    assert.deepEqual(refined.teamWriterDetails.map(row => [row.exclusiveSamples, row.exclusiveSampledUs]),
+      [[15, 647], [1, 61], [0, 0], [0, 0], [0, 0], [0, 0], [1, 79]]);
+    assert.deepEqual(refined.categories.map(row => [row.exclusiveSamples, row.exclusiveSampledUs,
+      row.inclusiveSamples, row.inclusiveSampledUs]),
+      [[0, 0, 0, 0], [1, 67, 2, 138], [17, 787, 18, 854], [0, 0, 0, 0],
+        [0, 0, 0, 0], [1, 73, 1, 73], [0, 0, 0, 0]]);
+    const namespace = refined.teamWriterDetails[0]!;
+    assert.equal(refined.namespaceFenceDetails.reduce((sum, row) => sum + row.exclusiveSamples, 0),
+      namespace.exclusiveSamples);
+    assert.equal(refined.namespaceFenceDetails.reduce((sum, row) => sum + row.exclusiveSampledUs, 0),
+      namespace.exclusiveSampledUs);
+    for (const secret of [root, 'TEST-private-cpu-token', 'TEST-private-function-token', 'sleepSync', 'fileLock.js'])
+      assert.equal(JSON.stringify(refined).includes(secret), false);
+    assert.equal(refined.rawDiscarded, true); assert.equal(existsSync(path), false);
     writeFileSync(path, JSON.stringify({ ...profile, samples: [99], timeDeltas: [1] }), { mode: 0o600 });
     const malformed = await readOriginalHostCpuProfile(path, true, 10000);
     assert.equal(malformed.status, 'unavailable'); assert.equal(malformed.reason, 'invalid-profile');
     assert.equal('teamWriterDetails' in malformed, false);
     assert.equal('teamWriterCallers' in malformed, false);
+    assert.equal('namespaceFenceDetails' in malformed, false);
     assert.equal(malformed.rawDiscarded, true); assert.equal(existsSync(path), false);
 
     // Synthetic receipt decoding only: no additional native child or raw diagnostics are retained.

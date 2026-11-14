@@ -2254,3 +2254,330 @@ Only root publishes after root and independent source review.
 The next ordinary original native run may distinguish deadline, invalid
 catalog, ownership/current refusal or transport/cleanup. No cause is claimed
 until that new observation actually exists; current Linux failures remain.
+
+## Review 30 — refine the original namespace-fence sampled-stack attribution
+
+### R1 — observed evidence and the bounded question
+
+The original e29dbde receipts reported the following first-Host sampling
+results. These are the already completed original jobs, not new runs:
+
+| Original job / platform | sampledUs | writer exclusive sampledUs | namespace-fence exclusive sampledUs | nodeCount / sampleCount | fileBytes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| [132132912841, Windows x64](https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132132912841) | 149629498 | 79163933 | 72218739 | 26762 / 14555 | 6113051 |
+| [132132912961, Windows ARM](https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132132912961) | 193032508 | 138847670 | 123412990 | 29721 / 18635 | 7133927 |
+| [132132913050, Darwin x64](https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132132913050) | 198047584 | 133363007 | 120904811 | 17645 / 6526 | 4210370 |
+
+All three retained projections have samplingIntervalUs=10000 and
+rawDiscarded=true. The profile covers the same original Host epoch1,
+including its existing cleanup. These sampled stack durations neither
+measure pure namespace validation CPU nor identify syscall counts, lock
+contention, exact wall-time responsibility, or a cause of the native
+terminal failure. The deleted profiles cannot be reclassified retrospectively.
+
+Review24 already identifies namespace-fence through the nearest original
+TeamOwnerStore.fenced/validateNamespace frame. That bucket can contain
+directory-prefix checks, recursive tree inspection, lock acquisition or
+release, and unclassified work under the protected callback. Refine only
+that existing bucket so the next ordinary run can distinguish the known
+source families. No production optimization or guard change is selected.
+
+### R2 — exact source and controller path prerequisite
+
+Use these immutable sources at parent
+15fc115e92b249b5d6cb35dbf8dbe78dd784ea4c:
+
+- packages/legacy-agent-host/src/adapters/team/TeamOwnerStore.ts,
+  17c422fbabf290e582dad1f48f973d85d42dc082: fenced calls
+  validateNamespace before the lock and again inside its callback.
+  validateNamespace contains the exact local functions directoryPath and
+  tree (lines68 and84); the former walks path components with lstatSync,
+  the latter recursively inspects readdirSync entries.
+- packages/legacy-agent-host/src/adapters/team/ControllerAdapter.ts,
+  45ca266cf44afd3a65c5db3312640d71f67328eb, lines62–79:
+  withTeamFileFence is the existing withFileLockSync export obtained from
+  agent-teams-controller/src/internal/fileLock.js. Do not assume this
+  import points at controller/dist.
+- agent-teams-controller/package.json,
+  293fb7e08df5e9cc00663e0e5454dfde6ecfb103: CommonJS main is src/index.js;
+  both src and dist are published roots.
+- agent-teams-controller/scripts/build.mjs,
+  bf2ce41041a9aee92261319e86cf802d82004739: recursively copies src to
+  dist without transforming function names or rewriting imports.
+- agent-teams-controller/src/internal/fileLock.js,
+  3c087f7e7f35106e72340c3eca51b325e10d8314: the exact synchronous
+  acquisition/release helpers are source-backed; withFileLockSync and
+  withFileLock each invoke an arbitrary protected callback.
+- scripts/legacy-agent-host/candidate-closure.ts,
+  b6ad8b343f2210cec5e51c0876e9cbefcafc64b7, lines95–157: packaged
+  dependency roots are copied to numeric host/packages/NNNN folders.
+  A numeric folder alone is not proof of the controller package identity.
+
+A controller family match requires the normalized, segment-anchored path
+/agent-teams-controller/(src|dist)/internal/fileLock.js and an exact
+allowlisted function name. The src path is the actual current Host import;
+the dist path is the verified copy-equivalent build layout, not a claim
+that an old profile used it. Do not match generic internal/fileLock.js,
+arbitrary numeric package roots, or a function name by itself.
+If packaging, inlining or an unavailable frame prevents this exact match,
+retain residual attribution. No new path lookup, require.resolve, module
+load, file read, profiler hook or source-root inference is introduced.
+
+### R3 — two-file TEST-only change, preserving the original sums
+
+Only these existing files may change after the reviewed plan is published:
+
+1. packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts,
+   preimage 1148b16387db9ef033ed6e9efa1e5f785783ea04.
+2. packages/legacy-agent-host/tests/native-host-close.test.ts,
+   preimage 8bbd83ce4406438b066dcc7c58c57d1bbba35705.
+
+Keep all seven original broad categories, all seven teamWriterDetails
+rows, original order, matching rules, exclusive/inclusive arithmetic and
+attribution string unchanged. Add one fixed four-row namespaceFenceDetails
+partition to an available CPU projection; each row carries only family,
+exclusiveSamples and exclusiveSampledUs. Its fixed families are
+directoryPath, tree, controller-lock and residual. It is additional detail
+of the original namespace row, never additional sampled time.
+
+directoryPath and tree require the exact existing
+/adapters/team/TeamOwnerStore.[jt]s suffix plus the corresponding exact
+function name. controller-lock requires the controller path above and
+one of these existing named private operations:
+
+codeOf, statOrMissing, readOrMissing, unlinkOrMissing, removeEmptyGate,
+isProcessAlive, parsePid, writeComplete, recoverGate, acquireGate,
+readLockInfo, sameLock, recoverDataLock, releaseLock, tryAcquire,
+sleepSync, resolveLockOptions, acquireFileLockSync.
+
+In particular sleepSync is matched only with that controller path and
+the original namespace/writer context; no generic sleep or filesystem
+frame becomes a controller match. The wrapper functions withFileLockSync
+and withFileLock are not controller-lock roots. Their exact frames reset
+the new subfamily to residual, so an arbitrary protected callback is not
+automatically described as lock work. Anonymous release-wrapper overhead
+without a more precise private helper remains residual.
+
+Traverse only the same already validated original stack tree. Compute the
+original broad category and writer family first, with their current rules
+unchanged. The new subfamily is eligible only while the original exclusive
+category is team-writer-authority and the original writer family is
+namespace-fence. Outside that intersection reset the subfamily to residual;
+never carry a directory/lock label across a different broad/writer family.
+Every new exact fenced or validateNamespace frame also resets it to
+residual before any narrower descendant match. Within the eligible context
+a nearest exact directoryPath, tree or controller helper frame supplies
+the subfamily inherited by its unclassified synchronous descendants.
+The wrapper boundary above resets it again. Returning to a sibling branch
+uses its own original ancestor context, not a global last-seen label.
+
+For every eligible original sample, increment exactly one new row using
+the same original sample count and timeDelta. The four rows must sum
+exactly to the unchanged namespace-fence row for both counts and sampledUs.
+They are source-family stack attribution, including native descendant
+work, not isolated function self-time or a proof of pure validation cost.
+Unknown, inlined and unmatched work remains residual without a guessed
+family, a new broad category, or invented cause.
+
+No raw frame/function name, URL, pathname, stack, arguments, IDs or private
+text is copied into the receipt. Only the four fixed labels and bounded
+integer totals leave the projection. An unavailable/invalid profile
+remains unavailable and gains no successful detail rows.
+
+### R4 — original limits and meaningful existing coverage
+
+Keep the existing first-Host-only sampler, 10000us native interval and
+supported interval validation, original native scenario/deadlines,
+16MiB file limit, fixed node/sample/duration bounds, one connected acyclic
+tree check, safe timeDelta arithmetic, before/after file identity checks,
+original read/discard failure semantics and mandatory raw-profile unlink.
+All R25–R29 event, byte, request and child limits and first-failure
+observations remain untouched. No new child, run, retry, stage, job,
+matrix, benchmark, production read, lock, timer or retained raw profile.
+
+Extend the same existing failed-original-Node-child test case. Preserve
+its one actual child and all earlier broad/writer expected values, exit1,
+privacy, malformed-profile, file-size and unlink assertions. Add finite
+controlled profile data inside that same case to prove:
+
+- All four exact new rows, nearest descendant inheritance, recursive tree
+  attribution and both count/time conservation against the original row.
+- Exact controller src and copy-equivalent dist paths match only the
+  finite named helpers; a wrong path, same-named foreign function and
+  numeric packaged path remain residual.
+- Wrapper callback work, a nested fresh fenced/validateNamespace boundary
+  and missing/inlined frames remain residual until a precise new match.
+  A lock frame outside the original namespace/writer intersection, or a
+  nested different broad/writer family, contributes no new namespace row.
+- An invalid original tree/sample still returns unavailable, without the
+  new detail field; no raw marker/path/function name escapes and each
+  controlled raw profile is discarded by the same reader.
+
+These controlled profiles prove the classifier contract only. They do
+not prove the family distribution, improvement, successful native input
+or failure cause on any platform. Host build, the existing native-host-close
+suite, affected canonical types/lint and source-size checks remain required
+before acceptance. With execution unavailable, source publication remains
+SOURCE_ONLY_UNEXECUTED and those checks run in ordinary CI, without changing
+budgets or retrying the original jobs. Root alone publishes after root
+and independent plan/source review.
+
+
+## Review 31 — bind the V2 management catalog and key operation to the native optional integration ID
+
+### R1 — exact failure, native contract, and the baseline limit
+
+The original Linux V2 preflight at F
+`e29dbde300ea73ec4e46e5f57f9e007ca5473552`, job
+`132132912845`,
+failed at `opencode-v2-model-probe.native.ts:383`: the first catalog RPC
+completed with an `ok` reply, then `authMethods: []` differed from
+the unchanged `['api']` assertion. Its preceding version, default,
+model details, `connected: false`, and `configuredAuthless: true`
+assertions passed. The original closed failure row records
+`unknownProbeCancelled: true`, `catalogCompleted: true`,
+`catalogPhase: first-assertions`, three model requests, and
+`cleanup: true`. This is separate from the earlier held catalog RPC.
+The log does not retain the raw provider/integration response bodies;
+the source finding below must not be called an inspected raw response
+or a successful corrected native run.
+
+Exact F `OpenCodeV2ManagementHost.ts` blob
+`0a78ee125848aee947b409d2e6a3253be4a5ecab` loses an allowed relationship
+in two places. Catalog projection selects
+`integrations.get(provider ? provider.integrationId ?? '' : id)`.
+A present provider with no explicit ID therefore cannot use a genuine
+same-ID integration from that very directory. The original
+`keyOperation` similarly chooses only `provider.integrationId`
+when a provider exists, and returns held before its original callback.
+The existing frontend projection
+`capturedManagementCatalog.ts` `d462486c7914ff325a7fe24466f224d55200458b`
+uses actual `authMethods` to enable Connect/API-key setup; it does
+not synthesize an API-key capability from `configuredAuthless`.
+
+Primary native source is official
+[anomalyco/opencode@68bc26b7da1990ce10ffecfbc1e09eb13aa5d824](https://github.com/anomalyco/opencode/tree/68bc26b7da1990ce10ffecfbc1e09eb13aa5d824),
+the published 2.1.4 tag source, not a newly measured installed bundle.
+`packages/schema/src/provider.ts` `6306eb374d91b4c45768ed76cd3fbda33d2378d1`
+declares optional `integrationID`; its empty provider omits that field.
+`packages/core/src/config/plugin/provider.ts`
+`21a1a87edb84544120c69b58ac5bbdf9188bc562` creates a same-ID integration
+with a genuine key method when that configured integration is absent.
+`packages/core/src/provider.ts`
+`b4f88d649d1b8e34434b715fe05e61a4c754b52b:459` resolves
+`record.provider.integrationID ?? Integration.ID.make(record.provider.id)`.
+`packages/server/src/handlers/provider.ts`
+`ab9c2201a5eea69a943b47cf871aec49ada22e14` returns those available records.
+
+The consumed D68 source is
+`agent-teams-ai/old-provider-implementations@68dca527b779ebb82923f30d7b08441085d8b579`,
+checked archive SHA-256
+`07241cca756e69aa6001df41d6a7408aad5d8ab4c8277f9d70f35d0d66736c73`.
+Its `v2-owned-catalog.ts` `900929ed38ea49605f07a8ca3dca7c75bc5a4c09`
+omits the projected ID only for native `undefined`; a present ID must
+be a nonempty string of at most 2048 characters with no control characters.
+Null, empty, numeric, and malformed values refuse as
+`invalid_native_catalog`. `v2-owned-directory.ts`
+`ec430bf1bfbdba10e6dddd3e2560a9c2de5e6b02` retains the exact location,
+unique provider/integration IDs and the original four finite GETs;
+`plainKey` is true only for an actual `key` method with no form.
+`v2-credential-client.ts`
+`7cc07068845c4fc2ec995ac599e74fe8a0b32103` then verifies the selected
+integration ID and directory again before any key POST and verifies
+the original empty-before/single-after credential ownership.
+
+The older frontend/runtime is not evidence that this exact implicit-ID
+case previously succeeded. Old F `4a0e06277fe216d9f82dbbede362668fe46622ee`
+consumed runtime `e13edcd3d4ffbecc0272ae30195cc6b15b710ee7`;
+its `OpenCodeV2ProviderDirectory.ts` `825f53115b899ea2cfc4f7e50266aa07058c487f`
+used the same empty lookup, and test `bc86ea6c58a006b51d5d223349ff190235c70ff4`
+explicitly refused a null relationship even beside a same-ID integration.
+This change aligns the current qualified 2.1.4 decoder/management consumer
+with native optional-ID semantics while preserving explicit aliases,
+unsupported integration forms and the existing native/UI acceptance gates.
+
+### R2 — two existing source paths; no additional owner or API
+
+Both preimages below were read back unchanged at current F
+`2f6f3db0c6685dda535dfe866f7264249129ecab` before this plan.
+
+| Existing path | Exact preimage | Bounded change |
+| --- | --- | --- |
+| `packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts` | `0a78ee125848aee947b409d2e6a3253be4a5ecab` | Correct only catalog projection and the original keyOperation integration selection. |
+| `packages/legacy-agent-host/tests/opencode-v2-credential-scope.test.ts` | `83c106fb12267e57a7023cfce788277ffa780e5a` | Extend the existing first critical case with controlled original Host/client protocol subscopes. |
+
+Catalog uses an explicit decoded `integrationId` unchanged when present.
+Only when that field is truly absent may it look up the provider's exact
+ID in the already-read integrations map. It advertises `api` only when
+that actual row reports `plainKey: true`. Missing rows, unrelated rows,
+key forms and other authentication methods do not acquire an API-key
+capability. Existing integration-only directory entries retain their
+original behavior.
+
+The original keyOperation applies the same optional-ID distinction.
+A present decoded native ID remains authoritative even when different
+from the provider ID; failed or absent explicit target evidence cannot
+fall back to a same-ID row. Only the absent-ID branch may select a
+genuine same-ID row from the original decoded directory. Keep the
+existing excluded integration IDs and catalog filters exactly in their
+current branches. Preserve the original retained command ID, native
+identity, plugins, permissions, MCP, source/current checks, original
+signal/deadline, original credential client, callback, disposal order,
+cleanup-unknown precedence and command journal. No additional GET,
+POST, prompt, retry, selector refresh, mutation, timeout or allowance
+is introduced by either production change.
+
+No D decoder, schema, renderer, IPC, key store, native fixture, workflow,
+package pin or provider eligibility changes are in this scope. In
+particular the original native `authMethods: ['api']` assertion in
+`opencode-v2-model-probe.native.ts` `d07280188edc39526a1852b895084eb179740a3c`
+is unchanged. P05's separate authless readiness fixture does not
+replace this catalog/key capability requirement.
+
+### R3 — meaningful existing coverage and unchanged acceptance
+
+Retain all existing credential-scope cases, including their original
+SessionCredential finite peer modes, source auth bytes and no-replay
+assertions. Extend only the first case with explicitly synthetic
+management protocol subscopes. Construct the real Host with a validated
+TEST profile and the original captured filesystem/current checks;
+replace only that instance's existing private `nativeClient`
+launch/custody admission boundary. Return real pinned owned-session
+and credential clients connected to the finite TEST HTTP peer.
+There is no new production injection/export or synthetic native
+qualification, and catalog/keyOperation themselves are not mocked.
+
+Each explicit catalog or key operation owns its original client,
+signal and deadline; never refresh a failed operation or reuse a
+closed Host as a retry. The peer verifies original location and
+authorization, a bounded request body, exact route/method ordering,
+and a finite operation ledger. A catalog needs only its four original
+identity/plugin/permission/MCP observations plus the existing four
+directory GETs; a successful key operation adds the existing
+integration read, one original key POST and its readback. Failed
+selection cannot POST. Existing peer limits and production budgets
+are not raised, and each new explicit controlled operation is joined
+and disposed before its peer closes.
+
+The added assertions distinguish: a configured provider with an
+absent ID plus a real same-ID plain-key integration; an explicit
+different-ID alias with a distracting same-ID row; a dangling/foreign
+explicit target which must not fall back; absent/unrelated integration
+rows; a genuine key method with a form; malformed null/empty/numeric
+native IDs rejected by the real decoder; and the existing excluded-ID
+policy. Positive catalog evidence must still leave `connected`
+unproved. A successful key callback must retain the exact selected
+integration, perform exactly one original POST, and return its genuine
+client readback. All refusal subscopes require zero POST and unchanged
+source auth bytes. The old selector must fail at least the absent-ID
+catalog and original key-operation assertions, so this is not a
+test that merely restates the new expression.
+
+Host build, the affected existing critical suite, canonical Host/test
+types, lint and source-size checks remain required before acceptance.
+Root coordinates the available execution slot; no independent native
+rerun or CI cancellation is authorized by this plan. Source review or
+controlled peer success cannot be transferred to native execution,
+user authentication, Desktop Connect or performance. The unchanged
+ordinary native and frontend gates remain the acceptance evidence.
+Root alone publishes after root and independent plan/source review.

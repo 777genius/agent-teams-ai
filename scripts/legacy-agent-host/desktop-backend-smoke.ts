@@ -24,14 +24,14 @@ import { runDesktopNativeQuitMode, verifyDesktopNativeQuitAfterShutdown, capture
 import { prepareDesktopMixedNativeFixture, reserveMixedOpenCodeEndpoint } from './desktop-mixed-native-fixture.ts';
 import { runDesktopMixedCreateLaunchUiSmoke } from './desktop-mixed-create-launch-ui-smoke.ts';
 import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
-import { desktopProofEvidence, captureDesktopProofScope, projectDesktopProofReceiptSummary } from './desktop-proof-evidence.ts';
+import { desktopProofEvidence, captureDesktopProofScope, projectDesktopProofReceiptSummary, verifyDesktopProofInputsAfterCleanup } from './desktop-proof-evidence.ts';
 import { runDesktopNativeReview } from './desktop-native-review-compose.ts';
 import { desktopReadbackArtifacts, runDesktopNativeReadback } from './desktop-readback-fixture.ts';
 import { assertCapturedDesktopMetadataAbsent, observeDesktopMetadataClose, captureDesktopOpenCodeV2ColdMetadata } from './desktop-opencode-v2-cold-metadata.ts';
 import { readDesktopMetadataLineageFailure } from './desktop-opencode-metadata-lineage.ts';
 import { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
-import { captureDesktopCodexNativeInputs, captureDesktopCodexAccountInput, captureDesktopSourceHashes, verifyDesktopNativeFreeze, verifyDesktopPackedFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
+import { captureDesktopCodexNativeInputs, captureDesktopCodexAccountInput, captureDesktopSourceHashes, verifyDesktopPackedFreeze, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
 import { runDesktopF08ReadTimingProof, runDesktopHostRoutingProof } from './desktop-host-routing-proof.ts';
 import { startDesktopCodexQuestionModel } from './desktop-codex-question-model.ts';
 import { prepareDesktopCodexQuestionFixture, prepareDesktopCodexQuestionLaunch, waitDesktopCodexQuestionRenderer } from './desktop-codex-question-fixture.ts';
@@ -223,6 +223,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     codexResumeModel,
     openCodeLifecycleModel, openCodeReviewModel, capturedMcpModel,
   });
+  if (fixture.linuxChildExec) evidence.linuxChildExecInput = fixture.linuxChildExec;
   if (checkpointUpgrade) evidence.claudeCheckpointUpgrade = checkpointUpgrade.proof;
   if (capturedMcpUiMode) evidence.scope = 'Original Launch member MCP policies, selected external server and app-only isolation, actual native permission and tool effect, all-member Stop and saved UI readback; finite localhost inference only';
   if (scheduleUiMode) evidence.scope = 'Original Schedule controls, actual finite Claude and task-first native Bash/MCP, Stop, history and reload; localhost inference only';
@@ -764,7 +765,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         evidence.status = 'INCOMPLETE';
       }
     }
-    await verifyDesktopNativeFreeze(nativeInputs, evidence);
+    await verifyDesktopProofInputsAfterCleanup(nativeInputs, fixture, evidence);
     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
     console.log(JSON.stringify(projectDesktopProofReceiptSummary(evidence, { receiptPath, mode, mixedMode })));
     if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');

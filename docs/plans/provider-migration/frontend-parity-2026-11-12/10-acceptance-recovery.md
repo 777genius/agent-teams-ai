@@ -1519,3 +1519,33 @@ Add the explicit Row[] annotation to exactly the reported replies declaration in
 ### Review 3 — existing gates
 
 Root publishes this plan before the source. Independent source review verifies that the only emitted-code-neutral delta is the two Row[] annotations. The unchanged pinned script type project and existing packaged/ordinary Desktop CI lanes remain required; source review does not qualify their execution. No workflow, runner, retry or budget change belongs to this correction.
+
+
+---
+
+## Incoming base history preserved at 0543d437
+
+The following append-only entries are retained verbatim from base
+`0543d437695318f0157e6d600d76abdce5c51e8e`. Their original section numbers
+refer to that branch history; they do not renumber or replace the completion
+branch entries above. Current integration is governed by plan 12.
+
+## §33 — read the original public Windows runtime archive through its release URL
+
+### Review 1 — observed download failure and current release evidence
+
+On parent `e29dbde300ea73ec4e46e5f57f9e007ca5473552`, Anthropic compatible status run43497088461/job132132911090 fails step8 before application build or any UI exercise. Its original `gh release download` reports `release not found`. This does not establish that the pinned release is absent or that its bytes are invalid.
+
+The original workflow is `.github/workflows/anthropic-compatible-status-e2e.yml` blob`e71415c3187c85d342893313e9ab0dafdfd5b701`; it selects `RUNTIME_BUILD_DISPATCH_TOKEN` for that CLI call. Independent current GitHub REST reads show the configured repository `777genius/agent_teams_orchestrator_binaries` is public and release438216067, tag`runtime-v0.0.158`, is published (not draft). Asset723802173 is the exact `agent-teams-runtime-win32-x64-v0.0.158.zip`, 99139667 bytes, with GitHub digest `sha256:ddcd5bdeb2a2a36c5636d1380eb0f40d1ac87fa5efcb2bb5d6190706d533f7c8`, matching unchanged `runtime.lock.json` blob`771bffacba378d277484712bc5cb7941223b6d2c`. These are metadata checks, not a new archive download or native PASS. The precise CLI/token failure is not inferred from the message.
+
+Primary references: [original failing run](https://github.com/777genius/agent-teams-ai/actions/runs/43497088461), [public release](https://github.com/777genius/agent_teams_orchestrator_binaries/releases/tag/runtime-v0.0.158), and [existing runtime stager](https://github.com/777genius/agent-teams-ai/blob/e29dbde300ea73ec4e46e5f57f9e007ca5473552/scripts/stage-runtime.mjs), whose normal download path already uses the same public release URL and checksum verifier.
+
+### Review 2 — one workflow step; exact archive and checksum remain authoritative
+
+Only change the existing “Assert pinned Windows runtime archive SHA-256” step. Read the same lock and platform asset, retain the original strict 64-hex SHA check, create the same dedicated archive directory, and use PowerShell's standard `Invoke-WebRequest` to read the public HTTPS release URL. Validate the lock repository as an owner/name pair and URI-escape the exact tag and asset filename; download to the original destination with a 300-second request timeout. This is the ordinary public read of already-published data; no secret, credential, release, repository permission or access policy is changed.
+
+Remove the now-unused dispatch-token environment from this one read step. Keep the subsequent SHA256 comparison exact and unconditional. Keep the independent normal `stage-runtime.mjs` call, its authentication behavior and archive validation, all build/package steps, and the final default-model E2E's original archive path unchanged. Do not replace the archive with a freshly built binary, change runtime.lock, skip the native assertions, accept a missing file, or create a release. No retry loop, job/matrix addition or timeout increase belongs to this repair.
+
+### Review 3 — source review and the existing Windows E2E
+
+Root and a peer review the one-step diff and unchanged checksum/consumer path before source publication. No new unit test is useful for this reversible workflow change. The next ordinary exact-head workflow must download and hash the original bytes, stage/build/package successfully, and run both existing packaged UI cases. A public metadata read or source-only review cannot satisfy those execution gates. Wait for the currently running PR checks before advancing their heads; do not cancel or rerun the failed job to hide the first result.

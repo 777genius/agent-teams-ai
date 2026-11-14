@@ -2572,6 +2572,34 @@ test('selected checkpoint resumes through a new Host/generation, retains Team de
     assert.equal(f.opens(), 1, 'invalid Skip history cannot allocate a replacement provider');
   }
   assert.equal(f.opens(), 1, 'Skip retains the original binding without another provider');
+  const skippedLaunchPath = join(f.root, 'teams/test-runtime-host/.host-owner/launches',
+    runtimeDigest('TEST-run') + '.json');
+  const skippedLaunchBytes = readFileSync(skippedLaunchPath, 'utf8');
+  const unexplainedSkip = JSON.parse(skippedLaunchBytes) as TeamLaunchRecord;
+  assert.equal(unexplainedSkip.memberActions?.length, 1);
+  assert.equal(unexplainedSkip.memberActions![0]!.input.commandId, 'TEST-source-skip');
+  assert.equal(unexplainedSkip.memberActions![0]!.phase, 'selected');
+  const skippedSourcePath = join(f.root, 'runtime-sessions',
+    runtimeDigest({ backendId: f.runtimeBinding.backendId, teamId: f.runtimeBinding.teamId,
+      memberId: f.runtimeBinding.memberId }), runtimeDigest(normalizeBinding(f.runtimeBinding)) + '.json');
+  const skippedSourceBytes = readFileSync(skippedSourcePath, 'utf8');
+  const skippedPayloadPath = join(f.root, 'runtime-checkpoints', captured.value.reference + '.json');
+  const skippedPayloadBytes = readFileSync(skippedPayloadPath);
+  delete unexplainedSkip.memberActions;
+  try {
+    writeFileSync(skippedLaunchPath, JSON.stringify(unexplainedSkip));
+    const refused = await f.rpc('team.launch.read', {}) as { ok: boolean; code?: string };
+    assert.equal(refused.ok, false, 'a skipped prepared member needs its original selected Skip receipt');
+    assert.equal(refused.code, 'hold');
+  } finally {
+    writeFileSync(skippedLaunchPath, skippedLaunchBytes);
+  }
+  assert.equal(readFileSync(skippedLaunchPath, 'utf8'), skippedLaunchBytes);
+  assert.equal(readFileSync(skippedSourcePath, 'utf8'), skippedSourceBytes);
+  assert.deepEqual(readFileSync(skippedPayloadPath), skippedPayloadBytes);
+  assert.equal(f.opens(), 1);
+  assert.equal(f.session().submits.length, 1);
+  assert.equal(f.handoffs(), 1);
   await f.restart();
   const before = (await f.rpc('team.launch.read', {})) as {
     ok: boolean;

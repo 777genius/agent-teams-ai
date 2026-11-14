@@ -828,6 +828,9 @@ export async function startNativeTeamModel(
       ? {
           currentLegacyTurns,
           currentLegacyProbes,
+          get currentLegacyCatalogRequests() {
+            return currentLegacyCatalogRequests;
+          },
           finishCurrentLegacySource: async () => {
             assert.ok(currentLegacyOpen, 'close the original current-legacy epoch once');
             currentLegacyOpen = false;

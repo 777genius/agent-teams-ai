@@ -8,6 +8,7 @@ import { basename, isAbsolute, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
+import type { NativeCoordinationFixture } from './fixtures/native-opencode-team/coordination-probe.ts';
 import { record } from './fixtures/native-claude-team/model.ts';
 import { fileHash, nativeHostEnvironment, startHost, tick, treeHash, writeNativeFailureReceipt } from './fixtures/native-host.ts';
 import { CONTEXT_MARKER, startOpenCodeModel } from './fixtures/native-opencode-team/model.ts';
@@ -94,6 +95,7 @@ export interface PackagedNativeHostInputs {
 /** Same native scenario for source qualification and the separately captured packaged candidate. */
 export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeHostInputs, signal?: AbortSignal) {
   const startedAt = performance.now();
+  const qualifyCoordination = !packaged && process.platform === 'linux' && process.arch === 'x64';
   const elapsedMs = () => Math.round(performance.now() - startedAt);
   signal?.throwIfAborted();
   assert.ok(process.platform === 'linux' && process.arch === 'x64' ||
@@ -130,6 +132,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
   const cancelOriginalHost = () => { host?.child.stdin.end(); };
   signal?.addEventListener('abort', cancelOriginalHost, { once: true });
   let model: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
+  let coordination: NativeCoordinationFixture | undefined;
   let passed = false, cleanup = false;
   let originalFailure: unknown;
   let lastInputProgress: ReturnType<typeof nativeInputProgress> | undefined;
@@ -165,6 +168,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       windowsShellSha256 = await fileHash(shell);
     }
     model = await startOpenCodeModel({ nativeGeneration: 'v2', nativeMessageImage: true,
+      ...(qualifyCoordination ? { coordinationProof: true as const, localReadinessProof: true as const } : {}),
       selectedModel: { id: 'TEST-model-B', effort: 'high' },
       selectedConfiguration: { scope: 'project-A' } });
     const namespace = basename(root);
@@ -217,7 +221,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     await writeFile(join(globalDirectory, 'opencode.json'), JSON.stringify({
       model: 'TEST-local/TEST-model', provider: { 'TEST-local': {
         npm: '@ai-sdk/openai-compatible',
-        options: { baseURL: `${model.url}/v1`, apiKey: 'TEST-LOCALHOST-ONLY' },
+        options: { baseURL: `${model.url}/v1`, ...(qualifyCoordination ? {} : { apiKey: 'TEST-LOCALHOST-ONLY' }) },
         models: Object.fromEntries(['TEST-model', 'TEST-model-B'].map(id => [id, {
           name: id, limit: { context: 200000, output: 2000 },
           capabilities: { tools: true, input: ['text', 'image'], output: ['text'] },
@@ -235,7 +239,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     const originalProjectConfig = projectConfig('project-A');
     await writeFile(projectPath, originalProjectConfig, { mode: 0o600 });
     await mkdir(join(root, 'data/opencode'), { mode: 0o700 });
-    await writeFile(join(root, 'data/opencode/auth.json'), JSON.stringify({
+    await writeFile(join(root, 'data/opencode/auth.json'), JSON.stringify(qualifyCoordination ? {} : {
       'TEST-local': { type: 'api', key: 'TEST-LOCALHOST-ONLY' },
     }), { mode: 0o600 });
     const member = profile.runtime!.members[0]!;
@@ -246,9 +250,19 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       openCodeDefault: { providerId: 'TEST-local', modelId: 'TEST-model' },
       openCodePreferences: { defaultModelId: 'TEST-local/TEST-model-B', modelLimitOverrides: {} },
     }), { effort: 'high', permissions: approvalMode === 'auto' ? 'bypass' : 'manual' });
+    if (qualifyCoordination) {
+      const { captureNativeCoordinationFixture } = await import('./fixtures/native-opencode-team/coordination-probe.ts');
+      coordination = captureNativeCoordinationFixture(profile);
+    }
     const profilePath = join(root, 'profile.json');
     const bytes = JSON.stringify(profile);
     await writeFile(profilePath, bytes, { mode: 0o600 });
+    if (coordination) {
+      await coordination.run({ profilePath, profileSha256: createHash('sha256').update(bytes).digest('hex'),
+        model, ...(signal ? { signal } : {}) });
+      assert.equal(coordination.evidence.status, 'PASS'); assert.equal(coordination.evidence.cleanup, true);
+      completeStep('original_native_coordination_and_cleanup_before_business_host');
+    }
     const start = () => {
       signal?.throwIfAborted();
       const epoch = ++hostEpoch;
@@ -323,6 +337,11 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     }
     assert.equal(replies.size, approvalMode === 'manual' ? 2 : 0);
     assert.deepEqual(model.failures, []); assert.equal(model.observations.length, 11);
+    assert.equal(model.coordination?.observations.length ?? 0, qualifyCoordination ? 3 : 0);
+    assert.equal(model.localReadiness?.ordinary.length ?? 0, qualifyCoordination ? 1 : 0);
+    assert.equal(model.localReadiness?.inventoryReads ?? 0, qualifyCoordination ? 1 : 0);
+    assert.ok(model.observations.length + (model.coordination?.observations.length ?? 0) +
+      (model.localReadiness?.ordinary.length ?? 0) <= 16);
     assert.ok(model.observations.every(row => row.requestedModel === 'TEST-model-B' &&
       row.requestedEffort === 'high'), 'every native tool turn keeps the explicitly selected model/variant');
     assert.ok(model.observations.every(row => row.contextEffective));
@@ -398,6 +417,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     } catch (error) { cleanupErrors.push(error); }
     try { await model?.close(); } catch (error) { cleanupErrors.push(error); }
     signal?.removeEventListener('abort', cancelOriginalHost);
+    if (coordination?.evidence.status === 'INCOMPLETE' && coordination.evidence.cleanup !== true)
+      cleanupErrors.push(new Error('Original coordination cleanup unconfirmed'));
     cleanup = cleanupErrors.length === 0;
     const originalHostCpu = await passiveModule?.readOriginalHostCpuProfile(originalProfiledHost?.testCpuProfilePath,
       originalProfiledHost !== undefined &&
@@ -427,6 +448,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
             ? originalFailure.code : null,
         hosts: hosts.map(({ exitCode, signalCode, stdoutValid }) => ({ exitCode, signalCode, stdoutValid })),
         modelOrigin: 'localhost-scripted', modelRequests: model?.observations.length ?? 0, modelProgress,
+        coordination: coordination?.evidence ?? { status: 'unqualified', cleanup: null },
         modelFailures: model?.failures ?? [], vendorAuthQualified: false,
         desktopQualified: false, releaseQualified: false,
       };

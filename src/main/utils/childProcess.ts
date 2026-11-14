@@ -21,6 +21,8 @@ import {
 } from './cliProcessCustody';
 import { withCliProcessDefaults } from './cliProcessDefaults';
 import { classifyCliSpawnError } from './cliWorkingDirectory';
+import { execFileWithLinuxChildLaunch, remainingLinuxChildLaunchTime, spawnWithLinuxChildLaunch } from './linuxChildLaunch';
+import { isLinuxChildLaunchFailure } from './linuxChildLaunchSelection';
 import {
   isSameUnixProcessIdentity,
   readUnixProcessTable,
@@ -60,6 +62,7 @@ function execFileAsync(
   outputLimits: { stdoutMaxBuffer?: number; stderrMaxBuffer?: number } = {}
 ): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
+    const entered = performance.now();
     const { timeout, killSignal, signal, maxBuffer, ...baseExecOptions } = options;
     const timeoutMs = typeof timeout === 'number' && timeout > 0 ? timeout : 0;
     const legacyOutputLimitBytes =
@@ -93,6 +96,7 @@ function execFileAsync(
           : { ...baseExecOptions, maxBuffer };
     const timeoutSignal = normalizeKillSignal(killSignal);
     let child: ChildProcess | null = null;
+    let handoffCleanup: Promise<void> | undefined;
     let settled = false;
     let stdoutText = '';
     let stderrText = '';
@@ -104,7 +108,7 @@ function execFileAsync(
       signal?.removeEventListener('abort', handleAbort);
     };
     const rejectAfterProcessTreeTermination = (error: Error): void => {
-      void killProcessTreeAndWait(child, timeoutSignal).then(
+      void (handoffCleanup ?? killProcessTreeAndWait(child, timeoutSignal)).then(
         () => reject(error),
         (terminationError) => {
           Object.assign(error, {
@@ -158,7 +162,7 @@ function execFileAsync(
       rejectAborted();
       return;
     }
-    child = execFile(cmd, args, execOptions, (err, stdout, stderr) => {
+    child = execFileWithLinuxChildLaunch(cmd, args, execOptions, (err, stdout, stderr) => {
       if (settled) {
         return;
       }
@@ -171,7 +175,8 @@ function execFileAsync(
           stdout: String(stdout),
           stderr: String(stderr),
         });
-        if ((err as NodeJS.ErrnoException).code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
+        if (isLinuxChildLaunchFailure(err) ||
+            (err as NodeJS.ErrnoException).code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
           Object.assign(normalizedError, {
             killed: true,
             signal: timeoutSignal,
@@ -182,6 +187,9 @@ function execFileAsync(
           reject(normalizedError);
         }
       } else resolve({ stdout: String(stdout), stderr: String(stderr) });
+    }, timeoutMs > 0 ? entered + timeoutMs : undefined, (originalChild) => {
+      handoffCleanup ??= killProcessTreeAndWait(originalChild, timeoutSignal);
+      return handoffCleanup;
     });
     if (!settled) {
       trackCliProcess(child);
@@ -227,7 +235,7 @@ function execFileAsync(
             stderr: stderrText,
           });
           rejectAfterProcessTreeTermination(error);
-        }, timeoutMs);
+        }, remainingLinuxChildLaunchTime(child, timeoutMs, entered));
         timeoutHandle.unref?.();
       }
     }
@@ -382,6 +390,7 @@ export async function execCli(
   try {
     return await execCliUnclassified(binaryPath, args, options);
   } catch (error) {
+    if (isLinuxChildLaunchFailure(error)) throw error;
     // A missing cwd surfaces as `spawn <binary> ENOENT`; report the real cause.
     throw await classifyCliSpawnError(error, options.cwd);
   }
@@ -432,7 +441,7 @@ async function execCliUnclassified(
         err && typeof err === 'object' && 'code' in err
           ? (err as { code?: string }).code
           : undefined;
-      if (code !== 'EINVAL') {
+      if (isLinuxChildLaunchFailure(err) || code !== 'EINVAL') {
         throw err;
       }
     }
@@ -471,7 +480,7 @@ export function spawnCli(
   }
 
   try {
-    return trackCliProcess(spawn(binaryPath, args, opts));
+    return trackCliProcess(spawnWithLinuxChildLaunch(binaryPath, args, opts));
   } catch (err: unknown) {
     const code =
       err && typeof err === 'object' && 'code' in err ? (err as { code?: string }).code : undefined;

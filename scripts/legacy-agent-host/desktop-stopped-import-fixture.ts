@@ -10,6 +10,16 @@ export const LEGACY_IMPORT_TEAM = 'test-stopped-legacy';
 export const LEGACY_IMPORT_LABEL = 'TEST never-launched legacy saved Team';
 export const CURRENT_LEGACY_SOURCE_PROMPT = 'TEST_CURRENT_LEGACY_SOLO_ONE';
 export const CURRENT_LEGACY_SOURCE_REPLY = 'REPLY_TEST_CURRENT_LEGACY_SOLO_ONE';
+
+/** Expected wire value for the existing pinned SDK0.3.305 fixture, never a saved-setting default. */
+export function expectedStoppedImportNativeEffort(
+  selected: { model: unknown; effort?: unknown }
+): unknown {
+  if (selected.effort !== undefined) return selected.effort;
+  assert.equal(selected.model, 'claude-sonnet-4-6', 'Only the pinned Sonnet default is qualified');
+  return 'high';
+}
+
 export interface StoppedImportUiSeed {
   sourceKind?: 'captured-stopped-solo';
   priorRun?: { path: string; sha256: string };
@@ -472,5 +482,44 @@ export async function readStoppedImportSourceDiagnostics(
       false,
       join(import.meta.dirname, '../..')
     ),
+  };
+}
+
+/** Closed facts from existing UI steps only; this projection never performs a read or retry. */
+export function projectCurrentStoppedProducerFailure(options: {
+  phase: string;
+  source: unknown;
+  model: {
+    readonly failures: readonly string[];
+    readonly currentLegacyCatalogRequests?: number;
+    readonly currentLegacyTurns?: readonly unknown[];
+    readonly currentLegacyProbes?: readonly unknown[];
+  };
+  captured: readonly unknown[];
+  steps: readonly Record<string, unknown>[];
+}) {
+  const phases = ['connect', 'create-form', 'model-selection', 'launch-settings', 'create-launch',
+    'source-identity', 'reply', 'stop', 'create-task', 'stop-proof', 'quit', 'oracle-drain', 'source-capture'];
+  const count = (value: unknown, cap: number) =>
+    Array.isArray(value) && value.length <= cap ? value.length : null;
+  const catalogCount = (value: unknown) =>
+    typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 9 ? value : null;
+  const exceeded = options.model.failures[0] === 'bounded original legacy catalog reads';
+  return {
+    phase: phases.includes(options.phase) ? options.phase : 'unknown',
+    source: options.source,
+    catalogLimitExceeded: exceeded ? true : null,
+    catalogReadsAtLeast: exceeded ? 9 : null,
+    catalogRequests: catalogCount(options.model.currentLegacyCatalogRequests),
+    catalogByPhase: phases.flatMap(phase => {
+      const steps = options.steps.filter(step => step.producerPhase === phase);
+      return steps.length ? [{ phase,
+        first: catalogCount(steps[0]!.catalogRequests),
+        last: catalogCount(steps.at(-1)!.catalogRequests) }] : [];
+    }),
+    nativeBusinessCount: count(options.model.currentLegacyTurns, 1),
+    modelProbeCount: count(options.model.currentLegacyProbes, 8),
+    capturedNativeCount: count(options.captured, 32),
+    capturedNativeOverflow: options.captured.length > 32,
   };
 }

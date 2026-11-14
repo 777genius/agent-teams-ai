@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { RetainedWindowsCustody } from '@agent-teams/legacy-agent-host/owned-process';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { assertDesktopMetadataLineageReleased, desktopMetadataProfileHash,
   readDesktopMetadataLineage } from '../../../scripts/legacy-agent-host/desktop-opencode-metadata-lineage';
@@ -17,6 +17,9 @@ import {
   type SelectedHostProfile,
 } from '../../../src/features/agent-backend/main';
 import { capturedHostProfileDigest } from '../../../src/features/agent-backend/main/infrastructure/selectedHostProfile';
+import * as nodeLaunch from '../../../src/main/utils/electronNodeLaunch';
+import * as linuxLaunch from '../../../src/main/utils/linuxChildLaunch';
+import { linuxChildLaunchFailure } from '../../../src/main/utils/linuxChildLaunchSelection';
 import { formatPersistentLogMessage, installPersistentAppLog } from '../../../src/main/utils/persistentAppLog';
 import { addLogSink } from '../../../src/shared/utils/logger';
 
@@ -658,8 +661,13 @@ describe('captured legacy host client over real subprocess stdio', () => {
     });
     const oldExecutable = process.env.OPENCODE_V2_EMBEDDED_BUN;
     process.env.OPENCODE_V2_EMBEDDED_BUN = '/TEST/bun';
+    const route = vi.spyOn(nodeLaunch, 'resolveElectronNodeLaunch');
     try {
       const handshake = await transport.start();
+      expect(route.mock.calls).toEqual([
+        [profile.nodeExecutable, ['--version'], 'generic'],
+        [profile.nodeExecutable, [profile.hostEntry], 'generic'],
+      ]);
       expect(handshake).toMatchObject({ protocolVersion: 1, buildId: 'TEST-host-v1' });
       const [hostPid] = await Promise.all([transport.request('metadata', 'ready'), ready]);
       if (typeof hostPid !== 'number') throw new Error('TEST original Host PID missing');
@@ -699,6 +707,7 @@ describe('captured legacy host client over real subprocess stdio', () => {
       expect(await transport.shutdown()).toEqual({ childExit: 'confirmed', providerCustody: 'unresolved' });
       await expect(transport.request('echo', {})).rejects.toMatchObject({ code: 'shutting-down', outcome: 'not-dispatched' });
     } finally {
+      route.mockRestore();
       removeSink(); log.dispose();
       if (oldExecutable === undefined) delete process.env.OPENCODE_V2_EMBEDDED_BUN;
       else process.env.OPENCODE_V2_EMBEDDED_BUN = oldExecutable;
@@ -800,6 +809,24 @@ describe('captured legacy host client over real subprocess stdio', () => {
     const transport = client({ ...(await fixture()), expectedBuildId: 'another-build' });
     await expect(transport.start()).rejects.toMatchObject({ code: 'profile-mismatch' });
     expect((await transport.shutdown()).childExit).toBe('confirmed');
+
+    // A synthetic private helper failure still owns the actual Node child.
+    // No helper allocation/empty EOF is promoted to a Host handshake.
+    let allocated: ChildProcess | undefined;
+    const observe = vi.spyOn(linuxLaunch, 'observeLinuxChildLaunchFailure').mockImplementation((child, listener) => {
+      allocated = child;
+      queueMicrotask(() => listener(linuxChildLaunchFailure('status', true)));
+      return () => {};
+    });
+    try {
+      const stalled = client(await fixture('process.stdin.resume(); setInterval(() => {}, 1000);', 'raw'));
+      await expect(stalled.start()).rejects.toMatchObject({ code: 'transport-closed', outcome: 'unknown' });
+      expect(allocated?.pid).toBeGreaterThan(0);
+      expect(allocated?.exitCode).toBeNull(); expect(allocated?.signalCode).toBeNull();
+      await expect(stalled.request('echo')).rejects.toMatchObject({ outcome: 'not-dispatched' });
+      expect((await stalled.shutdown()).childExit).toBe('confirmed');
+      expect(allocated?.exitCode !== null || allocated?.signalCode !== null).toBe(true);
+    } finally { observe.mockRestore(); }
   });
 
   it('seals pending startup before validation can spawn the host', async () => {
@@ -811,6 +838,32 @@ describe('captured legacy host client over real subprocess stdio', () => {
       code: 'shutting-down',
       outcome: 'not-dispatched',
     });
+  });
+
+  it('rechecks shutdown after asynchronous Node launch resolution before original allocation', async () => {
+    const profile = await fixture();
+    const transport = client(profile);
+    const original = nodeLaunch.resolveElectronNodeLaunch;
+    let enter!: () => void, release!: () => void;
+    const entered = new Promise<void>(resolve => { enter = resolve; });
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const route = vi.spyOn(nodeLaunch, 'resolveElectronNodeLaunch').mockImplementation(async (...args) => {
+      const selected = await original(...args);
+      if (args[1][0] === profile.hostEntry) { enter(); await gate; }
+      return selected;
+    });
+    const allocate = vi.spyOn(linuxLaunch, 'spawnWithLinuxChildLaunch');
+    try {
+      const opening = transport.start();
+      const rejected = expect(opening).rejects.toMatchObject({
+        code: 'shutting-down', outcome: 'not-dispatched',
+      });
+      await entered;
+      expect((await transport.shutdown()).childExit).toBe('confirmed');
+      release();
+      await rejected;
+      expect(allocate).not.toHaveBeenCalled();
+    } finally { release(); route.mockRestore(); allocate.mockRestore(); }
   });
 
   it('shutdown does not kill an unrelated captured test child', async () => {

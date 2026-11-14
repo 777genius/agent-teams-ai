@@ -275,11 +275,26 @@ export async function runDesktopNativeCommandsUiProof(
     assert.ok(display.length > 0, 'actual output is available for display');
     const originalRows = `[...document.querySelectorAll('[data-timeline-row-key]')].filter(e=>e.getAttribute('data-timeline-row-key')===${desktopJsLiteral(commandId)})`;
     const visible = `(() => {const rows=${originalRows};return rows.length===1&&rows[0].innerText.replace(/\\s+/g,' ').trim().includes(${desktopJsLiteral(display.replace(/\s+/g, ' ').trim())});})()`;
-    if (!(await cdp.evaluate(visible))) {
-      const header = `(() => {const rows=${originalRows};if(rows.length!==1)return null;const cards=[...rows[0].querySelectorAll('article.activity-timeline-card[data-expanded="false"]')].filter(e=>e.textContent.includes('/cost')&&e.firstElementChild?.getAttribute('role')==='button');if(cards.length!==1)return null;const e=cards[0].firstElementChild,r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))?{x,y,tag:e.tagName}:null;})()`;
-      await ui.clickExpression(header, 'expand actual native cost reply');
-    }
     await ui.waitRead(visible, 'actual local command output appears in the conversation');
+    const cardRead = (body: string) => `(() => {
+      const rows=${originalRows};if(rows.length!==1)return null;
+      const cards=[...rows[0].querySelectorAll('article.activity-timeline-card')].filter(e=>
+        e.textContent.replace(/\\s+/g,' ').trim().includes(${desktopJsLiteral(display.replace(/\s+/g, ' ').trim())}));
+      if(cards.length!==1)return null;const card=cards[0];${body}
+    })()`;
+    options.assertOwnedRenderer();
+    const expanded = await cdp.evaluate(cardRead('return card.getAttribute("data-expanded");'));
+    assert.ok(expanded === 'true' || expanded === 'false', 'one exact native cost report card');
+    if (expanded === 'false') {
+      await ui.clickExpression(cardRead(`
+        if(card.getAttribute('data-expanded')!=='false')return null;
+        const e=card.firstElementChild;if(e?.getAttribute('role')!=='button')return null;
+        const r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);
+        return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))?{x,y,tag:e.tagName}:null;
+      `), 'expand exact native cost reply once');
+      await ui.waitRead(cardRead('return card.getAttribute("data-expanded")==="true";'),
+        'original native cost report card expanded');
+    }
     await revealDesktopReply(cdp, display, {
       messageId: commandId,
       assertOwnedRenderer: options.assertOwnedRenderer,

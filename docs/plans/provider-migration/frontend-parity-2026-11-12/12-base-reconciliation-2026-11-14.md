@@ -178,3 +178,29 @@ those artifacts; the newly restored environment permits that work now.
 Neither this merge nor the TEST diagnostics establish E2E completion.
 Current-base qualification requires the actual original scenarios to pass
 after the corresponding production repairs.
+
+## Host probe preparation extraction during reconciliation
+
+Written before the extraction. Combining incoming readiness preparation
+with the retained operation-owned process selection would exceed the
+Coordinator's 800-line limit. Move only its OpenCode ordinary probe,
+private local-readiness branch, and coordination preparation into
+`composition/ProviderModelProbePreparation.ts`. The exported
+`prepareOpenCodeModelProbe(profile, input, isCurrent, ports, purpose?,
+observeProvider?)` returns the existing `NativeModelProbe` contract.
+Its narrow typed ports capture the original target-current guard, endpoint
+queue operation, derived-host construction, original host retirement,
+replacement begin/publish/release, writer check and optional V2 custody.
+
+`ProviderManagementCoordinator` retains profile admission, operation-owned
+source/process selection, endpoint queues, resource fences, host caches,
+origin WeakMap, and Claude/Codex dispatch. It captures one V1 process
+selection before preparation and closes that selection into all ordinary,
+limited, and coordination host callbacks. The extracted readiness
+recursion reuses those same ports; it cannot resolve a newer source by
+profile ID. Target guards are captured at the original preparation cuts,
+not eagerly across branches. No whole-service host cast, additional
+registry, public purpose selector, deadline change or native-namespace
+permission is introduced. Preserve both parents' critical owner, queue,
+credential, Skip and diagnostic cases, and review the exact extraction
+independently before the merge is staged.

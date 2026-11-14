@@ -41,6 +41,7 @@ import { CapturedNativeExtensions } from '../services/extensions/runtime/Capture
 import { CapturedSkills } from '../services/extensions/skills/CapturedSkills';
 import { CapturedSkillsCache } from '../services/extensions/skills/CapturedSkillsCache';
 import { CapturedSkillsCollection } from '../services/extensions/skills/CapturedSkillsCollection';
+import { initializeLinuxChildLaunch } from '../utils/linuxChildLaunchSelection';
 import { getTeamsBasePath } from '../utils/pathDecoder';
 import { getDevRendererLocation } from '../utils/rendererLocation';
 
@@ -614,6 +615,7 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
       : pathToFileURL(options.rendererIndexPath).href;
   const path = env.AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH;
   const sha256 = env.AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256;
+  initializeLinuxChildLaunch(env);
   const feature = new DesktopBackendFeature({
     // Partial/invalid configuration must fail closed, not select another backend.
     descriptor: path || sha256 ? { path: path ?? '', sha256: sha256 ?? '' } : null,

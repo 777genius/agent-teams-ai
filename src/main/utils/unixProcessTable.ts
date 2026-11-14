@@ -1,6 +1,6 @@
-import { spawnSync } from 'child_process';
 import { readFileSync } from 'fs';
 
+import { spawnSyncWithLinuxChildLaunch } from './linuxChildLaunch';
 import { traceTestUnixProcessTableResult } from './testChildProcessTrace';
 
 export interface UnixProcessIdentity {
@@ -20,7 +20,7 @@ export function tryReadUnixProcessTable(): Map<number, UnixProcessIdentity> | nu
 
 export function readUnixProcessTable(rootPid: number): Map<number, UnixProcessIdentity> {
   try {
-    const result = spawnSync('ps', ['-axo', 'pid=,ppid=,pgid=,lstart='], {
+    const result = spawnSyncWithLinuxChildLaunch('ps', ['-axo', 'pid=,ppid=,pgid=,lstart='], {
       encoding: 'utf8',
       windowsHide: true,
     });

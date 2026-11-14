@@ -129,6 +129,11 @@ const cpuWriterFamilies = ['namespace-fence', 'team-state', 'team-state-validati
   'launch-binding-read', 'launch-binding-current', 'launch-binding-clone', 'other-writer'] as const;
 const cpuWriterCallers = ['node-timer', 'v2-request-admission', 'v2-request-password', 'v2-read-snapshot',
   'runtime-session-read', 'provider-attestation-wait', 'unclassified'] as const;
+const cpuNamespaceFamilies = ['directoryPath', 'tree', 'controller-lock', 'residual'] as const;
+const cpuControllerLockFunctions = ['codeOf', 'statOrMissing', 'readOrMissing', 'unlinkOrMissing',
+  'removeEmptyGate', 'isProcessAlive', 'parsePid', 'writeComplete', 'recoverGate', 'acquireGate',
+  'readLockInfo', 'sameLock', 'recoverDataLock', 'releaseLock', 'tryAcquire', 'sleepSync',
+  'resolveLockOptions', 'acquireFileLockSync'];
 type CpuUnavailable = 'not-started' | 'host-not-exited' | 'missing' | 'stat-failed' | 'file-shape' |
   'empty-profile' | 'profile-over-limit' | 'open-failed' | 'read-failed' | 'incomplete-read' |
   'changed-file' | 'invalid-profile' | 'discard-failed';
@@ -144,6 +149,8 @@ type CpuWriterTotals = { family: typeof cpuWriterFamilies[number]; exclusiveSamp
   exclusiveSampledUs: number };
 type CpuWriterCallerTotals = { caller: typeof cpuWriterCallers[number]; exclusiveSamples: number;
   exclusiveSampledUs: number; namespaceSamples: number; namespaceSampledUs: number };
+type CpuNamespaceTotals = { family: typeof cpuNamespaceFamilies[number]; exclusiveSamples: number;
+  exclusiveSampledUs: number };
 export type OriginalHostCpuProfile = CpuFileSize & ({ status: 'unavailable'; reason: CpuUnavailable; rawDiscarded: boolean } | {
   status: 'available'; rawDiscarded: boolean; samplingIntervalUs: 1000 | 10000; profileDurationUs: number;
   sampledUs: number; unsampledUs: number; nodeCount: number; sampleCount: number;
@@ -152,6 +159,8 @@ export type OriginalHostCpuProfile = CpuFileSize & ({ status: 'unavailable'; rea
   teamWriterDetails: CpuWriterTotals[];
   /** Sampled caller ancestry, not invocation counts, request latency or a specific timer owner. */
   teamWriterCallers: { attribution: 'outermost-allowlisted-caller-on-sampled-stack'; rows: CpuWriterCallerTotals[] };
+  /** Partition of namespace-fence only; descendant attribution, not isolated function self-time. */
+  namespaceFenceDetails: CpuNamespaceTotals[];
 });
 
 /** Closed source families only. No frame name, source URL, path or stack leaves this projection. */
@@ -205,6 +214,22 @@ function cpuWriterCaller(frame: Record<string, unknown>): number | undefined {
   return undefined;
 }
 
+/** Named controller paths only: staged numeric package identities remain residual. */
+function cpuNamespaceFamily(frame: Record<string, unknown>): number | undefined {
+  if (typeof frame.url !== 'string' || typeof frame.functionName !== 'string') return undefined;
+  const path = frame.url.replaceAll('\\', '/'), name = frame.functionName;
+  if (/\/adapters\/team\/TeamOwnerStore\.[jt]s$/.test(path)) {
+    if (name === 'directoryPath') return 0;
+    if (name === 'tree') return 1;
+  }
+  if (/\/agent-teams-controller\/(?:src|dist)\/internal\/fileLock\.js$/.test(path)) {
+    // A protected callback is not lock work merely because this wrapper is its ancestor.
+    if (name === 'withFileLockSync' || name === 'withFileLock') return 3;
+    if (cpuControllerLockFunctions.includes(name)) return 2;
+  }
+  return undefined;
+}
+
 function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): OriginalHostCpuProfile {
   const invalid = (): never => { throw new Error('Invalid TEST CPU profile'); };
   const value = record(raw), start = integer(value.startTime, Number.MAX_SAFE_INTEGER),
@@ -216,7 +241,7 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
       value.samples.length !== value.timeDeltas.length) return invalid();
   const duration = end - start;
   const nodes = new Map<number, { category: number | undefined; writerFamily: number | undefined;
-    writerCaller: number | undefined; children: number[] }>();
+    namespaceFamily: number | undefined; writerCaller: number | undefined; children: number[] }>();
   for (const rawNode of value.nodes) {
     const node = record(rawNode), id = integer(node.id, 1_000_000);
     if (id === null || id < 1 || nodes.has(id) ||
@@ -229,13 +254,14 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
     }
     const callFrame = record(node.callFrame);
     nodes.set(id, { category: cpuCategory(callFrame), writerFamily: cpuWriterFamily(callFrame),
-      writerCaller: cpuWriterCaller(callFrame), children });
+      namespaceFamily: cpuNamespaceFamily(callFrame), writerCaller: cpuWriterCaller(callFrame), children });
   }
   const first = integer(record(value.nodes[0]).id, 1_000_000)!;
-  type StackAttribution = { exclusive: number; inclusive: number; writerFamily: number; writerCaller: number | undefined };
+  type StackAttribution = { exclusive: number; inclusive: number; writerFamily: number;
+    namespaceFamily: number; writerCaller: number | undefined };
   const frames = new Map<number, StackAttribution>();
   const pending: (StackAttribution & { id: number })[] = [
-    { id: first, exclusive: 5, inclusive: 0, writerFamily: 6, writerCaller: undefined },
+    { id: first, exclusive: 5, inclusive: 0, writerFamily: 6, namespaceFamily: 3, writerCaller: undefined },
   ];
   while (pending.length) {
     const current = pending.pop()!, node = nodes.get(current.id);
@@ -245,9 +271,13 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
     const writerFamily = node.writerFamily === 5
       ? (current.writerFamily === 4 ? 5 : current.writerFamily)
       : node.writerFamily ?? current.writerFamily;
+    const namespaceFamily = exclusive === 2 && writerFamily === 0
+      ? node.writerFamily === 0 ? 3 : node.namespaceFamily ??
+        (current.exclusive === 2 && current.writerFamily === 0 ? current.namespaceFamily : 3)
+      : 3;
     const writerCaller = current.writerCaller ?? node.writerCaller;
-    frames.set(current.id, { exclusive, inclusive, writerFamily, writerCaller });
-    for (const id of node.children) pending.push({ id, exclusive, inclusive, writerFamily, writerCaller });
+    frames.set(current.id, { exclusive, inclusive, writerFamily, namespaceFamily, writerCaller });
+    for (const id of node.children) pending.push({ id, exclusive, inclusive, writerFamily, namespaceFamily, writerCaller });
   }
   if (frames.size !== nodes.size) return invalid();
   const categories: CpuTotals[] = cpuCategories.map(category => ({ category,
@@ -256,6 +286,8 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
     exclusiveSamples: 0, exclusiveSampledUs: 0 }));
   const callerRows: CpuWriterCallerTotals[] = cpuWriterCallers.map(caller => ({ caller,
     exclusiveSamples: 0, exclusiveSampledUs: 0, namespaceSamples: 0, namespaceSampledUs: 0 }));
+  const namespaceFenceDetails: CpuNamespaceTotals[] = cpuNamespaceFamilies.map(family => ({ family,
+    exclusiveSamples: 0, exclusiveSampledUs: 0 }));
   let sampledUs = 0;
   for (let index = 0; index < value.samples.length; index++) {
     const id = integer(value.samples[index], 1_000_000), delta = integer(value.timeDeltas[index], duration);
@@ -270,6 +302,10 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
       const caller = callerRows[frame.writerCaller ?? 6]!;
       caller.exclusiveSamples++; caller.exclusiveSampledUs += delta;
       if (frame.writerFamily === 0) { caller.namespaceSamples++; caller.namespaceSampledUs += delta; }
+      if (frame.writerFamily === 0) {
+        const namespace = namespaceFenceDetails[frame.namespaceFamily]!;
+        namespace.exclusiveSamples++; namespace.exclusiveSampledUs += delta;
+      }
     }
     // A category is counted at most once per stack. Inclusive columns overlap; never sum them.
     const inclusive = frame.inclusive | 1 << frame.exclusive;
@@ -280,7 +316,7 @@ function projectCpuProfile(raw: unknown, samplingIntervalUs: 1000 | 10000): Orig
   return { status: 'available', rawDiscarded: false, samplingIntervalUs,
     profileDurationUs: duration, sampledUs, unsampledUs: duration - sampledUs,
     nodeCount: nodes.size, sampleCount: value.samples.length,
-    attribution: 'nearest-allowlisted-stack-frame', categories, teamWriterDetails,
+    attribution: 'nearest-allowlisted-stack-frame', categories, teamWriterDetails, namespaceFenceDetails,
     teamWriterCallers: { attribution: 'outermost-allowlisted-caller-on-sampled-stack', rows: callerRows } };
 }
 

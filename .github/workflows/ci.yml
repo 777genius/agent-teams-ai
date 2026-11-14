@@ -624,6 +624,29 @@ jobs:
           pnpm --dir "$selected_v2_a" add --ignore-scripts --save-exact @opencode/cli@2.0.21 @opencode/cli-linux-x64@2.0.21 corepack@0.36.0
           pnpm --dir "$selected_v2_b" add --ignore-scripts --save-exact @opencode/cli@2.3.0 @opencode/cli-linux-x64@2.3.0
           printf 'OPENCODE_V2_UI_ORIGINAL_PACKAGES=%s\nOPENCODE_V2_UI_NEXT_PACKAGES=%s\n' "$selected_v2_a" "$selected_v2_b" >> "$GITHUB_ENV"
+          LEGACY_LINUX_CHILD_EXEC_GO=1 node packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts \
+            --linux-child-exec "$selected_inputs/linux-child-exec" "$(command -v cc)" "$(command -v readelf)" \
+            > "$selected_inputs/linux-child-exec-selection.json"
+          node --input-type=module - "$selected_inputs/linux-child-exec-selection.json" <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          const pin = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+          assert.deepEqual(Object.keys(pin).sort(), ['binarySha256', 'manifestPath', 'manifestSha256']);
+          assert.equal(pin.manifestPath, join(dirname(process.argv[2]), 'linux-child-exec/manifest.json'));
+          assert.equal(realpathSync(pin.manifestPath), pin.manifestPath);
+          const digest = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          assert.match(pin.manifestSha256, /^[a-f0-9]{64}$/);
+          assert.equal(digest(pin.manifestPath), pin.manifestSha256);
+          const manifest = JSON.parse(readFileSync(pin.manifestPath, 'utf8'));
+          assert.equal(manifest.protocol, 'linux-child-exec-v1');
+          assert.equal(manifest.sourceSha256, digest('packages/legacy-agent-host/native/linux-child-exec.c'));
+          assert.equal(manifest.binarySha256, pin.binarySha256);
+          assert.equal(digest(join(dirname(pin.manifestPath), 'linux-child-exec')), pin.binarySha256);
+          assert.ok(!/[\r\n]/.test(pin.manifestPath));
+          appendFileSync(process.env.GITHUB_ENV, `LEGACY_LINUX_CHILD_EXEC_MANIFEST=${pin.manifestPath}\nLEGACY_LINUX_CHILD_EXEC_SHA256=${pin.manifestSha256}\n`);
+          NODE
       - name: Bind retained inputs and exact stock helper source without launching a session
         run: node scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts
       - name: Exercise original retained V1 and new Host V2 controls once
@@ -748,7 +771,7 @@ jobs:
           assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);
           assert.deepEqual(r.cleanupErrors, []); assert.deepEqual(r.modelFailures, []);
           assert.equal(r.releaseQualified, false); assert.equal(r.vendorAuthQualified, false);
-          assert.equal(r.build.providerDigest, '73dbbfba5e8fed6719ccdeaae499a47284b72ac831c33a2c7206fbf2799f77b8');
+          assert.equal(r.build.providerDigest, 'ae1a7f4063d893e0d76f509971d3940ee0a37902fbdf752a737d9c88390d6d8d');
           assert.equal(r.inputs.kind, 'TEST_DESKTOP_V1_SOURCE_INPUTS'); assert.equal(r.inputs.status, 'READY');
           assert.equal(r.inputs.v1.version, '1.19.4');
           assert.equal(r.inputs.v1.sha256, '538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7');
@@ -814,6 +837,8 @@ jobs:
           path: |
             ${{ runner.temp }}/retained-opencode-*.json
             ${{ runner.temp }}/retained-opencode-*.log
+            ${{ runner.temp }}/TEST-retained-opencode-inputs-*/linux-child-exec-selection.json
+            ${{ runner.temp }}/TEST-retained-opencode-inputs-*/linux-child-exec/**
             ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.json
             ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.log
             ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.png
@@ -1231,7 +1256,7 @@ jobs:
             sha256: 'fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89',
           };
           const currentProvider = await readNativeProviderArtifact(repo);
-          assert.equal(currentProvider.sha256, '73dbbfba5e8fed6719ccdeaae499a47284b72ac831c33a2c7206fbf2799f77b8');
+          assert.equal(currentProvider.sha256, 'ae1a7f4063d893e0d76f509971d3940ee0a37902fbdf752a737d9c88390d6d8d');
           await verifyNativeProviderArtifact(donor, oldProvider);
           await verifyNativeProviderArtifact(repo, currentProvider);
           const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');
@@ -1426,8 +1451,8 @@ jobs:
           import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
           const provider = await readNativeProviderArtifact(process.cwd());
           assert.deepEqual(provider, {
-            path: 'vendor/provider-migration/frontend-parity-97690540/agent-teams-provider-implementations-0.0.0.tgz',
-            sha256: '73dbbfba5e8fed6719ccdeaae499a47284b72ac831c33a2c7206fbf2799f77b8',
+            path: 'vendor/provider-migration/opencode-local-readiness-002db02a/agent-teams-provider-implementations-0.0.0.tgz',
+            sha256: 'ae1a7f4063d893e0d76f509971d3940ee0a37902fbdf752a737d9c88390d6d8d',
           });
           await verifyNativeProviderArtifact(process.cwd(), provider);
           const stage = process.env.CODEX_CANDIDATE_STAGE;
@@ -1460,8 +1485,8 @@ jobs:
           LEGACY_CODEX_TEAM_GO=1 \
           LEGACY_CODEX_CANDIDATE_VERSION=0.169.0 \
           LEGACY_CODEX_CANDIDATE_INPUTS="$candidate_stage/input-pins.json" \
-          LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/frontend-parity-97690540/agent-teams-provider-implementations-0.0.0.tgz \
-          LEGACY_NATIVE_PROVIDER_SHA256=73dbbfba5e8fed6719ccdeaae499a47284b72ac831c33a2c7206fbf2799f77b8 \
+          LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/opencode-local-readiness-002db02a/agent-teams-provider-implementations-0.0.0.tgz \
+          LEGACY_NATIVE_PROVIDER_SHA256=ae1a7f4063d893e0d76f509971d3940ee0a37902fbdf752a737d9c88390d6d8d \
           "$selected_node" --test packages/legacy-agent-host/tests/native-codex-team.native.ts 2>&1 | tee "$RUNNER_TEMP/stage1-codex-0169-candidate.log"
           "$selected_node" --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
@@ -1475,7 +1500,7 @@ jobs:
           assert.equal(receipt.status, 'PASS'); assert.equal(receipt.cleanup, true);
           assert.equal(receipt.nativeVersion, 'codex-cli 0.169.0');
           assert.equal(receipt.scope, 'public-D Codex 0.169.0 candidate Darwin ARM64');
-          assert.equal(receipt.artifacts.provider.sha256, '73dbbfba5e8fed6719ccdeaae499a47284b72ac831c33a2c7206fbf2799f77b8');
+          assert.equal(receipt.artifacts.provider.sha256, 'ae1a7f4063d893e0d76f509971d3940ee0a37902fbdf752a737d9c88390d6d8d');
           assert.equal(receipt.artifacts.node.version, 'v24.21.0');
           assert.equal(receipt.artifacts.inputs.archive.sha256, 'd67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d');
           assert.equal(receipt.catalog.originalChildExited, true);

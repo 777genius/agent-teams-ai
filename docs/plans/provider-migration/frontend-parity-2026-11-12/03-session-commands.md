@@ -1855,3 +1855,31 @@ and must not invent a zero cost or reported token totals. Codex/Claude reported
 usage remains independently checked through each actual adapter. This is an
 explicit original capability boundary, not permission to disable a working
 usage source in another provider.
+
+
+---
+
+## Incoming base history preserved at 0543d437
+
+The following append-only entries are retained verbatim from base
+`0543d437695318f0157e6d600d76abdce5c51e8e`. Their original section numbers
+refer to that branch history; they do not renumber or replace the completion
+branch entries above. Current integration is governed by plan 12.
+
+## R23 — expand the exact native /cost card from its actual UI state
+
+### Review 1 — actual failure and the existing renderer contract
+
+Parent e29dbde300ea73ec4e46e5f57f9e007ca5473552, run43497088359/job132132912296, reaches the first native /cost reply and fails at desktop-native-commands-ui-proof.ts283 in revealDesktopReply: “Reply viewport visibility unconfirmed; no business mutation replay”. The original input, output row and native no-model-request assertions precede this failure. The log alone does not identify the complete final rendered geometry.
+
+The source at desktop-native-commands-ui-proof.ts66cbf3e18719f2e7a638da4252a6619509e43b08:276–282 decides whether to expand from normalized innerText presence. ActivityItem.tsx764c3dfc6e32ea6f9063797634922f92e3847b7e keeps the full text in a collapsed CompactMarkdownPreview with line-clamp-2 and advertises its real state through data-expanded. Thus full text presence cannot establish that expansion is unnecessary. The existing Codex report proof b690c535a7482beb75abd090ca90bfc76ba7f95d already uses this actual state; P10§28 documents the same renderer contract.
+
+### Review 2 — one existing proof, one original control
+
+Only change scripts/legacy-agent-host/desktop-native-commands-ui-proof.ts. Keep the exact native commandId/data-timeline-row-key selector from R22, full normalized reply text, original input/output/event equality and no-model-request checks. Passively require that exact row and reply text, then find exactly one activity card inside it containing the exact report. Require its data-expanded value to be true or false. Ambiguous or missing identity/state still fails.
+
+When that exact card is collapsed, use the existing clickExpression and its original geometry/hit/ownership checks to click its original role=button header once. Keep the target constrained to the same card and false state before the click; then the existing passive read confirms true. An already expanded card gets no click. Keep the existing revealDesktopReply with messageId afterward: full text geometry and clipping are still mandatory. Do not replace geometry with text presence, change CSS/DOM/React state, retry Send or native command execution, add a new UI control, or change any deadline/attempt/request budget.
+
+### Review 3 — existing gate
+
+Root publishes this plan before source. Peer review checks the scoped selector, actual-state decision, single original click and unchanged native proof. No additional unit suite or product renderer change is needed; the existing compact ActivityItem test already checks its original toggle contract. Existing script types and the same original Create/native-commands Desktop journey must pass on the coherent new head. This is a source-supported proof correction; only actual E2E can establish that it resolves the observed visibility failure.

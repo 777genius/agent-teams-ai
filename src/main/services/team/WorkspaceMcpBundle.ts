@@ -103,7 +103,7 @@ async function buildCurrentBundle(
       await fs.realpath(path.join(server, 'node_modules', 'tsup', 'dist', 'cli-default.js')),
       '--out-dir',
       outputDirectory,
-    ]);
+    ], 'generic');
     await execCli(launch.command, launch.args, {
       cwd: server,
       timeout: BUILD_TIMEOUT_MS,

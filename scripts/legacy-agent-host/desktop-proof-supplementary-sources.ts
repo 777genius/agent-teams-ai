@@ -17,6 +17,11 @@ export const desktopProofProcessSources = [
   'scripts/legacy-agent-host/fixtures/process-foreground-service.ts',
   'scripts/legacy-agent-host/fixtures/process-notification-wrapper.json',
   'scripts/legacy-agent-host/fixtures/process-bootstrap.ts',
+  'src/main/utils/linuxChildLaunchSelection.ts',
+  'src/main/utils/linuxChildLaunch.ts',
+  'src/main/services/team/AgentTeamsMcpHttpServer.ts',
+  'packages/legacy-agent-host/native/linux-child-exec.c',
+  'packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts',
 ];
 
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
@@ -93,6 +98,10 @@ export const desktopProofSupplementarySources = [
   // Captured Claude authentication production closure.
   'packages/legacy-agent-host/src/management/OAuthOperationOwner.ts',
   'packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts',
+  'packages/legacy-agent-host/src/composition/ProviderModelProbePreparation.ts',
+  'packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationEndpoint.ts',
+  'packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts',
+  'packages/legacy-agent-host/src/adapters/providers/OpenCodeLocalModelReadiness.ts',
   'packages/legacy-agent-host/src/composition/TeamHost.ts',
   'src/features/agent-backend/main/infrastructure/CapturedProviderManagement.ts',
   'src/features/runtime-provider-management/contracts/types.ts',

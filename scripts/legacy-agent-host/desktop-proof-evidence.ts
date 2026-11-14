@@ -1,6 +1,8 @@
 import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
 import { readDesktopNativeProviderArtifact } from './desktop-native-stop-fixture.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
+import { verifyDesktopNativeFreeze } from './desktop-source-freeze.ts';
+import { verifyLinuxChildExecInput } from '../../src/main/utils/linuxChildLaunchSelection.ts';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
@@ -11,6 +13,24 @@ import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fix
 import type { startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import type { startOpenCodeV2ReviewModel } from './desktop-opencode-v2-review-model.ts';
 import type { startDesktopCapturedMcpModel } from './desktop-opencode-v2-mcp-fixture.ts';
+
+/** Preserve both original input checks after app cleanup and before writing its receipt. */
+export async function verifyDesktopProofInputsAfterCleanup(
+  before: Parameters<typeof verifyDesktopNativeFreeze>[0],
+  fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>,
+  evidence: Record<string, unknown>
+): Promise<void> {
+  await verifyDesktopNativeFreeze(before, evidence);
+  if (fixture.linuxChildExec) {
+    try {
+      assert.deepEqual(verifyLinuxChildExecInput(fixture.linuxChildExec), fixture.linuxChildExec);
+      evidence.linuxChildExecInputVerifiedAfterCleanup = true;
+    } catch {
+      evidence.linuxChildExecInputVerifiedAfterCleanup = false;
+      evidence.status = 'INCOMPLETE';
+    }
+  }
+}
 
 /** Preserve exact source and scope facts in the existing evidence owner. */
 export function captureDesktopProofScope(evidence: Record<string, unknown>, options: {

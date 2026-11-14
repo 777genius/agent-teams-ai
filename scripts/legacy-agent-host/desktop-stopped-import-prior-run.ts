@@ -12,6 +12,7 @@ import {
   CURRENT_LEGACY_SOURCE_PROMPT,
   CURRENT_LEGACY_SOURCE_REPLY,
   captureCurrentStoppedSourceInputs,
+  projectCurrentStoppedProducerFailure,
   readStoppedImportSourceDiagnostics,
   stoppedImportSourceBytes,
 } from './desktop-stopped-import-fixture.ts';
@@ -200,7 +201,8 @@ export async function produceDesktopCurrentStoppedTeam(options: {
     };
     const ui = createDesktopUiControls(renderer, {
       assertOwnedRenderer: assertOriginal,
-      step: (value) => steps.push(value),
+      step: (value) => steps.push({ ...value, producerPhase: phase,
+        catalogRequests: model.currentLegacyCatalogRequests }),
     });
     phase = 'create-form';
     await openOriginalCreateForm(renderer, ui, join(fixture.root, 'workspace'), LEGACY_IMPORT_TEAM);
@@ -510,14 +512,10 @@ export async function produceDesktopCurrentStoppedTeam(options: {
     proof.status = 'PASS';
   } catch (error) {
     try {
-      const captured = native.captured(), exceeded = model.failures[0] === 'bounded original legacy catalog reads';
-      const count = (value: unknown, cap: number) => Array.isArray(value) && value.length <= cap ? value.length : null;
-      failureObservation = {
+      failureObservation = projectCurrentStoppedProducerFailure({
         phase, source: projectDesktopHarnessFailure(error, options.repo, desktopProofSources),
-        catalogLimitExceeded: exceeded ? true : null, catalogReadsAtLeast: exceeded ? 9 : null,
-        nativeBusinessCount: count(model.currentLegacyTurns, 1), modelProbeCount: count(model.currentLegacyProbes, 8),
-        capturedNativeCount: count(captured, 32), capturedNativeOverflow: captured.length > 32,
-      };
+        model, captured: native.captured(), steps,
+      });
     } catch { failureObservation = { phase, source: { kind: 'unclassified', frames: [] } }; }
     proof.failure = error instanceof Error ? error.message.slice(0, 4000) : 'current source failed';
     throw error;

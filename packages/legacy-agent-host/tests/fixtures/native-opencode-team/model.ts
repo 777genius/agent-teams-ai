@@ -20,6 +20,12 @@ import { nativeToolReceipt, record } from '../native-claude-team/model.ts';
 import { isOpenCodeModelProbe } from './model-probe.ts';
 
 export const CONTEXT_MARKER = 'TEST_OPENCODE_CAPTURED_MEMBER_CONTEXT_V1';
+export const COORDINATION_TOOLS = ['coordination_task_briefing', 'coordination_message_send'] as const;
+export const COORDINATION_PROMPT =
+  'Native local coordination check. Call coordination_task_briefing with {} once. ' +
+  'Read its nonce and destination from the actual result. Then call coordination_message_send ' +
+  'with exactly that nonce and destination once. After its accepted result reply OK. ' +
+  'Do not use any other tool, file, command or agent.';
 export const REQUIRED_TOOLS = [
   'task_create',
   'task_set_owner',
@@ -51,6 +57,8 @@ export type SettingsModelProbe = {
 export async function startOpenCodeModel(
   options: {
     nativeGeneration?: 'v2';
+    coordinationProof?: true;
+    localReadinessProof?: true;
     sharedSessionProbe?: boolean;
     nativeMessageImage?: boolean;
     mixedGroups?: boolean;
@@ -84,6 +92,33 @@ export async function startOpenCodeModel(
       /\/TEST-native-opencode-capture-[^/]+\/workspace$/
     );
 
+  if (options.localReadinessProof) assert.equal(options.coordinationProof, true);
+  if (options.coordinationProof)
+    assert.ok(!options.sharedSessionProbe && !options.mixedGroups && !options.peerMessaging &&
+      !options.captureFileUpdate && !options.allowModelProbes && !options.settingsProbe &&
+      !options.mixedTaskNotifications, 'one explicitly selected native coordination scenario');
+  const coordinationObservations: { step: number; nativeToolRefs: string[];
+    requestedModel?: string; requestedEffort?: string; requestedOutputTokens?: number }[] = [];
+  const ordinaryReadinessObservations: { requestedModel?: string; requestedEffort?: string; requestedOutputTokens?: number }[] = [];
+  let inventoryReads = 0;
+  const localReadiness = { ordinary: ordinaryReadinessObservations, get inventoryReads() { return inventoryReads; } };
+  let coordinationArmed = false, coordinationFinished = false, coordinationNonce: string | undefined;
+  const coordination = {
+    observations: coordinationObservations,
+    arm() {
+      assert.equal(options.coordinationProof, true);
+      assert.ok(!coordinationArmed && !coordinationFinished && observations.length === 0 && probes.length === 0);
+      coordinationArmed = true;
+    },
+    finish() {
+      assert.ok(coordinationArmed && !coordinationFinished);
+      assert.equal(coordinationObservations.length, 3); assert.equal(failures.length, 0);
+      if (options.localReadinessProof) {
+        assert.equal(ordinaryReadinessObservations.length, 1); assert.equal(inventoryReads, 1);
+      }
+      coordinationArmed = false; coordinationFinished = true;
+    },
+  };
   const probes: {
     requestedModel?: string;
     requestedEffort?: string;
@@ -116,11 +151,26 @@ export async function startOpenCodeModel(
   const server = createServer((request, response) => {
     void (async () => {
       assert.equal(failures.length, 0, 'oracle seals after its first protocol failure');
+      if (options.localReadinessProof && request.method === 'GET') {
+        assert.equal(request.url, '/v1/models');
+        assert.ok(coordinationArmed && !coordinationFinished);
+        assert.equal(ordinaryReadinessObservations.length, 1);
+        assert.equal(coordinationObservations.length, 0); assert.equal(inventoryReads, 0);
+        assert.equal(request.headers.authorization, undefined);
+        for await (const chunk of request) assert.equal(Buffer.byteLength(chunk), 0, 'bodyless original metadata read');
+        inventoryReads++;
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end(JSON.stringify({ data: [...new Set(['TEST-model', options.selectedModel?.id ?? 'TEST-model'])]
+          .map(id => ({ id })) }));
+        return;
+      }
       assert.equal(request.method, 'POST');
+      if (options.localReadinessProof) assert.equal(request.headers.authorization, undefined,
+        'the original authless source remains authless through business continuation');
       assert.match(request.url ?? '', /\/v1\/chat\/completions$/);
       if (!options.mixedTaskNotifications)
         assert.ok(
-          observations.length < (options.peerMessaging ? 48 : 16),
+          observations.length + coordinationObservations.length + ordinaryReadinessObservations.length < (options.peerMessaging ? 48 : 16),
           'finite model request budget'
         );
       let bytes = 0;
@@ -146,10 +196,94 @@ export async function startOpenCodeModel(
           'actual native request retains its original private model body');
         assert.equal(request.headers['x-test-config-scope'], options.selectedConfiguration.scope,
           'actual native request retains its original private model headers');
-        assert.equal(request.headers.authorization, 'Bearer TEST-LOCALHOST-ONLY');
+        assert.equal(request.headers.authorization, options.localReadinessProof ? undefined : 'Bearer TEST-LOCALHOST-ONLY');
       }
       const messages = (Array.isArray(body.messages) ? body.messages : []).map(record);
       const user = messages.filter((item) => item.role === 'user');
+      if (options.localReadinessProof && coordinationArmed && ordinaryReadinessObservations.length === 0) {
+        assert.equal(inventoryReads, 0); assert.equal(coordinationObservations.length, 0);
+        assert.equal(isOpenCodeModelProbe(body, options.nativeGeneration ?? 'v1'), true,
+          'the first native input is the original ordinary no-tool probe');
+        ordinaryReadinessObservations.push({
+          ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+          ...(typeof body.reasoning_effort === 'string' ? { requestedEffort: body.reasoning_effort } : {}),
+          ...(typeof body.max_tokens === 'number' ? { requestedOutputTokens: body.max_tokens } : {}),
+        });
+        const event = (delta: Record<string, unknown>, finish: string | null) => ({
+          id: 'TEST-native-readiness-ordinary', object: 'chat.completion.chunk', created: 1700000000,
+          model: typeof body.model === 'string' ? body.model : 'TEST-model',
+          choices: [{ index: 0, delta, finish_reason: finish }],
+        });
+        response.writeHead(200, { 'content-type': 'text/event-stream' });
+        response.write('data: ' + JSON.stringify(event({ role: 'assistant', content: 'OK' }, null)) + '\n\n');
+        response.write('data: ' + JSON.stringify(event({}, 'stop')) + '\n\n');
+        response.end('data: [DONE]\n\n');
+        return;
+      }
+      if (coordinationArmed) {
+        if (options.localReadinessProof) {
+          assert.equal(ordinaryReadinessObservations.length, 1); assert.equal(inventoryReads, 1);
+        }
+        const step = coordinationObservations.length;
+        assert.ok(step < 3, 'one original two-tool challenge and terminal');
+        assert.equal(user.length, 1); assert.equal(mixedNativeText(user[0]!.content), COORDINATION_PROMPT);
+        const offered = (Array.isArray(body.tools) ? body.tools : []).map(record)
+          .map(tool => String(record(tool.function).name));
+        assert.deepEqual([...offered].sort(), [...COORDINATION_TOOLS].sort(),
+          'only the two inert native tools may be offered');
+        const calls = messages.filter(message => message.role === 'assistant').flatMap(message =>
+          Array.isArray(message.tool_calls) ? message.tool_calls.map(record) : []);
+        const results = messages.filter(message => message.role === 'tool');
+        assert.equal(calls.length, step); assert.equal(results.length, step);
+        for (let index = 0; index < step; index++) {
+          const id = 'TEST_COORDINATION_' + index;
+          assert.equal(calls[index]!.id, id); assert.equal(results[index]!.tool_call_id, id);
+          const call = record(calls[index]!.function);
+          assert.equal(call.name, COORDINATION_TOOLS[index]); assert.equal(typeof call.arguments, 'string');
+          const args = record(JSON.parse(call.arguments as string) as unknown);
+          if (index === 0) assert.deepEqual(args, {});
+          else assert.ok(Object.keys(args).sort().join(',') === 'destination,nonce' &&
+            args.destination === 'native-local-coordination-v1' && args.nonce === coordinationNonce,
+            'second actual native tool consumes the original nonce');
+          let content = results[index]!.content;
+          if (Array.isArray(content)) {
+            assert.equal(content.length, 1);
+            const block = record(content[0]); assert.equal(block.type, 'text'); content = block.text;
+          }
+          assert.equal(typeof content, 'string');
+          const result = record(JSON.parse(content as string) as unknown);
+          if (index === 0) {
+            assert.equal(Object.keys(result).sort().join(','), 'destination,nonce');
+            assert.equal(result.destination, 'native-local-coordination-v1');
+            assert.ok(typeof result.nonce === 'string' && /^[a-f0-9]{64}$/.test(result.nonce),
+              'first native tool supplies a bounded actual challenge nonce');
+            if (coordinationNonce !== undefined) assert.ok(coordinationNonce === result.nonce, 'original nonce unchanged');
+            else coordinationNonce = result.nonce;
+          } else assert.ok(Object.keys(result).sort().join(',') === 'accepted,nonce' &&
+            result.accepted === true && result.nonce === coordinationNonce, 'actual second tool accepted the original nonce');
+        }
+        coordinationObservations.push({ step, nativeToolRefs: calls.map(call => String(call.id)),
+          ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+          ...(typeof body.reasoning_effort === 'string' ? { requestedEffort: body.reasoning_effort } : {}),
+          ...(typeof body.max_tokens === 'number' ? { requestedOutputTokens: body.max_tokens } : {}) });
+        const delta = step === 2 ? { role: 'assistant', content: 'OK' } : {
+          role: 'assistant', tool_calls: [{ index: 0, id: 'TEST_COORDINATION_' + step, type: 'function',
+            function: { name: COORDINATION_TOOLS[step], arguments: JSON.stringify(step === 0 ? {} :
+              { nonce: coordinationNonce, destination: 'native-local-coordination-v1' }) } }],
+        };
+        const event = (value: unknown, finish: string | null) => ({
+          id: 'TEST-coordination-response-' + step, object: 'chat.completion.chunk', created: 1700000000,
+          model: typeof body.model === 'string' ? body.model : 'TEST-model',
+          choices: [{ index: 0, delta: value, finish_reason: finish }],
+        });
+        response.writeHead(200, { 'content-type': 'text/event-stream' });
+        response.write('data: ' + JSON.stringify(event(delta, null)) + '\n\n');
+        response.write('data: ' + JSON.stringify(event({}, step === 2 ? 'stop' : 'tool_calls')) + '\n\n');
+        response.end('data: [DONE]\n\n');
+        return;
+      }
+      if (options.coordinationProof) assert.equal(coordinationFinished, true,
+        'no business input before the original challenge is completed and released');
       if (
         options.allowModelProbes &&
         isOpenCodeModelProbe(body, options.nativeGeneration ?? 'v1')
@@ -548,6 +682,8 @@ export async function startOpenCodeModel(
     observations,
     ...(options.mixedTaskNotifications ? { notificationObservations } : {}),
     probes,
+    ...(options.coordinationProof ? { coordination } : {}),
+    ...(options.localReadinessProof ? { localReadiness } : {}),
     failures,
     ...(options.holdInitialTurnResponse ? { heldInitialRequests } : {}),
     close: () =>

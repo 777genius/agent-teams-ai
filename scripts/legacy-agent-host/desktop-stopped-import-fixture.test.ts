@@ -168,12 +168,29 @@ test('import UI model proof permits finite exact preflight receipts while refusi
     ok: true,
     resourceHeld: false,
   };
-  const omittedModel = { ...model, probes: [{ requestedModel: selected.model }] };
+  const omittedModel = {
+    ...model, probes: [{ requestedModel: selected.model, requestedEffort: 'high' }],
+  };
   assert.doesNotThrow(() =>
     assertStoppedImportModelChecks([omittedReceipt], omittedModel, omittedSelection)
   );
   assert.throws(() => assertStoppedImportModelChecks([receipt], omittedModel, omittedSelection));
   assert.throws(() => assertStoppedImportModelChecks([omittedReceipt], model, omittedSelection));
+  assert.throws(() =>
+    assertStoppedImportModelChecks([{ ...omittedReceipt, effort: 'high' }], omittedModel, omittedSelection)
+  );
+  assert.throws(() =>
+    assertStoppedImportModelChecks(
+      [omittedReceipt], { ...model, probes: [{ requestedModel: selected.model }] }, omittedSelection
+    )
+  );
+  assert.throws(() =>
+    assertStoppedImportModelChecks(
+      [{ ...omittedReceipt, modelId: 'claude-opus-4-6' }],
+      { ...model, probes: [{ requestedModel: 'claude-opus-4-6', requestedEffort: 'high' }] },
+      { model: 'claude-opus-4-6' }
+    )
+  );
   assert.doesNotThrow(() =>
     assertStoppedImportModelChecks(
       [receipt, { ...receipt, commandId: 'TEST-probe-2' }],

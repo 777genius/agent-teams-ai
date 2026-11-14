@@ -4,6 +4,7 @@ import * as path from 'node:path';
 
 import { resolveWorkspaceMcpBundle } from '@main/services/team/WorkspaceMcpBundle';
 import { execCli } from '@main/utils/childProcess';
+import * as nodeLaunch from '@main/utils/electronNodeLaunch';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createMcpDeploymentManifest } from '../../../../mcp-server/deploymentManifest';
@@ -59,12 +60,19 @@ describe('workspace MCP bundle freshness', () => {
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await fs.rm(root, { recursive: true, force: true });
   });
 
   it('builds before trusting preexisting dist and reuses only unchanged verified output', async () => {
     await write('mcp-server/dist/index.js', '// stale compiled code');
+    const route = vi.spyOn(nodeLaunch, 'resolveElectronNodeLaunch');
     const entry = await resolveWorkspaceMcpBundle(root, '/selected/node', outputRoot());
+
+    expect(route).toHaveBeenCalledExactlyOnceWith('/selected/node', [
+      path.join(root, 'mcp-server/node_modules/tsup/dist/cli-default.js'),
+      '--out-dir', path.dirname(entry),
+    ], 'generic');
 
     expect(await fs.readFile(entry, 'utf8')).toBe('// bundle 1');
     expect(entry.startsWith(path.join(outputRoot(), 'dev') + path.sep)).toBe(true);

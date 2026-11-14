@@ -7,6 +7,7 @@ import { fileDigest } from './desktop-backend-fixture.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import {
   readDesktopStoppedImportSeed,
+  expectedStoppedImportNativeEffort,
   readStoppedImportSourceDiagnostics,
   stoppedImportSourceBytes,
 } from './desktop-stopped-import-fixture.ts';
@@ -57,7 +58,7 @@ export function assertStoppedImportModelChecks(
   );
   for (const probe of model.probes) {
     assert.equal(probe.requestedModel, selected.model);
-    assert.equal(probe.requestedEffort, selected.effort);
+    assert.equal(probe.requestedEffort, expectedStoppedImportNativeEffort(selected));
   }
   assert.deepEqual(model.unexpectedNoToolsRequests, []);
   assert.deepEqual(model.observations, [], 'zero Team agent prompts or tool inputs');

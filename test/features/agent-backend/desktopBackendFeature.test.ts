@@ -21,6 +21,7 @@ import {
   registerBackendConnectionsHttp,
   registerBackendConnectionsIpc,
 } from '../../../src/features/agent-backend/main';
+import { addLogSink } from '../../../src/shared/utils/logger';
 
 import type {
   BackendConnectionSnapshot,
@@ -602,22 +603,73 @@ it('rechecks captured context after lazy host startup before dispatching a finit
     bindingDirectory: setup.bindingDirectory,
   });
   await desktop.initialize();
-  let current = true;
-  const pending = desktop.facade.invoke(request('opaque-A', 'stale-during-start'), {
-    isCurrent: () => current,
+  const originalDiagnostics = process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS;
+  const observations: { phase: string; kind: string; elapsedMs: number }[] = [];
+  const phases = ['profile-validation-start', 'profile-validation-complete', 'child-captured',
+    'ready', 'request-timeout', 'request-admitted', 'response-accepted',
+    'owner-start', 'owner-started', 'read-start', 'read-complete'];
+  const kinds = ['handshake', 'rpc', 'registry-list', 'retirement-read'];
+  let dropped = 0;
+  let pendingObservation: {
+    state: 'pending' | 'resolved-success' | 'resolved-failure' | 'resolved-unprojected' | 'rejected';
+    code?: string; outcome?: string;
+  } = { state: 'pending' };
+  const removeSink = addLogSink(entry => {
+    if (entry.level !== 'diagnostic' || entry.namespace !== 'TEST:HostStartup' ||
+        entry.args[0] !== 'Host startup observation') return;
+    const value = entry.args[1];
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+    const row = value as Record<string, unknown>;
+    if (typeof row.phase !== 'string' || !phases.includes(row.phase) ||
+        typeof row.kind !== 'string' || !kinds.includes(row.kind) ||
+        typeof row.elapsedMs !== 'number' || !Number.isSafeInteger(row.elapsedMs) ||
+        row.elapsedMs < 0) return;
+    if (observations.length < 16)
+      observations.push({ phase: row.phase, kind: row.kind, elapsedMs: row.elapsedMs });
+    else dropped++;
   });
-  await vi.waitFor(async () => {
-    await access(join(setup.descriptor.owners[0].storageRoot, 'started'));
-  });
-  current = false;
-  await writeFile(join(setup.descriptor.owners[0].storageRoot, 'release-startup'), 'release');
-  expect(await pending).toEqual({ ok: false, code: 'forbidden', outcome: 'not-dispatched' });
-  expect(
-    await readFile(join(setup.descriptor.owners[0].storageRoot, 'host-created'), 'utf8')
-  ).toBe('TEST-desktop-v1');
-  await expect(
-    access(join(setup.descriptor.owners[0].storageRoot, 'effects'))
-  ).rejects.toMatchObject({ code: 'ENOENT' });
+  try {
+    process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS = '1';
+    let current = true;
+    const pending = desktop.facade.invoke(request('opaque-A', 'stale-during-start'), {
+      isCurrent: () => current,
+    });
+    void pending.then(result => {
+      try {
+        pendingObservation = result.ok ? { state: 'resolved-success' } : {
+          state: 'resolved-failure',
+          code: ['invalid', 'conflict', 'forbidden', 'hold', 'busy', 'unavailable', 'shutting-down']
+            .includes(result.code) ? result.code : 'unrecognized',
+          outcome: ['not-dispatched', 'rejected', 'unknown'].includes(result.outcome)
+            ? result.outcome : 'unrecognized',
+        };
+      } catch {
+        pendingObservation = { state: 'resolved-unprojected' };
+      }
+    }, () => { pendingObservation = { state: 'rejected' }; });
+    await vi.waitFor(async () => {
+      await access(join(setup.descriptor.owners[0].storageRoot, 'started'));
+    });
+    current = false;
+    await writeFile(join(setup.descriptor.owners[0].storageRoot, 'release-startup'), 'release');
+    expect(await pending).toEqual({ ok: false, code: 'forbidden', outcome: 'not-dispatched' });
+    expect(
+      await readFile(join(setup.descriptor.owners[0].storageRoot, 'host-created'), 'utf8')
+    ).toBe('TEST-desktop-v1');
+    await expect(
+      access(join(setup.descriptor.owners[0].storageRoot, 'effects'))
+    ).rejects.toMatchObject({ code: 'ENOENT' });
+  } finally {
+    removeSink();
+    if (originalDiagnostics === undefined) delete process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS;
+    else process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS = originalDiagnostics;
+    try {
+      process.stdout.write(JSON.stringify({ kind: 'TEST_LAZY_HOST_STARTUP_OBSERVATION',
+        point: 'case-finally', observations, dropped, pending: pendingObservation }) + '\n');
+    } catch {
+      // A passive observation cannot replace the original test result.
+    }
+  }
 });
 
 it('native health starts only the granted default owner and reports actual handshake without provider or Team work', async () => {
