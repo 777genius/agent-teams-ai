@@ -24,6 +24,7 @@ import {
   isTeamDataWorkerFatalError,
 } from '@main/services/team/TeamDataWorkerClient';
 import {
+  checkOptionalExtraCliArgs,
   parseCreateTeamRequest,
   TeamRequestValidationError,
   validateBootstrapOnlyLaunchRequest,
@@ -129,11 +130,7 @@ import {
   parseTeamMemberRestartResult,
   type TeamMemberRestartResult,
 } from '@shared/types/teamMemberRestart';
-import {
-  extractFlagsFromHelp,
-  extractUserFlags,
-  PROTECTED_CLI_FLAGS,
-} from '@shared/utils/cliArgsParser';
+import { extractFlagsFromHelp, findInvalidUserFlags } from '@shared/utils/cliArgsParser';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
@@ -1956,14 +1953,8 @@ async function validateProvisioningRequest(
       };
     }
   }
-  if (payload.extraCliArgs !== undefined) {
-    if (typeof payload.extraCliArgs !== 'string') {
-      return { valid: false, error: 'extraCliArgs must be a string' };
-    }
-    if (payload.extraCliArgs.length > 1024) {
-      return { valid: false, error: 'extraCliArgs too long (max 1024)' };
-    }
-  }
+  const extraCliArgs = checkOptionalExtraCliArgs(payload.extraCliArgs);
+  if (!extraCliArgs.ok) return { valid: false, error: extraCliArgs.error };
 
   return {
     valid: true,
@@ -1989,10 +1980,7 @@ async function validateProvisioningRequest(
         typeof payload.worktree === 'string' && payload.worktree.trim()
           ? payload.worktree.trim()
           : undefined,
-      extraCliArgs:
-        typeof payload.extraCliArgs === 'string' && payload.extraCliArgs.trim()
-          ? payload.extraCliArgs.trim()
-          : undefined,
+      extraCliArgs: extraCliArgs.value,
     },
   };
 }
@@ -2142,6 +2130,8 @@ async function handleLaunchTeamUnlocked(
   if (payload.prompt !== undefined && typeof payload.prompt !== 'string') {
     return { success: false, error: 'prompt must be a string' };
   }
+  const extraCliArgs = checkOptionalExtraCliArgs(payload.extraCliArgs);
+  if (!extraCliArgs.ok) return { success: false, error: extraCliArgs.error };
   const bootstrapError = validateBootstrapOnlyLaunchRequest(payload);
   if (bootstrapError) return { success: false, error: bootstrapError };
 
@@ -2230,6 +2220,11 @@ async function handleLaunchTeamUnlocked(
       : providerChangedFromSaved
         ? undefined
         : savedRequest.model;
+    // A saved draft may predate the guard, so check the args that will really run.
+    const draftExtraCliArgs = checkOptionalExtraCliArgs(
+      typeof payload.extraCliArgs === 'string' ? payload.extraCliArgs : savedRequest.extraCliArgs
+    );
+    if (!draftExtraCliArgs.ok) return { success: false, error: draftExtraCliArgs.error };
     const draftLimitContext =
       booleanOptions.limitContext ??
       (providerChangedFromSaved ? undefined : savedRequest.limitContext);
@@ -2261,10 +2256,7 @@ async function handleLaunchTeamUnlocked(
         typeof payload.worktree === 'string'
           ? payload.worktree.trim() || undefined
           : savedRequest.worktree,
-      extraCliArgs:
-        typeof payload.extraCliArgs === 'string'
-          ? payload.extraCliArgs.trim() || undefined
-          : savedRequest.extraCliArgs,
+      extraCliArgs: draftExtraCliArgs.value,
       members: savedRequest.members,
     };
 
@@ -2384,10 +2376,7 @@ async function handleLaunchTeamUnlocked(
           allowExperimentalLocalModels: booleanOptions.allowExperimentalLocalModels,
           worktree:
             typeof payload.worktree === 'string' ? payload.worktree.trim() || undefined : undefined,
-          extraCliArgs:
-            typeof payload.extraCliArgs === 'string'
-              ? payload.extraCliArgs.trim() || undefined
-              : undefined,
+          extraCliArgs: extraCliArgs.value,
         },
         (progress) => {
           launchIoGovernor?.noteProvisioningProgress(progress);
@@ -2415,17 +2404,7 @@ async function handleValidateCliArgs(
   }
   return wrapTeamHandler('validateCliArgs', async () => {
     const helpOutput = await getTeamProvisioningPreflightApi().getCliHelpOutput();
-    const knownFlags = extractFlagsFromHelp(helpOutput);
-    const userFlags = extractUserFlags(rawArgs);
-
-    const invalidFlags = userFlags.filter((f) => !knownFlags.has(f));
-    const protectedFlags = userFlags.filter((f) => PROTECTED_CLI_FLAGS.has(f));
-    const allBad = [...new Set([...invalidFlags, ...protectedFlags])];
-
-    return {
-      valid: allBad.length === 0,
-      invalidFlags: allBad.length > 0 ? allBad : undefined,
-    };
+    return findInvalidUserFlags(rawArgs, extractFlagsFromHelp(helpOutput));
   });
 }
 

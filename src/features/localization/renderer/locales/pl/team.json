@@ -2569,6 +2569,7 @@
       "allFlagsValid": "Wszystkie flagi prawidłowe",
       "unknownFlags": "Nieznane: {{flags}}",
       "protectedFlags": "Chronione: {{flags}}",
+      "missingValue": "Brak wartości: {{flags}}",
       "failed": "Walidacja nie powiodła się"
     },
     "placeholders": {

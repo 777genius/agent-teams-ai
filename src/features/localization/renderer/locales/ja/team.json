@@ -2569,6 +2569,7 @@
       "allFlagsValid": "すべてのフラグが有効",
       "unknownFlags": "不明: {{flags}}",
       "protectedFlags": "保護: {{flags}}",
+      "missingValue": "値がありません: {{flags}}",
       "failed": "検証失敗"
     },
     "placeholders": {

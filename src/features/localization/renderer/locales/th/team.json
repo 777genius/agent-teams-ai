@@ -2569,6 +2569,7 @@
       "allFlagsValid": "แฟล็กทั้งหมดถูกต้อง",
       "unknownFlags": "ไม่ทราบ: {{flags}}",
       "protectedFlags": "ที่ป้องกัน: {{flags}}",
+      "missingValue": "ไม่มีค่า: {{flags}}",
       "failed": "การตรวจสอบล้มเหลว"
     },
     "placeholders": {

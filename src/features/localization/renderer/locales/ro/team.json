@@ -2569,6 +2569,7 @@
       "allFlagsValid": "Toate flag-urile valide",
       "unknownFlags": "Necunoscute: {{flags}}",
       "protectedFlags": "Protejate: {{flags}}",
+      "missingValue": "Valoare lipsă: {{flags}}",
       "failed": "Validarea a eșuat"
     },
     "placeholders": {

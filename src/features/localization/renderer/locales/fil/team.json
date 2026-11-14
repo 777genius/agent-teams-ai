@@ -2569,6 +2569,7 @@
       "allFlagsValid": "Valid ang lahat ng flag",
       "unknownFlags": "Hindi alam: {{flags}}",
       "protectedFlags": "Protektado: {{flags}}",
+      "missingValue": "Kulang ang value: {{flags}}",
       "failed": "Nabigo ang validation"
     },
     "placeholders": {

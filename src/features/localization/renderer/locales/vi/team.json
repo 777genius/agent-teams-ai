@@ -2569,6 +2569,7 @@
       "allFlagsValid": "Tất cả cờ đều hợp lệ",
       "unknownFlags": "Không xác định: {{flags}}",
       "protectedFlags": "Được bảo vệ: {{flags}}",
+      "missingValue": "Thiếu giá trị: {{flags}}",
       "failed": "Xác thực thất bại"
     },
     "placeholders": {

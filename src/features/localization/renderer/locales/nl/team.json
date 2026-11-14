@@ -2569,6 +2569,7 @@
       "allFlagsValid": "Alle flags geldig",
       "unknownFlags": "Onbekend: {{flags}}",
       "protectedFlags": "Beschermd: {{flags}}",
+      "missingValue": "Waarde ontbreekt: {{flags}}",
       "failed": "Validatie mislukt"
     },
     "placeholders": {
