@@ -24,9 +24,7 @@ const record = (value: unknown): Record<string, unknown> =>
     : unavailable();
 
 /** Composition-only opt-in read from the very file/hash passed to the original Host. */
-export function captureMainWindowsCustody(
-  profile: SelectedHostProfile
-): RetainedWindowsCustody | undefined {
+export function readMainWindowsCustodySource(profile: SelectedHostProfile) {
   if (process.platform !== 'win32') return;
   const path = profile.env.LEGACY_AGENT_HOST_PROFILE_PATH;
   const sha256 = profile.env.LEGACY_AGENT_HOST_PROFILE_SHA256;
@@ -53,6 +51,16 @@ export function captureMainWindowsCustody(
     }
   }
   if (!selected.length) unavailable();
+  return { path, sha256, selected };
+}
+
+/** Original Main creates this physical owner once; recovery only re-reads its source. */
+export function captureMainWindowsCustody(
+  profile: SelectedHostProfile
+): RetainedWindowsCustody | undefined {
+  const source = readMainWindowsCustodySource(profile);
+  if (!source) return;
+  const { path, sha256, selected } = source;
   const brokers = new Map(
     selected.map((value) => {
       const broker = value.windowsBroker!;

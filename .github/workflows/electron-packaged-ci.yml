@@ -162,6 +162,26 @@ jobs:
         run: |
           node node_modules/@typescript/native/bin/tsc -p tsconfig.legacy-agent-host-scripts.json
           node --test scripts/legacy-agent-host/candidate-closure.test.ts scripts/legacy-agent-host/packaged-opencode-v2-inputs.test.ts scripts/legacy-agent-host/stage-node.test.ts
+      - name: Verify and stage original Windows scoped broker for packaged Retry
+        if: matrix.os == 'win32'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json
+          if ($LASTEXITCODE -ne 0) { throw 'Original broker compiler failed' }
+          node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json
+          if ($LASTEXITCODE -ne 0) { throw 'Original retained Host compiler failed' }
+          node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts
+          if ($LASTEXITCODE -ne 0) { throw 'Original broker protocol cases failed' }
+          node --check tools/owned-process-broker/nativeWindowsAppGate.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged Windows driver syntax failed' }
+          $build = Join-Path $env:RUNNER_TEMP ("TEST-Windows-UI-build-" + $env:GITHUB_RUN_ID + "-" + $env:RUNNER_ARCH)
+          $stage = Join-Path $PWD 'resources\legacy-agent-host\windows-retry-custody'
+          if (Test-Path $stage) { throw 'Windows Retry broker destination must be absent' }
+          $cmake = (Get-Command cmake.exe -ErrorAction Stop).Source
+          pnpm exec tsx scripts/build/buildOwnedProcessBroker.ts ${{ matrix.arch }} $build $stage $cmake service-scopes-v1
+          if ($LASTEXITCODE -ne 0) { throw 'Original scoped broker stage failed' }
+          "WINDOWS_RETRY_BUILD=$build" >> $env:GITHUB_ENV
       - name: Package unsigned test bundle
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -199,6 +219,43 @@ jobs:
         env:
           OPENCODE_V2_PACKAGED_RECEIPT: ${{ runner.temp }}/opencode-v2-packaged.json
         run: node "${{ github.workspace }}/scripts/legacy-agent-host/run-packaged-opencode-v2.ts" "${{ matrix.bundle }}" "${{ matrix.platform }}"
+      - name: Qualify packaged Windows same-Main Retry and original Processes UI Kill
+        if: matrix.os == 'win32'
+        shell: pwsh
+        env:
+          OWNED_PROCESS_VENDOR_TEST_GO: '1'
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $inputs = Join-Path $env:RUNNER_TEMP ("TEST-Windows-UI-vendor-" + $env:GITHUB_RUN_ID + "-" + $env:RUNNER_ARCH)
+          $bash = Join-Path $env:ProgramFiles 'Git\bin\bash.exe'
+          if (-not (Test-Path $bash -PathType Leaf)) { throw 'Explicit original Git Bash is absent' }
+          node --import tsx tools/owned-process-broker/nativeVendorInputs.ts $inputs $bash
+          if ($LASTEXITCODE -ne 0) { throw 'Exact original Claude input capture failed' }
+          $bundle = (Resolve-Path '${{ matrix.bundle }}').Path
+          $apps = @(Get-ChildItem -LiteralPath $bundle -File -Filter '*.exe' | Where-Object { $_.Name -notmatch 'uninstall' })
+          if ($apps.Count -ne 1) { throw 'Expected one original packaged application executable' }
+          $app = $apps[0].FullName
+          $broker = Join-Path $bundle 'resources\legacy-agent-host\windows-retry-custody\owned-process-broker.exe'
+          $query = Join-Path $env:WINDOWS_RETRY_BUILD 'Release\owned-process-fixture.exe'
+          $selection = Join-Path $inputs 'selection.json'
+          $sha256 = (Get-FileHash -Algorithm SHA256 $selection).Hash.ToLowerInvariant()
+          $receipt = Join-Path $env:RUNNER_TEMP 'windows-same-main-process-ui.json'
+          node --import tsx tools/owned-process-broker/nativeWindowsAppGate.mjs $app $broker $query $selection $sha256 $receipt
+          if ($LASTEXITCODE -ne 0) { throw 'Actual same-Main Windows UI qualification failed' }
+          node --input-type=module -e "import assert from 'node:assert/strict';import fs from 'node:fs';const r=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));assert.equal(r.kind,'TEST_WINDOWS_PACKAGED_SAME_MAIN_PROCESS_UI');assert.equal(r.status,'PASS');assert.equal(r.cleanup,true);assert.equal(r.sourceHead,process.env.EXPECTED_SOURCE_SHA);assert.equal(r.platform,'win32-'+process.arch);assert.deepEqual(r.counts,{mainStarts:1,initialRuntimeOpen:1,businessInput:1,refreshClicks:1,retryClicks:1,uiStops:2,quit:1});assert.equal(r.actualHostSuccessors,1);assert.equal(r.modelRequests,4);assert.equal(r.modelProbes,0);assert.deepEqual(r.modelFailures,[]);assert.equal(r.modelNotifications.length,2);assert.equal(r.nativeCleanup.originalQueryWitnesses,3);assert.equal(r.packagedAndNativeInputsUnchanged,true);assert.equal(r.sourceFreezeFailure,undefined);assert.equal(r.originalMain.pid,r.sameMainAfterRetry.pid);assert.equal(r.originalMain.birth,r.sameMainAfterRetry.birth);" $receipt
+          if ($LASTEXITCODE -ne 0) { throw 'Exact same-Main UI receipt refused' }
+      - name: Preserve packaged Windows original Retry evidence
+        if: always() && matrix.os == 'win32'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: windows-same-main-process-ui-${{ matrix.platform }}-${{ github.event.pull_request.head.sha }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/windows-same-main-process-ui.json
+            ${{ runner.temp }}/windows-same-main-process-ui.app.log
+            ${{ runner.temp }}/windows-same-main-process-ui.*.png
       - name: Preserve exact packaged Host evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

@@ -17,7 +17,7 @@ import { createServer } from 'node:http';
 import { nativePeerTurn, nativePeerActions } from '../native-peers.ts';
 
 import { nativeToolReceipt, record } from '../native-claude-team/model.ts';
-import { isOpenCodeModelProbe } from './model-probe.ts';
+import { createConfiguredOpenCodeLaunchPreparation, isOpenCodeModelProbe, replyOpenCodeModelProbe } from './model-probe.ts';
 import type { RetainedProcessScenario } from '../native-codex-team/model.ts';
 
 export const CONTEXT_MARKER = 'TEST_OPENCODE_CAPTURED_MEMBER_CONTEXT_V1';
@@ -70,6 +70,7 @@ export async function startOpenCodeModel(
     peerMessaging?: boolean;
     captureFileUpdate?: CaptureFileUpdateScenario;
     allowModelProbes?: boolean;
+    configuredLaunchPreparation?: true;
     settingsProbe?: () => SettingsModelProbe | 'idle' | undefined;
     selectedBusinessOutputTokens?: number;
     memberName?: 'alice' | 'carol';
@@ -161,6 +162,8 @@ export async function startOpenCodeModel(
   const heldInitialRequests: { turn: string; step: number; disconnected: boolean }[] = [];
   const counts = new Map<string, number>();
   let taskId: string | undefined;
+  const configuredLaunch = createConfiguredOpenCodeLaunchPreparation(options,
+    () => ({ probes: probes.length, business: observations.length }));
   const server = createServer((request, response) => {
     void (async () => {
       assert.equal(failures.length, 0, 'oracle seals after its first protocol failure');
@@ -195,6 +198,7 @@ export async function startOpenCodeModel(
         chunks.push(chunk);
       }
       const body = record(JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown);
+      const configuredProbe = configuredLaunch?.request(request, body);
       if (options.liveMembershipPhase || options.retainedProcess) {
         assert.equal(request.headers.authorization, 'Bearer TEST-LOCALHOST-ONLY');
         assert.equal(body.model, 'TEST-model');
@@ -303,7 +307,7 @@ export async function startOpenCodeModel(
       if (options.coordinationProof) assert.equal(coordinationFinished, true,
         'no business input before the original challenge is completed and released');
       if (
-        (options.allowModelProbes || processPhase === 'standalone-management-probe') &&
+        (options.allowModelProbes || configuredProbe || processPhase === 'standalone-management-probe') &&
         isOpenCodeModelProbe(body, options.nativeGeneration ?? 'v1')
       ) {
         if (options.retainedProcess) {
@@ -339,19 +343,7 @@ export async function startOpenCodeModel(
             ? { requestedEffort: body.reasoning_effort }
             : {}),
         });
-        const event = (delta: Record<string, unknown>, finish: string | null) => ({
-          id: `TEST-opencode-probe-${probes.length}`,
-          object: 'chat.completion.chunk',
-          created: 1700000000,
-          model: typeof body.model === 'string' ? body.model : 'TEST-model',
-          choices: [{ index: 0, delta, finish_reason: finish }],
-        });
-        response.writeHead(200, { 'content-type': 'text/event-stream' });
-        response.write(
-          `data: ${JSON.stringify(event({ role: 'assistant', content: 'OK' }, null))}\n\n`
-        );
-        response.write(`data: ${JSON.stringify(event({}, 'stop'))}\n\n`);
-        response.end('data: [DONE]\n\n');
+        replyOpenCodeModelProbe(response, body, probes.length);
         return;
       }
       assert.equal(settingsProbe, undefined, 'no business input during Settings verification');
@@ -776,6 +768,7 @@ export async function startOpenCodeModel(
     observations,
     ...(options.mixedTaskNotifications ? { notificationObservations } : {}),
     probes,
+    ...(configuredLaunch ? { configuredLaunchPreparation: configuredLaunch.port } : {}),
     ...(options.coordinationProof ? { coordination } : {}),
     ...(options.localReadinessProof ? { localReadiness } : {}),
     failures,

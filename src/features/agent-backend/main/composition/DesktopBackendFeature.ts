@@ -33,6 +33,8 @@ import { loadDesktopBackendDescriptor } from '../infrastructure/loadDesktopBacke
 import { readCapturedTeamRetirements } from '../infrastructure/readCapturedTeamRetirements';
 import { CapturedStoppedTeamImport } from '../infrastructure/stopped-import/CapturedStoppedTeamImport';
 
+import { recoverCapturedHost } from './recoverCapturedHost';
+
 import type { BackendHandle } from '../../contracts';
 import type { BackendConnectionSnapshot } from '../../contracts/connections';
 import type {
@@ -140,7 +142,12 @@ export class DesktopBackendFeature {
         lookup: async (handle, commandId, method, guard) =>
           (await target(handle, guard)).lookup(handle, commandId, method, guard),
       },
-      rosterCommands
+      rosterCommands,
+      (request, guard) => recoverCapturedHost(request, guard, {
+        selection: this.options.descriptor, descriptor: () => this.descriptor,
+        router: () => this.router, definitions: () => this.handleDefinitions(), clients: this.clients,
+        isCurrent: () => !this.sealed && this.state === 'ready',
+      })
     );
   }
 
@@ -600,7 +607,7 @@ export class DesktopBackendFeature {
       available.find(row => row.projectPath === null);
     if (!selected) return;
     const sources = await this.captureSourceTarget(selected, guard);
-    if (sources) await refreshCapturedRuntimeConfiguration(sources);
+    if (sources) await refreshCapturedRuntimeConfiguration(sources, selected);
   }
 
   /** Main Skills choices derive solely from the original authorized descriptor, including optional runtimes. */
@@ -713,7 +720,7 @@ export class DesktopBackendFeature {
     return this.captureManagementTarget(
       selected,
       guard,
-      sources ? await refreshCapturedRuntimeConfiguration(sources) : undefined
+      sources ? await refreshCapturedRuntimeConfiguration(sources, selected) : undefined
     );
   }
 

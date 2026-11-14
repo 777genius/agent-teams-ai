@@ -43,6 +43,7 @@ import type {
 } from '../../../src/shared/types';
 
 const hoisted = vi.hoisted(() => ({
+  isElectronMode: vi.fn(() => false),
   list: vi.fn(),
   getData: vi.fn(),
   getTaskChangePresence: vi.fn(),
@@ -90,6 +91,7 @@ const originalWindowAnimationFrame =
       };
 
 vi.mock('@renderer/api', () => ({
+  isElectronMode: hoisted.isElectronMode,
   api: {
     teams: {
       list: hoisted.list,
@@ -1965,6 +1967,33 @@ describe('teamSlice actions', () => {
     await selectPromise;
 
     expect(store.getState().selectedTeamData).toBe(cachedBeta);
+
+    const hostKey = 'host-team:TEST-retained-selection';
+    const hostData = createTeamSnapshot({ teamName: hostKey });
+    const cache = { ...store.getState().teamDataCacheByName, [hostKey]: hostData };
+    store.setState({ teamDataCacheByName: cache });
+    hoisted.isElectronMode.mockReturnValue(true);
+    vi.stubGlobal('navigator', { platform: 'Win32' });
+    try {
+      for (const message of ['Host team read unavailable', 'Host teams unavailable']) {
+        hoisted.getData.mockRejectedValueOnce(new Error(message));
+        await store.getState().selectTeam(hostKey, { forceFreshSnapshot: true });
+
+        expect(store.getState().selectedTeamName).toBe(hostKey);
+        expect(store.getState().selectedTeamData).toBe(hostData);
+        expect(store.getState().teamDataCacheByName).toBe(cache);
+        expect(store.getState().selectedTeamError).toBe(message);
+        expect(store.getState().selectedTeamLoading).toBe(false);
+      }
+      hoisted.getData.mockResolvedValueOnce(hostData);
+      await store.getState().selectTeam(hostKey, { forceFreshSnapshot: true });
+
+      expect(store.getState().selectedTeamError).toBeNull();
+      expect(store.getState().selectedTeamData).toBe(hostData);
+    } finally {
+      hoisted.isElectronMode.mockReturnValue(false);
+      vi.unstubAllGlobals();
+    }
   });
 
   it('commits selectTeam thin snapshot before post-paint messages and activity meta refreshes', async () => {
@@ -6884,6 +6913,48 @@ describe('teamSlice actions', () => {
       // Should NOT replace data with error — preserve existing data
       expect(store.getState().selectedTeamError).toBeNull();
       expect(store.getState().selectedTeamData).toEqual(existingData);
+
+      const hostKey = 'host-team:TEST-retained-refresh';
+      const hostData = createTeamSnapshot({ teamName: hostKey });
+      const cache = { [hostKey]: hostData };
+      store.setState({
+        selectedTeamName: hostKey,
+        selectedTeamData: hostData,
+        teamDataCacheByName: cache,
+      });
+      hoisted.isElectronMode.mockReturnValue(true);
+      vi.stubGlobal('navigator', { platform: 'Win32' });
+      try {
+        for (const message of ['Host team read unavailable', 'Host teams unavailable']) {
+          hoisted.getData.mockRejectedValueOnce(new Error(message));
+          await store.getState().refreshTeamData(hostKey);
+
+          expect(store.getState().selectedTeamData).toBe(hostData);
+          expect(store.getState().teamDataCacheByName).toBe(cache);
+          expect(store.getState().selectedTeamError).toBe(message);
+          expect(store.getState().selectedTeamLoading).toBe(false);
+        }
+        hoisted.getData.mockResolvedValueOnce(hostData);
+        await store.getState().refreshTeamData(hostKey);
+        expect(store.getState().selectedTeamError).toBeNull();
+
+        hoisted.isElectronMode.mockReturnValue(false);
+        hoisted.getData.mockRejectedValueOnce(new Error('Host teams unavailable'));
+        await store.getState().refreshTeamData(hostKey);
+        expect(store.getState().selectedTeamError).toBeNull();
+        expect(store.getState().selectedTeamData).toBe(hostData);
+
+        hoisted.isElectronMode.mockReturnValue(true);
+        vi.stubGlobal('navigator', { platform: 'Linux x86_64' });
+        hoisted.getData.mockRejectedValueOnce(new Error('Host team read unavailable'));
+        await store.getState().refreshTeamData(hostKey);
+        expect(store.getState().selectedTeamError).toBeNull();
+        expect(store.getState().selectedTeamData).toBe(hostData);
+        expect(store.getState().teamDataCacheByName[hostKey]).toBe(hostData);
+      } finally {
+        hoisted.isElectronMode.mockReturnValue(false);
+        vi.unstubAllGlobals();
+      }
     });
 
     it('reuses the existing selectedTeamData ref on a semantic no-op refresh', async () => {

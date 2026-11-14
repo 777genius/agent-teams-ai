@@ -291,7 +291,7 @@ export async function prepareNativeRetainedServiceScenario(options: {
         commandId, binding: { schemaVersion: 1, handleId: 'TEST-natural-process',
           owner: options.profile.owner, scope: team.scope }, payload,
       }, { control: method === 'runtime.read' || method.startsWith('team.process.') || method === 'team.lifecycle.read',
-        ...(providerFixture ? { remainingMs: budget } : {}) }),
+        ...(providerFixture ? { remainingMs: () => remaining(deadline) } : {}) }),
       budget));
       remaining(deadline); // A delayed timeout callback cannot qualify a late public reply.
       assert.equal(result.ok, true, 'Original natural-service Host route succeeded');

@@ -289,9 +289,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   let quitRequested = false;
   let finishMixedSettings: (() => Promise<void>) | undefined;
   const restartSameProfile = async (selection: Pick<Parameters<typeof restartCapturedDesktopApp>[0],
-    'model' | 'provider' | 'boundary' | 'createdHandleId' | 'afterOriginalSettingsQuit' | 'afterOriginalMembershipQuit'>) => {
+    'model' | 'provider' | 'boundary' | 'createdHandleId' | 'afterOriginalSettingsQuit' | 'afterOriginalMembershipQuit'> & { codexSourceSelectionRestart?: typeof restartCapturedDesktopApp }) => {
     assert.ok(cdp && !packed && selection.model);
-    return restartCapturedDesktopApp({
+    return (selection.codexSourceSelectionRestart ?? restartCapturedDesktopApp)({
       app, cdp, group, fixture, repo, mode, evidence, cdpLibrary, ...selection,
       ...(checkpointUpgrade ? { checkpointUpgrade } : {}),
       markQuitRequested: () => { quitRequested = true; },
@@ -394,7 +394,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         group,
         evidence,
         executable: openCodeLifecycleMode ? process.env.OPENCODE_V2_EMBEDDED_BUN! : process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
-        ...(openCodeLifecycleMode ? { provider: 'opencode' as const } : {}),
+        ...(openCodeLifecycleMode ? { openCode: { model: openCodeLifecycleModel } } : {}),
         manualPermissions: approvalUiMode,
         ...(quitScenario === 'pending-open' ? { returnAt: 'opening' as const } : {}),
       });
@@ -490,10 +490,10 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         ...(openCodeLifecycleModel ? { openCodeModel: openCodeLifecycleModel } : {}),
         capturedGroup: () => group,
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
-        ...(mode === 'native-resume-ui' || extensionsUiMode ? { restartSameProfile: () =>
+        ...(mode === 'native-resume-ui' || extensionsUiMode ? { restartSameProfile: (codexSourceSelectionRestart) =>
           restartSameProfile({ model: openCodeLifecycleModel ?? codexResumeModel ?? conversationModel!,
             provider: openCodeLifecycleMode ? 'opencode' : codexResumeMode ? 'codex' : 'claude',
-            boundary: extensionsUiMode ? 'extensions-before-launch' : 'resume-after-stop' }) } : {}),
+            boundary: extensionsUiMode ? 'extensions-before-launch' : 'resume-after-stop', ...(codexSourceSelectionRestart ? { codexSourceSelectionRestart } : {}) }) } : {}),
       });
     } else if (readbackMode) {
       assert.ok(fixture.uiSeed);

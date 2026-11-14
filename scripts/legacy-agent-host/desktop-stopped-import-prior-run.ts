@@ -102,6 +102,7 @@ export async function produceDesktopCurrentStoppedTeam(options: {
     TERM: 'dumb',
     NO_COLOR: '1',
     NODE_ENV: 'development',
+    NODE_OPTIONS: '--max-old-space-size=8192',
     AGENT_TEAMS_ELECTRON_USER_DATA_DIR: join(fixture.root, 'userData'),
     AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: join(fixture.root, 'claude'),
     CLAUDE_ROOT: join(fixture.root, 'claude'),

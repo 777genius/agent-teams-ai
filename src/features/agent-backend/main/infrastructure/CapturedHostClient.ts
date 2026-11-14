@@ -47,6 +47,7 @@ import {
   capturedHostProfileDigest,
   captureHostProfile,
   HostClientError,
+  remainingHostStartup,
   type SelectedHostProfile,
   validateHostProfile,
 } from './selectedHostProfile';
@@ -158,9 +159,16 @@ export class CapturedHostClient {
 
   constructor(
     profile: SelectedHostProfile,
-    private readonly nativeOwner?: HostCustodyOwner
+    private readonly nativeOwner?: HostCustodyOwner,
+    private readonly startupRemainingMs?: () => number
   ) {
     this.profile = captureHostProfile(profile);
+  }
+
+  recoveryState(owner: HostCustodyOwner): 'ready' | 'closed' | 'held' {
+    if (this.nativeOwner !== owner || (this.child?.pid ?? 0) <= 0) return 'held';
+    if (this.ready && !this.sealed && !this.quiescing) return 'ready';
+    return this.exited && this.sealed && this.nativeAbort.signal.aborted ? 'closed' : 'held';
   }
 
   start(): Promise<HostHandshake> {
@@ -172,9 +180,10 @@ export class CapturedHostClient {
   private async open(): Promise<HostHandshake> {
     try {
       observeCapturedHostStartup('profile-validation-start');
-      await validateHostProfile(this.profile);
+      await validateHostProfile(this.profile, this.startupRemainingMs);
       observeCapturedHostStartup('profile-validation-complete');
       if (this.sealed || this.quiescing) throw new HostClientError('shutting-down', 'not-dispatched');
+      remainingHostStartup(this.profile, this.startupRemainingMs);
       const child = spawnWithLinuxChildLaunch(this.profile.nodeExecutable, [this.profile.hostEntry], {
         cwd: this.profile.cwd,
         env: { ...this.profile.env },
@@ -204,7 +213,7 @@ export class CapturedHostClient {
         this.diagnosticTail = Buffer.concat([this.diagnosticTail, chunk]).subarray(-8192);
         this.retainCloseDiagnostic(chunk);
       });
-      const handshakeRemaining = remainingLinuxChildLaunchTime(child, this.profile.startupTimeoutMs);
+      const handshakeRemaining = remainingLinuxChildLaunchTime(child, remainingHostStartup(this.profile, this.startupRemainingMs));
       if (handshakeRemaining <= 0) throw new HostClientError('request-timeout', 'unknown');
       const result = await this.send(
         'host.handshake',
@@ -212,8 +221,10 @@ export class CapturedHostClient {
         true,
         handshakeRemaining
       );
+      remainingHostStartup(this.profile, this.startupRemainingMs);
       const handshake = this.validateHandshake(result);
       if (this.nativeOwner) await this.bindNative(handshake);
+      remainingHostStartup(this.profile, this.startupRemainingMs);
       if (this.sealed || this.quiescing) throw new HostClientError('shutting-down', 'not-dispatched');
       this.ready = true;
       observeCapturedHostStartup('ready');
@@ -414,6 +425,7 @@ export class CapturedHostClient {
       profileDigest,
     });
     this.nativeBinding = Object.freeze(binding);
+    remainingHostStartup(this.profile, this.startupRemainingMs);
     this.nativePort = owner.attach({
       binding,
       profileId: this.profile.profileId,
@@ -424,7 +436,7 @@ export class CapturedHostClient {
       HOST_CUSTODY_BIND_METHOD,
       binding,
       true,
-      this.profile.startupTimeoutMs
+      remainingHostStartup(this.profile, this.startupRemainingMs)
     );
     if (!isRecord(ack) || ack.bound !== true || this.sealed)
       throw new HostClientError('profile-mismatch', 'unknown');

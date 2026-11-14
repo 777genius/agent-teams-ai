@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
 import { teamModelProbeSelectionSchema } from './teamLaunchModelProbe.js';
-import { teamModelProbeProfile, teamModelProbeEffort } from './teamLaunchModelProbe.js';
+import { teamModelProbeProfile, teamModelProbeEffort, teamModelProbeActionDigest } from './teamLaunchModelProbe.js';
 import { actualCaptureReadinessCommandId, modelReadinessMechanismDigest } from '../team-launch/launchReadiness.js';
 import { captureOpenCodeConfigurationSource } from '../adapters/providers/OpenCodeConfigurationSource.js';
 import { captureOpenCodeReadinessOrigin, captureReadinessPreparation,
@@ -91,6 +91,20 @@ export function captureOpenCodeProbeAccount(
   original?: Readonly<StoredModelProbe>,
   capturedOrigin = original?.localModelReadinessOrigin
 ): { digest: string; isCurrent(): boolean; nativeCredentialScopeDigest?: string } | undefined {
+  return captureOpenCodeProbeAccountInspection(profile, input, ownerCurrent, original, capturedOrigin)?.account;
+}
+
+/** The same synchronous account inspection also owns its freshly captured policy inspector. */
+function captureOpenCodeProbeAccountInspection(
+  profile: OpenCodeManagementProfile,
+  input: Pick<ModelProbeInput, 'providerId' | 'modelId'>,
+  ownerCurrent: () => boolean,
+  original?: Readonly<StoredModelProbe>,
+  capturedOrigin = original?.localModelReadinessOrigin
+): {
+  account: NonNullable<ReturnType<typeof captureOpenCodeProbeAccount>>;
+  origin: ReturnType<typeof captureOpenCodeReadinessOrigin> | undefined;
+} | undefined {
   const source = captureOpenCodeConfigurationSource(profile,
     profile.nativeGeneration === 'v2' ? profile.embedded?.configurationSource : undefined, ownerCurrent);
   const policy = capturedOrigin
@@ -145,12 +159,13 @@ export function captureOpenCodeProbeAccount(
   }
   if (original?.nativeFileKeyWitness !== undefined && !fileProof) held();
   const nativeCredentialScopeDigest = fileProof?.scopeDigest ?? (key?.present ? key.digest : undefined);
-  return {
+  const account = {
     digest: managementDigest({ binding: profile.accountBinding, key: fileProof?.scopeDigest ?? key?.digest ?? null,
       configuredKey: typeof configuredKey === 'string' ? configuredKey : null }),
     isCurrent: current,
     ...(profile.nativeGeneration === 'v2' && nativeCredentialScopeDigest !== undefined ? { nativeCredentialScopeDigest } : {}),
   };
+  return { account, origin: policy };
 }
 
 /** Caller already validated its exact product publication; this never admits a replacement profile. */
@@ -175,11 +190,12 @@ export function capturePreparedModelReference(options: {
       (original.purpose === undefined && original.readinessScope?.kind !== 'native') ||
       modelReadinessMechanismDigest(candidate) !== original.readinessScope?.mechanismDigest) held();
   return options.management.probes.captureReadinessReference(options.commandId, options.context, saved => {
-    const origin = saved.localModelReadinessOrigin
+    const inspected = saved.readiness || saved.readinessScope?.accountDigest !== undefined || saved.nativeFileKeyWitness !== undefined
+      ? captureOpenCodeProbeAccountInspection(candidate, saved, options.isCurrent, saved) : undefined;
+    const account = inspected?.account;
+    const origin = inspected?.origin ?? (saved.localModelReadinessOrigin
       ? captureOpenCodeReadinessOrigin(saved.localModelReadinessOrigin, candidate, saved.providerId,
-        options.isCurrent) : undefined;
-    const account = saved.readiness || saved.readinessScope?.accountDigest !== undefined || saved.nativeFileKeyWitness !== undefined
-      ? captureOpenCodeProbeAccount(candidate, saved, options.isCurrent, saved) : undefined;
+        options.isCurrent) : undefined);
     if (!options.isCurrent() || account && !account.isCurrent() || saved.nativeFileKeyWitness !== undefined && !account) held();
     options.observeAccount?.(account);
     return { target: options.management.readinessTarget(candidate),
@@ -562,13 +578,17 @@ export function captureLaunchModelReadiness(options: {
       });
       if (matches.length !== 1) held();
       const original = matches[0]!, input = original.selection;
-      if (input.draft && input.draft.providerId !== 'opencode' ||
-          input.rosterRevision !== transfer.roster.expected.expectedRevision) held();
+      if (input.draft && input.draft.providerId !== 'opencode') held();
       saved = options.management.probes.readScopedProbe(original.commandId, teamBindingDigest, runtimeDigest(input));
       if (saved.readinessScope?.kind !== 'team' || saved.readinessScope.sourceRevision !== input.launchId ||
           saved.readinessScope.rosterRevision !== input.rosterRevision ||
           !saved.readinessScope.destinationKeys.includes(runtimeDigest(input.draft?.target ?? {
             launchId: input.launchId, memberId: input.memberId }))) held();
+      if (input.draft && !input.launchId.startsWith('saved-model-') &&
+          saved.readinessScope.actionDigest !== teamModelProbeActionDigest(original.commandId, saved.context!)) {
+        if (saved.readinessScope.actionDigest !== teamModelProbeActionDigest(original.commandId, saved.context!,
+          transfer.roster.expected.expectedRevision)) held();
+      } else if (input.rosterRevision !== transfer.roster.expected.expectedRevision) held();
       if (input.draft?.target.kind === 'member') {
         const intended = transfer.roster.expected.members.find(row => row.name === destination.name);
         if (!intended) held();

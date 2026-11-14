@@ -487,6 +487,8 @@ export interface OpenCodeRuntimeInstallProgress {
 }
 
 export interface OpenCodeRuntimeStatus {
+  /** Generation reported by the original captured native catalog; not a CLI version. */
+  nativeGeneration?: 'v1' | 'v2';
   /** Captured engine version is separate from the selecting native CLI version. */
   engineVersion?: string;
   /** Opaque Host selection revision; no private paths or configuration cross this boundary. */
@@ -524,6 +526,6 @@ export interface OpenCodeRuntimeAPI {
   readonly arch?: string;
   getStatus: () => Promise<OpenCodeRuntimeStatus>;
   install: (options?: OpenCodeRuntimeInstallOptions) => Promise<OpenCodeRuntimeStatus>;
-  invalidateStatus: () => Promise<void>;
+  invalidateStatus: (mode?: 'cache-only') => Promise<void>;
   onProgress: (cb: (event: unknown, data: OpenCodeRuntimeStatus) => void) => () => void;
 }
